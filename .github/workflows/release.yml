@@ -1,0 +1,77 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      # 1. 严格拉取 main 分支的代码
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+
+      # 2. 安装 Node 24 (已移除 cache 选项，交由下方手动缓存处理)
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      # 3. 启用 Corepack 并激活项目所需的 Yarn 4.15.0
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@4.15.0 --activate
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+
+      # 4. 动态获取 Yarn v4 (Berry) 的缓存目录
+      - name: Get Yarn cache directory path
+        id: yarn-cache-dir-path
+        shell: bash
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+
+      # 5. 手动配置 actions/cache，绕过 setup-node 在 Windows 下的缓存 Bug
+      - name: Cache Yarn dependencies
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      # 6. 验证触发的 Tag（去掉首字母 v）是否与 main 分支的 package.json 版本一致
+      - name: Validate version
+        shell: bash
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/}"
+          TAG_VERSION="${TAG_VERSION#v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "Tag version: $TAG_VERSION"
+          echo "Package version: $PKG_VERSION"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match package.json version ($PKG_VERSION)"
+            exit 1
+          fi
+          echo "Version validation passed."
+
+      # 7. 安装依赖
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      # 8. 打包 Release
+      - name: Build release
+        run: yarn build:release
+
+      # 9. 创建 Release 并上传制品
+      - name: Create Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

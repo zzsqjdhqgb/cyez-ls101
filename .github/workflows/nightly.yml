@@ -1,0 +1,76 @@
+name: Nightly Build
+
+on:
+  schedule:
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: dev
+
+      # 1. 安装 Node 22 (已移除 cache 选项，交由下方手动缓存处理)
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      # 2. 启用 Corepack 并激活项目所需的 Yarn 4.15.0
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@4.15.0 --activate
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+
+      # 3. 动态获取 Yarn v4 (Berry) 的缓存目录
+      - name: Get Yarn cache directory path
+        id: yarn-cache-dir-path
+        shell: bash
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+
+      # 4. 手动配置 actions/cache，绕过 setup-node 在 Windows 下的缓存 Bug
+      - name: Cache Yarn dependencies
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build nightly
+        run: yarn build:nightly
+
+      - name: Delete old release
+        shell: bash
+        run: |
+          gh release delete nightly --yes --cleanup-tag || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Move nightly tag
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f nightly
+          git push -f origin nightly
+
+      - name: Create/Update Nightly Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: nightly
+          name: Nightly Build
+          prerelease: true
+          files: dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
