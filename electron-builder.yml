@@ -1,0 +1,107 @@
+#
+# Copyright (c) 2026 Haoting Ying (zzsqjdhqgb). All rights reserved.
+# Proprietary code. Use is subject to the LICENSE file in the repository root.
+#
+
+appId: io.github.zzsqjdhqgb.cyez-ls101
+productName: 曹二听说101
+directories:
+  buildResources: build
+fileAssociations:
+  - ext: cyexam
+    name: CYEZ 考试包
+    description: CYEZ 考试包文件
+    role: Editor
+    mimeType: application/x-cyez-exam
+    icon: assets/file-icons/cyexam.ico
+  - ext: cytmpl
+    name: CYEZ 模板包
+    description: CYEZ 模板包文件
+    role: Editor
+    mimeType: application/x-cyez-template
+    icon: assets/file-icons/cytmpl.ico
+  - ext: cydraft
+    name: CYEZ 草稿包
+    description: CYEZ 草稿包文件
+    role: Editor
+    mimeType: application/x-cyez-draft
+    icon: assets/file-icons/cydraft.ico
+  - ext: cysubm
+    name: CYEZ 作答包
+    description: CYEZ 作答包文件
+    role: Editor
+    mimeType: application/x-cyez-submission
+    icon: assets/file-icons/cysubm.ico
+  - ext: cygrade
+    name: CYEZ 批改记录包
+    description: CYEZ 批改记录包文件
+    role: Editor
+    mimeType: application/x-cyez-grading
+    icon: assets/file-icons/cygrade.ico
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - 'out/**/*'
+asarUnpack:
+  - resources/**
+  - node_modules/sherpa-onnx-node/**
+  - node_modules/sherpa-onnx-*/**
+  - node_modules/ffmpeg-static/**
+win:
+  executableName: CYEZ-LS101
+  icon: build/icon.png
+nsis:
+  oneClick: false
+  artifactName: ${name}-${version}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+  runAfterFinish: true
+  license: "LICENSE"
+mac:
+  entitlementsInherit: build/entitlements.mac.plist
+  icon: build/icon.png
+  extendInfo:
+    - NSCameraUsageDescription: Application requests access to the device's camera.
+    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
+    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
+    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  notarize: false
+dmg:
+  artifactName: ${name}-${version}.${ext}
+linux:
+  target:
+    - AppImage
+    - snap
+    - deb
+  icon: build/icon.png
+  maintainer: electronjs.org
+  category: Utility
+appImage:
+  artifactName: ${name}-${version}.${ext}
+npmRebuild: false
+publish:
+  provider: generic
+  url: https://example.com/auto-updates
+electronDownload:
+  mirror: https://npmmirror.com/mirrors/electron/
+extraResources:
+  - from: exams
+    to: exams
+  - from: templates
+    to: templates
+  - from: resources/tts
+    to: tts
+  - from: assets
+    to: assets
+  - from: resources/media
+    to: media
+extraFiles:
+  - from: LICENSE
+    to: LICENSE.txt
+  - from: thirdparty-licenses
+    to: thirdparty-licenses

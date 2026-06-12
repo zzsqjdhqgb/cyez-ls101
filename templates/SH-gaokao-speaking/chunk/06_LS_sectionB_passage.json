@@ -1,0 +1,118 @@
+{
+  "examData": {
+    "questions": [
+      {
+        "id": "26",
+        "content": [
+          { "type": "text", "text": "Section B", "size": "large", "bold": true },
+          { "type": "text", "text": "Directions: In Section B, you will hear a short passage about {{LS_passage_topic}}. The passage will be read twice. After you hear the passage, answer the first question with the information you hear and the second in your own opinion with at least 3 sentences. For the first question, you will have 30 seconds to prepare and 30 seconds to talk. For the second question, you will have one minute to prepare and another minute to talk.", "size": "small" },
+          { "type": "audio", "src": "media/LS_sectionB_dir.mp3", "text": "Section B. Directions: In Section B, you will hear a short passage about {{LS_passage_topic}}. The passage will be read twice. After you hear the passage, answer the first question with the information you hear and the second in your own opinion with at least 3 sentences. For the first question, you will have 30 seconds to prepare and 30 seconds to talk. For the second question, you will have one minute to prepare and another minute to talk." }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听指令"
+      },
+      {
+        "id": "27",
+        "content": [
+          { "type": "text", "text": "Questions:", "size": "large", "bold": true },
+          { "type": "text", "text": "1. {{LS_question_1}}", "size": "small" },
+          { "type": "text", "text": "2. {{LS_question_2}}", "size": "small" },
+          { "type": "audio", "src": "media/LS_passage.mp3", "text": "{{LS_passage}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "28",
+        "content": [
+          { "type": "text", "text": "Questions:", "size": "large", "bold": true },
+          { "type": "text", "text": "1. {{LS_question_1}}", "size": "small" },
+          { "type": "text", "text": "2. {{LS_question_2}}", "size": "small" },
+          { "type": "audio", "src": "media/LS_passage.mp3", "text": "{{LS_passage}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "29",
+        "content": [
+          { "type": "text", "text": "Questions:", "size": "large", "bold": true },
+          { "type": "text", "text": "1. {{LS_question_1}}", "size": "small" },
+          { "type": "audio", "src": "media/LS_passage.mp3", "text": "Questions. One. {{LS_question_1}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "30",
+        "content": [
+          { "type": "text", "text": "Questions:", "size": "large", "bold": true },
+          { "type": "text", "text": "1. {{LS_question_1}}", "size": "small" }
+        ],
+        "time": { "type": "countdown", "seconds": 30 },
+        "statusText": "答题准备"
+      },
+      {
+        "id": "31",
+        "content": [
+          { "type": "text", "text": "Questions:", "size": "large", "bold": true },
+          { "type": "text", "text": "1. {{LS_question_1}}", "size": "small" }
+        ],
+        "time": { "type": "record", "duration": 30, "recordIndex": 11 },
+        "statusText": "录音中"
+      },
+      {
+        "id": "32",
+        "content": [
+          { "type": "text", "text": "Questions:", "size": "large", "bold": true },
+          { "type": "text", "text": "2. {{LS_question_2}}", "size": "small" },
+          { "type": "audio", "src": "media/LS_passage.mp3", "text": "Questions. Two. {{LS_question_2}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "33",
+        "content": [
+          { "type": "text", "text": "Questions:", "size": "large", "bold": true },
+          { "type": "text", "text": "2. {{LS_question_2}}", "size": "small" }
+        ],
+        "time": { "type": "countdown", "seconds": 60 },
+        "statusText": "答题准备"
+      },
+      {
+        "id": "34",
+        "content": [
+          { "type": "text", "text": "Questions:", "size": "large", "bold": true },
+          { "type": "text", "text": "2. {{LS_question_2}}", "size": "small" }
+        ],
+        "time": { "type": "record", "duration": 60, "recordIndex": 12 },
+        "statusText": "录音中"
+      }
+    ],
+    "gradingInfo": [
+      {
+        "id": 9,
+        "scoreOptions": [0, 0.5, 1],
+        "recordIndices": [11],
+        "problemInfo": "# Speaking\n\n## Section B\n\n**Directions**: In Section B, you will hear a short passage about {{LS_passage_topic}}. The passage will be read twice. After you hear the passage, answer the first question with the information you hear and the second in your own opinion with at least 3 sentences. For the first question, you will have 30 seconds to prepare and 30 seconds to talk. For the second question, you will have one minute to prepare and another minute to talk.\n\n{{LS_passage}}\n\n1. {{LS_question_1}}",
+        "gradingInfo": "**考试要求**：30秒准备，30秒回答（共1题，共1分）。\n\n**评分标准**：\n\n  - 1分\n      - 能针对问题作出清楚全面、正确合理的应答\n      - 语音正确\n      - 语言结构和用词符合交际要求\n  - 0.5分\n      - 能针对问题给出部分答案，不够完整合理\n      - 语音基本正确\n      - 有个别语言结构或用词错误\n  - 0分\n      - 没有答题或答题内容与问题无关\n\n---\n\n**参考答案**\n\n{{LS_question_std_1}}"
+      },
+      {
+        "id": 10,
+        "scoreOptions": [0, 0.5, 1, 1.5],
+        "recordIndices": [12],
+        "problemInfo": "# Speaking\n\n## Section B\n\n**Directions**: In Section B, you will hear a short passage about {{LS_passage_topic}}. The passage will be read twice. After you hear the passage, answer the first question with the information you hear and the second in your own opinion with at least 3 sentences. For the first question, you will have 30 seconds to prepare and 30 seconds to talk. For the second question, you will have one minute to prepare and another minute to talk.\n\n{{LS_passage}}\n\n2. {{LS_question_2}}",
+        "gradingInfo": "**考试要求**：1分钟准备，1分钟回答（共1题，共1.5分）。\n\n**评分标准**：\n\n  - 1.5分\n      - 能连贯流畅地表达思想\n      - 内容切题\n      - 语言正确\n  - 1分\n      - 基本能连贯完整地表达思想\n      - 能针对题目谈话\n  - 0.5分\n      - 能讲述几句，但内容不连贯\n      - 与题目的关系不大\n      - 语言结构或用词错误严重，使人理解困难\n  - 0分\n      - 没有答题或内容与题目无关\n\n---\n\n**参考答案**\n\n{{LS_question_std_2}}"
+      }
+    ]
+  },
+  "editableData": [
+    { "type": "text", "id": "LS_passage_topic", "description": "听短文回答问题 - 短文主题 (you will hear a short passage about...)" },
+    { "type": "text", "id": "LS_passage", "description": "听短文回答问题 - 短文" },
+    { "type": "text", "id": "LS_question_1", "description": "听短文回答问题 - 问题1" },
+    { "type": "text", "id": "LS_question_std_1", "description": "听短文回答问题 - 问题1 - 参考答案" },
+    { "type": "text", "id": "LS_question_2", "description": "听短文回答问题 - 问题2" },
+    { "type": "text", "id": "LS_question_std_2", "description": "听短文回答问题 - 问题2 - 参考答案" }
+  ]
+}

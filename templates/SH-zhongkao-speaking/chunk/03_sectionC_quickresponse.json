@@ -1,0 +1,117 @@
+{
+  "examData": {
+    "questions": [
+      {
+        "id": "13",
+        "content": [
+          { "type": "text", "text": "II.Quick response", "size": "large", "bold": true },
+          { "type": "text", "text": "Directions: You will hear five sentences.Make quick response to the sentences you have heard.For each sentence,you will have ten seconds to prepare and ten seconds to answer.(你将听到 5 句句子，根据所听句子快速应答。对于每句句子，你将有 10 秒的准备时间和 10 秒的应答时间)", "size": "small" },
+          { "type": "audio", "src": "media/section2_dir.mp3", "text": "Part Two: Quick response. You will hear five sentences.Make quick response to the sentences you have heard.For each sentence,you will have ten seconds to prepare and ten seconds to answer." }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听指令"
+      },
+      {
+        "id": "14",
+        "content": [
+          { "type": "text", "text": "1. {{quickresponse_1}}", "size": "large" },
+          { "type": "audio", "src": "media/quickresp1.mp3", "text": "{{quickresponse_1}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "15",
+        "content": [
+          { "type": "text", "text": "1. {{quickresponse_1}}", "size": "large" }
+        ],
+        "time": { "type": "record", "duration": 5, "recordIndex": 6 },
+        "statusText": "录音中"
+      },
+      {
+        "id": "16",
+        "content": [
+          { "type": "text", "text": "2. {{quickresponse_2}}", "size": "large" },
+          { "type": "audio", "src": "media/quickresp2.mp3", "text": "{{quickresponse_2}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "17",
+        "content": [
+          { "type": "text", "text": "2. {{quickresponse_2}}", "size": "large" }
+        ],
+        "time": { "type": "record", "duration": 5, "recordIndex": 7 },
+        "statusText": "录音中"
+      },
+      {
+        "id": "18",
+        "content": [
+          { "type": "text", "text": "3. {{quickresponse_3}}", "size": "large" },
+          { "type": "audio", "src": "media/quickresp3.mp3", "text": "{{quickresponse_3}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "19",
+        "content": [
+          { "type": "text", "text": "3. {{quickresponse_3}}", "size": "large" }
+        ],
+        "time": { "type": "record", "duration": 5, "recordIndex": 8 },
+        "statusText": "录音中"
+      },
+      {
+        "id": "20",
+        "content": [
+          { "type": "text", "text": "4. {{quickresponse_4}}", "size": "large" },
+          { "type": "audio", "src": "media/quickresp1.mp3", "text": "{{quickresponse_4}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "21",
+        "content": [
+          { "type": "text", "text": "4. {{quickresponse_4}}", "size": "large" }
+        ],
+        "time": { "type": "record", "duration": 5, "recordIndex": 9 },
+        "statusText": "录音中"
+      },
+      {
+        "id": "22",
+        "content": [
+          { "type": "text", "text": "5. {{quickresponse_5}}", "size": "large" },
+          { "type": "audio", "src": "media/quickresp5.mp3", "text": "{{quickresponse_5}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "23",
+        "content": [
+          { "type": "text", "text": "5. {{quickresponse_5}}", "size": "large" }
+        ],
+        "time": { "type": "record", "duration": 5, "recordIndex": 10 },
+        "statusText": "录音中"
+      }
+    ],
+    "gradingInfo": [
+      {
+        "id": 2,
+        "scoreOptions": [0, 0.5, 1, 1.5, 2, 2.5],
+        "recordIndices": [6, 7, 8, 9, 10],
+        "problemInfo": "## II. Quick response\n\nDirections: You will hear five sentences.Make quick response to the sentences you have heard.For each sentence,you will have ten seconds to prepare and ten seconds to answer.\n\n1. {{quickresponse_1}}\n2. {{quickresponse_2}}\n3. {{quickresponse_3}}\n4. {{quickresponse_4}}\n5. {{quickresponse_5}}\n\n",
+        "gradingInfo": "- 核心评分点:相关性(40%)、地道性(30%)、礼貌性(30%)\n\n- 考查重点:听懂日常场景对话(邀请、建议、道歉、询问、感谢等)，用符合英语习惯的表达回应，避免中式思维。"
+      }
+    ]
+  },
+  "editableData": [
+    { "type": "text", "id": "quickresponse_1", "description": "交际应答1" },
+    { "type": "text", "id": "quickresponse_2", "description": "交际应答2" },
+    { "type": "text", "id": "quickresponse_3", "description": "交际应答3" },
+    { "type": "text", "id": "quickresponse_4", "description": "交际应答4" },
+    { "type": "text", "id": "quickresponse_5", "description": "交际应答5" }
+  ]
+}

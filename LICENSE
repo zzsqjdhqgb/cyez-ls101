@@ -1,0 +1,33 @@
+Copyright (c) 2026 Haoting Ying (zzsqjdhqgb). All rights reserved.
+
+保留所有权利。
+
+--------------------------------------------------------------------------------
+[CN] 使用限制
+
+著作权人保留所有权利。未经著作权人明确的书面许可，任何人不得出于任何目的（包括但不限于个人使用、教学、商业或非商业用途）复制、分发、修改、编译、运行或以其他方式使用本项目的任何源代码或其编译产物。
+
+作为仅有的例外，您被授予一项有限的、不可转让的权利：
+- 在 GitHub 平台（github.com）上，通过该平台提供的功能（包括但不限于在线浏览代码、以及使用分叉（fork）功能在您的 GitHub 账户中创建本仓库的副本）访问本项目的源代码，**且此访问仅限于在 GitHub 平台上进行浏览**。
+- 您**不得**将源代码下载到本地计算机，也不得对分叉后的仓库进行任何修改、编译、运行、分发或其他任何超出纯粹浏览的使用行为。
+- 任何分叉的仓库都必须完整保留本许可证文本，并持续受其全部条款约束。不得删除或更改本许可证内容。
+
+除上述明确列出的有限允许行为外，任何其他形式的使用、复制、分发、修改、编译或运行，均须事先取得著作权人的书面许可。
+
+[EN] Usage Restrictions
+
+The copyright holder reserves all rights. Without the express written permission of the copyright holder, no one may copy, distribute, modify, compile, run, or otherwise use any source code or compiled products of this project for any purpose, including but not limited to personal, educational, commercial, or non-commercial use.
+
+As a sole exception, you are granted a limited, non-transferable right to:
+- Access the source code of this project on the GitHub platform (github.com) through the functionalities provided by the platform (including but not limited to browsing the code online and creating a copy of this repository in your GitHub account via the fork function), **solely for the purpose of browsing on the GitHub platform**.
+- You **may not** download the source code to a local computer, nor may you modify, compile, run, distribute, or otherwise use the forked repository beyond mere browsing.
+- Any forked repository must retain this license text in its entirety and remain subject to all its terms. This license must not be removed or altered.
+
+Any use, copying, distribution, modification, compilation, or running beyond the limited acts expressly permitted above requires the prior written permission of the copyright holder.
+
+--------------------------------------------------------------------------------
+[CN] 免责声明
+本软件及相关文档均按“原样”提供，不提供任何明示或暗示的保证，包括但不限于对适销性、特定用途的适用性和非侵权性的保证。在任何情况下，著作权人均不对因本软件、其使用或其他交易所引起的或与之相关的任何索赔、损害或其他责任（无论是合同诉讼、侵权诉讼还是其他诉讼）承担责任。
+
+[EN] Disclaimer
+THIS SOFTWARE AND DOCUMENTATION ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

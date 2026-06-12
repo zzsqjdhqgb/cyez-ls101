@@ -1,0 +1,44 @@
+{
+  "examData": {
+    "title": "[仅供测试] 四宫格图片",
+    "questions": [
+      {
+        "id": "1",
+        "content": [
+          { "type": "text", "text": "主题：{{topic_text}}", "size": "large" },
+          { "type": "quad-image", "images": ["media/picture1.png", "media/picture2.png", "media/picture3.png", "media/picture4.png"], "width": "80%" }
+        ],
+        "time": { "type": "countdown", "seconds": 500 },
+        "statusText": "准备中"
+      }
+    ]
+  },
+  "editableData": [
+    {
+      "type": "file",
+      "id": "picture_file_1",
+      "description": "选择图片",
+      "fileName": "media/picture1.png"
+    },
+    {
+      "type": "file",
+      "id": "picture_file_2",
+      "description": "选择图片",
+      "fileName": "media/picture2.png"
+    },
+    {
+      "type": "file",
+      "id": "picture_file_3",
+      "description": "选择图片",
+      "fileName": "media/picture3.png"
+    },
+    {
+      "type": "file",
+      "id": "picture_file_4",
+      "description": "选择图片",
+      "fileName": "media/picture4.png"
+    },
+    { "type": "text", "id": "topic_text", "description": "图片主题" }
+  ],
+  "dev": true
+}

@@ -1,0 +1,72 @@
+{
+  "examData": {
+    "questions": [
+      {
+        "id": "9",
+        "content": [
+          { "type": "text", "text": "Section C", "size": "large", "bold": true },
+          { "type": "text", "text": "Directions: Ask two questions about each situation given below. At least one special question should be asked about each situation.", "size": "small" },
+          { "type": "audio", "src": "media/sectionC_dir.mp3", "text": "Section C. Directions: Ask two questions about each situation given below. At least one special question should be asked about each situation." }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听指令"
+      },
+      {
+        "id": "10",
+        "content": [
+          { "type": "text", "text": "Question 1~2 {{situation_1}}", "size": "large" },
+          { "type": "audio", "src": "media/situation1.mp3", "text": "{{situation_1}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "11",
+        "content": [
+          { "type": "text", "text": "Question 1~2 {{situation_1}}", "size": "large" }
+        ],
+        "time": { "type": "record", "duration": 20, "recordIndex": 4 },
+        "statusText": "录音中"
+      },
+      {
+        "id": "12",
+        "content": [
+          { "type": "text", "text": "Question 3~4 {{situation_2}}", "size": "large" },
+          { "type": "audio", "src": "media/situation2.mp3", "text": "{{situation_2}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "13",
+        "content": [
+          { "type": "text", "text": "Question 3~4 {{situation_2}}", "size": "large" }
+        ],
+        "time": { "type": "record", "duration": 20, "recordIndex": 5 },
+        "statusText": "录音中"
+      }
+    ],
+    "gradingInfo": [
+      {
+        "id": 2,
+        "scoreOptions": [0, 0.5, 1],
+        "recordIndices": [4],
+        "problemInfo": "# Speaking\n\n## Section C\n\n**Directions**: Ask two questions about each situation given below. At least one special question should be asked about each situation.\n\n<u>Question 1-2:</u>\n\n{{situation_1}}",
+        "gradingInfo": "**考试要求**： 2个情景，各提2个问题\n\n**评分标准**：\n\n-   1分（共2题，共2分）\n    -   能对所给情景进行提问\n    -   内容恰当，问句结构正确\n\n-   0.5分\n    -   提问基本符合情景要求\n    -   语音结构有误\n\n-   0分\n    -   不能提问或不符要求\n\n\n**注意事项**：\n\n1.  至少一句特殊疑问句（可以先问特殊疑问句）\n2.  两个问题须针对不同的信息（可以问针对不同方面的两句特殊疑问句）\n\n---\n\n**参考答案**\n\n{{situation_std_1}}"
+      },
+      {
+        "id": 3,
+        "scoreOptions": [0, 0.5, 1],
+        "recordIndices": [5],
+        "problemInfo": "# Speaking\n\n## Section C\n\n**Directions**: Ask two questions about each situation given below. At least one special question should be asked about each situation.\n\n<u>Question 3-4:</u>\n\n{{situation_2}}\n\n",
+        "gradingInfo": "**考试要求**： 2个情景，各提2个问题\n\n**评分标准**：\n\n-   1分（共2题，共2分）\n    -   能对所给情景进行提问\n    -   内容恰当，问句结构正确\n\n-   0.5分\n    -   提问基本符合情景要求\n    -   语音结构有误\n\n-   0分\n    -   不能提问或不符要求\n\n\n**注意事项**：\n\n1.  至少一句特殊疑问句（可以先问特殊疑问句）\n2.  两个问题须针对不同的信息（可以问针对不同方面的两句特殊疑问句）\n\n---\n\n**参考答案**\n\n{{situation_std_2}}"
+      }
+    ]
+  },
+  "editableData": [
+    { "type": "text", "id": "situation_1", "description": "情景提问1" },
+    { "type": "text", "id": "situation_std_1", "description": "情景提问1 - 参考答案" },
+    { "type": "text", "id": "situation_2", "description": "情景提问2" },
+    { "type": "text", "id": "situation_std_2", "description": "情景提问2 - 参考答案" }
+  ]
+}

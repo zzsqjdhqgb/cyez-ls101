@@ -1,0 +1,13 @@
+{
+  "examData": {
+    "title": "上海中考英语口语模板"
+  },
+  "editableData": [],
+  "chunks": [
+    { "chunkid": "01", "file": "chunk/01_sectionA_phrases.json" },
+    { "chunkid": "02", "file": "chunk/02_sectionB_sentences.json" },
+    { "chunkid": "03", "file": "chunk/03_sectionC_quickresponse.json" },
+    { "chunkid": "04", "file": "chunk/04_sectionD_retell.json" },
+    { "chunkid": "05", "file": "chunk/05_sectionE_freetalk.json" }
+  ]
+}

@@ -1,0 +1,418 @@
+{
+  "title": "上海中考英语口语模板",
+  "questions": [
+    {
+      "id": "1",
+      "content": [
+        {
+          "type": "text",
+          "text": "Section A",
+          "size": "large",
+          "bold": true
+        },
+        {
+          "type": "text",
+          "text": "测试版暂时忽略directions",
+          "size": "small"
+        }
+      ],
+      "time": {
+        "seconds": 5,
+        "type": "countdown"
+      },
+      "statusText": "听指令"
+    },
+    {
+      "id": "2",
+      "content": [
+        {
+          "type": "text",
+          "text": "throw the sandbags",
+          "size": "small"
+        },
+        {
+          "type": "audio",
+          "src": "media/audio_2_1.wav",
+          "text": "throw the sandbags"
+        }
+      ],
+      "time": {
+        "type": "content-controlled"
+      },
+      "statusText": "听录音"
+    },
+    {
+      "id": "3",
+      "content": [
+        {
+          "type": "text",
+          "text": "throw the sandbags",
+          "size": "small"
+        }
+      ],
+      "time": {
+        "type": "record",
+        "duration": 5,
+        "recordIndex": 1
+      },
+      "statusText": "录音中"
+    },
+    {
+      "id": "4",
+      "content": [
+        {
+          "type": "text",
+          "text": "tie my shoelaces",
+          "size": "small"
+        },
+        {
+          "type": "audio",
+          "src": "media/audio_4_1.wav",
+          "text": "tie my shoelaces"
+        }
+      ],
+      "time": {
+        "type": "content-controlled"
+      },
+      "statusText": "听录音"
+    },
+    {
+      "id": "5",
+      "content": [
+        {
+          "type": "text",
+          "text": "tie my shoelaces",
+          "size": "small"
+        }
+      ],
+      "time": {
+        "type": "record",
+        "duration": 5,
+        "recordIndex": 2
+      },
+      "statusText": "录音中"
+    },
+    {
+      "id": "6",
+      "content": [
+        {
+          "type": "text",
+          "text": "wear a smile",
+          "size": "small"
+        },
+        {
+          "type": "audio",
+          "src": "media/audio_6_1.wav",
+          "text": "wear a smile"
+        }
+      ],
+      "time": {
+        "type": "content-controlled"
+      },
+      "statusText": "听录音"
+    },
+    {
+      "id": "7",
+      "content": [
+        {
+          "type": "text",
+          "text": "wear a smile",
+          "size": "small"
+        }
+      ],
+      "time": {
+        "type": "record",
+        "duration": 5,
+        "recordIndex": 3
+      },
+      "statusText": "录音中"
+    },
+    {
+      "id": "8",
+      "content": [
+        {
+          "type": "text",
+          "text": "Section B",
+          "size": "large",
+          "bold": true
+        },
+        {
+          "type": "text",
+          "text": "测试版暂时忽略directions",
+          "size": "small"
+        }
+      ],
+      "time": {
+        "type": "countdown",
+        "seconds": 5
+      },
+      "statusText": "听指令"
+    },
+    {
+      "id": "9",
+      "content": [
+        {
+          "type": "text",
+          "text": "Beat around the bush.",
+          "size": "small"
+        },
+        {
+          "type": "audio",
+          "text": "Beat around the bush.",
+          "src": "media/audio_9_1.wav"
+        }
+      ],
+      "time": {
+        "type": "content-controlled"
+      },
+      "statusText": "听录音"
+    },
+    {
+      "id": "10",
+      "content": [
+        {
+          "type": "text",
+          "text": "Beat around the bush.",
+          "size": "small"
+        }
+      ],
+      "time": {
+        "type": "record",
+        "duration": 5,
+        "recordIndex": 4
+      },
+      "statusText": "录音中"
+    },
+    {
+      "id": "11",
+      "content": [
+        {
+          "type": "text",
+          "text": "Bite the hand that feeds you.",
+          "size": "small"
+        },
+        {
+          "type": "audio",
+          "text": "Bite the hand that feeds you.",
+          "src": "media/audio_11_1.wav"
+        }
+      ],
+      "time": {
+        "type": "content-controlled"
+      },
+      "statusText": "听录音"
+    },
+    {
+      "id": "12",
+      "content": [
+        {
+          "type": "text",
+          "text": "Bite the hand that feeds you.",
+          "size": "small"
+        }
+      ],
+      "time": {
+        "type": "record",
+        "duration": 5,
+        "recordIndex": 5
+      },
+      "statusText": "录音中"
+    },
+    {
+      "id": "13",
+      "content": [
+        {
+          "type": "text",
+          "text": "Section C",
+          "size": "large",
+          "bold": true
+        },
+        {
+          "type": "text",
+          "text": "测试版暂时忽略directions",
+          "size": "small"
+        }
+      ],
+      "time": {
+        "type": "countdown",
+        "seconds": 5
+      },
+      "statusText": "听指令"
+    },
+    {
+      "id": "14",
+      "content": [
+        {
+          "type": "text",
+          "text": "1. Excuse me?",
+          "size": "large"
+        },
+        {
+          "type": "audio",
+          "src": "media/audio_14_1.wav",
+          "text": "Excuse me?"
+        }
+      ],
+      "time": {
+        "type": "content-controlled"
+      },
+      "statusText": "听语音"
+    },
+    {
+      "id": "15",
+      "content": [
+        {
+          "type": "text",
+          "text": "1. Excuse me?",
+          "size": "large"
+        }
+      ],
+      "time": {
+        "type": "record",
+        "duration": 5,
+        "recordIndex": 6
+      },
+      "statusText": "录音中"
+    },
+    {
+      "id": "16",
+      "content": [
+        {
+          "type": "text",
+          "text": "2. Congratulations!",
+          "size": "large"
+        },
+        {
+          "type": "audio",
+          "src": "media/audio_16_1.wav",
+          "text": "Congratulations!"
+        }
+      ],
+      "time": {
+        "type": "content-controlled"
+      },
+      "statusText": "听语音"
+    },
+    {
+      "id": "17",
+      "content": [
+        {
+          "type": "text",
+          "text": "2. Congratulations!",
+          "size": "large"
+        }
+      ],
+      "time": {
+        "type": "record",
+        "duration": 5,
+        "recordIndex": 7
+      },
+      "statusText": "录音中"
+    },
+    {
+      "id": "18",
+      "content": [
+        {
+          "type": "text",
+          "text": "3. Pardon me?",
+          "size": "large"
+        },
+        {
+          "type": "audio",
+          "src": "media/audio_18_1.wav",
+          "text": "Pardon me?"
+        }
+      ],
+      "time": {
+        "type": "content-controlled"
+      },
+      "statusText": "听语音"
+    },
+    {
+      "id": "19",
+      "content": [
+        {
+          "type": "text",
+          "text": "3. Pardon me?",
+          "size": "large"
+        }
+      ],
+      "time": {
+        "type": "record",
+        "duration": 5,
+        "recordIndex": 8
+      },
+      "statusText": "录音中"
+    },
+    {
+      "id": "20",
+      "content": [
+        {
+          "type": "text",
+          "text": "4. I cannot find my purse.",
+          "size": "large"
+        },
+        {
+          "type": "audio",
+          "src": "media/audio_20_1.wav",
+          "text": "I cannot find my purse."
+        }
+      ],
+      "time": {
+        "type": "content-controlled"
+      },
+      "statusText": "听语音"
+    },
+    {
+      "id": "21",
+      "content": [
+        {
+          "type": "text",
+          "text": "4. I cannot find my purse.",
+          "size": "large"
+        }
+      ],
+      "time": {
+        "type": "record",
+        "duration": 5,
+        "recordIndex": 9
+      },
+      "statusText": "录音中"
+    },
+    {
+      "id": "22",
+      "content": [
+        {
+          "type": "text",
+          "text": "5. I never trust him.",
+          "size": "large"
+        },
+        {
+          "type": "audio",
+          "src": "media/audio_22_1.wav",
+          "text": "I never trust him."
+        }
+      ],
+      "time": {
+        "type": "content-controlled"
+      },
+      "statusText": "听语音"
+    },
+    {
+      "id": "23",
+      "content": [
+        {
+          "type": "text",
+          "text": "5. I never trust him.",
+          "size": "large"
+        }
+      ],
+      "time": {
+        "type": "record",
+        "duration": 5,
+        "recordIndex": 10
+      },
+      "statusText": "录音中"
+    }
+  ]
+}

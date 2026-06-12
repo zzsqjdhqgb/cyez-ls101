@@ -1,0 +1,12 @@
+{
+  "examData": {
+    "title": "[仅供测试] 批改模块"
+  },
+  "editableData": [],
+  "chunks": [
+    { "chunkid": "01", "file": "chunk/01_part1_reading.json" },
+    { "chunkid": "02", "file": "chunk/02_part2_picture.json" },
+    { "chunkid": "03", "file": "chunk/03_part3_freetalk.json" }
+  ],
+  "dev": true
+}

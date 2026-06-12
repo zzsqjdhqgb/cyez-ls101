@@ -1,0 +1,61 @@
+{
+  "examData": {
+    "questions": [
+      {
+        "id": "1",
+        "content": [
+          { "type": "text", "text": "Speaking. Section A", "size": "large", "bold": true },
+          { "type": "text", "text": "Directions: Read aloud the following sentences. For each sentence, you will have thirty seconds to prepare and fifteen seconds to read.", "size": "small" },
+          { "type": "audio", "src": "media/sectionA_dir.mp3", "text": "Speaking. Section A. Directions: Read aloud the following sentences. For each sentence, you will have thirty seconds to prepare and fifteen seconds to read." }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听指令"
+      },
+      {
+        "id": "2",
+        "content": [
+          { "type": "text", "text": "{{sentence_1}}", "size": "small" }
+        ],
+        "time": { "type": "countdown", "seconds": 30 },
+        "statusText": "答题准备"
+      },
+      {
+        "id": "3",
+        "content": [
+          { "type": "text", "text": "{{sentence_1}}", "size": "small" }
+        ],
+        "time": { "type": "record", "duration": 15, "recordIndex": 1 },
+        "statusText": "录音中"
+      },
+      {
+        "id": "4",
+        "content": [
+          { "type": "text", "text": "{{sentence_2}}", "size": "small" }
+        ],
+        "time": { "type": "countdown", "seconds": 30 },
+        "statusText": "答题准备"
+      },
+      {
+        "id": "5",
+        "content": [
+          { "type": "text", "text": "{{sentence_2}}", "size": "small" }
+        ],
+        "time": { "type": "record", "duration": 15, "recordIndex": 2 },
+        "statusText": "录音中"
+      }
+    ],
+    "gradingInfo": [
+      {
+        "id": 0,
+        "scoreOptions": [0, 0.5, 1],
+        "recordIndices": [1, 2],
+        "problemInfo": "# Speaking\n\n## Section A\n\n**Directions**: Read aloud the following sentences. For each sentence, you will have thirty seconds to prepare and fifteen seconds to read.\n\n1. {{sentence_1}}\n2. {{sentence_2}}\n\n",
+        "gradingInfo": "**考试要求**： 2句，每句30秒准备，15秒朗读\n\n**评分标准**：\n\n-   1分（共2题，共1分）\n    -   能流利朗读所给句子\n    -   发音清楚，语音语调节奏正确\n    -   能正确处理句子重音、意群停顿\n    -   并熟练掌握连读、失爆等朗读技巧\n    -   在整句朗读流利且重音、停顿合理的情况下，如有个别单词读错不扣分\n-   0.5分\n    -   能基本读出所给句子，语音语调有错误，但不影响理解\n    -   第1句读错2-3个单词\n    -   第2句读错2-5个单词\n-   0分\n    -   不能朗读或朗读时错误严重，以致所读内容无法理解"
+      }
+    ]
+  },
+  "editableData": [
+    { "type": "text", "id": "sentence_1", "description": "第一句朗读句子" },
+    { "type": "text", "id": "sentence_2", "description": "第二句朗读句子" }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "examData": {
+    "questions": [
+      {
+        "id": "8",
+        "content": [
+          { "type": "text", "text": "Section 2", "size": "large", "bold": true },
+          { "type": "text", "text": "Read the following sentences.You will have ten seconds to prepare and ten seconds to read.(朗读下列句子。你将有 10 秒的准备时间和 10 秒的朗读时间。)", "size": "small" },
+          { "type": "audio", "src": "media/section1_2_dir.mp3", "text": "Section Two. Read the following sentences.You will have ten seconds to prepare and ten seconds to read." }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听指令"
+      },
+      {
+        "id": "9",
+        "content": [
+          { "type": "text", "text": "{{sentence_1}}", "size": "small" }
+        ],
+        "time": { "type": "countdown", "seconds": 10 },
+        "statusText": "答题准备"
+      },
+      {
+        "id": "10",
+        "content": [
+          { "type": "text", "text": "{{sentence_1}}", "size": "small" }
+        ],
+        "time": { "type": "record", "duration": 10, "recordIndex": 4 },
+        "statusText": "录音中"
+      },
+      {
+        "id": "11",
+        "content": [
+          { "type": "text", "text": "{{sentence_2}}", "size": "small" }
+        ],
+        "time": { "type": "countdown", "seconds": 10 },
+        "statusText": "答题准备"
+      },
+      {
+        "id": "12",
+        "content": [
+          { "type": "text", "text": "{{sentence_2}}", "size": "small" }
+        ],
+        "time": { "type": "record", "duration": 10, "recordIndex": 5 },
+        "statusText": "录音中"
+      }
+    ],
+    "gradingInfo": [
+      {
+        "id": 1,
+        "scoreOptions": [0, 0.5, 1],
+        "recordIndices": [4, 5],
+        "problemInfo": "## Section 2: Read Aloud\n\nRead the following sentences.You will have ten seconds to prepare and ten seconds to read.\n\n1. {{sentence_1}}\n2. {{sentence_2}}\n\n",
+        "gradingInfo": "核心评分点: 发音(30%)、语调(30%)、流畅度(40%)"
+      }
+    ]
+  },
+  "editableData": [
+    { "type": "text", "id": "sentence_1", "description": "第一句朗读句子" },
+    { "type": "text", "id": "sentence_2", "description": "第二句朗读句子" }
+  ]
+}

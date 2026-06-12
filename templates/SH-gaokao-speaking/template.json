@@ -1,0 +1,14 @@
+{
+  "examData": {
+    "title": "上海高考英语听说模板"
+  },
+  "editableData": [],
+  "chunks": [
+    { "chunkid": "01", "file": "chunk/01_sectionA_reading.json" },
+    { "chunkid": "02", "file": "chunk/02_sectionB_passage.json" },
+    { "chunkid": "03", "file": "chunk/03_sectionC_situation.json" },
+    { "chunkid": "04", "file": "chunk/04_sectionD_picture.json" },
+    { "chunkid": "05", "file": "chunk/05_LS_sectionA_quickresponse.json" },
+    { "chunkid": "06", "file": "chunk/06_LS_sectionB_passage.json" }
+  ]
+}

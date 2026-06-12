@@ -1,0 +1,42 @@
+{
+  "examData": {
+    "title": "[仅供测试] 朗读句子",
+    "questions": [
+      {
+        "id": "1",
+        "content": [
+          { "type": "text", "text": "请朗读以下句子", "size": "large", "bold": true },
+          { "type": "text", "text": "{{sentence_1}}", "size": "small" }
+        ],
+        "time": { "type": "countdown", "seconds": 3 },
+        "statusText": "准备中"
+      },
+      {
+        "id": "2",
+        "content": [{ "type": "text", "text": "{{sentence_1}}", "size": "small" }],
+        "time": { "type": "record", "duration": 5, "recordIndex": 2 },
+        "statusText": "录音中"
+      },
+      {
+        "id": "3",
+        "content": [
+          { "type": "text", "text": "请朗读第二句", "size": "large", "bold": true },
+          { "type": "text", "text": "{{sentence_2}}", "size": "small" }
+        ],
+        "time": { "type": "countdown", "seconds": 3 },
+        "statusText": "准备中"
+      },
+      {
+        "id": "4",
+        "content": [{ "type": "text", "text": "{{sentence_2}}", "size": "small" }],
+        "time": { "type": "record", "duration": 5, "recordIndex": 4 },
+        "statusText": "录音中"
+      }
+    ]
+  },
+  "editableData": [
+    { "type": "text", "id": "sentence_1", "description": "第一句话" },
+    { "type": "text", "id": "sentence_2", "description": "第二句话" }
+  ],
+  "dev": true
+}

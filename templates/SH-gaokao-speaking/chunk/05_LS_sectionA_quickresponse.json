@@ -1,0 +1,124 @@
+{
+  "examData": {
+    "questions": [
+      {
+        "id": "17",
+        "content": [
+          { "type": "text", "text": "Listening & Speaking. Section A", "size": "large", "bold": true },
+          { "type": "text", "text": "Directions: In Section A, you will hear four sentences. Make quick responses to the sentences you have heard.", "size": "small" },
+          { "type": "audio", "src": "media/LS_sectionA_dir.mp3", "text": "Listening and Speaking. Section A. In Section A, you will hear four sentences. Make quick responses to the sentences you have heard." }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听指令"
+      },
+      {
+        "id": "18",
+        "content": [
+          { "type": "text", "text": "Please Listen:", "size": "large", "bold": true },
+          { "type": "audio", "src": "media/quickresp_1.mp3", "text": "1. {{quickresp_1}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "19",
+        "content": [
+          { "type": "text", "text": "Please Answer:", "size": "small" }
+        ],
+        "time": { "type": "record", "duration": 5, "recordIndex": 7 },
+        "statusText": "录音中"
+      },
+      {
+        "id": "20",
+        "content": [
+          { "type": "text", "text": "Please Listen:", "size": "large", "bold": true },
+          { "type": "audio", "src": "media/quickresp_2.mp3", "text": "2. {{quickresp_2}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "21",
+        "content": [
+          { "type": "text", "text": "Please Answer:", "size": "small" }
+        ],
+        "time": { "type": "record", "duration": 5, "recordIndex": 8 },
+        "statusText": "录音中"
+      },
+      {
+        "id": "22",
+        "content": [
+          { "type": "text", "text": "Please Listen:", "size": "large", "bold": true },
+          { "type": "audio", "src": "media/quickresp_3.mp3", "text": "3. {{quickresp_3}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "23",
+        "content": [
+          { "type": "text", "text": "Please Answer:", "size": "small" }
+        ],
+        "time": { "type": "record", "duration": 5, "recordIndex": 9 },
+        "statusText": "录音中"
+      },
+      {
+        "id": "24",
+        "content": [
+          { "type": "text", "text": "Please Listen:", "size": "large", "bold": true },
+          { "type": "audio", "src": "media/quickresp_4.mp3", "text": "4. {{quickresp_4}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "25",
+        "content": [
+          { "type": "text", "text": "Please Answer:", "size": "small" }
+        ],
+        "time": { "type": "record", "duration": 5, "recordIndex": 10 },
+        "statusText": "录音中"
+      }
+    ],
+    "gradingInfo": [
+      {
+        "id": 5,
+        "scoreOptions": [0, 0.25, 0.5],
+        "recordIndices": [7],
+        "problemInfo": "# Speaking\n\n## Section A\n\n**Directions**: In Section A, you will hear four sentences. Make quick responses to the sentences you have heard.\n\n1. {{quickresp_1}}",
+        "gradingInfo": "**考试要求**：共4句，每句5秒回答。\n\n**评分标准**：\n\n  - 0.5分（共4题，共2分）\n      - 能作出准确合理的应答\n      - 语音正确\n      - 语言结构和用词符合交际要求\n  - 0.25分\n      - 应答较为准确合理\n      - 语音基本正确\n      - 有个别语言结构或用词错误\n  - 0分\n      - 没有答题或应答不准确合理，不符合交际要求\n\n**注意事项**：\n\n1.  须准备不同的功能话题；\n2.  快速判断所给题目是一般疑问句/特殊疑问句/陈述句/祈使句，听到考题时注意疑问词和时态。\n\n---\n\n**参考答案**\n\n{{quickresp_std_1}}"
+      },
+      {
+        "id": 6,
+        "scoreOptions": [0, 0.25, 0.5],
+        "recordIndices": [8],
+        "problemInfo": "# Speaking\n\n## Section A\n\n**Directions**: In Section A, you will hear four sentences. Make quick responses to the sentences you have heard.\n\n2. {{quickresp_2}}",
+        "gradingInfo": "**考试要求**：共4句，每句5秒回答。\n\n**评分标准**：\n\n  - 0.5分（共4题，共2分）\n      - 能作出准确合理的应答\n      - 语音正确\n      - 语言结构和用词符合交际要求\n  - 0.25分\n      - 应答较为准确合理\n      - 语音基本正确\n      - 有个别语言结构或用词错误\n  - 0分\n      - 没有答题或应答不准确合理，不符合交际要求\n\n**注意事项**：\n\n1.  须准备不同的功能话题；\n2.  快速判断所给题目是一般疑问句/特殊疑问句/陈述句/祈使句，听到考题时注意疑问词和时态。\n\n---\n\n**参考答案**\n\n{{quickresp_std_2}}"
+      },
+      {
+        "id": 7,
+        "scoreOptions": [0, 0.25, 0.5],
+        "recordIndices": [9],
+        "problemInfo": "# Speaking\n\n## Section A\n\n**Directions**: In Section A, you will hear four sentences. Make quick responses to the sentences you have heard.\n\n3. {{quickresp_3}}",
+        "gradingInfo": "**考试要求**：共4句，每句5秒回答。\n\n**评分标准**：\n\n  - 0.5分（共4题，共2分）\n      - 能作出准确合理的应答\n      - 语音正确\n      - 语言结构和用词符合交际要求\n  - 0.25分\n      - 应答较为准确合理\n      - 语音基本正确\n      - 有个别语言结构或用词错误\n  - 0分\n      - 没有答题或应答不准确合理，不符合交际要求\n\n**注意事项**：\n\n1.  须准备不同的功能话题；\n2.  快速判断所给题目是一般疑问句/特殊疑问句/陈述句/祈使句，听到考题时注意疑问词和时态。\n\n---\n\n**参考答案**\n\n{{quickresp_std_3}}"
+      },
+      {
+        "id": 8,
+        "scoreOptions": [0, 0.25, 0.5],
+        "recordIndices": [10],
+        "problemInfo": "# Speaking\n\n## Section A\n\n**Directions**: In Section A, you will hear four sentences. Make quick responses to the sentences you have heard.\n\n4. {{quickresp_4}}",
+        "gradingInfo": "**考试要求**：共4句，每句5秒回答。\n\n**评分标准**：\n\n  - 0.5分（共4题，共2分）\n      - 能作出准确合理的应答\n      - 语音正确\n      - 语言结构和用词符合交际要求\n  - 0.25分\n      - 应答较为准确合理\n      - 语音基本正确\n      - 有个别语言结构或用词错误\n  - 0分\n      - 没有答题或应答不准确合理，不符合交际要求\n\n**注意事项**：\n\n1.  须准备不同的功能话题；\n2.  快速判断所给题目是一般疑问句/特殊疑问句/陈述句/祈使句，听到考题时注意疑问词和时态。\n\n---\n\n**参考答案**\n\n{{quickresp_std_4}}"
+      }
+    ]
+  },
+  "editableData": [
+    { "type": "text", "id": "quickresp_1", "description": "快速应答1" },
+    { "type": "text", "id": "quickresp_std_1", "description": "快速应答1 - 参考答案" },
+    { "type": "text", "id": "quickresp_2", "description": "快速应答2" },
+    { "type": "text", "id": "quickresp_std_2", "description": "快速应答2 - 参考答案" },
+    { "type": "text", "id": "quickresp_3", "description": "快速应答3" },
+    { "type": "text", "id": "quickresp_std_3", "description": "快速应答3 - 参考答案" },
+    { "type": "text", "id": "quickresp_4", "description": "快速应答4" },
+    { "type": "text", "id": "quickresp_std_4", "description": "快速应答4 - 参考答案" }
+  ]
+}

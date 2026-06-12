@@ -1,0 +1,45 @@
+{
+  "examData": {
+    "questions": [
+      {
+        "id": "1",
+        "content": [
+          { "type": "text", "text": "Part 1: Reading Aloud", "size": "large", "bold": true },
+          { "type": "text", "text": "Directions: Read the following passage aloud. You will have 30 seconds to prepare and 45 seconds to read.", "size": "small" },
+          { "type": "audio", "src": "media/instructions_part1.mp3", "text": "Part 1. Directions: Read the following passage aloud. You will have 30 seconds to prepare and 45 seconds to read." }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听指令"
+      },
+      {
+        "id": "2",
+        "content": [
+          { "type": "text", "text": "{{passage_text}}", "size": "small" }
+        ],
+        "time": { "type": "countdown", "seconds": 5 },
+        "statusText": "准备中"
+      },
+      {
+        "id": "3",
+        "content": [
+          { "type": "text", "text": "{{passage_text}}", "size": "small" }
+        ],
+        "time": { "type": "record", "duration": 5, "recordIndex": 3 },
+        "statusText": "录音中"
+      }
+    ],
+    "gradingInfo": [
+      {
+        "id": 0,
+        "fullScore": 5,
+        "scoreOptions": [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5],
+        "recordIndices": [3],
+        "problemInfo": "## Reading Aloud\n\nListen to the student's recording of the passage and evaluate based on the criteria below.\n\n**Passage text:**\n\n{{passage_text}}\n\n",
+        "gradingInfo": "### Scoring Rubric\n\n| Score | Description |\n|-------|-------------|\n| 5 | **Excellent** - Clear pronunciation, natural intonation, no errors |\n| 4 | **Good** - Minor pronunciation errors, mostly natural flow |\n| 3 | **Fair** - Some mispronunciations, slightly hesitant |\n| 2 | **Poor** - Frequent errors, unnatural pace |\n| 1 | **Very Poor** - Difficult to understand, many errors |\n\n### Key Points\n\n- Check for correct pronunciation of difficult words\n- Evaluate fluency and natural pauses\n- Check word stress and sentence intonation"
+      }
+    ]
+  },
+  "editableData": [
+    { "type": "text", "id": "passage_text", "description": "朗读短文内容（支持多行）" }
+  ]
+}

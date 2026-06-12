@@ -1,0 +1,36 @@
+#
+# Copyright (c) 2026 Haoting Ying (zzsqjdhqgb). All rights reserved.
+# Proprietary code. Use is subject to the LICENSE file in the repository root.
+#
+
+services:
+  opencode-pnpm-dev:
+    build: .
+    container_name: opencode-pnpm-dev
+    volumes:
+      # 将当前目录（项目根目录）挂载到容器的 /workspace
+      - .:/workspace
+      # 持久化 OpenCode 的配置和缓存，避免重启后需要重新登录
+      - opencode-data-plain:/root/.local
+      - opencode-config-plain:/root/.config/opencode
+      - yarn:/workspace/.yarn
+      - yarn-cache:/yarn/store
+      - node_modules:/workspace/node_modules
+      - ./.git:/workspace/.git:ro
+      - assets:/workspace/assets
+      - ./assets/.gitkeep:/workspace/assets/.gitkeep
+      - /workspace/dist
+      - /workspace/out
+    working_dir: /workspace
+    # 保持容器运行并支持交互式终端
+    stdin_open: true
+    tty: true
+    # 自动重启（可选）
+
+volumes:
+  opencode-data-plain:
+  opencode-config-plain:
+  yarn:
+  yarn-cache:
+  node_modules:
+  assets:

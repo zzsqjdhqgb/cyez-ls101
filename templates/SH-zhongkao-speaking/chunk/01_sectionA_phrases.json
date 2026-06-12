@@ -1,0 +1,78 @@
+{
+  "examData": {
+    "questions": [
+      {
+        "id": "1",
+        "content": [
+          { "type": "text", "text": "I: Read Aloud. Section 1.", "size": "large", "bold": true },
+          { "type": "text", "text": "Read the following phrases. You will have ten seconds to prepare and fifteen seconds to read.(朗读下列词组。你将有 10 秒的准备时间和 15 秒的朗读时间。)", "size": "small" },
+          { "type": "audio", "src": "media/section1_1_dir.mp3", "text": "Part One: Read Aloud. Section One. Read the following phrases.You will have ten seconds to prepare and fifteen seconds to read." }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听指令"
+      },
+      {
+        "id": "2",
+        "content": [
+          { "type": "text", "text": "{{phrase_1_display}}", "size": "small" }
+        ],
+        "time": { "type": "countdown", "seconds": 10 },
+        "statusText": "答题准备"
+      },
+      {
+        "id": "3",
+        "content": [
+          { "type": "text", "text": "{{phrase_1}}", "size": "small" }
+        ],
+        "time": { "type": "record", "duration": 15, "recordIndex": 1 },
+        "statusText": "录音中"
+      },
+      {
+        "id": "4",
+        "content": [
+          { "type": "text", "text": "{{phrase_2}}", "size": "small" }
+        ],
+        "time": { "type": "countdown", "seconds": 10 },
+        "statusText": "答题准备"
+      },
+      {
+        "id": "5",
+        "content": [
+          { "type": "text", "text": "{{phrase_2}}", "size": "small" }
+        ],
+        "time": { "type": "record", "duration": 15, "recordIndex": 2 },
+        "statusText": "录音中"
+      },
+      {
+        "id": "6",
+        "content": [
+          { "type": "text", "text": "{{phrase_3}}", "size": "small" }
+        ],
+        "time": { "type": "countdown", "seconds": 10 },
+        "statusText": "答题准备"
+      },
+      {
+        "id": "7",
+        "content": [
+          { "type": "text", "text": "{{phrase_3}}", "size": "small" }
+        ],
+        "time": { "type": "record", "duration": 15, "recordIndex": 3 },
+        "statusText": "录音中"
+      }
+    ],
+    "gradingInfo": [
+      {
+        "id": 0,
+        "scoreOptions": [0, 0.5, 1, 1.5],
+        "recordIndices": [1, 2, 3],
+        "problemInfo": "## I: Read Aloud\n\n**Section 1**: Read the following phrases. You will have ten seconds to prepare and fifteen seconds to read.\n\n1. {{phrase_1}}\n2. {{phrase_2}}\n3. {{phrase_3}}\n\n",
+        "gradingInfo": "核心评分点: 发音(30%)、语调(30%)、流畅度(40%)"
+      }
+    ]
+  },
+  "editableData": [
+    { "type": "text", "id": "phrase_1", "description": "第一个朗读词组" },
+    { "type": "text", "id": "phrase_2", "description": "第二个朗读词组" },
+    { "type": "text", "id": "phrase_3", "description": "第三个朗读词组" }
+  ]
+}

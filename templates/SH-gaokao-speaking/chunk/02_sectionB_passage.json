@@ -1,0 +1,44 @@
+{
+  "examData": {
+    "questions": [
+      {
+        "id": "6",
+        "content": [
+          { "type": "text", "text": "Section B", "size": "large", "bold": true },
+          { "type": "text", "text": "Directions: Read aloud the following passage. You will have one minute to prepare and thirty seconds to read.", "size": "small" },
+          { "type": "audio", "src": "media/sectionB_dir.mp3", "text": "Section B. Directions: Read aloud the following passage. You will have one minute to prepare and thirty seconds to read." }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听指令"
+      },
+      {
+        "id": "7",
+        "content": [
+          { "type": "text", "text": "{{passage_1}}", "size": "small" }
+        ],
+        "time": { "type": "countdown", "seconds": 60 },
+        "statusText": "答题准备"
+      },
+      {
+        "id": "8",
+        "content": [
+          { "type": "text", "text": "{{passage_1}}", "size": "small" }
+        ],
+        "time": { "type": "record", "duration": 30, "recordIndex": 3 },
+        "statusText": "录音中"
+      }
+    ],
+    "gradingInfo": [
+      {
+        "id": 1,
+        "scoreOptions": [0, 0.25, 0.5, 0.75, 1],
+        "recordIndices": [3],
+        "problemInfo": "# Speaking\n\n## Section B\n\n**Directions**: Read aloud the following passage. You will have one minute to prepare and thirty seconds to read.\n\n{{passage_1}}\n\n",
+        "gradingInfo": "**考试要求**： 1段，1分钟准备，30秒朗读\n\n**评分标准**：\n\n-   2分（共1题，共折合为1分）\n    -   能流利朗读所给的段落\n    -   发音清楚，语音语调节奏正确\n    -   能正确处理句子重音、意群停顿\n    -   语气转换，并熟练掌握连读、失爆等朗读技巧\n    -   在整句朗读流利且重音、停顿合理的情况下，如有个别单词读错不扣分\n-   1.5分\n    -   能基本流利朗读所给的段落\n    -   发音清楚，语音语调节奏基本正确\n    -   能基本正确处理句子重音、意群停顿\n    -   语气转换，并掌握连读、失爆等朗读技巧\n    -   有2-4个单词读错\n-   1分\n    -   能以正常语速朗读所给的段落\n    -   语音语调有错误，但不影响理解\n    -   有3-5个单词读错\n-   0.5分\n    -   能基本读出所给的段落\n    -   语音语调有错误，但不影响理解\n    -   有6-10个单词读错\n-   0分\n    -   不能朗读或朗读时错误严重，以致所读内容无法理解\n\n**注意事项**：\n1.  评分不以读完短文为标准，按照正常的语速朗读，注意力放在语音语调方面\n2.  务必注意意群停顿，不熟悉的单词也尽量按语感读出\n3.  准备时间里可以轻读调整，开始录音时用最合适的语音语调读出"
+      }
+    ]
+  },
+  "editableData": [
+    { "type": "text", "id": "passage_1", "description": "朗读短文内容" }
+  ]
+}

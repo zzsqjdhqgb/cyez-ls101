@@ -1,0 +1,51 @@
+{
+  "examData": {
+    "questions": [
+      {
+        "id": "14",
+        "content": [
+          { "type": "text", "text": "Section D", "size": "large", "bold": true },
+          {"type": "text", "text": "Directions: You will have one minute to prepare and another minute to talk about the following pictures with at least five sentences. Begin your talk with the sentence given.", "size": "small" },
+          { "type": "audio", "src": "media/sectionD_dir.mp3", "text": "Section D. Directions: You will have one minute to prepare and another minute to talk about the following pictures with at least five sentences. Begin your talk with the sentence given." }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "播放指令"
+      },
+      {
+        "id": "15",
+        "content": [
+          { "type": "text", "text": "Begin your talk with the sentence given: {{picture_start}}", "size": "large", "bold": true },
+          { "type": "quad-image", "images": ["media/picture1.png", "media/picture2.png", "media/picture3.png", "media/picture4.png"], "width": "80%" }
+        ],
+        "time": { "type": "countdown", "seconds": 60 },
+        "statusText": "准备中"
+      },
+      {
+        "id": "16",
+        "content": [
+          { "type": "text", "text": "Begin your talk with the sentence given: {{picture_start}}", "size": "large", "bold": true },
+          { "type": "quad-image", "images": ["media/picture1.png", "media/picture2.png", "media/picture3.png", "media/picture4.png"], "width": "80%" }
+        ],
+        "time": { "type": "record", "duration": 60, "recordIndex": 6 },
+        "statusText": "录音中"
+      }
+    ],
+    "gradingInfo": [
+      {
+        "id": 4,
+        "scoreOptions": [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5],
+        "recordIndices": [6],
+        "problemInfo": "# Speaking\n\n## Section D\n\n**Directions**: You will have one minute to prepare and another minute to talk about the following pictures with at least five sentences. Begin your talk with the sentence given.\n\n**{{picture_start}}**\n\n| 1![](media/picture1.png) | 2![](media/picture2.png) |\n| ------ | ------ |\n| 3![](media/picture3.png) | 4![](media/picture4.png) |",
+        "gradingInfo": "**考试要求**： 1分钟准备，1分钟回答。时间分配：5s→10s×4→15s\n\n**评分标准**：\n\n-   3分（共1题，共折合为1.5分）\n    -   能有条理地、完整地叙述一个主题，内容与图片相符\n    -   表达清楚，叙述连贯流畅\n    -   语言结构和用词符合交际要求\n    -   语音正确\n\n-   2.5分\n    -   能有条理地、完整地叙述一个主题，内容与图片相符\n    -   表达基本清楚，叙述基本连贯流畅，但有较少的表达错误\n    -   语言结构和用词基本符合交际要求\n    -   语音正确\n\n-   2分\n    -   能连贯地叙述一个主题，内容基本与图片相符\n    -   语言结构与用词有错误，但不影响整段意义的表达与理解\n    -   语音基本正确\n\n-   1.5分\n    -   能较连贯地叙述一个主题，内容基本与图片相符\n    -   语言结构与用词有错误，但基本不影响整段意义的表达与理解\n    -   语音基本正确\n\n-   1分\n    -   能讲述几句，但主题不清楚，内容不连贯\n    -   与图片关系不大，叙述中大多数语言结构混乱，用词不正确\n    -   语音错误严重，使人理解困难\n\n-   0.5分\n    -   只能讲述1句\n\n-   0分\n    -   没有答题或答题内容与图片内容无关   \n\n\n**注意事项**：\n\n1.  利用好所给的句子，纵观所有图片，形成一个总体框架，然后按顺序讲述\n2.  看清图片中的人物和背景，读懂图片，明确图片立意和内涵主题\n3.  描述过程中的时态和人称以 Guided sentence 提供的时态为主\n\n---\n\n**参考答案**\n\n{{picture_std}}"
+      }
+    ]
+  },
+  "editableData": [
+    { "type": "file", "id": "picture_file1", "description": "看图说话图片-1", "fileName": "media/picture1.png" },
+    { "type": "file", "id": "picture_file2", "description": "看图说话图片-2", "fileName": "media/picture2.png" },
+    { "type": "file", "id": "picture_file3", "description": "看图说话图片-3", "fileName": "media/picture3.png" },
+    { "type": "file", "id": "picture_file4", "description": "看图说话图片-4", "fileName": "media/picture4.png" },
+    { "type": "text", "id": "picture_start", "description": "看图说话开头句" },
+    { "type": "text", "id": "picture_std", "description": "看图说话参考答案" }
+  ]
+}

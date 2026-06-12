@@ -1,0 +1,39 @@
+{
+  "examData": {
+    "questions": [
+      {
+        "id": "4",
+        "content": [
+          { "type": "text", "text": "Part 2: Picture Description", "size": "large", "bold": true },
+          { "type": "text", "text": "Directions: Describe the picture in at least 5 sentences. You will have 60 seconds to prepare and 60 seconds to speak. Begin with: {{picture_start}}", "size": "small" },
+          { "type": "image", "src": "media/sample_picture.png", "width": "60%" }
+        ],
+        "time": { "type": "countdown", "seconds": 5 },
+        "statusText": "准备中"
+      },
+      {
+        "id": "5",
+        "content": [
+          { "type": "text", "text": "Begin with: {{picture_start}}", "size": "large", "bold": true },
+          { "type": "image", "src": "media/sample_picture.png", "width": "60%" }
+        ],
+        "time": { "type": "record", "duration": 5, "recordIndex": 5 },
+        "statusText": "录音中"
+      }
+    ],
+    "gradingInfo": [
+      {
+        "id": 1,
+        "fullScore": 10,
+        "scoreOptions": [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10],
+        "recordIndices": [5],
+        "problemInfo": "## Picture Description\n\nListen to the student's description of the picture.\n\n**Starting sentence:** {{picture_start}}\n\n![Reference Image](media/sample_picture.png)\n\nEvaluate whether the student:\n- Used the given starting sentence correctly\n- Described the picture with at least 5 sentences\n- Used appropriate vocabulary",
+        "gradingInfo": "### Scoring Rubric\n\n| Score | Description |\n|-------|-------------|\n| 10 | **Outstanding** - Rich vocabulary, well-organized, 5+ sentences, accurate description |\n| 8 | **Good** - Adequate vocabulary, mostly organized, 5 sentences |\n| 6 | **Average** - Basic description, some organization, 4-5 sentences |\n| 4 | **Below Average** - Limited vocabulary, poor organization, \\u003c4 sentences |\n| 2 | **Poor** - Very brief, difficult to follow |\n\n### Key Points\n\n- Check if the student used the starting sentence\n- Count the number of meaningful sentences\n- Evaluate the accuracy of the description"
+      }
+    ]
+  },
+  "editableData": [
+    { "type": "file", "id": "picture_file", "description": "看图说话图片", "fileName": "media/sample_picture.png" },
+    { "type": "text", "id": "picture_start", "description": "看图说话开头句" }
+  ]
+}

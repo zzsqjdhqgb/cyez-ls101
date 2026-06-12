@@ -1,0 +1,67 @@
+{
+  "examData": {
+    "title": "[仅供测试] 语音合成模块",
+    "questions": [
+      {
+        "id": "1",
+        "content": [
+          {
+            "type": "text",
+            "text": "{{instruction_text}}",
+            "size": "large",
+            "bold": true
+          },
+          {
+            "type": "audio",
+            "src": "media/instruction_audio.wav",
+            "text": "{{instruction_text}}"
+          },
+          {
+            "type": "image",
+            "src": "media/test_image.png",
+            "width": "80%"
+          }
+        ],
+        "time": {
+          "type": "content-controlled"
+        },
+        "statusText": "准备中"
+      },
+      {
+        "id": "2",
+        "content": [
+          {
+            "type": "text",
+            "text": "{{response_prompt}}",
+            "size": "small"
+          }
+        ],
+        "time": {
+          "type": "record",
+          "duration": 10,
+          "recordIndex": 2
+        },
+        "statusText": "录音中"
+      }
+    ]
+  },
+  "editableData": [
+    {
+      "type": "text",
+      "id": "instruction_text",
+      "description": "开场指导语"
+    },
+    {
+      "type": "text",
+      "id": "response_prompt",
+      "description": "答题提示文字"
+    },
+    {
+      "type": "file",
+      "id": "test_image",
+      "description": "选择一张图片",
+      "fileName": "media/test_image.png"
+    }
+  ],
+  "dev": true
+}

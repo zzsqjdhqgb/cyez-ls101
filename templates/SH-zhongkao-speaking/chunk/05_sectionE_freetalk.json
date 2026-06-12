@@ -1,0 +1,44 @@
+{
+  "examData": {
+    "questions": [
+      {
+        "id": "29",
+        "content": [
+          { "type": "text", "text": "IV.Free talk", "size": "large", "bold": true },
+          { "type": "text", "text": "Directions: Say at least five sentences according to the following mind map.You will have fifty seconds to prepare and fifty seconds to talk.(根据下列思维导图说至少 5 句话。你将有 50 秒的准备时间和 50 秒的表达时间)", "size": "small" },
+          { "type": "audio", "src": "media/section4_dir.mp3", "text": "Part Four: Free talk. Directions: Say at least five sentences according to the following mind map.You will have fifty seconds to prepare and fifty seconds to talk." }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听指令"
+      },
+      {
+        "id": "30",
+        "content": [
+          { "type": "image", "src": "media/4_picture.png", "width": "80%" }
+        ],
+        "time": { "type": "countdown", "seconds": 50 },
+        "statusText": "答题准备"
+      },
+      {
+        "id": "31",
+        "content": [
+          { "type": "image", "src": "media/4_picture.png", "width": "80%" }
+        ],
+        "time": { "type": "record", "duration": 50, "recordIndex": 12 },
+        "statusText": "录音中"
+      }
+    ],
+    "gradingInfo": [
+      {
+        "id": 4,
+        "scoreOptions": [0, 0.5, 1, 1.5, 2, 2.5],
+        "recordIndices": [12],
+        "problemInfo": "## IV. Free talk\n\nDirections: Say at least five sentences according to the following mind map.You will have fifty seconds to prepare and fifty seconds to talk.\n\n{{free_talk_mind_map}}\n\n",
+        "gradingInfo": "- 核心评分点:结构完整性(30%)、内容充实度(30%)、语言多样性(40%)\n\n- 考查重点:围绕指定话题(如“我的爱好”“环保”“科技”“校园生活”)，在1.5分钟内完成“开头点题+中间论述+结尾总结”，避免内容空洞、句型单一。"
+      }
+    ]
+  },
+  "editableData": [    
+    { "type": "file", "id": "free_talk_mind_map", "fileName": "media/4_picture.png", "description": "自由表达 - 思维导图" }
+  ]
+}

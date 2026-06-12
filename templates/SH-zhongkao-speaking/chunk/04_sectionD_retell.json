@@ -1,0 +1,64 @@
+{
+  "examData": {
+    "questions": [
+      {
+        "id": "24",
+        "content": [
+          { "type": "text", "text": "III.Retell", "size": "large", "bold": true },
+          { "type": "text", "text": "Directions: You will hear a passage about {{3_passage_topic}}. It will be read twice.Retell the passage with the following given points.You will have fifty seconds to prepare and fifty seconds to retell.(你将听到一段文章。文章将读 2 遍。根据下面所给提示复述文章。你将有 50 秒的准备时间和 50 秒的复述时间)", "size": "small" },
+          { "type": "audio", "src": "media/section3_dir.mp3", "text": "Part Three: Retell. You will hear a dialogue about ordering dishes. It will be read twice.Retell the passage with the following given points.You will have fifty seconds to prepare and fifty seconds to retell." }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听指令"
+      },
+      {
+        "id": "25",
+        "content": [          
+          { "type": "image", "src": "media/3_picture.png", "width": "80%" },
+          { "type": "audio", "src": "media/3_passage.mp3", "text": "{{3_passage}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "26",
+        "content": [          
+          { "type": "image", "src": "media/3_picture.png", "width": "80%" },
+          { "type": "audio", "src": "media/3_passage.mp3", "text": "{{3_passage}}" }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听语音"
+      },
+      {
+        "id": "27",
+        "content": [
+          { "type": "image", "src": "media/3_picture.png", "width": "80%" }
+        ],
+        "time": { "type": "countdown", "seconds": 50 },
+        "statusText": "答题准备"
+      },
+      {
+        "id": "28",
+        "content": [
+          { "type": "image", "src": "media/3_picture.png", "width": "80%" }
+        ],
+        "time": { "type": "record", "duration": 50, "recordIndex": 11 },
+        "statusText": "录音中"
+      }
+    ],
+    "gradingInfo": [
+      {
+        "id": 3,
+        "scoreOptions": [0, 0.5, 1, 1.5, 2, 2.5],
+        "recordIndices": [11],
+        "problemInfo": "## III. Retell\n\nDirections: You will hear a passage about {{3_passage_topic}}. It will be read twice.Retell the passage with the following given points.You will have fifty seconds to prepare and fifty seconds to retell.\n\n{{3_passage}}",
+        "gradingInfo": "- 核心评分点:关键信息完整性(40%)、逻辑连贯性(30%)、语法准确性(30%)\n\n- 考查重点:听一段 200词左右的短文(故事、通知、说明文)，抓取“who/what/when/where/why/how”核心信息，用自己的话连贯复述，不遗漏关键细节。"
+      }
+    ]
+  },
+  "editableData": [
+    { "type": "text", "id": "3_passage_topic", "description": "听短文复述 - 短文主题 (you will hear a passage about...)" },
+    { "type": "text", "id": "3_passage", "description": "听短文复述 - 短文" },
+    { "type": "file", "id": "3_passage_instruction", "fileName": "media/3_picture.png", "description": "听短文复述 - 提示图片" }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "examData": {
+    "title": "[仅供测试] 看图说话",
+    "questions": [
+      {
+        "id": "1",
+        "content": [
+          { "type": "text", "text": "主题：{{topic_text}}", "size": "large" },
+          { "type": "image", "src": "media/picture.png", "width": "80%" }
+        ],
+        "time": { "type": "countdown", "seconds": 5 },
+        "statusText": "准备中"
+      },
+      {
+        "id": "2",
+        "content": [{ "type": "text", "text": "请用至少3句话描述图片", "size": "large" }],
+        "time": { "type": "record", "duration": 10, "recordIndex": 2 },
+        "statusText": "录音中"
+      }
+    ]
+  },
+  "editableData": [
+    {
+      "type": "file",
+      "id": "picture_file",
+      "description": "选择图片",
+      "fileName": "media/picture.png"
+    },
+    { "type": "text", "id": "topic_text", "description": "图片主题" }
+  ],
+  "dev": true
+}

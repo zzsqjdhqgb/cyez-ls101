@@ -1,0 +1,45 @@
+{
+  "examData": {
+    "questions": [
+      {
+        "id": "6",
+        "content": [
+          { "type": "text", "text": "Part 3: Free Talk", "size": "large", "bold": true },
+          { "type": "text", "text": "Directions: Talk about the following topic. You will have 60 seconds to prepare and 90 seconds to speak.", "size": "small" },
+          { "type": "audio", "src": "media/instructions_part3.mp3", "text": "Part 3. Directions: Talk about the following topic. You will have 60 seconds to prepare and 90 seconds to speak." }
+        ],
+        "time": { "type": "content-controlled" },
+        "statusText": "听指令"
+      },
+      {
+        "id": "7",
+        "content": [
+          { "type": "text", "text": "Topic: {{free_talk_topic}}", "size": "large", "bold": true }
+        ],
+        "time": { "type": "countdown", "seconds": 5 },
+        "statusText": "准备中"
+      },
+      {
+        "id": "8",
+        "content": [
+          { "type": "text", "text": "Topic: {{free_talk_topic}}", "size": "large", "bold": true }
+        ],
+        "time": { "type": "record", "duration": 5, "recordIndex": 8 },
+        "statusText": "录音中"
+      }
+    ],
+    "gradingInfo": [
+      {
+        "id": 2,
+        "fullScore": 10,
+        "scoreOptions": [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10],
+        "recordIndices": [8],
+        "problemInfo": "## Free Talk\n\nListen to the student's talk about the following topic.\n\n**Topic:** {{free_talk_topic}}\n\nEvaluate based on the speaking ability demonstrated in the recording.",
+        "gradingInfo": "### Scoring Rubric\n\n| Score | Description |\n|-------|-------------|\n| 10 | **Outstanding** - Well-organized, rich content, fluent, excellent vocabulary |\n| 8 | **Good** - Organized, sufficient content, mostly fluent |\n| 6 | **Average** - Basic organization, adequate content, some hesitation |\n| 4 | **Below Average** - Poor organization, limited content, frequent hesitation |\n| 2 | **Poor** - Very brief, lacks coherence |\n\n### Key Points\n\n- Relevance to the topic\n- Organization and coherence\n- Vocabulary range\n- Fluency and pronunciation\n- Use of complex sentences"
+      }
+    ]
+  },
+  "editableData": [
+    { "type": "text", "id": "free_talk_topic", "description": "自由口语话题（支持多行）" }
+  ]
+}
