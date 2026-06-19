@@ -41,7 +41,7 @@ function send(msg: Record<string, unknown>): void {
   parentPort!.postMessage(msg)
 }
 
-const whisperDir = join(cfg.assetsDir, 'stt', 'sherpa-onnx-whisper-small.en')
+const whisperDir = join(cfg.assetsDir, 'stt', 'sherpa-onnx-whisper-medium.en')
 const sileroPath = join(cfg.assetsDir, 'stt', 'silero_vad.onnx')
 
 interface Engine {
@@ -51,14 +51,14 @@ interface Engine {
 let engine: Engine | null = null
 
 function initEngine(): Engine {
-  if (!existsSync(join(whisperDir, 'small.en-encoder.int8.onnx'))) {
+  if (!existsSync(join(whisperDir, 'medium.en-encoder.int8.onnx'))) {
     throw new Error(`Whisper model not found at ${whisperDir}`)
   }
   if (!existsSync(sileroPath)) {
     throw new Error(`Silero VAD model not found at ${sileroPath}`)
   }
 
-  log.info('Initializing OfflineRecognizer (Whisper small.en)...')
+  log.info('Initializing OfflineRecognizer (Whisper medium.en)...')
   const recognizer = new sherpa_onnx.OfflineRecognizer({
     featConfig: {
       sampleRate: 16000,
@@ -66,10 +66,10 @@ function initEngine(): Engine {
     },
     modelConfig: {
       whisper: {
-        encoder: join(whisperDir, 'small.en-encoder.int8.onnx'),
-        decoder: join(whisperDir, 'small.en-decoder.int8.onnx')
+        encoder: join(whisperDir, 'medium.en-encoder.int8.onnx'),
+        decoder: join(whisperDir, 'medium.en-decoder.int8.onnx')
       },
-      tokens: join(whisperDir, 'small.en-tokens.txt'),
+      tokens: join(whisperDir, 'medium.en-tokens.txt'),
       numThreads: 2,
       provider: 'cpu',
       debug: 0

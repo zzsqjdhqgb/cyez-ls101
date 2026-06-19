@@ -19,6 +19,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     openssh-client \
     sudo \
+    tar \
+    bzip2 \
     && rm -rf /var/lib/apt/lists/*
 
 # 1. 安装并启用 yarn

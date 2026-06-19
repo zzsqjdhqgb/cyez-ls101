@@ -33,14 +33,14 @@ function resolveAssetsDir(argv) {
 }
 
 const ASSETS_DIR = resolveAssetsDir(process.argv)
-const whisperDir = join(ASSETS_DIR, 'sherpa-onnx-whisper-small.en')
+const whisperDir = join(ASSETS_DIR, 'sherpa-onnx-whisper-medium.en')
 const sileroPath = join(ASSETS_DIR, 'silero_vad.onnx')
 
 function checkModels() {
   const files = [
-    join(whisperDir, 'small.en-encoder.int8.onnx'),
-    join(whisperDir, 'small.en-decoder.int8.onnx'),
-    join(whisperDir, 'small.en-tokens.txt'),
+    join(whisperDir, 'medium.en-encoder.int8.onnx'),
+    join(whisperDir, 'medium.en-decoder.int8.onnx'),
+    join(whisperDir, 'medium.en-tokens.txt'),
     sileroPath
   ]
   let ok = true
@@ -65,10 +65,10 @@ function createRecognizer() {
     },
     modelConfig: {
       whisper: {
-        encoder: join(whisperDir, 'small.en-encoder.int8.onnx'),
-        decoder: join(whisperDir, 'small.en-decoder.int8.onnx')
+        encoder: join(whisperDir, 'medium.en-encoder.int8.onnx'),
+        decoder: join(whisperDir, 'medium.en-decoder.int8.onnx')
       },
-      tokens: join(whisperDir, 'small.en-tokens.txt'),
+      tokens: join(whisperDir, 'medium.en-tokens.txt'),
       numThreads: 2,
       provider: 'cpu',
       debug: 0
