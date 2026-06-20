@@ -41,7 +41,7 @@ function send(msg: Record<string, unknown>): void {
   parentPort!.postMessage(msg)
 }
 
-const whisperDir = join(cfg.assetsDir, 'stt', 'sherpa-onnx-whisper-medium.en')
+const qwen3AsrDir = join(cfg.assetsDir, 'stt', 'sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25')
 const sileroPath = join(cfg.assetsDir, 'stt', 'silero_vad.onnx')
 
 interface Engine {
@@ -51,28 +51,31 @@ interface Engine {
 let engine: Engine | null = null
 
 function initEngine(): Engine {
-  if (!existsSync(join(whisperDir, 'medium.en-encoder.int8.onnx'))) {
-    throw new Error(`Whisper model not found at ${whisperDir}`)
+  if (!existsSync(join(qwen3AsrDir, 'encoder.int8.onnx'))) {
+    throw new Error(`Qwen3 ASR model not found at ${qwen3AsrDir}`)
   }
   if (!existsSync(sileroPath)) {
     throw new Error(`Silero VAD model not found at ${sileroPath}`)
   }
 
-  log.info('Initializing OfflineRecognizer (Whisper medium.en)...')
+  log.info('Initializing OfflineRecognizer (Qwen3 ASR 0.6B)...')
   const recognizer = new sherpa_onnx.OfflineRecognizer({
     featConfig: {
       sampleRate: 16000,
       featureDim: 80
     },
     modelConfig: {
-      whisper: {
-        encoder: join(whisperDir, 'medium.en-encoder.int8.onnx'),
-        decoder: join(whisperDir, 'medium.en-decoder.int8.onnx')
+      qwen3Asr: {
+        convFrontend: join(qwen3AsrDir, 'conv_frontend.onnx'),
+        encoder: join(qwen3AsrDir, 'encoder.int8.onnx'),
+        decoder: join(qwen3AsrDir, 'decoder.int8.onnx'),
+        tokenizer: join(qwen3AsrDir, 'tokenizer'),
+        hotwords: ''
       },
-      tokens: join(whisperDir, 'medium.en-tokens.txt'),
+      tokens: '',
       numThreads: 2,
       provider: 'cpu',
-      debug: 0
+      debug: 1
     }
   })
 
@@ -85,10 +88,10 @@ function createVad(): InstanceType<typeof sherpa_onnx.Vad> {
     {
       sileroVad: {
         model: sileroPath,
-        threshold: 0.5,
-        minSpeechDuration: 0.25,
-        minSilenceDuration: 0.5,
-        maxSpeechDuration: 5,
+        threshold: 0.4,
+        minSpeechDuration: 0.3,
+        minSilenceDuration: 1.2,
+        maxSpeechDuration: 30,
         windowSize: 512
       },
       sampleRate: 16000,
@@ -143,7 +146,6 @@ function transcribe(audioPath: string): string {
     log.info(`Processing ${samples.length} samples (${(samples.length / 16000).toFixed(1)}s)...`)
 
     for (let i = 0; i < samples.length; i += windowSize) {
-      // 注意：samples 已经是纯 V8 内部数组，subarray 安全
       const thisWindow = samples.subarray(i, Math.min(i + windowSize, samples.length))
       vad.acceptWaveform(thisWindow)
 

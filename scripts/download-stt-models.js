@@ -52,7 +52,7 @@ async function download(url, dest, label) {
 
 function cleanupExtractedDir(dir) {
   const removeDirs = ['test_wavs']
-  const removeFiles = ['medium.en-encoder.onnx', 'medium.en-decoder.onnx']
+  const removeFiles = ['encoder.onnx', 'decoder.onnx']
 
   for (const name of removeDirs) {
     const p = join(dir, name)
@@ -77,15 +77,15 @@ function cleanupExtractedDir(dir) {
     downloaded++
   }
 
-  const whisperDir = join(STT_DIR, 'sherpa-onnx-whisper-medium.en')
-  if (existsSync(whisperDir)) {
+  const qwen3AsrDir = join(STT_DIR, 'sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25')
+  if (existsSync(qwen3AsrDir)) {
     cached++
   } else {
-    const tarPath = join(STT_DIR, 'whisper-medium.en.tar.bz2')
+    const tarPath = join(STT_DIR, 'qwen3-asr-0.6B-int8.tar.bz2')
     await download(
-      `${BASE_URL}/sherpa-onnx-whisper-medium.en.tar.bz2`,
+      `${BASE_URL}/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2`,
       tarPath,
-      `${prefix} whisper-medium.en`
+      `${prefix} qwen3-asr-0.6B`
     )
     downloaded++
     console.log(' extracting...')
@@ -94,7 +94,7 @@ function cleanupExtractedDir(dir) {
     unlinkSync(tarPath)
 
     console.log(`${prefix} cleaning up non-quantized models and test wavs...`)
-    cleanupExtractedDir(whisperDir)
+    cleanupExtractedDir(qwen3AsrDir)
   }
 
   const parts = []

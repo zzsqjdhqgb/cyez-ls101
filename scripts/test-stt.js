@@ -33,14 +33,14 @@ function resolveAssetsDir(argv) {
 }
 
 const ASSETS_DIR = resolveAssetsDir(process.argv)
-const whisperDir = join(ASSETS_DIR, 'sherpa-onnx-whisper-medium.en')
+const qwen3AsrDir = join(ASSETS_DIR, 'sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25')
 const sileroPath = join(ASSETS_DIR, 'silero_vad.onnx')
 
 function checkModels() {
   const files = [
-    join(whisperDir, 'medium.en-encoder.int8.onnx'),
-    join(whisperDir, 'medium.en-decoder.int8.onnx'),
-    join(whisperDir, 'medium.en-tokens.txt'),
+    join(qwen3AsrDir, 'conv_frontend.onnx'),
+    join(qwen3AsrDir, 'encoder.int8.onnx'),
+    join(qwen3AsrDir, 'decoder.int8.onnx'),
     sileroPath
   ]
   let ok = true
@@ -49,6 +49,11 @@ function checkModels() {
       console.error(`MISSING: ${f}`)
       ok = false
     }
+  }
+  const tokenizerDir = join(qwen3AsrDir, 'tokenizer')
+  if (!existsSync(tokenizerDir)) {
+    console.error(`MISSING: ${tokenizerDir}`)
+    ok = false
   }
   if (!ok) {
     console.error('\nPlease run: node scripts/download-stt-models.js')
@@ -64,14 +69,17 @@ function createRecognizer() {
       featureDim: 80
     },
     modelConfig: {
-      whisper: {
-        encoder: join(whisperDir, 'medium.en-encoder.int8.onnx'),
-        decoder: join(whisperDir, 'medium.en-decoder.int8.onnx')
+      qwen3Asr: {
+        convFrontend: join(qwen3AsrDir, 'conv_frontend.onnx'),
+        encoder: join(qwen3AsrDir, 'encoder.int8.onnx'),
+        decoder: join(qwen3AsrDir, 'decoder.int8.onnx'),
+        tokenizer: join(qwen3AsrDir, 'tokenizer'),
+        hotwords: ''
       },
-      tokens: join(whisperDir, 'medium.en-tokens.txt'),
+      tokens: '',
       numThreads: 2,
       provider: 'cpu',
-      debug: 0
+      debug: 1
     }
   }
 
@@ -82,10 +90,10 @@ function createVad() {
   const config = {
     sileroVad: {
       model: sileroPath,
-      threshold: 0.5,
-      minSpeechDuration: 0.25,
-      minSilenceDuration: 0.5,
-      maxSpeechDuration: 5,
+      threshold: 0.4,
+      minSpeechDuration: 0.3,
+      minSilenceDuration: 1.2,
+      maxSpeechDuration: 30,
       windowSize: 512
     },
     sampleRate: 16000,
