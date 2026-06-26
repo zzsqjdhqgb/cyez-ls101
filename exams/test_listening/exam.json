@@ -1,0 +1,37 @@
+{
+  "title": "听力测试样卷",
+  "choiceOnly": true,
+  "questions": [
+    {
+      "id": "q1",
+      "content": [
+        { "type": "text", "text": "第一节", "size": "large", "bold": true },
+        { "type": "text", "text": "听下面一段对话，选择正确答案。每段对话读两遍。", "size": "normal" }
+      ],
+      "time": [
+        { "type": "countdown", "seconds": 30, "focusId": 1 },
+        { "type": "countdown", "seconds": 30, "focusId": 2 },
+        { "type": "countdown", "seconds": 60 },
+        { "type": "countdown", "seconds": 30, "focusId": 3 }
+      ],
+      "choicePages": [
+        {
+          "questions": [
+            { "id": 1, "stem": "What does the man want to do?", "options": ["Buy a book", "Borrow a book", "Return a book", "Read a book"], "answer": "C" },
+            { "id": 2, "stem": "Where does the conversation most probably take place?", "options": ["At a library", "At a bookstore", "In a classroom", "At a post office"], "answer": "A" }
+          ]
+        },
+        {
+          "questions": [
+            { "id": 3, "stem": "How much does the man need to pay?", "options": ["$5", "$10", "$15", "Nothing"], "answer": "D" }
+          ]
+        }
+      ]
+    }
+  ],
+  "gradingInfo": [
+    { "choiceId": 1, "fullScore": 2 },
+    { "choiceId": 2, "fullScore": 2 },
+    { "choiceId": 3, "fullScore": 2 }
+  ]
+}

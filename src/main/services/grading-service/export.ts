@@ -31,25 +31,52 @@ export function exportCsv(gradingPath: string, batchId: string): string {
       break
     }
   }
-  const sortedGi = [...gradingInfo].sort((a, b) => a.id - b.id)
-  const giHeaders = sortedGi.map((_, idx) => String(idx + 1)).join(',')
+  const sortedGi = [...gradingInfo].sort((a, b) => {
+    const aId = ('id' in a ? a.id : a.choiceId) as number
+    const bId = ('id' in b ? b.id : b.choiceId) as number
+    return aId - bId
+  })
 
-  let csv = `\uFEFF姓名,学号,试卷名称,${giHeaders ? giHeaders + ',' : ''}总分,作答时间\n`
+  // Build headers
+  const giHeaders: string[] = []
+  for (const gi of sortedGi) {
+    if ('id' in gi) {
+      giHeaders.push(`题${((gi as Record<string, unknown>).id as number) + 1}`)
+    } else {
+      giHeaders.push(`选${(gi as Record<string, unknown>).choiceId}`)
+      giHeaders.push(`选${(gi as Record<string, unknown>).choiceId}-答案`)
+      giHeaders.push(`选${(gi as Record<string, unknown>).choiceId}-正误`)
+    }
+  }
+  let csv = `\uFEFF姓名,学号,试卷名称,${giHeaders.join(',')},总分,作答时间\n`
+
   for (const r of batchRecords) {
     const maxScore = getMaxScore(r.rid)
     const totalScore = typeof r.totalScore === 'number' ? `${r.totalScore}/${maxScore ?? '-'}` : '-'
-    const giScores = sortedGi
-      .map((gi) => {
-        const se = r.scores[gi.id]
-        return se
-          ? `${se.score}/${gi.fullScore ?? gi.scoreOptions?.[gi.scoreOptions.length - 1] ?? '-'}`
-          : `-/${gi.fullScore ?? gi.scoreOptions?.[gi.scoreOptions.length - 1] ?? '-'}`
-      })
-      .join(',')
+    const giCells: string[] = []
+    for (const gi of sortedGi) {
+      if ('id' in gi) {
+        const giRecord = gi as Record<string, unknown>
+        const se = r.scores[giRecord.id as number]
+        const fs =
+          giRecord.fullScore ??
+          (giRecord.scoreOptions as number[] | undefined)?.[
+            (giRecord.scoreOptions as number[]).length - 1
+          ] ??
+          '-'
+        giCells.push(se ? `${se.score}/${fs}` : `-/${fs}`)
+      } else {
+        const giRecord = gi as Record<string, unknown>
+        const cs = r.choiceScores?.[giRecord.choiceId as number]
+        giCells.push(cs ? `${cs.score}/${cs.fullScore}` : `0/${giRecord.fullScore}`)
+        giCells.push(cs?.userAnswer ?? '未答')
+        giCells.push(cs?.isCorrect ? '✓' : '✗')
+      }
+    }
     const time = getSubmissionMeta(r.rid)?.submittedAt
       ? new Date(getSubmissionMeta(r.rid)!.submittedAt).toLocaleString('zh-CN')
       : ''
-    csv += `${r.student.name},${r.student.studentId},${r.examTitle},${giScores ? giScores + ',' : ''}${totalScore},${time}\n`
+    csv += `${r.student.name},${r.student.studentId},${r.examTitle},${giCells.join(',')},${totalScore},${time}\n`
   }
 
   return csv
@@ -123,6 +150,25 @@ export async function exportPdf(
 
     const examPkg: ExamPackage = JSON.parse(readFileSync(examJsonPath, 'utf-8'))
     const gradingInfo = examPkg.gradingInfo || []
+    const recordingGi = gradingInfo.filter((gi) => 'id' in gi && !('choiceId' in gi))
+
+    // Build choice question lookup
+    const choiceQs: Record<number, Record<string, unknown>> = {}
+    for (const r of batchRecords) {
+      const pq = loadExamPackage(r.rid)
+      if (pq) {
+        for (const q of pq.questions) {
+          if (q.choicePages) {
+            for (const page of q.choicePages) {
+              for (const cq of page.questions) {
+                choiceQs[cq.id] = cq as unknown as Record<string, unknown>
+              }
+            }
+          }
+        }
+        break
+      }
+    }
 
     let md = `# ${record.student.name} \u2014 ${record.examTitle}\n\n`
     md += `| **\u59D3\u540D** | **\u5B66\u53F7** | **\u8BD5\u5377\u540D\u79F0** | **\u603B\u5206** | **\u4F5C\u7B54\u65F6\u95F4** |\n`
@@ -130,30 +176,52 @@ export async function exportPdf(
     md += `| ${record.student.name} | ${record.student.studentId} | ${record.examTitle} | ${record.totalScore !== undefined ? `${record.totalScore}/${getMaxScore(record.rid) ?? '-'}` : '-'} | ${getSubmissionMeta(record.rid)?.submittedAt ? new Date(getSubmissionMeta(record.rid)!.submittedAt).toLocaleString('zh-CN') : '-'} |\n\n`
     md += `---\n\n`
 
-    if (gradingInfo.length > 0) {
-      const sortedGi = [...gradingInfo].sort((a, b) => a.id - b.id)
+    if (recordingGi.length > 0) {
+      const sortedGi = [...recordingGi].sort(
+        (a, b) =>
+          (((a as Record<string, unknown>).id as number) -
+            (b as Record<string, unknown>).id) as number
+      )
       md += `| ${sortedGi.map((_, idx) => String(idx + 1)).join(' | ')} |\n`
       md += `|${sortedGi.map(() => ':--:').join('|')}|\n`
       md += `| ${sortedGi
         .map((gi) => {
-          const se = record.scores[gi.id]
+          const giRec = gi as Record<string, unknown>
+          const se = record.scores[giRec.id as number]
           return se
-            ? `${se.score}/${gi.fullScore ?? gi.scoreOptions?.[gi.scoreOptions.length - 1] ?? '-'}`
-            : `-/${gi.fullScore ?? gi.scoreOptions?.[gi.scoreOptions.length - 1] ?? '-'}`
+            ? `${se.score}/${giRec.fullScore ?? (giRec.scoreOptions as number[] | undefined)?.[(giRec.scoreOptions as number[]).length - 1] ?? '-'}`
+            : `-/${giRec.fullScore ?? (giRec.scoreOptions as number[] | undefined)?.[(giRec.scoreOptions as number[]).length - 1] ?? '-'}`
         })
         .join(' | ')} |\n\n`
       md += `---\n\n`
     }
 
-    for (const gi of gradingInfo) {
-      const scoreEntry = record.scores[gi.id]
+    for (const gi of recordingGi) {
+      const giRec = gi as Record<string, unknown>
+      const scoreEntry = record.scores[giRec.id as number]
       md += `### \u9898\u76EE\n\n`
-      md += `${gi.problemInfo}\n\n`
+      md += `${giRec.problemInfo}\n\n`
       md += `<div class="score"><strong>\u5206\u6570\uFF1A${scoreEntry?.score ?? '\u672A\u8BC4\u5206'}</strong></div>\n\n`
       md += `<div class="score"><strong>\u8BC4\u8BED\uFF1A${scoreEntry?.comment || '\u65E0'}</strong></div>\n\n`
       md += `### \u8BC4\u5206\u6807\u51C6\n\n`
-      md += `${gi.gradingInfo}\n\n`
+      md += `${giRec.gradingInfo}\n\n`
       md += `---\n\n`
+    }
+
+    // Add choice question details
+    if (record.choiceScores && Object.keys(record.choiceScores).length > 0) {
+      md += `### 选择题\n\n`
+      md += `| 题号 | 题干 | 选项 | 正确答案 | 用户答案 | 正误 | 得分 |\n`
+      md += `|:--:|------|------|:--:|:--:|:--:|:--:|\n`
+      for (const [cIdStr, cs] of Object.entries(record.choiceScores)) {
+        const cq = choiceQs[Number(cIdStr)]
+        if (!cq) continue
+        const stem = (cq as { stem: string }).stem
+        const options = (cq as { options: [string, string, string, string] }).options
+        const optionsStr = `A.${options[0]} B.${options[1]} C.${options[2]} D.${options[3]}`
+        md += `| ${cIdStr} | ${stem} | ${optionsStr} | ${cs.correctAnswer} | ${cs.userAnswer ?? '-'} | ${cs.isCorrect ? '✓' : '✗'} | ${cs.score}/${cs.fullScore} |\n`
+      }
+      md += `\n---\n\n`
     }
 
     try {

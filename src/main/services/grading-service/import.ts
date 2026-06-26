@@ -150,13 +150,90 @@ export function importSubmissions(
         writeFileSync(targetPath, f.getData())
       }
 
+      // Load choice answers from submission
+      let choiceAnswers: Record<number, string> = {}
+      try {
+        const choicesPath = join(targetDir, 'choices.json')
+        if (existsSync(choicesPath)) {
+          choiceAnswers = JSON.parse(readFileSync(choicesPath, 'utf-8'))
+        }
+      } catch {
+        /* ignore */
+      }
+
+      // Auto-grade choice questions
+      const choiceScores: Record<
+        number,
+        {
+          choiceId: number
+          userAnswer?: string
+          correctAnswer: string
+          isCorrect: boolean
+          fullScore: number
+          score: number
+        }
+      > = {}
+      let totalScore = 0
+      let maxScore = 0
+      const gradingInfo = examPackage.gradingInfo || []
+      const choiceGradingItems = gradingInfo.filter(
+        (gi: Record<string, unknown>) => 'choiceId' in gi && !('id' in gi)
+      )
+      const recordingItems = gradingInfo.filter(
+        (gi: Record<string, unknown>) => 'id' in gi && !('choiceId' in gi)
+      )
+
+      // Compute choice scores
+      const allChoiceQs: Record<number, Record<string, unknown>> = {}
+      for (const q of examPackage.questions) {
+        const cp = (q as Record<string, unknown>).choicePages as
+          | Record<string, unknown>[]
+          | undefined
+        if (cp) {
+          for (const page of cp) {
+            const qs = page.questions as Record<string, unknown>[]
+            if (qs) for (const cq of qs) allChoiceQs[cq.id as number] = cq
+          }
+        }
+      }
+
+      for (const gi of choiceGradingItems) {
+        const cId = gi.choiceId as number
+        const fullScore = gi.fullScore as number
+        const cq = allChoiceQs[cId]
+        if (!cq) continue
+        const correctAnswer = cq.answer as string
+        const userAnswer = choiceAnswers[cId]
+        const isCorrect = userAnswer === correctAnswer
+        choiceScores[cId] = {
+          choiceId: cId,
+          userAnswer: userAnswer || undefined,
+          correctAnswer,
+          isCorrect,
+          fullScore,
+          score: isCorrect ? fullScore : 0
+        }
+        totalScore += choiceScores[cId].score
+        maxScore += fullScore
+      }
+
+      // Compute recording-derived max score
+      for (const gi of recordingItems) {
+        const fs = gi.fullScore as number
+        if (typeof fs === 'number' && fs > 0) maxScore += fs
+      }
+
+      const isChoiceOnly = examPackage.choiceOnly === true
       records[rid] = {
         rid,
-        status: 'ungraded',
+        status: isChoiceOnly ? 'completed' : 'ungraded',
         student: meta.student,
         examTitle: examPackage.title,
         eid,
-        scores: {}
+        scores: {},
+        totalScore: totalScore > 0 || maxScore > 0 ? totalScore : undefined,
+        maxScore: maxScore > 0 ? maxScore : undefined,
+        choiceScores: Object.keys(choiceScores).length > 0 ? choiceScores : undefined
       }
       imported++
     }

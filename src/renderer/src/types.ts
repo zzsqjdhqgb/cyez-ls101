@@ -10,7 +10,11 @@ export type {
   ContentNode,
   TimeControl,
   Question,
+  ChoiceQuestion,
+  ChoicePage,
   GradingInfoItem,
+  ChoiceGradingInfoItem,
+  RecordingGradingInfoItem,
   ExamPackage,
   ExamListItem,
   StudentInfo,
@@ -25,6 +29,7 @@ export type {
   GradingBatch,
   GradingListItem,
   SettlementRecord,
+  ChoiceAnswerRecord,
   DraftListItem,
   DraftView
 } from '../../shared/types'

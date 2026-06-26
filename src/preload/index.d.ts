@@ -47,6 +47,7 @@ declare global {
         deleteMultiple: (
           ids: string[]
         ) => Promise<{ success: boolean; deleted: string[]; notFound: string[] }>
+        saveChoiceAnswers: (submissionId: string, answers: Record<number, string>) => Promise<void>
       }
       template: {
         list: (devMode?: boolean) => Promise<TemplateListItem[]>
@@ -140,6 +141,9 @@ declare global {
         getGradingHtml: (
           rid: string
         ) => Promise<{ success: boolean; html?: string; error?: string }>
+        exportChoiceOnlyReport: (
+          submissionId: string
+        ) => Promise<{ success: boolean; error?: string }>
         onImportProgress: (
           callback: (progress: { current: number; total: number }) => void
         ) => () => void

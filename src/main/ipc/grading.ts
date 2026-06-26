@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os'
 import AdmZip from 'adm-zip'
 import { marked } from 'marked'
 import type { GradingListItem, ExamPackage } from '../../shared/types'
-import { ensureDir, getGradingPath } from '../utils'
+import { ensureDir, getGradingPath, getSubmissionsPath } from '../utils'
 import {
   loadRecords,
   getSubmissionMeta,
@@ -243,6 +243,7 @@ export function registerGradingHandlers(): void {
 
     const examPkg: ExamPackage = JSON.parse(readFileSync(examJsonPath, 'utf-8'))
     const gradingInfo = examPkg.gradingInfo || []
+    const recordingGi = gradingInfo.filter((gi) => 'id' in gi && !('choiceId' in gi))
 
     const css = `
       @page { margin: 10mm; }
@@ -268,30 +269,62 @@ export function registerGradingHandlers(): void {
     md += `| ${record.student.name} | ${record.student.studentId} | ${record.examTitle} | ${record.totalScore !== undefined ? `${record.totalScore}/${getMaxScore(record.rid) ?? '-'}` : '-'} | ${getSubmissionMeta(record.rid)?.submittedAt ? new Date(getSubmissionMeta(record.rid)!.submittedAt).toLocaleString('zh-CN') : '-'} |\n\n`
     md += `---\n\n`
 
-    if (gradingInfo.length > 0) {
-      const sortedGi = [...gradingInfo].sort((a, b) => a.id - b.id)
+    if (recordingGi.length > 0) {
+      const sortedGi = [...recordingGi].sort(
+        (a, b) =>
+          (((a as Record<string, unknown>).id as number) -
+            (b as Record<string, unknown>).id) as number
+      )
       md += `| ${sortedGi.map((_, idx) => String(idx + 1)).join(' | ')} |\n`
       md += `|${sortedGi.map(() => ':--:').join('|')}|\n`
       md += `| ${sortedGi
         .map((gi) => {
-          const se = record.scores[gi.id]
+          const giRec = gi as Record<string, unknown>
+          const se = record.scores[giRec.id as number]
           return se
-            ? `${se.score}/${gi.fullScore ?? gi.scoreOptions?.[gi.scoreOptions.length - 1] ?? '-'}`
-            : `-/${gi.fullScore ?? gi.scoreOptions?.[gi.scoreOptions.length - 1] ?? '-'}`
+            ? `${se.score}/${giRec.fullScore ?? (giRec.scoreOptions as number[] | undefined)?.[(giRec.scoreOptions as number[]).length - 1] ?? '-'}`
+            : `-/${giRec.fullScore ?? (giRec.scoreOptions as number[] | undefined)?.[(giRec.scoreOptions as number[]).length - 1] ?? '-'}`
         })
         .join(' | ')} |\n\n`
       md += `---\n\n`
     }
 
-    for (const gi of gradingInfo) {
-      const scoreEntry = record.scores[gi.id]
+    for (const gi of recordingGi) {
+      const giRec = gi as Record<string, unknown>
+      const scoreEntry = record.scores[giRec.id as number]
       md += `### \u9898\u76EE\n\n`
-      md += `${gi.problemInfo}\n\n`
+      md += `${giRec.problemInfo}\n\n`
       md += `<div class="score"><strong>\u5206\u6570\uFF1A${scoreEntry?.score ?? '\u672A\u8BC4\u5206'}</strong></div>\n\n`
       md += `<div class="score"><strong>\u8BC4\u8BED\uFF1A${scoreEntry?.comment || '\u65E0'}</strong></div>\n\n`
       md += `### \u8BC4\u5206\u6807\u51C6\n\n`
-      md += `${gi.gradingInfo}\n\n`
+      md += `${giRec.gradingInfo}\n\n`
       md += `---\n\n`
+    }
+
+    // Add choice question results
+    if (record.choiceScores && Object.keys(record.choiceScores).length > 0) {
+      const choiceQLookup: Record<
+        number,
+        { stem: string; options: [string, string, string, string] }
+      > = {}
+      for (const q of examPkg.questions) {
+        if (q.choicePages) {
+          for (const page of q.choicePages) {
+            for (const cq of page.questions) {
+              choiceQLookup[cq.id] = cq
+            }
+          }
+        }
+      }
+      md += `### 选择题\n\n`
+      md += `| 题号 | 题干 | 选项 | 正确答案 | 用户答案 | 正误 | 得分 |\n`
+      md += `|:--:|------|------|:--:|:--:|:--:|:--:|\n`
+      for (const [cIdStr, cs] of Object.entries(record.choiceScores)) {
+        const cq = choiceQLookup[Number(cIdStr)]
+        if (!cq) continue
+        md += `| ${cIdStr} | ${cq.stem} | A.${cq.options[0]} B.${cq.options[1]} C.${cq.options[2]} D.${cq.options[3]} | ${cs.correctAnswer} | ${cs.userAnswer ?? '-'} | ${cs.isCorrect ? '✓' : '✗'} | ${cs.score}/${cs.fullScore} |\n`
+      }
+      md += `\n---\n\n`
     }
 
     try {
@@ -312,4 +345,161 @@ export function registerGradingHandlers(): void {
       return { success: false, error: message }
     }
   })
+
+  // Export choice-only report directly (no grading batch needed)
+  ipcMain.handle(
+    'grading:exportChoiceOnlyReport',
+    async (_event, submissionId: string): Promise<{ success: boolean; error?: string }> => {
+      try {
+        const subPath = join(getSubmissionsPath(), submissionId)
+        if (!existsSync(subPath)) {
+          return { success: false, error: '作答记录不存在' }
+        }
+
+        // Load exam
+        const examDir = join(subPath, 'exam')
+        const examJsonPath = join(examDir, 'exam.json')
+        if (!existsSync(examJsonPath)) {
+          return { success: false, error: '未找到试卷数据' }
+        }
+        const examPkg: ExamPackage = JSON.parse(readFileSync(examJsonPath, 'utf-8'))
+
+        // Load choices
+        let choiceAnswers: Record<number, string> = {}
+        const choicesPath = join(subPath, 'choices.json')
+        if (existsSync(choicesPath)) {
+          choiceAnswers = JSON.parse(readFileSync(choicesPath, 'utf-8'))
+        }
+
+        // Load meta
+        let studentInfo = { name: '未知', studentId: '未知' }
+        const metaPath = join(subPath, 'meta.json')
+        if (existsSync(metaPath)) {
+          const meta = JSON.parse(readFileSync(metaPath, 'utf-8'))
+          studentInfo = meta.student
+        }
+
+        // Compute scores
+        const gradingInfo = examPkg.gradingInfo || []
+        const choiceItems = gradingInfo.filter(
+          (gi: Record<string, unknown>) => 'choiceId' in gi && !('id' in gi)
+        )
+        let totalScore = 0
+        let maxScore = 0
+        const rows: {
+          choiceId: number
+          stem: string
+          options: string
+          correctAnswer: string
+          userAnswer: string
+          isCorrect: boolean
+          score: number
+          fullScore: number
+        }[] = []
+
+        // Build choice question lookup
+        const choiceQLookup: Record<
+          number,
+          { stem: string; options: [string, string, string, string]; answer: string }
+        > = {}
+        for (const q of examPkg.questions) {
+          if (q.choicePages) {
+            for (const page of q.choicePages) {
+              for (const cq of page.questions) {
+                choiceQLookup[cq.id] = cq
+              }
+            }
+          }
+        }
+
+        for (const gi of choiceItems) {
+          const cId = (gi as Record<string, unknown>).choiceId as number
+          const fullScore = (gi as Record<string, unknown>).fullScore as number
+          maxScore += fullScore
+          const cq = choiceQLookup[cId]
+          if (!cq) continue
+          const userAnswer = choiceAnswers[cId] ?? '(未作答)'
+          const isCorrect = choiceAnswers[cId] === cq.answer
+          const score = isCorrect ? fullScore : 0
+          totalScore += score
+          rows.push({
+            choiceId: cId,
+            stem: cq.stem,
+            options: `A.${cq.options[0]} B.${cq.options[1]} C.${cq.options[2]} D.${cq.options[3]}`,
+            correctAnswer: cq.answer,
+            userAnswer,
+            isCorrect,
+            score,
+            fullScore
+          })
+        }
+
+        // Generate HTML
+        const css = `
+          @page { margin: 10mm; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #1e293b; line-height: 1.6; padding: 20px; }
+          h1 { font-size: 22px; margin: 0 0 16px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+          table { border-collapse: collapse; width: 100%; margin: 6px 0; }
+          td, th { border: 1px solid #d1d5db; padding: 4px 8px; }
+          .correct { color: #16a34a; }
+          .wrong { color: #dc2626; }
+        `
+        let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><base href="file://${examDir.replace(/\\/g, '/')}/"><title>${studentInfo.name}_${examPkg.title}_报告</title><style>${css}</style></head><body>`
+        html += `<h1>${studentInfo.name} — ${examPkg.title}</h1>`
+        html += `<table><tr><td>姓名</td><td>${studentInfo.name}</td><td>学号</td><td>${studentInfo.studentId}</td><td>总分</td><td>${totalScore}/${maxScore}</td></tr></table>`
+        html += `<h2>选择题详情</h2>`
+        html += `<table><tr><th>题号</th><th>题干</th><th>选项</th><th>正确答案</th><th>用户答案</th><th>正误</th><th>得分</th></tr>`
+        for (const row of rows) {
+          const correctClass = row.isCorrect ? 'correct' : 'wrong'
+          html += `<tr><td>${row.choiceId}</td><td>${row.stem}</td><td>${row.options}</td><td>${row.correctAnswer}</td><td>${row.userAnswer}</td><td class="${correctClass}">${row.isCorrect ? '✓' : '✗'}</td><td>${row.score}/${row.fullScore}</td></tr>`
+        }
+        html += `</table></body></html>`
+
+        // Show save dialog
+        const win = BrowserWindow.getFocusedWindow()
+        if (!win) return { success: false, error: 'No window' }
+
+        const result = await dialog.showSaveDialog(win, {
+          title: '导出报告',
+          defaultPath: `报告_${studentInfo.name}_${examPkg.title}.pdf`,
+          filters: [{ name: 'PDF', extensions: ['pdf'] }]
+        })
+
+        if (result.canceled || !result.filePath) return { success: false }
+
+        // Generate PDF
+        const tempDir = join(tmpdir(), 'cyez-report-' + Date.now())
+        ensureDir(tempDir)
+        const htmlPath = join(tempDir, 'report.html')
+        writeFileSync(htmlPath, html, 'utf-8')
+
+        const pdfWin = new BrowserWindow({
+          width: 800,
+          height: 600,
+          show: false,
+          webPreferences: { webSecurity: false, nodeIntegration: false, contextIsolation: true }
+        })
+
+        try {
+          await pdfWin.loadURL(`file://${htmlPath.replace(/\\/g, '/')}`)
+          const pdfBuffer = await pdfWin.webContents.printToPDF({
+            printBackground: true,
+            pageSize: 'A4'
+          })
+          writeFileSync(result.filePath, pdfBuffer)
+          return { success: true }
+        } finally {
+          pdfWin.destroy()
+          try {
+            rmSync(tempDir, { recursive: true, force: true })
+          } catch {
+            /* ignore */
+          }
+        }
+      } catch (err) {
+        console.error('导出报告失败:', err)
+        return { success: false, error: String(err) }
+      }
+    }
+  )
 }

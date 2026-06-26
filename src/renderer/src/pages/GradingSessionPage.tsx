@@ -268,6 +268,12 @@ export default function GradingSessionPage(): JSX.Element {
       }
 
       const fi = result.firstItem
+      if (!('id' in fi.gradingInfoItem)) {
+        setError('无可批改项目')
+        setLoading(false)
+        return
+      }
+
       const scoreOptions =
         fi.gradingInfoItem.scoreOptions && fi.gradingInfoItem.scoreOptions.length > 0
           ? fi.gradingInfoItem.scoreOptions
@@ -382,6 +388,12 @@ export default function GradingSessionPage(): JSX.Element {
 
       if (result.nextItem) {
         const ni = result.nextItem
+        if (!('id' in ni.gradingInfoItem)) {
+          setMsgModal({ title: '提示', message: '无可批改项目', type: 'info' })
+          navigate('/grading')
+          return
+        }
+
         const scoreOptions =
           ni.gradingInfoItem.scoreOptions && ni.gradingInfoItem.scoreOptions.length > 0
             ? ni.gradingInfoItem.scoreOptions

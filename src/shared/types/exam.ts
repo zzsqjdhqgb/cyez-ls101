@@ -13,18 +13,30 @@ export type ContentNode =
   | { type: 'quad-image'; images: [string, string, string, string]; width?: string }
 
 export type TimeControl =
-  | { type: 'countdown'; seconds: number }
-  | { type: 'record'; duration: number; recordIndex?: number }
-  | { type: 'content-controlled' }
+  | { type: 'countdown'; seconds: number; focusId?: number }
+  | { type: 'record'; duration: number; recordIndex?: number; focusId?: number }
+  | { type: 'content-controlled'; focusId?: number }
+
+export interface ChoiceQuestion {
+  id: number
+  stem: string
+  options: [string, string, string, string]
+  answer: string
+}
+
+export interface ChoicePage {
+  questions: ChoiceQuestion[]
+}
 
 export interface Question {
   id: string
   content: ContentNode[]
-  time: TimeControl
+  time: TimeControl | TimeControl[]
   statusText?: string
+  choicePages?: ChoicePage[]
 }
 
-export interface GradingInfoItem {
+export interface RecordingGradingInfoItem {
   id: number
   recordIndices: number[]
   problemInfo: string
@@ -33,10 +45,18 @@ export interface GradingInfoItem {
   scoreOptions?: number[]
 }
 
+export interface ChoiceGradingInfoItem {
+  choiceId: number
+  fullScore: number
+}
+
+export type GradingInfoItem = RecordingGradingInfoItem | ChoiceGradingInfoItem
+
 export interface ExamPackage {
   title: string
   questions: Question[]
   gradingInfo?: GradingInfoItem[]
+  choiceOnly?: boolean
 }
 
 export interface ExamListItem {

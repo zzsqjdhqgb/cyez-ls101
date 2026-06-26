@@ -129,6 +129,140 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
       }
     }
     // 不再限制其他时间类型下有音频节点（允许指令音频等）
+
+    // If question has choicePages, validate them
+    if (question.choicePages !== undefined) {
+      if (!Array.isArray(question.choicePages) || question.choicePages.length === 0) {
+        errors.push({ questionIndex: i, message: 'choicePages must be a non-empty array' })
+      } else {
+        const seenChoiceIds = new Set<number>()
+        let totalChoiceCount = 0
+        for (let pi = 0; pi < question.choicePages.length; pi++) {
+          const page = question.choicePages[pi] as Record<string, unknown>
+          if (!page || typeof page !== 'object' || !Array.isArray(page.questions)) {
+            errors.push({
+              questionIndex: i,
+              message: `choicePages[${pi}].questions must be an array`
+            })
+            continue
+          }
+          const pageQuestions = page.questions as Record<string, unknown>[]
+          if (pageQuestions.length === 0) {
+            errors.push({
+              questionIndex: i,
+              message: `choicePages[${pi}].questions must not be empty`
+            })
+          }
+          for (let qi = 0; qi < pageQuestions.length; qi++) {
+            const cq = pageQuestions[qi]
+            if (typeof cq.id !== 'number' || cq.id < 1) {
+              errors.push({
+                questionIndex: i,
+                message: `choicePages[${pi}].questions[${qi}].id must be a number >= 1`
+              })
+            } else {
+              if (seenChoiceIds.has(cq.id)) {
+                errors.push({ questionIndex: i, message: `Duplicate choice question id: ${cq.id}` })
+              }
+              seenChoiceIds.add(cq.id)
+              totalChoiceCount++
+            }
+            if (typeof cq.stem !== 'string' || cq.stem.trim() === '') {
+              errors.push({
+                questionIndex: i,
+                message: `choicePages[${pi}].questions[${qi}].stem must be a non-empty string`
+              })
+            }
+            if (!Array.isArray(cq.options) || cq.options.length !== 4) {
+              errors.push({
+                questionIndex: i,
+                message: `choicePages[${pi}].questions[${qi}].options must be an array of 4 strings`
+              })
+            } else {
+              for (let oi = 0; oi < cq.options.length; oi++) {
+                if (typeof cq.options[oi] !== 'string') {
+                  errors.push({
+                    questionIndex: i,
+                    message: `choicePages[${pi}].questions[${qi}].options[${oi}] must be a string`
+                  })
+                }
+              }
+
+              // Check that each gradingInfo item has EITHER id OR choiceId, not both
+              if ('id' in item && 'choiceId' in item) {
+                errors.push({
+                  questionIndex: -1,
+                  message: `gradingInfo[${gi}] cannot have both id and choiceId`
+                })
+              }
+              if (!('id' in item) && !('choiceId' in item)) {
+                errors.push({
+                  questionIndex: -1,
+                  message: `gradingInfo[${gi}] must have either id or choiceId`
+                })
+              }
+              // Validate ChoiceGradingInfoItem
+              if ('choiceId' in item && !('id' in item)) {
+                if (typeof item.choiceId !== 'number' || item.choiceId < 1) {
+                  errors.push({
+                    questionIndex: -1,
+                    message: `gradingInfo[${gi}].choiceId must be a number >= 1`
+                  })
+                } else {
+                  // Check choiceId matches an existing ChoiceQuestion
+                  const questionRecords = exam.questions as Record<string, unknown>[]
+                  let found = false
+                  for (const q of questionRecords) {
+                    const cp = q.choicePages as Record<string, unknown>[] | undefined
+                    if (cp) {
+                      for (const page of cp) {
+                        const qs = page.questions as Record<string, unknown>[]
+                        if (qs && qs.some((cq) => cq.id === item.choiceId)) {
+                          found = true
+                          break
+                        }
+                      }
+                      if (found) break
+                    }
+                  }
+                  if (!found) {
+                    errors.push({
+                      questionIndex: -1,
+                      message: `gradingInfo[${gi}].choiceId ${item.choiceId} does not match any ChoiceQuestion`
+                    })
+                  }
+                }
+                if (typeof item.fullScore !== 'number' || item.fullScore <= 0) {
+                  errors.push({
+                    questionIndex: -1,
+                    message: `gradingInfo[${gi}].fullScore must be a positive number`
+                  })
+                }
+              }
+            }
+            const validAnswers = ['A', 'B', 'C', 'D']
+            if (typeof cq.answer !== 'string' || !validAnswers.includes(cq.answer)) {
+              errors.push({
+                questionIndex: i,
+                message: `choicePages[${pi}].questions[${qi}].answer must be A, B, C, or D`
+              })
+            }
+          }
+        }
+        // Validate focusId in timers
+        const questionTimeArray = Array.isArray(question.time) ? question.time : [question.time]
+        for (const tc of questionTimeArray as Record<string, unknown>[]) {
+          if (tc && typeof tc.focusId === 'number') {
+            if (tc.focusId < 1 || tc.focusId > totalChoiceCount) {
+              errors.push({
+                questionIndex: i,
+                message: `focusId ${tc.focusId} must be between 1 and total choice questions (${totalChoiceCount})`
+              })
+            }
+          }
+        }
+      }
+    }
   }
 
   // 验证 gradingInfo（如果存在）
@@ -256,6 +390,24 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
           questionIndex: -1,
           message: `gradingInfo covers ${seenRecordIndices.size} record indices but exam has ${validRecordIndices.size}`
         })
+      }
+    }
+  }
+
+  // Validate choiceOnly
+  if (exam.choiceOnly === true) {
+    const questions = exam.questions as Record<string, unknown>[]
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i]
+      const time = q.time
+      const timeArray = Array.isArray(time) ? time : [time]
+      for (const tc of timeArray as Record<string, unknown>[]) {
+        if (tc && tc.type === 'record') {
+          errors.push({
+            questionIndex: i,
+            message: 'choiceOnly exam cannot have record type timers'
+          })
+        }
       }
     }
   }

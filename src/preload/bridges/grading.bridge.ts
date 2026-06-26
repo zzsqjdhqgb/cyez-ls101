@@ -74,6 +74,7 @@ export function createGradingBridge(): {
     loadAudio: (rid: string, recordIndex: number) => Promise<string>
     speechToText: (rid: string, recordIndex: number) => Promise<string>
     getGradingHtml: (rid: string) => Promise<{ success: boolean; html?: string; error?: string }>
+    exportChoiceOnlyReport: (submissionId: string) => Promise<{ success: boolean; error?: string }>
     onImportProgress: (
       callback: (progress: { current: number; total: number }) => void
     ) => () => void
@@ -159,6 +160,8 @@ export function createGradingBridge(): {
         ipcRenderer.invoke('grading:speechToText', rid, recordIndex),
       getGradingHtml: (rid: string): Promise<{ success: boolean; html?: string; error?: string }> =>
         ipcRenderer.invoke('grading:getGradingHtml', rid),
+      exportChoiceOnlyReport: (submissionId) =>
+        ipcRenderer.invoke('grading:exportChoiceOnlyReport', submissionId),
       onImportProgress: (
         callback: (progress: { current: number; total: number }) => void
       ): (() => void) => {
