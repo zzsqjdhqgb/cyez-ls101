@@ -106,29 +106,53 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
       continue
     }
 
-    const time = question.time as Record<string, unknown>
-    if (!['countdown', 'record', 'content-controlled'].includes(time.type as string)) {
-      errors.push({ questionIndex: i, message: `Invalid time type: ${time.type}` })
-    }
+    const timeArray = Array.isArray(question.time) ? question.time : [question.time]
+    for (let ti = 0; ti < timeArray.length; ti++) {
+      const time = timeArray[ti] as Record<string, unknown>
+      const timeLabel = timeArray.length > 1 ? `time[${ti}]: ` : ''
 
-    if (time.type === 'countdown' && typeof time.seconds !== 'number') {
-      errors.push({ questionIndex: i, message: 'countdown must have seconds (number)' })
-    }
+      if (!['countdown', 'record', 'content-controlled'].includes(time.type as string)) {
+        errors.push({ questionIndex: i, message: `Invalid time type: ${time.type}` })
+      }
 
-    if (time.type === 'record' && typeof time.duration !== 'number') {
-      errors.push({ questionIndex: i, message: 'record must have duration (number)' })
-    }
+      if (time.type === 'countdown' && typeof time.seconds !== 'number') {
+        errors.push({ questionIndex: i, message: `${timeLabel}countdown must have seconds (number)` })
+      }
 
-    // content-controlled 下必须有且仅有一个视频或音频节点
-    if (time.type === 'content-controlled') {
-      if (mediaCount !== 1) {
+      if (time.type === 'record' && typeof time.duration !== 'number') {
+        errors.push({ questionIndex: i, message: `${timeLabel}record must have duration (number)` })
+      }
+
+      if (time.type === 'content-controlled' && mediaCount !== 1) {
+        errors.push({
+          questionIndex: i,
+          message: `${timeLabel}content-controlled must have exactly one video or audio node, found ${mediaCount}`
+        })
+      }
+
+      if (typeof time.focusId === 'number' && (time.focusId < 1 || !Number.isInteger(time.focusId))) {
+        errors.push({ questionIndex: i, message: `${timeLabel}focusId must be a positive integer` })
+      }
+
+      if (time.type === 'countdown' && typeof time.seconds !== 'number') {
+        errors.push({ questionIndex: i, message: `${timeLabel}: countdown must have seconds (number)` })
+      }
+
+      if (time.type === 'record' && typeof time.duration !== 'number') {
+        errors.push({ questionIndex: i, message: `${timeLabel}: record must have duration (number)` })
+      }
+
+      if (time.type === 'content-controlled' && mediaCount !== 1) {
         errors.push({
           questionIndex: i,
           message: `content-controlled must have exactly one video or audio node, found ${mediaCount}`
         })
       }
+
+      if (typeof time.focusId === 'number' && (time.focusId < 1 || !Number.isInteger(time.focusId))) {
+        errors.push({ questionIndex: i, message: `${timeLabel}: focusId must be a positive integer` })
+      }
     }
-    // 不再限制其他时间类型下有音频节点（允许指令音频等）
 
     // If question has choicePages, validate them
     if (question.choicePages !== undefined) {
@@ -188,57 +212,6 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
                 }
               }
 
-              // Check that each gradingInfo item has EITHER id OR choiceId, not both
-              if ('id' in item && 'choiceId' in item) {
-                errors.push({
-                  questionIndex: -1,
-                  message: `gradingInfo[${gi}] cannot have both id and choiceId`
-                })
-              }
-              if (!('id' in item) && !('choiceId' in item)) {
-                errors.push({
-                  questionIndex: -1,
-                  message: `gradingInfo[${gi}] must have either id or choiceId`
-                })
-              }
-              // Validate ChoiceGradingInfoItem
-              if ('choiceId' in item && !('id' in item)) {
-                if (typeof item.choiceId !== 'number' || item.choiceId < 1) {
-                  errors.push({
-                    questionIndex: -1,
-                    message: `gradingInfo[${gi}].choiceId must be a number >= 1`
-                  })
-                } else {
-                  // Check choiceId matches an existing ChoiceQuestion
-                  const questionRecords = exam.questions as Record<string, unknown>[]
-                  let found = false
-                  for (const q of questionRecords) {
-                    const cp = q.choicePages as Record<string, unknown>[] | undefined
-                    if (cp) {
-                      for (const page of cp) {
-                        const qs = page.questions as Record<string, unknown>[]
-                        if (qs && qs.some((cq) => cq.id === item.choiceId)) {
-                          found = true
-                          break
-                        }
-                      }
-                      if (found) break
-                    }
-                  }
-                  if (!found) {
-                    errors.push({
-                      questionIndex: -1,
-                      message: `gradingInfo[${gi}].choiceId ${item.choiceId} does not match any ChoiceQuestion`
-                    })
-                  }
-                }
-                if (typeof item.fullScore !== 'number' || item.fullScore <= 0) {
-                  errors.push({
-                    questionIndex: -1,
-                    message: `gradingInfo[${gi}].fullScore must be a positive number`
-                  })
-                }
-              }
             }
             const validAnswers = ['A', 'B', 'C', 'D']
             if (typeof cq.answer !== 'string' || !validAnswers.includes(cq.answer)) {
@@ -277,14 +250,75 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
       const questions = exam.questions as Record<string, unknown>[]
       const validRecordIndices = new Set<number>()
       for (const q of questions) {
-        const time = q.time as Record<string, unknown>
-        if (time && time.type === 'record' && typeof time.recordIndex === 'number') {
-          validRecordIndices.add(time.recordIndex)
+        const time = q.time
+        const timeArray = Array.isArray(time) ? time : [time]
+        for (const tc of timeArray as Record<string, unknown>[]) {
+          if (tc && tc.type === 'record' && typeof tc.recordIndex === 'number') {
+            validRecordIndices.add(tc.recordIndex)
+          }
         }
       }
 
       for (let gi = 0; gi < gradingItems.length; gi++) {
         const item = gradingItems[gi]
+
+        // Check mutual exclusivity: must have either id or choiceId, not both
+        const hasId = 'id' in item
+        const hasChoiceId = 'choiceId' in item
+        if (hasId && hasChoiceId) {
+          errors.push({
+            questionIndex: -1,
+            message: `gradingInfo[${gi}] cannot have both id and choiceId`
+          })
+          continue
+        }
+        if (!hasId && !hasChoiceId) {
+          errors.push({
+            questionIndex: -1,
+            message: `gradingInfo[${gi}] must have either id or choiceId`
+          })
+          continue
+        }
+
+        if (hasChoiceId) {
+          // Validate ChoiceGradingInfoItem
+          if (typeof item.choiceId !== 'number' || item.choiceId < 1) {
+            errors.push({
+              questionIndex: -1,
+              message: `gradingInfo[${gi}].choiceId must be a number >= 1`
+            })
+          } else {
+            let found = false
+            for (const q of questions) {
+              const cp = q.choicePages as Record<string, unknown>[] | undefined
+              if (cp) {
+                for (const page of cp) {
+                  const qs = page.questions as Record<string, unknown>[]
+                  if (qs && qs.some((cq) => cq.id === item.choiceId)) {
+                    found = true
+                    break
+                  }
+                }
+                if (found) break
+              }
+            }
+            if (!found) {
+              errors.push({
+                questionIndex: -1,
+                message: `gradingInfo[${gi}].choiceId ${item.choiceId} does not match any ChoiceQuestion`
+              })
+            }
+          }
+          if (typeof item.fullScore !== 'number' || item.fullScore <= 0) {
+            errors.push({
+              questionIndex: -1,
+              message: `gradingInfo[${gi}].fullScore must be a positive number`
+            })
+          }
+          continue
+        }
+
+        // Validate RecordingGradingInfoItem (hasId)
         if (typeof item.id !== 'number') {
           errors.push({ questionIndex: -1, message: `gradingInfo[${gi}].id must be a number` })
         } else if (item.id !== expectedId) {
