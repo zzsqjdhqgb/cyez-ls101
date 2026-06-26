@@ -8,17 +8,17 @@
         { "type": "text", "text": "第一节", "size": "large", "bold": true },
         { "type": "text", "text": "听下面一段对话，选择正确答案。每段对话读两遍。", "size": "normal" }
       ],
-      "time": [
-        { "type": "countdown", "seconds": 30, "focusId": 1 },
-        { "type": "countdown", "seconds": 30, "focusId": 2 },
-        { "type": "countdown", "seconds": 60 },
-        { "type": "countdown", "seconds": 30, "focusId": 3 }
-      ],
+    "time": [
+      { "type": "countdown", "seconds": 5, "focusId": 1 },
+      { "type": "countdown", "seconds": 5, "focusId": 2 },
+      { "type": "countdown", "seconds": 5 },
+      { "type": "countdown", "seconds": 5, "focusId": 3 }
+],
       "choicePages": [
         {
           "questions": [
             { "id": 1, "stem": "What does the man want to do?", "options": ["Buy a book", "Borrow a book", "Return a book", "Read a book"], "answer": "C" },
-            { "id": 2, "stem": "Where does the conversation most probably take place?", "options": ["At a library", "At a bookstore", "In a classroom", "At a post office"], "answer": "A" }
+            { "id": 2, "stem": "Where does the conversation most probably take place?", "options": ["At a library", "At a bookstore", "In a classroom", "At a post office"], "answer": "A" }    
           ]
         },
         {
