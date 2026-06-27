@@ -81,6 +81,7 @@ export default function ExamPage(): JSX.Element {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const choiceAnswersRef = useRef<Record<number, string>>({})
   const scale = useScalingRatio()
 
   const [devMode, setDevMode] = useState(() => sessionStorage.getItem('devMode') === 'true')
@@ -158,10 +159,9 @@ export default function ExamPage(): JSX.Element {
   // 跳转到下一题
   const nextQuestion = useCallback(() => {
     clearTimers(true)
-    // Save choice answers before leaving this question
-    if (Object.keys(choiceAnswers).length > 0 && submissionId) {
+    if (Object.keys(choiceAnswersRef.current).length > 0 && submissionId) {
       window.electronAPI.submission
-        .saveChoiceAnswers(submissionId, choiceAnswers)
+        .saveChoiceAnswers(submissionId, choiceAnswersRef.current)
         .catch(console.error)
     }
     setMediaError(null)
@@ -177,7 +177,7 @@ export default function ExamPage(): JSX.Element {
       }
       return next
     })
-  }, [clearTimers, choiceAnswers, submissionId, questions.length])
+  }, [clearTimers, submissionId, questions.length])
 
   // 推进计时器：同题内下一个 timer，或进入下一题
   const advanceTimer = useCallback(() => {
@@ -355,7 +355,9 @@ export default function ExamPage(): JSX.Element {
   const handleChoiceAnswer = useCallback((choiceId: number, answer: string) => {
     setChoiceAnswers((prev) => {
       if (prev[choiceId] === answer) return prev
-      return { ...prev, [choiceId]: answer }
+      const next = { ...prev, [choiceId]: answer }
+      choiceAnswersRef.current = next
+      return next
     })
   }, [])
 
