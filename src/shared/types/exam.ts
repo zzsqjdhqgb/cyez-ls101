@@ -48,6 +48,7 @@ export interface RecordingGradingInfoItem {
 export interface ChoiceGradingInfoItem {
   choiceId: number
   fullScore: number
+  problemInfo?: string
 }
 
 export type GradingInfoItem = RecordingGradingInfoItem | ChoiceGradingInfoItem

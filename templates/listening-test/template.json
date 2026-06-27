@@ -96,9 +96,9 @@
       }
     ],
     "gradingInfo": [
-      { "choiceId": 1, "fullScore": 2 },
-      { "choiceId": 2, "fullScore": 2 },
-      { "choiceId": 3, "fullScore": 2 }
+      { "choiceId": 1, "fullScore": 2, "problemInfo": "{{problem_info_1}}" },
+      { "choiceId": 2, "fullScore": 2, "problemInfo": "{{problem_info_2}}" },
+      { "choiceId": 3, "fullScore": 2, "problemInfo": "{{problem_info_3}}" }
     ]
   },
   "editableData": [
@@ -109,6 +109,7 @@
     { "type": "text", "id": "opt_1_C",         "description": "第1题 — 选项 C" },
     { "type": "text", "id": "opt_1_D",         "description": "第1题 — 选项 D" },
     { "type": "text", "id": "answer_1",        "description": "第1题 — 正确答案 (A/B/C/D)" },
+    { "type": "text", "id": "problem_info_1", "description": "第1题 — 题面（含题干、选项、听力文字，支持Markdown）" },
 
     { "type": "text", "id": "dialogue_text_2", "description": "第二段对话文本 (TTS合成)" },
     { "type": "text", "id": "stem_2",          "description": "第2题 — 题干" },
@@ -117,6 +118,7 @@
     { "type": "text", "id": "opt_2_C",         "description": "第2题 — 选项 C" },
     { "type": "text", "id": "opt_2_D",         "description": "第2题 — 选项 D" },
     { "type": "text", "id": "answer_2",        "description": "第2题 — 正确答案 (A/B/C/D)" },
+    { "type": "text", "id": "problem_info_2", "description": "第2题 — 题面（含题干、选项、听力文字，支持Markdown）" },
 
     { "type": "text", "id": "dialogue_text_3", "description": "第三段对话文本 (TTS合成)" },
     { "type": "text", "id": "stem_3",          "description": "第3题 — 题干" },
@@ -124,7 +126,8 @@
     { "type": "text", "id": "opt_3_B",         "description": "第3题 — 选项 B" },
     { "type": "text", "id": "opt_3_C",         "description": "第3题 — 选项 C" },
     { "type": "text", "id": "opt_3_D",         "description": "第3题 — 选项 D" },
-    { "type": "text", "id": "answer_3",        "description": "第3题 — 正确答案 (A/B/C/D)" }
+    { "type": "text", "id": "answer_3",        "description": "第3题 — 正确答案 (A/B/C/D)" },
+    { "type": "text", "id": "problem_info_3", "description": "第3题 — 题面（含题干、选项、听力文字，支持Markdown）" }
   ],
   "dev": true
 }

@@ -7,7 +7,12 @@ import { readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { BrowserWindow } from 'electron'
 import { marked } from 'marked'
-import type { GradingRecord, GradingInfoItem, ExamPackage } from '../../../shared/types'
+import type {
+  GradingRecord,
+  GradingInfoItem,
+  ExamPackage,
+  ChoiceAnswerRecord
+} from '../../../shared/types'
 import { ensureDir, getGradingPath } from '../../utils'
 import { loadRecords, loadExamPackage, getSubmissionMeta } from './import'
 import { getMaxScore } from './settlement'
@@ -127,6 +132,9 @@ export async function exportPdf(
     li { margin-left: 20px; }
     strong { font-weight: 600; }
     p { margin: 4px 0; line-height: 1.6; }
+    blockquote { margin: 8px 0; padding: 8px 16px; border-left: 4px solid #94a3b8; background: #f8fafc; color: #475569; }
+    .correct { color: #16a34a; font-weight: 600; }
+    .wrong { color: #dc2626; font-weight: 600; }
   `
 
   let errorCount = 0
@@ -151,24 +159,6 @@ export async function exportPdf(
     const examPkg: ExamPackage = JSON.parse(readFileSync(examJsonPath, 'utf-8'))
     const gradingInfo = examPkg.gradingInfo || []
     const recordingGi = gradingInfo.filter((gi) => 'id' in gi && !('choiceId' in gi))
-
-    // Build choice question lookup
-    const choiceQs: Record<number, Record<string, unknown>> = {}
-    for (const r of batchRecords) {
-      const pq = loadExamPackage(r.rid)
-      if (pq) {
-        for (const q of pq.questions) {
-          if (q.choicePages) {
-            for (const page of q.choicePages) {
-              for (const cq of page.questions) {
-                choiceQs[cq.id] = cq as unknown as Record<string, unknown>
-              }
-            }
-          }
-        }
-        break
-      }
-    }
 
     let md = `# ${record.student.name} \u2014 ${record.examTitle}\n\n`
     md += `| **\u59D3\u540D** | **\u5B66\u53F7** | **\u8BD5\u5377\u540D\u79F0** | **\u603B\u5206** | **\u4F5C\u7B54\u65F6\u95F4** |\n`
@@ -209,20 +199,7 @@ export async function exportPdf(
     }
 
     // Add choice question details
-    if (record.choiceScores && Object.keys(record.choiceScores).length > 0) {
-      md += `### 选择题\n\n`
-      md += `| 题号 | 题干 | 选项 | 正确答案 | 用户答案 | 正误 | 得分 |\n`
-      md += `|:--:|------|------|:--:|:--:|:--:|:--:|\n`
-      for (const [cIdStr, cs] of Object.entries(record.choiceScores)) {
-        const cq = choiceQs[Number(cIdStr)]
-        if (!cq) continue
-        const stem = (cq as { stem: string }).stem
-        const options = (cq as { options: [string, string, string, string] }).options
-        const optionsStr = `A.${options[0]} B.${options[1]} C.${options[2]} D.${options[3]}`
-        md += `| ${cIdStr} | ${stem} | ${optionsStr} | ${cs.correctAnswer} | ${cs.userAnswer ?? '-'} | ${cs.isCorrect ? '✓' : '✗'} | ${cs.score}/${cs.fullScore} |\n`
-      }
-      md += `\n---\n\n`
-    }
+    md += buildChoiceQuestionsMarkdown(gradingInfo, record.choiceScores)
 
     try {
       const htmlBody = await marked.parse(md)
@@ -288,4 +265,37 @@ export async function exportPdf(
   onProgress?.(batchRecords.length, batchRecords.length, '完成')
 
   return { success: true, errorCount, pdfErrors, files }
+}
+
+export function buildChoiceQuestionsMarkdown(
+  gradingInfo: GradingInfoItem[],
+  choiceScores?: Record<number, ChoiceAnswerRecord>
+): string {
+  if (!choiceScores || Object.keys(choiceScores).length === 0) return ''
+
+  const choiceGi = gradingInfo.filter(
+    (gi) => 'choiceId' in gi && !('id' in gi)
+  ) as ChoiceGradingInfoItem[]
+  choiceGi.sort((a, b) => a.choiceId - b.choiceId)
+
+  let md = ''
+  for (const gi of choiceGi) {
+    const cs = choiceScores[gi.choiceId]
+    if (!cs) continue
+
+    md += `### 第${gi.choiceId}题\n\n`
+
+    if (gi.problemInfo) {
+      md += gi.problemInfo + '\n\n'
+    }
+
+    const correctClass = cs.isCorrect ? 'correct' : 'wrong'
+    md += `- 正确答案: ${cs.correctAnswer}\n`
+    md += `- 用户答案: ${cs.userAnswer || '未作答'}\n`
+    md += `- 正误: <span class="${correctClass}">${cs.isCorrect ? '✓' : '✗'}</span>\n`
+    md += `- 得分: ${cs.score}/${cs.fullScore}\n\n`
+    md += `---\n\n`
+  }
+
+  return md
 }

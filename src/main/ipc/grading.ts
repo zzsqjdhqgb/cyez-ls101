@@ -9,7 +9,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import AdmZip from 'adm-zip'
 import { marked } from 'marked'
-import type { GradingListItem, ExamPackage } from '../../shared/types'
+import type { GradingListItem, ExamPackage, ChoiceAnswerRecord } from '../../shared/types'
 import { ensureDir, getGradingPath, getSubmissionsPath } from '../utils'
 import {
   loadRecords,
@@ -20,7 +20,8 @@ import {
   settleNow,
   listBatches,
   exportCsv,
-  exportPdf
+  exportPdf,
+  buildChoiceQuestionsMarkdown
 } from '../services/grading-service'
 import { getFileFilter } from '../../shared/file-types'
 import { getSttEngine } from '../stt/stt-service'
@@ -261,6 +262,9 @@ export function registerGradingHandlers(): void {
       li { margin-left: 20px; }
       strong { font-weight: 600; }
       p { margin: 4px 0; line-height: 1.6; }
+      blockquote { margin: 8px 0; padding: 8px 16px; border-left: 4px solid #94a3b8; background: #f8fafc; color: #475569; }
+      .correct { color: #16a34a; font-weight: 600; }
+      .wrong { color: #dc2626; font-weight: 600; }
     `
 
     let md = `# ${record.student.name} \u2014 ${record.examTitle}\n\n`
@@ -302,30 +306,7 @@ export function registerGradingHandlers(): void {
     }
 
     // Add choice question results
-    if (record.choiceScores && Object.keys(record.choiceScores).length > 0) {
-      const choiceQLookup: Record<
-        number,
-        { stem: string; options: [string, string, string, string] }
-      > = {}
-      for (const q of examPkg.questions) {
-        if (q.choicePages) {
-          for (const page of q.choicePages) {
-            for (const cq of page.questions) {
-              choiceQLookup[cq.id] = cq
-            }
-          }
-        }
-      }
-      md += `### 选择题\n\n`
-      md += `| 题号 | 题干 | 选项 | 正确答案 | 用户答案 | 正误 | 得分 |\n`
-      md += `|:--:|------|------|:--:|:--:|:--:|:--:|\n`
-      for (const [cIdStr, cs] of Object.entries(record.choiceScores)) {
-        const cq = choiceQLookup[Number(cIdStr)]
-        if (!cq) continue
-        md += `| ${cIdStr} | ${cq.stem} | A.${cq.options[0]} B.${cq.options[1]} C.${cq.options[2]} D.${cq.options[3]} | ${cs.correctAnswer} | ${cs.userAnswer ?? '-'} | ${cs.isCorrect ? '✓' : '✗'} | ${cs.score}/${cs.fullScore} |\n`
-      }
-      md += `\n---\n\n`
-    }
+    md += buildChoiceQuestionsMarkdown(gradingInfo, record.choiceScores)
 
     try {
       const htmlBody = await marked.parse(md)
@@ -386,16 +367,7 @@ export function registerGradingHandlers(): void {
         )
         let totalScore = 0
         let maxScore = 0
-        const rows: {
-          choiceId: number
-          stem: string
-          options: string
-          correctAnswer: string
-          userAnswer: string
-          isCorrect: boolean
-          score: number
-          fullScore: number
-        }[] = []
+        const choiceScores: Record<number, ChoiceAnswerRecord> = {}
 
         // Build choice question lookup
         const choiceQLookup: Record<
@@ -418,42 +390,50 @@ export function registerGradingHandlers(): void {
           maxScore += fullScore
           const cq = choiceQLookup[cId]
           if (!cq) continue
-          const userAnswer = choiceAnswers[cId] ?? '(未作答)'
+          const userAnswer = choiceAnswers[cId]
           const isCorrect = choiceAnswers[cId] === cq.answer
           const score = isCorrect ? fullScore : 0
           totalScore += score
-          rows.push({
+          choiceScores[cId] = {
             choiceId: cId,
-            stem: cq.stem,
-            options: `A.${cq.options[0]} B.${cq.options[1]} C.${cq.options[2]} D.${cq.options[3]}`,
-            correctAnswer: cq.answer,
             userAnswer,
+            correctAnswer: cq.answer,
             isCorrect,
-            score,
-            fullScore
-          })
+            fullScore,
+            score
+          }
         }
 
-        // Generate HTML
+        // Generate markdown
         const css = `
           @page { margin: 10mm; }
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #1e293b; line-height: 1.6; padding: 20px; }
           h1 { font-size: 22px; margin: 0 0 16px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+          h2 { font-size: 17px; margin: 12px 0 6px; font-weight: 700; }
+          h3 { font-size: 15px; margin: 10px 0 4px; font-weight: 600; }
           table { border-collapse: collapse; width: 100%; margin: 6px 0; }
           td, th { border: 1px solid #d1d5db; padding: 4px 8px; }
-          .correct { color: #16a34a; }
-          .wrong { color: #dc2626; }
+          hr { border: none; border-top: 1px solid #94a3b8; margin: 16px 0; }
+          img { max-width: 100%; margin: 8px 0; }
+          a { color: #2563eb; }
+          .score { color: #16a34a; font-weight: 600; }
+          li { margin-left: 20px; }
+          strong { font-weight: 600; }
+          p { margin: 4px 0; line-height: 1.6; }
+          blockquote { margin: 8px 0; padding: 8px 16px; border-left: 4px solid #94a3b8; background: #f8fafc; color: #475569; }
+          .correct { color: #16a34a; font-weight: 600; }
+          .wrong { color: #dc2626; font-weight: 600; }
         `
-        let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><base href="file://${examDir.replace(/\\/g, '/')}/"><title>${studentInfo.name}_${examPkg.title}_报告</title><style>${css}</style></head><body>`
-        html += `<h1>${studentInfo.name} — ${examPkg.title}</h1>`
-        html += `<table><tr><td>姓名</td><td>${studentInfo.name}</td><td>学号</td><td>${studentInfo.studentId}</td><td>总分</td><td>${totalScore}/${maxScore}</td></tr></table>`
-        html += `<h2>选择题详情</h2>`
-        html += `<table><tr><th>题号</th><th>题干</th><th>选项</th><th>正确答案</th><th>用户答案</th><th>正误</th><th>得分</th></tr>`
-        for (const row of rows) {
-          const correctClass = row.isCorrect ? 'correct' : 'wrong'
-          html += `<tr><td>${row.choiceId}</td><td>${row.stem}</td><td>${row.options}</td><td>${row.correctAnswer}</td><td>${row.userAnswer}</td><td class="${correctClass}">${row.isCorrect ? '✓' : '✗'}</td><td>${row.score}/${row.fullScore}</td></tr>`
-        }
-        html += `</table></body></html>`
+
+        let md = `# ${studentInfo.name} \u2014 ${examPkg.title}\n\n`
+        md += `| **\u59D3\u540D** | **\u5B66\u53F7** | **\u8BD5\u5377\u540D\u79F0** | **\u603B\u5206** |\n`
+        md += `|:------:|:------:|:------:|:------:|\n`
+        md += `| ${studentInfo.name} | ${studentInfo.studentId} | ${examPkg.title} | ${totalScore}/${maxScore} |\n\n`
+        md += `---\n\n`
+        md += buildChoiceQuestionsMarkdown(gradingInfo, choiceScores)
+
+        const htmlBody = await marked.parse(md)
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><base href="file://${examDir.replace(/\\/g, '/')}/"><title>${studentInfo.name}_${examPkg.title}_报告</title><style>${css}</style></head><body>${htmlBody}</body></html>`
 
         // Show save dialog
         const win = BrowserWindow.getFocusedWindow()
