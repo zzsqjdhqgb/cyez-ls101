@@ -89,7 +89,7 @@ export default function LicensePage({ onActivated }: LicensePageProps): JSX.Elem
           试用期已到期
         </div>
         <div style={{ fontSize: 14, color: '#64748b' }}>
-          软件试用期已于 2026年7月1日 到期，如需继续使用请联系开发者。
+          软件试用期已于 2026年8月1日 到期，如需继续使用请联系开发者。
         </div>
       </div>
     )
@@ -185,7 +185,7 @@ export default function LicensePage({ onActivated }: LicensePageProps): JSX.Elem
             lineHeight: 1.6
           }}
         >
-          此邀请码将于 <b>2026年7月1日</b> 到期，届时软件将无法启动。
+          此邀请码将于 <b>2026年8月1日</b> 到期，届时软件将无法启动。
         </div>
       </div>
     </div>
