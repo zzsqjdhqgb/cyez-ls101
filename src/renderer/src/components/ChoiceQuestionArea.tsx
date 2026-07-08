@@ -30,47 +30,47 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     display: 'flex',
     flexDirection: 'column',
-    gap: 16,
-    padding: '16px 20px'
+    gap: 8,
+    padding: '10px 16px'
   },
   questionBlock: {
-    padding: '12px 16px',
+    padding: '8px 12px',
     borderRadius: 8,
     border: '1px solid #333',
     transition: 'background 0.2s'
   },
   questionBlockHighlight: {
-    padding: '12px 16px',
+    padding: '8px 12px',
     borderRadius: 8,
     border: '1px solid #3b82f6',
     background: '#283548',
     transition: 'background 0.2s'
   },
   stem: {
-    fontSize: 22,
+    fontSize: 18,
     color: '#e2e8f0',
-    marginBottom: 10,
-    lineHeight: 1.5,
+    marginBottom: 6,
+    lineHeight: 1.3,
     wordBreak: 'break-word'
   },
   optionsGrid: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 6
+    gap: 2
   },
   optionRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: 10,
-    padding: '6px 10px',
+    gap: 8,
+    padding: '3px 8px',
     borderRadius: 6,
     cursor: 'pointer',
     transition: 'background 0.15s',
     userSelect: 'none'
   },
   radio: {
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
     borderRadius: '50%',
     border: '2px solid #64748b',
     display: 'flex',
@@ -80,8 +80,8 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'border-color 0.15s'
   },
   radioSelected: {
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
     borderRadius: '50%',
     border: '2px solid #3b82f6',
     display: 'flex',
@@ -90,23 +90,23 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0
   },
   radioDot: {
-    width: 10,
-    height: 10,
+    width: 8,
+    height: 8,
     borderRadius: '50%',
     background: '#3b82f6'
   },
   optionLabel: {
-    fontSize: 20,
+    fontSize: 16,
     color: '#94a3b8',
-    minWidth: 24
+    minWidth: 20
   },
   optionText: {
-    fontSize: 20,
+    fontSize: 16,
     color: '#cbd5e1',
     flex: 1
   },
   optionTextSelected: {
-    fontSize: 20,
+    fontSize: 16,
     color: '#ffffff',
     flex: 1,
     fontWeight: 500
@@ -116,12 +116,12 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
-    marginTop: 12,
-    padding: '8px 0'
+    marginTop: 8,
+    padding: '4px 0'
   },
   pageBtn: {
-    fontSize: 18,
-    padding: '6px 16px',
+    fontSize: 16,
+    padding: '4px 14px',
     background: '#333',
     color: '#cbd5e1',
     border: '1px solid #444',
@@ -129,8 +129,8 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer'
   },
   pageBtnDisabled: {
-    fontSize: 18,
-    padding: '6px 16px',
+    fontSize: 16,
+    padding: '4px 14px',
     background: '#222',
     color: '#555',
     border: '1px solid #333',
@@ -138,7 +138,7 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'default'
   },
   pageInfo: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#64748b'
   }
 }
