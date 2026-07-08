@@ -9,7 +9,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import AdmZip from 'adm-zip'
 import { marked } from 'marked'
-import type { GradingListItem, ExamPackage, ChoiceAnswerRecord } from '../../shared/types'
+import type { GradingListItem, ExamPackage, ChoiceAnswerRecord, RecordingGradingInfoItem, ChoiceGradingInfoItem } from '../../shared/types'
 import { ensureDir, getGradingPath, getSubmissionsPath } from '../utils'
 import {
   loadRecords,
@@ -244,7 +244,9 @@ export function registerGradingHandlers(): void {
 
     const examPkg: ExamPackage = JSON.parse(readFileSync(examJsonPath, 'utf-8'))
     const gradingInfo = examPkg.gradingInfo || []
-    const recordingGi = gradingInfo.filter((gi) => 'id' in gi && !('choiceId' in gi))
+    const recordingGi = gradingInfo.filter(
+      (gi): gi is RecordingGradingInfoItem => 'id' in gi
+    )
 
     const css = `
       @page { margin: 10mm; }
@@ -274,34 +276,27 @@ export function registerGradingHandlers(): void {
     md += `---\n\n`
 
     if (recordingGi.length > 0) {
-      const sortedGi = [...recordingGi].sort(
-        (a, b) =>
-          (((a as Record<string, unknown>).id as number) -
-            (b as Record<string, unknown>).id) as number
-      )
+      const sortedGi = [...recordingGi].sort((a, b) => a.id - b.id)
       md += `| ${sortedGi.map((_, idx) => String(idx + 1)).join(' | ')} |\n`
       md += `|${sortedGi.map(() => ':--:').join('|')}|\n`
       md += `| ${sortedGi
         .map((gi) => {
-          const giRec = gi as Record<string, unknown>
-          const se = record.scores[giRec.id as number]
-          return se
-            ? `${se.score}/${giRec.fullScore ?? (giRec.scoreOptions as number[] | undefined)?.[(giRec.scoreOptions as number[]).length - 1] ?? '-'}`
-            : `-/${giRec.fullScore ?? (giRec.scoreOptions as number[] | undefined)?.[(giRec.scoreOptions as number[]).length - 1] ?? '-'}`
+          const se = record.scores[gi.id]
+          const fs = gi.fullScore ?? gi.scoreOptions?.[gi.scoreOptions.length - 1] ?? '-'
+          return se ? `${se.score}/${fs}` : `-/${fs}`
         })
         .join(' | ')} |\n\n`
       md += `---\n\n`
     }
 
     for (const gi of recordingGi) {
-      const giRec = gi as Record<string, unknown>
-      const scoreEntry = record.scores[giRec.id as number]
+      const scoreEntry = record.scores[gi.id]
       md += `### \u9898\u76EE\n\n`
-      md += `${giRec.problemInfo}\n\n`
+      md += `${gi.problemInfo}\n\n`
       md += `<div class="score"><strong>\u5206\u6570\uFF1A${scoreEntry?.score ?? '\u672A\u8BC4\u5206'}</strong></div>\n\n`
       md += `<div class="score"><strong>\u8BC4\u8BED\uFF1A${scoreEntry?.comment || '\u65E0'}</strong></div>\n\n`
       md += `### \u8BC4\u5206\u6807\u51C6\n\n`
-      md += `${giRec.gradingInfo}\n\n`
+      md += `${gi.gradingInfo}\n\n`
       md += `---\n\n`
     }
 
@@ -363,7 +358,7 @@ export function registerGradingHandlers(): void {
         // Compute scores
         const gradingInfo = examPkg.gradingInfo || []
         const choiceItems = gradingInfo.filter(
-          (gi: Record<string, unknown>) => 'choiceId' in gi && !('id' in gi)
+          (gi): gi is ChoiceGradingInfoItem => 'choiceId' in gi
         )
         let totalScore = 0
         let maxScore = 0
@@ -385,8 +380,8 @@ export function registerGradingHandlers(): void {
         }
 
         for (const gi of choiceItems) {
-          const cId = (gi as Record<string, unknown>).choiceId as number
-          const fullScore = (gi as Record<string, unknown>).fullScore as number
+          const cId = gi.choiceId
+          const fullScore = gi.fullScore
           maxScore += fullScore
           const cq = choiceQLookup[cId]
           if (!cq) continue

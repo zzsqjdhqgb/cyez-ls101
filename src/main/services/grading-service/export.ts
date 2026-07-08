@@ -11,7 +11,9 @@ import type {
   GradingRecord,
   GradingInfoItem,
   ExamPackage,
-  ChoiceAnswerRecord
+  ChoiceAnswerRecord,
+  RecordingGradingInfoItem,
+  ChoiceGradingInfoItem
 } from '../../../shared/types'
 import { ensureDir, getGradingPath } from '../../utils'
 import { loadRecords, loadExamPackage, getSubmissionMeta } from './import'
@@ -46,11 +48,11 @@ export function exportCsv(gradingPath: string, batchId: string): string {
   const giHeaders: string[] = []
   for (const gi of sortedGi) {
     if ('id' in gi) {
-      giHeaders.push(`题${((gi as Record<string, unknown>).id as number) + 1}`)
+      giHeaders.push(`题${gi.id + 1}`)
     } else {
-      giHeaders.push(`选${(gi as Record<string, unknown>).choiceId}`)
-      giHeaders.push(`选${(gi as Record<string, unknown>).choiceId}-答案`)
-      giHeaders.push(`选${(gi as Record<string, unknown>).choiceId}-正误`)
+      giHeaders.push(`选${gi.choiceId}`)
+      giHeaders.push(`选${gi.choiceId}-答案`)
+      giHeaders.push(`选${gi.choiceId}-正误`)
     }
   }
   let csv = `\uFEFF姓名,学号,试卷名称,${giHeaders.join(',')},总分,作答时间\n`
@@ -61,19 +63,15 @@ export function exportCsv(gradingPath: string, batchId: string): string {
     const giCells: string[] = []
     for (const gi of sortedGi) {
       if ('id' in gi) {
-        const giRecord = gi as Record<string, unknown>
-        const se = r.scores[giRecord.id as number]
+        const se = r.scores[gi.id]
         const fs =
-          giRecord.fullScore ??
-          (giRecord.scoreOptions as number[] | undefined)?.[
-            (giRecord.scoreOptions as number[]).length - 1
-          ] ??
+          gi.fullScore ??
+          gi.scoreOptions?.[gi.scoreOptions.length - 1] ??
           '-'
         giCells.push(se ? `${se.score}/${fs}` : `-/${fs}`)
       } else {
-        const giRecord = gi as Record<string, unknown>
-        const cs = r.choiceScores?.[giRecord.choiceId as number]
-        giCells.push(cs ? `${cs.score}/${cs.fullScore}` : `0/${giRecord.fullScore}`)
+        const cs = r.choiceScores?.[gi.choiceId]
+        giCells.push(cs ? `${cs.score}/${cs.fullScore}` : `0/${gi.fullScore}`)
         giCells.push(cs?.userAnswer ?? '未答')
         giCells.push(cs?.isCorrect ? '✓' : '✗')
       }
@@ -158,7 +156,9 @@ export async function exportPdf(
 
     const examPkg: ExamPackage = JSON.parse(readFileSync(examJsonPath, 'utf-8'))
     const gradingInfo = examPkg.gradingInfo || []
-    const recordingGi = gradingInfo.filter((gi) => 'id' in gi && !('choiceId' in gi))
+    const recordingGi = gradingInfo.filter(
+      (gi): gi is RecordingGradingInfoItem => 'id' in gi
+    )
 
     let md = `# ${record.student.name} \u2014 ${record.examTitle}\n\n`
     md += `| **\u59D3\u540D** | **\u5B66\u53F7** | **\u8BD5\u5377\u540D\u79F0** | **\u603B\u5206** | **\u4F5C\u7B54\u65F6\u95F4** |\n`
@@ -167,34 +167,27 @@ export async function exportPdf(
     md += `---\n\n`
 
     if (recordingGi.length > 0) {
-      const sortedGi = [...recordingGi].sort(
-        (a, b) =>
-          (((a as Record<string, unknown>).id as number) -
-            (b as Record<string, unknown>).id) as number
-      )
+      const sortedGi = [...recordingGi].sort((a, b) => a.id - b.id)
       md += `| ${sortedGi.map((_, idx) => String(idx + 1)).join(' | ')} |\n`
       md += `|${sortedGi.map(() => ':--:').join('|')}|\n`
       md += `| ${sortedGi
         .map((gi) => {
-          const giRec = gi as Record<string, unknown>
-          const se = record.scores[giRec.id as number]
-          return se
-            ? `${se.score}/${giRec.fullScore ?? (giRec.scoreOptions as number[] | undefined)?.[(giRec.scoreOptions as number[]).length - 1] ?? '-'}`
-            : `-/${giRec.fullScore ?? (giRec.scoreOptions as number[] | undefined)?.[(giRec.scoreOptions as number[]).length - 1] ?? '-'}`
+          const se = record.scores[gi.id]
+          const fs = gi.fullScore ?? gi.scoreOptions?.[gi.scoreOptions.length - 1] ?? '-'
+          return se ? `${se.score}/${fs}` : `-/${fs}`
         })
         .join(' | ')} |\n\n`
       md += `---\n\n`
     }
 
     for (const gi of recordingGi) {
-      const giRec = gi as Record<string, unknown>
-      const scoreEntry = record.scores[giRec.id as number]
+      const scoreEntry = record.scores[gi.id]
       md += `### \u9898\u76EE\n\n`
-      md += `${giRec.problemInfo}\n\n`
+      md += `${gi.problemInfo}\n\n`
       md += `<div class="score"><strong>\u5206\u6570\uFF1A${scoreEntry?.score ?? '\u672A\u8BC4\u5206'}</strong></div>\n\n`
       md += `<div class="score"><strong>\u8BC4\u8BED\uFF1A${scoreEntry?.comment || '\u65E0'}</strong></div>\n\n`
       md += `### \u8BC4\u5206\u6807\u51C6\n\n`
-      md += `${giRec.gradingInfo}\n\n`
+      md += `${gi.gradingInfo}\n\n`
       md += `---\n\n`
     }
 

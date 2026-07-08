@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 import AdmZip from 'adm-zip'
-import type { GradingRecord, ExamPackage, StudentInfo, SubmissionMeta } from '../../../shared/types'
+import type { GradingRecord, ExamPackage, StudentInfo, SubmissionMeta, ChoiceGradingInfoItem, RecordingGradingInfoItem } from '../../../shared/types'
 import { ensureDir, getGradingPath, computeEid } from '../../utils'
 
 function getRecordsPath(): string {
@@ -177,29 +177,25 @@ export function importSubmissions(
       let maxScore = 0
       const gradingInfo = examPackage.gradingInfo || []
       const choiceGradingItems = gradingInfo.filter(
-        (gi: Record<string, unknown>) => 'choiceId' in gi && !('id' in gi)
+        (gi): gi is ChoiceGradingInfoItem => 'choiceId' in gi
       )
       const recordingItems = gradingInfo.filter(
-        (gi: Record<string, unknown>) => 'id' in gi && !('choiceId' in gi)
+        (gi): gi is RecordingGradingInfoItem => 'id' in gi
       )
 
       // Compute choice scores
       const allChoiceQs: Record<number, Record<string, unknown>> = {}
       for (const q of examPackage.questions) {
-        const cp = (q as Record<string, unknown>).choicePages as
-          | Record<string, unknown>[]
-          | undefined
-        if (cp) {
-          for (const page of cp) {
-            const qs = page.questions as Record<string, unknown>[]
-            if (qs) for (const cq of qs) allChoiceQs[cq.id as number] = cq
+        if (q.choicePages) {
+          for (const page of q.choicePages) {
+            for (const cq of page.questions) allChoiceQs[cq.id] = cq as unknown as Record<string, unknown>
           }
         }
       }
 
       for (const gi of choiceGradingItems) {
-        const cId = gi.choiceId as number
-        const fullScore = gi.fullScore as number
+        const cId = gi.choiceId
+        const fullScore = gi.fullScore
         const cq = allChoiceQs[cId]
         if (!cq) continue
         const correctAnswer = cq.answer as string

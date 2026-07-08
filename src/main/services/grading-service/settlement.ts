@@ -6,7 +6,7 @@
 import { writeFileSync, existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import type { GradingBatch } from '../../../shared/types'
+import type { GradingBatch, RecordingGradingInfoItem } from '../../../shared/types'
 import { ensureDir } from '../../utils'
 import { loadRecords, saveRecords, loadExamPackage, getSubmissionMeta } from './import'
 
@@ -43,10 +43,10 @@ export function settleNow(gradingPath: string, sessionSettlementRids: string[]):
     let allGraded = true
     let totalScore = 0
     const recordingItems = pkg.gradingInfo.filter(
-      (gi: Record<string, unknown>) => 'id' in gi && !('choiceId' in gi)
+      (gi): gi is RecordingGradingInfoItem => 'id' in gi
     )
     for (const gi of recordingItems) {
-      const se = record.scores[(gi as Record<string, unknown>).id as number]
+      const se = record.scores[gi.id]
       if (!se) {
         allGraded = false
         break
