@@ -14,7 +14,13 @@ export type ContentNode =
 
 export type TimeControl =
   | { type: 'countdown'; seconds: number; focusId?: number; pageRange?: [number, number] }
-  | { type: 'record'; duration: number; recordIndex?: number; focusId?: number; pageRange?: [number, number] }
+  | {
+      type: 'record'
+      duration: number
+      recordIndex?: number
+      focusId?: number
+      pageRange?: [number, number]
+    }
   | { type: 'content-controlled'; focusId?: number; pageRange?: [number, number] }
 
 export interface ChoiceQuestion {

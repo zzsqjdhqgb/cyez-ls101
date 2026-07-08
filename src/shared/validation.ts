@@ -116,7 +116,10 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
       }
 
       if (time.type === 'countdown' && typeof time.seconds !== 'number') {
-        errors.push({ questionIndex: i, message: `${timeLabel}countdown must have seconds (number)` })
+        errors.push({
+          questionIndex: i,
+          message: `${timeLabel}countdown must have seconds (number)`
+        })
       }
 
       if (time.type === 'record' && typeof time.duration !== 'number') {
@@ -130,7 +133,10 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
         })
       }
 
-      if (typeof time.focusId === 'number' && (time.focusId < 1 || !Number.isInteger(time.focusId))) {
+      if (
+        typeof time.focusId === 'number' &&
+        (time.focusId < 1 || !Number.isInteger(time.focusId))
+      ) {
         errors.push({ questionIndex: i, message: `${timeLabel}focusId must be a positive integer` })
       }
 
@@ -159,11 +165,17 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
       }
 
       if (time.type === 'countdown' && typeof time.seconds !== 'number') {
-        errors.push({ questionIndex: i, message: `${timeLabel}: countdown must have seconds (number)` })
+        errors.push({
+          questionIndex: i,
+          message: `${timeLabel}: countdown must have seconds (number)`
+        })
       }
 
       if (time.type === 'record' && typeof time.duration !== 'number') {
-        errors.push({ questionIndex: i, message: `${timeLabel}: record must have duration (number)` })
+        errors.push({
+          questionIndex: i,
+          message: `${timeLabel}: record must have duration (number)`
+        })
       }
 
       if (time.type === 'content-controlled' && mediaCount !== 1) {
@@ -173,8 +185,14 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
         })
       }
 
-      if (typeof time.focusId === 'number' && (time.focusId < 1 || !Number.isInteger(time.focusId))) {
-        errors.push({ questionIndex: i, message: `${timeLabel}: focusId must be a positive integer` })
+      if (
+        typeof time.focusId === 'number' &&
+        (time.focusId < 1 || !Number.isInteger(time.focusId))
+      ) {
+        errors.push({
+          questionIndex: i,
+          message: `${timeLabel}: focusId must be a positive integer`
+        })
       }
     }
 
@@ -235,7 +253,6 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
                   })
                 }
               }
-
             }
             const validAnswers = ['A', 'B', 'C', 'D']
             if (typeof cq.answer !== 'string' || !validAnswers.includes(cq.answer)) {
