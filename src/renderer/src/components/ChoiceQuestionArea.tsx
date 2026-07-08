@@ -10,6 +10,7 @@ interface Props {
   pages: ChoicePage[]
   currentPage: number
   focusId?: number
+  pageRange?: [number, number]
   answers: Record<number, string>
   onAnswer: (choiceId: number, answer: string) => void
   onPageChange: (page: number) => void
@@ -146,12 +147,16 @@ export default function ChoiceQuestionArea({
   pages,
   currentPage,
   focusId,
+  pageRange,
   answers,
   onAnswer,
   onPageChange
 }: Props): JSX.Element {
   const totalPages = pages.length
   const isLocked = focusId !== undefined && focusId > 0
+  const hasRange = pageRange !== undefined
+  const rangeStart = hasRange ? pageRange[0] : 0
+  const rangeEnd = hasRange ? pageRange[1] : totalPages - 1
 
   useEffect(() => {
     if (focusId !== undefined && focusId > 0) {
@@ -161,6 +166,16 @@ export default function ChoiceQuestionArea({
       }
     }
   }, [focusId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (hasRange && currentPage < rangeStart) {
+      onPageChange(rangeStart)
+    }
+  }, [pageRange]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const prevDisabled = isLocked || currentPage === 0 || (hasRange && currentPage <= rangeStart)
+  const nextDisabled =
+    isLocked || currentPage === totalPages - 1 || (hasRange && currentPage >= rangeEnd)
 
   const currentPageQuestions = pages[currentPage]?.questions ?? []
 
@@ -214,8 +229,8 @@ export default function ChoiceQuestionArea({
         <div style={styles.pageNav}>
           <button
             onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 0 || isLocked}
-            style={currentPage === 0 || isLocked ? styles.pageBtnDisabled : styles.pageBtn}
+            disabled={prevDisabled}
+            style={prevDisabled ? styles.pageBtnDisabled : styles.pageBtn}
           >
             ◀ 上一页
           </button>
@@ -224,10 +239,8 @@ export default function ChoiceQuestionArea({
           </span>
           <button
             onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages - 1 || isLocked}
-            style={
-              currentPage === totalPages - 1 || isLocked ? styles.pageBtnDisabled : styles.pageBtn
-            }
+            disabled={nextDisabled}
+            style={nextDisabled ? styles.pageBtnDisabled : styles.pageBtn}
           >
             下一页 ▶
           </button>

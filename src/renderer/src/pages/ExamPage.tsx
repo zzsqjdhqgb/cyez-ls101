@@ -601,6 +601,7 @@ export default function ExamPage(): JSX.Element {
                 pages={choicePages}
                 currentPage={currentChoicePage}
                 focusId={currentTimer?.focusId}
+                pageRange={currentTimer?.pageRange}
                 answers={choiceAnswers}
                 onAnswer={handleChoiceAnswer}
                 onPageChange={setCurrentChoicePage}

@@ -134,6 +134,30 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
         errors.push({ questionIndex: i, message: `${timeLabel}focusId must be a positive integer` })
       }
 
+      if (time.pageRange !== undefined) {
+        if (
+          !Array.isArray(time.pageRange) ||
+          time.pageRange.length !== 2 ||
+          typeof time.pageRange[0] !== 'number' ||
+          typeof time.pageRange[1] !== 'number' ||
+          !Number.isInteger(time.pageRange[0]) ||
+          !Number.isInteger(time.pageRange[1]) ||
+          time.pageRange[0] < 0 ||
+          time.pageRange[1] < time.pageRange[0]
+        ) {
+          errors.push({
+            questionIndex: i,
+            message: `${timeLabel}pageRange must be [start, end] with 0 <= start <= end`
+          })
+        }
+        if (typeof time.focusId === 'number') {
+          errors.push({
+            questionIndex: i,
+            message: `${timeLabel}pageRange and focusId cannot both be set`
+          })
+        }
+      }
+
       if (time.type === 'countdown' && typeof time.seconds !== 'number') {
         errors.push({ questionIndex: i, message: `${timeLabel}: countdown must have seconds (number)` })
       }
@@ -230,6 +254,16 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
               errors.push({
                 questionIndex: i,
                 message: `focusId ${tc.focusId} must be between 1 and total choice questions (${totalChoiceCount})`
+              })
+            }
+          }
+          if (tc && tc.pageRange !== undefined) {
+            const pr = tc.pageRange as number[]
+            const totalPages = question.choicePages!.length
+            if (pr[1] >= totalPages) {
+              errors.push({
+                questionIndex: i,
+                message: `pageRange end ${pr[1]} must be less than total pages (${totalPages})`
               })
             }
           }

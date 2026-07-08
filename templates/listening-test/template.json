@@ -79,7 +79,7 @@
         "content": [
           { "type": "text", "text": "听力部分已结束，请检查答案。", "size": "normal" }
         ],
-        "time": { "type": "countdown", "seconds": 10 },
+        "time": { "type": "countdown", "seconds": 10, "pageRange": [0, 1] },
         "choicePages": [
           {
             "questions": [
@@ -96,9 +96,9 @@
       }
     ],
     "gradingInfo": [
-      { "choiceId": 1, "fullScore": 2, "problemInfo": "{{problem_info_1}}" },
-      { "choiceId": 2, "fullScore": 2, "problemInfo": "{{problem_info_2}}" },
-      { "choiceId": 3, "fullScore": 2, "problemInfo": "{{problem_info_3}}" }
+      { "choiceId": 1, "fullScore": 2, "problemInfo": "**{{stem_1}}**\n\nA. {{opt_1_A}}\nB. {{opt_1_B}}\nC. {{opt_1_C}}\nD. {{opt_1_D}}\n\n> {{dialogue_text_1}}" },
+      { "choiceId": 2, "fullScore": 2, "problemInfo": "**{{stem_2}}**\n\nA. {{opt_2_A}}\nB. {{opt_2_B}}\nC. {{opt_2_C}}\nD. {{opt_2_D}}\n\n> {{dialogue_text_2}}" },
+      { "choiceId": 3, "fullScore": 2, "problemInfo": "**{{stem_3}}**\n\nA. {{opt_3_A}}\nB. {{opt_3_B}}\nC. {{opt_3_C}}\nD. {{opt_3_D}}\n\n> {{dialogue_text_3}}" }
     ]
   },
   "editableData": [
@@ -109,7 +109,7 @@
     { "type": "text", "id": "opt_1_C",         "description": "第1题 — 选项 C" },
     { "type": "text", "id": "opt_1_D",         "description": "第1题 — 选项 D" },
     { "type": "text", "id": "answer_1",        "description": "第1题 — 正确答案 (A/B/C/D)" },
-    { "type": "text", "id": "problem_info_1", "description": "第1题 — 题面（含题干、选项、听力文字，支持Markdown）" },
+
 
     { "type": "text", "id": "dialogue_text_2", "description": "第二段对话文本 (TTS合成)" },
     { "type": "text", "id": "stem_2",          "description": "第2题 — 题干" },
@@ -118,7 +118,7 @@
     { "type": "text", "id": "opt_2_C",         "description": "第2题 — 选项 C" },
     { "type": "text", "id": "opt_2_D",         "description": "第2题 — 选项 D" },
     { "type": "text", "id": "answer_2",        "description": "第2题 — 正确答案 (A/B/C/D)" },
-    { "type": "text", "id": "problem_info_2", "description": "第2题 — 题面（含题干、选项、听力文字，支持Markdown）" },
+
 
     { "type": "text", "id": "dialogue_text_3", "description": "第三段对话文本 (TTS合成)" },
     { "type": "text", "id": "stem_3",          "description": "第3题 — 题干" },
@@ -126,8 +126,7 @@
     { "type": "text", "id": "opt_3_B",         "description": "第3题 — 选项 B" },
     { "type": "text", "id": "opt_3_C",         "description": "第3题 — 选项 C" },
     { "type": "text", "id": "opt_3_D",         "description": "第3题 — 选项 D" },
-    { "type": "text", "id": "answer_3",        "description": "第3题 — 正确答案 (A/B/C/D)" },
-    { "type": "text", "id": "problem_info_3", "description": "第3题 — 题面（含题干、选项、听力文字，支持Markdown）" }
+    { "type": "text", "id": "answer_3",        "description": "第3题 — 正确答案 (A/B/C/D)" }
   ],
   "dev": true
 }

@@ -5,14 +5,6 @@ Borrow a book
 Return a book
 Read a book
 C
-**What does the man want to do?**
-
-A. Buy a book
-B. Borrow a book
-C. Return a book
-D. Read a book
-
-> Man: Excuse me, I'd like to return this book. Woman: Of course. Do you have your library card? Man: Yes, here it is. Woman: Let me check... It seems this book is overdue by two days. There's a late fee. Man: Oh, I'm sorry. How much do I need to pay? Woman: Actually, since this is your first time, I'll waive the fee. Just return it and you're all set.
 Man: Hello, I'm looking for a book on world history. Woman: History books are on the second floor, to your left. Man: Great, thank you. Is there a reading area nearby? Woman: Yes, right next to the history section. You can sit and read there. Man: Perfect. And how many books can I borrow at one time? Woman: Up to five books, for two weeks each.
 Where does the conversation most probably take place?
 At a library
@@ -20,14 +12,6 @@ At a bookstore
 In a classroom
 At a post office
 A
-**Where does the conversation most probably take place?**
-
-A. At a library
-B. At a bookstore
-C. In a classroom
-D. At a post office
-
-> Man: Hello, I'm looking for a book on world history. Woman: History books are on the second floor, to your left. Man: Great, thank you. Is there a reading area nearby? Woman: Yes, right next to the history section. You can sit and read there. Man: Perfect. And how many books can I borrow at one time? Woman: Up to five books, for two weeks each.
 Woman: Hi, I noticed you were looking at the job posting board. Are you interested in the part-time position? Man: Yes, I am. But I'm not sure if I qualify. Woman: The library assistant position doesn't require previous experience. Man: That's good to hear. What are the working hours? Woman: Weekday evenings from 6 to 9, and Saturday mornings. Is that OK? Man: That works perfectly for my class schedule.
 What time does the library assistant work on weekdays?
 9 AM to 12 PM
@@ -35,11 +19,3 @@ What time does the library assistant work on weekdays?
 6 PM to 9 PM
 All day
 C
-**What time does the library assistant work on weekdays?**
-
-A. 9 AM to 12 PM
-B. 1 PM to 4 PM
-C. 6 PM to 9 PM
-D. All day
-
-> Woman: Hi, I noticed you were looking at the job posting board. Are you interested in the part-time position? Man: Yes, I am. But I'm not sure if I qualify. Woman: The library assistant position doesn't require previous experience. Man: That's good to hear. What are the working hours? Woman: Weekday evenings from 6 to 9, and Saturday mornings. Is that OK? Man: That works perfectly for my class schedule.
