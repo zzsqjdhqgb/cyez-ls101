@@ -7,7 +7,14 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 import AdmZip from 'adm-zip'
-import type { GradingRecord, ExamPackage, StudentInfo, SubmissionMeta, ChoiceGradingInfoItem, RecordingGradingInfoItem } from '../../../shared/types'
+import type {
+  GradingRecord,
+  ExamPackage,
+  StudentInfo,
+  SubmissionMeta,
+  ChoiceGradingInfoItem,
+  RecordingGradingInfoItem
+} from '../../../shared/types'
 import { ensureDir, getGradingPath, computeEid } from '../../utils'
 
 function getRecordsPath(): string {
@@ -179,16 +186,15 @@ export function importSubmissions(
       const choiceGradingItems = gradingInfo.filter(
         (gi): gi is ChoiceGradingInfoItem => 'choiceId' in gi
       )
-      const recordingItems = gradingInfo.filter(
-        (gi): gi is RecordingGradingInfoItem => 'id' in gi
-      )
+      const recordingItems = gradingInfo.filter((gi): gi is RecordingGradingInfoItem => 'id' in gi)
 
       // Compute choice scores
       const allChoiceQs: Record<number, Record<string, unknown>> = {}
       for (const q of examPackage.questions) {
         if (q.choicePages) {
           for (const page of q.choicePages) {
-            for (const cq of page.questions) allChoiceQs[cq.id] = cq as unknown as Record<string, unknown>
+            for (const cq of page.questions)
+              allChoiceQs[cq.id] = cq as unknown as Record<string, unknown>
           }
         }
       }

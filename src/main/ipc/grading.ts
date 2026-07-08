@@ -9,7 +9,13 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import AdmZip from 'adm-zip'
 import { marked } from 'marked'
-import type { GradingListItem, ExamPackage, ChoiceAnswerRecord, RecordingGradingInfoItem, ChoiceGradingInfoItem } from '../../shared/types'
+import type {
+  GradingListItem,
+  ExamPackage,
+  ChoiceAnswerRecord,
+  RecordingGradingInfoItem,
+  ChoiceGradingInfoItem
+} from '../../shared/types'
 import { ensureDir, getGradingPath, getSubmissionsPath } from '../utils'
 import {
   loadRecords,
@@ -244,9 +250,7 @@ export function registerGradingHandlers(): void {
 
     const examPkg: ExamPackage = JSON.parse(readFileSync(examJsonPath, 'utf-8'))
     const gradingInfo = examPkg.gradingInfo || []
-    const recordingGi = gradingInfo.filter(
-      (gi): gi is RecordingGradingInfoItem => 'id' in gi
-    )
+    const recordingGi = gradingInfo.filter((gi): gi is RecordingGradingInfoItem => 'id' in gi)
 
     const css = `
       @page { margin: 10mm; }

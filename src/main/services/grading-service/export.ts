@@ -64,10 +64,7 @@ export function exportCsv(gradingPath: string, batchId: string): string {
     for (const gi of sortedGi) {
       if ('id' in gi) {
         const se = r.scores[gi.id]
-        const fs =
-          gi.fullScore ??
-          gi.scoreOptions?.[gi.scoreOptions.length - 1] ??
-          '-'
+        const fs = gi.fullScore ?? gi.scoreOptions?.[gi.scoreOptions.length - 1] ?? '-'
         giCells.push(se ? `${se.score}/${fs}` : `-/${fs}`)
       } else {
         const cs = r.choiceScores?.[gi.choiceId]
@@ -156,9 +153,7 @@ export async function exportPdf(
 
     const examPkg: ExamPackage = JSON.parse(readFileSync(examJsonPath, 'utf-8'))
     const gradingInfo = examPkg.gradingInfo || []
-    const recordingGi = gradingInfo.filter(
-      (gi): gi is RecordingGradingInfoItem => 'id' in gi
-    )
+    const recordingGi = gradingInfo.filter((gi): gi is RecordingGradingInfoItem => 'id' in gi)
 
     let md = `# ${record.student.name} \u2014 ${record.examTitle}\n\n`
     md += `| **\u59D3\u540D** | **\u5B66\u53F7** | **\u8BD5\u5377\u540D\u79F0** | **\u603B\u5206** | **\u4F5C\u7B54\u65F6\u95F4** |\n`
