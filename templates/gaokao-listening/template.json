@@ -975,102 +975,102 @@
       {
         "choiceId": 1,
         "fullScore": 1,
-        "problemInfo": "**{{stem_1}}**\n\nA. {{opt_1_A}}\nB. {{opt_1_B}}\nC. {{opt_1_C}}\nD. {{opt_1_D}}\n\n> {{dialogue_text_1}}"
+        "problemInfo": "**{{stem_1}}**\n\nA. {{opt_1_A}}\n\nB. {{opt_1_B}}\n\nC. {{opt_1_C}}\n\nD. {{opt_1_D}}\n\n> {{dialogue_text_1}}"
       },
       {
         "choiceId": 2,
         "fullScore": 1,
-        "problemInfo": "**{{stem_2}}**\n\nA. {{opt_2_A}}\nB. {{opt_2_B}}\nC. {{opt_2_C}}\nD. {{opt_2_D}}\n\n> {{dialogue_text_2}}"
+        "problemInfo": "**{{stem_2}}**\n\nA. {{opt_2_A}}\n\nB. {{opt_2_B}}\n\nC. {{opt_2_C}}\n\nD. {{opt_2_D}}\n\n> {{dialogue_text_2}}"
       },
       {
         "choiceId": 3,
         "fullScore": 1,
-        "problemInfo": "**{{stem_3}}**\n\nA. {{opt_3_A}}\nB. {{opt_3_B}}\nC. {{opt_3_C}}\nD. {{opt_3_D}}\n\n> {{dialogue_text_3}}"
+        "problemInfo": "**{{stem_3}}**\n\nA. {{opt_3_A}}\n\nB. {{opt_3_B}}\n\nC. {{opt_3_C}}\n\nD. {{opt_3_D}}\n\n> {{dialogue_text_3}}"
       },
       {
         "choiceId": 4,
         "fullScore": 1,
-        "problemInfo": "**{{stem_4}}**\n\nA. {{opt_4_A}}\nB. {{opt_4_B}}\nC. {{opt_4_C}}\nD. {{opt_4_D}}\n\n> {{dialogue_text_4}}"
+        "problemInfo": "**{{stem_4}}**\n\nA. {{opt_4_A}}\n\nB. {{opt_4_B}}\n\nC. {{opt_4_C}}\n\nD. {{opt_4_D}}\n\n> {{dialogue_text_4}}"
       },
       {
         "choiceId": 5,
         "fullScore": 1,
-        "problemInfo": "**{{stem_5}}**\n\nA. {{opt_5_A}}\nB. {{opt_5_B}}\nC. {{opt_5_C}}\nD. {{opt_5_D}}\n\n> {{dialogue_text_5}}"
+        "problemInfo": "**{{stem_5}}**\n\nA. {{opt_5_A}}\n\nB. {{opt_5_B}}\n\nC. {{opt_5_C}}\n\nD. {{opt_5_D}}\n\n> {{dialogue_text_5}}"
       },
       {
         "choiceId": 6,
         "fullScore": 1,
-        "problemInfo": "**{{stem_6}}**\n\nA. {{opt_6_A}}\nB. {{opt_6_B}}\nC. {{opt_6_C}}\nD. {{opt_6_D}}\n\n> {{dialogue_text_6}}"
+        "problemInfo": "**{{stem_6}}**\n\nA. {{opt_6_A}}\n\nB. {{opt_6_B}}\n\nC. {{opt_6_C}}\n\nD. {{opt_6_D}}\n\n> {{dialogue_text_6}}"
       },
       {
         "choiceId": 7,
         "fullScore": 1,
-        "problemInfo": "**{{stem_7}}**\n\nA. {{opt_7_A}}\nB. {{opt_7_B}}\nC. {{opt_7_C}}\nD. {{opt_7_D}}\n\n> {{dialogue_text_7}}"
+        "problemInfo": "**{{stem_7}}**\n\nA. {{opt_7_A}}\n\nB. {{opt_7_B}}\n\nC. {{opt_7_C}}\n\nD. {{opt_7_D}}\n\n> {{dialogue_text_7}}"
       },
       {
         "choiceId": 8,
         "fullScore": 1,
-        "problemInfo": "**{{stem_8}}**\n\nA. {{opt_8_A}}\nB. {{opt_8_B}}\nC. {{opt_8_C}}\nD. {{opt_8_D}}\n\n> {{dialogue_text_8}}"
+        "problemInfo": "**{{stem_8}}**\n\nA. {{opt_8_A}}\n\nB. {{opt_8_B}}\n\nC. {{opt_8_C}}\n\nD. {{opt_8_D}}\n\n> {{dialogue_text_8}}"
       },
       {
         "choiceId": 9,
         "fullScore": 1,
-        "problemInfo": "**{{stem_9}}**\n\nA. {{opt_9_A}}\nB. {{opt_9_B}}\nC. {{opt_9_C}}\nD. {{opt_9_D}}\n\n> {{dialogue_text_9}}"
+        "problemInfo": "**{{stem_9}}**\n\nA. {{opt_9_A}}\n\nB. {{opt_9_B}}\n\nC. {{opt_9_C}}\n\nD. {{opt_9_D}}\n\n> {{dialogue_text_9}}"
       },
       {
         "choiceId": 10,
         "fullScore": 1,
-        "problemInfo": "**{{stem_10}}**\n\nA. {{opt_10_A}}\nB. {{opt_10_B}}\nC. {{opt_10_C}}\nD. {{opt_10_D}}\n\n> {{dialogue_text_10}}"
+        "problemInfo": "**{{stem_10}}**\n\nA. {{opt_10_A}}\n\nB. {{opt_10_B}}\n\nC. {{opt_10_C}}\n\nD. {{opt_10_D}}\n\n> {{dialogue_text_10}}"
       },
       {
         "choiceId": 11,
         "fullScore": 1.5,
-        "problemInfo": "**{{stem_11}}**\n\nA. {{opt_11_A}}\nB. {{opt_11_B}}\nC. {{opt_11_C}}\nD. {{opt_11_D}}\n\n> {{passage_text_1}}"
+        "problemInfo": "**{{stem_11}}**\n\nA. {{opt_11_A}}\n\nB. {{opt_11_B}}\n\nC. {{opt_11_C}}\n\nD. {{opt_11_D}}\n\n> {{passage_text_1}}"
       },
       {
         "choiceId": 12,
         "fullScore": 1.5,
-        "problemInfo": "**{{stem_12}}**\n\nA. {{opt_12_A}}\nB. {{opt_12_B}}\nC. {{opt_12_C}}\nD. {{opt_12_D}}\n\n> {{passage_text_1}}"
+        "problemInfo": "**{{stem_12}}**\n\nA. {{opt_12_A}}\n\nB. {{opt_12_B}}\n\nC. {{opt_12_C}}\n\nD. {{opt_12_D}}\n\n> {{passage_text_1}}"
       },
       {
         "choiceId": 13,
         "fullScore": 1.5,
-        "problemInfo": "**{{stem_13}}**\n\nA. {{opt_13_A}}\nB. {{opt_13_B}}\nC. {{opt_13_C}}\nD. {{opt_13_D}}\n\n> {{passage_text_1}}"
+        "problemInfo": "**{{stem_13}}**\n\nA. {{opt_13_A}}\n\nB. {{opt_13_B}}\n\nC. {{opt_13_C}}\n\nD. {{opt_13_D}}\n\n> {{passage_text_1}}"
       },
       {
         "choiceId": 14,
         "fullScore": 1.5,
-        "problemInfo": "**{{stem_14}}**\n\nA. {{opt_14_A}}\nB. {{opt_14_B}}\nC. {{opt_14_C}}\nD. {{opt_14_D}}\n\n> {{passage_text_2}}"
+        "problemInfo": "**{{stem_14}}**\n\nA. {{opt_14_A}}\n\nB. {{opt_14_B}}\n\nC. {{opt_14_C}}\n\nD. {{opt_14_D}}\n\n> {{passage_text_2}}"
       },
       {
         "choiceId": 15,
         "fullScore": 1.5,
-        "problemInfo": "**{{stem_15}}**\n\nA. {{opt_15_A}}\nB. {{opt_15_B}}\nC. {{opt_15_C}}\nD. {{opt_15_D}}\n\n> {{passage_text_2}}"
+        "problemInfo": "**{{stem_15}}**\n\nA. {{opt_15_A}}\n\nB. {{opt_15_B}}\n\nC. {{opt_15_C}}\n\nD. {{opt_15_D}}\n\n> {{passage_text_2}}"
       },
       {
         "choiceId": 16,
         "fullScore": 1.5,
-        "problemInfo": "**{{stem_16}}**\n\nA. {{opt_16_A}}\nB. {{opt_16_B}}\nC. {{opt_16_C}}\nD. {{opt_16_D}}\n\n> {{passage_text_2}}"
+        "problemInfo": "**{{stem_16}}**\n\nA. {{opt_16_A}}\n\nB. {{opt_16_B}}\n\nC. {{opt_16_C}}\n\nD. {{opt_16_D}}\n\n> {{passage_text_2}}"
       },
       {
         "choiceId": 17,
         "fullScore": 1.5,
-        "problemInfo": "**{{stem_17}}**\n\nA. {{opt_17_A}}\nB. {{opt_17_B}}\nC. {{opt_17_C}}\nD. {{opt_17_D}}\n\n> {{dialogue_long_text}}"
+        "problemInfo": "**{{stem_17}}**\n\nA. {{opt_17_A}}\n\nB. {{opt_17_B}}\n\nC. {{opt_17_C}}\n\nD. {{opt_17_D}}\n\n> {{dialogue_long_text}}"
       },
       {
         "choiceId": 18,
         "fullScore": 1.5,
-        "problemInfo": "**{{stem_18}}**\n\nA. {{opt_18_A}}\nB. {{opt_18_B}}\nC. {{opt_18_C}}\nD. {{opt_18_D}}\n\n> {{dialogue_long_text}}"
+        "problemInfo": "**{{stem_18}}**\n\nA. {{opt_18_A}}\n\nB. {{opt_18_B}}\n\nC. {{opt_18_C}}\n\nD. {{opt_18_D}}\n\n> {{dialogue_long_text}}"
       },
       {
         "choiceId": 19,
         "fullScore": 1.5,
-        "problemInfo": "**{{stem_19}}**\n\nA. {{opt_19_A}}\nB. {{opt_19_B}}\nC. {{opt_19_C}}\nD. {{opt_19_D}}\n\n> {{dialogue_long_text}}"
+        "problemInfo": "**{{stem_19}}**\n\nA. {{opt_19_A}}\n\nB. {{opt_19_B}}\n\nC. {{opt_19_C}}\n\nD. {{opt_19_D}}\n\n> {{dialogue_long_text}}"
       },
       {
         "choiceId": 20,
         "fullScore": 1.5,
-        "problemInfo": "**{{stem_20}}**\n\nA. {{opt_20_A}}\nB. {{opt_20_B}}\nC. {{opt_20_C}}\nD. {{opt_20_D}}\n\n> {{dialogue_long_text}}"
+        "problemInfo": "**{{stem_20}}**\n\nA. {{opt_20_A}}\n\nB. {{opt_20_B}}\n\nC. {{opt_20_C}}\n\nD. {{opt_20_D}}\n\n> {{dialogue_long_text}}"
       }
     ]
   },

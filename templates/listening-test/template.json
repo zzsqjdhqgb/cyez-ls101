@@ -96,17 +96,17 @@
       {
         "choiceId": 1,
         "fullScore": 2,
-        "problemInfo": "**{{stem_1}}**\n\nA. {{opt_1_A}}\nB. {{opt_1_B}}\nC. {{opt_1_C}}\nD. {{opt_1_D}}\n\n> {{dialogue_text_1}}"
+        "problemInfo": "**{{stem_1}}**\n\nA. {{opt_1_A}}\n\nB. {{opt_1_B}}\n\nC. {{opt_1_C}}\n\nD. {{opt_1_D}}\n\n> {{dialogue_text_1}}"
       },
       {
         "choiceId": 2,
         "fullScore": 2,
-        "problemInfo": "**{{stem_2}}**\n\nA. {{opt_2_A}}\nB. {{opt_2_B}}\nC. {{opt_2_C}}\nD. {{opt_2_D}}\n\n> {{dialogue_text_2}}"
+        "problemInfo": "**{{stem_2}}**\n\nA. {{opt_2_A}}\n\nB. {{opt_2_B}}\n\nC. {{opt_2_C}}\n\nD. {{opt_2_D}}\n\n> {{dialogue_text_2}}"
       },
       {
         "choiceId": 3,
         "fullScore": 2,
-        "problemInfo": "**{{stem_3}}**\n\nA. {{opt_3_A}}\nB. {{opt_3_B}}\nC. {{opt_3_C}}\nD. {{opt_3_D}}\n\n> {{dialogue_text_3}}"
+        "problemInfo": "**{{stem_3}}**\n\nA. {{opt_3_A}}\n\nB. {{opt_3_B}}\n\nC. {{opt_3_C}}\n\nD. {{opt_3_D}}\n\n> {{dialogue_text_3}}"
       }
     ],
     "choicePageGroups": [
