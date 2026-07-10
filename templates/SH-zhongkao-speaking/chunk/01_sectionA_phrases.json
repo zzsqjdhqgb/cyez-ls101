@@ -4,12 +4,11 @@
       {
         "id": "1",
         "content": [
-          { "type": "text", "text": "I: Read Aloud. Section 1.", "size": "large", "bold": true },
-          { "type": "text", "text": "Read the following phrases. You will have ten seconds to prepare and fifteen seconds to read.(朗读下列词组。你将有 10 秒的准备时间和 15 秒的朗读时间。)", "size": "small" },
-          { "type": "audio", "src": "media/section1_1_dir.mp3", "text": "Part One: Read Aloud. Section One. Read the following phrases.You will have ten seconds to prepare and fifteen seconds to read." }
+          { "type": "text", "text": "一A. 朗读词组", "size": "large", "bold": true },
+          { "type": "text", "text": "Read the following phrases. You will have ten seconds to prepare and fifteen seconds to read. 注意连读、失爆、弱读等发音现象。(朗读下列词组。你将有 10 秒的准备时间和 15 秒的朗读时间。注意连读、失爆、弱读。)", "size": "small" }
         ],
-        "time": { "type": "content-controlled" },
-        "statusText": "听指令"
+        "time": { "type": "countdown", "seconds": 10 },
+        "statusText": "阅读提示"
       },
       {
         "id": "2",
@@ -65,12 +64,13 @@
         "id": 0,
         "scoreOptions": [0, 0.5, 1, 1.5],
         "recordIndices": [1, 2, 3],
-        "problemInfo": "## I: Read Aloud\n\n**Section 1**: Read the following phrases. You will have ten seconds to prepare and fifteen seconds to read.\n\n1. {{phrase_1}}\n2. {{phrase_2}}\n3. {{phrase_3}}\n\n",
-        "gradingInfo": "核心评分点: 发音(30%)、语调(30%)、流畅度(40%)"
+        "problemInfo": "## 一A: 朗读词组 (1.5分, 每题0.5分)\n\nRead the following phrases. You will have ten seconds to prepare and fifteen seconds to read.\n\n1. {{phrase_1}}\n2. {{phrase_2}}\n3. {{phrase_3}}\n\n",
+        "gradingInfo": "**评分标准**：\n\n- 核心评分点：\n  - 连读(linking)：相邻单词间辅音+元音的连读处理 (30%)\n  - 失爆(elision)：爆破音在另一个爆破音前不完全爆破 (35%)\n  - 弱读(weak forms)：功能词（冠词、介词、助动词）的弱读处理 (35%)\n\n- 每题0.5分，共3题，满分1.5分\n- 发音清晰、流畅，能正确运用上述发音技巧得满分\n- 出现个别技巧失误但不影响理解，酌情扣0.5分\n- 多项发音技巧缺失或严重错误，不得分"
       }
     ]
   },
   "editableData": [
+    { "type": "text", "id": "phrase_1_display", "description": "第一个朗读词组 - 准备阶段显示文本（可为音标/提示版）" },
     { "type": "text", "id": "phrase_1", "description": "第一个朗读词组" },
     { "type": "text", "id": "phrase_2", "description": "第二个朗读词组" },
     { "type": "text", "id": "phrase_3", "description": "第三个朗读词组" }

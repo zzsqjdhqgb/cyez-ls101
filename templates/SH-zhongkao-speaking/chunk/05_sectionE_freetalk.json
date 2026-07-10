@@ -4,9 +4,9 @@
       {
         "id": "29",
         "content": [
-          { "type": "text", "text": "IV.Free talk", "size": "large", "bold": true },
-          { "type": "text", "text": "Directions: Say at least five sentences according to the following mind map.You will have fifty seconds to prepare and fifty seconds to talk.(根据下列思维导图说至少 5 句话。你将有 50 秒的准备时间和 50 秒的表达时间)", "size": "small" },
-          { "type": "audio", "src": "media/section4_dir.mp3", "text": "Part Four: Free talk. Directions: Say at least five sentences according to the following mind map.You will have fifty seconds to prepare and fifty seconds to talk." }
+          { "type": "text", "text": "四. 话题表达", "size": "large", "bold": true },
+          { "type": "text", "text": "Directions: Say at least five sentences according to the following topic and mind map. You will have seventy-five seconds to prepare and sixty seconds to talk. 要求至少说 5 句话。(根据下列话题和思维导图说至少 5 句话。你将有 75 秒的准备时间和 60 秒的表达时间。)", "size": "small" },
+          { "type": "audio", "src": "media/section4_dir.mp3", "text": "Part Four: Free Talk. Say at least five sentences according to the topic {{4_topic}} and the following mind map. You will have seventy-five seconds to prepare and sixty seconds to talk." }
         ],
         "time": { "type": "content-controlled" },
         "statusText": "听指令"
@@ -14,17 +14,19 @@
       {
         "id": "30",
         "content": [
+          { "type": "text", "text": "话题：{{4_topic}}", "size": "large", "bold": true },
           { "type": "image", "src": "media/4_picture.png", "width": "80%" }
         ],
-        "time": { "type": "countdown", "seconds": 50 },
+        "time": { "type": "countdown", "seconds": 75 },
         "statusText": "答题准备"
       },
       {
         "id": "31",
         "content": [
+          { "type": "text", "text": "话题：{{4_topic}}", "size": "large", "bold": true },
           { "type": "image", "src": "media/4_picture.png", "width": "80%" }
         ],
-        "time": { "type": "record", "duration": 50, "recordIndex": 12 },
+        "time": { "type": "record", "duration": 60, "recordIndex": 12 },
         "statusText": "录音中"
       }
     ],
@@ -33,12 +35,13 @@
         "id": 4,
         "scoreOptions": [0, 0.5, 1, 1.5, 2, 2.5],
         "recordIndices": [12],
-        "problemInfo": "## IV. Free talk\n\nDirections: Say at least five sentences according to the following mind map.You will have fifty seconds to prepare and fifty seconds to talk.\n\n{{free_talk_mind_map}}\n\n",
-        "gradingInfo": "- 核心评分点:结构完整性(30%)、内容充实度(30%)、语言多样性(40%)\n\n- 考查重点:围绕指定话题(如“我的爱好”“环保”“科技”“校园生活”)，在1.5分钟内完成“开头点题+中间论述+结尾总结”，避免内容空洞、句型单一。"
+        "problemInfo": "## 四: 话题表达 (2.5分)\n\nDirections: Say at least five sentences according to the following topic and mind map. You will have seventy-five seconds to prepare and sixty seconds to talk.\n\n话题：{{4_topic}}\n\n思维导图请参考图片。\n\n",
+        "gradingInfo": "**评分标准**：\n\n- 核心评分点：\n  - 内容完整性(content completeness)：覆盖话题关键要点，不少于5句话，内容充实不空洞 (35%)\n  - 语言准确性(language accuracy)：语法正确、词汇恰当、发音清晰 (35%)\n  - 逻辑连贯性(logical coherence)：有清晰的开头（点题）、中间（展开论述）、结尾（总结）结构，逻辑顺畅 (30%)\n\n- 满分2.5分，至少说5句话（不足5句按内容不完整扣分）\n- 准备75秒 + 表达60秒\n- 常见话题：我的爱好、环保、科技、校园生活、家庭、节日等"
       }
     ]
   },
-  "editableData": [    
-    { "type": "file", "id": "free_talk_mind_map", "fileName": "media/4_picture.png", "description": "自由表达 - 思维导图" }
+  "editableData": [
+    { "type": "text", "id": "4_topic", "description": "话题表达 - 话题名称" },
+    { "type": "file", "id": "4_picture", "fileName": "media/4_picture.png", "description": "话题表达 - 思维导图" }
   ]
 }
