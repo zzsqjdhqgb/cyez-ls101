@@ -36,6 +36,7 @@ import './ipc/app'
 // 提取后的模块
 import { createWindow } from './app/create-window'
 import { initializeBundledData } from './app/initialize'
+import { runMigrations } from './app/migrate'
 import {
   getStoredVersion,
   getCurrentVersion,
@@ -257,12 +258,20 @@ function startApp(): void {
 
     const storedVersion = getStoredVersion()
     const currentVersion = getCurrentVersion()
+    console.log(`[version] stored=${storedVersion}, current=${currentVersion}`)
 
     if (storedVersion === null) {
+      console.log('[version] storedVersion is null, writing reset-required flag')
       writeResetRequiredFlag()
     } else if (storedVersion !== currentVersion) {
+      console.log(
+        `[version] version changed: ${storedVersion} -> ${currentVersion}, running migrations`
+      )
+      await runMigrations(storedVersion)
       writeUpdateNotificationFlag(storedVersion)
       writeVersionFile(currentVersion)
+    } else {
+      console.log('[version] no version change, skipping migrations')
     }
 
     createWindow()

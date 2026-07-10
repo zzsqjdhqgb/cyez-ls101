@@ -57,10 +57,46 @@ export function loadExam(examsPath: string, examId: string): Record<string, unkn
   const missing = validateExamResources(examDir, questions)
   if (missing.length > 0) throw new Error(`缺少资源文件：${missing.join(', ')}`)
 
-  examPackage.questions = questions.map((q) => ({
-    ...q,
-    content: prefixContentNodesForExam((q.content as Record<string, unknown>[]) ?? [], examId)
-  }))
+  // Normalize time to always be an array, resolve choicePages from groups, build choiceQuestionMap
+  const choicePageGroups = examPackage.choicePageGroups as Record<string, unknown>[][] | undefined
+  const allChoiceQuestions: Record<string, unknown>[] = []
+
+  // Collect choice questions from groups
+  if (choicePageGroups) {
+    for (const pages of choicePageGroups) {
+      for (const page of pages) {
+        const qs = page.questions as Record<string, unknown>[]
+        if (qs) allChoiceQuestions.push(...qs)
+      }
+    }
+  }
+
+  examPackage.questions = (questions as Record<string, unknown>[]).map((q) => {
+    const qTime = q.time
+    if (qTime && !Array.isArray(qTime)) {
+      q.time = [qTime]
+    }
+    // Resolve choicePages: inline takes priority, then group (if choicePageGroupId set), then undefined
+    let cp = q.choicePages as Record<string, unknown>[] | undefined
+    const resolvedFromGroup = !cp && choicePageGroups && q.choicePageGroupId !== undefined
+    if (!cp && choicePageGroups && q.choicePageGroupId !== undefined) {
+      const gid = q.choicePageGroupId as number
+      cp = choicePageGroups[gid] as Record<string, unknown>[] | undefined
+    }
+    // Collect choice questions only from inline pages (group ones already collected)
+    if (cp && !resolvedFromGroup) {
+      for (const page of cp) {
+        const qs = page.questions as Record<string, unknown>[]
+        if (qs) allChoiceQuestions.push(...qs)
+      }
+    }
+    return {
+      ...q,
+      choicePages: cp,
+      content: prefixContentNodesForExam((q.content as Record<string, unknown>[]) ?? [], examId)
+    }
+  })
+  ;(examPackage as Record<string, unknown>)._choiceQuestionMap = allChoiceQuestions
   return examPackage
 }
 

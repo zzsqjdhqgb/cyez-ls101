@@ -10,6 +10,7 @@ export function createSubmissionBridge(): {
   submission: {
     create: (examId: string, student: StudentInfo) => Promise<string>
     saveRecord: (submissionId: string, recordIndex: number, buffer: ArrayBuffer) => Promise<void>
+    saveChoiceAnswers: (submissionId: string, answers: Record<number, string>) => Promise<void>
     list: (filter?: {
       studentId?: string
       name?: string
@@ -29,6 +30,8 @@ export function createSubmissionBridge(): {
         ipcRenderer.invoke('submission:create', examId, student),
       saveRecord: (submissionId: string, recordIndex: number, buffer: ArrayBuffer): Promise<void> =>
         ipcRenderer.invoke('submission:saveRecord', submissionId, recordIndex, buffer),
+      saveChoiceAnswers: (submissionId, answers) =>
+        ipcRenderer.invoke('submission:saveChoiceAnswers', submissionId, answers),
       list: (filter?: {
         studentId?: string
         name?: string

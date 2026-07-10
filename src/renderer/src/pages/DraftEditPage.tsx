@@ -6,7 +6,7 @@
 // src/renderer/src/pages/DraftEditPage.tsx
 import { JSX, useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Download, FileText, Pencil } from 'lucide-react'
+import { ArrowLeft, Download, Eraser, FileText, Pencil, Wand2 } from 'lucide-react'
 import type { DraftView } from '../types'
 import { MessageModal, ProgressModal, ResultModal } from '../components/Modal'
 import EditableFormItem from './draft/EditableFormItem'
@@ -97,6 +97,33 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
     flexShrink: 0
   },
+  fillInput: {
+    width: 100,
+    height: 36,
+    padding: '0 8px',
+    fontSize: 14,
+    border: '1px solid #e2e8f0',
+    borderRadius: 8,
+    outline: 'none',
+    color: '#1e293b',
+    boxSizing: 'border-box' as React.CSSProperties['boxSizing']
+  },
+  devBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    padding: '8px 12px',
+    fontSize: 14,
+    fontWeight: 500,
+    border: '1px solid #e2e8f0',
+    borderRadius: 8,
+    cursor: 'pointer',
+    background: '#fff',
+    color: '#475569',
+    outline: 'none',
+    whiteSpace: 'nowrap' as React.CSSProperties['whiteSpace']
+  },
   iconBtn: {
     display: 'inline-flex',
     alignItems: 'center',
@@ -171,6 +198,16 @@ export default function DraftEditPage(): JSX.Element {
     type: 'info' | 'success' | 'error'
   } | null>(null)
   const [collapsedPreviews, setCollapsedPreviews] = useState<Record<string, boolean>>({})
+  const [devMode, setDevMode] = useState(() => sessionStorage.getItem('devMode') === 'true')
+  const [fillValue, setFillValue] = useState('A')
+
+  useEffect(() => {
+    const handler = (): void => {
+      setDevMode(sessionStorage.getItem('devMode') === 'true')
+    }
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [])
 
   useEffect(() => {
     if (!draftId) return
@@ -274,6 +311,56 @@ export default function DraftEditPage(): JSX.Element {
       }
       return next
     })
+  }
+
+  const handleAutoFill = async (): Promise<void> => {
+    if (!draft || !fillValue || !draftId) return
+
+    const textItems = draft.editableItems.filter((item) => item.type === 'text')
+    for (const item of textItems) {
+      await window.electronAPI.draft.updateText(draftId, item.id, fillValue)
+    }
+
+    const contentEl = document.getElementById('draft-edit-content')
+    if (contentEl) {
+      const textareas = contentEl.querySelectorAll<HTMLTextAreaElement>('textarea')
+      const nativeSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLTextAreaElement.prototype,
+        'value'
+      )?.set
+      for (const textarea of textareas) {
+        nativeSetter?.call(textarea, fillValue)
+        textarea.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+    }
+
+    const updated = await window.electronAPI.draft.load(draftId)
+    setDraft(updated)
+  }
+
+  const handleClearAll = async (): Promise<void> => {
+    if (!draft || !draftId) return
+
+    const textItems = draft.editableItems.filter((item) => item.type === 'text')
+    for (const item of textItems) {
+      await window.electronAPI.draft.updateText(draftId, item.id, '')
+    }
+
+    const contentEl = document.getElementById('draft-edit-content')
+    if (contentEl) {
+      const textareas = contentEl.querySelectorAll<HTMLTextAreaElement>('textarea')
+      const nativeSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLTextAreaElement.prototype,
+        'value'
+      )?.set
+      for (const textarea of textareas) {
+        nativeSetter?.call(textarea, '')
+        textarea.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+    }
+
+    const updated = await window.electronAPI.draft.load(draftId)
+    setDraft(updated)
   }
 
   const handleExportExam = useCallback(() => {
@@ -392,6 +479,25 @@ export default function DraftEditPage(): JSX.Element {
           </div>
         </div>
         <div style={styles.headerActions}>
+          {devMode && (
+            <>
+              <input
+                type="text"
+                value={fillValue}
+                onChange={(e) => setFillValue(e.target.value)}
+                style={styles.fillInput}
+                placeholder="填充内容"
+              />
+              <button onClick={handleAutoFill} style={styles.devBtn} title="一键填充文本字段">
+                <Wand2 size={18} strokeWidth={2} />
+                填充
+              </button>
+              <button onClick={handleClearAll} style={styles.devBtn} title="一键清空文本字段">
+                <Eraser size={18} strokeWidth={2} />
+                清空
+              </button>
+            </>
+          )}
           <button onClick={handleExportDraft} style={styles.iconBtn} title="导出草稿包">
             <Download size={18} strokeWidth={2} />
             导出草稿
@@ -402,7 +508,7 @@ export default function DraftEditPage(): JSX.Element {
           </button>
         </div>
       </div>
-      <div style={styles.content}>
+      <div id="draft-edit-content" style={styles.content}>
         {draft.editableItems.map((item) => (
           <EditableFormItem
             key={item.id}

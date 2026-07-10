@@ -7,7 +7,14 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 import AdmZip from 'adm-zip'
-import type { GradingRecord, ExamPackage, StudentInfo, SubmissionMeta } from '../../../shared/types'
+import type {
+  GradingRecord,
+  ExamPackage,
+  StudentInfo,
+  SubmissionMeta,
+  ChoiceGradingInfoItem,
+  RecordingGradingInfoItem
+} from '../../../shared/types'
 import { ensureDir, getGradingPath, computeEid } from '../../utils'
 
 function getRecordsPath(): string {
@@ -150,13 +157,95 @@ export function importSubmissions(
         writeFileSync(targetPath, f.getData())
       }
 
+      // Load choice answers from submission
+      let choiceAnswers: Record<number, string> = {}
+      try {
+        const choicesPath = join(targetDir, 'choices.json')
+        if (existsSync(choicesPath)) {
+          choiceAnswers = JSON.parse(readFileSync(choicesPath, 'utf-8'))
+        }
+      } catch {
+        /* ignore */
+      }
+
+      // Auto-grade choice questions
+      const choiceScores: Record<
+        number,
+        {
+          choiceId: number
+          userAnswer?: string
+          correctAnswer: string
+          isCorrect: boolean
+          fullScore: number
+          score: number
+        }
+      > = {}
+      let totalScore = 0
+      let maxScore = 0
+      const gradingInfo = examPackage.gradingInfo || []
+      const choiceGradingItems = gradingInfo.filter(
+        (gi): gi is ChoiceGradingInfoItem => 'choiceId' in gi
+      )
+      const recordingItems = gradingInfo.filter((gi): gi is RecordingGradingInfoItem => 'id' in gi)
+
+      // Compute choice scores
+      const allChoiceQs: Record<number, Record<string, unknown>> = {}
+      const cpg = examPackage.choicePageGroups as Record<string, unknown>[][] | undefined
+      for (const q of examPackage.questions) {
+        let pages = q.choicePages as Record<string, unknown>[] | undefined
+        if (!pages && cpg) {
+          const gid = (q.choicePageGroupId as number | undefined) ?? 0
+          pages = cpg[gid] as Record<string, unknown>[] | undefined
+        }
+        if (pages) {
+          for (const page of pages) {
+            const qs = page.questions as Record<string, unknown>[]
+            if (qs) {
+              for (const cq of qs) {
+                const cqObj = cq as Record<string, unknown>
+                allChoiceQs[cqObj.id as number] = cqObj
+              }
+            }
+          }
+        }
+      }
+
+      for (const gi of choiceGradingItems) {
+        const cId = gi.choiceId
+        const fullScore = gi.fullScore
+        const cq = allChoiceQs[cId]
+        if (!cq) continue
+        const correctAnswer = cq.answer as string
+        const userAnswer = choiceAnswers[cId]
+        const isCorrect = userAnswer === correctAnswer
+        choiceScores[cId] = {
+          choiceId: cId,
+          userAnswer: userAnswer || undefined,
+          correctAnswer,
+          isCorrect,
+          fullScore,
+          score: isCorrect ? fullScore : 0
+        }
+        totalScore += choiceScores[cId].score
+        maxScore += fullScore
+      }
+
+      // Compute recording-derived max score
+      for (const gi of recordingItems) {
+        const fs = gi.fullScore as number
+        if (typeof fs === 'number' && fs > 0) maxScore += fs
+      }
+
       records[rid] = {
         rid,
         status: 'ungraded',
         student: meta.student,
         examTitle: examPackage.title,
         eid,
-        scores: {}
+        scores: {},
+        totalScore: totalScore > 0 || maxScore > 0 ? totalScore : undefined,
+        maxScore: maxScore > 0 ? maxScore : undefined,
+        choiceScores: Object.keys(choiceScores).length > 0 ? choiceScores : undefined
       }
       imported++
     }

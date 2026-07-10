@@ -49,6 +49,31 @@ export function saveRecord(
   writeFileSync(filePath, Buffer.from(buffer))
 }
 
+export function saveChoiceAnswers(
+  submissionsPath: string,
+  submissionId: string,
+  answers: Record<number, string>
+): void {
+  const subDir = join(submissionsPath, submissionId)
+  ensureDir(subDir)
+  const filePath = join(subDir, 'choices.json')
+  writeFileSync(filePath, JSON.stringify(answers, null, 2))
+}
+
+export function loadChoiceAnswers(
+  submissionsPath: string,
+  submissionId: string
+): Record<number, string> {
+  const subDir = join(submissionsPath, submissionId)
+  const filePath = join(subDir, 'choices.json')
+  if (!existsSync(filePath)) return {}
+  try {
+    return JSON.parse(readFileSync(filePath, 'utf-8'))
+  } catch {
+    return {}
+  }
+}
+
 export function listSubmissions(
   examsPath: string,
   submissionsPath: string,

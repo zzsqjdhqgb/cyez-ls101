@@ -1,0 +1,804 @@
+{
+  "examData": {
+    "title": "高考英语听力 — 短对话专项训练",
+    "choiceOnly": true,
+    "choicePageGroups": [
+      [
+        {
+          "questions": [
+            {
+              "id": 1,
+              "stem": " ",
+              "options": [
+                "{{opt_1_A}}",
+                "{{opt_1_B}}",
+                "{{opt_1_C}}",
+                "{{opt_1_D}}"
+              ],
+              "answer": "{{answer_1}}"
+            },
+            {
+              "id": 2,
+              "stem": " ",
+              "options": [
+                "{{opt_2_A}}",
+                "{{opt_2_B}}",
+                "{{opt_2_C}}",
+                "{{opt_2_D}}"
+              ],
+              "answer": "{{answer_2}}"
+            },
+            {
+              "id": 3,
+              "stem": " ",
+              "options": [
+                "{{opt_3_A}}",
+                "{{opt_3_B}}",
+                "{{opt_3_C}}",
+                "{{opt_3_D}}"
+              ],
+              "answer": "{{answer_3}}"
+            },
+            {
+              "id": 4,
+              "stem": " ",
+              "options": [
+                "{{opt_4_A}}",
+                "{{opt_4_B}}",
+                "{{opt_4_C}}",
+                "{{opt_4_D}}"
+              ],
+              "answer": "{{answer_4}}"
+            },
+            {
+              "id": 5,
+              "stem": " ",
+              "options": [
+                "{{opt_5_A}}",
+                "{{opt_5_B}}",
+                "{{opt_5_C}}",
+                "{{opt_5_D}}"
+              ],
+              "answer": "{{answer_5}}"
+            }
+          ]
+        },
+        {
+          "questions": [
+            {
+              "id": 6,
+              "stem": " ",
+              "options": [
+                "{{opt_6_A}}",
+                "{{opt_6_B}}",
+                "{{opt_6_C}}",
+                "{{opt_6_D}}"
+              ],
+              "answer": "{{answer_6}}"
+            },
+            {
+              "id": 7,
+              "stem": " ",
+              "options": [
+                "{{opt_7_A}}",
+                "{{opt_7_B}}",
+                "{{opt_7_C}}",
+                "{{opt_7_D}}"
+              ],
+              "answer": "{{answer_7}}"
+            },
+            {
+              "id": 8,
+              "stem": " ",
+              "options": [
+                "{{opt_8_A}}",
+                "{{opt_8_B}}",
+                "{{opt_8_C}}",
+                "{{opt_8_D}}"
+              ],
+              "answer": "{{answer_8}}"
+            },
+            {
+              "id": 9,
+              "stem": " ",
+              "options": [
+                "{{opt_9_A}}",
+                "{{opt_9_B}}",
+                "{{opt_9_C}}",
+                "{{opt_9_D}}"
+              ],
+              "answer": "{{answer_9}}"
+            },
+            {
+              "id": 10,
+              "stem": " ",
+              "options": [
+                "{{opt_10_A}}",
+                "{{opt_10_B}}",
+                "{{opt_10_C}}",
+                "{{opt_10_D}}"
+              ],
+              "answer": "{{answer_10}}"
+            }
+          ]
+        }
+      ]
+    ],
+    "questions": [
+      {
+        "id": "q_pre_sectionA",
+        "content": [
+          {
+            "type": "text",
+            "text": "I. Listening Comprehension",
+            "size": "large",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Section A",
+            "size": "normal",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Directions: In Section A, you will hear ten short conversations between two speakers. At the end of each conversation, a question will be asked about what was said. The conversations and the questions will be spoken only once. After you hear a conversation and the question about it, read the four possible answers on your paper, and decide which one is the best answer to the question you have heard.",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/directions_sectionA.wav",
+            "text": "Section A. Directions: In Section A, you will hear ten short conversations between two speakers. At the end of each conversation, a question will be asked about what was said. The conversations and the questions will be spoken only once. After you hear a conversation and the question about it, read the four possible answers on your paper, and decide which one is the best answer to the question you have heard."
+          }
+        ],
+        "time": {
+          "type": "content-controlled"
+        }
+      },
+      {
+        "id": "q1_sd1",
+        "content": [
+          {
+            "type": "audio",
+            "src": "media/dialogue_1.wav",
+            "text": "{{dialogue_text_1}} Question: {{stem_1}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 1
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 1
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q1_sd2",
+        "content": [
+          {
+            "type": "audio",
+            "src": "media/dialogue_2.wav",
+            "text": "{{dialogue_text_2}} Question: {{stem_2}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 2
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 2
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q1_sd3",
+        "content": [
+          {
+            "type": "audio",
+            "src": "media/dialogue_3.wav",
+            "text": "{{dialogue_text_3}} Question: {{stem_3}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 3
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 3
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q1_sd4",
+        "content": [
+          {
+            "type": "audio",
+            "src": "media/dialogue_4.wav",
+            "text": "{{dialogue_text_4}} Question: {{stem_4}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 4
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 4
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q1_sd5",
+        "content": [
+          {
+            "type": "audio",
+            "src": "media/dialogue_5.wav",
+            "text": "{{dialogue_text_5}} Question: {{stem_5}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 5
+          },
+          {
+            "type": "countdown",
+            "seconds": 5,
+            "focusId": 5
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q1_sd6",
+        "content": [
+          {
+            "type": "audio",
+            "src": "media/dialogue_6.wav",
+            "text": "{{dialogue_text_6}} Question: {{stem_6}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 6
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 6
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q1_sd7",
+        "content": [
+          {
+            "type": "audio",
+            "src": "media/dialogue_7.wav",
+            "text": "{{dialogue_text_7}} Question: {{stem_7}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 7
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 7
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q1_sd8",
+        "content": [
+          {
+            "type": "audio",
+            "src": "media/dialogue_8.wav",
+            "text": "{{dialogue_text_8}} Question: {{stem_8}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 8
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 8
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q1_sd9",
+        "content": [
+          {
+            "type": "audio",
+            "src": "media/dialogue_9.wav",
+            "text": "{{dialogue_text_9}} Question: {{stem_9}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 9
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 9
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q1_sd10",
+        "content": [
+          {
+            "type": "audio",
+            "src": "media/dialogue_10.wav",
+            "text": "{{dialogue_text_10}} Question: {{stem_10}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 10
+          },
+          {
+            "type": "countdown",
+            "seconds": 5,
+            "focusId": 10
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q_review",
+        "content": [
+          {
+            "type": "text",
+            "text": "听力部分已结束，请检查答案。",
+            "size": "normal"
+          }
+        ],
+        "time": {
+          "type": "countdown",
+          "seconds": 20,
+          "pageRange": [
+            0,
+            1
+          ]
+        },
+        "statusText": "请检查",
+        "choicePageGroupId": 0
+      }
+    ],
+    "gradingInfo": [
+      {
+        "choiceId": 1,
+        "fullScore": 1,
+        "problemInfo": "**{{stem_1}}**\n\nA. {{opt_1_A}}\n\nB. {{opt_1_B}}\n\nC. {{opt_1_C}}\n\nD. {{opt_1_D}}\n\n> {{dialogue_text_1}}"
+      },
+      {
+        "choiceId": 2,
+        "fullScore": 1,
+        "problemInfo": "**{{stem_2}}**\n\nA. {{opt_2_A}}\n\nB. {{opt_2_B}}\n\nC. {{opt_2_C}}\n\nD. {{opt_2_D}}\n\n> {{dialogue_text_2}}"
+      },
+      {
+        "choiceId": 3,
+        "fullScore": 1,
+        "problemInfo": "**{{stem_3}}**\n\nA. {{opt_3_A}}\n\nB. {{opt_3_B}}\n\nC. {{opt_3_C}}\n\nD. {{opt_3_D}}\n\n> {{dialogue_text_3}}"
+      },
+      {
+        "choiceId": 4,
+        "fullScore": 1,
+        "problemInfo": "**{{stem_4}}**\n\nA. {{opt_4_A}}\n\nB. {{opt_4_B}}\n\nC. {{opt_4_C}}\n\nD. {{opt_4_D}}\n\n> {{dialogue_text_4}}"
+      },
+      {
+        "choiceId": 5,
+        "fullScore": 1,
+        "problemInfo": "**{{stem_5}}**\n\nA. {{opt_5_A}}\n\nB. {{opt_5_B}}\n\nC. {{opt_5_C}}\n\nD. {{opt_5_D}}\n\n> {{dialogue_text_5}}"
+      },
+      {
+        "choiceId": 6,
+        "fullScore": 1,
+        "problemInfo": "**{{stem_6}}**\n\nA. {{opt_6_A}}\n\nB. {{opt_6_B}}\n\nC. {{opt_6_C}}\n\nD. {{opt_6_D}}\n\n> {{dialogue_text_6}}"
+      },
+      {
+        "choiceId": 7,
+        "fullScore": 1,
+        "problemInfo": "**{{stem_7}}**\n\nA. {{opt_7_A}}\n\nB. {{opt_7_B}}\n\nC. {{opt_7_C}}\n\nD. {{opt_7_D}}\n\n> {{dialogue_text_7}}"
+      },
+      {
+        "choiceId": 8,
+        "fullScore": 1,
+        "problemInfo": "**{{stem_8}}**\n\nA. {{opt_8_A}}\n\nB. {{opt_8_B}}\n\nC. {{opt_8_C}}\n\nD. {{opt_8_D}}\n\n> {{dialogue_text_8}}"
+      },
+      {
+        "choiceId": 9,
+        "fullScore": 1,
+        "problemInfo": "**{{stem_9}}**\n\nA. {{opt_9_A}}\n\nB. {{opt_9_B}}\n\nC. {{opt_9_C}}\n\nD. {{opt_9_D}}\n\n> {{dialogue_text_9}}"
+      },
+      {
+        "choiceId": 10,
+        "fullScore": 1,
+        "problemInfo": "**{{stem_10}}**\n\nA. {{opt_10_A}}\n\nB. {{opt_10_B}}\n\nC. {{opt_10_C}}\n\nD. {{opt_10_D}}\n\n> {{dialogue_text_10}}"
+      }
+    ]
+  },
+  "editableData": [
+    {
+      "type": "text",
+      "id": "dialogue_text_1",
+      "description": "第1段短对话文本 (TTS合成)"
+    },
+    {
+      "type": "text",
+      "id": "stem_1",
+      "description": "第1题 — 题干（仅用于音频播报，界面不显示）"
+    },
+    {
+      "type": "text",
+      "id": "opt_1_A",
+      "description": "第1题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_1_B",
+      "description": "第1题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_1_C",
+      "description": "第1题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_1_D",
+      "description": "第1题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_1",
+      "description": "第1题 — 正确答案 (A/B/C/D)"
+    },
+    {
+      "type": "text",
+      "id": "dialogue_text_2",
+      "description": "第2段短对话文本 (TTS合成)"
+    },
+    {
+      "type": "text",
+      "id": "stem_2",
+      "description": "第2题 — 题干（仅用于音频播报，界面不显示）"
+    },
+    {
+      "type": "text",
+      "id": "opt_2_A",
+      "description": "第2题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_2_B",
+      "description": "第2题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_2_C",
+      "description": "第2题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_2_D",
+      "description": "第2题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_2",
+      "description": "第2题 — 正确答案 (A/B/C/D)"
+    },
+    {
+      "type": "text",
+      "id": "dialogue_text_3",
+      "description": "第3段短对话文本 (TTS合成)"
+    },
+    {
+      "type": "text",
+      "id": "stem_3",
+      "description": "第3题 — 题干（仅用于音频播报，界面不显示）"
+    },
+    {
+      "type": "text",
+      "id": "opt_3_A",
+      "description": "第3题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_3_B",
+      "description": "第3题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_3_C",
+      "description": "第3题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_3_D",
+      "description": "第3题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_3",
+      "description": "第3题 — 正确答案 (A/B/C/D)"
+    },
+    {
+      "type": "text",
+      "id": "dialogue_text_4",
+      "description": "第4段短对话文本 (TTS合成)"
+    },
+    {
+      "type": "text",
+      "id": "stem_4",
+      "description": "第4题 — 题干（仅用于音频播报，界面不显示）"
+    },
+    {
+      "type": "text",
+      "id": "opt_4_A",
+      "description": "第4题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_4_B",
+      "description": "第4题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_4_C",
+      "description": "第4题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_4_D",
+      "description": "第4题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_4",
+      "description": "第4题 — 正确答案 (A/B/C/D)"
+    },
+    {
+      "type": "text",
+      "id": "dialogue_text_5",
+      "description": "第5段短对话文本 (TTS合成)"
+    },
+    {
+      "type": "text",
+      "id": "stem_5",
+      "description": "第5题 — 题干（仅用于音频播报，界面不显示）"
+    },
+    {
+      "type": "text",
+      "id": "opt_5_A",
+      "description": "第5题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_5_B",
+      "description": "第5题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_5_C",
+      "description": "第5题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_5_D",
+      "description": "第5题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_5",
+      "description": "第5题 — 正确答案 (A/B/C/D)"
+    },
+    {
+      "type": "text",
+      "id": "dialogue_text_6",
+      "description": "第6段短对话文本 (TTS合成)"
+    },
+    {
+      "type": "text",
+      "id": "stem_6",
+      "description": "第6题 — 题干（仅用于音频播报，界面不显示）"
+    },
+    {
+      "type": "text",
+      "id": "opt_6_A",
+      "description": "第6题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_6_B",
+      "description": "第6题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_6_C",
+      "description": "第6题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_6_D",
+      "description": "第6题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_6",
+      "description": "第6题 — 正确答案 (A/B/C/D)"
+    },
+    {
+      "type": "text",
+      "id": "dialogue_text_7",
+      "description": "第7段短对话文本 (TTS合成)"
+    },
+    {
+      "type": "text",
+      "id": "stem_7",
+      "description": "第7题 — 题干（仅用于音频播报，界面不显示）"
+    },
+    {
+      "type": "text",
+      "id": "opt_7_A",
+      "description": "第7题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_7_B",
+      "description": "第7题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_7_C",
+      "description": "第7题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_7_D",
+      "description": "第7题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_7",
+      "description": "第7题 — 正确答案 (A/B/C/D)"
+    },
+    {
+      "type": "text",
+      "id": "dialogue_text_8",
+      "description": "第8段短对话文本 (TTS合成)"
+    },
+    {
+      "type": "text",
+      "id": "stem_8",
+      "description": "第8题 — 题干（仅用于音频播报，界面不显示）"
+    },
+    {
+      "type": "text",
+      "id": "opt_8_A",
+      "description": "第8题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_8_B",
+      "description": "第8题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_8_C",
+      "description": "第8题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_8_D",
+      "description": "第8题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_8",
+      "description": "第8题 — 正确答案 (A/B/C/D)"
+    },
+    {
+      "type": "text",
+      "id": "dialogue_text_9",
+      "description": "第9段短对话文本 (TTS合成)"
+    },
+    {
+      "type": "text",
+      "id": "stem_9",
+      "description": "第9题 — 题干（仅用于音频播报，界面不显示）"
+    },
+    {
+      "type": "text",
+      "id": "opt_9_A",
+      "description": "第9题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_9_B",
+      "description": "第9题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_9_C",
+      "description": "第9题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_9_D",
+      "description": "第9题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_9",
+      "description": "第9题 — 正确答案 (A/B/C/D)"
+    },
+    {
+      "type": "text",
+      "id": "dialogue_text_10",
+      "description": "第10段短对话文本 (TTS合成)"
+    },
+    {
+      "type": "text",
+      "id": "stem_10",
+      "description": "第10题 — 题干（仅用于音频播报，界面不显示）"
+    },
+    {
+      "type": "text",
+      "id": "opt_10_A",
+      "description": "第10题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_10_B",
+      "description": "第10题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_10_C",
+      "description": "第10题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_10_D",
+      "description": "第10题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_10",
+      "description": "第10题 — 正确答案 (A/B/C/D)"
+    }
+  ]
+}

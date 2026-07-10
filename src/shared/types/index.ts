@@ -9,7 +9,11 @@ export type {
   ContentNode,
   TimeControl,
   Question,
+  ChoiceQuestion,
+  ChoicePage,
   GradingInfoItem,
+  ChoiceGradingInfoItem,
+  RecordingGradingInfoItem,
   ExamPackage,
   ExamListItem
 } from './exam'
@@ -26,5 +30,6 @@ export type {
   GradingRecord,
   GradingBatch,
   GradingListItem,
-  SettlementRecord
+  SettlementRecord,
+  ChoiceAnswerRecord
 } from './grading'

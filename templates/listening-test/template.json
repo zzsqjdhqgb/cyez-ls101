@@ -1,0 +1,270 @@
+{
+  "examData": {
+    "title": "[仅供测试] 听力考试",
+    "choiceOnly": true,
+    "questions": [
+      {
+        "id": "q1",
+        "content": [
+          {
+            "type": "text",
+            "text": "第一节",
+            "size": "large",
+            "bold": true
+          },
+          {
+            "type": "audio",
+            "src": "media/dialogue_1.wav",
+            "text": "{{dialogue_text_1}} Question: {{stem_1}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 1
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 1
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q2",
+        "content": [
+          {
+            "type": "audio",
+            "src": "media/dialogue_2.wav",
+            "text": "{{dialogue_text_2}} Question: {{stem_2}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 2
+          },
+          {
+            "type": "countdown",
+            "seconds": 5,
+            "focusId": 2
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q3",
+        "content": [
+          {
+            "type": "audio",
+            "src": "media/dialogue_3.wav",
+            "text": "{{dialogue_text_3}} Question: {{stem_3}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 3
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 3
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q4",
+        "statusText": "请检查",
+        "content": [
+          {
+            "type": "text",
+            "text": "听力部分已结束，请检查答案。",
+            "size": "normal"
+          }
+        ],
+        "time": {
+          "type": "countdown",
+          "seconds": 10,
+          "pageRange": [
+            0,
+            1
+          ]
+        },
+        "choicePageGroupId": 0
+      }
+    ],
+    "gradingInfo": [
+      {
+        "choiceId": 1,
+        "fullScore": 2,
+        "problemInfo": "**{{stem_1}}**\n\nA. {{opt_1_A}}\n\nB. {{opt_1_B}}\n\nC. {{opt_1_C}}\n\nD. {{opt_1_D}}\n\n> {{dialogue_text_1}}"
+      },
+      {
+        "choiceId": 2,
+        "fullScore": 2,
+        "problemInfo": "**{{stem_2}}**\n\nA. {{opt_2_A}}\n\nB. {{opt_2_B}}\n\nC. {{opt_2_C}}\n\nD. {{opt_2_D}}\n\n> {{dialogue_text_2}}"
+      },
+      {
+        "choiceId": 3,
+        "fullScore": 2,
+        "problemInfo": "**{{stem_3}}**\n\nA. {{opt_3_A}}\n\nB. {{opt_3_B}}\n\nC. {{opt_3_C}}\n\nD. {{opt_3_D}}\n\n> {{dialogue_text_3}}"
+      }
+    ],
+    "choicePageGroups": [
+      [
+        {
+          "questions": [
+            {
+              "id": 1,
+              "stem": "{{stem_1}}",
+              "options": [
+                "{{opt_1_A}}",
+                "{{opt_1_B}}",
+                "{{opt_1_C}}",
+                "{{opt_1_D}}"
+              ],
+              "answer": "{{answer_1}}"
+            },
+            {
+              "id": 2,
+              "stem": "{{stem_2}}",
+              "options": [
+                "{{opt_2_A}}",
+                "{{opt_2_B}}",
+                "{{opt_2_C}}",
+                "{{opt_2_D}}"
+              ],
+              "answer": "{{answer_2}}"
+            }
+          ]
+        },
+        {
+          "questions": [
+            {
+              "id": 3,
+              "stem": "{{stem_3}}",
+              "options": [
+                "{{opt_3_A}}",
+                "{{opt_3_B}}",
+                "{{opt_3_C}}",
+                "{{opt_3_D}}"
+              ],
+              "answer": "{{answer_3}}"
+            }
+          ]
+        }
+      ]
+    ]
+  },
+  "editableData": [
+    {
+      "type": "text",
+      "id": "dialogue_text_1",
+      "description": "第一段对话文本 (TTS合成)"
+    },
+    {
+      "type": "text",
+      "id": "stem_1",
+      "description": "第1题 — 题干"
+    },
+    {
+      "type": "text",
+      "id": "opt_1_A",
+      "description": "第1题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_1_B",
+      "description": "第1题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_1_C",
+      "description": "第1题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_1_D",
+      "description": "第1题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_1",
+      "description": "第1题 — 正确答案 (A/B/C/D)"
+    },
+    {
+      "type": "text",
+      "id": "dialogue_text_2",
+      "description": "第二段对话文本 (TTS合成)"
+    },
+    {
+      "type": "text",
+      "id": "stem_2",
+      "description": "第2题 — 题干"
+    },
+    {
+      "type": "text",
+      "id": "opt_2_A",
+      "description": "第2题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_2_B",
+      "description": "第2题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_2_C",
+      "description": "第2题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_2_D",
+      "description": "第2题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_2",
+      "description": "第2题 — 正确答案 (A/B/C/D)"
+    },
+    {
+      "type": "text",
+      "id": "dialogue_text_3",
+      "description": "第三段对话文本 (TTS合成)"
+    },
+    {
+      "type": "text",
+      "id": "stem_3",
+      "description": "第3题 — 题干"
+    },
+    {
+      "type": "text",
+      "id": "opt_3_A",
+      "description": "第3题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_3_B",
+      "description": "第3题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_3_C",
+      "description": "第3题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_3_D",
+      "description": "第3题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_3",
+      "description": "第3题 — 正确答案 (A/B/C/D)"
+    }
+  ],
+  "dev": true
+}

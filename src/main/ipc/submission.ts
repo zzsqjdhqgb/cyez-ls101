@@ -12,6 +12,7 @@ import { getExamsPath, getSubmissionsPath } from '../utils'
 import {
   createSubmission,
   saveRecord,
+  saveChoiceAnswers,
   listSubmissions,
   deleteSubmission,
   exportSubmission,
@@ -28,6 +29,13 @@ ipcMain.handle(
   'submission:saveRecord',
   async (_event, submissionId: string, recordIndex: number, buffer: ArrayBuffer) => {
     saveRecord(getSubmissionsPath(), submissionId, recordIndex, buffer)
+  }
+)
+
+ipcMain.handle(
+  'submission:saveChoiceAnswers',
+  async (_event, submissionId: string, answers: Record<number, string>) => {
+    saveChoiceAnswers(getSubmissionsPath(), submissionId, answers)
   }
 )
 

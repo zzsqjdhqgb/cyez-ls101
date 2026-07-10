@@ -24,5 +24,5 @@ export type {
 export { getMaxScore, settleNow, settleLater, listBatches } from './settlement'
 export type { SettleNowResult } from './settlement'
 
-export { exportCsv, exportPdf } from './export'
+export { exportCsv, exportPdf, buildChoiceQuestionsMarkdown } from './export'
 export type { PdfExportResult } from './export'
