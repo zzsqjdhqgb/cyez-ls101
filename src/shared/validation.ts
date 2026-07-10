@@ -30,6 +30,43 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
 
   const questions = exam.questions as unknown[]
 
+  // Validate choicePageGroups if present
+  const groupInfo = new Map<number, { totalPages: number; totalChoiceCount: number; choiceIds: number[] }>()
+  const choicePageGroups = exam.choicePageGroups as Record<string, unknown>[] | undefined
+  if (choicePageGroups !== undefined) {
+    if (!Array.isArray(choicePageGroups)) {
+      errors.push({ questionIndex: -1, message: 'choicePageGroups must be an array' })
+    } else {
+      for (let gi = 0; gi < choicePageGroups.length; gi++) {
+        const pages = choicePageGroups[gi] as unknown
+        if (!Array.isArray(pages) || pages.length === 0) {
+          errors.push({ questionIndex: -1, message: `choicePageGroups[${gi}] must be a non-empty array of pages` })
+          continue
+        }
+        const seenIds = new Set<number>()
+        let count = 0
+        for (let pi = 0; pi < pages.length; pi++) {
+          const page = pages[pi] as Record<string, unknown>
+          if (!page || !Array.isArray(page.questions)) {
+            errors.push({ questionIndex: -1, message: `choicePageGroups[${gi}][${pi}].questions must be an array` })
+            continue
+          }
+          for (const cq of page.questions) {
+            const cqObj = cq as Record<string, unknown>
+            if (typeof cqObj.id === 'number' && cqObj.id >= 1) {
+              if (seenIds.has(cqObj.id)) {
+                errors.push({ questionIndex: -1, message: `Duplicate choice question id ${cqObj.id} in choicePageGroups[${gi}]` })
+              }
+              seenIds.add(cqObj.id)
+              count++
+            }
+          }
+        }
+        groupInfo.set(gi, { totalPages: pages.length, totalChoiceCount: count, choiceIds: [...seenIds] })
+      }
+    }
+  }
+
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i]
     if (!q || typeof q !== 'object') {
@@ -233,10 +270,10 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
               seenChoiceIds.add(cq.id)
               totalChoiceCount++
             }
-            if (typeof cq.stem !== 'string' || cq.stem.trim() === '') {
+            if (typeof cq.stem !== 'string') {
               errors.push({
                 questionIndex: i,
-                message: `choicePages[${pi}].questions[${qi}].stem must be a non-empty string`
+                message: `choicePages[${pi}].questions[${qi}].stem must be a string`
               })
             }
             if (!Array.isArray(cq.options) || cq.options.length !== 4) {
@@ -263,7 +300,7 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
             }
           }
         }
-        // Validate focusId in timers
+        // Validate focusId/pageRange in timers (inline pages)
         const questionTimeArray = Array.isArray(question.time) ? question.time : [question.time]
         for (const tc of questionTimeArray as Record<string, unknown>[]) {
           if (tc && typeof tc.focusId === 'number') {
@@ -276,11 +313,50 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
           }
           if (tc && tc.pageRange !== undefined) {
             const pr = tc.pageRange as number[]
-            const totalPages = question.choicePages!.length
-            if (pr[1] >= totalPages) {
+            if (pr[1] >= question.choicePages!.length) {
               errors.push({
                 questionIndex: i,
-                message: `pageRange end ${pr[1]} must be less than total pages (${totalPages})`
+                message: `pageRange end ${pr[1]} must be less than total pages (${question.choicePages!.length})`
+              })
+            }
+          }
+        }
+      }
+    }
+
+    // Validate choicePageGroupId if present
+    if (question.choicePageGroupId !== undefined) {
+      const gid = question.choicePageGroupId as number
+      if (typeof gid !== 'number' || gid < 0 || !Number.isInteger(gid)) {
+        errors.push({ questionIndex: i, message: 'choicePageGroupId must be a non-negative integer' })
+      } else if (!choicePageGroups) {
+        errors.push({ questionIndex: i, message: `choicePageGroupId specified but choicePageGroups is not defined` })
+      } else if (!groupInfo.has(gid)) {
+        errors.push({ questionIndex: i, message: `choicePageGroupId ${gid} does not match any group in choicePageGroups` })
+      }
+    }
+
+    // If no inline choicePages, validate focusId/pageRange against the group
+    if (question.choicePages === undefined && question.choicePageGroupId !== undefined) {
+      const gid = question.choicePageGroupId as number
+      const info = groupInfo.get(gid)
+      if (info) {
+        const questionTimeArray = Array.isArray(question.time) ? question.time : [question.time]
+        for (const tc of questionTimeArray as Record<string, unknown>[]) {
+          if (tc && typeof tc.focusId === 'number') {
+            if (tc.focusId < 1 || tc.focusId > info.totalChoiceCount) {
+              errors.push({
+                questionIndex: i,
+                message: `focusId ${tc.focusId} must be between 1 and total choice questions (${info.totalChoiceCount})`
+              })
+            }
+          }
+          if (tc && tc.pageRange !== undefined) {
+            const pr = tc.pageRange as number[]
+            if (pr[1] >= info.totalPages) {
+              errors.push({
+                questionIndex: i,
+                message: `pageRange end ${pr[1]} must be less than total pages (${info.totalPages})`
               })
             }
           }
@@ -344,6 +420,18 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
               const cp = q.choicePages as Record<string, unknown>[] | undefined
               if (cp) {
                 for (const page of cp) {
+                  const qs = page.questions as Record<string, unknown>[]
+                  if (qs && qs.some((cq) => cq.id === item.choiceId)) {
+                    found = true
+                    break
+                  }
+                }
+                if (found) break
+              }
+            }
+            if (!found && choicePageGroups) {
+              for (const pages of choicePageGroups as unknown as Record<string, unknown>[][]) {
+                for (const page of pages) {
                   const qs = page.questions as Record<string, unknown>[]
                   if (qs && qs.some((cq) => cq.id === item.choiceId)) {
                     found = true

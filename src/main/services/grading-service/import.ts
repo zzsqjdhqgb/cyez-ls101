@@ -190,11 +190,22 @@ export function importSubmissions(
 
       // Compute choice scores
       const allChoiceQs: Record<number, Record<string, unknown>> = {}
+      const cpg = examPackage.choicePageGroups as Record<string, unknown>[][] | undefined
       for (const q of examPackage.questions) {
-        if (q.choicePages) {
-          for (const page of q.choicePages) {
-            for (const cq of page.questions)
-              allChoiceQs[cq.id] = cq as unknown as Record<string, unknown>
+        let pages = q.choicePages as Record<string, unknown>[] | undefined
+        if (!pages && cpg) {
+          const gid = (q.choicePageGroupId as number | undefined) ?? 0
+          pages = cpg[gid] as Record<string, unknown>[] | undefined
+        }
+        if (pages) {
+          for (const page of pages) {
+            const qs = page.questions as Record<string, unknown>[]
+            if (qs) {
+              for (const cq of qs) {
+                const cqObj = cq as Record<string, unknown>
+                allChoiceQs[cqObj.id as number] = cqObj
+              }
+            }
           }
         }
       }

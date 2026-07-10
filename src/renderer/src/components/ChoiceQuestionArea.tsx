@@ -165,13 +165,13 @@ export default function ChoiceQuestionArea({
         onPageChange(targetPage)
       }
     }
-  }, [focusId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [focusId, currentPage])
 
   useEffect(() => {
     if (hasRange && currentPage < rangeStart) {
       onPageChange(rangeStart)
     }
-  }, [pageRange]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pageRange, currentPage])
 
   const prevDisabled = isLocked || currentPage === 0 || (hasRange && currentPage <= rangeStart)
   const nextDisabled =
