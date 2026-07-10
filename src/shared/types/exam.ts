@@ -40,6 +40,7 @@ export interface Question {
   time: TimeControl | TimeControl[]
   statusText?: string
   choicePages?: ChoicePage[]
+  choicePageGroupId?: number
 }
 
 export interface RecordingGradingInfoItem {
@@ -64,6 +65,7 @@ export interface ExamPackage {
   questions: Question[]
   gradingInfo?: GradingInfoItem[]
   choiceOnly?: boolean
+  choicePageGroups?: ChoicePage[][]
 }
 
 export interface ExamListItem {
