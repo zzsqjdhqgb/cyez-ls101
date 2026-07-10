@@ -546,11 +546,86 @@
           },
           {
             "type": "countdown",
-            "seconds": 15,
-            "pageRange": [
-              2,
-              2
-            ]
+            "seconds": 2,
+            "focusId": 11
+          }
+        ]
+      },
+      {
+        "id": "q_passage1_s11",
+        "content": [
+          {
+            "type": "text",
+            "text": "第11题",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/stem_11.wav",
+            "text": "{{stem_11}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 11
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 11
+          }
+        ]
+      },
+      {
+        "id": "q_passage1_s12",
+        "content": [
+          {
+            "type": "text",
+            "text": "第12题",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/stem_12.wav",
+            "text": "{{stem_12}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 12
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 12
+          }
+        ]
+      },
+      {
+        "id": "q_passage1_s13",
+        "content": [
+          {
+            "type": "text",
+            "text": "第13题",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/stem_13.wav",
+            "text": "{{stem_13}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 13
+          },
+          {
+            "type": "countdown",
+            "seconds": 5,
+            "focusId": 13
           }
         ]
       },
@@ -619,11 +694,86 @@
           },
           {
             "type": "countdown",
-            "seconds": 15,
-            "pageRange": [
-              3,
-              3
-            ]
+            "seconds": 2,
+            "focusId": 14
+          }
+        ]
+      },
+      {
+        "id": "q_passage2_s14",
+        "content": [
+          {
+            "type": "text",
+            "text": "第14题",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/stem_14.wav",
+            "text": "{{stem_14}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 14
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 14
+          }
+        ]
+      },
+      {
+        "id": "q_passage2_s15",
+        "content": [
+          {
+            "type": "text",
+            "text": "第15题",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/stem_15.wav",
+            "text": "{{stem_15}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 15
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 15
+          }
+        ]
+      },
+      {
+        "id": "q_passage2_s16",
+        "content": [
+          {
+            "type": "text",
+            "text": "第16题",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/stem_16.wav",
+            "text": "{{stem_16}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 16
+          },
+          {
+            "type": "countdown",
+            "seconds": 5,
+            "focusId": 16
           }
         ]
       },
@@ -692,11 +842,112 @@
           },
           {
             "type": "countdown",
-            "seconds": 20,
-            "pageRange": [
-              4,
-              4
-            ]
+            "seconds": 2,
+            "focusId": 17
+          }
+        ]
+      },
+      {
+        "id": "q_dialogue_long_s17",
+        "content": [
+          {
+            "type": "text",
+            "text": "第17题",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/stem_17.wav",
+            "text": "{{stem_17}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 17
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 17
+          }
+        ]
+      },
+      {
+        "id": "q_dialogue_long_s18",
+        "content": [
+          {
+            "type": "text",
+            "text": "第18题",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/stem_18.wav",
+            "text": "{{stem_18}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 18
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 18
+          }
+        ]
+      },
+      {
+        "id": "q_dialogue_long_s19",
+        "content": [
+          {
+            "type": "text",
+            "text": "第19题",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/stem_19.wav",
+            "text": "{{stem_19}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 19
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 19
+          }
+        ]
+      },
+      {
+        "id": "q_dialogue_long_s20",
+        "content": [
+          {
+            "type": "text",
+            "text": "第20题",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/stem_20.wav",
+            "text": "{{stem_20}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 20
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 20
           }
         ]
       },
