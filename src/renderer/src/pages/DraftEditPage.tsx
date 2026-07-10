@@ -6,7 +6,7 @@
 // src/renderer/src/pages/DraftEditPage.tsx
 import { JSX, useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Download, FileText, Pencil } from 'lucide-react'
+import { ArrowLeft, Download, FileText, Pencil, Wand2 } from 'lucide-react'
 import type { DraftView } from '../types'
 import { MessageModal, ProgressModal, ResultModal } from '../components/Modal'
 import EditableFormItem from './draft/EditableFormItem'
@@ -171,6 +171,15 @@ export default function DraftEditPage(): JSX.Element {
     type: 'info' | 'success' | 'error'
   } | null>(null)
   const [collapsedPreviews, setCollapsedPreviews] = useState<Record<string, boolean>>({})
+  const [devMode, setDevMode] = useState(() => sessionStorage.getItem('devMode') === 'true')
+
+  useEffect(() => {
+    const handler = (): void => {
+      setDevMode(sessionStorage.getItem('devMode') === 'true')
+    }
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [])
 
   useEffect(() => {
     if (!draftId) return
@@ -274,6 +283,15 @@ export default function DraftEditPage(): JSX.Element {
       }
       return next
     })
+  }
+
+  const handleAutoFill = (): void => {
+    if (!draft) return
+    for (const item of draft.editableItems) {
+      if (item.type === 'text') {
+        handleTextChange(item.id, 'A')
+      }
+    }
   }
 
   const handleExportExam = useCallback(() => {
@@ -392,6 +410,12 @@ export default function DraftEditPage(): JSX.Element {
           </div>
         </div>
         <div style={styles.headerActions}>
+          {devMode && (
+            <button onClick={handleAutoFill} style={styles.iconBtn} title="一键填写文本字段">
+              <Wand2 size={18} strokeWidth={2} />
+              一键填写
+            </button>
+          )}
           <button onClick={handleExportDraft} style={styles.iconBtn} title="导出草稿包">
             <Download size={18} strokeWidth={2} />
             导出草稿
