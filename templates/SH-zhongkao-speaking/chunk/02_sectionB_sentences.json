@@ -7,7 +7,7 @@
           { "type": "text", "text": "一B. 朗读句子", "size": "large", "bold": true },
           { "type": "text", "text": "Read the following sentences. You will have ten seconds to prepare and ten seconds to read. 注意语调（降调/升调）和意群停顿。(朗读下列句子。你将有 10 秒的准备时间和 10 秒的朗读时间。注意语调（降调/升调）和意群停顿。)", "size": "small" }
         ],
-        "time": { "type": "content-controlled" },
+        "time": { "type": "countdown", "seconds": 10 },
         "statusText": "阅读提示"
       },
       {
