@@ -5561,52 +5561,52 @@
     "gradingInfo": [
       {
         "choiceId": 1,
-        "fullScore": 1.5,
+        "fullScore": 1,
         "problemInfo": "**{{stem_1}}**\n\nA. {{opt_1_A}}\nB. {{opt_1_B}}\nC. {{opt_1_C}}\nD. {{opt_1_D}}\n\n> {{dialogue_text_1}}"
       },
       {
         "choiceId": 2,
-        "fullScore": 1.5,
+        "fullScore": 1,
         "problemInfo": "**{{stem_2}}**\n\nA. {{opt_2_A}}\nB. {{opt_2_B}}\nC. {{opt_2_C}}\nD. {{opt_2_D}}\n\n> {{dialogue_text_2}}"
       },
       {
         "choiceId": 3,
-        "fullScore": 1.5,
+        "fullScore": 1,
         "problemInfo": "**{{stem_3}}**\n\nA. {{opt_3_A}}\nB. {{opt_3_B}}\nC. {{opt_3_C}}\nD. {{opt_3_D}}\n\n> {{dialogue_text_3}}"
       },
       {
         "choiceId": 4,
-        "fullScore": 1.5,
+        "fullScore": 1,
         "problemInfo": "**{{stem_4}}**\n\nA. {{opt_4_A}}\nB. {{opt_4_B}}\nC. {{opt_4_C}}\nD. {{opt_4_D}}\n\n> {{dialogue_text_4}}"
       },
       {
         "choiceId": 5,
-        "fullScore": 1.5,
+        "fullScore": 1,
         "problemInfo": "**{{stem_5}}**\n\nA. {{opt_5_A}}\nB. {{opt_5_B}}\nC. {{opt_5_C}}\nD. {{opt_5_D}}\n\n> {{dialogue_text_5}}"
       },
       {
         "choiceId": 6,
-        "fullScore": 1.5,
+        "fullScore": 1,
         "problemInfo": "**{{stem_6}}**\n\nA. {{opt_6_A}}\nB. {{opt_6_B}}\nC. {{opt_6_C}}\nD. {{opt_6_D}}\n\n> {{dialogue_text_6}}"
       },
       {
         "choiceId": 7,
-        "fullScore": 1.5,
+        "fullScore": 1,
         "problemInfo": "**{{stem_7}}**\n\nA. {{opt_7_A}}\nB. {{opt_7_B}}\nC. {{opt_7_C}}\nD. {{opt_7_D}}\n\n> {{dialogue_text_7}}"
       },
       {
         "choiceId": 8,
-        "fullScore": 1.5,
+        "fullScore": 1,
         "problemInfo": "**{{stem_8}}**\n\nA. {{opt_8_A}}\nB. {{opt_8_B}}\nC. {{opt_8_C}}\nD. {{opt_8_D}}\n\n> {{dialogue_text_8}}"
       },
       {
         "choiceId": 9,
-        "fullScore": 1.5,
+        "fullScore": 1,
         "problemInfo": "**{{stem_9}}**\n\nA. {{opt_9_A}}\nB. {{opt_9_B}}\nC. {{opt_9_C}}\nD. {{opt_9_D}}\n\n> {{dialogue_text_9}}"
       },
       {
         "choiceId": 10,
-        "fullScore": 1.5,
+        "fullScore": 1,
         "problemInfo": "**{{stem_10}}**\n\nA. {{opt_10_A}}\nB. {{opt_10_B}}\nC. {{opt_10_C}}\nD. {{opt_10_D}}\n\n> {{dialogue_text_10}}"
       },
       {
