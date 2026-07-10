@@ -7,6 +7,7 @@ import { JSX, useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import DisplayArea from '../components/DisplayArea'
 import StatusBar from '../components/StatusBar'
+import ChoiceQuestionArea from '../components/ChoiceQuestionArea'
 import type { ExamPackage, Question, StudentInfo } from '../types'
 import { MessageModal } from '../components/Modal'
 import useScalingRatio, { DESIGN_WIDTH, DESIGN_HEIGHT } from './exam/useScaling'
@@ -52,6 +53,7 @@ export default function ExamPage(): JSX.Element {
 
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentIndex, setCurrentIndex] = useState(-1)
+  const [timerIndex, setTimerIndex] = useState(0)
   const [phase, setPhase] = useState<Phase>('input')
   const [countdown, setCountdown] = useState(0)
   const [recordingTimeLeft, setRecordingTimeLeft] = useState(0)
@@ -65,6 +67,10 @@ export default function ExamPage(): JSX.Element {
 
   const [mediaError, setMediaError] = useState<string | null>(null)
 
+  const [choiceAnswers, setChoiceAnswers] = useState<Record<number, string>>({})
+  const [currentChoicePage, setCurrentChoicePage] = useState(0)
+  const [choiceOnly, setChoiceOnly] = useState(false)
+
   const [formError, setFormError] = useState<string | null>(null)
   const [msgModal, setMsgModal] = useState<{
     title: string
@@ -75,6 +81,7 @@ export default function ExamPage(): JSX.Element {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const choiceAnswersRef = useRef<Record<number, string>>({})
   const scale = useScalingRatio()
 
   const [devMode, setDevMode] = useState(() => sessionStorage.getItem('devMode') === 'true')
@@ -103,7 +110,11 @@ export default function ExamPage(): JSX.Element {
       .load(examId)
       .then((pkg: ExamPackage) => {
         setQuestions(pkg.questions)
+        setChoiceOnly(pkg.choiceOnly === true)
         setCurrentIndex(0)
+        setTimerIndex(0)
+        setCurrentChoicePage(0)
+        setChoiceAnswers({})
         setPhase('input')
       })
       .catch((err) => {
@@ -148,9 +159,16 @@ export default function ExamPage(): JSX.Element {
   // 跳转到下一题
   const nextQuestion = useCallback(() => {
     clearTimers(true)
+    if (Object.keys(choiceAnswersRef.current).length > 0 && submissionId) {
+      window.electronAPI.submission
+        .saveChoiceAnswers(submissionId, choiceAnswersRef.current)
+        .catch(console.error)
+    }
     setMediaError(null)
     setRecordingTimeLeft(0)
     setRecordingProgress(0)
+    setTimerIndex(0)
+    setCurrentChoicePage(0)
     setCurrentIndex((prev) => {
       const next = prev + 1
       if (next >= questions.length) {
@@ -159,7 +177,24 @@ export default function ExamPage(): JSX.Element {
       }
       return next
     })
-  }, [clearTimers, questions.length])
+  }, [clearTimers, submissionId, questions.length])
+
+  // 推进计时器：同题内下一个 timer，或进入下一题
+  const advanceTimer = useCallback(() => {
+    const question = questions[currentIndex]
+    if (!question) {
+      nextQuestion()
+      return
+    }
+    const timeArray = Array.isArray(question.time) ? question.time : [question.time]
+    const nextTi = timerIndex + 1
+    if (nextTi < timeArray.length) {
+      clearTimers()
+      setTimerIndex(nextTi)
+    } else {
+      nextQuestion()
+    }
+  }, [questions, currentIndex, timerIndex, clearTimers, nextQuestion])
 
   // 开始录音（使用已获取的 MediaStream）
   const startRecordingWithStream = useCallback(
@@ -185,9 +220,9 @@ export default function ExamPage(): JSX.Element {
 
         setRecordingTimeLeft(0)
 
-        // 播放"停止录音"提示音，然后跳转下一题
+        // 播放"停止录音"提示音，然后推进计时器
         await playShortAudio('app-resource://stop_record.mp3')
-        nextQuestion()
+        advanceTimer()
       }
 
       mediaRecorder.start()
@@ -211,10 +246,10 @@ export default function ExamPage(): JSX.Element {
         }
       }, 100)
     },
-    [clearTimers, stopRecording, nextQuestion, submissionId]
+    [clearTimers, stopRecording, advanceTimer, submissionId]
   )
 
-  // 处理题目切换
+  // 处理题目/计时器切换
   useEffect(() => {
     if (phase !== 'exam') return
     if (currentIndex < 0 || currentIndex >= questions.length) return
@@ -222,8 +257,15 @@ export default function ExamPage(): JSX.Element {
     const question = questions[currentIndex]
     clearTimers()
 
-    if (question.time.type === 'countdown') {
-      const seconds = question.time.seconds
+    const timeArray = Array.isArray(question.time) ? question.time : [question.time]
+    const currentTime = timeArray[timerIndex]
+    if (!currentTime) {
+      queueMicrotask(() => advanceTimer())
+      return
+    }
+
+    if (currentTime.type === 'countdown') {
+      const seconds = currentTime.seconds
       let remaining = seconds
       queueMicrotask(() => setCountdown(remaining))
       timerRef.current = setInterval(() => {
@@ -231,13 +273,12 @@ export default function ExamPage(): JSX.Element {
         setCountdown(remaining)
         if (remaining <= 0) {
           clearTimers()
-          nextQuestion()
+          advanceTimer()
         }
       }, 1000)
-    } else if (question.time.type === 'record') {
-      const { duration, recordIndex } = question.time
+    } else if (currentTime.type === 'record') {
+      const { duration, recordIndex } = currentTime
 
-      // 步骤：先加载麦克风 → 播放"准备录音"音频 → 开始录音
       navigator.mediaDevices
         .getUserMedia({ audio: true })
         .then((stream) => {
@@ -248,11 +289,18 @@ export default function ExamPage(): JSX.Element {
         })
         .catch((err) => {
           console.error('无法获取麦克风或播放提示音失败:', err)
-          // 如果连麦克风都获取不到，直接跳过本题
-          nextQuestion()
+          advanceTimer()
         })
     }
-  }, [currentIndex, questions, clearTimers, nextQuestion, startRecordingWithStream, phase])
+  }, [
+    currentIndex,
+    timerIndex,
+    questions,
+    clearTimers,
+    advanceTimer,
+    startRecordingWithStream,
+    phase
+  ])
 
   const handleMediaError = useCallback(
     (msg: string) => {
@@ -265,9 +313,9 @@ export default function ExamPage(): JSX.Element {
 
   const handleMediaEnded = useCallback(() => {
     if (phase === 'exam' && !mediaError) {
-      nextQuestion()
+      advanceTimer()
     }
-  }, [phase, mediaError, nextQuestion])
+  }, [phase, mediaError, advanceTimer])
 
   const handleBack = useCallback(() => {
     clearTimers()
@@ -303,6 +351,15 @@ export default function ExamPage(): JSX.Element {
       setMsgModal({ title: '操作失败', message: '创建作答记录失败', type: 'error' })
     }
   }
+
+  const handleChoiceAnswer = useCallback((choiceId: number, answer: string) => {
+    setChoiceAnswers((prev) => {
+      if (prev[choiceId] === answer) return prev
+      const next = { ...prev, [choiceId]: answer }
+      choiceAnswersRef.current = next
+      return next
+    })
+  }, [])
 
   const renderContent = (): JSX.Element => {
     if (loading) {
@@ -346,6 +403,18 @@ export default function ExamPage(): JSX.Element {
     }
 
     if (phase === 'finished') {
+      const handleExport = async (): Promise<void> => {
+        try {
+          if (!submissionId) return
+          const result = await window.electronAPI.grading.exportChoiceOnlyReport(submissionId)
+          if (!result.success && result.error) {
+            setMsgModal({ title: '导出失败', message: result.error, type: 'error' })
+          }
+        } catch (err) {
+          setMsgModal({ title: '导出失败', message: String(err), type: 'error' })
+        }
+      }
+
       return (
         <div style={{ textAlign: 'center' }}>
           <p style={{ fontSize: 40 }}>考试完成</p>
@@ -379,6 +448,22 @@ export default function ExamPage(): JSX.Element {
             >
               查看作答
             </button>
+            {choiceOnly && (
+              <button
+                onClick={() => void handleExport()}
+                style={{
+                  fontSize: 22,
+                  padding: '10px 24px',
+                  cursor: 'pointer',
+                  background: '#16a34a',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8
+                }}
+              >
+                导出报告 (PDF)
+              </button>
+            )}
           </div>
         </div>
       )
@@ -401,6 +486,14 @@ export default function ExamPage(): JSX.Element {
     // phase === 'exam'
     const currentQuestion =
       currentIndex >= 0 && currentIndex < questions.length ? questions[currentIndex] : null
+
+    const timeArray = currentQuestion
+      ? Array.isArray(currentQuestion.time)
+        ? currentQuestion.time
+        : [currentQuestion.time]
+      : []
+    const currentTimer = timeArray[timerIndex]
+    const choicePages = currentQuestion?.choicePages || null
 
     if (mediaError && phase === 'exam') {
       return (
@@ -429,9 +522,13 @@ export default function ExamPage(): JSX.Element {
       )
     }
 
+    if (!currentQuestion) {
+      return <div style={{ fontSize: 40, color: '#888' }}>等待...</div>
+    }
+
     return (
       <>
-        {devMode && currentQuestion && (
+        {devMode && (
           <>
             <div
               style={{
@@ -483,14 +580,40 @@ export default function ExamPage(): JSX.Element {
           </>
         )}
 
-        {currentQuestion ? (
+        {choicePages ? (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              width: '100%',
+              height: '100%'
+            }}
+          >
+            <div style={{ flexShrink: 0 }}>
+              <DisplayArea
+                question={currentQuestion}
+                onMediaEnded={handleMediaEnded}
+                onMediaError={handleMediaError}
+              />
+            </div>
+            <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+              <ChoiceQuestionArea
+                pages={choicePages}
+                currentPage={currentChoicePage}
+                focusId={currentTimer?.focusId}
+                pageRange={currentTimer?.pageRange}
+                answers={choiceAnswers}
+                onAnswer={handleChoiceAnswer}
+                onPageChange={setCurrentChoicePage}
+              />
+            </div>
+          </div>
+        ) : (
           <DisplayArea
             question={currentQuestion}
             onMediaEnded={handleMediaEnded}
             onMediaError={handleMediaError}
           />
-        ) : (
-          <div style={{ fontSize: 40, color: '#888' }}>等待...</div>
         )}
       </>
     )
@@ -498,6 +621,15 @@ export default function ExamPage(): JSX.Element {
 
   const currentQuestion =
     currentIndex >= 0 && currentIndex < questions.length ? questions[currentIndex] : null
+
+  const currentTimeArray = currentQuestion
+    ? Array.isArray(currentQuestion.time)
+      ? currentQuestion.time
+      : [currentQuestion.time]
+    : []
+  const displayQuestion = currentQuestion
+    ? { ...currentQuestion, time: currentTimeArray[timerIndex] }
+    : null
 
   return (
     <div
@@ -553,7 +685,7 @@ export default function ExamPage(): JSX.Element {
           >
             <StatusBar
               key={currentQuestion?.id || 'idle'}
-              question={currentQuestion}
+              question={displayQuestion}
               countdown={countdown}
               recordingProgress={recordingProgress}
               recordingTimeLeft={recordingTimeLeft}

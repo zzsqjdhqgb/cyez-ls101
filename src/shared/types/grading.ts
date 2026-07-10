@@ -15,6 +15,15 @@ export interface GradingScoreEntry {
 
 export type GradingStatus = 'ungraded' | 'grading' | 'completed'
 
+export interface ChoiceAnswerRecord {
+  choiceId: number
+  userAnswer?: string
+  correctAnswer: string
+  isCorrect: boolean
+  fullScore: number
+  score: number
+}
+
 export interface GradingRecord {
   rid: string
   status: GradingStatus
@@ -27,6 +36,7 @@ export interface GradingRecord {
   batchId?: string
   gradedAt?: string
   submittedAt?: string
+  choiceScores?: Record<number, ChoiceAnswerRecord>
 }
 
 export interface GradingBatch {

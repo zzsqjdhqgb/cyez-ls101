@@ -32,7 +32,9 @@ export default function StatusBar({
   }
 
   // ---- 倒计时题型 ----
-  if (question.time.type === 'countdown') {
+  const time = Array.isArray(question.time) ? question.time[0] : question.time
+
+  if (time.type === 'countdown') {
     return (
       <div
         style={{
@@ -50,7 +52,7 @@ export default function StatusBar({
   }
 
   // ---- 录音题型 ----
-  if (question.time.type === 'record') {
+  if (time.type === 'record') {
     return (
       <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 16 }}>
         {statusText && <span style={{ fontSize: 24, minWidth: 100 }}>{statusText}</span>}

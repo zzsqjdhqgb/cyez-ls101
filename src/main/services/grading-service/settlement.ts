@@ -6,19 +6,20 @@
 import { writeFileSync, existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import type { GradingBatch } from '../../../shared/types'
+import type { GradingBatch, RecordingGradingInfoItem } from '../../../shared/types'
 import { ensureDir } from '../../utils'
 import { loadRecords, saveRecords, loadExamPackage, getSubmissionMeta } from './import'
 
 export function getMaxScore(rid: string): number | undefined {
   const pkg = loadExamPackage(rid)
-  if (!pkg || !Array.isArray(pkg.gradingInfo)) return undefined
-  return pkg.gradingInfo.reduce(
-    (sum, gi) =>
-      sum +
-      (gi.fullScore ?? (gi.scoreOptions?.length ? gi.scoreOptions[gi.scoreOptions.length - 1] : 0)),
-    0
-  )
+  if (!pkg?.gradingInfo) return undefined
+  let sum = 0
+  for (const gi of pkg.gradingInfo) {
+    if ('fullScore' in gi && typeof gi.fullScore === 'number') {
+      sum += gi.fullScore
+    }
+  }
+  return sum > 0 ? sum : undefined
 }
 
 export interface SettleNowResult {
@@ -41,7 +42,10 @@ export function settleNow(gradingPath: string, sessionSettlementRids: string[]):
 
     let allGraded = true
     let totalScore = 0
-    for (const gi of pkg.gradingInfo) {
+    const recordingItems = pkg.gradingInfo.filter(
+      (gi): gi is RecordingGradingInfoItem => 'id' in gi
+    )
+    for (const gi of recordingItems) {
       const se = record.scores[gi.id]
       if (!se) {
         allGraded = false
@@ -49,6 +53,15 @@ export function settleNow(gradingPath: string, sessionSettlementRids: string[]):
       }
       totalScore += se.score
     }
+
+    // Include choice scores
+    let choiceTotal = 0
+    if (record.choiceScores) {
+      for (const cs of Object.values(record.choiceScores)) {
+        choiceTotal += cs.score
+      }
+    }
+    totalScore += choiceTotal
 
     if (allGraded) {
       record.status = 'completed'

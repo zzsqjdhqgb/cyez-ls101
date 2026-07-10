@@ -5,7 +5,12 @@
 
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import type { GradingRecord, GradingInfoItem, SettlementRecord } from '../../../shared/types'
+import type {
+  GradingRecord,
+  GradingInfoItem,
+  RecordingGradingInfoItem,
+  SettlementRecord
+} from '../../../shared/types'
 import { getGradingPath } from '../../utils'
 import { loadRecords, saveRecords, loadExamPackage } from './import'
 
@@ -51,13 +56,14 @@ export class GradingSession {
     record: GradingRecord,
     fromId: number
   ): number | null {
-    const startIndex = gradingInfo.findIndex((gi) => gi.id === fromId)
-    const scanFrom = startIndex === -1 ? 0 : startIndex
-    for (let i = scanFrom; i < gradingInfo.length; i++) {
-      const gi = gradingInfo[i]
-      if (!record.scores[gi.id]) {
-        return gi.id
-      }
+    const recordingItems = gradingInfo.filter((gi) => 'id' in gi && !('choiceId' in gi))
+    const startIdx = recordingItems.findIndex(
+      (gi) => (gi as RecordingGradingInfoItem).id === fromId
+    )
+    const scanFrom = startIdx >= 0 ? startIdx : 0
+    for (let i = scanFrom; i < recordingItems.length; i++) {
+      const gi = recordingItems[i] as RecordingGradingInfoItem
+      if (!record.scores[gi.id]) return gi.id
     }
     return null
   }
@@ -73,7 +79,10 @@ export class GradingSession {
     const gradingInfo = examPackage.gradingInfo
     if (!Array.isArray(gradingInfo)) return null
 
-    const item = gradingInfo.find((gi) => gi.id === gradingInfoId)
+    const item = gradingInfo.find(
+      (gi) =>
+        'id' in gi && !('choiceId' in gi) && (gi as RecordingGradingInfoItem).id === gradingInfoId
+    ) as RecordingGradingInfoItem | undefined
     if (!item) return null
 
     const audioUrls: string[] = []
@@ -120,8 +129,9 @@ export class GradingSession {
         sessionCount++
 
         let submissionUngradedCount = 0
-        for (let i = 0; i < pkg.gradingInfo.length; i++) {
-          if (!record.scores[pkg.gradingInfo[i].id]) {
+        const recordingItems = pkg.gradingInfo.filter((gi) => 'id' in gi && !('choiceId' in gi))
+        for (const gi of recordingItems) {
+          if (!record.scores[(gi as RecordingGradingInfoItem).id]) {
             totalUngradedItems++
             submissionUngradedCount++
           }
@@ -226,8 +236,12 @@ export class GradingSession {
           this.sessionCurrentGradingItemIndex[nextRid] = firstUngraded
           const nextFromOther = this.loadGradingItem(nextRid, firstUngraded)
           let currentSubmissionUngradedCount = 0
-          for (const gi of nextGradingInfo) {
-            if (!nextRecord.scores[gi.id]) currentSubmissionUngradedCount++
+          const nextRecordingItems = nextGradingInfo.filter(
+            (gi) => 'id' in gi && !('choiceId' in gi)
+          )
+          for (const gi of nextRecordingItems) {
+            if (!nextRecord.scores[(gi as RecordingGradingInfoItem).id])
+              currentSubmissionUngradedCount++
           }
           return {
             success: true,
@@ -249,8 +263,12 @@ export class GradingSession {
             this.sessionCurrentGradingItemIndex[skipRid] = ungraded
             const nextFromSkip = this.loadGradingItem(skipRid, ungraded)
             let currentSubmissionUngradedCount = 0
-            for (const gi of skipGradingInfo) {
-              if (!skipRecord.scores[gi.id]) currentSubmissionUngradedCount++
+            const skipRecordingItems = skipGradingInfo.filter(
+              (gi) => 'id' in gi && !('choiceId' in gi)
+            )
+            for (const gi of skipRecordingItems) {
+              if (!skipRecord.scores[(gi as RecordingGradingInfoItem).id])
+                currentSubmissionUngradedCount++
             }
             return {
               success: true,
@@ -284,8 +302,9 @@ export class GradingSession {
       if (!pkg || !Array.isArray(pkg.gradingInfo)) continue
 
       let allGraded = true
-      for (const gi of pkg.gradingInfo) {
-        if (!record.scores[gi.id]) {
+      const recordingItems = pkg.gradingInfo.filter((gi) => 'id' in gi && !('choiceId' in gi))
+      for (const gi of recordingItems) {
+        if (!record.scores[(gi as RecordingGradingInfoItem).id]) {
           allGraded = false
           break
         }
@@ -311,9 +330,10 @@ export class GradingSession {
       if (!pkg || !Array.isArray(pkg.gradingInfo)) continue
 
       let gradedCount = 0
-      const totalItems = pkg.gradingInfo.length
-      for (const gi of pkg.gradingInfo) {
-        if (record.scores[gi.id]) gradedCount++
+      const recordingItems = pkg.gradingInfo.filter((gi) => 'id' in gi && !('choiceId' in gi))
+      const totalItems = recordingItems.length
+      for (const gi of recordingItems) {
+        if (record.scores[(gi as RecordingGradingInfoItem).id]) gradedCount++
       }
 
       let status: 'canSettle' | 'grading' | 'ungraded'

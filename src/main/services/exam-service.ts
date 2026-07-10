@@ -57,10 +57,27 @@ export function loadExam(examsPath: string, examId: string): Record<string, unkn
   const missing = validateExamResources(examDir, questions)
   if (missing.length > 0) throw new Error(`缺少资源文件：${missing.join(', ')}`)
 
-  examPackage.questions = questions.map((q) => ({
-    ...q,
-    content: prefixContentNodesForExam((q.content as Record<string, unknown>[]) ?? [], examId)
-  }))
+  // Normalize time to always be an array, build choiceQuestionMap
+  const allChoiceQuestions: Record<string, unknown>[] = []
+  examPackage.questions = (questions as Record<string, unknown>[]).map((q) => {
+    const qTime = q.time
+    if (qTime && !Array.isArray(qTime)) {
+      q.time = [qTime]
+    }
+    // Collect all choice questions across pages for the global map
+    const cp = q.choicePages as Record<string, unknown>[] | undefined
+    if (cp) {
+      for (const page of cp) {
+        const qs = page.questions as Record<string, unknown>[]
+        if (qs) allChoiceQuestions.push(...qs)
+      }
+    }
+    return {
+      ...q,
+      content: prefixContentNodesForExam((q.content as Record<string, unknown>[]) ?? [], examId)
+    }
+  })
+  ;(examPackage as Record<string, unknown>)._choiceQuestionMap = allChoiceQuestions
   return examPackage
 }
 
