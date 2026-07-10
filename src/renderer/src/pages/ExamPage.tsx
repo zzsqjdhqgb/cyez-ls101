@@ -12,8 +12,9 @@ import type { ExamPackage, Question, StudentInfo } from '../types'
 import { MessageModal } from '../components/Modal'
 import useScalingRatio, { DESIGN_WIDTH, DESIGN_HEIGHT } from './exam/useScaling'
 import StudentForm from './exam/StudentForm'
+import MicTest from './exam/MicTest'
 
-type Phase = 'input' | 'exam' | 'finished' | 'error'
+type Phase = 'input' | 'micTest' | 'exam' | 'finished' | 'error'
 
 /**
  * 播放一个短音频，返回一个 Promise，在播放结束后 resolve。
@@ -82,6 +83,7 @@ export default function ExamPage(): JSX.Element {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const choiceAnswersRef = useRef<Record<number, string>>({})
+  const micDeviceIdRef = useRef<string>('')
   const scale = useScalingRatio()
 
   const [devMode, setDevMode] = useState(() => sessionStorage.getItem('devMode') === 'true')
@@ -280,7 +282,11 @@ export default function ExamPage(): JSX.Element {
       const { duration, recordIndex } = currentTime
 
       navigator.mediaDevices
-        .getUserMedia({ audio: true })
+        .getUserMedia({
+          audio: micDeviceIdRef.current
+            ? { deviceId: { exact: micDeviceIdRef.current } }
+            : true
+        })
         .then((stream) => {
           return playShortAudio('app-resource://ready_record.mp3').then(() => stream)
         })
@@ -345,12 +351,20 @@ export default function ExamPage(): JSX.Element {
     try {
       const subId = await window.electronAPI.submission.create(examId, student)
       setSubmissionId(subId)
-      setPhase('exam')
+      setPhase('micTest')
     } catch (err) {
       console.error('创建提交失败:', err)
       setMsgModal({ title: '操作失败', message: '创建作答记录失败', type: 'error' })
     }
   }
+
+  const handleMicDeviceSelected = useCallback((deviceId: string) => {
+    micDeviceIdRef.current = deviceId
+  }, [])
+
+  const handleStartExamFromMicTest = useCallback(() => {
+    setPhase('exam')
+  }, [])
 
   const handleChoiceAnswer = useCallback((choiceId: number, answer: string) => {
     setChoiceAnswers((prev) => {
@@ -479,6 +493,15 @@ export default function ExamPage(): JSX.Element {
           onIdChange={setStudentId}
           onSubmit={handleStartExam}
           onBack={handleBack}
+        />
+      )
+    }
+
+    if (phase === 'micTest') {
+      return (
+        <MicTest
+          onDeviceSelected={handleMicDeviceSelected}
+          onStartExam={handleStartExamFromMicTest}
         />
       )
     }
