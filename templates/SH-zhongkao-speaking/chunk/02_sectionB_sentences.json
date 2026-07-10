@@ -4,12 +4,11 @@
       {
         "id": "8",
         "content": [
-          { "type": "text", "text": "Section 2", "size": "large", "bold": true },
-          { "type": "text", "text": "Read the following sentences.You will have ten seconds to prepare and ten seconds to read.(朗读下列句子。你将有 10 秒的准备时间和 10 秒的朗读时间。)", "size": "small" },
-          { "type": "audio", "src": "media/section1_2_dir.mp3", "text": "Section Two. Read the following sentences.You will have ten seconds to prepare and ten seconds to read." }
+          { "type": "text", "text": "一B. 朗读句子", "size": "large", "bold": true },
+          { "type": "text", "text": "Read the following sentences. You will have ten seconds to prepare and ten seconds to read. 注意语调（降调/升调）和意群停顿。(朗读下列句子。你将有 10 秒的准备时间和 10 秒的朗读时间。注意语调（降调/升调）和意群停顿。)", "size": "small" }
         ],
         "time": { "type": "content-controlled" },
-        "statusText": "听指令"
+        "statusText": "阅读提示"
       },
       {
         "id": "9",
@@ -49,8 +48,8 @@
         "id": 1,
         "scoreOptions": [0, 0.5, 1],
         "recordIndices": [4, 5],
-        "problemInfo": "## Section 2: Read Aloud\n\nRead the following sentences.You will have ten seconds to prepare and ten seconds to read.\n\n1. {{sentence_1}}\n2. {{sentence_2}}\n\n",
-        "gradingInfo": "核心评分点: 发音(30%)、语调(30%)、流畅度(40%)"
+        "problemInfo": "## 一B: 朗读句子 (1分, 每题0.5分)\n\nRead the following sentences. You will have ten seconds to prepare and ten seconds to read.\n\n1. {{sentence_1}}\n2. {{sentence_2}}\n\n",
+        "gradingInfo": "**评分标准**：\n\n- 核心评分点：\n  - 语调(intonation)：陈述句用降调、疑问句用升调，语调自然恰当 (40%)\n  - 意群停顿(sense group pausing)：根据意群合理停顿，不破句 (30%)\n  - 发音与流畅度：发音清晰，朗读流畅，无长时间停顿 (30%)\n\n- 每题0.5分，共2题，满分1分\n- 语调正确、意群停顿合理、发音清晰流畅得满分\n- 语调或停顿有明显错误但可接受，酌情扣0.5分\n- 语调完全错误或频繁破句，不得分"
       }
     ]
   },

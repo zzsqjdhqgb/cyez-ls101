@@ -4,9 +4,9 @@
       {
         "id": "24",
         "content": [
-          { "type": "text", "text": "III.Retell", "size": "large", "bold": true },
-          { "type": "text", "text": "Directions: You will hear a passage about {{3_passage_topic}}. It will be read twice.Retell the passage with the following given points.You will have fifty seconds to prepare and fifty seconds to retell.(你将听到一段文章。文章将读 2 遍。根据下面所给提示复述文章。你将有 50 秒的准备时间和 50 秒的复述时间)", "size": "small" },
-          { "type": "audio", "src": "media/section3_dir.mp3", "text": "Part Three: Retell. You will hear a dialogue about ordering dishes. It will be read twice.Retell the passage with the following given points.You will have fifty seconds to prepare and fifty seconds to retell." }
+          { "type": "text", "text": "三. 复述", "size": "large", "bold": true },
+          { "type": "text", "text": "Directions: You will hear a dialogue about {{3_dialogue_topic}}. It will be read twice. Retell the dialogue with the following given points. You will have sixty seconds to prepare and sixty seconds to retell. 注意信息提取与转述的完整性。(你将听到一段关于{{3_dialogue_topic}}的对话。对话将读 2 遍。根据下面所给提示复述对话内容。你将有 60 秒的准备时间和 60 秒的复述时间。注意信息的完整提取与转述。)", "size": "small" },
+          { "type": "audio", "src": "media/section3_dir.mp3", "text": "Part Three: Retell. You will hear a dialogue about {{3_dialogue_topic}}. It will be read twice. Retell the dialogue with the following given points. You will have sixty seconds to prepare and sixty seconds to retell." }
         ],
         "time": { "type": "content-controlled" },
         "statusText": "听指令"
@@ -15,26 +15,26 @@
         "id": "25",
         "content": [          
           { "type": "image", "src": "media/3_picture.png", "width": "80%" },
-          { "type": "audio", "src": "media/3_passage.mp3", "text": "{{3_passage}}" }
+          { "type": "audio", "src": "media/3_dialogue.mp3", "text": "{{3_dialogue}}" }
         ],
         "time": { "type": "content-controlled" },
-        "statusText": "听语音"
+        "statusText": "听语音 (第1遍)"
       },
       {
         "id": "26",
         "content": [          
           { "type": "image", "src": "media/3_picture.png", "width": "80%" },
-          { "type": "audio", "src": "media/3_passage.mp3", "text": "{{3_passage}}" }
+          { "type": "audio", "src": "media/3_dialogue.mp3", "text": "{{3_dialogue}}" }
         ],
         "time": { "type": "content-controlled" },
-        "statusText": "听语音"
+        "statusText": "听语音 (第2遍)"
       },
       {
         "id": "27",
         "content": [
           { "type": "image", "src": "media/3_picture.png", "width": "80%" }
         ],
-        "time": { "type": "countdown", "seconds": 50 },
+        "time": { "type": "countdown", "seconds": 60 },
         "statusText": "答题准备"
       },
       {
@@ -42,7 +42,7 @@
         "content": [
           { "type": "image", "src": "media/3_picture.png", "width": "80%" }
         ],
-        "time": { "type": "record", "duration": 50, "recordIndex": 11 },
+        "time": { "type": "record", "duration": 60, "recordIndex": 11 },
         "statusText": "录音中"
       }
     ],
@@ -51,14 +51,14 @@
         "id": 3,
         "scoreOptions": [0, 0.5, 1, 1.5, 2, 2.5],
         "recordIndices": [11],
-        "problemInfo": "## III. Retell\n\nDirections: You will hear a passage about {{3_passage_topic}}. It will be read twice.Retell the passage with the following given points.You will have fifty seconds to prepare and fifty seconds to retell.\n\n{{3_passage}}",
-        "gradingInfo": "- 核心评分点:关键信息完整性(40%)、逻辑连贯性(30%)、语法准确性(30%)\n\n- 考查重点:听一段 200词左右的短文(故事、通知、说明文)，抓取“who/what/when/where/why/how”核心信息，用自己的话连贯复述，不遗漏关键细节。"
+        "problemInfo": "## 三: 复述 (2.5分)\n\nDirections: You will hear a dialogue about {{3_dialogue_topic}}. It will be read twice. Retell the dialogue with the following given points. You will have sixty seconds to prepare and sixty seconds to retell.\n\n{{3_dialogue}}\n\n",
+        "gradingInfo": "**评分标准**：\n\n- 核心评分点：\n  - 信息提取完整性(information completeness)：包含 who/what/when/where/why/how 关键信息，不遗漏要点 (40%)\n  - 转述能力(retelling ability)：用自己的话连贯转述，非逐字背诵原文 (30%)\n  - 语言准确性(language accuracy)：语法正确、时态一致、用词恰当 (30%)\n\n- 满分2.5分\n- 考查重点：听一段约200词的对话（故事、通知、情景对话），抓取核心信息并用第三人称/过去时态进行连贯转述\n- 准备60秒 + 复述60秒"
       }
     ]
   },
   "editableData": [
-    { "type": "text", "id": "3_passage_topic", "description": "听短文复述 - 短文主题 (you will hear a passage about...)" },
-    { "type": "text", "id": "3_passage", "description": "听短文复述 - 短文" },
-    { "type": "file", "id": "3_passage_instruction", "fileName": "media/3_picture.png", "description": "听短文复述 - 提示图片" }
+    { "type": "text", "id": "3_dialogue_topic", "description": "复述 - 对话主题 (you will hear a dialogue about...)" },
+    { "type": "text", "id": "3_dialogue", "description": "复述 - 对话内容全文（用于TTS合成音频）" },
+    { "type": "file", "id": "3_picture", "fileName": "media/3_picture.png", "description": "复述 - 提示图片（关键信息思维导图）" }
   ]
 }
