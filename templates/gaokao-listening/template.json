@@ -31,7 +31,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -42,7 +42,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -53,7 +53,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -64,7 +64,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -75,7 +75,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -90,7 +90,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -101,7 +101,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -112,7 +112,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -123,7 +123,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -134,7 +134,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -149,7 +149,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -160,7 +160,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -171,7 +171,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -186,7 +186,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -197,7 +197,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -208,7 +208,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -223,7 +223,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -234,7 +234,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -245,7 +245,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -256,7 +256,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -294,7 +294,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -305,7 +305,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -316,7 +316,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -327,7 +327,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -338,7 +338,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -353,7 +353,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -364,7 +364,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -375,7 +375,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -386,7 +386,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -397,7 +397,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -412,7 +412,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -423,7 +423,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -434,7 +434,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -449,7 +449,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -460,7 +460,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -471,7 +471,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -486,7 +486,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -497,7 +497,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -508,7 +508,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -519,7 +519,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -557,7 +557,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -568,7 +568,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -579,7 +579,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -590,7 +590,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -601,7 +601,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -616,7 +616,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -627,7 +627,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -638,7 +638,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -649,7 +649,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -660,7 +660,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -675,7 +675,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -686,7 +686,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -697,7 +697,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -712,7 +712,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -723,7 +723,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -734,7 +734,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -749,7 +749,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -760,7 +760,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -771,7 +771,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -782,7 +782,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -820,7 +820,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -831,7 +831,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -842,7 +842,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -853,7 +853,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -864,7 +864,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -879,7 +879,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -890,7 +890,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -901,7 +901,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -912,7 +912,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -923,7 +923,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -938,7 +938,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -949,7 +949,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -960,7 +960,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -975,7 +975,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -986,7 +986,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -997,7 +997,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -1012,7 +1012,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -1023,7 +1023,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -1034,7 +1034,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -1045,7 +1045,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -1083,7 +1083,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -1094,7 +1094,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -1105,7 +1105,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -1116,7 +1116,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -1127,7 +1127,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -1142,7 +1142,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -1153,7 +1153,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -1164,7 +1164,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -1175,7 +1175,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -1186,7 +1186,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -1201,7 +1201,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -1212,7 +1212,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -1223,7 +1223,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -1238,7 +1238,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -1249,7 +1249,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -1260,7 +1260,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -1275,7 +1275,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -1286,7 +1286,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -1297,7 +1297,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -1308,7 +1308,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -1346,7 +1346,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -1357,7 +1357,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -1368,7 +1368,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -1379,7 +1379,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -1390,7 +1390,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -1405,7 +1405,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -1416,7 +1416,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -1427,7 +1427,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -1438,7 +1438,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -1449,7 +1449,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -1464,7 +1464,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -1475,7 +1475,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -1486,7 +1486,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -1501,7 +1501,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -1512,7 +1512,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -1523,7 +1523,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -1538,7 +1538,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -1549,7 +1549,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -1560,7 +1560,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -1571,7 +1571,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -1609,7 +1609,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -1620,7 +1620,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -1631,7 +1631,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -1642,7 +1642,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -1653,7 +1653,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -1668,7 +1668,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -1679,7 +1679,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -1690,7 +1690,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -1701,7 +1701,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -1712,7 +1712,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -1727,7 +1727,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -1738,7 +1738,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -1749,7 +1749,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -1764,7 +1764,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -1775,7 +1775,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -1786,7 +1786,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -1801,7 +1801,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -1812,7 +1812,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -1823,7 +1823,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -1834,7 +1834,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -1872,7 +1872,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -1883,7 +1883,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -1894,7 +1894,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -1905,7 +1905,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -1916,7 +1916,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -1931,7 +1931,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -1942,7 +1942,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -1953,7 +1953,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -1964,7 +1964,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -1975,7 +1975,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -1990,7 +1990,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -2001,7 +2001,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -2012,7 +2012,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -2027,7 +2027,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -2038,7 +2038,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -2049,7 +2049,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -2064,7 +2064,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -2075,7 +2075,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -2086,7 +2086,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -2097,7 +2097,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -2135,7 +2135,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -2146,7 +2146,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -2157,7 +2157,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -2168,7 +2168,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -2179,7 +2179,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -2194,7 +2194,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -2205,7 +2205,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -2216,7 +2216,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -2227,7 +2227,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -2238,7 +2238,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -2253,7 +2253,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -2264,7 +2264,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -2275,7 +2275,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -2290,7 +2290,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -2301,7 +2301,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -2312,7 +2312,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -2327,7 +2327,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -2338,7 +2338,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -2349,7 +2349,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -2360,7 +2360,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -2398,7 +2398,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -2409,7 +2409,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -2420,7 +2420,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -2431,7 +2431,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -2442,7 +2442,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -2457,7 +2457,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -2468,7 +2468,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -2479,7 +2479,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -2490,7 +2490,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -2501,7 +2501,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -2516,7 +2516,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -2527,7 +2527,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -2538,7 +2538,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -2553,7 +2553,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -2564,7 +2564,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -2575,7 +2575,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -2590,7 +2590,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -2601,7 +2601,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -2612,7 +2612,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -2623,7 +2623,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -2661,7 +2661,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -2672,7 +2672,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -2683,7 +2683,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -2694,7 +2694,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -2705,7 +2705,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -2720,7 +2720,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -2731,7 +2731,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -2742,7 +2742,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -2753,7 +2753,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -2764,7 +2764,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -2779,7 +2779,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -2790,7 +2790,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -2801,7 +2801,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -2816,7 +2816,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -2827,7 +2827,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -2838,7 +2838,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -2853,7 +2853,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -2864,7 +2864,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -2875,7 +2875,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -2886,7 +2886,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -2921,7 +2921,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -2932,7 +2932,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -2943,7 +2943,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -2954,7 +2954,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -2965,7 +2965,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -2980,7 +2980,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -2991,7 +2991,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -3002,7 +3002,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -3013,7 +3013,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -3024,7 +3024,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -3039,7 +3039,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -3050,7 +3050,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -3061,7 +3061,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -3076,7 +3076,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -3087,7 +3087,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -3098,7 +3098,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -3113,7 +3113,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -3124,7 +3124,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -3135,7 +3135,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -3146,7 +3146,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -3189,7 +3189,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -3200,7 +3200,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -3211,7 +3211,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -3222,7 +3222,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -3233,7 +3233,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -3248,7 +3248,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -3259,7 +3259,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -3270,7 +3270,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -3281,7 +3281,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -3292,7 +3292,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -3307,7 +3307,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -3318,7 +3318,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -3329,7 +3329,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -3344,7 +3344,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -3355,7 +3355,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -3366,7 +3366,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -3381,7 +3381,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -3392,7 +3392,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -3403,7 +3403,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -3414,7 +3414,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -3460,7 +3460,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -3471,7 +3471,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -3482,7 +3482,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -3493,7 +3493,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -3504,7 +3504,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -3519,7 +3519,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -3530,7 +3530,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -3541,7 +3541,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -3552,7 +3552,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -3563,7 +3563,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -3578,7 +3578,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -3589,7 +3589,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -3600,7 +3600,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -3615,7 +3615,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -3626,7 +3626,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -3637,7 +3637,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -3652,7 +3652,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -3663,7 +3663,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -3674,7 +3674,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -3685,7 +3685,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -3720,7 +3720,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -3731,7 +3731,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -3742,7 +3742,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -3753,7 +3753,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -3764,7 +3764,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -3779,7 +3779,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -3790,7 +3790,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -3801,7 +3801,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -3812,7 +3812,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -3823,7 +3823,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -3838,7 +3838,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -3849,7 +3849,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -3860,7 +3860,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -3875,7 +3875,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -3886,7 +3886,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -3897,7 +3897,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -3912,7 +3912,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -3923,7 +3923,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -3934,7 +3934,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -3945,7 +3945,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -3988,7 +3988,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -3999,7 +3999,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -4010,7 +4010,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -4021,7 +4021,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -4032,7 +4032,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -4047,7 +4047,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -4058,7 +4058,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -4069,7 +4069,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -4080,7 +4080,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -4091,7 +4091,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -4106,7 +4106,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -4117,7 +4117,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -4128,7 +4128,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -4143,7 +4143,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -4154,7 +4154,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -4165,7 +4165,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -4180,7 +4180,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -4191,7 +4191,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -4202,7 +4202,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -4213,7 +4213,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -4259,7 +4259,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -4270,7 +4270,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -4281,7 +4281,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -4292,7 +4292,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -4303,7 +4303,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -4318,7 +4318,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -4329,7 +4329,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -4340,7 +4340,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -4351,7 +4351,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -4362,7 +4362,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -4377,7 +4377,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -4388,7 +4388,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -4399,7 +4399,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -4414,7 +4414,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -4425,7 +4425,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -4436,7 +4436,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -4451,7 +4451,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -4462,7 +4462,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -4473,7 +4473,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -4484,7 +4484,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -4519,7 +4519,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -4530,7 +4530,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -4541,7 +4541,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -4552,7 +4552,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -4563,7 +4563,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -4578,7 +4578,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -4589,7 +4589,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -4600,7 +4600,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -4611,7 +4611,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -4622,7 +4622,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -4637,7 +4637,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -4648,7 +4648,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -4659,7 +4659,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -4674,7 +4674,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -4685,7 +4685,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -4696,7 +4696,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -4711,7 +4711,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -4722,7 +4722,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -4733,7 +4733,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -4744,7 +4744,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -4787,7 +4787,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -4798,7 +4798,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -4809,7 +4809,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -4820,7 +4820,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -4831,7 +4831,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -4846,7 +4846,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -4857,7 +4857,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -4868,7 +4868,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -4879,7 +4879,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -4890,7 +4890,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -4905,7 +4905,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -4916,7 +4916,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -4927,7 +4927,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -4942,7 +4942,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -4953,7 +4953,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -4964,7 +4964,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -4979,7 +4979,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -4990,7 +4990,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -5001,7 +5001,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -5012,7 +5012,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -5058,7 +5058,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -5069,7 +5069,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -5080,7 +5080,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -5091,7 +5091,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -5102,7 +5102,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -5117,7 +5117,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -5128,7 +5128,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -5139,7 +5139,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -5150,7 +5150,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -5161,7 +5161,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -5176,7 +5176,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -5187,7 +5187,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -5198,7 +5198,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -5213,7 +5213,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -5224,7 +5224,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -5235,7 +5235,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -5250,7 +5250,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -5261,7 +5261,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -5272,7 +5272,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -5283,7 +5283,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -5318,7 +5318,7 @@
             "questions": [
               {
                 "id": 1,
-                "stem": "{{stem_1}}",
+                "stem": " ",
                 "options": [
                   "{{opt_1_A}}",
                   "{{opt_1_B}}",
@@ -5329,7 +5329,7 @@
               },
               {
                 "id": 2,
-                "stem": "{{stem_2}}",
+                "stem": " ",
                 "options": [
                   "{{opt_2_A}}",
                   "{{opt_2_B}}",
@@ -5340,7 +5340,7 @@
               },
               {
                 "id": 3,
-                "stem": "{{stem_3}}",
+                "stem": " ",
                 "options": [
                   "{{opt_3_A}}",
                   "{{opt_3_B}}",
@@ -5351,7 +5351,7 @@
               },
               {
                 "id": 4,
-                "stem": "{{stem_4}}",
+                "stem": " ",
                 "options": [
                   "{{opt_4_A}}",
                   "{{opt_4_B}}",
@@ -5362,7 +5362,7 @@
               },
               {
                 "id": 5,
-                "stem": "{{stem_5}}",
+                "stem": " ",
                 "options": [
                   "{{opt_5_A}}",
                   "{{opt_5_B}}",
@@ -5377,7 +5377,7 @@
             "questions": [
               {
                 "id": 6,
-                "stem": "{{stem_6}}",
+                "stem": " ",
                 "options": [
                   "{{opt_6_A}}",
                   "{{opt_6_B}}",
@@ -5388,7 +5388,7 @@
               },
               {
                 "id": 7,
-                "stem": "{{stem_7}}",
+                "stem": " ",
                 "options": [
                   "{{opt_7_A}}",
                   "{{opt_7_B}}",
@@ -5399,7 +5399,7 @@
               },
               {
                 "id": 8,
-                "stem": "{{stem_8}}",
+                "stem": " ",
                 "options": [
                   "{{opt_8_A}}",
                   "{{opt_8_B}}",
@@ -5410,7 +5410,7 @@
               },
               {
                 "id": 9,
-                "stem": "{{stem_9}}",
+                "stem": " ",
                 "options": [
                   "{{opt_9_A}}",
                   "{{opt_9_B}}",
@@ -5421,7 +5421,7 @@
               },
               {
                 "id": 10,
-                "stem": "{{stem_10}}",
+                "stem": " ",
                 "options": [
                   "{{opt_10_A}}",
                   "{{opt_10_B}}",
@@ -5436,7 +5436,7 @@
             "questions": [
               {
                 "id": 11,
-                "stem": "{{stem_11}}",
+                "stem": " ",
                 "options": [
                   "{{opt_11_A}}",
                   "{{opt_11_B}}",
@@ -5447,7 +5447,7 @@
               },
               {
                 "id": 12,
-                "stem": "{{stem_12}}",
+                "stem": " ",
                 "options": [
                   "{{opt_12_A}}",
                   "{{opt_12_B}}",
@@ -5458,7 +5458,7 @@
               },
               {
                 "id": 13,
-                "stem": "{{stem_13}}",
+                "stem": " ",
                 "options": [
                   "{{opt_13_A}}",
                   "{{opt_13_B}}",
@@ -5473,7 +5473,7 @@
             "questions": [
               {
                 "id": 14,
-                "stem": "{{stem_14}}",
+                "stem": " ",
                 "options": [
                   "{{opt_14_A}}",
                   "{{opt_14_B}}",
@@ -5484,7 +5484,7 @@
               },
               {
                 "id": 15,
-                "stem": "{{stem_15}}",
+                "stem": " ",
                 "options": [
                   "{{opt_15_A}}",
                   "{{opt_15_B}}",
@@ -5495,7 +5495,7 @@
               },
               {
                 "id": 16,
-                "stem": "{{stem_16}}",
+                "stem": " ",
                 "options": [
                   "{{opt_16_A}}",
                   "{{opt_16_B}}",
@@ -5510,7 +5510,7 @@
             "questions": [
               {
                 "id": 17,
-                "stem": "{{stem_17}}",
+                "stem": " ",
                 "options": [
                   "{{opt_17_A}}",
                   "{{opt_17_B}}",
@@ -5521,7 +5521,7 @@
               },
               {
                 "id": 18,
-                "stem": "{{stem_18}}",
+                "stem": " ",
                 "options": [
                   "{{opt_18_A}}",
                   "{{opt_18_B}}",
@@ -5532,7 +5532,7 @@
               },
               {
                 "id": 19,
-                "stem": "{{stem_19}}",
+                "stem": " ",
                 "options": [
                   "{{opt_19_A}}",
                   "{{opt_19_B}}",
@@ -5543,7 +5543,7 @@
               },
               {
                 "id": 20,
-                "stem": "{{stem_20}}",
+                "stem": " ",
                 "options": [
                   "{{opt_20_A}}",
                   "{{opt_20_B}}",
@@ -5670,7 +5670,7 @@
     {
       "type": "text",
       "id": "stem_1",
-      "description": "第1题 — 题干"
+      "description": "第1题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -5705,7 +5705,7 @@
     {
       "type": "text",
       "id": "stem_2",
-      "description": "第2题 — 题干"
+      "description": "第2题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -5740,7 +5740,7 @@
     {
       "type": "text",
       "id": "stem_3",
-      "description": "第3题 — 题干"
+      "description": "第3题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -5775,7 +5775,7 @@
     {
       "type": "text",
       "id": "stem_4",
-      "description": "第4题 — 题干"
+      "description": "第4题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -5810,7 +5810,7 @@
     {
       "type": "text",
       "id": "stem_5",
-      "description": "第5题 — 题干"
+      "description": "第5题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -5845,7 +5845,7 @@
     {
       "type": "text",
       "id": "stem_6",
-      "description": "第6题 — 题干"
+      "description": "第6题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -5880,7 +5880,7 @@
     {
       "type": "text",
       "id": "stem_7",
-      "description": "第7题 — 题干"
+      "description": "第7题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -5915,7 +5915,7 @@
     {
       "type": "text",
       "id": "stem_8",
-      "description": "第8题 — 题干"
+      "description": "第8题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -5950,7 +5950,7 @@
     {
       "type": "text",
       "id": "stem_9",
-      "description": "第9题 — 题干"
+      "description": "第9题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -5985,7 +5985,7 @@
     {
       "type": "text",
       "id": "stem_10",
-      "description": "第10题 — 题干"
+      "description": "第10题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -6020,7 +6020,7 @@
     {
       "type": "text",
       "id": "stem_11",
-      "description": "第11题 — 题干"
+      "description": "第11题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -6050,7 +6050,7 @@
     {
       "type": "text",
       "id": "stem_12",
-      "description": "第12题 — 题干"
+      "description": "第12题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -6080,7 +6080,7 @@
     {
       "type": "text",
       "id": "stem_13",
-      "description": "第13题 — 题干"
+      "description": "第13题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -6115,7 +6115,7 @@
     {
       "type": "text",
       "id": "stem_14",
-      "description": "第14题 — 题干"
+      "description": "第14题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -6145,7 +6145,7 @@
     {
       "type": "text",
       "id": "stem_15",
-      "description": "第15题 — 题干"
+      "description": "第15题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -6175,7 +6175,7 @@
     {
       "type": "text",
       "id": "stem_16",
-      "description": "第16题 — 题干"
+      "description": "第16题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -6210,7 +6210,7 @@
     {
       "type": "text",
       "id": "stem_17",
-      "description": "第17题 — 题干"
+      "description": "第17题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -6240,7 +6240,7 @@
     {
       "type": "text",
       "id": "stem_18",
-      "description": "第18题 — 题干"
+      "description": "第18题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -6270,7 +6270,7 @@
     {
       "type": "text",
       "id": "stem_19",
-      "description": "第19题 — 题干"
+      "description": "第19题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
@@ -6300,7 +6300,7 @@
     {
       "type": "text",
       "id": "stem_20",
-      "description": "第20题 — 题干"
+      "description": "第20题 — 题干（仅用于音频播报，界面不显示）"
     },
     {
       "type": "text",
