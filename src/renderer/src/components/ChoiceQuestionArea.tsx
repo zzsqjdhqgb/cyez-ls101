@@ -165,13 +165,13 @@ export default function ChoiceQuestionArea({
         onPageChange(targetPage)
       }
     }
-  }, [focusId, currentPage])
+  }, [focusId, currentPage, pages, onPageChange])
 
   useEffect(() => {
     if (hasRange && currentPage < rangeStart) {
       onPageChange(rangeStart)
     }
-  }, [pageRange, currentPage])
+  }, [pageRange, currentPage, hasRange, rangeStart, onPageChange])
 
   const prevDisabled = isLocked || currentPage === 0 || (hasRange && currentPage <= rangeStart)
   const nextDisabled =

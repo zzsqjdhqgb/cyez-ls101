@@ -31,7 +31,10 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
   const questions = exam.questions as unknown[]
 
   // Validate choicePageGroups if present
-  const groupInfo = new Map<number, { totalPages: number; totalChoiceCount: number; choiceIds: number[] }>()
+  const groupInfo = new Map<
+    number,
+    { totalPages: number; totalChoiceCount: number; choiceIds: number[] }
+  >()
   const choicePageGroups = exam.choicePageGroups as Record<string, unknown>[] | undefined
   if (choicePageGroups !== undefined) {
     if (!Array.isArray(choicePageGroups)) {
@@ -40,7 +43,10 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
       for (let gi = 0; gi < choicePageGroups.length; gi++) {
         const pages = choicePageGroups[gi] as unknown
         if (!Array.isArray(pages) || pages.length === 0) {
-          errors.push({ questionIndex: -1, message: `choicePageGroups[${gi}] must be a non-empty array of pages` })
+          errors.push({
+            questionIndex: -1,
+            message: `choicePageGroups[${gi}] must be a non-empty array of pages`
+          })
           continue
         }
         const seenIds = new Set<number>()
@@ -48,21 +54,31 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
         for (let pi = 0; pi < pages.length; pi++) {
           const page = pages[pi] as Record<string, unknown>
           if (!page || !Array.isArray(page.questions)) {
-            errors.push({ questionIndex: -1, message: `choicePageGroups[${gi}][${pi}].questions must be an array` })
+            errors.push({
+              questionIndex: -1,
+              message: `choicePageGroups[${gi}][${pi}].questions must be an array`
+            })
             continue
           }
           for (const cq of page.questions) {
             const cqObj = cq as Record<string, unknown>
             if (typeof cqObj.id === 'number' && cqObj.id >= 1) {
               if (seenIds.has(cqObj.id)) {
-                errors.push({ questionIndex: -1, message: `Duplicate choice question id ${cqObj.id} in choicePageGroups[${gi}]` })
+                errors.push({
+                  questionIndex: -1,
+                  message: `Duplicate choice question id ${cqObj.id} in choicePageGroups[${gi}]`
+                })
               }
               seenIds.add(cqObj.id)
               count++
             }
           }
         }
-        groupInfo.set(gi, { totalPages: pages.length, totalChoiceCount: count, choiceIds: [...seenIds] })
+        groupInfo.set(gi, {
+          totalPages: pages.length,
+          totalChoiceCount: count,
+          choiceIds: [...seenIds]
+        })
       }
     }
   }
@@ -328,11 +344,20 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
     if (question.choicePageGroupId !== undefined) {
       const gid = question.choicePageGroupId as number
       if (typeof gid !== 'number' || gid < 0 || !Number.isInteger(gid)) {
-        errors.push({ questionIndex: i, message: 'choicePageGroupId must be a non-negative integer' })
+        errors.push({
+          questionIndex: i,
+          message: 'choicePageGroupId must be a non-negative integer'
+        })
       } else if (!choicePageGroups) {
-        errors.push({ questionIndex: i, message: `choicePageGroupId specified but choicePageGroups is not defined` })
+        errors.push({
+          questionIndex: i,
+          message: `choicePageGroupId specified but choicePageGroups is not defined`
+        })
       } else if (!groupInfo.has(gid)) {
-        errors.push({ questionIndex: i, message: `choicePageGroupId ${gid} does not match any group in choicePageGroups` })
+        errors.push({
+          questionIndex: i,
+          message: `choicePageGroupId ${gid} does not match any group in choicePageGroups`
+        })
       }
     }
 

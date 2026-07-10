@@ -236,7 +236,6 @@ export function importSubmissions(
         if (typeof fs === 'number' && fs > 0) maxScore += fs
       }
 
-
       records[rid] = {
         rid,
         status: 'ungraded',

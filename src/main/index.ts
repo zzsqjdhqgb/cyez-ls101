@@ -264,8 +264,10 @@ function startApp(): void {
       console.log('[version] storedVersion is null, writing reset-required flag')
       writeResetRequiredFlag()
     } else if (storedVersion !== currentVersion) {
-      console.log(`[version] version changed: ${storedVersion} -> ${currentVersion}, running migrations`)
-      await runMigrations(storedVersion, currentVersion)
+      console.log(
+        `[version] version changed: ${storedVersion} -> ${currentVersion}, running migrations`
+      )
+      await runMigrations(storedVersion)
       writeUpdateNotificationFlag(storedVersion)
       writeVersionFile(currentVersion)
     } else {

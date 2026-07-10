@@ -30,9 +30,7 @@ function compareVersions(a: string, b: string): number {
 
 function clearTemplates(): void {
   const templatesPath = getTemplatesPath()
-  const entries = readdirSync(templatesPath, { withFileTypes: true }).filter((e) =>
-    e.isDirectory()
-  )
+  const entries = readdirSync(templatesPath, { withFileTypes: true }).filter((e) => e.isDirectory())
   console.log(`[migrate] 清空 ${entries.length} 个试卷模板`)
   for (const entry of entries) {
     rmSync(join(templatesPath, entry.name), { recursive: true, force: true })
@@ -43,13 +41,10 @@ async function migrateTo030(): Promise<void> {
   console.log('[migrate] 开始迁移至 v0.3.0')
   clearTemplates()
   await importBundledTemplates()
-  console.log('[migrate] 迁移至 v0.3.0 完成')
+  console.log(`[migrate] 迁移至 v0.3.0+ 完成`)
 }
 
-export async function runMigrations(
-  previousVersion: string,
-  _currentVersion: string
-): Promise<void> {
+export async function runMigrations(previousVersion: string): Promise<void> {
   if (compareVersions(previousVersion, '0.3.0') < 0) {
     await migrateTo030()
   } else {
