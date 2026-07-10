@@ -15,13 +15,12 @@ export default function MicTest({ onDeviceSelected, onStartExam }: MicTestProps)
   const [selectedDeviceId, setSelectedDeviceId] = useState('')
   const [recording, setRecording] = useState(false)
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null)
-  const [playing, setPlaying] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [devicesLoaded, setDevicesLoaded] = useState(false)
 
   const streamRef = useRef<MediaStream | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const chunksRef = useRef<BlobPart[]>([])
 
   useEffect(() => {
     loadDevices()
@@ -53,10 +52,12 @@ export default function MicTest({ onDeviceSelected, onStartExam }: MicTestProps)
   const handleDeviceChange = (deviceId: string): void => {
     setSelectedDeviceId(deviceId)
     onDeviceSelected(deviceId)
-    stopAll()
+    if (recording) {
+      stopMedia()
+    }
   }
 
-  const stopAll = (): void => {
+  const stopMedia = (): void => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.onstop = null
       mediaRecorderRef.current.stop()
@@ -69,11 +70,18 @@ export default function MicTest({ onDeviceSelected, onStartExam }: MicTestProps)
     setRecording(false)
   }
 
-  const startRecording = async (): Promise<void> => {
+  const toggleRecording = async (): Promise<void> => {
+    if (recording) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop()
+      }
+      return
+    }
+
     try {
       setErrorMsg(null)
       setRecordedBlob(null)
-      stopAll()
+      chunksRef.current = []
 
       const constraints: MediaStreamConstraints = {
         audio: selectedDeviceId
@@ -87,10 +95,9 @@ export default function MicTest({ onDeviceSelected, onStartExam }: MicTestProps)
       const mediaRecorder = new MediaRecorder(stream)
       mediaRecorderRef.current = mediaRecorder
 
-      const chunks: BlobPart[] = []
-      mediaRecorder.ondataavailable = (e) => chunks.push(e.data)
+      mediaRecorder.ondataavailable = (e) => chunksRef.current.push(e.data)
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' })
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
         setRecordedBlob(blob)
         stream.getTracks().forEach((track) => track.stop())
         streamRef.current = null
@@ -106,38 +113,12 @@ export default function MicTest({ onDeviceSelected, onStartExam }: MicTestProps)
     }
   }
 
-  const stopRecording = (): void => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop()
-    }
-  }
-
-  const togglePlayback = (): void => {
-    if (!audioRef.current || !recordedBlob) return
-
-    if (playing) {
-      audioRef.current.pause()
-      setPlaying(false)
-      return
-    }
-
-    audioRef.current.play().catch((err) => {
-      console.error('播放失败:', err)
-      setErrorMsg('播放失败')
-      setPlaying(false)
-    })
-    setPlaying(true)
-  }
-
-  const handleRetry = (): void => {
-    setRecordedBlob(null)
-    setPlaying(false)
-  }
-
   const deviceOptions = devices.map((d) => ({
     value: d.deviceId,
     label: d.label || `麦克风 (${d.deviceId.slice(0, 8)}...)`
   }))
+
+  const hasRecording = recordedBlob !== null
 
   return (
     <div
@@ -222,50 +203,24 @@ export default function MicTest({ onDeviceSelected, onStartExam }: MicTestProps)
               </select>
             </div>
 
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 16
-              }}
-            >
-              {!recording ? (
-                <button
-                  onClick={() => void startRecording()}
-                  disabled={!selectedDeviceId}
-                  style={{
-                    padding: '12px 32px',
-                    fontSize: 18,
-                    fontWeight: 600,
-                    background: '#e74c3c',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 8,
-                    cursor: selectedDeviceId ? 'pointer' : 'not-allowed',
-                    opacity: selectedDeviceId ? 1 : 0.5
-                  }}
-                >
-                  {recordedBlob ? '重新录音' : '开始录音'}
-                </button>
-              ) : (
-                <button
-                  onClick={stopRecording}
-                  style={{
-                    padding: '12px 32px',
-                    fontSize: 18,
-                    fontWeight: 600,
-                    background: '#f59e0b',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    animation: 'pulse 1.5s infinite'
-                  }}
-                >
-                  停止录音
-                </button>
-              )}
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button
+                onClick={() => void toggleRecording()}
+                disabled={!selectedDeviceId}
+                style={{
+                  padding: '12px 32px',
+                  fontSize: 18,
+                  fontWeight: 600,
+                  background: recording ? '#f59e0b' : '#e74c3c',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  cursor: selectedDeviceId ? 'pointer' : 'not-allowed',
+                  opacity: selectedDeviceId ? 1 : 0.5
+                }}
+              >
+                {recording ? '停止录音' : '开始录音'}
+              </button>
             </div>
 
             {recording && (
@@ -276,66 +231,28 @@ export default function MicTest({ onDeviceSelected, onStartExam }: MicTestProps)
                   color: '#f59e0b'
                 }}
               >
-                🔴 正在录音...
+                正在录音...
               </div>
             )}
 
-            {recordedBlob && !recording && (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 12,
-                  alignItems: 'center'
-                }}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                opacity: hasRecording ? 1 : 0.4,
+                pointerEvents: hasRecording ? 'auto' : 'none'
+              }}
+            >
+              <audio
+                key={hasRecording ? recordedBlob!.size : 'empty'}
+                controls
+                style={{ width: '100%', maxWidth: 360 }}
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12
-                  }}
-                >
-                  <button
-                    onClick={togglePlayback}
-                    style={{
-                      padding: '10px 28px',
-                      fontSize: 16,
-                      fontWeight: 600,
-                      background: playing ? '#f59e0b' : '#16a34a',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: 8,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {playing ? '暂停播放' : '播放录音'}
-                  </button>
-                  <button
-                    onClick={handleRetry}
-                    style={{
-                      padding: '10px 28px',
-                      fontSize: 16,
-                      fontWeight: 600,
-                      background: '#555',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: 8,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    重新录制
-                  </button>
-                </div>
-                <audio
-                  ref={audioRef}
-                  src={recordedBlob ? URL.createObjectURL(recordedBlob) : undefined}
-                  onEnded={() => setPlaying(false)}
-                  onPause={() => setPlaying(false)}
-                  style={{ display: 'none' }}
-                />
-              </div>
-            )}
+                {hasRecording && (
+                  <source src={URL.createObjectURL(recordedBlob!)} type="audio/webm" />
+                )}
+              </audio>
+            </div>
           </>
         )}
 
