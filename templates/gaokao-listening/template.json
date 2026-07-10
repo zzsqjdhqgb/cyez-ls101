@@ -4,7 +4,7 @@
     "choiceOnly": true,
     "questions": [
       {
-        "id": "q1_sd1",
+        "id": "q_pre_section1",
         "content": [
           {
             "type": "text",
@@ -14,9 +14,264 @@
           },
           {
             "type": "text",
-            "text": "听下面10段短对话。每段对话后有一个小题，从题中所给的A、B、C、D四个选项中选出最佳选项。每段对话仅读一遍。",
+            "text": "听下面10段短对话。每段对话后有一个小题，从题中所给的A、B、C、D四个选项中选出最佳选项。每段对话仅读一遍。现在你有20秒钟的时间阅读前10道小题。",
             "size": "small"
+          }
+        ],
+        "time": {
+          "type": "countdown",
+          "seconds": 20,
+          "pageRange": [
+            0,
+            1
+          ]
+        },
+        "choicePages": [
+          {
+            "questions": [
+              {
+                "id": 1,
+                "stem": "{{stem_1}}",
+                "options": [
+                  "{{opt_1_A}}",
+                  "{{opt_1_B}}",
+                  "{{opt_1_C}}",
+                  "{{opt_1_D}}"
+                ],
+                "answer": "{{answer_1}}"
+              },
+              {
+                "id": 2,
+                "stem": "{{stem_2}}",
+                "options": [
+                  "{{opt_2_A}}",
+                  "{{opt_2_B}}",
+                  "{{opt_2_C}}",
+                  "{{opt_2_D}}"
+                ],
+                "answer": "{{answer_2}}"
+              },
+              {
+                "id": 3,
+                "stem": "{{stem_3}}",
+                "options": [
+                  "{{opt_3_A}}",
+                  "{{opt_3_B}}",
+                  "{{opt_3_C}}",
+                  "{{opt_3_D}}"
+                ],
+                "answer": "{{answer_3}}"
+              },
+              {
+                "id": 4,
+                "stem": "{{stem_4}}",
+                "options": [
+                  "{{opt_4_A}}",
+                  "{{opt_4_B}}",
+                  "{{opt_4_C}}",
+                  "{{opt_4_D}}"
+                ],
+                "answer": "{{answer_4}}"
+              },
+              {
+                "id": 5,
+                "stem": "{{stem_5}}",
+                "options": [
+                  "{{opt_5_A}}",
+                  "{{opt_5_B}}",
+                  "{{opt_5_C}}",
+                  "{{opt_5_D}}"
+                ],
+                "answer": "{{answer_5}}"
+              }
+            ]
           },
+          {
+            "questions": [
+              {
+                "id": 6,
+                "stem": "{{stem_6}}",
+                "options": [
+                  "{{opt_6_A}}",
+                  "{{opt_6_B}}",
+                  "{{opt_6_C}}",
+                  "{{opt_6_D}}"
+                ],
+                "answer": "{{answer_6}}"
+              },
+              {
+                "id": 7,
+                "stem": "{{stem_7}}",
+                "options": [
+                  "{{opt_7_A}}",
+                  "{{opt_7_B}}",
+                  "{{opt_7_C}}",
+                  "{{opt_7_D}}"
+                ],
+                "answer": "{{answer_7}}"
+              },
+              {
+                "id": 8,
+                "stem": "{{stem_8}}",
+                "options": [
+                  "{{opt_8_A}}",
+                  "{{opt_8_B}}",
+                  "{{opt_8_C}}",
+                  "{{opt_8_D}}"
+                ],
+                "answer": "{{answer_8}}"
+              },
+              {
+                "id": 9,
+                "stem": "{{stem_9}}",
+                "options": [
+                  "{{opt_9_A}}",
+                  "{{opt_9_B}}",
+                  "{{opt_9_C}}",
+                  "{{opt_9_D}}"
+                ],
+                "answer": "{{answer_9}}"
+              },
+              {
+                "id": 10,
+                "stem": "{{stem_10}}",
+                "options": [
+                  "{{opt_10_A}}",
+                  "{{opt_10_B}}",
+                  "{{opt_10_C}}",
+                  "{{opt_10_D}}"
+                ],
+                "answer": "{{answer_10}}"
+              }
+            ]
+          },
+          {
+            "questions": [
+              {
+                "id": 11,
+                "stem": "{{stem_11}}",
+                "options": [
+                  "{{opt_11_A}}",
+                  "{{opt_11_B}}",
+                  "{{opt_11_C}}",
+                  "{{opt_11_D}}"
+                ],
+                "answer": "{{answer_11}}"
+              },
+              {
+                "id": 12,
+                "stem": "{{stem_12}}",
+                "options": [
+                  "{{opt_12_A}}",
+                  "{{opt_12_B}}",
+                  "{{opt_12_C}}",
+                  "{{opt_12_D}}"
+                ],
+                "answer": "{{answer_12}}"
+              },
+              {
+                "id": 13,
+                "stem": "{{stem_13}}",
+                "options": [
+                  "{{opt_13_A}}",
+                  "{{opt_13_B}}",
+                  "{{opt_13_C}}",
+                  "{{opt_13_D}}"
+                ],
+                "answer": "{{answer_13}}"
+              }
+            ]
+          },
+          {
+            "questions": [
+              {
+                "id": 14,
+                "stem": "{{stem_14}}",
+                "options": [
+                  "{{opt_14_A}}",
+                  "{{opt_14_B}}",
+                  "{{opt_14_C}}",
+                  "{{opt_14_D}}"
+                ],
+                "answer": "{{answer_14}}"
+              },
+              {
+                "id": 15,
+                "stem": "{{stem_15}}",
+                "options": [
+                  "{{opt_15_A}}",
+                  "{{opt_15_B}}",
+                  "{{opt_15_C}}",
+                  "{{opt_15_D}}"
+                ],
+                "answer": "{{answer_15}}"
+              },
+              {
+                "id": 16,
+                "stem": "{{stem_16}}",
+                "options": [
+                  "{{opt_16_A}}",
+                  "{{opt_16_B}}",
+                  "{{opt_16_C}}",
+                  "{{opt_16_D}}"
+                ],
+                "answer": "{{answer_16}}"
+              }
+            ]
+          },
+          {
+            "questions": [
+              {
+                "id": 17,
+                "stem": "{{stem_17}}",
+                "options": [
+                  "{{opt_17_A}}",
+                  "{{opt_17_B}}",
+                  "{{opt_17_C}}",
+                  "{{opt_17_D}}"
+                ],
+                "answer": "{{answer_17}}"
+              },
+              {
+                "id": 18,
+                "stem": "{{stem_18}}",
+                "options": [
+                  "{{opt_18_A}}",
+                  "{{opt_18_B}}",
+                  "{{opt_18_C}}",
+                  "{{opt_18_D}}"
+                ],
+                "answer": "{{answer_18}}"
+              },
+              {
+                "id": 19,
+                "stem": "{{stem_19}}",
+                "options": [
+                  "{{opt_19_A}}",
+                  "{{opt_19_B}}",
+                  "{{opt_19_C}}",
+                  "{{opt_19_D}}"
+                ],
+                "answer": "{{answer_19}}"
+              },
+              {
+                "id": 20,
+                "stem": "{{stem_20}}",
+                "options": [
+                  "{{opt_20_A}}",
+                  "{{opt_20_B}}",
+                  "{{opt_20_C}}",
+                  "{{opt_20_D}}"
+                ],
+                "answer": "{{answer_20}}"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "q1_sd1",
+        "content": [
           {
             "type": "audio",
             "src": "media/dialogue_1.wav",
@@ -2645,26 +2900,20 @@
         ]
       },
       {
-        "id": "q_section2_header",
+        "id": "q_pre_passage1",
         "content": [
           {
             "type": "text",
-            "text": "第二节",
-            "size": "large",
-            "bold": true
-          },
-          {
-            "type": "text",
-            "text": "听下面2段短文和1段长对话。每段材料后有若干小题。听每段材料前，你将有时间阅读各个小题。每段材料读两遍。",
+            "text": "听第一篇短文，回答第11至13三个小题。现在你有15秒钟的时间阅读这三道小题。",
             "size": "small"
           }
         ],
         "time": {
           "type": "countdown",
-          "seconds": 30,
+          "seconds": 15,
           "pageRange": [
             2,
-            4
+            2
           ]
         },
         "choicePages": [
@@ -2926,6 +3175,15 @@
           },
           {
             "type": "countdown",
+            "seconds": 2,
+            "focusId": 11
+          },
+          {
+            "type": "content-controlled",
+            "focusId": 11
+          },
+          {
+            "type": "countdown",
             "seconds": 15,
             "pageRange": [
               2,
@@ -2933,6 +3191,266 @@
             ]
           }
         ],
+        "choicePages": [
+          {
+            "questions": [
+              {
+                "id": 1,
+                "stem": "{{stem_1}}",
+                "options": [
+                  "{{opt_1_A}}",
+                  "{{opt_1_B}}",
+                  "{{opt_1_C}}",
+                  "{{opt_1_D}}"
+                ],
+                "answer": "{{answer_1}}"
+              },
+              {
+                "id": 2,
+                "stem": "{{stem_2}}",
+                "options": [
+                  "{{opt_2_A}}",
+                  "{{opt_2_B}}",
+                  "{{opt_2_C}}",
+                  "{{opt_2_D}}"
+                ],
+                "answer": "{{answer_2}}"
+              },
+              {
+                "id": 3,
+                "stem": "{{stem_3}}",
+                "options": [
+                  "{{opt_3_A}}",
+                  "{{opt_3_B}}",
+                  "{{opt_3_C}}",
+                  "{{opt_3_D}}"
+                ],
+                "answer": "{{answer_3}}"
+              },
+              {
+                "id": 4,
+                "stem": "{{stem_4}}",
+                "options": [
+                  "{{opt_4_A}}",
+                  "{{opt_4_B}}",
+                  "{{opt_4_C}}",
+                  "{{opt_4_D}}"
+                ],
+                "answer": "{{answer_4}}"
+              },
+              {
+                "id": 5,
+                "stem": "{{stem_5}}",
+                "options": [
+                  "{{opt_5_A}}",
+                  "{{opt_5_B}}",
+                  "{{opt_5_C}}",
+                  "{{opt_5_D}}"
+                ],
+                "answer": "{{answer_5}}"
+              }
+            ]
+          },
+          {
+            "questions": [
+              {
+                "id": 6,
+                "stem": "{{stem_6}}",
+                "options": [
+                  "{{opt_6_A}}",
+                  "{{opt_6_B}}",
+                  "{{opt_6_C}}",
+                  "{{opt_6_D}}"
+                ],
+                "answer": "{{answer_6}}"
+              },
+              {
+                "id": 7,
+                "stem": "{{stem_7}}",
+                "options": [
+                  "{{opt_7_A}}",
+                  "{{opt_7_B}}",
+                  "{{opt_7_C}}",
+                  "{{opt_7_D}}"
+                ],
+                "answer": "{{answer_7}}"
+              },
+              {
+                "id": 8,
+                "stem": "{{stem_8}}",
+                "options": [
+                  "{{opt_8_A}}",
+                  "{{opt_8_B}}",
+                  "{{opt_8_C}}",
+                  "{{opt_8_D}}"
+                ],
+                "answer": "{{answer_8}}"
+              },
+              {
+                "id": 9,
+                "stem": "{{stem_9}}",
+                "options": [
+                  "{{opt_9_A}}",
+                  "{{opt_9_B}}",
+                  "{{opt_9_C}}",
+                  "{{opt_9_D}}"
+                ],
+                "answer": "{{answer_9}}"
+              },
+              {
+                "id": 10,
+                "stem": "{{stem_10}}",
+                "options": [
+                  "{{opt_10_A}}",
+                  "{{opt_10_B}}",
+                  "{{opt_10_C}}",
+                  "{{opt_10_D}}"
+                ],
+                "answer": "{{answer_10}}"
+              }
+            ]
+          },
+          {
+            "questions": [
+              {
+                "id": 11,
+                "stem": "{{stem_11}}",
+                "options": [
+                  "{{opt_11_A}}",
+                  "{{opt_11_B}}",
+                  "{{opt_11_C}}",
+                  "{{opt_11_D}}"
+                ],
+                "answer": "{{answer_11}}"
+              },
+              {
+                "id": 12,
+                "stem": "{{stem_12}}",
+                "options": [
+                  "{{opt_12_A}}",
+                  "{{opt_12_B}}",
+                  "{{opt_12_C}}",
+                  "{{opt_12_D}}"
+                ],
+                "answer": "{{answer_12}}"
+              },
+              {
+                "id": 13,
+                "stem": "{{stem_13}}",
+                "options": [
+                  "{{opt_13_A}}",
+                  "{{opt_13_B}}",
+                  "{{opt_13_C}}",
+                  "{{opt_13_D}}"
+                ],
+                "answer": "{{answer_13}}"
+              }
+            ]
+          },
+          {
+            "questions": [
+              {
+                "id": 14,
+                "stem": "{{stem_14}}",
+                "options": [
+                  "{{opt_14_A}}",
+                  "{{opt_14_B}}",
+                  "{{opt_14_C}}",
+                  "{{opt_14_D}}"
+                ],
+                "answer": "{{answer_14}}"
+              },
+              {
+                "id": 15,
+                "stem": "{{stem_15}}",
+                "options": [
+                  "{{opt_15_A}}",
+                  "{{opt_15_B}}",
+                  "{{opt_15_C}}",
+                  "{{opt_15_D}}"
+                ],
+                "answer": "{{answer_15}}"
+              },
+              {
+                "id": 16,
+                "stem": "{{stem_16}}",
+                "options": [
+                  "{{opt_16_A}}",
+                  "{{opt_16_B}}",
+                  "{{opt_16_C}}",
+                  "{{opt_16_D}}"
+                ],
+                "answer": "{{answer_16}}"
+              }
+            ]
+          },
+          {
+            "questions": [
+              {
+                "id": 17,
+                "stem": "{{stem_17}}",
+                "options": [
+                  "{{opt_17_A}}",
+                  "{{opt_17_B}}",
+                  "{{opt_17_C}}",
+                  "{{opt_17_D}}"
+                ],
+                "answer": "{{answer_17}}"
+              },
+              {
+                "id": 18,
+                "stem": "{{stem_18}}",
+                "options": [
+                  "{{opt_18_A}}",
+                  "{{opt_18_B}}",
+                  "{{opt_18_C}}",
+                  "{{opt_18_D}}"
+                ],
+                "answer": "{{answer_18}}"
+              },
+              {
+                "id": 19,
+                "stem": "{{stem_19}}",
+                "options": [
+                  "{{opt_19_A}}",
+                  "{{opt_19_B}}",
+                  "{{opt_19_C}}",
+                  "{{opt_19_D}}"
+                ],
+                "answer": "{{answer_19}}"
+              },
+              {
+                "id": 20,
+                "stem": "{{stem_20}}",
+                "options": [
+                  "{{opt_20_A}}",
+                  "{{opt_20_B}}",
+                  "{{opt_20_C}}",
+                  "{{opt_20_D}}"
+                ],
+                "answer": "{{answer_20}}"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "q_pre_passage2",
+        "content": [
+          {
+            "type": "text",
+            "text": "听第二篇短文，回答第14至16三个小题。现在你有15秒钟的时间阅读这三道小题。",
+            "size": "small"
+          }
+        ],
+        "time": {
+          "type": "countdown",
+          "seconds": 15,
+          "pageRange": [
+            3,
+            3
+          ]
+        },
         "choicePages": [
           {
             "questions": [
@@ -3192,6 +3710,15 @@
           },
           {
             "type": "countdown",
+            "seconds": 2,
+            "focusId": 14
+          },
+          {
+            "type": "content-controlled",
+            "focusId": 14
+          },
+          {
+            "type": "countdown",
             "seconds": 15,
             "pageRange": [
               3,
@@ -3199,6 +3726,266 @@
             ]
           }
         ],
+        "choicePages": [
+          {
+            "questions": [
+              {
+                "id": 1,
+                "stem": "{{stem_1}}",
+                "options": [
+                  "{{opt_1_A}}",
+                  "{{opt_1_B}}",
+                  "{{opt_1_C}}",
+                  "{{opt_1_D}}"
+                ],
+                "answer": "{{answer_1}}"
+              },
+              {
+                "id": 2,
+                "stem": "{{stem_2}}",
+                "options": [
+                  "{{opt_2_A}}",
+                  "{{opt_2_B}}",
+                  "{{opt_2_C}}",
+                  "{{opt_2_D}}"
+                ],
+                "answer": "{{answer_2}}"
+              },
+              {
+                "id": 3,
+                "stem": "{{stem_3}}",
+                "options": [
+                  "{{opt_3_A}}",
+                  "{{opt_3_B}}",
+                  "{{opt_3_C}}",
+                  "{{opt_3_D}}"
+                ],
+                "answer": "{{answer_3}}"
+              },
+              {
+                "id": 4,
+                "stem": "{{stem_4}}",
+                "options": [
+                  "{{opt_4_A}}",
+                  "{{opt_4_B}}",
+                  "{{opt_4_C}}",
+                  "{{opt_4_D}}"
+                ],
+                "answer": "{{answer_4}}"
+              },
+              {
+                "id": 5,
+                "stem": "{{stem_5}}",
+                "options": [
+                  "{{opt_5_A}}",
+                  "{{opt_5_B}}",
+                  "{{opt_5_C}}",
+                  "{{opt_5_D}}"
+                ],
+                "answer": "{{answer_5}}"
+              }
+            ]
+          },
+          {
+            "questions": [
+              {
+                "id": 6,
+                "stem": "{{stem_6}}",
+                "options": [
+                  "{{opt_6_A}}",
+                  "{{opt_6_B}}",
+                  "{{opt_6_C}}",
+                  "{{opt_6_D}}"
+                ],
+                "answer": "{{answer_6}}"
+              },
+              {
+                "id": 7,
+                "stem": "{{stem_7}}",
+                "options": [
+                  "{{opt_7_A}}",
+                  "{{opt_7_B}}",
+                  "{{opt_7_C}}",
+                  "{{opt_7_D}}"
+                ],
+                "answer": "{{answer_7}}"
+              },
+              {
+                "id": 8,
+                "stem": "{{stem_8}}",
+                "options": [
+                  "{{opt_8_A}}",
+                  "{{opt_8_B}}",
+                  "{{opt_8_C}}",
+                  "{{opt_8_D}}"
+                ],
+                "answer": "{{answer_8}}"
+              },
+              {
+                "id": 9,
+                "stem": "{{stem_9}}",
+                "options": [
+                  "{{opt_9_A}}",
+                  "{{opt_9_B}}",
+                  "{{opt_9_C}}",
+                  "{{opt_9_D}}"
+                ],
+                "answer": "{{answer_9}}"
+              },
+              {
+                "id": 10,
+                "stem": "{{stem_10}}",
+                "options": [
+                  "{{opt_10_A}}",
+                  "{{opt_10_B}}",
+                  "{{opt_10_C}}",
+                  "{{opt_10_D}}"
+                ],
+                "answer": "{{answer_10}}"
+              }
+            ]
+          },
+          {
+            "questions": [
+              {
+                "id": 11,
+                "stem": "{{stem_11}}",
+                "options": [
+                  "{{opt_11_A}}",
+                  "{{opt_11_B}}",
+                  "{{opt_11_C}}",
+                  "{{opt_11_D}}"
+                ],
+                "answer": "{{answer_11}}"
+              },
+              {
+                "id": 12,
+                "stem": "{{stem_12}}",
+                "options": [
+                  "{{opt_12_A}}",
+                  "{{opt_12_B}}",
+                  "{{opt_12_C}}",
+                  "{{opt_12_D}}"
+                ],
+                "answer": "{{answer_12}}"
+              },
+              {
+                "id": 13,
+                "stem": "{{stem_13}}",
+                "options": [
+                  "{{opt_13_A}}",
+                  "{{opt_13_B}}",
+                  "{{opt_13_C}}",
+                  "{{opt_13_D}}"
+                ],
+                "answer": "{{answer_13}}"
+              }
+            ]
+          },
+          {
+            "questions": [
+              {
+                "id": 14,
+                "stem": "{{stem_14}}",
+                "options": [
+                  "{{opt_14_A}}",
+                  "{{opt_14_B}}",
+                  "{{opt_14_C}}",
+                  "{{opt_14_D}}"
+                ],
+                "answer": "{{answer_14}}"
+              },
+              {
+                "id": 15,
+                "stem": "{{stem_15}}",
+                "options": [
+                  "{{opt_15_A}}",
+                  "{{opt_15_B}}",
+                  "{{opt_15_C}}",
+                  "{{opt_15_D}}"
+                ],
+                "answer": "{{answer_15}}"
+              },
+              {
+                "id": 16,
+                "stem": "{{stem_16}}",
+                "options": [
+                  "{{opt_16_A}}",
+                  "{{opt_16_B}}",
+                  "{{opt_16_C}}",
+                  "{{opt_16_D}}"
+                ],
+                "answer": "{{answer_16}}"
+              }
+            ]
+          },
+          {
+            "questions": [
+              {
+                "id": 17,
+                "stem": "{{stem_17}}",
+                "options": [
+                  "{{opt_17_A}}",
+                  "{{opt_17_B}}",
+                  "{{opt_17_C}}",
+                  "{{opt_17_D}}"
+                ],
+                "answer": "{{answer_17}}"
+              },
+              {
+                "id": 18,
+                "stem": "{{stem_18}}",
+                "options": [
+                  "{{opt_18_A}}",
+                  "{{opt_18_B}}",
+                  "{{opt_18_C}}",
+                  "{{opt_18_D}}"
+                ],
+                "answer": "{{answer_18}}"
+              },
+              {
+                "id": 19,
+                "stem": "{{stem_19}}",
+                "options": [
+                  "{{opt_19_A}}",
+                  "{{opt_19_B}}",
+                  "{{opt_19_C}}",
+                  "{{opt_19_D}}"
+                ],
+                "answer": "{{answer_19}}"
+              },
+              {
+                "id": 20,
+                "stem": "{{stem_20}}",
+                "options": [
+                  "{{opt_20_A}}",
+                  "{{opt_20_B}}",
+                  "{{opt_20_C}}",
+                  "{{opt_20_D}}"
+                ],
+                "answer": "{{answer_20}}"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "q_pre_dialogue_long",
+        "content": [
+          {
+            "type": "text",
+            "text": "听下面一段长对话，回答第17至20四个小题。现在你有15秒钟的时间阅读这四道小题。",
+            "size": "small"
+          }
+        ],
+        "time": {
+          "type": "countdown",
+          "seconds": 15,
+          "pageRange": [
+            4,
+            4
+          ]
+        },
         "choicePages": [
           {
             "questions": [
@@ -3452,6 +4239,15 @@
           }
         ],
         "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 17
+          },
+          {
+            "type": "countdown",
+            "seconds": 2,
+            "focusId": 17
+          },
           {
             "type": "content-controlled",
             "focusId": 17
