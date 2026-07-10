@@ -233,10 +233,10 @@ export function validateExamPackage(pkg: unknown): ValidationError[] {
               seenChoiceIds.add(cq.id)
               totalChoiceCount++
             }
-            if (typeof cq.stem !== 'string' || cq.stem.trim() === '') {
+            if (typeof cq.stem !== 'string') {
               errors.push({
                 questionIndex: i,
-                message: `choicePages[${pi}].questions[${qi}].stem must be a non-empty string`
+                message: `choicePages[${pi}].questions[${qi}].stem must be a string`
               })
             }
             if (!Array.isArray(cq.options) || cq.options.length !== 4) {
