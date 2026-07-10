@@ -1,0 +1,434 @@
+{
+  "examData": {
+    "title": "高考英语听力 — 长对话专项训练",
+    "choiceOnly": true,
+    "choicePageGroups": [
+      [
+        {
+          "questions": [
+            {
+              "id": 1,
+              "stem": " ",
+              "options": [
+                "{{opt_17_A}}",
+                "{{opt_17_B}}",
+                "{{opt_17_C}}",
+                "{{opt_17_D}}"
+              ],
+              "answer": "{{answer_17}}"
+            },
+            {
+              "id": 2,
+              "stem": " ",
+              "options": [
+                "{{opt_18_A}}",
+                "{{opt_18_B}}",
+                "{{opt_18_C}}",
+                "{{opt_18_D}}"
+              ],
+              "answer": "{{answer_18}}"
+            },
+            {
+              "id": 3,
+              "stem": " ",
+              "options": [
+                "{{opt_19_A}}",
+                "{{opt_19_B}}",
+                "{{opt_19_C}}",
+                "{{opt_19_D}}"
+              ],
+              "answer": "{{answer_19}}"
+            },
+            {
+              "id": 4,
+              "stem": " ",
+              "options": [
+                "{{opt_20_A}}",
+                "{{opt_20_B}}",
+                "{{opt_20_C}}",
+                "{{opt_20_D}}"
+              ],
+              "answer": "{{answer_20}}"
+            }
+          ]
+        }
+      ]
+    ],
+    "questions": [
+      {
+        "id": "q_sectionB_header",
+        "content": [
+          {
+            "type": "text",
+            "text": "Section B",
+            "size": "normal",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Directions: In Section B, you will hear two passages and one longer conversation. After each passage or conversation, you will be asked several questions. The passages and the conversation will be read twice, but the questions will be spoken only once. When you hear a question, read the four possible answers on your paper, and decide which one is the best answer to the question you have heard.",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/directions_sectionB.wav",
+            "text": "Section B. Directions: In Section B, you will hear two passages and one longer conversation. After each passage or conversation, you will be asked several questions. The passages and the conversation will be read twice, but the questions will be spoken only once. When you hear a question, read the four possible answers on your paper, and decide which one is the best answer to the question you have heard."
+          }
+        ],
+        "time": {
+          "type": "content-controlled"
+        }
+      },
+      {
+        "id": "q_pre_dialogue_long",
+        "content": [
+          {
+            "type": "text",
+            "text": "Questions 1 through 4 are based on the following conversation.",
+            "size": "small"
+          }
+        ],
+        "time": {
+          "type": "countdown",
+          "seconds": 15,
+          "pageRange": [
+            0,
+            0
+          ]
+        },
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q_dialogue_long_play1",
+        "content": [
+          {
+            "type": "text",
+            "text": "第一遍",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/dialogue_long.wav",
+            "text": "{{dialogue_long_text}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 1
+          },
+          {
+            "type": "countdown",
+            "seconds": 2,
+            "focusId": 1
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q_dialogue_long_play2",
+        "content": [
+          {
+            "type": "text",
+            "text": "第二遍",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/dialogue_long.wav",
+            "text": "{{dialogue_long_text}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 1
+          },
+          {
+            "type": "countdown",
+            "seconds": 2,
+            "focusId": 1
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q_dialogue_long_s17",
+        "content": [
+          {
+            "type": "text",
+            "text": "第1题",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/stem_17.wav",
+            "text": "{{stem_17}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 1
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 1
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q_dialogue_long_s18",
+        "content": [
+          {
+            "type": "text",
+            "text": "第2题",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/stem_18.wav",
+            "text": "{{stem_18}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 2
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 2
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q_dialogue_long_s19",
+        "content": [
+          {
+            "type": "text",
+            "text": "第3题",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/stem_19.wav",
+            "text": "{{stem_19}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 3
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 3
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q_dialogue_long_s20",
+        "content": [
+          {
+            "type": "text",
+            "text": "第4题",
+            "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/stem_20.wav",
+            "text": "{{stem_20}}"
+          }
+        ],
+        "time": [
+          {
+            "type": "content-controlled",
+            "focusId": 4
+          },
+          {
+            "type": "countdown",
+            "seconds": 3,
+            "focusId": 4
+          }
+        ],
+        "choicePageGroupId": 0
+      },
+      {
+        "id": "q_review",
+        "content": [
+          {
+            "type": "text",
+            "text": "听力部分已结束，请检查答案。",
+            "size": "normal"
+          }
+        ],
+        "time": {
+          "type": "countdown",
+          "seconds": 20,
+          "pageRange": [
+            0,
+            0
+          ]
+        },
+        "statusText": "请检查",
+        "choicePageGroupId": 0
+      }
+    ],
+    "gradingInfo": [
+      {
+        "choiceId": 1,
+        "fullScore": 1.5,
+        "problemInfo": "**{{stem_17}}**\n\nA. {{opt_17_A}}\n\nB. {{opt_17_B}}\n\nC. {{opt_17_C}}\n\nD. {{opt_17_D}}\n\n> {{dialogue_long_text}}"
+      },
+      {
+        "choiceId": 2,
+        "fullScore": 1.5,
+        "problemInfo": "**{{stem_18}}**\n\nA. {{opt_18_A}}\n\nB. {{opt_18_B}}\n\nC. {{opt_18_C}}\n\nD. {{opt_18_D}}\n\n> {{dialogue_long_text}}"
+      },
+      {
+        "choiceId": 3,
+        "fullScore": 1.5,
+        "problemInfo": "**{{stem_19}}**\n\nA. {{opt_19_A}}\n\nB. {{opt_19_B}}\n\nC. {{opt_19_C}}\n\nD. {{opt_19_D}}\n\n> {{dialogue_long_text}}"
+      },
+      {
+        "choiceId": 4,
+        "fullScore": 1.5,
+        "problemInfo": "**{{stem_20}}**\n\nA. {{opt_20_A}}\n\nB. {{opt_20_B}}\n\nC. {{opt_20_C}}\n\nD. {{opt_20_D}}\n\n> {{dialogue_long_text}}"
+      }
+    ]
+  },
+  "editableData": [
+    {
+      "type": "text",
+      "id": "dialogue_long_text",
+      "description": "长对话文本 (TTS合成)"
+    },
+    {
+      "type": "text",
+      "id": "stem_17",
+      "description": "第17题 — 题干（仅用于音频播报，界面不显示）"
+    },
+    {
+      "type": "text",
+      "id": "opt_17_A",
+      "description": "第17题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_17_B",
+      "description": "第17题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_17_C",
+      "description": "第17题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_17_D",
+      "description": "第17题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_17",
+      "description": "第17题 — 正确答案 (A/B/C/D)"
+    },
+    {
+      "type": "text",
+      "id": "stem_18",
+      "description": "第18题 — 题干（仅用于音频播报，界面不显示）"
+    },
+    {
+      "type": "text",
+      "id": "opt_18_A",
+      "description": "第18题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_18_B",
+      "description": "第18题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_18_C",
+      "description": "第18题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_18_D",
+      "description": "第18题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_18",
+      "description": "第18题 — 正确答案 (A/B/C/D)"
+    },
+    {
+      "type": "text",
+      "id": "stem_19",
+      "description": "第19题 — 题干（仅用于音频播报，界面不显示）"
+    },
+    {
+      "type": "text",
+      "id": "opt_19_A",
+      "description": "第19题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_19_B",
+      "description": "第19题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_19_C",
+      "description": "第19题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_19_D",
+      "description": "第19题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_19",
+      "description": "第19题 — 正确答案 (A/B/C/D)"
+    },
+    {
+      "type": "text",
+      "id": "stem_20",
+      "description": "第20题 — 题干（仅用于音频播报，界面不显示）"
+    },
+    {
+      "type": "text",
+      "id": "opt_20_A",
+      "description": "第20题 — 选项 A"
+    },
+    {
+      "type": "text",
+      "id": "opt_20_B",
+      "description": "第20题 — 选项 B"
+    },
+    {
+      "type": "text",
+      "id": "opt_20_C",
+      "description": "第20题 — 选项 C"
+    },
+    {
+      "type": "text",
+      "id": "opt_20_D",
+      "description": "第20题 — 选项 D"
+    },
+    {
+      "type": "text",
+      "id": "answer_20",
+      "description": "第20题 — 正确答案 (A/B/C/D)"
+    }
+  ]
+}
