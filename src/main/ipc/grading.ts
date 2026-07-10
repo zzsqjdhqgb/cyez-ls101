@@ -368,14 +368,20 @@ export function registerGradingHandlers(): void {
         let maxScore = 0
         const choiceScores: Record<number, ChoiceAnswerRecord> = {}
 
-        // Build choice question lookup
+        // Build choice question lookup (resolve from inline or group)
         const choiceQLookup: Record<
           number,
           { stem: string; options: [string, string, string, string]; answer: string }
         > = {}
+        const cpg = examPkg.choicePageGroups
         for (const q of examPkg.questions) {
-          if (q.choicePages) {
-            for (const page of q.choicePages) {
+          let pages = q.choicePages
+          if (!pages && cpg) {
+            const gid = q.choicePageGroupId ?? 0
+            pages = cpg[gid]
+          }
+          if (pages) {
+            for (const page of pages) {
               for (const cq of page.questions) {
                 choiceQLookup[cq.id] = cq
               }
