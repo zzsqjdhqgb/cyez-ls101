@@ -48,7 +48,7 @@ async function importBundledExams(): Promise<void> {
   }
 }
 
-async function importBundledTemplates(): Promise<void> {
+export async function importBundledTemplates(): Promise<void> {
   const templatesPath = getTemplatesPath()
 
   const bundledDir = app.isPackaged
