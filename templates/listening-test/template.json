@@ -28,7 +28,8 @@
             "seconds": 3,
             "focusId": 1
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q2",
@@ -49,7 +50,8 @@
             "seconds": 5,
             "focusId": 2
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q3",
@@ -70,7 +72,8 @@
             "seconds": 3,
             "focusId": 3
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q4",
@@ -89,7 +92,8 @@
             0,
             1
           ]
-        }
+        },
+        "choicePageGroupId": 0
       }
     ],
     "gradingInfo": [

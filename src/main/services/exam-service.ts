@@ -76,11 +76,11 @@ export function loadExam(examsPath: string, examId: string): Record<string, unkn
     if (qTime && !Array.isArray(qTime)) {
       q.time = [qTime]
     }
-    // Resolve choicePages: inline takes priority, then group (default group 0), then undefined
+    // Resolve choicePages: inline takes priority, then group (if choicePageGroupId set), then undefined
     let cp = q.choicePages as Record<string, unknown>[] | undefined
-    const resolvedFromGroup = !cp && choicePageGroups
-    if (!cp && choicePageGroups) {
-      const gid = (q.choicePageGroupId as number | undefined) ?? 0
+    const resolvedFromGroup = !cp && choicePageGroups && q.choicePageGroupId !== undefined
+    if (!cp && choicePageGroups && q.choicePageGroupId !== undefined) {
+      const gid = q.choicePageGroupId as number
       cp = choicePageGroups[gid] as Record<string, unknown>[] | undefined
     }
     // Collect choice questions only from inline pages (group ones already collected)

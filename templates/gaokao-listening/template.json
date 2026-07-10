@@ -266,15 +266,15 @@
             "type": "text",
             "text": "Directions: In Section A, you will hear ten short conversations between two speakers. At the end of each conversation, a question will be asked about what was said. The conversations and the questions will be spoken only once. After you hear a conversation and the question about it, read the four possible answers on your paper, and decide which one is the best answer to the question you have heard.",
             "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/directions_sectionA.wav",
+            "text": "Section A. Directions: In Section A, you will hear ten short conversations between two speakers. At the end of each conversation, a question will be asked about what was said. The conversations and the questions will be spoken only once. After you hear a conversation and the question about it, read the four possible answers on your paper, and decide which one is the best answer to the question you have heard."
           }
         ],
         "time": {
-          "type": "countdown",
-          "seconds": 20,
-          "pageRange": [
-            0,
-            1
-          ]
+          "type": "content-controlled"
         }
       },
       {
@@ -296,7 +296,8 @@
             "seconds": 3,
             "focusId": 1
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q1_sd2",
@@ -317,7 +318,8 @@
             "seconds": 3,
             "focusId": 2
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q1_sd3",
@@ -338,7 +340,8 @@
             "seconds": 3,
             "focusId": 3
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q1_sd4",
@@ -359,7 +362,8 @@
             "seconds": 3,
             "focusId": 4
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q1_sd5",
@@ -380,7 +384,8 @@
             "seconds": 5,
             "focusId": 5
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q1_sd6",
@@ -401,7 +406,8 @@
             "seconds": 3,
             "focusId": 6
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q1_sd7",
@@ -422,7 +428,8 @@
             "seconds": 3,
             "focusId": 7
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q1_sd8",
@@ -443,7 +450,8 @@
             "seconds": 3,
             "focusId": 8
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q1_sd9",
@@ -464,7 +472,8 @@
             "seconds": 3,
             "focusId": 9
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q1_sd10",
@@ -485,7 +494,8 @@
             "seconds": 5,
             "focusId": 10
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_sectionB_header",
@@ -500,15 +510,15 @@
             "type": "text",
             "text": "Directions: In Section B, you will hear two passages and one longer conversation. After each passage or conversation, you will be asked several questions. The passages and the conversation will be read twice, but the questions will be spoken only once. When you hear a question, read the four possible answers on your paper, and decide which one is the best answer to the question you have heard.",
             "size": "small"
+          },
+          {
+            "type": "audio",
+            "src": "media/directions_sectionB.wav",
+            "text": "Section B. Directions: In Section B, you will hear two passages and one longer conversation. After each passage or conversation, you will be asked several questions. The passages and the conversation will be read twice, but the questions will be spoken only once. When you hear a question, read the four possible answers on your paper, and decide which one is the best answer to the question you have heard."
           }
         ],
         "time": {
-          "type": "countdown",
-          "seconds": 15,
-          "pageRange": [
-            2,
-            4
-          ]
+          "type": "content-controlled"
         }
       },
       {
@@ -527,7 +537,8 @@
             2,
             2
           ]
-        }
+        },
+        "choicePageGroupId": 0
       },
       {
         "id": "q_passage1_play1",
@@ -553,7 +564,8 @@
             "seconds": 2,
             "focusId": 11
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_passage1_play2",
@@ -579,7 +591,8 @@
             "seconds": 2,
             "focusId": 11
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_passage1_s11",
@@ -605,7 +618,8 @@
             "seconds": 3,
             "focusId": 11
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_passage1_s12",
@@ -631,7 +645,8 @@
             "seconds": 3,
             "focusId": 12
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_passage1_s13",
@@ -657,7 +672,8 @@
             "seconds": 5,
             "focusId": 13
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_pre_passage2",
@@ -675,7 +691,8 @@
             3,
             3
           ]
-        }
+        },
+        "choicePageGroupId": 0
       },
       {
         "id": "q_passage2_play1",
@@ -701,7 +718,8 @@
             "seconds": 2,
             "focusId": 14
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_passage2_play2",
@@ -727,7 +745,8 @@
             "seconds": 2,
             "focusId": 14
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_passage2_s14",
@@ -753,7 +772,8 @@
             "seconds": 3,
             "focusId": 14
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_passage2_s15",
@@ -779,7 +799,8 @@
             "seconds": 3,
             "focusId": 15
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_passage2_s16",
@@ -805,7 +826,8 @@
             "seconds": 5,
             "focusId": 16
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_pre_dialogue_long",
@@ -823,7 +845,8 @@
             4,
             4
           ]
-        }
+        },
+        "choicePageGroupId": 0
       },
       {
         "id": "q_dialogue_long_play1",
@@ -849,7 +872,8 @@
             "seconds": 2,
             "focusId": 17
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_dialogue_long_play2",
@@ -875,7 +899,8 @@
             "seconds": 2,
             "focusId": 17
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_dialogue_long_s17",
@@ -901,7 +926,8 @@
             "seconds": 3,
             "focusId": 17
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_dialogue_long_s18",
@@ -927,7 +953,8 @@
             "seconds": 3,
             "focusId": 18
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_dialogue_long_s19",
@@ -953,7 +980,8 @@
             "seconds": 3,
             "focusId": 19
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_dialogue_long_s20",
@@ -979,7 +1007,8 @@
             "seconds": 3,
             "focusId": 20
           }
-        ]
+        ],
+        "choicePageGroupId": 0
       },
       {
         "id": "q_review",
@@ -998,7 +1027,8 @@
             4
           ]
         },
-        "statusText": "请检查"
+        "statusText": "请检查",
+        "choicePageGroupId": 0
       }
     ],
     "gradingInfo": [
