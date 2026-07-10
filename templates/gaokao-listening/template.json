@@ -1,6 +1,6 @@
 {
   "examData": {
-    "title": "高考英语听力标准模板",
+    "title": "高考英语听力",
     "choiceOnly": true,
     "choicePageGroups": [
       [
@@ -1800,6 +1800,5 @@
       "id": "answer_20",
       "description": "第20题 — 正确答案 (A/B/C/D)"
     }
-  ],
-  "dev": true
+  ]
 }
