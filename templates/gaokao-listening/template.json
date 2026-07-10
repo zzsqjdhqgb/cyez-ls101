@@ -248,17 +248,23 @@
     ],
     "questions": [
       {
-        "id": "q_pre_section1",
+        "id": "q_pre_sectionA",
         "content": [
           {
             "type": "text",
-            "text": "第一节",
+            "text": "I. Listening Comprehension",
             "size": "large",
             "bold": true
           },
           {
             "type": "text",
-            "text": "听下面10段短对话。每段对话后有一个小题，从题中所给的A、B、C、D四个选项中选出最佳选项。每段对话仅读一遍。现在你有20秒钟的时间阅读前10道小题。",
+            "text": "Section A",
+            "size": "normal",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Directions: In Section A, you will hear ten short conversations between two speakers. At the end of each conversation, a question will be asked about what was said. The conversations and the questions will be spoken only once. After you hear a conversation and the question about it, read the four possible answers on your paper, and decide which one is the best answer to the question you have heard.",
             "size": "small"
           }
         ],
@@ -482,11 +488,35 @@
         ]
       },
       {
+        "id": "q_sectionB_header",
+        "content": [
+          {
+            "type": "text",
+            "text": "Section B",
+            "size": "normal",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Directions: In Section B, you will hear two passages and one longer conversation. After each passage or conversation, you will be asked several questions. The passages and the conversation will be read twice, but the questions will be spoken only once. When you hear a question, read the four possible answers on your paper, and decide which one is the best answer to the question you have heard.",
+            "size": "small"
+          }
+        ],
+        "time": {
+          "type": "countdown",
+          "seconds": 15,
+          "pageRange": [
+            2,
+            4
+          ]
+        }
+      },
+      {
         "id": "q_pre_passage1",
         "content": [
           {
             "type": "text",
-            "text": "听第一篇短文，回答第11至13三个小题。现在你有15秒钟的时间阅读这三道小题。",
+            "text": "Questions 11 through 13 are based on the following passage.",
             "size": "small"
           }
         ],
@@ -634,7 +664,7 @@
         "content": [
           {
             "type": "text",
-            "text": "听第二篇短文，回答第14至16三个小题。现在你有15秒钟的时间阅读这三道小题。",
+            "text": "Questions 14 through 16 are based on the following passage.",
             "size": "small"
           }
         ],
@@ -782,7 +812,7 @@
         "content": [
           {
             "type": "text",
-            "text": "听下面一段长对话，回答第17至20四个小题。现在你有15秒钟的时间阅读这四道小题。",
+            "text": "Questions 17 through 20 are based on the following conversation.",
             "size": "small"
           }
         ],
