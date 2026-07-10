@@ -225,10 +225,10 @@ export function importSubmissions(
         if (typeof fs === 'number' && fs > 0) maxScore += fs
       }
 
-      const isChoiceOnly = examPackage.choiceOnly === true
+
       records[rid] = {
         rid,
-        status: isChoiceOnly ? 'completed' : 'ungraded',
+        status: 'ungraded',
         student: meta.student,
         examTitle: examPackage.title,
         eid,
