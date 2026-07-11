@@ -22,6 +22,7 @@ export interface ExamTemplate {
   editableData: EditableDataItem[]
   chunks?: ChunkEntry[]
   dev?: boolean
+  tags?: string[]
 }
 
 export interface TemplateListItem {
@@ -30,4 +31,5 @@ export interface TemplateListItem {
   description?: string
   createdAt: string
   dev?: boolean
+  tags?: string[]
 }

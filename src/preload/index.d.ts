@@ -54,6 +54,10 @@ declare global {
         import: () => Promise<{ success: boolean; error?: string }>
         export: (templateId: string) => Promise<void>
         delete: (templateId: string) => Promise<{ success: boolean }>
+        updateTags: (
+          templateId: string,
+          tags: string[]
+        ) => Promise<{ success: boolean; error?: string }>
       }
       draft: {
         create: (templateId: string) => Promise<string>

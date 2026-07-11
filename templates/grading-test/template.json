@@ -4,9 +4,21 @@
   },
   "editableData": [],
   "chunks": [
-    { "chunkid": "01", "file": "chunk/01_part1_reading.json" },
-    { "chunkid": "02", "file": "chunk/02_part2_picture.json" },
-    { "chunkid": "03", "file": "chunk/03_part3_freetalk.json" }
+    {
+      "chunkid": "01",
+      "file": "chunk/01_part1_reading.json"
+    },
+    {
+      "chunkid": "02",
+      "file": "chunk/02_part2_picture.json"
+    },
+    {
+      "chunkid": "03",
+      "file": "chunk/03_part3_freetalk.json"
+    }
   ],
-  "dev": true
+  "dev": true,
+  "tags": [
+    "测试"
+  ]
 }

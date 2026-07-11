@@ -14,7 +14,8 @@ import {
   listTemplates,
   importTemplate,
   exportTemplate,
-  deleteTemplate
+  deleteTemplate,
+  updateTemplateTags
 } from '../services/template-service'
 import { getFileFilter, getExtension } from '../../shared/file-types'
 
@@ -61,4 +62,8 @@ ipcMain.handle('template:export', async (_event, templateId: string) => {
 
 ipcMain.handle('template:delete', async (_event, templateId: string) => {
   return deleteTemplate(getTemplatesPath(), templateId)
+})
+
+ipcMain.handle('template:updateTags', async (_event, templateId: string, tags: string[]) => {
+  return updateTemplateTags(getTemplatesPath(), templateId, tags)
 })
