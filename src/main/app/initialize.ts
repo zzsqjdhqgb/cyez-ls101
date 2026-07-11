@@ -4,7 +4,7 @@
  */
 
 import { app } from 'electron'
-import { readFileSync, writeFileSync, existsSync, readdirSync, copyFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, readdirSync, copyFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import process from 'node:process'
 import { randomUUID } from 'node:crypto'
@@ -76,6 +76,20 @@ export async function importBundledTemplates(): Promise<void> {
   }
 }
 
+export function clearTemplates(): void {
+  const templatesPath = getTemplatesPath()
+  if (!existsSync(templatesPath)) return
+  const entries = readdirSync(templatesPath, { withFileTypes: true }).filter((e) => e.isDirectory())
+  const filtered = entries.filter((e) => e.name !== 'initialized')
+  const count = filtered.length
+  if (count > 0) {
+    console.log(`[initialize] 清空 ${count} 个试卷模板目录`)
+  }
+  for (const entry of filtered) {
+    rmSync(join(templatesPath, entry.name), { recursive: true, force: true })
+  }
+}
+
 export async function initializeBundledData(): Promise<void> {
   if (existsSync(getVersionFilePath())) return
 
@@ -84,6 +98,10 @@ export async function initializeBundledData(): Promise<void> {
   if (existsSync(examsInitFlag) || existsSync(templatesInitFlag)) return
 
   await importBundledExams()
-  await importBundledTemplates()
   writeVersionFile(getCurrentVersion())
+}
+
+export async function reimportBundledTemplatesOnStartup(): Promise<void> {
+  clearTemplates()
+  await importBundledTemplates()
 }
