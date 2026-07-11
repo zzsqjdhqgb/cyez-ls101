@@ -202,6 +202,9 @@ function mergeChunks(
   if ('dev' in base) {
     result.dev = base.dev
   }
+  if (base.tags) {
+    result.tags = [...base.tags]
+  }
   return result
 }
 
@@ -318,6 +321,7 @@ interface TemplateInfo {
   description?: string
   createdAt: string
   dev?: boolean
+  tags?: string[]
 }
 
 export function listTemplates(templatesPath: string, devMode?: boolean): TemplateInfo[] {
@@ -339,13 +343,33 @@ export function listTemplates(templatesPath: string, devMode?: boolean): Templat
         title: String(title),
         description: undefined,
         createdAt: stat.mtime.toISOString(),
-        dev: template.dev || undefined
+        dev: template.dev || undefined,
+        tags: template.tags ?? undefined
       })
     } catch {
       /* skip */
     }
   }
   return list
+}
+
+export function updateTemplateTags(
+  templatesPath: string,
+  templateId: string,
+  tags: string[]
+): { success: boolean; error?: string } {
+  const jsonPath = join(templatesPath, templateId, 'template.json')
+  if (!existsSync(jsonPath)) {
+    return { success: false, error: '模板不存在' }
+  }
+  try {
+    const data = JSON.parse(readFileSync(jsonPath, 'utf-8'))
+    data.tags = tags
+    writeFileSync(jsonPath, JSON.stringify(data, null, 2), 'utf-8')
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: String(err) }
+  }
 }
 
 export function importTemplate(

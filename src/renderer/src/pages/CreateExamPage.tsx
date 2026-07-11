@@ -115,7 +115,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
   cardMeta: {
     fontSize: 13,
-    color: '#94a3b8'
+    color: '#94a3b8',
+    display: 'flex',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6
   },
   cardActions: {
     display: 'flex',
@@ -125,6 +129,59 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'center',
     paddingTop: 60,
     color: '#94a3b8'
+  },
+  searchBar: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+    alignItems: 'center'
+  },
+  filterTagChip: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '4px 12px',
+    fontSize: 13,
+    fontWeight: 500,
+    borderRadius: 14,
+    whiteSpace: 'nowrap',
+    cursor: 'pointer',
+    border: '1.5px solid transparent',
+    outline: 'none',
+    transition: 'box-shadow 0.15s, border-color 0.15s'
+  },
+  clearFilterBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 28,
+    height: 28,
+    fontSize: 16,
+    fontWeight: 600,
+    borderRadius: 14,
+    cursor: 'pointer',
+    border: '1.5px solid #e2e8f0',
+    outline: 'none',
+    background: '#fff',
+    color: '#94a3b8',
+    padding: 0,
+    lineHeight: 1
+  },
+  tagChip: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '2px 8px',
+    fontSize: 12,
+    fontWeight: 500,
+    borderRadius: 12,
+    whiteSpace: 'nowrap'
+  },
+  tagsRow: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+    alignItems: 'center'
   }
 }
 
@@ -160,16 +217,14 @@ export default function CreateExamPage(): JSX.Element {
     id: string
   } | null>(null)
 
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set())
+
   const loadTemplates = async (): Promise<void> => {
     setLoading(true)
     try {
       const devMode = sessionStorage.getItem('devMode') === 'true'
       const list = await window.electronAPI.template.list(devMode)
-      list.sort((a, b) => {
-        if (a.dev && !b.dev) return 1
-        if (!a.dev && b.dev) return -1
-        return 0
-      })
+      list.sort((a, b) => a.title.localeCompare(b.title, 'zh-CN'))
       setTemplates(list)
     } catch (err) {
       console.error('加载模板列表失败:', err)
@@ -279,6 +334,39 @@ export default function CreateExamPage(): JSX.Element {
     loadDrafts()
   }
 
+  const allTags = Array.from(new Set(templates.flatMap((t) => t.tags || []))).sort(
+    (a, b) => a.localeCompare(b, 'zh-CN')
+  )
+
+  const filteredTemplates = templates.filter((t) => {
+    if (selectedTags.size === 0) return true
+    const tTags = t.tags || []
+    for (const tag of selectedTags) {
+      if (!tTags.includes(tag)) return false
+    }
+    return true
+  })
+
+  const hashStr = (s: string): number => {
+    let h = 0
+    for (let i = 0; i < s.length; i++) {
+      h = (Math.imul(31, h) + s.charCodeAt(i)) | 0
+    }
+    return h
+  }
+
+  const tagColor = (tag: string): { background: string; color: string } => {
+    const hue = ((hashStr(tag) % 360) + 360) % 360
+    const satBg = 70
+    const satText = 65
+    const lightBg = 92
+    const lightText = 35
+    return {
+      background: `hsl(${hue}, ${satBg}%, ${lightBg}%)`,
+      color: `hsl(${hue}, ${satText}%, ${lightText}%)`
+    }
+  }
+
   const formatDate = (iso: string): string =>
     new Date(iso).toLocaleString('zh-CN', {
       year: 'numeric',
@@ -323,17 +411,74 @@ export default function CreateExamPage(): JSX.Element {
               导入模板
             </button>
           </div>
+          {allTags.length > 0 && (
+            <div style={styles.searchBar}>
+              {selectedTags.size > 0 && (
+                <button
+                  style={styles.clearFilterBtn}
+                  onClick={() => setSelectedTags(new Set())}
+                  title="清除筛选"
+                >
+                  ×
+                </button>
+              )}
+              {allTags.map((tag) => {
+                const c = tagColor(tag)
+                const active = selectedTags.has(tag)
+                return (
+                  <button
+                    key={tag}
+                    style={{
+                      ...styles.filterTagChip,
+                      background: active ? c.color : c.background,
+                      color: active ? '#fff' : c.color,
+                      borderColor: active ? c.color : 'transparent'
+                    }}
+                    onClick={() => {
+                      const next = new Set(selectedTags)
+                      if (active) {
+                        next.delete(tag)
+                      } else {
+                        next.add(tag)
+                      }
+                      setSelectedTags(next)
+                    }}
+                  >
+                    {tag}
+                  </button>
+                )
+              })}
+            </div>
+          )}
           {loading ? (
             <div style={{ textAlign: 'center', paddingTop: 40, color: '#94a3b8' }}>加载中...</div>
-          ) : templates.length === 0 ? (
-            <div style={styles.empty}>暂无模板</div>
+          ) : filteredTemplates.length === 0 ? (
+            <div style={styles.empty}>{selectedTags.size > 0 ? '没有匹配的模板' : '暂无模板'}</div>
           ) : (
             <div style={styles.list}>
-              {templates.map((t) => (
+              {filteredTemplates.map((t) => (
                 <div key={t.id} style={t.dev ? styles.cardDev : styles.card}>
                   <div style={styles.cardInfo}>
                     <div style={styles.cardTitle}>{t.title}</div>
-                    <div style={styles.cardMeta}>创建于 {formatDate(t.createdAt)}</div>
+                    <div style={styles.cardMeta}>
+                      <span>创建于 {formatDate(t.createdAt)}</span>
+                      {(t.tags || []).length > 0 && (
+                        <>
+                          <span style={{ color: '#cbd5e1' }}>·</span>
+                          {(t.tags || []).map((tag) => {
+                            const c = tagColor(tag)
+                            return (
+                              <span
+                                key={tag}
+                                style={{ ...styles.tagChip, background: c.background, color: c.color }}
+                              >
+                                {tag}
+                              </span>
+                            )
+                          })}
+                        </>
+                      )}
+                    </div>
                   </div>
                   <div style={styles.cardActions}>
                     <button

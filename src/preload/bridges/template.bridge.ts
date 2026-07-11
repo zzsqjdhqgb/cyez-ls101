@@ -12,6 +12,10 @@ export function createTemplateBridge(): {
     import: () => Promise<{ success: boolean; error?: string }>
     export: (templateId: string) => Promise<void>
     delete: (templateId: string) => Promise<{ success: boolean }>
+    updateTags: (
+      templateId: string,
+      tags: string[]
+    ) => Promise<{ success: boolean; error?: string }>
   }
 } {
   return {
@@ -23,7 +27,12 @@ export function createTemplateBridge(): {
       export: (templateId: string): Promise<void> =>
         ipcRenderer.invoke('template:export', templateId),
       delete: (templateId: string): Promise<{ success: boolean }> =>
-        ipcRenderer.invoke('template:delete', templateId)
+        ipcRenderer.invoke('template:delete', templateId),
+      updateTags: (
+        templateId: string,
+        tags: string[]
+      ): Promise<{ success: boolean; error?: string }> =>
+        ipcRenderer.invoke('template:updateTags', templateId, tags)
     }
   }
 }
