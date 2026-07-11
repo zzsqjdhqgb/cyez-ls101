@@ -266,5 +266,8 @@
       "description": "第3题 — 正确答案 (A/B/C/D)"
     }
   ],
-  "dev": true
+  "dev": true,
+  "tags": [
+    "测试"
+  ]
 }
