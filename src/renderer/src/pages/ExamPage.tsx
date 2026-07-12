@@ -12,8 +12,9 @@ import type { ExamPackage, Question, StudentInfo } from '../types'
 import { MessageModal } from '../components/Modal'
 import useScalingRatio, { DESIGN_WIDTH, DESIGN_HEIGHT } from './exam/useScaling'
 import StudentForm from './exam/StudentForm'
+import MicTest from './exam/MicTest'
 
-type Phase = 'input' | 'exam' | 'finished' | 'error'
+type Phase = 'input' | 'mic-test' | 'exam' | 'finished' | 'error'
 
 /**
  * 播放一个短音频，返回一个 Promise，在播放结束后 resolve。
@@ -72,6 +73,8 @@ export default function ExamPage(): JSX.Element {
   const [choiceOnly, setChoiceOnly] = useState(false)
 
   const [formError, setFormError] = useState<string | null>(null)
+  const [selectedMicDeviceId, setSelectedMicDeviceId] = useState('')
+  const [pendingStudent, setPendingStudent] = useState<StudentInfo | null>(null)
   const [msgModal, setMsgModal] = useState<{
     title: string
     message: string
@@ -280,7 +283,9 @@ export default function ExamPage(): JSX.Element {
       const { duration, recordIndex } = currentTime
 
       navigator.mediaDevices
-        .getUserMedia({ audio: true })
+        .getUserMedia({
+          audio: selectedMicDeviceId ? { deviceId: { exact: selectedMicDeviceId } } : true
+        })
         .then((stream) => {
           return playShortAudio('app-resource://ready_record.mp3').then(() => stream)
         })
@@ -299,7 +304,8 @@ export default function ExamPage(): JSX.Element {
     clearTimers,
     advanceTimer,
     startRecordingWithStream,
-    phase
+    phase,
+    selectedMicDeviceId
   ])
 
   const handleMediaError = useCallback(
@@ -342,15 +348,25 @@ export default function ExamPage(): JSX.Element {
     if (!examId) return
 
     const student: StudentInfo = { name: trimmedName, studentId: trimmedId }
-    try {
-      const subId = await window.electronAPI.submission.create(examId, student)
-      setSubmissionId(subId)
-      setPhase('exam')
-    } catch (err) {
-      console.error('创建提交失败:', err)
-      setMsgModal({ title: '操作失败', message: '创建作答记录失败', type: 'error' })
-    }
+    setPendingStudent(student)
+    setPhase('mic-test')
   }
+
+  const handleMicTestComplete = useCallback(
+    async (deviceId: string) => {
+      setSelectedMicDeviceId(deviceId)
+      if (!pendingStudent || !examId) return
+      try {
+        const subId = await window.electronAPI.submission.create(examId, pendingStudent)
+        setSubmissionId(subId)
+        setPhase('exam')
+      } catch (err) {
+        console.error('创建提交失败:', err)
+        setMsgModal({ title: '操作失败', message: '创建作答记录失败', type: 'error' })
+      }
+    },
+    [pendingStudent, examId]
+  )
 
   const handleChoiceAnswer = useCallback((choiceId: number, answer: string) => {
     setChoiceAnswers((prev) => {
@@ -481,6 +497,10 @@ export default function ExamPage(): JSX.Element {
           onBack={handleBack}
         />
       )
+    }
+
+    if (phase === 'mic-test') {
+      return <MicTest onComplete={handleMicTestComplete} onBack={handleBack} />
     }
 
     // phase === 'exam'

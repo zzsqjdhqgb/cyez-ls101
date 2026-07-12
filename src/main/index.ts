@@ -35,7 +35,7 @@ import './ipc/app'
 
 // 提取后的模块
 import { createWindow } from './app/create-window'
-import { initializeBundledData } from './app/initialize'
+import { initializeBundledData, reimportBundledTemplatesOnStartup } from './app/initialize'
 import { runMigrations } from './app/migrate'
 import {
   getStoredVersion,
@@ -226,6 +226,8 @@ export async function performSoftReset(): Promise<void> {
 
   await initializeBundledData()
 
+  await reimportBundledTemplatesOnStartup()
+
   createWindow()
 
   isClearingCache = false
@@ -243,6 +245,8 @@ function startApp(): void {
     recreateDataDirs()
 
     await initializeBundledData()
+
+    await reimportBundledTemplatesOnStartup()
 
     registerExamResourceProtocol()
     registerDraftResourceProtocol()

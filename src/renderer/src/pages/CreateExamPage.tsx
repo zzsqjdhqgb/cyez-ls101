@@ -257,6 +257,9 @@ export default function CreateExamPage(): JSX.Element {
     navigate(tab === 'templates' ? '/create/templates' : '/create/drafts')
   }
 
+  // TODO: 临时禁用导入模板功能。每次启动时模板会自动从预置目录重新导入，
+  // 用户手动导入的模板会在下次启动时被覆盖，为避免混淆暂时禁用此功能。
+  /*
   const handleImportTemplate = async (): Promise<void> => {
     const result = await window.electronAPI.template.import()
     if (result.success) {
@@ -265,6 +268,7 @@ export default function CreateExamPage(): JSX.Element {
       setMsgModal({ title: '导入失败', message: result.error, type: 'error' })
     }
   }
+  */
 
   const handleCreateDraft = async (templateId: string): Promise<void> => {
     try {
@@ -276,6 +280,9 @@ export default function CreateExamPage(): JSX.Element {
     }
   }
 
+  // TODO: 临时禁用导出模板/删除模板功能。每次启动时模板会自动从预置目录重新导入，
+  // 用户手动导出的模板文件或删除的模板会在下次启动时被还原，为避免混淆暂时禁用。
+  /*
   const handleExportTemplate = (id: string): void => {
     void window.electronAPI.template.export(id)
   }
@@ -283,6 +290,7 @@ export default function CreateExamPage(): JSX.Element {
   const handleDeleteTemplate = (id: string): void => {
     setDeleteTarget({ type: 'template', id })
   }
+  */
 
   const handleEditDraft = (draftId: string): void => {
     navigate(`/draft/${draftId}`)
@@ -334,8 +342,8 @@ export default function CreateExamPage(): JSX.Element {
     loadDrafts()
   }
 
-  const allTags = Array.from(new Set(templates.flatMap((t) => t.tags || []))).sort(
-    (a, b) => a.localeCompare(b, 'zh-CN')
+  const allTags = Array.from(new Set(templates.flatMap((t) => t.tags || []))).sort((a, b) =>
+    a.localeCompare(b, 'zh-CN')
   )
 
   const filteredTemplates = templates.filter((t) => {
@@ -401,16 +409,18 @@ export default function CreateExamPage(): JSX.Element {
 
       {activeTab === 'templates' && (
         <>
-          <div style={styles.actions}>
-            <button
-              onClick={() => {
-                void handleImportTemplate()
-              }}
-              style={styles.btnPrimary}
-            >
-              导入模板
-            </button>
-          </div>
+          {/* TODO: 临时移除导入模板按钮。每次启动时模板会自动从预置目录重新导入，
+              用户手动导入的模板会在下次启动时被覆盖，为避免混淆暂时禁用此功能。 */}
+          {/* <div style={styles.actions}> */}
+          {/*   <button */}
+          {/*     onClick={() => { */}
+          {/*       void handleImportTemplate() */}
+          {/*     }} */}
+          {/*     style={styles.btnPrimary} */}
+          {/*   > */}
+          {/*     导入模板 */}
+          {/*   </button> */}
+          {/* </div> */}
           {allTags.length > 0 && (
             <div style={styles.searchBar}>
               {selectedTags.size > 0 && (
@@ -430,9 +440,9 @@ export default function CreateExamPage(): JSX.Element {
                     key={tag}
                     style={{
                       ...styles.filterTagChip,
-                      background: active ? c.color : c.background,
+                      background: active ? c.color : 'transparent',
                       color: active ? '#fff' : c.color,
-                      borderColor: active ? c.color : 'transparent'
+                      borderColor: c.color
                     }}
                     onClick={() => {
                       const next = new Set(selectedTags)
@@ -470,7 +480,11 @@ export default function CreateExamPage(): JSX.Element {
                             return (
                               <span
                                 key={tag}
-                                style={{ ...styles.tagChip, background: c.background, color: c.color }}
+                                style={{
+                                  ...styles.tagChip,
+                                  background: c.background,
+                                  color: c.color
+                                }}
                               >
                                 {tag}
                               </span>
@@ -489,6 +503,8 @@ export default function CreateExamPage(): JSX.Element {
                     >
                       新建试卷
                     </button>
+                    {/* TODO: 临时禁用导出模板/删除模板，原因同上 */}
+                    {/*
                     <button onClick={() => handleExportTemplate(t.id)} style={styles.btnSecondary}>
                       导出
                     </button>
@@ -500,6 +516,7 @@ export default function CreateExamPage(): JSX.Element {
                     >
                       删除
                     </button>
+                    */}
                   </div>
                 </div>
               ))}
