@@ -440,9 +440,9 @@ export default function CreateExamPage(): JSX.Element {
                     key={tag}
                     style={{
                       ...styles.filterTagChip,
-                      background: active ? c.color : c.background,
+                      background: active ? c.color : 'transparent',
                       color: active ? '#fff' : c.color,
-                      borderColor: active ? c.color : 'transparent'
+                      borderColor: c.color
                     }}
                     onClick={() => {
                       const next = new Set(selectedTags)
