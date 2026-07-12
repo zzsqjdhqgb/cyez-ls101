@@ -8,7 +8,7 @@
           { "type": "text", "text": "Directions: You will hear a dialogue about {{3_dialogue_topic}}. It will be read twice. Retell the dialogue with the following given points. You will have sixty seconds to prepare and sixty seconds to retell. 注意信息提取与转述的完整性。(你将听到一段关于{{3_dialogue_topic}}的对话。对话将读 2 遍。根据下面所给提示复述对话内容。你将有 60 秒的准备时间和 60 秒的复述时间。注意信息的完整提取与转述。)", "size": "small" },
           { "type": "audio", "src": "media/section3_dir.mp3", "text": "Part Three: Retell. You will hear a dialogue about {{3_dialogue_topic}}. It will be read twice. Retell the dialogue with the following given points. You will have sixty seconds to prepare and sixty seconds to retell." }
         ],
-        "time": { "type": "content-controlled" },
+        "time": [{ "type": "content-controlled" }, { "type": "countdown", "seconds": 1 }],
         "statusText": "听指令"
       },
       {
@@ -17,7 +17,7 @@
           { "type": "image", "src": "media/3_picture.png", "width": "80%" },
           { "type": "audio", "src": "media/3_dialogue.mp3", "text": "{{3_dialogue}}" }
         ],
-        "time": { "type": "content-controlled" },
+        "time": [{ "type": "content-controlled" }, { "type": "countdown", "seconds": 1 }],
         "statusText": "听语音 (第1遍)"
       },
       {

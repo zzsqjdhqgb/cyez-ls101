@@ -8,7 +8,7 @@
           { "type": "text", "text": "Directions: In Section B, you will hear a short passage about {{LS_passage_topic}}. The passage will be read twice. After you hear the passage, answer the first question with the information you hear and the second in your own opinion with at least 3 sentences. For the first question, you will have 30 seconds to prepare and 30 seconds to talk. For the second question, you will have one minute to prepare and another minute to talk.", "size": "small" },
           { "type": "audio", "src": "media/LS_sectionB_dir.mp3", "text": "Section B. Directions: In Section B, you will hear a short passage about {{LS_passage_topic}}. The passage will be read twice. After you hear the passage, answer the first question with the information you hear and the second in your own opinion with at least 3 sentences. For the first question, you will have 30 seconds to prepare and 30 seconds to talk. For the second question, you will have one minute to prepare and another minute to talk." }
         ],
-        "time": { "type": "content-controlled" },
+        "time": [{ "type": "content-controlled" }, { "type": "countdown", "seconds": 1 }],
         "statusText": "听指令"
       },
       {
@@ -19,7 +19,7 @@
           { "type": "text", "text": "2. {{LS_question_2}}", "size": "small" },
           { "type": "audio", "src": "media/LS_passage.mp3", "text": "{{LS_passage}}" }
         ],
-        "time": { "type": "content-controlled" },
+        "time": [{ "type": "content-controlled" }, { "type": "countdown", "seconds": 1 }],
         "statusText": "听语音"
       },
       {
@@ -30,7 +30,7 @@
           { "type": "text", "text": "2. {{LS_question_2}}", "size": "small" },
           { "type": "audio", "src": "media/LS_passage.mp3", "text": "{{LS_passage}}" }
         ],
-        "time": { "type": "content-controlled" },
+        "time": [{ "type": "content-controlled" }, { "type": "countdown", "seconds": 1 }],
         "statusText": "听语音"
       },
       {
