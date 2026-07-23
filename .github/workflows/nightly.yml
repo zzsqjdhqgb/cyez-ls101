@@ -15,14 +15,35 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: dev
+          fetch-depth: 0
+
+      # 检查自上次 nightly 以来是否有新 commit
+      - name: Check for new commits
+        id: check-commits
+        shell: bash
+        run: |
+          git fetch origin tag nightly --no-tags 2>/dev/null || true
+          NIGHTLY_SHA=$(git rev-parse nightly 2>/dev/null || echo "")
+          HEAD_SHA=$(git rev-parse HEAD)
+          echo "nightly_sha=$NIGHTLY_SHA" >> $GITHUB_OUTPUT
+          echo "head_sha=$HEAD_SHA" >> $GITHUB_OUTPUT
+          if [ -n "$NIGHTLY_SHA" ] && [ "$NIGHTLY_SHA" = "$HEAD_SHA" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "No new commits since last nightly. Skipping build."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "New commits detected. Proceeding with build."
+          fi
 
       # 1. 安装 Node 22 (已移除 cache 选项，交由下方手动缓存处理)
       - uses: actions/setup-node@v6
+        if: steps.check-commits.outputs.skip != 'true'
         with:
           node-version: '24'
 
       # 2. 启用 Corepack 并激活项目所需的 Yarn 4.15.0
       - name: Enable Corepack
+        if: steps.check-commits.outputs.skip != 'true'
         run: |
           corepack enable
           corepack prepare yarn@4.15.0 --activate
@@ -31,12 +52,14 @@ jobs:
 
       # 3. 动态获取 Yarn v4 (Berry) 的缓存目录
       - name: Get Yarn cache directory path
+        if: steps.check-commits.outputs.skip != 'true'
         id: yarn-cache-dir-path
         shell: bash
         run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
 
       # 4. 手动配置 actions/cache，绕过 setup-node 在 Windows 下的缓存 Bug
       - name: Cache Yarn dependencies
+        if: steps.check-commits.outputs.skip != 'true'
         uses: actions/cache@v5
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
@@ -45,12 +68,15 @@ jobs:
             ${{ runner.os }}-yarn-
 
       - name: Install dependencies
+        if: steps.check-commits.outputs.skip != 'true'
         run: yarn install --immutable
 
       - name: Build nightly
+        if: steps.check-commits.outputs.skip != 'true'
         run: yarn build:nightly
 
       - name: Delete old release
+        if: steps.check-commits.outputs.skip != 'true'
         shell: bash
         run: |
           gh release delete nightly --yes --cleanup-tag || true
@@ -58,6 +84,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Move nightly tag
+        if: steps.check-commits.outputs.skip != 'true'
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
@@ -66,6 +93,7 @@ jobs:
           git push -f origin nightly
 
       - name: Create/Update Nightly Release
+        if: steps.check-commits.outputs.skip != 'true'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: nightly
