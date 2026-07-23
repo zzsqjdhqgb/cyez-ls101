@@ -41,7 +41,7 @@ function send(msg: Record<string, unknown>): void {
   parentPort!.postMessage(msg)
 }
 
-const whisperDir = join(cfg.assetsDir, 'stt', 'sherpa-onnx-whisper-small.en')
+const qwen3AsrDir = join(cfg.assetsDir, 'stt', 'sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25')
 const sileroPath = join(cfg.assetsDir, 'stt', 'silero_vad.onnx')
 
 interface Engine {
@@ -51,28 +51,31 @@ interface Engine {
 let engine: Engine | null = null
 
 function initEngine(): Engine {
-  if (!existsSync(join(whisperDir, 'small.en-encoder.int8.onnx'))) {
-    throw new Error(`Whisper model not found at ${whisperDir}`)
+  if (!existsSync(join(qwen3AsrDir, 'encoder.int8.onnx'))) {
+    throw new Error(`Qwen3 ASR model not found at ${qwen3AsrDir}`)
   }
   if (!existsSync(sileroPath)) {
     throw new Error(`Silero VAD model not found at ${sileroPath}`)
   }
 
-  log.info('Initializing OfflineRecognizer (Whisper small.en)...')
+  log.info('Initializing OfflineRecognizer (Qwen3 ASR 0.6B)...')
   const recognizer = new sherpa_onnx.OfflineRecognizer({
     featConfig: {
       sampleRate: 16000,
       featureDim: 80
     },
     modelConfig: {
-      whisper: {
-        encoder: join(whisperDir, 'small.en-encoder.int8.onnx'),
-        decoder: join(whisperDir, 'small.en-decoder.int8.onnx')
+      qwen3Asr: {
+        convFrontend: join(qwen3AsrDir, 'conv_frontend.onnx'),
+        encoder: join(qwen3AsrDir, 'encoder.int8.onnx'),
+        decoder: join(qwen3AsrDir, 'decoder.int8.onnx'),
+        tokenizer: join(qwen3AsrDir, 'tokenizer'),
+        hotwords: ''
       },
-      tokens: join(whisperDir, 'small.en-tokens.txt'),
+      tokens: '',
       numThreads: 2,
       provider: 'cpu',
-      debug: 0
+      debug: 1
     }
   })
 
@@ -133,35 +136,25 @@ function transcribe(audioPath: string): string {
     }
 
     const samples = wave.samples
+    const sampleRate = wave.sampleRate
+    const totalDuration = samples.length / sampleRate
 
     const { recognizer } = engine!
     const vad = createVad()
 
     const windowSize = 512
-    const results: string[] = []
+    const speechSegments: Array<{ samples: Float32Array; startSample: number }> = []
 
-    log.info(`Processing ${samples.length} samples (${(samples.length / 16000).toFixed(1)}s)...`)
+    log.info(`Processing ${samples.length} samples (${totalDuration.toFixed(1)}s)...`)
 
     for (let i = 0; i < samples.length; i += windowSize) {
-      // 注意：samples 已经是纯 V8 内部数组，subarray 安全
       const thisWindow = samples.subarray(i, Math.min(i + windowSize, samples.length))
       vad.acceptWaveform(thisWindow)
 
       while (!vad.isEmpty()) {
         const segment = vad.front(false)
         vad.pop()
-
-        const stream = recognizer.createStream()
-        stream.acceptWaveform({
-          samples: segment.samples,
-          sampleRate: wave.sampleRate
-        })
-
-        recognizer.decode(stream)
-        const r = recognizer.getResult(stream)
-        if (r.text.length > 0) {
-          results.push(r.text.toLowerCase().trim())
-        }
+        speechSegments.push({ samples: segment.samples, startSample: segment.start })
       }
     }
 
@@ -170,18 +163,108 @@ function transcribe(audioPath: string): string {
     while (!vad.isEmpty()) {
       const segment = vad.front(false)
       vad.pop()
+      speechSegments.push({ samples: segment.samples, startSample: segment.start })
+    }
 
+    // Build contiguous timeline: interleave speech and silence, covering entire audio
+    interface TimelineEntry {
+      samples: Float32Array
+      startSample: number
+      endSample: number
+      kind: 'speech' | 'silence'
+    }
+
+    const timeline: TimelineEntry[] = []
+    let cursor = 0
+
+    for (const seg of speechSegments) {
+      if (seg.startSample > cursor) {
+        timeline.push({
+          samples: samples.subarray(cursor, seg.startSample),
+          startSample: cursor,
+          endSample: seg.startSample,
+          kind: 'silence'
+        })
+      }
+      timeline.push({
+        samples: seg.samples,
+        startSample: seg.startSample,
+        endSample: seg.startSample + seg.samples.length,
+        kind: 'speech'
+      })
+      cursor = seg.startSample + seg.samples.length
+    }
+
+    // Trailing silence
+    if (cursor < samples.length) {
+      timeline.push({
+        samples: samples.subarray(cursor),
+        startSample: cursor,
+        endSample: samples.length,
+        kind: 'silence'
+      })
+    }
+
+    // Log timeline
+    for (const entry of timeline) {
+      const s = entry.startSample / sampleRate
+      const e = entry.endSample / sampleRate
+      log.info(`[VAD] ${entry.kind}: ${s.toFixed(2)}s - ${e.toFixed(2)}s (${(e - s).toFixed(2)}s)`)
+    }
+
+    // Greedy merge contiguous timeline entries, max 30s per chunk
+    const MAX_MERGE_DURATION = 30
+    const chunks: Array<{ samples: Float32Array; startSample: number; endSample: number }> = []
+    let buf = new Float32Array(0)
+    let bufStart = 0
+    let bufEnd = 0
+
+    for (const entry of timeline) {
+      const bufDuration = buf.length / sampleRate
+      const entryDuration = (entry.endSample - entry.startSample) / sampleRate
+
+      if (bufDuration + entryDuration <= MAX_MERGE_DURATION) {
+        if (buf.length === 0) {
+          bufStart = entry.startSample
+        }
+        const combined = new Float32Array(buf.length + entry.samples.length)
+        combined.set(buf)
+        combined.set(entry.samples, buf.length)
+        buf = combined
+        bufEnd = entry.endSample
+      } else {
+        if (buf.length > 0) {
+          chunks.push({ samples: buf, startSample: bufStart, endSample: bufEnd })
+        }
+        buf = new Float32Array(entry.samples)
+        bufStart = entry.startSample
+        bufEnd = entry.endSample
+      }
+    }
+    if (buf.length > 0) {
+      chunks.push({ samples: buf, startSample: bufStart, endSample: bufEnd })
+    }
+
+    log.info(`Timeline entries: ${timeline.length}, chunks: ${chunks.length}`)
+
+    const results: string[] = []
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i]
       const stream = recognizer.createStream()
       stream.acceptWaveform({
-        samples: segment.samples,
-        sampleRate: wave.sampleRate
+        samples: chunk.samples,
+        sampleRate
       })
 
       recognizer.decode(stream)
       const r = recognizer.getResult(stream)
-      if (r.text.length > 0) {
-        results.push(r.text.toLowerCase().trim())
+      const text = r.text.trim()
+      if (text.length > 0) {
+        results.push(text.toLowerCase())
       }
+      const startSec = chunk.startSample / sampleRate
+      const endSec = chunk.endSample / sampleRate
+      log.info(`[ASR] chunk #${i + 1}: ${startSec.toFixed(2)}s - ${endSec.toFixed(2)}s (${(chunk.samples.length / sampleRate).toFixed(2)}s) "${text}"`)
     }
 
     const text = results.join(' ').trim()

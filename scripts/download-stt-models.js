@@ -5,7 +5,6 @@
 
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/explicit-function-return-type */
 const { createWriteStream, existsSync, mkdirSync, rmSync, unlinkSync } = require('node:fs')
-const { readFile, writeFile } = require('node:fs/promises')
 const { join, dirname } = require('node:path')
 
 const isTTY = process.stdout.isTTY
@@ -24,22 +23,36 @@ async function download(url, dest, label) {
   let received = 0
   const reader = res.body.getReader()
   const writeStream = createWriteStream(dest)
+  const write = (chunk) =>
+    new Promise((resolve, reject) => {
+      const ok = writeStream.write(chunk)
+      if (ok) { resolve(); return }
+      const onDrain = () => { cleanup(); resolve() }
+      const onError = (err) => { cleanup(); reject(err) }
+      const cleanup = () => { writeStream.off('drain', onDrain); writeStream.off('error', onError) }
+      writeStream.once('drain', onDrain)
+      writeStream.once('error', onError)
+    })
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
-    writeStream.write(value)
+    await write(value)
     received += value.length
     if (isTTY && total > 0) {
       process.stdout.write(`\r${label} ${Math.round((received / total) * 100)}%`)
     }
   }
-  writeStream.end()
+  await new Promise((resolve, reject) => {
+    writeStream.end()
+    writeStream.on('finish', resolve)
+    writeStream.on('error', reject)
+  })
   if (isTTY) process.stdout.write(`\r${label} done\n`)
 }
 
 function cleanupExtractedDir(dir) {
   const removeDirs = ['test_wavs']
-  const removeFiles = ['small.en-encoder.onnx', 'small.en-decoder.onnx']
+  const removeFiles = ['encoder.onnx', 'decoder.onnx']
 
   for (const name of removeDirs) {
     const p = join(dir, name)
@@ -64,34 +77,24 @@ function cleanupExtractedDir(dir) {
     downloaded++
   }
 
-  const whisperDir = join(STT_DIR, 'sherpa-onnx-whisper-small.en')
-  if (existsSync(whisperDir)) {
+  const qwen3AsrDir = join(STT_DIR, 'sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25')
+  if (existsSync(qwen3AsrDir)) {
     cached++
   } else {
-    const tarPath = join(STT_DIR, 'whisper-small.en.tar.bz2')
+    const tarPath = join(STT_DIR, 'qwen3-asr-0.6B-int8.tar.bz2')
     await download(
-      `${BASE_URL}/sherpa-onnx-whisper-small.en.tar.bz2`,
+      `${BASE_URL}/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2`,
       tarPath,
-      `${prefix} whisper-small.en`
+      `${prefix} qwen3-asr-0.6B`
     )
     downloaded++
-    process.stdout.write(`${prefix} extracting...`)
-    const { extract } = await import('archive-wasm')
-    const fileData = await readFile(tarPath)
-    for (const entry of extract(fileData)) {
-      const targetPath = join(STT_DIR, entry.path)
-      if (entry.type === 'DIRECTORY') {
-        mkdirSync(targetPath, { recursive: true })
-      } else if (entry.type === 'FILE') {
-        mkdirSync(dirname(targetPath), { recursive: true })
-        await writeFile(targetPath, Buffer.from(entry.data))
-      }
-    }
+    console.log(' extracting...')
+    const { execSync } = require('node:child_process')
+    execSync(`tar -xjf "${tarPath}" -C "${STT_DIR}"`)
     unlinkSync(tarPath)
-    console.log(' done')
 
     console.log(`${prefix} cleaning up non-quantized models and test wavs...`)
-    cleanupExtractedDir(whisperDir)
+    cleanupExtractedDir(qwen3AsrDir)
   }
 
   const parts = []
