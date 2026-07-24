@@ -1,4 +1,15 @@
 {
   "files": [],
-  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }]
+  "references": [
+    { "path": "./tsconfig.node.json" },
+    { "path": "./packages/core-types" },
+    { "path": "./packages/section-engine" },
+    { "path": "./packages/airouter" },
+    { "path": "./packages/editor-kit" },
+    { "path": "./packages/exam-player" },
+    { "path": "./packages/template-editor" },
+    { "path": "./packages/interface-editor" },
+    { "path": "./packages/schema-editor" },
+    { "path": "./packages/renderer" }
+  ]
 }
