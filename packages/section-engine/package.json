@@ -1,5 +1,5 @@
 {
-  "name": "@cyez/section-engine",
+  "name": "@ls101/section-engine",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@cyez/core-types": "workspace:*"
+    "@ls101/core-types": "workspace:*"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

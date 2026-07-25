@@ -1167,6 +1167,107 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@ls101/airouter@workspace:*, @ls101/airouter@workspace:packages/airouter":
+  version: 0.0.0-use.local
+  resolution: "@ls101/airouter@workspace:packages/airouter"
+  dependencies:
+    "@ls101/core-types": "workspace:*"
+  languageName: unknown
+  linkType: soft
+
+"@ls101/core-types@workspace:*, @ls101/core-types@workspace:packages/core-types":
+  version: 0.0.0-use.local
+  resolution: "@ls101/core-types@workspace:packages/core-types"
+  languageName: unknown
+  linkType: soft
+
+"@ls101/editor-kit@workspace:*, @ls101/editor-kit@workspace:packages/editor-kit":
+  version: 0.0.0-use.local
+  resolution: "@ls101/editor-kit@workspace:packages/editor-kit"
+  dependencies:
+    "@ls101/core-types": "workspace:*"
+  peerDependencies:
+    react: ^19
+    react-dom: ^19
+  languageName: unknown
+  linkType: soft
+
+"@ls101/exam-player@workspace:*, @ls101/exam-player@workspace:packages/exam-player":
+  version: 0.0.0-use.local
+  resolution: "@ls101/exam-player@workspace:packages/exam-player"
+  dependencies:
+    "@ls101/core-types": "workspace:*"
+  peerDependencies:
+    react: ^19
+    react-dom: ^19
+  languageName: unknown
+  linkType: soft
+
+"@ls101/interface-editor@workspace:*, @ls101/interface-editor@workspace:packages/interface-editor":
+  version: 0.0.0-use.local
+  resolution: "@ls101/interface-editor@workspace:packages/interface-editor"
+  dependencies:
+    "@ls101/airouter": "workspace:*"
+    "@ls101/core-types": "workspace:*"
+    "@ls101/editor-kit": "workspace:*"
+  peerDependencies:
+    react: ^19
+    react-dom: ^19
+  languageName: unknown
+  linkType: soft
+
+"@ls101/renderer@workspace:packages/renderer":
+  version: 0.0.0-use.local
+  resolution: "@ls101/renderer@workspace:packages/renderer"
+  dependencies:
+    "@ls101/airouter": "workspace:*"
+    "@ls101/core-types": "workspace:*"
+    "@ls101/editor-kit": "workspace:*"
+    "@ls101/exam-player": "workspace:*"
+    "@ls101/interface-editor": "workspace:*"
+    "@ls101/schema-editor": "workspace:*"
+    "@ls101/section-engine": "workspace:*"
+    "@ls101/template-editor": "workspace:*"
+    react-router-dom: "npm:^7"
+  peerDependencies:
+    react: ^19
+    react-dom: ^19
+  languageName: unknown
+  linkType: soft
+
+"@ls101/schema-editor@workspace:*, @ls101/schema-editor@workspace:packages/schema-editor":
+  version: 0.0.0-use.local
+  resolution: "@ls101/schema-editor@workspace:packages/schema-editor"
+  dependencies:
+    "@ls101/core-types": "workspace:*"
+    "@ls101/editor-kit": "workspace:*"
+  peerDependencies:
+    react: ^19
+    react-dom: ^19
+  languageName: unknown
+  linkType: soft
+
+"@ls101/section-engine@workspace:*, @ls101/section-engine@workspace:packages/section-engine":
+  version: 0.0.0-use.local
+  resolution: "@ls101/section-engine@workspace:packages/section-engine"
+  dependencies:
+    "@ls101/core-types": "workspace:*"
+  languageName: unknown
+  linkType: soft
+
+"@ls101/template-editor@workspace:*, @ls101/template-editor@workspace:packages/template-editor":
+  version: 0.0.0-use.local
+  resolution: "@ls101/template-editor@workspace:packages/template-editor"
+  dependencies:
+    "@ls101/core-types": "workspace:*"
+    "@ls101/editor-kit": "workspace:*"
+    "@ls101/section-engine": "workspace:*"
+  peerDependencies:
+    react: ^19
+    react-dom: ^19
+  languageName: unknown
+  linkType: soft
+
 "@malept/cross-spawn-promise@npm:^2.0.0":
   version: 2.0.0
   resolution: "@malept/cross-spawn-promise@npm:2.0.0"
@@ -6907,6 +7008,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-router-dom@npm:^7":
+  version: 7.18.1
+  resolution: "react-router-dom@npm:7.18.1"
+  dependencies:
+    react-router: "npm:7.18.1"
+  peerDependencies:
+    react: ">=18"
+    react-dom: ">=18"
+  checksum: 10c0/5efb99f2f09cecf445788f3459a8f5ff952ed85061f2d40f8de25fdd6e2ce6aeea8e40e4bacad470ea42a45d0460feb6fb59c62f14d87720b43d5c96cd9b2cb6
+  languageName: node
+  linkType: hard
+
 "react-router-dom@npm:^7.14.2":
   version: 7.15.1
   resolution: "react-router-dom@npm:7.15.1"
@@ -6932,6 +7045,22 @@ __metadata:
     react-dom:
       optional: true
   checksum: 10c0/3daff5404c7de1429447e735f1ee7e070d4f11632f589cec70c5171f2357be9cada2162f780bc9061eb153646109ad6e80c2d10a6b27256593f28a66945f4c76
+  languageName: node
+  linkType: hard
+
+"react-router@npm:7.18.1":
+  version: 7.18.1
+  resolution: "react-router@npm:7.18.1"
+  dependencies:
+    cookie: "npm:^1.0.1"
+    set-cookie-parser: "npm:^2.6.0"
+  peerDependencies:
+    react: ">=18"
+    react-dom: ">=18"
+  peerDependenciesMeta:
+    react-dom:
+      optional: true
+  checksum: 10c0/1a559de58d656bad5565f2232e4f4fab7e9f5282dfaf95bc24f195a06e7e85b281077fe5c21ed3ff527e3d90d930447e0d0bb0f0713950d2a56ad0f0377a7d09
   languageName: node
   linkType: hard
 

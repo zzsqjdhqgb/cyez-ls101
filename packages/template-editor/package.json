@@ -1,5 +1,5 @@
 {
-  "name": "@cyez/template-editor",
+  "name": "@ls101/template-editor",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,9 +9,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@cyez/core-types": "workspace:*",
-    "@cyez/section-engine": "workspace:*",
-    "@cyez/editor-kit": "workspace:*"
+    "@ls101/core-types": "workspace:*",
+    "@ls101/editor-kit": "workspace:*",
+    "@ls101/section-engine": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19",

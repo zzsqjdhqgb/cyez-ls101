@@ -1,5 +1,5 @@
 {
-  "name": "@cyez/renderer",
+  "name": "@ls101/renderer",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,14 +9,14 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@cyez/core-types": "workspace:*",
-    "@cyez/section-engine": "workspace:*",
-    "@cyez/airouter": "workspace:*",
-    "@cyez/editor-kit": "workspace:*",
-    "@cyez/exam-player": "workspace:*",
-    "@cyez/template-editor": "workspace:*",
-    "@cyez/interface-editor": "workspace:*",
-    "@cyez/schema-editor": "workspace:*",
+    "@ls101/airouter": "workspace:*",
+    "@ls101/core-types": "workspace:*",
+    "@ls101/editor-kit": "workspace:*",
+    "@ls101/exam-player": "workspace:*",
+    "@ls101/interface-editor": "workspace:*",
+    "@ls101/schema-editor": "workspace:*",
+    "@ls101/section-engine": "workspace:*",
+    "@ls101/template-editor": "workspace:*",
     "react-router-dom": "^7"
   },
   "peerDependencies": {

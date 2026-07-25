@@ -1,5 +1,5 @@
 {
-  "name": "@cyez/interface-editor",
+  "name": "@ls101/interface-editor",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,9 +9,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@cyez/core-types": "workspace:*",
-    "@cyez/airouter": "workspace:*",
-    "@cyez/editor-kit": "workspace:*"
+    "@ls101/airouter": "workspace:*",
+    "@ls101/core-types": "workspace:*",
+    "@ls101/editor-kit": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19",
