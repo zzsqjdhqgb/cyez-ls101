@@ -17,6 +17,5 @@ coverage
 !/.yarn/releases
 !/.yarn/sdks
 !/.yarn/versions
-tsconfig.node.tsbuildinfo
-tsconfig.web.tsbuildinfo
 ~$*.docx
+*.tsbuildinfo
