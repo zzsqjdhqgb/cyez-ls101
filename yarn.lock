@@ -1210,6 +1210,7 @@ __metadata:
     "@ls101/airouter": "workspace:*"
     "@ls101/core-types": "workspace:*"
     "@ls101/editor-kit": "workspace:*"
+    "@sinclair/typebox": "npm:^0.34.52"
   peerDependencies:
     react: ^19
     react-dom: ^19
@@ -1624,6 +1625,13 @@ __metadata:
   version: 0.4.1
   resolution: "@sec-ant/readable-stream@npm:0.4.1"
   checksum: 10c0/64e9e9cf161e848067a5bf60cdc04d18495dc28bb63a8d9f8993e4dd99b91ad34e4b563c85de17d91ffb177ec17a0664991d2e115f6543e73236a906068987af
+  languageName: node
+  linkType: hard
+
+"@sinclair/typebox@npm:^0.34.52":
+  version: 0.34.52
+  resolution: "@sinclair/typebox@npm:0.34.52"
+  checksum: 10c0/03e9be17ffb536ddd6dc35b6131c88eb113b2ce6cbec4fa60b1d5219de99e59b2649fc40ad70a85db561104395faa3406608971dc7b0abef529b80fb001dc821
   languageName: node
   linkType: hard
 

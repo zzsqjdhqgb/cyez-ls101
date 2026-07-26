@@ -11,7 +11,8 @@
   "dependencies": {
     "@ls101/airouter": "workspace:*",
     "@ls101/core-types": "workspace:*",
-    "@ls101/editor-kit": "workspace:*"
+    "@ls101/editor-kit": "workspace:*",
+    "@sinclair/typebox": "^0.34.52"
   },
   "peerDependencies": {
     "react": "^19",
