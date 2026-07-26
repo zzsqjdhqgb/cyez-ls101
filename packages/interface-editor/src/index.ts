@@ -13,8 +13,8 @@ export type { FieldLeaf, FieldGroup, FieldNode, InterfaceDef } from './types'
 export { flattenFields, findNodeByPath, getAllVarNames } from './queries'
 
 // 校验 → src/validation.ts
-export { validateInterfaceDef } from './validation'
-export type { ValidationError, ValidationResult } from './validation'
+export { validateInterfaceDef, success, failure } from './validation'
+export type { ValidationErrorCode, ValidationError, ValidationResult } from './validation'
 
 // 跨模块类型（定义在 @ls101/core-types，此处便捷引用）
 export type { InterfaceVarInfo, InterfaceVarManifest, InterfaceInstance } from '@ls101/core-types'
