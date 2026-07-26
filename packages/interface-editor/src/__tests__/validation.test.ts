@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest"
-import { validateInterfaceDef } from "../validation"
+import { validateInterfaceDef, success, failure } from "../validation"
+import type { ValidationError, ValidationErrorCode } from "../validation"
+import { formatError } from "../errorMessages"
 import type { InterfaceDef, FieldNode } from "../types"
 
 // ============================================================
@@ -26,6 +28,41 @@ function validDef(overrides: Partial<InterfaceDef> = {}): InterfaceDef {
     ...overrides,
   }
 }
+
+/** 断言错误列表中包含指定的错误代码和可选路径/参数 */
+function expectError(
+  errors: readonly ValidationError[],
+  code: ValidationErrorCode,
+  path: string,
+  params: Record<string, string> = {}
+): void {
+  expect(errors).toContainEqual({ path, code, params })
+}
+
+// ============================================================
+// success / failure 工厂
+// ============================================================
+
+describe("success / failure 工厂", () => {
+  it("success() 返回 valid=true, errors=[]", () => {
+    const r = success()
+    expect(r.valid).toBe(true)
+    expect(r.errors).toEqual([])
+  })
+
+  it("failure([]) 返回 valid=false, errors=[]", () => {
+    const r = failure([])
+    expect(r.valid).toBe(false)
+    expect(r.errors).toEqual([])
+  })
+
+  it("failure 保留传入的错误列表", () => {
+    const err: ValidationError = { path: "a", code: "EMPTY_VAR_NAME", params: {} }
+    const r = failure([err])
+    expect(r.valid).toBe(false)
+    expect(r.errors).toEqual([err])
+  })
+})
 
 // ============================================================
 // 正常情况
@@ -78,31 +115,20 @@ describe("validateInterfaceDef — 正常", () => {
 // ============================================================
 
 describe("validateInterfaceDef — 顶层校验", () => {
-  it("promptTemplate 为空字符串 → 报错 path=''", () => {
+  it("promptTemplate 为空字符串 → EMPTY_PROMPT_TEMPLATE", () => {
     const result = validateInterfaceDef(validDef({ promptTemplate: "" }))
     expect(result.valid).toBe(false)
-    expect(result.errors).toContainEqual({
-      path: "",
-      message: expect.stringContaining("提示词模板") as unknown as string,
-    })
+    expectError(result.errors, "EMPTY_PROMPT_TEMPLATE", "")
   })
 
-  it("promptTemplate 仅空白 → 报错", () => {
+  it("promptTemplate 仅空白 → EMPTY_PROMPT_TEMPLATE", () => {
     const result = validateInterfaceDef(validDef({ promptTemplate: "   " }))
-    expect(result.valid).toBe(false)
-    expect(result.errors).toContainEqual({
-      path: "",
-      message: expect.stringContaining("提示词模板") as unknown as string,
-    })
+    expectError(result.errors, "EMPTY_PROMPT_TEMPLATE", "")
   })
 
-  it("fields 为空 → 报错", () => {
+  it("fields 为空 → EMPTY_FIELDS", () => {
     const result = validateInterfaceDef(validDef({ fields: {} }))
-    expect(result.valid).toBe(false)
-    expect(result.errors).toContainEqual({
-      path: "",
-      message: expect.stringContaining("字段结构不能为空") as unknown as string,
-    })
+    expectError(result.errors, "EMPTY_FIELDS", "")
   })
 })
 
@@ -111,20 +137,16 @@ describe("validateInterfaceDef — 顶层校验", () => {
 // ============================================================
 
 describe("validateInterfaceDef — 字段组校验", () => {
-  it("FieldGroup.children 为空 → 报错", () => {
+  it("FieldGroup.children 为空 → EMPTY_GROUP", () => {
     const result = validateInterfaceDef(
       validDef({
         fields: { emptyGroup: group({}) },
       })
     )
-    expect(result.valid).toBe(false)
-    expect(result.errors).toContainEqual({
-      path: "emptyGroup",
-      message: expect.stringContaining("字段组不能为空") as unknown as string,
-    })
+    expectError(result.errors, "EMPTY_GROUP", "emptyGroup")
   })
 
-  it("嵌套的空字段组 → 报错路径正确", () => {
+  it("嵌套的空字段组 → 错误路径正确", () => {
     const result = validateInterfaceDef(
       validDef({
         fields: {
@@ -134,10 +156,7 @@ describe("validateInterfaceDef — 字段组校验", () => {
         },
       })
     )
-    expect(result.errors).toContainEqual({
-      path: "outer.inner",
-      message: expect.stringContaining("字段组不能为空") as unknown as string,
-    })
+    expectError(result.errors, "EMPTY_GROUP", "outer.inner")
   })
 })
 
@@ -146,81 +165,51 @@ describe("validateInterfaceDef — 字段组校验", () => {
 // ============================================================
 
 describe("validateInterfaceDef — varName 校验", () => {
-  it("varName 为空字符串 → 报错", () => {
+  it("varName 为空字符串 → EMPTY_VAR_NAME", () => {
     const result = validateInterfaceDef(
-      validDef({
-        fields: { a: textLeaf("") },
-      })
+      validDef({ fields: { a: textLeaf("") } })
     )
-    expect(result.valid).toBe(false)
-    expect(result.errors).toContainEqual({
-      path: "a",
-      message: expect.stringContaining("变量名不能为空") as unknown as string,
-    })
+    expectError(result.errors, "EMPTY_VAR_NAME", "a")
   })
 
-  it("varName 仅空白 → 报错", () => {
+  it("varName 仅空白 → EMPTY_VAR_NAME", () => {
     const result = validateInterfaceDef(
-      validDef({
-        fields: { a: textLeaf("  ") },
-      })
+      validDef({ fields: { a: textLeaf("  ") } })
     )
-    expect(result.errors).toContainEqual({
-      path: "a",
-      message: expect.stringContaining("变量名不能为空") as unknown as string,
-    })
+    expectError(result.errors, "EMPTY_VAR_NAME", "a")
   })
 
-  it("varName 含空格 → 格式报错", () => {
+  it("varName 含空格 → INVALID_VAR_NAME", () => {
     const result = validateInterfaceDef(
-      validDef({
-        fields: { a: textLeaf("my var") },
-      })
+      validDef({ fields: { a: textLeaf("my var") } })
     )
-    expect(result.errors).toContainEqual({
-      path: "a",
-      message: expect.stringContaining("格式无效") as unknown as string,
-    })
+    expectError(result.errors, "INVALID_VAR_NAME", "a", { varName: "my var" })
   })
 
-  it("varName 含特殊字符 → 格式报错", () => {
+  it("varName 含特殊字符 → INVALID_VAR_NAME", () => {
     const result = validateInterfaceDef(
-      validDef({
-        fields: { a: textLeaf("var@name") },
-      })
+      validDef({ fields: { a: textLeaf("var@name") } })
     )
-    expect(result.errors).toContainEqual({
-      path: "a",
-      message: expect.stringContaining("格式无效") as unknown as string,
-    })
+    expectError(result.errors, "INVALID_VAR_NAME", "a", { varName: "var@name" })
   })
 
-  it("varName 以数字开头 → 格式报错", () => {
+  it("varName 以数字开头 → INVALID_VAR_NAME", () => {
     const result = validateInterfaceDef(
-      validDef({
-        fields: { a: textLeaf("1var") },
-      })
+      validDef({ fields: { a: textLeaf("1var") } })
     )
-    expect(result.errors).toContainEqual({
-      path: "a",
-      message: expect.stringContaining("格式无效") as unknown as string,
-    })
+    expectError(result.errors, "INVALID_VAR_NAME", "a", { varName: "1var" })
   })
 
-  it("varName 合法格式：字母开头 + 连字符 + 下划线", () => {
+  it("varName 合法格式：字母开头 + 连字符 + 下划线 → 通过", () => {
     const result = validateInterfaceDef(
-      validDef({
-        fields: { a: textLeaf("my_var-name2") },
-      })
+      validDef({ fields: { a: textLeaf("my_var-name2") } })
     )
     expect(result.valid).toBe(true)
   })
 
-  it("varName 以下划线开头", () => {
+  it("varName 以下划线开头 → 通过", () => {
     const result = validateInterfaceDef(
-      validDef({
-        fields: { a: textLeaf("_private") },
-      })
+      validDef({ fields: { a: textLeaf("_private") } })
     )
     expect(result.valid).toBe(true)
   })
@@ -231,7 +220,7 @@ describe("validateInterfaceDef — varName 校验", () => {
 // ============================================================
 
 describe("validateInterfaceDef — varName 唯一性", () => {
-  it("同层重复 varName → 报错", () => {
+  it("同层重复 varName → DUPLICATE_VAR_NAME", () => {
     const result = validateInterfaceDef(
       validDef({
         fields: {
@@ -243,11 +232,12 @@ describe("validateInterfaceDef — varName 唯一性", () => {
     expect(result.valid).toBe(false)
     expect(result.errors).toContainEqual({
       path: expect.any(String) as unknown as string,
-      message: expect.stringContaining("dup") as unknown as string,
+      code: "DUPLICATE_VAR_NAME" as const,
+      params: { varName: "dup" },
     })
   })
 
-  it("跨层重复 varName → 报错", () => {
+  it("跨层重复 varName → 第二个出现的被标记", () => {
     const result = validateInterfaceDef(
       validDef({
         fields: {
@@ -259,8 +249,11 @@ describe("validateInterfaceDef — varName 唯一性", () => {
       })
     )
     expect(result.valid).toBe(false)
-    // 第二个出现的 varName 应被标记
-    expect(result.errors.some((e) => e.path === "grp.inner")).toBe(true)
+    expect(result.errors).toContainEqual({
+      path: "grp.inner",
+      code: "DUPLICATE_VAR_NAME" as const,
+      params: { varName: "dup" },
+    })
   })
 
   it("全部 varName 唯一 → 通过", () => {
@@ -282,28 +275,18 @@ describe("validateInterfaceDef — varName 唯一性", () => {
 // ============================================================
 
 describe("validateInterfaceDef — description / example", () => {
-  it("description 为空 → 报错", () => {
+  it("description 为空 → EMPTY_DESCRIPTION", () => {
     const result = validateInterfaceDef(
-      validDef({
-        fields: { a: textLeaf("ok", "") },
-      })
+      validDef({ fields: { a: textLeaf("ok", "") } })
     )
-    expect(result.errors).toContainEqual({
-      path: "a",
-      message: expect.stringContaining("字段描述不能为空") as unknown as string,
-    })
+    expectError(result.errors, "EMPTY_DESCRIPTION", "a")
   })
 
-  it("example 为空 → 报错", () => {
+  it("example 为空 → EMPTY_EXAMPLE", () => {
     const result = validateInterfaceDef(
-      validDef({
-        fields: { a: textLeaf("ok", "desc", "") },
-      })
+      validDef({ fields: { a: textLeaf("ok", "desc", "") } })
     )
-    expect(result.errors).toContainEqual({
-      path: "a",
-      message: expect.stringContaining("示例值不能为空") as unknown as string,
-    })
+    expectError(result.errors, "EMPTY_EXAMPLE", "a")
   })
 })
 
@@ -317,14 +300,64 @@ describe("validateInterfaceDef — 多重错误聚合", () => {
       validDef({
         promptTemplate: "",
         fields: {
-          a: textLeaf(""),       // 空 varName
-          b: textLeaf("dup"),    // 重复
-          c: textLeaf("dup"),    // 重复
+          a: textLeaf(""),       // EMPTY_VAR_NAME
+          b: textLeaf("dup"),    // 首次出现，不报
+          c: textLeaf("dup"),    // DUPLICATE_VAR_NAME
         },
       })
     )
     expect(result.valid).toBe(false)
-    // promptTemplate(1) + a(1: 空varName) + c(1: dup重复, b是首次出现不报) = 3
+    // EMPTY_PROMPT_TEMPLATE + EMPTY_VAR_NAME + DUPLICATE_VAR_NAME = 3
     expect(result.errors.length).toBe(3)
+  })
+})
+
+// ============================================================
+// errorMessages — formatError
+// ============================================================
+
+describe("formatError", () => {
+  it("渲染 EMPTY_VAR_NAME", () => {
+    const err: ValidationError = { path: "a", code: "EMPTY_VAR_NAME", params: {} }
+    expect(formatError(err)).toBe("变量名不能为空")
+  })
+
+  it("渲染 INVALID_VAR_NAME 含 params 插值", () => {
+    const err: ValidationError = {
+      path: "a",
+      code: "INVALID_VAR_NAME",
+      params: { varName: "foo bar" },
+    }
+    expect(formatError(err)).toContain('"foo bar"')
+    expect(formatError(err)).toContain("格式无效")
+  })
+
+  it("渲染 DUPLICATE_VAR_NAME 含 params 插值", () => {
+    const err: ValidationError = {
+      path: "grp.inner",
+      code: "DUPLICATE_VAR_NAME",
+      params: { varName: "dup" },
+    }
+    expect(formatError(err)).toContain('"dup"')
+    expect(formatError(err)).toContain("重复")
+  })
+
+  it("未知 code 降级为 code 名称", () => {
+    const err: ValidationError = {
+      path: "",
+      code: "UNKNOWN_CODE" as ValidationErrorCode,
+      params: {},
+    }
+    expect(formatError(err)).toBe("未知错误: UNKNOWN_CODE")
+  })
+
+  it("模板中未提供的 params 保留占位符原样", () => {
+    const err: ValidationError = {
+      path: "a",
+      code: "INVALID_VAR_NAME",
+      params: {},
+    }
+    // params 缺 varName → "{{varName}}" 不被替换
+    expect(formatError(err)).toContain("{{varName}}")
   })
 })
