@@ -26,10 +26,22 @@ async function download(url, dest, label) {
   const write = (chunk) =>
     new Promise((resolve, reject) => {
       const ok = writeStream.write(chunk)
-      if (ok) { resolve(); return }
-      const onDrain = () => { cleanup(); resolve() }
-      const onError = (err) => { cleanup(); reject(err) }
-      const cleanup = () => { writeStream.off('drain', onDrain); writeStream.off('error', onError) }
+      if (ok) {
+        resolve()
+        return
+      }
+      const onDrain = () => {
+        cleanup()
+        resolve()
+      }
+      const onError = (err) => {
+        cleanup()
+        reject(err)
+      }
+      const cleanup = () => {
+        writeStream.off('drain', onDrain)
+        writeStream.off('error', onError)
+      }
       writeStream.once('drain', onDrain)
       writeStream.once('error', onError)
     })

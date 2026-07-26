@@ -217,7 +217,9 @@ function convertToWav(inputPath) {
     for (const entry of timeline) {
       const s = entry.startSample / wave.sampleRate
       const e = entry.endSample / wave.sampleRate
-      console.log(`[VAD] ${entry.kind}: ${s.toFixed(2)}s - ${e.toFixed(2)}s (${(e - s).toFixed(2)}s)`)
+      console.log(
+        `[VAD] ${entry.kind}: ${s.toFixed(2)}s - ${e.toFixed(2)}s (${(e - s).toFixed(2)}s)`
+      )
     }
 
     // Greedy merge contiguous timeline entries, max 30s per chunk
@@ -270,7 +272,9 @@ function convertToWav(inputPath) {
       const text = r.text.trim()
       const s = chunk.startSample / wave.sampleRate
       const e = chunk.endSample / wave.sampleRate
-      console.log(`[ASR] chunk #${i + 1}: ${s.toFixed(2)}s - ${e.toFixed(2)}s (${((e - s)).toFixed(2)}s) "${text}"`)
+      console.log(
+        `[ASR] chunk #${i + 1}: ${s.toFixed(2)}s - ${e.toFixed(2)}s (${(e - s).toFixed(2)}s) "${text}"`
+      )
     }
 
     const stop = Date.now()

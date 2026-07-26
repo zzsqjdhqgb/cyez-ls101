@@ -264,7 +264,9 @@ function transcribe(audioPath: string): string {
       }
       const startSec = chunk.startSample / sampleRate
       const endSec = chunk.endSample / sampleRate
-      log.info(`[ASR] chunk #${i + 1}: ${startSec.toFixed(2)}s - ${endSec.toFixed(2)}s (${(chunk.samples.length / sampleRate).toFixed(2)}s) "${text}"`)
+      log.info(
+        `[ASR] chunk #${i + 1}: ${startSec.toFixed(2)}s - ${endSec.toFixed(2)}s (${(chunk.samples.length / sampleRate).toFixed(2)}s) "${text}"`
+      )
     }
 
     const text = results.join(' ').trim()
