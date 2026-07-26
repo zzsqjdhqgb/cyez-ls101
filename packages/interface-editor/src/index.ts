@@ -12,6 +12,10 @@ export type { FieldLeaf, FieldGroup, FieldNode, InterfaceDef } from './types'
 // 字段树查询 → src/queries.ts
 export { flattenFields, findNodeByPath, getAllVarNames } from './queries'
 
+// JSON Schema 生成与校验 → src/schema.ts
+export { buildJsonSchema, buildJsonExample, validateJson } from './schema'
+export type { JsonValidationResult } from './schema'
+
 // 校验 → src/validation.ts
 export { validateInterfaceDef, success, failure } from './validation'
 export type { ValidationErrorCode, ValidationError, ValidationResult } from './validation'
