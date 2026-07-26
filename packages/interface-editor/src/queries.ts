@@ -1,4 +1,4 @@
-// @cyez/interface-editor — 字段树查询
+// @ls101/interface-editor — 字段树查询
 //
 // 纯函数集合，对 InterfaceDef 的 fields 树进行只读查询。
 //
