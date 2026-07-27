@@ -21,6 +21,8 @@ services:
       - ./assets/.gitkeep:/workspace/assets/.gitkeep
       - /workspace/dist
       - /workspace/out
+      - ./docker-compose.yml:/workspace/docker-compose.yml:ro
+      - ./Dockerfile:/workspace/Dockerfile:ro
     working_dir: /workspace
     # 保持容器运行并支持交互式终端
     stdin_open: true
