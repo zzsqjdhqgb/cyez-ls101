@@ -1,10 +1,4 @@
 // @ls101/interface-editor — Interface（题型）编辑器
-//
-// 逻辑模块待实现:
-//   3. buildAIPrompt(def) → string       — 拼接 promptTemplate + fields JSON 描述（发给 LLM）
-//   4. parseAIResponse(def, rawJSON)     — 校验 LLM 返回的结构，映射 varName → value
-//   5. createInstance(def, values)       — 包装为 InterfaceInstance
-//   6. buildVarManifest(def)             — 生成 InterfaceVarManifest（供 Template 导入）
 
 // 类型定义 → src/types.ts
 export type { FieldLeaf, FieldGroup, FieldNode, InterfaceDef } from './types'
@@ -15,6 +9,9 @@ export { flattenFields, findNodeByPath, getAllVarNames } from './queries'
 // JSON Schema 生成与校验 → src/schema.ts
 export { buildJsonSchema, buildJsonExample, validateJson } from './schema'
 export type { JsonValidationResult } from './schema'
+
+// 转换 → src/conversions.ts
+export { buildAIPrompt, buildVarManifest, buildInstanceFromJson } from './conversions'
 
 // 校验 → src/validation.ts
 export { validateInterfaceDef, success, failure } from './validation'
