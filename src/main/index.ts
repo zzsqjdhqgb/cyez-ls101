@@ -1,3 +1,8 @@
-// Electron 主进程入口 — IPC handler + 本地模型 worker
+import { app } from 'electron'
+import { registerFileStore, registerFileStoreScheme } from '@ls101/file-store/main'
 
-export {}
+registerFileStoreScheme()
+
+app.whenReady().then(() => {
+  registerFileStore({ baseDir: app.getPath('userData') })
+})

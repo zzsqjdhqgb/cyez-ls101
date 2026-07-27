@@ -1,0 +1,97 @@
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { FileStorage, resolveAssetPath, resolveScopePath, resolveTextPath } from '../main/storage'
+import type { FileLocation } from '../shared/types'
+
+describe('FileStorage', () => {
+  let baseDir: string
+  let storage: FileStorage
+  const draftScope = ['interfaces', 'drafts', 'draft-abc123'] as const
+
+  beforeEach(async () => {
+    baseDir = await mkdtemp(path.join(tmpdir(), 'file-store-'))
+    storage = new FileStorage(baseDir)
+  })
+
+  afterEach(async () => {
+    await rm(baseDir, { recursive: true, force: true })
+  })
+
+  it('maps text and assets into reserved directories', () => {
+    const location: FileLocation = { scope: draftScope, filename: 'manifest.json' }
+
+    expect(resolveScopePath(baseDir, draftScope)).toBe(
+      path.join(baseDir, 'interfaces', 'drafts', 'draft-abc123')
+    )
+    expect(resolveTextPath(baseDir, location)).toBe(
+      path.join(baseDir, 'interfaces', 'drafts', 'draft-abc123', '.text', 'manifest.json')
+    )
+    expect(resolveAssetPath(baseDir, location)).toBe(
+      path.join(baseDir, 'interfaces', 'drafts', 'draft-abc123', '.assets', 'manifest.json')
+    )
+  })
+
+  it('keeps text and assets separate even with the same filename', async () => {
+    const location: FileLocation = { scope: draftScope, filename: 'content' }
+    await storage.writeText(location, '{"value":1}')
+    await storage.writeAsset(location, new Uint8Array([1, 2, 3]))
+
+    expect(await storage.readText(location)).toBe('{"value":1}')
+    expect(await storage.readAsset(location)).toEqual(new Uint8Array([1, 2, 3]))
+    expect(await storage.listText(draftScope)).toEqual(['content'])
+    expect(await storage.listAssets(draftScope)).toEqual(['content'])
+  })
+
+  it('lists child scopes without exposing reserved directories', async () => {
+    await storage.writeText({ scope: ['interfaces'], filename: 'index.json' }, '{}')
+    await storage.writeAsset({ scope: ['interfaces'], filename: 'cover.png' }, new Uint8Array([1]))
+    await storage.writeText({ scope: ['interfaces', 'published'], filename: 'index.json' }, '{}')
+    await storage.writeText({ scope: ['interfaces', 'drafts'], filename: 'index.json' }, '{}')
+
+    expect(await storage.listScopes(['interfaces'])).toEqual(['drafts', 'published'])
+  })
+
+  it('uses null, false and empty lists for missing data', async () => {
+    const location: FileLocation = { scope: ['config'], filename: 'missing.json' }
+    expect(await storage.readText(location)).toBeNull()
+    expect(await storage.readAsset(location)).toBeNull()
+    expect(await storage.hasText(location)).toBe(false)
+    expect(await storage.hasAsset(location)).toBe(false)
+    expect(await storage.listText(['config'])).toEqual([])
+    expect(await storage.listAssets(['config'])).toEqual([])
+    expect(await storage.listScopes(['config'])).toEqual([])
+  })
+
+  it('clears one scope recursively without affecting siblings', async () => {
+    const draftFile: FileLocation = { scope: draftScope, filename: 'manifest.json' }
+    const nestedFile: FileLocation = {
+      scope: [...draftScope, 'media'],
+      filename: 'index.json'
+    }
+    const siblingFile: FileLocation = {
+      scope: ['interfaces', 'drafts', 'draft-other'],
+      filename: 'manifest.json'
+    }
+
+    await storage.writeText(draftFile, '{}')
+    await storage.writeText(nestedFile, '{}')
+    await storage.writeText(siblingFile, '{}')
+    await storage.clearScope(draftScope)
+    await storage.clearScope(draftScope)
+
+    expect(await storage.hasText(draftFile)).toBe(false)
+    expect(await storage.hasText(nestedFile)).toBe(false)
+    expect(await storage.hasText(siblingFile)).toBe(true)
+
+    await storage.writeText(draftFile, '{"restored":true}')
+    expect(await storage.readText(draftFile)).toBe('{"restored":true}')
+  })
+
+  it('rejects traversal before touching disk', async () => {
+    await expect(
+      storage.writeText({ scope: ['interfaces', '..'], filename: 'outside.json' }, '{}')
+    ).rejects.toThrow('Invalid file-store scope segment')
+  })
+})

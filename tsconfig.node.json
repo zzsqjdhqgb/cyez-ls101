@@ -13,6 +13,7 @@
     "types": ["electron-vite/node"]
   },
   "references": [
-    { "path": "./packages/core-types" }
+    { "path": "./packages/core-types" },
+    { "path": "./packages/file-store" }
   ]
 }

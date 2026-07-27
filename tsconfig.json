@@ -10,6 +10,7 @@
     { "path": "./packages/template-editor" },
     { "path": "./packages/interface-editor" },
     { "path": "./packages/schema-editor" },
+    { "path": "./packages/file-store" },
     { "path": "./packages/renderer" }
   ]
 }
