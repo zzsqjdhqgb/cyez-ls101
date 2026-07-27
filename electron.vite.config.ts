@@ -13,18 +13,22 @@ export default defineConfig({
       rollupOptions: {
         external: ['sherpa-onnx-node', 'ffmpeg-static'],
         input: {
-          index: resolve('src/main/index.ts'),
-          'tts-worker': resolve('src/main/tts/tts-worker.ts'),
-          'stt-worker': resolve('src/main/stt/stt-worker.ts')
+          index: resolve('src/main/index.ts')
         }
       }
     }
   },
   preload: {},
   renderer: {
+    root: resolve('packages/renderer'),
+    build: {
+      rollupOptions: {
+        input: resolve('packages/renderer/index.html')
+      }
+    },
     resolve: {
       alias: {
-        '@renderer': resolve('src/renderer/src')
+        '@renderer': resolve('packages/renderer/src')
       }
     },
     plugins: [react()]
