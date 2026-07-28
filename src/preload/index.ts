@@ -1,5 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import {
+  FILE_DIALOG_CHANNELS,
+  type FileDialogBridge,
+  type ReadFileOptions,
+  type WriteFileOptions
+} from '@ls101/file-dialog/shared'
+import {
   FILE_STORE_CHANNELS,
   type FileStoreBridge,
   type FileStoreChannel
@@ -16,4 +22,14 @@ const fileStoreBridge: FileStoreBridge = {
   }
 }
 
+const fileDialogBridge: FileDialogBridge = {
+  read(options?: ReadFileOptions) {
+    return ipcRenderer.invoke(FILE_DIALOG_CHANNELS.read, options)
+  },
+  write(data: Uint8Array, options?: WriteFileOptions) {
+    return ipcRenderer.invoke(FILE_DIALOG_CHANNELS.write, data, options)
+  }
+}
+
 contextBridge.exposeInMainWorld('fileStore', fileStoreBridge)
+contextBridge.exposeInMainWorld('fileDialog', fileDialogBridge)

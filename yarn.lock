@@ -1203,6 +1203,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@ls101/file-dialog@workspace:packages/file-dialog":
+  version: 0.0.0-use.local
+  resolution: "@ls101/file-dialog@workspace:packages/file-dialog"
+  peerDependencies:
+    electron: ^39
+  languageName: unknown
+  linkType: soft
+
 "@ls101/file-store@workspace:packages/file-store":
   version: 0.0.0-use.local
   resolution: "@ls101/file-store@workspace:packages/file-store"
