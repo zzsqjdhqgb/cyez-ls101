@@ -3,6 +3,7 @@ import { compareInterfaceIdentity, isInterfaceId, verifyInterfaceId } from './id
 import {
   InterfaceRepositoryError,
   type InterfaceRepository,
+  type LocatedInterfaceInstance,
   type SaveEntityResult
 } from './repository'
 import type { InterfaceDef } from './types'
@@ -19,7 +20,7 @@ export interface InterfaceExchangeInstance {
 
 export interface InterfaceExchangePackage {
   format: 'ls101-interface'
-  version: 1
+  version: 2
   exportedAt: string
   interface: InterfaceDef
   instances: InterfaceExchangeInstance[]
@@ -40,7 +41,7 @@ export interface InterfacePackageImportOptions {
 
 export interface InterfacePackageImportResult {
   interface: SaveEntityResult
-  instances: Record<string, SaveEntityResult>
+  instances: Record<string, SaveEntityResult | 'skipped-other-interface'>
 }
 
 /** 构建与具体 ZIP 库无关的交换包，Electron 适配层负责将它编码为文件。 */
@@ -77,7 +78,7 @@ export async function exportInterfacePackage(
 
   return {
     format: 'ls101-interface',
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     interface: def,
     instances
@@ -101,7 +102,7 @@ export async function inspectInterfacePackage(
 
   const seen = new Set<string>()
   const instances = value.instances.map(({ instance, assets }) => {
-    assertExchangeInstance(instance, assets, value.interface.id)
+    assertExchangeInstance(instance, assets)
     if (seen.has(instance.instanceId)) {
       throw invalidPackage(`Duplicate instance ID in package: ${instance.instanceId}`)
     }
@@ -129,15 +130,17 @@ export async function importInterfacePackage(
   const selected = value.instances.filter(({ instance }) => selectedIds.has(instance.instanceId))
 
   const existingDef = await repository.getInterface(value.interface.id)
-  if (existingDef && compareInterfaceIdentity(existingDef, value.interface) !== 'same') {
-    throw identityConflict(`Interface ID collision: ${value.interface.id}`)
+  if (existingDef) {
+    const comparison = compareInterfaceIdentity(existingDef, value.interface)
+    const reason = comparison === 'same' ? 'already exists' : 'has an identity collision'
+    throw identityConflict(`Interface ${value.interface.id} ${reason}`)
   }
 
   for (const incoming of selected) {
-    const existing = await repository.getInstance(value.interface.id, incoming.instance.instanceId)
+    const existing = await repository.findInstance(incoming.instance.instanceId)
     if (!existing) continue
 
-    const same = await exportedInstanceMatches(repository, existing.assetFilenames, incoming)
+    const same = await exportedInstanceMatches(repository, existing, incoming)
     if (!same) {
       throw identityConflict(`Instance ID conflict: ${incoming.instance.instanceId}`)
     }
@@ -145,11 +148,20 @@ export async function importInterfacePackage(
 
   let interfaceResult: SaveEntityResult | null = null
   const createdInstances: string[] = []
-  const instances: Record<string, SaveEntityResult> = {}
+  const instances: Record<string, SaveEntityResult | 'skipped-other-interface'> = {}
   try {
     interfaceResult = await repository.saveInterface(value.interface)
     for (const incoming of selected) {
-      const result = await repository.saveInstance(incoming.instance, incoming.assets)
+      const existing = await repository.findInstance(incoming.instance.instanceId)
+      if (existing && existing.interfaceId !== value.interface.id) {
+        instances[incoming.instance.instanceId] = 'skipped-other-interface'
+        continue
+      }
+      const result = await repository.saveInstance(
+        value.interface.id,
+        incoming.instance,
+        incoming.assets
+      )
       instances[incoming.instance.instanceId] = result
       if (result === 'created') createdInstances.push(incoming.instance.instanceId)
     }
@@ -205,7 +217,7 @@ function assertPackageShape(value: InterfaceExchangePackage): void {
   if (
     !value ||
     value.format !== 'ls101-interface' ||
-    value.version !== 1 ||
+    value.version !== 2 ||
     Number.isNaN(Date.parse(value.exportedAt)) ||
     !value.interface ||
     !isInterfaceId(value.interface.id) ||
@@ -217,12 +229,8 @@ function assertPackageShape(value: InterfaceExchangePackage): void {
 
 function assertExchangeInstance(
   instance: InterfaceInstance,
-  assets: Record<string, Uint8Array>,
-  interfaceId: string
+  assets: Record<string, Uint8Array>
 ): void {
-  if (instance.interfaceId !== interfaceId) {
-    throw invalidPackage(`Instance ${instance.instanceId} belongs to another Interface`)
-  }
   if (!isUuid(instance.instanceId) || Number.isNaN(Date.parse(instance.generatedAt))) {
     throw invalidPackage(`Instance metadata is invalid: ${instance.instanceId}`)
   }
@@ -245,22 +253,18 @@ function assertExchangeInstance(
 
 async function exportedInstanceMatches(
   repository: InterfaceRepository,
-  storedAssetFilenames: readonly string[],
+  stored: LocatedInterfaceInstance,
   incoming: InterfaceExchangeInstance
 ): Promise<boolean> {
-  const stored = await repository.getInstance(
-    incoming.instance.interfaceId,
-    incoming.instance.instanceId
-  )
-  if (!stored || canonicalInstance(stored.instance) !== canonicalInstance(incoming.instance)) {
+  if (canonicalInstance(stored.instance) !== canonicalInstance(incoming.instance)) {
     return false
   }
 
   const filenames = Object.keys(incoming.assets).sort()
-  if (!sameStrings(storedAssetFilenames, filenames)) return false
+  if (!sameStrings(stored.assetFilenames, filenames)) return false
   for (const filename of filenames) {
     const existing = await repository.readInstanceAsset(
-      incoming.instance.interfaceId,
+      stored.interfaceId,
       incoming.instance.instanceId,
       filename
     )
@@ -271,7 +275,6 @@ async function exportedInstanceMatches(
 
 function canonicalInstance(instance: InterfaceInstance): string {
   return JSON.stringify({
-    interfaceId: instance.interfaceId,
     generatedAt: instance.generatedAt,
     values: Object.fromEntries(
       Object.entries(instance.values).sort(([a], [b]) => a.localeCompare(b))

@@ -16,7 +16,7 @@ const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}
 
 interface ZipManifest {
   format: 'ls101-interface-zip'
-  version: 1
+  version: 2
   exportedAt: string
   interfaceId: string
   instances: Array<{
@@ -30,7 +30,7 @@ export async function encodeInterfaceZip(value: InterfaceExchangePackage): Promi
   const files: Record<string, Uint8Array> = {}
   const manifest: ZipManifest = {
     format: 'ls101-interface-zip',
-    version: 1,
+    version: 2,
     exportedAt: value.exportedAt,
     interfaceId: value.interface.id,
     instances: value.instances.map(({ instance, assets }) => ({
@@ -90,7 +90,7 @@ export async function decodeInterfaceZip(data: Uint8Array): Promise<InterfaceExc
 
   return {
     format: 'ls101-interface',
-    version: 1,
+    version: 2,
     exportedAt: manifest.exportedAt,
     interface: def,
     instances
@@ -101,7 +101,7 @@ function assertManifest(value: ZipManifest): void {
   if (
     !isRecord(value) ||
     value.format !== 'ls101-interface-zip' ||
-    value.version !== 1 ||
+    value.version !== 2 ||
     typeof value.exportedAt !== 'string' ||
     Number.isNaN(Date.parse(value.exportedAt)) ||
     typeof value.interfaceId !== 'string' ||

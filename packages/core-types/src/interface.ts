@@ -47,9 +47,6 @@ export interface InterfaceInstance {
   /** 实例唯一标识 */
   instanceId: string
 
-  /** 来源 Interface 定义 ID */
-  interfaceId: string
-
   /** 生成时间（ISO 8601） */
   generatedAt: string
 

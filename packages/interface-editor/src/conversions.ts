@@ -101,7 +101,6 @@ export function buildInstanceFromJson(
 
   return {
     instanceId: crypto.randomUUID(),
-    interfaceId: def.id,
     generatedAt: new Date().toISOString(),
     values
   }

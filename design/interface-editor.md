@@ -192,7 +192,6 @@ LLM 返回的 JSON 与字段结构一致，但叶子节点填充了实际值：
 ```json
 {
   "instanceId": "550e8400-e29b-41d4-a716-446655440000",
-  "interfaceId": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
   "generatedAt": "2026-07-24T10:30:00Z",
   "values": {
     "sentenceA1": "The importance of education cannot be overstated.",
@@ -218,7 +217,9 @@ LLM 返回的 JSON 与字段结构一致，但叶子节点填充了实际值：
 
 Interface 实例使用实体身份：每次独立生成、复制、基于已有实例重新生成或修改后另存时，系统生成新的 UUID v4 `instanceId`。两个实例即使字段值和图片内容完全相同，只要 `instanceId` 不同，就视为两个不同实例。Instance 不参与 Interface 内容 ID 的计算，实例列表变化不会改变 `InterfaceDef.id`。
 
-导入原实例或恢复备份时保留原 `instanceId`。重复导入同 `instanceId`、同内容的实例时跳过；同 `instanceId`、不同内容属于数据冲突，拒绝导入。实例的 `interfaceId` 必须与所属 Interface 的内容 ID 一致。
+实例本体不保存 `interfaceId`；实例所属的 Interface 由其文件目录确定。实例始终存放在对应 Interface 的 `instances/<instanceId>` 下，删除 Interface 时一并删除附属实例和资源。
+
+导入原实例或恢复备份时保留原 `instanceId`。重复导入同 `instanceId`、同内容的实例时跳过；同 `instanceId`、不同内容属于数据冲突，拒绝导入。内置 Interface 迁移时保留实例 UUID和值，将实例及资源重写到新版 Interface 目录，成功后删除旧版目录。
 
 ## 六、Interface 导入导出
 
@@ -232,7 +233,7 @@ Interface 定义——包含名称、描述、`promptTemplate` 和有序 `fields
 
 导入时可以再次选择不导入实例、导入选中实例或导入全部附带实例。不支持脱离 Interface 单独导出实例。实例中的本地图片等资源必须随实例一起打包。
 
-导入时系统必须重新计算并校验 Interface 内容 ID。本地已有同 ID、同内容时复用已有 Interface；同 ID、不同内容视为哈希冲突或数据篡改，拒绝导入。不同 `instanceId` 的实例即使内容相同也全部保留，不按内容去重。
+导入时系统必须重新计算并校验 Interface 内容 ID。本地只要已有相同 ID 的 Interface，就拒绝导入，不创建内置内容的用户副本。不同 `instanceId` 的实例即使内容相同也全部保留，不按内容去重。若实例 UUID 已存在于另一个 Interface 且内容相同，则跳过该实例并保留当前归属；内容不同则拒绝导入。
 
 交换文件使用 `.lsinterface` 扩展名，内容为 ZIP。渲染进程使用 `fflate` 将业务交换包编码/解码为 `Uint8Array`，再通过 `@ls101/file-dialog` 的 `readBinary()` 和 `writeBinary()` 调用系统文件对话框。ZIP 固定结构如下：
 
@@ -248,7 +249,18 @@ instances/
 
 解包时必须拒绝未知路径、路径穿越、重复文件、缺失文件、非法 UTF-8/JSON、资源清单不一致及超过文件数或解压大小限制的文件。`file-dialog` 只负责用户文件的二进制读写，不解析 ZIP 或 Interface 业务内容。
 
-## 七、生成失败处理
+## 七、内置 Interface 更新
+
+同一 `builtinKey` 的变量契约固定为 `varName + type` 集合，禁止增加、删除、重命名变量或改变 text/image 类型。必须改变变量契约时，应创建新的 `builtinKey`。
+
+内置更新分为两类：
+
+- 字段路径、层级、顺序、节点类型、`varName` 均不变，只有名称、Interface 描述、提示词、叶子描述或示例变化：自动更新。Template 自动切换到新版，实例保留 UUID并迁移到新版，成功后删除旧版并通知用户。
+- JSON 字段路径、层级或顺序变化，但变量契约不变：用户手动选择“更新并迁移”或“备份旧版”。
+
+“更新并迁移”会切换 Template 引用，把实例及资源写入新版目录并保留 UUID，验证成功后删除旧内置版本。“备份旧版”会把旧 Interface 整体从内置目录复制到用户 `published` 目录，回读验证后删除内置源目录；旧实例随旧版保留，新版内置 Interface 不附带实例。
+
+## 八、生成失败处理
 
 - LLM 返回格式不符合字段结构 → 提示"AI 返回格式异常"，展示原始返回内容，教师可手动修正或重新生成
 - 图片生成超时/失败 → 图片字段为空，标记为"生成失败"，教师可单独重新生成该图片

@@ -72,7 +72,6 @@ interface InterfaceVarInfo {
 ```typescript
 interface InterfaceInstance {
   instanceId: string               // UUID v4，一次独立创建对应一个实体 ID
-  interfaceId: string              // 所属 InterfaceDef 的内容 ID
   generatedAt: string
   values: Record<string, string>   // varName → 值
 }
@@ -80,7 +79,7 @@ interface InterfaceInstance {
 
 `InterfaceDef.id` 是内容身份：相同的规范化 Interface 内容具有相同 ID。哈希输入包含 `name`、`description`、`promptTemplate` 和有序字段树，不包含实例。
 
-`InterfaceInstance.instanceId` 是实体身份：两个实例即使 `values` 完全相同，只要 UUID 不同，就视为两个不同实例。新增、删除或导入实例不会改变 `InterfaceDef.id`。导入原实例或恢复备份时保留 UUID；同 UUID、不同内容必须作为冲突拒绝。
+`InterfaceInstance.instanceId` 是实体身份：两个实例即使 `values` 完全相同，只要 UUID 不同，就视为两个不同实例。实例本体不保存 `interfaceId`，所属 Interface 由仓储目录确定。新增、删除或导入实例不会改变 `InterfaceDef.id`。导入原实例、恢复备份或迁移内置版本时保留 UUID；同 UUID、不同内容必须作为冲突拒绝。
 
 ---
 

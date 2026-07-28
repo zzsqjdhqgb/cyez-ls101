@@ -29,8 +29,18 @@ export type {
   InterfaceRepository,
   InterfaceStore,
   StoredInterfaceInstance,
+  LocatedInterfaceInstance,
+  BuiltinInterfaceEntry,
   SaveEntityResult
 } from './repository'
+export { classifyBuiltinUpdate, planBuiltinUpdate, applyBuiltinUpdate } from './builtin'
+export type {
+  BuiltinUpdateKind,
+  ManualBuiltinUpdateChoice,
+  BuiltinUpdatePlan,
+  BuiltinUpdateResult,
+  InterfaceReferenceMigrator
+} from './builtin'
 export { exportInterfacePackage, inspectInterfacePackage, importInterfacePackage } from './exchange'
 export type {
   InterfaceExchangePackage,

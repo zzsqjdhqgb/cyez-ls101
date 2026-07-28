@@ -177,7 +177,6 @@ describe('buildInstanceFromJson', () => {
       fields: { q: textLeaf('title', '标题', 'ex') }
     })
     const instance = buildInstanceFromJson(def, { q: '2024 模拟卷' })
-    expect(instance.interfaceId).toBe('if-test-001')
     expect(instance.values).toEqual({ title: '2024 模拟卷' })
   })
 

@@ -134,7 +134,7 @@ baseDir/
                 └── .assets/
 ```
 
-Interface 模块的领域仓储在该 scope 模型上采用以下布局。实例属于对应的已发布 Interface，不放在全局实例目录：
+Interface 模块的领域仓储在该 scope 模型上采用以下布局。实例属于对应的 Interface，不放在全局实例目录：
 
 ```text
 interfaces/
@@ -142,17 +142,23 @@ interfaces/
 │   └── <draftId>/
 │       └── .text/
 │           └── draft.json
-└── published/
-    └── <interface-sha256-digest>/
-        ├── .text/
-        │   └── interface.json
-        └── instances/
-            └── <instanceId>/
-                ├── .text/
-                │   └── instance.json
-                └── .assets/
-                    └── <instance assets>
+├── published/
+│   └── <interface-sha256-digest>/
+│       ├── .text/interface.json
+│       └── instances/<instanceId>/
+│           ├── .text/instance.json
+│           └── .assets/<instance assets>
+└── builtin/
+    └── <builtinKey>/
+        ├── .text/current.json
+        └── versions/<interface-sha256-digest>/
+            ├── .text/interface.json
+            └── instances/<instanceId>/
+                ├── .text/instance.json
+                └── .assets/<instance assets>
 ```
+
+同一个 Interface 内容 ID 在本机只能存在于 `published` 或某个 `builtin` 版本目录之一。备份旧内置版本时，仓储复制定义、实例和资源到 `published`，回读验证后删除内置源目录。内置更新迁移实例时采用同样的“复制、验证、删除源”流程。
 
 映射规则：
 

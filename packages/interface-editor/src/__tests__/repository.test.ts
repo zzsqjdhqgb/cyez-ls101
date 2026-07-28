@@ -11,6 +11,7 @@ import {
   inspectInterfaceFile,
   type InterfaceFileDialog
 } from '../fileExchange'
+import { applyBuiltinUpdate, classifyBuiltinUpdate, planBuiltinUpdate } from '../builtin'
 import { createInterfaceDraft, publishInterface } from '../id'
 import {
   FileInterfaceRepository,
@@ -40,10 +41,9 @@ function content(name = '口语 Interface'): InterfaceContent {
   }
 }
 
-function instance(interfaceId: string, instanceId: string, title: string): InterfaceInstance {
+function instance(instanceId: string, title: string): InterfaceInstance {
   return {
     instanceId,
-    interfaceId,
     generatedAt: '2026-07-28T10:00:00.000Z',
     values: { title }
   }
@@ -101,11 +101,13 @@ describe('FileInterfaceRepository', () => {
     const { repository } = setup()
     const def = await publishInterface(content())
     await repository.saveInterface(def)
-    const value = instance(def.id, INSTANCE_A, '第一套')
+    const value = instance(INSTANCE_A, '第一套')
 
-    expect(await repository.saveInstance(value, { 'picture.png': new Uint8Array([1, 2, 3]) })).toBe(
-      'created'
-    )
+    expect(
+      await repository.saveInstance(def.id, value, {
+        'picture.png': new Uint8Array([1, 2, 3])
+      })
+    ).toBe('created')
     expect(await repository.getInstance(def.id, INSTANCE_A)).toEqual({
       instance: value,
       assetFilenames: ['picture.png']
@@ -113,7 +115,7 @@ describe('FileInterfaceRepository', () => {
     expect(await repository.readInstanceAsset(def.id, INSTANCE_A, 'picture.png')).toEqual(
       new Uint8Array([1, 2, 3])
     )
-    expect(repository.getInstanceAssetUrl(def.id, INSTANCE_A, 'picture.png')).toContain(
+    await expect(repository.getInstanceAssetUrl(def.id, INSTANCE_A, 'picture.png')).resolves.toContain(
       `/published/${def.id.slice(7)}/instances/${INSTANCE_A}/picture.png`
     )
   })
@@ -123,8 +125,8 @@ describe('FileInterfaceRepository', () => {
     const def = await publishInterface(content())
     await repository.saveInterface(def)
 
-    await repository.saveInstance(instance(def.id, INSTANCE_A, '相同内容'))
-    await repository.saveInstance(instance(def.id, INSTANCE_B, '相同内容'))
+    await repository.saveInstance(def.id, instance(INSTANCE_A, '相同内容'))
+    await repository.saveInstance(def.id, instance(INSTANCE_B, '相同内容'))
 
     expect(await repository.listInstanceIds(def.id)).toEqual([INSTANCE_A, INSTANCE_B])
   })
@@ -133,12 +135,12 @@ describe('FileInterfaceRepository', () => {
     const { repository } = setup()
     const def = await publishInterface(content())
     await repository.saveInterface(def)
-    const original = instance(def.id, INSTANCE_A, '原始内容')
+    const original = instance(INSTANCE_A, '原始内容')
 
-    await repository.saveInstance(original)
-    expect(await repository.saveInstance(original)).toBe('existing')
+    await repository.saveInstance(def.id, original)
+    expect(await repository.saveInstance(def.id, original)).toBe('existing')
     await expect(
-      repository.saveInstance(instance(def.id, INSTANCE_A, '冲突内容'))
+      repository.saveInstance(def.id, instance(INSTANCE_A, '冲突内容'))
     ).rejects.toMatchObject({ code: 'IDENTITY_CONFLICT' })
   })
 
@@ -148,8 +150,8 @@ describe('FileInterfaceRepository', () => {
     await repository.saveInterface(def)
 
     await expect(
-      repository.saveInstance({
-        ...instance(def.id, INSTANCE_A, '内容'),
+      repository.saveInstance(def.id, {
+        ...instance(INSTANCE_A, '内容'),
         values: { unexpected: '值' }
       })
     ).rejects.toMatchObject({ code: 'INVALID_DATA' })
@@ -159,11 +161,215 @@ describe('FileInterfaceRepository', () => {
     const { repository } = setup()
     const def = await publishInterface(content())
     await repository.saveInterface(def)
-    await repository.saveInstance(instance(def.id, INSTANCE_A, '内容'))
+    await repository.saveInstance(def.id, instance(INSTANCE_A, '内容'))
 
     await repository.deleteInterface(def.id)
     expect(await repository.getInterface(def.id)).toBeNull()
     expect(await repository.listInstanceIds(def.id)).toEqual([])
+  })
+})
+
+describe('内置 Interface 更新', () => {
+  it('语义字段变化自动迁移实例并删除旧内置版本', async () => {
+    const { repository } = setup()
+    const oldDef = await publishInterface(content())
+    const nextDef = await publishInterface({
+      ...content('新版名称'),
+      description: '新版说明',
+      promptTemplate: '新版提示词',
+      fields: {
+        title: {
+          type: 'text',
+          varName: 'title',
+          description: '新版标题说明',
+          example: '新版示例'
+        }
+      }
+    })
+    await repository.saveBuiltinInterface('speaking', oldDef)
+    await repository.setBuiltinCurrent('speaking', oldDef.id)
+    await repository.saveInstance(oldDef.id, instance(INSTANCE_A, '旧实例'), {
+      'picture.png': new Uint8Array([1, 2, 3])
+    })
+    const migrated: Array<[string, string]> = []
+
+    const plan = await planBuiltinUpdate(repository, 'speaking', nextDef)
+    expect(plan.kind).toBe('automatic')
+    const result = await applyBuiltinUpdate(
+      repository,
+      {
+        async replaceInterfaceReferences(from, to) {
+          migrated.push([from, to])
+        }
+      },
+      plan
+    )
+
+    expect(result.migratedInstanceIds).toEqual([INSTANCE_A])
+    expect(await repository.getInterface(oldDef.id)).toBeNull()
+    expect(await repository.getInstance(nextDef.id, INSTANCE_A)).toMatchObject({
+      instance: { instanceId: INSTANCE_A, values: { title: '旧实例' } }
+    })
+    expect(await repository.readInstanceAsset(nextDef.id, INSTANCE_A, 'picture.png')).toEqual(
+      new Uint8Array([1, 2, 3])
+    )
+    expect(await repository.getBuiltin('speaking')).toEqual({
+      builtinKey: 'speaking',
+      currentInterfaceId: nextDef.id
+    })
+    expect(migrated).toEqual([[oldDef.id, nextDef.id]])
+  })
+
+  it('结构变化可把旧版和实例物理备份到 published', async () => {
+    const { repository } = setup()
+    const oldDef = await publishInterface(content())
+    const nextDef = await publishInterface({
+      ...content(),
+      fields: {
+        section: {
+          type: 'group',
+          children: {
+            heading: {
+              type: 'text',
+              varName: 'title',
+              description: '标题',
+              example: '模拟试卷'
+            }
+          }
+        }
+      }
+    })
+    await repository.saveBuiltinInterface('speaking', oldDef)
+    await repository.setBuiltinCurrent('speaking', oldDef.id)
+    await repository.saveInstance(oldDef.id, instance(INSTANCE_A, '旧实例'))
+    const references: Array<[string, string]> = []
+
+    const plan = await planBuiltinUpdate(repository, 'speaking', nextDef)
+    expect(plan.kind).toBe('manual')
+    const result = await applyBuiltinUpdate(
+      repository,
+      {
+        async replaceInterfaceReferences(from, to) {
+          references.push([from, to])
+        }
+      },
+      plan,
+      'backup-old'
+    )
+
+    expect(result.backedUpPrevious).toBe(true)
+    expect(await repository.getInterface(oldDef.id)).toEqual(oldDef)
+    expect(await repository.getInstance(oldDef.id, INSTANCE_A)).not.toBeNull()
+    expect(await repository.listInstanceIds(nextDef.id)).toEqual([])
+    await expect(repository.getInstanceAssetUrl(oldDef.id, INSTANCE_A, 'image.png')).resolves.toContain(
+      `/published/${oldDef.id.slice(7)}/instances/${INSTANCE_A}/image.png`
+    )
+    expect(await repository.getBuiltin('speaking')).toEqual({
+      builtinKey: 'speaking',
+      currentInterfaceId: nextDef.id
+    })
+    expect(await repository.listPublishedInterfaceIds()).toContain(oldDef.id)
+    expect(await repository.listBuiltinVersionIds('speaking')).toEqual([nextDef.id])
+    expect(references).toEqual([])
+  })
+
+  it('禁止删除当前内置版本，也禁止发布与内置相同的内容', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(content())
+    await repository.saveBuiltinInterface('speaking', def)
+    await repository.setBuiltinCurrent('speaking', def.id)
+
+    await expect(repository.deleteInterface(def.id)).rejects.toMatchObject({
+      code: 'IDENTITY_CONFLICT'
+    })
+    await expect(repository.saveInterface(def)).rejects.toMatchObject({
+      code: 'IDENTITY_CONFLICT'
+    })
+    expect(await repository.listBuiltinKeys()).toEqual(['speaking'])
+  })
+
+  it('结构变化可手动迁移，变量契约变化禁止更新', async () => {
+    const oldDef = await publishInterface(content())
+    const structural = await publishInterface({
+      ...content(),
+      fields: {
+        group: {
+          type: 'group',
+          children: {
+            title: content().fields.title
+          }
+        }
+      }
+    })
+    const changedContract = await publishInterface({
+      ...content(),
+      fields: {
+        title: {
+          type: 'text',
+          varName: 'renamedTitle',
+          description: '标题',
+          example: '模拟试卷'
+        }
+      }
+    })
+
+    expect(classifyBuiltinUpdate(oldDef, structural)).toBe('manual')
+    expect(classifyBuiltinUpdate(oldDef, changedContract)).toBe('invalid-contract')
+
+    const { repository } = setup()
+    await repository.saveBuiltinInterface('speaking', oldDef)
+    await repository.setBuiltinCurrent('speaking', oldDef.id)
+    const plan = await planBuiltinUpdate(repository, 'speaking', changedContract)
+    await expect(
+      applyBuiltinUpdate(repository, { async replaceInterfaceReferences() {} }, plan)
+    ).rejects.toThrow('changes its variable contract')
+    expect(await repository.getBuiltin('speaking')).toEqual({
+      builtinKey: 'speaking',
+      currentInterfaceId: oldDef.id
+    })
+  })
+
+  it('结构变化选择迁移时保留实例 UUID并删除旧版', async () => {
+    const { repository } = setup()
+    const oldDef = await publishInterface(content())
+    const nextDef = await publishInterface({
+      ...content(),
+      fields: {
+        section: {
+          type: 'group',
+          children: {
+            title: {
+              type: 'text',
+              varName: 'title',
+              description: '标题',
+              example: '模拟试卷'
+            }
+          }
+        }
+      }
+    })
+    await repository.saveBuiltinInterface('speaking', oldDef)
+    await repository.setBuiltinCurrent('speaking', oldDef.id)
+    await repository.saveInstance(oldDef.id, instance(INSTANCE_A, '待迁移'))
+    const references: Array<[string, string]> = []
+
+    const result = await applyBuiltinUpdate(
+      repository,
+      {
+        async replaceInterfaceReferences(from, to) {
+          references.push([from, to])
+        }
+      },
+      await planBuiltinUpdate(repository, 'speaking', nextDef),
+      'migrate'
+    )
+
+    expect(result.migratedInstanceIds).toEqual([INSTANCE_A])
+    expect(await repository.getInterface(oldDef.id)).toBeNull()
+    expect(await repository.getInstance(nextDef.id, INSTANCE_A)).toMatchObject({
+      instance: { instanceId: INSTANCE_A, values: { title: '待迁移' } }
+    })
+    expect(references).toEqual([[oldDef.id, nextDef.id]])
   })
 })
 
@@ -172,8 +378,8 @@ describe('Interface 交换包', () => {
     const { repository } = setup()
     const def = await publishInterface(content())
     await repository.saveInterface(def)
-    await repository.saveInstance(instance(def.id, INSTANCE_A, 'A'))
-    await repository.saveInstance(instance(def.id, INSTANCE_B, 'B'))
+    await repository.saveInstance(def.id, instance(INSTANCE_A, 'A'))
+    await repository.saveInstance(def.id, instance(INSTANCE_B, 'B'))
 
     const none = await exportInterfacePackage(repository, def.id, { mode: 'none' })
     const selected = await exportInterfacePackage(repository, def.id, {
@@ -195,10 +401,10 @@ describe('Interface 交换包', () => {
     const target = setup().repository
     const def = await publishInterface(content())
     await source.saveInterface(def)
-    await source.saveInstance(instance(def.id, INSTANCE_A, 'A'), {
+    await source.saveInstance(def.id, instance(INSTANCE_A, 'A'), {
       'a.png': new Uint8Array([4, 5])
     })
-    await source.saveInstance(instance(def.id, INSTANCE_B, 'B'))
+    await source.saveInstance(def.id, instance(INSTANCE_B, 'B'))
     const bundle = await exportInterfacePackage(source, def.id, { mode: 'all' })
 
     const inspection = await inspectInterfacePackage(bundle)
@@ -214,18 +420,18 @@ describe('Interface 交换包', () => {
     )
   })
 
-  it('重复导入同一实例时返回 existing', async () => {
+  it('拒绝重复导入已经存在的 Interface', async () => {
     const source = setup().repository
     const target = setup().repository
     const def = await publishInterface(content())
     await source.saveInterface(def)
-    await source.saveInstance(instance(def.id, INSTANCE_A, 'A'))
+    await source.saveInstance(def.id, instance(INSTANCE_A, 'A'))
     const bundle = await exportInterfacePackage(source, def.id, { mode: 'all' })
 
     await importInterfacePackage(target, bundle, { instances: { mode: 'all' } })
-    const result = await importInterfacePackage(target, bundle, { instances: { mode: 'all' } })
-
-    expect(result).toEqual({ interface: 'existing', instances: { [INSTANCE_A]: 'existing' } })
+    await expect(
+      importInterfacePackage(target, bundle, { instances: { mode: 'all' } })
+    ).rejects.toMatchObject({ code: 'IDENTITY_CONFLICT' })
   })
 
   it('不同 UUID 的相同实例内容在导入时全部保留', async () => {
@@ -233,12 +439,33 @@ describe('Interface 交换包', () => {
     const target = setup().repository
     const def = await publishInterface(content())
     await source.saveInterface(def)
-    await source.saveInstance(instance(def.id, INSTANCE_A, '相同'))
-    await source.saveInstance(instance(def.id, INSTANCE_B, '相同'))
+    await source.saveInstance(def.id, instance(INSTANCE_A, '相同'))
+    await source.saveInstance(def.id, instance(INSTANCE_B, '相同'))
     const bundle = await exportInterfacePackage(source, def.id, { mode: 'all' })
 
     await importInterfacePackage(target, bundle, { instances: { mode: 'all' } })
     expect(await target.listInstanceIds(def.id)).toEqual([INSTANCE_A, INSTANCE_B])
+  })
+
+  it('导入旧版包时跳过已迁移到其他 Interface 的同一实例', async () => {
+    const source = setup().repository
+    const target = setup().repository
+    const oldDef = await publishInterface(content('旧版'))
+    const newDef = await publishInterface(content('新版'))
+    await source.saveInterface(oldDef)
+    await source.saveInstance(oldDef.id, instance(INSTANCE_A, '相同实例'))
+    const bundle = await exportInterfacePackage(source, oldDef.id, { mode: 'all' })
+
+    await target.saveInterface(newDef)
+    await target.saveInstance(newDef.id, instance(INSTANCE_A, '相同实例'))
+    const result = await importInterfacePackage(target, bundle, { instances: { mode: 'all' } })
+
+    expect(result).toEqual({
+      interface: 'created',
+      instances: { [INSTANCE_A]: 'skipped-other-interface' }
+    })
+    expect(await target.getInstance(oldDef.id, INSTANCE_A)).toBeNull()
+    expect(await target.getInstance(newDef.id, INSTANCE_A)).not.toBeNull()
   })
 
   it('导入前发现实例冲突，不写入包内其他实例', async () => {
@@ -246,10 +473,10 @@ describe('Interface 交换包', () => {
     const target = setup().repository
     const def = await publishInterface(content())
     await source.saveInterface(def)
-    await source.saveInstance(instance(def.id, INSTANCE_A, '来源内容'))
-    await source.saveInstance(instance(def.id, INSTANCE_B, '待导入'))
+    await source.saveInstance(def.id, instance(INSTANCE_A, '来源内容'))
+    await source.saveInstance(def.id, instance(INSTANCE_B, '待导入'))
     await target.saveInterface(def)
-    await target.saveInstance(instance(def.id, INSTANCE_A, '本地冲突内容'))
+    await target.saveInstance(def.id, instance(INSTANCE_A, '本地冲突内容'))
     const bundle = await exportInterfacePackage(source, def.id, { mode: 'all' })
 
     await expect(
@@ -281,7 +508,7 @@ describe('Interface ZIP 与文件对话框', () => {
     const source = setup().repository
     const def = await publishInterface(content())
     await source.saveInterface(def)
-    await source.saveInstance(instance(def.id, INSTANCE_A, 'A'), {
+    await source.saveInstance(def.id, instance(INSTANCE_A, 'A'), {
       'picture.png': new Uint8Array([0, 1, 2, 255])
     })
     const bundle = await exportInterfacePackage(source, def.id, { mode: 'all' })
@@ -304,7 +531,7 @@ describe('Interface ZIP 与文件对话框', () => {
     const def = await publishInterface(content())
     const manifest = {
       format: 'ls101-interface-zip',
-      version: 1,
+      version: 2,
       exportedAt: '2026-07-28T10:00:00.000Z',
       interfaceId: def.id,
       instances: []
@@ -353,8 +580,8 @@ describe('Interface ZIP 与文件对话框', () => {
     const target = setup().repository
     const def = await publishInterface(content())
     await source.saveInterface(def)
-    await source.saveInstance(instance(def.id, INSTANCE_A, 'A'))
-    await source.saveInstance(instance(def.id, INSTANCE_B, 'B'))
+    await source.saveInstance(def.id, instance(INSTANCE_A, 'A'))
+    await source.saveInstance(def.id, instance(INSTANCE_B, 'B'))
     const bundle = await exportInterfacePackage(source, def.id, { mode: 'all' })
     const dialog = new TestFileDialog(await encodeInterfaceZip(bundle), 'shared.lsinterface')
 
