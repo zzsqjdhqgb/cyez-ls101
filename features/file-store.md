@@ -1,0 +1,234 @@
+# File Store
+
+## 功能状态
+
+`@ls101/file-store` 已实现应用私有目录中的分层文件存储，并已接入 Electron main 与 preload。
+
+当前应用使用 `app.getPath('userData')` 作为存储根目录。renderer 公共 API 已可用，但当前业务 renderer 尚未发现对 `fileStore` 单例的实际调用；`@ls101/interface-editor` 定义了与 `ScopedStore` 兼容的仓储接口，但尚未在应用入口中连接真实 file store。
+
+## 功能边界
+
+File Store 负责：
+
+- 管理应用私有 `userData` 目录中的持久化数据。
+- 使用逐层派生的 scope 隔离业务数据。
+- 分别存储 JSON 文本数据和二进制资源。
+- 通过受限 IPC 在 renderer 与 main 之间传递存储请求。
+- 为二进制资源生成 `asset://local/...` URL。
+
+File Store 不负责：
+
+- 打开系统文件选择或保存对话框。
+- 导入、导出用户主动选择的外部文件。
+- 业务数据的运行时 schema 校验。
+- 事务、并发写锁、原子写入或流式 I/O。
+
+## 公共接口
+
+renderer 从 `@ls101/file-store/renderer` 导入唯一的 `fileStore` 实例：
+
+```typescript
+import { fileStore } from '@ls101/file-store/renderer'
+
+const draft = fileStore.scope('interfaces').scope('drafts').scope('draft-abc123')
+```
+
+公开接口如下：
+
+```typescript
+interface FileStore {
+  scope(name: string): ScopedStore
+}
+
+interface ScopedStore {
+  scope(name: string): ScopedStore
+
+  readText<T>(filename: string): Promise<T | null>
+  writeText<T>(filename: string, data: T): Promise<void>
+  deleteText(filename: string): Promise<void>
+  hasText(filename: string): Promise<boolean>
+  listText(): Promise<string[]>
+
+  readAsset(filename: string): Promise<Uint8Array | null>
+  writeAsset(filename: string, data: Uint8Array): Promise<void>
+  deleteAsset(filename: string): Promise<void>
+  hasAsset(filename: string): Promise<boolean>
+  listAssets(): Promise<string[]>
+  getAssetUrl(filename: string): string
+
+  listScopes(): Promise<string[]>
+  clear(): Promise<void>
+}
+```
+
+main 从 `@ls101/file-store/main` 导出：
+
+```typescript
+registerFileStoreScheme(): void
+registerFileStore(options: { baseDir: string }): void
+```
+
+shared 从 `@ls101/file-store/shared` 导出 IPC 通道常量和 bridge 类型。
+
+## Scope 模型
+
+每个 scope 由一个或多个独立 segment 构成。调用方只能逐层派生 scope，不能传入组合路径：
+
+```typescript
+fileStore.scope('interfaces') // 合法
+fileStore.scope('interfaces/drafts') // 非法
+fileStore.scope('../interfaces') // 非法
+```
+
+内部和 IPC 使用 segment 数组表示位置，例如：
+
+```typescript
+['interfaces', 'drafts', 'draft-abc123']
+```
+
+scope segment 必须匹配：
+
+```regex
+^[a-zA-Z0-9][a-zA-Z0-9_-]*$
+```
+
+filename 必须匹配：
+
+```regex
+^[a-zA-Z0-9][a-zA-Z0-9_.-]*$
+```
+
+因此 scope 不允许点号或路径分隔符，filename 可以包含扩展名点号，但不能以点号开头或包含路径分隔符。renderer 在 IPC 前校验，main 在解析物理路径时再次校验。
+
+## 存储布局
+
+每个 scope 使用两个保留目录隔离数据类型：
+
+```text
+<baseDir>/
+└── <scope...>/
+    ├── .text/
+    │   └── <filename>
+    ├── .assets/
+    │   └── <filename>
+    └── <child-scope>/
+```
+
+映射规则：
+
+```text
+Text  = Join(baseDir, ...scope, '.text', filename)
+Asset = Join(baseDir, ...scope, '.assets', filename)
+```
+
+相同 filename 可以同时存在于 Text 和 Asset 命名空间。`.text` 和 `.assets` 不符合 scope 命名规则，也不会由 `listScopes()` 返回。
+
+## Text 语义
+
+- `writeText()` 在 renderer 使用 `JSON.stringify()` 序列化数据。
+- 序列化结果为 `undefined` 时抛出 `TypeError`；其他 JSON 序列化错误原样传播。
+- main 只保存 UTF-8 字符串，不执行 JSON 解析或业务校验。
+- `readText()` 在 renderer 使用 `JSON.parse()` 解析数据。
+- 文件不存在时返回 `null`。
+- 文件内容不是合法 JSON 时，`JSON.parse()` 错误直接传播。
+- 泛型参数 `T` 只提供编译期类型，不提供运行时验证。
+
+## Asset 语义
+
+- `writeAsset()` 只接受 `Uint8Array`，renderer 和 main 都会执行类型检查。
+- `readAsset()` 返回 `Uint8Array`，文件不存在时返回 `null`。
+- `getAssetUrl()` 同步校验 filename，并返回编码后的 `asset://local/...` URL。
+- URL 生成不检查目标文件是否存在。
+
+示例：
+
+```text
+asset://local/interfaces/drafts/draft-abc123/cover.png
+```
+
+协议处理器只映射 `.assets`。它要求 scheme 为 `asset`、host 为 `local`，并拒绝认证信息、端口、query、fragment、空路径段和非法编码路径。URL 校验或路径解析失败时返回 `403 Forbidden`。
+
+## 列表、删除与清理
+
+- `listText()` 和 `listAssets()` 只返回当前命名空间中的合法普通文件。
+- `listScopes()` 只返回合法的直接子目录。
+- 列表不包含符号链接，并按名称排序。
+- 目标目录不存在时，列表返回空数组。
+- `deleteText()` 和 `deleteAsset()` 对不存在的文件保持成功。
+- `hasText()` 和 `hasAsset()` 在文件不存在时返回 `false`。
+- `clear()` 递归删除当前 scope、数据文件和全部后代 scope。
+- `clear()` 不删除父 scope 或兄弟 scope，对不存在的 scope 也是幂等操作。
+- 清理后的 `ScopedStore` 仍可继续写入，所需目录会自动重建。
+
+直接按名称执行的文件操作没有额外的 `realpath` 包含性检查，因此当前实现不声明针对已存在符号链接路径的完整隔离保证。
+
+## Electron 集成
+
+主进程在 Electron ready 前注册自定义 scheme，并在 ready 后注册存储能力：
+
+```typescript
+registerFileStoreScheme()
+
+app.whenReady().then(() => {
+  registerFileStore({ baseDir: app.getPath('userData') })
+})
+```
+
+preload 只暴露 `FILE_STORE_CHANNELS` 中允许的通道，通过 `window.fileStore.invoke()` 调用 `ipcRenderer.invoke()`；不支持的通道会在 preload 中被拒绝。
+
+已实现通道：
+
+```text
+file:read-text
+file:write-text
+file:delete-text
+file:has-text
+file:list-text
+file:read-asset
+file:write-asset
+file:delete-asset
+file:has-asset
+file:list-assets
+file:list-scopes
+file:clear-scope
+```
+
+## 错误与缺失数据
+
+| 场景 | 结果 |
+| --- | --- |
+| Text 或 Asset 不存在 | `read*()` 返回 `null` |
+| 文件不存在 | `has*()` 返回 `false` |
+| 列表目录不存在 | 返回 `[]` |
+| 删除或清理目标不存在 | 操作成功 |
+| scope 或 filename 非法 | 抛出校验错误 |
+| JSON 无法序列化或解析 | 原错误传播 |
+| 文件系统发生非 `ENOENT` 错误 | 原错误传播 |
+| preload bridge 不存在 | 抛出 bridge unavailable 错误 |
+
+模块没有定义业务错误码或错误 UI。
+
+## 验证覆盖
+
+当前自动化测试覆盖：
+
+- scope 与 filename 校验。
+- Text 和 Asset 的物理路径映射及命名空间隔离。
+- 缺失数据语义、列表排序和递归清理。
+- asset URL 解析与非法 URL 拒绝。
+- renderer 的 scope 派生、IPC 参数和 asset URL 生成。
+
+当前未覆盖真实 Electron IPC、preload、protocol handler 和 `net.fetch()` 的端到端运行，也未覆盖并发写入、原子性和符号链接路径攻击。
+
+## 代码依据
+
+- `packages/file-store/src/renderer/index.ts`
+- `packages/file-store/src/renderer/ScopedStore.ts`
+- `packages/file-store/src/shared/pathUtils.ts`
+- `packages/file-store/src/main/storage.ts`
+- `packages/file-store/src/main/assetUrl.ts`
+- `packages/file-store/src/main/protocol.ts`
+- `packages/file-store/src/main/handlers.ts`
+- `src/main/index.ts`
+- `src/preload/index.ts`
+- `packages/file-store/src/__tests__/`
