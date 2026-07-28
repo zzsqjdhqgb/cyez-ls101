@@ -1203,11 +1203,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@ls101/file-dialog@workspace:packages/file-dialog":
+"@ls101/file-dialog@workspace:*, @ls101/file-dialog@workspace:packages/file-dialog":
   version: 0.0.0-use.local
   resolution: "@ls101/file-dialog@workspace:packages/file-dialog"
   peerDependencies:
     electron: ^39
+  peerDependenciesMeta:
+    electron:
+      optional: true
   languageName: unknown
   linkType: soft
 
@@ -1226,8 +1229,10 @@ __metadata:
     "@ls101/airouter": "workspace:*"
     "@ls101/core-types": "workspace:*"
     "@ls101/editor-kit": "workspace:*"
+    "@ls101/file-dialog": "workspace:*"
     "@sinclair/typebox": "npm:^0.34.52"
     ajv: "npm:^8.20.0"
+    fflate: "npm:^0.8.2"
   peerDependencies:
     react: ^19
     react-dom: ^19

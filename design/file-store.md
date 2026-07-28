@@ -134,6 +134,26 @@ baseDir/
                 └── .assets/
 ```
 
+Interface 模块的领域仓储在该 scope 模型上采用以下布局。实例属于对应的已发布 Interface，不放在全局实例目录：
+
+```text
+interfaces/
+├── drafts/
+│   └── <draftId>/
+│       └── .text/
+│           └── draft.json
+└── published/
+    └── <interface-sha256-digest>/
+        ├── .text/
+        │   └── interface.json
+        └── instances/
+            └── <instanceId>/
+                ├── .text/
+                │   └── instance.json
+                └── .assets/
+                    └── <instance assets>
+```
+
 映射规则：
 
 ```text

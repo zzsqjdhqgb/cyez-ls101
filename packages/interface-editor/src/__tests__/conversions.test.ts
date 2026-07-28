@@ -56,6 +56,14 @@ describe('buildAIPrompt', () => {
     expect(prompt).toContain('题干描述')
   })
 
+  it('明确要求 image 字段返回生图提示词而不是 URL', () => {
+    const prompt = buildAIPrompt(makeDef({
+      fields: { picture: imageLeaf('image', '考试配图', '学生在教室学习') }
+    }))
+    expect(prompt).toContain('图片生成模型')
+    expect(prompt).toContain('不要返回图片 URL')
+  })
+
   it('包含 JSON Example', () => {
     const def = makeDef({
       fields: { q: textLeaf('v1', 'desc', '示例值ABC') }

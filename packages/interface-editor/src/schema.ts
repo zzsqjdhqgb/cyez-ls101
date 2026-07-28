@@ -15,7 +15,7 @@
 //
 // 设计原则：
 //   - varName 不进入 JSON Schema（LLM 不应看到变量名）
-//   - description 写入 Schema 的 description 字段，供 LLM 理解字段含义
+//   - description 写入 Schema；图片字段会追加生图提示词约束
 //   - 所有 object 节点设置 additionalProperties: false
 
 import { Type } from '@sinclair/typebox'
@@ -45,7 +45,11 @@ export function buildJsonSchema(fields: Record<string, FieldNode>): Record<strin
     if (node.type === 'group') {
       properties[key] = buildJsonSchema(node.children) as ReturnType<typeof Type.Object>
     } else {
-      properties[key] = Type.String({ description: node.description })
+      const description =
+        node.type === 'image'
+          ? `${node.description}（请返回可直接用于图片生成模型的详细提示词，而不是图片 URL）`
+          : node.description
+      properties[key] = Type.String({ description })
     }
   }
 

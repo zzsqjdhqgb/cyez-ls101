@@ -1,6 +1,6 @@
 import { basename } from 'node:path'
 import { readFile, writeFile } from 'node:fs/promises'
-import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { BrowserWindow, dialog, ipcMain, type OpenDialogOptions } from 'electron'
 import { FILE_DIALOG_CHANNELS } from '../shared/constants'
 import type { ReadFileOptions, WriteFileOptions } from '../shared/types'
 import { validateReadFileOptions, validateWriteFileOptions } from '../shared/validation'
@@ -14,10 +14,10 @@ export function registerFileDialogHandlers(): void {
   ipcMain.handle(FILE_DIALOG_CHANNELS.read, async (event, options?: ReadFileOptions) => {
     validateReadFileOptions(options)
     const parent = BrowserWindow.fromWebContents(event.sender)
-    const dialogOptions = {
+    const dialogOptions: OpenDialogOptions = {
       title: options?.title,
       filters: copyFilters(options?.filters),
-      properties: ['openFile'] as const
+      properties: ['openFile']
     }
     const result = parent
       ? await dialog.showOpenDialog(parent, dialogOptions)

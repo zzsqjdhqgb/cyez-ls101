@@ -72,10 +72,7 @@ export type FieldNode = FieldLeaf | FieldGroup
  * 2. 编辑 fields（字段树）
  * 3. 多次调用 AI 生成多套数据实例（InterfaceInstance）
  */
-export interface InterfaceDef {
-  /** 唯一标识符 */
-  id: string
-
+export interface InterfaceContent {
   /** 显示名称，如 "上海高考口语" */
   name: string
 
@@ -94,4 +91,15 @@ export interface InterfaceDef {
    * 树的叶子节点对应 Template 中可用的变量。
    */
   fields: Record<string, FieldNode>
+}
+
+/** 可编辑草稿。draftId 只标识本机编辑会话，不参与导入导出。 */
+export interface InterfaceDraft extends InterfaceContent {
+  draftId: string
+}
+
+/** 已发布或导入的 Interface；id 由完整内容确定。 */
+export interface InterfaceDef extends InterfaceContent {
+  /** sha256:<64 位十六进制摘要> */
+  id: string
 }

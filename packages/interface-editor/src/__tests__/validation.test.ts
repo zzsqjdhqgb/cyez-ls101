@@ -18,7 +18,7 @@ function group(children: Record<string, FieldNode>) {
 
 function validDef(overrides: Partial<InterfaceDef> = {}): InterfaceDef {
   return {
-    id: "test-id",
+    id: `sha256:${"a".repeat(64)}`,
     name: "Test Interface",
     description: "A test interface",
     promptTemplate: "Generate a test exam",
@@ -115,6 +115,16 @@ describe("validateInterfaceDef — 正常", () => {
 // ============================================================
 
 describe("validateInterfaceDef — 顶层校验", () => {
+  it("id 不是 SHA-256 内容 ID → INVALID_ID", () => {
+    const result = validateInterfaceDef(validDef({ id: "test-id" }))
+    expectError(result.errors, "INVALID_ID", "", { id: "test-id" })
+  })
+
+  it("name 仅空白 → EMPTY_NAME", () => {
+    const result = validateInterfaceDef(validDef({ name: "   " }))
+    expectError(result.errors, "EMPTY_NAME", "")
+  })
+
   it("promptTemplate 为空字符串 → EMPTY_PROMPT_TEMPLATE", () => {
     const result = validateInterfaceDef(validDef({ promptTemplate: "" }))
     expect(result.valid).toBe(false)
@@ -137,6 +147,20 @@ describe("validateInterfaceDef — 顶层校验", () => {
 // ============================================================
 
 describe("validateInterfaceDef — 字段组校验", () => {
+  it("字段 key 含点号 → INVALID_FIELD_KEY", () => {
+    const result = validateInterfaceDef(
+      validDef({ fields: { "section.a": textLeaf("value") } })
+    )
+    expectError(result.errors, "INVALID_FIELD_KEY", "section.a", { key: "section.a" })
+  })
+
+  it("字段 key 含首尾空格 → INVALID_FIELD_KEY", () => {
+    const result = validateInterfaceDef(
+      validDef({ fields: { " field ": textLeaf("value") } })
+    )
+    expectError(result.errors, "INVALID_FIELD_KEY", " field ", { key: " field " })
+  })
+
   it("FieldGroup.children 为空 → EMPTY_GROUP", () => {
     const result = validateInterfaceDef(
       validDef({
@@ -220,6 +244,14 @@ describe("validateInterfaceDef — varName 校验", () => {
 // ============================================================
 
 describe("validateInterfaceDef — varName 唯一性", () => {
+  it("多个空 varName 不额外产生 DUPLICATE_VAR_NAME", () => {
+    const result = validateInterfaceDef(
+      validDef({ fields: { a: textLeaf(""), b: textLeaf("") } })
+    )
+    expect(result.errors.filter((error) => error.code === "EMPTY_VAR_NAME")).toHaveLength(2)
+    expect(result.errors.some((error) => error.code === "DUPLICATE_VAR_NAME")).toBe(false)
+  })
+
   it("同层重复 varName → DUPLICATE_VAR_NAME", () => {
     const result = validateInterfaceDef(
       validDef({

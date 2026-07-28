@@ -46,17 +46,25 @@ describe('buildJsonSchema', () => {
     })
   })
 
-  it('单个 image 叶子 → type: "string"', () => {
+  it('单个 image 叶子 → type: "string" 并要求返回生图提示词', () => {
     const schema = buildJsonSchema({
       pic: imageLeaf('img1', '图片描述', '一只猫')
     })
     expect(schema).toMatchObject({
       type: 'object',
       properties: {
-        pic: { type: 'string', description: '图片描述' }
+        pic: {
+          type: 'string',
+          description: expect.stringContaining('图片生成模型')
+        }
       },
       required: ['pic']
     })
+  })
+
+  it('image schema 保留教师填写的描述', () => {
+    const schema = buildJsonSchema({ pic: imageLeaf('img1', '校园操场配图') })
+    expect(JSON.stringify(schema)).toContain('校园操场配图')
   })
 
   it('多个同层叶子 → 全部出现在 properties 和 required', () => {
@@ -70,7 +78,7 @@ describe('buildJsonSchema', () => {
       properties: {
         a: { type: 'string', description: '字段A' },
         b: { type: 'string', description: '字段B' },
-        c: { type: 'string', description: '字段C' }
+        c: { type: 'string', description: expect.stringContaining('字段C') }
       },
       required: ['a', 'b', 'c']
     })

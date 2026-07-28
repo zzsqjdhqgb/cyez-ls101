@@ -9,15 +9,19 @@
 
 import type { InterfaceDef, FieldNode } from './types'
 import { flattenFields } from './queries'
+import { isInterfaceId } from './id'
 
 /**
  * 校验错误类型代码。
  * 每种代码代表一类独立的校验失败情形，UI 层据此决定高亮位置和消息文本。
  */
 export type ValidationErrorCode =
+  | 'INVALID_ID' // id 不是 SHA-256 内容 ID
+  | 'EMPTY_NAME' // name 为空
   | 'EMPTY_PROMPT_TEMPLATE' // promptTemplate 为空
   | 'EMPTY_FIELDS' // fields 根级为空
   | 'EMPTY_GROUP' // FieldGroup.children 为空
+  | 'INVALID_FIELD_KEY' // 字段 key 为空、含 "." 或首尾空白
   | 'EMPTY_VAR_NAME' // varName 为空
   | 'INVALID_VAR_NAME' // varName 格式不合法
   | 'EMPTY_DESCRIPTION' // description 为空
@@ -39,6 +43,8 @@ export interface ValidationError {
    * 错误相关的上下文数据，供 UI 消息渲染时插值。
    * 不同 code 携带的 params 结构:
    *
+   *   INVALID_ID           → { id: string }
+   *   INVALID_FIELD_KEY    → { key: string }
    *   INVALID_VAR_NAME     → { varName: string }
    *   DUPLICATE_VAR_NAME   → { varName: string }
    *   其他 code            → 不使用（空对象）
@@ -101,6 +107,14 @@ export function validateInterfaceDef(def: InterfaceDef): ValidationResult {
 
   // — 顶层 —
 
+  if (!isInterfaceId(def.id)) {
+    errors.push(err('', 'INVALID_ID', { id: def.id }))
+  }
+
+  if (!def.name.trim()) {
+    errors.push(err('', 'EMPTY_NAME'))
+  }
+
   if (!def.promptTemplate.trim()) {
     errors.push(err('', 'EMPTY_PROMPT_TEMPLATE'))
   }
@@ -117,6 +131,7 @@ export function validateInterfaceDef(def: InterfaceDef): ValidationResult {
 
   const seen = new Set<string>()
   for (const { path, leaf } of flattenFields(def.fields)) {
+    if (!leaf.varName.trim() || !VAR_NAME_PATTERN.test(leaf.varName)) continue
     if (seen.has(leaf.varName)) {
       errors.push(err(path, 'DUPLICATE_VAR_NAME', { varName: leaf.varName }))
     }
@@ -137,6 +152,10 @@ function validateNodes(
 ): void {
   for (const [key, node] of Object.entries(fields)) {
     const path = parentPath ? `${parentPath}.${key}` : key
+
+    if (!key.trim() || key !== key.trim() || key.includes('.')) {
+      errors.push(err(path, 'INVALID_FIELD_KEY', { key }))
+    }
 
     if (node.type === 'group') {
       if (Object.keys(node.children).length === 0) {

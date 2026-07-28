@@ -14,9 +14,12 @@ import type { ValidationError, ValidationErrorCode } from './validation'
  * 模板中使用 {{paramName}} 占位符，由 formatError 根据 error.params 插值。
  */
 const MESSAGES: Record<ValidationErrorCode, string> = {
+  INVALID_ID: 'Interface ID "{{id}}" 不是有效的 SHA-256 内容 ID',
+  EMPTY_NAME: 'Interface 名称不能为空',
   EMPTY_PROMPT_TEMPLATE: '提示词模板不能为空',
   EMPTY_FIELDS: '字段结构不能为空（至少需要一个字段）',
   EMPTY_GROUP: '字段组不能为空（至少需要一个子字段）',
+  INVALID_FIELD_KEY: '字段名称 "{{key}}" 不能为空、包含点号或带有首尾空格',
   EMPTY_VAR_NAME: '变量名不能为空',
   INVALID_VAR_NAME:
     '变量名 "{{varName}}" 格式无效（仅允许字母、数字、下划线和连字符，以字母或下划线开头）',

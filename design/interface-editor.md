@@ -191,8 +191,8 @@ LLM 返回的 JSON 与字段结构一致，但叶子节点填充了实际值：
 
 ```json
 {
-  "instanceId": "inst-001",
-  "interfaceId": "if-shanghai-speaking",
+  "instanceId": "550e8400-e29b-41d4-a716-446655440000",
+  "interfaceId": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
   "generatedAt": "2026-07-24T10:30:00Z",
   "values": {
     "sentenceA1": "The importance of education cannot be overstated.",
@@ -216,9 +216,37 @@ LLM 返回的 JSON 与字段结构一致，但叶子节点填充了实际值：
 
 教师可以预览每个实例的值（包括生成的图片）、删除不满意的实例、或基于已有实例重新生成。
 
+Interface 实例使用实体身份：每次独立生成、复制、基于已有实例重新生成或修改后另存时，系统生成新的 UUID v4 `instanceId`。两个实例即使字段值和图片内容完全相同，只要 `instanceId` 不同，就视为两个不同实例。Instance 不参与 Interface 内容 ID 的计算，实例列表变化不会改变 `InterfaceDef.id`。
+
+导入原实例或恢复备份时保留原 `instanceId`。重复导入同 `instanceId`、同内容的实例时跳过；同 `instanceId`、不同内容属于数据冲突，拒绝导入。实例的 `interfaceId` 必须与所属 Interface 的内容 ID 一致。
+
 ## 六、Interface 导入导出
 
-Interface 定义——包含 `promptTemplate` 和 `fields` 结构——可导出为文件，供其他教师导入使用。实例数据也可随 Interface 一并导出/导入。提示词和字段设计是反复调试的成果，应该可以跨设备共享。
+Interface 定义——包含名称、描述、`promptTemplate` 和有序 `fields` 结构——可导出为文件，供其他教师导入使用。Interface 使用规范化内容的 SHA-256 作为 ID，因此相同内容在不同设备上具有相同 ID；实例不参与该哈希。
+
+导出时 Interface 定义始终包含，教师可以选择：
+
+- 仅导出 Interface
+- 导出 Interface 和选中的实例
+- 导出 Interface 和全部实例
+
+导入时可以再次选择不导入实例、导入选中实例或导入全部附带实例。不支持脱离 Interface 单独导出实例。实例中的本地图片等资源必须随实例一起打包。
+
+导入时系统必须重新计算并校验 Interface 内容 ID。本地已有同 ID、同内容时复用已有 Interface；同 ID、不同内容视为哈希冲突或数据篡改，拒绝导入。不同 `instanceId` 的实例即使内容相同也全部保留，不按内容去重。
+
+交换文件使用 `.lsinterface` 扩展名，内容为 ZIP。渲染进程使用 `fflate` 将业务交换包编码/解码为 `Uint8Array`，再通过 `@ls101/file-dialog` 的 `readBinary()` 和 `writeBinary()` 调用系统文件对话框。ZIP 固定结构如下：
+
+```text
+manifest.json
+interface.json
+instances/
+└── <instanceId>/
+    ├── instance.json
+    └── assets/
+        └── <instance assets>
+```
+
+解包时必须拒绝未知路径、路径穿越、重复文件、缺失文件、非法 UTF-8/JSON、资源清单不一致及超过文件数或解压大小限制的文件。`file-dialog` 只负责用户文件的二进制读写，不解析 ZIP 或 Interface 业务内容。
 
 ## 七、生成失败处理
 

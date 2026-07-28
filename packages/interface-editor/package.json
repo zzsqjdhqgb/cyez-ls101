@@ -12,8 +12,10 @@
     "@ls101/airouter": "workspace:*",
     "@ls101/core-types": "workspace:*",
     "@ls101/editor-kit": "workspace:*",
+    "@ls101/file-dialog": "workspace:*",
     "@sinclair/typebox": "^0.34.52",
-    "ajv": "^8.20.0"
+    "ajv": "^8.20.0",
+    "fflate": "^0.8.2"
   },
   "peerDependencies": {
     "react": "^19",

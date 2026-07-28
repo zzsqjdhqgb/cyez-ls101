@@ -37,6 +37,7 @@ export function buildAIPrompt(def: InterfaceDef): string {
   return `${def.promptTemplate}
 
 请严格按照以下 JSON Schema 输出，不要输出任何 JSON 之外的文本：
+其中图片字段应返回可直接用于图片生成模型的详细提示词，不要返回图片 URL。
 
 ${schemaStr}
 
