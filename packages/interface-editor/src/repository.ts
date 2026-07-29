@@ -77,6 +77,11 @@ export interface InterfaceRepository {
     instance: InterfaceInstance,
     assets?: Readonly<Record<string, Uint8Array>>
   ): Promise<SaveEntityResult>
+  updateInstance(
+    interfaceId: string,
+    instance: InterfaceInstance,
+    assets?: Readonly<Record<string, Uint8Array>>
+  ): Promise<void>
   readInstanceAsset(
     interfaceId: string,
     instanceId: string,
@@ -346,6 +351,44 @@ export class FileInterfaceRepository implements InterfaceRepository {
     const location = await this.requireInterfaceLocation(interfaceId)
     await this.writeInstanceAt(location.scope, instance, assets)
     return 'created'
+  }
+
+  async updateInstance(
+    interfaceId: string,
+    instance: InterfaceInstance,
+    assets?: Readonly<Record<string, Uint8Array>>
+  ): Promise<void> {
+    assertInstance(instance)
+    await this.assertInstanceCompatible(interfaceId, instance)
+    const existing = await this.findInstance(instance.instanceId)
+    if (!existing || existing.interfaceId !== interfaceId) {
+      throw new InterfaceRepositoryError('NOT_FOUND', `Instance not found: ${instance.instanceId}`)
+    }
+
+    const nextAssets =
+      assets ?? (await this.loadAssets(interfaceId, instance.instanceId, existing.assetFilenames))
+    assertAssets(nextAssets)
+    const location = await this.requireInterfaceLocation(interfaceId)
+    if (assets === undefined) {
+      await this.instanceScope(location.scope, instance.instanceId).writeText<StoredInstanceFile>(
+        INSTANCE_FILE,
+        { instance, assets: existing.assetFilenames }
+      )
+      return
+    }
+    const previousAssets = await this.loadAssets(
+      interfaceId,
+      instance.instanceId,
+      existing.assetFilenames
+    )
+    const scope = this.instanceScope(location.scope, instance.instanceId)
+    await scope.clear()
+    try {
+      await this.writeInstanceAt(location.scope, instance, nextAssets)
+    } catch (error) {
+      await this.writeInstanceAt(location.scope, existing.instance, previousAssets)
+      throw error
+    }
   }
 
   async readInstanceAsset(

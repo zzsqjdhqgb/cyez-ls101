@@ -4,7 +4,7 @@
 
 `@ls101/file-dialog` 已实现 Electron 系统原生文件打开与保存能力，并已接入 main 与 preload。
 
-`@ls101/interface-editor` 已使用该模块实现 Interface 二进制包的导入、检查和导出函数。当前尚未发现业务 renderer UI 对这些函数的实际调用，因此基础设施和业务交换 API 已落地，但 UI 工作流尚未形成可确认的集成事实。
+`@ls101/interface-editor` 已使用该模块实现 Interface 二进制包的导入会话和导出应用用例。当前尚未发现业务 renderer UI 对这些用例的实际调用，因此基础设施和业务交换 API 已落地，但 UI 工作流尚未形成可确认的集成事实。
 
 ## 功能边界
 
@@ -189,14 +189,14 @@ file-dialog:write
 
 ## Interface 集成
 
-`@ls101/interface-editor` 已通过 `Pick<FileDialog, 'readBinary' | 'writeBinary'>` 使用 File Dialog，并支持测试时注入替代实现。
+`@ls101/interface-editor` 已通过窄化的 `InterfaceFileDialog` 端口使用 `readBinary()` 和 `writeBinary()`，并由 `createInterfaceApplication()` 注入具体实现。测试可以注入替代文件对话框。
 
 已实现的交换能力包括：
 
 - 导出 Interface ZIP 字节到 `.lsinterface` 文件。
 - 提供 `LS101 Interface` 文件过滤器。
 - 读取用户选择的 `.lsinterface` 文件并保留 basename。
-- 在 File Dialog 返回字节后执行 Interface ZIP 解码、检查和导入。
+- 在 File Dialog 返回字节后执行 Interface ZIP 解码和检查，并创建只能提交一次的导入会话。
 - 保留读取取消的 `null` 和写入取消的 `false` 语义。
 
 ZIP 编解码、文件名清理和 Interface 业务校验属于 `@ls101/interface-editor`，不属于通用 File Dialog。

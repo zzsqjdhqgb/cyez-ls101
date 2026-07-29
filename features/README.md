@@ -18,3 +18,5 @@
 | --- | --- | --- | --- |
 | 应用私有文件存储 | `@ls101/file-store` | 基础设施已实现并完成 Electron 注册 | [file-store.md](file-store.md) |
 | 系统文件对话框 | `@ls101/file-dialog` | 基础设施已实现并完成 Electron 注册 | [file-dialog.md](file-dialog.md) |
+| 通用长耗时任务进度 | `@ls101/core-types` | 跨模块契约已实现，Interface 已产生实际句柄 | [task-progress.md](task-progress.md) |
+| Interface 领域与应用 API | `@ls101/interface-editor` | 领域、仓储和应用门面已实现，renderer 与真实 AI 尚未接线 | [interface-editor.md](interface-editor.md) |

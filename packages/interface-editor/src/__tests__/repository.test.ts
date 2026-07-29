@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import type { InterfaceInstance } from '@ls101/core-types'
+import type {
+  InterfaceInstance,
+  TaskProgressSnapshot
+} from '@ls101/core-types'
+import {
+  createInterfaceApplication,
+  type InterfaceTextGenerationChunk,
+  type InterfaceTextGenerator,
+} from '../application'
 import {
   exportInterfacePackage,
   importInterfacePackage,
@@ -619,6 +627,143 @@ describe('Interface ZIP 与文件对话框', () => {
   })
 })
 
+describe('Interface application', () => {
+  it('按五个 UI 模块浏览、复制和发布 Interface', async () => {
+    const { repository } = setup()
+    const app = createInterfaceApplication({ repository, fileDialog: new TestFileDialog(null) })
+    const draft = await app.drafts.create(content())
+
+    expect(await app.browser.listDrafts()).toEqual([
+      { draftId: draft.draftId, name: draft.name, description: draft.description }
+    ])
+    const published = await app.drafts.publish(draft.draftId)
+    expect(published.status).toBe('published')
+    if (published.status === 'invalid') throw new Error('Unexpected invalid draft')
+
+    expect(await app.browser.listPublished()).toEqual([published.interface])
+    expect((await app.published.get(published.interface.interfaceId))?.definition.name).toBe(
+      draft.name
+    )
+    const copy = await app.published.copyToDraft(published.interface.interfaceId)
+    expect(copy.draftId).not.toBe(draft.draftId)
+    expect(copy.fields).toEqual(draft.fields)
+  })
+
+  it('从内置 Interface 复制的未修改草稿发布为已存在内容', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(content())
+    await repository.saveBuiltinInterface('speaking', def)
+    await repository.setBuiltinCurrent('speaking', def.id)
+    const app = createInterfaceApplication({ repository, fileDialog: new TestFileDialog(null) })
+
+    const draft = await app.published.copyToDraft(def.id)
+    const result = await app.drafts.publish(draft.draftId)
+
+    expect(result).toMatchObject({
+      status: 'already-published',
+      interface: { interfaceId: def.id, source: { type: 'builtin', builtinKey: 'speaking' } }
+    })
+  })
+
+  it('创建正式空白实例并以整表保存和 JSON 导入覆盖同一 UUID', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(content())
+    await repository.saveInterface(def)
+    const app = createInterfaceApplication({ repository, fileDialog: new TestFileDialog(null) })
+
+    const blank = await app.published.createBlankInstance(def.id)
+    expect(blank.instance.instanceId).toMatch(/^[0-9a-f-]{36}$/)
+    expect(blank.instance.values).toEqual({ title: '' })
+
+    const saved = await app.instances.save(def.id, blank.instance.instanceId, { title: '手动值' })
+    expect(saved.instance).toMatchObject({
+      instanceId: blank.instance.instanceId,
+      values: { title: '手动值' }
+    })
+
+    const invalid = await app.instances.replaceFromJson(
+      def.id,
+      blank.instance.instanceId,
+      '{broken'
+    )
+    expect(invalid.status).toBe('invalid-json')
+    expect((await app.instances.get(def.id, blank.instance.instanceId))?.instance.values).toEqual({
+      title: '手动值'
+    })
+
+    const replaced = await app.instances.replaceFromJson(
+      def.id,
+      blank.instance.instanceId,
+      '{"title":"JSON 值"}'
+    )
+    expect(replaced.status).toBe('replaced')
+    if (replaced.status === 'replaced') {
+      expect(replaced.instance.instance).toMatchObject({
+        instanceId: blank.instance.instanceId,
+        values: { title: 'JSON 值' }
+      })
+    }
+  })
+
+  it('以扁平流式任务句柄展示 AI 过程并覆盖当前实例', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(content())
+    await repository.saveInterface(def)
+    const generator = new TestTextGenerator()
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(null),
+      textGenerator: generator
+    })
+    const blank = await app.published.createBlankInstance(def.id)
+
+    const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId)
+    const snapshots: TaskProgressSnapshot[] = []
+    handle.subscribe(() => snapshots.push(handle.getSnapshot()))
+    generator.append('正在构造 JSON')
+    generator.complete('{"title":"AI 值"}')
+
+    const result = await handle.completion
+    expect(result.status).toBe('completed')
+    expect(snapshots.some(({ items }) => items[0].log?.content.includes('正在构造'))).toBe(true)
+    expect(handle.getSnapshot().items.map(({ status }) => status)).toEqual([
+      'completed',
+      'completed',
+      'completed'
+    ])
+    expect((await app.instances.get(def.id, blank.instance.instanceId))?.instance.values).toEqual({
+      title: 'AI 值'
+    })
+  })
+
+  it('AI 运行时拒绝第二个生成、整表保存和 JSON 覆盖', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(content())
+    await repository.saveInterface(def)
+    const generator = new TestTextGenerator()
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(null),
+      textGenerator: generator
+    })
+    const blank = await app.published.createBlankInstance(def.id)
+    const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId)
+
+    await expect(
+      app.instances.startAIGeneration(def.id, blank.instance.instanceId)
+    ).rejects.toThrow('Instance is busy')
+    await expect(
+      app.instances.save(def.id, blank.instance.instanceId, { title: '手动值' })
+    ).rejects.toThrow('Instance is busy')
+    await expect(
+      app.instances.replaceFromJson(def.id, blank.instance.instanceId, '{"title":"JSON 值"}')
+    ).rejects.toThrow('Instance is busy')
+
+    generator.complete('{"title":"AI 值"}')
+    await handle.completion
+  })
+})
+
 interface MemoryData {
   texts: Map<string, unknown>
   assets: Map<string, Uint8Array>
@@ -706,6 +851,43 @@ class MemoryStore implements InterfaceStore {
 
   private fileKey(filename: string): string {
     return `${this.key()}::${filename}`
+  }
+}
+
+class TestTextGenerator implements InterfaceTextGenerator {
+  private readonly chunks: InterfaceTextGenerationChunk[] = []
+  private finished = false
+  private wake: (() => void) | null = null
+
+  async *generate(
+    _prompt: string,
+    options: { signal: AbortSignal }
+  ): AsyncIterable<InterfaceTextGenerationChunk> {
+    while (!this.finished || this.chunks.length > 0) {
+      if (options.signal.aborted) throw new DOMException('Aborted', 'AbortError')
+      const chunk = this.chunks.shift()
+      if (chunk) {
+        yield chunk
+        continue
+      }
+      await new Promise<void>((resolve) => {
+        this.wake = resolve
+        options.signal.addEventListener('abort', () => resolve(), { once: true })
+      })
+    }
+  }
+
+  append(content: string): void {
+    this.chunks.push({ type: 'reasoning', delta: content })
+    this.wake?.()
+    this.wake = null
+  }
+
+  complete(text: string): void {
+    this.chunks.push({ type: 'output', delta: text })
+    this.finished = true
+    this.wake?.()
+    this.wake = null
   }
 }
 

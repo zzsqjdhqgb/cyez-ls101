@@ -28,15 +28,18 @@ import { buildJsonSchema, buildJsonExample } from './schema'
  * LLM 应直接返回符合 Schema 的 JSON，不要包含任何 JSON 之外的文本。
  */
 export function buildAIPrompt(def: InterfaceDef): string {
+  return `${def.promptTemplate}\n\n${buildFormatInstructions(def)}`
+}
+
+/** 构建由字段结构派生的格式限制提示词。 */
+export function buildFormatInstructions(def: InterfaceDef): string {
   const schema = buildJsonSchema(def.fields)
   const example = buildJsonExample(def.fields)
 
   const schemaStr = JSON.stringify(schema, null, 2)
   const exampleStr = JSON.stringify(example, null, 2)
 
-  return `${def.promptTemplate}
-
-请严格按照以下 JSON Schema 输出，不要输出任何 JSON 之外的文本：
+  return `请严格按照以下 JSON Schema 输出，不要输出任何 JSON 之外的文本：
 其中图片字段应返回可直接用于图片生成模型的详细提示词，不要返回图片 URL。
 
 ${schemaStr}
