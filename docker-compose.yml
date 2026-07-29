@@ -13,6 +13,7 @@ services:
       # 持久化 OpenCode 的配置和缓存，避免重启后需要重新登录
       - opencode-data-plain:/root/.local
       - opencode-config-plain:/root/.config/opencode
+      - codex_home:/root/.codex
       - yarn:/workspace/.yarn
       - yarn-cache:/yarn/store
       - node_modules:/workspace/node_modules
@@ -23,6 +24,7 @@ services:
       - /workspace/out
       - ./docker-compose.yml:/workspace/docker-compose.yml:ro
       - ./Dockerfile:/workspace/Dockerfile:ro
+      - ./opencode.bat:/workspace/opencode.bat:ro
     working_dir: /workspace
     # 保持容器运行并支持交互式终端
     stdin_open: true
@@ -32,6 +34,7 @@ services:
 volumes:
   opencode-data-plain:
   opencode-config-plain:
+  codex_home:
   yarn:
   yarn-cache:
   node_modules:
