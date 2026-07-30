@@ -164,6 +164,7 @@ export interface InterfaceImportSession {
 
 export interface InterfaceImportResult {
   interfaceId: string
+  interfaceStatus: 'created' | 'skipped-existing'
   importedInstanceIds: string[]
   skippedInstanceIds: string[]
 }
@@ -493,6 +494,7 @@ export function createInterfaceApplication(
             const result = await importInterfacePackage(repository, value, { instances })
             return {
               interfaceId: value.interface.id,
+              interfaceStatus: result.interface,
               importedInstanceIds: Object.entries(result.instances)
                 .filter(([, status]) => status === 'created')
                 .map(([instanceId]) => instanceId),

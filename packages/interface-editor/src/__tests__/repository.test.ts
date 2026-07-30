@@ -426,18 +426,26 @@ describe('Interface 交换包', () => {
     )
   })
 
-  it('拒绝重复导入已经存在的 Interface', async () => {
+  it('跳过已存在的 Interface 并继续导入新实例', async () => {
     const source = setup().repository
     const target = setup().repository
     const def = await publishInterface(content())
     await source.saveInterface(def)
     await source.saveInstance(def.id, instance(INSTANCE_A, 'A'))
+    await source.saveInstance(def.id, instance(INSTANCE_B, 'B'))
     const bundle = await exportInterfacePackage(source, def.id, { mode: 'all' })
 
-    await importInterfacePackage(target, bundle, { instances: { mode: 'all' } })
-    await expect(
-      importInterfacePackage(target, bundle, { instances: { mode: 'all' } })
-    ).rejects.toMatchObject({ code: 'IDENTITY_CONFLICT' })
+    await target.saveBuiltinInterface('speaking', def)
+    await target.setBuiltinCurrent('speaking', def.id)
+    await target.saveInstance(def.id, instance(INSTANCE_A, 'A'))
+    const result = await importInterfacePackage(target, bundle, { instances: { mode: 'all' } })
+
+    expect(result).toEqual({
+      interface: 'skipped-existing',
+      instances: { [INSTANCE_A]: 'existing', [INSTANCE_B]: 'created' }
+    })
+    expect(await target.listInstanceIds(def.id)).toEqual([INSTANCE_A, INSTANCE_B])
+    expect(await target.listPublishedInterfaceIds()).toEqual([])
   })
 
   it('不同 UUID 的相同实例内容在导入时全部保留', async () => {
@@ -626,6 +634,32 @@ describe('Interface ZIP 与文件对话框', () => {
 })
 
 describe('Interface application', () => {
+  it('导入会话报告 Interface 跳过状态并继续导入新实例', async () => {
+    const source = setup().repository
+    const target = setup().repository
+    const def = await publishInterface(content())
+    await source.saveInterface(def)
+    await source.saveInstance(def.id, instance(INSTANCE_A, 'A'))
+    await source.saveInstance(def.id, instance(INSTANCE_B, 'B'))
+    await target.saveInterface(def)
+    await target.saveInstance(def.id, instance(INSTANCE_A, 'A'))
+
+    const bundle = await exportInterfacePackage(source, def.id, { mode: 'all' })
+    const app = createInterfaceApplication({
+      repository: target,
+      fileDialog: new TestFileDialog(await encodeInterfaceZip(bundle))
+    })
+    const session = await app.transfer.beginImport()
+    if (!session) throw new Error('Expected an import session')
+
+    await expect(session.commit({ mode: 'all' })).resolves.toEqual({
+      interfaceId: def.id,
+      interfaceStatus: 'skipped-existing',
+      importedInstanceIds: [INSTANCE_B],
+      skippedInstanceIds: [INSTANCE_A]
+    })
+  })
+
   it('按五个 UI 模块浏览、复制和发布 Interface', async () => {
     const { repository } = setup()
     const app = createInterfaceApplication({ repository, fileDialog: new TestFileDialog(null) })

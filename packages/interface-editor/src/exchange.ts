@@ -39,8 +39,10 @@ export interface InterfacePackageImportOptions {
   instances: InstanceSelection
 }
 
+export type InterfaceDefinitionImportResult = 'created' | 'skipped-existing'
+
 export interface InterfacePackageImportResult {
-  interface: SaveEntityResult
+  interface: InterfaceDefinitionImportResult
   instances: Record<string, SaveEntityResult | 'skipped-other-interface'>
 }
 
@@ -130,10 +132,8 @@ export async function importInterfacePackage(
   const selected = value.instances.filter(({ instance }) => selectedIds.has(instance.instanceId))
 
   const existingDef = await repository.getInterface(value.interface.id)
-  if (existingDef) {
-    const comparison = compareInterfaceIdentity(existingDef, value.interface)
-    const reason = comparison === 'same' ? 'already exists' : 'has an identity collision'
-    throw identityConflict(`Interface ${value.interface.id} ${reason}`)
+  if (existingDef && compareInterfaceIdentity(existingDef, value.interface) !== 'same') {
+    throw identityConflict(`Interface ${value.interface.id} has an identity collision`)
   }
 
   for (const incoming of selected) {
@@ -146,11 +146,14 @@ export async function importInterfacePackage(
     }
   }
 
-  let interfaceResult: SaveEntityResult | null = null
+  let interfaceResult: InterfaceDefinitionImportResult = 'skipped-existing'
   const createdInstances: string[] = []
   const instances: Record<string, SaveEntityResult | 'skipped-other-interface'> = {}
   try {
-    interfaceResult = await repository.saveInterface(value.interface)
+    if (!existingDef) {
+      const saved = await repository.saveInterface(value.interface)
+      interfaceResult = saved === 'created' ? 'created' : 'skipped-existing'
+    }
     for (const incoming of selected) {
       const existing = await repository.findInstance(incoming.instance.instanceId)
       if (existing && existing.interfaceId !== value.interface.id) {

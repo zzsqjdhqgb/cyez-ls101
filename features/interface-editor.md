@@ -439,10 +439,13 @@ interface InterfaceImportSession {
 ```typescript
 interface InterfaceImportResult {
   interfaceId: string
+  interfaceStatus: 'created' | 'skipped-existing'
   importedInstanceIds: string[]
   skippedInstanceIds: string[]
 }
 ```
+
+`interfaceStatus` 明确表示 Interface 定义是新写入还是因本地已有相同内容而跳过；定义被跳过不影响所选实例的导入。
 
 ## 交换文件
 
@@ -468,7 +471,7 @@ instances/
 - 文件数量和解压后总大小不超过限制。
 - JSON 和 UTF-8 内容合法。
 
-本地已存在相同 Interface ID 时，导入拒绝整个 Interface，不创建重复用户副本。实例 UUID 冲突规则由仓储执行：同 UUID、不同内容拒绝；同 UUID、相同内容且已归属其他 Interface 时跳过，不改变现有归属。
+本地已存在相同 Interface ID 且规范化内容一致时，只跳过 Interface 定义写入（结果为 `skipped-existing`），不创建重复用户副本，并继续导入用户选择的实例。本地同 ID 但内容不一致时视为哈希碰撞或篡改，拒绝整个导入。实例 UUID 冲突规则由仓储执行：同 UUID、同内容时跳过；同 UUID、不同内容时拒绝整个导入。若相同实例已归属其他 Interface，跳过后不改变现有归属。
 
 ## 存储与身份
 

@@ -248,7 +248,7 @@ Interface 定义——包含名称、描述、`promptTemplate` 和有序 `fields
 
 导入时可以再次选择不导入实例、导入选中实例或导入全部附带实例。不支持脱离 Interface 单独导出实例。实例中的本地图片等资源必须随实例一起打包。
 
-导入时系统必须重新计算并校验 Interface 内容 ID。本地只要已有相同 ID 的 Interface，就拒绝导入，不创建内置内容的用户副本。不同 `instanceId` 的实例即使内容相同也全部保留，不按内容去重。若实例 UUID 已存在于另一个 Interface 且内容相同，则跳过该实例并保留当前归属；内容不同则拒绝导入。
+导入时系统必须重新计算并校验 Interface 内容 ID。本地已有相同 ID 且规范化内容一致时，跳过 Interface 定义写入，不创建内置内容的用户副本，但继续导入用户选择的实例；同 ID 但内容不一致时视为哈希碰撞或篡改，拒绝整个导入。不同 `instanceId` 的实例即使内容相同也全部保留，不按内容去重。若实例 UUID 已存在且内容相同，则跳过该实例；已归属另一个 Interface 时保留当前归属。若同 UUID 内容不同，则在任何写入前拒绝整个导入。
 
 交换文件使用 `.lsinterface` 扩展名，内容为 ZIP。渲染进程使用 `fflate` 将业务交换包编码/解码为 `Uint8Array`，再通过 `@ls101/file-dialog` 的 `readBinary()` 和 `writeBinary()` 调用系统文件对话框。ZIP 固定结构如下：
 
