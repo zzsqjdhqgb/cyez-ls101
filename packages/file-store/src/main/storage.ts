@@ -1,4 +1,5 @@
-import { access, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
+import { access, mkdir, open, readFile, readdir, rename, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { ASSET_DIRECTORY, TEXT_DIRECTORY } from '../shared/constants'
 import { validateFilename, validateScope, validateScopeSegment } from '../shared/pathUtils'
@@ -21,6 +22,56 @@ export function resolveAssetPath(baseDir: string, location: FileLocation): strin
 
 function isMissingFile(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === 'ENOENT'
+}
+
+interface AtomicWriteOperations {
+  open: typeof open
+  rename: typeof rename
+  rm: typeof rm
+}
+
+const atomicWriteOperations: AtomicWriteOperations = { open, rename, rm }
+
+/** Write beside the target so rename never crosses filesystems. */
+export async function atomicWriteFile(
+  filePath: string,
+  data: string | Uint8Array,
+  operationOverrides: Partial<AtomicWriteOperations> = {}
+): Promise<void> {
+  const operations = { ...atomicWriteOperations, ...operationOverrides }
+  const directory = path.dirname(filePath)
+  const temporaryPath = path.join(directory, `.file-store-${randomUUID()}.tmp`)
+  let temporaryFile: Awaited<ReturnType<typeof open>> | null = null
+  let renamed = false
+
+  await mkdir(directory, { recursive: true })
+  try {
+    temporaryFile = await operations.open(temporaryPath, 'wx', 0o666)
+    await temporaryFile.writeFile(data)
+    await temporaryFile.sync()
+    await temporaryFile.close()
+    temporaryFile = null
+
+    await operations.rename(temporaryPath, filePath)
+    renamed = true
+    await syncDirectory(directory, operations.open)
+  } finally {
+    if (temporaryFile) await temporaryFile.close().catch(() => undefined)
+    if (!renamed) await operations.rm(temporaryPath, { force: true }).catch(() => undefined)
+  }
+}
+
+async function syncDirectory(directory: string, openFile: typeof open): Promise<void> {
+  let directoryHandle: Awaited<ReturnType<typeof open>> | null = null
+  try {
+    directoryHandle = await openFile(directory, 'r')
+    await directoryHandle.sync()
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code
+    if (!code || !['EINVAL', 'EISDIR', 'ENOTSUP', 'EPERM'].includes(code)) throw error
+  } finally {
+    if (directoryHandle) await directoryHandle.close()
+  }
 }
 
 export class FileStorage {
@@ -136,7 +187,6 @@ export class FileStorage {
   }
 
   private async write(filePath: string, data: string | Uint8Array): Promise<void> {
-    await mkdir(path.dirname(filePath), { recursive: true })
-    await writeFile(filePath, data)
+    await atomicWriteFile(filePath, data)
   }
 }

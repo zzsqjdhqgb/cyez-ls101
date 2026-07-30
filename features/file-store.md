@@ -13,6 +13,7 @@ File Store 负责：
 - 管理应用私有 `userData` 目录中的持久化数据。
 - 使用逐层派生的 scope 隔离业务数据。
 - 分别存储 JSON 文本数据和二进制资源。
+- 以同目录临时文件加原子重命名的方式写入 Text 和 Asset。
 - 通过受限 IPC 在 renderer 与 main 之间传递存储请求。
 - 为二进制资源生成 `asset://local/...` URL。
 
@@ -21,7 +22,7 @@ File Store 不负责：
 - 打开系统文件选择或保存对话框。
 - 导入、导出用户主动选择的外部文件。
 - 业务数据的运行时 schema 校验。
-- 事务、并发写锁、原子写入或流式 I/O。
+- 多文件事务、并发写锁或流式 I/O。
 
 ## 公共接口
 
@@ -123,6 +124,19 @@ Asset = Join(baseDir, ...scope, '.assets', filename)
 
 相同 filename 可以同时存在于 Text 和 Asset 命名空间。`.text` 和 `.assets` 不符合 scope 命名规则，也不会由 `listScopes()` 返回。
 
+## 原子写入
+
+`writeText()` 和 `writeAsset()` 在 main 进程统一使用单文件原子替换流程：
+
+1. 在目标文件所在目录创建名称唯一的隐藏临时文件。
+2. 将完整内容写入临时文件并执行文件 `fsync`。
+3. 关闭临时文件后，以同文件系统内的 `rename` 原子替换目标文件。
+4. 在平台和文件系统支持时同步父目录，使重命名元数据持久化。
+
+写入、同步、关闭或重命名在替换前失败时，旧目标文件保持不变，临时文件会尽力清理。进程在清理前被强制终止可能留下 `.file-store-*.tmp`，这些名称不符合公开 filename 规则，不会出现在 `listText()` 或 `listAssets()` 中，并会随 scope 清理而删除。
+
+该保证针对单个文件，依赖本地文件系统提供同目录 `rename` 的原子替换语义。File Store 不提供跨文件事务或并发写锁；多个成功的并发写入采用最后完成重命名者生效的语义。
+
 ## Text 语义
 
 - `writeText()` 在 renderer 使用 `JSON.stringify()` 序列化数据。
@@ -217,8 +231,9 @@ file:clear-scope
 - 缺失数据语义、列表排序和递归清理。
 - asset URL 解析与非法 URL 拒绝。
 - renderer 的 scope 派生、IPC 参数和 asset URL 生成。
+- 单文件原子替换、临时文件清理和替换失败时保留旧内容。
 
-当前未覆盖真实 Electron IPC、preload、protocol handler 和 `net.fetch()` 的端到端运行，也未覆盖并发写入、原子性和符号链接路径攻击。
+当前未覆盖真实 Electron IPC、preload、protocol handler 和 `net.fetch()` 的端到端运行，也未覆盖并发写入、进程在系统调用中间被终止的故障注入和符号链接路径攻击。
 
 ## 代码依据
 

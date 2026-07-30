@@ -1,8 +1,14 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { FileStorage, resolveAssetPath, resolveScopePath, resolveTextPath } from '../main/storage'
+import {
+  atomicWriteFile,
+  FileStorage,
+  resolveAssetPath,
+  resolveScopePath,
+  resolveTextPath
+} from '../main/storage'
 import type { FileLocation } from '../shared/types'
 
 describe('FileStorage', () => {
@@ -42,6 +48,36 @@ describe('FileStorage', () => {
     expect(await storage.readAsset(location)).toEqual(new Uint8Array([1, 2, 3]))
     expect(await storage.listText(draftScope)).toEqual(['content'])
     expect(await storage.listAssets(draftScope)).toEqual(['content'])
+  })
+
+  it('atomically replaces an existing file without leaving temporary files', async () => {
+    const location: FileLocation = { scope: draftScope, filename: 'instance.json' }
+    const filePath = resolveTextPath(baseDir, location)
+
+    await storage.writeText(location, '{"value":"old"}')
+    await storage.writeText(location, '{"value":"new"}')
+
+    expect(await storage.readText(location)).toBe('{"value":"new"}')
+    expect(await readdir(path.dirname(filePath))).toEqual(['instance.json'])
+  })
+
+  it('preserves the old file and removes the temporary file when replacement fails', async () => {
+    const location: FileLocation = { scope: draftScope, filename: 'instance.json' }
+    const filePath = resolveTextPath(baseDir, location)
+    await storage.writeText(location, '{"value":"old"}')
+
+    await expect(
+      atomicWriteFile(filePath, '{"value":"new"}', {
+        async rename() {
+          const error = new Error('simulated rename failure') as NodeJS.ErrnoException
+          error.code = 'EIO'
+          throw error
+        }
+      })
+    ).rejects.toThrow('simulated rename failure')
+
+    expect(await readFile(filePath, 'utf8')).toBe('{"value":"old"}')
+    expect(await readdir(path.dirname(filePath))).toEqual(['instance.json'])
   })
 
   it('lists child scopes without exposing reserved directories', async () => {

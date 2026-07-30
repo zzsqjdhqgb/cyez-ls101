@@ -171,7 +171,15 @@ Asset = Join(baseDir, ...scope, '.assets', filename)
 
 `.text` 和 `.assets` 是 file-store 内部保留目录。它们不符合 scope segment 规则，也不会被 `listScopes()` 返回。
 
-## 六、列表与清理
+## 六、单文件原子写入
+
+Text 和 Asset 的所有写入必须在 main 进程经过同一个原子替换入口。实现按以下顺序执行：在目标同目录创建唯一临时文件、写入全部内容、对临时文件执行 `fsync`、关闭文件、以 `rename` 替换目标，并在文件系统支持时同步父目录。临时文件与目标处于同一目录，禁止跨文件系统重命名。
+
+替换前任一步骤失败时，不得截断或删除旧目标文件，并应尽力清理临时文件。进程被强制终止而遗留的隐藏临时文件不属于公开 Text 或 Asset 列表，并在所属 scope 清理时一并删除。
+
+原子性只覆盖单个文件，不扩展为多文件事务。并发写入不加锁，多个成功写入由最后完成 `rename` 的写入生效。
+
+## 七、列表与清理
 
 - `listText()` 只列出当前 scope 的 `.text` 文件。
 - `listAssets()` 只列出当前 scope 的 `.assets` 文件。
@@ -197,7 +205,7 @@ await interfaces.clear() // 删除整个 interfaces 数据树
 
 顶层 `clear()` 在存储层是合法能力。业务模块通过控制顶层 `ScopedStore` 对象的可见范围来控制删除权限。
 
-## 七、IPC 契约
+## 八、IPC 契约
 
 文件请求使用结构化位置：
 
@@ -229,7 +237,7 @@ file:clear-scope
 
 Text 与 Asset 使用不同通道，由主进程决定进入 `.text` 还是 `.assets`。调用方不能通过参数指定保留目录。
 
-## 八、Asset 自定义协议
+## 九、Asset 自定义协议
 
 资源 URL 使用固定 host，并把 scope 放入 pathname：
 
@@ -255,7 +263,7 @@ return <img src={draft.getAssetUrl('cover.png')} />
 
 协议处理器永远不会映射 `.text`，因此 Text 文件不在 `asset://` 的可达范围内。
 
-## 九、包导出边界
+## 十、包导出边界
 
 ```text
 @ls101/file-store/main

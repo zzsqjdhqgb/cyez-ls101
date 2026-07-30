@@ -598,7 +598,7 @@ MISSING_ASSET
 - AIRouter 尚未实现真实文本生成流；当前只有需求注释和 Interface 端口。
 - 图片字段的二次图片生成、资源保存和字段 URL 替换尚未实现。
 - 实例时间字段仍名为 `generatedAt`，空白实例也会在创建时写入该时间。
-- 实例整表更新依赖底层单文件 `writeText()`；File Store 当前不声明临时文件加 rename 的原子写保证。
+- 实例整表更新依赖 File Store 的单文件原子替换；这不构成 Interface 定义、实例和资源之间的多文件事务。
 - 应用层部分错误仍使用普通 `Error` 文本，尚未统一为稳定错误码。
 - builtin 引用迁移没有真实 Template 仓储适配器。
 - 没有删除已发布 Interface 前的 Template 引用影响检查应用用例。
