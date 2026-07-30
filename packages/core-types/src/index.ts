@@ -6,3 +6,5 @@
 
 export type { InterfaceVarInfo, InterfaceVarManifest, InterfaceInstance } from './interface'
 export type { TaskProgressItem, TaskProgressSnapshot, TaskProgressHandle } from './task-progress'
+export { WINDOW_CONTROL_CHANNELS, WINDOW_CONTROL_EVENTS } from './window-controls'
+export type { WindowControlsBridge } from './window-controls'
