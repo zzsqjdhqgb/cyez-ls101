@@ -42,11 +42,21 @@ Interface 定义在 AI 生成之前的状态。Template 编辑器读取此格式
 
 ```typescript
 interface InterfaceDef {
-  id: string                        // sha256:<64位十六进制摘要>，由规范化内容确定
+  id: string // sha256:<64位十六进制摘要>，由规范化内容确定
   name: string
   description: string
   promptTemplate: string
-  fields: InterfaceFieldTree      // 详见 interface-editor.md
+  fields: FieldCollection
+}
+
+interface FieldCollection {
+  order: string[] // 唯一的字段顺序来源
+  nodes: Record<string, FieldNode>
+}
+
+interface FieldGroup {
+  type: 'group'
+  children: FieldCollection
 }
 
 // Template 编辑器关心的平铺视图：
@@ -57,11 +67,11 @@ interface InterfaceVarManifest {
 }
 
 interface InterfaceVarInfo {
-  varName: string                 // Template 中以 [@varName] 引用
-  type: "text" | "image"
+  varName: string // Template 中以 [@varName] 引用
+  type: 'text' | 'image'
   description: string
   example: string
-  path: string                    // 字段路径，如 "sectionA.sentences.s1"
+  path: string // 字段路径，如 "sectionA.sentences.s1"
 }
 ```
 
@@ -71,13 +81,13 @@ interface InterfaceVarInfo {
 
 ```typescript
 interface InterfaceInstance {
-  instanceId: string               // UUID v4，一次独立创建对应一个实体 ID
+  instanceId: string // UUID v4，一次独立创建对应一个实体 ID
   generatedAt: string
-  values: Record<string, string>   // varName → 值
+  values: Record<string, string> // varName → 值
 }
 ```
 
-`InterfaceDef.id` 是内容身份：相同的规范化 Interface 内容具有相同 ID。哈希输入包含 `name`、`description`、`promptTemplate` 和有序字段树，不包含实例。
+`InterfaceDef.id` 是内容身份：相同的规范化 Interface 内容具有相同 ID。哈希输入包含 `name`、`description`、`promptTemplate` 和有序字段树，不包含实例。每层 `order` 必须与 `nodes` 的 key 集合完全一致，字段顺序不依赖 JSON 对象属性顺序。
 
 `InterfaceInstance.instanceId` 是实体身份：两个实例即使 `values` 完全相同，只要 UUID 不同，就视为两个不同实例。实例本体不保存 `interfaceId`，所属 Interface 由仓储目录确定。新增、删除或导入实例不会改变 `InterfaceDef.id`。导入原实例、恢复备份或迁移内置版本时保留 UUID；同 UUID、不同内容必须作为冲突拒绝。
 
@@ -97,9 +107,9 @@ interface SchemaDef {
 
 // 提交信息字段定义（Schema 导出的变量列表）
 type SchemaFieldDef =
-  | { varName: string, type: "text" }
-  | { varName: string, type: "audio", recordIndex: number }
-  | { varName: string, type: "choice", choiceIndex: number }
+  | { varName: string; type: 'text' }
+  | { varName: string; type: 'audio'; recordIndex: number }
+  | { varName: string; type: 'choice'; choiceIndex: number }
 ```
 
 Schema 内部的评分结构、维度、合并方式等由 schema-editor 设计文档定义，本文档不涉及。
@@ -141,9 +151,9 @@ interface ExamPackage {
 }
 
 type SchemaFieldValue =
-  | { varName: string, type: "text",   value: string }                     // 固定文本，展开时已确定
-  | { varName: string, type: "audio",  recordIndex: number }               // 录音槽位，题号引用
-  | { varName: string, type: "choice", choiceIndex: number }               // 选择题槽位，题号引用
+  | { varName: string; type: 'text'; value: string } // 固定文本，展开时已确定
+  | { varName: string; type: 'audio'; recordIndex: number } // 录音槽位，题号引用
+  | { varName: string; type: 'choice'; choiceIndex: number } // 选择题槽位，题号引用
 
 interface ExamPage {
   id: string
@@ -153,9 +163,9 @@ interface ExamPage {
 }
 
 type ResolvedTimelineStep =
-  | { type: "play",       src: string,         statusText?: string }
-  | { type: "countdown",  seconds: number,     statusText?: string }
-  | { type: "record",     duration: number,    recordIndex: number, statusText?: string }
+  | { type: 'play'; src: string; statusText?: string }
+  | { type: 'countdown'; seconds: number; statusText?: string }
+  | { type: 'record'; duration: number; recordIndex: number; statusText?: string }
 
 // （ResolvedLayoutBlock 等详见 template-editor.md）
 ```

@@ -34,6 +34,7 @@ export type {
   FieldLeaf,
   FieldGroup,
   FieldNode,
+  FieldCollection,
   InterfaceContent,
   InterfaceDraft,
   InterfaceDef

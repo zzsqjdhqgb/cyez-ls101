@@ -10,7 +10,10 @@
 
 - `InterfaceDef.id` 是内容 ID，格式为 `sha256:<64 位十六进制摘要>`，不由 UI 或用户手工填写
 - 哈希输入包含 `name`、`description`、`promptTemplate` 和有序 `fields` 树，不包含 ID、状态和时间戳
-- 文本统一为 LF 换行和 Unicode NFC；字段顺序影响编辑器展示，因此顺序变化视为内容变化
+- 每层字段集合存储为 `{ order, nodes }`；`order` 与 `nodes` 的 key 集合必须完全一致，且是显示、遍历和哈希的唯一顺序来源
+- 文本统一为 LF 换行和 Unicode NFC；字段顺序按 `order` 编码为条目数组，因此顺序变化视为内容变化
+- 规范值使用 `fast-json-stable-stringify` 序列化：对象 key 按字典序排列，不输出缩进或额外空白，字段条目数组保持业务顺序
+- 规范字符串固定使用 UTF-8 编码后计算 SHA-256，不依赖平台默认编码或 JavaScript 对象属性声明顺序
 - 用户发布内容和内置 Interface 使用同一套 `publishInterface()` 计算规则；相同内容在不同设备上得到相同 ID
 - 内置 Interface 内容不变时 ID 永远不变；内容修改后自然产生新 ID，不维护预设 UUID 表
 - 草稿使用独立的随机 UUID v4 `draftId` 管理本地编辑会话，不参与发布、导入和 Template 引用

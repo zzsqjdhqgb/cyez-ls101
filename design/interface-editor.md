@@ -15,30 +15,37 @@ interface InterfaceDef {
   id: string
   name: string
   description: string
-  promptTemplate: string        // 发送给 LLM 的提示词
-  fields: FieldNode             // 字段结构（嵌套对象树）
+  promptTemplate: string // 发送给 LLM 的提示词
+  fields: FieldCollection // 根级字段集合
 }
 
-// FieldNode 可以是一组子字段（object），也可以是叶子字段
+interface FieldCollection {
+  order: string[] // 唯一的显示和遍历顺序
+  nodes: Record<string, FieldNode>
+}
+
+// FieldNode 可以是一组子字段，也可以是叶子字段
 type FieldNode = FieldGroup | FieldLeaf
 
 interface FieldGroup {
-  type: "group"                 // 容器，包含子字段
-  children: Record<string, FieldNode>
+  type: 'group' // 容器，包含子字段
+  children: FieldCollection
 }
 ```
+
+每一层的 `order` 必须无重复，并且与 `nodes` 的 key 集合完全一致。显示、变量清单、Schema 构建、builtin 结构判断和 Content ID 都只使用 `order` 作为顺序来源。
 
 ### 2.2 叶子字段
 
 ```typescript
 interface FieldLeaf {
-  type: "text" | "image"
+  type: 'text' | 'image'
 
   // 以下三项由教师填写
 
-  varName: string               // 变量名，在 Template 中以 [@varName] 引用
-  description: string           // 字段描述，告知 AI 此字段的含义，如"第二题题干"
-  example: string               // 示例值，辅助 AI 理解输出格式
+  varName: string // 变量名，在 Template 中以 [@varName] 引用
+  description: string // 字段描述，告知 AI 此字段的含义，如"第二题题干"
+  example: string // 示例值，辅助 AI 理解输出格式
 }
 ```
 
@@ -50,12 +57,13 @@ interface FieldLeaf {
 {
   "promptTemplate": "请生成一套上海高考英语口语模拟试卷，难度中等，话题围绕校园生活。",
   "fields": {
-    "sectionA": {
-      "type": "group",
-      "children": {
-        "sentences": {
-          "type": "group",
-          "children": {
+    "order": ["sectionA", "sectionB"],
+    "nodes": {
+      "sectionA": {
+        "type": "group",
+        "children": {
+          "order": ["s1", "s2"],
+          "nodes": {
             "s1": {
               "type": "text",
               "varName": "sentenceA1",
@@ -70,22 +78,25 @@ interface FieldLeaf {
             }
           }
         }
-      }
-    },
-    "sectionB": {
-      "type": "group",
-      "children": {
-        "picture": {
-          "type": "image",
-          "varName": "sectionBImage",
-          "description": "看图说话题目配图",
-          "example": "A family having dinner together in a cozy restaurant"
-        },
-        "hint": {
-          "type": "text",
-          "varName": "sectionBHint",
-          "description": "看图说话关键词提示",
-          "example": "family, dinner, restaurant, happy"
+      },
+      "sectionB": {
+        "type": "group",
+        "children": {
+          "order": ["picture", "hint"],
+          "nodes": {
+            "picture": {
+              "type": "image",
+              "varName": "sectionBImage",
+              "description": "看图说话题目配图",
+              "example": "A family having dinner together in a cozy restaurant"
+            },
+            "hint": {
+              "type": "text",
+              "varName": "sectionBHint",
+              "description": "看图说话关键词提示",
+              "example": "family, dinner, restaurant, happy"
+            }
+          }
         }
       }
     }
@@ -140,7 +151,7 @@ interface FieldLeaf {
 
 ### 4.1 提交给 LLM
 
-系统将 `promptTemplate` + 字段结构的 JSON 描述一同发给 LLM：
+系统按每层 `order` 将领域字段树转换为普通 JSON 输出结构，再与 `promptTemplate` 一同发给 LLM。`order` 和 `nodes` 是本地领域格式，不会出现在发给 LLM 的 JSON 中：
 
 ```json
 {
@@ -196,7 +207,7 @@ LLM 返回的 JSON 与字段结构一致，但叶子节点填充了实际值：
   "values": {
     "sentenceA1": "The importance of education cannot be overstated.",
     "sentenceA2": "Technology has changed the way we communicate.",
-    "sectionBImage": "https://...",           // 已生成的图片 URL
+    "sectionBImage": "https://...", // 已生成的图片 URL
     "sectionBHint": "classroom, students, project, teacher, collaboration"
   }
 }

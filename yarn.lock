@@ -1232,6 +1232,7 @@ __metadata:
     "@ls101/file-dialog": "workspace:*"
     "@sinclair/typebox": "npm:^0.34.52"
     ajv: "npm:^8.20.0"
+    fast-json-stable-stringify: "npm:^2.1.0"
     fflate: "npm:^0.8.2"
   peerDependencies:
     react: ^19
@@ -4263,7 +4264,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fast-json-stable-stringify@npm:^2.0.0":
+"fast-json-stable-stringify@npm:^2.0.0, fast-json-stable-stringify@npm:^2.1.0":
   version: 2.1.0
   resolution: "fast-json-stable-stringify@npm:2.1.0"
   checksum: 10c0/7f081eb0b8a64e0057b3bb03f974b3ef00135fbf36c1c710895cd9300f13c94ba809bb3a81cf4e1b03f6e5285610a61abbd7602d0652de423144dfee5a389c9b

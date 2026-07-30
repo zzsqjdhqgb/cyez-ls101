@@ -7,7 +7,7 @@
 //   - 消息文本由 errorMessages.ts 集中管理，校验函数本身不拼接字符串
 //   - ValidationResult.valid 是只读的派生字段
 
-import type { InterfaceDef, FieldNode } from './types'
+import type { FieldCollection, InterfaceDef } from './types'
 import { flattenFields } from './queries'
 import { isInterfaceId } from './id'
 
@@ -21,6 +21,7 @@ export type ValidationErrorCode =
   | 'EMPTY_PROMPT_TEMPLATE' // promptTemplate 为空
   | 'EMPTY_FIELDS' // fields 根级为空
   | 'EMPTY_GROUP' // FieldGroup.children 为空
+  | 'INVALID_FIELD_ORDER' // order 与 nodes 的 key 集合不一致或包含重复项
   | 'INVALID_FIELD_KEY' // 字段 key 为空、含 "." 或首尾空白
   | 'EMPTY_VAR_NAME' // varName 为空
   | 'INVALID_VAR_NAME' // varName 格式不合法
@@ -119,23 +120,25 @@ export function validateInterfaceDef(def: InterfaceDef): ValidationResult {
     errors.push(err('', 'EMPTY_PROMPT_TEMPLATE'))
   }
 
-  if (Object.keys(def.fields).length === 0) {
+  if (Object.keys(def.fields.nodes).length === 0) {
     errors.push(err('', 'EMPTY_FIELDS'))
   }
 
   // — 递归校验字段树 —
 
-  validateNodes(def.fields, '', errors)
+  const fieldOrderIsValid = validateNodes(def.fields, '', errors)
 
   // — varName 全局唯一性 —
 
-  const seen = new Set<string>()
-  for (const { path, leaf } of flattenFields(def.fields)) {
-    if (!leaf.varName.trim() || !VAR_NAME_PATTERN.test(leaf.varName)) continue
-    if (seen.has(leaf.varName)) {
-      errors.push(err(path, 'DUPLICATE_VAR_NAME', { varName: leaf.varName }))
+  if (fieldOrderIsValid) {
+    const seen = new Set<string>()
+    for (const { path, leaf } of flattenFields(def.fields)) {
+      if (!leaf.varName.trim() || !VAR_NAME_PATTERN.test(leaf.varName)) continue
+      if (seen.has(leaf.varName)) {
+        errors.push(err(path, 'DUPLICATE_VAR_NAME', { varName: leaf.varName }))
+      }
+      seen.add(leaf.varName)
     }
-    seen.add(leaf.varName)
   }
 
   return errors.length === 0 ? success() : failure(errors)
@@ -146,11 +149,21 @@ export function validateInterfaceDef(def: InterfaceDef): ValidationResult {
 // ============================================================
 
 function validateNodes(
-  fields: Record<string, FieldNode>,
+  fields: FieldCollection,
   parentPath: string,
   errors: ValidationError[]
-): void {
-  for (const [key, node] of Object.entries(fields)) {
+): boolean {
+  const nodeKeys = Object.keys(fields.nodes)
+  const orderIsValid =
+    fields.order.length === nodeKeys.length &&
+    new Set(fields.order).size === fields.order.length &&
+    fields.order.every((key) => Object.hasOwn(fields.nodes, key))
+  if (!orderIsValid) errors.push(err(parentPath, 'INVALID_FIELD_ORDER'))
+
+  const keys = orderIsValid ? fields.order : nodeKeys.sort()
+  let descendantsAreValid = true
+  for (const key of keys) {
+    const node = fields.nodes[key]
     const path = parentPath ? `${parentPath}.${key}` : key
 
     if (!key.trim() || key !== key.trim() || key.includes('.')) {
@@ -158,11 +171,10 @@ function validateNodes(
     }
 
     if (node.type === 'group') {
-      if (Object.keys(node.children).length === 0) {
+      if (Object.keys(node.children.nodes).length === 0) {
         errors.push(err(path, 'EMPTY_GROUP'))
-      } else {
-        validateNodes(node.children, path, errors)
       }
+      if (!validateNodes(node.children, path, errors)) descendantsAreValid = false
     } else {
       // FieldLeaf
 
@@ -181,4 +193,5 @@ function validateNodes(
       }
     }
   }
+  return orderIsValid && descendantsAreValid
 }

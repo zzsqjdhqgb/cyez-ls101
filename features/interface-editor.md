@@ -36,10 +36,7 @@ Interface Editor 不负责：
 普通 renderer 代码从根入口导入：
 
 ```typescript
-import {
-  createInterfaceApplication,
-  editInterfaceDraft
-} from '@ls101/interface-editor'
+import { createInterfaceApplication, editInterfaceDraft } from '@ls101/interface-editor'
 ```
 
 根入口只公开 UI 应用能力、领域 DTO、草稿编辑操作和公开结果类型，不公开仓储布局、ZIP 编解码、内容哈希 helper 或 builtin 迁移步骤。
@@ -49,13 +46,9 @@ import {
 应用组合层从以下子入口导入：
 
 ```typescript
-import {
-  FileInterfaceRepository
-} from '@ls101/interface-editor/adapters'
+import { FileInterfaceRepository } from '@ls101/interface-editor/adapters'
 
-import {
-  createBuiltinInterfaceApplication
-} from '@ls101/interface-editor/builtin'
+import { createBuiltinInterfaceApplication } from '@ls101/interface-editor/builtin'
 ```
 
 `./adapters` 提供仓储接口、文件仓储实现和文件对话框端口。`./builtin` 提供 builtin 更新应用服务及相关计划和结果类型。
@@ -118,9 +111,7 @@ interface PublishedInterfaceSummary {
   interfaceId: string
   name: string
   description: string
-  source:
-    | { type: 'published' }
-    | { type: 'builtin'; builtinKey: string }
+  source: { type: 'published' } | { type: 'builtin'; builtinKey: string }
   instanceCount: number
 }
 ```
@@ -227,9 +218,7 @@ interface PublishedInterfaceApplication {
 ```typescript
 interface PublishedInterfaceDetails {
   definition: InterfaceDef
-  source:
-    | { type: 'published' }
-    | { type: 'builtin'; builtinKey: string }
+  source: { type: 'published' } | { type: 'builtin'; builtinKey: string }
 }
 ```
 
@@ -277,10 +266,7 @@ interface InterfacePromptBundle {
 
 ```typescript
 interface InterfaceInstanceApplication {
-  get(
-    interfaceId: string,
-    instanceId: string
-  ): Promise<InterfaceInstanceDetails | null>
+  get(interfaceId: string, instanceId: string): Promise<InterfaceInstanceDetails | null>
 
   save(
     interfaceId: string,
@@ -401,10 +387,7 @@ reasoning 和 output 会合并为可展开的 Markdown 日志。AI 失败、取�
 
 ```typescript
 interface InterfaceTransferApplication {
-  export(
-    interfaceId: string,
-    instances: InstanceSelection
-  ): Promise<ExportInterfaceResult>
+  export(interfaceId: string, instances: InstanceSelection): Promise<ExportInterfaceResult>
 
   beginImport(): Promise<InterfaceImportSession | null>
 }
@@ -424,9 +407,7 @@ type InstanceSelection =
 导出始终包含 Interface 定义，可以不附带实例、附带全部实例或附带选中的实例。实例资源随实例写入 `.lsinterface` ZIP。
 
 ```typescript
-type ExportInterfaceResult =
-  | { status: 'exported' }
-  | { status: 'cancelled' }
+type ExportInterfaceResult = { status: 'exported' } | { status: 'cancelled' }
 ```
 
 用户取消系统保存对话框属于正常 `cancelled` 结果。
@@ -506,7 +487,9 @@ sha256:<64 lowercase hexadecimal characters>
 - `promptTemplate`
 - 保留顺序的完整字段树
 
-文本统一换行为 LF并执行 Unicode NFC 规范化。实例不参与 Interface ID。
+字段树的每一层存储为 `{ order: string[], nodes: Record<string, FieldNode> }`。`order` 是显示、遍历和哈希的唯一顺序来源，必须无重复且与 `nodes` 的 key 集合完全一致；草稿保存、发布和导入都会拒绝不一致的数据。
+
+文本统一换行为 LF并执行 Unicode NFC 规范化。字段树按显式 `order` 编码为有序条目数组，结构对象再通过 `fast-json-stable-stringify` 按 key 字典序、无缩进序列化，最后以 UTF-8 字节计算 SHA-256。该过程不依赖对象属性声明顺序或平台默认编码。实例不参与 Interface ID。
 
 ### 实例身份
 
@@ -558,10 +541,7 @@ const builtinInterfaces = createBuiltinInterfaceApplication({
 interface BuiltinInterfaceApplication {
   check(builtinKey: string, next: InterfaceDef): Promise<BuiltinUpdatePlan>
 
-  apply(
-    plan: BuiltinUpdatePlan,
-    choice?: ManualBuiltinUpdateChoice
-  ): Promise<BuiltinUpdateResult>
+  apply(plan: BuiltinUpdatePlan, choice?: ManualBuiltinUpdateChoice): Promise<BuiltinUpdateResult>
 }
 ```
 
@@ -583,10 +563,7 @@ Template 引用迁移通过以下端口注入：
 
 ```typescript
 interface InterfaceReferenceMigrator {
-  replaceInterfaceReferences(
-    fromInterfaceId: string,
-    toInterfaceId: string
-  ): Promise<void>
+  replaceInterfaceReferences(fromInterfaceId: string, toInterfaceId: string): Promise<void>
 }
 ```
 

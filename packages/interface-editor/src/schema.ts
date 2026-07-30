@@ -21,7 +21,7 @@
 import { Type } from '@sinclair/typebox'
 import Ajv from 'ajv'
 import type { ErrorObject } from 'ajv'
-import type { FieldNode } from './types'
+import type { FieldCollection } from './types'
 
 // ============================================================
 // 1. buildJsonSchema — TypeBox 构建 JSON Schema
@@ -35,13 +35,14 @@ import type { FieldNode } from './types'
  *
  * varName 不出现在 Schema 中。
  */
-export function buildJsonSchema(fields: Record<string, FieldNode>): Record<string, unknown> {
+export function buildJsonSchema(fields: FieldCollection): Record<string, unknown> {
   const properties: Record<
     string,
     ReturnType<typeof Type.Object> | ReturnType<typeof Type.String>
   > = {}
 
-  for (const [key, node] of Object.entries(fields)) {
+  for (const key of fields.order) {
+    const node = fields.nodes[key]
     if (node.type === 'group') {
       properties[key] = buildJsonSchema(node.children) as ReturnType<typeof Type.Object>
     } else {
@@ -69,10 +70,11 @@ export function buildJsonSchema(fields: Record<string, FieldNode>): Record<strin
  *
  * 示例 JSON 随 Schema 一同发送给 LLM，辅助理解期望的输出格式。
  */
-export function buildJsonExample(fields: Record<string, FieldNode>): Record<string, unknown> {
+export function buildJsonExample(fields: FieldCollection): Record<string, unknown> {
   const result: Record<string, unknown> = {}
 
-  for (const [key, node] of Object.entries(fields)) {
+  for (const key of fields.order) {
+    const node = fields.nodes[key]
     if (node.type === 'group') {
       result[key] = buildJsonExample(node.children)
     } else {

@@ -17,6 +17,7 @@
     "@ls101/file-dialog": "workspace:*",
     "@sinclair/typebox": "^0.34.52",
     "ajv": "^8.20.0",
+    "fast-json-stable-stringify": "^2.1.0",
     "fflate": "^0.8.2"
   },
   "peerDependencies": {

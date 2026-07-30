@@ -1,12 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type {
-  InterfaceInstance,
-  TaskProgressSnapshot
-} from '@ls101/core-types'
+import type { InterfaceInstance, TaskProgressSnapshot } from '@ls101/core-types'
 import {
   createInterfaceApplication,
   type InterfaceTextGenerationChunk,
-  type InterfaceTextGenerator,
+  type InterfaceTextGenerator
 } from '../application'
 import {
   exportInterfacePackage,
@@ -29,6 +26,7 @@ import {
 import type { InterfaceContent } from '../types'
 import { decodeInterfaceZip, encodeInterfaceZip } from '../zip'
 import { strToU8, unzipSync, zipSync } from 'fflate'
+import { collection } from './fieldFixtures'
 
 const INSTANCE_A = '10000000-0000-4000-8000-000000000001'
 const INSTANCE_B = '10000000-0000-4000-8000-000000000002'
@@ -38,14 +36,14 @@ function content(name = '口语 Interface'): InterfaceContent {
     name,
     description: '用于测试',
     promptTemplate: '生成一套口语题',
-    fields: {
+    fields: collection({
       title: {
         type: 'text',
         varName: 'title',
         description: '标题',
         example: '模拟试卷'
       }
-    }
+    })
   }
 }
 
@@ -123,9 +121,9 @@ describe('FileInterfaceRepository', () => {
     expect(await repository.readInstanceAsset(def.id, INSTANCE_A, 'picture.png')).toEqual(
       new Uint8Array([1, 2, 3])
     )
-    await expect(repository.getInstanceAssetUrl(def.id, INSTANCE_A, 'picture.png')).resolves.toContain(
-      `/published/${def.id.slice(7)}/instances/${INSTANCE_A}/picture.png`
-    )
+    await expect(
+      repository.getInstanceAssetUrl(def.id, INSTANCE_A, 'picture.png')
+    ).resolves.toContain(`/published/${def.id.slice(7)}/instances/${INSTANCE_A}/picture.png`)
   })
 
   it('内容相同但 UUID 不同的实例作为两个实体保留', async () => {
@@ -185,14 +183,14 @@ describe('内置 Interface 更新', () => {
       ...content('新版名称'),
       description: '新版说明',
       promptTemplate: '新版提示词',
-      fields: {
+      fields: collection({
         title: {
           type: 'text',
           varName: 'title',
           description: '新版标题说明',
           example: '新版示例'
         }
-      }
+      })
     })
     await repository.saveBuiltinInterface('speaking', oldDef)
     await repository.setBuiltinCurrent('speaking', oldDef.id)
@@ -233,19 +231,19 @@ describe('内置 Interface 更新', () => {
     const oldDef = await publishInterface(content())
     const nextDef = await publishInterface({
       ...content(),
-      fields: {
+      fields: collection({
         section: {
           type: 'group',
-          children: {
+          children: collection({
             heading: {
               type: 'text',
               varName: 'title',
               description: '标题',
               example: '模拟试卷'
             }
-          }
+          })
         }
-      }
+      })
     })
     await repository.saveBuiltinInterface('speaking', oldDef)
     await repository.setBuiltinCurrent('speaking', oldDef.id)
@@ -269,9 +267,9 @@ describe('内置 Interface 更新', () => {
     expect(await repository.getInterface(oldDef.id)).toEqual(oldDef)
     expect(await repository.getInstance(oldDef.id, INSTANCE_A)).not.toBeNull()
     expect(await repository.listInstanceIds(nextDef.id)).toEqual([])
-    await expect(repository.getInstanceAssetUrl(oldDef.id, INSTANCE_A, 'image.png')).resolves.toContain(
-      `/published/${oldDef.id.slice(7)}/instances/${INSTANCE_A}/image.png`
-    )
+    await expect(
+      repository.getInstanceAssetUrl(oldDef.id, INSTANCE_A, 'image.png')
+    ).resolves.toContain(`/published/${oldDef.id.slice(7)}/instances/${INSTANCE_A}/image.png`)
     expect(await repository.getBuiltin('speaking')).toEqual({
       builtinKey: 'speaking',
       currentInterfaceId: nextDef.id
@@ -300,25 +298,25 @@ describe('内置 Interface 更新', () => {
     const oldDef = await publishInterface(content())
     const structural = await publishInterface({
       ...content(),
-      fields: {
+      fields: collection({
         group: {
           type: 'group',
-          children: {
-            title: content().fields.title
-          }
+          children: collection({
+            title: content().fields.nodes.title
+          })
         }
-      }
+      })
     })
     const changedContract = await publishInterface({
       ...content(),
-      fields: {
+      fields: collection({
         title: {
           type: 'text',
           varName: 'renamedTitle',
           description: '标题',
           example: '模拟试卷'
         }
-      }
+      })
     })
 
     expect(classifyBuiltinUpdate(oldDef, structural)).toBe('manual')
@@ -342,19 +340,19 @@ describe('内置 Interface 更新', () => {
     const oldDef = await publishInterface(content())
     const nextDef = await publishInterface({
       ...content(),
-      fields: {
+      fields: collection({
         section: {
           type: 'group',
-          children: {
+          children: collection({
             title: {
               type: 'text',
               varName: 'title',
               description: '标题',
               example: '模拟试卷'
             }
-          }
+          })
         }
-      }
+      })
     })
     await repository.saveBuiltinInterface('speaking', oldDef)
     await repository.setBuiltinCurrent('speaking', oldDef.id)

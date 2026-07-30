@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { buildJsonSchema, buildJsonExample, validateJson } from '../schema'
+import {
+  buildJsonSchema as buildCollectionJsonSchema,
+  buildJsonExample as buildCollectionJsonExample,
+  validateJson
+} from '../schema'
 import type { FieldNode, FieldLeaf, FieldGroup } from '../types'
 import Ajv from 'ajv'
+import { collection } from './fieldFixtures'
 
 // ============================================================
 // 测试辅助工厂
@@ -16,8 +21,13 @@ function imageLeaf(varName: string, description = 'desc', example = 'ex'): Field
 }
 
 function group(children: Record<string, FieldNode>): FieldGroup {
-  return { type: 'group', children }
+  return { type: 'group', children: collection(children) }
 }
+
+const buildJsonSchema = (fields: Record<string, FieldNode>): Record<string, unknown> =>
+  buildCollectionJsonSchema(collection(fields))
+const buildJsonExample = (fields: Record<string, FieldNode>): Record<string, unknown> =>
+  buildCollectionJsonExample(collection(fields))
 
 // ============================================================
 // buildJsonSchema
@@ -194,20 +204,14 @@ describe('buildJsonSchema — meta-schema 合法性', () => {
 
   expectValidSchema({}, '空 fields')
 
-  expectValidSchema(
-    { q: textLeaf('v1', '字段描述') },
-    '单个 text leaf'
-  )
+  expectValidSchema({ q: textLeaf('v1', '字段描述') }, '单个 text leaf')
 
   expectValidSchema(
     { a: textLeaf('v1', 'A'), b: textLeaf('v2', 'B'), c: imageLeaf('v3', 'C') },
     '多个叶子混合 text + image'
   )
 
-  expectValidSchema(
-    { section: group({ sub: textLeaf('v1', '嵌套') }) },
-    '嵌套 group'
-  )
+  expectValidSchema({ section: group({ sub: textLeaf('v1', '嵌套') }) }, '嵌套 group')
 
   expectValidSchema(
     {
@@ -330,10 +334,7 @@ describe('validateJson', () => {
   })
 
   it('缺少必填字段 → valid=false', () => {
-    const result = validateJson(
-      testSchema,
-      '{"title": "Test Exam"}'
-    )
+    const result = validateJson(testSchema, '{"title": "Test Exam"}')
     expect(result.valid).toBe(false)
     expect(result.errors).not.toBeNull()
     expect(result.errors!.length).toBeGreaterThan(0)
@@ -348,10 +349,7 @@ describe('validateJson', () => {
   })
 
   it('类型不匹配 → valid=false', () => {
-    const result = validateJson(
-      testSchema,
-      '{"title": 123, "questions": {"q1": "Q", "q2": "Q2"}}'
-    )
+    const result = validateJson(testSchema, '{"title": 123, "questions": {"q1": "Q", "q2": "Q2"}}')
     expect(result.valid).toBe(false)
   })
 

@@ -1,4 +1,11 @@
-import type { FieldNode, InterfaceContent, InterfaceDef, InterfaceDraft } from './types'
+import stableStringify from 'fast-json-stable-stringify'
+import type {
+  FieldCollection,
+  FieldNode,
+  InterfaceContent,
+  InterfaceDef,
+  InterfaceDraft
+} from './types'
 
 const CONTENT_ID_PATTERN = /^sha256:[0-9a-f]{64}$/
 
@@ -61,10 +68,10 @@ export function isInterfaceId(value: string): boolean {
 
 /**
  * 哈希输入使用固定顶层结构，并将字段树编码为有序条目数组。
- * 字段顺序会影响编辑器展示和变量清单，因此顺序变化视为内容变化。
+ * stableStringify 递归按 key 排序且不输出额外空白；字段条目数组保留业务顺序。
  */
 export function canonicalizeInterfaceContent(content: InterfaceContent): string {
-  return JSON.stringify({
+  return stableStringify({
     name: normalizeText(content.name),
     description: normalizeText(content.description),
     promptTemplate: normalizeText(content.promptTemplate),
@@ -72,8 +79,8 @@ export function canonicalizeInterfaceContent(content: InterfaceContent): string 
   })
 }
 
-function canonicalizeFields(fields: Record<string, FieldNode>): unknown[] {
-  return Object.entries(fields).map(([key, node]) => [normalizeText(key), canonicalizeNode(node)])
+function canonicalizeFields(fields: FieldCollection): unknown[] {
+  return fields.order.map((key) => [normalizeText(key), canonicalizeNode(fields.nodes[key])])
 }
 
 function canonicalizeNode(node: FieldNode): unknown {

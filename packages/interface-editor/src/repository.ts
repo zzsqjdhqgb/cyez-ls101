@@ -701,15 +701,25 @@ function isContent(value: Record<string, unknown>): boolean {
     typeof value.name === 'string' &&
     typeof value.description === 'string' &&
     typeof value.promptTemplate === 'string' &&
-    isFieldRecord(value.fields)
+    isFieldCollection(value.fields)
   )
 }
 
-function isFieldRecord(value: unknown): boolean {
-  if (!isRecord(value)) return false
-  return Object.values(value).every((node) => {
+function isFieldCollection(value: unknown): boolean {
+  if (!isRecord(value) || !Array.isArray(value.order) || !isRecord(value.nodes)) return false
+  if (!value.order.every((key) => typeof key === 'string')) return false
+  const order = value.order as string[]
+  const nodeKeys = Object.keys(value.nodes)
+  if (
+    order.length !== nodeKeys.length ||
+    new Set(order).size !== order.length ||
+    !order.every((key) => Object.hasOwn(value.nodes as object, key))
+  ) {
+    return false
+  }
+  return Object.values(value.nodes).every((node) => {
     if (!isRecord(node) || typeof node.type !== 'string') return false
-    if (node.type === 'group') return isFieldRecord(node.children)
+    if (node.type === 'group') return isFieldCollection(node.children)
     return (
       (node.type === 'text' || node.type === 'image') &&
       typeof node.varName === 'string' &&

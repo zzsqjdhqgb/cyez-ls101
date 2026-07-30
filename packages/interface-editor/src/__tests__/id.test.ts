@@ -8,22 +8,29 @@ import {
   publishInterface,
   verifyInterfaceId
 } from '../id'
-import type { InterfaceContent } from '../types'
+import type { FieldCollection, FieldNode, InterfaceContent } from '../types'
+import { asCollection, collection } from './fieldFixtures'
 
-function content(overrides: Partial<InterfaceContent> = {}): InterfaceContent {
+type ContentOverrides = Omit<Partial<InterfaceContent>, 'fields'> & {
+  fields?: FieldCollection | Record<string, FieldNode>
+}
+
+function content(overrides: ContentOverrides = {}): InterfaceContent {
+  const { fields, ...rest } = overrides
   return {
     name: '上海高考口语',
     description: '口语模拟考试',
     promptTemplate: '生成一套试题',
-    fields: {
+    fields: collection({
       title: {
         type: 'text',
         varName: 'title',
         description: '试卷标题',
         example: '英语口语模拟卷'
       }
-    },
-    ...overrides
+    }),
+    ...rest,
+    ...(fields ? { fields: asCollection(fields) } : {})
   }
 }
 
@@ -38,6 +45,18 @@ describe('Interface 内容 ID', () => {
     const first = await publishInterface(content())
     const second = await publishInterface(content())
     expect(first.id).toBe(second.id)
+  })
+
+  it('使用固定 key 顺序、无缩进的确定性序列化格式', () => {
+    expect(canonicalizeInterfaceContent(content())).toBe(
+      '{"description":"口语模拟考试","fields":[["title",{"description":"试卷标题","example":"英语口语模拟卷","type":"text","varName":"title"}]],"name":"上海高考口语","promptTemplate":"生成一套试题"}'
+    )
+  })
+
+  it('固定规范内容的 UTF-8 SHA-256 摘要', async () => {
+    expect(await deriveInterfaceId(content())).toBe(
+      'sha256:fd802dfd0e05605b6cccf191203ec47665d75ae2696dcbfeebd8aa605f1fb93e'
+    )
   })
 
   it('内容变化产生不同 ID', async () => {
@@ -59,15 +78,33 @@ describe('Interface 内容 ID', () => {
     expect(first).not.toBe(second)
   })
 
+  it('节点对象声明顺序不影响 ID，显式 order 才决定字段顺序', async () => {
+    const a = {
+      type: 'text' as const,
+      varName: 'a',
+      description: 'A',
+      example: 'A'
+    }
+    const b = { ...a, varName: 'b', description: 'B', example: 'B' }
+    const first = await deriveInterfaceId(content({ fields: collection({ a, b }, ['b', 'a']) }))
+    const second = await deriveInterfaceId(content({ fields: collection({ b, a }, ['b', 'a']) }))
+
+    expect(first).toBe(second)
+  })
+
   it('CRLF/LF 和等价 Unicode 规范化后 ID 相同', async () => {
-    const first = await deriveInterfaceId(content({
-      name: 'Caf\u00e9',
-      promptTemplate: 'line 1\r\nline 2'
-    }))
-    const second = await deriveInterfaceId(content({
-      name: 'Cafe\u0301',
-      promptTemplate: 'line 1\nline 2'
-    }))
+    const first = await deriveInterfaceId(
+      content({
+        name: 'Caf\u00e9',
+        promptTemplate: 'line 1\r\nline 2'
+      })
+    )
+    const second = await deriveInterfaceId(
+      content({
+        name: 'Cafe\u0301',
+        promptTemplate: 'line 1\nline 2'
+      })
+    )
     expect(first).toBe(second)
   })
 

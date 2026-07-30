@@ -55,11 +55,19 @@ export interface FieldGroup {
    *
    * 教师通过编辑器自由组织层级，点击"+"按钮添加子字段。
    */
-  children: Record<string, FieldNode>
+  children: FieldCollection
 }
 
 /** 字段树节点：叶子字段或字段组 */
 export type FieldNode = FieldLeaf | FieldGroup
+
+/**
+ * 同一层级的字段集合。order 是唯一顺序来源，必须与 nodes 的 key 集合完全一致。
+ */
+export interface FieldCollection {
+  order: string[]
+  nodes: Record<string, FieldNode>
+}
 
 // ============================================================
 // Interface 定义
@@ -90,7 +98,7 @@ export interface InterfaceContent {
    * 字段结构树。定义了 AI 输出 JSON 的结构和每个字段的含义。
    * 树的叶子节点对应 Template 中可用的变量。
    */
-  fields: Record<string, FieldNode>
+  fields: FieldCollection
 }
 
 /** 可编辑草稿。draftId 只标识本机编辑会话，不参与导入导出。 */

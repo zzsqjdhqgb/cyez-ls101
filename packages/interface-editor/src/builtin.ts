@@ -1,5 +1,5 @@
 import type { InterfaceRepository } from './repository'
-import type { FieldNode, InterfaceDef } from './types'
+import type { FieldCollection, FieldNode, InterfaceDef } from './types'
 
 export type BuiltinUpdateKind = 'none' | 'automatic' | 'manual' | 'invalid-contract'
 export type ManualBuiltinUpdateChoice = 'migrate' | 'backup-old'
@@ -142,8 +142,9 @@ function jsonStructure(def: InterfaceDef): string {
   return JSON.stringify(structureEntries(def.fields))
 }
 
-function structureEntries(fields: Record<string, FieldNode>): unknown[] {
-  return Object.entries(fields).map(([key, node]) => {
+function structureEntries(fields: FieldCollection): unknown[] {
+  return fields.order.map((key) => {
+    const node = fields.nodes[key]
     if (node.type === 'group') {
       return [key.normalize('NFC'), 'group', structureEntries(node.children)]
     }
@@ -152,10 +153,11 @@ function structureEntries(fields: Record<string, FieldNode>): unknown[] {
 }
 
 function collectLeaves(
-  fields: Record<string, FieldNode>
+  fields: FieldCollection
 ): Array<{ node: Exclude<FieldNode, { type: 'group' }> }> {
   const leaves: Array<{ node: Exclude<FieldNode, { type: 'group' }> }> = []
-  for (const node of Object.values(fields)) {
+  for (const key of fields.order) {
+    const node = fields.nodes[key]
     if (node.type === 'group') leaves.push(...collectLeaves(node.children))
     else leaves.push({ node })
   }

@@ -191,7 +191,7 @@ const EMPTY_CONTENT: InterfaceContent = {
   name: '',
   description: '',
   promptTemplate: '',
-  fields: {}
+  fields: { order: [], nodes: {} }
 }
 
 export function editInterfaceDraft(

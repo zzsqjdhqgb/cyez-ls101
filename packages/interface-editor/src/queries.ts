@@ -18,7 +18,7 @@
 // 待实现:
 //   [无 — 查询层已完整]
 
-import type { FieldLeaf, FieldGroup, FieldNode } from './types'
+import type { FieldCollection, FieldLeaf, FieldGroup, FieldNode } from './types'
 
 /**
  * 递归平铺字段树，返回所有叶子字段及其完整路径。
@@ -28,11 +28,12 @@ import type { FieldLeaf, FieldGroup, FieldNode } from './types'
  * // → [{ path: "a.b", leaf: { type: "text", varName: "x", ... } }]
  */
 export function flattenFields(
-  fields: Record<string, FieldNode>,
+  fields: FieldCollection,
   parentPath = ''
 ): { path: string; leaf: FieldLeaf }[] {
   const result: { path: string; leaf: FieldLeaf }[] = []
-  for (const [key, node] of Object.entries(fields)) {
+  for (const key of fields.order) {
+    const node = fields.nodes[key]
     const currentPath = parentPath ? `${parentPath}.${key}` : key
     if (isFieldLeaf(node)) {
       result.push({ path: currentPath, leaf: node })
@@ -50,12 +51,12 @@ export function flattenFields(
  *
  * @returns 找到的节点，路径无效时返回 null
  */
-export function findNodeByPath(fields: Record<string, FieldNode>, path: string): FieldNode | null {
+export function findNodeByPath(fields: FieldCollection, path: string): FieldNode | null {
   const segments = path.split('.')
-  let current: Record<string, FieldNode> = fields
+  let current: FieldCollection = fields
   for (let i = 0; i < segments.length; i++) {
     const key = segments[i]
-    const node = current[key]
+    const node = current.nodes[key]
     if (!node) return null
     // 到达路径末尾 — 返回当前节点（可能是叶子或组）
     if (i === segments.length - 1) return node
@@ -69,7 +70,7 @@ export function findNodeByPath(fields: Record<string, FieldNode>, path: string):
 /**
  * 收集字段树中所有叶子字段的变量名。
  */
-export function getAllVarNames(fields: Record<string, FieldNode>): string[] {
+export function getAllVarNames(fields: FieldCollection): string[] {
   return flattenFields(fields).map((f) => f.leaf.varName)
 }
 

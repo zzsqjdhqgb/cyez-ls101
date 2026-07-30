@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { buildAIPrompt, buildVarManifest, buildInstanceFromJson } from '../conversions'
-import type { InterfaceDef, FieldNode, FieldLeaf, FieldGroup } from '../types'
+import type { InterfaceDef, FieldCollection, FieldNode, FieldLeaf, FieldGroup } from '../types'
+import { asCollection, collection } from './fieldFixtures'
 
 // ============================================================
 // 测试辅助
@@ -15,19 +16,25 @@ function imageLeaf(varName: string, description = 'desc', example = 'ex'): Field
 }
 
 function group(children: Record<string, FieldNode>): FieldGroup {
-  return { type: 'group', children }
+  return { type: 'group', children: collection(children) }
 }
 
-function makeDef(overrides: Partial<InterfaceDef> = {}): InterfaceDef {
+type DefOverrides = Omit<Partial<InterfaceDef>, 'fields'> & {
+  fields?: FieldCollection | Record<string, FieldNode>
+}
+
+function makeDef(overrides: DefOverrides = {}): InterfaceDef {
+  const { fields, ...rest } = overrides
   return {
     id: 'if-test-001',
     name: '测试题型',
     description: '用于测试的 Interface',
     promptTemplate: '请生成一套测试题目',
-    fields: {
+    fields: collection({
       title: textLeaf('examTitle', '试卷标题', '2024 英语模拟卷')
-    },
-    ...overrides
+    }),
+    ...rest,
+    ...(fields ? { fields: asCollection(fields) } : {})
   }
 }
 
@@ -57,9 +64,11 @@ describe('buildAIPrompt', () => {
   })
 
   it('明确要求 image 字段返回生图提示词而不是 URL', () => {
-    const prompt = buildAIPrompt(makeDef({
-      fields: { picture: imageLeaf('image', '考试配图', '学生在教室学习') }
-    }))
+    const prompt = buildAIPrompt(
+      makeDef({
+        fields: { picture: imageLeaf('image', '考试配图', '学生在教室学习') }
+      })
+    )
     expect(prompt).toContain('图片生成模型')
     expect(prompt).toContain('不要返回图片 URL')
   })
@@ -116,7 +125,8 @@ describe('buildAIPrompt', () => {
 describe('buildVarManifest', () => {
   it('interfaceId 和 interfaceName 正确传递', () => {
     const def = makeDef({
-      id: 'if-abc', name: '上海高考口语'
+      id: 'if-abc',
+      name: '上海高考口语'
     })
     const manifest = buildVarManifest(def)
     expect(manifest.interfaceId).toBe('if-abc')
@@ -124,9 +134,11 @@ describe('buildVarManifest', () => {
   })
 
   it('单个 text leaf → 一个变量', () => {
-    const manifest = buildVarManifest(makeDef({
-      fields: { q: textLeaf('v1', '题干', '示例') }
-    }))
+    const manifest = buildVarManifest(
+      makeDef({
+        fields: { q: textLeaf('v1', '题干', '示例') }
+      })
+    )
     expect(manifest.vars).toHaveLength(1)
     expect(manifest.vars[0]).toEqual({
       varName: 'v1',
@@ -138,27 +150,31 @@ describe('buildVarManifest', () => {
   })
 
   it('image leaf → type 为 image', () => {
-    const manifest = buildVarManifest(makeDef({
-      fields: { pic: imageLeaf('img1', '配图', '一只猫') }
-    }))
+    const manifest = buildVarManifest(
+      makeDef({
+        fields: { pic: imageLeaf('img1', '配图', '一只猫') }
+      })
+    )
     expect(manifest.vars[0].type).toBe('image')
   })
 
   it('多个叶子 → 按深度优先顺序排列', () => {
-    const manifest = buildVarManifest(makeDef({
-      fields: {
-        a: textLeaf('va', '字段A', 'A'),
-        grp: group({
-          b: textLeaf('vb', '字段B', 'B'),
-          c: imageLeaf('vc', '字段C', 'C')
-        }),
-        d: textLeaf('vd', '字段D', 'D')
-      }
-    }))
+    const manifest = buildVarManifest(
+      makeDef({
+        fields: {
+          a: textLeaf('va', '字段A', 'A'),
+          grp: group({
+            b: textLeaf('vb', '字段B', 'B'),
+            c: imageLeaf('vc', '字段C', 'C')
+          }),
+          d: textLeaf('vd', '字段D', 'D')
+        }
+      })
+    )
     expect(manifest.vars).toHaveLength(4)
     // 深度优先：a, grp.b, grp.c, d
-    expect(manifest.vars.map(v => v.path)).toEqual(['a', 'grp.b', 'grp.c', 'd'])
-    expect(manifest.vars.map(v => v.varName)).toEqual(['va', 'vb', 'vc', 'vd'])
+    expect(manifest.vars.map((v) => v.path)).toEqual(['a', 'grp.b', 'grp.c', 'd'])
+    expect(manifest.vars.map((v) => v.varName)).toEqual(['va', 'vb', 'vc', 'vd'])
   })
 
   it('空 fields → vars 为空数组', () => {
@@ -264,7 +280,9 @@ describe('buildInstanceFromJson', () => {
         })
       }
     })
-    const instance = buildInstanceFromJson(def, { section: null as unknown as Record<string, unknown> })
+    const instance = buildInstanceFromJson(def, {
+      section: null as unknown as Record<string, unknown>
+    })
     expect(instance.values).toEqual({ val: '' })
   })
 
