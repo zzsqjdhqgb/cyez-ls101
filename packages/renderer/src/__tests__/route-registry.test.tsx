@@ -16,10 +16,12 @@ describe('AppRouteRegistry', () => {
       id: 'test',
       path: '/test',
       component: TestPage,
+      layout: 'focus',
       navigation: { label: '测试', icon: PanelsTopLeft }
     })
 
     expect(registry.getSnapshot()).toHaveLength(1)
+    expect(registry.getSnapshot()[0]?.layout).toBe('focus')
     expect(listener).toHaveBeenCalledTimes(1)
 
     unregister()

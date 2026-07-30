@@ -43,6 +43,11 @@
   display: none;
 }
 
+.brand[data-sidebar-hidden] {
+  width: auto;
+  border-right: 0;
+}
+
 .dragRegion {
   min-width: 24px;
   height: 100%;

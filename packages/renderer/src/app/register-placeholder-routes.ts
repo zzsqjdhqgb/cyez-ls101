@@ -1,6 +1,8 @@
 import { Boxes, PanelsTopLeft, Settings2 } from 'lucide-react'
+import { FocusPlaceholderPage } from '../pages/FocusPlaceholderPage'
 import { GroupedPlaceholderPage } from '../pages/GroupedPlaceholderPage'
 import { HiddenPlaceholderPage } from '../pages/HiddenPlaceholderPage'
+import { ImmersivePlaceholderPage } from '../pages/ImmersivePlaceholderPage'
 import { SettingsPlaceholderPage } from '../pages/SettingsPlaceholderPage'
 import { WorkbenchPage } from '../pages/WorkbenchPage'
 import { registerAppRoute } from './route-registry'
@@ -11,6 +13,7 @@ const unregisterRoutes = [
     id: 'workbench',
     path: '/',
     component: WorkbenchPage,
+    layout: 'standard',
     navigation: {
       label: '工作台',
       icon: PanelsTopLeft,
@@ -49,6 +52,22 @@ const unregisterRoutes = [
     id: 'hidden-placeholder',
     path: '/hidden-example',
     component: HiddenPlaceholderPage
+  }),
+
+  // Hidden focus-layout route, opened from the grouped placeholder page.
+  registerAppRoute({
+    id: 'focus-layout-placeholder',
+    path: '/layout-example/focus',
+    component: FocusPlaceholderPage,
+    layout: 'focus'
+  }),
+
+  // Hidden immersive-layout route, opened from the grouped placeholder page.
+  registerAppRoute({
+    id: 'immersive-layout-placeholder',
+    path: '/layout-example/immersive',
+    component: ImmersivePlaceholderPage,
+    layout: 'immersive'
   })
 ]
 

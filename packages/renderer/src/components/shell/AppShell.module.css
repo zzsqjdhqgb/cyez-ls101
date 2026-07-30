@@ -12,11 +12,20 @@
   --current-sidebar-width: var(--sidebar-collapsed-width);
 }
 
+.shell[data-layout='immersive'] {
+  grid-template-rows: minmax(0, 1fr);
+}
+
 .workspace {
   display: grid;
   grid-template-columns: var(--current-sidebar-width) minmax(0, 1fr);
   min-height: 0;
   transition: grid-template-columns 160ms ease;
+}
+
+.shell[data-layout='focus'] .workspace,
+.shell[data-layout='immersive'] .workspace {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .content {

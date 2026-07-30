@@ -5,6 +5,7 @@ import styles from './TitleBar.module.css'
 
 interface TitleBarProps {
   sidebarCollapsed: boolean
+  sidebarVisible: boolean
 }
 
 function RestoreIcon(): JSX.Element {
@@ -16,7 +17,7 @@ function RestoreIcon(): JSX.Element {
   )
 }
 
-export function TitleBar({ sidebarCollapsed }: TitleBarProps): JSX.Element {
+export function TitleBar({ sidebarCollapsed, sidebarVisible }: TitleBarProps): JSX.Element {
   const [maximized, setMaximized] = useState(false)
   const controls = window.windowControls
 
@@ -37,7 +38,11 @@ export function TitleBar({ sidebarCollapsed }: TitleBarProps): JSX.Element {
 
   return (
     <header className={styles.titlebar}>
-      <div className={styles.brand} data-collapsed={sidebarCollapsed || undefined}>
+      <div
+        className={styles.brand}
+        data-collapsed={sidebarVisible && sidebarCollapsed ? true : undefined}
+        data-sidebar-hidden={!sidebarVisible || undefined}
+      >
         <img src={appIconUrl} alt="" />
         <span>曹二听说101</span>
       </div>

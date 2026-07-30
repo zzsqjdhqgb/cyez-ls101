@@ -2,7 +2,7 @@
 
 ## 功能状态
 
-`@ls101/renderer` 已实现可运行的 React 应用入口、注册式路由、自动生成的侧边栏、自定义 Electron 标题栏、基础设计令牌和少量通用 UI 组件。
+`@ls101/renderer` 已实现可运行的 React 应用入口、注册式路由、路由级布局选择、自动生成的侧边栏、自定义 Electron 标题栏、基础设计令牌和少量通用 UI 组件。
 
 Electron main 已创建无边框主窗口并注册窗口控制 IPC；preload 已将固定的窗口控制桥接暴露为 `window.windowControls`。renderer 在 Electron 环境中使用该桥接控制当前窗口，在普通浏览器环境中仍可渲染，但窗口按钮会处于禁用状态。
 
@@ -15,6 +15,7 @@ Electron main 已创建无边框主窗口并注册窗口控制 IPC；preload 已
 - 创建 React 根节点和 `MemoryRouter`。
 - 接收路由注册，并据此生成 React Router 路由。
 - 根据路由的导航元数据生成主侧边栏和底部导航。
+- 根据路由的布局元数据选择标准、专注或沉浸外壳。
 - 展示应用品牌、自定义标题栏和窗口控制按钮。
 - 管理一次 renderer 运行期间的侧边栏展开或收起状态。
 - 提供颜色、间距、字号、圆角和布局尺寸等设计令牌。
@@ -96,6 +97,7 @@ interface AppRouteRegistration {
   id: string
   path: `/${string}`
   component: ComponentType
+  layout?: 'standard' | 'focus' | 'immersive'
   navigation?: NavigationRegistration
 }
 
@@ -109,6 +111,7 @@ function registerAppRoute(registration: AppRouteRegistration): () => void
 | `id`         | 是   | 注册表内的唯一身份；不显示给用户                     |
 | `path`       | 是   | React Router 路径，必须以 `/` 开头；同一注册表内唯一 |
 | `component`  | 是   | 路由命中时渲染的无参数 React 组件                    |
+| `layout`     | 否   | 路由使用的外壳等级；省略时为 `'standard'`            |
 | `navigation` | 否   | 存在时生成侧边栏入口；省略时注册为隐藏路由           |
 
 注册表不修改或包装页面组件。页面需要的领域服务、Context 和临时 UI 状态仍由 renderer bootstrap 或页面组件提供。
@@ -147,9 +150,27 @@ unregister()
 
 当前不会校验空 `id`、空导航名称、路径模式合法性、图标类型或未知字段；这些错误可能在 React Router 或渲染阶段表现出来。
 
+## 路由布局等级
+
+路由可以通过 `layout` 从三种应用外壳中选择：
+
+| 等级          | 自定义标题栏 | 侧边栏 | 路由内容区域                               |
+| ------------- | ------------ | ------ | ------------------------------------------ |
+| `standard`    | 显示         | 显示   | 占据侧边栏右侧空间，适合普通页面           |
+| `focus`       | 显示         | 隐藏   | 占据标题栏下方全部空间，适合复杂编辑工作区 |
+| `immersive`   | 隐藏         | 隐藏   | 占据整个 renderer，适合播放器或全屏预览    |
+
+`layout` 省略时按 `standard` 处理。`AppShell` 使用 React Router 的匹配规则寻找当前注册路由，因此带参数的路径和普通静态路径使用同一套路由优先级。未注册的地址使用 404 页面和 `standard` 外壳。
+
+布局切换只改变 renderer 外壳，不会调用 Electron 的原生全屏或 kiosk API，也不会改变窗口大小、最大化状态和系统任务栏行为。需要真正系统全屏的功能必须通过独立的 main/preload 契约实现。
+
+进入 `focus` 或 `immersive` 时，侧边栏组件会从 DOM 中移除；返回 `standard` 后恢复显示，并保留本次 renderer 运行期间原有的折叠状态。`immersive` 还会移除自定义标题栏及其窗口控制和拖拽区域，因此沉浸页面必须自行提供离开入口；如果它还需要拖动、最小化或关闭窗口，也必须在页面内部明确接入相应控件。
+
+布局只决定应用外壳占用的区域，不强制页面内部结构。复杂编辑器可以直接使用整个路由内容区域；普通页面仍可使用 `Page` 组件获得最大宽度和统一留白。
+
 ## 注册示例
 
-项目在 `register-placeholder-routes.ts` 中保留四种最小示例。
+项目在 `register-placeholder-routes.ts` 中保留四种导航注册示例，并额外注册两个隐藏的布局等级示例。
 
 ### 默认主导航
 
@@ -160,6 +181,7 @@ registerAppRoute({
   id: 'workbench',
   path: '/',
   component: WorkbenchPage,
+  layout: 'standard',
   navigation: {
     label: '工作台',
     icon: PanelsTopLeft,
@@ -213,6 +235,28 @@ registerAppRoute({
   component: HiddenPlaceholderPage
 })
 ```
+
+### 布局等级隐藏路由
+
+分组页面本身使用默认 `standard` 布局，并提供两个按钮进入独立的隐藏路由：
+
+```typescript
+registerAppRoute({
+  id: 'focus-layout-placeholder',
+  path: '/layout-example/focus',
+  component: FocusPlaceholderPage,
+  layout: 'focus'
+})
+
+registerAppRoute({
+  id: 'immersive-layout-placeholder',
+  path: '/layout-example/immersive',
+  component: ImmersivePlaceholderPage,
+  layout: 'immersive'
+})
+```
+
+两个页面均省略 `navigation`，不会增加侧边栏项目，并提供返回分组页面的按钮。隐藏路由与布局等级彼此独立：省略 `navigation` 只控制侧边栏入口，`layout` 只控制页面命中后的外壳。
 
 ### 热更新清理
 
@@ -343,7 +387,8 @@ packages/renderer/src/styles/tokens.css
 - main 注册文件存储、文件对话框和窗口控制能力。
 - preload 暴露三个独立 bridge。
 - renderer 入口、注册表、应用外壳、侧边栏和标题栏接线。
-- 工作台、分组导航、底部导航和隐藏路由示例接线。
+- standard、focus 和 immersive 三种路由布局接线。
+- 工作台、分组导航、底部导航、隐藏路由和布局等级示例接线。
 - 生产构建能够打包 main、preload、renderer 和品牌图标。
 
 尚未完成：
@@ -351,12 +396,11 @@ packages/renderer/src/styles/tokens.css
 - renderer bootstrap 和领域应用服务 Context。
 - Interface Editor 的真实页面和数据接线。
 - Template、试卷、考试播放器、批改和设置业务页面。
-- 复杂编辑器的专注布局或播放器的沉浸布局。
+- 真实复杂编辑器和播放器页面对专注、沉浸布局的接入。
 - 真实 Electron 环境中的自动化端到端测试。
 
 ## 已知限制
 
-- 所有注册路由共用同一种标题栏加侧边栏布局。
 - 路由注册不支持 lazy component、加载状态、错误边界或页面级元数据。
 - 导航只支持两种固定位置，不支持多级子菜单。
 - 路由和导航注册只存在于内存中。
@@ -377,6 +421,7 @@ packages/renderer/src/styles/tokens.css
 - 主导航、分组导航和底部导航能够从注册信息生成。
 - 隐藏路由不出现在侧边栏，但可通过程序导航进入。
 - 路由切换后页面内容更新。
+- 注册路由能够选择 standard、focus 或 immersive 外壳，并能返回标准外壳。
 - 折叠侧边栏后展开按钮仍然存在。
 
 项目级验证已运行：

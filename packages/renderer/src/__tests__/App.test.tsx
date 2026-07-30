@@ -33,10 +33,39 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: '隐藏页面' })).toBeInTheDocument()
   })
 
+  it('selects standard, focus and immersive shells from route registrations', () => {
+    render(<App />)
+
+    expect(screen.getByRole('navigation', { name: '主导航' })).toBeInTheDocument()
+    expect(screen.getByText('曹二听说101')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('link', { name: '分组页面' }))
+    expect(screen.getByRole('navigation', { name: '主导航' })).toBeInTheDocument()
+    expect(screen.getByText('曹二听说101')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '打开专注布局' }))
+    expect(screen.queryByRole('navigation', { name: '主导航' })).not.toBeInTheDocument()
+    expect(screen.getByText('曹二听说101')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '返回分组页面' }))
+    fireEvent.click(screen.getByRole('button', { name: '打开沉浸布局' }))
+    expect(screen.queryByRole('navigation', { name: '主导航' })).not.toBeInTheDocument()
+    expect(screen.queryByText('曹二听说101')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '返回分组页面' }))
+    expect(screen.getByRole('navigation', { name: '主导航' })).toBeInTheDocument()
+    expect(screen.getByText('曹二听说101')).toBeInTheDocument()
+  })
+
   it('keeps the expand control visible after collapsing the sidebar', () => {
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: '收起侧边栏' }))
+    expect(screen.getByRole('button', { name: '展开侧边栏' })).toBeVisible()
+
+    fireEvent.click(screen.getByRole('link', { name: '分组页面' }))
+    fireEvent.click(screen.getByRole('button', { name: '打开专注布局' }))
+    fireEvent.click(screen.getByRole('button', { name: '返回分组页面' }))
     expect(screen.getByRole('button', { name: '展开侧边栏' })).toBeVisible()
   })
 })

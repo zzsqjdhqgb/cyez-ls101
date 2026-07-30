@@ -1,6 +1,8 @@
 import { useSyncExternalStore, type ComponentType } from 'react'
 import type { LucideIcon } from 'lucide-react'
 
+export type RouteLayout = 'standard' | 'focus' | 'immersive'
+
 export interface NavigationRegistration {
   label: string
   icon: LucideIcon
@@ -13,6 +15,7 @@ export interface AppRouteRegistration {
   id: string
   path: `/${string}`
   component: ComponentType
+  layout?: RouteLayout
   navigation?: NavigationRegistration
 }
 
