@@ -4,9 +4,10 @@
 #
 
 services:
-  opencode-pnpm-dev:
-    build: .
-    container_name: opencode-pnpm-dev
+  cyez-ls101-dev-docker:
+    runtime: runsc
+    build: ./dev-env/docker/
+    container_name: cyez-ls101-dev-docker
     volumes:
       # 将当前目录（项目根目录）挂载到容器的 /workspace
       - .:/workspace
@@ -17,14 +18,15 @@ services:
       - yarn:/workspace/.yarn
       - yarn-cache:/yarn/store
       - node_modules:/workspace/node_modules
-      - ./.git:/workspace/.git:ro
       - assets:/workspace/assets
-      - ./assets/.gitkeep:/workspace/assets/.gitkeep
       - /workspace/dist
       - /workspace/out
+      - /workspace/dev-env/.vagrant
+      - ./.git:/workspace/.git:ro
+      - ./assets/.gitkeep:/workspace/assets/.gitkeep:ro
       - ./docker-compose.yml:/workspace/docker-compose.yml:ro
-      - ./Dockerfile:/workspace/Dockerfile:ro
       - ./opencode.bat:/workspace/opencode.bat:ro
+      - ./dev-env/:/workspace/dev-env/:ro
     working_dir: /workspace
     # 保持容器运行并支持交互式终端
     stdin_open: true
