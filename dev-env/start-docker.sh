@@ -1,1 +1,0 @@
-docker compose run --rm cyez-ls101-dev-docker

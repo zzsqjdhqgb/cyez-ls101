@@ -5,12 +5,11 @@
 
 services:
   cyez-ls101-dev-docker:
-    runtime: runsc
-    build: ./dev-env/docker/
+    build: .
     container_name: cyez-ls101-dev-docker
     volumes:
       # 将当前目录（项目根目录）挂载到容器的 /workspace
-      - .:/workspace
+      - ../:/workspace
       # 持久化 OpenCode 的配置和缓存，避免重启后需要重新登录
       - opencode-data-plain:/root/.local
       - opencode-config-plain:/root/.config/opencode
@@ -21,12 +20,9 @@ services:
       - assets:/workspace/assets
       - /workspace/dist
       - /workspace/out
-      - /workspace/dev-env/.vagrant
-      - ./.git:/workspace/.git:ro
-      - ./assets/.gitkeep:/workspace/assets/.gitkeep:ro
-      - ./docker-compose.yml:/workspace/docker-compose.yml:ro
-      - ./opencode.bat:/workspace/opencode.bat:ro
-      - ./dev-env/:/workspace/dev-env/:ro
+      - ../.git:/workspace/.git:ro
+      - ../assets/.gitkeep:/workspace/assets/.gitkeep:ro
+      - ../docker/:/workspace/docker/:ro
     working_dir: /workspace
     # 保持容器运行并支持交互式终端
     stdin_open: true
