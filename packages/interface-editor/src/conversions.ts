@@ -94,7 +94,8 @@ export function buildVarManifest(def: InterfaceDef): InterfaceVarManifest {
  */
 export function buildInstanceFromJson(
   def: InterfaceDef,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  name = '未命名实例'
 ): InterfaceInstance {
   const values: Record<string, string> = {}
 
@@ -104,6 +105,7 @@ export function buildInstanceFromJson(
 
   return {
     instanceId: crypto.randomUUID(),
+    name,
     generatedAt: new Date().toISOString(),
     values
   }

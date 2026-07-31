@@ -203,6 +203,7 @@ LLM 返回的 JSON 与字段结构一致，但叶子节点填充了实际值：
 ```json
 {
   "instanceId": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "校园话题第一套",
   "generatedAt": "2026-07-24T10:30:00Z",
   "values": {
     "sentenceA1": "The importance of education cannot be overstated.",
@@ -226,11 +227,11 @@ LLM 返回的 JSON 与字段结构一致，但叶子节点填充了实际值：
 
 教师可以预览每个实例的值（包括生成的图片）、删除不满意的实例、或基于已有实例重新生成。
 
-创建实例时立即生成 UUID v4并持久化一份所有变量值为空字符串的正式实例，然后进入实例编辑页面。实例页面采用整表保存，不按单字段写入。用户可以手动填写全部值，也可以通过 JSON 或 AI 生成结果原子覆盖当前实例的全部值；覆盖不改变 `instanceId`。JSON 解析或结构校验失败、AI 失败或取消时，原值保持不变。已有值允许再次通过 JSON 或 AI 覆盖，覆盖后仍可继续手动编辑。
+创建实例时立即生成 UUID v4并持久化一份名称为“未命名实例”、所有变量值为空字符串的正式实例，然后进入实例编辑页面。实例页面采用整表保存，不按单字段写入。用户可以手动编辑实例 `name` 和全部值，也可以通过 JSON 或 AI 生成结果原子覆盖当前实例的全部值；`name` 不进入 JSON Schema，也不会被 JSON 或 AI 修改，覆盖不改变 `instanceId`。JSON 解析或结构校验失败、AI 失败或取消时，原值保持不变。已有值允许再次通过 JSON 或 AI 覆盖，覆盖后仍可继续手动编辑。
 
 AI Router 提供自身规范的文本流，Interface 将其适配为通用任务进度句柄。UI 展示 AI 输出或模型提供的思考日志，并继续展示 Interface 自身的结果校验和实例保存步骤。图片生成使用普通异步接口，Interface 可为每张图片建立无日志的进度项。一个实例同时只允许一个 AI 生成任务；生成期间禁止保存手动编辑结果或执行 JSON 覆盖，用户可以取消生成。
 
-Interface 实例使用实体身份：每次独立生成、复制、基于已有实例重新生成或修改后另存时，系统生成新的 UUID v4 `instanceId`。两个实例即使字段值和图片内容完全相同，只要 `instanceId` 不同，就视为两个不同实例。Instance 不参与 Interface 内容 ID 的计算，实例列表变化不会改变 `InterfaceDef.id`。
+Interface 实例使用实体身份：每次独立生成、复制、基于已有实例重新生成或修改后另存时，系统生成新的 UUID v4 `instanceId`。两个实例即使名称、字段值和图片内容完全相同，只要 `instanceId` 不同，就视为两个不同实例。Instance 不参与 Interface 内容 ID 的计算，实例列表变化不会改变 `InterfaceDef.id`。
 
 实例本体不保存 `interfaceId`；实例所属的 Interface 由其文件目录确定。实例始终存放在对应 Interface 的 `instances/<instanceId>` 下，删除 Interface 时一并删除附属实例和资源。
 

@@ -45,6 +45,7 @@ export interface PublishedInterfaceDetails {
 
 export interface InterfaceInstanceSummary {
   instanceId: string
+  name: string
   generatedAt: string
 }
 
@@ -52,6 +53,11 @@ export interface InterfaceInstanceDetails {
   interfaceId: string
   instance: InterfaceInstance
   assetUrls: Record<string, string>
+}
+
+export interface InterfaceInstanceEdit {
+  name: string
+  values: Record<string, string>
 }
 
 export interface InterfacePromptBundle {
@@ -134,7 +140,7 @@ export interface InterfaceInstanceApplication {
   save(
     interfaceId: string,
     instanceId: string,
-    values: Record<string, string>
+    edit: InterfaceInstanceEdit
   ): Promise<InterfaceInstanceDetails>
   replaceFromJson(
     interfaceId: string,
@@ -153,7 +159,12 @@ export type ExportInterfaceResult = { status: 'exported' } | { status: 'cancelle
 export interface InterfaceImportPreview {
   filename: string
   interface: { interfaceId: string; name: string; description: string }
-  instances: Array<{ instanceId: string; generatedAt: string; assetFilenames: string[] }>
+  instances: Array<{
+    instanceId: string
+    name: string
+    generatedAt: string
+    assetFilenames: string[]
+  }>
 }
 
 export interface InterfaceImportSession {
@@ -360,6 +371,7 @@ export function createInterfaceApplication(
           .filter((stored): stored is NonNullable<typeof stored> => stored !== null)
           .map(({ instance }) => ({
             instanceId: instance.instanceId,
+            name: instance.name,
             generatedAt: instance.generatedAt
           }))
       },
@@ -400,11 +412,15 @@ export function createInterfaceApplication(
     },
     instances: {
       get: getInstanceDetails,
-      async save(interfaceId, instanceId, values) {
+      async save(interfaceId, instanceId, edit) {
         const release = acquireInstance(interfaceId, instanceId)
         try {
           const current = await requireInstance(repository, interfaceId, instanceId)
-          await repository.updateInstance(interfaceId, { ...current.instance, values })
+          await repository.updateInstance(interfaceId, {
+            ...current.instance,
+            name: edit.name,
+            values: edit.values
+          })
           return (await getInstanceDetails(interfaceId, instanceId)) as InterfaceInstanceDetails
         } finally {
           release()

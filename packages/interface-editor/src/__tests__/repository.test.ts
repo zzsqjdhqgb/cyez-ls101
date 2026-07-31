@@ -47,9 +47,10 @@ function content(name = '口语 Interface'): InterfaceContent {
   }
 }
 
-function instance(instanceId: string, title: string): InterfaceInstance {
+function instance(instanceId: string, title: string, name = `实例 ${title}`): InterfaceInstance {
   return {
     instanceId,
+    name,
     generatedAt: '2026-07-28T10:00:00.000Z',
     values: { title }
   }
@@ -160,6 +161,16 @@ describe('FileInterfaceRepository', () => {
         ...instance(INSTANCE_A, '内容'),
         values: { unexpected: '值' }
       })
+    ).rejects.toMatchObject({ code: 'INVALID_DATA' })
+  })
+
+  it('拒绝没有名称的实例', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(content())
+    await repository.saveInterface(def)
+
+    await expect(
+      repository.saveInstance(def.id, instance(INSTANCE_A, '内容', '   '))
     ).rejects.toMatchObject({ code: 'INVALID_DATA' })
   })
 
@@ -415,6 +426,7 @@ describe('Interface 交换包', () => {
 
     const inspection = await inspectInterfacePackage(bundle)
     expect(inspection.instances).toHaveLength(2)
+    expect(inspection.instances.map(({ name }) => name)).toEqual(['实例 A', '实例 B'])
 
     const result = await importInterfacePackage(target, bundle, {
       instances: { mode: 'selected', instanceIds: [INSTANCE_A] }
@@ -705,13 +717,25 @@ describe('Interface application', () => {
 
     const blank = await app.published.createBlankInstance(def.id)
     expect(blank.instance.instanceId).toMatch(/^[0-9a-f-]{36}$/)
+    expect(blank.instance.name).toBe('未命名实例')
     expect(blank.instance.values).toEqual({ title: '' })
 
-    const saved = await app.instances.save(def.id, blank.instance.instanceId, { title: '手动值' })
-    expect(saved.instance).toMatchObject({
-      instanceId: blank.instance.instanceId,
+    const saved = await app.instances.save(def.id, blank.instance.instanceId, {
+      name: '第一套口语题',
       values: { title: '手动值' }
     })
+    expect(saved.instance).toMatchObject({
+      instanceId: blank.instance.instanceId,
+      name: '第一套口语题',
+      values: { title: '手动值' }
+    })
+    await expect(app.published.listInstances(def.id)).resolves.toEqual([
+      {
+        instanceId: blank.instance.instanceId,
+        name: '第一套口语题',
+        generatedAt: blank.instance.generatedAt
+      }
+    ])
 
     const invalid = await app.instances.replaceFromJson(
       def.id,
@@ -722,6 +746,9 @@ describe('Interface application', () => {
     expect((await app.instances.get(def.id, blank.instance.instanceId))?.instance.values).toEqual({
       title: '手动值'
     })
+    expect((await app.instances.get(def.id, blank.instance.instanceId))?.instance.name).toBe(
+      '第一套口语题'
+    )
 
     const replaced = await app.instances.replaceFromJson(
       def.id,
@@ -732,6 +759,7 @@ describe('Interface application', () => {
     if (replaced.status === 'replaced') {
       expect(replaced.instance.instance).toMatchObject({
         instanceId: blank.instance.instanceId,
+        name: '第一套口语题',
         values: { title: 'JSON 值' }
       })
     }
@@ -748,6 +776,10 @@ describe('Interface application', () => {
       textGenerator: generator
     })
     const blank = await app.published.createBlankInstance(def.id)
+    await app.instances.save(def.id, blank.instance.instanceId, {
+      name: 'AI 生成前名称',
+      values: blank.instance.values
+    })
 
     const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId)
     const snapshots: TaskProgressSnapshot[] = []
@@ -766,6 +798,9 @@ describe('Interface application', () => {
     expect((await app.instances.get(def.id, blank.instance.instanceId))?.instance.values).toEqual({
       title: 'AI 值'
     })
+    expect((await app.instances.get(def.id, blank.instance.instanceId))?.instance.name).toBe(
+      'AI 生成前名称'
+    )
   })
 
   it('AI 运行时拒绝第二个生成、整表保存和 JSON 覆盖', async () => {
@@ -785,7 +820,10 @@ describe('Interface application', () => {
       app.instances.startAIGeneration(def.id, blank.instance.instanceId)
     ).rejects.toThrow('Instance is busy')
     await expect(
-      app.instances.save(def.id, blank.instance.instanceId, { title: '手动值' })
+      app.instances.save(def.id, blank.instance.instanceId, {
+        name: '手动名称',
+        values: { title: '手动值' }
+      })
     ).rejects.toThrow('Instance is busy')
     await expect(
       app.instances.replaceFromJson(def.id, blank.instance.instanceId, '{"title":"JSON 值"}')

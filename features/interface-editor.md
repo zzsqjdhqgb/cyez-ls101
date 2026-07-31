@@ -271,7 +271,7 @@ interface InterfaceInstanceApplication {
   save(
     interfaceId: string,
     instanceId: string,
-    values: Record<string, string>
+    edit: { name: string; values: Record<string, string> }
   ): Promise<InterfaceInstanceDetails>
 
   replaceFromJson(
@@ -303,9 +303,10 @@ interface InterfaceInstanceDetails {
 
 ### 整表保存
 
-`save()` 接收当前实例全部变量值，不提供单字段保存。
+`save()` 接收当前实例名称和全部变量值，不提供单字段保存。
 
 - `instanceId` 和所属 Interface 保持不变。
+- `name` 必须是非空字符串，只能由用户手动编辑。
 - values 的 key 集合必须与 Interface 的变量集合完全一致。
 - 未显式替换资源时保留现有实例资源和资源清单。
 - 保存通过写入同一个 `instance.json` 完成。
@@ -496,19 +497,20 @@ sha256:<64 lowercase hexadecimal characters>
 
 ### 实例身份
 
-实例使用 UUID v4实体身份。不同 UUID 即使 values 完全相同，也视为不同实例。
+实例使用 UUID v4实体身份。不同 UUID 即使 name 和 values 完全相同，也视为不同实例。
 
 实例本体当前包含：
 
 ```typescript
 interface InterfaceInstance {
   instanceId: string
+  name: string
   generatedAt: string
   values: Record<string, string>
 }
 ```
 
-空白实例创建、手动保存、JSON 覆盖和 AI 覆盖都保留同一 UUID。导入和 builtin 迁移也保留原 UUID。
+空白实例创建、手动保存、JSON 覆盖和 AI 覆盖都保留同一 UUID。实例 `name` 不进入 JSON Schema，JSON 和 AI 覆盖只修改 `values`。导入和 builtin 迁移也保留原 UUID 和名称。
 
 ### 物理分区
 

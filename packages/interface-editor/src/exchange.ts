@@ -30,6 +30,7 @@ export interface InterfacePackageInspection {
   interface: InterfaceDef
   instances: Array<{
     instanceId: string
+    name: string
     generatedAt: string
     assetFilenames: string[]
   }>
@@ -111,6 +112,7 @@ export async function inspectInterfacePackage(
     seen.add(instance.instanceId)
     return {
       instanceId: instance.instanceId,
+      name: instance.name,
       generatedAt: instance.generatedAt,
       assetFilenames: Object.keys(assets).sort()
     }
@@ -234,7 +236,12 @@ function assertExchangeInstance(
   instance: InterfaceInstance,
   assets: Record<string, Uint8Array>
 ): void {
-  if (!isUuid(instance.instanceId) || Number.isNaN(Date.parse(instance.generatedAt))) {
+  if (
+    !isUuid(instance.instanceId) ||
+    typeof instance.name !== 'string' ||
+    !instance.name.trim() ||
+    Number.isNaN(Date.parse(instance.generatedAt))
+  ) {
     throw invalidPackage(`Instance metadata is invalid: ${instance.instanceId}`)
   }
   if (
@@ -278,6 +285,7 @@ async function exportedInstanceMatches(
 
 function canonicalInstance(instance: InterfaceInstance): string {
   return JSON.stringify({
+    name: instance.name,
     generatedAt: instance.generatedAt,
     values: Object.fromEntries(
       Object.entries(instance.values).sort(([a], [b]) => a.localeCompare(b))

@@ -182,6 +182,12 @@ describe('buildJsonSchema', () => {
     // 字段 key "q1" 出现在 properties 中
     expect(schemaStr).toContain('q1')
   })
+
+  it('实例 name 不出现在 schema 中且不能由 JSON 提供', () => {
+    const schema = buildJsonSchema({ q: textLeaf('answer', '题目') })
+    expect(JSON.stringify(schema)).not.toContain('name')
+    expect(validateJson(schema, '{"name":"AI 名称","q":"答案"}').valid).toBe(false)
+  })
 })
 
 // ============================================================

@@ -260,6 +260,11 @@ describe('buildInstanceFromJson', () => {
     expect(new Date(instance.generatedAt).toISOString()).toBe(instance.generatedAt)
   })
 
+  it('实例名称使用本地默认值，不从 JSON 数据读取', () => {
+    const instance = buildInstanceFromJson(makeDef(), { q: 'x', name: 'AI 名称' })
+    expect(instance.name).toBe('未命名实例')
+  })
+
   it('data 中路径不存在 → 降级为空字符串', () => {
     const def = makeDef({
       fields: {

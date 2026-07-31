@@ -664,6 +664,9 @@ function assertBuiltinKey(value: string): void {
 
 function assertInstance(value: InterfaceInstance): void {
   assertUuid(value.instanceId, 'instanceId')
+  if (typeof value.name !== 'string' || !value.name.trim()) {
+    throw invalidData('Instance name is required')
+  }
   if (Number.isNaN(Date.parse(value.generatedAt))) throw invalidData('generatedAt is invalid')
   if (!isStringRecord(value.values)) throw invalidData('Instance values must contain strings')
 }
@@ -735,6 +738,8 @@ function isStoredInstanceFile(value: unknown): value is StoredInstanceFile {
   return (
     typeof instance.instanceId === 'string' &&
     UUID_V4_PATTERN.test(instance.instanceId) &&
+    typeof instance.name === 'string' &&
+    Boolean(instance.name.trim()) &&
     typeof instance.generatedAt === 'string' &&
     !Number.isNaN(Date.parse(instance.generatedAt)) &&
     isStringRecord(instance.values) &&
@@ -745,6 +750,7 @@ function isStoredInstanceFile(value: unknown): value is StoredInstanceFile {
 
 function canonicalInstance(instance: InterfaceInstance): string {
   return JSON.stringify({
+    name: instance.name,
     generatedAt: instance.generatedAt,
     values: Object.fromEntries(
       Object.entries(instance.values).sort(([a], [b]) => a.localeCompare(b))

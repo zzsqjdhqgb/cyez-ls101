@@ -47,6 +47,9 @@ export interface InterfaceInstance {
   /** 实例唯一标识 */
   instanceId: string
 
+  /** 用户可编辑的实例名称，不参与 AI 或 JSON 生成 */
+  name: string
+
   /** 生成时间（ISO 8601） */
   generatedAt: string
 
