@@ -19,6 +19,7 @@
     "test:coverage": "vitest run --coverage",
     "start": "electron-vite preview",
     "dev": "yarn run predev && chcp 65001 && electron-vite dev",
+    "dev:docker": "yarn run predev && xvfb-run -a electron-vite dev --noSandbox",
     "build": "yarn run prebuild && yarn run lint && yarn run typecheck && electron-vite build",
     "setup": "node scripts/setup.js",
     "postinstall": "electron-builder install-app-deps && node scripts/setup.js",
