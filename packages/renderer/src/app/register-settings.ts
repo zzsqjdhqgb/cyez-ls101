@@ -1,12 +1,12 @@
 import { Palette } from 'lucide-react'
-import { AppearanceSettingsExample } from '../features/settings/AppearanceSettingsExample'
+import { AppearanceSettingsPage } from '../features/settings/AppearanceSettingsPage'
 import { registerSettingsPage } from './settings-registry'
 
 const unregisterSettingsPages = [
   registerSettingsPage({
-    id: 'appearance-example',
-    title: '外观（示例）',
-    description: '临时演示页面，设置不会保存',
+    id: 'appearance',
+    title: '外观',
+    description: '调整应用主题和动态效果',
     icon: Palette,
     group: {
       id: 'general',
@@ -14,7 +14,7 @@ const unregisterSettingsPages = [
       order: 0
     },
     order: 0,
-    component: AppearanceSettingsExample
+    component: AppearanceSettingsPage
   })
 ]
 

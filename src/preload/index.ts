@@ -15,13 +15,28 @@ import {
   type FileStoreBridge,
   type FileStoreChannel
 } from '@ls101/file-store/shared'
+import {
+  CONFIG_STORE_CHANNELS,
+  type ConfigStoreBridge,
+  type ConfigStoreChannel
+} from '@ls101/config-store/shared'
 
 const allowedChannels = new Set<FileStoreChannel>(Object.values(FILE_STORE_CHANNELS))
+const allowedConfigChannels = new Set<ConfigStoreChannel>(Object.values(CONFIG_STORE_CHANNELS))
 
 const fileStoreBridge: FileStoreBridge = {
   invoke(channel, ...args) {
     if (!allowedChannels.has(channel as FileStoreChannel)) {
       return Promise.reject(new Error(`Unsupported file-store channel: ${channel}`))
+    }
+    return ipcRenderer.invoke(channel, ...args)
+  }
+}
+
+const configStoreBridge: ConfigStoreBridge = {
+  invoke(channel, ...args) {
+    if (!allowedConfigChannels.has(channel as ConfigStoreChannel)) {
+      return Promise.reject(new Error(`Unsupported config-store channel: ${channel}`))
     }
     return ipcRenderer.invoke(channel, ...args)
   }
@@ -62,5 +77,6 @@ const windowControlsBridge: WindowControlsBridge = {
 }
 
 contextBridge.exposeInMainWorld('fileStore', fileStoreBridge)
+contextBridge.exposeInMainWorld('configStore', configStoreBridge)
 contextBridge.exposeInMainWorld('fileDialog', fileDialogBridge)
 contextBridge.exposeInMainWorld('windowControls', windowControlsBridge)

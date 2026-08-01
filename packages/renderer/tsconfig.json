@@ -10,6 +10,7 @@
   "include": ["src"],
   "references": [
     { "path": "../core-types" },
+    { "path": "../config-store" },
     { "path": "../section-engine" },
     { "path": "../airouter" },
     { "path": "../editor-kit" },

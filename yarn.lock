@@ -1159,6 +1159,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@ls101/config-store@workspace:*, @ls101/config-store@workspace:packages/config-store":
+  version: 0.0.0-use.local
+  resolution: "@ls101/config-store@workspace:packages/config-store"
+  peerDependencies:
+    electron: ^39
+  peerDependenciesMeta:
+    electron:
+      optional: true
+  languageName: unknown
+  linkType: soft
+
 "@ls101/core-types@workspace:*, @ls101/core-types@workspace:packages/core-types":
   version: 0.0.0-use.local
   resolution: "@ls101/core-types@workspace:packages/core-types"
@@ -1229,6 +1240,7 @@ __metadata:
   resolution: "@ls101/renderer@workspace:packages/renderer"
   dependencies:
     "@ls101/airouter": "workspace:*"
+    "@ls101/config-store": "workspace:*"
     "@ls101/core-types": "workspace:*"
     "@ls101/editor-kit": "workspace:*"
     "@ls101/exam-player": "workspace:*"

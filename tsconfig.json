@@ -3,6 +3,7 @@
   "references": [
     { "path": "./tsconfig.node.json" },
     { "path": "./packages/core-types" },
+    { "path": "./packages/config-store" },
     { "path": "./packages/section-engine" },
     { "path": "./packages/airouter" },
     { "path": "./packages/editor-kit" },

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ls101/airouter": "workspace:*",
+    "@ls101/config-store": "workspace:*",
     "@ls101/core-types": "workspace:*",
     "@ls101/editor-kit": "workspace:*",
     "@ls101/exam-player": "workspace:*",
