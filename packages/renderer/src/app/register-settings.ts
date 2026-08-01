@@ -1,8 +1,22 @@
-import { Palette } from 'lucide-react'
+import { Bot, Palette } from 'lucide-react'
+import { AIRouterSettingsPage } from '../features/airouter/AIRouterSettingsPage'
 import { AppearanceSettingsPage } from '../features/settings/AppearanceSettingsPage'
 import { registerSettingsPage } from './settings-registry'
 
 const unregisterSettingsPages = [
+  registerSettingsPage({
+    id: 'ai-router',
+    title: 'AI Router',
+    description: '配置文本生成 Provider 和可用模型',
+    icon: Bot,
+    group: {
+      id: 'ai',
+      label: 'AI',
+      order: 10
+    },
+    order: 0,
+    component: AIRouterSettingsPage
+  }),
   registerSettingsPage({
     id: 'appearance',
     title: '外观',
