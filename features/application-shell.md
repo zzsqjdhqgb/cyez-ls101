@@ -6,7 +6,7 @@
 
 Electron main 已创建无边框主窗口并注册窗口控制 IPC；preload 已将固定的窗口控制桥接暴露为 `window.windowControls`。renderer 在 Electron 环境中使用该桥接控制当前窗口，在普通浏览器环境中仍可渲染，但窗口按钮会处于禁用状态。
 
-当前工作台和设置页面仍是轻量占位内容。Interface Editor 已以“题型”接入应用外壳；试卷、批改、Template 等其他领域应用尚未接入。
+当前工作台仍是轻量占位内容。设置页面已提供分组注册、总览入口和统一详情页框架，但尚未注册具体业务设置。Interface Editor 已以“题型”接入应用外壳；试卷、批改、Template 等其他领域应用尚未接入。
 
 ## 功能边界
 
@@ -205,13 +205,13 @@ registerAppRoute({
 })
 ```
 
-设置使用底部导航：
+设置总览使用底部导航，并注册一条隐藏的设置详情路由：
 
 ```typescript
 registerAppRoute({
-  id: 'settings-placeholder',
+  id: 'settings',
   path: '/settings',
-  component: SettingsPlaceholderPage,
+  component: SettingsOverviewPage,
   navigation: {
     label: '设置',
     icon: Settings2,
@@ -219,9 +219,49 @@ registerAppRoute({
     order: 0
   }
 })
+
+registerAppRoute({
+  id: 'settings-detail',
+  path: '/settings/:settingsPageId',
+  component: SettingsDetailPage
+})
 ```
 
 省略 `navigation` 只控制侧边栏入口，`layout` 独立决定页面外壳等级。
+
+## 设置页注册
+
+业务模块使用 `registerSettingsPage()` 注册完整设置页。`/settings` 按分组和排序元数据展示入口，点击后进入 `/settings/:settingsPageId`。详情路由统一提供页面标题、说明、返回入口和内容宽度；业务组件不应重复渲染这些外层元素。
+
+```typescript
+const unregister = registerSettingsPage({
+  id: 'ai-engine',
+  title: 'AI 引擎',
+  description: '配置模型、语音识别和图像生成服务',
+  icon: Cpu,
+  group: { id: 'intelligence', label: '智能服务', order: 20 },
+  order: 10,
+  component: AiEngineSettings
+})
+```
+
+同一分组可以由多个模块共同使用，但相同分组 `id` 的 `label` 和 `order` 必须一致。页面 `id` 必须全局唯一；冲突注册会同步抛出错误，且不改变注册表。注册函数返回幂等的注销函数，运行时注册或注销会立即更新总览和当前详情页。模块级注册在 HMR 时应与路由注册一样调用注销函数。
+
+注册组件可使用 `SettingsContent`、`SettingsSection` 和 `SettingsRow` 组合内容。这些组件统一设置页的分区边框、标题、说明、行间距、控件对齐和窄窗口响应式布局：
+
+```tsx
+function AiEngineSettings(): JSX.Element {
+  return (
+    <SettingsContent>
+      <SettingsSection title="模型服务" description="用于内容生成和评分。">
+        <SettingsRow label="默认模型" description="新任务默认使用的模型。">
+          <ModelSelect />
+        </SettingsRow>
+      </SettingsSection>
+    </SettingsContent>
+  )
+}
+```
 
 ### 热更新清理
 

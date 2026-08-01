@@ -56,3 +56,12 @@ button:disabled {
   color: var(--color-accent-contrast);
   background: var(--color-accent);
 }
+
+[data-reduce-motion] *,
+[data-reduce-motion] *::before,
+[data-reduce-motion] *::after {
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+}

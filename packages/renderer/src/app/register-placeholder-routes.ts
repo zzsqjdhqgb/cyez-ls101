@@ -4,7 +4,8 @@ import { InterfaceDraftEditorPage } from '../features/interfaces/InterfaceDraftE
 import { InterfaceDraftListPage } from '../features/interfaces/InterfaceDraftListPage'
 import { InterfaceInstanceEditorPage } from '../features/interfaces/InterfaceInstanceEditorPage'
 import { InterfaceListPage } from '../features/interfaces/InterfaceListPage'
-import { SettingsPlaceholderPage } from '../pages/SettingsPlaceholderPage'
+import { SettingsDetailPage } from '../pages/SettingsDetailPage'
+import { SettingsOverviewPage } from '../pages/SettingsOverviewPage'
 import { WorkbenchPage } from '../pages/WorkbenchPage'
 import { registerAppRoute } from './route-registry'
 
@@ -64,15 +65,22 @@ const unregisterRoutes = [
 
   // Footer navigation registration.
   registerAppRoute({
-    id: 'settings-placeholder',
+    id: 'settings',
     path: '/settings',
-    component: SettingsPlaceholderPage,
+    component: SettingsOverviewPage,
     navigation: {
       label: '设置',
       icon: Settings2,
       placement: 'footer',
       order: 0
     }
+  }),
+
+  registerAppRoute({
+    id: 'settings-detail',
+    path: '/settings/:settingsPageId',
+    component: SettingsDetailPage,
+    layout: 'standard'
   })
 ]
 

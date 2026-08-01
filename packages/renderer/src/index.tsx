@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './app/App'
+import './app/register-example-settings'
 import './app/register-placeholder-routes'
 import './styles/tokens.css'
 import './styles/global.css'
