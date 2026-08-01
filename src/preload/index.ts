@@ -20,6 +20,13 @@ import {
   type ConfigStoreBridge,
   type ConfigStoreChannel
 } from '@ls101/config-store/shared'
+import {
+  AIROUTER_CHANNELS,
+  type AIRouterBridge,
+  type AIRouterProviderConfigInput,
+  type AIRouterStreamEvent,
+  type AIRouterTextRequest
+} from '@ls101/airouter/shared'
 
 const allowedChannels = new Set<FileStoreChannel>(Object.values(FILE_STORE_CHANNELS))
 const allowedConfigChannels = new Set<ConfigStoreChannel>(Object.values(CONFIG_STORE_CHANNELS))
@@ -39,6 +46,43 @@ const configStoreBridge: ConfigStoreBridge = {
       return Promise.reject(new Error(`Unsupported config-store channel: ${channel}`))
     }
     return ipcRenderer.invoke(channel, ...args)
+  }
+}
+
+const airouterBridge: AIRouterBridge = {
+  listProviderConfigs() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listConfigs)
+  },
+  saveProviderConfig(config: AIRouterProviderConfigInput) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.saveConfig, config)
+  },
+  deleteProviderConfig(id: string) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.deleteConfig, id)
+  },
+  listModels(id: string) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listModels, id)
+  },
+  testConnection(request) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.testConnection, request)
+  },
+  startTextGeneration(
+    request: AIRouterTextRequest,
+    listener: (event: AIRouterStreamEvent) => void
+  ) {
+    const requestId = crypto.randomUUID()
+    const handler = (_event: IpcRendererEvent, id: string, event: AIRouterStreamEvent): void => {
+      if (id !== requestId) return
+      listener(event)
+      if (event.type === 'done' || event.type === 'error') {
+        ipcRenderer.removeListener(AIROUTER_CHANNELS.generateEvent, handler)
+      }
+    }
+    ipcRenderer.on(AIROUTER_CHANNELS.generateEvent, handler)
+    ipcRenderer.send(AIROUTER_CHANNELS.generateStart, requestId, request)
+    return () => {
+      ipcRenderer.removeListener(AIROUTER_CHANNELS.generateEvent, handler)
+      ipcRenderer.send(AIROUTER_CHANNELS.generateAbort, requestId)
+    }
   }
 }
 
@@ -78,5 +122,6 @@ const windowControlsBridge: WindowControlsBridge = {
 
 contextBridge.exposeInMainWorld('fileStore', fileStoreBridge)
 contextBridge.exposeInMainWorld('configStore', configStoreBridge)
+contextBridge.exposeInMainWorld('airouter', airouterBridge)
 contextBridge.exposeInMainWorld('fileDialog', fileDialogBridge)
 contextBridge.exposeInMainWorld('windowControls', windowControlsBridge)

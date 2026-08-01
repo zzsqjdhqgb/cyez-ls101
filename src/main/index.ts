@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { registerConfigStore } from '@ls101/config-store/main'
+import { registerAIRouter } from '@ls101/airouter/main'
 import { registerFileDialog } from '@ls101/file-dialog/main'
 import { registerFileStore, registerFileStoreScheme } from '@ls101/file-store/main'
 import { createMainWindow } from './window'
@@ -13,6 +14,7 @@ app.whenReady().then(() => {
 
   registerFileStore({ baseDir: app.getPath('userData') })
   registerConfigStore({ baseDir: app.getPath('userData') })
+  registerAIRouter({ baseDir: app.getPath('userData') })
   registerFileDialog()
   registerWindowControlHandlers()
 

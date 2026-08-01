@@ -15,6 +15,8 @@
   "references": [
     { "path": "./packages/core-types" },
     { "path": "./packages/config-store" },
+    { "path": "./packages/secret-store" },
+    { "path": "./packages/airouter" },
     { "path": "./packages/file-dialog" },
     { "path": "./packages/file-store" }
   ]

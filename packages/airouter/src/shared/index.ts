@@ -1,3 +1,5 @@
+export { AIROUTER_CHANNELS } from './constants'
+export type { AIRouterChannel } from './constants'
 export type {
   AIRouterClient,
   AIRouterBridge,
@@ -11,4 +13,4 @@ export type {
   AIRouterTestResult,
   AIRouterTextChunk,
   AIRouterTextRequest
-} from './shared'
+} from './types'
