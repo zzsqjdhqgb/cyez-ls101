@@ -1,0 +1,310 @@
+.editor {
+  display: grid;
+  grid-template-rows: 62px minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-surface-subtle);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0 20px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.toolbarIdentity,
+.toolbarActions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.toolbarIdentity > div {
+  min-width: 0;
+}
+
+.toolbarIdentity h1 {
+  max-width: 520px;
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text-strong);
+  font-size: 15px;
+  font-weight: 660;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolbarIdentity span {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.8fr) minmax(440px, 1.35fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.documentPane {
+  height: 100%;
+  min-width: 0;
+  padding: 28px;
+  border-right: 1px solid var(--color-border);
+  overflow: auto;
+  background: var(--color-surface);
+}
+
+.formSection + .formSection {
+  margin-top: 34px;
+  padding-top: 28px;
+  border-top: 1px solid var(--color-border);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: 18px;
+}
+
+.sectionTitle svg {
+  width: 17px;
+  height: 17px;
+  color: var(--color-accent);
+}
+
+.sectionTitle h2,
+.paneHeader h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 15px;
+  font-weight: 660;
+}
+
+.formSection label,
+.inspectorForm label {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 16px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.formSection input,
+.formSection textarea,
+.inspectorForm input,
+.inspectorForm textarea,
+.inspectorForm select {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font: 13px/1.5 var(--font-ui);
+  resize: vertical;
+}
+
+.prompt {
+  min-height: 270px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace !important;
+}
+
+.validation {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 22px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--color-danger);
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.fieldsPane {
+  height: 100%;
+  display: grid;
+  grid-template-rows: 62px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.paneHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 18px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.paneHeader > div:last-child {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.paneHeader span {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.fieldWorkspace {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.82fr) minmax(250px, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tree {
+  height: 100%;
+  min-width: 0;
+  padding: 10px 0;
+  border-right: 1px solid var(--color-border);
+  overflow: auto;
+  background: var(--color-surface);
+}
+
+.treeRow {
+  display: grid;
+  grid-template-columns: 16px 42px minmax(70px, 1fr);
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 38px;
+  padding-top: 0;
+  padding-right: 10px;
+  padding-bottom: 0;
+  border: 0;
+  color: var(--color-text);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.treeRow:hover {
+  background: var(--color-surface-hover);
+}
+
+.treeRow[data-selected] {
+  color: var(--color-text-strong);
+  background: var(--color-accent-soft);
+}
+
+.treeRow svg {
+  width: 14px;
+  height: 14px;
+}
+
+.treeRow strong,
+.treeRow code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.treeRow code {
+  grid-column: 3;
+  color: var(--color-accent);
+  font-size: 10px;
+}
+
+.nodeType {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.treeEmpty,
+.inspectorEmpty,
+.missing {
+  display: grid;
+  min-height: 240px;
+  place-items: center;
+  padding: 20px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.inspector {
+  height: 100%;
+  min-width: 0;
+  overflow: auto;
+}
+
+.inspectorForm {
+  padding: 20px;
+}
+
+.inspectorHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: 22px;
+}
+
+.inspectorHeading span,
+.inspectorHeading strong {
+  display: block;
+}
+
+.inspectorHeading span {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.inspectorHeading strong {
+  max-width: 250px;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--color-text-strong);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inspectorEmpty {
+  align-content: center;
+  gap: var(--space-2);
+}
+
+.inspectorEmpty svg {
+  width: 20px;
+  height: 20px;
+  color: var(--color-accent);
+}
+
+.groupHint {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+@media (max-width: 940px) {
+  .workspace {
+    grid-template-columns: minmax(270px, 0.72fr) minmax(410px, 1fr);
+  }
+
+  .documentPane {
+    padding: 22px;
+  }
+
+  .fieldWorkspace {
+    grid-template-columns: minmax(190px, 0.75fr) minmax(220px, 1fr);
+  }
+}

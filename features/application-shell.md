@@ -6,7 +6,7 @@
 
 Electron main 已创建无边框主窗口并注册窗口控制 IPC；preload 已将固定的窗口控制桥接暴露为 `window.windowControls`。renderer 在 Electron 环境中使用该桥接控制当前窗口，在普通浏览器环境中仍可渲染，但窗口按钮会处于禁用状态。
 
-当前工作台和其他页面仅包含轻量占位内容。试卷、批改、Interface、Template 等领域应用尚未接入应用外壳。
+当前工作台和设置页面仍是轻量占位内容。Interface Editor 已以“题型”接入应用外壳；试卷、批改、Template 等其他领域应用尚未接入。
 
 ## 功能边界
 
@@ -70,7 +70,7 @@ packages/renderer/src/index.tsx
 2. 加载设计令牌和全局样式。
 3. 查找 `#root`；不存在时抛出错误并停止渲染。
 4. 使用 React `StrictMode` 渲染 `<App />`。
-5. `<App />` 创建 `MemoryRouter`，并将注册路由放入共享 `<AppShell />`。
+5. `<App />` 创建领域应用 Provider 和 `MemoryRouter`，并将注册路由放入共享 `<AppShell />`。
 
 使用 `MemoryRouter` 意味着当前页面地址不会写入浏览器地址栏或系统 URL。一次 renderer 重新加载后会重新进入 `/`。
 
@@ -154,11 +154,11 @@ unregister()
 
 路由可以通过 `layout` 从三种应用外壳中选择：
 
-| 等级          | 自定义标题栏 | 侧边栏 | 路由内容区域                               |
-| ------------- | ------------ | ------ | ------------------------------------------ |
-| `standard`    | 显示         | 显示   | 占据侧边栏右侧空间，适合普通页面           |
-| `focus`       | 显示         | 隐藏   | 占据标题栏下方全部空间，适合复杂编辑工作区 |
-| `immersive`   | 隐藏         | 隐藏   | 占据整个 renderer，适合播放器或全屏预览    |
+| 等级        | 自定义标题栏 | 侧边栏 | 路由内容区域                               |
+| ----------- | ------------ | ------ | ------------------------------------------ |
+| `standard`  | 显示         | 显示   | 占据侧边栏右侧空间，适合普通页面           |
+| `focus`     | 显示         | 隐藏   | 占据标题栏下方全部空间，适合复杂编辑工作区 |
+| `immersive` | 隐藏         | 隐藏   | 占据整个 renderer，适合播放器或全屏预览    |
 
 `layout` 省略时按 `standard` 处理。`AppShell` 使用 React Router 的匹配规则寻找当前注册路由，因此带参数的路径和普通静态路径使用同一套路由优先级。未注册的地址使用 404 页面和 `standard` 外壳。
 
@@ -168,13 +168,9 @@ unregister()
 
 布局只决定应用外壳占用的区域，不强制页面内部结构。复杂编辑器可以直接使用整个路由内容区域；普通页面仍可使用 `Page` 组件获得最大宽度和统一留白。
 
-## 注册示例
+## 当前注册
 
-项目在 `register-placeholder-routes.ts` 中保留四种导航注册示例，并额外注册两个隐藏的布局等级示例。
-
-### 默认主导航
-
-省略 `placement` 时进入主导航：
+项目在 `register-placeholder-routes.ts` 中注册工作台、题型和设置入口。省略 `placement` 的工作台与题型进入主导航：
 
 ```typescript
 registerAppRoute({
@@ -190,25 +186,26 @@ registerAppRoute({
 })
 ```
 
-### 分组导航
-
-填写 `group` 后显示组标题，并与同名项归入同一组：
+题型列表另有四条不显示在侧边栏的工作流路由：草稿列表、草稿编辑、题型详情和题组编辑。列表与详情使用 `standard`，两个编辑页面使用 `focus`。例如：
 
 ```typescript
 registerAppRoute({
-  id: 'grouped-placeholder',
-  path: '/grouped-example',
-  component: GroupedPlaceholderPage,
-  navigation: {
-    label: '分组页面',
-    icon: Boxes,
-    group: '示例分组',
-    order: 10
-  }
+  id: 'interfaces',
+  path: '/interfaces',
+  component: InterfaceListPage,
+  layout: 'standard',
+  navigation: { label: '题型', icon: Shapes, order: 10 }
+})
+
+registerAppRoute({
+  id: 'interface-draft-editor',
+  path: '/interfaces/drafts/:draftId',
+  component: InterfaceDraftEditorPage,
+  layout: 'focus'
 })
 ```
 
-### 底部导航
+设置使用底部导航：
 
 ```typescript
 registerAppRoute({
@@ -224,39 +221,7 @@ registerAppRoute({
 })
 ```
 
-### 隐藏路由
-
-省略 `navigation` 后路由仍可通过 `navigate()` 或链接访问，但不会显示在侧边栏：
-
-```typescript
-registerAppRoute({
-  id: 'hidden-placeholder',
-  path: '/hidden-example',
-  component: HiddenPlaceholderPage
-})
-```
-
-### 布局等级隐藏路由
-
-分组页面本身使用默认 `standard` 布局，并提供两个按钮进入独立的隐藏路由：
-
-```typescript
-registerAppRoute({
-  id: 'focus-layout-placeholder',
-  path: '/layout-example/focus',
-  component: FocusPlaceholderPage,
-  layout: 'focus'
-})
-
-registerAppRoute({
-  id: 'immersive-layout-placeholder',
-  path: '/layout-example/immersive',
-  component: ImmersivePlaceholderPage,
-  layout: 'immersive'
-})
-```
-
-两个页面均省略 `navigation`，不会增加侧边栏项目，并提供返回分组页面的按钮。隐藏路由与布局等级彼此独立：省略 `navigation` 只控制侧边栏入口，`layout` 只控制页面命中后的外壳。
+省略 `navigation` 只控制侧边栏入口，`layout` 独立决定页面外壳等级。
 
 ### 热更新清理
 
@@ -276,7 +241,7 @@ if (import.meta.hot) {
 
 工作台使用固定注册 ID `workbench` 和根路由 `/`，显示在主导航中。
 
-当前工作台只包含统一页面标题、一个进入隐藏路由示例的按钮和空状态。它尚未读取最近编辑内容、待办任务、最近访问记录或快捷操作数据，也没有定义这些数据的跨模块契约。
+当前工作台只包含统一页面标题、一个进入题型列表的按钮和空状态。它尚未读取最近编辑内容、待办任务、最近访问记录或快捷操作数据，也没有定义这些数据的跨模块契约。
 
 ## 侧边栏行为
 
@@ -368,16 +333,17 @@ packages/renderer/src/styles/tokens.css
 
 以下组件位于 `packages/renderer/src/components/ui/`，目前仅是 renderer 内部复用组件，没有从 package 根入口导出：
 
-| 组件         | 当前能力                                                                         |
-| ------------ | -------------------------------------------------------------------------------- |
-| `Button`     | `primary`、`secondary`、`ghost`、`danger` 四种外观；小和中两种尺寸；可选前置图标 |
-| `IconButton` | 默认、ghost、danger 三种外观；小和中两种尺寸；强制提供无障碍名称和 Tooltip       |
-| `Tooltip`    | 上、右、下、左四个方向；hover 或 focus-within 后显示；可禁用                     |
-| `Page`       | 提供统一最大宽度、水平留白和垂直间距                                             |
-| `PageHeader` | 页面一级标题和右侧操作区                                                         |
-| `EmptyState` | 图标和单行标题的轻量空状态                                                       |
+| 组件           | 当前能力                                                                         |
+| -------------- | -------------------------------------------------------------------------------- |
+| `Button`       | `primary`、`secondary`、`ghost`、`danger` 四种外观；小和中两种尺寸；可选前置图标 |
+| `IconButton`   | 默认、ghost、danger 三种外观；小和中两种尺寸；强制提供无障碍名称和 Tooltip       |
+| `Tooltip`      | 上、右、下、左四个方向；hover 或 focus-within 后显示；可禁用                     |
+| `Page`         | 提供统一最大宽度、水平留白和垂直间距                                             |
+| `PageHeader`   | 页面一级标题和右侧操作区                                                         |
+| `EmptyState`   | 图标和单行标题的轻量空状态                                                       |
+| `ConfirmModal` | 危险操作和未保存修改离开确认                                                     |
 
-这些组件没有表单状态管理、异步 loading 约定、菜单、对话框、toast、下拉选择或数据表功能。新增组件应基于真实页面需求，而不是预先扩充完整组件库。
+这些组件没有表单状态管理、异步 loading 约定、菜单、toast、下拉选择或数据表功能。新增组件应基于真实页面需求，而不是预先扩充完整组件库。
 
 ## 集成状态
 
@@ -388,13 +354,12 @@ packages/renderer/src/styles/tokens.css
 - preload 暴露三个独立 bridge。
 - renderer 入口、注册表、应用外壳、侧边栏和标题栏接线。
 - standard、focus 和 immersive 三种路由布局接线。
-- 工作台、分组导航、底部导航、隐藏路由和布局等级示例接线。
+- 工作台与题型主导航、设置底部导航和隐藏工作流路由接线。
+- Interface Editor 的真实服务 Context、题型页面与 focus 编辑页面接线。
 - 生产构建能够打包 main、preload、renderer 和品牌图标。
 
 尚未完成：
 
-- renderer bootstrap 和领域应用服务 Context。
-- Interface Editor 的真实页面和数据接线。
 - Template、试卷、考试播放器、批改和设置业务页面。
 - 真实复杂编辑器和播放器页面对专注、沉浸布局的接入。
 - 真实 Electron 环境中的自动化端到端测试。

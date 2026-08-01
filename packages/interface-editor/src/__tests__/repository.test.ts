@@ -688,6 +688,14 @@ describe('Interface application', () => {
     expect((await app.published.get(published.interface.interfaceId))?.definition.name).toBe(
       draft.name
     )
+    const prompts = await app.published.getPrompts(published.interface.interfaceId)
+    expect(prompts.prompt).toBe(draft.promptTemplate)
+    expect(prompts.fullPrompt).toContain(draft.promptTemplate)
+    expect(JSON.parse(prompts.jsonSchema)).toMatchObject({
+      type: 'object',
+      properties: { title: { type: 'string' } }
+    })
+    expect(JSON.parse(prompts.jsonExample)).toEqual({ title: '模拟试卷' })
     const copy = await app.published.copyToDraft(published.interface.interfaceId)
     expect(copy.draftId).not.toBe(draft.draftId)
     expect(copy.fields).toEqual(draft.fields)
@@ -717,7 +725,7 @@ describe('Interface application', () => {
 
     const blank = await app.published.createBlankInstance(def.id)
     expect(blank.instance.instanceId).toMatch(/^[0-9a-f-]{36}$/)
-    expect(blank.instance.name).toBe('未命名实例')
+    expect(blank.instance.name).toBe('未命名题组')
     expect(blank.instance.values).toEqual({ title: '' })
 
     const saved = await app.instances.save(def.id, blank.instance.instanceId, {

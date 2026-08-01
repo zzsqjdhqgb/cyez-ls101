@@ -1,0 +1,154 @@
+.summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.summary p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.summaryActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+
+.definition {
+  margin-top: 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.definition summary {
+  padding: 16px 4px;
+  color: var(--color-text-strong);
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.definition section {
+  padding: 8px 4px 22px;
+}
+
+.copyTools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 4px 4px 20px;
+}
+
+.copyActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.copyStatus {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.copyStatus svg {
+  width: 14px;
+  height: 14px;
+}
+
+.definition h3 {
+  margin: 0 0 10px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.definition pre {
+  max-height: 260px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: auto;
+  color: var(--color-text);
+  background: var(--color-surface-subtle);
+  font:
+    12px/1.6 ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  white-space: pre-wrap;
+}
+
+.fieldList {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: 52px minmax(100px, 0.6fr) minmax(110px, 0.8fr) minmax(0, 2fr);
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 42px;
+  padding-right: 12px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 12px;
+}
+
+.fieldRow:last-child {
+  border-bottom: 0;
+}
+
+.fieldRow strong,
+.fieldRow span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fieldRow code {
+  color: var(--color-accent);
+}
+
+.fieldKind {
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+@media (max-width: 720px) {
+  .summary {
+    flex-direction: column;
+  }
+
+  .summaryActions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .copyTools {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .fieldRow {
+    grid-template-columns: 42px minmax(90px, 0.7fr) minmax(100px, 1fr);
+  }
+
+  .fieldRow > span:last-child {
+    display: none;
+  }
+}

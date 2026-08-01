@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AppShell } from '../components/shell/AppShell'
+import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceApplicationProvider'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { useRegisteredRoutes } from './route-registry'
 
@@ -22,8 +23,10 @@ function RegisteredAppRoutes(): JSX.Element {
 
 export function App(): JSX.Element {
   return (
-    <MemoryRouter>
-      <RegisteredAppRoutes />
-    </MemoryRouter>
+    <InterfaceApplicationProvider>
+      <MemoryRouter>
+        <RegisteredAppRoutes />
+      </MemoryRouter>
+    </InterfaceApplicationProvider>
   )
 }

@@ -4,7 +4,7 @@
 
 `@ls101/interface-editor` 已实现与 UI 框架无关的 Interface 领域模型、文件仓储、草稿与发布流程、实例编辑、导入导出、builtin 更新和五模块应用门面。
 
-当前代码已具备供 renderer 调用的应用 API，但业务 renderer 尚未创建 bootstrap、React Context、页面或组件，也尚未连接真实 `@ls101/file-store`、`@ls101/file-dialog` 和 AIRouter 实例。测试使用内存仓储、测试文件对话框和测试文本生成流验证应用行为。
+renderer 已创建应用组合层和 React Context，并接入真实 `@ls101/file-store` 与 `@ls101/file-dialog`。当前 UI 包含题型列表、草稿列表、草稿编辑、题型详情和题组编辑页面；草稿编辑与题组编辑使用 `focus` 布局，编辑器中的工作区分栏支持拖动调整。AIRouter 实例尚未接入，因此题组页的 AI 生成入口当前禁用。领域层测试继续使用内存仓储、测试文件对话框和测试文本生成流验证应用行为。
 
 ## 功能边界
 
@@ -233,12 +233,16 @@ interface InterfacePromptBundle {
   prompt: string
   formatInstructions: string
   fullPrompt: string
+  jsonSchema: string
+  jsonExample: string
 }
 ```
 
 - `prompt` 是教师编写的原始 `promptTemplate`。
 - `formatInstructions` 是系统根据字段树生成的 JSON Schema、图片字段约束和示例输出。
 - `fullPrompt` 是 `prompt` 与 `formatInstructions` 的拼接结果。
+- `jsonSchema` 是单独格式化的 JSON Schema 字符串。
+- `jsonExample` 是单独格式化的示例 JSON 字符串。
 
 模块只返回字符串。复制到系统剪贴板由 renderer 使用浏览器或 Electron 能力完成。
 

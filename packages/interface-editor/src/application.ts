@@ -16,7 +16,7 @@ import { exportInterfaceFile, readInterfaceFile, type InterfaceFileDialog } from
 import { createInterfaceDraft, publishInterface } from './id'
 import { addNode, removeNode, renameNode, updateNode } from './mutations'
 import type { InterfaceRepository } from './repository'
-import { buildJsonSchema, validateJson } from './schema'
+import { buildJsonExample, buildJsonSchema, validateJson } from './schema'
 import type { FieldNode, InterfaceContent, InterfaceDef, InterfaceDraft } from './types'
 import { validateInterfaceDef, type ValidationError } from './validation'
 
@@ -64,6 +64,8 @@ export interface InterfacePromptBundle {
   prompt: string
   formatInstructions: string
   fullPrompt: string
+  jsonSchema: string
+  jsonExample: string
 }
 
 export type InterfaceDraftOperation =
@@ -380,7 +382,9 @@ export function createInterfaceApplication(
         return {
           prompt: def.promptTemplate,
           formatInstructions: buildFormatInstructions(def),
-          fullPrompt: buildAIPrompt(def)
+          fullPrompt: buildAIPrompt(def),
+          jsonSchema: JSON.stringify(buildJsonSchema(def.fields), null, 2),
+          jsonExample: JSON.stringify(buildJsonExample(def.fields), null, 2)
         }
       },
       async getVarManifest(interfaceId) {
@@ -389,7 +393,7 @@ export function createInterfaceApplication(
       async createBlankInstance(interfaceId) {
         const def = await requireInterface(repository, interfaceId)
         const now = new Date().toISOString()
-        const instance = buildInstanceFromJson(def, {})
+        const instance = buildInstanceFromJson(def, {}, '未命名题组')
         instance.generatedAt = now
         for (const key of Object.keys(instance.values)) instance.values[key] = ''
         await repository.saveInstance(interfaceId, instance)

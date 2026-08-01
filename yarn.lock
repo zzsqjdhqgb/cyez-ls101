@@ -1198,7 +1198,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@ls101/file-store@workspace:packages/file-store":
+"@ls101/file-store@workspace:*, @ls101/file-store@workspace:packages/file-store":
   version: 0.0.0-use.local
   resolution: "@ls101/file-store@workspace:packages/file-store"
   peerDependencies:
@@ -1232,6 +1232,8 @@ __metadata:
     "@ls101/core-types": "workspace:*"
     "@ls101/editor-kit": "workspace:*"
     "@ls101/exam-player": "workspace:*"
+    "@ls101/file-dialog": "workspace:*"
+    "@ls101/file-store": "workspace:*"
     "@ls101/interface-editor": "workspace:*"
     "@ls101/schema-editor": "workspace:*"
     "@ls101/section-engine": "workspace:*"
