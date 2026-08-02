@@ -107,11 +107,22 @@ export interface InterfaceTextGenerationChunk {
   delta: string
 }
 
+export interface InterfaceTextModelSelection {
+  providerId: string
+  modelId: string
+}
+
+export interface InterfaceTextModelOption extends InterfaceTextModelSelection {
+  providerName: string
+  modelName?: string
+}
+
 /** AIRouter 或其他 AI 适配器只需提供此窄能力。 */
 export interface InterfaceTextGenerator {
+  listModels?(): Promise<readonly InterfaceTextModelOption[]>
   generate(
     prompt: string,
-    options: { signal: AbortSignal }
+    options: { signal: AbortSignal; model?: InterfaceTextModelSelection }
   ): AsyncIterable<InterfaceTextGenerationChunk>
 }
 
@@ -139,6 +150,7 @@ export interface PublishedInterfaceApplication {
 
 export interface InterfaceInstanceApplication {
   get(interfaceId: string, instanceId: string): Promise<InterfaceInstanceDetails | null>
+  listAIGenerationModels(): Promise<readonly InterfaceTextModelOption[]>
   save(
     interfaceId: string,
     instanceId: string,
@@ -151,7 +163,8 @@ export interface InterfaceInstanceApplication {
   ): Promise<ReplaceInstanceFromJsonResult>
   startAIGeneration(
     interfaceId: string,
-    instanceId: string
+    instanceId: string,
+    options?: { model?: InterfaceTextModelSelection }
   ): Promise<TaskProgressHandle<InterfaceAIGenerationResult>>
   delete(interfaceId: string, instanceId: string): Promise<void>
 }
@@ -416,6 +429,9 @@ export function createInterfaceApplication(
     },
     instances: {
       get: getInstanceDetails,
+      async listAIGenerationModels() {
+        return (await textGenerator?.listModels?.()) ?? []
+      },
       async save(interfaceId, instanceId, edit) {
         const release = acquireInstance(interfaceId, instanceId)
         try {
@@ -431,7 +447,7 @@ export function createInterfaceApplication(
         }
       },
       replaceFromJson,
-      async startAIGeneration(interfaceId, instanceId) {
+      async startAIGeneration(interfaceId, instanceId, options = {}) {
         if (!textGenerator) throw new Error('Interface text generator is not configured')
         const release = acquireInstance(interfaceId, instanceId)
         try {
@@ -439,7 +455,8 @@ export function createInterfaceApplication(
           const def = await requireInterface(repository, interfaceId)
           const controller = new AbortController()
           const stream = textGenerator.generate(buildAIPrompt(def), {
-            signal: controller.signal
+            signal: controller.signal,
+            model: options.model
           })
           return createGenerationHandle(
             stream,

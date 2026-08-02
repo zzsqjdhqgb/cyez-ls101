@@ -3,6 +3,32 @@ import type { AIRouterClient, AIRouterProviderConfigSummary } from '@ls101/airou
 import { createInterfaceAIRouterTextGenerator } from '../features/interfaces/InterfaceAIRouterAdapter'
 
 describe('Interface AIRouter adapter', () => {
+  it('lists enabled models with their provider names', async () => {
+    const client = clientWith({
+      listProviderConfigs: vi.fn().mockResolvedValue([
+        {
+          id: 'provider-a',
+          name: 'Provider A',
+          type: 'anthropic',
+          baseUrl: 'https://a.example.com',
+          models: [
+            { id: 'enabled-model', enabled: true },
+            { id: 'disabled-model', enabled: false }
+          ],
+          hasApiKey: true
+        }
+      ])
+    })
+
+    await expect(createInterfaceAIRouterTextGenerator(client).listModels?.()).resolves.toEqual([
+      {
+        providerId: 'provider-a',
+        providerName: 'Provider A',
+        modelId: 'enabled-model'
+      }
+    ])
+  })
+
   it('uses the first enabled text model and forwards stream chunks', async () => {
     const configs: AIRouterProviderConfigSummary[] = [
       {
@@ -70,6 +96,48 @@ describe('Interface AIRouter adapter', () => {
       '请先在 AI 引擎设置中启用至少一个文本模型'
     )
     expect(client.generateText).not.toHaveBeenCalled()
+  })
+
+  it('uses the explicitly selected enabled model', async () => {
+    const generateText = vi.fn((_request, _options) => ({
+      async *[Symbol.asyncIterator]() {
+        yield { type: 'output' as const, delta: '{}' }
+      }
+    }))
+    const client = clientWith({
+      listProviderConfigs: vi.fn().mockResolvedValue([
+        {
+          id: 'provider-a',
+          name: 'Provider A',
+          type: 'anthropic',
+          baseUrl: 'https://a.example.com',
+          models: [
+            { id: 'first-model', enabled: true },
+            { id: 'selected-model', enabled: true }
+          ],
+          hasApiKey: true
+        }
+      ]),
+      generateText
+    })
+    const signal = new AbortController().signal
+    const stream = createInterfaceAIRouterTextGenerator(client).generate('prompt', {
+      signal,
+      model: { providerId: 'provider-a', modelId: 'selected-model' }
+    })
+
+    for await (const _chunk of stream) {
+      // Drain the stream so the adapter sends the request.
+    }
+
+    expect(generateText).toHaveBeenCalledWith(
+      {
+        providerConfigId: 'provider-a',
+        modelId: 'selected-model',
+        prompt: 'prompt'
+      },
+      { signal }
+    )
   })
 })
 

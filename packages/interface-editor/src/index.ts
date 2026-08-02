@@ -24,6 +24,8 @@ export type {
   ReplaceInstanceFromJsonResult,
   InterfaceAIGenerationResult,
   InterfaceTextGenerationChunk,
+  InterfaceTextModelSelection,
+  InterfaceTextModelOption,
   InterfaceTextGenerator,
   ExportInterfaceResult,
   InterfaceImportPreview,

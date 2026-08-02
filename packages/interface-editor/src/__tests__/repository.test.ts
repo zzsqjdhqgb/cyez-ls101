@@ -3,7 +3,8 @@ import type { InterfaceInstance, TaskProgressSnapshot } from '@ls101/core-types'
 import {
   createInterfaceApplication,
   type InterfaceTextGenerationChunk,
-  type InterfaceTextGenerator
+  type InterfaceTextGenerator,
+  type InterfaceTextModelSelection
 } from '../application'
 import {
   exportInterfacePackage,
@@ -794,7 +795,10 @@ describe('Interface application', () => {
       values: blank.instance.values
     })
 
-    const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId)
+    const selectedModel = { providerId: 'provider-a', modelId: 'model-b' }
+    const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId, {
+      model: selectedModel
+    })
     const snapshots: TaskProgressSnapshot[] = []
     handle.subscribe(() => snapshots.push(handle.getSnapshot()))
     generator.append('正在构造 JSON')
@@ -802,6 +806,7 @@ describe('Interface application', () => {
 
     const result = await handle.completion
     expect(result.status).toBe('completed')
+    expect(generator.selectedModel).toEqual(selectedModel)
     expect(snapshots.some(({ items }) => items[0].log?.content.includes('正在构造'))).toBe(true)
     expect(handle.getSnapshot().items.map(({ status }) => status)).toEqual([
       'completed',
@@ -941,11 +946,13 @@ class TestTextGenerator implements InterfaceTextGenerator {
   private readonly chunks: InterfaceTextGenerationChunk[] = []
   private finished = false
   private wake: (() => void) | null = null
+  selectedModel: InterfaceTextModelSelection | null = null
 
   async *generate(
     _prompt: string,
-    options: { signal: AbortSignal }
+    options: { signal: AbortSignal; model?: InterfaceTextModelSelection }
   ): AsyncIterable<InterfaceTextGenerationChunk> {
+    this.selectedModel = options.model ?? null
     while (!this.finished || this.chunks.length > 0) {
       if (options.signal.aborted) throw new DOMException('Aborted', 'AbortError')
       const chunk = this.chunks.shift()

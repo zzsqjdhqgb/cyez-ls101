@@ -4,7 +4,7 @@
 
 `@ls101/interface-editor` 已实现与 UI 框架无关的 Interface 领域模型、文件仓储、草稿与发布流程、实例编辑、导入导出、builtin 更新和五模块应用门面。
 
-renderer 已创建应用组合层和 React Context，并接入真实 `@ls101/file-store`、`@ls101/file-dialog` 与 AIRouter。当前 UI 包含题型列表、草稿列表、草稿编辑、题型详情和题组编辑页面；草稿编辑与题组编辑使用 `focus` 布局，编辑器中的工作区分栏支持拖动调整。题组页可以使用第一个已启用的 AIRouter 文本模型生成内容，并展示流式进度、校验、保存和取消状态。领域层测试继续使用内存仓储、测试文件对话框和测试文本生成流验证应用行为。
+renderer 已创建应用组合层和 React Context，并接入真实 `@ls101/file-store`、`@ls101/file-dialog` 与 AIRouter。当前 UI 包含题型列表、草稿列表、草稿编辑、题型详情和题组编辑页面；草稿编辑与题组编辑使用 `focus` 布局，编辑器中的工作区分栏支持拖动调整。题组页可以从所有已启用的 AIRouter 文本模型中选择生成模型，并在与 JSON 互斥的右侧分栏中展示流式进度、校验、保存和取消状态。领域层测试继续使用内存仓储、测试文件对话框和测试文本生成流验证应用行为。
 
 ## 功能边界
 
@@ -346,14 +346,20 @@ interface InterfaceTextGenerationChunk {
 }
 
 interface InterfaceTextGenerator {
+  listModels?(): Promise<readonly InterfaceTextModelOption[]>
   generate(
     prompt: string,
-    options: { signal: AbortSignal }
+    options: {
+      signal: AbortSignal
+      model?: { providerId: string; modelId: string }
+    }
   ): AsyncIterable<InterfaceTextGenerationChunk>
 }
 ```
 
 该端口表示 Interface 对文本生成的最小需求，不要求 AIRouter 使用相同命名。bootstrap 可以在 AIRouter 实现后提供适配器。
+
+`listAIGenerationModels()` 将适配器提供的模型选项暴露给 UI。`startAIGeneration()` 可接收所选 `providerId` 和 `modelId`；调用方未指定时，适配器仍可提供自己的默认选择策略。
 
 `startAIGeneration()`：
 
@@ -599,7 +605,7 @@ MISSING_ASSET
 
 ## 当前限制
 
-- AIRouter 当前没有默认模型设置；Interface 按 Provider 配置顺序选择第一个已启用的文本模型。
+- AIRouter 当前没有持久化的默认模型设置；题组编辑器每次打开 AI 分栏时默认选中 Provider 配置顺序中的第一个已启用模型。
 - 图片字段的二次图片生成、资源保存和字段 URL 替换尚未实现。
 - 实例时间字段仍名为 `generatedAt`，空白实例也会在创建时写入该时间。
 - 实例整表更新依赖 File Store 的单文件原子替换；这不构成 Interface 定义、实例和资源之间的多文件事务。

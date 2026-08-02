@@ -28,6 +28,11 @@ import {
   SettingsSection
 } from '../../components/settings/SettingsContent'
 import { Button } from '../../components/ui/Button'
+import {
+  AIModelSelect,
+  type AIModelOption,
+  type AIModelSelection
+} from '../../components/ai/AIModelSelect'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { toast } from '../../components/ui/toast'
 import { airouterApplication, type AIRouterApplication } from './AIRouterApplication'
@@ -180,6 +185,15 @@ export function AIRouterTextSettingsPage({
   const selectedTestModelId = enabledModels.some((model) => model.id === testModelId)
     ? testModelId
     : (enabledModels[0]?.id ?? '')
+  const testModelProviderId = draft?.id ?? 'unsaved-provider'
+  const testModelOptions: AIModelOption[] = enabledModels.map((model) => ({
+    providerId: testModelProviderId,
+    providerName: draft?.name.trim() || '当前 Provider',
+    modelId: model.id
+  }))
+  const selectedTestModel: AIModelSelection | null = selectedTestModelId
+    ? { providerId: testModelProviderId, modelId: selectedTestModelId }
+    : null
 
   const persistedConfig = draft?.id ? configs?.find((config) => config.id === draft.id) : undefined
   const draftModified = draft
@@ -567,20 +581,14 @@ export function AIRouterTextSettingsPage({
                 description="发送固定的短请求，验证密钥、地址、模型和生成权限。"
               >
                 <SettingsRow label="测试模型" description="只能测试当前已启用的模型。">
-                  <select
-                    aria-label="测试模型"
-                    className={styles.inputWide}
-                    disabled={!enabledModels.length || Boolean(busy)}
-                    onChange={(event) => setTestModelId(event.target.value)}
-                    value={selectedTestModelId}
-                  >
-                    {!enabledModels.length ? <option value="">没有已启用模型</option> : null}
-                    {enabledModels.map((model) => (
-                      <option key={model.id} value={model.id}>
-                        {model.id}
-                      </option>
-                    ))}
-                  </select>
+                  <AIModelSelect
+                    disabled={Boolean(busy)}
+                    label="测试模型"
+                    options={testModelOptions}
+                    showLabel={false}
+                    value={selectedTestModel}
+                    onChange={(selection) => setTestModelId(selection?.modelId ?? '')}
+                  />
                 </SettingsRow>
                 <div className={styles.sectionActions}>
                   <OperationFeedback value={feedback.test} />

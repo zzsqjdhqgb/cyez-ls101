@@ -30,11 +30,7 @@ Task Progress 不负责：
 从 `@ls101/core-types` 导入：
 
 ```typescript
-import type {
-  TaskProgressHandle,
-  TaskProgressItem,
-  TaskProgressSnapshot
-} from '@ls101/core-types'
+import type { TaskProgressHandle, TaskProgressItem, TaskProgressSnapshot } from '@ls101/core-types'
 ```
 
 接口定义：
@@ -111,10 +107,7 @@ interface TaskProgressHandle<TResult> {
 `getSnapshot()` 返回当前完整进度。生产者只在进度内容发生变化时替换快照对象，因此该接口可直接用于 React `useSyncExternalStore`：
 
 ```typescript
-const snapshot = useSyncExternalStore(
-  handle.subscribe,
-  handle.getSnapshot
-)
+const snapshot = useSyncExternalStore(handle.subscribe, handle.getSnapshot)
 ```
 
 `subscribe(listener)` 注册变更监听器，并返回取消订阅函数。监听器只表示快照可能已经变化，调用方应重新调用 `getSnapshot()` 获取数据。
@@ -208,8 +201,8 @@ AI 生成
 - AI、校验和保存三个扁平任务项的状态推进。
 - AI 成功后覆盖当前实例并保留 UUID。
 - 同一实例运行 AI 时拒绝第二个生成、整表保存和 JSON 覆盖。
-- renderer 订阅进度句柄、锁定编辑、取消生成和回填完成结果。
-- AIRouter 默认模型选择与文本增量流转发。
+- renderer 在互斥的 AI/JSON 分栏中选择模型、订阅进度句柄、锁定编辑、取消生成并回填完成结果。
+- AIRouter 默认模型和显式指定模型的选择与文本增量流转发。
 
 当前未覆盖 Markdown 语义渲染、真实 Provider 端到端流、图片任务以及应用关闭时的任务清理。
 

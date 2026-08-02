@@ -225,6 +225,11 @@ describe('Interface pages', () => {
       cancel: vi.fn(),
       completion
     }
+    const models = [
+      { providerId: 'provider-a', providerName: 'Provider A', modelId: 'model-a' },
+      { providerId: 'provider-b', providerName: 'Provider B', modelId: 'model-b' }
+    ]
+    const listAIGenerationModels = vi.fn().mockResolvedValue(models)
     const startAIGeneration = vi.fn().mockResolvedValue(handle)
     const app = application({
       published: {
@@ -235,6 +240,7 @@ describe('Interface pages', () => {
       },
       instances: {
         get: vi.fn().mockResolvedValue(initial),
+        listAIGenerationModels,
         save: vi.fn(),
         replaceFromJson: vi.fn(),
         startAIGeneration
@@ -256,12 +262,26 @@ describe('Interface pages', () => {
     )
 
     expect(await screen.findByRole('heading', { name: '第一套题组' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'JSON' }))
+    expect(screen.getByRole('complementary', { name: 'JSON 覆盖' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'AI 生成' }))
 
-    await waitFor(() => expect(startAIGeneration).toHaveBeenCalledWith(interfaceId, instanceId))
-    expect(screen.getByRole('dialog', { name: 'AI 生成' })).toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: 'JSON 覆盖' })).not.toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: 'AI 生成' })).toBeInTheDocument()
+    await waitFor(() => expect(listAIGenerationModels).toHaveBeenCalledOnce())
+    fireEvent.change(screen.getByLabelText('生成模型'), { target: { value: '1' } })
+    fireEvent.click(screen.getByRole('button', { name: '开始生成' }))
+
+    await waitFor(() =>
+      expect(startAIGeneration).toHaveBeenCalledWith(interfaceId, instanceId, {
+        model: { providerId: 'provider-b', modelId: 'model-b' }
+      })
+    )
     expect(screen.getByRole('region', { name: 'AI 生成进度' })).toBeInTheDocument()
     expect(screen.getByDisplayValue('旧题目')).toBeDisabled()
+    expect(screen.getByRole('button', { name: '返回题型详情' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'JSON' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '生成中' })).toBeDisabled()
     expect(screen.queryByRole('button', { name: '完成' })).not.toBeInTheDocument()
 
     await act(async () => {
@@ -269,16 +289,103 @@ describe('Interface pages', () => {
       await completion
     })
 
-    expect(await screen.findByDisplayValue('AI 新题目')).toBeDisabled()
+    expect(await screen.findByDisplayValue('AI 新题目')).toBeEnabled()
     expect(await screen.findByText('AI 生成内容已保存')).toBeInTheDocument()
-    expect(screen.getByRole('dialog', { name: 'AI 生成' })).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: 'AI 生成' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'AI 生成进度' })).toBeInTheDocument()
     expect(screen.getByText('生成完成')).toBeInTheDocument()
+    expect(screen.getByLabelText('生成模型')).toBeEnabled()
+    expect(screen.getByRole('button', { name: '返回题型详情' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'JSON' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'AI 生成' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '重新生成' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '重新生成' }))
+    await waitFor(() => expect(startAIGeneration).toHaveBeenCalledTimes(2))
+    expect(startAIGeneration).toHaveBeenNthCalledWith(2, interfaceId, instanceId, {
+      model: { providerId: 'provider-b', modelId: 'model-b' }
+    })
+    expect(await screen.findByRole('button', { name: '重新生成' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '完成' }))
 
-    expect(screen.queryByRole('dialog', { name: 'AI 生成' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: 'AI 生成' })).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'AI 生成进度' })).not.toBeInTheDocument()
     expect(screen.getByDisplayValue('AI 新题目')).toBeEnabled()
+  })
+
+  it('keeps AI failures in the AI pane and allows retrying', async () => {
+    const interfaceId = `sha256:${'c'.repeat(64)}`
+    const instanceId = '20000000-0000-4000-8000-000000000002'
+    const initial = {
+      interfaceId,
+      instance: {
+        instanceId,
+        name: '失败测试题组',
+        generatedAt: '2026-08-02T00:00:00.000Z',
+        values: { questionText: '原题目' }
+      },
+      assetUrls: {}
+    }
+    const result: InterfaceAIGenerationResult = {
+      status: 'failed',
+      message: '生成服务暂时不可用'
+    }
+    const snapshot: TaskProgressSnapshot = {
+      items: [{ id: 'ai', label: 'AI 生成', status: 'completed' }]
+    }
+    const handle: TaskProgressHandle<InterfaceAIGenerationResult> = {
+      getSnapshot: () => snapshot,
+      subscribe: () => () => undefined,
+      cancel: vi.fn(),
+      completion: Promise.resolve(result)
+    }
+    const startAIGeneration = vi.fn().mockResolvedValue(handle)
+    const app = application({
+      published: {
+        get: vi.fn().mockResolvedValue({
+          definition: { ...draft, id: interfaceId },
+          source: { type: 'published' }
+        })
+      },
+      instances: {
+        get: vi.fn().mockResolvedValue(initial),
+        listAIGenerationModels: vi
+          .fn()
+          .mockResolvedValue([
+            { providerId: 'provider-a', providerName: 'Provider A', modelId: 'model-a' }
+          ]),
+        save: vi.fn(),
+        replaceFromJson: vi.fn(),
+        startAIGeneration
+      }
+    })
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/interfaces/${interfaceId}/instances/${instanceId}`]}>
+          <Routes>
+            <Route
+              path="/interfaces/:interfaceId/instances/:instanceId"
+              element={<InterfaceInstanceEditorPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByRole('heading', { name: '失败测试题组' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'AI 生成' }))
+    await waitFor(() => expect(screen.getByLabelText('生成模型')).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: '开始生成' }))
+
+    expect(await screen.findByText('生成失败')).toBeInTheDocument()
+    expect(screen.getByText('生成服务暂时不可用')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '重新生成' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '完成' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '重新生成' }))
+    await waitFor(() => expect(startAIGeneration).toHaveBeenCalledTimes(2))
   })
 })

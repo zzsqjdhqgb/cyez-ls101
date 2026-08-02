@@ -104,7 +104,8 @@
 }
 
 .fieldHeader h2,
-.jsonPane h2 {
+.jsonPane h2,
+.aiPane h2 {
   margin: 0;
   color: var(--color-text-strong);
   font-size: 16px;
@@ -170,11 +171,14 @@
 }
 
 .generationProgress {
+  width: 100%;
   min-height: 0;
+  min-width: 0;
 }
 
 .generationProgress ol {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   margin: 0;
   padding: 0;
@@ -186,11 +190,19 @@
   grid-template-columns: 18px minmax(0, 1fr);
   align-items: start;
   gap: 10px;
+  min-width: 0;
   padding: 14px 16px;
+  overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text-muted);
   background: var(--color-surface);
+}
+
+.generationProgress li > div,
+.generationStarting > div,
+.generationResult > div {
+  min-width: 0;
 }
 
 .generationProgress li > svg {
@@ -217,6 +229,9 @@
 }
 
 .generationProgress pre {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
   max-height: 260px;
   margin: 8px 0 0;
   padding: 10px;
@@ -232,31 +247,22 @@
     monospace;
   white-space: pre-wrap;
   word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
-.generationBackdrop {
-  position: fixed;
-  z-index: 110;
-  inset: 0;
-  display: grid;
-  padding: 24px;
-  place-items: center;
-  background: rgb(18 25 24 / 38%);
-}
-
-.generationDialog {
+.aiPane {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  width: min(1180px, calc(100vw - 48px));
-  height: min(900px, calc(100vh - 48px));
+  width: auto;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-popover);
+  border-left: 1px solid var(--color-border);
   background: var(--color-surface-subtle);
 }
 
-.generationHeader {
+.aiHeader {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -265,18 +271,18 @@
   background: var(--color-surface);
 }
 
-.generationHeader > div {
+.aiHeader > div {
   min-width: 0;
 }
 
-.generationHeader span:not(.generationIcon) {
+.aiHeader span:not(.generationIcon) {
   display: block;
-  margin-bottom: 2px;
+  margin-top: 2px;
   color: var(--color-text-muted);
   font-size: 11px;
 }
 
-.generationHeader h2 {
+.aiHeader h2 {
   margin: 0;
   color: var(--color-text-strong);
   font-size: 16px;
@@ -299,13 +305,21 @@
   height: 18px;
 }
 
-.generationBody {
+.aiBody {
   display: grid;
   align-content: start;
-  gap: 18px;
+  gap: 22px;
   min-height: 0;
   padding: 24px;
   overflow: auto;
+}
+
+.generationContent {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 18px;
+  min-height: 0;
 }
 
 .generationStarting,
@@ -314,6 +328,7 @@
   grid-template-columns: 20px minmax(0, 1fr);
   align-items: start;
   gap: 12px;
+  min-width: 0;
   padding: 16px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -347,6 +362,7 @@
   color: var(--color-text-muted);
   font-size: 12px;
   line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 .generationResult[data-status='error'] > svg {
@@ -357,9 +373,10 @@
   color: var(--color-text-muted);
 }
 
-.generationActions {
+.aiActions {
   display: flex;
   justify-content: flex-end;
+  gap: var(--space-2);
   padding: 14px 22px;
   border-top: 1px solid var(--color-border);
   background: var(--color-surface);
@@ -380,11 +397,13 @@
 
 .jsonPane {
   display: grid;
-  grid-template-rows: auto minmax(200px, 1fr) auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   width: auto;
+  height: 100%;
   min-width: 0;
   min-height: 0;
   padding: 24px;
+  overflow: auto;
   border-left: 1px solid var(--color-border);
   background: var(--color-surface);
 }
@@ -431,16 +450,7 @@
     padding-left: 24px;
   }
 
-  .generationBackdrop {
-    padding: 12px;
-  }
-
-  .generationDialog {
-    width: calc(100vw - 24px);
-    height: calc(100vh - 24px);
-  }
-
-  .generationBody {
+  .aiBody {
     padding: 16px;
   }
 }

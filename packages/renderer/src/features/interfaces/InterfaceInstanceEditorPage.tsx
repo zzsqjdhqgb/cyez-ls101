@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore, type JSX } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type JSX } from 'react'
 import type { TaskProgressHandle, TaskProgressItem } from '@ls101/core-types'
 import type {
   FieldLeaf,
@@ -16,10 +16,16 @@ import {
   Circle,
   Image as ImageIcon,
   LoaderCircle,
+  RefreshCw,
   Save,
   X
 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
+import {
+  AIModelSelect,
+  type AIModelOption,
+  type AIModelSelection
+} from '../../components/ai/AIModelSelect'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { IconButton } from '../../components/ui/IconButton'
@@ -42,6 +48,8 @@ interface GenerationSession {
   startError: string | null
 }
 
+type AuxiliaryPanel = 'json' | 'ai' | null
+
 export function InterfaceInstanceEditorPage(): JSX.Element {
   const application = useInterfaceApplication()
   const navigate = useNavigate()
@@ -51,14 +59,19 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   const [name, setName] = useState('')
   const [values, setValues] = useState<Record<string, string>>({})
   const [json, setJson] = useState('')
-  const [jsonOpen, setJsonOpen] = useState(false)
+  const [panel, setPanel] = useState<AuxiliaryPanel>(null)
   const [jsonErrors, setJsonErrors] = useState<readonly InstanceDataError[]>([])
+  const [modelOptions, setModelOptions] = useState<readonly AIModelOption[]>([])
+  const [selectedModel, setSelectedModel] = useState<AIModelSelection | null>(null)
+  const [modelsLoading, setModelsLoading] = useState(false)
+  const [modelsError, setModelsError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [generation, setGeneration] = useState<GenerationSession | null>(null)
   const [dirty, setDirty] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmLeave, setConfirmLeave] = useState(false)
+  const modelLoadId = useRef(0)
 
   useEffect(() => {
     let active = true
@@ -81,6 +94,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       })
     return () => {
       active = false
+      modelLoadId.current += 1
     }
   }, [application, interfaceId, instanceId])
 
@@ -101,12 +115,54 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
     setDirty(true)
   }
 
+  const loadModels = async (): Promise<void> => {
+    const loadId = ++modelLoadId.current
+    setModelsLoading(true)
+    setModelsError(null)
+    try {
+      const models = await application.instances.listAIGenerationModels()
+      if (loadId !== modelLoadId.current) return
+      setModelOptions(models)
+      setSelectedModel((current) =>
+        current &&
+        models.some(
+          (model) => model.providerId === current.providerId && model.modelId === current.modelId
+        )
+          ? current
+          : models[0]
+            ? { providerId: models[0].providerId, modelId: models[0].modelId }
+            : null
+      )
+    } catch (reason) {
+      if (loadId !== modelLoadId.current) return
+      setModelOptions([])
+      setSelectedModel(null)
+      setModelsError(errorMessage(reason))
+    } finally {
+      if (loadId === modelLoadId.current) setModelsLoading(false)
+    }
+  }
+
+  const toggleAIPanel = (): void => {
+    if (panel === 'ai') {
+      modelLoadId.current += 1
+      setGeneration(null)
+      setPanel(null)
+      return
+    }
+    setPanel('ai')
+    void loadModels()
+  }
+
   const startGeneration = async (): Promise<void> => {
+    if (!selectedModel) return
     setGeneration({ handle: null, result: null, startError: null })
     setError(null)
     setJsonErrors([])
     try {
-      const handle = await application.instances.startAIGeneration(interfaceId, instanceId)
+      const handle = await application.instances.startAIGeneration(interfaceId, instanceId, {
+        model: selectedModel
+      })
       setGeneration({ handle, result: null, startError: null })
       const result = await handle.completion
       setGeneration((current) => (current ? { ...current, result } : current))
@@ -118,16 +174,9 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       } else if (result.status === 'invalid-response') {
         setJson(result.rawOutput)
         setJsonErrors(result.errors)
-        setJsonOpen(true)
-        setError('AI 返回内容未通过字段校验')
-      } else if (result.status === 'failed') {
-        setError(result.message)
-      } else {
-        toast.info('已取消 AI 生成')
-      }
+      } else if (result.status === 'cancelled') toast.info('已取消 AI 生成')
     } catch (reason) {
       const message = errorMessage(reason)
-      setError(message)
       setGeneration((current) => (current ? { ...current, startError: message } : current))
     }
   }
@@ -162,7 +211,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       setDetails(result.instance)
       setValues(result.instance.instance.values)
       setDirty(false)
-      setJsonOpen(false)
+      setPanel(null)
       setJson('')
       toast.success('已从 JSON 更新题组')
     } catch (reason) {
@@ -180,8 +229,15 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
     navigate(`/interfaces/${encodeURIComponent(interfaceId)}`)
   }
 
-  const aiBusy = generation !== null
-  const busy = saving || aiBusy
+  const generationFinished = generation ? isGenerationFinished(generation) : false
+  const generationRunning = generation !== null && !generationFinished
+  const busy = saving || generationRunning
+
+  const finishGeneration = (): void => {
+    const openJson = generation?.result?.status === 'invalid-response'
+    setGeneration(null)
+    setPanel(openJson ? 'json' : null)
+  }
 
   if (loading) return <div className={shared.loading}>正在加载题组...</div>
 
@@ -190,7 +246,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       <header className={styles.toolbar}>
         <div className={styles.identity}>
           <IconButton
-            disabled={aiBusy}
+            disabled={generationRunning}
             icon={ArrowLeft}
             label="返回题型详情"
             variant="ghost"
@@ -204,16 +260,23 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
           </div>
         </div>
         <div className={styles.actions}>
-          <Button icon={Braces} disabled={busy} onClick={() => setJsonOpen((open) => !open)}>
+          <Button
+            icon={Braces}
+            disabled={saving || generationRunning}
+            onClick={() => {
+              setGeneration(null)
+              setPanel((current) => (current === 'json' ? null : 'json'))
+            }}
+          >
             JSON
           </Button>
           <Button
-            icon={aiBusy ? LoaderCircle : Bot}
-            disabled={!details || busy || dirty}
+            icon={generationRunning ? LoaderCircle : Bot}
+            disabled={!details || saving || generationRunning || dirty}
             title={dirty ? '请先保存当前修改' : undefined}
-            onClick={() => void startGeneration()}
+            onClick={toggleAIPanel}
           >
-            {aiBusy ? '生成中' : 'AI 生成'}
+            {generationRunning ? '生成中' : 'AI 生成'}
           </Button>
           <Button
             icon={Save}
@@ -234,7 +297,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
           initialSize={560}
           minFirst={360}
           minSecond={320}
-          label="调整题组字段与 JSON 面板宽度"
+          label={`调整题组字段与${panel === 'ai' ? ' AI' : ' JSON'}面板宽度`}
         >
           <section className={styles.formPane}>
             {error ? (
@@ -286,7 +349,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
             </div>
           </section>
 
-          {jsonOpen ? (
+          {panel === 'json' ? (
             <aside className={styles.jsonPane} aria-label="JSON 覆盖">
               <header>
                 <div>
@@ -312,7 +375,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
                 </div>
               ) : null}
               <div className={styles.jsonActions}>
-                <Button variant="ghost" disabled={busy} onClick={() => setJsonOpen(false)}>
+                <Button variant="ghost" disabled={busy} onClick={() => setPanel(null)}>
                   取消
                 </Button>
                 <Button
@@ -324,6 +387,22 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
                 </Button>
               </div>
             </aside>
+          ) : panel === 'ai' ? (
+            <AIGenerationPane
+              dirty={dirty}
+              modelsError={modelsError}
+              modelsLoading={modelsLoading}
+              modelOptions={modelOptions}
+              selectedModel={selectedModel}
+              session={generation}
+              onCancel={() => generation?.handle?.cancel()}
+              onClose={() => setPanel(null)}
+              onFinish={finishGeneration}
+              onRefresh={() => void loadModels()}
+              onRetry={() => void startGeneration()}
+              onSelectModel={setSelectedModel}
+              onStart={() => void startGeneration()}
+            />
           ) : null}
         </ResizableSplit>
       )}
@@ -336,74 +415,121 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
         onCancel={() => setConfirmLeave(false)}
         onConfirm={() => navigate(`/interfaces/${encodeURIComponent(interfaceId)}`)}
       />
-      {generation ? (
-        <GenerationModal
-          session={generation}
-          onCancel={() => generation.handle?.cancel()}
-          onFinish={() => setGeneration(null)}
-        />
-      ) : null}
     </div>
   )
 }
 
-function GenerationModal({
+function AIGenerationPane({
+  dirty,
+  modelsError,
+  modelsLoading,
+  modelOptions,
+  selectedModel,
   session,
   onCancel,
-  onFinish
+  onClose,
+  onFinish,
+  onRefresh,
+  onRetry,
+  onSelectModel,
+  onStart
 }: {
-  session: GenerationSession
+  dirty: boolean
+  modelsError: string | null
+  modelsLoading: boolean
+  modelOptions: readonly AIModelOption[]
+  selectedModel: AIModelSelection | null
+  session: GenerationSession | null
   onCancel(): void
+  onClose(): void
   onFinish(): void
+  onRefresh(): void
+  onRetry(): void
+  onSelectModel(value: AIModelSelection | null): void
+  onStart(): void
 }): JSX.Element {
-  const finished = session.result !== null || session.startError !== null
+  const finished = session ? isGenerationFinished(session) : false
 
   return (
-    <div className={styles.generationBackdrop} role="presentation">
-      <section
-        aria-labelledby="generation-modal-title"
-        aria-modal="true"
-        className={styles.generationDialog}
-        role="dialog"
-      >
-        <header className={styles.generationHeader}>
-          <span className={styles.generationIcon}>
-            <Bot aria-hidden="true" />
-          </span>
-          <div>
-            <span>{finished ? '生成任务已结束' : '正在生成题组'}</span>
-            <h2 id="generation-modal-title">AI 生成</h2>
-          </div>
-        </header>
-
-        <div className={styles.generationBody}>
-          {session.handle ? <GenerationProgress handle={session.handle} /> : null}
-          {!session.handle && !finished ? (
-            <div className={styles.generationStarting} role="status">
-              <LoaderCircle aria-hidden="true" />
-              <div>
-                <strong>正在启动生成任务</strong>
-                <span>正在读取模型配置并准备提示词...</span>
-              </div>
-            </div>
-          ) : null}
-          {finished ? <GenerationResult session={session} /> : null}
+    <aside className={styles.aiPane} aria-label="AI 生成">
+      <header className={styles.aiHeader}>
+        <span className={styles.generationIcon}>
+          <Bot aria-hidden="true" />
+        </span>
+        <div>
+          <h2>AI 生成</h2>
+          <span>{session ? (finished ? '生成任务已结束' : '正在生成题组') : '生成设置'}</span>
         </div>
+      </header>
 
-        <footer className={styles.generationActions}>
-          {finished ? (
+      <div className={styles.aiBody}>
+        <AIModelSelect
+          disabled={session !== null && !finished}
+          error={modelsError}
+          label="生成模型"
+          loading={modelsLoading}
+          options={modelOptions}
+          value={selectedModel}
+          onChange={onSelectModel}
+          onRefresh={onRefresh}
+        />
+        {session ? (
+          <div className={styles.generationContent}>
+            {session.handle ? <GenerationProgress handle={session.handle} /> : null}
+            {!session.handle && !finished ? (
+              <div className={styles.generationStarting} role="status">
+                <LoaderCircle aria-hidden="true" />
+                <div>
+                  <strong>正在启动生成任务</strong>
+                  <span>正在读取模型配置并准备提示词...</span>
+                </div>
+              </div>
+            ) : null}
+            {finished ? <GenerationResult session={session} /> : null}
+          </div>
+        ) : null}
+      </div>
+
+      <footer className={styles.aiActions}>
+        {!session ? (
+          <>
+            <Button variant="ghost" onClick={onClose}>
+              取消
+            </Button>
+            <Button
+              icon={Bot}
+              variant="primary"
+              disabled={!selectedModel || modelsLoading || Boolean(modelsError) || dirty}
+              onClick={onStart}
+            >
+              开始生成
+            </Button>
+          </>
+        ) : finished ? (
+          <>
+            <Button
+              icon={RefreshCw}
+              disabled={!selectedModel || modelsLoading || Boolean(modelsError) || dirty}
+              onClick={onRetry}
+            >
+              重新生成
+            </Button>
             <Button icon={Check} variant="primary" onClick={onFinish}>
               完成
             </Button>
-          ) : (
-            <Button icon={X} disabled={!session.handle} variant="ghost" onClick={onCancel}>
-              取消生成
-            </Button>
-          )}
-        </footer>
-      </section>
-    </div>
+          </>
+        ) : (
+          <Button icon={X} disabled={!session.handle} variant="ghost" onClick={onCancel}>
+            取消生成
+          </Button>
+        )}
+      </footer>
+    </aside>
   )
+}
+
+function isGenerationFinished(session: GenerationSession): boolean {
+  return session.result !== null || session.startError !== null
 }
 
 function GenerationResult({ session }: { session: GenerationSession }): JSX.Element {
