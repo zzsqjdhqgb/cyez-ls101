@@ -4,7 +4,19 @@ import type {
   AIRouterProviderConfigSummary,
   AIRouterProviderType
 } from '@ls101/airouter'
-import { Check, Download, Plus, Save, TestTube2, Trash2 } from 'lucide-react'
+import {
+  AudioLines,
+  Check,
+  Download,
+  MessageSquareText,
+  Mic,
+  Plus,
+  Save,
+  TestTube2,
+  Trash2,
+  type LucideIcon
+} from 'lucide-react'
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import {
   SettingsContent,
   SettingsRow,
@@ -36,7 +48,74 @@ const defaultBaseUrls: Record<AIRouterProviderType, string> = {
   anthropic: 'https://api.anthropic.com/v1'
 }
 
+const sectionBasePath = '/settings/ai-router'
+const sections = [
+  { id: 'text', label: '文本生成', icon: MessageSquareText },
+  { id: 'speech-synthesis', label: '语音合成', icon: AudioLines },
+  { id: 'speech-recognition', label: '语音识别', icon: Mic }
+] as const
+
 export function AIRouterSettingsPage({
+  application = airouterApplication
+}: {
+  application?: AIRouterApplication
+}): JSX.Element {
+  const location = useLocation()
+
+  return (
+    <div className={styles.routerPage}>
+      <nav aria-label="AI Router 设置分类" className={styles.tabs} role="tablist">
+        {sections.map((section) => {
+          const Icon = section.icon
+          const active =
+            location.pathname === `${sectionBasePath}/${section.id}` ||
+            (section.id === 'text' && location.pathname === sectionBasePath)
+          return (
+            <Link
+              aria-selected={active}
+              className={styles.tab}
+              data-active={active || undefined}
+              key={section.id}
+              role="tab"
+              to={`${sectionBasePath}/${section.id}`}
+            >
+              <Icon aria-hidden="true" />
+              <span>{section.label}</span>
+            </Link>
+          )
+        })}
+      </nav>
+
+      <Routes>
+        <Route index element={<Navigate replace to="text" />} />
+        <Route path="text" element={<AIRouterTextSettingsPage application={application} />} />
+        <Route
+          path="speech-synthesis"
+          element={
+            <AIRouterPlaceholder
+              icon={AudioLines}
+              title="语音合成"
+              description="语音合成模型的 Provider、模型和连接测试将在这里配置。"
+            />
+          }
+        />
+        <Route
+          path="speech-recognition"
+          element={
+            <AIRouterPlaceholder
+              icon={Mic}
+              title="语音识别"
+              description="语音识别模型的 Provider、模型和连接测试将在这里配置。"
+            />
+          }
+        />
+        <Route path="*" element={<Navigate replace to="text" />} />
+      </Routes>
+    </div>
+  )
+}
+
+export function AIRouterTextSettingsPage({
   application = airouterApplication
 }: {
   application?: AIRouterApplication
@@ -422,6 +501,29 @@ export function AIRouterSettingsPage({
         title="删除 Provider 配置？"
       />
     </SettingsContent>
+  )
+}
+
+function AIRouterPlaceholder({
+  icon: Icon,
+  title,
+  description
+}: {
+  icon: LucideIcon
+  title: string
+  description: string
+}): JSX.Element {
+  return (
+    <section className={styles.placeholder}>
+      <div className={styles.placeholderIcon}>
+        <Icon aria-hidden="true" />
+      </div>
+      <div className={styles.placeholderText}>
+        <span className={styles.placeholderBadge}>临时占位</span>
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
+    </section>
   )
 }
 

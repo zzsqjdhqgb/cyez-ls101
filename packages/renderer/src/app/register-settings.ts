@@ -7,7 +7,7 @@ const unregisterSettingsPages = [
   registerSettingsPage({
     id: 'ai-router',
     title: 'AI Router',
-    description: '配置文本生成 Provider 和可用模型',
+    description: '配置 AI Provider 和各类可用模型',
     icon: Bot,
     group: {
       id: 'ai',

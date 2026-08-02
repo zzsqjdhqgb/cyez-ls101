@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 
+import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AIRouterProviderConfigSummary } from '@ls101/airouter'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AIRouterSettingsPage } from '../features/airouter/AIRouterSettingsPage'
 import type { AIRouterApplication } from '../features/airouter/AIRouterApplication'
 
@@ -26,7 +28,7 @@ describe('AIRouterSettingsPage', () => {
       testConnection: vi.fn().mockResolvedValue({ ok: true, text: 'OK' })
     }
 
-    render(<AIRouterSettingsPage application={application} />)
+    renderAIRouter(application)
 
     expect(await screen.findByDisplayValue('学校 OpenAI')).not.toBeNull()
     const apiKeyInput = screen.getByLabelText('API Key') as HTMLInputElement
@@ -42,4 +44,42 @@ describe('AIRouterSettingsPage', () => {
       expect.objectContaining({ id: 'provider-1', apiKey: undefined })
     )
   })
+
+  it('uses URL-backed model categories and marks speech pages as placeholders', async () => {
+    const application: AIRouterApplication = {
+      listConfigs: vi.fn().mockResolvedValue([]),
+      saveConfig: vi.fn(),
+      deleteConfig: vi.fn(),
+      listModels: vi.fn(),
+      testConnection: vi.fn()
+    }
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    expect(screen.getByRole('tab', { name: '语音合成' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('heading', { name: '语音合成' })).toBeInTheDocument()
+    expect(screen.getByText('临时占位')).toBeInTheDocument()
+    expect(application.listConfigs).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('tab', { name: '语音识别' }))
+    expect(screen.getByRole('tab', { name: '语音识别' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('heading', { name: '语音识别' })).toBeInTheDocument()
+    expect(screen.getByText('临时占位')).toBeInTheDocument()
+  })
 })
+
+function renderAIRouter(
+  application: AIRouterApplication,
+  initialEntry = '/settings/ai-router/text'
+) {
+  return render(
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <Routes>
+        <Route
+          path="/settings/ai-router/*"
+          element={<AIRouterSettingsPage application={application} />}
+        />
+      </Routes>
+    </MemoryRouter>
+  )
+}

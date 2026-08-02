@@ -31,7 +31,7 @@ function renderSettings(initialEntry = '/settings') {
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route path="/settings" element={<SettingsOverviewPage />} />
-        <Route path="/settings/:settingsPageId" element={<SettingsDetailPage />} />
+        <Route path="/settings/:settingsPageId/*" element={<SettingsDetailPage />} />
       </Routes>
     </MemoryRouter>
   )

@@ -78,7 +78,7 @@ const unregisterRoutes = [
 
   registerAppRoute({
     id: 'settings-detail',
-    path: '/settings/:settingsPageId',
+    path: '/settings/:settingsPageId/*',
     component: SettingsDetailPage,
     layout: 'standard'
   })
