@@ -6,10 +6,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import '../app/register-placeholder-routes'
 import { App } from '../app/App'
 import { appRouteRegistry } from '../app/route-registry'
-import { toast } from '../components/ui/toast'
 
 afterEach(() => {
-  toast.dismiss()
   cleanup()
 })
 
@@ -34,15 +32,6 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '打开题型' }))
     expect(screen.getByRole('heading', { name: '题型' })).toBeInTheDocument()
-  })
-
-  it('shows a toast example from the workbench', async () => {
-    render(<App />)
-
-    fireEvent.click(screen.getByRole('button', { name: '显示通知' }))
-
-    expect(await screen.findByText('工作台通知')).toBeInTheDocument()
-    expect(screen.getByText('Toast 组件运行正常')).toBeInTheDocument()
   })
 
   it('registers list and details as standard and both editors as focus', () => {

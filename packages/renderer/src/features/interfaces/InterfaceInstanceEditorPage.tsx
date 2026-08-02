@@ -5,12 +5,13 @@ import type {
   InterfaceInstanceDetails,
   InstanceDataError
 } from '@ls101/interface-editor'
-import { AlertCircle, ArrowLeft, Bot, Braces, Check, Image as ImageIcon, Save } from 'lucide-react'
+import { AlertCircle, ArrowLeft, Bot, Braces, Image as ImageIcon, Save } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { IconButton } from '../../components/ui/IconButton'
 import { ResizableSplit } from '../../components/ui/ResizableSplit'
+import { toast } from '../../components/ui/toast'
 import { useInterfaceApplication } from './InterfaceApplicationContext'
 import { errorMessage, flattenNodes } from './interfaceUi'
 import shared from './InterfaceShared.module.css'
@@ -36,7 +37,6 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
-  const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirmLeave, setConfirmLeave] = useState(false)
 
@@ -74,13 +74,11 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   const updateName = (next: string): void => {
     setName(next)
     setDirty(true)
-    setStatus(null)
   }
 
   const updateValue = (varName: string, value: string): void => {
     setValues((current) => ({ ...current, [varName]: value }))
     setDirty(true)
-    setStatus(null)
   }
 
   const save = async (): Promise<void> => {
@@ -92,7 +90,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       setDetails(saved)
       setValues(saved.instance.values)
       setDirty(false)
-      setStatus('已保存')
+      toast.success('题组已保存')
     } catch (reason) {
       setError(errorMessage(reason))
     } finally {
@@ -113,9 +111,9 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       setDetails(result.instance)
       setValues(result.instance.instance.values)
       setDirty(false)
-      setStatus('已从 JSON 更新')
       setJsonOpen(false)
       setJson('')
+      toast.success('已从 JSON 更新题组')
     } catch (reason) {
       setError(errorMessage(reason))
     } finally {
@@ -141,7 +139,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
           <div>
             <h1>{name || '未命名题组'}</h1>
             <span>
-              {definition?.name ?? '题组'} · {dirty ? '有未保存修改' : status || '编辑'}
+              {definition?.name ?? '题组'} · {dirty ? '有未保存修改' : '编辑'}
             </span>
           </div>
         </div>
@@ -196,12 +194,6 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
                 <h2>内容字段</h2>
                 <span>{leaves.length} 个变量</span>
               </div>
-              {!dirty && status ? (
-                <span className={styles.savedStatus}>
-                  <Check aria-hidden="true" />
-                  {status}
-                </span>
-              ) : null}
             </div>
 
             <div className={styles.fields}>

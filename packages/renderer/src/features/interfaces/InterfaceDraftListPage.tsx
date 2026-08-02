@@ -7,6 +7,7 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { IconButton } from '../../components/ui/IconButton'
 import { Page, PageHeader } from '../../components/ui/Page'
+import { toast } from '../../components/ui/toast'
 import { useInterfaceApplication } from './InterfaceApplicationContext'
 import { errorMessage } from './interfaceUi'
 import shared from './InterfaceShared.module.css'
@@ -64,6 +65,7 @@ export function InterfaceDraftListPage(): JSX.Element {
       await application.drafts.delete(item.draftId)
       setPendingDelete(null)
       await load()
+      toast.success(`已删除草稿“${item.name || '未命名题型'}”`)
     } catch (reason) {
       setError(errorMessage(reason))
     }

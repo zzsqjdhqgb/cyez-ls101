@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Page, PageHeader } from '../../components/ui/Page'
+import { toast } from '../../components/ui/toast'
 import { useInterfaceApplication } from './InterfaceApplicationContext'
 import { errorMessage } from './interfaceUi'
 import shared from './InterfaceShared.module.css'
@@ -55,6 +56,7 @@ export function InterfaceListPage(): JSX.Element {
       if (!session) return
       await session.commit({ mode: 'all' })
       await load()
+      toast.success('题型已导入')
     } catch (reason) {
       setError(errorMessage(reason))
     } finally {

@@ -6,13 +6,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { InterfaceApplication, InterfaceDraft } from '@ls101/interface-editor'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AppToaster } from '../components/ui/ToastViewport'
+import { toast } from '../components/ui/toast'
 import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceApplicationProvider'
 import { InterfaceDetailsPage } from '../features/interfaces/InterfaceDetailsPage'
 import { InterfaceDraftEditorPage } from '../features/interfaces/InterfaceDraftEditorPage'
 import { InterfaceDraftListPage } from '../features/interfaces/InterfaceDraftListPage'
 import { InterfaceListPage } from '../features/interfaces/InterfaceListPage'
 
-afterEach(cleanup)
+afterEach(() => {
+  toast.dismiss()
+  cleanup()
+})
 
 const draft: InterfaceDraft = {
   draftId: '10000000-0000-4000-8000-000000000001',
@@ -107,6 +111,29 @@ describe('Interface pages', () => {
     expect(app.drafts.get).toHaveBeenCalledWith(draft.draftId)
     expect(screen.getByRole('region', { name: '字段结构' })).toBeInTheDocument()
     expect(screen.getAllByRole('separator')).toHaveLength(2)
+  })
+
+  it('uses a toast for draft save completion', async () => {
+    const app = application()
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/interfaces/drafts/${draft.draftId}`]}>
+          <Routes>
+            <Route path="/interfaces/drafts/:draftId" element={<InterfaceDraftEditorPage />} />
+          </Routes>
+        </MemoryRouter>
+        <AppToaster />
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByRole('heading', { name: '听说测试' })).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('名称'), { target: { value: '听说测试更新' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+
+    await waitFor(() => expect(app.drafts.save).toHaveBeenCalledOnce())
+    expect(await screen.findByText('草稿已保存')).toBeInTheDocument()
+    expect(screen.queryByText('已保存')).not.toBeInTheDocument()
   })
 
   it('copies each prompt artifact from interface details', async () => {

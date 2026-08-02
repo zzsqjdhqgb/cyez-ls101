@@ -115,6 +115,7 @@ export function InterfaceDetailsPage(): JSX.Element {
     setError(null)
     try {
       await application.transfer.export(interfaceId, { mode: 'all' })
+      toast.success('题型已导出')
     } catch (reason) {
       setError(errorMessage(reason))
     } finally {
@@ -127,6 +128,7 @@ export function InterfaceDetailsPage(): JSX.Element {
       await application.instances.delete(interfaceId, instance.instanceId)
       setPendingDelete(null)
       await load()
+      toast.success(`已删除题组“${instance.name}”`)
     } catch (reason) {
       setError(errorMessage(reason))
     }

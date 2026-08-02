@@ -25,6 +25,7 @@ import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { IconButton } from '../../components/ui/IconButton'
 import { ResizableSplit } from '../../components/ui/ResizableSplit'
+import { toast } from '../../components/ui/toast'
 import { useInterfaceApplication } from './InterfaceApplicationContext'
 import {
   errorMessage,
@@ -48,7 +49,6 @@ export function InterfaceDraftEditorPage(): JSX.Element {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
-  const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [confirmLeave, setConfirmLeave] = useState(false)
@@ -82,20 +82,19 @@ export function InterfaceDraftEditorPage(): JSX.Element {
     if (result.operationApplied) {
       setDraft(result.draft)
       setDirty(true)
-      setStatus(null)
       setValidationErrors([])
     }
     return result.operationApplied
   }
 
-  const save = async (): Promise<boolean> => {
+  const save = async (notify = true): Promise<boolean> => {
     if (!draft) return false
     setSaving(true)
     setError(null)
     try {
       await application.drafts.save(draft)
       setDirty(false)
-      setStatus('已保存')
+      if (notify) toast.success('草稿已保存')
       return true
     } catch (reason) {
       setError(errorMessage(reason))
@@ -106,15 +105,15 @@ export function InterfaceDraftEditorPage(): JSX.Element {
   }
 
   const publish = async (): Promise<void> => {
-    if (!(await save())) return
+    if (!(await save(false))) return
     setSaving(true)
     try {
       const result = await application.drafts.publish(draftId)
       if (result.status === 'invalid') {
         setValidationErrors(result.errors.map(validationMessage))
-        setStatus(null)
         return
       }
+      toast.success('题型已发布')
       navigate(`/interfaces/${encodeURIComponent(result.interface.interfaceId)}`)
     } catch (reason) {
       setError(errorMessage(reason))
@@ -155,7 +154,7 @@ export function InterfaceDraftEditorPage(): JSX.Element {
           <IconButton icon={ArrowLeft} label="返回草稿列表" variant="ghost" onClick={leave} />
           <div>
             <h1>{draft?.name || '未命名题型'}</h1>
-            <span>{dirty ? '有未保存修改' : status || '草稿'}</span>
+            <span>{dirty ? '有未保存修改' : '草稿'}</span>
           </div>
         </div>
         <div className={styles.toolbarActions}>
