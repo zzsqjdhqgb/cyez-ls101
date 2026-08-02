@@ -10,8 +10,9 @@ export interface AIRouterApplication {
   listConfigs(): Promise<AIRouterProviderConfigSummary[]>
   saveConfig(config: AIRouterProviderConfigInput): Promise<AIRouterProviderConfigSummary>
   deleteConfig(id: string): Promise<void>
-  listModels(id: string): Promise<AIRouterModelOption[]>
-  testConnection(configId: string, modelId: string): Promise<AIRouterTestResult>
+  readApiKey(id: string): Promise<string | null>
+  listModels(config: AIRouterProviderConfigInput): Promise<AIRouterModelOption[]>
+  testConnection(config: AIRouterProviderConfigInput, modelId: string): Promise<AIRouterTestResult>
 }
 
 export function createAIRouterApplication(
@@ -21,9 +22,9 @@ export function createAIRouterApplication(
     listConfigs: () => client.listProviderConfigs(),
     saveConfig: (config) => client.saveProviderConfig(config),
     deleteConfig: (id) => client.deleteProviderConfig(id),
-    listModels: (id) => client.listModels(id),
-    testConnection: (configId, modelId) =>
-      client.testConnection({ providerConfigId: configId, modelId })
+    readApiKey: (id) => client.readProviderApiKey(id),
+    listModels: (config) => client.listModels(config),
+    testConnection: (config, modelId) => client.testConnection({ config, modelId })
   }
 }
 

@@ -149,7 +149,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
           <Button icon={Braces} onClick={() => setJsonOpen((open) => !open)}>
             JSON
           </Button>
-          <Button icon={Bot} disabled title="AI Router 尚未配置">
+          <Button icon={Bot} disabled title="AI 引擎尚未配置">
             AI 生成
           </Button>
           <Button

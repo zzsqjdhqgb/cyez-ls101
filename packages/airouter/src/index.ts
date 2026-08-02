@@ -1,6 +1,7 @@
 export type {
   AIRouterClient,
   AIRouterBridge,
+  AIRouterConnectionTestInput,
   AIRouterModelConfig,
   AIRouterModelOption,
   AIRouterProviderConfig,

@@ -1,6 +1,7 @@
 import { ipcMain, type WebContents } from 'electron'
 import { AIROUTER_CHANNELS } from '../shared'
 import type {
+  AIRouterConnectionTestInput,
   AIRouterProviderConfigInput,
   AIRouterStreamEvent,
   AIRouterTextRequest
@@ -26,10 +27,14 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
   ipcMain.handle(AIROUTER_CHANNELS.deleteConfig, (_event, id: string) =>
     service.deleteProviderConfig(id)
   )
-  ipcMain.handle(AIROUTER_CHANNELS.listModels, (_event, id: string) => service.listModels(id))
-  ipcMain.handle(
-    AIROUTER_CHANNELS.testConnection,
-    (_event, request: Omit<AIRouterTextRequest, 'prompt'>) => service.testConnection(request)
+  ipcMain.handle(AIROUTER_CHANNELS.readApiKey, (_event, id: string) =>
+    service.readProviderApiKey(id)
+  )
+  ipcMain.handle(AIROUTER_CHANNELS.listModels, (_event, input: AIRouterProviderConfigInput) =>
+    service.listModels(input)
+  )
+  ipcMain.handle(AIROUTER_CHANNELS.testConnection, (_event, request: AIRouterConnectionTestInput) =>
+    service.testConnection(request)
   )
   ipcMain.on(
     AIROUTER_CHANNELS.generateStart,
@@ -71,5 +76,5 @@ async function streamToRenderer(
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'AI Router 请求失败'
+  return error instanceof Error ? error.message : 'AI 引擎请求失败'
 }

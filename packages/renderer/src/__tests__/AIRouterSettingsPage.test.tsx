@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom/vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { AIRouterProviderConfigSummary } from '@ls101/airouter'
+import type { AIRouterProviderConfigInput, AIRouterProviderConfigSummary } from '@ls101/airouter'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AIRouterSettingsPage } from '../features/airouter/AIRouterSettingsPage'
 import type { AIRouterApplication } from '../features/airouter/AIRouterApplication'
@@ -11,7 +11,7 @@ import type { AIRouterApplication } from '../features/airouter/AIRouterApplicati
 afterEach(cleanup)
 
 describe('AIRouterSettingsPage', () => {
-  it('edits a provider without exposing its saved API key and runs the fixed test', async () => {
+  it('opens provider editing in a modal and saves base fields and model ids together', async () => {
     const config: AIRouterProviderConfigSummary = {
       id: 'provider-1',
       name: '学校 OpenAI',
@@ -22,27 +22,203 @@ describe('AIRouterSettingsPage', () => {
     }
     const application: AIRouterApplication = {
       listConfigs: vi.fn().mockResolvedValue([config]),
-      saveConfig: vi.fn().mockResolvedValue(config),
+      saveConfig: vi.fn().mockImplementation(async (input: AIRouterProviderConfigInput) => ({
+        id: input.id ?? 'provider-1',
+        name: input.name,
+        type: input.type,
+        baseUrl: input.baseUrl ?? config.baseUrl,
+        models: input.models,
+        hasApiKey: config.hasApiKey || Boolean(input.apiKey)
+      })),
       deleteConfig: vi.fn(),
+      readApiKey: vi.fn().mockResolvedValue('saved-secret'),
       listModels: vi.fn(),
       testConnection: vi.fn().mockResolvedValue({ ok: true, text: 'OK' })
     }
 
     renderAIRouter(application)
 
-    expect(await screen.findByDisplayValue('学校 OpenAI')).not.toBeNull()
-    const apiKeyInput = screen.getByLabelText('API Key') as HTMLInputElement
+    const providerButton = await screen.findByRole('button', { name: /学校 OpenAI/ })
+    expect(screen.queryByLabelText('API Key')).toBeNull()
+    fireEvent.click(providerButton)
+
+    const dialog = screen.getByRole('dialog', { name: '学校 OpenAI' })
+    const apiKeyInput = within(dialog).getByLabelText('API Key') as HTMLInputElement
     expect(apiKeyInput.placeholder).toBe('已安全保存')
     expect(apiKeyInput.value).toBe('')
+    expect(apiKeyInput.type).toBe('password')
+    expect(within(dialog).queryByText('已保存密钥；留空将保留原值。')).toBeNull()
+    expect(within(dialog).queryByText('清除密钥')).toBeNull()
+    expect(within(dialog).queryByRole('button', { name: '保存模型设置' })).toBeNull()
 
-    fireEvent.click(screen.getByRole('button', { name: '测试连接' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '显示 API Key' }))
+    await waitFor(() => expect(application.readApiKey).toHaveBeenCalledWith('provider-1'))
+    expect(apiKeyInput.value).toBe('saved-secret')
+    expect(apiKeyInput.type).toBe('text')
+    expect(within(dialog).getByRole('button', { name: '保存 Provider' })).toBeDisabled()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '隐藏 API Key' }))
+    expect(apiKeyInput.type).toBe('password')
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '测试连接' }))
     await waitFor(() =>
-      expect(application.testConnection).toHaveBeenCalledWith('provider-1', 'test-model')
+      expect(application.testConnection).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'provider-1',
+          name: '学校 OpenAI',
+          apiKey: undefined,
+          models: [{ id: 'test-model', enabled: true }]
+        }),
+        'test-model'
+      )
     )
-    expect(await screen.findByText('连接成功，模型回复：OK')).not.toBeNull()
+    const connectionSection = within(dialog)
+      .getByRole('heading', { name: '连接测试' })
+      .closest('section')
+    expect(connectionSection).not.toBeNull()
+    expect(
+      await within(connectionSection as HTMLElement).findByText('连接成功，模型回复：OK')
+    ).toBeInTheDocument()
+    expect(application.saveConfig).not.toHaveBeenCalled()
+
+    fireEvent.change(within(dialog).getByLabelText('配置名称'), {
+      target: { value: '学校 OpenAI 更新' }
+    })
+    fireEvent.change(within(dialog).getByLabelText('手动模型 ID'), {
+      target: { value: 'new-model' }
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '添加' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+
+    await waitFor(() => expect(application.saveConfig).toHaveBeenCalledTimes(1))
     expect(application.saveConfig).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'provider-1', apiKey: undefined })
+      expect.objectContaining({
+        id: 'provider-1',
+        name: '学校 OpenAI 更新',
+        apiKey: undefined,
+        models: [
+          { id: 'test-model', enabled: true },
+          { id: 'new-model', enabled: true }
+        ]
+      })
     )
+  })
+
+  it('clears a saved API key when the revealed input is emptied and saved', async () => {
+    const config: AIRouterProviderConfigSummary = {
+      id: 'provider-1',
+      name: 'OpenAI',
+      type: 'openai-compatible',
+      baseUrl: 'https://api.example.com/v1',
+      models: [],
+      hasApiKey: true
+    }
+    const application: AIRouterApplication = {
+      listConfigs: vi.fn().mockResolvedValue([config]),
+      saveConfig: vi.fn().mockImplementation(async (input: AIRouterProviderConfigInput) => ({
+        ...config,
+        hasApiKey: !input.clearApiKey
+      })),
+      deleteConfig: vi.fn(),
+      readApiKey: vi.fn().mockResolvedValue('saved-secret'),
+      listModels: vi.fn(),
+      testConnection: vi.fn()
+    }
+
+    renderAIRouter(application)
+
+    fireEvent.click(await screen.findByRole('button', { name: /OpenAI/ }))
+    const dialog = screen.getByRole('dialog', { name: 'OpenAI' })
+    fireEvent.click(within(dialog).getByRole('button', { name: '显示 API Key' }))
+    const apiKeyInput = (await within(dialog).findByDisplayValue(
+      'saved-secret'
+    )) as HTMLInputElement
+    fireEvent.change(apiKeyInput, { target: { value: '' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+
+    await waitFor(() =>
+      expect(application.saveConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'provider-1',
+          apiKey: undefined,
+          clearApiKey: true
+        })
+      )
+    )
+  })
+
+  it('discovers models and tests an unsaved provider draft before saving once', async () => {
+    const application: AIRouterApplication = {
+      listConfigs: vi.fn().mockResolvedValue([]),
+      saveConfig: vi.fn().mockImplementation(async (input: AIRouterProviderConfigInput) => ({
+        id: 'new-provider',
+        name: input.name,
+        type: input.type,
+        baseUrl: input.baseUrl ?? 'https://api.openai.com/v1',
+        models: input.models,
+        hasApiKey: Boolean(input.apiKey)
+      })),
+      deleteConfig: vi.fn(),
+      readApiKey: vi.fn(),
+      listModels: vi.fn().mockResolvedValue([{ id: 'draft-model' }]),
+      testConnection: vi.fn().mockResolvedValue({ ok: true, text: 'OK' })
+    }
+
+    renderAIRouter(application)
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('配置名称'), {
+      target: { value: '未保存 Provider' }
+    })
+    fireEvent.change(within(dialog).getByLabelText('API Key'), {
+      target: { value: 'draft-secret' }
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取模型列表' }))
+
+    await waitFor(() =>
+      expect(application.listModels).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: undefined,
+          name: '未保存 Provider',
+          apiKey: 'draft-secret',
+          models: []
+        })
+      )
+    )
+    expect(application.saveConfig).not.toHaveBeenCalled()
+    const modelSection = within(dialog)
+      .getByRole('heading', { name: 'Model ID' })
+      .closest('section')
+    expect(modelSection).not.toBeNull()
+    expect(within(modelSection as HTMLElement).getByText('获取到 1 个模型')).toBeInTheDocument()
+
+    const modelToggle = await within(dialog).findByRole('checkbox', { name: 'draft-model' })
+    fireEvent.click(modelToggle)
+    fireEvent.click(within(dialog).getByRole('button', { name: '测试连接' }))
+
+    await waitFor(() =>
+      expect(application.testConnection).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: undefined,
+          name: '未保存 Provider',
+          apiKey: 'draft-secret',
+          models: [{ id: 'draft-model', enabled: true }]
+        }),
+        'draft-model'
+      )
+    )
+    expect(application.saveConfig).not.toHaveBeenCalled()
+    const connectionSection = within(dialog)
+      .getByRole('heading', { name: '连接测试' })
+      .closest('section')
+    expect(connectionSection).not.toBeNull()
+    expect(
+      await within(connectionSection as HTMLElement).findByText('连接成功，模型回复：OK')
+    ).toBeInTheDocument()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+    await waitFor(() => expect(application.saveConfig).toHaveBeenCalledTimes(1))
   })
 
   it('uses URL-backed model categories and marks speech pages as placeholders', async () => {
@@ -50,6 +226,7 @@ describe('AIRouterSettingsPage', () => {
       listConfigs: vi.fn().mockResolvedValue([]),
       saveConfig: vi.fn(),
       deleteConfig: vi.fn(),
+      readApiKey: vi.fn(),
       listModels: vi.fn(),
       testConnection: vi.fn()
     }

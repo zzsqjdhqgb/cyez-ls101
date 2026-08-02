@@ -52,12 +52,18 @@ export interface AIRouterTestResult {
   text: string
 }
 
+export interface AIRouterConnectionTestInput {
+  config: AIRouterProviderConfigInput
+  modelId: string
+}
+
 export interface AIRouterClient {
   listProviderConfigs(): Promise<AIRouterProviderConfigSummary[]>
   saveProviderConfig(config: AIRouterProviderConfigInput): Promise<AIRouterProviderConfigSummary>
   deleteProviderConfig(id: string): Promise<void>
-  listModels(id: string): Promise<AIRouterModelOption[]>
-  testConnection(request: Omit<AIRouterTextRequest, 'prompt'>): Promise<AIRouterTestResult>
+  readProviderApiKey(id: string): Promise<string | null>
+  listModels(config: AIRouterProviderConfigInput): Promise<AIRouterModelOption[]>
+  testConnection(request: AIRouterConnectionTestInput): Promise<AIRouterTestResult>
   generateText(
     request: AIRouterTextRequest,
     options?: { signal?: AbortSignal }
@@ -68,8 +74,9 @@ export interface AIRouterBridge {
   listProviderConfigs(): Promise<AIRouterProviderConfigSummary[]>
   saveProviderConfig(config: AIRouterProviderConfigInput): Promise<AIRouterProviderConfigSummary>
   deleteProviderConfig(id: string): Promise<void>
-  listModels(id: string): Promise<AIRouterModelOption[]>
-  testConnection(request: Omit<AIRouterTextRequest, 'prompt'>): Promise<AIRouterTestResult>
+  readProviderApiKey(id: string): Promise<string | null>
+  listModels(config: AIRouterProviderConfigInput): Promise<AIRouterModelOption[]>
+  testConnection(request: AIRouterConnectionTestInput): Promise<AIRouterTestResult>
   startTextGeneration(
     request: AIRouterTextRequest,
     listener: (event: AIRouterStreamEvent) => void

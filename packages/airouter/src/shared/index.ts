@@ -3,6 +3,7 @@ export type { AIRouterChannel } from './constants'
 export type {
   AIRouterClient,
   AIRouterBridge,
+  AIRouterConnectionTestInput,
   AIRouterModelConfig,
   AIRouterModelOption,
   AIRouterProviderConfig,

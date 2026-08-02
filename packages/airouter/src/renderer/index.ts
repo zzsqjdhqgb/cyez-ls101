@@ -15,7 +15,8 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
     listProviderConfigs: () => getBridge().listProviderConfigs(),
     saveProviderConfig: (config) => getBridge().saveProviderConfig(config),
     deleteProviderConfig: (id) => getBridge().deleteProviderConfig(id),
-    listModels: (id) => getBridge().listModels(id),
+    readProviderApiKey: (id) => getBridge().readProviderApiKey(id),
+    listModels: (config) => getBridge().listModels(config),
     testConnection: (request) => getBridge().testConnection(request),
     generateText(request, options = {}) {
       const queue: AIRouterTextChunk[] = []

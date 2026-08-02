@@ -6,6 +6,7 @@ import { JsonConfigStorage } from '@ls101/config-store/main'
 import type { JsonValue } from '@ls101/config-store/shared'
 import { createElectronSecretStorage, type EncryptedSecretStorage } from '@ls101/secret-store/main'
 import type {
+  AIRouterConnectionTestInput,
   AIRouterModelConfig,
   AIRouterModelOption,
   AIRouterProviderConfig,
@@ -81,10 +82,14 @@ export class AIRouterService {
     await this.secretStorage.scope('airouter').delete(id)
   }
 
-  async listModels(id: string): Promise<AIRouterModelOption[]> {
+  async readProviderApiKey(id: string): Promise<string | null> {
     validateConfigId(id)
-    const config = await this.requireConfig(id)
-    const apiKey = (await this.secretStorage.scope('airouter').read(id)) ?? ''
+    await this.requireConfig(id)
+    return this.secretStorage.scope('airouter').read(id)
+  }
+
+  async listModels(input: AIRouterProviderConfigInput): Promise<AIRouterModelOption[]> {
+    const { config, apiKey } = await this.resolveTransientConfig(input)
     const response = await fetch(modelEndpoint(config), {
       headers: requestHeaders(config.type, apiKey),
       signal: AbortSignal.timeout(30_000)
@@ -105,12 +110,17 @@ export class AIRouterService {
       .sort((left, right) => left.id.localeCompare(right.id))
   }
 
-  async testConnection(request: Omit<AIRouterTextRequest, 'prompt'>): Promise<AIRouterTestResult> {
-    validateTextSelection(request)
-    const result = await this.collectText({
-      ...request,
-      prompt: '请只回复 OK，不要添加其他内容。'
-    })
+  async testConnection(request: AIRouterConnectionTestInput): Promise<AIRouterTestResult> {
+    if (!request || typeof request.modelId !== 'string' || !request.modelId) {
+      throw new Error('模型 ID 不能为空')
+    }
+    const { config, apiKey } = await this.resolveTransientConfig(request.config)
+    const selected = config.models.find((model) => model.id === request.modelId && model.enabled)
+    if (!selected) throw new Error('模型未配置或未启用')
+    const result = await this.collectText(
+      createLanguageModel(config, apiKey, selected.id),
+      '请只回复 OK，不要添加其他内容。'
+    )
     return { ok: true, text: result }
   }
 
@@ -127,11 +137,10 @@ export class AIRouterService {
     }
   }
 
-  private async collectText(request: AIRouterTextRequest): Promise<string> {
-    const { model } = await this.resolveModel(request)
+  private async collectText(model: LanguageModelV1, prompt: string): Promise<string> {
     const result = await generateText({
       model,
-      prompt: request.prompt,
+      prompt,
       abortSignal: AbortSignal.timeout(30_000)
     })
     return result.text
@@ -143,12 +152,21 @@ export class AIRouterService {
     const selected = config.models.find((model) => model.id === request.modelId && model.enabled)
     if (!selected) throw new Error('模型未配置或未启用')
     const apiKey = (await this.secretStorage.scope('airouter').read(config.id)) ?? ''
-    if (config.type === 'openai-compatible') {
-      const provider = createOpenAI({ apiKey, baseURL: config.baseUrl })
-      return { model: provider(selected.id) }
+    return { model: createLanguageModel(config, apiKey, selected.id) }
+  }
+
+  private async resolveTransientConfig(
+    input: AIRouterProviderConfigInput
+  ): Promise<{ config: AIRouterProviderConfig; apiKey: string }> {
+    const id = input.id?.trim() || 'preview'
+    validateConfigId(id)
+    const config = normalizeConfig({ ...input, id })
+    let apiKey = ''
+    if (!input.clearApiKey) {
+      if (input.apiKey !== undefined) apiKey = input.apiKey
+      else if (input.id) apiKey = (await this.secretStorage.scope('airouter').read(id)) ?? ''
     }
-    const provider = createAnthropic({ apiKey, baseURL: config.baseUrl })
-    return { model: provider(selected.id) }
+    return { config, apiKey }
   }
 
   private async summary(config: AIRouterProviderConfig): Promise<AIRouterProviderConfigSummary> {
@@ -168,7 +186,7 @@ export class AIRouterService {
   private async readDocument(): Promise<StoredDocument> {
     const value = await this.configStorage.read<JsonValue>({ scope: ['airouter'], key: CONFIG_KEY })
     if (!value) return { version: CONFIG_VERSION, providers: [] }
-    if (!isStoredDocument(value)) throw new Error('AI Router 配置数据无效')
+    if (!isStoredDocument(value)) throw new Error('AI 引擎配置数据无效')
     return value
   }
 
@@ -247,6 +265,19 @@ function requestHeaders(type: AIRouterProviderType, apiKey: string): Record<stri
     : { authorization: `Bearer ${apiKey}` }
 }
 
+function createLanguageModel(
+  config: AIRouterProviderConfig,
+  apiKey: string,
+  modelId: string
+): LanguageModelV1 {
+  if (config.type === 'openai-compatible') {
+    const provider = createOpenAI({ apiKey, baseURL: config.baseUrl })
+    return provider(modelId)
+  }
+  const provider = createAnthropic({ apiKey, baseURL: config.baseUrl })
+  return provider(modelId)
+}
+
 function toChunk(part: unknown): AIRouterTextChunk | null {
   if (!part || typeof part !== 'object') return null
   const value = part as { type?: unknown; textDelta?: unknown; delta?: unknown }
@@ -264,7 +295,7 @@ function isStreamError(part: unknown): part is { error: unknown } {
 function formatProviderError(error: unknown): string {
   if (error instanceof Error) return error.message
   if (typeof error === 'string') return error
-  return 'AI Router 请求失败'
+  return 'AI 引擎请求失败'
 }
 
 function validateConfigId(id: string): void {

@@ -9,6 +9,7 @@ describe('AIRouter renderer client', () => {
       listProviderConfigs: vi.fn(),
       saveProviderConfig: vi.fn(),
       deleteProviderConfig: vi.fn(),
+      readProviderApiKey: vi.fn(),
       listModels: vi.fn(),
       testConnection: vi.fn(),
       startTextGeneration: vi.fn((_request, listener) => {
@@ -39,6 +40,7 @@ describe('AIRouter renderer client', () => {
       listProviderConfigs: vi.fn(),
       saveProviderConfig: vi.fn(),
       deleteProviderConfig: vi.fn(),
+      readProviderApiKey: vi.fn(),
       listModels: vi.fn(),
       testConnection: vi.fn(),
       startTextGeneration: vi.fn(() => cancel)

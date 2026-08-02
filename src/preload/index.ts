@@ -59,8 +59,11 @@ const airouterBridge: AIRouterBridge = {
   deleteProviderConfig(id: string) {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.deleteConfig, id)
   },
-  listModels(id: string) {
-    return ipcRenderer.invoke(AIROUTER_CHANNELS.listModels, id)
+  readProviderApiKey(id: string) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.readApiKey, id)
+  },
+  listModels(config: AIRouterProviderConfigInput) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listModels, config)
   },
   testConnection(request) {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.testConnection, request)

@@ -2,6 +2,7 @@ export const AIROUTER_CHANNELS = {
   listConfigs: 'airouter:list-configs',
   saveConfig: 'airouter:save-config',
   deleteConfig: 'airouter:delete-config',
+  readApiKey: 'airouter:read-api-key',
   listModels: 'airouter:list-models',
   testConnection: 'airouter:test-connection',
   generateStart: 'airouter:generate-start',
