@@ -11,6 +11,7 @@ import {
   Download,
   Eye,
   EyeOff,
+  LockKeyhole,
   MessageSquareText,
   Mic,
   Plus,
@@ -350,19 +351,34 @@ export function AIRouterTextSettingsPage({
                   />
                 </SettingsRow>
                 <SettingsRow label="Provider 类型">
-                  <select
-                    aria-label="Provider 类型"
-                    className={styles.input}
-                    disabled={Boolean(busy) || Boolean(draft.id)}
-                    onChange={(event) => {
-                      const type = event.target.value as AIRouterProviderType
-                      setDraft({ ...draft, type, baseUrl: defaultBaseUrls[type] })
-                    }}
-                    value={draft.type}
-                  >
-                    <option value="openai-compatible">OpenAI Compatible</option>
-                    <option value="anthropic">Anthropic</option>
-                  </select>
+                  {draft.id ? (
+                    <span className={styles.providerTypeControl}>
+                      <input
+                        aria-label="Provider 类型"
+                        className={styles.input}
+                        disabled
+                        type="text"
+                        value={providerLabels[draft.type]}
+                      />
+                      <span className={styles.providerTypeLock} title="Provider 类型不可修改">
+                        <LockKeyhole aria-hidden="true" />
+                      </span>
+                    </span>
+                  ) : (
+                    <select
+                      aria-label="Provider 类型"
+                      className={styles.input}
+                      disabled={Boolean(busy)}
+                      onChange={(event) => {
+                        const type = event.target.value as AIRouterProviderType
+                        setDraft({ ...draft, type, baseUrl: defaultBaseUrls[type] })
+                      }}
+                      value={draft.type}
+                    >
+                      <option value="openai-compatible">OpenAI Compatible</option>
+                      <option value="anthropic">Anthropic</option>
+                    </select>
+                  )}
                 </SettingsRow>
                 <SettingsRow
                   label="Base URL"
@@ -627,8 +643,6 @@ export function AIRouterTextSettingsPage({
                       'save',
                       async () => {
                         const saved = await saveDraft()
-                        setDraft(null)
-                        setFeedback({})
                         toast.success(`已保存“${saved.name}”`)
                       },
                       'editor'

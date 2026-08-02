@@ -44,6 +44,10 @@ describe('AIRouterSettingsPage', () => {
 
     const dialog = screen.getByRole('dialog', { name: '学校 OpenAI' })
     const apiKeyInput = within(dialog).getByLabelText('API Key') as HTMLInputElement
+    const providerType = within(dialog).getByLabelText('Provider 类型') as HTMLInputElement
+    expect(providerType.tagName).toBe('INPUT')
+    expect(providerType).toBeDisabled()
+    expect(providerType.value).toBe('OpenAI Compatible')
     expect(apiKeyInput.placeholder).toBe('已安全保存')
     expect(apiKeyInput.value).toBe('')
     expect(apiKeyInput.type).toBe('password')
@@ -102,6 +106,8 @@ describe('AIRouterSettingsPage', () => {
         ]
       })
     )
+    expect(dialog).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: '保存 Provider' })).toBeDisabled()
   })
 
   it('clears a saved API key when the revealed input is emptied and saved', async () => {
@@ -168,6 +174,7 @@ describe('AIRouterSettingsPage', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
     const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    expect(within(dialog).getByLabelText('Provider 类型').tagName).toBe('SELECT')
     fireEvent.change(within(dialog).getByLabelText('配置名称'), {
       target: { value: '未保存 Provider' }
     })
@@ -219,6 +226,12 @@ describe('AIRouterSettingsPage', () => {
 
     fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
     await waitFor(() => expect(application.saveConfig).toHaveBeenCalledTimes(1))
+    expect(dialog).toBeInTheDocument()
+    const savedProviderType = within(dialog).getByLabelText('Provider 类型') as HTMLInputElement
+    expect(savedProviderType.tagName).toBe('INPUT')
+    expect(savedProviderType).toBeDisabled()
+    expect(savedProviderType.value).toBe('OpenAI Compatible')
+    expect(within(dialog).getByRole('button', { name: '保存 Provider' })).toBeDisabled()
   })
 
   it('uses URL-backed model categories and marks speech pages as placeholders', async () => {
