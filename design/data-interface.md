@@ -1,48 +1,37 @@
 # Interface / Template / Schema 数据接口规范（定稿）
 
-<!-- 审核进度：已审至 ## 五、Schema 定义（含），之前全部已定稿。 -->
-<!-- 关键变更：Schema 导出变量名列表（对称于 Interface→Template），Template 展开时填固定值 + 留作答槽位。 -->
-<!-- 已知未完善：选择题的处理方式尚未最终确定，当前为临时方案。 -->
+<!-- 本文只定义跨模块契约，不涉及内部实现。 -->
+<!-- 选择题在 Player 数据段中的最终交互和导出方式尚未定稿，本文只保留扩展位置，不提前确定产品行为。 -->
 
-本文定义三个模块之间的数据契约。不涉及内部实现。
-
----
+本文定义 Interface、Template 和 Schema 之间的数据契约。
 
 ## 一、总览
 
-```
-Interface                    Template                   Schema
-    │                            │                         │
-    │  变量名列表（varNames）      │                         │  变量名列表（fieldNames）
-    ▼                            ▼                         ▼
-InterfaceVarManifest ────→ Template 编辑器          SchemaFieldManifest
-    │                                                        │
-    │  AI 生成                                               │
-    ▼                                                        │
-InterfaceInstance ──────→ Section 引擎展开                    │
- (values)                   │                                │
-                            │  按 Schema fieldNames 填充       │
-                            ▼                                ▼
-                        ExamPackage ◄────────────────  Schema 定义
-                            │                         (fieldNames + 评分结构)
-                            ▼
-                        ExamPlayer
-                            │
-                            ▼
-                      SubmissionPackage
-```
+~~~text
+Interface                         Template                         Schema
+    │                                │                               │
+    │ InterfaceVarManifest           │ DSL + 变量表达式              │ SchemaBlockManifest
+    ▼                                │                               │
+InterfaceDef ────────────────→ TemplateContent ←──────────────── SchemaDef
+    │                                │
+    │ 多个 InterfaceInstance         │ 导出时选择各 Interface 的实例
+    ▼                                ▼
+InterfaceInstance ─────────────→ ExamPackage
+                                      ├── Player 数据段
+                                      └── Schema 映射段
+~~~
 
-对称关系：**Interface 导出 varNames → Template 填充 → ExamPackage**，完全对应于 **Schema 导出 fieldNames → Template 填充 + ExamPlayer 采集 → SubmissionPackage**。Schema 内部的评分流程不在本文档范围内。
+Interface 负责提供可生成的数据变量；Template 负责定义试卷 DSL、参数来源和播放结构；Schema 负责提供可复用的评分块以及每个评分块需要的变量。
 
----
+Template 不保存 InterfaceInstance。Template 只保存 Interface 的身份和内部别名；预览或正式导出时，才为每个别名选择一个实例。
 
-## 二、Interface 定义（未实例化）
+## 二、Interface 定义与实例
 
-Interface 定义在 AI 生成之前的状态。Template 编辑器读取此格式来构建变量选择器。
+### 2.1 InterfaceDef
 
-```typescript
+~~~typescript
 interface InterfaceDef {
-  id: string // sha256:<64位十六进制摘要>，由规范化内容确定
+  id: string // sha256:<64 位十六进制摘要>
   name: string
   description: string
   promptTemplate: string
@@ -50,7 +39,7 @@ interface InterfaceDef {
 }
 
 interface FieldCollection {
-  order: string[] // 唯一的字段顺序来源
+  order: string[]
   nodes: Record<string, FieldNode>
 }
 
@@ -58,8 +47,11 @@ interface FieldGroup {
   type: 'group'
   children: FieldCollection
 }
+~~~
 
-// Template 编辑器关心的平铺视图：
+Template 使用扁平变量清单：
+
+~~~typescript
 interface InterfaceVarManifest {
   interfaceId: string
   interfaceName: string
@@ -67,146 +59,262 @@ interface InterfaceVarManifest {
 }
 
 interface InterfaceVarInfo {
-  varName: string // Template 中以 [@varName] 引用
+  varName: string
   type: 'text' | 'image'
   description: string
   example: string
-  path: string // 字段路径，如 "sectionA.sentences.s1"
+  path: string
 }
-```
+~~~
 
----
+### 2.2 InterfaceInstance
 
-## 二之二、Interface 实例（已实例化）
-
-```typescript
+~~~typescript
 interface InterfaceInstance {
-  instanceId: string // UUID v4，一次独立创建对应一个实体 ID
-  name: string // 用户可编辑；不由 JSON 或 AI 生成
+  instanceId: string // UUID v4
+  name: string
   generatedAt: string
-  values: Record<string, string> // varName → 值
+  values: Record<string, string>
 }
-```
+~~~
 
-`InterfaceDef.id` 是内容身份：相同的规范化 Interface 内容具有相同 ID。哈希输入包含 `name`、`description`、`promptTemplate` 和有序字段树，不包含实例。每层 `order` 必须与 `nodes` 的 key 集合完全一致，字段顺序不依赖 JSON 对象属性顺序。
-
-`InterfaceInstance.instanceId` 是实体身份：两个实例即使 `name` 和 `values` 完全相同，只要 UUID 不同，就视为两个不同实例。`name` 由用户编辑，不进入字段 JSON Schema，也不会被 JSON 或 AI 覆盖。实例本体不保存 `interfaceId`，所属 Interface 由仓储目录确定。新增、删除或导入实例不会改变 `InterfaceDef.id`。导入原实例、恢复备份或迁移内置版本时保留 UUID；同 UUID、不同内容必须作为冲突拒绝。
-
----
+实例本体不保存 interfaceId；实例所属的 Interface 由仓储目录确定。Template 导出时必须校验所选 instanceId 确实属于 Template 声明的 interfaceId。
 
 ## 三、Schema 定义
 
-### 3.1 SchemaDef
+### 3.1 Schema 是评分块列表
 
-```typescript
+Schema 不是一个只能整体消费的评分配置，而是一个可复用的评分块列表。Template 或函数可以只消费其中的部分评分块，也可以多次独立消费同一个评分块。
+
+~~~typescript
 interface SchemaDef {
   id: string
   name: string
-  // 提交信息变量列表（对标 Interface 的 vars，这是 Schema 对其他模块的唯一契约）
+  blocks: SchemaBlockDef[]
+}
+
+interface SchemaBlockDef {
+  blockId: string
+  name: string
+
+  // 评分块对外暴露的变量列表。
+  // 评分维度、评分规则和内部合并方式由 schema-editor 定义。
   fields: SchemaFieldDef[]
 }
 
-// 提交信息字段定义（Schema 导出的变量列表）
 type SchemaFieldDef =
   | { varName: string; type: 'text' }
-  | { varName: string; type: 'audio'; recordIndex: number }
-  | { varName: string; type: 'choice'; choiceIndex: number }
-```
+  | { varName: string; type: 'audio' }
+  | { varName: string; type: 'choice' }
+~~~
 
-Schema 内部的评分结构、维度、合并方式等由 schema-editor 设计文档定义，本文档不涉及。
+choice 类型的 Player 交互和最终导出方式尚未定稿；Template 的 Schema 引用模型必须为其保留扩展位置，但本文不确定具体行为。
 
-### 3.2 Schema 的变量导出（对标 Interface 的 varManifest）
+Schema 对 Template 暴露评分块清单：
 
-```typescript
-interface SchemaFieldManifest {
+~~~typescript
+interface SchemaBlockManifest {
   schemaId: string
   schemaName: string
-  fields: SchemaFieldDef[]
+  blocks: Array<{
+    blockId: string
+    blockName: string
+    fields: SchemaFieldDef[]
+  }>
 }
-```
+~~~
 
-`SchemaFieldManifest` 是 Schema 对 Template 和 ExamPlayer 的契约：Template 展开 ExamPackage 时按此列表填充固定值，ExamPlayer 按此列表采集作答数据。
+### 3.2 Schema 评分块消费
 
----
+Template 或函数在所在层级消费评分块：
 
-## 四、Template → ExamPackage
+~~~typescript
+interface SchemaUse {
+  useId: string
+  schemaId: string
+  blockId: string
 
-Section 引擎展开模板树时，除了生成页面数据外，还根据 Schema 的 `fields` 生成三个数据段：
+  // 必须覆盖被消费评分块的全部 fields。
+  bindings: Record<string, SchemaBindingExpression>
+}
+~~~
 
-```typescript
-interface ExamPackage {
-  title: string
-  schemaId?: string
+同一个 schemaId + blockId 可以出现多次；每次消费拥有独立的 useId 和独立绑定。
+
+Schema 绑定允许使用 Template 的普通表达式：
+
+~~~typescript
+type SchemaBindingExpression =
+  | {
+      type: 'literal'
+      value: string | number
+    }
+  | {
+      type: 'variable'
+      scope: 'interface'
+      alias: string
+      varName: string
+    }
+  | {
+      type: 'variable'
+      scope: 'local'
+      name: string
+    }
+  | {
+      type: 'concat'
+      parts: Array<
+        | { type: 'literal'; value: string }
+        | { type: 'variable'; scope: 'interface'; alias: string; varName: string }
+        | { type: 'variable'; scope: 'local'; name: string }
+      >
+    }
+  | {
+      type: 'record-output'
+      name: string
+    }
+~~~
+
+其中 record-output 是运行期录音槽位的引用；其他表达式在导出试卷包时求值。
+
+### 3.3 Schema 作用域和合并
+
+Schema 消费遵循 DSL 的局部作用域：
+
+- 子层级不能看到父层级声明的 Schema 消费。
+- 当前层级消费评分块时，必须在当前层级完整绑定全部参数，不能只绑定一部分。
+- 父层级可以看到子函数声明的 Schema 依赖，但只能把它当作不可修改的依赖声明，不能重新绑定子函数内部字段。
+- 函数内部消费的评分块会随函数依赖向外合并。
+- 外层也可以独立消费同一个 Schema 或同一个评分块；独立消费不会覆盖函数内部绑定。
+- 生成导出包时，Schema 依赖按 schemaId 分组；每个 useId 仍保留为独立消费实例。
+
+Template 发布校验必须确认展开后的有效 Schema 消费集合非空。Schema 依赖可以全部来自函数内部，但不能完全缺失。
+
+## 四、Template 对外契约
+
+Template 可以依赖多个 Interface，并且只接受每个 Interface 的部分变量：
+
+~~~typescript
+interface TemplateInterfaceRequirement {
+  alias: string
+  interfaceId: string
+  acceptedVars: string[]
+}
+~~~
+
+alias 是 Template 内部为 Interface 分配的命名空间。只有 Interface 变量使用命名空间，例如：
+
+~~~text
+[@speaking.sentence]
+[@listening.question]
+~~~
+
+Template 不保存实例选择：
+
+~~~typescript
+interface ExportInterfaceInstanceSelection {
+  alias: string
+  interfaceId: string
+  instanceId: string
+}
+~~~
+
+导出或预览时，调用方必须为每个 alias 提供一个选择结果。
+
+## 五、Template DSL 与导出
+
+Template 的 DSL 由页面节点、框架节点和函数节点组成。页面节点包含内容文档和线性时间线；时间线中的每个 record 步骤产生一个可命名的录音输出。函数有手动声明的输入列表、外层框架节点和手动声明的出参列表。
+
+函数出参和页面录音输出都属于局部变量。出参名称在同一局部命名空间内唯一；新增时系统可以生成可编辑的默认名称，如 recording-1。
+
+除用户录制的音频外，所有变量和表达式都在导出试卷包时确定值，等价于编译期求值。
+
+### 5.1 Player 数据段
+
+Player 数据段与 Schema 的评分结构无关，只描述 ExamPlayer 播放试卷和保存运行期作答所需的基本信息。
+
+~~~typescript
+interface PlayerExamData {
   pages: ExamPage[]
-
-  // —— 以下三个数据段由 Section 引擎根据 Schema.fields 生成 ——
-
-  // 录音题号索引（告诉 ExamPlayer 哪些序号需要录音）
   recordingIndices: number[]
 
-  // 选择题号索引（告诉 ExamPlayer 哪些序号需要选择交互）
-  choiceIndices: number[]
-
-  // Schema 字段值列表（与 Schema.fields 一一对应）
-  schemaFields: SchemaFieldValue[]
+  // 选择题的交互和导出方式尚未定稿。
+  // choiceIndices 及相关字段在选择题设计确定后补充。
 }
-
-type SchemaFieldValue =
-  | { varName: string; type: 'text'; value: string } // 固定文本，展开时已确定
-  | { varName: string; type: 'audio'; recordIndex: number } // 录音槽位，题号引用
-  | { varName: string; type: 'choice'; choiceIndex: number } // 选择题槽位，题号引用
 
 interface ExamPage {
   id: string
-  sectionTypeRef: string
-  layout: ResolvedLayoutBlock[]
+  layout: ResolvedContentBlock[]
   timeline: ResolvedTimelineStep[]
 }
 
 type ResolvedTimelineStep =
-  | { type: 'play'; src: string; statusText?: string }
-  | { type: 'countdown'; seconds: number; statusText?: string }
-  | { type: 'record'; duration: number; recordIndex: number; statusText?: string }
+  | { type: 'play'; src: string }
+  | { type: 'countdown'; seconds: number }
+  | { type: 'record'; duration: number; recordIndex: number }
+~~~
 
-// （ResolvedLayoutBlock 等详见 template-editor.md）
-```
+录音文件按 recordIndex 保存。Player 不需要理解 Schema 的评分规则。
 
-### 4.1 生成规则
+### 5.2 Schema 映射段
 
-Section 引擎展开时：
+Schema 映射段把每个评分块消费实例的字段映射到固定值或 Player 运行期槽位：
 
-1. 遍历所有 Section 的 timeline，对每个 `record` 步骤分配全局唯一的 `recordIndex`（从 0 递增）
-2. 遍历所有 Section 的 params，对含选择题 params（optionA/B/C/D + answer）的 Section 分配全局唯一的 `choiceIndex`（从 0 递增）
-3. 收集 `recordingIndices` 和 `choiceIndices`
-4. 遍历 `Schema.fields`，生成 `schemaFields`：
-   - `type=text`：value 直接从 Section 的 layout 中提取渲染文本
-   - `type=audio`：记录对应的 `recordIndex`
-   - `type=choice`：记录对应的 `choiceIndex`
-5. `schemaFields` 与 `Schema.fields` 顺序一致、一一对应
+~~~typescript
+interface SchemaExportData {
+  usages: SchemaUsageExport[]
+}
 
----
+interface SchemaUsageExport {
+  useId: string
+  schemaId: string
+  blockId: string
+  fields: SchemaFieldValue[]
+}
 
-## 五、ExamPlayer → SubmissionPackage
+type SchemaFieldValue =
+  | { varName: string; type: 'text'; value: string }
+  | { varName: string; type: 'audio'; recordIndex: number }
+  | { varName: string; type: 'choice'; choiceIndex: number }
+~~~
 
-### 5.1 作答包结构
+text 等非录音字段在导出时已经确定。audio 字段只保存对应的 recordIndex，实际音频由 ExamPlayer 在运行时录制。choice 字段的运行期行为待选择题设计确定。
 
-```typescript
-// 作答包是 ZIP 文件，内含以下文件：
-//
-//   submission.json     — 元数据
-//   schemaFields.json   — 从 ExamPackage 原样传递
-//   choice.json          — 所有选择题答案 {"0": "A", "1": "B", ...}
-//   0.mp3                — 录音（按 recordingIndices 编号）
-//   1.mp3
-//   ...
-```
+### 5.3 ExamPackage
 
-### 5.2 submission.json
+~~~typescript
+interface ExamPackage {
+  title: string
+  player: PlayerExamData
+  schema: SchemaExportData
+}
+~~~
 
-```typescript
+Template 可以引用多个 Schema，因此 ExamPackage 不再使用单一的 schemaId 字段。
+
+## 六、作答包
+
+作答包分为 Player 运行期数据和 Schema 映射数据：
+
+~~~text
+submission.zip
+├── submission.json
+├── schema.json
+├── 0.mp3
+├── 1.mp3
+└── ...
+~~~
+
+- schema.json 保存从 ExamPackage.schema 原样传递的 Schema 映射。
+- 音频文件按 recordIndex 命名。
+- ExamPlayer 不解析、不修改评分块字段，只负责采集运行期作答并写入作答包。
+- 选择题的作答文件和交互协议待单独设计。
+
+元数据使用多个 Schema：
+
+~~~typescript
 interface SubmissionMeta {
   student: StudentInfo
-  schemaId: string
+  schemaIds: string[]
   submittedAt: string
 }
 
@@ -214,55 +322,30 @@ interface StudentInfo {
   name: string
   studentId: string
 }
-```
+~~~
 
-### 5.3 schemaFields.json
+## 七、完整数据流
 
-从 ExamPackage 中的 `schemaFields` **原样复制、不做任何修改**。ExamPlayer 不解析、不篡改。
-
-### 5.4 choice.json
-
-```typescript
-// Record<choiceIndex, selectedOption>
-// 如 { "0": "A", "1": "C" }
-```
-
-ExamPlayer 根据 `choiceIndices` 在每个选择题的交互阶段收集学生选择，考试结束后统一写入 `choice.json`。
-
-### 5.5 录音文件
-
-ExamPlayer 根据 `recordingIndices` 依次启动录音，录音结束后以 `{recordIndex}.mp3` 文件名存入作答包。
-
----
-
-## 六、全链路数据流
-
-```
-1. 教师创建 Interface 定义 → InterfaceDef
-2. 教师创建 Schema 定义 → SchemaDef（含 fields 变量列表）
-
-3. 教师编辑 Template
-   → 导入 InterfaceVarManifest（变量选择器可用）
-   → 导入 SchemaFieldManifest（知晓提交需要哪些字段）
-   → 组装 Section 树（layout + timeline）
-   → 关联 Schema
-
-4. 教师调用 AI 生成 Interface 实例 → InterfaceInstance
-
-5. Template 绑定 Interface 实例 → [@varName] 解析
-
-6. Section 引擎展开
-   → 遍历树 → 解析变量 → 分配 recordIndex / choiceIndex
-   → 按 Schema.fields 生成 schemaFields
-   → ExamPackage { pages, schemaId, recordingIndices, choiceIndices, schemaFields }
-
-7. ExamPlayer 播放
-   → 按 recordingIndices 录音 → 存为 {n}.mp3
-   → 按 choiceIndices 收选择 → 存为 choice.json
-   → schemaFields.json 原样传递
-   → 打包 ZIP → SubmissionPackage
-
-8. 评分
-   → 解压 SubmissionPackage
-   → 按 Schema 的评分结构（本文档不涉及）打分 → 成绩结果
-```
+~~~text
+1. 创建 InterfaceDef
+2. 创建 SchemaDef（包含可复用评分块）
+3. 创建 TemplateDraft
+   → 声明多个 Interface 依赖和变量子集
+   → 组装页面、框架和函数节点
+   → 配置函数输入和手动出参
+   → 在函数或 Template 层消费 Schema 评分块
+   → 为每个评分块完整填写绑定
+4. 发布 TemplateDraft → TemplateDef
+5. 预览或导出时为每个 Interface 别名选择 InterfaceInstance
+6. 编译 Template DSL
+   → 求值所有静态表达式
+   → 展开函数和框架
+   → 为录音步骤分配 recordIndex
+   → 生成 Player 数据段
+   → 生成 Schema 映射段
+7. ExamPlayer 播放 Player 数据
+   → 运行时录制音频
+   → 采集其他尚未确定的运行期作答
+   → 生成作答包
+8. Schema 系统读取 schema.json 和作答数据进行评分
+~~~
