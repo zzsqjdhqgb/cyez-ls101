@@ -1,9 +1,14 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom/vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { InterfaceApplication, InterfaceDraft } from '@ls101/interface-editor'
+import type { TaskProgressHandle, TaskProgressSnapshot } from '@ls101/core-types'
+import type {
+  InterfaceAIGenerationResult,
+  InterfaceApplication,
+  InterfaceDraft
+} from '@ls101/interface-editor'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AppToaster } from '../components/ui/ToastViewport'
 import { toast } from '../components/ui/toast'
@@ -11,6 +16,7 @@ import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceAp
 import { InterfaceDetailsPage } from '../features/interfaces/InterfaceDetailsPage'
 import { InterfaceDraftEditorPage } from '../features/interfaces/InterfaceDraftEditorPage'
 import { InterfaceDraftListPage } from '../features/interfaces/InterfaceDraftListPage'
+import { InterfaceInstanceEditorPage } from '../features/interfaces/InterfaceInstanceEditorPage'
 import { InterfaceListPage } from '../features/interfaces/InterfaceListPage'
 
 afterEach(() => {
@@ -180,5 +186,99 @@ describe('Interface pages', () => {
     fireEvent.click(screen.getByRole('button', { name: '复制 JSON Schema' }))
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('{"type":"object"}'))
     expect(await screen.findByText('已复制JSON Schema')).toBeInTheDocument()
+  })
+
+  it('runs AI generation, locks editing, and applies the completed instance', async () => {
+    const interfaceId = `sha256:${'b'.repeat(64)}`
+    const instanceId = '20000000-0000-4000-8000-000000000001'
+    const initial = {
+      interfaceId,
+      instance: {
+        instanceId,
+        name: '第一套题组',
+        generatedAt: '2026-08-02T00:00:00.000Z',
+        values: { questionText: '旧题目' }
+      },
+      assetUrls: {}
+    }
+    const completed = {
+      ...initial,
+      instance: {
+        ...initial.instance,
+        values: { questionText: 'AI 新题目' }
+      }
+    }
+    let resolveCompletion: (result: InterfaceAIGenerationResult) => void = () => undefined
+    const completion = new Promise<InterfaceAIGenerationResult>((resolve) => {
+      resolveCompletion = resolve
+    })
+    const snapshot: TaskProgressSnapshot = {
+      items: [
+        { id: 'ai', label: 'AI 生成', status: 'running' },
+        { id: 'validate', label: '校验生成结果', status: 'waiting' },
+        { id: 'save', label: '保存实例', status: 'waiting' }
+      ]
+    }
+    const handle: TaskProgressHandle<InterfaceAIGenerationResult> = {
+      getSnapshot: () => snapshot,
+      subscribe: () => () => undefined,
+      cancel: vi.fn(),
+      completion
+    }
+    const startAIGeneration = vi.fn().mockResolvedValue(handle)
+    const app = application({
+      published: {
+        get: vi.fn().mockResolvedValue({
+          definition: { ...draft, id: interfaceId },
+          source: { type: 'published' }
+        })
+      },
+      instances: {
+        get: vi.fn().mockResolvedValue(initial),
+        save: vi.fn(),
+        replaceFromJson: vi.fn(),
+        startAIGeneration
+      }
+    })
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/interfaces/${interfaceId}/instances/${instanceId}`]}>
+          <Routes>
+            <Route
+              path="/interfaces/:interfaceId/instances/:instanceId"
+              element={<InterfaceInstanceEditorPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+        <AppToaster />
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByRole('heading', { name: '第一套题组' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'AI 生成' }))
+
+    await waitFor(() => expect(startAIGeneration).toHaveBeenCalledWith(interfaceId, instanceId))
+    expect(screen.getByRole('dialog', { name: 'AI 生成' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'AI 生成进度' })).toBeInTheDocument()
+    expect(screen.getByDisplayValue('旧题目')).toBeDisabled()
+    expect(screen.queryByRole('button', { name: '完成' })).not.toBeInTheDocument()
+
+    await act(async () => {
+      resolveCompletion({ status: 'completed', instance: completed })
+      await completion
+    })
+
+    expect(await screen.findByDisplayValue('AI 新题目')).toBeDisabled()
+    expect(await screen.findByText('AI 生成内容已保存')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'AI 生成' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'AI 生成进度' })).toBeInTheDocument()
+    expect(screen.getByText('生成完成')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '完成' }))
+
+    expect(screen.queryByRole('dialog', { name: 'AI 生成' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'AI 生成进度' })).not.toBeInTheDocument()
+    expect(screen.getByDisplayValue('AI 新题目')).toBeEnabled()
   })
 })

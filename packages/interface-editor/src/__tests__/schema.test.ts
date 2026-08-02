@@ -1,12 +1,14 @@
-import { describe, it, expect } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
+import { TypeGuard } from '@sinclair/typebox'
 import {
   buildJsonSchema as buildCollectionJsonSchema,
   buildJsonExample as buildCollectionJsonExample,
   validateJson
 } from '../schema'
 import type { FieldNode, FieldLeaf, FieldGroup } from '../types'
-import Ajv from 'ajv'
 import { collection } from './fieldFixtures'
+
+afterEach(() => vi.unstubAllGlobals())
 
 // ============================================================
 // 测试辅助工厂
@@ -195,16 +197,10 @@ describe('buildJsonSchema', () => {
 // ============================================================
 
 describe('buildJsonSchema — meta-schema 合法性', () => {
-  const metaAjv = new Ajv({ strict: false })
-
   function expectValidSchema(fields: Record<string, FieldNode>, description: string): void {
     it(description, () => {
       const schema = buildJsonSchema(fields)
-      const valid = metaAjv.validateSchema(schema)
-      if (!valid) {
-        console.error(`meta-schema validation failed for "${description}":`, metaAjv.errors)
-      }
-      expect(valid).toBe(true)
+      expect(TypeGuard.IsSchema(schema)).toBe(true)
     })
   }
 
@@ -377,6 +373,18 @@ describe('validateJson', () => {
   it('空对象 {} → 缺少必填字段导致失败', () => {
     const result = validateJson(testSchema, '{}')
     expect(result.valid).toBe(false)
+  })
+
+  it('禁用 Function 构造器时仍可校验，兼容 Electron CSP', () => {
+    vi.stubGlobal('Function', function blockedFunctionConstructor(): never {
+      throw new Error('unsafe-eval blocked by CSP')
+    })
+
+    expect(
+      validateJson(testSchema, '{"title":"Test","questions":{"q1":"Question 1","q2":"Question 2"}}')
+        .valid
+    ).toBe(true)
+    expect(validateJson(testSchema, '{"title":123}').valid).toBe(false)
   })
 })
 

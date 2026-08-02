@@ -169,6 +169,215 @@
   line-height: 1.5;
 }
 
+.generationProgress {
+  min-height: 0;
+}
+
+.generationProgress ol {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.generationProgress li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+}
+
+.generationProgress li > svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: var(--color-text-faint);
+}
+
+.generationProgress li[data-status='running'] > svg {
+  color: var(--color-accent);
+  animation: generation-spin 900ms linear infinite;
+}
+
+.generationProgress li[data-status='completed'] > svg {
+  color: var(--color-accent);
+}
+
+.generationProgress strong {
+  display: block;
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.generationProgress pre {
+  max-height: 260px;
+  margin: 8px 0 0;
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  font:
+    11px/1.55 ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.generationBackdrop {
+  position: fixed;
+  z-index: 110;
+  inset: 0;
+  display: grid;
+  padding: 24px;
+  place-items: center;
+  background: rgb(18 25 24 / 38%);
+}
+
+.generationDialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(1180px, calc(100vw - 48px));
+  height: min(900px, calc(100vh - 48px));
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
+  background: var(--color-surface-subtle);
+}
+
+.generationHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.generationHeader > div {
+  min-width: 0;
+}
+
+.generationHeader span:not(.generationIcon) {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.generationHeader h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 16px;
+  font-weight: 660;
+}
+
+.generationIcon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-sm);
+  place-items: center;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.generationIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.generationBody {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  min-height: 0;
+  padding: 24px;
+  overflow: auto;
+}
+
+.generationStarting,
+.generationResult {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.generationStarting > svg,
+.generationResult > svg {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: var(--color-accent);
+}
+
+.generationStarting > svg {
+  animation: generation-spin 900ms linear infinite;
+}
+
+.generationStarting strong,
+.generationResult strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--color-text-strong);
+  font-size: 13px;
+  font-weight: 660;
+}
+
+.generationStarting span,
+.generationResult span {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.generationResult[data-status='error'] > svg {
+  color: var(--color-danger);
+}
+
+.generationResult[data-status='cancelled'] > svg {
+  color: var(--color-text-muted);
+}
+
+.generationActions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 22px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+@keyframes generation-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .generationProgress li[data-status='running'] > svg,
+  .generationStarting > svg {
+    animation: none;
+  }
+}
+
 .jsonPane {
   display: grid;
   grid-template-rows: auto minmax(200px, 1fr) auto auto;
@@ -220,5 +429,18 @@
   .formPane {
     padding-right: 24px;
     padding-left: 24px;
+  }
+
+  .generationBackdrop {
+    padding: 12px;
+  }
+
+  .generationDialog {
+    width: calc(100vw - 24px);
+    height: calc(100vh - 24px);
+  }
+
+  .generationBody {
+    padding: 16px;
   }
 }

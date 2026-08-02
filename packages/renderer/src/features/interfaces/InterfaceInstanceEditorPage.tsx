@@ -1,11 +1,24 @@
-import { useEffect, useMemo, useState, type JSX } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore, type JSX } from 'react'
+import type { TaskProgressHandle, TaskProgressItem } from '@ls101/core-types'
 import type {
   FieldLeaf,
+  InterfaceAIGenerationResult,
   InterfaceDef,
   InterfaceInstanceDetails,
   InstanceDataError
 } from '@ls101/interface-editor'
-import { AlertCircle, ArrowLeft, Bot, Braces, Image as ImageIcon, Save } from 'lucide-react'
+import {
+  AlertCircle,
+  ArrowLeft,
+  Bot,
+  Braces,
+  Check,
+  Circle,
+  Image as ImageIcon,
+  LoaderCircle,
+  Save,
+  X
+} from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
@@ -23,6 +36,12 @@ interface LeafEntry {
   path: string[]
 }
 
+interface GenerationSession {
+  handle: TaskProgressHandle<InterfaceAIGenerationResult> | null
+  result: InterfaceAIGenerationResult | null
+  startError: string | null
+}
+
 export function InterfaceInstanceEditorPage(): JSX.Element {
   const application = useInterfaceApplication()
   const navigate = useNavigate()
@@ -36,6 +55,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   const [jsonErrors, setJsonErrors] = useState<readonly InstanceDataError[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [generation, setGeneration] = useState<GenerationSession | null>(null)
   const [dirty, setDirty] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmLeave, setConfirmLeave] = useState(false)
@@ -79,6 +99,37 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   const updateValue = (varName: string, value: string): void => {
     setValues((current) => ({ ...current, [varName]: value }))
     setDirty(true)
+  }
+
+  const startGeneration = async (): Promise<void> => {
+    setGeneration({ handle: null, result: null, startError: null })
+    setError(null)
+    setJsonErrors([])
+    try {
+      const handle = await application.instances.startAIGeneration(interfaceId, instanceId)
+      setGeneration({ handle, result: null, startError: null })
+      const result = await handle.completion
+      setGeneration((current) => (current ? { ...current, result } : current))
+      if (result.status === 'completed') {
+        setDetails(result.instance)
+        setValues(result.instance.instance.values)
+        setDirty(false)
+        toast.success('AI 生成内容已保存')
+      } else if (result.status === 'invalid-response') {
+        setJson(result.rawOutput)
+        setJsonErrors(result.errors)
+        setJsonOpen(true)
+        setError('AI 返回内容未通过字段校验')
+      } else if (result.status === 'failed') {
+        setError(result.message)
+      } else {
+        toast.info('已取消 AI 生成')
+      }
+    } catch (reason) {
+      const message = errorMessage(reason)
+      setError(message)
+      setGeneration((current) => (current ? { ...current, startError: message } : current))
+    }
   }
 
   const save = async (): Promise<void> => {
@@ -129,13 +180,22 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
     navigate(`/interfaces/${encodeURIComponent(interfaceId)}`)
   }
 
+  const aiBusy = generation !== null
+  const busy = saving || aiBusy
+
   if (loading) return <div className={shared.loading}>正在加载题组...</div>
 
   return (
     <div className={styles.editor}>
       <header className={styles.toolbar}>
         <div className={styles.identity}>
-          <IconButton icon={ArrowLeft} label="返回题型详情" variant="ghost" onClick={leave} />
+          <IconButton
+            disabled={aiBusy}
+            icon={ArrowLeft}
+            label="返回题型详情"
+            variant="ghost"
+            onClick={leave}
+          />
           <div>
             <h1>{name || '未命名题组'}</h1>
             <span>
@@ -144,16 +204,21 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
           </div>
         </div>
         <div className={styles.actions}>
-          <Button icon={Braces} onClick={() => setJsonOpen((open) => !open)}>
+          <Button icon={Braces} disabled={busy} onClick={() => setJsonOpen((open) => !open)}>
             JSON
           </Button>
-          <Button icon={Bot} disabled title="AI 引擎尚未配置">
-            AI 生成
+          <Button
+            icon={aiBusy ? LoaderCircle : Bot}
+            disabled={!details || busy || dirty}
+            title={dirty ? '请先保存当前修改' : undefined}
+            onClick={() => void startGeneration()}
+          >
+            {aiBusy ? '生成中' : 'AI 生成'}
           </Button>
           <Button
             icon={Save}
             variant="primary"
-            disabled={!details || saving || !dirty}
+            disabled={!details || busy || !dirty}
             onClick={() => void save()}
           >
             保存
@@ -183,6 +248,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
               <label htmlFor="instance-name">题组名称</label>
               <input
                 id="instance-name"
+                disabled={busy}
                 value={name}
                 onChange={(event) => updateName(event.target.value)}
                 placeholder="未命名题组"
@@ -210,6 +276,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
                   <span className={styles.description}>{leaf.description}</span>
                   <textarea
                     rows={leaf.type === 'image' ? 3 : 5}
+                    disabled={busy}
                     value={values[leaf.varName] ?? ''}
                     onChange={(event) => updateValue(leaf.varName, event.target.value)}
                     placeholder={leaf.example}
@@ -230,6 +297,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
               <textarea
                 aria-label="JSON 内容"
                 value={json}
+                disabled={busy}
                 onChange={(event) => setJson(event.target.value)}
                 placeholder={'{\n  "section": {\n    "question": "..."\n  }\n}'}
                 spellCheck={false}
@@ -244,12 +312,12 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
                 </div>
               ) : null}
               <div className={styles.jsonActions}>
-                <Button variant="ghost" onClick={() => setJsonOpen(false)}>
+                <Button variant="ghost" disabled={busy} onClick={() => setJsonOpen(false)}>
                   取消
                 </Button>
                 <Button
                   variant="primary"
-                  disabled={!json.trim() || saving}
+                  disabled={!json.trim() || busy}
                   onClick={() => void replaceJson()}
                 >
                   覆盖全部值
@@ -268,6 +336,134 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
         onCancel={() => setConfirmLeave(false)}
         onConfirm={() => navigate(`/interfaces/${encodeURIComponent(interfaceId)}`)}
       />
+      {generation ? (
+        <GenerationModal
+          session={generation}
+          onCancel={() => generation.handle?.cancel()}
+          onFinish={() => setGeneration(null)}
+        />
+      ) : null}
     </div>
   )
+}
+
+function GenerationModal({
+  session,
+  onCancel,
+  onFinish
+}: {
+  session: GenerationSession
+  onCancel(): void
+  onFinish(): void
+}): JSX.Element {
+  const finished = session.result !== null || session.startError !== null
+
+  return (
+    <div className={styles.generationBackdrop} role="presentation">
+      <section
+        aria-labelledby="generation-modal-title"
+        aria-modal="true"
+        className={styles.generationDialog}
+        role="dialog"
+      >
+        <header className={styles.generationHeader}>
+          <span className={styles.generationIcon}>
+            <Bot aria-hidden="true" />
+          </span>
+          <div>
+            <span>{finished ? '生成任务已结束' : '正在生成题组'}</span>
+            <h2 id="generation-modal-title">AI 生成</h2>
+          </div>
+        </header>
+
+        <div className={styles.generationBody}>
+          {session.handle ? <GenerationProgress handle={session.handle} /> : null}
+          {!session.handle && !finished ? (
+            <div className={styles.generationStarting} role="status">
+              <LoaderCircle aria-hidden="true" />
+              <div>
+                <strong>正在启动生成任务</strong>
+                <span>正在读取模型配置并准备提示词...</span>
+              </div>
+            </div>
+          ) : null}
+          {finished ? <GenerationResult session={session} /> : null}
+        </div>
+
+        <footer className={styles.generationActions}>
+          {finished ? (
+            <Button icon={Check} variant="primary" onClick={onFinish}>
+              完成
+            </Button>
+          ) : (
+            <Button icon={X} disabled={!session.handle} variant="ghost" onClick={onCancel}>
+              取消生成
+            </Button>
+          )}
+        </footer>
+      </section>
+    </div>
+  )
+}
+
+function GenerationResult({ session }: { session: GenerationSession }): JSX.Element {
+  let title = '生成任务启动失败'
+  let message = session.startError ?? '无法启动生成任务'
+  let status = 'error'
+
+  if (session.result?.status === 'completed') {
+    title = '生成完成'
+    message = '生成内容已通过校验并保存到当前题组。'
+    status = 'success'
+  } else if (session.result?.status === 'invalid-response') {
+    title = '生成内容未通过校验'
+    message = `发现 ${session.result.errors.length} 个字段错误，可点击完成后在 JSON 面板中检查。`
+  } else if (session.result?.status === 'failed') {
+    title = '生成失败'
+    message = session.result.message
+  } else if (session.result?.status === 'cancelled') {
+    title = '生成已取消'
+    message = '任务已停止，当前题组内容没有被生成结果覆盖。'
+    status = 'cancelled'
+  }
+
+  return (
+    <div className={styles.generationResult} data-status={status} role="status">
+      {status === 'success' ? <Check aria-hidden="true" /> : <AlertCircle aria-hidden="true" />}
+      <div>
+        <strong>{title}</strong>
+        <span>{message}</span>
+      </div>
+    </div>
+  )
+}
+
+function GenerationProgress({
+  handle
+}: {
+  handle: TaskProgressHandle<InterfaceAIGenerationResult>
+}): JSX.Element {
+  const snapshot = useSyncExternalStore(handle.subscribe, handle.getSnapshot, handle.getSnapshot)
+
+  return (
+    <section aria-label="AI 生成进度" className={styles.generationProgress}>
+      <ol>
+        {snapshot.items.map((item) => (
+          <li data-status={item.status} key={item.id}>
+            <ProgressIcon item={item} />
+            <div>
+              <strong>{item.label}</strong>
+              {item.log?.content ? <pre>{item.log.content}</pre> : null}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+function ProgressIcon({ item }: { item: TaskProgressItem }): JSX.Element {
+  if (item.status === 'completed') return <Check aria-hidden="true" />
+  if (item.status === 'running') return <LoaderCircle aria-hidden="true" />
+  return <Circle aria-hidden="true" />
 }

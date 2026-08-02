@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { InterfaceInstance, TaskProgressSnapshot } from '@ls101/core-types'
 import {
   createInterfaceApplication,
@@ -27,6 +27,8 @@ import type { InterfaceContent } from '../types'
 import { decodeInterfaceZip, encodeInterfaceZip } from '../zip'
 import { strToU8, unzipSync, zipSync } from 'fflate'
 import { collection } from './fieldFixtures'
+
+afterEach(() => vi.unstubAllGlobals())
 
 const INSTANCE_A = '10000000-0000-4000-8000-000000000001'
 const INSTANCE_B = '10000000-0000-4000-8000-000000000002'
@@ -773,7 +775,10 @@ describe('Interface application', () => {
     }
   })
 
-  it('以扁平流式任务句柄展示 AI 过程并覆盖当前实例', async () => {
+  it('在 Electron CSP 下以扁平流式任务句柄展示 AI 过程并覆盖当前实例', async () => {
+    vi.stubGlobal('Function', function blockedFunctionConstructor(): never {
+      throw new Error('unsafe-eval blocked by CSP')
+    })
     const { repository } = setup()
     const def = await publishInterface(content())
     await repository.saveInterface(def)

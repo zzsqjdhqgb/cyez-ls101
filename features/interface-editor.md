@@ -4,7 +4,7 @@
 
 `@ls101/interface-editor` 已实现与 UI 框架无关的 Interface 领域模型、文件仓储、草稿与发布流程、实例编辑、导入导出、builtin 更新和五模块应用门面。
 
-renderer 已创建应用组合层和 React Context，并接入真实 `@ls101/file-store` 与 `@ls101/file-dialog`。当前 UI 包含题型列表、草稿列表、草稿编辑、题型详情和题组编辑页面；草稿编辑与题组编辑使用 `focus` 布局，编辑器中的工作区分栏支持拖动调整。AIRouter 实例尚未接入，因此题组页的 AI 生成入口当前禁用。领域层测试继续使用内存仓储、测试文件对话框和测试文本生成流验证应用行为。
+renderer 已创建应用组合层和 React Context，并接入真实 `@ls101/file-store`、`@ls101/file-dialog` 与 AIRouter。当前 UI 包含题型列表、草稿列表、草稿编辑、题型详情和题组编辑页面；草稿编辑与题组编辑使用 `focus` 布局，编辑器中的工作区分栏支持拖动调整。题组页可以使用第一个已启用的 AIRouter 文本模型生成内容，并展示流式进度、校验、保存和取消状态。领域层测试继续使用内存仓储、测试文件对话框和测试文本生成流验证应用行为。
 
 ## 功能边界
 
@@ -319,7 +319,7 @@ renderer 可以在页面内维护未保存表单状态，在用户执行保存�
 
 ### JSON 覆盖
 
-`replaceFromJson()` 先解析 JSON，再使用 Interface 字段树生成的 JSON Schema 校验结构。成功后将字段路径映射为 `varName -> value` 并覆盖当前实例全部值。
+`replaceFromJson()` 先解析 JSON，再使用 Interface 字段树生成的 JSON Schema 校验结构。校验由 TypeBox Value 解释执行，不依赖 `eval` 或 `Function` 动态代码生成，兼容 renderer 的严格 CSP。成功后将字段路径映射为 `varName -> value` 并覆盖当前实例全部值。
 
 ```typescript
 type ReplaceInstanceFromJsonResult =
@@ -599,9 +599,7 @@ MISSING_ASSET
 
 ## 当前限制
 
-- renderer 尚未创建 Interface 页面、Context、Hooks 或 bootstrap 接线。
-- `@ls101/file-store` 和 `@ls101/file-dialog` 尚未在业务应用入口连接到 Interface 应用。
-- AIRouter 尚未实现真实文本生成流；当前只有需求注释和 Interface 端口。
+- AIRouter 当前没有默认模型设置；Interface 按 Provider 配置顺序选择第一个已启用的文本模型。
 - 图片字段的二次图片生成、资源保存和字段 URL 替换尚未实现。
 - 实例时间字段仍名为 `generatedAt`，空白实例也会在创建时写入该时间。
 - 实例整表更新依赖 File Store 的单文件原子替换；这不构成 Interface 定义、实例和资源之间的多文件事务。
@@ -628,8 +626,7 @@ MISSING_ASSET
 
 当前未覆盖：
 
-- 真实 Electron、File Store、File Dialog 和 AIRouter 端到端集成。
-- renderer 页面交互和任务进度展示。
+- 真实 Electron、File Store、File Dialog、AIRouter Provider 和远端模型之间的端到端流程。
 - 图片生成。
 - 实例更新时底层文件写入中断。
 - 多 renderer 或多进程同时修改同一实例。

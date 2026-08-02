@@ -11,16 +11,15 @@
 //      — 用字段的 example 值填充出一份示例 JSON
 //
 //   3. validateJson(schema, jsonString) → JsonValidationResult
-//      — 用 Ajv 校验 JSON 字符串是否符合 Schema
+//      — 用 TypeBox Value 校验 JSON 字符串是否符合 Schema
 //
 // 设计原则：
 //   - varName 不进入 JSON Schema（LLM 不应看到变量名）
 //   - description 写入 Schema；图片字段会追加生图提示词约束
 //   - 所有 object 节点设置 additionalProperties: false
 
-import { Type } from '@sinclair/typebox'
-import Ajv from 'ajv'
-import type { ErrorObject } from 'ajv'
+import { Type, type TSchema } from '@sinclair/typebox'
+import { Value } from '@sinclair/typebox/value'
 import type { FieldCollection } from './types'
 
 // ============================================================
@@ -86,7 +85,7 @@ export function buildJsonExample(fields: FieldCollection): Record<string, unknow
 }
 
 // ============================================================
-// 3. validateJson — Ajv 校验 JSON 字符串
+// 3. validateJson — TypeBox Value 校验 JSON 字符串
 // ============================================================
 
 /**
@@ -94,25 +93,29 @@ export function buildJsonExample(fields: FieldCollection): Record<string, unknow
  *
  * 返回三种情况：
  * - JSON 解析成功 + Schema 校验通过 → { valid: true, errors: null, data }
- * - JSON 解析成功 + Schema 校验失败 → { valid: false, errors: ErrorObject[], data: null }
+ * - JSON 解析成功 + Schema 校验失败 → { valid: false, errors: JsonValidationError[], data: null }
  * - JSON 格式非法（parse 失败）   → { valid: false, errors: [单条], data: null }
  */
 export interface JsonValidationResult {
   valid: boolean
-  /** 校验通过时为 null；失败时包含 Ajv 原生错误对象列表或 JSON 解析错误 */
-  errors: ErrorObject[] | null
+  /** 校验通过时为 null；失败时包含结构校验错误或 JSON 解析错误 */
+  errors: JsonValidationError[] | null
   /** 校验通过时返回解析后的 JS 对象 */
   data: Record<string, unknown> | null
 }
 
-const _ajv = new Ajv({ allErrors: true })
+export interface JsonValidationError {
+  instancePath: string
+  schemaPath: string
+  keyword: string
+  message: string
+  params: Record<string, unknown>
+}
 
 export function validateJson(
   schema: Record<string, unknown>,
   jsonString: string
 ): JsonValidationResult {
-  const validate = _ajv.compile(schema)
-
   let data: unknown
   try {
     data = JSON.parse(jsonString)
@@ -132,9 +135,20 @@ export function validateJson(
     }
   }
 
-  if (validate(data)) {
+  const typedSchema = schema as TSchema
+  if (Value.Check(typedSchema, data)) {
     return { valid: true, errors: null, data: data as Record<string, unknown> }
   }
 
-  return { valid: false, errors: validate.errors ?? [], data: null }
+  return {
+    valid: false,
+    errors: [...Value.Errors(typedSchema, data)].map((error) => ({
+      instancePath: error.path,
+      schemaPath: '',
+      keyword: 'typebox',
+      message: error.message,
+      params: { type: error.type }
+    })),
+    data: null
+  }
 }

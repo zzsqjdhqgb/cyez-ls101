@@ -4,7 +4,7 @@
 
 `@ls101/core-types` 已定义跨模块长耗时任务进度契约 `TaskProgressHandle<TResult>`。该契约不提供全局任务管理器或具体实现类，由执行长耗时操作的领域模块创建句柄并维护快照。
 
-`@ls101/interface-editor` 已使用该契约包装 Interface AI 文本生成、结果校验和实例保存流程。当前业务 renderer 尚未接入对应句柄，也尚未实现通用进度列表组件。
+`@ls101/interface-editor` 已使用该契约包装 Interface AI 文本生成、结果校验和实例保存流程。题组编辑页已通过 `useSyncExternalStore` 接入该句柄，展示流式日志、步骤状态和取消入口；当前仍未实现跨模块通用进度列表组件。
 
 ## 功能边界
 
@@ -197,7 +197,7 @@ AI 生成
 - 没有持久化和恢复能力。
 - 没有统一错误对象，最终结果由各领域自行定义。
 - 没有通用 React 组件。
-- 当前只有 Interface AI 流程创建了实际句柄；AIRouter 尚未实现真实文本流适配。
+- 当前只有 Interface AI 流程创建了实际句柄；renderer 已将 AIRouter 文本流适配到 Interface 生成端口。
 - Interface 图片生成尚未实现，当前没有可验证的图片任务进度行为。
 
 ## 验证覆盖
@@ -208,8 +208,10 @@ AI 生成
 - AI、校验和保存三个扁平任务项的状态推进。
 - AI 成功后覆盖当前实例并保留 UUID。
 - 同一实例运行 AI 时拒绝第二个生成、整表保存和 JSON 覆盖。
+- renderer 订阅进度句柄、锁定编辑、取消生成和回填完成结果。
+- AIRouter 默认模型选择与文本增量流转发。
 
-当前未覆盖 renderer 的 `useSyncExternalStore` 接线、Markdown 渲染、真实 AIRouter 流、图片任务以及应用关闭时的任务清理。
+当前未覆盖 Markdown 语义渲染、真实 Provider 端到端流、图片任务以及应用关闭时的任务清理。
 
 ## 代码依据
 
@@ -218,3 +220,5 @@ AI 生成
 - `packages/interface-editor/src/application.ts`
 - `packages/interface-editor/src/__tests__/repository.test.ts`
 - `packages/airouter/src/index.ts`
+- `packages/renderer/src/features/interfaces/InterfaceAIRouterAdapter.ts`
+- `packages/renderer/src/features/interfaces/InterfaceInstanceEditorPage.tsx`
