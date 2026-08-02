@@ -13,6 +13,7 @@ File Store 负责：
 - 管理应用私有 `userData` 目录中的持久化数据。
 - 使用逐层派生的 scope 隔离业务数据。
 - 分别存储 JSON 文本数据和二进制资源。
+- 为 Asset 生成可传递的只读位置 Key，并支持通过 Key 读取资源。
 - 以同目录临时文件加原子重命名的方式写入 Text 和 Asset。
 - 通过受限 IPC 在 renderer 与 main 之间传递存储请求。
 - 为二进制资源生成 `asset://local/...` URL。
@@ -39,6 +40,8 @@ const draft = fileStore.scope('interfaces').scope('drafts').scope('draft-abc123'
 ```typescript
 interface FileStore {
   scope(name: string): ScopedStore
+  readAsset(key: AssetKey): Promise<Uint8Array | null>
+  getAssetUrl(key: AssetKey): string
 }
 
 interface ScopedStore {
@@ -55,6 +58,7 @@ interface ScopedStore {
   deleteAsset(filename: string): Promise<void>
   hasAsset(filename: string): Promise<boolean>
   listAssets(): Promise<string[]>
+  getAssetKey(filename: string): AssetKey
   getAssetUrl(filename: string): string
 
   listScopes(): Promise<string[]>
@@ -153,6 +157,11 @@ Asset = Join(baseDir, ...scope, '.assets', filename)
 - `readAsset()` 返回 `Uint8Array`，文件不存在时返回 `null`。
 - `getAssetUrl()` 同步校验 filename，并返回编码后的 `asset://local/...` URL。
 - URL 生成不检查目标文件是否存在。
+- `getAssetKey()` 返回版本化、可序列化的位置型 Key：`asset-key://v1/<scope...>/<filename>`。
+- `fileStore.readAsset(key)` 允许调用方无需重新构造 scope，直接读取 Key 指向的 Asset。
+- `fileStore.getAssetUrl(key)` 将 Key 转换为现有的 `asset://local/...` 展示 URL。
+- Key API 不提供 Asset 写入、删除或任何 Text 访问能力。
+- Asset Key 编码当前 scope；资源迁移到其他 scope 后，旧 Key 失效。
 
 示例：
 

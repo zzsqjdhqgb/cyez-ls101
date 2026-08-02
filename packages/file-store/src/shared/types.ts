@@ -1,5 +1,8 @@
 export type ScopePath = readonly string[]
 
+/** File Store 生成的、可序列化的只读 Asset 位置键。 */
+export type AssetKey = string
+
 export interface FileLocation {
   scope: ScopePath
   filename: string
@@ -7,6 +10,8 @@ export interface FileLocation {
 
 export interface FileStore {
   scope(name: string): ScopedStore
+  readAsset(key: AssetKey): Promise<Uint8Array | null>
+  getAssetUrl(key: AssetKey): string
 }
 
 export interface ScopedStore {
@@ -23,6 +28,7 @@ export interface ScopedStore {
   deleteAsset(filename: string): Promise<void>
   hasAsset(filename: string): Promise<boolean>
   listAssets(): Promise<string[]>
+  getAssetKey(filename: string): AssetKey
   getAssetUrl(filename: string): string
 
   listScopes(): Promise<string[]>

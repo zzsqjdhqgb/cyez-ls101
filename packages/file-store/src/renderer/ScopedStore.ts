@@ -1,10 +1,7 @@
-import {
-  ASSET_PROTOCOL_HOST,
-  ASSET_PROTOCOL_SCHEME,
-  FILE_STORE_CHANNELS
-} from '../shared/constants'
+import { FILE_STORE_CHANNELS } from '../shared/constants'
+import { assetLocationToUrl, createAssetKey } from '../shared/assetKey'
 import { validateFilename, validateScopeSegment } from '../shared/pathUtils'
-import type { FileLocation, ScopedStore, ScopePath } from '../shared/types'
+import type { AssetKey, FileLocation, ScopedStore, ScopePath } from '../shared/types'
 import { getFileStoreBridge } from './bridge'
 
 export class ScopedStoreImpl implements ScopedStore {
@@ -60,10 +57,12 @@ export class ScopedStoreImpl implements ScopedStore {
     return (await this.invoke(FILE_STORE_CHANNELS.listAssets, this.scopePath)) as string[]
   }
 
+  getAssetKey(filename: string): AssetKey {
+    return createAssetKey(this.location(filename))
+  }
+
   getAssetUrl(filename: string): string {
-    validateFilename(filename)
-    const pathname = [...this.scopePath, filename].map(encodeURIComponent).join('/')
-    return `${ASSET_PROTOCOL_SCHEME}://${ASSET_PROTOCOL_HOST}/${pathname}`
+    return assetLocationToUrl(this.location(filename))
   }
 
   async listScopes(): Promise<string[]> {

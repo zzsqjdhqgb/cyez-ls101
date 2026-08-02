@@ -4,7 +4,8 @@
 
 文件存储层采用 Electron 进程隔离：
 
-- 渲染进程不接触物理路径，只能从顶层 scope 逐层派生 `ScopedStore`。
+- 渲染进程不接触物理路径；写入、删除和 Text 操作只能通过逐层派生的 `ScopedStore` 完成。
+- Asset 可以生成只读位置 Key，持有 Key 的调用方可以直接读取资源或生成展示 URL。
 - preload 只暴露 file-store 白名单 IPC 通道，不暴露完整 `ipcRenderer`。
 - 主进程重新校验所有 scope segment 和 filename，负责物理路径映射与文件 I/O。
 - 存储根目录通过依赖注入传入，通常为 `app.getPath('userData')`。
@@ -87,6 +88,8 @@ renderer 只公开一个 `fileStore` 单例和必要类型：
 ```typescript
 export interface FileStore {
   scope(name: string): ScopedStore
+  readAsset(key: AssetKey): Promise<Uint8Array | null>
+  getAssetUrl(key: AssetKey): string
 }
 
 export interface ScopedStore {
@@ -103,6 +106,7 @@ export interface ScopedStore {
   deleteAsset(filename: string): Promise<void>
   hasAsset(filename: string): Promise<boolean>
   listAssets(): Promise<string[]>
+  getAssetKey(filename: string): AssetKey
   getAssetUrl(filename: string): string
 
   listScopes(): Promise<string[]>
@@ -110,7 +114,8 @@ export interface ScopedStore {
 }
 ```
 
-不公开裸 Key API、IPC 实现类或物理路径转换函数。
+`AssetKey` 是可序列化的只读位置键。公共 API 不提供按 Key 写入、删除 Asset
+或访问 Text 的能力，也不公开 IPC 实现类或物理路径转换函数。
 
 ## 五、Text 与 Asset 隔离
 
@@ -239,6 +244,28 @@ Text 与 Asset 使用不同通道，由主进程决定进入 `.text` 还是 `.as
 
 ## 九、Asset 自定义协议
 
+### Asset Key
+
+Asset Key 由 `ScopedStore.getAssetKey(filename)` 创建，格式为：
+
+```text
+asset-key://v1/interfaces/drafts/draft-abc123/cover.png
+```
+
+Key 编码完整 scope 和 filename，但不包含 `userData` 等物理路径。`fileStore.readAsset(key)`
+将 Key 解析为现有的结构化 `FileLocation`，复用 `file:read-asset` IPC；
+`fileStore.getAssetUrl(key)` 则将同一位置转换为展示 URL。
+
+Key 的约束：
+
+- 只用于 Asset 读取和展示 URL 生成。
+- 不支持按 Key 写入、删除、列举或清理资源。
+- 不支持任何 Text Key 操作。
+- renderer 在 IPC 前验证版本、scope segment 和 filename，main 仍独立验证解析后的位置。
+- 当前 Key 是位置型引用；资源移动到其他 scope 后，旧 Key 失效。
+
+### 展示 URL
+
 资源 URL 使用固定 host，并把 scope 放入 pathname：
 
 ```text
@@ -272,6 +299,7 @@ return <img src={draft.getAssetUrl('cover.png')} />
 
 @ls101/file-store/renderer
 ├── fileStore
+├── AssetKey
 ├── FileStore
 └── ScopedStore
 
