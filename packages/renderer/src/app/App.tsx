@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AppShell } from '../components/shell/AppShell'
+import { AppToaster } from '../components/ui/ToastViewport'
 import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceApplicationProvider'
 import { AppearanceSettingsProvider } from '../features/settings/AppearanceSettingsProvider'
 import { NotFoundPage } from '../pages/NotFoundPage'
@@ -29,6 +30,7 @@ export function App(): JSX.Element {
         <MemoryRouter>
           <RegisteredAppRoutes />
         </MemoryRouter>
+        <AppToaster />
       </InterfaceApplicationProvider>
     </AppearanceSettingsProvider>
   )

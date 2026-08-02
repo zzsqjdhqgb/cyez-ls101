@@ -98,8 +98,7 @@
 }
 
 .status,
-.error,
-.success {
+.error {
   display: flex;
   min-height: 48px;
   align-items: center;
@@ -116,17 +115,6 @@
   border-color: color-mix(in srgb, var(--color-danger) 28%, var(--color-border));
   color: var(--color-danger);
   background: var(--color-danger-soft);
-}
-
-.success {
-  border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border));
-  color: var(--color-accent);
-  background: var(--color-accent-soft);
-}
-
-.success svg {
-  width: 16px;
-  height: 16px;
 }
 
 .providerToolbar {

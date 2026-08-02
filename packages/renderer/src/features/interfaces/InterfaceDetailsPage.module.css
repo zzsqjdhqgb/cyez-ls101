@@ -53,21 +53,6 @@
   gap: var(--space-2);
 }
 
-.copyStatus {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--color-accent);
-  font-size: 12px;
-  font-weight: 620;
-}
-
-.copyStatus svg {
-  width: 14px;
-  height: 14px;
-}
-
 .definition h3 {
   margin: 0 0 10px;
   color: var(--color-text-muted);

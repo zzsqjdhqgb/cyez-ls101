@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { InterfaceApplication, InterfaceDraft } from '@ls101/interface-editor'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { AppToaster } from '../components/ui/ToastViewport'
 import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceApplicationProvider'
 import { InterfaceDetailsPage } from '../features/interfaces/InterfaceDetailsPage'
 import { InterfaceDraftEditorPage } from '../features/interfaces/InterfaceDraftEditorPage'
@@ -139,6 +140,7 @@ describe('Interface pages', () => {
             <Route path="/interfaces/:interfaceId" element={<InterfaceDetailsPage />} />
           </Routes>
         </MemoryRouter>
+        <AppToaster />
       </InterfaceApplicationProvider>
     )
 
@@ -150,6 +152,6 @@ describe('Interface pages', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '复制 JSON Schema' }))
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('{"type":"object"}'))
-    expect(screen.getByRole('status')).toHaveTextContent('已复制JSON Schema')
+    expect(await screen.findByText('已复制JSON Schema')).toBeInTheDocument()
   })
 })

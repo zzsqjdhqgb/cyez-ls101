@@ -28,6 +28,7 @@ import {
 } from '../../components/settings/SettingsContent'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
+import { toast } from '../../components/ui/toast'
 import { airouterApplication, type AIRouterApplication } from './AIRouterApplication'
 import styles from './AIRouterSettingsPage.module.css'
 
@@ -135,7 +136,6 @@ export function AIRouterTextSettingsPage({
   const [manualModel, setManualModel] = useState('')
   const [testModelId, setTestModelId] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AIRouterProviderConfigSummary | null>(null)
   const [apiKeyVisible, setApiKeyVisible] = useState(false)
@@ -191,7 +191,6 @@ export function AIRouterTextSettingsPage({
     feedbackScope?: FeedbackScope
   ): Promise<void> => {
     setBusy(label)
-    setMessage(null)
     if (feedbackScope) {
       setFeedback((current) => ({ ...current, [feedbackScope]: undefined }))
     } else {
@@ -230,7 +229,6 @@ export function AIRouterTextSettingsPage({
     setDraft(nextDraft)
     setManualModel('')
     setTestModelId('')
-    setMessage(null)
     setError(null)
     setApiKeyVisible(false)
     setApiKeyLoaded(false)
@@ -261,13 +259,6 @@ export function AIRouterTextSettingsPage({
           {error}
         </div>
       ) : null}
-      {!draft && message ? (
-        <div className={styles.success}>
-          <Check aria-hidden="true" />
-          {message}
-        </div>
-      ) : null}
-
       <SettingsSection title="Provider" description="管理文本生成所使用的 Provider 配置。">
         <div className={styles.providerToolbar}>
           <span>共 {configs.length} 个 Provider</span>
@@ -411,13 +402,13 @@ export function AIRouterTextSettingsPage({
                             setApiKeyVisible(true)
                             return
                           }
+                          const id = draft.id
                           void run(
                             'api-key',
                             async () => {
-                              const id = draft.id
                               const apiKey = (await application.readApiKey(id)) ?? ''
                               setDraft((current) =>
-                                current?.id === id ? { ...current, apiKey } : current
+                                current && current.id === id ? { ...current, apiKey } : current
                               )
                               setApiKeyBaseline(apiKey)
                               setApiKeyLoaded(true)
@@ -638,7 +629,7 @@ export function AIRouterTextSettingsPage({
                         const saved = await saveDraft()
                         setDraft(null)
                         setFeedback({})
-                        setMessage(`已保存“${saved.name}”`)
+                        toast.success(`已保存“${saved.name}”`)
                       },
                       'editor'
                     )
@@ -666,7 +657,7 @@ export function AIRouterTextSettingsPage({
             const next = configs.filter((config) => config.id !== target.id)
             setConfigs(next)
             setDraft(null)
-            setMessage(`已删除“${target.name}”`)
+            toast.success(`已删除“${target.name}”`)
           })
         }}
         open={Boolean(deleteTarget)}

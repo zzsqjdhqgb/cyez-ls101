@@ -1,0 +1,170 @@
+.viewport {
+  font-family: var(--font-ui);
+}
+
+.overflowBadge {
+  position: fixed;
+  right: 10px;
+  bottom: 10px;
+  z-index: 1000000000;
+  display: grid;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  border: 2px solid var(--color-canvas);
+  border-radius: 12px;
+  place-items: center;
+  color: var(--color-surface);
+  background: var(--color-danger);
+  box-shadow: 0 2px 8px rgb(25 35 34 / 20%);
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  width: min(360px, calc(100vw - 32px));
+  min-height: 56px;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: 13px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popover);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.toast:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.content {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  order: 1;
+}
+
+.title {
+  color: var(--color-text-strong);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.description {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.icon {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  order: 0;
+  place-items: center;
+}
+
+.icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.success {
+  border-color: color-mix(in srgb, var(--color-accent) 30%, var(--color-border));
+}
+
+.success .icon {
+  color: var(--color-accent);
+}
+
+.error {
+  border-color: color-mix(in srgb, var(--color-danger) 34%, var(--color-border));
+}
+
+.error .icon {
+  color: var(--color-danger);
+}
+
+.info .icon,
+.loading .icon {
+  color: var(--color-accent);
+}
+
+.warning .icon {
+  color: var(--color-text-strong);
+}
+
+.closeButton {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  margin: -5px -5px -5px 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  order: 3;
+  place-items: center;
+  color: var(--color-text-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  color: var(--color-text-strong);
+  background: var(--color-surface-hover);
+}
+
+.closeButton:active {
+  background: var(--color-surface-pressed);
+}
+
+.closeButton svg {
+  width: 15px;
+  height: 15px;
+}
+
+.actionButton {
+  min-height: 28px;
+  flex: 0 0 auto;
+  align-self: center;
+  padding: 0 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  order: 2;
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.actionButton:hover {
+  background: var(--color-surface-hover);
+}
+
+.loadingIcon {
+  animation: toast-spin 900ms linear infinite;
+}
+
+@keyframes toast-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+[data-reduce-motion] .loadingIcon {
+  animation: none;
+}

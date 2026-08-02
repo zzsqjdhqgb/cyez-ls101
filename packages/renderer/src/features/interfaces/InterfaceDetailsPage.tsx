@@ -9,7 +9,6 @@ import {
   AlertCircle,
   ArrowLeft,
   Braces,
-  Check,
   Copy,
   FileOutput,
   Layers3,
@@ -22,6 +21,7 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { IconButton } from '../../components/ui/IconButton'
 import { Page, PageHeader } from '../../components/ui/Page'
+import { toast } from '../../components/ui/toast'
 import { useInterfaceApplication } from './InterfaceApplicationContext'
 import { errorMessage, flattenNodes, formatDate } from './interfaceUi'
 import shared from './InterfaceShared.module.css'
@@ -38,7 +38,6 @@ export function InterfaceDetailsPage(): JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [working, setWorking] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<InterfaceInstanceSummary | null>(null)
-  const [copied, setCopied] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -138,9 +137,9 @@ export function InterfaceDetailsPage(): JSX.Element {
     try {
       if (!navigator.clipboard) throw new Error('当前环境无法访问剪贴板。')
       await navigator.clipboard.writeText(value)
-      setCopied(label)
+      toast.success(`已复制${label}`)
     } catch (reason) {
-      setError(errorMessage(reason))
+      toast.error(errorMessage(reason))
     }
   }
 
@@ -216,12 +215,6 @@ export function InterfaceDetailsPage(): JSX.Element {
                     复制 JSON Example
                   </Button>
                 </div>
-                {copied ? (
-                  <span className={styles.copyStatus} role="status">
-                    <Check aria-hidden="true" />
-                    已复制{copied}
-                  </span>
-                ) : null}
               </div>
             ) : null}
             <section>

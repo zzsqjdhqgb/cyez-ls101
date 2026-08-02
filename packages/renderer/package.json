@@ -23,7 +23,8 @@
     "lucide-react": "^1.14.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "react-router-dom": "^7"
+    "react-router-dom": "^7",
+    "sonner": "^2.0.7"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
