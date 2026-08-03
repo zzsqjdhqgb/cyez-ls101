@@ -3,13 +3,17 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EncryptedSecretStorage } from '@ls101/secret-store/main'
+import type { AIRouterProviderConfigInput } from '../shared'
 import { AIRouterService } from '../main/service'
 
-const { generateTextMock } = vi.hoisted(() => ({ generateTextMock: vi.fn() }))
+const { generateTextMock, streamTextMock } = vi.hoisted(() => ({
+  generateTextMock: vi.fn(),
+  streamTextMock: vi.fn()
+}))
 
 vi.mock('ai', async (importOriginal) => {
   const actual = await importOriginal<typeof import('ai')>()
-  return { ...actual, generateText: generateTextMock }
+  return { ...actual, generateText: generateTextMock, streamText: streamTextMock }
 })
 
 describe('AIRouterService', () => {
@@ -18,6 +22,7 @@ describe('AIRouterService', () => {
 
   beforeEach(async () => {
     generateTextMock.mockReset()
+    streamTextMock.mockReset()
     baseDir = await mkdtemp(path.join(tmpdir(), 'airouter-'))
     const secrets = new EncryptedSecretStorage(baseDir, {
       encrypt: (value) => new TextEncoder().encode(value),
@@ -60,13 +65,13 @@ describe('AIRouterService', () => {
   })
 
   it('discovers and sorts model ids from an unsaved provider draft', async () => {
-    const draft = {
+    const draft: AIRouterProviderConfigInput = {
       name: '测试服务',
       type: 'openai-compatible',
       baseUrl: 'https://api.example.com/v1',
       models: [],
       apiKey: 'secret-key'
-    } as const
+    }
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ data: [{ id: 'zeta' }, { id: 'alpha' }] }), {
         status: 200,
@@ -85,13 +90,13 @@ describe('AIRouterService', () => {
 
   it('tests a model from an unsaved provider draft without persisting it', async () => {
     generateTextMock.mockResolvedValue({ text: 'OK' })
-    const draft = {
+    const draft: AIRouterProviderConfigInput = {
       name: '测试服务',
       type: 'openai-compatible',
       baseUrl: 'https://api.example.com/v1',
       models: [{ id: 'draft-model', enabled: true }],
       apiKey: 'draft-secret'
-    } as const
+    }
 
     await expect(
       service.testConnection({ config: draft, modelId: 'draft-model' })
@@ -100,5 +105,33 @@ describe('AIRouterService', () => {
       expect.objectContaining({ prompt: '请只回复 OK，不要添加其他内容。' })
     )
     expect(await service.listProviderConfigs()).toEqual([])
+  })
+
+  it('maps AI SDK 7 text and reasoning deltas', async () => {
+    const saved = await service.saveProviderConfig({
+      name: '测试 OpenAI',
+      type: 'openai-compatible',
+      models: [{ id: 'test-model', enabled: true }]
+    })
+    streamTextMock.mockReturnValue({
+      fullStream: (async function* () {
+        yield { type: 'reasoning-delta', delta: '思考' }
+        yield { type: 'text-delta', delta: '回答' }
+      })()
+    })
+
+    const chunks = []
+    for await (const chunk of service.generateText({
+      providerConfigId: saved.id,
+      modelId: 'test-model',
+      prompt: '测试'
+    })) {
+      chunks.push(chunk)
+    }
+
+    expect(chunks).toEqual([
+      { type: 'reasoning', delta: '思考' },
+      { type: 'output', delta: '回答' }
+    ])
   })
 })

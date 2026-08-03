@@ -12,11 +12,11 @@
     "./shared": "./src/shared/index.ts"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "1.2.12",
-    "@ai-sdk/openai": "1.3.24",
+    "@ai-sdk/anthropic": "4.0.27",
+    "@ai-sdk/openai": "4.0.27",
     "@ls101/config-store": "workspace:*",
     "@ls101/secret-store": "workspace:*",
-    "ai": "4.3.16",
+    "ai": "7.0.48",
     "zod": "3.25.76"
   },
   "scripts": {

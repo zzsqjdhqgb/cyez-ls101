@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
-import { generateText, streamText, type LanguageModelV1 } from 'ai'
+import { generateText, streamText, type LanguageModel } from 'ai'
 import { JsonConfigStorage } from '@ls101/config-store/main'
 import type { JsonValue } from '@ls101/config-store/shared'
 import { createElectronSecretStorage, type EncryptedSecretStorage } from '@ls101/secret-store/main'
@@ -137,7 +137,7 @@ export class AIRouterService {
     }
   }
 
-  private async collectText(model: LanguageModelV1, prompt: string): Promise<string> {
+  private async collectText(model: LanguageModel, prompt: string): Promise<string> {
     const result = await generateText({
       model,
       prompt,
@@ -146,7 +146,7 @@ export class AIRouterService {
     return result.text
   }
 
-  private async resolveModel(request: AIRouterTextRequest): Promise<{ model: LanguageModelV1 }> {
+  private async resolveModel(request: AIRouterTextRequest): Promise<{ model: LanguageModel }> {
     validateTextRequest(request)
     const config = await this.requireConfig(request.providerConfigId)
     const selected = config.models.find((model) => model.id === request.modelId && model.enabled)
@@ -269,10 +269,10 @@ function createLanguageModel(
   config: AIRouterProviderConfig,
   apiKey: string,
   modelId: string
-): LanguageModelV1 {
+): LanguageModel {
   if (config.type === 'openai-compatible') {
     const provider = createOpenAI({ apiKey, baseURL: config.baseUrl })
-    return provider(modelId)
+    return provider.chat(modelId)
   }
   const provider = createAnthropic({ apiKey, baseURL: config.baseUrl })
   return provider(modelId)
@@ -283,7 +283,7 @@ function toChunk(part: unknown): AIRouterTextChunk | null {
   const value = part as { type?: unknown; textDelta?: unknown; delta?: unknown }
   const delta = typeof value.textDelta === 'string' ? value.textDelta : value.delta
   if (typeof delta !== 'string' || !delta) return null
-  if (value.type === 'reasoning') return { type: 'reasoning', delta }
+  if (value.type === 'reasoning-delta') return { type: 'reasoning', delta }
   if (value.type === 'text-delta' || value.type === 'text') return { type: 'output', delta }
   return null
 }
