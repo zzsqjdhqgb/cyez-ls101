@@ -14,6 +14,7 @@
   },
   "references": [
     { "path": "./packages/core-types" },
+    { "path": "./packages/clipboard" },
     { "path": "./packages/config-store" },
     { "path": "./packages/secret-store" },
     { "path": "./packages/airouter" },

@@ -27,6 +27,7 @@ import {
   type AIRouterStreamEvent,
   type AIRouterTextRequest
 } from '@ls101/airouter/shared'
+import { CLIPBOARD_CHANNELS, type ClipboardBridge } from '@ls101/clipboard/shared'
 
 const allowedChannels = new Set<FileStoreChannel>(Object.values(FILE_STORE_CHANNELS))
 const allowedConfigChannels = new Set<ConfigStoreChannel>(Object.values(CONFIG_STORE_CHANNELS))
@@ -98,6 +99,12 @@ const fileDialogBridge: FileDialogBridge = {
   }
 }
 
+const clipboardBridge: ClipboardBridge = {
+  readImage() {
+    return ipcRenderer.invoke(CLIPBOARD_CHANNELS.readImage)
+  }
+}
+
 const windowControlsBridge: WindowControlsBridge = {
   minimize() {
     return ipcRenderer.invoke(WINDOW_CONTROL_CHANNELS.minimize)
@@ -127,4 +134,5 @@ contextBridge.exposeInMainWorld('fileStore', fileStoreBridge)
 contextBridge.exposeInMainWorld('configStore', configStoreBridge)
 contextBridge.exposeInMainWorld('airouter', airouterBridge)
 contextBridge.exposeInMainWorld('fileDialog', fileDialogBridge)
+contextBridge.exposeInMainWorld('imageClipboard', clipboardBridge)
 contextBridge.exposeInMainWorld('windowControls', windowControlsBridge)

@@ -1241,6 +1241,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@ls101/clipboard@workspace:*, @ls101/clipboard@workspace:packages/clipboard":
+  version: 0.0.0-use.local
+  resolution: "@ls101/clipboard@workspace:packages/clipboard"
+  peerDependencies:
+    electron: ^39
+  peerDependenciesMeta:
+    electron:
+      optional: true
+  languageName: unknown
+  linkType: soft
+
 "@ls101/config-store@workspace:*, @ls101/config-store@workspace:packages/config-store":
   version: 0.0.0-use.local
   resolution: "@ls101/config-store@workspace:packages/config-store"
@@ -1321,6 +1332,7 @@ __metadata:
   resolution: "@ls101/renderer@workspace:packages/renderer"
   dependencies:
     "@ls101/airouter": "workspace:*"
+    "@ls101/clipboard": "workspace:*"
     "@ls101/config-store": "workspace:*"
     "@ls101/core-types": "workspace:*"
     "@ls101/editor-kit": "workspace:*"
