@@ -50,6 +50,28 @@ function content(name = '口语 Interface'): InterfaceContent {
   }
 }
 
+function contentWithImage(): InterfaceContent {
+  return {
+    ...content(),
+    fields: collection({
+      title: {
+        type: 'text',
+        varName: 'title',
+        description: '标题',
+        example: '模拟试卷'
+      },
+      picture: {
+        type: 'image',
+        varName: 'questionImage',
+        description: '题目配图',
+        example: '校园操场'
+      }
+    })
+  }
+}
+
+const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+
 function instance(instanceId: string, title: string, name = `实例 ${title}`): InterfaceInstance {
   return {
     instanceId,
@@ -774,6 +796,125 @@ describe('Interface application', () => {
         values: { title: 'JSON 值' }
       })
     }
+  })
+
+  it('手动保存图片字段时同时保留提示词并向下游暴露资源文件名', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(contentWithImage())
+    await repository.saveInterface(def)
+    const app = createInterfaceApplication({ repository, fileDialog: new TestFileDialog(null) })
+    const blank = await app.published.createBlankInstance(def.id)
+
+    const saved = await app.instances.save(def.id, blank.instance.instanceId, {
+      name: '图片题组',
+      values: { title: '看图回答', questionImage: '' },
+      imagePrompts: { questionImage: '一名学生站在操场上' },
+      imageFiles: { questionImage: PNG_BYTES }
+    })
+
+    const filename = saved.instance.values.questionImage
+    expect(filename).toMatch(/^questionImage-[0-9a-f-]{36}\.png$/)
+    expect(saved.instance.imagePrompts).toEqual({ questionImage: '一名学生站在操场上' })
+    expect(saved.assetUrls[filename]).toContain(filename)
+    await expect(
+      repository.readInstanceAsset(def.id, blank.instance.instanceId, filename)
+    ).resolves.toEqual(PNG_BYTES)
+  })
+
+  it('提示词与图片独立更新，显式移除图片时仍保留提示词', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(contentWithImage())
+    await repository.saveInterface(def)
+    const app = createInterfaceApplication({ repository, fileDialog: new TestFileDialog(null) })
+    const blank = await app.published.createBlankInstance(def.id)
+    const withImage = await app.instances.save(def.id, blank.instance.instanceId, {
+      name: '图片题组',
+      values: { title: '看图回答', questionImage: '' },
+      imagePrompts: { questionImage: '初始提示词' },
+      imageFiles: { questionImage: PNG_BYTES }
+    })
+    const previousFilename = withImage.instance.values.questionImage
+
+    const withPrompt = await app.instances.save(def.id, blank.instance.instanceId, {
+      name: '图片题组',
+      values: withImage.instance.values,
+      imagePrompts: { questionImage: '一名学生站在操场上' }
+    })
+
+    expect(withPrompt.instance.values.questionImage).toBe(previousFilename)
+    expect(withPrompt.instance.imagePrompts).toEqual({
+      questionImage: '一名学生站在操场上'
+    })
+    expect(withPrompt.assetUrls[previousFilename]).toContain(previousFilename)
+
+    const withoutImage = await app.instances.save(def.id, blank.instance.instanceId, {
+      name: '图片题组',
+      values: withPrompt.instance.values,
+      imagePrompts: withPrompt.instance.imagePrompts,
+      imageFiles: { questionImage: null }
+    })
+
+    expect(withoutImage.instance.values.questionImage).toBe('')
+    expect(withoutImage.instance.imagePrompts).toEqual({
+      questionImage: '一名学生站在操场上'
+    })
+    expect(withoutImage.assetUrls).toEqual({})
+    await expect(
+      repository.readInstanceAsset(def.id, blank.instance.instanceId, previousFilename)
+    ).resolves.toBeNull()
+  })
+
+  it('JSON 覆盖更新图片提示词但保留已绑定的图片值', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(contentWithImage())
+    await repository.saveInterface(def)
+    const app = createInterfaceApplication({ repository, fileDialog: new TestFileDialog(null) })
+    const blank = await app.published.createBlankInstance(def.id)
+    const withImage = await app.instances.save(def.id, blank.instance.instanceId, {
+      name: '图片题组',
+      values: { title: '旧标题', questionImage: '' },
+      imagePrompts: { questionImage: '旧提示词' },
+      imageFiles: { questionImage: PNG_BYTES }
+    })
+    const filename = withImage.instance.values.questionImage
+
+    const replaced = await app.instances.replaceFromJson(
+      def.id,
+      blank.instance.instanceId,
+      '{"title":"JSON 标题","picture":"JSON 图片提示词"}'
+    )
+
+    expect(replaced.status).toBe('replaced')
+    if (replaced.status === 'replaced') {
+      expect(replaced.instance.instance.values).toEqual({
+        title: 'JSON 标题',
+        questionImage: filename
+      })
+      expect(replaced.instance.instance.imagePrompts).toEqual({
+        questionImage: 'JSON 图片提示词'
+      })
+      expect(replaced.instance.assetUrls[filename]).toContain(filename)
+    }
+  })
+
+  it('拒绝非图片内容且不修改实例', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(contentWithImage())
+    await repository.saveInterface(def)
+    const app = createInterfaceApplication({ repository, fileDialog: new TestFileDialog(null) })
+    const blank = await app.published.createBlankInstance(def.id)
+
+    await expect(
+      app.instances.save(def.id, blank.instance.instanceId, {
+        name: '图片题组',
+        values: { title: '看图回答', questionImage: '' },
+        imageFiles: { questionImage: new TextEncoder().encode('not an image') }
+      })
+    ).rejects.toThrow('Only PNG, JPEG, GIF, and WebP images are supported')
+    expect((await app.instances.get(def.id, blank.instance.instanceId))?.instance.values).toEqual({
+      title: '',
+      questionImage: ''
+    })
   })
 
   it('在 Electron CSP 下以扁平流式任务句柄展示 AI 过程并覆盖当前实例', async () => {

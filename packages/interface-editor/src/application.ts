@@ -17,7 +17,13 @@ import { createInterfaceDraft, publishInterface } from './id'
 import { addNode, removeNode, renameNode, updateNode } from './mutations'
 import type { InterfaceRepository } from './repository'
 import { buildJsonExample, buildJsonSchema, validateJson } from './schema'
-import type { FieldNode, InterfaceContent, InterfaceDef, InterfaceDraft } from './types'
+import type {
+  FieldCollection,
+  FieldNode,
+  InterfaceContent,
+  InterfaceDef,
+  InterfaceDraft
+} from './types'
 import { validateInterfaceDef, type ValidationError } from './validation'
 
 export type PublishedInterfaceSource =
@@ -58,6 +64,9 @@ export interface InterfaceInstanceDetails {
 export interface InterfaceInstanceEdit {
   name: string
   values: Record<string, string>
+  imagePrompts?: Readonly<Record<string, string>>
+  /** 以图片变量名为 key；二进制表示新增或替换，null 表示移除，缺少 key 表示保留。 */
+  imageFiles?: Readonly<Record<string, Uint8Array | null>>
 }
 
 export interface InterfacePromptBundle {
@@ -286,11 +295,13 @@ export function createInterfaceApplication(
   ): Promise<InterfaceInstanceDetails | null> => {
     const stored = await repository.getInstance(interfaceId, instanceId)
     if (!stored) return null
+    const def = await requireInterface(repository, interfaceId)
+    const instance = normalizeImagePromptValues(def.fields, stored)
     const assetUrls: Record<string, string> = {}
     for (const filename of stored.assetFilenames) {
       assetUrls[filename] = await repository.getInstanceAssetUrl(interfaceId, instanceId, filename)
     }
-    return { interfaceId, instance: stored.instance, assetUrls }
+    return { interfaceId, instance, assetUrls }
   }
 
   const replaceFromJson = async (
@@ -308,9 +319,15 @@ export function createInterfaceApplication(
         return { status: 'invalid-json', errors: jsonErrors(validation.errors) }
       }
       const mapped = buildInstanceFromJson(def, validation.data)
+      const values = { ...mapped.values }
+      for (const varName of flattenImageVarNames(def.fields)) {
+        const currentValue = current.instance.values[varName]
+        values[varName] = current.assetFilenames.includes(currentValue) ? currentValue : ''
+      }
       await repository.updateInstance(interfaceId, {
         ...current.instance,
-        values: mapped.values
+        values,
+        imagePrompts: mapped.imagePrompts
       })
       return {
         status: 'replaced',
@@ -435,12 +452,85 @@ export function createInterfaceApplication(
       async save(interfaceId, instanceId, edit) {
         const release = acquireInstance(interfaceId, instanceId)
         try {
+          const def = await requireInterface(repository, interfaceId)
           const current = await requireInstance(repository, interfaceId, instanceId)
-          await repository.updateInstance(interfaceId, {
+          const imageVarNames = new Set(flattenImageVarNames(def.fields))
+          const selectedImages = edit.imageFiles ?? {}
+          const nextImagePrompts = {
+            ...(current.instance.imagePrompts ?? {}),
+            ...(edit.imagePrompts ?? {})
+          }
+          const selectedImageExtensions = new Map<string, string>()
+          for (const [varName, data] of Object.entries(selectedImages)) {
+            if (!imageVarNames.has(varName)) {
+              throw new Error(`Not an image variable: ${varName}`)
+            }
+            if (data === null) continue
+            assertSupportedImage(data)
+            selectedImageExtensions.set(varName, supportedImageExtension(data))
+          }
+          for (const [varName, prompt] of Object.entries(nextImagePrompts)) {
+            if (!imageVarNames.has(varName)) {
+              throw new Error(`Not an image variable: ${varName}`)
+            }
+            if (typeof prompt !== 'string') throw new TypeError('Image prompt must be a string')
+          }
+
+          const nextValues = { ...edit.values }
+          const replacedAssetNames = new Set<string>()
+          const selectedAssetData: Record<string, Uint8Array> = {}
+          const usedAssetNames = new Set(current.assetFilenames)
+
+          for (const varName of imageVarNames) {
+            if (!Object.hasOwn(selectedImages, varName)) continue
+            const previousValue = current.instance.values[varName]
+            if (current.assetFilenames.includes(previousValue)) {
+              replacedAssetNames.add(previousValue)
+            }
+
+            const selected = selectedImages[varName]
+            if (selected === null) {
+              nextValues[varName] = ''
+              continue
+            }
+            const filename = createImageFilename(
+              varName,
+              selectedImageExtensions.get(varName) as string,
+              usedAssetNames
+            )
+            usedAssetNames.add(filename)
+            selectedAssetData[filename] = new Uint8Array(selected)
+            nextValues[varName] = filename
+          }
+
+          const retainedAssetNames = new Set(
+            [...imageVarNames]
+              .map((varName) => nextValues[varName])
+              .filter((value) => current.assetFilenames.includes(value))
+          )
+          const instance = {
             ...current.instance,
             name: edit.name,
-            values: edit.values
-          })
+            values: nextValues,
+            imagePrompts: Object.keys(nextImagePrompts).length ? nextImagePrompts : undefined
+          }
+          const assetsChanged =
+            Object.keys(selectedImages).length > 0 || replacedAssetNames.size > 0
+          if (!assetsChanged) {
+            await repository.updateInstance(interfaceId, instance)
+          } else {
+            const nextAssets = await loadInstanceAssets(
+              repository,
+              interfaceId,
+              instanceId,
+              current
+            )
+            for (const filename of replacedAssetNames) {
+              if (!retainedAssetNames.has(filename)) delete nextAssets[filename]
+            }
+            Object.assign(nextAssets, selectedAssetData)
+            await repository.updateInstance(interfaceId, instance, nextAssets)
+          }
           return (await getInstanceDetails(interfaceId, instanceId)) as InterfaceInstanceDetails
         } finally {
           release()
@@ -547,6 +637,100 @@ export function createInterfaceApplication(
       }
     }
   }
+}
+
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024
+
+function flattenImageVarNames(fields: FieldCollection): string[] {
+  const result: string[] = []
+  for (const key of fields.order) {
+    const node = fields.nodes[key]
+    if (node.type === 'group') result.push(...flattenImageVarNames(node.children))
+    else if (node.type === 'image') result.push(node.varName)
+  }
+  return result
+}
+
+function normalizeImagePromptValues(
+  fields: FieldCollection,
+  stored: { instance: InterfaceInstance; assetFilenames: readonly string[] }
+): InterfaceInstance {
+  const values = { ...stored.instance.values }
+  const imagePrompts = { ...(stored.instance.imagePrompts ?? {}) }
+  for (const varName of flattenImageVarNames(fields)) {
+    const value = values[varName]
+    if (value && !stored.assetFilenames.includes(value) && !Object.hasOwn(imagePrompts, varName)) {
+      imagePrompts[varName] = value
+      values[varName] = ''
+    }
+  }
+  return {
+    ...stored.instance,
+    values,
+    imagePrompts: Object.keys(imagePrompts).length ? imagePrompts : undefined
+  }
+}
+
+async function loadInstanceAssets(
+  repository: InterfaceRepository,
+  interfaceId: string,
+  instanceId: string,
+  current: { assetFilenames: readonly string[] }
+): Promise<Record<string, Uint8Array>> {
+  const assets: Record<string, Uint8Array> = {}
+  for (const filename of current.assetFilenames) {
+    const data = await repository.readInstanceAsset(interfaceId, instanceId, filename)
+    if (!data) throw new Error(`Instance asset is missing: ${filename}`)
+    assets[filename] = data
+  }
+  return assets
+}
+
+function assertSupportedImage(data: Uint8Array): void {
+  if (!(data instanceof Uint8Array)) throw new TypeError('Image data must be a Uint8Array')
+  if (data.byteLength > MAX_IMAGE_BYTES) throw new Error('Image must not exceed 20 MB')
+  supportedImageExtension(data)
+}
+
+function supportedImageExtension(data: Uint8Array): 'png' | 'jpg' | 'gif' | 'webp' {
+  if (data.length >= 8 && samePrefix(data, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
+    return 'png'
+  }
+  if (data.length >= 3 && samePrefix(data, [0xff, 0xd8, 0xff])) return 'jpg'
+  if (
+    data.length >= 6 &&
+    (samePrefix(data, [0x47, 0x49, 0x46, 0x38, 0x37, 0x61]) ||
+      samePrefix(data, [0x47, 0x49, 0x46, 0x38, 0x39, 0x61]))
+  ) {
+    return 'gif'
+  }
+  if (
+    data.length >= 12 &&
+    samePrefix(data, [0x52, 0x49, 0x46, 0x46]) &&
+    sameAt(data, 8, [0x57, 0x45, 0x42, 0x50])
+  ) {
+    return 'webp'
+  }
+  throw new Error('Only PNG, JPEG, GIF, and WebP images are supported')
+}
+
+function createImageFilename(
+  varName: string,
+  extension: string,
+  existing: ReadonlySet<string>
+): string {
+  let filename = ''
+  do filename = `${varName}-${crypto.randomUUID()}.${extension}`
+  while (existing.has(filename))
+  return filename
+}
+
+function samePrefix(data: Uint8Array, expected: readonly number[]): boolean {
+  return sameAt(data, 0, expected)
+}
+
+function sameAt(data: Uint8Array, offset: number, expected: readonly number[]): boolean {
+  return expected.every((value, index) => data[offset + index] === value)
 }
 
 async function requireInterface(

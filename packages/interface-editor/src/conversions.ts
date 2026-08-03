@@ -83,8 +83,8 @@ export function buildVarManifest(def: InterfaceDef): InterfaceVarManifest {
  * 将 LLM 返回的 JSON 数据（已通过 schema 校验）映射为 InterfaceInstance。
  *
  * 映射过程：
- *   字段树叶子 → 其路径（如 "sectionA.sentences.s1"）定位 JSON 中的值
- *             → 以其 varName 作为 key 存入 values。
+ *   文本叶子 → 以 varName 作为 key 存入 values。
+ *   图片叶子 → values 中留空，并把生成提示词存入 imagePrompts。
  *
  * 调用方应确保 data 已通过 validateJson(schema, llmResponse) 校验。
  * 本函数不做重复校验。路径遍历失败时降级为空字符串，不会抛异常。
@@ -98,16 +98,24 @@ export function buildInstanceFromJson(
   name = '未命名实例'
 ): InterfaceInstance {
   const values: Record<string, string> = {}
+  const imagePrompts: Record<string, string> = {}
 
   for (const { path, leaf } of flattenFields(def.fields)) {
-    values[leaf.varName] = getValueAtPath(data, path)
+    const value = getValueAtPath(data, path)
+    if (leaf.type === 'image') {
+      values[leaf.varName] = ''
+      imagePrompts[leaf.varName] = value
+    } else {
+      values[leaf.varName] = value
+    }
   }
 
   return {
     instanceId: crypto.randomUUID(),
     name,
     generatedAt: new Date().toISOString(),
-    values
+    values,
+    imagePrompts: Object.keys(imagePrompts).length ? imagePrompts : undefined
   }
 }
 

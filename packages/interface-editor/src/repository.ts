@@ -529,6 +529,16 @@ export class FileInterfaceRepository implements InterfaceRepository {
     if (!sameStrings(expected, actual)) {
       throw invalidData('Instance values do not match the Interface variables')
     }
+    const imageVarNames = new Set(
+      flattenFields(def.fields)
+        .filter(({ leaf }) => leaf.type === 'image')
+        .map(({ leaf }) => leaf.varName)
+    )
+    for (const varName of Object.keys(instance.imagePrompts ?? {})) {
+      if (!imageVarNames.has(varName)) {
+        throw invalidData(`Image prompt does not match an image variable: ${varName}`)
+      }
+    }
   }
 
   private async readInstanceAt(
@@ -669,6 +679,9 @@ function assertInstance(value: InterfaceInstance): void {
   }
   if (Number.isNaN(Date.parse(value.generatedAt))) throw invalidData('generatedAt is invalid')
   if (!isStringRecord(value.values)) throw invalidData('Instance values must contain strings')
+  if (value.imagePrompts !== undefined && !isStringRecord(value.imagePrompts)) {
+    throw invalidData('Instance image prompts must contain strings')
+  }
 }
 
 function assertAssets(assets: Readonly<Record<string, Uint8Array>>): void {
@@ -743,6 +756,7 @@ function isStoredInstanceFile(value: unknown): value is StoredInstanceFile {
     typeof instance.generatedAt === 'string' &&
     !Number.isNaN(Date.parse(instance.generatedAt)) &&
     isStringRecord(instance.values) &&
+    (instance.imagePrompts === undefined || isStringRecord(instance.imagePrompts)) &&
     value.assets.every((item) => typeof item === 'string' && ASSET_FILENAME_PATTERN.test(item)) &&
     new Set(value.assets).size === value.assets.length
   )
@@ -754,6 +768,9 @@ function canonicalInstance(instance: InterfaceInstance): string {
     generatedAt: instance.generatedAt,
     values: Object.fromEntries(
       Object.entries(instance.values).sort(([a], [b]) => a.localeCompare(b))
+    ),
+    imagePrompts: Object.fromEntries(
+      Object.entries(instance.imagePrompts ?? {}).sort(([a], [b]) => a.localeCompare(b))
     )
   })
 }

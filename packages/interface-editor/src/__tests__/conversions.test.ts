@@ -291,12 +291,13 @@ describe('buildInstanceFromJson', () => {
     expect(instance.values).toEqual({ val: '' })
   })
 
-  it('image 字段值也转为字符串', () => {
+  it('image 字段将中间提示词与下游图片值分开', () => {
     const def = makeDef({
       fields: { pic: imageLeaf('img', '图片', 'ex') }
     })
     const instance = buildInstanceFromJson(def, { pic: 'https://example.com/img.png' })
-    expect(instance.values).toEqual({ img: 'https://example.com/img.png' })
+    expect(instance.values).toEqual({ img: '' })
+    expect(instance.imagePrompts).toEqual({ img: 'https://example.com/img.png' })
   })
 
   it('值中包含数字时转为字符串', () => {

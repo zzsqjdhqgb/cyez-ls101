@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type JSX } from 'react'
+import { imageClipboard } from '@ls101/clipboard/renderer'
 import type { TaskProgressHandle, TaskProgressItem } from '@ls101/core-types'
+import { fileDialog } from '@ls101/file-dialog/renderer'
 import type {
   FieldLeaf,
   InterfaceAIGenerationResult,
@@ -13,11 +15,14 @@ import {
   Bot,
   Braces,
   Check,
+  ClipboardPaste,
   Circle,
+  FolderOpen,
   Image as ImageIcon,
   LoaderCircle,
   RefreshCw,
   Save,
+  Trash2,
   X
 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -48,6 +53,12 @@ interface GenerationSession {
   startError: string | null
 }
 
+interface PendingImage {
+  name: string
+  data: Uint8Array
+  previewUrl: string
+}
+
 type AuxiliaryPanel = 'json' | 'ai' | null
 
 export function InterfaceInstanceEditorPage(): JSX.Element {
@@ -58,6 +69,8 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   const [details, setDetails] = useState<InterfaceInstanceDetails | null>(null)
   const [name, setName] = useState('')
   const [values, setValues] = useState<Record<string, string>>({})
+  const [imagePrompts, setImagePrompts] = useState<Record<string, string>>({})
+  const [pendingImages, setPendingImages] = useState<Record<string, PendingImage | null>>({})
   const [json, setJson] = useState('')
   const [panel, setPanel] = useState<AuxiliaryPanel>(null)
   const [jsonErrors, setJsonErrors] = useState<readonly InstanceDataError[]>([])
@@ -72,6 +85,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [confirmLeave, setConfirmLeave] = useState(false)
   const modelLoadId = useRef(0)
+  const previewUrls = useRef(new Set<string>())
 
   useEffect(() => {
     let active = true
@@ -85,6 +99,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
         setDetails(instance)
         setName(instance?.instance.name ?? '')
         setValues(instance?.instance.values ?? {})
+        setImagePrompts(instance?.instance.imagePrompts ?? {})
       })
       .catch((reason: unknown) => {
         if (active) setError(errorMessage(reason))
@@ -97,6 +112,14 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       modelLoadId.current += 1
     }
   }, [application, interfaceId, instanceId])
+
+  useEffect(
+    () => () => {
+      for (const url of previewUrls.current) URL.revokeObjectURL(url)
+      previewUrls.current.clear()
+    },
+    []
+  )
 
   const leaves = useMemo<LeafEntry[]>(() => {
     if (!definition) return []
@@ -113,6 +136,76 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   const updateValue = (varName: string, value: string): void => {
     setValues((current) => ({ ...current, [varName]: value }))
     setDirty(true)
+  }
+
+  const updateImagePrompt = (varName: string, value: string): void => {
+    setImagePrompts((current) => ({ ...current, [varName]: value }))
+    setDirty(true)
+  }
+
+  const removeImage = (varName: string): void => {
+    setPendingImages((current) => {
+      const selected = current[varName]
+      if (selected) {
+        URL.revokeObjectURL(selected.previewUrl)
+        previewUrls.current.delete(selected.previewUrl)
+      }
+      return { ...current, [varName]: null }
+    })
+    setDirty(true)
+  }
+
+  const discardAllPendingImages = (): void => {
+    for (const selected of Object.values(pendingImages)) {
+      if (!selected) continue
+      URL.revokeObjectURL(selected.previewUrl)
+      previewUrls.current.delete(selected.previewUrl)
+    }
+    setPendingImages({})
+  }
+
+  const stageImage = (varName: string, name: string, data: Uint8Array): void => {
+    const previewUrl = URL.createObjectURL(new Blob([new Uint8Array(data)]))
+    previewUrls.current.add(previewUrl)
+    setPendingImages((current) => {
+      const previous = current[varName]
+      if (previous) {
+        URL.revokeObjectURL(previous.previewUrl)
+        previewUrls.current.delete(previous.previewUrl)
+      }
+      return {
+        ...current,
+        [varName]: { name, data: new Uint8Array(data), previewUrl }
+      }
+    })
+    setDirty(true)
+  }
+
+  const chooseImageFile = async (varName: string): Promise<void> => {
+    setError(null)
+    try {
+      const selected = await fileDialog.readBinary({
+        title: '选择图片',
+        filters: [{ name: '图片', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }]
+      })
+      if (selected) stageImage(varName, selected.name, selected.data)
+    } catch (reason) {
+      setError(errorMessage(reason))
+    }
+  }
+
+  const chooseClipboardImage = async (varName: string): Promise<void> => {
+    setError(null)
+    try {
+      const data = await imageClipboard.readImage()
+      if (!data) {
+        toast.info('剪贴板中没有图片')
+        return
+      }
+      stageImage(varName, '剪贴板图片.png', data)
+    } catch (reason) {
+      setError(errorMessage(reason))
+    }
   }
 
   const loadModels = async (): Promise<void> => {
@@ -167,8 +260,10 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       const result = await handle.completion
       setGeneration((current) => (current ? { ...current, result } : current))
       if (result.status === 'completed') {
+        discardAllPendingImages()
         setDetails(result.instance)
         setValues(result.instance.instance.values)
+        setImagePrompts(result.instance.instance.imagePrompts ?? {})
         setDirty(false)
         toast.success('AI 生成内容已保存')
       } else if (result.status === 'invalid-response') {
@@ -186,9 +281,22 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
     setSaving(true)
     setError(null)
     try {
-      const saved = await application.instances.save(interfaceId, instanceId, { name, values })
+      const imageFiles = Object.fromEntries(
+        Object.entries(pendingImages).map(([varName, selected]) => [
+          varName,
+          selected?.data ?? null
+        ])
+      )
+      const saved = await application.instances.save(interfaceId, instanceId, {
+        name,
+        values,
+        imagePrompts,
+        imageFiles
+      })
+      discardAllPendingImages()
       setDetails(saved)
       setValues(saved.instance.values)
+      setImagePrompts(saved.instance.imagePrompts ?? {})
       setDirty(false)
       toast.success('题组已保存')
     } catch (reason) {
@@ -208,8 +316,10 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
         setJsonErrors(result.errors)
         return
       }
+      discardAllPendingImages()
       setDetails(result.instance)
       setValues(result.instance.instance.values)
+      setImagePrompts(result.instance.instance.imagePrompts ?? {})
       setDirty(false)
       setPanel(null)
       setJson('')
@@ -326,26 +436,46 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
             </div>
 
             <div className={styles.fields}>
-              {leaves.map(({ key, leaf, path }) => (
-                <label className={styles.valueField} key={path.join('.')}>
-                  <span className={styles.valueHeading}>
-                    <span>
-                      {leaf.type === 'image' ? <ImageIcon aria-hidden="true" /> : null}
-                      <strong>{key}</strong>
-                      <code>[@{leaf.varName}]</code>
+              {leaves.map(({ key, leaf, path }) => {
+                const imageEdited = Object.hasOwn(pendingImages, leaf.varName)
+                const existingImageUrl = details.assetUrls[values[leaf.varName] ?? '']
+                return (
+                  <section className={styles.valueField} key={path.join('.')}>
+                    <span className={styles.valueHeading}>
+                      <span>
+                        {leaf.type === 'image' ? <ImageIcon aria-hidden="true" /> : null}
+                        <strong>{key}</strong>
+                        <code>[@{leaf.varName}]</code>
+                      </span>
+                      <small>{path.slice(0, -1).join(' / ')}</small>
                     </span>
-                    <small>{path.slice(0, -1).join(' / ')}</small>
-                  </span>
-                  <span className={styles.description}>{leaf.description}</span>
-                  <textarea
-                    rows={leaf.type === 'image' ? 3 : 5}
-                    disabled={busy}
-                    value={values[leaf.varName] ?? ''}
-                    onChange={(event) => updateValue(leaf.varName, event.target.value)}
-                    placeholder={leaf.example}
-                  />
-                </label>
-              ))}
+                    <span className={styles.description}>{leaf.description}</span>
+                    {leaf.type === 'image' ? (
+                      <ImageValueInput
+                        disabled={busy}
+                        existingUrl={imageEdited ? undefined : existingImageUrl}
+                        fieldName={key}
+                        pending={pendingImages[leaf.varName] ?? undefined}
+                        prompt={imagePrompts[leaf.varName] ?? ''}
+                        promptPlaceholder={leaf.example}
+                        onChooseClipboard={() => void chooseClipboardImage(leaf.varName)}
+                        onChooseFile={() => void chooseImageFile(leaf.varName)}
+                        onPromptChange={(value) => updateImagePrompt(leaf.varName, value)}
+                        onRemove={() => removeImage(leaf.varName)}
+                      />
+                    ) : (
+                      <textarea
+                        aria-label={`${key} 内容`}
+                        rows={5}
+                        disabled={busy}
+                        value={values[leaf.varName] ?? ''}
+                        onChange={(event) => updateValue(leaf.varName, event.target.value)}
+                        placeholder={leaf.example}
+                      />
+                    )}
+                  </section>
+                )
+              })}
             </div>
           </section>
 
@@ -415,6 +545,88 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
         onCancel={() => setConfirmLeave(false)}
         onConfirm={() => navigate(`/interfaces/${encodeURIComponent(interfaceId)}`)}
       />
+    </div>
+  )
+}
+
+function ImageValueInput({
+  disabled,
+  existingUrl,
+  fieldName,
+  pending,
+  prompt,
+  promptPlaceholder,
+  onChooseClipboard,
+  onChooseFile,
+  onPromptChange,
+  onRemove
+}: {
+  disabled: boolean
+  existingUrl?: string
+  fieldName: string
+  pending?: PendingImage
+  prompt: string
+  promptPlaceholder: string
+  onChooseClipboard(): void
+  onChooseFile(): void
+  onPromptChange(value: string): void
+  onRemove(): void
+}): JSX.Element {
+  const previewUrl = pending?.previewUrl ?? existingUrl
+
+  return (
+    <div className={styles.imageInput}>
+      <label className={styles.imagePrompt}>
+        <span>提示词</span>
+        <textarea
+          aria-label={`${fieldName}图片提示词`}
+          rows={3}
+          disabled={disabled}
+          value={prompt}
+          onChange={(event) => onPromptChange(event.target.value)}
+          placeholder={promptPlaceholder}
+        />
+      </label>
+      <div className={styles.imageAssetInput}>
+        <span className={styles.imageInputLabel}>图片</span>
+        <div className={styles.imagePicker}>
+          <div className={styles.imagePreview} data-empty={!previewUrl}>
+            {previewUrl ? (
+              <img alt={`${fieldName}预览`} src={previewUrl} />
+            ) : (
+              <span>
+                <ImageIcon aria-hidden="true" />
+                尚未选择图片
+              </span>
+            )}
+          </div>
+          <div className={styles.imagePickerFooter}>
+            <span>{pending?.name ?? (existingUrl ? '已保存图片' : 'PNG、JPEG、GIF 或 WebP')}</span>
+            <div>
+              <Button icon={FolderOpen} size="small" disabled={disabled} onClick={onChooseFile}>
+                选择文件
+              </Button>
+              <Button
+                icon={ClipboardPaste}
+                size="small"
+                disabled={disabled}
+                onClick={onChooseClipboard}
+              >
+                从剪贴板读取
+              </Button>
+              {previewUrl ? (
+                <IconButton
+                  disabled={disabled}
+                  icon={Trash2}
+                  label="移除图片"
+                  variant="danger"
+                  onClick={onRemove}
+                />
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

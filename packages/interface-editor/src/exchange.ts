@@ -251,6 +251,15 @@ function assertExchangeInstance(
   ) {
     throw invalidPackage(`Instance values are invalid: ${instance.instanceId}`)
   }
+  if (
+    instance.imagePrompts !== undefined &&
+    (!instance.imagePrompts ||
+      typeof instance.imagePrompts !== 'object' ||
+      Array.isArray(instance.imagePrompts) ||
+      Object.values(instance.imagePrompts).some((item) => typeof item !== 'string'))
+  ) {
+    throw invalidPackage(`Instance image prompts are invalid: ${instance.instanceId}`)
+  }
   if (!assets || typeof assets !== 'object' || Array.isArray(assets)) {
     throw invalidPackage(`Instance assets are invalid: ${instance.instanceId}`)
   }
@@ -289,6 +298,9 @@ function canonicalInstance(instance: InterfaceInstance): string {
     generatedAt: instance.generatedAt,
     values: Object.fromEntries(
       Object.entries(instance.values).sort(([a], [b]) => a.localeCompare(b))
+    ),
+    imagePrompts: Object.fromEntries(
+      Object.entries(instance.imagePrompts ?? {}).sort(([a], [b]) => a.localeCompare(b))
     )
   })
 }

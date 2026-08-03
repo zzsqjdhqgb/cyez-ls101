@@ -307,19 +307,25 @@ interface InterfaceInstanceDetails {
 
 ### 整表保存
 
-`save()` 接收当前实例名称和全部变量值，不提供单字段保存。
+`save()` 接收当前实例名称、全部变量值、图片提示词中间值和可选的图片变量字节，不提供单字段保存。
 
 - `instanceId` 和所属 Interface 保持不变。
 - `name` 必须是非空字符串，只能由用户手动编辑。
 - values 的 key 集合必须与 Interface 的变量集合完全一致。
 - 未显式替换资源时保留现有实例资源和资源清单。
-- 保存通过写入同一个 `instance.json` 完成。
+- 图片字节只接受 PNG、JPEG、GIF 或 WebP，单张不得超过 20 MB。
+- 新图片由应用层按 `varName + UUID + 实际格式扩展名` 生成实例内文件名，并以该文件名覆盖对应 `values[varName]`。
+- 图片提示词独立保存在可选的 `imagePrompts[varName]` 中，只作为 Interface Editor 的操作中间值；其他模块从 `values` 获取图片，不把提示词当作变量值。
+- 修改或清空提示词不会改变图片。只有调用方显式提交图片移除操作时，`values[varName]` 才变为空字符串，旧资源若未被其他图片字段引用会一并删除。
+- 图片变化通过仓储的实例与完整 assets 更新路径保存，失败时恢复原实例和资源；普通文本保存仍只更新 `instance.json`。
 
-renderer 可以在页面内维护未保存表单状态，在用户执行保存时提交完整 `values`。
+renderer 可以在页面内维护未保存表单状态，在用户执行保存时提交完整 `values`、`imagePrompts` 和图片变更。
+
+手动编辑页为图片字段同时展示提示词输入和可选图片区域。图片可以通过系统文件对话框选择 PNG、JPEG、GIF 或 WebP，也可以通过 `@ls101/clipboard` 从系统剪贴板读取；选择后立即显示本地预览，但在用户点击题组“保存”前不会写入仓储。已有图片通过 `assetUrls[values[varName]]` 展示。提示词和图片可以同时保存，但系统不声明二者存在内容对应关系。
 
 ### JSON 覆盖
 
-`replaceFromJson()` 先解析 JSON，再使用 Interface 字段树生成的 JSON Schema 校验结构。校验由 TypeBox Value 解释执行，不依赖 `eval` 或 `Function` 动态代码生成，兼容 renderer 的严格 CSP。成功后将字段路径映射为 `varName -> value` 并覆盖当前实例全部值。
+`replaceFromJson()` 先解析 JSON，再使用 Interface 字段树生成的 JSON Schema 校验结构。校验由 TypeBox Value 解释执行，不依赖 `eval` 或 `Function` 动态代码生成，兼容 renderer 的严格 CSP。成功后，文本字段映射到 `values`；图片字段映射到 `imagePrompts`，已有图片 `values` 保持不变。
 
 ```typescript
 type ReplaceInstanceFromJsonResult =
@@ -517,10 +523,11 @@ interface InterfaceInstance {
   name: string
   generatedAt: string
   values: Record<string, string>
+  imagePrompts?: Record<string, string>
 }
 ```
 
-空白实例创建、手动保存、JSON 覆盖和 AI 覆盖都保留同一 UUID。实例 `name` 不进入 JSON Schema，JSON 和 AI 覆盖只修改 `values`。导入和 builtin 迁移也保留原 UUID 和名称。
+空白实例创建、手动保存、JSON 覆盖和 AI 覆盖都保留同一 UUID。实例 `name` 不进入 JSON Schema。JSON 和 AI 覆盖文本字段值并更新图片提示词，但不替换已有图片。导入和 builtin 迁移保留 UUID、名称和图片提示词编辑元数据。
 
 ### 物理分区
 

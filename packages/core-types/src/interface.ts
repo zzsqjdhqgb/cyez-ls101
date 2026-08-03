@@ -55,7 +55,10 @@ export interface InterfaceInstance {
 
   /**
    * 变量名到值的映射。
-   * 值始终为字符串——对于 image 类型字段，值为图片 URL 或本地文件路径。
+   * 值始终为字符串；对于 image 类型字段，值为图片 Asset 文件名或空字符串。
    */
   values: Record<string, string>
+
+  /** Interface Editor 保存的图片提示词中间值；下游模块不将其作为变量值使用。 */
+  imagePrompts?: Record<string, string>
 }

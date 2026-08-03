@@ -95,6 +95,92 @@
   resize: vertical;
 }
 
+.imageInput {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.imagePrompt,
+.imageAssetInput {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.imagePrompt > span,
+.imageInputLabel {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.imagePicker {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.imagePreview {
+  display: grid;
+  width: 100%;
+  min-height: 180px;
+  max-height: 420px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  place-items: center;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-subtle);
+}
+
+.imagePreview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.imagePreview > span {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.imagePreview > span svg {
+  width: 28px;
+  height: 28px;
+  color: var(--color-text-muted);
+}
+
+.imagePickerFooter {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+}
+
+.imagePickerFooter > span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.imagePickerFooter > div {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
 .fieldHeader {
   display: flex;
   align-items: center;
@@ -452,5 +538,14 @@
 
   .aiBody {
     padding: 16px;
+  }
+
+  .imagePickerFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .imagePickerFooter > div {
+    flex-wrap: wrap;
   }
 }

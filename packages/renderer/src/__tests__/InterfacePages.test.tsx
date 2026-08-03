@@ -19,7 +19,27 @@ import { InterfaceDraftListPage } from '../features/interfaces/InterfaceDraftLis
 import { InterfaceInstanceEditorPage } from '../features/interfaces/InterfaceInstanceEditorPage'
 import { InterfaceListPage } from '../features/interfaces/InterfaceListPage'
 
+const imageInputMocks = vi.hoisted(() => ({
+  readBinary: vi.fn(),
+  writeBinary: vi.fn(),
+  readClipboardImage: vi.fn()
+}))
+
+vi.mock('@ls101/file-dialog/renderer', () => ({
+  fileDialog: {
+    readBinary: imageInputMocks.readBinary,
+    writeBinary: imageInputMocks.writeBinary
+  }
+}))
+
+vi.mock('@ls101/clipboard/renderer', () => ({
+  imageClipboard: { readImage: imageInputMocks.readClipboardImage }
+}))
+
 afterEach(() => {
+  imageInputMocks.readBinary.mockReset()
+  imageInputMocks.writeBinary.mockReset()
+  imageInputMocks.readClipboardImage.mockReset()
   toast.dismiss()
   cleanup()
 })
@@ -312,6 +332,154 @@ describe('Interface pages', () => {
     expect(screen.queryByRole('complementary', { name: 'AI 生成' })).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'AI 生成进度' })).not.toBeInTheDocument()
     expect(screen.getByDisplayValue('AI 新题目')).toBeEnabled()
+  })
+
+  it('keeps image prompts while selecting, replacing, and removing an image', async () => {
+    const interfaceId = `sha256:${'d'.repeat(64)}`
+    const instanceId = '20000000-0000-4000-8000-000000000003'
+    const definition = {
+      ...draft,
+      id: interfaceId,
+      fields: {
+        order: ['picture'],
+        nodes: {
+          picture: {
+            type: 'image' as const,
+            varName: 'questionImage',
+            description: '题目配图',
+            example: '一名学生站在操场上'
+          }
+        }
+      }
+    }
+    const initial = {
+      interfaceId,
+      instance: {
+        instanceId,
+        name: '图片题组',
+        generatedAt: '2026-08-03T00:00:00.000Z',
+        values: { questionImage: '' },
+        imagePrompts: { questionImage: '原始图片提示词' }
+      },
+      assetUrls: {}
+    }
+    const fileBytes = new Uint8Array([1, 2, 3])
+    const clipboardBytes = new Uint8Array([4, 5, 6])
+    imageInputMocks.readBinary.mockResolvedValue({ name: 'local.png', data: fileBytes })
+    imageInputMocks.readClipboardImage.mockResolvedValue(clipboardBytes)
+    const createObjectURL = vi
+      .spyOn(URL, 'createObjectURL')
+      .mockReturnValueOnce('blob:file-preview')
+      .mockReturnValueOnce('blob:clipboard-preview')
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
+    let savedFilename = ''
+    const save = vi.fn().mockImplementation(
+      async (
+        _interfaceId: string,
+        _instanceId: string,
+        edit: {
+          values: Record<string, string>
+          imagePrompts?: Record<string, string>
+          imageFiles?: Record<string, Uint8Array | null>
+        }
+      ) => {
+        if (Object.hasOwn(edit.imageFiles ?? {}, 'questionImage')) {
+          savedFilename = edit.imageFiles?.questionImage ? 'questionImage-saved.png' : ''
+        }
+        return {
+          ...initial,
+          instance: {
+            ...initial.instance,
+            values: { questionImage: savedFilename },
+            imagePrompts: edit.imagePrompts
+          },
+          assetUrls: savedFilename ? { [savedFilename]: `asset://local/${savedFilename}` } : {}
+        }
+      }
+    )
+    const app = application({
+      published: { get: vi.fn().mockResolvedValue({ definition, source: { type: 'published' } }) },
+      instances: {
+        get: vi.fn().mockResolvedValue(initial),
+        listAIGenerationModels: vi.fn().mockResolvedValue([]),
+        save,
+        replaceFromJson: vi.fn(),
+        startAIGeneration: vi.fn()
+      }
+    })
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/interfaces/${interfaceId}/instances/${instanceId}`]}>
+          <Routes>
+            <Route
+              path="/interfaces/:interfaceId/instances/:instanceId"
+              element={<InterfaceInstanceEditorPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByDisplayValue('原始图片提示词')).toBeInTheDocument()
+    expect(screen.getByText('尚未选择图片')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '选择文件' }))
+    await waitFor(() => expect(imageInputMocks.readBinary).toHaveBeenCalledOnce())
+    expect(await screen.findByAltText('picture预览')).toHaveAttribute('src', 'blob:file-preview')
+
+    fireEvent.click(screen.getByRole('button', { name: '从剪贴板读取' }))
+    await waitFor(() => expect(imageInputMocks.readClipboardImage).toHaveBeenCalledOnce())
+    expect(await screen.findByAltText('picture预览')).toHaveAttribute(
+      'src',
+      'blob:clipboard-preview'
+    )
+    expect(screen.getByText('剪贴板图片.png')).toBeInTheDocument()
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:file-preview')
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(save).toHaveBeenCalledOnce())
+    expect(save).toHaveBeenCalledWith(interfaceId, instanceId, {
+      name: '图片题组',
+      values: { questionImage: '' },
+      imagePrompts: { questionImage: '原始图片提示词' },
+      imageFiles: { questionImage: clipboardBytes }
+    })
+    expect(await screen.findByAltText('picture预览')).toHaveAttribute(
+      'src',
+      'asset://local/questionImage-saved.png'
+    )
+
+    expect(screen.getByDisplayValue('原始图片提示词')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('picture图片提示词'), {
+      target: { value: '新的图片提示词' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(2))
+    expect(save).toHaveBeenLastCalledWith(interfaceId, instanceId, {
+      name: '图片题组',
+      values: { questionImage: 'questionImage-saved.png' },
+      imagePrompts: { questionImage: '新的图片提示词' },
+      imageFiles: {}
+    })
+    expect(screen.getByAltText('picture预览')).toHaveAttribute(
+      'src',
+      'asset://local/questionImage-saved.png'
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '移除图片' }))
+    expect(screen.getByDisplayValue('新的图片提示词')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(3))
+    expect(save).toHaveBeenLastCalledWith(interfaceId, instanceId, {
+      name: '图片题组',
+      values: { questionImage: 'questionImage-saved.png' },
+      imagePrompts: { questionImage: '新的图片提示词' },
+      imageFiles: { questionImage: null }
+    })
+    expect(screen.queryByAltText('picture预览')).not.toBeInTheDocument()
+    expect(screen.getByDisplayValue('新的图片提示词')).toBeInTheDocument()
+    expect(createObjectURL).toHaveBeenCalledTimes(2)
   })
 
   it('keeps AI failures in the AI pane and allows retrying', async () => {
