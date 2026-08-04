@@ -1,5 +1,17 @@
 // @ls101/template-editor - 低代码图形化 Template 编辑器领域 API
 
+export { createTemplateApplication, TemplateApplicationError } from './application'
+export type {
+  EmbeddedFunctionResult,
+  FunctionDocumentApplication,
+  FunctionSummary,
+  TemplateApplication,
+  TemplateApplicationDependencies,
+  TemplateBrowserApplication,
+  TemplateDocumentApplication,
+  TemplateSummary
+} from './application'
+
 export {
   canonicalizeFunctionContent,
   createFunctionDocument,

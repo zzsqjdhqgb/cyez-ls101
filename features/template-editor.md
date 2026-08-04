@@ -2,7 +2,7 @@
 
 ## 功能状态
 
-`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 与 Function 工作文档身份、内嵌函数资源身份、严格语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。当前没有实现仓储、函数资源复制操作或 renderer 页面。
+`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 与 Function 工作文档身份、文件仓储、内嵌函数资源管理、应用门面、严格语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。当前没有实现 renderer 页面或最终试卷文件封装。
 
 ## 已实现边界
 
@@ -30,6 +30,22 @@ Template 不区分草稿和发布状态。`createTemplateDocument()` 生成稳�
 - `createFunctionResource()`：生成带内容 ID 的内嵌函数快照。
 - `verifyFunctionResourceId()`：复算函数资源 ID 并检测正文篡改。
 - `canonicalizeFunctionContent()`：生成稳定的函数正文规范表示。
+
+## 仓储
+
+`TemplateRepository` 同时管理 Template 和 Function 工作文档。`FileTemplateRepository` 使用 `@ls101/file-store` 兼容的作用域存储，布局为 `templates/<templateId>/template.json` 和 `functions/<functionId>/function.json`；适配器从 `@ls101/template-editor/adapters` 导出。
+
+工作文档保存允许名称、DSL 和绑定处于业务不完整状态。仓储只负责持久化边界完整性：UUID v4、顶层数据结构、JSON 编辑器状态、内嵌函数资源 ID 唯一性及资源内容哈希。读取时执行相同检查，损坏数据通过 `TemplateRepositoryError` 的 `INVALID_ID` 或 `INVALID_DATA` 返回。删除 Template 或函数源文档会清除对应工作目录；已嵌入其他 Template 的函数快照不受源函数删除影响。
+
+## 应用门面
+
+`createTemplateApplication()` 提供浏览、Template 工作文档和 Function 工作文档三个分区。创建操作立即生成 UUID 并保存；获取、整份保存和删除直接对应仓储操作。
+
+`templates.embedFunction(templateId, functionId)` 递归读取函数库源文档，从叶子开始复制完整依赖闭包，把嵌套调用从源函数 UUID 改写为内嵌资源内容 ID，并把资源合并回 Template。同内容资源按哈希去重；递归依赖、源函数缺失和理论上的哈希碰撞通过结构化 `TemplateApplicationError` 返回。操作返回根资源的 `functionRef`，供编辑器创建或更新函数调用节点。
+
+`templates.pruneFunctionResources()` 从 Template 根节点遍历嵌套函数引用，只保留传递可达的资源。清理是显式操作，因此编辑器可以在“复制资源”和“写入调用节点”之间保存中间状态。
+
+`templates.validate()` 和 `templates.compile()` 会根据当前 Template 收集 Interface 与 Schema 身份，通过调用方提供的跨模块查询函数取得清单。编译时再把 Interface 实例选择及仓储定位器交给底层异步编译器。Schema Editor 尚未实现实际查询 API，当前通过窄依赖接口接入。
 
 ## 严格语义校验
 
@@ -70,12 +86,11 @@ Template 不区分草稿和发布状态。`createTemplateDocument()` 生成稳�
 
 工作文档允许保存不完整状态；编译入口会自行执行严格校验。以下能力尚未实现：
 
-- Template 和 Function 工作文档仓储，以及调用方把 Interface 仓储的 `findInstance()` 适配为编译所需实例定位器。
-- 复制函数完整依赖闭包、改写内部引用、按哈希去重和清理不可达资源的应用操作。
-- 工作文档保存、预览和导出的应用服务工作流。
+- renderer 对 Template 应用门面的注册，以及图形化 DSL 编辑器。
+- Interface 应用/仓储的实例定位适配器和 Schema Editor 的评分块清单适配器。
+- 编辑器节点级变更、撤销/重做和编译错误文案及定位交互。
 - `ExamPackage` 的文件封装、资源复制和持久化格式。
-- renderer 图形化 DSL 编辑器及编译错误文案和定位交互。
 
 ## 验证覆盖
 
-单元测试覆盖工作文档 UUID、函数资源内容 ID 与入口级篡改检测、完整结构化错误契约、依赖与表达式类型、函数作用域及重命名、Schema 完整绑定、函数递归、Collector 跨函数收集、分页、视图范围和全局候选约束。编译测试额外覆盖完整 Player/Schema 输出、重复及嵌套函数调用、函数内部相对与绝对 focus、函数内部 Schema 展开、number/file/audio 出参、全局录音索引、跨调用静态值循环、多 Interface/Schema 隔离、仓储归属验证和校验错误透传。
+单元测试覆盖工作文档 CRUD、仓储完整性、函数依赖闭包复制与去重、源删除隔离、递归拒绝、不可达资源清理、应用层依赖组装、工作文档 UUID、函数资源内容 ID 与入口级篡改检测、完整结构化错误契约、函数作用域、Schema 绑定、Collector 和视图约束。编译测试额外覆盖完整 Player/Schema 输出、重复及嵌套函数调用、函数内部相对与绝对 focus、函数内部 Schema 展开、number/file/audio 出参、全局录音索引、跨调用静态值循环、多 Interface/Schema 隔离、仓储归属验证和校验错误透传。
