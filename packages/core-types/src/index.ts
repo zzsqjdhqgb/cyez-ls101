@@ -5,6 +5,12 @@
 // 各包内部的领域类型（InterfaceDef、SectionDef 等）定义在各自的包中。
 
 export type { InterfaceVarInfo, InterfaceVarManifest, InterfaceInstance } from './interface'
+export type {
+  SchemaFieldType,
+  SchemaFieldDef,
+  SchemaBlockManifest,
+  SchemaBlockManifestEntry
+} from './schema'
 export type { TaskProgressItem, TaskProgressSnapshot, TaskProgressHandle } from './task-progress'
 export { WINDOW_CONTROL_CHANNELS, WINDOW_CONTROL_EVENTS } from './window-controls'
 export type { WindowControlsBridge } from './window-controls'

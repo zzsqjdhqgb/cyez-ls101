@@ -1373,6 +1373,7 @@ __metadata:
     "@ls101/core-types": "workspace:*"
     "@ls101/editor-kit": "workspace:*"
     "@ls101/section-engine": "workspace:*"
+    fast-json-stable-stringify: "npm:^2.1.0"
   peerDependencies:
     react: ^19
     react-dom: ^19

@@ -61,7 +61,7 @@ interface PageNode extends BaseNode {
 interface FunctionNode extends BaseNode {
   type: 'function'
   functionRef: string
-  inputs: Record<string, ValueExpression>
+  inputs: Record<string, StaticValueExpression>
 }
 
 interface ChoiceQuestionNode extends BaseNode {
@@ -163,6 +163,13 @@ type ValueExpression<T extends ValueType = ValueType> =
   | { type: T; source: 'literal'; value: T extends 'string' ? string : T extends 'number' ? number : string }
   | { type: T; source: 'variable'; ref: VariableRef }
 
+type StringExpression = ValueExpression<'string'> | TextExpression
+
+type StaticValueExpression =
+  | StringExpression
+  | ValueExpression<'number'>
+  | ValueExpression<'file'>
+
 type VariableRef =
   | { scope: 'interface'; alias: string; varName: string }
   | { scope: 'local'; name: string }
@@ -198,7 +205,7 @@ interface FunctionOutputDef {
 }
 
 type OutputExpression =
-  | ValueExpression
+  | StaticValueExpression
   | { type: 'audio'; source: 'record-output'; name: string }
   | { type: 'choice'; source: 'choice-output'; name: string }
 ~~~
@@ -211,7 +218,7 @@ type OutputExpression =
 interface FunctionNode extends BaseNode {
   type: 'function'
   functionRef: string
-  inputs: Record<string, ValueExpression>
+  inputs: Record<string, StaticValueExpression>
 }
 ~~~
 
