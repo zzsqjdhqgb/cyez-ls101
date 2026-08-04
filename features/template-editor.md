@@ -2,7 +2,7 @@
 
 ## 功能状态
 
-`@ls101/template-editor` 已实现 UI 无关的作者态领域类型，以及 Template 草稿、发布和内容身份纯函数。当前没有实现仓储、编辑操作、完整语义校验、函数展开、试卷包编译或 renderer 页面。
+`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 草稿与内容身份纯函数，以及基于外部依赖清单的发布语义校验。当前没有实现仓储、编辑操作、试卷包编译或 renderer 页面。
 
 ## 已实现边界
 
@@ -11,7 +11,7 @@
 - 页面、框架、函数调用和选择题单题四种 DSL 节点。
 - 页面内容块、线性时间线和选择题视图控制。
 - `string | number | file` 静态参数表达式，以及 `audio | choice` 运行期输出。
-- 函数输入、手动出参和局部输出引用。
+- 函数输入、手动出参、局部输出引用，以及调用点出参名称重定向。
 - 带 `schemaId + blockId` 强关联的评分块消费与字段绑定。
 - 多 Interface 依赖、命名空间和导出时实例选择 DTO。
 - `TemplateContent`、`TemplateDraft`、`TemplateDef` 和发布状态。
@@ -31,16 +31,33 @@ Schema Editor 向 Template Editor 提供的 `SchemaBlockManifest` 位于 `@ls101
 - `verifyTemplateId()`：复算已发布内容 ID。
 - `compareTemplateIdentity()`：区分相同内容、不同 ID 和同 ID 内容冲突。
 
+## 发布语义校验
+
+`validateTemplateContent(content, context)` 接收 Template 正文，以及只读的 Interface 变量清单、Schema 评分块清单和函数定义列表。返回稳定错误代码、字段路径和参数，不生成面向用户的错误文案。
+
+校验器按 Template 根或函数定义建立局部作用域，框架本身不创建隐式作用域。函数调用必须完整填写输入，并通过 `outputNames` 将每个手动出参重命名到调用方作用域；同一函数可以因此被多次调用。函数内部 Schema 消费随实际调用展开，但调用方不能改写其绑定。
+
+当前校验覆盖：
+
+- Interface 别名、依赖、acceptedVars 和变量类型。
+- 节点、内容块、选项、局部变量和 Schema use 的唯一性。
+- 页面、时间线、文本插值、函数输入与出参的变量解析和类型匹配。
+- Schema、评分块、完整字段绑定及 text/audio/choice 类型匹配。
+- 函数缺失、输入/出参映射完整性和递归调用。
+- ChoiceCollector 嵌套、全卷唯一候选、分页字面量、题数总和和未收集题目。
+- 选择题视图是否具有唯一 ChoiceMeta，以及 free/range 页码范围。
+- 展开后的 Template 是否至少消费一个 Schema 评分块。
+
 ## 未实现边界
 
-当前类型允许表达草稿的中间状态，但不会执行发布校验。以下规则仍需由后续语义校验器和编译器实现：
+当前类型仍允许表达不完整的草稿；调用方只在发布前执行严格校验。以下规则需要后续编译器或应用层实现：
 
-- 节点 ID、局部变量名、Interface 别名和 Schema `useId` 唯一性。
-- 函数输入完整性、变量类型匹配和 Schema 字段完整绑定。
-- ChoiceCollector 的数量、嵌套、分页总数和全局唯一 ChoiceMeta。
-- `focus/range` 引用解析、函数展开和运行期索引分配。
+- `focus.questionRef` 的函数调用路径展开和最终全局题目身份解析。
+- 函数、页面、选择题和 Schema 映射的实际展开及运行期索引分配。
+- 静态函数出参的完整依赖图求值和跨调用循环检测。
 - InterfaceInstance 归属校验及最终 ExamPackage 生成。
+- 草稿仓储、发布工作流和 renderer 编辑器。
 
 ## 验证覆盖
 
-单元测试覆盖内容 ID 格式与稳定性、数组顺序、字符串规范化、依赖身份变化、篡改检测、身份冲突分类和草稿/发布字段隔离。类型构造测试覆盖页面、选择题、函数 choice 出参和 Schema choice 绑定。
+单元测试覆盖内容 ID、草稿/发布身份、依赖与表达式类型、函数作用域及重命名、Schema 完整绑定、函数递归、Collector 跨函数收集、分页、视图范围和全局候选约束。

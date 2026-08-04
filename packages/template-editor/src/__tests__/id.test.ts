@@ -58,7 +58,8 @@ describe('Template 内容身份', () => {
           id: 'function-call',
           type: 'function',
           functionRef: `sha256:${'5'.repeat(64)}`,
-          inputs: {}
+          inputs: {},
+          outputNames: {}
         }
       ])
     })

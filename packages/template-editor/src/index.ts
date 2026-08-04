@@ -12,4 +12,11 @@ export {
 } from './id'
 
 export type { TemplateIdentityComparison } from './id'
+export { validateTemplateContent } from './validation'
+export type {
+  TemplateValidationContext,
+  TemplateValidationError,
+  TemplateValidationErrorCode,
+  TemplateValidationResult
+} from './validation'
 export type * from './types'

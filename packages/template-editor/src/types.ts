@@ -186,6 +186,8 @@ export interface FunctionNode extends BaseNode {
   /** 引用不可变 FunctionDef 的内容 ID。 */
   functionRef: string
   inputs: Record<string, StaticValueExpression>
+  /** key 是函数出参名，value 是该次调用在调用方作用域中暴露的名称。 */
+  outputNames: Record<string, string>
 }
 
 export interface ChoiceQuestionNode extends BaseNode {
@@ -201,7 +203,6 @@ export interface ChoiceOptionDef {
 }
 
 export interface ChoiceCollectorConfig {
-  id: string
   pages: ChoicePageSpec[]
 }
 

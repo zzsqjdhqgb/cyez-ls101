@@ -62,6 +62,7 @@ interface FunctionNode extends BaseNode {
   type: 'function'
   functionRef: string
   inputs: Record<string, StaticValueExpression>
+  outputNames: Record<string, string>
 }
 
 interface ChoiceQuestionNode extends BaseNode {
@@ -219,10 +220,11 @@ interface FunctionNode extends BaseNode {
   type: 'function'
   functionRef: string
   inputs: Record<string, StaticValueExpression>
+  outputNames: Record<string, string>
 }
 ~~~
 
-调用函数时，调用方为每个函数输入提供一个表达式。函数出参以其声明的名称加入调用方的局部命名空间。
+调用函数时，调用方为每个函数输入提供一个表达式，并通过 outputNames 为每个函数出参指定调用方局部命名空间中的名称。新增调用节点时系统自动生成不冲突的默认名称，用户可以编辑；同一函数因此可以被多次调用而不产生固定出参名冲突。
 
 ## 七、选择题
 
@@ -250,7 +252,6 @@ interface ChoiceOptionDef {
 }
 
 interface ChoiceCollectorConfig {
-  id: string
   pages: ChoicePageSpec[]
 }
 

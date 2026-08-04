@@ -23,5 +23,5 @@
 | 通用长耗时任务进度       | `@ls101/core-types`                      | 跨模块契约已实现，Interface 已产生实际句柄              | [task-progress.md](task-progress.md)         |
 | AI 文本与图像路由        | `@ls101/airouter`、renderer              | 文本流、独立图像 Provider 和全局手动生图模式已接入      | [ai-router.md](ai-router.md)                 |
 | Interface 领域与应用 API | `@ls101/interface-editor`                | 领域、仓储和应用门面已实现，renderer 与真实 AI 尚未接线 | [interface-editor.md](interface-editor.md)   |
-| Template 核心领域模型    | `@ls101/template-editor`                 | 作者态类型和内容身份已实现，校验、编译和 UI 尚未实现    | [template-editor.md](template-editor.md)     |
+| Template 核心领域模型    | `@ls101/template-editor`                 | 作者态类型、内容身份和发布语义校验已实现                | [template-editor.md](template-editor.md)     |
 | 应用外壳与注册式导航     | `@ls101/renderer`、Electron main/preload | 基础外壳、窗口控制、路由注册和轻量 UI 组件已实现        | [application-shell.md](application-shell.md) |
