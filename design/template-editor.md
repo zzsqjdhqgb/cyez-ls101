@@ -418,11 +418,11 @@ Template 本身不计算内容哈希。只有 `resources.functions` 中的内嵌
 
 ## 十一、预览与导出
 
-预览和正式导出都需要为每个 Interface 别名临时选择一个实例。选择结果不写入 Template。
+预览和正式导出都需要为每个 Interface 别名临时选择一个实例。选择结果不写入 Template。异步编译入口通过调用方提供的 Interface 仓储定位器按 `instanceId` 获取唯一定位结果，不直接信任选择 DTO 中自行声明的 `interfaceId`；定位结果的真实归属、选择结果和 Template requirement 必须三者一致。
 
 导出流程：
 
-1. 为所有 Interface 别名选择并校验 InterfaceInstance。
+1. 为所有 Interface 别名选择 InterfaceInstance，并通过仓储定位器校验实例存在且归属正确。
 2. 解析 Interface 变量、函数输入、页面参数和 Schema 表达式。
 3. 展开框架和函数，平行收集页面、选择题单题节点和 Schema 依赖。
 4. 由唯一 ChoiceCollector 生成 choiceMetaCandidate，校验分页数量并提升为全局 ChoiceMeta。

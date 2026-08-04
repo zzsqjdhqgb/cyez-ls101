@@ -1,4 +1,5 @@
 import type { TemplateContent, TemplateDocument } from './types'
+import { deriveFunctionResourceId, isFunctionResourceId } from './id'
 import { analyzeChoiceFrame, validateChoiceResult } from './validation/choice'
 import {
   addError,
@@ -6,6 +7,7 @@ import {
   validateInterfaceRequirements,
   type TemplateDocumentValidationContext,
   type TemplateValidationContext,
+  type TemplateValidationError,
   type TemplateValidationResult
 } from './validation/shared'
 import { validateDefinitionScope } from './validation/scope'
@@ -18,14 +20,39 @@ export type {
   TemplateValidationResult
 } from './validation/shared'
 
-export function validateTemplateDocument(
+export async function validateTemplateDocument(
   document: TemplateDocument,
   context: TemplateDocumentValidationContext
-): TemplateValidationResult {
-  return validateTemplateContent(document.content, {
+): Promise<TemplateValidationResult> {
+  const resourceErrors = await Promise.all(
+    document.resources.functions.map(
+      async (resource, index): Promise<TemplateValidationError | undefined> => {
+        const path = `resources.functions[${index}].id`
+        if (!isFunctionResourceId(resource.id)) {
+          return {
+            path,
+            code: 'INVALID_FUNCTION_RESOURCE_ID' as const,
+            params: { id: resource.id }
+          }
+        }
+
+        const expected = await deriveFunctionResourceId(resource)
+        return resource.id === expected
+          ? undefined
+          : {
+              path,
+              code: 'FUNCTION_RESOURCE_ID_MISMATCH' as const,
+              params: { actual: resource.id, expected }
+            }
+      }
+    )
+  )
+  const semantic = validateTemplateContent(document.content, {
     ...context,
     functions: document.resources.functions
   })
+  const errors = [...resourceErrors.filter((error) => error !== undefined), ...semantic.errors]
+  return errors.length === 0 ? { valid: true, errors: [] } : { valid: false, errors }
 }
 
 export function validateTemplateContent(

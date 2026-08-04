@@ -98,7 +98,12 @@ function analyzeChoiceNode(
     case 'function': {
       const func = state.functionsById.get(node.functionRef)
       if (!func || functionStack.includes(func.id)) return emptyChoiceAnalysis()
-      return analyzeChoiceFrame(func.body, `${path}.function`, [...functionStack, func.id], state)
+      return analyzeChoiceFrame(
+        func.body,
+        `${path}.function.body`,
+        [...functionStack, func.id],
+        state
+      )
     }
   }
 }

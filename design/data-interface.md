@@ -223,6 +223,8 @@ interface ExportInterfaceInstanceSelection {
 
 导出或预览时，调用方必须为每个 alias 提供一个选择结果。
 
+编译入口不直接信任选择结果中的 `interfaceId`。调用方还必须提供按 `instanceId` 返回唯一仓储定位结果的异步定位器；编译器比较定位结果中的真实 `interfaceId`、Template requirement 和选择结果三者，并从定位结果读取实例值。
+
 Template 是使用稳定 UUID 的可编辑工作文档，不区分草稿和发布状态。它保存完整正文、编辑器私有状态，以及当前引用函数的自包含资源闭包：
 
 ~~~typescript

@@ -313,7 +313,7 @@ function validateFunctionCall(
     func.schemaUses,
     func.inputs,
     func.outputs,
-    `${path}.function`,
+    `${path}.function.body`,
     [...functionStack, func.id],
     state
   )

@@ -7,21 +7,30 @@ import type {
   SchemaBlockManifest,
   SchemaUsageExport
 } from '@ls101/core-types'
-import type { FunctionDef, TemplateValueType, ValueType } from '../types'
+import type {
+  ExportInterfaceInstanceSelection,
+  FunctionDef,
+  TemplateValueType,
+  ValueType
+} from '../types'
 import type {
   TemplateDocumentValidationContext,
   TemplateValidationError
 } from '../validation/shared'
 
-export interface TemplateInterfaceBinding {
-  alias: string
-  /** InterfaceInstance 的仓储归属；必须与 Template requirement 一致。 */
+export type TemplateInterfaceBinding = ExportInterfaceInstanceSelection
+
+/** Interface 仓储按 instanceId 返回的唯一定位结果。 */
+export interface LocatedInterfaceInstance {
   interfaceId: string
   instance: InterfaceInstance
 }
 
 export interface TemplateCompileContext extends TemplateDocumentValidationContext {
   interfaceBindings: readonly TemplateInterfaceBinding[]
+  locateInterfaceInstance(
+    instanceId: string
+  ): LocatedInterfaceInstance | null | Promise<LocatedInterfaceInstance | null>
 }
 
 export type TemplateCompileErrorCode =
@@ -29,6 +38,7 @@ export type TemplateCompileErrorCode =
   | 'MISSING_INTERFACE_BINDING'
   | 'UNKNOWN_INTERFACE_BINDING'
   | 'INTERFACE_BINDING_ID_MISMATCH'
+  | 'INTERFACE_INSTANCE_NOT_FOUND'
   | 'MISSING_INTERFACE_VALUE'
   | 'STATIC_VALUE_CYCLE'
   | 'UNRESOLVED_VALUE'

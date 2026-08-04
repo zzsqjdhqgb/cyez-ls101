@@ -1,5 +1,15 @@
-import { describe, expect, it } from 'vitest'
-import type { ChoiceQuestionNode, FunctionDef, PageNode, SchemaUse, TemplateNode } from '../types'
+import { describe, expect, expectTypeOf, it } from 'vitest'
+import type {
+  ChoiceOutputExpression,
+  ChoiceQuestionNode,
+  FunctionDef,
+  FunctionOutputDef,
+  PageNode,
+  SchemaUse,
+  StaticValueExpression,
+  TemplateNode,
+  ValueExpression
+} from '../types'
 import { number, root, text } from './fixtures'
 
 describe('Template 核心类型', () => {
@@ -92,5 +102,46 @@ describe('Template 核心类型', () => {
 
     expect(use.schemaId).toMatch(/^sha256:/)
     expect(use.bindings.answer.type).toBe('choice-output')
+  })
+
+  it('在编译期拒绝非法的表达式组合', () => {
+    const numberExpression: ValueExpression<'number'> = {
+      type: 'number',
+      source: 'literal',
+      value: 10
+    }
+    const choiceExpression: ChoiceOutputExpression = {
+      type: 'choice',
+      source: 'choice-output',
+      name: 'answer'
+    }
+    const audioOutput: FunctionOutputDef = {
+      name: 'recording',
+      type: 'audio',
+      expression: { type: 'audio', source: 'record-output', name: 'recording-1' }
+    }
+
+    expectTypeOf(numberExpression).toMatchTypeOf<StaticValueExpression>()
+    expectTypeOf(choiceExpression).not.toMatchTypeOf<StaticValueExpression>()
+    expectTypeOf(audioOutput).toMatchTypeOf<FunctionOutputDef>()
+
+    const invalidNumber: ValueExpression<'number'> = {
+      type: 'number',
+      source: 'literal',
+      // @ts-expect-error number 字面量不能保存 string
+      value: '10'
+    }
+    // @ts-expect-error choice 是运行期值，不能作为静态函数输入
+    const invalidStatic: StaticValueExpression = choiceExpression
+    const invalidAudioOutput: FunctionOutputDef = {
+      name: 'recording',
+      type: 'audio',
+      // @ts-expect-error audio 出参必须引用 record-output
+      expression: { type: 'string', source: 'literal', value: 'recording.mp3' }
+    }
+
+    expect(invalidNumber.type).toBe('number')
+    expect(invalidStatic.type).toBe('choice')
+    expect(invalidAudioOutput.type).toBe('audio')
   })
 })

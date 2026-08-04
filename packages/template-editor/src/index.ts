@@ -17,7 +17,8 @@ export type {
   TemplateCompileError,
   TemplateCompileErrorCode,
   TemplateCompileResult,
-  TemplateInterfaceBinding
+  TemplateInterfaceBinding,
+  LocatedInterfaceInstance
 } from './compiler'
 export { validateTemplateContent, validateTemplateDocument } from './validation'
 export type {

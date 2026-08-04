@@ -33,7 +33,7 @@ Template 不区分草稿和发布状态。`createTemplateDocument()` 生成稳�
 
 ## 严格语义校验
 
-`validateTemplateDocument(document, context)` 从 Template 自带资源读取函数快照，调用方只提供 Interface 变量清单和 Schema 评分块清单。底层 `validateTemplateContent(content, context)` 仍可用于单独校验正文及显式函数集合。两者都返回稳定错误代码、字段路径和参数，不生成面向用户的错误文案。
+异步的 `validateTemplateDocument(document, context)` 从 Template 自带资源读取函数快照，复算每个资源的内容 ID，并拒绝非法 ID 或正文篡改。调用方只提供 Interface 变量清单和 Schema 评分块清单。底层同步的 `validateTemplateContent(content, context)` 仍可用于单独校验正文及显式函数集合，但不承担资源身份验证。两者都返回稳定错误代码、字段路径和参数，不生成面向用户的错误文案。
 
 校验器按 Template 根或函数定义建立局部作用域，框架本身不创建隐式作用域。函数调用必须完整填写输入，并通过 `outputNames` 将每个手动出参重命名到调用方作用域；同一函数可以因此被多次调用。函数内部 Schema 消费随实际调用展开，但调用方不能改写其绑定。
 
@@ -44,19 +44,20 @@ Template 不区分草稿和发布状态。`createTemplateDocument()` 生成稳�
 - 页面、时间线、文本插值、函数输入与出参的变量解析和类型匹配。
 - Schema、评分块、完整字段绑定及 text/audio/choice 类型匹配。
 - 函数缺失、输入/出参映射完整性和递归调用。
+- 内嵌函数资源 ID 格式、正文摘要和嵌套依赖闭包。
 - ChoiceCollector 嵌套、全卷唯一候选、分页字面量、题数总和和未收集题目。
 - 选择题视图是否具有唯一 ChoiceMeta，以及 free/range 页码范围。
 - 展开后的 Template 是否至少消费一个 Schema 评分块。
 
 ## 试卷包编译
 
-`compileTemplate(document, context)` 先对工作文档执行完整语义校验，再使用导出时传入的 Interface 实例绑定展开 Template。函数定义只从 `document.resources.functions` 读取，不访问函数库。成功时返回 `ExamPackage`；失败时通过判别联合返回校验阶段或编译阶段的结构化错误，不生成部分试卷包。
+异步的 `compileTemplate(document, context)` 先对工作文档执行完整语义和资源完整性校验，再使用导出时传入的 Interface 实例选择展开 Template。函数定义只从 `document.resources.functions` 读取，不访问函数库。成功时返回 `ExamPackage`；失败时通过判别联合返回校验阶段或编译阶段的结构化错误，不生成部分试卷包。
 
 编译器分两阶段工作。第一阶段展开框架和函数调用，分配全局 `recordIndex`、`choiceIndex` 并建立静态值依赖；第二阶段统一求值页面内容、时间线、选择题、函数静态出参和 Schema 字段。因此页面或函数输入可以引用同层稍后声明的静态输出，跨函数形成的静态值循环会作为编译错误返回。
 
 当前编译行为包括：
 
-- 校验每个 Interface 别名恰好有一个实例绑定、绑定的仓储归属匹配 `interfaceId`，且所有 acceptedVars 都有实例值。
+- 校验每个 Interface 别名恰好有一个实例选择；通过调用方提供的仓储定位器按 `instanceId` 获取唯一定位结果，并验证真实仓储归属匹配 `interfaceId`，且所有 acceptedVars 都有实例值。
 - 按函数调用路径展开页面、内容块、录音、选择题、函数出参和函数内部 Schema 消费。
 - 为展开后的页面和内容块生成稳定 ID，为每次函数内部 Schema 消费生成调用路径限定的 `useId`。
 - 收集唯一 ChoiceCollector 候选，生成全局只读 ChoiceMeta，并把结构化 focus 地址解析为 `choiceIndex`。
@@ -69,7 +70,7 @@ Template 不区分草稿和发布状态。`createTemplateDocument()` 生成稳�
 
 工作文档允许保存不完整状态；编译入口会自行执行严格校验。以下能力尚未实现：
 
-- Template 和 Function 工作文档仓储，以及调用方从 Interface 仓储按 instanceId 组装编译绑定。
+- Template 和 Function 工作文档仓储，以及调用方把 Interface 仓储的 `findInstance()` 适配为编译所需实例定位器。
 - 复制函数完整依赖闭包、改写内部引用、按哈希去重和清理不可达资源的应用操作。
 - 工作文档保存、预览和导出的应用服务工作流。
 - `ExamPackage` 的文件封装、资源复制和持久化格式。
@@ -77,4 +78,4 @@ Template 不区分草稿和发布状态。`createTemplateDocument()` 生成稳�
 
 ## 验证覆盖
 
-单元测试覆盖工作文档 UUID、函数资源内容 ID 与篡改检测、依赖与表达式类型、函数作用域及重命名、Schema 完整绑定、函数递归、Collector 跨函数收集、分页、视图范围和全局候选约束。编译测试额外覆盖内嵌函数资源、完整 Player/Schema 输出、重复函数调用、相对与绝对 focus 地址、函数内部 Schema 展开、跨调用静态值循环、Interface 实例绑定错误和校验错误透传。
+单元测试覆盖工作文档 UUID、函数资源内容 ID 与入口级篡改检测、完整结构化错误契约、依赖与表达式类型、函数作用域及重命名、Schema 完整绑定、函数递归、Collector 跨函数收集、分页、视图范围和全局候选约束。编译测试额外覆盖完整 Player/Schema 输出、重复及嵌套函数调用、函数内部相对与绝对 focus、函数内部 Schema 展开、number/file/audio 出参、全局录音索引、跨调用静态值循环、多 Interface/Schema 隔离、仓储归属验证和校验错误透传。

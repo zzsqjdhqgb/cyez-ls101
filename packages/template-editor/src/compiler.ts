@@ -18,14 +18,15 @@ export type {
   TemplateCompileError,
   TemplateCompileErrorCode,
   TemplateCompileResult,
-  TemplateInterfaceBinding
+  TemplateInterfaceBinding,
+  LocatedInterfaceInstance
 } from './compiler/shared'
 
-export function compileTemplate(
+export async function compileTemplate(
   template: TemplateDocument,
   context: TemplateCompileContext
-): TemplateCompileResult {
-  const validation = validateTemplateDocument(template, context)
+): Promise<TemplateCompileResult> {
+  const validation = await validateTemplateDocument(template, context)
   if (!validation.valid) {
     return {
       success: false,
@@ -34,7 +35,7 @@ export function compileTemplate(
   }
 
   const content = template.content
-  const bound = bindInterfaceValues(content, context)
+  const bound = await bindInterfaceValues(content, context)
   if (bound.errors.length > 0) return { success: false, errors: bound.errors }
 
   const state = createCompilerState(context, bound.valuesByAlias, template.resources.functions)
@@ -77,13 +78,16 @@ interface BoundInterfaceResult {
   errors: TemplateCompileError[]
 }
 
-function bindInterfaceValues(
+async function bindInterfaceValues(
   content: TemplateContent,
   context: TemplateCompileContext
-): BoundInterfaceResult {
+): Promise<BoundInterfaceResult> {
   const valuesByAlias = new Map<string, Map<string, BoundInterfaceValue>>()
   const errors: TemplateCompileError[] = []
-  const bindings = new Map<string, TemplateCompileContext['interfaceBindings'][number]>()
+  const bindings = new Map<
+    string,
+    { binding: TemplateCompileContext['interfaceBindings'][number]; index: number }
+  >()
   const requirements = new Map(
     content.interfaces.map((requirement) => [requirement.alias, requirement])
   )
@@ -98,7 +102,7 @@ function bindInterfaceValues(
       )
       return
     }
-    bindings.set(binding.alias, binding)
+    bindings.set(binding.alias, { binding, index })
     if (!requirements.has(binding.alias)) {
       errors.push(
         compileError('UNKNOWN_INTERFACE_BINDING', `interfaceBindings[${index}].alias`, {
@@ -108,32 +112,67 @@ function bindInterfaceValues(
     }
   })
 
-  content.interfaces.forEach((requirement, index) => {
-    const binding = bindings.get(requirement.alias)
+  for (const [index, requirement] of content.interfaces.entries()) {
+    const bindingEntry = bindings.get(requirement.alias)
     const path = `interfaces[${index}]`
-    if (!binding) {
+    if (!bindingEntry) {
       errors.push(compileError('MISSING_INTERFACE_BINDING', path, { alias: requirement.alias }))
-      return
+      continue
     }
+    const { binding, index: bindingIndex } = bindingEntry
     if (binding.interfaceId !== requirement.interfaceId) {
       errors.push(
-        compileError('INTERFACE_BINDING_ID_MISMATCH', `${path}.interfaceId`, {
-          alias: requirement.alias,
-          expected: requirement.interfaceId,
-          actual: binding.interfaceId
-        })
+        compileError(
+          'INTERFACE_BINDING_ID_MISMATCH',
+          `interfaceBindings[${bindingIndex}].interfaceId`,
+          {
+            alias: requirement.alias,
+            expected: requirement.interfaceId,
+            actual: binding.interfaceId
+          }
+        )
       )
-      return
+      continue
+    }
+
+    const located = await context.locateInterfaceInstance(binding.instanceId)
+    if (!located) {
+      errors.push(
+        compileError(
+          'INTERFACE_INSTANCE_NOT_FOUND',
+          `interfaceBindings[${bindingIndex}].instanceId`,
+          {
+            alias: requirement.alias,
+            instanceId: binding.instanceId
+          }
+        )
+      )
+      continue
+    }
+    if (located.interfaceId !== requirement.interfaceId) {
+      errors.push(
+        compileError(
+          'INTERFACE_BINDING_ID_MISMATCH',
+          `interfaceBindings[${bindingIndex}].instanceId`,
+          {
+            alias: requirement.alias,
+            instanceId: binding.instanceId,
+            expected: requirement.interfaceId,
+            actual: located.interfaceId
+          }
+        )
+      )
+      continue
     }
 
     const manifest = manifests.get(requirement.interfaceId)
     const values = new Map<string, BoundInterfaceValue>()
     requirement.acceptedVars.forEach((varName) => {
-      if (!Object.hasOwn(binding.instance.values, varName)) {
+      if (!Object.hasOwn(located.instance.values, varName)) {
         errors.push(
           compileError('MISSING_INTERFACE_VALUE', `${path}.acceptedVars`, {
             alias: requirement.alias,
-            instanceId: binding.instance.instanceId,
+            instanceId: binding.instanceId,
             varName
           })
         )
@@ -142,11 +181,11 @@ function bindInterfaceValues(
       const variable = manifest?.vars.find((item) => item.varName === varName)
       values.set(varName, {
         type: variable?.type === 'image' ? 'file' : 'string',
-        value: binding.instance.values[varName]
+        value: located.instance.values[varName]
       })
     })
     valuesByAlias.set(requirement.alias, values)
-  })
+  }
 
   return { valuesByAlias, errors }
 }

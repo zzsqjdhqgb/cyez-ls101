@@ -1,8 +1,10 @@
 import type { InterfaceVarManifest, SchemaBlockManifest } from '@ls101/core-types'
 import { describe, expect, it } from 'vitest'
 import { compileTemplate, type TemplateCompileContext } from '../compiler'
+import { createFunctionResource } from '../id'
 import type {
   FrameNode,
+  FunctionContent,
   FunctionDef,
   FunctionNode,
   PageNode,
@@ -15,8 +17,7 @@ import { number, root, text } from './fixtures'
 const INTERFACE_ID = `sha256:${'1'.repeat(64)}`
 const OTHER_INTERFACE_ID = `sha256:${'9'.repeat(64)}`
 const SCHEMA_ID = `sha256:${'2'.repeat(64)}`
-const TEXT_FUNCTION_ID = `sha256:${'3'.repeat(64)}`
-const CHOICE_FUNCTION_ID = `sha256:${'4'.repeat(64)}`
+const OTHER_SCHEMA_ID = `sha256:${'8'.repeat(64)}`
 
 function interfaceManifest(): InterfaceVarManifest {
   return {
@@ -73,14 +74,21 @@ function compileContext(overrides: Partial<TemplateCompileContext> = {}): Templa
       {
         alias: 'exam',
         interfaceId: INTERFACE_ID,
-        instance: {
-          instanceId: 'instance-1',
-          name: 'Instance',
-          generatedAt: '2026-08-04T00:00:00.000Z',
-          values: { sentence: 'Hello', picture: 'picture.png' }
-        }
+        instanceId: 'instance-1'
       }
     ],
+    locateInterfaceInstance: (instanceId) =>
+      instanceId === 'instance-1'
+        ? {
+            interfaceId: INTERFACE_ID,
+            instance: {
+              instanceId: 'instance-1',
+              name: 'Instance',
+              generatedAt: '2026-08-04T00:00:00.000Z',
+              values: { sentence: 'Hello', picture: 'picture.png' }
+            }
+          }
+        : null,
     ...overrides
   }
 }
@@ -138,9 +146,8 @@ function choiceSchemaUse(useId: string, outputName: string): SchemaUse {
   }
 }
 
-function textFunction(): FunctionDef {
+function textFunctionContent(): FunctionContent {
   return {
-    id: TEXT_FUNCTION_ID,
     name: 'Append punctuation',
     inputs: [{ name: 'value', type: 'string' }],
     body: root(),
@@ -161,9 +168,8 @@ function textFunction(): FunctionDef {
   }
 }
 
-function choiceFunction(withSchemaUse = true): FunctionDef {
+function choiceFunctionContent(withSchemaUse = true): FunctionContent {
   return {
-    id: CHOICE_FUNCTION_ID,
     name: 'Single choice',
     inputs: [{ name: 'prompt', type: 'string' }],
     body: root([
@@ -288,10 +294,12 @@ function mainPage(): PageNode {
 }
 
 describe('compileTemplate', () => {
-  it('展开完整 Template 为 Player 数据和 Schema 映射', () => {
+  it('展开完整 Template 为 Player 数据和 Schema 映射', async () => {
+    const textResource = await createFunctionResource(textFunctionContent())
+    const choiceResource = await createFunctionResource(choiceFunctionContent())
     const textCall = functionCall(
       'text-call',
-      TEXT_FUNCTION_ID,
+      textResource.id,
       {
         value: {
           type: 'string',
@@ -303,7 +311,7 @@ describe('compileTemplate', () => {
     )
     const choiceCall = functionCall(
       'choice-call',
-      CHOICE_FUNCTION_ID,
+      choiceResource.id,
       {
         prompt: {
           type: 'string',
@@ -328,8 +336,8 @@ describe('compileTemplate', () => {
       ]
     })
 
-    const result = compileTemplate(
-      document(exam, [textFunction(), choiceFunction()]),
+    const result = await compileTemplate(
+      document(exam, [textResource, choiceResource]),
       compileContext()
     )
     expect(result.success).toBe(true)
@@ -414,11 +422,12 @@ describe('compileTemplate', () => {
     ])
   })
 
-  it('为重复函数调用生成独立题目、出参和 Schema useId', () => {
+  it('为重复函数调用生成独立题目、出参和 Schema useId', async () => {
+    const choiceResource = await createFunctionResource(choiceFunctionContent())
     const call = (id: string, prompt: string, outputName: string): FunctionNode =>
       functionCall(
         id,
-        CHOICE_FUNCTION_ID,
+        choiceResource.id,
         { prompt: { type: 'string', source: 'literal', value: prompt } },
         { answer: outputName }
       )
@@ -455,7 +464,7 @@ describe('compileTemplate', () => {
       schemaUses: []
     })
 
-    const result = compileTemplate(document(exam, [choiceFunction()]), compileContext())
+    const result = await compileTemplate(document(exam, [choiceResource]), compileContext())
     expect(result.success).toBe(true)
     if (!result.success) return
 
@@ -475,9 +484,8 @@ describe('compileTemplate', () => {
     ])
   })
 
-  it('检测跨函数调用的静态值循环', () => {
-    const echo: FunctionDef = {
-      id: TEXT_FUNCTION_ID,
+  it('检测跨函数调用的静态值循环', async () => {
+    const echo = await createFunctionResource({
       name: 'Echo',
       inputs: [{ name: 'value', type: 'string' }],
       body: root(),
@@ -493,11 +501,11 @@ describe('compileTemplate', () => {
         }
       ],
       schemaUses: []
-    }
+    })
     const call = (id: string, inputName: string, outputName: string): FunctionNode =>
       functionCall(
         id,
-        TEXT_FUNCTION_ID,
+        echo.id,
         {
           value: {
             type: 'string',
@@ -519,7 +527,7 @@ describe('compileTemplate', () => {
       ]
     })
 
-    const result = compileTemplate(
+    const result = await compileTemplate(
       document(exam, [echo]),
       compileContext({ interfaceBindings: [] })
     )
@@ -529,14 +537,17 @@ describe('compileTemplate', () => {
     })
   })
 
-  it('返回 Interface 绑定缺失、归属不符和变量缺失错误', () => {
-    const missing = compileTemplate(document(content()), compileContext({ interfaceBindings: [] }))
+  it('返回 Interface 绑定缺失、归属不符和变量缺失错误', async () => {
+    const missing = await compileTemplate(
+      document(content()),
+      compileContext({ interfaceBindings: [] })
+    )
     expect(missing).toMatchObject({
       success: false,
       errors: [{ stage: 'compile', code: 'MISSING_INTERFACE_BINDING' }]
     })
 
-    const mismatch = compileTemplate(
+    const mismatch = await compileTemplate(
       document(content()),
       compileContext({
         interfaceBindings: [
@@ -552,18 +563,24 @@ describe('compileTemplate', () => {
       errors: [{ stage: 'compile', code: 'INTERFACE_BINDING_ID_MISMATCH' }]
     })
 
-    const missingValue = compileTemplate(
+    const missingValue = await compileTemplate(
       document(content()),
       compileContext({
         interfaceBindings: [
           {
             ...compileContext().interfaceBindings[0],
-            instance: {
-              ...compileContext().interfaceBindings[0].instance,
-              values: { sentence: 'Hello' }
-            }
+            instanceId: 'missing-picture'
           }
-        ]
+        ],
+        locateInterfaceInstance: () => ({
+          interfaceId: INTERFACE_ID,
+          instance: {
+            instanceId: 'missing-picture',
+            name: 'Missing picture',
+            generatedAt: '2026-08-04T00:00:00.000Z',
+            values: { sentence: 'Hello' }
+          }
+        })
       })
     )
     expect(missingValue).toMatchObject({
@@ -572,8 +589,193 @@ describe('compileTemplate', () => {
     })
   })
 
-  it('返回严格校验错误而不进入编译', () => {
-    const result = compileTemplate(
+  it('拒绝重复和未知的 Interface 绑定', async () => {
+    const base = compileContext().interfaceBindings[0]
+    const result = await compileTemplate(
+      document(content()),
+      compileContext({
+        interfaceBindings: [
+          base,
+          { ...base, instanceId: 'instance-2' },
+          { alias: 'unknown', interfaceId: INTERFACE_ID, instanceId: 'instance-3' }
+        ]
+      })
+    )
+
+    expect(result).toEqual({
+      success: false,
+      errors: [
+        {
+          stage: 'compile',
+          path: 'interfaceBindings[1].alias',
+          code: 'DUPLICATE_INTERFACE_BINDING',
+          params: { alias: 'exam' }
+        },
+        {
+          stage: 'compile',
+          path: 'interfaceBindings[2].alias',
+          code: 'UNKNOWN_INTERFACE_BINDING',
+          params: { alias: 'unknown' }
+        }
+      ]
+    })
+  })
+
+  it('通过仓储定位结果校验实例真实归属和存在性', async () => {
+    const ownershipMismatch = await compileTemplate(
+      document(content()),
+      compileContext({
+        locateInterfaceInstance: () => ({
+          interfaceId: OTHER_INTERFACE_ID,
+          instance: {
+            instanceId: 'instance-1',
+            name: 'Wrong owner',
+            generatedAt: '2026-08-04T00:00:00.000Z',
+            values: { sentence: 'Hello', picture: 'picture.png' }
+          }
+        })
+      })
+    )
+    expect(ownershipMismatch).toEqual({
+      success: false,
+      errors: [
+        {
+          stage: 'compile',
+          path: 'interfaceBindings[0].instanceId',
+          code: 'INTERFACE_BINDING_ID_MISMATCH',
+          params: {
+            alias: 'exam',
+            instanceId: 'instance-1',
+            expected: INTERFACE_ID,
+            actual: OTHER_INTERFACE_ID
+          }
+        }
+      ]
+    })
+
+    const notFound = await compileTemplate(
+      document(content()),
+      compileContext({ locateInterfaceInstance: () => null })
+    )
+    expect(notFound).toEqual({
+      success: false,
+      errors: [
+        {
+          stage: 'compile',
+          path: 'interfaceBindings[0].instanceId',
+          code: 'INTERFACE_INSTANCE_NOT_FOUND',
+          params: { alias: 'exam', instanceId: 'instance-1' }
+        }
+      ]
+    })
+  })
+
+  it('隔离多个 Interface 的值并允许空字符串和多余实例值', async () => {
+    const otherManifest: InterfaceVarManifest = {
+      interfaceId: OTHER_INTERFACE_ID,
+      interfaceName: 'Other data',
+      vars: [
+        {
+          varName: 'sentence',
+          type: 'text',
+          description: 'Other sentence',
+          example: 'Other',
+          path: 'sentence'
+        }
+      ]
+    }
+    const otherSchema: SchemaBlockManifest = {
+      schemaId: OTHER_SCHEMA_ID,
+      schemaName: 'Other schema',
+      blocks: [
+        {
+          blockId: 'text',
+          blockName: 'Text',
+          fields: [{ varName: 'prompt', type: 'text' }]
+        }
+      ]
+    }
+    const exam = content({
+      interfaces: [
+        { alias: 'exam', interfaceId: INTERFACE_ID, acceptedVars: ['sentence'] },
+        { alias: 'other', interfaceId: OTHER_INTERFACE_ID, acceptedVars: ['sentence'] }
+      ],
+      schemaUses: [
+        textSchemaUse('exam-text', {
+          type: 'variable',
+          scope: 'interface',
+          alias: 'exam',
+          varName: 'sentence'
+        }),
+        {
+          useId: 'other-text',
+          schemaId: OTHER_SCHEMA_ID,
+          blockId: 'text',
+          bindings: {
+            prompt: {
+              type: 'variable',
+              scope: 'interface',
+              alias: 'other',
+              varName: 'sentence'
+            }
+          }
+        }
+      ]
+    })
+    const instances = {
+      'instance-1': {
+        interfaceId: INTERFACE_ID,
+        instance: {
+          instanceId: 'instance-1',
+          name: 'Empty value',
+          generatedAt: '2026-08-04T00:00:00.000Z',
+          values: { sentence: '', extra: 'allowed' }
+        }
+      },
+      'instance-2': {
+        interfaceId: OTHER_INTERFACE_ID,
+        instance: {
+          instanceId: 'instance-2',
+          name: 'Other value',
+          generatedAt: '2026-08-04T00:00:00.000Z',
+          values: { sentence: 'Other' }
+        }
+      }
+    }
+    const result = await compileTemplate(
+      document(exam),
+      compileContext({
+        interfaceManifests: [interfaceManifest(), otherManifest],
+        schemaManifests: [schemaManifest(), otherSchema],
+        interfaceBindings: [
+          { alias: 'exam', interfaceId: INTERFACE_ID, instanceId: 'instance-1' },
+          { alias: 'other', interfaceId: OTHER_INTERFACE_ID, instanceId: 'instance-2' }
+        ],
+        locateInterfaceInstance: (instanceId) =>
+          instances[instanceId as keyof typeof instances] ?? null
+      })
+    )
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.examPackage.schema.usages).toEqual([
+      {
+        useId: 'schema-use:exam-text',
+        schemaId: SCHEMA_ID,
+        blockId: 'text',
+        fields: [{ varName: 'prompt', type: 'text', value: '' }]
+      },
+      {
+        useId: 'schema-use:other-text',
+        schemaId: OTHER_SCHEMA_ID,
+        blockId: 'text',
+        fields: [{ varName: 'prompt', type: 'text', value: 'Other' }]
+      }
+    ])
+  })
+
+  it('返回严格校验错误而不进入编译', async () => {
+    const result = await compileTemplate(
       document(content({ name: '', schemaUses: [] })),
       compileContext()
     )
@@ -583,7 +785,7 @@ describe('compileTemplate', () => {
     expect(result.errors.every((error) => error.stage === 'validation')).toBe(true)
   })
 
-  it('focus 地址不存在时返回编译错误', () => {
+  it('focus 地址不存在时返回编译错误', async () => {
     const pageWithUnknownFocus: PageNode = {
       id: 'page',
       type: 'page',
@@ -625,7 +827,7 @@ describe('compileTemplate', () => {
       schemaUses: [choiceSchemaUse('choice', 'answer')]
     })
 
-    const result = compileTemplate(document(exam), compileContext({ interfaceBindings: [] }))
+    const result = await compileTemplate(document(exam), compileContext({ interfaceBindings: [] }))
     expect(result).toMatchObject({
       success: false,
       errors: [{ stage: 'compile', code: 'UNKNOWN_FOCUS_QUESTION' }]
