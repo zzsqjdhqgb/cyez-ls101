@@ -107,7 +107,7 @@ type SchemaFieldDef =
   | { varName: string; type: 'choice' }
 ~~~
 
-choice 表示学生在 ExamPlayer 运行期间产生的单选作答。Schema 通过 choiceIndex 引用 Player 保存的选项 ID；正确答案和分值属于评分块的静态参数，不放入 Player 题目数据。
+choice 表示学生在 ExamPlayer 运行期间产生的单选作答。Schema 通过 choiceIndex 引用 Player 保存的 A-Z 选项标签；未作答值为 `-`。正确答案和分值属于评分块的静态参数，不放入 Player 题目数据。
 
 Schema 对 Template 暴露评分块清单：
 
@@ -225,9 +225,9 @@ interface ExportInterfaceInstanceSelection {
 
 ## 五、Template DSL 与导出
 
-Template 的 DSL 由页面节点、框架节点和函数节点组成。页面节点包含内容文档和线性时间线；时间线中的每个 record 步骤产生一个可命名的录音输出。函数有手动声明的输入列表、外层框架节点和手动声明的出参列表。
+Template 的 DSL 由页面节点、框架节点、选择题单题节点和函数节点组成。页面节点包含内容文档和线性时间线；时间线中的每个 record 步骤产生一个可命名的录音输出。函数有手动声明的输入列表、外层框架节点和手动声明的出参列表。
 
-函数还可以产生选择题结构片段。选择题片段不通过普通出参或可变句柄传递，而是与页面平行地进入编译结果；具有 ChoiceCollector 的框架负责按作用域收集后代片段并组装分页题组。
+选择题单题是正式的 DSL 节点。它不生成显示页面，而是与页面平行地进入编译结果；具有 ChoiceCollector 的框架负责收集包裹范围内的单题节点并生成分页配置。该过程不使用普通出参、可变句柄或 setter。
 
 函数出参、页面录音输出和选择题输出都属于局部变量。名称在同一局部命名空间内唯一；新增时系统可以生成可编辑的默认名称，如 recording-1、answer-1。
 
@@ -241,19 +241,22 @@ Template 的 DSL 由页面节点、框架节点和函数节点组成。页面节
 interface CompiledNode {
   pages: CompiledPage[]
   choiceQuestions: CompiledChoiceQuestion[]
+  choiceMetaCandidate?: CompiledChoiceMeta
   schemaUses: CompiledSchemaUse[]
   valueOutputs: CompiledValueOutput[]
 }
 ~~~
 
-ChoiceCollector 按子节点展开顺序拼接 choiceQuestions。题目归属最近的 Collector；嵌套 Collector 捕获自己的后代题目，不向外泄漏。每次函数调用都会重新命名局部题目身份。Collector 在收集完成后执行第二阶段解析，统一重写：
+普通框架和函数按子节点展开顺序传播 choiceQuestions。ChoiceCollector 消费包裹范围内的题目，阻断原始题目继续向上传播，并生成一个密封的 choiceMetaCandidate。Collector 的 pages 是不可变量绑定的字面量列表；每项 questionCount 必须为正整数，且总和必须等于实际收集的题目数量。
 
-- 页面中的 ChoiceViewOutlet；
+首版全卷最多只能产生一个 choiceMetaCandidate。Collector 不能嵌套，多个候选是编译错误；带 Collector 的函数调用两次也会产生两个候选并报错。存在选择题节点时必须恰好产生一个候选，未被消费的 choiceQuestions 是编译错误。候选提升为全局 ChoiceMeta 后，编译器统一重写：
+
+- 页面中的 ChoiceViewBlock；
 - 时间线中的 focus/range 视图控制；
 - choice 类型函数出参；
 - Schema choice 字段绑定。
 
-缺少 Collector 的题目片段是编译错误。该机制没有 setter、Frame 句柄或共享可变对象。
+每次函数调用都会重新命名局部题目身份。同一个不带 Collector 的单题函数可以调用任意次数，由外层 Collector 统一收集；带 Collector 的完整选择题函数可以独立使用。该机制没有 setter、Frame 句柄或共享可变对象。
 
 ### 5.2 Player 数据段
 
@@ -263,8 +266,7 @@ Player 数据段与 Schema 的评分结构无关，只描述 ExamPlayer 播放�
 interface PlayerExamData {
   pages: ExamPage[]
   recordingIndices: number[]
-  choiceIndices: number[]
-  choiceSets: PlayerChoiceSet[]
+  choiceMeta?: PlayerChoiceMeta
 }
 
 interface ExamPage {
@@ -300,7 +302,6 @@ interface PlayerChoiceView {
   y: number
   width: number
   height: number
-  choiceSetId: string
   defaultViewport: ResolvedChoiceViewport
 }
 
@@ -323,8 +324,7 @@ type ResolvedChoiceViewport =
       initialPage?: number
     }
 
-interface PlayerChoiceSet {
-  id: string
+interface PlayerChoiceMeta {
   pages: Array<{ questionIndices: number[] }>
   questions: PlayerChoiceQuestion[]
 }
@@ -333,15 +333,18 @@ interface PlayerChoiceQuestion {
   choiceIndex: number
   stem: string
   options: Array<{
-    id: string
+    label: string
     content: string
   }>
 }
+
+// 序列化值必须是 A-Z 中的选项标签，或表示未作答的 `-`。
+type ChoiceAnswer = string
 ~~~
 
-choiceIndex 与 recordIndex 一样在整份试卷内全局唯一，从 0 递增分配。ChoiceView 只持有 choiceSetId 和视图参数；多个视图引用同一 ChoiceSet 时共享答案，但各自维护独立的当前内页。内页序号从 0 开始。Player 不需要理解 Schema 的评分规则，也不会收到正确答案和分值。
+choiceIndex 与 recordIndex 一样在整份试卷内全局唯一，从 0 递增分配。选项标签根据顺序自动生成为 A-Z。所有 ChoiceView 显示同一个全局 ChoiceMeta 并共享答案，但各自维护独立的当前内页。内页序号从 0 开始。Player 不需要理解 Schema 的评分规则，也不会收到正确答案和分值。
 
-选择题视图支持三种模式：free 可浏览整个题组；focus 跳到目标题、高亮并锁定内部分页；range 只允许在指定内页范围内翻页。页面时间线可以在每个步骤覆盖视图模式。选择不是时间线推进的前置条件，学生可以改选但不能通过再次点击取消。
+选择题视图支持三种模式：free 可浏览全局 ChoiceMeta 的所有内页；focus 可以引用全局 ChoiceMeta 中任意题目，并跳到目标题、高亮且锁定内部分页；range 只允许在指定全局内页范围内翻页。页面时间线可以在每个步骤覆盖视图模式。选择不是时间线推进的前置条件，学生可以改选但不能通过再次点击取消。
 
 ### 5.3 Schema 映射段
 
@@ -395,7 +398,7 @@ submission.zip
 
 - schema.json 保存从 ExamPackage.schema 原样传递的 Schema 映射。
 - 音频文件按 recordIndex 命名。
-- choices.json 保存 Record<choiceIndex, optionId>；未作答的题目不包含对应 key。
+- choices.json 保存完整的 Record<choiceIndex, ChoiceAnswer>。ChoiceAnswer 为 A-Z 中的选项标签，未作答统一保存为 `-`；每个 choiceIndex 都必须存在。
 - ExamPlayer 不解析、不修改评分块字段，只负责采集运行期作答并写入作答包。
 
 元数据使用多个 Schema：
@@ -422,8 +425,8 @@ interface StudentInfo {
    → 声明多个 Interface 依赖和变量子集
    → 组装页面、框架和函数节点
    → 配置函数输入和手动出参
-   → 单题函数产生选择题结构片段
-   → ChoiceCollector 收集片段并配置分页
+   → 添加 ChoiceQuestionNode 或调用单题函数
+   → 唯一 ChoiceCollector 收集单题并配置 page 列表
    → 在函数或 Template 层消费 Schema 评分块
    → 为每个评分块完整填写绑定
 4. 发布 TemplateDraft → TemplateDef
@@ -431,8 +434,9 @@ interface StudentInfo {
 6. 编译 Template DSL
    → 求值所有静态表达式
    → 展开函数和框架
-   → 平行收集页面和选择题结构片段
-   → ChoiceCollector 组装题组并分配 choiceIndex
+   → 平行收集页面和选择题单题节点
+   → 唯一 ChoiceCollector 生成并提升全局 ChoiceMeta
+   → 分配 choiceIndex 并解析视图和引用
    → 为录音步骤分配 recordIndex
    → 生成 Player 数据段
    → 生成 Schema 映射段

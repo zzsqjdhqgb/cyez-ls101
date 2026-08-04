@@ -29,7 +29,7 @@ Interface                         Template                         Schema
 +----------------+-----------------------------------+----------------+
 ~~~
 
-- 左侧列出页面预设、框架预设、函数和用户自定义函数。
+- 左侧列出页面预设、框架预设、选择题单题、函数和用户自定义函数。
 - 中间显示当前 Template 的有序节点树。
 - 右侧显示选中节点的参数、输入绑定、出参和 Schema 绑定。
 - 页面节点是叶子节点；框架节点可以包含多个有序子节点；函数节点是可复用函数的调用。
@@ -37,10 +37,10 @@ Interface                         Template                         Schema
 
 ## 三、DSL 节点
 
-Template 的节点只有两种基础结构：页面节点和框架节点。函数节点是函数在调用处的表现形式。
+Template 有页面节点、框架节点和选择题单题节点三种基础结构。函数节点是函数在调用处的表现形式。
 
 ~~~typescript
-type TemplateNode = PageNode | FrameNode | FunctionNode
+type TemplateNode = PageNode | FrameNode | FunctionNode | ChoiceQuestionNode
 
 interface BaseNode {
   id: string
@@ -63,6 +63,13 @@ interface FunctionNode extends BaseNode {
   functionRef: string
   inputs: Record<string, ValueExpression>
 }
+
+interface ChoiceQuestionNode extends BaseNode {
+  type: 'choice-question'
+  stem: TextExpression
+  options: ChoiceOptionDef[]
+  outputName: string
+}
 ~~~
 
 框架节点的 children 是一个有序列表，不使用 ChildrenSlot。框架只负责组合和排序；子节点类型与数量约束由函数定义或其他编辑器校验规则决定，而不是通过隐藏的插槽结构表达。
@@ -82,7 +89,7 @@ interface ContentDocument {
   blocks: ContentBlock[]
 }
 
-type ContentBlock = TextBlock | ImageBlock | ChoiceViewOutlet
+type ContentBlock = TextBlock | ImageBlock | ChoiceViewBlock
 
 interface TextBlock {
   id: string
@@ -176,7 +183,6 @@ interface FunctionDef {
   inputs: FunctionInputDef[]
   body: FrameNode
   outputs: FunctionOutputDef[]
-  choiceQuestions: ChoiceQuestionContribution[]
   schemaUses: SchemaUse[]
 }
 
@@ -217,18 +223,18 @@ interface FunctionNode extends BaseNode {
 
 选择题由三个部分组成：
 
-- ChoiceQuestionContribution：函数或 Template 产生的一道选择题结构片段。
-- ChoiceCollector：框架节点上的收集边界，负责把后代片段组成一个可分页题组。
-- ChoiceViewOutlet：页面内容中的受控视图占位，编译后显示 Collector 生成的题组。
+- ChoiceQuestionNode：可以直接放在框架或函数中的单题节点。
+- ChoiceCollector：框架节点上的局部收集边界，负责把后代单题节点组成分页配置。
+- ChoiceViewBlock：页面内容中的受控视图，显示编译后的全局 ChoiceMeta。
 
-选择题题目与显示页面平行地由编译器收集，不通过 setter、Frame 句柄或普通函数出参传递。函数在编译器层面返回题目结构片段，但用户手动声明的函数出参只负责把具体 choice 作答值传到外层。
+选择题单题节点与显示页面平行地由编译器收集，不通过 setter、Frame 句柄或普通函数出参传递。用户手动声明的函数出参只负责把具体 choice 作答值传到外层。
 
 ~~~typescript
-interface ChoiceQuestionContribution {
-  id: string
-  outputName: string
+interface ChoiceQuestionNode extends BaseNode {
+  type: 'choice-question'
   stem: TextExpression
   options: ChoiceOptionDef[]
+  outputName: string
 }
 
 interface ChoiceOptionDef {
@@ -238,27 +244,34 @@ interface ChoiceOptionDef {
 
 interface ChoiceCollectorConfig {
   id: string
-  questionsPerPage: number
+  pages: ChoicePageSpec[]
+}
+
+interface ChoicePageSpec {
+  questionCount: number
 }
 ~~~
 
-每道题产生一个 choice 类型的运行期输出。outputName 在当前局部命名空间内唯一，新增时自动生成 answer-1 一类的可编辑默认名称。首版选择题为单选；选项数量由题目结构决定，选项 ID 稳定，A/B/C/D 等字母只属于显示标签。
+单题节点接收题干和可增减的选项列表。首版为单选，选项数量必须为 2 至 26；显示标签根据列表位置从 A 开始自动递增，不能手动编辑。每道题产生一个 choice 类型的运行期输出，值为 A-Z 或未作答标记 `-`。outputName 在当前局部命名空间内唯一，新增时自动生成 answer-1 一类的可编辑默认名称。
 
-正确答案、分值和评分规则不属于 ChoiceQuestionContribution，不写入 Player 使用的题目结构；它们通过 Schema 评分块的静态参数表达。
+choice 是独立的运行期类型，不是 string。它不能参与文本拼接，也不能隐式绑定到 string 参数；它只能通过函数 choice 出参继续传递，或绑定到 Schema 的 choice 字段。
 
-### 7.2 ChoiceViewOutlet
+正确答案、分值和评分规则不属于 ChoiceQuestionNode，不写入 Player 使用的题目结构；它们通过 Schema 评分块的静态参数表达。
 
-页面内容可以插入选择题视图占位：
+Collector 的 pages 是可增减列表，每项的 questionCount 表示该内页包含的连续题目数量。例如 `[5, 5]` 表示前五题在第一页、后五题在第二页。questionCount 只能是大于 0 的整数字面量，不接受变量绑定。发布时必须满足所有 questionCount 之和等于 Collector 实际收集的单题节点数量。
+
+### 7.2 ChoiceViewBlock
+
+页面内容可以插入选择题视图：
 
 ~~~typescript
-interface ChoiceViewOutlet {
+interface ChoiceViewBlock {
   id: string
   type: 'choice-view'
   x: number
   y: number
   width: number
   height: number
-  collector: 'nearest'
   defaultViewport: ChoiceViewport
 }
 
@@ -273,30 +286,33 @@ type ChoiceViewport =
     }
 ~~~
 
-- free：允许浏览整个题组。
+- free：允许浏览全局 ChoiceMeta 的所有内页。
 - focus：自动跳到包含目标题的内页、高亮该题并锁定内部分页；同一内页上的其他题仍可作答。
-- range：只允许在指定内页范围内翻页，当前内页超出范围时自动回到范围起点。
+- range：只允许在全局内页的指定范围内翻页，当前内页超出范围时自动回到范围起点。
 
-持久化格式中的内页序号从 0 开始，编辑器向用户显示时从 1 开始。Collector 的分页规则或题目数量变化后，编辑器必须重新校验 initialPage、startPage 和 endPage。
+focus 的 questionRef 可以引用全局 ChoiceMeta 中的任意题目，不受原 Collector 收集范围限制。持久化格式中的内页序号从 0 开始，编辑器向用户显示时从 1 开始。Collector 的分页规则或题目数量变化后，编辑器必须重新校验 initialPage、startPage 和 endPage。
 
-同一个 Collector 生成的多个 ChoiceViewOutlet 共享学生答案，但各自拥有独立的当前内页和视图状态。进入新的外层页面时，视图根据 defaultViewport 和当前时间步骤的覆盖参数初始化；答案不会被清除。学生可以改选，不能通过再次点击已选项取消；首版不强制作答，外层时间线结束时照常推进。
+所有 ChoiceViewBlock 显示同一个全局 ChoiceMeta 并共享学生答案，但各自拥有独立的当前内页和视图状态。进入新的外层页面时，视图根据 defaultViewport 和当前时间步骤的覆盖参数初始化；答案不会被清除。学生可以改选，不能通过再次点击已选项取消；首版不强制作答，外层时间线结束时照常推进。
 
 ### 7.3 收集与函数组合
 
-编译节点时，页面、选择题片段、Schema 依赖和普通出参通过彼此独立的通道返回：
+编译节点时，页面、选择题单题、Schema 依赖和普通出参通过彼此独立的通道返回：
 
 ~~~typescript
 interface CompiledNode {
   pages: CompiledPage[]
   choiceQuestions: CompiledChoiceQuestion[]
+  choiceMetaCandidate?: CompiledChoiceMeta
   schemaUses: CompiledSchemaUse[]
   valueOutputs: CompiledValueOutput[]
 }
 ~~~
 
-具有 choiceCollector 的框架按子节点展开顺序收集 choiceQuestions。多个函数调用之间按调用节点顺序收集；单个函数产生多道题时按函数内声明顺序收集。Collector 根据 questionsPerPage 分页，并在第二阶段解析 ChoiceViewOutlet、focus/range、choice 出参和 Schema 绑定。
+普通框架和函数按子节点展开顺序向上传播 choiceQuestions。具有 choiceCollector 的框架消费包裹范围内的 choiceQuestions，阻止原始题目继续向父层传播，按照 pages 配置分页，并生成一个密封的 choiceMetaCandidate。编译器随后把候选提升为全局、只读的 ChoiceMeta，并在第二阶段解析 ChoiceViewBlock、focus/range、choice 出参和 Schema 绑定。
 
-每个题目片段归属最近的外层 Collector。嵌套 Collector 会捕获自己的后代题目，不向更外层泄漏；题目片段找不到 Collector 时视为编译错误。每次函数调用都会重新命名局部题目身份，因此同一个单题函数调用十次会生成十道独立题目，但可以由同一个 Collector 组成统一题组。
+首版整份 Template 最多只能产生一个 choiceMetaCandidate：Collector 不能嵌套；出现多个 Collector 候选是编译错误；带 Collector 的函数被调用两次同样会因产生两个候选而报错。没有选择题时允许没有 Collector；存在 ChoiceQuestionNode 时必须恰好产生一个候选，任何未被 Collector 消费的 choiceQuestions 都是编译错误。
+
+每次函数调用都会重新命名局部题目身份，因此同一个不带 Collector 的单题函数调用十次会生成十道独立题目，并可由外层同一个 Collector 组成全局 ChoiceMeta。带 Collector 的完整选择题函数则可以开箱即用，外部不需要再次配置分页。
 
 ## 八、Interface 依赖
 
@@ -353,7 +369,6 @@ interface TemplateContent {
   description: string
   interfaces: TemplateInterfaceRequirement[]
   root: FrameNode
-  choiceQuestions: ChoiceQuestionContribution[]
   schemaUses: SchemaUse[]
 }
 
@@ -368,7 +383,7 @@ interface TemplateDef extends TemplateContent {
 }
 ~~~
 
-发布时根据 TemplateContent 的规范化内容计算 TemplateDef.id，格式为 sha256:<64 位十六进制摘要>。规范化输入包括名称、描述、Interface 依赖、根 DSL、Template 层选择题片段、Template 层 Schema 消费和引用的函数定义身份；不包括 draftId、发布状态、时间戳和导出时选择的 Interface 实例。
+发布时根据 TemplateContent 的规范化内容计算 TemplateDef.id，格式为 sha256:<64 位十六进制摘要>。规范化输入包括名称、描述、Interface 依赖、完整根 DSL、Template 层 Schema 消费和引用的函数定义身份；不包括 draftId、发布状态、时间戳和导出时选择的 Interface 实例。
 
 发布后的 Template 不直接编辑。修改已发布 Template 时先创建草稿；草稿通过校验后发布，内容变化时产生新的内容 ID，相同内容则复用已有成品。
 
@@ -380,11 +395,12 @@ interface TemplateDef extends TemplateContent {
 
 1. 为所有 Interface 别名选择并校验 InterfaceInstance。
 2. 解析 Interface 变量、函数输入、页面参数和 Schema 表达式。
-3. 展开框架和函数，平行收集页面、选择题片段和 Schema 依赖。
-4. 由每个 ChoiceCollector 组装题组并解析视图占位，为题目分配全局 choiceIndex。
-5. 按页面时间线为 record 步骤分配全局 recordIndex。
-6. 生成 ExamPlayer 可识别的页面、录音槽位和选择题题组。
-7. 生成 Schema 可识别的评分块映射。
-8. 写入最终试卷包。
+3. 展开框架和函数，平行收集页面、选择题单题节点和 Schema 依赖。
+4. 由唯一 ChoiceCollector 生成 choiceMetaCandidate，校验分页数量并提升为全局 ChoiceMeta。
+5. 为每道选择题分配全局 choiceIndex，并解析视图、focus/range、choice 出参和 Schema 绑定。
+6. 按页面时间线为 record 步骤分配全局 recordIndex。
+7. 生成 ExamPlayer 可识别的页面、录音槽位和全局 ChoiceMeta。
+8. 生成 Schema 可识别的评分块映射。
+9. 写入最终试卷包。
 
 除用户录制的音频和学生选择外，其他变量在第 2 步完成赋值，等价于编译期确定值。
