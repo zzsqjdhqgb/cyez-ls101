@@ -11,7 +11,7 @@ Interface                         Template                         Schema
     │                                │                               │
     │ InterfaceVarManifest           │ DSL + 变量表达式              │ SchemaBlockManifest
     ▼                                │                               │
-InterfaceDef ────────────────→ TemplateContent ←──────────────── SchemaDef
+InterfaceDef ───────────────→ TemplateDocument ←─────────────── SchemaDef
     │                                │
     │ 多个 InterfaceInstance         │ 导出时选择各 Interface 的实例
     ▼                                ▼
@@ -190,7 +190,7 @@ Schema 消费遵循 DSL 的局部作用域：
 - 外层也可以独立消费同一个 Schema 或同一个评分块；独立消费不会覆盖函数内部绑定。
 - 生成导出包时，Schema 依赖按 schemaId 分组；每个 useId 仍保留为独立消费实例。
 
-Template 发布校验必须确认展开后的有效 Schema 消费集合非空。Schema 依赖可以全部来自函数内部，但不能完全缺失。
+Template 预览和导出校验必须确认展开后的有效 Schema 消费集合非空。Schema 依赖可以全部来自函数内部，但不能完全缺失。
 
 ## 四、Template 对外契约
 
@@ -222,6 +222,19 @@ interface ExportInterfaceInstanceSelection {
 ~~~
 
 导出或预览时，调用方必须为每个 alias 提供一个选择结果。
+
+Template 是使用稳定 UUID 的可编辑工作文档，不区分草稿和发布状态。它保存完整正文、编辑器私有状态，以及当前引用函数的自包含资源闭包：
+
+~~~typescript
+interface TemplateDocument {
+  templateId: string
+  content: TemplateContent
+  resources: { functions: FunctionDef[] }
+  editorState: DslEditorState
+}
+~~~
+
+函数库源文档使用 UUID，可以独立修改或删除。函数被加入 Template 时，其完整嵌套依赖闭包会被复制到 `resources.functions`；内部引用改写为内容哈希 ID，相同快照按哈希去重。Template 此后不再依赖函数库源文档。编译器保留函数结构到导出阶段再展开，不在复制时摊平函数。
 
 ## 五、Template DSL 与导出
 
@@ -424,17 +437,18 @@ interface StudentInfo {
 ~~~text
 1. 创建 InterfaceDef
 2. 创建 SchemaDef（包含可复用评分块）
-3. 创建 TemplateDraft
+3. 创建或打开 TemplateDocument
    → 声明多个 Interface 依赖和变量子集
-   → 组装页面、框架和函数节点
+   → 组装页面、框架和选择题节点
+   → 从函数库复制函数及其完整依赖闭包到 Template 资源
    → 配置函数输入和手动出参
    → 添加 ChoiceQuestionNode 或调用单题函数
    → 唯一 ChoiceCollector 收集单题并配置 page 列表
    → 在函数或 Template 层消费 Schema 评分块
    → 为每个评分块完整填写绑定
-4. 发布 TemplateDraft → TemplateDef
+4. 直接保存当前 Template 工作文档
 5. 预览或导出时为每个 Interface 别名选择 InterfaceInstance
-6. 编译 Template DSL
+6. 严格校验并编译 Template DSL
    → 求值所有静态表达式
    → 展开函数和框架
    → 平行收集页面和选择题单题节点

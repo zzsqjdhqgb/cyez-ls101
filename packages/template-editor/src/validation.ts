@@ -1,20 +1,32 @@
-import type { TemplateContent } from './types'
+import type { TemplateContent, TemplateDocument } from './types'
 import { analyzeChoiceFrame, validateChoiceResult } from './validation/choice'
 import {
   addError,
   createValidationState,
   validateInterfaceRequirements,
+  type TemplateDocumentValidationContext,
   type TemplateValidationContext,
   type TemplateValidationResult
 } from './validation/shared'
 import { validateDefinitionScope } from './validation/scope'
 
 export type {
+  TemplateDocumentValidationContext,
   TemplateValidationContext,
   TemplateValidationError,
   TemplateValidationErrorCode,
   TemplateValidationResult
 } from './validation/shared'
+
+export function validateTemplateDocument(
+  document: TemplateDocument,
+  context: TemplateDocumentValidationContext
+): TemplateValidationResult {
+  return validateTemplateContent(document.content, {
+    ...context,
+    functions: document.resources.functions
+  })
+}
 
 export function validateTemplateContent(
   content: TemplateContent,

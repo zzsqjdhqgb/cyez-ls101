@@ -2,7 +2,7 @@
 
 ## 功能状态
 
-`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 草稿与内容身份纯函数、基于外部依赖清单的发布语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。当前没有实现仓储、编辑操作或 renderer 页面。
+`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 与 Function 工作文档身份、内嵌函数资源身份、严格语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。当前没有实现仓储、函数资源复制操作或 renderer 页面。
 
 ## 已实现边界
 
@@ -14,26 +14,26 @@
 - 函数输入、手动出参、局部输出引用，以及调用点出参名称重定向。
 - 带 `schemaId + blockId` 强关联的评分块消费与字段绑定。
 - 多 Interface 依赖、命名空间和导出时实例选择 DTO。
-- `TemplateContent`、`TemplateDraft`、`TemplateDef` 和发布状态。
+- `TemplateContent`、稳定 UUID 的 `TemplateDocument`、内嵌函数资源和 JSON 编辑器状态。
 
 Schema Editor 向 Template Editor 提供的 `SchemaBlockManifest` 位于 `@ls101/core-types`，其中只包含评分块和字段契约，不暴露评分实现。
 
-## 内容身份
+## 工作文档与函数资源身份
 
-`deriveTemplateId()` 对 `TemplateContent` 做稳定序列化并计算 SHA-256，结果格式为 `sha256:<64 位十六进制摘要>`。对象 key 不影响结果，DSL 数组顺序参与结果；所有字符串在计算前统一为 LF 换行和 NFC Unicode。
+Template 不区分草稿和发布状态。`createTemplateDocument()` 生成稳定 UUID `templateId` 并深拷贝正文、函数资源和编辑器状态；保存工作文档不触发严格校验，预览和导出才要求当前内容完整合法。导出后的 ExamPackage 不依赖 Template，后续修改或删除工作文档不会影响已经导出的试卷。
 
-哈希包含名称、描述、Interface 依赖、完整根 DSL、Schema 消费，以及根 DSL 中的函数内容 ID 引用。`draftId`、发布 `id`、状态、时间戳和导出时选择的 Interface 实例不参与哈希。
+函数库源文档同样使用稳定 UUID `functionId`，可以直接编辑和删除。Template 内的 `FunctionDef` 是复制后的不可变快照，其 `id` 由 `deriveFunctionResourceId()` 根据函数正文计算。嵌套 `functionRef`、节点顺序、输入输出和 Schema 消费参与哈希；对象 key 不影响结果，字符串统一为 LF 换行和 NFC Unicode。
 
-公共纯函数包括：
+当前身份工具包括：
 
-- `createTemplateDraft()`：生成 UUID v4 草稿身份和 `draft` 状态。
-- `publishTemplate()`：生成不可变内容 ID 和 `published` 状态。
-- `verifyTemplateId()`：复算已发布内容 ID。
-- `compareTemplateIdentity()`：区分相同内容、不同 ID 和同 ID 内容冲突。
+- `createTemplateDocument()`、`createFunctionDocument()`：创建可编辑 UUID 工作文档。
+- `createFunctionResource()`：生成带内容 ID 的内嵌函数快照。
+- `verifyFunctionResourceId()`：复算函数资源 ID 并检测正文篡改。
+- `canonicalizeFunctionContent()`：生成稳定的函数正文规范表示。
 
-## 发布语义校验
+## 严格语义校验
 
-`validateTemplateContent(content, context)` 接收 Template 正文，以及只读的 Interface 变量清单、Schema 评分块清单和函数定义列表。返回稳定错误代码、字段路径和参数，不生成面向用户的错误文案。
+`validateTemplateDocument(document, context)` 从 Template 自带资源读取函数快照，调用方只提供 Interface 变量清单和 Schema 评分块清单。底层 `validateTemplateContent(content, context)` 仍可用于单独校验正文及显式函数集合。两者都返回稳定错误代码、字段路径和参数，不生成面向用户的错误文案。
 
 校验器按 Template 根或函数定义建立局部作用域，框架本身不创建隐式作用域。函数调用必须完整填写输入，并通过 `outputNames` 将每个手动出参重命名到调用方作用域；同一函数可以因此被多次调用。函数内部 Schema 消费随实际调用展开，但调用方不能改写其绑定。
 
@@ -50,7 +50,7 @@ Schema Editor 向 Template Editor 提供的 `SchemaBlockManifest` 位于 `@ls101
 
 ## 试卷包编译
 
-`compileTemplate(content, context)` 先执行完整发布语义校验，再使用导出时传入的 Interface 实例绑定展开 Template。成功时返回 `ExamPackage`；失败时通过判别联合返回校验阶段或编译阶段的结构化错误，不生成部分试卷包。
+`compileTemplate(document, context)` 先对工作文档执行完整语义校验，再使用导出时传入的 Interface 实例绑定展开 Template。函数定义只从 `document.resources.functions` 读取，不访问函数库。成功时返回 `ExamPackage`；失败时通过判别联合返回校验阶段或编译阶段的结构化错误，不生成部分试卷包。
 
 编译器分两阶段工作。第一阶段展开框架和函数调用，分配全局 `recordIndex`、`choiceIndex` 并建立静态值依赖；第二阶段统一求值页面内容、时间线、选择题、函数静态出参和 Schema 字段。因此页面或函数输入可以引用同层稍后声明的静态输出，跨函数形成的静态值循环会作为编译错误返回。
 
@@ -67,13 +67,14 @@ Schema Editor 向 Template Editor 提供的 `SchemaBlockManifest` 位于 `@ls101
 
 ## 未实现边界
 
-当前类型仍允许表达不完整的草稿；编译入口会自行执行严格校验。以下能力尚未实现：
+工作文档允许保存不完整状态；编译入口会自行执行严格校验。以下能力尚未实现：
 
-- Template 和 Function 仓储，以及调用方从 Interface 仓储按 instanceId 组装编译绑定。
-- 草稿保存、发布和预览的应用服务工作流。
+- Template 和 Function 工作文档仓储，以及调用方从 Interface 仓储按 instanceId 组装编译绑定。
+- 复制函数完整依赖闭包、改写内部引用、按哈希去重和清理不可达资源的应用操作。
+- 工作文档保存、预览和导出的应用服务工作流。
 - `ExamPackage` 的文件封装、资源复制和持久化格式。
 - renderer 图形化 DSL 编辑器及编译错误文案和定位交互。
 
 ## 验证覆盖
 
-单元测试覆盖内容 ID、草稿/发布身份、依赖与表达式类型、函数作用域及重命名、Schema 完整绑定、函数递归、Collector 跨函数收集、分页、视图范围和全局候选约束。编译测试额外覆盖完整 Player/Schema 输出、重复函数调用、相对与绝对 focus 地址、函数内部 Schema 展开、跨调用静态值循环、Interface 实例绑定错误和校验错误透传。
+单元测试覆盖工作文档 UUID、函数资源内容 ID 与篡改检测、依赖与表达式类型、函数作用域及重命名、Schema 完整绑定、函数递归、Collector 跨函数收集、分页、视图范围和全局候选约束。编译测试额外覆盖内嵌函数资源、完整 Player/Schema 输出、重复函数调用、相对与绝对 focus 地址、函数内部 Schema 展开、跨调用静态值循环、Interface 实例绑定错误和校验错误透传。

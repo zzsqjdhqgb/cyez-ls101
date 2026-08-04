@@ -566,7 +566,7 @@ describe('validateTemplateContent - Schema 绑定', () => {
     expectCode(unknownBlock, 'UNKNOWN_SCHEMA_BLOCK')
   })
 
-  it('展开后完全没有 Schema 消费时拒绝发布', () => {
+  it('展开后完全没有 Schema 消费时拒绝导出', () => {
     expectCode(templateContent({ schemaUses: [] }), 'NO_SCHEMA_USE')
   })
 
@@ -731,7 +731,7 @@ describe('validateTemplateContent - ChoiceCollector', () => {
     expect(resultCodes).toContain('UNKNOWN_CHOICE_VIEW_OVERRIDE')
   })
 
-  it('选择题视图在没有唯一 ChoiceMeta 时拒绝发布', () => {
+  it('选择题视图在没有唯一 ChoiceMeta 时拒绝导出', () => {
     const content = templateContent({
       root: root([
         page({

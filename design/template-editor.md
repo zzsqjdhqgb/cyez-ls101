@@ -185,13 +185,22 @@ Interface 的 text 变量可以绑定到 string；Interface 的 image 变量可�
 函数是一个可复用的 DSL 子图。它由手动配置的输入列表、一个外层框架节点和手动配置的出参列表组成。
 
 ~~~typescript
-interface FunctionDef {
-  id: string
+interface FunctionContent {
   name: string
   inputs: FunctionInputDef[]
   body: FrameNode
   outputs: FunctionOutputDef[]
   schemaUses: SchemaUse[]
+}
+
+interface FunctionDocument {
+  functionId: string
+  content: FunctionContent
+  editorState: DslEditorState
+}
+
+interface FunctionDef extends FunctionContent {
+  id: string
 }
 
 interface FunctionInputDef {
@@ -210,6 +219,10 @@ type OutputExpression =
   | { type: 'audio'; source: 'record-output'; name: string }
   | { type: 'choice'; source: 'choice-output'; name: string }
 ~~~
+
+函数库中的 `FunctionDocument` 是可直接编辑和删除的源文档，使用稳定 UUID 标识。用户把函数加入 Template 时，系统复制该函数当前状态及其完整嵌套函数依赖闭包；复制过程从叶子开始，把内部 `functionRef` 改写为已复制子函数的内容 ID，再计算父函数内容 ID。相同内容 ID 的资源只保存一次，因此最终结构是去重后的依赖图，而不是重复的树。
+
+Template 不保存对函数库 UUID 的活动引用。复制完成后，Template 根节点和内嵌函数中的 `functionRef` 都只指向 Template 自身资源集合中的 `FunctionDef.id`。修改或删除函数库源文档不会影响已有 Template；更新到新版本必须显式重新复制。函数不会在存储时摊平，输入、出参、局部命名空间、Schema 消费和相对 focus 地址仍保留原有函数边界，最终导出时才由编译器展开。递归函数依赖不允许复制。
 
 函数输入、页面录音输出、选择题输出和函数出参共享同一个局部命名空间，所有名称必须整体唯一。新增输入或出参时系统生成可编辑的默认名称，例如 text-1、recording-1、answer-1。
 
@@ -266,7 +279,7 @@ choice 是独立的运行期类型，不是 string。它不能参与文本拼接
 
 正确答案、分值和评分规则不属于 ChoiceQuestionNode，不写入 Player 使用的题目结构；它们通过 Schema 评分块的静态参数表达。
 
-Collector 的 pages 是可增减列表，每项的 questionCount 表示该内页包含的连续题目数量。例如 `[5, 5]` 表示前五题在第一页、后五题在第二页。questionCount 只能是大于 0 的整数字面量，不接受变量绑定。发布时必须满足所有 questionCount 之和等于 Collector 实际收集的单题节点数量。
+Collector 的 pages 是可增减列表，每项的 questionCount 表示该内页包含的连续题目数量。例如 `[5, 5]` 表示前五题在第一页、后五题在第二页。questionCount 只能是大于 0 的整数字面量，不接受变量绑定。严格校验时必须满足所有 questionCount 之和等于 Collector 实际收集的单题节点数量。
 
 ### 7.2 ChoiceViewBlock
 
@@ -372,13 +385,11 @@ interface SchemaUse {
 
 Schema 相关的完整导出规则见 data-interface.md。
 
-## 十、Template 生命周期与身份
+## 十、Template 工作文档与函数资源
 
-Template 使用草稿与已发布成品分离的模型。每份 Template 必须有有效的 Schema 依赖：根层可以直接消费评分块，也可以通过函数内部消费间接产生依赖；整个 DSL 展开后不能没有任何 Schema 评分块。
+Template 是可持续编辑并直接保存的工作文档，不区分草稿和已发布成品。每份 Template 使用稳定 UUID 标识；导出 ExamPackage 不是发布操作，也不会冻结 Template。导出后继续修改或删除 Template 不影响已经生成的试卷包，因为试卷包保存完整 Player 数据，只保留对 Schema 的评分依赖。
 
 ~~~typescript
-type TemplateStatus = 'draft' | 'published'
-
 interface TemplateContent {
   name: string
   description: string
@@ -387,20 +398,23 @@ interface TemplateContent {
   schemaUses: SchemaUse[]
 }
 
-interface TemplateDraft extends TemplateContent {
-  draftId: string
-  status: 'draft'
+interface TemplateResources {
+  functions: FunctionDef[]
 }
 
-interface TemplateDef extends TemplateContent {
-  id: string
-  status: 'published'
+interface TemplateDocument {
+  templateId: string
+  content: TemplateContent
+  resources: TemplateResources
+  editorState: DslEditorState
 }
 ~~~
 
-发布时根据 TemplateContent 的规范化内容计算 TemplateDef.id，格式为 sha256:<64 位十六进制摘要>。规范化输入包括名称、描述、Interface 依赖、完整根 DSL、Template 层 Schema 消费和引用的函数定义身份；不包括 draftId、发布状态、时间戳和导出时选择的 Interface 实例。
+`editorState` 保存画布位置、折叠、选择等编辑器私有 JSON 状态，不参与语义校验或试卷编译。工作文档可以处于不完整状态，保存不触发严格校验；预览和导出必须通过完整校验。
 
-发布后的 Template 不直接编辑。修改已发布 Template 时先创建草稿；草稿通过校验后发布，内容变化时产生新的内容 ID，相同内容则复用已有成品。
+Template 本身不计算内容哈希。只有 `resources.functions` 中的内嵌函数快照使用 `sha256:<64 位十六进制摘要>` 内容 ID，用于不可变引用、复制去重和完整性验证。资源集合只需保存从 Template 根节点传递可达的函数依赖闭包；编辑器撤销历史所需的临时副本属于编辑状态，不参与编译。
+
+每份 Template 必须有有效的 Schema 依赖：根层可以直接消费评分块，也可以通过内嵌函数消费间接产生依赖；整个 DSL 展开后不能没有任何 Schema 评分块。
 
 ## 十一、预览与导出
 

@@ -1,25 +1,51 @@
 import stableStringify from 'fast-json-stable-stringify'
-import type { TemplateContent, TemplateDef, TemplateDraft } from './types'
+import type {
+  DslEditorState,
+  FunctionContent,
+  FunctionDef,
+  FunctionDocument,
+  TemplateContent,
+  TemplateDocument,
+  TemplateResources
+} from './types'
 
 const CONTENT_ID_PATTERN = /^sha256:[0-9a-f]{64}$/
 
-/** 创建仅用于本地草稿管理的随机 UUID v4。 */
-export function createTemplateDraftId(): string {
+export function createTemplateId(): string {
   return crypto.randomUUID()
 }
 
-/** 创建草稿；发布时 draftId 不进入成品。 */
-export function createTemplateDraft(content: TemplateContent): TemplateDraft {
+export function createFunctionId(): string {
+  return crypto.randomUUID()
+}
+
+export function createTemplateDocument(
+  content: TemplateContent,
+  resources: TemplateResources = { functions: [] },
+  editorState: DslEditorState = {}
+): TemplateDocument {
   return {
-    draftId: createTemplateDraftId(),
-    status: 'draft',
-    ...copyTemplateContent(content)
+    templateId: createTemplateId(),
+    content: structuredClone(content),
+    resources: structuredClone(resources),
+    editorState: structuredClone(editorState)
   }
 }
 
-/** 根据规范化 TemplateContent 生成稳定的 SHA-256 ID。 */
-export async function deriveTemplateId(content: TemplateContent): Promise<string> {
-  const bytes = new TextEncoder().encode(canonicalizeTemplateContent(content))
+export function createFunctionDocument(
+  content: FunctionContent,
+  editorState: DslEditorState = {}
+): FunctionDocument {
+  return {
+    functionId: createFunctionId(),
+    content: structuredClone(content),
+    editorState: structuredClone(editorState)
+  }
+}
+
+/** 为已经改写完嵌套 functionRef 的函数快照计算内容 ID。 */
+export async function deriveFunctionResourceId(content: FunctionContent): Promise<string> {
+  const bytes = new TextEncoder().encode(canonicalizeFunctionContent(content))
   const digest = await crypto.subtle.digest('SHA-256', bytes)
   const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join(
     ''
@@ -27,62 +53,31 @@ export async function deriveTemplateId(content: TemplateContent): Promise<string
   return `sha256:${hex}`
 }
 
-/** 发布内容。相同规范化内容始终得到相同 ID。 */
-export async function publishTemplate(content: TemplateContent): Promise<TemplateDef> {
-  const normalizedContent = copyTemplateContent(content)
-  return {
-    id: await deriveTemplateId(normalizedContent),
-    status: 'published',
-    ...normalizedContent
-  }
+export async function createFunctionResource(content: FunctionContent): Promise<FunctionDef> {
+  const copy = structuredClone(content)
+  return { ...copy, id: await deriveFunctionResourceId(copy) }
 }
 
-/** 导入时复算摘要，拒绝被篡改的同 ID 内容。 */
-export async function verifyTemplateId(def: TemplateDef): Promise<boolean> {
-  if (!isTemplateId(def.id)) return false
-  return def.id === (await deriveTemplateId(def))
-}
-
-export type TemplateIdentityComparison = 'same' | 'different-id' | 'collision'
-
-export function compareTemplateIdentity(
-  existing: TemplateDef,
-  incoming: TemplateDef
-): TemplateIdentityComparison {
-  if (existing.id !== incoming.id) return 'different-id'
-  return canonicalizeTemplateContent(existing) === canonicalizeTemplateContent(incoming)
-    ? 'same'
-    : 'collision'
-}
-
-export function isTemplateId(value: string): boolean {
-  return CONTENT_ID_PATTERN.test(value)
-}
-
-/**
- * 对象 key 使用稳定排序，业务数组保留顺序；所有字符串统一换行和 Unicode 形式。
- * 只选择 TemplateContent 顶层字段，因此草稿/发布身份和调用方附加元数据不会参与哈希。
- */
-export function canonicalizeTemplateContent(content: TemplateContent): string {
-  return stableStringify(
-    normalizeCanonicalValue({
-      name: content.name,
-      description: content.description,
-      interfaces: content.interfaces,
-      root: content.root,
-      schemaUses: content.schemaUses
-    })
+export async function verifyFunctionResourceId(resource: FunctionDef): Promise<boolean> {
+  return (
+    isFunctionResourceId(resource.id) && resource.id === (await deriveFunctionResourceId(resource))
   )
 }
 
-function copyTemplateContent(content: TemplateContent): TemplateContent {
-  return {
-    name: content.name,
-    description: content.description,
-    interfaces: content.interfaces,
-    root: content.root,
-    schemaUses: content.schemaUses
-  }
+export function isFunctionResourceId(value: string): boolean {
+  return CONTENT_ID_PATTERN.test(value)
+}
+
+export function canonicalizeFunctionContent(content: FunctionContent): string {
+  return stableStringify(
+    normalizeCanonicalValue({
+      name: content.name,
+      inputs: content.inputs,
+      body: content.body,
+      outputs: content.outputs,
+      schemaUses: content.schemaUses
+    })
+  )
 }
 
 function normalizeCanonicalValue(value: unknown): unknown {

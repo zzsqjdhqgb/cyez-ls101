@@ -1,6 +1,6 @@
 import type { ExamPackage } from '@ls101/core-types'
-import type { TemplateContent } from './types'
-import { validateTemplateContent } from './validation'
+import type { TemplateContent, TemplateDocument } from './types'
+import { validateTemplateDocument } from './validation'
 import { instantiateTemplate } from './compiler/expand'
 import {
   CompileFailure,
@@ -22,10 +22,10 @@ export type {
 } from './compiler/shared'
 
 export function compileTemplate(
-  content: TemplateContent,
+  template: TemplateDocument,
   context: TemplateCompileContext
 ): TemplateCompileResult {
-  const validation = validateTemplateContent(content, context)
+  const validation = validateTemplateDocument(template, context)
   if (!validation.valid) {
     return {
       success: false,
@@ -33,10 +33,11 @@ export function compileTemplate(
     }
   }
 
+  const content = template.content
   const bound = bindInterfaceValues(content, context)
   if (bound.errors.length > 0) return { success: false, errors: bound.errors }
 
-  const state = createCompilerState(context, bound.valuesByAlias)
+  const state = createCompilerState(context, bound.valuesByAlias, template.resources.functions)
   try {
     const structure = instantiateTemplate(content, state)
     state.staticCells.forEach((cell) => cell.get())

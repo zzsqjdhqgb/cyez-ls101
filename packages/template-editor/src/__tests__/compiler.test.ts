@@ -7,7 +7,8 @@ import type {
   FunctionNode,
   PageNode,
   SchemaUse,
-  TemplateContent
+  TemplateContent,
+  TemplateDocument
 } from '../types'
 import { number, root, text } from './fixtures'
 
@@ -68,7 +69,6 @@ function compileContext(overrides: Partial<TemplateCompileContext> = {}): Templa
   return {
     interfaceManifests: [interfaceManifest()],
     schemaManifests: [schemaManifest()],
-    functions: [],
     interfaceBindings: [
       {
         alias: 'exam',
@@ -82,6 +82,15 @@ function compileContext(overrides: Partial<TemplateCompileContext> = {}): Templa
       }
     ],
     ...overrides
+  }
+}
+
+function document(content: TemplateContent, functions: FunctionDef[] = []): TemplateDocument {
+  return {
+    templateId: 'template-1',
+    content,
+    resources: { functions },
+    editorState: {}
   }
 }
 
@@ -320,8 +329,8 @@ describe('compileTemplate', () => {
     })
 
     const result = compileTemplate(
-      exam,
-      compileContext({ functions: [textFunction(), choiceFunction()] })
+      document(exam, [textFunction(), choiceFunction()]),
+      compileContext()
     )
     expect(result.success).toBe(true)
     if (!result.success) return
@@ -446,7 +455,7 @@ describe('compileTemplate', () => {
       schemaUses: []
     })
 
-    const result = compileTemplate(exam, compileContext({ functions: [choiceFunction()] }))
+    const result = compileTemplate(document(exam, [choiceFunction()]), compileContext())
     expect(result.success).toBe(true)
     if (!result.success) return
 
@@ -511,8 +520,8 @@ describe('compileTemplate', () => {
     })
 
     const result = compileTemplate(
-      exam,
-      compileContext({ functions: [echo], interfaceBindings: [] })
+      document(exam, [echo]),
+      compileContext({ interfaceBindings: [] })
     )
     expect(result).toMatchObject({
       success: false,
@@ -521,14 +530,14 @@ describe('compileTemplate', () => {
   })
 
   it('返回 Interface 绑定缺失、归属不符和变量缺失错误', () => {
-    const missing = compileTemplate(content(), compileContext({ interfaceBindings: [] }))
+    const missing = compileTemplate(document(content()), compileContext({ interfaceBindings: [] }))
     expect(missing).toMatchObject({
       success: false,
       errors: [{ stage: 'compile', code: 'MISSING_INTERFACE_BINDING' }]
     })
 
     const mismatch = compileTemplate(
-      content(),
+      document(content()),
       compileContext({
         interfaceBindings: [
           {
@@ -544,7 +553,7 @@ describe('compileTemplate', () => {
     })
 
     const missingValue = compileTemplate(
-      content(),
+      document(content()),
       compileContext({
         interfaceBindings: [
           {
@@ -563,8 +572,11 @@ describe('compileTemplate', () => {
     })
   })
 
-  it('返回发布校验错误而不进入编译', () => {
-    const result = compileTemplate(content({ name: '', schemaUses: [] }), compileContext())
+  it('返回严格校验错误而不进入编译', () => {
+    const result = compileTemplate(
+      document(content({ name: '', schemaUses: [] })),
+      compileContext()
+    )
 
     expect(result.success).toBe(false)
     if (result.success) return
@@ -613,7 +625,7 @@ describe('compileTemplate', () => {
       schemaUses: [choiceSchemaUse('choice', 'answer')]
     })
 
-    const result = compileTemplate(exam, compileContext({ interfaceBindings: [] }))
+    const result = compileTemplate(document(exam), compileContext({ interfaceBindings: [] }))
     expect(result).toMatchObject({
       success: false,
       errors: [{ stage: 'compile', code: 'UNKNOWN_FOCUS_QUESTION' }]

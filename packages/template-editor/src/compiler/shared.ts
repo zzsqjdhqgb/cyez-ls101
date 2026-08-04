@@ -8,7 +8,10 @@ import type {
   SchemaUsageExport
 } from '@ls101/core-types'
 import type { FunctionDef, TemplateValueType, ValueType } from '../types'
-import type { TemplateValidationContext, TemplateValidationError } from '../validation/shared'
+import type {
+  TemplateDocumentValidationContext,
+  TemplateValidationError
+} from '../validation/shared'
 
 export interface TemplateInterfaceBinding {
   alias: string
@@ -17,7 +20,7 @@ export interface TemplateInterfaceBinding {
   instance: InterfaceInstance
 }
 
-export interface TemplateCompileContext extends TemplateValidationContext {
+export interface TemplateCompileContext extends TemplateDocumentValidationContext {
   interfaceBindings: readonly TemplateInterfaceBinding[]
 }
 
@@ -98,10 +101,11 @@ export class CompileFailure extends Error {
 
 export function createCompilerState(
   context: TemplateCompileContext,
-  interfaceValuesByAlias: Map<string, Map<string, BoundInterfaceValue>>
+  interfaceValuesByAlias: Map<string, Map<string, BoundInterfaceValue>>,
+  functions: readonly FunctionDef[]
 ): CompilerState {
   return {
-    functionsById: new Map(context.functions.map((func) => [func.id, func])),
+    functionsById: new Map(functions.map((func) => [func.id, func])),
     schemasById: new Map(context.schemaManifests.map((schema) => [schema.schemaId, schema])),
     interfaceValuesByAlias,
     staticCells: [],

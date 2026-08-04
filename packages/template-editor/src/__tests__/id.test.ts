@@ -1,35 +1,70 @@
 import { describe, expect, it } from 'vitest'
 import {
-  canonicalizeTemplateContent,
-  compareTemplateIdentity,
-  createTemplateDraft,
-  deriveTemplateId,
-  isTemplateId,
-  publishTemplate,
-  verifyTemplateId
+  canonicalizeFunctionContent,
+  createFunctionDocument,
+  createFunctionResource,
+  createTemplateDocument,
+  deriveFunctionResourceId,
+  isFunctionResourceId,
+  verifyFunctionResourceId
 } from '../id'
+import type { FunctionContent } from '../types'
 import { root, templateContent, text } from './fixtures'
 
-describe('Template 内容身份', () => {
-  it('生成标准 SHA-256 内容 ID', async () => {
-    const id = await deriveTemplateId(templateContent())
-    expect(isTemplateId(id)).toBe(true)
-    expect(id).toMatch(/^sha256:[0-9a-f]{64}$/)
+function functionContent(overrides: Partial<FunctionContent> = {}): FunctionContent {
+  return {
+    name: 'Reusable page',
+    inputs: [{ name: 'prompt', type: 'string' }],
+    body: root(),
+    outputs: [
+      {
+        name: 'result',
+        type: 'string',
+        expression: {
+          type: 'string',
+          source: 'variable',
+          ref: { scope: 'local', name: 'prompt' }
+        }
+      }
+    ],
+    schemaUses: [],
+    ...overrides
+  }
+}
+
+describe('Template 工作文档与函数资源身份', () => {
+  it('为 Template 工作文档生成稳定 UUID 并保存编辑器状态', () => {
+    const content = templateContent()
+    const document = createTemplateDocument(content, { functions: [] }, { zoom: 1.25 })
+
+    expect(document.templateId).toMatch(/^[0-9a-f-]{36}$/i)
+    expect(document.content).toEqual(content)
+    expect(document.resources).toEqual({ functions: [] })
+    expect(document.editorState).toEqual({ zoom: 1.25 })
+
+    content.name = 'Changed outside'
+    expect(document.content.name).not.toBe(content.name)
   })
 
-  it('相同内容产生相同 ID', async () => {
-    const first = await publishTemplate(templateContent())
-    const second = await publishTemplate(templateContent())
-    expect(first.id).toBe(second.id)
+  it('为函数库源文档生成稳定 UUID，源文档不使用内容 ID', () => {
+    const source = createFunctionDocument(functionContent(), { selectedNodeId: 'root' })
+
+    expect(source.functionId).toMatch(/^[0-9a-f-]{36}$/i)
+    expect(source.functionId).not.toMatch(/^sha256:/)
+    expect(source.editorState).toEqual({ selectedNodeId: 'root' })
   })
 
-  it('固定规范内容的 UTF-8 SHA-256 摘要', async () => {
-    expect(await deriveTemplateId(templateContent())).toBe(
-      'sha256:aaef29e9a375d7d370f05e2d4f26313657ab5cb988eb4b507e8d3b33a51b847a'
-    )
+  it('为嵌入 Template 的函数快照生成标准 SHA-256 内容 ID', async () => {
+    const resource = await createFunctionResource(functionContent())
+
+    expect(isFunctionResourceId(resource.id)).toBe(true)
+    expect(resource.id).toMatch(/^sha256:[0-9a-f]{64}$/)
+    expect(await verifyFunctionResourceId(resource)).toBe(true)
   })
 
-  it('节点顺序是规范内容的一部分', async () => {
+  it('相同函数内容产生相同资源 ID，结构顺序参与哈希', async () => {
+    const first = await createFunctionResource(functionContent())
+    const duplicate = await createFunctionResource(functionContent())
     const pageA = {
       id: 'page-a',
       type: 'page' as const,
@@ -37,43 +72,36 @@ describe('Template 内容身份', () => {
       timeline: []
     }
     const pageB = { ...pageA, id: 'page-b' }
+    const ordered = await deriveFunctionResourceId(functionContent({ body: root([pageA, pageB]) }))
+    const reversed = await deriveFunctionResourceId(functionContent({ body: root([pageB, pageA]) }))
 
-    const first = await deriveTemplateId(templateContent({ root: root([pageA, pageB]) }))
-    const second = await deriveTemplateId(templateContent({ root: root([pageB, pageA]) }))
-    expect(first).not.toBe(second)
+    expect(first.id).toBe(duplicate.id)
+    expect(ordered).not.toBe(reversed)
   })
 
-  it('Interface、Schema 和函数身份都参与 ID', async () => {
-    const base = templateContent()
-    const baseId = await deriveTemplateId(base)
-    const changedInterface = templateContent({
-      interfaces: [{ ...base.interfaces[0], interfaceId: `sha256:${'3'.repeat(64)}` }]
-    })
-    const changedSchema = templateContent({
-      schemaUses: [{ ...base.schemaUses[0], schemaId: `sha256:${'4'.repeat(64)}` }]
-    })
-    const changedFunction = templateContent({
-      root: root([
-        {
-          id: 'function-call',
-          type: 'function',
-          functionRef: `sha256:${'5'.repeat(64)}`,
-          inputs: {},
-          outputNames: {}
-        }
-      ])
-    })
+  it('嵌套函数资源引用参与父函数内容哈希', async () => {
+    const call = (functionRef: string) =>
+      functionContent({
+        body: root([
+          {
+            id: 'nested-call',
+            type: 'function',
+            functionRef,
+            inputs: {},
+            outputNames: {}
+          }
+        ])
+      })
 
-    expect(await deriveTemplateId(changedInterface)).not.toBe(baseId)
-    expect(await deriveTemplateId(changedSchema)).not.toBe(baseId)
-    expect(await deriveTemplateId(changedFunction)).not.toBe(baseId)
+    expect(await deriveFunctionResourceId(call(`sha256:${'1'.repeat(64)}`))).not.toBe(
+      await deriveFunctionResourceId(call(`sha256:${'2'.repeat(64)}`))
+    )
   })
 
-  it('CRLF/LF 和等价 Unicode 规范化后 ID 相同', async () => {
-    const first = templateContent({
-      name: 'Cafe\u0301',
-      description: 'line 1\r\nline 2',
-      root: root([
+  it('CRLF/LF 和等价 Unicode 规范化后资源 ID 相同', async () => {
+    const first = functionContent({
+      name: 'Cafe\u0301\r\nFunction',
+      body: root([
         {
           id: 'question',
           type: 'choice-question',
@@ -86,10 +114,9 @@ describe('Template 内容身份', () => {
         }
       ])
     })
-    const second = templateContent({
-      name: 'Caf\u00e9',
-      description: 'line 1\nline 2',
-      root: root([
+    const second = functionContent({
+      name: 'Caf\u00e9\nFunction',
+      body: root([
         {
           id: 'question',
           type: 'choice-question',
@@ -103,47 +130,24 @@ describe('Template 内容身份', () => {
       ])
     })
 
-    expect(await deriveTemplateId(first)).toBe(await deriveTemplateId(second))
+    expect(await deriveFunctionResourceId(first)).toBe(await deriveFunctionResourceId(second))
   })
 
-  it('发布结果可复算验证，正文篡改后验证失败', async () => {
-    const published = await publishTemplate(templateContent())
-    expect(await verifyTemplateId(published)).toBe(true)
-    expect(await verifyTemplateId({ ...published, name: '被篡改的模板' })).toBe(false)
+  it('函数资源正文被篡改后验证失败', async () => {
+    const resource = await createFunctionResource(functionContent())
+
+    expect(await verifyFunctionResourceId({ ...resource, name: 'Tampered' })).toBe(false)
   })
 
-  it('区分重复、不同 ID 和同 ID 不同内容', async () => {
-    const existing = await publishTemplate(templateContent())
-    const duplicate = await publishTemplate(templateContent())
-    const different = await publishTemplate(templateContent({ name: '另一份模板' }))
-    const collision = { ...existing, description: '冲突内容' }
-
-    expect(compareTemplateIdentity(existing, duplicate)).toBe('same')
-    expect(compareTemplateIdentity(existing, different)).toBe('different-id')
-    expect(compareTemplateIdentity(existing, collision)).toBe('collision')
-  })
-
-  it('草稿身份和状态不参与发布 ID', async () => {
-    const draft = createTemplateDraft(templateContent())
-    const published = await publishTemplate(draft)
-
-    expect(draft.draftId).toMatch(/^[0-9a-f-]{36}$/i)
-    expect(draft.status).toBe('draft')
-    expect(published.status).toBe('published')
-    expect(published).not.toHaveProperty('draftId')
-    expect(await verifyTemplateId(published)).toBe(true)
-  })
-
-  it('规范化输出忽略顶层草稿、发布身份和附加元数据', () => {
-    const content = templateContent()
+  it('规范化只包含函数正文，不包含资源或编辑身份', () => {
+    const content = functionContent()
     const decorated = {
       ...content,
-      draftId: 'draft-id',
-      id: 'published-id',
-      status: 'draft' as const,
-      updatedAt: '2026-08-04T00:00:00Z'
+      id: 'resource-id',
+      functionId: 'source-id',
+      editorState: { selectedNodeId: 'root' }
     }
 
-    expect(canonicalizeTemplateContent(decorated)).toBe(canonicalizeTemplateContent(content))
+    expect(canonicalizeFunctionContent(decorated)).toBe(canonicalizeFunctionContent(content))
   })
 })

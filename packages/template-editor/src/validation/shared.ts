@@ -7,6 +7,9 @@ export interface TemplateValidationContext {
   functions: readonly FunctionDef[]
 }
 
+/** TemplateDocument 已自带函数资源，调用方只需提供跨模块清单。 */
+export type TemplateDocumentValidationContext = Omit<TemplateValidationContext, 'functions'>
+
 export type TemplateValidationErrorCode =
   | 'EMPTY_TEMPLATE_NAME'
   | 'DUPLICATE_INTERFACE_MANIFEST'

@@ -193,7 +193,7 @@ export interface PageNode extends BaseNode {
 
 export interface FunctionNode extends BaseNode {
   type: 'function'
-  /** 引用不可变 FunctionDef 的内容 ID。 */
+  /** 在函数源文档中引用函数库 UUID；嵌入 Template 后改写为 FunctionDef 内容 ID。 */
   functionRef: string
   inputs: Record<string, StaticValueExpression>
   /** key 是函数出参名，value 是该次调用在调用方作用域中暴露的名称。 */
@@ -225,14 +225,30 @@ export interface ChoicePageSpec {
 // 函数
 // ============================================================
 
-export interface FunctionDef {
-  /** 不可变函数定义的内容 ID。 */
-  id: string
+/** 函数库文档和 Template 内嵌快照共享的可编辑正文。 */
+export interface FunctionContent {
   name: string
   inputs: FunctionInputDef[]
   body: FrameNode
   outputs: FunctionOutputDef[]
   schemaUses: SchemaUse[]
+}
+
+/** 函数库中的可编辑源文档；嵌套源函数可引用此 UUID，Template 不能直接引用。 */
+export interface FunctionDocument {
+  /** 函数库源文档的稳定 UUID。 */
+  functionId: string
+  content: FunctionContent
+  editorState: DslEditorState
+}
+
+/**
+ * Template 自带的不可变函数快照。id 是改写完子函数引用后的内容哈希；
+ * FunctionNode.functionRef 在 Template 及内嵌函数中都指向此资源集合内的 id。
+ */
+export interface FunctionDef extends FunctionContent {
+  /** sha256:<64 位十六进制摘要> */
+  id: string
 }
 
 export interface FunctionInputDef {
@@ -345,7 +361,7 @@ export interface SchemaChoiceOutputExpression {
 }
 
 // ============================================================
-// Template 生命周期
+// Template 工作文档
 // ============================================================
 
 export interface TemplateInterfaceRequirement {
@@ -363,19 +379,33 @@ export interface TemplateContent {
   schemaUses: SchemaUse[]
 }
 
-export type TemplateStatus = 'draft' | 'published'
-
-export interface TemplateDraft extends TemplateContent {
-  /** 仅标识本地编辑会话，不参与发布内容 ID。 */
-  draftId: string
-  status: 'draft'
+export interface TemplateResources {
+  /** 当前 Template 根及内嵌函数传递闭包可达的函数快照，按内容 ID 去重。 */
+  functions: FunctionDef[]
 }
 
-export interface TemplateDef extends TemplateContent {
-  /** sha256:<64 位十六进制摘要> */
-  id: string
-  status: 'published'
+/**
+ * 可持续编辑并直接保存的 Template 文档。导出 ExamPackage 不是发布操作，
+ * 后续修改或删除此文档不会影响已经导出的试卷包。
+ */
+export interface TemplateDocument {
+  /** 工作文档的稳定 UUID。 */
+  templateId: string
+  content: TemplateContent
+  resources: TemplateResources
+  editorState: DslEditorState
 }
+
+/** 编辑器私有 JSON 状态，例如画布位置、折叠和选中状态；不参与校验或编译。 */
+export type DslEditorState = Record<string, JsonValue>
+
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue }
 
 /** 预览或导出时临时提供，不写入 TemplateContent。 */
 export interface ExportInterfaceInstanceSelection {
