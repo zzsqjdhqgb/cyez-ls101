@@ -11,7 +11,6 @@ import {
 import type {
   AIRouterGeneratedImage,
   AIRouterImageConnectionTestInput,
-  AIRouterImageGenerationSettings,
   AIRouterImageProviderConfig,
   AIRouterImageProviderConfigInput,
   AIRouterImageProviderConfigSummary,
@@ -23,8 +22,8 @@ import type {
 
 const CONFIG_VERSION = 1
 const PROVIDERS_KEY = 'image-providers'
-const SETTINGS_KEY = 'image-settings'
 const DEFAULT_BASE_URL = 'https://api.openai.com/v1'
+const DEFAULT_MANUAL_PROVIDER_ID = 'manual'
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024
 const validConfigId = /^[a-zA-Z0-9_-]+$/
 
@@ -60,45 +59,36 @@ export class AIRouterImageService {
     const id = input.id?.trim() || randomUUID()
     validateConfigId(id)
     const config = normalizeConfig({ ...input, id })
-    const providers = document.providers.some((candidate) => candidate.id === id)
+    let providers = document.providers.some((candidate) => candidate.id === id)
       ? document.providers.map((candidate) => (candidate.id === id ? config : candidate))
       : [...document.providers, config]
+    providers = ensureSelectableProvider(providers)
     await this.writeDocument({ version: CONFIG_VERSION, providers })
-    if (input.clearApiKey) await this.secretScope().delete(id)
+    if (config.type === 'manual' || input.clearApiKey) await this.secretScope().delete(id)
     else if (input.apiKey !== undefined) await this.secretScope().write(id, input.apiKey)
-    const settings = await this.getGenerationSettings()
-    if (
-      settings.mode === 'provider' &&
-      settings.providerConfigId === id &&
-      !config.models.some((model) => model.id === settings.modelId && model.enabled)
-    ) {
-      await this.saveGenerationSettings({ mode: 'manual' })
-    }
     return this.summary(config)
   }
 
   async deleteProviderConfig(id: string): Promise<void> {
     validateConfigId(id)
     const document = await this.readDocument()
-    await this.writeDocument({
-      version: CONFIG_VERSION,
-      providers: document.providers.filter((config) => config.id !== id)
-    })
+    const providers = ensureSelectableProvider(
+      document.providers.filter((config) => config.id !== id)
+    )
+    await this.writeDocument({ version: CONFIG_VERSION, providers })
     await this.secretScope().delete(id)
-    const settings = await this.getGenerationSettings()
-    if (settings.mode === 'provider' && settings.providerConfigId === id) {
-      await this.saveGenerationSettings({ mode: 'manual' })
-    }
   }
 
   async readProviderApiKey(id: string): Promise<string | null> {
     validateConfigId(id)
-    await this.requireConfig(id)
+    const config = await this.requireConfig(id)
+    if (config.type === 'manual') return null
     return this.secretScope().read(id)
   }
 
   async listModels(input: AIRouterImageProviderConfigInput): Promise<AIRouterModelOption[]> {
     const { config, apiKey } = await this.resolveTransientConfig(input)
+    if (config.type === 'manual') return []
     const response = await fetch(`${config.baseUrl}/models`, {
       headers: { authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(30_000)
@@ -119,33 +109,6 @@ export class AIRouterImageService {
       .sort((left, right) => left.id.localeCompare(right.id))
   }
 
-  async getGenerationSettings(): Promise<AIRouterImageGenerationSettings> {
-    const value = await this.configStorage.read<JsonValue>({
-      scope: ['airouter'],
-      key: SETTINGS_KEY
-    })
-    if (!value) return { mode: 'manual' }
-    if (!isGenerationSettings(value)) throw new Error('图像生成设置数据无效')
-    return value
-  }
-
-  async saveGenerationSettings(
-    settings: AIRouterImageGenerationSettings
-  ): Promise<AIRouterImageGenerationSettings> {
-    validateGenerationSettings(settings)
-    if (settings.mode === 'provider') {
-      const config = await this.requireConfig(settings.providerConfigId)
-      if (!config.models.some((model) => model.id === settings.modelId && model.enabled)) {
-        throw new Error('图像生成模型未配置或未启用')
-      }
-    }
-    await this.configStorage.write(
-      { scope: ['airouter'], key: SETTINGS_KEY },
-      settings as unknown as JsonValue
-    )
-    return settings
-  }
-
   async testConnection(
     request: AIRouterImageConnectionTestInput
   ): Promise<AIRouterImageTestResult> {
@@ -153,6 +116,7 @@ export class AIRouterImageService {
       throw new Error('模型 ID 不能为空')
     }
     const { config, apiKey } = await this.resolveTransientConfig(request.config)
+    if (config.type === 'manual') throw new Error('手动 Provider 不需要连接测试')
     if (!config.models.some((model) => model.id === request.modelId && model.enabled)) {
       throw new Error('模型未配置或未启用')
     }
@@ -166,6 +130,7 @@ export class AIRouterImageService {
   ): Promise<AIRouterGeneratedImage> {
     validateImageRequest(request)
     const config = await this.requireConfig(request.providerConfigId)
+    if (config.type === 'manual') throw new Error('手动 Provider 不能通过 API 生成图片')
     if (!config.models.some((model) => model.id === request.modelId && model.enabled)) {
       throw new Error('图像生成模型未配置或未启用')
     }
@@ -193,7 +158,8 @@ export class AIRouterImageService {
     return {
       ...config,
       models: config.models.map((model) => ({ ...model })),
-      hasApiKey: (await this.secretScope().read(config.id)) !== null
+      hasApiKey:
+        config.type === 'openai-compatible' && (await this.secretScope().read(config.id)) !== null
     }
   }
 
@@ -209,7 +175,9 @@ export class AIRouterImageService {
       scope: ['airouter'],
       key: PROVIDERS_KEY
     })
-    if (!value) return { version: CONFIG_VERSION, providers: [] }
+    if (!value) {
+      return { version: CONFIG_VERSION, providers: [createDefaultManualProvider()] }
+    }
     if (!isStoredDocument(value)) throw new Error('图像 Provider 配置数据无效')
     return value
   }
@@ -253,7 +221,12 @@ function normalizeConfig(
   if (typeof input.name !== 'string' || !input.name.trim()) {
     throw new Error('Provider 名称不能为空')
   }
-  if (input.type !== 'openai-compatible') throw new Error('不支持的图像 Provider 类型')
+  if (input.type !== 'manual' && input.type !== 'openai-compatible') {
+    throw new Error('不支持的图像 Provider 类型')
+  }
+  if (input.type === 'manual') {
+    return { id: input.id, name: input.name.trim(), type: input.type, baseUrl: '', models: [] }
+  }
   if (input.baseUrl !== undefined && typeof input.baseUrl !== 'string') {
     throw new Error('Base URL 必须是字符串')
   }
@@ -292,7 +265,7 @@ function isProviderConfig(value: unknown): value is AIRouterImageProviderConfig 
     typeof candidate.id === 'string' &&
     validConfigId.test(candidate.id) &&
     typeof candidate.name === 'string' &&
-    candidate.type === 'openai-compatible' &&
+    (candidate.type === 'manual' || candidate.type === 'openai-compatible') &&
     typeof candidate.baseUrl === 'string' &&
     Array.isArray(candidate.models) &&
     candidate.models.every(
@@ -302,25 +275,26 @@ function isProviderConfig(value: unknown): value is AIRouterImageProviderConfig 
   )
 }
 
-function isGenerationSettings(value: JsonValue): value is AIRouterImageGenerationSettings {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
-  const candidate = value as Partial<AIRouterImageGenerationSettings>
-  return (
-    candidate.mode === 'manual' ||
-    (candidate.mode === 'provider' &&
-      typeof candidate.providerConfigId === 'string' &&
-      typeof candidate.modelId === 'string')
-  )
+function createDefaultManualProvider(): AIRouterImageProviderConfig {
+  return {
+    id: DEFAULT_MANUAL_PROVIDER_ID,
+    name: '手动生成',
+    type: 'manual',
+    baseUrl: '',
+    models: []
+  }
 }
 
-function validateGenerationSettings(settings: AIRouterImageGenerationSettings): void {
-  if (!settings || (settings.mode !== 'manual' && settings.mode !== 'provider')) {
-    throw new Error('图像生成模式无效')
+function ensureSelectableProvider(
+  providers: AIRouterImageProviderConfig[]
+): AIRouterImageProviderConfig[] {
+  if (providers.some((config) => config.type === 'manual')) return providers
+  if (providers.some((config) => config.models.some((model) => model.enabled))) return providers
+  const defaultProvider = createDefaultManualProvider()
+  if (providers.some((config) => config.id === defaultProvider.id)) {
+    defaultProvider.id = `manual-${randomUUID()}`
   }
-  if (settings.mode === 'provider') {
-    validateConfigId(settings.providerConfigId)
-    if (!settings.modelId) throw new Error('图像生成模型 ID 不能为空')
-  }
+  return [...providers, defaultProvider]
 }
 
 function validateImageRequest(request: AIRouterImageRequest): void {

@@ -404,6 +404,9 @@ describe('Interface pages', () => {
       instances: {
         get: vi.fn().mockResolvedValue(initial),
         listAIGenerationModels: vi.fn().mockResolvedValue([]),
+        listImageGenerationProviders: vi
+          .fn()
+          .mockResolvedValue([{ providerId: 'manual', providerName: '手动生成' }]),
         save,
         replaceFromJson: vi.fn(),
         startAIGeneration: vi.fn(),
@@ -487,7 +490,8 @@ describe('Interface pages', () => {
     fireEvent.click(screen.getByRole('button', { name: '生成图片' }))
     await waitFor(() =>
       expect(app.instances.generateImage).toHaveBeenCalledWith('新的图片提示词', {
-        signal: expect.any(AbortSignal)
+        signal: expect.any(AbortSignal),
+        provider: { providerId: 'manual' }
       })
     )
     expect(await screen.findByAltText('picture预览')).toHaveAttribute(

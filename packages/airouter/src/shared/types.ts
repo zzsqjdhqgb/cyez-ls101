@@ -1,5 +1,5 @@
 export type AIRouterProviderType = 'openai-compatible' | 'anthropic'
-export type AIRouterImageProviderType = 'openai-compatible'
+export type AIRouterImageProviderType = 'manual' | 'openai-compatible'
 
 export interface AIRouterModelConfig {
   id: string
@@ -102,10 +102,6 @@ export interface AIRouterImageTestResult {
   image: AIRouterGeneratedImage
 }
 
-export type AIRouterImageGenerationSettings =
-  | { mode: 'manual' }
-  | { mode: 'provider'; providerConfigId: string; modelId: string }
-
 export type AIRouterImageGenerationEvent =
   | { type: 'result'; image: AIRouterGeneratedImage }
   | { type: 'error'; message: string }
@@ -124,10 +120,6 @@ export interface AIRouterClient {
   deleteImageProviderConfig(id: string): Promise<void>
   readImageProviderApiKey(id: string): Promise<string | null>
   listImageModels(config: AIRouterImageProviderConfigInput): Promise<AIRouterModelOption[]>
-  getImageGenerationSettings(): Promise<AIRouterImageGenerationSettings>
-  saveImageGenerationSettings(
-    settings: AIRouterImageGenerationSettings
-  ): Promise<AIRouterImageGenerationSettings>
   testImageConnection(request: AIRouterImageConnectionTestInput): Promise<AIRouterImageTestResult>
   generateImage(
     request: AIRouterImageRequest,
@@ -153,10 +145,6 @@ export interface AIRouterBridge {
   deleteImageProviderConfig(id: string): Promise<void>
   readImageProviderApiKey(id: string): Promise<string | null>
   listImageModels(config: AIRouterImageProviderConfigInput): Promise<AIRouterModelOption[]>
-  getImageGenerationSettings(): Promise<AIRouterImageGenerationSettings>
-  saveImageGenerationSettings(
-    settings: AIRouterImageGenerationSettings
-  ): Promise<AIRouterImageGenerationSettings>
   testImageConnection(request: AIRouterImageConnectionTestInput): Promise<AIRouterImageTestResult>
   startTextGeneration(
     request: AIRouterTextRequest,

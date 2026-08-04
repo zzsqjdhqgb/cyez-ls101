@@ -10,8 +10,6 @@ export const AIROUTER_CHANNELS = {
   deleteImageConfig: 'airouter:delete-image-config',
   readImageApiKey: 'airouter:read-image-api-key',
   listImageModels: 'airouter:list-image-models',
-  getImageSettings: 'airouter:get-image-settings',
-  saveImageSettings: 'airouter:save-image-settings',
   testImageConnection: 'airouter:test-image-connection',
   imageGenerateStart: 'airouter:image-generate-start',
   imageGenerateAbort: 'airouter:image-generate-abort',

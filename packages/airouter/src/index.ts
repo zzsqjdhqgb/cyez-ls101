@@ -5,7 +5,6 @@ export type {
   AIRouterGeneratedImage,
   AIRouterImageConnectionTestInput,
   AIRouterImageGenerationEvent,
-  AIRouterImageGenerationSettings,
   AIRouterImageProviderConfig,
   AIRouterImageProviderConfigInput,
   AIRouterImageProviderConfigSummary,

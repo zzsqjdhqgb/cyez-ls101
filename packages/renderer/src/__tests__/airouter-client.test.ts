@@ -110,8 +110,6 @@ function bridgeWith(overrides: Partial<AIRouterBridge>): AIRouterBridge {
     deleteImageProviderConfig: vi.fn(),
     readImageProviderApiKey: vi.fn(),
     listImageModels: vi.fn(),
-    getImageGenerationSettings: vi.fn(),
-    saveImageGenerationSettings: vi.fn(),
     testImageConnection: vi.fn(),
     startTextGeneration: vi.fn(),
     startImageGeneration: vi.fn(),

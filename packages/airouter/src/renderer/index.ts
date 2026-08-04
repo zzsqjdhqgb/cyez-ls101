@@ -25,8 +25,6 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
     deleteImageProviderConfig: (id) => getBridge().deleteImageProviderConfig(id),
     readImageProviderApiKey: (id) => getBridge().readImageProviderApiKey(id),
     listImageModels: (config) => getBridge().listImageModels(config),
-    getImageGenerationSettings: () => getBridge().getImageGenerationSettings(),
-    saveImageGenerationSettings: (settings) => getBridge().saveImageGenerationSettings(settings),
     testImageConnection: (request) => getBridge().testImageConnection(request),
     generateImage(request, options = {}) {
       return new Promise<AIRouterGeneratedImage>((resolve, reject) => {

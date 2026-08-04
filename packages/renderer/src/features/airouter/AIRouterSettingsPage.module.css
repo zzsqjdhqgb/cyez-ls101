@@ -215,37 +215,6 @@
   color: var(--color-text-faint);
 }
 
-.imageModeToggle {
-  display: inline-grid;
-  grid-template-columns: repeat(2, minmax(120px, 1fr));
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-subtle);
-}
-
-.imageModeToggle button {
-  min-height: 34px;
-  padding: 0 var(--space-3);
-  border: 0;
-  border-radius: calc(var(--radius-sm) - 2px);
-  color: var(--color-text-muted);
-  background: transparent;
-  cursor: pointer;
-}
-
-.imageModeToggle button[data-active] {
-  color: var(--color-text-strong);
-  box-shadow: var(--shadow-sm);
-  background: var(--color-surface);
-}
-
-.imageModeToggle button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
 .imageTestPreview {
   display: block;
   width: min(100%, 320px);

@@ -126,6 +126,16 @@ export interface InterfaceTextModelOption extends InterfaceTextModelSelection {
   modelName?: string
 }
 
+export interface InterfaceImageProviderSelection {
+  providerId: string
+  modelId?: string
+}
+
+export interface InterfaceImageProviderOption extends InterfaceImageProviderSelection {
+  providerName: string
+  modelName?: string
+}
+
 /** AIRouter 或其他 AI 适配器只需提供此窄能力。 */
 export interface InterfaceTextGenerator {
   listModels?(): Promise<readonly InterfaceTextModelOption[]>
@@ -136,7 +146,11 @@ export interface InterfaceTextGenerator {
 }
 
 export interface InterfaceImageGenerator {
-  generate(prompt: string, options: { signal: AbortSignal }): Promise<{ data: Uint8Array }>
+  listProviders?(): Promise<readonly InterfaceImageProviderOption[]>
+  generate(
+    prompt: string,
+    options: { signal: AbortSignal; provider?: InterfaceImageProviderSelection }
+  ): Promise<{ data: Uint8Array }>
 }
 
 export interface InterfaceBrowser {
@@ -164,6 +178,7 @@ export interface PublishedInterfaceApplication {
 export interface InterfaceInstanceApplication {
   get(interfaceId: string, instanceId: string): Promise<InterfaceInstanceDetails | null>
   listAIGenerationModels(): Promise<readonly InterfaceTextModelOption[]>
+  listImageGenerationProviders(): Promise<readonly InterfaceImageProviderOption[]>
   save(
     interfaceId: string,
     instanceId: string,
@@ -177,9 +192,15 @@ export interface InterfaceInstanceApplication {
   startAIGeneration(
     interfaceId: string,
     instanceId: string,
-    options?: { model?: InterfaceTextModelSelection }
+    options?: {
+      model?: InterfaceTextModelSelection
+      imageProvider?: InterfaceImageProviderSelection
+    }
   ): Promise<TaskProgressHandle<InterfaceAIGenerationResult>>
-  generateImage(prompt: string, options?: { signal?: AbortSignal }): Promise<Uint8Array>
+  generateImage(
+    prompt: string,
+    options?: { signal?: AbortSignal; provider?: InterfaceImageProviderSelection }
+  ): Promise<Uint8Array>
   delete(interfaceId: string, instanceId: string): Promise<void>
 }
 
@@ -455,6 +476,9 @@ export function createInterfaceApplication(
       async listAIGenerationModels() {
         return (await textGenerator?.listModels?.()) ?? []
       },
+      async listImageGenerationProviders() {
+        return (await imageGenerator?.listProviders?.()) ?? []
+      },
       async save(interfaceId, instanceId, edit) {
         const release = acquireInstance(interfaceId, instanceId)
         try {
@@ -577,7 +601,8 @@ export function createInterfaceApplication(
               for (const [index, [varName, prompt]] of prompts.entries()) {
                 progress.startImage(index)
                 const generated = await imageGenerator?.generate(prompt, {
-                  signal: controller.signal
+                  signal: controller.signal,
+                  ...(options.imageProvider ? { provider: options.imageProvider } : {})
                 })
                 if (!generated) throw new Error('Interface image generator is not configured')
                 assertSupportedImage(generated.data)
@@ -638,7 +663,10 @@ export function createInterfaceApplication(
         if (options.signal?.aborted) abort()
         else options.signal?.addEventListener('abort', abort, { once: true })
         try {
-          const image = await imageGenerator.generate(prompt, { signal: controller.signal })
+          const image = await imageGenerator.generate(prompt, {
+            signal: controller.signal,
+            ...(options.provider ? { provider: options.provider } : {})
+          })
           assertSupportedImage(image.data)
           return new Uint8Array(image.data)
         } finally {
