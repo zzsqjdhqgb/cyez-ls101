@@ -582,7 +582,10 @@ export function createInterfaceApplication(
             stream,
             controller,
             async (text, progress) => {
-              const validation = validateJson(buildJsonSchema(def.fields), text)
+              const validation = validateJson(
+                buildJsonSchema(def.fields),
+                normalizeAIJsonOutput(text)
+              )
               if (!validation.valid || !validation.data) {
                 return {
                   status: 'invalid-response',
@@ -1017,3 +1020,16 @@ function createGenerationHandle(
 }
 
 class GenerationCancelledError extends Error {}
+
+/** Remove presentation wrappers that some text models add around an otherwise valid object. */
+function normalizeAIJsonOutput(text: string): string {
+  const trimmed = text.trim()
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)
+  const candidate = fenced?.[1]?.trim() ?? trimmed
+  const objectStart = candidate.indexOf('{')
+  if (objectStart <= 0) return candidate
+  const objectEnd = candidate.lastIndexOf('}')
+  return objectEnd >= objectStart
+    ? candidate.slice(objectStart, objectEnd + 1)
+    : candidate.slice(objectStart)
+}

@@ -129,10 +129,24 @@ export class AIRouterService {
     options: { signal?: AbortSignal } = {}
   ): AsyncGenerator<AIRouterTextChunk> {
     const { model } = await this.resolveModel(request)
-    const result = streamText({ model, prompt: request.prompt, abortSignal: options.signal })
+    const result = streamText({
+      model,
+      prompt: request.prompt,
+      abortSignal: options.signal,
+      // Interface responses are structured JSON. Leave enough room for nested
+      // fields and image prompts so providers do not silently truncate the object.
+      maxOutputTokens: 8192
+    })
     for await (const part of result.fullStream as AsyncIterable<unknown>) {
       const chunk = toChunk(part)
       if (chunk) yield chunk
+      const finishReason = streamFinishReason(part)
+      if (finishReason === 'length') {
+        throw new Error('AI 输出达到长度上限，JSON 未完整生成；请减少字段内容后重试')
+      }
+      if (finishReason === 'content-filter') {
+        throw new Error('AI 输出被 Provider 的内容安全策略截断')
+      }
       if (isStreamError(part)) throw new Error(formatProviderError(part.error))
     }
   }
@@ -280,8 +294,18 @@ function createLanguageModel(
 
 function toChunk(part: unknown): AIRouterTextChunk | null {
   if (!part || typeof part !== 'object') return null
-  const value = part as { type?: unknown; textDelta?: unknown; delta?: unknown }
-  const delta = typeof value.textDelta === 'string' ? value.textDelta : value.delta
+  const value = part as {
+    type?: unknown
+    text?: unknown
+    textDelta?: unknown
+    delta?: unknown
+  }
+  const delta =
+    typeof value.text === 'string'
+      ? value.text
+      : typeof value.textDelta === 'string'
+        ? value.textDelta
+        : value.delta
   if (typeof delta !== 'string' || !delta) return null
   if (value.type === 'reasoning-delta') return { type: 'reasoning', delta }
   if (value.type === 'text-delta' || value.type === 'text') return { type: 'output', delta }
@@ -290,6 +314,13 @@ function toChunk(part: unknown): AIRouterTextChunk | null {
 
 function isStreamError(part: unknown): part is { error: unknown } {
   return Boolean(part && typeof part === 'object' && (part as { type?: unknown }).type === 'error')
+}
+
+function streamFinishReason(part: unknown): string | null {
+  if (!part || typeof part !== 'object') return null
+  const value = part as { type?: unknown; finishReason?: unknown }
+  if (value.type !== 'finish' && value.type !== 'finish-step') return null
+  return typeof value.finishReason === 'string' ? value.finishReason : null
 }
 
 function formatProviderError(error: unknown): string {

@@ -500,6 +500,138 @@ describe('Interface pages', () => {
     )
   })
 
+  it('generates prompted images sequentially and saves them as one replacement', async () => {
+    const interfaceId = `sha256:${'e'.repeat(64)}`
+    const instanceId = '20000000-0000-4000-8000-000000000004'
+    const definition = {
+      ...draft,
+      id: interfaceId,
+      fields: {
+        order: ['first', 'second', 'third'],
+        nodes: {
+          first: {
+            type: 'image' as const,
+            varName: 'firstImage',
+            description: '第一张图',
+            example: '一座山'
+          },
+          second: {
+            type: 'image' as const,
+            varName: 'secondImage',
+            description: '第二张图',
+            example: '一片海'
+          },
+          third: {
+            type: 'image' as const,
+            varName: 'thirdImage',
+            description: '没有提示词的图片',
+            example: '一片森林'
+          }
+        }
+      }
+    }
+    const initial = {
+      interfaceId,
+      instance: {
+        instanceId,
+        name: '批量生图题组',
+        generatedAt: '2026-08-04T00:00:00.000Z',
+        values: {
+          firstImage: 'first-old.png',
+          secondImage: 'second-old.png',
+          thirdImage: 'third-old.png'
+        },
+        imagePrompts: { firstImage: '山的提示词', secondImage: '海的提示词' }
+      },
+      assetUrls: {
+        'first-old.png': 'asset://local/first-old.png',
+        'second-old.png': 'asset://local/second-old.png',
+        'third-old.png': 'asset://local/third-old.png'
+      }
+    }
+    const firstImage = new Uint8Array([1, 2, 3])
+    const secondImage = new Uint8Array([4, 5, 6])
+    let resolveFirst!: (data: Uint8Array) => void
+    const firstPending = new Promise<Uint8Array>((resolve) => {
+      resolveFirst = resolve
+    })
+    const generateImage = vi
+      .fn()
+      .mockReturnValueOnce(firstPending)
+      .mockResolvedValueOnce(secondImage)
+    const saved = {
+      ...initial,
+      instance: {
+        ...initial.instance,
+        values: {
+          firstImage: 'first-new.png',
+          secondImage: 'second-new.png',
+          thirdImage: 'third-old.png'
+        }
+      },
+      assetUrls: {
+        ...initial.assetUrls,
+        'first-new.png': 'asset://local/first-new.png',
+        'second-new.png': 'asset://local/second-new.png'
+      }
+    }
+    const save = vi.fn().mockResolvedValue(saved)
+    const app = application({
+      published: { get: vi.fn().mockResolvedValue({ definition, source: { type: 'published' } }) },
+      instances: {
+        get: vi.fn().mockResolvedValue(initial),
+        listImageGenerationProviders: vi
+          .fn()
+          .mockResolvedValue([
+            { providerId: 'image-api', providerName: '图片 API', modelId: 'image-1' }
+          ]),
+        save,
+        generateImage
+      }
+    })
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/interfaces/${interfaceId}/instances/${instanceId}`]}>
+          <Routes>
+            <Route
+              path="/interfaces/:interfaceId/instances/:instanceId"
+              element={<InterfaceInstanceEditorPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+        <AppToaster />
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByRole('heading', { name: '批量生图题组' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'AI 生图' }))
+    expect(screen.getByRole('complementary', { name: 'AI 生图' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '开始生图' }))
+    await waitFor(() => expect(generateImage).toHaveBeenCalledOnce())
+    expect(generateImage).toHaveBeenCalledWith('山的提示词', {
+      signal: expect.any(AbortSignal),
+      provider: { providerId: 'image-api', modelId: 'image-1' }
+    })
+    expect(generateImage).toHaveBeenCalledTimes(1)
+
+    resolveFirst(firstImage)
+    await waitFor(() => expect(generateImage).toHaveBeenCalledTimes(2))
+    expect(generateImage).toHaveBeenLastCalledWith('海的提示词', {
+      signal: expect.any(AbortSignal),
+      provider: { providerId: 'image-api', modelId: 'image-1' }
+    })
+    await waitFor(() => expect(save).toHaveBeenCalledOnce())
+    expect(save).toHaveBeenCalledWith(interfaceId, instanceId, {
+      name: '批量生图题组',
+      values: initial.instance.values,
+      imagePrompts: initial.instance.imagePrompts,
+      imageFiles: { firstImage, secondImage }
+    })
+    expect(await screen.findByText('生图完成')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '完成' })).toBeInTheDocument()
+  })
+
   it('keeps AI failures in the AI pane and allows retrying', async () => {
     const interfaceId = `sha256:${'c'.repeat(64)}`
     const instanceId = '20000000-0000-4000-8000-000000000002'
