@@ -12,6 +12,11 @@ export function registerFileStoreHandlers(baseDir: string): void {
   ipcMain.handle(FILE_STORE_CHANNELS.writeText, (_event, location: FileLocation, data: string) =>
     storage.writeText(location, data)
   )
+  ipcMain.handle(
+    FILE_STORE_CHANNELS.compareAndSwapText,
+    (_event, location: FileLocation, expected: string | null, data: string) =>
+      storage.compareAndSwapText(location, expected, data)
+  )
   ipcMain.handle(FILE_STORE_CHANNELS.deleteText, (_event, location: FileLocation) =>
     storage.deleteText(location)
   )

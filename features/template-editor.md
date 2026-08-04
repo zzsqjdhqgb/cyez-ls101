@@ -35,9 +35,9 @@ Template 不区分草稿和发布状态。`createTemplateDocument()` 生成稳�
 
 `TemplateRepository` 同时管理 Template 和 Function 工作文档。`FileTemplateRepository` 使用 `@ls101/file-store` 兼容的作用域存储，布局为 `templates/<templateId>/template.json` 和 `functions/<functionId>/function.json`；适配器从 `@ls101/template-editor/adapters` 导出。
 
-工作文档保存允许名称、DSL 和绑定处于业务不完整状态。仓储通过完整递归结构解析器验证所有节点判别字段、内容块、时间线、表达式、Interface requirement、Schema use、函数定义和 JSON 编辑器状态，确保读取结果可以安全进入校验和编译；同时检查 UUID v4、内嵌函数资源 ID 唯一性及资源内容哈希。损坏数据通过 `TemplateRepositoryError` 的 `INVALID_ID` 或 `INVALID_DATA` 返回，不会泄漏普通遍历异常。
+工作文档保存允许名称、DSL 和绑定处于业务不完整状态。仓储通过完整递归结构解析器验证所有节点判别字段、内容块、时间线、表达式、Interface requirement、Schema use、函数定义和 JSON 编辑器状态，确保读取结果可以安全进入校验和编译。编辑器状态只接受由有限数字、字符串、布尔值、null、数组和普通对象组成的无环 JSON 树；非普通对象及循环引用会被拒绝。同时检查 UUID v4、内嵌函数资源 ID 唯一性及资源内容哈希。结构损坏或底层 JSON 语法错误都通过 `TemplateRepositoryError('INVALID_DATA')` 返回，不会泄漏 `TypeError`、`RangeError` 或 `SyntaxError`。
 
-Template 和 Function 工作文档都带 revision。首次保存使用 0，后续成功保存递增并返回新的完整文档；调用方必须用返回值替换本地副本。文件仓储对同一文档的变更串行执行并使用 compare-and-swap，过期副本返回 `REVISION_CONFLICT` 及当前/传入 revision，不覆盖较新数据。删除 Template 或函数源文档会清除对应工作目录；已嵌入其他 Template 的函数快照不受源函数删除影响。
+Template 和 Function 工作文档都带 revision。首次保存使用 0，后续成功保存递增并返回新的完整文档；调用方必须用返回值替换本地副本。文件仓储使用 File Store main 进程提供的原子 compare-and-swap；该保证跨 renderer/window 和仓储实例成立。过期副本返回 `REVISION_CONFLICT` 及当前/传入 revision，不覆盖较新数据。删除 Template 或函数源文档会清除对应工作目录；已嵌入其他 Template 的函数快照不受源函数删除影响。
 
 ## 应用门面
 
@@ -95,4 +95,4 @@ Template 和 Function 工作文档都带 revision。首次保存使用 0，后�
 
 ## 验证覆盖
 
-单元测试覆盖完整递归文档解析、损坏文件读取、revision/CAS、autosave 与函数嵌入/清理并发、工作文档 CRUD、函数依赖闭包复制与去重、嵌套 Frame 引用改写、源删除隔离、递归拒绝、函数内部 Schema 清单收集、不可达资源清理、应用层依赖组装、函数资源摘要、结构化错误契约、函数作用域、Schema 绑定、Collector 和视图约束。编译测试额外覆盖完整 Player/Schema 输出、重复及嵌套函数调用、函数内部相对与绝对 focus、number/file/audio 出参、全局录音索引、跨调用静态值循环、多 Interface/Schema 隔离和仓储归属验证。
+单元测试覆盖完整递归文档解析、损坏及非法 JSON 文件读取、严格 JSON 编辑状态、跨仓储实例 revision/CAS、autosave 与函数嵌入/清理并发、工作文档 CRUD、函数依赖闭包复制与去重、嵌套 Frame 引用改写、源删除隔离、递归拒绝、函数内部 Schema 清单收集、不可达资源清理、应用层依赖组装、函数资源摘要、结构化错误契约、函数作用域、Schema 绑定、Collector 和视图约束。编译测试额外覆盖完整 Player/Schema 输出、重复及嵌套函数调用、函数内部相对与绝对 focus、number/file/audio 出参、全局录音索引、跨调用静态值循环、多 Interface/Schema 隔离和仓储归属验证。

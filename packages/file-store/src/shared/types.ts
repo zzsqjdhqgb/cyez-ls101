@@ -19,6 +19,7 @@ export interface ScopedStore {
 
   readText<T>(filename: string): Promise<T | null>
   writeText<T>(filename: string, data: T): Promise<void>
+  compareAndSwapText<T>(filename: string, expected: T | null, data: T): Promise<boolean>
   deleteText(filename: string): Promise<void>
   hasText(filename: string): Promise<boolean>
   listText(): Promise<string[]>

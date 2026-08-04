@@ -47,6 +47,26 @@ describe('renderer scoped store', () => {
     expect(fileStore.getAssetUrl(key)).toBe('asset://local/interfaces/drafts/cover.png')
   })
 
+  it('serializes both sides of a text compare-and-swap request', async () => {
+    const invoke = vi.fn().mockResolvedValue(true)
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: { fileStore: { invoke } }
+    })
+    const { fileStore } = await import('../renderer')
+    const template = fileStore.scope('templates').scope('template-id')
+
+    await expect(
+      template.compareAndSwapText('template.json', { revision: 2 }, { revision: 3 })
+    ).resolves.toBe(true)
+    expect(invoke).toHaveBeenCalledWith(
+      FILE_STORE_CHANNELS.compareAndSwapText,
+      { scope: ['templates', 'template-id'], filename: 'template.json' },
+      '{"revision":2}',
+      '{"revision":3}'
+    )
+  })
+
   it('rejects invalid asset keys before IPC', async () => {
     const invoke = vi.fn()
     Object.defineProperty(globalThis, 'window', {

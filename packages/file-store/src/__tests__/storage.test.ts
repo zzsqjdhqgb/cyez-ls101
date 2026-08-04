@@ -61,6 +61,22 @@ describe('FileStorage', () => {
     expect(await readdir(path.dirname(filePath))).toEqual(['instance.json'])
   })
 
+  it('atomically compares and swaps text across concurrent callers', async () => {
+    const location: FileLocation = { scope: draftScope, filename: 'instance.json' }
+    const original = '{"revision":0}'
+    const candidates = ['{"revision":1,"name":"first"}', '{"revision":1,"name":"second"}']
+    await storage.writeText(location, original)
+
+    const results = await Promise.all(
+      candidates.map((candidate) => storage.compareAndSwapText(location, original, candidate))
+    )
+
+    expect(results.filter(Boolean)).toHaveLength(1)
+    expect(results.filter((result) => !result)).toHaveLength(1)
+    expect(candidates).toContain(await storage.readText(location))
+    expect(await storage.readText(location)).toBe(candidates[results.indexOf(true)])
+  })
+
   it('preserves the old file and removes the temporary file when replacement fails', async () => {
     const location: FileLocation = { scope: draftScope, filename: 'instance.json' }
     const filePath = resolveTextPath(baseDir, location)

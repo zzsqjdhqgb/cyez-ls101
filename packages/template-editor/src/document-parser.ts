@@ -20,6 +20,7 @@ import type {
 
 export function parseTemplateDocument(value: unknown): TemplateDocument | null {
   if (
+    !isJsonTree(value) ||
     !isRecord(value) ||
     typeof value.templateId !== 'string' ||
     !isRevision(value.revision) ||
@@ -43,6 +44,7 @@ export function parseTemplateDocument(value: unknown): TemplateDocument | null {
 
 export function parseFunctionDocument(value: unknown): FunctionDocument | null {
   if (
+    !isJsonTree(value) ||
     !isRecord(value) ||
     typeof value.functionId !== 'string' ||
     !isRevision(value.revision) ||
@@ -333,14 +335,67 @@ function isRecordOf(
 }
 
 function isJsonObject(value: unknown): boolean {
-  return isRecord(value) && Object.values(value).every(isJsonValue)
+  return isRecord(value) && isJsonTree(value)
 }
 
-function isJsonValue(value: unknown): value is JsonValue {
+function isJsonTree(value: unknown, ancestors = new Set<object>()): value is JsonValue {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return true
   if (typeof value === 'number') return Number.isFinite(value)
-  if (Array.isArray(value)) return value.every(isJsonValue)
-  return isRecord(value) && Object.values(value).every(isJsonValue)
+  if (typeof value !== 'object') return false
+
+  try {
+    const prototype = Object.getPrototypeOf(value)
+    if (Array.isArray(value)) {
+      if (prototype !== Array.prototype || ancestors.has(value)) return false
+      const keys = Reflect.ownKeys(value)
+      if (
+        keys.length !== value.length + 1 ||
+        keys.some(
+          (key, index) =>
+            (index < value.length && key !== String(index)) ||
+            (index === value.length && key !== 'length')
+        )
+      ) {
+        return false
+      }
+      ancestors.add(value)
+      try {
+        for (let index = 0; index < value.length; index += 1) {
+          const descriptor = Object.getOwnPropertyDescriptor(value, String(index))
+          if (!descriptor || !('value' in descriptor) || !isJsonTree(descriptor.value, ancestors)) {
+            return false
+          }
+        }
+        return true
+      } finally {
+        ancestors.delete(value)
+      }
+    }
+
+    if ((prototype !== Object.prototype && prototype !== null) || ancestors.has(value)) {
+      return false
+    }
+    ancestors.add(value)
+    try {
+      for (const key of Reflect.ownKeys(value)) {
+        if (typeof key !== 'string') return false
+        const descriptor = Object.getOwnPropertyDescriptor(value, key)
+        if (
+          !descriptor ||
+          !descriptor.enumerable ||
+          !('value' in descriptor) ||
+          !isJsonTree(descriptor.value, ancestors)
+        ) {
+          return false
+        }
+      }
+      return true
+    } finally {
+      ancestors.delete(value)
+    }
+  } catch {
+    return false
+  }
 }
 
 function isRevision(value: unknown): boolean {
@@ -356,5 +411,7 @@ function isFiniteNumber(value: unknown): value is number {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
 }

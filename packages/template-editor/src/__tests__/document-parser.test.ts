@@ -256,10 +256,15 @@ describe('工作文档结构解析器', () => {
   })
 
   it('拒绝不能安全遍历的判别联合和字段类型', () => {
+    const cyclicEditorState: Record<string, unknown> = {}
+    cyclicEditorState.self = cyclicEditorState
     const invalidValues: unknown[] = [
       null,
       { ...completeTemplate(), revision: -1 },
       { ...completeTemplate(), editorState: { invalid: Number.NaN } },
+      { ...completeTemplate(), editorState: new Date() },
+      { ...completeTemplate(), editorState: new Map([['zoom', 1]]) },
+      { ...completeTemplate(), editorState: cyclicEditorState },
       {
         ...completeTemplate(),
         content: { ...completeTemplate().content, root: { id: 'root', type: 'unknown' } }

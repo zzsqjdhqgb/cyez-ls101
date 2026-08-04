@@ -11,6 +11,7 @@ export interface TemplateStore {
   scope(name: string): TemplateStore
   readText<T>(filename: string): Promise<T | null>
   writeText<T>(filename: string, data: T): Promise<void>
+  compareAndSwapText<T>(filename: string, expected: T | null, data: T): Promise<boolean>
   listScopes(): Promise<string[]>
   clear(): Promise<void>
 }
@@ -41,7 +42,6 @@ export class TemplateRepositoryError extends Error {
 export class FileTemplateRepository implements TemplateRepository {
   private readonly templates: TemplateStore
   private readonly functions: TemplateStore
-  private readonly mutationTails = new Map<string, Promise<void>>()
 
   constructor(root: TemplateStore) {
     this.templates = root.scope('templates')
@@ -54,7 +54,11 @@ export class FileTemplateRepository implements TemplateRepository {
 
   async getTemplate(templateId: string): Promise<TemplateDocument | null> {
     assertUuid(templateId, 'templateId')
-    const value = await this.templates.scope(templateId).readText<unknown>(TEMPLATE_FILE)
+    const value = await readStoredValue(
+      this.templates.scope(templateId),
+      TEMPLATE_FILE,
+      `Template ${templateId}`
+    )
     if (value === null) return null
     const document = parseTemplateDocument(value)
     if (!document || document.templateId !== templateId) {
@@ -68,35 +72,49 @@ export class FileTemplateRepository implements TemplateRepository {
     if (!parseTemplateDocument(document)) throw invalidData('Template is invalid')
     assertUuid(document.templateId, 'templateId')
     await assertFunctionResources(document.resources.functions)
-    return this.runExclusive(`template:${document.templateId}`, async () => {
-      const scope = this.templates.scope(document.templateId)
-      const stored = await scope.readText<unknown>(TEMPLATE_FILE)
-      if (stored === null) {
-        if (document.revision !== 0) {
-          throw revisionConflict('Template', document.templateId, 0, document.revision)
-        }
-        await scope.writeText(TEMPLATE_FILE, document)
-        return document
+    const scope = this.templates.scope(document.templateId)
+    const stored = await readStoredValue(scope, TEMPLATE_FILE, `Template ${document.templateId}`)
+    if (stored === null) {
+      if (document.revision !== 0) {
+        throw revisionConflict('Template', document.templateId, 0, document.revision)
       }
-      const current = parseTemplateDocument(stored)
-      if (!current || current.templateId !== document.templateId) {
-        throw invalidData(`Template ${document.templateId} is invalid`)
+      if (!(await scope.compareAndSwapText(TEMPLATE_FILE, null, document))) {
+        throw await latestRevisionConflict(
+          'Template',
+          document.templateId,
+          document.revision,
+          scope,
+          TEMPLATE_FILE,
+          parseTemplateDocument
+        )
       }
-      await assertFunctionResources(current.resources.functions)
-      if (current.revision !== document.revision) {
-        throw revisionConflict('Template', document.templateId, current.revision, document.revision)
-      }
-      const updated = { ...document, revision: document.revision + 1 }
-      await scope.writeText(TEMPLATE_FILE, updated)
-      return updated
-    })
+      return document
+    }
+    const current = parseTemplateDocument(stored)
+    if (!current || current.templateId !== document.templateId) {
+      throw invalidData(`Template ${document.templateId} is invalid`)
+    }
+    await assertFunctionResources(current.resources.functions)
+    if (current.revision !== document.revision) {
+      throw revisionConflict('Template', document.templateId, current.revision, document.revision)
+    }
+    const updated = { ...document, revision: document.revision + 1 }
+    if (!(await scope.compareAndSwapText(TEMPLATE_FILE, stored, updated))) {
+      throw await latestRevisionConflict(
+        'Template',
+        document.templateId,
+        document.revision,
+        scope,
+        TEMPLATE_FILE,
+        parseTemplateDocument
+      )
+    }
+    return updated
   }
 
   async deleteTemplate(templateId: string): Promise<void> {
     assertUuid(templateId, 'templateId')
-    await this.runExclusive(`template:${templateId}`, () =>
-      this.templates.scope(templateId).clear()
-    )
+    await this.templates.scope(templateId).clear()
   }
 
   async listFunctionIds(): Promise<string[]> {
@@ -105,7 +123,11 @@ export class FileTemplateRepository implements TemplateRepository {
 
   async getFunction(functionId: string): Promise<FunctionDocument | null> {
     assertUuid(functionId, 'functionId')
-    const value = await this.functions.scope(functionId).readText<unknown>(FUNCTION_FILE)
+    const value = await readStoredValue(
+      this.functions.scope(functionId),
+      FUNCTION_FILE,
+      `Function ${functionId}`
+    )
     if (value === null) return null
     const document = parseFunctionDocument(value)
     if (!document || document.functionId !== functionId) {
@@ -117,52 +139,84 @@ export class FileTemplateRepository implements TemplateRepository {
   async saveFunction(document: FunctionDocument): Promise<FunctionDocument> {
     if (!parseFunctionDocument(document)) throw invalidData('Function is invalid')
     assertUuid(document.functionId, 'functionId')
-    return this.runExclusive(`function:${document.functionId}`, async () => {
-      const scope = this.functions.scope(document.functionId)
-      const stored = await scope.readText<unknown>(FUNCTION_FILE)
-      if (stored === null) {
-        if (document.revision !== 0) {
-          throw revisionConflict('Function', document.functionId, 0, document.revision)
-        }
-        await scope.writeText(FUNCTION_FILE, document)
-        return document
+    const scope = this.functions.scope(document.functionId)
+    const stored = await readStoredValue(scope, FUNCTION_FILE, `Function ${document.functionId}`)
+    if (stored === null) {
+      if (document.revision !== 0) {
+        throw revisionConflict('Function', document.functionId, 0, document.revision)
       }
-      const current = parseFunctionDocument(stored)
-      if (!current || current.functionId !== document.functionId) {
-        throw invalidData(`Function ${document.functionId} is invalid`)
+      if (!(await scope.compareAndSwapText(FUNCTION_FILE, null, document))) {
+        throw await latestRevisionConflict(
+          'Function',
+          document.functionId,
+          document.revision,
+          scope,
+          FUNCTION_FILE,
+          parseFunctionDocument
+        )
       }
-      if (current.revision !== document.revision) {
-        throw revisionConflict('Function', document.functionId, current.revision, document.revision)
-      }
-      const updated = { ...document, revision: document.revision + 1 }
-      await scope.writeText(FUNCTION_FILE, updated)
-      return updated
-    })
+      return document
+    }
+    const current = parseFunctionDocument(stored)
+    if (!current || current.functionId !== document.functionId) {
+      throw invalidData(`Function ${document.functionId} is invalid`)
+    }
+    if (current.revision !== document.revision) {
+      throw revisionConflict('Function', document.functionId, current.revision, document.revision)
+    }
+    const updated = { ...document, revision: document.revision + 1 }
+    if (!(await scope.compareAndSwapText(FUNCTION_FILE, stored, updated))) {
+      throw await latestRevisionConflict(
+        'Function',
+        document.functionId,
+        document.revision,
+        scope,
+        FUNCTION_FILE,
+        parseFunctionDocument
+      )
+    }
+    return updated
   }
 
   async deleteFunction(functionId: string): Promise<void> {
     assertUuid(functionId, 'functionId')
-    await this.runExclusive(`function:${functionId}`, () =>
-      this.functions.scope(functionId).clear()
-    )
+    await this.functions.scope(functionId).clear()
   }
+}
 
-  private async runExclusive<T>(key: string, operation: () => Promise<T>): Promise<T> {
-    const previous = this.mutationTails.get(key) ?? Promise.resolve()
-    let release: () => void = () => undefined
-    const current = new Promise<void>((resolve) => {
-      release = resolve
-    })
-    const tail = previous.then(() => current)
-    this.mutationTails.set(key, tail)
-    await previous
-    try {
-      return await operation()
-    } finally {
-      release()
-      if (this.mutationTails.get(key) === tail) this.mutationTails.delete(key)
-    }
+async function readStoredValue(
+  store: TemplateStore,
+  filename: string,
+  label: string
+): Promise<unknown | null> {
+  try {
+    return await store.readText<unknown>(filename)
+  } catch (error) {
+    if (isSyntaxError(error)) throw invalidData(`${label} contains invalid JSON`)
+    throw error
   }
+}
+
+async function latestRevisionConflict<T extends { revision: number }>(
+  kind: 'Template' | 'Function',
+  id: string,
+  providedRevision: number,
+  store: TemplateStore,
+  filename: string,
+  parse: (value: unknown) => T | null
+): Promise<TemplateRepositoryError> {
+  const stored = await readStoredValue(store, filename, `${kind} ${id}`)
+  if (stored === null) return revisionConflict(kind, id, 0, providedRevision)
+  const current = parse(stored)
+  if (!current) throw invalidData(`${kind} ${id} is invalid`)
+  return revisionConflict(kind, id, current.revision, providedRevision)
+}
+
+function isSyntaxError(error: unknown): boolean {
+  return (
+    error instanceof SyntaxError ||
+    (typeof error === 'object' && error !== null && Reflect.get(error, 'name') === 'SyntaxError')
+  )
 }
 
 async function listUuidScopes(store: TemplateStore): Promise<string[]> {

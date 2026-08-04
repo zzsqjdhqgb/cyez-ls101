@@ -193,6 +193,79 @@ describe('FileTemplateRepository', () => {
       code: 'REVISION_CONFLICT'
     })
   })
+
+  it('跨仓储实例原子拒绝并发 Template 和 Function 保存', async () => {
+    const store = new MemoryStore()
+    const rootStore = store.scope('template-editor')
+    const firstRepository = new FileTemplateRepository(rootStore)
+    const secondRepository = new FileTemplateRepository(rootStore)
+    const template = await firstRepository.saveTemplate({
+      ...createTemplateDocument(emptyContent()),
+      templateId: TEMPLATE_ID
+    })
+    const func = await firstRepository.saveFunction(functionDocument(FUNCTION_A, 'Original'))
+
+    const templateResults = await Promise.allSettled([
+      firstRepository.saveTemplate({
+        ...template,
+        content: { ...template.content, name: 'First edit' }
+      }),
+      secondRepository.saveTemplate({
+        ...template,
+        content: { ...template.content, name: 'Second edit' }
+      })
+    ])
+    const functionResults = await Promise.allSettled([
+      firstRepository.saveFunction({
+        ...func,
+        content: { ...func.content, name: 'First edit' }
+      }),
+      secondRepository.saveFunction({
+        ...func,
+        content: { ...func.content, name: 'Second edit' }
+      })
+    ])
+
+    for (const results of [templateResults, functionResults]) {
+      expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1)
+      expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1)
+      expect(results.find((result) => result.status === 'rejected')).toMatchObject({
+        reason: { code: 'REVISION_CONFLICT' }
+      })
+    }
+    const savedTemplate = templateResults.find((result) => result.status === 'fulfilled')
+    const savedFunction = functionResults.find((result) => result.status === 'fulfilled')
+    expect((await firstRepository.getTemplate(TEMPLATE_ID))?.content.name).toBe(
+      savedTemplate?.value.content.name
+    )
+    expect((await firstRepository.getFunction(FUNCTION_A))?.content.name).toBe(
+      savedFunction?.value.content.name
+    )
+  })
+
+  it('将底层 JSON 语法错误转换为 INVALID_DATA', async () => {
+    const repository = new FileTemplateRepository(new SyntaxErrorStore())
+
+    await expect(repository.getTemplate(TEMPLATE_ID)).rejects.toMatchObject({
+      code: 'INVALID_DATA'
+    })
+    await expect(repository.getFunction(FUNCTION_A)).rejects.toMatchObject({
+      code: 'INVALID_DATA'
+    })
+  })
+
+  it('保存时拒绝非普通对象和循环 JSON 状态', async () => {
+    const { repository } = setup()
+    const base = { ...createTemplateDocument(emptyContent()), templateId: TEMPLATE_ID }
+    const cyclic: Record<string, unknown> = {}
+    cyclic.self = cyclic
+
+    for (const editorState of [new Date(), new Map([['zoom', 1]]), cyclic]) {
+      await expect(
+        repository.saveTemplate({ ...base, editorState } as unknown as TemplateDocument)
+      ).rejects.toMatchObject({ code: 'INVALID_DATA' })
+    }
+  })
 })
 
 describe('TemplateApplication', () => {
@@ -478,6 +551,14 @@ class MemoryStore implements TemplateStore {
     this.state.set(this.key(filename), structuredClone(data))
   }
 
+  async compareAndSwapText<T>(filename: string, expected: T | null, data: T): Promise<boolean> {
+    const key = this.key(filename)
+    const current = this.state.has(key) ? this.state.get(key) : null
+    if (JSON.stringify(current) !== JSON.stringify(expected)) return false
+    this.state.set(key, structuredClone(data))
+    return true
+  }
+
   async listScopes(): Promise<string[]> {
     const prefix = `${this.path.join('/')}/`
     const scopes = new Set<string>()
@@ -500,4 +581,26 @@ class MemoryStore implements TemplateStore {
   private key(filename: string): string {
     return [...this.path, filename].join('/')
   }
+}
+
+class SyntaxErrorStore implements TemplateStore {
+  scope(): TemplateStore {
+    return this
+  }
+
+  async readText<T>(): Promise<T | null> {
+    throw new SyntaxError('Unexpected end of JSON input')
+  }
+
+  async writeText<T>(_filename: string, _data: T): Promise<void> {}
+
+  async compareAndSwapText<T>(_filename: string, _expected: T | null, _data: T): Promise<boolean> {
+    return false
+  }
+
+  async listScopes(): Promise<string[]> {
+    return []
+  }
+
+  async clear(): Promise<void> {}
 }

@@ -75,6 +75,8 @@ async function syncDirectory(directory: string, openFile: typeof open): Promise<
 }
 
 export class FileStorage {
+  private mutationTail: Promise<void> = Promise.resolve()
+
   constructor(private readonly baseDir: string) {}
 
   async readText(location: FileLocation): Promise<string | null> {
@@ -88,7 +90,24 @@ export class FileStorage {
 
   async writeText(location: FileLocation, data: string): Promise<void> {
     if (typeof data !== 'string') throw new TypeError('Text data must be a string')
-    await this.write(resolveTextPath(this.baseDir, location), data)
+    await this.runMutation(() => this.write(resolveTextPath(this.baseDir, location), data))
+  }
+
+  async compareAndSwapText(
+    location: FileLocation,
+    expected: string | null,
+    data: string
+  ): Promise<boolean> {
+    if (expected !== null && typeof expected !== 'string') {
+      throw new TypeError('Expected text data must be a string or null')
+    }
+    if (typeof data !== 'string') throw new TypeError('Text data must be a string')
+    return this.runMutation(async () => {
+      const current = await this.readText(location)
+      if (current !== expected) return false
+      await this.write(resolveTextPath(this.baseDir, location), data)
+      return true
+    })
   }
 
   async readAsset(location: FileLocation): Promise<Uint8Array | null> {
@@ -103,15 +122,15 @@ export class FileStorage {
 
   async writeAsset(location: FileLocation, data: Uint8Array): Promise<void> {
     if (!(data instanceof Uint8Array)) throw new TypeError('Asset data must be a Uint8Array')
-    await this.write(resolveAssetPath(this.baseDir, location), data)
+    await this.runMutation(() => this.write(resolveAssetPath(this.baseDir, location), data))
   }
 
   async deleteText(location: FileLocation): Promise<void> {
-    await rm(resolveTextPath(this.baseDir, location), { force: true })
+    await this.runMutation(() => rm(resolveTextPath(this.baseDir, location), { force: true }))
   }
 
   async deleteAsset(location: FileLocation): Promise<void> {
-    await rm(resolveAssetPath(this.baseDir, location), { force: true })
+    await this.runMutation(() => rm(resolveAssetPath(this.baseDir, location), { force: true }))
   }
 
   hasText(location: FileLocation): Promise<boolean> {
@@ -152,7 +171,9 @@ export class FileStorage {
   }
 
   async clearScope(scope: ScopePath): Promise<void> {
-    await rm(resolveScopePath(this.baseDir, scope), { recursive: true, force: true })
+    await this.runMutation(() =>
+      rm(resolveScopePath(this.baseDir, scope), { recursive: true, force: true })
+    )
   }
 
   private async exists(filePath: string): Promise<boolean> {
@@ -188,5 +209,19 @@ export class FileStorage {
 
   private async write(filePath: string, data: string | Uint8Array): Promise<void> {
     await atomicWriteFile(filePath, data)
+  }
+
+  private async runMutation<T>(operation: () => Promise<T>): Promise<T> {
+    const previous = this.mutationTail
+    let release: () => void = () => undefined
+    this.mutationTail = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    await previous.catch(() => undefined)
+    try {
+      return await operation()
+    } finally {
+      release()
+    }
   }
 }

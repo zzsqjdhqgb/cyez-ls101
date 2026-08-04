@@ -15,6 +15,7 @@ File Store 负责：
 - 分别存储 JSON 文本数据和二进制资源。
 - 为 Asset 生成可传递的只读位置 Key，并支持通过 Key 读取资源。
 - 以同目录临时文件加原子重命名的方式写入 Text 和 Asset。
+- 为单个 Text 文件提供跨 renderer 的原子 compare-and-swap。
 - 通过受限 IPC 在 renderer 与 main 之间传递存储请求。
 - 为二进制资源生成 `asset://local/...` URL。
 
@@ -23,7 +24,7 @@ File Store 不负责：
 - 打开系统文件选择或保存对话框。
 - 导入、导出用户主动选择的外部文件。
 - 业务数据的运行时 schema 校验。
-- 多文件事务、并发写锁或流式 I/O。
+- 多文件事务、面向业务的锁管理或流式 I/O。
 
 ## 公共接口
 
@@ -49,6 +50,7 @@ interface ScopedStore {
 
   readText<T>(filename: string): Promise<T | null>
   writeText<T>(filename: string, data: T): Promise<void>
+  compareAndSwapText<T>(filename: string, expected: T | null, data: T): Promise<boolean>
   deleteText(filename: string): Promise<void>
   hasText(filename: string): Promise<boolean>
   listText(): Promise<string[]>
@@ -139,11 +141,18 @@ Asset = Join(baseDir, ...scope, '.assets', filename)
 
 写入、同步、关闭或重命名在替换前失败时，旧目标文件保持不变，临时文件会尽力清理。进程在清理前被强制终止可能留下 `.file-store-*.tmp`，这些名称不符合公开 filename 规则，不会出现在 `listText()` 或 `listAssets()` 中，并会随 scope 清理而删除。
 
-该保证针对单个文件，依赖本地文件系统提供同目录 `rename` 的原子替换语义。File Store 不提供跨文件事务或并发写锁；多个成功的并发写入采用最后完成重命名者生效的语义。
+该保证针对单个文件，依赖本地文件系统提供同目录 `rename` 的原子替换语义。普通 `writeText()` 的多个成功并发写入仍采用最后执行者生效的语义；File Store 不提供跨文件事务。
+
+## Text compare-and-swap
+
+`compareAndSwapText(filename, expected, data)` 在 renderer 分别序列化期望值和新值，在 main 进程的同一个 mutation 队列中完成“读取原始文本、比较、原子替换”。当前值与期望值完全相同时写入并返回 `true`，否则不修改文件并返回 `false`。`expected: null` 表示期望文件不存在，可用于原子创建。
+
+Text 和 Asset 的写入、删除以及 scope 清理与 CAS 使用同一个 main 进程 mutation 队列。因此多个 renderer/window 即使各自创建业务仓储实例，也无法同时以同一旧值成功交换；普通修改也不会插入 CAS 的读取和替换之间。该队列只协调当前应用 main 进程中的 File Store 请求，不防止其他进程直接修改存储目录。
 
 ## Text 语义
 
 - `writeText()` 在 renderer 使用 `JSON.stringify()` 序列化数据。
+- `compareAndSwapText()` 对期望值和新值使用相同序列化规则；期望文件不存在时传入 `null`。
 - 序列化结果为 `undefined` 时抛出 `TypeError`；其他 JSON 序列化错误原样传播。
 - main 只保存 UTF-8 字符串，不执行 JSON 解析或业务校验。
 - `readText()` 在 renderer 使用 `JSON.parse()` 解析数据。

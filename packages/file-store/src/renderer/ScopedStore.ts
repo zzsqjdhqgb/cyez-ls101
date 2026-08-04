@@ -18,9 +18,19 @@ export class ScopedStoreImpl implements ScopedStore {
   }
 
   async writeText<T>(filename: string, data: T): Promise<void> {
-    const value = JSON.stringify(data)
-    if (value === undefined) throw new TypeError('Data is not JSON serializable')
+    const value = serializeJson(data)
     await this.invoke(FILE_STORE_CHANNELS.writeText, this.location(filename), value)
+  }
+
+  async compareAndSwapText<T>(filename: string, expected: T | null, data: T): Promise<boolean> {
+    const expectedValue = expected === null ? null : serializeJson(expected)
+    const value = serializeJson(data)
+    return (await this.invoke(
+      FILE_STORE_CHANNELS.compareAndSwapText,
+      this.location(filename),
+      expectedValue,
+      value
+    )) as boolean
   }
 
   async deleteText(filename: string): Promise<void> {
@@ -81,4 +91,10 @@ export class ScopedStoreImpl implements ScopedStore {
   private invoke(channel: string, ...args: unknown[]): Promise<unknown> {
     return getFileStoreBridge().invoke(channel, ...args)
   }
+}
+
+function serializeJson<T>(data: T): string {
+  const value = JSON.stringify(data)
+  if (value === undefined) throw new TypeError('Data is not JSON serializable')
+  return value
 }

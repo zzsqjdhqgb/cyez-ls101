@@ -7,6 +7,7 @@ export const ASSET_DIRECTORY = '.assets'
 export const FILE_STORE_CHANNELS = {
   readText: 'file:read-text',
   writeText: 'file:write-text',
+  compareAndSwapText: 'file:compare-and-swap-text',
   deleteText: 'file:delete-text',
   hasText: 'file:has-text',
   listText: 'file:list-text',
