@@ -126,7 +126,17 @@ export interface FreeChoiceViewport {
 
 export interface FocusChoiceViewport {
   mode: 'focus'
-  questionRef: string
+  questionRef: ChoiceQuestionRef
+}
+
+/**
+ * callPath 由 FunctionNode.id 组成，不包含 FrameNode.id。
+ * relative 从当前 Template/函数定义作用域开始，absolute 从 Template 根开始。
+ */
+export interface ChoiceQuestionRef {
+  scope: 'relative' | 'absolute'
+  callPath: string[]
+  questionId: string
 }
 
 export interface RangeChoiceViewport {

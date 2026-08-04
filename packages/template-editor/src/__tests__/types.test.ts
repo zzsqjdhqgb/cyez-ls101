@@ -35,7 +35,10 @@ describe('Template 核心类型', () => {
             y: 0,
             width: 100,
             height: 100,
-            defaultViewport: { mode: 'focus', questionRef: question.id }
+            defaultViewport: {
+              mode: 'focus',
+              questionRef: { scope: 'relative', callPath: [], questionId: question.id }
+            }
           }
         ]
       },

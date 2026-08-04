@@ -2,7 +2,7 @@
 
 ## 功能状态
 
-`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 草稿与内容身份纯函数，以及基于外部依赖清单的发布语义校验。当前没有实现仓储、编辑操作、试卷包编译或 renderer 页面。
+`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 草稿与内容身份纯函数、基于外部依赖清单的发布语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。当前没有实现仓储、编辑操作或 renderer 页面。
 
 ## 已实现边界
 
@@ -48,16 +48,32 @@ Schema Editor 向 Template Editor 提供的 `SchemaBlockManifest` 位于 `@ls101
 - 选择题视图是否具有唯一 ChoiceMeta，以及 free/range 页码范围。
 - 展开后的 Template 是否至少消费一个 Schema 评分块。
 
+## 试卷包编译
+
+`compileTemplate(content, context)` 先执行完整发布语义校验，再使用导出时传入的 Interface 实例绑定展开 Template。成功时返回 `ExamPackage`；失败时通过判别联合返回校验阶段或编译阶段的结构化错误，不生成部分试卷包。
+
+编译器分两阶段工作。第一阶段展开框架和函数调用，分配全局 `recordIndex`、`choiceIndex` 并建立静态值依赖；第二阶段统一求值页面内容、时间线、选择题、函数静态出参和 Schema 字段。因此页面或函数输入可以引用同层稍后声明的静态输出，跨函数形成的静态值循环会作为编译错误返回。
+
+当前编译行为包括：
+
+- 校验每个 Interface 别名恰好有一个实例绑定、绑定的仓储归属匹配 `interfaceId`，且所有 acceptedVars 都有实例值。
+- 按函数调用路径展开页面、内容块、录音、选择题、函数出参和函数内部 Schema 消费。
+- 为展开后的页面和内容块生成稳定 ID，为每次函数内部 Schema 消费生成调用路径限定的 `useId`。
+- 收集唯一 ChoiceCollector 候选，生成全局只读 ChoiceMeta，并把结构化 focus 地址解析为 `choiceIndex`。
+- 把文本插值、静态参数和 Interface 图片值求值为 Player 可直接消费的数据。
+- 把 Schema 的 text 字段编译为静态值，把 audio 和 choice 字段编译为对应运行期索引。
+
+跨模块 `ExamPackage` 契约位于 `@ls101/core-types`。`player` 只包含页面、时间线、录音索引和可选的 ChoiceMeta；`schema.usages` 只描述评分块消费及其字段到静态值或运行期索引的映射。
+
 ## 未实现边界
 
-当前类型仍允许表达不完整的草稿；调用方只在发布前执行严格校验。以下规则需要后续编译器或应用层实现：
+当前类型仍允许表达不完整的草稿；编译入口会自行执行严格校验。以下能力尚未实现：
 
-- `focus.questionRef` 的函数调用路径展开和最终全局题目身份解析。
-- 函数、页面、选择题和 Schema 映射的实际展开及运行期索引分配。
-- 静态函数出参的完整依赖图求值和跨调用循环检测。
-- InterfaceInstance 归属校验及最终 ExamPackage 生成。
-- 草稿仓储、发布工作流和 renderer 编辑器。
+- Template 和 Function 仓储，以及调用方从 Interface 仓储按 instanceId 组装编译绑定。
+- 草稿保存、发布和预览的应用服务工作流。
+- `ExamPackage` 的文件封装、资源复制和持久化格式。
+- renderer 图形化 DSL 编辑器及编译错误文案和定位交互。
 
 ## 验证覆盖
 
-单元测试覆盖内容 ID、草稿/发布身份、依赖与表达式类型、函数作用域及重命名、Schema 完整绑定、函数递归、Collector 跨函数收集、分页、视图范围和全局候选约束。
+单元测试覆盖内容 ID、草稿/发布身份、依赖与表达式类型、函数作用域及重命名、Schema 完整绑定、函数递归、Collector 跨函数收集、分页、视图范围和全局候选约束。编译测试额外覆盖完整 Player/Schema 输出、重复函数调用、相对与绝对 focus 地址、函数内部 Schema 展开、跨调用静态值循环、Interface 实例绑定错误和校验错误透传。

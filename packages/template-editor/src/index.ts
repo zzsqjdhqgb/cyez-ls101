@@ -12,6 +12,14 @@ export {
 } from './id'
 
 export type { TemplateIdentityComparison } from './id'
+export { compileTemplate } from './compiler'
+export type {
+  TemplateCompileContext,
+  TemplateCompileError,
+  TemplateCompileErrorCode,
+  TemplateCompileResult,
+  TemplateInterfaceBinding
+} from './compiler'
 export { validateTemplateContent } from './validation'
 export type {
   TemplateValidationContext,

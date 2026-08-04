@@ -154,8 +154,14 @@ function validateChoiceViewport(
   state: ValidationState
 ): void {
   if (viewport.mode === 'focus') {
-    if (!viewport.questionRef.trim())
-      addError(state, `${path}.questionRef`, 'EMPTY_FOCUS_REFERENCE')
+    if (!viewport.questionRef.questionId.trim()) {
+      addError(state, `${path}.questionRef.questionId`, 'EMPTY_FOCUS_REFERENCE')
+    }
+    viewport.questionRef.callPath.forEach((callId, index) => {
+      if (!callId.trim()) {
+        addError(state, `${path}.questionRef.callPath[${index}]`, 'INVALID_FOCUS_CALL_PATH')
+      }
+    })
     return
   }
 

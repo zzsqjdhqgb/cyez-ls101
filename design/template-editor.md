@@ -285,7 +285,14 @@ interface ChoiceViewBlock {
 
 type ChoiceViewport =
   | { mode: 'free'; initialPage?: number }
-  | { mode: 'focus'; questionRef: string }
+  | {
+      mode: 'focus'
+      questionRef: {
+        scope: 'relative' | 'absolute'
+        callPath: string[]
+        questionId: string
+      }
+    }
   | {
       mode: 'range'
       startPage: number
@@ -298,7 +305,7 @@ type ChoiceViewport =
 - focus：自动跳到包含目标题的内页、高亮该题并锁定内部分页；同一内页上的其他题仍可作答。
 - range：只允许在全局内页的指定范围内翻页，当前内页超出范围时自动回到范围起点。
 
-focus 的 questionRef 可以引用全局 ChoiceMeta 中的任意题目，不受原 Collector 收集范围限制。持久化格式中的内页序号从 0 开始，编辑器向用户显示时从 1 开始。Collector 的分页规则或题目数量变化后，编辑器必须重新校验 initialPage、startPage 和 endPage。
+focus 的 questionRef 可以引用全局 ChoiceMeta 中的任意题目，不受原 Collector 收集范围限制。relative 地址从当前 Template 或函数定义作用域开始，absolute 地址从 Template 根开始；callPath 由沿途 FunctionNode.id 组成，questionId 指向最终单题节点。持久化格式中的内页序号从 0 开始，编辑器向用户显示时从 1 开始。Collector 的分页规则或题目数量变化后，编辑器必须重新校验 initialPage、startPage 和 endPage。
 
 所有 ChoiceViewBlock 显示同一个全局 ChoiceMeta 并共享学生答案，但各自拥有独立的当前内页和视图状态。进入新的外层页面时，视图根据 defaultViewport 和当前时间步骤的覆盖参数初始化；答案不会被清除。学生可以改选，不能通过再次点击已选项取消；首版不强制作答，外层时间线结束时照常推进。
 

@@ -56,6 +56,7 @@ export type TemplateValidationErrorCode =
   | 'CHOICE_VIEW_WITHOUT_META'
   | 'INVALID_CHOICE_VIEWPORT'
   | 'EMPTY_FOCUS_REFERENCE'
+  | 'INVALID_FOCUS_CALL_PATH'
 
 export interface TemplateValidationError {
   path: string

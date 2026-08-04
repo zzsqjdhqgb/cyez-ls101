@@ -11,6 +11,26 @@ export type {
   SchemaBlockManifest,
   SchemaBlockManifestEntry
 } from './schema'
+export type {
+  ExamPackage,
+  PlayerExamData,
+  ExamPage,
+  ResolvedContentBlock,
+  ResolvedTextBlock,
+  ResolvedImageBlock,
+  PlayerChoiceView,
+  ResolvedTimelineStep,
+  ResolvedTimelineAction,
+  ResolvedChoiceViewport,
+  PlayerChoiceMeta,
+  PlayerChoiceQuestion,
+  PlayerChoiceOption,
+  ChoiceOptionLabel,
+  ChoiceAnswer,
+  SchemaExportData,
+  SchemaUsageExport,
+  SchemaFieldValue
+} from './exam'
 export type { TaskProgressItem, TaskProgressSnapshot, TaskProgressHandle } from './task-progress'
 export { WINDOW_CONTROL_CHANNELS, WINDOW_CONTROL_EVENTS } from './window-controls'
 export type { WindowControlsBridge } from './window-controls'
