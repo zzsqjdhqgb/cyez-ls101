@@ -1,7 +1,6 @@
 # Interface / Template / Schema 数据接口规范（定稿）
 
 <!-- 本文只定义跨模块契约，不涉及内部实现。 -->
-<!-- 选择题在 Player 数据段中的最终交互和导出方式尚未定稿，本文只保留扩展位置，不提前确定产品行为。 -->
 
 本文定义 Interface、Template 和 Schema 之间的数据契约。
 
@@ -108,7 +107,7 @@ type SchemaFieldDef =
   | { varName: string; type: 'choice' }
 ~~~
 
-choice 类型的 Player 交互和最终导出方式尚未定稿；Template 的 Schema 引用模型必须为其保留扩展位置，但本文不确定具体行为。
+choice 表示学生在 ExamPlayer 运行期间产生的单选作答。Schema 通过 choiceIndex 引用 Player 保存的选项 ID；正确答案和分值属于评分块的静态参数，不放入 Player 题目数据。
 
 Schema 对 Template 暴露评分块清单：
 
@@ -172,9 +171,13 @@ type SchemaBindingExpression =
       type: 'record-output'
       name: string
     }
+  | {
+      type: 'choice-output'
+      name: string
+    }
 ~~~
 
-其中 record-output 是运行期录音槽位的引用；其他表达式在导出试卷包时求值。
+record-output 和 choice-output 分别引用运行期录音槽位和选择题作答槽位；其他表达式在导出试卷包时求值。
 
 ### 3.3 Schema 作用域和合并
 
@@ -224,11 +227,35 @@ interface ExportInterfaceInstanceSelection {
 
 Template 的 DSL 由页面节点、框架节点和函数节点组成。页面节点包含内容文档和线性时间线；时间线中的每个 record 步骤产生一个可命名的录音输出。函数有手动声明的输入列表、外层框架节点和手动声明的出参列表。
 
-函数出参和页面录音输出都属于局部变量。出参名称在同一局部命名空间内唯一；新增时系统可以生成可编辑的默认名称，如 recording-1。
+函数还可以产生选择题结构片段。选择题片段不通过普通出参或可变句柄传递，而是与页面平行地进入编译结果；具有 ChoiceCollector 的框架负责按作用域收集后代片段并组装分页题组。
 
-除用户录制的音频外，所有变量和表达式都在导出试卷包时确定值，等价于编译期求值。
+函数出参、页面录音输出和选择题输出都属于局部变量。名称在同一局部命名空间内唯一；新增时系统可以生成可编辑的默认名称，如 recording-1、answer-1。
 
-### 5.1 Player 数据段
+除用户录制的音频和学生选择外，所有变量和表达式都在导出试卷包时确定值，等价于编译期求值。
+
+### 5.1 选择题结构收集
+
+编译器对每个节点产生独立的结构通道：
+
+~~~typescript
+interface CompiledNode {
+  pages: CompiledPage[]
+  choiceQuestions: CompiledChoiceQuestion[]
+  schemaUses: CompiledSchemaUse[]
+  valueOutputs: CompiledValueOutput[]
+}
+~~~
+
+ChoiceCollector 按子节点展开顺序拼接 choiceQuestions。题目归属最近的 Collector；嵌套 Collector 捕获自己的后代题目，不向外泄漏。每次函数调用都会重新命名局部题目身份。Collector 在收集完成后执行第二阶段解析，统一重写：
+
+- 页面中的 ChoiceViewOutlet；
+- 时间线中的 focus/range 视图控制；
+- choice 类型函数出参；
+- Schema choice 字段绑定。
+
+缺少 Collector 的题目片段是编译错误。该机制没有 setter、Frame 句柄或共享可变对象。
+
+### 5.2 Player 数据段
 
 Player 数据段与 Schema 的评分结构无关，只描述 ExamPlayer 播放试卷和保存运行期作答所需的基本信息。
 
@@ -236,26 +263,87 @@ Player 数据段与 Schema 的评分结构无关，只描述 ExamPlayer 播放�
 interface PlayerExamData {
   pages: ExamPage[]
   recordingIndices: number[]
-
-  // 选择题的交互和导出方式尚未定稿。
-  // choiceIndices 及相关字段在选择题设计确定后补充。
+  choiceIndices: number[]
+  choiceSets: PlayerChoiceSet[]
 }
 
 interface ExamPage {
   id: string
-  layout: ResolvedContentBlock[]
+  content: ResolvedContentBlock[]
   timeline: ResolvedTimelineStep[]
 }
 
-type ResolvedTimelineStep =
+type ResolvedContentBlock = ResolvedTextBlock | ResolvedImageBlock | PlayerChoiceView
+
+interface ResolvedTextBlock {
+  id: string
+  type: 'text'
+  x: number
+  y: number
+  width?: number
+  text: string
+}
+
+interface ResolvedImageBlock {
+  id: string
+  type: 'image'
+  x: number
+  y: number
+  width: number
+  src: string
+}
+
+interface PlayerChoiceView {
+  id: string
+  type: 'choice-view'
+  x: number
+  y: number
+  width: number
+  height: number
+  choiceSetId: string
+  defaultViewport: ResolvedChoiceViewport
+}
+
+type ResolvedTimelineStep = ResolvedTimelineAction & {
+  choiceViewOverrides?: Record<string, ResolvedChoiceViewport>
+}
+
+type ResolvedTimelineAction =
   | { type: 'play'; src: string }
   | { type: 'countdown'; seconds: number }
   | { type: 'record'; duration: number; recordIndex: number }
+
+type ResolvedChoiceViewport =
+  | { mode: 'free'; initialPage?: number }
+  | { mode: 'focus'; choiceIndex: number }
+  | {
+      mode: 'range'
+      startPage: number
+      endPage: number
+      initialPage?: number
+    }
+
+interface PlayerChoiceSet {
+  id: string
+  pages: Array<{ questionIndices: number[] }>
+  questions: PlayerChoiceQuestion[]
+}
+
+interface PlayerChoiceQuestion {
+  choiceIndex: number
+  stem: string
+  options: Array<{
+    id: string
+    content: string
+  }>
+}
 ~~~
 
-录音文件按 recordIndex 保存。Player 不需要理解 Schema 的评分规则。
+choiceIndex 与 recordIndex 一样在整份试卷内全局唯一，从 0 递增分配。ChoiceView 只持有 choiceSetId 和视图参数；多个视图引用同一 ChoiceSet 时共享答案，但各自维护独立的当前内页。内页序号从 0 开始。Player 不需要理解 Schema 的评分规则，也不会收到正确答案和分值。
 
-### 5.2 Schema 映射段
+选择题视图支持三种模式：free 可浏览整个题组；focus 跳到目标题、高亮并锁定内部分页；range 只允许在指定内页范围内翻页。页面时间线可以在每个步骤覆盖视图模式。选择不是时间线推进的前置条件，学生可以改选但不能通过再次点击取消。
+
+### 5.3 Schema 映射段
 
 Schema 映射段把每个评分块消费实例的字段映射到固定值或 Player 运行期槽位：
 
@@ -277,9 +365,9 @@ type SchemaFieldValue =
   | { varName: string; type: 'choice'; choiceIndex: number }
 ~~~
 
-text 等非录音字段在导出时已经确定。audio 字段只保存对应的 recordIndex，实际音频由 ExamPlayer 在运行时录制。choice 字段的运行期行为待选择题设计确定。
+text 等静态字段在导出时已经确定。audio 字段只保存对应的 recordIndex，实际音频由 ExamPlayer 在运行时录制；choice 字段只保存对应的 choiceIndex，学生选择由 ExamPlayer 在运行时采集。
 
-### 5.3 ExamPackage
+### 5.4 ExamPackage
 
 ~~~typescript
 interface ExamPackage {
@@ -299,6 +387,7 @@ Template 可以引用多个 Schema，因此 ExamPackage 不再使用单一的 sc
 submission.zip
 ├── submission.json
 ├── schema.json
+├── choices.json
 ├── 0.mp3
 ├── 1.mp3
 └── ...
@@ -306,8 +395,8 @@ submission.zip
 
 - schema.json 保存从 ExamPackage.schema 原样传递的 Schema 映射。
 - 音频文件按 recordIndex 命名。
+- choices.json 保存 Record<choiceIndex, optionId>；未作答的题目不包含对应 key。
 - ExamPlayer 不解析、不修改评分块字段，只负责采集运行期作答并写入作答包。
-- 选择题的作答文件和交互协议待单独设计。
 
 元数据使用多个 Schema：
 
@@ -333,6 +422,8 @@ interface StudentInfo {
    → 声明多个 Interface 依赖和变量子集
    → 组装页面、框架和函数节点
    → 配置函数输入和手动出参
+   → 单题函数产生选择题结构片段
+   → ChoiceCollector 收集片段并配置分页
    → 在函数或 Template 层消费 Schema 评分块
    → 为每个评分块完整填写绑定
 4. 发布 TemplateDraft → TemplateDef
@@ -340,12 +431,14 @@ interface StudentInfo {
 6. 编译 Template DSL
    → 求值所有静态表达式
    → 展开函数和框架
+   → 平行收集页面和选择题结构片段
+   → ChoiceCollector 组装题组并分配 choiceIndex
    → 为录音步骤分配 recordIndex
    → 生成 Player 数据段
    → 生成 Schema 映射段
 7. ExamPlayer 播放 Player 数据
    → 运行时录制音频
-   → 采集其他尚未确定的运行期作答
+   → 按 choiceIndex 采集学生选择
    → 生成作答包
 8. Schema 系统读取 schema.json 和作答数据进行评分
 ~~~

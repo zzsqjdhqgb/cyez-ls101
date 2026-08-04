@@ -49,6 +49,7 @@ interface BaseNode {
 interface FrameNode extends BaseNode {
   type: 'frame'
   children: TemplateNode[]
+  choiceCollector?: ChoiceCollectorConfig
 }
 
 interface PageNode extends BaseNode {
@@ -81,7 +82,7 @@ interface ContentDocument {
   blocks: ContentBlock[]
 }
 
-type ContentBlock = TextBlock | ImageBlock
+type ContentBlock = TextBlock | ImageBlock | ChoiceViewOutlet
 
 interface TextBlock {
   id: string
@@ -124,7 +125,11 @@ type TextExpression = {
 时间线是按顺序执行的列表。
 
 ~~~typescript
-type TimelineStep =
+type TimelineStep = TimelineAction & {
+  choiceViewOverrides?: Record<string, ChoiceViewport>
+}
+
+type TimelineAction =
   | { type: 'play'; src: ValueExpression<'file'> }
   | { type: 'countdown'; seconds: ValueExpression<'number'> }
   | {
@@ -136,7 +141,9 @@ type TimelineStep =
 
 record 步骤会产生一个音频类型的可用输出。新增录音项时系统生成默认名称，例如 recording-1；用户可以编辑名称，但同一局部命名空间内的名称必须唯一。展开 Template 时，系统为所有录音输出分配全局 recordIndex。
 
-当前内置时间线只有上述三种步骤。用户录制的音频是 Template 导出后仍需在 ExamPlayer 运行时产生的变量；其他参数和表达式在导出试卷包时确定。
+choiceViewOverrides 以内容块 ID 为 key，在当前时间步骤覆盖选择题视图的状态。它可以让同一个选择题视图在播放音频时聚焦某题，在检查阶段开放指定内页范围；选择题视图不能阻止时间线推进。
+
+当前内置时间线只有上述三种步骤。用户录制的音频和学生选择是 Template 导出后仍需在 ExamPlayer 运行时产生的变量；其他参数和表达式在导出试卷包时确定。
 
 ## 五、值与变量表达式
 
@@ -169,6 +176,7 @@ interface FunctionDef {
   inputs: FunctionInputDef[]
   body: FrameNode
   outputs: FunctionOutputDef[]
+  choiceQuestions: ChoiceQuestionContribution[]
   schemaUses: SchemaUse[]
 }
 
@@ -179,16 +187,17 @@ interface FunctionInputDef {
 
 interface FunctionOutputDef {
   name: string
-  type: ValueType | 'audio'
+  type: ValueType | 'audio' | 'choice'
   expression: OutputExpression
 }
 
 type OutputExpression =
   | ValueExpression
   | { type: 'audio'; source: 'record-output'; name: string }
+  | { type: 'choice'; source: 'choice-output'; name: string }
 ~~~
 
-函数输入和出参共享同一个局部命名空间，所有名称必须整体唯一。新增输入或出参时系统生成可编辑的默认名称，例如 text-1、recording-1。
+函数输入、页面录音输出、选择题输出和函数出参共享同一个局部命名空间，所有名称必须整体唯一。新增输入或出参时系统生成可编辑的默认名称，例如 text-1、recording-1、answer-1。
 
 函数出参表达式对函数内部来说就是普通可填写变量槽位，因此可以引用函数输入、页面录音输出、其他局部变量和固定文本。函数节点对外只暴露函数声明的出参，函数内部的其他变量不会穿透到外层。
 
@@ -202,7 +211,94 @@ interface FunctionNode extends BaseNode {
 
 调用函数时，调用方为每个函数输入提供一个表达式。函数出参以其声明的名称加入调用方的局部命名空间。
 
-## 七、Interface 依赖
+## 七、选择题
+
+### 7.1 定位
+
+选择题由三个部分组成：
+
+- ChoiceQuestionContribution：函数或 Template 产生的一道选择题结构片段。
+- ChoiceCollector：框架节点上的收集边界，负责把后代片段组成一个可分页题组。
+- ChoiceViewOutlet：页面内容中的受控视图占位，编译后显示 Collector 生成的题组。
+
+选择题题目与显示页面平行地由编译器收集，不通过 setter、Frame 句柄或普通函数出参传递。函数在编译器层面返回题目结构片段，但用户手动声明的函数出参只负责把具体 choice 作答值传到外层。
+
+~~~typescript
+interface ChoiceQuestionContribution {
+  id: string
+  outputName: string
+  stem: TextExpression
+  options: ChoiceOptionDef[]
+}
+
+interface ChoiceOptionDef {
+  id: string
+  content: TextExpression
+}
+
+interface ChoiceCollectorConfig {
+  id: string
+  questionsPerPage: number
+}
+~~~
+
+每道题产生一个 choice 类型的运行期输出。outputName 在当前局部命名空间内唯一，新增时自动生成 answer-1 一类的可编辑默认名称。首版选择题为单选；选项数量由题目结构决定，选项 ID 稳定，A/B/C/D 等字母只属于显示标签。
+
+正确答案、分值和评分规则不属于 ChoiceQuestionContribution，不写入 Player 使用的题目结构；它们通过 Schema 评分块的静态参数表达。
+
+### 7.2 ChoiceViewOutlet
+
+页面内容可以插入选择题视图占位：
+
+~~~typescript
+interface ChoiceViewOutlet {
+  id: string
+  type: 'choice-view'
+  x: number
+  y: number
+  width: number
+  height: number
+  collector: 'nearest'
+  defaultViewport: ChoiceViewport
+}
+
+type ChoiceViewport =
+  | { mode: 'free'; initialPage?: number }
+  | { mode: 'focus'; questionRef: string }
+  | {
+      mode: 'range'
+      startPage: number
+      endPage: number
+      initialPage?: number
+    }
+~~~
+
+- free：允许浏览整个题组。
+- focus：自动跳到包含目标题的内页、高亮该题并锁定内部分页；同一内页上的其他题仍可作答。
+- range：只允许在指定内页范围内翻页，当前内页超出范围时自动回到范围起点。
+
+持久化格式中的内页序号从 0 开始，编辑器向用户显示时从 1 开始。Collector 的分页规则或题目数量变化后，编辑器必须重新校验 initialPage、startPage 和 endPage。
+
+同一个 Collector 生成的多个 ChoiceViewOutlet 共享学生答案，但各自拥有独立的当前内页和视图状态。进入新的外层页面时，视图根据 defaultViewport 和当前时间步骤的覆盖参数初始化；答案不会被清除。学生可以改选，不能通过再次点击已选项取消；首版不强制作答，外层时间线结束时照常推进。
+
+### 7.3 收集与函数组合
+
+编译节点时，页面、选择题片段、Schema 依赖和普通出参通过彼此独立的通道返回：
+
+~~~typescript
+interface CompiledNode {
+  pages: CompiledPage[]
+  choiceQuestions: CompiledChoiceQuestion[]
+  schemaUses: CompiledSchemaUse[]
+  valueOutputs: CompiledValueOutput[]
+}
+~~~
+
+具有 choiceCollector 的框架按子节点展开顺序收集 choiceQuestions。多个函数调用之间按调用节点顺序收集；单个函数产生多道题时按函数内声明顺序收集。Collector 根据 questionsPerPage 分页，并在第二阶段解析 ChoiceViewOutlet、focus/range、choice 出参和 Schema 绑定。
+
+每个题目片段归属最近的外层 Collector。嵌套 Collector 会捕获自己的后代题目，不向更外层泄漏；题目片段找不到 Collector 时视为编译错误。每次函数调用都会重新命名局部题目身份，因此同一个单题函数调用十次会生成十道独立题目，但可以由同一个 Collector 组成统一题组。
+
+## 八、Interface 依赖
 
 Template 可以依赖多个 Interface，并且只接受每个 Interface 的部分变量。每个依赖有一个 Template 内部别名，别名构成 Interface 变量的命名空间。
 
@@ -223,7 +319,7 @@ listening → 上海高考听力 Interface → audio, question
 
 Template 保存 interfaceId 和别名，不保存 instanceId。预览或导出时，用户为每个别名选择一个属于对应 Interface 的实例。
 
-## 八、Schema 消费
+## 九、Schema 消费
 
 Schema 由多个可复用评分块组成。Template 或函数可以选择其中的部分评分块；一旦消费某个评分块，必须在当前层级完整绑定它的全部参数。
 
@@ -245,7 +341,7 @@ interface SchemaUse {
 
 Schema 相关的完整导出规则见 data-interface.md。
 
-## 九、Template 生命周期与身份
+## 十、Template 生命周期与身份
 
 Template 使用草稿与已发布成品分离的模型。每份 Template 必须有有效的 Schema 依赖：根层可以直接消费评分块，也可以通过函数内部消费间接产生依赖；整个 DSL 展开后不能没有任何 Schema 评分块。
 
@@ -257,6 +353,7 @@ interface TemplateContent {
   description: string
   interfaces: TemplateInterfaceRequirement[]
   root: FrameNode
+  choiceQuestions: ChoiceQuestionContribution[]
   schemaUses: SchemaUse[]
 }
 
@@ -271,11 +368,11 @@ interface TemplateDef extends TemplateContent {
 }
 ~~~
 
-发布时根据 TemplateContent 的规范化内容计算 TemplateDef.id，格式为 sha256:<64 位十六进制摘要>。规范化输入包括名称、描述、Interface 依赖、根 DSL、Template 层 Schema 消费和引用的函数定义身份；不包括 draftId、发布状态、时间戳和导出时选择的 Interface 实例。
+发布时根据 TemplateContent 的规范化内容计算 TemplateDef.id，格式为 sha256:<64 位十六进制摘要>。规范化输入包括名称、描述、Interface 依赖、根 DSL、Template 层选择题片段、Template 层 Schema 消费和引用的函数定义身份；不包括 draftId、发布状态、时间戳和导出时选择的 Interface 实例。
 
 发布后的 Template 不直接编辑。修改已发布 Template 时先创建草稿；草稿通过校验后发布，内容变化时产生新的内容 ID，相同内容则复用已有成品。
 
-## 十、预览与导出
+## 十一、预览与导出
 
 预览和正式导出都需要为每个 Interface 别名临时选择一个实例。选择结果不写入 Template。
 
@@ -283,9 +380,11 @@ interface TemplateDef extends TemplateContent {
 
 1. 为所有 Interface 别名选择并校验 InterfaceInstance。
 2. 解析 Interface 变量、函数输入、页面参数和 Schema 表达式。
-3. 展开框架和函数，按页面时间线为 record 步骤分配全局 recordIndex。
-4. 生成 ExamPlayer 可识别的页面和运行期录音槽位。
-5. 生成 Schema 可识别的评分块映射。
-6. 写入最终试卷包。
+3. 展开框架和函数，平行收集页面、选择题片段和 Schema 依赖。
+4. 由每个 ChoiceCollector 组装题组并解析视图占位，为题目分配全局 choiceIndex。
+5. 按页面时间线为 record 步骤分配全局 recordIndex。
+6. 生成 ExamPlayer 可识别的页面、录音槽位和选择题题组。
+7. 生成 Schema 可识别的评分块映射。
+8. 写入最终试卷包。
 
-除用户录制的音频外，其他变量在第 2 步完成赋值，等价于编译期确定值。
+除用户录制的音频和学生选择外，其他变量在第 2 步完成赋值，等价于编译期确定值。
