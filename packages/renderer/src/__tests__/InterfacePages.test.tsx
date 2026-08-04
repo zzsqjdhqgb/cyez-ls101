@@ -365,12 +365,14 @@ describe('Interface pages', () => {
     }
     const fileBytes = new Uint8Array([1, 2, 3])
     const clipboardBytes = new Uint8Array([4, 5, 6])
+    const generatedBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
     imageInputMocks.readBinary.mockResolvedValue({ name: 'local.png', data: fileBytes })
     imageInputMocks.readClipboardImage.mockResolvedValue(clipboardBytes)
     const createObjectURL = vi
       .spyOn(URL, 'createObjectURL')
       .mockReturnValueOnce('blob:file-preview')
       .mockReturnValueOnce('blob:clipboard-preview')
+      .mockReturnValueOnce('blob:generated-preview')
     const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
     let savedFilename = ''
     const save = vi.fn().mockImplementation(
@@ -404,7 +406,8 @@ describe('Interface pages', () => {
         listAIGenerationModels: vi.fn().mockResolvedValue([]),
         save,
         replaceFromJson: vi.fn(),
-        startAIGeneration: vi.fn()
+        startAIGeneration: vi.fn(),
+        generateImage: vi.fn().mockResolvedValue(generatedBytes)
       }
     })
 
@@ -480,6 +483,17 @@ describe('Interface pages', () => {
     expect(screen.queryByAltText('picture预览')).not.toBeInTheDocument()
     expect(screen.getByDisplayValue('新的图片提示词')).toBeInTheDocument()
     expect(createObjectURL).toHaveBeenCalledTimes(2)
+
+    fireEvent.click(screen.getByRole('button', { name: '生成图片' }))
+    await waitFor(() =>
+      expect(app.instances.generateImage).toHaveBeenCalledWith('新的图片提示词', {
+        signal: expect.any(AbortSignal)
+      })
+    )
+    expect(await screen.findByAltText('picture预览')).toHaveAttribute(
+      'src',
+      'blob:generated-preview'
+    )
   })
 
   it('keeps AI failures in the AI pane and allows retrying', async () => {

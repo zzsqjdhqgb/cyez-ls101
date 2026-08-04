@@ -1,6 +1,8 @@
 import type {
   AIRouterBridge,
   AIRouterClient,
+  AIRouterGeneratedImage,
+  AIRouterImageGenerationEvent,
   AIRouterStreamEvent,
   AIRouterTextChunk,
   AIRouterTextRequest
@@ -18,6 +20,41 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
     readProviderApiKey: (id) => getBridge().readProviderApiKey(id),
     listModels: (config) => getBridge().listModels(config),
     testConnection: (request) => getBridge().testConnection(request),
+    listImageProviderConfigs: () => getBridge().listImageProviderConfigs(),
+    saveImageProviderConfig: (config) => getBridge().saveImageProviderConfig(config),
+    deleteImageProviderConfig: (id) => getBridge().deleteImageProviderConfig(id),
+    readImageProviderApiKey: (id) => getBridge().readImageProviderApiKey(id),
+    listImageModels: (config) => getBridge().listImageModels(config),
+    getImageGenerationSettings: () => getBridge().getImageGenerationSettings(),
+    saveImageGenerationSettings: (settings) => getBridge().saveImageGenerationSettings(settings),
+    testImageConnection: (request) => getBridge().testImageConnection(request),
+    generateImage(request, options = {}) {
+      return new Promise<AIRouterGeneratedImage>((resolve, reject) => {
+        let settled = false
+        let stop = (): void => undefined
+        const finish = (event: AIRouterImageGenerationEvent): void => {
+          if (settled) return
+          settled = true
+          options.signal?.removeEventListener('abort', abort)
+          stop()
+          if (event.type === 'result') {
+            resolve({
+              data: new Uint8Array(event.image.data as ArrayLike<number>),
+              mediaType: event.image.mediaType
+            })
+          } else reject(new Error(event.message))
+        }
+        const abort = (): void => {
+          if (settled) return
+          settled = true
+          stop()
+          reject(new DOMException('Image generation was aborted', 'AbortError'))
+        }
+        stop = getBridge().startImageGeneration(request, finish)
+        if (options.signal?.aborted) abort()
+        else options.signal?.addEventListener('abort', abort, { once: true })
+      })
+    },
     generateText(request, options = {}) {
       const queue: AIRouterTextChunk[] = []
       const waiters: Array<{

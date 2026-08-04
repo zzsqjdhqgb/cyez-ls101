@@ -135,6 +135,10 @@ export interface InterfaceTextGenerator {
   ): AsyncIterable<InterfaceTextGenerationChunk>
 }
 
+export interface InterfaceImageGenerator {
+  generate(prompt: string, options: { signal: AbortSignal }): Promise<{ data: Uint8Array }>
+}
+
 export interface InterfaceBrowser {
   listDrafts(): Promise<InterfaceDraftSummary[]>
   listPublished(): Promise<PublishedInterfaceSummary[]>
@@ -175,6 +179,7 @@ export interface InterfaceInstanceApplication {
     instanceId: string,
     options?: { model?: InterfaceTextModelSelection }
   ): Promise<TaskProgressHandle<InterfaceAIGenerationResult>>
+  generateImage(prompt: string, options?: { signal?: AbortSignal }): Promise<Uint8Array>
   delete(interfaceId: string, instanceId: string): Promise<void>
 }
 
@@ -221,6 +226,7 @@ export interface InterfaceApplicationDependencies {
   repository: InterfaceRepository
   fileDialog: InterfaceFileDialog
   textGenerator?: InterfaceTextGenerator
+  imageGenerator?: InterfaceImageGenerator
 }
 
 const EMPTY_CONTENT: InterfaceContent = {
@@ -259,7 +265,7 @@ export function editInterfaceDraft(
 export function createInterfaceApplication(
   dependencies: InterfaceApplicationDependencies
 ): InterfaceApplication {
-  const { repository, fileDialog, textGenerator } = dependencies
+  const { repository, fileDialog, textGenerator, imageGenerator } = dependencies
   const busyInstances = new Set<string>()
 
   const acquireInstance = (interfaceId: string, instanceId: string): (() => void) => {
@@ -551,7 +557,7 @@ export function createInterfaceApplication(
           return createGenerationHandle(
             stream,
             controller,
-            async (text, saving) => {
+            async (text, progress) => {
               const validation = validateJson(buildJsonSchema(def.fields), text)
               if (!validation.valid || !validation.data) {
                 return {
@@ -562,11 +568,52 @@ export function createInterfaceApplication(
               }
               const current = await requireInstance(repository, interfaceId, instanceId)
               const mapped = buildInstanceFromJson(def, validation.data)
-              saving()
-              await repository.updateInstance(interfaceId, {
-                ...current.instance,
-                values: mapped.values
-              })
+              const prompts = Object.entries(mapped.imagePrompts ?? {})
+              if (prompts.length && !imageGenerator) {
+                throw new Error('Interface image generator is not configured')
+              }
+              progress.prepareImages(prompts.map(([varName]) => varName))
+              const generatedImages: Record<string, Uint8Array> = {}
+              for (const [index, [varName, prompt]] of prompts.entries()) {
+                progress.startImage(index)
+                const generated = await imageGenerator?.generate(prompt, {
+                  signal: controller.signal
+                })
+                if (!generated) throw new Error('Interface image generator is not configured')
+                assertSupportedImage(generated.data)
+                generatedImages[varName] = new Uint8Array(generated.data)
+                progress.completeImage(index)
+              }
+
+              const values = { ...mapped.values }
+              const assets = await loadInstanceAssets(repository, interfaceId, instanceId, current)
+              const imageVarNames = new Set(flattenImageVarNames(def.fields))
+              const usedAssetNames = new Set(current.assetFilenames)
+              for (const varName of imageVarNames) {
+                const previous = current.instance.values[varName]
+                if (current.assetFilenames.includes(previous)) delete assets[previous]
+                const data = generatedImages[varName]
+                if (!data) continue
+                const filename = createImageFilename(
+                  varName,
+                  supportedImageExtension(data),
+                  usedAssetNames
+                )
+                usedAssetNames.add(filename)
+                assets[filename] = data
+                values[varName] = filename
+              }
+
+              progress.saving()
+              await repository.updateInstance(
+                interfaceId,
+                {
+                  ...current.instance,
+                  values,
+                  imagePrompts: mapped.imagePrompts
+                },
+                assets
+              )
               return {
                 status: 'completed',
                 instance: (await getInstanceDetails(
@@ -582,6 +629,20 @@ export function createInterfaceApplication(
         } catch (error) {
           release()
           throw error
+        }
+      },
+      async generateImage(prompt, options = {}) {
+        if (!imageGenerator) throw new Error('Interface image generator is not configured')
+        const controller = new AbortController()
+        const abort = (): void => controller.abort()
+        if (options.signal?.aborted) abort()
+        else options.signal?.addEventListener('abort', abort, { once: true })
+        try {
+          const image = await imageGenerator.generate(prompt, { signal: controller.signal })
+          assertSupportedImage(image.data)
+          return new Uint8Array(image.data)
+        } finally {
+          options.signal?.removeEventListener('abort', abort)
         }
       },
       async delete(interfaceId, instanceId) {
@@ -764,7 +825,15 @@ function jsonErrors(
 function createGenerationHandle(
   stream: AsyncIterable<InterfaceTextGenerationChunk>,
   controller: AbortController,
-  apply: (text: string, saving: () => void) => Promise<InterfaceAIGenerationResult>,
+  apply: (
+    text: string,
+    progress: {
+      prepareImages(varNames: readonly string[]): void
+      startImage(index: number): void
+      completeImage(index: number): void
+      saving(): void
+    }
+  ) => Promise<InterfaceAIGenerationResult>,
   dispose: () => void
 ): TaskProgressHandle<InterfaceAIGenerationResult> {
   let cancelled = false
@@ -782,6 +851,7 @@ function createGenerationHandle(
   }
   let reasoning = ''
   let output = ''
+  let imageItems: TaskProgressItem[] = []
   const aiItem = (status: 'running' | 'completed'): TaskProgressItem => {
     const sections: string[] = []
     if (reasoning) sections.push(`### 思考\n\n${reasoning}`)
@@ -810,13 +880,53 @@ function createGenerationHandle(
         { id: 'validate', label: '校验生成结果', status: 'running' },
         { id: 'save', label: '保存实例', status: 'waiting' }
       ])
-      const applied = await apply(output, () => {
-        if (cancelled) throw new GenerationCancelledError()
-        publish([
-          aiItem('completed'),
-          { id: 'validate', label: '校验生成结果', status: 'completed' },
-          { id: 'save', label: '保存实例', status: 'running' }
-        ])
+      const applied = await apply(output, {
+        prepareImages(varNames) {
+          if (cancelled) throw new GenerationCancelledError()
+          imageItems = varNames.map((varName, index) => ({
+            id: `image-${index}`,
+            label: `生成图片：${varName}`,
+            status: 'waiting'
+          }))
+          publish([
+            aiItem('completed'),
+            { id: 'validate', label: '校验生成结果', status: 'completed' },
+            ...imageItems,
+            { id: 'save', label: '保存实例', status: 'waiting' }
+          ])
+        },
+        startImage(index) {
+          if (cancelled) throw new GenerationCancelledError()
+          imageItems = imageItems.map((item, itemIndex) =>
+            itemIndex === index ? { ...item, status: 'running' } : item
+          )
+          publish([
+            aiItem('completed'),
+            { id: 'validate', label: '校验生成结果', status: 'completed' },
+            ...imageItems,
+            { id: 'save', label: '保存实例', status: 'waiting' }
+          ])
+        },
+        completeImage(index) {
+          imageItems = imageItems.map((item, itemIndex) =>
+            itemIndex === index ? { ...item, status: 'completed' } : item
+          )
+          publish([
+            aiItem('completed'),
+            { id: 'validate', label: '校验生成结果', status: 'completed' },
+            ...imageItems,
+            { id: 'save', label: '保存实例', status: 'waiting' }
+          ])
+        },
+        saving() {
+          if (cancelled) throw new GenerationCancelledError()
+          publish([
+            aiItem('completed'),
+            { id: 'validate', label: '校验生成结果', status: 'completed' },
+            ...imageItems,
+            { id: 'save', label: '保存实例', status: 'running' }
+          ])
+        }
       })
       if (applied.status === 'invalid-response') {
         publish([
@@ -837,6 +947,7 @@ function createGenerationHandle(
       publish([
         aiItem('completed'),
         { id: 'validate', label: '校验生成结果', status: 'completed' },
+        ...imageItems,
         { id: 'save', label: '保存实例', status: 'completed' }
       ])
       return applied

@@ -2,13 +2,20 @@ import { ipcMain, type WebContents } from 'electron'
 import { AIROUTER_CHANNELS } from '../shared'
 import type {
   AIRouterConnectionTestInput,
+  AIRouterImageConnectionTestInput,
+  AIRouterImageGenerationEvent,
+  AIRouterImageGenerationSettings,
+  AIRouterImageProviderConfigInput,
+  AIRouterImageRequest,
   AIRouterProviderConfigInput,
   AIRouterStreamEvent,
   AIRouterTextRequest
 } from '../shared'
 import { AIRouterService, type AIRouterServiceOptions } from './service'
+import { AIRouterImageService } from './image-service'
 
 export { AIRouterService } from './service'
+export { AIRouterImageService } from './image-service'
 export type { AIRouterServiceOptions } from './service'
 
 interface ActiveGeneration {
@@ -18,6 +25,7 @@ interface ActiveGeneration {
 
 export function registerAIRouter(options: AIRouterServiceOptions): void {
   const service = new AIRouterService(options)
+  const imageService = new AIRouterImageService(options)
   const active = new Map<string, ActiveGeneration>()
 
   ipcMain.handle(AIROUTER_CHANNELS.listConfigs, () => service.listProviderConfigs())
@@ -36,6 +44,31 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
   ipcMain.handle(AIROUTER_CHANNELS.testConnection, (_event, request: AIRouterConnectionTestInput) =>
     service.testConnection(request)
   )
+  ipcMain.handle(AIROUTER_CHANNELS.listImageConfigs, () => imageService.listProviderConfigs())
+  ipcMain.handle(
+    AIROUTER_CHANNELS.saveImageConfig,
+    (_event, input: AIRouterImageProviderConfigInput) => imageService.saveProviderConfig(input)
+  )
+  ipcMain.handle(AIROUTER_CHANNELS.deleteImageConfig, (_event, id: string) =>
+    imageService.deleteProviderConfig(id)
+  )
+  ipcMain.handle(AIROUTER_CHANNELS.readImageApiKey, (_event, id: string) =>
+    imageService.readProviderApiKey(id)
+  )
+  ipcMain.handle(
+    AIROUTER_CHANNELS.listImageModels,
+    (_event, input: AIRouterImageProviderConfigInput) => imageService.listModels(input)
+  )
+  ipcMain.handle(AIROUTER_CHANNELS.getImageSettings, () => imageService.getGenerationSettings())
+  ipcMain.handle(
+    AIROUTER_CHANNELS.saveImageSettings,
+    (_event, settings: AIRouterImageGenerationSettings) =>
+      imageService.saveGenerationSettings(settings)
+  )
+  ipcMain.handle(
+    AIROUTER_CHANNELS.testImageConnection,
+    (_event, request: AIRouterImageConnectionTestInput) => imageService.testConnection(request)
+  )
   ipcMain.on(
     AIROUTER_CHANNELS.generateStart,
     (event, requestId: string, request: AIRouterTextRequest) => {
@@ -53,6 +86,43 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
   ipcMain.on(AIROUTER_CHANNELS.generateAbort, (event, requestId: string) => {
     active.get(`${event.sender.id}:${requestId}`)?.controller.abort()
   })
+  ipcMain.on(
+    AIROUTER_CHANNELS.imageGenerateStart,
+    (event, requestId: string, request: AIRouterImageRequest) => {
+      const key = `${event.sender.id}:${requestId}`
+      active.get(key)?.controller.abort()
+      const controller = new AbortController()
+      active.set(key, { sender: event.sender, controller })
+      void imageToRenderer(
+        imageService,
+        event.sender,
+        requestId,
+        request,
+        controller.signal
+      ).finally(() => active.delete(key))
+    }
+  )
+  ipcMain.on(AIROUTER_CHANNELS.imageGenerateAbort, (event, requestId: string) => {
+    active.get(`${event.sender.id}:${requestId}`)?.controller.abort()
+  })
+}
+
+async function imageToRenderer(
+  service: AIRouterImageService,
+  sender: WebContents,
+  requestId: string,
+  request: AIRouterImageRequest,
+  signal: AbortSignal
+): Promise<void> {
+  const send = (event: AIRouterImageGenerationEvent): void => {
+    if (!sender.isDestroyed()) sender.send(AIROUTER_CHANNELS.imageGenerateEvent, requestId, event)
+  }
+  try {
+    const image = await service.generateImage(request, { signal })
+    if (!signal.aborted) send({ type: 'result', image })
+  } catch (error) {
+    if (!signal.aborted) send({ type: 'error', message: errorMessage(error) })
+  }
 }
 
 async function streamToRenderer(

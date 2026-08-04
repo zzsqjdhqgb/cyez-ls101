@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { InterfaceInstance, TaskProgressSnapshot } from '@ls101/core-types'
 import {
   createInterfaceApplication,
+  type InterfaceImageGenerator,
   type InterfaceTextGenerationChunk,
   type InterfaceTextGenerator,
   type InterfaceTextModelSelection
@@ -990,6 +991,47 @@ describe('Interface application', () => {
 
     generator.complete('{"title":"AI 值"}')
     await handle.completion
+  })
+
+  it('在文本校验后生成图片并原子保存提示词和资源', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(contentWithImage())
+    await repository.saveInterface(def)
+    const textGenerator = new TestTextGenerator()
+    const imageGenerator: InterfaceImageGenerator = {
+      generate: vi.fn().mockResolvedValue({ data: PNG_BYTES })
+    }
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(null),
+      textGenerator,
+      imageGenerator
+    })
+    const blank = await app.published.createBlankInstance(def.id)
+    const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId)
+    textGenerator.complete('{"title":"AI 图片题","picture":"学生在校园操场上跑步"}')
+
+    const result = await handle.completion
+    expect(result.status).toBe('completed')
+    expect(imageGenerator.generate).toHaveBeenCalledWith('学生在校园操场上跑步', {
+      signal: expect.any(AbortSignal)
+    })
+    expect(handle.getSnapshot().items.map((item) => item.label)).toEqual([
+      'AI 生成',
+      '校验生成结果',
+      '生成图片：questionImage',
+      '保存实例'
+    ])
+    const details = await app.instances.get(def.id, blank.instance.instanceId)
+    expect(details?.instance.values.title).toBe('AI 图片题')
+    expect(details?.instance.imagePrompts).toEqual({
+      questionImage: '学生在校园操场上跑步'
+    })
+    const filename = details?.instance.values.questionImage ?? ''
+    expect(filename).toMatch(/^questionImage-[0-9a-f-]{36}\.png$/)
+    expect(await repository.readInstanceAsset(def.id, blank.instance.instanceId, filename)).toEqual(
+      PNG_BYTES
+    )
   })
 })
 

@@ -149,6 +149,15 @@ function clientWith(overrides: Partial<AIRouterClient>): AIRouterClient {
     readProviderApiKey: vi.fn(),
     listModels: vi.fn(),
     testConnection: vi.fn(),
+    listImageProviderConfigs: vi.fn().mockResolvedValue([]),
+    saveImageProviderConfig: vi.fn(),
+    deleteImageProviderConfig: vi.fn(),
+    readImageProviderApiKey: vi.fn(),
+    listImageModels: vi.fn(),
+    getImageGenerationSettings: vi.fn().mockResolvedValue({ mode: 'manual' }),
+    saveImageGenerationSettings: vi.fn(),
+    testImageConnection: vi.fn(),
+    generateImage: vi.fn(),
     generateText: vi.fn(),
     ...overrides
   }

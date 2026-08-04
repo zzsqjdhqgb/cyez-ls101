@@ -21,11 +21,20 @@ describe('renderer clipboard', () => {
 
     await expect(imageClipboard.readImage()).resolves.toBeNull()
   })
+
+  it('writes prompt text through the preload bridge', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    setBridge(vi.fn(), writeText)
+    const { imageClipboard } = await import('../renderer')
+
+    await imageClipboard.writeText('prompt')
+    expect(writeText).toHaveBeenCalledWith('prompt')
+  })
 })
 
-function setBridge(readImage: ReturnType<typeof vi.fn>): void {
+function setBridge(readImage: ReturnType<typeof vi.fn>, writeText = vi.fn()): void {
   Object.defineProperty(globalThis, 'window', {
     configurable: true,
-    value: { imageClipboard: { readImage } }
+    value: { imageClipboard: { readImage, writeText } }
   })
 }

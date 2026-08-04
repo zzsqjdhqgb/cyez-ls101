@@ -20,7 +20,7 @@ describe('AIRouterSettingsPage', () => {
       models: [{ id: 'test-model', enabled: true }],
       hasApiKey: true
     }
-    const application: AIRouterApplication = {
+    const application = applicationWith({
       listConfigs: vi.fn().mockResolvedValue([config]),
       saveConfig: vi.fn().mockImplementation(async (input: AIRouterProviderConfigInput) => ({
         id: input.id ?? 'provider-1',
@@ -34,7 +34,7 @@ describe('AIRouterSettingsPage', () => {
       readApiKey: vi.fn().mockResolvedValue('saved-secret'),
       listModels: vi.fn(),
       testConnection: vi.fn().mockResolvedValue({ ok: true, text: 'OK' })
-    }
+    })
 
     renderAIRouter(application)
 
@@ -119,7 +119,7 @@ describe('AIRouterSettingsPage', () => {
       models: [],
       hasApiKey: true
     }
-    const application: AIRouterApplication = {
+    const application = applicationWith({
       listConfigs: vi.fn().mockResolvedValue([config]),
       saveConfig: vi.fn().mockImplementation(async (input: AIRouterProviderConfigInput) => ({
         ...config,
@@ -129,7 +129,7 @@ describe('AIRouterSettingsPage', () => {
       readApiKey: vi.fn().mockResolvedValue('saved-secret'),
       listModels: vi.fn(),
       testConnection: vi.fn()
-    }
+    })
 
     renderAIRouter(application)
 
@@ -154,7 +154,7 @@ describe('AIRouterSettingsPage', () => {
   })
 
   it('discovers models and tests an unsaved provider draft before saving once', async () => {
-    const application: AIRouterApplication = {
+    const application = applicationWith({
       listConfigs: vi.fn().mockResolvedValue([]),
       saveConfig: vi.fn().mockImplementation(async (input: AIRouterProviderConfigInput) => ({
         id: 'new-provider',
@@ -168,7 +168,7 @@ describe('AIRouterSettingsPage', () => {
       readApiKey: vi.fn(),
       listModels: vi.fn().mockResolvedValue([{ id: 'draft-model' }]),
       testConnection: vi.fn().mockResolvedValue({ ok: true, text: 'OK' })
-    }
+    })
 
     renderAIRouter(application)
 
@@ -235,14 +235,14 @@ describe('AIRouterSettingsPage', () => {
   })
 
   it('uses URL-backed model categories and marks speech pages as placeholders', async () => {
-    const application: AIRouterApplication = {
+    const application = applicationWith({
       listConfigs: vi.fn().mockResolvedValue([]),
       saveConfig: vi.fn(),
       deleteConfig: vi.fn(),
       readApiKey: vi.fn(),
       listModels: vi.fn(),
       testConnection: vi.fn()
-    }
+    })
 
     renderAIRouter(application, '/settings/ai-router/speech-synthesis')
 
@@ -256,7 +256,75 @@ describe('AIRouterSettingsPage', () => {
     expect(screen.getByRole('heading', { name: '语音识别' })).toBeInTheDocument()
     expect(screen.getByText('临时占位')).toBeInTheDocument()
   })
+
+  it('configures a separate image provider and switches from manual to API mode', async () => {
+    const saveImageSettings = vi.fn().mockImplementation(async (settings) => settings)
+    const application = applicationWith({
+      listImageConfigs: vi.fn().mockResolvedValue([]),
+      getImageSettings: vi.fn().mockResolvedValue({ mode: 'manual' }),
+      saveImageConfig: vi.fn().mockImplementation(async (input) => ({
+        id: 'image-provider',
+        name: input.name,
+        type: 'openai-compatible',
+        baseUrl: input.baseUrl,
+        models: input.models,
+        hasApiKey: Boolean(input.apiKey)
+      })),
+      saveImageSettings
+    })
+
+    renderAIRouter(application, '/settings/ai-router/image')
+
+    expect(await screen.findByRole('button', { name: '手动生成' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    expect(screen.getByRole('button', { name: 'API Provider' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('图像配置名称'), {
+      target: { value: '图片服务' }
+    })
+    fireEvent.change(within(dialog).getByLabelText('图像 API Key'), {
+      target: { value: 'image-secret' }
+    })
+    fireEvent.change(within(dialog).getByLabelText('手动图像模型 ID'), {
+      target: { value: 'gpt-image-1' }
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '添加' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+
+    await waitFor(() => expect(application.saveImageConfig).toHaveBeenCalledOnce())
+    fireEvent.click(screen.getByRole('button', { name: 'API Provider' }))
+    await waitFor(() =>
+      expect(saveImageSettings).toHaveBeenCalledWith({
+        mode: 'provider',
+        providerConfigId: 'image-provider',
+        modelId: 'gpt-image-1'
+      })
+    )
+  })
 })
+
+function applicationWith(overrides: Partial<AIRouterApplication>): AIRouterApplication {
+  return {
+    listConfigs: vi.fn().mockResolvedValue([]),
+    saveConfig: vi.fn(),
+    deleteConfig: vi.fn(),
+    readApiKey: vi.fn(),
+    listModels: vi.fn(),
+    testConnection: vi.fn(),
+    listImageConfigs: vi.fn().mockResolvedValue([]),
+    saveImageConfig: vi.fn(),
+    deleteImageConfig: vi.fn(),
+    readImageApiKey: vi.fn(),
+    listImageModels: vi.fn(),
+    getImageSettings: vi.fn().mockResolvedValue({ mode: 'manual' }),
+    saveImageSettings: vi.fn(),
+    testImageConnection: vi.fn(),
+    ...overrides
+  }
+}
 
 function renderAIRouter(
   application: AIRouterApplication,

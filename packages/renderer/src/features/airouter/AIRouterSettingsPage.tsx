@@ -11,6 +11,7 @@ import {
   Download,
   Eye,
   EyeOff,
+  Image as ImageIcon,
   LockKeyhole,
   MessageSquareText,
   Mic,
@@ -36,6 +37,7 @@ import {
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { toast } from '../../components/ui/toast'
 import { airouterApplication, type AIRouterApplication } from './AIRouterApplication'
+import { AIRouterImageSettingsPage } from './AIRouterImageSettingsPage'
 import styles from './AIRouterSettingsPage.module.css'
 
 interface ProviderDraft {
@@ -68,6 +70,7 @@ const defaultBaseUrls: Record<AIRouterProviderType, string> = {
 const sectionBasePath = '/settings/ai-router'
 const sections = [
   { id: 'text', label: '文本生成', icon: MessageSquareText },
+  { id: 'image', label: '图像生成', icon: ImageIcon },
   { id: 'speech-synthesis', label: '语音合成', icon: AudioLines },
   { id: 'speech-recognition', label: '语音识别', icon: Mic }
 ] as const
@@ -106,6 +109,7 @@ export function AIRouterSettingsPage({
       <Routes>
         <Route index element={<Navigate replace to="text" />} />
         <Route path="text" element={<AIRouterTextSettingsPage application={application} />} />
+        <Route path="image" element={<AIRouterImageSettingsPage application={application} />} />
         <Route
           path="speech-synthesis"
           element={

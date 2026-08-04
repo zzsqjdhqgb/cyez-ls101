@@ -23,6 +23,9 @@ import {
 import {
   AIROUTER_CHANNELS,
   type AIRouterBridge,
+  type AIRouterImageGenerationEvent,
+  type AIRouterImageProviderConfigInput,
+  type AIRouterImageRequest,
   type AIRouterProviderConfigInput,
   type AIRouterStreamEvent,
   type AIRouterTextRequest
@@ -69,6 +72,30 @@ const airouterBridge: AIRouterBridge = {
   testConnection(request) {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.testConnection, request)
   },
+  listImageProviderConfigs() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listImageConfigs)
+  },
+  saveImageProviderConfig(config: AIRouterImageProviderConfigInput) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.saveImageConfig, config)
+  },
+  deleteImageProviderConfig(id: string) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.deleteImageConfig, id)
+  },
+  readImageProviderApiKey(id: string) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.readImageApiKey, id)
+  },
+  listImageModels(config: AIRouterImageProviderConfigInput) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listImageModels, config)
+  },
+  getImageGenerationSettings() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.getImageSettings)
+  },
+  saveImageGenerationSettings(settings) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.saveImageSettings, settings)
+  },
+  testImageConnection(request) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.testImageConnection, request)
+  },
   startTextGeneration(
     request: AIRouterTextRequest,
     listener: (event: AIRouterStreamEvent) => void
@@ -87,6 +114,27 @@ const airouterBridge: AIRouterBridge = {
       ipcRenderer.removeListener(AIROUTER_CHANNELS.generateEvent, handler)
       ipcRenderer.send(AIROUTER_CHANNELS.generateAbort, requestId)
     }
+  },
+  startImageGeneration(
+    request: AIRouterImageRequest,
+    listener: (event: AIRouterImageGenerationEvent) => void
+  ) {
+    const requestId = crypto.randomUUID()
+    const handler = (
+      _event: IpcRendererEvent,
+      id: string,
+      event: AIRouterImageGenerationEvent
+    ): void => {
+      if (id !== requestId) return
+      listener(event)
+      ipcRenderer.removeListener(AIROUTER_CHANNELS.imageGenerateEvent, handler)
+    }
+    ipcRenderer.on(AIROUTER_CHANNELS.imageGenerateEvent, handler)
+    ipcRenderer.send(AIROUTER_CHANNELS.imageGenerateStart, requestId, request)
+    return () => {
+      ipcRenderer.removeListener(AIROUTER_CHANNELS.imageGenerateEvent, handler)
+      ipcRenderer.send(AIROUTER_CHANNELS.imageGenerateAbort, requestId)
+    }
   }
 }
 
@@ -102,6 +150,9 @@ const fileDialogBridge: FileDialogBridge = {
 const clipboardBridge: ClipboardBridge = {
   readImage() {
     return ipcRenderer.invoke(CLIPBOARD_CHANNELS.readImage)
+  },
+  writeText(text: string) {
+    return ipcRenderer.invoke(CLIPBOARD_CHANNELS.writeText, text)
   }
 }
 

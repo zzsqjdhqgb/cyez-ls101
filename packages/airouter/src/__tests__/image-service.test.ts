@@ -1,0 +1,104 @@
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { EncryptedSecretStorage } from '@ls101/secret-store/main'
+import { AIRouterImageService } from '../main/image-service'
+
+const { generateImageMock } = vi.hoisted(() => ({ generateImageMock: vi.fn() }))
+
+vi.mock('ai', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('ai')>()
+  return { ...actual, generateImage: generateImageMock }
+})
+
+describe('AIRouterImageService', () => {
+  let baseDir: string
+  let service: AIRouterImageService
+
+  beforeEach(async () => {
+    generateImageMock.mockReset()
+    baseDir = await mkdtemp(path.join(tmpdir(), 'airouter-image-'))
+    const secrets = new EncryptedSecretStorage(baseDir, {
+      encrypt: (value) => new TextEncoder().encode(value),
+      decrypt: (value) => new TextDecoder().decode(value)
+    })
+    service = new AIRouterImageService({ baseDir, secretStorage: secrets })
+  })
+
+  afterEach(async () => {
+    vi.unstubAllGlobals()
+    await rm(baseDir, { recursive: true, force: true })
+  })
+
+  it('stores image providers and secrets independently from text providers', async () => {
+    const saved = await service.saveProviderConfig({
+      name: '图片 OpenAI',
+      type: 'openai-compatible',
+      baseUrl: 'https://images.example.com/v1/',
+      models: [{ id: 'image-model', enabled: true }],
+      apiKey: 'image-secret'
+    })
+
+    expect(saved.baseUrl).toBe('https://images.example.com/v1')
+    expect(await service.readProviderApiKey(saved.id)).toBe('image-secret')
+    const document = await readFile(
+      path.join(baseDir, 'config', 'airouter', 'image-providers.json'),
+      'utf8'
+    )
+    expect(document).not.toContain('image-secret')
+    expect(
+      await readFile(path.join(baseDir, 'config', 'airouter', 'providers.json'), 'utf8').catch(
+        () => null
+      )
+    ).toBeNull()
+  })
+
+  it('defaults to manual mode and falls back to it when the selected provider is deleted', async () => {
+    expect(await service.getGenerationSettings()).toEqual({ mode: 'manual' })
+    const saved = await service.saveProviderConfig({
+      name: '图片 OpenAI',
+      type: 'openai-compatible',
+      models: [{ id: 'image-model', enabled: true }]
+    })
+    await expect(
+      service.saveGenerationSettings({
+        mode: 'provider',
+        providerConfigId: saved.id,
+        modelId: 'image-model'
+      })
+    ).resolves.toEqual({
+      mode: 'provider',
+      providerConfigId: saved.id,
+      modelId: 'image-model'
+    })
+
+    await service.deleteProviderConfig(saved.id)
+    expect(await service.getGenerationSettings()).toEqual({ mode: 'manual' })
+  })
+
+  it('generates one image with the selected provider model', async () => {
+    const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
+    generateImageMock.mockResolvedValue({
+      image: { uint8Array: bytes, mediaType: 'image/png' }
+    })
+    const saved = await service.saveProviderConfig({
+      name: '图片 OpenAI',
+      type: 'openai-compatible',
+      models: [{ id: 'image-model', enabled: true }],
+      apiKey: 'secret'
+    })
+
+    await expect(
+      service.generateImage({
+        providerConfigId: saved.id,
+        modelId: 'image-model',
+        prompt: '校园操场',
+        size: { width: 1024, height: 1024 }
+      })
+    ).resolves.toEqual({ data: bytes, mediaType: 'image/png' })
+    expect(generateImageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: '校园操场', size: '1024x1024' })
+    )
+  })
+})

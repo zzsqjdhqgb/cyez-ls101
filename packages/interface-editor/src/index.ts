@@ -27,6 +27,7 @@ export type {
   InterfaceTextModelSelection,
   InterfaceTextModelOption,
   InterfaceTextGenerator,
+  InterfaceImageGenerator,
   ExportInterfaceResult,
   InterfaceImportPreview,
   InterfaceImportSession,

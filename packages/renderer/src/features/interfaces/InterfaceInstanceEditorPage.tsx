@@ -23,6 +23,7 @@ import {
   RefreshCw,
   Save,
   Trash2,
+  WandSparkles,
   X
 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -80,11 +81,13 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   const [modelsError, setModelsError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [generatingImage, setGeneratingImage] = useState<string | null>(null)
   const [generation, setGeneration] = useState<GenerationSession | null>(null)
   const [dirty, setDirty] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmLeave, setConfirmLeave] = useState(false)
   const modelLoadId = useRef(0)
+  const imageGenerationController = useRef<AbortController | null>(null)
   const previewUrls = useRef(new Set<string>())
 
   useEffect(() => {
@@ -120,6 +123,8 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
     },
     []
   )
+
+  useEffect(() => () => imageGenerationController.current?.abort(), [])
 
   const leaves = useMemo<LeafEntry[]>(() => {
     if (!definition) return []
@@ -205,6 +210,32 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       stageImage(varName, '剪贴板图片.png', data)
     } catch (reason) {
       setError(errorMessage(reason))
+    }
+  }
+
+  const generateFieldImage = async (varName: string): Promise<void> => {
+    const prompt = imagePrompts[varName]?.trim()
+    if (!prompt) {
+      toast.info('请先填写图片提示词')
+      return
+    }
+    setGeneratingImage(varName)
+    setError(null)
+    const controller = new AbortController()
+    imageGenerationController.current = controller
+    try {
+      const data = await application.instances.generateImage(prompt, { signal: controller.signal })
+      stageImage(varName, 'AI 生成图片', data)
+      toast.success('图片已生成，请保存题组')
+    } catch (reason) {
+      if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
+        setError(errorMessage(reason))
+      }
+    } finally {
+      if (imageGenerationController.current === controller) {
+        imageGenerationController.current = null
+      }
+      setGeneratingImage(null)
     }
   }
 
@@ -341,7 +372,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
 
   const generationFinished = generation ? isGenerationFinished(generation) : false
   const generationRunning = generation !== null && !generationFinished
-  const busy = saving || generationRunning
+  const busy = saving || generationRunning || generatingImage !== null
 
   const finishGeneration = (): void => {
     const openJson = generation?.result?.status === 'invalid-response'
@@ -460,8 +491,11 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
                         promptPlaceholder={leaf.example}
                         onChooseClipboard={() => void chooseClipboardImage(leaf.varName)}
                         onChooseFile={() => void chooseImageFile(leaf.varName)}
+                        onCancelGenerate={() => imageGenerationController.current?.abort()}
+                        onGenerate={() => void generateFieldImage(leaf.varName)}
                         onPromptChange={(value) => updateImagePrompt(leaf.varName, value)}
                         onRemove={() => removeImage(leaf.varName)}
+                        generating={generatingImage === leaf.varName}
                       />
                     ) : (
                       <textarea
@@ -556,8 +590,11 @@ function ImageValueInput({
   pending,
   prompt,
   promptPlaceholder,
+  generating,
+  onCancelGenerate,
   onChooseClipboard,
   onChooseFile,
+  onGenerate,
   onPromptChange,
   onRemove
 }: {
@@ -567,8 +604,11 @@ function ImageValueInput({
   pending?: PendingImage
   prompt: string
   promptPlaceholder: string
+  generating: boolean
+  onCancelGenerate(): void
   onChooseClipboard(): void
   onChooseFile(): void
+  onGenerate(): void
   onPromptChange(value: string): void
   onRemove(): void
 }): JSX.Element {
@@ -605,6 +645,14 @@ function ImageValueInput({
             <div>
               <Button icon={FolderOpen} size="small" disabled={disabled} onClick={onChooseFile}>
                 选择文件
+              </Button>
+              <Button
+                icon={generating ? X : WandSparkles}
+                size="small"
+                disabled={generating ? false : disabled || !prompt.trim()}
+                onClick={generating ? onCancelGenerate : onGenerate}
+              >
+                {generating ? '取消生成' : '生成图片'}
               </Button>
               <Button
                 icon={ClipboardPaste}

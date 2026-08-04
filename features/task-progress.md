@@ -191,20 +191,20 @@ AI 生成
 - 没有统一错误对象，最终结果由各领域自行定义。
 - 没有通用 React 组件。
 - 当前只有 Interface AI 流程创建了实际句柄；renderer 已将 AIRouter 文本流适配到 Interface 生成端口。
-- Interface 图片生成尚未实现，当前没有可验证的图片任务进度行为。
+- 图片生成使用普通 Promise；Interface 为每个图片变量追加一个无日志任务项。
 
 ## 验证覆盖
 
 当前自动化测试覆盖：
 
 - Interface 将 AI reasoning/output 增量转换为流式 Markdown 日志。
-- AI、校验和保存三个扁平任务项的状态推进。
+- AI、校验、逐图片生成和保存等扁平任务项的状态推进。
 - AI 成功后覆盖当前实例并保留 UUID。
 - 同一实例运行 AI 时拒绝第二个生成、整表保存和 JSON 覆盖。
 - renderer 在互斥的 AI/JSON 分栏中选择模型、订阅进度句柄、锁定编辑、取消生成并回填完成结果。
 - AIRouter 默认模型和显式指定模型的选择与文本增量流转发。
 
-当前未覆盖 Markdown 语义渲染、真实 Provider 端到端流、图片任务以及应用关闭时的任务清理。
+当前未覆盖 Markdown 语义渲染、真实 Provider 端到端流以及应用关闭时的任务恢复。
 
 ## 代码依据
 
@@ -215,3 +215,4 @@ AI 生成
 - `packages/airouter/src/index.ts`
 - `packages/renderer/src/features/interfaces/InterfaceAIRouterAdapter.ts`
 - `packages/renderer/src/features/interfaces/InterfaceInstanceEditorPage.tsx`
+- `packages/renderer/src/features/airouter/ManualImageGenerationDialog.tsx`
