@@ -208,6 +208,40 @@ describe('Interface pages', () => {
     expect(await screen.findByText('已复制JSON Schema')).toBeInTheDocument()
   })
 
+  it('does not report a successful export when the save dialog is cancelled', async () => {
+    const interfaceId = `sha256:${'f'.repeat(64)}`
+    const exportInterface = vi.fn().mockResolvedValue({ status: 'cancelled' })
+    const successToast = vi.spyOn(toast, 'success')
+    const app = application({
+      published: {
+        get: vi.fn().mockResolvedValue({
+          definition: { ...draft, id: interfaceId },
+          source: { type: 'published' }
+        }),
+        listInstances: vi.fn().mockResolvedValue([]),
+        getPrompts: vi.fn().mockResolvedValue(null)
+      },
+      transfer: { export: exportInterface }
+    })
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/interfaces/${interfaceId}`]}>
+          <Routes>
+            <Route path="/interfaces/:interfaceId" element={<InterfaceDetailsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByRole('button', { name: '导出' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '导出' }))
+
+    await waitFor(() => expect(exportInterface).toHaveBeenCalledWith(interfaceId, { mode: 'all' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '导出' })).toBeEnabled())
+    expect(successToast).not.toHaveBeenCalledWith('题型已导出')
+  })
+
   it('runs AI generation, locks editing, and applies the completed instance', async () => {
     const interfaceId = `sha256:${'b'.repeat(64)}`
     const instanceId = '20000000-0000-4000-8000-000000000001'

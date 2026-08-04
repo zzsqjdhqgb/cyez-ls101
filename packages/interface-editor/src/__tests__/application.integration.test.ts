@@ -6,6 +6,8 @@ import {
   type InterfaceTextGenerationChunk,
   type InterfaceTextModelSelection
 } from '../index'
+import { createBuiltinInterfaceApplication } from '../builtin-entry'
+import { createInterfaceDraft, publishInterface } from '../id'
 import { FileInterfaceRepository, type InterfaceStore } from '../repository'
 import type { InterfaceFileDialog } from '../fileExchange'
 
@@ -214,6 +216,129 @@ describe('interface editor application integration', () => {
     expect(generated).toEqual(PNG)
   })
 
+  it('keeps the current instance unchanged after an invalid AI response and releases its lock', async () => {
+    const repository = new FileInterfaceRepository(new MemoryStore())
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(),
+      textGenerator: new ScriptedTextGenerator('{"title":"缺少 section"}')
+    })
+    const draft = await app.drafts.create(content)
+    const published = await app.drafts.publish(draft.draftId)
+    if (published.status === 'invalid') throw new Error('expected a valid draft')
+    const interfaceId = published.interface.interfaceId
+    const blank = await app.published.createBlankInstance(interfaceId)
+    const before = await app.instances.save(interfaceId, blank.instance.instanceId, {
+      name: '原题组',
+      values: { titleText: '原标题', questionImage: '', answerText: 'Original answer' }
+    })
+
+    const handle = await app.instances.startAIGeneration(interfaceId, blank.instance.instanceId)
+
+    await expect(handle.completion).resolves.toMatchObject({ status: 'invalid-response' })
+    await expect(app.instances.get(interfaceId, blank.instance.instanceId)).resolves.toEqual(before)
+    expect(handle.getSnapshot().items.at(-1)).toMatchObject({ id: 'save', status: 'waiting' })
+    await expect(
+      app.instances.save(interfaceId, blank.instance.instanceId, {
+        name: '锁已释放',
+        values: before.instance.values
+      })
+    ).resolves.toMatchObject({ instance: { name: '锁已释放' } })
+  })
+
+  it('cancels during image generation without replacing values or assets', async () => {
+    const repository = new FileInterfaceRepository(new MemoryStore())
+    let imageStarted!: () => void
+    const started = new Promise<void>((resolve) => {
+      imageStarted = resolve
+    })
+    const imageGenerator: InterfaceImageGenerator = {
+      async generate(_prompt, { signal }) {
+        imageStarted()
+        return new Promise((_, reject) => {
+          const abort = (): void => reject(new DOMException('Aborted', 'AbortError'))
+          if (signal.aborted) abort()
+          else signal.addEventListener('abort', abort, { once: true })
+        })
+      }
+    }
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(),
+      textGenerator: new ScriptedTextGenerator(
+        '{"title":"AI 标题","section":{"picture":"AI 配图","answer":"AI answer"}}'
+      ),
+      imageGenerator
+    })
+    const draft = await app.drafts.create(content)
+    const published = await app.drafts.publish(draft.draftId)
+    if (published.status === 'invalid') throw new Error('expected a valid draft')
+    const interfaceId = published.interface.interfaceId
+    const blank = await app.published.createBlankInstance(interfaceId)
+    const before = await app.instances.save(interfaceId, blank.instance.instanceId, {
+      name: '原题组',
+      values: { titleText: '原标题', questionImage: '', answerText: 'Original answer' },
+      imagePrompts: { questionImage: '原提示词' },
+      imageFiles: { questionImage: PNG }
+    })
+    const oldFilename = before.instance.values.questionImage
+
+    const handle = await app.instances.startAIGeneration(interfaceId, blank.instance.instanceId)
+    await started
+    handle.cancel()
+
+    await expect(handle.completion).resolves.toEqual({ status: 'cancelled' })
+    await expect(app.instances.get(interfaceId, blank.instance.instanceId)).resolves.toEqual(before)
+    await expect(
+      repository.readInstanceAsset(interfaceId, blank.instance.instanceId, oldFilename)
+    ).resolves.toEqual(PNG)
+    await expect(
+      app.instances.save(interfaceId, blank.instance.instanceId, {
+        name: '锁已释放',
+        values: before.instance.values,
+        imagePrompts: before.instance.imagePrompts
+      })
+    ).resolves.toMatchObject({ instance: { name: '锁已释放' } })
+  })
+
+  it('does not persist generated data when the final repository update fails', async () => {
+    const repository = new FileInterfaceRepository(new MemoryStore())
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(),
+      textGenerator: new ScriptedTextGenerator(
+        '{"title":"AI 标题","section":{"picture":"AI 配图","answer":"AI answer"}}'
+      ),
+      imageGenerator: { generate: vi.fn().mockResolvedValue({ data: PNG }) }
+    })
+    const draft = await app.drafts.create(content)
+    const published = await app.drafts.publish(draft.draftId)
+    if (published.status === 'invalid') throw new Error('expected a valid draft')
+    const interfaceId = published.interface.interfaceId
+    const blank = await app.published.createBlankInstance(interfaceId)
+    const before = await app.instances.save(interfaceId, blank.instance.instanceId, {
+      name: '原题组',
+      values: { titleText: '原标题', questionImage: '', answerText: 'Original answer' }
+    })
+    vi.spyOn(repository, 'updateInstance').mockRejectedValueOnce(
+      new Error('simulated write failure')
+    )
+
+    const handle = await app.instances.startAIGeneration(interfaceId, blank.instance.instanceId)
+
+    await expect(handle.completion).resolves.toEqual({
+      status: 'failed',
+      message: 'simulated write failure'
+    })
+    await expect(app.instances.get(interfaceId, blank.instance.instanceId)).resolves.toEqual(before)
+    await expect(
+      app.instances.save(interfaceId, blank.instance.instanceId, {
+        name: '锁已释放',
+        values: before.instance.values
+      })
+    ).resolves.toMatchObject({ instance: { name: '锁已释放' } })
+  })
+
   it('exports an app package and imports a selected instance into another app', async () => {
     const sourceDialog = new TestFileDialog()
     const sourceRepository = new FileInterfaceRepository(new MemoryStore())
@@ -299,6 +424,54 @@ describe('interface editor application integration', () => {
     ).resolves.toEqual({ status: 'cancelled' })
     dialog.readData = null
     await expect(app.transfer.beginImport()).resolves.toBeNull()
+  })
+
+  it('cancels an import session without writing and rejects a later commit', async () => {
+    const sourceDialog = new TestFileDialog()
+    const source = createInterfaceApplication({
+      repository: new FileInterfaceRepository(new MemoryStore()),
+      fileDialog: sourceDialog
+    })
+    const draft = await source.drafts.create(content)
+    const published = await source.drafts.publish(draft.draftId)
+    if (published.status === 'invalid') throw new Error('expected a valid draft')
+    await source.transfer.export(published.interface.interfaceId, { mode: 'none' })
+
+    const target = createInterfaceApplication({
+      repository: new FileInterfaceRepository(new MemoryStore()),
+      fileDialog: new TestFileDialog(sourceDialog.writtenData)
+    })
+    const session = await target.transfer.beginImport()
+    if (!session) throw new Error('expected an import session')
+
+    session.cancel()
+
+    await expect(session.commit({ mode: 'all' })).rejects.toThrow('no longer active')
+    await expect(target.browser.listPublished()).resolves.toEqual([])
+  })
+
+  it('rejects a stale builtin update plan through the public builtin facade', async () => {
+    const repository = new FileInterfaceRepository(new MemoryStore())
+    const references = { replaceInterfaceReferences: vi.fn().mockResolvedValue(undefined) }
+    const builtins = createBuiltinInterfaceApplication({ repository, references })
+    const previous = await publishInterface(createInterfaceDraft(content))
+    const next = await publishInterface(
+      createInterfaceDraft({ ...content, description: '下一版本说明' })
+    )
+    const intervening = await publishInterface(
+      createInterfaceDraft({ ...content, description: '抢先发布的版本' })
+    )
+    await repository.saveBuiltinInterface('speaking', previous)
+    await repository.setBuiltinCurrent('speaking', previous.id)
+    const stalePlan = await builtins.check('speaking', next)
+    await repository.saveBuiltinInterface('speaking', intervening)
+    await repository.setBuiltinCurrent('speaking', intervening.id)
+
+    await expect(builtins.apply(stalePlan)).rejects.toThrow('plan is stale')
+    await expect(repository.getBuiltin('speaking')).resolves.toMatchObject({
+      currentInterfaceId: intervening.id
+    })
+    expect(references.replaceInterfaceReferences).not.toHaveBeenCalled()
   })
 })
 
