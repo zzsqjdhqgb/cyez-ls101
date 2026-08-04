@@ -56,7 +56,7 @@ export interface TemplateDocumentApplication {
     editorState?: DslEditorState
   ): Promise<TemplateDocument>
   get(templateId: string): Promise<TemplateDocument | null>
-  save(document: TemplateDocument): Promise<void>
+  save(document: TemplateDocument): Promise<TemplateDocument>
   delete(templateId: string): Promise<void>
   embedFunction(templateId: string, functionId: string): Promise<EmbeddedFunctionResult>
   pruneFunctionResources(templateId: string): Promise<TemplateDocument>
@@ -73,7 +73,7 @@ export interface FunctionDocumentApplication {
     editorState?: DslEditorState
   ): Promise<FunctionDocument>
   get(functionId: string): Promise<FunctionDocument | null>
-  save(document: FunctionDocument): Promise<void>
+  save(document: FunctionDocument): Promise<FunctionDocument>
   delete(functionId: string): Promise<void>
 }
 
@@ -187,8 +187,7 @@ export function createTemplateApplication(
           { functions: [] },
           editorState
         )
-        await repository.saveTemplate(document)
-        return document
+        return repository.saveTemplate(document)
       },
       get: (templateId) => repository.getTemplate(templateId),
       save: (document) => repository.saveTemplate(document),
@@ -245,8 +244,8 @@ export function createTemplateApplication(
           ...template,
           resources: { functions: [...resources.values()] }
         }
-        await repository.saveTemplate(updated)
-        return { template: updated, functionRef: resource.id }
+        const saved = await repository.saveTemplate(updated)
+        return { template: saved, functionRef: resource.id }
       },
       async pruneFunctionResources(templateId) {
         const template = await loadTemplate(templateId)
@@ -258,8 +257,7 @@ export function createTemplateApplication(
             functions: template.resources.functions.filter((item) => reachable.has(item.id))
           }
         }
-        await repository.saveTemplate(updated)
-        return updated
+        return repository.saveTemplate(updated)
       },
       async validate(templateId) {
         const document = await loadTemplate(templateId)
@@ -281,8 +279,7 @@ export function createTemplateApplication(
           { ...structuredClone(EMPTY_FUNCTION_CONTENT), ...structuredClone(initial) },
           editorState
         )
-        await repository.saveFunction(document)
-        return document
+        return repository.saveFunction(document)
       },
       get: (functionId) => repository.getFunction(functionId),
       save: (document) => repository.saveFunction(document),

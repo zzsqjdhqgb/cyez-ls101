@@ -238,6 +238,8 @@ export interface FunctionContent {
 export interface FunctionDocument {
   /** 函数库源文档的稳定 UUID。 */
   functionId: string
+  /** 仓储乐观并发版本；每次成功更新后递增。 */
+  revision: number
   content: FunctionContent
   editorState: DslEditorState
 }
@@ -391,6 +393,8 @@ export interface TemplateResources {
 export interface TemplateDocument {
   /** 工作文档的稳定 UUID。 */
   templateId: string
+  /** 仓储乐观并发版本；每次成功更新后递增。 */
+  revision: number
   content: TemplateContent
   resources: TemplateResources
   editorState: DslEditorState

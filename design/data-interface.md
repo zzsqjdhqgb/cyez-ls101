@@ -230,11 +230,14 @@ Template 是使用稳定 UUID 的可编辑工作文档，不区分草稿和发�
 ~~~typescript
 interface TemplateDocument {
   templateId: string
+  revision: number
   content: TemplateContent
   resources: { functions: FunctionDef[] }
   editorState: DslEditorState
 }
 ~~~
+
+`revision` 从 0 开始，由工作文档仓储在每次成功更新后递增。保存必须携带调用方读取到的 revision；与当前仓储版本不一致时返回冲突，不覆盖较新的正文或函数资源。
 
 函数库源文档使用 UUID，可以独立修改或删除。函数被加入 Template 时，其完整嵌套依赖闭包会被复制到 `resources.functions`；内部引用改写为内容哈希 ID，相同快照按哈希去重。Template 此后不再依赖函数库源文档。编译器保留函数结构到导出阶段再展开，不在复制时摊平函数。
 

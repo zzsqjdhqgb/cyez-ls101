@@ -26,6 +26,7 @@ export function createTemplateDocument(
 ): TemplateDocument {
   return {
     templateId: createTemplateId(),
+    revision: 0,
     content: structuredClone(content),
     resources: structuredClone(resources),
     editorState: structuredClone(editorState)
@@ -38,6 +39,7 @@ export function createFunctionDocument(
 ): FunctionDocument {
   return {
     functionId: createFunctionId(),
+    revision: 0,
     content: structuredClone(content),
     editorState: structuredClone(editorState)
   }

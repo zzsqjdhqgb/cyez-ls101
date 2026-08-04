@@ -43,6 +43,7 @@ function content(functionRef: string): TemplateContent {
 function document(functionDef: FunctionDef): TemplateDocument {
   return {
     templateId: 'template-id',
+    revision: 0,
     content: content(functionDef.id),
     resources: { functions: [functionDef] },
     editorState: {}

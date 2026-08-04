@@ -195,6 +195,7 @@ interface FunctionContent {
 
 interface FunctionDocument {
   functionId: string
+  revision: number
   content: FunctionContent
   editorState: DslEditorState
 }
@@ -404,6 +405,7 @@ interface TemplateResources {
 
 interface TemplateDocument {
   templateId: string
+  revision: number
   content: TemplateContent
   resources: TemplateResources
   editorState: DslEditorState
@@ -411,6 +413,8 @@ interface TemplateDocument {
 ~~~
 
 `editorState` 保存画布位置、折叠、选择等编辑器私有 JSON 状态，不参与语义校验或试卷编译。工作文档可以处于不完整状态，保存不触发严格校验；预览和导出必须通过完整校验。
+
+Template 和函数源工作文档都带非负整数 `revision`。新文档从 0 开始，每次成功更新后由仓储递增；保存操作返回带新 revision 的完整文档，编辑器必须用返回值替换本地副本。仓储通过 revision compare-and-swap 拒绝过期保存，耗时的函数复制或资源清理不能覆盖期间完成的 autosave。
 
 Template 本身不计算内容哈希。只有 `resources.functions` 中的内嵌函数快照使用 `sha256:<64 位十六进制摘要>` 内容 ID，用于不可变引用、复制去重和完整性验证。资源集合只需保存从 Template 根节点传递可达的函数依赖闭包；编辑器撤销历史所需的临时副本属于编辑状态，不参与编译。
 

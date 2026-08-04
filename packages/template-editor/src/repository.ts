@@ -1,3 +1,4 @@
+import { parseFunctionDocument, parseTemplateDocument } from './document-parser'
 import { verifyFunctionResourceId } from './id'
 import type { FunctionDef, FunctionDocument, TemplateDocument } from './types'
 
@@ -17,19 +18,20 @@ export interface TemplateStore {
 export interface TemplateRepository {
   listTemplateIds(): Promise<string[]>
   getTemplate(templateId: string): Promise<TemplateDocument | null>
-  saveTemplate(document: TemplateDocument): Promise<void>
+  saveTemplate(document: TemplateDocument): Promise<TemplateDocument>
   deleteTemplate(templateId: string): Promise<void>
 
   listFunctionIds(): Promise<string[]>
   getFunction(functionId: string): Promise<FunctionDocument | null>
-  saveFunction(document: FunctionDocument): Promise<void>
+  saveFunction(document: FunctionDocument): Promise<FunctionDocument>
   deleteFunction(functionId: string): Promise<void>
 }
 
 export class TemplateRepositoryError extends Error {
   constructor(
-    public readonly code: 'INVALID_ID' | 'INVALID_DATA',
-    message: string
+    public readonly code: 'INVALID_ID' | 'INVALID_DATA' | 'REVISION_CONFLICT',
+    message: string,
+    public readonly params: Readonly<Record<string, string | number>> = {}
   ) {
     super(message)
     this.name = 'TemplateRepositoryError'
@@ -39,6 +41,7 @@ export class TemplateRepositoryError extends Error {
 export class FileTemplateRepository implements TemplateRepository {
   private readonly templates: TemplateStore
   private readonly functions: TemplateStore
+  private readonly mutationTails = new Map<string, Promise<void>>()
 
   constructor(root: TemplateStore) {
     this.templates = root.scope('templates')
@@ -53,23 +56,47 @@ export class FileTemplateRepository implements TemplateRepository {
     assertUuid(templateId, 'templateId')
     const value = await this.templates.scope(templateId).readText<unknown>(TEMPLATE_FILE)
     if (value === null) return null
-    if (!isTemplateDocument(value) || value.templateId !== templateId) {
+    const document = parseTemplateDocument(value)
+    if (!document || document.templateId !== templateId) {
       throw invalidData(`Template ${templateId} is invalid`)
     }
-    await assertFunctionResources(value.resources.functions)
-    return value
+    await assertFunctionResources(document.resources.functions)
+    return document
   }
 
-  async saveTemplate(document: TemplateDocument): Promise<void> {
-    if (!isTemplateDocument(document)) throw invalidData('Template is invalid')
+  async saveTemplate(document: TemplateDocument): Promise<TemplateDocument> {
+    if (!parseTemplateDocument(document)) throw invalidData('Template is invalid')
     assertUuid(document.templateId, 'templateId')
     await assertFunctionResources(document.resources.functions)
-    await this.templates.scope(document.templateId).writeText(TEMPLATE_FILE, document)
+    return this.runExclusive(`template:${document.templateId}`, async () => {
+      const scope = this.templates.scope(document.templateId)
+      const stored = await scope.readText<unknown>(TEMPLATE_FILE)
+      if (stored === null) {
+        if (document.revision !== 0) {
+          throw revisionConflict('Template', document.templateId, 0, document.revision)
+        }
+        await scope.writeText(TEMPLATE_FILE, document)
+        return document
+      }
+      const current = parseTemplateDocument(stored)
+      if (!current || current.templateId !== document.templateId) {
+        throw invalidData(`Template ${document.templateId} is invalid`)
+      }
+      await assertFunctionResources(current.resources.functions)
+      if (current.revision !== document.revision) {
+        throw revisionConflict('Template', document.templateId, current.revision, document.revision)
+      }
+      const updated = { ...document, revision: document.revision + 1 }
+      await scope.writeText(TEMPLATE_FILE, updated)
+      return updated
+    })
   }
 
   async deleteTemplate(templateId: string): Promise<void> {
     assertUuid(templateId, 'templateId')
-    await this.templates.scope(templateId).clear()
+    await this.runExclusive(`template:${templateId}`, () =>
+      this.templates.scope(templateId).clear()
+    )
   }
 
   async listFunctionIds(): Promise<string[]> {
@@ -80,21 +107,61 @@ export class FileTemplateRepository implements TemplateRepository {
     assertUuid(functionId, 'functionId')
     const value = await this.functions.scope(functionId).readText<unknown>(FUNCTION_FILE)
     if (value === null) return null
-    if (!isFunctionDocument(value) || value.functionId !== functionId) {
+    const document = parseFunctionDocument(value)
+    if (!document || document.functionId !== functionId) {
       throw invalidData(`Function ${functionId} is invalid`)
     }
-    return value
+    return document
   }
 
-  async saveFunction(document: FunctionDocument): Promise<void> {
-    if (!isFunctionDocument(document)) throw invalidData('Function is invalid')
+  async saveFunction(document: FunctionDocument): Promise<FunctionDocument> {
+    if (!parseFunctionDocument(document)) throw invalidData('Function is invalid')
     assertUuid(document.functionId, 'functionId')
-    await this.functions.scope(document.functionId).writeText(FUNCTION_FILE, document)
+    return this.runExclusive(`function:${document.functionId}`, async () => {
+      const scope = this.functions.scope(document.functionId)
+      const stored = await scope.readText<unknown>(FUNCTION_FILE)
+      if (stored === null) {
+        if (document.revision !== 0) {
+          throw revisionConflict('Function', document.functionId, 0, document.revision)
+        }
+        await scope.writeText(FUNCTION_FILE, document)
+        return document
+      }
+      const current = parseFunctionDocument(stored)
+      if (!current || current.functionId !== document.functionId) {
+        throw invalidData(`Function ${document.functionId} is invalid`)
+      }
+      if (current.revision !== document.revision) {
+        throw revisionConflict('Function', document.functionId, current.revision, document.revision)
+      }
+      const updated = { ...document, revision: document.revision + 1 }
+      await scope.writeText(FUNCTION_FILE, updated)
+      return updated
+    })
   }
 
   async deleteFunction(functionId: string): Promise<void> {
     assertUuid(functionId, 'functionId')
-    await this.functions.scope(functionId).clear()
+    await this.runExclusive(`function:${functionId}`, () =>
+      this.functions.scope(functionId).clear()
+    )
+  }
+
+  private async runExclusive<T>(key: string, operation: () => Promise<T>): Promise<T> {
+    const previous = this.mutationTails.get(key) ?? Promise.resolve()
+    let release: () => void = () => undefined
+    const current = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const tail = previous.then(() => current)
+    this.mutationTails.set(key, tail)
+    await previous
+    try {
+      return await operation()
+    } finally {
+      release()
+      if (this.mutationTails.get(key) === tail) this.mutationTails.delete(key)
+    }
   }
 }
 
@@ -115,64 +182,6 @@ async function assertFunctionResources(resources: readonly FunctionDef[]): Promi
   }
 }
 
-function isTemplateDocument(value: unknown): value is TemplateDocument {
-  if (!isRecord(value) || typeof value.templateId !== 'string') return false
-  if (!isRecord(value.content) || !isRecord(value.resources) || !isRecord(value.editorState)) {
-    return false
-  }
-  const content = value.content
-  return (
-    typeof content.name === 'string' &&
-    typeof content.description === 'string' &&
-    Array.isArray(content.interfaces) &&
-    isRecord(content.root) &&
-    Array.isArray(content.schemaUses) &&
-    Array.isArray(value.resources.functions) &&
-    value.resources.functions.every(isFunctionDef) &&
-    isJsonObject(value.editorState)
-  )
-}
-
-function isFunctionDocument(value: unknown): value is FunctionDocument {
-  return (
-    isRecord(value) &&
-    typeof value.functionId === 'string' &&
-    isFunctionContent(value.content) &&
-    isRecord(value.editorState) &&
-    isJsonObject(value.editorState)
-  )
-}
-
-function isFunctionDef(value: unknown): value is FunctionDef {
-  return isRecord(value) && typeof value.id === 'string' && isFunctionContent(value)
-}
-
-function isFunctionContent(value: unknown): boolean {
-  return (
-    isRecord(value) &&
-    typeof value.name === 'string' &&
-    Array.isArray(value.inputs) &&
-    isRecord(value.body) &&
-    Array.isArray(value.outputs) &&
-    Array.isArray(value.schemaUses)
-  )
-}
-
-function isJsonObject(value: Record<string, unknown>): boolean {
-  return Object.values(value).every(isJsonValue)
-}
-
-function isJsonValue(value: unknown): boolean {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') return true
-  if (typeof value === 'number') return Number.isFinite(value)
-  if (Array.isArray(value)) return value.every(isJsonValue)
-  return isRecord(value) && Object.values(value).every(isJsonValue)
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
-}
-
 function assertUuid(value: string, label: string): void {
   if (!UUID_V4_PATTERN.test(value)) {
     throw new TemplateRepositoryError('INVALID_ID', `Invalid ${label}: ${value}`)
@@ -181,4 +190,17 @@ function assertUuid(value: string, label: string): void {
 
 function invalidData(message: string): TemplateRepositoryError {
   return new TemplateRepositoryError('INVALID_DATA', message)
+}
+
+function revisionConflict(
+  kind: 'Template' | 'Function',
+  id: string,
+  currentRevision: number,
+  providedRevision: number
+): TemplateRepositoryError {
+  return new TemplateRepositoryError('REVISION_CONFLICT', `${kind} revision conflict: ${id}`, {
+    id,
+    currentRevision,
+    providedRevision
+  })
 }

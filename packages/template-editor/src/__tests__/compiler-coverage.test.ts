@@ -52,6 +52,7 @@ function document(
 ): TemplateDocument {
   return {
     templateId: 'template-id',
+    revision: 0,
     content,
     resources: { functions },
     editorState: {}

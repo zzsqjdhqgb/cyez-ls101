@@ -96,6 +96,7 @@ function compileContext(overrides: Partial<TemplateCompileContext> = {}): Templa
 function document(content: TemplateContent, functions: FunctionDef[] = []): TemplateDocument {
   return {
     templateId: 'template-1',
+    revision: 0,
     content,
     resources: { functions },
     editorState: {}
