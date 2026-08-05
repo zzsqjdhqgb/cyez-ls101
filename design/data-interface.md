@@ -331,9 +331,11 @@ type ResolvedTimelineStep = ResolvedTimelineAction & {
 }
 
 type ResolvedTimelineAction =
-  | { type: 'play'; src: string }
+  | { type: 'play'; text: string }
   | { type: 'countdown'; seconds: number }
   | { type: 'record'; duration: number; recordIndex: number }
+
+play.text 是 Template 编译期解析完成的 TTS 文本，不是文件地址；ExamPlayer 在运行时使用该文本播放合成语音。
 
 type ResolvedChoiceViewport =
   | { mode: 'free'; initialPage?: number }

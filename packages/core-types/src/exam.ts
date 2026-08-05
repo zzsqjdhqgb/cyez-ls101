@@ -56,7 +56,8 @@ export type ResolvedTimelineStep = ResolvedTimelineAction & {
 }
 
 export type ResolvedTimelineAction =
-  | { type: 'play'; src: string }
+  /** 已解析完成、供 ExamPlayer TTS 播放的文本。 */
+  | { type: 'play'; text: string }
   | { type: 'countdown'; seconds: number }
   | { type: 'record'; duration: number; recordIndex: number }
 

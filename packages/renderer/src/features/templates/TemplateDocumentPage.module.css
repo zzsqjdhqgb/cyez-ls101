@@ -50,7 +50,7 @@
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(280px, 340px) minmax(420px, 1fr);
+  grid-template-columns: minmax(240px, 300px) minmax(480px, 1fr);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -131,44 +131,6 @@
   line-height: 1.5;
 }
 
-.nodeDetails {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-}
-
-.nodeDetails > div {
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  gap: 10px;
-  align-items: baseline;
-}
-
-.nodeDetails dt {
-  color: var(--color-text-muted);
-  font-size: 12px;
-}
-
-.nodeDetails dd {
-  min-width: 0;
-  margin: 0;
-  overflow-wrap: anywhere;
-  color: var(--color-text-strong);
-  font-size: 12px;
-}
-
-.nodeActions {
-  display: flex;
-  gap: 6px;
-  margin-top: 18px;
-}
-
-.inspectorEmpty {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: 13px;
-}
-
 .structure {
   padding: 24px 28px 36px;
   background: var(--color-surface-subtle);
@@ -198,25 +160,33 @@
   list-style: none;
 }
 
-.nodeRow {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  align-items: stretch;
-  min-height: 46px;
+.nodeCard {
+  overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
   transition:
     border-color 120ms ease,
-    background-color 120ms ease;
+    box-shadow 120ms ease;
 }
 
-.nodeRow:hover {
+.nodeCard:hover {
   border-color: var(--color-border-strong);
 }
 
-.nodeRow[data-selected] {
+.nodeCard[data-selected] {
   border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-focus-ring);
+}
+
+.nodeRow {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: stretch;
+  min-height: 46px;
+}
+
+.nodeCard[data-selected] .nodeRow {
   background: var(--color-accent-soft);
 }
 
@@ -227,6 +197,18 @@
   color: inherit;
   background: transparent;
   cursor: pointer;
+}
+
+.nodeCardActions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding-right: 8px;
+}
+
+.nodeInlineEditor {
+  padding: 0 14px 14px 40px;
+  border-top: 1px solid var(--color-border);
 }
 
 .collapseButton {
@@ -285,9 +267,20 @@
 .nodeChildren {
   display: grid;
   gap: 7px;
-  margin: 7px 0 0 14px;
-  padding-left: 12px;
+  margin: 7px 0 0 18px;
+  padding-left: 14px;
   border-left: 1px solid var(--color-border-strong);
+}
+
+@media (max-width: 1040px) {
+  .workspace {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+
+  .structure {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
 }
 
 @media (max-width: 800px) {
@@ -316,6 +309,10 @@
   .properties {
     border-right: 0;
     border-bottom: 1px solid var(--color-border);
+  }
+
+  .nodeInlineEditor {
+    padding-left: 14px;
   }
 
   .structureHeader {

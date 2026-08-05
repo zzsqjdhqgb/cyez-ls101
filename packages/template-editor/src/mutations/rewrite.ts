@@ -164,8 +164,7 @@ export function mapTimelineExpression(
   step: TimelineStep,
   mapRef: (ref: VariableRef) => VariableRef
 ): TimelineStep {
-  if (step.type === 'play')
-    return { ...step, src: mapStaticExpression(step.src, mapRef) as typeof step.src }
+  if (step.type === 'play') return { ...step, text: mapTextExpression(step.text, mapRef) }
   if (step.type === 'countdown')
     return { ...step, seconds: mapStaticExpression(step.seconds, mapRef) as typeof step.seconds }
   return { ...step, duration: mapStaticExpression(step.duration, mapRef) as typeof step.duration }

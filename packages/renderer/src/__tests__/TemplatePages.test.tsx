@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom/vitest'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { TemplateApplication, TemplateDocument } from '@ls101/template-editor'
 import type { JSX } from 'react'
@@ -16,11 +16,7 @@ const MISSING_TEMPLATE_ID = '30000000-0000-4000-8000-000000000003'
 
 afterEach(cleanup)
 
-function template(
-  revision = 1,
-  templateId = TEMPLATE_ID,
-  name = '听力模板'
-): TemplateDocument {
+function template(revision = 1, templateId = TEMPLATE_ID, name = '听力模板'): TemplateDocument {
   return {
     templateId,
     revision,
@@ -65,8 +61,7 @@ function TemplateRouteSwitcher(): JSX.Element {
   )
 }
 
-function application(): TemplateApplication {
-  const document = template()
+function application(document = template()): TemplateApplication {
   return {
     browser: {
       listTemplates: vi.fn().mockResolvedValue([
@@ -339,7 +334,7 @@ describe('Template pages', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '撤销' }))
     expect(screen.queryByRole('button', { name: '选择节点 page' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '复制节点' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: '复制节点' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '重做' })).toBeEnabled()
 
     fireEvent.click(screen.getByRole('button', { name: '重做' }))
@@ -404,5 +399,211 @@ describe('Template pages', () => {
 
     expect(screen.queryByRole('button', { name: '选择节点 page' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '展开节点 frame' })).toBeInTheDocument()
+  })
+
+  it('edits choice question text parts, options and output name', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '选择节点 root' })
+    fireEvent.click(screen.getByRole('button', { name: '选择题' }))
+    const selectedCard = screen
+      .getByRole('button', { name: '选择节点 question' })
+      .closest('[data-selected]')
+    if (!selectedCard) throw new Error('expected selected node card')
+    expect(within(selectedCard).getByLabelText('输出名称')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '节点' })).not.toBeInTheDocument()
+    fireEvent.change(within(selectedCard).getByLabelText('输出名称'), {
+      target: { value: 'answer-1' }
+    })
+    fireEvent.change(screen.getByLabelText('题干文本 1'), {
+      target: { value: '请回答：' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: '题干添加变量' }))
+    fireEvent.change(screen.getByLabelText('题干变量 2名称'), {
+      target: { value: 'question-text' }
+    })
+    fireEvent.change(screen.getByLabelText('选项 A 内容文本 1'), {
+      target: { value: '正确答案' }
+    })
+    fireEvent.change(screen.getByLabelText('选项 B 内容文本 1'), {
+      target: { value: '干扰项' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: '添加选项' }))
+    fireEvent.change(screen.getByLabelText('选项 C 内容文本 1'), {
+      target: { value: '第三项' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: '上移选项 C' }))
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(app.templates.save).toHaveBeenCalledOnce())
+    const saved = vi.mocked(app.templates.save).mock.calls[0][0]
+    const question = saved.content.root.children[1]
+    expect(question).toMatchObject({
+      type: 'choice-question',
+      outputName: 'answer-1',
+      stem: {
+        parts: [
+          { type: 'literal', value: '请回答：' },
+          { type: 'variable', ref: { scope: 'local', name: 'question-text' } }
+        ]
+      }
+    })
+    if (question.type !== 'choice-question') throw new Error('expected choice question')
+    expect(question.options.map((option) => option.content.parts[0])).toEqual([
+      { type: 'literal', value: '正确答案' },
+      { type: 'literal', value: '第三项' },
+      { type: 'literal', value: '干扰项' }
+    ])
+  })
+
+  it('configures collector pages against descendant questions', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '选择节点 root' })
+    fireEvent.click(screen.getByRole('button', { name: '选择题' }))
+    fireEvent.click(screen.getByRole('button', { name: '选择题' }))
+    fireEvent.click(screen.getByRole('button', { name: '选择节点 root' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: '选择题 Collector' }))
+
+    expect(screen.getByText('2 / 2 题')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('第 1 页题目数'), { target: { value: '1' } })
+    fireEvent.click(screen.getByRole('button', { name: '添加分页' }))
+    expect(screen.getByText('2 / 2 题')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(app.templates.save).toHaveBeenCalledOnce())
+    expect(vi.mocked(app.templates.save).mock.calls[0][0].content.root.choiceCollector).toEqual({
+      pages: [{ questionCount: 1 }, { questionCount: 1 }]
+    })
+  })
+
+  it('counts choice questions propagated by embedded function calls', async () => {
+    const document = template()
+    const functionRef = `sha256:${'a'.repeat(64)}`
+    document.content.root.children = [
+      { id: 'single-question-call', type: 'function', functionRef, inputs: {}, outputNames: {} }
+    ]
+    document.resources.functions = [
+      {
+        id: functionRef,
+        name: '单题',
+        inputs: [],
+        outputs: [],
+        schemaUses: [],
+        body: {
+          id: 'function-root',
+          type: 'frame',
+          children: [
+            {
+              id: 'function-question',
+              type: 'choice-question',
+              stem: { type: 'string', parts: [{ type: 'literal', value: '题目' }] },
+              options: [
+                {
+                  id: 'function-option-a',
+                  content: { type: 'string', parts: [{ type: 'literal', value: 'A' }] }
+                },
+                {
+                  id: 'function-option-b',
+                  content: { type: 'string', parts: [{ type: 'literal', value: 'B' }] }
+                }
+              ],
+              outputName: 'answer'
+            }
+          ]
+        }
+      }
+    ]
+    const app = application(document)
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '选择节点 root' })
+    fireEvent.click(screen.getByRole('checkbox', { name: '选择题 Collector' }))
+
+    expect(screen.getByText('1 / 1 题')).toBeInTheDocument()
+  })
+
+  it('edits page timeline values, variables and record outputs', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: '选择节点 page-1' }))
+    fireEvent.click(screen.getByRole('button', { name: 'TTS 播放' }))
+    fireEvent.change(screen.getByLabelText('TTS 文本文本 1'), {
+      target: { value: '请朗读：' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'TTS 文本添加变量' }))
+    fireEvent.change(screen.getByLabelText('TTS 文本变量 2名称'), {
+      target: { value: 'prompt-text' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: '倒计时' }))
+    fireEvent.change(screen.getByLabelText('倒计时（秒）'), { target: { value: '5' } })
+    fireEvent.click(screen.getByRole('button', { name: '录音' }))
+    fireEvent.change(screen.getByLabelText('录音时长（秒）'), { target: { value: '30' } })
+    fireEvent.change(screen.getByLabelText('输出名称'), { target: { value: 'response-audio' } })
+    fireEvent.click(screen.getByRole('button', { name: '复制录音 3' }))
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(app.templates.save).toHaveBeenCalledOnce())
+    const saved = vi.mocked(app.templates.save).mock.calls[0][0]
+    const page = saved.content.root.children[0]
+    if (page.type !== 'page') throw new Error('expected page')
+    expect(page.timeline).toEqual([
+      {
+        type: 'play',
+        text: {
+          type: 'string',
+          parts: [
+            { type: 'literal', value: '请朗读：' },
+            { type: 'variable', ref: { scope: 'local', name: 'prompt-text' } }
+          ]
+        }
+      },
+      { type: 'countdown', seconds: { type: 'number', source: 'literal', value: 5 } },
+      {
+        type: 'record',
+        duration: { type: 'number', source: 'literal', value: 30 },
+        outputName: 'response-audio'
+      },
+      {
+        type: 'record',
+        duration: { type: 'number', source: 'literal', value: 30 },
+        outputName: 'response-audio-1'
+      }
+    ])
   })
 })

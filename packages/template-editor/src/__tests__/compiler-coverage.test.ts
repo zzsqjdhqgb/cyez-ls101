@@ -264,15 +264,26 @@ describe('Template 编译组合覆盖', () => {
     const page: PageNode = {
       id: 'page',
       type: 'page',
-      content: { blocks: [] },
+      content: {
+        blocks: [
+          {
+            id: 'media',
+            type: 'image',
+            x: 0,
+            y: 0,
+            width: 100,
+            src: {
+              type: 'file',
+              source: 'variable',
+              ref: { scope: 'local', name: 'compiled-file' }
+            }
+          }
+        ]
+      },
       timeline: [
         {
           type: 'play',
-          src: {
-            type: 'file',
-            source: 'variable',
-            ref: { scope: 'local', name: 'compiled-file' }
-          }
+          text: text('Ready')
         },
         {
           type: 'countdown',
@@ -302,8 +313,12 @@ describe('Template 编译组合覆盖', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
+    expect(result.examPackage.player.pages[0].content[0]).toMatchObject({
+      type: 'image',
+      src: 'audio.mp3'
+    })
     expect(result.examPackage.player.pages[0].timeline).toEqual([
-      { type: 'play', src: 'audio.mp3' },
+      { type: 'play', text: 'Ready' },
       { type: 'countdown', seconds: 7 }
     ])
     expect(result.examPackage.player).not.toHaveProperty('choiceMeta')

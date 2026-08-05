@@ -1,5 +1,11 @@
 import { useState, type JSX } from 'react'
-import type { FrameNode, TemplateNode, TextExpression } from '@ls101/template-editor'
+import type {
+  FrameNode,
+  FunctionDef,
+  TemplateDocumentOperation,
+  TemplateNode,
+  TextExpression
+} from '@ls101/template-editor'
 import {
   ArrowDown,
   ArrowLeft,
@@ -23,6 +29,7 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { IconButton } from '../../components/ui/IconButton'
 import { useTemplateApplication } from './TemplateApplicationContext'
 import styles from './TemplateDocumentPage.module.css'
+import { TemplateNodeInspector } from './TemplateNodeInspector'
 import { useTemplateEditorSession } from './useTemplateEditorSession'
 
 type InsertableNodeType = 'frame' | 'page' | 'choice-question'
@@ -49,12 +56,6 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const document = session.document
   const root = document?.content.root ?? null
   const selectedLocation = root ? locateNode(root, session.selectedNodeId) : null
-  const selectedNode = selectedLocation?.node ?? null
-  const selectedIsRoot = selectedNode?.id === root?.id
-  const canMoveUp = Boolean(selectedLocation?.parent && selectedLocation.index > 0)
-  const canMoveDown = Boolean(
-    selectedLocation?.parent && selectedLocation.index < selectedLocation.parent.children.length - 1
-  )
 
   const editMetadata = (
     type: 'set-template-name' | 'set-template-description',
@@ -71,26 +72,6 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
       parentId: target.parentId,
       index: target.index,
       node: createNode(type)
-    })
-  }
-
-  const moveSelected = (offset: -1 | 1): void => {
-    if (!selectedLocation?.parent) return
-    session.apply({
-      type: 'move-node',
-      nodeId: selectedLocation.node.id,
-      parentId: selectedLocation.parent.id,
-      index: selectedLocation.index + offset
-    })
-  }
-
-  const copySelected = (): void => {
-    if (!selectedLocation?.parent) return
-    session.apply({
-      type: 'copy-node',
-      nodeId: selectedLocation.node.id,
-      parentId: selectedLocation.parent.id,
-      index: selectedLocation.index + 1
     })
   }
 
@@ -196,63 +177,6 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
               />
             </label>
           </section>
-
-          <section className={styles.inspectorSection} aria-labelledby="selected-node-heading">
-            <h2 id="selected-node-heading">节点</h2>
-            {selectedNode ? (
-              <>
-                <dl className={styles.nodeDetails}>
-                  <div>
-                    <dt>类型</dt>
-                    <dd>{selectedIsRoot ? '根框架' : nodeTypeLabel(selectedNode.type)}</dd>
-                  </div>
-                  <div>
-                    <dt>ID</dt>
-                    <dd>{selectedNode.id}</dd>
-                  </div>
-                  {selectedLocation?.parent ? (
-                    <div>
-                      <dt>父节点</dt>
-                      <dd>{selectedLocation.parent.id}</dd>
-                    </div>
-                  ) : null}
-                </dl>
-                <div className={styles.nodeActions}>
-                  <IconButton
-                    icon={ArrowUp}
-                    label="上移节点"
-                    size="small"
-                    disabled={!canMoveUp}
-                    onClick={() => moveSelected(-1)}
-                  />
-                  <IconButton
-                    icon={ArrowDown}
-                    label="下移节点"
-                    size="small"
-                    disabled={!canMoveDown}
-                    onClick={() => moveSelected(1)}
-                  />
-                  <IconButton
-                    icon={Copy}
-                    label="复制节点"
-                    size="small"
-                    disabled={Boolean(selectedIsRoot)}
-                    onClick={copySelected}
-                  />
-                  <IconButton
-                    icon={Trash2}
-                    label="删除节点"
-                    size="small"
-                    variant="danger"
-                    disabled={Boolean(selectedIsRoot)}
-                    onClick={() => setPendingDeleteId(selectedNode.id)}
-                  />
-                </div>
-              </>
-            ) : (
-              <p className={styles.inspectorEmpty}>未选择节点</p>
-            )}
-          </section>
         </aside>
 
         <main className={styles.structure} aria-labelledby="template-structure-heading">
@@ -288,11 +212,16 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
           {root ? (
             <NodeTree
               node={root}
+              parent={null}
+              index={0}
               rootId={root.id}
               selectedNodeId={session.selectedNodeId}
               collapsedIds={collapsedIds}
+              functions={document?.resources.functions ?? []}
+              apply={session.apply}
               onSelect={session.selectNode}
               onToggle={toggleCollapsed}
+              onDelete={setPendingDeleteId}
             />
           ) : (
             <EmptyState icon={Layers3} title={session.loading ? '正在加载模板' : '模板不可用'} />
@@ -324,60 +253,137 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
 
 interface NodeTreeProps {
   node: TemplateNode
+  parent: FrameNode | null
+  index: number
   rootId: string
   selectedNodeId: string
   collapsedIds: ReadonlySet<string>
+  functions: readonly FunctionDef[]
+  apply(operation: TemplateDocumentOperation): boolean
   onSelect(nodeId: string): void
   onToggle(nodeId: string): void
+  onDelete(nodeId: string): void
 }
 
 function NodeTree({
   node,
+  parent,
+  index,
   rootId,
   selectedNodeId,
   collapsedIds,
+  functions,
+  apply,
   onSelect,
-  onToggle
+  onToggle,
+  onDelete
 }: NodeTreeProps): JSX.Element {
   const collapsible = node.type === 'frame' && node.children.length > 0
   const collapsed = collapsedIds.has(node.id) && !containsDescendant(node, selectedNodeId)
+  const selected = node.id === selectedNodeId
+  const canMoveUp = Boolean(parent && index > 0)
+  const canMoveDown = Boolean(parent && index < parent.children.length - 1)
   return (
     <ul className={styles.nodeList}>
       <li>
-        <div className={styles.nodeRow} data-selected={node.id === selectedNodeId || undefined}>
-          <button
-            aria-label={`${collapsed ? '展开' : '折叠'}节点 ${node.id}`}
-            className={styles.collapseButton}
-            disabled={!collapsible}
-            type="button"
-            onClick={() => onToggle(node.id)}
-          >
-            {collapsed ? <ChevronRight aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
-          </button>
-          <button
-            aria-label={`选择节点 ${node.id}`}
-            className={styles.nodeSelect}
-            type="button"
-            onClick={() => onSelect(node.id)}
-          >
-            <NodeIcon type={node.type} />
-            <span className={styles.nodeIdentity}>
-              <strong>{node.id}</strong>
-              <small>{node.id === rootId ? '根框架' : nodeTypeLabel(node.type)}</small>
-            </span>
-          </button>
+        <div className={styles.nodeCard} data-selected={selected || undefined}>
+          <div className={styles.nodeRow}>
+            <button
+              aria-label={`${collapsed ? '展开' : '折叠'}节点 ${node.id}`}
+              className={styles.collapseButton}
+              disabled={!collapsible}
+              type="button"
+              onClick={() => onToggle(node.id)}
+            >
+              {collapsed ? <ChevronRight aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
+            </button>
+            <button
+              aria-label={`选择节点 ${node.id}`}
+              className={styles.nodeSelect}
+              type="button"
+              onClick={() => onSelect(node.id)}
+            >
+              <NodeIcon type={node.type} />
+              <span className={styles.nodeIdentity}>
+                <strong>{node.id}</strong>
+                <small>{node.id === rootId ? '根框架' : nodeTypeLabel(node.type)}</small>
+              </span>
+            </button>
+            {selected && parent ? (
+              <div className={styles.nodeCardActions}>
+                <IconButton
+                  icon={ArrowUp}
+                  label="上移节点"
+                  size="small"
+                  disabled={!canMoveUp}
+                  onClick={() =>
+                    apply({
+                      type: 'move-node',
+                      nodeId: node.id,
+                      parentId: parent.id,
+                      index: index - 1
+                    })
+                  }
+                />
+                <IconButton
+                  icon={ArrowDown}
+                  label="下移节点"
+                  size="small"
+                  disabled={!canMoveDown}
+                  onClick={() =>
+                    apply({
+                      type: 'move-node',
+                      nodeId: node.id,
+                      parentId: parent.id,
+                      index: index + 1
+                    })
+                  }
+                />
+                <IconButton
+                  icon={Copy}
+                  label="复制节点"
+                  size="small"
+                  onClick={() =>
+                    apply({
+                      type: 'copy-node',
+                      nodeId: node.id,
+                      parentId: parent.id,
+                      index: index + 1
+                    })
+                  }
+                />
+                <IconButton
+                  icon={Trash2}
+                  label="删除节点"
+                  size="small"
+                  variant="danger"
+                  onClick={() => onDelete(node.id)}
+                />
+              </div>
+            ) : null}
+          </div>
+          {selected && node.type !== 'function' ? (
+            <div className={styles.nodeInlineEditor}>
+              <TemplateNodeInspector node={node} functions={functions} apply={apply} />
+            </div>
+          ) : null}
         </div>
         {node.type === 'frame' && !collapsed && node.children.length > 0 ? (
           <div className={styles.nodeChildren}>
-            {node.children.map((child) => (
+            {node.children.map((child, childIndex) => (
               <NodeTree
                 key={child.id}
                 node={child}
+                parent={node}
+                index={childIndex}
                 rootId={rootId}
                 selectedNodeId={selectedNodeId}
                 collapsedIds={collapsedIds}
+                functions={functions}
+                apply={apply}
                 onSelect={onSelect}
                 onToggle={onToggle}
+                onDelete={onDelete}
               />
             ))}
           </div>

@@ -199,7 +199,7 @@ function isTimelineStep(value: unknown): value is TimelineStep {
   }
   switch (value.type) {
     case 'play':
-      return isValueExpression(value.src, 'file')
+      return isTextExpression(value.text)
     case 'countdown':
       return isValueExpression(value.seconds, 'number')
     case 'record':

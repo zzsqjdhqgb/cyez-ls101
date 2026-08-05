@@ -150,7 +150,8 @@ export type TimelineAction = PlayTimelineAction | CountdownTimelineAction | Reco
 
 export interface PlayTimelineAction {
   type: 'play'
-  src: ValueExpression<'file'>
+  /** 编译期解析后交给 ExamPlayer TTS 的文本。 */
+  text: TextExpression
 }
 
 export interface CountdownTimelineAction {

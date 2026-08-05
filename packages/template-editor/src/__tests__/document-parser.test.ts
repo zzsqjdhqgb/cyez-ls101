@@ -181,10 +181,15 @@ function completeTemplate(): TemplateDocument {
             timeline: [
               {
                 type: 'play',
-                src: {
-                  type: 'file',
-                  source: 'variable',
-                  ref: { scope: 'interface', alias: 'data', varName: 'image' }
+                text: {
+                  type: 'string',
+                  parts: [
+                    { type: 'literal', value: '播放：' },
+                    {
+                      type: 'variable',
+                      ref: { scope: 'interface', alias: 'data', varName: 'prompt' }
+                    }
+                  ]
                 },
                 choiceViewOverrides: {
                   'choice-free': {
@@ -283,6 +288,28 @@ describe('工作文档结构解析器', () => {
       {
         ...completeTemplate(),
         content: { ...completeTemplate().content, schemaUses: [{ bindings: [] }] }
+      },
+      {
+        ...completeTemplate(),
+        content: {
+          ...completeTemplate().content,
+          root: {
+            ...completeTemplate().content.root,
+            children: completeTemplate().content.root.children.map((node) =>
+              node.type === 'page'
+                ? {
+                    ...node,
+                    timeline: [
+                      {
+                        type: 'play',
+                        src: { type: 'file', source: 'literal', value: 'legacy.mp3' }
+                      }
+                    ]
+                  }
+                : node
+            )
+          }
+        }
       }
     ]
 

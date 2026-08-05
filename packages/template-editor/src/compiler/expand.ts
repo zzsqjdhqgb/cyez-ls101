@@ -206,7 +206,7 @@ function resolvePage(
       case 'play':
         return {
           type: 'play',
-          src: resolveValueExpression(step.src, 'file', scope, state, `${stepPath}.src`) as string,
+          text: resolveTextExpression(step.text, scope, state, `${stepPath}.text`),
           ...(choiceViewOverrides ? { choiceViewOverrides } : {})
         }
       case 'countdown':

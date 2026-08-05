@@ -227,8 +227,9 @@ function validateNodeExpressions(
       })
       node.timeline.forEach((step, index) => {
         const stepPath = `${path}.timeline[${index}]`
-        if (step.type === 'play')
-          validateValueExpression(step.src, 'file', `${stepPath}.src`, scope, state)
+        if (step.type === 'play') {
+          validateTextExpression(step.text, `${stepPath}.text`, scope, state)
+        }
         if (step.type === 'countdown') {
           validateValueExpression(step.seconds, 'number', `${stepPath}.seconds`, scope, state)
         }

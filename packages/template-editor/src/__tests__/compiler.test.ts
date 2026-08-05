@@ -275,10 +275,15 @@ function mainPage(): PageNode {
     timeline: [
       {
         type: 'play',
-        src: {
-          type: 'file',
-          source: 'variable',
-          ref: { scope: 'interface', alias: 'exam', varName: 'picture' }
+        text: {
+          type: 'string',
+          parts: [
+            { type: 'literal', value: 'Listen: ' },
+            {
+              type: 'variable',
+              ref: { scope: 'interface', alias: 'exam', varName: 'sentence' }
+            }
+          ]
         }
       },
       { type: 'countdown', seconds: number(3) },
@@ -383,7 +388,7 @@ describe('compileTemplate', () => {
       defaultViewport: { mode: 'focus', choiceIndex: 0 }
     })
     expect(compiledPage.timeline).toEqual([
-      { type: 'play', src: 'picture.png' },
+      { type: 'play', text: 'Listen: Hello' },
       { type: 'countdown', seconds: 3 },
       {
         type: 'record',
