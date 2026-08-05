@@ -108,6 +108,11 @@ describe('interface editor application integration', () => {
     const filename = saved.instance.values.questionImage
     expect(filename).toMatch(/^questionImage-[0-9a-f-]{36}\.png$/)
     expect(saved.assetUrls[filename]).toContain(filename)
+    await expect(app.instances.locate(instance.instance.instanceId)).resolves.toEqual({
+      interfaceId,
+      instance: saved.instance
+    })
+    await expect(app.instances.locate('10000000-0000-4000-8000-000000000001')).resolves.toBeNull()
     await expect(
       repository.readInstanceAsset(interfaceId, instance.instance.instanceId, filename)
     ).resolves.toEqual(PNG)

@@ -15,6 +15,7 @@ export type {
   PublishedInterfaceSource,
   InterfaceInstanceSummary,
   InterfaceInstanceDetails,
+  InterfaceInstanceLocation,
   InterfaceInstanceEdit,
   InterfacePromptBundle,
   InterfaceDraftOperation,

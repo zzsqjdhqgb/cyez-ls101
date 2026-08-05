@@ -272,6 +272,7 @@ interface InterfacePromptBundle {
 ```typescript
 interface InterfaceInstanceApplication {
   get(interfaceId: string, instanceId: string): Promise<InterfaceInstanceDetails | null>
+  locate(instanceId: string): Promise<InterfaceInstanceLocation | null>
 
   save(
     interfaceId: string,
@@ -294,6 +295,10 @@ interface InterfaceInstanceApplication {
 }
 ```
 
+`get()` 用于已知 Interface 归属的编辑流程。`locate()` 按全局唯一的 `instanceId`
+定位实例并在结果中返回 `interfaceId`，供 Template 编译等跨模块调用方使用。调用方不需要依赖
+Interface 仓储接口，也不需要知道用户发布内容和 builtin 版本的物理分区。
+
 ### 实例详情
 
 ```typescript
@@ -301,6 +306,15 @@ interface InterfaceInstanceDetails {
   interfaceId: string
   instance: InterfaceInstance
   assetUrls: Record<string, string>
+}
+```
+
+跨模块定位使用不含 UI 资源 URL 的窄 DTO：
+
+```typescript
+interface InterfaceInstanceLocation {
+  interfaceId: string
+  instance: InterfaceInstance
 }
 ```
 

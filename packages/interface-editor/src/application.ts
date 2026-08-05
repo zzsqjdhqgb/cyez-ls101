@@ -61,6 +61,12 @@ export interface InterfaceInstanceDetails {
   assetUrls: Record<string, string>
 }
 
+/** 跨模块按 instanceId 定位实例时使用的最小只读 DTO。 */
+export interface InterfaceInstanceLocation {
+  interfaceId: string
+  instance: InterfaceInstance
+}
+
 export interface InterfaceInstanceEdit {
   name: string
   values: Record<string, string>
@@ -177,6 +183,11 @@ export interface PublishedInterfaceApplication {
 
 export interface InterfaceInstanceApplication {
   get(interfaceId: string, instanceId: string): Promise<InterfaceInstanceDetails | null>
+  /**
+   * 按全局唯一 instanceId 定位实例并返回其 Interface 归属。
+   * Template 等跨模块消费者不需要知道 Interface 的仓储分区。
+   */
+  locate(instanceId: string): Promise<InterfaceInstanceLocation | null>
   listAIGenerationModels(): Promise<readonly InterfaceTextModelOption[]>
   listImageGenerationProviders(): Promise<readonly InterfaceImageProviderOption[]>
   save(
@@ -473,6 +484,15 @@ export function createInterfaceApplication(
     },
     instances: {
       get: getInstanceDetails,
+      async locate(instanceId) {
+        const located = await repository.findInstance(instanceId)
+        if (!located) return null
+        const definition = await requireInterface(repository, located.interfaceId)
+        return {
+          interfaceId: located.interfaceId,
+          instance: normalizeImagePromptValues(definition.fields, located)
+        }
+      },
       async listAIGenerationModels() {
         return (await textGenerator?.listModels?.()) ?? []
       },
