@@ -18,6 +18,7 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: '工作台' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '工作台' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '题型' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '模板' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '设置' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('link', { name: '题型' }))
@@ -34,6 +35,13 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: '题型' })).toBeInTheDocument()
   })
 
+  it('opens the template list from the workbench', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: '打开模板' }))
+    expect(screen.getByRole('heading', { name: '模板' })).toBeInTheDocument()
+  })
+
   it('registers list and details as standard and both editors as focus', () => {
     const routes = new Map(appRouteRegistry.getSnapshot().map((route) => [route.id, route]))
     expect(routes.get('interfaces')?.layout).toBe('standard')
@@ -41,6 +49,8 @@ describe('App', () => {
     expect(routes.get('interface-details')?.layout).toBe('standard')
     expect(routes.get('interface-draft-editor')?.layout).toBe('focus')
     expect(routes.get('interface-instance-editor')?.layout).toBe('focus')
+    expect(routes.get('templates')?.layout).toBe('standard')
+    expect(routes.get('template-editor')?.layout).toBe('focus')
     expect(routes.get('interface-drafts')?.navigation).toBeUndefined()
   })
 

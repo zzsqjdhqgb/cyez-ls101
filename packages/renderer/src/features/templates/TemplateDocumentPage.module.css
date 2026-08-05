@@ -1,0 +1,160 @@
+.editor {
+  display: grid;
+  grid-template-rows: 62px minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-surface-subtle);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0 20px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.identity,
+.actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.identity > div {
+  min-width: 0;
+}
+
+.identity h1 {
+  max-width: 520px;
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text-strong);
+  font-size: 15px;
+  font-weight: 660;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identity span {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.7fr) minmax(420px, 1.3fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.properties,
+.structure {
+  min-width: 0;
+  min-height: 0;
+  padding: 28px;
+  overflow: auto;
+}
+
+.properties {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.properties h2,
+.structure h2 {
+  margin: 0 0 20px;
+  color: var(--color-text-strong);
+  font-size: 15px;
+  font-weight: 660;
+}
+
+.properties label {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 18px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.properties input,
+.properties textarea {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font: 13px/1.5 var(--font-ui);
+}
+
+.properties textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.notice {
+  margin-bottom: 18px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--color-danger);
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.nodeList,
+.nodeList ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nodeList ul {
+  padding-left: 22px;
+}
+
+.node {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--color-border-strong);
+  color: var(--color-text);
+  background: var(--color-surface);
+  font-size: 13px;
+}
+
+.nodeType {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+@media (max-width: 800px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    overflow: auto;
+  }
+
+  .properties,
+  .structure {
+    overflow: visible;
+  }
+
+  .properties {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+}

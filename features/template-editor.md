@@ -2,7 +2,7 @@
 
 ## 功能状态
 
-`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 与 Function 工作文档身份、文件仓储、内嵌函数资源管理、应用门面、严格语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。当前没有实现 renderer 页面或最终试卷文件封装。
+`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 与 Function 工作文档身份、文件仓储、内嵌函数资源管理、应用门面、严格语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。renderer 已注册 Template 应用门面、列表入口和最小工作文档页面；完整图形化 DSL 编辑器和最终试卷文件封装尚未实现。
 
 ## 已实现边界
 
@@ -61,7 +61,7 @@ Template 和 Function 工作文档都带 revision。首次保存使用 0，后�
 
 工作文档允许暂时不完整。删除函数输入、录音或选择题后，无法无歧义决定替代值的普通表达式不会被猜测式删除或改写，而由严格语义校验返回可定位错误。函数输入重命名和 Interface alias 重命名属于含义明确的操作，会重写当前可编辑正文中的对应变量引用。内嵌函数资源不随 alias 重命名而重写：函数禁止直接引用 Template Interface alias，只能通过调用输入接收 Interface 值，因此函数资源不捕获调用方命名空间。
 
-`templates.validate()` 和 `templates.compile()` 会根据当前 Template 收集 Interface 与 Schema 身份，通过调用方提供的跨模块查询函数取得清单。编译时再把 Interface 实例选择及仓储定位器交给底层异步编译器。Schema Editor 尚未实现实际查询 API，当前通过窄依赖接口接入。
+`templates.validate()` 和 `templates.compile()` 会根据当前 Template 收集 Interface 与 Schema 身份，通过调用方提供的跨模块查询函数取得清单。编译时再把 Interface 实例选择及实例定位器交给底层异步编译器。renderer 通过 Interface 应用门面的 `published.getVarManifest()` 和 `instances.locate()` 适配这两项能力，不依赖 Interface 仓储。Schema Editor 尚未实现实际查询 API，当前通过窄依赖接口接入。
 
 ## 严格语义校验
 
@@ -103,8 +103,8 @@ Template 和 Function 工作文档都带 revision。首次保存使用 0，后�
 
 工作文档允许保存不完整状态；编译入口会自行执行严格校验。以下能力尚未实现：
 
-- renderer 对 Template 应用门面的注册，以及图形化 DSL 编辑器。
-- Interface 应用/仓储的实例定位适配器和 Schema Editor 的评分块清单适配器。
+- 完整图形化 DSL 编辑器；当前 renderer 只提供 Template 列表、新建、基础属性编辑、结构只读展示和保存。
+- Schema Editor 的评分块清单适配器。
 - renderer 的撤销/重做状态管理，以及编译错误文案和画布定位交互。
 - `ExamPackage` 的文件封装、资源复制和持久化格式。
 

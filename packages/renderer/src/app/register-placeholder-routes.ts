@@ -1,4 +1,4 @@
-import { PanelsTopLeft, Settings2, Shapes } from 'lucide-react'
+import { LayoutTemplate, PanelsTopLeft, Settings2, Shapes } from 'lucide-react'
 import { InterfaceDetailsPage } from '../features/interfaces/InterfaceDetailsPage'
 import { InterfaceDraftEditorPage } from '../features/interfaces/InterfaceDraftEditorPage'
 import { InterfaceDraftListPage } from '../features/interfaces/InterfaceDraftListPage'
@@ -7,6 +7,8 @@ import { InterfaceListPage } from '../features/interfaces/InterfaceListPage'
 import { SettingsDetailPage } from '../pages/SettingsDetailPage'
 import { SettingsOverviewPage } from '../pages/SettingsOverviewPage'
 import { WorkbenchPage } from '../pages/WorkbenchPage'
+import { TemplateBrowserPage } from '../features/templates/TemplateBrowserPage'
+import { TemplateDocumentPage } from '../features/templates/TemplateDocumentPage'
 import { registerAppRoute } from './route-registry'
 
 const unregisterRoutes = [
@@ -33,6 +35,25 @@ const unregisterRoutes = [
       icon: Shapes,
       order: 10
     }
+  }),
+
+  registerAppRoute({
+    id: 'templates',
+    path: '/templates',
+    component: TemplateBrowserPage,
+    layout: 'standard',
+    navigation: {
+      label: '模板',
+      icon: LayoutTemplate,
+      order: 20
+    }
+  }),
+
+  registerAppRoute({
+    id: 'template-editor',
+    path: '/templates/:templateId',
+    component: TemplateDocumentPage,
+    layout: 'focus'
   }),
 
   registerAppRoute({
