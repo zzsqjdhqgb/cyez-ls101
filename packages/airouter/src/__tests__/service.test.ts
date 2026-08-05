@@ -115,8 +115,9 @@ describe('AIRouterService', () => {
     })
     streamTextMock.mockReturnValue({
       fullStream: (async function* () {
-        yield { type: 'reasoning-delta', delta: '思考' }
-        yield { type: 'text-delta', delta: '回答' }
+        yield { type: 'reasoning-delta', id: 'reasoning-1', text: '思考' }
+        yield { type: 'text-delta', id: 'text-1', text: '回答' }
+        yield { type: 'finish', finishReason: 'stop' }
       })()
     })
 
@@ -133,5 +134,32 @@ describe('AIRouterService', () => {
       { type: 'reasoning', delta: '思考' },
       { type: 'output', delta: '回答' }
     ])
+    expect(streamTextMock).toHaveBeenCalledWith(expect.objectContaining({ maxOutputTokens: 8192 }))
+  })
+
+  it('reports a truncated text stream before JSON validation', async () => {
+    const saved = await service.saveProviderConfig({
+      name: '测试 OpenAI',
+      type: 'openai-compatible',
+      models: [{ id: 'test-model', enabled: true }]
+    })
+    streamTextMock.mockReturnValue({
+      fullStream: (async function* () {
+        yield { type: 'text-delta', id: 'text-1', text: '{"title":"未完成' }
+        yield { type: 'finish', finishReason: 'length' }
+      })()
+    })
+
+    await expect(
+      (async () => {
+        for await (const _chunk of service.generateText({
+          providerConfigId: saved.id,
+          modelId: 'test-model',
+          prompt: '测试'
+        })) {
+          // Consume the stream until the finish reason is reported.
+        }
+      })()
+    ).rejects.toThrow('AI 输出达到长度上限')
   })
 })

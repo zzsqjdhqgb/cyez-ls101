@@ -1,6 +1,5 @@
 import { airouterClient, type AIRouterClient } from '@ls101/airouter/renderer'
 import type {
-  AIRouterImageGenerationSettings,
   AIRouterImageProviderConfigInput,
   AIRouterImageProviderConfigSummary,
   AIRouterImageTestResult,
@@ -24,10 +23,6 @@ export interface AIRouterApplication {
   deleteImageConfig(id: string): Promise<void>
   readImageApiKey(id: string): Promise<string | null>
   listImageModels(config: AIRouterImageProviderConfigInput): Promise<AIRouterModelOption[]>
-  getImageSettings(): Promise<AIRouterImageGenerationSettings>
-  saveImageSettings(
-    settings: AIRouterImageGenerationSettings
-  ): Promise<AIRouterImageGenerationSettings>
   testImageConnection(
     config: AIRouterImageProviderConfigInput,
     modelId: string
@@ -49,8 +44,6 @@ export function createAIRouterApplication(
     deleteImageConfig: (id) => client.deleteImageProviderConfig(id),
     readImageApiKey: (id) => client.readImageProviderApiKey(id),
     listImageModels: (config) => client.listImageModels(config),
-    getImageSettings: () => client.getImageGenerationSettings(),
-    saveImageSettings: (settings) => client.saveImageGenerationSettings(settings),
     testImageConnection: (config, modelId) => client.testImageConnection({ config, modelId })
   }
 }

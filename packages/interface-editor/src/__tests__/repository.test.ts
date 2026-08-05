@@ -963,6 +963,27 @@ describe('Interface application', () => {
     )
   })
 
+  it('accepts a JSON code fence around an otherwise valid AI response', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(content())
+    await repository.saveInterface(def)
+    const generator = new TestTextGenerator()
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(null),
+      textGenerator: generator
+    })
+    const blank = await app.published.createBlankInstance(def.id)
+    const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId)
+
+    generator.complete('```json\n{"title":"代码围栏内容"}\n```')
+
+    await expect(handle.completion).resolves.toMatchObject({ status: 'completed' })
+    await expect(app.instances.get(def.id, blank.instance.instanceId)).resolves.toMatchObject({
+      instance: { values: { title: '代码围栏内容' } }
+    })
+  })
+
   it('AI 运行时拒绝第二个生成、整表保存和 JSON 覆盖', async () => {
     const { repository } = setup()
     const def = await publishInterface(content())
@@ -998,7 +1019,11 @@ describe('Interface application', () => {
     const def = await publishInterface(contentWithImage())
     await repository.saveInterface(def)
     const textGenerator = new TestTextGenerator()
+    const selectedImageProvider = { providerId: 'manual-provider' }
     const imageGenerator: InterfaceImageGenerator = {
+      listProviders: vi
+        .fn()
+        .mockResolvedValue([{ ...selectedImageProvider, providerName: '手动生成' }]),
       generate: vi.fn().mockResolvedValue({ data: PNG_BYTES })
     }
     const app = createInterfaceApplication({
@@ -1008,13 +1033,19 @@ describe('Interface application', () => {
       imageGenerator
     })
     const blank = await app.published.createBlankInstance(def.id)
-    const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId)
+    await expect(app.instances.listImageGenerationProviders()).resolves.toEqual([
+      { providerId: 'manual-provider', providerName: '手动生成' }
+    ])
+    const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId, {
+      imageProvider: selectedImageProvider
+    })
     textGenerator.complete('{"title":"AI 图片题","picture":"学生在校园操场上跑步"}')
 
     const result = await handle.completion
     expect(result.status).toBe('completed')
     expect(imageGenerator.generate).toHaveBeenCalledWith('学生在校园操场上跑步', {
-      signal: expect.any(AbortSignal)
+      signal: expect.any(AbortSignal),
+      provider: selectedImageProvider
     })
     expect(handle.getSnapshot().items.map((item) => item.label)).toEqual([
       'AI 生成',

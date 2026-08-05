@@ -165,6 +165,15 @@
   padding: 10px 12px;
 }
 
+.imageProviderSelect {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.imageProviderSelect > * {
+  max-width: none;
+}
+
 .imagePickerFooter > span {
   min-width: 0;
   overflow: hidden;

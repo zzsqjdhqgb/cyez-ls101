@@ -54,27 +54,42 @@ describe('AIRouterImageService', () => {
     ).toBeNull()
   })
 
-  it('defaults to manual mode and falls back to it when the selected provider is deleted', async () => {
-    expect(await service.getGenerationSettings()).toEqual({ mode: 'manual' })
+  it('exposes a manual Provider initially and restores one when no selectable Provider remains', async () => {
+    const initial = await service.listProviderConfigs()
+    expect(initial).toEqual([
+      expect.objectContaining({ id: 'manual', name: '手动生成', type: 'manual', models: [] })
+    ])
     const saved = await service.saveProviderConfig({
       name: '图片 OpenAI',
       type: 'openai-compatible',
       models: [{ id: 'image-model', enabled: true }]
     })
-    await expect(
-      service.saveGenerationSettings({
-        mode: 'provider',
-        providerConfigId: saved.id,
-        modelId: 'image-model'
-      })
-    ).resolves.toEqual({
-      mode: 'provider',
-      providerConfigId: saved.id,
-      modelId: 'image-model'
-    })
-
+    await service.deleteProviderConfig('manual')
+    expect(await service.listProviderConfigs()).toEqual([saved])
     await service.deleteProviderConfig(saved.id)
-    expect(await service.getGenerationSettings()).toEqual({ mode: 'manual' })
+    expect(await service.listProviderConfigs()).toEqual([
+      expect.objectContaining({ type: 'manual', models: [] })
+    ])
+  })
+
+  it('stores manual Providers without API fields or models', async () => {
+    await expect(
+      service.saveProviderConfig({
+        name: '外部手动生成',
+        type: 'manual',
+        baseUrl: 'https://ignored.example.com/v1',
+        models: [{ id: 'ignored', enabled: true }],
+        apiKey: 'ignored-secret'
+      })
+    ).resolves.toEqual(
+      expect.objectContaining({
+        name: '外部手动生成',
+        type: 'manual',
+        baseUrl: '',
+        models: [],
+        hasApiKey: false
+      })
+    )
   })
 
   it('generates one image with the selected provider model', async () => {

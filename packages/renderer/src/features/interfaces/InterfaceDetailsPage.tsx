@@ -114,8 +114,8 @@ export function InterfaceDetailsPage(): JSX.Element {
     setWorking(true)
     setError(null)
     try {
-      await application.transfer.export(interfaceId, { mode: 'all' })
-      toast.success('题型已导出')
+      const result = await application.transfer.export(interfaceId, { mode: 'all' })
+      if (result.status === 'exported') toast.success('题型已导出')
     } catch (reason) {
       setError(errorMessage(reason))
     } finally {

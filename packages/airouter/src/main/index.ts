@@ -4,7 +4,6 @@ import type {
   AIRouterConnectionTestInput,
   AIRouterImageConnectionTestInput,
   AIRouterImageGenerationEvent,
-  AIRouterImageGenerationSettings,
   AIRouterImageProviderConfigInput,
   AIRouterImageRequest,
   AIRouterProviderConfigInput,
@@ -58,12 +57,6 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
   ipcMain.handle(
     AIROUTER_CHANNELS.listImageModels,
     (_event, input: AIRouterImageProviderConfigInput) => imageService.listModels(input)
-  )
-  ipcMain.handle(AIROUTER_CHANNELS.getImageSettings, () => imageService.getGenerationSettings())
-  ipcMain.handle(
-    AIROUTER_CHANNELS.saveImageSettings,
-    (_event, settings: AIRouterImageGenerationSettings) =>
-      imageService.saveGenerationSettings(settings)
   )
   ipcMain.handle(
     AIROUTER_CHANNELS.testImageConnection,

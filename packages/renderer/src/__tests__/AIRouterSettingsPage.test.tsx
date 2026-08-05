@@ -7,8 +7,12 @@ import type { AIRouterProviderConfigInput, AIRouterProviderConfigSummary } from 
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AIRouterSettingsPage } from '../features/airouter/AIRouterSettingsPage'
 import type { AIRouterApplication } from '../features/airouter/AIRouterApplication'
+import { manualImageGenerationCoordinator } from '../features/airouter/ManualImageGeneration'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
 
 describe('AIRouterSettingsPage', () => {
   it('opens provider editing in a modal and saves base fields and model ids together', async () => {
@@ -257,11 +261,17 @@ describe('AIRouterSettingsPage', () => {
     expect(screen.getByText('临时占位')).toBeInTheDocument()
   })
 
-  it('configures a separate image provider and switches from manual to API mode', async () => {
-    const saveImageSettings = vi.fn().mockImplementation(async (settings) => settings)
+  it('manages image Providers without a default Provider control', async () => {
+    const manualProvider = {
+      id: 'manual',
+      name: '手动生成',
+      type: 'manual' as const,
+      baseUrl: '',
+      models: [],
+      hasApiKey: false
+    }
     const application = applicationWith({
-      listImageConfigs: vi.fn().mockResolvedValue([]),
-      getImageSettings: vi.fn().mockResolvedValue({ mode: 'manual' }),
+      listImageConfigs: vi.fn().mockResolvedValue([manualProvider]),
       saveImageConfig: vi.fn().mockImplementation(async (input) => ({
         id: 'image-provider',
         name: input.name,
@@ -269,17 +279,14 @@ describe('AIRouterSettingsPage', () => {
         baseUrl: input.baseUrl,
         models: input.models,
         hasApiKey: Boolean(input.apiKey)
-      })),
-      saveImageSettings
+      }))
     })
 
     renderAIRouter(application, '/settings/ai-router/image')
 
-    expect(await screen.findByRole('button', { name: '手动生成' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    )
-    expect(screen.getByRole('button', { name: 'API Provider' })).toBeDisabled()
+    expect(await screen.findByText('共 1 个 Provider')).toBeInTheDocument()
+    expect(screen.queryByLabelText('默认图像 Provider')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'API Provider' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '添加 Provider' }))
     const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
     fireEvent.change(within(dialog).getByLabelText('图像配置名称'), {
@@ -295,13 +302,63 @@ describe('AIRouterSettingsPage', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
 
     await waitFor(() => expect(application.saveImageConfig).toHaveBeenCalledOnce())
-    fireEvent.click(screen.getByRole('button', { name: 'API Provider' }))
+  })
+
+  it('adds manual generation as a Provider type without API fields', async () => {
+    const application = applicationWith({
+      listImageConfigs: vi.fn().mockResolvedValue([
+        {
+          id: 'manual',
+          name: '手动生成',
+          type: 'manual',
+          baseUrl: '',
+          models: [],
+          hasApiKey: false
+        }
+      ]),
+      saveImageConfig: vi.fn().mockImplementation(async (input) => ({
+        id: 'custom-manual',
+        name: input.name,
+        type: input.type,
+        baseUrl: '',
+        models: [],
+        hasApiKey: false
+      }))
+    })
+
+    renderAIRouter(application, '/settings/ai-router/image')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('图像 Provider 类型'), {
+      target: { value: 'manual' }
+    })
+    expect(within(dialog).queryByLabelText('图像 API Key')).toBeNull()
+    expect(within(dialog).queryByLabelText('手动图像模型 ID')).toBeNull()
+    expect(within(dialog).queryByRole('heading', { name: '连接测试' })).toBeNull()
+    expect(within(dialog).getByRole('button', { name: '测试手动生成' })).toBeInTheDocument()
+
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:manual-test')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
+    fireEvent.click(within(dialog).getByRole('button', { name: '测试手动生成' }))
+    await vi.waitFor(() =>
+      expect(manualImageGenerationCoordinator.getSnapshot()?.prompt).toContain('绿色圆形图标')
+    )
+    manualImageGenerationCoordinator.complete(
+      manualImageGenerationCoordinator.getSnapshot()?.id ?? '',
+      { data: new Uint8Array([0x89, 0x50, 0x4e, 0x47]), mediaType: 'image/png' }
+    )
+    expect(await within(dialog).findByText('测试图片已导入')).toBeInTheDocument()
+
+    fireEvent.change(within(dialog).getByLabelText('图像配置名称'), {
+      target: { value: '浏览器生图' }
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+
     await waitFor(() =>
-      expect(saveImageSettings).toHaveBeenCalledWith({
-        mode: 'provider',
-        providerConfigId: 'image-provider',
-        modelId: 'gpt-image-1'
-      })
+      expect(application.saveImageConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ name: '浏览器生图', type: 'manual' })
+      )
     )
   })
 })
@@ -319,8 +376,6 @@ function applicationWith(overrides: Partial<AIRouterApplication>): AIRouterAppli
     deleteImageConfig: vi.fn(),
     readImageApiKey: vi.fn(),
     listImageModels: vi.fn(),
-    getImageSettings: vi.fn().mockResolvedValue({ mode: 'manual' }),
-    saveImageSettings: vi.fn(),
     testImageConnection: vi.fn(),
     ...overrides
   }

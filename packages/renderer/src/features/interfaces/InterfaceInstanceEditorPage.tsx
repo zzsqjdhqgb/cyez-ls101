@@ -6,6 +6,8 @@ import type {
   FieldLeaf,
   InterfaceAIGenerationResult,
   InterfaceDef,
+  InterfaceImageProviderOption,
+  InterfaceImageProviderSelection,
   InterfaceInstanceDetails,
   InstanceDataError
 } from '@ls101/interface-editor'
@@ -19,6 +21,7 @@ import {
   Circle,
   FolderOpen,
   Image as ImageIcon,
+  Images,
   LoaderCircle,
   RefreshCw,
   Save,
@@ -32,6 +35,7 @@ import {
   type AIModelOption,
   type AIModelSelection
 } from '../../components/ai/AIModelSelect'
+import { AIImageProviderSelect } from '../../components/ai/AIImageProviderSelect'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { IconButton } from '../../components/ui/IconButton'
@@ -54,13 +58,21 @@ interface GenerationSession {
   startError: string | null
 }
 
+type ImageGenerationStatus = 'running' | 'completed' | 'failed' | 'cancelled'
+
+interface ImageGenerationSession {
+  status: ImageGenerationStatus
+  items: readonly TaskProgressItem[]
+  error?: string
+}
+
 interface PendingImage {
   name: string
   data: Uint8Array
   previewUrl: string
 }
 
-type AuxiliaryPanel = 'json' | 'ai' | null
+type AuxiliaryPanel = 'json' | 'ai' | 'image-ai' | null
 
 export function InterfaceInstanceEditorPage(): JSX.Element {
   const application = useInterfaceApplication()
@@ -79,14 +91,23 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   const [selectedModel, setSelectedModel] = useState<AIModelSelection | null>(null)
   const [modelsLoading, setModelsLoading] = useState(false)
   const [modelsError, setModelsError] = useState<string | null>(null)
+  const [imageProviderOptions, setImageProviderOptions] = useState<
+    readonly InterfaceImageProviderOption[]
+  >([])
+  const [selectedImageProvider, setSelectedImageProvider] =
+    useState<InterfaceImageProviderSelection | null>(null)
+  const [imageProvidersLoading, setImageProvidersLoading] = useState(true)
+  const [imageProvidersError, setImageProvidersError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [generatingImage, setGeneratingImage] = useState<string | null>(null)
   const [generation, setGeneration] = useState<GenerationSession | null>(null)
+  const [imageGeneration, setImageGeneration] = useState<ImageGenerationSession | null>(null)
   const [dirty, setDirty] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmLeave, setConfirmLeave] = useState(false)
   const modelLoadId = useRef(0)
+  const imageProviderLoadId = useRef(0)
   const imageGenerationController = useRef<AbortController | null>(null)
   const previewUrls = useRef(new Set<string>())
 
@@ -115,6 +136,36 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       modelLoadId.current += 1
     }
   }, [application, interfaceId, instanceId])
+
+  useEffect(() => {
+    const loadId = ++imageProviderLoadId.current
+    const listProviders = application.instances.listImageGenerationProviders
+    if (!listProviders) return
+    void listProviders()
+      .then((providers) => {
+        if (loadId !== imageProviderLoadId.current) return
+        setImageProviderOptions(providers)
+        setSelectedImageProvider((current) =>
+          current && findImageProvider(providers, current)
+            ? current
+            : providers[0]
+              ? providerSelectionOf(providers[0])
+              : null
+        )
+      })
+      .catch((reason: unknown) => {
+        if (loadId !== imageProviderLoadId.current) return
+        setImageProviderOptions([])
+        setSelectedImageProvider(null)
+        setImageProvidersError(errorMessage(reason))
+      })
+      .finally(() => {
+        if (loadId === imageProviderLoadId.current) setImageProvidersLoading(false)
+      })
+    return () => {
+      imageProviderLoadId.current += 1
+    }
+  }, [application])
 
   useEffect(
     () => () => {
@@ -219,12 +270,19 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       toast.info('请先填写图片提示词')
       return
     }
+    if (!selectedImageProvider) {
+      toast.info('请先选择图像 Provider')
+      return
+    }
     setGeneratingImage(varName)
     setError(null)
     const controller = new AbortController()
     imageGenerationController.current = controller
     try {
-      const data = await application.instances.generateImage(prompt, { signal: controller.signal })
+      const data = await application.instances.generateImage(prompt, {
+        signal: controller.signal,
+        provider: selectedImageProvider
+      })
       stageImage(varName, 'AI 生成图片', data)
       toast.success('图片已生成，请保存题组')
     } catch (reason) {
@@ -274,18 +332,35 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       setPanel(null)
       return
     }
+    setImageGeneration(null)
     setPanel('ai')
     void loadModels()
   }
 
+  const toggleImageAIPanel = (): void => {
+    if (panel === 'image-ai') {
+      setImageGeneration(null)
+      setPanel(null)
+      return
+    }
+    setGeneration(null)
+    setImageGeneration(null)
+    setPanel('image-ai')
+  }
+
   const startGeneration = async (): Promise<void> => {
     if (!selectedModel) return
+    if (hasImageFields && !selectedImageProvider) {
+      setError('请先选择图像 Provider')
+      return
+    }
     setGeneration({ handle: null, result: null, startError: null })
     setError(null)
     setJsonErrors([])
     try {
       const handle = await application.instances.startAIGeneration(interfaceId, instanceId, {
-        model: selectedModel
+        model: selectedModel,
+        ...(hasImageFields && selectedImageProvider ? { imageProvider: selectedImageProvider } : {})
       })
       setGeneration({ handle, result: null, startError: null })
       const result = await handle.completion
@@ -304,6 +379,93 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
     } catch (reason) {
       const message = errorMessage(reason)
       setGeneration((current) => (current ? { ...current, startError: message } : current))
+    }
+  }
+
+  const imageTargets = leaves
+    .filter(({ leaf }) => leaf.type === 'image' && Boolean(imagePrompts[leaf.varName]?.trim()))
+    .map(({ key, leaf }) => ({
+      key,
+      varName: leaf.varName,
+      prompt: imagePrompts[leaf.varName].trim()
+    }))
+
+  const startImageGeneration = async (): Promise<void> => {
+    if (!selectedImageProvider || imageTargets.length === 0 || dirty) return
+
+    const controller = new AbortController()
+    imageGenerationController.current = controller
+    const imageItems: TaskProgressItem[] = imageTargets.map(({ key, varName }) => ({
+      id: `image-${varName}`,
+      label: `生成图片：${key}`,
+      status: 'waiting'
+    }))
+    const saveItem: TaskProgressItem = {
+      id: 'save-images',
+      label: '保存图片',
+      status: 'waiting'
+    }
+    const publish = (
+      items: readonly TaskProgressItem[],
+      status: ImageGenerationStatus = 'running',
+      error?: string
+    ): void => setImageGeneration({ status, items, ...(error ? { error } : {}) })
+
+    publish([...imageItems, saveItem])
+    setError(null)
+    try {
+      const generatedImages: Record<string, Uint8Array> = {}
+      for (const [index, target] of imageTargets.entries()) {
+        if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
+        imageItems[index] = { ...imageItems[index], status: 'running' }
+        publish([...imageItems, saveItem])
+        generatedImages[target.varName] = await application.instances.generateImage(target.prompt, {
+          signal: controller.signal,
+          provider: selectedImageProvider
+        })
+        imageItems[index] = { ...imageItems[index], status: 'completed' }
+        publish([...imageItems, saveItem])
+      }
+
+      const savingItem: TaskProgressItem = { ...saveItem, status: 'running' }
+      publish([...imageItems, savingItem])
+      const saved = await application.instances.save(interfaceId, instanceId, {
+        name,
+        values,
+        imagePrompts,
+        imageFiles: generatedImages
+      })
+      discardAllPendingImages()
+      setDetails(saved)
+      setValues(saved.instance.values)
+      setImagePrompts(saved.instance.imagePrompts ?? {})
+      setDirty(false)
+      publish([...imageItems, { ...saveItem, status: 'completed' }], 'completed')
+      toast.success('AI 生图结果已保存')
+    } catch (reason) {
+      const cancelled =
+        controller.signal.aborted ||
+        (reason instanceof DOMException && reason.name === 'AbortError')
+      if (cancelled) {
+        publish([...imageItems, saveItem], 'cancelled')
+        toast.info('已取消 AI 生图')
+      } else {
+        const message = errorMessage(reason)
+        const failedItems = imageItems.map((item) =>
+          item.status === 'running'
+            ? {
+                ...item,
+                status: 'completed' as const,
+                log: { format: 'text' as const, content: message }
+              }
+            : item
+        )
+        publish([...failedItems, saveItem], 'failed', message)
+      }
+    } finally {
+      if (imageGenerationController.current === controller) {
+        imageGenerationController.current = null
+      }
     }
   }
 
@@ -372,7 +534,9 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
 
   const generationFinished = generation ? isGenerationFinished(generation) : false
   const generationRunning = generation !== null && !generationFinished
-  const busy = saving || generationRunning || generatingImage !== null
+  const imageGenerationRunning = imageGeneration?.status === 'running'
+  const busy = saving || generationRunning || imageGenerationRunning || generatingImage !== null
+  const hasImageFields = leaves.some(({ leaf }) => leaf.type === 'image')
 
   const finishGeneration = (): void => {
     const openJson = generation?.result?.status === 'invalid-response'
@@ -403,9 +567,10 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
         <div className={styles.actions}>
           <Button
             icon={Braces}
-            disabled={saving || generationRunning}
+            disabled={saving || generationRunning || imageGenerationRunning}
             onClick={() => {
               setGeneration(null)
+              setImageGeneration(null)
               setPanel((current) => (current === 'json' ? null : 'json'))
             }}
           >
@@ -413,11 +578,32 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
           </Button>
           <Button
             icon={generationRunning ? LoaderCircle : Bot}
-            disabled={!details || saving || generationRunning || dirty}
+            disabled={!details || saving || generationRunning || imageGenerationRunning || dirty}
             title={dirty ? '请先保存当前修改' : undefined}
             onClick={toggleAIPanel}
           >
             {generationRunning ? '生成中' : 'AI 生成'}
+          </Button>
+          <Button
+            icon={imageGenerationRunning ? LoaderCircle : Images}
+            disabled={
+              !details ||
+              saving ||
+              generationRunning ||
+              imageGenerationRunning ||
+              dirty ||
+              imageTargets.length === 0
+            }
+            title={
+              dirty
+                ? '请先保存当前修改'
+                : imageTargets.length === 0
+                  ? '没有已填写提示词的图片字段'
+                  : undefined
+            }
+            onClick={toggleImageAIPanel}
+          >
+            {imageGenerationRunning ? '生图中' : 'AI 生图'}
           </Button>
           <Button
             icon={Save}
@@ -438,7 +624,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
           initialSize={560}
           minFirst={360}
           minSecond={320}
-          label={`调整题组字段与${panel === 'ai' ? ' AI' : ' JSON'}面板宽度`}
+          label={`调整题组字段与${panel === 'ai' ? ' AI' : panel === 'image-ai' ? ' AI 生图' : ' JSON'}面板宽度`}
         >
           <section className={styles.formPane}>
             {error ? (
@@ -496,6 +682,11 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
                         onPromptChange={(value) => updateImagePrompt(leaf.varName, value)}
                         onRemove={() => removeImage(leaf.varName)}
                         generating={generatingImage === leaf.varName}
+                        imageProviderOptions={imageProviderOptions}
+                        imageProvider={selectedImageProvider}
+                        imageProvidersLoading={imageProvidersLoading}
+                        imageProvidersError={imageProvidersError}
+                        onSelectImageProvider={setSelectedImageProvider}
                       />
                     ) : (
                       <textarea
@@ -557,6 +748,11 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
               modelsError={modelsError}
               modelsLoading={modelsLoading}
               modelOptions={modelOptions}
+              imageProviderOptions={imageProviderOptions}
+              selectedImageProvider={selectedImageProvider}
+              imageProvidersLoading={imageProvidersLoading}
+              imageProvidersError={imageProvidersError}
+              hasImageFields={hasImageFields}
               selectedModel={selectedModel}
               session={generation}
               onCancel={() => generation?.handle?.cancel()}
@@ -565,7 +761,27 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
               onRefresh={() => void loadModels()}
               onRetry={() => void startGeneration()}
               onSelectModel={setSelectedModel}
+              onSelectImageProvider={setSelectedImageProvider}
               onStart={() => void startGeneration()}
+            />
+          ) : panel === 'image-ai' ? (
+            <ImageGenerationPane
+              dirty={dirty}
+              imageProviderOptions={imageProviderOptions}
+              selectedImageProvider={selectedImageProvider}
+              imageProvidersLoading={imageProvidersLoading}
+              imageProvidersError={imageProvidersError}
+              targetCount={imageTargets.length}
+              session={imageGeneration}
+              onCancel={() => imageGenerationController.current?.abort()}
+              onClose={() => setPanel(null)}
+              onFinish={() => {
+                setImageGeneration(null)
+                setPanel(null)
+              }}
+              onRetry={() => void startImageGeneration()}
+              onSelectImageProvider={setSelectedImageProvider}
+              onStart={() => void startImageGeneration()}
             />
           ) : null}
         </ResizableSplit>
@@ -595,6 +811,11 @@ function ImageValueInput({
   onChooseClipboard,
   onChooseFile,
   onGenerate,
+  imageProviderOptions,
+  imageProvider,
+  imageProvidersLoading,
+  imageProvidersError,
+  onSelectImageProvider,
   onPromptChange,
   onRemove
 }: {
@@ -609,6 +830,11 @@ function ImageValueInput({
   onChooseClipboard(): void
   onChooseFile(): void
   onGenerate(): void
+  imageProviderOptions: readonly InterfaceImageProviderOption[]
+  imageProvider: InterfaceImageProviderSelection | null
+  imageProvidersLoading: boolean
+  imageProvidersError: string | null
+  onSelectImageProvider(value: InterfaceImageProviderSelection | null): void
   onPromptChange(value: string): void
   onRemove(): void
 }): JSX.Element {
@@ -640,6 +866,18 @@ function ImageValueInput({
               </span>
             )}
           </div>
+          <div className={styles.imageProviderSelect}>
+            <AIImageProviderSelect
+              disabled={disabled || generating}
+              error={imageProvidersError}
+              label={`${fieldName}图像 Provider`}
+              loading={imageProvidersLoading}
+              options={imageProviderOptions}
+              showLabel={false}
+              value={imageProvider}
+              onChange={onSelectImageProvider}
+            />
+          </div>
           <div className={styles.imagePickerFooter}>
             <span>{pending?.name ?? (existingUrl ? '已保存图片' : 'PNG、JPEG、GIF 或 WebP')}</span>
             <div>
@@ -649,7 +887,15 @@ function ImageValueInput({
               <Button
                 icon={generating ? X : WandSparkles}
                 size="small"
-                disabled={generating ? false : disabled || !prompt.trim()}
+                disabled={
+                  generating
+                    ? false
+                    : disabled ||
+                      !prompt.trim() ||
+                      !imageProvider ||
+                      imageProvidersLoading ||
+                      Boolean(imageProvidersError)
+                }
                 onClick={generating ? onCancelGenerate : onGenerate}
               >
                 {generating ? '取消生成' : '生成图片'}
@@ -684,6 +930,11 @@ function AIGenerationPane({
   modelsError,
   modelsLoading,
   modelOptions,
+  imageProviderOptions,
+  selectedImageProvider,
+  imageProvidersLoading,
+  imageProvidersError,
+  hasImageFields,
   selectedModel,
   session,
   onCancel,
@@ -692,12 +943,18 @@ function AIGenerationPane({
   onRefresh,
   onRetry,
   onSelectModel,
+  onSelectImageProvider,
   onStart
 }: {
   dirty: boolean
   modelsError: string | null
   modelsLoading: boolean
   modelOptions: readonly AIModelOption[]
+  imageProviderOptions: readonly InterfaceImageProviderOption[]
+  selectedImageProvider: InterfaceImageProviderSelection | null
+  imageProvidersLoading: boolean
+  imageProvidersError: string | null
+  hasImageFields: boolean
   selectedModel: AIModelSelection | null
   session: GenerationSession | null
   onCancel(): void
@@ -706,6 +963,7 @@ function AIGenerationPane({
   onRefresh(): void
   onRetry(): void
   onSelectModel(value: AIModelSelection | null): void
+  onSelectImageProvider(value: InterfaceImageProviderSelection | null): void
   onStart(): void
 }): JSX.Element {
   const finished = session ? isGenerationFinished(session) : false
@@ -733,6 +991,17 @@ function AIGenerationPane({
           onChange={onSelectModel}
           onRefresh={onRefresh}
         />
+        {hasImageFields ? (
+          <AIImageProviderSelect
+            disabled={session !== null && !finished}
+            error={imageProvidersError}
+            label="图像 Provider"
+            loading={imageProvidersLoading}
+            options={imageProviderOptions}
+            value={selectedImageProvider}
+            onChange={onSelectImageProvider}
+          />
+        ) : null}
         {session ? (
           <div className={styles.generationContent}>
             {session.handle ? <GenerationProgress handle={session.handle} /> : null}
@@ -759,7 +1028,14 @@ function AIGenerationPane({
             <Button
               icon={Bot}
               variant="primary"
-              disabled={!selectedModel || modelsLoading || Boolean(modelsError) || dirty}
+              disabled={
+                !selectedModel ||
+                (hasImageFields && !selectedImageProvider) ||
+                modelsLoading ||
+                Boolean(modelsError) ||
+                (hasImageFields && Boolean(imageProvidersError)) ||
+                dirty
+              }
               onClick={onStart}
             >
               开始生成
@@ -769,7 +1045,14 @@ function AIGenerationPane({
           <>
             <Button
               icon={RefreshCw}
-              disabled={!selectedModel || modelsLoading || Boolean(modelsError) || dirty}
+              disabled={
+                !selectedModel ||
+                (hasImageFields && !selectedImageProvider) ||
+                modelsLoading ||
+                Boolean(modelsError) ||
+                (hasImageFields && Boolean(imageProvidersError)) ||
+                dirty
+              }
               onClick={onRetry}
             >
               重新生成
@@ -788,8 +1071,144 @@ function AIGenerationPane({
   )
 }
 
+function ImageGenerationPane({
+  dirty,
+  imageProviderOptions,
+  selectedImageProvider,
+  imageProvidersLoading,
+  imageProvidersError,
+  targetCount,
+  session,
+  onCancel,
+  onClose,
+  onFinish,
+  onRetry,
+  onSelectImageProvider,
+  onStart
+}: {
+  dirty: boolean
+  imageProviderOptions: readonly InterfaceImageProviderOption[]
+  selectedImageProvider: InterfaceImageProviderSelection | null
+  imageProvidersLoading: boolean
+  imageProvidersError: string | null
+  targetCount: number
+  session: ImageGenerationSession | null
+  onCancel(): void
+  onClose(): void
+  onFinish(): void
+  onRetry(): void
+  onSelectImageProvider(value: InterfaceImageProviderSelection | null): void
+  onStart(): void
+}): JSX.Element {
+  const running = session?.status === 'running'
+  const finished = session !== null && !running
+
+  return (
+    <aside className={styles.aiPane} aria-label="AI 生图">
+      <header className={styles.aiHeader}>
+        <span className={styles.generationIcon}>
+          <Images aria-hidden="true" />
+        </span>
+        <div>
+          <h2>AI 生图</h2>
+          <span>
+            {session
+              ? running
+                ? `正在生成 ${targetCount} 张图片`
+                : '生图任务已结束'
+              : `${targetCount} 张图片待生成`}
+          </span>
+        </div>
+      </header>
+
+      <div className={styles.aiBody}>
+        <AIImageProviderSelect
+          disabled={running}
+          error={imageProvidersError}
+          label="图像 Provider"
+          loading={imageProvidersLoading}
+          options={imageProviderOptions}
+          value={selectedImageProvider}
+          onChange={onSelectImageProvider}
+        />
+        {session ? (
+          <div className={styles.generationContent}>
+            <GenerationProgressItems label="AI 生图进度" items={session.items} />
+            {finished ? <ImageGenerationResult session={session} /> : null}
+          </div>
+        ) : null}
+      </div>
+
+      <footer className={styles.aiActions}>
+        {!session ? (
+          <>
+            <Button variant="ghost" onClick={onClose}>
+              取消
+            </Button>
+            <Button
+              icon={Images}
+              variant="primary"
+              disabled={
+                !selectedImageProvider ||
+                targetCount === 0 ||
+                imageProvidersLoading ||
+                Boolean(imageProvidersError) ||
+                dirty
+              }
+              onClick={onStart}
+            >
+              开始生图
+            </Button>
+          </>
+        ) : running ? (
+          <Button icon={X} variant="ghost" onClick={onCancel}>
+            取消生图
+          </Button>
+        ) : (
+          <>
+            <Button
+              icon={RefreshCw}
+              disabled={
+                !selectedImageProvider ||
+                targetCount === 0 ||
+                imageProvidersLoading ||
+                Boolean(imageProvidersError) ||
+                dirty
+              }
+              onClick={onRetry}
+            >
+              重新生成
+            </Button>
+            <Button icon={Check} variant="primary" onClick={onFinish}>
+              完成
+            </Button>
+          </>
+        )}
+      </footer>
+    </aside>
+  )
+}
+
 function isGenerationFinished(session: GenerationSession): boolean {
   return session.result !== null || session.startError !== null
+}
+
+function providerSelectionOf(
+  option: InterfaceImageProviderOption
+): InterfaceImageProviderSelection {
+  return {
+    providerId: option.providerId,
+    ...(option.modelId ? { modelId: option.modelId } : {})
+  }
+}
+
+function findImageProvider(
+  options: readonly InterfaceImageProviderOption[],
+  selection: InterfaceImageProviderSelection
+): InterfaceImageProviderOption | undefined {
+  return options.find(
+    (option) => option.providerId === selection.providerId && option.modelId === selection.modelId
+  )
 }
 
 function GenerationResult({ session }: { session: GenerationSession }): JSX.Element {
@@ -824,6 +1243,41 @@ function GenerationResult({ session }: { session: GenerationSession }): JSX.Elem
   )
 }
 
+function ImageGenerationResult({ session }: { session: ImageGenerationSession }): JSX.Element {
+  const content =
+    session.status === 'completed'
+      ? {
+          title: '生图完成',
+          message: '所有图片已生成并保存到当前题组。',
+          status: 'success'
+        }
+      : session.status === 'cancelled'
+        ? {
+            title: '生图已取消',
+            message: '任务已停止，当前题组中的图片没有被覆盖。',
+            status: 'cancelled'
+          }
+        : {
+            title: '生图失败',
+            message: session.error ?? '图片生成服务暂时不可用',
+            status: 'error'
+          }
+
+  return (
+    <div className={styles.generationResult} data-status={content.status} role="status">
+      {content.status === 'success' ? (
+        <Check aria-hidden="true" />
+      ) : (
+        <AlertCircle aria-hidden="true" />
+      )}
+      <div>
+        <strong>{content.title}</strong>
+        <span>{content.message}</span>
+      </div>
+    </div>
+  )
+}
+
 function GenerationProgress({
   handle
 }: {
@@ -831,10 +1285,20 @@ function GenerationProgress({
 }): JSX.Element {
   const snapshot = useSyncExternalStore(handle.subscribe, handle.getSnapshot, handle.getSnapshot)
 
+  return <GenerationProgressItems label="AI 生成进度" items={snapshot.items} />
+}
+
+function GenerationProgressItems({
+  label,
+  items
+}: {
+  label: string
+  items: readonly TaskProgressItem[]
+}): JSX.Element {
   return (
-    <section aria-label="AI 生成进度" className={styles.generationProgress}>
+    <section aria-label={label} className={styles.generationProgress}>
       <ol>
-        {snapshot.items.map((item) => (
+        {items.map((item) => (
           <li data-status={item.status} key={item.id}>
             <ProgressIcon item={item} />
             <div>

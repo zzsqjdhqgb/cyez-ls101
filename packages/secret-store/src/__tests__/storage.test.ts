@@ -27,7 +27,9 @@ describe('EncryptedSecretStorage', () => {
     const filePath = path.join(baseDir, 'secrets', 'airouter', 'providers', 'provider-1.bin')
     expect(await readFile(filePath, 'utf8')).toBe('encrypted:secret-value')
     expect(await scoped.read('provider-1')).toBe('secret-value')
-    expect((await stat(filePath)).mode & 0o777).toBe(0o600)
+    if (process.platform !== 'win32') {
+      expect((await stat(filePath)).mode & 0o777).toBe(0o600)
+    }
   })
 
   it('clears a scope and rejects traversal', async () => {

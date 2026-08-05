@@ -87,12 +87,6 @@ const airouterBridge: AIRouterBridge = {
   listImageModels(config: AIRouterImageProviderConfigInput) {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.listImageModels, config)
   },
-  getImageGenerationSettings() {
-    return ipcRenderer.invoke(AIROUTER_CHANNELS.getImageSettings)
-  },
-  saveImageGenerationSettings(settings) {
-    return ipcRenderer.invoke(AIROUTER_CHANNELS.saveImageSettings, settings)
-  },
   testImageConnection(request) {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.testImageConnection, request)
   },

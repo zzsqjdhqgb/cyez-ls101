@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, type JSX } from 'react'
 import type {
-  AIRouterImageGenerationSettings,
   AIRouterImageProviderConfigInput,
   AIRouterImageProviderConfigSummary,
+  AIRouterImageProviderType,
   AIRouterModelConfig
 } from '@ls101/airouter'
 import {
@@ -26,15 +26,20 @@ import {
 } from '../../components/settings/SettingsContent'
 import { toast } from '../../components/ui/toast'
 import { airouterApplication, type AIRouterApplication } from './AIRouterApplication'
+import {
+  manualImageGenerationCoordinator,
+  type ManualImageGenerationCoordinator
+} from './ManualImageGeneration'
 import styles from './AIRouterSettingsPage.module.css'
 
 export function AIRouterImageSettingsPage({
-  application = airouterApplication
+  application = airouterApplication,
+  manualGenerator = manualImageGenerationCoordinator
 }: {
   application?: AIRouterApplication
+  manualGenerator?: ManualImageGenerationCoordinator
 }): JSX.Element {
   const [configs, setConfigs] = useState<AIRouterImageProviderConfigSummary[] | null>(null)
-  const [settings, setSettings] = useState<AIRouterImageGenerationSettings | null>(null)
   const [draft, setDraft] = useState<ImageProviderDraft | null>(null)
   const [manualModel, setManualModel] = useState('')
   const [testModelId, setTestModelId] = useState('')
@@ -49,11 +54,11 @@ export function AIRouterImageSettingsPage({
 
   useEffect(() => {
     let active = true
-    void Promise.all([application.listImageConfigs(), application.getImageSettings()])
-      .then(([nextConfigs, nextSettings]) => {
+    void application
+      .listImageConfigs()
+      .then((nextConfigs) => {
         if (!active) return
         setConfigs(nextConfigs)
-        setSettings(nextSettings)
       })
       .catch((reason: unknown) => active && setError(errorMessage(reason)))
     return () => {
@@ -69,10 +74,6 @@ export function AIRouterImageSettingsPage({
   )
 
   const enabledModels = useMemo(() => draft?.models.filter((model) => model.enabled) ?? [], [draft])
-  const selectedProviderModel =
-    settings?.mode === 'provider'
-      ? modelSelectionValue(settings.providerConfigId, settings.modelId)
-      : ''
   const selectedTestModel = enabledModels.some((model) => model.id === testModelId)
     ? testModelId
     : (enabledModels[0]?.id ?? '')
@@ -90,16 +91,7 @@ export function AIRouterImageSettingsPage({
     }
   }
 
-  if (!configs || !settings)
-    return <div className={styles.status}>{error ?? '正在加载图像生成设置...'}</div>
-
-  const saveSettings = (next: AIRouterImageGenerationSettings): void => {
-    void run('settings', async () => {
-      const saved = await application.saveImageSettings(next)
-      setSettings(saved)
-      setFeedback('已保存图像生成模式')
-    })
-  }
+  if (!configs) return <div className={styles.status}>{error ?? '正在加载图像 Provider...'}</div>
 
   const closeEditor = (): void => {
     if (busy) return
@@ -116,14 +108,18 @@ export function AIRouterImageSettingsPage({
   const saveDraft = (): void => {
     if (!draft) return
     void run('save', async () => {
-      const clearApiKey = apiKeyLoaded && draft.hasApiKey && !draft.apiKey
+      const clearApiKey =
+        draft.type === 'openai-compatible' && apiKeyLoaded && draft.hasApiKey && !draft.apiKey
       const saved = await application.saveImageConfig({
         id: draft.id,
         name: draft.name,
-        type: 'openai-compatible',
+        type: draft.type,
         baseUrl: draft.baseUrl,
         models: draft.models,
-        apiKey: !clearApiKey && draft.apiKey !== apiKeyBaseline ? draft.apiKey : undefined,
+        apiKey:
+          draft.type === 'openai-compatible' && !clearApiKey && draft.apiKey !== apiKeyBaseline
+            ? draft.apiKey
+            : undefined,
         clearApiKey
       })
       setConfigs((current) => upsert(current ?? [], saved))
@@ -151,76 +147,9 @@ export function AIRouterImageSettingsPage({
           {error}
         </div>
       ) : null}
-      <SettingsSection title="生成方式" description="图像生成与文本生成使用独立的 Provider 配置。">
-        <SettingsRow
-          label="当前模式"
-          description="手动模式会弹出窗口，复制提示词后导入本地文件或剪贴板图片。"
-        >
-          <div className={styles.imageModeToggle} role="group" aria-label="图像生成模式">
-            <button
-              type="button"
-              aria-pressed={settings.mode === 'manual'}
-              data-active={settings.mode === 'manual' || undefined}
-              onClick={() => saveSettings({ mode: 'manual' })}
-            >
-              手动生成
-            </button>
-            <button
-              type="button"
-              aria-pressed={settings.mode === 'provider'}
-              data-active={settings.mode === 'provider' || undefined}
-              disabled={!configs.some((config) => config.models.some((model) => model.enabled))}
-              onClick={() => {
-                const first = firstImageModel(configs)
-                if (first) saveSettings({ mode: 'provider', ...first })
-              }}
-            >
-              API Provider
-            </button>
-          </div>
-        </SettingsRow>
-        {settings.mode === 'provider' ? (
-          <SettingsRow label="默认模型" description="业务调用未指定模型时使用此模型。">
-            <select
-              aria-label="默认图像模型"
-              className={styles.inputWide}
-              disabled={Boolean(busy)}
-              value={selectedProviderModel}
-              onChange={(event) => {
-                const [providerConfigId, modelId] = JSON.parse(event.target.value) as [
-                  string,
-                  string
-                ]
-                if (providerConfigId && modelId)
-                  saveSettings({ mode: 'provider', providerConfigId, modelId })
-              }}
-            >
-              {configs.flatMap((config) =>
-                config.models
-                  .filter((model) => model.enabled)
-                  .map((model) => (
-                    <option
-                      key={`${config.id}:${model.id}`}
-                      value={modelSelectionValue(config.id, model.id)}
-                    >
-                      {config.name} / {model.id}
-                    </option>
-                  ))
-              )}
-            </select>
-          </SettingsRow>
-        ) : null}
-        {feedback ? (
-          <div className={styles.operationFeedback}>
-            <Check aria-hidden="true" />
-            <span>{feedback}</span>
-          </div>
-        ) : null}
-      </SettingsSection>
-
       <SettingsSection
         title="图像 Provider"
-        description="单独管理图像生成服务，不复用文本 Provider。"
+        description="单独管理图像生成服务，不复用文本 Provider；具体调用时选择 Provider。"
       >
         <div className={styles.providerToolbar}>
           <span>共 {configs.length} 个 Provider</span>
@@ -240,11 +169,17 @@ export function AIRouterImageSettingsPage({
                 <span className={styles.providerText}>
                   <span className={styles.providerName}>{config.name}</span>
                   <span className={styles.providerMeta}>
-                    <span>OpenAI Compatible</span>
-                    <span>
-                      {config.models.filter((model) => model.enabled).length} 个已启用模型
-                    </span>
-                    <span>{config.hasApiKey ? '已配置密钥' : '未配置密钥'}</span>
+                    <span>{providerTypeLabel(config.type)}</span>
+                    {config.type === 'manual' ? (
+                      <span>通过弹窗导入生成结果</span>
+                    ) : (
+                      <>
+                        <span>
+                          {config.models.filter((model) => model.enabled).length} 个已启用模型
+                        </span>
+                        <span>{config.hasApiKey ? '已配置密钥' : '未配置密钥'}</span>
+                      </>
+                    )}
                   </span>
                 </span>
               </button>
@@ -285,7 +220,11 @@ export function AIRouterImageSettingsPage({
             <div className={styles.editorBody}>
               <SettingsSection
                 title="基础配置"
-                description="图像 Provider 的 API Key 使用独立加密存储。"
+                description={
+                  draft.type === 'manual'
+                    ? '手动 Provider 会通过全局弹窗完成图片导入。'
+                    : '图像 Provider 的 API Key 使用独立加密存储。'
+                }
               >
                 <SettingsRow label="配置名称">
                   <input
@@ -295,193 +234,268 @@ export function AIRouterImageSettingsPage({
                     onChange={(event) => setDraft({ ...draft, name: event.target.value })}
                   />
                 </SettingsRow>
-                <SettingsRow label="Base URL">
-                  <input
-                    aria-label="图像 Base URL"
-                    className={styles.inputWide}
-                    value={draft.baseUrl}
-                    onChange={(event) => setDraft({ ...draft, baseUrl: event.target.value })}
-                  />
-                </SettingsRow>
-                <SettingsRow label="API Key">
-                  <div className={styles.secretControl}>
-                    <div className={styles.secretInputWrap}>
-                      <input
-                        aria-label="图像 API Key"
-                        className={styles.inputWide}
-                        type={apiKeyVisible ? 'text' : 'password'}
-                        placeholder={draft.hasApiKey ? '已安全保存' : '输入 API Key'}
-                        value={draft.apiKey}
-                        onChange={(event) => setDraft({ ...draft, apiKey: event.target.value })}
-                      />
-                      <button
-                        aria-label={apiKeyVisible ? '隐藏图像 API Key' : '显示图像 API Key'}
-                        className={styles.secretVisibility}
-                        type="button"
-                        onClick={() => {
-                          if (!draft.id || !draft.hasApiKey || apiKeyLoaded || draft.apiKey)
-                            setApiKeyVisible(!apiKeyVisible)
-                          else
-                            void run('api-key', async () => {
-                              const apiKey =
-                                (await application.readImageApiKey(draft.id as string)) ?? ''
-                              setDraft((current) => (current ? { ...current, apiKey } : current))
-                              setApiKeyBaseline(apiKey)
-                              setApiKeyLoaded(true)
-                              setApiKeyVisible(true)
-                            })
-                        }}
-                      >
-                        {apiKeyVisible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
-                      </button>
-                    </div>
-                  </div>
-                </SettingsRow>
-              </SettingsSection>
-              <SettingsSection
-                title="图像模型"
-                description="从服务获取模型列表，或手动添加模型 ID。"
-              >
-                <div className={styles.modelToolbar}>
-                  <Button
-                    icon={Download}
-                    disabled={Boolean(busy)}
-                    onClick={() =>
-                      void run('models', async () => {
-                        const discovered = await application.listImageModels(
-                          toInput(draft, apiKeyBaseline, apiKeyLoaded)
-                        )
-                        const existing = new Map(draft.models.map((model) => [model.id, model]))
+                <SettingsRow label="Provider 类型">
+                  {draft.id ? (
+                    <input
+                      aria-label="图像 Provider 类型"
+                      className={styles.input}
+                      disabled
+                      value={providerTypeLabel(draft.type)}
+                    />
+                  ) : (
+                    <select
+                      aria-label="图像 Provider 类型"
+                      className={styles.input}
+                      value={draft.type}
+                      onChange={(event) =>
                         setDraft({
                           ...draft,
-                          models: discovered
-                            .map(
-                              (model) => existing.get(model.id) ?? { id: model.id, enabled: false }
-                            )
-                            .concat(
-                              draft.models.filter(
-                                (model) => !discovered.some((item) => item.id === model.id)
-                              )
-                            )
+                          type: event.target.value as AIRouterImageProviderType
                         })
-                        setFeedback(`获取到 ${discovered.length} 个模型`)
-                      })
-                    }
-                  >
-                    获取模型列表
-                  </Button>
-                  <div className={styles.addModel}>
-                    <input
-                      aria-label="手动图像模型 ID"
-                      className={styles.input}
-                      value={manualModel}
-                      onChange={(event) => setManualModel(event.target.value)}
-                    />
-                    <Button
-                      icon={Plus}
-                      size="small"
-                      disabled={!manualModel.trim()}
-                      onClick={() => {
-                        const id = manualModel.trim()
-                        if (id && !draft.models.some((model) => model.id === id))
-                          setDraft({ ...draft, models: [...draft.models, { id, enabled: true }] })
-                        setManualModel('')
-                      }}
+                      }
                     >
-                      添加
-                    </Button>
-                  </div>
-                </div>
-                {draft.models.length ? (
-                  <div className={styles.modelList}>
-                    {draft.models.map((model) => (
-                      <div className={styles.modelItem} key={model.id}>
-                        <label className={styles.modelToggle}>
+                      <option value="openai-compatible">OpenAI Compatible</option>
+                      <option value="manual">手动生成</option>
+                    </select>
+                  )}
+                </SettingsRow>
+                {draft.type === 'openai-compatible' ? (
+                  <>
+                    <SettingsRow label="Base URL">
+                      <input
+                        aria-label="图像 Base URL"
+                        className={styles.inputWide}
+                        value={draft.baseUrl}
+                        onChange={(event) => setDraft({ ...draft, baseUrl: event.target.value })}
+                      />
+                    </SettingsRow>
+                    <SettingsRow label="API Key">
+                      <div className={styles.secretControl}>
+                        <div className={styles.secretInputWrap}>
                           <input
-                            type="checkbox"
-                            checked={model.enabled}
-                            onChange={(event) =>
+                            aria-label="图像 API Key"
+                            className={styles.inputWide}
+                            type={apiKeyVisible ? 'text' : 'password'}
+                            placeholder={draft.hasApiKey ? '已安全保存' : '输入 API Key'}
+                            value={draft.apiKey}
+                            onChange={(event) => setDraft({ ...draft, apiKey: event.target.value })}
+                          />
+                          <button
+                            aria-label={apiKeyVisible ? '隐藏图像 API Key' : '显示图像 API Key'}
+                            className={styles.secretVisibility}
+                            type="button"
+                            onClick={() => {
+                              if (!draft.id || !draft.hasApiKey || apiKeyLoaded || draft.apiKey)
+                                setApiKeyVisible(!apiKeyVisible)
+                              else
+                                void run('api-key', async () => {
+                                  const apiKey =
+                                    (await application.readImageApiKey(draft.id as string)) ?? ''
+                                  setDraft((current) =>
+                                    current ? { ...current, apiKey } : current
+                                  )
+                                  setApiKeyBaseline(apiKey)
+                                  setApiKeyLoaded(true)
+                                  setApiKeyVisible(true)
+                                })
+                            }}
+                          >
+                            {apiKeyVisible ? (
+                              <EyeOff aria-hidden="true" />
+                            ) : (
+                              <Eye aria-hidden="true" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </SettingsRow>
+                  </>
+                ) : null}
+              </SettingsSection>
+              {draft.type === 'openai-compatible' ? (
+                <SettingsSection
+                  title="图像模型"
+                  description="从服务获取模型列表，或手动添加模型 ID。"
+                >
+                  <div className={styles.modelToolbar}>
+                    <Button
+                      icon={Download}
+                      disabled={Boolean(busy)}
+                      onClick={() =>
+                        void run('models', async () => {
+                          const discovered = await application.listImageModels(
+                            toInput(draft, apiKeyBaseline, apiKeyLoaded)
+                          )
+                          const existing = new Map(draft.models.map((model) => [model.id, model]))
+                          setDraft({
+                            ...draft,
+                            models: discovered
+                              .map(
+                                (model) =>
+                                  existing.get(model.id) ?? { id: model.id, enabled: false }
+                              )
+                              .concat(
+                                draft.models.filter(
+                                  (model) => !discovered.some((item) => item.id === model.id)
+                                )
+                              )
+                          })
+                          setFeedback(`获取到 ${discovered.length} 个模型`)
+                        })
+                      }
+                    >
+                      获取模型列表
+                    </Button>
+                    <div className={styles.addModel}>
+                      <input
+                        aria-label="手动图像模型 ID"
+                        className={styles.input}
+                        value={manualModel}
+                        onChange={(event) => setManualModel(event.target.value)}
+                      />
+                      <Button
+                        icon={Plus}
+                        size="small"
+                        disabled={!manualModel.trim()}
+                        onClick={() => {
+                          const id = manualModel.trim()
+                          if (id && !draft.models.some((model) => model.id === id))
+                            setDraft({ ...draft, models: [...draft.models, { id, enabled: true }] })
+                          setManualModel('')
+                        }}
+                      >
+                        添加
+                      </Button>
+                    </div>
+                  </div>
+                  {draft.models.length ? (
+                    <div className={styles.modelList}>
+                      {draft.models.map((model) => (
+                        <div className={styles.modelItem} key={model.id}>
+                          <label className={styles.modelToggle}>
+                            <input
+                              type="checkbox"
+                              checked={model.enabled}
+                              onChange={(event) =>
+                                setDraft({
+                                  ...draft,
+                                  models: draft.models.map((candidate) =>
+                                    candidate.id === model.id
+                                      ? { ...candidate, enabled: event.target.checked }
+                                      : candidate
+                                  )
+                                })
+                              }
+                            />
+                            <span>{model.id}</span>
+                          </label>
+                          <button
+                            aria-label={`移除图像模型 ${model.id}`}
+                            className={styles.removeModel}
+                            type="button"
+                            onClick={() =>
                               setDraft({
                                 ...draft,
-                                models: draft.models.map((candidate) =>
-                                  candidate.id === model.id
-                                    ? { ...candidate, enabled: event.target.checked }
-                                    : candidate
+                                models: draft.models.filter(
+                                  (candidate) => candidate.id !== model.id
                                 )
                               })
                             }
-                          />
-                          <span>{model.id}</span>
-                        </label>
-                        <button
-                          aria-label={`移除图像模型 ${model.id}`}
-                          className={styles.removeModel}
-                          type="button"
-                          onClick={() =>
-                            setDraft({
-                              ...draft,
-                              models: draft.models.filter((candidate) => candidate.id !== model.id)
-                            })
-                          }
-                        >
-                          <Trash2 aria-hidden="true" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className={styles.emptyModels}>尚未添加模型。</p>
-                )}
-              </SettingsSection>
-              <SettingsSection
-                title="连接测试"
-                description="实际生成一张测试图片，可能产生 Provider 费用。"
-              >
-                <SettingsRow label="测试模型">
-                  <select
-                    aria-label="测试图像模型"
-                    className={styles.inputWide}
-                    value={selectedTestModel}
-                    onChange={(event) => setTestModelId(event.target.value)}
-                  >
-                    {!enabledModels.length ? <option value="">请先启用模型</option> : null}
-                    {enabledModels.map((model) => (
-                      <option key={model.id} value={model.id}>
-                        {model.id}
-                      </option>
-                    ))}
-                  </select>
-                </SettingsRow>
-                <div className={styles.sectionActions}>
-                  <Button
-                    icon={TestTube2}
-                    disabled={!selectedTestModel || Boolean(busy)}
-                    onClick={() =>
-                      void run('test', async () => {
-                        const result = await application.testImageConnection(
-                          toInput(draft, apiKeyBaseline, apiKeyLoaded),
-                          selectedTestModel
-                        )
-                        const url = URL.createObjectURL(
-                          new Blob([new Uint8Array(result.image.data)], {
-                            type: result.image.mediaType
+                          >
+                            <Trash2 aria-hidden="true" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={styles.emptyModels}>尚未添加模型。</p>
+                  )}
+                </SettingsSection>
+              ) : (
+                <SettingsSection
+                  title="测试生成"
+                  description="打开手动导入窗口，导入一张测试图片以确认流程可用。"
+                >
+                  <div className={styles.sectionActions}>
+                    <Button
+                      icon={TestTube2}
+                      disabled={Boolean(busy)}
+                      onClick={() =>
+                        void run('test', async () => {
+                          const result = await manualGenerator.generate('一枚简洁的绿色圆形图标')
+                          const url = URL.createObjectURL(
+                            new Blob([new Uint8Array(result.data)], { type: result.mediaType })
+                          )
+                          setTestPreview((current) => {
+                            if (current) URL.revokeObjectURL(current)
+                            return url
                           })
-                        )
-                        setTestPreview((current) => {
-                          if (current) URL.revokeObjectURL(current)
-                          return url
+                          setFeedback('测试图片已导入')
                         })
-                        setFeedback('连接成功，测试图片已生成')
-                      })
-                    }
-                  >
-                    测试连接
-                  </Button>
+                      }
+                    >
+                      测试手动生成
+                    </Button>
+                  </div>
+                </SettingsSection>
+              )}
+              {draft.type === 'openai-compatible' ? (
+                <SettingsSection
+                  title="连接测试"
+                  description="实际生成一张测试图片，可能产生 Provider 费用。"
+                >
+                  <SettingsRow label="测试模型">
+                    <select
+                      aria-label="测试图像模型"
+                      className={styles.inputWide}
+                      value={selectedTestModel}
+                      onChange={(event) => setTestModelId(event.target.value)}
+                    >
+                      {!enabledModels.length ? <option value="">请先启用模型</option> : null}
+                      {enabledModels.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.id}
+                        </option>
+                      ))}
+                    </select>
+                  </SettingsRow>
+                  <div className={styles.sectionActions}>
+                    <Button
+                      icon={TestTube2}
+                      disabled={!selectedTestModel || Boolean(busy)}
+                      onClick={() =>
+                        void run('test', async () => {
+                          const result = await application.testImageConnection(
+                            toInput(draft, apiKeyBaseline, apiKeyLoaded),
+                            selectedTestModel
+                          )
+                          const url = URL.createObjectURL(
+                            new Blob([new Uint8Array(result.image.data)], {
+                              type: result.image.mediaType
+                            })
+                          )
+                          setTestPreview((current) => {
+                            if (current) URL.revokeObjectURL(current)
+                            return url
+                          })
+                          setFeedback('连接成功，测试图片已生成')
+                        })
+                      }
+                    >
+                      测试连接
+                    </Button>
+                  </div>
+                </SettingsSection>
+              ) : null}
+              {feedback ? (
+                <div className={styles.operationFeedback}>
+                  <Check aria-hidden="true" />
+                  <span>{feedback}</span>
                 </div>
-                {testPreview ? (
-                  <img className={styles.imageTestPreview} alt="测试生成图片" src={testPreview} />
-                ) : null}
-              </SettingsSection>
+              ) : null}
+              {testPreview ? (
+                <img className={styles.imageTestPreview} alt="测试生成图片" src={testPreview} />
+              ) : null}
             </div>
             <footer className={styles.editorFooter}>
               <div>
@@ -505,7 +519,7 @@ export function AIRouterImageSettingsPage({
                 <Button
                   icon={Save}
                   variant="primary"
-                  disabled={!draftModified || Boolean(busy)}
+                  disabled={!draft.name.trim() || !draftModified || Boolean(busy)}
                   onClick={saveDraft}
                 >
                   保存 Provider
@@ -518,7 +532,11 @@ export function AIRouterImageSettingsPage({
       <ConfirmModal
         danger
         confirmLabel="删除配置"
-        message={`将删除“${deleteTarget?.name ?? ''}”的图像配置和加密密钥。`}
+        message={
+          deleteTarget?.type === 'manual'
+            ? `将删除“${deleteTarget.name}”的手动生成配置。`
+            : `将删除“${deleteTarget?.name ?? ''}”的图像配置和加密密钥。`
+        }
         open={Boolean(deleteTarget)}
         title="删除图像 Provider 配置？"
         onCancel={() => setDeleteTarget(null)}
@@ -528,9 +546,8 @@ export function AIRouterImageSettingsPage({
           if (!target) return
           void run('delete', async () => {
             await application.deleteImageConfig(target.id)
-            setConfigs((current) => (current ?? []).filter((config) => config.id !== target.id))
-            if (settings.mode === 'provider' && settings.providerConfigId === target.id)
-              setSettings(await application.getImageSettings())
+            const nextConfigs = await application.listImageConfigs()
+            setConfigs(nextConfigs)
             closeEditor()
             toast.success(`已删除“${target.name}”`)
           })
@@ -543,6 +560,7 @@ export function AIRouterImageSettingsPage({
 function createDraft(): ImageProviderDraft {
   return {
     name: '',
+    type: 'openai-compatible',
     baseUrl: 'https://api.openai.com/v1',
     apiKey: '',
     hasApiKey: false,
@@ -563,7 +581,7 @@ function toInput(
   return {
     id: draft.id,
     name: draft.name,
-    type: 'openai-compatible',
+    type: draft.type,
     baseUrl: draft.baseUrl,
     models: draft.models,
     apiKey: !clearApiKey && draft.apiKey !== baseline ? draft.apiKey : undefined,
@@ -581,6 +599,7 @@ function isModified(
     return true
   return (
     draft.name !== saved.name ||
+    draft.type !== saved.type ||
     draft.baseUrl !== saved.baseUrl ||
     JSON.stringify(draft.models) !== JSON.stringify(saved.models)
   )
@@ -596,18 +615,8 @@ function upsert(
     : configs.map((config) => (config.id === saved.id ? saved : config))
 }
 
-function firstImageModel(
-  configs: readonly AIRouterImageProviderConfigSummary[]
-): { providerConfigId: string; modelId: string } | null {
-  for (const config of configs) {
-    const model = config.models.find((candidate) => candidate.enabled)
-    if (model) return { providerConfigId: config.id, modelId: model.id }
-  }
-  return null
-}
-
-function modelSelectionValue(providerConfigId: string, modelId: string): string {
-  return JSON.stringify([providerConfigId, modelId])
+function providerTypeLabel(type: AIRouterImageProviderType): string {
+  return type === 'manual' ? '手动生成' : 'OpenAI Compatible'
 }
 
 function errorMessage(reason: unknown): string {
@@ -617,6 +626,7 @@ function errorMessage(reason: unknown): string {
 interface ImageProviderDraft {
   id?: string
   name: string
+  type: AIRouterImageProviderType
   baseUrl: string
   apiKey: string
   hasApiKey: boolean
