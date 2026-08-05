@@ -376,6 +376,10 @@ describe('Template pages', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '页面' }))
     expect(screen.getByRole('button', { name: '选择节点 page-2' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '折叠节点 frame' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '折叠节点 frame' }))
+
+    expect(screen.queryByRole('button', { name: '选择节点 page' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '选择节点 page-2' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '展开节点 frame' })).toBeInTheDocument()
   })
 })

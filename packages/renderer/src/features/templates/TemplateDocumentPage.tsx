@@ -116,6 +116,15 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   }
 
   const toggleCollapsed = (nodeId: string): void => {
+    const node = root ? locateNode(root, nodeId)?.node : null
+    if (
+      node?.type === 'frame' &&
+      collapsedIds.has(nodeId) &&
+      containsDescendant(node, session.selectedNodeId)
+    ) {
+      session.selectNode(nodeId)
+      return
+    }
     setCollapsedIds((current) => {
       const next = new Set(current)
       if (next.has(nodeId)) next.delete(nodeId)
