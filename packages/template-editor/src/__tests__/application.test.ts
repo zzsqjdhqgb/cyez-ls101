@@ -323,6 +323,77 @@ describe('TemplateApplication', () => {
     ).toHaveLength(2)
   })
 
+  it('原子复制函数闭包并插入已补齐绑定的调用节点', async () => {
+    const { repository, application } = setup()
+    const source = functionDocument(FUNCTION_A, 'Question')
+    source.content.inputs = [
+      { name: 'prompt', type: 'string' },
+      { name: 'duration', type: 'number' }
+    ]
+    source.content.outputs = [
+      {
+        name: 'result',
+        type: 'string',
+        expression: {
+          type: 'string',
+          source: 'variable',
+          ref: { scope: 'local', name: 'prompt' }
+        }
+      }
+    ]
+    await repository.saveFunction(source)
+    const template = await application.templates.create({
+      name: 'Exam',
+      root: root([
+        {
+          id: 'function-call',
+          type: 'choice-question',
+          stem: { type: 'string', parts: [{ type: 'literal', value: 'Existing' }] },
+          options: [
+            { id: 'a', content: { type: 'string', parts: [{ type: 'literal', value: 'A' }] } },
+            { id: 'b', content: { type: 'string', parts: [{ type: 'literal', value: 'B' }] } }
+          ],
+          outputName: 'result-1'
+        }
+      ])
+    })
+
+    const inserted = await application.templates.insertFunctionCall(
+      template.templateId,
+      FUNCTION_A,
+      'root'
+    )
+
+    expect(inserted.template.revision).toBe(template.revision + 1)
+    expect(inserted.template.resources.functions).toHaveLength(1)
+    expect(inserted.callNodeId).toBe('function-call-1')
+    expect(inserted.template.content.root.children[1]).toMatchObject({
+      id: 'function-call-1',
+      type: 'function',
+      functionRef: inserted.functionRef,
+      inputs: {
+        prompt: { type: 'string', source: 'literal', value: '' },
+        duration: { type: 'number', source: 'literal', value: 0 }
+      },
+      outputNames: { result: 'result-2' }
+    })
+  })
+
+  it('调用节点插入失败时不保存刚复制的函数资源', async () => {
+    const { repository, application } = setup()
+    await repository.saveFunction(functionDocument(FUNCTION_A, 'Question'))
+    const template = await application.templates.create({ name: 'Exam' })
+
+    await expect(
+      application.templates.insertFunctionCall(template.templateId, FUNCTION_A, 'missing-parent')
+    ).rejects.toMatchObject({
+      code: 'EDIT_REJECTED',
+      params: { code: 'PARENT_NOT_FOUND', path: 'parentId' }
+    })
+
+    expect(await repository.getTemplate(template.templateId)).toEqual(template)
+  })
+
   it('从可达的函数资源收集 Schema manifest', async () => {
     const { repository, application, requestedSchemas } = setup()
     const source = functionDocument(FUNCTION_A, 'Schema consumer')

@@ -11,6 +11,7 @@ import {
   createFunctionResource,
   createTemplateDocument
 } from './id'
+import { editTemplateDocument } from './mutations'
 import type { TemplateRepository } from './repository'
 import type {
   DslEditorState,
@@ -45,6 +46,10 @@ export interface EmbeddedFunctionResult {
   functionRef: string
 }
 
+export interface InsertedFunctionCallResult extends EmbeddedFunctionResult {
+  callNodeId: string
+}
+
 export interface TemplateBrowserApplication {
   listTemplates(): Promise<TemplateSummary[]>
   listFunctions(): Promise<FunctionSummary[]>
@@ -59,6 +64,12 @@ export interface TemplateDocumentApplication {
   save(document: TemplateDocument): Promise<TemplateDocument>
   delete(templateId: string): Promise<void>
   embedFunction(templateId: string, functionId: string): Promise<EmbeddedFunctionResult>
+  insertFunctionCall(
+    templateId: string,
+    functionId: string,
+    parentId: string,
+    index?: number
+  ): Promise<InsertedFunctionCallResult>
   pruneFunctionResources(templateId: string): Promise<TemplateDocument>
   validate(templateId: string): Promise<TemplateValidationResult>
   compile(
@@ -98,7 +109,8 @@ export class TemplateApplicationError extends Error {
       | 'TEMPLATE_NOT_FOUND'
       | 'FUNCTION_NOT_FOUND'
       | 'RECURSIVE_FUNCTION_DEPENDENCY'
-      | 'FUNCTION_RESOURCE_COLLISION',
+      | 'FUNCTION_RESOURCE_COLLISION'
+      | 'EDIT_REJECTED',
     message: string,
     public readonly params: Readonly<Record<string, string>> = {}
   ) {
@@ -157,6 +169,62 @@ export function createTemplateApplication(
     }
   }
 
+  const embedFunctionClosure = async (
+    template: TemplateDocument,
+    functionId: string
+  ): Promise<{ template: TemplateDocument; resource: FunctionDef }> => {
+    const resources = new Map(template.resources.functions.map((item) => [item.id, item]))
+    const bySourceId = new Map<string, FunctionDef>()
+
+    const snapshot = async (sourceId: string, stack: readonly string[]): Promise<FunctionDef> => {
+      const cached = bySourceId.get(sourceId)
+      if (cached) return cached
+      if (stack.includes(sourceId)) {
+        const chain = [...stack, sourceId]
+        throw new TemplateApplicationError(
+          'RECURSIVE_FUNCTION_DEPENDENCY',
+          `Recursive function dependency: ${chain.join(' -> ')}`,
+          { functionId: sourceId, chain: chain.join(' -> ') }
+        )
+      }
+      const source = await repository.getFunction(sourceId)
+      if (!source) {
+        throw new TemplateApplicationError(
+          'FUNCTION_NOT_FOUND',
+          `Function not found: ${sourceId}`,
+          { functionId: sourceId }
+        )
+      }
+      const body = await rewriteFunctionRefs(source.content.body, (nestedId) =>
+        snapshot(nestedId, [...stack, sourceId])
+      )
+      const resource = await createFunctionResource({ ...source.content, body })
+      const existing = resources.get(resource.id)
+      if (
+        existing &&
+        canonicalizeFunctionContent(existing) !== canonicalizeFunctionContent(resource)
+      ) {
+        throw new TemplateApplicationError(
+          'FUNCTION_RESOURCE_COLLISION',
+          `Function resource ID collision: ${resource.id}`,
+          { resourceId: resource.id }
+        )
+      }
+      resources.set(resource.id, existing ?? resource)
+      bySourceId.set(sourceId, existing ?? resource)
+      return existing ?? resource
+    }
+
+    const resource = await snapshot(functionId, [])
+    return {
+      template: {
+        ...template,
+        resources: { functions: [...resources.values()] }
+      },
+      resource
+    }
+  }
+
   return {
     browser: {
       async listTemplates() {
@@ -194,58 +262,39 @@ export function createTemplateApplication(
       delete: (templateId) => repository.deleteTemplate(templateId),
       async embedFunction(templateId, functionId) {
         const template = await loadTemplate(templateId)
-        const resources = new Map(template.resources.functions.map((item) => [item.id, item]))
-        const bySourceId = new Map<string, FunctionDef>()
-
-        const snapshot = async (
-          sourceId: string,
-          stack: readonly string[]
-        ): Promise<FunctionDef> => {
-          const cached = bySourceId.get(sourceId)
-          if (cached) return cached
-          if (stack.includes(sourceId)) {
-            const chain = [...stack, sourceId]
-            throw new TemplateApplicationError(
-              'RECURSIVE_FUNCTION_DEPENDENCY',
-              `Recursive function dependency: ${chain.join(' -> ')}`,
-              { functionId: sourceId, chain: chain.join(' -> ') }
-            )
-          }
-          const source = await repository.getFunction(sourceId)
-          if (!source) {
-            throw new TemplateApplicationError(
-              'FUNCTION_NOT_FOUND',
-              `Function not found: ${sourceId}`,
-              { functionId: sourceId }
-            )
-          }
-          const body = await rewriteFunctionRefs(source.content.body, (nestedId) =>
-            snapshot(nestedId, [...stack, sourceId])
+        const embedded = await embedFunctionClosure(template, functionId)
+        const saved = await repository.saveTemplate(embedded.template)
+        return { template: saved, functionRef: embedded.resource.id }
+      },
+      async insertFunctionCall(templateId, functionId, parentId, index) {
+        const template = await loadTemplate(templateId)
+        const embedded = await embedFunctionClosure(template, functionId)
+        const edited = editTemplateDocument(embedded.template, {
+          type: 'insert-function-call',
+          parentId,
+          index,
+          functionRef: embedded.resource.id,
+          signature: embedded.resource
+        })
+        if (!edited.applied) {
+          throw new TemplateApplicationError(
+            'EDIT_REJECTED',
+            `Function call insertion rejected: ${edited.error.code} at ${edited.error.path}`,
+            { code: edited.error.code, path: edited.error.path }
           )
-          const resource = await createFunctionResource({ ...source.content, body })
-          const existing = resources.get(resource.id)
-          if (
-            existing &&
-            canonicalizeFunctionContent(existing) !== canonicalizeFunctionContent(resource)
-          ) {
-            throw new TemplateApplicationError(
-              'FUNCTION_RESOURCE_COLLISION',
-              `Function resource ID collision: ${resource.id}`,
-              { resourceId: resource.id }
-            )
-          }
-          resources.set(resource.id, existing ?? resource)
-          bySourceId.set(sourceId, existing ?? resource)
-          return existing ?? resource
         }
-
-        const resource = await snapshot(functionId, [])
-        const updated = {
-          ...template,
-          resources: { functions: [...resources.values()] }
+        const callNodeId = edited.changes.find(
+          (change) => change.kind === 'insert' && change.subjectId !== undefined
+        )?.subjectId
+        if (!callNodeId) {
+          throw new TemplateApplicationError(
+            'EDIT_REJECTED',
+            'Function call insertion did not report the inserted node',
+            { code: 'MISSING_INSERT_RESULT', path: 'content.root' }
+          )
         }
-        const saved = await repository.saveTemplate(updated)
-        return { template: saved, functionRef: resource.id }
+        const saved = await repository.saveTemplate(edited.document)
+        return { template: saved, functionRef: embedded.resource.id, callNodeId }
       },
       async pruneFunctionResources(templateId) {
         const template = await loadTemplate(templateId)

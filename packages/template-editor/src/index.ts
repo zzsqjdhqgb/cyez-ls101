@@ -3,6 +3,7 @@
 export { createTemplateApplication, TemplateApplicationError } from './application'
 export type {
   EmbeddedFunctionResult,
+  InsertedFunctionCallResult,
   FunctionDocumentApplication,
   FunctionSummary,
   TemplateApplication,
@@ -11,6 +12,18 @@ export type {
   TemplateDocumentApplication,
   TemplateSummary
 } from './application'
+
+export { editFunctionDocument, editTemplateDocument } from './mutations'
+export type {
+  DefinitionOperation,
+  DocumentEditChange,
+  DocumentEditError,
+  DocumentEditErrorCode,
+  DocumentEditResult,
+  FunctionCallSignature,
+  FunctionDocumentOperation,
+  TemplateDocumentOperation
+} from './mutations'
 
 export {
   canonicalizeFunctionContent,
