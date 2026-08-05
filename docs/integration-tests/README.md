@@ -9,11 +9,11 @@
 
 ## 测试目录
 
-| 测试源文件                                                                                       | 路径数 | 详细文档                                        | 主要范围                                                                                      |
-| ------------------------------------------------------------------------------------------------ | -----: | ----------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| [`tests/integration/electron-app.spec.ts`](../../tests/integration/electron-app.spec.ts)         |      6 | [Electron 应用测试路径](./electron-app.md)      | 应用启动、preload、IPC、导航、配置与业务数据持久化、窗口控制                                  |
-| [`tests/integration/airouter.spec.ts`](../../tests/integration/airouter.spec.ts)                 |     27 | [AIRouter 集成测试路径](./airouter.md)          | Provider、密钥、模型、文本流、图像生成、错误、取消与 UI 状态                                  |
-| [`tests/integration/interface-editor.spec.ts`](../../tests/integration/interface-editor.spec.ts) |     15 | [题型编辑器集成测试路径](./interface-editor.md) | 草稿、发布、题型列表/详情、实例 CRUD、JSON 覆盖、AI 生成/生图、导出导入、字段树与图片字段操作 |
+| 测试源文件                                                                                       | 路径数 | 详细文档                                        | 主要范围                                                          |
+| ------------------------------------------------------------------------------------------------ | -----: | ----------------------------------------------- | ----------------------------------------------------------------- |
+| [`tests/integration/electron-app.spec.ts`](../../tests/integration/electron-app.spec.ts)         |      6 | [Electron 应用测试路径](./electron-app.md)      | 应用启动、preload、IPC、导航、配置与业务数据持久化、窗口控制      |
+| [`tests/integration/airouter.spec.ts`](../../tests/integration/airouter.spec.ts)                 |     27 | [AIRouter 集成测试路径](./airouter.md)          | Provider、密钥、模型、文本流、图像生成、错误、取消与 UI 状态      |
+| [`tests/integration/interface-editor.spec.ts`](../../tests/integration/interface-editor.spec.ts) |      3 | [题型编辑器集成测试路径](./interface-editor.md) | 题型编辑器经真实 AIRouter 链路的 AI 文本/图像生成、校验失败与取消 |
 
 Playwright 的全局配置位于 [`playwright.config.ts`](../../playwright.config.ts)。当前固定使用单 worker，避免多个 Electron 实例争用系统剪贴板和显示服务。
 
