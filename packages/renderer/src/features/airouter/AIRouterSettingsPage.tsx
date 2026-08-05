@@ -649,7 +649,7 @@ export function AIRouterTextSettingsPage({
                 <Button
                   icon={Save}
                   variant="primary"
-                  disabled={!draftModified || Boolean(busy)}
+                  disabled={!draft.name.trim() || !draftModified || Boolean(busy)}
                   onClick={() =>
                     void run(
                       'save',
