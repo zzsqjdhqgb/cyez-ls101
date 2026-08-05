@@ -55,9 +55,9 @@ Template 和 Function 工作文档都带 revision。首次保存使用 0，后�
 
 当前操作覆盖节点插入、删除、移动和复制，页面内容块与时间线，选择题选项，Collector 分页，函数调用输入/出参绑定，函数输入与手动出参，Interface requirement、Schema use、Schema 字段绑定和编辑器私有状态。节点使用定义作用域内唯一 ID 定位；列表索引在操作时检查边界。
 
-新增或复制时自动分配不冲突的节点 ID、内容块 ID、选项 ID、录音名、选择题输出名和函数调用出参名。复制子树会同步重写复制体内部的局部变量引用以及 focus 的 `callPath/questionId`。删除 ChoiceViewBlock 会清除时间线中对应的 override；删除函数调用节点会在同一次 Template 编辑中清除传递不可达的函数资源。`reconcile-function-call` 根据最新签名移除过期 binding key、保留仍有效的值并补齐新增输入和出参名。
+新增或复制时自动分配不冲突的节点 ID、内容块 ID、选项 ID、录音名、选择题输出名和函数调用出参名。复制子树会同步重写复制体内部的局部变量引用以及 relative focus 的 `callPath/questionId`；absolute focus 始终保留从 Template 根出发的原地址。删除 ChoiceViewBlock 会清除时间线中对应的 override；删除函数调用节点会在同一次 Template 编辑中清除传递不可达的函数资源。`reconcile-function-call` 根据最新签名移除过期 binding key、保留仍有效的值并补齐新增输入和出参名。
 
-工作文档允许暂时不完整。删除函数输入、录音或选择题后，无法无歧义决定替代值的普通表达式不会被猜测式删除或改写，而由严格语义校验返回可定位错误。函数输入重命名和 Interface alias 重命名属于含义明确的操作，会重写当前可编辑正文中的对应变量引用。
+工作文档允许暂时不完整。删除函数输入、录音或选择题后，无法无歧义决定替代值的普通表达式不会被猜测式删除或改写，而由严格语义校验返回可定位错误。函数输入重命名和 Interface alias 重命名属于含义明确的操作，会重写当前可编辑正文中的对应变量引用。内嵌函数资源不随 alias 重命名而重写：函数禁止直接引用 Template Interface alias，只能通过调用输入接收 Interface 值，因此函数资源不捕获调用方命名空间。
 
 `templates.validate()` 和 `templates.compile()` 会根据当前 Template 收集 Interface 与 Schema 身份，通过调用方提供的跨模块查询函数取得清单。编译时再把 Interface 实例选择及仓储定位器交给底层异步编译器。Schema Editor 尚未实现实际查询 API，当前通过窄依赖接口接入。
 
@@ -72,6 +72,7 @@ Template 和 Function 工作文档都带 revision。首次保存使用 0，后�
 - Interface 别名、依赖、acceptedVars 和变量类型。
 - 节点、内容块、选项、局部变量和 Schema use 的唯一性。
 - 页面、时间线、文本插值、函数输入与出参的变量解析和类型匹配。
+- 函数定义不能直接引用 Template Interface alias，Interface 值必须从调用点经函数输入传入。
 - Schema、评分块、完整字段绑定及 text/audio/choice 类型匹配。
 - 函数缺失、输入/出参映射完整性和递归调用。
 - 内嵌函数资源 ID 格式、正文摘要和嵌套依赖闭包。

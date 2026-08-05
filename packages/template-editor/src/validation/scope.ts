@@ -28,12 +28,14 @@ export function validateDefinitionScope(
   outputs: readonly FunctionOutputDef[],
   path: string,
   functionStack: readonly string[],
-  state: ValidationState
+  state: ValidationState,
+  interfaceVariablesAllowed = true
 ): void {
   const scope: ScopeState = {
     symbols: new Map(),
     usedNames: new Map(),
-    nodeIds: new Map()
+    nodeIds: new Map(),
+    interfaceVariablesAllowed
   }
 
   inputs.forEach((input, index) => {
@@ -315,7 +317,8 @@ function validateFunctionCall(
     func.outputs,
     `${path}.function.body`,
     [...functionStack, func.id],
-    state
+    state,
+    false
   )
 }
 
@@ -436,6 +439,14 @@ function resolveVariableType(
       return undefined
     }
     return symbol.type
+  }
+
+  if (!scope.interfaceVariablesAllowed) {
+    addError(state, path, 'INTERFACE_VARIABLE_IN_FUNCTION', {
+      alias: ref.alias,
+      varName: ref.varName
+    })
+    return undefined
   }
 
   const requirement = state.requirementsByAlias.get(ref.alias)

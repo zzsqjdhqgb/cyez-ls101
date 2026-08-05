@@ -33,6 +33,7 @@ export type TemplateValidationErrorCode =
   | 'DUPLICATE_LOCAL_NAME'
   | 'UNKNOWN_LOCAL_VARIABLE'
   | 'UNKNOWN_INTERFACE_ALIAS'
+  | 'INTERFACE_VARIABLE_IN_FUNCTION'
   | 'EXPRESSION_TYPE_MISMATCH'
   | 'UNKNOWN_FUNCTION'
   | 'RECURSIVE_FUNCTION_CALL'
@@ -96,6 +97,7 @@ export interface ScopeState {
   symbols: Map<string, LocalSymbol>
   usedNames: Map<string, string>
   nodeIds: Map<string, string>
+  interfaceVariablesAllowed: boolean
 }
 
 const LOCAL_NAME_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_-]*$/

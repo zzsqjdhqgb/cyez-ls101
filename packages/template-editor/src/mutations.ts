@@ -615,12 +615,17 @@ function applyDefinitionOperation(
     case 'copy-node':
       return copyNode(state, operation.nodeId, operation.parentId, operation.index)
     case 'set-frame-choice-collector':
-      return updateNodeByType(state, operation.frameId, 'frame', (frame) => ({
-        ...frame,
-        ...(operation.pages === null
-          ? { choiceCollector: undefined }
-          : { choiceCollector: { pages: structuredClone([...operation.pages]) } })
-      }))
+      return updateNodeByType(state, operation.frameId, 'frame', (frame) => {
+        if (operation.pages === null) {
+          const withoutCollector = { ...frame }
+          delete withoutCollector.choiceCollector
+          return withoutCollector
+        }
+        return {
+          ...frame,
+          choiceCollector: { pages: structuredClone([...operation.pages]) }
+        }
+      })
     case 'insert-content-block':
       return editPage(state, operation.pageId, (page, path) => {
         const index = insertionIndex(operation.index, page.content.blocks.length)
@@ -1548,7 +1553,7 @@ function rewriteChoiceViewport(
   viewport: ChoiceViewport,
   idMap: ReadonlyMap<string, string>
 ): ChoiceViewport {
-  if (viewport.mode !== 'focus') return viewport
+  if (viewport.mode !== 'focus' || viewport.questionRef.scope === 'absolute') return viewport
   return {
     ...viewport,
     questionRef: {
@@ -1564,11 +1569,10 @@ function removeChoiceOverrides(timeline: readonly TimelineStep[], blockId: strin
     if (!step.choiceViewOverrides || !(blockId in step.choiceViewOverrides)) return step
     const choiceViewOverrides = { ...step.choiceViewOverrides }
     delete choiceViewOverrides[blockId]
-    return {
-      ...step,
-      choiceViewOverrides:
-        Object.keys(choiceViewOverrides).length > 0 ? choiceViewOverrides : undefined
-    }
+    if (Object.keys(choiceViewOverrides).length > 0) return { ...step, choiceViewOverrides }
+    const withoutOverrides = { ...step }
+    delete withoutOverrides.choiceViewOverrides
+    return withoutOverrides
   })
 }
 

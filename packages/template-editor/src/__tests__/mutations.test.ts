@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { parseFunctionDocument, parseTemplateDocument } from '../document-parser'
 import { createFunctionDocument, createFunctionResource, createTemplateDocument } from '../id'
 import { editFunctionDocument, editTemplateDocument } from '../mutations'
 import type { FunctionDocumentOperation, TemplateDocumentOperation } from '../mutations'
+import { FileTemplateRepository, type TemplateStore } from '../repository'
+import { validateTemplateDocument } from '../validation'
 import type {
   ChoiceQuestionNode,
   FunctionContent,
@@ -76,6 +79,7 @@ function applyTemplateEdit(
   const result = editTemplateDocument(document, operation)
   expect(result.applied).toBe(true)
   if (!result.applied) throw new Error(`${result.error.code}: ${result.error.path}`)
+  expect(parseTemplateDocument(result.document)).toBe(result.document)
   return result.document
 }
 
@@ -86,7 +90,58 @@ function applyFunctionEdit(
   const result = editFunctionDocument(document, operation)
   expect(result.applied).toBe(true)
   if (!result.applied) throw new Error(`${result.error.code}: ${result.error.path}`)
+  expect(parseFunctionDocument(result.document)).toBe(result.document)
   return result.document
+}
+
+function expectTemplateEditError(
+  document: TemplateDocument,
+  operation: TemplateDocumentOperation,
+  code: Parameters<typeof expectEditError>[2],
+  path: string,
+  params: Readonly<Record<string, string | number>>
+): void {
+  expectEditError(
+    editTemplateDocument(document, operation),
+    operation,
+    code,
+    path,
+    params,
+    document
+  )
+}
+
+function expectFunctionEditError(
+  document: ReturnType<typeof createFunctionDocument>,
+  operation: FunctionDocumentOperation,
+  code: Parameters<typeof expectEditError>[2],
+  path: string,
+  params: Readonly<Record<string, string | number>>
+): void {
+  expectEditError(
+    editFunctionDocument(document, operation),
+    operation,
+    code,
+    path,
+    params,
+    document
+  )
+}
+
+function expectEditError(
+  result: ReturnType<typeof editTemplateDocument> | ReturnType<typeof editFunctionDocument>,
+  operation: TemplateDocumentOperation | FunctionDocumentOperation,
+  code: import('../mutations').DocumentEditErrorCode,
+  path: string,
+  params: Readonly<Record<string, string | number>>,
+  document: TemplateDocument | ReturnType<typeof createFunctionDocument>
+): void {
+  expect(result).toEqual({
+    applied: false,
+    document,
+    operation,
+    error: { code, path, params }
+  })
 }
 
 describe('Template 文档编辑', () => {
@@ -148,6 +203,22 @@ describe('Template 文档编辑', () => {
                     questionId: 'question'
                   }
                 }
+              },
+              {
+                id: 'absolute-focus',
+                type: 'choice-view' as const,
+                x: 0,
+                y: 0,
+                width: 100,
+                height: 100,
+                defaultViewport: {
+                  mode: 'focus' as const,
+                  questionRef: {
+                    scope: 'absolute' as const,
+                    callPath: ['call'],
+                    questionId: 'question'
+                  }
+                }
               }
             ]
           },
@@ -183,6 +254,17 @@ describe('Template 文档编辑', () => {
         scope: 'relative',
         callPath: ['call-1'],
         questionId: 'question-1'
+      }
+    })
+    const absoluteFocus = copiedPage.content.blocks[1]
+    expect(absoluteFocus).toMatchObject({
+      defaultViewport: {
+        mode: 'focus',
+        questionRef: {
+          scope: 'absolute',
+          callPath: ['call'],
+          questionId: 'question'
+        }
       }
     })
   })
@@ -229,6 +311,38 @@ describe('Template 文档编辑', () => {
     expect(editedPage).toMatchObject({ content: { blocks: [] } })
     if (editedPage.type !== 'page') return
     expect(editedPage.timeline[0].choiceViewOverrides).toBeUndefined()
+    expect(Object.hasOwn(editedPage.timeline[0], 'choiceViewOverrides')).toBe(false)
+  })
+
+  it('清除可选配置后仍能通过 parser 和仓储往返', async () => {
+    let collectorDocument = template([
+      {
+        id: 'section',
+        type: 'frame',
+        children: [],
+        choiceCollector: { pages: [{ questionCount: 1 }] }
+      }
+    ])
+    collectorDocument = applyTemplateEdit(collectorDocument, {
+      type: 'set-frame-choice-collector',
+      frameId: 'section',
+      pages: null
+    })
+    const section = collectorDocument.content.root.children[0]
+    expect(Object.hasOwn(section, 'choiceCollector')).toBe(false)
+
+    let overrideDocument = template([page()])
+    overrideDocument = applyTemplateEdit(overrideDocument, {
+      type: 'remove-content-block',
+      pageId: 'page',
+      blockId: 'choice-view'
+    })
+
+    for (const document of [collectorDocument, overrideDocument]) {
+      const repository = new FileTemplateRepository(new MemoryStore())
+      const saved = await repository.saveTemplate(document)
+      expect(await repository.getTemplate(document.templateId)).toEqual(saved)
+    }
   })
 
   it('复制录音时间步骤时生成新的输出名', () => {
@@ -352,6 +466,117 @@ describe('Template 文档编辑', () => {
     if (!result.applied) return
     expect(JSON.stringify(result.document.content)).not.toContain('"alias":"old"')
     expect(JSON.stringify(result.document.content)).toContain('"alias":"data"')
+  })
+
+  it('Interface alias 重命名不改写内容寻址函数资源，函数直接引用会被明确拒绝', async () => {
+    const interfaceId = `sha256:${'1'.repeat(64)}`
+    const schemaId = `sha256:${'2'.repeat(64)}`
+    const resource = await createFunctionResource({
+      name: 'Invalid direct Interface use',
+      inputs: [],
+      body: root([
+        {
+          id: 'inner-page',
+          type: 'page',
+          content: {
+            blocks: [
+              {
+                id: 'prompt',
+                type: 'text',
+                x: 0,
+                y: 0,
+                text: {
+                  type: 'string',
+                  parts: [
+                    {
+                      type: 'variable',
+                      ref: { scope: 'interface', alias: 'old', varName: 'prompt' }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          timeline: []
+        }
+      ]),
+      outputs: [],
+      schemaUses: []
+    })
+    const document = createTemplateDocument(
+      {
+        name: 'Template',
+        description: '',
+        interfaces: [{ alias: 'old', interfaceId, acceptedVars: ['prompt'] }],
+        root: root([
+          {
+            id: 'call',
+            type: 'function',
+            functionRef: resource.id,
+            inputs: {},
+            outputNames: {}
+          }
+        ]),
+        schemaUses: [
+          {
+            useId: 'text',
+            schemaId,
+            blockId: 'text',
+            bindings: { prompt: { type: 'literal', value: 'Prompt' } }
+          }
+        ]
+      },
+      { functions: [resource] }
+    )
+    const result = editTemplateDocument(document, {
+      type: 'update-interface-requirement',
+      alias: 'old',
+      requirement: { alias: 'data', interfaceId, acceptedVars: ['prompt'] }
+    })
+
+    expect(result.applied).toBe(true)
+    if (!result.applied) return
+    expect(result.document.resources).toBe(document.resources)
+    expect(
+      await validateTemplateDocument(result.document, {
+        interfaceManifests: [
+          {
+            interfaceId,
+            interfaceName: 'Data',
+            vars: [
+              {
+                varName: 'prompt',
+                type: 'text',
+                description: 'Prompt',
+                example: 'Hello',
+                path: 'prompt'
+              }
+            ]
+          }
+        ],
+        schemaManifests: [
+          {
+            schemaId,
+            schemaName: 'Schema',
+            blocks: [
+              {
+                blockId: 'text',
+                blockName: 'Text',
+                fields: [{ varName: 'prompt', type: 'text' }]
+              }
+            ]
+          }
+        ]
+      })
+    ).toMatchObject({
+      valid: false,
+      errors: [
+        {
+          code: 'INTERFACE_VARIABLE_IN_FUNCTION',
+          params: { alias: 'old', varName: 'prompt' }
+        }
+      ]
+    })
   })
 
   it('删除最后一个函数调用节点时同步清理不可达函数资源闭包', async () => {
@@ -512,7 +737,385 @@ describe('Template 文档编辑', () => {
     expect(document.content.schemaUses).toEqual([])
     expect(document.editorState).toEqual({})
   })
+
+  it('覆盖剩余公开成功操作并保证每一步都可解析', () => {
+    let document = createTemplateDocument({
+      name: 'Template',
+      description: '',
+      interfaces: [{ alias: 'data', interfaceId: 'interface', acceptedVars: ['prompt'] }],
+      root: root([
+        page(),
+        question('question', 'answer'),
+        {
+          id: 'call',
+          type: 'function',
+          functionRef: 'function',
+          inputs: { stale: { type: 'string', source: 'literal', value: 'remove' } },
+          outputNames: { stale: 'stale-output' }
+        }
+      ]),
+      schemaUses: [
+        {
+          useId: 'use',
+          schemaId: 'schema',
+          blockId: 'block',
+          bindings: { prompt: { type: 'literal', value: 'Before' } }
+        }
+      ]
+    })
+    document = applyTemplateEdit(document, { type: 'set-template-name', value: 'Renamed' })
+    document = applyTemplateEdit(document, {
+      type: 'set-template-description',
+      value: 'Description'
+    })
+    document = applyTemplateEdit(document, {
+      type: 'update-interface-requirement',
+      alias: 'data',
+      requirement: { alias: 'data', interfaceId: 'interface', acceptedVars: ['prompt', 'image'] }
+    })
+    document = applyTemplateEdit(document, {
+      type: 'insert-function-call',
+      parentId: 'root',
+      functionRef: 'new-function',
+      signature: {
+        inputs: [{ name: 'count', type: 'number' }],
+        outputs: [{ name: 'result', type: 'string' }]
+      }
+    })
+    document = applyTemplateEdit(document, {
+      type: 'update-content-block',
+      pageId: 'page',
+      blockId: 'choice-view',
+      block: {
+        id: 'renamed-view',
+        type: 'choice-view',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        defaultViewport: { mode: 'free' }
+      }
+    })
+    document = applyTemplateEdit(document, {
+      type: 'copy-content-block',
+      pageId: 'page',
+      blockId: 'renamed-view'
+    })
+    const pageAfterCopy = document.content.root.children[0]
+    if (pageAfterCopy.type !== 'page') throw new Error('Expected page')
+    expect(pageAfterCopy.timeline[0].choiceViewOverrides).toEqual({
+      'renamed-view': {
+        mode: 'focus',
+        questionRef: { scope: 'relative', callPath: [], questionId: 'question' }
+      }
+    })
+    document = applyTemplateEdit(document, {
+      type: 'move-content-block',
+      pageId: 'page',
+      blockId: 'renamed-view-1',
+      index: 0
+    })
+    document = applyTemplateEdit(document, {
+      type: 'update-content-block',
+      pageId: 'page',
+      blockId: 'renamed-view-1',
+      block: { id: 'copied-text', type: 'text', x: 5, y: 5, text: text('Copy') }
+    })
+    document = applyTemplateEdit(document, {
+      type: 'update-timeline-step',
+      pageId: 'page',
+      index: 0,
+      step: { type: 'countdown', seconds: number(2) }
+    })
+    document = applyTemplateEdit(document, {
+      type: 'copy-timeline-step',
+      pageId: 'page',
+      index: 0
+    })
+    document = applyTemplateEdit(document, {
+      type: 'remove-timeline-step',
+      pageId: 'page',
+      index: 1
+    })
+    document = applyTemplateEdit(document, {
+      type: 'set-choice-question',
+      nodeId: 'question',
+      stem: text('Updated question'),
+      outputName: 'updated-answer'
+    })
+    document = applyTemplateEdit(document, {
+      type: 'update-choice-option',
+      nodeId: 'question',
+      optionId: 'a',
+      option: { id: 'first', content: text('First') }
+    })
+    document = applyTemplateEdit(document, {
+      type: 'copy-choice-option',
+      nodeId: 'question',
+      optionId: 'first'
+    })
+    document = applyTemplateEdit(document, {
+      type: 'remove-choice-option',
+      nodeId: 'question',
+      optionId: 'first-1'
+    })
+    document = applyTemplateEdit(document, {
+      type: 'set-function-call-input',
+      nodeId: 'call',
+      inputName: 'stale',
+      expression: null
+    })
+    document = applyTemplateEdit(document, {
+      type: 'set-function-call-output-name',
+      nodeId: 'call',
+      outputName: 'stale',
+      value: null
+    })
+    document = applyTemplateEdit(document, {
+      type: 'update-schema-use',
+      useId: 'use',
+      use: {
+        useId: 'renamed-use',
+        schemaId: 'schema',
+        blockId: 'block',
+        bindings: { prompt: { type: 'literal', value: 'After' } }
+      }
+    })
+    document = applyTemplateEdit(document, {
+      type: 'set-schema-binding',
+      useId: 'renamed-use',
+      fieldName: 'prompt',
+      expression: null
+    })
+
+    const editedPage = document.content.root.children[0]
+    expect(document.content).toMatchObject({ name: 'Renamed', description: 'Description' })
+    expect(editedPage).toMatchObject({
+      content: {
+        blocks: [{ id: 'copied-text' }, { id: 'renamed-view' }]
+      },
+      timeline: [{ type: 'countdown', seconds: { value: 2 } }]
+    })
+    if (editedPage.type !== 'page') return
+    expect(editedPage.timeline[0].choiceViewOverrides).toBeUndefined()
+    expect(document.content.root.children[2]).toMatchObject({ inputs: {}, outputNames: {} })
+    expect(document.content.root.children[3]).toMatchObject({
+      id: 'function-call',
+      inputs: { count: { type: 'number', value: 0 } },
+      outputNames: { result: 'result-1' }
+    })
+    expect(document.content.schemaUses[0]).toMatchObject({
+      useId: 'renamed-use',
+      bindings: {}
+    })
+  })
+
+  it('为每个 Template 编辑错误码返回完整且稳定的错误契约', () => {
+    const basic = template([
+      page(),
+      question('question', 'answer'),
+      {
+        id: 'section',
+        type: 'frame',
+        children: [{ id: 'nested', type: 'frame', children: [] }]
+      }
+    ])
+    expectTemplateEditError(
+      basic,
+      { type: 'remove-node', nodeId: 'missing' },
+      'NODE_NOT_FOUND',
+      'nodeId',
+      { nodeId: 'missing' }
+    )
+    expectTemplateEditError(
+      basic,
+      { type: 'insert-node', parentId: 'missing', node: question('new', 'new-answer') },
+      'PARENT_NOT_FOUND',
+      'parentId',
+      { parentId: 'missing' }
+    )
+    expectTemplateEditError(
+      basic,
+      { type: 'insert-node', parentId: 'page', node: question('new', 'new-answer') },
+      'PARENT_NOT_FRAME',
+      'root.children[0]',
+      { parentId: 'page' }
+    )
+    expectTemplateEditError(
+      basic,
+      { type: 'remove-node', nodeId: 'root' },
+      'ROOT_NODE_IMMUTABLE',
+      'root',
+      { nodeId: 'root' }
+    )
+    expectTemplateEditError(
+      basic,
+      { type: 'move-node', nodeId: 'section', parentId: 'nested' },
+      'MOVE_INTO_DESCENDANT',
+      'parentId',
+      { nodeId: 'section', parentId: 'nested' }
+    )
+    expectTemplateEditError(
+      basic,
+      {
+        type: 'insert-node',
+        parentId: 'root',
+        index: 99,
+        node: question('new', 'new-answer')
+      },
+      'INVALID_INDEX',
+      'root.children',
+      { index: 99 }
+    )
+    expectTemplateEditError(
+      basic,
+      { type: 'set-frame-choice-collector', frameId: 'page', pages: [] },
+      'WRONG_NODE_TYPE',
+      'root.children[0]',
+      { expected: 'frame', actual: 'page' }
+    )
+    expectTemplateEditError(
+      basic,
+      { type: 'remove-content-block', pageId: 'page', blockId: 'missing' },
+      'CONTENT_BLOCK_NOT_FOUND',
+      'root.children[0].content.blocks',
+      { blockId: 'missing' }
+    )
+    const blockConflict = template([
+      {
+        ...page(),
+        content: {
+          blocks: [
+            { id: 'first', type: 'text', x: 0, y: 0, text: text('First') },
+            { id: 'second', type: 'text', x: 0, y: 0, text: text('Second') }
+          ]
+        }
+      }
+    ])
+    expectTemplateEditError(
+      blockConflict,
+      {
+        type: 'update-content-block',
+        pageId: 'page',
+        blockId: 'first',
+        block: { id: 'second', type: 'text', x: 0, y: 0, text: text('Conflict') }
+      },
+      'CONTENT_BLOCK_ID_CONFLICT',
+      'root.children[0].content.blocks',
+      { blockId: 'second' }
+    )
+    expectTemplateEditError(
+      basic,
+      { type: 'remove-timeline-step', pageId: 'page', index: 99 },
+      'TIMELINE_STEP_NOT_FOUND',
+      'root.children[0].timeline',
+      { index: 99 }
+    )
+    expectTemplateEditError(
+      basic,
+      { type: 'remove-choice-option', nodeId: 'question', optionId: 'missing' },
+      'CHOICE_OPTION_NOT_FOUND',
+      'root.children[1].options',
+      { optionId: 'missing' }
+    )
+    expectTemplateEditError(
+      basic,
+      {
+        type: 'update-choice-option',
+        nodeId: 'question',
+        optionId: 'a',
+        option: { id: 'b', content: text('Conflict') }
+      },
+      'CHOICE_OPTION_ID_CONFLICT',
+      'root.children[1].options',
+      { optionId: 'b' }
+    )
+    expectTemplateEditError(
+      basic,
+      { type: 'remove-schema-use', useId: 'missing' },
+      'SCHEMA_USE_NOT_FOUND',
+      'schemaUses',
+      { useId: 'missing' }
+    )
+    const schemaConflict = createTemplateDocument({
+      ...basic.content,
+      schemaUses: [{ useId: 'use', schemaId: 'schema', blockId: 'block', bindings: {} }]
+    })
+    expectTemplateEditError(
+      schemaConflict,
+      {
+        type: 'insert-schema-use',
+        use: { useId: 'use', schemaId: 'other', blockId: 'other', bindings: {} }
+      },
+      'SCHEMA_USE_ID_CONFLICT',
+      'schemaUses',
+      { useId: 'use' }
+    )
+    expectTemplateEditError(
+      basic,
+      { type: 'remove-interface-requirement', alias: 'missing' },
+      'INTERFACE_REQUIREMENT_NOT_FOUND',
+      'content.interfaces',
+      { alias: 'missing' }
+    )
+    const interfaceConflict = createTemplateDocument({
+      ...basic.content,
+      interfaces: [{ alias: 'data', interfaceId: 'interface', acceptedVars: ['prompt'] }]
+    })
+    expectTemplateEditError(
+      interfaceConflict,
+      {
+        type: 'insert-interface-requirement',
+        requirement: { alias: 'data', interfaceId: 'other', acceptedVars: ['value'] }
+      },
+      'INTERFACE_ALIAS_CONFLICT',
+      'content.interfaces',
+      { alias: 'data' }
+    )
+  })
 })
+
+class MemoryStore implements TemplateStore {
+  constructor(
+    private readonly state = new Map<string, unknown>(),
+    private readonly path: string[] = []
+  ) {}
+
+  scope(name: string): TemplateStore {
+    return new MemoryStore(this.state, [...this.path, name])
+  }
+
+  async readText<T>(filename: string): Promise<T | null> {
+    return (this.state.get(this.key(filename)) as T | undefined) ?? null
+  }
+
+  async writeText<T>(filename: string, data: T): Promise<void> {
+    this.state.set(this.key(filename), structuredClone(data))
+  }
+
+  async compareAndSwapText<T>(filename: string, expected: T | null, data: T): Promise<boolean> {
+    const key = this.key(filename)
+    const current = this.state.has(key) ? this.state.get(key) : null
+    if (JSON.stringify(current) !== JSON.stringify(expected)) return false
+    this.state.set(key, structuredClone(data))
+    return true
+  }
+
+  async listScopes(): Promise<string[]> {
+    return []
+  }
+
+  async clear(): Promise<void> {
+    const prefix = `${this.path.join('/')}/`
+    for (const key of this.state.keys()) {
+      if (key.startsWith(prefix)) this.state.delete(key)
+    }
+  }
+
+  private key(filename: string): string {
+    return [...this.path, filename].join('/')
+  }
+}
 
 describe('Function 文档编辑', () => {
   it('重命名函数输入时重写正文、函数出参和 Schema 内的局部引用', () => {
@@ -684,5 +1287,97 @@ describe('Function 文档编辑', () => {
     })
     expect(document.content.inputs).toEqual([])
     expect(document.content.outputs).toEqual([])
+  })
+
+  it('覆盖函数名称及输入输出更新操作并保证每一步可解析', () => {
+    let document = createFunctionDocument({
+      name: 'Function',
+      inputs: [{ name: 'prompt', type: 'string' }],
+      body: root(),
+      outputs: [
+        {
+          name: 'result',
+          type: 'string',
+          expression: { type: 'string', parts: [{ type: 'literal', value: 'Before' }] }
+        }
+      ],
+      schemaUses: []
+    })
+    document = applyFunctionEdit(document, { type: 'set-function-name', value: 'Renamed' })
+    document = applyFunctionEdit(document, {
+      type: 'update-function-input',
+      name: 'prompt',
+      input: { name: 'count', type: 'number' }
+    })
+    document = applyFunctionEdit(document, {
+      type: 'update-function-output',
+      name: 'result',
+      output: {
+        name: 'result',
+        type: 'number',
+        expression: {
+          type: 'number',
+          source: 'variable',
+          ref: { scope: 'local', name: 'count' }
+        }
+      }
+    })
+
+    expect(document.content).toMatchObject({
+      name: 'Renamed',
+      inputs: [{ name: 'count', type: 'number' }],
+      outputs: [{ name: 'result', type: 'number', expression: { ref: { name: 'count' } } }]
+    })
+  })
+
+  it('为 Function 专属编辑错误码返回完整且稳定的错误契约', () => {
+    const document = createFunctionDocument({
+      name: 'Function',
+      inputs: [{ name: 'first', type: 'string' }],
+      body: root(),
+      outputs: [
+        {
+          name: 'result',
+          type: 'string',
+          expression: { type: 'string', parts: [{ type: 'literal', value: 'Result' }] }
+        }
+      ],
+      schemaUses: []
+    })
+    expectFunctionEditError(
+      document,
+      { type: 'remove-function-input', name: 'missing' },
+      'FUNCTION_INPUT_NOT_FOUND',
+      'content.inputs',
+      { name: 'missing' }
+    )
+    expectFunctionEditError(
+      document,
+      { type: 'insert-function-input', input: { name: 'first', type: 'number' } },
+      'FUNCTION_INPUT_NAME_CONFLICT',
+      'content.inputs',
+      { name: 'first' }
+    )
+    expectFunctionEditError(
+      document,
+      { type: 'remove-function-output', name: 'missing' },
+      'FUNCTION_OUTPUT_NOT_FOUND',
+      'content.outputs',
+      { name: 'missing' }
+    )
+    expectFunctionEditError(
+      document,
+      {
+        type: 'insert-function-output',
+        output: {
+          name: 'result',
+          type: 'string',
+          expression: { type: 'string', parts: [] }
+        }
+      },
+      'FUNCTION_OUTPUT_NAME_CONFLICT',
+      'content.outputs',
+      { name: 'result' }
+    )
   })
 })

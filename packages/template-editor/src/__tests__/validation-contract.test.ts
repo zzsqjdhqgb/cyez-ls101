@@ -428,4 +428,109 @@ describe('Template 校验错误契约', () => {
       }
     ])
   })
+
+  it('函数只能通过输入接收 Interface 值，不能直接引用 Template alias', () => {
+    const func: FunctionDef = {
+      id: FUNCTION_ID,
+      name: 'Interface consumer',
+      inputs: [],
+      body: root([
+        {
+          id: 'inner-page',
+          type: 'page',
+          content: {
+            blocks: [
+              {
+                id: 'prompt',
+                type: 'text',
+                x: 0,
+                y: 0,
+                text: {
+                  type: 'string',
+                  parts: [
+                    {
+                      type: 'variable',
+                      ref: { scope: 'interface', alias: 'speaking', varName: 'sentence' }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          timeline: []
+        }
+      ]),
+      outputs: [],
+      schemaUses: []
+    }
+    const result = validateTemplateContent(
+      content({
+        root: root([
+          { id: 'call', type: 'function', functionRef: FUNCTION_ID, inputs: {}, outputNames: {} }
+        ])
+      }),
+      context({ functions: [func] })
+    )
+
+    expect(result.errors).toEqual([
+      {
+        path: 'root.children[0].function.body.children[0].content.blocks[0].text.parts[0]',
+        code: 'INTERFACE_VARIABLE_IN_FUNCTION',
+        params: { alias: 'speaking', varName: 'sentence' }
+      }
+    ])
+  })
+
+  it('允许 Template 调用点把 Interface 值绑定给函数输入', () => {
+    const func: FunctionDef = {
+      id: FUNCTION_ID,
+      name: 'Input consumer',
+      inputs: [{ name: 'prompt', type: 'string' }],
+      body: root([
+        {
+          id: 'inner-page',
+          type: 'page',
+          content: {
+            blocks: [
+              {
+                id: 'prompt',
+                type: 'text',
+                x: 0,
+                y: 0,
+                text: {
+                  type: 'string',
+                  parts: [{ type: 'variable', ref: { scope: 'local', name: 'prompt' } }]
+                }
+              }
+            ]
+          },
+          timeline: []
+        }
+      ]),
+      outputs: [],
+      schemaUses: []
+    }
+    const result = validateTemplateContent(
+      content({
+        root: root([
+          {
+            id: 'call',
+            type: 'function',
+            functionRef: FUNCTION_ID,
+            inputs: {
+              prompt: {
+                type: 'string',
+                source: 'variable',
+                ref: { scope: 'interface', alias: 'speaking', varName: 'sentence' }
+              }
+            },
+            outputNames: {}
+          }
+        ])
+      }),
+      context({ functions: [func] })
+    )
+
+    expect(result).toEqual({ valid: true, errors: [] })
+  })
 })

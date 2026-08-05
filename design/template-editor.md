@@ -130,7 +130,7 @@ type TextExpression = {
 }
 ~~~
 
-文本变量可以来自 Interface、函数输入或当前作用域中的其他输出。只有 Interface 变量在用户可见语法中带命名空间，例如 [@speaking.sentence]；局部变量通过当前作用域中的名称引用。
+Template 根中的文本变量可以来自 Interface 或当前作用域中的其他输出。只有 Interface 变量在用户可见语法中带命名空间，例如 [@speaking.sentence]；局部变量通过当前作用域中的名称引用。函数定义不能直接引用 Template 的 Interface alias，所需 Interface 值必须在调用点绑定到函数输入，再由函数内部以局部变量使用。
 
 ### 4.2 时间线
 
@@ -230,6 +230,8 @@ type OutputExpression =
 Template 不保存对函数库 UUID 的活动引用。复制完成后，Template 根节点和内嵌函数中的 `functionRef` 都只指向 Template 自身资源集合中的 `FunctionDef.id`。修改或删除函数库源文档不会影响已有 Template；更新到新版本必须显式重新复制。函数不会在存储时摊平，输入、出参、局部命名空间、Schema 消费和相对 focus 地址仍保留原有函数边界，最终导出时才由编译器展开。递归函数依赖不允许复制。
 
 函数输入、页面录音输出、选择题输出和函数出参共享同一个局部命名空间，所有名称必须整体唯一。新增输入或出参时系统生成可编辑的默认名称，例如 text-1、recording-1、answer-1。
+
+函数是独立复用边界，不捕获调用方的 Interface 命名空间。Template 调用函数时可以把 Interface 变量绑定到函数输入；函数正文、函数出参和函数内部 Schema 绑定只能引用函数输入及函数自身产生的局部变量。这样 Interface alias 重命名不需要重建内容寻址的函数资源 DAG。
 
 函数出参表达式对函数内部来说就是普通可填写变量槽位，因此可以引用函数输入、页面录音输出、其他局部变量和固定文本。函数节点对外只暴露函数声明的出参，函数内部的其他变量不会穿透到外层。
 
