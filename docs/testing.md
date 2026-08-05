@@ -20,7 +20,6 @@ Vitest 根配置在 `vitest.config.ts`，具体环境由各 workspace 的 `vites
 yarn test                    # 依次运行 Vitest 和 Playwright 全部测试
 yarn test:vitest             # Vitest 单元测试和包级集成测试
 yarn test:playwright         # 构建并运行 Playwright Electron 集成测试
-yarn test:playwright:headed  # 以可见窗口运行 Playwright Electron 集成测试
 yarn test:watch              # Vitest 监视模式
 yarn test:coverage           # Vitest 覆盖率
 ```
@@ -34,29 +33,7 @@ xvfb-run -a yarn test:playwright
 
 ## Electron 集成测试
 
-配置文件为 `playwright.config.ts`，测试位于 `tests/integration/`。测试固定使用单 worker，避免多个 Electron 实例争用系统剪贴板和显示服务。
-
-套件开始前会构建一次应用。每个测试都会：
-
-- 启动真实 Electron 应用。
-- 创建独立的临时用户数据目录。
-- 收集未处理的 renderer 错误。
-- 关闭应用并清理临时数据。
-
-当前场景覆盖：
-
-- BrowserWindow 安全配置与全部 preload bridge。
-- File Store、Config Store、Asset Protocol、AI Router、Clipboard 和窗口控制 IPC。
-- 工作台、题型、模板和设置主导航。
-- 外观设置保存及页面重载恢复。
-- 模板创建、编辑、保存及页面重载恢复。
-- 自定义标题栏关闭操作。
-
-文件选择器和 AI 网络请求只验证 bridge/handler 可达性。自动化测试不会打开系统对话框，也不会访问真实 AI Provider。
-
-### Linux 密钥存储
-
-集成测试设置 `LS101_INTEGRATION_TEST=1`，让 Electron 在 Linux 临时用户数据目录中使用 `basic_text` 密钥存储后端，从而不依赖 CI 容器中的桌面密钥环。正常应用启动不会启用此模式，测试结束后临时目录会被删除。
+配置文件为 `playwright.config.ts`，测试位于 `tests/integration/`。每条测试路径的操作流程、断言、数据隔离和覆盖边界统一维护在 [`docs/integration-tests/`](./integration-tests/README.md)。
 
 ## 测试产物
 
