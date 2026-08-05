@@ -1,4 +1,4 @@
-import { useEffect, useState, type JSX } from 'react'
+import { useEffect, useRef, useState, type JSX } from 'react'
 import {
   editTemplateDocument,
   type TemplateDocument,
@@ -7,6 +7,7 @@ import {
 import { ArrowLeft, Layers3, Save } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
+import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { IconButton } from '../../components/ui/IconButton'
 import { useTemplateApplication } from './TemplateApplicationContext'
@@ -14,13 +15,27 @@ import styles from './TemplateDocumentPage.module.css'
 import { templateErrorMessage } from './templateUi'
 
 export function TemplateDocumentPage(): JSX.Element {
+  const { templateId = '' } = useParams()
+  return <TemplateDocumentEditor key={templateId} templateId={templateId} />
+}
+
+function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Element {
   const application = useTemplateApplication()
   const navigate = useNavigate()
-  const { templateId = '' } = useParams()
   const [document, setDocument] = useState<TemplateDocument | null>(null)
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmLeave, setConfirmLeave] = useState(false)
+  const editVersionRef = useRef(0)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -50,29 +65,46 @@ export function TemplateDocumentPage(): JSX.Element {
       return
     }
     setDocument(result.document)
+    editVersionRef.current += 1
     setDirty(true)
     setError(null)
   }
 
   const save = async (): Promise<void> => {
     if (!document) return
+    const snapshot = document
+    const savedEditVersion = editVersionRef.current
     setSaving(true)
     setError(null)
     try {
-      setDocument(await application.templates.save(document))
-      setDirty(false)
+      const saved = await application.templates.save(snapshot)
+      if (!mountedRef.current) return
+      const hasNewerEdits = editVersionRef.current !== savedEditVersion
+      setDocument((current) => {
+        if (!current || current.templateId !== saved.templateId) return current
+        return hasNewerEdits ? { ...current, revision: saved.revision } : saved
+      })
+      setDirty(hasNewerEdits)
     } catch (reason) {
-      setError(templateErrorMessage(reason))
+      if (mountedRef.current) setError(templateErrorMessage(reason))
     } finally {
-      setSaving(false)
+      if (mountedRef.current) setSaving(false)
     }
+  }
+
+  const leave = (): void => {
+    if (dirty) {
+      setConfirmLeave(true)
+      return
+    }
+    navigate('/templates')
   }
 
   return (
     <div className={styles.editor}>
       <header className={styles.toolbar}>
         <div className={styles.identity}>
-          <IconButton icon={ArrowLeft} label="返回模板" onClick={() => navigate('/templates')} />
+          <IconButton icon={ArrowLeft} label="返回模板" onClick={leave} />
           <div>
             <h1>{document?.content.name || '未命名模板'}</h1>
             <span>{document ? `Revision ${document.revision}` : '正在加载'}</span>
@@ -126,6 +158,15 @@ export function TemplateDocumentPage(): JSX.Element {
           ) : null}
         </section>
       </div>
+      <ConfirmModal
+        confirmLabel="放弃修改"
+        danger
+        message="离开后，本次尚未保存的修改会丢失。"
+        open={confirmLeave}
+        title="放弃未保存的修改？"
+        onCancel={() => setConfirmLeave(false)}
+        onConfirm={() => navigate('/templates')}
+      />
     </div>
   )
 }
