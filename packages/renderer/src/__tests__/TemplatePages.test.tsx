@@ -382,4 +382,27 @@ describe('Template pages', () => {
     expect(screen.queryByRole('button', { name: '选择节点 page-2' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '展开节点 frame' })).toBeInTheDocument()
   })
+
+  it('collapses an expanded frame while one of its children is selected', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '选择节点 root' })
+    fireEvent.click(screen.getByRole('button', { name: '框架' }))
+    fireEvent.click(screen.getByRole('button', { name: '页面' }))
+    expect(screen.getByRole('button', { name: '选择节点 page' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '折叠节点 frame' }))
+
+    expect(screen.queryByRole('button', { name: '选择节点 page' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '展开节点 frame' })).toBeInTheDocument()
+  })
 })
