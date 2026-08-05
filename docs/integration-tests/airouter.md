@@ -3,106 +3,191 @@
  Proprietary code. Use is subject to the LICENSE file in the repository root.
 -->
 
-# AIRouter 集成测试规划
+# AIRouter 集成测试路径
 
-状态：规划中，尚未实现对应的 Playwright 测试文件。
+源文件：[`tests/integration/airouter.spec.ts`](../../tests/integration/airouter.spec.ts)
 
-本阶段只确定测试项标题和简介，不记录具体操作流程、HTTP 路由、请求样例或断言细节。实现每一项时，再将它扩展为与 [`electron-app.md`](./electron-app.md) 一致的完整测试路径文档。
+本地模拟服务：[`tests/integration/support/mock-ai-server.ts`](../../tests/integration/support/mock-ai-server.ts)
 
-## 本地模拟 API
+运行命令：
 
-AIRouter 集成测试有必要建立本地模拟 API。Provider 配置、模型发现和界面状态可以在不联网的情况下测试，但文本连接、流式生成和图像生成只有经过 AI SDK 与真实 HTTP 边界，才能覆盖协议适配、请求头、流事件、错误传播及取消行为。
+```bash
+yarn test:playwright tests/integration/airouter.spec.ts
+```
 
-建议由 Playwright fixture 在测试进程内启动轻量 Node HTTP 服务，仅监听 `127.0.0.1` 并使用系统分配的随机端口。服务同时模拟 OpenAI-compatible、Anthropic 和 OpenAI-compatible 图像协议，允许测试按场景配置成功、流式、延迟、失败、截断和无效媒体响应，并记录收到的请求供测试断言。每条测试前重置场景和请求记录，套件结束后关闭服务；不使用真实 API Key，也不访问公网。
+所有路径都使用独立的临时 Electron `userData` 目录。本地模拟服务只监听
+`127.0.0.1` 的随机端口，模拟 OpenAI-compatible、Anthropic 和图像生成协议；测试不使用真实 API Key，也不访问公网。
 
 ## 设置与初始状态
 
 ### AR-01 AI 引擎设置入口与分类导航
 
-确认用户能够从设置首页进入 AI 引擎，并在文本模型、图像模型以及尚未开放的语音分类之间切换。该项建立 AIRouter 所有后续设置测试的页面入口基线。
+测试路径：`工作台 -> 设置 -> AI 引擎 -> 文本/图像/语音合成/语音识别`。
+
+操作流程：从侧栏进入设置，再打开 AI 引擎，依次点击四个分类标签并返回文本生成。
+
+测试内容：设置入口、分类路由、选中状态以及文本 Provider 空状态均能正常显示。
 
 ### AR-02 文本空状态与默认手动图像 Provider
 
-确认全新用户数据目录中没有文本 Provider，同时图像设置自动提供可选择的“手动生成”Provider。该项覆盖两个配置域不同的初始化契约。
+测试路径：`AI 引擎/文本生成 -> AI 引擎/图像生成 -> preload 配置列表`。
+
+操作流程：检查全新目录的文本页面，再切到图像页面，并通过 preload 读取两个配置域。
+
+测试内容：文本 Provider 列表为空；图像域自动返回唯一的 `manual` Provider，且两个配置域相互独立。
 
 ## 文本 Provider 配置
 
 ### AR-03 OpenAI-compatible Provider 创建与重载
 
-确认用户能够保存包含名称、Base URL、API Key 和启用模型的 OpenAI-compatible 文本 Provider，并在 renderer 重载后看到相同的非敏感配置摘要。
+测试路径：`文本生成 -> 添加 Provider -> 保存 -> renderer reload -> 文本生成`。
+
+操作流程：通过 UI 填写名称、本地 Base URL、API Key 和手动模型，保存后重载并重新进入 AI 引擎。
+
+测试内容：名称、类型、地址、启用模型和密钥存在状态均恢复；配置摘要不包含密钥明文。
 
 ### AR-04 Anthropic Provider 创建与重载
 
-确认 Anthropic 类型可以独立保存和恢复，并保持自己的类型、默认地址语义和模型配置，不被当作 OpenAI-compatible Provider 处理。
+测试路径：`文本生成 -> 添加 Provider -> Anthropic -> 保存 -> reload`。
+
+操作流程：切换 Provider 类型，确认默认 Anthropic 地址，替换为 mock 地址并添加模型后保存和重载。
+
+测试内容：Anthropic 类型、Base URL 和模型独立持久化，编辑时类型保持锁定且未被转为 OpenAI-compatible。
 
 ### AR-05 文本 Provider API Key 生命周期
 
-覆盖已保存密钥的状态提示、按需读取、替换和清除，确认敏感值与普通 Provider 配置分开存储，列表与重载过程不会直接泄露密钥内容。
+测试路径：`已保存 Provider -> 显示密钥 -> 替换 -> 保存 -> 再次读取 -> 清空 -> 保存`。
+
+操作流程：先通过 preload 建立带密钥配置，再从 UI 按需读取密钥、替换密钥，重新读取后清空。
+
+测试内容：保存状态提示、按需读取、替换和删除均经过真实密钥存储；最终读取结果为 `null`。
 
 ### AR-06 文本模型手动管理与启用状态
 
-确认用户可以手动添加模型 ID、切换启用状态、去重并移除模型，且保存后的模型集合与界面选择状态一致。
+测试路径：`添加 Provider -> 手动添加 alpha/alpha/beta -> 禁用 beta -> 删除 alpha -> 保存`。
+
+操作流程：重复添加同一模型，再添加第二个模型，修改启用状态并删除第一个模型。
+
+测试内容：重复 ID 被去重，删除生效，禁用状态在持久化配置中保持为 `false`。
 
 ### AR-07 文本模型发现与现有配置合并
 
-使用本地模拟 API 返回无序且混合格式的模型列表，确认发现结果经过规范化和排序，并与草稿中已有模型合并而不丢失启用状态。
+测试路径：`Provider 草稿 -> 添加现有模型 -> 获取模型列表 -> mock /v1/models`。
+
+操作流程：草稿中先加入已发现模型和自定义模型，再请求 mock 返回的无序、混合格式模型列表。
+
+测试内容：有效模型被规范化并按 ID 排序；已有模型的启用状态和未发现的自定义模型被保留；请求携带草稿 API Key。
 
 ### AR-08 OpenAI-compatible 未保存草稿连接测试
 
-确认用户无需先保存 Provider 就能使用当前草稿中的 Base URL、API Key 和已启用模型完成连接测试，并且测试本身不会产生持久化配置。
+测试路径：`未保存草稿 -> 测试连接 -> /v1/chat/completions -> 配置列表`。
+
+操作流程：填写本地地址、草稿密钥和启用模型，直接点击测试连接，不执行保存。
+
+测试内容：固定短请求得到 `OK`，OpenAI Bearer 鉴权正确，测试后持久化 Provider 列表仍为空。
 
 ### AR-09 Anthropic 未保存草稿连接测试
 
-确认 Anthropic 草稿通过对应协议完成连接测试，验证类型特有的鉴权和消息协议确实经过本地模拟端点，而不是复用 OpenAI 请求格式。
+测试路径：`Anthropic 草稿 -> 测试连接 -> /v1/messages`。
+
+操作流程：选择 Anthropic，填写草稿地址、密钥和模型后执行连接测试。
+
+测试内容：请求走 Anthropic messages 路由，携带 `x-api-key` 和版本头，不产生 OpenAI chat 请求。
 
 ### AR-10 文本 Provider 编辑、删除与密钥清理
 
-确认已保存 Provider 可以修改基础字段和模型配置，删除时经过确认界面，并同时移除配置摘要与加密密钥，不影响其他 Provider。
+测试路径：`两个已保存 Provider -> 编辑目标 -> 保存 -> 删除确认 -> preload 校验`。
+
+操作流程：修改目标名称并添加模型，保存后经确认弹窗删除，再读取配置与密钥。
+
+测试内容：目标配置和密钥同时删除，读取已删除密钥返回“配置不存在”，另一个 Provider 及其密钥不受影响。
 
 ## 文本生成运行时
 
 ### AR-11 OpenAI-compatible 文本流端到端传递
 
-确认已保存且启用的 OpenAI-compatible 模型能够把本地模拟 API 的文本与推理增量依次传过 AI SDK、main、IPC、preload 和 renderer 异步迭代器，并正常结束。
+测试路径：`renderer preload -> IPC -> main AIRouter -> /v1/chat/completions SSE -> renderer`。
+
+操作流程：保存 OpenAI-compatible 配置，从 renderer 启动文本生成并收集事件直到 `done`。
+
+测试内容：两个 output 增量按顺序到达，流正常结束；HTTP 请求包含目标模型、prompt 和 `stream=true`。OpenAI chat 路径不声明 reasoning 增量。
 
 ### AR-12 Anthropic 文本流端到端传递
 
-确认 Anthropic 流式响应经过其独立协议适配后，向 renderer 提供与 OpenAI-compatible 相同的 AIRouter chunk 契约。
+测试路径：`renderer preload -> IPC -> main AIRouter -> /v1/messages SSE -> renderer`。
+
+操作流程：保存 Anthropic reasoning 模型并收集完整流事件。
+
+测试内容：Anthropic thinking block 转为 AIRouter reasoning chunk，text block 转为 output chunk，最后发送统一的 `done` 事件。
 
 ### AR-13 文本生成取消与资源释放
 
-确认 renderer 发起的取消会终止当前 IPC 生成任务和底层 HTTP 请求，异步迭代器及时结束，且监听器与 active request 不会残留到下一次生成。
+测试路径：`renderer start -> mock 延迟响应 -> renderer abort -> HTTP close -> 后续正常生成`。
+
+操作流程：启动慢模型，100 ms 后调用 preload 返回的取消函数，随后发起第二个正常请求。
+
+测试内容：取消后 renderer 不接收迟到事件，底层连接在响应前关闭，后续请求仍能完整结束，证明 active request 和监听器没有污染下一次调用。
 
 ### AR-14 文本 Provider 错误与截断反馈
 
-覆盖 HTTP 失败、Provider 流错误、长度上限和内容过滤等结果，确认 AIRouter 将它们转换为稳定、可理解的 renderer 错误，而不是静默返回不完整内容。
+测试路径：`renderer -> HTTP 401 / length finish / content_filter finish -> renderer error`。
+
+操作流程：依次调用 mock 的鉴权失败、长度截断和内容过滤模型。
+
+测试内容：Provider HTTP 错误保留服务端消息；长度和内容过滤转换为稳定的中文 AIRouter 错误，均不以 `done` 冒充成功。
 
 ## 图像 Provider 与生成
 
 ### AR-15 手动图像生成与剪贴板导入
 
-确认默认手动 Provider 能打开全局导入对话框、展示提示词、复制提示词、从真实剪贴板读取图片并把确认后的字节返回原调用方，同时在取消时正确结束请求。
+测试路径：`图像设置 -> 手动生成 -> 测试手动生成 -> 全局导入对话框 -> Electron clipboard`。
+
+操作流程：打开默认手动 Provider，复制提示词，将测试 PNG 放入系统剪贴板，从剪贴板读取并确认；再次打开后执行取消。
+
+测试内容：提示词展示和复制、真实剪贴板图片读取、预览、确认结果、成功反馈和取消关闭均正常；测试结束恢复原剪贴板。
 
 ### AR-16 OpenAI-compatible 图像 Provider 配置
 
-确认图像 Provider 使用独立于文本 Provider 的配置和密钥域，并支持保存名称、Base URL、API Key、模型及启用状态后重载恢复。
+测试路径：`图像生成 -> 添加 Provider -> 保存 -> reload -> 图像生成`。
+
+操作流程：通过 UI 填写图像名称、独立 Base URL、图像 API Key 和模型，保存后重载。
+
+测试内容：图像配置和密钥状态正确恢复；同一测试中的文本 Provider 保持在文本配置域，不与图像配置混合。
 
 ### AR-17 图像模型发现与连接预览
 
-使用本地模拟 API 发现图像模型并执行测试生成，确认设置页能够显示成功反馈和有效图片预览，且未保存草稿同样可以完成连接测试。
+测试路径：`未保存图像草稿 -> /v1/models -> 启用模型 -> /v1/images/generations -> 预览`。
+
+操作流程：使用草稿地址和密钥发现模型，启用 `mock-image` 后直接执行测试连接。
+
+测试内容：发现数量正确，连接成功反馈与图片预览可见，请求携带草稿密钥，持久化列表仍只有默认手动 Provider。
 
 ### AR-18 API 图像生成端到端传递
 
-确认消费方提交 Provider、模型、提示词和可选尺寸后，本地模拟 API 返回的图片媒体类型与字节能够经过 main、IPC 和 preload 完整到达 renderer。
+测试路径：`renderer preload -> IPC -> main AIRouter -> /v1/images/generations -> renderer`。
+
+操作流程：保存 API 图像 Provider，通过 preload 提交提示词和 `256x128` 尺寸并等待 result 事件。
+
+测试内容：请求模型、提示词和尺寸正确；返回媒体类型为 PNG，renderer 收到的字节与 mock 原始 PNG 完全一致。
 
 ### AR-19 图像生成错误、取消与结果限制
 
-覆盖请求取消、HTTP 失败、非图片媒体类型和超大结果，确认错误能传回原调用方，取消后不会再接收迟到的成功结果。
+测试路径：`HTTP 429 / 非图片字节 / 超过 20 MB / 延迟响应取消 -> renderer`。
+
+操作流程：依次调用四种 mock 模型；慢请求在 100 ms 后取消，并观察底层连接状态。
+
+测试内容：HTTP 错误、非图片结果和超限结果返回明确错误；非图片校验基于真实字节签名而非 Provider 声明；取消后无迟到 result，HTTP 连接提前关闭。
 
 ### AR-20 图像 Provider 删除与可选择项兜底
 
-确认删除图像 Provider 会同步清理其密钥；当删除后没有手动 Provider 或启用的 API 模型时，系统会恢复默认手动 Provider，保证图像功能始终存在可选择入口。
+测试路径：`API Provider + manual -> 删除 manual -> UI 删除 API -> 自动恢复 manual`。
 
-## 消费方集成说明
+操作流程：先保存唯一启用的 API Provider并删除默认手动配置，再从 UI 经确认删除 API Provider。
 
-AR-11、AR-12、AR-15 和 AR-18 不应只在设置页内部调用 AIRouter client。实现时应选择至少一个真实业务消费入口，确认设置中启用的模型或 Provider 能被消费方列出、选择并实际调用。具体消费页面和路径将在实现对应测试项时确定。
+测试内容：API 密钥随配置删除；当不存在手动 Provider 或启用 API 模型时，服务自动恢复无密钥的“手动生成”入口。
+
+## 覆盖边界
+
+- AR-11、AR-12 和 AR-18 从真实 renderer preload bridge 发起，覆盖 HTTP、AI SDK、main、IPC 和 preload，但不绑定某个题型编辑器的业务流程。
+- 题型编辑器如何列出、选择和消费 AIRouter 模型，属于题型实例编辑器的独立集成测试路径。
+- 本套件不访问公网，不验证第三方服务的实时可用性、计费或限流策略。

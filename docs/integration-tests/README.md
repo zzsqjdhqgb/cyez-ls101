@@ -12,7 +12,7 @@
 | 测试源文件                                                                               | 路径数 | 详细文档                                   | 主要范围                                                     |
 | ---------------------------------------------------------------------------------------- | -----: | ------------------------------------------ | ------------------------------------------------------------ |
 | [`tests/integration/electron-app.spec.ts`](../../tests/integration/electron-app.spec.ts) |      6 | [Electron 应用测试路径](./electron-app.md) | 应用启动、preload、IPC、导航、配置与业务数据持久化、窗口控制 |
-| 规划：`tests/integration/airouter.spec.ts`                                               |     20 | [AIRouter 测试规划](./airouter.md)         | Provider、密钥、模型、文本流、图像生成、错误与消费方集成     |
+| [`tests/integration/airouter.spec.ts`](../../tests/integration/airouter.spec.ts)         |     20 | [AIRouter 集成测试路径](./airouter.md)     | Provider、密钥、模型、文本流、图像生成、错误与取消           |
 
 Playwright 的全局配置位于 [`playwright.config.ts`](../../playwright.config.ts)。当前固定使用单 worker，避免多个 Electron 实例争用系统剪贴板和显示服务。
 
@@ -44,11 +44,11 @@ Playwright 测试进程
 
 ## 公共生命周期
 
-`electron-app.spec.ts` 中每条路径都使用相同的前后置流程。
+两个 spec 中的每条路径都使用相同的前后置流程；AIRouter spec 还会在套件级启动和关闭本地 mock HTTP 服务，并在每条路径前清空请求记录。
 
 测试前：
 
-1. 在系统临时目录中创建 `ls101-integration-*` 用户数据目录。
+1. 在系统临时目录中创建当前 spec 专用的用户数据目录。
 2. 使用构建后的项目入口启动真实 Electron。
 3. 传入 `--user-data-dir`、`--no-sandbox` 和测试专用环境变量。
 4. 等待首个 BrowserWindow 完成 DOM 加载。
@@ -60,7 +60,7 @@ Playwright 测试进程
 2. 删除本条路径的临时用户数据目录。
 3. 断言 renderer 没有未处理的 `pageerror`。
 
-IPC 往返路径会临时写入系统剪贴板，但使用 `finally` 恢复原文本。其他数据只写入测试专用用户目录。
+IPC 往返路径会临时写入系统剪贴板，但使用 `finally` 恢复原文本或图片。其他数据只写入测试专用用户目录。
 
 ## 数据隔离
 

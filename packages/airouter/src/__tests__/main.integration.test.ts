@@ -140,7 +140,7 @@ describe('AIRouter main integration', () => {
       models: [{ id: 'image-model', enabled: true }],
       apiKey: 'image-secret'
     })
-    const bytes = new Uint8Array([1, 2, 3])
+    const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
     generateImageMock.mockResolvedValue({ image: { uint8Array: bytes, mediaType: 'image/png' } })
 
     const sender = createSender()

@@ -210,9 +210,33 @@ async function generate(
     abortSignal: signal
   })
   const data = new Uint8Array(result.image.uint8Array)
-  if (!result.image.mediaType.startsWith('image/')) throw new Error('生成结果不是图片')
+  const mediaType = detectImageMediaType(data)
+  if (!mediaType) throw new Error('生成结果不是图片')
   if (data.byteLength > MAX_IMAGE_BYTES) throw new Error('生成图片不能超过 20 MB')
-  return { data, mediaType: result.image.mediaType }
+  return { data, mediaType }
+}
+
+function detectImageMediaType(data: Uint8Array): string | null {
+  if (hasPrefix(data, [0x89, 0x50, 0x4e, 0x47])) return 'image/png'
+  if (hasPrefix(data, [0xff, 0xd8])) return 'image/jpeg'
+  if (hasPrefix(data, [0x47, 0x49, 0x46])) return 'image/gif'
+  if (
+    hasPrefix(data, [0x52, 0x49, 0x46, 0x46]) &&
+    hasPrefix(data.subarray(8), [0x57, 0x45, 0x42, 0x50])
+  )
+    return 'image/webp'
+  if (hasPrefix(data, [0x42, 0x4d])) return 'image/bmp'
+  if (hasPrefix(data, [0x49, 0x49, 0x2a, 0x00]) || hasPrefix(data, [0x4d, 0x4d, 0x00, 0x2a]))
+    return 'image/tiff'
+  if (hasPrefix(data, [0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, 0x61, 0x76, 0x69, 0x66]))
+    return 'image/avif'
+  if (hasPrefix(data, [0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63]))
+    return 'image/heic'
+  return null
+}
+
+function hasPrefix(data: Uint8Array, prefix: readonly number[]): boolean {
+  return prefix.every((byte, index) => data[index] === byte)
 }
 
 function normalizeConfig(
