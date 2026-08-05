@@ -178,6 +178,14 @@ test('AR-01 navigates through AI engine settings categories', async () => {
     await expect(page.getByRole('tab', { name })).toHaveAttribute('aria-selected', 'true')
   }
   await expect(page.getByText('尚未添加文本生成 Provider')).toBeVisible()
+  await page.getByRole('tab', { name: '语音合成' }).click()
+  await expect(
+    page.getByText('语音合成模型的 Provider、模型和连接测试将在这里配置。')
+  ).toBeVisible()
+  await page.getByRole('tab', { name: '语音识别' }).click()
+  await expect(
+    page.getByText('语音识别模型的 Provider、模型和连接测试将在这里配置。')
+  ).toBeVisible()
 })
 
 test('AR-02 exposes the text empty state and default manual image provider', async () => {
@@ -793,4 +801,134 @@ test('AR-23 rejects invalid image prompts and dimensions before issuing HTTP req
   expect(oversizedHeight).toEqual(zeroWidth)
   expect(fractionalWidth).toEqual(zeroWidth)
   expect(mockServer.allRequests()).toEqual([])
+})
+
+test('AR-24 reports model discovery failures without persisting drafts', async () => {
+  await openAirouter()
+  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByLabel('配置名称').fill('Failed Discovery')
+  await page.getByLabel('Base URL').fill(mockServer.baseUrl)
+  await page.getByRole('textbox', { name: 'API Key', exact: true }).fill('discovery-bad-key')
+  mockServer.failNextRequest('/v1/models', 500, {
+    error: { message: 'mock model list failure' }
+  })
+  await page.getByRole('button', { name: '获取模型列表' }).click()
+  await expect(page.getByRole('alert')).toContainText('获取模型列表失败（HTTP 500）')
+  await expect(page.getByRole('dialog')).toBeVisible()
+  expect(await page.evaluate(() => window.airouter.listProviderConfigs())).toEqual([])
+
+  await page.getByRole('button', { name: '关闭 Provider 编辑器' }).click()
+  await page.getByRole('tab', { name: '图像生成' }).click()
+  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByLabel('图像配置名称').fill('Image Failed Discovery')
+  await page.getByLabel('图像 Base URL').fill(mockServer.baseUrl)
+  await page.getByRole('textbox', { name: '图像 API Key', exact: true }).fill('image-discovery-bad')
+  mockServer.failNextRequest('/v1/models', 401, { error: { message: 'mock unauthorized' } })
+  await page.getByRole('button', { name: '获取模型列表' }).click()
+  await expect(page.getByText('获取模型列表失败（HTTP 401）')).toBeVisible()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  expect(await page.evaluate(() => window.airouter.listImageProviderConfigs())).toEqual([
+    expect.objectContaining({ id: 'manual' })
+  ])
+})
+
+test('AR-25 closes an unsaved provider draft without persisting it', async () => {
+  await openAirouter()
+  const openDraft = async (): Promise<void> => {
+    await page.getByRole('button', { name: '添加 Provider' }).click()
+    await page.getByLabel('配置名称').fill('Unsaved Draft')
+    await page.getByLabel('Base URL').fill(mockServer.baseUrl)
+    await addModel('draft-model')
+  }
+  const assertClosedAndEmpty = async (): Promise<void> => {
+    await expect(page.getByRole('dialog')).toBeHidden()
+    expect(await page.evaluate(() => window.airouter.listProviderConfigs())).toEqual([])
+  }
+
+  await openDraft()
+  await page.getByRole('button', { name: '取消' }).click()
+  await assertClosedAndEmpty()
+
+  await openDraft()
+  await page.keyboard.press('Escape')
+  await assertClosedAndEmpty()
+
+  await openDraft()
+  const backdrop = page.locator('div[role="presentation"]').filter({
+    has: page.getByRole('dialog')
+  })
+  await backdrop.click({ position: { x: 8, y: 8 } })
+  await assertClosedAndEmpty()
+})
+
+test('AR-26 constrains save and busy states in the provider editor', async () => {
+  await saveTextProvider(textProvider('existing-state', 'mock-text'))
+  await openAirouter()
+  await page.getByRole('button', { name: /existing-state/ }).click()
+  const save = page.getByRole('button', { name: '保存 Provider' })
+  await expect(save).toBeDisabled()
+  await page.getByLabel('配置名称').fill('changed-state-name')
+  await expect(save).toBeEnabled()
+  await page.getByRole('button', { name: '取消' }).click()
+
+  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await expect(save).toBeDisabled()
+  await page.getByLabel('配置名称').fill('State Test')
+  await page.getByLabel('Base URL').fill(mockServer.baseUrl)
+  await page.getByRole('textbox', { name: 'API Key', exact: true }).fill('state-secret')
+  await addModel('mock-slow')
+  await expect(save).toBeEnabled()
+  await page.getByRole('button', { name: '测试连接' }).click()
+  await expect(page.getByLabel('配置名称')).toBeDisabled()
+  await expect(page.getByLabel('Base URL')).toBeDisabled()
+  await expect(save).toBeDisabled()
+  await expect(page.getByText('连接成功，模型回复：OK')).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByLabel('配置名称')).toBeEnabled()
+  await expect(save).toBeEnabled()
+})
+
+test('AR-27 cancels text generation after partial output and reuses the pipeline', async () => {
+  await saveTextProvider(textProvider('partial-cancel', 'mock-partial-stall'))
+  const operation = page.evaluate(
+    () =>
+      new Promise<StreamEvent[]>((resolve) => {
+        const events: StreamEvent[] = []
+        const abort = window.airouter.startTextGeneration(
+          {
+            providerConfigId: 'partial-cancel',
+            modelId: 'mock-partial-stall',
+            prompt: 'Cancel me'
+          },
+          (event) => {
+            events.push(event)
+            if (event.type === 'chunk') {
+              ;(window as unknown as { __abortPartialText?: () => void }).__abortPartialText = abort
+            }
+          }
+        )
+        setTimeout(() => resolve(events), 1_800)
+      })
+  )
+  const request = await mockServer.waitForRequest(
+    (item) => item.path === '/v1/chat/completions',
+    10_000
+  )
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            typeof (window as unknown as { __abortPartialText?: () => void }).__abortPartialText ===
+            'function'
+        ),
+      { timeout: 5_000 }
+    )
+    .toBe(true)
+  await page.evaluate(() => {
+    ;(window as unknown as { __abortPartialText?: () => void }).__abortPartialText?.()
+  })
+  expect(await operation).toEqual([{ type: 'chunk', chunk: { type: 'output', delta: 'Partial ' } }])
+  await expect.poll(() => request.closedBeforeResponse).toBe(true)
+  await saveTextProvider(textProvider('after-partial-cancel', 'mock-text'))
+  expect((await collectText('after-partial-cancel', 'mock-text')).at(-1)).toEqual({ type: 'done' })
 })

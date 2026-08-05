@@ -16,9 +16,15 @@ export interface RecordedAiRequest {
   closedBeforeResponse: boolean
 }
 
+interface PendingMockFailure {
+  status: number
+  body: unknown
+}
+
 export class MockAiServer {
   private server: Server | null = null
   private readonly requests: RecordedAiRequest[] = []
+  private readonly failures = new Map<string, PendingMockFailure[]>()
   private readonly timers = new Set<NodeJS.Timeout>()
 
   get baseUrl(): string {
@@ -51,6 +57,7 @@ export class MockAiServer {
 
   reset(): void {
     this.requests.length = 0
+    this.failures.clear()
     this.timers.forEach(clearTimeout)
     this.timers.clear()
   }
@@ -67,6 +74,13 @@ export class MockAiServer {
 
   allRequests(): readonly RecordedAiRequest[] {
     return this.requests
+  }
+
+  /** Makes the next matching request fail with the given status instead of the normal handler. */
+  failNextRequest(path: string, status = 500, body?: unknown): void {
+    const pending = this.failures.get(path) ?? []
+    pending.push({ status, body: body ?? { error: { message: 'mock request failed' } } })
+    this.failures.set(path, pending)
   }
 
   findRequest(path: string): RecordedAiRequest | undefined {
@@ -99,6 +113,12 @@ export class MockAiServer {
     response.on('close', () => {
       recorded.closedBeforeResponse = !response.writableEnded
     })
+
+    const failure = this.failures.get(recorded.path)?.shift()
+    if (failure) {
+      this.sendJson(response, failure.status, failure.body)
+      return
+    }
 
     if (recorded.path === '/v1/models') {
       this.sendJson(response, 200, {
@@ -139,6 +159,20 @@ export class MockAiServer {
       this.sendJson(response, 401, { error: { message: 'mock authentication failed' } })
       return
     }
+    if (model.includes('slow')) {
+      this.delay(
+        response,
+        () => {
+          if (request.body.stream !== true) {
+            this.sendJson(response, 200, openAiCompletion(model, 'OK'))
+            return
+          }
+          this.sendOpenAiStream(response, model, 'stop')
+        },
+        2_000
+      )
+      return
+    }
     if (request.body.stream !== true) {
       this.sendJson(response, 200, openAiCompletion(model, 'OK'))
       return
@@ -156,8 +190,33 @@ export class MockAiServer {
       )
       return
     }
-    if (model.includes('slow')) {
-      this.delay(response, () => this.sendOpenAiStream(response, model, 'stop'), 2_000)
+    if (model.includes('partial-stall')) {
+      response.writeHead(200, {
+        'content-type': 'text/event-stream; charset=utf-8',
+        'cache-control': 'no-cache',
+        connection: 'keep-alive'
+      })
+      this.writeOpenAiDelta(response, model, 'Partial ')
+      this.delay(
+        response,
+        () => {
+          this.writeOpenAiDelta(response, model, 'response')
+          this.writeOpenAiDelta(response, model, null, 'stop')
+          response.end('data: [DONE]\n\n')
+        },
+        2_000
+      )
+      return
+    }
+    if (model.includes('mock-json')) {
+      const payload = model.includes('image')
+        ? '{"title":"AI 标题","picture":"A green circle icon"}'
+        : '{"title":"AI 标题","answer":"AI answer"}'
+      this.sendOpenAiStream(response, model, 'stop', [payload])
+      return
+    }
+    if (model.includes('mock-nonjson')) {
+      this.sendOpenAiStream(response, model, 'stop', ['这不是一个合法的 JSON 响应'])
       return
     }
     const finishReason = model.includes('length')
@@ -168,27 +227,37 @@ export class MockAiServer {
     this.sendOpenAiStream(response, model, finishReason)
   }
 
-  private sendOpenAiStream(response: ServerResponse, model: string, finishReason: string): void {
+  private sendOpenAiStream(
+    response: ServerResponse,
+    model: string,
+    finishReason: string,
+    deltas: string[] = ['Mock ', 'response']
+  ): void {
     response.writeHead(200, {
       'content-type': 'text/event-stream; charset=utf-8',
       'cache-control': 'no-cache',
       connection: 'keep-alive'
     })
-    const chunk = (content: string | null, reason: string | null): void => {
-      response.write(
-        `data: ${JSON.stringify({
-          id: 'chatcmpl-mock',
-          object: 'chat.completion.chunk',
-          created: 1,
-          model,
-          choices: [{ index: 0, delta: content === null ? {} : { content }, finish_reason: reason }]
-        })}\n\n`
-      )
-    }
-    chunk('Mock ', null)
-    chunk('response', null)
-    chunk(null, finishReason)
+    for (const content of deltas) this.writeOpenAiDelta(response, model, content, null)
+    this.writeOpenAiDelta(response, model, null, finishReason)
     response.end('data: [DONE]\n\n')
+  }
+
+  private writeOpenAiDelta(
+    response: ServerResponse,
+    model: string,
+    content: string | null,
+    reason: string | null = null
+  ): void {
+    response.write(
+      `data: ${JSON.stringify({
+        id: 'chatcmpl-mock',
+        object: 'chat.completion.chunk',
+        created: 1,
+        model,
+        choices: [{ index: 0, delta: content === null ? {} : { content }, finish_reason: reason }]
+      })}\n\n`
+    )
   }
 
   private handleAnthropicText(response: ServerResponse, request: RecordedAiRequest): void {
