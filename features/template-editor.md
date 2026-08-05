@@ -55,6 +55,8 @@ Template 和 Function 工作文档都带 revision。首次保存使用 0，后�
 
 当前操作覆盖节点插入、删除、移动和复制，页面内容块与时间线，选择题选项，Collector 分页，函数调用输入/出参绑定，函数输入与手动出参，Interface requirement、Schema use、Schema 字段绑定和编辑器私有状态。节点使用定义作用域内唯一 ID 定位；列表索引在操作时检查边界。
 
+编辑引擎实现位于 `src/mutations/`：公开入口保持在 `index.ts`，Template/Function 文档编辑、节点定义 reducer、页面关联清理、表达式重写、标识生成和函数资源可达性分别按状态所有权与不变量组织。该目录拆分不改变 `@ls101/template-editor` 的公开导出。
+
 新增或复制时自动分配不冲突的节点 ID、内容块 ID、选项 ID、录音名、选择题输出名和函数调用出参名。复制子树会同步重写复制体内部的局部变量引用以及 relative focus 的 `callPath/questionId`；absolute focus 始终保留从 Template 根出发的原地址。删除 ChoiceViewBlock 会清除时间线中对应的 override；删除函数调用节点会在同一次 Template 编辑中清除传递不可达的函数资源。`reconcile-function-call` 根据最新签名移除过期 binding key、保留仍有效的值并补齐新增输入和出参名。
 
 工作文档允许暂时不完整。删除函数输入、录音或选择题后，无法无歧义决定替代值的普通表达式不会被猜测式删除或改写，而由严格语义校验返回可定位错误。函数输入重命名和 Interface alias 重命名属于含义明确的操作，会重写当前可编辑正文中的对应变量引用。内嵌函数资源不随 alias 重命名而重写：函数禁止直接引用 Template Interface alias，只能通过调用输入接收 Interface 值，因此函数资源不捕获调用方命名空间。
