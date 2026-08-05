@@ -2,7 +2,7 @@
 
 ## 功能状态
 
-`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 与 Function 工作文档身份、文件仓储、内嵌函数资源管理、应用门面、严格语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。renderer 已注册 Template 应用门面、列表入口和最小工作文档页面；完整图形化 DSL 编辑器和最终试卷文件封装尚未实现。
+`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 与 Function 工作文档身份、文件仓储、内嵌函数资源管理、应用门面、严格语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。renderer 已注册 Template 应用门面、列表入口、工作文档编辑会话和节点结构编辑器；节点专用配置界面与最终试卷文件封装尚未实现。
 
 ## 已实现边界
 
@@ -59,6 +59,10 @@ Template 和 Function 工作文档都带 revision。首次保存使用 0，后�
 
 新增或复制时自动分配不冲突的节点 ID、内容块 ID、选项 ID、录音名、选择题输出名和函数调用出参名。复制子树会同步重写复制体内部的局部变量引用以及 relative focus 的 `callPath/questionId`；absolute focus 始终保留从 Template 根出发的原地址。删除 ChoiceViewBlock 会清除时间线中对应的 override；删除函数调用节点会在同一次 Template 编辑中清除传递不可达的函数资源。`reconcile-function-call` 根据最新签名移除过期 binding key、保留仍有效的值并补齐新增输入和出参名。
 
+renderer 的 Template 编辑会话直接消费不可变 mutation 结果，以完整文档快照维护 undo/redo 历史。最近成功保存的历史条目作为 clean 基线；撤销回该条目会恢复为非 dirty。保存期间允许继续编辑，返回的新 revision 会重定基到当前 undo/redo 历史，既不覆盖新修改，也不会让后续保存使用过期 CAS revision。路由参数变化通过新的 keyed 编辑会话隔离旧文档、错误和异步响应。
+
+当前结构编辑器展示包含根 Frame 的可折叠节点树，支持选择节点，以及新增 Frame、Page、ChoiceQuestion，兄弟节点上移/下移、子树复制和确认删除。新增或复制后的节点自动成为当前选择；非 Frame 节点旁新增时作为同级节点插入，Frame 节点被选中时则添加为其子节点。Function 调用必须经过函数资源闭包复制应用操作，因此不通过普通节点插入入口创建。
+
 工作文档允许暂时不完整。删除函数输入、录音或选择题后，无法无歧义决定替代值的普通表达式不会被猜测式删除或改写，而由严格语义校验返回可定位错误。函数输入重命名和 Interface alias 重命名属于含义明确的操作，会重写当前可编辑正文中的对应变量引用。内嵌函数资源不随 alias 重命名而重写：函数禁止直接引用 Template Interface alias，只能通过调用输入接收 Interface 值，因此函数资源不捕获调用方命名空间。
 
 `templates.validate()` 和 `templates.compile()` 会根据当前 Template 收集 Interface 与 Schema 身份，通过调用方提供的跨模块查询函数取得清单。编译时再把 Interface 实例选择及实例定位器交给底层异步编译器。renderer 通过 Interface 应用门面的 `published.getVarManifest()` 和 `instances.locate()` 适配这两项能力，不依赖 Interface 仓储。Schema Editor 尚未实现实际查询 API，当前通过窄依赖接口接入。
@@ -103,11 +107,11 @@ Template 和 Function 工作文档都带 revision。首次保存使用 0，后�
 
 工作文档允许保存不完整状态；编译入口会自行执行严格校验。以下能力尚未实现：
 
-- 完整图形化 DSL 编辑器；当前 renderer 只提供 Template 列表、新建、基础属性编辑、结构只读展示和保存。
+- Page 内容与时间线、ChoiceQuestion/Collector、Function 调用、Interface requirement 和 Schema use 的节点专用编辑界面。
 - Schema Editor 的评分块清单适配器。
-- renderer 的撤销/重做状态管理，以及编译错误文案和画布定位交互。
+- 编译错误文案、节点定位交互和预览流程。
 - `ExamPackage` 的文件封装、资源复制和持久化格式。
 
 ## 验证覆盖
 
-单元测试覆盖完整递归文档解析、损坏及非法 JSON 文件读取、严格 JSON 编辑状态、跨仓储实例 revision/CAS、autosave 与函数嵌入/清理并发、工作文档 CRUD、函数依赖闭包复制与去重、嵌套 Frame 引用改写、源删除隔离、递归拒绝、函数内部 Schema 清单收集、不可达资源清理、应用层依赖组装、函数资源摘要、结构化错误契约、函数作用域、Schema 绑定、Collector 和视图约束。编辑测试覆盖不可变/revision 语义、节点冲突重命名、子树内部引用和 focus 重写、移动约束、内容块级联清理、录音复制、函数调用签名协调、输入和 Interface alias 重命名、资源级联清理，以及函数闭包复制与调用插入的单次保存和失败无残留。编译测试额外覆盖完整 Player/Schema 输出、重复及嵌套函数调用、函数内部相对与绝对 focus、number/file/audio 出参、全局录音索引、跨调用静态值循环、多 Interface/Schema 隔离和仓储归属验证。
+单元测试覆盖完整递归文档解析、损坏及非法 JSON 文件读取、严格 JSON 编辑状态、跨仓储实例 revision/CAS、autosave 与函数嵌入/清理并发、工作文档 CRUD、函数依赖闭包复制与去重、嵌套 Frame 引用改写、源删除隔离、递归拒绝、函数内部 Schema 清单收集、不可达资源清理、应用层依赖组装、函数资源摘要、结构化错误契约、函数作用域、Schema 绑定、Collector 和视图约束。编辑测试覆盖不可变/revision 语义、节点冲突重命名、子树内部引用和 focus 重写、移动约束、内容块级联清理、录音复制、函数调用签名协调、输入和 Interface alias 重命名、资源级联清理，以及函数闭包复制与调用插入的单次保存和失败无残留。renderer 测试覆盖保存期间继续编辑、保存失败后保持历史与 dirty 并允许重试、加载异常、mutation 拒绝、路由会话隔离、离开确认、折叠 Frame 内新增节点可见、嵌套节点增删移动复制、undo/redo 和保存 clean 基线。编译测试额外覆盖完整 Player/Schema 输出、重复及嵌套函数调用、函数内部相对与绝对 focus、number/file/audio 出参、全局录音索引、跨调用静态值循环、多 Interface/Schema 隔离和仓储归属验证。

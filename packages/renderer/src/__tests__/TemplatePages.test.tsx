@@ -138,7 +138,7 @@ describe('Template pages', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: '新建模板' }))
-    expect(await screen.findByRole('heading', { name: '属性' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '模板' })).toBeInTheDocument()
     expect(app.templates.create).toHaveBeenCalledWith({ name: '未命名模板' })
   })
 
@@ -203,7 +203,7 @@ describe('Template pages', () => {
     })
 
     expect(name).toHaveValue('保存期间的新修改')
-    expect(screen.getByText('Revision 2')).toBeInTheDocument()
+    expect(screen.getByText(/Revision 2/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '保存' })).toBeEnabled()
 
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
@@ -277,5 +277,105 @@ describe('Template pages', () => {
     expect(await screen.findByDisplayValue('听力模板')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '保存' })).toBeDisabled()
+  })
+
+  it('edits nested node structure through immutable mutations', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '选择节点 root' })
+    fireEvent.click(screen.getByRole('button', { name: '框架' }))
+    expect(screen.getByRole('button', { name: '选择节点 frame' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '页面' }))
+    expect(screen.getByRole('button', { name: '选择节点 page' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '选择题' }))
+    expect(screen.getByRole('button', { name: '选择节点 question' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '选择节点 page' }))
+    fireEvent.click(screen.getByRole('button', { name: '复制节点' }))
+    expect(screen.getByRole('button', { name: '选择节点 page-2' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '下移节点' }))
+    fireEvent.click(screen.getByRole('button', { name: '删除节点' }))
+    expect(screen.getByRole('dialog', { name: '删除节点“page-2”？' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '删除' }))
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(app.templates.save).toHaveBeenCalledOnce())
+    const saved = vi.mocked(app.templates.save).mock.calls[0][0]
+    expect(saved.content.root.children.map((node) => node.id)).toEqual(['page-1', 'frame'])
+    const frame = saved.content.root.children[1]
+    expect(frame).toMatchObject({ id: 'frame', type: 'frame' })
+    if (frame.type !== 'frame') throw new Error('expected inserted frame')
+    expect(frame.children.map(({ id, type }) => ({ id, type }))).toEqual([
+      { id: 'page', type: 'page' },
+      { id: 'question', type: 'choice-question' }
+    ])
+  })
+
+  it('tracks undo and redo against the last saved history entry', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '选择节点 root' })
+    fireEvent.click(screen.getByRole('button', { name: '页面' }))
+    expect(screen.getByRole('button', { name: '选择节点 page' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '撤销' }))
+    expect(screen.queryByRole('button', { name: '选择节点 page' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '复制节点' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '重做' })).toBeEnabled()
+
+    fireEvent.click(screen.getByRole('button', { name: '重做' }))
+    expect(screen.getByRole('button', { name: '选择节点 page' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '复制节点' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    expect(await screen.findByText('Revision 2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '保存' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: '撤销' }))
+    expect(screen.getByRole('button', { name: '保存' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: '重做' }))
+    expect(screen.getByRole('button', { name: '保存' })).toBeDisabled()
+  })
+
+  it('reveals a new child when inserting into a collapsed frame', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '选择节点 root' })
+    fireEvent.click(screen.getByRole('button', { name: '框架' }))
+    fireEvent.click(screen.getByRole('button', { name: '页面' }))
+    fireEvent.click(screen.getByRole('button', { name: '选择节点 frame' }))
+    fireEvent.click(screen.getByRole('button', { name: '折叠节点 frame' }))
+    expect(screen.queryByRole('button', { name: '选择节点 page' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '页面' }))
+    expect(screen.getByRole('button', { name: '选择节点 page-2' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '折叠节点 frame' })).toBeInTheDocument()
   })
 })
