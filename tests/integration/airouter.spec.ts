@@ -5,7 +5,7 @@ import {
   type ElectronApplication,
   type Page
 } from '@playwright/test'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { MOCK_PNG_BASE64, MockAiServer } from './support/mock-ai-server'
@@ -148,15 +148,26 @@ async function collectImage(
   modelId: string,
   size?: { width: number; height: number }
 ): Promise<ImageEvent> {
+  return collectImageRequest({
+    providerConfigId,
+    modelId,
+    prompt: 'A green circle',
+    size
+  })
+}
+
+async function collectImageRequest(request: {
+  providerConfigId: string
+  modelId: string
+  prompt: string
+  size?: { width: number; height: number }
+}): Promise<ImageEvent> {
   return page.evaluate(
-    ({ providerConfigId, modelId, size }) =>
+    (input) =>
       new Promise((resolve) => {
-        window.airouter.startImageGeneration(
-          { providerConfigId, modelId, prompt: 'A green circle', size },
-          resolve
-        )
+        window.airouter.startImageGeneration(input, resolve)
       }),
-    { providerConfigId, modelId, size }
+    request
   )
 }
 
@@ -223,7 +234,18 @@ test('AR-04 creates and reloads an Anthropic provider through the UI', async () 
   await openAirouter()
   await page.getByRole('button', { name: /Local Anthropic/ }).click()
   await expect(page.getByLabel('Provider 类型')).toHaveValue('Anthropic')
+  await expect(page.getByLabel('Provider 类型')).toBeDisabled()
   await expect(page.getByLabel('Base URL')).toHaveValue(mockServer.baseUrl)
+  await expect(page.getByRole('checkbox', { name: 'mock-reasoning' })).toBeChecked()
+  expect(await page.evaluate(() => window.airouter.listProviderConfigs())).toEqual([
+    expect.objectContaining({
+      name: 'Local Anthropic',
+      type: 'anthropic',
+      baseUrl: mockServer.baseUrl,
+      models: [{ id: 'mock-reasoning', enabled: true }],
+      hasApiKey: false
+    })
+  ])
 })
 
 test('AR-05 loads, replaces and clears a text provider API key', async () => {
@@ -237,15 +259,21 @@ test('AR-05 loads, replaces and clears a text provider API key', async () => {
   await expect(apiKey).toHaveValue('key-lifecycle-secret')
   await apiKey.fill('replacement-secret')
   await page.getByRole('button', { name: '保存 Provider' }).click()
+  await expect(page.getByText('已保存“key-lifecycle”')).toBeVisible({ timeout: 10_000 })
   await expect
-    .poll(() => page.evaluate((value) => window.airouter.readProviderApiKey(value), id))
+    .poll(() => page.evaluate((value) => window.airouter.readProviderApiKey(value), id), {
+      timeout: 10_000
+    })
     .toBe('replacement-secret')
   await page.getByRole('button', { name: '显示 API Key' }).click()
   await expect(apiKey).toHaveValue('replacement-secret')
   await apiKey.fill('')
   await page.getByRole('button', { name: '保存 Provider' }).click()
+  await expect(page.getByText('已保存“key-lifecycle”').last()).toBeVisible({ timeout: 10_000 })
   await expect
-    .poll(() => page.evaluate((value) => window.airouter.readProviderApiKey(value), id))
+    .poll(() => page.evaluate((value) => window.airouter.readProviderApiKey(value), id), {
+      timeout: 10_000
+    })
     .toBeNull()
 })
 
@@ -354,6 +382,7 @@ test('AR-11 streams OpenAI-compatible output across HTTP, main, IPC and preload'
   ])
   expect(mockServer.findRequest('/v1/chat/completions')?.body).toMatchObject({
     model: 'mock-text',
+    messages: [{ role: 'user', content: 'Integration prompt' }],
     stream: true
   })
 })
@@ -378,30 +407,42 @@ test('AR-13 cancels text generation, closes HTTP work and allows a subsequent re
           { providerConfigId: 'cancel-text', modelId: 'mock-slow', prompt: 'Cancel me' },
           (event) => events.push(event)
         )
-        setTimeout(abort, 100)
-        setTimeout(() => resolve(events), 400)
+        ;(window as unknown as { __abortTextGeneration?: () => void }).__abortTextGeneration = abort
+        setTimeout(() => resolve(events), 1_500)
       })
   )
-  const request = await mockServer.waitForRequest((item) => item.path === '/v1/chat/completions')
+  const request = await mockServer.waitForRequest(
+    (item) => item.path === '/v1/chat/completions',
+    10_000
+  )
+  await page.evaluate(() => {
+    ;(window as unknown as { __abortTextGeneration?: () => void }).__abortTextGeneration?.()
+  })
   expect(await operation).toEqual([])
   await expect.poll(() => request.closedBeforeResponse).toBe(true)
   await saveTextProvider(textProvider('after-cancel', 'mock-text'))
   expect((await collectText('after-cancel', 'mock-text')).at(-1)).toEqual({ type: 'done' })
 })
 
-test('AR-14 reports provider HTTP errors, length truncation and content filtering', async () => {
+test('AR-14 reports both provider protocols, stream failures and truncation', async () => {
   await saveTextProvider({
     ...textProvider('text-errors', 'mock-http-error'),
-    models: ['mock-http-error', 'mock-length', 'mock-content-filter'].map((id) => ({
-      id,
-      enabled: true
-    }))
+    models: ['mock-http-error', 'mock-stream-error', 'mock-length', 'mock-content-filter'].map(
+      (id) => ({ id, enabled: true })
+    )
   })
+  await saveTextProvider(textProvider('anthropic-errors', 'mock-http-error', 'anthropic'))
   const http = await collectText('text-errors', 'mock-http-error')
+  const anthropicHttp = await collectText('anthropic-errors', 'mock-http-error')
+  const stream = await collectText('text-errors', 'mock-stream-error')
   const length = await collectText('text-errors', 'mock-length')
   const filtered = await collectText('text-errors', 'mock-content-filter')
   expect(http.at(-1)).toMatchObject({ type: 'error' })
   expect(http.at(-1)?.message).toContain('mock authentication failed')
+  expect(anthropicHttp.at(-1)).toMatchObject({ type: 'error' })
+  expect(anthropicHttp.at(-1)?.message).toContain('mock anthropic failure')
+  expect(stream.at(-1)).toMatchObject({ type: 'error' })
+  expect(stream.at(-1)?.message).toContain('mock stream failure')
   expect(length.at(-1)).toEqual({
     type: 'error',
     message: 'AI 输出达到长度上限，JSON 未完整生成；请减少字段内容后重试'
@@ -418,16 +459,26 @@ test('AR-15 imports and cancels manual image generation through the global dialo
     text: clipboard.readText()
   }))
   try {
-    await electronApp.evaluate(
-      ({ clipboard, nativeImage }, base64) =>
-        clipboard.writeImage(nativeImage.createFromBuffer(Buffer.from(base64, 'base64'))),
-      MOCK_PNG_BASE64
-    )
+    const importPath = path.join(userDataDir, 'manual-import.png')
+    await writeFile(importPath, Buffer.from(MOCK_PNG_BASE64, 'base64'))
+    await electronApp.evaluate(({ dialog }, filePath) => {
+      Object.defineProperty(dialog, 'showOpenDialog', {
+        configurable: true,
+        value: async () => ({ canceled: false, filePaths: [filePath], bookmarks: [] })
+      })
+    }, importPath)
     await openAirouter('图像生成')
     await page.getByRole('button', { name: /手动生成/ }).click()
     await page.getByRole('button', { name: '测试手动生成' }).click()
     await expect(page.getByRole('heading', { name: '生成并导入图片' })).toBeVisible()
     await expect(page.getByLabel('图片提示词')).toHaveValue('一枚简洁的绿色圆形图标')
+    await page.getByRole('button', { name: '选择文件' }).click()
+    await expect(page.getByText('manual-import.png')).toBeVisible()
+    await expect(page.getByAltText('待导入图片预览')).toBeVisible()
+    await page.getByRole('button', { name: '使用此图片' }).click()
+    await expect(page.getByText('测试图片已导入')).toBeVisible()
+
+    await page.getByRole('button', { name: '测试手动生成' }).click()
     await page.getByRole('button', { name: '复制' }).click()
     await expect
       .poll(() => electronApp.evaluate(({ clipboard }) => clipboard.readText()))
@@ -445,16 +496,19 @@ test('AR-15 imports and cancels manual image generation through the global dialo
     await page.getByRole('button', { name: '取消图片生成' }).click()
     await expect(page.getByRole('heading', { name: '生成并导入图片' })).toBeHidden()
   } finally {
-    await electronApp.evaluate(({ clipboard, nativeImage }, previous) => {
-      clipboard.writeText(previous.text)
-      if (previous.image.length)
-        clipboard.writeImage(nativeImage.createFromBuffer(Buffer.from(previous.image)))
+    const restored = await electronApp.evaluate(({ clipboard, nativeImage }, previous) => {
+      const image = previous.image.length
+        ? nativeImage.createFromBuffer(Buffer.from(previous.image))
+        : undefined
+      clipboard.write(image ? { text: previous.text, image } : { text: previous.text })
+      return { image: clipboard.readImage().toPNG(), text: clipboard.readText() }
     }, originalClipboard)
+    expect(restored.text).toBe(originalClipboard.text)
+    expect(Array.from(restored.image)).toEqual(Array.from(originalClipboard.image))
   }
 })
 
-test('AR-16 saves and reloads an independent OpenAI-compatible image provider', async () => {
-  await saveTextProvider(textProvider('same-name', 'mock-text'))
+test('AR-16 saves and reloads an image provider with isolated config and secret scopes', async () => {
   await openAirouter('图像生成')
   await page.getByRole('button', { name: '添加 Provider' }).click()
   await page.getByLabel('图像配置名称').fill('Image API')
@@ -462,17 +516,55 @@ test('AR-16 saves and reloads an independent OpenAI-compatible image provider', 
   await page.getByRole('textbox', { name: '图像 API Key', exact: true }).fill('image-secret')
   await addModel('mock-image', true)
   await page.getByRole('button', { name: '保存 Provider' }).click()
+  const imageConfig = (await page.evaluate(() => window.airouter.listImageProviderConfigs())).find(
+    (config) => config.type === 'openai-compatible'
+  )
+  expect(imageConfig).toBeTruthy()
+  const sharedId = String(imageConfig?.id)
+  await saveTextProvider({
+    id: sharedId,
+    name: 'Text API',
+    type: 'openai-compatible',
+    baseUrl: mockServer.baseUrl,
+    models: [{ id: 'mock-text', enabled: true }],
+    apiKey: 'text-domain-secret'
+  })
   await page.reload()
   await openAirouter('图像生成')
   await expect(page.getByRole('button', { name: /Image API/ })).toContainText('1 个已启用模型')
-  const state = await page.evaluate(async () => ({
-    image: await window.airouter.listImageProviderConfigs(),
-    text: await window.airouter.listProviderConfigs()
-  }))
-  expect(state.image).toContainEqual(
-    expect.objectContaining({ name: 'Image API', hasApiKey: true, type: 'openai-compatible' })
+  await page.getByRole('button', { name: /Image API/ }).click()
+  await expect(page.getByLabel('图像 Provider 类型')).toBeDisabled()
+  await expect(page.getByLabel('图像 Base URL')).toHaveValue(mockServer.baseUrl)
+  await expect(page.getByRole('checkbox', { name: 'mock-image' })).toBeChecked()
+  const state = await page.evaluate(
+    async (id) => ({
+      image: await window.airouter.listImageProviderConfigs(),
+      imageKey: await window.airouter.readImageProviderApiKey(id),
+      text: await window.airouter.listProviderConfigs(),
+      textKey: await window.airouter.readProviderApiKey(id)
+    }),
+    sharedId
   )
-  expect(state.text).toEqual([expect.objectContaining({ id: 'same-name' })])
+  expect(state.image).toContainEqual(
+    expect.objectContaining({
+      id: sharedId,
+      name: 'Image API',
+      type: 'openai-compatible',
+      baseUrl: mockServer.baseUrl,
+      models: [{ id: 'mock-image', enabled: true }],
+      hasApiKey: true
+    })
+  )
+  expect(state.text).toEqual([
+    expect.objectContaining({
+      id: sharedId,
+      name: 'Text API',
+      models: [{ id: 'mock-text', enabled: true }],
+      hasApiKey: true
+    })
+  ])
+  expect(state.imageKey).toBe('image-secret')
+  expect(state.textKey).toBe('text-domain-secret')
 })
 
 test('AR-17 discovers image models and previews an unsaved connection test', async () => {
@@ -523,7 +615,7 @@ test('AR-19 reports image failures and suppresses results after cancellation', a
   expect(oversized).toEqual({ type: 'error', message: '生成图片不能超过 20 MB' })
 
   mockServer.reset()
-  const events = await page.evaluate(
+  const operation = page.evaluate(
     () =>
       new Promise<ImageEvent[]>((resolve) => {
         const values: ImageEvent[] = []
@@ -531,12 +623,19 @@ test('AR-19 reports image failures and suppresses results after cancellation', a
           { providerConfigId: 'mock-slow', modelId: 'mock-slow', prompt: 'Cancel image' },
           (event) => values.push(event)
         )
-        setTimeout(abort, 100)
-        setTimeout(() => resolve(values), 400)
+        ;(window as unknown as { __abortImageGeneration?: () => void }).__abortImageGeneration =
+          abort
+        setTimeout(() => resolve(values), 1_500)
       })
   )
-  const request = await mockServer.waitForRequest((item) => item.path === '/v1/images/generations')
-  expect(events).toEqual([])
+  const request = await mockServer.waitForRequest(
+    (item) => item.path === '/v1/images/generations',
+    10_000
+  )
+  await page.evaluate(() => {
+    ;(window as unknown as { __abortImageGeneration?: () => void }).__abortImageGeneration?.()
+  })
+  expect(await operation).toEqual([])
   await expect.poll(() => request.closedBeforeResponse).toBe(true)
 })
 
@@ -545,6 +644,17 @@ test('AR-20 deletes image providers and restores the manual fallback with secret
   await page.evaluate(() => window.airouter.deleteImageProviderConfig('manual'))
   expect(await page.evaluate(() => window.airouter.listImageProviderConfigs())).toEqual([
     expect.objectContaining({ id: 'only-api', hasApiKey: true })
+  ])
+  await saveImageProvider({
+    ...imageProvider('only-api', 'mock-image'),
+    models: [{ id: 'mock-image', enabled: false }]
+  })
+  expect(await page.evaluate(() => window.airouter.listImageProviderConfigs())).toEqual([
+    expect.objectContaining({
+      id: 'only-api',
+      models: [{ id: 'mock-image', enabled: false }]
+    }),
+    expect.objectContaining({ type: 'manual' })
   ])
   await openAirouter('图像生成')
   await page.getByRole('button', { name: /only-api/ }).click()
@@ -564,4 +674,123 @@ test('AR-20 deletes image providers and restores the manual fallback with secret
     expect.objectContaining({ name: '手动生成', type: 'manual', hasApiKey: false })
   ])
   expect(state.deletedKeyError).toContain('图像 Provider 配置不存在')
+})
+
+test('AR-21 edits image models and completes the image API key lifecycle', async () => {
+  await saveImageProvider(imageProvider('image-lifecycle', 'alpha'))
+  await openAirouter('图像生成')
+  await page.getByRole('button', { name: /image-lifecycle/ }).click()
+  const apiKey = page.getByRole('textbox', { name: '图像 API Key', exact: true })
+  await expect(apiKey).toHaveAttribute('placeholder', '已安全保存')
+  await page.getByRole('button', { name: '显示图像 API Key' }).click()
+  await expect(apiKey).toHaveValue('image-lifecycle-secret')
+  await apiKey.fill('replacement-image-secret')
+  await expect(apiKey).toHaveValue('replacement-image-secret')
+  await page.getByLabel('图像配置名称').fill('Edited Image Provider')
+  await addModel('beta', true)
+  await addModel('beta', true)
+  await addModel('remove-me', true)
+  await page.getByRole('checkbox', { name: 'alpha' }).uncheck()
+  await page.getByRole('button', { name: '移除图像模型 remove-me' }).click()
+  await page.getByRole('button', { name: '保存 Provider' }).click()
+  await expect(page.getByText('已保存“Edited Image Provider”')).toBeVisible({ timeout: 10_000 })
+  await expect
+    .poll(() => page.evaluate(() => window.airouter.readImageProviderApiKey('image-lifecycle')), {
+      timeout: 10_000
+    })
+    .toBe('replacement-image-secret')
+  expect(await page.evaluate(() => window.airouter.listImageProviderConfigs())).toContainEqual(
+    expect.objectContaining({
+      id: 'image-lifecycle',
+      name: 'Edited Image Provider',
+      models: [
+        { id: 'alpha', enabled: false },
+        { id: 'beta', enabled: true }
+      ],
+      hasApiKey: true
+    })
+  )
+
+  await page.getByRole('button', { name: '显示图像 API Key' }).click()
+  await expect(apiKey).toHaveValue('replacement-image-secret')
+  await apiKey.fill('')
+  await page.getByRole('button', { name: '保存 Provider' }).click()
+  await expect(page.getByText('已保存“Edited Image Provider”').last()).toBeVisible({
+    timeout: 10_000
+  })
+  await expect
+    .poll(() => page.evaluate(() => window.airouter.readImageProviderApiKey('image-lifecycle')), {
+      timeout: 10_000
+    })
+    .toBeNull()
+  await page.reload()
+  await openAirouter('图像生成')
+  await expect(page.getByRole('button', { name: /Edited Image Provider/ })).toContainText(
+    '1 个已启用模型'
+  )
+  expect(await page.evaluate(() => window.airouter.listImageProviderConfigs())).toContainEqual(
+    expect.objectContaining({ id: 'image-lifecycle', hasApiKey: false })
+  )
+})
+
+test('AR-22 reports failed text and image draft connection tests without persisting them', async () => {
+  await openAirouter()
+  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByLabel('配置名称').fill('Failed Text Draft')
+  await page.getByLabel('Base URL').fill(mockServer.baseUrl)
+  await page.getByRole('textbox', { name: 'API Key', exact: true }).fill('bad-text-key')
+  await addModel('mock-http-error')
+  await page.getByRole('button', { name: '测试连接' }).click()
+  await expect(page.getByRole('alert')).toContainText('mock authentication failed')
+  expect(await page.evaluate(() => window.airouter.listProviderConfigs())).toEqual([])
+
+  await page.reload()
+  await openAirouter('图像生成')
+  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByLabel('图像配置名称').fill('Failed Image Draft')
+  await page.getByLabel('图像 Base URL').fill(mockServer.baseUrl)
+  await page.getByRole('textbox', { name: '图像 API Key', exact: true }).fill('bad-image-key')
+  await addModel('mock-http-error', true)
+  await page.getByRole('button', { name: '测试连接' }).click()
+  await expect(page.getByRole('alert')).toContainText('mock image quota exceeded', {
+    timeout: 15_000
+  })
+  expect(await page.evaluate(() => window.airouter.listImageProviderConfigs())).toEqual([
+    expect.objectContaining({ id: 'manual' })
+  ])
+})
+
+test('AR-23 rejects invalid image prompts and dimensions before issuing HTTP requests', async () => {
+  await saveImageProvider(imageProvider('image-validation', 'mock-image'))
+  const blankPrompt = await collectImageRequest({
+    providerConfigId: 'image-validation',
+    modelId: 'mock-image',
+    prompt: '   '
+  })
+  const zeroWidth = await collectImageRequest({
+    providerConfigId: 'image-validation',
+    modelId: 'mock-image',
+    prompt: 'invalid width',
+    size: { width: 0, height: 128 }
+  })
+  const oversizedHeight = await collectImageRequest({
+    providerConfigId: 'image-validation',
+    modelId: 'mock-image',
+    prompt: 'invalid height',
+    size: { width: 128, height: 8193 }
+  })
+  const fractionalWidth = await collectImageRequest({
+    providerConfigId: 'image-validation',
+    modelId: 'mock-image',
+    prompt: 'fractional width',
+    size: { width: 128.5, height: 128 }
+  })
+  expect(blankPrompt).toEqual({ type: 'error', message: '图片提示词不能为空' })
+  expect(zeroWidth).toEqual({
+    type: 'error',
+    message: '图片尺寸必须是 1 到 8192 之间的整数'
+  })
+  expect(oversizedHeight).toEqual(zeroWidth)
+  expect(fractionalWidth).toEqual(zeroWidth)
+  expect(mockServer.allRequests()).toEqual([])
 })

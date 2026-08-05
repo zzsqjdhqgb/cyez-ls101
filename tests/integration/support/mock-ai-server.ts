@@ -143,6 +143,19 @@ export class MockAiServer {
       this.sendJson(response, 200, openAiCompletion(model, 'OK'))
       return
     }
+    if (model.includes('stream-error')) {
+      response.writeHead(200, {
+        'content-type': 'text/event-stream; charset=utf-8',
+        'cache-control': 'no-cache',
+        connection: 'keep-alive'
+      })
+      response.end(
+        `data: ${JSON.stringify({
+          error: { message: 'mock stream failure', type: 'server_error', code: 'mock_error' }
+        })}\n\n`
+      )
+      return
+    }
     if (model.includes('slow')) {
       this.delay(response, () => this.sendOpenAiStream(response, model, 'stop'), 2_000)
       return

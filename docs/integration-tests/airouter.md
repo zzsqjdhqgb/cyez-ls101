@@ -15,6 +15,12 @@
 yarn test:playwright tests/integration/airouter.spec.ts
 ```
 
+Linux 容器或无桌面环境：
+
+```bash
+xvfb-run -a yarn test:playwright tests/integration/airouter.spec.ts
+```
+
 所有路径都使用独立的临时 Electron `userData` 目录。本地模拟服务只监听
 `127.0.0.1` 的随机端口，模拟 OpenAI-compatible、Anthropic 和图像生成协议；测试不使用真实 API Key，也不访问公网。
 
@@ -52,7 +58,7 @@ yarn test:playwright tests/integration/airouter.spec.ts
 
 操作流程：切换 Provider 类型，确认默认 Anthropic 地址，替换为 mock 地址并添加模型后保存和重载。
 
-测试内容：Anthropic 类型、Base URL 和模型独立持久化，编辑时类型保持锁定且未被转为 OpenAI-compatible。
+测试内容：Anthropic 类型、Base URL 和模型独立持久化；重载后模型仍启用，类型控件保持禁用且未被转为 OpenAI-compatible。
 
 ### AR-05 文本 Provider API Key 生命周期
 
@@ -124,27 +130,27 @@ yarn test:playwright tests/integration/airouter.spec.ts
 
 测试路径：`renderer start -> mock 延迟响应 -> renderer abort -> HTTP close -> 后续正常生成`。
 
-操作流程：启动慢模型，100 ms 后调用 preload 返回的取消函数，随后发起第二个正常请求。
+操作流程：启动慢模型，等待 mock 收到请求后调用 preload 返回的取消函数，随后发起第二个正常请求。
 
 测试内容：取消后 renderer 不接收迟到事件，底层连接在响应前关闭，后续请求仍能完整结束，证明 active request 和监听器没有污染下一次调用。
 
-### AR-14 文本 Provider 错误与截断反馈
+### AR-14 文本 Provider 错误、流失败与截断反馈
 
-测试路径：`renderer -> HTTP 401 / length finish / content_filter finish -> renderer error`。
+测试路径：`renderer -> OpenAI HTTP 401 / Anthropic HTTP 400 / stream error / length / content_filter -> renderer error`。
 
-操作流程：依次调用 mock 的鉴权失败、长度截断和内容过滤模型。
+操作流程：分别使用 OpenAI-compatible 和 Anthropic Provider 触发协议特有 HTTP 错误，再触发流内错误、长度截断和内容过滤。
 
-测试内容：Provider HTTP 错误保留服务端消息；长度和内容过滤转换为稳定的中文 AIRouter 错误，均不以 `done` 冒充成功。
+测试内容：两种 Provider 的 HTTP 错误和流内错误保留服务端消息；长度和内容过滤转换为稳定的中文 AIRouter 错误，所有失败均不以 `done` 冒充成功。
 
 ## 图像 Provider 与生成
 
-### AR-15 手动图像生成与剪贴板导入
+### AR-15 手动图像生成、文件与剪贴板导入
 
-测试路径：`图像设置 -> 手动生成 -> 测试手动生成 -> 全局导入对话框 -> Electron clipboard`。
+测试路径：`图像设置 -> 手动生成 -> 全局导入对话框 -> file-dialog IPC / Electron clipboard`。
 
-操作流程：打开默认手动 Provider，复制提示词，将测试 PNG 放入系统剪贴板，从剪贴板读取并确认；再次打开后执行取消。
+操作流程：把测试 PNG 写入当前临时目录并让 main 文件对话框返回该路径，经真实 file-dialog IPC 读取并确认；再次打开后复制提示词、从真实剪贴板读取并确认；第三次打开执行取消。
 
-测试内容：提示词展示和复制、真实剪贴板图片读取、预览、确认结果、成功反馈和取消关闭均正常；测试结束恢复原剪贴板。
+测试内容：真实文件读取、提示词展示和复制、真实剪贴板图片读取、预览、确认结果、成功反馈和取消关闭均正常；测试结束一次性恢复原剪贴板文本和图片并验证恢复结果。
 
 ### AR-16 OpenAI-compatible 图像 Provider 配置
 
@@ -152,7 +158,7 @@ yarn test:playwright tests/integration/airouter.spec.ts
 
 操作流程：通过 UI 填写图像名称、独立 Base URL、图像 API Key 和模型，保存后重载。
 
-测试内容：图像配置和密钥状态正确恢复；同一测试中的文本 Provider 保持在文本配置域，不与图像配置混合。
+测试内容：重载后图像类型锁定，Base URL、模型 ID、启用状态和密钥均精确恢复；再用相同 Provider ID 保存文本配置和不同密钥，两个配置列表与密钥读取结果仍完全独立。
 
 ### AR-17 图像模型发现与连接预览
 
@@ -174,7 +180,7 @@ yarn test:playwright tests/integration/airouter.spec.ts
 
 测试路径：`HTTP 429 / 非图片字节 / 超过 20 MB / 延迟响应取消 -> renderer`。
 
-操作流程：依次调用四种 mock 模型；慢请求在 100 ms 后取消，并观察底层连接状态。
+操作流程：依次调用四种 mock 模型；慢请求在 mock 收到请求后取消，并观察底层连接状态。
 
 测试内容：HTTP 错误、非图片结果和超限结果返回明确错误；非图片校验基于真实字节签名而非 Provider 声明；取消后无迟到 result，HTTP 连接提前关闭。
 
@@ -182,12 +188,39 @@ yarn test:playwright tests/integration/airouter.spec.ts
 
 测试路径：`API Provider + manual -> 删除 manual -> UI 删除 API -> 自动恢复 manual`。
 
-操作流程：先保存唯一启用的 API Provider并删除默认手动配置，再从 UI 经确认删除 API Provider。
+操作流程：先保存唯一启用的 API Provider并删除默认手动配置，确认不产生多余兜底；再禁用其唯一模型并确认恢复手动 Provider，最后从 UI 经确认删除 API Provider。
 
-测试内容：API 密钥随配置删除；当不存在手动 Provider 或启用 API 模型时，服务自动恢复无密钥的“手动生成”入口。
+测试内容：有可选 API 模型时不额外恢复手动 Provider；API 模型全部禁用或 Provider 被删除时自动恢复无密钥的“手动生成”入口，API 密钥随配置删除。
+
+### AR-21 图像 Provider 编辑、模型管理与密钥生命周期
+
+测试路径：`已保存图像 Provider -> 显示密钥 -> 编辑名称/模型/密钥 -> 保存 -> 清空密钥 -> reload`。
+
+操作流程：读取已保存密钥并替换；重复添加模型、禁用已有模型、删除临时模型并保存；再次读取替换后的密钥，然后清空并重载。
+
+测试内容：图像模型 ID 去重，禁用和删除状态正确持久化；密钥按需读取、替换和删除均经过真实独立 secret scope；重载后名称、启用模型数量和无密钥状态正确恢复。
+
+### AR-22 文本与图像草稿连接失败反馈
+
+测试路径：`未保存文本草稿 -> HTTP 401 -> UI error -> 未保存图像草稿 -> HTTP 429 -> UI error`。
+
+操作流程：分别用文本和图像未保存草稿执行失败的连接测试，观察设置编辑器错误反馈并读取持久化配置。
+
+测试内容：两类连接测试显示 Provider 原始错误消息，失败草稿不会产生文本配置或图像 API 配置。
+
+### AR-23 图像请求输入校验
+
+测试路径：`renderer preload -> IPC -> main validation -> renderer error`。
+
+操作流程：向已保存 API 图像 Provider 依次提交空白提示词、宽度为 `0`、高度为 `8193` 和非整数宽度的请求。
+
+测试内容：空提示词和超出 `1..8192` 整数范围的尺寸返回稳定错误，所有请求都在 main 校验阶段终止，不访问 mock HTTP 服务。
 
 ## 覆盖边界
 
-- AR-11、AR-12 和 AR-18 从真实 renderer preload bridge 发起，覆盖 HTTP、AI SDK、main、IPC 和 preload，但不绑定某个题型编辑器的业务流程。
+- AR-11、AR-12、AR-18、AR-19 和 AR-23 从真实 renderer preload bridge 发起，覆盖 HTTP 或 main 校验、AI SDK、IPC 和 preload，但不绑定某个题型编辑器的业务流程。
+- AR-15 覆盖真实文件读取 IPC，但用测试路径替代交互式系统文件选择窗口；不验证各操作系统原生对话框的视觉与人工选择行为。
+- 手动图像请求的并发 FIFO 队列和调用方 `AbortSignal` 由 `ManualImageGeneration.test.ts` 覆盖，不在 Playwright 中重复构造并发业务页面。
 - 题型编辑器如何列出、选择和消费 AIRouter 模型，属于题型实例编辑器的独立集成测试路径。
+- 当前不覆盖损坏的 Provider 配置文件、应用退出时仍在进行的请求恢复，以及模型发现接口失败或畸形 SSE 的所有第三方变体。
 - 本套件不访问公网，不验证第三方服务的实时可用性、计费或限流策略。

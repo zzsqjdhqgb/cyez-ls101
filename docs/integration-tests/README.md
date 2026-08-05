@@ -12,7 +12,7 @@
 | 测试源文件                                                                               | 路径数 | 详细文档                                   | 主要范围                                                     |
 | ---------------------------------------------------------------------------------------- | -----: | ------------------------------------------ | ------------------------------------------------------------ |
 | [`tests/integration/electron-app.spec.ts`](../../tests/integration/electron-app.spec.ts) |      6 | [Electron 应用测试路径](./electron-app.md) | 应用启动、preload、IPC、导航、配置与业务数据持久化、窗口控制 |
-| [`tests/integration/airouter.spec.ts`](../../tests/integration/airouter.spec.ts)         |     20 | [AIRouter 集成测试路径](./airouter.md)     | Provider、密钥、模型、文本流、图像生成、错误与取消           |
+| [`tests/integration/airouter.spec.ts`](../../tests/integration/airouter.spec.ts)         |     23 | [AIRouter 集成测试路径](./airouter.md)     | Provider、密钥、模型、文本流、图像生成、错误与取消           |
 
 Playwright 的全局配置位于 [`playwright.config.ts`](../../playwright.config.ts)。当前固定使用单 worker，避免多个 Electron 实例争用系统剪贴板和显示服务。
 
@@ -60,7 +60,7 @@ Playwright 测试进程
 2. 删除本条路径的临时用户数据目录。
 3. 断言 renderer 没有未处理的 `pageerror`。
 
-IPC 往返路径会临时写入系统剪贴板，但使用 `finally` 恢复原文本或图片。其他数据只写入测试专用用户目录。
+IPC 往返路径会临时写入系统剪贴板，但使用 `finally` 一次性恢复原文本和图片，并断言恢复结果。其他数据只写入测试专用用户目录。
 
 ## 数据隔离
 
@@ -73,7 +73,7 @@ Linux 测试进程设置 `LS101_INTEGRATION_TEST=1`，允许未打包 Electron �
 当前集成测试有意不执行以下外部操作：
 
 - 不请求真实 AI Provider，也不保存真实 API Key。
-- 不打开系统文件选择或保存对话框。
+- 不显示需要人工操作的系统文件选择或保存对话框；需要覆盖文件读取时会在 Electron main 中把对话框结果指向测试专用文件。
 - 不依赖开发者已有的配置、模板或用户文件。
 - 不测试操作系统窗口管理器对最小化和最大化的视觉表现。
 
