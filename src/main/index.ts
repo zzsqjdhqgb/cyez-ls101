@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, safeStorage } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { registerConfigStore } from '@ls101/config-store/main'
 import { registerAIRouter } from '@ls101/airouter/main'
@@ -12,6 +12,14 @@ registerFileStoreScheme()
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('io.github.zzsqjdhqgb.cyez-ls101')
+
+  if (
+    !app.isPackaged &&
+    process.platform === 'linux' &&
+    process.env['LS101_INTEGRATION_TEST'] === '1'
+  ) {
+    safeStorage.setUsePlainTextEncryption(true)
+  }
 
   registerFileStore({ baseDir: app.getPath('userData') })
   registerConfigStore({ baseDir: app.getPath('userData') })

@@ -6,6 +6,8 @@ out
 *.log*
 /repomix-output.md
 coverage
+playwright-report
+test-results
 /assets/*
 !/assets/.gitkeep
 /resources/file-icons/*.ico
