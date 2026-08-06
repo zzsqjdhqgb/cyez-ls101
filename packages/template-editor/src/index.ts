@@ -4,8 +4,10 @@ export { createTemplateApplication, TemplateApplicationError } from './applicati
 export type {
   EmbeddedFunctionResult,
   InsertedFunctionCallResult,
-  FunctionDocumentApplication,
+  FunctionLibraryApplication,
+  FunctionLibrarySummary,
   FunctionSummary,
+  LocalFunctionLibraryApplication,
   TemplateApplication,
   TemplateApplicationDependencies,
   TemplateBrowserApplication,
@@ -27,13 +29,19 @@ export type {
 
 export {
   canonicalizeFunctionContent,
+  canonicalizeFunctionLibraryContent,
   createFunctionDocument,
   createFunctionId,
+  createFunctionLibraryId,
+  createFunctionLibraryRelease,
   createFunctionResource,
+  createLocalFunctionLibraryDocument,
   createTemplateDocument,
   createTemplateId,
   deriveFunctionResourceId,
+  deriveFunctionLibraryContentHash,
   isFunctionResourceId,
+  verifyFunctionLibraryRelease,
   verifyFunctionResourceId
 } from './id'
 export { compileTemplate } from './compiler'

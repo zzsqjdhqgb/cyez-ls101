@@ -71,7 +71,14 @@ function application(document = template()): TemplateApplication {
           description: document.content.description
         }
       ]),
-      listFunctions: vi.fn().mockResolvedValue([{ functionId: FUNCTION_ID, name: '单题函数' }])
+      listFunctionLibraries: vi.fn().mockResolvedValue([
+        {
+          source: 'local',
+          libraryId: '40000000-0000-4000-8000-000000000004',
+          name: '听力函数库',
+          functions: [{ functionId: FUNCTION_ID, name: '单题函数' }]
+        }
+      ])
     },
     templates: {
       create: vi.fn().mockResolvedValue(document),
@@ -87,17 +94,14 @@ function application(document = template()): TemplateApplication {
       validate: vi.fn(),
       compile: vi.fn()
     },
-    functions: {
-      create: vi.fn(),
-      get: vi.fn(),
-      save: vi.fn(),
-      delete: vi.fn()
+    functionLibraries: {
+      local: {}
     }
   } as unknown as TemplateApplication
 }
 
 describe('Template pages', () => {
-  it('lists templates and functions and opens a template', async () => {
+  it('lists templates and function libraries and opens a template', async () => {
     const app = application()
     render(
       <TemplateApplicationProvider application={app}>
@@ -111,10 +115,16 @@ describe('Template pages', () => {
     )
 
     expect(await screen.findByRole('button', { name: '听力模板' })).toBeInTheDocument()
-    expect(screen.getByText('单题函数')).toBeInTheDocument()
+    expect(screen.getByText('听力函数库')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '听力模板' }))
 
     expect(await screen.findByRole('heading', { name: '结构' })).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: '函数库' })).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: '属性' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '内置' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '导入' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '本地' })).toBeInTheDocument()
+    expect(screen.getByText('基础组件库')).toBeInTheDocument()
     expect(screen.getByText('page-1')).toBeInTheDocument()
     expect(app.templates.get).toHaveBeenCalledWith(TEMPLATE_ID)
   })
@@ -133,7 +143,7 @@ describe('Template pages', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: '新建模板' }))
-    expect(await screen.findByRole('heading', { name: '模板' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '属性' })).toBeInTheDocument()
     expect(app.templates.create).toHaveBeenCalledWith({ name: '未命名模板' })
   })
 
@@ -419,9 +429,10 @@ describe('Template pages', () => {
       .getByRole('button', { name: '选择节点 question' })
       .closest('[data-selected]')
     if (!selectedCard) throw new Error('expected selected node card')
-    expect(within(selectedCard).getByLabelText('输出名称')).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: '节点' })).not.toBeInTheDocument()
-    fireEvent.change(within(selectedCard).getByLabelText('输出名称'), {
+    expect(within(selectedCard).queryByLabelText('输出名称')).not.toBeInTheDocument()
+    const properties = screen.getByRole('complementary', { name: '属性' })
+    expect(within(properties).getByRole('heading', { name: '节点属性' })).toBeInTheDocument()
+    fireEvent.change(within(properties).getByLabelText('输出名称'), {
       target: { value: 'answer-1' }
     })
     fireEvent.change(screen.getByLabelText('题干文本 1'), {

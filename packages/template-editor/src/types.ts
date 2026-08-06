@@ -226,7 +226,7 @@ export interface ChoicePageSpec {
 // 函数
 // ============================================================
 
-/** 函数库文档和 Template 内嵌快照共享的可编辑正文。 */
+/** 函数库条目和 Template 内嵌快照共享的可编辑正文。 */
 export interface FunctionContent {
   name: string
   inputs: FunctionInputDef[]
@@ -235,14 +235,66 @@ export interface FunctionContent {
   schemaUses: SchemaUse[]
 }
 
-/** 函数库中的可编辑源文档；嵌套源函数可引用此 UUID，Template 不能直接引用。 */
+/** 函数编辑器使用的库内函数投影；保存时由所属本地函数库统一执行 CAS。 */
 export interface FunctionDocument {
-  /** 函数库源文档的稳定 UUID。 */
+  /** 自定义函数使用 UUID，内置函数使用稳定 builtin key。 */
   functionId: string
-  /** 仓储乐观并发版本；每次成功更新后递增。 */
-  revision: number
   content: FunctionContent
   editorState: DslEditorState
+}
+
+/** 函数库语义内容中的函数条目；不包含编辑器私有状态。 */
+export interface FunctionLibraryEntry {
+  functionId: string
+  content: FunctionContent
+}
+
+export interface FunctionLibraryContent {
+  name: string
+  functions: FunctionLibraryEntry[]
+}
+
+export interface FunctionLibraryEditorState {
+  library: DslEditorState
+  functions: Record<string, DslEditorState>
+}
+
+export interface FunctionLibraryExportState {
+  version: number
+  contentHash: string
+}
+
+/** 用户本地持续编辑的函数库工作文档。 */
+export interface LocalFunctionLibraryDocument {
+  /** 稳定 UUID。 */
+  libraryId: string
+  /** 仓储乐观并发版本；每次成功更新后递增。 */
+  revision: number
+  content: FunctionLibraryContent
+  editorState: FunctionLibraryEditorState
+  /** 仅用于辅助下一次导出，不属于函数库语义内容。 */
+  exportState?: FunctionLibraryExportState
+}
+
+/** 导入或随软件发布的不可变函数库版本。 */
+export interface FunctionLibraryRelease {
+  libraryId: string
+  version: number
+  /** sha256:<64 位十六进制摘要> */
+  contentHash: string
+  content: FunctionLibraryContent
+}
+
+export type FunctionLibrarySource = 'builtin' | 'imported' | 'local'
+
+export type FunctionLibraryLocator =
+  | { source: 'builtin'; libraryId: string }
+  | { source: 'imported'; libraryId: string; version: number }
+  | { source: 'local'; libraryId: string }
+
+export interface FunctionLocator {
+  library: FunctionLibraryLocator
+  functionId: string
 }
 
 /**

@@ -3,21 +3,34 @@ import type {
   InterfaceVarManifest,
   SchemaBlockManifest
 } from '@ls101/core-types'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createTemplateApplication, TemplateApplicationError } from '../application'
-import { createFunctionDocument, createFunctionResource, createTemplateDocument } from '../id'
+import {
+  createFunctionDocument,
+  createFunctionLibraryRelease,
+  createFunctionResource,
+  createTemplateDocument
+} from '../id'
 import {
   FileTemplateRepository,
   TemplateRepositoryError,
   type TemplateRepository,
   type TemplateStore
 } from '../repository'
-import type { FunctionContent, FunctionDocument, TemplateContent, TemplateDocument } from '../types'
+import type {
+  FunctionContent,
+  FunctionDocument,
+  FunctionLocator,
+  LocalFunctionLibraryDocument,
+  TemplateContent,
+  TemplateDocument
+} from '../types'
 import { root } from './fixtures'
 
 const FUNCTION_A = '10000000-0000-4000-8000-000000000001'
 const FUNCTION_B = '10000000-0000-4000-8000-000000000002'
 const FUNCTION_C = '10000000-0000-4000-8000-000000000003'
+const LIBRARY_ID = '40000000-0000-4000-8000-000000000001'
 const TEMPLATE_ID = '20000000-0000-4000-8000-000000000001'
 const INTERFACE_ID = `sha256:${'1'.repeat(64)}`
 const SCHEMA_ID = `sha256:${'2'.repeat(64)}`
@@ -30,7 +43,6 @@ function functionDocument(
 ): FunctionDocument {
   return {
     functionId,
-    revision: 0,
     content: {
       name,
       inputs: [],
@@ -40,6 +52,51 @@ function functionDocument(
     },
     editorState: {}
   }
+}
+
+function localLibrary(
+  functions: readonly FunctionDocument[] = [],
+  revision = 0
+): LocalFunctionLibraryDocument {
+  return {
+    libraryId: LIBRARY_ID,
+    revision,
+    content: {
+      name: 'Local library',
+      functions: functions.map(({ functionId, content }) => ({ functionId, content }))
+    },
+    editorState: {
+      library: {},
+      functions: Object.fromEntries(
+        functions.map(({ functionId, editorState }) => [functionId, editorState])
+      )
+    }
+  }
+}
+
+function functionLocator(functionId: string): FunctionLocator {
+  return { library: { source: 'local', libraryId: LIBRARY_ID }, functionId }
+}
+
+async function saveFunctions(
+  repository: TemplateRepository,
+  ...functions: FunctionDocument[]
+): Promise<LocalFunctionLibraryDocument> {
+  const current = await repository.getLocalFunctionLibrary(LIBRARY_ID)
+  const byId = new Map(current?.content.functions.map((entry) => [entry.functionId, entry]) ?? [])
+  const editorStates = { ...(current?.editorState.functions ?? {}) }
+  functions.forEach((document) => {
+    byId.set(document.functionId, {
+      functionId: document.functionId,
+      content: structuredClone(document.content)
+    })
+    editorStates[document.functionId] = structuredClone(document.editorState)
+  })
+  return repository.saveLocalFunctionLibrary({
+    ...(current ?? localLibrary()),
+    content: { name: current?.content.name ?? 'Local library', functions: [...byId.values()] },
+    editorState: { library: current?.editorState.library ?? {}, functions: editorStates }
+  })
 }
 
 function functionCall(id: string, functionRef: string) {
@@ -104,28 +161,75 @@ function setup() {
 }
 
 describe('FileTemplateRepository', () => {
-  it('保存、读取、列出和删除 Template 与 Function 工作文档', async () => {
+  it('保存、读取、列出和删除 Template 与本地函数库工作文档', async () => {
     const { repository } = setup()
     const template = { ...createTemplateDocument(emptyContent()), templateId: TEMPLATE_ID }
-    const func = functionDocument(FUNCTION_A, 'Function')
+    const library = localLibrary([functionDocument(FUNCTION_A, 'Function')])
 
     await repository.saveTemplate(template)
-    await repository.saveFunction(func)
+    await repository.saveLocalFunctionLibrary(library)
 
     expect(await repository.listTemplateIds()).toEqual([TEMPLATE_ID])
-    expect(await repository.listFunctionIds()).toEqual([FUNCTION_A])
+    expect(await repository.listLocalFunctionLibraryIds()).toEqual([LIBRARY_ID])
     expect(await repository.getTemplate(TEMPLATE_ID)).toEqual(template)
-    expect(await repository.getFunction(FUNCTION_A)).toEqual(func)
+    expect(await repository.getLocalFunctionLibrary(LIBRARY_ID)).toEqual(library)
 
     await repository.deleteTemplate(TEMPLATE_ID)
-    await repository.deleteFunction(FUNCTION_A)
+    await repository.deleteLocalFunctionLibrary(LIBRARY_ID)
     expect(await repository.getTemplate(TEMPLATE_ID)).toBeNull()
-    expect(await repository.getFunction(FUNCTION_A)).toBeNull()
+    expect(await repository.getLocalFunctionLibrary(LIBRARY_ID)).toBeNull()
   })
 
-  it('拒绝非法 UUID 和被篡改的内嵌函数资源', async () => {
+  it('登记不可变的导入和内置 release，并单独维护内置 active 版本', async () => {
+    const { repository } = setup()
+    const imported = await createFunctionLibraryRelease(LIBRARY_ID, 2, {
+      name: 'Imported',
+      functions: [
+        {
+          functionId: FUNCTION_A,
+          content: functionDocument(FUNCTION_A, 'Imported function').content
+        }
+      ]
+    })
+    const builtin = await createFunctionLibraryRelease('builtin:basic', 1, {
+      name: '基础组件库',
+      functions: [
+        {
+          functionId: 'builtin:page',
+          content: functionDocument(FUNCTION_A, 'Page').content
+        }
+      ]
+    })
+
+    await repository.registerImportedFunctionLibrary(imported)
+    await repository.registerBuiltinFunctionLibrary(builtin)
+    await repository.setActiveBuiltinFunctionLibraryVersion('builtin:basic', 1)
+
+    expect(await repository.listImportedFunctionLibraryIds()).toEqual([LIBRARY_ID])
+    expect(await repository.listImportedFunctionLibraryVersions(LIBRARY_ID)).toEqual([2])
+    expect(await repository.getImportedFunctionLibrary(LIBRARY_ID, 2)).toEqual(imported)
+    expect(await repository.listBuiltinFunctionLibraryIds()).toEqual(['builtin:basic'])
+    expect(await repository.getActiveBuiltinFunctionLibrary('builtin:basic')).toEqual(builtin)
+
+    await expect(
+      repository.registerBuiltinFunctionLibrary({
+        ...builtin,
+        contentHash: `sha256:${'0'.repeat(64)}`
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_DATA' })
+  })
+
+  it('拒绝非法 UUID、重复函数 ID 和被篡改的 Template 函数资源', async () => {
     const { repository } = setup()
     await expect(repository.getTemplate('bad-id')).rejects.toBeInstanceOf(TemplateRepositoryError)
+    await expect(
+      repository.saveLocalFunctionLibrary({
+        ...localLibrary([
+          functionDocument(FUNCTION_A, 'First'),
+          functionDocument(FUNCTION_A, 'Duplicate')
+        ])
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_DATA' })
 
     const resource = await createFunctionResource(functionDocument(FUNCTION_A, 'Original').content)
     const template = {
@@ -139,11 +243,15 @@ describe('FileTemplateRepository', () => {
     })
   })
 
-  it('读取损坏的 Template 和 Function 文件时返回 INVALID_DATA', async () => {
+  it('读取损坏的 Template 和本地函数库文件时返回 INVALID_DATA', async () => {
     const { store, repository } = setup()
     const template = { ...createTemplateDocument(emptyContent()), templateId: TEMPLATE_ID }
     const templateScope = store.scope('template-editor').scope('templates').scope(TEMPLATE_ID)
-    const functionScope = store.scope('template-editor').scope('functions').scope(FUNCTION_A)
+    const libraryScope = store
+      .scope('template-editor')
+      .scope('function-libraries')
+      .scope('local')
+      .scope(LIBRARY_ID)
 
     for (const corrupt of [
       { ...template, content: { ...template.content, root: {} } },
@@ -156,45 +264,47 @@ describe('FileTemplateRepository', () => {
       })
     }
 
-    const func = functionDocument(FUNCTION_A, 'Broken')
-    await functionScope.writeText('function.json', {
-      ...func,
-      content: { ...func.content, body: {} }
+    const library = localLibrary([functionDocument(FUNCTION_A, 'Broken')])
+    await libraryScope.writeText('library.json', {
+      ...library,
+      content: { ...library.content, functions: [{ functionId: FUNCTION_A, content: {} }] }
     })
-    await expect(repository.getFunction(FUNCTION_A)).rejects.toMatchObject({
+    await expect(repository.getLocalFunctionLibrary(LIBRARY_ID)).rejects.toMatchObject({
       code: 'INVALID_DATA'
     })
   })
 
-  it('使用 revision/CAS 拒绝过期 Template 和 Function 保存', async () => {
+  it('使用 revision/CAS 拒绝过期 Template 和本地函数库保存', async () => {
     const { repository } = setup()
     const template = await repository.saveTemplate({
       ...createTemplateDocument(emptyContent()),
       templateId: TEMPLATE_ID
     })
-    const func = await repository.saveFunction(functionDocument(FUNCTION_A, 'Function'))
+    const library = await repository.saveLocalFunctionLibrary(
+      localLibrary([functionDocument(FUNCTION_A, 'Function')])
+    )
 
     const updatedTemplate = await repository.saveTemplate({
       ...template,
       content: { ...template.content, name: 'Updated' }
     })
-    const updatedFunction = await repository.saveFunction({
-      ...func,
-      content: { ...func.content, name: 'Updated' }
+    const updatedLibrary = await repository.saveLocalFunctionLibrary({
+      ...library,
+      content: { ...library.content, name: 'Updated' }
     })
     expect(updatedTemplate.revision).toBe(1)
-    expect(updatedFunction.revision).toBe(1)
+    expect(updatedLibrary.revision).toBe(1)
 
     await expect(repository.saveTemplate(template)).rejects.toMatchObject({
       code: 'REVISION_CONFLICT',
       params: { currentRevision: 1, providedRevision: 0 }
     })
-    await expect(repository.saveFunction(func)).rejects.toMatchObject({
+    await expect(repository.saveLocalFunctionLibrary(library)).rejects.toMatchObject({
       code: 'REVISION_CONFLICT'
     })
   })
 
-  it('跨仓储实例原子拒绝并发 Template 和 Function 保存', async () => {
+  it('跨仓储实例原子拒绝并发 Template 和本地函数库保存', async () => {
     const store = new MemoryStore()
     const rootStore = store.scope('template-editor')
     const firstRepository = new FileTemplateRepository(rootStore)
@@ -203,7 +313,9 @@ describe('FileTemplateRepository', () => {
       ...createTemplateDocument(emptyContent()),
       templateId: TEMPLATE_ID
     })
-    const func = await firstRepository.saveFunction(functionDocument(FUNCTION_A, 'Original'))
+    const library = await firstRepository.saveLocalFunctionLibrary(
+      localLibrary([functionDocument(FUNCTION_A, 'Original')])
+    )
 
     const templateResults = await Promise.allSettled([
       firstRepository.saveTemplate({
@@ -215,18 +327,18 @@ describe('FileTemplateRepository', () => {
         content: { ...template.content, name: 'Second edit' }
       })
     ])
-    const functionResults = await Promise.allSettled([
-      firstRepository.saveFunction({
-        ...func,
-        content: { ...func.content, name: 'First edit' }
+    const libraryResults = await Promise.allSettled([
+      firstRepository.saveLocalFunctionLibrary({
+        ...library,
+        content: { ...library.content, name: 'First edit' }
       }),
-      secondRepository.saveFunction({
-        ...func,
-        content: { ...func.content, name: 'Second edit' }
+      secondRepository.saveLocalFunctionLibrary({
+        ...library,
+        content: { ...library.content, name: 'Second edit' }
       })
     ])
 
-    for (const results of [templateResults, functionResults]) {
+    for (const results of [templateResults, libraryResults]) {
       expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1)
       expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1)
       expect(results.find((result) => result.status === 'rejected')).toMatchObject({
@@ -234,12 +346,12 @@ describe('FileTemplateRepository', () => {
       })
     }
     const savedTemplate = templateResults.find((result) => result.status === 'fulfilled')
-    const savedFunction = functionResults.find((result) => result.status === 'fulfilled')
+    const savedLibrary = libraryResults.find((result) => result.status === 'fulfilled')
     expect((await firstRepository.getTemplate(TEMPLATE_ID))?.content.name).toBe(
       savedTemplate?.value.content.name
     )
-    expect((await firstRepository.getFunction(FUNCTION_A))?.content.name).toBe(
-      savedFunction?.value.content.name
+    expect((await firstRepository.getLocalFunctionLibrary(LIBRARY_ID))?.content.name).toBe(
+      savedLibrary?.value.content.name
     )
   })
 
@@ -249,7 +361,7 @@ describe('FileTemplateRepository', () => {
     await expect(repository.getTemplate(TEMPLATE_ID)).rejects.toMatchObject({
       code: 'INVALID_DATA'
     })
-    await expect(repository.getFunction(FUNCTION_A)).rejects.toMatchObject({
+    await expect(repository.getLocalFunctionLibrary(LIBRARY_ID)).rejects.toMatchObject({
       code: 'INVALID_DATA'
     })
   })
@@ -269,16 +381,87 @@ describe('FileTemplateRepository', () => {
 })
 
 describe('TemplateApplication', () => {
+  it('由 Template 应用读取并幂等登记 builtin manifest', async () => {
+    const { repository, externalDependencies } = setup()
+    const release = await createFunctionLibraryRelease('builtin:basic', 1, {
+      name: '基础组件库',
+      functions: []
+    })
+    const getBuiltinFunctionLibraryManifest = vi.fn().mockResolvedValue({ libraries: [release] })
+    const application = createTemplateApplication({
+      repository,
+      ...externalDependencies,
+      getBuiltinFunctionLibraryManifest
+    })
+
+    await application.initialize()
+    await application.initialize()
+
+    expect(getBuiltinFunctionLibraryManifest).toHaveBeenCalledTimes(1)
+    expect(await repository.getActiveBuiltinFunctionLibrary('builtin:basic')).toEqual(release)
+  })
+
   it('创建并浏览工作文档', async () => {
     const { application } = setup()
     const template = await application.templates.create({ name: 'Exam' })
-    const func = await application.functions.create({ name: 'Question' })
+    const library = await application.functionLibraries.local.create('Question library')
+    const created = await application.functionLibraries.local.createFunction(library.libraryId, {
+      name: 'Question'
+    })
 
     expect(await application.browser.listTemplates()).toEqual([
       { templateId: template.templateId, name: 'Exam', description: '' }
     ])
-    expect(await application.browser.listFunctions()).toEqual([
-      { functionId: func.functionId, name: 'Question' }
+    expect(await application.browser.listFunctionLibraries()).toEqual([
+      {
+        source: 'local',
+        libraryId: library.libraryId,
+        name: 'Question library',
+        functions: [{ functionId: created.function.functionId, name: 'Question' }]
+      }
+    ])
+  })
+
+  it('按函数库来源定位本地、导入和当前内置 release 中的函数', async () => {
+    const { repository, application } = setup()
+    await saveFunctions(repository, functionDocument(FUNCTION_A, 'Local function'))
+    const imported = await createFunctionLibraryRelease(LIBRARY_ID, 3, {
+      name: 'Imported library',
+      functions: [
+        {
+          functionId: FUNCTION_B,
+          content: functionDocument(FUNCTION_B, 'Imported function').content
+        }
+      ]
+    })
+    const builtin = await createFunctionLibraryRelease('builtin:basic', 1, {
+      name: '基础组件库',
+      functions: [
+        {
+          functionId: 'builtin:page',
+          content: functionDocument(FUNCTION_C, 'Builtin function').content
+        }
+      ]
+    })
+    await repository.registerImportedFunctionLibrary(imported)
+    await repository.registerBuiltinFunctionLibrary(builtin)
+    await repository.setActiveBuiltinFunctionLibraryVersion('builtin:basic', 1)
+    const template = await application.templates.create()
+
+    await application.templates.embedFunction(template.templateId, functionLocator(FUNCTION_A))
+    await application.templates.embedFunction(template.templateId, {
+      library: { source: 'imported', libraryId: LIBRARY_ID, version: 3 },
+      functionId: FUNCTION_B
+    })
+    const result = await application.templates.embedFunction(template.templateId, {
+      library: { source: 'builtin', libraryId: 'builtin:basic' },
+      functionId: 'builtin:page'
+    })
+
+    expect(result.template.resources.functions.map((item) => item.name).sort()).toEqual([
+      'Builtin function',
+      'Imported function',
+      'Local function'
     ])
   })
 
@@ -292,11 +475,13 @@ describe('TemplateApplication', () => {
         children: [functionCall('leaf-call', FUNCTION_B)]
       }
     ])
-    await repository.saveFunction(leaf)
-    await repository.saveFunction(parent)
+    await saveFunctions(repository, leaf, parent)
     const template = await application.templates.create({ name: 'Exam' })
 
-    const first = await application.templates.embedFunction(template.templateId, FUNCTION_A)
+    const first = await application.templates.embedFunction(
+      template.templateId,
+      functionLocator(FUNCTION_A)
+    )
     expect(first.template.resources.functions).toHaveLength(2)
     const parentResource = first.template.resources.functions.find(
       (resource) => resource.id === first.functionRef
@@ -312,12 +497,14 @@ describe('TemplateApplication', () => {
       true
     )
 
-    const second = await application.templates.embedFunction(template.templateId, FUNCTION_A)
+    const second = await application.templates.embedFunction(
+      template.templateId,
+      functionLocator(FUNCTION_A)
+    )
     expect(second.functionRef).toBe(first.functionRef)
     expect(second.template.resources.functions).toHaveLength(2)
 
-    await repository.deleteFunction(FUNCTION_A)
-    await repository.deleteFunction(FUNCTION_B)
+    await repository.deleteLocalFunctionLibrary(LIBRARY_ID)
     expect(
       (await application.templates.get(template.templateId))?.resources.functions
     ).toHaveLength(2)
@@ -341,7 +528,7 @@ describe('TemplateApplication', () => {
         }
       }
     ]
-    await repository.saveFunction(source)
+    await saveFunctions(repository, source)
     const template = await application.templates.create({
       name: 'Exam',
       root: root([
@@ -360,7 +547,7 @@ describe('TemplateApplication', () => {
 
     const inserted = await application.templates.insertFunctionCall(
       template.templateId,
-      FUNCTION_A,
+      functionLocator(FUNCTION_A),
       'root'
     )
 
@@ -381,11 +568,15 @@ describe('TemplateApplication', () => {
 
   it('调用节点插入失败时不保存刚复制的函数资源', async () => {
     const { repository, application } = setup()
-    await repository.saveFunction(functionDocument(FUNCTION_A, 'Question'))
+    await saveFunctions(repository, functionDocument(FUNCTION_A, 'Question'))
     const template = await application.templates.create({ name: 'Exam' })
 
     await expect(
-      application.templates.insertFunctionCall(template.templateId, FUNCTION_A, 'missing-parent')
+      application.templates.insertFunctionCall(
+        template.templateId,
+        functionLocator(FUNCTION_A),
+        'missing-parent'
+      )
     ).rejects.toMatchObject({
       code: 'EDIT_REJECTED',
       params: { code: 'PARENT_NOT_FOUND', path: 'parentId' }
@@ -405,9 +596,12 @@ describe('TemplateApplication', () => {
         bindings: { prompt: { type: 'literal', value: 'Inside function' } }
       }
     ]
-    await repository.saveFunction(source)
+    await saveFunctions(repository, source)
     const template = await application.templates.create({ name: 'Exam' })
-    const embedded = await application.templates.embedFunction(template.templateId, FUNCTION_A)
+    const embedded = await application.templates.embedFunction(
+      template.templateId,
+      functionLocator(FUNCTION_A)
+    )
     const saved = await application.templates.save({
       ...embedded.template,
       content: {
@@ -425,19 +619,18 @@ describe('TemplateApplication', () => {
 
   it('拒绝递归或缺失的函数依赖', async () => {
     const { repository, application } = setup()
-    await repository.saveFunction(
-      functionDocument(FUNCTION_A, 'A', [functionCall('b', FUNCTION_B)])
-    )
-    await repository.saveFunction(
+    await saveFunctions(
+      repository,
+      functionDocument(FUNCTION_A, 'A', [functionCall('b', FUNCTION_B)]),
       functionDocument(FUNCTION_B, 'B', [functionCall('a', FUNCTION_A)])
     )
     const template = await application.templates.create()
 
     await expect(
-      application.templates.embedFunction(template.templateId, FUNCTION_A)
+      application.templates.embedFunction(template.templateId, functionLocator(FUNCTION_A))
     ).rejects.toMatchObject({ code: 'RECURSIVE_FUNCTION_DEPENDENCY' })
     await expect(
-      application.templates.embedFunction(template.templateId, FUNCTION_C)
+      application.templates.embedFunction(template.templateId, functionLocator(FUNCTION_C))
     ).rejects.toEqual(
       expect.objectContaining<Partial<TemplateApplicationError>>({ code: 'FUNCTION_NOT_FOUND' })
     )
@@ -445,9 +638,12 @@ describe('TemplateApplication', () => {
 
   it('按根节点和嵌套引用清理不可达函数资源', async () => {
     const { repository, application } = setup()
-    await repository.saveFunction(functionDocument(FUNCTION_A, 'A'))
+    await saveFunctions(repository, functionDocument(FUNCTION_A, 'A'))
     const template = await application.templates.create()
-    const embedded = await application.templates.embedFunction(template.templateId, FUNCTION_A)
+    const embedded = await application.templates.embedFunction(
+      template.templateId,
+      functionLocator(FUNCTION_A)
+    )
 
     const referenced = {
       ...embedded.template,
@@ -471,14 +667,14 @@ describe('TemplateApplication', () => {
 
   it('autosave 与 embedFunction 交错时以 revision 冲突阻止覆盖', async () => {
     const { repository, externalDependencies } = setup()
-    await repository.saveFunction(functionDocument(FUNCTION_A, 'Slow function'))
+    await saveFunctions(repository, functionDocument(FUNCTION_A, 'Slow function'))
     const entered = deferred<void>()
     const release = deferred<void>()
     const delayedRepository = forwardRepository(repository, {
-      async getFunction(functionId) {
+      async getLocalFunctionLibrary(libraryId) {
         entered.resolve()
         await release.promise
-        return repository.getFunction(functionId)
+        return repository.getLocalFunctionLibrary(libraryId)
       }
     })
     const application = createTemplateApplication({
@@ -487,7 +683,10 @@ describe('TemplateApplication', () => {
     })
     const template = await application.templates.create({ name: 'Before edit' })
 
-    const embedding = application.templates.embedFunction(template.templateId, FUNCTION_A)
+    const embedding = application.templates.embedFunction(
+      template.templateId,
+      functionLocator(FUNCTION_A)
+    )
     await entered.promise
     const edited = await application.templates.save({
       ...template,
@@ -588,10 +787,20 @@ function forwardRepository(
     getTemplate: (id) => base.getTemplate(id),
     saveTemplate: (document) => base.saveTemplate(document),
     deleteTemplate: (id) => base.deleteTemplate(id),
-    listFunctionIds: () => base.listFunctionIds(),
-    getFunction: (id) => base.getFunction(id),
-    saveFunction: (document) => base.saveFunction(document),
-    deleteFunction: (id) => base.deleteFunction(id),
+    listLocalFunctionLibraryIds: () => base.listLocalFunctionLibraryIds(),
+    getLocalFunctionLibrary: (id) => base.getLocalFunctionLibrary(id),
+    saveLocalFunctionLibrary: (document) => base.saveLocalFunctionLibrary(document),
+    deleteLocalFunctionLibrary: (id) => base.deleteLocalFunctionLibrary(id),
+    listImportedFunctionLibraryIds: () => base.listImportedFunctionLibraryIds(),
+    listImportedFunctionLibraryVersions: (id) => base.listImportedFunctionLibraryVersions(id),
+    getImportedFunctionLibrary: (id, version) => base.getImportedFunctionLibrary(id, version),
+    registerImportedFunctionLibrary: (release) => base.registerImportedFunctionLibrary(release),
+    listBuiltinFunctionLibraryIds: () => base.listBuiltinFunctionLibraryIds(),
+    getActiveBuiltinFunctionLibrary: (id) => base.getActiveBuiltinFunctionLibrary(id),
+    getBuiltinFunctionLibrary: (id, version) => base.getBuiltinFunctionLibrary(id, version),
+    registerBuiltinFunctionLibrary: (release) => base.registerBuiltinFunctionLibrary(release),
+    setActiveBuiltinFunctionLibraryVersion: (id, version) =>
+      base.setActiveBuiltinFunctionLibraryVersion(id, version),
     ...overrides
   }
 }

@@ -1172,7 +1172,6 @@ describe('Function 文档编辑', () => {
 
     expect(result.applied).toBe(true)
     if (!result.applied) return
-    expect(result.document.revision).toBe(0)
     expect(JSON.stringify(result.document.content)).not.toContain('"name":"prompt"')
     expect(JSON.stringify(result.document.content)).toContain('"name":"sentence"')
   })

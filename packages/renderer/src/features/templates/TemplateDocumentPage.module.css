@@ -50,12 +50,13 @@
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(240px, 300px) minmax(480px, 1fr);
+  grid-template-columns: minmax(220px, 260px) minmax(480px, 1fr) minmax(280px, 340px);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
 }
 
+.library,
 .properties,
 .structure {
   min-width: 0;
@@ -63,8 +64,13 @@
   overflow: auto;
 }
 
-.properties {
+.library {
   border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.properties {
+  border-left: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 
@@ -73,6 +79,7 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+.library h2,
 .properties h2,
 .structure h2 {
   margin: 0;
@@ -81,8 +88,26 @@
   font-weight: 660;
 }
 
+.library h2,
 .properties h2 {
   margin-bottom: 18px;
+}
+
+.libraryGroups {
+  display: grid;
+  gap: 18px;
+}
+
+.libraryGroup {
+  display: grid;
+  gap: 8px;
+}
+
+.libraryGroup h3 {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 660;
 }
 
 .properties label {
@@ -206,11 +231,6 @@
   padding-right: 8px;
 }
 
-.nodeInlineEditor {
-  padding: 0 14px 14px 40px;
-  border-top: 1px solid var(--color-border);
-}
-
 .collapseButton {
   display: grid;
   width: 28px;
@@ -274,7 +294,7 @@
 
 @media (max-width: 1040px) {
   .workspace {
-    grid-template-columns: 240px minmax(0, 1fr);
+    grid-template-columns: 210px minmax(0, 1fr) 280px;
   }
 
   .structure {
@@ -301,18 +321,20 @@
     overflow: visible;
   }
 
+  .library,
   .properties,
   .structure {
     overflow: visible;
   }
 
-  .properties {
+  .library {
     border-right: 0;
     border-bottom: 1px solid var(--color-border);
   }
 
-  .nodeInlineEditor {
-    padding-left: 14px;
+  .properties {
+    border-left: 0;
+    border-bottom: 1px solid var(--color-border);
   }
 
   .structureHeader {

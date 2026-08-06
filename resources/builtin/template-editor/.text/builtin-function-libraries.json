@@ -1,0 +1,13 @@
+{
+  "libraries": [
+    {
+      "libraryId": "builtin:basic",
+      "version": 1,
+      "contentHash": "sha256:ea11b193ad8b921053e28679ecc52f9222edfdf3e45cbe2f496076cb375d4e19",
+      "content": {
+        "name": "基础组件库",
+        "functions": []
+      }
+    }
+  ]
+}

@@ -27,7 +27,7 @@ function template(revision = 4): TemplateDocument {
 
 function application(document: TemplateDocument = template()): TemplateApplication {
   return {
-    browser: { listTemplates: vi.fn(), listFunctions: vi.fn() },
+    browser: { listTemplates: vi.fn(), listFunctionLibraries: vi.fn() },
     templates: {
       create: vi.fn(),
       get: vi.fn().mockResolvedValue(document),
@@ -39,11 +39,8 @@ function application(document: TemplateDocument = template()): TemplateApplicati
       validate: vi.fn(),
       compile: vi.fn()
     },
-    functions: {
-      create: vi.fn(),
-      get: vi.fn(),
-      save: vi.fn(),
-      delete: vi.fn()
+    functionLibraries: {
+      local: {}
     }
   } as unknown as TemplateApplication
 }

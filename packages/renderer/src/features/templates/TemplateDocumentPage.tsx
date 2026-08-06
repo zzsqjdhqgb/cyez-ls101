@@ -1,7 +1,6 @@
 import { useState, type JSX } from 'react'
 import type {
   FrameNode,
-  FunctionDef,
   TemplateDocumentOperation,
   TemplateNode,
   TextExpression
@@ -56,6 +55,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const document = session.document
   const root = document?.content.root ?? null
   const selectedLocation = root ? locateNode(root, session.selectedNodeId) : null
+  const selectedNode = selectedLocation?.node ?? null
 
   const editMetadata = (
     type: 'set-template-name' | 'set-template-description',
@@ -152,30 +152,21 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
       </header>
 
       <div className={styles.workspace}>
-        <aside className={styles.properties} aria-labelledby="template-properties-heading">
+        <aside className={styles.library} aria-labelledby="function-library-heading">
           <section className={styles.inspectorSection}>
-            <h2 id="template-properties-heading">模板</h2>
-            {session.error ? (
-              <div className={styles.notice} role="alert">
-                {session.error}
-              </div>
-            ) : null}
-            <label>
-              名称
-              <input
-                disabled={!document}
-                value={document?.content.name ?? ''}
-                onChange={(event) => editMetadata('set-template-name', event.target.value)}
-              />
-            </label>
-            <label>
-              描述
-              <textarea
-                disabled={!document}
-                value={document?.content.description ?? ''}
-                onChange={(event) => editMetadata('set-template-description', event.target.value)}
-              />
-            </label>
+            <h2 id="function-library-heading">函数库</h2>
+            <div className={styles.libraryGroups}>
+              <section className={styles.libraryGroup} aria-labelledby="builtin-library-heading">
+                <h3 id="builtin-library-heading">内置</h3>
+                <span>基础组件库</span>
+              </section>
+              <section className={styles.libraryGroup} aria-labelledby="imported-library-heading">
+                <h3 id="imported-library-heading">导入</h3>
+              </section>
+              <section className={styles.libraryGroup} aria-labelledby="local-library-heading">
+                <h3 id="local-library-heading">本地</h3>
+              </section>
+            </div>
           </section>
         </aside>
 
@@ -217,7 +208,6 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
               rootId={root.id}
               selectedNodeId={session.selectedNodeId}
               collapsedIds={collapsedIds}
-              functions={document?.resources.functions ?? []}
               apply={session.apply}
               onSelect={session.selectNode}
               onToggle={toggleCollapsed}
@@ -227,6 +217,43 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
             <EmptyState icon={Layers3} title={session.loading ? '正在加载模板' : '模板不可用'} />
           )}
         </main>
+
+        <aside className={styles.properties} aria-labelledby="template-properties-heading">
+          <section className={styles.inspectorSection}>
+            <h2 id="template-properties-heading">属性</h2>
+            {session.error ? (
+              <div className={styles.notice} role="alert">
+                {session.error}
+              </div>
+            ) : null}
+            <label>
+              名称
+              <input
+                disabled={!document}
+                value={document?.content.name ?? ''}
+                onChange={(event) => editMetadata('set-template-name', event.target.value)}
+              />
+            </label>
+            <label>
+              描述
+              <textarea
+                disabled={!document}
+                value={document?.content.description ?? ''}
+                onChange={(event) => editMetadata('set-template-description', event.target.value)}
+              />
+            </label>
+          </section>
+          {selectedNode ? (
+            <section className={styles.inspectorSection} aria-labelledby="node-properties-heading">
+              <h2 id="node-properties-heading">节点属性</h2>
+              <TemplateNodeInspector
+                node={selectedNode}
+                functions={document?.resources.functions ?? []}
+                apply={session.apply}
+              />
+            </section>
+          ) : null}
+        </aside>
       </div>
 
       <ConfirmModal
@@ -258,7 +285,6 @@ interface NodeTreeProps {
   rootId: string
   selectedNodeId: string
   collapsedIds: ReadonlySet<string>
-  functions: readonly FunctionDef[]
   apply(operation: TemplateDocumentOperation): boolean
   onSelect(nodeId: string): void
   onToggle(nodeId: string): void
@@ -272,7 +298,6 @@ function NodeTree({
   rootId,
   selectedNodeId,
   collapsedIds,
-  functions,
   apply,
   onSelect,
   onToggle,
@@ -362,11 +387,6 @@ function NodeTree({
               </div>
             ) : null}
           </div>
-          {selected && node.type !== 'function' ? (
-            <div className={styles.nodeInlineEditor}>
-              <TemplateNodeInspector node={node} functions={functions} apply={apply} />
-            </div>
-          ) : null}
         </div>
         {node.type === 'frame' && !collapsed && node.children.length > 0 ? (
           <div className={styles.nodeChildren}>
@@ -379,7 +399,6 @@ function NodeTree({
                 rootId={rootId}
                 selectedNodeId={selectedNodeId}
                 collapsedIds={collapsedIds}
-                functions={functions}
                 apply={apply}
                 onSelect={onSelect}
                 onToggle={onToggle}

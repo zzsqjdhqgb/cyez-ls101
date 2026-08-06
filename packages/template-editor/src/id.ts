@@ -4,6 +4,9 @@ import type {
   FunctionContent,
   FunctionDef,
   FunctionDocument,
+  FunctionLibraryContent,
+  FunctionLibraryRelease,
+  LocalFunctionLibraryDocument,
   TemplateContent,
   TemplateDocument,
   TemplateResources
@@ -16,6 +19,10 @@ export function createTemplateId(): string {
 }
 
 export function createFunctionId(): string {
+  return crypto.randomUUID()
+}
+
+export function createFunctionLibraryId(): string {
   return crypto.randomUUID()
 }
 
@@ -39,8 +46,19 @@ export function createFunctionDocument(
 ): FunctionDocument {
   return {
     functionId: createFunctionId(),
-    revision: 0,
     content: structuredClone(content),
+    editorState: structuredClone(editorState)
+  }
+}
+
+export function createLocalFunctionLibraryDocument(
+  name = '',
+  editorState: LocalFunctionLibraryDocument['editorState'] = { library: {}, functions: {} }
+): LocalFunctionLibraryDocument {
+  return {
+    libraryId: createFunctionLibraryId(),
+    revision: 0,
+    content: { name, functions: [] },
     editorState: structuredClone(editorState)
   }
 }
@@ -80,6 +98,51 @@ export function canonicalizeFunctionContent(content: FunctionContent): string {
       schemaUses: content.schemaUses
     })
   )
+}
+
+export function canonicalizeFunctionLibraryContent(content: FunctionLibraryContent): string {
+  return stableStringify(
+    normalizeCanonicalValue({
+      name: content.name,
+      functions: [...content.functions]
+        .sort((left, right) => left.functionId.localeCompare(right.functionId))
+        .map((entry) => ({
+          functionId: entry.functionId,
+          content: JSON.parse(canonicalizeFunctionContent(entry.content)) as unknown
+        }))
+    })
+  )
+}
+
+export async function deriveFunctionLibraryContentHash(
+  content: FunctionLibraryContent
+): Promise<string> {
+  const bytes = new TextEncoder().encode(canonicalizeFunctionLibraryContent(content))
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join(
+    ''
+  )
+  return `sha256:${hex}`
+}
+
+export async function createFunctionLibraryRelease(
+  libraryId: string,
+  version: number,
+  content: FunctionLibraryContent
+): Promise<FunctionLibraryRelease> {
+  const copy = structuredClone(content)
+  return {
+    libraryId,
+    version,
+    contentHash: await deriveFunctionLibraryContentHash(copy),
+    content: copy
+  }
+}
+
+export async function verifyFunctionLibraryRelease(
+  release: FunctionLibraryRelease
+): Promise<boolean> {
+  return release.contentHash === (await deriveFunctionLibraryContentHash(release.content))
 }
 
 function normalizeCanonicalValue(value: unknown): unknown {

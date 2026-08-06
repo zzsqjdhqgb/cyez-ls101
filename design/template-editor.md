@@ -10,24 +10,24 @@ Template 也不直接实现评分逻辑。Schema 以可复用的评分块列表�
 
 整体关系：
 
-~~~text
+```text
 Interface                         Template                         Schema
 定义可生成的数据变量                定义试卷 DSL 和参数连接             定义可消费的评分块和变量
         │                                  │                                  │
         │                                  │ 选择评分块并绑定                  │
         └── 导出时选择 Instance ──────────┴────────── 生成导出映射 ────────────┘
-~~~
+```
 
 ## 二、编辑器界面
 
 编辑器是图形化 DSL 编辑器，采用资源/模板配置与 DSL 节点树并列的布局：
 
-~~~text
+```text
 +----------------------+------------------------------------------------+
 | 资源与模板级配置      | DSL 节点树                                     |
 |                      | 节点卡片内原地编辑属性、绑定和内部列表            |
 +----------------------+------------------------------------------------+
-~~~
+```
 
 - 资源区列出页面预设、框架预设、选择题单题、函数、用户自定义函数及模板级配置。
 - 主区域显示当前 Template 的有序节点树。
@@ -46,7 +46,7 @@ Interface                         Template                         Schema
 
 Template 有页面节点、框架节点和选择题单题节点三种基础结构。函数节点是函数在调用处的表现形式。
 
-~~~typescript
+```typescript
 type TemplateNode = PageNode | FrameNode | FunctionNode | ChoiceQuestionNode
 
 interface BaseNode {
@@ -78,7 +78,7 @@ interface ChoiceQuestionNode extends BaseNode {
   options: ChoiceOptionDef[]
   outputName: string
 }
-~~~
+```
 
 框架节点的 children 是一个有序列表，不使用 ChildrenSlot。框架只负责组合和排序；子节点类型与数量约束由函数定义或其他编辑器校验规则决定，而不是通过隐藏的插槽结构表达。
 
@@ -92,7 +92,7 @@ interface ChoiceQuestionNode extends BaseNode {
 
 内容文档是面向教师的简单编辑器，基于 1200×800 设计基准。内容块使用百分比坐标；图片永远渲染在文本下方，同类型内容块按数组顺序渲染。
 
-~~~typescript
+```typescript
 interface ContentDocument {
   blocks: ContentBlock[]
 }
@@ -119,19 +119,16 @@ interface ImageBlock {
   width: number
   src: ValueExpression<'file'>
 }
-~~~
+```
 
 文本支持固定内容与变量拼接。编辑器显示为带变量 token 的自然文本；内部使用结构化片段保存，避免用户直接修改变量标识。
 
-~~~typescript
+```typescript
 type TextExpression = {
   type: 'string'
-  parts: Array<
-    | { type: 'literal'; value: string }
-    | { type: 'variable'; ref: VariableRef }
-  >
+  parts: Array<{ type: 'literal'; value: string } | { type: 'variable'; ref: VariableRef }>
 }
-~~~
+```
 
 Template 根中的文本变量可以来自 Interface 或当前作用域中的其他输出。只有 Interface 变量在用户可见语法中带命名空间，例如 [@speaking.sentence]；局部变量通过当前作用域中的名称引用。函数定义不能直接引用 Template 的 Interface alias，所需 Interface 值必须在调用点绑定到函数输入，再由函数内部以局部变量使用。
 
@@ -139,7 +136,7 @@ Template 根中的文本变量可以来自 Interface 或当前作用域中的其
 
 时间线是按顺序执行的列表。
 
-~~~typescript
+```typescript
 type TimelineStep = TimelineAction & {
   choiceViewOverrides?: Record<string, ChoiceViewport>
 }
@@ -152,7 +149,7 @@ type TimelineAction =
       duration: ValueExpression<'number'>
       outputName: string
     }
-~~~
+```
 
 record 步骤会产生一个音频类型的可用输出。新增录音项时系统生成默认名称，例如 recording-1；用户可以编辑名称，但同一局部命名空间内的名称必须唯一。展开 Template 时，系统为所有录音输出分配全局 recordIndex。
 
@@ -164,24 +161,25 @@ play 步骤的 text 是提交给 TTS 的文本，支持固定文本与变量拼�
 
 参数类型只有 string、number 和 file。非文本值不支持拼接，只能是一个固定值或一个变量引用。
 
-~~~typescript
+```typescript
 type ValueType = 'string' | 'number' | 'file'
 
 type ValueExpression<T extends ValueType = ValueType> =
-  | { type: T; source: 'literal'; value: T extends 'string' ? string : T extends 'number' ? number : string }
+  | {
+      type: T
+      source: 'literal'
+      value: T extends 'string' ? string : T extends 'number' ? number : string
+    }
   | { type: T; source: 'variable'; ref: VariableRef }
 
 type StringExpression = ValueExpression<'string'> | TextExpression
 
-type StaticValueExpression =
-  | StringExpression
-  | ValueExpression<'number'>
-  | ValueExpression<'file'>
+type StaticValueExpression = StringExpression | ValueExpression<'number'> | ValueExpression<'file'>
 
 type VariableRef =
   | { scope: 'interface'; alias: string; varName: string }
   | { scope: 'local'; name: string }
-~~~
+```
 
 Interface 的 text 变量可以绑定到 string；Interface 的 image 变量可以绑定到 file。当前没有 Interface 的 number 变量，但表达式模型保留未来增加该能力的空间。
 
@@ -191,7 +189,7 @@ Interface 的 text 变量可以绑定到 string；Interface 的 image 变量可�
 
 函数是一个可复用的 DSL 子图。它由手动配置的输入列表、一个外层框架节点和手动配置的出参列表组成。
 
-~~~typescript
+```typescript
 interface FunctionContent {
   name: string
   inputs: FunctionInputDef[]
@@ -202,9 +200,31 @@ interface FunctionContent {
 
 interface FunctionDocument {
   functionId: string
-  revision: number
   content: FunctionContent
   editorState: DslEditorState
+}
+
+interface FunctionLibraryContent {
+  name: string
+  functions: Array<{
+    functionId: string
+    content: FunctionContent
+  }>
+}
+
+interface LocalFunctionLibraryDocument {
+  libraryId: string
+  revision: number
+  content: FunctionLibraryContent
+  editorState: FunctionLibraryEditorState
+  exportState?: FunctionLibraryExportState
+}
+
+interface FunctionLibraryRelease {
+  libraryId: string
+  version: number
+  contentHash: string
+  content: FunctionLibraryContent
 }
 
 interface FunctionDef extends FunctionContent {
@@ -226,11 +246,13 @@ type OutputExpression =
   | StaticValueExpression
   | { type: 'audio'; source: 'record-output'; name: string }
   | { type: 'choice'; source: 'choice-output'; name: string }
-~~~
+```
 
-函数库中的 `FunctionDocument` 是可直接编辑和删除的源文档，使用稳定 UUID 标识。用户把函数加入 Template 时，系统复制该函数当前状态及其完整嵌套函数依赖闭包；复制过程从叶子开始，把内部 `functionRef` 改写为已复制子函数的内容 ID，再计算父函数内容 ID。相同内容 ID 的资源只保存一次，因此最终结构是去重后的依赖图，而不是重复的树。
+函数必须属于函数库。内置、导入和本地是函数库的来源分类，每个来源都允许包含多个函数库，每个函数库包含多个函数。本地函数库是带 `revision` 的可编辑工作文档；导入函数库和内置函数库按版本保存不可变 release。`FunctionDocument` 只是函数编辑器使用的库内函数投影，不是独立仓储对象，也没有自己的仓储 revision。
 
-Template 不保存对函数库 UUID 的活动引用。复制完成后，Template 根节点和内嵌函数中的 `functionRef` 都只指向 Template 自身资源集合中的 `FunctionDef.id`。修改或删除函数库源文档不会影响已有 Template；更新到新版本必须显式重新复制。函数不会在存储时摊平，输入、出参、局部命名空间、Schema 消费和相对 focus 地址仍保留原有函数边界，最终导出时才由编译器展开。递归函数依赖不允许复制。
+用户把函数加入 Template 时，系统先通过来源、函数库 ID、可选 release 版本和函数 ID 定位源函数，再复制该函数当前状态及其完整嵌套函数依赖闭包。复制过程从叶子开始，把内部 `functionRef` 改写为已复制子函数的内容 ID，再计算父函数内容 ID。相同内容 ID 的资源只保存一次，因此最终结构是去重后的依赖图，而不是重复的树。
+
+Template 不保存对函数库的活动引用。复制完成后，Template 根节点和内嵌函数中的 `functionRef` 都只指向 Template 自身资源集合中的 `FunctionDef.id`。修改、删除或切换函数库版本不会影响已有 Template；更新到新版本必须显式重新复制。函数不会在存储时摊平，输入、出参、局部命名空间、Schema 消费和相对 focus 地址仍保留原有函数边界，最终导出时才由编译器展开。递归函数依赖不允许复制。
 
 函数输入、页面录音输出、选择题输出和函数出参共享同一个局部命名空间，所有名称必须整体唯一。新增输入或出参时系统生成可编辑的默认名称，例如 text-1、recording-1、answer-1。
 
@@ -238,14 +260,14 @@ Template 不保存对函数库 UUID 的活动引用。复制完成后，Template
 
 函数出参表达式对函数内部来说就是普通可填写变量槽位，因此可以引用函数输入、页面录音输出、其他局部变量和固定文本。函数节点对外只暴露函数声明的出参，函数内部的其他变量不会穿透到外层。
 
-~~~typescript
+```typescript
 interface FunctionNode extends BaseNode {
   type: 'function'
   functionRef: string
   inputs: Record<string, StaticValueExpression>
   outputNames: Record<string, string>
 }
-~~~
+```
 
 调用函数时，调用方为每个函数输入提供一个表达式，并通过 outputNames 为每个函数出参指定调用方局部命名空间中的名称。新增调用节点时系统自动生成不冲突的默认名称，用户可以编辑；同一函数因此可以被多次调用而不产生固定出参名冲突。
 
@@ -263,7 +285,7 @@ interface FunctionNode extends BaseNode {
 
 选择题单题节点与显示页面平行地由编译器收集，不通过 setter、Frame 句柄或普通函数出参传递。用户手动声明的函数出参只负责把具体 choice 作答值传到外层。
 
-~~~typescript
+```typescript
 interface ChoiceQuestionNode extends BaseNode {
   type: 'choice-question'
   stem: TextExpression
@@ -283,7 +305,7 @@ interface ChoiceCollectorConfig {
 interface ChoicePageSpec {
   questionCount: number
 }
-~~~
+```
 
 单题节点接收题干和可增减的选项列表。首版为单选，选项数量必须为 2 至 26；显示标签根据列表位置从 A 开始自动递增，不能手动编辑。每道题产生一个 choice 类型的运行期输出，值为 A-Z 或未作答标记 `-`。outputName 在当前局部命名空间内唯一，新增时自动生成 answer-1 一类的可编辑默认名称。
 
@@ -297,7 +319,7 @@ Collector 的 pages 是可增减列表，每项的 questionCount 表示该内页
 
 页面内容可以插入选择题视图：
 
-~~~typescript
+```typescript
 interface ChoiceViewBlock {
   id: string
   type: 'choice-view'
@@ -324,7 +346,7 @@ type ChoiceViewport =
       endPage: number
       initialPage?: number
     }
-~~~
+```
 
 - free：允许浏览全局 ChoiceMeta 的所有内页。
 - focus：自动跳到包含目标题的内页、高亮该题并锁定内部分页；同一内页上的其他题仍可作答。
@@ -338,7 +360,7 @@ focus 的 questionRef 可以引用全局 ChoiceMeta 中的任意题目，不受�
 
 编译节点时，页面、选择题单题、Schema 依赖和普通出参通过彼此独立的通道返回：
 
-~~~typescript
+```typescript
 interface CompiledNode {
   pages: CompiledPage[]
   choiceQuestions: CompiledChoiceQuestion[]
@@ -346,7 +368,7 @@ interface CompiledNode {
   schemaUses: CompiledSchemaUse[]
   valueOutputs: CompiledValueOutput[]
 }
-~~~
+```
 
 普通框架和函数按子节点展开顺序向上传播 choiceQuestions。具有 choiceCollector 的框架消费包裹范围内的 choiceQuestions，阻止原始题目继续向父层传播，按照 pages 配置分页，并生成一个密封的 choiceMetaCandidate。编译器随后把候选提升为全局、只读的 ChoiceMeta，并在第二阶段解析 ChoiceViewBlock、focus/range、choice 出参和 Schema 绑定。
 
@@ -358,20 +380,20 @@ interface CompiledNode {
 
 Template 可以依赖多个 Interface，并且只接受每个 Interface 的部分变量。每个依赖有一个 Template 内部别名，别名构成 Interface 变量的命名空间。
 
-~~~typescript
+```typescript
 interface TemplateInterfaceRequirement {
   alias: string
   interfaceId: string
   acceptedVars: string[]
 }
-~~~
+```
 
 例如：
 
-~~~text
+```text
 speaking  → 上海高考口语 Interface → sentence, topic, picture
 listening → 上海高考听力 Interface → audio, question
-~~~
+```
 
 Template 保存 interfaceId 和别名，不保存 instanceId。预览或导出时，用户为每个别名选择一个属于对应 Interface 的实例。
 
@@ -379,14 +401,14 @@ Template 保存 interfaceId 和别名，不保存 instanceId。预览或导出�
 
 Schema 由多个可复用评分块组成。Template 或函数可以选择其中的部分评分块；一旦消费某个评分块，必须在当前层级完整绑定它的全部参数。
 
-~~~typescript
+```typescript
 interface SchemaUse {
   useId: string
   schemaId: string
   blockId: string
   bindings: Record<string, OutputExpression>
 }
-~~~
+```
 
 评分块的消费具有作用域：
 
@@ -401,7 +423,7 @@ Schema 相关的完整导出规则见 data-interface.md。
 
 Template 是可持续编辑并直接保存的工作文档，不区分草稿和已发布成品。每份 Template 使用稳定 UUID 标识；导出 ExamPackage 不是发布操作，也不会冻结 Template。导出后继续修改或删除 Template 不影响已经生成的试卷包，因为试卷包保存完整 Player 数据，只保留对 Schema 的评分依赖。
 
-~~~typescript
+```typescript
 interface TemplateContent {
   name: string
   description: string
@@ -421,11 +443,13 @@ interface TemplateDocument {
   resources: TemplateResources
   editorState: DslEditorState
 }
-~~~
+```
 
 `editorState` 保存画布位置、折叠、选择等编辑器私有 JSON 状态，不参与语义校验或试卷编译。工作文档可以处于不完整状态，保存不触发严格校验；预览和导出必须通过完整校验。
 
-Template 和函数源工作文档都带非负整数 `revision`。新文档从 0 开始，每次成功更新后由仓储递增；保存操作返回带新 revision 的完整文档，编辑器必须用返回值替换本地副本。仓储通过 File Store main 进程的原子 revision compare-and-swap 拒绝过期保存，该保证跨 renderer 和仓储实例成立；耗时的函数复制或资源清理不能覆盖期间完成的 autosave。
+Template 和本地函数库工作文档都带非负整数 `revision`。新文档从 0 开始，每次成功更新后由仓储递增；保存操作返回带新 revision 的完整文档，编辑器必须用返回值替换本地副本。仓储通过 File Store main 进程的原子 revision compare-and-swap 拒绝过期保存，该保证跨 renderer 和仓储实例成立；耗时的函数复制或资源清理不能覆盖期间完成的 autosave。导入和内置函数库是不可变 release，不使用工作文档 revision。
+
+函数库仓储位于 `template-editor/function-libraries`。本地库按 UUID 保存单份工作文档；导入库按 UUID 和版本保存 release；内置库按稳定 key 和版本保存 release，并通过 active 指针标识当前软件版本使用的 release。软件安装目录只携带当前内置 release，并由 File Store 提供的通用只读 Builtin Scoped Store 暴露；该读取层仅提供受 scope 约束的读取、存在性检查、列举和 asset URL，不提供写入、删除、CAS 或业务复制。Template Editor 初始化时自行读取、校验并幂等登记内置 release，随后只从自己的用户数据仓储读取。
 
 Template 本身不计算内容哈希。只有 `resources.functions` 中的内嵌函数快照使用 `sha256:<64 位十六进制摘要>` 内容 ID，用于不可变引用、复制去重和完整性验证。资源集合只需保存从 Template 根节点传递可达的函数依赖闭包；编辑器撤销历史所需的临时副本属于编辑状态，不参与编译。
 

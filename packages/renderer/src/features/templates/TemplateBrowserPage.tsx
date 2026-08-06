@@ -1,5 +1,5 @@
 import { useEffect, useState, type JSX } from 'react'
-import type { FunctionSummary, TemplateSummary } from '@ls101/template-editor'
+import type { FunctionLibrarySummary, TemplateSummary } from '@ls101/template-editor'
 import { AlertCircle, Braces, LayoutTemplate, Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
@@ -13,18 +13,21 @@ export function TemplateBrowserPage(): JSX.Element {
   const application = useTemplateApplication()
   const navigate = useNavigate()
   const [templates, setTemplates] = useState<TemplateSummary[]>([])
-  const [functions, setFunctions] = useState<FunctionSummary[]>([])
+  const [functionLibraries, setFunctionLibraries] = useState<FunctionLibrarySummary[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
-    void Promise.all([application.browser.listTemplates(), application.browser.listFunctions()])
-      .then(([templateItems, functionItems]) => {
+    void Promise.all([
+      application.browser.listTemplates(),
+      application.browser.listFunctionLibraries()
+    ])
+      .then(([templateItems, libraryItems]) => {
         if (!active) return
         setTemplates(templateItems)
-        setFunctions(functionItems)
+        setFunctionLibraries(libraryItems)
       })
       .catch((reason: unknown) => {
         if (active) setError(templateErrorMessage(reason))
@@ -98,14 +101,19 @@ export function TemplateBrowserPage(): JSX.Element {
 
       <section aria-labelledby="template-functions-heading">
         <div className={styles.sectionHeader}>
-          <h2 id="template-functions-heading">函数</h2>
+          <h2 id="template-functions-heading">函数库</h2>
         </div>
-        {!loading && functions.length === 0 ? <EmptyState icon={Braces} title="暂无函数" /> : null}
-        {!loading && functions.length > 0 ? (
+        {!loading && functionLibraries.length === 0 ? (
+          <EmptyState icon={Braces} title="暂无函数库" />
+        ) : null}
+        {!loading && functionLibraries.length > 0 ? (
           <div className={styles.list}>
-            {functions.map((item) => (
-              <article className={styles.row} key={item.functionId}>
-                <span className={styles.functionName}>{item.name || '未命名函数'}</span>
+            {functionLibraries.map((item) => (
+              <article
+                className={styles.row}
+                key={`${item.source}:${item.libraryId}:${item.version ?? 'local'}`}
+              >
+                <span className={styles.functionName}>{item.name || '未命名函数库'}</span>
               </article>
             ))}
           </div>

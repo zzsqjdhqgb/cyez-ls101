@@ -5,8 +5,11 @@ import type {
   FunctionContent,
   FunctionDef,
   FunctionDocument,
+  FunctionLibraryContent,
+  FunctionLibraryRelease,
   FunctionOutputDef,
   JsonValue,
+  LocalFunctionLibraryDocument,
   SchemaBindingExpression,
   SchemaUse,
   StaticValueExpression,
@@ -47,13 +50,44 @@ export function parseFunctionDocument(value: unknown): FunctionDocument | null {
     !isJsonTree(value) ||
     !isRecord(value) ||
     typeof value.functionId !== 'string' ||
-    !isRevision(value.revision) ||
     !isFunctionContent(value.content) ||
     !isJsonObject(value.editorState)
   ) {
     return null
   }
   return value as unknown as FunctionDocument
+}
+
+export function parseLocalFunctionLibraryDocument(
+  value: unknown
+): LocalFunctionLibraryDocument | null {
+  if (
+    !isJsonTree(value) ||
+    !isRecord(value) ||
+    typeof value.libraryId !== 'string' ||
+    !isRevision(value.revision) ||
+    !isFunctionLibraryContent(value.content) ||
+    !isFunctionLibraryEditorState(value.editorState) ||
+    (value.exportState !== undefined && !isFunctionLibraryExportState(value.exportState))
+  ) {
+    return null
+  }
+  return value as unknown as LocalFunctionLibraryDocument
+}
+
+export function parseFunctionLibraryRelease(value: unknown): FunctionLibraryRelease | null {
+  if (
+    !isJsonTree(value) ||
+    !isRecord(value) ||
+    typeof value.libraryId !== 'string' ||
+    !Number.isSafeInteger(value.version) ||
+    (value.version as number) < 1 ||
+    typeof value.contentHash !== 'string' ||
+    !isFunctionLibraryContent(value.content)
+  ) {
+    return null
+  }
+  return value as unknown as FunctionLibraryRelease
 }
 
 function isFunctionDef(value: unknown): value is FunctionDef {
@@ -73,6 +107,36 @@ function isFunctionContent(value: unknown): value is FunctionContent {
     value.outputs.every(isFunctionOutput) &&
     Array.isArray(value.schemaUses) &&
     value.schemaUses.every(isSchemaUse)
+  )
+}
+
+function isFunctionLibraryContent(value: unknown): value is FunctionLibraryContent {
+  return (
+    isRecord(value) &&
+    typeof value.name === 'string' &&
+    Array.isArray(value.functions) &&
+    value.functions.every(
+      (entry) =>
+        isRecord(entry) && typeof entry.functionId === 'string' && isFunctionContent(entry.content)
+    )
+  )
+}
+
+function isFunctionLibraryEditorState(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    isJsonObject(value.library) &&
+    isRecord(value.functions) &&
+    Object.values(value.functions).every(isJsonObject)
+  )
+}
+
+function isFunctionLibraryExportState(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    Number.isSafeInteger(value.version) &&
+    (value.version as number) >= 1 &&
+    typeof value.contentHash === 'string'
   )
 }
 

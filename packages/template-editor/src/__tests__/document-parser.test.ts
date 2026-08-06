@@ -251,7 +251,6 @@ describe('工作文档结构解析器', () => {
     const template = completeTemplate()
     const func: FunctionDocument = {
       functionId: '20000000-0000-4000-8000-000000000001',
-      revision: 2,
       content: completeFunctionContent(),
       editorState: { collapsed: ['root'] }
     }
@@ -317,7 +316,6 @@ describe('工作文档结构解析器', () => {
     expect(
       parseFunctionDocument({
         functionId: 'id',
-        revision: 0,
         content: { ...completeFunctionContent(), outputs: [{ type: 'unknown' }] },
         editorState: {}
       })

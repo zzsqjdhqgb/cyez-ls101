@@ -1,4 +1,5 @@
 import type { InterfaceVarManifest, SchemaBlockManifest } from '@ls101/core-types'
+import { initializeBuiltinFunctionLibraries } from './builtin-initializer'
 import { compileTemplate } from './compiler'
 import type {
   LocatedInterfaceInstance,
@@ -9,6 +10,7 @@ import {
   canonicalizeFunctionContent,
   createFunctionDocument,
   createFunctionResource,
+  createLocalFunctionLibraryDocument,
   createTemplateDocument
 } from './id'
 import { editTemplateDocument } from './mutations'
@@ -19,6 +21,10 @@ import type {
   FunctionContent,
   FunctionDef,
   FunctionDocument,
+  FunctionLibraryLocator,
+  FunctionLibraryRelease,
+  FunctionLocator,
+  LocalFunctionLibraryDocument,
   SchemaUse,
   TemplateContent,
   TemplateDocument,
@@ -41,6 +47,14 @@ export interface FunctionSummary {
   name: string
 }
 
+export interface FunctionLibrarySummary {
+  source: FunctionLibraryLocator['source']
+  libraryId: string
+  version?: number
+  name: string
+  functions: FunctionSummary[]
+}
+
 export interface EmbeddedFunctionResult {
   template: TemplateDocument
   functionRef: string
@@ -52,7 +66,7 @@ export interface InsertedFunctionCallResult extends EmbeddedFunctionResult {
 
 export interface TemplateBrowserApplication {
   listTemplates(): Promise<TemplateSummary[]>
-  listFunctions(): Promise<FunctionSummary[]>
+  listFunctionLibraries(): Promise<FunctionLibrarySummary[]>
 }
 
 export interface TemplateDocumentApplication {
@@ -63,10 +77,10 @@ export interface TemplateDocumentApplication {
   get(templateId: string): Promise<TemplateDocument | null>
   save(document: TemplateDocument): Promise<TemplateDocument>
   delete(templateId: string): Promise<void>
-  embedFunction(templateId: string, functionId: string): Promise<EmbeddedFunctionResult>
+  embedFunction(templateId: string, locator: FunctionLocator): Promise<EmbeddedFunctionResult>
   insertFunctionCall(
     templateId: string,
-    functionId: string,
+    locator: FunctionLocator,
     parentId: string,
     index?: number
   ): Promise<InsertedFunctionCallResult>
@@ -78,24 +92,41 @@ export interface TemplateDocumentApplication {
   ): Promise<TemplateCompileResult>
 }
 
-export interface FunctionDocumentApplication {
-  create(
+export interface LocalFunctionLibraryApplication {
+  create(name?: string): Promise<LocalFunctionLibraryDocument>
+  get(libraryId: string): Promise<LocalFunctionLibraryDocument | null>
+  save(document: LocalFunctionLibraryDocument): Promise<LocalFunctionLibraryDocument>
+  delete(libraryId: string): Promise<void>
+  createFunction(
+    libraryId: string,
     initial?: Partial<FunctionContent>,
     editorState?: DslEditorState
-  ): Promise<FunctionDocument>
-  get(functionId: string): Promise<FunctionDocument | null>
-  save(document: FunctionDocument): Promise<FunctionDocument>
-  delete(functionId: string): Promise<void>
+  ): Promise<{ library: LocalFunctionLibraryDocument; function: FunctionDocument }>
+  getFunction(libraryId: string, functionId: string): Promise<FunctionDocument | null>
+  saveFunction(
+    library: LocalFunctionLibraryDocument,
+    functionDocument: FunctionDocument
+  ): Promise<LocalFunctionLibraryDocument>
+  deleteFunction(
+    library: LocalFunctionLibraryDocument,
+    functionId: string
+  ): Promise<LocalFunctionLibraryDocument>
+}
+
+export interface FunctionLibraryApplication {
+  readonly local: LocalFunctionLibraryApplication
 }
 
 export interface TemplateApplication {
+  initialize(): Promise<void>
   readonly browser: TemplateBrowserApplication
   readonly templates: TemplateDocumentApplication
-  readonly functions: FunctionDocumentApplication
+  readonly functionLibraries: FunctionLibraryApplication
 }
 
 export interface TemplateApplicationDependencies {
   repository: TemplateRepository
+  getBuiltinFunctionLibraryManifest?(): Promise<unknown | null>
   getInterfaceManifest(interfaceId: string): Promise<InterfaceVarManifest | null>
   getSchemaManifest(schemaId: string): Promise<SchemaBlockManifest | null>
   locateInterfaceInstance(
@@ -107,6 +138,7 @@ export class TemplateApplicationError extends Error {
   constructor(
     public readonly code:
       | 'TEMPLATE_NOT_FOUND'
+      | 'FUNCTION_LIBRARY_NOT_FOUND'
       | 'FUNCTION_NOT_FOUND'
       | 'RECURSIVE_FUNCTION_DEPENDENCY'
       | 'FUNCTION_RESOURCE_COLLISION'
@@ -139,6 +171,21 @@ export function createTemplateApplication(
   dependencies: TemplateApplicationDependencies
 ): TemplateApplication {
   const { repository } = dependencies
+  let initialization: Promise<void> | null = null
+
+  const initialize = (): Promise<void> => {
+    if (!initialization) {
+      initialization = (async () => {
+        if (!dependencies.getBuiltinFunctionLibraryManifest) return
+        const manifest = await dependencies.getBuiltinFunctionLibraryManifest()
+        if (manifest === null) {
+          throw new Error('Builtin function library manifest is missing')
+        }
+        await initializeBuiltinFunctionLibraries(repository, manifest)
+      })()
+    }
+    return initialization
+  }
 
   const loadTemplate = async (templateId: string): Promise<TemplateDocument> => {
     const document = await repository.getTemplate(templateId)
@@ -171,10 +218,22 @@ export function createTemplateApplication(
 
   const embedFunctionClosure = async (
     template: TemplateDocument,
-    functionId: string
+    locator: FunctionLocator
   ): Promise<{ template: TemplateDocument; resource: FunctionDef }> => {
     const resources = new Map(template.resources.functions.map((item) => [item.id, item]))
     const bySourceId = new Map<string, FunctionDef>()
+    const library = await loadFunctionLibrary(repository, locator.library)
+    if (!library) {
+      throw new TemplateApplicationError(
+        'FUNCTION_LIBRARY_NOT_FOUND',
+        `Function library not found: ${locator.library.libraryId}`,
+        {
+          source: locator.library.source,
+          libraryId: locator.library.libraryId
+        }
+      )
+    }
+    const functions = new Map(library.content.functions.map((entry) => [entry.functionId, entry]))
 
     const snapshot = async (sourceId: string, stack: readonly string[]): Promise<FunctionDef> => {
       const cached = bySourceId.get(sourceId)
@@ -187,7 +246,7 @@ export function createTemplateApplication(
           { functionId: sourceId, chain: chain.join(' -> ') }
         )
       }
-      const source = await repository.getFunction(sourceId)
+      const source = functions.get(sourceId)
       if (!source) {
         throw new TemplateApplicationError(
           'FUNCTION_NOT_FOUND',
@@ -215,7 +274,7 @@ export function createTemplateApplication(
       return existing ?? resource
     }
 
-    const resource = await snapshot(functionId, [])
+    const resource = await snapshot(locator.functionId, [])
     return {
       template: {
         ...template,
@@ -226,6 +285,7 @@ export function createTemplateApplication(
   }
 
   return {
+    initialize,
     browser: {
       async listTemplates() {
         const documents = await Promise.all(
@@ -239,13 +299,34 @@ export function createTemplateApplication(
             description: content.description
           }))
       },
-      async listFunctions() {
-        const documents = await Promise.all(
-          (await repository.listFunctionIds()).map((id) => repository.getFunction(id))
-        )
-        return documents
-          .filter((item) => item !== null)
-          .map(({ functionId, content }) => ({ functionId, name: content.name }))
+      async listFunctionLibraries() {
+        const [localIds, importedIds, builtinIds] = await Promise.all([
+          repository.listLocalFunctionLibraryIds(),
+          repository.listImportedFunctionLibraryIds(),
+          repository.listBuiltinFunctionLibraryIds()
+        ])
+        const [locals, importedVersions, builtins] = await Promise.all([
+          Promise.all(localIds.map((id) => repository.getLocalFunctionLibrary(id))),
+          Promise.all(
+            importedIds.map(async (libraryId) => {
+              const versions = await repository.listImportedFunctionLibraryVersions(libraryId)
+              return Promise.all(
+                versions.map((version) => repository.getImportedFunctionLibrary(libraryId, version))
+              )
+            })
+          ),
+          Promise.all(builtinIds.map((id) => repository.getActiveBuiltinFunctionLibrary(id)))
+        ])
+        return [
+          ...builtins
+            .filter((item) => item !== null)
+            .map((release) => summarizeLibrary('builtin', release)),
+          ...importedVersions
+            .flat()
+            .filter((item) => item !== null)
+            .map((release) => summarizeLibrary('imported', release)),
+          ...locals.filter((item) => item !== null).map(summarizeLocalLibrary)
+        ]
       }
     },
     templates: {
@@ -260,15 +341,15 @@ export function createTemplateApplication(
       get: (templateId) => repository.getTemplate(templateId),
       save: (document) => repository.saveTemplate(document),
       delete: (templateId) => repository.deleteTemplate(templateId),
-      async embedFunction(templateId, functionId) {
+      async embedFunction(templateId, locator) {
         const template = await loadTemplate(templateId)
-        const embedded = await embedFunctionClosure(template, functionId)
+        const embedded = await embedFunctionClosure(template, locator)
         const saved = await repository.saveTemplate(embedded.template)
         return { template: saved, functionRef: embedded.resource.id }
       },
-      async insertFunctionCall(templateId, functionId, parentId, index) {
+      async insertFunctionCall(templateId, locator, parentId, index) {
         const template = await loadTemplate(templateId)
-        const embedded = await embedFunctionClosure(template, functionId)
+        const embedded = await embedFunctionClosure(template, locator)
         const edited = editTemplateDocument(embedded.template, {
           type: 'insert-function-call',
           parentId,
@@ -322,19 +403,164 @@ export function createTemplateApplication(
         })
       }
     },
-    functions: {
-      async create(initial = {}, editorState = {}) {
-        const document = createFunctionDocument(
-          { ...structuredClone(EMPTY_FUNCTION_CONTENT), ...structuredClone(initial) },
-          editorState
-        )
-        return repository.saveFunction(document)
-      },
-      get: (functionId) => repository.getFunction(functionId),
-      save: (document) => repository.saveFunction(document),
-      delete: (functionId) => repository.deleteFunction(functionId)
+    functionLibraries: {
+      local: {
+        async create(name = '') {
+          return repository.saveLocalFunctionLibrary(createLocalFunctionLibraryDocument(name))
+        },
+        get: (libraryId) => repository.getLocalFunctionLibrary(libraryId),
+        save: (document) => repository.saveLocalFunctionLibrary(document),
+        delete: (libraryId) => repository.deleteLocalFunctionLibrary(libraryId),
+        async createFunction(libraryId, initial = {}, editorState = {}) {
+          const library = await loadLocalFunctionLibrary(repository, libraryId)
+          const functionDocument = createFunctionDocument(
+            { ...structuredClone(EMPTY_FUNCTION_CONTENT), ...structuredClone(initial) },
+            editorState
+          )
+          const updated: LocalFunctionLibraryDocument = {
+            ...library,
+            content: {
+              ...library.content,
+              functions: [
+                ...library.content.functions,
+                { functionId: functionDocument.functionId, content: functionDocument.content }
+              ]
+            },
+            editorState: {
+              ...library.editorState,
+              functions: {
+                ...library.editorState.functions,
+                [functionDocument.functionId]: functionDocument.editorState
+              }
+            }
+          }
+          return {
+            library: await repository.saveLocalFunctionLibrary(updated),
+            function: functionDocument
+          }
+        },
+        async getFunction(libraryId, functionId) {
+          const library = await repository.getLocalFunctionLibrary(libraryId)
+          if (!library) return null
+          return projectFunctionDocument(library, functionId)
+        },
+        async saveFunction(library, functionDocument) {
+          const index = library.content.functions.findIndex(
+            (entry) => entry.functionId === functionDocument.functionId
+          )
+          if (index < 0) throw functionNotFound(functionDocument.functionId)
+          const functions = [...library.content.functions]
+          functions[index] = {
+            functionId: functionDocument.functionId,
+            content: structuredClone(functionDocument.content)
+          }
+          return repository.saveLocalFunctionLibrary({
+            ...library,
+            content: { ...library.content, functions },
+            editorState: {
+              ...library.editorState,
+              functions: {
+                ...library.editorState.functions,
+                [functionDocument.functionId]: structuredClone(functionDocument.editorState)
+              }
+            }
+          })
+        },
+        async deleteFunction(library, functionId) {
+          if (!library.content.functions.some((entry) => entry.functionId === functionId)) {
+            throw functionNotFound(functionId)
+          }
+          const functionStates = { ...library.editorState.functions }
+          delete functionStates[functionId]
+          return repository.saveLocalFunctionLibrary({
+            ...library,
+            content: {
+              ...library.content,
+              functions: library.content.functions.filter(
+                (entry) => entry.functionId !== functionId
+              )
+            },
+            editorState: { ...library.editorState, functions: functionStates }
+          })
+        }
+      }
     }
   }
+}
+
+async function loadFunctionLibrary(
+  repository: TemplateRepository,
+  locator: FunctionLibraryLocator
+): Promise<LocalFunctionLibraryDocument | FunctionLibraryRelease | null> {
+  if (locator.source === 'local') {
+    return repository.getLocalFunctionLibrary(locator.libraryId)
+  }
+  if (locator.source === 'imported') {
+    return repository.getImportedFunctionLibrary(locator.libraryId, locator.version)
+  }
+  return repository.getActiveBuiltinFunctionLibrary(locator.libraryId)
+}
+
+async function loadLocalFunctionLibrary(
+  repository: TemplateRepository,
+  libraryId: string
+): Promise<LocalFunctionLibraryDocument> {
+  const library = await repository.getLocalFunctionLibrary(libraryId)
+  if (!library) {
+    throw new TemplateApplicationError(
+      'FUNCTION_LIBRARY_NOT_FOUND',
+      `Function library not found: ${libraryId}`,
+      { source: 'local', libraryId }
+    )
+  }
+  return library
+}
+
+function summarizeLibrary(
+  source: 'builtin' | 'imported',
+  release: FunctionLibraryRelease
+): FunctionLibrarySummary {
+  return {
+    source,
+    libraryId: release.libraryId,
+    version: release.version,
+    name: release.content.name,
+    functions: release.content.functions.map(({ functionId, content }) => ({
+      functionId,
+      name: content.name
+    }))
+  }
+}
+
+function summarizeLocalLibrary(library: LocalFunctionLibraryDocument): FunctionLibrarySummary {
+  return {
+    source: 'local',
+    libraryId: library.libraryId,
+    name: library.content.name,
+    functions: library.content.functions.map(({ functionId, content }) => ({
+      functionId,
+      name: content.name
+    }))
+  }
+}
+
+function projectFunctionDocument(
+  library: LocalFunctionLibraryDocument,
+  functionId: string
+): FunctionDocument | null {
+  const entry = library.content.functions.find((item) => item.functionId === functionId)
+  if (!entry) return null
+  return {
+    functionId,
+    content: structuredClone(entry.content),
+    editorState: structuredClone(library.editorState.functions[functionId] ?? {})
+  }
+}
+
+function functionNotFound(functionId: string): TemplateApplicationError {
+  return new TemplateApplicationError('FUNCTION_NOT_FOUND', `Function not found: ${functionId}`, {
+    functionId
+  })
 }
 
 async function rewriteFunctionRefs(

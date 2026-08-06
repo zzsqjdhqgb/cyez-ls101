@@ -100,6 +100,8 @@ extraResources:
     to: assets
   - from: resources/media
     to: media
+  - from: resources/builtin
+    to: builtin
 extraFiles:
   - from: LICENSE
     to: LICENSE.txt

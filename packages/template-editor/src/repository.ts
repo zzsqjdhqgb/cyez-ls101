@@ -1,10 +1,28 @@
-import { parseFunctionDocument, parseTemplateDocument } from './document-parser'
-import { verifyFunctionResourceId } from './id'
-import type { FunctionDef, FunctionDocument, TemplateDocument } from './types'
+import {
+  parseFunctionLibraryRelease,
+  parseLocalFunctionLibraryDocument,
+  parseTemplateDocument
+} from './document-parser'
+import {
+  canonicalizeFunctionLibraryContent,
+  verifyFunctionLibraryRelease,
+  verifyFunctionResourceId
+} from './id'
+import type {
+  FunctionDef,
+  FunctionLibraryContent,
+  FunctionLibraryRelease,
+  LocalFunctionLibraryDocument,
+  TemplateDocument
+} from './types'
 
 const TEMPLATE_FILE = 'template.json'
-const FUNCTION_FILE = 'function.json'
+const LIBRARY_FILE = 'library.json'
+const ACTIVE_FILE = 'active.json'
 const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const BUILTIN_LIBRARY_ID_PATTERN = /^builtin:([a-z0-9][a-z0-9_-]*)$/
+const BUILTIN_FUNCTION_ID_PATTERN = /^builtin:[a-z0-9][a-z0-9_-]*$/
+const VERSION_SCOPE_PATTERN = /^v([1-9][0-9]*)$/
 
 /** @ls101/file-store 的 ScopedStore 满足此结构，也可由测试内存实现替代。 */
 export interface TemplateStore {
@@ -22,15 +40,34 @@ export interface TemplateRepository {
   saveTemplate(document: TemplateDocument): Promise<TemplateDocument>
   deleteTemplate(templateId: string): Promise<void>
 
-  listFunctionIds(): Promise<string[]>
-  getFunction(functionId: string): Promise<FunctionDocument | null>
-  saveFunction(document: FunctionDocument): Promise<FunctionDocument>
-  deleteFunction(functionId: string): Promise<void>
+  listLocalFunctionLibraryIds(): Promise<string[]>
+  getLocalFunctionLibrary(libraryId: string): Promise<LocalFunctionLibraryDocument | null>
+  saveLocalFunctionLibrary(
+    document: LocalFunctionLibraryDocument
+  ): Promise<LocalFunctionLibraryDocument>
+  deleteLocalFunctionLibrary(libraryId: string): Promise<void>
+
+  listImportedFunctionLibraryIds(): Promise<string[]>
+  listImportedFunctionLibraryVersions(libraryId: string): Promise<number[]>
+  getImportedFunctionLibrary(
+    libraryId: string,
+    version: number
+  ): Promise<FunctionLibraryRelease | null>
+  registerImportedFunctionLibrary(release: FunctionLibraryRelease): Promise<FunctionLibraryRelease>
+
+  listBuiltinFunctionLibraryIds(): Promise<string[]>
+  getActiveBuiltinFunctionLibrary(libraryId: string): Promise<FunctionLibraryRelease | null>
+  getBuiltinFunctionLibrary(
+    libraryId: string,
+    version: number
+  ): Promise<FunctionLibraryRelease | null>
+  registerBuiltinFunctionLibrary(release: FunctionLibraryRelease): Promise<FunctionLibraryRelease>
+  setActiveBuiltinFunctionLibraryVersion(libraryId: string, version: number): Promise<void>
 }
 
 export class TemplateRepositoryError extends Error {
   constructor(
-    public readonly code: 'INVALID_ID' | 'INVALID_DATA' | 'REVISION_CONFLICT',
+    public readonly code: 'INVALID_ID' | 'INVALID_DATA' | 'REVISION_CONFLICT' | 'RELEASE_CONFLICT',
     message: string,
     public readonly params: Readonly<Record<string, string | number>> = {}
   ) {
@@ -41,11 +78,16 @@ export class TemplateRepositoryError extends Error {
 
 export class FileTemplateRepository implements TemplateRepository {
   private readonly templates: TemplateStore
-  private readonly functions: TemplateStore
+  private readonly localLibraries: TemplateStore
+  private readonly importedLibraries: TemplateStore
+  private readonly builtinLibraries: TemplateStore
 
   constructor(root: TemplateStore) {
     this.templates = root.scope('templates')
-    this.functions = root.scope('functions')
+    const libraries = root.scope('function-libraries')
+    this.localLibraries = libraries.scope('local')
+    this.importedLibraries = libraries.scope('imported')
+    this.builtinLibraries = libraries.scope('builtin')
   }
 
   async listTemplateIds(): Promise<string[]> {
@@ -117,70 +159,240 @@ export class FileTemplateRepository implements TemplateRepository {
     await this.templates.scope(templateId).clear()
   }
 
-  async listFunctionIds(): Promise<string[]> {
-    return listUuidScopes(this.functions)
+  async listLocalFunctionLibraryIds(): Promise<string[]> {
+    return listUuidScopes(this.localLibraries)
   }
 
-  async getFunction(functionId: string): Promise<FunctionDocument | null> {
-    assertUuid(functionId, 'functionId')
+  async getLocalFunctionLibrary(libraryId: string): Promise<LocalFunctionLibraryDocument | null> {
+    assertUuid(libraryId, 'libraryId')
     const value = await readStoredValue(
-      this.functions.scope(functionId),
-      FUNCTION_FILE,
-      `Function ${functionId}`
+      this.localLibraries.scope(libraryId),
+      LIBRARY_FILE,
+      `Local function library ${libraryId}`
     )
     if (value === null) return null
-    const document = parseFunctionDocument(value)
-    if (!document || document.functionId !== functionId) {
-      throw invalidData(`Function ${functionId} is invalid`)
+    const document = parseLocalFunctionLibraryDocument(value)
+    if (!document || document.libraryId !== libraryId) {
+      throw invalidData(`Local function library ${libraryId} is invalid`)
     }
+    assertLocalLibrary(document)
     return document
   }
 
-  async saveFunction(document: FunctionDocument): Promise<FunctionDocument> {
-    if (!parseFunctionDocument(document)) throw invalidData('Function is invalid')
-    assertUuid(document.functionId, 'functionId')
-    const scope = this.functions.scope(document.functionId)
-    const stored = await readStoredValue(scope, FUNCTION_FILE, `Function ${document.functionId}`)
+  async saveLocalFunctionLibrary(
+    document: LocalFunctionLibraryDocument
+  ): Promise<LocalFunctionLibraryDocument> {
+    if (!parseLocalFunctionLibraryDocument(document)) {
+      throw invalidData('Local function library is invalid')
+    }
+    assertUuid(document.libraryId, 'libraryId')
+    assertLocalLibrary(document)
+    const scope = this.localLibraries.scope(document.libraryId)
+    const stored = await readStoredValue(
+      scope,
+      LIBRARY_FILE,
+      `Local function library ${document.libraryId}`
+    )
     if (stored === null) {
       if (document.revision !== 0) {
-        throw revisionConflict('Function', document.functionId, 0, document.revision)
+        throw revisionConflict('FunctionLibrary', document.libraryId, 0, document.revision)
       }
-      if (!(await scope.compareAndSwapText(FUNCTION_FILE, null, document))) {
+      if (!(await scope.compareAndSwapText(LIBRARY_FILE, null, document))) {
         throw await latestRevisionConflict(
-          'Function',
-          document.functionId,
+          'FunctionLibrary',
+          document.libraryId,
           document.revision,
           scope,
-          FUNCTION_FILE,
-          parseFunctionDocument
+          LIBRARY_FILE,
+          parseLocalFunctionLibraryDocument
         )
       }
       return document
     }
-    const current = parseFunctionDocument(stored)
-    if (!current || current.functionId !== document.functionId) {
-      throw invalidData(`Function ${document.functionId} is invalid`)
+    const current = parseLocalFunctionLibraryDocument(stored)
+    if (!current || current.libraryId !== document.libraryId) {
+      throw invalidData(`Local function library ${document.libraryId} is invalid`)
     }
+    assertLocalLibrary(current)
     if (current.revision !== document.revision) {
-      throw revisionConflict('Function', document.functionId, current.revision, document.revision)
+      throw revisionConflict(
+        'FunctionLibrary',
+        document.libraryId,
+        current.revision,
+        document.revision
+      )
     }
     const updated = { ...document, revision: document.revision + 1 }
-    if (!(await scope.compareAndSwapText(FUNCTION_FILE, stored, updated))) {
+    if (!(await scope.compareAndSwapText(LIBRARY_FILE, stored, updated))) {
       throw await latestRevisionConflict(
-        'Function',
-        document.functionId,
+        'FunctionLibrary',
+        document.libraryId,
         document.revision,
         scope,
-        FUNCTION_FILE,
-        parseFunctionDocument
+        LIBRARY_FILE,
+        parseLocalFunctionLibraryDocument
       )
     }
     return updated
   }
 
-  async deleteFunction(functionId: string): Promise<void> {
-    assertUuid(functionId, 'functionId')
-    await this.functions.scope(functionId).clear()
+  async deleteLocalFunctionLibrary(libraryId: string): Promise<void> {
+    assertUuid(libraryId, 'libraryId')
+    await this.localLibraries.scope(libraryId).clear()
+  }
+
+  async listImportedFunctionLibraryIds(): Promise<string[]> {
+    return listUuidScopes(this.importedLibraries)
+  }
+
+  async listImportedFunctionLibraryVersions(libraryId: string): Promise<number[]> {
+    assertUuid(libraryId, 'libraryId')
+    return listVersionScopes(this.importedLibraries.scope(libraryId).scope('releases'))
+  }
+
+  async getImportedFunctionLibrary(
+    libraryId: string,
+    version: number
+  ): Promise<FunctionLibraryRelease | null> {
+    assertUuid(libraryId, 'libraryId')
+    return this.getRelease(this.importedLibraries, libraryId, version, 'Imported')
+  }
+
+  async registerImportedFunctionLibrary(
+    release: FunctionLibraryRelease
+  ): Promise<FunctionLibraryRelease> {
+    assertUuid(release.libraryId, 'libraryId')
+    await validateFunctionLibraryRelease(release, 'imported')
+    return this.registerRelease(this.importedLibraries, release, 'Imported')
+  }
+
+  async listBuiltinFunctionLibraryIds(): Promise<string[]> {
+    const keys = await this.builtinLibraries.listScopes()
+    return keys.map((key) => builtinLibraryId(key)).sort()
+  }
+
+  async getActiveBuiltinFunctionLibrary(libraryId: string): Promise<FunctionLibraryRelease | null> {
+    const key = assertBuiltinLibraryId(libraryId)
+    const value = await readStoredValue(
+      this.builtinLibraries.scope(key),
+      ACTIVE_FILE,
+      `Builtin function library ${libraryId} active version`
+    )
+    if (value === null) return null
+    if (!isActiveVersion(value)) {
+      throw invalidData(`Builtin function library ${libraryId} active version is invalid`)
+    }
+    const release = await this.getBuiltinFunctionLibrary(libraryId, value.version)
+    if (!release) {
+      throw invalidData(
+        `Builtin function library ${libraryId} active release v${value.version} is missing`
+      )
+    }
+    return release
+  }
+
+  async getBuiltinFunctionLibrary(
+    libraryId: string,
+    version: number
+  ): Promise<FunctionLibraryRelease | null> {
+    const key = assertBuiltinLibraryId(libraryId)
+    return this.getRelease(this.builtinLibraries, key, version, 'Builtin', libraryId)
+  }
+
+  async registerBuiltinFunctionLibrary(
+    release: FunctionLibraryRelease
+  ): Promise<FunctionLibraryRelease> {
+    const key = assertBuiltinLibraryId(release.libraryId)
+    await validateFunctionLibraryRelease(release, 'builtin')
+    return this.registerRelease(this.builtinLibraries, release, 'Builtin', key)
+  }
+
+  async setActiveBuiltinFunctionLibraryVersion(libraryId: string, version: number): Promise<void> {
+    const key = assertBuiltinLibraryId(libraryId)
+    assertVersion(version)
+    const release = await this.getBuiltinFunctionLibrary(libraryId, version)
+    if (!release) {
+      throw invalidData(`Builtin function library ${libraryId} release v${version} is missing`)
+    }
+    await this.builtinLibraries.scope(key).writeText(ACTIVE_FILE, { version })
+  }
+
+  private async getRelease(
+    root: TemplateStore,
+    physicalLibraryId: string,
+    version: number,
+    label: 'Imported' | 'Builtin',
+    logicalLibraryId = physicalLibraryId
+  ): Promise<FunctionLibraryRelease | null> {
+    assertVersion(version)
+    const value = await readStoredValue(
+      releaseScope(root, physicalLibraryId, version),
+      LIBRARY_FILE,
+      `${label} function library ${logicalLibraryId} v${version}`
+    )
+    if (value === null) return null
+    const release = parseFunctionLibraryRelease(value)
+    if (
+      !release ||
+      release.libraryId !== logicalLibraryId ||
+      release.version !== version ||
+      !(await verifyFunctionLibraryRelease(release))
+    ) {
+      throw invalidData(`${label} function library ${logicalLibraryId} v${version} is invalid`)
+    }
+    await validateFunctionLibraryRelease(release, label === 'Builtin' ? 'builtin' : 'imported')
+    return release
+  }
+
+  private async registerRelease(
+    root: TemplateStore,
+    release: FunctionLibraryRelease,
+    label: 'Imported' | 'Builtin',
+    physicalLibraryId = release.libraryId
+  ): Promise<FunctionLibraryRelease> {
+    const scope = releaseScope(root, physicalLibraryId, release.version)
+    const stored = await readStoredValue(
+      scope,
+      LIBRARY_FILE,
+      `${label} function library ${release.libraryId} v${release.version}`
+    )
+    if (stored !== null) {
+      const current = parseFunctionLibraryRelease(stored)
+      if (!current || !(await verifyFunctionLibraryRelease(current))) {
+        throw invalidData(
+          `${label} function library ${release.libraryId} v${release.version} is invalid`
+        )
+      }
+      if (
+        current.libraryId === release.libraryId &&
+        current.version === release.version &&
+        current.contentHash === release.contentHash &&
+        canonicalizeFunctionLibraryContent(current.content) ===
+          canonicalizeFunctionLibraryContent(release.content)
+      ) {
+        return current
+      }
+      throw releaseConflict(release.libraryId, release.version)
+    }
+    if (!(await scope.compareAndSwapText(LIBRARY_FILE, null, release))) {
+      const current = await this.getRelease(
+        root,
+        physicalLibraryId,
+        release.version,
+        label,
+        release.libraryId
+      )
+      if (
+        current &&
+        current.contentHash === release.contentHash &&
+        canonicalizeFunctionLibraryContent(current.content) ===
+          canonicalizeFunctionLibraryContent(release.content)
+      ) {
+        return current
+      }
+      throw releaseConflict(release.libraryId, release.version)
+    }
+    return release
   }
 }
 
@@ -198,7 +410,7 @@ async function readStoredValue(
 }
 
 async function latestRevisionConflict<T extends { revision: number }>(
-  kind: 'Template' | 'Function',
+  kind: 'Template' | 'FunctionLibrary',
   id: string,
   providedRevision: number,
   store: TemplateStore,
@@ -225,6 +437,70 @@ async function listUuidScopes(store: TemplateStore): Promise<string[]> {
   return ids.sort()
 }
 
+async function listVersionScopes(store: TemplateStore): Promise<number[]> {
+  const scopes = await store.listScopes()
+  return scopes
+    .map((scope) => {
+      const match = VERSION_SCOPE_PATTERN.exec(scope)
+      if (!match) throw invalidData(`Invalid stored function library version: ${scope}`)
+      const version = Number(match[1])
+      assertVersion(version)
+      return version
+    })
+    .sort((left, right) => left - right)
+}
+
+function releaseScope(root: TemplateStore, libraryId: string, version: number): TemplateStore {
+  assertVersion(version)
+  return root.scope(libraryId).scope('releases').scope(`v${version}`)
+}
+
+function assertLocalLibrary(document: LocalFunctionLibraryDocument): void {
+  assertFunctionLibraryContent(document.content, 'local')
+  const ids = new Set(document.content.functions.map((entry) => entry.functionId))
+  for (const functionId of Object.keys(document.editorState.functions)) {
+    if (!ids.has(functionId)) {
+      throw invalidData(`Editor state references unknown function: ${functionId}`)
+    }
+  }
+}
+
+export async function validateFunctionLibraryRelease(
+  release: FunctionLibraryRelease,
+  source: 'builtin' | 'imported'
+): Promise<void> {
+  if (!parseFunctionLibraryRelease(release) || !(await verifyFunctionLibraryRelease(release))) {
+    throw invalidData('Function library release is invalid')
+  }
+  assertVersion(release.version)
+  if (source === 'builtin') assertBuiltinLibraryId(release.libraryId)
+  else assertUuid(release.libraryId, 'libraryId')
+  assertFunctionLibraryContent(release.content, source)
+}
+
+function assertFunctionLibraryContent(
+  content: FunctionLibraryContent,
+  source: 'builtin' | 'imported' | 'local'
+): void {
+  const ids = new Set<string>()
+  for (const entry of content.functions) {
+    if (source === 'builtin') {
+      if (!BUILTIN_FUNCTION_ID_PATTERN.test(entry.functionId)) {
+        throw new TemplateRepositoryError(
+          'INVALID_ID',
+          `Invalid builtin functionId: ${entry.functionId}`
+        )
+      }
+    } else {
+      assertUuid(entry.functionId, 'functionId')
+    }
+    if (ids.has(entry.functionId)) {
+      throw invalidData(`Duplicate function in library: ${entry.functionId}`)
+    }
+    ids.add(entry.functionId)
+  }
+}
+
 async function assertFunctionResources(resources: readonly FunctionDef[]): Promise<void> {
   const ids = new Set<string>()
   for (const resource of resources) {
@@ -242,12 +518,43 @@ function assertUuid(value: string, label: string): void {
   }
 }
 
+function assertBuiltinLibraryId(libraryId: string): string {
+  const match = BUILTIN_LIBRARY_ID_PATTERN.exec(libraryId)
+  if (!match) {
+    throw new TemplateRepositoryError('INVALID_ID', `Invalid builtin libraryId: ${libraryId}`)
+  }
+  return match[1]
+}
+
+function builtinLibraryId(key: string): string {
+  if (!/^[a-z0-9][a-z0-9_-]*$/.test(key)) {
+    throw invalidData(`Invalid stored builtin library key: ${key}`)
+  }
+  return `builtin:${key}`
+}
+
+function assertVersion(version: number): void {
+  if (!Number.isSafeInteger(version) || version < 1) {
+    throw new TemplateRepositoryError('INVALID_ID', `Invalid function library version: ${version}`)
+  }
+}
+
+function isActiveVersion(value: unknown): value is { version: number } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Reflect.ownKeys(value).length === 1 &&
+    Number.isSafeInteger(Reflect.get(value, 'version')) &&
+    (Reflect.get(value, 'version') as number) >= 1
+  )
+}
+
 function invalidData(message: string): TemplateRepositoryError {
   return new TemplateRepositoryError('INVALID_DATA', message)
 }
 
 function revisionConflict(
-  kind: 'Template' | 'Function',
+  kind: 'Template' | 'FunctionLibrary',
   id: string,
   currentRevision: number,
   providedRevision: number
@@ -257,4 +564,12 @@ function revisionConflict(
     currentRevision,
     providedRevision
   })
+}
+
+function releaseConflict(libraryId: string, version: number): TemplateRepositoryError {
+  return new TemplateRepositoryError(
+    'RELEASE_CONFLICT',
+    `Function library release conflict: ${libraryId} v${version}`,
+    { libraryId, version }
+  )
 }
