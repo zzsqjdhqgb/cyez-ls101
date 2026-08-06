@@ -11,7 +11,10 @@ import {
   type WriteFileOptions
 } from '@ls101/file-dialog/shared'
 import {
+  BUILTIN_FILE_STORE_CHANNELS,
   FILE_STORE_CHANNELS,
+  type BuiltinFileStoreBridge,
+  type BuiltinFileStoreChannel,
   type FileStoreBridge,
   type FileStoreChannel
 } from '@ls101/file-store/shared'
@@ -33,12 +36,24 @@ import {
 import { CLIPBOARD_CHANNELS, type ClipboardBridge } from '@ls101/clipboard/shared'
 
 const allowedChannels = new Set<FileStoreChannel>(Object.values(FILE_STORE_CHANNELS))
+const allowedBuiltinChannels = new Set<BuiltinFileStoreChannel>(
+  Object.values(BUILTIN_FILE_STORE_CHANNELS)
+)
 const allowedConfigChannels = new Set<ConfigStoreChannel>(Object.values(CONFIG_STORE_CHANNELS))
 
 const fileStoreBridge: FileStoreBridge = {
   invoke(channel, ...args) {
     if (!allowedChannels.has(channel as FileStoreChannel)) {
       return Promise.reject(new Error(`Unsupported file-store channel: ${channel}`))
+    }
+    return ipcRenderer.invoke(channel, ...args)
+  }
+}
+
+const builtinFileStoreBridge: BuiltinFileStoreBridge = {
+  invoke(channel, ...args) {
+    if (!allowedBuiltinChannels.has(channel as BuiltinFileStoreChannel)) {
+      return Promise.reject(new Error(`Unsupported builtin file-store channel: ${channel}`))
     }
     return ipcRenderer.invoke(channel, ...args)
   }
@@ -176,6 +191,7 @@ const windowControlsBridge: WindowControlsBridge = {
 }
 
 contextBridge.exposeInMainWorld('fileStore', fileStoreBridge)
+contextBridge.exposeInMainWorld('builtinFileStore', builtinFileStoreBridge)
 contextBridge.exposeInMainWorld('configStore', configStoreBridge)
 contextBridge.exposeInMainWorld('airouter', airouterBridge)
 contextBridge.exposeInMainWorld('fileDialog', fileDialogBridge)

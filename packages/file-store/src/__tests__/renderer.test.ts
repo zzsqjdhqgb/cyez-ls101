@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { FILE_STORE_CHANNELS } from '../shared/constants'
+import { BUILTIN_FILE_STORE_CHANNELS, FILE_STORE_CHANNELS } from '../shared/constants'
 
 describe('renderer scoped store', () => {
   afterEach(() => {
@@ -94,5 +94,48 @@ describe('renderer scoped store', () => {
 
     expect(() => fileStore.scope('interfaces/drafts')).toThrow('Invalid file-store scope segment')
     expect(invoke).not.toHaveBeenCalled()
+  })
+
+  it('exposes builtin scopes through a read-only contract and separate channels', async () => {
+    const invoke = vi.fn().mockResolvedValue('{"libraries":[]}')
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: { builtinFileStore: { invoke } }
+    })
+    const { builtinFileStore } = await import('../renderer')
+    const template = builtinFileStore.scope('template-editor')
+
+    await expect(template.readText('libraries.json')).resolves.toEqual({ libraries: [] })
+    expect(invoke).toHaveBeenCalledWith(BUILTIN_FILE_STORE_CHANNELS.readText, {
+      scope: ['template-editor'],
+      filename: 'libraries.json'
+    })
+    expect(template.getAssetUrl('cover.png')).toBe(
+      'builtin-asset://local/template-editor/cover.png'
+    )
+    expect(template.getAssetKey('cover.png')).toBe(
+      'builtin-asset-key://v1/template-editor/cover.png'
+    )
+    expect('writeText' in template).toBe(false)
+    expect('clear' in template).toBe(false)
+  })
+
+  it('reads builtin assets only from builtin asset keys', async () => {
+    const invoke = vi.fn().mockResolvedValue(new Uint8Array([4, 5, 6]))
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: { builtinFileStore: { invoke } }
+    })
+    const { builtinFileStore } = await import('../renderer')
+    const key = builtinFileStore.scope('template-editor').getAssetKey('cover.png')
+
+    await expect(builtinFileStore.readAsset(key)).resolves.toEqual(new Uint8Array([4, 5, 6]))
+    expect(invoke).toHaveBeenCalledWith(BUILTIN_FILE_STORE_CHANNELS.readAsset, {
+      scope: ['template-editor'],
+      filename: 'cover.png'
+    })
+    await expect(
+      builtinFileStore.readAsset('asset-key://v1/template-editor/cover.png')
+    ).rejects.toThrow('Invalid builtin asset key')
   })
 })

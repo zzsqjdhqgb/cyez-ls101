@@ -9,6 +9,7 @@
 - preload 只暴露 file-store 白名单 IPC 通道，不暴露完整 `ipcRenderer`。
 - 主进程重新校验所有 scope segment 和 filename，负责物理路径映射与文件 I/O。
 - 存储根目录通过依赖注入传入，通常为 `app.getPath('userData')`。
+- 随软件发布的 builtin 资源使用独立的只读根目录和 IPC 白名单；底层只提供读取能力，不执行任何业务复制或初始化。
 
 ## 二、Scope 模型
 
@@ -290,34 +291,72 @@ return <img src={draft.getAssetUrl('cover.png')} />
 
 协议处理器永远不会映射 `.text`，因此 Text 文件不在 `asset://` 的可达范围内。
 
-## 十、包导出边界
+## 十、Builtin Scoped Store
+
+`builtinFileStore` 与普通 `fileStore` 使用相同的 scope、`.text`、`.assets`、segment 校验和 filename 校验规则，但只公开读取操作：
+
+```typescript
+interface ReadonlyScopedStore {
+  scope(name: string): ReadonlyScopedStore
+  readText<T>(filename: string): Promise<T | null>
+  hasText(filename: string): Promise<boolean>
+  listText(): Promise<string[]>
+  readAsset(filename: string): Promise<Uint8Array | null>
+  hasAsset(filename: string): Promise<boolean>
+  listAssets(): Promise<string[]>
+  getAssetKey(filename: string): AssetKey
+  getAssetUrl(filename: string): string
+  listScopes(): Promise<string[]>
+}
+```
+
+Builtin Reader 不公开写入、删除、CAS 或 `clear()`。Main 进程只把固定 builtin 根目录映射为只读 IPC 和 `builtin-asset://` 协议；Renderer 不接触物理路径。业务模块读取 builtin 数据后，自行决定直接使用、转换、缓存或复制，File Store 不理解业务格式。
+
+`FileStorage` 是 `@ls101/file-store` 的内部 main 进程实现，不属于任何 package export，禁止模块外部直接构造或访问。
+
+## 十一、包导出边界
 
 ```text
 @ls101/file-store/main
 ├── registerFileStoreScheme
-└── registerFileStore
+├── registerFileStore
+├── registerBuiltinFileStoreScheme
+└── registerBuiltinFileStore
 
 @ls101/file-store/renderer
 ├── fileStore
+├── builtinFileStore
 ├── AssetKey
 ├── FileStore
-└── ScopedStore
+├── ScopedStore
+├── BuiltinFileStore
+└── ReadonlyScopedStore
 
 @ls101/file-store/shared
 ├── FILE_STORE_CHANNELS
+├── BUILTIN_FILE_STORE_CHANNELS
 ├── FileStoreChannel
-└── FileStoreBridge
+├── BuiltinFileStoreChannel
+├── FileStoreBridge
+└── BuiltinFileStoreBridge
 ```
 
 主进程使用方式：
 
 ```typescript
 import { app } from 'electron'
-import { registerFileStore, registerFileStoreScheme } from '@ls101/file-store/main'
+import {
+  registerBuiltinFileStore,
+  registerBuiltinFileStoreScheme,
+  registerFileStore,
+  registerFileStoreScheme
+} from '@ls101/file-store/main'
 
 registerFileStoreScheme()
+registerBuiltinFileStoreScheme()
 
 app.whenReady().then(() => {
   registerFileStore({ baseDir: app.getPath('userData') })
+  registerBuiltinFileStore({ baseDir: resolveBuiltinResourceRoot() })
 })
 ```

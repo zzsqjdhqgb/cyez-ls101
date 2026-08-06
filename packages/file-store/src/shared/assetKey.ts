@@ -1,8 +1,14 @@
-import { ASSET_PROTOCOL_HOST, ASSET_PROTOCOL_SCHEME } from './constants'
+import {
+  ASSET_PROTOCOL_HOST,
+  ASSET_PROTOCOL_SCHEME,
+  BUILTIN_ASSET_PROTOCOL_HOST,
+  BUILTIN_ASSET_PROTOCOL_SCHEME
+} from './constants'
 import { validateFilename, validateScope } from './pathUtils'
 import type { AssetKey, FileLocation } from './types'
 
 const ASSET_KEY_SCHEME = 'asset-key'
+const BUILTIN_ASSET_KEY_SCHEME = 'builtin-asset-key'
 const ASSET_KEY_VERSION = 'v1'
 
 export function createAssetKey(location: FileLocation): AssetKey {
@@ -17,6 +23,25 @@ export function assetKeyToLocation(key: AssetKey): FileLocation {
 export function assetLocationToUrl(location: FileLocation): string {
   validateLocation(location)
   return `${ASSET_PROTOCOL_SCHEME}://${ASSET_PROTOCOL_HOST}/${encodeLocation(location)}`
+}
+
+export function createBuiltinAssetKey(location: FileLocation): AssetKey {
+  validateLocation(location)
+  return `${BUILTIN_ASSET_KEY_SCHEME}://${ASSET_KEY_VERSION}/${encodeLocation(location)}`
+}
+
+export function builtinAssetKeyToLocation(key: AssetKey): FileLocation {
+  return parseLocationUrl(
+    key,
+    `${BUILTIN_ASSET_KEY_SCHEME}:`,
+    ASSET_KEY_VERSION,
+    'Invalid builtin asset key'
+  )
+}
+
+export function builtinAssetLocationToUrl(location: FileLocation): string {
+  validateLocation(location)
+  return `${BUILTIN_ASSET_PROTOCOL_SCHEME}://${BUILTIN_ASSET_PROTOCOL_HOST}/${encodeLocation(location)}`
 }
 
 function encodeLocation(location: FileLocation): string {

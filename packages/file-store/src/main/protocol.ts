@@ -1,7 +1,7 @@
 import { net, protocol } from 'electron'
 import { pathToFileURL } from 'node:url'
-import { ASSET_PROTOCOL_SCHEME } from '../shared/constants'
-import { assetUrlToLocation } from './assetUrl'
+import { ASSET_PROTOCOL_SCHEME, BUILTIN_ASSET_PROTOCOL_SCHEME } from '../shared/constants'
+import { assetUrlToLocation, builtinAssetUrlToLocation } from './assetUrl'
 import { resolveAssetPath } from './storage'
 
 export function registerAssetScheme(): void {
@@ -18,10 +18,35 @@ export function registerAssetScheme(): void {
   ])
 }
 
+export function registerBuiltinAssetScheme(): void {
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: BUILTIN_ASSET_PROTOCOL_SCHEME,
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        stream: true
+      }
+    }
+  ])
+}
+
 export function registerAssetProtocol(baseDir: string): void {
   protocol.handle(ASSET_PROTOCOL_SCHEME, (request) => {
     try {
       const filePath = resolveAssetPath(baseDir, assetUrlToLocation(request.url))
+      return net.fetch(pathToFileURL(filePath).toString())
+    } catch {
+      return new Response('Forbidden', { status: 403 })
+    }
+  })
+}
+
+export function registerBuiltinAssetProtocol(baseDir: string): void {
+  protocol.handle(BUILTIN_ASSET_PROTOCOL_SCHEME, (request) => {
+    try {
+      const filePath = resolveAssetPath(baseDir, builtinAssetUrlToLocation(request.url))
       return net.fetch(pathToFileURL(filePath).toString())
     } catch {
       return new Response('Forbidden', { status: 403 })

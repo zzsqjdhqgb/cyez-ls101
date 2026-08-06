@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { assetKeyToLocation, createAssetKey } from '../shared/assetKey'
+import {
+  assetKeyToLocation,
+  builtinAssetKeyToLocation,
+  createAssetKey,
+  createBuiltinAssetKey
+} from '../shared/assetKey'
 
 describe('asset keys', () => {
   it('round-trips an arbitrary-depth asset location', () => {
@@ -12,6 +17,15 @@ describe('asset keys', () => {
 
     expect(key).toBe('asset-key://v1/interfaces/published/abc123/instances/instance-1/cover.png')
     expect(assetKeyToLocation(key)).toEqual(location)
+  })
+
+  it('keeps builtin asset keys in a separate namespace', () => {
+    const location = { scope: ['template-editor'], filename: 'cover.png' }
+    const key = createBuiltinAssetKey(location)
+
+    expect(key).toBe('builtin-asset-key://v1/template-editor/cover.png')
+    expect(builtinAssetKeyToLocation(key)).toEqual(location)
+    expect(() => assetKeyToLocation(key)).toThrow('Invalid asset key')
   })
 
   it.each([

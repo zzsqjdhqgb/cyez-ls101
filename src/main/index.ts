@@ -4,16 +4,29 @@ import { registerConfigStore } from '@ls101/config-store/main'
 import { registerAIRouter } from '@ls101/airouter/main'
 import { registerClipboard } from '@ls101/clipboard/main'
 import { registerFileDialog } from '@ls101/file-dialog/main'
-import { registerFileStore, registerFileStoreScheme } from '@ls101/file-store/main'
+import {
+  registerBuiltinFileStore,
+  registerBuiltinFileStoreScheme,
+  registerFileStore,
+  registerFileStoreScheme
+} from '@ls101/file-store/main'
+import { join } from 'node:path'
 import { createMainWindow } from './window'
 import { registerWindowControlHandlers } from './window-controls'
 
 registerFileStoreScheme()
+registerBuiltinFileStoreScheme()
 
-app.whenReady().then(() => {
+function initializeApplication(): void {
   electronApp.setAppUserModelId('io.github.zzsqjdhqgb.cyez-ls101')
 
-  registerFileStore({ baseDir: app.getPath('userData') })
+  const userDataDir = app.getPath('userData')
+  registerFileStore({ baseDir: userDataDir })
+  registerBuiltinFileStore({
+    baseDir: app.isPackaged
+      ? join(process.resourcesPath, 'builtin')
+      : join(app.getAppPath(), 'resources', 'builtin')
+  })
   registerConfigStore({ baseDir: app.getPath('userData') })
   registerAIRouter({ baseDir: app.getPath('userData') })
   registerClipboard()
@@ -31,7 +44,9 @@ app.whenReady().then(() => {
       createMainWindow()
     }
   })
-})
+}
+
+void app.whenReady().then(initializeApplication)
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

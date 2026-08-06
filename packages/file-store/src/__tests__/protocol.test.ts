@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assetUrlToLocation } from '../main/assetUrl'
+import { assetUrlToLocation, builtinAssetUrlToLocation } from '../main/assetUrl'
 
 describe('asset URL parsing', () => {
   it('converts an arbitrary-depth asset URL into a location', () => {
@@ -18,6 +18,15 @@ describe('asset URL parsing', () => {
     'asset://local/interfaces/cover.png?download=1',
     'asset://local/interfaces/cover.png#fragment'
   ])('rejects %s', (url) => {
+    expect(() => assetUrlToLocation(url)).toThrow()
+  })
+
+  it('parses builtin asset URLs only through the builtin protocol', () => {
+    const url = 'builtin-asset://local/template-editor/cover.png'
+    expect(builtinAssetUrlToLocation(url)).toEqual({
+      scope: ['template-editor'],
+      filename: 'cover.png'
+    })
     expect(() => assetUrlToLocation(url)).toThrow()
   })
 })

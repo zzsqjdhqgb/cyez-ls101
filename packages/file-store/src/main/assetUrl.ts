@@ -1,12 +1,25 @@
-import { ASSET_PROTOCOL_HOST, ASSET_PROTOCOL_SCHEME } from '../shared/constants'
+import {
+  ASSET_PROTOCOL_HOST,
+  ASSET_PROTOCOL_SCHEME,
+  BUILTIN_ASSET_PROTOCOL_HOST,
+  BUILTIN_ASSET_PROTOCOL_SCHEME
+} from '../shared/constants'
 import { validateFilename, validateScope } from '../shared/pathUtils'
 import type { FileLocation } from '../shared/types'
 
 export function assetUrlToLocation(rawUrl: string): FileLocation {
+  return parseAssetUrl(rawUrl, ASSET_PROTOCOL_SCHEME, ASSET_PROTOCOL_HOST)
+}
+
+export function builtinAssetUrlToLocation(rawUrl: string): FileLocation {
+  return parseAssetUrl(rawUrl, BUILTIN_ASSET_PROTOCOL_SCHEME, BUILTIN_ASSET_PROTOCOL_HOST)
+}
+
+function parseAssetUrl(rawUrl: string, scheme: string, host: string): FileLocation {
   const url = new URL(rawUrl)
   if (
-    url.protocol !== `${ASSET_PROTOCOL_SCHEME}:` ||
-    url.hostname !== ASSET_PROTOCOL_HOST ||
+    url.protocol !== `${scheme}:` ||
+    url.hostname !== host ||
     url.username ||
     url.password ||
     url.port ||

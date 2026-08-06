@@ -14,6 +14,28 @@ export interface FileStore {
   getAssetUrl(key: AssetKey): string
 }
 
+export interface BuiltinFileStore {
+  scope(name: string): ReadonlyScopedStore
+  readAsset(key: AssetKey): Promise<Uint8Array | null>
+  getAssetUrl(key: AssetKey): string
+}
+
+export interface ReadonlyScopedStore {
+  scope(name: string): ReadonlyScopedStore
+
+  readText<T>(filename: string): Promise<T | null>
+  hasText(filename: string): Promise<boolean>
+  listText(): Promise<string[]>
+
+  readAsset(filename: string): Promise<Uint8Array | null>
+  hasAsset(filename: string): Promise<boolean>
+  listAssets(): Promise<string[]>
+  getAssetKey(filename: string): AssetKey
+  getAssetUrl(filename: string): string
+
+  listScopes(): Promise<string[]>
+}
+
 export interface ScopedStore {
   scope(name: string): ScopedStore
 
@@ -37,5 +59,9 @@ export interface ScopedStore {
 }
 
 export interface FileStoreBridge {
+  invoke(channel: string, ...args: unknown[]): Promise<unknown>
+}
+
+export interface BuiltinFileStoreBridge {
   invoke(channel: string, ...args: unknown[]): Promise<unknown>
 }
