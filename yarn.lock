@@ -1221,6 +1221,8 @@ __metadata:
     "@ls101/config-store": "workspace:*"
     "@ls101/secret-store": "workspace:*"
     ai: "npm:7.0.48"
+    fflate: "npm:^0.8.2"
+    ffmpeg-static: "npm:^5.3.0"
     zod: "npm:3.25.76"
   languageName: unknown
   linkType: soft

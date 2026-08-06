@@ -1,4 +1,4 @@
-import { ipcMain, type WebContents } from 'electron'
+import { app, ipcMain, type WebContents } from 'electron'
 import { AIROUTER_CHANNELS } from '../shared'
 import type {
   AIRouterConnectionTestInput,
@@ -7,15 +7,30 @@ import type {
   AIRouterImageProviderConfigInput,
   AIRouterImageRequest,
   AIRouterProviderConfigInput,
+  AIRouterSpeechConnectionTestInput,
+  AIRouterSpeechProviderConfigInput,
+  AIRouterSpeechSynthesisEvent,
+  AIRouterSpeechSynthesisRequest,
+  AIRouterSpeechVoiceListInput,
   AIRouterStreamEvent,
   AIRouterTextRequest
 } from '../shared'
 import { AIRouterService, type AIRouterServiceOptions } from './service'
 import { AIRouterImageService } from './image-service'
+import { AIRouterSpeechService } from './speech-service'
+import { PocketTtsSynthesizer } from './pocket-tts'
 
 export { AIRouterService } from './service'
 export { AIRouterImageService } from './image-service'
+export { AIRouterSpeechService } from './speech-service'
+export { AIRouterSpeechModelStore } from './speech-model-store'
+export { PocketTtsSynthesizer } from './pocket-tts'
 export type { AIRouterServiceOptions } from './service'
+export type {
+  AIRouterLocalSpeechRequest,
+  AIRouterLocalSpeechSynthesizer,
+  AIRouterSpeechServiceOptions
+} from './speech-service'
 
 interface ActiveGeneration {
   sender: WebContents
@@ -25,6 +40,13 @@ interface ActiveGeneration {
 export function registerAIRouter(options: AIRouterServiceOptions): void {
   const service = new AIRouterService(options)
   const imageService = new AIRouterImageService(options)
+  const speechService = new AIRouterSpeechService({
+    baseDir: options.baseDir,
+    appVersion: app.getVersion(),
+    configStorage: options.configStorage,
+    secretStorage: options.secretStorage,
+    localSynthesizers: { 'pocket-tts': new PocketTtsSynthesizer() }
+  })
   const active = new Map<string, ActiveGeneration>()
 
   ipcMain.handle(AIROUTER_CHANNELS.listConfigs, () => service.listProviderConfigs())
@@ -62,6 +84,41 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
     AIROUTER_CHANNELS.testImageConnection,
     (_event, request: AIRouterImageConnectionTestInput) => imageService.testConnection(request)
   )
+  ipcMain.handle(AIROUTER_CHANNELS.listSpeechConfigs, () => speechService.listProviderConfigs())
+  ipcMain.handle(
+    AIROUTER_CHANNELS.saveSpeechConfig,
+    (_event, input: AIRouterSpeechProviderConfigInput) => speechService.saveProviderConfig(input)
+  )
+  ipcMain.handle(AIROUTER_CHANNELS.deleteSpeechConfig, (_event, id: string) =>
+    speechService.deleteProviderConfig(id)
+  )
+  ipcMain.handle(AIROUTER_CHANNELS.readSpeechApiKey, (_event, id: string) =>
+    speechService.readProviderApiKey(id)
+  )
+  ipcMain.handle(
+    AIROUTER_CHANNELS.listSpeechPackages,
+    (_event, providerType?: AIRouterSpeechProviderConfigInput['type']) =>
+      speechService.listModelPackages(providerType)
+  )
+  ipcMain.handle(AIROUTER_CHANNELS.importSpeechPackage, (_event, data: Uint8Array) => {
+    if (!(data instanceof Uint8Array)) throw new TypeError('模型包必须是二进制数据')
+    return speechService.importModelPackage(data)
+  })
+  ipcMain.handle(AIROUTER_CHANNELS.deleteSpeechPackage, (_event, id: string, version: string) =>
+    speechService.deleteModelPackage(id, version)
+  )
+  ipcMain.handle(
+    AIROUTER_CHANNELS.listSpeechModels,
+    (_event, input: AIRouterSpeechProviderConfigInput) => speechService.listModels(input)
+  )
+  ipcMain.handle(
+    AIROUTER_CHANNELS.listSpeechVoices,
+    (_event, request: AIRouterSpeechVoiceListInput) => speechService.listVoices(request)
+  )
+  ipcMain.handle(
+    AIROUTER_CHANNELS.testSpeechConnection,
+    (_event, request: AIRouterSpeechConnectionTestInput) => speechService.testConnection(request)
+  )
   ipcMain.on(
     AIROUTER_CHANNELS.generateStart,
     (event, requestId: string, request: AIRouterTextRequest) => {
@@ -96,6 +153,25 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
     }
   )
   ipcMain.on(AIROUTER_CHANNELS.imageGenerateAbort, (event, requestId: string) => {
+    active.get(`${event.sender.id}:${requestId}`)?.controller.abort()
+  })
+  ipcMain.on(
+    AIROUTER_CHANNELS.speechSynthesisStart,
+    (event, requestId: string, request: AIRouterSpeechSynthesisRequest) => {
+      const key = `${event.sender.id}:${requestId}`
+      active.get(key)?.controller.abort()
+      const controller = new AbortController()
+      active.set(key, { sender: event.sender, controller })
+      void speechToRenderer(
+        speechService,
+        event.sender,
+        requestId,
+        request,
+        controller.signal
+      ).finally(() => active.delete(key))
+    }
+  )
+  ipcMain.on(AIROUTER_CHANNELS.speechSynthesisAbort, (event, requestId: string) => {
     active.get(`${event.sender.id}:${requestId}`)?.controller.abort()
   })
 }
@@ -135,6 +211,24 @@ async function streamToRenderer(
   } catch (error) {
     if (!signal.aborted) send({ type: 'error', message: errorMessage(error) })
     else send({ type: 'done' })
+  }
+}
+
+async function speechToRenderer(
+  service: AIRouterSpeechService,
+  sender: WebContents,
+  requestId: string,
+  request: AIRouterSpeechSynthesisRequest,
+  signal: AbortSignal
+): Promise<void> {
+  const send = (event: AIRouterSpeechSynthesisEvent): void => {
+    if (!sender.isDestroyed()) sender.send(AIROUTER_CHANNELS.speechSynthesisEvent, requestId, event)
+  }
+  try {
+    const audio = await service.synthesizeSpeech(request, { signal })
+    if (!signal.aborted) send({ type: 'result', audio })
+  } catch (error) {
+    if (!signal.aborted) send({ type: 'error', message: errorMessage(error) })
   }
 }
 

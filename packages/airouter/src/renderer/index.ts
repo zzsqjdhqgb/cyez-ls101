@@ -4,6 +4,9 @@ import type {
   AIRouterGeneratedImage,
   AIRouterImageGenerationEvent,
   AIRouterStreamEvent,
+  AIRouterSpeechModelPackageImportResult,
+  AIRouterSpeechProviderType,
+  AIRouterSpeechSynthesisEvent,
   AIRouterTextChunk,
   AIRouterTextRequest
 } from '../shared'
@@ -26,6 +29,49 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
     readImageProviderApiKey: (id) => getBridge().readImageProviderApiKey(id),
     listImageModels: (config) => getBridge().listImageModels(config),
     testImageConnection: (request) => getBridge().testImageConnection(request),
+    listSpeechProviderConfigs: () => getBridge().listSpeechProviderConfigs(),
+    saveSpeechProviderConfig: (config) => getBridge().saveSpeechProviderConfig(config),
+    deleteSpeechProviderConfig: (id) => getBridge().deleteSpeechProviderConfig(id),
+    readSpeechProviderApiKey: (id) => getBridge().readSpeechProviderApiKey(id),
+    listSpeechModelPackages: (providerType?: AIRouterSpeechProviderType) =>
+      getBridge().listSpeechModelPackages(providerType),
+    importSpeechModelPackage: (data: Uint8Array): Promise<AIRouterSpeechModelPackageImportResult> =>
+      getBridge().importSpeechModelPackage(data),
+    deleteSpeechModelPackage: (id, version) => getBridge().deleteSpeechModelPackage(id, version),
+    listSpeechModels: (config) => getBridge().listSpeechModels(config),
+    listSpeechVoices: (request) => getBridge().listSpeechVoices(request),
+    testSpeechConnection: (request) => getBridge().testSpeechConnection(request),
+    synthesizeSpeech(request, options = {}) {
+      return new Promise((resolve, reject) => {
+        let settled = false
+        let stop = (): void => undefined
+        const finish = (event: AIRouterSpeechSynthesisEvent): void => {
+          if (settled) return
+          settled = true
+          options.signal?.removeEventListener('abort', abort)
+          stop()
+          if (event.type === 'result') {
+            resolve({
+              data: new Uint8Array(event.audio.data as ArrayLike<number>),
+              mediaType: event.audio.mediaType,
+              format: event.audio.format,
+              sampleRate: event.audio.sampleRate,
+              channels: event.audio.channels,
+              durationMs: event.audio.durationMs
+            })
+          } else reject(new Error(event.message))
+        }
+        const abort = (): void => {
+          if (settled) return
+          settled = true
+          stop()
+          reject(new DOMException('Speech synthesis was aborted', 'AbortError'))
+        }
+        stop = getBridge().startSpeechSynthesis(request, finish)
+        if (options.signal?.aborted) abort()
+        else options.signal?.addEventListener('abort', abort, { once: true })
+      })
+    },
     generateImage(request, options = {}) {
       return new Promise<AIRouterGeneratedImage>((resolve, reject) => {
         let settled = false

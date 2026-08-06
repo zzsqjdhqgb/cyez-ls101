@@ -26,6 +26,13 @@ import {
   type AIRouterImageGenerationEvent,
   type AIRouterImageProviderConfigInput,
   type AIRouterImageRequest,
+  type AIRouterSpeechConnectionTestInput,
+  type AIRouterSpeechModelPackageImportResult,
+  type AIRouterSpeechProviderConfigInput,
+  type AIRouterSpeechProviderType,
+  type AIRouterSpeechSynthesisEvent,
+  type AIRouterSpeechSynthesisRequest,
+  type AIRouterSpeechVoiceListInput,
   type AIRouterProviderConfigInput,
   type AIRouterStreamEvent,
   type AIRouterTextRequest
@@ -89,6 +96,59 @@ const airouterBridge: AIRouterBridge = {
   },
   testImageConnection(request) {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.testImageConnection, request)
+  },
+  listSpeechProviderConfigs() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listSpeechConfigs)
+  },
+  saveSpeechProviderConfig(config: AIRouterSpeechProviderConfigInput) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.saveSpeechConfig, config)
+  },
+  deleteSpeechProviderConfig(id: string) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.deleteSpeechConfig, id)
+  },
+  readSpeechProviderApiKey(id: string) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.readSpeechApiKey, id)
+  },
+  listSpeechModelPackages(providerType?: AIRouterSpeechProviderType) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listSpeechPackages, providerType)
+  },
+  importSpeechModelPackage(data: Uint8Array): Promise<AIRouterSpeechModelPackageImportResult> {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.importSpeechPackage, data)
+  },
+  deleteSpeechModelPackage(id: string, version: string) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.deleteSpeechPackage, id, version)
+  },
+  listSpeechModels(config: AIRouterSpeechProviderConfigInput) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listSpeechModels, config)
+  },
+  listSpeechVoices(request: AIRouterSpeechVoiceListInput) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listSpeechVoices, request)
+  },
+  testSpeechConnection(request: AIRouterSpeechConnectionTestInput) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.testSpeechConnection, request)
+  },
+  startSpeechSynthesis(
+    request: AIRouterSpeechSynthesisRequest,
+    listener: (event: AIRouterSpeechSynthesisEvent) => void
+  ) {
+    const requestId = crypto.randomUUID()
+    const handler = (
+      _event: IpcRendererEvent,
+      id: string,
+      event: AIRouterSpeechSynthesisEvent
+    ): void => {
+      if (id !== requestId) return
+      listener(event)
+      if (event.type === 'result' || event.type === 'error') {
+        ipcRenderer.removeListener(AIROUTER_CHANNELS.speechSynthesisEvent, handler)
+      }
+    }
+    ipcRenderer.on(AIROUTER_CHANNELS.speechSynthesisEvent, handler)
+    ipcRenderer.send(AIROUTER_CHANNELS.speechSynthesisStart, requestId, request)
+    return () => {
+      ipcRenderer.removeListener(AIROUTER_CHANNELS.speechSynthesisEvent, handler)
+      ipcRenderer.send(AIROUTER_CHANNELS.speechSynthesisAbort, requestId)
+    }
   },
   startTextGeneration(
     request: AIRouterTextRequest,
