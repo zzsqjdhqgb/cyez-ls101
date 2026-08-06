@@ -10,7 +10,7 @@ const { join, dirname } = require('node:path')
 const isTTY = process.stdout.isTTY
 
 const BASE_URL = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models'
-const STT_DIR = join(process.cwd(), 'assets', 'stt')
+const STT_DIR = join(process.cwd(), 'model-assets', 'stt')
 
 async function download(url, dest, label) {
   if (isTTY) process.stdout.write(`${label} `)

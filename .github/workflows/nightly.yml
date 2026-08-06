@@ -99,6 +99,8 @@ jobs:
           tag_name: nightly
           name: Nightly Build
           prerelease: true
-          files: dist/*.exe
+          files: |
+            dist/*.exe
+            dist/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -4,7 +4,7 @@
  */
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-const { execSync } = require('child_process')
+const { execFileSync, execSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
 const builder = require('electron-builder')
@@ -115,6 +115,15 @@ async function main() {
   // 3. 执行打包
   console.log('Starting electron-builder...')
   const result = await builder.build(buildOptions)
+  console.log('Building external TTS model package...')
+  execFileSync(
+    process.execPath,
+    [path.join(root, 'scripts', 'build-tts-model-package.mjs'), version],
+    {
+      stdio: 'inherit',
+      cwd: root
+    }
+  )
   console.log('Build completed successfully:', result)
 }
 

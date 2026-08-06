@@ -139,7 +139,7 @@ manifest v1 采用以下结构：
   },
   "assets": [
     {
-      "path": "model/tts_b6369a24.safetensors",
+      "path": "model/model.safetensors",
       "kind": "model-weights",
       "size": 235738732,
       "sha256": "..."
@@ -163,7 +163,7 @@ manifest v1 采用以下结构：
       "name": "Pocket TTS English v1",
       "languageCodes": ["en", "en-US"],
       "artifacts": {
-        "weights": ["model/tts_b6369a24.safetensors"],
+        "weights": ["model/model.safetensors"],
         "tokenizer": ["tokenizer/tokenizer.model"]
       },
       "parameters": {
@@ -204,6 +204,8 @@ manifest v1 采用以下结构：
 
 `runtime.minimumAppVersion` 使用 SemVer 格式。导入模型包和加载已安装模型包时都必须与 Electron 应用当前版本比较，不能只校验字段类型。
 
+setup 阶段下载的模型原始文件统一放在仓库根目录的 `model-assets/`，不与图标等应用资源混放。构建阶段读取 `model-assets/tts/` 生成独立的 Pocket TTS ZIP；该 ZIP 输出到 `dist/`，与 exe、安装包并列发布，不写入 Electron 安装包。TTS WASM runtime 仍随应用本体发布。
+
 ### 模型文件去重
 
 模型文件保存接口不提供类似 `deduplicate: true` 的特殊参数。模型包通过 `assets` 列表声明需要保存的文件，导入程序对每个列表项对应的文件计算 SHA-256，并将文件保存为 Blob 或链接到已有 Blob。相同内容的模型权重、tokenizer 或音色文件只保存一份。
@@ -223,7 +225,7 @@ manifest v1 采用以下结构：
 ```json
 [
   {
-    "path": "model/tts_b6369a24.safetensors",
+    "path": "model/model.safetensors",
     "kind": "model-weights",
     "size": 235738732,
     "sha256": "...",

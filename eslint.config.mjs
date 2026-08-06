@@ -12,7 +12,14 @@ import eslintPluginReactRefresh from 'eslint-plugin-react-refresh'
 
 export default defineConfig(
   {
-    ignores: ['**/node_modules', '**/dist', '**/out', 'resources/tts', '**/__tests__/**']
+    ignores: [
+      '**/node_modules',
+      '**/dist',
+      '**/out',
+      '**/model-assets/**',
+      'resources/tts',
+      '**/__tests__/**'
+    ]
   },
   tseslint.configs.recommended,
   eslintPluginReact.configs.flat.recommended,
