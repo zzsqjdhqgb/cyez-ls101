@@ -1,6 +1,7 @@
-import { useState, type JSX } from 'react'
+import { useEffect, useState, type JSX } from 'react'
 import type {
   FrameNode,
+  FunctionLibrarySummary,
   TemplateDocumentOperation,
   TemplateNode,
   TextExpression
@@ -9,6 +10,7 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowUp,
+  AlertCircle,
   Braces,
   ChevronDown,
   ChevronRight,
@@ -29,6 +31,7 @@ import { IconButton } from '../../components/ui/IconButton'
 import { useTemplateApplication } from './TemplateApplicationContext'
 import styles from './TemplateDocumentPage.module.css'
 import { TemplateNodeInspector } from './TemplateNodeInspector'
+import { templateErrorMessage } from './templateUi'
 import { useTemplateEditorSession } from './useTemplateEditorSession'
 
 type InsertableNodeType = 'frame' | 'page' | 'choice-question'
@@ -38,6 +41,15 @@ interface NodeLocation {
   parent: FrameNode | null
   index: number
 }
+
+const LIBRARY_SOURCES: readonly {
+  source: FunctionLibrarySummary['source']
+  label: string
+}[] = [
+  { source: 'builtin', label: '内置' },
+  { source: 'imported', label: '导入' },
+  { source: 'local', label: '本地' }
+]
 
 export function TemplateDocumentPage(): JSX.Element {
   const { templateId = '' } = useParams()
@@ -51,6 +63,32 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [collapsedIds, setCollapsedIds] = useState<ReadonlySet<string>>(() => new Set())
+  const [functionLibraries, setFunctionLibraries] = useState<FunctionLibrarySummary[]>([])
+  const [libraryLoading, setLibraryLoading] = useState(true)
+  const [libraryError, setLibraryError] = useState<string | null>(null)
+  const [collapsedLibraryKeys, setCollapsedLibraryKeys] = useState<ReadonlySet<string>>(
+    () => new Set()
+  )
+
+  useEffect(() => {
+    let active = true
+    void application.browser
+      .listFunctionLibraries()
+      .then((items) => {
+        if (!active) return
+        setFunctionLibraries(items)
+        setLibraryError(null)
+      })
+      .catch((reason: unknown) => {
+        if (active) setLibraryError(templateErrorMessage(reason))
+      })
+      .finally(() => {
+        if (active) setLibraryLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [application])
 
   const document = session.document
   const root = document?.content.root ?? null
@@ -111,6 +149,15 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
     })
   }
 
+  const toggleLibrary = (key: string): void => {
+    setCollapsedLibraryKeys((current) => {
+      const next = new Set(current)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
   return (
     <div className={styles.editor}>
       <header className={styles.toolbar}>
@@ -156,16 +203,69 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
           <section className={styles.inspectorSection}>
             <h2 id="function-library-heading">函数库</h2>
             <div className={styles.libraryGroups}>
-              <section className={styles.libraryGroup} aria-labelledby="builtin-library-heading">
-                <h3 id="builtin-library-heading">内置</h3>
-                <span>基础组件库</span>
-              </section>
-              <section className={styles.libraryGroup} aria-labelledby="imported-library-heading">
-                <h3 id="imported-library-heading">导入</h3>
-              </section>
-              <section className={styles.libraryGroup} aria-labelledby="local-library-heading">
-                <h3 id="local-library-heading">本地</h3>
-              </section>
+              {libraryError ? (
+                <div className={styles.libraryNotice} role="alert">
+                  <AlertCircle aria-hidden="true" />
+                  <span>{libraryError}</span>
+                </div>
+              ) : null}
+              {libraryLoading ? (
+                <span className={styles.libraryStatus}>正在加载函数库...</span>
+              ) : null}
+              {!libraryLoading
+                ? LIBRARY_SOURCES.map(({ source, label }) => {
+                    const libraries = functionLibraries.filter((item) => item.source === source)
+                    return (
+                      <section
+                        className={styles.libraryGroup}
+                        aria-labelledby={`${source}-library-heading`}
+                        key={source}
+                      >
+                        <h3 id={`${source}-library-heading`}>{label}</h3>
+                        {libraries.length === 0 ? (
+                          <span className={styles.libraryStatus}>暂无函数库</span>
+                        ) : (
+                          <ul className={styles.libraryList}>
+                            {libraries.map((library) => {
+                              const key = libraryKey(library)
+                              const collapsed = collapsedLibraryKeys.has(key)
+                              return (
+                                <li key={key}>
+                                  <button
+                                    type="button"
+                                    className={styles.libraryButton}
+                                    aria-expanded={!collapsed}
+                                    aria-label={libraryButtonLabel(library)}
+                                    onClick={() => toggleLibrary(key)}
+                                  >
+                                    {collapsed ? (
+                                      <ChevronRight aria-hidden="true" />
+                                    ) : (
+                                      <ChevronDown aria-hidden="true" />
+                                    )}
+                                    <span>{library.name || '未命名函数库'}</span>
+                                    {library.version ? <small>v{library.version}</small> : null}
+                                  </button>
+                                  {!collapsed ? (
+                                    library.functions.length > 0 ? (
+                                      <ul className={styles.functionList}>
+                                        {library.functions.map((item) => (
+                                          <li key={item.functionId}>{item.name || '未命名函数'}</li>
+                                        ))}
+                                      </ul>
+                                    ) : (
+                                      <span className={styles.emptyLibrary}>暂无函数</span>
+                                    )
+                                  ) : null}
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        )}
+                      </section>
+                    )
+                  })
+                : null}
             </div>
           </section>
         </aside>
@@ -276,6 +376,15 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
       />
     </div>
   )
+}
+
+function libraryKey(library: FunctionLibrarySummary): string {
+  return `${library.source}:${library.libraryId}:${library.version ?? 'working'}`
+}
+
+function libraryButtonLabel(library: FunctionLibrarySummary): string {
+  const name = library.name || '未命名函数库'
+  return library.version ? `${name}，版本 ${library.version}` : name
 }
 
 interface NodeTreeProps {

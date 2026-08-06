@@ -23,9 +23,9 @@ export async function initializeBuiltinFunctionLibraries(
   for (const release of manifest.libraries) {
     await repository.registerBuiltinFunctionLibrary(release)
   }
-  for (const release of manifest.libraries) {
-    await repository.setActiveBuiltinFunctionLibraryVersion(release.libraryId, release.version)
-  }
+  await repository.setActiveBuiltinFunctionLibraries(
+    manifest.libraries.map(({ libraryId, version }) => ({ libraryId, version }))
+  )
 
   return manifest.libraries
 }

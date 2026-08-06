@@ -73,6 +73,20 @@ function application(document = template()): TemplateApplication {
       ]),
       listFunctionLibraries: vi.fn().mockResolvedValue([
         {
+          source: 'builtin',
+          libraryId: 'builtin:layout',
+          version: 2,
+          name: '版式组件库',
+          functions: [{ functionId: 'builtin:page', name: '分页' }]
+        },
+        {
+          source: 'imported',
+          libraryId: '50000000-0000-4000-8000-000000000005',
+          version: 3,
+          name: '导入题型库',
+          functions: [{ functionId: '60000000-0000-4000-8000-000000000006', name: '口语题' }]
+        },
+        {
           source: 'local',
           libraryId: '40000000-0000-4000-8000-000000000004',
           name: '听力函数库',
@@ -124,9 +138,15 @@ describe('Template pages', () => {
     expect(screen.getByRole('heading', { name: '内置' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '导入' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '本地' })).toBeInTheDocument()
-    expect(screen.getByText('基础组件库')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '版式组件库，版本 2' })).toBeInTheDocument()
+    expect(screen.getByText('分页')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '导入题型库，版本 3' })).toBeInTheDocument()
+    expect(screen.getByText('口语题')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '听力函数库' })).toBeInTheDocument()
+    expect(screen.getByText('单题函数')).toBeInTheDocument()
     expect(screen.getByText('page-1')).toBeInTheDocument()
     expect(app.templates.get).toHaveBeenCalledWith(TEMPLATE_ID)
+    expect(app.browser.listFunctionLibraries).toHaveBeenCalledTimes(2)
   })
 
   it('creates a template and enters its editor route', async () => {

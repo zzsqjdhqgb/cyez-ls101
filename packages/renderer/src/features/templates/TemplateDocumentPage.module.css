@@ -110,6 +110,97 @@
   font-weight: 660;
 }
 
+.libraryNotice {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 7px;
+  color: var(--color-danger);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.libraryNotice svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+}
+
+.libraryStatus,
+.emptyLibrary {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.libraryList,
+.functionList {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.libraryButton {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  width: 100%;
+  min-height: 30px;
+  padding: 4px 2px;
+  border: 0;
+  color: var(--color-text-strong);
+  background: transparent;
+  font: 600 13px/1.4 var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+
+.libraryButton:hover {
+  color: var(--color-accent);
+}
+
+.libraryButton svg {
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-muted);
+}
+
+.libraryButton span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.libraryButton small {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 520;
+}
+
+.functionList {
+  gap: 0;
+  padding-left: 18px;
+}
+
+.functionList li,
+.emptyLibrary {
+  display: block;
+  min-width: 0;
+  padding: 4px 6px;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emptyLibrary {
+  padding-left: 24px;
+}
+
 .properties label {
   display: grid;
   gap: 7px;

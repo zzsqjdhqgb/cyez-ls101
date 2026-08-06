@@ -60,6 +60,61 @@ describe('内置函数库启动初始化', () => {
     ).rejects.toMatchObject({ code: 'RELEASE_CONFLICT' })
     expect(await repository.getActiveBuiltinFunctionLibrary('builtin:basic')).toEqual(first)
   })
+
+  it('升级时停用已从清单移除的内置库并保留历史 release', async () => {
+    const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
+    const basic = await createFunctionLibraryRelease('builtin:basic', 1, {
+      name: 'Basic',
+      functions: []
+    })
+    const legacy = await createFunctionLibraryRelease('builtin:legacy', 1, {
+      name: 'Legacy',
+      functions: []
+    })
+
+    await initializeBuiltinFunctionLibraries(repository, { libraries: [basic, legacy] })
+    await initializeBuiltinFunctionLibraries(repository, { libraries: [basic] })
+
+    expect(await repository.listBuiltinFunctionLibraryIds()).toEqual(['builtin:basic'])
+    expect(await repository.getActiveBuiltinFunctionLibrary('builtin:legacy')).toBeNull()
+    expect(await repository.getBuiltinFunctionLibrary('builtin:legacy', 1)).toEqual(legacy)
+  })
+
+  it('在启动期拒绝缺失、非法和递归的内置函数依赖', async () => {
+    const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
+    const entry = (functionId: string, functionRef?: string) => ({
+      functionId,
+      content: {
+        name: functionId,
+        inputs: [],
+        body: {
+          id: 'root',
+          type: 'frame' as const,
+          children: functionRef
+            ? [{ id: 'call', type: 'function' as const, functionRef, inputs: {}, outputNames: {} }]
+            : []
+        },
+        outputs: [],
+        schemaUses: []
+      }
+    })
+    const invalidContents = [
+      [entry('builtin:root', 'builtin:missing')],
+      [entry('builtin:root', 'not-builtin')],
+      [entry('builtin:root', 'builtin:child'), entry('builtin:child', 'builtin:root')]
+    ]
+
+    for (const functions of invalidContents) {
+      const release = await createFunctionLibraryRelease('builtin:broken', 1, {
+        name: 'Broken',
+        functions
+      })
+      await expect(
+        initializeBuiltinFunctionLibraries(repository, { libraries: [release] })
+      ).rejects.toBeInstanceOf(BuiltinFunctionLibraryInitializationError)
+    }
+    expect(await repository.listBuiltinFunctionLibraryIds()).toEqual([])
+  })
 })
 
 class MemoryStore implements TemplateStore {

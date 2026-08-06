@@ -2,7 +2,7 @@
 
 ## 功能状态
 
-`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 与 Function 工作文档身份、文件仓储、内嵌函数资源管理、应用门面、严格语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。renderer 已注册 Template 应用门面、列表入口、工作文档编辑会话和节点结构编辑器；节点专用配置界面与最终试卷文件封装尚未实现。
+`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 与函数库工作文档身份、版本化函数库仓储、内嵌函数资源管理、应用门面、严格语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。renderer 已注册 Template 应用门面、列表入口、函数库浏览、工作文档编辑会话和节点结构编辑器；节点专用配置界面与最终试卷文件封装尚未实现。
 
 ## 已实现边界
 
@@ -18,34 +18,46 @@
 
 Schema Editor 向 Template Editor 提供的 `SchemaBlockManifest` 位于 `@ls101/core-types`，其中只包含评分块和字段契约，不暴露评分实现。
 
-## 工作文档与函数资源身份
+## 工作文档、函数库与资源身份
 
 Template 不区分草稿和发布状态。`createTemplateDocument()` 生成稳定 UUID `templateId`、初始 revision 0，并深拷贝正文、函数资源和编辑器状态；保存工作文档不触发严格业务校验，预览和导出才要求当前内容完整合法。导出后的 ExamPackage 不依赖 Template，后续修改或删除工作文档不会影响已经导出的试卷。
 
-函数库源文档同样使用稳定 UUID `functionId`，可以直接编辑和删除。Template 内的 `FunctionDef` 是复制后的不可变快照，其 `id` 由 `deriveFunctionResourceId()` 根据函数正文计算。嵌套 `functionRef`、节点顺序、输入输出和 Schema 消费参与哈希；对象 key 不影响结果，字符串统一为 LF 换行和 NFC Unicode。
+用户本地函数以函数库为工作文档边界。`LocalFunctionLibraryDocument` 使用稳定 UUID `libraryId` 和仓储 revision，库内每个函数使用稳定 UUID `functionId`；函数的语义正文和编辑器状态都随所属函数库统一读取、保存和删除。导入库和内置库使用不可变的 `FunctionLibraryRelease`，由 `libraryId + version + contentHash` 标识；内置库使用稳定的 `builtin:*` 库及函数 ID。
+
+Template 内的 `FunctionDef` 是从函数库复制后的不可变快照，其 `id` 由 `deriveFunctionResourceId()` 根据函数正文计算。嵌套 `functionRef`、节点顺序、输入输出和 Schema 消费参与哈希；对象 key 不影响结果，字符串统一为 LF 换行和 NFC Unicode。源函数后续修改、删除或内置 release 停用不会改变已经嵌入 Template 的快照。
 
 当前身份工具包括：
 
-- `createTemplateDocument()`、`createFunctionDocument()`：创建可编辑 UUID 工作文档。
+- `createTemplateDocument()`：创建可编辑的 Template 工作文档。
+- `createLocalFunctionLibraryDocument()`、`createFunctionDocument()`：创建本地函数库及其库内函数投影。
+- `createFunctionLibraryRelease()`、`verifyFunctionLibraryRelease()`：创建和验证不可变函数库 release。
 - `createFunctionResource()`：生成带内容 ID 的内嵌函数快照。
 - `verifyFunctionResourceId()`：复算函数资源 ID 并检测正文篡改。
 - `canonicalizeFunctionContent()`：生成稳定的函数正文规范表示。
 
 ## 仓储
 
-`TemplateRepository` 同时管理 Template 和 Function 工作文档。`FileTemplateRepository` 使用 `@ls101/file-store` 兼容的作用域存储，布局为 `templates/<templateId>/template.json` 和 `functions/<functionId>/function.json`；适配器从 `@ls101/template-editor/adapters` 导出。
+`TemplateRepository` 同时管理 Template、本地函数库工作文档、导入 release 和内置 release。`FileTemplateRepository` 使用 `@ls101/file-store` 兼容的作用域存储；适配器从 `@ls101/template-editor/adapters` 导出。主要布局为：
+
+- `templates/<templateId>/template.json`：Template 工作文档。
+- `function-libraries/local/<libraryId>/library.json`：本地函数库工作文档，包含库内全部函数和编辑器状态。
+- `function-libraries/imported/<libraryId>/releases/v<version>/library.json`：导入的不可变 release。
+- `function-libraries/builtin/<builtinKey>/releases/v<version>/library.json`：随应用登记的不可变内置 release。
+- `function-libraries/builtin/active.json`：当前清单中的内置库及 active 版本。升级时整份替换此清单；被移除库的历史 release 继续保留，仅供已有版本依赖读取，不再出现在浏览列表或新建引用中。
 
 工作文档保存允许名称、DSL 和绑定处于业务不完整状态。仓储通过完整递归结构解析器验证所有节点判别字段、内容块、时间线、表达式、Interface requirement、Schema use、函数定义和 JSON 编辑器状态，确保读取结果可以安全进入校验和编译。编辑器状态只接受由有限数字、字符串、布尔值、null、数组和普通对象组成的无环 JSON 树；非普通对象及循环引用会被拒绝。同时检查 UUID v4、内嵌函数资源 ID 唯一性及资源内容哈希。结构损坏或底层 JSON 语法错误都通过 `TemplateRepositoryError('INVALID_DATA')` 返回，不会泄漏 `TypeError`、`RangeError` 或 `SyntaxError`。
 
-Template 和 Function 工作文档都带 revision。首次保存使用 0，后续成功保存递增并返回新的完整文档；调用方必须用返回值替换本地副本。文件仓储使用 File Store main 进程提供的原子 compare-and-swap；该保证跨 renderer/window 和仓储实例成立。过期副本返回 `REVISION_CONFLICT` 及当前/传入 revision，不覆盖较新数据。删除 Template 或函数源文档会清除对应工作目录；已嵌入其他 Template 的函数快照不受源函数删除影响。
+Template 和本地函数库工作文档都带 revision。首次保存使用 0，后续成功保存递增并返回新的完整文档；调用方必须用返回值替换本地副本。文件仓储使用 File Store main 进程提供的原子 compare-and-swap；该保证跨 renderer/window 和仓储实例成立。过期副本返回 `REVISION_CONFLICT` 及当前/传入 revision，不覆盖较新数据。删除本地函数库会清除整个库工作目录；已嵌入其他 Template 的函数快照不受源库删除影响。
+
+函数库 release 登记前会校验内容哈希、库和函数 ID、函数 ID 唯一性以及完整依赖图。每个 `functionRef` 必须符合对应来源的 ID 规则并指向同一 release 内存在的函数，任何直接或间接递归都会在启动或导入阶段被拒绝，不能延迟到复制函数时才失败。
 
 ## 应用门面
 
-`createTemplateApplication()` 提供浏览、Template 工作文档和 Function 工作文档三个分区。创建操作立即生成 UUID 并保存；获取、整份保存和删除直接对应仓储操作。`save()` 返回递增 revision 后的文档，过期 autosave 必须由调用方处理冲突，不能静默覆盖。
+`createTemplateApplication()` 提供 `browser`、`templates` 和 `functionLibraries.local` 三个分区。`browser.listFunctionLibraries()` 汇总当前 active 内置库、全部导入 release 和本地函数库，并返回每个库的来源、版本及函数摘要；renderer 左栏按“来源 → 函数库 → 函数”展示该数据。Template 和本地函数库的创建操作立即生成 UUID 并保存；获取、整份保存和删除直接对应仓储操作。`save()` 返回递增 revision 后的文档，过期 autosave 必须由调用方处理冲突，不能静默覆盖。
 
-`templates.embedFunction(templateId, functionId)` 递归读取函数库源文档，从叶子开始复制完整依赖闭包，把嵌套调用从源函数 UUID 改写为内嵌资源内容 ID，并把资源合并回 Template。同内容资源按哈希去重；递归依赖、源函数缺失和理论上的哈希碰撞通过结构化 `TemplateApplicationError` 返回。操作返回根资源的 `functionRef`，供编辑器创建或更新函数调用节点。
+`templates.embedFunction(templateId, locator)` 通过包含来源、库 ID、可选 release 版本和函数 ID 的定位器读取函数库，从叶子开始复制完整依赖闭包，把嵌套调用从源函数 ID 改写为内嵌资源内容 ID，并把资源合并回 Template。同内容资源按哈希去重；运行期源函数缺失和理论上的哈希碰撞通过结构化 `TemplateApplicationError` 返回。操作返回根资源的 `functionRef`，供编辑器创建或更新函数调用节点。
 
-`templates.insertFunctionCall(templateId, functionId, parentId, index?)` 是编辑器使用的原子组合操作。它在同一份已读取的 Template 上复制完整函数闭包、按函数签名生成所有输入默认表达式和调用处出参名、插入函数节点，最后只执行一次 CAS 保存。父框架不存在或结构操作被拒绝时不会保存刚复制的资源；成功结果包含 `functionRef` 和最终生成的 `callNodeId`。
+`templates.insertFunctionCall(templateId, locator, parentId, index?)` 是编辑器使用的原子组合操作。它在同一份已读取的 Template 上复制完整函数闭包、按函数签名生成所有输入默认表达式和调用处出参名、插入函数节点，最后只执行一次 CAS 保存。父框架不存在或结构操作被拒绝时不会保存刚复制的资源；成功结果包含 `functionRef` 和最终生成的 `callNodeId`。
 
 `templates.pruneFunctionResources()` 从 Template 根节点遍历嵌套函数引用，只保留传递可达的资源。清理是显式操作，因此编辑器可以在“复制资源”和“写入调用节点”之间保存中间状态。嵌入和清理都基于读取到的 revision 保存；如果期间发生 autosave，资源操作以 `REVISION_CONFLICT` 失败，不会用旧正文覆盖编辑内容。
 
@@ -55,7 +67,7 @@ Template 和 Function 工作文档都带 revision。首次保存使用 0，后�
 
 当前操作覆盖节点插入、删除、移动和复制，页面内容块与时间线，选择题选项，Collector 分页，函数调用输入/出参绑定，函数输入与手动出参，Interface requirement、Schema use、Schema 字段绑定和编辑器私有状态。节点使用定义作用域内唯一 ID 定位；列表索引在操作时检查边界。
 
-编辑引擎实现位于 `src/mutations/`：公开入口保持在 `index.ts`，Template/Function 文档编辑、节点定义 reducer、页面关联清理、表达式重写、标识生成和函数资源可达性分别按状态所有权与不变量组织。该目录拆分不改变 `@ls101/template-editor` 的公开导出。
+编辑引擎实现位于 `src/mutations/`：公开入口保持在 `index.ts`，Template 文档与库内函数投影编辑、节点定义 reducer、页面关联清理、表达式重写、标识生成和函数资源可达性分别按状态所有权与不变量组织。该目录拆分不改变 `@ls101/template-editor` 的公开导出。
 
 新增或复制时自动分配不冲突的节点 ID、内容块 ID、选项 ID、录音名、选择题输出名和函数调用出参名。复制子树会同步重写复制体内部的局部变量引用以及 relative focus 的 `callPath/questionId`；absolute focus 始终保留从 Template 根出发的原地址。删除 ChoiceViewBlock 会清除时间线中对应的 override；删除函数调用节点会在同一次 Template 编辑中清除传递不可达的函数资源。`reconcile-function-call` 根据最新签名移除过期 binding key、保留仍有效的值并补齐新增输入和出参名。
 

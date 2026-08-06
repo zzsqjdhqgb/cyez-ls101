@@ -63,6 +63,9 @@ export interface TemplateRepository {
   ): Promise<FunctionLibraryRelease | null>
   registerBuiltinFunctionLibrary(release: FunctionLibraryRelease): Promise<FunctionLibraryRelease>
   setActiveBuiltinFunctionLibraryVersion(libraryId: string, version: number): Promise<void>
+  setActiveBuiltinFunctionLibraries(
+    libraries: readonly { libraryId: string; version: number }[]
+  ): Promise<void>
 }
 
 export class TemplateRepositoryError extends Error {
@@ -267,25 +270,19 @@ export class FileTemplateRepository implements TemplateRepository {
   }
 
   async listBuiltinFunctionLibraryIds(): Promise<string[]> {
-    const keys = await this.builtinLibraries.listScopes()
-    return keys.map((key) => builtinLibraryId(key)).sort()
+    const active = await this.readActiveBuiltinFunctionLibraries()
+    return active.libraries.map(({ libraryId }) => libraryId)
   }
 
   async getActiveBuiltinFunctionLibrary(libraryId: string): Promise<FunctionLibraryRelease | null> {
-    const key = assertBuiltinLibraryId(libraryId)
-    const value = await readStoredValue(
-      this.builtinLibraries.scope(key),
-      ACTIVE_FILE,
-      `Builtin function library ${libraryId} active version`
-    )
-    if (value === null) return null
-    if (!isActiveVersion(value)) {
-      throw invalidData(`Builtin function library ${libraryId} active version is invalid`)
-    }
-    const release = await this.getBuiltinFunctionLibrary(libraryId, value.version)
+    assertBuiltinLibraryId(libraryId)
+    const active = await this.readActiveBuiltinFunctionLibraries()
+    const entry = active.libraries.find((item) => item.libraryId === libraryId)
+    if (!entry) return null
+    const release = await this.getBuiltinFunctionLibrary(libraryId, entry.version)
     if (!release) {
       throw invalidData(
-        `Builtin function library ${libraryId} active release v${value.version} is missing`
+        `Builtin function library ${libraryId} active release v${entry.version} is missing`
       )
     }
     return release
@@ -308,13 +305,44 @@ export class FileTemplateRepository implements TemplateRepository {
   }
 
   async setActiveBuiltinFunctionLibraryVersion(libraryId: string, version: number): Promise<void> {
-    const key = assertBuiltinLibraryId(libraryId)
-    assertVersion(version)
-    const release = await this.getBuiltinFunctionLibrary(libraryId, version)
-    if (!release) {
-      throw invalidData(`Builtin function library ${libraryId} release v${version} is missing`)
+    const active = await this.readActiveBuiltinFunctionLibraries()
+    const libraries = active.libraries.filter((item) => item.libraryId !== libraryId)
+    libraries.push({ libraryId, version })
+    await this.setActiveBuiltinFunctionLibraries(libraries)
+  }
+
+  async setActiveBuiltinFunctionLibraries(
+    libraries: readonly { libraryId: string; version: number }[]
+  ): Promise<void> {
+    const normalized = [...libraries].sort((left, right) =>
+      left.libraryId.localeCompare(right.libraryId)
+    )
+    const ids = new Set<string>()
+    for (const { libraryId, version } of normalized) {
+      assertBuiltinLibraryId(libraryId)
+      assertVersion(version)
+      if (ids.has(libraryId)) {
+        throw invalidData(`Duplicate active builtin function library: ${libraryId}`)
+      }
+      ids.add(libraryId)
+      if (!(await this.getBuiltinFunctionLibrary(libraryId, version))) {
+        throw invalidData(`Builtin function library ${libraryId} release v${version} is missing`)
+      }
     }
-    await this.builtinLibraries.scope(key).writeText(ACTIVE_FILE, { version })
+    await this.builtinLibraries.writeText(ACTIVE_FILE, { libraries: normalized })
+  }
+
+  private async readActiveBuiltinFunctionLibraries(): Promise<ActiveBuiltinFunctionLibraries> {
+    const value = await readStoredValue(
+      this.builtinLibraries,
+      ACTIVE_FILE,
+      'Active builtin function libraries'
+    )
+    if (value === null) return { libraries: [] }
+    if (!isActiveBuiltinFunctionLibraries(value)) {
+      throw invalidData('Active builtin function libraries are invalid')
+    }
+    return value
   }
 
   private async getRelease(
@@ -476,6 +504,7 @@ export async function validateFunctionLibraryRelease(
   if (source === 'builtin') assertBuiltinLibraryId(release.libraryId)
   else assertUuid(release.libraryId, 'libraryId')
   assertFunctionLibraryContent(release.content, source)
+  assertFunctionLibraryDependencyGraph(release.content, source)
 }
 
 function assertFunctionLibraryContent(
@@ -498,6 +527,64 @@ function assertFunctionLibraryContent(
       throw invalidData(`Duplicate function in library: ${entry.functionId}`)
     }
     ids.add(entry.functionId)
+  }
+}
+
+function assertFunctionLibraryDependencyGraph(
+  content: FunctionLibraryContent,
+  source: 'builtin' | 'imported'
+): void {
+  const functions = new Map(content.functions.map((entry) => [entry.functionId, entry]))
+  const dependencies = new Map<string, string[]>()
+
+  for (const entry of content.functions) {
+    const refs: string[] = []
+    visitFunctionRefs(entry.content.body, (functionRef) => {
+      if (source === 'builtin') {
+        if (!BUILTIN_FUNCTION_ID_PATTERN.test(functionRef)) {
+          throw new TemplateRepositoryError(
+            'INVALID_ID',
+            `Invalid builtin functionRef: ${functionRef}`
+          )
+        }
+      } else {
+        assertUuid(functionRef, 'functionRef')
+      }
+      if (!functions.has(functionRef)) {
+        throw invalidData(`Unknown function dependency in ${entry.functionId}: ${functionRef}`)
+      }
+      refs.push(functionRef)
+    })
+    dependencies.set(entry.functionId, refs)
+  }
+
+  const visited = new Set<string>()
+  const visiting = new Set<string>()
+  const stack: string[] = []
+  const visit = (functionId: string): void => {
+    if (visited.has(functionId)) return
+    if (visiting.has(functionId)) {
+      const start = stack.indexOf(functionId)
+      const chain = [...stack.slice(start), functionId]
+      throw invalidData(`Recursive function dependency: ${chain.join(' -> ')}`)
+    }
+    visiting.add(functionId)
+    stack.push(functionId)
+    for (const dependency of dependencies.get(functionId) ?? []) visit(dependency)
+    stack.pop()
+    visiting.delete(functionId)
+    visited.add(functionId)
+  }
+  for (const functionId of functions.keys()) visit(functionId)
+}
+
+function visitFunctionRefs(
+  frame: FunctionContent['body'],
+  visit: (functionRef: string) => void
+): void {
+  for (const node of frame.children) {
+    if (node.type === 'frame') visitFunctionRefs(node, visit)
+    else if (node.type === 'function') visit(node.functionRef)
   }
 }
 
@@ -526,26 +613,35 @@ function assertBuiltinLibraryId(libraryId: string): string {
   return match[1]
 }
 
-function builtinLibraryId(key: string): string {
-  if (!/^[a-z0-9][a-z0-9_-]*$/.test(key)) {
-    throw invalidData(`Invalid stored builtin library key: ${key}`)
-  }
-  return `builtin:${key}`
-}
-
 function assertVersion(version: number): void {
   if (!Number.isSafeInteger(version) || version < 1) {
     throw new TemplateRepositoryError('INVALID_ID', `Invalid function library version: ${version}`)
   }
 }
 
-function isActiveVersion(value: unknown): value is { version: number } {
+interface ActiveBuiltinFunctionLibraries {
+  libraries: { libraryId: string; version: number }[]
+}
+
+function isActiveBuiltinFunctionLibraries(value: unknown): value is ActiveBuiltinFunctionLibraries {
   return (
     typeof value === 'object' &&
     value !== null &&
     Reflect.ownKeys(value).length === 1 &&
-    Number.isSafeInteger(Reflect.get(value, 'version')) &&
-    (Reflect.get(value, 'version') as number) >= 1
+    Array.isArray(Reflect.get(value, 'libraries')) &&
+    (Reflect.get(value, 'libraries') as unknown[]).every(
+      (item) =>
+        typeof item === 'object' &&
+        item !== null &&
+        Reflect.ownKeys(item).length === 2 &&
+        typeof Reflect.get(item, 'libraryId') === 'string' &&
+        BUILTIN_LIBRARY_ID_PATTERN.test(Reflect.get(item, 'libraryId') as string) &&
+        Number.isSafeInteger(Reflect.get(item, 'version')) &&
+        (Reflect.get(item, 'version') as number) >= 1
+    ) &&
+    new Set(
+      (Reflect.get(value, 'libraries') as { libraryId: string }[]).map(({ libraryId }) => libraryId)
+    ).size === (Reflect.get(value, 'libraries') as unknown[]).length
   )
 }
 
