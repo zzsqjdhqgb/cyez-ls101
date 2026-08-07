@@ -38,7 +38,7 @@ describe('内置函数库启动初始化', () => {
     })
     expect(await repository.getActiveBuiltinFunctionLibrary('builtin:examples')).toMatchObject({
       libraryId: 'builtin:examples',
-      version: 2,
+      version: 3,
       content: {
         name: '示例组件库',
         functions: [
@@ -46,6 +46,15 @@ describe('内置函数库启动初始化', () => {
             functionId: 'builtin:example-title-page',
             content: {
               name: '标题页组合',
+              inputs: [
+                { name: 'title', type: 'string' },
+                { name: 'subtitle', type: 'string' },
+                { name: 'countdownSeconds', type: 'number' }
+              ],
+              outputs: [
+                { name: 'heading', type: 'string' },
+                { name: 'countdownSecondsResult', type: 'number' }
+              ],
               body: { children: [{ type: 'frame', children: [{ type: 'page' }] }] }
             }
           },
@@ -53,6 +62,16 @@ describe('内置函数库启动初始化', () => {
             functionId: 'builtin:example-choice-section',
             content: {
               name: '选择题组合',
+              inputs: [
+                { name: 'instruction', type: 'string' },
+                { name: 'question', type: 'string' },
+                { name: 'optionA', type: 'string' },
+                { name: 'optionB', type: 'string' }
+              ],
+              outputs: [
+                { name: 'answer', type: 'choice' },
+                { name: 'questionText', type: 'string' }
+              ],
               body: {
                 children: [
                   {
@@ -138,7 +157,7 @@ describe('内置函数库启动初始化', () => {
 
     expect(await repository.getActiveBuiltinFunctionLibrary('builtin:examples')).toMatchObject({
       libraryId: 'builtin:examples',
-      version: 2,
+      version: 3,
       content: { name: '示例组件库' }
     })
     expect(await repository.getBuiltinFunctionLibrary('builtin:examples', 1)).toEqual(previous)

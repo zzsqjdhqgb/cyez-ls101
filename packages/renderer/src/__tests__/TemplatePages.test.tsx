@@ -107,7 +107,7 @@ function application(document = template()): TemplateApplication {
         {
           source: 'builtin',
           libraryId: 'builtin:examples',
-          version: 2,
+          version: 3,
           name: '示例组件库',
           functions: [
             {
@@ -281,7 +281,7 @@ describe('Template pages', () => {
     expect(screen.getByRole('button', { name: '添加框架' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '添加页面' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '添加选择题' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '示例组件库，版本 2' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '示例组件库，版本 3' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '添加标题页组合' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '添加选择题组合' })).toBeInTheDocument()
 

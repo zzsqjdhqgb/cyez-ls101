@@ -120,8 +120,8 @@
     },
     {
       "libraryId": "builtin:examples",
-      "version": 2,
-      "contentHash": "sha256:26429a1505c458e898ffc8aced402c457067c32319543efb375c4d81766b1ace",
+      "version": 3,
+      "contentHash": "sha256:782b0ead9760823a2a48a4100387e03eea73037d278376450e60a5144617e012",
       "content": {
         "name": "示例组件库",
         "functions": [
@@ -129,7 +129,20 @@
             "functionId": "builtin:example-title-page",
             "content": {
               "name": "标题页组合",
-              "inputs": [],
+              "inputs": [
+                {
+                  "name": "title",
+                  "type": "string"
+                },
+                {
+                  "name": "subtitle",
+                  "type": "string"
+                },
+                {
+                  "name": "countdownSeconds",
+                  "type": "number"
+                }
+              ],
               "body": {
                 "id": "root",
                 "type": "frame",
@@ -156,8 +169,11 @@
                                 "type": "string",
                                 "parts": [
                                   {
-                                    "type": "literal",
-                                    "value": "示例标题"
+                                    "type": "variable",
+                                    "ref": {
+                                      "scope": "local",
+                                      "name": "title"
+                                    }
                                   }
                                 ]
                               }
@@ -174,21 +190,76 @@
                                 "type": "string",
                                 "parts": [
                                   {
-                                    "type": "literal",
-                                    "value": "用于展示页面内容节点组合"
+                                    "type": "variable",
+                                    "ref": {
+                                      "scope": "local",
+                                      "name": "subtitle"
+                                    }
                                   }
                                 ]
                               }
                             }
                           ]
                         },
-                        "timeline": []
+                        "timeline": [
+                          {
+                            "type": "countdown",
+                            "seconds": {
+                              "type": "number",
+                              "source": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "countdownSeconds"
+                              }
+                            }
+                          }
+                        ]
                       }
                     ]
                   }
                 ]
               },
-              "outputs": [],
+              "outputs": [
+                {
+                  "name": "heading",
+                  "type": "string",
+                  "expression": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "local",
+                          "name": "title"
+                        }
+                      },
+                      {
+                        "type": "literal",
+                        "value": " - "
+                      },
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "local",
+                          "name": "subtitle"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "countdownSecondsResult",
+                  "type": "number",
+                  "expression": {
+                    "type": "number",
+                    "source": "variable",
+                    "ref": {
+                      "scope": "local",
+                      "name": "countdownSeconds"
+                    }
+                  }
+                }
+              ],
               "schemaUses": []
             }
           },
@@ -196,7 +267,24 @@
             "functionId": "builtin:example-choice-section",
             "content": {
               "name": "选择题组合",
-              "inputs": [],
+              "inputs": [
+                {
+                  "name": "instruction",
+                  "type": "string"
+                },
+                {
+                  "name": "question",
+                  "type": "string"
+                },
+                {
+                  "name": "optionA",
+                  "type": "string"
+                },
+                {
+                  "name": "optionB",
+                  "type": "string"
+                }
+              ],
               "body": {
                 "id": "root",
                 "type": "frame",
@@ -222,8 +310,11 @@
                                 "type": "string",
                                 "parts": [
                                   {
-                                    "type": "literal",
-                                    "value": "请完成下面的示例选择题"
+                                    "type": "variable",
+                                    "ref": {
+                                      "scope": "local",
+                                      "name": "instruction"
+                                    }
                                   }
                                 ]
                               }
@@ -239,8 +330,11 @@
                           "type": "string",
                           "parts": [
                             {
-                              "type": "literal",
-                              "value": "请选择一个答案"
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "question"
+                              }
                             }
                           ]
                         },
@@ -251,8 +345,11 @@
                               "type": "string",
                               "parts": [
                                 {
-                                  "type": "literal",
-                                  "value": "示例选项 A"
+                                  "type": "variable",
+                                  "ref": {
+                                    "scope": "local",
+                                    "name": "optionA"
+                                  }
                                 }
                               ]
                             }
@@ -263,8 +360,11 @@
                               "type": "string",
                               "parts": [
                                 {
-                                  "type": "literal",
-                                  "value": "示例选项 B"
+                                  "type": "variable",
+                                  "ref": {
+                                    "scope": "local",
+                                    "name": "optionB"
+                                  }
                                 }
                               ]
                             }
@@ -276,7 +376,29 @@
                   }
                 ]
               },
-              "outputs": [],
+              "outputs": [
+                {
+                  "name": "answer",
+                  "type": "choice",
+                  "expression": {
+                    "type": "choice",
+                    "source": "choice-output",
+                    "name": "example-answer"
+                  }
+                },
+                {
+                  "name": "questionText",
+                  "type": "string",
+                  "expression": {
+                    "type": "string",
+                    "source": "variable",
+                    "ref": {
+                      "scope": "local",
+                      "name": "question"
+                    }
+                  }
+                }
+              ],
               "schemaUses": []
             }
           }
