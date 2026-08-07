@@ -1,7 +1,6 @@
 .nodeEditor {
   display: grid;
   gap: 14px;
-  padding-top: 14px;
 }
 
 .nodeEditor label,

@@ -18,18 +18,24 @@ import {
   FileText,
   Layers3,
   ListChecks,
+  Mic,
+  Plus,
   Redo2,
   Save,
+  Timer,
   Trash2,
-  Undo2
+  Undo2,
+  Volume2
 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { IconButton } from '../../components/ui/IconButton'
+import { ResizableSplit } from '../../components/ui/ResizableSplit'
 import { useTemplateApplication } from './TemplateApplicationContext'
 import styles from './TemplateDocumentPage.module.css'
+import { TemplateInspectorSection } from './TemplateInspectorSection'
 import { TemplateNodeInspector } from './TemplateNodeInspector'
 import { templateErrorMessage } from './templateUi'
 import { useTemplateEditorSession } from './useTemplateEditorSession'
@@ -64,6 +70,8 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const [functionLibraries, setFunctionLibraries] = useState<FunctionLibrarySummary[]>([])
   const [libraryLoading, setLibraryLoading] = useState(true)
   const [libraryError, setLibraryError] = useState<string | null>(null)
+  const [activeLibrarySource, setActiveLibrarySource] =
+    useState<FunctionLibrarySummary['source']>('builtin')
   const [collapsedLibraryKeys, setCollapsedLibraryKeys] = useState<ReadonlySet<string>>(
     () => new Set()
   )
@@ -207,10 +215,39 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
         </div>
       </header>
 
-      <div className={styles.workspace}>
+      <ResizableSplit
+        className={styles.workspace}
+        initialSize={300}
+        minFirst={240}
+        minSecond={708}
+        label="调整函数库宽度"
+      >
         <aside className={styles.library} aria-labelledby="function-library-heading">
-          <section className={styles.inspectorSection}>
-            <h2 id="function-library-heading">函数库</h2>
+          <section className={`${styles.inspectorSection} ${styles.librarySection}`}>
+            <div className={styles.libraryHeading}>
+              <h2 id="function-library-heading">函数库</h2>
+              <span>组件素材</span>
+            </div>
+            <div className={styles.sourceTabs} role="tablist" aria-label="函数库来源">
+              {LIBRARY_SOURCES.map(({ source, label }) => (
+                <button
+                  aria-controls={`${source}-library-panel`}
+                  aria-label={`${label}函数库`}
+                  aria-selected={activeLibrarySource === source}
+                  className={styles.sourceTab}
+                  id={`${source}-library-tab`}
+                  key={source}
+                  role="tab"
+                  type="button"
+                  onClick={() => setActiveLibrarySource(source)}
+                >
+                  <span>{label}</span>
+                  <small aria-hidden="true">
+                    {functionLibraries.filter((item) => item.source === source).length}
+                  </small>
+                </button>
+              ))}
+            </div>
             <div className={styles.libraryGroups}>
               {libraryError ? (
                 <div className={styles.libraryNotice} role="alert">
@@ -221,133 +258,155 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
               {libraryLoading ? (
                 <span className={styles.libraryStatus}>正在加载函数库...</span>
               ) : null}
-              {!libraryLoading
-                ? LIBRARY_SOURCES.map(({ source, label }) => {
-                    const libraries = functionLibraries.filter((item) => item.source === source)
-                    return (
-                      <section
-                        className={styles.libraryGroup}
-                        aria-labelledby={`${source}-library-heading`}
-                        key={source}
-                      >
-                        <h3 id={`${source}-library-heading`}>{label}</h3>
-                        {libraries.length === 0 ? (
-                          <span className={styles.libraryStatus}>暂无函数库</span>
-                        ) : (
-                          <ul className={styles.libraryList}>
-                            {libraries.map((library) => {
-                              const key = libraryKey(library)
-                              const collapsed = collapsedLibraryKeys.has(key)
-                              return (
-                                <li key={key}>
-                                  <button
-                                    type="button"
-                                    className={styles.libraryButton}
-                                    aria-expanded={!collapsed}
-                                    aria-label={libraryButtonLabel(library)}
-                                    onClick={() => toggleLibrary(key)}
-                                  >
-                                    {collapsed ? (
-                                      <ChevronRight aria-hidden="true" />
-                                    ) : (
-                                      <ChevronDown aria-hidden="true" />
-                                    )}
-                                    <span>{library.name || '未命名函数库'}</span>
-                                    {library.version ? <small>v{library.version}</small> : null}
-                                  </button>
-                                  {!collapsed ? (
-                                    library.functions.length > 0 ? (
-                                      <ul className={styles.functionList}>
-                                        {library.functions.map((item) => (
-                                          <li key={item.functionId}>
-                                            <button
-                                              type="button"
-                                              className={styles.functionButton}
-                                              disabled={!document || session.saving}
-                                              aria-label={item.name || '未命名函数'}
-                                              onClick={() => insertLibraryItem(library, item)}
-                                            >
-                                              {item.name || '未命名函数'}
-                                            </button>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    ) : (
-                                      <span className={styles.emptyLibrary}>暂无函数</span>
-                                    )
-                                  ) : null}
-                                </li>
-                              )
-                            })}
-                          </ul>
-                        )}
-                      </section>
-                    )
-                  })
-                : null}
+              {!libraryLoading ? (
+                <section
+                  aria-labelledby={`${activeLibrarySource}-library-tab`}
+                  className={styles.libraryPanel}
+                  id={`${activeLibrarySource}-library-panel`}
+                  role="tabpanel"
+                >
+                  {functionLibraries.filter((item) => item.source === activeLibrarySource)
+                    .length === 0 ? (
+                    <LibraryEmptyState source={activeLibrarySource} />
+                  ) : (
+                    <ul className={styles.libraryList}>
+                      {functionLibraries
+                        .filter((item) => item.source === activeLibrarySource)
+                        .map((library) => {
+                          const key = libraryKey(library)
+                          const collapsed = collapsedLibraryKeys.has(key)
+                          return (
+                            <li className={styles.libraryGroup} key={key}>
+                              <button
+                                type="button"
+                                className={styles.libraryButton}
+                                aria-expanded={!collapsed}
+                                aria-label={libraryButtonLabel(library)}
+                                onClick={() => toggleLibrary(key)}
+                              >
+                                {collapsed ? (
+                                  <ChevronRight aria-hidden="true" />
+                                ) : (
+                                  <ChevronDown aria-hidden="true" />
+                                )}
+                                <span>{library.name || '未命名函数库'}</span>
+                                <small>
+                                  {library.functions.length} 项
+                                  {library.version ? ` · v${library.version}` : ''}
+                                </small>
+                              </button>
+                              {!collapsed ? (
+                                library.functions.length > 0 ? (
+                                  <ul className={styles.functionList}>
+                                    {library.functions.map((item) => (
+                                      <li key={item.functionId}>
+                                        <div
+                                          className={styles.functionCard}
+                                          title={item.name || '未命名函数'}
+                                        >
+                                          <span className={styles.functionIcon}>
+                                            <NodeIcon type={item.component?.type ?? 'function'} />
+                                          </span>
+                                          <span className={styles.functionIdentity}>
+                                            <strong>{item.name || '未命名函数'}</strong>
+                                            <small>
+                                              {item.component
+                                                ? nodeTypeLabel(item.component.type)
+                                                : '函数'}
+                                            </small>
+                                          </span>
+                                          <IconButton
+                                            icon={Plus}
+                                            label={`添加${item.name || '未命名函数'}`}
+                                            size="small"
+                                            disabled={!document || session.saving}
+                                            onClick={() => insertLibraryItem(library, item)}
+                                          />
+                                        </div>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <span className={styles.emptyLibrary}>暂无函数</span>
+                                )
+                              ) : null}
+                            </li>
+                          )
+                        })}
+                    </ul>
+                  )}
+                </section>
+              ) : null}
             </div>
           </section>
         </aside>
 
-        <main className={styles.structure} aria-labelledby="template-structure-heading">
-          <div className={styles.structureHeader}>
-            <h2 id="template-structure-heading">结构</h2>
-          </div>
-          {root ? (
-            <NodeTree
-              node={root}
-              parent={null}
-              index={0}
-              rootId={root.id}
-              selectedNodeId={session.selectedNodeId}
-              collapsedIds={collapsedIds}
-              apply={session.apply}
-              onSelect={session.selectNode}
-              onToggle={toggleCollapsed}
-              onDelete={setPendingDeleteId}
-            />
-          ) : (
-            <EmptyState icon={Layers3} title={session.loading ? '正在加载模板' : '模板不可用'} />
-          )}
-        </main>
-
-        <aside className={styles.properties} aria-labelledby="template-properties-heading">
-          <section className={styles.inspectorSection}>
-            <h2 id="template-properties-heading">属性</h2>
-            {session.error ? (
-              <div className={styles.notice} role="alert">
-                {session.error}
-              </div>
-            ) : null}
-            <label>
-              名称
-              <input
-                disabled={!document}
-                value={document?.content.name ?? ''}
-                onChange={(event) => editMetadata('set-template-name', event.target.value)}
-              />
-            </label>
-            <label>
-              描述
-              <textarea
-                disabled={!document}
-                value={document?.content.description ?? ''}
-                onChange={(event) => editMetadata('set-template-description', event.target.value)}
-              />
-            </label>
-          </section>
-          {selectedNode ? (
-            <section className={styles.inspectorSection} aria-labelledby="node-properties-heading">
-              <h2 id="node-properties-heading">节点属性</h2>
-              <TemplateNodeInspector
-                node={selectedNode}
-                functions={document?.resources.functions ?? []}
+        <ResizableSplit
+          className={styles.editorMain}
+          initialSize={340}
+          minFirst={420}
+          minSecond={280}
+          label="调整属性栏宽度"
+          sizeFrom="second"
+        >
+          <main className={styles.structure} aria-labelledby="template-structure-heading">
+            <div className={styles.structureHeader}>
+              <h2 id="template-structure-heading">结构</h2>
+            </div>
+            {root ? (
+              <NodeTree
+                node={root}
+                parent={null}
+                index={0}
+                rootId={root.id}
+                selectedNodeId={session.selectedNodeId}
+                collapsedIds={collapsedIds}
                 apply={session.apply}
+                onSelect={session.selectNode}
+                onToggle={toggleCollapsed}
+                onDelete={setPendingDeleteId}
               />
-            </section>
-          ) : null}
-        </aside>
-      </div>
+            ) : (
+              <EmptyState icon={Layers3} title={session.loading ? '正在加载模板' : '模板不可用'} />
+            )}
+          </main>
+
+          <aside className={styles.properties} aria-label="属性">
+            <TemplateInspectorSection title="全局属性" headingId="template-properties-heading">
+              {session.error ? (
+                <div className={styles.notice} role="alert">
+                  {session.error}
+                </div>
+              ) : null}
+              <label>
+                名称
+                <input
+                  disabled={!document}
+                  value={document?.content.name ?? ''}
+                  onChange={(event) => editMetadata('set-template-name', event.target.value)}
+                />
+              </label>
+              <label>
+                描述
+                <textarea
+                  disabled={!document}
+                  value={document?.content.description ?? ''}
+                  onChange={(event) => editMetadata('set-template-description', event.target.value)}
+                />
+              </label>
+            </TemplateInspectorSection>
+            {selectedNode ? (
+              <TemplateInspectorSection title="节点属性" headingId="node-properties-heading">
+                <TemplateNodeInspector
+                  node={selectedNode}
+                  functions={document?.resources.functions ?? []}
+                  apply={session.apply}
+                />
+              </TemplateInspectorSection>
+            ) : null}
+          </aside>
+        </ResizableSplit>
+      </ResizableSplit>
 
       <ConfirmModal
         confirmLabel="放弃修改"
@@ -388,6 +447,26 @@ function libraryKey(library: FunctionLibrarySummary): string {
 function libraryButtonLabel(library: FunctionLibrarySummary): string {
   const name = library.name || '未命名函数库'
   return library.version ? `${name}，版本 ${library.version}` : name
+}
+
+function LibraryEmptyState({ source }: { source: FunctionLibrarySummary['source'] }): JSX.Element {
+  const label = LIBRARY_SOURCES.find((item) => item.source === source)?.label ?? ''
+  const description =
+    source === 'builtin'
+      ? '当前没有可用的内置组件'
+      : source === 'imported'
+        ? '导入函数库后会显示在这里'
+        : '创建本地函数库后会显示在这里'
+
+  return (
+    <div className={styles.libraryEmptyState}>
+      <span className={styles.libraryEmptyIcon}>
+        <Braces aria-hidden="true" />
+      </span>
+      <strong>暂无{label}函数库</strong>
+      <span>{description}</span>
+    </div>
+  )
 }
 
 interface NodeTreeProps {
@@ -499,6 +578,7 @@ function NodeTree({
               </div>
             ) : null}
           </div>
+          {node.type === 'page' ? <PageNodeSummary node={node} /> : null}
         </div>
         {node.type === 'frame' && !collapsed && node.children.length > 0 ? (
           <div className={styles.nodeChildren}>
@@ -522,6 +602,41 @@ function NodeTree({
       </li>
     </ul>
   )
+}
+
+function PageNodeSummary({ node }: { node: Extract<TemplateNode, { type: 'page' }> }): JSX.Element {
+  return (
+    <div className={styles.nodeSummary}>
+      <div className={styles.nodeSummaryHeading}>
+        <span>时间线</span>
+        <small>{node.timeline.length} 项</small>
+      </div>
+      {node.timeline.length > 0 ? (
+        <ol className={styles.timelineSummary} aria-label={`节点 ${node.id} 时间线`}>
+          {node.timeline.map((step, index) => (
+            <li key={index}>
+              <TimelineStepIcon type={step.type} />
+              <span>{timelineStepLabel(step.type)}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <span className={styles.nodeSummaryEmpty}>暂无时间线</span>
+      )}
+    </div>
+  )
+}
+
+function TimelineStepIcon({ type }: { type: 'play' | 'countdown' | 'record' }): JSX.Element {
+  if (type === 'play') return <Volume2 aria-hidden="true" />
+  if (type === 'countdown') return <Timer aria-hidden="true" />
+  return <Mic aria-hidden="true" />
+}
+
+function timelineStepLabel(type: 'play' | 'countdown' | 'record'): string {
+  if (type === 'play') return 'TTS 播放'
+  if (type === 'countdown') return '倒计时'
+  return '录音'
 }
 
 function containsDescendant(node: TemplateNode, nodeId: string): boolean {

@@ -17,6 +17,7 @@ interface ResizableSplitProps {
   minSecond: number
   className?: string
   label?: string
+  sizeFrom?: 'first' | 'second'
 }
 
 export function ResizableSplit({
@@ -25,7 +26,8 @@ export function ResizableSplit({
   minFirst,
   minSecond,
   className,
-  label = '调整分栏宽度'
+  label = '调整分栏宽度',
+  sizeFrom = 'first'
 }: ResizableSplitProps): JSX.Element {
   const rootRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState(initialSize)
@@ -37,8 +39,11 @@ export function ResizableSplit({
     const root = rootRef.current
     if (!root || panels.length < 2) return
     const rect = root.getBoundingClientRect()
-    const maxFirst = Math.max(minFirst, rect.width - minSecond - 8)
-    setSize(Math.min(maxFirst, Math.max(minFirst, clientX - rect.left)))
+    const minimum = sizeFrom === 'first' ? minFirst : minSecond
+    const oppositeMinimum = sizeFrom === 'first' ? minSecond : minFirst
+    const maximum = Math.max(minimum, rect.width - oppositeMinimum - 8)
+    const nextSize = sizeFrom === 'first' ? clientX - rect.left : rect.right - clientX
+    setSize(Math.min(maximum, Math.max(minimum, nextSize)))
   }
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>): void => {
@@ -67,13 +72,16 @@ export function ResizableSplit({
     const root = rootRef.current
     if (!root) return
     const rect = root.getBoundingClientRect()
-    setSizeFromClientX(rect.left + size + (event.key === 'ArrowLeft' ? -step : step))
+    const separatorX = sizeFrom === 'first' ? rect.left + size : rect.right - size
+    setSizeFromClientX(separatorX + (event.key === 'ArrowLeft' ? -step : step))
   }
 
   const gridTemplateColumns =
     panels.length < 2
       ? 'minmax(0, 1fr)'
-      : `minmax(${minFirst}px, ${size}px) 8px minmax(${minSecond}px, 1fr)`
+      : sizeFrom === 'first'
+        ? `minmax(${minFirst}px, ${size}px) 8px minmax(${minSecond}px, 1fr)`
+        : `minmax(${minFirst}px, 1fr) 8px minmax(${minSecond}px, ${size}px)`
   const splitStyle = { gridTemplateColumns } as CSSProperties
 
   return (

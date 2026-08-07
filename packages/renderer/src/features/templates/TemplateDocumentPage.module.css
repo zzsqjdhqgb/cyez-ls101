@@ -49,8 +49,16 @@
 }
 
 .workspace {
-  display: grid;
-  grid-template-columns: minmax(220px, 260px) minmax(480px, 1fr) minmax(280px, 340px);
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.editorMain {
+  width: 100%;
+  height: 100%;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -59,18 +67,28 @@
 .library,
 .properties,
 .structure {
+  width: 100%;
+  height: 100%;
   min-width: 0;
   min-height: 0;
+}
+
+.library,
+.properties {
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.structure {
   overflow: auto;
 }
 
 .library {
-  border-right: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 
 .properties {
-  border-left: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 
@@ -79,8 +97,6 @@
   border-bottom: 1px solid var(--color-border);
 }
 
-.library h2,
-.properties h2,
 .structure h2 {
   margin: 0;
   color: var(--color-text-strong);
@@ -88,26 +104,113 @@
   font-weight: 660;
 }
 
-.library h2,
-.properties h2 {
-  margin-bottom: 18px;
+.librarySection {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  padding: 16px 12px 24px;
+  border-bottom: 0;
+}
+
+.libraryHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+}
+
+.libraryHeading h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 15px;
+  font-weight: 660;
+}
+
+.libraryHeading > span {
+  color: var(--color-text-faint);
+  font-size: 11px;
+}
+
+.sourceTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  margin-top: 14px;
+  padding: 3px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-subtle);
+}
+
+.sourceTab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 32px;
+  padding: 5px 7px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  color: var(--color-text-muted);
+  background: transparent;
+  font: 620 12px/1.3 var(--font-ui);
+  cursor: pointer;
+}
+
+.sourceTab:hover {
+  color: var(--color-text-strong);
+  background: var(--color-surface-hover);
+}
+
+.sourceTab[aria-selected='true'] {
+  color: var(--color-accent);
+  background: var(--color-surface);
+  box-shadow:
+    inset 0 -2px var(--color-accent),
+    0 1px 2px rgb(20 31 29 / 8%);
+}
+
+.sourceTab:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.sourceTab small {
+  min-width: 16px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  color: var(--color-text-muted);
+  background: var(--color-surface-pressed);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.sourceTab[aria-selected='true'] small {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
 }
 
 .libraryGroups {
   display: grid;
-  gap: 18px;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.libraryPanel,
+.libraryList,
+.libraryGroup {
+  display: grid;
+}
+
+.libraryList {
+  gap: 14px;
 }
 
 .libraryGroup {
-  display: grid;
   gap: 8px;
-}
-
-.libraryGroup h3 {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  font-weight: 660;
 }
 
 .libraryNotice {
@@ -132,10 +235,49 @@
   line-height: 1.5;
 }
 
+.libraryEmptyState {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  min-height: 180px;
+  padding: 30px 16px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle);
+  text-align: center;
+}
+
+.libraryEmptyIcon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 3px;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.libraryEmptyIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.libraryEmptyState strong {
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.libraryEmptyState > span:last-child {
+  max-width: 190px;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 .libraryList,
 .functionList {
-  display: grid;
-  gap: 3px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -146,17 +288,19 @@
   grid-template-columns: 16px minmax(0, 1fr) auto;
   align-items: center;
   width: 100%;
-  min-height: 30px;
-  padding: 4px 2px;
-  border: 0;
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
   color: var(--color-text-strong);
-  background: transparent;
+  background: var(--color-surface-subtle);
   font: 600 13px/1.4 var(--font-ui);
   text-align: left;
   cursor: pointer;
 }
 
 .libraryButton:hover {
+  border-color: var(--color-accent);
   color: var(--color-accent);
 }
 
@@ -175,54 +319,83 @@
 
 .libraryButton small {
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 520;
+  white-space: nowrap;
 }
 
 .functionList {
-  gap: 0;
-  padding-left: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
 }
 
-.functionList li,
+.functionList li {
+  min-width: 0;
+}
+
+.functionCard {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 28px;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  min-height: 58px;
+  padding: 9px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  background: var(--color-surface);
+  font: 600 12px/1.35 var(--font-ui);
+  text-align: left;
+}
+
+.functionCard:focus-within {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.functionIcon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: var(--radius-xs);
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.functionIcon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.functionIdentity {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.functionIdentity strong {
+  overflow: hidden;
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 640;
+  overflow-wrap: anywhere;
+}
+
+.functionIdentity small {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 520;
+}
+
 .emptyLibrary {
   display: block;
-  min-width: 0;
-  padding: 4px 6px;
-  overflow: hidden;
+  padding: 12px 8px;
   color: var(--color-text-muted);
   font-size: 12px;
-  line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.functionButton {
-  display: block;
-  width: 100%;
-  padding: 4px 6px;
-  border: 0;
-  overflow: hidden;
-  color: var(--color-text-muted);
-  background: transparent;
-  font: 12px/1.4 var(--font-ui);
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.functionButton:hover:not(:disabled) {
-  color: var(--color-accent);
-  background: var(--color-surface-subtle);
-}
-
-.functionButton:disabled {
-  cursor: default;
-}
-
-.emptyLibrary {
-  padding-left: 24px;
+  text-align: center;
 }
 
 .properties label {
@@ -323,6 +496,69 @@
   background: var(--color-accent-soft);
 }
 
+.nodeSummary {
+  display: grid;
+  gap: 7px;
+  padding: 9px 12px 11px 40px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-subtle);
+}
+
+.nodeCard[data-selected] .nodeSummary {
+  border-top-color: color-mix(in srgb, var(--color-accent) 18%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 3%, var(--color-surface-subtle));
+}
+
+.nodeSummaryHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 660;
+}
+
+.nodeSummaryHeading small {
+  color: var(--color-text-faint);
+  font-size: 10px;
+  font-weight: 520;
+}
+
+.timelineSummary {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timelineSummary li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 7px;
+  align-items: center;
+  min-height: 26px;
+  padding: 3px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  color: var(--color-text);
+  background: var(--color-surface);
+  font-size: 11px;
+  font-weight: 560;
+}
+
+.timelineSummary svg {
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-muted);
+}
+
+.nodeSummaryEmpty {
+  color: var(--color-text-faint);
+  font-size: 11px;
+}
+
 .collapseButton,
 .nodeSelect {
   padding: 0;
@@ -401,10 +637,6 @@
 }
 
 @media (max-width: 1040px) {
-  .workspace {
-    grid-template-columns: 210px minmax(0, 1fr) 280px;
-  }
-
   .structure {
     padding-right: 20px;
     padding-left: 20px;
@@ -424,14 +656,27 @@
     z-index: 2;
   }
 
-  .workspace {
+  .workspace,
+  .editorMain {
     grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    overflow: visible;
+  }
+
+  .workspace > [role='separator'],
+  .editorMain > [role='separator'] {
+    display: none;
+  }
+
+  .workspace > div,
+  .editorMain > div {
     overflow: visible;
   }
 
   .library,
   .properties,
   .structure {
+    height: auto;
     overflow: visible;
   }
 

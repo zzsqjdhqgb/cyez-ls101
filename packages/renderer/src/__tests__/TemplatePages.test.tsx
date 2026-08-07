@@ -45,7 +45,7 @@ function deferred<T>(): { promise: Promise<T>; resolve(value: T): void } {
 }
 
 async function clickLibraryFunction(name: string): Promise<void> {
-  fireEvent.click(screen.getByRole('button', { name }))
+  fireEvent.click(screen.getByRole('button', { name: `添加${name}` }))
   await waitFor(() =>
     expect(screen.getByRole('button', { name: '保存' })).not.toHaveTextContent('正在保存')
   )
@@ -194,24 +194,73 @@ describe('Template pages', () => {
 
     expect(await screen.findByRole('heading', { name: '结构' })).toBeInTheDocument()
     expect(screen.getByRole('complementary', { name: '函数库' })).toBeInTheDocument()
-    expect(screen.getByRole('complementary', { name: '属性' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '内置' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '导入' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '本地' })).toBeInTheDocument()
+    const properties = screen.getByRole('complementary', { name: '属性' })
+    expect(properties).toBeInTheDocument()
+    const globalProperties = within(properties).getByRole('button', { name: '全局属性' })
+    expect(globalProperties).toHaveAttribute('aria-expanded', 'true')
+    expect(within(properties).getByRole('button', { name: '节点属性' })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
+    fireEvent.click(globalProperties)
+    expect(within(properties).queryByLabelText('名称')).not.toBeInTheDocument()
+    fireEvent.click(globalProperties)
+    expect(within(properties).getByLabelText('名称')).toBeInTheDocument()
+    expect(screen.getByRole('separator', { name: '调整函数库宽度' })).toBeInTheDocument()
+    expect(screen.getByRole('separator', { name: '调整属性栏宽度' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '内置函数库' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: '导入函数库' })).toHaveAttribute(
+      'aria-selected',
+      'false'
+    )
+    expect(screen.getByRole('tab', { name: '本地函数库' })).toHaveAttribute(
+      'aria-selected',
+      'false'
+    )
     expect(screen.getByRole('button', { name: '基础组件库，版本 2' })).toBeInTheDocument()
-    expect(screen.getByText('框架')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '页面' })).toBeInTheDocument()
-    expect(screen.getByText('选择题')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '添加框架' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '添加页面' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '添加选择题' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '示例组件库，版本 2' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '标题页组合' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '选择题组合' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '添加标题页组合' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '添加选择题组合' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: '导入函数库' }))
     expect(screen.getByRole('button', { name: '导入题型库，版本 3' })).toBeInTheDocument()
-    expect(screen.getByText('口语题')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '添加口语题' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '添加框架' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: '本地函数库' }))
     expect(screen.getByRole('button', { name: '听力函数库' })).toBeInTheDocument()
-    expect(screen.getByText('单题函数')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '添加单题函数' })).toBeInTheDocument()
     expect(screen.getByText('page-1')).toBeInTheDocument()
     expect(app.templates.get).toHaveBeenCalledWith(TEMPLATE_ID)
     expect(app.browser.listFunctionLibraries).toHaveBeenCalledTimes(2)
+  })
+
+  it('shows a source-aware empty state when a function library source is empty', async () => {
+    const app = application()
+    vi.mocked(app.browser.listFunctionLibraries).mockResolvedValue([])
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    expect(await screen.findByText('暂无内置函数库')).toBeInTheDocument()
+    expect(screen.getByText('当前没有可用的内置组件')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: '导入函数库' }))
+    expect(screen.getByText('暂无导入函数库')).toBeInTheDocument()
+    expect(screen.getByText('导入函数库后会显示在这里')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: '本地函数库' }))
+    expect(screen.getByText('暂无本地函数库')).toBeInTheDocument()
+    expect(screen.getByText('创建本地函数库后会显示在这里')).toBeInTheDocument()
   })
 
   it('inserts an example library entry as a function call', async () => {
@@ -253,7 +302,7 @@ describe('Template pages', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: '新建模板' }))
-    expect(await screen.findByRole('heading', { name: '属性' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '全局属性' })).toBeInTheDocument()
     expect(app.templates.create).toHaveBeenCalledWith({ name: '未命名模板' })
   })
 
@@ -698,6 +747,12 @@ describe('Template pages', () => {
     fireEvent.change(screen.getByLabelText('录音时长（秒）'), { target: { value: '30' } })
     fireEvent.change(screen.getByLabelText('输出名称'), { target: { value: 'response-audio' } })
     fireEvent.click(screen.getByRole('button', { name: '复制录音 3' }))
+
+    const timelineSummary = screen.getByRole('list', { name: '节点 page-1 时间线' })
+    expect(within(timelineSummary).getAllByRole('listitem')).toHaveLength(4)
+    expect(within(timelineSummary).getByText('TTS 播放')).toBeInTheDocument()
+    expect(within(timelineSummary).getByText('倒计时')).toBeInTheDocument()
+    expect(within(timelineSummary).getAllByText('录音')).toHaveLength(2)
 
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
     await waitFor(() => expect(app.templates.save).toHaveBeenCalledOnce())
