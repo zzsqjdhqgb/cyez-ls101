@@ -19,7 +19,8 @@ Vitest 根配置在 `vitest.config.ts`，具体环境由各 workspace 的 `vites
 ```bash
 yarn test                    # 依次运行 Vitest 和 Playwright 全部测试
 yarn test:vitest             # Vitest 单元测试和包级集成测试
-yarn test:playwright         # 构建并运行 Playwright Electron 集成测试
+yarn test:playwright         # 目录打包当前平台应用并运行 Playwright 集成测试
+yarn test:playwright:run     # 复用已有目录打包产物，仅运行 Playwright
 yarn test:watch              # Vitest 监视模式
 yarn test:coverage           # Vitest 覆盖率
 ```
@@ -33,7 +34,7 @@ xvfb-run -a yarn test:playwright
 
 ## Electron 集成测试
 
-配置文件为 `playwright.config.ts`，测试位于 `tests/integration/`。每条测试路径的操作流程、断言、数据隔离和覆盖边界统一维护在 [`docs/integration-tests/`](./integration-tests/README.md)。
+配置文件为 `playwright.config.ts`，测试位于 `tests/integration/`。`yarn test:playwright` 先调用 `build.js --dir --current-platform`，再直接启动 `dist/win-unpacked/CYEZ-LS101.exe` 或 `dist/linux-unpacked/cyez-ls101`。测试断言 `app.isPackaged`，不会使用开发 Electron 或 `out/` 入口。每条测试路径的操作流程、断言、数据隔离和覆盖边界统一维护在 [`docs/integration-tests/`](./integration-tests/README.md)。
 
 ## 测试产物
 

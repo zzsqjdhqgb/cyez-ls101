@@ -13,6 +13,8 @@
 yarn test:playwright
 ```
 
+命令先为当前平台执行 `electron-builder --dir`，测试直接启动 unpacked 可执行文件并断言 `app.isPackaged === true`。
+
 所有路径都先执行[公共生命周期](./README.md#公共生命周期)，因此下面不重复描述应用启动、临时目录创建、关闭清理和 renderer 错误检查。
 
 ## 覆盖矩阵
@@ -46,6 +48,7 @@ yarn test:playwright
 测试内容：
 
 - 应用菜单已移除，主窗口标题为“曹二听说101”且窗口可见。
+- `app.isPackaged === true`，测试目标确实是 electron-builder 目录产物。
 - `contextIsolation=true`、`nodeIntegration=false`、`sandbox=true`。
 - `app.getPath('userData')` 指向当前测试临时目录。
 - 每个 preload bridge 暴露的方法集合与契约完全一致。

@@ -21,6 +21,8 @@ Linux 容器或无桌面环境：
 xvfb-run -a yarn test:playwright tests/integration/airouter.spec.ts
 ```
 
+命令先为当前平台执行 `electron-builder --dir`，测试直接启动 unpacked 可执行文件。
+
 所有路径都使用独立的临时 Electron `userData` 目录。本地模拟服务只监听
 `127.0.0.1` 的随机端口，模拟 OpenAI-compatible、Anthropic 和图像生成协议；测试不使用真实 API Key，也不访问公网。
 

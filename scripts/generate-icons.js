@@ -11,7 +11,7 @@ const PNG_DIR = path.join(__dirname, '..', 'resources', 'file-icons')
 const ICO_DIR = path.join(__dirname, '..', 'assets', 'file-icons')
 const EXTENSIONS = ['cyexam', 'cytmpl', 'cydraft', 'cysubm', 'cygrade']
 
-function pngToIco(pngPath, icoPath) {
+function createIco(pngPath) {
   const pngData = fs.readFileSync(pngPath)
   const header = Buffer.alloc(6)
   header.writeUInt16LE(0, 0)
@@ -29,8 +29,7 @@ function pngToIco(pngPath, icoPath) {
   entry.writeUInt32LE(pngData.length, 8)
   entry.writeUInt32LE(imageOffset, 12)
 
-  const ico = Buffer.concat([header, entry, pngData])
-  fs.writeFileSync(icoPath, ico)
+  return Buffer.concat([header, entry, pngData])
 }
 
 function main() {
@@ -44,6 +43,7 @@ function main() {
   fs.mkdirSync(ICO_DIR, { recursive: true })
 
   let generated = 0
+  let cached = 0
   let missing = 0
 
   for (const ext of EXTENSIONS) {
@@ -54,12 +54,18 @@ function main() {
       missing++
       continue
     }
-    pngToIco(pngPath, icoPath)
+    const ico = createIco(pngPath)
+    if (fs.existsSync(icoPath) && fs.readFileSync(icoPath).equals(ico)) {
+      cached++
+      continue
+    }
+    fs.writeFileSync(icoPath, ico)
     generated++
   }
 
   const parts = []
   if (generated) parts.push(`${generated} generated`)
+  if (cached) parts.push(`${cached} cached`)
   if (missing) parts.push(`${missing} missing PNG`)
   console.log(`${prefix} ${parts.join(', ') || 'nothing to do'}`)
 }

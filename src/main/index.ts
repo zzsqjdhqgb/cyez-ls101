@@ -14,9 +14,9 @@ app.whenReady().then(() => {
   electronApp.setAppUserModelId('io.github.zzsqjdhqgb.cyez-ls101')
 
   if (
-    !app.isPackaged &&
     process.platform === 'linux' &&
-    process.env['LS101_INTEGRATION_TEST'] === '1'
+    process.env['LS101_INTEGRATION_TEST'] === '1' &&
+    (!app.isPackaged || app.getVersion().includes('-local.'))
   ) {
     safeStorage.setUsePlainTextEncryption(true)
   }

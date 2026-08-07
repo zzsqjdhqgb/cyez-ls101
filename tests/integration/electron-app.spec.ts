@@ -1,15 +1,8 @@
-import {
-  _electron as electron,
-  expect,
-  test,
-  type ElectronApplication,
-  type Page
-} from '@playwright/test'
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-
-const projectRoot = process.cwd()
+import { launchIntegrationApp } from './support/electron-app'
 
 let electronApp: ElectronApplication
 let page: Page
@@ -19,11 +12,7 @@ let pageErrors: string[]
 test.beforeEach(async () => {
   userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-integration-'))
   pageErrors = []
-  electronApp = await electron.launch({
-    args: ['.', '--no-sandbox', '--password-store=basic', `--user-data-dir=${userDataDir}`],
-    cwd: projectRoot,
-    env: { ...process.env, LS101_INTEGRATION_TEST: '1' }
-  })
+  electronApp = await launchIntegrationApp(userDataDir)
   page = await electronApp.firstWindow()
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
@@ -42,6 +31,7 @@ test('starts a hardened application window and exposes every preload bridge', as
     const preferences = window.webContents.getLastWebPreferences()
     return {
       appName: app.getName(),
+      isPackaged: app.isPackaged,
       applicationMenuRemoved: Menu.getApplicationMenu() === null,
       contextIsolation: preferences.contextIsolation,
       nodeIntegration: preferences.nodeIntegration,
@@ -56,6 +46,7 @@ test('starts a hardened application window and exposes every preload bridge', as
     appName: 'cyez-ls101',
     applicationMenuRemoved: true,
     contextIsolation: true,
+    isPackaged: true,
     nodeIntegration: false,
     sandbox: true,
     title: '曹二听说101',
@@ -82,18 +73,29 @@ test('starts a hardened application window and exposes every preload bridge', as
     airouter: [
       'deleteImageProviderConfig',
       'deleteProviderConfig',
+      'deleteSpeechModelPackage',
+      'deleteSpeechProviderConfig',
+      'importSpeechModelPackage',
       'listImageModels',
       'listImageProviderConfigs',
       'listModels',
       'listProviderConfigs',
+      'listSpeechModelPackages',
+      'listSpeechModels',
+      'listSpeechProviderConfigs',
+      'listSpeechVoices',
       'readImageProviderApiKey',
       'readProviderApiKey',
+      'readSpeechProviderApiKey',
       'saveImageProviderConfig',
       'saveProviderConfig',
+      'saveSpeechProviderConfig',
       'startImageGeneration',
+      'startSpeechSynthesis',
       'startTextGeneration',
       'testConnection',
-      'testImageConnection'
+      'testImageConnection',
+      'testSpeechConnection'
     ],
     configStore: ['invoke'],
     fileDialog: ['read', 'write'],

@@ -21,6 +21,8 @@ Linux 容器或无桌面环境：
 xvfb-run -a yarn test:playwright tests/integration/interface-editor.spec.ts
 ```
 
+命令先为当前平台执行 `electron-builder --dir`，测试直接启动 unpacked 可执行文件。
+
 本套件验证题型编辑器消费 AIRouter 的真实跨包链路：`题型实例编辑器 -> InterfaceAIRouterAdapter / ConfiguredImageGenerator -> airouter renderer client -> sandbox preload -> ipcMain -> AIRouterService / AIRouterImageService -> AI SDK -> mock HTTP`，以及生成结果经 JSON 校验、图片生成和原子保存后的真实 UI 反馈。
 
 每条路径都用独立的临时 Electron `userData` 目录。已发布的题型通过 `fileStore` bridge 直接写入 `FileInterfaceRepository` 的存储布局（`interfaces/published/<interfaceId>/interface.json`），interface id 按仓库相同的 canonicalization + SHA-256 规则推导；题组实例由 UI「新建题组」创建，不从外部写入。

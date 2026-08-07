@@ -1,14 +1,9 @@
-import {
-  _electron as electron,
-  expect,
-  test,
-  type ElectronApplication,
-  type Page
-} from '@playwright/test'
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { MOCK_PNG_BASE64, MockAiServer } from './support/mock-ai-server'
+import { launchIntegrationApp } from './support/electron-app'
 
 interface ModelConfig {
   id: string
@@ -47,7 +42,6 @@ interface ImageEvent {
   message?: string
 }
 
-const projectRoot = process.cwd()
 const mockServer = new MockAiServer()
 
 let electronApp: ElectronApplication
@@ -62,11 +56,7 @@ test.beforeEach(async () => {
   mockServer.reset()
   userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-airouter-'))
   pageErrors = []
-  electronApp = await electron.launch({
-    args: ['.', '--no-sandbox', '--password-store=basic', `--user-data-dir=${userDataDir}`],
-    cwd: projectRoot,
-    env: { ...process.env, LS101_INTEGRATION_TEST: '1' }
-  })
+  electronApp = await launchIntegrationApp(userDataDir)
   page = await electronApp.firstWindow()
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
@@ -179,9 +169,8 @@ test('AR-01 navigates through AI engine settings categories', async () => {
   }
   await expect(page.getByText('尚未添加文本生成 Provider')).toBeVisible()
   await page.getByRole('tab', { name: '语音合成' }).click()
-  await expect(
-    page.getByText('语音合成模型的 Provider、模型和连接测试将在这里配置。')
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: '语音 Provider' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'TTS 模型包' })).toBeVisible()
   await page.getByRole('tab', { name: '语音识别' }).click()
   await expect(
     page.getByText('语音识别模型的 Provider、模型和连接测试将在这里配置。')

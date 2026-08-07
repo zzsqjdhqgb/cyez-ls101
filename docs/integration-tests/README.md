@@ -21,7 +21,8 @@ Playwright 的全局配置位于 [`playwright.config.ts`](../../playwright.confi
 
 ```bash
 yarn test             # 先运行 Vitest，再运行 Playwright/Electron 集成测试
-yarn test:playwright  # 只构建并运行 Playwright/Electron 集成测试
+yarn test:playwright      # 目录打包当前平台应用并运行集成测试
+yarn test:playwright:run  # 复用已有目录打包产物，仅运行集成测试
 ```
 
 Windows 直接运行上述命令，Electron 窗口会正常显示。Linux 无桌面环境需要虚拟显示：
@@ -50,7 +51,7 @@ Playwright 测试进程
 测试前：
 
 1. 在系统临时目录中创建当前 spec 专用的用户数据目录。
-2. 使用构建后的项目入口启动真实 Electron。
+2. 使用 `electron-builder --dir` 生成的当前平台 unpacked 可执行文件启动 Electron。
 3. 传入 `--user-data-dir`、`--no-sandbox` 和测试专用环境变量。
 4. 等待首个 BrowserWindow 完成 DOM 加载。
 5. 确认工作台一级标题可见，应用才被视为启动成功。
@@ -67,7 +68,7 @@ IPC 往返路径会临时写入系统剪贴板，但使用 `finally` 一次性�
 
 Playwright 测试与 `yarn dev` 不共享数据目录。每条测试路径都有独立临时目录，路径结束后自动删除，因此测试之间也不共享配置、模板或文件。
 
-Linux 测试进程设置 `LS101_INTEGRATION_TEST=1`，允许未打包 Electron 在临时目录中使用 `basic_text` 密钥存储后端，从而避免依赖 CI 桌面密钥环。打包应用不会启用此分支。
+测试启动参数包含 `--password-store=basic`，并设置 `LS101_INTEGRATION_TEST=1`。Linux 上只有未打包应用或版本号包含 `-local.` 的目录打包产物会启用 Electron `basic_text` 后端，因此容器不依赖桌面密钥环；release、nightly 和 dev 构建不会因该环境变量降低密钥存储级别。测试运行目标仍是 `app.isPackaged === true` 的应用。
 
 ## 覆盖边界
 

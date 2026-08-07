@@ -1,16 +1,11 @@
-import {
-  _electron as electron,
-  expect,
-  test,
-  type ElectronApplication,
-  type Page
-} from '@playwright/test'
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { createHash } from 'node:crypto'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import stableStringify from 'fast-json-stable-stringify'
 import { MockAiServer } from './support/mock-ai-server'
+import { launchIntegrationApp } from './support/electron-app'
 
 interface ProviderInput {
   id?: string
@@ -46,7 +41,6 @@ interface SeededInterfaceContent {
   fields: SeededFields
 }
 
-const projectRoot = process.cwd()
 const mockServer = new MockAiServer()
 
 let electronApp: ElectronApplication
@@ -107,11 +101,7 @@ test.beforeEach(async () => {
   mockServer.reset()
   userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-interface-'))
   pageErrors = []
-  electronApp = await electron.launch({
-    args: ['.', '--no-sandbox', '--password-store=basic', `--user-data-dir=${userDataDir}`],
-    cwd: projectRoot,
-    env: { ...process.env, LS101_INTEGRATION_TEST: '1' }
-  })
+  electronApp = await launchIntegrationApp(userDataDir)
   page = await electronApp.firstWindow()
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
