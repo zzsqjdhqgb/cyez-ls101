@@ -540,6 +540,16 @@
   background: var(--color-danger-soft);
 }
 
+.removeModel:disabled {
+  color: var(--color-text-faint);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.removeModel:disabled:hover {
+  background: transparent;
+}
+
 .removeModel svg {
   width: 15px;
   height: 15px;
@@ -554,6 +564,113 @@
   text-align: center;
 }
 
+.packageList {
+  border-top: 1px solid var(--color-border);
+}
+
+.packageItem {
+  display: flex;
+  min-width: 0;
+  min-height: 86px;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.packageItem:last-child {
+  border-bottom: 0;
+}
+
+.packageIcon {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+  color: var(--color-accent);
+}
+
+.packageText {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.packageTitle {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--color-text-strong);
+  font-size: 14px;
+  font-weight: 620;
+}
+
+.packageTitle > span {
+  color: var(--color-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.packageDescription {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.packageEmpty,
+.localPackagePrompt {
+  display: flex;
+  min-height: 156px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.packageEmpty svg,
+.localPackagePrompt > svg {
+  width: 22px;
+  height: 22px;
+  color: var(--color-text-faint);
+}
+
+.localPackagePrompt {
+  min-height: 190px;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.localPackagePrompt strong {
+  color: var(--color-text-strong);
+  font-size: 14px;
+  font-weight: 640;
+}
+
+.speechTestControls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.speechTestAudio {
+  display: block;
+  width: calc(100% - var(--space-8));
+  height: 40px;
+  margin: 0 var(--space-4) var(--space-4);
+}
+
 @media (max-width: 760px) {
   .placeholder {
     min-height: 220px;
@@ -562,13 +679,16 @@
   }
 
   .providerToolbar,
-  .modelToolbar {
+  .modelToolbar,
+  .speechTestControls {
     align-items: flex-start;
     flex-direction: column;
   }
 
   .providerToolbar > button,
   .addModel,
+  .speechTestControls > button,
+  .speechTestControls > .input,
   .input,
   .inputWide,
   .providerTypeControl,

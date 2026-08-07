@@ -4,6 +4,7 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AIRouterProviderConfigInput, AIRouterProviderConfigSummary } from '@ls101/airouter'
+import { fileDialog } from '@ls101/file-dialog/renderer'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AIRouterSettingsPage } from '../features/airouter/AIRouterSettingsPage'
 import type { AIRouterApplication } from '../features/airouter/AIRouterApplication'
@@ -238,27 +239,142 @@ describe('AIRouterSettingsPage', () => {
     expect(within(dialog).getByRole('button', { name: '保存 Provider' })).toBeDisabled()
   })
 
-  it('uses URL-backed model categories and marks speech pages as placeholders', async () => {
+  it('uses URL-backed model categories and keeps speech recognition as a placeholder', async () => {
     const application = applicationWith({
-      listConfigs: vi.fn().mockResolvedValue([]),
-      saveConfig: vi.fn(),
-      deleteConfig: vi.fn(),
-      readApiKey: vi.fn(),
-      listModels: vi.fn(),
-      testConnection: vi.fn()
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([])
     })
 
     renderAIRouter(application, '/settings/ai-router/speech-synthesis')
 
     expect(screen.getByRole('tab', { name: '语音合成' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('heading', { name: '语音合成' })).toBeInTheDocument()
-    expect(screen.getByText('临时占位')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '语音 Provider' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'TTS 模型包' })).toBeInTheDocument()
+    expect(screen.queryByText('临时占位')).toBeNull()
     expect(application.listConfigs).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('tab', { name: '语音识别' }))
     expect(screen.getByRole('tab', { name: '语音识别' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('heading', { name: '语音识别' })).toBeInTheDocument()
     expect(screen.getByText('临时占位')).toBeInTheDocument()
+  })
+
+  it('saves an OpenAI-compatible speech Provider with model and voice IDs', async () => {
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([]),
+      saveSpeechConfig: vi.fn().mockImplementation(async (input) => ({
+        id: 'speech-online',
+        name: input.name,
+        kind: input.kind,
+        type: input.type,
+        baseUrl: input.baseUrl ?? '',
+        modelPackageId: '',
+        modelPackageVersion: '',
+        models: input.models,
+        voices: input.voices,
+        hasApiKey: Boolean(input.apiKey)
+      }))
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('语音配置名称'), {
+      target: { value: '在线语音' }
+    })
+    fireEvent.change(within(dialog).getByLabelText('语音 API Key'), {
+      target: { value: 'speech-secret' }
+    })
+    fireEvent.change(within(dialog).getByLabelText('手动语音模型 ID'), {
+      target: { value: 'gpt-4o-mini-tts' }
+    })
+    fireEvent.click(within(dialog).getAllByRole('button', { name: '添加' })[0])
+    fireEvent.change(within(dialog).getByLabelText('手动语音音色 ID'), {
+      target: { value: 'alloy' }
+    })
+    fireEvent.click(within(dialog).getAllByRole('button', { name: '添加' })[1])
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+
+    await waitFor(() =>
+      expect(application.saveSpeechConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: '在线语音',
+          kind: 'online',
+          type: 'openai-compatible',
+          apiKey: 'speech-secret',
+          models: [{ id: 'gpt-4o-mini-tts', enabled: true }],
+          voices: [{ id: 'alloy', enabled: true }]
+        })
+      )
+    )
+  })
+
+  it('prompts for a local package and configures the imported package', async () => {
+    const modelPackage = createSpeechPackageSummary()
+    vi.spyOn(fileDialog, 'readBinary').mockResolvedValue({
+      name: 'pocket-tts-en-1.0.0.zip',
+      data: new Uint8Array([1, 2, 3])
+    })
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValueOnce([]).mockResolvedValue([modelPackage]),
+      importSpeechPackage: vi.fn().mockResolvedValue({
+        package: modelPackage,
+        reusedAssetCount: 2,
+        storedAssetCount: 3
+      }),
+      saveSpeechConfig: vi.fn().mockImplementation(async (input) => ({
+        id: 'speech-local',
+        name: input.name,
+        kind: input.kind,
+        type: input.type,
+        baseUrl: '',
+        modelPackageId: input.modelPackageId ?? '',
+        modelPackageVersion: input.modelPackageVersion ?? '',
+        models: input.models,
+        voices: input.voices,
+        hasApiKey: false
+      }))
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('语音运行方式'), {
+      target: { value: 'local' }
+    })
+    expect(within(dialog).getByText('需要先导入 Pocket TTS 模型包')).toBeInTheDocument()
+    expect(within(dialog).queryByRole('heading', { name: '启用模型' })).toBeNull()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '导入模型包' }))
+    await waitFor(() =>
+      expect(application.importSpeechPackage).toHaveBeenCalledWith(new Uint8Array([1, 2, 3]))
+    )
+    expect(await within(dialog).findByRole('heading', { name: '启用模型' })).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Pocket English (pocket-en)')).toBeChecked()
+    expect(within(dialog).getByLabelText('Alba (alba)')).toBeChecked()
+
+    fireEvent.change(within(dialog).getByLabelText('语音配置名称'), {
+      target: { value: '本地英文语音' }
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+
+    await waitFor(() =>
+      expect(application.saveSpeechConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: '本地英文语音',
+          kind: 'local',
+          type: 'pocket-tts',
+          modelPackageId: 'pocket-tts-en',
+          modelPackageVersion: '1.0.0',
+          models: [{ id: 'pocket-en', enabled: true }],
+          voices: [{ id: 'alba', enabled: true }]
+        })
+      )
+    )
   })
 
   it('manages image Providers without a default Provider control', async () => {
@@ -377,7 +493,48 @@ function applicationWith(overrides: Partial<AIRouterApplication>): AIRouterAppli
     readImageApiKey: vi.fn(),
     listImageModels: vi.fn(),
     testImageConnection: vi.fn(),
+    listSpeechConfigs: vi.fn().mockResolvedValue([]),
+    saveSpeechConfig: vi.fn(),
+    deleteSpeechConfig: vi.fn(),
+    readSpeechApiKey: vi.fn(),
+    listSpeechPackages: vi.fn().mockResolvedValue([]),
+    importSpeechPackage: vi.fn(),
+    deleteSpeechPackage: vi.fn(),
+    listSpeechModels: vi.fn(),
+    listSpeechVoices: vi.fn(),
+    testSpeechConnection: vi.fn(),
     ...overrides
+  }
+}
+
+function createSpeechPackageSummary() {
+  return {
+    package: {
+      id: 'pocket-tts-en',
+      version: '1.0.0',
+      name: 'Pocket TTS English',
+      description: 'English Pocket TTS model'
+    },
+    runtime: { engine: 'pocket-tts' as const, engineApiVersion: 1 },
+    models: [
+      {
+        id: 'pocket-en',
+        name: 'Pocket English',
+        languageCodes: ['en'],
+        artifacts: { model: ['model.bin'] },
+        parameters: {}
+      }
+    ],
+    voices: [
+      {
+        id: 'alba',
+        name: 'Alba',
+        languageCodes: ['en'],
+        files: ['voices.bin']
+      }
+    ],
+    assetCount: 5,
+    totalBytes: 1024
   }
 }
 

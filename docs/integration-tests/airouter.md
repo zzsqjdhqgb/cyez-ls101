@@ -32,7 +32,7 @@ xvfb-run -a yarn test:playwright tests/integration/airouter.spec.ts
 
 操作流程：从侧栏进入设置，再打开 AI 引擎，依次点击四个分类标签并返回文本生成，最后再次切到语音合成和语音识别。
 
-测试内容：设置入口、分类路由、选中状态、语音合成/语音识别占位页描述以及文本 Provider 空状态均能正常显示。
+测试内容：设置入口、分类路由和选中状态均正常；语音合成显示真实的 Provider 与 TTS 模型包设置区域，语音识别仍显示占位页；文本 Provider 空状态正常显示。
 
 ### AR-02 文本空状态与默认手动图像 Provider
 
@@ -251,6 +251,7 @@ xvfb-run -a yarn test:playwright tests/integration/airouter.spec.ts
 ## 覆盖边界
 
 - AR-11、AR-12、AR-18、AR-19 和 AR-23 从真实 renderer preload bridge 发起，覆盖 HTTP 或 main 校验、AI SDK、IPC 和 preload，但不绑定某个题型编辑器的业务流程。
+- 语音设置页的在线 Provider 保存、本地模型包缺失提示、ZIP 导入后模型与音色启用由 `AIRouterSettingsPage.test.tsx` 覆盖；当前 Playwright 集成套件只覆盖语音设置分类的入口，不操作系统文件选择窗口或执行 Pocket TTS 合成。
 - AR-15 覆盖真实文件读取 IPC，但用测试路径替代交互式系统文件选择窗口；不验证各操作系统原生对话框的视觉与人工选择行为。
 - 手动图像请求的并发 FIFO 队列和调用方 `AbortSignal` 由 `ManualImageGeneration.test.ts` 覆盖，不在 Playwright 中重复构造并发业务页面。
 - 题型编辑器如何列出、选择和消费 AIRouter 模型，属于题型实例编辑器的独立集成测试路径。

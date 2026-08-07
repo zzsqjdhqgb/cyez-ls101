@@ -1,6 +1,6 @@
 # AI Router
 
-`@ls101/airouter` 为 Electron main 和 renderer 提供文本生成与图像生成基础设施。文本和图像 Provider 使用完全独立的普通配置、模型列表和加密密钥；AIRouter 不保存业务图片文件。
+`@ls101/airouter` 为 Electron main 和 renderer 提供文本生成、图像生成与语音合成基础设施。三类 Provider 使用相互独立的普通配置、模型列表和加密密钥；AIRouter 不保存业务图片文件。
 
 ## 文本生成
 
@@ -25,7 +25,7 @@ interface AIRouterGeneratedImage {
 
 图像请求使用独立的 start/result/error/abort IPC 通道，因此 renderer 的 `AbortSignal` 可以取消 main 中的远端请求。取消时 client 以 `AbortError` 拒绝 Promise。
 
-## 语音合成（设计）
+## 语音合成
 
 语音合成暂不考虑音频流式传输。AIRouter 将语音合成分为 Provider、模型包和角色路由三层：
 
@@ -74,7 +74,7 @@ Welcome to the test.
 密钥：airouter/speech-providers/{providerId}
 ```
 
-建议区分 Provider 的通用类别和具体运行时：
+Provider 配置区分通用类别和具体运行时：
 
 ```typescript
 interface AIRouterSpeechProviderConfig {
@@ -82,10 +82,11 @@ interface AIRouterSpeechProviderConfig {
   name: string
   kind: 'online' | 'local'
   type: 'openai-compatible' | 'pocket-tts' | 'qwen-tts'
-  baseUrl?: string
-  modelPackageId?: string
+  baseUrl: string
+  modelPackageId: string
+  modelPackageVersion: string
   models: AIRouterModelConfig[]
-  voices: AIRouterVoiceConfig[]
+  voices: AIRouterSpeechVoiceConfig[]
 }
 ```
 
@@ -93,17 +94,25 @@ interface AIRouterSpeechProviderConfig {
 
 ### 设置页面
 
-语音合成设置页面分为两个区域：
+`设置 → AI 引擎 → 语音合成` 已接入独立设置页，分为两个区域：
 
-- Provider 区域：创建、选择和删除在线或离线 Provider。
-- 模型包与模型区域：根据当前 Provider 类型展示模型包、模型和音色配置。
+- 语音 Provider：列出、创建、编辑和删除在线或离线 Provider；摘要显示运行时、启用模型数和启用音色数。
+- TTS 模型包：列出已安装包的运行时、版本、模型数、音色数、总大小和 Provider 引用数，并提供 ZIP 导入与删除入口。
 
-选择本地 Provider 后，只展示与该运行时兼容的模型包：
+在线 Provider 当前只允许选择 `openai-compatible`，配置 Base URL、独立 API Key、模型 ID 和音色 ID。模型可以从兼容服务的 `/models` 接口发现，也可以手动添加；音色 ID 由用户手动添加。已保存的 API Key 默认不返回 renderer，只有点击显示按钮时才按 Provider ID 读取。连接测试使用一个已启用模型和音色合成固定测试文本，成功后在编辑器内显示音频播放器。
 
-- 没有任何可用模型包时，隐藏模型和音色配置，展示“请先导入模型包”的空状态和导入按钮；未来可以在此增加模型包下载链接。
+本地 Provider 当前只允许选择 `pocket-tts`。编辑器按 manifest 的 `runtime.engine` 过滤模型包：
+
+- 没有任何可用模型包时，隐藏模型和音色配置，展示“需要先导入 Pocket TTS 模型包”的空状态和导入按钮。本地 Provider 可以先保存为空配置，但没有模型包、启用模型和启用音色时不能用于合成。
 - 已导入至少一个可用模型包时，先选择模型包，再勾选该包中启用的模型和音色。
 - Pocket TTS 模型包不会显示在 Qwen TTS Provider 下；兼容性由 manifest 中的运行时标识和 API 版本判断。
 - `minimumAppVersion` 高于当前应用版本的模型包拒绝导入；应用降级后，已安装但不再兼容的模型包不出现在可选列表中，也不能被 Provider 加载。
+- 从本地 Provider 编辑器导入兼容模型包后，新包会立即成为当前选择，并默认启用包内全部模型和音色。
+- 模型包被任意 Provider 引用时，设置页禁用其删除按钮；未被 Provider 使用的包经确认后删除。
+
+Provider 保存后编辑器保持打开，类型和运行方式不可修改；需要更换运行时应新建 Provider。相同模型包可以被多个 Provider 引用，每个 Provider 分别保存自己的模型和音色启用集合。
+
+当前设置页只管理 Provider 和模型包，不保存 `default`、`man`、`woman` 角色路由。三组 Provider、模型和音色选择器应由实际发起语音合成的业务界面提供；该调用界面尚未接入 renderer。
 
 ### 模型包格式
 

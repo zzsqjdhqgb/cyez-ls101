@@ -38,6 +38,7 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { toast } from '../../components/ui/toast'
 import { airouterApplication, type AIRouterApplication } from './AIRouterApplication'
 import { AIRouterImageSettingsPage } from './AIRouterImageSettingsPage'
+import { AIRouterSpeechSettingsPage } from './AIRouterSpeechSettingsPage'
 import styles from './AIRouterSettingsPage.module.css'
 
 interface ProviderDraft {
@@ -112,13 +113,7 @@ export function AIRouterSettingsPage({
         <Route path="image" element={<AIRouterImageSettingsPage application={application} />} />
         <Route
           path="speech-synthesis"
-          element={
-            <AIRouterPlaceholder
-              icon={AudioLines}
-              title="语音合成"
-              description="语音合成模型的 Provider、模型和连接测试将在这里配置。"
-            />
-          }
+          element={<AIRouterSpeechSettingsPage application={application} />}
         />
         <Route
           path="speech-recognition"

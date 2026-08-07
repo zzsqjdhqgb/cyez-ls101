@@ -6,6 +6,16 @@ import type {
   AIRouterModelOption,
   AIRouterProviderConfigInput,
   AIRouterProviderConfigSummary,
+  AIRouterSpeechConnectionTestInput,
+  AIRouterSpeechModelOption,
+  AIRouterSpeechModelPackageImportResult,
+  AIRouterSpeechModelPackageSummary,
+  AIRouterSpeechProviderConfigInput,
+  AIRouterSpeechProviderConfigSummary,
+  AIRouterSpeechProviderType,
+  AIRouterSpeechTestResult,
+  AIRouterSpeechVoiceListInput,
+  AIRouterSpeechVoiceOption,
   AIRouterTestResult
 } from '@ls101/airouter/shared'
 
@@ -27,6 +37,22 @@ export interface AIRouterApplication {
     config: AIRouterImageProviderConfigInput,
     modelId: string
   ): Promise<AIRouterImageTestResult>
+  listSpeechConfigs(): Promise<AIRouterSpeechProviderConfigSummary[]>
+  saveSpeechConfig(
+    config: AIRouterSpeechProviderConfigInput
+  ): Promise<AIRouterSpeechProviderConfigSummary>
+  deleteSpeechConfig(id: string): Promise<void>
+  readSpeechApiKey(id: string): Promise<string | null>
+  listSpeechPackages(
+    providerType?: AIRouterSpeechProviderType
+  ): Promise<AIRouterSpeechModelPackageSummary[]>
+  importSpeechPackage(data: Uint8Array): Promise<AIRouterSpeechModelPackageImportResult>
+  deleteSpeechPackage(id: string, version: string): Promise<void>
+  listSpeechModels(config: AIRouterSpeechProviderConfigInput): Promise<AIRouterSpeechModelOption[]>
+  listSpeechVoices(request: AIRouterSpeechVoiceListInput): Promise<AIRouterSpeechVoiceOption[]>
+  testSpeechConnection(
+    request: AIRouterSpeechConnectionTestInput
+  ): Promise<AIRouterSpeechTestResult>
 }
 
 export function createAIRouterApplication(
@@ -44,7 +70,17 @@ export function createAIRouterApplication(
     deleteImageConfig: (id) => client.deleteImageProviderConfig(id),
     readImageApiKey: (id) => client.readImageProviderApiKey(id),
     listImageModels: (config) => client.listImageModels(config),
-    testImageConnection: (config, modelId) => client.testImageConnection({ config, modelId })
+    testImageConnection: (config, modelId) => client.testImageConnection({ config, modelId }),
+    listSpeechConfigs: () => client.listSpeechProviderConfigs(),
+    saveSpeechConfig: (config) => client.saveSpeechProviderConfig(config),
+    deleteSpeechConfig: (id) => client.deleteSpeechProviderConfig(id),
+    readSpeechApiKey: (id) => client.readSpeechProviderApiKey(id),
+    listSpeechPackages: (providerType) => client.listSpeechModelPackages(providerType),
+    importSpeechPackage: (data) => client.importSpeechModelPackage(data),
+    deleteSpeechPackage: (id, version) => client.deleteSpeechModelPackage(id, version),
+    listSpeechModels: (config) => client.listSpeechModels(config),
+    listSpeechVoices: (request) => client.listSpeechVoices(request),
+    testSpeechConnection: (request) => client.testSpeechConnection(request)
   }
 }
 
