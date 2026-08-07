@@ -197,6 +197,30 @@
   white-space: nowrap;
 }
 
+.functionButton {
+  display: block;
+  width: 100%;
+  padding: 4px 6px;
+  border: 0;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  background: transparent;
+  font: 12px/1.4 var(--font-ui);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.functionButton:hover:not(:disabled) {
+  color: var(--color-accent);
+  background: var(--color-surface-subtle);
+}
+
+.functionButton:disabled {
+  cursor: default;
+}
+
 .emptyLibrary {
   padding-left: 24px;
 }
@@ -259,13 +283,6 @@
   gap: var(--space-4);
   min-height: 36px;
   margin-bottom: 18px;
-}
-
-.insertActions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 7px;
 }
 
 .nodeList {
@@ -431,9 +448,5 @@
   .structureHeader {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .insertActions {
-    justify-content: flex-start;
   }
 }

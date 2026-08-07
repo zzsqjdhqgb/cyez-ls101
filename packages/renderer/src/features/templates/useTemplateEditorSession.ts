@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   editTemplateDocument,
   type DocumentEditError,
+  type FunctionLocator,
   type TemplateApplication,
   type TemplateDocument,
   type TemplateDocumentOperation,
@@ -38,6 +39,7 @@ export interface TemplateEditorSession {
   undo(): void
   redo(): void
   save(): Promise<boolean>
+  insertFunctionCall(locator: FunctionLocator, parentId: string, index?: number): Promise<boolean>
   clearError(): void
 }
 
@@ -207,6 +209,52 @@ export function useTemplateEditorSession(
     }
   }
 
+  const insertFunctionCall = async (
+    locator: FunctionLocator,
+    parentId: string,
+    index?: number
+  ): Promise<boolean> => {
+    let snapshot = historyRef.current.present
+    if (!snapshot || savingRef.current) return false
+    if (snapshot.id !== historyRef.current.cleanId) {
+      if (!(await save())) return false
+      snapshot = historyRef.current.present
+      if (!snapshot || snapshot.id !== historyRef.current.cleanId) return false
+    }
+    savingRef.current = true
+    setSaving(true)
+    setError(null)
+    try {
+      const result = await application.templates.insertFunctionCall(
+        templateId,
+        locator,
+        parentId,
+        index
+      )
+      if (!mountedRef.current) return false
+      const current = historyRef.current
+      const id = current.nextId
+      const selectedNodeId = normalizeSelection(result.template, result.callNodeId)
+      replaceHistory({
+        past: current.present
+          ? [...current.past, current.present].slice(-HISTORY_LIMIT)
+          : current.past,
+        present: { id, document: result.template, selectedNodeId },
+        future: [],
+        cleanId: id,
+        nextId: id + 1
+      })
+      replaceSelection(selectedNodeId)
+      return true
+    } catch (reason) {
+      if (mountedRef.current) setError(templateErrorMessage(reason))
+      return false
+    } finally {
+      savingRef.current = false
+      if (mountedRef.current) setSaving(false)
+    }
+  }
+
   const document = history.present?.document ?? null
   return {
     document,
@@ -223,6 +271,7 @@ export function useTemplateEditorSession(
     undo,
     redo,
     save,
+    insertFunctionCall,
     clearError: () => setError(null)
   }
 }

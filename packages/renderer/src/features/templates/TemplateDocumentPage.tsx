@@ -2,9 +2,9 @@ import { useEffect, useState, type JSX } from 'react'
 import type {
   FrameNode,
   FunctionLibrarySummary,
+  FunctionLocator,
   TemplateDocumentOperation,
-  TemplateNode,
-  TextExpression
+  TemplateNode
 } from '@ls101/template-editor'
 import {
   ArrowDown,
@@ -33,8 +33,6 @@ import styles from './TemplateDocumentPage.module.css'
 import { TemplateNodeInspector } from './TemplateNodeInspector'
 import { templateErrorMessage } from './templateUi'
 import { useTemplateEditorSession } from './useTemplateEditorSession'
-
-type InsertableNodeType = 'frame' | 'page' | 'choice-question'
 
 interface NodeLocation {
   node: TemplateNode
@@ -102,15 +100,26 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
     session.apply({ type, value })
   }
 
-  const insertNode = (type: InsertableNodeType): void => {
-    if (!root) return
+  const insertLibraryItem = (
+    library: FunctionLibrarySummary,
+    item: FunctionLibrarySummary['functions'][number]
+  ): void => {
+    if (!root || !document || session.saving) return
     const target = insertionTarget(root, selectedLocation)
-    session.apply({
-      type: 'insert-node',
-      parentId: target.parentId,
-      index: target.index,
-      node: createNode(type)
-    })
+    if (item.component) {
+      session.apply({
+        type: 'insert-node',
+        parentId: target.parentId,
+        index: target.index,
+        node: structuredClone(item.component)
+      })
+      return
+    }
+    void session.insertFunctionCall(
+      functionLocator(library, item.functionId),
+      target.parentId,
+      target.index
+    )
   }
 
   const deleteSelected = (): void => {
@@ -250,7 +259,17 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                                     library.functions.length > 0 ? (
                                       <ul className={styles.functionList}>
                                         {library.functions.map((item) => (
-                                          <li key={item.functionId}>{item.name || '未命名函数'}</li>
+                                          <li key={item.functionId}>
+                                            <button
+                                              type="button"
+                                              className={styles.functionButton}
+                                              disabled={!document || session.saving}
+                                              aria-label={item.name || '未命名函数'}
+                                              onClick={() => insertLibraryItem(library, item)}
+                                            >
+                                              {item.name || '未命名函数'}
+                                            </button>
+                                          </li>
                                         ))}
                                       </ul>
                                     ) : (
@@ -273,32 +292,6 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
         <main className={styles.structure} aria-labelledby="template-structure-heading">
           <div className={styles.structureHeader}>
             <h2 id="template-structure-heading">结构</h2>
-            <div className={styles.insertActions}>
-              <Button
-                icon={Layers3}
-                size="small"
-                disabled={!document}
-                onClick={() => insertNode('frame')}
-              >
-                框架
-              </Button>
-              <Button
-                icon={FileText}
-                size="small"
-                disabled={!document}
-                onClick={() => insertNode('page')}
-              >
-                页面
-              </Button>
-              <Button
-                icon={ListChecks}
-                size="small"
-                disabled={!document}
-                onClick={() => insertNode('choice-question')}
-              >
-                选择题
-              </Button>
-            </div>
           </div>
           {root ? (
             <NodeTree
@@ -376,6 +369,16 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
       />
     </div>
   )
+}
+
+function functionLocator(library: FunctionLibrarySummary, functionId: string): FunctionLocator {
+  if (library.source === 'imported') {
+    return {
+      library: { source: 'imported', libraryId: library.libraryId, version: library.version ?? 1 },
+      functionId
+    }
+  }
+  return { library: { source: library.source, libraryId: library.libraryId }, functionId }
 }
 
 function libraryKey(library: FunctionLibrarySummary): string {
@@ -553,27 +556,6 @@ function insertionTarget(
   if (selection.node.type === 'frame') return { parentId: selection.node.id }
   if (!selection.parent) return { parentId: root.id }
   return { parentId: selection.parent.id, index: selection.index + 1 }
-}
-
-function createNode(type: InsertableNodeType): TemplateNode {
-  if (type === 'frame') return { id: 'frame', type, children: [] }
-  if (type === 'page') {
-    return { id: 'page', type, content: { blocks: [] }, timeline: [] }
-  }
-  return {
-    id: 'question',
-    type,
-    stem: text(''),
-    options: [
-      { id: 'option-a', content: text('') },
-      { id: 'option-b', content: text('') }
-    ],
-    outputName: 'choice'
-  }
-}
-
-function text(value: string): TextExpression {
-  return { type: 'string', parts: [{ type: 'literal', value }] }
 }
 
 function nodeTypeLabel(type: TemplateNode['type']): string {

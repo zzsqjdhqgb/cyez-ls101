@@ -2,11 +2,285 @@
   "libraries": [
     {
       "libraryId": "builtin:basic",
-      "version": 1,
-      "contentHash": "sha256:ea11b193ad8b921053e28679ecc52f9222edfdf3e45cbe2f496076cb375d4e19",
+      "version": 2,
+      "contentHash": "sha256:3c83a0a7b467994d7e87ada6a04840ddd192a20e426a4a0d4e69f8b8569b8e72",
       "content": {
         "name": "基础组件库",
-        "functions": []
+        "functions": [
+          {
+            "functionId": "builtin:frame",
+            "content": {
+              "name": "框架",
+              "inputs": [],
+              "body": {
+                "id": "root",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "frame",
+                    "type": "frame",
+                    "children": []
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": []
+            }
+          },
+          {
+            "functionId": "builtin:page",
+            "content": {
+              "name": "页面",
+              "inputs": [],
+              "body": {
+                "id": "root",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "content": {
+                      "blocks": []
+                    },
+                    "timeline": []
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": []
+            }
+          },
+          {
+            "functionId": "builtin:choice-question",
+            "content": {
+              "name": "选择题",
+              "inputs": [],
+              "body": {
+                "id": "root",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "question",
+                    "type": "choice-question",
+                    "stem": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "题目"
+                        }
+                      ]
+                    },
+                    "options": [
+                      {
+                        "id": "option-a",
+                        "content": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "literal",
+                              "value": "选项 A"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "id": "option-b",
+                        "content": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "literal",
+                              "value": "选项 B"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "outputName": "answer"
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "answer",
+                  "type": "choice",
+                  "expression": {
+                    "type": "choice",
+                    "source": "choice-output",
+                    "name": "answer"
+                  }
+                }
+              ],
+              "schemaUses": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "libraryId": "builtin:examples",
+      "version": 2,
+      "contentHash": "sha256:26429a1505c458e898ffc8aced402c457067c32319543efb375c4d81766b1ace",
+      "content": {
+        "name": "示例组件库",
+        "functions": [
+          {
+            "functionId": "builtin:example-title-page",
+            "content": {
+              "name": "标题页组合",
+              "inputs": [],
+              "body": {
+                "id": "root",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "title-section",
+                    "type": "frame",
+                    "children": [
+                      {
+                        "id": "title-page",
+                        "type": "page",
+                        "content": {
+                          "blocks": [
+                            {
+                              "id": "title",
+                              "type": "text",
+                              "x": 80,
+                              "y": 96,
+                              "width": 800,
+                              "fontSize": 36,
+                              "bold": true,
+                              "align": "center",
+                              "text": {
+                                "type": "string",
+                                "parts": [
+                                  {
+                                    "type": "literal",
+                                    "value": "示例标题"
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "id": "subtitle",
+                              "type": "text",
+                              "x": 160,
+                              "y": 168,
+                              "width": 640,
+                              "fontSize": 20,
+                              "align": "center",
+                              "text": {
+                                "type": "string",
+                                "parts": [
+                                  {
+                                    "type": "literal",
+                                    "value": "用于展示页面内容节点组合"
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        "timeline": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": []
+            }
+          },
+          {
+            "functionId": "builtin:example-choice-section",
+            "content": {
+              "name": "选择题组合",
+              "inputs": [],
+              "body": {
+                "id": "root",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "question-section",
+                    "type": "frame",
+                    "children": [
+                      {
+                        "id": "instruction-page",
+                        "type": "page",
+                        "content": {
+                          "blocks": [
+                            {
+                              "id": "instruction",
+                              "type": "text",
+                              "x": 64,
+                              "y": 64,
+                              "width": 720,
+                              "fontSize": 24,
+                              "bold": true,
+                              "text": {
+                                "type": "string",
+                                "parts": [
+                                  {
+                                    "type": "literal",
+                                    "value": "请完成下面的示例选择题"
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        "timeline": []
+                      },
+                      {
+                        "id": "example-question",
+                        "type": "choice-question",
+                        "stem": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "literal",
+                              "value": "请选择一个答案"
+                            }
+                          ]
+                        },
+                        "options": [
+                          {
+                            "id": "option-a",
+                            "content": {
+                              "type": "string",
+                              "parts": [
+                                {
+                                  "type": "literal",
+                                  "value": "示例选项 A"
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "id": "option-b",
+                            "content": {
+                              "type": "string",
+                              "parts": [
+                                {
+                                  "type": "literal",
+                                  "value": "示例选项 B"
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        "outputName": "example-answer"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": []
+            }
+          }
+        ]
       }
     }
   ]

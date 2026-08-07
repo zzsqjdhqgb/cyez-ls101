@@ -55,6 +55,8 @@ Template 和本地函数库工作文档都带 revision。首次保存使用 0，
 
 `createTemplateApplication()` 提供 `browser`、`templates` 和 `functionLibraries.local` 三个分区。`browser.listFunctionLibraries()` 汇总当前 active 内置库、全部导入 release 和本地函数库，并返回每个库的来源、版本及函数摘要；renderer 左栏按“来源 → 函数库 → 函数”展示该数据。Template 和本地函数库的创建操作立即生成 UUID 并保存；获取、整份保存和删除直接对应仓储操作。`save()` 返回递增 revision 后的文档，过期 autosave 必须由调用方处理冲突，不能静默覆盖。
 
+当前随应用发布的 `builtin:basic` v2“基础组件库”是唯一的节点预设特例，包含 `builtin:frame`（框架）、`builtin:page`（页面）和 `builtin:choice-question`（带两个最小选项的选择题）。应用层按 `builtin:basic` 这个稳定库 ID 硬编码识别，renderer 提取条目函数体根下的唯一子节点并执行 `insert-node`，不会生成函数调用节点或内嵌函数资源。`builtin:examples` v2“示例组件库”仅用于演示，包含“标题页组合”和“选择题组合”两个普通函数；点击后仍生成函数调用节点并复制函数资源。组件只能从左栏函数库添加；中间节点树只负责结构选择、复制、移动和删除。
+
 `templates.embedFunction(templateId, locator)` 通过包含来源、库 ID、可选 release 版本和函数 ID 的定位器读取函数库，从叶子开始复制完整依赖闭包，把嵌套调用从源函数 ID 改写为内嵌资源内容 ID，并把资源合并回 Template。同内容资源按哈希去重；运行期源函数缺失和理论上的哈希碰撞通过结构化 `TemplateApplicationError` 返回。操作返回根资源的 `functionRef`，供编辑器创建或更新函数调用节点。
 
 `templates.insertFunctionCall(templateId, locator, parentId, index?)` 是编辑器使用的原子组合操作。它在同一份已读取的 Template 上复制完整函数闭包、按函数签名生成所有输入默认表达式和调用处出参名、插入函数节点，最后只执行一次 CAS 保存。父框架不存在或结构操作被拒绝时不会保存刚复制的资源；成功结果包含 `functionRef` 和最终生成的 `callNodeId`。

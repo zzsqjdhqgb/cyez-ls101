@@ -44,6 +44,13 @@ function deferred<T>(): { promise: Promise<T>; resolve(value: T): void } {
   return { promise, resolve }
 }
 
+async function clickLibraryFunction(name: string): Promise<void> {
+  fireEvent.click(screen.getByRole('button', { name }))
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: '保存' })).not.toHaveTextContent('正在保存')
+  )
+}
+
 function TemplateRouteSwitcher(): JSX.Element {
   const navigate = useNavigate()
   return (
@@ -62,7 +69,8 @@ function TemplateRouteSwitcher(): JSX.Element {
 }
 
 function application(document = template()): TemplateApplication {
-  return {
+  let storedDocument = structuredClone(document)
+  const app = {
     browser: {
       listTemplates: vi.fn().mockResolvedValue([
         {
@@ -74,10 +82,42 @@ function application(document = template()): TemplateApplication {
       listFunctionLibraries: vi.fn().mockResolvedValue([
         {
           source: 'builtin',
-          libraryId: 'builtin:layout',
+          libraryId: 'builtin:basic',
           version: 2,
-          name: '版式组件库',
-          functions: [{ functionId: 'builtin:page', name: '分页' }]
+          name: '基础组件库',
+          functions: [
+            {
+              functionId: 'builtin:frame',
+              name: '框架',
+              component: createLibraryNode('builtin:frame')
+            },
+            {
+              functionId: 'builtin:page',
+              name: '页面',
+              component: createLibraryNode('builtin:page')
+            },
+            {
+              functionId: 'builtin:choice-question',
+              name: '选择题',
+              component: createLibraryNode('builtin:choice-question')
+            }
+          ]
+        },
+        {
+          source: 'builtin',
+          libraryId: 'builtin:examples',
+          version: 2,
+          name: '示例组件库',
+          functions: [
+            {
+              functionId: 'builtin:example-title-page',
+              name: '标题页组合'
+            },
+            {
+              functionId: 'builtin:example-choice-section',
+              name: '选择题组合'
+            }
+          ]
         },
         {
           source: 'imported',
@@ -97,10 +137,10 @@ function application(document = template()): TemplateApplication {
     templates: {
       create: vi.fn().mockResolvedValue(document),
       get: vi.fn().mockResolvedValue(document),
-      save: vi.fn().mockImplementation(async (value: TemplateDocument) => ({
-        ...value,
-        revision: value.revision + 1
-      })),
+      save: vi.fn().mockImplementation(async (value: TemplateDocument) => {
+        storedDocument = { ...value, revision: value.revision + 1 }
+        return storedDocument
+      }),
       delete: vi.fn(),
       embedFunction: vi.fn(),
       insertFunctionCall: vi.fn(),
@@ -112,6 +152,26 @@ function application(document = template()): TemplateApplication {
       local: {}
     }
   } as unknown as TemplateApplication
+  return app
+}
+
+function createLibraryNode(
+  functionId: string
+): TemplateDocument['content']['root']['children'][number] {
+  if (functionId === 'builtin:frame') return { id: 'frame', type: 'frame', children: [] }
+  if (functionId === 'builtin:page') {
+    return { id: 'page', type: 'page', content: { blocks: [] }, timeline: [] }
+  }
+  return {
+    id: 'question',
+    type: 'choice-question',
+    stem: { type: 'string', parts: [{ type: 'literal', value: '' }] },
+    options: [
+      { id: 'option-a', content: { type: 'string', parts: [{ type: 'literal', value: '' }] } },
+      { id: 'option-b', content: { type: 'string', parts: [{ type: 'literal', value: '' }] } }
+    ],
+    outputName: 'choice'
+  }
 }
 
 describe('Template pages', () => {
@@ -138,8 +198,13 @@ describe('Template pages', () => {
     expect(screen.getByRole('heading', { name: '内置' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '导入' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '本地' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '版式组件库，版本 2' })).toBeInTheDocument()
-    expect(screen.getByText('分页')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '基础组件库，版本 2' })).toBeInTheDocument()
+    expect(screen.getByText('框架')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '页面' })).toBeInTheDocument()
+    expect(screen.getByText('选择题')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '示例组件库，版本 2' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '标题页组合' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '选择题组合' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '导入题型库，版本 3' })).toBeInTheDocument()
     expect(screen.getByText('口语题')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '听力函数库' })).toBeInTheDocument()
@@ -147,6 +212,31 @@ describe('Template pages', () => {
     expect(screen.getByText('page-1')).toBeInTheDocument()
     expect(app.templates.get).toHaveBeenCalledWith(TEMPLATE_ID)
     expect(app.browser.listFunctionLibraries).toHaveBeenCalledTimes(2)
+  })
+
+  it('inserts an example library entry as a function call', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '选择节点 root' })
+    await clickLibraryFunction('标题页组合')
+    expect(app.templates.insertFunctionCall).toHaveBeenCalledWith(
+      TEMPLATE_ID,
+      {
+        library: { source: 'builtin', libraryId: 'builtin:examples' },
+        functionId: 'builtin:example-title-page'
+      },
+      'root',
+      undefined
+    )
   })
 
   it('creates a template and enters its editor route', async () => {
@@ -317,13 +407,14 @@ describe('Template pages', () => {
     )
 
     await screen.findByRole('button', { name: '选择节点 root' })
-    fireEvent.click(screen.getByRole('button', { name: '框架' }))
+    await clickLibraryFunction('框架')
     expect(screen.getByRole('button', { name: '选择节点 frame' })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '页面' }))
+    await clickLibraryFunction('页面')
     expect(screen.getByRole('button', { name: '选择节点 page' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '选择题' }))
+    await clickLibraryFunction('选择题')
     expect(screen.getByRole('button', { name: '选择节点 question' })).toBeInTheDocument()
+    expect(app.templates.insertFunctionCall).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('button', { name: '选择节点 page' }))
     fireEvent.click(screen.getByRole('button', { name: '复制节点' }))
@@ -359,7 +450,7 @@ describe('Template pages', () => {
     )
 
     await screen.findByRole('button', { name: '选择节点 root' })
-    fireEvent.click(screen.getByRole('button', { name: '页面' }))
+    await clickLibraryFunction('页面')
     expect(screen.getByRole('button', { name: '选择节点 page' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '撤销' }))
@@ -393,13 +484,13 @@ describe('Template pages', () => {
     )
 
     await screen.findByRole('button', { name: '选择节点 root' })
-    fireEvent.click(screen.getByRole('button', { name: '框架' }))
-    fireEvent.click(screen.getByRole('button', { name: '页面' }))
+    await clickLibraryFunction('框架')
+    await clickLibraryFunction('页面')
     fireEvent.click(screen.getByRole('button', { name: '选择节点 frame' }))
     fireEvent.click(screen.getByRole('button', { name: '折叠节点 frame' }))
     expect(screen.queryByRole('button', { name: '选择节点 page' })).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '页面' }))
+    await clickLibraryFunction('页面')
     expect(screen.getByRole('button', { name: '选择节点 page-2' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '折叠节点 frame' }))
 
@@ -421,8 +512,8 @@ describe('Template pages', () => {
     )
 
     await screen.findByRole('button', { name: '选择节点 root' })
-    fireEvent.click(screen.getByRole('button', { name: '框架' }))
-    fireEvent.click(screen.getByRole('button', { name: '页面' }))
+    await clickLibraryFunction('框架')
+    await clickLibraryFunction('页面')
     expect(screen.getByRole('button', { name: '选择节点 page' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '折叠节点 frame' }))
@@ -444,7 +535,7 @@ describe('Template pages', () => {
     )
 
     await screen.findByRole('button', { name: '选择节点 root' })
-    fireEvent.click(screen.getByRole('button', { name: '选择题' }))
+    await clickLibraryFunction('选择题')
     const selectedCard = screen
       .getByRole('button', { name: '选择节点 question' })
       .closest('[data-selected]')
@@ -509,8 +600,8 @@ describe('Template pages', () => {
     )
 
     await screen.findByRole('button', { name: '选择节点 root' })
-    fireEvent.click(screen.getByRole('button', { name: '选择题' }))
-    fireEvent.click(screen.getByRole('button', { name: '选择题' }))
+    await clickLibraryFunction('选择题')
+    await clickLibraryFunction('选择题')
     fireEvent.click(screen.getByRole('button', { name: '选择节点 root' }))
     fireEvent.click(screen.getByRole('checkbox', { name: '选择题 Collector' }))
 

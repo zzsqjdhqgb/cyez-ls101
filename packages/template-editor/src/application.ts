@@ -45,6 +45,7 @@ export interface TemplateSummary {
 export interface FunctionSummary {
   functionId: string
   name: string
+  component?: TemplateNode
 }
 
 export interface FunctionLibrarySummary {
@@ -525,10 +526,15 @@ function summarizeLibrary(
     libraryId: release.libraryId,
     version: release.version,
     name: release.content.name,
-    functions: release.content.functions.map(({ functionId, content }) => ({
-      functionId,
-      name: content.name
-    }))
+    functions: release.content.functions.map(({ functionId, content }) => {
+      const component =
+        source === 'builtin' &&
+        release.libraryId === 'builtin:basic' &&
+        content.body.children.length === 1
+          ? structuredClone(content.body.children[0])
+          : undefined
+      return { functionId, name: content.name, ...(component ? { component } : {}) }
+    })
   }
 }
 

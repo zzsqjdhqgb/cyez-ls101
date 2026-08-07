@@ -20,11 +20,51 @@ describe('内置函数库启动初始化', () => {
     await initializeBuiltinFunctionLibraries(repository, manifest)
     await initializeBuiltinFunctionLibraries(repository, manifest)
 
-    expect(await repository.listBuiltinFunctionLibraryIds()).toEqual(['builtin:basic'])
+    expect(await repository.listBuiltinFunctionLibraryIds()).toEqual([
+      'builtin:basic',
+      'builtin:examples'
+    ])
     expect(await repository.getActiveBuiltinFunctionLibrary('builtin:basic')).toMatchObject({
       libraryId: 'builtin:basic',
-      version: 1,
-      content: { name: '基础组件库', functions: [] }
+      version: 2,
+      content: {
+        name: '基础组件库',
+        functions: [
+          { functionId: 'builtin:frame', content: { name: '框架' } },
+          { functionId: 'builtin:page', content: { name: '页面' } },
+          { functionId: 'builtin:choice-question', content: { name: '选择题' } }
+        ]
+      }
+    })
+    expect(await repository.getActiveBuiltinFunctionLibrary('builtin:examples')).toMatchObject({
+      libraryId: 'builtin:examples',
+      version: 2,
+      content: {
+        name: '示例组件库',
+        functions: [
+          {
+            functionId: 'builtin:example-title-page',
+            content: {
+              name: '标题页组合',
+              body: { children: [{ type: 'frame', children: [{ type: 'page' }] }] }
+            }
+          },
+          {
+            functionId: 'builtin:example-choice-section',
+            content: {
+              name: '选择题组合',
+              body: {
+                children: [
+                  {
+                    type: 'frame',
+                    children: [{ type: 'page' }, { type: 'choice-question' }]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
     })
   })
 
@@ -78,6 +118,30 @@ describe('内置函数库启动初始化', () => {
     expect(await repository.listBuiltinFunctionLibraryIds()).toEqual(['builtin:basic'])
     expect(await repository.getActiveBuiltinFunctionLibrary('builtin:legacy')).toBeNull()
     expect(await repository.getBuiltinFunctionLibrary('builtin:legacy', 1)).toEqual(legacy)
+  })
+
+  it('内容变化时使用新版本激活并保留旧版本', async () => {
+    const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
+    const previous = await createFunctionLibraryRelease('builtin:examples', 1, {
+      name: '旧示例组件库',
+      functions: []
+    })
+    const manifest = JSON.parse(
+      await readFile(
+        'resources/builtin/template-editor/.text/builtin-function-libraries.json',
+        'utf8'
+      )
+    ) as { libraries: { libraryId: string; version: number }[] }
+
+    await initializeBuiltinFunctionLibraries(repository, { libraries: [previous] })
+    await initializeBuiltinFunctionLibraries(repository, manifest)
+
+    expect(await repository.getActiveBuiltinFunctionLibrary('builtin:examples')).toMatchObject({
+      libraryId: 'builtin:examples',
+      version: 2,
+      content: { name: '示例组件库' }
+    })
+    expect(await repository.getBuiltinFunctionLibrary('builtin:examples', 1)).toEqual(previous)
   })
 
   it('在启动期拒绝缺失、非法和递归的内置函数依赖', async () => {

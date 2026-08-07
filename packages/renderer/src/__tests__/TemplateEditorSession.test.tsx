@@ -97,6 +97,97 @@ describe('Template editor session', () => {
     expect(result.current.error).toBeNull()
   })
 
+  it('inserts a library function through the application and selects the saved node', async () => {
+    const source = template()
+    const app = application(source)
+    const inserted: TemplateDocument = {
+      ...source,
+      revision: 5,
+      content: {
+        ...source.content,
+        root: {
+          ...source.content.root,
+          children: [{ id: 'page', type: 'page', content: { blocks: [] }, timeline: [] }]
+        }
+      }
+    }
+    vi.mocked(app.templates.insertFunctionCall).mockResolvedValue({
+      template: inserted,
+      functionRef: `sha256:${'a'.repeat(64)}`,
+      callNodeId: 'page'
+    })
+    const { result } = renderHook(() => useTemplateEditorSession(app, TEMPLATE_ID))
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    let completed = false
+    await act(async () => {
+      completed = await result.current.insertFunctionCall(
+        { source: 'builtin', libraryId: 'builtin:basic' },
+        'root'
+      )
+    })
+
+    expect(completed).toBe(true)
+    expect(app.templates.insertFunctionCall).toHaveBeenCalledWith(
+      TEMPLATE_ID,
+      { source: 'builtin', libraryId: 'builtin:basic' },
+      'root',
+      undefined
+    )
+    expect(result.current.document).toEqual(inserted)
+    expect(result.current.selectedNodeId).toBe('page')
+    expect(result.current.dirty).toBe(false)
+    expect(result.current.canUndo).toBe(true)
+  })
+
+  it('saves local edits before inserting a library function', async () => {
+    const source = template()
+    const app = application(source)
+    vi.mocked(app.templates.save).mockImplementation(async (document) => ({
+      ...document,
+      revision: 5
+    }))
+    const inserted: TemplateDocument = {
+      ...source,
+      revision: 6,
+      content: {
+        ...source.content,
+        name: '本地修改',
+        root: {
+          ...source.content.root,
+          children: [{ id: 'page', type: 'page', content: { blocks: [] }, timeline: [] }]
+        }
+      }
+    }
+    vi.mocked(app.templates.insertFunctionCall).mockResolvedValue({
+      template: inserted,
+      functionRef: `sha256:${'b'.repeat(64)}`,
+      callNodeId: 'page'
+    })
+    const { result } = renderHook(() => useTemplateEditorSession(app, TEMPLATE_ID))
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    act(() => result.current.apply({ type: 'set-template-name', value: '本地修改' }))
+    await act(async () => {
+      await result.current.insertFunctionCall(
+        { source: 'builtin', libraryId: 'builtin:basic' },
+        'root'
+      )
+    })
+
+    expect(app.templates.save).toHaveBeenCalledWith(
+      expect.objectContaining({ content: expect.objectContaining({ name: '本地修改' }) })
+    )
+    expect(app.templates.insertFunctionCall).toHaveBeenCalledWith(
+      TEMPLATE_ID,
+      { source: 'builtin', libraryId: 'builtin:basic' },
+      'root',
+      undefined
+    )
+    expect(result.current.document).toEqual(inserted)
+    expect(result.current.dirty).toBe(false)
+  })
+
   it('reports load failures without creating an editable history entry', async () => {
     const app = application()
     vi.mocked(app.templates.get).mockRejectedValueOnce(new Error('读取模板失败'))

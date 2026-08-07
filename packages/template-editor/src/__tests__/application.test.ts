@@ -422,6 +422,32 @@ describe('TemplateApplication', () => {
     ])
   })
 
+  it('把基础组件库的单节点函数体作为可直接插入的节点预设返回', async () => {
+    const { repository, application } = setup()
+    const page = { id: 'page', type: 'page' as const, content: { blocks: [] }, timeline: [] }
+    const release = await createFunctionLibraryRelease('builtin:basic', 2, {
+      name: '基础组件库',
+      functions: [
+        {
+          functionId: 'builtin:page',
+          content: functionDocument(FUNCTION_A, '页面', [page]).content
+        }
+      ]
+    })
+    await repository.registerBuiltinFunctionLibrary(release)
+    await repository.setActiveBuiltinFunctionLibraryVersion(release.libraryId, release.version)
+
+    expect(await application.browser.listFunctionLibraries()).toEqual([
+      {
+        source: 'builtin',
+        libraryId: 'builtin:basic',
+        version: 2,
+        name: '基础组件库',
+        functions: [{ functionId: 'builtin:page', name: '页面', component: page }]
+      }
+    ])
+  })
+
   it('按函数库来源定位本地、导入和当前内置 release 中的函数', async () => {
     const { repository, application } = setup()
     await saveFunctions(repository, functionDocument(FUNCTION_A, 'Local function'))

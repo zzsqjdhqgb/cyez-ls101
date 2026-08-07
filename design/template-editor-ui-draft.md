@@ -15,6 +15,7 @@
 - 中间是节点树。
 - 右侧是属性列表。
 - 左侧按内置、导入、本地三个来源分类显示函数库。
+- 组件只能从左侧函数库点击添加；节点树不提供直接新增组件入口。
 - 内置、导入和本地都是函数库的来源分类，不是函数的来源分类。
 - 每个来源下都可以有多个函数库，每个函数库可以包含多个函数。
 - 内置库、导入库和本地库分别查找，不要求合并到同一个仓储或 ID 空间。
@@ -27,8 +28,8 @@
 - 版本号不由用户显式指定，使用自增版本号。
 - 系统记录上次导出的内容哈希；再次导出时，如果内容哈希发生变化，版本号自增一位。
 - 本地自定义函数库的版本信息不参与编辑逻辑，只作为导出辅助状态。
-- 现阶段只维护一个内置函数库，名称为“基础组件库”。
-- 基础组件库只包含不可拆分的原子组件。
+- 当前维护“基础组件库”和临时的“示例组件库”。
+- 基础组件库是唯一直接插入节点的特例；示例组件库导出普通函数，后续可以整库删除。
 - 当前以独立函数为单位的仓储格式需要改为以函数库为单位。
 - 软件安装目录只保存随当前软件版本发布的内置函数库 release。
 - File Store 层提供一个通用的只读 Builtin Scoped Store，用于读取安装目录中随软件发布的资源。
@@ -42,7 +43,7 @@
 
 ### ID 与定位
 
-~~~typescript
+```typescript
 type LibraryId = `builtin:${string}` | UUID
 type FunctionId = `builtin:${string}` | UUID
 
@@ -65,7 +66,7 @@ interface FunctionLocator {
   library: FunctionLibraryLocator
   functionId: FunctionId
 }
-~~~
+```
 
 - 内置库和内置函数使用带 `builtin:` 前缀的稳定 key。
 - 自定义库和自定义函数使用 `crypto.randomUUID()` 生成 UUID v4。
@@ -80,11 +81,11 @@ interface FunctionLocator {
 
 函数库按以下层级组织：
 
-~~~text
+```text
 来源分类（内置 / 导入 / 本地）
   └─ 多个函数库
        └─ 多个函数
-~~~
+```
 
 - `source` 描述的是函数库来源，不是函数来源。
 - 三个来源下都允许存在多个函数库。
@@ -96,7 +97,7 @@ interface FunctionLocator {
 
 三类函数库分别使用不同的数据源，不要求合并成一个仓储：
 
-~~~typescript
+```typescript
 interface BuiltinFunctionLibraryCatalog {
   listLibraries(): readonly BuiltinFunctionLibrary[]
   getLibrary(libraryId: `builtin:${string}`): BuiltinFunctionLibrary | null
@@ -111,7 +112,7 @@ interface LocalFunctionLibraryRepository {
   listLibraries(): Promise<readonly LocalFunctionLibraryDocument[]>
   getLibrary(libraryId: UUID): Promise<LocalFunctionLibraryDocument | null>
 }
-~~~
+```
 
 - 内置函数库是随应用发布的只读定义。
 - 导入函数库按 `libraryId + version` 保存不可变 release，同一个库的多个版本可以并存。
@@ -121,7 +122,7 @@ interface LocalFunctionLibraryRepository {
 
 ### 内置函数库存储
 
-当前实现已经提供函数库仓储和内置 release 启动初始化；首版安装清单登记一个内容为空的“基础组件库” v1，具体原子组件仍待后续定义。
+当前实现已经提供函数库仓储和内置 release 启动初始化；安装清单登记“基础组件库” v2，包含当前 DSL 的三个不可拆分原子组件：框架、页面和选择题；同时登记临时的“示例组件库” v2，其中只有“标题页组合”和“选择题组合”两个普通函数。只有 `builtin:basic` 被应用层硬编码为单节点预设库，点击时直接插入节点；包括示例库在内的其他函数库条目都生成函数调用节点。
 
 现阶段的实现设想：
 
@@ -133,15 +134,15 @@ interface LocalFunctionLibraryRepository {
 - 其他需要 builtin 数据的模块可以复用同一个只读读取层，并自行决定缓存、转换、复制或直接使用策略。
 - Renderer 不接收任意文件系统路径；所有读取仍通过白名单 IPC 和受校验的结构化 scope 完成。
 - 内置 release 在用户数据仓储中仍然只读，没有工作文档 `revision`、导出状态或编辑状态。
-- 内置目录的数据结构从一开始支持多个函数库，但首版只提供 `builtin:basic`，显示名称为“基础组件库”。
-- 基础组件库只包含不可拆分的原子组件。
+- 内置目录的数据结构支持多个函数库；当前提供 `builtin:basic`“基础组件库”和可随时删除的 `builtin:examples`“示例组件库”。
+- 基础组件库只包含不可拆分的原子节点预设，示例组件库只承担普通复合函数示范用途。
 - 所有内置库和函数的稳定 key、函数引用及定义都应在测试中统一校验。
 
 Template Editor 的初始化不是把内置 release 转换为本地可编辑函数库，而是把受软件管理的不可变 release 从 Builtin Scoped Store 登记到自己的用户数据仓储。三类函数库因此可以在运行期通过统一的 Template Editor 仓储边界读取，同时仍保持不同的写入规则。
 
 ### Builtin Scoped Store 边界
 
-~~~typescript
+```typescript
 interface BuiltinFileStore {
   scope(name: string): ReadonlyScopedStore
   readAsset(key: AssetKey): Promise<Uint8Array | null>
@@ -160,7 +161,7 @@ interface ReadonlyScopedStore {
   getAssetUrl(filename: string): string
   listScopes(): Promise<string[]>
 }
-~~~
+```
 
 - 不公开 `writeText`、`compareAndSwapText`、`deleteText`、`writeAsset`、`deleteAsset` 或 `clear`。
 - Main 进程仅注册只读 IPC 和只读 asset protocol，并将逻辑 scope 映射到固定 builtin 资源根目录。
@@ -168,7 +169,7 @@ interface ReadonlyScopedStore {
 
 ### 仓储目录格式
 
-~~~text
+```text
 userData/
 └─ template-editor/
    ├─ templates/
@@ -189,7 +190,7 @@ userData/
             └─ releases/
                └─ v<version>/
                   └─ .text/library.json
-~~~
+```
 
 - 逻辑 ID `builtin:basic` 中的 `builtin:` 是类型前缀，不直接作为 File Store scope；物理目录使用经过严格校验的内置 key，例如 `basic`。
 - 本地函数库只有一份持续编辑的 `library.json`，使用文档 `revision` 和 CAS 保存。
@@ -213,7 +214,7 @@ userData/
 
 ### 工作文档与导出包
 
-~~~typescript
+```typescript
 interface FunctionLibraryDocument {
   libraryId: string
   revision: number
@@ -230,7 +231,7 @@ interface ExportedFunctionLibrary {
   contentHash: string
   content: FunctionLibraryContent
 }
-~~~
+```
 
 - `revision` 只用于本地仓储的并发保存，不是用户可见版本。
 - `exportState` 是本地辅助状态，不属于函数库语义内容。
