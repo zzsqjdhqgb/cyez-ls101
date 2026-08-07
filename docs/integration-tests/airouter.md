@@ -272,9 +272,9 @@ xvfb-run -a yarn test:playwright tests/integration/airouter.spec.ts
 
 测试路径：`renderer preload -> IPC -> main AIRouter -> /v1/audio/speech -> renderer`。
 
-操作流程：保存包含 `default`、`man` 和 `woman` 音色的在线 Provider，通过 preload 提交带 `[Man]:`、`[Woman]:` 标记的多行文本，再提交单片段 MP3 请求。
+操作流程：保存包含 `default`、`man` 和 `woman` 音色的在线 Provider，通过 preload 提交带 `[Man]:`、`[Woman]:` 标记的多行文本，再分别提交单片段 MP3、Opus 和 PCM 请求。
 
-测试内容：角色标记不传给 Provider；连续相同角色合并为一次请求；未标记文本走 `default`；所有 Provider 片段请求统一使用 `response_format=wav` 并按原顺序合并为 PCM WAV；最终 WAV/MP3 结果的媒体类型和格式符合调用方要求。
+测试内容：角色标记不传给 Provider；连续相同角色合并为一次请求；未标记文本走 `default`；所有 Provider 片段请求统一使用 `response_format=wav` 并按原顺序合并为 PCM WAV；最终 WAV、MP3、Opus 和 PCM 结果的媒体类型、格式和非空字节均符合调用方要求。
 
 ### AR-31 语音错误、取消与请求复用
 
@@ -290,11 +290,19 @@ xvfb-run -a yarn test:playwright tests/integration/airouter.spec.ts
 
 操作流程：使用 setup 阶段下载的 Pocket TTS 模型权重、tokenizer 和 Alba 音色生成测试模型包，经真实文件对话框导入，在 UI 中执行连接测试并确认音频播放器，再保存 Provider，通过 preload 发起完整语音合成。
 
-测试内容：真实模型包资产校验、模型包加载、WASM Worker 初始化、音频生成、连接测试 IPC 以及合成事件 IPC 均成功返回 24 kHz 单声道 WAV。该路径使用本地资产，不访问公网。
+测试内容：真实模型包资产校验、模型包加载、WASM Worker 初始化、短文本和超过 `maxTokensPerChunk` 的长文本音频生成、连接测试 IPC 以及合成事件 IPC 均成功返回 24 kHz 单声道 WAV；分块后的每个模型调用由 `pocket-tts-runtime.test.ts` 的确定性 mock 直接计数。该路径使用本地资产，不访问公网。
+
+### AR-33 文本与语音请求参数校验
+
+测试路径：`renderer preload -> IPC -> main validation -> renderer error`。
+
+操作流程：保存含有启用和禁用模型/音色的文本与在线语音 Provider，依次提交无效文本 Provider ID、未配置或禁用的文本模型、空语音文本、缺少 `default` 路由、无效输出格式以及禁用的语音模型和音色。
+
+测试内容：所有错误消息从真实 main/IPC 入口返回；参数校验在发起 Provider HTTP 请求前终止，mock 服务请求列表保持为空。
 
 ## 覆盖边界
 
-- AR-11、AR-12、AR-18、AR-19、AR-23、AR-30、AR-31 和 AR-32 从真实 renderer preload bridge 发起，覆盖 HTTP 或 main 校验、AI SDK、IPC 和 preload，但不绑定某个题型编辑器的业务流程。
+- AR-11、AR-12、AR-18、AR-19、AR-23、AR-30、AR-31、AR-32 和 AR-33 从真实 renderer preload bridge 发起，覆盖 HTTP 或 main 校验、AI SDK、IPC 和 preload，但不绑定某个题型编辑器的业务流程。
 - AR-28 使用轻量合法模型包覆盖模型包/Provider 生命周期；AR-32 使用 setup 下载的真实 Pocket TTS 资产覆盖实际 WASM 推理，因此模型包导入测试和真实推理测试不会互相承担不必要的重量。
 - `AIRouterSettingsPage.test.tsx` 继续覆盖 renderer 组件的细粒度分支；Playwright 额外覆盖真实文件读取、语音 Provider 配置、在线连接测试、语音合成路由、取消和 Pocket TTS Worker。
 - AR-15 覆盖真实文件读取 IPC，但用测试路径替代交互式系统文件选择窗口；不验证各操作系统原生对话框的视觉与人工选择行为。

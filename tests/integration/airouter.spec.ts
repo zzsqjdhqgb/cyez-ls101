@@ -71,6 +71,18 @@ interface SpeechEvent {
   message?: string
 }
 
+interface SpeechTarget {
+  providerConfigId: string
+  modelId: string
+  voiceId: string
+}
+
+interface SpeechRouting {
+  default: SpeechTarget
+  man?: SpeechTarget
+  woman?: SpeechTarget
+}
+
 const mockServer = new MockAiServer()
 
 let electronApp: ElectronApplication
@@ -170,19 +182,24 @@ function speechProvider(
 }
 
 async function collectText(providerConfigId: string, modelId: string): Promise<StreamEvent[]> {
+  return collectTextRequest({ providerConfigId, modelId, prompt: 'Integration prompt' })
+}
+
+async function collectTextRequest(request: {
+  providerConfigId: string
+  modelId: string
+  prompt: string
+}): Promise<StreamEvent[]> {
   return page.evaluate(
-    ({ providerConfigId, modelId }) =>
+    (input) =>
       new Promise((resolve) => {
         const events: StreamEvent[] = []
-        window.airouter.startTextGeneration(
-          { providerConfigId, modelId, prompt: 'Integration prompt' },
-          (event) => {
-            events.push(event)
-            if (event.type === 'done' || event.type === 'error') resolve(events)
-          }
-        )
+        window.airouter.startTextGeneration(input, (event) => {
+          events.push(event)
+          if (event.type === 'done' || event.type === 'error') resolve(events)
+        })
       }),
-    { providerConfigId, modelId }
+    request
   )
 }
 
@@ -216,11 +233,7 @@ async function collectImageRequest(request: {
 
 async function collectSpeech(request: {
   text: string
-  routing: {
-    default: { providerConfigId: string; modelId: string; voiceId: string }
-    man?: { providerConfigId: string; modelId: string; voiceId: string }
-    woman?: { providerConfigId: string; modelId: string; voiceId: string }
-  }
+  routing: SpeechRouting
   format?: 'wav' | 'mp3' | 'opus' | 'pcm-s16le'
 }): Promise<SpeechEvent> {
   return page.evaluate(
@@ -1185,21 +1198,28 @@ test('AR-30 routes speech roles, merges adjacent segments, and returns requested
     { input: 'Last default', voice: 'default', responseFormat: 'wav' }
   ])
 
-  const mp3 = await collectSpeech({
-    text: 'One segment',
-    format: 'mp3',
-    routing: {
-      default: { providerConfigId: 'speech-route', modelId: 'mock-speech', voiceId: 'default' }
-    }
-  })
-  expect(mp3).toEqual({
-    type: 'result',
-    audio: expect.objectContaining({ mediaType: 'audio/mpeg', format: 'mp3' })
-  })
-  expect(mockServer.allRequests().at(-1)?.body).toMatchObject({
-    response_format: 'wav',
-    input: 'One segment'
-  })
+  for (const [format, mediaType] of [
+    ['mp3', 'audio/mpeg'],
+    ['opus', 'audio/opus'],
+    ['pcm-s16le', 'audio/pcm']
+  ] as const) {
+    const converted = await collectSpeech({
+      text: `One ${format} segment`,
+      format,
+      routing: {
+        default: { providerConfigId: 'speech-route', modelId: 'mock-speech', voiceId: 'default' }
+      }
+    })
+    expect(converted).toEqual({
+      type: 'result',
+      audio: expect.objectContaining({ mediaType, format })
+    })
+    expect(converted.audio?.data.byteLength).toBeGreaterThan(0)
+    expect(mockServer.allRequests().at(-1)?.body).toMatchObject({
+      response_format: 'wav',
+      input: `One ${format} segment`
+    })
+  }
 })
 
 test('AR-31 reports speech failures, cancels slow synthesis, and reuses the pipeline', async () => {
@@ -1345,6 +1365,97 @@ test('AR-32 executes the real Pocket TTS model package through the Electron stac
     audio: { mediaType: 'audio/wav', format: 'wav', sampleRate: 24000, channels: 1 }
   })
   expect(result.audio?.data.byteLength).toBeGreaterThan(44)
+
+  const longText = Array.from(
+    { length: 8 },
+    (_, index) => `Pocket TTS chunk ${index + 1} is deliberately long enough to exercise splitting.`
+  ).join(' ')
+  const longResult = await collectSpeech({
+    text: longText,
+    routing: {
+      default: {
+        providerConfigId: String(config?.id),
+        modelId: 'pocket-tts-en-v1',
+        voiceId: 'alba'
+      }
+    }
+  })
+  expect(longResult).toMatchObject({
+    type: 'result',
+    audio: { mediaType: 'audio/wav', format: 'wav', sampleRate: 24000, channels: 1 }
+  })
+  expect(longResult.audio?.data.byteLength).toBeGreaterThan(44)
+})
+
+test('AR-33 rejects invalid text and speech selections before making HTTP requests', async () => {
+  await saveTextProvider({
+    ...textProvider('text-validation', 'enabled-text'),
+    models: [
+      { id: 'enabled-text', enabled: true },
+      { id: 'disabled-text', enabled: false }
+    ]
+  })
+  const speechConfig = speechProvider(
+    'speech-validation',
+    ['enabled-speech', 'disabled-speech'],
+    ['enabled-voice', 'disabled-voice']
+  )
+  speechConfig.models[1].enabled = false
+  speechConfig.voices[1].enabled = false
+  await saveSpeechProvider(speechConfig)
+
+  const invalidTextProvider = await collectTextRequest({
+    providerConfigId: 'invalid id',
+    modelId: 'enabled-text',
+    prompt: 'Should fail validation'
+  })
+  const disabledTextModel = await collectTextRequest({
+    providerConfigId: 'text-validation',
+    modelId: 'disabled-text',
+    prompt: 'Should fail validation'
+  })
+  const missingTextModel = await collectTextRequest({
+    providerConfigId: 'text-validation',
+    modelId: 'missing-text',
+    prompt: 'Should fail validation'
+  })
+  expect(invalidTextProvider.at(-1)).toEqual({ type: 'error', message: 'Provider 配置 ID 无效' })
+  expect(disabledTextModel.at(-1)).toEqual({ type: 'error', message: '模型未配置或未启用' })
+  expect(missingTextModel.at(-1)).toEqual({ type: 'error', message: '模型未配置或未启用' })
+
+  const enabledTarget = {
+    providerConfigId: 'speech-validation',
+    modelId: 'enabled-speech',
+    voiceId: 'enabled-voice'
+  }
+  const emptySpeechText = await collectSpeech({ text: '   ', routing: { default: enabledTarget } })
+  const missingDefault = await collectSpeech({
+    text: 'Missing default',
+    routing: {} as SpeechRouting
+  })
+  const invalidSpeechFormat = await collectSpeech({
+    text: 'Invalid format',
+    format: 'flac' as never,
+    routing: { default: enabledTarget }
+  })
+  const disabledSpeechModel = await collectSpeech({
+    text: 'Disabled model',
+    routing: {
+      default: { ...enabledTarget, modelId: 'disabled-speech' }
+    }
+  })
+  const disabledSpeechVoice = await collectSpeech({
+    text: 'Disabled voice',
+    routing: {
+      default: { ...enabledTarget, voiceId: 'disabled-voice' }
+    }
+  })
+  expect(emptySpeechText).toEqual({ type: 'error', message: '语音合成文本不能为空' })
+  expect(missingDefault).toEqual({ type: 'error', message: '语音合成必须配置 default 目标' })
+  expect(invalidSpeechFormat).toEqual({ type: 'error', message: '不支持的语音输出格式' })
+  expect(disabledSpeechModel).toEqual({ type: 'error', message: '语音模型未配置或未启用' })
+  expect(disabledSpeechVoice).toEqual({ type: 'error', message: '语音音色未配置或未启用' })
+  expect(mockServer.allRequests()).toEqual([])
 })
 
 function createTestSpeechPackage(): Uint8Array {
