@@ -10,7 +10,7 @@
 // It mirrors the reference code pattern provided by the User.
 //
 // Options:
-//   --model-dir <path>  Custom path to assets/stt directory (tests paths with spaces, etc.)
+//   --model-dir <path>  Custom path to model-assets/stt directory (tests paths with spaces, etc.)
 
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/explicit-function-return-type */
 const { existsSync, unlinkSync } = require('node:fs')
@@ -29,7 +29,7 @@ function resolveAssetsDir(argv) {
     argv.splice(idx, 2)
     return dir
   }
-  return join(__dirname, '..', 'assets', 'stt')
+  return join(__dirname, '..', 'model-assets', 'stt')
 }
 
 const ASSETS_DIR = resolveAssetsDir(process.argv)

@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react'
+import type { ReactElement } from 'react'
+import * as TooltipPrimitive from '@radix-ui/react-tooltip'
 import styles from './Tooltip.module.css'
 
 interface TooltipProps {
   label: string
-  children: ReactNode
+  children: ReactElement
   side?: 'top' | 'right' | 'bottom' | 'left'
   disabled?: boolean
 }
@@ -13,15 +14,19 @@ export function Tooltip({
   children,
   side = 'top',
   disabled = false
-}: TooltipProps): ReactNode {
+}: TooltipProps): ReactElement {
   if (disabled) return children
 
   return (
-    <span className={styles.root} data-side={side}>
-      {children}
-      <span className={styles.content} role="tooltip">
-        {label}
-      </span>
-    </span>
+    <TooltipPrimitive.Provider delayDuration={350}>
+      <TooltipPrimitive.Root>
+        <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
+        <TooltipPrimitive.Portal>
+          <TooltipPrimitive.Content className={styles.content} side={side} sideOffset={8}>
+            {label}
+          </TooltipPrimitive.Content>
+        </TooltipPrimitive.Portal>
+      </TooltipPrimitive.Root>
+    </TooltipPrimitive.Provider>
   )
 }

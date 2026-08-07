@@ -95,6 +95,84 @@ describe('AIRouter renderer client', () => {
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
     expect(cancel).toHaveBeenCalled()
   })
+
+  it('returns speech audio from a one-shot IPC generation', async () => {
+    const cancel = vi.fn()
+    const bridge = bridgeWith({
+      startSpeechSynthesis: vi.fn((_request, listener) => {
+        queueMicrotask(() =>
+          listener({
+            type: 'result',
+            audio: {
+              data: new Uint8Array([4, 5, 6]),
+              mediaType: 'audio/wav',
+              format: 'wav',
+              sampleRate: 24_000,
+              channels: 1,
+              durationMs: 12.5
+            }
+          })
+        )
+        return cancel
+      })
+    })
+
+    await expect(
+      createAIRouterClient(bridge).synthesizeSpeech({
+        text: 'hello',
+        routing: {
+          default: { providerConfigId: 'speech', modelId: 'model', voiceId: 'voice' }
+        }
+      })
+    ).resolves.toEqual({
+      data: new Uint8Array([4, 5, 6]),
+      mediaType: 'audio/wav',
+      format: 'wav',
+      sampleRate: 24_000,
+      channels: 1,
+      durationMs: 12.5
+    })
+    expect(cancel).toHaveBeenCalled()
+  })
+
+  it('rejects speech IPC errors and stops the listener', async () => {
+    const cancel = vi.fn()
+    const bridge = bridgeWith({
+      startSpeechSynthesis: vi.fn((_request, listener) => {
+        queueMicrotask(() => listener({ type: 'error', message: 'speech failed' }))
+        return cancel
+      })
+    })
+
+    await expect(
+      createAIRouterClient(bridge).synthesizeSpeech({
+        text: 'hello',
+        routing: {
+          default: { providerConfigId: 'speech', modelId: 'model', voiceId: 'voice' }
+        }
+      })
+    ).rejects.toThrow('speech failed')
+    expect(cancel).toHaveBeenCalled()
+  })
+
+  it('rejects speech synthesis with AbortError when the caller aborts', async () => {
+    const cancel = vi.fn()
+    const bridge = bridgeWith({ startSpeechSynthesis: vi.fn(() => cancel) })
+    const controller = new AbortController()
+    const pending = createAIRouterClient(bridge).synthesizeSpeech(
+      {
+        text: 'hello',
+        routing: {
+          default: { providerConfigId: 'speech', modelId: 'model', voiceId: 'voice' }
+        }
+      },
+      { signal: controller.signal }
+    )
+    controller.abort()
+
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
+    expect(cancel).toHaveBeenCalled()
+  })
 })
 
 function bridgeWith(overrides: Partial<AIRouterBridge>): AIRouterBridge {

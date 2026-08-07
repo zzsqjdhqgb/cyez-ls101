@@ -35,9 +35,11 @@ import {
   type AIModelSelection
 } from '../../components/ai/AIModelSelect'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
+import { Modal, ModalDescription, ModalTitle } from '../../components/ui/Modal'
 import { toast } from '../../components/ui/toast'
 import { airouterApplication, type AIRouterApplication } from './AIRouterApplication'
 import { AIRouterImageSettingsPage } from './AIRouterImageSettingsPage'
+import { AIRouterSpeechSettingsPage } from './AIRouterSpeechSettingsPage'
 import styles from './AIRouterSettingsPage.module.css'
 
 interface ProviderDraft {
@@ -112,13 +114,7 @@ export function AIRouterSettingsPage({
         <Route path="image" element={<AIRouterImageSettingsPage application={application} />} />
         <Route
           path="speech-synthesis"
-          element={
-            <AIRouterPlaceholder
-              icon={AudioLines}
-              title="语音合成"
-              description="语音合成模型的 Provider、模型和连接测试将在这里配置。"
-            />
-          }
+          element={<AIRouterSpeechSettingsPage application={application} />}
         />
         <Route
           path="speech-recognition"
@@ -168,21 +164,6 @@ export function AIRouterTextSettingsPage({
       active = false
     }
   }, [application])
-
-  const editorOpen = Boolean(draft)
-  useEffect(() => {
-    if (!editorOpen) return
-    const previousOverflow = document.body.style.overflow
-    const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape' && !busy) setDraft(null)
-    }
-    document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [busy, editorOpen])
 
   const enabledModels = useMemo(() => draft?.models.filter((model) => model.enabled) ?? [], [draft])
 
@@ -317,25 +298,24 @@ export function AIRouterTextSettingsPage({
       </SettingsSection>
 
       {draft ? (
-        <div
-          className={styles.editorBackdrop}
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeEditor()
+        <Modal
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) closeEditor()
           }}
+          open
+          overlayClassName={styles.editorBackdrop}
         >
-          <section
-            aria-labelledby="provider-editor-title"
-            aria-modal="true"
-            className={styles.editorDialog}
-            role="dialog"
-          >
+          <section className={styles.editorDialog}>
             <header className={styles.editorHeader}>
               <div>
-                <span className={styles.editorEyebrow}>
-                  {draft.id ? '编辑 Provider' : '添加 Provider'}
-                </span>
-                <h2 id="provider-editor-title">{draft.name.trim() || '未命名 Provider'}</h2>
+                <ModalDescription asChild>
+                  <span className={styles.editorEyebrow}>
+                    {draft.id ? '编辑 Provider' : '添加 Provider'}
+                  </span>
+                </ModalDescription>
+                <ModalTitle asChild>
+                  <h2>{draft.name.trim() || '未命名 Provider'}</h2>
+                </ModalTitle>
               </div>
               <button
                 aria-label="关闭 Provider 编辑器"
@@ -649,7 +629,7 @@ export function AIRouterTextSettingsPage({
                 <Button
                   icon={Save}
                   variant="primary"
-                  disabled={!draftModified || Boolean(busy)}
+                  disabled={!draft.name.trim() || !draftModified || Boolean(busy)}
                   onClick={() =>
                     void run(
                       'save',
@@ -666,7 +646,7 @@ export function AIRouterTextSettingsPage({
               </div>
             </footer>
           </section>
-        </div>
+        </Modal>
       ) : null}
 
       <ConfirmModal

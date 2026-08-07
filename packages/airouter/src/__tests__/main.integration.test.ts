@@ -1,38 +1,45 @@
+import { createHash } from 'node:crypto'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EncryptedSecretStorage } from '@ls101/secret-store/main'
+import { strToU8, zipSync } from 'fflate'
 import { AIROUTER_CHANNELS } from '../shared'
 
 type IpcHandler = (_event: unknown, ...args: unknown[]) => unknown
 type IpcListener = (...args: unknown[]) => void
 
-const { electronMocks, generateImageMock, streamTextMock } = vi.hoisted(() => {
-  const handlers = new Map<string, IpcHandler>()
-  const listeners = new Map<string, IpcListener>()
-  return {
-    electronMocks: {
-      handlers,
-      listeners,
-      handle: vi.fn((channel: string, handler: IpcHandler) => {
-        handlers.set(channel, handler)
-      }),
-      on: vi.fn((channel: string, listener: IpcListener) => {
-        listeners.set(channel, listener)
-      }),
-      safeStorage: {
-        isEncryptionAvailable: vi.fn(() => true),
-        encryptString: vi.fn((value: string) => new TextEncoder().encode(value)),
-        decryptString: vi.fn((value: Uint8Array) => new TextDecoder().decode(value))
-      }
-    },
-    generateImageMock: vi.fn(),
-    streamTextMock: vi.fn()
+const { electronMocks, generateImageMock, speechSynthesizeMock, streamTextMock } = vi.hoisted(
+  () => {
+    const handlers = new Map<string, IpcHandler>()
+    const listeners = new Map<string, IpcListener>()
+    return {
+      electronMocks: {
+        handlers,
+        listeners,
+        handle: vi.fn((channel: string, handler: IpcHandler) => {
+          handlers.set(channel, handler)
+        }),
+        on: vi.fn((channel: string, listener: IpcListener) => {
+          listeners.set(channel, listener)
+        }),
+        safeStorage: {
+          isEncryptionAvailable: vi.fn(() => true),
+          encryptString: vi.fn((value: string) => new TextEncoder().encode(value)),
+          decryptString: vi.fn((value: Uint8Array) => new TextDecoder().decode(value))
+        },
+        app: { getVersion: vi.fn(() => '0.3.1') }
+      },
+      generateImageMock: vi.fn(),
+      speechSynthesizeMock: vi.fn(),
+      streamTextMock: vi.fn()
+    }
   }
-})
+)
 
 vi.mock('electron', () => ({
+  app: electronMocks.app,
   ipcMain: electronMocks,
   safeStorage: electronMocks.safeStorage
 }))
@@ -41,6 +48,12 @@ vi.mock('ai', async (importOriginal) => {
   const actual = await importOriginal<typeof import('ai')>()
   return { ...actual, generateImage: generateImageMock, streamText: streamTextMock }
 })
+
+vi.mock('../main/pocket-tts', () => ({
+  PocketTtsSynthesizer: class {
+    synthesize = speechSynthesizeMock
+  }
+}))
 
 describe('AIRouter main integration', () => {
   let baseDir: string
@@ -52,6 +65,7 @@ describe('AIRouter main integration', () => {
     electronMocks.handle.mockClear()
     electronMocks.on.mockClear()
     generateImageMock.mockReset()
+    speechSynthesizeMock.mockReset()
     streamTextMock.mockReset()
     baseDir = await mkdtemp(path.join(tmpdir(), 'airouter-main-'))
   })
@@ -90,6 +104,62 @@ describe('AIRouter main integration', () => {
     await expect(handler(AIROUTER_CHANNELS.readApiKey)(undefined, 'provider-a')).resolves.toBe(
       'integration-secret'
     )
+  })
+
+  it('wires speech provider handlers to config and secret stores', async () => {
+    const { registerAIRouter } = await import('../main')
+    registerAIRouter({ baseDir, secretStorage: createSecrets(baseDir) })
+
+    const saved = await handler(AIROUTER_CHANNELS.saveSpeechConfig)(undefined, {
+      id: 'speech-provider',
+      name: '集成测试语音 Provider',
+      kind: 'online',
+      type: 'openai-compatible',
+      baseUrl: 'https://api.example.com/v1/',
+      models: [{ id: 'tts-model', enabled: true }],
+      voices: [{ id: 'voice-a', enabled: true }],
+      apiKey: 'speech-secret'
+    })
+
+    expect(saved).toEqual(
+      expect.objectContaining({
+        id: 'speech-provider',
+        baseUrl: 'https://api.example.com/v1',
+        hasApiKey: true
+      })
+    )
+    await expect(handler(AIROUTER_CHANNELS.listSpeechConfigs)(undefined)).resolves.toEqual([saved])
+    await expect(
+      handler(AIROUTER_CHANNELS.readSpeechApiKey)(undefined, 'speech-provider')
+    ).resolves.toBe('speech-secret')
+  })
+
+  it('imports, lists, filters, and deletes speech model packages through IPC', async () => {
+    const { registerAIRouter } = await import('../main')
+    registerAIRouter({ baseDir, secretStorage: createSecrets(baseDir) })
+
+    const imported = await handler(AIROUTER_CHANNELS.importSpeechPackage)(
+      undefined,
+      createSpeechPackage()
+    )
+    expect(imported).toEqual(
+      expect.objectContaining({
+        package: expect.objectContaining({
+          package: expect.objectContaining({ id: 'integration-pocket', version: '1.0.0' }),
+          runtime: expect.objectContaining({ engine: 'pocket-tts' })
+        }),
+        storedAssetCount: 1
+      })
+    )
+    await expect(
+      handler(AIROUTER_CHANNELS.listSpeechPackages)(undefined, 'pocket-tts')
+    ).resolves.toHaveLength(1)
+    await expect(
+      handler(AIROUTER_CHANNELS.listSpeechPackages)(undefined, 'qwen-tts')
+    ).resolves.toEqual([])
+
+    await handler(AIROUTER_CHANNELS.deleteSpeechPackage)(undefined, 'integration-pocket', '1.0.0')
+    await expect(handler(AIROUTER_CHANNELS.listSpeechPackages)(undefined)).resolves.toEqual([])
   })
 
   it('forwards text stream chunks and completion through the IPC event channel', async () => {
@@ -140,7 +210,7 @@ describe('AIRouter main integration', () => {
       models: [{ id: 'image-model', enabled: true }],
       apiKey: 'image-secret'
     })
-    const bytes = new Uint8Array([1, 2, 3])
+    const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
     generateImageMock.mockResolvedValue({ image: { uint8Array: bytes, mediaType: 'image/png' } })
 
     const sender = createSender()
@@ -161,7 +231,90 @@ describe('AIRouter main integration', () => {
       expect.objectContaining({ prompt: '一张图片', size: '512x512' })
     )
   })
+  it('forwards synthesized speech data through the IPC event channel', async () => {
+    const { registerAIRouter } = await import('../main')
+    registerAIRouter({ baseDir, secretStorage: createSecrets(baseDir) })
+    await handler(AIROUTER_CHANNELS.importSpeechPackage)(undefined, createSpeechPackage())
+    await handler(AIROUTER_CHANNELS.saveSpeechConfig)(undefined, {
+      id: 'local-speech-provider',
+      name: '本地语音 Provider',
+      kind: 'local',
+      type: 'pocket-tts',
+      modelPackageId: 'integration-pocket',
+      modelPackageVersion: '1.0.0',
+      models: [{ id: 'local-model', enabled: true }],
+      voices: [{ id: 'local-voice', enabled: true }]
+    })
+    const audio = {
+      data: new Uint8Array([1, 2, 3]),
+      mediaType: 'audio/wav',
+      format: 'wav' as const
+    }
+    speechSynthesizeMock.mockResolvedValue(audio)
+
+    const sender = createSender()
+    const requestId = 'speech-request'
+    listener(AIROUTER_CHANNELS.speechSynthesisStart)({ sender }, requestId, {
+      text: 'Hello',
+      routing: {
+        default: {
+          providerConfigId: 'local-speech-provider',
+          modelId: 'local-model',
+          voiceId: 'local-voice'
+        }
+      }
+    })
+    await waitForSentEvents(sender, 1)
+
+    expect(sender.send).toHaveBeenCalledWith(AIROUTER_CHANNELS.speechSynthesisEvent, requestId, {
+      type: 'result',
+      audio
+    })
+    expect(speechSynthesizeMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: 'Hello',
+        modelId: 'local-model',
+        voiceId: 'local-voice',
+        format: 'wav'
+      })
+    )
+  })
 })
+
+function createSpeechPackage(): Uint8Array {
+  const bytes = new Uint8Array([1, 2, 3, 4])
+  const sha256 = createHash('sha256').update(bytes).digest('hex')
+  const manifest = {
+    format: 'ls101.tts-model-package',
+    formatVersion: 1,
+    package: { id: 'integration-pocket', version: '1.0.0', name: 'Integration Pocket' },
+    runtime: { engine: 'pocket-tts', engineApiVersion: 1 },
+    assets: [
+      {
+        path: 'model/shared.bin',
+        kind: 'model-asset',
+        size: bytes.byteLength,
+        sha256
+      }
+    ],
+    models: [
+      {
+        id: 'local-model',
+        name: 'Local Model',
+        artifacts: {
+          weights: ['model/shared.bin'],
+          tokenizer: ['model/shared.bin']
+        },
+        parameters: {}
+      }
+    ],
+    voices: [{ id: 'local-voice', name: 'Local Voice', files: ['model/shared.bin'] }]
+  }
+  return zipSync({
+    'manifest.json': strToU8(JSON.stringify(manifest)),
+    'model/shared.bin': bytes
+  })
+}
 
 function createSecrets(baseDir: string): EncryptedSecretStorage {
   return new EncryptedSecretStorage(baseDir, {

@@ -458,7 +458,7 @@ describe('Template pages', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: '返回模板' }))
 
-    expect(screen.getByRole('dialog', { name: '放弃未保存的修改？' })).toBeInTheDocument()
+    expect(screen.getByRole('alertdialog', { name: '放弃未保存的修改？' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '取消' }))
     expect(screen.getByLabelText('名称')).toHaveValue('尚未保存的模板')
 
@@ -530,7 +530,7 @@ describe('Template pages', () => {
     expect(screen.getByRole('button', { name: '选择节点 page-2' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '下移节点' }))
     fireEvent.click(screen.getByRole('button', { name: '删除节点' }))
-    expect(screen.getByRole('dialog', { name: '删除节点“page-2”？' })).toBeInTheDocument()
+    expect(screen.getByRole('alertdialog', { name: '删除节点“page-2”？' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '删除' }))
 
     fireEvent.click(screen.getByRole('button', { name: '保存' }))

@@ -13,7 +13,8 @@ export default defineConfig({
       rollupOptions: {
         external: ['sherpa-onnx-node', 'ffmpeg-static'],
         input: {
-          index: resolve('src/main/index.ts')
+          index: resolve('src/main/index.ts'),
+          'pocket-tts-worker': resolve('packages/airouter/src/main/pocket-tts-worker.ts')
         }
       }
     }

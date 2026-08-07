@@ -21,7 +21,7 @@
 | 系统文件对话框           | `@ls101/file-dialog`                     | 基础设施已实现并完成 Electron 注册                      | [file-dialog.md](file-dialog.md)             |
 | 系统剪贴板图片读取       | `@ls101/clipboard`                       | 图片读取已实现并完成 Electron 注册，Interface 已接入    | [clipboard.md](clipboard.md)                 |
 | 通用长耗时任务进度       | `@ls101/core-types`                      | 跨模块契约已实现，Interface 已产生实际句柄              | [task-progress.md](task-progress.md)         |
-| AI 文本与图像路由        | `@ls101/airouter`、renderer              | 文本流、独立图像 Provider 和全局手动生图模式已接入      | [ai-router.md](ai-router.md)                 |
+| AI 文本、图像与语音路由  | `@ls101/airouter`、renderer              | 文本流、图像 Provider、TTS Provider 与模型包设置已接入  | [ai-router.md](ai-router.md)                 |
 | Interface 领域与应用 API | `@ls101/interface-editor`                | 领域、仓储和应用门面已实现，renderer 与真实 AI 尚未接线 | [interface-editor.md](interface-editor.md)   |
 | Template 核心领域模型    | `@ls101/template-editor`                 | 领域、仓储、应用门面、严格校验和试卷包编译已实现        | [template-editor.md](template-editor.md)     |
 | 应用外壳与注册式导航     | `@ls101/renderer`、Electron main/preload | 基础外壳、窗口控制、路由注册和轻量 UI 组件已实现        | [application-shell.md](application-shell.md) |

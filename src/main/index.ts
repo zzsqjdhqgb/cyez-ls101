@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, safeStorage } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { registerConfigStore } from '@ls101/config-store/main'
 import { registerAIRouter } from '@ls101/airouter/main'
@@ -20,6 +20,14 @@ registerBuiltinFileStoreScheme()
 function initializeApplication(): void {
   electronApp.setAppUserModelId('io.github.zzsqjdhqgb.cyez-ls101')
 
+  if (
+    process.platform === 'linux' &&
+    process.env['LS101_INTEGRATION_TEST'] === '1' &&
+    (!app.isPackaged || app.getVersion().includes('-local.'))
+  ) {
+    safeStorage.setUsePlainTextEncryption(true)
+  }
+
   const userDataDir = app.getPath('userData')
   registerFileStore({ baseDir: userDataDir })
   registerBuiltinFileStore({
@@ -27,8 +35,8 @@ function initializeApplication(): void {
       ? join(process.resourcesPath, 'builtin')
       : join(app.getAppPath(), 'resources', 'builtin')
   })
-  registerConfigStore({ baseDir: app.getPath('userData') })
-  registerAIRouter({ baseDir: app.getPath('userData') })
+  registerConfigStore({ baseDir: userDataDir })
+  registerAIRouter({ baseDir: userDataDir })
   registerClipboard()
   registerFileDialog()
   registerWindowControlHandlers()

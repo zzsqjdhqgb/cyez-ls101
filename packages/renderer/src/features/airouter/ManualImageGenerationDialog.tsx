@@ -4,6 +4,7 @@ import { fileDialog } from '@ls101/file-dialog/renderer'
 import { Check, ClipboardCopy, ClipboardPaste, FolderOpen, Image, X } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { IconButton } from '../../components/ui/IconButton'
+import { Modal, ModalDescription, ModalTitle } from '../../components/ui/Modal'
 import { toast } from '../../components/ui/toast'
 import {
   manualImageGenerationCoordinator,
@@ -101,17 +102,22 @@ function ManualImageGenerationDialogSession({
   }
 
   return (
-    <div className={styles.backdrop} role="presentation">
-      <section
-        aria-labelledby="manual-image-title"
-        aria-modal="true"
-        className={styles.dialog}
-        role="dialog"
-      >
+    <Modal
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) coordinator.cancel(request.id)
+      }}
+      open
+      overlayClassName={styles.backdrop}
+    >
+      <section className={styles.dialog}>
         <header className={styles.header}>
           <div>
-            <span>手动生成模式</span>
-            <h2 id="manual-image-title">生成并导入图片</h2>
+            <ModalDescription asChild>
+              <span>手动生成模式</span>
+            </ModalDescription>
+            <ModalTitle asChild>
+              <h2>生成并导入图片</h2>
+            </ModalTitle>
           </div>
           <IconButton
             icon={X}
@@ -164,7 +170,11 @@ function ManualImageGenerationDialogSession({
               </div>
             </div>
           </div>
-          {error ? <div className={styles.error}>{error}</div> : null}
+          {error ? (
+            <div className={styles.error} role="alert">
+              {error}
+            </div>
+          ) : null}
         </div>
         <footer className={styles.footer}>
           <Button variant="ghost" onClick={() => coordinator.cancel(request.id)}>
@@ -182,7 +192,7 @@ function ManualImageGenerationDialogSession({
           </Button>
         </footer>
       </section>
-    </div>
+    </Modal>
   )
 }
 

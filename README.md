@@ -233,26 +233,27 @@ pnpm start
 
 ## 可用脚本
 
-| 命令 | 说明 |
-|------|------|
-| `pnpm dev` | 启动开发服务器（热重载） |
-| `pnpm start` | 预览构建产物 |
-| `pnpm build` | 构建生产版本 |
-| `pnpm build:win` | 构建 Windows 安装包 |
-| `pnpm build:mac` | 构建 macOS 安装包 |
-| `pnpm build:linux` | 构建 Linux 安装包 |
-| `pnpm lint` | 运行 ESLint 检查 |
-| `pnpm lint:fix` | 自动修复 ESLint 问题 |
-| `pnpm format` | 使用 Prettier 格式化代码 |
-| `pnpm typecheck` | TypeScript 类型检查 |
+| 命令                   | 说明                               |
+| ---------------------- | ---------------------------------- |
+| `yarn dev`             | 启动开发服务器（热重载）           |
+| `yarn start`           | 预览构建产物                       |
+| `yarn build`           | 构建生产版本                       |
+| `yarn build:win`       | 构建 Windows 安装包（默认平台）    |
+| `yarn build:linux`     | 构建 Linux 安装包                  |
+| `yarn build:dir`       | 构建 Windows unpacked 目录         |
+| `yarn build:dir:linux` | 构建 Linux unpacked 目录           |
+| `yarn test:playwright` | 目录打包当前平台应用并运行集成测试 |
+| `yarn lint`            | 运行 ESLint 检查                   |
+| `yarn lint:fix`        | 自动修复 ESLint 问题               |
+| `yarn format`          | 使用 Prettier 格式化代码           |
+| `yarn typecheck`       | TypeScript 类型检查                |
 
 ## 构建与分发
 
-| 平台 | 命令 | 产物格式 |
-|------|------|----------|
-| Windows | `pnpm build:win` | NSIS 安装包 |
-| macOS | `pnpm build:mac` | DMG |
-| Linux | `pnpm build:linux` | AppImage / Snap / deb |
+| 平台    | 命令               | 产物格式              |
+| ------- | ------------------ | --------------------- |
+| Windows | `yarn build:win`   | NSIS 安装包           |
+| Linux   | `yarn build:linux` | AppImage / Snap / deb |
 
 构建输出位于 `dist/` 目录。
 

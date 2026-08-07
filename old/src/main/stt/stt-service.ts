@@ -32,7 +32,9 @@ let _enginePromise: Promise<SttApi> | null = null
 let _worker: Worker | null = null
 
 function resolveAssetsDir(): string {
-  return app.isPackaged ? join(process.resourcesPath, 'assets') : join(app.getAppPath(), 'assets')
+  return app.isPackaged
+    ? join(process.resourcesPath, 'assets')
+    : join(app.getAppPath(), 'model-assets')
 }
 
 function resolveFfmpegBin(): string {

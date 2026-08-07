@@ -96,8 +96,8 @@ extraResources:
     to: templates
   - from: resources/tts
     to: tts
-  - from: assets
-    to: assets
+  - from: model-assets/stt
+    to: assets/stt
   - from: resources/media
     to: media
   - from: resources/builtin

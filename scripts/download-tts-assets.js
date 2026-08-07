@@ -10,13 +10,14 @@ const { join, dirname } = require('node:path')
 const isTTY = process.stdout.isTTY
 
 const BASE_URL = 'https://huggingface.co/kyutai/pocket-tts-without-voice-cloning/resolve/main'
-const ASSETS_DIR = join(process.cwd(), 'assets')
+const ASSETS_DIR = join(process.cwd(), 'model-assets', 'tts')
 const FILES = [
-  'tokenizer.model',
-  'tts_b6369a24.safetensors',
-  ...['alba', 'marius', 'javert', 'fantine', 'cosette', 'eponine', 'azelma'].map(
-    (v) => `embeddings_v2/${v}.safetensors`
-  )
+  { remote: 'tokenizer.model', local: 'tokenizer.model' },
+  { remote: 'tts_b6369a24.safetensors', local: 'model.safetensors' },
+  ...['alba', 'marius', 'javert', 'fantine', 'cosette', 'eponine', 'azelma'].map((id) => ({
+    remote: `embeddings_v2/${id}.safetensors`,
+    local: `voices/${id}.safetensors`
+  }))
 ]
 
 async function download(url, dest, label) {
@@ -49,12 +50,12 @@ async function download(url, dest, label) {
   let downloaded = 0
 
   for (const file of FILES) {
-    const dest = join(ASSETS_DIR, file)
+    const dest = join(ASSETS_DIR, file.local)
     if (existsSync(dest)) {
       cached++
       continue
     }
-    await download(`${BASE_URL}/${file}`, dest, `${prefix} ${file}`)
+    await download(`${BASE_URL}/${file.remote}`, dest, `${prefix} ${file.local}`)
     downloaded++
   }
 
