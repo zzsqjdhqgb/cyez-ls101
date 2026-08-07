@@ -7,10 +7,11 @@
 
 ## 测试分层
 
-项目使用两层自动化测试：
+项目使用三层自动化测试：
 
 - Vitest：包级单元测试和模块集成测试，覆盖领域逻辑、存储实现、renderer 组件和 IPC handler。
-- Playwright：完整 Electron 集成测试，启动构建产物并覆盖 main、sandbox preload、renderer 和持久化存储之间的调用链。
+- Playwright 浏览器组件测试：启动独立的 Vite renderer 测试页，直接操作真实浏览器中的 renderer 组件，覆盖语义、键盘、焦点、响应式布局和组件状态。
+- Playwright Electron 集成测试：启动构建产物并覆盖 main、sandbox preload、renderer 和持久化存储之间的调用链。
 
 Vitest 根配置在 `vitest.config.ts`，具体环境由各 workspace 的 `vitest.config.ts` 定义。React 测试使用 jsdom 和 `vitest.setup.ts` 中的 `@testing-library/jest-dom` matcher；Node 模块测试使用 node 环境。
 
@@ -19,8 +20,10 @@ Vitest 根配置在 `vitest.config.ts`，具体环境由各 workspace 的 `vites
 ```bash
 yarn test                    # 依次运行 Vitest 和 Playwright 全部测试
 yarn test:vitest             # Vitest 单元测试和包级集成测试
-yarn test:playwright         # 目录打包当前平台应用并运行 Playwright 集成测试
-yarn test:playwright:run     # 复用已有目录打包产物，仅运行 Playwright
+yarn test:playwright         # 目录打包当前平台应用，再运行 Electron 和 renderer 组件测试
+yarn test:playwright:run     # 复用已有目录打包产物，运行两套 Playwright 测试
+yarn test:playwright:electron # 仅运行 Electron 集成测试
+yarn test:playwright:components # 仅运行 renderer 组件测试
 yarn test:watch              # Vitest 监视模式
 yarn test:coverage           # Vitest 覆盖率
 ```
@@ -31,6 +34,12 @@ Linux 无桌面环境需要虚拟显示服务：
 xvfb-run -a yarn test
 xvfb-run -a yarn test:playwright
 ```
+
+## Renderer 组件测试
+
+配置文件为 `playwright.components.config.ts`，测试位于 `tests/components/`。Playwright 会启动 `tests/components/vite.config.ts` 指向的独立 Vite 页面；测试页直接导入 `packages/renderer/src` 中的组件，不加载 Electron、preload 或真实持久化服务。
+
+组件测试路径和审查范围维护在 [`docs/integration-tests/renderer-components.md`](./integration-tests/renderer-components.md)。
 
 ## Electron 集成测试
 

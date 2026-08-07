@@ -9,20 +9,23 @@
 
 ## 测试目录
 
-| 测试源文件                                                                                       | 路径数 | 详细文档                                        | 主要范围                                                                |
-| ------------------------------------------------------------------------------------------------ | -----: | ----------------------------------------------- | ----------------------------------------------------------------------- |
-| [`tests/integration/electron-app.spec.ts`](../../tests/integration/electron-app.spec.ts)         |      6 | [Electron 应用测试路径](./electron-app.md)      | 应用启动、preload、IPC、导航、配置与业务数据持久化、窗口控制            |
-| [`tests/integration/airouter.spec.ts`](../../tests/integration/airouter.spec.ts)                 |     32 | [AIRouter 集成测试路径](./airouter.md)          | Provider、密钥、TTS 模型包、文本/语音流、图像生成、错误、取消与 UI 状态 |
-| [`tests/integration/interface-editor.spec.ts`](../../tests/integration/interface-editor.spec.ts) |      3 | [题型编辑器集成测试路径](./interface-editor.md) | 题型编辑器经真实 AIRouter 链路的 AI 文本/图像生成、校验失败与取消       |
+| 测试源文件                                                                                             | 路径数 | 详细文档                                          | 主要范围                                                                |
+| ------------------------------------------------------------------------------------------------------ | -----: | ------------------------------------------------- | ----------------------------------------------------------------------- |
+| [`tests/integration/electron-app.spec.ts`](../../tests/integration/electron-app.spec.ts)               |      6 | [Electron 应用测试路径](./electron-app.md)        | 应用启动、preload、IPC、导航、配置与业务数据持久化、窗口控制            |
+| [`tests/integration/airouter.spec.ts`](../../tests/integration/airouter.spec.ts)                       |     33 | [AIRouter 集成测试路径](./airouter.md)            | Provider、密钥、TTS 模型包、文本/语音流、图像生成、错误、取消与 UI 状态 |
+| [`tests/integration/interface-editor.spec.ts`](../../tests/integration/interface-editor.spec.ts)       |      3 | [题型编辑器集成测试路径](./interface-editor.md)   | 题型编辑器经真实 AIRouter 链路的 AI 文本/图像生成、校验失败与取消       |
+| [`tests/components/renderer-components.spec.tsx`](../../tests/components/renderer-components.spec.tsx) |      8 | [Renderer 组件测试路径](./renderer-components.md) | 通用 UI、壳层导航、设置行、模型选择器、键盘和窄视口可用性               |
 
-Playwright 的全局配置位于 [`playwright.config.ts`](../../playwright.config.ts)。当前固定使用单 worker，避免多个 Electron 实例争用系统剪贴板和显示服务。
+Electron 集成测试的配置位于 [`playwright.config.ts`](../../playwright.config.ts)，renderer 组件测试的配置位于 [`playwright.components.config.ts`](../../playwright.components.config.ts)。当前两套 Playwright 测试都固定使用单 worker；Electron 测试避免多个实例争用系统剪贴板和显示服务，组件测试保持顺序以减少共享 Vite 页面和报告产物的干扰。
 
 ## 运行方式
 
 ```bash
-yarn test             # 先运行 Vitest，再运行 Playwright/Electron 集成测试
-yarn test:playwright      # 目录打包当前平台应用并运行集成测试
-yarn test:playwright:run  # 复用已有目录打包产物，仅运行集成测试
+yarn test             # 先运行 Vitest，再运行 Electron 和 renderer 组件 Playwright 测试
+yarn test:playwright      # 目录打包当前平台应用，再运行 Electron 和 renderer 组件测试
+yarn test:playwright:run  # 复用已有目录打包产物，运行两套 Playwright 测试
+yarn test:playwright:electron # 仅运行 Electron 集成测试
+yarn test:playwright:components # 仅运行 renderer 组件测试
 ```
 
 Windows 直接运行上述命令，Electron 窗口会正常显示。Linux 无桌面环境需要虚拟显示：
@@ -46,7 +49,7 @@ Playwright 测试进程
 
 ## 公共生命周期
 
-两个 spec 中的每条路径都使用相同的前后置流程；AIRouter spec 还会在套件级启动和关闭本地 mock HTTP 服务，并在每条路径前清空请求记录。
+Electron spec 中的每条路径都使用相同的前后置流程；AIRouter spec 还会在套件级启动和关闭本地 mock HTTP 服务，并在每条路径前清空请求记录。renderer 组件测试不启动 Electron，每条路径通过独立 URL 选择一个组件 story。
 
 测试前：
 
@@ -78,6 +81,8 @@ Playwright 测试与 `yarn dev` 不共享数据目录。每条测试路径都有
 - 不显示需要人工操作的系统文件选择或保存对话框；需要覆盖文件读取时会在 Electron main 中把对话框结果指向测试专用文件。
 - 不依赖开发者已有的配置、模板或用户文件。
 - 不测试操作系统窗口管理器对最小化和最大化的视觉表现。
+
+renderer 组件测试有意不覆盖 preload、IPC、真实文件/剪贴板、AI 请求和系统窗口管理器；这些行为仍由 Electron 集成测试或 Vitest 覆盖。
 
 这些边界内的 preload API 会验证是否完整暴露，适合自动化的 handler 会执行真实 IPC 往返。
 

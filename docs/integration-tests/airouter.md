@@ -12,13 +12,13 @@
 运行命令：
 
 ```bash
-yarn test:playwright tests/integration/airouter.spec.ts
+yarn test:playwright:electron tests/integration/airouter.spec.ts
 ```
 
 Linux 容器或无桌面环境：
 
 ```bash
-xvfb-run -a yarn test:playwright tests/integration/airouter.spec.ts
+xvfb-run -a yarn test:playwright:electron tests/integration/airouter.spec.ts
 ```
 
 命令先为当前平台执行 `electron-builder --dir`，测试直接启动 unpacked 可执行文件。
