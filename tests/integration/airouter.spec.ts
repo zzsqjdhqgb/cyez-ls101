@@ -933,6 +933,8 @@ test('AR-25 closes an unsaved provider draft without persisting it', async () =>
 
   await openDraft()
   await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await page.getByRole('button', { name: '取消' }).click()
   await assertClosedAndEmpty()
 
   await openDraft()
@@ -940,6 +942,8 @@ test('AR-25 closes an unsaved provider draft without persisting it', async () =>
     has: page.getByRole('dialog')
   })
   await backdrop.click({ position: { x: 8, y: 8 } })
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await page.getByRole('button', { name: '取消' }).click()
   await assertClosedAndEmpty()
 })
 

@@ -103,7 +103,6 @@ function ManualImageGenerationDialogSession({
 
   return (
     <Modal
-      dismissible={false}
       onOpenChange={(nextOpen) => {
         if (!nextOpen) coordinator.cancel(request.id)
       }}

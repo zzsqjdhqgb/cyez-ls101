@@ -9,8 +9,8 @@
 
 ## 本次已处理
 
-- `ConfirmModal` 改用 Radix `AlertDialog`，补齐 `alertdialog` 语义、初始焦点、焦点陷阱、Escape/取消语义和关闭后的触发控件焦点恢复。
-- 新增共享 `Modal`，统一三个 Provider 编辑器和手动图片导入弹窗的 Portal、焦点管理、遮罩交互和忙碌状态下的关闭保护；保留原有可见 DOM 结构和 CSS。
+- `ConfirmModal` 改用 Radix `AlertDialog`，补齐 `alertdialog` 语义、初始焦点、焦点陷阱、显式取消语义和关闭后的触发控件焦点恢复。
+- 新增共享 `Modal`，统一三个 Provider 编辑器和手动图片导入弹窗的 Portal、焦点管理和显式关闭；Escape 与遮罩外点击始终不会关闭弹窗，保留原有可见 DOM 结构和 CSS。
 - `Tooltip` 改用 Radix Tooltip，补齐 Portal、碰撞处理、键盘触发和 `aria-describedby` 关联。
 - 手动图片导入错误区增加 `role="alert"`，异步失败可以被辅助技术及时播报。
 
@@ -26,7 +26,7 @@
 
 位置：[`ManualImageGenerationDialog.tsx`](../packages/renderer/src/features/airouter/ManualImageGenerationDialog.tsx:82)
 
-该弹窗现在复用 `Modal`，拥有初始焦点、焦点陷阱、焦点恢复和 `aria-describedby`；导入失败信息也已经改为 `role="alert"`。为避免导入流程被遮罩或 Escape 误取消，仍保留显式取消按钮和右上角关闭按钮作为关闭入口。
+该弹窗现在复用 `Modal`，拥有初始焦点、焦点陷阱、焦点恢复和 `aria-describedby`；导入失败信息也已经改为 `role="alert"`。Escape 和遮罩外点击不会取消导入，必须使用显式取消按钮或右上角关闭按钮。
 
 ## P2：辅助语义和状态反馈不完整
 

@@ -77,7 +77,7 @@ export function ModalStory(): JSX.Element {
     <>
       <Button onClick={() => setOpen(true)}>打开通用弹窗</Button>
       <Modal open={open} onOpenChange={setOpen}>
-        <section>
+        <section style={{ margin: 24, padding: 24 }}>
           <ModalTitle asChild>
             <h2>通用弹窗</h2>
           </ModalTitle>

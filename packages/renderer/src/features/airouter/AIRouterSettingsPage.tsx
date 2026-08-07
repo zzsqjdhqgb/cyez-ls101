@@ -299,7 +299,6 @@ export function AIRouterTextSettingsPage({
 
       {draft ? (
         <Modal
-          dismissible={!busy}
           onOpenChange={(nextOpen) => {
             if (!nextOpen) closeEditor()
           }}

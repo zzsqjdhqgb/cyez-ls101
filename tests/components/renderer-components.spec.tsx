@@ -32,7 +32,7 @@ test('FE-02 icon buttons remain discoverable through focus and tooltips', async 
   await expect(button).toHaveAttribute('aria-describedby', tooltipId as string)
 })
 
-test('FE-03 confirmation modal exposes dialog semantics and completes both actions', async ({
+test('FE-03 confirmation modal requires an explicit action and restores focus', async ({
   page
 }) => {
   const component = await openComponent(page, 'confirm-modal')
@@ -53,11 +53,13 @@ test('FE-03 confirmation modal exposes dialog semantics and completes both actio
 
   await trigger.click()
   await page.keyboard.press('Escape')
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: '取消' }).click()
   await expect(dialog).toBeHidden()
   await expect(trigger).toBeFocused()
 })
 
-test('FE-04 shared modal traps focus, closes with Escape, and restores its trigger', async ({
+test('FE-04 shared modal blocks Escape and outside clicks until explicit close', async ({
   page
 }) => {
   const component = await openComponent(page, 'modal')
@@ -74,6 +76,11 @@ test('FE-04 shared modal traps focus, closes with Escape, and restores its trigg
   await close.press('Tab')
   await expect(secondary).toBeFocused()
   await page.keyboard.press('Escape')
+  await expect(dialog).toBeVisible()
+  const overlay = page.locator('div[role="presentation"]').filter({ has: dialog })
+  await overlay.click({ position: { x: 1, y: 1 } })
+  await expect(dialog).toBeVisible()
+  await close.click()
   await expect(dialog).toBeHidden()
   await expect(trigger).toBeFocused()
 })

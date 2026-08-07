@@ -54,6 +54,9 @@ export function ConfirmModal({
                 const activeElement = document.activeElement
                 restoreFocus.current = activeElement instanceof HTMLElement ? activeElement : null
               }}
+              onEscapeKeyDown={(event) => {
+                event.preventDefault()
+              }}
             >
               <section aria-modal="true" className={styles.dialog}>
                 <div className={styles.icon} data-danger={danger || undefined}>

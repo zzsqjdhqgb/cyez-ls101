@@ -196,7 +196,6 @@ export function AIRouterImageSettingsPage({
 
       {draft ? (
         <Modal
-          dismissible={!busy}
           onOpenChange={(nextOpen) => {
             if (!nextOpen) closeEditor()
           }}

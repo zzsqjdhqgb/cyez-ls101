@@ -6,16 +6,9 @@ export interface ModalProps {
   onOpenChange(open: boolean): void
   children: ReactNode
   overlayClassName?: string
-  dismissible?: boolean
 }
 
-export function Modal({
-  open,
-  onOpenChange,
-  children,
-  overlayClassName,
-  dismissible = true
-}: ModalProps): JSX.Element {
+export function Modal({ open, onOpenChange, children, overlayClassName }: ModalProps): JSX.Element {
   const restoreFocus = useRef<HTMLElement | null>(null)
 
   return (
@@ -37,13 +30,13 @@ export function Modal({
                 restoreFocus.current = activeElement instanceof HTMLElement ? activeElement : null
               }}
               onEscapeKeyDown={(event) => {
-                if (!dismissible) event.preventDefault()
+                event.preventDefault()
               }}
               onInteractOutside={(event) => {
-                if (!dismissible) event.preventDefault()
+                event.preventDefault()
               }}
               onPointerDownOutside={(event) => {
-                if (!dismissible) event.preventDefault()
+                event.preventDefault()
               }}
             >
               {children}

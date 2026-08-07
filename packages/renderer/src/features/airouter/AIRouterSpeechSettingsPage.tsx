@@ -337,7 +337,6 @@ export function AIRouterSpeechSettingsPage({
 
       {draft ? (
         <Modal
-          dismissible={!busy}
           onOpenChange={(nextOpen) => {
             if (!nextOpen) closeEditor()
           }}
