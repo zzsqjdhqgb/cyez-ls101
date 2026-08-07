@@ -655,21 +655,17 @@ describe('Template pages', () => {
     fireEvent.change(within(properties).getByLabelText('输出名称'), {
       target: { value: 'answer-1' }
     })
-    fireEvent.change(screen.getByLabelText('题干文本 1'), {
+    fireEvent.change(screen.getByLabelText('题干'), {
       target: { value: '请回答：' }
     })
-    fireEvent.click(screen.getByRole('button', { name: '题干添加变量' }))
-    fireEvent.change(screen.getByLabelText('题干变量 2名称'), {
-      target: { value: 'question-text' }
-    })
-    fireEvent.change(screen.getByLabelText('选项 A 内容文本 1'), {
+    fireEvent.change(screen.getByLabelText('选项 A 内容'), {
       target: { value: '正确答案' }
     })
-    fireEvent.change(screen.getByLabelText('选项 B 内容文本 1'), {
+    fireEvent.change(screen.getByLabelText('选项 B 内容'), {
       target: { value: '干扰项' }
     })
     fireEvent.click(screen.getByRole('button', { name: '添加选项' }))
-    fireEvent.change(screen.getByLabelText('选项 C 内容文本 1'), {
+    fireEvent.change(screen.getByLabelText('选项 C 内容'), {
       target: { value: '第三项' }
     })
     fireEvent.click(screen.getByRole('button', { name: '上移选项 C' }))
@@ -682,10 +678,7 @@ describe('Template pages', () => {
       type: 'choice-question',
       outputName: 'answer-1',
       stem: {
-        parts: [
-          { type: 'literal', value: '请回答：' },
-          { type: 'variable', ref: { scope: 'local', name: 'question-text' } }
-        ]
+        parts: [{ type: 'literal', value: '请回答：' }]
       }
     })
     if (question.type !== 'choice-question') throw new Error('expected choice question')
@@ -781,7 +774,11 @@ describe('Template pages', () => {
   })
 
   it('edits page timeline values, variables and record outputs', async () => {
-    const app = application()
+    const document = template()
+    document.content.interfaces = [
+      { alias: 'exam', interfaceId: INTERFACE_ID, acceptedVars: ['prompt'] }
+    ]
+    const app = application(document)
     render(
       <TemplateApplicationProvider application={app}>
         <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
@@ -825,13 +822,11 @@ describe('Template pages', () => {
     expect(screen.queryByRole('list', { name: '节点 page-1 时间线' })).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'TTS 播放' }))
-    fireEvent.change(screen.getByLabelText('TTS 文本文本 1'), {
-      target: { value: '请朗读：' }
+    const ttsInput = screen.getByLabelText('TTS 文本')
+    fireEvent.change(ttsInput, {
+      target: { value: '请朗读：@pr', selectionStart: 7 }
     })
-    fireEvent.click(screen.getByRole('button', { name: 'TTS 文本添加变量' }))
-    fireEvent.change(screen.getByLabelText('TTS 文本变量 2名称'), {
-      target: { value: 'prompt-text' }
-    })
+    fireEvent.keyDown(ttsInput, { key: 'Enter' })
     fireEvent.click(screen.getByRole('button', { name: '倒计时' }))
     fireEvent.change(screen.getByLabelText('倒计时（秒）'), { target: { value: '5' } })
     fireEvent.click(screen.getByRole('button', { name: '录音' }))
@@ -842,7 +837,7 @@ describe('Template pages', () => {
     const timelineSummary = screen.getByRole('list', { name: '节点 page-1 时间线' })
     expect(within(timelineSummary).getAllByRole('listitem')).toHaveLength(4)
     expect(within(timelineSummary).getByLabelText('节点 page-1 时间线项目 1 TTS 文本')).toHaveValue(
-      '请朗读：[@prompt-text]'
+      '请朗读：[@exam.prompt]'
     )
     expect(
       within(timelineSummary).getByLabelText('节点 page-1 时间线项目 2 倒计时时长')
@@ -869,7 +864,10 @@ describe('Template pages', () => {
           type: 'string',
           parts: [
             { type: 'literal', value: '请朗读：' },
-            { type: 'variable', ref: { scope: 'local', name: 'prompt-text' } }
+            {
+              type: 'variable',
+              ref: { scope: 'interface', alias: 'exam', varName: 'prompt' }
+            }
           ]
         }
       },

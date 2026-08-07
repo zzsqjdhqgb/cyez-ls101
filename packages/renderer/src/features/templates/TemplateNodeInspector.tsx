@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { ArrowDown, ArrowUp, Copy, Mic, Plus, Timer, Trash2, Variable, Volume2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Copy, Mic, Plus, Timer, Trash2, Volume2 } from 'lucide-react'
 import type {
   ChoiceOptionDef,
   ChoiceQuestionNode,
@@ -9,33 +9,35 @@ import type {
   TemplateDocumentOperation,
   TemplateNode,
   TextExpression,
-  TextExpressionPart,
   TimelineStep,
-  ValueExpression,
-  VariableRef
+  ValueExpression
 } from '@ls101/template-editor'
 import { Button } from '../../components/ui/Button'
 import { IconButton } from '../../components/ui/IconButton'
 import styles from './TemplateNodeInspector.module.css'
+import { TemplateVariableInput } from './TemplateVariableInput'
+import type { TemplateVariableCandidate } from './TemplateVariableInputModel'
 
 interface TemplateNodeInspectorProps {
   node: TemplateNode
   functions: readonly FunctionDef[]
+  variableCandidates: readonly TemplateVariableCandidate[]
   apply(operation: TemplateDocumentOperation): boolean
 }
 
 export function TemplateNodeInspector({
   node,
   functions,
+  variableCandidates,
   apply
 }: TemplateNodeInspectorProps): JSX.Element {
   const details =
     node.type === 'frame' ? (
       <FrameInspector node={node} functions={functions} apply={apply} />
     ) : node.type === 'page' ? (
-      <PageInspector node={node} apply={apply} />
+      <PageInspector node={node} variableCandidates={variableCandidates} apply={apply} />
     ) : node.type === 'choice-question' ? (
-      <ChoiceQuestionInspector node={node} apply={apply} />
+      <ChoiceQuestionInspector node={node} variableCandidates={variableCandidates} apply={apply} />
     ) : null
 
   return (
@@ -141,9 +143,11 @@ function FrameInspector({
 
 function ChoiceQuestionInspector({
   node,
+  variableCandidates,
   apply
 }: {
   node: ChoiceQuestionNode
+  variableCandidates: readonly TemplateVariableCandidate[]
   apply: TemplateNodeInspectorProps['apply']
 }): JSX.Element {
   const updateOption = (optionId: string, option: ChoiceOptionDef): void => {
@@ -165,6 +169,7 @@ function ChoiceQuestionInspector({
       <TextExpressionEditor
         label="题干"
         value={node.stem}
+        candidates={variableCandidates}
         onChange={(stem) => apply({ type: 'set-choice-question', nodeId: node.id, stem })}
       />
 
@@ -209,6 +214,7 @@ function ChoiceQuestionInspector({
                 compact
                 label={`选项 ${optionLabel(index)} 内容`}
                 value={option.content}
+                candidates={variableCandidates}
                 onChange={(content) => updateOption(option.id, { ...option, content })}
               />
             </div>
@@ -236,9 +242,11 @@ function ChoiceQuestionInspector({
 
 function PageInspector({
   node,
+  variableCandidates,
   apply
 }: {
   node: PageNode
+  variableCandidates: readonly TemplateVariableCandidate[]
   apply: TemplateNodeInspectorProps['apply']
 }): JSX.Element {
   const updateStep = (index: number, step: TimelineStep): void => {
@@ -283,12 +291,14 @@ function PageInspector({
                   compact
                   label="TTS 文本"
                   value={step.text}
+                  candidates={variableCandidates}
                   onChange={(text) => updateStep(index, { ...step, text })}
                 />
               ) : (
                 <ValueExpressionEditor
                   label={step.type === 'record' ? '录音时长（秒）' : '倒计时（秒）'}
                   value={step.type === 'record' ? step.duration : step.seconds}
+                  candidates={variableCandidates}
                   onChange={(value) =>
                     updateStep(
                       index,
@@ -346,6 +356,7 @@ function PageInspector({
 interface TextExpressionEditorProps {
   label: string
   value: TextExpression
+  candidates: readonly TemplateVariableCandidate[]
   compact?: boolean
   onChange(value: TextExpression): void
 }
@@ -353,109 +364,21 @@ interface TextExpressionEditorProps {
 function TextExpressionEditor({
   label,
   value,
+  candidates,
   compact = false,
   onChange
 }: TextExpressionEditorProps): JSX.Element {
-  const parts = value.parts.length > 0 ? value.parts : [{ type: 'literal', value: '' } as const]
-  const updatePart = (index: number, part: TextExpressionPart): void => {
-    onChange({ ...value, parts: replaceAt(parts, index, part) })
-  }
-  const appendVariable = (): void => {
-    onChange({
-      ...value,
-      parts: [...parts, { type: 'variable', ref: { scope: 'local', name: '' } }]
-    })
-  }
-
-  if (compact && parts.length === 1 && parts[0].type === 'literal') {
-    return (
-      <div className={styles.compactExpression}>
-        <span className={styles.fieldLabel}>{label}</span>
-        <div className={styles.compactLiteral}>
-          <input
-            aria-label={`${label}文本 1`}
-            value={parts[0].value}
-            onChange={(event) => updatePart(0, { ...parts[0], value: event.target.value })}
-          />
-          <IconButton
-            icon={Variable}
-            label={`${label}添加变量`}
-            size="small"
-            onClick={appendVariable}
-          />
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className={compact ? styles.compactExpression : styles.expression}>
       <span className={styles.fieldLabel}>{label}</span>
-      <div className={styles.partList}>
-        {parts.map((part, index) => (
-          <div className={styles.partRow} key={`${part.type}-${index}`}>
-            <span className={styles.partType}>{part.type === 'literal' ? '文本' : '变量'}</span>
-            <div className={styles.partValue}>
-              {part.type === 'literal' ? (
-                <textarea
-                  aria-label={`${label}文本 ${index + 1}`}
-                  rows={compact ? 2 : 3}
-                  value={part.value}
-                  onChange={(event) => updatePart(index, { ...part, value: event.target.value })}
-                />
-              ) : (
-                <VariableRefEditor
-                  label={`${label}变量 ${index + 1}`}
-                  value={part.ref}
-                  onChange={(ref) => updatePart(index, { ...part, ref })}
-                />
-              )}
-            </div>
-            <div className={styles.verticalActions}>
-              <IconButton
-                icon={ArrowUp}
-                label={`上移${label}片段 ${index + 1}`}
-                size="small"
-                disabled={index === 0}
-                onClick={() => onChange({ ...value, parts: moveAt(parts, index, index - 1) })}
-              />
-              <IconButton
-                icon={ArrowDown}
-                label={`下移${label}片段 ${index + 1}`}
-                size="small"
-                disabled={index === parts.length - 1}
-                onClick={() => onChange({ ...value, parts: moveAt(parts, index, index + 1) })}
-              />
-              <IconButton
-                icon={Trash2}
-                label={`删除${label}片段 ${index + 1}`}
-                size="small"
-                variant="danger"
-                disabled={parts.length === 1}
-                onClick={() => onChange({ ...value, parts: removeAt(parts, index) })}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className={styles.commandRow}>
-        <Button
-          aria-label={`${label}添加文本`}
-          icon={Plus}
-          size="small"
-          onClick={() => onChange({ ...value, parts: [...parts, { type: 'literal', value: '' }] })}
-        >
-          文本
-        </Button>
-        <Button
-          aria-label={`${label}添加变量`}
-          icon={Variable}
-          size="small"
-          onClick={appendVariable}
-        >
-          变量
-        </Button>
-      </div>
+      <TemplateVariableInput
+        mode="text"
+        ariaLabel={label}
+        candidates={candidates}
+        multiline={!compact}
+        value={value}
+        onChange={onChange}
+      />
     </div>
   )
 }
@@ -465,104 +388,37 @@ type EditableValueExpression = ValueExpression<'number'> | ValueExpression<'file
 function ValueExpressionEditor({
   label,
   value,
+  candidates,
   onChange
 }: {
   label: string
   value: EditableValueExpression
+  candidates: readonly TemplateVariableCandidate[]
   onChange(value: EditableValueExpression): void
 }): JSX.Element {
   return (
     <div className={styles.expression}>
       <span className={styles.fieldLabel}>{label}</span>
-      <select
-        aria-label={`${label}来源`}
-        value={value.source}
-        onChange={(event) =>
-          onChange(
-            event.target.value === 'literal'
-              ? value.type === 'number'
-                ? literalNumber(0)
-                : literalFile('')
-              : variableValue(value.type, { scope: 'local', name: '' })
-          )
-        }
-      >
-        <option value="literal">固定值</option>
-        <option value="variable">变量</option>
-      </select>
-      {value.source === 'literal' ? (
-        <input
-          aria-label={label}
-          min={value.type === 'number' ? 0 : undefined}
-          step={value.type === 'number' ? 1 : undefined}
-          type={value.type === 'number' ? 'number' : 'text'}
-          value={value.value}
-          onChange={(event) =>
-            onChange(
-              value.type === 'number'
-                ? literalNumber(Number(event.target.value))
-                : literalFile(event.target.value)
-            )
-          }
+      {value.type === 'number' ? (
+        <TemplateVariableInput
+          mode="value"
+          ariaLabel={label}
+          candidates={candidates}
+          inputMode="decimal"
+          min={0}
+          value={value}
+          valueType="number"
+          onChange={onChange}
         />
       ) : (
-        <VariableRefEditor
-          label={label}
-          value={value.ref}
-          onChange={(ref) => onChange(variableValue(value.type, ref))}
+        <TemplateVariableInput
+          mode="value"
+          ariaLabel={label}
+          candidates={candidates}
+          value={value}
+          valueType="file"
+          onChange={onChange}
         />
-      )}
-    </div>
-  )
-}
-
-function VariableRefEditor({
-  label,
-  value,
-  onChange
-}: {
-  label: string
-  value: VariableRef
-  onChange(value: VariableRef): void
-}): JSX.Element {
-  return (
-    <div className={styles.variableFields}>
-      <select
-        aria-label={`${label}作用域`}
-        value={value.scope}
-        onChange={(event) =>
-          onChange(
-            event.target.value === 'interface'
-              ? { scope: 'interface', alias: '', varName: '' }
-              : { scope: 'local', name: '' }
-          )
-        }
-      >
-        <option value="local">局部</option>
-        <option value="interface">Interface</option>
-      </select>
-      {value.scope === 'local' ? (
-        <input
-          aria-label={`${label}名称`}
-          placeholder="变量名称"
-          value={value.name}
-          onChange={(event) => onChange({ ...value, name: event.target.value })}
-        />
-      ) : (
-        <>
-          <input
-            aria-label={`${label} Interface 别名`}
-            placeholder="Interface 别名"
-            value={value.alias}
-            onChange={(event) => onChange({ ...value, alias: event.target.value })}
-          />
-          <input
-            aria-label={`${label}变量名称`}
-            placeholder="变量名称"
-            value={value.varName}
-            onChange={(event) => onChange({ ...value, varName: event.target.value })}
-          />
-        </>
       )}
     </div>
   )
@@ -667,16 +523,6 @@ function text(value: string): TextExpression {
 
 function literalNumber(value: number): ValueExpression<'number'> {
   return { type: 'number', source: 'literal', value }
-}
-
-function literalFile(value: string): ValueExpression<'file'> {
-  return { type: 'file', source: 'literal', value }
-}
-
-function variableValue(type: 'number' | 'file', ref: VariableRef): EditableValueExpression {
-  return type === 'number'
-    ? { type: 'number', source: 'variable', ref }
-    : { type: 'file', source: 'variable', ref }
 }
 
 function replaceAt<T>(items: readonly T[], index: number, value: T): T[] {

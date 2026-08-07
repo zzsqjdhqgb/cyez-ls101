@@ -1,4 +1,5 @@
-import { useEffect, useId, useState, type JSX } from 'react'
+import { useEffect, useId, useMemo, useState, type JSX } from 'react'
+import type { InterfaceVarManifest } from '@ls101/core-types'
 import type {
   FrameNode,
   FunctionLibrarySummary,
@@ -39,6 +40,11 @@ import styles from './TemplateDocumentPage.module.css'
 import { TemplateInspectorSection } from './TemplateInspectorSection'
 import { TemplateInterfaceRequirements } from './TemplateInterfaceRequirements'
 import { TemplateNodeInspector } from './TemplateNodeInspector'
+import { TemplateVariableInput } from './TemplateVariableInput'
+import {
+  collectTemplateVariableCandidates,
+  type TemplateVariableCandidate
+} from './TemplateVariableInputModel'
 import { templateErrorMessage } from './templateUi'
 import { useTemplateEditorSession } from './useTemplateEditorSession'
 
@@ -72,6 +78,9 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const [functionLibraries, setFunctionLibraries] = useState<FunctionLibrarySummary[]>([])
   const [libraryLoading, setLibraryLoading] = useState(true)
   const [libraryError, setLibraryError] = useState<string | null>(null)
+  const [interfaceManifests, setInterfaceManifests] = useState<InterfaceVarManifest[]>([])
+  const [interfacesLoading, setInterfacesLoading] = useState(true)
+  const [interfacesError, setInterfacesError] = useState<string | null>(null)
   const [activeLibrarySource, setActiveLibrarySource] =
     useState<FunctionLibrarySummary['source']>('builtin')
   const [collapsedLibraryKeys, setCollapsedLibraryKeys] = useState<ReadonlySet<string>>(
@@ -98,10 +107,42 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
     }
   }, [application])
 
+  useEffect(() => {
+    let active = true
+    void application.browser
+      .listInterfaces()
+      .then((items) => {
+        if (!active) return
+        setInterfaceManifests(items)
+        setInterfacesError(null)
+      })
+      .catch((reason: unknown) => {
+        if (active) setInterfacesError(templateErrorMessage(reason))
+      })
+      .finally(() => {
+        if (active) setInterfacesLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [application])
+
   const document = session.document
   const root = document?.content.root ?? null
   const selectedLocation = root ? locateNode(root, session.selectedNodeId) : null
   const selectedNode = selectedLocation?.node ?? null
+  const variableCandidates = useMemo(
+    () =>
+      root && document
+        ? collectTemplateVariableCandidates(
+            root,
+            document.resources.functions,
+            document.content.interfaces,
+            interfaceManifests
+          )
+        : [],
+    [document, interfaceManifests, root]
+  )
 
   const editMetadata = (
     type: 'set-template-name' | 'set-template-description',
@@ -363,6 +404,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                 rootId={root.id}
                 selectedNodeId={session.selectedNodeId}
                 collapsedIds={collapsedIds}
+                variableCandidates={variableCandidates}
                 apply={session.apply}
                 onSelect={session.selectNode}
                 onToggle={toggleCollapsed}
@@ -397,8 +439,10 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                 />
               </label>
               <TemplateInterfaceRequirements
-                application={application}
                 disabled={!document || session.saving}
+                error={interfacesError}
+                loading={interfacesLoading}
+                manifests={interfaceManifests}
                 requirements={document?.content.interfaces ?? []}
                 apply={session.apply}
               />
@@ -408,6 +452,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                 <TemplateNodeInspector
                   node={selectedNode}
                   functions={document?.resources.functions ?? []}
+                  variableCandidates={variableCandidates}
                   apply={session.apply}
                 />
               </TemplateInspectorSection>
@@ -484,6 +529,7 @@ interface NodeTreeProps {
   rootId: string
   selectedNodeId: string
   collapsedIds: ReadonlySet<string>
+  variableCandidates: readonly TemplateVariableCandidate[]
   apply(operation: TemplateDocumentOperation): boolean
   onSelect(nodeId: string): void
   onToggle(nodeId: string): void
@@ -497,6 +543,7 @@ function NodeTree({
   rootId,
   selectedNodeId,
   collapsedIds,
+  variableCandidates,
   apply,
   onSelect,
   onToggle,
@@ -591,7 +638,7 @@ function NodeTree({
             ) : null}
           </div>
           {node.type === 'page' && !collapsed ? (
-            <PageNodeSummary node={node} apply={apply} />
+            <PageNodeSummary node={node} variableCandidates={variableCandidates} apply={apply} />
           ) : null}
         </div>
         {node.type === 'frame' && !collapsed && node.children.length > 0 ? (
@@ -605,6 +652,7 @@ function NodeTree({
                 rootId={rootId}
                 selectedNodeId={selectedNodeId}
                 collapsedIds={collapsedIds}
+                variableCandidates={variableCandidates}
                 apply={apply}
                 onSelect={onSelect}
                 onToggle={onToggle}
@@ -624,9 +672,11 @@ function hasInlineNodeProperties(node: TemplateNode): boolean {
 
 function PageNodeSummary({
   node,
+  variableCandidates,
   apply
 }: {
   node: Extract<TemplateNode, { type: 'page' }>
+  variableCandidates: readonly TemplateVariableCandidate[]
   apply: NodeTreeProps['apply']
 }): JSX.Element {
   const addMenuId = useId()
@@ -670,6 +720,7 @@ function PageNodeSummary({
                 index={index}
                 nodeId={node.id}
                 step={step}
+                variableCandidates={variableCandidates}
                 onChange={(nextStep) =>
                   apply({
                     type: 'update-timeline-step',
@@ -733,11 +784,13 @@ function TimelineStepFields({
   nodeId,
   index,
   step,
+  variableCandidates,
   onChange
 }: {
   nodeId: string
   index: number
   step: TimelineStep
+  variableCandidates: readonly TemplateVariableCandidate[]
   onChange(step: TimelineStep): void
 }): JSX.Element {
   const fieldPrefix = `节点 ${nodeId} 时间线项目 ${index + 1}`
@@ -745,19 +798,13 @@ function TimelineStepFields({
   if (step.type === 'play') {
     return (
       <div className={styles.timelineStepFields}>
-        <input
-          aria-label={`${fieldPrefix} TTS 文本`}
+        <TemplateVariableInput
+          mode="text"
+          ariaLabel={`${fieldPrefix} TTS 文本`}
+          candidates={variableCandidates}
           placeholder="TTS 文本"
-          value={textExpressionInputValue(step.text)}
-          onChange={(event) =>
-            onChange({
-              ...step,
-              text: {
-                type: 'string',
-                parts: [{ type: 'literal', value: event.target.value }]
-              }
-            })
-          }
+          value={step.text}
+          onChange={(text) => onChange({ ...step, text })}
         />
       </div>
     )
@@ -766,20 +813,16 @@ function TimelineStepFields({
   if (step.type === 'countdown') {
     return (
       <div className={styles.timelineStepFields}>
-        <input
-          aria-label={`${fieldPrefix} 倒计时时长`}
+        <TemplateVariableInput
+          mode="value"
+          ariaLabel={`${fieldPrefix} 倒计时时长`}
+          candidates={variableCandidates}
           inputMode="decimal"
+          min={0}
           placeholder="秒"
-          value={numberExpressionInputValue(step.seconds)}
-          onChange={(event) => {
-            const value = parseNonNegativeNumber(event.target.value)
-            if (value !== null) {
-              onChange({
-                ...step,
-                seconds: { type: 'number', source: 'literal', value }
-              })
-            }
-          }}
+          value={step.seconds}
+          valueType="number"
+          onChange={(seconds) => onChange({ ...step, seconds })}
         />
       </div>
     )
@@ -787,20 +830,16 @@ function TimelineStepFields({
 
   return (
     <div className={styles.timelineStepFields} data-field-count="2">
-      <input
-        aria-label={`${fieldPrefix} 录音时长`}
+      <TemplateVariableInput
+        mode="value"
+        ariaLabel={`${fieldPrefix} 录音时长`}
+        candidates={variableCandidates}
         inputMode="decimal"
+        min={0}
         placeholder="时长"
-        value={numberExpressionInputValue(step.duration)}
-        onChange={(event) => {
-          const value = parseNonNegativeNumber(event.target.value)
-          if (value !== null) {
-            onChange({
-              ...step,
-              duration: { type: 'number', source: 'literal', value }
-            })
-          }
-        }}
+        value={step.duration}
+        valueType="number"
+        onChange={(duration) => onChange({ ...step, duration })}
       />
       <input
         aria-label={`${fieldPrefix} 录音输出名称`}
@@ -836,34 +875,6 @@ function createTimelineStep(type: TimelineStep['type']): TimelineStep {
     duration: { type: 'number', source: 'literal', value: 1 },
     outputName: 'recording'
   }
-}
-
-function textExpressionInputValue(value: Extract<TimelineStep, { type: 'play' }>['text']): string {
-  return value.parts
-    .map((part) => {
-      if (part.type === 'literal') return part.value
-      return part.ref.scope === 'local'
-        ? `[@${part.ref.name}]`
-        : `[@${part.ref.alias}.${part.ref.varName}]`
-    })
-    .join('')
-}
-
-function numberExpressionInputValue(
-  value:
-    | Extract<TimelineStep, { type: 'countdown' }>['seconds']
-    | Extract<TimelineStep, { type: 'record' }>['duration']
-): string {
-  if (value.source === 'literal') return String(value.value)
-  return value.ref.scope === 'local'
-    ? `[@${value.ref.name}]`
-    : `[@${value.ref.alias}.${value.ref.varName}]`
-}
-
-function parseNonNegativeNumber(value: string): number | null {
-  if (value.trim() === '') return null
-  const parsed = Number(value)
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
 }
 
 function containsDescendant(node: TemplateNode, nodeId: string): boolean {

@@ -1,32 +1,31 @@
-import { useEffect, useMemo, useState, type JSX } from 'react'
+import { useMemo, useState, type JSX } from 'react'
 import type { InterfaceVarManifest } from '@ls101/core-types'
 import type {
-  TemplateApplication,
   TemplateDocumentOperation,
   TemplateInterfaceRequirement
 } from '@ls101/template-editor'
 import { Braces, Plus, Trash2, X } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { IconButton } from '../../components/ui/IconButton'
-import { templateErrorMessage } from './templateUi'
 import styles from './TemplateInterfaceRequirements.module.css'
 
 interface TemplateInterfaceRequirementsProps {
-  application: TemplateApplication
   disabled: boolean
+  error: string | null
+  loading: boolean
+  manifests: readonly InterfaceVarManifest[]
   requirements: readonly TemplateInterfaceRequirement[]
   apply(operation: TemplateDocumentOperation): boolean
 }
 
 export function TemplateInterfaceRequirements({
-  application,
   disabled,
+  error,
+  loading,
+  manifests,
   requirements,
   apply
 }: TemplateInterfaceRequirementsProps): JSX.Element {
-  const [manifests, setManifests] = useState<InterfaceVarManifest[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [selectedId, setSelectedId] = useState('')
   const [alias, setAlias] = useState('')
@@ -35,26 +34,6 @@ export function TemplateInterfaceRequirements({
     () => new Map(manifests.map((manifest) => [manifest.interfaceId, manifest])),
     [manifests]
   )
-
-  useEffect(() => {
-    let active = true
-    void application.browser
-      .listInterfaces()
-      .then((values) => {
-        if (!active) return
-        setManifests(values)
-        setError(null)
-      })
-      .catch((reason: unknown) => {
-        if (active) setError(templateErrorMessage(reason))
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [application])
 
   const resetDraft = (): void => {
     setAdding(false)

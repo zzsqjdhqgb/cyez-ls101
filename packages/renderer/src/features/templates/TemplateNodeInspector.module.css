@@ -64,8 +64,7 @@
 }
 
 .fieldGroup,
-.itemList,
-.partList {
+.itemList {
   display: grid;
   gap: 7px;
 }
@@ -149,60 +148,8 @@
   justify-self: start;
 }
 
-.partRow {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) 28px;
-  gap: 6px;
-  align-items: start;
-}
-
-.partType {
-  padding-top: 9px;
-  color: var(--color-text-muted);
-  font-size: 11px;
-}
-
-.partValue,
-.partValue {
-  display: grid;
-  min-width: 0;
-  gap: 6px;
-}
-
-.variableFields {
-  display: flex;
-  flex-wrap: wrap;
-  min-width: 0;
-  gap: 6px;
-}
-
-.variableFields select {
-  flex: 0 0 108px;
-  width: 108px;
-}
-
-.variableFields input {
-  flex: 1 1 140px;
-  width: auto;
-}
-
 .compactExpression textarea {
   min-height: 46px;
-}
-
-.compactLiteral {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 28px;
-  gap: 6px;
-  align-items: center;
-}
-
-.compactExpression .partRow {
-  grid-template-columns: 34px minmax(0, 1fr) 28px;
-}
-
-.compactExpression .partType {
-  font-size: 10px;
 }
 
 .emptyValue {
