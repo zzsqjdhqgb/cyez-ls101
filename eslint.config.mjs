@@ -17,6 +17,9 @@ export default defineConfig(
       '**/dist',
       '**/out',
       '**/model-assets/**',
+      '**/coverage/**',
+      '**/playwright-report/**',
+      '**/test-results/**',
       'resources/tts',
       '**/__tests__/**'
     ]
