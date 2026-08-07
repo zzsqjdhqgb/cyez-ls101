@@ -32,6 +32,7 @@ import {
 } from '../../components/settings/SettingsContent'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
+import { Modal, ModalDescription, ModalTitle } from '../../components/ui/Modal'
 import { toast } from '../../components/ui/toast'
 import { airouterApplication, type AIRouterApplication } from './AIRouterApplication'
 import styles from './AIRouterSettingsPage.module.css'
@@ -100,15 +101,6 @@ export function AIRouterSpeechSettingsPage({
     },
     [testAudioUrl]
   )
-
-  useEffect(() => {
-    if (!draft) return
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = previousOverflow
-    }
-  }, [draft])
 
   const localPackages =
     draft?.kind === 'local'
@@ -226,7 +218,7 @@ export function AIRouterSpeechSettingsPage({
 
   return (
     <SettingsContent>
-      {error ? (
+      {!draft && error ? (
         <div className={styles.error} role="alert">
           {error}
         </div>
@@ -344,25 +336,25 @@ export function AIRouterSpeechSettingsPage({
       </SettingsSection>
 
       {draft ? (
-        <div
-          className={styles.editorBackdrop}
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeEditor()
+        <Modal
+          dismissible={!busy}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) closeEditor()
           }}
+          open
+          overlayClassName={styles.editorBackdrop}
         >
-          <section
-            aria-labelledby="speech-provider-title"
-            aria-modal="true"
-            className={styles.editorDialog}
-            role="dialog"
-          >
+          <section className={styles.editorDialog}>
             <header className={styles.editorHeader}>
               <div>
-                <span className={styles.editorEyebrow}>
-                  {draft.id ? '编辑语音 Provider' : '添加语音 Provider'}
-                </span>
-                <h2 id="speech-provider-title">{draft.name.trim() || '未命名 Provider'}</h2>
+                <ModalDescription asChild>
+                  <span className={styles.editorEyebrow}>
+                    {draft.id ? '编辑语音 Provider' : '添加语音 Provider'}
+                  </span>
+                </ModalDescription>
+                <ModalTitle asChild>
+                  <h2>{draft.name.trim() || '未命名 Provider'}</h2>
+                </ModalTitle>
               </div>
               <button
                 aria-label="关闭语音 Provider 编辑器"
@@ -377,6 +369,11 @@ export function AIRouterSpeechSettingsPage({
             </header>
 
             <div className={styles.editorBody}>
+              {error ? (
+                <div className={styles.error} role="alert">
+                  {error}
+                </div>
+              ) : null}
               <SettingsSection title="基础配置">
                 <SettingsRow label="配置名称">
                   <input
@@ -790,7 +787,7 @@ export function AIRouterSpeechSettingsPage({
               </div>
             </footer>
           </section>
-        </div>
+        </Modal>
       ) : null}
 
       <ConfirmModal

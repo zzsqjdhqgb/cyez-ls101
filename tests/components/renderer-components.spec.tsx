@@ -25,26 +25,60 @@ test('FE-02 icon buttons remain discoverable through focus and tooltips', async 
 
   await expect(button).toHaveAccessibleName('删除 Provider')
   await button.focus()
-  await expect(component.getByRole('tooltip', { name: '删除 Provider' })).toBeVisible()
+  const tooltip = page.getByRole('tooltip', { name: '删除 Provider' })
+  await expect(tooltip).toBeVisible()
+  const tooltipId = await tooltip.getAttribute('id')
+  expect(tooltipId).toBeTruthy()
+  await expect(button).toHaveAttribute('aria-describedby', tooltipId as string)
 })
 
 test('FE-03 confirmation modal exposes dialog semantics and completes both actions', async ({
   page
 }) => {
   const component = await openComponent(page, 'confirm-modal')
-  const dialog = component.getByRole('dialog', { name: '删除 Provider？' })
+  const trigger = component.getByRole('button', { name: '打开确认框' })
+  const dialog = page.getByRole('alertdialog', { name: '删除 Provider？' })
 
   await expect(dialog).toHaveAttribute('aria-modal', 'true')
   await expect(dialog).toContainText('删除后将无法恢复。')
+  await expect(dialog.getByRole('button', { name: '取消' })).toBeFocused()
   await dialog.getByRole('button', { name: '删除' }).click()
   await expect(dialog).toBeHidden()
 
-  await component.getByRole('button', { name: '打开确认框' }).click()
-  await component.getByRole('button', { name: '取消' }).click()
+  await trigger.click()
+  await expect(dialog.getByRole('button', { name: '取消' })).toBeFocused()
+  await dialog.getByRole('button', { name: '取消' }).click()
   await expect(dialog).toBeHidden()
+  await expect(trigger).toBeFocused()
+
+  await trigger.click()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(trigger).toBeFocused()
 })
 
-test('FE-04 resizable split responds to keyboard resizing without leaving its bounds', async ({
+test('FE-04 shared modal traps focus, closes with Escape, and restores its trigger', async ({
+  page
+}) => {
+  const component = await openComponent(page, 'modal')
+  const trigger = component.getByRole('button', { name: '打开通用弹窗' })
+  const dialog = page.getByRole('dialog', { name: '通用弹窗' })
+  const secondary = dialog.getByRole('button', { name: '次要操作' })
+  const close = dialog.getByRole('button', { name: '关闭通用弹窗' })
+
+  await trigger.click()
+  await expect(dialog).toHaveAttribute('aria-modal', 'true')
+  await expect(secondary).toBeFocused()
+  await secondary.press('Tab')
+  await expect(close).toBeFocused()
+  await close.press('Tab')
+  await expect(secondary).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(trigger).toBeFocused()
+})
+
+test('FE-05 resizable split responds to keyboard resizing without leaving its bounds', async ({
   page
 }) => {
   const component = await openComponent(page, 'resizable-split')
@@ -65,7 +99,7 @@ test('FE-04 resizable split responds to keyboard resizing without leaving its bo
   await expect(separator).toHaveAttribute('aria-valuenow', '552')
 })
 
-test('FE-05 model selector groups providers and reports selection and refresh', async ({
+test('FE-06 model selector groups providers and reports selection and refresh', async ({
   page
 }) => {
   const component = await openComponent(page, 'ai-model-select')
@@ -85,7 +119,7 @@ test('FE-05 model selector groups providers and reports selection and refresh', 
   await expect(component.getByLabel('刷新次数')).toHaveText('1')
 })
 
-test('FE-06 application shell keeps navigation usable while changing layouts', async ({ page }) => {
+test('FE-07 application shell keeps navigation usable while changing layouts', async ({ page }) => {
   const component = await openComponent(page, 'shell')
   const sidebar = component.locator('aside')
 
@@ -106,7 +140,7 @@ test('FE-06 application shell keeps navigation usable while changing layouts', a
   await expect(component.locator('aside')).toHaveCount(0)
 })
 
-test('FE-07 settings rows remain usable in a narrow component viewport', async ({ page }) => {
+test('FE-08 settings rows remain usable in a narrow component viewport', async ({ page }) => {
   await page.setViewportSize({ height: 720, width: 720 })
   const component = await openComponent(page, 'settings')
   const select = component.getByRole('combobox', { name: '界面主题' })
@@ -124,7 +158,7 @@ test('FE-07 settings rows remain usable in a narrow component viewport', async (
   expect((switchBox?.x ?? 0) + (switchBox?.width ?? 0)).toBeLessThanOrEqual(720)
 })
 
-test('FE-08 page compositions retain a heading and empty-state reading order', async ({ page }) => {
+test('FE-09 page compositions retain a heading and empty-state reading order', async ({ page }) => {
   const component = await openComponent(page, 'page')
 
   await expect(component.getByRole('heading', { level: 1, name: '页面标题' })).toBeVisible()

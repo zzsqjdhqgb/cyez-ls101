@@ -26,6 +26,11 @@ import { Button } from '../../packages/renderer/src/components/ui/Button'
 import { ConfirmModal } from '../../packages/renderer/src/components/ui/ConfirmModal'
 import { EmptyState } from '../../packages/renderer/src/components/ui/EmptyState'
 import { IconButton } from '../../packages/renderer/src/components/ui/IconButton'
+import {
+  Modal,
+  ModalDescription,
+  ModalTitle
+} from '../../packages/renderer/src/components/ui/Modal'
 import { Page, PageHeader } from '../../packages/renderer/src/components/ui/Page'
 import { ResizableSplit } from '../../packages/renderer/src/components/ui/ResizableSplit'
 
@@ -61,6 +66,28 @@ export function ConfirmModalStory(): JSX.Element {
         title="删除 Provider？"
         confirmLabel="删除"
       />
+    </>
+  )
+}
+
+export function ModalStory(): JSX.Element {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>打开通用弹窗</Button>
+      <Modal open={open} onOpenChange={setOpen}>
+        <section>
+          <ModalTitle asChild>
+            <h2>通用弹窗</h2>
+          </ModalTitle>
+          <ModalDescription asChild>
+            <p>弹窗内容</p>
+          </ModalDescription>
+          <Button onClick={() => setOpen(false)}>次要操作</Button>
+          <Button onClick={() => setOpen(false)}>关闭通用弹窗</Button>
+        </section>
+      </Modal>
     </>
   )
 }

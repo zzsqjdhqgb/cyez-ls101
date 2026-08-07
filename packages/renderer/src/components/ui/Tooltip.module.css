@@ -1,10 +1,4 @@
-.root {
-  position: relative;
-  display: inline-flex;
-}
-
 .content {
-  position: absolute;
   z-index: 100;
   width: max-content;
   max-width: 220px;
@@ -17,60 +11,4 @@
   font-size: 12px;
   line-height: 1.35;
   pointer-events: none;
-  opacity: 0;
-  transform: translateY(2px);
-  transition:
-    opacity 120ms ease,
-    transform 120ms ease;
-}
-
-.root:hover .content,
-.root:focus-within .content {
-  opacity: 1;
-  transform: translate(0, 0);
-  transition-delay: 350ms;
-}
-
-.root[data-side='top'] .content {
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translate(-50%, 2px);
-}
-
-.root[data-side='top']:hover .content,
-.root[data-side='top']:focus-within .content {
-  transform: translate(-50%, 0);
-}
-
-.root[data-side='right'] .content {
-  top: 50%;
-  left: calc(100% + 8px);
-  transform: translate(-2px, -50%);
-}
-
-.root[data-side='right']:hover .content,
-.root[data-side='right']:focus-within .content {
-  transform: translate(0, -50%);
-}
-
-.root[data-side='bottom'] .content {
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translate(-50%, -2px);
-}
-
-.root[data-side='bottom']:hover .content,
-.root[data-side='bottom']:focus-within .content {
-  transform: translate(-50%, 0);
-}
-
-.root[data-side='left'] .content {
-  top: 50%;
-  right: calc(100% + 8px);
-  transform: translate(2px, -50%);
-}
-
-.root[data-side='left']:hover .content,
-.root[data-side='left']:focus-within .content {
-  transform: translate(0, -50%);
 }

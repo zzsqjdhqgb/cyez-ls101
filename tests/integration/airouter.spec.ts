@@ -1032,7 +1032,10 @@ test('AR-28 manages a local TTS model package and its Provider lifecycle', async
   await selectFileInElectronDialog(packagePath)
   await editor.getByRole('button', { name: '导入模型包' }).click()
   await expect(
-    page.getByRole('button', { name: '删除模型包 Integration Pocket Package' })
+    page.getByRole('button', {
+      includeHidden: true,
+      name: '删除模型包 Integration Pocket Package'
+    })
   ).toBeVisible()
   await expect(editor.getByRole('heading', { name: '启用模型' })).toBeVisible()
   await expect(editor.getByRole('checkbox', { name: 'Pocket A (pocket-a)' })).toBeChecked()
@@ -1091,12 +1094,12 @@ test('AR-28 manages a local TTS model package and its Provider lifecycle', async
   await expect(page.getByLabel('语音运行方式')).toBeDisabled()
   await expect(page.getByRole('checkbox', { name: 'Pocket A (pocket-a)' })).toBeChecked()
   await page.getByRole('button', { name: '删除 Provider' }).click()
-  const providerConfirm = page.getByRole('dialog', { name: '删除语音 Provider？' })
+  const providerConfirm = page.getByRole('alertdialog', { name: '删除语音 Provider？' })
   await providerConfirm.getByRole('button', { name: '删除 Provider' }).click()
   await expect(page.getByRole('button', { name: /Local Pocket/ })).toBeHidden()
 
   await page.getByRole('button', { name: '删除模型包 Integration Pocket Package' }).click()
-  const packageConfirm = page.getByRole('dialog', { name: '删除 TTS 模型包？' })
+  const packageConfirm = page.getByRole('alertdialog', { name: '删除 TTS 模型包？' })
   await packageConfirm.getByRole('button', { name: '删除模型包' }).click()
   await expect(page.getByText('已安装 0 个模型包')).toBeVisible()
   await expect(page.evaluate(() => window.airouter.listSpeechModelPackages())).resolves.toEqual([])
@@ -1322,7 +1325,10 @@ test('AR-32 executes the real Pocket TTS model package through the Electron stac
   await editor.getByLabel('语音运行方式').selectOption('local')
   await editor.getByRole('button', { name: '导入模型包' }).click()
   await expect(
-    page.getByRole('button', { name: '删除模型包 Pocket TTS Integration Package' })
+    page.getByRole('button', {
+      includeHidden: true,
+      name: '删除模型包 Pocket TTS Integration Package'
+    })
   ).toBeVisible({ timeout: 30_000 })
   await expect(editor.getByRole('checkbox', { name: 'Alba (alba)' })).toBeChecked()
   await expect(

@@ -5,29 +5,36 @@
 
 # Renderer 组件临时设计审查
 
-状态：临时清单。结论来自 FE-01 至 FE-08 的真实 Chromium 操作、窄 viewport 检查和当前 renderer 源码阅读；这里只记录需要后续确认或修复的设计问题，不改变本次组件测试的通过标准。
+状态：临时清单。结论来自 FE-01 至 FE-09 的真实 Chromium 操作、窄 viewport 检查和当前 renderer 源码阅读；已在本次重构中解决的项目保留在“已处理”小节，其他项目供后续修复。
+
+## 本次已处理
+
+- `ConfirmModal` 改用 Radix `AlertDialog`，补齐 `alertdialog` 语义、初始焦点、焦点陷阱、Escape/取消语义和关闭后的触发控件焦点恢复。
+- 新增共享 `Modal`，统一三个 Provider 编辑器和手动图片导入弹窗的 Portal、焦点管理、遮罩交互和忙碌状态下的关闭保护；保留原有可见 DOM 结构和 CSS。
+- `Tooltip` 改用 Radix Tooltip，补齐 Portal、碰撞处理、键盘触发和 `aria-describedby` 关联。
+- 手动图片导入错误区增加 `role="alert"`，异步失败可以被辅助技术及时播报。
 
 ## 优先处理
 
-### P1：确认框没有焦点管理和 Escape 行为
+### P1：确认框历史上没有焦点管理和 Escape 行为（已处理）
 
 位置：[`ConfirmModal.tsx`](../packages/renderer/src/components/ui/ConfirmModal.tsx:22)
 
-当前 modal 能提供 `role="dialog"`、`aria-modal` 和按钮操作，但打开时不会把焦点移入对话框，关闭后也不会恢复触发控件焦点；按 Escape 不会取消，Tab 也没有焦点陷阱。键盘用户可能继续操作背景页面，尤其是删除确认场景风险较高。建议补充初始焦点、Escape、焦点恢复和可测试的 focus trap；同时把固定的 `confirm-modal-title` / `confirm-modal-description` 改成 `useId`，避免同页存在多个 modal 时产生重复 ID。
+本次改为 Radix `AlertDialog`，由 Radix 管理焦点陷阱和模态层交互，并使用自动生成的标题/描述 ID；受控调用场景额外恢复打开前的触发控件焦点。组件测试 FE-03 覆盖确认和取消流程。
 
-### P1：手动导入图片弹窗缺少同等级的模态可用性
+### P1：手动导入图片弹窗缺少同等级的模态可用性（已处理）
 
 位置：[`ManualImageGenerationDialog.tsx`](../packages/renderer/src/features/airouter/ManualImageGenerationDialog.tsx:82)
 
-该弹窗也声明了 `role="dialog"` 和 `aria-modal`，但没有初始焦点、Escape、焦点恢复和 `aria-describedby`。导入失败信息只是普通 `div`（同文件约 169 行），异步错误不一定会被辅助技术及时播报。建议与确认框共用一个模态行为基础，并给错误区加 `role="alert"` 或状态播报策略。
+该弹窗现在复用 `Modal`，拥有初始焦点、焦点陷阱、焦点恢复和 `aria-describedby`；导入失败信息也已经改为 `role="alert"`。为避免导入流程被遮罩或 Escape 误取消，仍保留显式取消按钮和右上角关闭按钮作为关闭入口。
 
 ## P2：辅助语义和状态反馈不完整
 
-### Tooltip 没有和触发控件建立描述关系
+### Tooltip 历史上没有和触发控件建立描述关系（已处理）
 
 位置：[`Tooltip.tsx`](../packages/renderer/src/components/ui/Tooltip.tsx:14)、[`IconButton.tsx`](../packages/renderer/src/components/ui/IconButton.tsx:29)
 
-tooltip 通过 CSS 的 hover/focus-within 显示，但没有为 tooltip 生成 ID，也没有给子控件设置 `aria-describedby`。图标按钮自身有 `aria-label`，所以 FE-02 的视觉/可发现性通过，但其他需要补充说明的触发器不能稳定获得同一语义。建议使用 `useId` 建立描述关系，并明确 disabled 控件是否仍需要可读的原因说明。
+现在由 Radix Tooltip 在打开时生成 ID 并把 `aria-describedby` 关联到触发控件；FE-02 已验证该关系。disabled 触发器仍不会挂载 Tooltip，这是当前 API 的明确行为，后续若需要解释禁用原因应改用可聚焦包装元素。
 
 ### toast 溢出提示不可操作
 
@@ -39,13 +46,13 @@ tooltip 通过 CSS 的 hover/focus-within 显示，但没有为 tooltip 生成 I
 
 位置：[`SettingsContent.tsx`](../packages/renderer/src/components/settings/SettingsContent.tsx:42)
 
-`SettingsRow` 把 label 渲染为普通 `span`，组件本身不会给子控件生成 `id` 或 `aria-labelledby`。现有外观设置页面通过 select 的独立 `aria-label` 和 switch 的 `aria-label` 补救，因此 FE-07 通过；但复用 `SettingsRow` 的新控件若只依赖行标题，会缺少可访问名称。建议让 row 接收 `labelId`/`controlId`，或把控件渲染协议统一为 `aria-labelledby`。
+`SettingsRow` 把 label 渲染为普通 `span`，组件本身不会给子控件生成 `id` 或 `aria-labelledby`。现有外观设置页面通过 select 的独立 `aria-label` 和 switch 的 `aria-label` 补救，因此 FE-08 通过；但复用 `SettingsRow` 的新控件若只依赖行标题，会缺少可访问名称。建议让 row 接收 `labelId`/`controlId`，或把控件渲染协议统一为 `aria-labelledby`。
 
 ### ResizableSplit 的 separator 语义还不完整
 
 位置：[`ResizableSplit.tsx`](../packages/renderer/src/components/ui/ResizableSplit.tsx:77)
 
-FE-04 验证了键盘调整和当前最小/最大边界，但 separator 只有 `aria-valuemin` 和 `aria-valuenow`，缺少 `aria-valuemax`；像素值对用户也不够直观。建议补最大值、`aria-valuetext`，并在组件内部明确只接受两个 panel。当前实现对三个及以上 children 仍会渲染多个 handle，但只生成一组三列 grid 配置，API 行为容易误用。
+FE-05 验证了键盘调整和当前最小/最大边界，但 separator 只有 `aria-valuemin` 和 `aria-valuenow`，缺少 `aria-valuemax`；像素值对用户也不够直观。建议补最大值、`aria-valuetext`，并在组件内部明确只接受两个 panel。当前实现对三个及以上 children 仍会渲染多个 handle，但只生成一组三列 grid 配置，API 行为容易误用。
 
 ## P3：响应式与默认状态需要产品确认
 
@@ -53,7 +60,7 @@ FE-04 验证了键盘调整和当前最小/最大边界，但 separator 只有 `
 
 位置：[`global.css`](../packages/renderer/src/styles/global.css:17)、[`window.ts`](../src/main/window.ts:13)
 
-body 设置了 `min-width: 680px`，BrowserWindow 最小宽度为 760px。FE-07 只验证了 720px viewport 下设置控件不越界，因此当前桌面窗口范围内可用，但这不是移动或极窄窗口响应式设计。若未来要支持更窄窗口，需要重新设计 shell、Page header 和设置行；否则应把“桌面最小宽度”作为产品约束显式保留。
+body 设置了 `min-width: 680px`，BrowserWindow 最小宽度为 760px。FE-08 只验证了 720px viewport 下设置控件不越界，因此当前桌面窗口范围内可用，但这不是移动或极窄窗口响应式设计。若未来要支持更窄窗口，需要重新设计 shell、Page header 和设置行；否则应把“桌面最小宽度”作为产品约束显式保留。
 
 ### AIModelSelect 遇到失效 value 时会显示空白选择
 

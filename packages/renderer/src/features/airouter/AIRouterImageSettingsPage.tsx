@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
+import { Modal, ModalDescription, ModalTitle } from '../../components/ui/Modal'
 import {
   SettingsContent,
   SettingsRow,
@@ -142,7 +143,7 @@ export function AIRouterImageSettingsPage({
 
   return (
     <SettingsContent>
-      {error ? (
+      {!draft && error ? (
         <div className={styles.error} role="alert">
           {error}
         </div>
@@ -194,19 +195,25 @@ export function AIRouterImageSettingsPage({
       </SettingsSection>
 
       {draft ? (
-        <div className={styles.editorBackdrop} role="presentation">
-          <section
-            className={styles.editorDialog}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="image-provider-title"
-          >
+        <Modal
+          dismissible={!busy}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) closeEditor()
+          }}
+          open
+          overlayClassName={styles.editorBackdrop}
+        >
+          <section className={styles.editorDialog}>
             <header className={styles.editorHeader}>
               <div>
-                <span className={styles.editorEyebrow}>
-                  {draft.id ? '编辑图像 Provider' : '添加图像 Provider'}
-                </span>
-                <h2 id="image-provider-title">{draft.name.trim() || '未命名 Provider'}</h2>
+                <ModalDescription asChild>
+                  <span className={styles.editorEyebrow}>
+                    {draft.id ? '编辑图像 Provider' : '添加图像 Provider'}
+                  </span>
+                </ModalDescription>
+                <ModalTitle asChild>
+                  <h2>{draft.name.trim() || '未命名 Provider'}</h2>
+                </ModalTitle>
               </div>
               <button
                 aria-label="关闭图像 Provider 编辑器"
@@ -218,6 +225,11 @@ export function AIRouterImageSettingsPage({
               </button>
             </header>
             <div className={styles.editorBody}>
+              {error ? (
+                <div className={styles.error} role="alert">
+                  {error}
+                </div>
+              ) : null}
               <SettingsSection
                 title="基础配置"
                 description={
@@ -527,7 +539,7 @@ export function AIRouterImageSettingsPage({
               </div>
             </footer>
           </section>
-        </div>
+        </Modal>
       ) : null}
       <ConfirmModal
         danger
