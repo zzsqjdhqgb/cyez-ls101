@@ -36,6 +36,28 @@ describe('Template Interface adapter', () => {
     const instance = await application.published.createBlankInstance(interfaceId)
     const adapter = createTemplateInterfaceDependencies(application)
 
+    await expect(adapter.listInterfaceManifests()).resolves.toEqual([
+      {
+        interfaceId,
+        interfaceName: '有序题型',
+        vars: [
+          {
+            varName: 'secondValue',
+            type: 'image',
+            description: '第二项',
+            example: 'B',
+            path: 'second'
+          },
+          {
+            varName: 'firstValue',
+            type: 'text',
+            description: '第一项',
+            example: 'A',
+            path: 'first'
+          }
+        ]
+      }
+    ])
     await expect(adapter.getInterfaceManifest(interfaceId)).resolves.toMatchObject({
       interfaceId,
       vars: [
@@ -54,6 +76,7 @@ describe('Template Interface adapter', () => {
     const application = createInterfaceApplication({ repository, fileDialog: new TestFileDialog() })
     const adapter = createTemplateInterfaceDependencies(application)
 
+    await expect(adapter.listInterfaceManifests()).resolves.toEqual([])
     await expect(adapter.getInterfaceManifest(`sha256:${'f'.repeat(64)}`)).resolves.toBeNull()
     await expect(
       adapter.locateInterfaceInstance('10000000-0000-4000-8000-000000000001')

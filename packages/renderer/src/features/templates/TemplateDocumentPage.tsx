@@ -37,6 +37,7 @@ import { ResizableSplit } from '../../components/ui/ResizableSplit'
 import { useTemplateApplication } from './TemplateApplicationContext'
 import styles from './TemplateDocumentPage.module.css'
 import { TemplateInspectorSection } from './TemplateInspectorSection'
+import { TemplateInterfaceRequirements } from './TemplateInterfaceRequirements'
 import { TemplateNodeInspector } from './TemplateNodeInspector'
 import { templateErrorMessage } from './templateUi'
 import { useTemplateEditorSession } from './useTemplateEditorSession'
@@ -395,6 +396,12 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                   onChange={(event) => editMetadata('set-template-description', event.target.value)}
                 />
               </label>
+              <TemplateInterfaceRequirements
+                application={application}
+                disabled={!document || session.saving}
+                requirements={document?.content.interfaces ?? []}
+                apply={session.apply}
+              />
             </TemplateInspectorSection>
             {selectedNode ? (
               <TemplateInspectorSection title="节点属性" headingId="node-properties-heading">

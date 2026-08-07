@@ -3,13 +3,19 @@ import type { TemplateApplicationDependencies } from '@ls101/template-editor'
 
 export type TemplateInterfaceDependencies = Pick<
   TemplateApplicationDependencies,
-  'getInterfaceManifest' | 'locateInterfaceInstance'
+  'listInterfaceManifests' | 'getInterfaceManifest' | 'locateInterfaceInstance'
 >
 
 export function createTemplateInterfaceDependencies(
   application: InterfaceApplication
 ): TemplateInterfaceDependencies {
   return {
+    async listInterfaceManifests() {
+      const interfaces = await application.browser.listPublished()
+      return Promise.all(
+        interfaces.map(({ interfaceId }) => application.published.getVarManifest(interfaceId))
+      )
+    },
     async getInterfaceManifest(interfaceId) {
       const details = await application.published.get(interfaceId)
       if (!details) return null

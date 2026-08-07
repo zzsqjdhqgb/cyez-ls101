@@ -68,6 +68,7 @@ export interface InsertedFunctionCallResult extends EmbeddedFunctionResult {
 export interface TemplateBrowserApplication {
   listTemplates(): Promise<TemplateSummary[]>
   listFunctionLibraries(): Promise<FunctionLibrarySummary[]>
+  listInterfaces(): Promise<InterfaceVarManifest[]>
 }
 
 export interface TemplateDocumentApplication {
@@ -128,6 +129,7 @@ export interface TemplateApplication {
 export interface TemplateApplicationDependencies {
   repository: TemplateRepository
   getBuiltinFunctionLibraryManifest?(): Promise<unknown | null>
+  listInterfaceManifests?(): Promise<InterfaceVarManifest[]>
   getInterfaceManifest(interfaceId: string): Promise<InterfaceVarManifest | null>
   getSchemaManifest(schemaId: string): Promise<SchemaBlockManifest | null>
   locateInterfaceInstance(
@@ -328,6 +330,9 @@ export function createTemplateApplication(
             .map((release) => summarizeLibrary('imported', release)),
           ...locals.filter((item) => item !== null).map(summarizeLocalLibrary)
         ]
+      },
+      async listInterfaces() {
+        return dependencies.listInterfaceManifests?.() ?? []
       }
     },
     templates: {

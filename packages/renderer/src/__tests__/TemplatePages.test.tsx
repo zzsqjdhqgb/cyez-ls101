@@ -13,6 +13,7 @@ import { TemplateDocumentPage } from '../features/templates/TemplateDocumentPage
 const TEMPLATE_ID = '10000000-0000-4000-8000-000000000001'
 const FUNCTION_ID = '20000000-0000-4000-8000-000000000002'
 const MISSING_TEMPLATE_ID = '30000000-0000-4000-8000-000000000003'
+const INTERFACE_ID = `sha256:${'a'.repeat(64)}`
 
 afterEach(cleanup)
 
@@ -132,6 +133,28 @@ function application(document = template()): TemplateApplication {
           name: '听力函数库',
           functions: [{ functionId: FUNCTION_ID, name: '单题函数' }]
         }
+      ]),
+      listInterfaces: vi.fn().mockResolvedValue([
+        {
+          interfaceId: INTERFACE_ID,
+          interfaceName: '考试数据',
+          vars: [
+            {
+              varName: 'prompt',
+              type: 'text',
+              description: '题目文本',
+              example: '请作答',
+              path: 'prompt'
+            },
+            {
+              varName: 'picture',
+              type: 'image',
+              description: '题目图片',
+              example: 'image.png',
+              path: 'picture'
+            }
+          ]
+        }
       ])
     },
     templates: {
@@ -175,6 +198,43 @@ function createLibraryNode(
 }
 
 describe('Template pages', () => {
+  it('adds and configures an Interface requirement in global properties', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    const properties = await screen.findByRole('complementary', { name: '属性' })
+    fireEvent.click(await within(properties).findByRole('button', { name: '添加 Interface' }))
+    fireEvent.change(within(properties).getByLabelText('选择 Interface'), {
+      target: { value: INTERFACE_ID }
+    })
+
+    expect(within(properties).getByLabelText('新 Interface 别名')).toHaveValue('data')
+    expect(within(properties).getByLabelText('新 Interface 变量 prompt')).toBeChecked()
+    expect(within(properties).getByLabelText('新 Interface 变量 picture')).toBeChecked()
+    fireEvent.click(within(properties).getByLabelText('新 Interface 变量 picture'))
+    fireEvent.click(within(properties).getByRole('button', { name: '添加', exact: true }))
+
+    expect(within(properties).getByText('考试数据')).toBeInTheDocument()
+    fireEvent.change(within(properties).getByLabelText('Interface data 别名'), {
+      target: { value: 'speaking' }
+    })
+    expect(within(properties).getByLabelText('Interface speaking 变量 prompt')).toBeChecked()
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(app.templates.save).toHaveBeenCalledOnce())
+    expect(vi.mocked(app.templates.save).mock.calls[0][0].content.interfaces).toEqual([
+      { alias: 'speaking', interfaceId: INTERFACE_ID, acceptedVars: ['prompt'] }
+    ])
+  })
+
   it('lists templates and function libraries and opens a template', async () => {
     const app = application()
     render(
