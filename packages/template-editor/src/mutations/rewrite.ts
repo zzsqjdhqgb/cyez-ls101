@@ -228,11 +228,9 @@ export function renameLocalReferences(
   previous: string,
   next: string
 ): FunctionContent {
-  const mapRef = (ref: VariableRef): VariableRef =>
-    ref.scope === 'local' && ref.name === previous ? { ...ref, name: next } : ref
   return {
     ...content,
-    body: mapFrameExpressions(content.body, mapRef),
+    body: renameFrameLocalReferences(content.body, previous, next),
     outputs: content.outputs.map((output): FunctionOutputDef => {
       if (output.type === 'audio') {
         return output.expression.name === previous
@@ -247,35 +245,72 @@ export function renameLocalReferences(
       if (output.type === 'string') {
         return {
           ...output,
-          expression: mapStaticExpression(output.expression, mapRef) as typeof output.expression
+          expression: mapStaticExpression(
+            output.expression,
+            localReferenceRenamer(previous, next)
+          ) as typeof output.expression
         }
       }
       if (output.type === 'number') {
         return {
           ...output,
-          expression: mapStaticExpression(output.expression, mapRef) as typeof output.expression
+          expression: mapStaticExpression(
+            output.expression,
+            localReferenceRenamer(previous, next)
+          ) as typeof output.expression
         }
       }
       return {
         ...output,
-        expression: mapStaticExpression(output.expression, mapRef) as typeof output.expression
+        expression: mapStaticExpression(
+          output.expression,
+          localReferenceRenamer(previous, next)
+        ) as typeof output.expression
       }
     }),
-    schemaUses: mapSchemaUses(content.schemaUses, mapRef).map((use) => ({
-      ...use,
-      bindings: Object.fromEntries(
-        Object.entries(use.bindings).map(([key, expression]) => {
-          if (
-            (expression.type === 'record-output' || expression.type === 'choice-output') &&
-            expression.name === previous
-          ) {
-            return [key, { ...expression, name: next }]
-          }
-          return [key, expression]
-        })
-      )
-    }))
+    schemaUses: renameSchemaLocalReferences(content.schemaUses, previous, next)
   }
+}
+
+export function renameDefinitionLocalReferences(
+  state: DefinitionState,
+  previous: string,
+  next: string
+): DefinitionState {
+  return {
+    ...state,
+    root: renameFrameLocalReferences(state.root, previous, next),
+    schemaUses: renameSchemaLocalReferences(state.schemaUses, previous, next)
+  }
+}
+
+function renameFrameLocalReferences(frame: FrameNode, previous: string, next: string): FrameNode {
+  return mapFrameExpressions(frame, localReferenceRenamer(previous, next))
+}
+
+function renameSchemaLocalReferences(
+  uses: readonly SchemaUse[],
+  previous: string,
+  next: string
+): SchemaUse[] {
+  return mapSchemaUses(uses, localReferenceRenamer(previous, next)).map((use) => ({
+    ...use,
+    bindings: Object.fromEntries(
+      Object.entries(use.bindings).map(([key, expression]) => {
+        if (
+          (expression.type === 'record-output' || expression.type === 'choice-output') &&
+          expression.name === previous
+        ) {
+          return [key, { ...expression, name: next }]
+        }
+        return [key, expression]
+      })
+    )
+  }))
+}
+
+function localReferenceRenamer(previous: string, next: string): (ref: VariableRef) => VariableRef {
+  return (ref) => (ref.scope === 'local' && ref.name === previous ? { ...ref, name: next } : ref)
 }
 
 export function rewriteChoiceViewport(

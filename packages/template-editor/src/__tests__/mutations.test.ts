@@ -425,6 +425,87 @@ describe('Template 文档编辑', () => {
     })
   })
 
+  it('重命名节点输出变量时自动重写 Template 内的局部引用', () => {
+    let document = template([
+      {
+        id: 'call',
+        type: 'function',
+        functionRef: 'function',
+        inputs: {},
+        outputNames: { result: 'call-result' }
+      },
+      question('question', 'answer'),
+      {
+        id: 'page',
+        type: 'page',
+        content: {
+          blocks: [
+            {
+              id: 'text',
+              type: 'text',
+              x: 0,
+              y: 0,
+              text: {
+                type: 'string',
+                parts: [
+                  { type: 'variable', ref: { scope: 'local', name: 'call-result' } },
+                  {
+                    type: 'variable',
+                    ref: { scope: 'interface', alias: 'data', varName: 'call-result' }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        timeline: [{ type: 'record', duration: number(1), outputName: 'recording' }]
+      }
+    ])
+    document.content.schemaUses = [
+      {
+        useId: 'use',
+        schemaId: 'schema',
+        blockId: 'block',
+        bindings: {
+          text: { type: 'variable', scope: 'local', name: 'call-result' },
+          answer: { type: 'choice-output', name: 'answer' },
+          audio: { type: 'record-output', name: 'recording' }
+        }
+      }
+    ]
+
+    document = applyTemplateEdit(document, {
+      type: 'set-function-call-output-name',
+      nodeId: 'call',
+      outputName: 'result',
+      value: 'renamed-result'
+    })
+    document = applyTemplateEdit(document, {
+      type: 'set-choice-question',
+      nodeId: 'question',
+      outputName: 'renamed-answer'
+    })
+    const pageNode = document.content.root.children[2]
+    if (pageNode.type !== 'page') throw new Error('Expected page')
+    const recordingStep = pageNode.timeline[0]
+    if (recordingStep.type !== 'record') throw new Error('Expected recording')
+    document = applyTemplateEdit(document, {
+      type: 'update-timeline-step',
+      pageId: 'page',
+      index: 0,
+      step: { ...recordingStep, outputName: 'renamed-recording' }
+    })
+
+    const serialized = JSON.stringify(document.content)
+    expect(serialized).toContain('"name":"renamed-result"')
+    expect(serialized).toContain('"name":"renamed-answer"')
+    expect(serialized).toContain('"name":"renamed-recording"')
+    expect(serialized).toContain('"scope":"interface","alias":"data","varName":"call-result"')
+    expect(serialized).not.toContain('"scope":"local","name":"call-result"')
+    expect(serialized).not.toContain('"type":"choice-output","name":"answer"')
+    expect(serialized).not.toContain('"type":"record-output","name":"recording"')
+  })
+
   it('重命名 Interface alias 时重写 Template 根和 Schema 绑定', () => {
     const document = createTemplateDocument({
       name: 'Template',
@@ -1270,6 +1351,15 @@ describe('Function 文档编辑', () => {
       }
     })
     document = applyFunctionEdit(document, {
+      type: 'set-function-call-output-name',
+      nodeId: 'call',
+      outputName: 'value',
+      value: 'renamed-nested-value'
+    })
+    expect(document.content.outputs[0]).toMatchObject({
+      expression: { ref: { scope: 'local', name: 'renamed-nested-value' } }
+    })
+    document = applyFunctionEdit(document, {
       type: 'update-function-output',
       name: 'result',
       output: {
@@ -1282,7 +1372,7 @@ describe('Function 文档编辑', () => {
     expect(document.content.inputs).toEqual([{ name: 'prompt', type: 'string' }])
     expect(document.content.body.children[0]).toMatchObject({
       inputs: { value: { ref: { name: 'prompt' } } },
-      outputNames: { value: 'nested-value' }
+      outputNames: { value: 'renamed-nested-value' }
     })
     expect(document.content.outputs).toEqual([
       {

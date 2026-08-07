@@ -1,4 +1,4 @@
-import type { FunctionContent, FunctionDocument } from '../types'
+import type { FunctionContent, FunctionDocument, TemplateNode } from '../types'
 import { applyDefinitionOperation } from './definition'
 import { error, insertAt, insertionIndex, invalidIndex, removeAt, replaceAt } from './identifiers'
 import { applied, rejected } from './result'
@@ -11,6 +11,11 @@ export function editFunctionDocument(
 ): DocumentEditResult<FunctionDocument, FunctionDocumentOperation> {
   const direct = editFunctionMetadata(document, operation)
   if (direct) return direct
+
+  const outputRename = detectLocalOutputRename(
+    document.content.body,
+    operation as DefinitionOperation
+  )
 
   const result = applyDefinitionOperation(
     {
@@ -25,20 +30,70 @@ export function editFunctionDocument(
     operation as DefinitionOperation
   )
   if ('error' in result) return rejected(document, operation, result.error)
+  let content: FunctionContent = {
+    ...document.content,
+    body: result.state.root,
+    schemaUses: result.state.schemaUses
+  }
+  if (outputRename) {
+    content = renameLocalReferences(content, outputRename.previous, outputRename.next)
+  }
   return applied(
     document,
     operation,
     {
       ...document,
-      content: {
-        ...document.content,
-        body: result.state.root,
-        schemaUses: result.state.schemaUses
-      },
+      content,
       editorState: result.state.editorState
     },
     result.changes
   )
+}
+
+function detectLocalOutputRename(
+  root: FunctionContent['body'],
+  operation: DefinitionOperation
+): { previous: string; next: string } | null {
+  const node = findNode(root, 'nodeId' in operation ? operation.nodeId : '')
+  if (
+    operation.type === 'set-function-call-output-name' &&
+    operation.value !== null &&
+    node?.type === 'function'
+  ) {
+    return changedName(node.outputNames[operation.outputName], operation.value)
+  }
+  if (
+    operation.type === 'set-choice-question' &&
+    operation.outputName !== undefined &&
+    node?.type === 'choice-question'
+  ) {
+    return changedName(node.outputName, operation.outputName)
+  }
+  if (operation.type === 'update-timeline-step') {
+    const page = findNode(root, operation.pageId)
+    const step = page?.type === 'page' ? page.timeline[operation.index] : undefined
+    if (step?.type === 'record' && operation.step.type === 'record') {
+      return changedName(step.outputName, operation.step.outputName)
+    }
+  }
+  return null
+}
+
+function changedName(
+  previous: string | undefined,
+  next: string
+): { previous: string; next: string } | null {
+  return previous !== undefined && previous !== next ? { previous, next } : null
+}
+
+function findNode(node: TemplateNode, nodeId: string): TemplateNode | null {
+  if (node.id === nodeId) return node
+  if (node.type !== 'frame') return null
+  for (const child of node.children) {
+    const found = findNode(child, nodeId)
+    if (found) return found
+  }
+  return null
 }
 
 function editFunctionMetadata(

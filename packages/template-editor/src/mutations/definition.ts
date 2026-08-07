@@ -14,7 +14,12 @@ import {
   replaceAt
 } from './identifiers'
 import { prepareTimelineStep, removeChoiceOverrides, renameChoiceOverrides } from './page'
-import { collectLocalNames, defaultExpression, prepareInsertedSubtree } from './rewrite'
+import {
+  collectLocalNames,
+  defaultExpression,
+  prepareInsertedSubtree,
+  renameDefinitionLocalReferences
+} from './rewrite'
 import type {
   DefinitionOperation,
   DefinitionState,
@@ -214,8 +219,11 @@ export function applyDefinitionOperation(
           changes: [{ kind: 'insert', path: `${path}.timeline[${index}]` }]
         }
       })
-    case 'update-timeline-step':
-      return editPage(state, operation.pageId, (page, path) => {
+    case 'update-timeline-step': {
+      const current = findNode(state.root, operation.pageId)
+      const previousStep =
+        current?.node.type === 'page' ? current.node.timeline[operation.index] : undefined
+      const result = editPage(state, operation.pageId, (page, path) => {
         if (!hasIndex(page.timeline, operation.index))
           return {
             error: error('TIMELINE_STEP_NOT_FOUND', `${path}.timeline`, { index: operation.index })
@@ -228,6 +236,12 @@ export function applyDefinitionOperation(
           changes: [{ kind: 'update', path: `${path}.timeline[${operation.index}]` }]
         }
       })
+      return withRenamedLocalReferences(
+        result,
+        previousStep?.type === 'record' ? previousStep.outputName : undefined,
+        operation.step.type === 'record' ? operation.step.outputName : undefined
+      )
+    }
     case 'remove-timeline-step':
       return editPage(state, operation.pageId, (page, path) => {
         if (!hasIndex(page.timeline, operation.index))
@@ -280,12 +294,17 @@ export function applyDefinitionOperation(
           changes: [{ kind: 'insert', path: `${path}.timeline[${target}]` }]
         }
       })
-    case 'set-choice-question':
-      return updateNodeByType(state, operation.nodeId, 'choice-question', (node) => ({
+    case 'set-choice-question': {
+      const current = findNode(state.root, operation.nodeId)
+      const previousName =
+        current?.node.type === 'choice-question' ? current.node.outputName : undefined
+      const result = updateNodeByType(state, operation.nodeId, 'choice-question', (node) => ({
         ...node,
         ...(operation.stem === undefined ? {} : { stem: structuredClone(operation.stem) }),
         ...(operation.outputName === undefined ? {} : { outputName: operation.outputName })
       }))
+      return withRenamedLocalReferences(result, previousName, operation.outputName)
+    }
     case 'insert-choice-option':
       return editChoiceQuestion(state, operation.nodeId, (node, path) => {
         const index = insertionIndex(operation.index, node.options.length)
@@ -385,13 +404,20 @@ export function applyDefinitionOperation(
         else inputs[operation.inputName] = structuredClone(operation.expression)
         return { ...node, inputs }
       })
-    case 'set-function-call-output-name':
-      return updateNodeByType(state, operation.nodeId, 'function', (node) => {
+    case 'set-function-call-output-name': {
+      const current = findNode(state.root, operation.nodeId)
+      const previousName =
+        current?.node.type === 'function'
+          ? current.node.outputNames[operation.outputName]
+          : undefined
+      const result = updateNodeByType(state, operation.nodeId, 'function', (node) => {
         const outputNames = { ...node.outputNames }
         if (operation.value === null) delete outputNames[operation.outputName]
         else outputNames[operation.outputName] = operation.value
         return { ...node, outputNames }
       })
+      return withRenamedLocalReferences(result, previousName, operation.value ?? undefined)
+    }
     case 'reconcile-function-call':
       return reconcileFunctionCall(state, operation.nodeId, operation.signature)
     case 'insert-schema-use': {
@@ -662,6 +688,17 @@ function updateNode(
     state: { ...state, root: replaceNode(state.root, nodeId, update) },
     changes: [{ kind: 'update', path: found.path }]
   }
+}
+
+function withRenamedLocalReferences(
+  result: MutationResult,
+  previous: string | undefined,
+  next: string | undefined
+): MutationResult {
+  if ('error' in result || previous === undefined || next === undefined || previous === next) {
+    return result
+  }
+  return { ...result, state: renameDefinitionLocalReferences(result.state, previous, next) }
 }
 
 interface FoundNode {
