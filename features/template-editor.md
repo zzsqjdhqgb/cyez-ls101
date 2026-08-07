@@ -59,6 +59,8 @@ Template 和本地函数库工作文档都带 revision。首次保存使用 0，
 
 `templates.embedFunction(templateId, locator)` 通过包含来源、库 ID、可选 release 版本和函数 ID 的定位器读取函数库，从叶子开始复制完整依赖闭包，把嵌套调用从源函数 ID 改写为内嵌资源内容 ID，并把资源合并回 Template。同内容资源按哈希去重；运行期源函数缺失和理论上的哈希碰撞通过结构化 `TemplateApplicationError` 返回。操作返回根资源的 `functionRef`，供编辑器创建或更新函数调用节点。
 
+函数调用节点在节点卡片和右侧属性栏共享同一个参数编辑器。编辑器根据内嵌函数快照的签名展示全部入参和出参映射：字符串入参支持文本与变量拼接，数字和文件入参只能绑定常量或单个同类型变量，出参字段编辑调用方作用域中的变量名。修改出参名仍通过文档 mutation 自动重写当前定义作用域内的下游局部引用；快照缺失时，前端回退展示调用节点已有绑定以便诊断和修复。
+
 `templates.insertFunctionCall(templateId, locator, parentId, index?)` 是编辑器使用的原子组合操作。它在同一份已读取的 Template 上复制完整函数闭包、按函数签名生成所有输入默认表达式和调用处出参名、插入函数节点，最后只执行一次 CAS 保存。父框架不存在或结构操作被拒绝时不会保存刚复制的资源；成功结果包含 `functionRef` 和最终生成的 `callNodeId`。
 
 `templates.pruneFunctionResources()` 从 Template 根节点遍历嵌套函数引用，只保留传递可达的资源。清理是显式操作，因此编辑器可以在“复制资源”和“写入调用节点”之间保存中间状态。嵌入和清理都基于读取到的 revision 保存；如果期间发生 autosave，资源操作以 `REVISION_CONFLICT` 失败，不会用旧正文覆盖编辑内容。

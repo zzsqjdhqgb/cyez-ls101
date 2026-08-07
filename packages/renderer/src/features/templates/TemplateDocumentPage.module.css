@@ -509,6 +509,10 @@
   background: color-mix(in srgb, var(--color-accent) 3%, var(--color-surface-subtle));
 }
 
+.functionNodeSummary {
+  gap: 0;
+}
+
 .nodeSummaryHeading {
   display: flex;
   align-items: center;

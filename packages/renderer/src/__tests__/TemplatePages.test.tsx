@@ -348,6 +348,137 @@ describe('Template pages', () => {
     )
   })
 
+  it('edits function call inputs and output names from the card and inspector', async () => {
+    const document = template()
+    const functionRef = `sha256:${'c'.repeat(64)}`
+    document.resources.functions = [
+      {
+        id: functionRef,
+        name: '参数示例',
+        inputs: [
+          { name: 'title', type: 'string' },
+          { name: 'delay', type: 'number' },
+          { name: 'asset', type: 'file' }
+        ],
+        body: { id: 'function-root', type: 'frame', children: [] },
+        outputs: [
+          {
+            name: 'heading',
+            type: 'string',
+            expression: {
+              type: 'string',
+              source: 'variable',
+              ref: { scope: 'local', name: 'title' }
+            }
+          },
+          {
+            name: 'delayResult',
+            type: 'number',
+            expression: {
+              type: 'number',
+              source: 'variable',
+              ref: { scope: 'local', name: 'delay' }
+            }
+          },
+          {
+            name: 'assetResult',
+            type: 'file',
+            expression: {
+              type: 'file',
+              source: 'variable',
+              ref: { scope: 'local', name: 'asset' }
+            }
+          }
+        ],
+        schemaUses: []
+      }
+    ]
+    document.content.root.children = [
+      {
+        id: 'call',
+        name: '参数示例',
+        type: 'function',
+        functionRef,
+        inputs: {
+          title: { type: 'string', source: 'literal', value: '旧标题' },
+          delay: { type: 'number', source: 'literal', value: 3 },
+          asset: { type: 'file', source: 'literal', value: '' }
+        },
+        outputNames: {
+          heading: 'heading',
+          delayResult: 'delay-result',
+          assetResult: 'asset-result'
+        }
+      }
+    ]
+    const app = application(document)
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: '选择节点 call' }))
+    const selectedCard = screen
+      .getByRole('button', { name: '选择节点 call' })
+      .closest('[data-selected]')
+    if (!selectedCard) throw new Error('expected selected function card')
+
+    expect(within(selectedCard).getByLabelText('节点 call 入参 title')).toHaveValue('旧标题')
+    expect(within(selectedCard).getByLabelText('节点 call 入参 delay')).toHaveValue('3')
+    expect(within(selectedCard).getByLabelText('节点 call 出参 heading')).toHaveValue('heading')
+
+    const properties = screen.getByRole('complementary', { name: '属性' })
+    fireEvent.change(within(properties).getByLabelText('函数 入参 title'), {
+      target: { value: '新标题' }
+    })
+    fireEvent.change(within(properties).getByLabelText('函数 入参 delay'), {
+      target: { value: '8' }
+    })
+    fireEvent.change(within(properties).getByLabelText('函数 入参 asset'), {
+      target: { value: 'cover.png' }
+    })
+    fireEvent.change(within(properties).getByLabelText('函数 出参 heading'), {
+      target: { value: 'page-heading' }
+    })
+
+    expect(within(selectedCard).getByLabelText('节点 call 入参 title')).toHaveValue('新标题')
+    expect(within(selectedCard).getByLabelText('节点 call 入参 delay')).toHaveValue('8')
+    expect(within(selectedCard).getByLabelText('节点 call 入参 asset')).toHaveValue('cover.png')
+    expect(within(selectedCard).getByLabelText('节点 call 出参 heading')).toHaveValue(
+      'page-heading'
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '折叠节点 call' }))
+    expect(within(selectedCard).queryByLabelText('节点 call 入参 title')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '展开节点 call' }))
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(app.templates.save).toHaveBeenCalledOnce())
+    const saved = vi.mocked(app.templates.save).mock.calls[0][0]
+    const call = saved.content.root.children[0]
+    expect(call).toMatchObject({
+      type: 'function',
+      inputs: {
+        title: {
+          type: 'string',
+          parts: [{ type: 'literal', value: '新标题' }]
+        },
+        delay: { type: 'number', source: 'literal', value: 8 },
+        asset: { type: 'file', source: 'literal', value: 'cover.png' }
+      },
+      outputNames: {
+        heading: 'page-heading',
+        delayResult: 'delay-result',
+        assetResult: 'asset-result'
+      }
+    })
+  })
+
   it('creates a template and enters its editor route', async () => {
     const app = application()
     render(

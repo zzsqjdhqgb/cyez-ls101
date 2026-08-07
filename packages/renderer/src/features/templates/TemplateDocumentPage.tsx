@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useState, type JSX } from 'react'
 import type { InterfaceVarManifest } from '@ls101/core-types'
 import type {
   FrameNode,
+  FunctionDef,
   FunctionLibrarySummary,
   FunctionLocator,
   TemplateDocumentOperation,
@@ -38,6 +39,7 @@ import { ResizableSplit } from '../../components/ui/ResizableSplit'
 import { useTemplateApplication } from './TemplateApplicationContext'
 import styles from './TemplateDocumentPage.module.css'
 import { TemplateInspectorSection } from './TemplateInspectorSection'
+import { TemplateFunctionCallEditor } from './TemplateFunctionCallEditor'
 import { TemplateInterfaceRequirements } from './TemplateInterfaceRequirements'
 import { TemplateNodeInspector } from './TemplateNodeInspector'
 import { TemplateVariableInput } from './TemplateVariableInput'
@@ -404,6 +406,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                 rootId={root.id}
                 selectedNodeId={session.selectedNodeId}
                 collapsedIds={collapsedIds}
+                functions={document.resources.functions}
                 variableCandidates={variableCandidates}
                 apply={session.apply}
                 onSelect={session.selectNode}
@@ -529,6 +532,7 @@ interface NodeTreeProps {
   rootId: string
   selectedNodeId: string
   collapsedIds: ReadonlySet<string>
+  functions: readonly FunctionDef[]
   variableCandidates: readonly TemplateVariableCandidate[]
   apply(operation: TemplateDocumentOperation): boolean
   onSelect(nodeId: string): void
@@ -543,6 +547,7 @@ function NodeTree({
   rootId,
   selectedNodeId,
   collapsedIds,
+  functions,
   variableCandidates,
   apply,
   onSelect,
@@ -640,6 +645,17 @@ function NodeTree({
           {node.type === 'page' && !collapsed ? (
             <PageNodeSummary node={node} variableCandidates={variableCandidates} apply={apply} />
           ) : null}
+          {node.type === 'function' && !collapsed ? (
+            <div className={`${styles.nodeSummary} ${styles.functionNodeSummary}`}>
+              <TemplateFunctionCallEditor
+                compact
+                node={node}
+                definition={functions.find((definition) => definition.id === node.functionRef)}
+                variableCandidates={variableCandidates}
+                apply={apply}
+              />
+            </div>
+          ) : null}
         </div>
         {node.type === 'frame' && !collapsed && node.children.length > 0 ? (
           <div className={styles.nodeChildren}>
@@ -652,6 +668,7 @@ function NodeTree({
                 rootId={rootId}
                 selectedNodeId={selectedNodeId}
                 collapsedIds={collapsedIds}
+                functions={functions}
                 variableCandidates={variableCandidates}
                 apply={apply}
                 onSelect={onSelect}
@@ -667,7 +684,7 @@ function NodeTree({
 }
 
 function hasInlineNodeProperties(node: TemplateNode): boolean {
-  return node.type === 'page'
+  return node.type === 'page' || node.type === 'function'
 }
 
 function PageNodeSummary({

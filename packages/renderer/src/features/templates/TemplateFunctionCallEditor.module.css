@@ -1,0 +1,135 @@
+.editor {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.section,
+.rows {
+  display: grid;
+  min-width: 0;
+}
+
+.section {
+  gap: 7px;
+}
+
+.heading {
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.heading svg {
+  width: 13px;
+  height: 13px;
+}
+
+.heading small {
+  color: var(--color-text-faint);
+  font-size: 10px;
+  font-weight: 520;
+}
+
+.rows {
+  gap: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(76px, 0.42fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.identity {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.identity strong {
+  overflow: hidden;
+  color: var(--color-text-strong);
+  font-size: 11px;
+  font-weight: 620;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identity small {
+  color: var(--color-text-faint);
+  font-size: 10px;
+  font-weight: 520;
+}
+
+.control {
+  display: block;
+  min-width: 0;
+}
+
+.row input,
+.row textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font: 12px/1.35 var(--font-ui);
+}
+
+.row input:focus,
+.row textarea:focus {
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 0;
+}
+
+.empty,
+.warning {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.warning {
+  padding: 7px 8px;
+  border: 1px solid var(--color-warning-border, var(--color-border));
+  border-radius: var(--radius-xs);
+  background: var(--color-warning-soft, var(--color-surface-subtle));
+}
+
+.editor[data-compact] {
+  gap: 8px;
+}
+
+.editor[data-compact] .section {
+  gap: 4px;
+}
+
+.editor[data-compact] .heading {
+  font-size: 10px;
+}
+
+.editor[data-compact] .row {
+  grid-template-columns: minmax(70px, 0.35fr) minmax(0, 1fr);
+  gap: 5px;
+  padding: 3px 0;
+}
+
+.editor[data-compact] .row input,
+.editor[data-compact] .row textarea {
+  height: 24px;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  font-size: 11px;
+}

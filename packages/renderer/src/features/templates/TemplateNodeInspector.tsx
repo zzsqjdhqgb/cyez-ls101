@@ -14,6 +14,7 @@ import type {
 } from '@ls101/template-editor'
 import { Button } from '../../components/ui/Button'
 import { IconButton } from '../../components/ui/IconButton'
+import { TemplateFunctionCallEditor } from './TemplateFunctionCallEditor'
 import styles from './TemplateNodeInspector.module.css'
 import { TemplateVariableInput } from './TemplateVariableInput'
 import type { TemplateVariableCandidate } from './TemplateVariableInputModel'
@@ -38,6 +39,13 @@ export function TemplateNodeInspector({
       <PageInspector node={node} variableCandidates={variableCandidates} apply={apply} />
     ) : node.type === 'choice-question' ? (
       <ChoiceQuestionInspector node={node} variableCandidates={variableCandidates} apply={apply} />
+    ) : node.type === 'function' ? (
+      <TemplateFunctionCallEditor
+        node={node}
+        definition={functions.find((definition) => definition.id === node.functionRef)}
+        variableCandidates={variableCandidates}
+        apply={apply}
+      />
     ) : null
 
   return (
