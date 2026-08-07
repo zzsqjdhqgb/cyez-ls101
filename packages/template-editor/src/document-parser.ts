@@ -169,7 +169,13 @@ function isFunctionOutput(value: unknown): value is FunctionOutputDef {
 }
 
 function isTemplateNode(value: unknown): value is TemplateNode {
-  if (!isRecord(value) || typeof value.id !== 'string') return false
+  if (
+    !isRecord(value) ||
+    typeof value.id !== 'string' ||
+    (value.name !== undefined && typeof value.name !== 'string')
+  ) {
+    return false
+  }
   switch (value.type) {
     case 'frame':
       return isFrameNode(value)
@@ -207,6 +213,7 @@ function isFrameNode(value: unknown): value is FrameNode {
     !isRecord(value) ||
     value.type !== 'frame' ||
     typeof value.id !== 'string' ||
+    (value.name !== undefined && typeof value.name !== 'string') ||
     !Array.isArray(value.children) ||
     !value.children.every(isTemplateNode)
   ) {

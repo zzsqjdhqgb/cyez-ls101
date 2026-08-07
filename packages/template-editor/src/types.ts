@@ -178,6 +178,8 @@ export type TemplateNode = PageNode | FrameNode | FunctionNode | ChoiceQuestionN
 
 export interface BaseNode {
   id: string
+  /** 仅用于编辑器展示，不参与节点寻址或变量解析。 */
+  name?: string
 }
 
 export interface FrameNode extends BaseNode {

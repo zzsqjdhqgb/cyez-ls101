@@ -498,8 +498,8 @@
 
 .nodeSummary {
   display: grid;
-  gap: 7px;
-  padding: 9px 12px 11px 40px;
+  gap: 4px;
+  padding: 7px 10px 8px 40px;
   border-top: 1px solid var(--color-border);
   background: var(--color-surface-subtle);
 }
@@ -525,33 +525,101 @@
   font-weight: 520;
 }
 
+.nodeSummaryActions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.nodeSummaryAdd,
+.timelineRemove {
+  width: 22px;
+  height: 22px;
+}
+
+.timelineAddOption {
+  width: 24px;
+  height: 24px;
+}
+
 .timelineSummary {
   display: grid;
-  gap: 4px;
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.timelineSummary li {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
-  gap: 7px;
-  align-items: center;
-  min-height: 26px;
-  padding: 3px 8px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs);
-  color: var(--color-text);
-  background: var(--color-surface);
-  font-size: 11px;
-  font-weight: 560;
+.timelineSummaryItem,
+.timelineAddRow {
+  min-height: 29px;
+  background: transparent;
 }
 
-.timelineSummary svg {
-  width: 14px;
-  height: 14px;
+.timelineSummary > li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.timelineSummaryItem {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 22px;
+  gap: 5px;
+  align-items: center;
+  padding: 2px 2px 2px 4px;
+  color: var(--color-text);
+}
+
+.timelineTypeIcon {
+  display: grid;
+  width: 16px;
+  height: 22px;
+  place-items: center;
   color: var(--color-text-muted);
+}
+
+.timelineTypeIcon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.timelineStepFields {
+  display: grid;
+  min-width: 0;
+}
+
+.timelineStepFields[data-field-count='2'] {
+  grid-template-columns: minmax(58px, 0.7fr) minmax(82px, 1fr);
+  gap: 4px;
+}
+
+.timelineStepFields input {
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  padding: 2px 6px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font: 11px/1.35 var(--font-ui);
+}
+
+.timelineStepFields input:focus {
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 0;
+}
+
+.timelineStepFields input::placeholder {
+  color: var(--color-text-faint);
+}
+
+.timelineAddRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 2px 4px;
 }
 
 .nodeSummaryEmpty {

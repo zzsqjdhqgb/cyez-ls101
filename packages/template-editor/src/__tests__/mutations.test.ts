@@ -145,6 +145,22 @@ function expectEditError(
 }
 
 describe('Template 文档编辑', () => {
+  it('修改节点显示名称时不改变节点 ID', () => {
+    const document = template([page()])
+    const result = editTemplateDocument(document, {
+      type: 'set-node-name',
+      nodeId: 'page',
+      value: '开场页面'
+    })
+
+    expect(result.applied).toBe(true)
+    if (!result.applied) return
+    expect(result.document.content.root.children[0]).toMatchObject({
+      id: 'page',
+      name: '开场页面'
+    })
+  })
+
   it('插入节点时生成不冲突的节点 ID 和局部输出名，并保持 revision', () => {
     const document = template([question('question', 'answer')])
     const result = editTemplateDocument(document, {

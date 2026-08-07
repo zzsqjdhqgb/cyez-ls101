@@ -45,6 +45,7 @@ export function applyDefinitionOperation(
       })
       const node: FunctionNode = {
         id: operation.nodeId ?? '',
+        name: operation.signature.name ?? '函数调用',
         type: 'function',
         functionRef: operation.functionRef,
         inputs,
@@ -58,6 +59,8 @@ export function applyDefinitionOperation(
       return moveNode(state, operation.nodeId, operation.parentId, operation.index)
     case 'copy-node':
       return copyNode(state, operation.nodeId, operation.parentId, operation.index)
+    case 'set-node-name':
+      return updateNode(state, operation.nodeId, (node) => ({ ...node, name: operation.value }))
     case 'set-frame-choice-collector':
       return updateNodeByType(state, operation.frameId, 'frame', (frame) => {
         if (operation.pages === null) {
@@ -646,6 +649,19 @@ function updateNodeByType<TType extends TemplateNode['type']>(
     node: update(node),
     changes: [{ kind: 'update', path }]
   }))
+}
+
+function updateNode(
+  state: DefinitionState,
+  nodeId: string,
+  update: (node: TemplateNode) => TemplateNode
+): MutationResult {
+  const found = findNode(state.root, nodeId)
+  if (!found) return { error: error('NODE_NOT_FOUND', 'nodeId', { nodeId }) }
+  return {
+    state: { ...state, root: replaceNode(state.root, nodeId, update) },
+    changes: [{ kind: 'update', path: found.path }]
+  }
 }
 
 interface FoundNode {

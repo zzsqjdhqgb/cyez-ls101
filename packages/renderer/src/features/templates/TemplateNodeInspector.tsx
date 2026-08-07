@@ -28,13 +28,30 @@ export function TemplateNodeInspector({
   node,
   functions,
   apply
-}: TemplateNodeInspectorProps): JSX.Element | null {
-  if (node.type === 'frame') {
-    return <FrameInspector node={node} functions={functions} apply={apply} />
-  }
-  if (node.type === 'page') return <PageInspector node={node} apply={apply} />
-  if (node.type === 'choice-question') return <ChoiceQuestionInspector node={node} apply={apply} />
-  return null
+}: TemplateNodeInspectorProps): JSX.Element {
+  const details =
+    node.type === 'frame' ? (
+      <FrameInspector node={node} functions={functions} apply={apply} />
+    ) : node.type === 'page' ? (
+      <PageInspector node={node} apply={apply} />
+    ) : node.type === 'choice-question' ? (
+      <ChoiceQuestionInspector node={node} apply={apply} />
+    ) : null
+
+  return (
+    <div className={styles.nodeEditor}>
+      <label>
+        节点名称
+        <input
+          value={node.name ?? ''}
+          onChange={(event) =>
+            apply({ type: 'set-node-name', nodeId: node.id, value: event.target.value })
+          }
+        />
+      </label>
+      {details}
+    </div>
+  )
 }
 
 function FrameInspector({

@@ -156,14 +156,14 @@ const EMPTY_TEMPLATE_CONTENT: TemplateContent = {
   name: '',
   description: '',
   interfaces: [],
-  root: { id: 'root', type: 'frame', children: [] },
+  root: { id: 'root', name: '根框架', type: 'frame', children: [] },
   schemaUses: []
 }
 
 const EMPTY_FUNCTION_CONTENT: FunctionContent = {
   name: '',
   inputs: [],
-  body: { id: 'root', type: 'frame', children: [] },
+  body: { id: 'root', name: '根框架', type: 'frame', children: [] },
   outputs: [],
   schemaUses: []
 }
@@ -531,7 +531,7 @@ function summarizeLibrary(
         source === 'builtin' &&
         release.libraryId === 'builtin:basic' &&
         content.body.children.length === 1
-          ? structuredClone(content.body.children[0])
+          ? { ...structuredClone(content.body.children[0]), name: content.name }
           : undefined
       return { functionId, name: content.name, ...(component ? { component } : {}) }
     })

@@ -1,10 +1,11 @@
-import { useEffect, useState, type JSX } from 'react'
+import { useEffect, useId, useState, type JSX } from 'react'
 import type {
   FrameNode,
   FunctionLibrarySummary,
   FunctionLocator,
   TemplateDocumentOperation,
-  TemplateNode
+  TemplateNode,
+  TimelineStep
 } from '@ls101/template-editor'
 import {
   ArrowDown,
@@ -494,7 +495,8 @@ function NodeTree({
   onToggle,
   onDelete
 }: NodeTreeProps): JSX.Element {
-  const collapsible = node.type === 'frame' && node.children.length > 0
+  const collapsible =
+    (node.type === 'frame' && node.children.length > 0) || hasInlineNodeProperties(node)
   const collapsed = collapsedIds.has(node.id) && !containsDescendant(node, selectedNodeId)
   const selected = node.id === selectedNodeId
   const canMoveUp = Boolean(parent && index > 0)
@@ -521,8 +523,11 @@ function NodeTree({
             >
               <NodeIcon type={node.type} />
               <span className={styles.nodeIdentity}>
-                <strong>{node.id}</strong>
-                <small>{node.id === rootId ? '根框架' : nodeTypeLabel(node.type)}</small>
+                <strong>{node.name?.trim() || nodeTypeLabel(node.type)}</strong>
+                <small>
+                  {node.id}
+                  {node.id === rootId ? ' · 根节点' : ''}
+                </small>
               </span>
             </button>
             {selected && parent ? (
@@ -578,7 +583,9 @@ function NodeTree({
               </div>
             ) : null}
           </div>
-          {node.type === 'page' ? <PageNodeSummary node={node} /> : null}
+          {node.type === 'page' && !collapsed ? (
+            <PageNodeSummary node={node} apply={apply} />
+          ) : null}
         </div>
         {node.type === 'frame' && !collapsed && node.children.length > 0 ? (
           <div className={styles.nodeChildren}>
@@ -604,21 +611,88 @@ function NodeTree({
   )
 }
 
-function PageNodeSummary({ node }: { node: Extract<TemplateNode, { type: 'page' }> }): JSX.Element {
+function hasInlineNodeProperties(node: TemplateNode): boolean {
+  return node.type === 'page'
+}
+
+function PageNodeSummary({
+  node,
+  apply
+}: {
+  node: Extract<TemplateNode, { type: 'page' }>
+  apply: NodeTreeProps['apply']
+}): JSX.Element {
+  const addMenuId = useId()
+  const [adding, setAdding] = useState(false)
+
+  const addStep = (type: TimelineStep['type']): void => {
+    const step = createTimelineStep(type)
+    if (apply({ type: 'insert-timeline-step', pageId: node.id, step })) setAdding(false)
+  }
+
   return (
     <div className={styles.nodeSummary}>
       <div className={styles.nodeSummaryHeading}>
         <span>时间线</span>
-        <small>{node.timeline.length} 项</small>
+        <div className={styles.nodeSummaryActions}>
+          <small>{node.timeline.length} 项</small>
+          <IconButton
+            aria-controls={addMenuId}
+            aria-expanded={adding}
+            className={styles.nodeSummaryAdd}
+            icon={Plus}
+            label={`添加节点 ${node.id} 时间线项目`}
+            size="small"
+            variant="ghost"
+            onClick={() => setAdding((current) => !current)}
+          />
+        </div>
       </div>
-      {node.timeline.length > 0 ? (
+      {node.timeline.length > 0 || adding ? (
         <ol className={styles.timelineSummary} aria-label={`节点 ${node.id} 时间线`}>
           {node.timeline.map((step, index) => (
-            <li key={index}>
-              <TimelineStepIcon type={step.type} />
-              <span>{timelineStepLabel(step.type)}</span>
+            <li className={styles.timelineSummaryItem} key={index}>
+              <span
+                aria-label={timelineStepLabel(step.type)}
+                className={styles.timelineTypeIcon}
+                title={timelineStepLabel(step.type)}
+              >
+                <TimelineStepIcon type={step.type} />
+              </span>
+              <TimelineStepFields
+                index={index}
+                nodeId={node.id}
+                step={step}
+                onChange={(nextStep) =>
+                  apply({
+                    type: 'update-timeline-step',
+                    pageId: node.id,
+                    index,
+                    step: nextStep
+                  })
+                }
+              />
+              <IconButton
+                className={styles.timelineRemove}
+                icon={Trash2}
+                label={`删除节点 ${node.id} 时间线项目 ${index + 1}`}
+                size="small"
+                variant="danger"
+                onClick={() => apply({ type: 'remove-timeline-step', pageId: node.id, index })}
+              />
             </li>
           ))}
+          {adding ? (
+            <li
+              aria-label={`节点 ${node.id} 新增时间线项目`}
+              className={styles.timelineAddRow}
+              id={addMenuId}
+            >
+              <TimelineAddButton icon={Volume2} label="TTS 播放" onClick={() => addStep('play')} />
+              <TimelineAddButton icon={Timer} label="倒计时" onClick={() => addStep('countdown')} />
+              <TimelineAddButton icon={Mic} label="录音" onClick={() => addStep('record')} />
+            </li>
+          ) : null}
         </ol>
       ) : (
         <span className={styles.nodeSummaryEmpty}>暂无时间线</span>
@@ -627,16 +701,162 @@ function PageNodeSummary({ node }: { node: Extract<TemplateNode, { type: 'page' 
   )
 }
 
-function TimelineStepIcon({ type }: { type: 'play' | 'countdown' | 'record' }): JSX.Element {
+function TimelineAddButton({
+  icon: Icon,
+  label,
+  onClick
+}: {
+  icon: typeof Volume2
+  label: string
+  onClick(): void
+}): JSX.Element {
+  return (
+    <IconButton
+      className={styles.timelineAddOption}
+      icon={Icon}
+      label={`添加 ${label}`}
+      size="small"
+      variant="ghost"
+      onClick={onClick}
+    />
+  )
+}
+
+function TimelineStepFields({
+  nodeId,
+  index,
+  step,
+  onChange
+}: {
+  nodeId: string
+  index: number
+  step: TimelineStep
+  onChange(step: TimelineStep): void
+}): JSX.Element {
+  const fieldPrefix = `节点 ${nodeId} 时间线项目 ${index + 1}`
+
+  if (step.type === 'play') {
+    return (
+      <div className={styles.timelineStepFields}>
+        <input
+          aria-label={`${fieldPrefix} TTS 文本`}
+          placeholder="TTS 文本"
+          value={textExpressionInputValue(step.text)}
+          onChange={(event) =>
+            onChange({
+              ...step,
+              text: {
+                type: 'string',
+                parts: [{ type: 'literal', value: event.target.value }]
+              }
+            })
+          }
+        />
+      </div>
+    )
+  }
+
+  if (step.type === 'countdown') {
+    return (
+      <div className={styles.timelineStepFields}>
+        <input
+          aria-label={`${fieldPrefix} 倒计时时长`}
+          inputMode="decimal"
+          placeholder="秒"
+          value={numberExpressionInputValue(step.seconds)}
+          onChange={(event) => {
+            const value = parseNonNegativeNumber(event.target.value)
+            if (value !== null) {
+              onChange({
+                ...step,
+                seconds: { type: 'number', source: 'literal', value }
+              })
+            }
+          }}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className={styles.timelineStepFields} data-field-count="2">
+      <input
+        aria-label={`${fieldPrefix} 录音时长`}
+        inputMode="decimal"
+        placeholder="时长"
+        value={numberExpressionInputValue(step.duration)}
+        onChange={(event) => {
+          const value = parseNonNegativeNumber(event.target.value)
+          if (value !== null) {
+            onChange({
+              ...step,
+              duration: { type: 'number', source: 'literal', value }
+            })
+          }
+        }}
+      />
+      <input
+        aria-label={`${fieldPrefix} 录音输出名称`}
+        placeholder="输出名称"
+        value={step.outputName}
+        onChange={(event) => onChange({ ...step, outputName: event.target.value })}
+      />
+    </div>
+  )
+}
+
+function TimelineStepIcon({ type }: { type: TimelineStep['type'] }): JSX.Element {
   if (type === 'play') return <Volume2 aria-hidden="true" />
   if (type === 'countdown') return <Timer aria-hidden="true" />
   return <Mic aria-hidden="true" />
 }
 
-function timelineStepLabel(type: 'play' | 'countdown' | 'record'): string {
+function timelineStepLabel(type: TimelineStep['type']): string {
   if (type === 'play') return 'TTS 播放'
   if (type === 'countdown') return '倒计时'
   return '录音'
+}
+
+function createTimelineStep(type: TimelineStep['type']): TimelineStep {
+  if (type === 'play') {
+    return { type: 'play', text: { type: 'string', parts: [{ type: 'literal', value: '' }] } }
+  }
+  if (type === 'countdown') {
+    return { type: 'countdown', seconds: { type: 'number', source: 'literal', value: 1 } }
+  }
+  return {
+    type: 'record',
+    duration: { type: 'number', source: 'literal', value: 1 },
+    outputName: 'recording'
+  }
+}
+
+function textExpressionInputValue(value: Extract<TimelineStep, { type: 'play' }>['text']): string {
+  return value.parts
+    .map((part) => {
+      if (part.type === 'literal') return part.value
+      return part.ref.scope === 'local'
+        ? `[@${part.ref.name}]`
+        : `[@${part.ref.alias}.${part.ref.varName}]`
+    })
+    .join('')
+}
+
+function numberExpressionInputValue(
+  value:
+    | Extract<TimelineStep, { type: 'countdown' }>['seconds']
+    | Extract<TimelineStep, { type: 'record' }>['duration']
+): string {
+  if (value.source === 'literal') return String(value.value)
+  return value.ref.scope === 'local'
+    ? `[@${value.ref.name}]`
+    : `[@${value.ref.alias}.${value.ref.varName}]`
+}
+
+function parseNonNegativeNumber(value: string): number | null {
+  if (value.trim() === '') return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
 }
 
 function containsDescendant(node: TemplateNode, nodeId: string): boolean {

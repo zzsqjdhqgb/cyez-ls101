@@ -16,6 +16,7 @@ import type {
 } from '../types'
 
 export interface FunctionCallSignature {
+  name?: string
   inputs: readonly FunctionInputDef[]
   outputs: readonly Pick<FunctionOutputDef, 'name' | 'type'>[]
 }
@@ -39,6 +40,7 @@ export type DefinitionOperation =
   | { type: 'remove-node'; nodeId: string }
   | { type: 'move-node'; nodeId: string; parentId: string; index?: number }
   | { type: 'copy-node'; nodeId: string; parentId: string; index?: number }
+  | { type: 'set-node-name'; nodeId: string; value: string }
   | {
       type: 'set-frame-choice-collector'
       frameId: string

@@ -733,6 +733,37 @@ describe('Template pages', () => {
     )
 
     fireEvent.click(await screen.findByRole('button', { name: '选择节点 page-1' }))
+    fireEvent.change(screen.getByLabelText('节点名称'), { target: { value: '开场页面' } })
+    expect(screen.getByText('开场页面')).toBeInTheDocument()
+    const collapsePage = screen.getByRole('button', { name: '折叠节点 page-1' })
+    expect(collapsePage).toBeEnabled()
+    fireEvent.click(collapsePage)
+    expect(
+      screen.queryByRole('button', { name: '添加节点 page-1 时间线项目' })
+    ).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '展开节点 page-1' }))
+
+    const addTimelineItem = screen.getByRole('button', {
+      name: '添加节点 page-1 时间线项目'
+    })
+    fireEvent.click(addTimelineItem)
+    expect(addTimelineItem).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: '添加 TTS 播放' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '添加 倒计时' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '添加 录音' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '添加 TTS 播放' }))
+    const insertedTimeline = screen.getByRole('list', { name: '节点 page-1 时间线' })
+    expect(within(insertedTimeline).getAllByRole('listitem')).toHaveLength(1)
+    const inlineTts = within(insertedTimeline).getByLabelText('节点 page-1 时间线项目 1 TTS 文本')
+    fireEvent.change(inlineTts, { target: { value: '卡片内文本' } })
+    expect(inlineTts).toHaveValue('卡片内文本')
+    fireEvent.click(
+      within(insertedTimeline).getByRole('button', {
+        name: '删除节点 page-1 时间线项目 1'
+      })
+    )
+    expect(screen.queryByRole('list', { name: '节点 page-1 时间线' })).not.toBeInTheDocument()
+
     fireEvent.click(screen.getByRole('button', { name: 'TTS 播放' }))
     fireEvent.change(screen.getByLabelText('TTS 文本文本 1'), {
       target: { value: '请朗读：' }
@@ -750,15 +781,27 @@ describe('Template pages', () => {
 
     const timelineSummary = screen.getByRole('list', { name: '节点 page-1 时间线' })
     expect(within(timelineSummary).getAllByRole('listitem')).toHaveLength(4)
-    expect(within(timelineSummary).getByText('TTS 播放')).toBeInTheDocument()
-    expect(within(timelineSummary).getByText('倒计时')).toBeInTheDocument()
-    expect(within(timelineSummary).getAllByText('录音')).toHaveLength(2)
+    expect(within(timelineSummary).getByLabelText('节点 page-1 时间线项目 1 TTS 文本')).toHaveValue(
+      '请朗读：[@prompt-text]'
+    )
+    expect(
+      within(timelineSummary).getByLabelText('节点 page-1 时间线项目 2 倒计时时长')
+    ).toHaveValue('5')
+    expect(within(timelineSummary).getByLabelText('节点 page-1 时间线项目 3 录音时长')).toHaveValue(
+      '30'
+    )
+    expect(
+      within(timelineSummary).getByLabelText('节点 page-1 时间线项目 3 录音输出名称')
+    ).toHaveValue('response-audio')
+    expect(within(timelineSummary).queryByText('倒计时')).not.toBeInTheDocument()
+    expect(within(timelineSummary).queryByText('录音')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
     await waitFor(() => expect(app.templates.save).toHaveBeenCalledOnce())
     const saved = vi.mocked(app.templates.save).mock.calls[0][0]
     const page = saved.content.root.children[0]
     if (page.type !== 'page') throw new Error('expected page')
+    expect(page.name).toBe('开场页面')
     expect(page.timeline).toEqual([
       {
         type: 'play',

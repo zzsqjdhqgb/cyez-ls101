@@ -443,7 +443,13 @@ describe('TemplateApplication', () => {
         libraryId: 'builtin:basic',
         version: 2,
         name: '基础组件库',
-        functions: [{ functionId: 'builtin:page', name: '页面', component: page }]
+        functions: [
+          {
+            functionId: 'builtin:page',
+            name: '页面',
+            component: { ...page, name: '页面' }
+          }
+        ]
       }
     ])
   })
