@@ -250,12 +250,57 @@ xvfb-run -a yarn test:playwright tests/integration/airouter.spec.ts
 
 测试内容：取消后 renderer 只保留已收到的部分 chunk、不再收到迟到事件，底层连接在响应完成前关闭，后续请求仍能正常结束。
 
+## 语音合成 Provider 与模型包
+
+### AR-28 本地 TTS 模型包与 Provider 生命周期
+
+测试路径：`语音合成 -> 本地 Provider -> 文件对话框 IPC -> ZIP 模型包 -> Provider 保存/删除 -> 模型包删除`。
+
+操作流程：在空状态创建本地 Pocket TTS Provider，确认没有兼容模型包时只显示导入提示；通过测试文件路径注入 ZIP 并经真实 file-dialog IPC 导入一个包含两个模型、两个音色和三个相同资源的轻量模型包，保存 Provider，重载后读取模型/音色列表，再删除 Provider 和模型包。
+
+测试内容：模型包 manifest、模型与音色显示、导入后默认全启用、相同资产的 `storedAssetCount/reusedAssetCount`、本地 Provider 配置持久化、模型包运行时列表、模型包被引用时删除按钮禁用、Provider 删除后资源包可删除，以及模型包删除后的空状态均符合契约。测试包使用合法的 Pocket TTS manifest，但不执行真实模型推理。
+
+### AR-29 在线 TTS Provider 配置与连接测试
+
+测试路径：`语音合成 -> 在线 Provider 草稿 -> /v1/models -> /v1/audio/speech -> API Key secret -> reload`。
+
+操作流程：填写在线 Provider 地址和独立 API Key，从 mock `/v1/models` 获取模型并启用一个模型，手动添加音色，直接执行连接测试，确认播放器结果后保存并重载。
+
+测试内容：在线模型发现、音色配置、OpenAI-compatible 语音请求体、Bearer 鉴权、音频 Blob 播放器、Provider 持久化、独立语音密钥读取和配置摘要不泄漏密钥均经过真实 renderer/main/preload/IPC 往返。
+
+### AR-30 语音角色路由、片段合并与输出格式
+
+测试路径：`renderer preload -> IPC -> main AIRouter -> /v1/audio/speech -> renderer`。
+
+操作流程：保存包含 `default`、`man` 和 `woman` 音色的在线 Provider，通过 preload 提交带 `[Man]:`、`[Woman]:` 标记的多行文本，再提交单片段 MP3 请求。
+
+测试内容：角色标记不传给 Provider；连续相同角色合并为一次请求；未标记文本走 `default`；所有 Provider 片段请求统一使用 `response_format=wav` 并按原顺序合并为 PCM WAV；最终 WAV/MP3 结果的媒体类型和格式符合调用方要求。
+
+### AR-31 语音错误、取消与请求复用
+
+测试路径：`语音 HTTP 401 / 非音频结果 / 慢响应 -> preload abort -> HTTP close -> 后续正常合成`。
+
+操作流程：依次触发 mock 语音鉴权错误和非音频响应；启动慢速语音请求，在 mock 收到请求后调用 preload 返回的取消函数，最后用同一 Provider 发起正常合成。
+
+测试内容：服务端错误消息和音频类型校验错误传递到 renderer；取消不产生迟到事件且 HTTP 响应提前关闭；取消后的 active request、IPC 监听器和 Provider 仍可被后续请求复用。
+
+### AR-32 真实 Pocket TTS 模型包合成
+
+测试路径：`setup TTS 资产 -> ZIP 模型包 -> 语音设置连接测试 -> 保存 Provider -> preload startSpeechSynthesis -> Pocket TTS WASM Worker`。
+
+操作流程：使用 setup 阶段下载的 Pocket TTS 模型权重、tokenizer 和 Alba 音色生成测试模型包，经真实文件对话框导入，在 UI 中执行连接测试并确认音频播放器，再保存 Provider，通过 preload 发起完整语音合成。
+
+测试内容：真实模型包资产校验、模型包加载、WASM Worker 初始化、音频生成、连接测试 IPC 以及合成事件 IPC 均成功返回 24 kHz 单声道 WAV。该路径使用本地资产，不访问公网。
+
 ## 覆盖边界
 
-- AR-11、AR-12、AR-18、AR-19 和 AR-23 从真实 renderer preload bridge 发起，覆盖 HTTP 或 main 校验、AI SDK、IPC 和 preload，但不绑定某个题型编辑器的业务流程。
-- 语音设置页的在线 Provider 保存、本地模型包缺失提示、ZIP 导入后模型与音色启用由 `AIRouterSettingsPage.test.tsx` 覆盖；当前 Playwright 集成套件只覆盖语音设置分类的入口，不操作系统文件选择窗口或执行 Pocket TTS 合成。
+- AR-11、AR-12、AR-18、AR-19、AR-23、AR-30、AR-31 和 AR-32 从真实 renderer preload bridge 发起，覆盖 HTTP 或 main 校验、AI SDK、IPC 和 preload，但不绑定某个题型编辑器的业务流程。
+- AR-28 使用轻量合法模型包覆盖模型包/Provider 生命周期；AR-32 使用 setup 下载的真实 Pocket TTS 资产覆盖实际 WASM 推理，因此模型包导入测试和真实推理测试不会互相承担不必要的重量。
+- `AIRouterSettingsPage.test.tsx` 继续覆盖 renderer 组件的细粒度分支；Playwright 额外覆盖真实文件读取、语音 Provider 配置、在线连接测试、语音合成路由、取消和 Pocket TTS Worker。
 - AR-15 覆盖真实文件读取 IPC，但用测试路径替代交互式系统文件选择窗口；不验证各操作系统原生对话框的视觉与人工选择行为。
+- AR-28 和 AR-32 同样用测试路径替代人工选择 ZIP 文件；不验证各操作系统原生文件选择窗口的视觉与人工选择行为。
 - 手动图像请求的并发 FIFO 队列和调用方 `AbortSignal` 由 `ManualImageGeneration.test.ts` 覆盖，不在 Playwright 中重复构造并发业务页面。
 - 题型编辑器如何列出、选择和消费 AIRouter 模型，属于题型实例编辑器的独立集成测试路径。
+- 当前没有 Qwen TTS runtime 实现，未执行 Qwen 模型包推理；也未覆盖未来 Qwen Provider 的具体参数协议。
 - 当前不覆盖损坏的 Provider 配置文件、应用退出时仍在进行的请求恢复，以及模型发现接口失败或畸形 SSE 的所有第三方变体。
 - 本套件不访问公网，不验证第三方服务的实时可用性、计费或限流策略。

@@ -13,8 +13,11 @@ export async function transcodeWav(
   if (audio.format !== 'wav') throw new Error('音频转码输入必须是 WAV')
   if (signal?.aborted) throw abortError()
 
-  const ffmpegPath = require('ffmpeg-static') as unknown
-  if (typeof ffmpegPath !== 'string' || !ffmpegPath) throw new Error('FFmpeg 不可用')
+  const packagedFfmpegPath = require('ffmpeg-static') as unknown
+  if (typeof packagedFfmpegPath !== 'string' || !packagedFfmpegPath) {
+    throw new Error('FFmpeg 不可用')
+  }
+  const ffmpegPath = resolveUnpackedPath(packagedFfmpegPath)
   const process = spawn(
     ffmpegPath,
     [
@@ -104,6 +107,10 @@ function mediaTypeFor(format: Exclude<AIRouterSpeechAudioFormat, 'wav'>): string
   if (format === 'mp3') return 'audio/mpeg'
   if (format === 'opus') return 'audio/opus'
   return 'audio/pcm'
+}
+
+function resolveUnpackedPath(filePath: string): string {
+  return filePath.replace(/([\\/])app\.asar([\\/])/, '$1app.asar.unpacked$2')
 }
 
 function abortError(): DOMException {

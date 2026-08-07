@@ -145,6 +145,11 @@ export class MockAiServer {
       return
     }
 
+    if (recorded.path === '/v1/audio/speech') {
+      this.handleSpeech(response, recorded)
+      return
+    }
+
     if (recorded.path === '/v1/images/generations') {
       this.handleImage(response, recorded)
       return
@@ -343,6 +348,29 @@ export class MockAiServer {
     else send()
   }
 
+  private handleSpeech(response: ServerResponse, request: RecordedAiRequest): void {
+    const model = String(request.body.model ?? '')
+    if (model.includes('http-error')) {
+      this.sendJson(response, 401, { error: { message: 'mock speech authentication failed' } })
+      return
+    }
+
+    const send = (): void => {
+      if (model.includes('invalid-media')) {
+        this.sendBinary(response, 200, Buffer.from('not an audio file'), 'text/plain')
+        return
+      }
+      if (String(request.body.response_format ?? '') === 'mp3') {
+        this.sendBinary(response, 200, Buffer.from('ID3 mock audio'), 'audio/mpeg')
+        return
+      }
+      this.sendBinary(response, 200, createMockWav(16), 'audio/wav')
+    }
+
+    if (model.includes('slow')) this.delay(response, send, 2_000)
+    else send()
+  }
+
   private delay(response: ServerResponse, callback: () => void, milliseconds: number): void {
     const timer = setTimeout(() => {
       this.timers.delete(timer)
@@ -358,6 +386,16 @@ export class MockAiServer {
   private sendJson(response: ServerResponse, status: number, body: unknown): void {
     response.writeHead(status, { 'content-type': 'application/json; charset=utf-8' })
     response.end(JSON.stringify(body))
+  }
+
+  private sendBinary(
+    response: ServerResponse,
+    status: number,
+    data: Uint8Array,
+    mediaType: string
+  ): void {
+    response.writeHead(status, { 'content-type': mediaType })
+    response.end(data)
   }
 }
 
@@ -409,6 +447,31 @@ function anthropicMessage(model: string, content: string): Record<string, unknow
 
 function writeSse(response: ServerResponse, event: string, body: unknown): void {
   response.write(`event: ${event}\ndata: ${JSON.stringify(body)}\n\n`)
+}
+
+function createMockWav(sampleCount: number): Uint8Array {
+  const pcm = new Uint8Array(sampleCount * 2)
+  const buffer = new ArrayBuffer(44 + pcm.byteLength)
+  const view = new DataView(buffer)
+  const write = (offset: number, value: string): void => {
+    for (let index = 0; index < value.length; index++)
+      view.setUint8(offset + index, value.charCodeAt(index))
+  }
+  write(0, 'RIFF')
+  view.setUint32(4, 36 + pcm.byteLength, true)
+  write(8, 'WAVE')
+  write(12, 'fmt ')
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true)
+  view.setUint16(22, 1, true)
+  view.setUint32(24, 24000, true)
+  view.setUint32(28, 48000, true)
+  view.setUint16(32, 2, true)
+  view.setUint16(34, 16, true)
+  write(36, 'data')
+  view.setUint32(40, pcm.byteLength, true)
+  new Uint8Array(buffer, 44).set(pcm)
+  return new Uint8Array(buffer)
 }
 
 export const MOCK_PNG_BASE64 = PNG_BASE64

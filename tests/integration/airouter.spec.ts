@@ -1,7 +1,9 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { strToU8, zipSync } from 'fflate'
 import { MOCK_PNG_BASE64, MockAiServer } from './support/mock-ai-server'
 import { launchIntegrationApp } from './support/electron-app'
 
@@ -42,12 +44,40 @@ interface ImageEvent {
   message?: string
 }
 
+interface SpeechProviderInput {
+  id?: string
+  name: string
+  kind: 'online' | 'local'
+  type: 'openai-compatible' | 'pocket-tts' | 'qwen-tts'
+  baseUrl?: string
+  modelPackageId?: string
+  modelPackageVersion?: string
+  models: ModelConfig[]
+  voices: ModelConfig[]
+  apiKey?: string
+  clearApiKey?: boolean
+}
+
+interface SpeechEvent {
+  type: 'result' | 'error'
+  audio?: {
+    data: Uint8Array
+    mediaType: string
+    format: 'wav' | 'mp3' | 'opus' | 'pcm-s16le'
+    sampleRate?: number
+    channels?: number
+    durationMs?: number
+  }
+  message?: string
+}
+
 const mockServer = new MockAiServer()
 
 let electronApp: ElectronApplication
 let page: Page
 let userDataDir: string
 let pageErrors: string[]
+let cachedPocketTtsPackage: Uint8Array | undefined
 
 test.beforeAll(async () => mockServer.start())
 test.afterAll(async () => mockServer.close())
@@ -69,7 +99,9 @@ test.afterEach(async () => {
   expect(pageErrors).toEqual([])
 })
 
-async function openAirouter(tab: '文本生成' | '图像生成' = '文本生成'): Promise<void> {
+async function openAirouter(
+  tab: '文本生成' | '图像生成' | '语音合成' | '语音识别' = '文本生成'
+): Promise<void> {
   await page.getByRole('link', { name: '设置' }).click()
   await page.getByRole('button', { name: /AI 引擎/ }).click()
   await expect(page.getByRole('tab', { name: '文本生成' })).toBeVisible()
@@ -88,6 +120,10 @@ async function saveTextProvider(input: ProviderInput): Promise<Record<string, un
 
 async function saveImageProvider(input: ImageProviderInput): Promise<Record<string, unknown>> {
   return page.evaluate((config) => window.airouter.saveImageProviderConfig(config), input)
+}
+
+async function saveSpeechProvider(input: SpeechProviderInput): Promise<Record<string, unknown>> {
+  return page.evaluate((config) => window.airouter.saveSpeechProviderConfig(config), input)
 }
 
 function textProvider(
@@ -112,6 +148,23 @@ function imageProvider(id: string, modelId: string): ImageProviderInput {
     type: 'openai-compatible',
     baseUrl: mockServer.baseUrl,
     models: [{ id: modelId, enabled: true }],
+    apiKey: `${id}-secret`
+  }
+}
+
+function speechProvider(
+  id: string,
+  modelIds: string[] = ['mock-speech'],
+  voiceIds: string[] = ['alloy']
+): SpeechProviderInput {
+  return {
+    id,
+    name: id,
+    kind: 'online',
+    type: 'openai-compatible',
+    baseUrl: mockServer.baseUrl,
+    models: modelIds.map((modelId) => ({ id: modelId, enabled: true })),
+    voices: voiceIds.map((voiceId) => ({ id: voiceId, enabled: true })),
     apiKey: `${id}-secret`
   }
 }
@@ -159,6 +212,33 @@ async function collectImageRequest(request: {
       }),
     request
   )
+}
+
+async function collectSpeech(request: {
+  text: string
+  routing: {
+    default: { providerConfigId: string; modelId: string; voiceId: string }
+    man?: { providerConfigId: string; modelId: string; voiceId: string }
+    woman?: { providerConfigId: string; modelId: string; voiceId: string }
+  }
+  format?: 'wav' | 'mp3' | 'opus' | 'pcm-s16le'
+}): Promise<SpeechEvent> {
+  return page.evaluate(
+    (input) =>
+      new Promise((resolve) => {
+        window.airouter.startSpeechSynthesis(input, resolve)
+      }),
+    request
+  )
+}
+
+async function selectFileInElectronDialog(filePath: string): Promise<void> {
+  await electronApp.evaluate(({ dialog }, selectedPath) => {
+    Object.defineProperty(dialog, 'showOpenDialog', {
+      configurable: true,
+      value: async () => ({ canceled: false, filePaths: [selectedPath], bookmarks: [] })
+    })
+  }, filePath)
 }
 
 test('AR-01 navigates through AI engine settings categories', async () => {
@@ -921,3 +1001,459 @@ test('AR-27 cancels text generation after partial output and reuses the pipeline
   await saveTextProvider(textProvider('after-partial-cancel', 'mock-text'))
   expect((await collectText('after-partial-cancel', 'mock-text')).at(-1)).toEqual({ type: 'done' })
 })
+
+test('AR-28 manages a local TTS model package and its Provider lifecycle', async () => {
+  const packagePath = path.join(userDataDir, 'integration-pocket.zip')
+  await writeFile(packagePath, createTestSpeechPackage())
+  await openAirouter('语音合成')
+  await expect(page.getByText('共 0 个 Provider')).toBeVisible()
+  await expect(page.getByText('已安装 0 个模型包')).toBeVisible()
+
+  await page.getByRole('button', { name: '添加 Provider' }).click()
+  const editor = page.getByRole('dialog')
+  await editor.getByLabel('语音配置名称').fill('Local Pocket')
+  await editor.getByLabel('语音运行方式').selectOption('local')
+  await expect(editor.getByText('需要先导入 Pocket TTS 模型包')).toBeVisible()
+  await expect(editor.getByRole('heading', { name: '启用模型' })).toBeHidden()
+
+  await selectFileInElectronDialog(packagePath)
+  await editor.getByRole('button', { name: '导入模型包' }).click()
+  await expect(
+    page.getByRole('button', { name: '删除模型包 Integration Pocket Package' })
+  ).toBeVisible()
+  await expect(editor.getByRole('heading', { name: '启用模型' })).toBeVisible()
+  await expect(editor.getByRole('checkbox', { name: 'Pocket A (pocket-a)' })).toBeChecked()
+  await expect(editor.getByRole('checkbox', { name: 'Pocket B (pocket-b)' })).toBeChecked()
+  await expect(editor.getByRole('checkbox', { name: 'Alba (alba)' })).toBeChecked()
+  await expect(editor.getByRole('checkbox', { name: 'Marius (marius)' })).toBeChecked()
+  await expect(page.getByText('新增 1 个资源，复用 2 个资源')).toBeVisible()
+
+  await editor.getByRole('button', { name: '保存 Provider' }).click()
+  await expect(editor.getByText('Provider 已保存')).toBeVisible()
+  const savedState = await page.evaluate(async () => {
+    const configs = await window.airouter.listSpeechProviderConfigs()
+    const config = configs[0]
+    return {
+      configs,
+      models: config ? await window.airouter.listSpeechModels(config) : [],
+      voices: config ? await window.airouter.listSpeechVoices({ config, modelId: 'pocket-a' }) : []
+    }
+  })
+  expect(savedState.configs).toEqual([
+    expect.objectContaining({
+      name: 'Local Pocket',
+      kind: 'local',
+      type: 'pocket-tts',
+      modelPackageId: 'integration-pocket',
+      modelPackageVersion: '1.0.0',
+      models: [
+        { id: 'pocket-a', enabled: true },
+        { id: 'pocket-b', enabled: true }
+      ],
+      voices: [
+        { id: 'alba', enabled: true },
+        { id: 'marius', enabled: true }
+      ],
+      hasApiKey: false
+    })
+  ])
+  expect(savedState.models).toEqual([
+    { id: 'pocket-a', name: 'Pocket A', languageCodes: ['en'] },
+    { id: 'pocket-b', name: 'Pocket B', languageCodes: ['en'] }
+  ])
+  expect(savedState.voices).toEqual([
+    { id: 'alba', name: 'Alba', languageCodes: ['en'] },
+    { id: 'marius', name: 'Marius', languageCodes: ['en'] }
+  ])
+  await editor.getByRole('button', { name: '取消' }).click()
+
+  const packageRemove = page.getByRole('button', {
+    name: '删除模型包 Integration Pocket Package'
+  })
+  await expect(packageRemove).toBeDisabled()
+  await page.reload()
+  await openAirouter('语音合成')
+  await expect(page.getByRole('button', { name: /Local Pocket/ })).toContainText('2 个模型')
+  await page.getByRole('button', { name: /Local Pocket/ }).click()
+  await expect(page.getByLabel('语音运行方式')).toBeDisabled()
+  await expect(page.getByRole('checkbox', { name: 'Pocket A (pocket-a)' })).toBeChecked()
+  await page.getByRole('button', { name: '删除 Provider' }).click()
+  const providerConfirm = page.getByRole('dialog', { name: '删除语音 Provider？' })
+  await providerConfirm.getByRole('button', { name: '删除 Provider' }).click()
+  await expect(page.getByRole('button', { name: /Local Pocket/ })).toBeHidden()
+
+  await page.getByRole('button', { name: '删除模型包 Integration Pocket Package' }).click()
+  const packageConfirm = page.getByRole('dialog', { name: '删除 TTS 模型包？' })
+  await packageConfirm.getByRole('button', { name: '删除模型包' }).click()
+  await expect(page.getByText('已安装 0 个模型包')).toBeVisible()
+  await expect(page.evaluate(() => window.airouter.listSpeechModelPackages())).resolves.toEqual([])
+})
+
+test('AR-29 configures and tests an online TTS Provider through the UI', async () => {
+  await openAirouter('语音合成')
+  await page.getByRole('button', { name: '添加 Provider' }).click()
+  const editor = page.getByRole('dialog')
+  await editor.getByLabel('语音配置名称').fill('Online Speech')
+  await editor.getByLabel('语音 Base URL').fill(mockServer.baseUrl)
+  await editor.getByRole('textbox', { name: '语音 API Key', exact: true }).fill('speech-ui-secret')
+  await editor.getByRole('button', { name: '获取模型列表' }).click()
+  await expect(editor.getByText('获取到 5 个模型')).toBeVisible()
+  await editor.getByRole('checkbox', { name: 'mock-text' }).check()
+  await editor.getByLabel('手动语音音色 ID').fill('alloy')
+  await editor.getByRole('button', { name: '添加', exact: true }).last().click()
+
+  await editor.getByRole('button', { name: '测试合成' }).click()
+  await expect(editor.getByText('测试语音合成成功')).toBeVisible()
+  await expect(editor.locator('audio')).toBeVisible()
+  await expect(editor.locator('audio')).toHaveAttribute('src', /^blob:/)
+  const request = mockServer.findRequest('/v1/audio/speech')
+  expect(request?.headers.authorization).toBe('Bearer speech-ui-secret')
+  expect(request?.body).toMatchObject({
+    model: 'mock-text',
+    input: 'This is a voice synthesis connection test.',
+    voice: 'alloy',
+    response_format: 'wav'
+  })
+
+  await editor.getByRole('button', { name: '保存 Provider' }).click()
+  await expect(editor.getByText('Provider 已保存')).toBeVisible()
+  await page.reload()
+  await openAirouter('语音合成')
+  await page.getByRole('button', { name: /Online Speech/ }).click()
+  const apiKey = page.getByRole('textbox', { name: '语音 API Key', exact: true })
+  await expect(apiKey).toHaveAttribute('placeholder', '已安全保存')
+  await page.getByRole('button', { name: '显示语音 API Key' }).click()
+  await expect(apiKey).toHaveValue('speech-ui-secret')
+  const state = await page.evaluate(async () => {
+    const configs = await window.airouter.listSpeechProviderConfigs()
+    return {
+      configs,
+      apiKey: configs[0] ? await window.airouter.readSpeechProviderApiKey(configs[0].id) : null
+    }
+  })
+  expect(state.configs).toEqual([
+    expect.objectContaining({
+      name: 'Online Speech',
+      kind: 'online',
+      type: 'openai-compatible',
+      baseUrl: mockServer.baseUrl,
+      models: [
+        { id: 'a-model', enabled: false },
+        { id: 'mock-image', enabled: false },
+        { id: 'mock-reasoning', enabled: false },
+        { id: 'mock-text', enabled: true },
+        { id: 'z-model', enabled: false }
+      ],
+      voices: [{ id: 'alloy', enabled: true }],
+      hasApiKey: true
+    })
+  ])
+  expect(state.apiKey).toBe('speech-ui-secret')
+  expect(JSON.stringify(state.configs)).not.toContain('speech-ui-secret')
+})
+
+test('AR-30 routes speech roles, merges adjacent segments, and returns requested formats', async () => {
+  await saveSpeechProvider(
+    speechProvider('speech-route', ['mock-speech'], ['default', 'man', 'woman'])
+  )
+  const result = await collectSpeech({
+    text: 'Default line\n[Man]: First line\n[Man]: Second line\n[Woman]: Woman line\n[Woman]: Another line\nLast default',
+    routing: {
+      default: { providerConfigId: 'speech-route', modelId: 'mock-speech', voiceId: 'default' },
+      man: { providerConfigId: 'speech-route', modelId: 'mock-speech', voiceId: 'man' },
+      woman: { providerConfigId: 'speech-route', modelId: 'mock-speech', voiceId: 'woman' }
+    }
+  })
+  expect(result).toMatchObject({
+    type: 'result',
+    audio: { mediaType: 'audio/wav', format: 'wav', sampleRate: 24000, channels: 1 }
+  })
+  expect(result.audio?.data.byteLength).toBeGreaterThan(44)
+  expect(
+    mockServer
+      .allRequests()
+      .filter((request) => request.path === '/v1/audio/speech')
+      .map((request) => ({
+        input: request.body.input,
+        voice: request.body.voice,
+        responseFormat: request.body.response_format
+      }))
+  ).toEqual([
+    { input: 'Default line', voice: 'default', responseFormat: 'wav' },
+    { input: 'First line\nSecond line', voice: 'man', responseFormat: 'wav' },
+    { input: 'Woman line\nAnother line', voice: 'woman', responseFormat: 'wav' },
+    { input: 'Last default', voice: 'default', responseFormat: 'wav' }
+  ])
+
+  const mp3 = await collectSpeech({
+    text: 'One segment',
+    format: 'mp3',
+    routing: {
+      default: { providerConfigId: 'speech-route', modelId: 'mock-speech', voiceId: 'default' }
+    }
+  })
+  expect(mp3).toEqual({
+    type: 'result',
+    audio: expect.objectContaining({ mediaType: 'audio/mpeg', format: 'mp3' })
+  })
+  expect(mockServer.allRequests().at(-1)?.body).toMatchObject({
+    response_format: 'wav',
+    input: 'One segment'
+  })
+})
+
+test('AR-31 reports speech failures, cancels slow synthesis, and reuses the pipeline', async () => {
+  await saveSpeechProvider(
+    speechProvider('speech-errors', [
+      'speech-http-error',
+      'speech-invalid-media',
+      'speech-slow',
+      'mock-speech'
+    ])
+  )
+  const httpError = await collectSpeech({
+    text: 'HTTP failure',
+    routing: {
+      default: {
+        providerConfigId: 'speech-errors',
+        modelId: 'speech-http-error',
+        voiceId: 'alloy'
+      }
+    }
+  })
+  expect(httpError).toMatchObject({ type: 'error', message: 'mock speech authentication failed' })
+
+  const invalidMedia = await collectSpeech({
+    text: 'Invalid media',
+    routing: {
+      default: {
+        providerConfigId: 'speech-errors',
+        modelId: 'speech-invalid-media',
+        voiceId: 'alloy'
+      }
+    }
+  })
+  expect(invalidMedia).toMatchObject({ type: 'error', message: '语音合成结果不是音频' })
+
+  const operation = page.evaluate(
+    () =>
+      new Promise<SpeechEvent[]>((resolve) => {
+        const events: SpeechEvent[] = []
+        const abort = window.airouter.startSpeechSynthesis(
+          {
+            text: 'Cancel speech',
+            routing: {
+              default: {
+                providerConfigId: 'speech-errors',
+                modelId: 'speech-slow',
+                voiceId: 'alloy'
+              }
+            }
+          },
+          (event) => events.push(event)
+        )
+        ;(window as unknown as { __abortSpeech?: () => void }).__abortSpeech = abort
+        setTimeout(() => resolve(events), 1_800)
+      })
+  )
+  const request = await mockServer.waitForRequest(
+    (item) => item.path === '/v1/audio/speech' && item.body.model === 'speech-slow',
+    10_000
+  )
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            typeof (window as unknown as { __abortSpeech?: () => void }).__abortSpeech ===
+            'function'
+        ),
+      { timeout: 5_000 }
+    )
+    .toBe(true)
+  await page.evaluate(() => {
+    ;(window as unknown as { __abortSpeech?: () => void }).__abortSpeech?.()
+  })
+  expect(await operation).toEqual([])
+  await expect.poll(() => request.closedBeforeResponse).toBe(true)
+
+  const afterCancel = await collectSpeech({
+    text: 'After cancel',
+    routing: {
+      default: {
+        providerConfigId: 'speech-errors',
+        modelId: 'mock-speech',
+        voiceId: 'alloy'
+      }
+    }
+  })
+  expect(afterCancel).toMatchObject({ type: 'result', audio: { format: 'wav' } })
+})
+
+test('AR-32 executes the real Pocket TTS model package through the Electron stack', async () => {
+  test.setTimeout(180_000)
+  const packagePath = path.join(userDataDir, 'pocket-tts-integration.zip')
+  await writeFile(packagePath, await createRealPocketTtsPackage())
+  await selectFileInElectronDialog(packagePath)
+  await openAirouter('语音合成')
+  await page.getByRole('button', { name: '添加 Provider' }).click()
+  const editor = page.getByRole('dialog')
+  await editor.getByLabel('语音配置名称').fill('Pocket TTS Integration')
+  await editor.getByLabel('语音运行方式').selectOption('local')
+  await editor.getByRole('button', { name: '导入模型包' }).click()
+  await expect(
+    page.getByRole('button', { name: '删除模型包 Pocket TTS Integration Package' })
+  ).toBeVisible({ timeout: 30_000 })
+  await expect(editor.getByRole('checkbox', { name: 'Alba (alba)' })).toBeChecked()
+  await expect(
+    editor.getByRole('checkbox', { name: 'Pocket English (pocket-tts-en-v1)' })
+  ).toBeChecked()
+
+  await editor.getByRole('button', { name: '测试合成' }).click()
+  await expect(editor.getByText('测试语音合成成功')).toBeVisible({ timeout: 120_000 })
+  await expect(editor.locator('audio')).toBeVisible()
+  await expect(editor.locator('audio')).toHaveAttribute('src', /^blob:/)
+
+  await editor.getByRole('button', { name: '保存 Provider' }).click()
+  const config = await page.evaluate(
+    async () => (await window.airouter.listSpeechProviderConfigs())[0]
+  )
+  expect(config).toEqual(
+    expect.objectContaining({
+      name: 'Pocket TTS Integration',
+      kind: 'local',
+      type: 'pocket-tts',
+      modelPackageId: 'integration-pocket-real',
+      modelPackageVersion: '1.0.0',
+      models: [{ id: 'pocket-tts-en-v1', enabled: true }],
+      voices: [{ id: 'alba', enabled: true }]
+    })
+  )
+
+  const result = await collectSpeech({
+    text: 'Hello from the Pocket TTS integration test.',
+    routing: {
+      default: {
+        providerConfigId: String(config?.id),
+        modelId: 'pocket-tts-en-v1',
+        voiceId: 'alba'
+      }
+    }
+  })
+  expect(result).toMatchObject({
+    type: 'result',
+    audio: { mediaType: 'audio/wav', format: 'wav', sampleRate: 24000, channels: 1 }
+  })
+  expect(result.audio?.data.byteLength).toBeGreaterThan(44)
+})
+
+function createTestSpeechPackage(): Uint8Array {
+  const bytes = new Uint8Array([1, 2, 3, 4])
+  const hash = createHash('sha256').update(bytes).digest('hex')
+  const assets = [
+    { path: 'model/model.bin', kind: 'model-weights' },
+    { path: 'tokenizer/tokenizer.model', kind: 'tokenizer' },
+    { path: 'voices/alba.bin', kind: 'voice' }
+  ]
+  const manifest = {
+    format: 'ls101.tts-model-package',
+    formatVersion: 1,
+    package: {
+      id: 'integration-pocket',
+      version: '1.0.0',
+      name: 'Integration Pocket Package',
+      description: 'Small package used by the AIRouter integration suite'
+    },
+    runtime: { engine: 'pocket-tts', engineApiVersion: 1 },
+    assets: assets.map((asset) => ({ ...asset, size: bytes.byteLength, sha256: hash })),
+    models: [
+      {
+        id: 'pocket-a',
+        name: 'Pocket A',
+        languageCodes: ['en'],
+        artifacts: { weights: ['model/model.bin'], tokenizer: ['tokenizer/tokenizer.model'] },
+        parameters: {}
+      },
+      {
+        id: 'pocket-b',
+        name: 'Pocket B',
+        languageCodes: ['en'],
+        artifacts: { weights: ['model/model.bin'], tokenizer: ['tokenizer/tokenizer.model'] },
+        parameters: {}
+      }
+    ],
+    voices: [
+      { id: 'alba', name: 'Alba', languageCodes: ['en'], files: ['voices/alba.bin'] },
+      { id: 'marius', name: 'Marius', languageCodes: ['en'], files: ['voices/alba.bin'] }
+    ]
+  }
+  return zipSync({
+    'manifest.json': strToU8(JSON.stringify(manifest)),
+    ...Object.fromEntries(assets.map((asset) => [asset.path, bytes]))
+  })
+}
+
+async function createRealPocketTtsPackage(): Promise<Uint8Array> {
+  if (cachedPocketTtsPackage) return cachedPocketTtsPackage
+  const sourceFiles = [
+    { source: 'model.safetensors', path: 'model/model.safetensors', kind: 'model-weights' },
+    { source: 'tokenizer.model', path: 'tokenizer/tokenizer.model', kind: 'tokenizer' },
+    { source: 'voices/alba.safetensors', path: 'voices/alba.safetensors', kind: 'voice' }
+  ]
+  const assets = await Promise.all(
+    sourceFiles.map(async (asset) => ({
+      ...asset,
+      bytes: await readFile(path.join('model-assets', 'tts', asset.source))
+    }))
+  )
+  const manifest = {
+    format: 'ls101.tts-model-package',
+    formatVersion: 1,
+    package: {
+      id: 'integration-pocket-real',
+      version: '1.0.0',
+      name: 'Pocket TTS Integration Package'
+    },
+    runtime: { engine: 'pocket-tts', engineApiVersion: 1 },
+    assets: assets.map(({ path: assetPath, kind, bytes }) => ({
+      path: assetPath,
+      kind,
+      size: bytes.byteLength,
+      sha256: createHash('sha256').update(bytes).digest('hex')
+    })),
+    models: [
+      {
+        id: 'pocket-tts-en-v1',
+        name: 'Pocket English',
+        languageCodes: ['en', 'en-US'],
+        artifacts: {
+          weights: ['model/model.safetensors'],
+          tokenizer: ['tokenizer/tokenizer.model']
+        },
+        parameters: {
+          load: { quantization: 'f32' },
+          audio: { sampleRate: 24000 },
+          synthesis: {
+            maxTokensPerChunk: 50,
+            silenceBetweenChunksMs: 200,
+            temperature: 0.7,
+            padShortInputs: false,
+            removeSemicolons: false
+          }
+        }
+      }
+    ],
+    voices: [
+      {
+        id: 'alba',
+        name: 'Alba',
+        languageCodes: ['en', 'en-US'],
+        files: ['voices/alba.safetensors']
+      }
+    ]
+  }
+  const entries: Record<string, Uint8Array> = { 'manifest.json': strToU8(JSON.stringify(manifest)) }
+  for (const asset of assets) entries[asset.path] = asset.bytes
+  cachedPocketTtsPackage = zipSync(entries, { level: 0 })
+  return cachedPocketTtsPackage
+}

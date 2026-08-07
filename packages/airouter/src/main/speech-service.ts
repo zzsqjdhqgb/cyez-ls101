@@ -192,12 +192,16 @@ export class AIRouterSpeechService {
     const config = await this.resolveTransientConfig(request.config)
     const voiceId = request.voiceId || config.voices.find((voice) => voice.enabled)?.id
     if (!voiceId) throw new Error('语音音色不能为空')
+    const apiKey =
+      config.kind === 'online' ? await this.resolveApiKey(request.config, config.id) : undefined
     const audio = await this.synthesizeSingle(
       config,
       request.modelId,
       voiceId,
       'This is a voice synthesis connection test.',
-      'wav'
+      'wav',
+      undefined,
+      apiKey
     )
     return { ok: true, audio }
   }
@@ -236,12 +240,13 @@ export class AIRouterSpeechService {
     voiceId: string,
     text: string,
     format: AIRouterSpeechAudioFormat,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    apiKey?: string
   ): Promise<AIRouterGeneratedAudio> {
     assertEnabledModel(config, modelId)
     assertEnabledVoice(config, voiceId)
     if (config.kind === 'online') {
-      return this.synthesizeOpenAI(config, modelId, voiceId, text, format, signal)
+      return this.synthesizeOpenAI(config, modelId, voiceId, text, format, signal, apiKey)
     }
     if (!config.modelPackageId || !config.modelPackageVersion) {
       throw new Error('本地语音 Provider 尚未选择模型包')
@@ -279,14 +284,15 @@ export class AIRouterSpeechService {
     voiceId: string,
     text: string,
     format: AIRouterSpeechAudioFormat,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    apiKey?: string
   ): Promise<AIRouterGeneratedAudio> {
-    const apiKey = await this.secretScope().read(config.id)
+    const resolvedApiKey = apiKey ?? (await this.secretScope().read(config.id))
     const responseFormat = format === 'pcm-s16le' ? 'pcm' : format
     const response = await fetch(`${config.baseUrl}/audio/speech`, {
       method: 'POST',
       headers: {
-        authorization: `Bearer ${apiKey ?? ''}`,
+        authorization: `Bearer ${resolvedApiKey ?? ''}`,
         'content-type': 'application/json'
       },
       body: JSON.stringify({
