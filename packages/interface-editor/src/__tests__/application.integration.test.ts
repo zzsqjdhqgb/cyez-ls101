@@ -457,7 +457,10 @@ describe('interface editor application integration', () => {
 
   it('rejects a stale builtin update plan through the public builtin facade', async () => {
     const repository = new FileInterfaceRepository(new MemoryStore())
-    const references = { replaceInterfaceReferences: vi.fn().mockResolvedValue(undefined) }
+    const references = {
+      replaceInterfaceReferences: vi.fn().mockResolvedValue(undefined),
+      countInterfaceReferences: vi.fn().mockResolvedValue(0)
+    }
     const builtins = createBuiltinInterfaceApplication({ repository, references })
     const previous = await publishInterface(createInterfaceDraft(content))
     const next = await publishInterface(

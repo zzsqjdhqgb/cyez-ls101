@@ -3,6 +3,7 @@ import type { FieldCollection, FieldNode, InterfaceDef } from './types'
 
 export type BuiltinUpdateKind = 'none' | 'automatic' | 'manual' | 'invalid-contract'
 export type ManualBuiltinUpdateChoice = 'migrate' | 'backup-old'
+export type BuiltinRemovalChoice = 'delete' | 'backup-old'
 
 export interface BuiltinUpdatePlan {
   builtinKey: string
@@ -15,11 +16,31 @@ export interface InterfaceReferenceMigrator {
   replaceInterfaceReferences(fromInterfaceId: string, toInterfaceId: string): Promise<void>
 }
 
+export interface InterfaceReferenceManager extends InterfaceReferenceMigrator {
+  countInterfaceReferences(interfaceId: string): Promise<number>
+}
+
 export interface BuiltinUpdateResult {
   kind: BuiltinUpdateKind
   previousInterfaceId: string | null
   currentInterfaceId: string
   migratedInstanceIds: string[]
+  backedUpPrevious: boolean
+}
+
+export interface BuiltinRemovalPlan {
+  kind: 'removal'
+  builtinKey: string
+  previous: InterfaceDef
+  instanceIds: readonly string[]
+  referenceCount: number
+}
+
+export interface BuiltinRemovalResult {
+  kind: 'removal'
+  previousInterfaceId: string
+  affectedInstanceIds: readonly string[]
+  affectedReferenceCount: number
   backedUpPrevious: boolean
 }
 
@@ -127,6 +148,43 @@ export async function applyBuiltinUpdate(
     currentInterfaceId: plan.next.id,
     migratedInstanceIds: instanceIds,
     backedUpPrevious: false
+  }
+}
+
+export async function planBuiltinRemoval(
+  repository: InterfaceRepository,
+  references: InterfaceReferenceManager,
+  builtinKey: string
+): Promise<BuiltinRemovalPlan | null> {
+  const entry = await repository.getBuiltin(builtinKey)
+  if (!entry) return null
+  const previous = await repository.getInterface(entry.currentInterfaceId)
+  if (!previous) throw new Error(`Builtin Interface is missing: ${entry.currentInterfaceId}`)
+  const [instanceIds, referenceCount] = await Promise.all([
+    repository.listInstanceIds(previous.id),
+    references.countInterfaceReferences(previous.id)
+  ])
+  return { kind: 'removal', builtinKey, previous, instanceIds, referenceCount }
+}
+
+export async function applyBuiltinRemoval(
+  repository: InterfaceRepository,
+  plan: BuiltinRemovalPlan,
+  choice: BuiltinRemovalChoice
+): Promise<BuiltinRemovalResult> {
+  if (choice !== 'delete' && choice !== 'backup-old') {
+    throw new Error(`Builtin ${plan.builtinKey} requires a removal choice`)
+  }
+  if (choice === 'backup-old') {
+    await repository.backupBuiltinInterface(plan.builtinKey, plan.previous.id)
+  }
+  await repository.removeBuiltin(plan.builtinKey, plan.previous.id)
+  return {
+    kind: 'removal',
+    previousInterfaceId: plan.previous.id,
+    affectedInstanceIds: plan.instanceIds,
+    affectedReferenceCount: plan.referenceCount,
+    backedUpPrevious: choice === 'backup-old'
   }
 }
 

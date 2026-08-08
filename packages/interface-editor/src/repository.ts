@@ -68,6 +68,7 @@ export interface InterfaceRepository {
   saveBuiltinInterface(builtinKey: string, def: InterfaceDef): Promise<SaveEntityResult>
   setBuiltinCurrent(builtinKey: string, interfaceId: string): Promise<void>
   backupBuiltinInterface(builtinKey: string, interfaceId: string): Promise<void>
+  removeBuiltin(builtinKey: string, expectedCurrentInterfaceId: string): Promise<void>
 
   listInstanceIds(interfaceId: string): Promise<string[]>
   getInstance(interfaceId: string, instanceId: string): Promise<StoredInterfaceInstance | null>
@@ -299,6 +300,18 @@ export class FileInterfaceRepository implements InterfaceRepository {
       throw error
     }
     await location.scope.clear()
+  }
+
+  async removeBuiltin(builtinKey: string, expectedCurrentInterfaceId: string): Promise<void> {
+    assertBuiltinKey(builtinKey)
+    const entry = await this.getBuiltin(builtinKey)
+    if (!entry || entry.currentInterfaceId !== expectedCurrentInterfaceId) {
+      throw new InterfaceRepositoryError(
+        'IDENTITY_CONFLICT',
+        `Builtin Interface changed before removal: ${builtinKey}`
+      )
+    }
+    await this.builtins.scope(builtinKey).clear()
   }
 
   async listInstanceIds(interfaceId: string): Promise<string[]> {
@@ -706,7 +719,7 @@ function isInterfaceDraft(value: unknown): value is InterfaceDraft {
   )
 }
 
-function isInterfaceDef(value: unknown): value is InterfaceDef {
+export function isInterfaceDef(value: unknown): value is InterfaceDef {
   return (
     isRecord(value) && typeof value.id === 'string' && isInterfaceId(value.id) && isContent(value)
   )

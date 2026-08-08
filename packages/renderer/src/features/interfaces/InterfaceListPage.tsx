@@ -48,6 +48,14 @@ export function InterfaceListPage(): JSX.Element {
     }
   }, [application])
 
+  useEffect(() => {
+    const reload = (): void => {
+      void load()
+    }
+    window.addEventListener('interface-builtins-changed', reload)
+    return () => window.removeEventListener('interface-builtins-changed', reload)
+  }, [load])
+
   const importInterface = async (): Promise<void> => {
     setImporting(true)
     setError(null)

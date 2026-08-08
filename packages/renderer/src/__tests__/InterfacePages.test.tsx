@@ -18,6 +18,8 @@ import { InterfaceDraftEditorPage } from '../features/interfaces/InterfaceDraftE
 import { InterfaceDraftListPage } from '../features/interfaces/InterfaceDraftListPage'
 import { InterfaceInstanceEditorPage } from '../features/interfaces/InterfaceInstanceEditorPage'
 import { InterfaceListPage } from '../features/interfaces/InterfaceListPage'
+import { BuiltinInterfaceMaintenanceDialog } from '../features/interfaces/BuiltinInterfaceMaintenanceDialog'
+import type { BuiltinInterfaceMaintenance } from '../features/interfaces/BuiltinInterfaceMaintenance'
 
 const imageInputMocks = vi.hoisted(() => ({
   readBinary: vi.fn(),
@@ -83,6 +85,35 @@ function application(overrides: Record<string, unknown> = {}): InterfaceApplicat
 }
 
 describe('Interface pages', () => {
+  it('offers delete or backup when a bundled Interface is removed', async () => {
+    const previous = { ...draft, id: `sha256:${'a'.repeat(64)}` }
+    const plan = {
+      kind: 'removal' as const,
+      builtinKey: 'speaking',
+      previous,
+      instanceIds: ['10000000-0000-4000-8000-000000000001'],
+      referenceCount: 2
+    }
+    const resolve = vi.fn().mockResolvedValue(undefined)
+    const snapshot = [plan]
+    const maintenance: BuiltinInterfaceMaintenance = {
+      initialize: vi.fn(),
+      resolve,
+      dismiss: vi.fn(),
+      subscribe: () => () => undefined,
+      getSnapshot: () => snapshot
+    }
+
+    render(<BuiltinInterfaceMaintenanceDialog maintenance={maintenance} />)
+
+    expect(screen.getByRole('heading', { name: '内置题型已从应用中移除' })).toBeInTheDocument()
+    expect(screen.getByText(/1 个题组/)).toBeInTheDocument()
+    expect(screen.getByText(/2 处引用/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '保留旧版' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '删除' }))
+    await waitFor(() => expect(resolve).toHaveBeenCalledWith(plan, 'delete'))
+  })
+
   it('shows published interfaces and the draft entry', async () => {
     const app = application({
       browser: {
