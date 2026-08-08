@@ -121,13 +121,17 @@ export TEXTPA_BASE_URL='https://provider.example/v1'
 
 textpa assess artifacts/cues.jsonl \
   -o artifacts/assessments.jsonl \
-  --model MODEL_ID
+  --model MODEL_ID \
+  --concurrency 3
 ```
 
 如果服务只支持 Responses API，增加 `--api-style responses`；如果支持 JSON
 mode，可增加 `--json-mode`。输出文件按 utterance 即时落盘，重新运行会跳过
 已有 ID；每个中间文件旁会生成 `.manifest.json`，输入内容、模型或关键参数
 变化时拒绝混合续跑。明确需要重跑时才使用 `--overwrite`。
+
+`--concurrency` 默认是 1。执行器只保持指定数量的在途请求；发生错误时不会继续
+派发剩余队列。并发值必须服从实际服务商的限流配置。
 
 加入 canonical IPA 与最终分数：
 

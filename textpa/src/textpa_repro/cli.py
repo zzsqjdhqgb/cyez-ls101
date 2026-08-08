@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 import json
 import os
 from pathlib import Path
@@ -280,6 +281,12 @@ def command_extract_cues(args: argparse.Namespace) -> int:
 
 
 def command_assess(args: argparse.Namespace) -> int:
+    if (
+        isinstance(args.concurrency, bool)
+        or not isinstance(args.concurrency, int)
+        or args.concurrency < 1
+    ):
+        raise ValueError("concurrency must be a positive integer")
     source = _unique_records(list(read_jsonl(args.input)), args.input)
     for item in source:
         TextCues.from_dict(item)
@@ -326,22 +333,52 @@ def command_assess(args: argparse.Namespace) -> int:
                 retries=args.retries,
                 timeout=args.timeout,
             )
-        for index, item in enumerate(pending, start=1):
+        executor = ThreadPoolExecutor(max_workers=args.concurrency)
+        queued = iter(enumerate(pending, start=1))
+        in_flight: dict[Future[Assessment], tuple[int, dict[str, Any], TextCues]] = {}
+
+        def submit_next() -> bool:
+            try:
+                index, item = next(queued)
+            except StopIteration:
+                return False
             cues = TextCues.from_dict(item)
-            _log(f"assess {index}/{len(pending)}: {cues.utterance_id}")
-            assessment = assessor.assess(
-                render_prompt(cues, paper_compat=not args.json_input)
+            _log(f"assess start {index}/{len(pending)}: {cues.utterance_id}")
+            future = executor.submit(
+                assessor.assess,
+                render_prompt(cues, paper_compat=not args.json_input),
             )
-            record = dict(item)
-            record.update(
-                {
-                    "assessment": assessment.to_dict(),
-                    "provider": "openai-compatible",
-                    "llm_model": args.model,
-                    "prompt_mode": "json" if args.json_input else "paper",
-                }
-            )
-            writer.write(record)
+            in_flight[future] = (index, item, cues)
+            return True
+
+        for _ in range(min(args.concurrency, len(pending))):
+            submit_next()
+
+        try:
+            while in_flight:
+                completed, _ = wait(in_flight, return_when=FIRST_COMPLETED)
+                for future in completed:
+                    index, item, cues = in_flight.pop(future)
+                    assessment = future.result()
+                    record = dict(item)
+                    record.update(
+                        {
+                            "assessment": assessment.to_dict(),
+                            "provider": "openai-compatible",
+                            "llm_model": args.model,
+                            "prompt_mode": "json" if args.json_input else "paper",
+                        }
+                    )
+                    writer.write(record)
+                    _log(f"assess done {index}/{len(pending)}: {cues.utterance_id}")
+                    submit_next()
+        except BaseException:
+            for future in in_flight:
+                future.cancel()
+            executor.shutdown(wait=True, cancel_futures=True)
+            raise
+        else:
+            executor.shutdown(wait=True)
     return 0
 
 
@@ -475,6 +512,7 @@ def build_parser() -> argparse.ArgumentParser:
     assess.add_argument("--json-input", action="store_true")
     assess.add_argument("--retries", type=int, default=3)
     assess.add_argument("--timeout", type=float, default=120.0)
+    assess.add_argument("--concurrency", type=int, default=1)
     assess.add_argument("--overwrite", action="store_true")
     assess.set_defaults(handler=command_assess)
 
