@@ -16,6 +16,115 @@ afterEach(() => {
 })
 
 describe('AIRouterSettingsPage', () => {
+  it('shows a retryable page error when text settings cannot load', async () => {
+    const listConfigs = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new Error("Error invoking remote method 'airouter:listProviderConfigs': Error: 存储不可用")
+      )
+      .mockResolvedValueOnce([])
+    const application = applicationWith({ listConfigs })
+
+    renderAIRouter(application)
+
+    const pageError = await screen.findByRole('alert')
+    expect(pageError).toHaveTextContent('无法加载文本 Provider 设置')
+    expect(pageError).toHaveTextContent('存储不可用')
+    expect(pageError).not.toHaveTextContent('Error invoking remote method')
+
+    fireEvent.click(within(pageError).getByRole('button', { name: '重试' }))
+    expect(await screen.findByText('尚未添加文本生成 Provider')).toBeInTheDocument()
+    expect(listConfigs).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps model discovery failures beside the text model action', async () => {
+    const application = applicationWith({
+      listConfigs: vi.fn().mockResolvedValue([
+        {
+          id: 'text-provider',
+          name: '文本 Provider',
+          type: 'openai-compatible',
+          baseUrl: 'https://api.example.com/v1',
+          models: [],
+          hasApiKey: false
+        }
+      ]),
+      listModels: vi.fn().mockRejectedValue(new Error('模型服务暂时不可用'))
+    })
+
+    renderAIRouter(application)
+    fireEvent.click(await screen.findByRole('button', { name: /文本 Provider/ }))
+    const dialog = screen.getByRole('dialog', { name: '文本 Provider' })
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取模型列表' }))
+
+    const modelSection = within(dialog)
+      .getByRole('heading', { name: 'Model ID' })
+      .closest('section')
+    expect(modelSection).not.toBeNull()
+    expect(await within(modelSection as HTMLElement).findByRole('alert')).toHaveTextContent(
+      '模型服务暂时不可用'
+    )
+    expect(within(dialog).queryByText('AI 引擎设置操作失败')).toBeNull()
+  })
+
+  it('keeps a failed text deletion in the confirmation dialog', async () => {
+    const application = applicationWith({
+      listConfigs: vi.fn().mockResolvedValue([
+        {
+          id: 'delete-provider',
+          name: '待删除 Provider',
+          type: 'openai-compatible',
+          baseUrl: 'https://api.example.com/v1',
+          models: [],
+          hasApiKey: false
+        }
+      ]),
+      deleteConfig: vi.fn().mockRejectedValue(new Error('删除服务暂时不可用'))
+    })
+
+    renderAIRouter(application)
+    fireEvent.click(await screen.findByRole('button', { name: /待删除 Provider/ }))
+    const editor = screen.getByRole('dialog', { name: '待删除 Provider' })
+    fireEvent.click(within(editor).getByRole('button', { name: '删除 Provider' }))
+
+    const confirmation = screen.getByRole('alertdialog', { name: '删除 Provider 配置？' })
+    fireEvent.click(within(confirmation).getByRole('button', { name: '删除配置' }))
+
+    await waitFor(() => expect(confirmation).toHaveTextContent('删除服务暂时不可用'))
+    expect(editor).toBeInTheDocument()
+    expect(application.deleteConfig).toHaveBeenCalledWith('delete-provider')
+
+    fireEvent.click(within(confirmation).getByRole('button', { name: '取消' }))
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+  })
+
+  it('keeps image save failures in the editor feedback area', async () => {
+    const application = applicationWith({
+      listImageConfigs: vi.fn().mockResolvedValue([
+        {
+          id: 'image-provider',
+          name: '图像 Provider',
+          type: 'openai-compatible',
+          baseUrl: 'https://api.example.com/v1',
+          models: [],
+          hasApiKey: false
+        }
+      ]),
+      saveImageConfig: vi.fn().mockRejectedValue(new Error('图像配置保存失败'))
+    })
+
+    renderAIRouter(application, '/settings/ai-router/image')
+    fireEvent.click(await screen.findByRole('button', { name: /图像 Provider/ }))
+    const dialog = screen.getByRole('dialog', { name: '图像 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('图像配置名称'), {
+      target: { value: '更新后的图像 Provider' }
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('图像配置保存失败')
+    expect(dialog).toBeInTheDocument()
+  })
+
   it('opens provider editing in a modal and saves base fields and model ids together', async () => {
     const config: AIRouterProviderConfigSummary = {
       id: 'provider-1',

@@ -11,6 +11,8 @@ import {
   type ManualImageGenerationCoordinator,
   type ManualImageGenerationRequest
 } from './ManualImageGeneration'
+import { AIRouterOperationFeedback, type AIRouterFeedbackValue } from './AIRouterFeedback'
+import { formatAIRouterError } from './airouterError'
 import styles from './ManualImageGenerationDialog.module.css'
 
 interface SelectedImage {
@@ -51,7 +53,7 @@ function ManualImageGenerationDialogSession({
 }): JSX.Element {
   const [selected, setSelected] = useState<SelectedImage | null>(null)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<AIRouterFeedbackValue | null>(null)
 
   useEffect(
     () => () => {
@@ -70,7 +72,7 @@ function ManualImageGenerationDialogSession({
 
   const chooseFile = async (): Promise<void> => {
     setBusy(true)
-    setError(null)
+    setFeedback(null)
     try {
       const file = await fileDialog.readBinary({
         title: '导入生成的图片',
@@ -78,7 +80,10 @@ function ManualImageGenerationDialogSession({
       })
       if (file) select(file.data, file.name, mediaTypeFromName(file.name))
     } catch (reason) {
-      setError(errorMessage(reason))
+      setFeedback({
+        kind: 'error',
+        text: formatAIRouterError(reason, '导入图片失败')
+      })
     } finally {
       setBusy(false)
     }
@@ -86,7 +91,7 @@ function ManualImageGenerationDialogSession({
 
   const chooseClipboard = async (): Promise<void> => {
     setBusy(true)
-    setError(null)
+    setFeedback(null)
     try {
       const data = await imageClipboard.readImage()
       if (!data) {
@@ -95,7 +100,10 @@ function ManualImageGenerationDialogSession({
       }
       select(data, '剪贴板图片.png', 'image/png')
     } catch (reason) {
-      setError(errorMessage(reason))
+      setFeedback({
+        kind: 'error',
+        text: formatAIRouterError(reason, '读取剪贴板图片失败')
+      })
     } finally {
       setBusy(false)
     }
@@ -135,7 +143,11 @@ function ManualImageGenerationDialogSession({
               onClick={() =>
                 void imageClipboard.writeText(request.prompt).then(
                   () => toast.success('提示词已复制'),
-                  (reason: unknown) => setError(errorMessage(reason))
+                  (reason: unknown) =>
+                    setFeedback({
+                      kind: 'error',
+                      text: formatAIRouterError(reason, '复制提示词失败')
+                    })
                 )
               }
             >
@@ -170,11 +182,10 @@ function ManualImageGenerationDialogSession({
               </div>
             </div>
           </div>
-          {error ? (
-            <div className={styles.error} role="alert">
-              {error}
-            </div>
-          ) : null}
+          <AIRouterOperationFeedback
+            className={styles.errorFeedback}
+            value={feedback ?? undefined}
+          />
         </div>
         <footer className={styles.footer}>
           <Button variant="ghost" onClick={() => coordinator.cancel(request.id)}>
@@ -202,8 +213,4 @@ function mediaTypeFromName(name: string): string {
   if (extension === 'gif') return 'image/gif'
   if (extension === 'webp') return 'image/webp'
   return 'image/png'
-}
-
-function errorMessage(reason: unknown): string {
-  return reason instanceof Error ? reason.message : '导入图片失败'
 }
