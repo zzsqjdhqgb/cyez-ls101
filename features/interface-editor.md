@@ -603,6 +603,8 @@ resources/builtin/interface-editor/builtin/<builtinKey>/
 
 首次安装 builtin 时，如果相同内容 ID 已存在于 `published`，仓储会将该 Interface、实例和资源接管到 builtin 分区，而不是创建重复副本或报告身份冲突。Interface ID 不变，因此现有引用无需迁移；如果 current 指针写入失败，接管会回滚到 `published`。
 
+当前随应用发布 `shanghai-gaokao-speaking`（“上海高考英语口语”）。该 Interface 将旧 `templates/SH-gaokao-speaking/chunk` 六个文件中的 27 个 `editableData` 字段合并到一份可视化编辑结构，保留原变量名；四个旧 `file` 字段改为 `image`，不再按 JSON chunk 拆分定义。
+
 分类：
 
 - `none`：内容 ID 未变化。

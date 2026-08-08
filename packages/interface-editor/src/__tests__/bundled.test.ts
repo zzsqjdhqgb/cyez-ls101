@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { readFile, readdir } from 'node:fs/promises'
+import path from 'node:path'
 import { createBuiltinInterfaceApplication } from '../builtin-entry'
 import {
   BundledInterfaceRepositoryError,
@@ -6,6 +8,7 @@ import {
   type ReadonlyInterfaceStore
 } from '../bundled'
 import { publishInterface } from '../id'
+import { flattenFields } from '../queries'
 import { FileInterfaceRepository, type InterfaceStore } from '../repository'
 import type { InterfaceContent, InterfaceDef } from '../types'
 
@@ -27,6 +30,36 @@ const content: InterfaceContent = {
 }
 
 describe('bundled Interface repository', () => {
+  it('加载上海高考英语口语 builtin 并覆盖旧模板的全部 editableData', async () => {
+    const repository = new FileBundledInterfaceRepository(
+      new DiskReadonlyStore('resources/builtin/interface-editor')
+    )
+
+    const entries = await repository.loadAll()
+    const entry = entries.find(({ builtinKey }) => builtinKey === 'shanghai-gaokao-speaking')
+    expect(entry?.currentInterface).toMatchObject({
+      id: 'sha256:d1eb371653899bd7756f00d3871ca9d10437353c3c91a4398fbecb74c6cdbf25',
+      name: '上海高考英语口语'
+    })
+    if (!entry) throw new Error('expected Shanghai Gaokao speaking builtin')
+
+    const leaves = flattenFields(entry.currentInterface.fields)
+    const leavesByVarName = new Map(leaves.map(({ leaf }) => [leaf.varName, leaf]))
+    const legacyFields = await loadLegacyShanghaiGaokaoFields()
+    expect(leaves.map(({ leaf }) => leaf.varName).sort()).toEqual(
+      legacyFields.map(({ id }) => id).sort()
+    )
+    expect(
+      leaves.filter(({ leaf }) => leaf.type === 'image').map(({ leaf }) => leaf.varName)
+    ).toEqual(['picture_file1', 'picture_file2', 'picture_file3', 'picture_file4'])
+    expect(leavesByVarName.get('passage_1')?.description).toContain('不要求在30秒内读完')
+    expect(leavesByVarName.get('picture_start')?.example).toBe('It was Sunday morning.')
+    for (const varName of ['picture_file1', 'picture_file2', 'picture_file3', 'picture_file4']) {
+      expect(leavesByVarName.get(varName)?.example).not.toMatch(/[\u3400-\u9fff]/u)
+    }
+    expect(legacyFields).toHaveLength(27)
+  })
+
   it('按 builtinKey 和内容摘要读取独立 Interface 文件', async () => {
     const def = await publishInterface(content)
     const store = bundledStore('speaking', def)
@@ -110,6 +143,27 @@ describe('bundled Interface repository', () => {
   })
 })
 
+const LEGACY_CHUNKS = [
+  '01_sectionA_reading.json',
+  '02_sectionB_passage.json',
+  '03_sectionC_situation.json',
+  '04_sectionD_picture.json',
+  '05_LS_sectionA_quickresponse.json',
+  '06_LS_sectionB_passage.json'
+]
+
+async function loadLegacyShanghaiGaokaoFields(): Promise<Array<{ id: string; type: string }>> {
+  const fields = await Promise.all(
+    LEGACY_CHUNKS.map(async (filename) => {
+      const value = JSON.parse(
+        await readFile(path.join('templates/SH-gaokao-speaking/chunk', filename), 'utf8')
+      ) as { editableData: Array<{ id: string; type: string }> }
+      return value.editableData
+    })
+  )
+  return fields.flat()
+}
+
 function bundledStore(builtinKey: string, def: InterfaceDef): MemoryStore {
   const store = new MemoryStore()
   addBundled(store, builtinKey, def)
@@ -188,5 +242,35 @@ class MemoryStore implements InterfaceStore, ReadonlyInterfaceStore {
 
   private scopeKey(): string {
     return this.path.join('/')
+  }
+}
+
+class DiskReadonlyStore implements ReadonlyInterfaceStore {
+  constructor(private readonly directory: string) {}
+
+  scope(name: string): DiskReadonlyStore {
+    return new DiskReadonlyStore(path.join(this.directory, name))
+  }
+
+  async readText<T>(filename: string): Promise<T | null> {
+    try {
+      return JSON.parse(await readFile(path.join(this.directory, '.text', filename), 'utf8')) as T
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
+      throw error
+    }
+  }
+
+  async listScopes(): Promise<string[]> {
+    try {
+      const entries = await readdir(this.directory, { withFileTypes: true })
+      return entries
+        .filter((entry) => entry.isDirectory())
+        .map(({ name }) => name)
+        .sort()
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
+      throw error
+    }
   }
 }
