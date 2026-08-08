@@ -165,6 +165,7 @@ function completeTemplate(): TemplateDocument {
                   x: 0,
                   y: 20,
                   width: 100,
+                  height: 45,
                   src: { type: 'file', source: 'literal', value: 'image.png' }
                 },
                 {
@@ -262,9 +263,18 @@ describe('工作文档结构解析器', () => {
   it('拒绝不能安全遍历的判别联合和字段类型', () => {
     const cyclicEditorState: Record<string, unknown> = {}
     cyclicEditorState.self = cyclicEditorState
+    const imageWithoutHeight = structuredClone(completeTemplate())
+    const imagePage = imageWithoutHeight.content.root.children.find(
+      (node) => node.type === 'page'
+    )
+    if (imagePage?.type !== 'page') throw new Error('expected page')
+    const imageBlock = imagePage.content.blocks.find((block) => block.type === 'image')
+    if (imageBlock?.type !== 'image') throw new Error('expected image')
+    delete (imageBlock as Partial<typeof imageBlock>).height
     const invalidValues: unknown[] = [
       null,
       { ...completeTemplate(), revision: -1 },
+      imageWithoutHeight,
       { ...completeTemplate(), editorState: { invalid: Number.NaN } },
       { ...completeTemplate(), editorState: new Date() },
       { ...completeTemplate(), editorState: new Map([['zoom', 1]]) },

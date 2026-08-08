@@ -38,6 +38,7 @@ export interface ResolvedImageBlock {
   x: number
   y: number
   width: number
+  height: number
   src: string
 }
 

@@ -146,7 +146,7 @@ export function TemplatePageCanvas({
     const visualWidth = (blockRect.width / stageRect.width) * 100
     const visualHeight = (blockRect.height / stageRect.height) * 100
     const initialWidth = block.width ?? visualWidth
-    const initialHeight = block.type === 'choice-view' ? block.height : visualHeight
+    const initialHeight = block.type === 'text' ? visualHeight : block.height
     let latest = structuredClone(block)
     const move = (pointerEvent: PointerEvent): void => {
       const point = pagePointFromClient(stageRect, pointerEvent.clientX, pointerEvent.clientY)
@@ -158,7 +158,7 @@ export function TemplatePageCanvas({
           x: roundPagePercent(clampPagePercent(block.x + deltaX, 0, 100 - visualWidth)),
           y: roundPagePercent(clampPagePercent(block.y + deltaY, 0, 100 - visualHeight))
         }
-      } else if (block.type === 'choice-view') {
+      } else if (block.type !== 'text') {
         latest = {
           ...block,
           width: roundPagePercent(clampPagePercent(initialWidth + deltaX, 5, 100 - block.x)),
@@ -315,7 +315,7 @@ export function TemplatePageCanvas({
                 aria-label={`${contentBlockLabel(block.type)} ${block.id}`}
                 className={styles.contentBlock}
                 data-content-block-id={block.id}
-                height={block.type === 'choice-view' ? block.height : undefined}
+                height={block.type === 'text' ? undefined : block.height}
                 key={block.id}
                 kind={block.type}
                 layer={blockLayer(block.type, index)}
@@ -434,6 +434,7 @@ function createContentBlock(type: ContentBlock['type']): ContentBlock {
       x: 10,
       y: 10,
       width: 40,
+      height: 40,
       src: { type: 'file', source: 'literal', value: '' }
     }
   }
@@ -458,7 +459,7 @@ function availableBlockId(suggestion: string, blocks: readonly ContentBlock[]): 
 
 function offsetBlock(block: ContentBlock): ContentBlock {
   const width = block.width ?? 20
-  const height = block.type === 'choice-view' ? block.height : 10
+  const height = block.type === 'text' ? 10 : block.height
   return {
     ...block,
     x: roundPagePercent(clampPagePercent(block.x + 2, 0, 100 - width)),
@@ -471,8 +472,7 @@ function sameGeometry(first: ContentBlock, second: ContentBlock): boolean {
     first.x === second.x &&
     first.y === second.y &&
     first.width === second.width &&
-    (first.type !== 'choice-view' ||
-      (second.type === 'choice-view' && first.height === second.height))
+    (first.type === 'text' || (second.type !== 'text' && first.height === second.height))
   )
 }
 

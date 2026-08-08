@@ -104,6 +104,7 @@ export interface ImageBlock {
   x: number
   y: number
   width: number
+  height: number
   src: ValueExpression<'file'>
 }
 

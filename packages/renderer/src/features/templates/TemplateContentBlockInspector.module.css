@@ -87,6 +87,12 @@
   gap: 14px;
 }
 
+.emptyValue {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
 .inspector select {
   width: 100%;
   padding: 9px 10px;

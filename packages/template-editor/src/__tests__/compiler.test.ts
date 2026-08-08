@@ -248,6 +248,7 @@ function mainPage(): PageNode {
           x: 10,
           y: 25,
           width: 80,
+          height: 35,
           src: {
             type: 'file',
             source: 'variable',
@@ -381,6 +382,8 @@ describe('compileTemplate', () => {
     expect(compiledPage.content[1]).toMatchObject({
       id: 'block:main-page/picture',
       type: 'image',
+      width: 80,
+      height: 35,
       src: 'picture.png'
     })
     expect(compiledPage.content[2]).toMatchObject({

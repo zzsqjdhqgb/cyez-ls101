@@ -605,6 +605,17 @@
   gap: 5px;
 }
 
+.nodeContentEdit {
+  min-height: 24px;
+  padding: 2px 7px;
+  font-size: 10px;
+}
+
+.nodeContentEdit svg {
+  width: 13px;
+  height: 13px;
+}
+
 .nodeSummaryAdd,
 .timelineRemove {
   width: 22px;

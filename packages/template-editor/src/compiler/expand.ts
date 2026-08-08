@@ -173,6 +173,7 @@ function resolvePage(
           x: block.x,
           y: block.y,
           width: block.width,
+          height: block.height,
           src: resolveValueExpression(block.src, 'file', scope, state, `${blockPath}.src`) as string
         }
       case 'choice-view':

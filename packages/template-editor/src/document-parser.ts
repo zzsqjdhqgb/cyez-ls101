@@ -248,7 +248,11 @@ function isContentBlock(value: unknown): value is ContentBlock {
         isTextExpression(value.text)
       )
     case 'image':
-      return isFiniteNumber(value.width) && isValueExpression(value.src, 'file')
+      return (
+        isFiniteNumber(value.width) &&
+        isFiniteNumber(value.height) &&
+        isValueExpression(value.src, 'file')
+      )
     case 'choice-view':
       return (
         isFiniteNumber(value.width) &&
