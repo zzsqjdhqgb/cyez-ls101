@@ -12,6 +12,7 @@ const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}
 const ASSET_FILENAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/
 
 export type SaveEntityResult = 'created' | 'existing'
+export type InstallBuiltinInterfaceResult = SaveEntityResult | 'adopted'
 
 /** @ls101/file-store 的 ScopedStore 满足此结构，也可由测试内存实现替代。 */
 export interface InterfaceStore {
@@ -65,6 +66,10 @@ export interface InterfaceRepository {
   deleteInterface(interfaceId: string): Promise<void>
 
   getBuiltin(builtinKey: string): Promise<BuiltinInterfaceEntry | null>
+  installBuiltinInterface(
+    builtinKey: string,
+    def: InterfaceDef
+  ): Promise<InstallBuiltinInterfaceResult>
   saveBuiltinInterface(builtinKey: string, def: InterfaceDef): Promise<SaveEntityResult>
   setBuiltinCurrent(builtinKey: string, interfaceId: string): Promise<void>
   backupBuiltinInterface(builtinKey: string, interfaceId: string): Promise<void>
@@ -227,6 +232,48 @@ export class FileInterfaceRepository implements InterfaceRepository {
     return value as unknown as BuiltinInterfaceEntry
   }
 
+  async installBuiltinInterface(
+    builtinKey: string,
+    def: InterfaceDef
+  ): Promise<InstallBuiltinInterfaceResult> {
+    assertBuiltinKey(builtinKey)
+    await assertInterfaceDef(def)
+    const location = await this.locateInterface(def.id)
+    if (location) {
+      const existing = await this.readInterfaceAt(def.id, location.scope)
+      if (compareInterfaceIdentity(existing, def) !== 'same') {
+        throw identityConflict(`Interface ID collision: ${def.id}`)
+      }
+      if (location.kind === 'builtin') {
+        if (location.builtinKey !== builtinKey) {
+          throw identityConflict(`Interface ${def.id} belongs to builtin ${location.builtinKey}`)
+        }
+        await this.setBuiltinCurrent(builtinKey, def.id)
+        return 'existing'
+      }
+
+      const target = this.builtinInterfaceScope(builtinKey, def.id)
+      await this.moveInterfaceContent(def.id, location.scope, target)
+      try {
+        await this.setBuiltinCurrent(builtinKey, def.id)
+      } catch (error) {
+        await this.moveInterfaceContent(def.id, target, this.publishedInterfaceScope(def.id))
+        await this.builtins.scope(builtinKey).clear()
+        throw error
+      }
+      return 'adopted'
+    }
+
+    await this.builtinInterfaceScope(builtinKey, def.id).writeText(INTERFACE_FILE, def)
+    try {
+      await this.setBuiltinCurrent(builtinKey, def.id)
+    } catch (error) {
+      await this.builtins.scope(builtinKey).clear()
+      throw error
+    }
+    return 'created'
+  }
+
   async saveBuiltinInterface(builtinKey: string, def: InterfaceDef): Promise<SaveEntityResult> {
     assertBuiltinKey(builtinKey)
     await assertInterfaceDef(def)
@@ -268,38 +315,11 @@ export class FileInterfaceRepository implements InterfaceRepository {
       throw identityConflict(`Published Interface already exists: ${interfaceId}`)
     }
 
-    const def = await this.readInterfaceAt(interfaceId, location.scope)
-    const instanceIds = (await location.scope.scope('instances').listScopes()).filter((id) =>
-      UUID_V4_PATTERN.test(id)
+    await this.moveInterfaceContent(
+      interfaceId,
+      location.scope,
+      this.publishedInterfaceScope(interfaceId)
     )
-    const snapshots: Array<{
-      stored: StoredInterfaceInstance
-      assets: Record<string, Uint8Array>
-    }> = []
-    for (const instanceId of instanceIds) {
-      const stored = await this.readInstanceAt(location.scope, instanceId)
-      if (!stored) throw invalidData(`Instance disappeared during backup: ${instanceId}`)
-      const assets: Record<string, Uint8Array> = {}
-      for (const filename of stored.assetFilenames) {
-        const data = await this.instanceScope(location.scope, instanceId).readAsset(filename)
-        if (!data) throw new InterfaceRepositoryError('MISSING_ASSET', `Missing asset ${filename}`)
-        assets[filename] = data
-      }
-      snapshots.push({ stored, assets })
-    }
-
-    const target = this.publishedInterfaceScope(interfaceId)
-    await target.writeText(INTERFACE_FILE, def)
-    try {
-      for (const { stored, assets } of snapshots) {
-        await this.writeInstanceAt(target, stored.instance, assets)
-      }
-      await this.verifyInterfaceCopy(interfaceId, target, snapshots)
-    } catch (error) {
-      await target.clear()
-      throw error
-    }
-    await location.scope.clear()
   }
 
   async removeBuiltin(builtinKey: string, expectedCurrentInterfaceId: string): Promise<void> {
@@ -622,6 +642,49 @@ export class FileInterfaceRepository implements InterfaceRepository {
           throw invalidData(`Cannot verify copied asset: ${instanceId}/${filename}`)
         }
       }
+    }
+  }
+
+  private async moveInterfaceContent(
+    interfaceId: string,
+    source: InterfaceStore,
+    target: InterfaceStore
+  ): Promise<void> {
+    const def = await this.readInterfaceAt(interfaceId, source)
+    const instanceIds = (await source.scope('instances').listScopes()).filter((id) =>
+      UUID_V4_PATTERN.test(id)
+    )
+    const snapshots: Array<{
+      stored: StoredInterfaceInstance
+      assets: Record<string, Uint8Array>
+    }> = []
+    for (const instanceId of instanceIds) {
+      const stored = await this.readInstanceAt(source, instanceId)
+      if (!stored) throw invalidData(`Instance disappeared during Interface move: ${instanceId}`)
+      const assets: Record<string, Uint8Array> = {}
+      for (const filename of stored.assetFilenames) {
+        const data = await this.instanceScope(source, instanceId).readAsset(filename)
+        if (!data) throw new InterfaceRepositoryError('MISSING_ASSET', `Missing asset ${filename}`)
+        assets[filename] = data
+      }
+      snapshots.push({ stored, assets })
+    }
+
+    await target.writeText(INTERFACE_FILE, def)
+    try {
+      for (const { stored, assets } of snapshots) {
+        await this.writeInstanceAt(target, stored.instance, assets)
+      }
+      await this.verifyInterfaceCopy(interfaceId, target, snapshots)
+    } catch (error) {
+      await target.clear()
+      throw error
+    }
+    try {
+      await source.clear()
+    } catch (error) {
+      await target.clear()
+      throw error
     }
   }
 

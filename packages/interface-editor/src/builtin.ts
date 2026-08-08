@@ -78,9 +78,8 @@ export async function applyBuiltinUpdate(
     throw new Error(`Builtin ${plan.builtinKey} requires an update choice`)
   }
 
-  await repository.saveBuiltinInterface(plan.builtinKey, plan.next)
   if (!plan.previous) {
-    await repository.setBuiltinCurrent(plan.builtinKey, plan.next.id)
+    await repository.installBuiltinInterface(plan.builtinKey, plan.next)
     return {
       kind: plan.kind,
       previousInterfaceId: null,
@@ -89,6 +88,8 @@ export async function applyBuiltinUpdate(
       backedUpPrevious: false
     }
   }
+
+  await repository.saveBuiltinInterface(plan.builtinKey, plan.next)
 
   if (plan.kind === 'none') {
     return {

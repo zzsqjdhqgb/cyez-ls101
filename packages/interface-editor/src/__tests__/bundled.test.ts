@@ -52,6 +52,7 @@ describe('bundled Interface repository', () => {
     const repository = new FileInterfaceRepository(writable.scope('interfaces'))
     await repository.saveBuiltinInterface('removed', installed)
     await repository.setBuiltinCurrent('removed', installed.id)
+    await repository.saveInterface(bundled)
     const application = createBuiltinInterfaceApplication({
       repository,
       references: {
@@ -71,6 +72,11 @@ describe('bundled Interface repository', () => {
     expect(result.applied).toEqual([
       expect.objectContaining({ kind: 'automatic', currentInterfaceId: bundled.id })
     ])
+    await expect(repository.listPublishedInterfaceIds()).resolves.toEqual([])
+    await expect(repository.getBuiltin('speaking')).resolves.toEqual({
+      builtinKey: 'speaking',
+      currentInterfaceId: bundled.id
+    })
     expect(result.pending).toEqual([
       expect.objectContaining({
         kind: 'removal',

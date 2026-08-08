@@ -219,6 +219,43 @@ describe('FileInterfaceRepository', () => {
 })
 
 describe('内置 Interface 更新', () => {
+  it('首次安装时接管相同的已发布 Interface 并保留实例与资源', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(content())
+    await repository.saveInterface(def)
+    await repository.saveInstance(def.id, instance(INSTANCE_A, '已发布实例'), {
+      'attachment.bin': new Uint8Array([4, 5, 6])
+    })
+    const references = { replaceInterfaceReferences: vi.fn().mockResolvedValue(undefined) }
+
+    const result = await applyBuiltinUpdate(
+      repository,
+      references,
+      await planBuiltinUpdate(repository, 'speaking', def)
+    )
+
+    expect(result).toMatchObject({
+      kind: 'automatic',
+      previousInterfaceId: null,
+      currentInterfaceId: def.id
+    })
+    expect(await repository.listPublishedInterfaceIds()).toEqual([])
+    expect(await repository.getBuiltin('speaking')).toEqual({
+      builtinKey: 'speaking',
+      currentInterfaceId: def.id
+    })
+    expect(await repository.getInstance(def.id, INSTANCE_A)).toMatchObject({
+      instance: { values: { title: '已发布实例' } }
+    })
+    expect(await repository.readInstanceAsset(def.id, INSTANCE_A, 'attachment.bin')).toEqual(
+      new Uint8Array([4, 5, 6])
+    )
+    await expect(
+      repository.getInstanceAssetUrl(def.id, INSTANCE_A, 'attachment.bin')
+    ).resolves.toContain(`/builtin/speaking/versions/${def.id.slice('sha256:'.length)}/`)
+    expect(references.replaceInterfaceReferences).not.toHaveBeenCalled()
+  })
+
   it('语义字段变化自动迁移实例并删除旧内置版本', async () => {
     const { repository } = setup()
     const oldDef = await publishInterface(content())

@@ -601,6 +601,8 @@ resources/builtin/interface-editor/builtin/<builtinKey>/
 
 `reconcile()` 先完整读取并校验所有 bundled Interface，再执行任何写入。兼容更新自动应用；结构更新、变量契约冲突和从 bundled 目录移除的 builtin 返回待处理计划。读取失败不会被解释为全部 builtin 已删除。
 
+首次安装 builtin 时，如果相同内容 ID 已存在于 `published`，仓储会将该 Interface、实例和资源接管到 builtin 分区，而不是创建重复副本或报告身份冲突。Interface ID 不变，因此现有引用无需迁移；如果 current 指针写入失败，接管会回滚到 `published`。
+
 分类：
 
 - `none`：内容 ID 未变化。
