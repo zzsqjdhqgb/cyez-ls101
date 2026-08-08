@@ -15,6 +15,7 @@
     { "path": "../airouter" },
     { "path": "../editor-kit" },
     { "path": "../exam-player" },
+    { "path": "../page-renderer" },
     { "path": "../file-dialog" },
     { "path": "../file-store" },
     { "path": "../template-editor" },

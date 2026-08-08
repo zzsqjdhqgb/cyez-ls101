@@ -2,7 +2,7 @@
 
 ## 功能状态
 
-`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 与函数库工作文档身份、版本化函数库仓储、内嵌函数资源管理、应用门面、严格语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。renderer 已注册 Template 应用门面、列表入口、函数库浏览、工作文档编辑会话和节点结构编辑器；节点专用配置界面与最终试卷文件封装尚未实现。
+`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 与函数库工作文档身份、版本化函数库仓储、内嵌函数资源管理、应用门面、严格语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。renderer 已注册 Template 应用门面、列表入口、函数库浏览、工作文档编辑会话、节点结构编辑器和 Page 内容画布；最终试卷文件封装尚未实现。
 
 ## 已实现边界
 
@@ -79,6 +79,10 @@ renderer 的 Template 编辑会话直接消费不可变 mutation 结果，以完
 
 当前结构编辑器展示包含根 Frame 的可折叠节点树，支持选择节点，以及新增 Frame、Page、ChoiceQuestion，兄弟节点上移/下移、子树复制和确认删除。新增或复制后的节点自动成为当前选择；非 Frame 节点旁新增时作为同级节点插入，Frame 节点被选中时则添加为其子节点。Function 调用必须经过函数资源闭包复制应用操作，因此不通过普通节点插入入口创建。
 
+共享页面渲染原语位于 `@ls101/page-renderer`。该包定义 1200×800 固定设计面、百分比几何、缩放容器及文本、图片和 ChoiceView 的基础视觉组件，不依赖 Template 作者态模型或 Player 编译态模型。renderer 通过作者态 adapter 把 `ContentDocument` 映射到共享原语；未来 ExamPlayer 将通过独立 adapter 映射编译后的 `ExamPage`，播放控制和编辑控制均不进入共享渲染包。
+
+renderer 中栏提供“结构 / 页面”标签页。Page 画布支持新增文本、图片和 ChoiceView，单选、拖动、缩放、复制、删除及视图缩放；变量文本以 token 预览。选中块的 ID、百分比几何、文本表达式与格式、图片表达式和 ChoiceView 视口在右侧独立折叠区域编辑。交互继续提交现有内容块 mutation，因此共用文档撤销、重做、dirty 和保存语义；一次连续拖动或缩放只在指针释放时形成一个历史条目。
+
 工作文档允许暂时不完整。删除函数输入、录音或选择题后，无法无歧义决定替代值的普通表达式不会被猜测式删除或改写，而由严格语义校验返回可定位错误。函数输入重命名和 Interface alias 重命名属于含义明确的操作，会重写当前可编辑正文中的对应变量引用。内嵌函数资源不随 alias 重命名而重写：函数禁止直接引用 Template Interface alias，只能通过调用输入接收 Interface 值，因此函数资源不捕获调用方命名空间。
 
 `templates.validate()` 和 `templates.compile()` 会根据当前 Template 收集 Interface 与 Schema 身份，通过调用方提供的跨模块查询函数取得清单。编译时再把 Interface 实例选择及实例定位器交给底层异步编译器。renderer 通过 Interface 应用门面的 `published.getVarManifest()` 和 `instances.locate()` 适配这两项能力，不依赖 Interface 仓储。Schema Editor 尚未实现实际查询 API，当前通过窄依赖接口接入。
@@ -123,7 +127,8 @@ renderer 的 Template 编辑会话直接消费不可变 mutation 结果，以完
 
 工作文档允许保存不完整状态；编译入口会自行执行严格校验。以下能力尚未实现：
 
-- Page 内容与时间线、ChoiceQuestion/Collector、Function 调用、Interface requirement 和 Schema use 的节点专用编辑界面。
+- Page 画布的多选、吸附辅助线、键盘微调和画布内直接文本编辑。
+- Schema use 的节点专用编辑界面。
 - Schema Editor 的评分块清单适配器。
 - 编译错误文案、节点定位交互和预览流程。
 - `ExamPackage` 的文件封装、资源复制和持久化格式。

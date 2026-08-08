@@ -1015,4 +1015,75 @@ describe('Template pages', () => {
       }
     ])
   })
+
+  it('edits page content blocks on the graphical canvas', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: '选择节点 page-1' }))
+    fireEvent.click(screen.getByRole('button', { name: '编辑节点 page-1 页面内容' }))
+    expect(screen.getByRole('heading', { name: '页面' })).toBeInTheDocument()
+    expect(screen.getByRole('application')).toHaveAccessibleName('页面 page-1 内容编辑器')
+
+    fireEvent.click(screen.getByRole('button', { name: '添加内容块' }))
+    fireEvent.click(screen.getByRole('button', { name: '添加文本' }))
+    const properties = screen.getByRole('complementary', { name: '属性' })
+    const textInput = within(properties).getByLabelText('内容块文本')
+    fireEvent.change(textInput, { target: { value: '欢迎参加考试' } })
+
+    const stage = screen.getByLabelText('页面 page-1')
+    const textBlock = screen.getByRole('button', { name: '文本 text' })
+    vi.spyOn(stage, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      top: 0,
+      width: 1200,
+      height: 800
+    } as DOMRect)
+    vi.spyOn(textBlock, 'getBoundingClientRect').mockReturnValue({
+      left: 120,
+      top: 80,
+      width: 480,
+      height: 64
+    } as DOMRect)
+    fireEvent.pointerDown(textBlock, { button: 0, clientX: 120, clientY: 80 })
+    fireEvent.pointerMove(window, { clientX: 240, clientY: 160 })
+    fireEvent.pointerUp(window, { clientX: 240, clientY: 160 })
+    expect(within(properties).getByLabelText('X')).toHaveValue(20)
+    expect(within(properties).getByLabelText('Y')).toHaveValue(20)
+
+    fireEvent.click(screen.getByRole('button', { name: '复制内容块' }))
+    expect(screen.getByRole('button', { name: '文本 text-1' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '删除内容块' }))
+    expect(screen.queryByRole('button', { name: '文本 text-1' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '添加内容块' }))
+    fireEvent.click(screen.getByRole('button', { name: '添加图片' }))
+    fireEvent.click(screen.getByRole('button', { name: '添加内容块' }))
+    fireEvent.click(screen.getByRole('button', { name: '添加选择题视图' }))
+    expect(screen.getByText('3 个内容块')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(app.templates.save).toHaveBeenCalledOnce())
+    const saved = vi.mocked(app.templates.save).mock.calls[0][0]
+    const page = saved.content.root.children[0]
+    if (page.type !== 'page') throw new Error('expected page')
+    expect(page.content.blocks).toHaveLength(3)
+    expect(page.content.blocks[0]).toMatchObject({
+      id: 'text',
+      type: 'text',
+      x: 20,
+      y: 20,
+      width: 40,
+      text: { parts: [{ type: 'literal', value: '欢迎参加考试' }] }
+    })
+    expect(page.content.blocks.map((block) => block.type)).toEqual(['text', 'image', 'choice-view'])
+  })
 })

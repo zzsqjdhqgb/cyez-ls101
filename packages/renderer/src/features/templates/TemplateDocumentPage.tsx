@@ -19,6 +19,7 @@ import {
   ChevronRight,
   Copy,
   FileText,
+  LayoutTemplate,
   Layers3,
   ListChecks,
   Mic,
@@ -40,8 +41,10 @@ import { useTemplateApplication } from './TemplateApplicationContext'
 import styles from './TemplateDocumentPage.module.css'
 import { TemplateInspectorSection } from './TemplateInspectorSection'
 import { TemplateFunctionCallEditor } from './TemplateFunctionCallEditor'
+import { TemplateContentBlockInspector } from './TemplateContentBlockInspector'
 import { TemplateInterfaceRequirements } from './TemplateInterfaceRequirements'
 import { TemplateNodeInspector } from './TemplateNodeInspector'
+import { TemplatePageCanvas } from './TemplatePageCanvas'
 import { TemplateVariableInput } from './TemplateVariableInput'
 import {
   collectTemplateVariableCandidates,
@@ -76,6 +79,8 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const session = useTemplateEditorSession(application, templateId)
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [centerView, setCenterView] = useState<'structure' | 'page'>('structure')
+  const [selectedContentBlockId, setSelectedContentBlockId] = useState<string | null>(null)
   const [collapsedIds, setCollapsedIds] = useState<ReadonlySet<string>>(() => new Set())
   const [functionLibraries, setFunctionLibraries] = useState<FunctionLibrarySummary[]>([])
   const [libraryLoading, setLibraryLoading] = useState(true)
@@ -133,6 +138,12 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const root = document?.content.root ?? null
   const selectedLocation = root ? locateNode(root, session.selectedNodeId) : null
   const selectedNode = selectedLocation?.node ?? null
+  const selectedContentBlock =
+    selectedNode?.type === 'page'
+      ? (selectedNode.content.blocks.find((block) => block.id === selectedContentBlockId) ?? null)
+      : null
+  const visibleCenterView =
+    centerView === 'page' && selectedNode?.type === 'page' ? 'page' : 'structure'
   const variableCandidates = useMemo(
     () =>
       root && document
@@ -218,6 +229,17 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
       else next.add(key)
       return next
     })
+  }
+
+  const openPageEditor = (nodeId: string): void => {
+    session.selectNode(nodeId)
+    setSelectedContentBlockId(null)
+    setCenterView('page')
+  }
+
+  const selectTemplateNode = (nodeId: string): void => {
+    if (nodeId !== session.selectedNodeId) setSelectedContentBlockId(null)
+    session.selectNode(nodeId)
   }
 
   return (
@@ -394,28 +416,85 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
           label="调整属性栏宽度"
           sizeFrom="second"
         >
-          <main className={styles.structure} aria-labelledby="template-structure-heading">
-            <div className={styles.structureHeader}>
-              <h2 id="template-structure-heading">结构</h2>
+          <main className={styles.center} aria-labelledby="template-center-heading">
+            <div className={styles.centerHeader}>
+              <h2 className={styles.visuallyHidden} id="template-center-heading">
+                {visibleCenterView === 'structure' ? '结构' : '页面'}
+              </h2>
+              <div className={styles.centerTabs} role="tablist" aria-label="编辑视图">
+                <button
+                  aria-controls="template-structure-panel"
+                  aria-selected={visibleCenterView === 'structure'}
+                  className={styles.centerTab}
+                  id="template-structure-tab"
+                  role="tab"
+                  type="button"
+                  onClick={() => setCenterView('structure')}
+                >
+                  <Layers3 aria-hidden="true" />
+                  <span>结构</span>
+                </button>
+                <button
+                  aria-controls="template-page-panel"
+                  aria-selected={visibleCenterView === 'page'}
+                  className={styles.centerTab}
+                  disabled={selectedNode?.type !== 'page'}
+                  id="template-page-tab"
+                  role="tab"
+                  type="button"
+                  onClick={() => setCenterView('page')}
+                >
+                  <LayoutTemplate aria-hidden="true" />
+                  <span>页面</span>
+                </button>
+              </div>
             </div>
-            {root ? (
-              <NodeTree
-                node={root}
-                parent={null}
-                index={0}
-                rootId={root.id}
-                selectedNodeId={session.selectedNodeId}
-                collapsedIds={collapsedIds}
-                functions={document.resources.functions}
-                variableCandidates={variableCandidates}
-                apply={session.apply}
-                onSelect={session.selectNode}
-                onToggle={toggleCollapsed}
-                onDelete={setPendingDeleteId}
-              />
-            ) : (
-              <EmptyState icon={Layers3} title={session.loading ? '正在加载模板' : '模板不可用'} />
-            )}
+            {visibleCenterView === 'structure' ? (
+              <div
+                aria-labelledby="template-structure-tab"
+                className={styles.structure}
+                id="template-structure-panel"
+                role="tabpanel"
+              >
+                {root ? (
+                  <NodeTree
+                    node={root}
+                    parent={null}
+                    index={0}
+                    rootId={root.id}
+                    selectedNodeId={session.selectedNodeId}
+                    collapsedIds={collapsedIds}
+                    functions={document?.resources.functions ?? []}
+                    variableCandidates={variableCandidates}
+                    apply={session.apply}
+                    onSelect={selectTemplateNode}
+                    onToggle={toggleCollapsed}
+                    onDelete={setPendingDeleteId}
+                    onEditPage={openPageEditor}
+                  />
+                ) : (
+                  <EmptyState
+                    icon={Layers3}
+                    title={session.loading ? '正在加载模板' : '模板不可用'}
+                  />
+                )}
+              </div>
+            ) : selectedNode?.type === 'page' ? (
+              <div
+                aria-labelledby="template-page-tab"
+                className={styles.pagePanel}
+                id="template-page-panel"
+                role="tabpanel"
+              >
+                <TemplatePageCanvas
+                  apply={session.apply}
+                  disabled={session.saving}
+                  page={selectedNode}
+                  selectedBlockId={selectedContentBlockId}
+                  onSelectBlock={setSelectedContentBlockId}
+                />
+              </div>
+            ) : null}
           </main>
 
           <aside className={styles.properties} aria-label="属性">
@@ -457,6 +536,17 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                   functions={document?.resources.functions ?? []}
                   variableCandidates={variableCandidates}
                   apply={session.apply}
+                />
+              </TemplateInspectorSection>
+            ) : null}
+            {selectedNode?.type === 'page' && selectedContentBlock ? (
+              <TemplateInspectorSection title="内容块" headingId="content-block-properties-heading">
+                <TemplateContentBlockInspector
+                  apply={session.apply}
+                  block={selectedContentBlock}
+                  pageId={selectedNode.id}
+                  variableCandidates={variableCandidates}
+                  onBlockIdChange={setSelectedContentBlockId}
                 />
               </TemplateInspectorSection>
             ) : null}
@@ -538,6 +628,7 @@ interface NodeTreeProps {
   onSelect(nodeId: string): void
   onToggle(nodeId: string): void
   onDelete(nodeId: string): void
+  onEditPage(nodeId: string): void
 }
 
 function NodeTree({
@@ -552,7 +643,8 @@ function NodeTree({
   apply,
   onSelect,
   onToggle,
-  onDelete
+  onDelete,
+  onEditPage
 }: NodeTreeProps): JSX.Element {
   const collapsible =
     (node.type === 'frame' && node.children.length > 0) || hasInlineNodeProperties(node)
@@ -643,7 +735,12 @@ function NodeTree({
             ) : null}
           </div>
           {node.type === 'page' && !collapsed ? (
-            <PageNodeSummary node={node} variableCandidates={variableCandidates} apply={apply} />
+            <PageNodeSummary
+              node={node}
+              variableCandidates={variableCandidates}
+              apply={apply}
+              onEdit={() => onEditPage(node.id)}
+            />
           ) : null}
           {node.type === 'function' && !collapsed ? (
             <div className={`${styles.nodeSummary} ${styles.functionNodeSummary}`}>
@@ -674,6 +771,7 @@ function NodeTree({
                 onSelect={onSelect}
                 onToggle={onToggle}
                 onDelete={onDelete}
+                onEditPage={onEditPage}
               />
             ))}
           </div>
@@ -690,11 +788,13 @@ function hasInlineNodeProperties(node: TemplateNode): boolean {
 function PageNodeSummary({
   node,
   variableCandidates,
-  apply
+  apply,
+  onEdit
 }: {
   node: Extract<TemplateNode, { type: 'page' }>
   variableCandidates: readonly TemplateVariableCandidate[]
   apply: NodeTreeProps['apply']
+  onEdit(): void
 }): JSX.Element {
   const addMenuId = useId()
   const [adding, setAdding] = useState(false)
@@ -710,6 +810,13 @@ function PageNodeSummary({
         <span>时间线</span>
         <div className={styles.nodeSummaryActions}>
           <small>{node.timeline.length} 项</small>
+          <IconButton
+            icon={LayoutTemplate}
+            label={`编辑节点 ${node.id} 页面内容`}
+            size="small"
+            variant="ghost"
+            onClick={onEdit}
+          />
           <IconButton
             aria-controls={addMenuId}
             aria-expanded={adding}

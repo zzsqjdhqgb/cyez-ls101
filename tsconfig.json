@@ -10,6 +10,7 @@
     { "path": "./packages/airouter" },
     { "path": "./packages/editor-kit" },
     { "path": "./packages/exam-player" },
+    { "path": "./packages/page-renderer" },
     { "path": "./packages/template-editor" },
     { "path": "./packages/interface-editor" },
     { "path": "./packages/schema-editor" },

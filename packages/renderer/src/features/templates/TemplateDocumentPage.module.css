@@ -66,7 +66,7 @@
 
 .library,
 .properties,
-.structure {
+.center {
   width: 100%;
   height: 100%;
   min-width: 0;
@@ -80,10 +80,6 @@
   overflow-y: auto;
 }
 
-.structure {
-  overflow: auto;
-}
-
 .library {
   background: var(--color-surface);
 }
@@ -95,13 +91,6 @@
 .inspectorSection {
   padding: 24px;
   border-bottom: 1px solid var(--color-border);
-}
-
-.structure h2 {
-  margin: 0;
-  color: var(--color-text-strong);
-  font-size: 15px;
-  font-weight: 660;
 }
 
 .librarySection {
@@ -445,17 +434,98 @@
 }
 
 .structure {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
   padding: 24px 28px 36px;
+  overflow: auto;
   background: var(--color-surface-subtle);
 }
 
-.structureHeader {
+.center {
+  display: grid;
+  grid-template-rows: 44px minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--color-surface-subtle);
+}
+
+.centerHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  min-height: 36px;
-  margin-bottom: 18px;
+  min-width: 0;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.centerTabs {
+  display: flex;
+  height: 100%;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.centerTab {
+  position: relative;
+  display: inline-flex;
+  min-width: 78px;
+  padding: 0 12px;
+  border: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--color-text-muted);
+  background: transparent;
+  font: 620 12px/1.3 var(--font-ui);
+  cursor: pointer;
+}
+
+.centerTab svg {
+  width: 15px;
+  height: 15px;
+}
+
+.centerTab:hover:not(:disabled) {
+  color: var(--color-text-strong);
+  background: var(--color-surface-hover);
+}
+
+.centerTab[aria-selected='true'] {
+  color: var(--color-accent);
+}
+
+.centerTab[aria-selected='true']::after {
+  position: absolute;
+  right: 8px;
+  bottom: 0;
+  left: 8px;
+  height: 2px;
+  background: var(--color-accent);
+  content: '';
+}
+
+.centerTab:disabled {
+  opacity: 0.38;
+}
+
+.pagePanel {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .nodeList {
@@ -747,6 +817,7 @@
 
   .library,
   .properties,
+  .center,
   .structure {
     height: auto;
     overflow: visible;
@@ -762,8 +833,7 @@
     border-bottom: 1px solid var(--color-border);
   }
 
-  .structureHeader {
-    align-items: flex-start;
-    flex-direction: column;
+  .center {
+    grid-template-rows: 44px minmax(560px, auto);
   }
 }

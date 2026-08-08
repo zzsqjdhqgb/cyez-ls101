@@ -1,0 +1,104 @@
+.inspector {
+  display: grid;
+  gap: 14px;
+}
+
+.identity {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.identity > span:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.identity strong,
+.identity small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identity strong {
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.identity small {
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.typeIcon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-xs);
+  place-items: center;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.typeIcon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.geometryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.geometryGrid label,
+.inspector > label,
+.viewportFields label {
+  margin: 0;
+}
+
+.formatRow {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.formatButton[data-active] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.formatDivider {
+  width: 1px;
+  height: 20px;
+  margin: 0 3px;
+  background: var(--color-border);
+}
+
+.viewportFields {
+  display: grid;
+  gap: 14px;
+}
+
+.inspector select {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font: 13px/1.5 var(--font-ui);
+}
+
+.inspector select:focus {
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 0;
+}
