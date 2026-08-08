@@ -42,6 +42,7 @@ import styles from './TemplateDocumentPage.module.css'
 import { TemplateInspectorSection } from './TemplateInspectorSection'
 import { TemplateFunctionCallEditor } from './TemplateFunctionCallEditor'
 import { TemplateContentBlockInspector } from './TemplateContentBlockInspector'
+import { collectTemplateChoiceTargetPages } from './TemplateChoiceTargets'
 import { TemplateInterfaceRequirements } from './TemplateInterfaceRequirements'
 import { TemplateNodeInspector } from './TemplateNodeInspector'
 import { TemplatePageCanvas } from './TemplatePageCanvas'
@@ -155,6 +156,11 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
           )
         : [],
     [document, interfaceManifests, root]
+  )
+  const choiceTargetPages = useMemo(
+    () =>
+      root && document ? collectTemplateChoiceTargetPages(root, document.resources.functions) : [],
+    [document, root]
   )
 
   const editMetadata = (
@@ -544,6 +550,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                 <TemplateContentBlockInspector
                   apply={session.apply}
                   block={selectedContentBlock}
+                  choiceTargetPages={choiceTargetPages}
                   pageId={selectedNode.id}
                   variableCandidates={variableCandidates}
                   onBlockIdChange={setSelectedContentBlockId}
@@ -810,13 +817,16 @@ function PageNodeSummary({
         <span>时间线</span>
         <div className={styles.nodeSummaryActions}>
           <small>{node.timeline.length} 项</small>
-          <IconButton
+          <Button
+            aria-label={`编辑节点 ${node.id} 页面内容`}
+            className={styles.nodeContentEdit}
             icon={LayoutTemplate}
-            label={`编辑节点 ${node.id} 页面内容`}
             size="small"
             variant="ghost"
             onClick={onEdit}
-          />
+          >
+            编辑内容
+          </Button>
           <IconButton
             aria-controls={addMenuId}
             aria-expanded={adding}

@@ -16,11 +16,13 @@ import type {
 import { IconButton } from '../../components/ui/IconButton'
 import { TemplateVariableInput } from './TemplateVariableInput'
 import type { TemplateVariableCandidate } from './TemplateVariableInputModel'
+import { sameChoiceQuestionRef, type TemplateChoiceTargetPage } from './TemplateChoiceTargets'
 import styles from './TemplateContentBlockInspector.module.css'
 
 interface TemplateContentBlockInspectorProps {
   pageId: string
   block: ContentBlock
+  choiceTargetPages: readonly TemplateChoiceTargetPage[]
   variableCandidates: readonly TemplateVariableCandidate[]
   apply(operation: TemplateDocumentOperation): boolean
   onBlockIdChange(blockId: string): void
@@ -29,6 +31,7 @@ interface TemplateContentBlockInspectorProps {
 export function TemplateContentBlockInspector({
   pageId,
   block,
+  choiceTargetPages,
   variableCandidates,
   apply,
   onBlockIdChange
@@ -77,7 +80,7 @@ export function TemplateContentBlockInspector({
         />
         <NumberField
           label="Y"
-          max={block.type === 'choice-view' ? Math.max(0, 100 - block.height) : 100}
+          max={block.type === 'text' ? 100 : Math.max(0, 100 - block.height)}
           min={0}
           value={block.y}
           onChange={(y) => {
@@ -94,7 +97,7 @@ export function TemplateContentBlockInspector({
             else if (block.type === 'text') update({ ...block, width: undefined })
           }}
         />
-        {block.type === 'choice-view' ? (
+        {block.type !== 'text' ? (
           <NumberField
             label="高度"
             max={Math.max(1, 100 - block.y)}
@@ -167,6 +170,7 @@ export function TemplateContentBlockInspector({
 
       {block.type === 'choice-view' ? (
         <ChoiceViewportEditor
+          choiceTargetPages={choiceTargetPages}
           value={block.defaultViewport}
           onChange={(defaultViewport) => update({ ...block, defaultViewport })}
         />
@@ -176,19 +180,36 @@ export function TemplateContentBlockInspector({
 }
 
 function ChoiceViewportEditor({
+  choiceTargetPages,
   value,
   onChange
 }: {
+  choiceTargetPages: readonly TemplateChoiceTargetPage[]
   value: ChoiceViewport
   onChange(value: ChoiceViewport): void
 }): JSX.Element {
+  const allTargets = choiceTargetPages.flatMap((page) => page.questions)
+  const selectedTarget =
+    value.mode === 'focus'
+      ? (allTargets.find((target) => sameChoiceQuestionRef(target.ref, value.questionRef)) ?? null)
+      : null
+  const selectedPage =
+    choiceTargetPages.find((page) => page.pageIndex === selectedTarget?.pageIndex) ?? null
+  const pageIndexes = choiceTargetPages.map((page) => page.pageIndex)
+
   const setMode = (mode: ChoiceViewport['mode']): void => {
     if (mode === 'free') onChange({ mode: 'free' })
-    else if (mode === 'range') onChange({ mode: 'range', startPage: 0, endPage: 0 })
-    else {
+    else if (mode === 'range') {
+      const firstPage = pageIndexes[0] ?? 0
+      onChange({ mode: 'range', startPage: firstPage, endPage: firstPage })
+    } else {
       onChange({
         mode: 'focus',
-        questionRef: { scope: 'relative', callPath: [], questionId: '' }
+        questionRef: allTargets[0]?.ref ?? {
+          scope: 'absolute',
+          callPath: [],
+          questionId: ''
+        }
       })
     }
   }
@@ -206,90 +227,161 @@ function ChoiceViewportEditor({
         </select>
       </label>
       {value.mode === 'free' ? (
-        <NumberField
+        <PageSelect
           label="初始页"
-          min={0}
+          pageIndexes={pageIndexes}
           value={value.initialPage}
           onChange={(initialPage) => onChange({ ...value, initialPage })}
         />
       ) : null}
       {value.mode === 'range' ? (
         <div className={styles.geometryGrid}>
-          <NumberField
+          <PageSelect
             label="起始页"
-            min={0}
+            optional={false}
+            pageIndexes={pageIndexes}
             value={value.startPage}
-            onChange={(startPage) => onChange({ ...value, startPage: startPage ?? 0 })}
+            onChange={(startPage) => {
+              if (startPage === undefined) return
+              const endPage = pageIndexes.includes(value.endPage)
+                ? Math.max(startPage, value.endPage)
+                : startPage
+              const initialPage = clampOptionalPage(value.initialPage, startPage, endPage)
+              onChange({ ...value, startPage, endPage, initialPage })
+            }}
           />
-          <NumberField
+          <PageSelect
             label="结束页"
-            min={0}
+            optional={false}
+            pageIndexes={pageIndexes}
             value={value.endPage}
-            onChange={(endPage) => onChange({ ...value, endPage: endPage ?? 0 })}
+            onChange={(endPage) => {
+              if (endPage === undefined) return
+              const startPage = pageIndexes.includes(value.startPage)
+                ? Math.min(value.startPage, endPage)
+                : endPage
+              const initialPage = clampOptionalPage(value.initialPage, startPage, endPage)
+              onChange({ ...value, startPage, endPage, initialPage })
+            }}
           />
-          <NumberField
+          <PageSelect
             label="初始页"
-            min={0}
-            value={value.initialPage}
+            pageIndexes={pageIndexes.filter(
+              (pageIndex) => pageIndex >= value.startPage && pageIndex <= value.endPage
+            )}
+            value={clampOptionalPage(value.initialPage, value.startPage, value.endPage)}
             onChange={(initialPage) => onChange({ ...value, initialPage })}
           />
         </div>
       ) : null}
       {value.mode === 'focus' ? (
-        <>
-          <label>
-            引用范围
-            <select
-              value={value.questionRef.scope}
-              onChange={(event) =>
-                onChange({
-                  ...value,
-                  questionRef: {
-                    ...value.questionRef,
-                    scope: event.target.value as 'relative' | 'absolute'
-                  }
-                })
-              }
-            >
-              <option value="relative">相对</option>
-              <option value="absolute">绝对</option>
-            </select>
-          </label>
-          <label>
-            调用路径
-            <input
-              placeholder="function-a / function-b"
-              value={value.questionRef.callPath.join(' / ')}
-              onChange={(event) =>
-                onChange({
-                  ...value,
-                  questionRef: {
-                    ...value.questionRef,
-                    callPath: event.target.value
-                      .split('/')
-                      .map((item) => item.trim())
-                      .filter(Boolean)
-                  }
-                })
-              }
-            />
-          </label>
-          <label>
-            题目 ID
-            <input
-              value={value.questionRef.questionId}
-              onChange={(event) =>
-                onChange({
-                  ...value,
-                  questionRef: { ...value.questionRef, questionId: event.target.value }
-                })
-              }
-            />
-          </label>
-        </>
+        choiceTargetPages.length > 0 ? (
+          <div className={styles.geometryGrid}>
+            <label>
+              页面
+              <select
+                aria-label="聚焦页面"
+                value={selectedTarget?.pageIndex ?? ''}
+                onChange={(event) => {
+                  const page = choiceTargetPages.find(
+                    (candidate) => candidate.pageIndex === Number(event.target.value)
+                  )
+                  const target = page?.questions[0]
+                  if (target) onChange({ mode: 'focus', questionRef: target.ref })
+                }}
+              >
+                {!selectedTarget ? <option value="">请选择</option> : null}
+                {choiceTargetPages.map((page) => (
+                  <option
+                    disabled={page.questions.length === 0}
+                    key={page.pageIndex}
+                    value={page.pageIndex}
+                  >
+                    第 {page.pageIndex + 1} 页
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              题目
+              <select
+                aria-label="聚焦题目"
+                disabled={!selectedPage || selectedPage.questions.length === 0}
+                value={selectedTarget?.questionIndex ?? ''}
+                onChange={(event) => {
+                  const target = selectedPage?.questions.find(
+                    (candidate) => candidate.questionIndex === Number(event.target.value)
+                  )
+                  if (target) onChange({ mode: 'focus', questionRef: target.ref })
+                }}
+              >
+                {!selectedTarget ? <option value="">请选择</option> : null}
+                {selectedPage?.questions.map((target) => (
+                  <option key={target.questionIndex} value={target.questionIndex}>
+                    第 {target.questionIndex + 1} 题
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        ) : (
+          <p className={styles.emptyValue}>无可用题目</p>
+        )
       ) : null}
     </div>
   )
+}
+
+function PageSelect({
+  label,
+  optional = true,
+  pageIndexes,
+  value,
+  onChange
+}: {
+  label: string
+  optional?: boolean
+  pageIndexes: readonly number[]
+  value: number | undefined
+  onChange(value: number | undefined): void
+}): JSX.Element {
+  const hasValue = value !== undefined && pageIndexes.includes(value)
+  return (
+    <label>
+      {label}
+      <select
+        aria-label={label}
+        disabled={pageIndexes.length === 0}
+        value={hasValue ? value : ''}
+        onChange={(event) => {
+          if (event.target.value === '') onChange(undefined)
+          else onChange(Number(event.target.value))
+        }}
+      >
+        {pageIndexes.length === 0 ? <option value="">无可用页面</option> : null}
+        {pageIndexes.length > 0 && optional ? <option value="">默认</option> : null}
+        {pageIndexes.length > 0 && !optional && !hasValue ? (
+          <option disabled value="">
+            请选择
+          </option>
+        ) : null}
+        {pageIndexes.map((pageIndex) => (
+          <option key={pageIndex} value={pageIndex}>
+            第 {pageIndex + 1} 页
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+function clampOptionalPage(
+  page: number | undefined,
+  startPage: number,
+  endPage: number
+): number | undefined {
+  if (page === undefined) return undefined
+  return Math.min(endPage, Math.max(startPage, page))
 }
 
 function NumberField({

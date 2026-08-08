@@ -1070,6 +1070,10 @@ describe('Template pages', () => {
     fireEvent.click(screen.getByRole('button', { name: '添加选择题视图' }))
     expect(screen.getByText('3 个内容块')).toBeInTheDocument()
 
+    fireEvent.click(screen.getByRole('button', { name: '图片 image' }))
+    expect(within(properties).getByLabelText('高度')).toHaveValue(40)
+    fireEvent.change(within(properties).getByLabelText('高度'), { target: { value: '30' } })
+
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
     await waitFor(() => expect(app.templates.save).toHaveBeenCalledOnce())
     const saved = vi.mocked(app.templates.save).mock.calls[0][0]
@@ -1085,5 +1089,155 @@ describe('Template pages', () => {
       text: { parts: [{ type: 'literal', value: '欢迎参加考试' }] }
     })
     expect(page.content.blocks.map((block) => block.type)).toEqual(['text', 'image', 'choice-view'])
+    expect(page.content.blocks[1]).toMatchObject({ type: 'image', width: 40, height: 30 })
+  })
+
+  it('selects a focused choice target by page and question number', async () => {
+    const document = template()
+    const page = document.content.root.children[0]
+    if (page.type !== 'page') throw new Error('expected page')
+    page.content.blocks = [
+      {
+        id: 'choices',
+        type: 'choice-view',
+        x: 10,
+        y: 10,
+        width: 80,
+        height: 70,
+        defaultViewport: {
+          mode: 'focus',
+          questionRef: { scope: 'absolute', callPath: [], questionId: 'question-2' }
+        }
+      }
+    ]
+    document.content.root.choiceCollector = {
+      pages: [{ questionCount: 2 }, { questionCount: 1 }]
+    }
+    document.content.root.children.push(
+      createChoiceQuestion('question-1'),
+      createChoiceQuestion('question-2'),
+      createChoiceQuestion('question-3')
+    )
+    const app = application(document)
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: '编辑节点 page-1 页面内容' }))
+    fireEvent.click(screen.getByRole('button', { name: '选择题视图 choices' }))
+    const properties = screen.getByRole('complementary', { name: '属性' })
+    expect(within(properties).queryByText('调用路径')).not.toBeInTheDocument()
+    expect(within(properties).queryByText('题目 ID')).not.toBeInTheDocument()
+    expect(within(properties).getByLabelText('聚焦页面')).toHaveValue('0')
+    expect(within(properties).getByLabelText('聚焦题目')).toHaveValue('1')
+
+    fireEvent.change(within(properties).getByLabelText('聚焦页面'), {
+      target: { value: '1' }
+    })
+    expect(within(properties).getByLabelText('聚焦题目')).toHaveValue('0')
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(app.templates.save).toHaveBeenCalledOnce())
+    const savedPage = vi.mocked(app.templates.save).mock.calls[0][0].content.root.children[0]
+    if (savedPage.type !== 'page') throw new Error('expected page')
+    expect(savedPage.content.blocks[0]).toMatchObject({
+      type: 'choice-view',
+      defaultViewport: {
+        mode: 'focus',
+        questionRef: { scope: 'absolute', callPath: [], questionId: 'question-3' }
+      }
+    })
+  })
+
+  it('selects free and range page numbers from the collector pages', async () => {
+    const document = template()
+    const page = document.content.root.children[0]
+    if (page.type !== 'page') throw new Error('expected page')
+    page.content.blocks = [
+      {
+        id: 'choices',
+        type: 'choice-view',
+        x: 10,
+        y: 10,
+        width: 80,
+        height: 70,
+        defaultViewport: { mode: 'free' }
+      }
+    ]
+    document.content.root.choiceCollector = {
+      pages: [{ questionCount: 1 }, { questionCount: 1 }]
+    }
+    document.content.root.children.push(
+      createChoiceQuestion('question-1'),
+      createChoiceQuestion('question-2')
+    )
+    const app = application(document)
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: '编辑节点 page-1 页面内容' }))
+    fireEvent.click(screen.getByRole('button', { name: '选择题视图 choices' }))
+    const properties = screen.getByRole('complementary', { name: '属性' })
+    const initialPage = within(properties).getByLabelText('初始页')
+    expect(initialPage.tagName).toBe('SELECT')
+    expect(
+      within(initialPage)
+        .getAllByRole('option')
+        .map((option) => option.textContent)
+    ).toEqual(['默认', '第 1 页', '第 2 页'])
+    fireEvent.change(initialPage, { target: { value: '1' } })
+
+    fireEvent.change(within(properties).getByLabelText('显示模式'), {
+      target: { value: 'range' }
+    })
+    const startPage = within(properties).getByLabelText('起始页')
+    const endPage = within(properties).getByLabelText('结束页')
+    expect(startPage.tagName).toBe('SELECT')
+    expect(endPage.tagName).toBe('SELECT')
+    fireEvent.change(startPage, { target: { value: '1' } })
+    expect(endPage).toHaveValue('1')
+
+    const rangeInitialPage = within(properties).getByLabelText('初始页')
+    expect(
+      within(rangeInitialPage)
+        .getAllByRole('option')
+        .map((option) => option.textContent)
+    ).toEqual(['默认', '第 2 页'])
+    fireEvent.change(rangeInitialPage, { target: { value: '1' } })
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(app.templates.save).toHaveBeenCalledOnce())
+    const savedPage = vi.mocked(app.templates.save).mock.calls[0][0].content.root.children[0]
+    if (savedPage.type !== 'page') throw new Error('expected page')
+    expect(savedPage.content.blocks[0]).toMatchObject({
+      type: 'choice-view',
+      defaultViewport: { mode: 'range', startPage: 1, endPage: 1, initialPage: 1 }
+    })
   })
 })
+
+function createChoiceQuestion(id: string): TemplateDocument['content']['root']['children'][number] {
+  return {
+    id,
+    type: 'choice-question',
+    stem: { type: 'string', parts: [{ type: 'literal', value: id }] },
+    options: [
+      { id: 'a', content: { type: 'string', parts: [{ type: 'literal', value: 'A' }] } },
+      { id: 'b', content: { type: 'string', parts: [{ type: 'literal', value: 'B' }] } }
+    ],
+    outputName: `${id}-answer`
+  }
+}

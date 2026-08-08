@@ -395,6 +395,81 @@ describe('Template 校验错误契约', () => {
     ).toEqual({ valid: true, errors: [] })
   })
 
+  it('允许函数中的选择题由外部 Collector 收集', () => {
+    const func: FunctionDef = {
+      id: FUNCTION_ID,
+      name: 'Question source',
+      inputs: [],
+      body: root([question()]),
+      outputs: [],
+      schemaUses: []
+    }
+    const template = content({
+      root: {
+        ...root([
+          { id: 'call', type: 'function', functionRef: FUNCTION_ID, inputs: {}, outputNames: {} }
+        ]),
+        choiceCollector: { pages: [{ questionCount: 1 }] }
+      }
+    })
+
+    expect(validateTemplateContent(template, context({ functions: [func] }))).toEqual({
+      valid: true,
+      errors: []
+    })
+  })
+
+  it('拒绝函数内 ChoiceView 依赖函数外 Collector', () => {
+    const func: FunctionDef = {
+      id: FUNCTION_ID,
+      name: 'Leaky choice view',
+      inputs: [],
+      body: root([question(), pageWithViewport({ mode: 'free' })]),
+      outputs: [],
+      schemaUses: []
+    }
+    const template = content({
+      root: {
+        ...root([
+          { id: 'call', type: 'function', functionRef: FUNCTION_ID, inputs: {}, outputNames: {} }
+        ]),
+        choiceCollector: { pages: [{ questionCount: 1 }] }
+      }
+    })
+
+    expect(validateTemplateContent(template, context({ functions: [func] })).errors).toEqual([
+      {
+        path: 'root.children[0].function.body.children[1].content.blocks[0].defaultViewport',
+        code: 'FUNCTION_CHOICE_VIEW_WITHOUT_LOCAL_COLLECTOR',
+        params: {}
+      }
+    ])
+  })
+
+  it('允许函数在内部封装题目、Collector 和 ChoiceView', () => {
+    const func: FunctionDef = {
+      id: FUNCTION_ID,
+      name: 'Self-contained choice section',
+      inputs: [],
+      body: {
+        ...root([question(), pageWithViewport({ mode: 'free' })]),
+        choiceCollector: { pages: [{ questionCount: 1 }] }
+      },
+      outputs: [],
+      schemaUses: []
+    }
+    const template = content({
+      root: root([
+        { id: 'call', type: 'function', functionRef: FUNCTION_ID, inputs: {}, outputNames: {} }
+      ])
+    })
+
+    expect(validateTemplateContent(template, context({ functions: [func] }))).toEqual({
+      valid: true,
+      errors: []
+    })
+  })
+
   it('函数正文错误路径包含稳定的 function.body 段', () => {
     const func: FunctionDef = {
       id: FUNCTION_ID,

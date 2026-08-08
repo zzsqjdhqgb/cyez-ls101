@@ -10,6 +10,7 @@ export interface ChoiceAnalysis {
 interface ViewportUse {
   path: string
   viewport: ChoiceViewport
+  checkedAtFunctionBoundary: boolean
 }
 
 export function analyzeChoiceFrame(
@@ -81,7 +82,8 @@ function analyzeChoiceNode(
         if (block.type === 'choice-view') {
           viewports.push({
             path: `${path}.content.blocks[${index}].defaultViewport`,
-            viewport: block.defaultViewport
+            viewport: block.defaultViewport,
+            checkedAtFunctionBoundary: false
           })
         }
       })
@@ -89,7 +91,8 @@ function analyzeChoiceNode(
         for (const [blockId, viewport] of Object.entries(step.choiceViewOverrides ?? {})) {
           viewports.push({
             path: `${path}.timeline[${stepIndex}].choiceViewOverrides[${JSON.stringify(blockId)}]`,
-            viewport
+            viewport,
+            checkedAtFunctionBoundary: false
           })
         }
       })
@@ -98,12 +101,27 @@ function analyzeChoiceNode(
     case 'function': {
       const func = state.functionsById.get(node.functionRef)
       if (!func || functionStack.includes(func.id)) return emptyChoiceAnalysis()
-      return analyzeChoiceFrame(
+      const result = analyzeChoiceFrame(
         func.body,
         `${path}.function.body`,
         [...functionStack, func.id],
         state
       )
+      const uncheckedViewports = result.viewports.filter(
+        (viewport) => !viewport.checkedAtFunctionBoundary
+      )
+      if (uncheckedViewports.length > 0 && result.candidatePageCounts.length !== 1) {
+        uncheckedViewports.forEach((viewport) =>
+          addError(state, viewport.path, 'FUNCTION_CHOICE_VIEW_WITHOUT_LOCAL_COLLECTOR')
+        )
+      }
+      return {
+        ...result,
+        viewports: result.viewports.map((viewport) => ({
+          ...viewport,
+          checkedAtFunctionBoundary: true
+        }))
+      }
     }
   }
 }

@@ -83,6 +83,12 @@ renderer 的 Template 编辑会话直接消费不可变 mutation 结果，以完
 
 renderer 中栏提供“结构 / 页面”标签页。Page 画布支持新增文本、图片和 ChoiceView，单选、拖动、缩放、复制、删除及视图缩放；变量文本以 token 预览。选中块的 ID、百分比几何、文本表达式与格式、图片表达式和 ChoiceView 视口在右侧独立折叠区域编辑。交互继续提交现有内容块 mutation，因此共用文档撤销、重做、dirty 和保存语义；一次连续拖动或缩放只在指针释放时形成一个历史条目。
 
+图片内容块保存独立的百分比宽高，渲染时保持图片原始比例并以 `contain` 方式在固定框内居中；长边撑满框，另一方向留空，不执行裁剪或拉伸。
+
+ChoiceView 的 focus 模式在属性栏中按 Collector 展开结果选择“第几页 / 第几题”。renderer 使用与编译器一致的节点及函数调用展开顺序建立页题到 `questionRef` 的映射，不向用户暴露 scope、函数调用路径或题目节点 ID。
+
+ChoiceView 的 free/range 页码同样使用基于 Collector 最终页数的下拉框。range 起止页联动并限制初始页候选，避免属性栏产生越界或反向区间。函数中的选择题允许由外部 Collector 收集；函数中的 ChoiceView 则必须在该函数展开范围内找到唯一 Collector，不能依赖调用方 Collector。
+
 工作文档允许暂时不完整。删除函数输入、录音或选择题后，无法无歧义决定替代值的普通表达式不会被猜测式删除或改写，而由严格语义校验返回可定位错误。函数输入重命名和 Interface alias 重命名属于含义明确的操作，会重写当前可编辑正文中的对应变量引用。内嵌函数资源不随 alias 重命名而重写：函数禁止直接引用 Template Interface alias，只能通过调用输入接收 Interface 值，因此函数资源不捕获调用方命名空间。
 
 `templates.validate()` 和 `templates.compile()` 会根据当前 Template 收集 Interface 与 Schema 身份，通过调用方提供的跨模块查询函数取得清单。编译时再把 Interface 实例选择及实例定位器交给底层异步编译器。renderer 通过 Interface 应用门面的 `published.getVarManifest()` 和 `instances.locate()` 适配这两项能力，不依赖 Interface 仓储。Schema Editor 尚未实现实际查询 API，当前通过窄依赖接口接入。

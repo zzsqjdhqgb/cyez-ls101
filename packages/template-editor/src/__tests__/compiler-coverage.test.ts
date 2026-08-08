@@ -111,45 +111,48 @@ function focusFunctionContent(questionRef: ChoiceQuestionRef): FunctionContent {
   return {
     name: 'Focused question',
     inputs: [{ name: 'stem', type: 'string' }],
-    body: root([
-      {
-        id: 'question',
-        type: 'choice-question',
-        stem: {
-          type: 'string',
-          parts: [{ type: 'variable', ref: { scope: 'local', name: 'stem' } }]
+    body: {
+      ...root([
+        {
+          id: 'question',
+          type: 'choice-question',
+          stem: {
+            type: 'string',
+            parts: [{ type: 'variable', ref: { scope: 'local', name: 'stem' } }]
+          },
+          options: [
+            { id: 'a', content: text('A') },
+            { id: 'b', content: text('B') }
+          ],
+          outputName: 'answer'
         },
-        options: [
-          { id: 'a', content: text('A') },
-          { id: 'b', content: text('B') }
-        ],
-        outputName: 'answer'
-      },
-      {
-        id: 'page',
-        type: 'page',
-        content: {
-          blocks: [
+        {
+          id: 'page',
+          type: 'page',
+          content: {
+            blocks: [
+              {
+                id: 'view',
+                type: 'choice-view',
+                x: 0,
+                y: 0,
+                width: 100,
+                height: 100,
+                defaultViewport: focus
+              }
+            ]
+          },
+          timeline: [
             {
-              id: 'view',
-              type: 'choice-view',
-              x: 0,
-              y: 0,
-              width: 100,
-              height: 100,
-              defaultViewport: focus
+              type: 'countdown',
+              seconds: number(1),
+              choiceViewOverrides: { view: focus }
             }
           ]
-        },
-        timeline: [
-          {
-            type: 'countdown',
-            seconds: number(1),
-            choiceViewOverrides: { view: focus }
-          }
-        ]
-      }
-    ]),
+        }
+      ]),
+      choiceCollector: { pages: [{ questionCount: 1 }] }
+    },
     outputs: [
       {
         name: 'result',
@@ -161,32 +164,85 @@ function focusFunctionContent(questionRef: ChoiceQuestionRef): FunctionContent {
   }
 }
 
-function focusExam(functionRef: string): TemplateContent {
-  const functionCall = (id: string, stem: string, outputName: string) =>
-    call(
-      id,
-      functionRef,
-      { result: outputName },
-      {
-        stem: { type: 'string', source: 'literal', value: stem }
-      }
-    )
+function focusExam(functionRef: string, callId = 'call-1'): TemplateContent {
   return content({
-    root: {
-      id: 'root',
-      type: 'frame',
-      children: [
-        functionCall('call-1', 'First', 'answer-1'),
-        functionCall('call-2', 'Second', 'answer-2')
-      ],
-      choiceCollector: { pages: [{ questionCount: 1 }, { questionCount: 1 }] }
-    },
-    schemaUses: [choiceUse('choice-1', 'answer-1'), choiceUse('choice-2', 'answer-2')]
+    root: root([
+      call(
+        callId,
+        functionRef,
+        { result: 'answer-1' },
+        { stem: { type: 'string', source: 'literal', value: 'First' } }
+      )
+    ]),
+    schemaUses: [choiceUse('choice-1', 'answer-1')]
   })
 }
 
 describe('Template 编译组合覆盖', () => {
-  it('relative focus 在每次函数调用中解析到当前实例，包括时间线 override', async () => {
+  it('函数中的选择题可以由外部 Collector 收集和分页', async () => {
+    const resource = await createFunctionResource({
+      name: 'Question source',
+      inputs: [{ name: 'stem', type: 'string' }],
+      body: root([
+        {
+          id: 'question',
+          type: 'choice-question',
+          stem: {
+            type: 'string',
+            parts: [{ type: 'variable', ref: { scope: 'local', name: 'stem' } }]
+          },
+          options: [
+            { id: 'a', content: text('A') },
+            { id: 'b', content: text('B') }
+          ],
+          outputName: 'answer'
+        }
+      ]),
+      outputs: [
+        {
+          name: 'result',
+          type: 'choice',
+          expression: { type: 'choice', source: 'choice-output', name: 'answer' }
+        }
+      ],
+      schemaUses: []
+    })
+    const result = await compileTemplate(
+      document(
+        content({
+          root: {
+            ...root([
+              call(
+                'call-1',
+                resource.id,
+                { result: 'answer-1' },
+                { stem: { type: 'string', source: 'literal', value: 'First' } }
+              ),
+              call(
+                'call-2',
+                resource.id,
+                { result: 'answer-2' },
+                { stem: { type: 'string', source: 'literal', value: 'Second' } }
+              )
+            ]),
+            choiceCollector: { pages: [{ questionCount: 1 }, { questionCount: 1 }] }
+          },
+          schemaUses: [choiceUse('choice-1', 'answer-1'), choiceUse('choice-2', 'answer-2')]
+        }),
+        [resource]
+      ),
+      context()
+    )
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.examPackage.player.choiceMeta).toMatchObject({
+      pages: [{ questionIndices: [0] }, { questionIndices: [1] }],
+      questions: [{ stem: 'First' }, { stem: 'Second' }]
+    })
+  })
+
+  it('relative focus 在封装函数中解析到当前实例，包括时间线 override', async () => {
     const resource = await createFunctionResource(
       focusFunctionContent({ scope: 'relative', callPath: [], questionId: 'question' })
     )
@@ -194,16 +250,15 @@ describe('Template 编译组合覆盖', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    expect(result.examPackage.player.pages).toHaveLength(2)
-    result.examPackage.player.pages.forEach((page, choiceIndex) => {
-      expect(page.content[0]).toMatchObject({
-        defaultViewport: { mode: 'focus', choiceIndex }
-      })
-      expect(page.timeline[0]).toMatchObject({
-        choiceViewOverrides: {
-          [`block:call-${choiceIndex + 1}/page/view`]: { mode: 'focus', choiceIndex }
-        }
-      })
+    expect(result.examPackage.player.pages).toHaveLength(1)
+    const page = result.examPackage.player.pages[0]
+    expect(page.content[0]).toMatchObject({
+      defaultViewport: { mode: 'focus', choiceIndex: 0 }
+    })
+    expect(page.timeline[0]).toMatchObject({
+      choiceViewOverrides: {
+        'block:call-1/page/view': { mode: 'focus', choiceIndex: 0 }
+      }
     })
   })
 
@@ -215,18 +270,20 @@ describe('Template 编译组合覆盖', () => {
         questionId: 'question'
       })
     )
-    const result = await compileTemplate(document(focusExam(resource.id), [resource]), context())
+    const result = await compileTemplate(
+      document(focusExam(resource.id, 'call-2'), [resource]),
+      context()
+    )
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    result.examPackage.player.pages.forEach((page) => {
-      expect(page.content[0]).toMatchObject({
-        defaultViewport: { mode: 'focus', choiceIndex: 1 }
-      })
-      expect(page.timeline[0]).toMatchObject({
-        choiceViewOverrides: expect.objectContaining({
-          [page.content[0].id]: { mode: 'focus', choiceIndex: 1 }
-        })
+    const page = result.examPackage.player.pages[0]
+    expect(page.content[0]).toMatchObject({
+      defaultViewport: { mode: 'focus', choiceIndex: 0 }
+    })
+    expect(page.timeline[0]).toMatchObject({
+      choiceViewOverrides: expect.objectContaining({
+        [page.content[0].id]: { mode: 'focus', choiceIndex: 0 }
       })
     })
   })
@@ -272,6 +329,7 @@ describe('Template 编译组合覆盖', () => {
             x: 0,
             y: 0,
             width: 100,
+            height: 50,
             src: {
               type: 'file',
               source: 'variable',
@@ -315,6 +373,8 @@ describe('Template 编译组合覆盖', () => {
     if (!result.success) return
     expect(result.examPackage.player.pages[0].content[0]).toMatchObject({
       type: 'image',
+      width: 100,
+      height: 50,
       src: 'audio.mp3'
     })
     expect(result.examPackage.player.pages[0].timeline).toEqual([
