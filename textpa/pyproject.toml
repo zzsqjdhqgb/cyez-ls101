@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "textpa-repro"
+version = "0.1.0"
+description = "A deployable reproduction of the TextPA pronunciation assessment pipeline"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "TextPA reproduction contributors"}]
+dependencies = []
+
+[project.optional-dependencies]
+acoustic = [
+  "faster-whisper>=1.1,<2",
+  "numpy>=1.26,<3",
+  "transformers>=4.39,<5",
+]
+phonemizer = ["phonemizer>=3.3,<4"]
+llm = ["openai>=1.68,<3"]
+dev = []
+
+[project.scripts]
+textpa = "textpa_repro.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+

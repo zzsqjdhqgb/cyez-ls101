@@ -1,0 +1,10 @@
+# Top-level runtime dependencies verified together on Linux, Python 3.11, CPU only.
+# The extra index is needed for PyTorch's +cpu wheel; all other packages come from PyPI.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch==2.6.0+cpu
+numpy==1.26.4
+faster-whisper==1.2.1
+transformers==4.48.3
+phonemizer==3.4.0
+openai==2.53.0
