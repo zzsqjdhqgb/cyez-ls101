@@ -20,6 +20,7 @@
     "test:playwright:run": "yarn test:playwright:electron && yarn test:playwright:components",
     "test:playwright:electron": "playwright test --config=playwright.config.ts",
     "test:playwright:components": "playwright test --config=playwright.components.config.ts",
+    "test:smoke": "yarn build:test && playwright test --config=playwright.config.ts tests/integration/electron-app.spec.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "start": "electron-vite preview",
