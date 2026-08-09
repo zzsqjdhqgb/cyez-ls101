@@ -1,7 +1,7 @@
 import unittest
 
 from textpa_repro.models import TextCues
-from textpa_repro.prompting import PAPER_PROMPT, render_prompt
+from textpa_repro.prompting import CalibrationAnchor, PAPER_PROMPT, render_prompt
 
 
 class PromptingTests(unittest.TestCase):
@@ -28,7 +28,25 @@ class PromptingTests(unittest.TestCase):
         rendered = render_prompt(self.cues, paper_compat=False)
         self.assertIn('"Phonemes_IPA": "m E m b i w i"', rendered)
 
+    def test_calibration_anchor_precedes_unscored_input(self) -> None:
+        anchor_cues = TextCues(
+            utterance_id="anchor.wav",
+            transcript="A human-scored example.",
+            phonemes_cmu="AH HH Y UW M AH N",
+            phonemes_ipa="ə h j uː m ə n",
+        )
+        anchor = CalibrationAnchor(anchor_cues, accuracy=1.6, fluency=2.0)
+
+        rendered = render_prompt(self.cues, calibration_anchors=[anchor])
+
+        self.assertIn("averaged across five human evaluators", rendered)
+        self.assertIn("{'Accuracy': 1.6, 'Fluency': 2.0}", rendered)
+        self.assertLess(
+            rendered.index("A human-scored example."),
+            rendered.index("Maybe we should get some cards."),
+        )
+        self.assertEqual(rendered.count("{'Accuracy': 1.6, 'Fluency': 2.0}"), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -144,6 +144,52 @@ class LlmConfigurationTests(unittest.TestCase):
             messages=[{"role": "user", "content": "test prompt"}],
         )
 
+    def test_rate_limit_is_retried_after_sdk_retries_are_exhausted(self) -> None:
+        client = Mock()
+        rate_limit = RuntimeError("rate limited")
+        rate_limit.status_code = 429
+        successful = Mock(
+            output_text=(
+                '{"Accuracy": 4, "Fluency": 3, "Reasoning": "Clear."}'
+            )
+        )
+        client.responses.create.side_effect = [rate_limit, successful]
+        with patch("openai.OpenAI", return_value=client):
+            assessor = OpenAICompatibleAssessor(
+                "test-model",
+                api_key="unused",
+                api_style="responses",
+                retries=3,
+            )
+
+        with patch("textpa_repro.llm.time.sleep") as sleep:
+            result = assessor.assess("test prompt")
+
+        self.assertEqual(result.accuracy, 4.0)
+        self.assertEqual(client.responses.create.call_count, 2)
+        sleep.assert_called_once_with(1)
+
+    def test_non_rate_limit_api_error_is_not_retried(self) -> None:
+        client = Mock()
+        server_error = RuntimeError("server error")
+        server_error.status_code = 500
+        client.responses.create.side_effect = server_error
+        with patch("openai.OpenAI", return_value=client):
+            assessor = OpenAICompatibleAssessor(
+                "test-model",
+                api_key="unused",
+                api_style="responses",
+                retries=3,
+            )
+
+        with patch("textpa_repro.llm.time.sleep") as sleep:
+            with self.assertRaises(RuntimeError) as raised:
+                assessor.assess("test prompt")
+
+        self.assertIs(raised.exception, server_error)
+        client.responses.create.assert_called_once()
+        sleep.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

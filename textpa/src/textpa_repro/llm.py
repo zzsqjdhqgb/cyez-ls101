@@ -21,6 +21,13 @@ REASONING_EFFORTS = (
 )
 
 
+def _is_rate_limit_error(error: Exception) -> bool:
+    if getattr(error, "status_code", None) == 429:
+        return True
+    response = getattr(error, "response", None)
+    return getattr(response, "status_code", None) == 429
+
+
 def parse_assessment(text: str) -> Assessment:
     candidate = text.strip()
     if candidate.startswith("```"):
@@ -141,9 +148,15 @@ class OpenAICompatibleAssessor:
                 return parse_assessment(self._call(prompt))
             except (SchemaError, json.JSONDecodeError) as exc:
                 last_error = exc
-                if attempt + 1 < self.retries:
-                    time.sleep(min(2**attempt, 4))
+            except Exception as exc:
+                if not _is_rate_limit_error(exc):
+                    raise
+                last_error = exc
+            if attempt + 1 < self.retries:
+                time.sleep(min(2**attempt, 4))
         assert last_error is not None
+        if _is_rate_limit_error(last_error):
+            raise last_error
         raise SchemaError(
             f"model did not return a valid assessment after {self.retries} attempts"
         ) from last_error

@@ -23,11 +23,13 @@ class TrackingAssessor:
         self.active = 0
         self.max_active = 0
         self.call_count = 0
+        self.prompts: list[str] = []
 
     def assess(self, prompt: str) -> Assessment:
         with self._lock:
             self.active += 1
             self.call_count += 1
+            self.prompts.append(prompt)
             self.max_active = max(self.max_active, self.active)
         try:
             time.sleep(0.03)
@@ -134,6 +136,8 @@ class CliAssessConcurrencyTests(unittest.TestCase):
             api_style="chat",
             json_mode=False,
             json_input=False,
+            calibration_anchors=None,
+            exclude_calibration_anchors=False,
             reasoning_effort="high",
             retries=3,
             timeout=120.0,
@@ -169,6 +173,88 @@ class CliAssessConcurrencyTests(unittest.TestCase):
                 Path(f"{output}.manifest.json").read_text(encoding="utf-8")
             )
             self.assertEqual(manifest["config"]["reasoning_effort"], "high")
+
+    def test_assess_uses_and_excludes_calibration_anchors(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = self._write_cues(root, count=3)
+            anchors = root / "anchors.jsonl"
+            anchor_record = TextCues(
+                utterance_id="sample-1.wav",
+                transcript="Sample number 1.",
+                phonemes_cmu="S AE M P AH L",
+                phonemes_ipa="s ae m p əl",
+            ).to_dict()
+            anchor_record["human_scores"] = {"accuracy": 1.6, "fluency": 2.0}
+            anchors.write_text(
+                json.dumps(anchor_record, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            output = root / "assessments.jsonl"
+            assessor = TrackingAssessor()
+            args = self._args(source, output, concurrency=2)
+            args.calibration_anchors = str(anchors)
+            args.exclude_calibration_anchors = True
+
+            with patch(
+                "textpa_repro.cli.OpenAICompatibleAssessor", return_value=assessor
+            ):
+                self.assertEqual(command_assess(args), 0)
+
+            records = list(read_jsonl(output))
+            self.assertEqual(
+                {item["id"] for item in records},
+                {"sample-0.wav", "sample-2.wav"},
+            )
+            self.assertTrue(
+                all(
+                    item["prompt_mode"] == "paper-with-calibration-anchors"
+                    for item in records
+                )
+            )
+            manifest = json.loads(
+                Path(f"{output}.manifest.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                manifest["config"]["calibration_anchors"],
+                [{"id": "sample-1.wav", "accuracy": 1.6, "fluency": 2.0}],
+            )
+            self.assertTrue(manifest["config"]["exclude_calibration_anchors"])
+            self.assertEqual(len(assessor.prompts), 2)
+            self.assertTrue(
+                all("Sample number 1." in prompt for prompt in assessor.prompts)
+            )
+            self.assertTrue(
+                all(
+                    "{'Accuracy': 1.6, 'Fluency': 2.0}" in prompt
+                    for prompt in assessor.prompts
+                )
+            )
+
+    def test_assess_rejects_mismatched_excluded_anchor_cues(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = self._write_cues(root, count=2)
+            anchors = root / "anchors.jsonl"
+            anchor_record = TextCues(
+                utterance_id="sample-1.wav",
+                transcript="Different cues under the same ID.",
+                phonemes_cmu="D IH F ER AH N T",
+                phonemes_ipa="d ɪ f ɚ ə n t",
+            ).to_dict()
+            anchor_record["human_scores"] = {"accuracy": 1.6, "fluency": 2.0}
+            anchors.write_text(
+                json.dumps(anchor_record, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            args = self._args(source, root / "output.jsonl", concurrency=1)
+            args.calibration_anchors = str(anchors)
+            args.exclude_calibration_anchors = True
+
+            with patch("textpa_repro.cli.OpenAICompatibleAssessor") as assessor_class:
+                with self.assertRaisesRegex(SchemaError, "do not match cues"):
+                    command_assess(args)
+                assessor_class.assert_not_called()
 
     def test_nonpositive_concurrency_is_rejected_before_output_or_assessor(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

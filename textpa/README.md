@@ -136,11 +136,28 @@ mode，可增加 `--json-mode`。输出文件按 utterance 即时落盘，重新
 变化时拒绝混合续跑。明确需要重跑时才使用 `--overwrite`。
 
 `--concurrency` 默认是 1。执行器只保持指定数量的在途请求；发生错误时不会继续
-派发剩余队列。并发值必须服从实际服务商的限流配置。
+派发剩余队列。并发值必须服从实际服务商的限流配置。OpenAI SDK 自带的重试
+耗尽后，`--retries` 还会对 HTTP 429 做外层指数退避；其他 API 错误不会被当成
+限流吞掉。
 
 对支持推理深度的端点，可使用 `--reasoning-effort` 显式传入 `none`、
 `minimal`、`low`、`medium`、`high`、`xhigh` 或 `max`。该值会写入 manifest
 和每条输出；省略时不发送此参数，保留服务商默认行为。
+
+需要用已标注样本校准 1--5 标尺时，可提供包含 cue 字段和 `human_scores` 的
+JSONL。`--exclude-calibration-anchors` 会要求这些 ID 及其 cue 内容与输入一致，
+然后只评估其余记录：
+
+```bash
+textpa assess artifacts/multipa-reference/paper_cues.jsonl \
+  -o artifacts/calibrated.jsonl \
+  --model MODEL_ID \
+  --calibration-anchors benchmark-data/calibration/multipa-extreme4-anchors.jsonl \
+  --exclude-calibration-anchors
+```
+
+四极值锚点的 Luna max 探索结果及数据泄漏边界见
+[`BENCHMARK.md`](BENCHMARK.md)。
 
 加入 canonical IPA 与最终分数：
 

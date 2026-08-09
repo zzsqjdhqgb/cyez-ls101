@@ -35,7 +35,7 @@ from .llm import REASONING_EFFORTS, OpenAICompatibleAssessor
 from .metrics import evaluate_multipa
 from .models import Assessment, TextCues
 from .phonemize import EspeakCanonicalIpa
-from .prompting import render_prompt
+from .prompting import CalibrationAnchor, cue_payload, render_prompt
 from .reference import (
     download_multipa_audio,
     prepare_multipa_reference,
@@ -288,23 +288,78 @@ def command_assess(args: argparse.Namespace) -> int:
     ):
         raise ValueError("concurrency must be a positive integer")
     source = _unique_records(list(read_jsonl(args.input)), args.input)
+    source_cues: dict[str, TextCues] = {}
     for item in source:
-        TextCues.from_dict(item)
+        cues = TextCues.from_dict(item)
+        source_cues[cues.utterance_id] = cues
+    anchor_path = getattr(args, "calibration_anchors", None)
+    exclude_anchor_ids = getattr(args, "exclude_calibration_anchors", False)
+    anchors: list[CalibrationAnchor] = []
+    if anchor_path:
+        anchor_records = _unique_records(list(read_jsonl(anchor_path)), anchor_path)
+        anchors = [CalibrationAnchor.from_dict(item) for item in anchor_records]
+    if exclude_anchor_ids and not anchors:
+        raise ValueError(
+            "--exclude-calibration-anchors requires --calibration-anchors"
+        )
+    if exclude_anchor_ids:
+        source_ids = {str(item["id"]) for item in source}
+        anchor_ids = {anchor.cues.utterance_id for anchor in anchors}
+        missing = sorted(anchor_ids - source_ids)
+        if missing:
+            raise SchemaError(
+                "calibration anchors requested for exclusion are absent from input "
+                f"(missing={len(missing)})"
+            )
+        mismatched = sorted(
+            anchor.cues.utterance_id
+            for anchor in anchors
+            if cue_payload(anchor.cues)
+            != cue_payload(source_cues[anchor.cues.utterance_id])
+        )
+        if mismatched:
+            raise SchemaError(
+                "calibration anchors do not match cues with the same input IDs "
+                f"(mismatched={len(mismatched)})"
+            )
+        source = [item for item in source if item["id"] not in anchor_ids]
+        if not source:
+            raise SchemaError("excluding calibration anchors left no inputs to assess")
     resolved_base_url = args.base_url or os.getenv("TEXTPA_BASE_URL")
+    inputs = [_file_identity(args.input)]
+    config: dict[str, Any] = {
+        "model": args.model,
+        "base_url": resolved_base_url,
+        "api_key_env": args.api_key_env,
+        "api_style": args.api_style,
+        "json_mode": args.json_mode,
+        "json_input": args.json_input,
+        "reasoning_effort": args.reasoning_effort,
+        "retries": args.retries,
+        "timeout": args.timeout,
+    }
+    if anchor_path:
+        inputs.append({"kind": "calibration_anchors", **_file_identity(anchor_path)})
+        config.update(
+            {
+                "calibration_anchors": [
+                    anchor.manifest_dict() for anchor in anchors
+                ],
+                "exclude_calibration_anchors": exclude_anchor_ids,
+            }
+        )
+    if anchors:
+        prompt_mode = (
+            "json-with-calibration-anchors"
+            if args.json_input
+            else "paper-with-calibration-anchors"
+        )
+    else:
+        prompt_mode = "json" if args.json_input else "paper"
     manifest = _run_manifest(
         "assess",
-        [_file_identity(args.input)],
-        {
-            "model": args.model,
-            "base_url": resolved_base_url,
-            "api_key_env": args.api_key_env,
-            "api_style": args.api_style,
-            "json_mode": args.json_mode,
-            "json_input": args.json_input,
-            "reasoning_effort": args.reasoning_effort,
-            "retries": args.retries,
-            "timeout": args.timeout,
-        },
+        inputs,
+        config,
     )
     assessor: OpenAICompatibleAssessor | None = None
     if args.overwrite:
@@ -349,7 +404,11 @@ def command_assess(args: argparse.Namespace) -> int:
             _log(f"assess start {index}/{len(pending)}: {cues.utterance_id}")
             future = executor.submit(
                 assessor.assess,
-                render_prompt(cues, paper_compat=not args.json_input),
+                render_prompt(
+                    cues,
+                    paper_compat=not args.json_input,
+                    calibration_anchors=anchors,
+                ),
             )
             in_flight[future] = (index, item, cues)
             return True
@@ -369,7 +428,7 @@ def command_assess(args: argparse.Namespace) -> int:
                             "assessment": assessment.to_dict(),
                             "provider": "openai-compatible",
                             "llm_model": args.model,
-                            "prompt_mode": "json" if args.json_input else "paper",
+                            "prompt_mode": prompt_mode,
                         }
                     )
                     if args.reasoning_effort is not None:
@@ -515,6 +574,8 @@ def build_parser() -> argparse.ArgumentParser:
     assess.add_argument("--api-style", choices=("chat", "responses"), default="chat")
     assess.add_argument("--json-mode", action="store_true")
     assess.add_argument("--json-input", action="store_true")
+    assess.add_argument("--calibration-anchors")
+    assess.add_argument("--exclude-calibration-anchors", action="store_true")
     assess.add_argument("--reasoning-effort", choices=REASONING_EFFORTS)
     assess.add_argument("--retries", type=int, default=3)
     assess.add_argument("--timeout", type=float, default=120.0)
