@@ -1,3 +1,5 @@
+> **历史设计，已废弃。** 本文中的“Schema 配置”、录音索引匹配以及人工/AI 对 Schema 使用者透明等设计，已由 [题目评分管道与 Schema 设计](./question-type-pipeline-notes.md) 取代。本文仅保留为讨论记录，不再作为实现依据。
+
 ## 核心理念
 
 批改端的设计与出卷端完全对称。出卷端有 Template + Interface 两层，批改端有 Schema + Schema 配置两层。
