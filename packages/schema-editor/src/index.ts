@@ -1,33 +1,59 @@
-// @ls101/schema-editor - UI-independent Schema data pipeline
+// @ls101/schema-editor - UI-independent Schema structure and publication domain
 
 export {
-  canonicalizeSchemaContent,
+  canonicalizeSchemaStructure,
+  createSchemaDraft,
+  createSchemaDraftLibrary,
   createSchemaDefinition,
-  deriveSchemaId,
+  createSchemaId,
+  deriveSchemaStructureHash,
   isSchemaId,
-  verifySchemaId
+  isSchemaDraftId,
+  isSchemaLibraryId,
+  isSchemaStructureHash,
+  updateSchemaDefinition,
+  updateSchemaDraft,
+  verifySchemaDefinition
 } from './identity'
 export {
-  validateCompiledSchemaPipeline,
   validateSchemaDefinition,
+  validateSchemaData,
+  validateSchemaDraft,
+  validateSchemaDraftLibrary,
+  validateGradingResult,
+  validateSchemaStructure,
   type SchemaValidationError,
   type SchemaValidationErrorCode,
   type SchemaValidationResult
 } from './validation'
-export { instantiateSchemaPipeline, type SchemaInstantiationResult } from './instantiate'
+export { parseSchemaDefinition, parseSchemaDraftLibrary } from './parser'
+export {
+  createSchemaStructure,
+  SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID,
+  SCHEMA_QUESTION_DESCRIPTION_INPUT_ID
+} from './structure'
+export {
+  addSchemaDraft,
+  removeSchemaDraft,
+  replaceSchemaDraft,
+  type SchemaDraftLibraryEditResult
+} from './library'
+export {
+  FileSchemaRepository,
+  SchemaRepositoryError,
+  type SchemaRepository,
+  type SchemaStore
+} from './repository'
 export type {
-  CompiledSchemaBlock,
-  CompiledSchemaInput,
-  CompiledSchemaPipeline,
-  SchemaBlockDefinition,
-  SchemaBlockInstance,
-  SchemaContent,
+  GradingResult,
+  SchemaAnswerDefinition,
+  SchemaAnswerType,
+  SchemaData,
   SchemaDefinition,
-  SchemaInputDefinition,
-  SchemaInputType,
-  SchemaInstance,
-  SchemaInstanceBundle,
-  SchemaInstanceInput,
-  SchemaMissingReason,
-  SchemaRuntimeData
+  SchemaDraft,
+  SchemaDraftLibraryDocument,
+  SchemaQuestionType,
+  SchemaStructure,
+  SchemaTemplateInputDefinition,
+  SchemaTemplateInputType
 } from '@ls101/core-types'

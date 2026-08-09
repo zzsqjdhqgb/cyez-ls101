@@ -1,26 +1,109 @@
-import type { SchemaContent, SchemaDefinition } from '@ls101/core-types'
+import type {
+  SchemaData,
+  SchemaDefinition,
+  SchemaDraft,
+  SchemaDraftLibraryDocument,
+  SchemaStructure
+} from '@ls101/core-types'
 
-const SCHEMA_ID_PATTERN = /^sha256:[0-9a-f]{64}$/
+const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const STRUCTURE_HASH_PATTERN = /^sha256:[0-9a-f]{64}$/
 
-/** 规范表示保留评分块和接入口的业务顺序，并固定所有对象字段顺序。 */
-export function canonicalizeSchemaContent(content: SchemaContent): string {
+export function createSchemaDraftLibrary(name = ''): SchemaDraftLibraryDocument {
+  return {
+    libraryId: crypto.randomUUID(),
+    revision: 0,
+    name,
+    drafts: []
+  }
+}
+
+export function createSchemaDraft(name: string, structure: SchemaStructure): SchemaDraft {
+  return {
+    draftId: crypto.randomUUID(),
+    revision: 0,
+    name,
+    structure: structuredClone(structure)
+  }
+}
+
+export function updateSchemaDraft(
+  draft: SchemaDraft,
+  update: { name?: string; structure?: SchemaStructure }
+): SchemaDraft {
+  return {
+    ...draft,
+    revision: draft.revision + 1,
+    name: update.name ?? draft.name,
+    structure: structuredClone(update.structure ?? draft.structure)
+  }
+}
+
+export async function createSchemaDefinition(
+  draft: SchemaDraft,
+  data: SchemaData
+): Promise<SchemaDefinition> {
+  const structure = structuredClone(draft.structure)
+  return {
+    formatVersion: 2,
+    schemaId: createSchemaId(),
+    sourceDraftId: draft.draftId,
+    structureHash: await deriveSchemaStructureHash(structure),
+    revision: 0,
+    structure,
+    data: structuredClone(data)
+  }
+}
+
+export function updateSchemaDefinition(
+  definition: SchemaDefinition,
+  data: SchemaData
+): SchemaDefinition {
+  return {
+    ...definition,
+    revision: definition.revision + 1,
+    structure: structuredClone(definition.structure),
+    data: structuredClone(data)
+  }
+}
+
+export function createSchemaId(): string {
+  return crypto.randomUUID()
+}
+
+export function isSchemaId(value: string): boolean {
+  return UUID_V4_PATTERN.test(value)
+}
+
+export function isSchemaDraftId(value: string): boolean {
+  return UUID_V4_PATTERN.test(value)
+}
+
+export function isSchemaLibraryId(value: string): boolean {
+  return UUID_V4_PATTERN.test(value)
+}
+
+export function isSchemaStructureHash(value: string): boolean {
+  return STRUCTURE_HASH_PATTERN.test(value)
+}
+
+export function canonicalizeSchemaStructure(structure: SchemaStructure): string {
   return JSON.stringify({
-    name: normalizeText(content.name),
-    blocks: content.blocks.map((block) => ({
-      blockId: normalizeText(block.blockId),
-      name: normalizeText(block.name),
-      maxScore: block.maxScore,
-      inputs: block.inputs.map((input) => ({
-        inputId: normalizeText(input.inputId),
-        name: normalizeText(input.name),
-        type: input.type
-      }))
+    questionType: structure.questionType,
+    answerFormat: structure.answerFormat.map((answer) => ({
+      answerId: normalizeText(answer.answerId),
+      type: answer.type
+    })),
+    templateInputs: structure.templateInputs.map((input) => ({
+      inputId: normalizeText(input.inputId),
+      type: input.type,
+      required: input.required
     }))
   })
 }
 
-export async function deriveSchemaId(content: SchemaContent): Promise<string> {
-  const bytes = new TextEncoder().encode(canonicalizeSchemaContent(content))
+export async function deriveSchemaStructureHash(structure: SchemaStructure): Promise<string> {
+  const bytes = new TextEncoder().encode(canonicalizeSchemaStructure(structure))
   const digest = await crypto.subtle.digest('SHA-256', bytes)
   const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join(
     ''
@@ -28,23 +111,14 @@ export async function deriveSchemaId(content: SchemaContent): Promise<string> {
   return `sha256:${hex}`
 }
 
-export async function createSchemaDefinition(content: SchemaContent): Promise<SchemaDefinition> {
-  return {
-    formatVersion: 1,
-    schemaId: await deriveSchemaId(content),
-    name: content.name,
-    blocks: content.blocks
-  }
-}
-
-export async function verifySchemaId(definition: SchemaDefinition): Promise<boolean> {
+export async function verifySchemaDefinition(definition: SchemaDefinition): Promise<boolean> {
   return (
-    isSchemaId(definition.schemaId) && definition.schemaId === (await deriveSchemaId(definition))
+    definition.formatVersion === 2 &&
+    isSchemaId(definition.schemaId) &&
+    isSchemaDraftId(definition.sourceDraftId) &&
+    isSchemaStructureHash(definition.structureHash) &&
+    definition.structureHash === (await deriveSchemaStructureHash(definition.structure))
   )
-}
-
-export function isSchemaId(value: string): boolean {
-  return SCHEMA_ID_PATTERN.test(value)
 }
 
 function normalizeText(value: string): string {

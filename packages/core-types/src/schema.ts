@@ -1,50 +1,127 @@
-// @ls101/core-types - Template、ExamPlayer 与批改引擎共享的 Schema 数据管道契约
+// @ls101/core-types - Schema 结构、草稿/正式数据与评分结果契约
 
-/** 当前固定的 Schema 数据格式版本。 */
-export type SchemaFormatVersion = 1
+/** 新 Schema 数据格式版本。 */
+export type SchemaFormatVersion = 2
 
-/** Schema 接入口最终向批改引擎提供的数据类型。 */
-export type SchemaInputType = 'string' | 'audio'
+/** Schema 选择的评分数据管道。 */
+export type SchemaQuestionType = 'objective' | 'fixed-reading' | 'freetalk'
 
-/** 创建内容寻址 SchemaDefinition 时使用的可编辑内容。 */
-export interface SchemaContent {
-  name: string
-  blocks: SchemaBlockDefinition[]
+/** 学生答案槽位的语义类型。 */
+export type SchemaAnswerType = 'text' | 'fixed-speech' | 'free-speech'
+
+/** Schema 向 Template 暴露的静态文本输入类型。 */
+export type SchemaTemplateInputType = 'text'
+
+/** 一个正式 Schema 的不可变结构契约。 */
+export interface SchemaStructure {
+  questionType: SchemaQuestionType
+  answerFormat: SchemaAnswerDefinition[]
+  templateInputs: SchemaTemplateInputDefinition[]
 }
 
-/**
- * 一份不可变的数据管道定义。Schema 不包含评分实现，只描述批改输入的形状和满分。
- */
-export interface SchemaDefinition extends SchemaContent {
+/** 一个答案槽位；发布后 answerId、type 和顺序不可变。 */
+export interface SchemaAnswerDefinition {
+  answerId: string
+  type: SchemaAnswerType
+}
+
+/** 一个 Schema 静态文本输入；发布后 inputId、type 和 required 不可变。 */
+export interface SchemaTemplateInputDefinition {
+  inputId: string
+  type: SchemaTemplateInputType
+  required: boolean
+}
+
+/** 正式 Schema 可修改的题型数据。 */
+export interface SchemaData {
+  name: string
+  description: string
+  maxScore: number
+  answerDescriptions: Record<string, string>
+  inputDescriptions: Record<string, string>
+  rubricMarkdown: string
+  extraPromptMarkdown?: string
+}
+
+/** 只定义结构的 Schema 草稿。 */
+export interface SchemaDraft {
+  draftId: string
+  revision: number
+  name: string
+  structure: SchemaStructure
+}
+
+/** Schema 草稿库工作文档。 */
+export interface SchemaDraftLibraryDocument {
+  libraryId: string
+  revision: number
+  name: string
+  drafts: SchemaDraft[]
+}
+
+/** 一个已发布、可修改数据但冻结结构的正式 Schema。 */
+export interface SchemaDefinition {
   formatVersion: SchemaFormatVersion
+  schemaId: string
+  sourceDraftId: string
+  structureHash: string
+  revision: number
+  structure: SchemaStructure
+  data: SchemaData
+}
+
+/** Grading Engine 的正常评分结果。 */
+export interface GradingResult {
+  score: number
+  /** Markdown 评语。 */
+  comment: string
+}
+
+// ============================================================
+// Template 编译适配层（待 Template 迁移完成后删除）
+// ============================================================
+
+/** 旧 Schema 编译管道的数据格式版本。 */
+export type LegacySchemaFormatVersion = 1
+
+/** @deprecated 旧 Template 适配层的输入类型。 */
+export type SchemaInputType = 'string' | 'audio'
+
+/** @deprecated 旧 Template 适配层的评分定义。 */
+export interface LegacySchemaContent {
+  name: string
+  blocks: LegacySchemaBlockDefinition[]
+}
+
+/** @deprecated 使用 SchemaDefinition。 */
+export interface LegacySchemaDefinition extends LegacySchemaContent {
+  formatVersion: LegacySchemaFormatVersion
   schemaId: string
 }
 
-/** 一个实际评分块。第一版不区分可复用块定义与块实例。 */
-export interface SchemaBlockDefinition {
+/** @deprecated 使用 SchemaAnswerDefinition 和 SchemaStructure。 */
+export interface LegacySchemaBlockDefinition {
   blockId: string
   name: string
   maxScore: number
-  inputs: SchemaInputDefinition[]
+  inputs: LegacySchemaInputDefinition[]
 }
 
-/** 评分块的一个具名数据接入口。 */
-export interface SchemaInputDefinition {
+/** @deprecated 使用 SchemaTemplateInputDefinition。 */
+export interface LegacySchemaInputDefinition {
   inputId: string
   name: string
   type: SchemaInputType
 }
 
-/**
- * Template 编译后的 Schema 数据管道。定义快照随 ExamPackage 保存，批改端不依赖作者态仓储。
- */
+/** @deprecated 旧 Template 编译后的 Schema 数据管道。 */
 export interface CompiledSchemaPipeline {
-  formatVersion: SchemaFormatVersion
-  definitions: SchemaDefinition[]
+  formatVersion: LegacySchemaFormatVersion
+  definitions: LegacySchemaDefinition[]
   blocks: CompiledSchemaBlock[]
 }
 
-/** Template 展开后的一次评分块数据绑定。instanceId 在整份试卷内唯一。 */
+/** @deprecated 旧 Template 展开后的评分块绑定。 */
 export interface CompiledSchemaBlock {
   instanceId: string
   schemaId: string
@@ -52,10 +129,7 @@ export interface CompiledSchemaBlock {
   inputs: CompiledSchemaInput[]
 }
 
-/**
- * string 接入口可以来自编译期静态字符串或学生的运行期选择结果；
- * audio 接入口只能来自 ExamPlayer 的录音槽位。
- */
+/** @deprecated 旧 Template 的输入绑定。 */
 export type CompiledSchemaInput =
   | {
       inputId: string
@@ -76,25 +150,26 @@ export type CompiledSchemaInput =
       recordIndex: number
     }
 
-/** ExamPlayer 运行结束后提供给 Schema 实例化器的数据。 */
+/** @deprecated 旧 ExamPlayer 运行期数据。 */
 export interface SchemaRuntimeData {
   recordings: Readonly<Record<number, string>>
   choices: Readonly<Record<number, string | null>>
 }
 
-/** 一份 ExamPackage 中所有 Schema 的已解析实例集合。 */
+/** @deprecated 旧 Schema 实例集合。 */
 export interface SchemaInstanceBundle {
-  formatVersion: SchemaFormatVersion
+  formatVersion: LegacySchemaFormatVersion
   schemas: SchemaInstance[]
 }
 
-/** 供一个强依赖该 schemaId 的 Grading Engine 消费的数据。 */
+/** @deprecated 使用 Grading Engine 的解析输入。 */
 export interface SchemaInstance {
   schemaId: string
   name: string
   blocks: SchemaBlockInstance[]
 }
 
+/** @deprecated 旧评分块实例。 */
 export interface SchemaBlockInstance {
   instanceId: string
   blockId: string
@@ -105,6 +180,7 @@ export interface SchemaBlockInstance {
 
 export type SchemaMissingReason = 'unanswered' | 'recording-missing'
 
+/** @deprecated 旧 Schema 实例输入。 */
 export type SchemaInstanceInput =
   | {
       inputId: string
@@ -130,9 +206,9 @@ export type SchemaInstanceInput =
 
 /** @deprecated 使用 SchemaInputType。 */
 export type SchemaFieldType = SchemaInputType
-/** @deprecated 使用 SchemaInputDefinition。 */
-export type SchemaFieldDef = SchemaInputDefinition
+/** @deprecated 使用 LegacySchemaInputDefinition。 */
+export type SchemaFieldDef = LegacySchemaInputDefinition
 /** @deprecated 使用 SchemaDefinition。 */
-export type SchemaBlockManifest = SchemaDefinition
-/** @deprecated 使用 SchemaBlockDefinition。 */
-export type SchemaBlockManifestEntry = SchemaBlockDefinition
+export type SchemaBlockManifest = LegacySchemaDefinition
+/** @deprecated 使用 LegacySchemaBlockDefinition。 */
+export type SchemaBlockManifestEntry = LegacySchemaBlockDefinition
