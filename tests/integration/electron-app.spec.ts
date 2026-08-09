@@ -59,6 +59,7 @@ test('starts a hardened application window and exposes every preload bridge', as
     const methods = (name: string): string[] => Object.keys(runtimeWindow[name] as object).sort()
     return {
       airouter: methods('airouter'),
+      appInfo: methods('appInfo'),
       configStore: methods('configStore'),
       fileDialog: methods('fileDialog'),
       fileStore: methods('fileStore'),
@@ -97,6 +98,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       'testImageConnection',
       'testSpeechConnection'
     ],
+    appInfo: ['getVersion'],
     configStore: ['invoke'],
     fileDialog: ['read', 'write'],
     fileStore: ['invoke'],
@@ -237,6 +239,10 @@ test('navigates through every primary application area', async () => {
   await expect(page.getByRole('heading', { level: 1, name: '设置' })).toBeVisible()
   await expect(page.getByRole('button', { name: /外观/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /AI 引擎/ })).toBeVisible()
+  await page.getByRole('button', { name: /关于/ }).click()
+  await expect(page.getByRole('heading', { level: 1, name: '关于' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '曹二听说101' })).toBeVisible()
+  await expect(page.getByText(/^版本 \S+/)).toBeVisible()
 
   await page.getByRole('link', { name: '工作台' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()

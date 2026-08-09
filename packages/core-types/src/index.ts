@@ -32,5 +32,7 @@ export type {
   SchemaFieldValue
 } from './exam'
 export type { TaskProgressItem, TaskProgressSnapshot, TaskProgressHandle } from './task-progress'
+export { APP_INFO_CHANNELS } from './app-info'
+export type { AppInfoBridge } from './app-info'
 export { WINDOW_CONTROL_CHANNELS, WINDOW_CONTROL_EVENTS } from './window-controls'
 export type { WindowControlsBridge } from './window-controls'
