@@ -79,6 +79,8 @@ IPA、融合结果及实际使用的音素目录，因此只能作近似对照�
 完整对照及 CPU 资源数据见 [`BENCHMARK.md`](BENCHMARK.md)。
 本次模型评测的原始 `assess` 记录及 manifests 见
 [`benchmark-data/`](benchmark-data/README.md)。
+TextPA 的直接后续论文、Whisper/CTC/发音属性/韵律改进、指标口径和部署优先级
+整理在 [`RELATED_WORK.md`](RELATED_WORK.md)。
 本仓库固定作者代码 commit `e429201f2f8a7dbdb594e637bf0139c458256aad`
 及 MultiPA revision `ff1e3c79bfb1d113d887a0b7b05fe2900c095264`。
 
