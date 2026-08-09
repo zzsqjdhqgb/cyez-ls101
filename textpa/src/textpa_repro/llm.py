@@ -10,6 +10,17 @@ from .errors import DependencyError, SchemaError
 from .models import Assessment
 
 
+REASONING_EFFORTS = (
+    "none",
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+)
+
+
 def parse_assessment(text: str) -> Assessment:
     candidate = text.strip()
     if candidate.startswith("```"):
@@ -48,6 +59,7 @@ class OpenAICompatibleAssessor:
         api_key_env: str = "TEXTPA_API_KEY",
         api_style: str = "chat",
         json_mode: bool = False,
+        reasoning_effort: str | None = None,
         retries: int = 3,
         timeout: float = 120.0,
     ) -> None:
@@ -55,6 +67,9 @@ class OpenAICompatibleAssessor:
             raise ValueError("model must be a non-empty string")
         if api_style not in {"chat", "responses"}:
             raise ValueError("api_style must be 'chat' or 'responses'")
+        if reasoning_effort is not None and reasoning_effort not in REASONING_EFFORTS:
+            choices = ", ".join(REASONING_EFFORTS)
+            raise ValueError(f"reasoning_effort must be one of: {choices}")
         if isinstance(retries, bool) or not isinstance(retries, int) or retries < 1:
             raise ValueError("retries must be a positive integer")
         if (
@@ -86,6 +101,7 @@ class OpenAICompatibleAssessor:
         self.model = model
         self.api_style = api_style
         self.json_mode = json_mode
+        self.reasoning_effort = reasoning_effort
         self.retries = retries
 
     def _call(self, prompt: str) -> str:
@@ -96,6 +112,8 @@ class OpenAICompatibleAssessor:
             }
             if self.json_mode:
                 kwargs["response_format"] = {"type": "json_object"}
+            if self.reasoning_effort is not None:
+                kwargs["reasoning_effort"] = self.reasoning_effort
             response = self._client.chat.completions.create(**kwargs)
             content = response.choices[0].message.content
             if not isinstance(content, str):
@@ -106,6 +124,8 @@ class OpenAICompatibleAssessor:
             kwargs = {"model": self.model, "input": prompt}
             if self.json_mode:
                 kwargs["text"] = {"format": {"type": "json_object"}}
+            if self.reasoning_effort is not None:
+                kwargs["reasoning"] = {"effort": self.reasoning_effort}
             response = self._client.responses.create(**kwargs)
             content = response.output_text
             if not isinstance(content, str):

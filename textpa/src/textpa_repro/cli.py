@@ -31,7 +31,7 @@ from .io import (
     sha256_file,
     write_jsonl_atomic,
 )
-from .llm import OpenAICompatibleAssessor
+from .llm import REASONING_EFFORTS, OpenAICompatibleAssessor
 from .metrics import evaluate_multipa
 from .models import Assessment, TextCues
 from .phonemize import EspeakCanonicalIpa
@@ -301,6 +301,7 @@ def command_assess(args: argparse.Namespace) -> int:
             "api_style": args.api_style,
             "json_mode": args.json_mode,
             "json_input": args.json_input,
+            "reasoning_effort": args.reasoning_effort,
             "retries": args.retries,
             "timeout": args.timeout,
         },
@@ -313,6 +314,7 @@ def command_assess(args: argparse.Namespace) -> int:
             api_key_env=args.api_key_env,
             api_style=args.api_style,
             json_mode=args.json_mode,
+            reasoning_effort=args.reasoning_effort,
             retries=args.retries,
             timeout=args.timeout,
         )
@@ -330,6 +332,7 @@ def command_assess(args: argparse.Namespace) -> int:
                 api_key_env=args.api_key_env,
                 api_style=args.api_style,
                 json_mode=args.json_mode,
+                reasoning_effort=args.reasoning_effort,
                 retries=args.retries,
                 timeout=args.timeout,
             )
@@ -369,6 +372,8 @@ def command_assess(args: argparse.Namespace) -> int:
                             "prompt_mode": "json" if args.json_input else "paper",
                         }
                     )
+                    if args.reasoning_effort is not None:
+                        record["reasoning_effort"] = args.reasoning_effort
                     writer.write(record)
                     _log(f"assess done {index}/{len(pending)}: {cues.utterance_id}")
                     submit_next()
@@ -510,6 +515,7 @@ def build_parser() -> argparse.ArgumentParser:
     assess.add_argument("--api-style", choices=("chat", "responses"), default="chat")
     assess.add_argument("--json-mode", action="store_true")
     assess.add_argument("--json-input", action="store_true")
+    assess.add_argument("--reasoning-effort", choices=REASONING_EFFORTS)
     assess.add_argument("--retries", type=int, default=3)
     assess.add_argument("--timeout", type=float, default=120.0)
     assess.add_argument("--concurrency", type=int, default=1)

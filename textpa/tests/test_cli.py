@@ -134,6 +134,7 @@ class CliAssessConcurrencyTests(unittest.TestCase):
             api_style="chat",
             json_mode=False,
             json_input=False,
+            reasoning_effort="high",
             retries=3,
             timeout=120.0,
             concurrency=concurrency,
@@ -161,6 +162,13 @@ class CliAssessConcurrencyTests(unittest.TestCase):
             self.assertEqual(len(ids), 6)
             self.assertEqual(len(set(ids)), 6)
             self.assertEqual(set(ids), {f"sample-{index}.wav" for index in range(6)})
+            self.assertTrue(
+                all(record["reasoning_effort"] == "high" for record in records)
+            )
+            manifest = json.loads(
+                Path(f"{output}.manifest.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(manifest["config"]["reasoning_effort"], "high")
 
     def test_nonpositive_concurrency_is_rejected_before_output_or_assessor(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

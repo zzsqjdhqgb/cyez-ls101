@@ -77,6 +77,8 @@ textpa verify-reference --output-dir artifacts/multipa-reference
 作者所用 `textdistance` 对齐。论文未固定 eSpeak 版本，也未发布 canonical
 IPA、融合结果及实际使用的音素目录，因此只能作近似对照，不能强行校准命中。
 完整对照及 CPU 资源数据见 [`BENCHMARK.md`](BENCHMARK.md)。
+本次模型评测的原始 `assess` 记录及 manifests 见
+[`benchmark-data/`](benchmark-data/README.md)。
 本仓库固定作者代码 commit `e429201f2f8a7dbdb594e637bf0139c458256aad`
 及 MultiPA revision `ff1e3c79bfb1d113d887a0b7b05fe2900c095264`。
 
@@ -122,6 +124,7 @@ export TEXTPA_BASE_URL='https://provider.example/v1'
 textpa assess artifacts/cues.jsonl \
   -o artifacts/assessments.jsonl \
   --model MODEL_ID \
+  --reasoning-effort high \
   --concurrency 3
 ```
 
@@ -132,6 +135,10 @@ mode，可增加 `--json-mode`。输出文件按 utterance 即时落盘，重新
 
 `--concurrency` 默认是 1。执行器只保持指定数量的在途请求；发生错误时不会继续
 派发剩余队列。并发值必须服从实际服务商的限流配置。
+
+对支持推理深度的端点，可使用 `--reasoning-effort` 显式传入 `none`、
+`minimal`、`low`、`medium`、`high`、`xhigh` 或 `max`。该值会写入 manifest
+和每条输出；省略时不发送此参数，保留服务商默认行为。
 
 加入 canonical IPA 与最终分数：
 

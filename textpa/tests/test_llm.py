@@ -1,7 +1,7 @@
 import builtins
 import math
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from textpa_repro.errors import SchemaError
 from textpa_repro.llm import OpenAICompatibleAssessor, parse_assessment
@@ -54,6 +54,95 @@ class LlmConfigurationTests(unittest.TestCase):
         for timeout in (0.0, -1.0, math.nan):
             with self.subTest(timeout=timeout):
                 self._assert_rejected_before_openai_import(timeout=timeout)
+
+    def test_invalid_reasoning_effort_is_rejected_before_openai_import(self) -> None:
+        self._assert_rejected_before_openai_import(reasoning_effort="extreme")
+
+    def test_responses_api_sends_reasoning_effort(self) -> None:
+        client = Mock()
+        client.responses.create.return_value.output_text = (
+            '{"Accuracy": 4, "Fluency": 3, "Reasoning": "Clear."}'
+        )
+        with patch("openai.OpenAI", return_value=client):
+            assessor = OpenAICompatibleAssessor(
+                "test-model",
+                api_key="unused",
+                api_style="responses",
+                reasoning_effort="max",
+            )
+
+        assessor.assess("test prompt")
+
+        client.responses.create.assert_called_once_with(
+            model="test-model",
+            input="test prompt",
+            reasoning={"effort": "max"},
+        )
+
+    def test_chat_api_sends_reasoning_effort(self) -> None:
+        client = Mock()
+        client.chat.completions.create.return_value.choices = [
+            Mock(
+                message=Mock(
+                    content=(
+                        '{"Accuracy": 4, "Fluency": 3, "Reasoning": "Clear."}'
+                    )
+                )
+            )
+        ]
+        with patch("openai.OpenAI", return_value=client):
+            assessor = OpenAICompatibleAssessor(
+                "test-model",
+                api_key="unused",
+                api_style="chat",
+                reasoning_effort="high",
+            )
+
+        assessor.assess("test prompt")
+
+        client.chat.completions.create.assert_called_once_with(
+            model="test-model",
+            messages=[{"role": "user", "content": "test prompt"}],
+            reasoning_effort="high",
+        )
+
+    def test_omitted_reasoning_effort_preserves_request_shape(self) -> None:
+        client = Mock()
+        client.responses.create.return_value.output_text = (
+            '{"Accuracy": 4, "Fluency": 3, "Reasoning": "Clear."}'
+        )
+        with patch("openai.OpenAI", return_value=client):
+            assessor = OpenAICompatibleAssessor(
+                "test-model", api_key="unused", api_style="responses"
+            )
+
+        assessor.assess("test prompt")
+
+        client.responses.create.assert_called_once_with(
+            model="test-model", input="test prompt"
+        )
+
+        chat_client = Mock()
+        chat_client.chat.completions.create.return_value.choices = [
+            Mock(
+                message=Mock(
+                    content=(
+                        '{"Accuracy": 4, "Fluency": 3, "Reasoning": "Clear."}'
+                    )
+                )
+            )
+        ]
+        with patch("openai.OpenAI", return_value=chat_client):
+            chat_assessor = OpenAICompatibleAssessor(
+                "test-model", api_key="unused", api_style="chat"
+            )
+
+        chat_assessor.assess("test prompt")
+
+        chat_client.chat.completions.create.assert_called_once_with(
+            model="test-model",
+            messages=[{"role": "user", "content": "test prompt"}],
+        )
 
 
 if __name__ == "__main__":
