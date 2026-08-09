@@ -1,7 +1,7 @@
 # TextPA 可部署复现
 
-这是论文 *Read to Hear: A Zero-Shot Pronunciation Assessment Using Textual
-Descriptions and LLMs* 的独立工程化复现。它不依赖工作区中的 Electron 项目。
+这是论文 _Read to Hear: A Zero-Shot Pronunciation Assessment Using Textual
+Descriptions and LLMs_ 的独立工程化复现。它不依赖工作区中的 Electron 项目。
 
 链路保持论文的核心设计：
 
@@ -67,10 +67,10 @@ textpa verify-reference --output-dir artifacts/multipa-reference
 
 应得到：
 
-| 论文后端 | Accuracy PCC | Fluency PCC |
-|---|---:|---:|
-| gpt-4o-mini, LLM-only | 0.643 | 0.650 |
-| gemini-2.0-flash, LLM-only | 0.554 | 0.557 |
+| 论文后端                   | Accuracy PCC | Fluency PCC |
+| -------------------------- | -----------: | ----------: |
+| gpt-4o-mini, LLM-only      |        0.643 |       0.650 |
+| gemini-2.0-flash, LLM-only |        0.554 |       0.557 |
 
 论文加入 IPA match 后的最终 MultiPA Accuracy PCC 分别为 0.728 和 0.697。
 当前 eSpeak NG 1.51 环境重算为 0.733 和 0.700；字符级 Smith-Waterman 已与
@@ -81,6 +81,9 @@ IPA、融合结果及实际使用的音素目录，因此只能作近似对照�
 [`benchmark-data/`](benchmark-data/README.md)。
 TextPA 的直接后续论文、Whisper/CTC/发音属性/韵律改进、指标口径和部署优先级
 整理在 [`RELATED_WORK.md`](RELATED_WORK.md)。
+当前暂停点、诊断模块拆分方案和需要保留的实验边界见
+[`RESEARCH_PAUSE.md`](RESEARCH_PAUSE.md)。单条文字诊断冒烟的原始输入和 Sol
+medium 输出见 [`benchmark-data/diagnostic-smoke/`](benchmark-data/diagnostic-smoke)。
 本仓库固定作者代码 commit `e429201f2f8a7dbdb594e637bf0139c458256aad`
 及 MultiPA revision `ff1e3c79bfb1d113d887a0b7b05fe2900c095264`。
 
@@ -93,6 +96,11 @@ textpa prepare-reference \
 ```
 
 ## 运行链路
+
+面向上海英语听说练习及相似题型的版本化输入协议见
+[`SCORING_INPUT_FORMAT.md`](SCORING_INPUT_FORMAT.md)。它定义题目上下文、参考
+内容、rubric、声学证据和可选人工标签；当前 TextPA 仍只读取其中的 transcript、
+CMU 和 IPA 字段，内容评分将在后续接入。
 
 声学阶段分开执行，以降低 CPU 内存峰值并支持断点续跑：
 

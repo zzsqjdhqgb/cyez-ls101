@@ -14,8 +14,8 @@ The exact four human-scored examples are stored in `calibration/`; its README
 records the deterministic selection rule and leakage limitation. The
 calibrated manifest additionally records their order, scores and file hash.
 
-The `*-final.jsonl` files are derived artifacts and are not stored here. They
-can be regenerated from a raw file:
+Finalized outputs from the same runs are preserved in
+`derived-llm-benchmark/`. They can still be regenerated from a raw file:
 
 ```bash
 run_name=gpt-5.6-sol-high
@@ -45,6 +45,19 @@ textpa evaluate-multipa \
   --accuracy-field scores.paper_cohort_accuracy \
   --allow-subset
 ```
+
+Additional preserved material is grouped by purpose:
+
+- `anchor-benchmark/` contains the complete four-anchor experiment directory,
+  including its 46-item raw and finalized outputs.
+- `diagnostic-smoke/` contains the audio, cue/transcript inputs, manifests, and
+  the Sol medium diagnostic response.
+- `reasoning-rerun-smoke/` contains the single-sample reasoning-depth reruns.
+- `smoke/` contains the early smoke-test inputs and finalized paper-model
+  outputs.
+- `multipa-reference/` contains the small public reference snapshot.
+- `upstream-reference/` preserves the downloaded SpeechOcean snapshot from the
+  pinned TextPA checkout; it was not used by the current MultiPA benchmark.
 
 To reproduce a raw run on another machine, first prepare the reference data
 with `textpa prepare-reference --output-dir artifacts/multipa-reference`, then
