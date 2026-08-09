@@ -1049,7 +1049,7 @@ test('AR-28 manages a local TTS model package and its Provider lifecycle', async
   await expect(page.getByText('新增 1 个资源，复用 2 个资源')).toBeVisible()
 
   await editor.getByRole('button', { name: '保存 Provider' }).click()
-  await expect(editor.getByText('Provider 已保存')).toBeVisible()
+  await expect(page.getByText('已保存“Local Pocket”')).toBeVisible({ timeout: 10_000 })
   const savedState = await page.evaluate(async () => {
     const configs = await window.airouter.listSpeechProviderConfigs()
     const config = configs[0]
@@ -1136,7 +1136,7 @@ test('AR-29 configures and tests an online TTS Provider through the UI', async (
   })
 
   await editor.getByRole('button', { name: '保存 Provider' }).click()
-  await expect(editor.getByText('Provider 已保存')).toBeVisible()
+  await expect(page.getByText('已保存“Online Speech”')).toBeVisible({ timeout: 10_000 })
   await page.reload()
   await openAirouter('语音合成')
   await page.getByRole('button', { name: /Online Speech/ }).click()
@@ -1345,7 +1345,7 @@ test('AR-32 executes the real Pocket TTS model package through the Electron stac
   await expect(editor.locator('audio')).toHaveAttribute('src', /^blob:/)
 
   await editor.getByRole('button', { name: '保存 Provider' }).click()
-  await expect(editor.getByText('Provider 已保存')).toBeVisible()
+  await expect(page.getByText('已保存“Pocket TTS Integration”')).toBeVisible({ timeout: 10_000 })
   const config = await page.evaluate(
     async () => (await window.airouter.listSpeechProviderConfigs())[0]
   )
