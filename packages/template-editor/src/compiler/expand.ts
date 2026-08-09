@@ -1,12 +1,12 @@
 import type {
   ChoiceOptionLabel,
+  CompiledSchemaBlock,
+  CompiledSchemaInput,
   ExamPage,
   PlayerChoiceQuestion,
   ResolvedChoiceViewport,
   ResolvedContentBlock,
-  ResolvedTimelineStep,
-  SchemaFieldValue,
-  SchemaUsageExport
+  ResolvedTimelineStep
 } from '@ls101/core-types'
 import type {
   ChoiceQuestionRef,
@@ -383,19 +383,29 @@ function resolveSchemaUse(
   scope: CompileScope,
   path: string,
   state: CompilerState
-): SchemaUsageExport {
+): CompiledSchemaBlock {
   const schema = state.schemasById.get(use.schemaId)
   const block = schema?.blocks.find((candidate) => candidate.blockId === use.blockId)
   if (!block) fail('UNRESOLVED_VALUE', path, { schemaId: use.schemaId, blockId: use.blockId })
 
-  const fields = block.fields.map<SchemaFieldValue>((field) => {
-    const expression = use.bindings[field.varName]
-    const fieldPath = `${path}.bindings[${JSON.stringify(field.varName)}]`
-    switch (field.type) {
-      case 'text':
+  const inputs = block.inputs.map<CompiledSchemaInput>((input) => {
+    const expression = use.bindings[input.inputId]
+    const fieldPath = `${path}.bindings[${JSON.stringify(input.inputId)}]`
+    switch (input.type) {
+      case 'string':
+        if (expression.type === 'choice-output') {
+          const value = resolveRuntimeOutput(scope, expression.name, 'choice', fieldPath)
+          return {
+            inputId: input.inputId,
+            type: 'string',
+            source: 'choice',
+            choiceIndex: (value as Extract<typeof value, { type: 'choice' }>).choiceIndex
+          }
+        }
         return {
-          varName: field.varName,
-          type: 'text',
+          inputId: input.inputId,
+          type: 'string',
+          source: 'static',
           value: resolveSchemaTextBinding(expression, scope, state, fieldPath)
         }
       case 'audio': {
@@ -406,32 +416,20 @@ function resolveSchemaUse(
           fieldPath
         )
         return {
-          varName: field.varName,
+          inputId: input.inputId,
           type: 'audio',
+          source: 'recording',
           recordIndex: (value as Extract<typeof value, { type: 'audio' }>).recordIndex
-        }
-      }
-      case 'choice': {
-        const value = resolveRuntimeOutput(
-          scope,
-          (expression as Extract<typeof expression, { type: 'choice-output' }>).name,
-          'choice',
-          fieldPath
-        )
-        return {
-          varName: field.varName,
-          type: 'choice',
-          choiceIndex: (value as Extract<typeof value, { type: 'choice' }>).choiceIndex
         }
       }
     }
   })
 
   return {
-    useId: expandedSchemaUseId(scope.callPath, use.useId),
+    instanceId: expandedSchemaUseId(scope.callPath, use.useId),
     schemaId: use.schemaId,
     blockId: use.blockId,
-    fields
+    inputs
   }
 }
 

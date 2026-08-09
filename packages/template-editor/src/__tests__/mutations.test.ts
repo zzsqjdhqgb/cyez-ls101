@@ -653,13 +653,15 @@ describe('Template 文档编辑', () => {
         ],
         schemaManifests: [
           {
+            formatVersion: 1,
             schemaId,
-            schemaName: 'Schema',
+            name: 'Schema',
             blocks: [
               {
                 blockId: 'text',
-                blockName: 'Text',
-                fields: [{ varName: 'prompt', type: 'text' }]
+                name: 'Text',
+                maxScore: 10,
+                inputs: [{ inputId: 'prompt', name: 'Prompt', type: 'string' }]
               }
             ]
           }

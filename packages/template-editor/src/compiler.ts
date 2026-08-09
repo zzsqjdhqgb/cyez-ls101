@@ -45,7 +45,8 @@ export async function compileTemplate(
 
     const pages = state.pages.map((resolve) => resolve())
     const questions = state.questions.map((resolve) => resolve())
-    const schemaUsages = state.schemaUsages.map((resolve) => resolve())
+    const schemaBlocks = state.schemaUsages.map((resolve) => resolve())
+    const usedSchemaIds = new Set(schemaBlocks.map((block) => block.schemaId))
     const candidate = structure.candidates[0]
 
     const examPackage: ExamPackage = {
@@ -62,7 +63,11 @@ export async function compileTemplate(
             }
           : {})
       },
-      schema: { usages: schemaUsages }
+      schema: {
+        formatVersion: 1,
+        definitions: context.schemaManifests.filter((schema) => usedSchemaIds.has(schema.schemaId)),
+        blocks: schemaBlocks
+      }
     }
     return { success: true, examPackage }
   } catch (error) {

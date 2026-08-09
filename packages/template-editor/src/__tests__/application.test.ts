@@ -130,13 +130,15 @@ function setup() {
     ]
   }
   const schemaManifest: SchemaBlockManifest = {
+    formatVersion: 1,
     schemaId: SCHEMA_ID,
-    schemaName: 'Schema',
+    name: 'Schema',
     blocks: [
       {
         blockId: 'text',
-        blockName: 'Text',
-        fields: [{ varName: 'prompt', type: 'text' }]
+        name: 'Text',
+        maxScore: 10,
+        inputs: [{ inputId: 'prompt', name: 'Prompt', type: 'string' }]
       }
     ]
   }
@@ -799,9 +801,16 @@ describe('TemplateApplication', () => {
       examPackage: {
         title: 'Compiled exam',
         schema: {
-          usages: [
+          blocks: [
             {
-              fields: [{ varName: 'prompt', type: 'text', value: 'Resolved prompt' }]
+              inputs: [
+                {
+                  inputId: 'prompt',
+                  type: 'string',
+                  source: 'static',
+                  value: 'Resolved prompt'
+                }
+              ]
             }
           ]
         }

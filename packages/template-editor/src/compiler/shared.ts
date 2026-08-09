@@ -1,11 +1,11 @@
 import type {
+  CompiledSchemaBlock,
   ExamPage,
   ExamPackage,
   InterfaceInstance,
   InterfaceVarManifest,
   PlayerChoiceQuestion,
-  SchemaBlockManifest,
-  SchemaUsageExport
+  SchemaBlockManifest
 } from '@ls101/core-types'
 import type {
   ExportInterfaceInstanceSelection,
@@ -96,7 +96,7 @@ export interface CompilerState {
   staticCells: ValueCell[]
   pages: Array<() => ExamPage>
   questions: Array<() => PlayerChoiceQuestion>
-  schemaUsages: Array<() => SchemaUsageExport>
+  schemaUsages: Array<() => CompiledSchemaBlock>
   questionIndicesByAddress: Map<string, number>
   recordingIndices: number[]
   nextRecordIndex: number

@@ -44,23 +44,27 @@ function interfaceManifest(): InterfaceVarManifest {
 
 function schemaManifest(): SchemaBlockManifest {
   return {
+    formatVersion: 1,
     schemaId: SCHEMA_ID,
-    schemaName: 'Scoring',
+    name: 'Scoring',
     blocks: [
       {
         blockId: 'text',
-        blockName: 'Text',
-        fields: [{ varName: 'prompt', type: 'text' }]
+        name: 'Text',
+        maxScore: 10,
+        inputs: [{ inputId: 'prompt', name: 'Prompt', type: 'string' }]
       },
       {
         blockId: 'audio',
-        blockName: 'Audio',
-        fields: [{ varName: 'recording', type: 'audio' }]
+        name: 'Audio',
+        maxScore: 10,
+        inputs: [{ inputId: 'recording', name: 'Recording', type: 'audio' }]
       },
       {
         blockId: 'choice',
-        blockName: 'Choice',
-        fields: [{ varName: 'answer', type: 'choice' }]
+        name: 'Choice',
+        maxScore: 10,
+        inputs: [{ inputId: 'answer', name: 'Answer', type: 'string' }]
       }
     ]
   }
@@ -403,30 +407,30 @@ describe('compileTemplate', () => {
       }
     ])
 
-    expect(result.examPackage.schema.usages).toEqual([
+    expect(result.examPackage.schema.blocks).toEqual([
       {
-        useId: 'schema-use:choice-call/inner-choice',
+        instanceId: 'schema-use:choice-call/inner-choice',
         schemaId: SCHEMA_ID,
         blockId: 'choice',
-        fields: [{ varName: 'answer', type: 'choice', choiceIndex: 0 }]
+        inputs: [{ inputId: 'answer', type: 'string', source: 'choice', choiceIndex: 0 }]
       },
       {
-        useId: 'schema-use:root-text',
+        instanceId: 'schema-use:root-text',
         schemaId: SCHEMA_ID,
         blockId: 'text',
-        fields: [{ varName: 'prompt', type: 'text', value: 'Resolved: Hello!' }]
+        inputs: [{ inputId: 'prompt', type: 'string', source: 'static', value: 'Resolved: Hello!' }]
       },
       {
-        useId: 'schema-use:root-audio',
+        instanceId: 'schema-use:root-audio',
         schemaId: SCHEMA_ID,
         blockId: 'audio',
-        fields: [{ varName: 'recording', type: 'audio', recordIndex: 0 }]
+        inputs: [{ inputId: 'recording', type: 'audio', source: 'recording', recordIndex: 0 }]
       },
       {
-        useId: 'schema-use:root-choice',
+        instanceId: 'schema-use:root-choice',
         schemaId: SCHEMA_ID,
         blockId: 'choice',
-        fields: [{ varName: 'answer', type: 'choice', choiceIndex: 0 }]
+        inputs: [{ inputId: 'answer', type: 'string', source: 'choice', choiceIndex: 0 }]
       }
     ])
   })
@@ -487,7 +491,7 @@ describe('compileTemplate', () => {
     expect(result.examPackage.player.pages[0].content[0]).toMatchObject({
       defaultViewport: { mode: 'focus', choiceIndex: 1 }
     })
-    expect(result.examPackage.schema.usages.map((usage) => usage.useId)).toEqual([
+    expect(result.examPackage.schema.blocks.map((block) => block.instanceId)).toEqual([
       'schema-use:call-1/inner-choice',
       'schema-use:call-2/inner-choice'
     ])
@@ -694,13 +698,15 @@ describe('compileTemplate', () => {
       ]
     }
     const otherSchema: SchemaBlockManifest = {
+      formatVersion: 1,
       schemaId: OTHER_SCHEMA_ID,
-      schemaName: 'Other schema',
+      name: 'Other schema',
       blocks: [
         {
           blockId: 'text',
-          blockName: 'Text',
-          fields: [{ varName: 'prompt', type: 'text' }]
+          name: 'Text',
+          maxScore: 10,
+          inputs: [{ inputId: 'prompt', name: 'Prompt', type: 'string' }]
         }
       ]
     }
@@ -767,18 +773,18 @@ describe('compileTemplate', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    expect(result.examPackage.schema.usages).toEqual([
+    expect(result.examPackage.schema.blocks).toEqual([
       {
-        useId: 'schema-use:exam-text',
+        instanceId: 'schema-use:exam-text',
         schemaId: SCHEMA_ID,
         blockId: 'text',
-        fields: [{ varName: 'prompt', type: 'text', value: '' }]
+        inputs: [{ inputId: 'prompt', type: 'string', source: 'static', value: '' }]
       },
       {
-        useId: 'schema-use:other-text',
+        instanceId: 'schema-use:other-text',
         schemaId: OTHER_SCHEMA_ID,
         blockId: 'text',
-        fields: [{ varName: 'prompt', type: 'text', value: 'Other' }]
+        inputs: [{ inputId: 'prompt', type: 'string', source: 'static', value: 'Other' }]
       }
     ])
   })

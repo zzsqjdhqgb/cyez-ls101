@@ -6,6 +6,21 @@
 
 export type { InterfaceVarInfo, InterfaceVarManifest, InterfaceInstance } from './interface'
 export type {
+  SchemaFormatVersion,
+  SchemaInputType,
+  SchemaContent,
+  SchemaDefinition,
+  SchemaBlockDefinition,
+  SchemaInputDefinition,
+  CompiledSchemaPipeline,
+  CompiledSchemaBlock,
+  CompiledSchemaInput,
+  SchemaRuntimeData,
+  SchemaInstanceBundle,
+  SchemaInstance,
+  SchemaBlockInstance,
+  SchemaMissingReason,
+  SchemaInstanceInput,
   SchemaFieldType,
   SchemaFieldDef,
   SchemaBlockManifest,
@@ -26,10 +41,7 @@ export type {
   PlayerChoiceQuestion,
   PlayerChoiceOption,
   ChoiceOptionLabel,
-  ChoiceAnswer,
-  SchemaExportData,
-  SchemaUsageExport,
-  SchemaFieldValue
+  ChoiceAnswer
 } from './exam'
 export type { TaskProgressItem, TaskProgressSnapshot, TaskProgressHandle } from './task-progress'
 export { WINDOW_CONTROL_CHANNELS, WINDOW_CONTROL_EVENTS } from './window-controls'

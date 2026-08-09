@@ -53,23 +53,27 @@ function interfaceManifest(): InterfaceVarManifest {
 
 function schemaManifest(): SchemaBlockManifest {
   return {
+    formatVersion: 1,
     schemaId: SCHEMA_ID,
-    schemaName: 'Scoring',
+    name: 'Scoring',
     blocks: [
       {
         blockId: 'reading',
-        blockName: 'Reading',
-        fields: [{ varName: 'prompt', type: 'text' }]
+        name: 'Reading',
+        maxScore: 10,
+        inputs: [{ inputId: 'prompt', name: 'Prompt', type: 'string' }]
       },
       {
         blockId: 'recording',
-        blockName: 'Recording',
-        fields: [{ varName: 'recording', type: 'audio' }]
+        name: 'Recording',
+        maxScore: 10,
+        inputs: [{ inputId: 'recording', name: 'Recording', type: 'audio' }]
       },
       {
         blockId: 'single-choice',
-        blockName: 'Single choice',
-        fields: [{ varName: 'answer', type: 'choice' }]
+        name: 'Single choice',
+        maxScore: 10,
+        inputs: [{ inputId: 'answer', name: 'Answer', type: 'string' }]
       }
     ]
   }
@@ -526,7 +530,7 @@ describe('validateTemplateContent - Schema 绑定', () => {
     expect(resultCodes).toContain('UNKNOWN_SCHEMA_BINDING')
   })
 
-  it('拒绝把 choice 作答绑定到 text 字段', () => {
+  it('允许把 choice 作答绑定到 string 接入口', () => {
     const content = templateContent({
       root: collectedRoot([question()], [1]),
       schemaUses: [
@@ -541,7 +545,7 @@ describe('validateTemplateContent - Schema 绑定', () => {
       ]
     })
 
-    expectCode(content, 'SCHEMA_BINDING_TYPE_MISMATCH')
+    expect(codes(content)).not.toContain('SCHEMA_BINDING_TYPE_MISMATCH')
   })
 
   it('SchemaUse 必须引用存在的 Schema 和评分块', () => {

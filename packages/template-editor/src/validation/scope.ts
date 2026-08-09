@@ -535,23 +535,23 @@ function validateSchemaBindings(
   scope: ScopeState,
   state: ValidationState
 ): void {
-  const fields = new Map(block.fields.map((field) => [field.varName, field]))
-  block.fields.forEach((field) => {
-    const expression = use.bindings[field.varName]
+  const inputs = new Map(block.inputs.map((input) => [input.inputId, input]))
+  block.inputs.forEach((input) => {
+    const expression = use.bindings[input.inputId]
     if (!expression) {
-      addError(state, `${path}.bindings`, 'MISSING_SCHEMA_BINDING', { varName: field.varName })
+      addError(state, `${path}.bindings`, 'MISSING_SCHEMA_BINDING', { varName: input.inputId })
       return
     }
     validateSchemaBinding(
       expression,
-      field,
-      `${path}.bindings[${JSON.stringify(field.varName)}]`,
+      input,
+      `${path}.bindings[${JSON.stringify(input.inputId)}]`,
       scope,
       state
     )
   })
   for (const varName of Object.keys(use.bindings)) {
-    if (!fields.has(varName)) {
+    if (!inputs.has(varName)) {
       addError(state, `${path}.bindings[${JSON.stringify(varName)}]`, 'UNKNOWN_SCHEMA_BINDING', {
         varName
       })
@@ -566,8 +566,8 @@ function validateSchemaBinding(
   scope: ScopeState,
   state: ValidationState
 ): void {
-  if (field.type === 'text') {
-    validateTextSchemaBinding(expression, path, scope, state)
+  if (field.type === 'string') {
+    validateStringSchemaBinding(expression, path, scope, state)
     return
   }
 
@@ -576,14 +576,10 @@ function validateSchemaBinding(
     validateOutputReference(expression.name, 'audio', path, scope, state)
     return
   }
-  if (expected === 'choice' && expression.type === 'choice-output') {
-    validateOutputReference(expression.name, 'choice', path, scope, state)
-    return
-  }
   addSchemaTypeError(state, path, expected, expression.type)
 }
 
-function validateTextSchemaBinding(
+function validateStringSchemaBinding(
   expression: SchemaBindingExpression,
   path: string,
   scope: ScopeState,
@@ -592,7 +588,7 @@ function validateTextSchemaBinding(
   switch (expression.type) {
     case 'literal':
       if (typeof expression.value !== 'string') {
-        addSchemaTypeError(state, path, 'text', 'number')
+        addSchemaTypeError(state, path, 'string', 'number')
       }
       break
     case 'variable':
@@ -606,8 +602,10 @@ function validateTextSchemaBinding(
       })
       break
     case 'record-output':
+      addSchemaTypeError(state, path, 'string', expression.type)
+      break
     case 'choice-output':
-      addSchemaTypeError(state, path, 'text', expression.type)
+      validateOutputReference(expression.name, 'choice', path, scope, state)
       break
   }
 }

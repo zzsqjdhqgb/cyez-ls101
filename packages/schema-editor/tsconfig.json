@@ -2,13 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
-    "jsx": "react-jsx",
     "outDir": "./dist",
     "rootDir": "./src"
   },
   "include": ["src"],
-  "references": [
-    { "path": "../core-types" },
-    { "path": "../editor-kit" }
-  ]
+  "references": [{ "path": "../core-types" }]
 }

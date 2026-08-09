@@ -16,23 +16,27 @@ import { number, root, text } from './fixtures'
 const SCHEMA_ID = `sha256:${'2'.repeat(64)}`
 
 const schemaManifest: SchemaBlockManifest = {
+  formatVersion: 1,
   schemaId: SCHEMA_ID,
-  schemaName: 'Scoring',
+  name: 'Scoring',
   blocks: [
     {
       blockId: 'text',
-      blockName: 'Text',
-      fields: [{ varName: 'prompt', type: 'text' }]
+      name: 'Text',
+      maxScore: 10,
+      inputs: [{ inputId: 'prompt', name: 'Prompt', type: 'string' }]
     },
     {
       blockId: 'audio',
-      blockName: 'Audio',
-      fields: [{ varName: 'recording', type: 'audio' }]
+      name: 'Audio',
+      maxScore: 10,
+      inputs: [{ inputId: 'recording', name: 'Recording', type: 'audio' }]
     },
     {
       blockId: 'choice',
-      blockName: 'Choice',
-      fields: [{ varName: 'answer', type: 'choice' }]
+      name: 'Choice',
+      maxScore: 10,
+      inputs: [{ inputId: 'answer', name: 'Answer', type: 'string' }]
     }
   ]
 }
@@ -446,10 +450,10 @@ describe('Template 编译组合覆盖', () => {
         page.timeline[0].type === 'record' ? page.timeline[0].recordIndex : -1
       )
     ).toEqual([0, 1, 2])
-    expect(result.examPackage.schema.usages.flatMap((usage) => usage.fields)).toEqual([
-      { varName: 'recording', type: 'audio', recordIndex: 0 },
-      { varName: 'recording', type: 'audio', recordIndex: 1 },
-      { varName: 'recording', type: 'audio', recordIndex: 2 }
+    expect(result.examPackage.schema.blocks.flatMap((block) => block.inputs)).toEqual([
+      { inputId: 'recording', type: 'audio', source: 'recording', recordIndex: 0 },
+      { inputId: 'recording', type: 'audio', source: 'recording', recordIndex: 1 },
+      { inputId: 'recording', type: 'audio', source: 'recording', recordIndex: 2 }
     ])
   })
 
@@ -503,7 +507,7 @@ describe('Template 编译组合覆盖', () => {
       'block:page%2F%25/block%2F%25',
       'block:page%2F%25/view%2F%25'
     ])
-    expect(result.examPackage.schema.usages[0].useId).toBe('schema-use:use%2F%25')
+    expect(result.examPackage.schema.blocks[0].instanceId).toBe('schema-use:use%2F%25')
     expect(
       result.examPackage.player.choiceMeta?.questions[0].options.map((option) => option.label)
     ).toEqual('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''))

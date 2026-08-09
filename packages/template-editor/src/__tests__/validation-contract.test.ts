@@ -33,18 +33,21 @@ function interfaceManifest(): InterfaceVarManifest {
 
 function schemaManifest(): SchemaBlockManifest {
   return {
+    formatVersion: 1,
     schemaId: SCHEMA_ID,
-    schemaName: 'Scoring',
+    name: 'Scoring',
     blocks: [
       {
         blockId: 'text',
-        blockName: 'Text',
-        fields: [{ varName: 'prompt', type: 'text' }]
+        name: 'Text',
+        maxScore: 10,
+        inputs: [{ inputId: 'prompt', name: 'Prompt', type: 'string' }]
       },
       {
         blockId: 'choice',
-        blockName: 'Choice',
-        fields: [{ varName: 'answer', type: 'choice' }]
+        name: 'Choice',
+        maxScore: 10,
+        inputs: [{ inputId: 'answer', name: 'Answer', type: 'string' }]
       }
     ]
   }

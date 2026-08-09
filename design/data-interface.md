@@ -6,7 +6,7 @@
 
 ## 一、总览
 
-~~~text
+```text
 Interface                         Template                         Schema
     │                                │                               │
     │ InterfaceVarManifest           │ DSL + 变量表达式              │ SchemaBlockManifest
@@ -18,7 +18,7 @@ InterfaceDef ───────────────→ TemplateDocument �
 InterfaceInstance ─────────────→ ExamPackage
                                       ├── Player 数据段
                                       └── Schema 映射段
-~~~
+```
 
 Interface 负责提供可生成的数据变量；Template 负责定义试卷 DSL、参数来源和播放结构；Schema 负责提供可复用的评分块以及每个评分块需要的变量。
 
@@ -28,7 +28,7 @@ Template 不保存 InterfaceInstance。Template 只保存 Interface 的身份和
 
 ### 2.1 InterfaceDef
 
-~~~typescript
+```typescript
 interface InterfaceDef {
   id: string // sha256:<64 位十六进制摘要>
   name: string
@@ -46,11 +46,11 @@ interface FieldGroup {
   type: 'group'
   children: FieldCollection
 }
-~~~
+```
 
 Template 使用扁平变量清单：
 
-~~~typescript
+```typescript
 interface InterfaceVarManifest {
   interfaceId: string
   interfaceName: string
@@ -64,70 +64,71 @@ interface InterfaceVarInfo {
   example: string
   path: string
 }
-~~~
+```
 
 ### 2.2 InterfaceInstance
 
-~~~typescript
+```typescript
 interface InterfaceInstance {
   instanceId: string // UUID v4
   name: string
   generatedAt: string
   values: Record<string, string>
 }
-~~~
+```
 
 实例本体不保存 interfaceId；实例所属的 Interface 由仓储目录确定。Template 导出时必须校验所选 instanceId 确实属于 Template 声明的 interfaceId。
 
 ## 三、Schema 定义
 
-### 3.1 Schema 是评分块列表
+### 3.1 Schema 是评分数据管道定义
 
-Schema 不是一个只能整体消费的评分配置，而是一个可复用的评分块列表。Template 或函数可以只消费其中的部分评分块，也可以多次独立消费同一个评分块。
+Schema 第一版只定义批改输入的数据格式，不包含评分实现、评分维度、AI 配置或批改逻辑。它可以暂时作为 Template 的局部数据契约，不要求跨 Template 复用。
 
-~~~typescript
-interface SchemaDef {
-  id: string
+```typescript
+interface SchemaDefinition {
+  formatVersion: 1
+  schemaId: string // sha256:<64 位十六进制摘要>
   name: string
-  blocks: SchemaBlockDef[]
+  blocks: SchemaBlockDefinition[]
 }
 
-interface SchemaBlockDef {
+interface SchemaBlockDefinition {
   blockId: string
   name: string
-
-  // 评分块对外暴露的变量列表。
-  // 评分维度、评分规则和内部合并方式由 schema-editor 定义。
-  fields: SchemaFieldDef[]
+  maxScore: number
+  inputs: SchemaInputDefinition[]
 }
 
-type SchemaFieldDef =
-  | { varName: string; type: 'text' }
-  | { varName: string; type: 'audio' }
-  | { varName: string; type: 'choice' }
-~~~
+interface SchemaInputDefinition {
+  inputId: string
+  name: string
+  type: 'string' | 'audio'
+}
+```
 
-choice 表示学生在 ExamPlayer 运行期间产生的单选作答。Schema 通过 choiceIndex 引用 Player 保存的 A-Z 选项标签；未作答值为 `-`。正确答案和分值属于评分块的静态参数，不放入 Player 题目数据。
+选择题答案作为 `string` 接入口的运行期来源。Template 编译映射通过 `choiceIndex` 引用 Player 的选择结果；录音接入口通过 `recordIndex` 引用 Player 的录音槽位。
 
 Schema 对 Template 暴露评分块清单：
 
-~~~typescript
-interface SchemaBlockManifest {
+```typescript
+interface SchemaManifest {
   schemaId: string
-  schemaName: string
+  name: string
   blocks: Array<{
     blockId: string
-    blockName: string
-    fields: SchemaFieldDef[]
+    name: string
+    maxScore: number
+    inputs: SchemaInputDefinition[]
   }>
 }
-~~~
+```
 
 ### 3.2 Schema 评分块消费
 
 Template 或函数在所在层级消费评分块：
 
-~~~typescript
+```typescript
 interface SchemaUse {
   useId: string
   schemaId: string
@@ -136,13 +137,13 @@ interface SchemaUse {
   // 必须覆盖被消费评分块的全部 fields。
   bindings: Record<string, SchemaBindingExpression>
 }
-~~~
+```
 
 同一个 schemaId + blockId 可以出现多次；每次消费拥有独立的 useId 和独立绑定。
 
 Schema 绑定允许使用 Template 的普通表达式：
 
-~~~typescript
+```typescript
 type SchemaBindingExpression =
   | {
       type: 'literal'
@@ -175,7 +176,7 @@ type SchemaBindingExpression =
       type: 'choice-output'
       name: string
     }
-~~~
+```
 
 record-output 和 choice-output 分别引用运行期录音槽位和选择题作答槽位；其他表达式在导出试卷包时求值。
 
@@ -196,30 +197,30 @@ Template 预览和导出校验必须确认展开后的有效 Schema 消费集合
 
 Template 可以依赖多个 Interface，并且只接受每个 Interface 的部分变量：
 
-~~~typescript
+```typescript
 interface TemplateInterfaceRequirement {
   alias: string
   interfaceId: string
   acceptedVars: string[]
 }
-~~~
+```
 
 alias 是 Template 内部为 Interface 分配的命名空间。只有 Interface 变量使用命名空间，例如：
 
-~~~text
+```text
 [@speaking.sentence]
 [@listening.question]
-~~~
+```
 
 Template 不保存实例选择：
 
-~~~typescript
+```typescript
 interface ExportInterfaceInstanceSelection {
   alias: string
   interfaceId: string
   instanceId: string
 }
-~~~
+```
 
 导出或预览时，调用方必须为每个 alias 提供一个选择结果。
 
@@ -227,7 +228,7 @@ interface ExportInterfaceInstanceSelection {
 
 Template 是使用稳定 UUID 的可编辑工作文档，不区分草稿和发布状态。它保存完整正文、编辑器私有状态，以及当前引用函数的自包含资源闭包：
 
-~~~typescript
+```typescript
 interface TemplateDocument {
   templateId: string
   revision: number
@@ -235,7 +236,7 @@ interface TemplateDocument {
   resources: { functions: FunctionDef[] }
   editorState: DslEditorState
 }
-~~~
+```
 
 `revision` 从 0 开始，由工作文档仓储在每次成功更新后递增。保存必须携带调用方读取到的 revision；与当前仓储版本不一致时返回冲突，不覆盖较新的正文或函数资源。
 
@@ -255,7 +256,7 @@ Template 的 DSL 由页面节点、框架节点、选择题单题节点和函数
 
 编译器对每个节点产生独立的结构通道：
 
-~~~typescript
+```typescript
 interface CompiledNode {
   pages: CompiledPage[]
   choiceQuestions: CompiledChoiceQuestion[]
@@ -263,7 +264,7 @@ interface CompiledNode {
   schemaUses: CompiledSchemaUse[]
   valueOutputs: CompiledValueOutput[]
 }
-~~~
+```
 
 普通框架和函数按子节点展开顺序传播 choiceQuestions。ChoiceCollector 消费包裹范围内的题目，阻断原始题目继续向上传播，并生成一个密封的 choiceMetaCandidate。Collector 的 pages 是不可变量绑定的字面量列表；每项 questionCount 必须为正整数，且总和必须等于实际收集的题目数量。
 
@@ -280,7 +281,7 @@ interface CompiledNode {
 
 Player 数据段与 Schema 的评分结构无关，只描述 ExamPlayer 播放试卷和保存运行期作答所需的基本信息。
 
-~~~typescript
+```typescript
 interface PlayerExamData {
   pages: ExamPage[]
   recordingIndices: number[]
@@ -364,7 +365,7 @@ interface PlayerChoiceQuestion {
 
 // 序列化值必须是 A-Z 中的选项标签，或表示未作答的 `-`。
 type ChoiceAnswer = string
-~~~
+```
 
 choiceIndex 与 recordIndex 一样在整份试卷内全局唯一，从 0 递增分配。选项标签根据顺序自动生成为 A-Z。所有 ChoiceView 显示同一个全局 ChoiceMeta 并共享答案，但各自维护独立的当前内页。内页序号从 0 开始。Player 不需要理解 Schema 的评分规则，也不会收到正确答案和分值。
 
@@ -372,37 +373,39 @@ choiceIndex 与 recordIndex 一样在整份试卷内全局唯一，从 0 递增�
 
 ### 5.3 Schema 映射段
 
-Schema 映射段把每个评分块消费实例的字段映射到固定值或 Player 运行期槽位：
+Schema 映射段保存 Schema 定义快照，以及每个评分块接入口到固定值或 Player 运行期槽位的映射：
 
-~~~typescript
+```typescript
 interface SchemaExportData {
-  usages: SchemaUsageExport[]
+  formatVersion: 1
+  definitions: SchemaDefinition[]
+  blocks: SchemaBlockExport[]
 }
 
-interface SchemaUsageExport {
-  useId: string
+interface SchemaBlockExport {
+  instanceId: string
   schemaId: string
   blockId: string
-  fields: SchemaFieldValue[]
+  inputs: SchemaInputBinding[]
 }
 
-type SchemaFieldValue =
-  | { varName: string; type: 'text'; value: string }
-  | { varName: string; type: 'audio'; recordIndex: number }
-  | { varName: string; type: 'choice'; choiceIndex: number }
-~~~
+type SchemaInputBinding =
+  | { inputId: string; type: 'string'; source: 'static'; value: string }
+  | { inputId: string; type: 'string'; source: 'choice'; choiceIndex: number }
+  | { inputId: string; type: 'audio'; source: 'recording'; recordIndex: number }
+```
 
-text 等静态字段在导出时已经确定。audio 字段只保存对应的 recordIndex，实际音频由 ExamPlayer 在运行时录制；choice 字段只保存对应的 choiceIndex，学生选择由 ExamPlayer 在运行时采集。
+静态 string 接入口在导出时已经确定；audio 接入口只保存对应的 recordIndex，choice 来源只保存对应的 choiceIndex。ExamPlayer 在运行期采集录音和选择结果，Schema 实例化器再生成批改引擎输入。
 
 ### 5.4 ExamPackage
 
-~~~typescript
+```typescript
 interface ExamPackage {
   title: string
   player: PlayerExamData
   schema: SchemaExportData
 }
-~~~
+```
 
 Template 可以引用多个 Schema，因此 ExamPackage 不再使用单一的 schemaId 字段。
 
@@ -410,7 +413,7 @@ Template 可以引用多个 Schema，因此 ExamPackage 不再使用单一的 sc
 
 作答包分为 Player 运行期数据和 Schema 映射数据：
 
-~~~text
+```text
 submission.zip
 ├── submission.json
 ├── schema.json
@@ -418,7 +421,7 @@ submission.zip
 ├── 0.mp3
 ├── 1.mp3
 └── ...
-~~~
+```
 
 - schema.json 保存从 ExamPackage.schema 原样传递的 Schema 映射。
 - 音频文件按 recordIndex 命名。
@@ -427,7 +430,7 @@ submission.zip
 
 元数据使用多个 Schema：
 
-~~~typescript
+```typescript
 interface SubmissionMeta {
   student: StudentInfo
   schemaIds: string[]
@@ -438,11 +441,11 @@ interface StudentInfo {
   name: string
   studentId: string
 }
-~~~
+```
 
 ## 七、完整数据流
 
-~~~text
+```text
 1. 创建 InterfaceDef
 2. 创建 SchemaDef（包含可复用评分块）
 3. 创建或打开 TemplateDocument
@@ -470,4 +473,4 @@ interface StudentInfo {
    → 按 choiceIndex 采集学生选择
    → 生成作答包
 8. Schema 系统读取 schema.json 和作答数据进行评分
-~~~
+```

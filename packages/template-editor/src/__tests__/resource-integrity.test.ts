@@ -10,13 +10,15 @@ const SCHEMA_ID = `sha256:${'2'.repeat(64)}`
 const MISSING_FUNCTION_ID = `sha256:${'9'.repeat(64)}`
 
 const schemaManifest: SchemaBlockManifest = {
+  formatVersion: 1,
   schemaId: SCHEMA_ID,
-  schemaName: 'Scoring',
+  name: 'Scoring',
   blocks: [
     {
       blockId: 'text',
-      blockName: 'Text',
-      fields: [{ varName: 'prompt', type: 'text' }]
+      name: 'Text',
+      maxScore: 10,
+      inputs: [{ inputId: 'prompt', name: 'Prompt', type: 'string' }]
     }
   ]
 }

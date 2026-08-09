@@ -1,9 +1,11 @@
 // @ls101/core-types - Template Compiler、ExamPlayer 与评分系统的共享契约
 
+import type { CompiledSchemaPipeline } from './schema'
+
 export interface ExamPackage {
   title: string
   player: PlayerExamData
-  schema: SchemaExportData
+  schema: CompiledSchemaPipeline
 }
 
 export interface PlayerExamData {
@@ -117,19 +119,3 @@ export type ChoiceOptionLabel =
   | 'Z'
 
 export type ChoiceAnswer = ChoiceOptionLabel | '-'
-
-export interface SchemaExportData {
-  usages: SchemaUsageExport[]
-}
-
-export interface SchemaUsageExport {
-  useId: string
-  schemaId: string
-  blockId: string
-  fields: SchemaFieldValue[]
-}
-
-export type SchemaFieldValue =
-  | { varName: string; type: 'text'; value: string }
-  | { varName: string; type: 'audio'; recordIndex: number }
-  | { varName: string; type: 'choice'; choiceIndex: number }

@@ -1395,10 +1395,6 @@ __metadata:
   resolution: "@ls101/schema-editor@workspace:packages/schema-editor"
   dependencies:
     "@ls101/core-types": "workspace:*"
-    "@ls101/editor-kit": "workspace:*"
-  peerDependencies:
-    react: ^19
-    react-dom: ^19
   languageName: unknown
   linkType: soft
 
