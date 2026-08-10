@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom/vitest'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import type { JSX } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { TaskProgressHandle, TaskProgressSnapshot } from '@ls101/core-types'
 import type {
@@ -9,7 +10,7 @@ import type {
   InterfaceApplication,
   InterfaceDraft
 } from '@ls101/interface-editor'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { AppToaster } from '../components/ui/ToastViewport'
 import { toast } from '../components/ui/toast'
 import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceApplicationProvider'
@@ -112,6 +113,305 @@ describe('Interface pages', () => {
     expect(screen.getByRole('button', { name: '保留旧版' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '删除' }))
     await waitFor(() => expect(resolve).toHaveBeenCalledWith(plan, 'delete'))
+  })
+
+  it('shows builtin Interfaces and reloads after builtin maintenance changes', async () => {
+    const interfaceId = `sha256:${'9'.repeat(64)}`
+    const listPublished = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          interfaceId,
+          name: '上海高考听说',
+          description: '内置题型',
+          source: { type: 'builtin' as const, builtinKey: 'shanghai-gaokao-speaking' },
+          instanceCount: 0
+        }
+      ])
+    const app = application({
+      browser: { listDrafts: vi.fn().mockResolvedValue([]), listPublished }
+    })
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={['/interfaces']}>
+          <InterfaceListPage />
+        </MemoryRouter>
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByText('暂无题型')).toBeInTheDocument()
+    window.dispatchEvent(new Event('interface-builtins-changed'))
+
+    expect(await screen.findByRole('button', { name: '上海高考听说' })).toBeInTheDocument()
+    expect(screen.getByText('内置')).toBeInTheDocument()
+    expect(listPublished).toHaveBeenCalledTimes(2)
+  })
+
+  it('edits a nested field tree and reports publish validation before succeeding', async () => {
+    const save = vi.fn().mockResolvedValue(undefined)
+    const publish = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: 'invalid',
+        errors: [{ code: 'EMPTY_VAR_NAME', path: 'group1.field1' }]
+      })
+      .mockResolvedValueOnce({
+        status: 'published',
+        interface: {
+          interfaceId: `sha256:${'8'.repeat(64)}`,
+          name: '听说测试',
+          description: '用于课堂练习',
+          source: { type: 'published' },
+          instanceCount: 0
+        }
+      })
+    const app = application({
+      drafts: {
+        create: vi.fn().mockResolvedValue(draft),
+        get: vi.fn().mockResolvedValue(draft),
+        save,
+        delete: vi.fn(),
+        publish
+      }
+    })
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/interfaces/drafts/${draft.draftId}`]}>
+          <Routes>
+            <Route path="/interfaces/drafts/:draftId" element={<InterfaceDraftEditorPage />} />
+            <Route path="/interfaces/:interfaceId" element={<div>已发布题型</div>} />
+          </Routes>
+        </MemoryRouter>
+        <AppToaster />
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByRole('heading', { name: '听说测试' })).toBeInTheDocument()
+    const structure = within(screen.getByRole('region', { name: '字段结构' }))
+    fireEvent.click(screen.getByRole('button', { name: '添加字段组' }))
+    expect(structure.getByText('选中此字段组后，新字段会添加到组内。')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '添加字段' }))
+
+    const field = structure.getByRole('button', { name: /field1/ })
+    fireEvent.click(field)
+    fireEvent.change(structure.getByLabelText('类型'), { target: { value: 'image' } })
+    fireEvent.change(structure.getByLabelText('变量名'), { target: { value: 'pictureText' } })
+    fireEvent.change(structure.getByLabelText('描述'), { target: { value: '配图提示词' } })
+    fireEvent.change(structure.getByLabelText('示例'), { target: { value: '示例图片提示词' } })
+    const keyInput = structure.getByLabelText('字段标识')
+    fireEvent.change(keyInput, { target: { value: 'picture' } })
+    fireEvent.blur(keyInput)
+    expect(structure.getByRole('button', { name: /picture/ })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '发布' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('变量名不能为空')
+    expect(publish).toHaveBeenCalledOnce()
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ draftId: draft.draftId }))
+
+    fireEvent.click(screen.getByRole('button', { name: '发布' }))
+    expect(await screen.findByText('已发布题型')).toBeInTheDocument()
+    expect(publish).toHaveBeenCalledTimes(2)
+  })
+
+  it('saves an instance, replaces values from JSON, and preserves invalid state', async () => {
+    const interfaceId = `sha256:${'7'.repeat(64)}`
+    const instanceId = '20000000-0000-4000-8000-000000000005'
+    const initial = {
+      interfaceId,
+      instance: {
+        instanceId,
+        name: '原题组',
+        generatedAt: '2026-08-05T00:00:00.000Z',
+        values: { questionText: '旧内容' }
+      },
+      assetUrls: {}
+    }
+    const saved = {
+      ...initial,
+      instance: { ...initial.instance, name: '已保存题组', values: { questionText: '手动内容' } }
+    }
+    const replaced = {
+      ...saved,
+      instance: { ...saved.instance, values: { questionText: 'JSON 内容' } }
+    }
+    const save = vi.fn().mockResolvedValue(saved)
+    const replaceFromJson = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: 'invalid-json',
+        errors: [{ path: '', message: 'JSON 格式不合法' }]
+      })
+      .mockResolvedValueOnce({ status: 'replaced', instance: replaced })
+    const app = application({
+      published: {
+        get: vi.fn().mockResolvedValue({
+          definition: { ...draft, id: interfaceId },
+          source: { type: 'published' }
+        })
+      },
+      instances: {
+        get: vi.fn().mockResolvedValue(initial),
+        listImageGenerationProviders: vi.fn().mockResolvedValue([]),
+        save,
+        replaceFromJson,
+        startAIGeneration: vi.fn(),
+        generateImage: vi.fn()
+      }
+    })
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/interfaces/${interfaceId}/instances/${instanceId}`]}>
+          <Routes>
+            <Route
+              path="/interfaces/:interfaceId/instances/:instanceId"
+              element={<InterfaceInstanceEditorPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+        <AppToaster />
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByRole('heading', { name: '原题组' })).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('题组名称'), { target: { value: '已保存题组' } })
+    fireEvent.change(screen.getByLabelText('question 内容'), { target: { value: '手动内容' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() =>
+      expect(save).toHaveBeenCalledWith(interfaceId, instanceId, {
+        name: '已保存题组',
+        values: { questionText: '手动内容' },
+        imagePrompts: {},
+        imageFiles: {}
+      })
+    )
+    expect(await screen.findByText('题组已保存')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'JSON' }))
+    fireEvent.change(screen.getByLabelText('JSON 内容'), { target: { value: '{broken' } })
+    fireEvent.click(screen.getByRole('button', { name: '覆盖全部值' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('JSON 格式不合法')
+    expect(screen.getByDisplayValue('手动内容')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('JSON 内容'), {
+      target: { value: '{"question":"JSON 内容"}' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: '覆盖全部值' }))
+    expect(await screen.findByDisplayValue('JSON 内容')).toBeInTheDocument()
+    expect(await screen.findByText('已从 JSON 更新题组')).toBeInTheDocument()
+    expect(replaceFromJson).toHaveBeenNthCalledWith(1, interfaceId, instanceId, '{broken')
+    expect(replaceFromJson).toHaveBeenNthCalledWith(
+      2,
+      interfaceId,
+      instanceId,
+      '{"question":"JSON 内容"}'
+    )
+  })
+
+  it('deletes an instance from the details page after confirmation', async () => {
+    const interfaceId = `sha256:${'6'.repeat(64)}`
+    const instance = {
+      instanceId: '20000000-0000-4000-8000-000000000006',
+      name: '待删除题组',
+      generatedAt: '2026-08-06T00:00:00.000Z'
+    }
+    const listInstances = vi.fn().mockResolvedValueOnce([instance]).mockResolvedValueOnce([])
+    const deleteInstance = vi.fn().mockResolvedValue(undefined)
+    const app = application({
+      published: {
+        get: vi.fn().mockResolvedValue({
+          definition: { ...draft, id: interfaceId },
+          source: { type: 'published' }
+        }),
+        listInstances,
+        getPrompts: vi.fn().mockResolvedValue(null),
+        createBlankInstance: vi.fn(),
+        copyToDraft: vi.fn()
+      },
+      instances: { delete: deleteInstance }
+    })
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/interfaces/${interfaceId}`]}>
+          <Routes>
+            <Route path="/interfaces/:interfaceId" element={<InterfaceDetailsPage />} />
+          </Routes>
+        </MemoryRouter>
+        <AppToaster />
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByRole('button', { name: '待删除题组' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '删除题组' }))
+    expect(screen.getByRole('alertdialog', { name: '删除题组“待删除题组”？' })).toBeInTheDocument()
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: '删除' }))
+    await waitFor(() =>
+      expect(deleteInstance).toHaveBeenCalledWith(interfaceId, instance.instanceId)
+    )
+    expect(await screen.findByText('暂无题组')).toBeInTheDocument()
+    expect(screen.getByText('已删除题组“待删除题组”')).toBeInTheDocument()
+  })
+
+  it('guards leaving an instance with unsaved changes', async () => {
+    const interfaceId = `sha256:${'5'.repeat(64)}`
+    const instanceId = '20000000-0000-4000-8000-000000000007'
+    const app = application({
+      published: {
+        get: vi.fn().mockResolvedValue({
+          definition: { ...draft, id: interfaceId },
+          source: { type: 'published' }
+        })
+      },
+      instances: {
+        get: vi.fn().mockResolvedValue({
+          interfaceId,
+          instance: {
+            instanceId,
+            name: '离开确认题组',
+            generatedAt: '2026-08-07T00:00:00.000Z',
+            values: { questionText: '原内容' }
+          },
+          assetUrls: {}
+        }),
+        listImageGenerationProviders: vi.fn().mockResolvedValue([])
+      }
+    })
+
+    function DetailsRoute(): JSX.Element {
+      const navigate = useNavigate()
+      return <button onClick={() => navigate(`/interfaces/${interfaceId}`)}>题型详情</button>
+    }
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/interfaces/${interfaceId}/instances/${instanceId}`]}>
+          <Routes>
+            <Route
+              path="/interfaces/:interfaceId/instances/:instanceId"
+              element={<InterfaceInstanceEditorPage />}
+            />
+            <Route path="/interfaces/:interfaceId" element={<DetailsRoute />} />
+          </Routes>
+        </MemoryRouter>
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByDisplayValue('原内容')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('question 内容'), { target: { value: '未保存内容' } })
+    fireEvent.click(screen.getByRole('button', { name: '返回题型详情' }))
+    const dialog = screen.getByRole('alertdialog', { name: '放弃未保存的修改？' })
+    expect(dialog).toBeInTheDocument()
+    fireEvent.click(within(dialog).getByRole('button', { name: '取消' }))
+    expect(screen.getByDisplayValue('未保存内容')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '返回题型详情' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', { name: '放弃修改' })
+    )
+    expect(await screen.findByRole('button', { name: '题型详情' })).toBeInTheDocument()
   })
 
   it('shows published interfaces and the draft entry', async () => {

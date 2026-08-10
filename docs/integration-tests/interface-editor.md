@@ -23,7 +23,7 @@ xvfb-run -a yarn test:playwright:electron tests/integration/interface-editor.spe
 
 命令先为当前平台执行 `electron-builder --dir`，测试直接启动 unpacked 可执行文件。
 
-本套件验证题型编辑器消费 AIRouter 的真实跨包链路：`题型实例编辑器 -> InterfaceAIRouterAdapter / ConfiguredImageGenerator -> airouter renderer client -> sandbox preload -> ipcMain -> AIRouterService / AIRouterImageService -> AI SDK -> mock HTTP`，以及生成结果经 JSON 校验、图片生成和原子保存后的真实 UI 反馈。
+本套件验证题型编辑器的真实用户操作链路和跨包边界：草稿编辑器、发布题型、题组编辑器、内置题型初始化、导入导出、文件和剪贴板图片，以及 `题型实例编辑器 -> InterfaceAIRouterAdapter / ConfiguredImageGenerator -> airouter renderer client -> sandbox preload -> ipcMain -> AIRouterService / AIRouterImageService -> AI SDK -> mock HTTP` 的 AI 文本/图像生成链路。
 
 每条路径都用独立的临时 Electron `userData` 目录。已发布的题型通过 `fileStore` bridge 直接写入 `FileInterfaceRepository` 的存储布局（`interfaces/published/<interfaceId>/interface.json`），interface id 按仓库相同的 canonicalization + SHA-256 规则推导；题组实例由 UI「新建题组」创建，不从外部写入。
 
@@ -31,6 +31,7 @@ xvfb-run -a yarn test:playwright:electron tests/integration/interface-editor.spe
 
 - `textInterface`：两个文本叶子字段（`title`/`answer`），AI 返回 `{"title":"AI 标题","answer":"AI answer"}`。
 - `imageInterface`：一个文本叶子（`title`）和一个图片叶子（`picture`），AI 返回 `{"title":"AI 标题","picture":"A green circle icon"}`，图片字段的提示词再经图像 Provider 生成 PNG。
+- 资源中的 `shanghai-gaokao-speaking`：验证真实 bundled Interface 首次启动后被安装并出现在题型列表。
 
 ## 路径
 
@@ -58,8 +59,32 @@ xvfb-run -a yarn test:playwright:electron tests/integration/interface-editor.spe
 
 测试内容：校验失败状态「生成内容未通过校验」、字段错误数量、JSON 面板的原始输出和解析错误均正确；取消后显示「生成已取消」与「已取消 AI 生成」；两种失败路径都不会写入实例数据。
 
+### IE-04～IE-06 草稿生命周期
+
+覆盖草稿创建、基本信息和字段保存后重新打开、空变量名发布校验、发布成功、草稿复制/删除，以及未保存修改离开时的取消和放弃操作。
+
+### IE-07～IE-09 题组生命周期
+
+覆盖题组名称和字段值保存后重新打开、未保存修改离开确认、JSON 合法覆盖、非法 JSON 保留原值，以及删除题组后的文件存储清理。
+
+### IE-10～IE-11 题型复制与交换
+
+覆盖已发布题型复制为草稿，以及包含题组实例的 `.lsinterface` 导出、清空、重新导入和题组恢复。导出文件同时断言 ZIP 文件头，避免只验证 UI toast。
+
+### IE-12 字段树编辑
+
+覆盖字段组、组内字段、图片字段属性、字段重命名、节点删除和保存后重新打开。
+
+### IE-13～IE-15 图片输入与生图
+
+IE-13 通过真实文件选择器、Electron 剪贴板和图片字段 AI 生图验证图片暂存、预览、移除和保存；IE-15 验证独立 AI 生图面板的批量生成、保存、完成和取消。
+
+### IE-16 内置 Interface 首次安装
+
+使用打包应用实际携带的 `resources/builtin/interface-editor`，从全新 `userData` 启动后验证上海高考英语口语题型自动安装、显示「内置」标记、详情页入口和字段内容。
+
 ## 覆盖边界
 
-- 题型定义与 Provider 配置由测试预置，不验证题型定义编辑器自身的操作（属于草稿编辑器路径）。
+- Provider 配置和测试用已发布题型由测试预置；草稿定义、题组实例和内置题型则通过真实 UI 或应用启动流程创建。
 - 图片资产校验、JSON Schema 生成等纯领域逻辑由 `application.integration.test.ts` 覆盖；本套件验证的是真实 renderer/HTTP/IPC 链路与 UI 反馈。
 - 不访问公网，不请求真实 AI Provider。
