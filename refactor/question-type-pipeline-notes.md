@@ -358,14 +358,14 @@ interface SubmissionTemplate {
 
 这里的“副本”是最终 SubmissionPackage 中所有编译期可确定字段的完整静态部分，而不是需要播放器再次解释的中间模型。ExamPlayer 不读取或解释 `schemaUses`：它复制 `submissionTemplate`，按 `answerCapturePlan` 生成答案池，并向 `meta` 补充 `submissionId`、考生身份和考试时间。
 
-v1 ExamPackage 使用 ZIP 归档，`manifest.json` 直接保存上述 `ExamPackage` JSON，资源按照 `examData.resources[*].packagePath` 写入：
+ExamPackage 的规范解压目录使用 `index.json` 作为入口，资源按照 `examData.resources[*].packagePath` 写入：
 
 ```text
-manifest.json
+index.json
 resources/<assetKey>/<filename>
 ```
 
-归档读取器严格校验 manifest、播放器数据、捕获计划、SchemaUse、资源引用和 ZIP 内文件集合。页面图片等播放器资源全部进入考试包；只有评分快照实际需要的 SchemaUse 附件进入 `submissionTemplate.resources`。
+ZIP 只是该目录的传输形式。归档读取器严格校验 index、播放器数据、捕获计划、SchemaUse、资源引用和归档内文件集合。页面图片等播放器资源全部进入考试包；只有评分快照实际需要的 SchemaUse 附件进入 `submissionTemplate.resources`。
 
 播放器页面中的 `image` 块与 SchemaUse Markdown 附件是两类不同的消费者，但共同使用 `resource:<assetKey>` 逻辑地址。页面图片的资源键必须存在于 `examData.resources`；`examData.resources` 和 `submissionTemplate.resources` 都只允许指向考试包内的 `resources/` 静态资源目录。
 
@@ -495,15 +495,15 @@ type SubmissionResourceManifest = Record<
 
 Template 编译器负责识别 SchemaUse 批改快照所需的静态资源，将清单写入 `submissionTemplate.resources`，并把文件收入 ExamPackage 归档。组合作答包时，ExamPlayer 复制该资源清单并加入新录音的资源项，不解析 SchemaUse 文本；归档写入器根据清单从 ExamPackage 复制静态文件，并写入播放器返回的新录音。
 
-v1 Submission 归档布局固定为：
+Submission 归档布局固定为：
 
 ```text
-manifest.json
+index.json
 resources/<assetKey>/<filename>
 recordings/<resourceKey>/<filename>
 ```
 
-`manifest.json` 直接保存 `SubmissionPackage` JSON。归档中必须恰好包含 `resources` 清单引用的文件，不允许缺失文件、未知文件、重复路径或目录穿越路径。
+`index.json` 直接保存 `SubmissionPackage` JSON。归档中必须恰好包含 `resources` 清单引用的文件，不允许缺失文件、未知文件、重复路径或目录穿越路径。
 
 播放器回调在内存中返回 `SubmissionPackage` 清单和以资源键索引的新录音 Blob。播放器在组包时为新录音生成资源键、文件名、包内路径和媒体类型，使回调返回的清单已经满足 SubmissionPackage 契约。静态附件已经存在于 ExamPackage 归档，不需要播放器重新读取或返回。ZIP 编码、文件复制、可选的完整性校验和持久化由宿主应用或归档写入器负责，不属于 ExamPlayer 的考试流程逻辑。只有清单和它引用的全部文件共同组成可独立批改的最终作答归档。
 
@@ -612,4 +612,4 @@ GradingResult
 
 ## 十二、当前状态
 
-本文涉及的 Schema 结构、发布机制、Template 绑定、附件变量、资源地址、ExamPackage、SubmissionPackage 和评分输出均已确认。Schema、Template 编译、ExamPlayer 作答组包边界和 v1 ZIP 归档读写已经实现；完整播放器 UI 和 Grading Engine 仍待后续开发。
+本文涉及的 Schema 结构、发布机制、Template 绑定、附件变量、资源地址、ExamPackage、SubmissionPackage 和评分输出均已确认。Schema、Template 编译、ExamPlayer 作答组包边界和 v1 ZIP 归档读写已经实现；静态部署规范统一使用 `index.json` 作为解压目录入口，现有归档实现需要按该规范对齐。完整播放器 UI 和 Grading Engine 仍待后续开发。
