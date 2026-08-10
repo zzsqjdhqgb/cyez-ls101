@@ -61,6 +61,7 @@ export class SubmissionLibraryError extends Error {
 
 export class FileSubmissionLibraryRepository implements SubmissionLibraryRepository {
   private readonly submissions: SubmissionLibraryStore
+  private readonly mutationTails = new Map<string, Promise<void>>()
 
   constructor(root: SubmissionLibraryStore) {
     this.submissions = root.scope('submissions')
@@ -77,7 +78,11 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     )
     return records
       .filter((record): record is SubmissionLibraryRecord => record !== null)
-      .sort((left, right) => right.submittedAt.localeCompare(left.submittedAt))
+      .sort(
+        (left, right) =>
+          Date.parse(right.submittedAt) - Date.parse(left.submittedAt) ||
+          right.submissionId.localeCompare(left.submissionId)
+      )
   }
 
   async getRecord(submissionId: string): Promise<SubmissionLibraryRecord | null> {
@@ -108,35 +113,39 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
 
     const submission = archive.submission
     const storageKey = await submissionStorageKey(submission.meta.submissionId)
-    const scope = this.submissions.scope(storageKey)
     const hash = await sha256(data)
-    const existing = await this.readRecord(scope, storageKey)
-    if (existing) return resolveExisting(existing, submission.meta.submissionId, hash)
+    return this.runMutation(storageKey, async () => {
+      const scope = this.submissions.scope(storageKey)
+      const existing = await this.readRecord(scope, storageKey)
+      if (existing) return resolveExisting(existing, submission.meta.submissionId, hash)
 
-    const record: SubmissionLibraryRecord = {
-      formatVersion: 1,
-      submissionId: submission.meta.submissionId,
-      examPackageId: submission.meta.examPackageId,
-      examTitle: submission.meta.examTitle,
-      candidateId: submission.meta.candidate.candidateId,
-      candidateName: submission.meta.candidate.displayName,
-      startedAt: submission.meta.startedAt,
-      submittedAt: submission.meta.submittedAt,
-      importedAt: new Date().toISOString(),
-      archiveSha256: hash,
-      archiveBytes: data.byteLength,
-      schemaUseCount: submission.schemaUses.length
-    }
-    const filename = archiveFilename(hash)
-    await scope.writeAsset(filename, new Uint8Array(data))
-    if (await scope.compareAndSwapText(RECORD_FILE, null, record)) {
-      return { status: 'created', record }
-    }
+      const record: SubmissionLibraryRecord = {
+        formatVersion: 1,
+        submissionId: submission.meta.submissionId,
+        examPackageId: submission.meta.examPackageId,
+        examTitle: submission.meta.examTitle,
+        candidateId: submission.meta.candidate.candidateId,
+        candidateName: submission.meta.candidate.displayName,
+        startedAt: submission.meta.startedAt,
+        submittedAt: submission.meta.submittedAt,
+        importedAt: new Date().toISOString(),
+        archiveSha256: hash,
+        archiveBytes: data.byteLength,
+        schemaUseCount: submission.schemaUses.length
+      }
+      const filename = archiveFilename(hash)
+      await scope.writeAsset(filename, new Uint8Array(data))
+      if (await scope.compareAndSwapText(RECORD_FILE, null, record)) {
+        return { status: 'created', record }
+      }
 
-    const concurrent = await this.readRecord(scope, storageKey)
-    if (!concurrent) throw invalidStorage(`Submission record disappeared: ${record.submissionId}`)
-    if (concurrent.archiveSha256 !== hash) await scope.deleteAsset(filename)
-    return resolveExisting(concurrent, record.submissionId, hash)
+      const concurrent = await this.readRecord(scope, storageKey)
+      if (!concurrent) {
+        throw invalidStorage(`Submission record disappeared: ${record.submissionId}`)
+      }
+      if (concurrent.archiveSha256 !== hash) await scope.deleteAsset(filename)
+      return resolveExisting(concurrent, record.submissionId, hash)
+    })
   }
 
   async exportArchive(submissionId: string): Promise<Uint8Array> {
@@ -157,11 +166,15 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
   async deleteSubmission(submissionId: string): Promise<void> {
     assertSubmissionId(submissionId)
     const key = await submissionStorageKey(submissionId)
-    const record = await this.readRecord(this.submissions.scope(key), key)
-    if (record && record.submissionId !== submissionId) {
-      throw invalidStorage(`Submission storage key collision: ${submissionId}`)
-    }
-    await this.submissions.scope(key).clear()
+    await this.runMutation(key, async () => {
+      const scope = this.submissions.scope(key)
+      const record = await this.readRecord(scope, key)
+      if (!record) return
+      if (record.submissionId !== submissionId) {
+        throw invalidStorage(`Submission storage key collision: ${submissionId}`)
+      }
+      await scope.clear()
+    })
   }
 
   private async readRecord(
@@ -174,6 +187,21 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
       throw invalidStorage(`Invalid submission record: ${storageKey}`)
     }
     return structuredClone(value)
+  }
+
+  private async runMutation<T>(storageKey: string, operation: () => Promise<T>): Promise<T> {
+    const previous = this.mutationTails.get(storageKey) ?? Promise.resolve()
+    const result = previous.catch(() => undefined).then(operation)
+    const tail = result.then(
+      () => undefined,
+      () => undefined
+    )
+    this.mutationTails.set(storageKey, tail)
+    try {
+      return await result
+    } finally {
+      if (this.mutationTails.get(storageKey) === tail) this.mutationTails.delete(storageKey)
+    }
   }
 }
 

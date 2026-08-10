@@ -173,6 +173,7 @@ export function SubmissionLibraryPage(): JSX.Element {
                       <IconButton
                         icon={Trash2}
                         label="删除作答包"
+                        disabled={importing || exportingId !== null}
                         variant="danger"
                         onClick={() => setPendingDelete(record)}
                       />

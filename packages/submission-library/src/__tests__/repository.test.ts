@@ -106,6 +106,55 @@ describe('FileSubmissionLibraryRepository', () => {
     })
   })
 
+  it('按 submissionId 串行化导入和删除', async () => {
+    const store = new MemoryStore()
+    const repository = new FileSubmissionLibraryRepository(store)
+    const bytes = await encodeSubmissionPackage(submission(), {})
+    let releaseWrite: () => void = () => undefined
+    let signalWrite: () => void = () => undefined
+    const writeReached = new Promise<void>((resolve) => {
+      signalWrite = resolve
+    })
+    const writeBlocked = new Promise<void>((resolve) => {
+      releaseWrite = resolve
+    })
+    store.pauseNextAssetWrite(async () => {
+      signalWrite()
+      await writeBlocked
+    })
+
+    const importing = repository.importArchive(bytes)
+    await writeReached
+    const deleting = repository.deleteSubmission('submission-1')
+    releaseWrite()
+    await Promise.all([importing, deleting])
+
+    expect(await repository.listRecords()).toEqual([])
+    await expect(repository.exportArchive('submission-1')).rejects.toMatchObject({
+      code: 'NOT_FOUND'
+    })
+  })
+
+  it('按实际时间而不是 ISO 字符串排序', async () => {
+    const repository = new FileSubmissionLibraryRepository(new MemoryStore())
+    const earlier = submission()
+    earlier.meta.submissionId = 'submission-earlier'
+    earlier.meta.startedAt = '2026-08-10T11:50:00+08:00'
+    earlier.meta.submittedAt = '2026-08-10T12:00:00+08:00'
+    const later = submission()
+    later.meta.submissionId = 'submission-later'
+    later.meta.startedAt = '2026-08-10T04:50:00Z'
+    later.meta.submittedAt = '2026-08-10T05:00:00Z'
+
+    await repository.importArchive(await encodeSubmissionPackage(earlier, {}))
+    await repository.importArchive(await encodeSubmissionPackage(later, {}))
+
+    expect((await repository.listRecords()).map((record) => record.submissionId)).toEqual([
+      'submission-later',
+      'submission-earlier'
+    ])
+  })
+
   it('拒绝损坏的作答包', async () => {
     const repository = new FileSubmissionLibraryRepository(new MemoryStore())
     await expect(repository.importArchive(new Uint8Array([1, 2, 3]))).rejects.toMatchObject({
@@ -117,6 +166,7 @@ describe('FileSubmissionLibraryRepository', () => {
 interface MemoryState {
   texts: Map<string, unknown>
   assets: Map<string, Uint8Array>
+  nextAssetWrite?: () => Promise<void>
 }
 
 class MemoryStore implements SubmissionLibraryStore {
@@ -131,6 +181,10 @@ class MemoryStore implements SubmissionLibraryStore {
 
   scope(name: string): SubmissionLibraryStore {
     return new MemoryStore(this.state, [...this.path, name])
+  }
+
+  pauseNextAssetWrite(operation: () => Promise<void>): void {
+    this.state.nextAssetWrite = operation
   }
 
   async readText<T>(filename: string): Promise<T | null> {
@@ -153,6 +207,9 @@ class MemoryStore implements SubmissionLibraryStore {
 
   async writeAsset(filename: string, data: Uint8Array): Promise<void> {
     this.state.assets.set(this.fileKey(filename), new Uint8Array(data))
+    const operation = this.state.nextAssetWrite
+    this.state.nextAssetWrite = undefined
+    if (operation) await operation()
   }
 
   async deleteAsset(filename: string): Promise<void> {
