@@ -83,16 +83,16 @@ ExamPackage 的规范内容是一个可以直接部署的静态目录。ZIP 只�
 
 ```text
 <exam-root>/
-├── index.json
+├── manifest.json
 └── resources/
     └── <assetKey>/
         └── <filename>
 ```
 
-`index.json` 是入口文件，清单中的 `packagePath` 只保存相对于 `<exam-root>/` 的安全路径，不保存作者机器路径，也不保存固定的 `http://` 或 `exam://` 地址。播放器启动时先以 GET 请求读取：
+`manifest.json` 是入口文件，清单中的 `packagePath` 只保存相对于 `<exam-root>/` 的安全路径，不保存作者机器路径，也不保存固定的 `http://` 或 `exam://` 地址。播放器启动时先以 GET 请求读取：
 
 ```text
-GET <examBaseUrl>/index.json
+GET <examBaseUrl>/manifest.json
 ```
 
 所有考试资源都通过同一个考试路径 GET 获取。`examBaseUrl` 只由部署环境决定，例如：
@@ -102,7 +102,7 @@ exam://exam-id/
 https://example.test/exams/exam-id/
 ```
 
-Electron 可以注册 `exam://` 自定义协议，静态部署则直接使用 HTTP(S)。运行时通过 `index.json` 把 `resource:<assetKey>` 解析为 `examBaseUrl + packagePath`，因此播放器、Markdown 渲染器和批改系统不需要知道底层文件系统位置。
+Electron 可以注册 `exam://` 自定义协议，静态部署则直接使用 HTTP(S)。运行时通过 `manifest.json` 把 `resource:<assetKey>` 解析为 `examBaseUrl + packagePath`，因此播放器、Markdown 渲染器和批改系统不需要知道底层文件系统位置。
 
 资源加载器必须拒绝清单外的资源键、绝对路径、路径穿越和不在考试路径下的 URL。资源使用 GET 读取；播放器不把资源复制到应用全局目录，也不依赖解压目录之外的文件。
 
@@ -148,7 +148,7 @@ mount → 学生信息输入 → 麦克风测试 → 考试中 → 完成 → on
 
 ## 九、与主体软件的关系
 
-- 宿主或静态启动页负责：GET `index.json`、准备 `ExamPackage`，并向播放器提供 `examBaseUrl`
+- 宿主或静态启动页负责：GET `manifest.json`、准备 `ExamPackage`，并向播放器提供 `examBaseUrl`
 - `<ExamPlayer>` 接收数据，运行完整考试流程
 - `<ExamPlayer>` 按 `answerCapturePlan` 填充字符串和音频答案，复制 `submissionTemplate` 并补充考试元数据
 - `onFinish` 回调返回 `SubmissionBundle`，主体软件负责归档、保存、导出或投入批改
