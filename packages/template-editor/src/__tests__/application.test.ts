@@ -765,6 +765,16 @@ describe('TemplateApplication', () => {
     const { application } = setup()
     const template = await application.templates.create({
       name: 'Compiled exam',
+      root: root([
+        {
+          id: 'page',
+          type: 'page',
+          content: { blocks: [] },
+          timeline: [
+            { type: 'countdown', seconds: { type: 'number', source: 'literal', value: 1 } }
+          ]
+        }
+      ]),
       interfaces: [{ alias: 'data', interfaceId: INTERFACE_ID, acceptedVars: ['prompt'] }],
       schemaUses: [
         {

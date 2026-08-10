@@ -56,6 +56,8 @@ export type TemplateCompileErrorCode =
   | 'SPEECH_SYNTHESIZER_MISSING'
   | 'SPEECH_SYNTHESIS_FAILED'
   | 'INVALID_SYNTHESIZED_AUDIO'
+  | 'EMPTY_PLAYER_PAGES'
+  | 'INVALID_RECORDING_DURATION'
   | 'UNKNOWN_FOCUS_QUESTION'
 
 export type TemplateCompileError =
@@ -102,6 +104,7 @@ export type ExpandedTimelineStep =
       type: 'record'
       duration: number
       recordIndex: number
+      sourcePath: string
       choiceViewOverrides?: Record<string, ResolvedChoiceViewport>
     }
 

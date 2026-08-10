@@ -110,9 +110,19 @@ function page(overrides: Partial<PageNode> = {}): PageNode {
 }
 
 it('拒绝空页面时间线', () => {
+  expectCode(templateContent({ root: root([page({ timeline: [] })]) }), 'EMPTY_PAGE_TIMELINE')
+})
+
+it('拒绝零秒录音动作', () => {
   expectCode(
-    templateContent({ root: root([page({ timeline: [] })]) }),
-    'EMPTY_PAGE_TIMELINE'
+    templateContent({
+      root: root([
+        page({
+          timeline: [{ type: 'record', duration: number(0), outputName: 'recording' }]
+        })
+      ])
+    }),
+    'INVALID_RECORDING_DURATION'
   )
 })
 

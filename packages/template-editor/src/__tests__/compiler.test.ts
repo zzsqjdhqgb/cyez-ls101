@@ -329,6 +329,65 @@ function speechOnlyContent(): TemplateContent {
 }
 
 describe('compileTemplate', () => {
+  it('拒绝编译没有页面的 Template', async () => {
+    const result = await compileTemplate(document(content()), compileContext())
+
+    expect(result).toMatchObject({
+      success: false,
+      errors: [{ stage: 'compile', path: 'root', code: 'EMPTY_PLAYER_PAGES' }]
+    })
+  })
+
+  it('拒绝静态求值后为零秒的录音动作', async () => {
+    const resource = await createFunctionResource({
+      name: 'Recording page',
+      inputs: [{ name: 'duration', type: 'number' }],
+      body: root([
+        {
+          id: 'recording-page',
+          type: 'page',
+          content: { blocks: [] },
+          timeline: [
+            {
+              type: 'record',
+              duration: {
+                type: 'number',
+                source: 'variable',
+                ref: { scope: 'local', name: 'duration' }
+              },
+              outputName: 'recording'
+            }
+          ]
+        }
+      ]),
+      outputs: [],
+      schemaUses: []
+    })
+    const exam = content({
+      root: root([
+        functionCall(
+          'recording-call',
+          resource.id,
+          { duration: { type: 'number', source: 'literal', value: 0 } },
+          {}
+        )
+      ])
+    })
+    const result = await compileTemplate(document(exam, [resource]), compileContext())
+
+    expect(result).toMatchObject({
+      success: false,
+      errors: [
+        {
+          stage: 'compile',
+          path: 'root.children[0].function.body.children[0].timeline[0].duration',
+          code: 'INVALID_RECORDING_DURATION',
+          params: { value: 0 }
+        }
+      ]
+    })
+  })
+
   it('有播放动作但未提供语音合成器时返回稳定错误', async () => {
     const result = await compileTemplate(
       document(speechOnlyContent()),
@@ -921,6 +980,14 @@ describe('compileTemplate', () => {
       'Other schema'
     )
     const exam = content({
+      root: root([
+        {
+          id: 'page',
+          type: 'page',
+          content: { blocks: [] },
+          timeline: [{ type: 'countdown', seconds: number(1) }]
+        }
+      ]),
       interfaces: [
         { alias: 'exam', interfaceId: INTERFACE_ID, acceptedVars: ['sentence'] },
         { alias: 'other', interfaceId: OTHER_INTERFACE_ID, acceptedVars: ['sentence'] }

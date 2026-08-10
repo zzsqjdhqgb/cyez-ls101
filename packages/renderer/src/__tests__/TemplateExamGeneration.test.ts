@@ -108,6 +108,39 @@ describe('TemplateExamGeneration', () => {
     ])
     expect(decoded.resources.picture).toEqual(new Uint8Array([4, 5, 6]))
   })
+
+  it('没有播放动作时不要求或调用 TTS', async () => {
+    const synthesizeSpeech = vi.fn()
+    const compile = vi.fn().mockResolvedValue({
+      success: true,
+      examPackage: examWithoutSpeech(),
+      resourceSources: [{ assetKey: 'picture', sourceUrl: 'asset://picture' }]
+    })
+    const writeBinary = vi.fn().mockResolvedValue(true)
+
+    await expect(
+      generateExamArchive(
+        {
+          application: { templates: { compile } } as unknown as TemplateApplication,
+          templateId: 'template-1',
+          templateName: '无听力动作',
+          bindings: []
+        },
+        {
+          speechClient: { synthesizeSpeech },
+          fileDialog: { writeBinary } as never,
+          fetchResource: vi.fn().mockResolvedValue(new Response(new Uint8Array([4, 5, 6])))
+        }
+      )
+    ).resolves.toBe('exported')
+
+    expect(compile).toHaveBeenCalledWith('template-1', [], undefined)
+    expect(synthesizeSpeech).not.toHaveBeenCalled()
+    const decoded = await decodeExamPackage(writeBinary.mock.calls[0][0])
+    expect(decoded.exam.examData.player.pages[0].timeline).toEqual([
+      { type: 'countdown', seconds: 1 }
+    ])
+  })
 })
 
 function exam(): ExamPackage {
@@ -159,4 +192,11 @@ function exam(): ExamPackage {
       resources: {}
     }
   }
+}
+
+function examWithoutSpeech(): ExamPackage {
+  const value = exam()
+  value.examData.player.pages[0].timeline = [{ type: 'countdown', seconds: 1 }]
+  delete value.examData.resources.speech
+  return value
 }

@@ -481,7 +481,7 @@ function isSchemaDefinition(value: unknown): value is SchemaDefinition {
 function isPlayerExamData(value: unknown): boolean {
   if (!isRecord(value) || !Array.isArray(value.pages) || !Array.isArray(value.recordingIndices))
     return false
-  if (!value.pages.every(isExamPage)) return false
+  if (value.pages.length === 0 || !value.pages.every(isExamPage)) return false
   if (
     !value.recordingIndices.every(
       (index) => typeof index === 'number' && Number.isInteger(index) && index >= 0
@@ -576,7 +576,7 @@ function isTimelineStep(value: unknown): boolean {
   return (
     value.type === 'record' &&
     finiteNumber(value.duration) &&
-    value.duration >= 0 &&
+    value.duration > 0 &&
     typeof value.recordIndex === 'number' &&
     Number.isInteger(value.recordIndex) &&
     value.recordIndex >= 0

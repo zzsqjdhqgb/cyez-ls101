@@ -56,6 +56,9 @@ export async function compileTemplate(
     state.staticCells.forEach((cell) => cell.get())
 
     const expandedPages = state.pages.map((resolve) => resolve())
+    if (expandedPages.length === 0) {
+      throw new CompileFailure(compileError('EMPTY_PLAYER_PAGES', 'root'))
+    }
     const generatedSources: ExamResourceSource[] = []
     const pages = await compileTimelineAudio(
       expandedPages,
@@ -130,7 +133,23 @@ async function compileTimelineAudio(
     const timeline: ExamPage['timeline'] = []
     for (const [stepIndex, step] of page.timeline.entries()) {
       if (step.type !== 'play') {
-        timeline.push(step)
+        if (step.type === 'record') {
+          if (!Number.isFinite(step.duration) || step.duration <= 0) {
+            throw new CompileFailure(
+              compileError('INVALID_RECORDING_DURATION', step.sourcePath, {
+                value: step.duration
+              })
+            )
+          }
+          timeline.push({
+            type: 'record',
+            duration: step.duration,
+            recordIndex: step.recordIndex,
+            ...(step.choiceViewOverrides ? { choiceViewOverrides: step.choiceViewOverrides } : {})
+          })
+        } else {
+          timeline.push(step)
+        }
         continue
       }
       if (!context.synthesizeSpeech) {

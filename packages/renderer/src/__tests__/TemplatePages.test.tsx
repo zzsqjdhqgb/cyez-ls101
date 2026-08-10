@@ -9,6 +9,7 @@ import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { TemplateApplicationProvider } from '../features/templates/TemplateApplicationProvider'
 import { TemplateBrowserPage } from '../features/templates/TemplateBrowserPage'
 import { TemplateDocumentPage } from '../features/templates/TemplateDocumentPage'
+import { listSpeechGenerationSelections } from '../features/templates/TemplateExamGeneration'
 
 vi.mock('../features/templates/TemplateExamGeneration', () => ({
   generateExamArchive: vi.fn().mockResolvedValue('exported'),
@@ -211,8 +212,31 @@ function createLibraryNode(
 }
 
 describe('Template pages', () => {
-  it('从工具栏打开本次试卷生成配置', async () => {
+  it('没有 TTS 配置时仍允许生成不含播放动作的试卷', async () => {
+    vi.mocked(listSpeechGenerationSelections).mockResolvedValueOnce([])
     const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: '生成试卷' }))
+
+    expect(await screen.findByRole('button', { name: '生成并导出' })).toBeEnabled()
+  })
+
+  it('从工具栏打开本次试卷生成配置', async () => {
+    const document = template()
+    const page = document.content.root.children[0]
+    if (page.type === 'page') {
+      page.timeline = [{ type: 'play', text: { type: 'string', parts: [] } }]
+    }
+    const app = application(document)
     render(
       <TemplateApplicationProvider application={app}>
         <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>

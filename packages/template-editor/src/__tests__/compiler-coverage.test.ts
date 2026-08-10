@@ -230,7 +230,13 @@ describe('Template 编译组合覆盖', () => {
                 resource.id,
                 { result: 'answer-2' },
                 { stem: { type: 'string', source: 'literal', value: 'Second' } }
-              )
+              ),
+              {
+                id: 'page',
+                type: 'page',
+                content: { blocks: [] },
+                timeline: [{ type: 'countdown', seconds: number(1) }]
+              }
             ]),
             choiceCollector: { pages: [{ questionCount: 1 }, { questionCount: 1 }] }
           },

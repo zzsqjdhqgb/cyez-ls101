@@ -245,6 +245,7 @@ function resolvePage(
             `${stepPath}.duration`
           ) as number,
           recordIndex: recordIndices.get(index) as number,
+          sourcePath: `${stepPath}.duration`,
           ...(choiceViewOverrides ? { choiceViewOverrides } : {})
         }
     }

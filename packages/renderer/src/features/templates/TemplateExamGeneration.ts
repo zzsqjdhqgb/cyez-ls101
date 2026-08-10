@@ -18,7 +18,7 @@ export interface GenerateExamInput {
   templateId: string
   templateName: string
   bindings: readonly TemplateInterfaceBinding[]
-  speech: AIRouterSpeechTarget
+  speech?: AIRouterSpeechTarget
 }
 
 export interface GenerateExamDependencies {
@@ -44,16 +44,23 @@ export async function generateExamArchive(
   input: GenerateExamInput,
   dependencies: GenerateExamDependencies = defaultDependencies
 ): Promise<'exported' | 'cancelled'> {
-  const result = await input.application.templates.compile(input.templateId, input.bindings, {
-    async synthesizeSpeech(text) {
-      const audio = await dependencies.speechClient.synthesizeSpeech({
-        text,
-        routing: { default: input.speech },
-        format: 'wav'
-      })
-      return { data: audio.data, mediaType: audio.mediaType }
-    }
-  })
+  const speech = input.speech
+  const result = await input.application.templates.compile(
+    input.templateId,
+    input.bindings,
+    speech
+      ? {
+          async synthesizeSpeech(text) {
+            const audio = await dependencies.speechClient.synthesizeSpeech({
+              text,
+              routing: { default: speech },
+              format: 'wav'
+            })
+            return { data: audio.data, mediaType: audio.mediaType }
+          }
+        }
+      : undefined
+  )
   if (!result.success) {
     throw new Error(formatCompileErrors(result.errors))
   }

@@ -192,6 +192,21 @@ describe('ExamPackage ZIP archive', () => {
     expect(() => validateExamPackage(exam)).toThrowError(ExamPackageArchiveError)
   })
 
+  it('拒绝没有页面的试卷', () => {
+    const exam = examPackage()
+    exam.examData.player.pages = []
+
+    expect(() => validateExamPackage(exam)).toThrow('Invalid ExamPackage manifest')
+  })
+
+  it('拒绝零秒录音动作', () => {
+    const exam = examPackage()
+    const step = exam.examData.player.pages[0].timeline[0]
+    if (step.type === 'record') step.duration = 0
+
+    expect(() => validateExamPackage(exam)).toThrow('Invalid ExamPackage manifest')
+  })
+
   it('校验播放器页面图片的资源引用', () => {
     const valid = examPackage()
     valid.examData.player.pages[0].content.push({

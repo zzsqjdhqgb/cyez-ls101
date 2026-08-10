@@ -117,7 +117,7 @@ export function TemplateExamGenerationDialog({
   const missingInstances = requirements.some(
     (requirement) => !instanceSelections[requirement.alias]
   )
-  const canGenerate = !loading && !generating && !missingInstances && Boolean(selection)
+  const canGenerate = !loading && !generating && !missingInstances
 
   const selectProvider = (value: string): void => {
     const first = speechOptions.find((option) => option.providerConfigId === value)
@@ -135,7 +135,7 @@ export function TemplateExamGenerationDialog({
   }
 
   const generate = async (): Promise<void> => {
-    if (!selection || !canGenerate) return
+    if (!canGenerate) return
     setGenerating(true)
     setError(null)
     try {
@@ -273,7 +273,7 @@ export function TemplateExamGenerationDialog({
               {speechOptions.length === 0 ? (
                 <div className={styles.notice} role="alert">
                   <AlertCircle aria-hidden="true" />
-                  <span>没有同时启用 Model 和 Voice 的 TTS Provider，请先到设置中配置。</span>
+                  <span>没有可用的 TTS 配置；不含 TTS 播放动作的模板仍可生成。</span>
                 </div>
               ) : null}
               {requirements.some(
