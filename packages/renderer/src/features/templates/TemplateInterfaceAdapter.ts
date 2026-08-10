@@ -1,10 +1,12 @@
 import type { InterfaceApplication } from '@ls101/interface-editor'
 import type { TemplateApplicationDependencies } from '@ls101/template-editor'
 
-export type TemplateInterfaceDependencies = Pick<
-  TemplateApplicationDependencies,
-  'listInterfaceManifests' | 'getInterfaceManifest' | 'locateInterfaceInstance'
->
+export interface TemplateInterfaceDependencies {
+  listInterfaceManifests: NonNullable<TemplateApplicationDependencies['listInterfaceManifests']>
+  listInterfaceInstances: NonNullable<TemplateApplicationDependencies['listInterfaceInstances']>
+  getInterfaceManifest: TemplateApplicationDependencies['getInterfaceManifest']
+  locateInterfaceInstance: TemplateApplicationDependencies['locateInterfaceInstance']
+}
 
 export function createTemplateInterfaceDependencies(
   application: InterfaceApplication
@@ -21,6 +23,7 @@ export function createTemplateInterfaceDependencies(
       if (!details) return null
       return application.published.getVarManifest(interfaceId)
     },
+    listInterfaceInstances: (interfaceId) => application.published.listInstances(interfaceId),
     async locateInterfaceInstance(instanceId) {
       const located = await application.instances.locate(instanceId)
       return located

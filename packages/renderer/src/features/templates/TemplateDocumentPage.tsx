@@ -18,6 +18,7 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
+  FileArchive,
   FileText,
   LayoutTemplate,
   Layers3,
@@ -44,6 +45,7 @@ import { TemplateFunctionCallEditor } from './TemplateFunctionCallEditor'
 import { TemplateContentBlockInspector } from './TemplateContentBlockInspector'
 import { collectTemplateChoiceTargetPages } from './TemplateChoiceTargets'
 import { TemplateInterfaceRequirements } from './TemplateInterfaceRequirements'
+import { TemplateExamGenerationDialog } from './TemplateExamGenerationDialog'
 import { TemplateNodeInspector } from './TemplateNodeInspector'
 import { TemplatePageCanvas } from './TemplatePageCanvas'
 import { TemplateVariableInput } from './TemplateVariableInput'
@@ -80,6 +82,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const navigate = useNavigate()
   const session = useTemplateEditorSession(application, templateId)
   const [confirmLeave, setConfirmLeave] = useState(false)
+  const [generationOpen, setGenerationOpen] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [centerView, setCenterView] = useState<'structure' | 'page'>('structure')
   const [selectedContentBlockId, setSelectedContentBlockId] = useState<string | null>(null)
@@ -214,6 +217,12 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
     navigate('/templates')
   }
 
+  const openGeneration = async (): Promise<void> => {
+    if (!document || session.saving) return
+    if (session.dirty && !(await session.save())) return
+    setGenerationOpen(true)
+  }
+
   const toggleCollapsed = (nodeId: string): void => {
     const node = root ? locateNode(root, nodeId)?.node : null
     if (node?.type === 'frame' && containsDescendant(node, session.selectedNodeId)) {
@@ -285,6 +294,13 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
             onClick={() => void session.save()}
           >
             {session.saving ? '正在保存' : '保存'}
+          </Button>
+          <Button
+            icon={FileArchive}
+            disabled={!document || session.saving}
+            onClick={() => void openGeneration()}
+          >
+            生成试卷
           </Button>
         </div>
       </header>
@@ -588,6 +604,14 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
         onCancel={() => setPendingDeleteId(null)}
         onConfirm={deleteSelected}
       />
+      {document ? (
+        <TemplateExamGenerationDialog
+          application={application}
+          document={document}
+          open={generationOpen}
+          onOpenChange={setGenerationOpen}
+        />
+      ) : null}
     </div>
   )
 }

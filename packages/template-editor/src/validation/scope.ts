@@ -70,6 +70,9 @@ function scanScope(
       break
     case 'page':
       validateContentBlockIds(node, path, state)
+      if (node.timeline.length === 0) {
+        addError(state, `${path}.timeline`, 'EMPTY_PAGE_TIMELINE')
+      }
       node.timeline.forEach((step, index) => {
         if (step.type === 'record') {
           registerLocalName(

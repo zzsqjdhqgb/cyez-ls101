@@ -606,7 +606,7 @@ describe('Template 文档编辑', () => {
               }
             ]
           },
-          timeline: []
+          timeline: [{ type: 'countdown', seconds: number(1) }]
         }
       ]),
       outputs: [],

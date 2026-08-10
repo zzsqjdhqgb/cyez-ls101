@@ -1,0 +1,162 @@
+import { decodeExamPackage } from '@ls101/exam-package'
+import type { ExamPackage } from '@ls101/core-types'
+import type { TemplateApplication, TemplateCompileOptions } from '@ls101/template-editor'
+import { describe, expect, it, vi } from 'vitest'
+import {
+  generateExamArchive,
+  listSpeechGenerationSelections
+} from '../features/templates/TemplateExamGeneration'
+
+describe('TemplateExamGeneration', () => {
+  it('只列出同时启用的 Provider、Model 和 Voice 组合', async () => {
+    const client = {
+      listSpeechProviderConfigs: vi.fn().mockResolvedValue([
+        {
+          id: 'speech',
+          name: '本地语音',
+          kind: 'local',
+          type: 'pocket-tts',
+          baseUrl: '',
+          modelPackageId: 'package',
+          modelPackageVersion: '1',
+          models: [
+            { id: 'enabled-model', enabled: true },
+            { id: 'disabled-model', enabled: false }
+          ],
+          voices: [
+            { id: 'enabled-voice', enabled: true },
+            { id: 'disabled-voice', enabled: false }
+          ],
+          hasApiKey: false
+        }
+      ])
+    }
+
+    await expect(listSpeechGenerationSelections(client)).resolves.toEqual([
+      {
+        providerConfigId: 'speech',
+        providerName: '本地语音',
+        modelId: 'enabled-model',
+        voiceId: 'enabled-voice'
+      }
+    ])
+  })
+
+  it('使用本次选择合成语音、收集资源并导出合法试卷包', async () => {
+    const synthesizeSpeech = vi.fn().mockResolvedValue({
+      data: new Uint8Array([1, 2, 3]),
+      mediaType: 'audio/wav',
+      format: 'wav'
+    })
+    const compile = vi.fn(
+      async (_templateId: string, _bindings: unknown, options?: TemplateCompileOptions) => {
+        const audio = await options?.synthesizeSpeech?.('Hello')
+        return {
+          success: true as const,
+          examPackage: exam(),
+          resourceSources: [
+            { assetKey: 'speech', data: audio?.data ?? new Uint8Array() },
+            { assetKey: 'picture', sourceUrl: 'asset://picture' }
+          ]
+        }
+      }
+    )
+    const application = {
+      templates: { compile }
+    } as unknown as TemplateApplication
+    const writeBinary = vi.fn().mockResolvedValue(true)
+
+    await expect(
+      generateExamArchive(
+        {
+          application,
+          templateId: 'template-1',
+          templateName: '英语听说 / 第一套',
+          bindings: [],
+          speech: {
+            providerConfigId: 'speech-provider',
+            modelId: 'speech-model',
+            voiceId: 'speech-voice'
+          }
+        },
+        {
+          speechClient: { synthesizeSpeech },
+          fileDialog: { writeBinary } as never,
+          fetchResource: vi.fn().mockResolvedValue(new Response(new Uint8Array([4, 5, 6])))
+        }
+      )
+    ).resolves.toBe('exported')
+
+    expect(synthesizeSpeech).toHaveBeenCalledWith({
+      text: 'Hello',
+      routing: {
+        default: {
+          providerConfigId: 'speech-provider',
+          modelId: 'speech-model',
+          voiceId: 'speech-voice'
+        }
+      },
+      format: 'wav'
+    })
+    expect(writeBinary).toHaveBeenCalledOnce()
+    expect(writeBinary.mock.calls[0][1]).toMatchObject({
+      defaultName: '英语听说 - 第一套.lsexam'
+    })
+    const decoded = await decodeExamPackage(writeBinary.mock.calls[0][0])
+    expect(decoded.exam.examData.player.pages[0].timeline).toEqual([
+      { type: 'play', src: 'resource:speech' }
+    ])
+    expect(decoded.resources.picture).toEqual(new Uint8Array([4, 5, 6]))
+  })
+})
+
+function exam(): ExamPackage {
+  return {
+    format: 'ls101-exam',
+    formatVersion: 1,
+    packageId: 'exam-1',
+    examData: {
+      title: '英语听说',
+      player: {
+        pages: [
+          {
+            id: 'page',
+            content: [
+              {
+                id: 'picture',
+                type: 'image',
+                x: 0,
+                y: 0,
+                width: 100,
+                height: 100,
+                src: 'resource:picture'
+              }
+            ],
+            timeline: [{ type: 'play', src: 'resource:speech' }]
+          }
+        ],
+        recordingIndices: []
+      },
+      resources: {
+        speech: {
+          filename: 'speech.wav',
+          packagePath: 'resources/speech/speech.wav',
+          mediaType: 'audio/wav'
+        },
+        picture: {
+          filename: 'picture.png',
+          packagePath: 'resources/picture/picture.png',
+          mediaType: 'image/png'
+        }
+      }
+    },
+    answerCapturePlan: { strings: [], audios: [] },
+    submissionTemplate: {
+      format: 'ls101-submission',
+      formatVersion: 1,
+      meta: { examPackageId: 'exam-1', examTitle: '英语听说' },
+      schemaUses: [],
+      resources: {}
+    }
+  }
+}

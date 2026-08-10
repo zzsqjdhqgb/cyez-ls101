@@ -11,7 +11,9 @@ export type {
   TemplateApplication,
   TemplateApplicationDependencies,
   TemplateBrowserApplication,
+  TemplateCompileOptions,
   TemplateDocumentApplication,
+  TemplateInterfaceInstanceSummary,
   TemplateSummary
 } from './application'
 
@@ -50,6 +52,7 @@ export type {
   TemplateCompileError,
   TemplateCompileErrorCode,
   TemplateCompileResult,
+  GeneratedTimelineAudio,
   ExamResourceSource,
   TemplateInterfaceBinding,
   LocatedInterfaceInstance

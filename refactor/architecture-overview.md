@@ -72,7 +72,7 @@ IPC 表面积很小，主进程只暴露以下能力：
 | Interface | 渲染进程 | 题型管理：参数定义、AI 生成提示词模板、调用 LLM API、数据实例管理 |
 | Template | 渲染进程 | 模板管理：Section 结构定义、数据来源绑定（Interface 实例或自定义） |
 | Schema | 渲染进程 | 定义评分题型、题型数据、答案格式和 Template 输入契约 |
-| 考试播放器 | 渲染进程 | React 组件，fixed 覆盖层。接收 ExamPackage，产出 SubmissionBundle |
+| 考试播放器 | 渲染进程 | React 组件，fixed 覆盖层。从 examBaseUrl 加载 ExamPackage，产出完整作答归档 Blob |
 | AI 引擎 | 渲染 + 主进程 | 云 API（渲染进程直接 fetch），本地推理（主进程 IPC） |
 | 存储 | 主进程 | 文件读写、导入导出 ZIP、系统对话框 |
 
@@ -305,8 +305,9 @@ AI 生成、导入导出和批量运算等长耗时操作使用 `@ls101/core-typ
   主体 App 加载 ExamPackage → 传给 <ExamPlayer />
   → 按答案捕获计划收集字符串答案和 MediaRecorder 录音
   → 复制 SubmissionTemplate 并补充考生、时间和答案
-  → onFinish 回调返回 SubmissionBundle
-  → 主体 App 复制静态附件并写入独立作答归档（IPC: file:write）
+  → 播放器使用预检缓存中的静态附件生成完整作答归档 Blob
+  → onFinish 回调返回 Blob
+  → 主体 App 下载、上传或写入收卷库（Electron 保存时使用 IPC: file:write）
 
 批改:
   导入作答（IPC: file:unzip）
@@ -324,4 +325,4 @@ AI 生成、导入导出和批量运算等长耗时操作使用 `@ls101/core-typ
 
 3. **云 API 调用不走主进程。** LLM 和云端 STT 是 HTTP 请求，渲染进程直接 fetch。API Key 通过 IPC 从主进程的加密存储中获取。
 
-4. **考试播放器是独立组件。** CSS Modules 隔离样式，fixed 覆盖层独占全屏，props 进 callback 出，无任何 IPC 依赖（除了录音保存时调一次 file:write）。
+4. **考试播放器是独立组件。** CSS Modules 隔离样式，fixed 覆盖层独占全屏，通过兼容 HTTP GET 语义的 `examBaseUrl` 加载考试，callback 输出作答结果，不直接依赖 IPC。最终作答归档的保存或上传由宿主负责。

@@ -1,7 +1,7 @@
 # 题目评分管道、Schema 与资源设计（当前草案）
 
 > 本文整理 2026-08-09 的讨论结论，用于统一 Schema、Template、ExamPlayer 与 Grading Engine 之间的概念边界。
-> Schema 领域模型、Template 编译契约和 ExamPlayer 作答组包边界已按本文实现。完整 ExamPlayer UI、Grading Engine 和最终归档写入器仍待实现。
+> Schema 领域模型、Template 编译期 TTS 资源生成、完整 ExamPlayer UI 和播放器内的最终归档组装已按本文实现。Grading Engine 仍待实现。
 
 ## 一、评分管道
 
@@ -113,7 +113,7 @@ free-speech
 | `fixed-reading` | 一个或多个有序的 `fixed-speech` |
 | `freetalk`      | 一个或多个有序的 `free-speech`  |
 
-答案槽位是 Schema 中的语义对象，学生文本和录音是 ExamPlayer 的运行期对象。Template 按 `answerId` 绑定各个子槽位，Schema 不直接依赖 `recordIndex` 或选择题索引。
+答案槽位是 Schema 中的语义对象，学生文本和录音是 ExamPlayer 的运行期对象。Template 按 `answerId` 绑定各个子槽位，Schema 不直接依赖 `recordIndex` 或选择题索引。Template 时间线中的 TTS 文本在编译期生成音频并进入 ExamPackage；ExamPlayer 只播放编译后的音频资源，不在考试时执行 TTS。
 
 ## 四、Template 输入契约
 
@@ -367,7 +367,7 @@ resources/<assetKey>/<filename>
 
 ZIP 只是该目录的传输形式。归档读取器严格校验 index、播放器数据、捕获计划、SchemaUse、资源引用和归档内文件集合。页面图片等播放器资源全部进入考试包；只有评分快照实际需要的 SchemaUse 附件进入 `submissionTemplate.resources`。
 
-播放器页面中的 `image` 块与 SchemaUse Markdown 附件是两类不同的消费者，但共同使用 `resource:<assetKey>` 逻辑地址。页面图片的资源键必须存在于 `examData.resources`；`examData.resources` 和 `submissionTemplate.resources` 都只允许指向考试包内的 `resources/` 静态资源目录。
+播放器页面中的 `image` 块、时间线 `play` 音频与 SchemaUse Markdown 附件是不同的消费者，但共同使用 `resource:<assetKey>` 逻辑地址。页面图片和播放音频的资源键必须存在于 `examData.resources`；`examData.resources` 和 `submissionTemplate.resources` 都只允许指向考试包内的 `resources/` 静态资源目录。
 
 ## 八、SubmissionPackage
 
@@ -493,7 +493,7 @@ type SubmissionResourceManifest = Record<
 
 静态附件的 `packagePath` 必须位于 `resources/`，学生录音必须位于 `recordings/`。最终 SubmissionPackage 的资源清单可以同时包含两类路径；SchemaUse 的逻辑资源引用只能指向静态附件，`answers.audios` 的资源键只能指向录音。当前契约不要求录音资源与音频答案一一对应：是否允许多个音频答案共享录音、是否保留未引用录音，留给后续业务规则决定。
 
-Template 编译器负责识别 SchemaUse 批改快照所需的静态资源，将清单写入 `submissionTemplate.resources`，并把文件收入 ExamPackage 归档。组合作答包时，ExamPlayer 复制该资源清单并加入新录音的资源项，不解析 SchemaUse 文本；归档写入器根据清单从 ExamPackage 复制静态文件，并写入播放器返回的新录音。
+Template 编译器负责识别 SchemaUse 批改快照所需的静态资源，将清单写入 `submissionTemplate.resources`，并把文件收入 ExamPackage 归档。组合作答包时，ExamPlayer 复制该资源清单并加入新录音的资源项，不解析 SchemaUse 文本；播放器使用加载预检时已经取得的静态文件和本次录音生成完整作答归档 Blob。
 
 Submission 归档布局固定为：
 
@@ -505,7 +505,7 @@ recordings/<resourceKey>/<filename>
 
 `manifest.json` 直接保存 `SubmissionPackage` JSON。归档中必须恰好包含 `resources` 清单引用的文件，不允许缺失文件、未知文件、重复路径或目录穿越路径。
 
-播放器回调在内存中返回 `SubmissionPackage` 清单和以资源键索引的新录音 Blob。播放器在组包时为新录音生成资源键、文件名、包内路径和媒体类型，使回调返回的清单已经满足 SubmissionPackage 契约。静态附件已经存在于 ExamPackage 归档，不需要播放器重新读取或返回。ZIP 编码、文件复制、可选的完整性校验和持久化由宿主应用或归档写入器负责，不属于 ExamPlayer 的考试流程逻辑。只有清单和它引用的全部文件共同组成可独立批改的最终作答归档。
+播放器在组包时为新录音生成资源键、文件名、包内路径和媒体类型，使 SubmissionPackage 清单满足契约。播放器随后将清单、加载预检时取得的静态附件和新录音编码为完整作答归档 Blob，并通过完成回调返回。宿主只负责持久化、下载或上传 Blob。只有清单和它引用的全部文件共同组成可独立批改的最终作答归档。
 
 ### 8.3 不属于 SubmissionPackage 的数据
 
@@ -612,4 +612,4 @@ GradingResult
 
 ## 十二、当前状态
 
-本文涉及的 Schema 结构、发布机制、Template 绑定、附件变量、资源地址、ExamPackage、SubmissionPackage 和评分输出均已确认。Schema、Template 编译、ExamPlayer 作答组包边界和 v1 ZIP 归档读写已经实现；静态部署规范统一使用 `manifest.json` 作为解压目录入口。完整播放器 UI 和 Grading Engine 仍待后续开发。
+本文涉及的 Schema 结构、发布机制、Template 绑定、附件变量、资源地址、ExamPackage、SubmissionPackage 和评分输出均已确认。Schema、Template 编译期 TTS、完整 ExamPlayer、播放器内的作答归档组装和 v1 ZIP 归档读写已经实现；静态部署规范统一使用 `manifest.json` 作为解压目录入口。主应用的试卷库与考试启动路由和 Grading Engine 仍待后续开发。

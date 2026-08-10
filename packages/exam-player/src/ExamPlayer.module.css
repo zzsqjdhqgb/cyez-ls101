@@ -1,0 +1,472 @@
+.root {
+  all: initial;
+  position: fixed;
+  z-index: 9999;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  color: #f4f7f6;
+  background: #050606;
+  font-family: Inter, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+}
+
+.stage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1200px;
+  height: 800px;
+  overflow: hidden;
+  transform-origin: center;
+  color: #f4f7f6;
+  background: #101414;
+}
+
+.examLayout {
+  display: grid;
+  grid-template-rows: 720px 80px;
+  width: 1200px;
+  height: 800px;
+}
+
+.contentViewport {
+  display: grid;
+  width: 1200px;
+  height: 720px;
+  overflow: hidden;
+  place-items: center;
+  background: #0b0e0e;
+}
+
+.page {
+  position: relative;
+  width: 1200px;
+  height: 800px;
+  overflow: hidden;
+  transform: scale(0.9);
+  transform-origin: center;
+  color: #f4f7f6;
+  background: #151a1a;
+}
+
+.textBlock,
+.imageBlock,
+.choiceBlock {
+  position: absolute;
+  min-width: 1px;
+  min-height: 1px;
+  box-sizing: border-box;
+}
+
+.textBlock {
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.imageBlock img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+
+.choiceBlock {
+  overflow: hidden;
+  border: 1px solid #3c4745;
+  background: #111616;
+}
+
+.choiceView {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 48px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.choiceQuestions {
+  min-height: 0;
+  padding: 14px;
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+.choiceQuestion {
+  margin: 0 0 12px;
+  padding: 12px;
+  border: 1px solid #3c4745;
+  border-radius: 4px;
+  color: #e7edeb;
+}
+
+.choiceQuestion[data-focused] {
+  border-color: #58a6a0;
+  background: #192624;
+}
+
+.choiceQuestion legend {
+  max-width: calc(100% - 18px);
+  padding: 0 6px;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.choiceOptions {
+  display: grid;
+  gap: 6px;
+}
+
+.choiceOption {
+  display: grid;
+  grid-template-columns: 20px 28px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  color: #d4dcda;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.choiceOption:hover {
+  background: #202827;
+}
+
+.choiceOption input {
+  width: 17px;
+  height: 17px;
+  margin: 2px 0 0;
+  accent-color: #4da49d;
+}
+
+.optionLabel {
+  color: #8fc5c0;
+  font-weight: 700;
+}
+
+.choiceNavigation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  border-top: 1px solid #303a38;
+  color: #aeb9b7;
+  font-size: 14px;
+}
+
+.choiceNavigation button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #45514f;
+  border-radius: 4px;
+  place-items: center;
+  color: #e6ecea;
+  background: #202625;
+  cursor: pointer;
+}
+
+.choiceNavigation button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.choiceNavigation svg {
+  width: 18px;
+  height: 18px;
+}
+
+.statusBar {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) 180px;
+  align-items: center;
+  gap: 24px;
+  padding: 0 24px;
+  border-top: 1px solid #303a38;
+  box-sizing: border-box;
+  background: #171c1b;
+}
+
+.examPosition {
+  color: #96a29f;
+  font-size: 16px;
+}
+
+.statusMain {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  min-width: 0;
+}
+
+.statusMain strong {
+  flex: 0 0 auto;
+  font-size: 18px;
+}
+
+.progressTrack {
+  width: min(420px, 55%);
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #394240;
+}
+
+.progressTrack span {
+  display: block;
+  height: 100%;
+  background: #4da49d;
+}
+
+.remaining {
+  min-width: 52px;
+  color: #f2c86b;
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.exitButton {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 8px;
+  min-width: 104px;
+  padding: 10px 16px;
+  border: 1px solid #596260;
+  border-radius: 4px;
+  color: #e4e9e8;
+  background: #252c2b;
+  cursor: pointer;
+  font: 600 15px/1 inherit;
+}
+
+.exitButton svg {
+  width: 17px;
+  height: 17px;
+}
+
+.exitSpacer {
+  width: 104px;
+}
+
+.formPanel,
+.micPanel,
+.messageScreen {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 520px;
+  padding: 42px;
+  border: 1px solid #3c4745;
+  border-radius: 6px;
+  box-shadow: 0 22px 60px rgb(0 0 0 / 35%);
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  background: #171c1b;
+}
+
+.formPanel {
+  display: grid;
+  gap: 20px;
+}
+
+.eyebrow {
+  color: #70bdb6;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.formPanel h1,
+.micPanel h1,
+.messageScreen h1 {
+  margin: 0;
+  color: #f7f9f8;
+  font-size: 30px;
+  letter-spacing: 0;
+}
+
+.formPanel label,
+.micPanel label {
+  display: grid;
+  gap: 8px;
+  color: #b7c0be;
+  font-size: 14px;
+}
+
+.formPanel input,
+.micPanel select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #4a5653;
+  border-radius: 4px;
+  box-sizing: border-box;
+  outline: none;
+  color: #f4f7f6;
+  background: #0f1313;
+  font: 17px/1.4 inherit;
+}
+
+.formPanel input:focus,
+.micPanel select:focus {
+  border-color: #5db6ae;
+  box-shadow: 0 0 0 3px rgb(77 164 157 / 20%);
+}
+
+.formError {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid #e17070;
+  color: #f1aaaa;
+  background: #291a1a;
+  font-size: 14px;
+}
+
+.formActions,
+.messageActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font: 650 15px/1.2 inherit;
+}
+
+.primaryButton {
+  color: #07100f;
+  background: #70c8c0;
+}
+
+.secondaryButton {
+  border-color: #4a5553;
+  color: #dce3e1;
+  background: #252c2b;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.primaryButton svg,
+.secondaryButton svg {
+  width: 17px;
+  height: 17px;
+}
+
+.micPanel,
+.messageScreen {
+  text-align: center;
+}
+
+.micPanel {
+  width: 720px;
+}
+
+.micPanel p,
+.messageScreen p {
+  margin: 12px 0 24px;
+  color: #aeb8b5;
+  font-size: 16px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.micIcon {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 18px;
+  border: 1px solid #3f6662;
+  border-radius: 50%;
+  place-items: center;
+  color: #84d2ca;
+  background: #172725;
+}
+
+.micIcon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.playback {
+  width: 100%;
+  margin-top: 18px;
+}
+
+.messageScreen {
+  width: 620px;
+}
+
+.messageScreen > svg {
+  width: 46px;
+  height: 46px;
+  margin-bottom: 18px;
+  color: #e7bc62;
+}
+
+.messageScreen[data-error] > svg,
+.messageScreen[data-error] h1 {
+  color: #ed8d8d;
+}
+
+.confirmBackdrop {
+  position: absolute;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 66%);
+}
+
+.confirmDialog {
+  width: 440px;
+  padding: 34px;
+  border: 1px solid #56615f;
+  border-radius: 6px;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 50%);
+  box-sizing: border-box;
+  text-align: center;
+  background: #1b211f;
+}
+
+.confirmDialog > svg {
+  width: 38px;
+  height: 38px;
+  color: #e7bc62;
+}
+
+.confirmDialog h2 {
+  margin: 16px 0 8px;
+  font-size: 24px;
+}
+
+.confirmDialog p {
+  margin: 0 0 24px;
+  color: #aeb8b5;
+}
+
+.confirmDialog div {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}

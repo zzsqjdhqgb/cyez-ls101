@@ -10,6 +10,18 @@ import { TemplateApplicationProvider } from '../features/templates/TemplateAppli
 import { TemplateBrowserPage } from '../features/templates/TemplateBrowserPage'
 import { TemplateDocumentPage } from '../features/templates/TemplateDocumentPage'
 
+vi.mock('../features/templates/TemplateExamGeneration', () => ({
+  generateExamArchive: vi.fn().mockResolvedValue('exported'),
+  listSpeechGenerationSelections: vi.fn().mockResolvedValue([
+    {
+      providerConfigId: 'speech-provider',
+      providerName: '本地语音',
+      modelId: 'speech-model',
+      voiceId: 'speech-voice'
+    }
+  ])
+}))
+
 const TEMPLATE_ID = '10000000-0000-4000-8000-000000000001'
 const FUNCTION_ID = '20000000-0000-4000-8000-000000000002'
 const MISSING_TEMPLATE_ID = '30000000-0000-4000-8000-000000000003'
@@ -155,7 +167,8 @@ function application(document = template()): TemplateApplication {
             }
           ]
         }
-      ])
+      ]),
+      listInterfaceInstances: vi.fn().mockResolvedValue([])
     },
     templates: {
       create: vi.fn().mockResolvedValue(document),
@@ -198,6 +211,26 @@ function createLibraryNode(
 }
 
 describe('Template pages', () => {
+  it('从工具栏打开本次试卷生成配置', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: '生成试卷' }))
+
+    expect(await screen.findByRole('heading', { name: '生成试卷' })).toBeInTheDocument()
+    expect(screen.getByLabelText('TTS Provider')).toHaveValue('speech-provider')
+    expect(screen.getByLabelText('TTS Model')).toHaveValue('speech-model')
+    expect(screen.getByLabelText('TTS Voice')).toHaveValue('speech-voice')
+  })
+
   it('adds and configures an Interface requirement in global properties', async () => {
     const app = application()
     render(

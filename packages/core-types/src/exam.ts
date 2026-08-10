@@ -92,8 +92,8 @@ export type ResolvedTimelineStep = ResolvedTimelineAction & {
 }
 
 export type ResolvedTimelineAction =
-  /** 已解析完成、供 ExamPlayer TTS 播放的文本。 */
-  | { type: 'play'; text: string }
+  /** Template 编译期生成、供 ExamPlayer 直接播放的音频资源。 */
+  | { type: 'play'; src: string }
   | { type: 'countdown'; seconds: number }
   | { type: 'record'; duration: number; recordIndex: number }
 

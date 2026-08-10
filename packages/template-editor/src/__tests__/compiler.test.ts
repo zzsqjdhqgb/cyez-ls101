@@ -95,6 +95,7 @@ function compileContext(overrides: Partial<TemplateCompileContext> = {}): Templa
             assetUrls: { 'picture.png': 'asset://instance-1/picture.png' }
           }
         : null,
+    synthesizeSpeech: async () => ({ data: new Uint8Array([1, 2, 3]), mediaType: 'audio/wav' }),
     ...overrides
   }
 }
@@ -314,7 +315,89 @@ function mainPage(): PageNode {
   }
 }
 
+function speechOnlyContent(): TemplateContent {
+  return content({
+    root: root([
+      {
+        id: 'speech-page',
+        type: 'page',
+        content: { blocks: [] },
+        timeline: [{ type: 'play', text: text('Hello') }]
+      }
+    ])
+  })
+}
+
 describe('compileTemplate', () => {
+  it('有播放动作但未提供语音合成器时返回稳定错误', async () => {
+    const result = await compileTemplate(
+      document(speechOnlyContent()),
+      compileContext({ synthesizeSpeech: undefined })
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      errors: [
+        {
+          stage: 'compile',
+          path: 'root.children[0].timeline[0].text',
+          code: 'SPEECH_SYNTHESIZER_MISSING'
+        }
+      ]
+    })
+  })
+
+  it('语音合成失败时保留来源路径和错误消息', async () => {
+    const result = await compileTemplate(
+      document(speechOnlyContent()),
+      compileContext({
+        synthesizeSpeech: async () => {
+          throw new Error('provider unavailable')
+        }
+      })
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      errors: [
+        {
+          stage: 'compile',
+          path: 'root.children[0].timeline[0].text',
+          code: 'SPEECH_SYNTHESIS_FAILED',
+          params: { message: 'provider unavailable' }
+        }
+      ]
+    })
+  })
+
+  it.each([
+    { name: '空音频', audio: { data: new Uint8Array(), mediaType: 'audio/wav' } },
+    {
+      name: '非音频媒体类型',
+      audio: { data: new Uint8Array([1]), mediaType: 'application/octet-stream' }
+    },
+    {
+      name: '非结构化返回值',
+      audio: null as never
+    }
+  ])('拒绝语音合成器返回的无效数据：$name', async ({ audio }) => {
+    const result = await compileTemplate(
+      document(speechOnlyContent()),
+      compileContext({ synthesizeSpeech: async () => audio })
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      errors: [
+        {
+          stage: 'compile',
+          path: 'root.children[0].timeline[0].text',
+          code: 'INVALID_SYNTHESIZED_AUDIO'
+        }
+      ]
+    })
+  })
+
   it('编译 fixed-speech 双槽位和 SchemaUse 局部附件资源', async () => {
     const exam = content({
       root: root([
@@ -495,7 +578,7 @@ describe('compileTemplate', () => {
       defaultViewport: { mode: 'focus', choiceIndex: 0 }
     })
     expect(compiledPage.timeline).toEqual([
-      { type: 'play', text: 'Listen: Hello' },
+      { type: 'play', src: 'resource:player-tts-page%3Amain-page-0' },
       { type: 'countdown', seconds: 3 },
       {
         type: 'record',
@@ -597,7 +680,7 @@ describe('compileTemplate', () => {
           }
         ]
       },
-      timeline: []
+      timeline: [{ type: 'countdown', seconds: number(1) }]
     }
     const exam = content({
       root: collector(
@@ -960,7 +1043,7 @@ describe('compileTemplate', () => {
           }
         ]
       },
-      timeline: []
+      timeline: [{ type: 'countdown', seconds: number(1) }]
     }
     const directQuestion = {
       id: 'question',

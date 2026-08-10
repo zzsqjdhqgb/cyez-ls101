@@ -2,6 +2,7 @@ import type { InterfaceVarManifest, SchemaDefinition } from '@ls101/core-types'
 import { initializeBuiltinFunctionLibraries } from './builtin-initializer'
 import { compileTemplate } from './compiler'
 import type {
+  GeneratedTimelineAudio,
   LocatedInterfaceInstance,
   TemplateCompileResult,
   TemplateInterfaceBinding
@@ -69,6 +70,17 @@ export interface TemplateBrowserApplication {
   listTemplates(): Promise<TemplateSummary[]>
   listFunctionLibraries(): Promise<FunctionLibrarySummary[]>
   listInterfaces(): Promise<InterfaceVarManifest[]>
+  listInterfaceInstances(interfaceId: string): Promise<TemplateInterfaceInstanceSummary[]>
+}
+
+export interface TemplateInterfaceInstanceSummary {
+  instanceId: string
+  name: string
+  generatedAt: string
+}
+
+export interface TemplateCompileOptions {
+  synthesizeSpeech?(text: string): Promise<GeneratedTimelineAudio>
 }
 
 export interface TemplateDocumentApplication {
@@ -90,7 +102,8 @@ export interface TemplateDocumentApplication {
   validate(templateId: string): Promise<TemplateValidationResult>
   compile(
     templateId: string,
-    selections: readonly TemplateInterfaceBinding[]
+    selections: readonly TemplateInterfaceBinding[],
+    options?: TemplateCompileOptions
   ): Promise<TemplateCompileResult>
 }
 
@@ -130,6 +143,7 @@ export interface TemplateApplicationDependencies {
   repository: TemplateRepository
   getBuiltinFunctionLibraryManifest?(): Promise<unknown | null>
   listInterfaceManifests?(): Promise<InterfaceVarManifest[]>
+  listInterfaceInstances?(interfaceId: string): Promise<TemplateInterfaceInstanceSummary[]>
   getInterfaceManifest(interfaceId: string): Promise<InterfaceVarManifest | null>
   getSchema(schemaId: string): Promise<SchemaDefinition | null>
   locateInterfaceInstance(
@@ -333,6 +347,9 @@ export function createTemplateApplication(
       },
       async listInterfaces() {
         return dependencies.listInterfaceManifests?.() ?? []
+      },
+      async listInterfaceInstances(interfaceId) {
+        return dependencies.listInterfaceInstances?.(interfaceId) ?? []
       }
     },
     templates: {
@@ -399,12 +416,13 @@ export function createTemplateApplication(
         const document = await loadTemplate(templateId)
         return validateTemplateDocument(document, await loadValidationContext(document))
       },
-      async compile(templateId, selections) {
+      async compile(templateId, selections, options = {}) {
         const document = await loadTemplate(templateId)
         const manifests = await loadValidationContext(document)
         return compileTemplate(document, {
           ...manifests,
           interfaceBindings: selections,
+          synthesizeSpeech: options.synthesizeSpeech,
           locateInterfaceInstance: dependencies.locateInterfaceInstance
         })
       }

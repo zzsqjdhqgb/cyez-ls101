@@ -243,6 +243,12 @@ function validatePlayerReferences(exam: ExamPackage): void {
       page.content.filter((block) => block.type === 'choice-view').map((block) => block.id)
     )
     for (const step of page.timeline) {
+      if (step.type === 'play') {
+        const key = resourceKey(step.src)
+        if (key === null || !Object.hasOwn(exam.examData.resources, key)) {
+          throw invalidArchive(`Player audio references missing resource: ${step.src}`)
+        }
+      }
       if (step.type === 'record') {
         if (timelineRecordingIndices.has(step.recordIndex)) {
           throw invalidArchive(`Duplicate recordIndex in timeline: ${step.recordIndex}`)
@@ -522,6 +528,7 @@ function isExamPage(value: unknown): boolean {
     Array.isArray(value.content) &&
     value.content.every(isContentBlock) &&
     Array.isArray(value.timeline) &&
+    value.timeline.length > 0 &&
     value.timeline.every(isTimelineStep)
   )
 }
@@ -564,7 +571,7 @@ function isTimelineStep(value: unknown): boolean {
   ) {
     return false
   }
-  if (value.type === 'play') return typeof value.text === 'string'
+  if (value.type === 'play') return nonEmptyString(value.src)
   if (value.type === 'countdown') return finiteNumber(value.seconds) && value.seconds >= 0
   return (
     value.type === 'record' &&

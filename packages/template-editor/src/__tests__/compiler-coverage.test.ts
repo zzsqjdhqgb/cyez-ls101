@@ -40,7 +40,8 @@ function context(): TemplateCompileContext {
     interfaceManifests: [],
     schemaDefinitions,
     interfaceBindings: [],
-    locateInterfaceInstance: () => null
+    locateInterfaceInstance: () => null,
+    synthesizeSpeech: async () => ({ data: new Uint8Array([1, 2, 3]), mediaType: 'audio/wav' })
   }
 }
 
@@ -384,7 +385,7 @@ describe('Template 编译组合覆盖', () => {
       src: 'resource:player-block%3Apage%2Fmedia'
     })
     expect(result.examPackage.examData.player.pages[0].timeline).toEqual([
-      { type: 'play', text: 'Ready' },
+      { type: 'play', src: 'resource:player-tts-page%3Apage-0' },
       { type: 'countdown', seconds: 7 }
     ])
     expect(result.examPackage.examData.player).not.toHaveProperty('choiceMeta')
@@ -486,7 +487,7 @@ describe('Template 编译组合覆盖', () => {
                 }
               ]
             },
-            timeline: []
+            timeline: [{ type: 'countdown', seconds: number(1) }]
           },
           {
             id: 'question',

@@ -14,6 +14,7 @@
     "@ls101/config-store": "workspace:*",
     "@ls101/core-types": "workspace:*",
     "@ls101/editor-kit": "workspace:*",
+    "@ls101/exam-package": "workspace:*",
     "@ls101/exam-player": "workspace:*",
     "@ls101/file-dialog": "workspace:*",
     "@ls101/file-store": "workspace:*",

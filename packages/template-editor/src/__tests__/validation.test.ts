@@ -104,10 +104,17 @@ function page(overrides: Partial<PageNode> = {}): PageNode {
     id: 'page-1',
     type: 'page',
     content: { blocks: [] },
-    timeline: [],
+    timeline: [{ type: 'countdown', seconds: number(1) }],
     ...overrides
   }
 }
+
+it('拒绝空页面时间线', () => {
+  expectCode(
+    templateContent({ root: root([page({ timeline: [] })]) }),
+    'EMPTY_PAGE_TIMELINE'
+  )
+})
 
 function question(id = 'question-1', outputName = 'answer-1'): ChoiceQuestionNode {
   return {

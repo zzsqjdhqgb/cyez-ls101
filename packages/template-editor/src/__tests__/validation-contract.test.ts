@@ -117,7 +117,7 @@ function pageWithViewport(viewport: ChoiceViewport): PageNode {
         }
       ]
     },
-    timeline: []
+    timeline: [{ type: 'countdown', seconds: number(1) }]
   }
 }
 
@@ -479,7 +479,7 @@ describe('Template 校验错误契约', () => {
           id: 'inner-page',
           type: 'page',
           content: { blocks: [{ id: '', type: 'text', x: 0, y: 0, text: text('') }] },
-          timeline: []
+          timeline: [{ type: 'countdown', seconds: number(1) }]
         }
       ]),
       outputs: [],
@@ -531,7 +531,7 @@ describe('Template 校验错误契约', () => {
               }
             ]
           },
-          timeline: []
+          timeline: [{ type: 'countdown', seconds: number(1) }]
         }
       ]),
       outputs: [],
@@ -578,7 +578,7 @@ describe('Template 校验错误契约', () => {
               }
             ]
           },
-          timeline: []
+          timeline: [{ type: 'countdown', seconds: number(1) }]
         }
       ]),
       outputs: [],

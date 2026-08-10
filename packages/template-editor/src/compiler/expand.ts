@@ -1,11 +1,9 @@
 import type {
   ChoiceOptionLabel,
   CompiledSchemaInput,
-  ExamPage,
   PlayerChoiceQuestion,
   ResolvedChoiceViewport,
-  ResolvedContentBlock,
-  ResolvedTimelineStep
+  ResolvedContentBlock
 } from '@ls101/core-types'
 import type {
   ChoiceQuestionRef,
@@ -36,6 +34,8 @@ import {
   mergeStructuralResults,
   questionAddressKey,
   type ExpandedSchemaAnswer,
+  type ExpandedExamPage,
+  type ExpandedTimelineStep,
   type ExpandedSchemaUse,
   type CompiledValue,
   type CompileScope,
@@ -151,7 +151,7 @@ function resolvePage(
   path: string,
   recordIndices: ReadonlyMap<number, number>,
   state: CompilerState
-): ExamPage {
+): ExpandedExamPage {
   const pageId = expandedId('page', scope.callPath, page.id)
   const content = page.content.blocks.map<ResolvedContentBlock>((block, index) => {
     const blockPath = `${path}.content.blocks[${index}]`
@@ -205,7 +205,7 @@ function resolvePage(
     }
   })
 
-  const timeline = page.timeline.map<ResolvedTimelineStep>((step, index) => {
+  const timeline = page.timeline.map<ExpandedTimelineStep>((step, index) => {
     const stepPath = `${path}.timeline[${index}]`
     const choiceViewOverrides = resolveChoiceViewOverrides(
       step.choiceViewOverrides,
@@ -219,6 +219,7 @@ function resolvePage(
         return {
           type: 'play',
           text: resolveTextExpression(step.text, scope, state, `${stepPath}.text`),
+          sourcePath: `${stepPath}.text`,
           ...(choiceViewOverrides ? { choiceViewOverrides } : {})
         }
       case 'countdown':

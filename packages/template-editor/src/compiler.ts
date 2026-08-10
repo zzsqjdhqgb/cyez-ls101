@@ -1,5 +1,6 @@
 import type {
   AnswerCapturePlan,
+  ExamPage,
   ExamPackage,
   SchemaDefinition,
   SubmissionSchemaAnswer,
@@ -14,6 +15,7 @@ import {
   createCompilerState,
   manifestMap,
   type BoundInterfaceValue,
+  type ExpandedExamPage,
   type ExpandedSchemaUse,
   type ExamResourceSource,
   type TemplateCompileContext,
@@ -26,6 +28,7 @@ export type {
   TemplateCompileError,
   TemplateCompileErrorCode,
   TemplateCompileResult,
+  GeneratedTimelineAudio,
   ExamResourceSource,
   TemplateInterfaceBinding,
   LocatedInterfaceInstance
@@ -52,7 +55,14 @@ export async function compileTemplate(
     const structure = instantiateTemplate(content, state)
     state.staticCells.forEach((cell) => cell.get())
 
-    const pages = state.pages.map((resolve) => resolve())
+    const expandedPages = state.pages.map((resolve) => resolve())
+    const generatedSources: ExamResourceSource[] = []
+    const pages = await compileTimelineAudio(
+      expandedPages,
+      context,
+      state.resources,
+      generatedSources
+    )
     const questions = state.questions.map((resolve) => resolve())
     const schemaBlocks = state.schemaUsages.map((resolve) => resolve())
     const candidate = structure.candidates[0]
@@ -96,12 +106,90 @@ export async function compileTemplate(
       state.resourceSources,
       ([assetKey, sourceUrl]) => ({ assetKey, sourceUrl })
     )
-    return { success: true, examPackage, resourceSources }
+    return {
+      success: true,
+      examPackage,
+      resourceSources: [...resourceSources, ...generatedSources]
+    }
   } catch (error) {
     if (error instanceof CompileFailure) {
       return { success: false, errors: [error.compileError] }
     }
     throw error
+  }
+}
+
+async function compileTimelineAudio(
+  pages: readonly ExpandedExamPage[],
+  context: TemplateCompileContext,
+  resources: Map<string, ExamPackage['examData']['resources'][string]>,
+  sources: ExamResourceSource[]
+): Promise<ExamPage[]> {
+  const compiled: ExamPage[] = []
+  for (const [pageIndex, page] of pages.entries()) {
+    const timeline: ExamPage['timeline'] = []
+    for (const [stepIndex, step] of page.timeline.entries()) {
+      if (step.type !== 'play') {
+        timeline.push(step)
+        continue
+      }
+      if (!context.synthesizeSpeech) {
+        throw new CompileFailure(compileError('SPEECH_SYNTHESIZER_MISSING', step.sourcePath))
+      }
+
+      let audio: Awaited<ReturnType<NonNullable<TemplateCompileContext['synthesizeSpeech']>>>
+      try {
+        audio = await context.synthesizeSpeech(step.text)
+      } catch (error) {
+        throw new CompileFailure(
+          compileError('SPEECH_SYNTHESIS_FAILED', step.sourcePath, {
+            message: error instanceof Error ? error.message : String(error)
+          })
+        )
+      }
+      if (
+        !audio ||
+        !(audio.data instanceof Uint8Array) ||
+        audio.data.byteLength === 0 ||
+        typeof audio.mediaType !== 'string' ||
+        !audio.mediaType.toLowerCase().startsWith('audio/')
+      ) {
+        throw new CompileFailure(compileError('INVALID_SYNTHESIZED_AUDIO', step.sourcePath))
+      }
+
+      const assetKey = `player-tts-${encodeURIComponent(page.id)}-${stepIndex}`
+      const filename = `speech-${pageIndex}-${stepIndex}.${speechExtension(audio.mediaType)}`
+      resources.set(assetKey, {
+        filename,
+        packagePath: `resources/${assetKey}/${filename}`,
+        mediaType: audio.mediaType
+      })
+      sources.push({ assetKey, data: audio.data })
+      timeline.push({
+        type: 'play',
+        src: `resource:${assetKey}`,
+        ...(step.choiceViewOverrides ? { choiceViewOverrides: step.choiceViewOverrides } : {})
+      })
+    }
+    compiled.push({ id: page.id, content: page.content, timeline })
+  }
+  return compiled
+}
+
+function speechExtension(mediaType: string): string {
+  switch (mediaType.toLowerCase().split(';', 1)[0]) {
+    case 'audio/wav':
+    case 'audio/wave':
+      return 'wav'
+    case 'audio/mpeg':
+      return 'mp3'
+    case 'audio/ogg':
+    case 'audio/opus':
+      return 'ogg'
+    case 'audio/mp4':
+      return 'm4a'
+    default:
+      return 'bin'
   }
 }
 

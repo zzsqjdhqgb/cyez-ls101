@@ -1,11 +1,12 @@
 import type {
   CompiledSchemaInput,
-  ExamPage,
   ExamPackage,
   ExamResourceEntry,
   InterfaceInstance,
   InterfaceVarManifest,
   PlayerChoiceQuestion,
+  ResolvedChoiceViewport,
+  ResolvedContentBlock,
   SchemaDefinition
 } from '@ls101/core-types'
 import type {
@@ -31,9 +32,15 @@ export interface LocatedInterfaceInstance {
 
 export interface TemplateCompileContext extends TemplateDocumentValidationContext {
   interfaceBindings: readonly TemplateInterfaceBinding[]
+  synthesizeSpeech?(text: string): Promise<GeneratedTimelineAudio>
   locateInterfaceInstance(
     instanceId: string
   ): LocatedInterfaceInstance | null | Promise<LocatedInterfaceInstance | null>
+}
+
+export interface GeneratedTimelineAudio {
+  data: Uint8Array
+  mediaType: string
 }
 
 export type TemplateCompileErrorCode =
@@ -46,6 +53,9 @@ export type TemplateCompileErrorCode =
   | 'STATIC_VALUE_CYCLE'
   | 'UNRESOLVED_VALUE'
   | 'RESOURCE_SOURCE_NOT_FOUND'
+  | 'SPEECH_SYNTHESIZER_MISSING'
+  | 'SPEECH_SYNTHESIS_FAILED'
+  | 'INVALID_SYNTHESIZED_AUDIO'
   | 'UNKNOWN_FOCUS_QUESTION'
 
 export type TemplateCompileError =
@@ -66,10 +76,34 @@ export type TemplateCompileResult =
     }
   | { success: false; errors: readonly TemplateCompileError[] }
 
-export interface ExamResourceSource {
-  assetKey: string
-  sourceUrl: string
+export type ExamResourceSource =
+  | { assetKey: string; sourceUrl: string }
+  | { assetKey: string; data: Uint8Array }
+
+export interface ExpandedExamPage {
+  id: string
+  content: ResolvedContentBlock[]
+  timeline: ExpandedTimelineStep[]
 }
+
+export type ExpandedTimelineStep =
+  | {
+      type: 'play'
+      text: string
+      sourcePath: string
+      choiceViewOverrides?: Record<string, ResolvedChoiceViewport>
+    }
+  | {
+      type: 'countdown'
+      seconds: number
+      choiceViewOverrides?: Record<string, ResolvedChoiceViewport>
+    }
+  | {
+      type: 'record'
+      duration: number
+      recordIndex: number
+      choiceViewOverrides?: Record<string, ResolvedChoiceViewport>
+    }
 
 /** SchemaUse 展开后的编译器内部结构；运行期来源索引不会写入最终作答快照。 */
 export interface ExpandedSchemaUse {
@@ -133,7 +167,7 @@ export interface CompilerState {
   schemasById: Map<string, SchemaDefinition>
   interfaceValuesByAlias: Map<string, Map<string, BoundInterfaceValue>>
   staticCells: ValueCell[]
-  pages: Array<() => ExamPage>
+  pages: Array<() => ExpandedExamPage>
   questions: Array<() => PlayerChoiceQuestion>
   schemaUsages: Array<() => ExpandedSchemaUse>
   resources: Map<string, ExamResourceEntry>
