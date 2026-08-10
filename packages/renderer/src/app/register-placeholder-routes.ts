@@ -1,4 +1,4 @@
-import { LayoutTemplate, PanelsTopLeft, Settings2, Shapes } from 'lucide-react'
+import { BookCheck, LayoutTemplate, PanelsTopLeft, Settings2, Shapes } from 'lucide-react'
 import { InterfaceDetailsPage } from '../features/interfaces/InterfaceDetailsPage'
 import { InterfaceDraftEditorPage } from '../features/interfaces/InterfaceDraftEditorPage'
 import { InterfaceDraftListPage } from '../features/interfaces/InterfaceDraftListPage'
@@ -9,6 +9,10 @@ import { SettingsOverviewPage } from '../pages/SettingsOverviewPage'
 import { WorkbenchPage } from '../pages/WorkbenchPage'
 import { TemplateBrowserPage } from '../features/templates/TemplateBrowserPage'
 import { TemplateDocumentPage } from '../features/templates/TemplateDocumentPage'
+import { SchemaBrowserPage } from '../features/schemas/SchemaBrowserPage'
+import { SchemaDefinitionPage } from '../features/schemas/SchemaDefinitionPage'
+import { SchemaDraftEditorPage } from '../features/schemas/SchemaDraftEditorPage'
+import { SchemaDraftLibraryPage } from '../features/schemas/SchemaDraftLibraryPage'
 import { registerAppRoute } from './route-registry'
 
 const unregisterRoutes = [
@@ -38,6 +42,18 @@ const unregisterRoutes = [
   }),
 
   registerAppRoute({
+    id: 'schemas',
+    path: '/schemas',
+    component: SchemaBrowserPage,
+    layout: 'standard',
+    navigation: {
+      label: '评分 Schema',
+      icon: BookCheck,
+      order: 20
+    }
+  }),
+
+  registerAppRoute({
     id: 'templates',
     path: '/templates',
     component: TemplateBrowserPage,
@@ -45,7 +61,7 @@ const unregisterRoutes = [
     navigation: {
       label: '模板',
       icon: LayoutTemplate,
-      order: 20
+      order: 30
     }
   }),
 
@@ -53,6 +69,27 @@ const unregisterRoutes = [
     id: 'template-editor',
     path: '/templates/:templateId',
     component: TemplateDocumentPage,
+    layout: 'focus'
+  }),
+
+  registerAppRoute({
+    id: 'schema-draft-library',
+    path: '/schemas/drafts/:libraryId',
+    component: SchemaDraftLibraryPage,
+    layout: 'standard'
+  }),
+
+  registerAppRoute({
+    id: 'schema-draft-editor',
+    path: '/schemas/drafts/:libraryId/:draftId',
+    component: SchemaDraftEditorPage,
+    layout: 'focus'
+  }),
+
+  registerAppRoute({
+    id: 'schema-definition-editor',
+    path: '/schemas/:schemaId',
+    component: SchemaDefinitionPage,
     layout: 'focus'
   }),
 

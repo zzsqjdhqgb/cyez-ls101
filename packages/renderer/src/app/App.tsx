@@ -4,6 +4,7 @@ import { AppShell } from '../components/shell/AppShell'
 import { AppToaster } from '../components/ui/ToastViewport'
 import { ManualImageGenerationDialog } from '../features/airouter/ManualImageGenerationDialog'
 import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceApplicationProvider'
+import { SchemaApplicationProvider } from '../features/schemas/SchemaApplicationProvider'
 import { AppearanceSettingsProvider } from '../features/settings/AppearanceSettingsProvider'
 import { TemplateApplicationProvider } from '../features/templates/TemplateApplicationProvider'
 import { NotFoundPage } from '../pages/NotFoundPage'
@@ -29,13 +30,15 @@ export function App(): JSX.Element {
   return (
     <AppearanceSettingsProvider>
       <InterfaceApplicationProvider>
-        <TemplateApplicationProvider>
-          <MemoryRouter>
-            <RegisteredAppRoutes />
-          </MemoryRouter>
-          <ManualImageGenerationDialog />
-          <AppToaster />
-        </TemplateApplicationProvider>
+        <SchemaApplicationProvider>
+          <TemplateApplicationProvider>
+            <MemoryRouter>
+              <RegisteredAppRoutes />
+            </MemoryRouter>
+            <ManualImageGenerationDialog />
+            <AppToaster />
+          </TemplateApplicationProvider>
+        </SchemaApplicationProvider>
       </InterfaceApplicationProvider>
     </AppearanceSettingsProvider>
   )
