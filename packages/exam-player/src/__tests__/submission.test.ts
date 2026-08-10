@@ -30,7 +30,20 @@ function examPackage(): ExamPackage {
     packageId: 'exam-package-1',
     examData: {
       title: 'Oral exam',
-      player: { pages: [], recordingIndices: [3] },
+      player: {
+        pages: [],
+        recordingIndices: [3],
+        choiceMeta: {
+          pages: [],
+          questions: [
+            {
+              choiceIndex: 2,
+              stem: 'Choose one',
+              options: [{ label: 'B', content: 'Answer' }]
+            }
+          ]
+        }
+      },
       resources: {
         picture: {
           filename: 'picture.png',
@@ -151,6 +164,44 @@ describe('assembleSubmission', () => {
 
     expect(() => assembleSubmission(exam, input())).toThrowError(
       expect.objectContaining<Partial<SubmissionAssemblyError>>({ code: 'INVALID_CAPTURE_PLAN' })
+    )
+  })
+
+  it('拒绝捕获计划引用不存在的 choiceIndex', () => {
+    const exam = examPackage()
+    exam.answerCapturePlan.strings[0].choiceIndex = 99
+
+    expect(() => assembleSubmission(exam, input())).toThrowError(
+      expect.objectContaining<Partial<SubmissionAssemblyError>>({ code: 'INVALID_EXAM_PACKAGE' })
+    )
+  })
+
+  it('拒绝捕获计划引用不存在的 recordIndex', () => {
+    const exam = examPackage()
+    exam.answerCapturePlan.audios[0].recordIndex = 99
+
+    expect(() => assembleSubmission(exam, input())).toThrowError(
+      expect.objectContaining<Partial<SubmissionAssemblyError>>({ code: 'INVALID_EXAM_PACKAGE' })
+    )
+  })
+
+  it.each([
+    ['2026-08-10T01:00:00Z', '2026-08-10T01:10:00Z'],
+    ['2026-08-10T09:00:00+08:00', '2026-08-10T09:10:00+08:00'],
+    ['2026-08-10T01:00:00.123456Z', '2026-08-10T01:10:00.123456Z']
+  ])('接受合法 ISO 8601 时间戳 %s', (startedAt, submittedAt) => {
+    const result = assembleSubmission(examPackage(), input({ startedAt, submittedAt }))
+
+    expect(result.submission.meta).toMatchObject({ startedAt, submittedAt })
+  })
+
+  it('拒绝不存在的 ISO 8601 日期', () => {
+    expect(() =>
+      assembleSubmission(examPackage(), input({ startedAt: '2026-02-30T01:00:00Z' }))
+    ).toThrowError(
+      expect.objectContaining<Partial<SubmissionAssemblyError>>({
+        code: 'INVALID_SUBMISSION_META'
+      })
     )
   })
 

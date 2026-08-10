@@ -161,6 +161,30 @@ function validateMeta(input: SubmissionAssemblyInput): void {
 function validateCapturePlan(exam: ExamPackage): void {
   validateCaptureEntries(exam.answerCapturePlan.strings, 'stringAnswerIndex', 'choiceIndex')
   validateCaptureEntries(exam.answerCapturePlan.audios, 'audioAnswerIndex', 'recordIndex')
+
+  const choiceIndices = new Set(
+    exam.examData.player.choiceMeta?.questions.map((question) => question.choiceIndex) ?? []
+  )
+  for (const capture of exam.answerCapturePlan.strings) {
+    if (!choiceIndices.has(capture.choiceIndex)) {
+      throw new SubmissionAssemblyError(
+        'INVALID_EXAM_PACKAGE',
+        `Capture plan references unknown choiceIndex ${capture.choiceIndex}`,
+        { choiceIndex: capture.choiceIndex }
+      )
+    }
+  }
+
+  const recordIndices = new Set(exam.examData.player.recordingIndices)
+  for (const capture of exam.answerCapturePlan.audios) {
+    if (!recordIndices.has(capture.recordIndex)) {
+      throw new SubmissionAssemblyError(
+        'INVALID_EXAM_PACKAGE',
+        `Capture plan references unknown recordIndex ${capture.recordIndex}`,
+        { recordIndex: capture.recordIndex }
+      )
+    }
+  }
 }
 
 function validateCaptureEntries<
@@ -194,8 +218,53 @@ function validateCaptureEntries<
 }
 
 function isIsoDate(value: string): boolean {
-  const time = Date.parse(value)
-  return Number.isFinite(time) && new Date(time).toISOString() === value
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|([+-])(\d{2}):(\d{2}))$/.exec(
+      value
+    )
+  if (!match) return false
+
+  const [
+    ,
+    yearText,
+    monthText,
+    dayText,
+    hourText,
+    minuteText,
+    secondText,
+    ,
+    offsetHourText,
+    offsetMinuteText
+  ] = match
+  const year = Number(yearText)
+  const month = Number(monthText)
+  const day = Number(dayText)
+  const hour = Number(hourText)
+  const minute = Number(minuteText)
+  const second = Number(secondText)
+  const offsetHour = offsetHourText === undefined ? 0 : Number(offsetHourText)
+  const offsetMinute = offsetMinuteText === undefined ? 0 : Number(offsetMinuteText)
+
+  return (
+    month >= 1 &&
+    month <= 12 &&
+    day >= 1 &&
+    day <= daysInMonth(year, month) &&
+    hour <= 23 &&
+    minute <= 59 &&
+    second <= 59 &&
+    offsetHour <= 23 &&
+    offsetMinute <= 59 &&
+    Number.isFinite(Date.parse(value))
+  )
+}
+
+function daysInMonth(year: number, month: number): number {
+  if (month === 2) {
+    const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
+    return leapYear ? 29 : 28
+  }
+  return [4, 6, 9, 11].includes(month) ? 30 : 31
 }
 
 function audioExtension(mediaType: string): string {
