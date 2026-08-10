@@ -1,7 +1,7 @@
 # 题目评分管道、Schema 与资源设计（当前草案）
 
 > 本文整理 2026-08-09 的讨论结论，用于统一 Schema、Template、ExamPlayer 与 Grading Engine 之间的概念边界。
-> Schema 领域模型与 Template 编译契约已按本文实现。ExamPlayer/Grading Engine 的运行期答案解析和最终试卷归档写入器仍待实现。
+> Schema 领域模型、Template 编译契约和 ExamPlayer 作答组包边界已按本文实现。完整 ExamPlayer UI、Grading Engine 和最终归档写入器仍待实现。
 
 ## 一、评分管道
 
@@ -298,29 +298,233 @@ ExamPlayer / Markdown Renderer / Grading Engine:
 
 Schema 只消费附件变量已经解析后的文本参数，不参与文件导入、打包或物理路径计算。
 
-## 七、运行期数据流
+## 七、ExamPackage
+
+ExamPackage 是 Template 编译器生成、供 ExamPlayer 直接执行的考试包。目标结构由考试数据、答案捕获计划和作答包副本三部分组成：
+
+```typescript
+interface ExamPackage {
+  format: 'ls101-exam'
+  formatVersion: 1
+  packageId: string
+
+  examData: {
+    title: string
+    player: PlayerExamData
+    resources: ExamResourceManifest
+  }
+
+  answerCapturePlan: AnswerCapturePlan
+  submissionTemplate: SubmissionTemplate
+}
+```
+
+`examData` 只负责播放器展示和考试流程。`answerCapturePlan` 指导播放器把选择题和录音输出写入作答包的答案池：
+
+```typescript
+interface AnswerCapturePlan {
+  strings: Array<{
+    stringAnswerIndex: number
+    choiceIndex: number
+  }>
+
+  audios: Array<{
+    audioAnswerIndex: number
+    recordIndex: number
+  }>
+}
+```
+
+`choiceIndex` 和 `recordIndex` 只属于播放器运行期。`stringAnswerIndex` 和 `audioAnswerIndex` 属于最终 SubmissionPackage，并由 SchemaUse 快照引用。每类答案索引必须从零开始连续分配，捕获计划中不得出现重复的目标索引或来源索引。
+
+`submissionTemplate` 是 Template 编译器生成的作答包副本，包含所有编译期已经确定的批改数据：
+
+```typescript
+interface SubmissionTemplate {
+  format: 'ls101-submission'
+  formatVersion: 1
+
+  meta: {
+    examPackageId: string
+    examTitle: string
+  }
+
+  schemaUses: SubmissionSchemaUse[]
+
+  // 仅包含独立批改所需的静态资源。
+  resources: SubmissionResourceManifest
+}
+```
+
+这里的“副本”是最终 SubmissionPackage 中所有编译期可确定字段的完整静态部分，而不是需要播放器再次解释的中间模型。ExamPlayer 不读取或解释 `schemaUses`：它复制 `submissionTemplate`，按 `answerCapturePlan` 生成答案池，并向 `meta` 补充 `submissionId`、考生身份和考试时间。
+
+## 八、SubmissionPackage
+
+SubmissionPackage 是完全独立、可以直接进入批改流程的作答存储结构。它不包含完整 ExamPackage，而是保存三类业务数据：考试及考生元数据、字符串和音频答案，以及每个 SchemaUse 的完整批改快照。批改快照和音频答案所引用的文件随作答归档一起保存。
+
+```typescript
+interface SubmissionPackage {
+  format: 'ls101-submission'
+  formatVersion: 1
+
+  meta: {
+    submissionId: string
+    examPackageId: string
+    examTitle: string
+
+    candidate: {
+      candidateId: string
+      displayName: string
+    }
+
+    startedAt: string
+    submittedAt: string
+  }
+
+  answers: {
+    strings: Array<string | null>
+    audios: SubmissionAudioAnswer[]
+  }
+
+  schemaUses: SubmissionSchemaUse[]
+  resources: SubmissionResourceManifest
+}
+```
+
+`startedAt` 和 `submittedAt` 使用 ISO 8601 字符串。当前 SubmissionPackage 只表示一次正式完成的提交；中途保存、断点恢复和未完成 Attempt 暂不实现。
+
+字符串答案按 `stringAnswerIndex` 存入 `answers.strings`。`null` 表示未作答，避免与真实字符串混淆。当前客观题的实际答案是选项标签字符串，例如 `"A"`。
+
+音频答案按 `audioAnswerIndex` 存入 `answers.audios`：
+
+```typescript
+interface SubmissionAudioAnswer {
+  resourceKey: string
+  durationMs: number
+}
+```
+
+### 8.1 SchemaUse 批改快照
+
+`schemaUses` 中的每一项严格对应一次展开后的 SchemaUse，也是一个独立评分单元：
+
+```typescript
+interface SubmissionSchemaUse {
+  instanceId: string
+
+  // 完整正式 Schema 快照，不需要查询 Schema 仓储。
+  schema: SchemaDefinition
+
+  // Template 编译时已经解析完成的题目输入。
+  inputs: CompiledSchemaInput[]
+
+  // 编译期内容直接保存，学生答案只保存答案池索引。
+  answers: SubmissionSchemaAnswer[]
+}
+```
+
+三种答案引用如下：
+
+```typescript
+type SubmissionSchemaAnswer =
+  | {
+      answerId: string
+      type: 'text'
+      stringAnswerIndex: number
+    }
+  | {
+      answerId: string
+      type: 'fixed-speech'
+      text: string
+      audioAnswerIndex: number
+    }
+  | {
+      answerId: string
+      type: 'free-speech'
+      audioAnswerIndex: number
+    }
+```
+
+因此固定语音的原文直接保存在 SchemaUse 快照中，学生录音通过 `audioAnswerIndex` 取得：
+
+```typescript
+{
+  answerId: 'sentence-1',
+  type: 'fixed-speech',
+  text: 'The weather is beautiful today.',
+  audioAnswerIndex: 0
+}
+```
+
+批改系统处理某个列表项时，已经能够直接取得完整 Schema、题目输入、固定朗读文本和学生答案，不需要 ExamPackage、Template、Schema 仓储或播放器索引映射。
+
+### 8.2 Submission 资源
+
+SubmissionPackage 的 JSON 数据不直接内嵌音频或其他二进制文件。答案和 SchemaUse 输入通过资源键引用归档中的文件：
+
+```typescript
+type SubmissionResourceManifest = Record<
+  string,
+  {
+    filename: string
+    packagePath: string
+    mediaType?: string
+  }
+>
+```
+
+`resources` 同时包含：
+
+- `answers.audios` 引用的学生录音。
+- SchemaUse 输入中 `resource:<assetKey>` 引用的、独立批改所需的静态附件。
+
+Template 编译器负责识别 SchemaUse 批改快照所需的静态资源，将清单写入 `submissionTemplate.resources`，并把文件收入 ExamPackage 归档。组合作答包时，ExamPlayer 复制该资源清单并加入新录音的资源项，不解析 SchemaUse 文本；归档写入器根据清单从 ExamPackage 复制静态文件，并写入播放器返回的新录音。
+
+建议的 Submission 归档布局为：
+
+```text
+manifest.json
+resources/<assetKey>/<filename>
+recordings/<resourceKey>/<filename>
+```
+
+播放器回调在内存中返回 `SubmissionPackage` 清单和以资源键索引的新录音 Blob。播放器在组包时为新录音生成资源键、文件名、包内路径和媒体类型，使回调返回的清单已经满足 SubmissionPackage 契约。静态附件已经存在于 ExamPackage 归档，不需要播放器重新读取或返回。ZIP 编码、文件复制、可选的完整性校验和持久化由宿主应用或归档写入器负责，不属于 ExamPlayer 的考试流程逻辑。只有清单和它引用的全部文件共同组成可独立批改的最终作答归档。
+
+### 8.3 不属于 SubmissionPackage 的数据
+
+SubmissionPackage 只保存不可变的原始作答证据和编译期批改快照，不保存：
+
+- SchemaUse 的二次解析结果。
+- ASR 文本。
+- 语音纠错结果。
+- AI 调用状态。
+- 分数和评语。
+
+这些数据属于后续独立的 GradingRecord。GradingRecord 通过 `submissionId` 引用正式作答包，修改批改结果不会改变原始 SubmissionPackage。
+
+## 九、运行期数据流
 
 ```text
 正式 Schema 定义评分结构、题型数据、答案格式和输入契约
                               ↓
 Template 填充静态题目输入，并按 ID 绑定运行期答案槽位
                               ↓
-Template 编译器快照正式 Schema，解析 SchemaUse 附件并收集资源
+Template 编译器生成考试数据、答案捕获计划和 SubmissionTemplate
                               ↓
-ExamPlayer 按答案格式产生学生答案
+ExamPlayer 播放考试，按答案捕获计划记录字符串和音频
                               ↓
-解析出一次 SchemaUse 的完整评分输入
+复制 SubmissionTemplate，加入考试元数据和学生答案
                               ↓
-批改时选择 human 或 ai，并执行对应评分管道
+Grading Engine 逐项读取 SubmissionPackage.schemaUses
                               ↓
-输出评分结果
+选择 human 或 ai，并输出评分结果
 ```
 
-运行期解析只负责组合正式 Schema 快照、Template 题目输入、ExamPackage 资源和 ExamPlayer 答案，不产生新的作者态 Schema 配置模型。
+ExamPlayer 不知道 Schema 的结构和评分含义。Grading Engine 不需要重新取得或匹配 ExamPackage；SubmissionPackage 中的每个 SchemaUse 快照已经是完整评分输入，只需按索引从答案池取得学生作答。
 
-## 八、评分流程
+## 十、评分流程
 
-### 8.1 客观题
+### 10.1 客观题
 
 ```text
 学生答案字符串 + 解析字符串
@@ -332,7 +536,7 @@ ExamPlayer 按答案格式产生学生答案
 
 客观题当前不调用语音纠错系统、文本 LLM 或人类评分流程。
 
-### 8.2 人工评分
+### 10.2 人工评分
 
 ```text
 题目输入 + 评分标准 + 有序答案列表 + maxScore
@@ -344,7 +548,7 @@ ExamPlayer 按答案格式产生学生答案
 
 人工评分不要求执行语音纠错，也不要求先把录音转换成文本。评分者需要能够访问当前评分单元的全部输入和答案。
 
-### 8.3 AI 评分
+### 10.3 AI 评分
 
 ```text
 每条音频答案 ──→ 语音纠错系统 ──→ 该条答案的自然语言纠错结果
@@ -368,7 +572,7 @@ ExamPlayer 按答案格式产生学生答案
 
 音频答案在 Schema 数据中只表现为资源引用。ASR 和语音纠错都由 Grading Engine 内部处理。
 
-## 九、评分输出
+## 十一、评分输出
 
 所有题型及评分方式都只输出分数和评语：
 
@@ -389,6 +593,6 @@ GradingResult
 
 结构校验失败、资源缺失、模型调用失败等执行错误通过评分调用的失败通道表达，不混入正常评分结果。
 
-## 十、当前状态
+## 十二、当前状态
 
-本文涉及的 Schema 结构、发布机制、Template 绑定、附件变量、资源地址和评分输出均已确认，可以作为重新实现 Schema 的当前设计依据。
+本文涉及的 Schema 结构、发布机制、Template 绑定、附件变量、资源地址、ExamPackage、SubmissionPackage 和评分输出均已确认。Schema、Template 编译和 ExamPlayer 作答组包边界已经实现；完整播放器 UI、物理归档写入和 Grading Engine 仍待后续开发。

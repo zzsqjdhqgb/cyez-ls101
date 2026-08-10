@@ -1,12 +1,35 @@
 // @ls101/core-types - Template Compiler、ExamPlayer 与评分系统的共享契约
 
-import type { CompiledSchemaPackage } from './schema'
+import type { SubmissionTemplate } from './submission'
+
+export type ExamFormatVersion = 1
 
 export interface ExamPackage {
-  title: string
-  player: PlayerExamData
-  schema: CompiledSchemaPackage
-  resources: ExamResourceManifest
+  format: 'ls101-exam'
+  formatVersion: ExamFormatVersion
+  packageId: string
+  examData: {
+    title: string
+    player: PlayerExamData
+    resources: ExamResourceManifest
+  }
+  answerCapturePlan: AnswerCapturePlan
+  submissionTemplate: SubmissionTemplate
+}
+
+export interface AnswerCapturePlan {
+  strings: StringAnswerCapture[]
+  audios: AudioAnswerCapture[]
+}
+
+export interface StringAnswerCapture {
+  stringAnswerIndex: number
+  choiceIndex: number
+}
+
+export interface AudioAnswerCapture {
+  audioAnswerIndex: number
+  recordIndex: number
 }
 
 /** assetKey 到试卷包内资源元数据的映射。 */

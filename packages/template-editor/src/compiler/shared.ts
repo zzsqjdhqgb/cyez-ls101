@@ -1,5 +1,5 @@
 import type {
-  CompiledSchemaUse,
+  CompiledSchemaInput,
   ExamPage,
   ExamPackage,
   ExamResourceEntry,
@@ -71,6 +71,32 @@ export interface ExamResourceSource {
   sourceUrl: string
 }
 
+/** SchemaUse 展开后的编译器内部结构；运行期来源索引不会写入最终作答快照。 */
+export interface ExpandedSchemaUse {
+  instanceId: string
+  schemaId: string
+  inputs: CompiledSchemaInput[]
+  answers: ExpandedSchemaAnswer[]
+}
+
+export type ExpandedSchemaAnswer =
+  | {
+      answerId: string
+      type: 'text'
+      choiceIndex: number
+    }
+  | {
+      answerId: string
+      type: 'fixed-speech'
+      text: string
+      recordIndex: number
+    }
+  | {
+      answerId: string
+      type: 'free-speech'
+      recordIndex: number
+    }
+
 export type CompiledValue =
   | { type: 'string'; value: string }
   | { type: 'number'; value: number }
@@ -109,7 +135,7 @@ export interface CompilerState {
   staticCells: ValueCell[]
   pages: Array<() => ExamPage>
   questions: Array<() => PlayerChoiceQuestion>
-  schemaUsages: Array<() => CompiledSchemaUse>
+  schemaUsages: Array<() => ExpandedSchemaUse>
   resources: Map<string, ExamResourceEntry>
   resourceSources: Map<string, string>
   questionIndicesByAddress: Map<string, number>

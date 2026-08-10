@@ -30,7 +30,7 @@
 ```css
 /* ExamPlayer.module.css */
 .root {
-  all: initial;            /* 阻断外部样式继承 */
+  all: initial; /* 阻断外部样式继承 */
   position: fixed;
   top: 0;
   left: 0;
@@ -57,30 +57,25 @@
 
 ```typescript
 interface ExamPlayerProps {
-  exam: ExamPackage              // 试卷数据
-  resources: Record<string, string>  // 资源 src → 可访问 URL
+  exam: ExamPackage // 考试数据、答案捕获计划和作答包副本
+  resources: Record<string, string> // 资源 src → 可访问 URL
 
   // 回调
-  onFinish: (result: SubmissionPackage) => void
-  onClose?: () => void           // 中途退出（可选）
+  onFinish: (result: SubmissionBundle) => void
+  onClose?: () => void // 中途退出（可选）
   onError?: (error: Error) => void
 }
 
-interface ExamPackage {
-  title: string
-  questions: Question[]
-  gradingInfo?: GradingInfoItem[]
-}
-
-interface SubmissionPackage {
-  student: { name: string; studentId: string }
-  examId: string
-  recordings: { [recordIndex: number]: Blob }
-  submittedAt: string
+interface SubmissionBundle {
+  submission: SubmissionPackage
+  // 仅包含本次考试新产生的录音；静态附件由归档写入器从 ExamPackage 复制。
+  files: Record<string, Blob>
 }
 ```
 
-数据直接通过 props 传入，结果通过 `onFinish` callback 传回。没有 postMessage，没有 IPC，没有序列化。
+`ExamPackage` 和 `SubmissionPackage` 的完整结构以 [题目评分管道、Schema 与资源设计](./question-type-pipeline-notes.md) 为准。
+
+数据直接通过 props 传入，结果通过 `onFinish` callback 传回。`submission` 是可序列化的作答清单，`files` 只保存本次考试新录制的音频 Blob。归档写入器根据作答清单，从 ExamPackage 复制独立批改所需的静态附件。播放器不执行 ZIP 编码、IPC、Schema 解析或批改。
 
 ## 五、内部状态流转
 
@@ -113,6 +108,7 @@ mount → 学生信息输入 → 麦克风测试 → 考试中 → 完成 → on
 
 - 主体软件负责：加载试卷数据、转换资源路径、准备 `ExamPackage`
 - `<ExamPlayer>` 接收数据，运行完整考试流程
-- `onFinish` 回调返回 `SubmissionPackage`，主体软件处理后保存、导出或投入批改
+- `<ExamPlayer>` 按 `answerCapturePlan` 填充字符串和音频答案，复制 `submissionTemplate` 并补充考试元数据
+- `onFinish` 回调返回 `SubmissionBundle`，主体软件负责归档、保存、导出或投入批改
 
-播放器组件不知道模板、Section、Interface、Schema 等概念。它只知道试卷和作答。
+播放器组件不知道模板、Section、Interface、Schema 或评分规则。它只知道考试数据、答案捕获计划和待复制的作答包副本。

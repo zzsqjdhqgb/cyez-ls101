@@ -374,29 +374,31 @@ describe('compileTemplate', () => {
     if (!result.success) return
 
     const assetKey = 'schema-schema-use%3Areading-picture'
-    expect(result.examPackage.schema.uses).toEqual([
+    expect(result.examPackage.submissionTemplate.schemaUses).toEqual([
       {
         instanceId: 'schema-use:reading',
-        schemaId: FIXED_SCHEMA_ID,
+        schema: schemaDefinitions()[3],
         inputs: [{ inputId: 'prompt', type: 'text', value: `![题图](resource:${assetKey})` }],
         answers: [
           {
             answerId: 'reading',
             type: 'fixed-speech',
             text: 'Hello',
-            source: 'recording',
-            recordIndex: 0
+            audioAnswerIndex: 0
           }
         ]
       }
     ])
-    expect(result.examPackage.resources).toEqual({
+    expect(result.examPackage.examData.resources).toEqual({
       [assetKey]: {
         filename: 'picture.png',
         packagePath: `resources/${assetKey}/picture.png`,
         mediaType: 'image/png'
       }
     })
+    expect(result.examPackage.submissionTemplate.resources).toEqual(
+      result.examPackage.examData.resources
+    )
     expect(result.resourceSources).toEqual([
       { assetKey, sourceUrl: 'asset://instance-1/picture.png' }
     ])
@@ -440,6 +442,7 @@ describe('compileTemplate', () => {
           ]
         }),
         audioSchemaUse('root-audio', 'root-recording'),
+        audioSchemaUse('root-audio-copy', 'root-recording'),
         choiceSchemaUse('root-choice', 'outer-answer')
       ]
     })
@@ -451,9 +454,9 @@ describe('compileTemplate', () => {
     expect(result.success).toBe(true)
     if (!result.success) return
 
-    expect(result.examPackage.title).toBe('Compiled exam')
-    expect(result.examPackage.player.recordingIndices).toEqual([0])
-    expect(result.examPackage.player.choiceMeta).toEqual({
+    expect(result.examPackage.examData.title).toBe('Compiled exam')
+    expect(result.examPackage.examData.player.recordingIndices).toEqual([0])
+    expect(result.examPackage.examData.player.choiceMeta).toEqual({
       pages: [{ questionIndices: [0] }],
       questions: [
         {
@@ -467,7 +470,7 @@ describe('compileTemplate', () => {
       ]
     })
 
-    const compiledPage = result.examPackage.player.pages[0]
+    const compiledPage = result.examPackage.examData.player.pages[0]
     expect(compiledPage.id).toBe('page:main-page')
     expect(compiledPage.content[0]).toEqual({
       id: 'block:main-page/prompt',
@@ -504,39 +507,58 @@ describe('compileTemplate', () => {
       }
     ])
 
-    expect(result.examPackage.schema.uses).toEqual([
+    expect(result.examPackage.submissionTemplate.schemaUses).toEqual([
       {
         instanceId: 'schema-use:choice-call/inner-choice',
-        schemaId: CHOICE_SCHEMA_ID,
+        schema: schemaDefinitions()[2],
         inputs: [],
-        answers: [{ answerId: 'answer', type: 'text', source: 'choice', choiceIndex: 0 }]
+        answers: [{ answerId: 'answer', type: 'text', stringAnswerIndex: 0 }]
       },
       {
         instanceId: 'schema-use:root-text',
-        schemaId: SCHEMA_ID,
+        schema: schemaDefinitions()[0],
         inputs: [{ inputId: 'prompt', type: 'text', value: 'Resolved: Hello!' }],
         answers: []
       },
       {
         instanceId: 'schema-use:root-audio',
-        schemaId: AUDIO_SCHEMA_ID,
+        schema: schemaDefinitions()[1],
         inputs: [],
         answers: [
           {
             answerId: 'recording',
             type: 'free-speech',
-            source: 'recording',
-            recordIndex: 0
+            audioAnswerIndex: 0
+          }
+        ]
+      },
+      {
+        instanceId: 'schema-use:root-audio-copy',
+        schema: schemaDefinitions()[1],
+        inputs: [],
+        answers: [
+          {
+            answerId: 'recording',
+            type: 'free-speech',
+            audioAnswerIndex: 0
           }
         ]
       },
       {
         instanceId: 'schema-use:root-choice',
-        schemaId: CHOICE_SCHEMA_ID,
+        schema: schemaDefinitions()[2],
         inputs: [],
-        answers: [{ answerId: 'answer', type: 'text', source: 'choice', choiceIndex: 0 }]
+        answers: [{ answerId: 'answer', type: 'text', stringAnswerIndex: 0 }]
       }
     ])
+    expect(result.examPackage.answerCapturePlan).toEqual({
+      strings: [{ stringAnswerIndex: 0, choiceIndex: 0 }],
+      audios: [{ audioAnswerIndex: 0, recordIndex: 0 }]
+    })
+    expect(result.examPackage.submissionTemplate.meta).toEqual({
+      examPackageId: result.examPackage.packageId,
+      examTitle: 'Compiled exam'
+    })
   })
 
   it('为重复函数调用生成独立题目、出参和 Schema useId', async () => {
@@ -585,17 +607,17 @@ describe('compileTemplate', () => {
     expect(result.success).toBe(true)
     if (!result.success) return
 
-    expect(result.examPackage.player.choiceMeta?.pages).toEqual([
+    expect(result.examPackage.examData.player.choiceMeta?.pages).toEqual([
       { questionIndices: [0] },
       { questionIndices: [1] }
     ])
     expect(
-      result.examPackage.player.choiceMeta?.questions.map((question) => question.stem)
+      result.examPackage.examData.player.choiceMeta?.questions.map((question) => question.stem)
     ).toEqual(['First', 'Second'])
-    expect(result.examPackage.player.pages[0].content[0]).toMatchObject({
+    expect(result.examPackage.examData.player.pages[0].content[0]).toMatchObject({
       defaultViewport: { mode: 'focus', choiceIndex: 1 }
     })
-    expect(result.examPackage.schema.uses.map((use) => use.instanceId)).toEqual([
+    expect(result.examPackage.submissionTemplate.schemaUses.map((use) => use.instanceId)).toEqual([
       'schema-use:call-1/inner-choice',
       'schema-use:call-2/inner-choice'
     ])
@@ -883,16 +905,16 @@ describe('compileTemplate', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    expect(result.examPackage.schema.uses).toEqual([
+    expect(result.examPackage.submissionTemplate.schemaUses).toEqual([
       {
         instanceId: 'schema-use:exam-text',
-        schemaId: SCHEMA_ID,
+        schema: schemaDefinitions()[0],
         inputs: [{ inputId: 'prompt', type: 'text', value: '' }],
         answers: []
       },
       {
         instanceId: 'schema-use:other-text',
-        schemaId: OTHER_SCHEMA_ID,
+        schema: otherSchema,
         inputs: [{ inputId: 'prompt', type: 'text', value: 'Other' }],
         answers: []
       }

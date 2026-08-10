@@ -797,10 +797,11 @@ describe('TemplateApplication', () => {
     expect(result).toMatchObject({
       success: true,
       examPackage: {
-        title: 'Compiled exam',
-        schema: {
-          uses: [
+        examData: { title: 'Compiled exam' },
+        submissionTemplate: {
+          schemaUses: [
             {
+              schema: { schemaId: SCHEMA_ID },
               inputs: [
                 {
                   inputId: 'prompt',

@@ -18,13 +18,27 @@ export type {
   SchemaDraftLibraryDocument,
   SchemaDefinition,
   GradingResult,
-  CompiledSchemaPackage,
-  CompiledSchemaUse,
-  CompiledSchemaInput,
-  CompiledSchemaAnswer
+  CompiledSchemaInput
 } from './schema'
 export type {
+  SubmissionFormatVersion,
+  SubmissionCandidate,
+  SubmissionTemplate,
+  SubmissionPackage,
+  SubmissionMeta,
+  SubmissionAnswers,
+  SubmissionAudioAnswer,
+  SubmissionSchemaUse,
+  SubmissionSchemaAnswer,
+  SubmissionResourceManifest,
+  SubmissionResourceEntry
+} from './submission'
+export type {
+  ExamFormatVersion,
   ExamPackage,
+  AnswerCapturePlan,
+  StringAnswerCapture,
+  AudioAnswerCapture,
   ExamResourceManifest,
   ExamResourceEntry,
   PlayerExamData,

@@ -242,7 +242,7 @@ describe('Template 编译组合覆盖', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    expect(result.examPackage.player.choiceMeta).toMatchObject({
+    expect(result.examPackage.examData.player.choiceMeta).toMatchObject({
       pages: [{ questionIndices: [0] }, { questionIndices: [1] }],
       questions: [{ stem: 'First' }, { stem: 'Second' }]
     })
@@ -256,8 +256,8 @@ describe('Template 编译组合覆盖', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    expect(result.examPackage.player.pages).toHaveLength(1)
-    const page = result.examPackage.player.pages[0]
+    expect(result.examPackage.examData.player.pages).toHaveLength(1)
+    const page = result.examPackage.examData.player.pages[0]
     expect(page.content[0]).toMatchObject({
       defaultViewport: { mode: 'focus', choiceIndex: 0 }
     })
@@ -283,7 +283,7 @@ describe('Template 编译组合覆盖', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    const page = result.examPackage.player.pages[0]
+    const page = result.examPackage.examData.player.pages[0]
     expect(page.content[0]).toMatchObject({
       defaultViewport: { mode: 'focus', choiceIndex: 0 }
     })
@@ -377,17 +377,17 @@ describe('Template 编译组合覆盖', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    expect(result.examPackage.player.pages[0].content[0]).toMatchObject({
+    expect(result.examPackage.examData.player.pages[0].content[0]).toMatchObject({
       type: 'image',
       width: 100,
       height: 50,
       src: 'audio.mp3'
     })
-    expect(result.examPackage.player.pages[0].timeline).toEqual([
+    expect(result.examPackage.examData.player.pages[0].timeline).toEqual([
       { type: 'play', text: 'Ready' },
       { type: 'countdown', seconds: 7 }
     ])
-    expect(result.examPackage.player).not.toHaveProperty('choiceMeta')
+    expect(result.examPackage.examData.player).not.toHaveProperty('choiceMeta')
   })
 
   it('按页面和嵌套函数展开顺序分配 recordIndex，并转发 audio 出参', async () => {
@@ -446,16 +446,16 @@ describe('Template 编译组合覆盖', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    expect(result.examPackage.player.recordingIndices).toEqual([0, 1, 2])
+    expect(result.examPackage.examData.player.recordingIndices).toEqual([0, 1, 2])
     expect(
-      result.examPackage.player.pages.map((page) =>
+      result.examPackage.examData.player.pages.map((page) =>
         page.timeline[0].type === 'record' ? page.timeline[0].recordIndex : -1
       )
     ).toEqual([0, 1, 2])
-    expect(result.examPackage.schema.uses.flatMap((use) => use.answers)).toEqual([
-      { answerId: 'recording', type: 'free-speech', source: 'recording', recordIndex: 0 },
-      { answerId: 'recording', type: 'free-speech', source: 'recording', recordIndex: 1 },
-      { answerId: 'recording', type: 'free-speech', source: 'recording', recordIndex: 2 }
+    expect(result.examPackage.submissionTemplate.schemaUses.flatMap((use) => use.answers)).toEqual([
+      { answerId: 'recording', type: 'free-speech', audioAnswerIndex: 0 },
+      { answerId: 'recording', type: 'free-speech', audioAnswerIndex: 1 },
+      { answerId: 'recording', type: 'free-speech', audioAnswerIndex: 2 }
     ])
   })
 
@@ -504,14 +504,18 @@ describe('Template 编译组合覆盖', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    expect(result.examPackage.player.pages[0].id).toBe('page:page%2F%25')
-    expect(result.examPackage.player.pages[0].content.map((block) => block.id)).toEqual([
+    expect(result.examPackage.examData.player.pages[0].id).toBe('page:page%2F%25')
+    expect(result.examPackage.examData.player.pages[0].content.map((block) => block.id)).toEqual([
       'block:page%2F%25/block%2F%25',
       'block:page%2F%25/view%2F%25'
     ])
-    expect(result.examPackage.schema.uses[0].instanceId).toBe('schema-use:use%2F%25')
+    expect(result.examPackage.submissionTemplate.schemaUses[0].instanceId).toBe(
+      'schema-use:use%2F%25'
+    )
     expect(
-      result.examPackage.player.choiceMeta?.questions[0].options.map((option) => option.label)
+      result.examPackage.examData.player.choiceMeta?.questions[0].options.map(
+        (option) => option.label
+      )
     ).toEqual('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''))
   })
 })

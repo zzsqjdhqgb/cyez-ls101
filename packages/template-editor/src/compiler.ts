@@ -1,4 +1,10 @@
-import type { ExamPackage } from '@ls101/core-types'
+import type {
+  AnswerCapturePlan,
+  ExamPackage,
+  SchemaDefinition,
+  SubmissionSchemaAnswer,
+  SubmissionSchemaUse
+} from '@ls101/core-types'
 import type { TemplateContent, TemplateDocument } from './types'
 import { validateTemplateDocument } from './validation'
 import { instantiateTemplate } from './compiler/expand'
@@ -8,6 +14,7 @@ import {
   createCompilerState,
   manifestMap,
   type BoundInterfaceValue,
+  type ExpandedSchemaUse,
   type ExamResourceSource,
   type TemplateCompileContext,
   type TemplateCompileError,
@@ -48,30 +55,39 @@ export async function compileTemplate(
     const pages = state.pages.map((resolve) => resolve())
     const questions = state.questions.map((resolve) => resolve())
     const schemaBlocks = state.schemaUsages.map((resolve) => resolve())
-    const usedSchemaIds = new Set(schemaBlocks.map((block) => block.schemaId))
     const candidate = structure.candidates[0]
+    const packageId = crypto.randomUUID()
+    const resources = Object.fromEntries(state.resources)
+    const submission = buildSubmissionSnapshot(
+      packageId,
+      content.name,
+      schemaBlocks,
+      state.schemasById,
+      resources
+    )
 
     const examPackage: ExamPackage = {
-      title: content.name,
-      player: {
-        pages,
-        recordingIndices: state.recordingIndices,
-        ...(candidate
-          ? {
-              choiceMeta: {
-                pages: candidate.pages.map((questionIndices) => ({ questionIndices })),
-                questions
+      format: 'ls101-exam',
+      formatVersion: 1,
+      packageId,
+      examData: {
+        title: content.name,
+        player: {
+          pages,
+          recordingIndices: state.recordingIndices,
+          ...(candidate
+            ? {
+                choiceMeta: {
+                  pages: candidate.pages.map((questionIndices) => ({ questionIndices })),
+                  questions
+                }
               }
-            }
-          : {})
+            : {})
+        },
+        resources
       },
-      schema: {
-        definitions: context.schemaDefinitions.filter((schema) =>
-          usedSchemaIds.has(schema.schemaId)
-        ),
-        uses: schemaBlocks
-      },
-      resources: Object.fromEntries(state.resources)
+      answerCapturePlan: submission.answerCapturePlan,
+      submissionTemplate: submission.template
     }
     const resourceSources: ExamResourceSource[] = Array.from(
       state.resourceSources,
@@ -83,6 +99,86 @@ export async function compileTemplate(
       return { success: false, errors: [error.compileError] }
     }
     throw error
+  }
+}
+
+function buildSubmissionSnapshot(
+  packageId: string,
+  examTitle: string,
+  expandedUses: readonly ExpandedSchemaUse[],
+  schemasById: ReadonlyMap<string, SchemaDefinition>,
+  resources: ExamPackage['examData']['resources']
+): {
+  answerCapturePlan: AnswerCapturePlan
+  template: ExamPackage['submissionTemplate']
+} {
+  const stringIndices = new Map<number, number>()
+  const audioIndices = new Map<number, number>()
+  const answerCapturePlan: AnswerCapturePlan = { strings: [], audios: [] }
+
+  const stringAnswerIndex = (choiceIndex: number): number => {
+    const existing = stringIndices.get(choiceIndex)
+    if (existing !== undefined) return existing
+    const index = stringIndices.size
+    stringIndices.set(choiceIndex, index)
+    answerCapturePlan.strings.push({ stringAnswerIndex: index, choiceIndex })
+    return index
+  }
+
+  const audioAnswerIndex = (recordIndex: number): number => {
+    const existing = audioIndices.get(recordIndex)
+    if (existing !== undefined) return existing
+    const index = audioIndices.size
+    audioIndices.set(recordIndex, index)
+    answerCapturePlan.audios.push({ audioAnswerIndex: index, recordIndex })
+    return index
+  }
+
+  const schemaUses = expandedUses.map<SubmissionSchemaUse>((use) => {
+    const schema = schemasById.get(use.schemaId)
+    if (!schema) throw new Error(`Schema disappeared during compilation: ${use.schemaId}`)
+
+    const answers = use.answers.map<SubmissionSchemaAnswer>((answer) => {
+      switch (answer.type) {
+        case 'text':
+          return {
+            answerId: answer.answerId,
+            type: answer.type,
+            stringAnswerIndex: stringAnswerIndex(answer.choiceIndex)
+          }
+        case 'fixed-speech':
+          return {
+            answerId: answer.answerId,
+            type: answer.type,
+            text: answer.text,
+            audioAnswerIndex: audioAnswerIndex(answer.recordIndex)
+          }
+        case 'free-speech':
+          return {
+            answerId: answer.answerId,
+            type: answer.type,
+            audioAnswerIndex: audioAnswerIndex(answer.recordIndex)
+          }
+      }
+    })
+
+    return {
+      instanceId: use.instanceId,
+      schema: structuredClone(schema),
+      inputs: structuredClone(use.inputs),
+      answers
+    }
+  })
+
+  return {
+    answerCapturePlan,
+    template: {
+      format: 'ls101-submission',
+      formatVersion: 1,
+      meta: { examPackageId: packageId, examTitle },
+      schemaUses,
+      resources: structuredClone(resources)
+    }
   }
 }
 

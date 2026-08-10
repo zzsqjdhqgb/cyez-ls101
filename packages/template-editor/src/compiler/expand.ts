@@ -1,8 +1,6 @@
 import type {
   ChoiceOptionLabel,
-  CompiledSchemaAnswer,
   CompiledSchemaInput,
-  CompiledSchemaUse,
   ExamPage,
   PlayerChoiceQuestion,
   ResolvedChoiceViewport,
@@ -37,6 +35,8 @@ import {
   lazyValueCell,
   mergeStructuralResults,
   questionAddressKey,
+  type ExpandedSchemaAnswer,
+  type ExpandedSchemaUse,
   type CompileScope,
   type CompilerState,
   type StructuralResult,
@@ -385,7 +385,7 @@ function resolveSchemaUse(
   scope: CompileScope,
   path: string,
   state: CompilerState
-): CompiledSchemaUse {
+): ExpandedSchemaUse {
   const schema = state.schemasById.get(use.schemaId)
   if (!schema) fail('UNRESOLVED_VALUE', path, { schemaId: use.schemaId })
 
@@ -404,7 +404,7 @@ function resolveSchemaUse(
     ]
   })
 
-  const answers = schema.structure.answerFormat.map<CompiledSchemaAnswer>((answer) => {
+  const answers = schema.structure.answerFormat.map<ExpandedSchemaAnswer>((answer) => {
     const binding = use.answerBindings[answer.answerId]
     const fieldPath = `${path}.answerBindings[${JSON.stringify(answer.answerId)}]`
     switch (binding.type) {
@@ -413,7 +413,6 @@ function resolveSchemaUse(
         return {
           answerId: answer.answerId,
           type: 'text',
-          source: 'choice',
           choiceIndex: (value as Extract<typeof value, { type: 'choice' }>).choiceIndex
         }
       }
@@ -429,7 +428,6 @@ function resolveSchemaUse(
             state,
             `${fieldPath}.text`
           ),
-          source: 'recording',
           recordIndex: (value as Extract<typeof value, { type: 'audio' }>).recordIndex
         }
       }
@@ -438,7 +436,6 @@ function resolveSchemaUse(
         return {
           answerId: answer.answerId,
           type: 'free-speech',
-          source: 'recording',
           recordIndex: (value as Extract<typeof value, { type: 'audio' }>).recordIndex
         }
       }

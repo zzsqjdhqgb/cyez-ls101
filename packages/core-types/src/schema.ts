@@ -78,49 +78,9 @@ export interface GradingResult {
   comment: string
 }
 
-// ============================================================
-// Template 编译快照
-// ============================================================
-
-/** ExamPackage 中的正式 Schema 快照及其实际使用。 */
-export interface CompiledSchemaPackage {
-  definitions: SchemaDefinition[]
-  uses: CompiledSchemaUse[]
-}
-
-/** 一次展开后的 SchemaUse，对应一个实际评分单元。 */
-export interface CompiledSchemaUse {
-  instanceId: string
-  schemaId: string
-  inputs: CompiledSchemaInput[]
-  answers: CompiledSchemaAnswer[]
-}
-
 /** Template 在编译期已经解析完成的静态 Schema 输入。 */
 export interface CompiledSchemaInput {
   inputId: string
   type: 'text'
   value: string
 }
-
-/** ExamPlayer 在运行期产生的学生答案绑定。 */
-export type CompiledSchemaAnswer =
-  | {
-      answerId: string
-      type: 'text'
-      source: 'choice'
-      choiceIndex: number
-    }
-  | {
-      answerId: string
-      type: 'fixed-speech'
-      text: string
-      source: 'recording'
-      recordIndex: number
-    }
-  | {
-      answerId: string
-      type: 'free-speech'
-      source: 'recording'
-      recordIndex: number
-    }

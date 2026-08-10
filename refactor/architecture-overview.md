@@ -8,8 +8,8 @@
   Section 引擎（纯函数）            - 系统对话框
   Interface / Template 管理         - 本地模型推理（TTS、本地 STT）
   批改系统                          - 配置存储（API Key 等）
-  考试播放器                       
-  云 API 调用（直接 fetch）        
+  考试播放器
+  云 API 调用（直接 fetch）
 ```
 
 IPC 表面积很小，主进程只暴露以下能力：
@@ -72,7 +72,7 @@ IPC 表面积很小，主进程只暴露以下能力：
 | Interface | 渲染进程 | 题型管理：参数定义、AI 生成提示词模板、调用 LLM API、数据实例管理 |
 | Template | 渲染进程 | 模板管理：Section 结构定义、数据来源绑定（Interface 实例或自定义） |
 | Schema | 渲染进程 | 定义评分题型、题型数据、答案格式和 Template 输入契约 |
-| 考试播放器 | 渲染进程 | React 组件，fixed 覆盖层。接收 ExamPackage，产出 SubmissionPackage |
+| 考试播放器 | 渲染进程 | React 组件，fixed 覆盖层。接收 ExamPackage，产出 SubmissionBundle |
 | AI 引擎 | 渲染 + 主进程 | 云 API（渲染进程直接 fetch），本地推理（主进程 IPC） |
 | 存储 | 主进程 | 文件读写、导入导出 ZIP、系统对话框 |
 
@@ -303,13 +303,14 @@ AI 生成、导入导出和批量运算等长耗时操作使用 `@ls101/core-typ
 
 考试:
   主体 App 加载 ExamPackage → 传给 <ExamPlayer />
-  → 学生作答 → MediaRecorder 录音
-  → onFinish 回调返回 SubmissionPackage
-  → 主体 App 保存（IPC: file:write）
+  → 按答案捕获计划收集字符串答案和 MediaRecorder 录音
+  → 复制 SubmissionTemplate 并补充考生、时间和答案
+  → onFinish 回调返回 SubmissionBundle
+  → 主体 App 复制静态附件并写入独立作答归档（IPC: file:write）
 
 批改:
   导入作答（IPC: file:unzip）
-  → Schema 匹配 gradingInfo
+  → 逐项读取 SubmissionPackage 中的完整 SchemaUse 批改快照
   → 转写录音（IPC: ai:sttTranscribe 或云 API fetch）
   → LLM 预评分（fetch）
   → 教师确认 → 结算 → 导出成绩
