@@ -251,6 +251,8 @@ Template 变量作用域约定如下：
 - `[@varname]`：引用外部作用域中已有的变量，例如 Interface 或 Template 当前作用域中的 `file` 变量。
 - `[@this.varname]`：引用当前 SchemaUse 附件列表产生的局部变量。`this` 是 SchemaUse 的保留作用域名。
 
+因此 `this` 同时是 Template 全局保留的 Interface alias，不能用于声明 Interface requirement，避免 Schema 文本在格式化再解析后改变引用含义。
+
 例如：
 
 ```text

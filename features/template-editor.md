@@ -92,7 +92,7 @@ ChoiceView 的 free/range 页码同样使用基于 Collector 最终页数的下�
 
 工作文档允许暂时不完整。删除函数输入、录音或选择题后，无法无歧义决定替代值的普通表达式不会被猜测式删除或改写，而由严格语义校验返回可定位错误。函数输入重命名和 Interface alias 重命名属于含义明确的操作，会重写当前可编辑正文中的对应变量引用。内嵌函数资源不随 alias 重命名而重写：函数禁止直接引用 Template Interface alias，只能通过调用输入接收 Interface 值，因此函数资源不捕获调用方命名空间。
 
-`templates.validate()` 和 `templates.compile()` 会根据当前 Template 收集 Interface 与 Schema 身份，通过调用方提供的跨模块查询函数取得清单。编译时再把 Interface 实例选择及实例定位器交给底层异步编译器。renderer 通过 Interface 应用门面的 `published.getVarManifest()` 和 `instances.locate()` 取得变量、实例和附件源 URL，通过 `FileSchemaRepository.getSchema()` 读取最新正式 Schema。
+`templates.validate()` 和 `templates.compile()` 会根据当前 Template 收集 Interface 与 Schema 身份，通过调用方提供的跨模块查询函数取得清单。编译时再把 Interface 实例选择及实例定位器交给底层异步编译器。renderer 通过 Interface 应用门面的 `published.getVarManifest()` 和 `instances.locate()` 取得变量、实例和附件源 URL，通过 `FileSchemaRepository.getSchema()` 读取最新正式 Schema。Schema 查询适配器会先校验 UUID；空值和编辑中的非法 `schemaId` 直接按不存在处理，使语义校验可以返回结构化 `UNKNOWN_SCHEMA`，不会让仓储参数异常中断校验。
 
 ## 严格语义校验
 
@@ -102,7 +102,7 @@ ChoiceView 的 free/range 页码同样使用基于 Collector 最终页数的下�
 
 当前校验覆盖：
 
-- Interface 别名、依赖、acceptedVars 和变量类型。
+- Interface 别名、依赖、acceptedVars 和变量类型；`this` 是 SchemaUse 附件命名空间的全局保留别名。
 - 节点、内容块、选项、局部变量和 Schema use 的唯一性。
 - 页面、时间线、文本插值、函数输入与出参的变量解析和类型匹配。
 - 函数定义不能直接引用 Template Interface alias，Interface 值必须从调用点经函数输入传入。

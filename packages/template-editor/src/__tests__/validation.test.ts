@@ -194,6 +194,15 @@ describe('validateTemplateContent - 基础依赖', () => {
     expect(resultCodes).toContain('UNKNOWN_INTERFACE_VAR')
   })
 
+  it('保留 this 作为 SchemaUse 附件命名空间', () => {
+    expectCode(
+      templateContent({
+        interfaces: [{ alias: 'this', interfaceId: INTERFACE_ID, acceptedVars: ['sentence'] }]
+      }),
+      'INVALID_INTERFACE_ALIAS'
+    )
+  })
+
   it('Interface 变量必须被当前 Template 接受', () => {
     const content = templateContent({
       root: root([

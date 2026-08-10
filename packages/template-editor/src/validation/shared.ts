@@ -106,6 +106,7 @@ export interface ScopeState {
 }
 
 const LOCAL_NAME_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_-]*$/
+const RESERVED_INTERFACE_ALIASES = new Set(['this'])
 
 export function createValidationState(context: TemplateValidationContext): ValidationState {
   const state: ValidationState = {
@@ -169,7 +170,10 @@ export function validateInterfaceRequirements(
 ): void {
   content.interfaces.forEach((requirement, index) => {
     const path = `interfaces[${index}]`
-    if (!LOCAL_NAME_PATTERN.test(requirement.alias)) {
+    if (
+      !LOCAL_NAME_PATTERN.test(requirement.alias) ||
+      RESERVED_INTERFACE_ALIASES.has(requirement.alias)
+    ) {
       addError(state, `${path}.alias`, 'INVALID_INTERFACE_ALIAS', { alias: requirement.alias })
     }
     if (state.requirementsByAlias.has(requirement.alias)) {
