@@ -49,7 +49,7 @@ xvfb-run -a yarn test:playwright:electron tests/integration/interface-editor.spe
 
 操作流程：预置含图片字段的题型、文本 Provider（`mock-json-image`）和图像 Provider（`mock-image`），从 UI 同时选择文本模型与图像 Provider 后生成。
 
-测试内容：文本字段填充、图片提示词回填、图片预览可见；文本与图片 HTTP 请求参数正确；持久化实例包含 `imagePrompts` 和一张图片资产。
+测试内容：文本字段填充、图片提示词回填、图片预览可见；文本与图片 HTTP 请求参数正确；持久化实例包含 `imagePrompts` 和一张图片资产；页面中的 `asset://` 图片 URL 由 Electron `net.fetch()` 实际读取并校验字节。
 
 ### IE-03 AI 生成失败与取消
 
@@ -82,6 +82,18 @@ IE-13 通过真实文件选择器、Electron 剪贴板和图片字段 AI 生图�
 ### IE-16 内置 Interface 首次安装
 
 使用打包应用实际携带的 `resources/builtin/interface-editor`，从全新 `userData` 启动后验证上海高考英语口语题型自动安装、显示「内置」标记、详情页入口和字段内容。
+
+### IE-17～IE-18 内置题组与图片字段
+
+覆盖内置题组的创建、保存、重新打开、删除和复制为草稿，以及内置图片字段的单图生成、持久化和 `asset://` URL 实际读取。
+
+### IE-23 上海内置四图 AI 生成
+
+使用与上海内置字段结构匹配的文本响应，经过真实文本流和图像 Provider 链路生成 `picture_file1`～`picture_file4` 四张图片；断言四次图片请求、四个资产文件、提示词映射、图片预览，以及四个 `asset://` URL 都能由 Electron `net.fetch()` 返回正确 PNG 字节。
+
+### IE-19～IE-22 内置版本维护
+
+覆盖内置安装幂等、重启后的实例/资产/模板引用迁移、保留旧版本，以及变量契约变化时拒绝自动更新。
 
 ## 覆盖边界
 

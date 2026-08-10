@@ -579,6 +579,103 @@ describe('interface editor application integration', () => {
     ).resolves.toEqual(PNG)
   })
 
+  it('rolls back builtin instance migration when reference replacement fails', async () => {
+    const repository = new FileInterfaceRepository(new MemoryStore())
+    const app = createInterfaceApplication({ repository, fileDialog: new TestFileDialog() })
+    const references = {
+      replaceInterfaceReferences: vi.fn().mockRejectedValue(new Error('reference write failed')),
+      countInterfaceReferences: vi.fn().mockResolvedValue(0)
+    }
+    const builtins = createBuiltinInterfaceApplication({ repository, references })
+    const previous = await publishInterface(content)
+    const next = await publishInterface({
+      ...content,
+      fields: {
+        order: ['section'],
+        nodes: {
+          section: {
+            type: 'group',
+            children: structuredClone(content.fields)
+          }
+        }
+      }
+    })
+    await repository.saveBuiltinInterface('speaking', previous)
+    await repository.setBuiltinCurrent('speaking', previous.id)
+    const blank = await app.published.createBlankInstance(previous.id)
+    const saved = await app.instances.save(previous.id, blank.instance.instanceId, {
+      name: '回滚题组',
+      values: blank.instance.values,
+      imagePrompts: { questionImage: '原始提示词' },
+      imageFiles: { questionImage: PNG }
+    })
+
+    const plan = await builtins.check('speaking', next)
+    await expect(builtins.apply(plan, 'migrate')).rejects.toThrow('reference write failed')
+
+    await expect(repository.getBuiltin('speaking')).resolves.toEqual({
+      builtinKey: 'speaking',
+      currentInterfaceId: previous.id
+    })
+    await expect(repository.getInterface(previous.id)).resolves.toEqual(previous)
+    await expect(repository.getInterface(next.id)).resolves.toEqual(next)
+    await expect(app.instances.get(previous.id, blank.instance.instanceId)).resolves.toMatchObject({
+      interfaceId: previous.id,
+      instance: { name: '回滚题组', values: saved.instance.values }
+    })
+    await expect(app.instances.get(next.id, blank.instance.instanceId)).resolves.toBeNull()
+  })
+
+  it('rolls back the whole builtin migration when deleting the previous version fails', async () => {
+    const repository = new FileInterfaceRepository(new MemoryStore())
+    const app = createInterfaceApplication({ repository, fileDialog: new TestFileDialog() })
+    const references = {
+      replaceInterfaceReferences: vi.fn().mockResolvedValue(undefined),
+      countInterfaceReferences: vi.fn().mockResolvedValue(0)
+    }
+    const builtins = createBuiltinInterfaceApplication({ repository, references })
+    const previous = await publishInterface(content)
+    const next = await publishInterface({
+      ...content,
+      fields: {
+        order: ['section'],
+        nodes: {
+          section: {
+            type: 'group',
+            children: structuredClone(content.fields)
+          }
+        }
+      }
+    })
+    await repository.saveBuiltinInterface('speaking', previous)
+    await repository.setBuiltinCurrent('speaking', previous.id)
+    const blank = await app.published.createBlankInstance(previous.id)
+    await app.instances.save(previous.id, blank.instance.instanceId, {
+      name: '删除失败回滚题组',
+      values: blank.instance.values
+    })
+    vi.spyOn(repository, 'deleteInterface').mockRejectedValueOnce(
+      new Error('previous version delete failed')
+    )
+
+    const plan = await builtins.check('speaking', next)
+    await expect(builtins.apply(plan, 'migrate')).rejects.toThrow('previous version delete failed')
+
+    await expect(repository.getBuiltin('speaking')).resolves.toEqual({
+      builtinKey: 'speaking',
+      currentInterfaceId: previous.id
+    })
+    await expect(repository.getInterface(previous.id)).resolves.toEqual(previous)
+    await expect(repository.getInterface(next.id)).resolves.toEqual(next)
+    await expect(app.instances.get(previous.id, blank.instance.instanceId)).resolves.toMatchObject({
+      interfaceId: previous.id,
+      instance: { name: '删除失败回滚题组' }
+    })
+    await expect(app.instances.get(next.id, blank.instance.instanceId)).resolves.toBeNull()
+    expect(references.replaceInterfaceReferences).toHaveBeenNthCalledWith(1, previous.id, next.id)
+    expect(references.replaceInterfaceReferences).toHaveBeenNthCalledWith(2, next.id, previous.id)
+  })
+
   it('backs up the previous builtin version instead of migrating its instances', async () => {
     const repository = new FileInterfaceRepository(new MemoryStore())
     const app = createInterfaceApplication({ repository, fileDialog: new TestFileDialog() })
@@ -667,6 +764,39 @@ describe('interface editor application integration', () => {
     await expect(repository.listPublishedInterfaceIds()).resolves.toEqual([def.id])
     await expect(app.published.listInstances(def.id)).resolves.toEqual([
       expect.objectContaining({ instanceId: blank.instance.instanceId, name: '待处理题组' })
+    ])
+  })
+
+  it('restores builtin ownership when removal fails after backing up the previous version', async () => {
+    const repository = new FileInterfaceRepository(new MemoryStore())
+    const app = createInterfaceApplication({ repository, fileDialog: new TestFileDialog() })
+    const references = {
+      replaceInterfaceReferences: vi.fn().mockResolvedValue(undefined),
+      countInterfaceReferences: vi.fn().mockResolvedValue(0)
+    }
+    const builtins = createBuiltinInterfaceApplication({ repository, references })
+    const def = await publishInterface(content)
+    await repository.saveBuiltinInterface('speaking', def)
+    await repository.setBuiltinCurrent('speaking', def.id)
+    const blank = await app.published.createBlankInstance(def.id)
+    await app.instances.save(def.id, blank.instance.instanceId, {
+      name: '删除失败恢复题组',
+      values: blank.instance.values
+    })
+    const plan = await builtins.checkRemoval('speaking')
+    if (!plan) throw new Error('expected a builtin removal plan')
+    vi.spyOn(repository, 'removeBuiltin').mockRejectedValueOnce(new Error('remove failed'))
+
+    await expect(builtins.applyRemoval(plan, 'backup-old')).rejects.toThrow('remove failed')
+
+    await expect(repository.getBuiltin('speaking')).resolves.toEqual({
+      builtinKey: 'speaking',
+      currentInterfaceId: def.id
+    })
+    await expect(repository.listPublishedInterfaceIds()).resolves.toEqual([])
+    await expect(repository.getInterface(def.id)).resolves.toEqual(def)
+    await expect(app.published.listInstances(def.id)).resolves.toEqual([
+      expect.objectContaining({ instanceId: blank.instance.instanceId, name: '删除失败恢复题组' })
     ])
   })
 })
