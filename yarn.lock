@@ -1304,6 +1304,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@ls101/exam-package@workspace:packages/exam-package":
+  version: 0.0.0-use.local
+  resolution: "@ls101/exam-package@workspace:packages/exam-package"
+  dependencies:
+    "@ls101/core-types": "workspace:*"
+    "@ls101/schema-editor": "workspace:*"
+    fflate: "npm:^0.8.2"
+  languageName: unknown
+  linkType: soft
+
 "@ls101/exam-player@workspace:*, @ls101/exam-player@workspace:packages/exam-player":
   version: 0.0.0-use.local
   resolution: "@ls101/exam-player@workspace:packages/exam-player"

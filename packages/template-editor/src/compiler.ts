@@ -58,12 +58,15 @@ export async function compileTemplate(
     const candidate = structure.candidates[0]
     const packageId = crypto.randomUUID()
     const resources = Object.fromEntries(state.resources)
+    const submissionResources = Object.fromEntries(
+      [...state.resources].filter(([assetKey]) => state.submissionResourceKeys.has(assetKey))
+    )
     const submission = buildSubmissionSnapshot(
       packageId,
       content.name,
       schemaBlocks,
       state.schemasById,
-      resources
+      submissionResources
     )
 
     const examPackage: ExamPackage = {

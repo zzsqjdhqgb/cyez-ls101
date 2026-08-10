@@ -381,7 +381,7 @@ describe('Template 编译组合覆盖', () => {
       type: 'image',
       width: 100,
       height: 50,
-      src: 'audio.mp3'
+      src: 'resource:player-block%3Apage%2Fmedia'
     })
     expect(result.examPackage.examData.player.pages[0].timeline).toEqual([
       { type: 'play', text: 'Ready' },

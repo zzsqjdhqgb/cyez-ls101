@@ -75,7 +75,7 @@ interface SubmissionBundle {
 
 `ExamPackage` 和 `SubmissionPackage` 的完整结构以 [题目评分管道、Schema 与资源设计](./question-type-pipeline-notes.md) 为准。
 
-数据直接通过 props 传入，结果通过 `onFinish` callback 传回。`submission` 是可序列化的作答清单，`files` 只保存本次考试新录制的音频 Blob。归档写入器根据作答清单，从 ExamPackage 复制独立批改所需的静态附件。播放器不执行 ZIP 编码、IPC、Schema 解析或批改。
+数据直接通过 props 传入，结果通过 `onFinish` callback 传回。`submission` 是可序列化的作答清单，`files` 只保存本次考试新录制的音频 Blob。归档写入器根据作答清单，从 ExamPackage 复制独立批改所需的静态附件，并按 v1 ZIP 布局写入归档。播放器不执行 ZIP 编码、IPC、Schema 解析或批改。
 
 ## 五、内部状态流转
 

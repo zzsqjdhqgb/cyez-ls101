@@ -37,6 +37,7 @@ import {
   questionAddressKey,
   type ExpandedSchemaAnswer,
   type ExpandedSchemaUse,
+  type CompiledValue,
   type CompileScope,
   type CompilerState,
   type StructuralResult,
@@ -168,7 +169,8 @@ function resolvePage(
           ...(block.align === undefined ? {} : { align: block.align }),
           text: resolveTextExpression(block.text, scope, state, `${blockPath}.text`)
         }
-      case 'image':
+      case 'image': {
+        const file = resolveFileExpression(block.src, scope, state, `${blockPath}.src`)
         return {
           id,
           type: 'image',
@@ -176,8 +178,15 @@ function resolvePage(
           y: block.y,
           width: block.width,
           height: block.height,
-          src: resolveValueExpression(block.src, 'file', scope, state, `${blockPath}.src`) as string
+          src: registerResource(
+            file,
+            `player-${encodeURIComponent(id)}`,
+            block.id,
+            `${blockPath}.src`,
+            state
+          )
         }
+      }
       case 'choice-view':
         return {
           id,
@@ -461,22 +470,34 @@ function resolveSchemaAttachments(
     use.attachments.map((attachment, index) => {
       const attachmentPath = `${path}.attachments[${index}]`
       const file = resolveFileExpression(attachment.file, scope, state, `${attachmentPath}.file`)
-      if (!file.sourceUrl) {
-        fail('RESOURCE_SOURCE_NOT_FOUND', `${attachmentPath}.file`, {
-          filename: file.value
-        })
-      }
       const assetKey = `schema-${encodeURIComponent(instanceId)}-${encodeURIComponent(attachment.varName)}`
-      const filename = resourceFilename(file.value, attachment.varName)
-      state.resources.set(assetKey, {
-        filename,
-        packagePath: `resources/${assetKey}/${encodeURIComponent(filename)}`,
-        ...(mediaTypeFor(filename) ? { mediaType: mediaTypeFor(filename) } : {})
-      })
-      state.resourceSources.set(assetKey, file.sourceUrl)
-      return [attachment.varName, `resource:${assetKey}`]
+      state.submissionResourceKeys.add(assetKey)
+      return [
+        attachment.varName,
+        registerResource(file, assetKey, attachment.varName, `${attachmentPath}.file`, state)
+      ]
     })
   )
+}
+
+function registerResource(
+  file: Extract<CompiledValue, { type: 'file' }>,
+  assetKey: string,
+  fallbackName: string,
+  path: string,
+  state: CompilerState
+): string {
+  if (!file.sourceUrl) {
+    fail('RESOURCE_SOURCE_NOT_FOUND', path, { filename: file.value })
+  }
+  const filename = resourceFilename(file.value, fallbackName)
+  state.resources.set(assetKey, {
+    filename,
+    packagePath: `resources/${assetKey}/${encodeURIComponent(filename)}`,
+    ...(mediaTypeFor(filename) ? { mediaType: mediaTypeFor(filename) } : {})
+  })
+  state.resourceSources.set(assetKey, file.sourceUrl)
+  return `resource:${assetKey}`
 }
 
 function resourceFilename(value: string, fallback: string): string {

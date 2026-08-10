@@ -137,6 +137,7 @@ export interface CompilerState {
   questions: Array<() => PlayerChoiceQuestion>
   schemaUsages: Array<() => ExpandedSchemaUse>
   resources: Map<string, ExamResourceEntry>
+  submissionResourceKeys: Set<string>
   resourceSources: Map<string, string>
   questionIndicesByAddress: Map<string, number>
   recordingIndices: number[]
@@ -164,6 +165,7 @@ export function createCompilerState(
     questions: [],
     schemaUsages: [],
     resources: new Map(),
+    submissionResourceKeys: new Set(),
     resourceSources: new Map(),
     questionIndicesByAddress: new Map(),
     recordingIndices: [],

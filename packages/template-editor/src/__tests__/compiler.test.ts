@@ -488,7 +488,7 @@ describe('compileTemplate', () => {
       type: 'image',
       width: 80,
       height: 35,
-      src: 'picture.png'
+      src: 'resource:player-block%3Amain-page%2Fpicture'
     })
     expect(compiledPage.content[2]).toMatchObject({
       id: 'block:main-page/choices',
@@ -559,6 +559,10 @@ describe('compileTemplate', () => {
       examPackageId: result.examPackage.packageId,
       examTitle: 'Compiled exam'
     })
+    expect(result.examPackage.examData.resources).toHaveProperty(
+      'player-block%3Amain-page%2Fpicture'
+    )
+    expect(result.examPackage.submissionTemplate.resources).toEqual({})
   })
 
   it('为重复函数调用生成独立题目、出参和 Schema useId', async () => {
