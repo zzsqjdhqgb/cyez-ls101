@@ -13,6 +13,9 @@ const MANIFEST_PATH = 'manifest.json'
 const MAX_FILES = 10_000
 const MAX_UNCOMPRESSED_BYTES = 512 * 1024 * 1024
 const SAFE_RESOURCE_KEY = /^[A-Za-z0-9][A-Za-z0-9_.:%-]*$/
+const RESOURCE_URI = /^resource:([A-Za-z0-9][A-Za-z0-9_.:%-]*)$/
+
+type ResourcePathKind = 'static' | 'either'
 
 export interface ExamArchive {
   exam: ExamPackage
@@ -97,7 +100,7 @@ export function validateExamPackage(value: unknown): asserts value is ExamPackag
     !isRecord(value.examData) ||
     !nonEmptyString(value.examData.title) ||
     !isPlayerExamData(value.examData.player) ||
-    !isResourceManifest(value.examData.resources) ||
+    !isResourceManifest(value.examData.resources, 'static') ||
     !isCapturePlan(value.answerCapturePlan) ||
     !isSubmissionTemplate(value.submissionTemplate)
   ) {
@@ -130,7 +133,7 @@ export function validateSubmissionPackage(value: unknown): asserts value is Subm
     !isSubmissionAnswers(value.answers) ||
     !Array.isArray(value.schemaUses) ||
     !value.schemaUses.every(isSubmissionSchemaUse) ||
-    !isResourceManifest(value.resources)
+    !isResourceManifest(value.resources, 'either')
   ) {
     throw invalidArchive('Invalid SubmissionPackage manifest')
   }
@@ -215,6 +218,14 @@ function validateSchemaResourceReferences(
         if (!Object.hasOwn(resources, key)) {
           throw invalidArchive(`SchemaUse references missing resource: ${key}`)
         }
+        const resource = resources[key]
+        if (
+          !isRecord(resource) ||
+          typeof resource.packagePath !== 'string' ||
+          !resource.packagePath.startsWith('resources/')
+        ) {
+          throw invalidArchive(`SchemaUse references non-static resource: ${key}`)
+        }
       }
     }
   }
@@ -264,6 +275,12 @@ function validatePlayerReferences(exam: ExamPackage): void {
   }
   for (const page of player.pages) {
     for (const block of page.content) {
+      if (block.type === 'image') {
+        const key = resourceKey(block.src)
+        if (key === null || !Object.hasOwn(exam.examData.resources, key)) {
+          throw invalidArchive(`Player image references missing resource: ${block.src}`)
+        }
+      }
       if (block.type === 'choice-view')
         validateViewport(block.defaultViewport, choiceIndices, player)
     }
@@ -331,7 +348,7 @@ function isSubmissionTemplate(value: unknown): value is ExamPackage['submissionT
     nonEmptyString(value.meta.examTitle) &&
     Array.isArray(value.schemaUses) &&
     value.schemaUses.every(isSubmissionSchemaUse) &&
-    isResourceManifest(value.resources)
+    isResourceManifest(value.resources, 'static')
   )
 }
 
@@ -415,16 +432,19 @@ function isSubmissionSchemaUse(value: unknown): value is SubmissionSchemaUse {
   const definitions = new Map(
     schema.structure.answerFormat.map((answer) => [answer.answerId, answer.type])
   )
+  const answerIds = new Set<string>()
   return (
     answers.length === definitions.size &&
     answers.every((answer) => {
       if (
         !isRecord(answer) ||
         !nonEmptyString(answer.answerId) ||
+        answerIds.has(answer.answerId) ||
         definitions.get(answer.answerId) !== answer.type
       ) {
         return false
       }
+      answerIds.add(answer.answerId)
       if (answer.type === 'text')
         return (
           typeof answer.stringAnswerIndex === 'number' &&
@@ -603,11 +623,15 @@ function isCaptureEntries(entries: unknown[], targetField: string, sourceField: 
   return true
 }
 
-function isResourceManifest(value: unknown): boolean {
+function isResourceManifest(value: unknown, pathKind: ResourcePathKind): boolean {
   if (!isRecord(value)) return false
   const paths = new Set<string>()
   return Object.entries(value).every(([key, entry]) => {
-    if (!SAFE_RESOURCE_KEY.test(key) || !isResourceEntry(entry) || paths.has(entry.packagePath)) {
+    if (
+      !SAFE_RESOURCE_KEY.test(key) ||
+      !isResourceEntry(entry, pathKind) ||
+      paths.has(entry.packagePath)
+    ) {
       return false
     }
     paths.add(entry.packagePath)
@@ -616,7 +640,8 @@ function isResourceManifest(value: unknown): boolean {
 }
 
 function isResourceEntry(
-  value: unknown
+  value: unknown,
+  pathKind: ResourcePathKind
 ): value is { filename: string; packagePath: string; mediaType?: string } {
   return (
     isRecord(value) &&
@@ -624,10 +649,19 @@ function isResourceEntry(
     !/[\\/]/.test(value.filename) &&
     safePath(value.packagePath) &&
     value.packagePath !== MANIFEST_PATH &&
-    (value.packagePath.startsWith('resources/') || value.packagePath.startsWith('recordings/')) &&
+    matchesResourcePathKind(value.packagePath, pathKind) &&
     value.packagePath.endsWith(`/${encodeURIComponent(value.filename)}`) &&
     (value.mediaType === undefined || typeof value.mediaType === 'string')
   )
+}
+
+function matchesResourcePathKind(packagePath: string, pathKind: ResourcePathKind): boolean {
+  if (pathKind === 'static') return packagePath.startsWith('resources/')
+  return packagePath.startsWith('resources/') || packagePath.startsWith('recordings/')
+}
+
+function resourceKey(value: string): string | null {
+  return RESOURCE_URI.exec(value)?.[1] ?? null
 }
 
 function resourceFiles(

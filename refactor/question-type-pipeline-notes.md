@@ -367,6 +367,8 @@ resources/<assetKey>/<filename>
 
 归档读取器严格校验 manifest、播放器数据、捕获计划、SchemaUse、资源引用和 ZIP 内文件集合。页面图片等播放器资源全部进入考试包；只有评分快照实际需要的 SchemaUse 附件进入 `submissionTemplate.resources`。
 
+播放器页面中的 `image` 块与 SchemaUse Markdown 附件是两类不同的消费者，但共同使用 `resource:<assetKey>` 逻辑地址。页面图片的资源键必须存在于 `examData.resources`；`examData.resources` 和 `submissionTemplate.resources` 都只允许指向考试包内的 `resources/` 静态资源目录。
+
 ## 八、SubmissionPackage
 
 SubmissionPackage 是完全独立、可以直接进入批改流程的作答存储结构。它不包含完整 ExamPackage，而是保存三类业务数据：考试及考生元数据、字符串和音频答案，以及每个 SchemaUse 的完整批改快照。批改快照和音频答案所引用的文件随作答归档一起保存。
@@ -454,6 +456,8 @@ type SubmissionSchemaAnswer =
     }
 ```
 
+`answers` 必须与 `schema.structure.answerFormat` 一一对应：同一个 SchemaUse 中的 `answerId` 不得重复或缺失，ID 集合及各项类型必须与 Schema 定义完全一致。允许复用的是答案池索引，而不是 `answerId`；不同的答案槽位可以引用相同的 `stringAnswerIndex` 或 `audioAnswerIndex`，表示它们消费同一份学生作答。
+
 因此固定语音的原文直接保存在 SchemaUse 快照中，学生录音通过 `audioAnswerIndex` 取得：
 
 ```typescript
@@ -486,6 +490,8 @@ type SubmissionResourceManifest = Record<
 
 - `answers.audios` 引用的学生录音。
 - SchemaUse 输入中 `resource:<assetKey>` 引用的、独立批改所需的静态附件。
+
+静态附件的 `packagePath` 必须位于 `resources/`，学生录音必须位于 `recordings/`。最终 SubmissionPackage 的资源清单可以同时包含两类路径；SchemaUse 的逻辑资源引用只能指向静态附件，`answers.audios` 的资源键只能指向录音。当前契约不要求录音资源与音频答案一一对应：是否允许多个音频答案共享录音、是否保留未引用录音，留给后续业务规则决定。
 
 Template 编译器负责识别 SchemaUse 批改快照所需的静态资源，将清单写入 `submissionTemplate.resources`，并把文件收入 ExamPackage 归档。组合作答包时，ExamPlayer 复制该资源清单并加入新录音的资源项，不解析 SchemaUse 文本；归档写入器根据清单从 ExamPackage 复制静态文件，并写入播放器返回的新录音。
 

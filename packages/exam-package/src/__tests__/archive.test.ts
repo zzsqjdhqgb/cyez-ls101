@@ -192,6 +192,36 @@ describe('ExamPackage ZIP archive', () => {
     expect(() => validateExamPackage(exam)).toThrowError(ExamPackageArchiveError)
   })
 
+  it('校验播放器页面图片的资源引用', () => {
+    const valid = examPackage()
+    valid.examData.player.pages[0].content.push({
+      id: 'image-1',
+      type: 'image',
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 50,
+      src: 'resource:picture'
+    })
+    expect(() => validateExamPackage(valid)).not.toThrow()
+
+    const missing = structuredClone(valid)
+    const image = missing.examData.player.pages[0].content[0]
+    if (image.type === 'image') image.src = 'resource:missing'
+    expect(() => validateExamPackage(missing)).toThrow('Player image references missing resource')
+  })
+
+  it('考试资源和作答模板静态附件只能使用 resources 路径', () => {
+    const examResource = examPackage()
+    examResource.examData.resources.picture.packagePath = 'recordings/picture/picture.png'
+    expect(() => validateExamPackage(examResource)).toThrow('Invalid ExamPackage manifest')
+
+    const templateResource = examPackage()
+    templateResource.submissionTemplate.resources.picture.packagePath =
+      'recordings/picture/picture.png'
+    expect(() => validateExamPackage(templateResource)).toThrow('Invalid ExamPackage manifest')
+  })
+
   it('拒绝缺失和多余资源', async () => {
     await expect(encodeExamPackage(examPackage(), {})).rejects.toThrow('Missing resource bytes')
     await expect(
@@ -230,6 +260,28 @@ describe('SubmissionPackage ZIP archive', () => {
     )
   })
 
+  it('要求 SchemaUse 答案 ID 完整唯一，同时允许复用答案池索引', () => {
+    const sharedIndex = submissionPackage()
+    const use = sharedIndex.schemaUses[1]
+    use.schema.structure.answerFormat.push({ answerId: 'sentence-2', type: 'fixed-speech' })
+    use.schema.data.answerDescriptions['sentence-2'] = 'Second sentence'
+    use.answers.push({
+      answerId: 'sentence-2',
+      type: 'fixed-speech',
+      text: 'World.',
+      audioAnswerIndex: 0
+    })
+    expect(() => validateSubmissionPackage(sharedIndex)).not.toThrow()
+
+    const duplicate = structuredClone(sharedIndex)
+    duplicate.schemaUses[1].answers[1].answerId = 'sentence'
+    expect(() => validateSubmissionPackage(duplicate)).toThrow('Invalid SubmissionPackage manifest')
+
+    const missing = structuredClone(sharedIndex)
+    missing.schemaUses[1].answers.pop()
+    expect(() => validateSubmissionPackage(missing)).toThrow('Invalid SubmissionPackage manifest')
+  })
+
   it('从完整考试资源和录音中收集作答归档文件', () => {
     expect(
       collectSubmissionPackageFiles(
@@ -259,6 +311,21 @@ describe('SubmissionPackage ZIP archive', () => {
     pathInFilename.resources.picture.packagePath = 'resources/picture/nested%2Fpicture.png'
     expect(() => validateSubmissionPackage(pathInFilename)).toThrow(
       'Invalid SubmissionPackage manifest'
+    )
+  })
+
+  it('按引用用途区分最终作答包中的静态附件和录音', () => {
+    const staticAsRecording = submissionPackage()
+    staticAsRecording.resources.picture.packagePath = 'recordings/picture/picture.png'
+    expect(() => validateSubmissionPackage(staticAsRecording)).toThrow(
+      'SchemaUse references non-static resource'
+    )
+
+    const recordingAsStatic = submissionPackage()
+    recordingAsStatic.resources['answer-audio-0'].packagePath =
+      'resources/answer-audio-0/recording-0.ogg'
+    expect(() => validateSubmissionPackage(recordingAsStatic)).toThrow(
+      'Audio answer resource is outside recordings/'
     )
   })
 
