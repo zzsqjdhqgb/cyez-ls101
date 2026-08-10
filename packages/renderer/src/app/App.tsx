@@ -6,6 +6,7 @@ import { ManualImageGenerationDialog } from '../features/airouter/ManualImageGen
 import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceApplicationProvider'
 import { SchemaApplicationProvider } from '../features/schemas/SchemaApplicationProvider'
 import { AppearanceSettingsProvider } from '../features/settings/AppearanceSettingsProvider'
+import { SubmissionLibraryProvider } from '../features/submissions/SubmissionLibraryProvider'
 import { TemplateApplicationProvider } from '../features/templates/TemplateApplicationProvider'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { useRegisteredRoutes } from './route-registry'
@@ -31,13 +32,15 @@ export function App(): JSX.Element {
     <AppearanceSettingsProvider>
       <InterfaceApplicationProvider>
         <SchemaApplicationProvider>
-          <TemplateApplicationProvider>
-            <MemoryRouter>
-              <RegisteredAppRoutes />
-            </MemoryRouter>
-            <ManualImageGenerationDialog />
-            <AppToaster />
-          </TemplateApplicationProvider>
+          <SubmissionLibraryProvider>
+            <TemplateApplicationProvider>
+              <MemoryRouter>
+                <RegisteredAppRoutes />
+              </MemoryRouter>
+              <ManualImageGenerationDialog />
+              <AppToaster />
+            </TemplateApplicationProvider>
+          </SubmissionLibraryProvider>
         </SchemaApplicationProvider>
       </InterfaceApplicationProvider>
     </AppearanceSettingsProvider>

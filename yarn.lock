@@ -1304,7 +1304,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@ls101/exam-package@workspace:packages/exam-package":
+"@ls101/exam-package@workspace:*, @ls101/exam-package@workspace:packages/exam-package":
   version: 0.0.0-use.local
   resolution: "@ls101/exam-package@workspace:packages/exam-package"
   dependencies:
@@ -1388,6 +1388,7 @@ __metadata:
     "@ls101/page-renderer": "workspace:*"
     "@ls101/schema-editor": "workspace:*"
     "@ls101/section-engine": "workspace:*"
+    "@ls101/submission-library": "workspace:*"
     "@ls101/template-editor": "workspace:*"
     "@radix-ui/react-alert-dialog": "npm:^1.1.23"
     "@radix-ui/react-dialog": "npm:^1.1.23"
@@ -1424,6 +1425,15 @@ __metadata:
   resolution: "@ls101/section-engine@workspace:packages/section-engine"
   dependencies:
     "@ls101/core-types": "workspace:*"
+  languageName: unknown
+  linkType: soft
+
+"@ls101/submission-library@workspace:*, @ls101/submission-library@workspace:packages/submission-library":
+  version: 0.0.0-use.local
+  resolution: "@ls101/submission-library@workspace:packages/submission-library"
+  dependencies:
+    "@ls101/core-types": "workspace:*"
+    "@ls101/exam-package": "workspace:*"
   languageName: unknown
   linkType: soft
 

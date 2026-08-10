@@ -11,6 +11,7 @@
     { "path": "./packages/editor-kit" },
     { "path": "./packages/exam-player" },
     { "path": "./packages/exam-package" },
+    { "path": "./packages/submission-library" },
     { "path": "./packages/page-renderer" },
     { "path": "./packages/template-editor" },
     { "path": "./packages/interface-editor" },

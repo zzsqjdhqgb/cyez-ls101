@@ -1,4 +1,4 @@
-import { BookCheck, LayoutTemplate, PanelsTopLeft, Settings2, Shapes } from 'lucide-react'
+import { BookCheck, Inbox, LayoutTemplate, PanelsTopLeft, Settings2, Shapes } from 'lucide-react'
 import { InterfaceDetailsPage } from '../features/interfaces/InterfaceDetailsPage'
 import { InterfaceDraftEditorPage } from '../features/interfaces/InterfaceDraftEditorPage'
 import { InterfaceDraftListPage } from '../features/interfaces/InterfaceDraftListPage'
@@ -13,6 +13,7 @@ import { SchemaBrowserPage } from '../features/schemas/SchemaBrowserPage'
 import { SchemaDefinitionPage } from '../features/schemas/SchemaDefinitionPage'
 import { SchemaDraftEditorPage } from '../features/schemas/SchemaDraftEditorPage'
 import { SchemaDraftLibraryPage } from '../features/schemas/SchemaDraftLibraryPage'
+import { SubmissionLibraryPage } from '../features/submissions/SubmissionLibraryPage'
 import { registerAppRoute } from './route-registry'
 
 const unregisterRoutes = [
@@ -54,6 +55,18 @@ const unregisterRoutes = [
   }),
 
   registerAppRoute({
+    id: 'submissions',
+    path: '/submissions',
+    component: SubmissionLibraryPage,
+    layout: 'standard',
+    navigation: {
+      label: '收卷',
+      icon: Inbox,
+      order: 30
+    }
+  }),
+
+  registerAppRoute({
     id: 'templates',
     path: '/templates',
     component: TemplateBrowserPage,
@@ -61,7 +74,7 @@ const unregisterRoutes = [
     navigation: {
       label: '模板',
       icon: LayoutTemplate,
-      order: 30
+      order: 40
     }
   }),
 
