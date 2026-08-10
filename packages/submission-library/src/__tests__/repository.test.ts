@@ -1,7 +1,13 @@
 import type { SchemaDefinition, SubmissionPackage } from '@ls101/core-types'
 import { encodeSubmissionPackage } from '@ls101/exam-package'
 import { describe, expect, it } from 'vitest'
-import { FileSubmissionLibraryRepository, type SubmissionLibraryStore } from '../index'
+import {
+  createHumanGradingEngine,
+  FileSubmissionLibraryRepository,
+  objectiveGradingEngine,
+  type GradingInput,
+  type SubmissionLibraryStore
+} from '../index'
 
 const schema: SchemaDefinition = {
   formatVersion: 2,
@@ -161,7 +167,171 @@ describe('FileSubmissionLibraryRepository', () => {
       code: 'INVALID_ARCHIVE'
     })
   })
+
+  it('客观题严格比较学生答案和解析，空答案计零分', async () => {
+    const correct = objectiveInput('A', 'A')
+    await expect(objectiveGradingEngine.grade(correct)).resolves.toEqual({ score: 2, comment: '' })
+    await expect(objectiveGradingEngine.grade(objectiveInput('a', 'A'))).resolves.toEqual({
+      score: 0,
+      comment: ''
+    })
+    await expect(objectiveGradingEngine.grade(objectiveInput(null, ''))).resolves.toEqual({
+      score: 0,
+      comment: ''
+    })
+  })
+
+  it('人工引擎与客观题引擎使用同一输入契约并允许小数和空评语', async () => {
+    const input = readingInput()
+    const engine = createHumanGradingEngine((received) => {
+      expect(received).toBe(input)
+      return { score: 3.75, comment: '' }
+    })
+
+    await expect(engine.grade(input)).resolves.toEqual({ score: 3.75, comment: '' })
+  })
+
+  it('自动批改客观题、锁定已提交结果并完成后生成报告且禁止删除', async () => {
+    const repository = new FileSubmissionLibraryRepository(new MemoryStore())
+    const source = mixedSubmission()
+    const bytes = await encodeSubmissionPackage(source, {
+      'answer-audio-0': new Uint8Array([82, 73, 70, 70])
+    })
+    await repository.importArchive(bytes)
+
+    const started = await repository.startGrading(source.meta.submissionId)
+    expect(started.grading).toMatchObject({
+      status: 'grading',
+      totalScore: 2,
+      maxScore: 7,
+      items: [{ instanceId: 'schema-use:objective', engine: 'objective' }]
+    })
+
+    const completed = await repository.submitGradingResult(
+      source.meta.submissionId,
+      'schema-use:reading',
+      'human',
+      { score: 4.25, comment: '' }
+    )
+    expect(completed.grading).toMatchObject({
+      status: 'completed',
+      totalScore: 6.25,
+      maxScore: 7
+    })
+
+    await expect(
+      repository.submitGradingResult(source.meta.submissionId, 'schema-use:reading', 'human', {
+        score: 4,
+        comment: '再次提交'
+      })
+    ).rejects.toMatchObject({ code: 'GRADING_COMPLETED' })
+    await expect(repository.deleteSubmission(source.meta.submissionId)).rejects.toMatchObject({
+      code: 'GRADING_COMPLETED'
+    })
+
+    const report = await repository.getReport(source.meta.submissionId)
+    expect(report.markdown).toContain('# Student - Archive exam')
+    expect(report.markdown).toContain('| 6.25/7 |')
+    expect(report.markdown).toContain('- 正确答案：A')
+    expect(report.markdown).toContain('- 学生答案：A')
+    expect(report.markdown).toContain('**分数：4.25/5**')
+    expect(report.markdown).toContain('**评语：无**')
+    expect(report.resources['answer-audio-0'].data).toEqual(new Uint8Array([82, 73, 70, 70]))
+
+    const [entry] = await repository.listEntries()
+    expect(entry.grading).toMatchObject({
+      status: 'completed',
+      gradedCount: 2,
+      totalCount: 2,
+      totalScore: 6.25,
+      maxScore: 7
+    })
+  })
 })
+
+const readingSchema: SchemaDefinition = {
+  ...schema,
+  schemaId: '10000000-0000-4000-8000-000000000002',
+  sourceDraftId: '20000000-0000-4000-8000-000000000002',
+  structureHash: `sha256:${'2'.repeat(64)}`,
+  structure: {
+    questionType: 'fixed-reading',
+    answerFormat: [{ answerId: 'reading', type: 'fixed-speech' }],
+    templateInputs: [{ inputId: 'question-description', type: 'text', required: true }]
+  },
+  data: {
+    name: '朗读题',
+    description: '人工朗读评分',
+    maxScore: 5,
+    answerDescriptions: { reading: '朗读录音' },
+    inputDescriptions: {},
+    rubricMarkdown: '按准确度和流利度评分。'
+  }
+}
+
+function mixedSubmission(): SubmissionPackage {
+  const value = submission('A')
+  value.answers.audios = [{ resourceKey: 'answer-audio-0', durationMs: 3200 }]
+  value.schemaUses.push({
+    instanceId: 'schema-use:reading',
+    schema: readingSchema,
+    inputs: [{ inputId: 'question-description', type: 'text', value: '请朗读下面的句子。' }],
+    answers: [
+      {
+        answerId: 'reading',
+        type: 'fixed-speech',
+        text: 'The weather is beautiful today.',
+        audioAnswerIndex: 0
+      }
+    ]
+  })
+  value.resources['answer-audio-0'] = {
+    filename: 'recording-0.wav',
+    packagePath: 'recordings/answer-audio-0/recording-0.wav',
+    mediaType: 'audio/wav'
+  }
+  return value
+}
+
+function objectiveInput(answer: string | null, analysis: string): GradingInput {
+  return {
+    submission: submission().meta,
+    instanceId: 'schema-use:objective',
+    schema,
+    inputs: [
+      { inputId: 'question-description', type: 'text', value: 'Choose one.' },
+      { inputId: 'analysis', type: 'text', value: analysis }
+    ],
+    answers: [{ answerId: 'answer', description: 'Student answer', type: 'text', value: answer }],
+    resources: {}
+  }
+}
+
+function readingInput(): GradingInput {
+  return {
+    submission: submission().meta,
+    instanceId: 'schema-use:reading',
+    schema: readingSchema,
+    inputs: [{ inputId: 'question-description', type: 'text', value: 'Read it.' }],
+    answers: [
+      {
+        answerId: 'reading',
+        description: '朗读录音',
+        type: 'fixed-speech',
+        text: 'Read it.',
+        audio: {
+          resourceKey: 'audio',
+          filename: 'audio.wav',
+          mediaType: 'audio/wav',
+          kind: 'recording',
+          durationMs: 1000,
+          data: new Uint8Array([1])
+        }
+      }
+    ],
+    resources: {}
+  }
+}
 
 interface MemoryState {
   texts: Map<string, unknown>

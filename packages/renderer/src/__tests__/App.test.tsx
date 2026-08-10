@@ -56,6 +56,7 @@ describe('App', () => {
     expect(routes.get('schema-draft-library')?.layout).toBe('standard')
     expect(routes.get('schema-draft-editor')?.layout).toBe('focus')
     expect(routes.get('schema-definition-editor')?.layout).toBe('focus')
+    expect(routes.get('submission-grading')?.layout).toBe('focus')
     expect(routes.get('interface-drafts')?.navigation).toBeUndefined()
   })
 
