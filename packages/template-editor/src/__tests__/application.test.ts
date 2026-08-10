@@ -1,8 +1,4 @@
-import type {
-  InterfaceInstance,
-  InterfaceVarManifest,
-  SchemaBlockManifest
-} from '@ls101/core-types'
+import type { InterfaceInstance, InterfaceVarManifest } from '@ls101/core-types'
 import { describe, expect, it, vi } from 'vitest'
 import { createTemplateApplication, TemplateApplicationError } from '../application'
 import {
@@ -25,7 +21,7 @@ import type {
   TemplateContent,
   TemplateDocument
 } from '../types'
-import { root } from './fixtures'
+import { root, schemaDefinition, schemaText } from './fixtures'
 
 const FUNCTION_A = '10000000-0000-4000-8000-000000000001'
 const FUNCTION_B = '10000000-0000-4000-8000-000000000002'
@@ -129,19 +125,11 @@ function setup() {
       }
     ]
   }
-  const schemaManifest: SchemaBlockManifest = {
-    formatVersion: 1,
-    schemaId: SCHEMA_ID,
-    name: 'Schema',
-    blocks: [
-      {
-        blockId: 'text',
-        name: 'Text',
-        maxScore: 10,
-        inputs: [{ inputId: 'prompt', name: 'Prompt', type: 'string' }]
-      }
-    ]
-  }
+  const schemaManifest = schemaDefinition(SCHEMA_ID, {
+    questionType: 'freetalk',
+    answerFormat: [],
+    templateInputs: [{ inputId: 'prompt', type: 'text', required: true }]
+  })
   const instance: InterfaceInstance = {
     instanceId: INSTANCE_ID,
     name: 'Instance',
@@ -151,12 +139,12 @@ function setup() {
   const requestedSchemas: string[] = []
   const externalDependencies = {
     getInterfaceManifest: async (id: string) => (id === INTERFACE_ID ? interfaceManifest : null),
-    getSchemaManifest: async (id: string) => {
+    getSchema: async (id: string) => {
       requestedSchemas.push(id)
       return id === SCHEMA_ID ? schemaManifest : null
     },
     locateInterfaceInstance: async (id: string) =>
-      id === INSTANCE_ID ? { interfaceId: INTERFACE_ID, instance } : null
+      id === INSTANCE_ID ? { interfaceId: INTERFACE_ID, instance, assetUrls: {} } : null
   }
   const application = createTemplateApplication({ repository, ...externalDependencies })
   return { store, repository, application, externalDependencies, requestedSchemas }
@@ -626,8 +614,9 @@ describe('TemplateApplication', () => {
       {
         useId: 'function-text',
         schemaId: SCHEMA_ID,
-        blockId: 'text',
-        bindings: { prompt: { type: 'literal', value: 'Inside function' } }
+        inputBindings: { prompt: schemaText('Inside function') },
+        answerBindings: {},
+        attachments: []
       }
     ]
     await saveFunctions(repository, source)
@@ -781,10 +770,19 @@ describe('TemplateApplication', () => {
         {
           useId: 'text',
           schemaId: SCHEMA_ID,
-          blockId: 'text',
-          bindings: {
-            prompt: { type: 'variable', scope: 'interface', alias: 'data', varName: 'prompt' }
-          }
+          inputBindings: {
+            prompt: {
+              type: 'string',
+              parts: [
+                {
+                  type: 'variable',
+                  ref: { scope: 'interface', alias: 'data', varName: 'prompt' }
+                }
+              ]
+            }
+          },
+          answerBindings: {},
+          attachments: []
         }
       ]
     })
@@ -801,16 +799,16 @@ describe('TemplateApplication', () => {
       examPackage: {
         title: 'Compiled exam',
         schema: {
-          blocks: [
+          uses: [
             {
               inputs: [
                 {
                   inputId: 'prompt',
-                  type: 'string',
-                  source: 'static',
+                  type: 'text',
                   value: 'Resolved prompt'
                 }
-              ]
+              ],
+              answers: []
             }
           ]
         }

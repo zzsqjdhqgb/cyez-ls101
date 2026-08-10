@@ -1,4 +1,4 @@
-import type { InterfaceVarManifest, SchemaBlockManifest } from '@ls101/core-types'
+import type { InterfaceVarManifest, SchemaDefinition } from '@ls101/core-types'
 import { describe, expect, it } from 'vitest'
 import type {
   ChoiceQuestionNode,
@@ -9,10 +9,11 @@ import type {
   TemplateContent
 } from '../types'
 import { validateTemplateContent, type TemplateValidationContext } from '../validation'
-import { number, root, text } from './fixtures'
+import { number, root, schemaDefinition, schemaText, text } from './fixtures'
 
 const INTERFACE_ID = `sha256:${'1'.repeat(64)}`
 const SCHEMA_ID = `sha256:${'2'.repeat(64)}`
+const CHOICE_SCHEMA_ID = `sha256:${'4'.repeat(64)}`
 const FUNCTION_ID = `sha256:${'3'.repeat(64)}`
 
 function interfaceManifest(): InterfaceVarManifest {
@@ -31,32 +32,25 @@ function interfaceManifest(): InterfaceVarManifest {
   }
 }
 
-function schemaManifest(): SchemaBlockManifest {
-  return {
-    formatVersion: 1,
-    schemaId: SCHEMA_ID,
-    name: 'Scoring',
-    blocks: [
-      {
-        blockId: 'text',
-        name: 'Text',
-        maxScore: 10,
-        inputs: [{ inputId: 'prompt', name: 'Prompt', type: 'string' }]
-      },
-      {
-        blockId: 'choice',
-        name: 'Choice',
-        maxScore: 10,
-        inputs: [{ inputId: 'answer', name: 'Answer', type: 'string' }]
-      }
-    ]
-  }
+function schemaDefinitions(): SchemaDefinition[] {
+  return [
+    schemaDefinition(SCHEMA_ID, {
+      questionType: 'freetalk',
+      answerFormat: [],
+      templateInputs: [{ inputId: 'prompt', type: 'text', required: true }]
+    }),
+    schemaDefinition(CHOICE_SCHEMA_ID, {
+      questionType: 'objective',
+      answerFormat: [{ answerId: 'answer', type: 'text' }],
+      templateInputs: []
+    })
+  ]
 }
 
 function context(overrides: Partial<TemplateValidationContext> = {}): TemplateValidationContext {
   return {
     interfaceManifests: [interfaceManifest()],
-    schemaManifests: [schemaManifest()],
+    schemaDefinitions: schemaDefinitions(),
     functions: [],
     ...overrides
   }
@@ -66,17 +60,19 @@ function textUse(): SchemaUse {
   return {
     useId: 'text-use',
     schemaId: SCHEMA_ID,
-    blockId: 'text',
-    bindings: { prompt: { type: 'literal', value: 'Prompt' } }
+    inputBindings: { prompt: schemaText('Prompt') },
+    answerBindings: {},
+    attachments: []
   }
 }
 
 function choiceUse(outputName = 'answer-1'): SchemaUse {
   return {
     useId: 'choice-use',
-    schemaId: SCHEMA_ID,
-    blockId: 'choice',
-    bindings: { answer: { type: 'choice-output', name: outputName } }
+    schemaId: CHOICE_SCHEMA_ID,
+    inputBindings: {},
+    answerBindings: { answer: { type: 'text', source: 'choice-output', name: outputName } },
+    attachments: []
   }
 }
 
@@ -182,7 +178,7 @@ describe('Template 校验错误契约', () => {
       content(),
       context({
         interfaceManifests: [interfaceManifest(), interfaceManifest()],
-        schemaManifests: [schemaManifest(), schemaManifest()],
+        schemaDefinitions: [schemaDefinitions()[0], schemaDefinitions()[0]],
         functions: [emptyFunction, emptyFunction]
       })
     )
@@ -194,8 +190,8 @@ describe('Template 校验错误契约', () => {
         params: { id: INTERFACE_ID }
       },
       {
-        path: 'context.schemaManifests[1]',
-        code: 'DUPLICATE_SCHEMA_MANIFEST',
+        path: 'context.schemaDefinitions[1]',
+        code: 'DUPLICATE_SCHEMA_DEFINITION',
         params: { id: SCHEMA_ID }
       },
       {

@@ -1,11 +1,21 @@
 // @ls101/core-types - Template Compiler、ExamPlayer 与评分系统的共享契约
 
-import type { CompiledSchemaPipeline } from './schema'
+import type { CompiledSchemaPackage } from './schema'
 
 export interface ExamPackage {
   title: string
   player: PlayerExamData
-  schema: CompiledSchemaPipeline
+  schema: CompiledSchemaPackage
+  resources: ExamResourceManifest
+}
+
+/** assetKey 到试卷包内资源元数据的映射。 */
+export type ExamResourceManifest = Record<string, ExamResourceEntry>
+
+export interface ExamResourceEntry {
+  filename: string
+  packagePath: string
+  mediaType?: string
 }
 
 export interface PlayerExamData {

@@ -1,7 +1,8 @@
 import type {
   ChoiceOptionLabel,
-  CompiledSchemaBlock,
+  CompiledSchemaAnswer,
   CompiledSchemaInput,
+  CompiledSchemaUse,
   ExamPage,
   PlayerChoiceQuestion,
   ResolvedChoiceViewport,
@@ -20,8 +21,9 @@ import type {
   TemplateNode
 } from '../types'
 import {
+  resolveFileExpression,
   resolveRuntimeOutput,
-  resolveSchemaTextBinding,
+  resolveSchemaTextExpression,
   resolveStaticExpression,
   resolveTextExpression,
   resolveValueExpression
@@ -383,41 +385,59 @@ function resolveSchemaUse(
   scope: CompileScope,
   path: string,
   state: CompilerState
-): CompiledSchemaBlock {
+): CompiledSchemaUse {
   const schema = state.schemasById.get(use.schemaId)
-  const block = schema?.blocks.find((candidate) => candidate.blockId === use.blockId)
-  if (!block) fail('UNRESOLVED_VALUE', path, { schemaId: use.schemaId, blockId: use.blockId })
+  if (!schema) fail('UNRESOLVED_VALUE', path, { schemaId: use.schemaId })
 
-  const inputs = block.inputs.map<CompiledSchemaInput>((input) => {
-    const expression = use.bindings[input.inputId]
-    const fieldPath = `${path}.bindings[${JSON.stringify(input.inputId)}]`
-    switch (input.type) {
-      case 'string':
-        if (expression.type === 'choice-output') {
-          const value = resolveRuntimeOutput(scope, expression.name, 'choice', fieldPath)
-          return {
-            inputId: input.inputId,
-            type: 'string',
-            source: 'choice',
-            choiceIndex: (value as Extract<typeof value, { type: 'choice' }>).choiceIndex
-          }
-        }
+  const instanceId = expandedSchemaUseId(scope.callPath, use.useId)
+  const attachmentValues = resolveSchemaAttachments(use, instanceId, scope, path, state)
+  const inputs = schema.structure.templateInputs.flatMap<CompiledSchemaInput>((input) => {
+    const expression = use.inputBindings[input.inputId]
+    if (!expression) return []
+    const fieldPath = `${path}.inputBindings[${JSON.stringify(input.inputId)}]`
+    return [
+      {
+        inputId: input.inputId,
+        type: 'text',
+        value: resolveSchemaTextExpression(expression, attachmentValues, scope, state, fieldPath)
+      }
+    ]
+  })
+
+  const answers = schema.structure.answerFormat.map<CompiledSchemaAnswer>((answer) => {
+    const binding = use.answerBindings[answer.answerId]
+    const fieldPath = `${path}.answerBindings[${JSON.stringify(answer.answerId)}]`
+    switch (binding.type) {
+      case 'text': {
+        const value = resolveRuntimeOutput(scope, binding.name, 'choice', fieldPath)
         return {
-          inputId: input.inputId,
-          type: 'string',
-          source: 'static',
-          value: resolveSchemaTextBinding(expression, scope, state, fieldPath)
+          answerId: answer.answerId,
+          type: 'text',
+          source: 'choice',
+          choiceIndex: (value as Extract<typeof value, { type: 'choice' }>).choiceIndex
         }
-      case 'audio': {
-        const value = resolveRuntimeOutput(
-          scope,
-          (expression as Extract<typeof expression, { type: 'record-output' }>).name,
-          'audio',
-          fieldPath
-        )
+      }
+      case 'fixed-speech': {
+        const value = resolveRuntimeOutput(scope, binding.audio.name, 'audio', `${fieldPath}.audio`)
         return {
-          inputId: input.inputId,
-          type: 'audio',
+          answerId: answer.answerId,
+          type: 'fixed-speech',
+          text: resolveSchemaTextExpression(
+            binding.text,
+            attachmentValues,
+            scope,
+            state,
+            `${fieldPath}.text`
+          ),
+          source: 'recording',
+          recordIndex: (value as Extract<typeof value, { type: 'audio' }>).recordIndex
+        }
+      }
+      case 'free-speech': {
+        const value = resolveRuntimeOutput(scope, binding.audio.name, 'audio', `${fieldPath}.audio`)
+        return {
+          answerId: answer.answerId,
+          type: 'free-speech',
           source: 'recording',
           recordIndex: (value as Extract<typeof value, { type: 'audio' }>).recordIndex
         }
@@ -426,10 +446,72 @@ function resolveSchemaUse(
   })
 
   return {
-    instanceId: expandedSchemaUseId(scope.callPath, use.useId),
+    instanceId,
     schemaId: use.schemaId,
-    blockId: use.blockId,
-    inputs
+    inputs,
+    answers
+  }
+}
+
+function resolveSchemaAttachments(
+  use: SchemaUse,
+  instanceId: string,
+  scope: CompileScope,
+  path: string,
+  state: CompilerState
+): Map<string, string> {
+  return new Map(
+    use.attachments.map((attachment, index) => {
+      const attachmentPath = `${path}.attachments[${index}]`
+      const file = resolveFileExpression(attachment.file, scope, state, `${attachmentPath}.file`)
+      if (!file.sourceUrl) {
+        fail('RESOURCE_SOURCE_NOT_FOUND', `${attachmentPath}.file`, {
+          filename: file.value
+        })
+      }
+      const assetKey = `schema-${encodeURIComponent(instanceId)}-${encodeURIComponent(attachment.varName)}`
+      const filename = resourceFilename(file.value, attachment.varName)
+      state.resources.set(assetKey, {
+        filename,
+        packagePath: `resources/${assetKey}/${encodeURIComponent(filename)}`,
+        ...(mediaTypeFor(filename) ? { mediaType: mediaTypeFor(filename) } : {})
+      })
+      state.resourceSources.set(assetKey, file.sourceUrl)
+      return [attachment.varName, `resource:${assetKey}`]
+    })
+  )
+}
+
+function resourceFilename(value: string, fallback: string): string {
+  const withoutQuery = value.split(/[?#]/, 1)[0]
+  const filename = withoutQuery.split(/[\\/]/).pop()
+  return filename?.trim() || fallback
+}
+
+function mediaTypeFor(filename: string): string | undefined {
+  const extension = filename.split('.').pop()?.toLowerCase()
+  switch (extension) {
+    case 'png':
+      return 'image/png'
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg'
+    case 'gif':
+      return 'image/gif'
+    case 'webp':
+      return 'image/webp'
+    case 'svg':
+      return 'image/svg+xml'
+    case 'mp3':
+      return 'audio/mpeg'
+    case 'wav':
+      return 'audio/wav'
+    case 'ogg':
+      return 'audio/ogg'
+    case 'pdf':
+      return 'application/pdf'
+    default:
+      return undefined
   }
 }
 

@@ -1,11 +1,12 @@
 import type {
-  CompiledSchemaBlock,
+  CompiledSchemaUse,
   ExamPage,
   ExamPackage,
+  ExamResourceEntry,
   InterfaceInstance,
   InterfaceVarManifest,
   PlayerChoiceQuestion,
-  SchemaBlockManifest
+  SchemaDefinition
 } from '@ls101/core-types'
 import type {
   ExportInterfaceInstanceSelection,
@@ -24,6 +25,8 @@ export type TemplateInterfaceBinding = ExportInterfaceInstanceSelection
 export interface LocatedInterfaceInstance {
   interfaceId: string
   instance: InterfaceInstance
+  /** 文件名到可读源 URL 的映射，仅供编译时收集资源。 */
+  assetUrls: Readonly<Record<string, string>>
 }
 
 export interface TemplateCompileContext extends TemplateDocumentValidationContext {
@@ -42,6 +45,7 @@ export type TemplateCompileErrorCode =
   | 'MISSING_INTERFACE_VALUE'
   | 'STATIC_VALUE_CYCLE'
   | 'UNRESOLVED_VALUE'
+  | 'RESOURCE_SOURCE_NOT_FOUND'
   | 'UNKNOWN_FOCUS_QUESTION'
 
 export type TemplateCompileError =
@@ -54,13 +58,23 @@ export type TemplateCompileError =
     }
 
 export type TemplateCompileResult =
-  | { success: true; examPackage: ExamPackage }
+  | {
+      success: true
+      examPackage: ExamPackage
+      /** 写入试卷归档时使用，不属于持久化 ExamPackage JSON。 */
+      resourceSources: readonly ExamResourceSource[]
+    }
   | { success: false; errors: readonly TemplateCompileError[] }
+
+export interface ExamResourceSource {
+  assetKey: string
+  sourceUrl: string
+}
 
 export type CompiledValue =
   | { type: 'string'; value: string }
   | { type: 'number'; value: number }
-  | { type: 'file'; value: string }
+  | { type: 'file'; value: string; sourceUrl?: string }
   | { type: 'audio'; recordIndex: number }
   | { type: 'choice'; choiceIndex: number }
 
@@ -84,19 +98,20 @@ export interface StructuralResult {
   candidates: ChoiceCandidate[]
 }
 
-export interface BoundInterfaceValue {
-  type: 'string' | 'file'
-  value: string
-}
+export type BoundInterfaceValue =
+  | { type: 'string'; value: string }
+  | { type: 'file'; value: string; sourceUrl?: string }
 
 export interface CompilerState {
   functionsById: Map<string, FunctionDef>
-  schemasById: Map<string, SchemaBlockManifest>
+  schemasById: Map<string, SchemaDefinition>
   interfaceValuesByAlias: Map<string, Map<string, BoundInterfaceValue>>
   staticCells: ValueCell[]
   pages: Array<() => ExamPage>
   questions: Array<() => PlayerChoiceQuestion>
-  schemaUsages: Array<() => CompiledSchemaBlock>
+  schemaUsages: Array<() => CompiledSchemaUse>
+  resources: Map<string, ExamResourceEntry>
+  resourceSources: Map<string, string>
   questionIndicesByAddress: Map<string, number>
   recordingIndices: number[]
   nextRecordIndex: number
@@ -116,12 +131,14 @@ export function createCompilerState(
 ): CompilerState {
   return {
     functionsById: new Map(functions.map((func) => [func.id, func])),
-    schemasById: new Map(context.schemaManifests.map((schema) => [schema.schemaId, schema])),
+    schemasById: new Map(context.schemaDefinitions.map((schema) => [schema.schemaId, schema])),
     interfaceValuesByAlias,
     staticCells: [],
     pages: [],
     questions: [],
     schemaUsages: [],
+    resources: new Map(),
+    resourceSources: new Map(),
     questionIndicesByAddress: new Map(),
     recordingIndices: [],
     nextRecordIndex: 0,

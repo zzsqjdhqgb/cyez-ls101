@@ -8,6 +8,7 @@ import {
   createCompilerState,
   manifestMap,
   type BoundInterfaceValue,
+  type ExamResourceSource,
   type TemplateCompileContext,
   type TemplateCompileError,
   type TemplateCompileResult
@@ -18,6 +19,7 @@ export type {
   TemplateCompileError,
   TemplateCompileErrorCode,
   TemplateCompileResult,
+  ExamResourceSource,
   TemplateInterfaceBinding,
   LocatedInterfaceInstance
 } from './compiler/shared'
@@ -64,12 +66,18 @@ export async function compileTemplate(
           : {})
       },
       schema: {
-        formatVersion: 1,
-        definitions: context.schemaManifests.filter((schema) => usedSchemaIds.has(schema.schemaId)),
-        blocks: schemaBlocks
-      }
+        definitions: context.schemaDefinitions.filter((schema) =>
+          usedSchemaIds.has(schema.schemaId)
+        ),
+        uses: schemaBlocks
+      },
+      resources: Object.fromEntries(state.resources)
     }
-    return { success: true, examPackage }
+    const resourceSources: ExamResourceSource[] = Array.from(
+      state.resourceSources,
+      ([assetKey, sourceUrl]) => ({ assetKey, sourceUrl })
+    )
+    return { success: true, examPackage, resourceSources }
   } catch (error) {
     if (error instanceof CompileFailure) {
       return { success: false, errors: [error.compileError] }
@@ -186,7 +194,10 @@ async function bindInterfaceValues(
       const variable = manifest?.vars.find((item) => item.varName === varName)
       values.set(varName, {
         type: variable?.type === 'image' ? 'file' : 'string',
-        value: located.instance.values[varName]
+        value: located.instance.values[varName],
+        ...(variable?.type === 'image'
+          ? { sourceUrl: located.assetUrls[located.instance.values[varName]] }
+          : {})
       })
     })
     valuesByAlias.set(requirement.alias, values)

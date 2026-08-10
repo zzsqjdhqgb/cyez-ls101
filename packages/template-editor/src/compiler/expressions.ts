@@ -1,5 +1,5 @@
 import type {
-  SchemaBindingExpression,
+  SchemaTextExpression,
   StaticValueExpression,
   StringExpression,
   TextExpression,
@@ -40,16 +40,7 @@ export function resolveStaticExpression(
       ) as number
     }
   }
-  return {
-    type: 'file',
-    value: resolveValueExpression(
-      expression as ValueExpression<'file'>,
-      'file',
-      scope,
-      state,
-      path
-    ) as string
-  }
+  return resolveFileExpression(expression as ValueExpression<'file'>, scope, state, path)
 }
 
 export function resolveStringExpression(
@@ -91,36 +82,48 @@ export function resolveValueExpression(
   return readScalarValue(resolveVariable(expression.ref, scope, state, path), expected, path)
 }
 
-export function resolveSchemaTextBinding(
-  expression: SchemaBindingExpression,
+export function resolveFileExpression(
+  expression: ValueExpression<'file'>,
+  scope: CompileScope,
+  state: CompilerState,
+  path: string
+): Extract<CompiledValue, { type: 'file' }> {
+  if (expression.source === 'literal') {
+    return { type: 'file', value: expression.value, sourceUrl: expression.value }
+  }
+  const source = resolveVariable(expression.ref, scope, state, path)
+  const value = 'get' in source ? source.get() : source
+  if (value.type !== 'file') {
+    fail('UNRESOLVED_VALUE', path, { expected: 'file', actual: value.type })
+  }
+  return value
+}
+
+export function resolveSchemaTextExpression(
+  expression: SchemaTextExpression,
+  attachmentValues: ReadonlyMap<string, string>,
   scope: CompileScope,
   state: CompilerState,
   path: string
 ): string {
-  switch (expression.type) {
-    case 'literal':
-      return String(expression.value)
-    case 'variable':
+  return expression.parts
+    .map((part, index) => {
+      if (part.type === 'literal') return part.value
+      const partPath = `${path}.parts[${index}]`
+      if (part.ref.scope === 'schema-use') {
+        const value = attachmentValues.get(part.ref.varName)
+        if (value === undefined) {
+          fail('UNRESOLVED_VALUE', partPath, { varName: part.ref.varName })
+        }
+        return value
+      }
       return readScalarValue(
-        resolveVariable(expression, scope, state, path),
+        resolveVariable(part.ref, scope, state, partPath),
         'string',
-        path
+        partPath
       ) as string
-    case 'concat':
-      return expression.parts
-        .map((part, index) => {
-          if (part.type === 'literal') return part.value
-          return readScalarValue(
-            resolveVariable(part, scope, state, `${path}.parts[${index}]`),
-            'string',
-            `${path}.parts[${index}]`
-          ) as string
-        })
-        .join('')
-    case 'record-output':
-    case 'choice-output':
-      fail('UNRESOLVED_VALUE', path, { expected: 'text', actual: expression.type })
-  }
+    })
+    .join('')
 }
 
 export function resolveRuntimeOutput(
@@ -155,7 +158,11 @@ function resolveVariable(
   }
   return value.type === 'string'
     ? { type: 'string', value: value.value }
-    : { type: 'file', value: value.value }
+    : {
+        type: 'file',
+        value: value.value,
+        ...(value.sourceUrl ? { sourceUrl: value.sourceUrl } : {})
+      }
 }
 
 function readScalarValue(

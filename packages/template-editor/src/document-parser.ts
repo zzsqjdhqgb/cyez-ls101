@@ -10,7 +10,8 @@ import type {
   FunctionOutputDef,
   JsonValue,
   LocalFunctionLibraryDocument,
-  SchemaBindingExpression,
+  SchemaAnswerBinding,
+  SchemaTextExpression,
   SchemaUse,
   StaticValueExpression,
   TemplateDocument,
@@ -313,34 +314,61 @@ function isSchemaUse(value: unknown): value is SchemaUse {
     isRecord(value) &&
     typeof value.useId === 'string' &&
     typeof value.schemaId === 'string' &&
-    typeof value.blockId === 'string' &&
-    isRecordOf(value.bindings, isSchemaBindingExpression)
+    isRecordOf(value.inputBindings, isSchemaTextExpression) &&
+    isRecordOf(value.answerBindings, isSchemaAnswerBinding) &&
+    Array.isArray(value.attachments) &&
+    value.attachments.every(
+      (attachment) =>
+        isRecord(attachment) &&
+        typeof attachment.varName === 'string' &&
+        typeof attachment.description === 'string' &&
+        isValueExpression(attachment.file, 'file')
+    )
   )
 }
 
-function isSchemaBindingExpression(value: unknown): value is SchemaBindingExpression {
+function isSchemaAnswerBinding(value: unknown): value is SchemaAnswerBinding {
   if (!isRecord(value)) return false
   switch (value.type) {
-    case 'literal':
-      return typeof value.value === 'string' || isFiniteNumber(value.value)
-    case 'variable':
-      return isVariableRef(value)
-    case 'concat':
-      return (
-        Array.isArray(value.parts) &&
-        value.parts.every(
-          (part) =>
-            isRecord(part) &&
-            ((part.type === 'literal' && typeof part.value === 'string') ||
-              (part.type === 'variable' && isVariableRef(part)))
-        )
-      )
-    case 'record-output':
-    case 'choice-output':
-      return typeof value.name === 'string'
+    case 'text':
+      return value.source === 'choice-output' && typeof value.name === 'string'
+    case 'fixed-speech':
+      return isSchemaTextExpression(value.text) && isRecordOutputExpression(value.audio)
+    case 'free-speech':
+      return isRecordOutputExpression(value.audio)
     default:
       return false
   }
+}
+
+function isRecordOutputExpression(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    value.type === 'audio' &&
+    value.source === 'record-output' &&
+    typeof value.name === 'string'
+  )
+}
+
+function isSchemaTextExpression(value: unknown): value is SchemaTextExpression {
+  return (
+    isRecord(value) &&
+    value.type === 'string' &&
+    Array.isArray(value.parts) &&
+    value.parts.every(
+      (part) =>
+        isRecord(part) &&
+        ((part.type === 'literal' && typeof part.value === 'string') ||
+          (part.type === 'variable' && isSchemaTextVariableRef(part.ref)))
+    )
+  )
+}
+
+function isSchemaTextVariableRef(value: unknown): boolean {
+  return (
+    isVariableRef(value) ||
+    (isRecord(value) && value.scope === 'schema-use' && typeof value.varName === 'string')
+  )
 }
 
 function isStaticValueExpression(value: unknown): value is StaticValueExpression {

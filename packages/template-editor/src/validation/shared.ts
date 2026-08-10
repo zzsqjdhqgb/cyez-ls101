@@ -1,9 +1,9 @@
-import type { InterfaceVarManifest, SchemaBlockManifest } from '@ls101/core-types'
+import type { InterfaceVarManifest, SchemaDefinition } from '@ls101/core-types'
 import type { FunctionDef, TemplateContent, TemplateValueType } from '../types'
 
 export interface TemplateValidationContext {
   interfaceManifests: readonly InterfaceVarManifest[]
-  schemaManifests: readonly SchemaBlockManifest[]
+  schemaDefinitions: readonly SchemaDefinition[]
   functions: readonly FunctionDef[]
 }
 
@@ -13,7 +13,7 @@ export type TemplateDocumentValidationContext = Omit<TemplateValidationContext, 
 export type TemplateValidationErrorCode =
   | 'EMPTY_TEMPLATE_NAME'
   | 'DUPLICATE_INTERFACE_MANIFEST'
-  | 'DUPLICATE_SCHEMA_MANIFEST'
+  | 'DUPLICATE_SCHEMA_DEFINITION'
   | 'DUPLICATE_FUNCTION_DEF'
   | 'INVALID_FUNCTION_RESOURCE_ID'
   | 'FUNCTION_RESOURCE_ID_MISMATCH'
@@ -47,10 +47,14 @@ export type TemplateValidationErrorCode =
   | 'INVALID_SCHEMA_USE_ID'
   | 'DUPLICATE_SCHEMA_USE_ID'
   | 'UNKNOWN_SCHEMA'
-  | 'UNKNOWN_SCHEMA_BLOCK'
-  | 'MISSING_SCHEMA_BINDING'
-  | 'UNKNOWN_SCHEMA_BINDING'
-  | 'SCHEMA_BINDING_TYPE_MISMATCH'
+  | 'MISSING_SCHEMA_INPUT_BINDING'
+  | 'UNKNOWN_SCHEMA_INPUT_BINDING'
+  | 'MISSING_SCHEMA_ANSWER_BINDING'
+  | 'UNKNOWN_SCHEMA_ANSWER_BINDING'
+  | 'SCHEMA_ANSWER_TYPE_MISMATCH'
+  | 'INVALID_SCHEMA_ATTACHMENT_NAME'
+  | 'DUPLICATE_SCHEMA_ATTACHMENT_NAME'
+  | 'UNKNOWN_SCHEMA_ATTACHMENT'
   | 'NO_SCHEMA_USE'
   | 'EMPTY_CHOICE_COLLECTOR'
   | 'EMPTY_CHOICE_COLLECTOR_PAGES'
@@ -79,7 +83,7 @@ export interface TemplateValidationResult {
 export interface ValidationState {
   errors: TemplateValidationError[]
   interfacesById: Map<string, InterfaceVarManifest>
-  schemasById: Map<string, SchemaBlockManifest>
+  schemasById: Map<string, SchemaDefinition>
   functionsById: Map<string, FunctionDef>
   requirementsByAlias: Map<string, RequirementState>
   schemaUseCount: number
@@ -122,11 +126,11 @@ export function createValidationState(context: TemplateValidationContext): Valid
     state
   )
   indexUnique(
-    context.schemaManifests,
+    context.schemaDefinitions,
     (manifest) => manifest.schemaId,
     state.schemasById,
-    'context.schemaManifests',
-    'DUPLICATE_SCHEMA_MANIFEST',
+    'context.schemaDefinitions',
+    'DUPLICATE_SCHEMA_DEFINITION',
     state
   )
   indexUnique(
@@ -146,7 +150,7 @@ function indexUnique<T>(
   getId: (value: T) => string,
   target: Map<string, T>,
   path: string,
-  code: 'DUPLICATE_INTERFACE_MANIFEST' | 'DUPLICATE_SCHEMA_MANIFEST' | 'DUPLICATE_FUNCTION_DEF',
+  code: 'DUPLICATE_INTERFACE_MANIFEST' | 'DUPLICATE_SCHEMA_DEFINITION' | 'DUPLICATE_FUNCTION_DEF',
   state: ValidationState
 ): void {
   values.forEach((value, index) => {

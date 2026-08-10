@@ -23,7 +23,13 @@ export function createTemplateInterfaceDependencies(
     },
     async locateInterfaceInstance(instanceId) {
       const located = await application.instances.locate(instanceId)
-      return located ? { interfaceId: located.interfaceId, instance: located.instance } : null
+      return located
+        ? {
+            interfaceId: located.interfaceId,
+            instance: located.instance,
+            assetUrls: located.assetUrls
+          }
+        : null
     }
   }
 }

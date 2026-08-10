@@ -1,6 +1,6 @@
 # Schema 领域模块
 
-`@ls101/schema-editor` 实现 UI 无关的 Schema 结构、草稿库、正式 Schema、校验和持久化规则。Template 的新 SchemaUse、附件变量和资源打包尚未接入。
+`@ls101/schema-editor` 实现 UI 无关的 Schema 结构、草稿库、正式 Schema、校验和持久化规则。Template 已接入新的 SchemaUse、附件变量、正式 Schema 快照和 ExamPackage 资源清单。
 
 ## 结构契约
 
@@ -50,6 +50,8 @@ interface GradingResult {
 
 `validateGradingResult()` 保证分数是 `0..maxScore` 之间的有限数字，并校验评语类型。
 
-## 过渡边界
+## Template 编译边界
 
-旧 Template 编译器仍暂时使用 `CompiledSchemaPipeline` 适配类型。该适配类型在 `core-types` 中标记为 deprecated，不再从 `@ls101/schema-editor` 导出。Template 的新绑定和资源模型实现完成后删除。
+Template 文档只保存稳定 `schemaId`，不保存 revision。校验和编译时通过仓储读取最新正式 Schema；ExamPackage 保存当次完整 Schema 快照、每次 SchemaUse 的静态输入和答案索引。旧 `blocks`、`blockId`、`CompiledSchemaPipeline` 及运行期实例适配类型已经删除。
+
+SchemaUse 附件不进入 Schema 结构。Template 编译器把 `[@this.varName]` 解析为 `resource:<assetKey>`，并写入 ExamPackage 资源清单；Schema 和后续评分系统只消费解析后的文本及统一资源 resolver。

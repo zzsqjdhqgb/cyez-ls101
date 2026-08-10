@@ -83,25 +83,34 @@ describe('Template 核心类型', () => {
     expect(func.outputs[0].type).toBe('choice')
   })
 
-  it('SchemaUse 强关联 schemaId 并区分静态和运行期绑定', () => {
+  it('SchemaUse 通过稳定 ID 分离静态输入、运行期答案和附件', () => {
     const use: SchemaUse = {
       useId: 'choice-score-1',
       schemaId: `sha256:${'2'.repeat(64)}`,
-      blockId: 'single-choice',
-      bindings: {
+      inputBindings: {
         description: {
-          type: 'concat',
+          type: 'string',
           parts: [
             { type: 'literal', value: 'Question: ' },
-            { type: 'variable', scope: 'local', name: 'question-description' }
+            { type: 'variable', ref: { scope: 'local', name: 'question-description' } },
+            { type: 'variable', ref: { scope: 'schema-use', varName: 'image' } }
           ]
-        },
-        answer: { type: 'choice-output', name: 'answer-1' }
-      }
+        }
+      },
+      answerBindings: {
+        answer: { type: 'text', source: 'choice-output', name: 'answer-1' }
+      },
+      attachments: [
+        {
+          varName: 'image',
+          description: 'Question image',
+          file: { type: 'file', source: 'literal', value: 'question.png' }
+        }
+      ]
     }
 
     expect(use.schemaId).toMatch(/^sha256:/)
-    expect(use.bindings.answer.type).toBe('choice-output')
+    expect(use.answerBindings.answer.type).toBe('text')
   })
 
   it('在编译期拒绝非法的表达式组合', () => {

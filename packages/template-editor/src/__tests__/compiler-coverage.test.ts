@@ -1,4 +1,4 @@
-import type { SchemaBlockManifest } from '@ls101/core-types'
+import type { SchemaDefinition } from '@ls101/core-types'
 import { describe, expect, it } from 'vitest'
 import { compileTemplate, type TemplateCompileContext } from '../compiler'
 import { createFunctionResource } from '../id'
@@ -11,40 +11,34 @@ import type {
   TemplateContent,
   TemplateDocument
 } from '../types'
-import { number, root, text } from './fixtures'
+import { number, root, schemaDefinition, schemaText, text } from './fixtures'
 
 const SCHEMA_ID = `sha256:${'2'.repeat(64)}`
+const AUDIO_SCHEMA_ID = `sha256:${'3'.repeat(64)}`
+const CHOICE_SCHEMA_ID = `sha256:${'4'.repeat(64)}`
 
-const schemaManifest: SchemaBlockManifest = {
-  formatVersion: 1,
-  schemaId: SCHEMA_ID,
-  name: 'Scoring',
-  blocks: [
-    {
-      blockId: 'text',
-      name: 'Text',
-      maxScore: 10,
-      inputs: [{ inputId: 'prompt', name: 'Prompt', type: 'string' }]
-    },
-    {
-      blockId: 'audio',
-      name: 'Audio',
-      maxScore: 10,
-      inputs: [{ inputId: 'recording', name: 'Recording', type: 'audio' }]
-    },
-    {
-      blockId: 'choice',
-      name: 'Choice',
-      maxScore: 10,
-      inputs: [{ inputId: 'answer', name: 'Answer', type: 'string' }]
-    }
-  ]
-}
+const schemaDefinitions: SchemaDefinition[] = [
+  schemaDefinition(SCHEMA_ID, {
+    questionType: 'freetalk',
+    answerFormat: [],
+    templateInputs: [{ inputId: 'prompt', type: 'text', required: true }]
+  }),
+  schemaDefinition(AUDIO_SCHEMA_ID, {
+    questionType: 'freetalk',
+    answerFormat: [{ answerId: 'recording', type: 'free-speech' }],
+    templateInputs: []
+  }),
+  schemaDefinition(CHOICE_SCHEMA_ID, {
+    questionType: 'objective',
+    answerFormat: [{ answerId: 'answer', type: 'text' }],
+    templateInputs: []
+  })
+]
 
 function context(): TemplateCompileContext {
   return {
     interfaceManifests: [],
-    schemaManifests: [schemaManifest],
+    schemaDefinitions,
     interfaceBindings: [],
     locateInterfaceInstance: () => null
   }
@@ -78,26 +72,34 @@ function textUse(useId: string): SchemaUse {
   return {
     useId,
     schemaId: SCHEMA_ID,
-    blockId: 'text',
-    bindings: { prompt: { type: 'literal', value: 'Prompt' } }
+    inputBindings: { prompt: schemaText('Prompt') },
+    answerBindings: {},
+    attachments: []
   }
 }
 
 function audioUse(useId: string, outputName: string): SchemaUse {
   return {
     useId,
-    schemaId: SCHEMA_ID,
-    blockId: 'audio',
-    bindings: { recording: { type: 'record-output', name: outputName } }
+    schemaId: AUDIO_SCHEMA_ID,
+    inputBindings: {},
+    answerBindings: {
+      recording: {
+        type: 'free-speech',
+        audio: { type: 'audio', source: 'record-output', name: outputName }
+      }
+    },
+    attachments: []
   }
 }
 
 function choiceUse(useId: string, outputName: string): SchemaUse {
   return {
     useId,
-    schemaId: SCHEMA_ID,
-    blockId: 'choice',
-    bindings: { answer: { type: 'choice-output', name: outputName } }
+    schemaId: CHOICE_SCHEMA_ID,
+    inputBindings: {},
+    answerBindings: { answer: { type: 'text', source: 'choice-output', name: outputName } },
+    attachments: []
   }
 }
 
@@ -450,10 +452,10 @@ describe('Template 编译组合覆盖', () => {
         page.timeline[0].type === 'record' ? page.timeline[0].recordIndex : -1
       )
     ).toEqual([0, 1, 2])
-    expect(result.examPackage.schema.blocks.flatMap((block) => block.inputs)).toEqual([
-      { inputId: 'recording', type: 'audio', source: 'recording', recordIndex: 0 },
-      { inputId: 'recording', type: 'audio', source: 'recording', recordIndex: 1 },
-      { inputId: 'recording', type: 'audio', source: 'recording', recordIndex: 2 }
+    expect(result.examPackage.schema.uses.flatMap((use) => use.answers)).toEqual([
+      { answerId: 'recording', type: 'free-speech', source: 'recording', recordIndex: 0 },
+      { answerId: 'recording', type: 'free-speech', source: 'recording', recordIndex: 1 },
+      { answerId: 'recording', type: 'free-speech', source: 'recording', recordIndex: 2 }
     ])
   })
 
@@ -507,7 +509,7 @@ describe('Template 编译组合覆盖', () => {
       'block:page%2F%25/block%2F%25',
       'block:page%2F%25/view%2F%25'
     ])
-    expect(result.examPackage.schema.blocks[0].instanceId).toBe('schema-use:use%2F%25')
+    expect(result.examPackage.schema.uses[0].instanceId).toBe('schema-use:use%2F%25')
     expect(
       result.examPackage.player.choiceMeta?.questions[0].options.map((option) => option.label)
     ).toEqual('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''))

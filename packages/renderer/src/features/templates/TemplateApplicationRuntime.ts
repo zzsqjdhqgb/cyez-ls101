@@ -1,4 +1,5 @@
-import type { SchemaBlockManifest } from '@ls101/core-types'
+import type { SchemaDefinition } from '@ls101/core-types'
+import { FileSchemaRepository } from '@ls101/schema-editor'
 import { createTemplateApplication } from '@ls101/template-editor'
 import { FileTemplateRepository } from '@ls101/template-editor/adapters'
 import { builtinFileStore, fileStore } from '@ls101/file-store/renderer'
@@ -7,9 +8,10 @@ import { createTemplateInterfaceDependencies } from './TemplateInterfaceAdapter'
 
 const templateRepository = new FileTemplateRepository(fileStore.scope('template-editor'))
 const builtinTemplateStore = builtinFileStore.scope('template-editor')
+const schemaRepository = new FileSchemaRepository(fileStore.scope('schema-editor'))
 
-async function getSchemaManifest(): Promise<SchemaBlockManifest | null> {
-  return null
+async function getSchema(schemaId: string): Promise<SchemaDefinition | null> {
+  return schemaRepository.getSchema(schemaId)
 }
 
 export const templateApplication = createTemplateApplication({
@@ -17,5 +19,5 @@ export const templateApplication = createTemplateApplication({
   getBuiltinFunctionLibraryManifest: () =>
     builtinTemplateStore.readText('builtin-function-libraries.json'),
   ...createTemplateInterfaceDependencies(interfaceApplication),
-  getSchemaManifest
+  getSchema
 })

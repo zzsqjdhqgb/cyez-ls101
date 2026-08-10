@@ -13,10 +13,29 @@ import type {
 import { TemplateVariableInput } from '../features/templates/TemplateVariableInput'
 import {
   collectTemplateVariableCandidates,
+  parseSchemaTextExpression,
+  parseTextExpression,
+  schemaTextExpressionInputValue,
   type TemplateVariableCandidate
 } from '../features/templates/TemplateVariableInputModel'
 
 afterEach(cleanup)
+
+describe('SchemaUse 变量文本格式', () => {
+  it('只在 SchemaUse 文本中将 [@this.name] 解析为局部附件', () => {
+    const schemaExpression = parseSchemaTextExpression('![图]([@this.picture])')
+    expect(schemaExpression.parts[1]).toEqual({
+      type: 'variable',
+      ref: { scope: 'schema-use', varName: 'picture' }
+    })
+    expect(schemaTextExpressionInputValue(schemaExpression)).toBe('![图]([@this.picture])')
+
+    expect(parseTextExpression('[@this.picture]').parts[0]).toEqual({
+      type: 'variable',
+      ref: { scope: 'interface', alias: 'this', varName: 'picture' }
+    })
+  })
+})
 
 const candidates: TemplateVariableCandidate[] = [
   {

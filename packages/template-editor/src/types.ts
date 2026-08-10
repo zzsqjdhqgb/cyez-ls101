@@ -372,50 +372,62 @@ export type OutputExpression =
 // Schema 消费
 // ============================================================
 
-/** 一次评分块消费；schemaId 和 blockId 共同锁定其字段契约。 */
+/** 仅在当前 SchemaUse 文本绑定内可见的附件变量。 */
+export interface SchemaAttachmentVariableRef {
+  scope: 'schema-use'
+  varName: string
+}
+
+export type SchemaTextVariableRef = VariableRef | SchemaAttachmentVariableRef
+
+export type SchemaTextExpressionPart = TextLiteralPart | SchemaTextVariablePart
+
+export interface SchemaTextVariablePart {
+  type: 'variable'
+  ref: SchemaTextVariableRef
+}
+
+/** 支持 [@this.varName] 附件引用的 SchemaUse 文本表达式。 */
+export interface SchemaTextExpression {
+  type: 'string'
+  parts: SchemaTextExpressionPart[]
+}
+
+/** 一次 Schema 消费，对应试卷中的一个实际评分单元。 */
 export interface SchemaUse {
   useId: string
   schemaId: string
-  blockId: string
-  bindings: Record<string, SchemaBindingExpression>
+  inputBindings: Record<string, SchemaTextExpression>
+  answerBindings: Record<string, SchemaAnswerBinding>
+  attachments: SchemaUseAttachment[]
 }
 
-export type SchemaBindingExpression =
-  | SchemaLiteralExpression
-  | SchemaVariableExpression
-  | SchemaConcatExpression
-  | SchemaRecordOutputExpression
-  | SchemaChoiceOutputExpression
-
-export interface SchemaLiteralExpression {
-  type: 'literal'
-  value: string | number
+export interface SchemaUseAttachment {
+  varName: string
+  description: string
+  file: ValueExpression<'file'>
 }
 
-export type SchemaVariableExpression = VariableRef & {
-  type: 'variable'
-}
+export type SchemaAnswerBinding =
+  | SchemaTextAnswerBinding
+  | SchemaFixedSpeechAnswerBinding
+  | SchemaFreeSpeechAnswerBinding
 
-export interface SchemaConcatExpression {
-  type: 'concat'
-  parts: SchemaConcatPart[]
-}
-
-export type SchemaConcatPart = SchemaConcatLiteralPart | SchemaVariableExpression
-
-export interface SchemaConcatLiteralPart {
-  type: 'literal'
-  value: string
-}
-
-export interface SchemaRecordOutputExpression {
-  type: 'record-output'
+export interface SchemaTextAnswerBinding {
+  type: 'text'
+  source: 'choice-output'
   name: string
 }
 
-export interface SchemaChoiceOutputExpression {
-  type: 'choice-output'
-  name: string
+export interface SchemaFixedSpeechAnswerBinding {
+  type: 'fixed-speech'
+  text: SchemaTextExpression
+  audio: RecordOutputExpression
+}
+
+export interface SchemaFreeSpeechAnswerBinding {
+  type: 'free-speech'
+  audio: RecordOutputExpression
 }
 
 // ============================================================

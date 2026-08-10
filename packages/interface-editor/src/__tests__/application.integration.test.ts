@@ -110,7 +110,8 @@ describe('interface editor application integration', () => {
     expect(saved.assetUrls[filename]).toContain(filename)
     await expect(app.instances.locate(instance.instance.instanceId)).resolves.toEqual({
       interfaceId,
-      instance: saved.instance
+      instance: saved.instance,
+      assetUrls: saved.assetUrls
     })
     await expect(app.instances.locate('10000000-0000-4000-8000-000000000001')).resolves.toBeNull()
     await expect(

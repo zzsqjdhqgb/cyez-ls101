@@ -12,11 +12,12 @@
 - 页面内容块、线性时间线和选择题视图控制。
 - `string | number | file` 静态参数表达式，以及 `audio | choice` 运行期输出。
 - 函数输入、手动出参、局部输出引用，以及调用点出参名称重定向。
-- 带 `schemaId + blockId` 强关联的评分块绑定；Schema 接入口只有 `string` 和 `audio` 两类。
+- 只保存稳定 `schemaId` 的 `SchemaUse`，按稳定 ID 分别绑定静态文本输入和 `text | fixed-speech | free-speech` 答案槽位。
+- 每次 `SchemaUse` 可动态声明 `file` 附件，并通过仅在当前评分单元有效的 `[@this.varName]` 引用编译后的逻辑资源 URI。
 - 多 Interface 依赖、命名空间和导出时实例选择 DTO。
 - `TemplateContent`、稳定 UUID 的 `TemplateDocument`、内嵌函数资源和 JSON 编辑器状态。
 
-Schema Editor 向 Template Editor 提供的 `SchemaBlockManifest` 位于 `@ls101/core-types`，其中只包含评分块和字段契约，不暴露评分实现。
+Schema Editor 向 Template Editor 提供完整的正式 `SchemaDefinition`。Template 文档只保存 `schemaId`，校验和编译时读取最新 revision，并把当时的完整定义快照写入 ExamPackage。
 
 ## 工作文档、函数库与资源身份
 
@@ -69,7 +70,7 @@ Template 和本地函数库工作文档都带 revision。首次保存使用 0，
 
 `editTemplateDocument(document, operation)` 和 `editFunctionDocument(document, operation)` 是不访问仓储的纯编辑入口。成功结果包含新文档、原文档、原操作和结构化 change 列表，可直接作为撤销/重做历史的基础；失败结果保留原文档，并提供稳定错误码、路径和参数。编辑不修改输入对象，也不递增 revision，调用方保存后必须继续用仓储返回的新 revision 文档替换本地状态。
 
-当前操作覆盖节点插入、删除、移动和复制，页面内容块与时间线，选择题选项，Collector 分页，函数调用输入/出参绑定，函数输入与手动出参，Interface requirement、Schema use、Schema 字段绑定和编辑器私有状态。节点使用定义作用域内唯一 ID 定位；列表索引在操作时检查边界。
+当前操作覆盖节点插入、删除、移动和复制，页面内容块与时间线，选择题选项，Collector 分页，函数调用输入/出参绑定，函数输入与手动出参，Interface requirement、Schema use、Schema 输入/答案绑定、SchemaUse 附件和编辑器私有状态。节点使用定义作用域内唯一 ID 定位；列表索引在操作时检查边界。
 
 编辑引擎实现位于 `src/mutations/`：公开入口保持在 `index.ts`，Template 文档与库内函数投影编辑、节点定义 reducer、页面关联清理、表达式重写、标识生成和函数资源可达性分别按状态所有权与不变量组织。该目录拆分不改变 `@ls101/template-editor` 的公开导出。
 
@@ -91,7 +92,7 @@ ChoiceView 的 free/range 页码同样使用基于 Collector 最终页数的下�
 
 工作文档允许暂时不完整。删除函数输入、录音或选择题后，无法无歧义决定替代值的普通表达式不会被猜测式删除或改写，而由严格语义校验返回可定位错误。函数输入重命名和 Interface alias 重命名属于含义明确的操作，会重写当前可编辑正文中的对应变量引用。内嵌函数资源不随 alias 重命名而重写：函数禁止直接引用 Template Interface alias，只能通过调用输入接收 Interface 值，因此函数资源不捕获调用方命名空间。
 
-`templates.validate()` 和 `templates.compile()` 会根据当前 Template 收集 Interface 与 Schema 身份，通过调用方提供的跨模块查询函数取得清单。编译时再把 Interface 实例选择及实例定位器交给底层异步编译器。renderer 通过 Interface 应用门面的 `published.getVarManifest()` 和 `instances.locate()` 适配这两项能力，不依赖 Interface 仓储。Schema Editor 尚未实现实际查询 API，当前通过窄依赖接口接入。
+`templates.validate()` 和 `templates.compile()` 会根据当前 Template 收集 Interface 与 Schema 身份，通过调用方提供的跨模块查询函数取得清单。编译时再把 Interface 实例选择及实例定位器交给底层异步编译器。renderer 通过 Interface 应用门面的 `published.getVarManifest()` 和 `instances.locate()` 取得变量、实例和附件源 URL，通过 `FileSchemaRepository.getSchema()` 读取最新正式 Schema。
 
 ## 严格语义校验
 
@@ -105,12 +106,13 @@ ChoiceView 的 free/range 页码同样使用基于 Collector 最终页数的下�
 - 节点、内容块、选项、局部变量和 Schema use 的唯一性。
 - 页面、时间线、文本插值、函数输入与出参的变量解析和类型匹配。
 - 函数定义不能直接引用 Template Interface alias，Interface 值必须从调用点经函数输入传入。
-- Schema、评分块、完整接入口绑定及 string/audio 类型匹配；choice 输出作为 string 接入口的运行期来源。
+- 正式 Schema、必填/未知文本输入、完整答案绑定及三类答案的类型匹配。
+- SchemaUse 附件名称、外层 `file` 表达式、当前评分单元内 `[@this.varName]` 引用和作用域隔离。
 - 函数缺失、输入/出参映射完整性和递归调用。
 - 内嵌函数资源 ID 格式、正文摘要和嵌套依赖闭包。
 - ChoiceCollector 嵌套、全卷唯一候选、分页字面量、题数总和和未收集题目。
 - 选择题视图是否具有唯一 ChoiceMeta，以及 free/range 页码范围。
-- 展开后的 Template 是否至少消费一个 Schema 评分块。
+- 展开后的 Template 是否至少消费一个 Schema。
 
 ## 试卷包编译
 
@@ -122,22 +124,22 @@ ChoiceView 的 free/range 页码同样使用基于 Collector 最终页数的下�
 
 - 校验每个 Interface 别名恰好有一个实例选择；通过调用方提供的仓储定位器按 `instanceId` 获取唯一定位结果，并验证真实仓储归属匹配 `interfaceId`，且所有 acceptedVars 都有实例值。
 - 按函数调用路径展开页面、内容块、录音、选择题、函数出参和函数内部 Schema 消费。
-- 为展开后的页面和内容块生成稳定 ID，为每次函数内部 Schema 消费生成调用路径限定的 `useId`。
+- 为展开后的页面和内容块生成稳定 ID，为每次函数内部 Schema 消费生成调用路径限定的实例 ID。
 - 收集唯一 ChoiceCollector 候选，生成全局只读 ChoiceMeta，并把结构化 focus 地址解析为 `choiceIndex`。
 - 把文本插值、静态参数和 Interface 图片值求值为 Player 可直接消费的数据。
-- 把 Schema 的 string 接入口编译为静态值或 choice 运行期索引，把 audio 接入口编译为录音运行期索引。
+- 把 Schema 静态文本输入解析为字符串，把 `text` 答案编译为 choice 索引，把 `fixed-speech` 编译为固定原文与录音索引，把 `free-speech` 编译为录音索引。
+- 求值 SchemaUse 的附件 `file` 表达式，生成 `resource:<assetKey>`，写入 `ExamPackage.resources` 清单，并在编译结果旁返回仅供归档写入阶段使用的源 URL。
 
-跨模块 `ExamPackage` 契约位于 `@ls101/core-types`。`player` 只包含页面、时间线、录音索引和可选的 ChoiceMeta；`schema` 同时保存精确的 Schema 定义快照和每个评分块接入口到静态值或运行期索引的映射。
+跨模块 `ExamPackage` 契约位于 `@ls101/core-types`。`player` 只包含页面、时间线、录音索引和可选的 ChoiceMeta；`schema` 保存精确的正式 Schema 定义快照及每次使用的输入/答案映射；`resources` 保存逻辑资源键到包内路径和媒体元数据的映射。作者机器上的源 URL 不进入持久化 ExamPackage。
 
 ## 未实现边界
 
 工作文档允许保存不完整状态；编译入口会自行执行严格校验。以下能力尚未实现：
 
 - Page 画布的多选、吸附辅助线、键盘微调和画布内直接文本编辑。
-- Schema use 的节点专用编辑界面。
-- Schema Editor 的评分块清单适配器。
+- Schema use 的 renderer 专用配置界面，包括附件列表和 Markdown 附件变量插入。
 - 编译错误文案、节点定位交互和预览流程。
-- `ExamPackage` 的文件封装、资源复制和持久化格式。
+- `ExamPackage` 的最终归档格式和把编译结果中的资源源文件复制进归档的写入器。
 
 ## 验证覆盖
 

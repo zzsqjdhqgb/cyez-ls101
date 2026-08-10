@@ -127,8 +127,11 @@ describe('Template 工作文档与函数资源身份', () => {
         {
           useId: 'use',
           schemaId: `sha256:${'2'.repeat(64)}`,
-          blockId: 'text',
-          bindings: { prompt: { type: 'literal', value: 'Prompt' } }
+          inputBindings: {
+            prompt: { type: 'string', parts: [{ type: 'literal', value: 'Prompt' }] }
+          },
+          answerBindings: {},
+          attachments: []
         }
       ]
     })

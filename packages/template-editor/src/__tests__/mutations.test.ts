@@ -14,7 +14,7 @@ import type {
   TemplateDocument,
   TemplateNode
 } from '../types'
-import { number, root, text } from './fixtures'
+import { number, root, schemaDefinition, schemaText, text } from './fixtures'
 
 function template(children: TemplateNode[] = []): TemplateDocument {
   const content: TemplateContent = {
@@ -465,12 +465,20 @@ describe('Template 文档编辑', () => {
       {
         useId: 'use',
         schemaId: 'schema',
-        blockId: 'block',
-        bindings: {
-          text: { type: 'variable', scope: 'local', name: 'call-result' },
-          answer: { type: 'choice-output', name: 'answer' },
-          audio: { type: 'record-output', name: 'recording' }
-        }
+        inputBindings: {
+          text: {
+            type: 'string',
+            parts: [{ type: 'variable', ref: { scope: 'local', name: 'call-result' } }]
+          }
+        },
+        answerBindings: {
+          answer: { type: 'text', source: 'choice-output', name: 'answer' },
+          audio: {
+            type: 'free-speech',
+            audio: { type: 'audio', source: 'record-output', name: 'recording' }
+          }
+        },
+        attachments: []
       }
     ]
 
@@ -541,15 +549,19 @@ describe('Template 文档编辑', () => {
         {
           useId: 'use',
           schemaId: 'schema',
-          blockId: 'block',
-          bindings: {
+          inputBindings: {
             prompt: {
-              type: 'variable',
-              scope: 'interface',
-              alias: 'old',
-              varName: 'prompt'
+              type: 'string',
+              parts: [
+                {
+                  type: 'variable',
+                  ref: { scope: 'interface', alias: 'old', varName: 'prompt' }
+                }
+              ]
             }
-          }
+          },
+          answerBindings: {},
+          attachments: []
         }
       ]
     })
@@ -618,8 +630,9 @@ describe('Template 文档编辑', () => {
           {
             useId: 'text',
             schemaId,
-            blockId: 'text',
-            bindings: { prompt: { type: 'literal', value: 'Prompt' } }
+            inputBindings: { prompt: schemaText('Prompt') },
+            answerBindings: {},
+            attachments: []
           }
         ]
       },
@@ -651,20 +664,12 @@ describe('Template 文档编辑', () => {
             ]
           }
         ],
-        schemaManifests: [
-          {
-            formatVersion: 1,
-            schemaId,
-            name: 'Schema',
-            blocks: [
-              {
-                blockId: 'text',
-                name: 'Text',
-                maxScore: 10,
-                inputs: [{ inputId: 'prompt', name: 'Prompt', type: 'string' }]
-              }
-            ]
-          }
+        schemaDefinitions: [
+          schemaDefinition(schemaId, {
+            questionType: 'freetalk',
+            answerFormat: [],
+            templateInputs: [{ inputId: 'prompt', type: 'text', required: true }]
+          })
         ]
       })
     ).toMatchObject({
@@ -795,15 +800,16 @@ describe('Template 文档编辑', () => {
       use: {
         useId: 'use',
         schemaId: 'schema',
-        blockId: 'block',
-        bindings: {}
+        inputBindings: {},
+        answerBindings: {},
+        attachments: []
       }
     })
     document = applyTemplateEdit(document, {
-      type: 'set-schema-binding',
+      type: 'set-schema-input-binding',
       useId: 'use',
-      fieldName: 'prompt',
-      expression: { type: 'literal', value: 'Hello' }
+      inputId: 'prompt',
+      expression: schemaText('Hello')
     })
     document = applyTemplateEdit(document, {
       type: 'set-editor-state',
@@ -814,8 +820,8 @@ describe('Template 文档编辑', () => {
     expect(document.content.interfaces).toEqual([
       { alias: 'data', interfaceId: 'interface', acceptedVars: ['prompt'] }
     ])
-    expect(document.content.schemaUses[0].bindings).toEqual({
-      prompt: { type: 'literal', value: 'Hello' }
+    expect(document.content.schemaUses[0].inputBindings).toEqual({
+      prompt: schemaText('Hello')
     })
     expect(document.editorState).toEqual({ selection: { nodeId: 'root' } })
 
@@ -835,6 +841,54 @@ describe('Template 文档编辑', () => {
     expect(document.content.interfaces).toEqual([])
     expect(document.content.schemaUses).toEqual([])
     expect(document.editorState).toEqual({})
+  })
+
+  it('增删 SchemaUse 附件并在重命名时同步 [@this.*] 引用', () => {
+    let document = template()
+    document = applyTemplateEdit(document, {
+      type: 'insert-schema-use',
+      use: {
+        useId: 'use',
+        schemaId: 'schema',
+        inputBindings: {
+          prompt: {
+            type: 'string',
+            parts: [{ type: 'variable', ref: { scope: 'schema-use', varName: 'image' } }]
+          }
+        },
+        answerBindings: {},
+        attachments: []
+      }
+    })
+    document = applyTemplateEdit(document, {
+      type: 'insert-schema-attachment',
+      useId: 'use',
+      attachment: {
+        varName: 'image',
+        description: 'Image',
+        file: { type: 'file', source: 'literal', value: 'image.png' }
+      }
+    })
+    document = applyTemplateEdit(document, {
+      type: 'update-schema-attachment',
+      useId: 'use',
+      varName: 'image',
+      attachment: {
+        varName: 'picture',
+        description: 'Picture',
+        file: { type: 'file', source: 'literal', value: 'picture.png' }
+      }
+    })
+
+    expect(document.content.schemaUses[0].inputBindings.prompt.parts).toEqual([
+      { type: 'variable', ref: { scope: 'schema-use', varName: 'picture' } }
+    ])
+    document = applyTemplateEdit(document, {
+      type: 'remove-schema-attachment',
+      useId: 'use',
+      varName: 'picture'
+    })
+    expect(document.content.schemaUses[0].attachments).toEqual([])
   })
 
   it('覆盖剩余公开成功操作并保证每一步都可解析', () => {
@@ -857,8 +911,9 @@ describe('Template 文档编辑', () => {
         {
           useId: 'use',
           schemaId: 'schema',
-          blockId: 'block',
-          bindings: { prompt: { type: 'literal', value: 'Before' } }
+          inputBindings: { prompt: schemaText('Before') },
+          answerBindings: {},
+          attachments: []
         }
       ]
     })
@@ -976,14 +1031,15 @@ describe('Template 文档编辑', () => {
       use: {
         useId: 'renamed-use',
         schemaId: 'schema',
-        blockId: 'block',
-        bindings: { prompt: { type: 'literal', value: 'After' } }
+        inputBindings: { prompt: schemaText('After') },
+        answerBindings: {},
+        attachments: []
       }
     })
     document = applyTemplateEdit(document, {
-      type: 'set-schema-binding',
+      type: 'set-schema-input-binding',
       useId: 'renamed-use',
-      fieldName: 'prompt',
+      inputId: 'prompt',
       expression: null
     })
 
@@ -1005,7 +1061,7 @@ describe('Template 文档编辑', () => {
     })
     expect(document.content.schemaUses[0]).toMatchObject({
       useId: 'renamed-use',
-      bindings: {}
+      inputBindings: {}
     })
   })
 
@@ -1138,13 +1194,27 @@ describe('Template 文档编辑', () => {
     )
     const schemaConflict = createTemplateDocument({
       ...basic.content,
-      schemaUses: [{ useId: 'use', schemaId: 'schema', blockId: 'block', bindings: {} }]
+      schemaUses: [
+        {
+          useId: 'use',
+          schemaId: 'schema',
+          inputBindings: {},
+          answerBindings: {},
+          attachments: []
+        }
+      ]
     })
     expectTemplateEditError(
       schemaConflict,
       {
         type: 'insert-schema-use',
-        use: { useId: 'use', schemaId: 'other', blockId: 'other', bindings: {} }
+        use: {
+          useId: 'use',
+          schemaId: 'other',
+          inputBindings: {},
+          answerBindings: {},
+          attachments: []
+        }
       },
       'SCHEMA_USE_ID_CONFLICT',
       'schemaUses',
@@ -1257,8 +1327,14 @@ describe('Function 文档编辑', () => {
         {
           useId: 'use',
           schemaId: 'schema',
-          blockId: 'block',
-          bindings: { prompt: { type: 'variable', scope: 'local', name: 'prompt' } }
+          inputBindings: {
+            prompt: {
+              type: 'string',
+              parts: [{ type: 'variable', ref: { scope: 'local', name: 'prompt' } }]
+            }
+          },
+          answerBindings: {},
+          attachments: []
         }
       ]
     }

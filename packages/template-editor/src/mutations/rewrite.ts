@@ -3,7 +3,7 @@ import type {
   FrameNode,
   FunctionContent,
   FunctionOutputDef,
-  SchemaBindingExpression,
+  SchemaTextExpression,
   SchemaUse,
   StaticValueExpression,
   TemplateNode,
@@ -198,29 +198,69 @@ export function mapSchemaUses(
 ): SchemaUse[] {
   return uses.map((use) => ({
     ...use,
-    bindings: Object.fromEntries(
-      Object.entries(use.bindings).map(([key, expression]) => [
+    inputBindings: Object.fromEntries(
+      Object.entries(use.inputBindings).map(([key, expression]) => [
         key,
-        mapSchemaExpression(expression, mapRef)
+        mapSchemaTextExpression(expression, mapRef)
       ])
-    )
+    ),
+    answerBindings: Object.fromEntries(
+      Object.entries(use.answerBindings).map(([key, binding]) => [
+        key,
+        binding.type === 'fixed-speech'
+          ? { ...binding, text: mapSchemaTextExpression(binding.text, mapRef) }
+          : binding
+      ])
+    ),
+    attachments: use.attachments.map((attachment) => ({
+      ...attachment,
+      file: mapStaticExpression(attachment.file, mapRef) as typeof attachment.file
+    }))
   }))
 }
 
-export function mapSchemaExpression(
-  expression: SchemaBindingExpression,
+export function mapSchemaTextExpression(
+  expression: SchemaTextExpression,
   mapRef: (ref: VariableRef) => VariableRef
-): SchemaBindingExpression {
-  if (expression.type === 'variable') return { ...expression, ...mapRef(expression) }
-  if (expression.type === 'concat') {
-    return {
-      ...expression,
-      parts: expression.parts.map((part) =>
-        part.type === 'variable' ? { ...part, ...mapRef(part) } : part
-      )
-    }
+): SchemaTextExpression {
+  return {
+    ...expression,
+    parts: expression.parts.map((part) =>
+      part.type === 'variable' && part.ref.scope !== 'schema-use'
+        ? { ...part, ref: mapRef(part.ref) }
+        : part
+    )
   }
-  return expression
+}
+
+export function renameSchemaAttachmentReferences(
+  use: SchemaUse,
+  previous: string,
+  next: string
+): SchemaUse {
+  const rename = (expression: SchemaTextExpression): SchemaTextExpression => ({
+    ...expression,
+    parts: expression.parts.map((part) =>
+      part.type === 'variable' && part.ref.scope === 'schema-use' && part.ref.varName === previous
+        ? { ...part, ref: { ...part.ref, varName: next } }
+        : part
+    )
+  })
+  return {
+    ...use,
+    inputBindings: Object.fromEntries(
+      Object.entries(use.inputBindings).map(([inputId, expression]) => [
+        inputId,
+        rename(expression)
+      ])
+    ),
+    answerBindings: Object.fromEntries(
+      Object.entries(use.answerBindings).map(([answerId, binding]) => [
+        answerId,
+        binding.type === 'fixed-speech' ? { ...binding, text: rename(binding.text) } : binding
+      ])
+    )
+  }
 }
 
 export function renameLocalReferences(
@@ -295,15 +335,15 @@ function renameSchemaLocalReferences(
 ): SchemaUse[] {
   return mapSchemaUses(uses, localReferenceRenamer(previous, next)).map((use) => ({
     ...use,
-    bindings: Object.fromEntries(
-      Object.entries(use.bindings).map(([key, expression]) => {
-        if (
-          (expression.type === 'record-output' || expression.type === 'choice-output') &&
-          expression.name === previous
-        ) {
-          return [key, { ...expression, name: next }]
+    answerBindings: Object.fromEntries(
+      Object.entries(use.answerBindings).map(([key, binding]) => {
+        if (binding.type === 'text' && binding.name === previous) {
+          return [key, { ...binding, name: next }]
         }
-        return [key, expression]
+        if (binding.type !== 'text' && binding.audio.name === previous) {
+          return [key, { ...binding, audio: { ...binding.audio, name: next } }]
+        }
+        return [key, binding]
       })
     )
   }))

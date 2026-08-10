@@ -18,7 +18,8 @@ import {
   collectLocalNames,
   defaultExpression,
   prepareInsertedSubtree,
-  renameDefinitionLocalReferences
+  renameDefinitionLocalReferences,
+  renameSchemaAttachmentReferences
 } from './rewrite'
 import type {
   DefinitionOperation,
@@ -465,22 +466,134 @@ export function applyDefinitionOperation(
         changes: [{ kind: 'remove', path: `schemaUses[${index}]` }]
       }
     }
-    case 'set-schema-binding': {
+    case 'set-schema-input-binding': {
       const index = state.schemaUses.findIndex((use) => use.useId === operation.useId)
       if (index < 0)
         return { error: error('SCHEMA_USE_NOT_FOUND', 'schemaUses', { useId: operation.useId }) }
       const use = state.schemaUses[index]
-      const bindings = { ...use.bindings }
-      if (operation.expression === null) delete bindings[operation.fieldName]
-      else bindings[operation.fieldName] = structuredClone(operation.expression)
+      const inputBindings = { ...use.inputBindings }
+      if (operation.expression === null) delete inputBindings[operation.inputId]
+      else inputBindings[operation.inputId] = structuredClone(operation.expression)
       return {
-        state: { ...state, schemaUses: replaceAt(state.schemaUses, index, { ...use, bindings }) },
+        state: {
+          ...state,
+          schemaUses: replaceAt(state.schemaUses, index, { ...use, inputBindings })
+        },
         changes: [
           {
             kind: 'update',
-            path: `schemaUses[${index}].bindings[${JSON.stringify(operation.fieldName)}]`
+            path: `schemaUses[${index}].inputBindings[${JSON.stringify(operation.inputId)}]`
           }
         ]
+      }
+    }
+    case 'set-schema-answer-binding': {
+      const index = state.schemaUses.findIndex((use) => use.useId === operation.useId)
+      if (index < 0)
+        return { error: error('SCHEMA_USE_NOT_FOUND', 'schemaUses', { useId: operation.useId }) }
+      const use = state.schemaUses[index]
+      const answerBindings = { ...use.answerBindings }
+      if (operation.binding === null) delete answerBindings[operation.answerId]
+      else answerBindings[operation.answerId] = structuredClone(operation.binding)
+      return {
+        state: {
+          ...state,
+          schemaUses: replaceAt(state.schemaUses, index, { ...use, answerBindings })
+        },
+        changes: [
+          {
+            kind: 'update',
+            path: `schemaUses[${index}].answerBindings[${JSON.stringify(operation.answerId)}]`
+          }
+        ]
+      }
+    }
+    case 'insert-schema-attachment': {
+      const useIndex = state.schemaUses.findIndex((use) => use.useId === operation.useId)
+      if (useIndex < 0)
+        return { error: error('SCHEMA_USE_NOT_FOUND', 'schemaUses', { useId: operation.useId }) }
+      const use = state.schemaUses[useIndex]
+      if (use.attachments.some((item) => item.varName === operation.attachment.varName)) {
+        return {
+          error: error('SCHEMA_ATTACHMENT_NAME_CONFLICT', `schemaUses[${useIndex}].attachments`, {
+            varName: operation.attachment.varName
+          })
+        }
+      }
+      const index = insertionIndex(operation.index, use.attachments.length)
+      if (index === null)
+        return { error: invalidIndex(`schemaUses[${useIndex}].attachments`, operation.index) }
+      const attachments = insertAt(use.attachments, index, structuredClone(operation.attachment))
+      return {
+        state: {
+          ...state,
+          schemaUses: replaceAt(state.schemaUses, useIndex, { ...use, attachments })
+        },
+        changes: [{ kind: 'insert', path: `schemaUses[${useIndex}].attachments[${index}]` }]
+      }
+    }
+    case 'update-schema-attachment': {
+      const useIndex = state.schemaUses.findIndex((use) => use.useId === operation.useId)
+      if (useIndex < 0)
+        return { error: error('SCHEMA_USE_NOT_FOUND', 'schemaUses', { useId: operation.useId }) }
+      const use = state.schemaUses[useIndex]
+      const index = use.attachments.findIndex((item) => item.varName === operation.varName)
+      if (index < 0) {
+        return {
+          error: error('SCHEMA_ATTACHMENT_NOT_FOUND', `schemaUses[${useIndex}].attachments`, {
+            varName: operation.varName
+          })
+        }
+      }
+      if (
+        operation.attachment.varName !== operation.varName &&
+        use.attachments.some((item) => item.varName === operation.attachment.varName)
+      ) {
+        return {
+          error: error('SCHEMA_ATTACHMENT_NAME_CONFLICT', `schemaUses[${useIndex}].attachments`, {
+            varName: operation.attachment.varName
+          })
+        }
+      }
+      const renamedUse =
+        operation.attachment.varName === operation.varName
+          ? use
+          : renameSchemaAttachmentReferences(use, operation.varName, operation.attachment.varName)
+      const attachments = replaceAt(
+        renamedUse.attachments,
+        index,
+        structuredClone(operation.attachment)
+      )
+      return {
+        state: {
+          ...state,
+          schemaUses: replaceAt(state.schemaUses, useIndex, { ...renamedUse, attachments })
+        },
+        changes: [{ kind: 'update', path: `schemaUses[${useIndex}].attachments[${index}]` }]
+      }
+    }
+    case 'remove-schema-attachment': {
+      const useIndex = state.schemaUses.findIndex((use) => use.useId === operation.useId)
+      if (useIndex < 0)
+        return { error: error('SCHEMA_USE_NOT_FOUND', 'schemaUses', { useId: operation.useId }) }
+      const use = state.schemaUses[useIndex]
+      const index = use.attachments.findIndex((item) => item.varName === operation.varName)
+      if (index < 0) {
+        return {
+          error: error('SCHEMA_ATTACHMENT_NOT_FOUND', `schemaUses[${useIndex}].attachments`, {
+            varName: operation.varName
+          })
+        }
+      }
+      return {
+        state: {
+          ...state,
+          schemaUses: replaceAt(state.schemaUses, useIndex, {
+            ...use,
+            attachments: removeAt(use.attachments, index)
+          })
+        },
+        changes: [{ kind: 'remove', path: `schemaUses[${useIndex}].attachments[${index}]` }]
       }
     }
     case 'set-editor-state': {

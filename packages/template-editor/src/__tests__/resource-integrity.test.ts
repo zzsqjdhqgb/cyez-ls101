@@ -1,27 +1,18 @@
-import type { SchemaBlockManifest } from '@ls101/core-types'
 import { describe, expect, it } from 'vitest'
 import { compileTemplate, type TemplateCompileContext } from '../compiler'
 import { createFunctionResource } from '../id'
 import type { FunctionDef, TemplateContent, TemplateDocument } from '../types'
 import { validateTemplateDocument } from '../validation'
-import { root } from './fixtures'
+import { root, schemaDefinition, schemaText } from './fixtures'
 
 const SCHEMA_ID = `sha256:${'2'.repeat(64)}`
 const MISSING_FUNCTION_ID = `sha256:${'9'.repeat(64)}`
 
-const schemaManifest: SchemaBlockManifest = {
-  formatVersion: 1,
-  schemaId: SCHEMA_ID,
-  name: 'Scoring',
-  blocks: [
-    {
-      blockId: 'text',
-      name: 'Text',
-      maxScore: 10,
-      inputs: [{ inputId: 'prompt', name: 'Prompt', type: 'string' }]
-    }
-  ]
-}
+const schemaManifest = schemaDefinition(SCHEMA_ID, {
+  questionType: 'freetalk',
+  answerFormat: [],
+  templateInputs: [{ inputId: 'prompt', type: 'text', required: true }]
+})
 
 function content(functionRef: string): TemplateContent {
   return {
@@ -35,8 +26,9 @@ function content(functionRef: string): TemplateContent {
       {
         useId: 'text-use',
         schemaId: SCHEMA_ID,
-        blockId: 'text',
-        bindings: { prompt: { type: 'literal', value: 'Prompt' } }
+        inputBindings: { prompt: schemaText('Prompt') },
+        answerBindings: {},
+        attachments: []
       }
     ]
   }
@@ -54,7 +46,7 @@ function document(functionDef: FunctionDef): TemplateDocument {
 
 const validationContext = {
   interfaceManifests: [],
-  schemaManifests: [schemaManifest]
+  schemaDefinitions: [schemaManifest]
 }
 
 function compileContext(): TemplateCompileContext {

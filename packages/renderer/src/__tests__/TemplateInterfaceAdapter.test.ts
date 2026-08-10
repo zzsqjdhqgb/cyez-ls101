@@ -67,7 +67,8 @@ describe('Template Interface adapter', () => {
     })
     await expect(adapter.locateInterfaceInstance(instance.instance.instanceId)).resolves.toEqual({
       interfaceId,
-      instance: instance.instance
+      instance: instance.instance,
+      assetUrls: {}
     })
   })
 

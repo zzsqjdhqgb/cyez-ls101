@@ -1,4 +1,4 @@
-import type { InterfaceVarManifest, SchemaBlockManifest } from '@ls101/core-types'
+import type { InterfaceVarManifest, SchemaDefinition } from '@ls101/core-types'
 import { initializeBuiltinFunctionLibraries } from './builtin-initializer'
 import { compileTemplate } from './compiler'
 import type {
@@ -131,7 +131,7 @@ export interface TemplateApplicationDependencies {
   getBuiltinFunctionLibraryManifest?(): Promise<unknown | null>
   listInterfaceManifests?(): Promise<InterfaceVarManifest[]>
   getInterfaceManifest(interfaceId: string): Promise<InterfaceVarManifest | null>
-  getSchemaManifest(schemaId: string): Promise<SchemaBlockManifest | null>
+  getSchema(schemaId: string): Promise<SchemaDefinition | null>
   locateInterfaceInstance(
     instanceId: string
   ): LocatedInterfaceInstance | null | Promise<LocatedInterfaceInstance | null>
@@ -211,11 +211,11 @@ export function createTemplateApplication(
     const schemaIds = collectSchemaIds(document)
     const [interfaces, schemas] = await Promise.all([
       Promise.all(interfaceIds.map((id) => dependencies.getInterfaceManifest(id))),
-      Promise.all(schemaIds.map((id) => dependencies.getSchemaManifest(id)))
+      Promise.all(schemaIds.map((id) => dependencies.getSchema(id)))
     ])
     return {
       interfaceManifests: interfaces.filter((item) => item !== null),
-      schemaManifests: schemas.filter((item) => item !== null)
+      schemaDefinitions: schemas.filter((item) => item !== null)
     }
   }
 

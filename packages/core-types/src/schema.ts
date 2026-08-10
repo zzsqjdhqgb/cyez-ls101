@@ -78,137 +78,48 @@ export interface GradingResult {
 }
 
 // ============================================================
-// Template 编译适配层（待 Template 迁移完成后删除）
+// Template 编译快照
 // ============================================================
 
-/** 旧 Schema 编译管道的数据格式版本。 */
-export type LegacySchemaFormatVersion = 1
-
-/** @deprecated 旧 Template 适配层的输入类型。 */
-export type SchemaInputType = 'string' | 'audio'
-
-/** @deprecated 旧 Template 适配层的评分定义。 */
-export interface LegacySchemaContent {
-  name: string
-  blocks: LegacySchemaBlockDefinition[]
+/** ExamPackage 中的正式 Schema 快照及其实际使用。 */
+export interface CompiledSchemaPackage {
+  definitions: SchemaDefinition[]
+  uses: CompiledSchemaUse[]
 }
 
-/** @deprecated 使用 SchemaDefinition。 */
-export interface LegacySchemaDefinition extends LegacySchemaContent {
-  formatVersion: LegacySchemaFormatVersion
-  schemaId: string
-}
-
-/** @deprecated 使用 SchemaAnswerDefinition 和 SchemaStructure。 */
-export interface LegacySchemaBlockDefinition {
-  blockId: string
-  name: string
-  maxScore: number
-  inputs: LegacySchemaInputDefinition[]
-}
-
-/** @deprecated 使用 SchemaTemplateInputDefinition。 */
-export interface LegacySchemaInputDefinition {
-  inputId: string
-  name: string
-  type: SchemaInputType
-}
-
-/** @deprecated 旧 Template 编译后的 Schema 数据管道。 */
-export interface CompiledSchemaPipeline {
-  formatVersion: LegacySchemaFormatVersion
-  definitions: LegacySchemaDefinition[]
-  blocks: CompiledSchemaBlock[]
-}
-
-/** @deprecated 旧 Template 展开后的评分块绑定。 */
-export interface CompiledSchemaBlock {
+/** 一次展开后的 SchemaUse，对应一个实际评分单元。 */
+export interface CompiledSchemaUse {
   instanceId: string
   schemaId: string
-  blockId: string
   inputs: CompiledSchemaInput[]
+  answers: CompiledSchemaAnswer[]
 }
 
-/** @deprecated 旧 Template 的输入绑定。 */
-export type CompiledSchemaInput =
+/** Template 在编译期已经解析完成的静态 Schema 输入。 */
+export interface CompiledSchemaInput {
+  inputId: string
+  type: 'text'
+  value: string
+}
+
+/** ExamPlayer 在运行期产生的学生答案绑定。 */
+export type CompiledSchemaAnswer =
   | {
-      inputId: string
-      type: 'string'
-      source: 'static'
-      value: string
-    }
-  | {
-      inputId: string
-      type: 'string'
+      answerId: string
+      type: 'text'
       source: 'choice'
       choiceIndex: number
     }
   | {
-      inputId: string
-      type: 'audio'
+      answerId: string
+      type: 'fixed-speech'
+      text: string
       source: 'recording'
       recordIndex: number
     }
-
-/** @deprecated 旧 ExamPlayer 运行期数据。 */
-export interface SchemaRuntimeData {
-  recordings: Readonly<Record<number, string>>
-  choices: Readonly<Record<number, string | null>>
-}
-
-/** @deprecated 旧 Schema 实例集合。 */
-export interface SchemaInstanceBundle {
-  formatVersion: LegacySchemaFormatVersion
-  schemas: SchemaInstance[]
-}
-
-/** @deprecated 使用 Grading Engine 的解析输入。 */
-export interface SchemaInstance {
-  schemaId: string
-  name: string
-  blocks: SchemaBlockInstance[]
-}
-
-/** @deprecated 旧评分块实例。 */
-export interface SchemaBlockInstance {
-  instanceId: string
-  blockId: string
-  name: string
-  maxScore: number
-  inputs: SchemaInstanceInput[]
-}
-
-export type SchemaMissingReason = 'unanswered' | 'recording-missing'
-
-/** @deprecated 旧 Schema 实例输入。 */
-export type SchemaInstanceInput =
   | {
-      inputId: string
-      name: string
-      type: 'string'
-      status: 'resolved'
-      value: string
+      answerId: string
+      type: 'free-speech'
+      source: 'recording'
+      recordIndex: number
     }
-  | {
-      inputId: string
-      name: string
-      type: 'audio'
-      status: 'resolved'
-      assetKey: string
-    }
-  | {
-      inputId: string
-      name: string
-      type: SchemaInputType
-      status: 'missing'
-      reason: SchemaMissingReason
-    }
-
-/** @deprecated 使用 SchemaInputType。 */
-export type SchemaFieldType = SchemaInputType
-/** @deprecated 使用 LegacySchemaInputDefinition。 */
-export type SchemaFieldDef = LegacySchemaInputDefinition
-/** @deprecated 使用 SchemaDefinition。 */
-export type SchemaBlockManifest = LegacySchemaDefinition
-/** @deprecated 使用 LegacySchemaBlockDefinition。 */
-export type SchemaBlockManifestEntry = LegacySchemaBlockDefinition

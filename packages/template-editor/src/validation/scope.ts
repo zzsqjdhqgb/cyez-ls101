@@ -1,14 +1,10 @@
-import type {
-  InterfaceVarInfo,
-  SchemaBlockManifestEntry,
-  SchemaFieldDef,
-  SchemaFieldType
-} from '@ls101/core-types'
+import type { InterfaceVarInfo, SchemaAnswerDefinition, SchemaDefinition } from '@ls101/core-types'
 import type {
   FrameNode,
   FunctionNode,
   FunctionOutputDef,
-  SchemaBindingExpression,
+  SchemaAnswerBinding,
+  SchemaTextExpression,
   SchemaUse,
   StaticValueExpression,
   StringExpression,
@@ -516,105 +512,140 @@ function validateSchemaUses(
       addError(state, `${usePath}.schemaId`, 'UNKNOWN_SCHEMA', { schemaId: use.schemaId })
       return
     }
-    const block = schema.blocks.find((item) => item.blockId === use.blockId)
-    if (!block) {
-      addError(state, `${usePath}.blockId`, 'UNKNOWN_SCHEMA_BLOCK', {
-        schemaId: use.schemaId,
-        blockId: use.blockId
-      })
-      return
-    }
-    validateSchemaBindings(use, block, usePath, scope, state)
+    validateSchemaBindings(use, schema, usePath, scope, state)
   })
 }
 
 function validateSchemaBindings(
   use: SchemaUse,
-  block: SchemaBlockManifestEntry,
+  schema: SchemaDefinition,
   path: string,
   scope: ScopeState,
   state: ValidationState
 ): void {
-  const inputs = new Map(block.inputs.map((input) => [input.inputId, input]))
-  block.inputs.forEach((input) => {
-    const expression = use.bindings[input.inputId]
+  const attachments = new Set<string>()
+  use.attachments.forEach((attachment, index) => {
+    const attachmentPath = `${path}.attachments[${index}]`
+    if (!isValidLocalName(attachment.varName)) {
+      addError(state, `${attachmentPath}.varName`, 'INVALID_SCHEMA_ATTACHMENT_NAME', {
+        varName: attachment.varName
+      })
+    }
+    if (attachments.has(attachment.varName)) {
+      addError(state, `${attachmentPath}.varName`, 'DUPLICATE_SCHEMA_ATTACHMENT_NAME', {
+        varName: attachment.varName
+      })
+    }
+    attachments.add(attachment.varName)
+    validateValueExpression(attachment.file, 'file', `${attachmentPath}.file`, scope, state)
+  })
+
+  const inputs = new Map(schema.structure.templateInputs.map((input) => [input.inputId, input]))
+  schema.structure.templateInputs.forEach((input) => {
+    const expression = use.inputBindings[input.inputId]
     if (!expression) {
-      addError(state, `${path}.bindings`, 'MISSING_SCHEMA_BINDING', { varName: input.inputId })
+      if (input.required) {
+        addError(state, `${path}.inputBindings`, 'MISSING_SCHEMA_INPUT_BINDING', {
+          inputId: input.inputId
+        })
+      }
       return
     }
-    validateSchemaBinding(
+    validateSchemaTextExpression(
       expression,
-      input,
-      `${path}.bindings[${JSON.stringify(input.inputId)}]`,
+      `${path}.inputBindings[${JSON.stringify(input.inputId)}]`,
+      attachments,
       scope,
       state
     )
   })
-  for (const varName of Object.keys(use.bindings)) {
-    if (!inputs.has(varName)) {
-      addError(state, `${path}.bindings[${JSON.stringify(varName)}]`, 'UNKNOWN_SCHEMA_BINDING', {
-        varName
+  for (const inputId of Object.keys(use.inputBindings)) {
+    if (!inputs.has(inputId)) {
+      addError(
+        state,
+        `${path}.inputBindings[${JSON.stringify(inputId)}]`,
+        'UNKNOWN_SCHEMA_INPUT_BINDING',
+        { inputId }
+      )
+    }
+  }
+
+  const answers = new Map(schema.structure.answerFormat.map((answer) => [answer.answerId, answer]))
+  schema.structure.answerFormat.forEach((answer) => {
+    const binding = use.answerBindings[answer.answerId]
+    if (!binding) {
+      addError(state, `${path}.answerBindings`, 'MISSING_SCHEMA_ANSWER_BINDING', {
+        answerId: answer.answerId
       })
+      return
+    }
+    validateSchemaAnswerBinding(
+      binding,
+      answer,
+      `${path}.answerBindings[${JSON.stringify(answer.answerId)}]`,
+      attachments,
+      scope,
+      state
+    )
+  })
+  for (const answerId of Object.keys(use.answerBindings)) {
+    if (!answers.has(answerId)) {
+      addError(
+        state,
+        `${path}.answerBindings[${JSON.stringify(answerId)}]`,
+        'UNKNOWN_SCHEMA_ANSWER_BINDING',
+        { answerId }
+      )
     }
   }
 }
 
-function validateSchemaBinding(
-  expression: SchemaBindingExpression,
-  field: SchemaFieldDef,
+function validateSchemaAnswerBinding(
+  binding: SchemaAnswerBinding,
+  answer: SchemaAnswerDefinition,
   path: string,
+  attachments: ReadonlySet<string>,
   scope: ScopeState,
   state: ValidationState
 ): void {
-  if (field.type === 'string') {
-    validateStringSchemaBinding(expression, path, scope, state)
+  if (binding.type !== answer.type) {
+    addError(state, path, 'SCHEMA_ANSWER_TYPE_MISMATCH', {
+      expected: answer.type,
+      actual: binding.type
+    })
     return
   }
 
-  const expected = field.type
-  if (expected === 'audio' && expression.type === 'record-output') {
-    validateOutputReference(expression.name, 'audio', path, scope, state)
-    return
+  switch (binding.type) {
+    case 'text':
+      validateOutputReference(binding.name, 'choice', path, scope, state)
+      break
+    case 'fixed-speech':
+      validateSchemaTextExpression(binding.text, `${path}.text`, attachments, scope, state)
+      validateOutputReference(binding.audio.name, 'audio', `${path}.audio`, scope, state)
+      break
+    case 'free-speech':
+      validateOutputReference(binding.audio.name, 'audio', `${path}.audio`, scope, state)
+      break
   }
-  addSchemaTypeError(state, path, expected, expression.type)
 }
 
-function validateStringSchemaBinding(
-  expression: SchemaBindingExpression,
+function validateSchemaTextExpression(
+  expression: SchemaTextExpression,
   path: string,
+  attachments: ReadonlySet<string>,
   scope: ScopeState,
   state: ValidationState
 ): void {
-  switch (expression.type) {
-    case 'literal':
-      if (typeof expression.value !== 'string') {
-        addSchemaTypeError(state, path, 'string', 'number')
+  expression.parts.forEach((part, index) => {
+    if (part.type !== 'variable') return
+    const partPath = `${path}.parts[${index}]`
+    if (part.ref.scope === 'schema-use') {
+      if (!attachments.has(part.ref.varName)) {
+        addError(state, partPath, 'UNKNOWN_SCHEMA_ATTACHMENT', { varName: part.ref.varName })
       }
-      break
-    case 'variable':
-      validateVariableRef(expression, 'string', path, scope, state)
-      break
-    case 'concat':
-      expression.parts.forEach((part, index) => {
-        if (part.type === 'variable') {
-          validateVariableRef(part, 'string', `${path}.parts[${index}]`, scope, state)
-        }
-      })
-      break
-    case 'record-output':
-      addSchemaTypeError(state, path, 'string', expression.type)
-      break
-    case 'choice-output':
-      validateOutputReference(expression.name, 'choice', path, scope, state)
-      break
-  }
-}
-
-function addSchemaTypeError(
-  state: ValidationState,
-  path: string,
-  expected: SchemaFieldType,
-  actual: string
-): void {
-  addError(state, path, 'SCHEMA_BINDING_TYPE_MISMATCH', { expected, actual })
+      return
+    }
+    validateVariableRef(part.ref, 'string', partPath, scope, state)
+  })
 }

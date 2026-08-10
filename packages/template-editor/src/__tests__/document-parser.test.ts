@@ -90,27 +90,49 @@ function completeSchemaUse() {
   return {
     useId: 'all-bindings',
     schemaId: 'schema-id',
-    blockId: 'block-id',
-    bindings: {
-      literalText: { type: 'literal' as const, value: 'Text' },
-      literalNumber: { type: 'literal' as const, value: 1 },
-      localVariable: { type: 'variable' as const, scope: 'local' as const, name: 'text' },
-      interfaceVariable: {
-        type: 'variable' as const,
-        scope: 'interface' as const,
-        alias: 'data',
-        varName: 'prompt'
-      },
-      concat: {
-        type: 'concat' as const,
+    inputBindings: {
+      description: {
+        type: 'string' as const,
         parts: [
           { type: 'literal' as const, value: 'Prefix ' },
-          { type: 'variable' as const, scope: 'local' as const, name: 'text' }
+          {
+            type: 'variable' as const,
+            ref: { scope: 'local' as const, name: 'text' }
+          },
+          {
+            type: 'variable' as const,
+            ref: { scope: 'interface' as const, alias: 'data', varName: 'prompt' }
+          },
+          {
+            type: 'variable' as const,
+            ref: { scope: 'schema-use' as const, varName: 'image' }
+          }
         ]
+      }
+    },
+    answerBindings: {
+      answer: { type: 'text' as const, source: 'choice-output' as const, name: 'answer' },
+      reading: {
+        type: 'fixed-speech' as const,
+        text: { type: 'string' as const, parts: [{ type: 'literal' as const, value: 'Read' }] },
+        audio: { type: 'audio' as const, source: 'record-output' as const, name: 'recording' }
       },
-      recording: { type: 'record-output' as const, name: 'recording' },
-      answer: { type: 'choice-output' as const, name: 'answer' }
-    }
+      speech: {
+        type: 'free-speech' as const,
+        audio: { type: 'audio' as const, source: 'record-output' as const, name: 'recording' }
+      }
+    },
+    attachments: [
+      {
+        varName: 'image',
+        description: 'Question image',
+        file: {
+          type: 'file' as const,
+          source: 'variable' as const,
+          ref: { scope: 'interface' as const, alias: 'data', varName: 'image' }
+        }
+      }
+    ]
   }
 }
 
@@ -264,9 +286,7 @@ describe('工作文档结构解析器', () => {
     const cyclicEditorState: Record<string, unknown> = {}
     cyclicEditorState.self = cyclicEditorState
     const imageWithoutHeight = structuredClone(completeTemplate())
-    const imagePage = imageWithoutHeight.content.root.children.find(
-      (node) => node.type === 'page'
-    )
+    const imagePage = imageWithoutHeight.content.root.children.find((node) => node.type === 'page')
     if (imagePage?.type !== 'page') throw new Error('expected page')
     const imageBlock = imagePage.content.blocks.find((block) => block.type === 'image')
     if (imageBlock?.type !== 'image') throw new Error('expected image')
@@ -296,7 +316,7 @@ describe('工作文档结构解析器', () => {
       },
       {
         ...completeTemplate(),
-        content: { ...completeTemplate().content, schemaUses: [{ bindings: [] }] }
+        content: { ...completeTemplate().content, schemaUses: [{ inputBindings: [] }] }
       },
       {
         ...completeTemplate(),

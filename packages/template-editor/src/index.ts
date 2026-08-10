@@ -50,6 +50,7 @@ export type {
   TemplateCompileError,
   TemplateCompileErrorCode,
   TemplateCompileResult,
+  ExamResourceSource,
   TemplateInterfaceBinding,
   LocatedInterfaceInstance
 } from './compiler'

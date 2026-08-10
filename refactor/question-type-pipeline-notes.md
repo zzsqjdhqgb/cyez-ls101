@@ -1,7 +1,7 @@
 # 题目评分管道、Schema 与资源设计（当前草案）
 
 > 本文整理 2026-08-09 的讨论结论，用于统一 Schema、Template、ExamPlayer 与 Grading Engine 之间的概念边界。
-> 当前先维护设计文档，所有待确认项解决后再开始实现。现有 Schema 实现不要求兼容，新实现将直接替换旧模型。
+> Schema 领域模型与 Template 编译契约已按本文实现。ExamPlayer/Grading Engine 的运行期答案解析和最终试卷归档写入器仍待实现。
 
 ## 一、评分管道
 

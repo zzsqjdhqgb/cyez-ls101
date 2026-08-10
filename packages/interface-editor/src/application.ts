@@ -65,6 +65,7 @@ export interface InterfaceInstanceDetails {
 export interface InterfaceInstanceLocation {
   interfaceId: string
   instance: InterfaceInstance
+  assetUrls: Record<string, string>
 }
 
 export interface InterfaceInstanceEdit {
@@ -488,9 +489,18 @@ export function createInterfaceApplication(
         const located = await repository.findInstance(instanceId)
         if (!located) return null
         const definition = await requireInterface(repository, located.interfaceId)
+        const assetUrls: Record<string, string> = {}
+        for (const filename of located.assetFilenames) {
+          assetUrls[filename] = await repository.getInstanceAssetUrl(
+            located.interfaceId,
+            instanceId,
+            filename
+          )
+        }
         return {
           interfaceId: located.interfaceId,
-          instance: normalizeImagePromptValues(definition.fields, located)
+          instance: normalizeImagePromptValues(definition.fields, located),
+          assetUrls
         }
       },
       async listAIGenerationModels() {

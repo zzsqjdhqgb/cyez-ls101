@@ -6,7 +6,9 @@ import type {
   FunctionInputDef,
   FunctionOutputDef,
   JsonValue,
-  SchemaBindingExpression,
+  SchemaAnswerBinding,
+  SchemaTextExpression,
+  SchemaUseAttachment,
   SchemaUse,
   StaticValueExpression,
   TemplateInterfaceRequirement,
@@ -84,11 +86,30 @@ export type DefinitionOperation =
   | { type: 'update-schema-use'; useId: string; use: SchemaUse }
   | { type: 'remove-schema-use'; useId: string }
   | {
-      type: 'set-schema-binding'
+      type: 'set-schema-input-binding'
       useId: string
-      fieldName: string
-      expression: SchemaBindingExpression | null
+      inputId: string
+      expression: SchemaTextExpression | null
     }
+  | {
+      type: 'set-schema-answer-binding'
+      useId: string
+      answerId: string
+      binding: SchemaAnswerBinding | null
+    }
+  | {
+      type: 'insert-schema-attachment'
+      useId: string
+      index?: number
+      attachment: SchemaUseAttachment
+    }
+  | {
+      type: 'update-schema-attachment'
+      useId: string
+      varName: string
+      attachment: SchemaUseAttachment
+    }
+  | { type: 'remove-schema-attachment'; useId: string; varName: string }
   | { type: 'set-editor-state'; key: string; value: JsonValue | undefined }
 
 export type TemplateDocumentOperation =
@@ -132,6 +153,8 @@ export type DocumentEditErrorCode =
   | 'CHOICE_OPTION_ID_CONFLICT'
   | 'SCHEMA_USE_NOT_FOUND'
   | 'SCHEMA_USE_ID_CONFLICT'
+  | 'SCHEMA_ATTACHMENT_NOT_FOUND'
+  | 'SCHEMA_ATTACHMENT_NAME_CONFLICT'
   | 'INTERFACE_REQUIREMENT_NOT_FOUND'
   | 'INTERFACE_ALIAS_CONFLICT'
   | 'FUNCTION_INPUT_NOT_FOUND'
