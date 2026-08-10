@@ -180,6 +180,14 @@ asset://local/interfaces/drafts/draft-abc123/cover.png
 
 协议处理器只映射 `.assets`。它要求 scheme 为 `asset`、host 为 `local`，并拒绝认证信息、端口、query、fragment、空路径段和非法编码路径。URL 校验或路径解析失败时返回 `403 Forbidden`。
 
+### Asset 协议的跨平台实现
+
+`asset://` 和 `builtin-asset://` 协议在 main 进程中解析并校验 URL，然后使用 Node.js `readFile()` 读取目标文件并返回 `Response`。协议不再把目标路径转换为 `file://` URL 交给 Chromium 读取。
+
+这样可以避免 Windows 上 `userData` 路径叠加内置题型多层 scope 后过长，导致 Chromium 返回 `net::ERR_FILE_NOT_FOUND`。当前响应会设置常见图片的 MIME 类型；非法 URL 返回 `403`，文件不存在返回 `404`，其他文件系统错误返回 `500`。
+
+当前实现按完整文件读取，不提供显式的 `Range`、`206 Partial Content`、`HEAD` 或条件缓存响应。File Store 的展示资源目前主要是 AI 生成图片，适用于该使用场景；若以后承载音视频、PDF 或其他大文件，应改为基于 `stat()` 和 `createReadStream()` 的流式协议，并补充 Range 测试。
+
 ## 列表、删除与清理
 
 - `listText()` 和 `listAssets()` 只返回当前命名空间中的合法普通文件。
@@ -250,8 +258,9 @@ file:clear-scope
 - asset URL 解析与非法 URL 拒绝。
 - renderer 的 scope 派生、IPC 参数和 asset URL 生成。
 - 单文件原子替换、临时文件清理和替换失败时保留旧内容。
+- 打包 Electron 中的真实 File Store IPC、`asset://` 协议读取和图片字节返回。
 
-当前未覆盖真实 Electron IPC、preload、protocol handler 和 `net.fetch()` 的端到端运行，也未覆盖并发写入、进程在系统调用中间被终止的故障注入和符号链接路径攻击。
+当前未覆盖并发写入、进程在系统调用中间被终止的故障注入、Range/HEAD 响应和符号链接路径攻击。
 
 ## 代码依据
 
