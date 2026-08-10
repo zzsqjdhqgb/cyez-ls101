@@ -9,3 +9,5 @@ export {
 } from './builtin-initializer'
 export type { BundledFunctionLibraryManifest } from './builtin-initializer'
 export type { TemplateRepository, TemplateStore } from './repository'
+export { createTemplateInterfaceReferenceManager } from './interface-references'
+export type { TemplateInterfaceReferenceManager } from './interface-references'

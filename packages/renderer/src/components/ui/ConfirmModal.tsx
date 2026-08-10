@@ -1,5 +1,5 @@
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, CircleAlert } from 'lucide-react'
 import { useRef, type JSX } from 'react'
 import { Button } from './Button'
 import styles from './ConfirmModal.module.css'
@@ -10,6 +10,9 @@ interface ConfirmModalProps {
   message: string
   confirmLabel?: string
   danger?: boolean
+  error?: string | null
+  busy?: boolean
+  closeOnConfirm?: boolean
   onCancel(): void
   onConfirm(): void
 }
@@ -20,6 +23,9 @@ export function ConfirmModal({
   message,
   confirmLabel = '确认',
   danger = false,
+  error = null,
+  busy = false,
+  closeOnConfirm = true,
   onCancel,
   onConfirm
 }: ConfirmModalProps): JSX.Element | null {
@@ -67,22 +73,35 @@ export function ConfirmModal({
                     <h2>{title}</h2>
                   </AlertDialog.Title>
                   <AlertDialog.Description asChild>
-                    <p>{message}</p>
+                    <div>
+                      <p>{message}</p>
+                      {error ? (
+                        <div className={styles.error} role="alert">
+                          <CircleAlert aria-hidden="true" />
+                          <span>{error}</span>
+                        </div>
+                      ) : null}
+                    </div>
                   </AlertDialog.Description>
                 </div>
                 <div className={styles.actions}>
                   <AlertDialog.Cancel asChild>
-                    <Button variant="ghost">取消</Button>
+                    <Button disabled={busy} variant="ghost">
+                      取消
+                    </Button>
                   </AlertDialog.Cancel>
                   <AlertDialog.Action asChild>
                     <Button
+                      aria-busy={busy}
+                      disabled={busy}
                       variant={danger ? 'danger' : 'primary'}
-                      onClick={() => {
-                        actionTriggered.current = true
+                      onClick={(event) => {
+                        if (closeOnConfirm) actionTriggered.current = true
+                        else event.preventDefault()
                         onConfirm()
                       }}
                     >
-                      {confirmLabel}
+                      {busy ? '正在处理...' : confirmLabel}
                     </Button>
                   </AlertDialog.Action>
                 </div>

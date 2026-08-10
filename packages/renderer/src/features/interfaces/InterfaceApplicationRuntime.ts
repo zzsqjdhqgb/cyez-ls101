@@ -5,7 +5,7 @@ import { fileStore } from '@ls101/file-store/renderer'
 import { configuredImageGenerator } from '../airouter/ConfiguredImageGenerator'
 import { createInterfaceAIRouterTextGenerator } from './InterfaceAIRouterAdapter'
 
-const interfaceRepository = new FileInterfaceRepository(fileStore.scope('interfaces'))
+export const interfaceRepository = new FileInterfaceRepository(fileStore.scope('interfaces'))
 
 export const interfaceApplication = createInterfaceApplication({
   repository: interfaceRepository,

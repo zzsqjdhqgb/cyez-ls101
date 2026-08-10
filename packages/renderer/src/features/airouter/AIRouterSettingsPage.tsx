@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type JSX } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import type {
   AIRouterModelConfig,
   AIRouterProviderConfigSummary,
@@ -6,7 +6,6 @@ import type {
 } from '@ls101/airouter'
 import {
   AudioLines,
-  Check,
   ChevronRight,
   Download,
   Eye,
@@ -38,6 +37,13 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { Modal, ModalDescription, ModalTitle } from '../../components/ui/Modal'
 import { toast } from '../../components/ui/toast'
 import { airouterApplication, type AIRouterApplication } from './AIRouterApplication'
+import {
+  AIRouterOperationFeedback,
+  AIRouterPageError,
+  AIRouterPageLoading,
+  type AIRouterFeedbackValue
+} from './AIRouterFeedback'
+import { formatAIRouterError } from './airouterError'
 import { AIRouterImageSettingsPage } from './AIRouterImageSettingsPage'
 import { AIRouterSpeechSettingsPage } from './AIRouterSpeechSettingsPage'
 import styles from './AIRouterSettingsPage.module.css'
@@ -52,12 +58,7 @@ interface ProviderDraft {
   models: AIRouterModelConfig[]
 }
 
-type FeedbackScope = 'api-key' | 'models' | 'test' | 'editor'
-
-interface OperationFeedbackValue {
-  kind: 'success' | 'error'
-  text: string
-}
+type FeedbackScope = 'api-key' | 'models' | 'test' | 'editor' | 'delete'
 
 const providerLabels: Record<AIRouterProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
@@ -138,32 +139,45 @@ export function AIRouterTextSettingsPage({
   application?: AIRouterApplication
 }): JSX.Element {
   const [configs, setConfigs] = useState<AIRouterProviderConfigSummary[] | null>(null)
+  const loadRequest = useRef(0)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [draft, setDraft] = useState<ProviderDraft | null>(null)
   const [manualModel, setManualModel] = useState('')
   const [testModelId, setTestModelId] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AIRouterProviderConfigSummary | null>(null)
   const [apiKeyVisible, setApiKeyVisible] = useState(false)
   const [apiKeyLoaded, setApiKeyLoaded] = useState(false)
   const [apiKeyBaseline, setApiKeyBaseline] = useState('')
-  const [feedback, setFeedback] = useState<Partial<Record<FeedbackScope, OperationFeedbackValue>>>(
+  const [feedback, setFeedback] = useState<Partial<Record<FeedbackScope, AIRouterFeedbackValue>>>(
     {}
   )
 
-  useEffect(() => {
-    let active = true
-    void application
-      .listConfigs()
-      .then((values) => {
-        if (!active) return
-        setConfigs(values)
-      })
-      .catch((reason: unknown) => active && setError(errorMessage(reason)))
-    return () => {
-      active = false
+  const loadConfigs = useCallback(async (): Promise<void> => {
+    const requestId = loadRequest.current + 1
+    loadRequest.current = requestId
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const values = await application.listConfigs()
+      if (requestId !== loadRequest.current) return
+      setConfigs(values)
+    } catch (reason) {
+      if (requestId !== loadRequest.current) return
+      setConfigs(null)
+      setLoadError(formatAIRouterError(reason, '无法加载文本 Provider 设置'))
+    } finally {
+      if (requestId === loadRequest.current) setLoading(false)
     }
   }, [application])
+
+  useEffect(() => {
+    void loadConfigs()
+    return () => {
+      loadRequest.current += 1
+    }
+  }, [loadConfigs])
 
   const enabledModels = useMemo(() => draft?.models.filter((model) => model.enabled) ?? [], [draft])
 
@@ -188,26 +202,20 @@ export function AIRouterTextSettingsPage({
   const run = async (
     label: string,
     action: () => Promise<void>,
-    feedbackScope?: FeedbackScope
+    feedbackScope: FeedbackScope
   ): Promise<void> => {
     setBusy(label)
-    if (feedbackScope) {
-      setFeedback((current) => ({ ...current, [feedbackScope]: undefined }))
-    } else {
-      setError(null)
-    }
+    setFeedback((current) => ({ ...current, [feedbackScope]: undefined }))
     try {
       await action()
     } catch (reason) {
-      const text = errorMessage(reason)
-      if (feedbackScope) {
-        setFeedback((current) => ({
-          ...current,
-          [feedbackScope]: { kind: 'error', text }
-        }))
-      } else {
-        setError(text)
-      }
+      setFeedback((current) => ({
+        ...current,
+        [feedbackScope]: {
+          kind: 'error',
+          text: formatAIRouterError(reason, 'AI 引擎设置操作失败')
+        }
+      }))
     } finally {
       setBusy(null)
     }
@@ -229,7 +237,6 @@ export function AIRouterTextSettingsPage({
     setDraft(nextDraft)
     setManualModel('')
     setTestModelId('')
-    setError(null)
     setApiKeyVisible(false)
     setApiKeyLoaded(false)
     setApiKeyBaseline('')
@@ -241,7 +248,6 @@ export function AIRouterTextSettingsPage({
     setDraft(null)
     setManualModel('')
     setTestModelId('')
-    setError(null)
     setApiKeyVisible(false)
     setApiKeyLoaded(false)
     setApiKeyBaseline('')
@@ -249,16 +255,20 @@ export function AIRouterTextSettingsPage({
   }
 
   if (!configs) {
-    return <div className={styles.status}>{error ?? '正在加载 AI 引擎设置...'}</div>
+    return loadError ? (
+      <AIRouterPageError
+        message={loadError}
+        onRetry={() => void loadConfigs()}
+        retrying={loading}
+        title="无法加载文本 Provider 设置"
+      />
+    ) : (
+      <AIRouterPageLoading message="正在加载 AI 引擎设置..." />
+    )
   }
 
   return (
     <SettingsContent>
-      {!draft && error ? (
-        <div className={styles.error} role="alert">
-          {error}
-        </div>
-      ) : null}
       <SettingsSection title="Provider" description="管理文本生成所使用的 Provider 配置。">
         <div className={styles.providerToolbar}>
           <span>共 {configs.length} 个 Provider</span>
@@ -437,7 +447,7 @@ export function AIRouterTextSettingsPage({
                         {apiKeyVisible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
                       </button>
                     </div>
-                    <OperationFeedback value={feedback['api-key']} />
+                    <AIRouterOperationFeedback value={feedback['api-key']} />
                   </div>
                 </SettingsRow>
               </SettingsSection>
@@ -514,7 +524,10 @@ export function AIRouterTextSettingsPage({
                     </Button>
                   </div>
                 </div>
-                <OperationFeedback className={styles.modelFeedback} value={feedback.models} />
+                <AIRouterOperationFeedback
+                  className={styles.modelFeedback}
+                  value={feedback.models}
+                />
                 {draft.models.length ? (
                   <div className={styles.modelList}>
                     {draft.models.map((model) => (
@@ -575,7 +588,7 @@ export function AIRouterTextSettingsPage({
                   />
                 </SettingsRow>
                 <div className={styles.sectionActions}>
-                  <OperationFeedback value={feedback.test} />
+                  <AIRouterOperationFeedback value={feedback.test} />
                   <Button
                     icon={TestTube2}
                     disabled={!selectedTestModelId || Boolean(busy)}
@@ -621,7 +634,7 @@ export function AIRouterTextSettingsPage({
                   </Button>
                 ) : null}
               </div>
-              <OperationFeedback value={feedback.editor} />
+              <AIRouterOperationFeedback value={feedback.editor} />
               <div className={styles.editorFooterActions}>
                 <Button variant="ghost" disabled={Boolean(busy)} onClick={closeEditor}>
                   取消
@@ -650,21 +663,32 @@ export function AIRouterTextSettingsPage({
       ) : null}
 
       <ConfirmModal
+        busy={busy === 'delete'}
+        closeOnConfirm={false}
         danger
         confirmLabel="删除配置"
+        error={feedback.delete?.kind === 'error' ? feedback.delete.text : null}
         message={`将同时删除“${deleteTarget?.name ?? ''}”的普通配置和加密密钥。`}
-        onCancel={() => setDeleteTarget(null)}
+        onCancel={() => {
+          setDeleteTarget(null)
+          setFeedback((current) => ({ ...current, delete: undefined }))
+        }}
         onConfirm={() => {
           const target = deleteTarget
-          setDeleteTarget(null)
           if (!target) return
-          void run('delete', async () => {
-            await application.deleteConfig(target.id)
-            const next = configs.filter((config) => config.id !== target.id)
-            setConfigs(next)
-            setDraft(null)
-            toast.success(`已删除“${target.name}”`)
-          })
+          void run(
+            'delete',
+            async () => {
+              await application.deleteConfig(target.id)
+              const next = configs.filter((config) => config.id !== target.id)
+              setConfigs(next)
+              setDraft(null)
+              setDeleteTarget(null)
+              setFeedback({})
+              toast.success(`已删除“${target.name}”`)
+            },
+            'delete'
+          )
         }}
         open={Boolean(deleteTarget)}
         title="删除 Provider 配置？"
@@ -693,26 +717,6 @@ function AIRouterPlaceholder({
         <p>{description}</p>
       </div>
     </section>
-  )
-}
-
-function OperationFeedback({
-  value,
-  className
-}: {
-  value: OperationFeedbackValue | undefined
-  className?: string
-}): JSX.Element | null {
-  if (!value) return null
-  return (
-    <div
-      className={[styles.operationFeedback, className].filter(Boolean).join(' ')}
-      data-error={value.kind === 'error' || undefined}
-      role={value.kind === 'error' ? 'alert' : 'status'}
-    >
-      {value.kind === 'success' ? <Check aria-hidden="true" /> : null}
-      <span>{value.text}</span>
-    </div>
   )
 }
 
@@ -792,9 +796,4 @@ function upsert(
   const index = configs.findIndex((config) => config.id === saved.id)
   if (index < 0) return [...configs, saved]
   return configs.map((config) => (config.id === saved.id ? saved : config))
-}
-
-function errorMessage(reason: unknown): string {
-  if (!(reason instanceof Error)) return 'AI 引擎设置操作失败'
-  return reason.message.replace(/^Error invoking remote method '[^']+': Error:\s*/, '')
 }

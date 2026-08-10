@@ -42,7 +42,7 @@ yarn test:playwright
 1. 从主进程取得当前唯一的 BrowserWindow、应用信息和应用菜单。
 2. 读取窗口最后使用的 `webPreferences`。
 3. 核对应用名称、窗口标题、可见状态和测试用户数据目录。
-4. 在 renderer 中枚举 `airouter`、`configStore`、`fileDialog`、`fileStore`、`imageClipboard` 和 `windowControls` 的方法。
+4. 在 renderer 中枚举 `airouter`、`appInfo`、`configStore`、`fileDialog`、`fileStore`、`imageClipboard` 和 `windowControls` 的方法。
 5. 检查 renderer 全局环境中不存在 Node.js 的 `process` 和 `require`。
 
 测试内容：
@@ -104,7 +104,7 @@ renderer -> clipboard IPC -> Electron clipboard
 
 ```text
 / 工作台 -> /interfaces 题型 -> /templates 模板
-           -> /settings 设置 -> / 工作台
+           -> /settings 设置 -> /settings/about 关于 -> / 工作台
 ```
 
 操作流程：
@@ -114,15 +114,16 @@ renderer -> clipboard IPC -> Electron clipboard
 3. 点击主导航“模板”。
 4. 确认模板一级标题可见，并等待模板加载提示消失。
 5. 点击辅助导航“设置”。
-6. 确认设置一级标题以及“外观”“AI 引擎”入口可见。
-7. 点击“工作台”，确认返回初始页面。
+6. 确认设置一级标题以及“外观”“AI 引擎”“关于”入口可见。
+7. 进入“关于”，确认应用名称和主进程返回的版本号可见。
+8. 点击“工作台”，确认返回初始页面。
 
 测试内容：
 
 - 主导航与辅助导航注册完整。
 - MemoryRouter 能在四个主要应用区域之间切换。
 - 题型和模板 provider 能完成初始异步加载，不停留在 loading 状态。
-- 设置注册表包含当前两个设置模块。
+- 设置注册表包含当前三个设置模块，“关于”页能通过 `appInfo` preload bridge 读取运行版本。
 
 覆盖边界：
 

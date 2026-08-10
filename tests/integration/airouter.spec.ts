@@ -294,6 +294,7 @@ test('AR-03 creates and reloads an OpenAI-compatible provider through the UI', a
   await page.getByRole('textbox', { name: 'API Key', exact: true }).fill('openai-secret')
   await addModel('mock-text')
   await page.getByRole('button', { name: '保存 Provider' }).click()
+  await expect(page.getByText('已保存“Local OpenAI”')).toBeVisible({ timeout: 10_000 })
   await expect(page.getByText('已配置密钥')).toBeVisible()
   await page.reload()
   await openAirouter()
@@ -320,6 +321,7 @@ test('AR-04 creates and reloads an Anthropic provider through the UI', async () 
   await page.getByLabel('Base URL').fill(mockServer.baseUrl)
   await addModel('mock-reasoning')
   await page.getByRole('button', { name: '保存 Provider' }).click()
+  await expect(page.getByText('已保存“Local Anthropic”')).toBeVisible({ timeout: 10_000 })
   await page.reload()
   await openAirouter()
   await page.getByRole('button', { name: /Local Anthropic/ }).click()
@@ -377,8 +379,13 @@ test('AR-06 manages manual text models, enabled state, deduplication and removal
   await page.getByRole('checkbox', { name: 'beta' }).uncheck()
   await page.getByRole('button', { name: '移除模型 alpha' }).click()
   await page.getByRole('button', { name: '保存 Provider' }).click()
-  const configs = await page.evaluate(() => window.airouter.listProviderConfigs())
-  expect(configs[0].models).toEqual([{ id: 'beta', enabled: false }])
+  await expect
+    .poll(
+      async () =>
+        (await page.evaluate(() => window.airouter.listProviderConfigs()))[0]?.models ?? null,
+      { timeout: 10_000 }
+    )
+    .toEqual([{ id: 'beta', enabled: false }])
 })
 
 test('AR-07 discovers, sorts and merges text models with the draft', async () => {
@@ -606,6 +613,7 @@ test('AR-16 saves and reloads an image provider with isolated config and secret 
   await page.getByRole('textbox', { name: '图像 API Key', exact: true }).fill('image-secret')
   await addModel('mock-image', true)
   await page.getByRole('button', { name: '保存 Provider' }).click()
+  await expect(page.getByText('已保存“Image API”')).toBeVisible({ timeout: 10_000 })
   const imageConfig = (await page.evaluate(() => window.airouter.listImageProviderConfigs())).find(
     (config) => config.type === 'openai-compatible'
   )
@@ -1049,7 +1057,7 @@ test('AR-28 manages a local TTS model package and its Provider lifecycle', async
   await expect(page.getByText('新增 1 个资源，复用 2 个资源')).toBeVisible()
 
   await editor.getByRole('button', { name: '保存 Provider' }).click()
-  await expect(editor.getByText('Provider 已保存')).toBeVisible()
+  await expect(page.getByText('已保存“Local Pocket”')).toBeVisible({ timeout: 10_000 })
   const savedState = await page.evaluate(async () => {
     const configs = await window.airouter.listSpeechProviderConfigs()
     const config = configs[0]
@@ -1136,7 +1144,7 @@ test('AR-29 configures and tests an online TTS Provider through the UI', async (
   })
 
   await editor.getByRole('button', { name: '保存 Provider' }).click()
-  await expect(editor.getByText('Provider 已保存')).toBeVisible()
+  await expect(page.getByText('已保存“Online Speech”')).toBeVisible({ timeout: 10_000 })
   await page.reload()
   await openAirouter('语音合成')
   await page.getByRole('button', { name: /Online Speech/ }).click()
@@ -1345,7 +1353,7 @@ test('AR-32 executes the real Pocket TTS model package through the Electron stac
   await expect(editor.locator('audio')).toHaveAttribute('src', /^blob:/)
 
   await editor.getByRole('button', { name: '保存 Provider' }).click()
-  await expect(editor.getByText('Provider 已保存')).toBeVisible()
+  await expect(page.getByText('已保存“Pocket TTS Integration”')).toBeVisible({ timeout: 10_000 })
   const config = await page.evaluate(
     async () => (await window.airouter.listSpeechProviderConfigs())[0]
   )

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type JSX } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import type {
   AIRouterImageProviderConfigInput,
   AIRouterImageProviderConfigSummary,
@@ -6,7 +6,6 @@ import type {
   AIRouterModelConfig
 } from '@ls101/airouter'
 import {
-  Check,
   Download,
   Eye,
   EyeOff,
@@ -28,10 +27,19 @@ import {
 import { toast } from '../../components/ui/toast'
 import { airouterApplication, type AIRouterApplication } from './AIRouterApplication'
 import {
+  AIRouterOperationFeedback,
+  AIRouterPageError,
+  AIRouterPageLoading,
+  type AIRouterFeedbackValue
+} from './AIRouterFeedback'
+import { formatAIRouterError } from './airouterError'
+import {
   manualImageGenerationCoordinator,
   type ManualImageGenerationCoordinator
 } from './ManualImageGeneration'
 import styles from './AIRouterSettingsPage.module.css'
+
+type ImageFeedbackScope = 'api-key' | 'models' | 'test' | 'editor' | 'delete'
 
 export function AIRouterImageSettingsPage({
   application = airouterApplication,
@@ -41,31 +49,46 @@ export function AIRouterImageSettingsPage({
   manualGenerator?: ManualImageGenerationCoordinator
 }): JSX.Element {
   const [configs, setConfigs] = useState<AIRouterImageProviderConfigSummary[] | null>(null)
+  const loadRequest = useRef(0)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [draft, setDraft] = useState<ImageProviderDraft | null>(null)
   const [manualModel, setManualModel] = useState('')
   const [testModelId, setTestModelId] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [feedback, setFeedback] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<
+    Partial<Record<ImageFeedbackScope, AIRouterFeedbackValue>>
+  >({})
   const [apiKeyVisible, setApiKeyVisible] = useState(false)
   const [apiKeyBaseline, setApiKeyBaseline] = useState('')
   const [apiKeyLoaded, setApiKeyLoaded] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<AIRouterImageProviderConfigSummary | null>(null)
   const [testPreview, setTestPreview] = useState<string | null>(null)
 
-  useEffect(() => {
-    let active = true
-    void application
-      .listImageConfigs()
-      .then((nextConfigs) => {
-        if (!active) return
-        setConfigs(nextConfigs)
-      })
-      .catch((reason: unknown) => active && setError(errorMessage(reason)))
-    return () => {
-      active = false
+  const loadConfigs = useCallback(async (): Promise<void> => {
+    const requestId = loadRequest.current + 1
+    loadRequest.current = requestId
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const nextConfigs = await application.listImageConfigs()
+      if (requestId !== loadRequest.current) return
+      setConfigs(nextConfigs)
+    } catch (reason) {
+      if (requestId !== loadRequest.current) return
+      setConfigs(null)
+      setLoadError(formatAIRouterError(reason, '无法加载图像 Provider 设置'))
+    } finally {
+      if (requestId === loadRequest.current) setLoading(false)
     }
   }, [application])
+
+  useEffect(() => {
+    void loadConfigs()
+    return () => {
+      loadRequest.current += 1
+    }
+  }, [loadConfigs])
 
   useEffect(
     () => () => {
@@ -79,57 +102,91 @@ export function AIRouterImageSettingsPage({
     ? testModelId
     : (enabledModels[0]?.id ?? '')
 
-  const run = async (operation: string, action: () => Promise<void>): Promise<void> => {
+  const run = async (
+    operation: string,
+    action: () => Promise<void>,
+    feedbackScope: ImageFeedbackScope
+  ): Promise<void> => {
     setBusy(operation)
-    setError(null)
-    setFeedback(null)
+    setFeedback((current) => ({ ...current, [feedbackScope]: undefined }))
     try {
       await action()
     } catch (reason) {
-      setError(errorMessage(reason))
+      setFeedback((current) => ({
+        ...current,
+        [feedbackScope]: {
+          kind: 'error',
+          text: formatAIRouterError(reason, '图像生成设置操作失败')
+        }
+      }))
     } finally {
       setBusy(null)
     }
   }
 
-  if (!configs) return <div className={styles.status}>{error ?? '正在加载图像 Provider...'}</div>
+  if (!configs) {
+    return loadError ? (
+      <AIRouterPageError
+        message={loadError}
+        onRetry={() => void loadConfigs()}
+        retrying={loading}
+        title="无法加载图像 Provider 设置"
+      />
+    ) : (
+      <AIRouterPageLoading message="正在加载图像 Provider..." />
+    )
+  }
 
-  const closeEditor = (): void => {
-    if (busy) return
+  const resetEditorState = (): void => {
     if (testPreview) URL.revokeObjectURL(testPreview)
     setTestPreview(null)
-    setDraft(null)
     setManualModel('')
     setTestModelId('')
     setApiKeyVisible(false)
     setApiKeyBaseline('')
     setApiKeyLoaded(false)
+    setFeedback({})
+  }
+
+  const openEditor = (nextDraft: ImageProviderDraft): void => {
+    resetEditorState()
+    setDraft(nextDraft)
+  }
+
+  const closeEditor = (): void => {
+    if (busy) return
+    setDraft(null)
+    resetEditorState()
   }
 
   const saveDraft = (): void => {
     if (!draft) return
-    void run('save', async () => {
-      const clearApiKey =
-        draft.type === 'openai-compatible' && apiKeyLoaded && draft.hasApiKey && !draft.apiKey
-      const saved = await application.saveImageConfig({
-        id: draft.id,
-        name: draft.name,
-        type: draft.type,
-        baseUrl: draft.baseUrl,
-        models: draft.models,
-        apiKey:
-          draft.type === 'openai-compatible' && !clearApiKey && draft.apiKey !== apiKeyBaseline
-            ? draft.apiKey
-            : undefined,
-        clearApiKey
-      })
-      setConfigs((current) => upsert(current ?? [], saved))
-      setDraft(fromConfig(saved))
-      setApiKeyBaseline('')
-      setApiKeyLoaded(false)
-      setApiKeyVisible(false)
-      toast.success(`已保存“${saved.name}”`)
-    })
+    void run(
+      'save',
+      async () => {
+        const clearApiKey =
+          draft.type === 'openai-compatible' && apiKeyLoaded && draft.hasApiKey && !draft.apiKey
+        const saved = await application.saveImageConfig({
+          id: draft.id,
+          name: draft.name,
+          type: draft.type,
+          baseUrl: draft.baseUrl,
+          models: draft.models,
+          apiKey:
+            draft.type === 'openai-compatible' && !clearApiKey && draft.apiKey !== apiKeyBaseline
+              ? draft.apiKey
+              : undefined,
+          clearApiKey
+        })
+        setConfigs((current) => upsert(current ?? [], saved))
+        setDraft(fromConfig(saved))
+        setApiKeyBaseline('')
+        setApiKeyLoaded(false)
+        setApiKeyVisible(false)
+        toast.success(`已保存“${saved.name}”`)
+      },
+      'editor'
+    )
   }
 
   const draftModified = draft
@@ -143,18 +200,13 @@ export function AIRouterImageSettingsPage({
 
   return (
     <SettingsContent>
-      {!draft && error ? (
-        <div className={styles.error} role="alert">
-          {error}
-        </div>
-      ) : null}
       <SettingsSection
         title="图像 Provider"
         description="单独管理图像生成服务，不复用文本 Provider；具体调用时选择 Provider。"
       >
         <div className={styles.providerToolbar}>
           <span>共 {configs.length} 个 Provider</span>
-          <Button icon={Plus} variant="primary" onClick={() => setDraft(createDraft())}>
+          <Button icon={Plus} variant="primary" onClick={() => openEditor(createDraft())}>
             添加 Provider
           </Button>
         </div>
@@ -165,7 +217,7 @@ export function AIRouterImageSettingsPage({
                 className={styles.providerItem}
                 key={config.id}
                 type="button"
-                onClick={() => setDraft(fromConfig(config))}
+                onClick={() => openEditor(fromConfig(config))}
               >
                 <span className={styles.providerText}>
                   <span className={styles.providerName}>{config.name}</span>
@@ -224,11 +276,6 @@ export function AIRouterImageSettingsPage({
               </button>
             </header>
             <div className={styles.editorBody}>
-              {error ? (
-                <div className={styles.error} role="alert">
-                  {error}
-                </div>
-              ) : null}
               <SettingsSection
                 title="基础配置"
                 description={
@@ -299,16 +346,20 @@ export function AIRouterImageSettingsPage({
                               if (!draft.id || !draft.hasApiKey || apiKeyLoaded || draft.apiKey)
                                 setApiKeyVisible(!apiKeyVisible)
                               else
-                                void run('api-key', async () => {
-                                  const apiKey =
-                                    (await application.readImageApiKey(draft.id as string)) ?? ''
-                                  setDraft((current) =>
-                                    current ? { ...current, apiKey } : current
-                                  )
-                                  setApiKeyBaseline(apiKey)
-                                  setApiKeyLoaded(true)
-                                  setApiKeyVisible(true)
-                                })
+                                void run(
+                                  'api-key',
+                                  async () => {
+                                    const apiKey =
+                                      (await application.readImageApiKey(draft.id as string)) ?? ''
+                                    setDraft((current) =>
+                                      current ? { ...current, apiKey } : current
+                                    )
+                                    setApiKeyBaseline(apiKey)
+                                    setApiKeyLoaded(true)
+                                    setApiKeyVisible(true)
+                                  },
+                                  'api-key'
+                                )
                             }}
                           >
                             {apiKeyVisible ? (
@@ -318,6 +369,7 @@ export function AIRouterImageSettingsPage({
                             )}
                           </button>
                         </div>
+                        <AIRouterOperationFeedback value={feedback['api-key']} />
                       </div>
                     </SettingsRow>
                   </>
@@ -333,26 +385,36 @@ export function AIRouterImageSettingsPage({
                       icon={Download}
                       disabled={Boolean(busy)}
                       onClick={() =>
-                        void run('models', async () => {
-                          const discovered = await application.listImageModels(
-                            toInput(draft, apiKeyBaseline, apiKeyLoaded)
-                          )
-                          const existing = new Map(draft.models.map((model) => [model.id, model]))
-                          setDraft({
-                            ...draft,
-                            models: discovered
-                              .map(
-                                (model) =>
-                                  existing.get(model.id) ?? { id: model.id, enabled: false }
-                              )
-                              .concat(
-                                draft.models.filter(
-                                  (model) => !discovered.some((item) => item.id === model.id)
+                        void run(
+                          'models',
+                          async () => {
+                            const discovered = await application.listImageModels(
+                              toInput(draft, apiKeyBaseline, apiKeyLoaded)
+                            )
+                            const existing = new Map(draft.models.map((model) => [model.id, model]))
+                            setDraft({
+                              ...draft,
+                              models: discovered
+                                .map(
+                                  (model) =>
+                                    existing.get(model.id) ?? { id: model.id, enabled: false }
                                 )
-                              )
-                          })
-                          setFeedback(`获取到 ${discovered.length} 个模型`)
-                        })
+                                .concat(
+                                  draft.models.filter(
+                                    (model) => !discovered.some((item) => item.id === model.id)
+                                  )
+                                )
+                            })
+                            setFeedback((current) => ({
+                              ...current,
+                              models: {
+                                kind: 'success',
+                                text: `获取到 ${discovered.length} 个模型`
+                              }
+                            }))
+                          },
+                          'models'
+                        )
                       }
                     >
                       获取模型列表
@@ -379,6 +441,10 @@ export function AIRouterImageSettingsPage({
                       </Button>
                     </div>
                   </div>
+                  <AIRouterOperationFeedback
+                    className={styles.modelFeedback}
+                    value={feedback.models}
+                  />
                   {draft.models.length ? (
                     <div className={styles.modelList}>
                       {draft.models.map((model) => (
@@ -432,21 +498,29 @@ export function AIRouterImageSettingsPage({
                       icon={TestTube2}
                       disabled={Boolean(busy)}
                       onClick={() =>
-                        void run('test', async () => {
-                          const result = await manualGenerator.generate('一枚简洁的绿色圆形图标')
-                          const url = URL.createObjectURL(
-                            new Blob([new Uint8Array(result.data)], { type: result.mediaType })
-                          )
-                          setTestPreview((current) => {
-                            if (current) URL.revokeObjectURL(current)
-                            return url
-                          })
-                          setFeedback('测试图片已导入')
-                        })
+                        void run(
+                          'test',
+                          async () => {
+                            const result = await manualGenerator.generate('一枚简洁的绿色圆形图标')
+                            const url = URL.createObjectURL(
+                              new Blob([new Uint8Array(result.data)], { type: result.mediaType })
+                            )
+                            setTestPreview((current) => {
+                              if (current) URL.revokeObjectURL(current)
+                              return url
+                            })
+                            setFeedback((current) => ({
+                              ...current,
+                              test: { kind: 'success', text: '测试图片已导入' }
+                            }))
+                          },
+                          'test'
+                        )
                       }
                     >
                       测试手动生成
                     </Button>
+                    <AIRouterOperationFeedback value={feedback.test} />
                   </div>
                 </SettingsSection>
               )}
@@ -475,34 +549,36 @@ export function AIRouterImageSettingsPage({
                       icon={TestTube2}
                       disabled={!selectedTestModel || Boolean(busy)}
                       onClick={() =>
-                        void run('test', async () => {
-                          const result = await application.testImageConnection(
-                            toInput(draft, apiKeyBaseline, apiKeyLoaded),
-                            selectedTestModel
-                          )
-                          const url = URL.createObjectURL(
-                            new Blob([new Uint8Array(result.image.data)], {
-                              type: result.image.mediaType
+                        void run(
+                          'test',
+                          async () => {
+                            const result = await application.testImageConnection(
+                              toInput(draft, apiKeyBaseline, apiKeyLoaded),
+                              selectedTestModel
+                            )
+                            const url = URL.createObjectURL(
+                              new Blob([new Uint8Array(result.image.data)], {
+                                type: result.image.mediaType
+                              })
+                            )
+                            setTestPreview((current) => {
+                              if (current) URL.revokeObjectURL(current)
+                              return url
                             })
-                          )
-                          setTestPreview((current) => {
-                            if (current) URL.revokeObjectURL(current)
-                            return url
-                          })
-                          setFeedback('连接成功，测试图片已生成')
-                        })
+                            setFeedback((current) => ({
+                              ...current,
+                              test: { kind: 'success', text: '连接成功，测试图片已生成' }
+                            }))
+                          },
+                          'test'
+                        )
                       }
                     >
                       测试连接
                     </Button>
+                    <AIRouterOperationFeedback value={feedback.test} />
                   </div>
                 </SettingsSection>
-              ) : null}
-              {feedback ? (
-                <div className={styles.operationFeedback}>
-                  <Check aria-hidden="true" />
-                  <span>{feedback}</span>
-                </div>
               ) : null}
               {testPreview ? (
                 <img className={styles.imageTestPreview} alt="测试生成图片" src={testPreview} />
@@ -515,14 +591,18 @@ export function AIRouterImageSettingsPage({
                     icon={Trash2}
                     variant="danger"
                     disabled={Boolean(busy)}
-                    onClick={() =>
-                      setDeleteTarget(configs.find((config) => config.id === draft.id) ?? null)
-                    }
+                    onClick={() => {
+                      const target = configs.find((config) => config.id === draft.id)
+                      if (!target) return
+                      setFeedback((current) => ({ ...current, delete: undefined }))
+                      setDeleteTarget(target)
+                    }}
                   >
                     删除 Provider
                   </Button>
                 ) : null}
               </div>
+              <AIRouterOperationFeedback value={feedback.editor} />
               <div className={styles.editorFooterActions}>
                 <Button variant="ghost" onClick={closeEditor}>
                   取消
@@ -541,8 +621,11 @@ export function AIRouterImageSettingsPage({
         </Modal>
       ) : null}
       <ConfirmModal
+        busy={busy === 'delete'}
+        closeOnConfirm={false}
         danger
         confirmLabel="删除配置"
+        error={feedback.delete?.kind === 'error' ? feedback.delete.text : null}
         message={
           deleteTarget?.type === 'manual'
             ? `将删除“${deleteTarget.name}”的手动生成配置。`
@@ -550,18 +633,26 @@ export function AIRouterImageSettingsPage({
         }
         open={Boolean(deleteTarget)}
         title="删除图像 Provider 配置？"
-        onCancel={() => setDeleteTarget(null)}
+        onCancel={() => {
+          setDeleteTarget(null)
+          setFeedback((current) => ({ ...current, delete: undefined }))
+        }}
         onConfirm={() => {
           const target = deleteTarget
-          setDeleteTarget(null)
           if (!target) return
-          void run('delete', async () => {
-            await application.deleteImageConfig(target.id)
-            const nextConfigs = await application.listImageConfigs()
-            setConfigs(nextConfigs)
-            closeEditor()
-            toast.success(`已删除“${target.name}”`)
-          })
+          void run(
+            'delete',
+            async () => {
+              await application.deleteImageConfig(target.id)
+              const nextConfigs = await application.listImageConfigs()
+              setConfigs(nextConfigs)
+              setDraft(null)
+              resetEditorState()
+              setDeleteTarget(null)
+              toast.success(`已删除“${target.name}”`)
+            },
+            'delete'
+          )
         }}
       />
     </SettingsContent>
@@ -628,10 +719,6 @@ function upsert(
 
 function providerTypeLabel(type: AIRouterImageProviderType): string {
   return type === 'manual' ? '手动生成' : 'OpenAI Compatible'
-}
-
-function errorMessage(reason: unknown): string {
-  return reason instanceof Error ? reason.message : '图像生成设置操作失败'
 }
 
 interface ImageProviderDraft {

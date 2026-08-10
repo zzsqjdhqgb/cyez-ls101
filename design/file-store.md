@@ -287,9 +287,15 @@ return <img src={draft.getAssetUrl('cover.png')} />
 2. 拒绝认证信息、端口、query 和 fragment。
 3. 对 pathname 的每个 scope segment 和 filename 分别解码、校验。
 4. 固定映射到当前 scope 的 `.assets` 目录。
-5. 使用 Electron `net.fetch(fileUrl)` 返回文件流。
+5. 在 main 进程使用 Node.js `readFile()` 读取文件，并构造带 MIME 类型的 `Response` 返回。
 
 协议处理器永远不会映射 `.text`，因此 Text 文件不在 `asset://` 的可达范围内。
+
+### 跨平台路径与响应边界
+
+协议处理器不再依赖 `net.fetch(file://...)` 读取物理文件。Windows 上应用的 `userData` 路径与内置 Interface 的多层 scope 组合后可能超过 Chromium 处理本地文件 URL 的路径限制，即使 Node.js 已成功写入文件，Chromium 仍可能返回 `net::ERR_FILE_NOT_FOUND`。在 main 进程直接读取文件可以绕过这一限制。
+
+当前实现将完整文件读入内存后返回 `Response`，因此不声明对 `Range`、`206 Partial Content`、`HEAD` 或条件缓存请求的支持。当前 Asset 主要用于 Interface 图片预览；如果 File Store 扩展到音视频、PDF 或其他大文件，应使用 `fs.stat()` 加 `fs.createReadStream()` 构造流式响应，并实现并测试 `Range`、`Content-Range`、`Accept-Ranges` 和 `Content-Length`。
 
 ## 十、Builtin Scoped Store
 

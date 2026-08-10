@@ -34,6 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrandr2 libxkbcommon0 libxss1 \
     libasound2 \
     xdg-utils \
+    vim python3 python3-pip python3-venv python-is-python3 build-essential pkg-config libasound2-dev libsecret-1-dev ffmpeg\
     fonts-liberation fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 

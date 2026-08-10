@@ -1,4 +1,4 @@
-import { useEffect, useState, type JSX } from 'react'
+import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
 import type {
   AIRouterModelConfig,
   AIRouterSpeechModelPackageSummary,
@@ -12,7 +12,6 @@ import { fileDialog } from '@ls101/file-dialog/renderer'
 import {
   AudioLines,
   Box,
-  Check,
   ChevronRight,
   Download,
   Eye,
@@ -35,6 +34,13 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { Modal, ModalDescription, ModalTitle } from '../../components/ui/Modal'
 import { toast } from '../../components/ui/toast'
 import { airouterApplication, type AIRouterApplication } from './AIRouterApplication'
+import {
+  AIRouterOperationFeedback,
+  AIRouterPageError,
+  AIRouterPageLoading,
+  type AIRouterFeedbackValue
+} from './AIRouterFeedback'
+import { formatAIRouterError } from './airouterError'
 import styles from './AIRouterSettingsPage.module.css'
 
 interface SpeechProviderDraft {
@@ -51,6 +57,15 @@ interface SpeechProviderDraft {
   hasApiKey: boolean
 }
 
+type SpeechFeedbackScope =
+  | 'api-key'
+  | 'package'
+  | 'models'
+  | 'test'
+  | 'editor'
+  | 'delete-provider'
+  | 'delete-package'
+
 const providerLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
   'pocket-tts': 'Pocket TTS (WASM)',
@@ -63,15 +78,19 @@ export function AIRouterSpeechSettingsPage({
   application?: AIRouterApplication
 }): JSX.Element {
   const [configs, setConfigs] = useState<AIRouterSpeechProviderConfigSummary[] | null>(null)
+  const loadRequest = useRef(0)
   const [packages, setPackages] = useState<AIRouterSpeechModelPackageSummary[] | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [draft, setDraft] = useState<SpeechProviderDraft | null>(null)
   const [manualModel, setManualModel] = useState('')
   const [manualVoice, setManualVoice] = useState('')
   const [testModelId, setTestModelId] = useState('')
   const [testVoiceId, setTestVoiceId] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [feedback, setFeedback] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<
+    Partial<Record<SpeechFeedbackScope, AIRouterFeedbackValue>>
+  >({})
   const [apiKeyVisible, setApiKeyVisible] = useState(false)
   const [apiKeyBaseline, setApiKeyBaseline] = useState('')
   const [apiKeyLoaded, setApiKeyLoaded] = useState(false)
@@ -81,19 +100,35 @@ export function AIRouterSpeechSettingsPage({
     useState<AIRouterSpeechModelPackageSummary | null>(null)
   const [testAudioUrl, setTestAudioUrl] = useState<string | null>(null)
 
-  useEffect(() => {
-    let active = true
-    void Promise.all([application.listSpeechConfigs(), application.listSpeechPackages()])
-      .then(([nextConfigs, nextPackages]) => {
-        if (!active) return
-        setConfigs(nextConfigs)
-        setPackages(nextPackages)
-      })
-      .catch((reason: unknown) => active && setError(errorMessage(reason)))
-    return () => {
-      active = false
+  const loadSettings = useCallback(async (): Promise<void> => {
+    const requestId = loadRequest.current + 1
+    loadRequest.current = requestId
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const [nextConfigs, nextPackages] = await Promise.all([
+        application.listSpeechConfigs(),
+        application.listSpeechPackages()
+      ])
+      if (requestId !== loadRequest.current) return
+      setConfigs(nextConfigs)
+      setPackages(nextPackages)
+    } catch (reason) {
+      if (requestId !== loadRequest.current) return
+      setConfigs(null)
+      setPackages(null)
+      setLoadError(formatAIRouterError(reason, '无法加载语音合成设置'))
+    } finally {
+      if (requestId === loadRequest.current) setLoading(false)
     }
   }, [application])
+
+  useEffect(() => {
+    void loadSettings()
+    return () => {
+      loadRequest.current += 1
+    }
+  }, [loadSettings])
 
   useEffect(
     () => () => {
@@ -127,14 +162,23 @@ export function AIRouterSpeechSettingsPage({
     ? isModified(draft, persistedConfig, apiKeyBaseline, apiKeyLoaded)
     : false
 
-  const run = async (operation: string, action: () => Promise<void>): Promise<void> => {
+  const run = async (
+    operation: string,
+    action: () => Promise<void>,
+    feedbackScope: SpeechFeedbackScope
+  ): Promise<void> => {
     setBusy(operation)
-    setError(null)
-    setFeedback(null)
+    setFeedback((current) => ({ ...current, [feedbackScope]: undefined }))
     try {
       await action()
     } catch (reason) {
-      setError(errorMessage(reason))
+      setFeedback((current) => ({
+        ...current,
+        [feedbackScope]: {
+          kind: 'error',
+          text: formatAIRouterError(reason, '语音合成设置操作失败')
+        }
+      }))
     } finally {
       setBusy(null)
     }
@@ -150,12 +194,11 @@ export function AIRouterSpeechSettingsPage({
     setApiKeyVisible(false)
     setApiKeyBaseline('')
     setApiKeyLoaded(false)
-    setFeedback(null)
+    setFeedback({})
   }
 
   const openEditor = (nextDraft: SpeechProviderDraft): void => {
     resetEditorState()
-    setError(null)
     setDraft(nextDraft)
   }
 
@@ -163,7 +206,6 @@ export function AIRouterSpeechSettingsPage({
     if (busy) return
     setDraft(null)
     resetEditorState()
-    setError(null)
   }
 
   const selectPackage = (
@@ -213,17 +255,20 @@ export function AIRouterSpeechSettingsPage({
   }
 
   if (!configs || !packages) {
-    return <div className={styles.status}>{error ?? '正在加载语音合成设置...'}</div>
+    return loadError ? (
+      <AIRouterPageError
+        message={loadError}
+        onRetry={() => void loadSettings()}
+        retrying={loading}
+        title="无法加载语音合成设置"
+      />
+    ) : (
+      <AIRouterPageLoading message="正在加载语音合成设置..." />
+    )
   }
 
   return (
     <SettingsContent>
-      {!draft && error ? (
-        <div className={styles.error} role="alert">
-          {error}
-        </div>
-      ) : null}
-
       <SettingsSection
         title="语音 Provider"
         description="管理在线语音服务和使用本地模型包的离线语音运行时。"
@@ -274,11 +319,12 @@ export function AIRouterSpeechSettingsPage({
             icon={Upload}
             variant="primary"
             disabled={Boolean(busy)}
-            onClick={() => void run('import-package', importPackage)}
+            onClick={() => void run('import-package', importPackage, 'package')}
           >
             导入模型包
           </Button>
         </div>
+        {!draft ? <AIRouterOperationFeedback value={feedback.package} /> : null}
         {packages.length ? (
           <div className={styles.packageList}>
             {packages.map((modelPackage) => {
@@ -317,7 +363,10 @@ export function AIRouterSpeechSettingsPage({
                     aria-label={`删除模型包 ${modelPackage.package.name}`}
                     className={styles.removeModel}
                     disabled={Boolean(references.length) || Boolean(busy)}
-                    onClick={() => setDeletePackageTarget(modelPackage)}
+                    onClick={() => {
+                      setFeedback((current) => ({ ...current, 'delete-package': undefined }))
+                      setDeletePackageTarget(modelPackage)
+                    }}
                     title={references.length ? '模型包正在被 Provider 使用' : '删除模型包'}
                     type="button"
                   >
@@ -368,11 +417,6 @@ export function AIRouterSpeechSettingsPage({
             </header>
 
             <div className={styles.editorBody}>
-              {error ? (
-                <div className={styles.error} role="alert">
-                  {error}
-                </div>
-              ) : null}
               <SettingsSection title="基础配置">
                 <SettingsRow label="配置名称">
                   <input
@@ -473,15 +517,19 @@ export function AIRouterSpeechSettingsPage({
                                 return
                               }
                               const id = draft.id
-                              void run('api-key', async () => {
-                                const apiKey = (await application.readSpeechApiKey(id)) ?? ''
-                                setDraft((current) =>
-                                  current?.id === id ? { ...current, apiKey } : current
-                                )
-                                setApiKeyBaseline(apiKey)
-                                setApiKeyLoaded(true)
-                                setApiKeyVisible(true)
-                              })
+                              void run(
+                                'api-key',
+                                async () => {
+                                  const apiKey = (await application.readSpeechApiKey(id)) ?? ''
+                                  setDraft((current) =>
+                                    current?.id === id ? { ...current, apiKey } : current
+                                  )
+                                  setApiKeyBaseline(apiKey)
+                                  setApiKeyLoaded(true)
+                                  setApiKeyVisible(true)
+                                },
+                                'api-key'
+                              )
                             }}
                             title={apiKeyVisible ? '隐藏 API Key' : '显示 API Key'}
                             type="button"
@@ -493,6 +541,7 @@ export function AIRouterSpeechSettingsPage({
                             )}
                           </button>
                         </div>
+                        <AIRouterOperationFeedback value={feedback['api-key']} />
                       </div>
                     </SettingsRow>
                   </>
@@ -568,10 +617,11 @@ export function AIRouterSpeechSettingsPage({
                       icon={Upload}
                       variant="primary"
                       disabled={Boolean(busy)}
-                      onClick={() => void run('import-package', importPackage)}
+                      onClick={() => void run('import-package', importPackage, 'package')}
                     >
                       导入模型包
                     </Button>
+                    <AIRouterOperationFeedback value={feedback.package} />
                   </div>
                 )
               ) : (
@@ -585,27 +635,39 @@ export function AIRouterSpeechSettingsPage({
                         icon={Download}
                         disabled={Boolean(busy)}
                         onClick={() =>
-                          void run('models', async () => {
-                            const discovered = await application.listSpeechModels(
-                              toInput(draft, apiKeyBaseline, apiKeyLoaded)
-                            )
-                            const existing = new Map(draft.models.map((model) => [model.id, model]))
-                            setDraft({
-                              ...draft,
-                              models: discovered
-                                .map(
-                                  (model) =>
-                                    existing.get(model.id) ?? { id: model.id, enabled: false }
-                                )
-                                .concat(
-                                  draft.models.filter(
+                          void run(
+                            'models',
+                            async () => {
+                              const discovered = await application.listSpeechModels(
+                                toInput(draft, apiKeyBaseline, apiKeyLoaded)
+                              )
+                              const existing = new Map(
+                                draft.models.map((model) => [model.id, model])
+                              )
+                              setDraft({
+                                ...draft,
+                                models: discovered
+                                  .map(
                                     (model) =>
-                                      !discovered.some((candidate) => candidate.id === model.id)
+                                      existing.get(model.id) ?? { id: model.id, enabled: false }
                                   )
-                                )
-                            })
-                            setFeedback(`获取到 ${discovered.length} 个模型`)
-                          })
+                                  .concat(
+                                    draft.models.filter(
+                                      (model) =>
+                                        !discovered.some((candidate) => candidate.id === model.id)
+                                    )
+                                  )
+                              })
+                              setFeedback((current) => ({
+                                ...current,
+                                models: {
+                                  kind: 'success',
+                                  text: `获取到 ${discovered.length} 个模型`
+                                }
+                              }))
+                            },
+                            'models'
+                          )
                         }
                       >
                         获取模型列表
@@ -627,6 +689,10 @@ export function AIRouterSpeechSettingsPage({
                         }}
                       />
                     </div>
+                    <AIRouterOperationFeedback
+                      className={styles.modelFeedback}
+                      value={feedback.models}
+                    />
                     <ToggleList
                       empty="尚未添加模型。"
                       items={draft.models}
@@ -707,27 +773,35 @@ export function AIRouterSpeechSettingsPage({
                       icon={TestTube2}
                       disabled={Boolean(busy)}
                       onClick={() =>
-                        void run('test', async () => {
-                          const result = await application.testSpeechConnection({
-                            config: toInput(draft, apiKeyBaseline, apiKeyLoaded),
-                            modelId: selectedTestModel,
-                            voiceId: selectedTestVoice
-                          })
-                          const url = URL.createObjectURL(
-                            new Blob([new Uint8Array(result.audio.data)], {
-                              type: result.audio.mediaType
+                        void run(
+                          'test',
+                          async () => {
+                            const result = await application.testSpeechConnection({
+                              config: toInput(draft, apiKeyBaseline, apiKeyLoaded),
+                              modelId: selectedTestModel,
+                              voiceId: selectedTestVoice
                             })
-                          )
-                          setTestAudioUrl((current) => {
-                            if (current) URL.revokeObjectURL(current)
-                            return url
-                          })
-                          setFeedback('测试语音合成成功')
-                        })
+                            const url = URL.createObjectURL(
+                              new Blob([new Uint8Array(result.audio.data)], {
+                                type: result.audio.mediaType
+                              })
+                            )
+                            setTestAudioUrl((current) => {
+                              if (current) URL.revokeObjectURL(current)
+                              return url
+                            })
+                            setFeedback((current) => ({
+                              ...current,
+                              test: { kind: 'success', text: '测试语音合成成功' }
+                            }))
+                          },
+                          'test'
+                        )
                       }
                     >
                       测试合成
                     </Button>
+                    <AIRouterOperationFeedback value={feedback.test} />
                   </div>
                   {testAudioUrl ? (
                     <audio className={styles.speechTestAudio} controls src={testAudioUrl} />
@@ -745,19 +819,16 @@ export function AIRouterSpeechSettingsPage({
                     disabled={Boolean(busy)}
                     onClick={() => {
                       const config = configs.find((item) => item.id === draft.id)
-                      if (config) setDeleteProviderTarget(config)
+                      if (!config) return
+                      setFeedback((current) => ({ ...current, 'delete-provider': undefined }))
+                      setDeleteProviderTarget(config)
                     }}
                   >
                     删除 Provider
                   </Button>
                 ) : null}
               </div>
-              {feedback ? (
-                <span className={styles.operationFeedback}>
-                  <Check aria-hidden="true" />
-                  <span>{feedback}</span>
-                </span>
-              ) : null}
+              <AIRouterOperationFeedback value={feedback.editor} />
               <div className={styles.editorFooterActions}>
                 <Button disabled={Boolean(busy)} onClick={closeEditor}>
                   取消
@@ -767,18 +838,21 @@ export function AIRouterSpeechSettingsPage({
                   variant="primary"
                   disabled={Boolean(busy) || !draft.name.trim() || !draftModified}
                   onClick={() =>
-                    void run('save', async () => {
-                      const saved = await application.saveSpeechConfig(
-                        toInput(draft, apiKeyBaseline, apiKeyLoaded)
-                      )
-                      setConfigs((current) => upsert(current ?? [], saved))
-                      setDraft(fromConfig(saved))
-                      setApiKeyVisible(false)
-                      setApiKeyBaseline('')
-                      setApiKeyLoaded(false)
-                      setFeedback('Provider 已保存')
-                      toast.success(`已保存“${saved.name}”`)
-                    })
+                    void run(
+                      'save',
+                      async () => {
+                        const saved = await application.saveSpeechConfig(
+                          toInput(draft, apiKeyBaseline, apiKeyLoaded)
+                        )
+                        setConfigs((current) => upsert(current ?? [], saved))
+                        setDraft(fromConfig(saved))
+                        setApiKeyVisible(false)
+                        setApiKeyBaseline('')
+                        setApiKeyLoaded(false)
+                        toast.success(`已保存“${saved.name}”`)
+                      },
+                      'editor'
+                    )
                   }
                 >
                   保存 Provider
@@ -790,47 +864,71 @@ export function AIRouterSpeechSettingsPage({
       ) : null}
 
       <ConfirmModal
+        busy={busy === 'delete-provider'}
+        closeOnConfirm={false}
         danger
         confirmLabel="删除 Provider"
+        error={
+          feedback['delete-provider']?.kind === 'error' ? feedback['delete-provider'].text : null
+        }
         message={`将删除“${deleteProviderTarget?.name ?? ''}”及其独立保存的 API Key。`}
         open={Boolean(deleteProviderTarget)}
         title="删除语音 Provider？"
-        onCancel={() => setDeleteProviderTarget(null)}
+        onCancel={() => {
+          setDeleteProviderTarget(null)
+          setFeedback((current) => ({ ...current, 'delete-provider': undefined }))
+        }}
         onConfirm={() => {
           const target = deleteProviderTarget
-          setDeleteProviderTarget(null)
           if (!target) return
-          void run('delete-provider', async () => {
-            await application.deleteSpeechConfig(target.id)
-            setConfigs((current) => (current ?? []).filter((item) => item.id !== target.id))
-            setDraft(null)
-            resetEditorState()
-            toast.success(`已删除“${target.name}”`)
-          })
+          void run(
+            'delete-provider',
+            async () => {
+              await application.deleteSpeechConfig(target.id)
+              setConfigs((current) => (current ?? []).filter((item) => item.id !== target.id))
+              setDraft(null)
+              resetEditorState()
+              setDeleteProviderTarget(null)
+              toast.success(`已删除“${target.name}”`)
+            },
+            'delete-provider'
+          )
         }}
       />
       <ConfirmModal
+        busy={busy === 'delete-package'}
+        closeOnConfirm={false}
         danger
         confirmLabel="删除模型包"
+        error={
+          feedback['delete-package']?.kind === 'error' ? feedback['delete-package'].text : null
+        }
         message={`将删除“${deletePackageTarget?.package.name ?? ''}”及未被其他模型包引用的资源。`}
         open={Boolean(deletePackageTarget)}
         title="删除 TTS 模型包？"
-        onCancel={() => setDeletePackageTarget(null)}
+        onCancel={() => {
+          setDeletePackageTarget(null)
+          setFeedback((current) => ({ ...current, 'delete-package': undefined }))
+        }}
         onConfirm={() => {
           const target = deletePackageTarget
-          setDeletePackageTarget(null)
           if (!target) return
-          void run('delete-package', async () => {
-            await application.deleteSpeechPackage(target.package.id, target.package.version)
-            setPackages((current) =>
-              (current ?? []).filter(
-                (item) =>
-                  item.package.id !== target.package.id ||
-                  item.package.version !== target.package.version
+          void run(
+            'delete-package',
+            async () => {
+              await application.deleteSpeechPackage(target.package.id, target.package.version)
+              setPackages((current) =>
+                (current ?? []).filter(
+                  (item) =>
+                    item.package.id !== target.package.id ||
+                    item.package.version !== target.package.version
+                )
               )
-            )
-            toast.success(`已删除“${target.package.name}”`)
-          })
+              setDeletePackageTarget(null)
+              toast.success(`已删除“${target.package.name}”`)
+            },
+            'delete-package'
+          )
         }}
       />
     </SettingsContent>
@@ -1046,8 +1144,4 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`
-}
-
-function errorMessage(reason: unknown): string {
-  return reason instanceof Error ? reason.message : String(reason)
 }

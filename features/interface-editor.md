@@ -548,14 +548,14 @@ interface InterfaceInstance {
 
 ```text
 interfaces/
-├── drafts/<draftId>/draft.json
+├── drafts/<draftId>/.text/draft.json
 ├── published/<digest>/
-│   ├── interface.json
+│   ├── .text/interface.json
 │   └── instances/<instanceId>/
 └── builtin/<builtinKey>/
-    ├── current.json
+    ├── .text/current.json
     └── versions/<digest>/
-        ├── interface.json
+        ├── .text/interface.json
         └── instances/<instanceId>/
 ```
 
@@ -579,8 +579,31 @@ interface BuiltinInterfaceApplication {
   check(builtinKey: string, next: InterfaceDef): Promise<BuiltinUpdatePlan>
 
   apply(plan: BuiltinUpdatePlan, choice?: ManualBuiltinUpdateChoice): Promise<BuiltinUpdateResult>
+
+  checkRemoval(builtinKey: string): Promise<BuiltinRemovalPlan | null>
+
+  applyRemoval(
+    plan: BuiltinRemovalPlan,
+    choice: 'delete' | 'backup-old'
+  ): Promise<BuiltinRemovalResult>
+
+  reconcile(source: BundledInterfaceSource): Promise<BuiltinReconciliationResult>
 }
 ```
+
+随应用发布的只读来源按 Interface 独立存储，不使用总清单：
+
+```text
+resources/builtin/interface-editor/builtin/<builtinKey>/
+├── .text/current.json
+└── versions/<digest>/.text/interface.json
+```
+
+`reconcile()` 先完整读取并校验所有 bundled Interface，再执行任何写入。兼容更新自动应用；结构更新、变量契约冲突和从 bundled 目录移除的 builtin 返回待处理计划。读取失败不会被解释为全部 builtin 已删除。
+
+首次安装 builtin 时，如果相同内容 ID 已存在于 `published`，仓储会将该 Interface、实例和资源接管到 builtin 分区，而不是创建重复副本或报告身份冲突。Interface ID 不变，因此现有引用无需迁移；如果 current 指针写入失败，接管会回滚到 `published`。
+
+当前随应用发布 `shanghai-gaokao-speaking`（“上海高考英语口语”）。该 Interface 将旧 `templates/SH-gaokao-speaking/chunk` 六个文件中的 27 个 `editableData` 字段合并到一份可视化编辑结构，保留原变量名；四个旧 `file` 字段改为 `image`，不再按 JSON chunk 拆分定义。
 
 分类：
 
@@ -594,17 +617,20 @@ interface BuiltinInterfaceApplication {
 - `migrate`：迁移实例、Template 引用和当前版本指针。
 - `backup-old`：将旧 builtin 内容及实例物理备份到用户发布分区。
 
+builtin 从随包目录删除时，用户可以删除其定义、实例与资源，或将旧版备份到 `published`。备份保留原 Interface ID，因此 Template 引用无需改写；删除计划会提供受影响的实例和 Template 引用数量。
+
 `apply()` 执行前会重新检查当前 builtin 状态，拒绝已经失效的旧计划。
 
 Template 引用迁移通过以下端口注入：
 
 ```typescript
-interface InterfaceReferenceMigrator {
+interface InterfaceReferenceManager {
   replaceInterfaceReferences(fromInterfaceId: string, toInterfaceId: string): Promise<void>
+  countInterfaceReferences(interfaceId: string): Promise<number>
 }
 ```
 
-当前仓库尚无 Template 持久化实现，因此真实引用迁移尚未接线。
+renderer 使用 Template 仓储适配器扫描并改写工作文档中的 Interface requirement。批量改写失败时会回滚此前已保存的 Template。
 
 ## 错误与取消
 
@@ -632,7 +658,6 @@ MISSING_ASSET
 - 实例时间字段仍名为 `generatedAt`，空白实例也会在创建时写入该时间。
 - 实例整表更新依赖 File Store 的单文件原子替换；这不构成 Interface 定义、实例和资源之间的多文件事务。
 - 应用层部分错误仍使用普通 `Error` 文本，尚未统一为稳定错误码。
-- builtin 引用迁移没有真实 Template 仓储适配器。
 - 没有删除已发布 Interface 前的 Template 引用影响检查应用用例。
 - 导入导出一次性在内存中处理完整 ZIP，没有流式 I/O。
 
@@ -650,7 +675,7 @@ MISSING_ASSET
 - AI 流日志、文本校验、逐图片任务状态、成功覆盖和实例级并发拒绝。
 - 手动或 API 图片生成后的资源校验、原子保存和字段 URL 回填。
 - 导入导出选择、ZIP 往返、安全校验和取消语义。
-- builtin 自动更新、手动迁移、物理备份、回滚和契约拒绝。
+- builtin 独立文件读取、自动更新、手动迁移、删除、物理备份、引用改写、回滚和契约拒绝。
 - 五模块应用门面的主要成功路径。
 
 当前未覆盖：
@@ -673,6 +698,7 @@ MISSING_ASSET
 - `packages/interface-editor/src/zip.ts`
 - `packages/interface-editor/src/fileExchange.ts`
 - `packages/interface-editor/src/builtin.ts`
+- `packages/interface-editor/src/bundled.ts`
 - `packages/interface-editor/src/adapters.ts`
 - `packages/interface-editor/src/builtin-entry.ts`
 - `packages/interface-editor/src/__tests__/`

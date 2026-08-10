@@ -1,5 +1,6 @@
-import { Cpu, Palette } from 'lucide-react'
+import { Cpu, Info, Palette } from 'lucide-react'
 import { AIRouterSettingsPage } from '../features/airouter/AIRouterSettingsPage'
+import { AboutSettingsPage } from '../features/settings/AboutSettingsPage'
 import { AppearanceSettingsPage } from '../features/settings/AppearanceSettingsPage'
 import { registerSettingsPage } from './settings-registry'
 
@@ -29,6 +30,19 @@ const unregisterSettingsPages = [
     },
     order: 0,
     component: AppearanceSettingsPage
+  }),
+  registerSettingsPage({
+    id: 'about',
+    title: '关于',
+    description: '查看应用版本、项目团队和软件许可',
+    icon: Info,
+    group: {
+      id: 'general',
+      label: '通用',
+      order: 0
+    },
+    order: 100,
+    component: AboutSettingsPage
   })
 ]
 

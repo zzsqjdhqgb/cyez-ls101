@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { App } from './app/App'
 import { templateApplication } from './features/templates/TemplateApplicationRuntime'
+import { builtinInterfaceMaintenance } from './features/interfaces/BuiltinInterfaceRuntime'
 import './app/register-settings'
 import './app/register-placeholder-routes'
 import './styles/tokens.css'
@@ -17,6 +18,7 @@ if (!root) {
 const reactRoot = createRoot(root)
 
 async function renderApplication(): Promise<void> {
+  await builtinInterfaceMaintenance.initialize()
   await templateApplication.initialize()
   reactRoot.render(
     <StrictMode>

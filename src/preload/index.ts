@@ -1,7 +1,9 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import {
+  APP_INFO_CHANNELS,
   WINDOW_CONTROL_CHANNELS,
   WINDOW_CONTROL_EVENTS,
+  type AppInfoBridge,
   type WindowControlsBridge
 } from '@ls101/core-types'
 import {
@@ -225,6 +227,12 @@ const clipboardBridge: ClipboardBridge = {
   }
 }
 
+const appInfoBridge: AppInfoBridge = {
+  getVersion() {
+    return ipcRenderer.invoke(APP_INFO_CHANNELS.getVersion)
+  }
+}
+
 const windowControlsBridge: WindowControlsBridge = {
   minimize() {
     return ipcRenderer.invoke(WINDOW_CONTROL_CHANNELS.minimize)
@@ -256,4 +264,5 @@ contextBridge.exposeInMainWorld('configStore', configStoreBridge)
 contextBridge.exposeInMainWorld('airouter', airouterBridge)
 contextBridge.exposeInMainWorld('fileDialog', fileDialogBridge)
 contextBridge.exposeInMainWorld('imageClipboard', clipboardBridge)
+contextBridge.exposeInMainWorld('appInfo', appInfoBridge)
 contextBridge.exposeInMainWorld('windowControls', windowControlsBridge)

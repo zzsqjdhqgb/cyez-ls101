@@ -5,6 +5,7 @@ export type {
   StoredInterfaceInstance,
   LocatedInterfaceInstance,
   BuiltinInterfaceEntry,
+  InstallBuiltinInterfaceResult,
   SaveEntityResult
 } from './repository'
 export type { InterfaceFileDialog } from './fileExchange'

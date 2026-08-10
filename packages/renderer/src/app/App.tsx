@@ -4,6 +4,7 @@ import { AppShell } from '../components/shell/AppShell'
 import { AppToaster } from '../components/ui/ToastViewport'
 import { ManualImageGenerationDialog } from '../features/airouter/ManualImageGenerationDialog'
 import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceApplicationProvider'
+import { BuiltinInterfaceMaintenanceDialog } from '../features/interfaces/BuiltinInterfaceMaintenanceDialog'
 import { SchemaApplicationProvider } from '../features/schemas/SchemaApplicationProvider'
 import { AppearanceSettingsProvider } from '../features/settings/AppearanceSettingsProvider'
 import { SubmissionLibraryProvider } from '../features/submissions/SubmissionLibraryProvider'
@@ -38,6 +39,7 @@ export function App(): JSX.Element {
                 <RegisteredAppRoutes />
               </MemoryRouter>
               <ManualImageGenerationDialog />
+              <BuiltinInterfaceMaintenanceDialog />
               <AppToaster />
             </TemplateApplicationProvider>
           </SubmissionLibraryProvider>

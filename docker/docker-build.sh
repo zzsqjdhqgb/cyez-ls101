@@ -1,3 +1,3 @@
 cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-docker compose build  --no-cache --pull
+docker compose build --pull

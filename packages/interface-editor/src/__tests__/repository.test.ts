@@ -18,7 +18,13 @@ import {
   inspectInterfaceFile,
   type InterfaceFileDialog
 } from '../fileExchange'
-import { applyBuiltinUpdate, classifyBuiltinUpdate, planBuiltinUpdate } from '../builtin'
+import {
+  applyBuiltinRemoval,
+  applyBuiltinUpdate,
+  classifyBuiltinUpdate,
+  planBuiltinRemoval,
+  planBuiltinUpdate
+} from '../builtin'
 import { createInterfaceDraft, publishInterface } from '../id'
 import {
   FileInterfaceRepository,
@@ -213,6 +219,43 @@ describe('FileInterfaceRepository', () => {
 })
 
 describe('内置 Interface 更新', () => {
+  it('首次安装时接管相同的已发布 Interface 并保留实例与资源', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(content())
+    await repository.saveInterface(def)
+    await repository.saveInstance(def.id, instance(INSTANCE_A, '已发布实例'), {
+      'attachment.bin': new Uint8Array([4, 5, 6])
+    })
+    const references = { replaceInterfaceReferences: vi.fn().mockResolvedValue(undefined) }
+
+    const result = await applyBuiltinUpdate(
+      repository,
+      references,
+      await planBuiltinUpdate(repository, 'speaking', def)
+    )
+
+    expect(result).toMatchObject({
+      kind: 'automatic',
+      previousInterfaceId: null,
+      currentInterfaceId: def.id
+    })
+    expect(await repository.listPublishedInterfaceIds()).toEqual([])
+    expect(await repository.getBuiltin('speaking')).toEqual({
+      builtinKey: 'speaking',
+      currentInterfaceId: def.id
+    })
+    expect(await repository.getInstance(def.id, INSTANCE_A)).toMatchObject({
+      instance: { values: { title: '已发布实例' } }
+    })
+    expect(await repository.readInstanceAsset(def.id, INSTANCE_A, 'attachment.bin')).toEqual(
+      new Uint8Array([4, 5, 6])
+    )
+    await expect(
+      repository.getInstanceAssetUrl(def.id, INSTANCE_A, 'attachment.bin')
+    ).resolves.toContain(`/builtin/speaking/versions/${def.id.slice('sha256:'.length)}/`)
+    expect(references.replaceInterfaceReferences).not.toHaveBeenCalled()
+  })
+
   it('语义字段变化自动迁移实例并删除旧内置版本', async () => {
     const { repository } = setup()
     const oldDef = await publishInterface(content())
@@ -413,6 +456,57 @@ describe('内置 Interface 更新', () => {
       instance: { instanceId: INSTANCE_A, values: { title: '待迁移' } }
     })
     expect(references).toEqual([[oldDef.id, nextDef.id]])
+  })
+
+  it('删除内置 Interface 时可同时删除实例并报告受影响引用', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(content())
+    await repository.saveBuiltinInterface('speaking', def)
+    await repository.setBuiltinCurrent('speaking', def.id)
+    await repository.saveInstance(def.id, instance(INSTANCE_A, '待删除'))
+    const references = {
+      async replaceInterfaceReferences() {},
+      async countInterfaceReferences() {
+        return 2
+      }
+    }
+
+    const plan = await planBuiltinRemoval(repository, references, 'speaking')
+    if (!plan) throw new Error('expected a removal plan')
+    const result = await applyBuiltinRemoval(repository, plan, 'delete')
+
+    expect(result).toMatchObject({
+      affectedInstanceIds: [INSTANCE_A],
+      affectedReferenceCount: 2,
+      backedUpPrevious: false
+    })
+    expect(await repository.getBuiltin('speaking')).toBeNull()
+    expect(await repository.getInterface(def.id)).toBeNull()
+  })
+
+  it('删除内置 Interface 时可将旧版和实例备份到 published', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(content())
+    await repository.saveBuiltinInterface('speaking', def)
+    await repository.setBuiltinCurrent('speaking', def.id)
+    await repository.saveInstance(def.id, instance(INSTANCE_A, '待备份'))
+    const references = {
+      async replaceInterfaceReferences() {},
+      async countInterfaceReferences() {
+        return 1
+      }
+    }
+
+    const plan = await planBuiltinRemoval(repository, references, 'speaking')
+    if (!plan) throw new Error('expected a removal plan')
+    const result = await applyBuiltinRemoval(repository, plan, 'backup-old')
+
+    expect(result.backedUpPrevious).toBe(true)
+    expect(await repository.getBuiltin('speaking')).toBeNull()
+    expect(await repository.listPublishedInterfaceIds()).toContain(def.id)
+    expect(await repository.getInstance(def.id, INSTANCE_A)).toMatchObject({
+      instance: { values: { title: '待备份' } }
+    })
   })
 })
 
