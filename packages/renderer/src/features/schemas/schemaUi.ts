@@ -5,6 +5,7 @@ import type {
   SchemaStructure,
   SchemaValidationError
 } from '@ls101/schema-editor'
+import { isSchemaBuiltinInput } from '@ls101/schema-editor'
 
 export const questionTypeLabels: Record<SchemaQuestionType, string> = {
   objective: '客观题',
@@ -16,6 +17,12 @@ export const answerTypeLabels: Record<SchemaAnswerType, string> = {
   text: '文本',
   'fixed-speech': '固定语音',
   'free-speech': '自由语音'
+}
+
+export const answerComponentLabels: Record<SchemaAnswerType, readonly string[]> = {
+  text: ['文本'],
+  'fixed-speech': ['文本', '录音'],
+  'free-speech': ['录音']
 }
 
 const validationMessages: Record<SchemaValidationError['code'], string> = {
@@ -81,7 +88,9 @@ export function createEmptySchemaData(name: string, structure: SchemaStructure):
       structure.answerFormat.map((item) => [item.answerId, ''])
     ),
     inputDescriptions: Object.fromEntries(
-      structure.templateInputs.map((item) => [item.inputId, ''])
+      structure.templateInputs
+        .filter((item) => !isSchemaBuiltinInput(structure.questionType, item.inputId))
+        .map((item) => [item.inputId, ''])
     ),
     rubricMarkdown: '',
     extraPromptMarkdown: ''

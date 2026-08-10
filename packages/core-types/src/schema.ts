@@ -38,6 +38,7 @@ export interface SchemaData {
   description: string
   maxScore: number
   answerDescriptions: Record<string, string>
+  /** 仅保存自定义 Template 输入的说明；内置输入说明由系统提供。 */
   inputDescriptions: Record<string, string>
   rubricMarkdown: string
   extraPromptMarkdown?: string

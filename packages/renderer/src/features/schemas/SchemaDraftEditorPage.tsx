@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState, type JSX } from 'react'
 import {
   createSchemaStructure,
+  isSchemaBuiltinInput,
   replaceSchemaDraft,
-  SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID,
-  SCHEMA_QUESTION_DESCRIPTION_INPUT_ID,
   updateSchemaDraft,
   validateSchemaData,
   validateSchemaDraft,
@@ -34,6 +33,7 @@ import { toast } from '../../components/ui/toast'
 import { useSchemaRepository } from './SchemaApplicationContext'
 import { SchemaDataFields } from './SchemaDataFields'
 import {
+  answerComponentLabels,
   answerTypeLabels,
   createEmptySchemaData,
   questionTypeLabels,
@@ -61,7 +61,7 @@ export function SchemaDraftEditorPage(): JSX.Element {
   const additionalInputs = useMemo(
     () =>
       draft?.structure.templateInputs.filter(
-        (item) => !isBuiltinInput(item.inputId, draft.structure.questionType)
+        (item) => !isSchemaBuiltinInput(draft.structure.questionType, item.inputId)
       ) ?? [],
     [draft]
   )
@@ -313,10 +313,15 @@ export function SchemaDraftEditorPage(): JSX.Element {
                         }
                       />
                     </label>
-                    <label>
+                    <div className={styles.answerContract}>
                       <span>类型</span>
-                      <input readOnly value={answerTypeLabels[answer.type]} />
-                    </label>
+                      <strong>{answerTypeLabels[answer.type]}</strong>
+                      <div aria-label={`${answer.answerId} 子槽位`}>
+                        {answerComponentLabels[answer.type].map((component) => (
+                          <span key={component}>{component}</span>
+                        ))}
+                      </div>
+                    </div>
                     <div className={styles.itemActions}>
                       <IconButton
                         icon={ArrowUp}
@@ -387,7 +392,7 @@ export function SchemaDraftEditorPage(): JSX.Element {
               </div>
               <div className={styles.itemList}>
                 {draft.structure.templateInputs.map((input) => {
-                  const builtin = isBuiltinInput(input.inputId, draft.structure.questionType)
+                  const builtin = isSchemaBuiltinInput(draft.structure.questionType, input.inputId)
                   const additionalIndex = additionalInputs.findIndex(
                     (item) => item.inputId === input.inputId
                   )
@@ -544,13 +549,6 @@ function uniqueId(existing: readonly string[], base: string): string {
   let suffix = 1
   while (existing.includes(`${base}${suffix}`)) suffix += 1
   return `${base}${suffix}`
-}
-
-function isBuiltinInput(inputId: string, questionType: SchemaQuestionType): boolean {
-  return (
-    inputId === SCHEMA_QUESTION_DESCRIPTION_INPUT_ID ||
-    (questionType === 'objective' && inputId === SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID)
-  )
 }
 
 function move<T>(items: readonly T[], from: number, to: number): T[] {

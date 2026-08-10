@@ -54,10 +54,7 @@ const definition: SchemaDefinition = {
     description: '用于单句朗读练习',
     maxScore: 10,
     answerDescriptions: { recording: '学生朗读录音' },
-    inputDescriptions: {
-      'question-description': '题目描述',
-      'reference-text': '朗读原文'
-    },
+    inputDescriptions: { 'reference-text': '朗读原文' },
     rubricMarkdown: '按准确度和流利度评分。',
     extraPromptMarkdown: ''
   }
@@ -141,7 +138,7 @@ describe('Schema pages', () => {
     )
 
     expect(await screen.findByRole('heading', { name: '单句朗读' })).toBeInTheDocument()
-    expect(screen.getByDisplayValue('固定语音')).toHaveAttribute('readonly')
+    expect(screen.getByLabelText('recording 子槽位')).toHaveTextContent('文本录音')
     fireEvent.change(screen.getByLabelText('答案槽位 1 ID'), { target: { value: 'speech' } })
     fireEvent.change(screen.getByLabelText('输入 reference-text ID'), {
       target: { value: 'analysis' }
@@ -177,9 +174,7 @@ describe('Schema pages', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('描述'), { target: { value: '单句朗读评分' } })
     fireEvent.change(screen.getByLabelText('recording'), { target: { value: '学生录音' } })
-    fireEvent.change(screen.getByLabelText('question-description · 必填'), {
-      target: { value: '题目描述' }
-    })
+    expect(screen.getByText('题目描述')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('reference-text · 必填'), {
       target: { value: '朗读原文' }
     })

@@ -12,6 +12,7 @@ import {
   SchemaRepositoryError,
   updateSchemaDefinition,
   validateGradingResult,
+  validateSchemaData,
   validateSchemaDefinition,
   validateSchemaStructure,
   verifySchemaDefinition,
@@ -39,7 +40,7 @@ function schemaData(name = '朗读评分', maxScore = 10): SchemaData {
     description: '两句朗读合并评分',
     maxScore,
     answerDescriptions: { 'sentence-1': '第一句', 'sentence-2': '第二句' },
-    inputDescriptions: { 'question-description': '题目描述' },
+    inputDescriptions: {},
     rubricMarkdown: '根据发音和流利度评分。',
     extraPromptMarkdown: ''
   }
@@ -61,6 +62,24 @@ describe('Schema domain', () => {
     }
     expect(validateSchemaStructure(invalid).errors.map((error) => error.code)).toContain(
       'INVALID_ANSWER_FORMAT_FOR_QUESTION_TYPE'
+    )
+  })
+
+  it('keeps builtin input descriptions out of published Schema data', () => {
+    expect(validateSchemaData(schemaData(), fixedReadingStructure()).valid).toBe(true)
+    expect(
+      validateSchemaData(
+        {
+          ...schemaData(),
+          inputDescriptions: { 'question-description': '重复的题目描述' }
+        },
+        fixedReadingStructure()
+      ).errors
+    ).toContainEqual(
+      expect.objectContaining({
+        path: 'inputDescriptions.question-description',
+        code: 'UNKNOWN_INPUT_DESCRIPTION'
+      })
     )
   })
 
@@ -182,10 +201,7 @@ describe('Schema repository', () => {
       repository.publishDraft(library.libraryId, invalidDraft.draftId, {
         ...schemaData('客观题', 1),
         answerDescriptions: { answer: '学生答案' },
-        inputDescriptions: {
-          'question-description': '题目描述',
-          analysis: '解析'
-        },
+        inputDescriptions: {},
         rubricMarkdown: ''
       })
     ).rejects.toMatchObject({ code: 'INVALID_DATA' } satisfies Partial<SchemaRepositoryError>)

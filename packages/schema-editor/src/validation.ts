@@ -9,6 +9,7 @@ import type {
 } from '@ls101/core-types'
 import { isSchemaDraftId, isSchemaId, isSchemaLibraryId, isSchemaStructureHash } from './identity'
 import {
+  isSchemaBuiltinInput,
   SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID,
   SCHEMA_QUESTION_DESCRIPTION_INPUT_ID
 } from './structure'
@@ -313,7 +314,9 @@ function validateData(
   )
   validateDescriptions(
     data.inputDescriptions,
-    structure.templateInputs.map((input) => input.inputId),
+    structure.templateInputs
+      .filter((input) => !isSchemaBuiltinInput(structure.questionType, input.inputId))
+      .map((input) => input.inputId),
     at(path, 'inputDescriptions'),
     'INPUT',
     errors

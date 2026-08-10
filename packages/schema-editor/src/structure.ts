@@ -8,6 +8,19 @@ import type {
 export const SCHEMA_QUESTION_DESCRIPTION_INPUT_ID = 'question-description'
 export const SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID = 'analysis'
 
+export function schemaBuiltinInputDescription(
+  questionType: SchemaQuestionType,
+  inputId: string
+): string | null {
+  if (inputId === SCHEMA_QUESTION_DESCRIPTION_INPUT_ID) return '题目描述'
+  if (questionType === 'objective' && inputId === SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID) return '解析'
+  return null
+}
+
+export function isSchemaBuiltinInput(questionType: SchemaQuestionType, inputId: string): boolean {
+  return schemaBuiltinInputDescription(questionType, inputId) !== null
+}
+
 export function createSchemaStructure(
   questionType: SchemaQuestionType,
   answerFormat: readonly SchemaAnswerDefinition[],

@@ -9,6 +9,7 @@ import { toast } from '../../components/ui/toast'
 import { useSchemaRepository } from './SchemaApplicationContext'
 import { SchemaDataFields } from './SchemaDataFields'
 import {
+  answerComponentLabels,
   answerTypeLabels,
   questionTypeLabels,
   schemaErrorMessage,
@@ -195,7 +196,10 @@ export function SchemaDefinitionPage(): JSX.Element {
                 {definition.structure.answerFormat.map((answer) => (
                   <li key={answer.answerId}>
                     <code>{answer.answerId}</code>
-                    <span>{answerTypeLabels[answer.type]}</span>
+                    <span>
+                      {answerTypeLabels[answer.type]} ·{' '}
+                      {answerComponentLabels[answer.type].join(' + ')}
+                    </span>
                   </li>
                 ))}
               </ul>

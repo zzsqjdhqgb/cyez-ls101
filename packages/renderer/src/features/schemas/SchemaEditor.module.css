@@ -237,6 +237,32 @@
   padding-bottom: 2px;
 }
 
+.answerContract {
+  display: grid;
+  gap: 7px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.answerContract > strong {
+  color: var(--color-text-strong);
+  font-size: 13px;
+}
+
+.answerContract > div {
+  display: flex;
+  gap: 5px;
+}
+
+.answerContract > div span {
+  padding: 3px 6px;
+  border-radius: var(--radius-xs);
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle);
+  font-size: 10px;
+}
+
 .checkbox {
   display: flex !important;
   align-items: center;
@@ -352,6 +378,28 @@
 .descriptionSection code {
   color: var(--color-accent);
   font-size: 11px;
+}
+
+.builtinDescription {
+  display: grid;
+  gap: 7px;
+}
+
+.builtinDescription > span {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.builtinDescription > strong {
+  min-height: 38px;
+  padding: 9px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .markdown {

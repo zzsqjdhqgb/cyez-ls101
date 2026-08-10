@@ -56,7 +56,7 @@ PublishedSchema
 - `answerFormat` 定义学生答案槽位及其顺序。
 - `templateInputs` 定义 Template 必须提供的静态题目输入。
 - `maxScore` 是该评分单元的满分。
-- `gradingData` 保存答案和输入的显示说明、评分标准、AI 额外提示词等可编辑题型数据。
+- `gradingData` 保存答案槽位与自定义输入的显示说明、评分标准、AI 额外提示词等可编辑题型数据。内置输入的说明由系统固定提供。
 
 正式 Schema 不再使用内容哈希作为唯一身份，因为正式数据允许继续修改。发布和每次修改仍应保存 revision 或内容哈希，以便 Template 编译时记录并校验使用的准确快照。
 
@@ -128,7 +128,7 @@ TemplateInputDefinition
 
 `text` 可以是普通文本或 Markdown。Schema 不声明 `image`、`file` 或静态 `audio` 输入；图片、附件和其他文件通过每次 SchemaUse 的动态附件列表进入文本参数，见第六节。
 
-输入的显示说明保存在正式 Schema 的可编辑数据中，不参与结构哈希。
+自定义输入的显示说明保存在正式 Schema 的可编辑数据中，不参与结构哈希。内置输入的说明由系统固定提供：`question-description` 为“题目描述”，客观题的 `analysis` 为“解析”；二者不重复写入正式 Schema 数据。
 
 所有题型默认包含题目描述 `text` 输入。Schema 还可以根据评分需要声明参考答案、评分材料或其他文本输入。
 

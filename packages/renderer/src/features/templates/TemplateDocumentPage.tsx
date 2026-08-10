@@ -47,6 +47,7 @@ import { TemplateInterfaceRequirements } from './TemplateInterfaceRequirements'
 import { TemplateNodeInspector } from './TemplateNodeInspector'
 import { TemplatePageCanvas } from './TemplatePageCanvas'
 import { TemplateVariableInput } from './TemplateVariableInput'
+import { TemplateSchemaUses } from './TemplateSchemaUses'
 import {
   collectTemplateVariableCandidates,
   type TemplateVariableCandidate
@@ -533,6 +534,14 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                 manifests={interfaceManifests}
                 requirements={document?.content.interfaces ?? []}
                 apply={session.apply}
+              />
+            </TemplateInspectorSection>
+            <TemplateInspectorSection title="评分 Schema" defaultExpanded={false}>
+              <TemplateSchemaUses
+                apply={session.apply}
+                disabled={!document || session.saving}
+                uses={document?.content.schemaUses ?? []}
+                variableCandidates={variableCandidates}
               />
             </TemplateInspectorSection>
             {selectedNode ? (

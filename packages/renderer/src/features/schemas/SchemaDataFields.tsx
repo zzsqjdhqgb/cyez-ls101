@@ -1,4 +1,8 @@
-import type { SchemaData, SchemaStructure } from '@ls101/schema-editor'
+import {
+  schemaBuiltinInputDescription,
+  type SchemaData,
+  type SchemaStructure
+} from '@ls101/schema-editor'
 import type { JSX } from 'react'
 import styles from './SchemaEditor.module.css'
 
@@ -66,23 +70,36 @@ export function SchemaDataFields({
 
       <section className={styles.descriptionSection} aria-labelledby="input-description-heading">
         <h3 id="input-description-heading">Template 输入说明</h3>
-        {structure.templateInputs.map((input) => (
-          <label key={input.inputId}>
-            <span>
-              <code>{input.inputId}</code>
-              {input.required ? ' · 必填' : ' · 可选'}
-            </span>
-            <input
-              value={data.inputDescriptions[input.inputId] ?? ''}
-              onChange={(event) =>
-                update('inputDescriptions', {
-                  ...data.inputDescriptions,
-                  [input.inputId]: event.target.value
-                })
-              }
-            />
-          </label>
-        ))}
+        {structure.templateInputs.map((input) => {
+          const builtinDescription = schemaBuiltinInputDescription(
+            structure.questionType,
+            input.inputId
+          )
+          return builtinDescription !== null ? (
+            <div className={styles.builtinDescription} key={input.inputId}>
+              <span>
+                <code>{input.inputId}</code> · 必填 · 系统内置
+              </span>
+              <strong>{builtinDescription}</strong>
+            </div>
+          ) : (
+            <label key={input.inputId}>
+              <span>
+                <code>{input.inputId}</code>
+                {input.required ? ' · 必填' : ' · 可选'}
+              </span>
+              <input
+                value={data.inputDescriptions[input.inputId] ?? ''}
+                onChange={(event) =>
+                  update('inputDescriptions', {
+                    ...data.inputDescriptions,
+                    [input.inputId]: event.target.value
+                  })
+                }
+              />
+            </label>
+          )
+        })}
       </section>
 
       {structure.questionType !== 'objective' ? (

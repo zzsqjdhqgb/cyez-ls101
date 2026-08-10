@@ -42,7 +42,13 @@ export function schemaDefinition(
         structure.answerFormat.map((answer) => [answer.answerId, answer.answerId])
       ),
       inputDescriptions: Object.fromEntries(
-        structure.templateInputs.map((input) => [input.inputId, input.inputId])
+        structure.templateInputs
+          .filter(
+            (input) =>
+              input.inputId !== 'question-description' &&
+              !(structure.questionType === 'objective' && input.inputId === 'analysis')
+          )
+          .map((input) => [input.inputId, input.inputId])
       ),
       rubricMarkdown: ''
     }
