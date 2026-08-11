@@ -275,7 +275,7 @@ describe('Template pages', () => {
       'true'
     )
     expect(screen.getByRole('button', { name: '预览画面 2，倒计时' })).toBeInTheDocument()
-    expect(screen.getByLabelText('最终画面 1')).toHaveTextContent('请听题')
+    expect(screen.getByLabelText('最终画面 1').shadowRoot?.textContent).toContain('请听题')
 
     fireEvent.click(screen.getByRole('button', { name: '预览画面 2，倒计时' }))
     expect(screen.getByLabelText('最终画面 2')).toBeInTheDocument()

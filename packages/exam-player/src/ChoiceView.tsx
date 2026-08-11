@@ -1,7 +1,6 @@
 import { useMemo, useState, type JSX } from 'react'
 import type { ChoiceOptionLabel, PlayerChoiceMeta, ResolvedChoiceViewport } from '@ls101/core-types'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import styles from './ExamPlayer.module.css'
 
 interface ChoiceViewProps {
   meta: PlayerChoiceMeta
@@ -39,20 +38,20 @@ export function ChoiceView({ meta, viewport, answers, onAnswer }: ChoiceViewProp
     .filter((question) => question !== undefined)
 
   return (
-    <div className={styles.choiceView}>
-      <div className={styles.choiceQuestions}>
+    <div className="choiceView">
+      <div className="choiceQuestions">
         {questions.map((question) => {
           const focused = viewport.mode === 'focus' && viewport.choiceIndex === question.choiceIndex
           return (
             <fieldset
-              className={styles.choiceQuestion}
+              className="choiceQuestion"
               data-focused={focused || undefined}
               key={question.choiceIndex}
             >
               <legend>{question.stem}</legend>
-              <div className={styles.choiceOptions}>
+              <div className="choiceOptions">
                 {question.options.map((option) => (
-                  <label className={styles.choiceOption} key={option.label}>
+                  <label className="choiceOption" key={option.label}>
                     <input
                       checked={answers[question.choiceIndex] === option.label}
                       name={`choice-${question.choiceIndex}`}
@@ -60,7 +59,7 @@ export function ChoiceView({ meta, viewport, answers, onAnswer }: ChoiceViewProp
                       value={option.label}
                       onChange={() => onAnswer(question.choiceIndex, option.label)}
                     />
-                    <span className={styles.optionLabel}>{option.label}</span>
+                    <span className="optionLabel">{option.label}</span>
                     <span>{option.content}</span>
                   </label>
                 ))}
@@ -70,7 +69,7 @@ export function ChoiceView({ meta, viewport, answers, onAnswer }: ChoiceViewProp
         })}
       </div>
       {maximum > minimum ? (
-        <nav className={styles.choiceNavigation} aria-label="选择题分页">
+        <nav className="choiceNavigation" aria-label="选择题分页">
           <button
             aria-label="上一页"
             disabled={safePage <= minimum}

@@ -93,7 +93,8 @@
   white-space: nowrap;
 }
 
-.snapshotButton {
+.snapshotCard {
+  position: relative;
   display: grid;
   width: 100%;
   min-width: 0;
@@ -104,22 +105,32 @@
   border-radius: var(--radius-sm);
   color: var(--color-text);
   background: var(--color-surface);
-  text-align: left;
-  cursor: pointer;
 }
 
-.snapshotButton:hover {
+.snapshotCard:hover {
   border-color: var(--color-border-strong);
   background: var(--color-surface-hover);
 }
 
-.snapshotButton[aria-current='true'] {
+.snapshotCard[data-current] {
   border-color: var(--color-accent);
   background: var(--color-accent-soft);
   box-shadow: 0 0 0 1px var(--color-focus-ring);
 }
 
-.snapshotButton:focus-visible {
+.snapshotSelect {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.snapshotSelect:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 1px;
 }
@@ -188,6 +199,13 @@
   background: var(--color-surface-subtle);
 }
 
+.canvasEmpty {
+  display: grid;
+  min-height: 0;
+  grid-row: 1 / -1;
+  overflow: auto;
+}
+
 .canvasHeader,
 .stepBar {
   display: flex;
@@ -203,14 +221,14 @@
   padding: 0 16px;
 }
 
-.canvasHeader > div,
+.canvasHeading,
 .stepBar > div {
   display: grid;
   min-width: 0;
 }
 
-.canvasHeader strong,
-.canvasHeader span,
+.canvasHeading strong,
+.canvasHeading span,
 .stepBar strong,
 .stepBar span {
   overflow: hidden;
@@ -218,14 +236,14 @@
   white-space: nowrap;
 }
 
-.canvasHeader strong,
+.canvasHeading strong,
 .stepBar strong {
   color: var(--color-text-strong);
   font-size: 12px;
   font-weight: 650;
 }
 
-.canvasHeader span,
+.canvasHeading span,
 .stepBar span {
   color: var(--color-text-muted);
   font-size: 10px;
@@ -233,7 +251,135 @@
 
 .position {
   flex: 0 0 auto;
+  color: var(--color-text-muted);
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
+}
+
+.canvasHeaderActions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.choiceInfoAnchor {
+  position: relative;
+  display: flex;
+}
+
+.choiceInfoButton {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-xs);
+  place-items: center;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.choiceInfoButton:hover,
+.choiceInfoButton[aria-expanded='true'] {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.choiceInfoButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.choiceInfoButton svg {
+  width: 15px;
+  height: 15px;
+}
+
+.choiceInfoPopover {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(320px, calc(100vw - 48px));
+  max-height: min(480px, calc(100vh - 180px));
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popover);
+}
+
+.choiceInfoTitle,
+.choiceInfoItemHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.choiceInfoTitle {
+  margin-bottom: 10px;
+}
+
+.choiceInfoTitle strong,
+.choiceInfoItemHeading strong {
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 660;
+}
+
+.choiceInfoTitle span,
+.choiceInfoItemHeading span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-faint);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.choiceInfoList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.choiceInfoList > li {
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-subtle);
+}
+
+.choiceInfoList dl {
+  display: grid;
+  gap: 5px;
+  margin: 9px 0 0;
+}
+
+.choiceInfoList dl > div {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.choiceInfoList dt {
+  color: var(--color-text-muted);
+}
+
+.choiceInfoList dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text-strong);
+  overflow-wrap: anywhere;
 }
 
 .canvasViewport {

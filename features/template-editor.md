@@ -80,11 +80,11 @@ renderer 的 Template 编辑会话直接消费不可变 mutation 结果，以完
 
 当前结构编辑器展示包含根 Frame 的可折叠节点树，支持选择节点，以及新增 Frame、Page、ChoiceQuestion，兄弟节点上移/下移、子树复制和确认删除。新增或复制后的节点自动成为当前选择；非 Frame 节点旁新增时作为同级节点插入，Frame 节点被选中时则添加为其子节点。Function 调用必须经过函数资源闭包复制应用操作，因此不通过普通节点插入入口创建。
 
-共享页面渲染原语位于 `@ls101/page-renderer`。该包定义 1200×800 固定设计面、百分比几何、缩放容器及文本、图片和 ChoiceView 的基础视觉组件，不依赖 Template 作者态模型或 Player 编译态模型。renderer 通过作者态 adapter 把 `ContentDocument` 映射到共享原语；未来 ExamPlayer 将通过独立 adapter 映射编译后的 `ExamPage`，播放控制和编辑控制均不进入共享渲染包。
+作者态共享页面原语位于 `@ls101/page-renderer`。该包定义 1200×800 固定设计面、百分比几何、缩放容器及文本、图片和 ChoiceView 的基础视觉组件，不依赖 Template 作者态模型或 Player 编译态模型。学生端 `ExamPageView` 则是独立运行期渲染器：组件内部创建 Shadow Root，并把专用 `ExamPageView.css` 以内联私有样式安装到该根；它不导入 `renderer/styles/global.css`、主题 token 或 `ExamPlayer.module.css`。主程序和预览只能在 Shadow Host 外控制尺寸与变换，不能把全局元素选择器、主题变量或播放器布局样式注入学生端页面。
 
 renderer 中栏提供“结构 / 页面”标签页。Page 画布支持新增文本、图片和 ChoiceView，单选、拖动、缩放、复制、删除及视图缩放；变量文本以 token 预览。选中块的 ID、百分比几何、文本表达式与格式、图片表达式和 ChoiceView 视口在右侧独立折叠区域编辑。交互继续提交现有内容块 mutation，因此共用文档撤销、重做、dirty 和保存语义；一次连续拖动或缩放只在指针释放时形成一个历史条目。
 
-中栏同时提供“预览”模式。预览以当前选中的 Page、Frame、Function 调用或根 Frame 为范围，按编译展开顺序收集页面，并把每个 Page 的每个 Timeline step 映射为一个独立画面。进入预览后，左侧函数库切换为按 Page 分组的纵向胶片，中栏显示当前画面的学生端页面，右侧显示 Interface 实例选择、预览范围、当前 Timeline 信息和校验错误。预览直接读取当前未保存工作文档，执行与导出一致的变量、函数、ChoiceCollector、Schema 和资源解析，但不合成 TTS 音频；Interface 实例选择只保留在当前编辑会话中，不写入 Template。
+中栏同时提供“预览”模式。预览以当前选中的 Page、Frame、Function 调用或根 Frame 为范围，按编译展开顺序收集页面，并把每个 Page 的每个 Timeline step 映射为一个独立画面。进入预览后，左侧函数库切换为按 Page 分组的纵向胶片；胶片缩略图是不可聚焦的静态画面，中栏则复用学生端 ChoiceView，允许临时选择答案并在 free/range 允许范围内翻页。切换画面或重新进入预览会清空答案与分页状态；标题栏信息浮窗展示当前画面各 ChoiceView 的最终模式、可用分页、初始页或聚焦题，不向 1200×800 学生端画面插入调试标记。右侧显示 Interface 实例选择、预览范围、当前 Timeline 信息和校验错误。预览直接读取当前未保存工作文档，执行与导出一致的变量、函数、ChoiceCollector、Schema 和资源解析，但不合成 TTS 音频；Interface 实例选择只保留在当前编辑会话中，不写入 Template。
 
 图片内容块保存独立的百分比宽高，渲染时保持图片原始比例并以 `contain` 方式在固定框内居中；长边撑满框，另一方向留空，不执行裁剪或拉伸。
 

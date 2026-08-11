@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type JSX } from 'react'
-import type { ChoiceOptionLabel } from '@ls101/core-types'
+import type { ChoiceOptionLabel, PlayerChoiceMeta, ResolvedChoiceViewport } from '@ls101/core-types'
 import type {
   TemplateCompileError,
   TemplateDocument,
@@ -10,9 +10,10 @@ import type {
 } from '@ls101/template-editor'
 import { ExamPageView } from '@ls101/exam-player'
 import { PAGE_DESIGN_HEIGHT, PAGE_DESIGN_WIDTH } from '@ls101/page-renderer'
-import { AlertCircle, FileText, Layers3, Mic, RefreshCw, Timer, Volume2 } from 'lucide-react'
+import { AlertCircle, FileText, Info, Layers3, Mic, RefreshCw, Timer, Volume2 } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { Tooltip } from '../../components/ui/Tooltip'
 import { TemplateInspectorSection } from './TemplateInspectorSection'
 import { templatePreviewResourceUrls } from './TemplatePreviewModel'
 import type { TemplatePreviewSession } from './useTemplatePreview'
@@ -70,30 +71,34 @@ export function TemplatePreviewFilmstrip({
                       <span>{snapshot.page.sourceNodeName || snapshot.page.sourceNodeId}</span>
                     </div>
                   ) : null}
-                  <button
-                    aria-current={index === selectedIndex ? 'true' : undefined}
-                    aria-label={`预览画面 ${index + 1}，${stepLabel(snapshot.step)}`}
-                    className={styles.snapshotButton}
-                    type="button"
-                    onClick={() => onSelect(index)}
+                  <div
+                    className={styles.snapshotCard}
+                    data-current={index === selectedIndex || undefined}
                   >
-                    <span className={styles.thumbnailViewport}>
-                      <span className={styles.thumbnailPage}>
+                    <div aria-hidden="true" className={styles.thumbnailViewport} inert>
+                      <div className={styles.thumbnailPage}>
                         <ExamPageView
                           choiceMeta={preview?.choiceMeta}
                           page={snapshot.page}
                           resourceUrls={resourceUrls}
                           step={snapshot.step}
                         />
-                      </span>
-                    </span>
-                    <span className={styles.snapshotMeta}>
+                      </div>
+                    </div>
+                    <span aria-hidden="true" className={styles.snapshotMeta}>
                       <span className={styles.snapshotIndex}>{index + 1}</span>
                       <TimelineIcon step={snapshot.step} />
                       <span>{stepLabel(snapshot.step)}</span>
                       <small>{stepDetail(snapshot.step)}</small>
                     </span>
-                  </button>
+                    <button
+                      aria-current={index === selectedIndex ? 'true' : undefined}
+                      aria-label={`预览画面 ${index + 1}，${stepLabel(snapshot.step)}`}
+                      className={styles.snapshotSelect}
+                      type="button"
+                      onClick={() => onSelect(index)}
+                    />
+                  </div>
                 </li>
               )
             })}
@@ -118,11 +123,29 @@ export function TemplatePreviewCanvas({
   total: number
 }): JSX.Element {
   const viewportRef = useRef<HTMLDivElement>(null)
+  const choiceInfoRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(0.5)
+  const [choiceInfoState, setChoiceInfoState] = useState({ snapshotId: '', open: false })
   const [answerState, setAnswerState] = useState<{
     snapshotId: string
     answers: Record<number, ChoiceOptionLabel>
   }>({ snapshotId: '', answers: {} })
+  const choiceViews = useMemo(
+    () =>
+      snapshot?.page.content.flatMap((block) =>
+        block.type === 'choice-view'
+          ? [
+              {
+                id: block.id,
+                viewport: snapshot.step.choiceViewOverrides?.[block.id] ?? block.defaultViewport
+              }
+            ]
+          : []
+      ) ?? [],
+    [snapshot]
+  )
+  const snapshotId = snapshot?.id ?? ''
+  const choiceInfoOpen = choiceInfoState.snapshotId === snapshotId && choiceInfoState.open
 
   useEffect(() => {
     const viewport = viewportRef.current
@@ -137,12 +160,32 @@ export function TemplatePreviewCanvas({
     const observer = new ResizeObserver(update)
     observer.observe(viewport)
     return () => observer.disconnect()
-  }, [])
+  }, [snapshot?.id])
+
+  useEffect(() => {
+    if (!choiceInfoOpen) return
+    const closeOnOutsidePointer = (event: PointerEvent): void => {
+      if (!choiceInfoRef.current?.contains(event.target as Node)) {
+        setChoiceInfoState({ snapshotId, open: false })
+      }
+    }
+    const closeOnEscape = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setChoiceInfoState({ snapshotId, open: false })
+    }
+    document.addEventListener('pointerdown', closeOnOutsidePointer)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePointer)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [choiceInfoOpen, snapshotId])
 
   if (!snapshot) {
     return (
       <section className={styles.canvas} aria-label="模板预览画面">
-        <EmptyState icon={Layers3} title="没有可预览的画面" />
+        <div className={styles.canvasEmpty}>
+          <EmptyState icon={Layers3} title="没有可预览的画面" />
+        </div>
       </section>
     )
   }
@@ -157,20 +200,47 @@ export function TemplatePreviewCanvas({
   return (
     <section className={styles.canvas} aria-label="模板预览画面">
       <header className={styles.canvasHeader}>
-        <div>
+        <div className={styles.canvasHeading}>
           <strong>{snapshot.page.sourceNodeName || snapshot.page.sourceNodeId}</strong>
           <span>
             页面 {snapshot.pageIndex + 1} · Timeline {snapshot.stepIndex + 1}
           </span>
         </div>
-        <span className={styles.position}>
-          {position + 1} / {total}
-        </span>
+        <div className={styles.canvasHeaderActions}>
+          {choiceViews.length > 0 ? (
+            <div className={styles.choiceInfoAnchor} ref={choiceInfoRef}>
+              <Tooltip label="查看 ChoiceView 配置" side="bottom">
+                <button
+                  aria-controls="template-preview-choice-info"
+                  aria-expanded={choiceInfoOpen}
+                  aria-label="查看 ChoiceView 配置"
+                  className={styles.choiceInfoButton}
+                  type="button"
+                  onClick={() =>
+                    setChoiceInfoState((current) => ({
+                      snapshotId,
+                      open: current.snapshotId === snapshotId ? !current.open : true
+                    }))
+                  }
+                >
+                  <Info aria-hidden="true" />
+                </button>
+              </Tooltip>
+              {choiceInfoOpen ? (
+                <ChoiceViewInfoPopover choiceMeta={preview?.choiceMeta} choiceViews={choiceViews} />
+              ) : null}
+            </div>
+          ) : null}
+          <span className={styles.position}>
+            {position + 1} / {total}
+          </span>
+        </div>
       </header>
       <div className={styles.canvasViewport} ref={viewportRef}>
         <div className={styles.scaledPreview} style={scaledStyle}>
           <div className={styles.scaledPreviewInner} style={innerStyle}>
             <ExamPageView
+              key={snapshot.id}
               ariaLabel={`最终画面 ${position + 1}`}
               answers={answers}
               choiceMeta={preview?.choiceMeta}
@@ -201,6 +271,78 @@ export function TemplatePreviewCanvas({
       </footer>
     </section>
   )
+}
+
+function ChoiceViewInfoPopover({
+  choiceMeta,
+  choiceViews
+}: {
+  choiceMeta: PlayerChoiceMeta | undefined
+  choiceViews: readonly { id: string; viewport: ResolvedChoiceViewport }[]
+}): JSX.Element {
+  return (
+    <div
+      aria-label="ChoiceView 配置"
+      className={styles.choiceInfoPopover}
+      id="template-preview-choice-info"
+      role="region"
+    >
+      <div className={styles.choiceInfoTitle}>
+        <strong>ChoiceView 配置</strong>
+        <span>{choiceViews.length} 个控件</span>
+      </div>
+      <ol className={styles.choiceInfoList}>
+        {choiceViews.map((choiceView, index) => (
+          <li key={choiceView.id}>
+            <div className={styles.choiceInfoItemHeading}>
+              <strong>ChoiceView {index + 1}</strong>
+              <span>{choiceView.id}</span>
+            </div>
+            <dl>
+              {choiceViewportDetails(choiceView.viewport, choiceMeta).map(([label, value]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </li>
+        ))}
+      </ol>
+    </div>
+  )
+}
+
+function choiceViewportDetails(
+  viewport: ResolvedChoiceViewport,
+  choiceMeta: PlayerChoiceMeta | undefined
+): Array<[string, string]> {
+  const pageCount = choiceMeta?.pages.length ?? 0
+  if (viewport.mode === 'focus') {
+    const focusedPage = choiceMeta?.pages.findIndex((page) =>
+      page.questionIndices.includes(viewport.choiceIndex)
+    )
+    return [
+      ['模式', '聚焦题目'],
+      ['聚焦题', `第 ${viewport.choiceIndex + 1} 题`],
+      [
+        '所在页',
+        focusedPage === undefined || focusedPage < 0 ? '不可用' : `第 ${focusedPage + 1} 页`
+      ]
+    ]
+  }
+  if (viewport.mode === 'range') {
+    return [
+      ['模式', '限制范围'],
+      ['可用分页', `第 ${viewport.startPage + 1}–${viewport.endPage + 1} 页`],
+      ['初始页', `第 ${(viewport.initialPage ?? viewport.startPage) + 1} 页`]
+    ]
+  }
+  return [
+    ['模式', '全部分页'],
+    ['可用分页', pageCount > 0 ? `第 1–${pageCount} 页` : '暂无分页'],
+    ['初始页', `第 ${(viewport.initialPage ?? 0) + 1} 页`]
+  ]
 }
 
 export function TemplatePreviewInspector({

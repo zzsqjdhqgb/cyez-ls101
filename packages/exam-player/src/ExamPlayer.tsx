@@ -526,6 +526,7 @@ function ExamScreen({
       <div className={styles.contentViewport}>
         <ExamPageView
           answers={answers}
+          className={styles.pageHost}
           choiceMeta={meta}
           page={page}
           resourceUrls={loaded.resourceUrls}

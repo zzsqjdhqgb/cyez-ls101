@@ -1,4 +1,5 @@
-import type { CSSProperties, JSX } from 'react'
+import { useCallback, useState, type CSSProperties, type JSX } from 'react'
+import { createPortal } from 'react-dom'
 import type {
   ChoiceOptionLabel,
   ExamPage,
@@ -7,7 +8,9 @@ import type {
 } from '@ls101/core-types'
 import { ChoiceView } from './ChoiceView'
 import { resourceKey } from './loading'
-import styles from './ExamPlayer.module.css'
+import rendererCss from './ExamPageView.css?inline'
+
+const STYLE_MARKER = 'exam-page-view-styles'
 
 export interface ExamPageVisualStep {
   choiceViewOverrides?: Record<string, ResolvedChoiceViewport>
@@ -20,20 +23,51 @@ export interface ExamPageViewProps {
   choiceMeta?: PlayerChoiceMeta
   answers?: Readonly<Record<number, ChoiceOptionLabel>>
   ariaLabel?: string
+  className?: string
   onAnswer?(choiceIndex: number, answer: ChoiceOptionLabel): void
 }
 
 export function ExamPageView({
+  ariaLabel,
+  className,
+  ...contentProps
+}: ExamPageViewProps): JSX.Element {
+  const [shadowRoot, setShadowRoot] = useState<ShadowRoot | null>(null)
+  const attachRenderer = useCallback((host: HTMLDivElement | null): void => {
+    if (!host) return
+    const root = host.shadowRoot ?? host.attachShadow({ mode: 'open' })
+    if (!root.querySelector(`style[data-${STYLE_MARKER}]`)) {
+      const style = document.createElement('style')
+      style.setAttribute(`data-${STYLE_MARKER}`, '')
+      style.textContent = rendererCss
+      root.append(style)
+    }
+    setShadowRoot(root)
+  }, [])
+
+  return (
+    <div
+      aria-label={ariaLabel}
+      className={className}
+      data-exam-page-view=""
+      data-style-isolation="shadow"
+      ref={attachRenderer}
+    >
+      {shadowRoot ? createPortal(<ExamPageContent {...contentProps} />, shadowRoot) : null}
+    </div>
+  )
+}
+
+function ExamPageContent({
   page,
   step,
   resourceUrls,
   choiceMeta,
   answers = {},
-  ariaLabel,
   onAnswer = () => undefined
-}: ExamPageViewProps): JSX.Element {
+}: Omit<ExamPageViewProps, 'ariaLabel' | 'className'>): JSX.Element {
   return (
-    <div aria-label={ariaLabel} className={styles.page}>
+    <div className="page">
       {page.content.map((block) => {
         const style = {
           left: `${block.x}%`,
@@ -46,7 +80,7 @@ export function ExamPageView({
         if (block.type === 'text') {
           return (
             <div
-              className={styles.textBlock}
+              className="textBlock"
               key={block.id}
               style={{
                 ...style,
@@ -62,14 +96,14 @@ export function ExamPageView({
         if (block.type === 'image') {
           const key = resourceKey(block.src)
           return (
-            <div className={styles.imageBlock} key={block.id} style={style}>
+            <div className="imageBlock" key={block.id} style={style}>
               <img alt="" draggable={false} src={key ? resourceUrls[key] : undefined} />
             </div>
           )
         }
         const viewport = step.choiceViewOverrides?.[block.id] ?? block.defaultViewport
         return (
-          <div className={styles.choiceBlock} key={block.id} style={style}>
+          <div className="choiceBlock" key={block.id} style={style}>
             {choiceMeta ? (
               <ChoiceView
                 answers={answers}
