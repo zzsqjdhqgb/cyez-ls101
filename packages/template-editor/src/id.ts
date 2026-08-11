@@ -108,6 +108,7 @@ export function canonicalizeFunctionLibraryContent(content: FunctionLibraryConte
         .sort((left, right) => left.functionId.localeCompare(right.functionId))
         .map((entry) => ({
           functionId: entry.functionId,
+          ...(entry.exposed === false ? { exposed: false } : {}),
           content: JSON.parse(canonicalizeFunctionContent(entry.content)) as unknown
         }))
     })

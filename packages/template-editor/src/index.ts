@@ -7,6 +7,7 @@ export type {
   FunctionLibraryApplication,
   FunctionLibrarySummary,
   FunctionSummary,
+  ImportedFunctionLibraryApplication,
   LocalFunctionLibraryApplication,
   TemplateApplication,
   TemplateApplicationDependencies,
@@ -47,6 +48,7 @@ export {
   verifyFunctionResourceId
 } from './id'
 export { compileTemplate, compileTemplatePreview } from './compiler'
+export { parseFunctionLibraryRelease } from './document-parser'
 export type {
   TemplateCompileContext,
   TemplateCompileError,

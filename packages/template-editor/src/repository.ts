@@ -54,6 +54,7 @@ export interface TemplateRepository {
     version: number
   ): Promise<FunctionLibraryRelease | null>
   registerImportedFunctionLibrary(release: FunctionLibraryRelease): Promise<FunctionLibraryRelease>
+  deleteImportedFunctionLibrary(libraryId: string, version: number): Promise<void>
 
   listBuiltinFunctionLibraryIds(): Promise<string[]>
   getActiveBuiltinFunctionLibrary(libraryId: string): Promise<FunctionLibraryRelease | null>
@@ -245,7 +246,14 @@ export class FileTemplateRepository implements TemplateRepository {
   }
 
   async listImportedFunctionLibraryIds(): Promise<string[]> {
-    return listUuidScopes(this.importedLibraries)
+    const ids = await listUuidScopes(this.importedLibraries)
+    const populated = await Promise.all(
+      ids.map(async (libraryId) => ({
+        libraryId,
+        versions: await this.listImportedFunctionLibraryVersions(libraryId)
+      }))
+    )
+    return populated.filter(({ versions }) => versions.length > 0).map(({ libraryId }) => libraryId)
   }
 
   async listImportedFunctionLibraryVersions(libraryId: string): Promise<number[]> {
@@ -267,6 +275,12 @@ export class FileTemplateRepository implements TemplateRepository {
     assertUuid(release.libraryId, 'libraryId')
     await validateFunctionLibraryRelease(release, 'imported')
     return this.registerRelease(this.importedLibraries, release, 'Imported')
+  }
+
+  async deleteImportedFunctionLibrary(libraryId: string, version: number): Promise<void> {
+    assertUuid(libraryId, 'libraryId')
+    assertVersion(version)
+    await releaseScope(this.importedLibraries, libraryId, version).clear()
   }
 
   async listBuiltinFunctionLibraryIds(): Promise<string[]> {

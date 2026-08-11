@@ -389,14 +389,20 @@
   padding: 32px;
   overflow: hidden;
   place-items: center;
-  background: #090c0c;
+  background-color: #f8faf9;
+  background-image:
+    linear-gradient(rgb(78 98 94 / 10%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(78 98 94 / 10%) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 .scaledPreview {
   position: relative;
   flex: 0 0 auto;
   overflow: hidden;
-  box-shadow: 0 10px 34px rgb(0 0 0 / 30%);
+  box-shadow:
+    0 0 0 1px rgb(63 80 76 / 24%),
+    0 10px 34px rgb(20 31 29 / 24%);
 }
 
 .scaledPreviewInner {

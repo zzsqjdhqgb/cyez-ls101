@@ -23,12 +23,25 @@ vi.mock('../features/templates/TemplateExamGeneration', () => ({
   ])
 }))
 
+const functionLibraryFileDialog = vi.hoisted(() => ({
+  readText: vi.fn(),
+  writeText: vi.fn()
+}))
+
+vi.mock('@ls101/file-dialog/renderer', () => ({ fileDialog: functionLibraryFileDialog }))
+
 const TEMPLATE_ID = '10000000-0000-4000-8000-000000000001'
 const FUNCTION_ID = '20000000-0000-4000-8000-000000000002'
 const MISSING_TEMPLATE_ID = '30000000-0000-4000-8000-000000000003'
+const NEW_LIBRARY_ID = '70000000-0000-4000-8000-000000000007'
+const NEW_FUNCTION_ID = '80000000-0000-4000-8000-000000000008'
 const INTERFACE_ID = `sha256:${'a'.repeat(64)}`
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  functionLibraryFileDialog.readText.mockReset()
+  functionLibraryFileDialog.writeText.mockReset()
+})
 
 function template(revision = 1, templateId = TEMPLATE_ID, name = '听力模板'): TemplateDocument {
   return {
@@ -187,10 +200,57 @@ function application(document = template()): TemplateApplication {
       preview: vi.fn()
     },
     functionLibraries: {
-      local: {}
+      imported: {
+        register: vi.fn().mockImplementation(async (release) => release),
+        delete: vi.fn().mockResolvedValue(undefined)
+      },
+      local: {
+        create: vi.fn().mockImplementation(async (name = '') => ({
+          libraryId: NEW_LIBRARY_ID,
+          revision: 1,
+          content: { name, functions: [] },
+          editorState: { library: {}, functions: {} }
+        })),
+        get: vi.fn().mockResolvedValue({
+          libraryId: '40000000-0000-4000-8000-000000000004',
+          revision: 1,
+          content: { name: '听力函数库', functions: [] },
+          editorState: { library: {}, functions: {} }
+        }),
+        save: vi.fn().mockImplementation(async (library) => ({
+          ...library,
+          revision: library.revision + 1
+        })),
+        createFunction: vi.fn().mockImplementation(async (libraryId, initial = {}) => {
+          const content = emptyFunctionContent(initial.name ?? '')
+          return {
+            library: {
+              libraryId,
+              revision: 2,
+              content: {
+                name: '未命名函数库',
+                functions: [{ functionId: NEW_FUNCTION_ID, content }]
+              },
+              editorState: { library: {}, functions: { [NEW_FUNCTION_ID]: {} } }
+            },
+            function: { functionId: NEW_FUNCTION_ID, content, editorState: {} }
+          }
+        }),
+        delete: vi.fn().mockResolvedValue(undefined)
+      }
     }
   } as unknown as TemplateApplication
   return app
+}
+
+function emptyFunctionContent(name: string) {
+  return {
+    name,
+    inputs: [],
+    body: { id: 'root', type: 'frame' as const, children: [] },
+    outputs: [],
+    schemaUses: []
+  }
 }
 
 function createLibraryNode(
@@ -448,6 +508,119 @@ describe('Template pages', () => {
     fireEvent.click(screen.getByRole('tab', { name: '本地函数库' }))
     expect(screen.getByText('暂无本地函数库')).toBeInTheDocument()
     expect(screen.getByText('创建本地函数库后会显示在这里')).toBeInTheDocument()
+  })
+
+  it('creates and deletes local function libraries from the library panel', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '选择节点 root' })
+    fireEvent.click(screen.getByRole('button', { name: '新建本地函数库' }))
+
+    await waitFor(() =>
+      expect(app.functionLibraries.local.create).toHaveBeenCalledWith('未命名函数库')
+    )
+    expect(screen.getByRole('tab', { name: '本地函数库' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('button', { name: '未命名函数库' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /删除本地函数库“基础组件库”/ })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: '在“未命名函数库”中新建函数' }))
+    await waitFor(() =>
+      expect(app.functionLibraries.local.createFunction).toHaveBeenCalledWith(NEW_LIBRARY_ID, {
+        name: '未命名函数'
+      })
+    )
+    expect(screen.getByRole('button', { name: '添加未命名函数' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '删除本地函数库“未命名函数库”' }))
+    expect(
+      screen.getByRole('alertdialog', { name: '删除本地函数库“未命名函数库”？' })
+    ).toBeInTheDocument()
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: '删除' }))
+
+    await waitFor(() =>
+      expect(app.functionLibraries.local.delete).toHaveBeenCalledWith(NEW_LIBRARY_ID)
+    )
+    expect(screen.queryByRole('button', { name: '未命名函数库' })).not.toBeInTheDocument()
+  })
+
+  it('imports and deletes a specific imported function library release', async () => {
+    const app = application()
+    const release = {
+      libraryId: '90000000-0000-4000-8000-000000000009',
+      version: 4,
+      contentHash: `sha256:${'9'.repeat(64)}`,
+      content: { name: '共享函数库', functions: [] }
+    }
+    functionLibraryFileDialog.readText.mockResolvedValue({
+      name: 'shared.lsfunclib',
+      data: JSON.stringify(release)
+    })
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '选择节点 root' })
+    fireEvent.click(screen.getByRole('button', { name: '导入函数库' }))
+
+    await waitFor(() =>
+      expect(app.functionLibraries.imported.register).toHaveBeenCalledWith(release)
+    )
+    expect(screen.getByRole('tab', { name: '导入函数库' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('button', { name: '共享函数库，版本 4' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '删除导入函数库“共享函数库”版本 4' }))
+    const dialog = screen.getByRole('alertdialog', {
+      name: '删除导入函数库“共享函数库”版本 4？'
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '删除' }))
+
+    await waitFor(() =>
+      expect(app.functionLibraries.imported.delete).toHaveBeenCalledWith(release.libraryId, 4)
+    )
+    expect(screen.queryByRole('button', { name: '共享函数库，版本 4' })).not.toBeInTheDocument()
+  })
+
+  it('exports a local function library release from its row action', async () => {
+    const app = application()
+    functionLibraryFileDialog.writeText.mockResolvedValue(true)
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '选择节点 root' })
+    fireEvent.click(screen.getByRole('tab', { name: '本地函数库' }))
+    fireEvent.click(screen.getByRole('button', { name: '导出本地函数库“听力函数库”' }))
+
+    await waitFor(() => expect(functionLibraryFileDialog.writeText).toHaveBeenCalledOnce())
+    expect(functionLibraryFileDialog.writeText.mock.calls[0][1]).toMatchObject({
+      defaultName: '听力函数库-v1.lsfunclib'
+    })
+    expect(app.functionLibraries.local.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        exportState: expect.objectContaining({ version: 1 })
+      })
+    )
   })
 
   it('inserts an example library entry as a function call', async () => {
@@ -907,26 +1080,34 @@ describe('Template pages', () => {
       .getByRole('button', { name: '选择节点 question' })
       .closest('[data-selected]')
     if (!selectedCard) throw new Error('expected selected node card')
-    expect(within(selectedCard).queryByLabelText('输出名称')).not.toBeInTheDocument()
+    expect(within(selectedCard).getByText('选择题内容')).toBeInTheDocument()
+    expect(within(selectedCard).getByLabelText('节点 question 输出名称')).toHaveValue('choice')
+    expect(within(selectedCard).getByLabelText('节点 question 题干')).toHaveValue('')
+    expect(within(selectedCard).getByLabelText('节点 question 选项 A 内容')).toHaveValue('')
+    expect(within(selectedCard).getByLabelText('节点 question 选项 B 内容')).toHaveValue('')
     const properties = screen.getByRole('complementary', { name: '属性' })
     expect(within(properties).getByRole('heading', { name: '节点属性' })).toBeInTheDocument()
-    fireEvent.change(within(properties).getByLabelText('输出名称'), {
+    fireEvent.change(within(selectedCard).getByLabelText('节点 question 输出名称'), {
       target: { value: 'answer-1' }
     })
-    fireEvent.change(screen.getByLabelText('题干'), {
+    fireEvent.change(within(selectedCard).getByLabelText('节点 question 题干'), {
       target: { value: '请回答：' }
     })
-    fireEvent.change(screen.getByLabelText('选项 A 内容'), {
+    fireEvent.change(within(selectedCard).getByLabelText('节点 question 选项 A 内容'), {
       target: { value: '正确答案' }
     })
-    fireEvent.change(screen.getByLabelText('选项 B 内容'), {
+    fireEvent.change(within(selectedCard).getByLabelText('节点 question 选项 B 内容'), {
       target: { value: '干扰项' }
     })
-    fireEvent.click(screen.getByRole('button', { name: '添加选项' }))
-    fireEvent.change(screen.getByLabelText('选项 C 内容'), {
+    fireEvent.click(within(selectedCard).getByRole('button', { name: '节点 question 添加选项' }))
+    fireEvent.change(within(selectedCard).getByLabelText('节点 question 选项 C 内容'), {
       target: { value: '第三项' }
     })
-    fireEvent.click(screen.getByRole('button', { name: '上移选项 C' }))
+    fireEvent.click(within(selectedCard).getByRole('button', { name: '上移节点 question 选项 C' }))
+
+    fireEvent.click(screen.getByRole('button', { name: '折叠节点 question' }))
+    expect(within(selectedCard).queryByText('选择题内容')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '展开节点 question' }))
 
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
     await waitFor(() => expect(app.templates.save).toHaveBeenCalledOnce())

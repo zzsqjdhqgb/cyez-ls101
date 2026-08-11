@@ -118,7 +118,10 @@ function isFunctionLibraryContent(value: unknown): value is FunctionLibraryConte
     Array.isArray(value.functions) &&
     value.functions.every(
       (entry) =>
-        isRecord(entry) && typeof entry.functionId === 'string' && isFunctionContent(entry.content)
+        isRecord(entry) &&
+        typeof entry.functionId === 'string' &&
+        (entry.exposed === undefined || typeof entry.exposed === 'boolean') &&
+        isFunctionContent(entry.content)
     )
   )
 }

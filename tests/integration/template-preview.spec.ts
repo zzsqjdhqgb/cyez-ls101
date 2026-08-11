@@ -218,6 +218,13 @@ test('previews a selected node tree as a vertical timeline filmstrip', async ({}
 
   await page.getByRole('link', { name: '模板' }).click()
   await page.getByRole('button', { name: '纵向胶片预览' }).click()
+
+  await expect(page.getByLabel('节点 choice-1 输出名称')).toHaveValue('choice-1-answer')
+  await expect(page.getByLabel('节点 choice-1 题干')).toHaveValue('第一题：请选择 A')
+  await expect(page.getByLabel('节点 choice-1 选项 A 内容')).toHaveValue('选项 A')
+  await expect(page.getByLabel('节点 choice-1 选项 B 内容')).toHaveValue('选项 B')
+  await page.screenshot({ path: testInfo.outputPath('template-choice-node.png') })
+
   await page.getByRole('tab', { name: '预览' }).click()
 
   const filmstrip = page.getByRole('complementary', { name: '预览序列' })

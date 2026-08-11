@@ -38,7 +38,7 @@ export function TemplateNodeInspector({
     ) : node.type === 'page' ? (
       <PageInspector node={node} variableCandidates={variableCandidates} apply={apply} />
     ) : node.type === 'choice-question' ? (
-      <ChoiceQuestionInspector node={node} variableCandidates={variableCandidates} apply={apply} />
+      <ChoiceQuestionEditor node={node} variableCandidates={variableCandidates} apply={apply} />
     ) : node.type === 'function' ? (
       <TemplateFunctionCallEditor
         node={node}
@@ -149,24 +149,35 @@ function FrameInspector({
   )
 }
 
-function ChoiceQuestionInspector({
+export function ChoiceQuestionEditor({
   node,
   variableCandidates,
-  apply
+  apply,
+  compact = false,
+  ariaLabelPrefix
 }: {
   node: ChoiceQuestionNode
   variableCandidates: readonly TemplateVariableCandidate[]
   apply: TemplateNodeInspectorProps['apply']
+  compact?: boolean
+  ariaLabelPrefix?: string
 }): JSX.Element {
+  const controlLabel = (label: string): string =>
+    ariaLabelPrefix ? `${ariaLabelPrefix} ${label}` : label
   const updateOption = (optionId: string, option: ChoiceOptionDef): void => {
     apply({ type: 'update-choice-option', nodeId: node.id, optionId, option })
   }
 
   return (
-    <div className={styles.nodeEditor}>
+    <div
+      className={[styles.nodeEditor, compact ? styles.compactChoiceEditor : '']
+        .filter(Boolean)
+        .join(' ')}
+    >
       <label>
         输出名称
         <input
+          aria-label={controlLabel('输出名称')}
           value={node.outputName}
           onChange={(event) =>
             apply({ type: 'set-choice-question', nodeId: node.id, outputName: event.target.value })
@@ -175,6 +186,8 @@ function ChoiceQuestionInspector({
       </label>
 
       <TextExpressionEditor
+        ariaLabel={controlLabel('题干')}
+        compact={compact}
         label="题干"
         value={node.stem}
         candidates={variableCandidates}
@@ -188,7 +201,12 @@ function ChoiceQuestionInspector({
         </div>
         <div className={styles.itemList}>
           {node.options.map((option, index) => (
-            <div className={styles.editorItem} key={option.id}>
+            <div
+              className={[styles.editorItem, compact ? styles.compactChoiceOption : '']
+                .filter(Boolean)
+                .join(' ')}
+              key={option.id}
+            >
               <div className={styles.itemToolbar}>
                 <strong>{optionLabel(index)}</strong>
                 <ListActions
@@ -196,7 +214,7 @@ function ChoiceQuestionInspector({
                   index={index}
                   length={node.options.length}
                   removeDisabled={node.options.length <= 2}
-                  subject={`选项 ${optionLabel(index)}`}
+                  subject={controlLabel(`选项 ${optionLabel(index)}`)}
                   onCopy={() =>
                     apply({
                       type: 'copy-choice-option',
@@ -219,6 +237,7 @@ function ChoiceQuestionInspector({
                 />
               </div>
               <TextExpressionEditor
+                ariaLabel={controlLabel(`选项 ${optionLabel(index)} 内容`)}
                 compact
                 label={`选项 ${optionLabel(index)} 内容`}
                 value={option.content}
@@ -229,6 +248,7 @@ function ChoiceQuestionInspector({
           ))}
         </div>
         <Button
+          aria-label={controlLabel('添加选项')}
           className={styles.addButton}
           disabled={node.options.length >= 26}
           icon={Plus}
@@ -363,6 +383,7 @@ function PageInspector({
 
 interface TextExpressionEditorProps {
   label: string
+  ariaLabel?: string
   value: TextExpression
   candidates: readonly TemplateVariableCandidate[]
   compact?: boolean
@@ -371,6 +392,7 @@ interface TextExpressionEditorProps {
 
 function TextExpressionEditor({
   label,
+  ariaLabel = label,
   value,
   candidates,
   compact = false,
@@ -381,7 +403,7 @@ function TextExpressionEditor({
       <span className={styles.fieldLabel}>{label}</span>
       <TemplateVariableInput
         mode="text"
-        ariaLabel={label}
+        ariaLabel={ariaLabel}
         candidates={candidates}
         multiline={!compact}
         value={value}

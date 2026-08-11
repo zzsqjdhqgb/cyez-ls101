@@ -250,6 +250,8 @@ export interface FunctionDocument {
 export interface FunctionLibraryEntry {
   functionId: string
   content: FunctionContent
+  /** false 表示由跨库调用复制而来的内部依赖，不作为库的可编辑入口展示。 */
+  exposed?: boolean
 }
 
 export interface FunctionLibraryContent {

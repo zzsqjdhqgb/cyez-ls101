@@ -152,6 +152,53 @@
   min-height: 46px;
 }
 
+.compactChoiceEditor {
+  gap: 8px;
+}
+
+.compactChoiceEditor > label,
+.compactChoiceEditor > .expression {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.compactChoiceEditor > label,
+.compactChoiceEditor .fieldLabel,
+.compactChoiceEditor .groupHeading {
+  font-size: 10px;
+}
+
+.compactChoiceEditor input,
+.compactChoiceEditor textarea {
+  min-height: 26px;
+  padding: 3px 7px;
+  font-size: 11px;
+}
+
+.compactChoiceOption {
+  position: relative;
+  gap: 5px;
+  padding: 6px;
+}
+
+.compactChoiceOption .itemToolbar strong {
+  font-size: 11px;
+}
+
+.compactChoiceOption .compactExpression {
+  grid-template-columns: 68px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.compactChoiceEditor .addButton {
+  min-height: 26px;
+  padding: 3px 8px;
+  font-size: 10px;
+}
+
 .emptyValue {
   margin: 0;
   padding: 12px;

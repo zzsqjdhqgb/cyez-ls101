@@ -19,6 +19,7 @@ import { SettingsOverviewPage } from '../pages/SettingsOverviewPage'
 import { WorkbenchPage } from '../pages/WorkbenchPage'
 import { TemplateBrowserPage } from '../features/templates/TemplateBrowserPage'
 import { TemplateDocumentPage } from '../features/templates/TemplateDocumentPage'
+import { TemplateFunctionDocumentPage } from '../features/templates/TemplateFunctionDocumentPage'
 import { SchemaBrowserPage } from '../features/schemas/SchemaBrowserPage'
 import { SchemaDefinitionPage } from '../features/schemas/SchemaDefinitionPage'
 import { SchemaDraftEditorPage } from '../features/schemas/SchemaDraftEditorPage'
@@ -113,6 +114,13 @@ const unregisterRoutes = [
       icon: LayoutTemplate,
       order: 50
     }
+  }),
+
+  registerAppRoute({
+    id: 'template-function-editor',
+    path: '/templates/libraries/:libraryId/functions/:functionId',
+    component: TemplateFunctionDocumentPage,
+    layout: 'focus'
   }),
 
   registerAppRoute({

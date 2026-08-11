@@ -27,6 +27,7 @@ const FUNCTION_A = '10000000-0000-4000-8000-000000000001'
 const FUNCTION_B = '10000000-0000-4000-8000-000000000002'
 const FUNCTION_C = '10000000-0000-4000-8000-000000000003'
 const LIBRARY_ID = '40000000-0000-4000-8000-000000000001'
+const IMPORTED_LIBRARY_ID = '40000000-0000-4000-8000-000000000002'
 const TEMPLATE_ID = '20000000-0000-4000-8000-000000000001'
 const INTERFACE_ID = `sha256:${'1'.repeat(64)}`
 const SCHEMA_ID = `sha256:${'2'.repeat(64)}`
@@ -170,7 +171,7 @@ describe('FileTemplateRepository', () => {
     expect(await repository.getLocalFunctionLibrary(LIBRARY_ID)).toBeNull()
   })
 
-  it('登记不可变的导入和内置 release，并单独维护内置 active 版本', async () => {
+  it('登记和删除不可变的导入 release，并单独维护内置 active 版本', async () => {
     const { repository } = setup()
     const imported = await createFunctionLibraryRelease(LIBRARY_ID, 2, {
       name: 'Imported',
@@ -200,6 +201,11 @@ describe('FileTemplateRepository', () => {
     expect(await repository.getImportedFunctionLibrary(LIBRARY_ID, 2)).toEqual(imported)
     expect(await repository.listBuiltinFunctionLibraryIds()).toEqual(['builtin:basic'])
     expect(await repository.getActiveBuiltinFunctionLibrary('builtin:basic')).toEqual(builtin)
+
+    await repository.deleteImportedFunctionLibrary(LIBRARY_ID, 2)
+    expect(await repository.getImportedFunctionLibrary(LIBRARY_ID, 2)).toBeNull()
+    expect(await repository.listImportedFunctionLibraryVersions(LIBRARY_ID)).toEqual([])
+    expect(await repository.listImportedFunctionLibraryIds()).toEqual([])
 
     await expect(
       repository.registerBuiltinFunctionLibrary({
@@ -588,6 +594,104 @@ describe('TemplateApplication', () => {
     })
   })
 
+  it('把任意来源的函数依赖闭包复制为本地库内部快照后插入调用', async () => {
+    const { repository, application } = setup()
+    const target = functionDocument(FUNCTION_A, 'Target')
+    await saveFunctions(repository, target)
+    const imported = await createFunctionLibraryRelease(IMPORTED_LIBRARY_ID, 2, {
+      name: 'Imported library',
+      functions: [
+        {
+          functionId: FUNCTION_B,
+          content: functionDocument(FUNCTION_B, 'Imported parent', [
+            functionCall('nested-call', FUNCTION_C)
+          ]).content
+        },
+        {
+          functionId: FUNCTION_C,
+          content: functionDocument(FUNCTION_C, 'Imported leaf').content
+        }
+      ]
+    })
+    await repository.registerImportedFunctionLibrary(imported)
+
+    const inserted = await application.functionLibraries.local.insertFunctionCall(
+      LIBRARY_ID,
+      FUNCTION_A,
+      {
+        library: { source: 'imported', libraryId: IMPORTED_LIBRARY_ID, version: 2 },
+        functionId: FUNCTION_B
+      },
+      'root'
+    )
+
+    expect(inserted.library.content.functions).toHaveLength(3)
+    const internalEntries = inserted.library.content.functions.filter(
+      (entry) => entry.exposed === false
+    )
+    expect(internalEntries.map((entry) => entry.content.name).sort()).toEqual([
+      'Imported leaf',
+      'Imported parent'
+    ])
+    const call = inserted.function.content.body.children[0]
+    expect(call).toMatchObject({ id: inserted.callNodeId, type: 'function' })
+    if (call?.type !== 'function') return
+    const copiedParent = internalEntries.find((entry) => entry.functionId === call.functionRef)
+    const nested = copiedParent?.content.body.children[0]
+    expect(nested?.type).toBe('function')
+    if (nested?.type !== 'function') return
+    expect(internalEntries.some((entry) => entry.functionId === nested.functionRef)).toBe(true)
+    expect(await application.browser.listFunctionLibraries()).toEqual([
+      expect.objectContaining({
+        source: 'imported',
+        libraryId: IMPORTED_LIBRARY_ID,
+        functions: [
+          expect.objectContaining({ functionId: FUNCTION_B }),
+          expect.objectContaining({ functionId: FUNCTION_C })
+        ]
+      }),
+      expect.objectContaining({
+        source: 'local',
+        libraryId: LIBRARY_ID,
+        functions: [{ functionId: FUNCTION_A, name: 'Target' }]
+      })
+    ])
+
+    await repository.deleteImportedFunctionLibrary(IMPORTED_LIBRARY_ID, 2)
+    const template = await application.templates.create()
+    const embedded = await application.templates.embedFunction(
+      template.templateId,
+      functionLocator(FUNCTION_A)
+    )
+    expect(embedded.template.resources.functions).toHaveLength(3)
+
+    const cleaned = await application.functionLibraries.local.saveFunction(inserted.library, {
+      ...inserted.function,
+      content: { ...inserted.function.content, body: root() }
+    })
+    expect(cleaned.content.functions).toEqual([expect.objectContaining({ functionId: FUNCTION_A })])
+  })
+
+  it('拒绝插入会回指当前函数的同库调用', async () => {
+    const { repository, application } = setup()
+    await saveFunctions(
+      repository,
+      functionDocument(FUNCTION_A, 'A'),
+      functionDocument(FUNCTION_B, 'B', [functionCall('call-a', FUNCTION_A)])
+    )
+    const before = await repository.getLocalFunctionLibrary(LIBRARY_ID)
+
+    await expect(
+      application.functionLibraries.local.insertFunctionCall(
+        LIBRARY_ID,
+        FUNCTION_A,
+        functionLocator(FUNCTION_B),
+        'root'
+      )
+    ).rejects.toMatchObject({ code: 'RECURSIVE_FUNCTION_DEPENDENCY' })
+    expect(await repository.getLocalFunctionLibrary(LIBRARY_ID)).toEqual(before)
+  })
+
   it('调用节点插入失败时不保存刚复制的函数资源', async () => {
     const { repository, application } = setup()
     await saveFunctions(repository, functionDocument(FUNCTION_A, 'Question'))
@@ -860,6 +964,7 @@ function forwardRepository(
     listImportedFunctionLibraryVersions: (id) => base.listImportedFunctionLibraryVersions(id),
     getImportedFunctionLibrary: (id, version) => base.getImportedFunctionLibrary(id, version),
     registerImportedFunctionLibrary: (release) => base.registerImportedFunctionLibrary(release),
+    deleteImportedFunctionLibrary: (id, version) => base.deleteImportedFunctionLibrary(id, version),
     listBuiltinFunctionLibraryIds: () => base.listBuiltinFunctionLibraryIds(),
     getActiveBuiltinFunctionLibrary: (id) => base.getActiveBuiltinFunctionLibrary(id),
     getBuiltinFunctionLibrary: (id, version) => base.getBuiltinFunctionLibrary(id, version),

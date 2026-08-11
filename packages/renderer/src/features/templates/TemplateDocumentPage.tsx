@@ -3,8 +3,10 @@ import type { InterfaceVarManifest } from '@ls101/core-types'
 import type {
   FrameNode,
   FunctionDef,
+  FunctionLibraryRelease,
   FunctionLibrarySummary,
   FunctionLocator,
+  LocalFunctionLibraryDocument,
   TemplateDocumentOperation,
   TemplateNode,
   TimelineStep
@@ -18,6 +20,7 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
+  Download,
   Eye,
   FileArchive,
   FileText,
@@ -25,12 +28,14 @@ import {
   Layers3,
   ListChecks,
   Mic,
+  Pencil,
   Plus,
   Redo2,
   Save,
   Timer,
   Trash2,
   Undo2,
+  Upload,
   Volume2
 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -47,7 +52,11 @@ import { TemplateContentBlockInspector } from './TemplateContentBlockInspector'
 import { collectTemplateChoiceTargetPages } from './TemplateChoiceTargets'
 import { TemplateInterfaceRequirements } from './TemplateInterfaceRequirements'
 import { TemplateExamGenerationDialog } from './TemplateExamGenerationDialog'
-import { TemplateNodeInspector } from './TemplateNodeInspector'
+import {
+  exportLocalFunctionLibraryFile,
+  importFunctionLibraryFile
+} from './TemplateFunctionLibraryFiles'
+import { ChoiceQuestionEditor, TemplateNodeInspector } from './TemplateNodeInspector'
 import { TemplatePageCanvas } from './TemplatePageCanvas'
 import {
   TemplatePreviewCanvas,
@@ -100,6 +109,15 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const [functionLibraries, setFunctionLibraries] = useState<FunctionLibrarySummary[]>([])
   const [libraryLoading, setLibraryLoading] = useState(true)
   const [libraryError, setLibraryError] = useState<string | null>(null)
+  const [creatingLibrary, setCreatingLibrary] = useState(false)
+  const [importingLibrary, setImportingLibrary] = useState(false)
+  const [creatingFunctionLibraryId, setCreatingFunctionLibraryId] = useState<string | null>(null)
+  const [exportingLibraryId, setExportingLibraryId] = useState<string | null>(null)
+  const [pendingLibraryDelete, setPendingLibraryDelete] = useState<FunctionLibrarySummary | null>(
+    null
+  )
+  const [deletingLibrary, setDeletingLibrary] = useState(false)
+  const [libraryDeleteError, setLibraryDeleteError] = useState<string | null>(null)
   const [interfaceManifests, setInterfaceManifests] = useState<InterfaceVarManifest[]>([])
   const [interfacesLoading, setInterfacesLoading] = useState(true)
   const [interfacesError, setInterfacesError] = useState<string | null>(null)
@@ -280,10 +298,145 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
     })
   }
 
+  const createLocalFunctionLibrary = async (): Promise<void> => {
+    if (creatingLibrary) return
+    setCreatingLibrary(true)
+    setLibraryError(null)
+    try {
+      const library = await application.functionLibraries.local.create('未命名函数库')
+      const summary = summarizeLocalFunctionLibrary(library)
+      setFunctionLibraries((current) => [...current, summary])
+      setCollapsedLibraryKeys((current) => {
+        const next = new Set(current)
+        next.delete(libraryKey(summary))
+        return next
+      })
+      setActiveLibrarySource('local')
+    } catch (reason) {
+      setLibraryError(templateErrorMessage(reason))
+    } finally {
+      setCreatingLibrary(false)
+    }
+  }
+
+  const importFunctionLibrary = async (): Promise<void> => {
+    if (importingLibrary) return
+    setImportingLibrary(true)
+    setLibraryError(null)
+    try {
+      const release = await importFunctionLibraryFile(application)
+      if (!release) return
+      const summary = summarizeImportedFunctionLibrary(release)
+      setFunctionLibraries((current) => [
+        ...current.filter(
+          (item) =>
+            item.source !== 'imported' ||
+            item.libraryId !== summary.libraryId ||
+            item.version !== summary.version
+        ),
+        summary
+      ])
+      setCollapsedLibraryKeys((current) => {
+        const next = new Set(current)
+        next.delete(libraryKey(summary))
+        return next
+      })
+      setActiveLibrarySource('imported')
+    } catch (reason) {
+      setLibraryError(templateErrorMessage(reason))
+    } finally {
+      setImportingLibrary(false)
+    }
+  }
+
+  const createLocalFunction = async (library: FunctionLibrarySummary): Promise<void> => {
+    if (library.source !== 'local' || creatingFunctionLibraryId) return
+    setCreatingFunctionLibraryId(library.libraryId)
+    setLibraryError(null)
+    try {
+      const result = await application.functionLibraries.local.createFunction(library.libraryId, {
+        name: '未命名函数'
+      })
+      const summary = summarizeLocalFunctionLibrary(result.library)
+      setFunctionLibraries((current) =>
+        current.map((item) =>
+          item.source === 'local' && item.libraryId === library.libraryId ? summary : item
+        )
+      )
+      setCollapsedLibraryKeys((current) => {
+        const next = new Set(current)
+        next.delete(libraryKey(summary))
+        return next
+      })
+    } catch (reason) {
+      setLibraryError(templateErrorMessage(reason))
+    } finally {
+      setCreatingFunctionLibraryId(null)
+    }
+  }
+
+  const exportLocalFunctionLibrary = async (library: FunctionLibrarySummary): Promise<void> => {
+    if (library.source !== 'local' || exportingLibraryId) return
+    setExportingLibraryId(library.libraryId)
+    setLibraryError(null)
+    try {
+      await exportLocalFunctionLibraryFile(application, library.libraryId)
+    } catch (reason) {
+      setLibraryError(templateErrorMessage(reason))
+    } finally {
+      setExportingLibraryId(null)
+    }
+  }
+
+  const deleteFunctionLibrary = async (): Promise<void> => {
+    if (!pendingLibraryDelete || deletingLibrary) return
+    const library = pendingLibraryDelete
+    setDeletingLibrary(true)
+    setLibraryDeleteError(null)
+    try {
+      if (library.source === 'local') {
+        await application.functionLibraries.local.delete(library.libraryId)
+      } else if (library.source === 'imported' && library.version !== undefined) {
+        await application.functionLibraries.imported.delete(library.libraryId, library.version)
+      } else {
+        throw new Error('该函数库不能删除')
+      }
+      setFunctionLibraries((current) =>
+        current.filter(
+          (item) =>
+            item.source !== library.source ||
+            item.libraryId !== library.libraryId ||
+            item.version !== library.version
+        )
+      )
+      setCollapsedLibraryKeys((current) => {
+        const next = new Set(current)
+        next.delete(libraryKey(library))
+        return next
+      })
+      setPendingLibraryDelete(null)
+    } catch (reason) {
+      setLibraryDeleteError(templateErrorMessage(reason))
+    } finally {
+      setDeletingLibrary(false)
+    }
+  }
+
   const openPageEditor = (nodeId: string): void => {
     session.selectNode(nodeId)
     setSelectedContentBlockId(null)
     setCenterView('page')
+  }
+
+  const openFunctionEditor = async (
+    library: FunctionLibrarySummary,
+    functionId: string
+  ): Promise<void> => {
+    if (library.source !== 'local' || session.saving) return
+    if (session.dirty && !(await session.save())) return
+    navigate(`/templates/libraries/${library.libraryId}/functions/${functionId}`, {
+      state: { templateId }
+    })
   }
 
   const openPreview = (): void => {
@@ -368,7 +521,23 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
             <section className={`${styles.inspectorSection} ${styles.librarySection}`}>
               <div className={styles.libraryHeading}>
                 <h2 id="function-library-heading">函数库</h2>
-                <span>组件素材</span>
+                <div className={styles.libraryHeadingActions}>
+                  <span>组件素材</span>
+                  <IconButton
+                    icon={Upload}
+                    label="导入函数库"
+                    size="small"
+                    disabled={libraryLoading || importingLibrary}
+                    onClick={() => void importFunctionLibrary()}
+                  />
+                  <IconButton
+                    icon={Plus}
+                    label="新建本地函数库"
+                    size="small"
+                    disabled={libraryLoading || creatingLibrary}
+                    onClick={() => void createLocalFunctionLibrary()}
+                  />
+                </div>
               </div>
               <div className={styles.sourceTabs} role="tablist" aria-label="函数库来源">
                 {LIBRARY_SOURCES.map(({ source, label }) => (
@@ -419,24 +588,64 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                             const collapsed = collapsedLibraryKeys.has(key)
                             return (
                               <li className={styles.libraryGroup} key={key}>
-                                <button
-                                  type="button"
-                                  className={styles.libraryButton}
-                                  aria-expanded={!collapsed}
-                                  aria-label={libraryButtonLabel(library)}
-                                  onClick={() => toggleLibrary(key)}
+                                <div
+                                  className={styles.libraryGroupHeader}
+                                  data-actions={library.source !== 'builtin' || undefined}
                                 >
-                                  {collapsed ? (
-                                    <ChevronRight aria-hidden="true" />
-                                  ) : (
-                                    <ChevronDown aria-hidden="true" />
-                                  )}
-                                  <span>{library.name || '未命名函数库'}</span>
-                                  <small>
-                                    {library.functions.length} 项
-                                    {library.version ? ` · v${library.version}` : ''}
-                                  </small>
-                                </button>
+                                  <button
+                                    type="button"
+                                    className={styles.libraryButton}
+                                    aria-expanded={!collapsed}
+                                    aria-label={libraryButtonLabel(library)}
+                                    onClick={() => toggleLibrary(key)}
+                                  >
+                                    {collapsed ? (
+                                      <ChevronRight aria-hidden="true" />
+                                    ) : (
+                                      <ChevronDown aria-hidden="true" />
+                                    )}
+                                    <span>{library.name || '未命名函数库'}</span>
+                                    <small>
+                                      {library.functions.length} 项
+                                      {library.version ? ` · v${library.version}` : ''}
+                                    </small>
+                                  </button>
+                                  {library.source !== 'builtin' ? (
+                                    <div className={styles.libraryGroupActions}>
+                                      {library.source === 'local' ? (
+                                        <>
+                                          <IconButton
+                                            className={styles.libraryAction}
+                                            icon={Plus}
+                                            label={`在“${library.name || '未命名函数库'}”中新建函数`}
+                                            size="small"
+                                            disabled={creatingFunctionLibraryId !== null}
+                                            onClick={() => void createLocalFunction(library)}
+                                          />
+                                          <IconButton
+                                            className={styles.libraryAction}
+                                            icon={Download}
+                                            label={`导出本地函数库“${library.name || '未命名函数库'}”`}
+                                            size="small"
+                                            disabled={exportingLibraryId !== null}
+                                            onClick={() => void exportLocalFunctionLibrary(library)}
+                                          />
+                                        </>
+                                      ) : null}
+                                      <IconButton
+                                        className={styles.libraryAction}
+                                        icon={Trash2}
+                                        label={deleteLibraryLabel(library)}
+                                        size="small"
+                                        variant="danger"
+                                        onClick={() => {
+                                          setLibraryDeleteError(null)
+                                          setPendingLibraryDelete(library)
+                                        }}
+                                      />
+                                    </div>
+                                  ) : null}
+                                </div>
                                 {!collapsed ? (
                                   library.functions.length > 0 ? (
                                     <ul className={styles.functionList}>
@@ -457,13 +666,29 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                                                   : '函数'}
                                               </small>
                                             </span>
-                                            <IconButton
-                                              icon={Plus}
-                                              label={`添加${item.name || '未命名函数'}`}
-                                              size="small"
-                                              disabled={!document || session.saving}
-                                              onClick={() => insertLibraryItem(library, item)}
-                                            />
+                                            <span className={styles.functionActions}>
+                                              {library.source === 'local' ? (
+                                                <IconButton
+                                                  icon={Pencil}
+                                                  label={`编辑${item.name || '未命名函数'}`}
+                                                  size="small"
+                                                  disabled={session.saving}
+                                                  onClick={() =>
+                                                    void openFunctionEditor(
+                                                      library,
+                                                      item.functionId
+                                                    )
+                                                  }
+                                                />
+                                              ) : null}
+                                              <IconButton
+                                                icon={Plus}
+                                                label={`添加${item.name || '未命名函数'}`}
+                                                size="small"
+                                                disabled={!document || session.saving}
+                                                onClick={() => insertLibraryItem(library, item)}
+                                              />
+                                            </span>
                                           </div>
                                         </li>
                                       ))}
@@ -550,7 +775,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                 role="tabpanel"
               >
                 {root ? (
-                  <NodeTree
+                  <TemplateNodeTree
                     node={root}
                     parent={null}
                     index={0}
@@ -704,6 +929,22 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
         onCancel={() => setPendingDeleteId(null)}
         onConfirm={deleteSelected}
       />
+      <ConfirmModal
+        busy={deletingLibrary}
+        closeOnConfirm={false}
+        confirmLabel="删除"
+        danger
+        error={libraryDeleteError}
+        message={deleteLibraryMessage(pendingLibraryDelete)}
+        open={pendingLibraryDelete !== null}
+        title={deleteLibraryTitle(pendingLibraryDelete)}
+        onCancel={() => {
+          if (deletingLibrary) return
+          setLibraryDeleteError(null)
+          setPendingLibraryDelete(null)
+        }}
+        onConfirm={() => void deleteFunctionLibrary()}
+      />
       {document ? (
         <TemplateExamGenerationDialog
           application={application}
@@ -724,6 +965,55 @@ function functionLocator(library: FunctionLibrarySummary, functionId: string): F
     }
   }
   return { library: { source: library.source, libraryId: library.libraryId }, functionId }
+}
+
+function summarizeLocalFunctionLibrary(
+  library: LocalFunctionLibraryDocument
+): FunctionLibrarySummary {
+  return {
+    source: 'local',
+    libraryId: library.libraryId,
+    name: library.content.name,
+    functions: library.content.functions
+      .filter((entry) => entry.exposed !== false)
+      .map(({ functionId, content }) => ({
+        functionId,
+        name: content.name
+      }))
+  }
+}
+
+function summarizeImportedFunctionLibrary(release: FunctionLibraryRelease): FunctionLibrarySummary {
+  return {
+    source: 'imported',
+    libraryId: release.libraryId,
+    version: release.version,
+    name: release.content.name,
+    functions: release.content.functions
+      .filter((entry) => entry.exposed !== false)
+      .map(({ functionId, content }) => ({
+        functionId,
+        name: content.name
+      }))
+  }
+}
+
+function deleteLibraryLabel(library: FunctionLibrarySummary): string {
+  const name = library.name || '未命名函数库'
+  return library.source === 'imported'
+    ? `删除导入函数库“${name}”版本 ${library.version ?? 1}`
+    : `删除本地函数库“${name}”`
+}
+
+function deleteLibraryTitle(library: FunctionLibrarySummary | null): string {
+  if (!library) return '删除函数库？'
+  return `${deleteLibraryLabel(library)}？`
+}
+
+function deleteLibraryMessage(library: FunctionLibrarySummary | null): string {
+  return library?.source === 'imported'
+    ? '这个导入版本会从本机删除，其他版本和已经嵌入模板的函数不受影响。'
+    : '函数库及其中的全部函数都会从本地删除，已经嵌入模板的函数不受影响。'
 }
 
 function libraryKey(library: FunctionLibrarySummary): string {
@@ -755,7 +1045,7 @@ function LibraryEmptyState({ source }: { source: FunctionLibrarySummary['source'
   )
 }
 
-interface NodeTreeProps {
+export interface TemplateNodeTreeProps {
   node: TemplateNode
   parent: FrameNode | null
   index: number
@@ -771,7 +1061,7 @@ interface NodeTreeProps {
   onEditPage(nodeId: string): void
 }
 
-function NodeTree({
+export function TemplateNodeTree({
   node,
   parent,
   index,
@@ -785,7 +1075,7 @@ function NodeTree({
   onToggle,
   onDelete,
   onEditPage
-}: NodeTreeProps): JSX.Element {
+}: TemplateNodeTreeProps): JSX.Element {
   const collapsible =
     (node.type === 'frame' && node.children.length > 0) || hasInlineNodeProperties(node)
   const collapsed = collapsedIds.has(node.id) && !containsDescendant(node, selectedNodeId)
@@ -893,11 +1183,26 @@ function NodeTree({
               />
             </div>
           ) : null}
+          {node.type === 'choice-question' && !collapsed ? (
+            <div className={`${styles.nodeSummary} ${styles.choiceQuestionNodeSummary}`}>
+              <div className={styles.nodeSummaryHeading}>
+                <span>选择题内容</span>
+                <small>{node.options.length} 个选项</small>
+              </div>
+              <ChoiceQuestionEditor
+                ariaLabelPrefix={`节点 ${node.id}`}
+                compact
+                node={node}
+                variableCandidates={variableCandidates}
+                apply={apply}
+              />
+            </div>
+          ) : null}
         </div>
         {node.type === 'frame' && !collapsed && node.children.length > 0 ? (
           <div className={styles.nodeChildren}>
             {node.children.map((child, childIndex) => (
-              <NodeTree
+              <TemplateNodeTree
                 key={child.id}
                 node={child}
                 parent={node}
@@ -922,7 +1227,7 @@ function NodeTree({
 }
 
 function hasInlineNodeProperties(node: TemplateNode): boolean {
-  return node.type === 'page' || node.type === 'function'
+  return node.type === 'page' || node.type === 'function' || node.type === 'choice-question'
 }
 
 function PageNodeSummary({
@@ -933,7 +1238,7 @@ function PageNodeSummary({
 }: {
   node: Extract<TemplateNode, { type: 'page' }>
   variableCandidates: readonly TemplateVariableCandidate[]
-  apply: NodeTreeProps['apply']
+  apply: TemplateNodeTreeProps['apply']
   onEdit(): void
 }): JSX.Element {
   const addMenuId = useId()

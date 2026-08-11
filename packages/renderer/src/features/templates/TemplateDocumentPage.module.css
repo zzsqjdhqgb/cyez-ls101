@@ -116,7 +116,13 @@
   font-weight: 660;
 }
 
-.libraryHeading > span {
+.libraryHeadingActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.libraryHeadingActions > span {
   color: var(--color-text-faint);
   font-size: 11px;
 }
@@ -200,6 +206,28 @@
 
 .libraryGroup {
   gap: 8px;
+}
+
+.libraryGroupHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  align-items: center;
+}
+
+.libraryGroupHeader[data-actions] {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.libraryGroupActions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.libraryAction {
+  width: 28px;
+  height: 28px;
 }
 
 .libraryNotice {
@@ -325,7 +353,7 @@
 
 .functionCard {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 28px;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
   width: 100%;
@@ -337,6 +365,12 @@
   background: var(--color-surface);
   font: 600 12px/1.35 var(--font-ui);
   text-align: left;
+}
+
+.functionActions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .functionCard:focus-within {
@@ -581,6 +615,10 @@
 
 .functionNodeSummary {
   gap: 0;
+}
+
+.choiceQuestionNodeSummary {
+  gap: 8px;
 }
 
 .nodeSummaryHeading {

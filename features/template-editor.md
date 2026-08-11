@@ -2,7 +2,7 @@
 
 ## 功能状态
 
-`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 与函数库工作文档身份、版本化函数库仓储、内嵌函数资源管理、应用门面、严格语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。renderer 已注册 Template 应用门面、列表入口、函数库浏览、工作文档编辑会话、节点结构编辑器和 Page 内容画布；最终试卷文件封装尚未实现。
+`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 与函数库工作文档身份、版本化函数库仓储、内嵌函数资源管理、应用门面、严格语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。renderer 已注册 Template 应用门面、列表入口、函数库浏览、Template 与本地函数工作文档编辑会话、节点结构编辑器和 Page 内容画布；最终试卷文件封装尚未实现。
 
 ## 已实现边界
 
@@ -54,7 +54,9 @@ Template 和本地函数库工作文档都带 revision。首次保存使用 0，
 
 ## 应用门面
 
-`createTemplateApplication()` 提供 `browser`、`templates` 和 `functionLibraries.local` 三个分区。`browser.listFunctionLibraries()` 汇总当前 active 内置库、全部导入 release 和本地函数库，并返回每个库的来源、版本及函数摘要；renderer 左栏按“来源 → 函数库 → 函数”展示该数据。Template 和本地函数库的创建操作立即生成 UUID 并保存；获取、整份保存和删除直接对应仓储操作。`save()` 返回递增 revision 后的文档，过期 autosave 必须由调用方处理冲突，不能静默覆盖。
+`createTemplateApplication()` 提供 `browser`、`templates`、`functionLibraries.local` 和 `functionLibraries.imported` 分区。`browser.listFunctionLibraries()` 汇总当前 active 内置库、全部导入 release 和本地函数库，并返回每个库的来源、版本及函数摘要；renderer 左栏按“来源 → 函数库 → 函数”展示该数据。本地库可以直接创建函数、编辑函数、导出和删除；导入 release 可以登记并按具体版本删除，内置库不可删除且函数不可编辑。Template 和本地函数库的创建操作立即生成 UUID 并保存；获取、整份保存和删除直接对应仓储操作。`save()` 返回递增 revision 后的文档，过期 autosave 必须由调用方处理冲突，不能静默覆盖。
+
+函数库文件使用 `.lsfunclib` 扩展名，正文是经过规范化内容哈希保护的 `FunctionLibraryRelease` JSON。首次导出本地库使用 v1；内容未变化时重复导出保持版本，内容变化后再导出才递增版本，并在文件成功写入后更新工作文档的 `exportState`。导入必须经过 JSON 结构、内容哈希、UUID、函数 ID、依赖完整性和递归检查，不能把工作文档或任意 JSON 直接登记为导入 release。
 
 当前随应用发布的 `builtin:basic` v2“基础组件库”是唯一的节点预设特例，包含 `builtin:frame`（框架）、`builtin:page`（页面）和 `builtin:choice-question`（带两个最小选项的选择题）。应用层按 `builtin:basic` 这个稳定库 ID 硬编码识别，renderer 提取条目函数体根下的唯一子节点并执行 `insert-node`，不会生成函数调用节点或内嵌函数资源。`builtin:examples` v3“示例组件库”仅用于演示，包含“标题页组合”和“选择题组合”两个普通函数；两个示例函数都声明并在正文中使用入参，同时导出可供下游变量引用的静态值或选择题结果。点击后仍生成函数调用节点并复制函数资源。组件只能从左栏函数库添加；中间节点树只负责结构选择、复制、移动和删除。
 
@@ -78,7 +80,9 @@ Template 和本地函数库工作文档都带 revision。首次保存使用 0，
 
 renderer 的 Template 编辑会话直接消费不可变 mutation 结果，以完整文档快照维护 undo/redo 历史。最近成功保存的历史条目作为 clean 基线；撤销回该条目会恢复为非 dirty。保存期间允许继续编辑，返回的新 revision 会重定基到当前 undo/redo 历史，既不覆盖新修改，也不会让后续保存使用过期 CAS revision。路由参数变化通过新的 keyed 编辑会话隔离旧文档、错误和异步响应。
 
-当前结构编辑器展示包含根 Frame 的可折叠节点树，支持选择节点，以及新增 Frame、Page、ChoiceQuestion，兄弟节点上移/下移、子树复制和确认删除。新增或复制后的节点自动成为当前选择；非 Frame 节点旁新增时作为同级节点插入，Frame 节点被选中时则添加为其子节点。Function 调用必须经过函数资源闭包复制应用操作，因此不通过普通节点插入入口创建。
+本地函数使用独立的 focus 编辑路由和历史会话。页面复用 Template 的节点树、Page 画布、选择题、时间线、Schema use、函数调用和内容块检查器，并额外编辑函数名称、静态输入及五类输出表达式；左栏可插入基础节点预设，以及任意本地、导入或内置库中的普通函数。跨库调用会在一次 CAS 中复制所选函数的完整传递依赖闭包，给副本分配目标本地库中的 UUID 并改写内部引用；副本作为不在函数库浏览器中展示的内部依赖随目标库保存和导出，因此源库后续修改或删除不影响调用。插入会回指当前函数的同库依赖会被拒绝。会话保存时同时持有所属 `LocalFunctionLibraryDocument` 快照和当前 `FunctionDocument` 投影，通过 `saveFunction()` 在函数库 revision 边界执行 CAS，成功后用返回的完整函数库更新后续保存基线。直接访问导入库或内置库 ID 不能取得可编辑文档。
+
+当前结构编辑器展示包含根 Frame 的可折叠节点树，支持选择节点，以及新增 Frame、Page、ChoiceQuestion，兄弟节点上移/下移、子树复制和确认删除。Page 节点内联编辑 Timeline，Function 节点内联编辑调用参数，ChoiceQuestion 节点内联编辑输出名、题干和全部选项；节点折叠后隐藏对应编辑内容。新增或复制后的节点自动成为当前选择；非 Frame 节点旁新增时作为同级节点插入，Frame 节点被选中时则添加为其子节点。Function 调用必须经过函数资源闭包复制应用操作，因此不通过普通节点插入入口创建。
 
 作者态共享页面原语位于 `@ls101/page-renderer`。该包定义 1200×800 固定设计面、百分比几何、缩放容器及文本、图片和 ChoiceView 的基础视觉组件，不依赖 Template 作者态模型或 Player 编译态模型。学生端 `ExamPageView` 则是独立运行期渲染器：组件内部创建 Shadow Root，并把专用 `ExamPageView.css` 以内联私有样式安装到该根；它不导入 `renderer/styles/global.css`、主题 token 或 `ExamPlayer.module.css`。主程序和预览只能在 Shadow Host 外控制尺寸与变换，不能把全局元素选择器、主题变量或播放器布局样式注入学生端页面。
 

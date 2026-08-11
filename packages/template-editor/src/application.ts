@@ -11,11 +11,12 @@ import type {
 import {
   canonicalizeFunctionContent,
   createFunctionDocument,
+  createFunctionId,
   createFunctionResource,
   createLocalFunctionLibraryDocument,
   createTemplateDocument
 } from './id'
-import { editTemplateDocument } from './mutations'
+import { editFunctionDocument, editTemplateDocument } from './mutations'
 import type { TemplateRepository } from './repository'
 import type {
   DslEditorState,
@@ -24,6 +25,7 @@ import type {
   FunctionDef,
   FunctionDocument,
   FunctionLibraryLocator,
+  FunctionLibraryEntry,
   FunctionLibraryRelease,
   FunctionLocator,
   LocalFunctionLibraryDocument,
@@ -127,14 +129,31 @@ export interface LocalFunctionLibraryApplication {
     library: LocalFunctionLibraryDocument,
     functionDocument: FunctionDocument
   ): Promise<LocalFunctionLibraryDocument>
+  insertFunctionCall(
+    libraryId: string,
+    functionId: string,
+    locator: FunctionLocator,
+    parentId: string,
+    index?: number
+  ): Promise<{
+    library: LocalFunctionLibraryDocument
+    function: FunctionDocument
+    callNodeId: string
+  }>
   deleteFunction(
     library: LocalFunctionLibraryDocument,
     functionId: string
   ): Promise<LocalFunctionLibraryDocument>
 }
 
+export interface ImportedFunctionLibraryApplication {
+  register(release: FunctionLibraryRelease): Promise<FunctionLibraryRelease>
+  delete(libraryId: string, version: number): Promise<void>
+}
+
 export interface FunctionLibraryApplication {
   readonly local: LocalFunctionLibraryApplication
+  readonly imported: ImportedFunctionLibraryApplication
 }
 
 export interface TemplateApplication {
@@ -441,6 +460,10 @@ export function createTemplateApplication(
       }
     },
     functionLibraries: {
+      imported: {
+        register: (release) => repository.registerImportedFunctionLibrary(release),
+        delete: (libraryId, version) => repository.deleteImportedFunctionLibrary(libraryId, version)
+      },
       local: {
         async create(name = '') {
           return repository.saveLocalFunctionLibrary(createLocalFunctionLibraryDocument(name))
@@ -488,20 +511,118 @@ export function createTemplateApplication(
           if (index < 0) throw functionNotFound(functionDocument.functionId)
           const functions = [...library.content.functions]
           functions[index] = {
+            ...functions[index],
             functionId: functionDocument.functionId,
             content: structuredClone(functionDocument.content)
           }
+          const retainedFunctions = pruneInternalFunctionEntries(functions)
+          const functionStates = retainFunctionEditorStates(
+            {
+              ...library.editorState.functions,
+              [functionDocument.functionId]: structuredClone(functionDocument.editorState)
+            },
+            retainedFunctions
+          )
           return repository.saveLocalFunctionLibrary({
             ...library,
-            content: { ...library.content, functions },
+            content: { ...library.content, functions: retainedFunctions },
             editorState: {
               ...library.editorState,
+              functions: functionStates
+            }
+          })
+        },
+        async insertFunctionCall(libraryId, functionId, locator, parentId, index) {
+          const destination = await loadLocalFunctionLibrary(repository, libraryId)
+          const target = projectFunctionDocument(destination, functionId)
+          if (!target) throw functionNotFound(functionId)
+          const sourceLibrary = await loadFunctionLibrary(repository, locator.library)
+          if (!sourceLibrary) {
+            throw new TemplateApplicationError(
+              'FUNCTION_LIBRARY_NOT_FOUND',
+              `Function library not found: ${locator.library.libraryId}`,
+              {
+                source: locator.library.source,
+                libraryId: locator.library.libraryId
+              }
+            )
+          }
+          const closure = collectFunctionEntryClosure(
+            sourceLibrary.content.functions,
+            locator.functionId
+          )
+          if (
+            locator.library.source === 'local' &&
+            locator.library.libraryId === libraryId &&
+            closure.some((entry) => entry.functionId === functionId)
+          ) {
+            throw new TemplateApplicationError(
+              'RECURSIVE_FUNCTION_DEPENDENCY',
+              `Recursive function dependency: ${functionId} -> ${locator.functionId}`,
+              { functionId, dependencyId: locator.functionId }
+            )
+          }
+
+          const idMap = new Map(closure.map((entry) => [entry.functionId, createFunctionId()]))
+          const copiedEntries = closure.map((entry) => ({
+            functionId: requireMappedFunctionId(idMap, entry.functionId),
+            exposed: false,
+            content: {
+              ...structuredClone(entry.content),
+              body: rewriteCopiedFunctionRefs(entry.content.body, idMap)
+            }
+          }))
+          const copiedRoot = copiedEntries.find(
+            (entry) => entry.functionId === requireMappedFunctionId(idMap, locator.functionId)
+          )
+          if (!copiedRoot) throw functionNotFound(locator.functionId)
+          const edited = editFunctionDocument(target, {
+            type: 'insert-function-call',
+            parentId,
+            index,
+            functionRef: copiedRoot.functionId,
+            signature: copiedRoot.content
+          })
+          if (!edited.applied) {
+            throw new TemplateApplicationError(
+              'EDIT_REJECTED',
+              `Function call insertion rejected: ${edited.error.code} at ${edited.error.path}`,
+              { code: edited.error.code, path: edited.error.path }
+            )
+          }
+          const callNodeId = edited.changes.find(
+            (change) => change.kind === 'insert' && change.subjectId !== undefined
+          )?.subjectId
+          if (!callNodeId) {
+            throw new TemplateApplicationError(
+              'EDIT_REJECTED',
+              'Function call insertion did not report the inserted node',
+              { code: 'MISSING_INSERT_RESULT', path: 'content.body' }
+            )
+          }
+          const functions = destination.content.functions.map((entry) =>
+            entry.functionId === functionId
+              ? { ...entry, content: structuredClone(edited.document.content) }
+              : entry
+          )
+          const copiedEditorStates = Object.fromEntries(
+            copiedEntries.map((entry) => [entry.functionId, {}])
+          )
+          const savedLibrary = await repository.saveLocalFunctionLibrary({
+            ...destination,
+            content: { ...destination.content, functions: [...functions, ...copiedEntries] },
+            editorState: {
+              ...destination.editorState,
               functions: {
-                ...library.editorState.functions,
-                [functionDocument.functionId]: structuredClone(functionDocument.editorState)
+                ...destination.editorState.functions,
+                ...copiedEditorStates,
+                [functionId]: structuredClone(edited.document.editorState)
               }
             }
           })
+          const savedFunction = projectFunctionDocument(savedLibrary, functionId)
+          if (!savedFunction) throw functionNotFound(functionId)
+          return { library: savedLibrary, function: savedFunction, callNodeId }
         },
         async deleteFunction(library, functionId) {
           if (!library.content.functions.some((entry) => entry.functionId === functionId)) {
@@ -509,15 +630,19 @@ export function createTemplateApplication(
           }
           const functionStates = { ...library.editorState.functions }
           delete functionStates[functionId]
+          const retainedFunctions = pruneInternalFunctionEntries(
+            library.content.functions.filter((entry) => entry.functionId !== functionId)
+          )
           return repository.saveLocalFunctionLibrary({
             ...library,
             content: {
               ...library.content,
-              functions: library.content.functions.filter(
-                (entry) => entry.functionId !== functionId
-              )
+              functions: retainedFunctions
             },
-            editorState: { ...library.editorState, functions: functionStates }
+            editorState: {
+              ...library.editorState,
+              functions: retainFunctionEditorStates(functionStates, retainedFunctions)
+            }
           })
         }
       }
@@ -562,15 +687,17 @@ function summarizeLibrary(
     libraryId: release.libraryId,
     version: release.version,
     name: release.content.name,
-    functions: release.content.functions.map(({ functionId, content }) => {
-      const component =
-        source === 'builtin' &&
-        release.libraryId === 'builtin:basic' &&
-        content.body.children.length === 1
-          ? { ...structuredClone(content.body.children[0]), name: content.name }
-          : undefined
-      return { functionId, name: content.name, ...(component ? { component } : {}) }
-    })
+    functions: release.content.functions
+      .filter((entry) => entry.exposed !== false)
+      .map(({ functionId, content }) => {
+        const component =
+          source === 'builtin' &&
+          release.libraryId === 'builtin:basic' &&
+          content.body.children.length === 1
+            ? { ...structuredClone(content.body.children[0]), name: content.name }
+            : undefined
+        return { functionId, name: content.name, ...(component ? { component } : {}) }
+      })
   }
 }
 
@@ -579,10 +706,12 @@ function summarizeLocalLibrary(library: LocalFunctionLibraryDocument): FunctionL
     source: 'local',
     libraryId: library.libraryId,
     name: library.content.name,
-    functions: library.content.functions.map(({ functionId, content }) => ({
-      functionId,
-      name: content.name
-    }))
+    functions: library.content.functions
+      .filter((entry) => entry.exposed !== false)
+      .map(({ functionId, content }) => ({
+        functionId,
+        name: content.name
+      }))
   }
 }
 
@@ -657,4 +786,94 @@ function collectSchemaIds(document: TemplateDocument): string[] {
 
 function unique(values: readonly string[]): string[] {
   return [...new Set(values)]
+}
+
+function collectFunctionEntryClosure(
+  entries: readonly FunctionLibraryEntry[],
+  rootFunctionId: string
+): FunctionLibraryEntry[] {
+  const byId = new Map(entries.map((entry) => [entry.functionId, entry]))
+  const result: FunctionLibraryEntry[] = []
+  const visited = new Set<string>()
+  const active = new Set<string>()
+
+  const visit = (functionId: string): void => {
+    if (visited.has(functionId)) return
+    if (active.has(functionId)) {
+      throw new TemplateApplicationError(
+        'RECURSIVE_FUNCTION_DEPENDENCY',
+        `Recursive function dependency: ${[...active, functionId].join(' -> ')}`,
+        { functionId }
+      )
+    }
+    const entry = byId.get(functionId)
+    if (!entry) throw functionNotFound(functionId)
+    active.add(functionId)
+    collectFrameFunctionRefs(entry.content.body).forEach(visit)
+    active.delete(functionId)
+    visited.add(functionId)
+    result.push(entry)
+  }
+
+  visit(rootFunctionId)
+  return result
+}
+
+function collectFrameFunctionRefs(frame: FrameNode): string[] {
+  const refs: string[] = []
+  const scan = (node: TemplateNode): void => {
+    if (node.type === 'frame') node.children.forEach(scan)
+    else if (node.type === 'function') refs.push(node.functionRef)
+  }
+  scan(frame)
+  return refs
+}
+
+function rewriteCopiedFunctionRefs(
+  frame: FrameNode,
+  idMap: ReadonlyMap<string, string>
+): FrameNode {
+  return {
+    ...structuredClone(frame),
+    children: frame.children.map((node): TemplateNode => {
+      if (node.type === 'frame') return rewriteCopiedFunctionRefs(node, idMap)
+      if (node.type !== 'function') return structuredClone(node)
+      return {
+        ...structuredClone(node),
+        functionRef: requireMappedFunctionId(idMap, node.functionRef)
+      }
+    })
+  }
+}
+
+function requireMappedFunctionId(idMap: ReadonlyMap<string, string>, sourceId: string): string {
+  const mapped = idMap.get(sourceId)
+  if (!mapped) throw functionNotFound(sourceId)
+  return mapped
+}
+
+function pruneInternalFunctionEntries(
+  entries: readonly FunctionLibraryEntry[]
+): FunctionLibraryEntry[] {
+  const byId = new Map(entries.map((entry) => [entry.functionId, entry]))
+  const reachable = new Set<string>()
+  const visit = (functionId: string): void => {
+    if (reachable.has(functionId)) return
+    const entry = byId.get(functionId)
+    if (!entry) return
+    reachable.add(functionId)
+    collectFrameFunctionRefs(entry.content.body).forEach(visit)
+  }
+  entries.filter((entry) => entry.exposed !== false).forEach((entry) => visit(entry.functionId))
+  return entries.filter((entry) => entry.exposed !== false || reachable.has(entry.functionId))
+}
+
+function retainFunctionEditorStates(
+  states: LocalFunctionLibraryDocument['editorState']['functions'],
+  entries: readonly FunctionLibraryEntry[]
+): LocalFunctionLibraryDocument['editorState']['functions'] {
+  const retainedIds = new Set(entries.map((entry) => entry.functionId))
+  return Object.fromEntries(
+    Object.entries(states).filter(([functionId]) => retainedIds.has(functionId))
+  )
 }
