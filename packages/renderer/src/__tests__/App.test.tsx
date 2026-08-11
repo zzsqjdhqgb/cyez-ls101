@@ -19,6 +19,8 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: '工作台' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '题型' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '评分 Schema' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '考试' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '收卷' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '模板' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '设置' })).toBeInTheDocument()
 
@@ -52,6 +54,8 @@ describe('App', () => {
     expect(routes.get('interface-instance-editor')?.layout).toBe('focus')
     expect(routes.get('templates')?.layout).toBe('standard')
     expect(routes.get('template-editor')?.layout).toBe('focus')
+    expect(routes.get('exams')?.layout).toBe('standard')
+    expect(routes.get('exam-player')?.layout).toBe('immersive')
     expect(routes.get('schemas')?.layout).toBe('standard')
     expect(routes.get('schema-draft-library')?.layout).toBe('standard')
     expect(routes.get('schema-draft-editor')?.layout).toBe('focus')

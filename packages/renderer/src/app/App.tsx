@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AppShell } from '../components/shell/AppShell'
 import { AppToaster } from '../components/ui/ToastViewport'
 import { ManualImageGenerationDialog } from '../features/airouter/ManualImageGenerationDialog'
+import { ExamLibraryProvider } from '../features/exams/ExamLibraryProvider'
 import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceApplicationProvider'
 import { BuiltinInterfaceMaintenanceDialog } from '../features/interfaces/BuiltinInterfaceMaintenanceDialog'
 import { SchemaApplicationProvider } from '../features/schemas/SchemaApplicationProvider'
@@ -33,16 +34,18 @@ export function App(): JSX.Element {
     <AppearanceSettingsProvider>
       <InterfaceApplicationProvider>
         <SchemaApplicationProvider>
-          <SubmissionLibraryProvider>
-            <TemplateApplicationProvider>
-              <MemoryRouter>
-                <RegisteredAppRoutes />
-              </MemoryRouter>
-              <ManualImageGenerationDialog />
-              <BuiltinInterfaceMaintenanceDialog />
-              <AppToaster />
-            </TemplateApplicationProvider>
-          </SubmissionLibraryProvider>
+          <ExamLibraryProvider>
+            <SubmissionLibraryProvider>
+              <TemplateApplicationProvider>
+                <MemoryRouter>
+                  <RegisteredAppRoutes />
+                </MemoryRouter>
+                <ManualImageGenerationDialog />
+                <BuiltinInterfaceMaintenanceDialog />
+                <AppToaster />
+              </TemplateApplicationProvider>
+            </SubmissionLibraryProvider>
+          </ExamLibraryProvider>
         </SchemaApplicationProvider>
       </InterfaceApplicationProvider>
     </AppearanceSettingsProvider>

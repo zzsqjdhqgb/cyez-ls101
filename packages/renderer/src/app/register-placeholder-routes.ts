@@ -1,4 +1,14 @@
-import { BookCheck, Inbox, LayoutTemplate, PanelsTopLeft, Settings2, Shapes } from 'lucide-react'
+import {
+  BookCheck,
+  ClipboardCheck,
+  Inbox,
+  LayoutTemplate,
+  PanelsTopLeft,
+  Settings2,
+  Shapes
+} from 'lucide-react'
+import { ExamLibraryPage } from '../features/exams/ExamLibraryPage'
+import { ExamSessionPage } from '../features/exams/ExamSessionPage'
 import { InterfaceDetailsPage } from '../features/interfaces/InterfaceDetailsPage'
 import { InterfaceDraftEditorPage } from '../features/interfaces/InterfaceDraftEditorPage'
 import { InterfaceDraftListPage } from '../features/interfaces/InterfaceDraftListPage'
@@ -55,6 +65,25 @@ const unregisterRoutes = [
   }),
 
   registerAppRoute({
+    id: 'exams',
+    path: '/exams',
+    component: ExamLibraryPage,
+    layout: 'standard',
+    navigation: {
+      label: '考试',
+      icon: ClipboardCheck,
+      order: 30
+    }
+  }),
+
+  registerAppRoute({
+    id: 'exam-player',
+    path: '/exams/player',
+    component: ExamSessionPage,
+    layout: 'immersive'
+  }),
+
+  registerAppRoute({
     id: 'submissions',
     path: '/submissions',
     component: SubmissionLibraryPage,
@@ -62,7 +91,7 @@ const unregisterRoutes = [
     navigation: {
       label: '收卷',
       icon: Inbox,
-      order: 30
+      order: 40
     }
   }),
 
@@ -74,7 +103,7 @@ const unregisterRoutes = [
     navigation: {
       label: '模板',
       icon: LayoutTemplate,
-      order: 40
+      order: 50
     }
   }),
 

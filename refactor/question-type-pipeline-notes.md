@@ -367,7 +367,7 @@ resources/<assetKey>/<filename>
 
 ZIP 只是该目录的传输形式。归档读取器严格校验 index、播放器数据、捕获计划、SchemaUse、资源引用和归档内文件集合。页面图片等播放器资源全部进入考试包；只有评分快照实际需要的 SchemaUse 附件进入 `submissionTemplate.resources`。
 
-播放器页面中的 `image` 块、时间线 `play` 音频与 SchemaUse Markdown 附件是不同的消费者，但共同使用 `resource:<assetKey>` 逻辑地址。页面图片和播放音频的资源键必须存在于 `examData.resources`；`examData.resources` 和 `submissionTemplate.resources` 都只允许指向考试包内的 `resources/` 静态资源目录。
+播放器页面中的 `image` 块、时间线 `play` 音频与 SchemaUse Markdown 附件是不同的消费者，但共同使用 `resource:<assetKey>` 逻辑地址。页面图片和播放音频的资源键必须存在于 `examData.resources`；`examData.resources` 和 `submissionTemplate.resources` 都只允许指向考试包内的 `resources/` 静态资源目录。播放器数据必须至少包含一个页面，每个页面必须包含非空时间线，录音动作的时长必须严格大于零。
 
 ## 八、SubmissionPackage
 
@@ -612,4 +612,4 @@ GradingResult
 
 ## 十二、当前状态
 
-本文涉及的 Schema 结构、发布机制、Template 绑定、附件变量、资源地址、ExamPackage、SubmissionPackage 和评分输出均已确认。Schema、Template 编译期 TTS、完整 ExamPlayer、播放器内的作答归档组装和 v1 ZIP 归档读写已经实现；静态部署规范统一使用 `manifest.json` 作为解压目录入口。主应用的试卷库与考试启动路由和 Grading Engine 仍待后续开发。
+本文涉及的 Schema 结构、发布机制、Template 绑定、附件变量、资源地址、ExamPackage、SubmissionPackage 和评分输出均已确认。Schema、Template 编译期 TTS、完整 ExamPlayer、播放器内的作答归档组装和 v1 ZIP 归档读写已经实现；静态部署规范统一使用 `manifest.json` 作为解压目录入口。主应用已提供本地试卷库、试卷包导入与删除、考试启动路由和作答包文件保存；作答包自动进入收卷库和 Grading Engine 仍待后续开发。

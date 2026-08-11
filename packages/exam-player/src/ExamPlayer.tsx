@@ -48,6 +48,7 @@ interface TimelineStatus {
 
 export interface ExamPlayerProps {
   examBaseUrl: string
+  fetcher?: typeof fetch
   allowExit?: boolean
   recordingCueUrls?: { start?: string; stop?: string }
   onFinish(archive: Blob): void | Promise<void>
@@ -61,6 +62,7 @@ export function ExamPlayer({ examBaseUrl, ...props }: ExamPlayerProps): JSX.Elem
 
 function ExamPlayerSession({
   examBaseUrl,
+  fetcher = fetch,
   allowExit = true,
   recordingCueUrls,
   onFinish,
@@ -108,7 +110,7 @@ function ExamPlayerSession({
   useEffect(() => {
     let active = true
     let current: LoadedExam | null = null
-    void loadExam(examBaseUrl)
+    void loadExam(examBaseUrl, fetcher)
       .then((result) => {
         if (!active) {
           result.dispose()
@@ -127,7 +129,7 @@ function ExamPlayerSession({
       active = false
       current?.dispose()
     }
-  }, [examBaseUrl, loadAttempt, reportError])
+  }, [examBaseUrl, fetcher, loadAttempt, reportError])
 
   const retryLoad = (): void => {
     setPhase('loading')
@@ -445,7 +447,17 @@ function ExamPlayerSession({
       return <MessageScreen title="正在生成作答包" message="正在整理答案、录音和考试附件..." />
     }
     if (phase === 'complete') {
-      return <MessageScreen title="考试完成" message="作答包已成功提交。" />
+      return (
+        <MessageScreen
+          title="考试完成"
+          message="作答包已成功保存。"
+          actions={
+            <PlayerButton icon={Check} onClick={onExit}>
+              完成
+            </PlayerButton>
+          }
+        />
+      )
     }
     return page && step ? (
       <ExamScreen

@@ -1304,6 +1304,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@ls101/exam-library@workspace:*, @ls101/exam-library@workspace:packages/exam-library":
+  version: 0.0.0-use.local
+  resolution: "@ls101/exam-library@workspace:packages/exam-library"
+  dependencies:
+    "@ls101/core-types": "workspace:*"
+    "@ls101/exam-package": "workspace:*"
+  languageName: unknown
+  linkType: soft
+
 "@ls101/exam-package@workspace:*, @ls101/exam-package@workspace:packages/exam-package":
   version: 0.0.0-use.local
   resolution: "@ls101/exam-package@workspace:packages/exam-package"
@@ -1319,6 +1328,8 @@ __metadata:
   resolution: "@ls101/exam-player@workspace:packages/exam-player"
   dependencies:
     "@ls101/core-types": "workspace:*"
+    "@ls101/exam-package": "workspace:*"
+    lucide-react: "npm:^1.14.0"
   peerDependencies:
     react: ^19
     react-dom: ^19
@@ -1381,6 +1392,8 @@ __metadata:
     "@ls101/config-store": "workspace:*"
     "@ls101/core-types": "workspace:*"
     "@ls101/editor-kit": "workspace:*"
+    "@ls101/exam-library": "workspace:*"
+    "@ls101/exam-package": "workspace:*"
     "@ls101/exam-player": "workspace:*"
     "@ls101/file-dialog": "workspace:*"
     "@ls101/file-store": "workspace:*"

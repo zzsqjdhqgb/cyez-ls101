@@ -234,6 +234,11 @@ function validateNodeExpressions(
         }
         if (step.type === 'record') {
           validateValueExpression(step.duration, 'number', `${stepPath}.duration`, scope, state)
+          if (step.duration.source === 'literal' && step.duration.value <= 0) {
+            addError(state, `${stepPath}.duration`, 'INVALID_RECORDING_DURATION', {
+              value: step.duration.value
+            })
+          }
         }
       })
       break

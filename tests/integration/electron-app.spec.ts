@@ -231,6 +231,11 @@ test('navigates through every primary application area', async () => {
   await expect(page.getByRole('heading', { level: 1, name: '题型' })).toBeVisible()
   await expect(page.getByText('正在加载题型...')).toBeHidden()
 
+  await page.getByRole('link', { name: '考试' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: '考试' })).toBeVisible()
+  await expect(page.getByText('正在加载考试库...')).toBeHidden()
+  await expect(page.getByText('暂无试卷')).toBeVisible()
+
   await page.getByRole('link', { name: '模板' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '模板' })).toBeVisible()
   await expect(page.getByText('正在加载模板...')).toBeHidden()

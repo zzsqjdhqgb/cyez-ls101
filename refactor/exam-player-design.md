@@ -93,6 +93,8 @@ ZIP 只是该目录的传输形式。清单中的 `packagePath` 只保存相对�
 
 每次生成一份 ExamPackage 时，用户选择本次生成使用的语音 Provider、Model 和 Voice。该选择对本次生成中的全部 `play` 动作生效，不写入 Template 文档；以后再次从同一 Template 生成试卷时可以选择不同配置。Template 编译器通过编译上下文取得一个已经绑定本次选择的语音合成函数，不直接依赖 AIRouter 或 Electron IPC。
 
+如果 Template 展开后没有任何 `play` 动作，本次生成不要求选择或配置 TTS，也不调用语音合成服务。只有实际遇到 `play` 动作但编译上下文没有合成器时，编译器才返回缺少语音合成器错误。
+
 Template 编辑器提供“生成试卷”入口。生成对话框负责选择本次编译使用的 Interface 实例及 TTS Provider、Model 和 Voice，然后执行编译、收集静态资源和 TTS 音频并导出完整 ExamPackage。
 
 播放器收到的运行期动作应为：
@@ -106,7 +108,7 @@ type ResolvedTimelineAction =
 
 其中 `play.src` 必须是 `resource:<assetKey>`。播放器从预检完成的内存资源缓存中播放该音频，并在播放结束后推进到下一时间线动作。
 
-每个展开后的考试页面必须至少包含一个时间线动作。Template 验证或编译必须拒绝空时间线，播放器不为缺失时间线的页面提供手动“下一页”兜底。
+展开后的考试必须至少包含一个页面，并且每个页面必须至少包含一个时间线动作。Template 编译和 ExamPackage 校验必须拒绝零页面；Template 验证或编译必须拒绝空时间线。播放器不为缺失页面或时间线的试卷提供手动“下一页”兜底。
 
 ## 七、播放器内容
 
@@ -135,6 +137,7 @@ type ResolvedTimelineAction =
 - 考生姓名和考生号去除首尾空白后必须非空，不限制为六位数字。
 - 没有录音动作的考试跳过麦克风测试。
 - 有录音动作时，考生必须选择设备、完成试录、回放并确认后才能开始考试。
+- `record.duration` 必须严格大于零；作者态字面量、编译后的静态值和 ExamPackage 都执行该约束。
 - 正式录音按 `record.duration` 自动开始和结束。
 - 录音失败时暂停流程并显示重试或退出选择，不得静默跳过必需录音。
 - 录音开始和结束提示音通过可选 URL 由宿主提供；播放器不硬编码 Electron 的 `app-resource://` 地址。
@@ -179,5 +182,7 @@ recordings/<resourceKey>/<filename>
 - Template 编译期 TTS 音频生成和空时间线校验。
 - Template 编辑器中的生成试卷入口、配置选择和导出。
 - `@ls101/exam-player` 完整播放器及自动化测试。
+- 主应用本地考试库，支持导入、删除和从列表开始考试。
+- 本地 `.lsexam` 到 Player HTTP GET 协议的只读适配，以及完成后的作答包保存。
 
-本次不实现主应用的试卷列表、考试启动页面和收卷库接入；这些宿主功能后续使用 ExamPlayer 的 `examBaseUrl`、`onFinish` 和 `onExit` 接口接入。
+本次不实现作答包自动写入收卷库和评分流程。当前宿主在 `onFinish` 收到 Blob 后打开文件保存对话框；后续可在不修改 Player 的前提下增加本地收卷或上传策略。
