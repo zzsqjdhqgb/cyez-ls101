@@ -26,6 +26,31 @@ describe('createLocalExamTransport', () => {
     expect(missing.status).toBe(404)
     expect(post.status).toBe(405)
   })
+
+  it('拒绝 URL 规范化后发生碰撞的资源路径', () => {
+    const value = exam()
+    value.examData.resources.encoded = {
+      filename: 'a.wav',
+      packagePath: 'resources/x/%2e%2e/b/a.wav',
+      mediaType: 'audio/wav'
+    }
+    value.examData.resources.direct = {
+      filename: 'a.wav',
+      packagePath: 'resources/b/a.wav',
+      mediaType: 'audio/wav'
+    }
+
+    expect(() =>
+      createLocalExamTransport({
+        exam: value,
+        resources: {
+          speech: new Uint8Array([1]),
+          encoded: new Uint8Array([2]),
+          direct: new Uint8Array([3])
+        }
+      })
+    ).toThrow('试卷资源路径规范化后发生冲突：encoded、direct')
+  })
 })
 
 function exam(): ExamPackage {

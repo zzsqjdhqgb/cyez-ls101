@@ -7,10 +7,34 @@ export interface LocalExamTransport {
 
 export function createLocalExamTransport(archive: ExamArchive): LocalExamTransport {
   const baseUrl = `https://local-exam.invalid/${encodeURIComponent(archive.exam.packageId)}/`
-  const manifestUrl = new URL('manifest.json', baseUrl).href
+  const base = new URL(baseUrl)
+  const manifestUrl = new URL('manifest.json', base).href
   const resources = new Map<string, { data: Uint8Array; mediaType: string }>()
-  for (const [key, entry] of Object.entries(archive.exam.examData.resources)) {
-    resources.set(new URL(entry.packagePath, baseUrl).href, {
+  const entries = Object.entries(archive.exam.examData.resources).map(([key, entry]) => {
+    const resolved = new URL(entry.packagePath, base)
+    return { key, entry, resolved, url: resolved.href }
+  })
+  const paths = new Map<string, string>()
+  for (const { key, url } of entries) {
+    const existing = paths.get(url)
+    if (existing) {
+      throw new Error(`试卷资源路径规范化后发生冲突：${existing}、${key}`)
+    }
+    if (url === manifestUrl) throw new Error(`试卷资源路径与 manifest.json 冲突：${key}`)
+    paths.set(url, key)
+  }
+  for (const { entry, resolved, url } of entries) {
+    if (
+      resolved.search !== '' ||
+      resolved.hash !== '' ||
+      !url.startsWith(baseUrl) ||
+      resolved.pathname !== `${base.pathname}${entry.packagePath}`
+    ) {
+      throw new Error(`试卷资源路径不是规范的相对 URL：${entry.packagePath}`)
+    }
+  }
+  for (const { key, entry, url } of entries) {
+    resources.set(url, {
       data: archive.resources[key],
       mediaType: entry.mediaType ?? ''
     })

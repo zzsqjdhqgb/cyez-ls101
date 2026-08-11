@@ -14,6 +14,7 @@ const MAX_FILES = 10_000
 const MAX_UNCOMPRESSED_BYTES = 512 * 1024 * 1024
 const SAFE_RESOURCE_KEY = /^[A-Za-z0-9][A-Za-z0-9_.:%-]*$/
 const RESOURCE_URI = /^resource:([A-Za-z0-9][A-Za-z0-9_.:%-]*)$/
+const PACKAGE_URL_ROOT = new URL('https://exam-package.invalid/')
 
 type ResourcePathKind = 'static' | 'either'
 
@@ -655,6 +656,7 @@ function isResourceEntry(
     nonEmptyString(value.filename) &&
     !/[\\/]/.test(value.filename) &&
     safePath(value.packagePath) &&
+    canonicalUrlPath(value.packagePath) &&
     value.packagePath !== MANIFEST_PATH &&
     matchesResourcePathKind(value.packagePath, pathKind) &&
     value.packagePath.endsWith(`/${encodeURIComponent(value.filename)}`) &&
@@ -732,6 +734,15 @@ function safePath(path: unknown): path is string {
     !path.startsWith('/') &&
     path.split('/').every((segment) => segment.length > 0 && segment !== '.' && segment !== '..')
   )
+}
+
+function canonicalUrlPath(path: string): boolean {
+  try {
+    const resolved = new URL(path, PACKAGE_URL_ROOT)
+    return resolved.search === '' && resolved.hash === '' && resolved.pathname === `/${path}`
+  } catch {
+    return false
+  }
 }
 
 function readJson<T>(files: Record<string, Uint8Array>, path: string): T {

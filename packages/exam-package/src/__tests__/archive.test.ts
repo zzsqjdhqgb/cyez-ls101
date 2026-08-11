@@ -329,6 +329,22 @@ describe('SubmissionPackage ZIP archive', () => {
     )
   })
 
+  it('拒绝 URL 规范化后发生碰撞的资源路径', () => {
+    const collision = examPackage()
+    collision.examData.resources.encoded = {
+      filename: 'a.wav',
+      packagePath: 'resources/x/%2e%2e/b/a.wav',
+      mediaType: 'audio/wav'
+    }
+    collision.examData.resources.direct = {
+      filename: 'a.wav',
+      packagePath: 'resources/b/a.wav',
+      mediaType: 'audio/wav'
+    }
+
+    expect(() => validateExamPackage(collision)).toThrow('Invalid ExamPackage manifest')
+  })
+
   it('按引用用途区分最终作答包中的静态附件和录音', () => {
     const staticAsRecording = submissionPackage()
     staticAsRecording.resources.picture.packagePath = 'recordings/picture/picture.png'
