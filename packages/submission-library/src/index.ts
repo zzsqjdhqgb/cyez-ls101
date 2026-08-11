@@ -11,6 +11,7 @@ const RECORD_FILE = 'record.json'
 const GRADING_FILE = 'grading.json'
 const ARCHIVE_EXTENSION = '.lssubmission'
 const SHA256_PATTERN = /^[0-9a-f]{64}$/
+const RESOURCE_REFERENCE_PATTERN = /resource:([A-Za-z0-9][A-Za-z0-9_.:%-]*)/g
 const QUESTION_DESCRIPTION_INPUT_ID = 'question-description'
 const OBJECTIVE_ANALYSIS_INPUT_ID = 'analysis'
 
@@ -199,25 +200,27 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
 
   async listEntries(): Promise<SubmissionLibraryEntry[]> {
     const records = await this.listRecords()
-    return Promise.all(
-      records.map(async (record) => {
-        const key = await submissionStorageKey(record.submissionId)
-        const grading = await this.readGrading(this.submissions.scope(key), record.submissionId)
-        return {
-          record,
-          grading: grading
-            ? {
-                status: grading.status,
-                gradedCount: grading.items.length,
-                totalCount: record.schemaUseCount,
-                totalScore: grading.totalScore,
-                maxScore: grading.maxScore,
-                ...(grading.completedAt ? { completedAt: grading.completedAt } : {})
-              }
-            : null
-        }
+    const entries: SubmissionLibraryEntry[] = []
+    for (const record of records) {
+      const key = await submissionStorageKey(record.submissionId)
+      const scope = this.submissions.scope(key)
+      const archive = await this.readArchive(scope, record.submissionId)
+      const grading = await this.readGrading(scope, archive.submission)
+      entries.push({
+        record,
+        grading: grading
+          ? {
+              status: grading.status,
+              gradedCount: grading.items.length,
+              totalCount: archive.submission.schemaUses.length,
+              totalScore: grading.totalScore,
+              maxScore: grading.maxScore,
+              ...(grading.completedAt ? { completedAt: grading.completedAt } : {})
+            }
+          : null
       })
-    )
+    }
+    return entries
   }
 
   async getRecord(submissionId: string): Promise<SubmissionLibraryRecord | null> {
@@ -308,7 +311,8 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
       if (record.submissionId !== submissionId) {
         throw invalidStorage(`Submission storage key collision: ${submissionId}`)
       }
-      const grading = await this.readGrading(scope, submissionId)
+      const archive = await this.readArchive(scope, submissionId)
+      const grading = await this.readGrading(scope, archive.submission)
       if (grading?.status === 'completed') {
         throw new SubmissionLibraryError(
           'GRADING_COMPLETED',
@@ -325,9 +329,11 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     return this.runMutation(key, async () => {
       const scope = this.submissions.scope(key)
       const archive = await this.readArchive(scope, submissionId)
-      const existing = await this.readGrading(scope, submissionId)
+      const existing = await this.readGrading(scope, archive.submission)
       const next = await applyObjectiveGrades(archive, existing)
-      if (!sameValue(existing, next)) await this.writeGrading(scope, existing, next)
+      if (!sameValue(existing, next)) {
+        await this.writeGrading(scope, archive.submission, existing, next)
+      }
       return buildWorkspace(archive, next)
     })
   }
@@ -342,7 +348,7 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     return this.runMutation(key, async () => {
       const scope = this.submissions.scope(key)
       const archive = await this.readArchive(scope, submissionId)
-      const existing = await this.readGrading(scope, submissionId)
+      const existing = await this.readGrading(scope, archive.submission)
       if (!existing) throw invalidStorage(`Missing grading session: ${submissionId}`)
       if (existing.status === 'completed') {
         throw new SubmissionLibraryError('GRADING_COMPLETED', 'Grading is already completed', {
@@ -373,7 +379,7 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
         { instanceId, engine, result: structuredClone(result), gradedAt: now }
       ]
       const next = gradingRecord(archive.submission, items, now)
-      await this.writeGrading(scope, existing, next)
+      await this.writeGrading(scope, archive.submission, existing, next)
       return buildWorkspace(archive, next)
     })
   }
@@ -381,7 +387,9 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
   async getGradingRecord(submissionId: string): Promise<SubmissionGradingRecord | null> {
     assertSubmissionId(submissionId)
     const key = await submissionStorageKey(submissionId)
-    return this.readGrading(this.submissions.scope(key), submissionId)
+    const scope = this.submissions.scope(key)
+    const archive = await this.readArchive(scope, submissionId)
+    return this.readGrading(scope, archive.submission)
   }
 
   async getReport(submissionId: string): Promise<SubmissionReport> {
@@ -389,7 +397,7 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     const key = await submissionStorageKey(submissionId)
     const scope = this.submissions.scope(key)
     const archive = await this.readArchive(scope, submissionId)
-    const grading = await this.readGrading(scope, submissionId)
+    const grading = await this.readGrading(scope, archive.submission)
     if (!grading || grading.status !== 'completed') {
       throw new SubmissionLibraryError(
         'GRADING_NOT_COMPLETED',
@@ -399,7 +407,11 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     const inputs = archive.submission.schemaUses.map((use) => buildGradingInput(archive, use))
     return {
       markdown: buildSubmissionReportMarkdown(archive.submission, grading, inputs),
-      resources: inputs[0]?.resources ?? buildResources(archive)
+      resources: Object.fromEntries(
+        inputs.flatMap((input) =>
+          Object.entries(input.resources).filter(([, resource]) => resource.kind === 'static')
+        )
+      )
     }
   }
 
@@ -438,22 +450,25 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
 
   private async readGrading(
     scope: SubmissionLibraryStore,
-    submissionId: string
+    submission: SubmissionPackage
   ): Promise<SubmissionGradingRecord | null> {
     const value = await scope.readText<unknown>(GRADING_FILE)
     if (value === null) return null
-    if (!isSubmissionGradingRecord(value) || value.submissionId !== submissionId) {
-      throw invalidStorage(`Invalid grading record: ${submissionId}`)
-    }
-    return structuredClone(value)
+    return normalizeGradingRecord(value, submission)
   }
 
   private async writeGrading(
     scope: SubmissionLibraryStore,
+    submission: SubmissionPackage,
     existing: SubmissionGradingRecord | null,
     next: SubmissionGradingRecord
   ): Promise<void> {
-    if (!(await scope.compareAndSwapText(GRADING_FILE, existing, next))) {
+    const stored = await scope.readText<unknown>(GRADING_FILE)
+    const current = stored === null ? null : normalizeGradingRecord(stored, submission)
+    if (!sameValue(current, existing)) {
+      throw invalidStorage(`Concurrent grading update: ${next.submissionId}`)
+    }
+    if (!(await scope.compareAndSwapText(GRADING_FILE, stored, next))) {
       throw invalidStorage(`Concurrent grading update: ${next.submissionId}`)
     }
   }
@@ -525,7 +540,7 @@ export function buildGradingInput(
   archive: Awaited<ReturnType<typeof decodeSubmissionPackage>>,
   use: SubmissionSchemaUse
 ): GradingInput {
-  const resources = buildResources(archive)
+  const resources = buildResources(archive, gradingResourceKeys(archive.submission, use))
   const descriptions = use.schema.data.answerDescriptions
   const answers = use.answers.map<ResolvedGradingAnswer>((answer) => {
     const description = descriptions[answer.answerId] ?? answer.answerId
@@ -696,22 +711,46 @@ function buildWorkspace(
 }
 
 function buildResources(
-  archive: Awaited<ReturnType<typeof decodeSubmissionPackage>>
+  archive: Awaited<ReturnType<typeof decodeSubmissionPackage>>,
+  resourceKeys: ReadonlySet<string>
 ): Record<string, GradingResourceInput> {
   return Object.fromEntries(
-    Object.entries(archive.submission.resources).map(([resourceKey, entry]) => {
+    [...resourceKeys].map((resourceKey) => {
+      const entry = archive.submission.resources[resourceKey]
+      if (!entry) throw invalidStorage(`Unknown submission resource: ${resourceKey}`)
       const data = archive.files[resourceKey]
       if (!data) throw invalidStorage(`Missing submission resource: ${resourceKey}`)
       const resource: GradingResourceInput = {
         resourceKey,
         filename: entry.filename,
         kind: entry.packagePath.startsWith('recordings/') ? 'recording' : 'static',
-        data: new Uint8Array(data),
+        data,
         ...(entry.mediaType ? { mediaType: entry.mediaType } : {})
       }
       return [resourceKey, resource]
     })
   )
+}
+
+function gradingResourceKeys(
+  submission: SubmissionPackage,
+  use: SubmissionSchemaUse
+): ReadonlySet<string> {
+  const keys = new Set<string>()
+  const texts = [
+    ...use.inputs.map((input) => input.value),
+    ...use.answers.flatMap((answer) => (answer.type === 'fixed-speech' ? [answer.text] : []))
+  ]
+  for (const text of texts) {
+    for (const match of text.matchAll(RESOURCE_REFERENCE_PATTERN)) keys.add(match[1])
+  }
+  for (const answer of use.answers) {
+    if (answer.type === 'text') continue
+    const audio = submission.answers.audios[answer.audioAnswerIndex]
+    if (!audio) throw invalidStorage(`Missing audio answer index: ${answer.audioAnswerIndex}`)
+    keys.add(audio.resourceKey)
+  }
+  return keys
 }
 
 function assertGradingResult(result: GradingResult, maxScore: number): void {
@@ -730,26 +769,54 @@ function assertGradingResult(result: GradingResult, maxScore: number): void {
   }
 }
 
-function isSubmissionGradingRecord(value: unknown): value is SubmissionGradingRecord {
+function normalizeGradingRecord(
+  value: unknown,
+  submission: SubmissionPackage
+): SubmissionGradingRecord {
   if (
     !isRecord(value) ||
     value.formatVersion !== 1 ||
-    !nonEmptyString(value.submissionId) ||
+    value.submissionId !== submission.meta.submissionId ||
     (value.status !== 'grading' && value.status !== 'completed') ||
     !Array.isArray(value.items) ||
     !value.items.every(isSubmissionGradingItem) ||
-    typeof value.totalScore !== 'number' ||
-    !Number.isFinite(value.totalScore) ||
-    value.totalScore < 0 ||
-    typeof value.maxScore !== 'number' ||
-    !Number.isFinite(value.maxScore) ||
-    value.maxScore < 0
+    (value.completedAt !== undefined && !isoDate(value.completedAt))
   ) {
-    return false
+    throw invalidStorage(`Invalid grading record: ${submission.meta.submissionId}`)
   }
-  const ids = new Set(value.items.map((item) => item.instanceId))
-  if (ids.size !== value.items.length) return false
-  return value.status === 'completed' ? isoDate(value.completedAt) : value.completedAt === undefined
+
+  const items = structuredClone(value.items) as SubmissionGradingItem[]
+  const usesById = new Map(submission.schemaUses.map((use) => [use.instanceId, use]))
+  const ids = new Set<string>()
+  for (const item of items) {
+    const use = usesById.get(item.instanceId)
+    if (!use || ids.has(item.instanceId) || item.result.score > use.schema.data.maxScore) {
+      throw invalidStorage(`Grading item does not match submission: ${item.instanceId}`)
+    }
+    ids.add(item.instanceId)
+    if (use.schema.structure.questionType === 'objective') {
+      const expected = objectiveResult(submission, use)
+      if (
+        item.engine !== 'objective' ||
+        item.result.score !== expected.score ||
+        item.result.comment !== expected.comment
+      ) {
+        throw invalidStorage(`Invalid objective grading result: ${item.instanceId}`)
+      }
+    } else if (item.engine === 'objective') {
+      throw invalidStorage(`Invalid grading engine for item: ${item.instanceId}`)
+    }
+  }
+
+  const completedAt =
+    typeof value.completedAt === 'string'
+      ? value.completedAt
+      : items.reduce(
+          (latest, item) =>
+            Date.parse(item.gradedAt) > Date.parse(latest) ? item.gradedAt : latest,
+          submission.meta.submittedAt
+        )
+  return gradingRecord(submission, items, completedAt)
 }
 
 function isSubmissionGradingItem(value: unknown): value is SubmissionGradingItem {
@@ -764,6 +831,22 @@ function isSubmissionGradingItem(value: unknown): value is SubmissionGradingItem
     typeof value.result.comment === 'string' &&
     isoDate(value.gradedAt)
   )
+}
+
+function objectiveResult(submission: SubmissionPackage, use: SubmissionSchemaUse): GradingResult {
+  const answer = use.answers.find(
+    (item): item is Extract<SubmissionSchemaUse['answers'][number], { type: 'text' }> =>
+      item.type === 'text'
+  )
+  const analysis = use.inputs.find((input) => input.inputId === OBJECTIVE_ANALYSIS_INPUT_ID)?.value
+  if (!answer || analysis === undefined) {
+    throw invalidStorage(`Incomplete objective grading item: ${use.instanceId}`)
+  }
+  const studentAnswer = submission.answers.strings[answer.stringAnswerIndex] ?? null
+  return {
+    score: studentAnswer !== null && studentAnswer === analysis ? use.schema.data.maxScore : 0,
+    comment: ''
+  }
 }
 
 function sameValue(left: unknown, right: unknown): boolean {

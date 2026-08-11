@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type JSX } from 'react'
+import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
 import { fileDialog } from '@ls101/file-dialog/renderer'
 import type {
   SubmissionLibraryEntry,
@@ -33,6 +33,7 @@ export function SubmissionLibraryPage(): JSX.Element {
   const [report, setReport] = useState<SubmissionReport | null>(null)
   const [reportError, setReportError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const reportRequestId = useRef(0)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -117,17 +118,22 @@ export function SubmissionLibraryPage(): JSX.Element {
   }
 
   const viewReport = async (entry: SubmissionLibraryEntry): Promise<void> => {
+    const requestId = ++reportRequestId.current
     setReportTarget(entry)
     setReport(null)
     setReportError(null)
     try {
-      setReport(await repository.getReport(entry.record.submissionId))
+      const next = await repository.getReport(entry.record.submissionId)
+      if (reportRequestId.current === requestId) setReport(next)
     } catch (reason) {
-      setReportError(submissionErrorMessage(reason))
+      if (reportRequestId.current === requestId) {
+        setReportError(submissionErrorMessage(reason))
+      }
     }
   }
 
   const closeReport = (): void => {
+    reportRequestId.current += 1
     setReportTarget(null)
     setReport(null)
     setReportError(null)

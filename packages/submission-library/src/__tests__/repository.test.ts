@@ -6,6 +6,7 @@ import {
   FileSubmissionLibraryRepository,
   objectiveGradingEngine,
   type GradingInput,
+  type SubmissionGradingRecord,
   type SubmissionLibraryStore
 } from '../index'
 
@@ -192,11 +193,10 @@ describe('FileSubmissionLibraryRepository', () => {
   })
 
   it('自动批改客观题、锁定已提交结果并完成后生成报告且禁止删除', async () => {
-    const repository = new FileSubmissionLibraryRepository(new MemoryStore())
+    const store = new MemoryStore()
+    const repository = new FileSubmissionLibraryRepository(store)
     const source = mixedSubmission()
-    const bytes = await encodeSubmissionPackage(source, {
-      'answer-audio-0': new Uint8Array([82, 73, 70, 70])
-    })
+    const bytes = await encodeSubmissionPackage(source, mixedSubmissionFiles())
     await repository.importArchive(bytes)
 
     const started = await repository.startGrading(source.meta.submissionId)
@@ -206,6 +206,14 @@ describe('FileSubmissionLibraryRepository', () => {
       maxScore: 7,
       items: [{ instanceId: 'schema-use:objective', engine: 'objective' }]
     })
+    expect(Object.keys(started.inputs[0].resources)).toEqual(['objective-image'])
+    expect(Object.keys(started.inputs[1].resources).sort()).toEqual([
+      'answer-audio-0',
+      'reading-image'
+    ])
+    expect(started.inputs[1].resources['answer-audio-0'].data).toEqual(
+      new Uint8Array([82, 73, 70, 70])
+    )
 
     const completed = await repository.submitGradingResult(
       source.meta.submissionId,
@@ -218,6 +226,17 @@ describe('FileSubmissionLibraryRepository', () => {
       totalScore: 6.25,
       maxScore: 7
     })
+
+    const scope = await importedSubmissionScope(store)
+    const stored = await scope.readText<SubmissionGradingRecord>('grading.json')
+    expect(stored).not.toBeNull()
+    expect(
+      await scope.compareAndSwapText('grading.json', stored, {
+        ...stored!,
+        totalScore: 999,
+        maxScore: 999
+      })
+    ).toBe(true)
 
     await expect(
       repository.submitGradingResult(source.meta.submissionId, 'schema-use:reading', 'human', {
@@ -236,7 +255,7 @@ describe('FileSubmissionLibraryRepository', () => {
     expect(report.markdown).toContain('- 学生答案：A')
     expect(report.markdown).toContain('**分数：4.25/5**')
     expect(report.markdown).toContain('**评语：无**')
-    expect(report.resources['answer-audio-0'].data).toEqual(new Uint8Array([82, 73, 70, 70]))
+    expect(Object.keys(report.resources).sort()).toEqual(['objective-image', 'reading-image'])
 
     const [entry] = await repository.listEntries()
     expect(entry.grading).toMatchObject({
@@ -246,6 +265,53 @@ describe('FileSubmissionLibraryRepository', () => {
       totalScore: 6.25,
       maxScore: 7
     })
+  })
+
+  it('根据原始作答包重算评分汇总和完成状态', async () => {
+    const store = new MemoryStore()
+    const repository = new FileSubmissionLibraryRepository(store)
+    const source = mixedSubmission()
+    await repository.importArchive(await encodeSubmissionPackage(source, mixedSubmissionFiles()))
+    await repository.startGrading(source.meta.submissionId)
+
+    const scope = await importedSubmissionScope(store)
+    const stored = await scope.readText<SubmissionGradingRecord>('grading.json')
+    expect(stored).not.toBeNull()
+    const corrupted = {
+      ...stored!,
+      status: 'completed' as const,
+      totalScore: 999,
+      maxScore: 999,
+      completedAt: '2026-08-10T04:00:00Z'
+    }
+    expect(await scope.compareAndSwapText('grading.json', stored, corrupted)).toBe(true)
+
+    const [entry] = await repository.listEntries()
+    expect(entry.grading).toEqual({
+      status: 'grading',
+      gradedCount: 1,
+      totalCount: 2,
+      totalScore: 2,
+      maxScore: 7
+    })
+    await expect(repository.deleteSubmission(source.meta.submissionId)).resolves.toBeUndefined()
+  })
+
+  it('拒绝与作答包题目或分数上限不一致的持久化评分项', async () => {
+    const store = new MemoryStore()
+    const repository = new FileSubmissionLibraryRepository(store)
+    const source = mixedSubmission()
+    await repository.importArchive(await encodeSubmissionPackage(source, mixedSubmissionFiles()))
+    await repository.startGrading(source.meta.submissionId)
+
+    const scope = await importedSubmissionScope(store)
+    const stored = await scope.readText<SubmissionGradingRecord>('grading.json')
+    expect(stored).not.toBeNull()
+    const corrupted = structuredClone(stored!)
+    corrupted.items[0].result.score = 999
+    expect(await scope.compareAndSwapText('grading.json', stored, corrupted)).toBe(true)
+
+    await expect(repository.listEntries()).rejects.toMatchObject({ code: 'INVALID_STORAGE' })
   })
 })
 
@@ -271,11 +337,18 @@ const readingSchema: SchemaDefinition = {
 
 function mixedSubmission(): SubmissionPackage {
   const value = submission('A')
+  value.schemaUses[0].inputs[0].value = 'Choose one.\n\n![Objective](resource:objective-image)'
   value.answers.audios = [{ resourceKey: 'answer-audio-0', durationMs: 3200 }]
   value.schemaUses.push({
     instanceId: 'schema-use:reading',
     schema: readingSchema,
-    inputs: [{ inputId: 'question-description', type: 'text', value: '请朗读下面的句子。' }],
+    inputs: [
+      {
+        inputId: 'question-description',
+        type: 'text',
+        value: '请朗读下面的句子。\n\n![Reading](resource:reading-image)'
+      }
+    ],
     answers: [
       {
         answerId: 'reading',
@@ -290,7 +363,38 @@ function mixedSubmission(): SubmissionPackage {
     packagePath: 'recordings/answer-audio-0/recording-0.wav',
     mediaType: 'audio/wav'
   }
+  value.resources['objective-image'] = {
+    filename: 'objective.png',
+    packagePath: 'resources/objective-image/objective.png',
+    mediaType: 'image/png'
+  }
+  value.resources['reading-image'] = {
+    filename: 'reading.png',
+    packagePath: 'resources/reading-image/reading.png',
+    mediaType: 'image/png'
+  }
+  value.resources.unused = {
+    filename: 'unused.png',
+    packagePath: 'resources/unused/unused.png',
+    mediaType: 'image/png'
+  }
   return value
+}
+
+function mixedSubmissionFiles(): Record<string, Uint8Array> {
+  return {
+    'answer-audio-0': new Uint8Array([82, 73, 70, 70]),
+    'objective-image': new Uint8Array([1]),
+    'reading-image': new Uint8Array([2]),
+    unused: new Uint8Array([3])
+  }
+}
+
+async function importedSubmissionScope(store: MemoryStore): Promise<SubmissionLibraryStore> {
+  const submissions = store.scope('submissions')
+  const [key] = await submissions.listScopes()
+  if (!key) throw new Error('Expected an imported submission scope')
+  return submissions.scope(key)
 }
 
 function objectiveInput(answer: string | null, analysis: string): GradingInput {

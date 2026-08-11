@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom/vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type {
   GradingInput,
   SubmissionGradingWorkspace,
   SubmissionLibraryEntry,
-  SubmissionLibraryRepository
+  SubmissionLibraryRepository,
+  SubmissionReport
 } from '@ls101/submission-library'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -102,6 +103,44 @@ describe('submission grading UI', () => {
     expect(await screen.findByRole('heading', { name: '考试报告' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Student completed - Test' })).toBeInTheDocument()
     expect(screen.getByRole('cell', { name: '5/5' })).toBeInTheDocument()
+  })
+
+  it('ignores a stale report response after switching submissions', async () => {
+    const first = deferred<SubmissionReport>()
+    const second = deferred<SubmissionReport>()
+    const repository = mockRepository({
+      listEntries: vi
+        .fn()
+        .mockResolvedValue([
+          libraryEntry('first', completedSummary()),
+          libraryEntry('second', completedSummary())
+        ]),
+      getReport: vi.fn((submissionId: string) =>
+        submissionId === 'first' ? first.promise : second.promise
+      )
+    })
+
+    renderWithRepository(repository, '/submissions', [
+      <Route element={<SubmissionLibraryPage />} key="list" path="/submissions" />
+    ])
+
+    const buttons = await screen.findAllByRole('button', { name: '查看报告' })
+    fireEvent.click(buttons[0])
+    fireEvent.click(screen.getByRole('button', { name: '关闭报告' }))
+    fireEvent.click(buttons[1])
+
+    await act(async () => {
+      second.resolve({ markdown: '# Second report', resources: {} })
+      await second.promise
+    })
+    expect(await screen.findByRole('heading', { name: 'Second report' })).toBeInTheDocument()
+
+    await act(async () => {
+      first.resolve({ markdown: '# First report', resources: {} })
+      await first.promise
+    })
+    expect(screen.getByRole('heading', { name: 'Second report' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'First report' })).not.toBeInTheDocument()
   })
 })
 
@@ -236,4 +275,23 @@ function libraryEntry(
     },
     grading
   }
+}
+
+function completedSummary(): NonNullable<SubmissionLibraryEntry['grading']> {
+  return {
+    status: 'completed',
+    gradedCount: 1,
+    totalCount: 1,
+    totalScore: 5,
+    maxScore: 5,
+    completedAt: '2026-08-10T03:00:00Z'
+  }
+}
+
+function deferred<T>(): { promise: Promise<T>; resolve(value: T): void } {
+  let resolvePromise: (value: T) => void = () => undefined
+  const promise = new Promise<T>((resolve) => {
+    resolvePromise = resolve
+  })
+  return { promise, resolve: resolvePromise }
 }
