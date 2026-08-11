@@ -1,10 +1,11 @@
 import type { InterfaceVarManifest, SchemaDefinition } from '@ls101/core-types'
 import { initializeBuiltinFunctionLibraries } from './builtin-initializer'
-import { compileTemplate } from './compiler'
+import { compileTemplate, compileTemplatePreview } from './compiler'
 import type {
   GeneratedTimelineAudio,
   LocatedInterfaceInstance,
   TemplateCompileResult,
+  TemplatePreviewResult,
   TemplateInterfaceBinding
 } from './compiler/shared'
 import {
@@ -105,6 +106,10 @@ export interface TemplateDocumentApplication {
     selections: readonly TemplateInterfaceBinding[],
     options?: TemplateCompileOptions
   ): Promise<TemplateCompileResult>
+  preview(
+    document: TemplateDocument,
+    selections: readonly TemplateInterfaceBinding[]
+  ): Promise<TemplatePreviewResult>
 }
 
 export interface LocalFunctionLibraryApplication {
@@ -423,6 +428,14 @@ export function createTemplateApplication(
           ...manifests,
           interfaceBindings: selections,
           synthesizeSpeech: options.synthesizeSpeech,
+          locateInterfaceInstance: dependencies.locateInterfaceInstance
+        })
+      },
+      async preview(document, selections) {
+        const manifests = await loadValidationContext(document)
+        return compileTemplatePreview(document, {
+          ...manifests,
+          interfaceBindings: selections,
           locateInterfaceInstance: dependencies.locateInterfaceInstance
         })
       }

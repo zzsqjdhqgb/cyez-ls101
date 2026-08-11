@@ -825,6 +825,21 @@ describe('TemplateApplication', () => {
         }
       }
     })
+
+    const preview = await application.templates.preview(
+      {
+        ...template,
+        content: { ...template.content, name: 'Unsaved preview title' }
+      },
+      [{ alias: 'data', interfaceId: INTERFACE_ID, instanceId: INSTANCE_ID }]
+    )
+    expect(preview).toMatchObject({
+      success: true,
+      preview: {
+        title: 'Unsaved preview title',
+        pages: [{ sourceNodeId: 'page', timeline: [{ type: 'countdown', seconds: 1 }] }]
+      }
+    })
   })
 })
 

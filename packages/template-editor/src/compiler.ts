@@ -20,7 +20,9 @@ import {
   type ExamResourceSource,
   type TemplateCompileContext,
   type TemplateCompileError,
-  type TemplateCompileResult
+  type TemplateCompileResult,
+  type TemplatePreviewResult,
+  type TemplatePreviewTimelineStep
 } from './compiler/shared'
 
 export type {
@@ -33,6 +35,78 @@ export type {
   TemplateInterfaceBinding,
   LocatedInterfaceInstance
 } from './compiler/shared'
+
+export type {
+  TemplatePreviewData,
+  TemplatePreviewPage,
+  TemplatePreviewResult,
+  TemplatePreviewTimelineStep
+} from './compiler/shared'
+
+export async function compileTemplatePreview(
+  template: TemplateDocument,
+  context: TemplateCompileContext
+): Promise<TemplatePreviewResult> {
+  const validation = await validateTemplateDocument(template, context)
+  if (!validation.valid) {
+    return {
+      success: false,
+      errors: validation.errors.map((error) => ({ stage: 'validation', error }))
+    }
+  }
+
+  const bound = await bindInterfaceValues(template.content, context)
+  if (bound.errors.length > 0) return { success: false, errors: bound.errors }
+
+  const state = createCompilerState(context, bound.valuesByAlias, template.resources.functions)
+  try {
+    const structure = instantiateTemplate(template.content, state)
+    state.staticCells.forEach((cell) => cell.get())
+
+    const expandedPages = state.pages.map((resolve) => resolve())
+    if (expandedPages.length === 0) {
+      throw new CompileFailure(compileError('EMPTY_PLAYER_PAGES', 'root'))
+    }
+    validateResolvedRecordings(expandedPages)
+    const questions = state.questions.map((resolve) => resolve())
+    state.schemaUsages.forEach((resolve) => resolve())
+    const candidate = structure.candidates[0]
+
+    return {
+      success: true,
+      preview: {
+        title: template.content.name,
+        pages: expandedPages.map((page) => ({
+          id: page.id,
+          sourceNodeId: page.sourceNodeId,
+          ...(page.sourceNodeName ? { sourceNodeName: page.sourceNodeName } : {}),
+          callPath: page.callPath,
+          content: page.content,
+          timeline: page.timeline.map(toPreviewTimelineStep)
+        })),
+        recordingIndices: state.recordingIndices,
+        ...(candidate
+          ? {
+              choiceMeta: {
+                pages: candidate.pages.map((questionIndices) => ({ questionIndices })),
+                questions
+              }
+            }
+          : {}),
+        resources: Object.fromEntries(state.resources)
+      },
+      resourceSources: Array.from(state.resourceSources, ([assetKey, sourceUrl]) => ({
+        assetKey,
+        sourceUrl
+      }))
+    }
+  } catch (error) {
+    if (error instanceof CompileFailure) {
+      return { success: false, errors: [error.compileError] }
+    }
+    throw error
+  }
+}
 
 export async function compileTemplate(
   template: TemplateDocument,
@@ -193,6 +267,44 @@ async function compileTimelineAudio(
     compiled.push({ id: page.id, content: page.content, timeline })
   }
   return compiled
+}
+
+function toPreviewTimelineStep(
+  step: ExpandedExamPage['timeline'][number]
+): TemplatePreviewTimelineStep {
+  const choiceViewOverrides = step.choiceViewOverrides
+  if (step.type === 'play') {
+    return {
+      type: 'play',
+      text: step.text,
+      ...(choiceViewOverrides ? { choiceViewOverrides } : {})
+    }
+  }
+  if (step.type === 'countdown') {
+    return {
+      type: 'countdown',
+      seconds: step.seconds,
+      ...(choiceViewOverrides ? { choiceViewOverrides } : {})
+    }
+  }
+  return {
+    type: 'record',
+    duration: step.duration,
+    recordIndex: step.recordIndex,
+    ...(choiceViewOverrides ? { choiceViewOverrides } : {})
+  }
+}
+
+function validateResolvedRecordings(pages: readonly ExpandedExamPage[]): void {
+  pages.forEach((page) => {
+    page.timeline.forEach((step) => {
+      if (step.type === 'record' && (!Number.isFinite(step.duration) || step.duration <= 0)) {
+        throw new CompileFailure(
+          compileError('INVALID_RECORDING_DURATION', step.sourcePath, { value: step.duration })
+        )
+      }
+    })
+  })
 }
 
 function speechExtension(mediaType: string): string {

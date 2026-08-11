@@ -1,6 +1,6 @@
 import type { InterfaceVarManifest, SchemaDefinition } from '@ls101/core-types'
-import { describe, expect, it } from 'vitest'
-import { compileTemplate, type TemplateCompileContext } from '../compiler'
+import { describe, expect, it, vi } from 'vitest'
+import { compileTemplate, compileTemplatePreview, type TemplateCompileContext } from '../compiler'
 import { createFunctionResource } from '../id'
 import type {
   FrameNode,
@@ -329,6 +329,29 @@ function speechOnlyContent(): TemplateContent {
 }
 
 describe('compileTemplate', () => {
+  it('解析静态预览页面并跳过 TTS 音频生成', async () => {
+    const synthesizeSpeech = vi.fn()
+    const result = await compileTemplatePreview(
+      document(speechOnlyContent()),
+      compileContext({ synthesizeSpeech })
+    )
+
+    expect(result).toMatchObject({
+      success: true,
+      preview: {
+        pages: [
+          {
+            id: 'page:speech-page',
+            sourceNodeId: 'speech-page',
+            callPath: [],
+            timeline: [{ type: 'play', text: 'Hello' }]
+          }
+        ]
+      }
+    })
+    expect(synthesizeSpeech).not.toHaveBeenCalled()
+  })
+
   it('拒绝编译没有页面的 Template', async () => {
     const result = await compileTemplate(document(content()), compileContext())
 

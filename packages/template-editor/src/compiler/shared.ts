@@ -1,9 +1,11 @@
 import type {
   CompiledSchemaInput,
   ExamPackage,
+  ExamResourceManifest,
   ExamResourceEntry,
   InterfaceInstance,
   InterfaceVarManifest,
+  PlayerChoiceMeta,
   PlayerChoiceQuestion,
   ResolvedChoiceViewport,
   ResolvedContentBlock,
@@ -78,12 +80,58 @@ export type TemplateCompileResult =
     }
   | { success: false; errors: readonly TemplateCompileError[] }
 
+export interface TemplatePreviewPage {
+  id: string
+  sourceNodeId: string
+  sourceNodeName?: string
+  callPath: readonly string[]
+  content: ResolvedContentBlock[]
+  timeline: TemplatePreviewTimelineStep[]
+}
+
+export type TemplatePreviewTimelineStep =
+  | {
+      type: 'play'
+      text: string
+      choiceViewOverrides?: Record<string, ResolvedChoiceViewport>
+    }
+  | {
+      type: 'countdown'
+      seconds: number
+      choiceViewOverrides?: Record<string, ResolvedChoiceViewport>
+    }
+  | {
+      type: 'record'
+      duration: number
+      recordIndex: number
+      choiceViewOverrides?: Record<string, ResolvedChoiceViewport>
+    }
+
+export interface TemplatePreviewData {
+  title: string
+  pages: readonly TemplatePreviewPage[]
+  recordingIndices: readonly number[]
+  choiceMeta?: PlayerChoiceMeta
+  resources: ExamResourceManifest
+}
+
+export type TemplatePreviewResult =
+  | {
+      success: true
+      preview: TemplatePreviewData
+      resourceSources: readonly ExamResourceSource[]
+    }
+  | { success: false; errors: readonly TemplateCompileError[] }
+
 export type ExamResourceSource =
   | { assetKey: string; sourceUrl: string }
   | { assetKey: string; data: Uint8Array }
 
 export interface ExpandedExamPage {
   id: string
+  sourceNodeId: string
+  sourceNodeName?: string
+  callPath: readonly string[]
   content: ResolvedContentBlock[]
   timeline: ExpandedTimelineStep[]
 }

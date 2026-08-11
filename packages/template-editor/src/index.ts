@@ -46,12 +46,16 @@ export {
   verifyFunctionLibraryRelease,
   verifyFunctionResourceId
 } from './id'
-export { compileTemplate } from './compiler'
+export { compileTemplate, compileTemplatePreview } from './compiler'
 export type {
   TemplateCompileContext,
   TemplateCompileError,
   TemplateCompileErrorCode,
   TemplateCompileResult,
+  TemplatePreviewData,
+  TemplatePreviewPage,
+  TemplatePreviewResult,
+  TemplatePreviewTimelineStep,
   GeneratedTimelineAudio,
   ExamResourceSource,
   TemplateInterfaceBinding,

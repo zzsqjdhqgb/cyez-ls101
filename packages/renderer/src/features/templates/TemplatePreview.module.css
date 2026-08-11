@@ -1,0 +1,372 @@
+.filmstrip,
+.inspector,
+.canvas {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.filmstrip,
+.inspector {
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--color-surface);
+}
+
+.filmstrip {
+  display: grid;
+  grid-template-rows: 58px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.filmstripHeader {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filmstripHeader > div {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.filmstripHeader h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 14px;
+  font-weight: 660;
+}
+
+.filmstripHeader span {
+  color: var(--color-text-faint);
+  font-size: 11px;
+}
+
+.filmstripBody {
+  min-height: 0;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.filmstripNotice {
+  margin: 0;
+  padding: 24px 12px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.snapshotList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pageGroupHeading {
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 5px 4px 1px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.pageGroupHeading svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pageGroupHeading span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.snapshotButton {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 9px;
+  padding: 7px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  background: var(--color-surface);
+  text-align: left;
+  cursor: pointer;
+}
+
+.snapshotButton:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
+}
+
+.snapshotButton[aria-current='true'] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  box-shadow: 0 0 0 1px var(--color-focus-ring);
+}
+
+.snapshotButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.thumbnailViewport {
+  position: relative;
+  display: block;
+  width: 120px;
+  height: 80px;
+  overflow: hidden;
+  border: 1px solid #303a38;
+  background: #0b0e0e;
+  pointer-events: none;
+}
+
+.thumbnailPage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 1200px;
+  height: 800px;
+  transform: scale(0.1);
+  transform-origin: top left;
+}
+
+.snapshotMeta {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-content: center;
+  align-items: center;
+  gap: 3px 5px;
+  font-size: 11px;
+  font-weight: 620;
+}
+
+.snapshotMeta svg {
+  width: 14px;
+  height: 14px;
+  color: var(--color-accent);
+}
+
+.snapshotIndex {
+  grid-column: 1 / -1;
+  color: var(--color-text-faint);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.snapshotMeta small {
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 520;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas {
+  display: grid;
+  grid-template-rows: 52px minmax(0, 1fr) 58px;
+  overflow: hidden;
+  background: var(--color-surface-subtle);
+}
+
+.canvasHeader,
+.stepBar {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.canvasHeader {
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 16px;
+}
+
+.canvasHeader > div,
+.stepBar > div {
+  display: grid;
+  min-width: 0;
+}
+
+.canvasHeader strong,
+.canvasHeader span,
+.stepBar strong,
+.stepBar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvasHeader strong,
+.stepBar strong {
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.canvasHeader span,
+.stepBar span {
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.position {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.canvasViewport {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  padding: 32px;
+  overflow: hidden;
+  place-items: center;
+  background: #090c0c;
+}
+
+.scaledPreview {
+  position: relative;
+  flex: 0 0 auto;
+  overflow: hidden;
+  box-shadow: 0 10px 34px rgb(0 0 0 / 30%);
+}
+
+.scaledPreviewInner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1200px;
+  height: 800px;
+  transform-origin: top left;
+}
+
+.stepBar {
+  gap: 10px;
+  padding: 0 16px;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 0;
+}
+
+.stepIcon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-xs);
+  place-items: center;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.stepIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.details {
+  display: grid;
+  gap: 9px;
+  margin: 0 0 14px;
+}
+
+.details > div {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.details dt {
+  color: var(--color-text-muted);
+}
+
+.details dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text-strong);
+}
+
+.bindings {
+  display: grid;
+  gap: 14px;
+}
+
+.bindings label {
+  display: grid;
+  gap: 6px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.bindings select {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font: 12px/1.4 var(--font-ui);
+}
+
+.bindings select:focus {
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
+}
+
+.error {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 7px;
+  color: var(--color-danger);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.error svg {
+  width: 16px;
+  height: 16px;
+}
+
+.errorList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-danger);
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.emptyValue {
+  margin: 0;
+  color: var(--color-text-faint);
+  font-size: 12px;
+}

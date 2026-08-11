@@ -1,12 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type FormEvent,
-  type JSX
-} from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type JSX } from 'react'
 import type {
   ChoiceOptionLabel,
   ExamPage,
@@ -16,7 +8,7 @@ import type {
 import { collectSubmissionPackageFiles, encodeSubmissionPackage } from '@ls101/exam-package'
 import { AlertTriangle, Check, LogOut, Mic, Play, RefreshCw } from 'lucide-react'
 import { assembleSubmission, type CapturedAudioAnswer } from './submission'
-import { ChoiceView } from './ChoiceView'
+import { ExamPageView } from './ExamPageView'
 import { loadExam, resourceKey, type LoadedExam } from './loading'
 import styles from './ExamPlayer.module.css'
 
@@ -532,55 +524,14 @@ function ExamScreen({
   return (
     <div className={styles.examLayout}>
       <div className={styles.contentViewport}>
-        <div className={styles.page}>
-          {page.content.map((block) => {
-            const style = {
-              left: `${block.x}%`,
-              top: `${block.y}%`,
-              ...(block.width === undefined ? {} : { width: `${block.width}%` }),
-              ...(!('height' in block) || block.height === undefined
-                ? {}
-                : { height: `${block.height}%` })
-            } satisfies CSSProperties
-            if (block.type === 'text') {
-              return (
-                <div
-                  className={styles.textBlock}
-                  key={block.id}
-                  style={{
-                    ...style,
-                    fontSize: block.fontSize ?? 28,
-                    fontWeight: block.bold ? 700 : 400,
-                    textAlign: block.align ?? 'left'
-                  }}
-                >
-                  {block.text}
-                </div>
-              )
-            }
-            if (block.type === 'image') {
-              const key = resourceKey(block.src)
-              return (
-                <div className={styles.imageBlock} key={block.id} style={style}>
-                  <img alt="" draggable={false} src={key ? loaded.resourceUrls[key] : undefined} />
-                </div>
-              )
-            }
-            const viewport = step.choiceViewOverrides?.[block.id] ?? block.defaultViewport
-            return (
-              <div className={styles.choiceBlock} key={block.id} style={style}>
-                {meta ? (
-                  <ChoiceView
-                    answers={answers}
-                    meta={meta}
-                    viewport={viewport}
-                    onAnswer={onAnswer}
-                  />
-                ) : null}
-              </div>
-            )
-          })}
-        </div>
+        <ExamPageView
+          answers={answers}
+          choiceMeta={meta}
+          page={page}
+          resourceUrls={loaded.resourceUrls}
+          step={step}
+          onAnswer={onAnswer}
+        />
       </div>
       <footer className={styles.statusBar}>
         <div className={styles.examPosition}>

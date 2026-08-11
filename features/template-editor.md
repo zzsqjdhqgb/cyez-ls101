@@ -84,6 +84,8 @@ renderer 的 Template 编辑会话直接消费不可变 mutation 结果，以完
 
 renderer 中栏提供“结构 / 页面”标签页。Page 画布支持新增文本、图片和 ChoiceView，单选、拖动、缩放、复制、删除及视图缩放；变量文本以 token 预览。选中块的 ID、百分比几何、文本表达式与格式、图片表达式和 ChoiceView 视口在右侧独立折叠区域编辑。交互继续提交现有内容块 mutation，因此共用文档撤销、重做、dirty 和保存语义；一次连续拖动或缩放只在指针释放时形成一个历史条目。
 
+中栏同时提供“预览”模式。预览以当前选中的 Page、Frame、Function 调用或根 Frame 为范围，按编译展开顺序收集页面，并把每个 Page 的每个 Timeline step 映射为一个独立画面。进入预览后，左侧函数库切换为按 Page 分组的纵向胶片，中栏显示当前画面的学生端页面，右侧显示 Interface 实例选择、预览范围、当前 Timeline 信息和校验错误。预览直接读取当前未保存工作文档，执行与导出一致的变量、函数、ChoiceCollector、Schema 和资源解析，但不合成 TTS 音频；Interface 实例选择只保留在当前编辑会话中，不写入 Template。
+
 图片内容块保存独立的百分比宽高，渲染时保持图片原始比例并以 `contain` 方式在固定框内居中；长边撑满框，另一方向留空，不执行裁剪或拉伸。
 
 ChoiceView 的 focus 模式在属性栏中按 Collector 展开结果选择“第几页 / 第几题”。renderer 使用与编译器一致的节点及函数调用展开顺序建立页题到 `questionRef` 的映射，不向用户暴露 scope、函数调用路径或题目节点 ID。
@@ -138,7 +140,7 @@ ChoiceView 的 free/range 页码同样使用基于 Collector 最终页数的下�
 
 - Page 画布的多选、吸附辅助线、键盘微调和画布内直接文本编辑。
 - Schema use 的 renderer 专用配置界面，包括附件列表和 Markdown 附件变量插入。
-- 编译错误文案、节点定位交互和预览流程。
+- 编译错误文案和节点定位交互。
 - `ExamPackage` 的最终归档格式和把编译结果中的资源源文件复制进归档的写入器。
 
 ## 验证覆盖

@@ -18,6 +18,7 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
+  Eye,
   FileArchive,
   FileText,
   LayoutTemplate,
@@ -48,6 +49,12 @@ import { TemplateInterfaceRequirements } from './TemplateInterfaceRequirements'
 import { TemplateExamGenerationDialog } from './TemplateExamGenerationDialog'
 import { TemplateNodeInspector } from './TemplateNodeInspector'
 import { TemplatePageCanvas } from './TemplatePageCanvas'
+import {
+  TemplatePreviewCanvas,
+  TemplatePreviewFilmstrip,
+  TemplatePreviewInspector
+} from './TemplatePreview'
+import { buildTemplatePreviewSnapshots, templatePreviewResourceUrls } from './TemplatePreviewModel'
 import { TemplateVariableInput } from './TemplateVariableInput'
 import { TemplateSchemaUses } from './TemplateSchemaUses'
 import {
@@ -56,6 +63,7 @@ import {
 } from './TemplateVariableInputModel'
 import { templateErrorMessage } from './templateUi'
 import { useTemplateEditorSession } from './useTemplateEditorSession'
+import { useTemplatePreview } from './useTemplatePreview'
 
 interface NodeLocation {
   node: TemplateNode
@@ -84,7 +92,9 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [generationOpen, setGenerationOpen] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
-  const [centerView, setCenterView] = useState<'structure' | 'page'>('structure')
+  const [centerView, setCenterView] = useState<'structure' | 'page' | 'preview'>('structure')
+  const [previewTargetId, setPreviewTargetId] = useState('root')
+  const [selectedPreviewIndex, setSelectedPreviewIndex] = useState(0)
   const [selectedContentBlockId, setSelectedContentBlockId] = useState<string | null>(null)
   const [collapsedIds, setCollapsedIds] = useState<ReadonlySet<string>>(() => new Set())
   const [functionLibraries, setFunctionLibraries] = useState<FunctionLibrarySummary[]>([])
@@ -148,7 +158,30 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
       ? (selectedNode.content.blocks.find((block) => block.id === selectedContentBlockId) ?? null)
       : null
   const visibleCenterView =
-    centerView === 'page' && selectedNode?.type === 'page' ? 'page' : 'structure'
+    centerView === 'preview'
+      ? 'preview'
+      : centerView === 'page' && selectedNode?.type === 'page'
+        ? 'page'
+        : 'structure'
+  const previewSession = useTemplatePreview(application, document, visibleCenterView === 'preview')
+  const previewTarget = root ? (locateNode(root, previewTargetId)?.node ?? null) : null
+  const previewData =
+    previewSession.result?.success && !previewSession.missingInstances
+      ? previewSession.result.preview
+      : null
+  const previewSnapshots = useMemo(
+    () =>
+      root && previewTarget && previewData
+        ? buildTemplatePreviewSnapshots(root, previewTarget, previewData)
+        : [],
+    [previewData, previewTarget, root]
+  )
+  const previewResourceUrls = useMemo(
+    () => templatePreviewResourceUrls(previewSession.result),
+    [previewSession.result]
+  )
+  const safePreviewIndex = Math.min(selectedPreviewIndex, Math.max(0, previewSnapshots.length - 1))
+  const selectedPreviewSnapshot = previewSnapshots[safePreviewIndex] ?? null
   const variableCandidates = useMemo(
     () =>
       root && document
@@ -253,6 +286,13 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
     setCenterView('page')
   }
 
+  const openPreview = (): void => {
+    if (!selectedNode || selectedNode.type === 'choice-question') return
+    setPreviewTargetId(selectedNode.id)
+    setSelectedPreviewIndex(0)
+    setCenterView('preview')
+  }
+
   const selectTemplateNode = (nodeId: string): void => {
     if (nodeId !== session.selectedNodeId) setSelectedContentBlockId(null)
     session.selectNode(nodeId)
@@ -312,124 +352,137 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
         minSecond={708}
         label="调整函数库宽度"
       >
-        <aside className={styles.library} aria-labelledby="function-library-heading">
-          <section className={`${styles.inspectorSection} ${styles.librarySection}`}>
-            <div className={styles.libraryHeading}>
-              <h2 id="function-library-heading">函数库</h2>
-              <span>组件素材</span>
-            </div>
-            <div className={styles.sourceTabs} role="tablist" aria-label="函数库来源">
-              {LIBRARY_SOURCES.map(({ source, label }) => (
-                <button
-                  aria-controls={`${source}-library-panel`}
-                  aria-label={`${label}函数库`}
-                  aria-selected={activeLibrarySource === source}
-                  className={styles.sourceTab}
-                  id={`${source}-library-tab`}
-                  key={source}
-                  role="tab"
-                  type="button"
-                  onClick={() => setActiveLibrarySource(source)}
-                >
-                  <span>{label}</span>
-                  <small aria-hidden="true">
-                    {functionLibraries.filter((item) => item.source === source).length}
-                  </small>
-                </button>
-              ))}
-            </div>
-            <div className={styles.libraryGroups}>
-              {libraryError ? (
-                <div className={styles.libraryNotice} role="alert">
-                  <AlertCircle aria-hidden="true" />
-                  <span>{libraryError}</span>
-                </div>
-              ) : null}
-              {libraryLoading ? (
-                <span className={styles.libraryStatus}>正在加载函数库...</span>
-              ) : null}
-              {!libraryLoading ? (
-                <section
-                  aria-labelledby={`${activeLibrarySource}-library-tab`}
-                  className={styles.libraryPanel}
-                  id={`${activeLibrarySource}-library-panel`}
-                  role="tabpanel"
-                >
-                  {functionLibraries.filter((item) => item.source === activeLibrarySource)
-                    .length === 0 ? (
-                    <LibraryEmptyState source={activeLibrarySource} />
-                  ) : (
-                    <ul className={styles.libraryList}>
-                      {functionLibraries
-                        .filter((item) => item.source === activeLibrarySource)
-                        .map((library) => {
-                          const key = libraryKey(library)
-                          const collapsed = collapsedLibraryKeys.has(key)
-                          return (
-                            <li className={styles.libraryGroup} key={key}>
-                              <button
-                                type="button"
-                                className={styles.libraryButton}
-                                aria-expanded={!collapsed}
-                                aria-label={libraryButtonLabel(library)}
-                                onClick={() => toggleLibrary(key)}
-                              >
-                                {collapsed ? (
-                                  <ChevronRight aria-hidden="true" />
-                                ) : (
-                                  <ChevronDown aria-hidden="true" />
-                                )}
-                                <span>{library.name || '未命名函数库'}</span>
-                                <small>
-                                  {library.functions.length} 项
-                                  {library.version ? ` · v${library.version}` : ''}
-                                </small>
-                              </button>
-                              {!collapsed ? (
-                                library.functions.length > 0 ? (
-                                  <ul className={styles.functionList}>
-                                    {library.functions.map((item) => (
-                                      <li key={item.functionId}>
-                                        <div
-                                          className={styles.functionCard}
-                                          title={item.name || '未命名函数'}
-                                        >
-                                          <span className={styles.functionIcon}>
-                                            <NodeIcon type={item.component?.type ?? 'function'} />
-                                          </span>
-                                          <span className={styles.functionIdentity}>
-                                            <strong>{item.name || '未命名函数'}</strong>
-                                            <small>
-                                              {item.component
-                                                ? nodeTypeLabel(item.component.type)
-                                                : '函数'}
-                                            </small>
-                                          </span>
-                                          <IconButton
-                                            icon={Plus}
-                                            label={`添加${item.name || '未命名函数'}`}
-                                            size="small"
-                                            disabled={!document || session.saving}
-                                            onClick={() => insertLibraryItem(library, item)}
-                                          />
-                                        </div>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <span className={styles.emptyLibrary}>暂无函数</span>
-                                )
-                              ) : null}
-                            </li>
-                          )
-                        })}
-                    </ul>
-                  )}
-                </section>
-              ) : null}
-            </div>
-          </section>
-        </aside>
+        {visibleCenterView === 'preview' ? (
+          <TemplatePreviewFilmstrip
+            compiling={previewSession.compiling}
+            error={previewSession.error}
+            missingInstances={previewSession.missingInstances}
+            preview={previewData}
+            result={previewSession.result}
+            selectedIndex={safePreviewIndex}
+            snapshots={previewSnapshots}
+            onSelect={setSelectedPreviewIndex}
+          />
+        ) : (
+          <aside className={styles.library} aria-labelledby="function-library-heading">
+            <section className={`${styles.inspectorSection} ${styles.librarySection}`}>
+              <div className={styles.libraryHeading}>
+                <h2 id="function-library-heading">函数库</h2>
+                <span>组件素材</span>
+              </div>
+              <div className={styles.sourceTabs} role="tablist" aria-label="函数库来源">
+                {LIBRARY_SOURCES.map(({ source, label }) => (
+                  <button
+                    aria-controls={`${source}-library-panel`}
+                    aria-label={`${label}函数库`}
+                    aria-selected={activeLibrarySource === source}
+                    className={styles.sourceTab}
+                    id={`${source}-library-tab`}
+                    key={source}
+                    role="tab"
+                    type="button"
+                    onClick={() => setActiveLibrarySource(source)}
+                  >
+                    <span>{label}</span>
+                    <small aria-hidden="true">
+                      {functionLibraries.filter((item) => item.source === source).length}
+                    </small>
+                  </button>
+                ))}
+              </div>
+              <div className={styles.libraryGroups}>
+                {libraryError ? (
+                  <div className={styles.libraryNotice} role="alert">
+                    <AlertCircle aria-hidden="true" />
+                    <span>{libraryError}</span>
+                  </div>
+                ) : null}
+                {libraryLoading ? (
+                  <span className={styles.libraryStatus}>正在加载函数库...</span>
+                ) : null}
+                {!libraryLoading ? (
+                  <section
+                    aria-labelledby={`${activeLibrarySource}-library-tab`}
+                    className={styles.libraryPanel}
+                    id={`${activeLibrarySource}-library-panel`}
+                    role="tabpanel"
+                  >
+                    {functionLibraries.filter((item) => item.source === activeLibrarySource)
+                      .length === 0 ? (
+                      <LibraryEmptyState source={activeLibrarySource} />
+                    ) : (
+                      <ul className={styles.libraryList}>
+                        {functionLibraries
+                          .filter((item) => item.source === activeLibrarySource)
+                          .map((library) => {
+                            const key = libraryKey(library)
+                            const collapsed = collapsedLibraryKeys.has(key)
+                            return (
+                              <li className={styles.libraryGroup} key={key}>
+                                <button
+                                  type="button"
+                                  className={styles.libraryButton}
+                                  aria-expanded={!collapsed}
+                                  aria-label={libraryButtonLabel(library)}
+                                  onClick={() => toggleLibrary(key)}
+                                >
+                                  {collapsed ? (
+                                    <ChevronRight aria-hidden="true" />
+                                  ) : (
+                                    <ChevronDown aria-hidden="true" />
+                                  )}
+                                  <span>{library.name || '未命名函数库'}</span>
+                                  <small>
+                                    {library.functions.length} 项
+                                    {library.version ? ` · v${library.version}` : ''}
+                                  </small>
+                                </button>
+                                {!collapsed ? (
+                                  library.functions.length > 0 ? (
+                                    <ul className={styles.functionList}>
+                                      {library.functions.map((item) => (
+                                        <li key={item.functionId}>
+                                          <div
+                                            className={styles.functionCard}
+                                            title={item.name || '未命名函数'}
+                                          >
+                                            <span className={styles.functionIcon}>
+                                              <NodeIcon type={item.component?.type ?? 'function'} />
+                                            </span>
+                                            <span className={styles.functionIdentity}>
+                                              <strong>{item.name || '未命名函数'}</strong>
+                                              <small>
+                                                {item.component
+                                                  ? nodeTypeLabel(item.component.type)
+                                                  : '函数'}
+                                              </small>
+                                            </span>
+                                            <IconButton
+                                              icon={Plus}
+                                              label={`添加${item.name || '未命名函数'}`}
+                                              size="small"
+                                              disabled={!document || session.saving}
+                                              onClick={() => insertLibraryItem(library, item)}
+                                            />
+                                          </div>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : (
+                                    <span className={styles.emptyLibrary}>暂无函数</span>
+                                  )
+                                ) : null}
+                              </li>
+                            )
+                          })}
+                      </ul>
+                    )}
+                  </section>
+                ) : null}
+              </div>
+            </section>
+          </aside>
+        )}
 
         <ResizableSplit
           className={styles.editorMain}
@@ -442,7 +495,11 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
           <main className={styles.center} aria-labelledby="template-center-heading">
             <div className={styles.centerHeader}>
               <h2 className={styles.visuallyHidden} id="template-center-heading">
-                {visibleCenterView === 'structure' ? '结构' : '页面'}
+                {visibleCenterView === 'structure'
+                  ? '结构'
+                  : visibleCenterView === 'page'
+                    ? '页面'
+                    : '预览'}
               </h2>
               <div className={styles.centerTabs} role="tablist" aria-label="编辑视图">
                 <button
@@ -469,6 +526,19 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                 >
                   <LayoutTemplate aria-hidden="true" />
                   <span>页面</span>
+                </button>
+                <button
+                  aria-controls="template-preview-panel"
+                  aria-selected={visibleCenterView === 'preview'}
+                  className={styles.centerTab}
+                  disabled={!selectedNode || selectedNode.type === 'choice-question'}
+                  id="template-preview-tab"
+                  role="tab"
+                  type="button"
+                  onClick={openPreview}
+                >
+                  <Eye aria-hidden="true" />
+                  <span>预览</span>
                 </button>
               </div>
             </div>
@@ -502,7 +572,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                   />
                 )}
               </div>
-            ) : selectedNode?.type === 'page' ? (
+            ) : visibleCenterView === 'page' && selectedNode?.type === 'page' ? (
               <div
                 aria-labelledby="template-page-tab"
                 className={styles.pagePanel}
@@ -517,72 +587,102 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                   onSelectBlock={setSelectedContentBlockId}
                 />
               </div>
+            ) : visibleCenterView === 'preview' ? (
+              <div
+                aria-labelledby="template-preview-tab"
+                className={styles.pagePanel}
+                id="template-preview-panel"
+                role="tabpanel"
+              >
+                <TemplatePreviewCanvas
+                  position={safePreviewIndex}
+                  preview={previewData}
+                  resourceUrls={previewResourceUrls}
+                  snapshot={selectedPreviewSnapshot}
+                  total={previewSnapshots.length}
+                />
+              </div>
             ) : null}
           </main>
 
-          <aside className={styles.properties} aria-label="属性">
-            <TemplateInspectorSection title="全局属性" headingId="template-properties-heading">
-              {session.error ? (
-                <div className={styles.notice} role="alert">
-                  {session.error}
-                </div>
+          {visibleCenterView === 'preview' ? (
+            <TemplatePreviewInspector
+              document={document}
+              session={previewSession}
+              snapshot={selectedPreviewSnapshot}
+              snapshotCount={previewSnapshots.length}
+              target={previewTarget}
+            />
+          ) : (
+            <aside className={styles.properties} aria-label="属性">
+              <TemplateInspectorSection title="全局属性" headingId="template-properties-heading">
+                {session.error ? (
+                  <div className={styles.notice} role="alert">
+                    {session.error}
+                  </div>
+                ) : null}
+                <label>
+                  名称
+                  <input
+                    disabled={!document}
+                    value={document?.content.name ?? ''}
+                    onChange={(event) => editMetadata('set-template-name', event.target.value)}
+                  />
+                </label>
+                <label>
+                  描述
+                  <textarea
+                    disabled={!document}
+                    value={document?.content.description ?? ''}
+                    onChange={(event) =>
+                      editMetadata('set-template-description', event.target.value)
+                    }
+                  />
+                </label>
+                <TemplateInterfaceRequirements
+                  disabled={!document || session.saving}
+                  error={interfacesError}
+                  loading={interfacesLoading}
+                  manifests={interfaceManifests}
+                  requirements={document?.content.interfaces ?? []}
+                  apply={session.apply}
+                />
+              </TemplateInspectorSection>
+              <TemplateInspectorSection title="评分 Schema" defaultExpanded={false}>
+                <TemplateSchemaUses
+                  apply={session.apply}
+                  disabled={!document || session.saving}
+                  uses={document?.content.schemaUses ?? []}
+                  variableCandidates={variableCandidates}
+                />
+              </TemplateInspectorSection>
+              {selectedNode ? (
+                <TemplateInspectorSection title="节点属性" headingId="node-properties-heading">
+                  <TemplateNodeInspector
+                    node={selectedNode}
+                    functions={document?.resources.functions ?? []}
+                    variableCandidates={variableCandidates}
+                    apply={session.apply}
+                  />
+                </TemplateInspectorSection>
               ) : null}
-              <label>
-                名称
-                <input
-                  disabled={!document}
-                  value={document?.content.name ?? ''}
-                  onChange={(event) => editMetadata('set-template-name', event.target.value)}
-                />
-              </label>
-              <label>
-                描述
-                <textarea
-                  disabled={!document}
-                  value={document?.content.description ?? ''}
-                  onChange={(event) => editMetadata('set-template-description', event.target.value)}
-                />
-              </label>
-              <TemplateInterfaceRequirements
-                disabled={!document || session.saving}
-                error={interfacesError}
-                loading={interfacesLoading}
-                manifests={interfaceManifests}
-                requirements={document?.content.interfaces ?? []}
-                apply={session.apply}
-              />
-            </TemplateInspectorSection>
-            <TemplateInspectorSection title="评分 Schema" defaultExpanded={false}>
-              <TemplateSchemaUses
-                apply={session.apply}
-                disabled={!document || session.saving}
-                uses={document?.content.schemaUses ?? []}
-                variableCandidates={variableCandidates}
-              />
-            </TemplateInspectorSection>
-            {selectedNode ? (
-              <TemplateInspectorSection title="节点属性" headingId="node-properties-heading">
-                <TemplateNodeInspector
-                  node={selectedNode}
-                  functions={document?.resources.functions ?? []}
-                  variableCandidates={variableCandidates}
-                  apply={session.apply}
-                />
-              </TemplateInspectorSection>
-            ) : null}
-            {selectedNode?.type === 'page' && selectedContentBlock ? (
-              <TemplateInspectorSection title="内容块" headingId="content-block-properties-heading">
-                <TemplateContentBlockInspector
-                  apply={session.apply}
-                  block={selectedContentBlock}
-                  choiceTargetPages={choiceTargetPages}
-                  pageId={selectedNode.id}
-                  variableCandidates={variableCandidates}
-                  onBlockIdChange={setSelectedContentBlockId}
-                />
-              </TemplateInspectorSection>
-            ) : null}
-          </aside>
+              {selectedNode?.type === 'page' && selectedContentBlock ? (
+                <TemplateInspectorSection
+                  title="内容块"
+                  headingId="content-block-properties-heading"
+                >
+                  <TemplateContentBlockInspector
+                    apply={session.apply}
+                    block={selectedContentBlock}
+                    choiceTargetPages={choiceTargetPages}
+                    pageId={selectedNode.id}
+                    variableCandidates={variableCandidates}
+                    onBlockIdChange={setSelectedContentBlockId}
+                  />
+                </TemplateInspectorSection>
+              ) : null}
+            </aside>
+          )}
         </ResizableSplit>
       </ResizableSplit>
 

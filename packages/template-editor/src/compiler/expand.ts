@@ -251,7 +251,14 @@ function resolvePage(
     }
   })
 
-  return { id: pageId, content, timeline }
+  return {
+    id: pageId,
+    sourceNodeId: page.id,
+    ...(page.name ? { sourceNodeName: page.name } : {}),
+    callPath: [...scope.callPath],
+    content,
+    timeline
+  }
 }
 
 function resolveChoiceViewOverrides(

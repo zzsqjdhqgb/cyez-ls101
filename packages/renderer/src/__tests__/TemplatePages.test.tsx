@@ -183,7 +183,8 @@ function application(document = template()): TemplateApplication {
       insertFunctionCall: vi.fn(),
       pruneFunctionResources: vi.fn(),
       validate: vi.fn(),
-      compile: vi.fn()
+      compile: vi.fn(),
+      preview: vi.fn()
     },
     functionLibraries: {
       local: {}
@@ -212,6 +213,75 @@ function createLibraryNode(
 }
 
 describe('Template pages', () => {
+  it('previews every timeline step in a vertical filmstrip', async () => {
+    const document = template()
+    const page = document.content.root.children[0]
+    if (page.type !== 'page') throw new Error('expected page')
+    page.name = '开场页面'
+    page.timeline = [
+      { type: 'play', text: { type: 'string', parts: [{ type: 'literal', value: '请听题' }] } },
+      { type: 'countdown', seconds: { type: 'number', source: 'literal', value: 3 } }
+    ]
+    const app = application(document)
+    vi.mocked(app.templates.preview).mockResolvedValue({
+      success: true,
+      preview: {
+        title: '听力模板',
+        pages: [
+          {
+            id: 'page:page-1',
+            sourceNodeId: 'page-1',
+            sourceNodeName: '开场页面',
+            callPath: [],
+            content: [
+              {
+                id: 'block:title',
+                type: 'text',
+                x: 10,
+                y: 10,
+                width: 80,
+                text: '请听题'
+              }
+            ],
+            timeline: [
+              { type: 'play', text: '请听题' },
+              { type: 'countdown', seconds: 3 }
+            ]
+          }
+        ],
+        recordingIndices: [],
+        resources: {}
+      },
+      resourceSources: []
+    })
+
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('tab', { name: '预览' }))
+
+    expect(await screen.findByRole('complementary', { name: '预览序列' })).toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: '函数库' })).not.toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: '预览配置' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '预览画面 1，TTS 播放' })).toHaveAttribute(
+      'aria-current',
+      'true'
+    )
+    expect(screen.getByRole('button', { name: '预览画面 2，倒计时' })).toBeInTheDocument()
+    expect(screen.getByLabelText('最终画面 1')).toHaveTextContent('请听题')
+
+    fireEvent.click(screen.getByRole('button', { name: '预览画面 2，倒计时' }))
+    expect(screen.getByLabelText('最终画面 2')).toBeInTheDocument()
+    expect(app.templates.preview).toHaveBeenCalledWith(document, [])
+  })
+
   it('没有 TTS 配置时仍允许生成不含播放动作的试卷', async () => {
     vi.mocked(listSpeechGenerationSelections).mockResolvedValueOnce([])
     const app = application()

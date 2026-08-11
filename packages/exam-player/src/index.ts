@@ -2,6 +2,8 @@
 
 export { ExamPlayer } from './ExamPlayer'
 export type { ExamPlayerProps } from './ExamPlayer'
+export { ExamPageView } from './ExamPageView'
+export type { ExamPageViewProps, ExamPageVisualStep } from './ExamPageView'
 export { ExamLoadError, loadExam, resourceKey } from './loading'
 export type { LoadedExam } from './loading'
 export {
