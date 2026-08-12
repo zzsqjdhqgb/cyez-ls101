@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { buildAIPrompt, buildVarManifest, buildInstanceFromJson } from '../conversions'
+import {
+  buildAIPrompt,
+  buildExposedInstance,
+  buildVarManifest,
+  buildInstanceFromJson
+} from '../conversions'
 import type { InterfaceDef, FieldCollection, FieldNode, FieldLeaf, FieldGroup } from '../types'
 import { asCollection, collection } from './fieldFixtures'
 
@@ -155,7 +160,10 @@ describe('buildVarManifest', () => {
         fields: { pic: imageLeaf('img1', '配图', '一只猫') }
       })
     )
-    expect(manifest.vars[0].type).toBe('image')
+    expect(manifest.vars.map(({ varName, type }) => ({ varName, type }))).toEqual([
+      { varName: 'img1.inst', type: 'text' },
+      { varName: 'img1.img', type: 'image' }
+    ])
   })
 
   it('多个叶子 → 按深度优先顺序排列', () => {
@@ -171,15 +179,27 @@ describe('buildVarManifest', () => {
         }
       })
     )
-    expect(manifest.vars).toHaveLength(4)
+    expect(manifest.vars).toHaveLength(5)
     // 深度优先：a, grp.b, grp.c, d
-    expect(manifest.vars.map((v) => v.path)).toEqual(['a', 'grp.b', 'grp.c', 'd'])
-    expect(manifest.vars.map((v) => v.varName)).toEqual(['va', 'vb', 'vc', 'vd'])
+    expect(manifest.vars.map((v) => v.path)).toEqual(['a', 'grp.b', 'grp.c', 'grp.c', 'd'])
+    expect(manifest.vars.map((v) => v.varName)).toEqual(['va', 'vb', 'vc.inst', 'vc.img', 'vd'])
   })
 
   it('空 fields → vars 为空数组', () => {
     const manifest = buildVarManifest(makeDef({ fields: {} }))
     expect(manifest.vars).toEqual([])
+  })
+})
+
+describe('buildExposedInstance', () => {
+  it('将图片字段拆成提示词和图片变量', () => {
+    const def = makeDef({ fields: { picture: imageLeaf('questionImage') } })
+    const instance = buildInstanceFromJson(def, { picture: '校园操场' })
+    instance.values.questionImage = 'questionImage.png'
+    expect(buildExposedInstance(def, instance).values).toEqual({
+      'questionImage.inst': '校园操场',
+      'questionImage.img': 'questionImage.png'
+    })
   })
 })
 

@@ -389,9 +389,12 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       varName: leaf.varName,
       prompt: imagePrompts[leaf.varName].trim()
     }))
+  const allImagePromptsFilled = leaves.every(
+    ({ leaf }) => leaf.type !== 'image' || Boolean(imagePrompts[leaf.varName]?.trim())
+  )
 
   const startImageGeneration = async (): Promise<void> => {
-    if (!selectedImageProvider || imageTargets.length === 0 || dirty) return
+    if (!selectedImageProvider || imageTargets.length === 0) return
 
     const controller = new AbortController()
     imageGenerationController.current = controller
@@ -537,6 +540,18 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   const imageGenerationRunning = imageGeneration?.status === 'running'
   const busy = saving || generationRunning || imageGenerationRunning || generatingImage !== null
   const hasImageFields = leaves.some(({ leaf }) => leaf.type === 'image')
+  const imagesComplete = leaves.every(({ leaf }) => {
+    if (leaf.type !== 'image') return true
+    const pending = pendingImages[leaf.varName]
+    const hasImage = Object.hasOwn(pendingImages, leaf.varName)
+      ? pending !== null
+      : Boolean(values[leaf.varName]?.trim())
+    return hasImage && Boolean(imagePrompts[leaf.varName]?.trim())
+  })
+  const exposedVariableCount = leaves.reduce(
+    (count, { leaf }) => count + (leaf.type === 'image' ? 2 : 1),
+    0
+  )
 
   const finishGeneration = (): void => {
     const openJson = generation?.result?.status === 'invalid-response'
@@ -591,14 +606,14 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
               saving ||
               generationRunning ||
               imageGenerationRunning ||
-              dirty ||
-              imageTargets.length === 0
+              imageTargets.length === 0 ||
+              !allImagePromptsFilled
             }
             title={
-              dirty
-                ? '请先保存当前修改'
+              !allImagePromptsFilled
+                ? '请填写所有图片字段的提示词'
                 : imageTargets.length === 0
-                  ? '没有已填写提示词的图片字段'
+                  ? '没有图片字段'
                   : undefined
             }
             onClick={toggleImageAIPanel}
@@ -608,7 +623,8 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
           <Button
             icon={Save}
             variant="primary"
-            disabled={!details || busy || !dirty}
+            disabled={!details || busy || !dirty || !imagesComplete}
+            title={!imagesComplete ? '图片字段的提示词和图片必须同时填写' : undefined}
             onClick={() => void save()}
           >
             保存
@@ -648,7 +664,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
             <div className={styles.fieldHeader}>
               <div>
                 <h2>内容字段</h2>
-                <span>{leaves.length} 个变量</span>
+                <span>{exposedVariableCount} 个变量</span>
               </div>
             </div>
 
@@ -662,7 +678,11 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
                       <span>
                         {leaf.type === 'image' ? <ImageIcon aria-hidden="true" /> : null}
                         <strong>{key}</strong>
-                        <code>[@{leaf.varName}]</code>
+                        <code>
+                          {leaf.type === 'image'
+                            ? `[@${leaf.varName}.inst] / [@${leaf.varName}.img]`
+                            : `[@${leaf.varName}]`}
+                        </code>
                       </span>
                       <small>{path.slice(0, -1).join(' / ')}</small>
                     </span>
@@ -766,7 +786,6 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
             />
           ) : panel === 'image-ai' ? (
             <ImageGenerationPane
-              dirty={dirty}
               imageProviderOptions={imageProviderOptions}
               selectedImageProvider={selectedImageProvider}
               imageProvidersLoading={imageProvidersLoading}
@@ -1075,7 +1094,6 @@ function AIGenerationPane({
 }
 
 function ImageGenerationPane({
-  dirty,
   imageProviderOptions,
   selectedImageProvider,
   imageProvidersLoading,
@@ -1089,7 +1107,6 @@ function ImageGenerationPane({
   onSelectImageProvider,
   onStart
 }: {
-  dirty: boolean
   imageProviderOptions: readonly InterfaceImageProviderOption[]
   selectedImageProvider: InterfaceImageProviderSelection | null
   imageProvidersLoading: boolean
@@ -1155,8 +1172,7 @@ function ImageGenerationPane({
                 !selectedImageProvider ||
                 targetCount === 0 ||
                 imageProvidersLoading ||
-                Boolean(imageProvidersError) ||
-                dirty
+                Boolean(imageProvidersError)
               }
               onClick={onStart}
             >
@@ -1175,8 +1191,7 @@ function ImageGenerationPane({
                 !selectedImageProvider ||
                 targetCount === 0 ||
                 imageProvidersLoading ||
-                Boolean(imageProvidersError) ||
-                dirty
+                Boolean(imageProvidersError)
               }
               onClick={onRetry}
             >

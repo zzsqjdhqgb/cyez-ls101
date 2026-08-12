@@ -1,6 +1,7 @@
 // @ls101/interface-editor - UI-independent Interface application API
 
 export { createInterfaceApplication, editInterfaceDraft } from './application'
+export { imageAssetVarName, imagePromptVarName } from './conversions'
 export type {
   InterfaceApplication,
   InterfaceApplicationDependencies,

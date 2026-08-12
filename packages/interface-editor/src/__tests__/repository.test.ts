@@ -942,21 +942,17 @@ describe('Interface application', () => {
     })
     expect(withPrompt.assetUrls[previousFilename]).toContain(previousFilename)
 
-    const withoutImage = await app.instances.save(def.id, blank.instance.instanceId, {
-      name: '图片题组',
-      values: withPrompt.instance.values,
-      imagePrompts: withPrompt.instance.imagePrompts,
-      imageFiles: { questionImage: null }
-    })
-
-    expect(withoutImage.instance.values.questionImage).toBe('')
-    expect(withoutImage.instance.imagePrompts).toEqual({
-      questionImage: '一名学生站在操场上'
-    })
-    expect(withoutImage.assetUrls).toEqual({})
+    await expect(
+      app.instances.save(def.id, blank.instance.instanceId, {
+        name: '图片题组',
+        values: withPrompt.instance.values,
+        imagePrompts: withPrompt.instance.imagePrompts,
+        imageFiles: { questionImage: null }
+      })
+    ).rejects.toThrow('提示词和图片必须同时填写')
     await expect(
       repository.readInstanceAsset(def.id, blank.instance.instanceId, previousFilename)
-    ).resolves.toBeNull()
+    ).resolves.toEqual(PNG_BYTES)
   })
 
   it('JSON 覆盖更新图片提示词但保留已绑定的图片值', async () => {

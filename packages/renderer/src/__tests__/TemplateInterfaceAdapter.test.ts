@@ -34,6 +34,14 @@ describe('Template Interface adapter', () => {
     if (published.status === 'invalid') throw new Error('expected valid Interface content')
     const interfaceId = published.interface.interfaceId
     const instance = await application.published.createBlankInstance(interfaceId)
+    const saved = await application.instances.save(interfaceId, instance.instance.instanceId, {
+      name: '完整题组',
+      values: instance.instance.values,
+      imagePrompts: { secondValue: '操场上的学生' },
+      imageFiles: {
+        secondValue: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+      }
+    })
     const adapter = createTemplateInterfaceDependencies(application)
 
     await expect(adapter.listInterfaceManifests()).resolves.toEqual([
@@ -42,7 +50,14 @@ describe('Template Interface adapter', () => {
         interfaceName: '有序题型',
         vars: [
           {
-            varName: 'secondValue',
+            varName: 'secondValue.inst',
+            type: 'text',
+            description: '第二项（图片提示词）',
+            example: 'B',
+            path: 'second'
+          },
+          {
+            varName: 'secondValue.img',
             type: 'image',
             description: '第二项',
             example: 'B',
@@ -61,15 +76,28 @@ describe('Template Interface adapter', () => {
     await expect(adapter.getInterfaceManifest(interfaceId)).resolves.toMatchObject({
       interfaceId,
       vars: [
-        { varName: 'secondValue', type: 'image', path: 'second' },
+        { varName: 'secondValue.inst', type: 'text', path: 'second' },
+        { varName: 'secondValue.img', type: 'image', path: 'second' },
         { varName: 'firstValue', type: 'text', path: 'first' }
       ]
     })
-    await expect(adapter.locateInterfaceInstance(instance.instance.instanceId)).resolves.toEqual({
-      interfaceId,
-      instance: instance.instance,
-      assetUrls: {}
-    })
+    await expect(adapter.locateInterfaceInstance(saved.instance.instanceId)).resolves.toMatchObject(
+      {
+        interfaceId,
+        instance: {
+          values: {
+            firstValue: '',
+            'secondValue.inst': '操场上的学生',
+            'secondValue.img': expect.stringMatching(/^secondValue-.*\.png$/)
+          }
+        },
+        assetUrls: expect.objectContaining({
+          [saved.instance.values.secondValue]: expect.stringContaining(
+            saved.instance.values.secondValue
+          )
+        })
+      }
+    )
   })
 
   it('returns null for unknown Interface and instance IDs', async () => {

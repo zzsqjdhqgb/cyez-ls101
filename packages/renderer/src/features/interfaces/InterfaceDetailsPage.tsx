@@ -310,7 +310,12 @@ function DefinitionTree({ fields }: { fields: FieldCollection }): JSX.Element {
         >
           <span className={styles.fieldKind}>{node.type === 'group' ? '组' : node.type}</span>
           <strong>{key}</strong>
-          {node.type !== 'group' ? <code>[@{node.varName}]</code> : null}
+          {node.type === 'text' ? <code>[@{node.varName}]</code> : null}
+          {node.type === 'image' ? (
+            <code>
+              [@{node.varName}.inst] / [@{node.varName}.img]
+            </code>
+          ) : null}
           {node.type !== 'group' ? <span>{node.description}</span> : null}
         </div>
       ))}

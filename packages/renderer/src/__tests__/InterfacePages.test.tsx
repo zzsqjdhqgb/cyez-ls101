@@ -840,14 +840,7 @@ describe('Interface pages', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '移除图片' }))
     expect(screen.getByDisplayValue('新的图片提示词')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '保存' }))
-    await waitFor(() => expect(save).toHaveBeenCalledTimes(3))
-    expect(save).toHaveBeenLastCalledWith(interfaceId, instanceId, {
-      name: '图片题组',
-      values: { questionImage: 'questionImage-saved.png' },
-      imagePrompts: { questionImage: '新的图片提示词' },
-      imageFiles: { questionImage: null }
-    })
+    expect(screen.getByRole('button', { name: '保存' })).toBeDisabled()
     expect(screen.queryByAltText('picture预览')).not.toBeInTheDocument()
     expect(screen.getByDisplayValue('新的图片提示词')).toBeInTheDocument()
     expect(createObjectURL).toHaveBeenCalledTimes(2)
@@ -863,6 +856,15 @@ describe('Interface pages', () => {
       'src',
       'blob:generated-preview'
     )
+    expect(screen.getByRole('button', { name: '保存' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(3))
+    expect(save).toHaveBeenLastCalledWith(interfaceId, instanceId, {
+      name: '图片题组',
+      values: { questionImage: 'questionImage-saved.png' },
+      imagePrompts: { questionImage: '新的图片提示词' },
+      imageFiles: { questionImage: generatedBytes }
+    })
   })
 
   it('generates prompted images sequentially and saves them as one replacement', async () => {
@@ -906,7 +908,11 @@ describe('Interface pages', () => {
           secondImage: 'second-old.png',
           thirdImage: 'third-old.png'
         },
-        imagePrompts: { firstImage: '山的提示词', secondImage: '海的提示词' }
+        imagePrompts: {
+          firstImage: '山的提示词',
+          secondImage: '海的提示词',
+          thirdImage: '森林的提示词'
+        }
       },
       assetUrls: {
         'first-old.png': 'asset://local/first-old.png',
@@ -916,6 +922,7 @@ describe('Interface pages', () => {
     }
     const firstImage = new Uint8Array([1, 2, 3])
     const secondImage = new Uint8Array([4, 5, 6])
+    const thirdImage = new Uint8Array([7, 8, 9])
     let resolveFirst!: (data: Uint8Array) => void
     const firstPending = new Promise<Uint8Array>((resolve) => {
       resolveFirst = resolve
@@ -924,6 +931,7 @@ describe('Interface pages', () => {
       .fn()
       .mockReturnValueOnce(firstPending)
       .mockResolvedValueOnce(secondImage)
+      .mockResolvedValueOnce(thirdImage)
     const saved = {
       ...initial,
       instance: {
@@ -981,8 +989,12 @@ describe('Interface pages', () => {
     expect(generateImage).toHaveBeenCalledTimes(1)
 
     resolveFirst(firstImage)
-    await waitFor(() => expect(generateImage).toHaveBeenCalledTimes(2))
-    expect(generateImage).toHaveBeenLastCalledWith('海的提示词', {
+    await waitFor(() => expect(generateImage).toHaveBeenCalledTimes(3))
+    expect(generateImage).toHaveBeenNthCalledWith(2, '海的提示词', {
+      signal: expect.any(AbortSignal),
+      provider: { providerId: 'image-api', modelId: 'image-1' }
+    })
+    expect(generateImage).toHaveBeenNthCalledWith(3, '森林的提示词', {
       signal: expect.any(AbortSignal),
       provider: { providerId: 'image-api', modelId: 'image-1' }
     })
@@ -991,7 +1003,7 @@ describe('Interface pages', () => {
       name: '批量生图题组',
       values: initial.instance.values,
       imagePrompts: initial.instance.imagePrompts,
-      imageFiles: { firstImage, secondImage }
+      imageFiles: { firstImage, secondImage, thirdImage }
     })
     expect(await screen.findByText('生图完成')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '完成' })).toBeInTheDocument()

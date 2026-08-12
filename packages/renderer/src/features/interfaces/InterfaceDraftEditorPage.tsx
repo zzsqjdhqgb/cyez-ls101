@@ -284,7 +284,10 @@ export function InterfaceDraftEditorPage(): JSX.Element {
                         {node.type === 'group' ? '组' : node.type}
                       </span>
                       <strong>{key}</strong>
-                      {node.type !== 'group' && node.varName ? <code>{node.varName}</code> : null}
+                      {node.type === 'text' && node.varName ? <code>{node.varName}</code> : null}
+                      {node.type === 'image' && node.varName ? (
+                        <code>{node.varName}.inst / .img</code>
+                      ) : null}
                     </button>
                   )
                 })}

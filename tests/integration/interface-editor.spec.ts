@@ -627,7 +627,12 @@ test('IE-02 generates text and images atomically through the real pipelines', as
     model: 'mock-json-image',
     stream: true
   })
-  expect(mockServer.findRequest('/v1/images/generations')?.body).toMatchObject({
+  expect(
+    mockServer
+      .allRequests()
+      .filter((request) => request.path === '/v1/images/generations')
+      .at(-1)?.body
+  ).toMatchObject({
     model: 'mock-image',
     prompt: 'A green circle icon'
   })
@@ -989,8 +994,6 @@ test('IE-15 drives the standalone AI image panel end to end', async () => {
   const interfaceId = await seedInterface(imageInterface)
   await openInstanceEditor(interfaceId, imageInterface.name)
   await page.getByLabel('picture图片提示词').fill('A green circle icon')
-  await page.getByRole('button', { name: '保存' }).click()
-  await expect(page.getByText('题组已保存')).toBeVisible()
 
   await page.getByRole('button', { name: 'AI 生图' }).click()
   const panel = page.getByLabel('AI 生图', { exact: true })
@@ -1026,11 +1029,19 @@ test('IE-16 installs the bundled Shanghai speaking Interface on first launch', a
 })
 
 test('IE-17 manages a bundled instance and copies the builtin to a draft', async () => {
+  await saveTextProvider(textProvider('ie-builtin-manage-text', 'mock-json-shanghai'))
+  await saveImageProvider(imageProvider('ie-builtin-manage-image', 'mock-image'))
   await page.getByRole('link', { name: '题型' }).click()
   await page.getByRole('button', { name: '上海高考英语口语', exact: true }).click()
   await expect(page.getByText('内置题型', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: '新建题组' }).click()
+  await page.getByRole('button', { name: 'AI 生成' }).click()
+  await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-shanghai' })
+  await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await page.getByRole('button', { name: '开始生成' }).click()
+  await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 30_000 })
+  await page.getByRole('button', { name: '完成' }).click()
   await page.getByLabel('题组名称').fill('上海内置回归题组')
   await page.getByLabel('sentence1 内容').fill('A saved sentence from the bundled Interface.')
   await page.getByRole('button', { name: '保存' }).click()
@@ -1069,10 +1080,17 @@ test('IE-17 manages a bundled instance and copies the builtin to a draft', async
 })
 
 test('IE-18 generates and persists an image in a bundled picture field', async () => {
+  await saveTextProvider(textProvider('ie-builtin-image-text', 'mock-json-shanghai'))
   await saveImageProvider(imageProvider('ie-builtin-image', 'mock-image'))
   await page.getByRole('link', { name: '题型' }).click()
   await page.getByRole('button', { name: '上海高考英语口语', exact: true }).click()
   await page.getByRole('button', { name: '新建题组' }).click()
+  await page.getByRole('button', { name: 'AI 生成' }).click()
+  await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-shanghai' })
+  await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await page.getByRole('button', { name: '开始生成' }).click()
+  await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 30_000 })
+  await page.getByRole('button', { name: '完成' }).click()
   await page.getByLabel('题组名称').fill('内置图片题组')
 
   const pictureField = page
@@ -1086,7 +1104,12 @@ test('IE-18 generates and persists an image in a bundled picture field', async (
   await pictureField.getByRole('button', { name: '生成图片' }).click()
   await expect(page.getByText('图片已生成，请保存题组')).toBeVisible({ timeout: 15_000 })
   await expect(page.getByAltText('picture1预览')).toBeVisible()
-  expect(mockServer.findRequest('/v1/images/generations')?.body).toMatchObject({
+  expect(
+    mockServer
+      .allRequests()
+      .filter((request) => request.path === '/v1/images/generations')
+      .at(-1)?.body
+  ).toMatchObject({
     model: 'mock-image',
     prompt: 'A clean educational illustration of a park.'
   })
@@ -1099,7 +1122,7 @@ test('IE-18 generates and persists an image in a bundled picture field', async (
     'A clean educational illustration of a park.'
   )
   await expect(page.getByAltText('picture1预览')).toBeVisible()
-  await expectRenderedAssetsToLoad(1)
+  await expectRenderedAssetsToLoad(4)
 
   const instanceIds = await listFileStoreScopes([
     'interfaces',
@@ -1123,13 +1146,12 @@ test('IE-18 generates and persists an image in a bundled picture field', async (
     instance: { values: Record<string, string>; imagePrompts?: Record<string, string> }
     assets: string[]
   }>(instanceScope, 'instance.json')
-  expect(stored).toMatchObject({
-    instance: {
-      imagePrompts: { picture_file1: 'A clean educational illustration of a park.' }
-    },
-    assets: [expect.stringMatching(/^picture_file1-[0-9a-f-]+\.png$/)]
+  expect(stored?.instance.imagePrompts).toMatchObject({
+    picture_file1: 'A clean educational illustration of a park.'
   })
-  expect(stored?.instance.values.picture_file1).toBe(stored?.assets[0])
+  expect(stored?.assets).toHaveLength(4)
+  expect(stored?.instance.values.picture_file1).toMatch(/^picture_file1-[0-9a-f-]+\.png$/)
+  expect(stored?.assets).toContain(stored?.instance.values.picture_file1)
   await expect(listFileStoreScopes(instanceScope)).resolves.toEqual([])
   await expect(
     page.evaluate(

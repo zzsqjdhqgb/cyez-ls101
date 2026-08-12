@@ -65,14 +65,58 @@ export function buildVarManifest(def: InterfaceDef): InterfaceVarManifest {
   return {
     interfaceId: def.id,
     interfaceName: def.name,
-    vars: flattenFields(def.fields).map(({ path, leaf }) => ({
-      varName: leaf.varName,
-      type: leaf.type,
-      description: leaf.description,
-      example: leaf.example,
-      path
-    }))
+    vars: flattenFields(def.fields).flatMap(({ path, leaf }) =>
+      leaf.type === 'image'
+        ? [
+            {
+              varName: imagePromptVarName(leaf.varName),
+              type: 'text' as const,
+              description: `${leaf.description}（图片提示词）`,
+              example: leaf.example,
+              path
+            },
+            {
+              varName: imageAssetVarName(leaf.varName),
+              type: 'image' as const,
+              description: leaf.description,
+              example: leaf.example,
+              path
+            }
+          ]
+        : [
+            {
+              varName: leaf.varName,
+              type: 'text' as const,
+              description: leaf.description,
+              example: leaf.example,
+              path
+            }
+          ]
+    )
   }
+}
+
+export function imagePromptVarName(varName: string): string {
+  return `${varName}.inst`
+}
+
+export function imageAssetVarName(varName: string): string {
+  return `${varName}.img`
+}
+
+/** Build the value map consumed by Template without changing Interface editor storage. */
+export function buildExposedInstance(
+  def: InterfaceDef,
+  instance: InterfaceInstance
+): InterfaceInstance {
+  const values = { ...instance.values }
+  for (const { leaf } of flattenFields(def.fields)) {
+    if (leaf.type !== 'image') continue
+    delete values[leaf.varName]
+    values[imagePromptVarName(leaf.varName)] = instance.imagePrompts?.[leaf.varName] ?? ''
+    values[imageAssetVarName(leaf.varName)] = instance.values[leaf.varName] ?? ''
+  }
+  return { ...instance, values }
 }
 
 // ============================================================
