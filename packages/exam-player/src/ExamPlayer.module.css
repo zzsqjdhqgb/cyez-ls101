@@ -5,8 +5,9 @@
   inset: 0;
   display: block;
   overflow: hidden;
-  color: #f4f7f6;
-  background: #050606;
+  color: #17211f;
+  background: #e8eeec;
+  color-scheme: light;
   font-family: Inter, 'Segoe UI', 'Microsoft YaHei', sans-serif;
 }
 
@@ -18,8 +19,8 @@
   height: 800px;
   overflow: hidden;
   transform-origin: center;
-  color: #f4f7f6;
-  background: #101414;
+  color: #17211f;
+  background: #f8faf9;
 }
 
 .examLayout {
@@ -35,11 +36,12 @@
   height: 720px;
   overflow: hidden;
   place-items: center;
-  background: #0b0e0e;
+  background: #e8eeec;
 }
 
 .pageHost {
   flex: 0 0 auto;
+  box-shadow: 0 8px 26px rgb(35 56 52 / 12%);
   transform: scale(0.9);
   transform-origin: center;
 }
@@ -50,13 +52,13 @@
   align-items: center;
   gap: 24px;
   padding: 0 24px;
-  border-top: 1px solid #303a38;
+  border-top: 1px solid #d4ddda;
   box-sizing: border-box;
-  background: #171c1b;
+  background: #ffffff;
 }
 
 .examPosition {
-  color: #96a29f;
+  color: #65736f;
   font-size: 16px;
 }
 
@@ -78,18 +80,18 @@
   height: 8px;
   overflow: hidden;
   border-radius: 4px;
-  background: #394240;
+  background: #dce5e2;
 }
 
 .progressTrack span {
   display: block;
   height: 100%;
-  background: #4da49d;
+  background: #238d84;
 }
 
 .remaining {
   min-width: 52px;
-  color: #f2c86b;
+  color: #9a660b;
   font-size: 19px;
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -102,10 +104,10 @@
   gap: 8px;
   min-width: 104px;
   padding: 10px 16px;
-  border: 1px solid #596260;
+  border: 1px solid #b9c5c1;
   border-radius: 4px;
-  color: #e4e9e8;
-  background: #252c2b;
+  color: #26322f;
+  background: #f7f9f8;
   cursor: pointer;
   font: 600 15px/1 inherit;
 }
@@ -113,6 +115,11 @@
 .exitButton svg {
   width: 17px;
   height: 17px;
+}
+
+.exitButton:hover {
+  border-color: #8da09a;
+  background: #edf2f0;
 }
 
 .exitSpacer {
@@ -127,12 +134,12 @@
   left: 50%;
   width: 520px;
   padding: 42px;
-  border: 1px solid #3c4745;
+  border: 1px solid #d0dad7;
   border-radius: 6px;
-  box-shadow: 0 22px 60px rgb(0 0 0 / 35%);
+  box-shadow: 0 22px 60px rgb(36 55 51 / 16%);
   box-sizing: border-box;
   transform: translate(-50%, -50%);
-  background: #171c1b;
+  background: #ffffff;
 }
 
 .formPanel {
@@ -141,7 +148,7 @@
 }
 
 .eyebrow {
-  color: #70bdb6;
+  color: #197b73;
   font-size: 13px;
   font-weight: 700;
 }
@@ -150,7 +157,7 @@
 .micPanel h1,
 .messageScreen h1 {
   margin: 0;
-  color: #f7f9f8;
+  color: #17211f;
   font-size: 30px;
   letter-spacing: 0;
 }
@@ -159,7 +166,7 @@
 .micPanel label {
   display: grid;
   gap: 8px;
-  color: #b7c0be;
+  color: #52615d;
   font-size: 14px;
 }
 
@@ -167,27 +174,27 @@
 .micPanel select {
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid #4a5653;
+  border: 1px solid #b9c6c2;
   border-radius: 4px;
   box-sizing: border-box;
   outline: none;
-  color: #f4f7f6;
-  background: #0f1313;
+  color: #17211f;
+  background: #ffffff;
   font: 17px/1.4 inherit;
 }
 
 .formPanel input:focus,
 .micPanel select:focus {
-  border-color: #5db6ae;
-  box-shadow: 0 0 0 3px rgb(77 164 157 / 20%);
+  border-color: #238d84;
+  box-shadow: 0 0 0 3px rgb(35 141 132 / 16%);
 }
 
 .formError {
   margin: 0;
   padding: 10px 12px;
-  border-left: 3px solid #e17070;
-  color: #f1aaaa;
-  background: #291a1a;
+  border-left: 3px solid #c74747;
+  color: #9d2f2f;
+  background: #fff1f1;
   font-size: 14px;
 }
 
@@ -214,15 +221,24 @@
   font: 650 15px/1.2 inherit;
 }
 
+.primaryButton:hover:not(:disabled) {
+  background: #126d66;
+}
+
+.secondaryButton:hover:not(:disabled) {
+  border-color: #8da09a;
+  background: #edf2f0;
+}
+
 .primaryButton {
-  color: #07100f;
-  background: #70c8c0;
+  color: #ffffff;
+  background: #197f77;
 }
 
 .secondaryButton {
-  border-color: #4a5553;
-  color: #dce3e1;
-  background: #252c2b;
+  border-color: #b9c5c1;
+  color: #26322f;
+  background: #f7f9f8;
 }
 
 .primaryButton:disabled,
@@ -249,7 +265,7 @@
 .micPanel p,
 .messageScreen p {
   margin: 12px 0 24px;
-  color: #aeb8b5;
+  color: #60706c;
   font-size: 16px;
   line-height: 1.6;
   white-space: pre-wrap;
@@ -260,11 +276,11 @@
   width: 54px;
   height: 54px;
   margin: 0 auto 18px;
-  border: 1px solid #3f6662;
+  border: 1px solid #9ecbc6;
   border-radius: 50%;
   place-items: center;
-  color: #84d2ca;
-  background: #172725;
+  color: #197f77;
+  background: #e8f5f3;
 }
 
 .micIcon svg {
@@ -285,12 +301,12 @@
   width: 46px;
   height: 46px;
   margin-bottom: 18px;
-  color: #e7bc62;
+  color: #a66d09;
 }
 
 .messageScreen[data-error] > svg,
 .messageScreen[data-error] h1 {
-  color: #ed8d8d;
+  color: #b93636;
 }
 
 .confirmBackdrop {
@@ -299,24 +315,24 @@
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgb(0 0 0 / 66%);
+  background: rgb(24 35 32 / 46%);
 }
 
 .confirmDialog {
   width: 440px;
   padding: 34px;
-  border: 1px solid #56615f;
+  border: 1px solid #c8d2cf;
   border-radius: 6px;
-  box-shadow: 0 24px 80px rgb(0 0 0 / 50%);
+  box-shadow: 0 24px 80px rgb(24 35 32 / 24%);
   box-sizing: border-box;
   text-align: center;
-  background: #1b211f;
+  background: #ffffff;
 }
 
 .confirmDialog > svg {
   width: 38px;
   height: 38px;
-  color: #e7bc62;
+  color: #a66d09;
 }
 
 .confirmDialog h2 {
@@ -326,7 +342,7 @@
 
 .confirmDialog p {
   margin: 0 0 24px;
-  color: #aeb8b5;
+  color: #60706c;
 }
 
 .confirmDialog div {

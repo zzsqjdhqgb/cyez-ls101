@@ -5,9 +5,9 @@
   height: 800px;
   contain: layout paint style;
   isolation: isolate;
-  color: #f4f7f6;
-  background: #151a1a;
-  color-scheme: dark;
+  color: #17211f;
+  background: #ffffff;
+  color-scheme: light;
   font-family: Inter, 'Segoe UI', 'Microsoft YaHei', sans-serif;
   letter-spacing: 0;
   text-rendering: optimizeLegibility;
@@ -28,13 +28,13 @@ input {
 
 button:focus-visible,
 input:focus-visible {
-  outline: 2px solid rgb(88 166 160 / 45%);
+  outline: 2px solid rgb(35 141 132 / 42%);
   outline-offset: 2px;
 }
 
 ::selection {
-  color: #071211;
-  background: #8fc5c0;
+  color: #ffffff;
+  background: #238d84;
 }
 
 .page {
@@ -42,8 +42,8 @@ input:focus-visible {
   width: 1200px;
   height: 800px;
   overflow: hidden;
-  color: #f4f7f6;
-  background: #151a1a;
+  color: #17211f;
+  background: #ffffff;
 }
 
 .textBlock,
@@ -71,8 +71,8 @@ input:focus-visible {
 
 .choiceBlock {
   overflow: hidden;
-  border: 1px solid #3c4745;
-  background: #111616;
+  border: 1px solid #cbd6d2;
+  background: #fbfcfc;
 }
 
 .choiceView {
@@ -93,14 +93,14 @@ input:focus-visible {
 .choiceQuestion {
   margin: 0 0 12px;
   padding: 12px;
-  border: 1px solid #3c4745;
+  border: 1px solid #d3ddda;
   border-radius: 4px;
-  color: #e7edeb;
+  color: #1d2926;
 }
 
 .choiceQuestion[data-focused] {
-  border-color: #58a6a0;
-  background: #192624;
+  border-color: #238d84;
+  background: #eaf6f4;
 }
 
 .choiceQuestion legend {
@@ -122,25 +122,25 @@ input:focus-visible {
   gap: 8px;
   padding: 6px 8px;
   border-radius: 4px;
-  color: #d4dcda;
+  color: #33413d;
   cursor: pointer;
   font-size: 16px;
   line-height: 1.4;
 }
 
 .choiceOption:hover {
-  background: #202827;
+  background: #edf4f2;
 }
 
 .choiceOption input {
   width: 17px;
   height: 17px;
   margin: 2px 0 0;
-  accent-color: #4da49d;
+  accent-color: #197f77;
 }
 
 .optionLabel {
-  color: #8fc5c0;
+  color: #197f77;
   font-weight: 700;
 }
 
@@ -149,8 +149,8 @@ input:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  border-top: 1px solid #303a38;
-  color: #aeb9b7;
+  border-top: 1px solid #d3ddda;
+  color: #60706c;
   font-size: 14px;
 }
 
@@ -159,17 +159,23 @@ input:focus-visible {
   width: 32px;
   height: 32px;
   padding: 0;
-  border: 1px solid #45514f;
+  border: 1px solid #b9c6c2;
   border-radius: 4px;
   place-items: center;
-  color: #e6ecea;
-  background: #202625;
+  color: #26322f;
+  background: #ffffff;
   cursor: pointer;
 }
 
 .choiceNavigation button:disabled {
   opacity: 0.35;
   cursor: default;
+}
+
+.choiceNavigation button:hover:not(:disabled) {
+  border-color: #7ca9a3;
+  color: #126d66;
+  background: #edf5f3;
 }
 
 .choiceNavigation svg {
