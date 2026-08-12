@@ -1004,6 +1004,7 @@ function AIGenerationPane({
         ) : null}
         {session ? (
           <div className={styles.generationContent}>
+            {session.result?.status === 'failed' ? <GenerationResult session={session} /> : null}
             {session.handle ? <GenerationProgress handle={session.handle} /> : null}
             {!session.handle && !finished ? (
               <div className={styles.generationStarting} role="status">
@@ -1014,7 +1015,9 @@ function AIGenerationPane({
                 </div>
               </div>
             ) : null}
-            {finished ? <GenerationResult session={session} /> : null}
+            {finished && session.result?.status !== 'failed' ? (
+              <GenerationResult session={session} />
+            ) : null}
           </div>
         ) : null}
       </div>
