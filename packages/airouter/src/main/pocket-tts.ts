@@ -57,19 +57,42 @@ export class PocketTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     const synthesisParameters = recordValue(parameters.synthesis)
     const loadParameters = recordValue(parameters.load)
     const sampleRate = numberValue(audioParameters.sampleRate) ?? 24000
-    const session = await this.acquireSession(request, model, weights, tokenizer, {
+    const runtimeParameters = {
       quantization: stringValue(loadParameters.quantization) ?? 'f32',
       sampleRate,
       maxTokensPerChunk: numberValue(synthesisParameters.maxTokensPerChunk) ?? 50,
       silenceBetweenChunksMs: numberValue(synthesisParameters.silenceBetweenChunksMs) ?? 200,
       temperature: numberValue(synthesisParameters.temperature) ?? 0.7,
+      maxFramesPerChunk: numberValue(synthesisParameters.maxFramesPerChunk) ?? 1200,
+      synthesisTimeoutMs: numberValue(synthesisParameters.synthesisTimeoutMs) ?? 120_000,
       padShortInputs: Boolean(synthesisParameters.padShortInputs),
       removeSemicolons: Boolean(synthesisParameters.removeSemicolons)
-    })
+    }
+    const session = await this.acquireSession(request, model, weights, tokenizer, runtimeParameters)
     const requestId = crypto.randomUUID()
+    const startedAt = Date.now()
+    const summary = summarizeText(request.text)
+    console.info(
+      `[Pocket TTS ${requestId}] dispatching request: model=${request.modelId}, voice=${request.voiceId}, timeout=${runtimeParameters.synthesisTimeoutMs}ms, text="${summary}"`
+    )
     return new Promise<AIRouterGeneratedAudio>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        const pending = session.pending.get(requestId)
+        if (!pending) return
+        console.error(
+          `[Pocket TTS ${requestId}] request timed out after ${runtimeParameters.synthesisTimeoutMs}ms; terminating Worker`
+        )
+        pending.reject(
+          new Error(
+            `Pocket TTS 合成超时（${Math.ceil(runtimeParameters.synthesisTimeoutMs / 1000)} 秒），Worker 已终止`
+          )
+        )
+        this.terminate(session, requestId)
+      }, runtimeParameters.synthesisTimeoutMs)
       const abort = (): void => {
+        clearTimeout(timeout)
         request.signal?.removeEventListener('abort', abort)
+        console.warn(`[Pocket TTS ${requestId}] request aborted after ${Date.now() - startedAt}ms`)
         this.terminate(session, requestId)
         reject(new DOMException('Speech synthesis was aborted', 'AbortError'))
       }
@@ -80,11 +103,19 @@ export class PocketTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
       request.signal?.addEventListener('abort', abort, { once: true })
       session.pending.set(requestId, {
         resolve: (audio) => {
+          clearTimeout(timeout)
           request.signal?.removeEventListener('abort', abort)
+          console.info(
+            `[Pocket TTS ${requestId}] result received after ${Date.now() - startedAt}ms, bytes=${audio.data.byteLength}`
+          )
           resolve(audio)
         },
         reject: (error) => {
+          clearTimeout(timeout)
           request.signal?.removeEventListener('abort', abort)
+          console.error(
+            `[Pocket TTS ${requestId}] request rejected after ${Date.now() - startedAt}ms: ${errorMessage(error)}`
+          )
           reject(error)
         }
       })
@@ -114,6 +145,8 @@ export class PocketTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
       maxTokensPerChunk: number
       silenceBetweenChunksMs: number
       temperature: number
+      maxFramesPerChunk: number
+      synthesisTimeoutMs: number
       padShortInputs: boolean
       removeSemicolons: boolean
     }
@@ -230,6 +263,15 @@ function pocketTtsRequestError(error: unknown, request: AIRouterLocalSpeechReque
     `Pocket TTS 合成失败（模型 ${request.modelId}，音色 ${request.voiceId}，文本“${summary}”）：${message}`,
     { cause: error }
   )
+}
+
+function summarizeText(text: string): string {
+  const normalized = text.replace(/\s+/g, ' ').trim()
+  return normalized.length > 80 ? `${normalized.slice(0, 77)}...` : normalized
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 function resolveRuntimePaths(): { pttsWasmJsPath: string; wasmBinaryPath: string } {

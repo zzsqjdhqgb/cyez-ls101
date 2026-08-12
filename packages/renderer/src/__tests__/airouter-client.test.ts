@@ -31,7 +31,7 @@ describe('AIRouter renderer client', () => {
       { type: 'output', delta: 'A' },
       { type: 'reasoning', delta: 'B' }
     ])
-    expect(cancel).toHaveBeenCalled()
+    expect(cancel).toHaveBeenCalledOnce()
   })
 
   it('ends a pending stream when the caller aborts', async () => {
@@ -55,7 +55,7 @@ describe('AIRouter renderer client', () => {
     controller.abort()
 
     await expect(next).resolves.toEqual({ value: undefined, done: true })
-    expect(cancel).toHaveBeenCalled()
+    expect(cancel).toHaveBeenCalledTimes(2)
   })
 
   it('returns image bytes from a one-shot IPC generation', async () => {
@@ -79,7 +79,7 @@ describe('AIRouter renderer client', () => {
         prompt: 'prompt'
       })
     ).resolves.toEqual({ data: new Uint8Array([1, 2, 3]), mediaType: 'image/png' })
-    expect(cancel).toHaveBeenCalled()
+    expect(cancel).toHaveBeenCalledOnce()
   })
 
   it('rejects a pending image generation with AbortError', async () => {
@@ -93,7 +93,7 @@ describe('AIRouter renderer client', () => {
     controller.abort()
 
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
-    expect(cancel).toHaveBeenCalled()
+    expect(cancel).toHaveBeenCalledOnce()
   })
 
   it('returns speech audio from a one-shot IPC generation', async () => {

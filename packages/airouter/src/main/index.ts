@@ -221,15 +221,46 @@ async function speechToRenderer(
   request: AIRouterSpeechSynthesisRequest,
   signal: AbortSignal
 ): Promise<void> {
+  const startedAt = Date.now()
+  const summary = summarizeSpeechRequest(request)
+  console.info(`[AIRouter Speech ${requestId}] request received: ${summary}`)
   const send = (event: AIRouterSpeechSynthesisEvent): void => {
-    if (!sender.isDestroyed()) sender.send(AIROUTER_CHANNELS.speechSynthesisEvent, requestId, event)
+    if (sender.isDestroyed()) {
+      console.warn(`[AIRouter Speech ${requestId}] renderer destroyed before ${event.type} event`)
+      return
+    }
+    sender.send(AIROUTER_CHANNELS.speechSynthesisEvent, requestId, event)
+    console.info(`[AIRouter Speech ${requestId}] ${event.type} event sent to renderer`)
   }
   try {
     const audio = await service.synthesizeSpeech(request, { signal })
-    if (!signal.aborted) send({ type: 'result', audio })
+    if (!signal.aborted) {
+      console.info(
+        `[AIRouter Speech ${requestId}] completed in ${Date.now() - startedAt}ms, bytes=${audio.data.byteLength}`
+      )
+      send({ type: 'result', audio })
+    } else {
+      console.warn(`[AIRouter Speech ${requestId}] completed after abort`)
+    }
   } catch (error) {
-    if (!signal.aborted) send({ type: 'error', message: errorMessage(error) })
+    if (!signal.aborted) {
+      console.error(
+        `[AIRouter Speech ${requestId}] failed after ${Date.now() - startedAt}ms: ${errorMessage(error)}`
+      )
+      send({ type: 'error', message: errorMessage(error) })
+    } else {
+      console.warn(`[AIRouter Speech ${requestId}] aborted after ${Date.now() - startedAt}ms`)
+    }
   }
+}
+
+function summarizeSpeechRequest(request: AIRouterSpeechSynthesisRequest): string {
+  const text = request.text.replace(/\s+/g, ' ').trim()
+  const summary = text.length > 80 ? `${text.slice(0, 77)}...` : text
+  const roles = ['default', 'man', 'woman'].filter(
+    (role) => request.routing?.[role as keyof typeof request.routing]
+  )
+  return `chars=${request.text.length}, roles=${roles.join(',')}, text="${summary}"`
 }
 
 function errorMessage(error: unknown): string {

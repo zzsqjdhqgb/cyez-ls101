@@ -45,31 +45,51 @@ export async function generateExamArchive(
   input: GenerateExamInput,
   dependencies: GenerateExamDependencies = defaultDependencies
 ): Promise<'exported' | 'cancelled'> {
+  const startedAt = Date.now()
   const speech = input.speech
+  console.info(
+    `[Template Exam Generation] compile started: template=${input.templateId}, speech=${Boolean(speech)}`
+  )
   const result = await input.application.templates.compile(
     input.templateId,
     input.bindings,
     speech
       ? {
           async synthesizeSpeech(text) {
+            const speechStartedAt = Date.now()
+            console.info(
+              `[Template Exam Generation] TTS requested: chars=${text.length}, text="${summarizeText(text)}"`
+            )
             const audio = await dependencies.speechClient.synthesizeSpeech({
               text,
               routing: speech,
               format: 'wav'
             })
+            console.info(
+              `[Template Exam Generation] TTS completed in ${Date.now() - speechStartedAt}ms, bytes=${audio.data.byteLength}`
+            )
             return { data: audio.data, mediaType: audio.mediaType }
           }
         }
       : undefined
+  )
+  console.info(
+    `[Template Exam Generation] compile returned after ${Date.now() - startedAt}ms: success=${result.success}`
   )
   if (!result.success) {
     throw new Error(formatCompileErrors(result.errors))
   }
 
   const resources: Record<string, Uint8Array> = {}
+  console.info(
+    `[Template Exam Generation] collecting ${result.resourceSources.length} resource source(s)`
+  )
   for (const source of result.resourceSources) {
     if ('data' in source) {
       resources[source.assetKey] = source.data
+      console.info(
+        `[Template Exam Generation] collected generated resource ${source.assetKey}, bytes=${source.data.byteLength}`
+      )
       continue
     }
     const response = await dependencies.fetchResource(source.sourceUrl)
@@ -77,14 +97,23 @@ export async function generateExamArchive(
       throw new Error(`资源加载失败：${source.assetKey}（HTTP ${response.status}）`)
     }
     resources[source.assetKey] = new Uint8Array(await response.arrayBuffer())
+    console.info(
+      `[Template Exam Generation] fetched resource ${source.assetKey}, bytes=${resources[source.assetKey].byteLength}`
+    )
   }
 
+  console.info('[Template Exam Generation] encoding exam archive')
   const archive = await encodeExamPackage(result.examPackage, resources)
+  console.info(`[Template Exam Generation] archive encoded, bytes=${archive.byteLength}`)
+  console.info('[Template Exam Generation] opening save dialog')
   const written = await dependencies.fileDialog.writeBinary(archive, {
     title: '生成试卷',
     defaultName: `${safeFilename(input.templateName || '未命名试卷')}.lsexam`,
     filters: [{ name: 'LS101 试卷包', extensions: ['lsexam', 'zip'] }]
   })
+  console.info(
+    `[Template Exam Generation] save dialog completed after ${Date.now() - startedAt}ms: written=${written}`
+  )
   return written ? 'exported' : 'cancelled'
 }
 
@@ -131,6 +160,11 @@ function safeFilename(value: string): string {
     .join('')
   const safe = withoutControls.replace(/[\\/:*?"<>|]+/g, '-').replace(/[. ]+$/g, '')
   return safe || '未命名试卷'
+}
+
+function summarizeText(text: string): string {
+  const normalized = text.replace(/\s+/g, ' ').trim()
+  return normalized.length > 80 ? `${normalized.slice(0, 77)}...` : normalized
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

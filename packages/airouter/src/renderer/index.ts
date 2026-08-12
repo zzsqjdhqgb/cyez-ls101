@@ -42,6 +42,10 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
     listSpeechVoices: (request) => getBridge().listSpeechVoices(request),
     testSpeechConnection: (request) => getBridge().testSpeechConnection(request),
     synthesizeSpeech(request, options = {}) {
+      const startedAt = Date.now()
+      console.info(
+        `[AIRouter Speech Client] synthesis requested: chars=${request.text.length}, text="${summarizeText(request.text)}"`
+      )
       return new Promise((resolve, reject) => {
         let settled = false
         let stop = (): void => undefined
@@ -51,6 +55,9 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
           options.signal?.removeEventListener('abort', abort)
           stop()
           if (event.type === 'result') {
+            console.info(
+              `[AIRouter Speech Client] result received after ${Date.now() - startedAt}ms, bytes=${event.audio.data.byteLength}`
+            )
             resolve({
               data: new Uint8Array(event.audio.data as ArrayLike<number>),
               mediaType: event.audio.mediaType,
@@ -59,12 +66,18 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
               channels: event.audio.channels,
               durationMs: event.audio.durationMs
             })
-          } else reject(new Error(event.message))
+          } else {
+            console.error(
+              `[AIRouter Speech Client] error received after ${Date.now() - startedAt}ms: ${event.message}`
+            )
+            reject(new Error(event.message))
+          }
         }
         const abort = (): void => {
           if (settled) return
           settled = true
           stop()
+          console.warn(`[AIRouter Speech Client] request aborted after ${Date.now() - startedAt}ms`)
           reject(new DOMException('Speech synthesis was aborted', 'AbortError'))
         }
         stop = getBridge().startSpeechSynthesis(request, finish)
@@ -162,6 +175,11 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
       }
     }
   }
+}
+
+function summarizeText(text: string): string {
+  const normalized = text.replace(/\s+/g, ' ').trim()
+  return normalized.length > 80 ? `${normalized.slice(0, 77)}...` : normalized
 }
 
 export const airouterClient = createAIRouterClient()

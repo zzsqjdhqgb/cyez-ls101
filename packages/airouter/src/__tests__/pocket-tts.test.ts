@@ -135,6 +135,26 @@ describe('PocketTtsSynthesizer', () => {
     ).rejects.toThrow('mock postMessage failed')
   })
 
+  it('terminates a Worker that exceeds the configured synthesis timeout', async () => {
+    const pending = new PocketTtsSynthesizer().synthesize(
+      createRequest('stuck generation', undefined, 'wav', {
+        model: {
+          id: 'model',
+          name: 'Model',
+          artifacts: { weights: ['weights'], tokenizer: ['tokenizer'] },
+          parameters: { synthesis: { synthesisTimeoutMs: 10 } }
+        }
+      })
+    )
+    const rejection = expect(pending).rejects.toThrow(
+      'Pocket TTS 合成超时（1 秒），Worker 已终止'
+    )
+    const worker = await readyWorker()
+
+    await rejection
+    expect(worker.terminate).toHaveBeenCalledTimes(1)
+  })
+
   it('reuses an idle Worker and sends each request with its text and voice', async () => {
     const synthesizer = new PocketTtsSynthesizer()
     const first = synthesizer.synthesize(createRequest('first'))

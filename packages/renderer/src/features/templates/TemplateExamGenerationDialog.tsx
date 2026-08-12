@@ -148,6 +148,7 @@ export function TemplateExamGenerationDialog({
 
   const generate = async (): Promise<void> => {
     if (!canGenerate) return
+    console.info('[Template Exam Generation Dialog] generation started')
     setGenerating(true)
     setError(null)
     try {
@@ -169,12 +170,17 @@ export function TemplateExamGenerationDialog({
           : undefined
       })
       if (status === 'exported') {
+        console.info('[Template Exam Generation Dialog] generation exported')
         toast.success('试卷已生成')
         onOpenChange(false)
+      } else {
+        console.info('[Template Exam Generation Dialog] generation cancelled')
       }
     } catch (reason) {
+      console.error(`[Template Exam Generation Dialog] generation failed: ${errorMessage(reason)}`)
       setError(errorMessage(reason))
     } finally {
+      console.info('[Template Exam Generation Dialog] generation state released')
       setGenerating(false)
     }
   }

@@ -149,22 +149,29 @@ const airouterBridge: AIRouterBridge = {
     listener: (event: AIRouterSpeechSynthesisEvent) => void
   ) {
     const requestId = crypto.randomUUID()
+    let completed = false
     const handler = (
       _event: IpcRendererEvent,
       id: string,
       event: AIRouterSpeechSynthesisEvent
     ): void => {
       if (id !== requestId) return
-      listener(event)
       if (event.type === 'result' || event.type === 'error') {
+        completed = true
         ipcRenderer.removeListener(AIROUTER_CHANNELS.speechSynthesisEvent, handler)
       }
+      console.info(`[AIRouter Speech ${requestId}] preload received ${event.type} event`)
+      listener(event)
     }
     ipcRenderer.on(AIROUTER_CHANNELS.speechSynthesisEvent, handler)
+    console.info(`[AIRouter Speech ${requestId}] preload sending synthesis request`)
     ipcRenderer.send(AIROUTER_CHANNELS.speechSynthesisStart, requestId, request)
     return () => {
       ipcRenderer.removeListener(AIROUTER_CHANNELS.speechSynthesisEvent, handler)
-      ipcRenderer.send(AIROUTER_CHANNELS.speechSynthesisAbort, requestId)
+      if (!completed) {
+        console.info(`[AIRouter Speech ${requestId}] preload sending abort`)
+        ipcRenderer.send(AIROUTER_CHANNELS.speechSynthesisAbort, requestId)
+      }
     }
   },
   startTextGeneration(
