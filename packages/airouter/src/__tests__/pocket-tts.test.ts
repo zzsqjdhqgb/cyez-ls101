@@ -92,7 +92,7 @@ describe('PocketTtsSynthesizer', () => {
     workerState.startup = startup
 
     await expect(new PocketTtsSynthesizer().synthesize(createRequest('text'))).rejects.toThrow(
-      message
+      `Pocket TTS 合成失败（模型 model，音色 voice，文本“text”）：${message}`
     )
     expect(workerState.workers[0].terminate).toHaveBeenCalledTimes(1)
   })
@@ -104,7 +104,9 @@ describe('PocketTtsSynthesizer', () => {
     const requestId = requestMessage(worker).requestId
     worker.emit('message', { type: 'error', requestId, message: 'mock synthesis failed' })
 
-    await expect(pending).rejects.toThrow('mock synthesis failed')
+    await expect(pending).rejects.toThrow(
+      'Pocket TTS 合成失败（模型 model，音色 voice，文本“worker failure”）：mock synthesis failed'
+    )
     expect(worker.terminate).not.toHaveBeenCalled()
 
     const retry = synthesizer.synthesize(createRequest('retry after failure'))

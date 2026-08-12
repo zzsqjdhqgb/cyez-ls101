@@ -31,6 +31,17 @@ export class PocketTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
   private readonly sessions = new Map<string, Set<WorkerSession>>()
 
   async synthesize(request: AIRouterLocalSpeechRequest): Promise<AIRouterGeneratedAudio> {
+    try {
+      return await this.synthesizeRequest(request)
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') throw error
+      throw pocketTtsRequestError(error, request)
+    }
+  }
+
+  private async synthesizeRequest(
+    request: AIRouterLocalSpeechRequest
+  ): Promise<AIRouterGeneratedAudio> {
     if (request.format !== 'wav') throw new Error('Pocket TTS 当前只支持 WAV 输出')
     const model = findModel(request.manifest.models, request.modelId)
     const voice = findVoice(request.manifest.voices, request.voiceId)
@@ -209,6 +220,16 @@ export class PocketTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     sessions.delete(session)
     if (sessions.size === 0) this.sessions.delete(session.key)
   }
+}
+
+function pocketTtsRequestError(error: unknown, request: AIRouterLocalSpeechRequest): Error {
+  const message = error instanceof Error ? error.message : String(error)
+  const text = request.text.replace(/\s+/g, ' ').trim()
+  const summary = text.length > 80 ? `${text.slice(0, 77)}...` : text
+  return new Error(
+    `Pocket TTS 合成失败（模型 ${request.modelId}，音色 ${request.voiceId}，文本“${summary}”）：${message}`,
+    { cause: error }
+  )
 }
 
 function resolveRuntimePaths(): { pttsWasmJsPath: string; wasmBinaryPath: string } {

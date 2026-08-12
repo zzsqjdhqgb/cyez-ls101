@@ -1,6 +1,7 @@
 import type {
   AIRouterClient,
   AIRouterSpeechProviderConfigSummary,
+  AIRouterSpeechRouting,
   AIRouterSpeechTarget
 } from '@ls101/airouter'
 import { airouterClient } from '@ls101/airouter/renderer'
@@ -18,7 +19,7 @@ export interface GenerateExamInput {
   templateId: string
   templateName: string
   bindings: readonly TemplateInterfaceBinding[]
-  speech?: AIRouterSpeechTarget
+  speech?: AIRouterSpeechRouting
 }
 
 export interface GenerateExamDependencies {
@@ -53,7 +54,7 @@ export async function generateExamArchive(
           async synthesizeSpeech(text) {
             const audio = await dependencies.speechClient.synthesizeSpeech({
               text,
-              routing: { default: speech },
+              routing: speech,
               format: 'wav'
             })
             return { data: audio.data, mediaType: audio.mediaType }
@@ -108,11 +109,20 @@ function formatCompileErrors(errors: readonly unknown[]): string {
     .map((error) => {
       if (!isRecord(error)) return String(error)
       if (error.stage === 'validation' && isRecord(error.error)) {
-        return `${String(error.error.code)}：${String(error.error.path)}`
+        return formatCompileError(
+          String(error.error.code),
+          String(error.error.path),
+          error.error.params
+        )
       }
-      return `${String(error.code)}：${String(error.path)}`
+      return formatCompileError(String(error.code), String(error.path), error.params)
     })
     .join('\n')
+}
+
+function formatCompileError(code: string, path: string, params: unknown): string {
+  const message = isRecord(params) && typeof params.message === 'string' ? params.message : ''
+  return `${code}：${path}${message ? `\n${message}` : ''}`
 }
 
 function safeFilename(value: string): string {

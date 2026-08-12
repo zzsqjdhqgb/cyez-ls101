@@ -36,7 +36,9 @@ export function TemplateExamGenerationDialog({
   const [speechOptions, setSpeechOptions] = useState<SpeechGenerationSelection[]>([])
   const [providerId, setProviderId] = useState('')
   const [modelId, setModelId] = useState('')
-  const [voiceId, setVoiceId] = useState('')
+  const [defaultVoiceId, setDefaultVoiceId] = useState('')
+  const [manVoiceId, setManVoiceId] = useState('')
+  const [womanVoiceId, setWomanVoiceId] = useState('')
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -73,7 +75,9 @@ export function TemplateExamGenerationDialog({
         const first = speech[0]
         setProviderId(first?.providerConfigId ?? '')
         setModelId(first?.modelId ?? '')
-        setVoiceId(first?.voiceId ?? '')
+        setDefaultVoiceId(first?.voiceId ?? '')
+        setManVoiceId('')
+        setWomanVoiceId('')
       })
       .catch((reason: unknown) => {
         if (active) setError(errorMessage(reason))
@@ -108,12 +112,16 @@ export function TemplateExamGenerationDialog({
       ),
     [modelId, providerId, speechOptions]
   )
-  const selection = speechOptions.find(
-    (option) =>
-      option.providerConfigId === providerId &&
-      option.modelId === modelId &&
-      option.voiceId === voiceId
-  )
+  const speechTarget = (voiceId: string): SpeechGenerationSelection | undefined =>
+    speechOptions.find(
+      (option) =>
+        option.providerConfigId === providerId &&
+        option.modelId === modelId &&
+        option.voiceId === voiceId
+    )
+  const defaultSpeech = speechTarget(defaultVoiceId)
+  const manSpeech = speechTarget(manVoiceId)
+  const womanSpeech = speechTarget(womanVoiceId)
   const missingInstances = requirements.some(
     (requirement) => !instanceSelections[requirement.alias]
   )
@@ -123,7 +131,9 @@ export function TemplateExamGenerationDialog({
     const first = speechOptions.find((option) => option.providerConfigId === value)
     setProviderId(value)
     setModelId(first?.modelId ?? '')
-    setVoiceId(first?.voiceId ?? '')
+    setDefaultVoiceId(first?.voiceId ?? '')
+    setManVoiceId('')
+    setWomanVoiceId('')
   }
 
   const selectModel = (value: string): void => {
@@ -131,7 +141,9 @@ export function TemplateExamGenerationDialog({
       (option) => option.providerConfigId === providerId && option.modelId === value
     )
     setModelId(value)
-    setVoiceId(first?.voiceId ?? '')
+    setDefaultVoiceId(first?.voiceId ?? '')
+    setManVoiceId('')
+    setWomanVoiceId('')
   }
 
   const generate = async (): Promise<void> => {
@@ -148,7 +160,13 @@ export function TemplateExamGenerationDialog({
           interfaceId: requirement.interfaceId,
           instanceId: instanceSelections[requirement.alias]
         })),
-        speech: selection
+        speech: defaultSpeech
+          ? {
+              default: defaultSpeech,
+              ...(manSpeech ? { man: manSpeech } : {}),
+              ...(womanSpeech ? { woman: womanSpeech } : {})
+            }
+          : undefined
       })
       if (status === 'exported') {
         toast.success('试卷已生成')
@@ -253,14 +271,46 @@ export function TemplateExamGenerationDialog({
                   </select>
                 </label>
                 <label>
-                  <span>Voice</span>
+                  <span>默认音色</span>
                   <select
-                    aria-label="TTS Voice"
+                    aria-label="TTS 默认音色"
                     disabled={generating || !modelId}
-                    value={voiceId}
-                    onChange={(event) => setVoiceId(event.target.value)}
+                    value={defaultVoiceId}
+                    onChange={(event) => setDefaultVoiceId(event.target.value)}
                   >
-                    <option value="">请选择 Voice</option>
+                    <option value="">请选择默认音色</option>
+                    {voices.map((option) => (
+                      <option key={option.voiceId} value={option.voiceId}>
+                        {option.voiceId}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>男声音色</span>
+                  <select
+                    aria-label="TTS 男声音色"
+                    disabled={generating || !modelId}
+                    value={manVoiceId}
+                    onChange={(event) => setManVoiceId(event.target.value)}
+                  >
+                    <option value="">跟随默认音色</option>
+                    {voices.map((option) => (
+                      <option key={option.voiceId} value={option.voiceId}>
+                        {option.voiceId}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>女声音色</span>
+                  <select
+                    aria-label="TTS 女声音色"
+                    disabled={generating || !modelId}
+                    value={womanVoiceId}
+                    onChange={(event) => setWomanVoiceId(event.target.value)}
+                  >
+                    <option value="">跟随默认音色</option>
                     {voices.map((option) => (
                       <option key={option.voiceId} value={option.voiceId}>
                         {option.voiceId}

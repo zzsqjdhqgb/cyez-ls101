@@ -134,9 +134,19 @@ function PreviewInput({
 }
 
 function formatCompileError(error: TemplateCompileError): string {
-  return error.stage === 'validation'
-    ? `${error.error.code} · ${error.error.path}`
-    : `${error.code} · ${error.path}`
+  if (error.stage === 'validation') {
+    return compileErrorText(error.error.code, error.error.path, error.error.params)
+  }
+  return compileErrorText(error.code, error.path, error.params)
+}
+
+function compileErrorText(
+  code: string,
+  path: string,
+  params: Readonly<Record<string, string | number>>
+): string {
+  const message = typeof params.message === 'string' ? params.message : ''
+  return `${code} · ${path}${message ? ` · ${message}` : ''}`
 }
 
 function compileErrorPath(error: TemplateCompileError): string {

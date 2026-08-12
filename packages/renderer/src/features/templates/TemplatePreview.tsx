@@ -498,9 +498,18 @@ function stepDetail(step: TemplatePreviewTimelineStep): string {
 
 function formatCompileError(error: TemplateCompileError): string {
   if (error.stage === 'validation') {
-    return `${error.error.code} · ${error.error.path}`
+    return compileErrorText(error.error.code, error.error.path, error.error.params)
   }
-  return `${error.code} · ${error.path}`
+  return compileErrorText(error.code, error.path, error.params)
+}
+
+function compileErrorText(
+  code: string,
+  path: string,
+  params: Readonly<Record<string, string | number>>
+): string {
+  const message = typeof params.message === 'string' ? params.message : ''
+  return `${code} · ${path}${message ? ` · ${message}` : ''}`
 }
 
 function compileErrorPath(error: TemplateCompileError): string {

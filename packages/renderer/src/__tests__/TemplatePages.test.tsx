@@ -9,7 +9,10 @@ import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { TemplateApplicationProvider } from '../features/templates/TemplateApplicationProvider'
 import { TemplateBrowserPage } from '../features/templates/TemplateBrowserPage'
 import { TemplateDocumentPage } from '../features/templates/TemplateDocumentPage'
-import { listSpeechGenerationSelections } from '../features/templates/TemplateExamGeneration'
+import {
+  generateExamArchive,
+  listSpeechGenerationSelections
+} from '../features/templates/TemplateExamGeneration'
 
 vi.mock('../features/templates/TemplateExamGeneration', () => ({
   generateExamArchive: vi.fn().mockResolvedValue('exported'),
@@ -19,6 +22,18 @@ vi.mock('../features/templates/TemplateExamGeneration', () => ({
       providerName: '本地语音',
       modelId: 'speech-model',
       voiceId: 'speech-voice'
+    },
+    {
+      providerConfigId: 'speech-provider',
+      providerName: '本地语音',
+      modelId: 'speech-model',
+      voiceId: 'man-voice'
+    },
+    {
+      providerConfigId: 'speech-provider',
+      providerName: '本地语音',
+      modelId: 'speech-model',
+      voiceId: 'woman-voice'
     }
   ])
 }))
@@ -398,7 +413,44 @@ describe('Template pages', () => {
     expect(await screen.findByRole('heading', { name: '生成试卷' })).toBeInTheDocument()
     expect(screen.getByLabelText('TTS Provider')).toHaveValue('speech-provider')
     expect(screen.getByLabelText('TTS Model')).toHaveValue('speech-model')
-    expect(screen.getByLabelText('TTS Voice')).toHaveValue('speech-voice')
+    expect(screen.getByLabelText('TTS 默认音色')).toHaveValue('speech-voice')
+    expect(screen.getByLabelText('TTS 男声音色')).toHaveValue('')
+    expect(screen.getByLabelText('TTS 女声音色')).toHaveValue('')
+
+    fireEvent.change(screen.getByLabelText('TTS 男声音色'), {
+      target: { value: 'man-voice' }
+    })
+    fireEvent.change(screen.getByLabelText('TTS 女声音色'), {
+      target: { value: 'woman-voice' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: '生成并导出' }))
+
+    await waitFor(() =>
+      expect(generateExamArchive).toHaveBeenCalledWith(
+        expect.objectContaining({
+          speech: {
+            default: {
+              providerConfigId: 'speech-provider',
+              providerName: '本地语音',
+              modelId: 'speech-model',
+              voiceId: 'speech-voice'
+            },
+            man: {
+              providerConfigId: 'speech-provider',
+              providerName: '本地语音',
+              modelId: 'speech-model',
+              voiceId: 'man-voice'
+            },
+            woman: {
+              providerConfigId: 'speech-provider',
+              providerName: '本地语音',
+              modelId: 'speech-model',
+              voiceId: 'woman-voice'
+            }
+          }
+        })
+      )
+    )
   })
 
   it('adds and configures an Interface requirement in global properties', async () => {

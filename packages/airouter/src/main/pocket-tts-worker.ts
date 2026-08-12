@@ -26,7 +26,7 @@ interface PocketModel extends PocketTtsModel {
 
 interface PocketModule {
   Model: new (weights: Uint8Array, quantization: string) => PocketModel
-  initSync(data: BufferSource | WebAssembly.Module): void
+  initSync(options: { module: BufferSource | WebAssembly.Module }): void
 }
 
 const config = workerData as WorkerConfig
@@ -40,7 +40,7 @@ function send(message: Record<string, unknown>): void {
 
 async function initialize(): Promise<void> {
   const module = (await import(pathToFileURL(config.pttsWasmJsPath).href)) as PocketModule
-  module.initSync(readFileSync(config.wasmBinaryPath))
+  module.initSync({ module: readFileSync(config.wasmBinaryPath) })
   tokenizer = new UnigramTokenizer(
     decodeSentencepieceModel(new Uint8Array(readFileSync(config.tokenizerPath)))
   )

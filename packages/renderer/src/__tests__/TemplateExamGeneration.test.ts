@@ -74,9 +74,21 @@ describe('TemplateExamGeneration', () => {
           templateName: '英语听说 / 第一套',
           bindings: [],
           speech: {
-            providerConfigId: 'speech-provider',
-            modelId: 'speech-model',
-            voiceId: 'speech-voice'
+            default: {
+              providerConfigId: 'speech-provider',
+              modelId: 'speech-model',
+              voiceId: 'speech-voice'
+            },
+            man: {
+              providerConfigId: 'speech-provider',
+              modelId: 'speech-model',
+              voiceId: 'man-voice'
+            },
+            woman: {
+              providerConfigId: 'speech-provider',
+              modelId: 'speech-model',
+              voiceId: 'woman-voice'
+            }
           }
         },
         {
@@ -94,6 +106,16 @@ describe('TemplateExamGeneration', () => {
           providerConfigId: 'speech-provider',
           modelId: 'speech-model',
           voiceId: 'speech-voice'
+        },
+        man: {
+          providerConfigId: 'speech-provider',
+          modelId: 'speech-model',
+          voiceId: 'man-voice'
+        },
+        woman: {
+          providerConfigId: 'speech-provider',
+          modelId: 'speech-model',
+          voiceId: 'woman-voice'
         }
       },
       format: 'wav'
@@ -140,6 +162,49 @@ describe('TemplateExamGeneration', () => {
     expect(decoded.exam.examData.player.pages[0].timeline).toEqual([
       { type: 'countdown', seconds: 1 }
     ])
+  })
+
+  it('生成失败时显示语音合成的底层错误', async () => {
+    const application = {
+      templates: {
+        compile: vi.fn().mockResolvedValue({
+          success: false,
+          errors: [
+            {
+              stage: 'compile',
+              code: 'SPEECH_SYNTHESIS_FAILED',
+              path: 'root.children[0].timeline[0].text',
+              params: { message: 'Pocket TTS 不支持当前文本' }
+            }
+          ]
+        })
+      }
+    } as unknown as TemplateApplication
+
+    await expect(
+      generateExamArchive(
+        {
+          application,
+          templateId: 'template-1',
+          templateName: 'Template',
+          bindings: [],
+          speech: {
+            default: {
+              providerConfigId: 'speech-provider',
+              modelId: 'speech-model',
+              voiceId: 'speech-voice'
+            }
+          }
+        },
+        {
+          speechClient: { synthesizeSpeech: vi.fn() },
+          fileDialog: { writeBinary: vi.fn() } as never,
+          fetchResource: vi.fn()
+        }
+      )
+    ).rejects.toThrow(
+      'SPEECH_SYNTHESIS_FAILED：root.children[0].timeline[0].text\nPocket TTS 不支持当前文本'
+    )
   })
 })
 
