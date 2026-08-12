@@ -9,15 +9,49 @@ export type AIRouterSpeechProviderKind = 'online' | 'local'
 export type AIRouterSpeechRole = 'default' | 'man' | 'woman'
 export type AIRouterSpeechAudioFormat = 'wav' | 'mp3' | 'opus' | 'pcm-s16le'
 
+export type AIRouterReasoningEffort =
+  | 'none'
+  | 'minimal'
+  | 'low'
+  | 'medium'
+  | 'high'
+  | 'xhigh'
+  | 'max'
+
+export type AIRouterReasoningOption =
+  | { type: 'toggle' }
+  | { type: 'effort'; values: AIRouterReasoningEffort[] }
+  | { type: 'budget_tokens'; min?: number; max?: number }
+
+export type AIRouterReasoningConfig =
+  | { type: 'disabled' }
+  | { type: 'enabled' }
+  | { type: 'effort'; effort: AIRouterReasoningEffort }
+  | { type: 'budget_tokens'; budgetTokens: number }
+
+export interface AIRouterModelMetadata {
+  name?: string
+  contextLimit?: number
+  outputLimit?: number
+  reasoning?: boolean
+  reasoningOptions?: AIRouterReasoningOption[]
+  structuredOutput?: boolean
+  attachment?: boolean
+}
+
 export interface AIRouterModelConfig {
   id: string
   enabled: boolean
+  maxOutputTokens?: number
+  reasoning?: AIRouterReasoningConfig
+  metadata?: AIRouterModelMetadata
 }
 
 export interface AIRouterProviderConfig {
   id: string
   name: string
   type: AIRouterProviderType
+  catalogProviderId?: string
   baseUrl: string
   models: AIRouterModelConfig[]
 }
@@ -26,6 +60,7 @@ export interface AIRouterProviderConfigInput {
   id?: string
   name: string
   type: AIRouterProviderType
+  catalogProviderId?: string
   baseUrl?: string
   models: AIRouterModelConfig[]
   apiKey?: string
@@ -58,9 +93,8 @@ export interface AIRouterImageProviderConfigSummary extends AIRouterImageProvide
   hasApiKey: boolean
 }
 
-export interface AIRouterModelOption {
+export interface AIRouterModelOption extends AIRouterModelMetadata {
   id: string
-  name?: string
 }
 
 export interface AIRouterTextRequest {

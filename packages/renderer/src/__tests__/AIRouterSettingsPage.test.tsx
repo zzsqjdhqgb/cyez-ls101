@@ -16,6 +16,83 @@ afterEach(() => {
 })
 
 describe('AIRouterSettingsPage', () => {
+  it('offers common provider presets and applies their base URLs', async () => {
+    renderAIRouter(applicationWith({ listConfigs: vi.fn().mockResolvedValue([]) }))
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    const provider = within(dialog).getByLabelText('Provider') as HTMLSelectElement
+    expect(Array.from(provider.options).map((option) => option.text)).toEqual(
+      expect.arrayContaining(['OpenAI', 'Anthropic', 'OpenRouter', 'DeepSeek', 'Zhipu AI', 'Groq'])
+    )
+
+    fireEvent.change(provider, { target: { value: 'deepseek' } })
+    expect(within(dialog).getByLabelText('Base URL')).toHaveValue('https://api.deepseek.com')
+  })
+
+  it('edits models.dev output limits and reasoning effort per model', async () => {
+    const application = applicationWith({
+      listConfigs: vi.fn().mockResolvedValue([]),
+      saveConfig: vi.fn().mockImplementation(async (input: AIRouterProviderConfigInput) => ({
+        id: 'reasoning-provider',
+        name: input.name,
+        type: input.type,
+        catalogProviderId: input.catalogProviderId ?? '',
+        baseUrl: input.baseUrl ?? 'https://api.openai.com/v1',
+        models: input.models,
+        hasApiKey: false
+      })),
+      listModels: vi.fn().mockResolvedValue([
+        {
+          id: 'reasoning-model',
+          name: 'Reasoning Model',
+          contextLimit: 200_000,
+          outputLimit: 32_768,
+          reasoning: true,
+          reasoningOptions: [{ type: 'effort', values: ['low', 'medium', 'high'] }],
+          structuredOutput: true
+        }
+      ])
+    })
+    renderAIRouter(application)
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取模型列表' }))
+    expect(await within(dialog).findByText('Reasoning Model')).toBeInTheDocument()
+    expect(
+      within(dialog).getByText('上下文 200K · 输出 32.8K · 推理 · 结构化输出')
+    ).toBeInTheDocument()
+
+    fireEvent.click(within(dialog).getByText('Reasoning Model'))
+    expect(within(dialog).getByLabelText('reasoning-model 最大输出')).toHaveValue(32768)
+    fireEvent.change(within(dialog).getByLabelText('reasoning-model 推理模式'), {
+      target: { value: 'effort' }
+    })
+    fireEvent.change(within(dialog).getByLabelText('reasoning-model 推理强度'), {
+      target: { value: 'high' }
+    })
+
+    fireEvent.change(within(dialog).getByLabelText('配置名称'), {
+      target: { value: 'Reasoning Provider' }
+    })
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: 'reasoning-model' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+    await waitFor(() =>
+      expect(application.saveConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          models: [
+            expect.objectContaining({
+              id: 'reasoning-model',
+              maxOutputTokens: 32_768,
+              reasoning: { type: 'effort', effort: 'high' }
+            })
+          ]
+        })
+      )
+    )
+  })
+
   it('shows a retryable page error when text settings cannot load', async () => {
     const listConfigs = vi
       .fn()
@@ -158,10 +235,10 @@ describe('AIRouterSettingsPage', () => {
 
     const dialog = screen.getByRole('dialog', { name: '学校 OpenAI' })
     const apiKeyInput = within(dialog).getByLabelText('API Key') as HTMLInputElement
-    const providerType = within(dialog).getByLabelText('Provider 类型') as HTMLInputElement
+    const providerType = within(dialog).getByLabelText('Provider') as HTMLInputElement
     expect(providerType.tagName).toBe('INPUT')
     expect(providerType).toBeDisabled()
-    expect(providerType.value).toBe('OpenAI Compatible')
+    expect(providerType.value).toBe('自定义 OpenAI Compatible')
     expect(apiKeyInput.placeholder).toBe('已安全保存')
     expect(apiKeyInput.value).toBe('')
     expect(apiKeyInput.type).toBe('password')
@@ -216,7 +293,7 @@ describe('AIRouterSettingsPage', () => {
         apiKey: undefined,
         models: [
           { id: 'test-model', enabled: true },
-          { id: 'new-model', enabled: true }
+          { id: 'new-model', enabled: true, maxOutputTokens: 131072 }
         ]
       })
     )
@@ -288,7 +365,7 @@ describe('AIRouterSettingsPage', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
     const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
-    expect(within(dialog).getByLabelText('Provider 类型').tagName).toBe('SELECT')
+    expect(within(dialog).getByLabelText('Provider').tagName).toBe('SELECT')
     fireEvent.change(within(dialog).getByLabelText('配置名称'), {
       target: { value: '未保存 Provider' }
     })
@@ -324,7 +401,9 @@ describe('AIRouterSettingsPage', () => {
           id: undefined,
           name: '未保存 Provider',
           apiKey: 'draft-secret',
-          models: [{ id: 'draft-model', enabled: true }]
+          models: [
+            expect.objectContaining({ id: 'draft-model', enabled: true, maxOutputTokens: 131072 })
+          ]
         }),
         'draft-model'
       )
@@ -341,10 +420,10 @@ describe('AIRouterSettingsPage', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
     await waitFor(() => expect(application.saveConfig).toHaveBeenCalledTimes(1))
     expect(dialog).toBeInTheDocument()
-    const savedProviderType = within(dialog).getByLabelText('Provider 类型') as HTMLInputElement
+    const savedProviderType = within(dialog).getByLabelText('Provider') as HTMLInputElement
     expect(savedProviderType.tagName).toBe('INPUT')
     expect(savedProviderType).toBeDisabled()
-    expect(savedProviderType.value).toBe('OpenAI Compatible')
+    expect(savedProviderType.value).toBe('自定义 OpenAI Compatible')
     expect(within(dialog).getByRole('button', { name: '保存 Provider' })).toBeDisabled()
   })
 

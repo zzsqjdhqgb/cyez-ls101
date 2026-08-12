@@ -2,6 +2,14 @@
 
 `@ls101/airouter` 为 Electron main 和 renderer 提供文本生成、图像生成与语音合成基础设施。三类 Provider 使用相互独立的普通配置、模型列表和加密密钥；AIRouter 不保存业务图片文件。
 
+### 文本模型目录与生成参数
+
+文本 Provider 可以关联 [models.dev](https://models.dev) 的 Provider 目录。目录只用于补充模型名称、上下文/输出限制、推理能力和结构化输出能力；模型发现仍然使用用户配置的 Provider `/models` 接口。目录请求失败时不影响自定义模型使用。
+
+每个文本模型保存自己的最大输出长度和推理配置。未显式设置最大输出时，运行时默认使用 `min(131072, models.dev 的 limit.output)`；未匹配目录的模型默认使用 `131072`。当前不发送 `temperature`。
+
+推理控件按目录的 `reasoning_options` 动态显示：支持开关、effort 档位或 Anthropic 的 token budget。OpenAI/兼容协议使用 AI SDK 的标准 reasoning effort；Anthropic token budget 通过 `providerOptions.anthropic.thinking` 发送。没有对应目录能力时不向 Provider 发送推理参数。
+
 ## 文本生成
 
 文本 Provider 支持 `openai-compatible` 和 `anthropic`。OpenAI Compatible 显式使用 Chat Completions 模型，renderer client 将 main 发送的 `reasoning-delta` 和 `text-delta` 转换为 AIRouter 自身的异步增量流。

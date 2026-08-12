@@ -134,7 +134,85 @@ describe('AIRouterService', () => {
       { type: 'reasoning', delta: '思考' },
       { type: 'output', delta: '回答' }
     ])
-    expect(streamTextMock).toHaveBeenCalledWith(expect.objectContaining({ maxOutputTokens: 8192 }))
+    expect(streamTextMock).toHaveBeenCalledWith(
+      expect.objectContaining({ maxOutputTokens: 128 * 1024 })
+    )
+  })
+
+  it('uses the lower models.dev output limit and forwards reasoning effort', async () => {
+    const saved = await service.saveProviderConfig({
+      name: 'Reasoning OpenAI',
+      type: 'openai-compatible',
+      models: [
+        {
+          id: 'reasoning-model',
+          enabled: true,
+          reasoning: { type: 'effort', effort: 'high' },
+          metadata: {
+            outputLimit: 32_768,
+            reasoning: true,
+            reasoningOptions: [{ type: 'effort', values: ['low', 'medium', 'high'] }]
+          }
+        }
+      ]
+    })
+    streamTextMock.mockReturnValue({
+      fullStream: (async function* () {
+        yield { type: 'finish', finishReason: 'stop' }
+      })()
+    })
+
+    for await (const _chunk of service.generateText({
+      providerConfigId: saved.id,
+      modelId: 'reasoning-model',
+      prompt: '测试'
+    })) {
+      // Consume the stream.
+    }
+
+    expect(streamTextMock).toHaveBeenCalledWith(
+      expect.objectContaining({ maxOutputTokens: 32_768, reasoning: 'high' })
+    )
+  })
+
+  it('forwards an Anthropic reasoning token budget', async () => {
+    const saved = await service.saveProviderConfig({
+      name: 'Reasoning Anthropic',
+      type: 'anthropic',
+      models: [
+        {
+          id: 'claude-test',
+          enabled: true,
+          reasoning: { type: 'budget_tokens', budgetTokens: 4096 },
+          metadata: {
+            reasoning: true,
+            reasoningOptions: [{ type: 'budget_tokens', min: 1024 }]
+          }
+        }
+      ]
+    })
+    streamTextMock.mockReturnValue({
+      fullStream: (async function* () {
+        yield { type: 'finish', finishReason: 'stop' }
+      })()
+    })
+
+    for await (const _chunk of service.generateText({
+      providerConfigId: saved.id,
+      modelId: 'claude-test',
+      prompt: '测试'
+    })) {
+      // Consume the stream.
+    }
+
+    expect(streamTextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maxOutputTokens: 128 * 1024,
+        providerOptions: {
+          anthropic: { thinking: { type: 'enabled', budgetTokens: 4096 } }
+        }
+      })
+    )
   })
 
   it('reports a truncated text stream before JSON validation', async () => {
