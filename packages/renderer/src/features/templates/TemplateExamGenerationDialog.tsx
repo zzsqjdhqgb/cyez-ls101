@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type JSX } from 'react'
-import type { TemplateApplication, TemplateDocument } from '@ls101/template-editor'
+import type { TemplateApplication, TemplateDocument, TemplateNode } from '@ls101/template-editor'
 import { AlertCircle, FileArchive, X } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { IconButton } from '../../components/ui/IconButton'
@@ -122,10 +122,12 @@ export function TemplateExamGenerationDialog({
   const defaultSpeech = speechTarget(defaultVoiceId)
   const manSpeech = speechTarget(manVoiceId)
   const womanSpeech = speechTarget(womanVoiceId)
+  const requiresSpeech = containsSpeechAction(document.content.root)
   const missingInstances = requirements.some(
     (requirement) => !instanceSelections[requirement.alias]
   )
-  const canGenerate = !loading && !generating && !missingInstances
+  const speechSelectionMissing = requiresSpeech && !defaultSpeech
+  const canGenerate = !loading && !generating && !missingInstances && !speechSelectionMissing
 
   const selectProvider = (value: string): void => {
     const first = speechOptions.find((option) => option.providerConfigId === value)
@@ -332,6 +334,12 @@ export function TemplateExamGenerationDialog({
                   <span>没有可用的 TTS 配置；不含 TTS 播放动作的模板仍可生成。</span>
                 </div>
               ) : null}
+              {speechSelectionMissing ? (
+                <div className={styles.notice} role="alert">
+                  <AlertCircle aria-hidden="true" />
+                  <span>模板包含 TTS 播放动作，请先保存并选择一个默认音色。</span>
+                </div>
+              ) : null}
               {requirements.some(
                 (requirement) => (instances[requirement.alias] ?? []).length === 0
               ) ? (
@@ -373,4 +381,13 @@ function uniqueBy<T>(values: readonly T[], key: (value: T) => string): T[] {
 
 function errorMessage(reason: unknown): string {
   return reason instanceof Error ? reason.message : String(reason)
+}
+
+function containsSpeechAction(node: TemplateNode): boolean {
+  if (!node) return false
+  if (node.type === 'page') {
+    return node.timeline.some((step) => step.type === 'play')
+  }
+  if (node.type === 'frame') return node.children.some(containsSpeechAction)
+  return false
 }
