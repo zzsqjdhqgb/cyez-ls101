@@ -6,6 +6,7 @@ import type {
 } from '@ls101/core-types'
 import {
   buildAIPrompt,
+  buildExposedInstance,
   buildFormatInstructions,
   buildInstanceFromJson,
   buildVarManifest
@@ -363,6 +364,11 @@ export function createInterfaceApplication(
         const currentValue = current.instance.values[varName]
         values[varName] = current.assetFilenames.includes(currentValue) ? currentValue : ''
       }
+      assertCompleteImageValues(
+        new Set(flattenImageVarNames(def.fields)),
+        values,
+        mapped.imagePrompts ?? {}
+      )
       await repository.updateInstance(interfaceId, {
         ...current.instance,
         values,
@@ -499,7 +505,10 @@ export function createInterfaceApplication(
         }
         return {
           interfaceId: located.interfaceId,
-          instance: normalizeImagePromptValues(definition.fields, located),
+          instance: buildExposedInstance(
+            definition,
+            normalizeImagePromptValues(definition.fields, located)
+          ),
           assetUrls
         }
       },
@@ -562,6 +571,8 @@ export function createInterfaceApplication(
             selectedAssetData[filename] = new Uint8Array(selected)
             nextValues[varName] = filename
           }
+
+          assertCompleteImageValues(imageVarNames, nextValues, nextImagePrompts)
 
           const retainedAssetNames = new Set(
             [...imageVarNames]
@@ -626,6 +637,9 @@ export function createInterfaceApplication(
               const current = await requireInstance(repository, interfaceId, instanceId)
               const mapped = buildInstanceFromJson(def, validation.data)
               const prompts = Object.entries(mapped.imagePrompts ?? {})
+              if (prompts.some(([, prompt]) => !prompt.trim())) {
+                throw new Error('图片变量的提示词不能为空')
+              }
               if (prompts.length && !imageGenerator) {
                 throw new Error('Interface image generator is not configured')
               }
@@ -661,6 +675,8 @@ export function createInterfaceApplication(
                 assets[filename] = data
                 values[varName] = filename
               }
+
+              assertCompleteImageValues(imageVarNames, values, mapped.imagePrompts ?? {})
 
               progress.saving()
               await repository.updateInstance(
@@ -790,6 +806,18 @@ function normalizeImagePromptValues(
     ...stored.instance,
     values,
     imagePrompts: Object.keys(imagePrompts).length ? imagePrompts : undefined
+  }
+}
+
+function assertCompleteImageValues(
+  imageVarNames: ReadonlySet<string>,
+  values: Readonly<Record<string, string>>,
+  imagePrompts: Readonly<Record<string, string>>
+): void {
+  for (const varName of imageVarNames) {
+    if (!values[varName]?.trim() || !imagePrompts[varName]?.trim()) {
+      throw new Error(`图片变量 ${varName} 的提示词和图片必须同时填写`)
+    }
   }
 }
 

@@ -306,7 +306,8 @@ test('AR-03 creates and reloads an OpenAI-compatible provider through the UI', a
       type: 'openai-compatible',
       baseUrl: mockServer.baseUrl,
       hasApiKey: true,
-      models: [{ id: 'mock-text', enabled: true }]
+      catalogProviderId: '',
+      models: [{ id: 'mock-text', enabled: true, maxOutputTokens: 128 * 1024 }]
     })
   ])
   expect(JSON.stringify(configs)).not.toContain('openai-secret')
@@ -316,7 +317,7 @@ test('AR-04 creates and reloads an Anthropic provider through the UI', async () 
   await openAirouter()
   await page.getByRole('button', { name: '添加 Provider' }).click()
   await page.getByLabel('配置名称').fill('Local Anthropic')
-  await page.getByLabel('Provider 类型').selectOption('anthropic')
+  await page.getByLabel('Provider', { exact: true }).selectOption('anthropic')
   await expect(page.getByLabel('Base URL')).toHaveValue('https://api.anthropic.com/v1')
   await page.getByLabel('Base URL').fill(mockServer.baseUrl)
   await addModel('mock-reasoning')
@@ -325,8 +326,8 @@ test('AR-04 creates and reloads an Anthropic provider through the UI', async () 
   await page.reload()
   await openAirouter()
   await page.getByRole('button', { name: /Local Anthropic/ }).click()
-  await expect(page.getByLabel('Provider 类型')).toHaveValue('Anthropic')
-  await expect(page.getByLabel('Provider 类型')).toBeDisabled()
+  await expect(page.getByLabel('Provider', { exact: true })).toHaveValue('自定义 Anthropic')
+  await expect(page.getByLabel('Provider', { exact: true })).toBeDisabled()
   await expect(page.getByLabel('Base URL')).toHaveValue(mockServer.baseUrl)
   await expect(page.getByRole('checkbox', { name: 'mock-reasoning' })).toBeChecked()
   expect(await page.evaluate(() => window.airouter.listProviderConfigs())).toEqual([
@@ -334,7 +335,7 @@ test('AR-04 creates and reloads an Anthropic provider through the UI', async () 
       name: 'Local Anthropic',
       type: 'anthropic',
       baseUrl: mockServer.baseUrl,
-      models: [{ id: 'mock-reasoning', enabled: true }],
+      models: [{ id: 'mock-reasoning', enabled: true, maxOutputTokens: 128 * 1024 }],
       hasApiKey: false
     })
   ])
@@ -385,7 +386,7 @@ test('AR-06 manages manual text models, enabled state, deduplication and removal
         (await page.evaluate(() => window.airouter.listProviderConfigs()))[0]?.models ?? null,
       { timeout: 10_000 }
     )
-    .toEqual([{ id: 'beta', enabled: false }])
+    .toEqual([{ id: 'beta', enabled: false, maxOutputTokens: 128 * 1024 }])
 })
 
 test('AR-07 discovers, sorts and merges text models with the draft', async () => {
@@ -400,7 +401,7 @@ test('AR-07 discovers, sorts and merges text models with the draft', async () =>
   await expect(page.getByText('获取到 5 个模型')).toBeVisible()
   const labels = await page
     .getByRole('checkbox')
-    .evaluateAll((inputs) => inputs.map((input) => input.parentElement?.textContent?.trim() ?? ''))
+    .evaluateAll((inputs) => inputs.map((input) => input.getAttribute('aria-label') ?? ''))
   expect(labels).toEqual([
     'a-model',
     'mock-image',
@@ -433,7 +434,7 @@ test('AR-09 tests an unsaved Anthropic draft with its own protocol and headers',
   await openAirouter()
   await page.getByRole('button', { name: '添加 Provider' }).click()
   await page.getByLabel('配置名称').fill('Unsaved Anthropic')
-  await page.getByLabel('Provider 类型').selectOption('anthropic')
+  await page.getByLabel('Provider', { exact: true }).selectOption('anthropic')
   await page.getByLabel('Base URL').fill(mockServer.baseUrl)
   await page.getByRole('textbox', { name: 'API Key', exact: true }).fill('anthropic-secret')
   await addModel('mock-text')

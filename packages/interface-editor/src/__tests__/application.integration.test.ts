@@ -82,7 +82,12 @@ describe('interface editor application integration', () => {
       vars: [
         expect.objectContaining({ varName: 'titleText', path: 'title' }),
         expect.objectContaining({
-          varName: 'questionImage',
+          varName: 'questionImage.inst',
+          type: 'text',
+          path: 'section.picture'
+        }),
+        expect.objectContaining({
+          varName: 'questionImage.img',
           type: 'image',
           path: 'section.picture'
         }),
@@ -108,9 +113,16 @@ describe('interface editor application integration', () => {
     const filename = saved.instance.values.questionImage
     expect(filename).toMatch(/^questionImage-[0-9a-f-]{36}\.png$/)
     expect(saved.assetUrls[filename]).toContain(filename)
-    await expect(app.instances.locate(instance.instance.instanceId)).resolves.toEqual({
+    await expect(app.instances.locate(instance.instance.instanceId)).resolves.toMatchObject({
       interfaceId,
-      instance: saved.instance,
+      instance: {
+        values: {
+          titleText: '校园生活',
+          'questionImage.inst': '学生在校园里活动',
+          'questionImage.img': filename,
+          answerText: 'I like school.'
+        }
+      },
       assetUrls: saved.assetUrls
     })
     await expect(app.instances.locate('10000000-0000-4000-8000-000000000001')).resolves.toBeNull()
@@ -236,7 +248,9 @@ describe('interface editor application integration', () => {
     const blank = await app.published.createBlankInstance(interfaceId)
     const before = await app.instances.save(interfaceId, blank.instance.instanceId, {
       name: '原题组',
-      values: { titleText: '原标题', questionImage: '', answerText: 'Original answer' }
+      values: { titleText: '原标题', questionImage: '', answerText: 'Original answer' },
+      imagePrompts: { questionImage: '原提示词' },
+      imageFiles: { questionImage: PNG }
     })
 
     const handle = await app.instances.startAIGeneration(interfaceId, blank.instance.instanceId)
@@ -324,7 +338,9 @@ describe('interface editor application integration', () => {
     const blank = await app.published.createBlankInstance(interfaceId)
     const before = await app.instances.save(interfaceId, blank.instance.instanceId, {
       name: '原题组',
-      values: { titleText: '原标题', questionImage: '', answerText: 'Original answer' }
+      values: { titleText: '原标题', questionImage: '', answerText: 'Original answer' },
+      imagePrompts: { questionImage: '原提示词' },
+      imageFiles: { questionImage: PNG }
     })
     vi.spyOn(repository, 'updateInstance').mockRejectedValueOnce(
       new Error('simulated write failure')
@@ -366,7 +382,9 @@ describe('interface editor application integration', () => {
     })
     await source.instances.save(interfaceId, second.instance.instanceId, {
       name: '未选择题组',
-      values: second.instance.values
+      values: second.instance.values,
+      imagePrompts: { questionImage: '未选择图片' },
+      imageFiles: { questionImage: PNG }
     })
 
     await expect(source.transfer.export(interfaceId, { mode: 'all' })).resolves.toEqual({
@@ -653,7 +671,9 @@ describe('interface editor application integration', () => {
     const blank = await app.published.createBlankInstance(previous.id)
     await app.instances.save(previous.id, blank.instance.instanceId, {
       name: '删除失败回滚题组',
-      values: blank.instance.values
+      values: blank.instance.values,
+      imagePrompts: { questionImage: '回滚图片' },
+      imageFiles: { questionImage: PNG }
     })
     vi.spyOn(repository, 'deleteInterface').mockRejectedValueOnce(
       new Error('previous version delete failed')
@@ -703,7 +723,9 @@ describe('interface editor application integration', () => {
     const blank = await app.published.createBlankInstance(previous.id)
     await app.instances.save(previous.id, blank.instance.instanceId, {
       name: '保留旧版题组',
-      values: blank.instance.values
+      values: blank.instance.values,
+      imagePrompts: { questionImage: '旧版图片' },
+      imageFiles: { questionImage: PNG }
     })
 
     const plan = await builtins.check('speaking', next)
@@ -743,7 +765,9 @@ describe('interface editor application integration', () => {
     const blank = await app.published.createBlankInstance(def.id)
     await app.instances.save(def.id, blank.instance.instanceId, {
       name: '待处理题组',
-      values: blank.instance.values
+      values: blank.instance.values,
+      imagePrompts: { questionImage: '待处理图片' },
+      imageFiles: { questionImage: PNG }
     })
 
     const plan = await builtins.checkRemoval('speaking')
@@ -782,7 +806,9 @@ describe('interface editor application integration', () => {
     const blank = await app.published.createBlankInstance(def.id)
     await app.instances.save(def.id, blank.instance.instanceId, {
       name: '删除失败恢复题组',
-      values: blank.instance.values
+      values: blank.instance.values,
+      imagePrompts: { questionImage: '恢复图片' },
+      imageFiles: { questionImage: PNG }
     })
     const plan = await builtins.checkRemoval('speaking')
     if (!plan) throw new Error('expected a builtin removal plan')

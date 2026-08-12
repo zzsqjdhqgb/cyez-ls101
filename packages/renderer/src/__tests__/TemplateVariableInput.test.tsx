@@ -35,6 +35,17 @@ describe('SchemaUse 变量文本格式', () => {
       ref: { scope: 'interface', alias: 'this', varName: 'picture' }
     })
   })
+
+  it('保留图片派生变量名中的点号', () => {
+    expect(parseTextExpression('[@exam.picture.inst]').parts[0]).toEqual({
+      type: 'variable',
+      ref: { scope: 'interface', alias: 'exam', varName: 'picture.inst' }
+    })
+    expect(parseSchemaTextExpression('[@exam.picture.img]').parts[0]).toEqual({
+      type: 'variable',
+      ref: { scope: 'interface', alias: 'exam', varName: 'picture.img' }
+    })
+  })
 })
 
 const candidates: TemplateVariableCandidate[] = [

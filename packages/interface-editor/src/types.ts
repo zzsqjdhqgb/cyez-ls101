@@ -14,7 +14,7 @@
 
 /**
  * 叶子字段：Interface 字段树的末端节点。
- * 每个叶子字段对应 Template 中可引用的一个变量。
+ * 文本叶子对应一个导出变量；图片叶子对应 `<varName>.inst` 和 `<varName>.img` 两个导出变量。
  */
 export interface FieldLeaf {
   /** 字段值类型 */

@@ -195,7 +195,7 @@ describe('AIRouter main integration', () => {
       [requestId, { type: 'done' }]
     ])
     expect(streamTextMock).toHaveBeenCalledWith(
-      expect.objectContaining({ prompt: '测试', maxOutputTokens: 8192 })
+      expect.objectContaining({ prompt: '测试', maxOutputTokens: 128 * 1024 })
     )
   })
 

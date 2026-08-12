@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
+import type { JSONObject, SharedV4ProviderOptions } from '@ai-sdk/provider'
 import { generateText, streamText, type LanguageModel } from 'ai'
 import { JsonConfigStorage } from '@ls101/config-store/main'
 import type { JsonValue } from '@ls101/config-store/shared'
@@ -8,11 +9,15 @@ import { createElectronSecretStorage, type EncryptedSecretStorage } from '@ls101
 import type {
   AIRouterConnectionTestInput,
   AIRouterModelConfig,
+  AIRouterModelMetadata,
   AIRouterModelOption,
   AIRouterProviderConfig,
   AIRouterProviderConfigInput,
   AIRouterProviderConfigSummary,
   AIRouterProviderType,
+  AIRouterReasoningConfig,
+  AIRouterReasoningEffort,
+  AIRouterReasoningOption,
   AIRouterTestResult,
   AIRouterTextChunk,
   AIRouterTextRequest
@@ -20,6 +25,8 @@ import type {
 
 const CONFIG_VERSION = 1
 const CONFIG_KEY = 'providers'
+const DEFAULT_MAX_OUTPUT_TOKENS = 128 * 1024
+const MODELS_DEV_API_URL = 'https://models.dev/api.json'
 const validConfigId = /^[a-zA-Z0-9_-]+$/
 const DEFAULT_BASE_URLS: Record<AIRouterProviderType, string> = {
   'openai-compatible': 'https://api.openai.com/v1',
@@ -97,7 +104,7 @@ export class AIRouterService {
     if (!response.ok) throw new Error(`获取模型列表失败（HTTP ${response.status}）`)
     const payload = (await response.json()) as { data?: unknown }
     if (!Array.isArray(payload.data)) return []
-    return payload.data
+    const models = payload.data
       .map((item): AIRouterModelOption | null => {
         if (typeof item === 'string') return { id: item }
         if (!item || typeof item !== 'object') return null
@@ -108,6 +115,7 @@ export class AIRouterService {
       })
       .filter((model): model is AIRouterModelOption => model !== null)
       .sort((left, right) => left.id.localeCompare(right.id))
+    return enrichModelsFromCatalog(models, config.catalogProviderId)
   }
 
   async testConnection(request: AIRouterConnectionTestInput): Promise<AIRouterTestResult> {
@@ -128,14 +136,14 @@ export class AIRouterService {
     request: AIRouterTextRequest,
     options: { signal?: AbortSignal } = {}
   ): AsyncGenerator<AIRouterTextChunk> {
-    const { model } = await this.resolveModel(request)
+    const { model, config, selected } = await this.resolveModel(request)
+    const reasoning = reasoningCallOptions(config.type, selected.reasoning)
     const result = streamText({
       model,
       prompt: request.prompt,
       abortSignal: options.signal,
-      // Interface responses are structured JSON. Leave enough room for nested
-      // fields and image prompts so providers do not silently truncate the object.
-      maxOutputTokens: 8192
+      maxOutputTokens: selected.maxOutputTokens ?? defaultMaxOutputTokens(selected.metadata),
+      ...reasoning
     })
     for await (const part of result.fullStream as AsyncIterable<unknown>) {
       const chunk = toChunk(part)
@@ -160,13 +168,17 @@ export class AIRouterService {
     return result.text
   }
 
-  private async resolveModel(request: AIRouterTextRequest): Promise<{ model: LanguageModel }> {
+  private async resolveModel(request: AIRouterTextRequest): Promise<{
+    model: LanguageModel
+    config: AIRouterProviderConfig
+    selected: AIRouterModelConfig
+  }> {
     validateTextRequest(request)
     const config = await this.requireConfig(request.providerConfigId)
     const selected = config.models.find((model) => model.id === request.modelId && model.enabled)
     if (!selected) throw new Error('模型未配置或未启用')
     const apiKey = (await this.secretStorage.scope('airouter').read(config.id)) ?? ''
-    return { model: createLanguageModel(config, apiKey, selected.id) }
+    return { model: createLanguageModel(config, apiKey, selected.id), config, selected }
   }
 
   private async resolveTransientConfig(
@@ -237,9 +249,17 @@ function normalizeConfig(
     if (!model || typeof model.id !== 'string') continue
     const id = model.id.trim()
     if (!id || models.some((candidate) => candidate.id === id)) continue
-    models.push({ id, enabled: Boolean(model.enabled) })
+    models.push(normalizeModelConfig({ ...model, id }, input.type))
   }
-  return { id: input.id, name: input.name.trim(), type: input.type, baseUrl, models }
+  return {
+    id: input.id,
+    name: input.name.trim(),
+    type: input.type,
+    catalogProviderId:
+      input.catalogProviderId?.trim() || defaultCatalogProvider(input.type, baseUrl),
+    baseUrl,
+    models
+  }
 }
 
 function isStoredDocument(value: JsonValue): value is JsonValue & StoredDocument {
@@ -260,12 +280,135 @@ function isProviderConfig(value: unknown): value is AIRouterProviderConfig {
     validConfigId.test(candidate.id) &&
     typeof candidate.name === 'string' &&
     (candidate.type === 'openai-compatible' || candidate.type === 'anthropic') &&
+    (candidate.catalogProviderId === undefined ||
+      typeof candidate.catalogProviderId === 'string') &&
     typeof candidate.baseUrl === 'string' &&
     Array.isArray(candidate.models) &&
-    candidate.models.every(
-      (model) =>
-        Boolean(model) && typeof model.id === 'string' && typeof model.enabled === 'boolean'
-    )
+    candidate.models.every((model) => isModelConfig(model))
+  )
+}
+
+function normalizeModelConfig(
+  model: AIRouterModelConfig,
+  providerType: AIRouterProviderType
+): AIRouterModelConfig {
+  const metadata = normalizeModelMetadata(model.metadata)
+  const officialLimit = metadata?.outputLimit
+  const requestedMax = model.maxOutputTokens
+  if (requestedMax !== undefined && (!Number.isInteger(requestedMax) || requestedMax < 1)) {
+    throw new Error(`模型 ${model.id} 的最大输出长度必须是正整数`)
+  }
+  const maxOutputTokens =
+    requestedMax === undefined
+      ? undefined
+      : officialLimit
+        ? Math.min(requestedMax, officialLimit)
+        : requestedMax
+  const reasoning = normalizeReasoningConfig(model.id, model.reasoning, metadata, providerType)
+  return {
+    id: model.id,
+    enabled: Boolean(model.enabled),
+    ...(maxOutputTokens ? { maxOutputTokens } : {}),
+    ...(reasoning ? { reasoning } : {}),
+    ...(metadata ? { metadata } : {})
+  }
+}
+
+function normalizeModelMetadata(
+  value: AIRouterModelMetadata | undefined
+): AIRouterModelMetadata | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const metadata: AIRouterModelMetadata = {}
+  if (typeof value.name === 'string' && value.name.trim()) metadata.name = value.name.trim()
+  if (Number.isInteger(value.contextLimit) && (value.contextLimit as number) > 0) {
+    metadata.contextLimit = value.contextLimit
+  }
+  if (Number.isInteger(value.outputLimit) && (value.outputLimit as number) > 0) {
+    metadata.outputLimit = value.outputLimit
+  }
+  if (typeof value.reasoning === 'boolean') metadata.reasoning = value.reasoning
+  if (Array.isArray(value.reasoningOptions)) {
+    const options = normalizeReasoningOptions(value.reasoningOptions)
+    if (options.length) metadata.reasoningOptions = options
+  }
+  if (typeof value.structuredOutput === 'boolean') {
+    metadata.structuredOutput = value.structuredOutput
+  }
+  if (typeof value.attachment === 'boolean') metadata.attachment = value.attachment
+  return Object.keys(metadata).length ? metadata : undefined
+}
+
+function normalizeReasoningConfig(
+  modelId: string,
+  reasoning: AIRouterReasoningConfig | undefined,
+  metadata: AIRouterModelMetadata | undefined,
+  providerType: AIRouterProviderType
+): AIRouterReasoningConfig | undefined {
+  if (!reasoning) return undefined
+  if (metadata?.reasoning === false) throw new Error(`模型 ${modelId} 不支持推理`)
+  const options = metadata?.reasoningOptions ?? []
+  if (reasoning.type === 'disabled' || reasoning.type === 'enabled') {
+    const budgetOnlyCompatibleFallback =
+      providerType === 'openai-compatible' &&
+      options.some((option) => option.type === 'budget_tokens') &&
+      !options.some((option) => option.type === 'effort')
+    if (
+      options.length &&
+      !options.some((option) => option.type === 'toggle') &&
+      !budgetOnlyCompatibleFallback
+    ) {
+      throw new Error(`模型 ${modelId} 不支持推理开关`)
+    }
+    return { type: reasoning.type }
+  }
+  if (reasoning.type === 'effort') {
+    const option = options.find((candidate) => candidate.type === 'effort')
+    if (option?.type === 'effort' && !option.values.includes(reasoning.effort)) {
+      throw new Error(`模型 ${modelId} 不支持推理强度 ${reasoning.effort}`)
+    }
+    if (!isReasoningEffort(reasoning.effort)) throw new Error(`模型 ${modelId} 的推理强度无效`)
+    return { type: 'effort', effort: reasoning.effort }
+  }
+  if (!Number.isInteger(reasoning.budgetTokens) || reasoning.budgetTokens < 1) {
+    throw new Error(`模型 ${modelId} 的推理预算必须是正整数`)
+  }
+  if (providerType !== 'anthropic') {
+    throw new Error(`模型 ${modelId} 的当前 Provider 不支持 token 推理预算`)
+  }
+  const option = options.find((candidate) => candidate.type === 'budget_tokens')
+  if (option?.type === 'budget_tokens') {
+    if (option.min !== undefined && reasoning.budgetTokens < option.min) {
+      throw new Error(`模型 ${modelId} 的推理预算不能小于 ${option.min}`)
+    }
+    if (option.max !== undefined && reasoning.budgetTokens > option.max) {
+      throw new Error(`模型 ${modelId} 的推理预算不能大于 ${option.max}`)
+    }
+  }
+  return { type: 'budget_tokens', budgetTokens: reasoning.budgetTokens }
+}
+
+function isModelConfig(value: unknown): value is AIRouterModelConfig {
+  if (!value || typeof value !== 'object') return false
+  const model = value as Partial<AIRouterModelConfig>
+  return (
+    typeof model.id === 'string' &&
+    typeof model.enabled === 'boolean' &&
+    (model.maxOutputTokens === undefined ||
+      (Number.isInteger(model.maxOutputTokens) && model.maxOutputTokens > 0)) &&
+    (model.reasoning === undefined || isReasoningConfig(model.reasoning)) &&
+    (model.metadata === undefined || typeof model.metadata === 'object')
+  )
+}
+
+function isReasoningConfig(value: unknown): value is AIRouterReasoningConfig {
+  if (!value || typeof value !== 'object') return false
+  const config = value as { type?: unknown; effort?: unknown; budgetTokens?: unknown }
+  if (config.type === 'disabled' || config.type === 'enabled') return true
+  if (config.type === 'effort') return isReasoningEffort(config.effort)
+  return (
+    config.type === 'budget_tokens' &&
+    Number.isInteger(config.budgetTokens) &&
+    (config.budgetTokens as number) > 0
   )
 }
 
@@ -290,6 +433,143 @@ function createLanguageModel(
   }
   const provider = createAnthropic({ apiKey, baseURL: config.baseUrl })
   return provider(modelId)
+}
+
+function defaultCatalogProvider(type: AIRouterProviderType, baseUrl: string): string {
+  if (type === 'anthropic') return 'anthropic'
+  return baseUrl === DEFAULT_BASE_URLS['openai-compatible'] ? 'openai' : ''
+}
+
+function defaultMaxOutputTokens(metadata?: AIRouterModelMetadata): number {
+  const officialLimit = metadata?.outputLimit
+  return officialLimit && officialLimit > 0
+    ? Math.min(DEFAULT_MAX_OUTPUT_TOKENS, officialLimit)
+    : DEFAULT_MAX_OUTPUT_TOKENS
+}
+
+function reasoningCallOptions(
+  providerType: AIRouterProviderType,
+  reasoning?: AIRouterReasoningConfig
+): {
+  reasoning?: Exclude<AIRouterReasoningEffort, 'max'>
+  providerOptions?: SharedV4ProviderOptions
+} {
+  if (!reasoning) return {}
+  if (reasoning.type === 'disabled') return { reasoning: 'none' }
+  if (reasoning.type === 'enabled') return { reasoning: 'medium' }
+  if (reasoning.type === 'effort') {
+    if (reasoning.effort === 'max') {
+      return {
+        providerOptions: {
+          [providerType === 'anthropic' ? 'anthropic' : 'openai']:
+            providerType === 'anthropic'
+              ? ({
+                  effort: 'max',
+                  thinking: { type: 'adaptive', display: 'summarized' }
+                } as JSONObject)
+              : ({ reasoningEffort: 'max' } as JSONObject)
+        }
+      }
+    }
+    return { reasoning: reasoning.effort }
+  }
+  if (providerType !== 'anthropic') {
+    throw new Error('当前 Provider 协议不支持按 token 设置推理预算')
+  }
+  return {
+    providerOptions: {
+      anthropic: {
+        thinking: { type: 'enabled', budgetTokens: reasoning.budgetTokens }
+      }
+    }
+  }
+}
+
+interface ModelsDevProvider {
+  models?: Record<string, ModelsDevModel>
+}
+
+interface ModelsDevModel {
+  name?: unknown
+  reasoning?: unknown
+  reasoning_options?: unknown
+  structured_output?: unknown
+  attachment?: unknown
+  limit?: { context?: unknown; output?: unknown }
+}
+
+let modelsDevCache: Promise<Record<string, ModelsDevProvider>> | null = null
+
+async function enrichModelsFromCatalog(
+  models: AIRouterModelOption[],
+  providerId: string
+): Promise<AIRouterModelOption[]> {
+  if (!providerId) return models
+  try {
+    const catalog = await loadModelsDevCatalog()
+    const providerModels = catalog[providerId]?.models ?? {}
+    return models.map((model) => ({ ...model, ...toModelMetadata(providerModels[model.id]) }))
+  } catch {
+    return models
+  }
+}
+
+function loadModelsDevCatalog(): Promise<Record<string, ModelsDevProvider>> {
+  modelsDevCache ??= fetch(MODELS_DEV_API_URL, { signal: AbortSignal.timeout(5_000) })
+    .then((response) => {
+      if (!response.ok) throw new Error(`models.dev request failed (${response.status})`)
+      return response.json() as Promise<Record<string, ModelsDevProvider>>
+    })
+    .catch((error) => {
+      modelsDevCache = null
+      throw error
+    })
+  return modelsDevCache
+}
+
+function toModelMetadata(model?: ModelsDevModel): AIRouterModelMetadata {
+  if (!model) return {}
+  const metadata: AIRouterModelMetadata = {}
+  if (typeof model.name === 'string') metadata.name = model.name
+  if (typeof model.limit?.context === 'number') metadata.contextLimit = model.limit.context
+  if (typeof model.limit?.output === 'number') metadata.outputLimit = model.limit.output
+  if (typeof model.reasoning === 'boolean') metadata.reasoning = model.reasoning
+  const reasoningOptions = normalizeReasoningOptions(model.reasoning_options)
+  if (reasoningOptions.length) metadata.reasoningOptions = reasoningOptions
+  if (typeof model.structured_output === 'boolean') {
+    metadata.structuredOutput = model.structured_output
+  }
+  if (typeof model.attachment === 'boolean') metadata.attachment = model.attachment
+  return metadata
+}
+
+function normalizeReasoningOptions(value: unknown): AIRouterReasoningOption[] {
+  if (!Array.isArray(value)) return []
+  const options: AIRouterReasoningOption[] = []
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue
+    const option = item as { type?: unknown; values?: unknown; min?: unknown; max?: unknown }
+    if (option.type === 'toggle') options.push({ type: 'toggle' })
+    if (option.type === 'effort' && Array.isArray(option.values)) {
+      const values = option.values.filter(isReasoningEffort)
+      if (values.length) options.push({ type: 'effort', values })
+    }
+    if (option.type === 'budget_tokens') {
+      options.push({
+        type: 'budget_tokens',
+        ...(typeof option.min === 'number' ? { min: option.min } : {}),
+        ...(typeof option.max === 'number' ? { max: option.max } : {})
+      })
+    }
+  }
+  return options
+}
+
+function isReasoningEffort(value: unknown): value is AIRouterReasoningEffort {
+  return (
+    typeof value === 'string' &&
+    ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'].includes(value)
+  )
 }
 
 function toChunk(part: unknown): AIRouterTextChunk | null {
