@@ -11,7 +11,7 @@ describe('Template function library files', () => {
   it('keeps the release version for unchanged content and increments it after edits', async () => {
     let stored = library()
     const save = vi.fn().mockImplementation(async (next: LocalFunctionLibraryDocument) => {
-      stored = { ...next, revision: next.revision + 1 }
+      stored = { ...next, storageRevision: next.storageRevision + 1 }
       return stored
     })
     const application = functionLibraryApplication({
@@ -28,13 +28,33 @@ describe('Template function library files', () => {
     }
 
     expect((await exportLocalFunctionLibraryFile(application, LIBRARY_ID, dialog))?.version).toBe(1)
+    expect(stored.revision).toBe(1)
     expect((await exportLocalFunctionLibraryFile(application, LIBRARY_ID, dialog))?.version).toBe(1)
+    expect(stored.revision).toBe(1)
     expect(save).toHaveBeenCalledTimes(1)
 
     stored = { ...stored, content: { ...stored.content, name: '已修改函数库' } }
     expect((await exportLocalFunctionLibraryFile(application, LIBRARY_ID, dialog))?.version).toBe(2)
+    expect(stored.revision).toBe(2)
     expect(save).toHaveBeenCalledTimes(2)
     expect(written.map((value) => JSON.parse(value).version)).toEqual([1, 1, 2])
+  })
+
+  it('does not advance the revision when export is cancelled', async () => {
+    const stored = library()
+    const save = vi.fn()
+    const application = functionLibraryApplication({
+      get: vi.fn().mockResolvedValue(stored),
+      save
+    })
+    const dialog = {
+      readText: vi.fn(),
+      writeText: vi.fn().mockResolvedValue(false)
+    }
+
+    await expect(exportLocalFunctionLibraryFile(application, LIBRARY_ID, dialog)).resolves.toBeNull()
+    expect(stored.revision).toBe(0)
+    expect(save).not.toHaveBeenCalled()
   })
 
   it('registers a selected release and rejects malformed files', async () => {
@@ -66,7 +86,8 @@ describe('Template function library files', () => {
 function library(): LocalFunctionLibraryDocument {
   return {
     libraryId: LIBRARY_ID,
-    revision: 1,
+    revision: 0,
+    storageRevision: 1,
     content: { name: '本地函数库', functions: [] },
     editorState: { library: {}, functions: {} }
   }

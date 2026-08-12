@@ -705,6 +705,7 @@ function summarizeLocalLibrary(library: LocalFunctionLibraryDocument): FunctionL
   return {
     source: 'local',
     libraryId: library.libraryId,
+    ...(library.revision > 0 ? { version: library.revision } : {}),
     name: library.content.name,
     functions: library.content.functions
       .filter((entry) => entry.exposed !== false)

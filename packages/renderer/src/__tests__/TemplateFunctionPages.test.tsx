@@ -97,7 +97,7 @@ describe('Template function pages', () => {
     expect(functionDocument.content.name).toBe('更新后的函数')
     expect(functionDocument.content.inputs).toEqual([{ name: 'input', type: 'string' }])
     expect(functionDocument.content.body.children[0]).toMatchObject({ id: 'page', type: 'page' })
-    expect(screen.getByText(/Revision 5/)).toBeInTheDocument()
+    expect(screen.getByText(/Revision 4/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '保存' })).toBeDisabled()
   })
 
@@ -225,7 +225,7 @@ function application(): TemplateApplication {
         saveFunction: vi.fn().mockImplementation(async (library, document) => {
           storedLibrary = {
             ...library,
-            revision: library.revision + 1,
+            storageRevision: library.storageRevision + 1,
             content: {
               ...library.content,
               functions: library.content.functions.map((entry) =>
@@ -330,6 +330,7 @@ function localLibrary(): LocalFunctionLibraryDocument {
   return {
     libraryId: LIBRARY_ID,
     revision: 4,
+    storageRevision: 4,
     content: { name: '本地函数库', functions: [{ functionId: FUNCTION_ID, content }] },
     editorState: { library: {}, functions: { [FUNCTION_ID]: {} } }
   }

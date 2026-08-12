@@ -321,7 +321,7 @@ test('creates, edits and reloads a persisted template', async () => {
   await expect(functionName).toHaveValue('未命名函数')
   await functionName.fill('集成测试函数')
   await page.getByRole('button', { name: '保存' }).click()
-  await expect(page.getByText(/Revision 3$/)).toBeVisible()
+  await expect(page.getByText(/Revision 0$/)).toBeVisible()
   await page.getByRole('button', { name: '返回模板编辑' }).click()
 
   await page.getByRole('tab', { name: '本地函数库' }).click()

@@ -44,7 +44,7 @@ export async function exportLocalFunctionLibraryFile(
 
   const contentHash = await deriveFunctionLibraryContentHash(library.content)
   const unchanged = library.exportState?.contentHash === contentHash
-  const version = unchanged ? library.exportState.version : (library.exportState?.version ?? 0) + 1
+  const version = unchanged ? library.revision : library.revision + 1
   const release = await createFunctionLibraryRelease(library.libraryId, version, library.content)
   const written = await dialog.writeText(`${JSON.stringify(release, null, 2)}\n`, {
     title: '导出函数库',
@@ -56,7 +56,8 @@ export async function exportLocalFunctionLibraryFile(
   if (!unchanged) {
     await application.functionLibraries.local.save({
       ...library,
-      exportState: { version: release.version, contentHash: release.contentHash }
+      revision: release.version,
+      exportState: { contentHash: release.contentHash }
     })
   }
   return release

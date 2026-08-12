@@ -67,6 +67,7 @@ export function parseLocalFunctionLibraryDocument(
     !isRecord(value) ||
     typeof value.libraryId !== 'string' ||
     !isRevision(value.revision) ||
+    !isRevision(value.storageRevision) ||
     !isFunctionLibraryContent(value.content) ||
     !isFunctionLibraryEditorState(value.editorState) ||
     (value.exportState !== undefined && !isFunctionLibraryExportState(value.exportState))
@@ -136,12 +137,7 @@ function isFunctionLibraryEditorState(value: unknown): boolean {
 }
 
 function isFunctionLibraryExportState(value: unknown): boolean {
-  return (
-    isRecord(value) &&
-    Number.isSafeInteger(value.version) &&
-    (value.version as number) >= 1 &&
-    typeof value.contentHash === 'string'
-  )
+  return isRecord(value) && typeof value.contentHash === 'string'
 }
 
 function isFunctionOutput(value: unknown): value is FunctionOutputDef {

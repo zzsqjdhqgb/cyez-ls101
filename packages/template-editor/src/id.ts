@@ -58,6 +58,7 @@ export function createLocalFunctionLibraryDocument(
   return {
     libraryId: createFunctionLibraryId(),
     revision: 0,
+    storageRevision: 0,
     content: { name, functions: [] },
     editorState: structuredClone(editorState)
   }

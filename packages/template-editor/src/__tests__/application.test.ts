@@ -58,6 +58,7 @@ function localLibrary(
   return {
     libraryId: LIBRARY_ID,
     revision,
+    storageRevision: revision,
     content: {
       name: 'Local library',
       functions: functions.map(({ functionId, content }) => ({ functionId, content }))
@@ -289,7 +290,8 @@ describe('FileTemplateRepository', () => {
       content: { ...library.content, name: 'Updated' }
     })
     expect(updatedTemplate.revision).toBe(1)
-    expect(updatedLibrary.revision).toBe(1)
+    expect(updatedLibrary.revision).toBe(0)
+    expect(updatedLibrary.storageRevision).toBe(1)
 
     await expect(repository.saveTemplate(template)).rejects.toMatchObject({
       code: 'REVISION_CONFLICT',

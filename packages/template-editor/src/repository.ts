@@ -198,17 +198,18 @@ export class FileTemplateRepository implements TemplateRepository {
       `Local function library ${document.libraryId}`
     )
     if (stored === null) {
-      if (document.revision !== 0) {
-        throw revisionConflict('FunctionLibrary', document.libraryId, 0, document.revision)
+      if (document.storageRevision !== 0) {
+        throw revisionConflict('FunctionLibrary', document.libraryId, 0, document.storageRevision)
       }
       if (!(await scope.compareAndSwapText(LIBRARY_FILE, null, document))) {
         throw await latestRevisionConflict(
           'FunctionLibrary',
           document.libraryId,
-          document.revision,
+          document.storageRevision,
           scope,
           LIBRARY_FILE,
-          parseLocalFunctionLibraryDocument
+          parseLocalFunctionLibraryDocument,
+          (library) => library.storageRevision
         )
       }
       return document
@@ -218,23 +219,24 @@ export class FileTemplateRepository implements TemplateRepository {
       throw invalidData(`Local function library ${document.libraryId} is invalid`)
     }
     assertLocalLibrary(current)
-    if (current.revision !== document.revision) {
+    if (current.storageRevision !== document.storageRevision) {
       throw revisionConflict(
         'FunctionLibrary',
         document.libraryId,
-        current.revision,
-        document.revision
+        current.storageRevision,
+        document.storageRevision
       )
     }
-    const updated = { ...document, revision: document.revision + 1 }
+    const updated = { ...document, storageRevision: document.storageRevision + 1 }
     if (!(await scope.compareAndSwapText(LIBRARY_FILE, stored, updated))) {
       throw await latestRevisionConflict(
         'FunctionLibrary',
         document.libraryId,
-        document.revision,
+        document.storageRevision,
         scope,
         LIBRARY_FILE,
-        parseLocalFunctionLibraryDocument
+        parseLocalFunctionLibraryDocument,
+        (library) => library.storageRevision
       )
     }
     return updated
@@ -457,13 +459,14 @@ async function latestRevisionConflict<T extends { revision: number }>(
   providedRevision: number,
   store: TemplateStore,
   filename: string,
-  parse: (value: unknown) => T | null
+  parse: (value: unknown) => T | null,
+  selectRevision: (value: T) => number = (value) => value.revision
 ): Promise<TemplateRepositoryError> {
   const stored = await readStoredValue(store, filename, `${kind} ${id}`)
   if (stored === null) return revisionConflict(kind, id, 0, providedRevision)
   const current = parse(stored)
   if (!current) throw invalidData(`${kind} ${id} is invalid`)
-  return revisionConflict(kind, id, current.revision, providedRevision)
+  return revisionConflict(kind, id, selectRevision(current), providedRevision)
 }
 
 function isSyntaxError(error: unknown): boolean {

@@ -265,7 +265,6 @@ export interface FunctionLibraryEditorState {
 }
 
 export interface FunctionLibraryExportState {
-  version: number
   contentHash: string
 }
 
@@ -273,8 +272,10 @@ export interface FunctionLibraryExportState {
 export interface LocalFunctionLibraryDocument {
   /** 稳定 UUID。 */
   libraryId: string
-  /** 仓储乐观并发版本；每次成功更新后递增。 */
+  /** 导出修订号；仅在导出内容相对上次导出发生变化时递增。 */
   revision: number
+  /** 仓储乐观并发版本；每次成功保存后递增，不属于函数库导出语义。 */
+  storageRevision: number
   content: FunctionLibraryContent
   editorState: FunctionLibraryEditorState
   /** 仅用于辅助下一次导出，不属于函数库语义内容。 */

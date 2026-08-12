@@ -207,26 +207,29 @@ function application(document = template()): TemplateApplication {
       local: {
         create: vi.fn().mockImplementation(async (name = '') => ({
           libraryId: NEW_LIBRARY_ID,
-          revision: 1,
+          revision: 0,
+          storageRevision: 1,
           content: { name, functions: [] },
           editorState: { library: {}, functions: {} }
         })),
         get: vi.fn().mockResolvedValue({
           libraryId: '40000000-0000-4000-8000-000000000004',
-          revision: 1,
+          revision: 0,
+          storageRevision: 1,
           content: { name: '听力函数库', functions: [] },
           editorState: { library: {}, functions: {} }
         }),
         save: vi.fn().mockImplementation(async (library) => ({
           ...library,
-          revision: library.revision + 1
+          storageRevision: library.storageRevision + 1
         })),
         createFunction: vi.fn().mockImplementation(async (libraryId, initial = {}) => {
           const content = emptyFunctionContent(initial.name ?? '')
           return {
             library: {
               libraryId,
-              revision: 2,
+              revision: 0,
+              storageRevision: 2,
               content: {
                 name: '未命名函数库',
                 functions: [{ functionId: NEW_FUNCTION_ID, content }]
@@ -557,6 +560,7 @@ describe('Template pages', () => {
     const localDocument = {
       libraryId: '40000000-0000-4000-8000-000000000004',
       revision: 3,
+      storageRevision: 3,
       content: {
         name: '听力函数库',
         functions: [
@@ -595,7 +599,7 @@ describe('Template pages', () => {
         content: { ...localDocument.content, name: '听力题型库' }
       })
     )
-    expect(screen.getByRole('button', { name: '听力题型库' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '听力题型库，版本 3' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '导出本地函数库“听力题型库”' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '删除本地函数库“听力题型库”' })).toBeInTheDocument()
   })
@@ -666,9 +670,11 @@ describe('Template pages', () => {
     })
     expect(app.functionLibraries.local.save).toHaveBeenCalledWith(
       expect.objectContaining({
-        exportState: expect.objectContaining({ version: 1 })
+        revision: 1,
+        exportState: expect.objectContaining({ contentHash: expect.any(String) })
       })
     )
+    expect(screen.getByRole('button', { name: '听力函数库，版本 1' })).toBeInTheDocument()
   })
 
   it('inserts an example library entry as a function call', async () => {

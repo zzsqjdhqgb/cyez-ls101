@@ -388,7 +388,16 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
     setExportingLibraryId(library.libraryId)
     setLibraryError(null)
     try {
-      await exportLocalFunctionLibraryFile(application, library.libraryId)
+      const release = await exportLocalFunctionLibraryFile(application, library.libraryId)
+      if (release) {
+        setFunctionLibraries((current) =>
+          current.map((item) =>
+            item.source === 'local' && item.libraryId === library.libraryId
+              ? { ...item, version: release.version }
+              : item
+          )
+        )
+      }
     } catch (reason) {
       setLibraryError(templateErrorMessage(reason))
     } finally {
@@ -1071,6 +1080,7 @@ function summarizeLocalFunctionLibrary(
   return {
     source: 'local',
     libraryId: library.libraryId,
+    ...(library.revision > 0 ? { version: library.revision } : {}),
     name: library.content.name,
     functions: library.content.functions
       .filter((entry) => entry.exposed !== false)
