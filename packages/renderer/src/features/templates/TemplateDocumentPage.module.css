@@ -230,6 +230,27 @@
   height: 28px;
 }
 
+.libraryRenameEditor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px 28px;
+  gap: 3px;
+  align-items: center;
+  min-width: 0;
+}
+
+.libraryRenameEditor input {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 5px 8px;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font: 600 12px/1.4 var(--font-ui);
+  outline: 2px solid var(--color-focus-ring);
+}
+
 .libraryNotice {
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr);

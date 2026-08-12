@@ -552,6 +552,54 @@ describe('Template pages', () => {
     expect(screen.queryByRole('button', { name: '未命名函数库' })).not.toBeInTheDocument()
   })
 
+  it('renames only local function libraries and refreshes their row actions', async () => {
+    const app = application()
+    const localDocument = {
+      libraryId: '40000000-0000-4000-8000-000000000004',
+      revision: 3,
+      content: {
+        name: '听力函数库',
+        functions: [
+          {
+            functionId: FUNCTION_ID,
+            content: emptyFunctionContent('单题函数')
+          }
+        ]
+      },
+      editorState: { library: {}, functions: { [FUNCTION_ID]: {} } }
+    }
+    vi.mocked(app.functionLibraries.local.get).mockResolvedValueOnce(localDocument)
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '选择节点 root' })
+    fireEvent.click(screen.getByRole('tab', { name: '导入函数库' }))
+    expect(screen.queryByRole('button', { name: /重命名.*导入题型库/ })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: '本地函数库' }))
+    fireEvent.click(screen.getByRole('button', { name: '重命名本地函数库“听力函数库”' }))
+    const input = screen.getByRole('textbox', { name: '函数库“听力函数库”名称' })
+    fireEvent.change(input, { target: { value: '听力题型库' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    await waitFor(() =>
+      expect(app.functionLibraries.local.save).toHaveBeenCalledWith({
+        ...localDocument,
+        content: { ...localDocument.content, name: '听力题型库' }
+      })
+    )
+    expect(screen.getByRole('button', { name: '听力题型库' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '导出本地函数库“听力题型库”' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '删除本地函数库“听力题型库”' })).toBeInTheDocument()
+  })
+
   it('imports and deletes a specific imported function library release', async () => {
     const app = application()
     const release = {

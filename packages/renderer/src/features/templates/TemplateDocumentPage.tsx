@@ -17,6 +17,7 @@ import {
   ArrowUp,
   AlertCircle,
   Braces,
+  Check,
   ChevronDown,
   ChevronRight,
   Copy,
@@ -36,7 +37,8 @@ import {
   Trash2,
   Undo2,
   Upload,
-  Volume2
+  Volume2,
+  X
 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
@@ -113,6 +115,12 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const [importingLibrary, setImportingLibrary] = useState(false)
   const [creatingFunctionLibraryId, setCreatingFunctionLibraryId] = useState<string | null>(null)
   const [exportingLibraryId, setExportingLibraryId] = useState<string | null>(null)
+  const [renamingLibrary, setRenamingLibrary] = useState<{
+    libraryId: string
+    originalName: string
+    draft: string
+  } | null>(null)
+  const [savingLibraryName, setSavingLibraryName] = useState(false)
   const [pendingLibraryDelete, setPendingLibraryDelete] = useState<FunctionLibrarySummary | null>(
     null
   )
@@ -388,6 +396,36 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
     }
   }
 
+  const renameLocalFunctionLibrary = async (): Promise<void> => {
+    if (!renamingLibrary || savingLibraryName) return
+    const name = renamingLibrary.draft.trim()
+    if (!name) {
+      setLibraryError('函数库名称不能为空。')
+      return
+    }
+    setSavingLibraryName(true)
+    setLibraryError(null)
+    try {
+      const library = await application.functionLibraries.local.get(renamingLibrary.libraryId)
+      if (!library) throw new Error('本地函数库不存在。')
+      const saved = await application.functionLibraries.local.save({
+        ...library,
+        content: { ...library.content, name }
+      })
+      const summary = summarizeLocalFunctionLibrary(saved)
+      setFunctionLibraries((current) =>
+        current.map((item) =>
+          item.source === 'local' && item.libraryId === saved.libraryId ? summary : item
+        )
+      )
+      setRenamingLibrary(null)
+    } catch (reason) {
+      setLibraryError(templateErrorMessage(reason))
+    } finally {
+      setSavingLibraryName(false)
+    }
+  }
+
   const deleteFunctionLibrary = async (): Promise<void> => {
     if (!pendingLibraryDelete || deletingLibrary) return
     const library = pendingLibraryDelete
@@ -592,28 +630,88 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                                   className={styles.libraryGroupHeader}
                                   data-actions={library.source !== 'builtin' || undefined}
                                 >
-                                  <button
-                                    type="button"
-                                    className={styles.libraryButton}
-                                    aria-expanded={!collapsed}
-                                    aria-label={libraryButtonLabel(library)}
-                                    onClick={() => toggleLibrary(key)}
-                                  >
-                                    {collapsed ? (
-                                      <ChevronRight aria-hidden="true" />
-                                    ) : (
-                                      <ChevronDown aria-hidden="true" />
-                                    )}
-                                    <span>{library.name || '未命名函数库'}</span>
-                                    <small>
-                                      {library.functions.length} 项
-                                      {library.version ? ` · v${library.version}` : ''}
-                                    </small>
-                                  </button>
+                                  {library.source === 'local' &&
+                                  renamingLibrary?.libraryId === library.libraryId ? (
+                                    <div className={styles.libraryRenameEditor}>
+                                      <input
+                                        autoFocus
+                                        aria-label={`函数库“${renamingLibrary.originalName || '未命名函数库'}”名称`}
+                                        disabled={savingLibraryName}
+                                        value={renamingLibrary.draft}
+                                        onChange={(event) =>
+                                          setRenamingLibrary((current) =>
+                                            current
+                                              ? { ...current, draft: event.target.value }
+                                              : current
+                                          )
+                                        }
+                                        onKeyDown={(event) => {
+                                          if (event.key === 'Enter') {
+                                            event.preventDefault()
+                                            void renameLocalFunctionLibrary()
+                                          } else if (event.key === 'Escape') {
+                                            setRenamingLibrary(null)
+                                            setLibraryError(null)
+                                          }
+                                        }}
+                                      />
+                                      <IconButton
+                                        icon={Check}
+                                        label="确认重命名函数库"
+                                        size="small"
+                                        disabled={savingLibraryName}
+                                        onClick={() => void renameLocalFunctionLibrary()}
+                                      />
+                                      <IconButton
+                                        icon={X}
+                                        label="取消重命名函数库"
+                                        size="small"
+                                        disabled={savingLibraryName}
+                                        onClick={() => {
+                                          setRenamingLibrary(null)
+                                          setLibraryError(null)
+                                        }}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      className={styles.libraryButton}
+                                      aria-expanded={!collapsed}
+                                      aria-label={libraryButtonLabel(library)}
+                                      onClick={() => toggleLibrary(key)}
+                                    >
+                                      {collapsed ? (
+                                        <ChevronRight aria-hidden="true" />
+                                      ) : (
+                                        <ChevronDown aria-hidden="true" />
+                                      )}
+                                      <span>{library.name || '未命名函数库'}</span>
+                                      <small>
+                                        {library.functions.length} 项
+                                        {library.version ? ` · v${library.version}` : ''}
+                                      </small>
+                                    </button>
+                                  )}
                                   {library.source !== 'builtin' ? (
                                     <div className={styles.libraryGroupActions}>
                                       {library.source === 'local' ? (
                                         <>
+                                          <IconButton
+                                            className={styles.libraryAction}
+                                            icon={Pencil}
+                                            label={`重命名本地函数库“${library.name || '未命名函数库'}”`}
+                                            size="small"
+                                            disabled={renamingLibrary !== null}
+                                            onClick={() => {
+                                              setLibraryError(null)
+                                              setRenamingLibrary({
+                                                libraryId: library.libraryId,
+                                                originalName: library.name,
+                                                draft: library.name
+                                              })
+                                            }}
+                                          />
                                           <IconButton
                                             className={styles.libraryAction}
                                             icon={Plus}
