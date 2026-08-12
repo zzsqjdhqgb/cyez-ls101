@@ -17,7 +17,7 @@ import {
   createTemplateDocument
 } from './id'
 import { editFunctionDocument, editTemplateDocument } from './mutations'
-import type { TemplateRepository } from './repository'
+import { TemplateRepositoryError, type TemplateRepository } from './repository'
 import type {
   DslEditorState,
   FrameNode,
@@ -58,6 +58,7 @@ export interface FunctionLibrarySummary {
   version?: number
   name: string
   functions: FunctionSummary[]
+  error?: string
 }
 
 export interface EmbeddedFunctionResult {
@@ -347,26 +348,57 @@ export function createTemplateApplication(
           repository.listBuiltinFunctionLibraryIds()
         ])
         const [locals, importedVersions, builtins] = await Promise.all([
-          Promise.all(localIds.map((id) => repository.getLocalFunctionLibrary(id))),
+          Promise.all(
+            localIds.map(async (id) => {
+              try {
+                return { library: await repository.getLocalFunctionLibrary(id), error: null }
+              } catch (error) {
+                if (error instanceof TemplateRepositoryError && error.code === 'INVALID_DATA') {
+                  return { library: null, error: error.message }
+                }
+                throw error
+              }
+            })
+          ),
           Promise.all(
             importedIds.map(async (libraryId) => {
               const versions = await repository.listImportedFunctionLibraryVersions(libraryId)
-              return Promise.all(
+              return Promise.allSettled(
                 versions.map((version) => repository.getImportedFunctionLibrary(libraryId, version))
               )
             })
           ),
-          Promise.all(builtinIds.map((id) => repository.getActiveBuiltinFunctionLibrary(id)))
+          Promise.allSettled(builtinIds.map((id) => repository.getActiveBuiltinFunctionLibrary(id)))
         ])
         return [
           ...builtins
+            .filter(
+              (result): result is PromiseFulfilledResult<FunctionLibraryRelease | null> =>
+                result.status === 'fulfilled'
+            )
+            .map((result) => result.value)
             .filter((item) => item !== null)
             .map((release) => summarizeLibrary('builtin', release)),
           ...importedVersions
             .flat()
+            .filter(
+              (result): result is PromiseFulfilledResult<FunctionLibraryRelease | null> =>
+                result.status === 'fulfilled'
+            )
+            .map((result) => result.value)
             .filter((item) => item !== null)
             .map((release) => summarizeLibrary('imported', release)),
-          ...locals.filter((item) => item !== null).map(summarizeLocalLibrary)
+          ...locals.map(({ library, error }, index) =>
+            library
+              ? summarizeLocalLibrary(library)
+              : {
+                  source: 'local' as const,
+                  libraryId: localIds[index],
+                  name: '损坏的本地函数库',
+                  functions: [],
+                  error: error ?? '本地函数库无法读取。'
+                }
+          )
         ]
       },
       async listInterfaces() {

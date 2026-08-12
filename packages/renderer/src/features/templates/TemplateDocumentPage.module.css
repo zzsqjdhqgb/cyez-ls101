@@ -266,6 +266,17 @@
   margin-top: 1px;
 }
 
+.libraryNotice > div {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.libraryNotice span {
+  overflow-wrap: anywhere;
+}
+
 .libraryStatus,
 .emptyLibrary {
   color: var(--color-text-muted);

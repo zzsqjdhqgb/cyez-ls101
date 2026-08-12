@@ -1,5 +1,6 @@
 import {
   parseFunctionLibraryRelease,
+  parseLegacyLocalFunctionLibraryDocument,
   parseLocalFunctionLibraryDocument,
   parseTemplateDocument
 } from './document-parser'
@@ -169,18 +170,30 @@ export class FileTemplateRepository implements TemplateRepository {
 
   async getLocalFunctionLibrary(libraryId: string): Promise<LocalFunctionLibraryDocument | null> {
     assertUuid(libraryId, 'libraryId')
-    const value = await readStoredValue(
-      this.localLibraries.scope(libraryId),
-      LIBRARY_FILE,
-      `Local function library ${libraryId}`
-    )
+    const scope = this.localLibraries.scope(libraryId)
+    let value: unknown | null
+    try {
+      value = await readStoredValue(scope, LIBRARY_FILE, `Local function library ${libraryId}`)
+    } catch (error) {
+      if (error instanceof TemplateRepositoryError && error.code === 'INVALID_DATA') {
+        throw invalidLocalLibrary(libraryId, error.message)
+      }
+      throw error
+    }
     if (value === null) return null
     const document = parseLocalFunctionLibraryDocument(value)
-    if (!document || document.libraryId !== libraryId) {
-      throw invalidData(`Local function library ${libraryId} is invalid`)
+    if (document?.libraryId === libraryId) {
+      assertReadableLocalLibrary(document)
+      return document
     }
-    assertLocalLibrary(document)
-    return document
+
+    const migrated = parseLegacyLocalFunctionLibraryDocument(value)
+    if (!migrated || migrated.libraryId !== libraryId) {
+      throw invalidLocalLibrary(libraryId)
+    }
+    assertReadableLocalLibrary(migrated)
+    if (await scope.compareAndSwapText(LIBRARY_FILE, value, migrated)) return migrated
+    return this.getLocalFunctionLibrary(libraryId)
   }
 
   async saveLocalFunctionLibrary(
@@ -502,6 +515,7 @@ function releaseScope(root: TemplateStore, libraryId: string, version: number): 
 
 function assertLocalLibrary(document: LocalFunctionLibraryDocument): void {
   assertFunctionLibraryContent(document.content, 'local')
+  assertFunctionLibraryDependencyGraph(document.content, 'local')
   const ids = new Set(document.content.functions.map((entry) => entry.functionId))
   for (const functionId of Object.keys(document.editorState.functions)) {
     if (!ids.has(functionId)) {
@@ -549,7 +563,7 @@ function assertFunctionLibraryContent(
 
 function assertFunctionLibraryDependencyGraph(
   content: FunctionLibraryContent,
-  source: 'builtin' | 'imported'
+  source: 'builtin' | 'imported' | 'local'
 ): void {
   const functions = new Map(content.functions.map((entry) => [entry.functionId, entry]))
   const dependencies = new Map<string, string[]>()
@@ -664,6 +678,25 @@ function isActiveBuiltinFunctionLibraries(value: unknown): value is ActiveBuilti
 
 function invalidData(message: string): TemplateRepositoryError {
   return new TemplateRepositoryError('INVALID_DATA', message)
+}
+
+function invalidLocalLibrary(libraryId: string, message?: string): TemplateRepositoryError {
+  return new TemplateRepositoryError(
+    'INVALID_DATA',
+    message ?? `Local function library ${libraryId} is invalid`,
+    { libraryId }
+  )
+}
+
+function assertReadableLocalLibrary(document: LocalFunctionLibraryDocument): void {
+  try {
+    assertLocalLibrary(document)
+  } catch (error) {
+    if (error instanceof TemplateRepositoryError && error.code === 'INVALID_DATA') {
+      throw invalidLocalLibrary(document.libraryId, error.message)
+    }
+    throw error
+  }
 }
 
 function revisionConflict(

@@ -77,6 +77,35 @@ export function parseLocalFunctionLibraryDocument(
   return value as unknown as LocalFunctionLibraryDocument
 }
 
+export function parseLegacyLocalFunctionLibraryDocument(
+  value: unknown
+): LocalFunctionLibraryDocument | null {
+  if (
+    !isJsonTree(value) ||
+    !isRecord(value) ||
+    typeof value.libraryId !== 'string' ||
+    !isRevision(value.revision) ||
+    value.storageRevision !== undefined ||
+    !isFunctionLibraryContent(value.content) ||
+    !isFunctionLibraryEditorState(value.editorState) ||
+    (value.exportState !== undefined && !isLegacyFunctionLibraryExportState(value.exportState))
+  ) {
+    return null
+  }
+
+  const legacyExportState = value.exportState as
+    | { version: number; contentHash: string }
+    | undefined
+  return {
+    libraryId: value.libraryId,
+    revision: legacyExportState?.version ?? 0,
+    storageRevision: value.revision,
+    content: value.content,
+    editorState: value.editorState,
+    ...(legacyExportState ? { exportState: { contentHash: legacyExportState.contentHash } } : {})
+  } as LocalFunctionLibraryDocument
+}
+
 export function parseFunctionLibraryRelease(value: unknown): FunctionLibraryRelease | null {
   if (
     !isJsonTree(value) ||
@@ -138,6 +167,15 @@ function isFunctionLibraryEditorState(value: unknown): boolean {
 
 function isFunctionLibraryExportState(value: unknown): boolean {
   return isRecord(value) && typeof value.contentHash === 'string'
+}
+
+function isLegacyFunctionLibraryExportState(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    Number.isSafeInteger(value.version) &&
+    (value.version as number) >= 1 &&
+    typeof value.contentHash === 'string'
+  )
 }
 
 function isFunctionOutput(value: unknown): value is FunctionOutputDef {

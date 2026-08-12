@@ -227,6 +227,22 @@ describe('FileTemplateRepository', () => {
         ])
       })
     ).rejects.toMatchObject({ code: 'INVALID_DATA' })
+    await expect(
+      repository.saveLocalFunctionLibrary({
+        ...localLibrary([
+          functionDocument(FUNCTION_A, 'Recursive', [functionCall('call-self', FUNCTION_A)])
+        ])
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_DATA' })
+    await expect(
+      repository.saveLocalFunctionLibrary({
+        ...localLibrary([
+          functionDocument(FUNCTION_A, 'Missing dependency', [
+            functionCall('call-missing', FUNCTION_B)
+          ])
+        ])
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_DATA' })
 
     const resource = await createFunctionResource(functionDocument(FUNCTION_A, 'Original').content)
     const template = {
@@ -267,7 +283,35 @@ describe('FileTemplateRepository', () => {
       content: { ...library.content, functions: [{ functionId: FUNCTION_A, content: {} }] }
     })
     await expect(repository.getLocalFunctionLibrary(LIBRARY_ID)).rejects.toMatchObject({
-      code: 'INVALID_DATA'
+      code: 'INVALID_DATA',
+      params: { libraryId: LIBRARY_ID }
+    })
+  })
+
+  it('无损升级 storageRevision 拆分前的本地函数库', async () => {
+    const { store, repository } = setup()
+    const libraryScope = store
+      .scope('template-editor')
+      .scope('function-libraries')
+      .scope('local')
+      .scope(LIBRARY_ID)
+    const current = localLibrary([functionDocument(FUNCTION_A, 'Legacy function')], 7)
+    const { storageRevision: _storageRevision, ...legacy } = current
+    await libraryScope.writeText('library.json', {
+      ...legacy,
+      exportState: { version: 3, contentHash: `sha256:${'a'.repeat(64)}` }
+    })
+
+    await expect(repository.getLocalFunctionLibrary(LIBRARY_ID)).resolves.toMatchObject({
+      revision: 3,
+      storageRevision: 7,
+      content: { functions: [{ content: { name: 'Legacy function' } }] },
+      exportState: { contentHash: `sha256:${'a'.repeat(64)}` }
+    })
+    await expect(libraryScope.readText('library.json')).resolves.toMatchObject({
+      revision: 3,
+      storageRevision: 7,
+      exportState: { contentHash: `sha256:${'a'.repeat(64)}` }
     })
   })
 
@@ -417,6 +461,34 @@ describe('TemplateApplication', () => {
         name: 'Question library',
         functions: [{ functionId: created.function.functionId, name: 'Question' }]
       }
+    ])
+  })
+
+  it('浏览函数库时隔离损坏的本地库，不阻塞其他库', async () => {
+    const { store, application } = setup()
+    const validId = '40000000-0000-4000-8000-000000000010'
+    const invalidId = '40000000-0000-4000-8000-000000000011'
+    await store
+      .scope('template-editor')
+      .scope('function-libraries')
+      .scope('local')
+      .scope(validId)
+      .writeText('library.json', { ...localLibrary([], 0), libraryId: validId })
+    await store
+      .scope('template-editor')
+      .scope('function-libraries')
+      .scope('local')
+      .scope(invalidId)
+      .writeText('library.json', { libraryId: invalidId, revision: 0, content: null })
+
+    await expect(application.browser.listFunctionLibraries()).resolves.toEqual([
+      expect.objectContaining({ source: 'local', libraryId: validId, name: 'Local library' }),
+      expect.objectContaining({
+        source: 'local',
+        libraryId: invalidId,
+        name: '损坏的本地函数库',
+        error: expect.stringContaining(invalidId)
+      })
     ])
   })
 
@@ -748,16 +820,20 @@ describe('TemplateApplication', () => {
 
   it('拒绝递归或缺失的函数依赖', async () => {
     const { repository, application } = setup()
+    await expect(
+      saveFunctions(
+        repository,
+        functionDocument(FUNCTION_A, 'A', [functionCall('b', FUNCTION_B)]),
+        functionDocument(FUNCTION_B, 'B', [functionCall('a', FUNCTION_A)])
+      )
+    ).rejects.toMatchObject({ code: 'INVALID_DATA' })
     await saveFunctions(
       repository,
-      functionDocument(FUNCTION_A, 'A', [functionCall('b', FUNCTION_B)]),
-      functionDocument(FUNCTION_B, 'B', [functionCall('a', FUNCTION_A)])
+      functionDocument(FUNCTION_A, 'A'),
+      functionDocument(FUNCTION_B, 'B')
     )
     const template = await application.templates.create()
 
-    await expect(
-      application.templates.embedFunction(template.templateId, functionLocator(FUNCTION_A))
-    ).rejects.toMatchObject({ code: 'RECURSIVE_FUNCTION_DEPENDENCY' })
     await expect(
       application.templates.embedFunction(template.templateId, functionLocator(FUNCTION_C))
     ).rejects.toEqual(

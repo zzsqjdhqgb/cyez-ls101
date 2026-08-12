@@ -513,6 +513,55 @@ describe('Template pages', () => {
     expect(screen.getByText('创建本地函数库后会显示在这里')).toBeInTheDocument()
   })
 
+  it('offers to reset a damaged local function library and creates a replacement', async () => {
+    const app = application()
+    const invalidLibraryId = '40000000-0000-4000-8000-000000000004'
+    vi.mocked(app.browser.listFunctionLibraries)
+      .mockResolvedValueOnce([
+        {
+          source: 'builtin',
+          libraryId: 'builtin:basic',
+          version: 2,
+          name: '基础组件库',
+          functions: []
+        },
+        {
+          source: 'local',
+          libraryId: invalidLibraryId,
+          name: '损坏的本地函数库',
+          functions: [],
+          error: `Local function library ${invalidLibraryId} is invalid`
+        }
+      ])
+      .mockResolvedValueOnce([])
+
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    fireEvent.click(screen.getByRole('tab', { name: '本地函数库' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(invalidLibraryId)
+    fireEvent.click(screen.getByRole('button', { name: '重置损坏函数库' }))
+    const dialog = screen.getByRole('alertdialog', { name: '重置损坏的本地函数库？' })
+    fireEvent.click(within(dialog).getByRole('button', { name: '重置函数库' }))
+
+    await waitFor(() =>
+      expect(app.functionLibraries.local.delete).toHaveBeenCalledWith(invalidLibraryId)
+    )
+    expect(app.functionLibraries.local.create).toHaveBeenCalledWith('未命名函数库')
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+    expect(screen.getByRole('tab', { name: '本地函数库' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+  })
+
   it('creates and deletes local function libraries from the library panel', async () => {
     const app = application()
     render(

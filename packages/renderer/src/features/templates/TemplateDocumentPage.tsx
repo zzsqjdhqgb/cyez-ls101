@@ -1,15 +1,16 @@
 import { useEffect, useId, useMemo, useState, type JSX } from 'react'
 import type { InterfaceVarManifest } from '@ls101/core-types'
-import type {
-  FrameNode,
-  FunctionDef,
-  FunctionLibraryRelease,
-  FunctionLibrarySummary,
-  FunctionLocator,
-  LocalFunctionLibraryDocument,
-  TemplateDocumentOperation,
-  TemplateNode,
-  TimelineStep
+import {
+  TemplateRepositoryError,
+  type FrameNode,
+  type FunctionDef,
+  type FunctionLibraryRelease,
+  type FunctionLibrarySummary,
+  type FunctionLocator,
+  type LocalFunctionLibraryDocument,
+  type TemplateDocumentOperation,
+  type TemplateNode,
+  type TimelineStep
 } from '@ls101/template-editor'
 import {
   ArrowDown,
@@ -111,6 +112,10 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const [functionLibraries, setFunctionLibraries] = useState<FunctionLibrarySummary[]>([])
   const [libraryLoading, setLibraryLoading] = useState(true)
   const [libraryError, setLibraryError] = useState<string | null>(null)
+  const [invalidLocalLibraryId, setInvalidLocalLibraryId] = useState<string | null>(null)
+  const [resettingInvalidLibrary, setResettingInvalidLibrary] = useState(false)
+  const [invalidLibraryResetError, setInvalidLibraryResetError] = useState<string | null>(null)
+  const [confirmInvalidLibraryReset, setConfirmInvalidLibraryReset] = useState(false)
   const [creatingLibrary, setCreatingLibrary] = useState(false)
   const [importingLibrary, setImportingLibrary] = useState(false)
   const [creatingFunctionLibraryId, setCreatingFunctionLibraryId] = useState<string | null>(null)
@@ -143,9 +148,17 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
         if (!active) return
         setFunctionLibraries(items)
         setLibraryError(null)
+        setInvalidLocalLibraryId(
+          items.find((item) => item.source === 'local' && item.error)?.libraryId ?? null
+        )
       })
       .catch((reason: unknown) => {
-        if (active) setLibraryError(templateErrorMessage(reason))
+        if (!active) return
+        const libraryId = invalidLocalLibraryErrorId(reason)
+        setInvalidLocalLibraryId(libraryId)
+        setLibraryError(
+          libraryId ? `本地函数库 ${libraryId} 已损坏，无法加载。` : templateErrorMessage(reason)
+        )
       })
       .finally(() => {
         if (active) setLibraryLoading(false)
@@ -469,6 +482,31 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
     }
   }
 
+  const resetInvalidLocalFunctionLibrary = async (): Promise<void> => {
+    if (!invalidLocalLibraryId || resettingInvalidLibrary) return
+    setResettingInvalidLibrary(true)
+    setInvalidLibraryResetError(null)
+    try {
+      await application.functionLibraries.local.delete(invalidLocalLibraryId)
+      const replacement = await application.functionLibraries.local.create('未命名函数库')
+      const items = await application.browser.listFunctionLibraries()
+      setFunctionLibraries(items)
+      setLibraryError(null)
+      setInvalidLocalLibraryId(null)
+      setConfirmInvalidLibraryReset(false)
+      setActiveLibrarySource('local')
+      setCollapsedLibraryKeys((current) => {
+        const next = new Set(current)
+        next.delete(libraryKey(summarizeLocalFunctionLibrary(replacement)))
+        return next
+      })
+    } catch (reason) {
+      setInvalidLibraryResetError(templateErrorMessage(reason))
+    } finally {
+      setResettingInvalidLibrary(false)
+    }
+  }
+
   const openPageEditor = (nodeId: string): void => {
     session.selectNode(nodeId)
     setSelectedContentBlockId(null)
@@ -610,7 +648,21 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                 {libraryError ? (
                   <div className={styles.libraryNotice} role="alert">
                     <AlertCircle aria-hidden="true" />
-                    <span>{libraryError}</span>
+                    <div>
+                      <span>{libraryError}</span>
+                      {invalidLocalLibraryId ? (
+                        <Button
+                          size="small"
+                          variant="danger"
+                          onClick={() => {
+                            setInvalidLibraryResetError(null)
+                            setConfirmInvalidLibraryReset(true)
+                          }}
+                        >
+                          重置损坏函数库
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
                 {libraryLoading ? (
@@ -633,6 +685,30 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                           .map((library) => {
                             const key = libraryKey(library)
                             const collapsed = collapsedLibraryKeys.has(key)
+                            if (library.error) {
+                              return (
+                                <li className={styles.libraryGroup} key={key}>
+                                  <div className={styles.libraryNotice} role="alert">
+                                    <AlertCircle aria-hidden="true" />
+                                    <div>
+                                      <strong>{library.name}</strong>
+                                      <span>{library.error}</span>
+                                      <Button
+                                        size="small"
+                                        variant="danger"
+                                        onClick={() => {
+                                          setInvalidLocalLibraryId(library.libraryId)
+                                          setInvalidLibraryResetError(null)
+                                          setConfirmInvalidLibraryReset(true)
+                                        }}
+                                      >
+                                        重置损坏函数库
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </li>
+                              )
+                            }
                             return (
                               <li className={styles.libraryGroup} key={key}>
                                 <div
@@ -1037,6 +1113,22 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
         onConfirm={deleteSelected}
       />
       <ConfirmModal
+        busy={resettingInvalidLibrary}
+        closeOnConfirm={false}
+        confirmLabel="重置函数库"
+        danger
+        error={invalidLibraryResetError}
+        message="损坏的本地函数库及其中的全部函数将被删除，并新建一个空白函数库。已经嵌入模板的函数副本不受影响。"
+        open={confirmInvalidLibraryReset}
+        title="重置损坏的本地函数库？"
+        onCancel={() => {
+          if (resettingInvalidLibrary) return
+          setInvalidLibraryResetError(null)
+          setConfirmInvalidLibraryReset(false)
+        }}
+        onConfirm={() => void resetInvalidLocalFunctionLibrary()}
+      />
+      <ConfirmModal
         busy={deletingLibrary}
         closeOnConfirm={false}
         confirmLabel="删除"
@@ -1131,6 +1223,12 @@ function libraryKey(library: FunctionLibrarySummary): string {
 function libraryButtonLabel(library: FunctionLibrarySummary): string {
   const name = library.name || '未命名函数库'
   return library.version ? `${name}，版本 ${library.version}` : name
+}
+
+function invalidLocalLibraryErrorId(error: unknown): string | null {
+  if (!(error instanceof TemplateRepositoryError) || error.code !== 'INVALID_DATA') return null
+  const libraryId = error.params.libraryId
+  return typeof libraryId === 'string' ? libraryId : null
 }
 
 function LibraryEmptyState({ source }: { source: FunctionLibrarySummary['source'] }): JSX.Element {
