@@ -145,6 +145,41 @@ function expectEditError(
 }
 
 describe('Template 文档编辑', () => {
+  it('编辑变量时重写引用，复制变量时分配新的名称', () => {
+    let document = template([
+      {
+        id: 'variable',
+        type: 'variable',
+        variableName: 'message',
+        value: text('Hello')
+      },
+      {
+        id: 'consumer',
+        type: 'variable',
+        variableName: 'copy',
+        value: { type: 'string', source: 'variable', ref: { scope: 'local', name: 'message' } }
+      }
+    ])
+    document = applyTemplateEdit(document, {
+      type: 'set-variable',
+      nodeId: 'variable',
+      variableName: 'greeting'
+    })
+    expect(JSON.stringify(document.content)).not.toContain('"name":"message"')
+    expect(JSON.stringify(document.content)).toContain('"name":"greeting"')
+
+    document = applyTemplateEdit(document, {
+      type: 'copy-node',
+      nodeId: 'consumer',
+      parentId: 'root'
+    })
+    const copied = document.content.root.children[2]
+    expect(copied).toMatchObject({ type: 'variable', variableName: 'copy-1' })
+    if (copied.type === 'variable') {
+      expect(copied.value).toMatchObject({ ref: { name: 'greeting' } })
+    }
+  })
+
   it('修改节点显示名称时不改变节点 ID', () => {
     const document = template([page()])
     const result = editTemplateDocument(document, {

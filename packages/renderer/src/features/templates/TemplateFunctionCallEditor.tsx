@@ -9,6 +9,7 @@ import type {
 } from '@ls101/template-editor'
 import type { JSX } from 'react'
 import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-react'
+import { TemplateFunctionSchemaSummary } from './TemplateFunctionSchemaSummary'
 import { TemplateVariableInput } from './TemplateVariableInput'
 import type { TemplateVariableCandidate } from './TemplateVariableInputModel'
 import styles from './TemplateFunctionCallEditor.module.css'
@@ -16,6 +17,7 @@ import styles from './TemplateFunctionCallEditor.module.css'
 interface TemplateFunctionCallEditorProps {
   node: FunctionNode
   definition: FunctionDef | undefined
+  functions: readonly FunctionDef[]
   variableCandidates: readonly TemplateVariableCandidate[]
   compact?: boolean
   apply(operation: TemplateDocumentOperation): boolean
@@ -24,6 +26,7 @@ interface TemplateFunctionCallEditorProps {
 export function TemplateFunctionCallEditor({
   node,
   definition,
+  functions,
   variableCandidates,
   compact = false,
   apply
@@ -101,6 +104,10 @@ export function TemplateFunctionCallEditor({
           <span className={styles.empty}>无出参</span>
         )}
       </section>
+
+      {!compact && definition ? (
+        <TemplateFunctionSchemaSummary definition={definition} functions={functions} />
+      ) : null}
 
       {!definition ? <div className={styles.warning}>函数定义不可用，当前显示已有绑定</div> : null}
     </div>

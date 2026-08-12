@@ -33,6 +33,7 @@ export type TemplateValidationErrorCode =
   | 'UNKNOWN_CHOICE_VIEW_OVERRIDE'
   | 'INVALID_LOCAL_NAME'
   | 'DUPLICATE_LOCAL_NAME'
+  | 'CYCLIC_VARIABLE_DEFINITION'
   | 'UNKNOWN_LOCAL_VARIABLE'
   | 'UNKNOWN_INTERFACE_ALIAS'
   | 'INTERFACE_VARIABLE_IN_FUNCTION'
@@ -57,7 +58,6 @@ export type TemplateValidationErrorCode =
   | 'INVALID_SCHEMA_ATTACHMENT_NAME'
   | 'DUPLICATE_SCHEMA_ATTACHMENT_NAME'
   | 'UNKNOWN_SCHEMA_ATTACHMENT'
-  | 'NO_SCHEMA_USE'
   | 'EMPTY_CHOICE_COLLECTOR'
   | 'EMPTY_CHOICE_COLLECTOR_PAGES'
   | 'INVALID_CHOICE_PAGE_SIZE'
@@ -88,7 +88,6 @@ export interface ValidationState {
   schemasById: Map<string, SchemaDefinition>
   functionsById: Map<string, FunctionDef>
   requirementsByAlias: Map<string, RequirementState>
-  schemaUseCount: number
 }
 
 interface RequirementState {
@@ -116,8 +115,7 @@ export function createValidationState(context: TemplateValidationContext): Valid
     interfacesById: new Map(),
     schemasById: new Map(),
     functionsById: new Map(),
-    requirementsByAlias: new Map(),
-    schemaUseCount: 0
+    requirementsByAlias: new Map()
   }
 
   indexUnique(

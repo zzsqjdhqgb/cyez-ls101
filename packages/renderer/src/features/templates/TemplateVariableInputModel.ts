@@ -66,6 +66,10 @@ export function collectTemplateVariableCandidates(
       add(localCandidate(node.outputName, 'choice'))
       return
     }
+    if (node.type === 'variable') {
+      add(localCandidate(node.variableName, node.value.type))
+      return
+    }
 
     const definition = functionsById.get(node.functionRef)
     definition?.outputs.forEach((output) => {

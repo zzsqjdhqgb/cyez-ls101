@@ -175,7 +175,7 @@ export type TimelineStep = TimelineAction & {
 // DSL 节点
 // ============================================================
 
-export type TemplateNode = PageNode | FrameNode | FunctionNode | ChoiceQuestionNode
+export type TemplateNode = PageNode | FrameNode | FunctionNode | ChoiceQuestionNode | VariableNode
 
 export interface BaseNode {
   id: string
@@ -209,6 +209,13 @@ export interface ChoiceQuestionNode extends BaseNode {
   stem: TextExpression
   options: ChoiceOptionDef[]
   outputName: string
+}
+
+/** 在当前 Template 或函数定义作用域内声明一个不可变的静态变量。 */
+export interface VariableNode extends BaseNode {
+  type: 'variable'
+  variableName: string
+  value: StaticValueExpression
 }
 
 export interface ChoiceOptionDef {

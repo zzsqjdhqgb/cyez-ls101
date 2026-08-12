@@ -14,7 +14,8 @@ import type {
   PageNode,
   SchemaUse,
   TemplateContent,
-  TemplateNode
+  TemplateNode,
+  VariableNode
 } from '../types'
 import {
   resolveFileExpression,
@@ -54,6 +55,7 @@ export function instantiateTemplate(
   state: CompilerState
 ): StructuralResult {
   const scope: CompileScope = { callPath: [], symbols: new Map() }
+  registerVariableCells(content.root, scope, 'root', state)
   const structure = instantiateFrame(content.root, scope, 'root', state)
   instantiateSchemaUses(content.schemaUses, scope, 'schemaUses', state)
   return structure
@@ -67,6 +69,7 @@ function instantiateDefinition(
   state: CompilerState
 ): InstantiatedDefinition {
   const scope: CompileScope = { callPath, symbols: new Map(inputCells) }
+  registerVariableCells(func.body, scope, `${path}.body`, state)
   const structure = instantiateFrame(func.body, scope, `${path}.body`, state)
   instantiateSchemaUses(func.schemaUses, scope, `${path}.schemaUses`, state)
 
@@ -121,7 +124,36 @@ function instantiateNode(
       return instantiateQuestion(node, scope, path, state)
     case 'function':
       return instantiateFunctionCall(node, scope, path, state)
+    case 'variable':
+      return emptyStructuralResult()
   }
+}
+
+function registerVariableCells(
+  node: TemplateNode,
+  scope: CompileScope,
+  path: string,
+  state: CompilerState
+): void {
+  if (node.type === 'frame') {
+    node.children.forEach((child, index) =>
+      registerVariableCells(child, scope, `${path}.children[${index}]`, state)
+    )
+    return
+  }
+  if (node.type !== 'variable') return
+  scope.symbols.set(node.variableName, createVariableCell(node, scope, `${path}.value`, state))
+}
+
+function createVariableCell(
+  node: VariableNode,
+  scope: CompileScope,
+  path: string,
+  state: CompilerState
+): ValueCell {
+  return lazyValueCell(state, node.value.type, path, () =>
+    resolveStaticExpression(node.value, node.value.type, scope, state, path)
+  )
 }
 
 function instantiatePage(

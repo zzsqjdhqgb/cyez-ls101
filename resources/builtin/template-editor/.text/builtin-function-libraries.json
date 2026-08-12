@@ -2,8 +2,8 @@
   "libraries": [
     {
       "libraryId": "builtin:basic",
-      "version": 2,
-      "contentHash": "sha256:3c83a0a7b467994d7e87ada6a04840ddd192a20e426a4a0d4e69f8b8569b8e72",
+      "version": 4,
+      "contentHash": "sha256:b76ea4491369d1bf3502ddbc98c396e7075d83a0d748d8a5b51cdf57e355c2fe",
       "content": {
         "name": "基础组件库",
         "functions": [
@@ -112,6 +112,35 @@
                   }
                 }
               ],
+              "schemaUses": []
+            }
+          },
+          {
+            "functionId": "builtin:variable",
+            "content": {
+              "name": "变量",
+              "inputs": [],
+              "body": {
+                "id": "root",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "variable",
+                    "type": "variable",
+                    "variableName": "value",
+                    "value": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": ""
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              "outputs": [],
               "schemaUses": []
             }
           }

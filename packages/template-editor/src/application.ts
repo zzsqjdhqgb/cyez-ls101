@@ -30,6 +30,7 @@ import type {
   FunctionLocator,
   LocalFunctionLibraryDocument,
   SchemaUse,
+  StaticValueExpression,
   TemplateContent,
   TemplateDocument,
   TemplateNode
@@ -130,6 +131,11 @@ export interface LocalFunctionLibraryApplication {
     library: LocalFunctionLibraryDocument,
     functionDocument: FunctionDocument
   ): Promise<LocalFunctionLibraryDocument>
+  preview(
+    libraryId: string,
+    functionDocument: FunctionDocument,
+    inputs: Readonly<Record<string, StaticValueExpression>>
+  ): Promise<TemplatePreviewResult>
   insertFunctionCall(
     libraryId: string,
     functionId: string,
@@ -564,6 +570,85 @@ export function createTemplateApplication(
             }
           })
         },
+        async preview(libraryId, functionDocument, inputs) {
+          const library = await loadLocalFunctionLibrary(repository, libraryId)
+          const functions = new Map(
+            library.content.functions.map((entry) => [entry.functionId, entry])
+          )
+          const stored = functions.get(functionDocument.functionId)
+          if (!stored) throw functionNotFound(functionDocument.functionId)
+          functions.set(functionDocument.functionId, {
+            ...stored,
+            content: structuredClone(functionDocument.content)
+          })
+
+          const resources = new Map<string, FunctionDef>()
+          const bySourceId = new Map<string, FunctionDef>()
+          const snapshot = async (
+            sourceId: string,
+            stack: readonly string[]
+          ): Promise<FunctionDef> => {
+            const cached = bySourceId.get(sourceId)
+            if (cached) return cached
+            if (stack.includes(sourceId)) {
+              const chain = [...stack, sourceId]
+              throw new TemplateApplicationError(
+                'RECURSIVE_FUNCTION_DEPENDENCY',
+                `Recursive function dependency: ${chain.join(' -> ')}`,
+                { functionId: sourceId, chain: chain.join(' -> ') }
+              )
+            }
+            const source = functions.get(sourceId)
+            if (!source) throw functionNotFound(sourceId)
+            const body = await rewriteFunctionRefs(source.content.body, (nestedId) =>
+              snapshot(nestedId, [...stack, sourceId])
+            )
+            const resource = await createFunctionResource({ ...source.content, body })
+            const existing = resources.get(resource.id)
+            resources.set(resource.id, existing ?? resource)
+            bySourceId.set(sourceId, existing ?? resource)
+            return existing ?? resource
+          }
+
+          const rootResource = await snapshot(functionDocument.functionId, [])
+          const previewDocument = createTemplateDocument(
+            {
+              name: functionDocument.content.name || '函数预览',
+              description: '',
+              interfaces: [],
+              root: {
+                id: 'function-preview-root',
+                name: '函数预览',
+                type: 'frame',
+                children: [
+                  {
+                    id: 'function-preview-call',
+                    name: functionDocument.content.name,
+                    type: 'function',
+                    functionRef: rootResource.id,
+                    inputs: Object.fromEntries(
+                      rootResource.inputs.map((input) => [
+                        input.name,
+                        structuredClone(inputs[input.name] ?? defaultPreviewInput(input.type))
+                      ])
+                    ),
+                    outputNames: Object.fromEntries(
+                      rootResource.outputs.map((output) => [output.name, output.name])
+                    )
+                  }
+                ]
+              },
+              schemaUses: []
+            },
+            { functions: [...resources.values()] }
+          )
+          const manifests = await loadValidationContext(previewDocument)
+          return compileTemplatePreview(previewDocument, {
+            ...manifests,
+            interfaceBindings: [],
+            locateInterfaceInstance: dependencies.locateInterfaceInstance
+          })
+        },
         async insertFunctionCall(libraryId, functionId, locator, parentId, index) {
           const destination = await loadLocalFunctionLibrary(repository, libraryId)
           const target = projectFunctionDocument(destination, functionId)
@@ -819,6 +904,11 @@ function collectSchemaIds(document: TemplateDocument): string[] {
 
 function unique(values: readonly string[]): string[] {
   return [...new Set(values)]
+}
+
+function defaultPreviewInput(type: 'string' | 'number' | 'file'): StaticValueExpression {
+  if (type === 'number') return { type, source: 'literal', value: 0 }
+  return { type, source: 'literal', value: '' }
 }
 
 function collectFunctionEntryClosure(

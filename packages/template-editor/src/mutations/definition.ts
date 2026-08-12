@@ -306,6 +306,16 @@ export function applyDefinitionOperation(
       }))
       return withRenamedLocalReferences(result, previousName, operation.outputName)
     }
+    case 'set-variable': {
+      const current = findNode(state.root, operation.nodeId)
+      const previousName = current?.node.type === 'variable' ? current.node.variableName : undefined
+      const result = updateNodeByType(state, operation.nodeId, 'variable', (node) => ({
+        ...node,
+        ...(operation.variableName === undefined ? {} : { variableName: operation.variableName }),
+        ...(operation.value === undefined ? {} : { value: structuredClone(operation.value) })
+      }))
+      return withRenamedLocalReferences(result, previousName, operation.variableName)
+    }
     case 'insert-choice-option':
       return editChoiceQuestion(state, operation.nodeId, (node, path) => {
         const index = insertionIndex(operation.index, node.options.length)

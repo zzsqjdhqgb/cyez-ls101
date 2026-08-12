@@ -38,6 +38,7 @@ import {
   Trash2,
   Undo2,
   Upload,
+  Variable as VariableIcon,
   Volume2,
   X
 } from 'lucide-react'
@@ -59,7 +60,11 @@ import {
   exportLocalFunctionLibraryFile,
   importFunctionLibraryFile
 } from './TemplateFunctionLibraryFiles'
-import { ChoiceQuestionEditor, TemplateNodeInspector } from './TemplateNodeInspector'
+import {
+  ChoiceQuestionEditor,
+  TemplateNodeInspector,
+  VariableEditor
+} from './TemplateNodeInspector'
 import { TemplatePageCanvas } from './TemplatePageCanvas'
 import {
   TemplatePreviewCanvas,
@@ -525,7 +530,12 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   }
 
   const openPreview = (): void => {
-    if (!selectedNode || selectedNode.type === 'choice-question') return
+    if (
+      !selectedNode ||
+      selectedNode.type === 'choice-question' ||
+      selectedNode.type === 'variable'
+    )
+      return
     setPreviewTargetId(selectedNode.id)
     setSelectedPreviewIndex(0)
     setCenterView('preview')
@@ -939,7 +949,11 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                   aria-controls="template-preview-panel"
                   aria-selected={visibleCenterView === 'preview'}
                   className={styles.centerTab}
-                  disabled={!selectedNode || selectedNode.type === 'choice-question'}
+                  disabled={
+                    !selectedNode ||
+                    selectedNode.type === 'choice-question' ||
+                    selectedNode.type === 'variable'
+                  }
                   id="template-preview-tab"
                   role="tab"
                   type="button"
@@ -1384,6 +1398,7 @@ export function TemplateNodeTree({
                 compact
                 node={node}
                 definition={functions.find((definition) => definition.id === node.functionRef)}
+                functions={functions}
                 variableCandidates={variableCandidates}
                 apply={apply}
               />
@@ -1396,6 +1411,17 @@ export function TemplateNodeTree({
                 <small>{node.options.length} 个选项</small>
               </div>
               <ChoiceQuestionEditor
+                ariaLabelPrefix={`节点 ${node.id}`}
+                compact
+                node={node}
+                variableCandidates={variableCandidates}
+                apply={apply}
+              />
+            </div>
+          ) : null}
+          {node.type === 'variable' && !collapsed ? (
+            <div className={styles.nodeSummary}>
+              <VariableEditor
                 ariaLabelPrefix={`节点 ${node.id}`}
                 compact
                 node={node}
@@ -1433,7 +1459,12 @@ export function TemplateNodeTree({
 }
 
 function hasInlineNodeProperties(node: TemplateNode): boolean {
-  return node.type === 'page' || node.type === 'function' || node.type === 'choice-question'
+  return (
+    node.type === 'page' ||
+    node.type === 'function' ||
+    node.type === 'choice-question' ||
+    node.type === 'variable'
+  )
 }
 
 function PageNodeSummary({
@@ -1664,6 +1695,7 @@ function NodeIcon({ type }: { type: TemplateNode['type'] }): JSX.Element {
   if (type === 'frame') return <Layers3 aria-hidden="true" />
   if (type === 'page') return <FileText aria-hidden="true" />
   if (type === 'choice-question') return <ListChecks aria-hidden="true" />
+  if (type === 'variable') return <VariableIcon aria-hidden="true" />
   return <Braces aria-hidden="true" />
 }
 
@@ -1693,5 +1725,6 @@ function nodeTypeLabel(type: TemplateNode['type']): string {
   if (type === 'frame') return '框架'
   if (type === 'page') return '页面'
   if (type === 'choice-question') return '选择题'
+  if (type === 'variable') return '变量'
   return '函数'
 }

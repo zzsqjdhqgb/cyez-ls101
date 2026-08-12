@@ -173,6 +173,54 @@ function interfaceText(varName: string): TextExpression {
 }
 
 describe('validateTemplateContent - 基础依赖', () => {
+  it('变量在整个定义内声明提升，并拒绝循环依赖', () => {
+    const forwardReference = templateContent({
+      root: root([
+        page({
+          content: {
+            blocks: [
+              {
+                id: 'text',
+                type: 'text',
+                x: 0,
+                y: 0,
+                text: {
+                  type: 'string',
+                  parts: [{ type: 'variable', ref: { scope: 'local', name: 'message' } }]
+                }
+              }
+            ]
+          }
+        }),
+        {
+          id: 'variable',
+          type: 'variable',
+          variableName: 'message',
+          value: text('Hello')
+        }
+      ])
+    })
+    expect(codes(forwardReference)).not.toContain('UNKNOWN_LOCAL_VARIABLE')
+
+    const cyclic = templateContent({
+      root: root([
+        {
+          id: 'a',
+          type: 'variable',
+          variableName: 'a',
+          value: { type: 'string', source: 'variable', ref: { scope: 'local', name: 'b' } }
+        },
+        {
+          id: 'b',
+          type: 'variable',
+          variableName: 'b',
+          value: { type: 'string', source: 'variable', ref: { scope: 'local', name: 'a' } }
+        }
+      ])
+    })
+    expect(codes(cyclic)).toContain('CYCLIC_VARIABLE_DEFINITION')
+  })
+
   it('接受没有选择题的完整 Template', () => {
     expect(validateTemplateContent(templateContent(), validationContext())).toEqual({
       valid: true,
@@ -625,8 +673,13 @@ describe('validateTemplateContent - Schema 绑定', () => {
     expectCode(unknownSchema, 'UNKNOWN_SCHEMA')
   })
 
-  it('展开后完全没有 Schema 消费时拒绝导出', () => {
-    expectCode(templateContent({ schemaUses: [] }), 'NO_SCHEMA_USE')
+  it('允许没有 Schema 的 Template', () => {
+    expect(
+      validateTemplateContent(templateContent({ schemaUses: [] }), validationContext())
+    ).toEqual({
+      valid: true,
+      errors: []
+    })
   })
 
   it('同一作用域的 Schema useId 必须非空且唯一', () => {

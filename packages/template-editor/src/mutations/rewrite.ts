@@ -42,6 +42,11 @@ export function prepareInsertedSubtree(source: TemplateNode, state: DefinitionSt
       if (!nameMap.has(current.outputName)) nameMap.set(current.outputName, outputName)
       return { ...current, id, outputName }
     }
+    if (current.type === 'variable') {
+      const variableName = allocateName(current.variableName, 'value', usedNames)
+      if (!nameMap.has(current.variableName)) nameMap.set(current.variableName, variableName)
+      return { ...current, id, variableName }
+    }
     const outputNames = Object.fromEntries(
       Object.entries(current.outputNames).map(([key, value]) => {
         const outputName = allocateName(value, key || 'output', usedNames)
@@ -88,6 +93,7 @@ export function collectLocalNames(
       })
     }
     if (node.type === 'choice-question') names.add(node.outputName)
+    if (node.type === 'variable') names.add(node.variableName)
     if (node.type === 'function') Object.values(node.outputNames).forEach((name) => names.add(name))
   }
   visit(root)
@@ -132,6 +138,9 @@ export function mapNodeExpressions(
         ])
       )
     }
+  }
+  if (node.type === 'variable') {
+    return { ...node, value: mapStaticExpression(node.value, mapRef) }
   }
   return {
     ...node,

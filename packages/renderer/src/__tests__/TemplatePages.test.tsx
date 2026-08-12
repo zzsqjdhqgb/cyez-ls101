@@ -127,6 +127,11 @@ function application(document = template()): TemplateApplication {
               functionId: 'builtin:choice-question',
               name: '选择题',
               component: createLibraryNode('builtin:choice-question')
+            },
+            {
+              functionId: 'builtin:variable',
+              name: '变量',
+              component: createLibraryNode('builtin:variable')
             }
           ]
         },
@@ -262,6 +267,14 @@ function createLibraryNode(
   if (functionId === 'builtin:frame') return { id: 'frame', type: 'frame', children: [] }
   if (functionId === 'builtin:page') {
     return { id: 'page', type: 'page', content: { blocks: [] }, timeline: [] }
+  }
+  if (functionId === 'builtin:variable') {
+    return {
+      id: 'variable',
+      type: 'variable',
+      variableName: 'value',
+      value: { type: 'string', parts: [{ type: 'literal', value: '' }] }
+    }
   }
   return {
     id: 'question',
@@ -471,6 +484,7 @@ describe('Template pages', () => {
     expect(screen.getByRole('button', { name: '添加框架' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '添加页面' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '添加选择题' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '添加变量' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '示例组件库，版本 3' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '添加标题页组合' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '添加选择题组合' })).toBeInTheDocument()
@@ -556,10 +570,7 @@ describe('Template pages', () => {
     )
     expect(app.functionLibraries.local.create).toHaveBeenCalledWith('未命名函数库')
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
-    expect(screen.getByRole('tab', { name: '本地函数库' })).toHaveAttribute(
-      'aria-selected',
-      'true'
-    )
+    expect(screen.getByRole('tab', { name: '本地函数库' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('creates and deletes local function libraries from the library panel', async () => {
@@ -1313,6 +1324,32 @@ describe('Template pages', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: '选择题 Collector' }))
 
     expect(screen.getByText('1 / 1 题')).toBeInTheDocument()
+  })
+
+  it('adds and edits a non-visual variable node without losing input focus', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '添加变量' })
+    fireEvent.click(screen.getByRole('button', { name: '添加变量' }))
+    const nameInput = screen.getByLabelText('节点 variable 变量名称')
+    nameInput.focus()
+    fireEvent.change(nameInput, { target: { value: 'greeting' } })
+    expect(nameInput).toHaveFocus()
+    expect(nameInput).toHaveValue('greeting')
+
+    fireEvent.change(screen.getByLabelText('节点 variable 类型'), { target: { value: 'number' } })
+    fireEvent.change(screen.getByLabelText('节点 variable 值'), { target: { value: '12' } })
+    expect(screen.getByLabelText('节点 variable 值')).toHaveValue('12')
+    expect(screen.getByRole('tab', { name: '预览' })).toBeDisabled()
   })
 
   it('edits page timeline values, variables and record outputs', async () => {

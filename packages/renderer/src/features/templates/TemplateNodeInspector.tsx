@@ -10,6 +10,7 @@ import type {
   TemplateNode,
   TextExpression,
   TimelineStep,
+  VariableNode,
   ValueExpression
 } from '@ls101/template-editor'
 import { Button } from '../../components/ui/Button'
@@ -43,9 +44,12 @@ export function TemplateNodeInspector({
       <TemplateFunctionCallEditor
         node={node}
         definition={functions.find((definition) => definition.id === node.functionRef)}
+        functions={functions}
         variableCandidates={variableCandidates}
         apply={apply}
       />
+    ) : node.type === 'variable' ? (
+      <VariableEditor node={node} variableCandidates={variableCandidates} apply={apply} />
     ) : null
 
   return (
@@ -62,6 +66,91 @@ export function TemplateNodeInspector({
       {details}
     </div>
   )
+}
+
+export function VariableEditor({
+  node,
+  variableCandidates,
+  apply,
+  compact = false,
+  ariaLabelPrefix
+}: {
+  node: VariableNode
+  variableCandidates: readonly TemplateVariableCandidate[]
+  apply: TemplateNodeInspectorProps['apply']
+  compact?: boolean
+  ariaLabelPrefix?: string
+}): JSX.Element {
+  const label = (value: string): string => (ariaLabelPrefix ? `${ariaLabelPrefix} ${value}` : value)
+  const valueCandidates = variableCandidates.filter(
+    (candidate) => candidate.ref.scope !== 'local' || candidate.ref.name !== node.variableName
+  )
+  const updateType = (type: VariableNode['value']['type']): void => {
+    if (type === node.value.type) return
+    apply({ type: 'set-variable', nodeId: node.id, value: defaultVariableValue(type) })
+  }
+
+  return (
+    <div className={`${styles.nodeEditor}${compact ? ` ${styles.compactVariableEditor}` : ''}`}>
+      <label>
+        变量名称
+        <input
+          aria-label={label('变量名称')}
+          value={node.variableName}
+          onChange={(event) =>
+            apply({ type: 'set-variable', nodeId: node.id, variableName: event.target.value })
+          }
+        />
+      </label>
+      <label>
+        类型
+        <select
+          aria-label={label('类型')}
+          value={node.value.type}
+          onChange={(event) => updateType(event.target.value as VariableNode['value']['type'])}
+        >
+          <option value="string">文本</option>
+          <option value="number">数字</option>
+          <option value="file">文件</option>
+        </select>
+      </label>
+      <div className={styles.expression}>
+        <span className={styles.fieldLabel}>值</span>
+        {node.value.type === 'string' ? (
+          <TemplateVariableInput
+            mode="text"
+            ariaLabel={label('值')}
+            candidates={valueCandidates}
+            multiline={!compact}
+            value={'parts' in node.value ? node.value : stringValueAsText(node.value)}
+            onChange={(value) => apply({ type: 'set-variable', nodeId: node.id, value })}
+          />
+        ) : (
+          <TemplateVariableInput
+            mode="value"
+            ariaLabel={label('值')}
+            candidates={valueCandidates}
+            inputMode={node.value.type === 'number' ? 'decimal' : 'text'}
+            value={node.value}
+            valueType={node.value.type}
+            onChange={(value) => apply({ type: 'set-variable', nodeId: node.id, value })}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function defaultVariableValue(type: VariableNode['value']['type']): VariableNode['value'] {
+  if (type === 'number') return { type, source: 'literal', value: 0 }
+  if (type === 'file') return { type, source: 'literal', value: '' }
+  return { type, parts: [{ type: 'literal', value: '' }] }
+}
+
+function stringValueAsText(value: ValueExpression<'string'>): TextExpression {
+  return value.source === 'literal'
+    ? text(value.value)
+    : { type: 'string', parts: [{ type: 'variable', ref: value.ref }] }
 }
 
 function FrameInspector({

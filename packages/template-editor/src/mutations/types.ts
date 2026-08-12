@@ -64,6 +64,12 @@ export type DefinitionOperation =
       stem?: TextExpression
       outputName?: string
     }
+  | {
+      type: 'set-variable'
+      nodeId: string
+      variableName?: string
+      value?: StaticValueExpression
+    }
   | { type: 'insert-choice-option'; nodeId: string; index?: number; option: ChoiceOptionDef }
   | { type: 'update-choice-option'; nodeId: string; optionId: string; option: ChoiceOptionDef }
   | { type: 'remove-choice-option'; nodeId: string; optionId: string }

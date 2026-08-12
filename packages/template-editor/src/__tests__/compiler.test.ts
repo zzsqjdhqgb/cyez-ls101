@@ -329,6 +329,82 @@ function speechOnlyContent(): TemplateContent {
 }
 
 describe('compileTemplate', () => {
+  it('生成没有 Schema 的试卷和空作答模板', async () => {
+    const result = await compileTemplate(
+      document(
+        content({
+          root: root([
+            {
+              id: 'page',
+              type: 'page',
+              content: { blocks: [] },
+              timeline: [{ type: 'countdown', seconds: number(1) }]
+            }
+          ]),
+          schemaUses: []
+        })
+      ),
+      compileContext()
+    )
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.examPackage.answerCapturePlan).toEqual({ strings: [], audios: [] })
+    expect(result.examPackage.submissionTemplate.schemaUses).toEqual([])
+    expect(result.examPackage.submissionTemplate.resources).toEqual({})
+  })
+
+  it('声明提升变量并且变量节点不生成页面', async () => {
+    const result = await compileTemplatePreview(
+      document(
+        content({
+          root: root([
+            {
+              id: 'page',
+              type: 'page',
+              content: {
+                blocks: [
+                  {
+                    id: 'message',
+                    type: 'text',
+                    x: 0,
+                    y: 0,
+                    text: {
+                      type: 'string',
+                      parts: [{ type: 'variable', ref: { scope: 'local', name: 'message' } }]
+                    }
+                  }
+                ]
+              },
+              timeline: [{ type: 'play', text: text('Ready') }]
+            },
+            {
+              id: 'outer',
+              type: 'frame',
+              children: [
+                {
+                  id: 'variable',
+                  type: 'variable',
+                  variableName: 'message',
+                  value: text('Hello')
+                }
+              ]
+            }
+          ])
+        })
+      ),
+      compileContext()
+    )
+
+    expect(result).toMatchObject({
+      success: true,
+      preview: {
+        pages: [{ sourceNodeId: 'page', content: [{ type: 'text', text: 'Hello' }] }]
+      }
+    })
+    if (result.success) expect(result.preview.pages).toHaveLength(1)
+  })
+
   it('解析静态预览页面并跳过 TTS 音频生成', async () => {
     const synthesizeSpeech = vi.fn()
     const result = await compileTemplatePreview(

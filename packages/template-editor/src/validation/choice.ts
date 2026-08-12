@@ -76,6 +76,8 @@ function analyzeChoiceNode(
       return analyzeChoiceFrame(node, path, functionStack, state)
     case 'choice-question':
       return emptyChoiceAnalysis({ uncollectedQuestionCount: 1 })
+    case 'variable':
+      return emptyChoiceAnalysis()
     case 'page': {
       const viewports: ViewportUse[] = []
       node.content.blocks.forEach((block, index) => {

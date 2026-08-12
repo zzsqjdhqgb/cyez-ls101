@@ -69,6 +69,13 @@ function detectLocalOutputRename(
   ) {
     return changedName(node.outputName, operation.outputName)
   }
+  if (
+    operation.type === 'set-variable' &&
+    operation.variableName !== undefined &&
+    node?.type === 'variable'
+  ) {
+    return changedName(node.variableName, operation.variableName)
+  }
   if (operation.type === 'update-timeline-step') {
     const page = findNode(root, operation.pageId)
     const step = page?.type === 'page' ? page.timeline[operation.index] : undefined

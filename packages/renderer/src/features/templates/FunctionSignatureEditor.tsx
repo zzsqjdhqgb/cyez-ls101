@@ -78,7 +78,7 @@ export function FunctionSignatureEditor({
         {inputs.length === 0 ? <p className={styles.empty}>没有函数输入</p> : null}
         <div className={styles.list}>
           {inputs.map((input, index) => (
-            <div className={styles.item} key={`${index}:${input.name}`}>
+            <div className={styles.item} key={index}>
               <div className={styles.itemHeading}>
                 <strong>输入 {index + 1}</strong>
                 <IconButton
@@ -150,7 +150,7 @@ export function FunctionSignatureEditor({
         {outputs.length === 0 ? <p className={styles.empty}>没有函数输出</p> : null}
         <div className={styles.list}>
           {outputs.map((output, index) => (
-            <div className={styles.item} key={`${index}:${output.name}`}>
+            <div className={styles.item} key={index}>
               <div className={styles.itemHeading}>
                 <strong>输出 {index + 1}</strong>
                 <IconButton

@@ -1,0 +1,138 @@
+.section {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.heading {
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.heading svg {
+  width: 13px;
+  height: 13px;
+}
+
+.heading small {
+  color: var(--color-text-faint);
+  font-size: 10px;
+  font-weight: 520;
+}
+
+.list {
+  display: grid;
+  border-top: 1px solid var(--color-border);
+}
+
+.use {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.use > header {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.schemaIcon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  color: var(--color-accent);
+  background: var(--color-surface-subtle);
+}
+
+.schemaIcon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.identity {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.identity strong,
+.identity small,
+.meta dd,
+.group dd {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identity strong {
+  color: var(--color-text-strong);
+  font-size: 11px;
+}
+
+.identity small {
+  color: var(--color-text-faint);
+  font-size: 10px;
+}
+
+.meta,
+.group dl {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.meta > div,
+.group dl > div {
+  display: grid;
+  grid-template-columns: minmax(72px, 0.4fr) minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+}
+
+.meta dt,
+.group dt {
+  color: var(--color-text-faint);
+  font-size: 10px;
+}
+
+.meta dd,
+.group dd {
+  margin: 0;
+  color: var(--color-text-muted);
+  font: 10px/1.45 var(--font-mono);
+}
+
+.group {
+  display: grid;
+  gap: 5px;
+  padding-left: 9px;
+  border-left: 2px solid var(--color-border-strong);
+}
+
+.group h3 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.error {
+  padding: 7px 8px;
+  border: 1px solid var(--color-danger-border, var(--color-border));
+  border-radius: var(--radius-xs);
+  color: var(--color-danger);
+  background: var(--color-danger-soft, var(--color-surface-subtle));
+  font-size: 11px;
+}

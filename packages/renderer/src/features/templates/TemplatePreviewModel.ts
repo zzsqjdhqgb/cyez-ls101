@@ -5,14 +5,15 @@ import type {
   TemplatePreviewPage
 } from '@ls101/template-editor'
 import type { TemplatePreviewSnapshot } from './TemplatePreview'
-import type { TemplatePreviewSession } from './useTemplatePreview'
+import type { TemplatePreviewResult } from '@ls101/template-editor'
 
 export function buildTemplatePreviewSnapshots(
   root: TemplateDocument['content']['root'],
   target: TemplateNode,
-  preview: TemplatePreviewData
+  preview: TemplatePreviewData,
+  baseCallPath: readonly string[] = []
 ): TemplatePreviewSnapshot[] {
-  const selectedPages = filterPreviewPages(root, target, preview.pages)
+  const selectedPages = filterPreviewPages(root, target, preview.pages, baseCallPath)
   return selectedPages.flatMap((page, pageIndex) =>
     page.timeline.map((step, stepIndex) => ({
       id: `${page.id}:${stepIndex}`,
@@ -25,7 +26,7 @@ export function buildTemplatePreviewSnapshots(
 }
 
 export function templatePreviewResourceUrls(
-  result: TemplatePreviewSession['result']
+  result: TemplatePreviewResult | null
 ): Record<string, string> {
   if (!result?.success) return {}
   return Object.fromEntries(
@@ -38,7 +39,8 @@ export function templatePreviewResourceUrls(
 function filterPreviewPages(
   root: TemplateDocument['content']['root'],
   target: TemplateNode,
-  pages: readonly TemplatePreviewPage[]
+  pages: readonly TemplatePreviewPage[],
+  baseCallPath: readonly string[]
 ): TemplatePreviewPage[] {
   if (target.id === root.id) return [...pages]
   const directPageIds = new Set<string>()
@@ -46,9 +48,13 @@ function filterPreviewPages(
   collectPreviewSources(target, directPageIds, functionCallIds)
   return pages.filter(
     (page) =>
-      (page.callPath.length === 0 && directPageIds.has(page.sourceNodeId)) ||
-      (page.callPath.length > 0 && functionCallIds.has(page.callPath[0]))
+      (sameCallPath(page.callPath, baseCallPath) && directPageIds.has(page.sourceNodeId)) ||
+      page.callPath.slice(baseCallPath.length).some((callId) => functionCallIds.has(callId))
   )
+}
+
+function sameCallPath(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index])
 }
 
 function collectPreviewSources(

@@ -26,13 +26,14 @@ describe('内置函数库启动初始化', () => {
     ])
     expect(await repository.getActiveBuiltinFunctionLibrary('builtin:basic')).toMatchObject({
       libraryId: 'builtin:basic',
-      version: 2,
+      version: 4,
       content: {
         name: '基础组件库',
         functions: [
           { functionId: 'builtin:frame', content: { name: '框架' } },
           { functionId: 'builtin:page', content: { name: '页面' } },
-          { functionId: 'builtin:choice-question', content: { name: '选择题' } }
+          { functionId: 'builtin:choice-question', content: { name: '选择题' } },
+          { functionId: 'builtin:variable', content: { name: '变量' } }
         ]
       }
     })
@@ -161,6 +162,32 @@ describe('内置函数库启动初始化', () => {
       content: { name: '示例组件库' }
     })
     expect(await repository.getBuiltinFunctionLibrary('builtin:examples', 1)).toEqual(previous)
+  })
+
+  it('新版本初始化不受已激活的损坏旧版本阻塞', async () => {
+    const store = new MemoryStore().scope('template-editor')
+    const repository = new FileTemplateRepository(store)
+    await store
+      .scope('function-libraries')
+      .scope('builtin')
+      .scope('basic')
+      .scope('releases')
+      .scope('v3')
+      .writeText('library.json', { libraryId: 'builtin:basic', version: 3, content: null })
+    await store
+      .scope('function-libraries')
+      .scope('builtin')
+      .writeText('active.json', {
+        libraries: [{ libraryId: 'builtin:basic', version: 3 }]
+      })
+    const current = await createFunctionLibraryRelease('builtin:basic', 4, {
+      name: 'Basic v4',
+      functions: []
+    })
+
+    await initializeBuiltinFunctionLibraries(repository, { libraries: [current] })
+
+    expect(await repository.getActiveBuiltinFunctionLibrary('builtin:basic')).toEqual(current)
   })
 
   it('在启动期拒绝缺失、非法和递归的内置函数依赖', async () => {

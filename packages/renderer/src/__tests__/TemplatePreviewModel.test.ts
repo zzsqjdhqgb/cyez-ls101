@@ -62,6 +62,32 @@ describe('Template preview selection', () => {
       buildTemplatePreviewSnapshots(root, selectedFunction, preview).map((item) => item.id)
     ).toEqual(['page:function-call/inner-page:0', 'page:function-call/inner-page:1'])
   })
+
+  it('filters function-editor pages relative to the temporary preview call', () => {
+    const section = root.children[0]
+    if (section.type !== 'frame') throw new Error('expected frame')
+    const selectedPage = section.children[0]
+    const selectedFunction = section.children[1]
+    const functionPreview: TemplatePreviewData = {
+      ...preview,
+      pages: [
+        page('direct-page', ['function-preview-call'], 1),
+        page('inner-page', ['function-preview-call', 'function-call'], 1),
+        page('direct-page', ['unrelated-call'], 1)
+      ]
+    }
+
+    expect(
+      buildTemplatePreviewSnapshots(root, selectedPage, functionPreview, [
+        'function-preview-call'
+      ]).map((item) => item.page.callPath)
+    ).toEqual([['function-preview-call']])
+    expect(
+      buildTemplatePreviewSnapshots(root, selectedFunction, functionPreview, [
+        'function-preview-call'
+      ]).map((item) => item.page.callPath)
+    ).toEqual([['function-preview-call', 'function-call']])
+  })
 })
 
 function page(id: string, callPath: string[], stepCount: number): TemplatePreviewPage {

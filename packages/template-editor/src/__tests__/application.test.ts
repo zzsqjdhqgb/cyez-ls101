@@ -1023,6 +1023,61 @@ describe('TemplateApplication', () => {
       }
     })
   })
+
+  it('使用未保存的函数正文和临时输入生成无 Schema 预览', async () => {
+    const { application, repository } = setup()
+    const original = functionDocument(FUNCTION_A, 'Preview function')
+    original.content.inputs = [{ name: 'title', type: 'string' }]
+    await saveFunctions(repository, original)
+    const unsaved: FunctionDocument = {
+      ...original,
+      content: {
+        ...original.content,
+        body: root([
+          {
+            id: 'preview-page',
+            type: 'page',
+            content: {
+              blocks: [
+                {
+                  id: 'title',
+                  type: 'text',
+                  x: 10,
+                  y: 20,
+                  text: {
+                    type: 'string',
+                    parts: [{ type: 'variable', ref: { scope: 'local', name: 'title' } }]
+                  }
+                }
+              ]
+            },
+            timeline: [
+              { type: 'countdown', seconds: { type: 'number', source: 'literal', value: 3 } }
+            ]
+          }
+        ])
+      }
+    }
+
+    const result = await application.functionLibraries.local.preview(LIBRARY_ID, unsaved, {
+      title: { type: 'string', source: 'literal', value: 'Unsaved preview title' }
+    })
+
+    expect(result).toMatchObject({
+      success: true,
+      preview: {
+        title: 'Preview function',
+        pages: [
+          {
+            sourceNodeId: 'preview-page',
+            content: [{ id: expect.any(String), type: 'text', text: 'Unsaved preview title' }],
+            timeline: [{ type: 'countdown', seconds: 3 }]
+          }
+        ]
+      }
+    })
+    expect(await repository.listTemplateIds()).toEqual([])
+  })
 })
 
 function forwardRepository(

@@ -38,6 +38,7 @@ export function validateDefinitionScope(
     registerLocalName(input.name, input.type, `${path}.inputs[${index}].name`, true, scope, state)
   })
   scanScope(body, path, scope, state)
+  validateVariableCycles(body, path, state)
   outputs.forEach((output, index) => {
     registerLocalName(
       output.name,
@@ -89,6 +90,16 @@ function scanScope(
     case 'choice-question':
       registerLocalName(node.outputName, 'choice', `${path}.outputName`, true, scope, state)
       validateChoiceOptions(node, path, state)
+      break
+    case 'variable':
+      registerLocalName(
+        node.variableName,
+        node.value.type,
+        `${path}.variableName`,
+        true,
+        scope,
+        state
+      )
       break
     case 'function': {
       const func = state.functionsById.get(node.functionRef)
@@ -251,7 +262,75 @@ function validateNodeExpressions(
     case 'function':
       validateFunctionCall(node, path, scope, functionStack, state)
       break
+    case 'variable':
+      validateStaticExpression(node.value, node.value.type, `${path}.value`, scope, state)
+      break
   }
+}
+
+interface VariableDeclaration {
+  path: string
+  dependencies: string[]
+}
+
+function validateVariableCycles(body: FrameNode, path: string, state: ValidationState): void {
+  const declarations = new Map<string, VariableDeclaration>()
+  const collect = (node: TemplateNode, nodePath: string): void => {
+    if (node.type === 'frame') {
+      node.children.forEach((child, index) => collect(child, `${nodePath}.children[${index}]`))
+      return
+    }
+    if (node.type !== 'variable' || declarations.has(node.variableName)) return
+    declarations.set(node.variableName, {
+      path: `${nodePath}.value`,
+      dependencies: staticExpressionLocalReferences(node.value)
+    })
+  }
+  collect(body, path)
+
+  const visiting = new Set<string>()
+  const visited = new Set<string>()
+  const stack: string[] = []
+  const reported = new Set<string>()
+  const visit = (name: string): void => {
+    if (visited.has(name)) return
+    if (visiting.has(name)) {
+      const start = stack.indexOf(name)
+      const cycle = [...stack.slice(start), name]
+      for (const member of new Set(cycle)) {
+        if (reported.has(member)) continue
+        const declaration = declarations.get(member)
+        if (declaration) {
+          addError(state, declaration.path, 'CYCLIC_VARIABLE_DEFINITION', {
+            name: member,
+            chain: cycle.join(' -> ')
+          })
+          reported.add(member)
+        }
+      }
+      return
+    }
+    const declaration = declarations.get(name)
+    if (!declaration) return
+    visiting.add(name)
+    stack.push(name)
+    declaration.dependencies.forEach((dependency) => visit(dependency))
+    stack.pop()
+    visiting.delete(name)
+    visited.add(name)
+  }
+  declarations.forEach((_declaration, name) => visit(name))
+}
+
+function staticExpressionLocalReferences(expression: StaticValueExpression): string[] {
+  if ('parts' in expression) {
+    return expression.parts.flatMap((part) =>
+      part.type === 'variable' && part.ref.scope === 'local' ? [part.ref.name] : []
+    )
+  }
+  return expression.source === 'variable' && expression.ref.scope === 'local'
+    ? [expression.ref.name]
+    : []
 }
 
 function validateFunctionCall(
@@ -502,7 +581,6 @@ function validateSchemaUses(
   scope: ScopeState,
   state: ValidationState
 ): void {
-  state.schemaUseCount += uses.length
   const useIds = new Set<string>()
 
   uses.forEach((use, index) => {

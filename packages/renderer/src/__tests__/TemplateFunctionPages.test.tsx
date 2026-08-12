@@ -79,7 +79,19 @@ describe('Template function pages', () => {
       target: { value: '更新后的函数' }
     })
     fireEvent.click(within(properties).getByRole('button', { name: '添加输入' }))
-    expect(within(properties).getByLabelText('输入 1 名称')).toHaveValue('input')
+    const inputName = within(properties).getByLabelText('输入 1 名称')
+    expect(inputName).toHaveValue('input')
+    inputName.focus()
+    fireEvent.change(inputName, { target: { value: 'input-name' } })
+    expect(within(properties).getByLabelText('输入 1 名称')).toBe(inputName)
+    expect(inputName).toHaveFocus()
+
+    fireEvent.click(within(properties).getByRole('button', { name: '添加输出' }))
+    const outputName = within(properties).getByLabelText('输出 1 名称')
+    outputName.focus()
+    fireEvent.change(outputName, { target: { value: 'output-name' } })
+    expect(within(properties).getByLabelText('输出 1 名称')).toBe(outputName)
+    expect(outputName).toHaveFocus()
 
     fireEvent.click(screen.getByRole('button', { name: '添加页面' }))
     expect(await screen.findByRole('button', { name: '选择节点 page' })).toBeInTheDocument()
@@ -95,10 +107,109 @@ describe('Template function pages', () => {
       .mock.calls[0]
     expect(librarySnapshot.revision).toBe(4)
     expect(functionDocument.content.name).toBe('更新后的函数')
-    expect(functionDocument.content.inputs).toEqual([{ name: 'input', type: 'string' }])
+    expect(functionDocument.content.inputs).toEqual([{ name: 'input-name', type: 'string' }])
+    expect(functionDocument.content.outputs).toEqual([
+      {
+        name: 'output-name',
+        type: 'string',
+        expression: { type: 'string', parts: [{ type: 'literal', value: '' }] }
+      }
+    ])
     expect(functionDocument.content.body.children[0]).toMatchObject({ id: 'page', type: 'page' })
     expect(screen.getByText(/Revision 4/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '保存' })).toBeDisabled()
+  })
+
+  it('uses the template editor function library layout and filters the current function', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter
+          initialEntries={[`/templates/libraries/${LIBRARY_ID}/functions/${FUNCTION_ID}`]}
+        >
+          <Routes>
+            <Route
+              path="/templates/libraries/:libraryId/functions/:functionId"
+              element={<TemplateFunctionDocumentPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    expect(await screen.findByRole('heading', { name: '函数库' })).toBeInTheDocument()
+    expect(screen.getByRole('separator', { name: '调整函数库宽度' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '内置函数库' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('button', { name: '基础组件库' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '添加页面' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '基础组件库' }))
+    expect(screen.queryByRole('button', { name: '添加页面' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: '本地函数库' }))
+    expect(screen.getByRole('button', { name: '本地函数库' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '调用本地函数' })).not.toBeInTheDocument()
+    expect(screen.getByText('暂无可用函数')).toBeInTheDocument()
+  })
+
+  it('previews the selected function subtree with temporary input values', async () => {
+    const app = application()
+    vi.mocked(app.functionLibraries.local.get).mockResolvedValueOnce(previewLibrary())
+    vi.mocked(app.functionLibraries.local.preview).mockResolvedValue({
+      success: true,
+      preview: {
+        title: '预览函数',
+        pages: [
+          {
+            id: 'page:function-preview-call:preview-page',
+            sourceNodeId: 'preview-page',
+            sourceNodeName: '预览页',
+            callPath: ['function-preview-call'],
+            content: [],
+            timeline: [{ type: 'countdown', seconds: 3 }]
+          }
+        ],
+        recordingIndices: [],
+        resources: {}
+      },
+      resourceSources: []
+    })
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter
+          initialEntries={[`/templates/libraries/${LIBRARY_ID}/functions/${FUNCTION_ID}`]}
+        >
+          <Routes>
+            <Route
+              path="/templates/libraries/:libraryId/functions/:functionId"
+              element={<TemplateFunctionDocumentPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('tab', { name: '预览' }))
+    expect(await screen.findByRole('complementary', { name: '预览序列' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '函数库' })).not.toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: '函数预览配置' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '预览画面 1，倒计时' })).toBeInTheDocument()
+    expect(app.functionLibraries.local.preview).toHaveBeenCalledWith(
+      LIBRARY_ID,
+      expect.objectContaining({ functionId: FUNCTION_ID }),
+      { title: { type: 'string', source: 'literal', value: '' } }
+    )
+
+    fireEvent.change(screen.getByLabelText('预览输入 title'), {
+      target: { value: '临时标题' }
+    })
+    await waitFor(() =>
+      expect(app.functionLibraries.local.preview).toHaveBeenLastCalledWith(
+        LIBRARY_ID,
+        expect.objectContaining({ functionId: FUNCTION_ID }),
+        { title: { type: 'string', source: 'literal', value: '临时标题' } }
+      )
+    )
   })
 
   it('shows a non-editable error state for a missing local function', async () => {
@@ -143,7 +254,8 @@ describe('Template function pages', () => {
       </TemplateApplicationProvider>
     )
 
-    fireEvent.click(await screen.findByRole('button', { name: '调用导入函数' }))
+    fireEvent.click(await screen.findByRole('tab', { name: '导入函数库' }))
+    fireEvent.click(screen.getByRole('button', { name: '调用导入函数' }))
     await waitFor(() =>
       expect(app.functionLibraries.local.insertFunctionCall).toHaveBeenCalledWith(
         LIBRARY_ID,
@@ -244,6 +356,7 @@ function application(): TemplateApplication {
           }
           return structuredClone(storedLibrary)
         }),
+        preview: vi.fn(),
         insertFunctionCall: vi.fn().mockImplementation(async () => {
           const source = storedLibrary.content.functions.find(
             (entry) => entry.functionId === FUNCTION_ID
@@ -333,5 +446,44 @@ function localLibrary(): LocalFunctionLibraryDocument {
     storageRevision: 4,
     content: { name: '本地函数库', functions: [{ functionId: FUNCTION_ID, content }] },
     editorState: { library: {}, functions: { [FUNCTION_ID]: {} } }
+  }
+}
+
+function previewLibrary(): LocalFunctionLibraryDocument {
+  const library = localLibrary()
+  const entry = library.content.functions[0]
+  return {
+    ...library,
+    content: {
+      ...library.content,
+      functions: [
+        {
+          ...entry,
+          content: {
+            ...entry.content,
+            name: '预览函数',
+            inputs: [{ name: 'title', type: 'string' }],
+            body: {
+              id: 'root',
+              type: 'frame',
+              children: [
+                {
+                  id: 'preview-page',
+                  name: '预览页',
+                  type: 'page',
+                  content: { blocks: [] },
+                  timeline: [
+                    {
+                      type: 'countdown',
+                      seconds: { type: 'number', source: 'literal', value: 3 }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
   }
 }

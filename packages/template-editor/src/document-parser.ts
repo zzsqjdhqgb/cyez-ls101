@@ -241,6 +241,8 @@ function isTemplateNode(value: unknown): value is TemplateNode {
         ) &&
         typeof value.outputName === 'string'
       )
+    case 'variable':
+      return typeof value.variableName === 'string' && isStaticValueExpression(value.value)
     default:
       return false
   }
