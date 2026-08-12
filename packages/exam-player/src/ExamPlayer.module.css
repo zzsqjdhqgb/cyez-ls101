@@ -24,16 +24,16 @@
 }
 
 .examLayout {
-  display: grid;
-  grid-template-rows: 720px 80px;
+  position: relative;
   width: 1200px;
   height: 800px;
+  overflow: hidden;
 }
 
 .contentViewport {
   display: grid;
   width: 1200px;
-  height: 720px;
+  height: 800px;
   overflow: hidden;
   place-items: center;
   background: #e8eeec;
@@ -42,11 +42,16 @@
 .pageHost {
   flex: 0 0 auto;
   box-shadow: 0 8px 26px rgb(35 56 52 / 12%);
-  transform: scale(0.9);
-  transform-origin: center;
 }
 
 .statusBar {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 1200px;
+  height: 80px;
   display: grid;
   grid-template-columns: 180px minmax(0, 1fr) 180px;
   align-items: center;
