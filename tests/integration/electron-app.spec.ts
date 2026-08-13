@@ -1,7 +1,9 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import type { ExamPackage } from '@ls101/core-types'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { strToU8, unzipSync, zipSync } from 'fflate'
 import { launchIntegrationApp } from './support/electron-app'
 
 let electronApp: ElectronApplication
@@ -253,6 +255,49 @@ test('navigates through every primary application area', async () => {
   await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
 })
 
+test('exports a submission containing a large resource through the renderer ZIP worker', async () => {
+  const examPath = path.join(userDataDir, 'large-resource.lsexam')
+  const submissionPath = path.join(userDataDir, 'large-resource.lssubmission')
+  const resource = new Uint8Array(200_000)
+  for (let offset = 0; offset < resource.length; offset += 65_536) {
+    crypto.getRandomValues(resource.subarray(offset, offset + 65_536))
+  }
+  const manifest = largeResourceExamManifest()
+  const examBytes = zipSync({
+    'manifest.json': strToU8(JSON.stringify(manifest)),
+    'resources/attachment/data.bin': resource
+  })
+  await writeFile(examPath, examBytes)
+
+  await page.getByRole('link', { name: '考试' }).click()
+  await electronApp.evaluate(({ dialog }, filePath) => {
+    Object.defineProperty(dialog, 'showOpenDialog', {
+      configurable: true,
+      value: async () => ({ canceled: false, filePaths: [filePath] })
+    })
+  }, examPath)
+  await page.getByRole('button', { name: '导入试卷包' }).click()
+  await page.getByRole('button', { name: '开始考试' }).click()
+  await page.getByLabel('姓名').fill('测试考生')
+  await page.getByLabel('考生号').fill('worker-001')
+
+  await electronApp.evaluate(({ dialog }, filePath) => {
+    Object.defineProperty(dialog, 'showSaveDialog', {
+      configurable: true,
+      value: async () => ({ canceled: false, filePath })
+    })
+  }, submissionPath)
+  await page.getByRole('button', { name: '继续' }).click()
+
+  await expect(page.getByRole('heading', { name: '考试完成' })).toBeVisible()
+  const submission = unzipSync(await readFile(submissionPath))
+  expect(submission['resources/attachment/data.bin']).toEqual(resource)
+  expect(JSON.parse(Buffer.from(submission['manifest.json']).toString('utf8'))).toMatchObject({
+    format: 'ls101-submission',
+    meta: { candidate: { candidateId: 'worker-001', displayName: '测试考生' } }
+  })
+})
+
 test('persists appearance settings through the renderer and config store', async () => {
   await page.getByRole('link', { name: '设置' }).click()
   await page.getByRole('button', { name: /外观/ }).click()
@@ -413,3 +458,41 @@ test('routes window controls through preload to the owning BrowserWindow', async
     page.getByRole('button', { name: '关闭' }).click()
   ])
 })
+
+function largeResourceExamManifest(): ExamPackage {
+  const attachment = {
+    filename: 'data.bin',
+    packagePath: 'resources/attachment/data.bin',
+    mediaType: 'application/octet-stream'
+  }
+  return {
+    format: 'ls101-exam',
+    formatVersion: 1,
+    packageId: '50000000-0000-4000-8000-000000000001',
+    examData: {
+      title: '大附件导出测试',
+      player: {
+        pages: [
+          {
+            id: 'page-1',
+            content: [{ id: 'text-1', type: 'text', x: 10, y: 10, text: '测试内容' }],
+            timeline: [{ type: 'countdown', seconds: 0 }]
+          }
+        ],
+        recordingIndices: []
+      },
+      resources: { attachment }
+    },
+    answerCapturePlan: { strings: [], audios: [] },
+    submissionTemplate: {
+      format: 'ls101-submission',
+      formatVersion: 1,
+      meta: {
+        examPackageId: '50000000-0000-4000-8000-000000000001',
+        examTitle: '大附件导出测试'
+      },
+      schemaUses: [],
+      resources: { attachment }
+    }
+  }
+}
