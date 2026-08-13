@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type JSX } from 'react'
+import { useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import {
   createHumanGradingEngine,
   type GradingInput,
@@ -256,17 +256,40 @@ function GradingAnswer({ answer }: { answer: GradingInput['answers'][number] }):
 }
 
 function AudioAnswer({ resource }: { resource: GradingResourceInput }): JSX.Element {
-  const url = useMemo(
-    () =>
-      URL.createObjectURL(
-        new Blob([new Uint8Array(resource.data)], { type: resource.mediaType || 'audio/webm' })
-      ),
-    [resource]
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const [failedResourceKey, setFailedResourceKey] = useState<string | null>(null)
+
+  useEffect(() => {
+    const player = audioRef.current
+    if (!player) return
+    const nextUrl = URL.createObjectURL(
+      new Blob([new Uint8Array(resource.data)], { type: resource.mediaType || 'audio/webm' })
+    )
+    player.src = nextUrl
+    return () => {
+      player.removeAttribute('src')
+      URL.revokeObjectURL(nextUrl)
+    }
+  }, [resource])
+
+  const playbackError = failedResourceKey === resource.resourceKey
+
+  return (
+    <>
+      <audio
+        ref={audioRef}
+        controls
+        preload="metadata"
+        onCanPlay={() => setFailedResourceKey(null)}
+        onError={() => setFailedResourceKey(resource.resourceKey)}
+      />
+      {playbackError ? (
+        <p className={styles.audioError} role="alert">
+          录音无法播放，请导出作答包后检查音频文件。
+        </p>
+      ) : null}
+    </>
   )
-
-  useEffect(() => () => URL.revokeObjectURL(url), [url])
-
-  return <audio controls preload="metadata" src={url} />
 }
 
 function formatDuration(durationMs: number): string {

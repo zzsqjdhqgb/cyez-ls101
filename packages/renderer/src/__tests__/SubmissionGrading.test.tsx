@@ -10,6 +10,7 @@ import type {
   SubmissionReport
 } from '@ls101/submission-library'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { StrictMode } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SubmissionGradingPage } from '../features/submissions/SubmissionGradingPage'
 import { SubmissionLibraryPage } from '../features/submissions/SubmissionLibraryPage'
@@ -18,11 +19,44 @@ import { SubmissionLibraryProvider } from '../features/submissions/SubmissionLib
 afterEach(cleanup)
 
 beforeEach(() => {
-  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:grading-audio')
+  let nextUrl = 0
+  vi.spyOn(URL, 'createObjectURL').mockImplementation(() => `blob:grading-audio-${++nextUrl}`)
   vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
 })
 
 describe('submission grading UI', () => {
+  it('keeps the current recording URL alive across StrictMode effect checks', async () => {
+    const repository = mockRepository({
+      startGrading: vi.fn().mockResolvedValue(gradingWorkspace())
+    })
+
+    const rendered = render(
+      <StrictMode>
+        <SubmissionLibraryProvider repository={repository}>
+          <MemoryRouter initialEntries={['/submissions/submission-1/grade']}>
+            <Routes>
+              <Route element={<SubmissionGradingPage />} path="/submissions/:submissionId/grade" />
+            </Routes>
+          </MemoryRouter>
+        </SubmissionLibraryProvider>
+      </StrictMode>
+    )
+
+    const player = await waitFor(() => {
+      const element = rendered.container.querySelector('audio')
+      expect(element).not.toBeNull()
+      return element as HTMLAudioElement
+    })
+    const currentUrl = player.getAttribute('src')
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(2)
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:grading-audio-1')
+    expect(URL.revokeObjectURL).not.toHaveBeenCalledWith(currentUrl)
+    expect(currentUrl).toBe('blob:grading-audio-2')
+
+    fireEvent.error(player)
+    expect(screen.getByRole('alert')).toHaveTextContent('录音无法播放')
+  })
+
   it('submits a decimal human score with an empty comment and finishes the submission', async () => {
     const workspace = gradingWorkspace()
     const submitGradingResult = vi.fn().mockResolvedValue({
