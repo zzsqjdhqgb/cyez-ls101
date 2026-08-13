@@ -306,12 +306,16 @@ test('creates, edits and reloads a persisted template', async () => {
     'aria-selected',
     'true'
   )
-  await expect(page.getByRole('button', { name: '未命名函数库', exact: true })).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '未命名函数库，未导出', exact: true })
+  ).toBeVisible()
   await page.getByRole('button', { name: '重命名本地函数库“未命名函数库”' }).click()
   const libraryName = page.getByRole('textbox', { name: '函数库“未命名函数库”名称' })
   await libraryName.fill('集成测试函数库')
   await libraryName.press('Enter')
-  await expect(page.getByRole('button', { name: '集成测试函数库', exact: true })).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '集成测试函数库，未导出', exact: true })
+  ).toBeVisible()
 
   await page.getByRole('button', { name: '在“集成测试函数库”中新建函数' }).click()
   await expect(page.getByRole('button', { name: '添加未命名函数' })).toBeVisible()
@@ -331,16 +335,18 @@ test('creates, edits and reloads a persisted template', async () => {
     name: '删除本地函数库“集成测试函数库”？'
   })
   await deleteLibraryDialog.getByRole('button', { name: '删除' }).click()
-  await expect(page.getByRole('button', { name: '集成测试函数库', exact: true })).toHaveCount(0)
+  await expect(
+    page.getByRole('button', { name: '集成测试函数库，未导出', exact: true })
+  ).toHaveCount(0)
 
   await expect(page.getByText('Revision 1')).toBeVisible()
 
   await page.getByRole('button', { name: '返回模板' }).click()
-  await expect(page.getByRole('button', { name: '集成测试模板' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '集成测试模板', exact: true })).toBeVisible()
 
   await page.reload()
   await page.getByRole('link', { name: '模板' }).click()
-  await expect(page.getByRole('button', { name: '集成测试模板' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '集成测试模板', exact: true })).toBeVisible()
   await expect(page.getByText('由 Electron 集成测试创建')).toBeVisible()
 })
 

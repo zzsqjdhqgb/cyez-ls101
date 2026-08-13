@@ -50,6 +50,7 @@ import {
 import { templateErrorMessage } from './templateUi'
 import { useFunctionEditorSession } from './useFunctionEditorSession'
 import { useFunctionPreview } from './useFunctionPreview'
+import { useUnsavedChangesGuard } from './useUnsavedChangesGuard'
 import libraryStyles from './TemplateDocumentPage.module.css'
 import styles from './TemplateFunctionDocumentPage.module.css'
 
@@ -94,6 +95,7 @@ function TemplateFunctionDocumentEditor({
   const navigate = useNavigate()
   const location = useLocation()
   const session = useFunctionEditorSession(application, libraryId, functionId)
+  const unsavedChanges = useUnsavedChangesGuard(session.dirty)
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [centerView, setCenterView] = useState<'structure' | 'page' | 'preview'>('structure')
@@ -630,6 +632,10 @@ function TemplateFunctionDocumentEditor({
               snapshot={selectedPreviewSnapshot}
               snapshotCount={previewSnapshots.length}
               target={previewTarget}
+              onLocateError={(nodeId) => {
+                session.selectNode(nodeId)
+                setCenterView('structure')
+              }}
             />
           ) : (
             <aside className={styles.properties} aria-labelledby="function-properties-heading">
@@ -700,7 +706,19 @@ function TemplateFunctionDocumentEditor({
         open={confirmLeave}
         title="放弃未保存的修改？"
         onCancel={() => setConfirmLeave(false)}
-        onConfirm={() => navigate(backTarget)}
+        onConfirm={() => {
+          unsavedChanges.allowNextNavigation()
+          navigate(backTarget)
+        }}
+      />
+      <ConfirmModal
+        confirmLabel="放弃修改"
+        danger
+        message="离开后，本次尚未保存的函数修改会丢失。"
+        open={unsavedChanges.navigationPending}
+        title="放弃未保存的修改？"
+        onCancel={unsavedChanges.cancelNavigation}
+        onConfirm={unsavedChanges.confirmNavigation}
       />
       <ConfirmModal
         confirmLabel="删除"

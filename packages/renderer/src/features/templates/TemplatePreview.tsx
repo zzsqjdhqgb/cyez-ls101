@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type JSX } from 'react'
 import type { ChoiceOptionLabel, PlayerChoiceMeta, ResolvedChoiceViewport } from '@ls101/core-types'
 import type {
-  TemplateCompileError,
   TemplateDocument,
   TemplateNode,
   TemplatePreviewData,
@@ -16,6 +15,7 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { Tooltip } from '../../components/ui/Tooltip'
 import { TemplateInspectorSection } from './TemplateInspectorSection'
 import { templatePreviewResourceUrls } from './TemplatePreviewModel'
+import { templateCompileErrorDetails, templateErrorNodeId } from './TemplateCompileErrors'
 import type { TemplatePreviewSession } from './useTemplatePreview'
 import styles from './TemplatePreview.module.css'
 
@@ -350,13 +350,15 @@ export function TemplatePreviewInspector({
   target,
   snapshot,
   snapshotCount,
-  session
+  session,
+  onLocateError
 }: {
   document: TemplateDocument | null
   target: TemplateNode | null
   snapshot: TemplatePreviewSnapshot | null
   snapshotCount: number
   session: TemplatePreviewSession
+  onLocateError?(nodeId: string): void
 }): JSX.Element {
   return (
     <aside className={styles.inspector} aria-label="预览配置">
@@ -412,9 +414,27 @@ export function TemplatePreviewInspector({
       {session.result && !session.result.success ? (
         <TemplateInspectorSection title="校验结果">
           <ol className={styles.errorList}>
-            {session.result.errors.map((error, index) => (
-              <li key={`${compileErrorPath(error)}-${index}`}>{formatCompileError(error)}</li>
-            ))}
+            {session.result.errors.map((error, index) => {
+              const details = templateCompileErrorDetails(error)
+              const nodeId = document
+                ? templateErrorNodeId(document.content.root, details.path)
+                : null
+              return (
+                <li key={`${details.path}-${index}`}>
+                  {nodeId && onLocateError ? (
+                    <button type="button" onClick={() => onLocateError(nodeId)}>
+                      <strong>{details.message}</strong>
+                      <small>{details.path}</small>
+                    </button>
+                  ) : (
+                    <span>
+                      <strong>{details.message}</strong>
+                      <small>{details.path}</small>
+                    </span>
+                  )}
+                </li>
+              )
+            })}
           </ol>
         </TemplateInspectorSection>
       ) : null}
@@ -494,26 +514,6 @@ function stepDetail(step: TemplatePreviewTimelineStep): string {
   if (step.type === 'play') return step.text || '空文本'
   if (step.type === 'countdown') return `${step.seconds} 秒`
   return `${step.duration} 秒 · 录音 ${step.recordIndex + 1}`
-}
-
-function formatCompileError(error: TemplateCompileError): string {
-  if (error.stage === 'validation') {
-    return compileErrorText(error.error.code, error.error.path, error.error.params)
-  }
-  return compileErrorText(error.code, error.path, error.params)
-}
-
-function compileErrorText(
-  code: string,
-  path: string,
-  params: Readonly<Record<string, string | number>>
-): string {
-  const message = typeof params.message === 'string' ? params.message : ''
-  return `${code} · ${path}${message ? ` · ${message}` : ''}`
-}
-
-function compileErrorPath(error: TemplateCompileError): string {
-  return error.stage === 'validation' ? error.error.path : error.path
 }
 
 function nodeTypeLabel(type: TemplateNode['type']): string {

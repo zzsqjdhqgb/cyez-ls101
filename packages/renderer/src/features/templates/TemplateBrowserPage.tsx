@@ -1,9 +1,11 @@
 import { useEffect, useState, type JSX } from 'react'
 import type { FunctionLibrarySummary, TemplateSummary } from '@ls101/template-editor'
-import { AlertCircle, Braces, LayoutTemplate, Plus } from 'lucide-react'
+import { AlertCircle, Braces, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
+import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { IconButton } from '../../components/ui/IconButton'
 import { Page, PageHeader } from '../../components/ui/Page'
 import { useTemplateApplication } from './TemplateApplicationContext'
 import styles from './TemplateBrowserPage.module.css'
@@ -16,6 +18,8 @@ export function TemplateBrowserPage(): JSX.Element {
   const [functionLibraries, setFunctionLibraries] = useState<FunctionLibrarySummary[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<TemplateSummary | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -50,6 +54,23 @@ export function TemplateBrowserPage(): JSX.Element {
       setError(templateErrorMessage(reason))
     } finally {
       setCreating(false)
+    }
+  }
+
+  const deleteTemplate = async (): Promise<void> => {
+    if (!pendingDelete || deleting) return
+    setDeleting(true)
+    setError(null)
+    try {
+      await application.templates.delete(pendingDelete.templateId)
+      setTemplates((current) =>
+        current.filter((item) => item.templateId !== pendingDelete.templateId)
+      )
+      setPendingDelete(null)
+    } catch (reason) {
+      setError(templateErrorMessage(reason))
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -93,7 +114,15 @@ export function TemplateBrowserPage(): JSX.Element {
                 </button>
                 <p className={styles.rowDescription}>{item.description || '暂无描述'}</p>
               </div>
-              <Button onClick={() => navigate(`/templates/${item.templateId}`)}>编辑</Button>
+              <div className={styles.rowActions}>
+                <Button onClick={() => navigate(`/templates/${item.templateId}`)}>编辑</Button>
+                <IconButton
+                  icon={Trash2}
+                  label={`删除模板“${item.name || '未命名模板'}”`}
+                  variant="danger"
+                  onClick={() => setPendingDelete(item)}
+                />
+              </div>
             </article>
           ))}
         </div>
@@ -119,6 +148,20 @@ export function TemplateBrowserPage(): JSX.Element {
           </div>
         ) : null}
       </section>
+
+      <ConfirmModal
+        busy={deleting}
+        closeOnConfirm={false}
+        confirmLabel="删除"
+        danger
+        message="模板及其编辑内容会从本地删除，已经导出的试卷不受影响。"
+        open={pendingDelete !== null}
+        title={`删除模板“${pendingDelete?.name || '未命名模板'}”？`}
+        onCancel={() => {
+          if (!deleting) setPendingDelete(null)
+        }}
+        onConfirm={() => void deleteTemplate()}
+      />
     </Page>
   )
 }

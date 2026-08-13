@@ -14,8 +14,7 @@ import { useSchemaRepository } from '../schemas/SchemaApplicationContext'
 import { questionTypeLabels } from '../schemas/schemaUi'
 import { TemplateVariableInput } from './TemplateVariableInput'
 import {
-  parseSchemaTextExpression,
-  schemaTextExpressionInputValue,
+  collectSchemaAttachmentCandidates,
   type TemplateVariableCandidate
 } from './TemplateVariableInputModel'
 import { templateErrorMessage } from './templateUi'
@@ -178,6 +177,10 @@ function SchemaUseEditor({
   disabled,
   apply
 }: SchemaUseEditorProps): JSX.Element {
+  const schemaTextCandidates = useMemo(
+    () => [...variableCandidates, ...collectSchemaAttachmentCandidates(use.attachments)],
+    [use.attachments, variableCandidates]
+  )
   const audioOutputs = useMemo(
     () => variableCandidates.filter((item) => item.type === 'audio' && item.ref.scope === 'local'),
     [variableCandidates]
@@ -219,18 +222,18 @@ function SchemaUseEditor({
             {definition.structure.templateInputs.map((input) => (
               <label key={input.inputId}>
                 {schemaInputLabel(definition, input.inputId)}
-                <input
-                  aria-label={`${use.useId} ${input.inputId}`}
+                <TemplateVariableInput
+                  mode="schema-text"
+                  ariaLabel={`${use.useId} ${input.inputId}`}
                   disabled={disabled}
-                  value={schemaTextExpressionInputValue(
-                    use.inputBindings[input.inputId] ?? emptySchemaText()
-                  )}
-                  onChange={(event) =>
+                  candidates={schemaTextCandidates}
+                  value={use.inputBindings[input.inputId] ?? emptySchemaText()}
+                  onChange={(expression) =>
                     apply({
                       type: 'set-schema-input-binding',
                       useId: use.useId,
                       inputId: input.inputId,
-                      expression: parseSchemaTextExpression(event.target.value)
+                      expression
                     })
                   }
                 />
@@ -279,14 +282,16 @@ function SchemaUseEditor({
                     <strong>{description}</strong>
                     <label>
                       文本
-                      <input
-                        aria-label={`${use.useId} ${answer.answerId} 文本`}
+                      <TemplateVariableInput
+                        mode="schema-text"
+                        ariaLabel={`${use.useId} ${answer.answerId} 文本`}
                         disabled={disabled}
-                        value={schemaTextExpressionInputValue(binding.text)}
-                        onChange={(event) =>
+                        candidates={schemaTextCandidates}
+                        value={binding.text}
+                        onChange={(expression) =>
                           setAnswer(answer.answerId, {
                             ...binding,
-                            text: parseSchemaTextExpression(event.target.value)
+                            text: expression
                           })
                         }
                       />

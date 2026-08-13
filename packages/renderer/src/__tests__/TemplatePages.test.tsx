@@ -2,7 +2,7 @@
 
 import '@testing-library/jest-dom/vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TemplateApplication, TemplateDocument } from '@ls101/template-editor'
 import type { JSX } from 'react'
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
@@ -52,7 +52,12 @@ const NEW_LIBRARY_ID = '70000000-0000-4000-8000-000000000007'
 const NEW_FUNCTION_ID = '80000000-0000-4000-8000-000000000008'
 const INTERFACE_ID = `sha256:${'a'.repeat(64)}`
 
+beforeEach(() => {
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
+})
+
 afterEach(() => {
+  vi.restoreAllMocks()
   cleanup()
   functionLibraryFileDialog.readText.mockReset()
   functionLibraryFileDialog.writeText.mockReset()
@@ -104,6 +109,21 @@ function TemplateRouteSwitcher(): JSX.Element {
         打开缺失模板
       </button>
       <Routes>
+        <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+      </Routes>
+    </>
+  )
+}
+
+function TemplateNavigationHarness(): JSX.Element {
+  const navigate = useNavigate()
+  return (
+    <>
+      <button type="button" onClick={() => navigate('/templates')}>
+        前往模板列表
+      </button>
+      <Routes>
+        <Route path="/templates" element={<TemplateBrowserPage />} />
         <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
       </Routes>
     </>
@@ -259,6 +279,14 @@ function application(document = template()): TemplateApplication {
             function: { functionId: NEW_FUNCTION_ID, content, editorState: {} }
           }
         }),
+        deleteFunction: vi.fn().mockImplementation(async (library, functionId) => ({
+          ...library,
+          storageRevision: library.storageRevision + 1,
+          content: {
+            ...library.content,
+            functions: library.content.functions.filter((item) => item.functionId !== functionId)
+          }
+        })),
         delete: vi.fn().mockResolvedValue(undefined)
       }
     }
@@ -547,11 +575,31 @@ describe('Template pages', () => {
     expect(screen.queryByRole('button', { name: '添加框架' })).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('tab', { name: '本地函数库' }))
-    expect(screen.getByRole('button', { name: '听力函数库' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '听力函数库，未导出' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '添加单题函数' })).toBeInTheDocument()
     expect(screen.getByText('page-1')).toBeInTheDocument()
     expect(app.templates.get).toHaveBeenCalledWith(TEMPLATE_ID)
     expect(app.browser.listFunctionLibraries).toHaveBeenCalledTimes(2)
+  })
+
+  it('deletes a template from the browser after confirmation', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={['/templates']}>
+          <Routes>
+            <Route path="/templates" element={<TemplateBrowserPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '听力模板' })
+    fireEvent.click(screen.getByRole('button', { name: '删除模板“听力模板”' }))
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: '删除' }))
+
+    await waitFor(() => expect(app.templates.delete).toHaveBeenCalledWith(TEMPLATE_ID))
+    expect(screen.queryByRole('button', { name: '听力模板' })).not.toBeInTheDocument()
   })
 
   it('shows a source-aware empty state when a function library source is empty', async () => {
@@ -644,7 +692,7 @@ describe('Template pages', () => {
       expect(app.functionLibraries.local.create).toHaveBeenCalledWith('未命名函数库')
     )
     expect(screen.getByRole('tab', { name: '本地函数库' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('button', { name: '未命名函数库' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '未命名函数库，未导出' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /删除本地函数库“基础组件库”/ })).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: '在“未命名函数库”中新建函数' }))
@@ -664,7 +712,41 @@ describe('Template pages', () => {
     await waitFor(() =>
       expect(app.functionLibraries.local.delete).toHaveBeenCalledWith(NEW_LIBRARY_ID)
     )
-    expect(screen.queryByRole('button', { name: '未命名函数库' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '未命名函数库，未导出' })).not.toBeInTheDocument()
+  })
+
+  it('deletes a local function from its library row after confirmation', async () => {
+    const app = application()
+    const library = {
+      libraryId: '40000000-0000-4000-8000-000000000004',
+      revision: 0,
+      storageRevision: 1,
+      content: {
+        name: '听力函数库',
+        functions: [{ functionId: FUNCTION_ID, content: emptyFunctionContent('单题函数') }]
+      },
+      editorState: { library: {}, functions: { [FUNCTION_ID]: {} } }
+    }
+    vi.mocked(app.functionLibraries.local.get).mockResolvedValueOnce(library)
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '选择节点 root' })
+    fireEvent.click(screen.getByRole('tab', { name: '本地函数库' }))
+    fireEvent.click(screen.getByRole('button', { name: '删除本地函数“单题函数”' }))
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: '删除' }))
+
+    await waitFor(() =>
+      expect(app.functionLibraries.local.deleteFunction).toHaveBeenCalledWith(library, FUNCTION_ID)
+    )
+    expect(screen.queryByRole('button', { name: '编辑单题函数' })).not.toBeInTheDocument()
   })
 
   it('renames only local function libraries and refreshes their row actions', async () => {
@@ -682,7 +764,8 @@ describe('Template pages', () => {
           }
         ]
       },
-      editorState: { library: {}, functions: { [FUNCTION_ID]: {} } }
+      editorState: { library: {}, functions: { [FUNCTION_ID]: {} } },
+      exportState: { contentHash: `sha256:${'0'.repeat(64)}` }
     }
     vi.mocked(app.functionLibraries.local.get).mockResolvedValueOnce(localDocument)
     render(
@@ -711,7 +794,7 @@ describe('Template pages', () => {
         content: { ...localDocument.content, name: '听力题型库' }
       })
     )
-    expect(screen.getByRole('button', { name: '听力题型库，版本 3' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '听力题型库，v3 后有修改' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '导出本地函数库“听力题型库”' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '删除本地函数库“听力题型库”' })).toBeInTheDocument()
   })
@@ -786,7 +869,7 @@ describe('Template pages', () => {
         exportState: expect.objectContaining({ contentHash: expect.any(String) })
       })
     )
-    expect(screen.getByRole('button', { name: '听力函数库，版本 1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '听力函数库，已导出 v1' })).toBeInTheDocument()
   })
 
   it('inserts an example library entry as a function call', async () => {
@@ -1064,6 +1147,37 @@ describe('Template pages', () => {
     expect(await screen.findByRole('heading', { name: '模板' })).toBeInTheDocument()
   })
 
+  it('guards route navigation and window unload while template edits are unsaved', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <TemplateNavigationHarness />
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    fireEvent.change(await screen.findByLabelText('名称'), {
+      target: { value: '由路由保护的修改' }
+    })
+
+    const beforeUnload = new Event('beforeunload', { cancelable: true })
+    expect(window.dispatchEvent(beforeUnload)).toBe(false)
+    expect(beforeUnload.defaultPrevented).toBe(true)
+
+    fireEvent.click(screen.getByRole('button', { name: '前往模板列表' }))
+    expect(screen.getByRole('alertdialog', { name: '放弃未保存的修改？' })).toBeInTheDocument()
+    expect(screen.getByLabelText('名称')).toHaveValue('由路由保护的修改')
+
+    fireEvent.click(screen.getByRole('button', { name: '取消' }))
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('名称')).toHaveValue('由路由保护的修改')
+
+    fireEvent.click(screen.getByRole('button', { name: '前往模板列表' }))
+    fireEvent.click(screen.getByRole('button', { name: '放弃修改' }))
+    expect(await screen.findByRole('heading', { name: '模板' })).toBeInTheDocument()
+  })
+
   it('clears the previous document and page state when the route parameter changes', async () => {
     const app = application()
     const missing = deferred<TemplateDocument | null>()
@@ -1082,6 +1196,7 @@ describe('Template pages', () => {
     const name = await screen.findByLabelText('名称')
     fireEvent.change(name, { target: { value: '不应残留的修改' } })
     fireEvent.click(screen.getByRole('button', { name: '打开缺失模板' }))
+    fireEvent.click(screen.getByRole('button', { name: '放弃修改' }))
 
     await waitFor(() => expect(app.templates.get).toHaveBeenCalledWith(MISSING_TEMPLATE_ID))
     await waitFor(() => expect(screen.getByLabelText('名称')).toHaveValue(''))

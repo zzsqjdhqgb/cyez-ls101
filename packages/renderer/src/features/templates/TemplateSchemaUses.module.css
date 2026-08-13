@@ -40,6 +40,7 @@
 
 .picker select,
 .bindingGroup input,
+.bindingGroup textarea,
 .bindingGroup select,
 .attachment > input {
   width: 100%;
@@ -51,6 +52,10 @@
   color: var(--color-text-strong);
   background: var(--color-surface);
   font: 12px var(--font-ui);
+}
+
+.bindingGroup textarea {
+  resize: vertical;
 }
 
 .useList {

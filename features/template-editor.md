@@ -2,7 +2,7 @@
 
 ## 功能状态
 
-`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 与函数库工作文档身份、版本化函数库仓储、内嵌函数资源管理、应用门面、严格语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。renderer 已注册 Template 应用门面、列表入口、函数库浏览、Template 与本地函数工作文档编辑会话、节点结构编辑器和 Page 内容画布；最终试卷文件封装尚未实现。
+`@ls101/template-editor` 已实现 UI 无关的作者态领域类型、Template 与函数库工作文档身份、版本化函数库仓储、内嵌函数资源管理、应用门面、严格语义校验，以及从已校验 Template 到跨模块 `ExamPackage` 的编译。renderer 已注册 Template 应用门面、列表入口、函数库浏览、Template 与本地函数工作文档编辑会话、节点结构编辑器、Page 内容画布、SchemaUse 附件配置，以及包含资源文件的最终 `.lsexam` 归档导出。
 
 ## 已实现边界
 
@@ -143,9 +143,7 @@ ChoiceView 的 free/range 页码同样使用基于 Collector 最终页数的下�
 工作文档允许保存不完整状态；编译入口会自行执行严格校验。以下能力尚未实现：
 
 - Page 画布的多选、吸附辅助线、键盘微调和画布内直接文本编辑。
-- Schema use 的 renderer 专用配置界面，包括附件列表和 Markdown 附件变量插入。
-- 编译错误文案和节点定位交互。
-- `ExamPackage` 的最终归档格式和把编译结果中的资源源文件复制进归档的写入器。
+- 跨函数调用路径中深层编译错误的逐级调用栈导航。
 
 ## 验证覆盖
 

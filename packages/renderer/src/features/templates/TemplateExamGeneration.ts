@@ -8,6 +8,7 @@ import { airouterClient } from '@ls101/airouter/renderer'
 import { encodeExamPackage } from '@ls101/exam-package'
 import type { FileDialog } from '@ls101/file-dialog/renderer'
 import { fileDialog } from '@ls101/file-dialog/renderer'
+import { templateCompileErrorsMessage } from './TemplateCompileErrors'
 import type { TemplateApplication, TemplateInterfaceBinding } from '@ls101/template-editor'
 
 export interface SpeechGenerationSelection extends AIRouterSpeechTarget {
@@ -77,7 +78,7 @@ export async function generateExamArchive(
     `[Template Exam Generation] compile returned after ${Date.now() - startedAt}ms: success=${result.success}`
   )
   if (!result.success) {
-    throw new Error(formatCompileErrors(result.errors))
+    throw new Error(templateCompileErrorsMessage(result.errors))
   }
 
   const resources: Record<string, Uint8Array> = {}
@@ -132,28 +133,6 @@ function speechSelections(
   )
 }
 
-function formatCompileErrors(errors: readonly unknown[]): string {
-  if (errors.length === 0) return '试卷编译失败'
-  return errors
-    .map((error) => {
-      if (!isRecord(error)) return String(error)
-      if (error.stage === 'validation' && isRecord(error.error)) {
-        return formatCompileError(
-          String(error.error.code),
-          String(error.error.path),
-          error.error.params
-        )
-      }
-      return formatCompileError(String(error.code), String(error.path), error.params)
-    })
-    .join('\n')
-}
-
-function formatCompileError(code: string, path: string, params: unknown): string {
-  const message = isRecord(params) && typeof params.message === 'string' ? params.message : ''
-  return `${code}：${path}${message ? `\n${message}` : ''}`
-}
-
 function safeFilename(value: string): string {
   const withoutControls = [...value.trim()]
     .map((character) => (character.charCodeAt(0) < 32 ? '-' : character))
@@ -165,8 +144,4 @@ function safeFilename(value: string): string {
 function summarizeText(text: string): string {
   const normalized = text.replace(/\s+/g, ' ').trim()
   return normalized.length > 80 ? `${normalized.slice(0, 77)}...` : normalized
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }

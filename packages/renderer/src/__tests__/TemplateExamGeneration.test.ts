@@ -202,9 +202,7 @@ describe('TemplateExamGeneration', () => {
           fetchResource: vi.fn()
         }
       )
-    ).rejects.toThrow(
-      'SPEECH_SYNTHESIS_FAILED：root.children[0].timeline[0].text\nPocket TTS 不支持当前文本'
-    )
+    ).rejects.toThrow('Pocket TTS 不支持当前文本\n位置：root.children[0].timeline[0].text')
   })
 })
 

@@ -14,7 +14,8 @@ import {
   createFunctionId,
   createFunctionResource,
   createLocalFunctionLibraryDocument,
-  createTemplateDocument
+  createTemplateDocument,
+  deriveFunctionLibraryContentHash
 } from './id'
 import { editFunctionDocument, editTemplateDocument } from './mutations'
 import { TemplateRepositoryError, type TemplateRepository } from './repository'
@@ -59,6 +60,7 @@ export interface FunctionLibrarySummary {
   version?: number
   name: string
   functions: FunctionSummary[]
+  exportStatus?: 'never' | 'exported' | 'modified'
   error?: string
 }
 
@@ -376,6 +378,22 @@ export function createTemplateApplication(
           ),
           Promise.allSettled(builtinIds.map((id) => repository.getActiveBuiltinFunctionLibrary(id)))
         ])
+        const localSummaries = await Promise.all(
+          locals.map(async ({ library, error }, index) =>
+            library
+              ? summarizeLocalLibrary(
+                  library,
+                  await deriveFunctionLibraryContentHash(library.content)
+                )
+              : {
+                  source: 'local' as const,
+                  libraryId: localIds[index],
+                  name: '损坏的本地函数库',
+                  functions: [],
+                  error: error ?? '本地函数库无法读取。'
+                }
+          )
+        )
         return [
           ...builtins
             .filter(
@@ -394,17 +412,7 @@ export function createTemplateApplication(
             .map((result) => result.value)
             .filter((item) => item !== null)
             .map((release) => summarizeLibrary('imported', release)),
-          ...locals.map(({ library, error }, index) =>
-            library
-              ? summarizeLocalLibrary(library)
-              : {
-                  source: 'local' as const,
-                  libraryId: localIds[index],
-                  name: '损坏的本地函数库',
-                  functions: [],
-                  error: error ?? '本地函数库无法读取。'
-                }
-          )
+          ...localSummaries
         ]
       },
       async listInterfaces() {
@@ -818,11 +826,19 @@ function summarizeLibrary(
   }
 }
 
-function summarizeLocalLibrary(library: LocalFunctionLibraryDocument): FunctionLibrarySummary {
+function summarizeLocalLibrary(
+  library: LocalFunctionLibraryDocument,
+  contentHash: string
+): FunctionLibrarySummary {
   return {
     source: 'local',
     libraryId: library.libraryId,
     ...(library.revision > 0 ? { version: library.revision } : {}),
+    exportStatus: !library.exportState
+      ? 'never'
+      : library.exportState.contentHash === contentHash
+        ? 'exported'
+        : 'modified',
     name: library.content.name,
     functions: library.content.functions
       .filter((entry) => entry.exposed !== false)

@@ -1,4 +1,9 @@
-import type { TextExpression, ValueExpression, ValueType } from '@ls101/template-editor'
+import type {
+  SchemaTextExpression,
+  TextExpression,
+  ValueExpression,
+  ValueType
+} from '@ls101/template-editor'
 import {
   useId,
   useMemo,
@@ -12,8 +17,12 @@ import { Braces, Variable } from 'lucide-react'
 import styles from './TemplateVariableInput.module.css'
 import {
   parseTextExpression,
+  parseSchemaTextExpression,
+  schemaTextExpressionInputValue,
+  schemaVariableRefName,
   textExpressionInputValue,
   variableRefName,
+  type SchemaAttachmentVariableCandidate,
   type TemplateVariableCandidate
 } from './TemplateVariableInputModel'
 
@@ -43,8 +52,20 @@ type ValueVariableInputProps<T extends ValueType> = {
   onChange(value: ValueExpression<T>): void
 }
 
+type SchemaTextVariableInputProps = {
+  mode: 'schema-text'
+  value: SchemaTextExpression
+  candidates: readonly (TemplateVariableCandidate | SchemaAttachmentVariableCandidate)[]
+  ariaLabel: string
+  placeholder?: string
+  disabled?: boolean
+  className?: string
+  onChange(value: SchemaTextExpression): void
+}
+
 type TemplateVariableInputProps =
   | TextVariableInputProps
+  | SchemaTextVariableInputProps
   | ValueVariableInputProps<'string'>
   | ValueVariableInputProps<'number'>
   | ValueVariableInputProps<'file'>
@@ -66,21 +87,21 @@ export function TemplateVariableInput(props: TemplateVariableInputProps): JSX.El
   const [completion, setCompletion] = useState<CompletionState | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
 
-  const expectedType = props.mode === 'text' ? 'string' : props.valueType
-  const isMultiline =
-    props.mode === 'text' || (props.mode === 'value' && props.valueType === 'string')
+  const expectedType = props.mode === 'value' ? props.valueType : 'string'
+  const isMultiline = props.mode !== 'value' || props.valueType === 'string'
   const matchingCandidates = useMemo(() => {
     if (!completion || completion.blocked) return []
     const query = completion.query.toLocaleLowerCase()
     return props.candidates.filter((candidate) => {
-      if (candidate.type !== expectedType) return false
+      const schemaAttachment = props.mode === 'schema-text' && candidate.ref.scope === 'schema-use'
+      if (candidate.type !== expectedType && !schemaAttachment) return false
       if (!query) return true
-      const qualifiedName = variableRefName(candidate.ref).toLocaleLowerCase()
+      const qualifiedName = schemaVariableRefName(candidate.ref).toLocaleLowerCase()
       const variableName =
         candidate.ref.scope === 'local' ? candidate.ref.name : candidate.ref.varName
       return qualifiedName.startsWith(query) || variableName.toLocaleLowerCase().startsWith(query)
     })
-  }, [completion, expectedType, props.candidates])
+  }, [completion, expectedType, props.candidates, props.mode])
 
   const showCompletion = completion !== null
   const resolvedActiveIndex = Math.min(activeIndex, Math.max(0, matchingCandidates.length - 1))
@@ -89,6 +110,10 @@ export function TemplateVariableInput(props: TemplateVariableInputProps): JSX.El
   const emitDraft = (next: string): void => {
     if (props.mode === 'text') {
       props.onChange(parseTextExpression(next))
+      return
+    }
+    if (props.mode === 'schema-text') {
+      props.onChange(parseSchemaTextExpression(next))
       return
     }
     if (next === '') {
@@ -131,21 +156,25 @@ export function TemplateVariableInput(props: TemplateVariableInputProps): JSX.El
     updateCompletion(next, caret)
   }
 
-  const selectCandidate = (candidate: TemplateVariableCandidate): void => {
+  const selectCandidate = (
+    candidate: TemplateVariableCandidate | SchemaAttachmentVariableCandidate
+  ): void => {
     if (!completion || completion.blocked) return
-    const token = `[@${variableRefName(candidate.ref)}]`
+    const token = `[@${schemaVariableRefName(candidate.ref)}]`
 
-    if (props.mode === 'text') {
+    if (props.mode !== 'value') {
       const input = inputRef.current
       const caret = input?.selectionStart ?? draft.length
       const next = `${draft.slice(0, completion.start)}${token}${draft.slice(caret)}`
       setDraftState({ value: next, externalValue })
-      props.onChange(parseTextExpression(next))
+      if (props.mode === 'text') props.onChange(parseTextExpression(next))
+      else props.onChange(parseSchemaTextExpression(next))
       setCompletion(null)
       focusAt(input, completion.start + token.length)
       return
     }
 
+    if (candidate.ref.scope === 'schema-use') return
     setDraftState({ value: token, externalValue })
     const ref = structuredClone(candidate.ref)
     if (props.valueType === 'number') {
@@ -220,7 +249,7 @@ export function TemplateVariableInput(props: TemplateVariableInputProps): JSX.El
           ref={(element) => {
             inputRef.current = element
           }}
-          rows={props.mode === 'text' ? 3 : 2}
+          rows={props.mode === 'value' ? 2 : 3}
         />
       ) : (
         <input
@@ -270,6 +299,7 @@ export function TemplateVariableInput(props: TemplateVariableInputProps): JSX.El
 
 function expressionInputValue(props: TemplateVariableInputProps): string {
   if (props.mode === 'text') return textExpressionInputValue(props.value)
+  if (props.mode === 'schema-text') return schemaTextExpressionInputValue(props.value)
   if (props.value.source === 'literal') return String(props.value.value)
   return `[@${variableRefName(props.value.ref)}]`
 }

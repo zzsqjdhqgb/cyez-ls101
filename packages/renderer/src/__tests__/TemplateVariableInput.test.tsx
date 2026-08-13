@@ -16,6 +16,7 @@ import {
   parseSchemaTextExpression,
   parseTextExpression,
   schemaTextExpressionInputValue,
+  type SchemaAttachmentVariableCandidate,
   type TemplateVariableCandidate
 } from '../features/templates/TemplateVariableInputModel'
 
@@ -102,6 +103,31 @@ function TextHarness({
   )
 }
 
+function SchemaTextHarness(): JSX.Element {
+  const [value, setValue] = useState(parseSchemaTextExpression(''))
+  const attachments: SchemaAttachmentVariableCandidate[] = [
+    {
+      key: 'schema-use:reference',
+      label: 'this.reference',
+      sourceLabel: '当前评分单元附件',
+      type: 'file',
+      ref: { scope: 'schema-use', varName: 'reference' }
+    }
+  ]
+  return (
+    <>
+      <TemplateVariableInput
+        mode="schema-text"
+        ariaLabel="Schema 文本"
+        candidates={attachments}
+        value={value}
+        onChange={setValue}
+      />
+      <output data-testid="schema-value">{JSON.stringify(value)}</output>
+    </>
+  )
+}
+
 function NumberHarness(): JSX.Element {
   const [value, setValue] = useState<ValueExpression<'number'>>({
     type: 'number',
@@ -147,6 +173,16 @@ function StringValueHarness(): JSX.Element {
 }
 
 describe('TemplateVariableInput', () => {
+  it('inserts a Schema attachment reference into multiline text', () => {
+    render(<SchemaTextHarness />)
+    const input = screen.getByLabelText('Schema 文本')
+    fireEvent.change(input, { target: { value: '@ref', selectionStart: 4 } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(input).toHaveValue('[@this.reference]')
+    expect(screen.getByTestId('schema-value')).toHaveTextContent('"scope":"schema-use"')
+  })
+
   it('allows newlines in text expressions', () => {
     render(<TextHarness />)
     const input = screen.getByLabelText('文本')

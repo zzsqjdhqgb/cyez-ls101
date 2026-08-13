@@ -1,9 +1,4 @@
-import type {
-  FunctionDocument,
-  StaticValueExpression,
-  TemplateCompileError,
-  TemplateNode
-} from '@ls101/template-editor'
+import type { FunctionDocument, StaticValueExpression, TemplateNode } from '@ls101/template-editor'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import type { JSX } from 'react'
 import { Button } from '../../components/ui/Button'
@@ -11,19 +6,22 @@ import { TemplateInspectorSection } from './TemplateInspectorSection'
 import type { TemplatePreviewSnapshot } from './TemplatePreview'
 import type { FunctionPreviewSession } from './useFunctionPreview'
 import styles from './TemplatePreview.module.css'
+import { templateCompileErrorDetails, templateErrorNodeId } from './TemplateCompileErrors'
 
 export function TemplateFunctionPreviewInspector({
   document,
   target,
   snapshot,
   snapshotCount,
-  session
+  session,
+  onLocateError
 }: {
   document: FunctionDocument | null
   target: TemplateNode | null
   snapshot: TemplatePreviewSnapshot | null
   snapshotCount: number
   session: FunctionPreviewSession
+  onLocateError?(nodeId: string): void
 }): JSX.Element {
   return (
     <aside className={styles.inspector} aria-label="函数预览配置">
@@ -90,9 +88,27 @@ export function TemplateFunctionPreviewInspector({
       {session.result && !session.result.success ? (
         <TemplateInspectorSection title="校验结果">
           <ol className={styles.errorList}>
-            {session.result.errors.map((error, index) => (
-              <li key={`${compileErrorPath(error)}-${index}`}>{formatCompileError(error)}</li>
-            ))}
+            {session.result.errors.map((error, index) => {
+              const details = templateCompileErrorDetails(error)
+              const nodeId = document
+                ? templateErrorNodeId(document.content.body, details.path)
+                : null
+              return (
+                <li key={`${details.path}-${index}`}>
+                  {nodeId && onLocateError ? (
+                    <button type="button" onClick={() => onLocateError(nodeId)}>
+                      <strong>{details.message}</strong>
+                      <small>{details.path}</small>
+                    </button>
+                  ) : (
+                    <span>
+                      <strong>{details.message}</strong>
+                      <small>{details.path}</small>
+                    </span>
+                  )}
+                </li>
+              )
+            })}
           </ol>
         </TemplateInspectorSection>
       ) : null}
@@ -131,26 +147,6 @@ function PreviewInput({
       onChange={(event) => onChange({ type, source: 'literal', value: event.target.value })}
     />
   )
-}
-
-function formatCompileError(error: TemplateCompileError): string {
-  if (error.stage === 'validation') {
-    return compileErrorText(error.error.code, error.error.path, error.error.params)
-  }
-  return compileErrorText(error.code, error.path, error.params)
-}
-
-function compileErrorText(
-  code: string,
-  path: string,
-  params: Readonly<Record<string, string | number>>
-): string {
-  const message = typeof params.message === 'string' ? params.message : ''
-  return `${code} · ${path}${message ? ` · ${message}` : ''}`
-}
-
-function compileErrorPath(error: TemplateCompileError): string {
-  return error.stage === 'validation' ? error.error.path : error.path
 }
 
 function stepLabel(type: TemplatePreviewSnapshot['step']['type']): string {

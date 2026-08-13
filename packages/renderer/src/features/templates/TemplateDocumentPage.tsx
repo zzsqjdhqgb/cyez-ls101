@@ -81,6 +81,7 @@ import {
 import { templateErrorMessage } from './templateUi'
 import { useTemplateEditorSession } from './useTemplateEditorSession'
 import { useTemplatePreview } from './useTemplatePreview'
+import { useUnsavedChangesGuard } from './useUnsavedChangesGuard'
 
 interface NodeLocation {
   node: TemplateNode
@@ -106,6 +107,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const application = useTemplateApplication()
   const navigate = useNavigate()
   const session = useTemplateEditorSession(application, templateId)
+  const unsavedChanges = useUnsavedChangesGuard(session.dirty)
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [generationOpen, setGenerationOpen] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
@@ -134,7 +136,13 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const [pendingLibraryDelete, setPendingLibraryDelete] = useState<FunctionLibrarySummary | null>(
     null
   )
+  const [pendingFunctionDelete, setPendingFunctionDelete] = useState<{
+    library: FunctionLibrarySummary
+    functionId: string
+    functionName: string
+  } | null>(null)
   const [deletingLibrary, setDeletingLibrary] = useState(false)
+  const [deletingFunction, setDeletingFunction] = useState(false)
   const [libraryDeleteError, setLibraryDeleteError] = useState<string | null>(null)
   const [interfaceManifests, setInterfaceManifests] = useState<InterfaceVarManifest[]>([])
   const [interfacesLoading, setInterfacesLoading] = useState(true)
@@ -411,7 +419,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
         setFunctionLibraries((current) =>
           current.map((item) =>
             item.source === 'local' && item.libraryId === library.libraryId
-              ? { ...item, version: release.version }
+              ? { ...item, version: release.version, exportStatus: 'exported' }
               : item
           )
         )
@@ -487,6 +495,32 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
     }
   }
 
+  const deleteLocalFunction = async (): Promise<void> => {
+    if (!pendingFunctionDelete || deletingFunction) return
+    const target = pendingFunctionDelete
+    setDeletingFunction(true)
+    setLibraryDeleteError(null)
+    try {
+      const library = await application.functionLibraries.local.get(target.library.libraryId)
+      if (!library) throw new Error('本地函数库不存在。')
+      const saved = await application.functionLibraries.local.deleteFunction(
+        library,
+        target.functionId
+      )
+      const summary = summarizeLocalFunctionLibrary(saved)
+      setFunctionLibraries((current) =>
+        current.map((item) =>
+          item.source === 'local' && item.libraryId === saved.libraryId ? summary : item
+        )
+      )
+      setPendingFunctionDelete(null)
+    } catch (reason) {
+      setLibraryDeleteError(templateErrorMessage(reason))
+    } finally {
+      setDeletingFunction(false)
+    }
+  }
+
   const resetInvalidLocalFunctionLibrary = async (): Promise<void> => {
     if (!invalidLocalLibraryId || resettingInvalidLibrary) return
     setResettingInvalidLibrary(true)
@@ -523,7 +557,10 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
     functionId: string
   ): Promise<void> => {
     if (library.source !== 'local' || session.saving) return
-    if (session.dirty && !(await session.save())) return
+    if (session.dirty) {
+      if (!(await session.save())) return
+      unsavedChanges.allowNextNavigation()
+    }
     navigate(`/templates/libraries/${library.libraryId}/functions/${functionId}`, {
       state: { templateId }
     })
@@ -784,7 +821,11 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                                       <span>{library.name || '未命名函数库'}</span>
                                       <small>
                                         {library.functions.length} 项
-                                        {library.version ? ` · v${library.version}` : ''}
+                                        {library.source === 'local'
+                                          ? ` · ${libraryExportStatusLabel(library)}`
+                                          : library.version
+                                            ? ` · v${library.version}`
+                                            : ''}
                                       </small>
                                     </button>
                                   )}
@@ -861,18 +902,35 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                                             </span>
                                             <span className={styles.functionActions}>
                                               {library.source === 'local' ? (
-                                                <IconButton
-                                                  icon={Pencil}
-                                                  label={`编辑${item.name || '未命名函数'}`}
-                                                  size="small"
-                                                  disabled={session.saving}
-                                                  onClick={() =>
-                                                    void openFunctionEditor(
-                                                      library,
-                                                      item.functionId
-                                                    )
-                                                  }
-                                                />
+                                                <>
+                                                  <IconButton
+                                                    icon={Pencil}
+                                                    label={`编辑${item.name || '未命名函数'}`}
+                                                    size="small"
+                                                    disabled={session.saving}
+                                                    onClick={() =>
+                                                      void openFunctionEditor(
+                                                        library,
+                                                        item.functionId
+                                                      )
+                                                    }
+                                                  />
+                                                  <IconButton
+                                                    icon={Trash2}
+                                                    label={`删除本地函数“${item.name || '未命名函数'}”`}
+                                                    size="small"
+                                                    variant="danger"
+                                                    disabled={session.saving}
+                                                    onClick={() => {
+                                                      setLibraryDeleteError(null)
+                                                      setPendingFunctionDelete({
+                                                        library,
+                                                        functionId: item.functionId,
+                                                        functionName: item.name
+                                                      })
+                                                    }}
+                                                  />
+                                                </>
                                               ) : null}
                                               <IconButton
                                                 icon={Plus}
@@ -1034,6 +1092,10 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
               snapshot={selectedPreviewSnapshot}
               snapshotCount={previewSnapshots.length}
               target={previewTarget}
+              onLocateError={(nodeId) => {
+                session.selectNode(nodeId)
+                setCenterView('structure')
+              }}
             />
           ) : (
             <aside className={styles.properties} aria-label="属性">
@@ -1115,7 +1177,19 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
         open={confirmLeave}
         title="放弃未保存的修改？"
         onCancel={() => setConfirmLeave(false)}
-        onConfirm={() => navigate('/templates')}
+        onConfirm={() => {
+          unsavedChanges.allowNextNavigation()
+          navigate('/templates')
+        }}
+      />
+      <ConfirmModal
+        confirmLabel="放弃修改"
+        danger
+        message="离开后，本次尚未保存的修改会丢失。"
+        open={unsavedChanges.navigationPending}
+        title="放弃未保存的修改？"
+        onCancel={unsavedChanges.cancelNavigation}
+        onConfirm={unsavedChanges.confirmNavigation}
       />
       <ConfirmModal
         confirmLabel="删除"
@@ -1141,6 +1215,20 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
           setConfirmInvalidLibraryReset(false)
         }}
         onConfirm={() => void resetInvalidLocalFunctionLibrary()}
+      />
+      <ConfirmModal
+        busy={deletingFunction}
+        closeOnConfirm={false}
+        confirmLabel="删除"
+        danger
+        error={libraryDeleteError}
+        message="该函数会从本地函数库中删除，已经嵌入模板的函数副本不受影响。"
+        open={pendingFunctionDelete !== null}
+        title={`删除本地函数“${pendingFunctionDelete?.functionName || '未命名函数'}”？`}
+        onCancel={() => {
+          if (!deletingFunction) setPendingFunctionDelete(null)
+        }}
+        onConfirm={() => void deleteLocalFunction()}
       />
       <ConfirmModal
         busy={deletingLibrary}
@@ -1187,6 +1275,7 @@ function summarizeLocalFunctionLibrary(
     source: 'local',
     libraryId: library.libraryId,
     ...(library.revision > 0 ? { version: library.revision } : {}),
+    exportStatus: !library.exportState ? 'never' : 'modified',
     name: library.content.name,
     functions: library.content.functions
       .filter((entry) => entry.exposed !== false)
@@ -1236,7 +1325,14 @@ function libraryKey(library: FunctionLibrarySummary): string {
 
 function libraryButtonLabel(library: FunctionLibrarySummary): string {
   const name = library.name || '未命名函数库'
-  return library.version ? `${name}，版本 ${library.version}` : name
+  if (library.source !== 'local') return library.version ? `${name}，版本 ${library.version}` : name
+  return `${name}，${libraryExportStatusLabel(library)}`
+}
+
+function libraryExportStatusLabel(library: FunctionLibrarySummary): string {
+  if (library.exportStatus === 'modified') return `v${library.version ?? 0} 后有修改`
+  if (library.exportStatus === 'exported') return `已导出 v${library.version ?? 0}`
+  return '未导出'
 }
 
 function invalidLocalLibraryErrorId(error: unknown): string | null {

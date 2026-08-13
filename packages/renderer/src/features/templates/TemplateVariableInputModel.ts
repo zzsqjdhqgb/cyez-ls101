@@ -170,7 +170,7 @@ export function variableRefName(ref: VariableRef): string {
   return ref.scope === 'local' ? ref.name : `${ref.alias}.${ref.varName}`
 }
 
-function schemaVariableRefName(ref: SchemaTextVariableRef): string {
+export function schemaVariableRefName(ref: SchemaTextVariableRef): string {
   return ref.scope === 'schema-use' ? `this.${ref.varName}` : variableRefName(ref)
 }
 

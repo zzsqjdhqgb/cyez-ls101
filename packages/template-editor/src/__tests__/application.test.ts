@@ -457,6 +457,7 @@ describe('TemplateApplication', () => {
     expect(await application.browser.listFunctionLibraries()).toEqual([
       {
         source: 'local',
+        exportStatus: 'never',
         libraryId: library.libraryId,
         name: 'Question library',
         functions: [{ functionId: created.function.functionId, name: 'Question' }]

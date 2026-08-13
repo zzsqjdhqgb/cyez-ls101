@@ -44,6 +44,12 @@
   min-width: 0;
 }
 
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .rowTitle {
   display: inline-flex;
   max-width: 100%;
