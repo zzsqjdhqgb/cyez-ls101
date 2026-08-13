@@ -1,5 +1,5 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { launchIntegrationApp } from './support/electron-app'
@@ -342,6 +342,59 @@ test('creates, edits and reloads a persisted template', async () => {
   await page.getByRole('link', { name: '模板' }).click()
   await expect(page.getByRole('button', { name: '集成测试模板' })).toBeVisible()
   await expect(page.getByText('由 Electron 集成测试创建')).toBeVisible()
+})
+
+test('exports a persisted formal Schema through the native save dialog', async () => {
+  const schema = {
+    formatVersion: 2,
+    schemaId: '30000000-0000-4000-8000-000000000001',
+    sourceDraftId: '20000000-0000-4000-8000-000000000001',
+    structureHash: 'sha256:986c85b99e222584ba4614bd520a7cf8b6d439c1aea53b06eda9b82bb15bdd1e',
+    revision: 3,
+    structure: {
+      questionType: 'fixed-reading',
+      answerFormat: [{ answerId: 'recording', type: 'fixed-speech' }],
+      templateInputs: [
+        { inputId: 'question-description', type: 'text', required: true },
+        { inputId: 'reference-text', type: 'text', required: true }
+      ]
+    },
+    data: {
+      name: '集成测试 Schema',
+      description: '用于验证正式 Schema 导出',
+      maxScore: 10,
+      answerDescriptions: { recording: '学生朗读录音' },
+      inputDescriptions: { 'reference-text': '朗读原文' },
+      rubricMarkdown: '按准确度和流利度评分。',
+      extraPromptMarkdown: ''
+    }
+  }
+  await page.evaluate(async (value) => {
+    await window.fileStore.invoke(
+      'file:write-text',
+      {
+        scope: ['schema-editor', 'published', value.schemaId],
+        filename: 'schema.json'
+      },
+      JSON.stringify(value)
+    )
+  }, schema)
+
+  const exportPath = path.join(userDataDir, 'export.lsschema')
+  await electronApp.evaluate(({ dialog }, filePath) => {
+    Object.defineProperty(dialog, 'showSaveDialog', {
+      configurable: true,
+      value: async () => ({ canceled: false, filePath })
+    })
+  }, exportPath)
+
+  await page.getByRole('link', { name: '评分 Schema' }).click()
+  await expect(page.getByText('正在加载 Schema...')).toBeHidden()
+  await page.getByRole('button', { name: schema.data.name }).click()
+  await page.getByRole('button', { name: '导出' }).click()
+
+  await expect(page.getByText('Schema 已导出')).toBeVisible()
+  expect(JSON.parse(await readFile(exportPath, 'utf8'))).toEqual(schema)
 })
 
 test('routes window controls through preload to the owning BrowserWindow', async () => {

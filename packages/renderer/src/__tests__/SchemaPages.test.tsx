@@ -17,6 +17,10 @@ import { SchemaDefinitionPage } from '../features/schemas/SchemaDefinitionPage'
 import { SchemaDraftEditorPage } from '../features/schemas/SchemaDraftEditorPage'
 import { SchemaDraftLibraryPage } from '../features/schemas/SchemaDraftLibraryPage'
 
+const schemaFileDialog = vi.hoisted(() => ({ writeText: vi.fn() }))
+
+vi.mock('@ls101/file-dialog/renderer', () => ({ fileDialog: schemaFileDialog }))
+
 const LIBRARY_ID = '10000000-0000-4000-8000-000000000001'
 const DRAFT_ID = '20000000-0000-4000-8000-000000000001'
 const SCHEMA_ID = '30000000-0000-4000-8000-000000000001'
@@ -79,6 +83,7 @@ function repository(overrides: Partial<SchemaRepository> = {}): SchemaRepository
 }
 
 afterEach(() => {
+  schemaFileDialog.writeText.mockReset()
   toast.dismiss()
   cleanup()
 })
@@ -226,5 +231,39 @@ describe('Schema pages', () => {
       expect.objectContaining({ maxScore: 15 })
     )
     expect(await screen.findByText('正式 Schema 已保存')).toBeInTheDocument()
+  })
+
+  it('exports the saved formal Schema and blocks export while data is dirty', async () => {
+    schemaFileDialog.writeText.mockResolvedValue(true)
+    const app = repository({ getSchema: vi.fn().mockResolvedValue(definition) })
+
+    render(
+      <SchemaApplicationProvider repository={app}>
+        <MemoryRouter initialEntries={[`/schemas/${SCHEMA_ID}`]}>
+          <Routes>
+            <Route path="/schemas/:schemaId" element={<SchemaDefinitionPage />} />
+          </Routes>
+        </MemoryRouter>
+        <AppToaster />
+      </SchemaApplicationProvider>
+    )
+
+    const exportButton = await screen.findByRole('button', { name: '导出' })
+    expect(exportButton).toBeEnabled()
+    fireEvent.click(exportButton)
+
+    await waitFor(() => expect(schemaFileDialog.writeText).toHaveBeenCalledOnce())
+    expect(schemaFileDialog.writeText).toHaveBeenCalledWith(
+      `${JSON.stringify(definition, null, 2)}\n`,
+      expect.objectContaining({
+        title: '导出 Schema',
+        defaultName: '单句朗读评分-r3.lsschema',
+        filters: [{ name: 'LS101 Schema', extensions: ['lsschema'] }]
+      })
+    )
+    expect(await screen.findByText('Schema 已导出')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('满分'), { target: { value: '15' } })
+    expect(exportButton).toBeDisabled()
   })
 })

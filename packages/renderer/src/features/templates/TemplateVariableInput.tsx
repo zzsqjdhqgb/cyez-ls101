@@ -67,6 +67,8 @@ export function TemplateVariableInput(props: TemplateVariableInputProps): JSX.El
   const [activeIndex, setActiveIndex] = useState(0)
 
   const expectedType = props.mode === 'text' ? 'string' : props.valueType
+  const isMultiline =
+    props.mode === 'text' || (props.mode === 'value' && props.valueType === 'string')
   const matchingCandidates = useMemo(() => {
     if (!completion || completion.blocked) return []
     const query = completion.query.toLocaleLowerCase()
@@ -212,13 +214,13 @@ export function TemplateVariableInput(props: TemplateVariableInputProps): JSX.El
 
   return (
     <div className={`${styles.root}${props.className ? ` ${props.className}` : ''}`}>
-      {props.mode === 'text' && props.multiline ? (
+      {isMultiline ? (
         <textarea
           {...inputAttributes}
           ref={(element) => {
             inputRef.current = element
           }}
-          rows={3}
+          rows={props.mode === 'text' ? 3 : 2}
         />
       ) : (
         <input

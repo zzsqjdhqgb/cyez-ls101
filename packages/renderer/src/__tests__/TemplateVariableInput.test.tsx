@@ -125,7 +125,50 @@ function NumberHarness(): JSX.Element {
   )
 }
 
+function StringValueHarness(): JSX.Element {
+  const [value, setValue] = useState<ValueExpression<'string'>>({
+    type: 'string',
+    source: 'literal',
+    value: ''
+  })
+  return (
+    <>
+      <TemplateVariableInput
+        mode="value"
+        valueType="string"
+        ariaLabel="字符串"
+        candidates={candidates}
+        value={value}
+        onChange={setValue}
+      />
+      <output data-testid="string-value">{JSON.stringify(value)}</output>
+    </>
+  )
+}
+
 describe('TemplateVariableInput', () => {
+  it('allows newlines in text expressions', () => {
+    render(<TextHarness />)
+    const input = screen.getByLabelText('文本')
+
+    expect(input.tagName).toBe('TEXTAREA')
+    fireEvent.change(input, { target: { value: '第一行\n第二行', selectionStart: 9 } })
+
+    expect(input).toHaveValue('第一行\n第二行')
+    expect(screen.getByTestId('value')).toHaveTextContent('第一行\\n第二行')
+  })
+
+  it('allows newlines in string value expressions', () => {
+    render(<StringValueHarness />)
+    const input = screen.getByLabelText('字符串')
+
+    expect(input.tagName).toBe('TEXTAREA')
+    fireEvent.change(input, { target: { value: '第一行\n第二行', selectionStart: 9 } })
+
+    expect(input).toHaveValue('第一行\n第二行')
+    expect(screen.getByTestId('string-value')).toHaveTextContent('第一行\\n第二行')
+  })
+
   it('filters text variables by the live prefix and restores matches after deletion', () => {
     render(<TextHarness />)
     const input = screen.getByLabelText('文本')

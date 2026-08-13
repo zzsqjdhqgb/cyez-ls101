@@ -1,6 +1,6 @@
 import { useEffect, useState, type JSX } from 'react'
 import { validateSchemaData, type SchemaData, type SchemaDefinition } from '@ls101/schema-editor'
-import { AlertCircle, ArrowLeft, LockKeyhole, Save, Trash2 } from 'lucide-react'
+import { AlertCircle, ArrowLeft, Download, LockKeyhole, Save, Trash2 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
@@ -8,6 +8,7 @@ import { IconButton } from '../../components/ui/IconButton'
 import { toast } from '../../components/ui/toast'
 import { useSchemaRepository } from './SchemaApplicationContext'
 import { SchemaDataFields } from './SchemaDataFields'
+import { exportSchemaDefinitionFile } from './SchemaDefinitionFiles'
 import {
   answerComponentLabels,
   answerTypeLabels,
@@ -27,6 +28,7 @@ export function SchemaDefinitionPage(): JSX.Element {
   const [savedSnapshot, setSavedSnapshot] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [confirmLeave, setConfirmLeave] = useState(false)
@@ -96,6 +98,19 @@ export function SchemaDefinitionPage(): JSX.Element {
     }
   }
 
+  const exportSchema = async (): Promise<void> => {
+    if (!definition || dirty) return
+    setExporting(true)
+    setError(null)
+    try {
+      if (await exportSchemaDefinitionFile(definition)) toast.success('Schema 已导出')
+    } catch (reason) {
+      setError(schemaErrorMessage(reason))
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const leave = (): void => {
     if (dirty) setConfirmLeave(true)
     else navigate('/schemas')
@@ -120,13 +135,20 @@ export function SchemaDefinitionPage(): JSX.Element {
             icon={Trash2}
             label="删除正式 Schema"
             variant="danger"
-            disabled={!definition || saving}
+            disabled={!definition || saving || exporting}
             onClick={() => setConfirmDelete(true)}
           />
           <Button
+            icon={Download}
+            disabled={!definition || dirty || saving || exporting}
+            onClick={() => void exportSchema()}
+          >
+            {exporting ? '正在导出' : '导出'}
+          </Button>
+          <Button
             icon={Save}
             variant="primary"
-            disabled={!definition || !dirty || saving}
+            disabled={!definition || !dirty || saving || exporting}
             onClick={() => void save()}
           >
             {saving ? '正在保存' : '保存'}
