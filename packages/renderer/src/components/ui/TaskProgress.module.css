@@ -1,0 +1,96 @@
+.progress {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.progress ol {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.progress li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  min-width: 0;
+  padding: 13px 14px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+}
+
+.progress li > div {
+  min-width: 0;
+}
+
+.progress li > svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: var(--color-text-faint);
+}
+
+.progress li[data-status='running'] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.progress li[data-status='running'] > svg {
+  color: var(--color-accent);
+  animation: task-progress-spin 900ms linear infinite;
+}
+
+.progress li[data-status='completed'] > svg {
+  color: var(--color-accent);
+}
+
+.progress li[data-status='failed'] {
+  border-color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.progress li[data-status='failed'] > svg {
+  color: var(--color-danger);
+}
+
+.progress strong {
+  display: block;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.progress pre {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  max-height: 240px;
+  margin: 7px 0 0;
+  overflow: auto;
+  color: var(--color-text-muted);
+  font: 12px/1.55 var(--font-ui);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+@keyframes task-progress-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress li[data-status='running'] > svg {
+    animation: none;
+  }
+}

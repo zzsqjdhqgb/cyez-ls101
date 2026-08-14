@@ -9,34 +9,6 @@ import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { TemplateApplicationProvider } from '../features/templates/TemplateApplicationProvider'
 import { TemplateBrowserPage } from '../features/templates/TemplateBrowserPage'
 import { TemplateDocumentPage } from '../features/templates/TemplateDocumentPage'
-import {
-  generateExamArchive,
-  listSpeechGenerationSelections
-} from '../features/templates/TemplateExamGeneration'
-
-vi.mock('../features/templates/TemplateExamGeneration', () => ({
-  generateExamArchive: vi.fn().mockResolvedValue('exported'),
-  listSpeechGenerationSelections: vi.fn().mockResolvedValue([
-    {
-      providerConfigId: 'speech-provider',
-      providerName: '本地语音',
-      modelId: 'speech-model',
-      voiceId: 'speech-voice'
-    },
-    {
-      providerConfigId: 'speech-provider',
-      providerName: '本地语音',
-      modelId: 'speech-model',
-      voiceId: 'man-voice'
-    },
-    {
-      providerConfigId: 'speech-provider',
-      providerName: '本地语音',
-      modelId: 'speech-model',
-      voiceId: 'woman-voice'
-    }
-  ])
-}))
 
 const functionLibraryFileDialog = vi.hoisted(() => ({
   readText: vi.fn(),
@@ -401,14 +373,14 @@ describe('Template pages', () => {
     expect(app.templates.preview).toHaveBeenCalledWith(document, [])
   })
 
-  it('没有 TTS 配置时仍允许生成不含播放动作的试卷', async () => {
-    vi.mocked(listSpeechGenerationSelections).mockResolvedValueOnce([])
+  it('从工具栏进入独立的全屏试卷生成路由', async () => {
     const app = application()
     render(
       <TemplateApplicationProvider application={app}>
         <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
           <Routes>
             <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+            <Route path="/templates/:templateId/generate" element={<h1>试卷生成设置</h1>} />
           </Routes>
         </MemoryRouter>
       </TemplateApplicationProvider>
@@ -416,69 +388,30 @@ describe('Template pages', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: '生成试卷' }))
 
-    expect(await screen.findByRole('button', { name: '生成并导出' })).toBeEnabled()
+    expect(await screen.findByRole('heading', { name: '试卷生成设置' })).toBeInTheDocument()
   })
 
-  it('从工具栏打开本次试卷生成配置', async () => {
-    const document = template()
-    const page = document.content.root.children[0]
-    if (page.type === 'page') {
-      page.timeline = [{ type: 'play', text: { type: 'string', parts: [] } }]
-    }
-    const app = application(document)
+  it('进入生成路由前先保存模板的未保存修改', async () => {
+    const app = application()
     render(
       <TemplateApplicationProvider application={app}>
         <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
           <Routes>
             <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+            <Route path="/templates/:templateId/generate" element={<h1>试卷生成设置</h1>} />
           </Routes>
         </MemoryRouter>
       </TemplateApplicationProvider>
     )
 
+    const properties = await screen.findByRole('complementary', { name: '属性' })
+    fireEvent.change(within(properties).getByLabelText('名称'), {
+      target: { value: '已修改模板' }
+    })
     fireEvent.click(await screen.findByRole('button', { name: '生成试卷' }))
 
-    expect(await screen.findByRole('heading', { name: '生成试卷' })).toBeInTheDocument()
-    expect(screen.getByLabelText('TTS Provider')).toHaveValue('speech-provider')
-    expect(screen.getByLabelText('TTS Model')).toHaveValue('speech-model')
-    expect(screen.getByLabelText('TTS 默认音色')).toHaveValue('speech-voice')
-    expect(screen.getByLabelText('TTS 男声音色')).toHaveValue('')
-    expect(screen.getByLabelText('TTS 女声音色')).toHaveValue('')
-
-    fireEvent.change(screen.getByLabelText('TTS 男声音色'), {
-      target: { value: 'man-voice' }
-    })
-    fireEvent.change(screen.getByLabelText('TTS 女声音色'), {
-      target: { value: 'woman-voice' }
-    })
-    fireEvent.click(screen.getByRole('button', { name: '生成并导出' }))
-
-    await waitFor(() =>
-      expect(generateExamArchive).toHaveBeenCalledWith(
-        expect.objectContaining({
-          speech: {
-            default: {
-              providerConfigId: 'speech-provider',
-              providerName: '本地语音',
-              modelId: 'speech-model',
-              voiceId: 'speech-voice'
-            },
-            man: {
-              providerConfigId: 'speech-provider',
-              providerName: '本地语音',
-              modelId: 'speech-model',
-              voiceId: 'man-voice'
-            },
-            woman: {
-              providerConfigId: 'speech-provider',
-              providerName: '本地语音',
-              modelId: 'speech-model',
-              voiceId: 'woman-voice'
-            }
-          }
-        })
-      )
-    )
+    expect(await screen.findByRole('heading', { name: '试卷生成设置' })).toBeInTheDocument()
+    expect(app.templates.save).toHaveBeenCalledOnce()
   })
 
   it('adds and configures an Interface requirement in global properties', async () => {

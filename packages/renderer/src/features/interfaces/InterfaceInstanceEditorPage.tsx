@@ -18,7 +18,6 @@ import {
   Braces,
   Check,
   ClipboardPaste,
-  Circle,
   FolderOpen,
   Image as ImageIcon,
   Images,
@@ -40,6 +39,7 @@ import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { IconButton } from '../../components/ui/IconButton'
 import { ResizableSplit } from '../../components/ui/ResizableSplit'
+import { TaskProgress } from '../../components/ui/TaskProgress'
 import { toast } from '../../components/ui/toast'
 import { useInterfaceApplication } from './InterfaceApplicationContext'
 import { errorMessage, flattenNodes } from './interfaceUi'
@@ -1177,7 +1177,7 @@ function ImageGenerationPane({
         />
         {session ? (
           <div className={styles.generationContent}>
-            <GenerationProgressItems label="AI 生图进度" items={session.items} />
+            <TaskProgress label="AI 生图进度" items={session.items} />
             {finished ? <ImageGenerationResult session={session} /> : null}
           </div>
         ) : null}
@@ -1327,35 +1327,5 @@ function GenerationProgress({
 }): JSX.Element {
   const snapshot = useSyncExternalStore(handle.subscribe, handle.getSnapshot, handle.getSnapshot)
 
-  return <GenerationProgressItems label="AI 生成进度" items={snapshot.items} />
-}
-
-function GenerationProgressItems({
-  label,
-  items
-}: {
-  label: string
-  items: readonly TaskProgressItem[]
-}): JSX.Element {
-  return (
-    <section aria-label={label} className={styles.generationProgress}>
-      <ol>
-        {items.map((item) => (
-          <li data-status={item.status} key={item.id}>
-            <ProgressIcon item={item} />
-            <div>
-              <strong>{item.label}</strong>
-              {item.log?.content ? <pre>{item.log.content}</pre> : null}
-            </div>
-          </li>
-        ))}
-      </ol>
-    </section>
-  )
-}
-
-function ProgressIcon({ item }: { item: TaskProgressItem }): JSX.Element {
-  if (item.status === 'completed') return <Check aria-hidden="true" />
-  if (item.status === 'running') return <LoaderCircle aria-hidden="true" />
-  return <Circle aria-hidden="true" />
+  return <TaskProgress label="AI 生成进度" items={snapshot.items} />
 }

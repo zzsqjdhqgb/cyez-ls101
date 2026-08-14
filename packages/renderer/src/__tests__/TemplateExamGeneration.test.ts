@@ -1,14 +1,19 @@
-import { decodeExamPackage } from '@ls101/exam-package'
 import type { ExamPackage } from '@ls101/core-types'
-import type { TemplateApplication, TemplateCompileOptions } from '@ls101/template-editor'
+import { decodeExamPackage } from '@ls101/exam-package'
+import type {
+  TemplateApplication,
+  TemplateCompileOptions,
+  TemplateDocument
+} from '@ls101/template-editor'
 import { describe, expect, it, vi } from 'vitest'
 import {
-  generateExamArchive,
+  createExamGenerationSession,
+  exportGeneratedExam,
   listSpeechGenerationSelections
 } from '../features/templates/TemplateExamGeneration'
 
 describe('TemplateExamGeneration', () => {
-  it('只列出同时启用的 Provider、Model 和 Voice 组合', async () => {
+  it('只列出同时启用的提供商、模型和音色组合', async () => {
     const client = {
       listSpeechProviderConfigs: vi.fn().mockResolvedValue([
         {
@@ -42,224 +47,276 @@ describe('TemplateExamGeneration', () => {
     ])
   })
 
-  it('使用本次选择合成语音、收集资源并导出合法试卷包', async () => {
+  it('以一条语音一个任务生成试卷、收集资源并应用试卷名称', async () => {
     const synthesizeSpeech = vi.fn().mockResolvedValue({
       data: new Uint8Array([1, 2, 3]),
       mediaType: 'audio/wav',
       format: 'wav'
     })
-    const compile = vi.fn(
-      async (_templateId: string, _bindings: unknown, options?: TemplateCompileOptions) => {
-        const audio = await options?.synthesizeSpeech?.('Hello')
-        return {
-          success: true as const,
-          examPackage: exam(),
-          resourceSources: [
-            { assetKey: 'speech', data: audio?.data ?? new Uint8Array() },
-            { assetKey: 'picture', sourceUrl: 'asset://picture' }
-          ]
-        }
+    const application = generationApplication(['Hello'])
+    const session = createExamGenerationSession(
+      {
+        application,
+        document: template(),
+        examName: '英语听说 / 第一套',
+        bindings: [],
+        speech: speechRouting()
+      },
+      {
+        speechClient: { synthesizeSpeech },
+        fetchResource: vi.fn().mockResolvedValue(new Response(new Uint8Array([4, 5, 6])))
       }
     )
-    const application = {
-      templates: { compile }
-    } as unknown as TemplateApplication
-    const writeBinary = vi.fn().mockResolvedValue(true)
 
-    await expect(
-      generateExamArchive(
-        {
-          application,
-          templateId: 'template-1',
-          templateName: '英语听说 / 第一套',
-          bindings: [],
-          speech: {
-            default: {
-              providerConfigId: 'speech-provider',
-              modelId: 'speech-model',
-              voiceId: 'speech-voice'
-            },
-            man: {
-              providerConfigId: 'speech-provider',
-              modelId: 'speech-model',
-              voiceId: 'man-voice'
-            },
-            woman: {
-              providerConfigId: 'speech-provider',
-              modelId: 'speech-model',
-              voiceId: 'woman-voice'
-            }
-          }
-        },
-        {
-          speechClient: { synthesizeSpeech },
-          fileDialog: { writeBinary } as never,
-          fetchResource: vi.fn().mockResolvedValue(new Response(new Uint8Array([4, 5, 6])))
-        }
-      )
-    ).resolves.toBe('exported')
+    const handle = session.start()
+    const result = await handle.completion
 
-    expect(synthesizeSpeech).toHaveBeenCalledWith({
-      text: 'Hello',
-      routing: {
-        default: {
-          providerConfigId: 'speech-provider',
-          modelId: 'speech-model',
-          voiceId: 'speech-voice'
-        },
-        man: {
-          providerConfigId: 'speech-provider',
-          modelId: 'speech-model',
-          voiceId: 'man-voice'
-        },
-        woman: {
-          providerConfigId: 'speech-provider',
-          modelId: 'speech-model',
-          voiceId: 'woman-voice'
-        }
-      },
-      format: 'wav'
-    })
-    expect(writeBinary).toHaveBeenCalledOnce()
-    expect(writeBinary.mock.calls[0][1]).toMatchObject({
-      defaultName: '英语听说 - 第一套.lsexam'
-    })
-    const decoded = await decodeExamPackage(writeBinary.mock.calls[0][0])
-    expect(decoded.exam.examData.player.pages[0].timeline).toEqual([
-      { type: 'play', src: 'resource:speech' }
+    expect(result.status).toBe('completed')
+    if (result.status !== 'completed') return
+    expect(handle.getSnapshot().items.map(({ label, status }) => ({ label, status }))).toEqual([
+      { label: '准备试卷内容', status: 'completed' },
+      { label: '合成语音 1：Hello', status: 'completed' },
+      { label: '整理试卷资源', status: 'completed' },
+      { label: '打包试卷', status: 'completed' }
     ])
+    expect(synthesizeSpeech).toHaveBeenCalledWith(
+      { text: 'Hello', routing: speechRouting(), format: 'wav' },
+      { signal: expect.any(AbortSignal) }
+    )
+    const decoded = await decodeExamPackage(result.archive)
+    expect(decoded.exam.examData.title).toBe('英语听说 / 第一套')
+    expect(decoded.exam.submissionTemplate.meta.examTitle).toBe('英语听说 / 第一套')
     expect(decoded.resources.picture).toEqual(new Uint8Array([4, 5, 6]))
   })
 
-  it('没有播放动作时不要求或调用 TTS', async () => {
-    const synthesizeSpeech = vi.fn()
-    const compile = vi.fn().mockResolvedValue({
-      success: true,
-      examPackage: examWithoutSpeech(),
-      resourceSources: [{ assetKey: 'picture', sourceUrl: 'asset://picture' }]
+  it('单条语音额外重试三次后中断，手动重试从失败项继续', async () => {
+    const synthesizeSpeech = vi
+      .fn()
+      .mockResolvedValueOnce(generatedAudio(1))
+      .mockRejectedValueOnce(new Error('服务繁忙'))
+      .mockRejectedValueOnce(new Error('服务繁忙'))
+      .mockRejectedValueOnce(new Error('服务繁忙'))
+      .mockRejectedValueOnce(new Error('服务繁忙'))
+      .mockResolvedValueOnce(generatedAudio(2))
+    const application = generationApplication(['第一条', '第二条'])
+    const session = createExamGenerationSession(
+      {
+        application,
+        document: template(),
+        examName: '断点重试试卷',
+        bindings: [],
+        speech: speechRouting()
+      },
+      {
+        speechClient: { synthesizeSpeech },
+        fetchResource: vi.fn()
+      }
+    )
+
+    const firstHandle = session.start()
+    await expect(firstHandle.completion).resolves.toMatchObject({
+      status: 'failed',
+      message: expect.stringContaining('服务繁忙')
     })
-    const writeBinary = vi.fn().mockResolvedValue(true)
+    expect(synthesizeSpeech).toHaveBeenCalledTimes(5)
+    expect(firstHandle.getSnapshot().items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'speech-page-0', status: 'completed' }),
+        expect.objectContaining({
+          id: 'speech-page-1',
+          status: 'failed',
+          log: expect.objectContaining({ content: expect.stringContaining('第 4 / 4 次尝试失败') })
+        })
+      ])
+    )
 
-    await expect(
-      generateExamArchive(
-        {
-          application: { templates: { compile } } as unknown as TemplateApplication,
-          templateId: 'template-1',
-          templateName: '无听力动作',
-          bindings: []
-        },
-        {
-          speechClient: { synthesizeSpeech },
-          fileDialog: { writeBinary } as never,
-          fetchResource: vi.fn().mockResolvedValue(new Response(new Uint8Array([4, 5, 6])))
-        }
-      )
-    ).resolves.toBe('exported')
+    const retryHandle = session.start()
+    const retried = await retryHandle.completion
 
-    expect(compile).toHaveBeenCalledWith('template-1', [], undefined)
-    expect(synthesizeSpeech).not.toHaveBeenCalled()
-    const decoded = await decodeExamPackage(writeBinary.mock.calls[0][0])
-    expect(decoded.exam.examData.player.pages[0].timeline).toEqual([
-      { type: 'countdown', seconds: 1 }
+    expect(retried.status).toBe('completed')
+    expect(synthesizeSpeech).toHaveBeenCalledTimes(6)
+    expect(synthesizeSpeech.mock.calls.map(([request]) => request.text)).toEqual([
+      '第一条',
+      '第二条',
+      '第二条',
+      '第二条',
+      '第二条',
+      '第二条'
     ])
   })
 
-  it('生成失败时显示语音合成的底层错误', async () => {
-    const application = {
-      templates: {
-        compile: vi.fn().mockResolvedValue({
-          success: false,
-          errors: [
-            {
-              stage: 'compile',
-              code: 'SPEECH_SYNTHESIS_FAILED',
-              path: 'root.children[0].timeline[0].text',
-              params: { message: 'Pocket TTS 不支持当前文本' }
-            }
-          ]
-        })
-      }
-    } as unknown as TemplateApplication
+  it('无语音模板显示无需处理并且不要求语音配置', async () => {
+    const synthesizeSpeech = vi.fn()
+    const application = generationApplication([])
+    const session = createExamGenerationSession(
+      {
+        application,
+        document: template(),
+        examName: '无语音试卷',
+        bindings: []
+      },
+      { speechClient: { synthesizeSpeech }, fetchResource: vi.fn() }
+    )
 
+    const handle = session.start()
+    await expect(handle.completion).resolves.toMatchObject({ status: 'completed' })
+    expect(synthesizeSpeech).not.toHaveBeenCalled()
+    expect(handle.getSnapshot().items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'speech-none',
+          status: 'completed',
+          log: { format: 'text', content: '此模板无需合成语音' }
+        })
+      ])
+    )
+  })
+
+  it('导出生成结果时使用经过清理的试卷名称', async () => {
+    const writeBinary = vi.fn().mockResolvedValue(true)
     await expect(
-      generateExamArchive(
-        {
-          application,
-          templateId: 'template-1',
-          templateName: 'Template',
-          bindings: [],
-          speech: {
-            default: {
-              providerConfigId: 'speech-provider',
-              modelId: 'speech-model',
-              voiceId: 'speech-voice'
-            }
-          }
-        },
-        {
-          speechClient: { synthesizeSpeech: vi.fn() },
-          fileDialog: { writeBinary: vi.fn() } as never,
-          fetchResource: vi.fn()
-        }
-      )
-    ).rejects.toThrow('Pocket TTS 不支持当前文本\n位置：root.children[0].timeline[0].text')
+      exportGeneratedExam(new Uint8Array([1, 2, 3]), '英语听说 / 第一套', { writeBinary })
+    ).resolves.toBe(true)
+    expect(writeBinary).toHaveBeenCalledWith(
+      new Uint8Array([1, 2, 3]),
+      expect.objectContaining({ defaultName: '英语听说 - 第一套.lsexam', title: '导出试卷' })
+    )
   })
 })
 
-function exam(): ExamPackage {
+function generationApplication(speechTexts: readonly string[]): TemplateApplication {
+  const compile = vi.fn(
+    async (_templateId: string, _bindings: unknown, options?: TemplateCompileOptions) => {
+      const generated = []
+      for (const text of speechTexts) {
+        const audio = await options?.synthesizeSpeech?.(text)
+        if (audio) generated.push(audio)
+      }
+      return {
+        success: true as const,
+        examPackage: exam(speechTexts.length),
+        resourceSources: [
+          ...generated.map((audio, index) => ({ assetKey: `speech-${index}`, data: audio.data })),
+          ...(speechTexts.length === 1
+            ? [{ assetKey: 'picture', sourceUrl: 'asset://picture' }]
+            : [])
+        ]
+      }
+    }
+  )
+  return {
+    templates: {
+      preview: vi.fn().mockResolvedValue({
+        success: true,
+        preview: {
+          title: '模板',
+          pages: [
+            {
+              id: 'page',
+              sourceNodeId: 'page',
+              callPath: [],
+              content: [],
+              timeline: speechTexts.map((text) => ({ type: 'play', text }))
+            }
+          ],
+          recordingIndices: [],
+          resources: {}
+        },
+        resourceSources: []
+      }),
+      compile
+    }
+  } as unknown as TemplateApplication
+}
+
+function template(): TemplateDocument {
+  return {
+    templateId: 'template-1',
+    revision: 1,
+    content: {
+      name: '模板',
+      description: '',
+      interfaces: [],
+      root: {
+        id: 'root',
+        type: 'frame',
+        children: [{ id: 'page', type: 'page', content: { blocks: [] }, timeline: [] }]
+      },
+      schemaUses: []
+    },
+    resources: { functions: [] },
+    editorState: {}
+  }
+}
+
+function speechRouting() {
+  return {
+    default: { providerConfigId: 'default-provider', modelId: 'default-model', voiceId: 'default' },
+    man: { providerConfigId: 'man-provider', modelId: 'man-model', voiceId: 'man' },
+    woman: { providerConfigId: 'woman-provider', modelId: 'woman-model', voiceId: 'woman' }
+  }
+}
+
+function generatedAudio(value: number) {
+  return {
+    data: new Uint8Array([value]),
+    mediaType: 'audio/wav',
+    format: 'wav' as const
+  }
+}
+
+function exam(speechCount: number): ExamPackage {
   return {
     format: 'ls101-exam',
     formatVersion: 1,
     packageId: 'exam-1',
     examData: {
-      title: '英语听说',
+      title: '模板',
       player: {
         pages: [
           {
             id: 'page',
-            content: [
-              {
-                id: 'picture',
-                type: 'image',
-                x: 0,
-                y: 0,
-                width: 100,
-                height: 100,
-                src: 'resource:picture'
-              }
-            ],
-            timeline: [{ type: 'play', src: 'resource:speech' }]
+            content: [],
+            timeline: speechCount
+              ? Array.from({ length: speechCount }, (_, index) => ({
+                  type: 'play' as const,
+                  src: `resource:speech-${index}`
+                }))
+              : [{ type: 'countdown', seconds: 1 }]
           }
         ],
         recordingIndices: []
       },
-      resources: {
-        speech: {
-          filename: 'speech.wav',
-          packagePath: 'resources/speech/speech.wav',
-          mediaType: 'audio/wav'
-        },
-        picture: {
-          filename: 'picture.png',
-          packagePath: 'resources/picture/picture.png',
-          mediaType: 'image/png'
-        }
-      }
+      resources: Object.fromEntries([
+        ...Array.from({ length: speechCount }, (_, index) => [
+          `speech-${index}`,
+          {
+            filename: `speech-${index}.wav`,
+            packagePath: `resources/speech-${index}/speech-${index}.wav`,
+            mediaType: 'audio/wav'
+          }
+        ]),
+        ...(speechCount === 1
+          ? [
+              [
+                'picture',
+                {
+                  filename: 'picture.png',
+                  packagePath: 'resources/picture/picture.png',
+                  mediaType: 'image/png'
+                }
+              ]
+            ]
+          : [])
+      ])
     },
     answerCapturePlan: { strings: [], audios: [] },
     submissionTemplate: {
       format: 'ls101-submission',
       formatVersion: 1,
-      meta: { examPackageId: 'exam-1', examTitle: '英语听说' },
+      meta: { examPackageId: 'exam-1', examTitle: '模板' },
       schemaUses: [],
       resources: {}
     }
   }
-}
-
-function examWithoutSpeech(): ExamPackage {
-  const value = exam()
-  value.examData.player.pages[0].timeline = [{ type: 'countdown', seconds: 1 }]
-  delete value.examData.resources.speech
-  return value
 }

@@ -19,6 +19,7 @@ import { SettingsOverviewPage } from '../pages/SettingsOverviewPage'
 import { WorkbenchPage } from '../pages/WorkbenchPage'
 import { TemplateBrowserPage } from '../features/templates/TemplateBrowserPage'
 import { TemplateDocumentPage } from '../features/templates/TemplateDocumentPage'
+import { TemplateExamGenerationPage } from '../features/templates/TemplateExamGenerationPage'
 import { TemplateFunctionDocumentPage } from '../features/templates/TemplateFunctionDocumentPage'
 import { SchemaBrowserPage } from '../features/schemas/SchemaBrowserPage'
 import { SchemaDefinitionPage } from '../features/schemas/SchemaDefinitionPage'
@@ -127,6 +128,13 @@ const unregisterRoutes = [
     id: 'template-editor',
     path: '/templates/:templateId',
     component: TemplateDocumentPage,
+    layout: 'focus'
+  }),
+
+  registerAppRoute({
+    id: 'template-exam-generation',
+    path: '/templates/:templateId/generate',
+    component: TemplateExamGenerationPage,
     layout: 'focus'
   }),
 
