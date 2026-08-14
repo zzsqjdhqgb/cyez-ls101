@@ -764,6 +764,7 @@ describe('Interface pages', () => {
         }
       }
     )
+    const replaceFromJson = vi.fn().mockResolvedValue({ status: 'replaced', instance: initial })
     const app = application({
       published: { get: vi.fn().mockResolvedValue({ definition, source: { type: 'published' } }) },
       instances: {
@@ -773,7 +774,7 @@ describe('Interface pages', () => {
           .fn()
           .mockResolvedValue([{ providerId: 'manual', providerName: '手动生成' }]),
         save,
-        replaceFromJson: vi.fn(),
+        replaceFromJson,
         startAIGeneration: vi.fn(),
         generateImage: vi.fn().mockResolvedValue(generatedBytes)
       }
@@ -794,6 +795,24 @@ describe('Interface pages', () => {
 
     expect(await screen.findByDisplayValue('原始图片提示词')).toBeInTheDocument()
     expect(screen.getByText('尚未选择图片')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'JSON' }))
+    expect(screen.getByLabelText('图像 Provider')).toBeInTheDocument()
+    expect(screen.queryByLabelText('生成模型')).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('JSON 内容'), {
+      target: { value: '{"picture":"JSON 图片提示词"}' }
+    })
+    const replaceButton = screen.getByRole('button', { name: '覆盖全部值' })
+    await waitFor(() => expect(replaceButton).toBeEnabled())
+    fireEvent.click(replaceButton)
+    await waitFor(() =>
+      expect(replaceFromJson).toHaveBeenCalledWith(
+        interfaceId,
+        instanceId,
+        '{"picture":"JSON 图片提示词"}',
+        { imageProvider: { providerId: 'manual' } }
+      )
+    )
 
     fireEvent.click(screen.getByRole('button', { name: '选择文件' }))
     await waitFor(() => expect(imageInputMocks.readBinary).toHaveBeenCalledOnce())

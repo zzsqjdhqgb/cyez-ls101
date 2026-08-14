@@ -55,7 +55,14 @@ describe('interface editor application integration', () => {
 
   it('runs the draft, publish, definition and instance workflow through the public facade', async () => {
     const repository = new FileInterfaceRepository(new MemoryStore())
-    const app = createInterfaceApplication({ repository, fileDialog: new TestFileDialog() })
+    const imageGenerator: InterfaceImageGenerator = {
+      generate: vi.fn().mockResolvedValue({ data: PNG })
+    }
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(),
+      imageGenerator
+    })
 
     const draft = await app.drafts.create(content)
     expect((await app.browser.listDrafts()).map(({ draftId }) => draftId)).toEqual([draft.draftId])
@@ -139,18 +146,33 @@ describe('interface editor application integration', () => {
     const replaced = await app.instances.replaceFromJson(
       interfaceId,
       instance.instance.instanceId,
-      '{"title":"新标题","section":{"picture":"新的配图提示词","answer":"New answer"}}'
+      '{"title":"新标题","section":{"picture":"新的配图提示词","answer":"New answer"}}',
+      { imageProvider: { providerId: 'json-image-provider', modelId: 'json-image-model' } }
     )
+    expect(imageGenerator.generate).toHaveBeenCalledWith('新的配图提示词', {
+      signal: expect.any(AbortSignal),
+      provider: { providerId: 'json-image-provider', modelId: 'json-image-model' }
+    })
     expect(replaced).toMatchObject({
       status: 'replaced',
       instance: {
         instance: {
           name: '第一套题组',
-          values: { titleText: '新标题', questionImage: filename, answerText: 'New answer' },
+          values: {
+            titleText: '新标题',
+            questionImage: expect.stringMatching(/^questionImage-[0-9a-f-]{36}\.png$/),
+            answerText: 'New answer'
+          },
           imagePrompts: { questionImage: '新的配图提示词' }
         }
       }
     })
+    if (replaced.status === 'replaced') {
+      expect(replaced.instance.instance.values.questionImage).not.toBe(filename)
+      await expect(
+        repository.readInstanceAsset(interfaceId, instance.instance.instanceId, filename)
+      ).resolves.toBeNull()
+    }
     await expect(app.published.listInstances(interfaceId)).resolves.toHaveLength(1)
 
     const copied = await app.published.copyToDraft(interfaceId)

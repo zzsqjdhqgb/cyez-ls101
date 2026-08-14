@@ -91,6 +91,10 @@
   font: 13px/1.55 var(--font-ui);
 }
 
+.jsonProvider {
+  margin-top: 16px;
+}
+
 .valueField textarea {
   resize: vertical;
 }

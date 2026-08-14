@@ -802,6 +802,40 @@ test('IE-08 replaces instance values from JSON and reports invalid JSON', async 
   await expect(page.getByLabel('JSON 内容')).toBeHidden()
 })
 
+test('IE-08b generates image fields from JSON without selecting a text model', async () => {
+  await saveImageProvider(imageProvider('ie-json-image', 'mock-image'))
+  const interfaceId = await seedInterface(imageInterface)
+  await openInstanceEditor(interfaceId, imageInterface.name)
+
+  await page.getByRole('button', { name: 'JSON' }).click()
+  const jsonPanel = page.getByRole('complementary', { name: 'JSON 覆盖' })
+  await expect(jsonPanel.getByLabel('生成模型')).toHaveCount(0)
+  await jsonPanel.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await jsonPanel
+    .getByLabel('JSON 内容')
+    .fill('{"title":"JSON 图片题","picture":"A JSON green circle icon"}')
+  await jsonPanel.getByRole('button', { name: '覆盖全部值' }).click()
+
+  await expect(page.getByText('已从 JSON 更新题组')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByLabel('title 内容')).toHaveValue('JSON 图片题')
+  await expect(page.getByLabel('picture图片提示词')).toHaveValue('A JSON green circle icon')
+  await expect(page.getByAltText('picture预览')).toBeVisible()
+  await expectRenderedAssetsToLoad(1)
+
+  expect(mockServer.findRequest('/v1/chat/completions')).toBeUndefined()
+  expect(mockServer.findRequest('/v1/images/generations')?.body).toMatchObject({
+    model: 'mock-image',
+    prompt: 'A JSON green circle icon'
+  })
+  expect(await readInstance(interfaceId)).toMatchObject({
+    instance: {
+      values: { titleText: 'JSON 图片题' },
+      imagePrompts: { pictureImage: 'A JSON green circle icon' }
+    },
+    assets: [expect.stringMatching(/^pictureImage-[0-9a-f-]{36}\.png$/)]
+  })
+})
+
 test('IE-09 deletes an instance through the real UI', async () => {
   const interfaceId = await seedInterface(textInterface)
   await openInstanceEditor(interfaceId, textInterface.name)

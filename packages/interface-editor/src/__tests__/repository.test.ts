@@ -955,11 +955,19 @@ describe('Interface application', () => {
     ).resolves.toEqual(PNG_BYTES)
   })
 
-  it('JSON 覆盖更新图片提示词但保留已绑定的图片值', async () => {
+  it('JSON 覆盖使用所选图像 Provider 更新提示词和图片', async () => {
     const { repository } = setup()
     const def = await publishInterface(contentWithImage())
     await repository.saveInterface(def)
-    const app = createInterfaceApplication({ repository, fileDialog: new TestFileDialog(null) })
+    const imageProvider = { providerId: 'json-provider', modelId: 'json-image-model' }
+    const imageGenerator: InterfaceImageGenerator = {
+      generate: vi.fn().mockResolvedValue({ data: PNG_BYTES })
+    }
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(null),
+      imageGenerator
+    })
     const blank = await app.published.createBlankInstance(def.id)
     const withImage = await app.instances.save(def.id, blank.instance.instanceId, {
       name: '图片题组',
@@ -972,19 +980,30 @@ describe('Interface application', () => {
     const replaced = await app.instances.replaceFromJson(
       def.id,
       blank.instance.instanceId,
-      '{"title":"JSON 标题","picture":"JSON 图片提示词"}'
+      '{"title":"JSON 标题","picture":"JSON 图片提示词"}',
+      { imageProvider }
     )
 
+    expect(imageGenerator.generate).toHaveBeenCalledWith('JSON 图片提示词', {
+      signal: expect.any(AbortSignal),
+      provider: imageProvider
+    })
     expect(replaced.status).toBe('replaced')
     if (replaced.status === 'replaced') {
+      const replacementFilename = replaced.instance.instance.values.questionImage
       expect(replaced.instance.instance.values).toEqual({
         title: 'JSON 标题',
-        questionImage: filename
+        questionImage: replacementFilename
       })
+      expect(replacementFilename).toMatch(/^questionImage-[0-9a-f-]{36}\.png$/)
+      expect(replacementFilename).not.toBe(filename)
       expect(replaced.instance.instance.imagePrompts).toEqual({
         questionImage: 'JSON 图片提示词'
       })
-      expect(replaced.instance.assetUrls[filename]).toContain(filename)
+      expect(replaced.instance.assetUrls[replacementFilename]).toContain(replacementFilename)
+      await expect(
+        repository.readInstanceAsset(def.id, blank.instance.instanceId, filename)
+      ).resolves.toBeNull()
     }
   })
 

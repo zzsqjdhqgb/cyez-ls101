@@ -200,7 +200,8 @@ export interface InterfaceInstanceApplication {
   replaceFromJson(
     interfaceId: string,
     instanceId: string,
-    json: string
+    json: string,
+    options?: { imageProvider?: InterfaceImageProviderSelection }
   ): Promise<ReplaceInstanceFromJsonResult>
   startAIGeneration(
     interfaceId: string,
@@ -348,9 +349,9 @@ export function createInterfaceApplication(
     interfaceId: string,
     instanceId: string,
     json: string,
-    allowActiveGeneration = false
+    options: { imageProvider?: InterfaceImageProviderSelection } = {}
   ): Promise<ReplaceInstanceFromJsonResult> => {
-    const release = allowActiveGeneration ? null : acquireInstance(interfaceId, instanceId)
+    const release = acquireInstance(interfaceId, instanceId)
     try {
       const def = await requireInterface(repository, interfaceId)
       const current = await requireInstance(repository, interfaceId, instanceId)
@@ -359,27 +360,56 @@ export function createInterfaceApplication(
         return { status: 'invalid-json', errors: jsonErrors(validation.errors) }
       }
       const mapped = buildInstanceFromJson(def, validation.data)
-      const values = { ...mapped.values }
-      for (const varName of flattenImageVarNames(def.fields)) {
-        const currentValue = current.instance.values[varName]
-        values[varName] = current.assetFilenames.includes(currentValue) ? currentValue : ''
+      const prompts = Object.entries(mapped.imagePrompts ?? {})
+      if (prompts.some(([, prompt]) => !prompt.trim())) {
+        throw new Error('图片变量的提示词不能为空')
       }
-      assertCompleteImageValues(
-        new Set(flattenImageVarNames(def.fields)),
-        values,
-        mapped.imagePrompts ?? {}
+      if (prompts.length && !imageGenerator) {
+        throw new Error('Interface image generator is not configured')
+      }
+
+      const controller = new AbortController()
+      const generatedImages: Record<string, Uint8Array> = {}
+      for (const [varName, prompt] of prompts) {
+        const generated = await imageGenerator?.generate(prompt, {
+          signal: controller.signal,
+          ...(options.imageProvider ? { provider: options.imageProvider } : {})
+        })
+        if (!generated) throw new Error('Interface image generator is not configured')
+        assertSupportedImage(generated.data)
+        generatedImages[varName] = new Uint8Array(generated.data)
+      }
+
+      const values = { ...mapped.values }
+      const imageVarNames = new Set(flattenImageVarNames(def.fields))
+      const assets = await loadInstanceAssets(repository, interfaceId, instanceId, current)
+      const usedAssetNames = new Set(current.assetFilenames)
+      for (const varName of imageVarNames) {
+        const previous = current.instance.values[varName]
+        if (current.assetFilenames.includes(previous)) delete assets[previous]
+        const data = generatedImages[varName]
+        if (!data) continue
+        const filename = createImageFilename(varName, supportedImageExtension(data), usedAssetNames)
+        usedAssetNames.add(filename)
+        assets[filename] = data
+        values[varName] = filename
+      }
+      assertCompleteImageValues(imageVarNames, values, mapped.imagePrompts ?? {})
+      await repository.updateInstance(
+        interfaceId,
+        {
+          ...current.instance,
+          values,
+          imagePrompts: mapped.imagePrompts
+        },
+        prompts.length ? assets : undefined
       )
-      await repository.updateInstance(interfaceId, {
-        ...current.instance,
-        values,
-        imagePrompts: mapped.imagePrompts
-      })
       return {
         status: 'replaced',
         instance: (await getInstanceDetails(interfaceId, instanceId)) as InterfaceInstanceDetails
       }
     } finally {
-      release?.()
+      release()
     }
   }
 

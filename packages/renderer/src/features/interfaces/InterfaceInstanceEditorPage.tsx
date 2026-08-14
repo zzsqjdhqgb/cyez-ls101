@@ -507,7 +507,11 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
     setError(null)
     setJsonErrors([])
     try {
-      const result = await application.instances.replaceFromJson(interfaceId, instanceId, json)
+      const result = hasImageFields
+        ? await application.instances.replaceFromJson(interfaceId, instanceId, json, {
+            ...(selectedImageProvider ? { imageProvider: selectedImageProvider } : {})
+          })
+        : await application.instances.replaceFromJson(interfaceId, instanceId, json)
       if (result.status === 'invalid-json') {
         setJsonErrors(result.errors)
         return
@@ -740,6 +744,19 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
                 placeholder={'{\n  "section": {\n    "question": "..."\n  }\n}'}
                 spellCheck={false}
               />
+              {hasImageFields ? (
+                <div className={styles.jsonProvider}>
+                  <AIImageProviderSelect
+                    disabled={busy}
+                    error={imageProvidersError}
+                    label="图像 Provider"
+                    loading={imageProvidersLoading}
+                    options={imageProviderOptions}
+                    value={selectedImageProvider}
+                    onChange={setSelectedImageProvider}
+                  />
+                </div>
+              ) : null}
               {jsonErrors.length ? (
                 <div className={styles.jsonErrors} role="alert">
                   {jsonErrors.map((item, index) => (
@@ -755,7 +772,14 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
                 </Button>
                 <Button
                   variant="primary"
-                  disabled={!json.trim() || busy}
+                  disabled={
+                    !json.trim() ||
+                    busy ||
+                    (hasImageFields &&
+                      (!selectedImageProvider ||
+                        imageProvidersLoading ||
+                        Boolean(imageProvidersError)))
+                  }
                   onClick={() => void replaceJson()}
                 >
                   覆盖全部值

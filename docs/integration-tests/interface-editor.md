@@ -65,7 +65,7 @@ xvfb-run -a yarn test:playwright:electron tests/integration/interface-editor.spe
 
 ### IE-07～IE-09 题组生命周期
 
-覆盖题组名称和字段值保存后重新打开、未保存修改离开确认、JSON 合法覆盖、非法 JSON 保留原值，以及删除题组后的文件存储清理。
+覆盖题组名称和字段值保存后重新打开、未保存修改离开确认、JSON 合法覆盖、非法 JSON 保留原值，以及删除题组后的文件存储清理。`IE-08b` 额外覆盖含图片字段的 JSON 覆盖：面板只选择图像 Provider，不选择文本模型；JSON 中的图片提示词经真实生图链路生成资产并原子保存。
 
 ### IE-10～IE-11 题型复制与交换
 
