@@ -66,6 +66,69 @@ describe('bundled Interface repository', () => {
     expect(legacyFields).toHaveLength(27)
   })
 
+  it('加载上海中考英语口语 builtin 并覆盖旧模板的全部 editableData', async () => {
+    const repository = new FileBundledInterfaceRepository(
+      new DiskReadonlyStore('resources/builtin/interface-editor')
+    )
+
+    const entries = await repository.loadAll()
+    const entry = entries.find(({ builtinKey }) => builtinKey === 'shanghai-zhongkao-speaking')
+    expect(entry?.currentInterface).toMatchObject({
+      id: 'sha256:fd1bd229ebd711dce3655bdc3a4b41a9ecb93ce273b7643307a726ae403cc884',
+      name: '上海中考英语口语'
+    })
+    if (!entry) throw new Error('expected Shanghai Zhongkao speaking builtin')
+    expect(entry.currentInterface.promptTemplate).toContain('朗读词组')
+    expect(entry.currentInterface.promptTemplate).toContain('听后复述')
+    expect(entry.currentInterface.promptTemplate).toContain('no text')
+
+    const leaves = flattenFields(entry.currentInterface.fields)
+    const legacyFields = await loadLegacyFields('templates/SH-zhongkao-speaking/chunk')
+    expect(leaves.map(({ leaf }) => leaf.varName).sort()).toEqual(
+      legacyFields.map(({ id }) => id).sort()
+    )
+    expect(
+      leaves.filter(({ leaf }) => leaf.type === 'image').map(({ leaf }) => leaf.varName)
+    ).toEqual(['3_picture', '4_picture'])
+    for (const { leaf } of leaves.filter(({ leaf }) => leaf.type === 'image')) {
+      expect(leaf.example).not.toMatch(/[\u3400-\u9fff]/u)
+      expect(leaf.example).toContain('no text')
+    }
+    expect(legacyFields).toHaveLength(16)
+  })
+
+  it('加载上海高考英语听力 builtin 并覆盖完整卷的全部 editableData', async () => {
+    const repository = new FileBundledInterfaceRepository(
+      new DiskReadonlyStore('resources/builtin/interface-editor')
+    )
+
+    const entries = await repository.loadAll()
+    const entry = entries.find(({ builtinKey }) => builtinKey === 'shanghai-gaokao-listening')
+    expect(entry?.currentInterface).toMatchObject({
+      id: 'sha256:d615a1e2be09ecb9cd93a6c47639d07fdb64e68cf2af4b3d3e98615ed0c067f1',
+      name: '上海高考英语听力'
+    })
+    if (!entry) throw new Error('expected Shanghai Gaokao listening builtin')
+    expect(entry.currentInterface.promptTemplate).toContain('10段短对话')
+    expect(entry.currentInterface.promptTemplate).toContain('只有一个无争议的最佳答案')
+    expect(entry.currentInterface.fields.order).toEqual([
+      'shortDialogues',
+      'passages',
+      'longConversation'
+    ])
+
+    const leaves = flattenFields(entry.currentInterface.fields)
+    const legacyFields = await loadLegacyTemplateFields('templates/gaokao-listening/template.json')
+    expect(leaves.map(({ leaf }) => leaf.varName).sort()).toEqual(
+      legacyFields.map(({ id }) => id).sort()
+    )
+    expect(leaves.every(({ leaf }) => leaf.type === 'text')).toBe(true)
+    const answers = leaves.filter(({ leaf }) => leaf.varName.startsWith('answer_'))
+    expect(answers).toHaveLength(20)
+    expect(new Set(answers.map(({ leaf }) => leaf.example))).toEqual(new Set(['A', 'B', 'C', 'D']))
+    expect(legacyFields).toHaveLength(133)
+  })
+
   it('按 builtinKey 和内容摘要读取独立 Interface 文件', async () => {
     const def = await publishInterface(content)
     const store = bundledStore('speaking', def)
@@ -168,6 +231,30 @@ async function loadLegacyShanghaiGaokaoFields(): Promise<Array<{ id: string; typ
     })
   )
   return fields.flat()
+}
+
+async function loadLegacyFields(directory: string): Promise<Array<{ id: string; type: string }>> {
+  const filenames = (await readdir(directory))
+    .filter((filename) => filename.endsWith('.json'))
+    .sort()
+  const fields = await Promise.all(
+    filenames.map(async (filename) => {
+      const value = JSON.parse(await readFile(path.join(directory, filename), 'utf8')) as {
+        editableData: Array<{ id: string; type: string }>
+      }
+      return value.editableData
+    })
+  )
+  return fields.flat()
+}
+
+async function loadLegacyTemplateFields(
+  filename: string
+): Promise<Array<{ id: string; type: string }>> {
+  const value = JSON.parse(await readFile(filename, 'utf8')) as {
+    editableData: Array<{ id: string; type: string }>
+  }
+  return value.editableData
 }
 
 function bundledStore(builtinKey: string, def: InterfaceDef): MemoryStore {

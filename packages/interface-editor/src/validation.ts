@@ -78,10 +78,12 @@ export function failure(errors: ValidationError[]): ValidationResult {
 
 /**
  * varName 合法格式:
- * - 以字母或下划线开头
- * - 后续字符为字母、数字、下划线或连字符
+ * - 由字母、数字、下划线或连字符组成
+ *
+ * Interface 变量允许数字开头，以兼容旧模板中的题号前缀变量（如 3_dialogue）。
+ * Template 的本地变量和 Interface 别名仍使用更严格的标识符规则。
  */
-const VAR_NAME_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_-]*$/
+const VAR_NAME_PATTERN = /^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/
 
 // ============================================================
 // 内部工厂 — 创建 ValidationError

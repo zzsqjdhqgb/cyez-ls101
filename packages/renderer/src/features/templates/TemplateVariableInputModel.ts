@@ -29,8 +29,9 @@ export interface SchemaAttachmentVariableCandidate {
 }
 
 const VARIABLE_NAME_PATTERN = '[a-zA-Z_][a-zA-Z0-9_-]*'
+const INTERFACE_VARIABLE_NAME_PATTERN = '[a-zA-Z0-9_][a-zA-Z0-9_-]*'
 const VARIABLE_TOKEN_PATTERN = new RegExp(
-  `\\[@(${VARIABLE_NAME_PATTERN})(?:\\.(${VARIABLE_NAME_PATTERN}(?:\\.${VARIABLE_NAME_PATTERN})*))?\\]`,
+  `\\[@(${VARIABLE_NAME_PATTERN})(?:\\.(${INTERFACE_VARIABLE_NAME_PATTERN}(?:\\.${INTERFACE_VARIABLE_NAME_PATTERN})*))?\\]`,
   'g'
 )
 

@@ -1,0 +1,147 @@
+{
+  "id": "sha256:fd1bd229ebd711dce3655bdc3a4b41a9ecb93ce273b7643307a726ae403cc884",
+  "name": "上海中考英语口语",
+  "description": "上海中考英语口语完整题型，包含朗读词组、朗读句子、交际应答、复述和话题表达。",
+  "promptTemplate": "你是一名熟悉上海中考英语口语考试的资深命题教师。请生成一套完整、可直接用于初中生自主训练的上海中考英语口语考试内容。\n\n总体要求：\n1. 所有词组、句子、对话、话题和图片生图提示词均使用自然、准确、地道且适合初中生的英语；难度贴近中考，避免生僻词、歧义、事实错误和中式英语。\n2. 主题从家庭、校园、社区、健康、交通、节日、兴趣爱好、环境保护、志愿服务或个人成长等健康内容中选择；同一套试题各部分主题和情境避免重复。\n3. 命题兼顾语音语调、内容相关性、语法准确性、词汇运用、逻辑连贯性和表达流利度；不要生成评分、训练建议、作答反馈或字段结构之外的内容。\n\n题型要求：\n1. 朗读词组：三个词组分别自然包含适合考查连读、失爆或弱读的语音现象，长度和难度适合15秒内朗读。第一个词组的准备阶段显示文本与实际朗读文本保持一致，不添加音标、中文或答题提示。\n2. 朗读句子：两句主题不同，每句长度适合初中生在规定时间内自然朗读，并包含可考查重音、停顿、语调和连读的表达。\n3. 交际应答：五句分别覆盖问候、邀请、感谢、道歉、请求、建议、询问信息或提醒等不同交际功能。输入句应符合真实对话习惯，并能引出明确、自然的口头回答。\n4. 复述：生成一段主题明确、情节完整的双人英文对话，长度、词汇和信息密度适合初中生听后复述。对话应包含时间、地点、人物、事件及结果等可提取的关键信息。配图提示词须把这些关键词组织成清晰的无文字思维导图式画面，不能依赖其他图片或使用“同上图”等表述。\n5. 话题表达：选择贴近初中生生活且有明确表达空间的话题。配图提示词须生成一张无文字的思维导图式提示图，用三至四个易理解的视觉分支提示可谈论的方面，不直接提供完整答案。\n\n生成后检查：\n1. 各字段之间主题、人物、时间、地点和事实信息必须一致。\n2. 消除语法错误、时态混乱、主谓不一致、搭配不自然、内容空泛和题型重复。\n3. 图片提示词必须使用英文，明确画面构图、人物或物体、场景、视觉风格以及 no text 要求，并可直接用于图片生成模型。\n\n严格按字段结构输出，不要遗漏字段，也不要添加结构之外的内容。",
+  "fields": {
+    "order": ["phraseReading", "sentenceReading", "quickResponse", "retelling", "topicSpeaking"],
+    "nodes": {
+      "phraseReading": {
+        "type": "group",
+        "children": {
+          "order": ["phrase1Display", "phrase1", "phrase2", "phrase3"],
+          "nodes": {
+            "phrase1Display": {
+              "type": "text",
+              "varName": "phrase_1_display",
+              "description": "第一个朗读词组的准备阶段显示文本。必须与第一个实际朗读词组完全一致，不包含音标或额外提示。",
+              "example": "take an active part in"
+            },
+            "phrase1": {
+              "type": "text",
+              "varName": "phrase_1",
+              "description": "第一个英文朗读词组。自然包含适合考查连读、失爆或弱读的语音现象。",
+              "example": "take an active part in"
+            },
+            "phrase2": {
+              "type": "text",
+              "varName": "phrase_2",
+              "description": "第二个英文朗读词组。与第一个词组不同，长度和难度适合初中生。",
+              "example": "a basket of fresh fruit"
+            },
+            "phrase3": {
+              "type": "text",
+              "varName": "phrase_3",
+              "description": "第三个英文朗读词组。与前两个词组不同，适合自然流畅朗读。",
+              "example": "looked forward to the trip"
+            }
+          }
+        }
+      },
+      "sentenceReading": {
+        "type": "group",
+        "children": {
+          "order": ["sentence1", "sentence2"],
+          "nodes": {
+            "sentence1": {
+              "type": "text",
+              "varName": "sentence_1",
+              "description": "第一句英文朗读句子。语言自然，长度适合初中生，包含可考查重音、停顿和语调的表达。",
+              "example": "After school, my friends and I often practise basketball on the playground."
+            },
+            "sentence2": {
+              "type": "text",
+              "varName": "sentence_2",
+              "description": "第二句英文朗读句子。主题与第一句不同，并包含适合考查连读的表达。",
+              "example": "Could you please tell me how to get to the city library?"
+            }
+          }
+        }
+      },
+      "quickResponse": {
+        "type": "group",
+        "children": {
+          "order": ["prompt1", "prompt2", "prompt3", "prompt4", "prompt5"],
+          "nodes": {
+            "prompt1": {
+              "type": "text",
+              "varName": "quickresponse_1",
+              "description": "交际应答1的英文输入句，使用常见的初中生交际场景。",
+              "example": "How was your school trip yesterday?"
+            },
+            "prompt2": {
+              "type": "text",
+              "varName": "quickresponse_2",
+              "description": "交际应答2的英文输入句，交际功能与第1题不同。",
+              "example": "Would you like to join our reading club?"
+            },
+            "prompt3": {
+              "type": "text",
+              "varName": "quickresponse_3",
+              "description": "交际应答3的英文输入句，交际功能与前两题不同。",
+              "example": "Thank you for helping me with my science project."
+            },
+            "prompt4": {
+              "type": "text",
+              "varName": "quickresponse_4",
+              "description": "交际应答4的英文输入句，交际功能与前三题不同。",
+              "example": "I'm sorry that I took your notebook by mistake."
+            },
+            "prompt5": {
+              "type": "text",
+              "varName": "quickresponse_5",
+              "description": "交际应答5的英文输入句，交际功能与前四题不同。",
+              "example": "Excuse me, when does the next bus arrive?"
+            }
+          }
+        }
+      },
+      "retelling": {
+        "type": "group",
+        "children": {
+          "order": ["topic", "dialogue", "picture"],
+          "nodes": {
+            "topic": {
+              "type": "text",
+              "varName": "3_dialogue_topic",
+              "description": "听对话复述的英文主题短语，可直接接在 about 后。",
+              "example": "planning a class charity sale"
+            },
+            "dialogue": {
+              "type": "text",
+              "varName": "3_dialogue",
+              "description": "供TTS合成的完整英文双人对话。内容适合初中生听后复述，包含时间、地点、人物、事件和结果等关键信息。",
+              "example": "Girl: Our class charity sale is this Saturday. Have you decided what to bring, Tom?\nBoy: Yes. I'll sell the storybooks I have already read. What about you, Lucy?\nGirl: My mother and I are going to make some cookies on Friday evening.\nBoy: Great! Where will we hold the sale?\nGirl: On the school playground, from nine to eleven in the morning.\nBoy: What will we do with the money?\nGirl: We'll use it to buy art supplies for children at the community centre.\nBoy: That's meaningful. I'll ask my brother to help us set up the tables at eight thirty.\nGirl: Thanks. With everyone's help, I'm sure the sale will go well."
+            },
+            "picture": {
+              "type": "image",
+              "varName": "3_picture",
+              "description": "复述题的英文配图提示词。生成无文字的思维导图式提示图，清楚呈现对话中的人物、时间、地点、物品、行动和结果。",
+              "example": "Clean educational mind-map illustration, horizontal layout, no text, no letters, no numbers. In the centre, two Chinese middle-school students plan a charity sale. Around them, connected visual branches show storybooks and homemade cookies, a school playground with sale tables on a Saturday morning, and children at a community centre receiving new art supplies. Friendly flat illustration, clear icons, bright natural colours, uncluttered white background."
+            }
+          }
+        }
+      },
+      "topicSpeaking": {
+        "type": "group",
+        "children": {
+          "order": ["topic", "picture"],
+          "nodes": {
+            "topic": {
+              "type": "text",
+              "varName": "4_topic",
+              "description": "话题表达的简短英文话题名称，贴近初中生生活并适合连续口头表达。",
+              "example": "A healthy weekend"
+            },
+            "picture": {
+              "type": "image",
+              "varName": "4_picture",
+              "description": "话题表达的英文配图提示词。生成无文字的思维导图式提示图，以三至四个视觉分支提示可表达的方面，不提供完整答案。",
+              "example": "Clean educational mind-map illustration, horizontal layout, no text, no letters, no numbers. In the centre, a cheerful Chinese middle-school student enjoying a healthy weekend. Four connected visual branches show cycling in a park, preparing a balanced meal with family, reading beside a sunny window, and going to bed early. Friendly flat illustration, clear icons, fresh varied colours, uncluttered white background."
+            }
+          }
+        }
+      }
+    }
+  }
+}
