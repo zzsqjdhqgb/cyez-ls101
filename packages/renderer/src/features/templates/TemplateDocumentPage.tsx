@@ -55,7 +55,6 @@ import { TemplateFunctionCallEditor } from './TemplateFunctionCallEditor'
 import { TemplateContentBlockInspector } from './TemplateContentBlockInspector'
 import { collectTemplateChoiceTargetPages } from './TemplateChoiceTargets'
 import { TemplateInterfaceRequirements } from './TemplateInterfaceRequirements'
-import { TemplateExamGenerationDialog } from './TemplateExamGenerationDialog'
 import {
   exportLocalFunctionLibraryFile,
   importFunctionLibraryFile
@@ -109,7 +108,6 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const session = useTemplateEditorSession(application, templateId)
   const unsavedChanges = useUnsavedChangesGuard(session.dirty)
   const [confirmLeave, setConfirmLeave] = useState(false)
-  const [generationOpen, setGenerationOpen] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [centerView, setCenterView] = useState<'structure' | 'page' | 'preview'>('structure')
   const [previewTargetId, setPreviewTargetId] = useState('root')
@@ -305,7 +303,8 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const openGeneration = async (): Promise<void> => {
     if (!document || session.saving) return
     if (session.dirty && !(await session.save())) return
-    setGenerationOpen(true)
+    unsavedChanges.allowNextNavigation()
+    navigate(`/templates/${templateId}/generate`)
   }
 
   const toggleCollapsed = (nodeId: string): void => {
@@ -1246,14 +1245,6 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
         }}
         onConfirm={() => void deleteFunctionLibrary()}
       />
-      {document ? (
-        <TemplateExamGenerationDialog
-          application={application}
-          document={document}
-          open={generationOpen}
-          onOpenChange={setGenerationOpen}
-        />
-      ) : null}
     </div>
   )
 }

@@ -2,7 +2,7 @@
 export interface TaskProgressItem {
   id: string
   label: string
-  status: 'waiting' | 'running' | 'completed'
+  status: 'waiting' | 'running' | 'completed' | 'failed'
   log?: {
     format: 'text' | 'markdown'
     content: string
