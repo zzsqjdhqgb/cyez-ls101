@@ -1544,8 +1544,8 @@
     },
     {
       "libraryId": "builtin:shanghai-gaokao-groups",
-      "version": 2,
-      "contentHash": "sha256:fc55f34be16b5c39ac4f9b2d2ffac4a07fcbdf727ab50f4c3ab9994719d82f5b",
+      "version": 3,
+      "contentHash": "sha256:b7940275100fd0a19b4dfc808628018e456d017d8f25143a8d1031eacf6a8fb0",
       "content": {
         "name": "高中大题组",
         "functions": [
@@ -2697,6 +2697,22 @@
                   "type": "file"
                 },
                 {
+                  "name": "img1-inst",
+                  "type": "string"
+                },
+                {
+                  "name": "img2-inst",
+                  "type": "string"
+                },
+                {
+                  "name": "img3-inst",
+                  "type": "string"
+                },
+                {
+                  "name": "img4-inst",
+                  "type": "string"
+                },
+                {
                   "name": "prefix",
                   "type": "string"
                 },
@@ -2874,7 +2890,18 @@
                         },
                         {
                           "type": "literal",
-                          "value": "\n\n| 1![]("
+                          "value": "\n\n| 1!["
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "img1-inst"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "]("
                         },
                         {
                           "type": "variable",
@@ -2885,7 +2912,18 @@
                         },
                         {
                           "type": "literal",
-                          "value": ") | 2![]("
+                          "value": ") | 2!["
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "img2-inst"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "]("
                         },
                         {
                           "type": "variable",
@@ -2896,7 +2934,18 @@
                         },
                         {
                           "type": "literal",
-                          "value": ") |\n| ------ | ------ |\n| 3![]("
+                          "value": ") |\n| ------ | ------ |\n| 3!["
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "img3-inst"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "]("
                         },
                         {
                           "type": "variable",
@@ -2907,7 +2956,18 @@
                         },
                         {
                           "type": "literal",
-                          "value": ") | 4![]("
+                          "value": ") | 4!["
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "img4-inst"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "]("
                         },
                         {
                           "type": "variable",

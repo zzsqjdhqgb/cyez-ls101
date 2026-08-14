@@ -432,7 +432,7 @@ test('creates, edits and reloads a persisted template', async () => {
   await expect(
     page.getByRole('button', { name: '高中基础题型，版本 3', exact: true })
   ).toBeVisible()
-  await expect(page.getByRole('button', { name: '高中大题组，版本 2', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '高中大题组，版本 3', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '添加听短文回答题组' })).toBeVisible()
 
   const createLibrary = page.getByRole('button', { name: '新建本地函数库' })
