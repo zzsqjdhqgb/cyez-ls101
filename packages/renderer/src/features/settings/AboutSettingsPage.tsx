@@ -22,7 +22,7 @@ const initiator: Person = {
 const developers: Person[] = [
   {
     name: '应昊廷',
-    role: '开发者',
+    role: '2027届学生 开发者',
     avatarUrl: catAvatarUrl,
     profileUrl: 'https://github.com/zzsqjdhqgb'
   },
