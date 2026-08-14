@@ -1,8 +1,8 @@
 {
-  "id": "sha256:d615a1e2be09ecb9cd93a6c47639d07fdb64e68cf2af4b3d3e98615ed0c067f1",
+  "id": "sha256:03e00d7f007b7b2281e13429ec89220d3d5abfa218f1f953f0d3c64ff1489838",
   "name": "上海高考英语听力",
   "description": "上海高考英语听力完整题型，包含十段短对话、两篇听力短文和一段长对话，共20道选择题。",
-  "promptTemplate": "你是一名熟悉上海高考英语听力考试的资深命题教师。请生成一套完整、可直接用于高中生自主训练的上海高考英语听力试题。\n\n总体要求：\n1. 所有听力材料、题干和选项均使用自然、准确、地道且适合高中生的英语；难度、语速承载的信息量和表达方式贴近高考，避免生僻专名、冷门知识、歧义、事实错误和中式英语。\n2. 全卷包含10段短对话、2篇各对应3题的听力短文，以及1段对应4题的长对话，共20题。各材料主题、人物和场景避免重复，覆盖日常生活、校园学习、公共服务、旅行交通、文化活动、健康、科技、环境或社会实践等内容。\n3. 每题均为四选一选择题。题干、选项、正确答案和对应听力材料必须严格一致，只有一个无争议的最佳答案；不要生成解析、评分、训练建议、作答反馈或字段结构之外的内容。\n\n材料要求：\n1. 短对话：每段由两位说话者完成，围绕一个清楚的生活或学习场景展开，长度适合只播放一遍。每段只对应一道题，考查主旨、人物关系、地点、时间、数字、原因、态度、意图或推断等不同能力。对话文本不得包含题干或答案，不得直接说出选项字母。\n2. 听力短文：每篇结构完整、信息密度适中，适合连续播报并对应三道题。三题按材料信息出现顺序设置，兼顾事实细节、主旨目的和合理推断；不同题的答案依据不能混淆。\n3. 长对话：围绕一个真实任务展开，有自然的问答推进和足够的信息层次，适合连续播报并对应四道题。四题按对话信息出现顺序设置，覆盖不同考点。\n4. 对话使用“Man:”和“Woman:”等清晰说话人标签；独白不添加舞台说明、音效标记、题号或中文。听力材料中不要读出题干，系统会在材料之后另行播报对应题干。\n\n选项与答案要求：\n1. 每个题干简洁明确，不依赖界面上不可见的信息；避免否定套否定和超出材料的常识推断。\n2. 四个选项使用平行的语法结构、相近的长度和相同的信息维度。干扰项应来自材料中的相邻信息、合理误解或未满足条件，不能凭语言形式轻易排除。\n3. 正确答案在A、B、C、D之间合理分布，避免明显规律；答案字段只能填写一个大写字母。\n4. 数字、姓名、时间、地点、因果和人物指代在材料、题干及选项中保持一致。\n\n生成后逐题核对：确认正确选项得到材料直接支持或可由材料唯一推断，三个干扰项均不成立；消除语法错误、时态混乱、主谓不一致、搭配不自然、重复考点及答案分布规律。\n\n严格按字段结构输出，不要遗漏字段，也不要添加结构之外的内容。",
+  "promptTemplate": "你是一名熟悉上海高考英语听力考试的资深命题教师。请生成一套完整、可直接用于高中生自主训练的上海高考英语听力试题。\n\n总体要求：\n1. 所有听力材料、题干和选项均使用自然、准确、地道且适合高中生的英语；难度、语速承载的信息量和表达方式贴近高考，避免生僻专名、冷门知识、歧义、事实错误和中式英语。\n2. 全卷包含10段短对话、2篇各对应3题的听力短文，以及1段对应4题的长对话，共20题。各材料主题、人物和场景避免重复，覆盖日常生活、校园学习、公共服务、旅行交通、文化活动、健康、科技、环境或社会实践等内容。\n3. 每题均为四选一选择题。题干、选项、正确答案和对应听力材料必须严格一致，只有一个无争议的最佳答案；不要生成解析、评分、训练建议、作答反馈或字段结构之外的内容。\n\n材料要求：\n1. 短对话：每段由两位说话者完成，围绕一个清楚的生活或学习场景展开，长度适合只播放一遍。每段只对应一道题，考查主旨、人物关系、地点、时间、数字、原因、态度、意图或推断等不同能力。对话文本不得包含题干或答案，不得直接说出选项字母。\n2. 听力短文：每篇结构完整、信息密度适中，适合连续播报并对应三道题。三题按材料信息出现顺序设置，兼顾事实细节、主旨目的和合理推断；不同题的答案依据不能混淆。\n3. 长对话：围绕一个真实任务展开，有自然的问答推进和足够的信息层次，适合连续播报并对应四道题。四题按对话信息出现顺序设置，覆盖不同考点。\n4. 所有对话必须在每句台词的行首严格使用“[Man]:”或“[Woman]:”说话人标签，并让每句台词单独占一行，以便系统选择对应音色；不得使用“Man:”“Woman:”或其他标签。独白不添加舞台说明、音效标记、题号或中文。听力材料中不要读出题干，系统会在材料之后另行播报对应题干。\n\n选项与答案要求：\n1. 每个题干简洁明确，不依赖界面上不可见的信息；避免否定套否定和超出材料的常识推断。\n2. 四个选项使用平行的语法结构、相近的长度和相同的信息维度。干扰项应来自材料中的相邻信息、合理误解或未满足条件，不能凭语言形式轻易排除。\n3. 正确答案在A、B、C、D之间合理分布，避免明显规律；答案字段只能填写一个大写字母。\n4. 数字、姓名、时间、地点、因果和人物指代在材料、题干及选项中保持一致。\n\n生成后逐题核对：确认正确选项得到材料直接支持或可由材料唯一推断，三个干扰项均不成立；消除语法错误、时态混乱、主谓不一致、搭配不自然、重复考点及答案分布规律。\n\n严格按字段结构输出，不要遗漏字段，也不要添加结构之外的内容。",
   "fields": {
     "order": ["shortDialogues", "passages", "longConversation"],
     "nodes": {
@@ -30,8 +30,8 @@
                   "dialogue": {
                     "type": "text",
                     "varName": "dialogue_text_1",
-                    "description": "第1段短对话的完整英文文本，供TTS合成。使用清晰的说话人标签，不包含题干或答案。",
-                    "example": "Woman: It's already eight thirty. Won't you be late for the meeting?\nMan: No. It was put off for half an hour."
+                    "description": "第1段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Woman]: It's already eight thirty. Won't you be late for the meeting?\n[Man]: No. It was put off for half an hour."
                   },
                   "stem": {
                     "type": "text",
@@ -80,8 +80,8 @@
                   "dialogue": {
                     "type": "text",
                     "varName": "dialogue_text_2",
-                    "description": "第2段短对话的完整英文文本，供TTS合成。使用清晰的说话人标签，不包含题干或答案。",
-                    "example": "Man: Shall we take a taxi to the concert hall?\nWoman: The underground is faster at this time of day."
+                    "description": "第2段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Man]: Shall we take a taxi to the concert hall?\n[Woman]: The underground is faster at this time of day."
                   },
                   "stem": {
                     "type": "text",
@@ -130,8 +130,8 @@
                   "dialogue": {
                     "type": "text",
                     "varName": "dialogue_text_3",
-                    "description": "第3段短对话的完整英文文本，供TTS合成。使用清晰的说话人标签，不包含题干或答案。",
-                    "example": "Woman: This blue sweater is sixty dollars, but the grey one is twenty percent off.\nMan: Then I'll take the grey one."
+                    "description": "第3段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Woman]: This blue sweater is sixty dollars, but the grey one is twenty percent off.\n[Man]: Then I'll take the grey one."
                   },
                   "stem": {
                     "type": "text",
@@ -180,8 +180,8 @@
                   "dialogue": {
                     "type": "text",
                     "varName": "dialogue_text_4",
-                    "description": "第4段短对话的完整英文文本，供TTS合成。使用清晰的说话人标签，不包含题干或答案。",
-                    "example": "Man: Did you enjoy the new restaurant near the station?\nWoman: The service was excellent, though the soup was much too salty."
+                    "description": "第4段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Man]: Did you enjoy the new restaurant near the station?\n[Woman]: The service was excellent, though the soup was much too salty."
                   },
                   "stem": {
                     "type": "text",
@@ -230,8 +230,8 @@
                   "dialogue": {
                     "type": "text",
                     "varName": "dialogue_text_5",
-                    "description": "第5段短对话的完整英文文本，供TTS合成。使用清晰的说话人标签，不包含题干或答案。",
-                    "example": "Woman: Are you going to play tennis after class?\nMan: I planned to, but I have to finish my chemistry report first."
+                    "description": "第5段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Woman]: Are you going to play tennis after class?\n[Man]: I planned to, but I have to finish my chemistry report first."
                   },
                   "stem": {
                     "type": "text",
@@ -280,8 +280,8 @@
                   "dialogue": {
                     "type": "text",
                     "varName": "dialogue_text_6",
-                    "description": "第6段短对话的完整英文文本，供TTS合成。使用清晰的说话人标签，不包含题干或答案。",
-                    "example": "Man: Could you turn the music down? I'm preparing for tomorrow's interview.\nWoman: Sorry. I'll use my headphones."
+                    "description": "第6段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Man]: Could you turn the music down? I'm preparing for tomorrow's interview.\n[Woman]: Sorry. I'll use my headphones."
                   },
                   "stem": {
                     "type": "text",
@@ -330,8 +330,8 @@
                   "dialogue": {
                     "type": "text",
                     "varName": "dialogue_text_7",
-                    "description": "第7段短对话的完整英文文本，供TTS合成。使用清晰的说话人标签，不包含题干或答案。",
-                    "example": "Woman: The weather forecast says the rain will stop by noon.\nMan: Good. We can still have our picnic this afternoon."
+                    "description": "第7段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Woman]: The weather forecast says the rain will stop by noon.\n[Man]: Good. We can still have our picnic this afternoon."
                   },
                   "stem": {
                     "type": "text",
@@ -380,8 +380,8 @@
                   "dialogue": {
                     "type": "text",
                     "varName": "dialogue_text_8",
-                    "description": "第8段短对话的完整英文文本，供TTS合成。使用清晰的说话人标签，不包含题干或答案。",
-                    "example": "Man: I can't find the book on modern architecture.\nWoman: Someone returned it this morning. Let me check the shelf for you."
+                    "description": "第8段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Man]: I can't find the book on modern architecture.\n[Woman]: Someone returned it this morning. Let me check the shelf for you."
                   },
                   "stem": {
                     "type": "text",
@@ -430,8 +430,8 @@
                   "dialogue": {
                     "type": "text",
                     "varName": "dialogue_text_9",
-                    "description": "第9段短对话的完整英文文本，供TTS合成。使用清晰的说话人标签，不包含题干或答案。",
-                    "example": "Woman: Your presentation was very clear, David.\nMan: Thanks. I was nervous at first, but the audience's questions helped me relax."
+                    "description": "第9段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Woman]: Your presentation was very clear, David.\n[Man]: Thanks. I was nervous at first, but the audience's questions helped me relax."
                   },
                   "stem": {
                     "type": "text",
@@ -480,8 +480,8 @@
                   "dialogue": {
                     "type": "text",
                     "varName": "dialogue_text_10",
-                    "description": "第10段短对话的完整英文文本，供TTS合成。使用清晰的说话人标签，不包含题干或答案。",
-                    "example": "Man: I heard you are moving to a new flat next week.\nWoman: Yes. It is farther from my office, but there is a lovely park nearby."
+                    "description": "第10段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Man]: I heard you are moving to a new flat next week.\n[Woman]: Yes. It is farther from my office, but there is a lovely park nearby."
                   },
                   "stem": {
                     "type": "text",
@@ -833,8 +833,8 @@
             "script": {
               "type": "text",
               "varName": "dialogue_long_text",
-              "description": "长对话的完整英文文本，供TTS合成。围绕一个真实任务自然推进，不包含题干或答案。",
-              "example": "Woman: Good afternoon, City Arts Centre. How can I help you?\nMan: Hi. I'm calling about the weekend photography course in September. Are there still places available?\nWoman: Yes, but only on the course beginning September 14th. The earlier one is full.\nMan: That date is fine. Is the course suitable for beginners?\nWoman: Certainly. The first morning covers basic camera settings. In the afternoon, the group practises taking portraits outdoors. On Sunday, you'll learn to edit your best photographs.\nMan: Sounds good. Do I need an expensive camera?\nWoman: No. Any digital camera with manual controls will do. We can also lend cameras to four students, but they must be reserved in advance.\nMan: I have my own. How much does the course cost?\nWoman: It's ninety pounds, including lunch on both days. Students under eighteen pay seventy-five pounds.\nMan: I'm seventeen, so that's helpful. Can I register online?\nWoman: Yes. Complete the form by next Friday and upload a photograph of your student card.\nMan: Great. I'll do that tonight. Thank you."
+              "description": "长对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签；围绕一个真实任务自然推进，不包含题干或答案。",
+              "example": "[Woman]: Good afternoon, City Arts Centre. How can I help you?\n[Man]: Hi. I'm calling about the weekend photography course in September. Are there still places available?\n[Woman]: Yes, but only on the course beginning September 14th. The earlier one is full.\n[Man]: That date is fine. Is the course suitable for beginners?\n[Woman]: Certainly. The first morning covers basic camera settings. In the afternoon, the group practises taking portraits outdoors. On Sunday, you'll learn to edit your best photographs.\n[Man]: Sounds good. Do I need an expensive camera?\n[Woman]: No. Any digital camera with manual controls will do. We can also lend cameras to four students, but they must be reserved in advance.\n[Man]: I have my own. How much does the course cost?\n[Woman]: It's ninety pounds, including lunch on both days. Students under eighteen pay seventy-five pounds.\n[Man]: I'm seventeen, so that's helpful. Can I register online?\n[Woman]: Yes. Complete the form by next Friday and upload a photograph of your student card.\n[Man]: Great. I'll do that tonight. Thank you."
             },
             "question17": {
               "type": "group",

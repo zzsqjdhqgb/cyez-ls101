@@ -107,12 +107,13 @@ describe('bundled Interface repository', () => {
     const entries = await repository.loadAll()
     const entry = entries.find(({ builtinKey }) => builtinKey === 'shanghai-gaokao-listening')
     expect(entry?.currentInterface).toMatchObject({
-      id: 'sha256:d615a1e2be09ecb9cd93a6c47639d07fdb64e68cf2af4b3d3e98615ed0c067f1',
+      id: 'sha256:03e00d7f007b7b2281e13429ec89220d3d5abfa218f1f953f0d3c64ff1489838',
       name: '上海高考英语听力'
     })
     if (!entry) throw new Error('expected Shanghai Gaokao listening builtin')
     expect(entry.currentInterface.promptTemplate).toContain('10段短对话')
     expect(entry.currentInterface.promptTemplate).toContain('只有一个无争议的最佳答案')
+    expect(entry.currentInterface.promptTemplate).toContain('“[Man]:”或“[Woman]:”')
     expect(entry.currentInterface.fields.order).toEqual([
       'shortDialogues',
       'passages',
@@ -125,6 +126,11 @@ describe('bundled Interface repository', () => {
       legacyFields.map(({ id }) => id).sort()
     )
     expect(leaves.every(({ leaf }) => leaf.type === 'text')).toBe(true)
+    const dialogues = leaves.filter(({ leaf }) => leaf.varName.startsWith('dialogue_'))
+    expect(dialogues).toHaveLength(11)
+    for (const { leaf } of dialogues) {
+      expect(leaf.example.split('\n').every((line) => /^\[(Man|Woman)\]: /.test(line))).toBe(true)
+    }
     const answers = leaves.filter(({ leaf }) => leaf.varName.startsWith('answer_'))
     expect(answers).toHaveLength(20)
     expect(new Set(answers.map(({ leaf }) => leaf.example))).toEqual(new Set(['A', 'B', 'C', 'D']))
