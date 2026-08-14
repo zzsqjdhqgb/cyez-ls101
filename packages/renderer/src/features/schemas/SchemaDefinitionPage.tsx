@@ -24,6 +24,7 @@ export function SchemaDefinitionPage(): JSX.Element {
   const navigate = useNavigate()
   const { schemaId = '' } = useParams()
   const [definition, setDefinition] = useState<SchemaDefinition | null>(null)
+  const [builtin, setBuiltin] = useState(false)
   const [data, setData] = useState<SchemaData | null>(null)
   const [savedSnapshot, setSavedSnapshot] = useState('')
   const [loading, setLoading] = useState(true)
@@ -38,11 +39,11 @@ export function SchemaDefinitionPage(): JSX.Element {
 
   useEffect(() => {
     let active = true
-    void repository
-      .getSchema(schemaId)
-      .then((item) => {
+    void Promise.all([repository.getSchema(schemaId), repository.listBuiltinSchemaIds()])
+      .then(([item, builtinIds]) => {
         if (!active) return
         setDefinition(item)
+        setBuiltin(builtinIds.includes(schemaId))
         setData(item?.data ?? null)
         setSavedSnapshot(item ? JSON.stringify(item.data) : '')
       })
@@ -126,18 +127,24 @@ export function SchemaDefinitionPage(): JSX.Element {
           <div>
             <h1>{data?.name || '未命名 Schema'}</h1>
             <span>
-              {dirty ? '有未保存修改' : definition ? `正式版 r${definition.revision}` : '正式版'}
+              {dirty
+                ? '有未保存修改'
+                : definition
+                  ? `${builtin ? '内置' : '正式版'} · r${definition.revision}`
+                  : '正式版'}
             </span>
           </div>
         </div>
         <div className={styles.toolbarActions}>
-          <IconButton
-            icon={Trash2}
-            label="删除正式 Schema"
-            variant="danger"
-            disabled={!definition || saving || exporting}
-            onClick={() => setConfirmDelete(true)}
-          />
+          {!builtin ? (
+            <IconButton
+              icon={Trash2}
+              label="删除正式 Schema"
+              variant="danger"
+              disabled={!definition || saving || exporting}
+              onClick={() => setConfirmDelete(true)}
+            />
+          ) : null}
           <Button
             icon={Download}
             disabled={!definition || dirty || saving || exporting}

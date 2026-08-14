@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
 import type { SchemaData, SchemaStructure } from '@ls101/core-types'
 import {
@@ -8,6 +9,7 @@ import {
   createSchemaStructure,
   deriveSchemaStructureHash,
   FileSchemaRepository,
+  initializeBuiltinSchemas,
   parseSchemaDefinition,
   SchemaRepositoryError,
   updateSchemaDefinition,
@@ -141,6 +143,41 @@ describe('Schema domain', () => {
 })
 
 describe('Schema repository', () => {
+  it('registers bundled schemas idempotently and preserves editable data', async () => {
+    const repository = new FileSchemaRepository(new MemorySchemaStore())
+    const manifest = JSON.parse(
+      await readFile('resources/builtin/schema-editor/.text/builtin-schemas.json', 'utf8')
+    ) as unknown
+
+    const first = await initializeBuiltinSchemas(repository, manifest)
+    const sentenceSchema = first.find((item) => item.data.name === '上海高考 - 朗读句子')
+    expect(first).toHaveLength(7)
+    expect(sentenceSchema?.structure.answerFormat).toEqual([
+      { answerId: 'sentence-1', type: 'fixed-speech' },
+      { answerId: 'sentence-2', type: 'fixed-speech' }
+    ])
+    expect(sentenceSchema?.data.maxScore).toBe(1)
+
+    if (!sentenceSchema) throw new Error('Bundled sentence Schema was not found')
+    await repository.updateSchemaData(sentenceSchema.schemaId, 0, {
+      ...sentenceSchema.data,
+      description: '用户调整后的说明'
+    })
+    await initializeBuiltinSchemas(repository, manifest)
+
+    expect((await repository.getSchema(sentenceSchema.schemaId))?.data.description).toBe(
+      '用户调整后的说明'
+    )
+    expect(await repository.listSchemaIds()).toHaveLength(7)
+    expect(await repository.listBuiltinSchemaIds()).toContain(
+      '69fc2dc6-31d6-4666-bf6f-4b65a1e996dd'
+    )
+    await expect(repository.deleteSchema(sentenceSchema.schemaId)).rejects.toMatchObject({
+      code: 'BUILTIN_SCHEMA'
+    } satisfies Partial<SchemaRepositoryError>)
+    expect(await repository.getSchema(sentenceSchema.schemaId)).not.toBeNull()
+  })
+
   it('uses revision checks when saving draft libraries', async () => {
     const repository = new FileSchemaRepository(new MemorySchemaStore())
     const created = await repository.saveDraftLibrary(createSchemaDraftLibrary('评分结构'))

@@ -298,6 +298,24 @@ test('navigates through every primary application area', async () => {
   await expect(page.getByText('正在加载模板...')).toBeHidden()
   await expectValidStyleBindings(page)
 
+  await page.getByRole('link', { name: '评分单元' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: '评分单元' })).toBeVisible()
+  await expect(page.getByText('正在加载 Schema...')).toBeHidden()
+  for (const name of [
+    '上海高考 - 朗读句子',
+    '上海高考 - 朗读短文',
+    '上海高考 - 情景提问',
+    '上海高考 - 看图说话',
+    '上海高考 - 快速应答',
+    '上海高考 - 听短文回答事实题',
+    '上海高考 - 听短文回答观点题'
+  ]) {
+    await expect(page.getByRole('button', { name })).toBeVisible()
+  }
+  await expect(page.getByText('内置')).toHaveCount(7)
+  await expect(page.getByRole('button', { name: '删除正式 Schema' })).toHaveCount(0)
+  await expectValidStyleBindings(page)
+
   await page.getByRole('link', { name: '设置' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '设置' })).toBeVisible()
   await expect(page.getByRole('button', { name: /外观/ })).toBeVisible()

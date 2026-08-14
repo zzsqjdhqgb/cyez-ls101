@@ -1,0 +1,275 @@
+{
+  "schemas": [
+    {
+      "formatVersion": 2,
+      "schemaId": "69fc2dc6-31d6-4666-bf6f-4b65a1e996dd",
+      "sourceDraftId": "2dd95767-659b-4d4b-b990-9fba6c8712ca",
+      "structureHash": "sha256:2b255b31dc91335f38e408dd624013489be58aed334ea288050490b38aef1353",
+      "revision": 0,
+      "structure": {
+        "questionType": "fixed-reading",
+        "answerFormat": [
+          {
+            "answerId": "sentence-1",
+            "type": "fixed-speech"
+          },
+          {
+            "answerId": "sentence-2",
+            "type": "fixed-speech"
+          }
+        ],
+        "templateInputs": [
+          {
+            "inputId": "question-description",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      "data": {
+        "name": "上海高考 - 朗读句子",
+        "description": "两句朗读合并评分，每句分别绑定原文和录音。",
+        "maxScore": 1,
+        "answerDescriptions": {
+          "sentence-1": "第一句朗读",
+          "sentence-2": "第二句朗读"
+        },
+        "inputDescriptions": {},
+        "rubricMarkdown": "**考试要求**： 2句，每句30秒准备，15秒朗读\n\n**评分标准**：\n\n-   1分（共2题，共1分）\n    -   能流利朗读所给句子\n    -   发音清楚，语音语调节奏正确\n    -   能正确处理句子重音、意群停顿\n    -   并熟练掌握连读、失爆等朗读技巧\n    -   在整句朗读流利且重音、停顿合理的情况下，如有个别单词读错不扣分\n-   0.5分\n    -   能基本读出所给句子，语音语调有错误，但不影响理解\n    -   第1句读错2-3个单词\n    -   第2句读错2-5个单词\n-   0分\n    -   不能朗读或朗读时错误严重，以致所读内容无法理解"
+      }
+    },
+    {
+      "formatVersion": 2,
+      "schemaId": "b066147d-96c5-401b-9f08-79e583fdd473",
+      "sourceDraftId": "d592a9c9-e5c4-4b9c-b9a2-9c1e10353520",
+      "structureHash": "sha256:125850f063a9be9157fa5daa6804ae12312a37c7a3b0eb0ddc34f57ca72e228e",
+      "revision": 0,
+      "structure": {
+        "questionType": "fixed-reading",
+        "answerFormat": [
+          {
+            "answerId": "passage",
+            "type": "fixed-speech"
+          }
+        ],
+        "templateInputs": [
+          {
+            "inputId": "question-description",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      "data": {
+        "name": "上海高考 - 朗读短文",
+        "description": "朗读一段短文，按语音、语调、节奏和流利度评分。",
+        "maxScore": 1,
+        "answerDescriptions": {
+          "passage": "短文朗读"
+        },
+        "inputDescriptions": {},
+        "rubricMarkdown": "**考试要求**： 1段，1分钟准备，30秒朗读\n\n**评分标准**：\n\n-   2分（共1题，共折合为1分）\n    -   能流利朗读所给的段落\n    -   发音清楚，语音语调节奏正确\n    -   能正确处理句子重音、意群停顿\n    -   语气转换，并熟练掌握连读、失爆等朗读技巧\n    -   在整句朗读流利且重音、停顿合理的情况下，如有个别单词读错不扣分\n-   1.5分\n    -   能基本流利朗读所给的段落\n    -   发音清楚，语音语调节奏基本正确\n    -   能基本正确处理句子重音、意群停顿\n    -   语气转换，并掌握连读、失爆等朗读技巧\n    -   有2-4个单词读错\n-   1分\n    -   能以正常语速朗读所给的段落\n    -   语音语调有错误，但不影响理解\n    -   有3-5个单词读错\n-   0.5分\n    -   能基本读出所给的段落\n    -   语音语调有错误，但不影响理解\n    -   有6-10个单词读错\n-   0分\n    -   不能朗读或朗读时错误严重，以致所读内容无法理解\n\n**注意事项**：\n1.  评分不以读完短文为标准，按照正常的语速朗读，注意力放在语音语调方面\n2.  务必注意意群停顿，不熟悉的单词也尽量按语感读出\n3.  准备时间里可以轻读调整，开始录音时用最合适的语音语调读出"
+      }
+    },
+    {
+      "formatVersion": 2,
+      "schemaId": "89d318a8-0e31-4650-a2d9-9ce7e968f397",
+      "sourceDraftId": "fef65658-a439-47ff-b18f-f7e280853b82",
+      "structureHash": "sha256:de759d3988be2ad2174b20af6b8bf4cacb2ac2235066b98db5fe5640ef218cf8",
+      "revision": 0,
+      "structure": {
+        "questionType": "freetalk",
+        "answerFormat": [
+          {
+            "answerId": "answer",
+            "type": "free-speech"
+          }
+        ],
+        "templateInputs": [
+          {
+            "inputId": "question-description",
+            "type": "text",
+            "required": true
+          },
+          {
+            "inputId": "reference-answer",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      "data": {
+        "name": "上海高考 - 情景提问",
+        "description": "针对一个情景提出两个问题。",
+        "maxScore": 1,
+        "answerDescriptions": {
+          "answer": "情景提问录音"
+        },
+        "inputDescriptions": {
+          "reference-answer": "参考答案"
+        },
+        "rubricMarkdown": "**考试要求**： 2个情景，各提2个问题\n\n**评分标准**：\n\n-   1分（共2题，共2分）\n    -   能对所给情景进行提问\n    -   内容恰当，问句结构正确\n\n-   0.5分\n    -   提问基本符合情景要求\n    -   语音结构有误\n\n-   0分\n    -   不能提问或不符要求\n\n\n**注意事项**：\n\n1.  至少一句特殊疑问句（可以先问特殊疑问句）\n2.  两个问题须针对不同的信息（可以问针对不同方面的两句特殊疑问句）"
+      }
+    },
+    {
+      "formatVersion": 2,
+      "schemaId": "20b03294-5fc7-4880-98f3-e69f5b85262e",
+      "sourceDraftId": "3ac19082-a975-4d20-b5c6-99ab03290db1",
+      "structureHash": "sha256:de759d3988be2ad2174b20af6b8bf4cacb2ac2235066b98db5fe5640ef218cf8",
+      "revision": 0,
+      "structure": {
+        "questionType": "freetalk",
+        "answerFormat": [
+          {
+            "answerId": "answer",
+            "type": "free-speech"
+          }
+        ],
+        "templateInputs": [
+          {
+            "inputId": "question-description",
+            "type": "text",
+            "required": true
+          },
+          {
+            "inputId": "reference-answer",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      "data": {
+        "name": "上海高考 - 看图说话",
+        "description": "根据四幅图片和给定开头句完成口头叙述。",
+        "maxScore": 1.5,
+        "answerDescriptions": {
+          "answer": "看图说话录音"
+        },
+        "inputDescriptions": {
+          "reference-answer": "参考答案"
+        },
+        "rubricMarkdown": "**考试要求**： 1分钟准备，1分钟回答。时间分配：5s→10s×4→15s\n\n**评分标准**：\n\n-   3分（共1题，共折合为1.5分）\n    -   能有条理地、完整地叙述一个主题，内容与图片相符\n    -   表达清楚，叙述连贯流畅\n    -   语言结构和用词符合交际要求\n    -   语音正确\n\n-   2.5分\n    -   能有条理地、完整地叙述一个主题，内容与图片相符\n    -   表达基本清楚，叙述基本连贯流畅，但有较少的表达错误\n    -   语言结构和用词基本符合交际要求\n    -   语音正确\n\n-   2分\n    -   能连贯地叙述一个主题，内容基本与图片相符\n    -   语言结构与用词有错误，但不影响整段意义的表达与理解\n    -   语音基本正确\n\n-   1.5分\n    -   能较连贯地叙述一个主题，内容基本与图片相符\n    -   语言结构与用词有错误，但基本不影响整段意义的表达与理解\n    -   语音基本正确\n\n-   1分\n    -   能讲述几句，但主题不清楚，内容不连贯\n    -   与图片关系不大，叙述中大多数语言结构混乱，用词不正确\n    -   语音错误严重，使人理解困难\n\n-   0.5分\n    -   只能讲述1句\n\n-   0分\n    -   没有答题或答题内容与图片内容无关   \n\n\n**注意事项**：\n\n1.  利用好所给的句子，纵观所有图片，形成一个总体框架，然后按顺序讲述\n2.  看清图片中的人物和背景，读懂图片，明确图片立意和内涵主题\n3.  描述过程中的时态和人称以 Guided sentence 提供的时态为主"
+      }
+    },
+    {
+      "formatVersion": 2,
+      "schemaId": "3305545e-8ea6-4c5d-931b-20ab4f8a7362",
+      "sourceDraftId": "304e2f2f-4afa-481c-9b98-55f47555039f",
+      "structureHash": "sha256:de759d3988be2ad2174b20af6b8bf4cacb2ac2235066b98db5fe5640ef218cf8",
+      "revision": 0,
+      "structure": {
+        "questionType": "freetalk",
+        "answerFormat": [
+          {
+            "answerId": "answer",
+            "type": "free-speech"
+          }
+        ],
+        "templateInputs": [
+          {
+            "inputId": "question-description",
+            "type": "text",
+            "required": true
+          },
+          {
+            "inputId": "reference-answer",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      "data": {
+        "name": "上海高考 - 快速应答",
+        "description": "听一句话后在五秒内作出合理应答。",
+        "maxScore": 0.5,
+        "answerDescriptions": {
+          "answer": "快速应答录音"
+        },
+        "inputDescriptions": {
+          "reference-answer": "参考答案"
+        },
+        "rubricMarkdown": "**考试要求**：共4句，每句5秒回答。\n\n**评分标准**：\n\n  - 0.5分（共4题，共2分）\n      - 能作出准确合理的应答\n      - 语音正确\n      - 语言结构和用词符合交际要求\n  - 0.25分\n      - 应答较为准确合理\n      - 语音基本正确\n      - 有个别语言结构或用词错误\n  - 0分\n      - 没有答题或应答不准确合理，不符合交际要求\n\n**注意事项**：\n\n1.  须准备不同的功能话题；\n2.  快速判断所给题目是一般疑问句/特殊疑问句/陈述句/祈使句，听到考题时注意疑问词和时态。"
+      }
+    },
+    {
+      "formatVersion": 2,
+      "schemaId": "a46b4930-9ed0-438e-8714-e6f5dd45428c",
+      "sourceDraftId": "4f64965e-a958-4c36-a86a-bb6d7fdb336d",
+      "structureHash": "sha256:de759d3988be2ad2174b20af6b8bf4cacb2ac2235066b98db5fe5640ef218cf8",
+      "revision": 0,
+      "structure": {
+        "questionType": "freetalk",
+        "answerFormat": [
+          {
+            "answerId": "answer",
+            "type": "free-speech"
+          }
+        ],
+        "templateInputs": [
+          {
+            "inputId": "question-description",
+            "type": "text",
+            "required": true
+          },
+          {
+            "inputId": "reference-answer",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      "data": {
+        "name": "上海高考 - 听短文回答事实题",
+        "description": "根据所听短文信息回答第一问。",
+        "maxScore": 1,
+        "answerDescriptions": {
+          "answer": "事实题回答录音"
+        },
+        "inputDescriptions": {
+          "reference-answer": "参考答案"
+        },
+        "rubricMarkdown": "**考试要求**：30秒准备，30秒回答（共1题，共1分）。\n\n**评分标准**：\n\n  - 1分\n      - 能针对问题作出清楚全面、正确合理的应答\n      - 语音正确\n      - 语言结构和用词符合交际要求\n  - 0.5分\n      - 能针对问题给出部分答案，不够完整合理\n      - 语音基本正确\n      - 有个别语言结构或用词错误\n  - 0分\n      - 没有答题或答题内容与问题无关"
+      }
+    },
+    {
+      "formatVersion": 2,
+      "schemaId": "5b673f50-b3a8-485c-96fc-3e06e33429d5",
+      "sourceDraftId": "53461417-7484-43f4-884c-97a2b4939e9b",
+      "structureHash": "sha256:de759d3988be2ad2174b20af6b8bf4cacb2ac2235066b98db5fe5640ef218cf8",
+      "revision": 0,
+      "structure": {
+        "questionType": "freetalk",
+        "answerFormat": [
+          {
+            "answerId": "answer",
+            "type": "free-speech"
+          }
+        ],
+        "templateInputs": [
+          {
+            "inputId": "question-description",
+            "type": "text",
+            "required": true
+          },
+          {
+            "inputId": "reference-answer",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      "data": {
+        "name": "上海高考 - 听短文回答观点题",
+        "description": "结合个人观点用至少三句话回答第二问。",
+        "maxScore": 1.5,
+        "answerDescriptions": {
+          "answer": "观点题回答录音"
+        },
+        "inputDescriptions": {
+          "reference-answer": "参考答案"
+        },
+        "rubricMarkdown": "**考试要求**：1分钟准备，1分钟回答（共1题，共1.5分）。\n\n**评分标准**：\n\n  - 1.5分\n      - 能连贯流畅地表达思想\n      - 内容切题\n      - 语言正确\n  - 1分\n      - 基本能连贯完整地表达思想\n      - 能针对题目谈话\n  - 0.5分\n      - 能讲述几句，但内容不连贯\n      - 与题目的关系不大\n      - 语言结构或用词错误严重，使人理解困难\n  - 0分\n      - 没有答题或内容与题目无关"
+      }
+    }
+  ]
+}

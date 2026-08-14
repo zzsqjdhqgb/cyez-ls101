@@ -46,6 +46,11 @@ export {
   type SchemaRepository,
   type SchemaStore
 } from './repository'
+export {
+  BuiltinSchemaInitializationError,
+  initializeBuiltinSchemas,
+  type BundledSchemaManifest
+} from './builtin-initializer'
 export type {
   GradingResult,
   SchemaAnswerDefinition,
