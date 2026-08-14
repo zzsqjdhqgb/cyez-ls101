@@ -25,6 +25,7 @@ export type {
   ReadonlyScopedStore,
   ScopedStore
 } from '../shared/types'
+export { assetUrlToKey } from '../shared/assetKey'
 
 export const fileStore: FileStore = {
   scope(name: string): ScopedStore {

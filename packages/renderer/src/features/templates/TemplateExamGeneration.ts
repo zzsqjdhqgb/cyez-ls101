@@ -9,6 +9,8 @@ import type { ExamPackage, TaskProgressHandle, TaskProgressItem } from '@ls101/c
 import { encodeExamPackage } from '@ls101/exam-package'
 import type { FileDialog } from '@ls101/file-dialog/renderer'
 import { fileDialog } from '@ls101/file-dialog/renderer'
+import type { FileStore } from '@ls101/file-store/renderer'
+import { assetUrlToKey, fileStore } from '@ls101/file-store/renderer'
 import type {
   GeneratedTimelineAudio,
   TemplateApplication,
@@ -62,7 +64,21 @@ interface CachedSpeech {
 
 const defaultDependencies: GenerateExamDependencies = {
   speechClient: airouterClient,
-  fetchResource: (input, signal) => fetch(input, { signal })
+  fetchResource: fetchExamResource
+}
+
+export async function fetchExamResource(
+  input: string,
+  signal: AbortSignal,
+  store: Pick<FileStore, 'readAsset'> = fileStore,
+  fetcher: typeof fetch = fetch
+): Promise<Response> {
+  if (!input.startsWith('asset:')) return fetcher(input, { signal })
+
+  throwIfAborted(signal)
+  const data = await store.readAsset(assetUrlToKey(input))
+  throwIfAborted(signal)
+  return data === null ? new Response(null, { status: 404 }) : new Response(data)
 }
 
 export async function listSpeechGenerationSelections(
