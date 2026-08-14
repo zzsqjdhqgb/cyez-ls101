@@ -429,6 +429,12 @@ test('creates, edits and reloads a persisted template', async () => {
   await nameInput.fill('集成测试模板')
   await page.getByRole('textbox', { name: '描述' }).fill('由 Electron 集成测试创建')
 
+  await expect(
+    page.getByRole('button', { name: '高中基础题型，版本 3', exact: true })
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: '高中大题组，版本 2', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '添加听短文回答题组' })).toBeVisible()
+
   const createLibrary = page.getByRole('button', { name: '新建本地函数库' })
   await expect(createLibrary).toBeEnabled()
   await createLibrary.click()

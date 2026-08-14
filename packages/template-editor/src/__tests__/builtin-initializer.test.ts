@@ -23,7 +23,8 @@ describe('内置函数库启动初始化', () => {
     expect(await repository.listBuiltinFunctionLibraryIds()).toEqual([
       'builtin:basic',
       'builtin:examples',
-      'builtin:shanghai-gaokao-basic'
+      'builtin:shanghai-gaokao-basic',
+      'builtin:shanghai-gaokao-groups'
     ])
     expect(await repository.getActiveBuiltinFunctionLibrary('builtin:basic')).toMatchObject({
       libraryId: 'builtin:basic',
@@ -141,6 +142,51 @@ describe('内置函数库启动初始化', () => {
         ]
       }
     })
+
+    const groups = await repository.getActiveBuiltinFunctionLibrary(
+      'builtin:shanghai-gaokao-groups'
+    )
+    expect(groups).toMatchObject({
+      libraryId: 'builtin:shanghai-gaokao-groups',
+      version: 2,
+      contentHash: 'sha256:fc55f34be16b5c39ac4f9b2d2ffac4a07fcbdf727ab50f4c3ab9994719d82f5b',
+      content: { name: '高中大题组' }
+    })
+    expect(
+      groups?.content.functions
+        .filter((entry) => entry.exposed !== false)
+        .map(({ functionId, content }) => ({ functionId, name: content.name }))
+    ).toEqual([
+      {
+        functionId: 'builtin:shanghai-gaokao-sentence-group',
+        name: '朗读句子题组'
+      },
+      {
+        functionId: 'builtin:shanghai-gaokao-passage-group',
+        name: '朗读短文题组'
+      },
+      {
+        functionId: 'builtin:shanghai-gaokao-situation-group',
+        name: '情景提问题组'
+      },
+      {
+        functionId: 'builtin:shanghai-gaokao-picture-group',
+        name: '看图说话题组'
+      },
+      {
+        functionId: 'builtin:shanghai-gaokao-quick-response-group',
+        name: '快速应答题组'
+      },
+      {
+        functionId: 'builtin:shanghai-gaokao-passage-response-group',
+        name: '听短文回答题组'
+      }
+    ])
+    const passageResponse = groups?.content.functions.find(
+      ({ functionId }) => functionId === 'builtin:shanghai-gaokao-passage-response-group'
+    )
+    expect(passageResponse?.content.inputs).toContainEqual({ name: 'topic', type: 'string' })
+    expect(JSON.stringify(passageResponse?.content.body)).not.toContain('{{LS_passage_topic}}')
   })
 
   it('清单中任一 release 无效时不写入前面的有效 release', async () => {

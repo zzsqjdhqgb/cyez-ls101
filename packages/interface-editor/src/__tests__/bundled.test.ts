@@ -38,11 +38,13 @@ describe('bundled Interface repository', () => {
     const entries = await repository.loadAll()
     const entry = entries.find(({ builtinKey }) => builtinKey === 'shanghai-gaokao-speaking')
     expect(entry?.currentInterface).toMatchObject({
-      id: 'sha256:27479dd551162324fd66ccb93d1762cc25fc87bf424ca08a86cb7a49c3502c1c',
+      id: 'sha256:20641a4a02ec151817fbd2dd20a82b6a127e87dae19c2bc01c003c2cb66f07d1',
       name: '上海高考英语口语'
     })
     if (!entry) throw new Error('expected Shanghai Gaokao speaking builtin')
     expect(entry.currentInterface.promptTemplate).toContain('100至150词')
+    expect(entry.currentInterface.promptTemplate).toContain('适合约1分钟陈述')
+    expect(entry.currentInterface.promptTemplate).not.toContain('适合约1.5分钟陈述')
     expect(entry.currentInterface.promptTemplate).toContain(
       '不要为学生生成评分、训练建议或作答反馈'
     )

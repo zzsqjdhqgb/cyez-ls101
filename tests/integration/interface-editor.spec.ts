@@ -52,7 +52,7 @@ interface SeededDraft {
 
 const BUILTIN_KEY = 'shanghai-gaokao-speaking'
 const BUNDLED_INTERFACE_ID =
-  'sha256:27479dd551162324fd66ccb93d1762cc25fc87bf424ca08a86cb7a49c3502c1c'
+  'sha256:20641a4a02ec151817fbd2dd20a82b6a127e87dae19c2bc01c003c2cb66f07d1'
 const BUNDLED_INTERFACE_PATH = path.join(
   process.cwd(),
   'resources/builtin/interface-editor/builtin/shanghai-gaokao-speaking/versions',
