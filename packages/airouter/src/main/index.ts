@@ -1,4 +1,5 @@
 import { app, ipcMain, type WebContents } from 'electron'
+import { join } from 'node:path'
 import { AIROUTER_CHANNELS } from '../shared'
 import type {
   AIRouterConnectionTestInput,
@@ -8,6 +9,8 @@ import type {
   AIRouterImageRequest,
   AIRouterProviderConfigInput,
   AIRouterSpeechConnectionTestInput,
+  AIRouterSpeechRecognitionEvent,
+  AIRouterSpeechRecognitionRequest,
   AIRouterSpeechProviderConfigInput,
   AIRouterSpeechSynthesisEvent,
   AIRouterSpeechSynthesisRequest,
@@ -18,11 +21,13 @@ import type {
 import { AIRouterService, type AIRouterServiceOptions } from './service'
 import { AIRouterImageService } from './image-service'
 import { AIRouterSpeechService } from './speech-service'
+import { AIRouterSpeechRecognitionService } from './speech-recognition-service'
 import { PocketTtsSynthesizer } from './pocket-tts'
 
 export { AIRouterService } from './service'
 export { AIRouterImageService } from './image-service'
 export { AIRouterSpeechService } from './speech-service'
+export { AIRouterSpeechRecognitionService } from './speech-recognition-service'
 export { AIRouterSpeechModelStore } from './speech-model-store'
 export { PocketTtsSynthesizer } from './pocket-tts'
 export type { AIRouterServiceOptions } from './service'
@@ -46,6 +51,9 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
     configStorage: options.configStorage,
     secretStorage: options.secretStorage,
     localSynthesizers: { 'pocket-tts': new PocketTtsSynthesizer() }
+  })
+  const recognitionService = new AIRouterSpeechRecognitionService({
+    assetsDir: resolveRecognitionAssetsDir()
   })
   const active = new Map<string, ActiveGeneration>()
 
@@ -119,6 +127,7 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
     AIROUTER_CHANNELS.testSpeechConnection,
     (_event, request: AIRouterSpeechConnectionTestInput) => speechService.testConnection(request)
   )
+  ipcMain.handle(AIROUTER_CHANNELS.listRecognitionModels, () => recognitionService.listModels())
   ipcMain.on(
     AIROUTER_CHANNELS.generateStart,
     (event, requestId: string, request: AIRouterTextRequest) => {
@@ -174,6 +183,45 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
   ipcMain.on(AIROUTER_CHANNELS.speechSynthesisAbort, (event, requestId: string) => {
     active.get(`${event.sender.id}:${requestId}`)?.controller.abort()
   })
+  ipcMain.on(
+    AIROUTER_CHANNELS.speechRecognitionStart,
+    (event, requestId: string, request: AIRouterSpeechRecognitionRequest) => {
+      const key = `${event.sender.id}:${requestId}`
+      active.get(key)?.controller.abort()
+      const controller = new AbortController()
+      active.set(key, { sender: event.sender, controller })
+      void recognitionToRenderer(
+        recognitionService,
+        event.sender,
+        requestId,
+        request,
+        controller.signal
+      ).finally(() => active.delete(key))
+    }
+  )
+  ipcMain.on(AIROUTER_CHANNELS.speechRecognitionAbort, (event, requestId: string) => {
+    active.get(`${event.sender.id}:${requestId}`)?.controller.abort()
+  })
+}
+
+async function recognitionToRenderer(
+  service: AIRouterSpeechRecognitionService,
+  sender: WebContents,
+  requestId: string,
+  request: AIRouterSpeechRecognitionRequest,
+  signal: AbortSignal
+): Promise<void> {
+  const send = (event: AIRouterSpeechRecognitionEvent): void => {
+    if (!sender.isDestroyed()) {
+      sender.send(AIROUTER_CHANNELS.speechRecognitionEvent, requestId, event)
+    }
+  }
+  try {
+    const result = await service.recognize(request, { signal })
+    if (!signal.aborted) send({ type: 'result', result })
+  } catch (error) {
+    if (!signal.aborted) send({ type: 'error', message: errorMessage(error) })
+  }
 }
 
 async function imageToRenderer(
@@ -265,4 +313,10 @@ function summarizeSpeechRequest(request: AIRouterSpeechSynthesisRequest): string
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'AI 引擎请求失败'
+}
+
+function resolveRecognitionAssetsDir(): string {
+  const electronApp = app as typeof app & { isPackaged?: boolean; getAppPath?: () => string }
+  if (electronApp.isPackaged) return join(process.resourcesPath, 'assets', 'stt')
+  return join(electronApp.getAppPath?.() ?? process.cwd(), 'model-assets', 'stt')
 }

@@ -13,6 +13,7 @@
     { "path": "./packages/exam-package" },
     { "path": "./packages/exam-library" },
     { "path": "./packages/submission-library" },
+    { "path": "./packages/grading-engine" },
     { "path": "./packages/page-renderer" },
     { "path": "./packages/template-editor" },
     { "path": "./packages/interface-editor" },

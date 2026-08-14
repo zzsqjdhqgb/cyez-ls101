@@ -14,7 +14,8 @@ export default defineConfig({
         external: ['sherpa-onnx-node', 'ffmpeg-static'],
         input: {
           index: resolve('src/main/index.ts'),
-          'pocket-tts-worker': resolve('packages/airouter/src/main/pocket-tts-worker.ts')
+          'pocket-tts-worker': resolve('packages/airouter/src/main/pocket-tts-worker.ts'),
+          'qwen3-asr-worker': resolve('packages/airouter/src/main/qwen3-asr-worker.ts')
         }
       }
     }

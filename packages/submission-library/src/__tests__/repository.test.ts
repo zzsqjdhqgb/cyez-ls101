@@ -192,6 +192,53 @@ describe('FileSubmissionLibraryRepository', () => {
     await expect(engine.grade(input)).resolves.toEqual({ score: 3.75, comment: '' })
   })
 
+  it('持久化 AI 转写、纠错、原始响应和审查状态', async () => {
+    const repository = new FileSubmissionLibraryRepository(new MemoryStore())
+    const source = mixedSubmission()
+    await repository.importArchive(await encodeSubmissionPackage(source, mixedSubmissionFiles()))
+    await repository.startGrading(source.meta.submissionId)
+
+    const saved = await repository.saveAIGradingRun(
+      source.meta.submissionId,
+      'schema-use:reading',
+      {
+        status: 'succeeded',
+        speechRecognitionModel: { providerId: 'builtin-qwen3-asr', modelId: 'qwen3-asr-0.6b' },
+        textModel: { providerId: 'provider', modelId: 'model' },
+        answers: [
+          {
+            answerId: 'reading',
+            description: 'Reading',
+            transcript: 'read this sentence',
+            correction: '语音标准无错误',
+            referenceText: 'Read this sentence.'
+          }
+        ],
+        prompt: 'grading prompt',
+        rawResponse: '{"score":4.125,"comment":"Good"}',
+        result: { score: 4.125, comment: 'Good' },
+        review: {
+          mode: 'sample',
+          selected: true,
+          reviewed: true,
+          finalResult: { score: 4, comment: 'Reviewed' }
+        }
+      }
+    )
+
+    expect(saved.grading.aiRuns).toEqual([
+      expect.objectContaining({
+        instanceId: 'schema-use:reading',
+        status: 'succeeded',
+        rawResponse: '{"score":4.125,"comment":"Good"}',
+        review: expect.objectContaining({ reviewed: true })
+      })
+    ])
+    expect((await repository.getGradingRecord(source.meta.submissionId))?.aiRuns).toEqual(
+      saved.grading.aiRuns
+    )
+  })
+
   it('自动批改客观题、锁定已提交结果并在结算后生成报告', async () => {
     const store = new MemoryStore()
     const repository = new FileSubmissionLibraryRepository(store)

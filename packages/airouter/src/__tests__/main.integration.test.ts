@@ -10,33 +10,38 @@ import { AIROUTER_CHANNELS } from '../shared'
 type IpcHandler = (_event: unknown, ...args: unknown[]) => unknown
 type IpcListener = (...args: unknown[]) => void
 
-const { electronMocks, generateImageMock, speechSynthesizeMock, streamTextMock } = vi.hoisted(
-  () => {
-    const handlers = new Map<string, IpcHandler>()
-    const listeners = new Map<string, IpcListener>()
-    return {
-      electronMocks: {
-        handlers,
-        listeners,
-        handle: vi.fn((channel: string, handler: IpcHandler) => {
-          handlers.set(channel, handler)
-        }),
-        on: vi.fn((channel: string, listener: IpcListener) => {
-          listeners.set(channel, listener)
-        }),
-        safeStorage: {
-          isEncryptionAvailable: vi.fn(() => true),
-          encryptString: vi.fn((value: string) => new TextEncoder().encode(value)),
-          decryptString: vi.fn((value: Uint8Array) => new TextDecoder().decode(value))
-        },
-        app: { getVersion: vi.fn(() => '0.3.1') }
+const {
+  electronMocks,
+  generateImageMock,
+  recognizeSpeechMock,
+  speechSynthesizeMock,
+  streamTextMock
+} = vi.hoisted(() => {
+  const handlers = new Map<string, IpcHandler>()
+  const listeners = new Map<string, IpcListener>()
+  return {
+    electronMocks: {
+      handlers,
+      listeners,
+      handle: vi.fn((channel: string, handler: IpcHandler) => {
+        handlers.set(channel, handler)
+      }),
+      on: vi.fn((channel: string, listener: IpcListener) => {
+        listeners.set(channel, listener)
+      }),
+      safeStorage: {
+        isEncryptionAvailable: vi.fn(() => true),
+        encryptString: vi.fn((value: string) => new TextEncoder().encode(value)),
+        decryptString: vi.fn((value: Uint8Array) => new TextDecoder().decode(value))
       },
-      generateImageMock: vi.fn(),
-      speechSynthesizeMock: vi.fn(),
-      streamTextMock: vi.fn()
-    }
+      app: { getVersion: vi.fn(() => '0.3.1') }
+    },
+    generateImageMock: vi.fn(),
+    recognizeSpeechMock: vi.fn(),
+    speechSynthesizeMock: vi.fn(),
+    streamTextMock: vi.fn()
   }
-)
+})
 
 vi.mock('electron', () => ({
   app: electronMocks.app,
@@ -55,6 +60,23 @@ vi.mock('../main/pocket-tts', () => ({
   }
 }))
 
+vi.mock('../main/speech-recognition-service', () => ({
+  AIRouterSpeechRecognitionService: class {
+    listModels() {
+      return [
+        {
+          providerId: 'builtin-qwen3-asr',
+          providerName: '内置语音识别',
+          modelId: 'qwen3-asr-0.6b',
+          modelName: 'Qwen3 ASR 0.6B'
+        }
+      ]
+    }
+
+    recognize = recognizeSpeechMock
+  }
+}))
+
 describe('AIRouter main integration', () => {
   let baseDir: string
 
@@ -65,6 +87,7 @@ describe('AIRouter main integration', () => {
     electronMocks.handle.mockClear()
     electronMocks.on.mockClear()
     generateImageMock.mockReset()
+    recognizeSpeechMock.mockReset()
     speechSynthesizeMock.mockReset()
     streamTextMock.mockReset()
     baseDir = await mkdtemp(path.join(tmpdir(), 'airouter-main-'))
@@ -278,6 +301,37 @@ describe('AIRouter main integration', () => {
         format: 'wav'
       })
     )
+  })
+
+  it('lists Qwen3 ASR and forwards recognition through the IPC event channel', async () => {
+    const { registerAIRouter } = await import('../main')
+    registerAIRouter({ baseDir, secretStorage: createSecrets(baseDir) })
+    recognizeSpeechMock.mockResolvedValue({ text: 'recognized answer' })
+
+    expect(handler(AIROUTER_CHANNELS.listRecognitionModels)(undefined)).toEqual([
+      expect.objectContaining({
+        providerId: 'builtin-qwen3-asr',
+        modelId: 'qwen3-asr-0.6b'
+      })
+    ])
+
+    const sender = createSender()
+    const requestId = 'recognition-request'
+    const request = {
+      providerConfigId: 'builtin-qwen3-asr',
+      modelId: 'qwen3-asr-0.6b',
+      audio: { data: new Uint8Array([1, 2, 3]), mediaType: 'audio/wav' }
+    }
+    listener(AIROUTER_CHANNELS.speechRecognitionStart)({ sender }, requestId, request)
+    await waitForSentEvents(sender, 1)
+
+    expect(sender.send).toHaveBeenCalledWith(AIROUTER_CHANNELS.speechRecognitionEvent, requestId, {
+      type: 'result',
+      result: { text: 'recognized answer' }
+    })
+    expect(recognizeSpeechMock).toHaveBeenCalledWith(request, {
+      signal: expect.any(AbortSignal)
+    })
   })
 })
 

@@ -9,6 +9,31 @@ export type AIRouterSpeechProviderKind = 'online' | 'local'
 export type AIRouterSpeechRole = 'default' | 'man' | 'woman'
 export type AIRouterSpeechAudioFormat = 'wav' | 'mp3' | 'opus' | 'pcm-s16le'
 
+export interface AIRouterSpeechRecognitionModelOption {
+  providerId: string
+  providerName: string
+  modelId: string
+  modelName: string
+}
+
+export interface AIRouterSpeechRecognitionRequest {
+  providerConfigId: string
+  modelId: string
+  audio: {
+    data: Uint8Array
+    mediaType: string
+    filename?: string
+  }
+}
+
+export interface AIRouterSpeechRecognitionResult {
+  text: string
+}
+
+export type AIRouterSpeechRecognitionEvent =
+  | { type: 'result'; result: AIRouterSpeechRecognitionResult }
+  | { type: 'error'; message: string }
+
 export type AIRouterReasoningEffort =
   | 'none'
   | 'minimal'
@@ -341,6 +366,11 @@ export interface AIRouterClient {
   testSpeechConnection(
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult>
+  listSpeechRecognitionModels(): Promise<AIRouterSpeechRecognitionModelOption[]>
+  recognizeSpeech(
+    request: AIRouterSpeechRecognitionRequest,
+    options?: { signal?: AbortSignal }
+  ): Promise<AIRouterSpeechRecognitionResult>
   synthesizeSpeech(
     request: AIRouterSpeechSynthesisRequest,
     options?: { signal?: AbortSignal }
@@ -386,6 +416,11 @@ export interface AIRouterBridge {
   testSpeechConnection(
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult>
+  listSpeechRecognitionModels(): Promise<AIRouterSpeechRecognitionModelOption[]>
+  startSpeechRecognition(
+    request: AIRouterSpeechRecognitionRequest,
+    listener: (event: AIRouterSpeechRecognitionEvent) => void
+  ): () => void
   startSpeechSynthesis(
     request: AIRouterSpeechSynthesisRequest,
     listener: (event: AIRouterSpeechSynthesisEvent) => void

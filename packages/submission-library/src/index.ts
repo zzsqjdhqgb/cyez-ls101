@@ -90,11 +90,46 @@ export interface SubmissionGradingItem {
   gradedAt: string
 }
 
+export interface SubmissionAIModelSelection {
+  providerId: string
+  modelId: string
+}
+
+export interface SubmissionAIProcessedAnswer {
+  answerId: string
+  description: string
+  transcript: string
+  correction: string
+  referenceText?: string
+}
+
+export interface SubmissionAIGradingRun {
+  instanceId: string
+  status: 'processing' | 'succeeded' | 'failed'
+  speechRecognitionModel: SubmissionAIModelSelection
+  textModel: SubmissionAIModelSelection
+  answers: SubmissionAIProcessedAnswer[]
+  prompt?: string
+  rawResponse?: string
+  result?: GradingResult
+  error?: string
+  review?: {
+    mode: 'none' | 'all' | 'sample'
+    selected: boolean
+    reviewed: boolean
+    finalResult?: GradingResult
+  }
+  updatedAt: string
+}
+
+export type SubmissionAIGradingRunInput = Omit<SubmissionAIGradingRun, 'instanceId' | 'updatedAt'>
+
 export interface SubmissionGradingRecord {
   formatVersion: 1
   submissionId: string
   status: 'grading' | 'ready'
   items: SubmissionGradingItem[]
+  aiRuns: SubmissionAIGradingRun[]
   totalScore: number
   maxScore: number
   readyAt?: string
@@ -178,6 +213,11 @@ export interface SubmissionLibraryRepository {
     instanceId: string,
     engine: 'human' | 'ai',
     result: GradingResult
+  ): Promise<SubmissionGradingWorkspace>
+  saveAIGradingRun(
+    submissionId: string,
+    instanceId: string,
+    run: SubmissionAIGradingRunInput
   ): Promise<SubmissionGradingWorkspace>
   getGradingRecord(submissionId: string): Promise<SubmissionGradingRecord | null>
   getReport(submissionId: string): Promise<SubmissionReport>
@@ -508,7 +548,41 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
         ...existing.items,
         { instanceId, engine, result: structuredClone(result), gradedAt: now }
       ]
-      const next = gradingRecord(archive.submission, items, now)
+      const next = gradingRecord(archive.submission, items, now, existing.aiRuns)
+      await this.writeGrading(scope, archive.submission, existing, next)
+      return buildWorkspace(archive, next)
+    })
+  }
+
+  async saveAIGradingRun(
+    submissionId: string,
+    instanceId: string,
+    run: SubmissionAIGradingRunInput
+  ): Promise<SubmissionGradingWorkspace> {
+    const key = await submissionStorageKey(submissionId)
+    return this.runMutation(key, async () => {
+      const scope = this.submissions.scope(key)
+      const archive = await this.readArchive(scope, submissionId)
+      const existing = await this.readGrading(scope, archive.submission)
+      if (!existing) throw invalidStorage(`Missing grading session: ${submissionId}`)
+      const use = archive.submission.schemaUses.find((item) => item.instanceId === instanceId)
+      if (!use) {
+        throw new SubmissionLibraryError('NOT_FOUND', `Grading item not found: ${instanceId}`)
+      }
+      if (use.schema.structure.questionType === 'objective') {
+        throw new SubmissionLibraryError(
+          'INVALID_GRADING_RESULT',
+          'Objective items cannot have AI grading runs'
+        )
+      }
+      const nextRun: SubmissionAIGradingRun = {
+        instanceId,
+        ...structuredClone(run),
+        updatedAt: new Date().toISOString()
+      }
+      assertAIGradingRun(nextRun, use.schema.data.maxScore)
+      const aiRuns = [...existing.aiRuns.filter((item) => item.instanceId !== instanceId), nextRun]
+      const next = { ...existing, aiRuns }
       await this.writeGrading(scope, archive.submission, existing, next)
       return buildWorkspace(archive, next)
     })
@@ -833,13 +907,14 @@ async function applyObjectiveGrades(
       gradedAt: new Date().toISOString()
     })
   }
-  return gradingRecord(archive.submission, items, new Date().toISOString())
+  return gradingRecord(archive.submission, items, new Date().toISOString(), existing?.aiRuns ?? [])
 }
 
 function gradingRecord(
   submission: SubmissionPackage,
   items: SubmissionGradingItem[],
-  readyAt: string
+  readyAt: string,
+  aiRuns: SubmissionAIGradingRun[] = []
 ): SubmissionGradingRecord {
   const expectedIds = new Set(submission.schemaUses.map((use) => use.instanceId))
   const uniqueIds = new Set(items.map((item) => item.instanceId))
@@ -852,6 +927,7 @@ function gradingRecord(
     submissionId: submission.meta.submissionId,
     status: complete ? 'ready' : 'grading',
     items: structuredClone(items),
+    aiRuns: structuredClone(aiRuns),
     totalScore: items.reduce((total, item) => total + item.result.score, 0),
     maxScore: submission.schemaUses.reduce((total, use) => total + use.schema.data.maxScore, 0),
     ...(complete ? { readyAt } : {})
@@ -939,12 +1015,15 @@ function normalizeGradingRecord(
     (value.status !== 'grading' && value.status !== 'ready') ||
     !Array.isArray(value.items) ||
     !value.items.every(isSubmissionGradingItem) ||
+    !Array.isArray(value.aiRuns) ||
+    !value.aiRuns.every(isSubmissionAIGradingRun) ||
     (value.readyAt !== undefined && !isoDate(value.readyAt))
   ) {
     throw invalidStorage(`Invalid grading record: ${submission.meta.submissionId}`)
   }
 
   const items = structuredClone(value.items) as SubmissionGradingItem[]
+  const aiRuns = structuredClone(value.aiRuns) as SubmissionAIGradingRun[]
   const usesById = new Map(submission.schemaUses.map((use) => [use.instanceId, use]))
   const ids = new Set<string>()
   for (const item of items) {
@@ -967,6 +1046,20 @@ function normalizeGradingRecord(
     }
   }
 
+  const aiRunIds = new Set<string>()
+  for (const run of aiRuns) {
+    const use = usesById.get(run.instanceId)
+    if (
+      !use ||
+      use.schema.structure.questionType === 'objective' ||
+      aiRunIds.has(run.instanceId) ||
+      (run.result !== undefined && run.result.score > use.schema.data.maxScore)
+    ) {
+      throw invalidStorage(`Invalid AI grading run: ${run.instanceId}`)
+    }
+    aiRunIds.add(run.instanceId)
+  }
+
   const readyAt =
     typeof value.readyAt === 'string'
       ? value.readyAt
@@ -975,7 +1068,7 @@ function normalizeGradingRecord(
             Date.parse(item.gradedAt) > Date.parse(latest) ? item.gradedAt : latest,
           submission.meta.submittedAt
         )
-  return gradingRecord(submission, items, readyAt)
+  return gradingRecord(submission, items, readyAt, aiRuns)
 }
 
 function settlementLookup(
@@ -1054,6 +1147,77 @@ function isSubmissionGradingItem(value: unknown): value is SubmissionGradingItem
     typeof value.result.comment === 'string' &&
     isoDate(value.gradedAt)
   )
+}
+
+function isSubmissionAIGradingRun(value: unknown): value is SubmissionAIGradingRun {
+  if (
+    !isRecord(value) ||
+    !nonEmptyString(value.instanceId) ||
+    (value.status !== 'processing' && value.status !== 'succeeded' && value.status !== 'failed') ||
+    !isAIModelSelection(value.speechRecognitionModel) ||
+    !isAIModelSelection(value.textModel) ||
+    !Array.isArray(value.answers) ||
+    !value.answers.every(isAIProcessedAnswer) ||
+    (value.prompt !== undefined && typeof value.prompt !== 'string') ||
+    (value.rawResponse !== undefined && typeof value.rawResponse !== 'string') ||
+    (value.result !== undefined && !isGradingResult(value.result)) ||
+    (value.error !== undefined && typeof value.error !== 'string') ||
+    (value.review !== undefined && !isAIReview(value.review)) ||
+    !isoDate(value.updatedAt)
+  ) {
+    return false
+  }
+  if (value.status === 'succeeded') {
+    return (
+      value.result !== undefined && value.rawResponse !== undefined && value.error === undefined
+    )
+  }
+  if (value.status === 'failed') return nonEmptyString(value.error)
+  return value.result === undefined && value.error === undefined
+}
+
+function isAIReview(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    (value.mode === 'none' || value.mode === 'all' || value.mode === 'sample') &&
+    typeof value.selected === 'boolean' &&
+    typeof value.reviewed === 'boolean' &&
+    (value.finalResult === undefined || isGradingResult(value.finalResult)) &&
+    (!value.reviewed || (value.selected && value.finalResult !== undefined))
+  )
+}
+
+function isAIModelSelection(value: unknown): value is SubmissionAIModelSelection {
+  return isRecord(value) && nonEmptyString(value.providerId) && nonEmptyString(value.modelId)
+}
+
+function isAIProcessedAnswer(value: unknown): value is SubmissionAIProcessedAnswer {
+  return (
+    isRecord(value) &&
+    nonEmptyString(value.answerId) &&
+    typeof value.description === 'string' &&
+    typeof value.transcript === 'string' &&
+    typeof value.correction === 'string' &&
+    (value.referenceText === undefined || typeof value.referenceText === 'string')
+  )
+}
+
+function isGradingResult(value: unknown): value is GradingResult {
+  return (
+    isRecord(value) &&
+    typeof value.score === 'number' &&
+    Number.isFinite(value.score) &&
+    value.score >= 0 &&
+    typeof value.comment === 'string'
+  )
+}
+
+function assertAIGradingRun(run: SubmissionAIGradingRun, maxScore: number): void {
+  if (!isSubmissionAIGradingRun(run) || (run.result && run.result.score > maxScore)) {
+    throw new SubmissionLibraryError('INVALID_GRADING_RESULT', 'AI grading run is invalid', {
+      maxScore
+    })
+  }
 }
 
 function objectiveResult(submission: SubmissionPackage, use: SubmissionSchemaUse): GradingResult {
