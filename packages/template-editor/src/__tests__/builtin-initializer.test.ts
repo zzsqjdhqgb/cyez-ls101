@@ -22,7 +22,8 @@ describe('内置函数库启动初始化', () => {
 
     expect(await repository.listBuiltinFunctionLibraryIds()).toEqual([
       'builtin:basic',
-      'builtin:examples'
+      'builtin:examples',
+      'builtin:shanghai-gaokao-basic'
     ])
     expect(await repository.getActiveBuiltinFunctionLibrary('builtin:basic')).toMatchObject({
       libraryId: 'builtin:basic',
@@ -82,6 +83,42 @@ describe('内置函数库启动初始化', () => {
                 ]
               }
             }
+          }
+        ]
+      }
+    })
+    expect(
+      await repository.getActiveBuiltinFunctionLibrary('builtin:shanghai-gaokao-basic')
+    ).toMatchObject({
+      libraryId: 'builtin:shanghai-gaokao-basic',
+      version: 1,
+      content: {
+        name: '高中基础题型',
+        functions: [
+          { functionId: 'builtin:shanghai-gaokao-directions', content: { name: 'Directions页面' } },
+          {
+            functionId: 'builtin:shanghai-gaokao-reading-sentence',
+            content: { name: '朗读句子' }
+          },
+          {
+            functionId: 'builtin:shanghai-gaokao-reading-passage',
+            content: { name: '朗读短文' }
+          },
+          {
+            functionId: 'builtin:shanghai-gaokao-situation-question',
+            content: { name: '情景提问' }
+          },
+          {
+            functionId: 'builtin:shanghai-gaokao-picture-speaking',
+            content: { name: '看图说话' }
+          },
+          {
+            functionId: 'builtin:shanghai-gaokao-quick-response',
+            content: { name: '快速应答' }
+          },
+          {
+            functionId: 'builtin:shanghai-gaokao-passage-response',
+            content: { name: '听短文回答' }
           }
         ]
       }
