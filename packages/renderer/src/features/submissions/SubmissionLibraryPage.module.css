@@ -1,7 +1,46 @@
+.tabs {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tabs button {
+  display: flex;
+  height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-muted);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.tabs button[aria-selected='true'] {
+  border-bottom-color: var(--color-accent);
+  color: var(--color-text-strong);
+}
+
+.tabs span {
+  min-width: 20px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  color: var(--color-text-faint);
+  background: var(--color-surface-subtle);
+  font-size: 10px;
+  text-align: center;
+}
+
 .notice {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
+  margin-bottom: 16px;
   padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--color-danger) 24%, var(--color-border));
   border-radius: var(--radius-sm);
@@ -26,123 +65,121 @@
   font-size: 13px;
 }
 
-.sections {
-  display: grid;
-  gap: var(--space-10);
-}
-
-.section {
-  min-width: 0;
-}
-
-.sectionHeader {
+.selectionBar {
   display: flex;
-  height: 38px;
+  min-height: 46px;
   align-items: center;
-  gap: var(--space-2);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.sectionHeader h2 {
-  margin: 0;
-  color: var(--color-text-strong);
-  font-size: 14px;
-  font-weight: 680;
-}
-
-.sectionHeader span {
-  display: grid;
-  min-width: 22px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 10px;
-  place-items: center;
-  color: var(--color-text-muted);
+  gap: 14px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-bottom: 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   background: var(--color-surface-subtle);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+  font-size: 12px;
 }
 
-.sectionEmpty {
-  display: grid;
-  min-height: 92px;
-  border-bottom: 1px solid var(--color-border);
-  place-items: center;
-  color: var(--color-text-faint);
-  font-size: 12px;
+.selectionBar label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-text-strong);
+  cursor: pointer;
+}
+
+.selectionBar button {
+  margin-left: auto;
 }
 
 .tableFrame {
   width: 100%;
   overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
 }
 
-.table {
+.table,
+.batchTable {
   width: 100%;
-  min-width: 900px;
+  min-width: 960px;
   border-collapse: collapse;
   table-layout: fixed;
 }
 
-.table th {
-  height: 40px;
+.table th,
+.batchTable th {
+  height: 38px;
   padding: 0 12px;
   color: var(--color-text-faint);
+  background: var(--color-surface);
   font-size: 11px;
   font-weight: 650;
   text-align: left;
 }
 
-.table th:nth-child(1) {
-  width: 18%;
+.table th:first-child {
+  width: 42px;
 }
 
 .table th:nth-child(2) {
-  width: 25%;
+  width: 16%;
 }
 
 .table th:nth-child(3) {
-  width: 19%;
+  width: 20%;
 }
 
 .table th:nth-child(4) {
-  width: 10%;
+  width: 17%;
+}
+
+.table th:nth-child(5) {
+  width: 15%;
 }
 
 .table th:last-child {
-  width: 230px;
+  width: 250px;
 }
 
-.table td {
-  height: 70px;
-  padding: 10px 12px;
+.table td,
+.batchTable td {
+  height: 66px;
+  padding: 9px 12px;
   overflow: hidden;
   border-top: 1px solid var(--color-border);
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .table td strong,
-.table td span {
+.table td span,
+.batchTable td strong,
+.batchTable td span {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.table td strong {
-  margin-bottom: 4px;
+.table td strong,
+.batchTable td strong {
+  margin-bottom: 3px;
   color: var(--color-text-strong);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 650;
 }
 
-.table td span {
+.table td span,
+.batchTable td span {
   color: var(--color-text-faint);
-  font-size: 11px;
+  font-size: 10px;
+}
+
+.table td .ready {
+  color: var(--color-success);
 }
 
 .actions {
@@ -150,6 +187,97 @@
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-1);
+}
+
+.batchList {
+  display: grid;
+  gap: 10px;
+}
+
+.batch {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.batch[data-expanded] {
+  border-color: var(--color-border-strong);
+}
+
+.batchHeader {
+  display: grid;
+  width: 100%;
+  min-height: 64px;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border: 0;
+  color: var(--color-text-strong);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.batchHeader:hover {
+  background: var(--color-surface-subtle);
+}
+
+.batchHeader > svg {
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-faint);
+}
+
+.batchHeader span,
+.batchHeader strong,
+.batchHeader small {
+  display: block;
+  min-width: 0;
+}
+
+.batchHeader strong {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.batchHeader small,
+.batchHeader code {
+  color: var(--color-text-faint);
+  font-size: 10px;
+}
+
+.batchHeader code {
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--color-surface-subtle);
+}
+
+.batchBody {
+  overflow-x: auto;
+  border-top: 1px solid var(--color-border);
+}
+
+.batchTable th:first-child {
+  width: 17%;
+}
+
+.batchTable th:nth-child(2) {
+  width: 22%;
+}
+
+.batchTable th:nth-child(3) {
+  width: 10%;
+}
+
+.batchTable th:nth-child(4) {
+  width: 17%;
+}
+
+.batchTable th:last-child {
+  width: 280px;
 }
 
 .reportBackdrop {
@@ -218,9 +346,9 @@
 }
 
 @media (max-width: 720px) {
-  .tableFrame {
-    margin-right: -14px;
-    padding-right: 14px;
+  .selectionBar {
+    flex-wrap: wrap;
+    padding-block: 8px;
   }
 
   .reportBackdrop {

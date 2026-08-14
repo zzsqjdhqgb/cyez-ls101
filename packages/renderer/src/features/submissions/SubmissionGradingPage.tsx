@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type JSX } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import {
   createHumanGradingEngine,
   type GradingInput,
@@ -6,9 +6,8 @@ import {
   type SubmissionGradingWorkspace
 } from '@ls101/submission-library'
 import { ArrowLeft, Check, CircleAlert, LockKeyhole } from 'lucide-react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
-import { toast } from '../../components/ui/toast'
 import { useSubmissionLibrary } from './SubmissionLibraryContext'
 import { SubmissionMarkdown } from './SubmissionMarkdown'
 import { submissionErrorMessage } from './submissionUi'
@@ -17,35 +16,60 @@ import styles from './SubmissionGradingPage.module.css'
 const QUESTION_DESCRIPTION_INPUT_ID = 'question-description'
 
 export function SubmissionGradingPage(): JSX.Element {
-  const { submissionId = '' } = useParams()
+  const { submissionId: legacySubmissionId = '' } = useParams()
+  const [searchParams] = useSearchParams()
   const repository = useSubmissionLibrary()
   const navigate = useNavigate()
+  const submissionIds = useMemo(() => {
+    const queued = searchParams.getAll('submissionId').filter((value) => value.trim() !== '')
+    return queued.length > 0 ? [...new Set(queued)] : legacySubmissionId ? [legacySubmissionId] : []
+  }, [legacySubmissionId, searchParams])
+  const [submissionIndex, setSubmissionIndex] = useState(0)
+  const submissionId = submissionIds[submissionIndex] ?? ''
   const [workspace, setWorkspace] = useState<SubmissionGradingWorkspace | null>(null)
   const [score, setScore] = useState('')
   const [comment, setComment] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
+  const finishOrAdvance = useCallback((): void => {
+    setWorkspace(null)
+    setError(null)
+    setScore('')
+    setComment('')
+    if (submissionIndex + 1 < submissionIds.length) {
+      setSubmissionIndex((current) => current + 1)
+      return
+    }
+    navigate(settlementUrl(submissionIds))
+  }, [navigate, submissionIds, submissionIndex])
+
   useEffect(() => {
     let active = true
-    void repository
-      .startGrading(submissionId)
-      .then((next) => {
-        if (!active) return
-        if (next.grading.status === 'completed') {
-          toast.success('该作答已完成批改')
-          navigate('/submissions')
-          return
-        }
-        setWorkspace(next)
-      })
-      .catch((reason: unknown) => {
-        if (active) setError(submissionErrorMessage(reason))
-      })
+    const timeout = window.setTimeout(() => {
+      if (!submissionId) {
+        setError('未指定需要评分的作答记录。')
+        return
+      }
+      void repository
+        .startGrading(submissionId)
+        .then((next) => {
+          if (!active) return
+          if (next.grading.status === 'ready') {
+            finishOrAdvance()
+            return
+          }
+          setWorkspace(next)
+        })
+        .catch((reason: unknown) => {
+          if (active) setError(submissionErrorMessage(reason))
+        })
+    }, 0)
     return () => {
       active = false
+      window.clearTimeout(timeout)
     }
-  }, [navigate, repository, submissionId])
+  }, [finishOrAdvance, repository, submissionId])
 
   const current = useMemo(() => {
     if (!workspace) return null
@@ -75,9 +99,8 @@ export function SubmissionGradingPage(): JSX.Element {
         'human',
         result
       )
-      if (next.grading.status === 'completed') {
-        toast.success(`批改完成，总分 ${next.grading.totalScore}/${next.grading.maxScore}`)
-        navigate('/submissions')
+      if (next.grading.status === 'ready') {
+        finishOrAdvance()
         return
       }
       setWorkspace(next)
@@ -96,7 +119,7 @@ export function SubmissionGradingPage(): JSX.Element {
         <CircleAlert aria-hidden="true" />
         <p>{error}</p>
         <Button icon={ArrowLeft} onClick={() => navigate('/submissions')}>
-          返回收卷
+          返回作答记录
         </Button>
       </div>
     )
@@ -116,17 +139,22 @@ export function SubmissionGradingPage(): JSX.Element {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <Button icon={ArrowLeft} variant="ghost" onClick={() => navigate('/submissions')}>
+        <Button
+          icon={ArrowLeft}
+          variant="ghost"
+          onClick={() => navigate('/submissions?view=unsettled')}
+        >
           暂停并返回
         </Button>
         <div className={styles.identity}>
           <strong>{workspace.submission.meta.candidate.displayName}</strong>
           <span>
-            {workspace.submission.meta.candidate.candidateId} ·{' '}
+            {displayCandidateId(workspace.submission.meta.candidate.candidateId)} ·{' '}
             {workspace.submission.meta.examTitle}
           </span>
         </div>
         <div className={styles.progress}>
+          第 {submissionIndex + 1}/{submissionIds.length} 份 · 评分单元{' '}
           {workspace.grading.items.length + 1}/{workspace.inputs.length}
         </div>
       </header>
@@ -297,4 +325,14 @@ function formatDuration(durationMs: number): string {
   return seconds >= 60
     ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
     : `${seconds} 秒`
+}
+
+function settlementUrl(submissionIds: readonly string[]): string {
+  const params = new URLSearchParams()
+  submissionIds.forEach((submissionId) => params.append('submissionId', submissionId))
+  return `/submissions/settlement?${params.toString()}`
+}
+
+function displayCandidateId(candidateId: string): string {
+  return candidateId.startsWith('auto:') ? '考生号未填写' : candidateId
 }

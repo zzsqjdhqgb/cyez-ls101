@@ -107,11 +107,14 @@ export function WorkbenchPage(): JSX.Element {
               id: `submission:${entry.record.submissionId}`,
               title: `${entry.record.candidateName} · ${entry.record.examTitle}`,
               detail: `${entry.record.schemaUseCount} 个评分单元`,
-              status: entry.grading?.status === 'completed' ? '已完成' : '待评分',
-              path:
-                entry.grading?.status === 'completed'
-                  ? '/submissions'
-                  : `/submissions/${encodeURIComponent(entry.record.submissionId)}/grade`,
+              status: entry.settlement
+                ? '已结算'
+                : entry.grading?.status === 'ready'
+                  ? '可结算'
+                  : '待评分',
+              path: entry.settlement
+                ? `/submissions?view=settled&batchId=${encodeURIComponent(entry.settlement.batchId)}`
+                : `/submissions/grading?submissionId=${encodeURIComponent(entry.record.submissionId)}`,
               icon: Inbox
             }))
           const recentTemplates: RecentWorkItem[] = templateItems.slice(0, 3).map((item) => ({
@@ -125,12 +128,8 @@ export function WorkbenchPage(): JSX.Element {
 
           setSnapshot({
             exams: examRecords.length,
-            pendingSubmissions: submissionEntries.filter(
-              (entry) => entry.grading?.status !== 'completed'
-            ).length,
-            completedSubmissions: submissionEntries.filter(
-              (entry) => entry.grading?.status === 'completed'
-            ).length,
+            pendingSubmissions: submissionEntries.filter((entry) => !entry.settlement).length,
+            completedSubmissions: submissionEntries.filter((entry) => entry.settlement).length,
             interfaces: publishedInterfaces.length,
             interfaceDrafts: interfaceDrafts.length,
             templates: templateItems.length,
