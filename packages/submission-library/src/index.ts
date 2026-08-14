@@ -932,14 +932,16 @@ function normalizeGradingRecord(
   value: unknown,
   submission: SubmissionPackage
 ): SubmissionGradingRecord {
+  const legacyCompleted = isRecord(value) && value.status === 'completed'
   if (
     !isRecord(value) ||
     value.formatVersion !== 1 ||
     value.submissionId !== submission.meta.submissionId ||
-    (value.status !== 'grading' && value.status !== 'ready') ||
+    (value.status !== 'grading' && value.status !== 'ready' && !legacyCompleted) ||
     !Array.isArray(value.items) ||
     !value.items.every(isSubmissionGradingItem) ||
-    (value.readyAt !== undefined && !isoDate(value.readyAt))
+    (value.readyAt !== undefined && !isoDate(value.readyAt)) ||
+    (legacyCompleted && value.completedAt !== undefined && !isoDate(value.completedAt))
   ) {
     throw invalidStorage(`Invalid grading record: ${submission.meta.submissionId}`)
   }
@@ -970,11 +972,13 @@ function normalizeGradingRecord(
   const readyAt =
     typeof value.readyAt === 'string'
       ? value.readyAt
-      : items.reduce(
-          (latest, item) =>
-            Date.parse(item.gradedAt) > Date.parse(latest) ? item.gradedAt : latest,
-          submission.meta.submittedAt
-        )
+      : legacyCompleted && typeof value.completedAt === 'string'
+        ? value.completedAt
+        : items.reduce(
+            (latest, item) =>
+              Date.parse(item.gradedAt) > Date.parse(latest) ? item.gradedAt : latest,
+            submission.meta.submittedAt
+          )
   return gradingRecord(submission, items, readyAt)
 }
 

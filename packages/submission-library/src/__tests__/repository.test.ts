@@ -361,6 +361,35 @@ describe('FileSubmissionLibraryRepository', () => {
     await expect(repository.deleteSubmission(source.meta.submissionId)).resolves.toBeUndefined()
   })
 
+  it('兼容 completed 和 completedAt 格式的旧评分记录', async () => {
+    const store = new MemoryStore()
+    const repository = new FileSubmissionLibraryRepository(store)
+    const source = submission()
+    await repository.importArchive(await encodeSubmissionPackage(source, {}))
+    const current = (await repository.startGrading(source.meta.submissionId)).grading
+
+    const scope = await importedSubmissionScope(store)
+    const { readyAt, ...recordWithoutReadyAt } = current
+    const legacy = {
+      ...recordWithoutReadyAt,
+      status: 'completed',
+      completedAt: readyAt
+    }
+    expect(await scope.compareAndSwapText('grading.json', current, legacy)).toBe(true)
+
+    await expect(repository.getGradingRecord(source.meta.submissionId)).resolves.toEqual(current)
+    await expect(repository.listEntries()).resolves.toMatchObject([
+      {
+        grading: {
+          status: 'ready',
+          totalScore: 2,
+          maxScore: 2,
+          readyAt
+        }
+      }
+    ])
+  })
+
   it('拒绝与作答包题目或分数上限不一致的持久化评分项', async () => {
     const store = new MemoryStore()
     const repository = new FileSubmissionLibraryRepository(store)
