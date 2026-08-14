@@ -27,6 +27,7 @@ import { SchemaDraftEditorPage } from '../features/schemas/SchemaDraftEditorPage
 import { SchemaDraftLibraryPage } from '../features/schemas/SchemaDraftLibraryPage'
 import { SubmissionLibraryPage } from '../features/submissions/SubmissionLibraryPage'
 import { SubmissionGradingPage } from '../features/submissions/SubmissionGradingPage'
+import { SubmissionSettlementPage } from '../features/submissions/SubmissionSettlementPage'
 import { registerAppRoute } from './route-registry'
 
 const unregisterRoutes = [
@@ -100,8 +101,22 @@ const unregisterRoutes = [
 
   registerAppRoute({
     id: 'submission-grading',
+    path: '/submissions/grading',
+    component: SubmissionGradingPage,
+    layout: 'focus'
+  }),
+
+  registerAppRoute({
+    id: 'submission-grading-legacy',
     path: '/submissions/:submissionId/grade',
     component: SubmissionGradingPage,
+    layout: 'focus'
+  }),
+
+  registerAppRoute({
+    id: 'submission-settlement',
+    path: '/submissions/settlement',
+    component: SubmissionSettlementPage,
     layout: 'focus'
   }),
 

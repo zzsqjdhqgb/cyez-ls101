@@ -192,7 +192,7 @@ describe('FileSubmissionLibraryRepository', () => {
     await expect(engine.grade(input)).resolves.toEqual({ score: 3.75, comment: '' })
   })
 
-  it('自动批改客观题、锁定已提交结果并完成后生成报告且禁止删除', async () => {
+  it('自动批改客观题、锁定已提交结果并在结算后生成报告', async () => {
     const store = new MemoryStore()
     const repository = new FileSubmissionLibraryRepository(store)
     const source = mixedSubmission()
@@ -215,14 +215,14 @@ describe('FileSubmissionLibraryRepository', () => {
       new Uint8Array([82, 73, 70, 70])
     )
 
-    const completed = await repository.submitGradingResult(
+    const ready = await repository.submitGradingResult(
       source.meta.submissionId,
       'schema-use:reading',
       'human',
       { score: 4.25, comment: '' }
     )
-    expect(completed.grading).toMatchObject({
-      status: 'completed',
+    expect(ready.grading).toMatchObject({
+      status: 'ready',
       totalScore: 6.25,
       maxScore: 7
     })
@@ -244,9 +244,10 @@ describe('FileSubmissionLibraryRepository', () => {
         comment: '再次提交'
       })
     ).rejects.toMatchObject({ code: 'GRADING_COMPLETED' })
-    await expect(repository.deleteSubmission(source.meta.submissionId)).rejects.toMatchObject({
-      code: 'GRADING_COMPLETED'
-    })
+    const batch = await repository.settleSubmissions([source.meta.submissionId])
+    expect(batch.records).toEqual([
+      { submissionId: source.meta.submissionId, totalScore: 6.25, maxScore: 7 }
+    ])
 
     const report = await repository.getReport(source.meta.submissionId)
     expect(report.markdown).toContain('# Student - Archive exam')
@@ -259,12 +260,75 @@ describe('FileSubmissionLibraryRepository', () => {
 
     const [entry] = await repository.listEntries()
     expect(entry.grading).toMatchObject({
-      status: 'completed',
+      status: 'ready',
       gradedCount: 2,
       totalCount: 2,
       totalScore: 6.25,
       maxScore: 7
     })
+    expect(entry.settlement).toEqual({ batchId: batch.batchId, settledAt: batch.settledAt })
+  })
+
+  it('结算整体校验全部记录并拒绝产生部分批次', async () => {
+    const repository = new FileSubmissionLibraryRepository(new MemoryStore())
+    const ready = submission()
+    const pending = mixedSubmission()
+    pending.meta.submissionId = 'submission-pending'
+    await repository.importArchive(await encodeSubmissionPackage(ready, {}))
+    await repository.importArchive(await encodeSubmissionPackage(pending, mixedSubmissionFiles()))
+    await repository.startGrading(ready.meta.submissionId)
+    await repository.startGrading(pending.meta.submissionId)
+
+    await expect(
+      repository.settleSubmissions([ready.meta.submissionId, pending.meta.submissionId])
+    ).rejects.toMatchObject({ code: 'GRADING_NOT_READY' })
+    expect(await repository.listSettlementBatches()).toEqual([])
+    expect((await repository.listEntries()).every((entry) => entry.settlement === null)).toBe(true)
+  })
+
+  it('重新评分会删除评分结果并从批次移回未结算列表', async () => {
+    const repository = new FileSubmissionLibraryRepository(new MemoryStore())
+    const first = submission()
+    const second = submission('B')
+    second.meta.submissionId = 'submission-2'
+    await repository.importArchive(await encodeSubmissionPackage(first, {}))
+    await repository.importArchive(await encodeSubmissionPackage(second, {}))
+    await repository.startGrading(first.meta.submissionId)
+    await repository.startGrading(second.meta.submissionId)
+    const batch = await repository.settleSubmissions([
+      first.meta.submissionId,
+      second.meta.submissionId
+    ])
+
+    await repository.resetGrading(first.meta.submissionId)
+
+    expect(await repository.getGradingRecord(first.meta.submissionId)).toBeNull()
+    const entries = await repository.listEntries()
+    expect(
+      entries.find((entry) => entry.record.submissionId === first.meta.submissionId)
+    ).toMatchObject({
+      grading: null,
+      settlement: null
+    })
+    expect(await repository.listSettlementBatches()).toEqual([
+      {
+        ...batch,
+        records: [{ submissionId: second.meta.submissionId, totalScore: 0, maxScore: 2 }]
+      }
+    ])
+  })
+
+  it('已结算记录仍可删除并在最后一条移除后删除空批次', async () => {
+    const repository = new FileSubmissionLibraryRepository(new MemoryStore())
+    const source = submission()
+    await repository.importArchive(await encodeSubmissionPackage(source, {}))
+    await repository.startGrading(source.meta.submissionId)
+    await repository.settleSubmissions([source.meta.submissionId])
+
+    await repository.deleteSubmission(source.meta.submissionId)
+
+    expect(await repository.listEntries()).toEqual([])
+    expect(await repository.listSettlementBatches()).toEqual([])
   })
 
   it('根据原始作答包重算评分汇总和完成状态', async () => {
@@ -279,10 +343,10 @@ describe('FileSubmissionLibraryRepository', () => {
     expect(stored).not.toBeNull()
     const corrupted = {
       ...stored!,
-      status: 'completed' as const,
+      status: 'ready' as const,
       totalScore: 999,
       maxScore: 999,
-      completedAt: '2026-08-10T04:00:00Z'
+      readyAt: '2026-08-10T04:00:00Z'
     }
     expect(await scope.compareAndSwapText('grading.json', stored, corrupted)).toBe(true)
 
@@ -472,6 +536,10 @@ class MemoryStore implements SubmissionLibraryStore {
     if (expected === null ? current !== undefined : !deepEqual(current, expected)) return false
     this.state.texts.set(key, structuredClone(data))
     return true
+  }
+
+  async deleteText(filename: string): Promise<void> {
+    this.state.texts.delete(this.fileKey(filename))
   }
 
   async readAsset(filename: string): Promise<Uint8Array | null> {

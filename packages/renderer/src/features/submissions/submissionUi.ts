@@ -16,9 +16,17 @@ export function submissionErrorMessage(reason: unknown): string {
       case 'GRADING_RESULT_LOCKED':
         return '该评分单元已经提交，不能再次修改。'
       case 'GRADING_COMPLETED':
-        return '该作答已经完成批改，不能修改或删除。'
+        return '该作答已经完成全部评分单元，不能继续提交评分。'
       case 'GRADING_NOT_COMPLETED':
         return '该作答尚未完成批改，暂时不能生成报告。'
+      case 'GRADING_NOT_READY':
+        return '所选作答尚未完成全部评分，不能结算。'
+      case 'GRADING_NOT_SETTLED':
+        return '该作答尚未结算，暂时不能生成报告。'
+      case 'ALREADY_SETTLED':
+        return '该作答已经结算。如需重新评分，请先删除现有评分记录。'
+      case 'SETTLEMENT_CONFLICT':
+        return '结算数据已经发生变化，请重新加载后再试。'
     }
   }
   return reason instanceof Error ? reason.message : '操作失败，请重试。'

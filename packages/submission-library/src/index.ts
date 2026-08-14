@@ -9,6 +9,8 @@ import { decodeSubmissionPackage, ExamPackageArchiveError } from '@ls101/exam-pa
 
 const RECORD_FILE = 'record.json'
 const GRADING_FILE = 'grading.json'
+const SETTLEMENT_FILE = 'index.json'
+const SETTLEMENT_MUTATION_KEY = '__settlements__'
 const ARCHIVE_EXTENSION = '.lssubmission'
 const SHA256_PATTERN = /^[0-9a-f]{64}$/
 const RESOURCE_REFERENCE_PATTERN = /resource:([A-Za-z0-9][A-Za-z0-9_.:%-]*)/g
@@ -91,11 +93,11 @@ export interface SubmissionGradingItem {
 export interface SubmissionGradingRecord {
   formatVersion: 1
   submissionId: string
-  status: 'grading' | 'completed'
+  status: 'grading' | 'ready'
   items: SubmissionGradingItem[]
   totalScore: number
   maxScore: number
-  completedAt?: string
+  readyAt?: string
 }
 
 export interface SubmissionGradingSummary {
@@ -104,12 +106,36 @@ export interface SubmissionGradingSummary {
   totalCount: number
   totalScore: number
   maxScore: number
-  completedAt?: string
+  readyAt?: string
+}
+
+export interface SubmissionSettlementSummary {
+  batchId: string
+  settledAt: string
+}
+
+export interface SubmissionSettlementBatchRecord {
+  submissionId: string
+  totalScore: number
+  maxScore: number
+}
+
+export interface SubmissionSettlementBatch {
+  formatVersion: 1
+  batchId: string
+  settledAt: string
+  records: SubmissionSettlementBatchRecord[]
+}
+
+interface SubmissionSettlementIndex {
+  formatVersion: 1
+  batches: SubmissionSettlementBatch[]
 }
 
 export interface SubmissionLibraryEntry {
   record: SubmissionLibraryRecord
   grading: SubmissionGradingSummary | null
+  settlement: SubmissionSettlementSummary | null
 }
 
 export interface SubmissionGradingWorkspace {
@@ -128,6 +154,7 @@ export interface SubmissionLibraryStore {
   scope(name: string): SubmissionLibraryStore
   readText<T>(filename: string): Promise<T | null>
   compareAndSwapText<T>(filename: string, expected: T | null, data: T): Promise<boolean>
+  deleteText(filename: string): Promise<void>
   readAsset(filename: string): Promise<Uint8Array | null>
   writeAsset(filename: string, data: Uint8Array): Promise<void>
   deleteAsset(filename: string): Promise<void>
@@ -142,6 +169,9 @@ export interface SubmissionLibraryRepository {
   importArchive(data: Uint8Array): Promise<SubmissionImportResult>
   exportArchive(submissionId: string): Promise<Uint8Array>
   deleteSubmission(submissionId: string): Promise<void>
+  resetGrading(submissionId: string): Promise<void>
+  listSettlementBatches(): Promise<SubmissionSettlementBatch[]>
+  settleSubmissions(submissionIds: readonly string[]): Promise<SubmissionSettlementBatch>
   startGrading(submissionId: string): Promise<SubmissionGradingWorkspace>
   submitGradingResult(
     submissionId: string,
@@ -163,7 +193,11 @@ export class SubmissionLibraryError extends Error {
       | 'INVALID_GRADING_RESULT'
       | 'GRADING_RESULT_LOCKED'
       | 'GRADING_COMPLETED'
-      | 'GRADING_NOT_COMPLETED',
+      | 'GRADING_NOT_COMPLETED'
+      | 'GRADING_NOT_READY'
+      | 'GRADING_NOT_SETTLED'
+      | 'ALREADY_SETTLED'
+      | 'SETTLEMENT_CONFLICT',
     message: string,
     public readonly details: Readonly<Record<string, string | number>> = {}
   ) {
@@ -174,10 +208,12 @@ export class SubmissionLibraryError extends Error {
 
 export class FileSubmissionLibraryRepository implements SubmissionLibraryRepository {
   private readonly submissions: SubmissionLibraryStore
+  private readonly settlements: SubmissionLibraryStore
   private readonly mutationTails = new Map<string, Promise<void>>()
 
   constructor(root: SubmissionLibraryStore) {
     this.submissions = root.scope('submissions')
+    this.settlements = root.scope('settlements')
   }
 
   async listRecords(): Promise<SubmissionLibraryRecord[]> {
@@ -200,6 +236,7 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
 
   async listEntries(): Promise<SubmissionLibraryEntry[]> {
     const records = await this.listRecords()
+    const settlementBySubmission = settlementLookup(await this.readSettlementIndex())
     const entries: SubmissionLibraryEntry[] = []
     for (const record of records) {
       const key = await submissionStorageKey(record.submissionId)
@@ -215,9 +252,10 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
               totalCount: archive.submission.schemaUses.length,
               totalScore: grading.totalScore,
               maxScore: grading.maxScore,
-              ...(grading.completedAt ? { completedAt: grading.completedAt } : {})
+              ...(grading.readyAt ? { readyAt: grading.readyAt } : {})
             }
-          : null
+          : null,
+        settlement: settlementBySubmission.get(record.submissionId) ?? null
       })
     }
     return entries
@@ -305,28 +343,120 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     assertSubmissionId(submissionId)
     const key = await submissionStorageKey(submissionId)
     await this.runMutation(key, async () => {
-      const scope = this.submissions.scope(key)
-      const record = await this.readRecord(scope, key)
-      if (!record) return
-      if (record.submissionId !== submissionId) {
-        throw invalidStorage(`Submission storage key collision: ${submissionId}`)
+      await this.runMutation(SETTLEMENT_MUTATION_KEY, async () => {
+        const scope = this.submissions.scope(key)
+        const record = await this.readRecord(scope, key)
+        if (!record) return
+        if (record.submissionId !== submissionId) {
+          throw invalidStorage(`Submission storage key collision: ${submissionId}`)
+        }
+        const existing = await this.readSettlementIndex()
+        const next = removeSubmissionFromSettlements(existing, submissionId)
+        if (!sameValue(existing, next)) await this.writeSettlementIndex(existing, next)
+        try {
+          await scope.clear()
+        } catch (reason) {
+          if (!sameValue(existing, next)) await this.writeSettlementIndex(next, existing)
+          throw reason
+        }
+      })
+    })
+  }
+
+  async resetGrading(submissionId: string): Promise<void> {
+    assertSubmissionId(submissionId)
+    const key = await submissionStorageKey(submissionId)
+    await this.runMutation(key, async () => {
+      await this.runMutation(SETTLEMENT_MUTATION_KEY, async () => {
+        const scope = this.submissions.scope(key)
+        const archive = await this.readArchive(scope, submissionId)
+        const stored = await scope.readText<unknown>(GRADING_FILE)
+        if (stored === null) return
+        normalizeGradingRecord(stored, archive.submission)
+        const existing = await this.readSettlementIndex()
+        const next = removeSubmissionFromSettlements(existing, submissionId)
+        await scope.deleteText(GRADING_FILE)
+        try {
+          if (!sameValue(existing, next)) await this.writeSettlementIndex(existing, next)
+        } catch (reason) {
+          if (!(await scope.compareAndSwapText(GRADING_FILE, null, stored))) {
+            throw invalidStorage(
+              `Cannot restore grading after settlement conflict: ${submissionId}`
+            )
+          }
+          throw reason
+        }
+      })
+    })
+  }
+
+  async listSettlementBatches(): Promise<SubmissionSettlementBatch[]> {
+    return structuredClone((await this.readSettlementIndex()).batches).sort(
+      (left, right) =>
+        Date.parse(right.settledAt) - Date.parse(left.settledAt) ||
+        right.batchId.localeCompare(left.batchId)
+    )
+  }
+
+  async settleSubmissions(submissionIds: readonly string[]): Promise<SubmissionSettlementBatch> {
+    const uniqueIds = [...new Set(submissionIds)]
+    if (uniqueIds.length === 0 || uniqueIds.some((submissionId) => !nonEmptyString(submissionId))) {
+      throw new SubmissionLibraryError(
+        'GRADING_NOT_READY',
+        'Settlement requires at least one submission'
+      )
+    }
+    return this.runMutation(SETTLEMENT_MUTATION_KEY, async () => {
+      const existing = await this.readSettlementIndex()
+      const settled = settlementLookup(existing)
+      const records: SubmissionSettlementBatchRecord[] = []
+      for (const submissionId of uniqueIds) {
+        if (settled.has(submissionId)) {
+          throw new SubmissionLibraryError(
+            'ALREADY_SETTLED',
+            `Submission is already settled: ${submissionId}`,
+            { submissionId }
+          )
+        }
+        const key = await submissionStorageKey(submissionId)
+        const scope = this.submissions.scope(key)
+        const archive = await this.readArchive(scope, submissionId)
+        const grading = await this.readGrading(scope, archive.submission)
+        if (!grading || grading.status !== 'ready') {
+          throw new SubmissionLibraryError(
+            'GRADING_NOT_READY',
+            `Submission grading is not ready for settlement: ${submissionId}`,
+            { submissionId }
+          )
+        }
+        records.push({
+          submissionId,
+          totalScore: grading.totalScore,
+          maxScore: grading.maxScore
+        })
       }
-      const archive = await this.readArchive(scope, submissionId)
-      const grading = await this.readGrading(scope, archive.submission)
-      if (grading?.status === 'completed') {
-        throw new SubmissionLibraryError(
-          'GRADING_COMPLETED',
-          `Completed submission cannot be deleted: ${submissionId}`,
-          { submissionId }
-        )
+      const batch: SubmissionSettlementBatch = {
+        formatVersion: 1,
+        batchId: crypto.randomUUID(),
+        settledAt: new Date().toISOString(),
+        records
       }
-      await scope.clear()
+      await this.writeSettlementIndex(existing, {
+        ...existing,
+        batches: [...existing.batches, batch]
+      })
+      return structuredClone(batch)
     })
   }
 
   async startGrading(submissionId: string): Promise<SubmissionGradingWorkspace> {
     const key = await submissionStorageKey(submissionId)
     return this.runMutation(key, async () => {
+      if (settlementLookup(await this.readSettlementIndex()).has(submissionId)) {
+        throw new SubmissionLibraryError('ALREADY_SETTLED', 'Submission is already settled', {
+          submissionId
+        })
+      }
       const scope = this.submissions.scope(key)
       const archive = await this.readArchive(scope, submissionId)
       const existing = await this.readGrading(scope, archive.submission)
@@ -350,7 +480,7 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
       const archive = await this.readArchive(scope, submissionId)
       const existing = await this.readGrading(scope, archive.submission)
       if (!existing) throw invalidStorage(`Missing grading session: ${submissionId}`)
-      if (existing.status === 'completed') {
+      if (existing.status === 'ready') {
         throw new SubmissionLibraryError('GRADING_COMPLETED', 'Grading is already completed', {
           submissionId
         })
@@ -398,10 +528,17 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     const scope = this.submissions.scope(key)
     const archive = await this.readArchive(scope, submissionId)
     const grading = await this.readGrading(scope, archive.submission)
-    if (!grading || grading.status !== 'completed') {
+    if (!grading || grading.status !== 'ready') {
       throw new SubmissionLibraryError(
         'GRADING_NOT_COMPLETED',
         `Submission grading is not completed: ${submissionId}`
+      )
+    }
+    if (!settlementLookup(await this.readSettlementIndex()).has(submissionId)) {
+      throw new SubmissionLibraryError(
+        'GRADING_NOT_SETTLED',
+        `Submission grading is not settled: ${submissionId}`,
+        { submissionId }
       )
     }
     const inputs = archive.submission.schemaUses.map((use) => buildGradingInput(archive, use))
@@ -470,6 +607,28 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     }
     if (!(await scope.compareAndSwapText(GRADING_FILE, stored, next))) {
       throw invalidStorage(`Concurrent grading update: ${next.submissionId}`)
+    }
+  }
+
+  private async readSettlementIndex(): Promise<SubmissionSettlementIndex> {
+    const value = await this.settlements.readText<unknown>(SETTLEMENT_FILE)
+    if (value === null) return { formatVersion: 1, batches: [] }
+    if (!isSettlementIndex(value)) throw invalidStorage('Invalid settlement index')
+    return structuredClone(value)
+  }
+
+  private async writeSettlementIndex(
+    existing: SubmissionSettlementIndex,
+    next: SubmissionSettlementIndex
+  ): Promise<void> {
+    const stored = await this.settlements.readText<unknown>(SETTLEMENT_FILE)
+    const current = stored === null ? { formatVersion: 1, batches: [] } : stored
+    if (!sameValue(current, existing)) {
+      throw new SubmissionLibraryError('SETTLEMENT_CONFLICT', 'Settlement data changed')
+    }
+    const expected = stored === null ? null : stored
+    if (!(await this.settlements.compareAndSwapText(SETTLEMENT_FILE, expected, next))) {
+      throw new SubmissionLibraryError('SETTLEMENT_CONFLICT', 'Settlement data changed')
     }
   }
 
@@ -657,7 +816,7 @@ async function applyObjectiveGrades(
   archive: Awaited<ReturnType<typeof decodeSubmissionPackage>>,
   existing: SubmissionGradingRecord | null
 ): Promise<SubmissionGradingRecord> {
-  if (existing?.status === 'completed') return existing
+  if (existing?.status === 'ready') return existing
   const items = existing ? [...existing.items] : []
   for (const use of archive.submission.schemaUses) {
     if (
@@ -680,7 +839,7 @@ async function applyObjectiveGrades(
 function gradingRecord(
   submission: SubmissionPackage,
   items: SubmissionGradingItem[],
-  completedAt: string
+  readyAt: string
 ): SubmissionGradingRecord {
   const expectedIds = new Set(submission.schemaUses.map((use) => use.instanceId))
   const uniqueIds = new Set(items.map((item) => item.instanceId))
@@ -691,11 +850,11 @@ function gradingRecord(
   return {
     formatVersion: 1,
     submissionId: submission.meta.submissionId,
-    status: complete ? 'completed' : 'grading',
+    status: complete ? 'ready' : 'grading',
     items: structuredClone(items),
     totalScore: items.reduce((total, item) => total + item.result.score, 0),
     maxScore: submission.schemaUses.reduce((total, use) => total + use.schema.data.maxScore, 0),
-    ...(complete ? { completedAt } : {})
+    ...(complete ? { readyAt } : {})
   }
 }
 
@@ -777,10 +936,10 @@ function normalizeGradingRecord(
     !isRecord(value) ||
     value.formatVersion !== 1 ||
     value.submissionId !== submission.meta.submissionId ||
-    (value.status !== 'grading' && value.status !== 'completed') ||
+    (value.status !== 'grading' && value.status !== 'ready') ||
     !Array.isArray(value.items) ||
     !value.items.every(isSubmissionGradingItem) ||
-    (value.completedAt !== undefined && !isoDate(value.completedAt))
+    (value.readyAt !== undefined && !isoDate(value.readyAt))
   ) {
     throw invalidStorage(`Invalid grading record: ${submission.meta.submissionId}`)
   }
@@ -808,15 +967,79 @@ function normalizeGradingRecord(
     }
   }
 
-  const completedAt =
-    typeof value.completedAt === 'string'
-      ? value.completedAt
+  const readyAt =
+    typeof value.readyAt === 'string'
+      ? value.readyAt
       : items.reduce(
           (latest, item) =>
             Date.parse(item.gradedAt) > Date.parse(latest) ? item.gradedAt : latest,
           submission.meta.submittedAt
         )
-  return gradingRecord(submission, items, completedAt)
+  return gradingRecord(submission, items, readyAt)
+}
+
+function settlementLookup(
+  index: SubmissionSettlementIndex
+): Map<string, SubmissionSettlementSummary> {
+  return new Map(
+    index.batches.flatMap((batch) =>
+      batch.records.map((record) => [
+        record.submissionId,
+        { batchId: batch.batchId, settledAt: batch.settledAt }
+      ])
+    )
+  )
+}
+
+function removeSubmissionFromSettlements(
+  index: SubmissionSettlementIndex,
+  submissionId: string
+): SubmissionSettlementIndex {
+  return {
+    ...index,
+    batches: index.batches.flatMap((batch) => {
+      const records = batch.records.filter((record) => record.submissionId !== submissionId)
+      return records.length === 0 ? [] : [{ ...batch, records }]
+    })
+  }
+}
+
+function isSettlementIndex(value: unknown): value is SubmissionSettlementIndex {
+  if (!isRecord(value) || value.formatVersion !== 1 || !Array.isArray(value.batches)) return false
+  const batchIds = new Set<string>()
+  const submissionIds = new Set<string>()
+  for (const batch of value.batches) {
+    if (
+      !isRecord(batch) ||
+      batch.formatVersion !== 1 ||
+      !nonEmptyString(batch.batchId) ||
+      !isoDate(batch.settledAt) ||
+      !Array.isArray(batch.records) ||
+      batch.records.length === 0 ||
+      batchIds.has(batch.batchId)
+    ) {
+      return false
+    }
+    batchIds.add(batch.batchId)
+    for (const record of batch.records) {
+      if (
+        !isRecord(record) ||
+        !nonEmptyString(record.submissionId) ||
+        typeof record.totalScore !== 'number' ||
+        !Number.isFinite(record.totalScore) ||
+        record.totalScore < 0 ||
+        typeof record.maxScore !== 'number' ||
+        !Number.isFinite(record.maxScore) ||
+        record.maxScore < 0 ||
+        record.totalScore > record.maxScore ||
+        submissionIds.has(record.submissionId)
+      ) {
+        return false
+      }
+      submissionIds.add(record.submissionId)
+    }
+  }
+  return true
 }
 
 function isSubmissionGradingItem(value: unknown): value is SubmissionGradingItem {

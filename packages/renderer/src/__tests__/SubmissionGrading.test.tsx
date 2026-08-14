@@ -15,6 +15,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SubmissionGradingPage } from '../features/submissions/SubmissionGradingPage'
 import { SubmissionLibraryPage } from '../features/submissions/SubmissionLibraryPage'
 import { SubmissionLibraryProvider } from '../features/submissions/SubmissionLibraryProvider'
+import { SubmissionSettlementPage } from '../features/submissions/SubmissionSettlementPage'
 
 afterEach(cleanup)
 
@@ -47,8 +48,8 @@ describe('submission grading UI', () => {
       expect(element).not.toBeNull()
       return element as HTMLAudioElement
     })
+    await waitFor(() => expect(URL.createObjectURL).toHaveBeenCalledTimes(2))
     const currentUrl = player.getAttribute('src')
-    expect(URL.createObjectURL).toHaveBeenCalledTimes(2)
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:grading-audio-1')
     expect(URL.revokeObjectURL).not.toHaveBeenCalledWith(currentUrl)
     expect(currentUrl).toBe('blob:grading-audio-2')
@@ -57,13 +58,13 @@ describe('submission grading UI', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('录音无法播放')
   })
 
-  it('submits a decimal human score with an empty comment and finishes the submission', async () => {
+  it('submits a decimal human score with an empty comment and enters settlement', async () => {
     const workspace = gradingWorkspace()
     const submitGradingResult = vi.fn().mockResolvedValue({
       ...workspace,
       grading: {
         ...workspace.grading,
-        status: 'completed',
+        status: 'ready',
         totalScore: 3.75,
         items: [
           {
@@ -73,7 +74,7 @@ describe('submission grading UI', () => {
             gradedAt: '2026-08-10T03:00:00Z'
           }
         ],
-        completedAt: '2026-08-10T03:00:00Z'
+        readyAt: '2026-08-10T03:00:00Z'
       }
     })
     const repository = mockRepository({
@@ -87,7 +88,7 @@ describe('submission grading UI', () => {
         key="grade"
         path="/submissions/:submissionId/grade"
       />,
-      <Route element={<h1>收卷页</h1>} key="list" path="/submissions" />
+      <Route element={<h1>结算页</h1>} key="settlement" path="/submissions/settlement" />
     ])
 
     expect(await screen.findByText('请朗读句子。')).toBeInTheDocument()
@@ -103,38 +104,34 @@ describe('submission grading UI', () => {
         comment: ''
       })
     )
-    expect(await screen.findByRole('heading', { name: '收卷页' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '结算页' })).toBeInTheDocument()
   })
 
-  it('separates completed submissions and opens their Markdown report without a delete action', async () => {
+  it('separates unsettled submissions and settled batches and opens their report', async () => {
     const pending = libraryEntry('pending', null)
-    const completed = libraryEntry('completed', {
-      status: 'completed',
-      gradedCount: 1,
-      totalCount: 1,
-      totalScore: 5,
-      maxScore: 5,
-      completedAt: '2026-08-10T03:00:00Z'
-    })
+    const completed = libraryEntry('completed', completedSummary(), true)
     const repository = mockRepository({
       listEntries: vi.fn().mockResolvedValue([pending, completed]),
+      listSettlementBatches: vi.fn().mockResolvedValue([settlementBatch(['completed'])]),
       getReport: vi.fn().mockResolvedValue({
         markdown: '# Student completed - Test\n\n| 总分 |\n| --- |\n| 5/5 |',
         resources: {}
       })
     })
 
-    renderWithRepository(repository, '/submissions', [
+    renderWithRepository(repository, '/submissions?view=settled&batchId=batch-1', [
       <Route element={<SubmissionLibraryPage />} key="list" path="/submissions" />
     ])
 
-    expect(await screen.findByRole('heading', { name: '未批改' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '已批改' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '开始批改' })).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: '删除作答包' })).toHaveLength(1)
+    expect(await screen.findByRole('tab', { name: /已结算/ })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    expect(screen.getByRole('button', { name: '重新评分' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '删除作答记录' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '查看报告' }))
-    expect(await screen.findByRole('heading', { name: '考试报告' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '评分报告' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Student completed - Test' })).toBeInTheDocument()
     expect(screen.getByRole('cell', { name: '5/5' })).toBeInTheDocument()
   })
@@ -146,15 +143,16 @@ describe('submission grading UI', () => {
       listEntries: vi
         .fn()
         .mockResolvedValue([
-          libraryEntry('first', completedSummary()),
-          libraryEntry('second', completedSummary())
+          libraryEntry('first', completedSummary(), true),
+          libraryEntry('second', completedSummary(), true)
         ]),
+      listSettlementBatches: vi.fn().mockResolvedValue([settlementBatch(['first', 'second'])]),
       getReport: vi.fn((submissionId: string) =>
         submissionId === 'first' ? first.promise : second.promise
       )
     })
 
-    renderWithRepository(repository, '/submissions', [
+    renderWithRepository(repository, '/submissions?view=settled&batchId=batch-1', [
       <Route element={<SubmissionLibraryPage />} key="list" path="/submissions" />
     ])
 
@@ -175,6 +173,37 @@ describe('submission grading UI', () => {
     })
     expect(screen.getByRole('heading', { name: 'Second report' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'First report' })).not.toBeInTheDocument()
+  })
+
+  it('settles only ready submissions and returns to the expanded batch', async () => {
+    const ready = libraryEntry('ready', completedSummary())
+    const pending = libraryEntry('pending', null)
+    const settleSubmissions = vi.fn().mockResolvedValue(settlementBatch(['ready']))
+    const repository = mockRepository({
+      listEntries: vi.fn().mockResolvedValue([ready, pending]),
+      settleSubmissions
+    })
+
+    renderWithRepository(
+      repository,
+      '/submissions/settlement?submissionId=ready&submissionId=pending',
+      [
+        <Route
+          element={<SubmissionSettlementPage />}
+          key="settlement"
+          path="/submissions/settlement"
+        />,
+        <Route element={<h1>已结算列表</h1>} key="list" path="/submissions" />
+      ]
+    )
+
+    expect(await screen.findByRole('heading', { name: '评分结算' })).toBeInTheDocument()
+    expect(screen.getAllByText('可结算', { exact: true })).toHaveLength(2)
+    expect(screen.getByText('未评分', { exact: true })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '本次结算（1）' }))
+
+    await waitFor(() => expect(settleSubmissions).toHaveBeenCalledWith(['ready']))
+    expect(await screen.findByRole('heading', { name: '已结算列表' })).toBeInTheDocument()
   })
 })
 
@@ -202,6 +231,9 @@ function mockRepository(
     importArchive: vi.fn(),
     exportArchive: vi.fn(),
     deleteSubmission: vi.fn(),
+    resetGrading: vi.fn(),
+    listSettlementBatches: vi.fn().mockResolvedValue([]),
+    settleSubmissions: vi.fn(),
     startGrading: vi.fn(),
     submitGradingResult: vi.fn(),
     getGradingRecord: vi.fn().mockResolvedValue(null),
@@ -290,7 +322,8 @@ function gradingInput(): GradingInput {
 
 function libraryEntry(
   id: string,
-  grading: SubmissionLibraryEntry['grading']
+  grading: SubmissionLibraryEntry['grading'],
+  settled = false
 ): SubmissionLibraryEntry {
   return {
     record: {
@@ -307,18 +340,28 @@ function libraryEntry(
       archiveBytes: 100,
       schemaUseCount: 1
     },
-    grading
+    grading,
+    settlement: settled ? { batchId: 'batch-1', settledAt: '2026-08-10T04:00:00Z' } : null
   }
 }
 
 function completedSummary(): NonNullable<SubmissionLibraryEntry['grading']> {
   return {
-    status: 'completed',
+    status: 'ready',
     gradedCount: 1,
     totalCount: 1,
     totalScore: 5,
     maxScore: 5,
-    completedAt: '2026-08-10T03:00:00Z'
+    readyAt: '2026-08-10T03:00:00Z'
+  }
+}
+
+function settlementBatch(submissionIds: string[]) {
+  return {
+    formatVersion: 1 as const,
+    batchId: 'batch-1',
+    settledAt: '2026-08-10T04:00:00Z',
+    records: submissionIds.map((submissionId) => ({ submissionId, totalScore: 5, maxScore: 5 }))
   }
 }
 

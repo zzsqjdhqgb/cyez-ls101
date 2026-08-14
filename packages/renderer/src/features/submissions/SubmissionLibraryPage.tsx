@@ -1,12 +1,25 @@
-import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import { fileDialog } from '@ls101/file-dialog/renderer'
 import type {
   SubmissionLibraryEntry,
   SubmissionLibraryRecord,
-  SubmissionReport
+  SubmissionReport,
+  SubmissionSettlementBatch
 } from '@ls101/submission-library'
-import { AlertCircle, ClipboardCheck, Download, Eye, Inbox, Trash2, Upload, X } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import {
+  AlertCircle,
+  ChevronDown,
+  ChevronRight,
+  Download,
+  Eye,
+  Inbox,
+  Play,
+  RotateCcw,
+  Trash2,
+  Upload,
+  X
+} from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -21,25 +34,47 @@ import styles from './SubmissionLibraryPage.module.css'
 
 const SUBMISSION_FILTER = [{ name: 'LS101 作答包', extensions: ['lssubmission', 'zip'] }]
 
+type LibraryView = 'unsettled' | 'settled'
+
 export function SubmissionLibraryPage(): JSX.Element {
   const repository = useSubmissionLibrary()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const view: LibraryView = searchParams.get('view') === 'settled' ? 'settled' : 'unsettled'
+  const highlightedBatchId = searchParams.get('batchId')
   const [entries, setEntries] = useState<SubmissionLibraryEntry[]>([])
+  const [batches, setBatches] = useState<SubmissionSettlementBatch[]>([])
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [expandedBatchIds, setExpandedBatchIds] = useState<Set<string>>(
+    () => new Set(highlightedBatchId ? [highlightedBatchId] : [])
+  )
   const [loading, setLoading] = useState(true)
   const [importing, setImporting] = useState(false)
   const [exportingId, setExportingId] = useState<string | null>(null)
-  const [pendingDelete, setPendingDelete] = useState<SubmissionLibraryRecord | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<SubmissionLibraryEntry | null>(null)
+  const [pendingReset, setPendingReset] = useState<SubmissionLibraryEntry | null>(null)
   const [reportTarget, setReportTarget] = useState<SubmissionLibraryEntry | null>(null)
   const [report, setReport] = useState<SubmissionReport | null>(null)
   const [reportError, setReportError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const reportRequestId = useRef(0)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<void> => {
     setLoading(true)
     setError(null)
     try {
-      setEntries(await repository.listEntries())
+      const [nextEntries, nextBatches] = await Promise.all([
+        repository.listEntries(),
+        repository.listSettlementBatches()
+      ])
+      setEntries(nextEntries)
+      setBatches(nextBatches)
+      setSelectedIds((current) => {
+        const available = new Set(
+          nextEntries.filter((entry) => !entry.settlement).map((entry) => entry.record.submissionId)
+        )
+        return new Set([...current].filter((submissionId) => available.has(submissionId)))
+      })
     } catch (reason) {
       setError(submissionErrorMessage(reason))
     } finally {
@@ -48,22 +83,15 @@ export function SubmissionLibraryPage(): JSX.Element {
   }, [repository])
 
   useEffect(() => {
-    let active = true
-    void repository
-      .listEntries()
-      .then((items) => {
-        if (active) setEntries(items)
-      })
-      .catch((reason: unknown) => {
-        if (active) setError(submissionErrorMessage(reason))
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [repository])
+    const timeout = window.setTimeout(() => void load(), 0)
+    return () => window.clearTimeout(timeout)
+  }, [load])
+
+  const unsettled = useMemo(() => entries.filter((entry) => !entry.settlement), [entries])
+  const entriesById = useMemo(
+    () => new Map(entries.map((entry) => [entry.record.submissionId, entry])),
+    [entries]
+  )
 
   const importSubmission = async (): Promise<void> => {
     setImporting(true)
@@ -76,7 +104,7 @@ export function SubmissionLibraryPage(): JSX.Element {
       if (!selected) return
       const result = await repository.importArchive(selected.data)
       await load()
-      if (result.status === 'duplicate') toast.info('该作答包已经在收卷库中')
+      if (result.status === 'duplicate') toast.info('该作答包已经在作答记录中')
       else toast.success(`已导入 ${result.record.candidateName} 的作答包`)
     } catch (reason) {
       setError(submissionErrorMessage(reason))
@@ -105,13 +133,28 @@ export function SubmissionLibraryPage(): JSX.Element {
 
   const confirmDelete = async (): Promise<void> => {
     if (!pendingDelete) return
-    const record = pendingDelete
+    const target = pendingDelete
     setPendingDelete(null)
     setError(null)
     try {
-      await repository.deleteSubmission(record.submissionId)
+      await repository.deleteSubmission(target.record.submissionId)
       await load()
-      toast.success(`已删除 ${record.candidateName} 的作答包`)
+      toast.success(`已删除 ${target.record.candidateName} 的作答记录`)
+    } catch (reason) {
+      setError(submissionErrorMessage(reason))
+    }
+  }
+
+  const confirmReset = async (): Promise<void> => {
+    if (!pendingReset) return
+    const target = pendingReset
+    setPendingReset(null)
+    setError(null)
+    try {
+      await repository.resetGrading(target.record.submissionId)
+      await load()
+      setSearchParams({ view: 'unsettled' })
+      toast.success(`已将 ${target.record.candidateName} 的作答移回未评分列表`)
     } catch (reason) {
       setError(submissionErrorMessage(reason))
     }
@@ -126,9 +169,7 @@ export function SubmissionLibraryPage(): JSX.Element {
       const next = await repository.getReport(entry.record.submissionId)
       if (reportRequestId.current === requestId) setReport(next)
     } catch (reason) {
-      if (reportRequestId.current === requestId) {
-        setReportError(submissionErrorMessage(reason))
-      }
+      if (reportRequestId.current === requestId) setReportError(submissionErrorMessage(reason))
     }
   }
 
@@ -139,8 +180,30 @@ export function SubmissionLibraryPage(): JSX.Element {
     setReportError(null)
   }
 
-  const pending = entries.filter((entry) => entry.grading?.status !== 'completed')
-  const completed = entries.filter((entry) => entry.grading?.status === 'completed')
+  const switchView = (next: LibraryView): void => {
+    setSearchParams({ view: next })
+  }
+
+  const toggleSelected = (submissionId: string): void => {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (next.has(submissionId)) next.delete(submissionId)
+      else next.add(submissionId)
+      return next
+    })
+  }
+
+  const toggleAll = (): void => {
+    setSelectedIds((current) =>
+      current.size === unsettled.length && unsettled.length > 0
+        ? new Set()
+        : new Set(unsettled.map((entry) => entry.record.submissionId))
+    )
+  }
+
+  const startGrading = (submissionIds: readonly string[]): void => {
+    navigate(gradingSessionUrl(submissionIds))
+  }
 
   return (
     <Page>
@@ -158,6 +221,25 @@ export function SubmissionLibraryPage(): JSX.Element {
         }
       />
 
+      <div className={styles.tabs} role="tablist" aria-label="作答记录状态">
+        <button
+          aria-selected={view === 'unsettled'}
+          role="tab"
+          type="button"
+          onClick={() => switchView('unsettled')}
+        >
+          未结算 <span>{unsettled.length}</span>
+        </button>
+        <button
+          aria-selected={view === 'settled'}
+          role="tab"
+          type="button"
+          onClick={() => switchView('settled')}
+        >
+          已结算 <span>{entries.length - unsettled.length}</span>
+        </button>
+      </div>
+
       {error ? (
         <div className={styles.notice} role="alert">
           <AlertCircle aria-hidden="true" />
@@ -165,43 +247,63 @@ export function SubmissionLibraryPage(): JSX.Element {
         </div>
       ) : null}
 
-      {loading ? <div className={styles.loading}>正在加载收卷库...</div> : null}
-      {!loading && entries.length === 0 ? <EmptyState icon={Inbox} title="暂无作答包" /> : null}
-      {!loading && entries.length > 0 ? (
-        <div className={styles.sections}>
-          <SubmissionSection
-            emptyText="没有待批改作答"
-            entries={pending}
-            title="未批改"
-            onDelete={(record) => setPendingDelete(record)}
-            onExport={(record) => void exportSubmission(record)}
-            onGrade={(record) =>
-              navigate(`/submissions/${encodeURIComponent(record.submissionId)}/grade`)
-            }
-            exportingId={exportingId}
-            importing={importing}
-          />
-          <SubmissionSection
-            completed
-            emptyText="还没有已批改作答"
-            entries={completed}
-            title="已批改"
-            onExport={(record) => void exportSubmission(record)}
-            onReport={(entry) => void viewReport(entry)}
-            exportingId={exportingId}
-            importing={importing}
-          />
-        </div>
+      {loading ? <div className={styles.loading}>正在加载作答记录...</div> : null}
+      {!loading && view === 'unsettled' ? (
+        <UnsettledList
+          entries={unsettled}
+          exportingId={exportingId}
+          selectedIds={selectedIds}
+          onDelete={setPendingDelete}
+          onExport={(record) => void exportSubmission(record)}
+          onGrade={(entry) => startGrading([entry.record.submissionId])}
+          onGradeSelected={() => startGrading([...selectedIds])}
+          onToggle={toggleSelected}
+          onToggleAll={toggleAll}
+        />
+      ) : null}
+      {!loading && view === 'settled' ? (
+        <SettledBatches
+          batches={batches}
+          entriesById={entriesById}
+          expandedBatchIds={expandedBatchIds}
+          exportingId={exportingId}
+          onDelete={setPendingDelete}
+          onExport={(record) => void exportSubmission(record)}
+          onReport={(entry) => void viewReport(entry)}
+          onReset={setPendingReset}
+          onToggle={(batchId) =>
+            setExpandedBatchIds((current) => {
+              const next = new Set(current)
+              if (next.has(batchId)) next.delete(batchId)
+              else next.add(batchId)
+              return next
+            })
+          }
+        />
       ) : null}
 
       <ConfirmModal
         danger
         confirmLabel="删除"
-        message="删除后，本地保存的原始作答包和未完成评分都会一并移除。此操作无法撤销。"
+        message={
+          pendingDelete?.settlement
+            ? '删除后，原始作答包、评分结果和报告都会被移除。此操作无法撤销。'
+            : '删除后，原始作答包和已有评分进度都会被移除。此操作无法撤销。'
+        }
         open={pendingDelete !== null}
-        title={`删除 ${pendingDelete?.candidateName ?? ''} 的作答包？`}
+        title={`删除 ${pendingDelete?.record.candidateName ?? ''} 的作答记录？`}
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => void confirmDelete()}
+      />
+
+      <ConfirmModal
+        danger
+        confirmLabel="删除评分并重新开始"
+        message="现有评分、结算结果和报告将被删除，原始作答会作为未评分记录重新加入未结算列表。"
+        open={pendingReset !== null}
+        title={`重新评分 ${pendingReset?.record.candidateName ?? ''} 的作答？`}
+        onCancel={() => setPendingReset(null)}
+        onConfirm={() => void confirmReset()}
       />
 
       <Modal
@@ -213,7 +315,7 @@ export function SubmissionLibraryPage(): JSX.Element {
           <header className={styles.reportHeader}>
             <div>
               <ModalTitle asChild>
-                <h2>考试报告</h2>
+                <h2>评分报告</h2>
               </ModalTitle>
               <span>
                 {reportTarget?.record.candidateName} · {reportTarget?.record.examTitle}
@@ -243,117 +345,261 @@ export function SubmissionLibraryPage(): JSX.Element {
   )
 }
 
-interface SubmissionSectionProps {
-  title: string
-  emptyText: string
-  entries: SubmissionLibraryEntry[]
-  completed?: boolean
-  importing: boolean
-  exportingId: string | null
-  onGrade?(record: SubmissionLibraryRecord): void
-  onReport?(entry: SubmissionLibraryEntry): void
-  onExport(record: SubmissionLibraryRecord): void
-  onDelete?(record: SubmissionLibraryRecord): void
-}
-
-function SubmissionSection({
-  title,
-  emptyText,
+function UnsettledList({
   entries,
-  completed = false,
-  importing,
+  selectedIds,
   exportingId,
+  onToggle,
+  onToggleAll,
   onGrade,
-  onReport,
+  onGradeSelected,
   onExport,
   onDelete
-}: SubmissionSectionProps): JSX.Element {
+}: {
+  entries: SubmissionLibraryEntry[]
+  selectedIds: Set<string>
+  exportingId: string | null
+  onToggle(submissionId: string): void
+  onToggleAll(): void
+  onGrade(entry: SubmissionLibraryEntry): void
+  onGradeSelected(): void
+  onExport(record: SubmissionLibraryRecord): void
+  onDelete(entry: SubmissionLibraryEntry): void
+}): JSX.Element {
+  if (entries.length === 0) return <EmptyState icon={Inbox} title="没有未结算作答" />
   return (
-    <section className={styles.section}>
-      <div className={styles.sectionHeader}>
-        <h2>{title}</h2>
-        <span>{entries.length}</span>
+    <section aria-label="未结算作答">
+      <div className={styles.selectionBar}>
+        <label>
+          <input
+            checked={selectedIds.size === entries.length}
+            type="checkbox"
+            onChange={onToggleAll}
+          />
+          <span>全选</span>
+        </label>
+        <span>已选择 {selectedIds.size} 条</span>
+        <Button
+          disabled={selectedIds.size === 0}
+          icon={Play}
+          size="small"
+          variant="primary"
+          onClick={onGradeSelected}
+        >
+          开始评分（{selectedIds.size}）
+        </Button>
       </div>
-      {entries.length === 0 ? (
-        <div className={styles.sectionEmpty}>{emptyText}</div>
-      ) : (
-        <div className={styles.tableFrame}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>考生</th>
-                <th>考试</th>
-                <th>提交时间</th>
-                <th>{completed ? '成绩' : '进度'}</th>
-                <th aria-label="操作" />
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((entry) => {
-                const record = entry.record
-                const grading = entry.grading
-                return (
-                  <tr key={record.submissionId}>
-                    <td>
-                      <strong>{record.candidateName}</strong>
-                      <span>{record.candidateId}</span>
-                    </td>
-                    <td>
-                      <strong>{record.examTitle}</strong>
-                      <span title={record.examPackageId}>{record.examPackageId}</span>
-                    </td>
-                    <td>
-                      <time dateTime={record.submittedAt}>
-                        {formatDateTime(record.submittedAt)}
-                      </time>
-                    </td>
-                    <td>
-                      {completed && grading
-                        ? `${grading.totalScore}/${grading.maxScore}`
-                        : `${grading?.gradedCount ?? 0}/${grading?.totalCount ?? record.schemaUseCount}`}
-                    </td>
-                    <td>
-                      <div className={styles.actions}>
-                        {completed ? (
-                          <Button icon={Eye} size="small" onClick={() => onReport?.(entry)}>
-                            查看报告
-                          </Button>
-                        ) : (
-                          <Button
-                            icon={ClipboardCheck}
-                            size="small"
-                            variant="primary"
-                            onClick={() => onGrade?.(record)}
-                          >
-                            {grading ? '继续批改' : '开始批改'}
-                          </Button>
-                        )}
-                        <IconButton
-                          disabled={exportingId !== null}
-                          icon={Download}
-                          label="导出作答包"
-                          onClick={() => onExport(record)}
-                        />
-                        {!completed ? (
-                          <IconButton
-                            disabled={importing || exportingId !== null}
-                            icon={Trash2}
-                            label="删除作答包"
-                            variant="danger"
-                            onClick={() => onDelete?.(record)}
-                          />
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <div className={styles.tableFrame}>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th aria-label="选择" />
+              <th>作答人</th>
+              <th>试卷</th>
+              <th>作答时间</th>
+              <th>评分进度</th>
+              <th aria-label="操作" />
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((entry) => {
+              const { record, grading } = entry
+              return (
+                <tr key={record.submissionId}>
+                  <td>
+                    <input
+                      aria-label={`选择 ${record.candidateName} 的作答`}
+                      checked={selectedIds.has(record.submissionId)}
+                      type="checkbox"
+                      onChange={() => onToggle(record.submissionId)}
+                    />
+                  </td>
+                  <td>
+                    <strong>{record.candidateName}</strong>
+                    <span>{displayCandidateId(record.candidateId)}</span>
+                  </td>
+                  <td>{record.examTitle}</td>
+                  <td>{formatDateTime(record.submittedAt)}</td>
+                  <td>
+                    <strong className={grading?.status === 'ready' ? styles.ready : undefined}>
+                      {gradingStatus(entry)}
+                    </strong>
+                    <span>
+                      {grading
+                        ? `${grading.gradedCount}/${grading.totalCount} 个评分单元`
+                        : '尚未开始'}
+                    </span>
+                  </td>
+                  <td>
+                    <div className={styles.actions}>
+                      <Button
+                        icon={Play}
+                        size="small"
+                        variant="primary"
+                        onClick={() => onGrade(entry)}
+                      >
+                        {grading?.status === 'ready'
+                          ? '进入结算'
+                          : grading
+                            ? '继续评分'
+                            : '开始评分'}
+                      </Button>
+                      <IconButton
+                        disabled={exportingId !== null}
+                        icon={Download}
+                        label="导出作答包"
+                        onClick={() => onExport(record)}
+                      />
+                      <IconButton
+                        icon={Trash2}
+                        label="删除作答记录"
+                        variant="danger"
+                        onClick={() => onDelete(entry)}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </section>
   )
+}
+
+function SettledBatches({
+  batches,
+  entriesById,
+  expandedBatchIds,
+  exportingId,
+  onToggle,
+  onReport,
+  onReset,
+  onExport,
+  onDelete
+}: {
+  batches: SubmissionSettlementBatch[]
+  entriesById: Map<string, SubmissionLibraryEntry>
+  expandedBatchIds: Set<string>
+  exportingId: string | null
+  onToggle(batchId: string): void
+  onReport(entry: SubmissionLibraryEntry): void
+  onReset(entry: SubmissionLibraryEntry): void
+  onExport(record: SubmissionLibraryRecord): void
+  onDelete(entry: SubmissionLibraryEntry): void
+}): JSX.Element {
+  if (batches.length === 0) return <EmptyState icon={Inbox} title="还没有已结算作答" />
+  return (
+    <div className={styles.batchList}>
+      {batches.map((batch) => {
+        const expanded = expandedBatchIds.has(batch.batchId)
+        const batchEntries = batch.records.flatMap((record) => {
+          const entry = entriesById.get(record.submissionId)
+          return entry ? [entry] : []
+        })
+        return (
+          <section
+            className={styles.batch}
+            key={batch.batchId}
+            data-expanded={expanded || undefined}
+          >
+            <button
+              aria-expanded={expanded}
+              className={styles.batchHeader}
+              type="button"
+              onClick={() => onToggle(batch.batchId)}
+            >
+              {expanded ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}
+              <span>
+                <strong>结算于 {formatDateTime(batch.settledAt)}</strong>
+                <small>{batch.records.length} 条作答</small>
+              </span>
+              <code>{batch.batchId.slice(0, 8)}</code>
+            </button>
+            {expanded ? (
+              <div className={styles.batchBody}>
+                <table className={styles.batchTable}>
+                  <thead>
+                    <tr>
+                      <th>作答人</th>
+                      <th>试卷</th>
+                      <th>分数</th>
+                      <th>作答时间</th>
+                      <th aria-label="操作" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {batchEntries.map((entry) => (
+                      <tr key={entry.record.submissionId}>
+                        <td>
+                          <strong>{entry.record.candidateName}</strong>
+                          <span>{displayCandidateId(entry.record.candidateId)}</span>
+                        </td>
+                        <td>{entry.record.examTitle}</td>
+                        <td>
+                          <strong>
+                            {entry.grading
+                              ? `${entry.grading.totalScore}/${entry.grading.maxScore}`
+                              : '-'}
+                          </strong>
+                        </td>
+                        <td>{formatDateTime(entry.record.submittedAt)}</td>
+                        <td>
+                          <div className={styles.actions}>
+                            <Button
+                              icon={Eye}
+                              size="small"
+                              variant="secondary"
+                              onClick={() => onReport(entry)}
+                            >
+                              查看报告
+                            </Button>
+                            <IconButton
+                              icon={RotateCcw}
+                              label="重新评分"
+                              onClick={() => onReset(entry)}
+                            />
+                            <IconButton
+                              disabled={exportingId !== null}
+                              icon={Download}
+                              label="导出作答包"
+                              onClick={() => onExport(entry.record)}
+                            />
+                            <IconButton
+                              icon={Trash2}
+                              label="删除作答记录"
+                              variant="danger"
+                              onClick={() => onDelete(entry)}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </section>
+        )
+      })}
+    </div>
+  )
+}
+
+function gradingSessionUrl(submissionIds: readonly string[]): string {
+  const params = new URLSearchParams()
+  submissionIds.forEach((submissionId) => params.append('submissionId', submissionId))
+  return `/submissions/grading?${params.toString()}`
+}
+
+function gradingStatus(entry: SubmissionLibraryEntry): string {
+  if (!entry.grading) return '未评分'
+  return entry.grading.status === 'ready' ? '可结算' : '评分中'
+}
+
+function displayCandidateId(candidateId: string): string {
+  return candidateId.startsWith('auto:') ? '考生号未填写' : candidateId
 }
 
 function formatDateTime(value: string): string {
