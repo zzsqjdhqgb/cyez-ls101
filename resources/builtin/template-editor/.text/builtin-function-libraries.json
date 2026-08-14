@@ -436,8 +436,8 @@
     },
     {
       "libraryId": "builtin:shanghai-gaokao-basic",
-      "version": 1,
-      "contentHash": "sha256:40d78e296e5e0173df4daf353c0eb3558c21ad7ab8eb33899c10f764b7734c9e",
+      "version": 2,
+      "contentHash": "sha256:08f1601f52a92091d06d16fd2635023acfcfcaf156fb3aed2322ea57c4786cac",
       "content": {
         "name": "高中基础题型",
         "functions": [
@@ -710,7 +710,7 @@
               },
               "outputs": [
                 {
-                  "name": "passage",
+                  "name": "ans",
                   "type": "audio",
                   "expression": {
                     "type": "audio",
@@ -830,7 +830,7 @@
               },
               "outputs": [
                 {
-                  "name": "output",
+                  "name": "ans",
                   "type": "audio",
                   "expression": {
                     "type": "audio",
