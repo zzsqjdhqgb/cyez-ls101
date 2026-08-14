@@ -544,10 +544,21 @@
 }
 
 .modelItem {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 7px var(--space-4);
   border-bottom: 1px solid var(--color-border);
 }
 
-.modelItem:last-child {
+.modelDetailsItem {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modelItem:last-child,
+.modelDetailsItem:last-child {
   border-bottom: 0;
 }
 
@@ -576,7 +587,7 @@
   transition: transform 120ms ease;
 }
 
-.modelItem[open] > .modelSummary::before {
+.modelDetailsItem[open] > .modelSummary::before {
   transform: rotate(90deg);
 }
 

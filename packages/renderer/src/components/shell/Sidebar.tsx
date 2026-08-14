@@ -35,7 +35,7 @@ function NavigationLink({
   const link = (
     <NavLink
       aria-label={navigation.label}
-      className={({ isActive }) => `${styles.link} ${isActive ? styles.active : ''}`}
+      className={styles.link}
       end={route.path === '/'}
       to={route.path}
     >

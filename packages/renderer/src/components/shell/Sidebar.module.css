@@ -65,12 +65,12 @@
   background: var(--color-surface-hover);
 }
 
-.link.active {
+.link[aria-current='page'] {
   color: var(--color-accent);
   font-weight: 650;
 }
 
-.link.active::before {
+.link[aria-current='page']::before {
   content: '';
   position: absolute;
   top: 10px;
@@ -164,7 +164,7 @@
   width: auto;
 }
 
-.sidebar[data-collapsed] .link.active::before {
+.sidebar[data-collapsed] .link[aria-current='page']::before {
   left: 0;
 }
 

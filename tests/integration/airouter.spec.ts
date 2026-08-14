@@ -634,7 +634,12 @@ test('AR-16 saves and reloads an image provider with isolated config and secret 
   await page.getByRole('button', { name: /Image API/ }).click()
   await expect(page.getByLabel('图像 Provider 类型')).toBeDisabled()
   await expect(page.getByLabel('图像 Base URL')).toHaveValue(mockServer.baseUrl)
-  await expect(page.getByRole('checkbox', { name: 'mock-image' })).toBeChecked()
+  const modelCheckbox = page.getByRole('checkbox', { name: 'mock-image' })
+  const modelRow = modelCheckbox.locator('../..')
+  await expect(modelCheckbox).toBeChecked()
+  await expect(modelRow).toHaveCSS('display', 'flex')
+  await expect(modelRow).toHaveCSS('min-height', '44px')
+  await expect(modelRow).toHaveCSS('align-items', 'center')
   const state = await page.evaluate(
     async (id) => ({
       image: await window.airouter.listImageProviderConfigs(),

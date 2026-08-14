@@ -69,6 +69,7 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '收起侧边栏' }))
     expect(screen.getByRole('button', { name: '展开侧边栏' })).toBeVisible()
+    expect(screen.getByRole('link', { name: '工作台' }).className).not.toContain('=>')
 
     fireEvent.click(screen.getByRole('link', { name: '设置' }))
     expect(screen.getByRole('button', { name: '展开侧边栏' })).toBeVisible()
