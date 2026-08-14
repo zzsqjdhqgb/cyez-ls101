@@ -38,10 +38,16 @@ describe('bundled Interface repository', () => {
     const entries = await repository.loadAll()
     const entry = entries.find(({ builtinKey }) => builtinKey === 'shanghai-gaokao-speaking')
     expect(entry?.currentInterface).toMatchObject({
-      id: 'sha256:d1eb371653899bd7756f00d3871ca9d10437353c3c91a4398fbecb74c6cdbf25',
+      id: 'sha256:27479dd551162324fd66ccb93d1762cc25fc87bf424ca08a86cb7a49c3502c1c',
       name: '上海高考英语口语'
     })
     if (!entry) throw new Error('expected Shanghai Gaokao speaking builtin')
+    expect(entry.currentInterface.promptTemplate).toContain('100至150词')
+    expect(entry.currentInterface.promptTemplate).toContain(
+      '不要为学生生成评分、训练建议或作答反馈'
+    )
+    expect(entry.currentInterface.promptTemplate).toContain("As far as I'm concerned")
+    expect(entry.currentInterface.promptTemplate).toContain('In the foreground/background')
 
     const leaves = flattenFields(entry.currentInterface.fields)
     const leavesByVarName = new Map(leaves.map(({ leaf }) => [leaf.varName, leaf]))
