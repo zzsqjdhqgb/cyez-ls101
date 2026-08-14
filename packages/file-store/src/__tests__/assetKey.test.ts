@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   assetKeyToLocation,
+  assetUrlToKey,
   builtinAssetKeyToLocation,
   createAssetKey,
   createBuiltinAssetKey
@@ -26,6 +27,12 @@ describe('asset keys', () => {
     expect(key).toBe('builtin-asset-key://v1/template-editor/cover.png')
     expect(builtinAssetKeyToLocation(key)).toEqual(location)
     expect(() => assetKeyToLocation(key)).toThrow('Invalid asset key')
+  })
+
+  it('converts a local asset URL to its IPC-safe asset key', () => {
+    expect(assetUrlToKey('asset://local/interfaces/published/abc123/cover-image.png')).toBe(
+      'asset-key://v1/interfaces/published/abc123/cover-image.png'
+    )
   })
 
   it.each([

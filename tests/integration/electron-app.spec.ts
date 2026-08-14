@@ -11,6 +11,57 @@ let page: Page
 let userDataDir: string
 let pageErrors: string[]
 
+async function expectValidStyleBindings(currentPage: Page): Promise<void> {
+  const invalidBindings = await currentPage.locator('body').evaluate(() => {
+    const definedModuleClasses = new Set<string>()
+
+    const collectRules = (rules: CSSRuleList): void => {
+      for (const rule of rules) {
+        if (rule instanceof CSSStyleRule) {
+          for (const match of rule.selectorText.matchAll(/\.(_[A-Za-z_][\w-]*)/g)) {
+            definedModuleClasses.add(match[1])
+          }
+        }
+        if ('cssRules' in rule) {
+          try {
+            collectRules((rule as CSSGroupingRule).cssRules)
+          } catch {
+            // Ignore browser-managed rules that do not expose their children.
+          }
+        }
+      }
+    }
+
+    for (const stylesheet of document.styleSheets) {
+      try {
+        collectRules(stylesheet.cssRules)
+      } catch {
+        // Cross-origin stylesheets are opaque; packaged renderer styles are same-origin.
+      }
+    }
+
+    const problems: string[] = []
+    for (const element of document.querySelectorAll<HTMLElement>('[class]')) {
+      const className = element.getAttribute('class') ?? ''
+      if (
+        /=>|\bfunction\b|\[object Object\]|\b(?:undefined|null)\b|\$\{|styles[$.]/.test(className)
+      ) {
+        problems.push(`${element.tagName.toLowerCase()}: suspicious class="${className}"`)
+      }
+
+      for (const moduleClass of element.classList) {
+        if (moduleClass.startsWith('_') && !definedModuleClasses.has(moduleClass)) {
+          problems.push(`${element.tagName.toLowerCase()}: missing CSS rule for .${moduleClass}`)
+        }
+      }
+    }
+
+    return problems
+  })
+
+  expect(invalidBindings).toEqual([])
+}
+
 test.beforeEach(async () => {
   userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-integration-'))
   pageErrors = []
@@ -229,30 +280,64 @@ test('round-trips data through file, config, asset protocol, AI and clipboard IP
 })
 
 test('navigates through every primary application area', async () => {
+  await expectValidStyleBindings(page)
+
   await page.getByRole('link', { name: '题型库' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '题型库' })).toBeVisible()
   await expect(page.getByText('正在加载题型...')).toBeHidden()
+  await expectValidStyleBindings(page)
 
   await page.getByRole('link', { name: '试卷库' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '试卷库' })).toBeVisible()
   await expect(page.getByText('正在加载考试库...')).toBeHidden()
   await expect(page.getByText('暂无试卷')).toBeVisible()
+  await expectValidStyleBindings(page)
 
   await page.getByRole('link', { name: '试卷模板' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '试卷模板' })).toBeVisible()
   await expect(page.getByText('正在加载模板...')).toBeHidden()
+  await expectValidStyleBindings(page)
+
+  await page.getByRole('link', { name: '评分单元' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: '评分单元' })).toBeVisible()
+  await expect(page.getByText('正在加载 Schema...')).toBeHidden()
+  for (const name of [
+    '上海高考 - 朗读句子',
+    '上海高考 - 朗读短文',
+    '上海高考 - 情景提问',
+    '上海高考 - 看图说话',
+    '上海高考 - 快速应答',
+    '上海高考 - 听短文回答事实题',
+    '上海高考 - 听短文回答观点题'
+  ]) {
+    await expect(page.getByRole('button', { name })).toBeVisible()
+  }
+  await expect(page.getByText('内置')).toHaveCount(7)
+  await expect(page.getByRole('button', { name: '删除正式 Schema' })).toHaveCount(0)
+  await expectValidStyleBindings(page)
 
   await page.getByRole('link', { name: '设置' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '设置' })).toBeVisible()
   await expect(page.getByRole('button', { name: /外观/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /AI 引擎/ })).toBeVisible()
+  await expectValidStyleBindings(page)
   await page.getByRole('button', { name: /关于/ }).click()
   await expect(page.getByRole('heading', { level: 1, name: '关于' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '曹二听说101' })).toBeVisible()
   await expect(page.getByText(/^版本 \S+/)).toBeVisible()
+  await expectValidStyleBindings(page)
 
   await page.getByRole('link', { name: '工作台' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
+  await page.getByRole('button', { name: '收起侧边栏' }).click()
+
+  const sidebar = page.getByRole('navigation', { name: '主导航' }).locator('..')
+  const workbenchLink = page.getByRole('link', { name: '工作台' })
+  await expect(sidebar).toHaveCSS('width', '68px')
+  await expect(workbenchLink).toHaveCSS('width', '42px')
+  await expect(workbenchLink).toHaveCSS('justify-content', 'center')
+  await expect(workbenchLink.locator('span')).toBeHidden()
+  await expectValidStyleBindings(page)
 })
 
 test('exports a submission containing a large resource through the renderer ZIP worker', async () => {
@@ -343,6 +428,12 @@ test('creates, edits and reloads a persisted template', async () => {
   await expect(nameInput).toHaveValue('未命名模板')
   await nameInput.fill('集成测试模板')
   await page.getByRole('textbox', { name: '描述' }).fill('由 Electron 集成测试创建')
+
+  await expect(
+    page.getByRole('button', { name: '高中基础题型，版本 3', exact: true })
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: '高中大题组，版本 2', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '添加听短文回答题组' })).toBeVisible()
 
   const createLibrary = page.getByRole('button', { name: '新建本地函数库' })
   await expect(createLibrary).toBeEnabled()

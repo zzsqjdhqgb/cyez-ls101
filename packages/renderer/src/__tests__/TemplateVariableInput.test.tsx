@@ -47,6 +47,17 @@ describe('SchemaUse 变量文本格式', () => {
       ref: { scope: 'interface', alias: 'exam', varName: 'picture.img' }
     })
   })
+
+  it('解析带题号前缀的 Interface 变量名', () => {
+    expect(parseTextExpression('[@oral.3_dialogue]').parts[0]).toEqual({
+      type: 'variable',
+      ref: { scope: 'interface', alias: 'oral', varName: '3_dialogue' }
+    })
+    expect(parseTextExpression('[@oral.4_picture.img]').parts[0]).toEqual({
+      type: 'variable',
+      ref: { scope: 'interface', alias: 'oral', varName: '4_picture.img' }
+    })
+  })
 })
 
 const candidates: TemplateVariableCandidate[] = [

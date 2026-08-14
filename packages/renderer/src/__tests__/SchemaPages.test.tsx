@@ -74,7 +74,9 @@ function repository(overrides: Partial<SchemaRepository> = {}): SchemaRepository
     })),
     deleteDraftLibrary: vi.fn().mockResolvedValue(undefined),
     listSchemaIds: vi.fn().mockResolvedValue([]),
+    listBuiltinSchemaIds: vi.fn().mockResolvedValue([]),
     getSchema: vi.fn().mockResolvedValue(null),
+    registerBuiltinSchema: vi.fn().mockResolvedValue(definition),
     publishDraft: vi.fn().mockResolvedValue(definition),
     updateSchemaData: vi.fn().mockResolvedValue(definition),
     deleteSchema: vi.fn().mockResolvedValue(undefined),
@@ -119,6 +121,33 @@ describe('Schema pages', () => {
     expect(saveDraftLibrary.mock.calls[0][0]).toEqual(
       expect.objectContaining({ name: '未命名草稿库', drafts: [] })
     )
+  })
+
+  it('marks builtin schemas and removes their deletion controls', async () => {
+    const app = repository({
+      listSchemaIds: vi.fn().mockResolvedValue([SCHEMA_ID]),
+      listBuiltinSchemaIds: vi.fn().mockResolvedValue([SCHEMA_ID]),
+      getSchema: vi.fn().mockResolvedValue(definition)
+    })
+
+    const view = render(
+      <SchemaApplicationProvider repository={app}>
+        <MemoryRouter initialEntries={['/schemas']}>
+          <Routes>
+            <Route path="/schemas" element={<SchemaBrowserPage />} />
+            <Route path="/schemas/:schemaId" element={<SchemaDefinitionPage />} />
+          </Routes>
+        </MemoryRouter>
+      </SchemaApplicationProvider>
+    )
+
+    expect(await screen.findByText('内置')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '删除正式 Schema' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '单句朗读评分' }))
+    expect(await screen.findByText('内置 · r3')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '删除正式 Schema' })).not.toBeInTheDocument()
+    view.unmount()
   })
 
   it('edits and saves a structure draft with stable slots', async () => {

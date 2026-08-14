@@ -9,10 +9,29 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   createExamGenerationSession,
   exportGeneratedExam,
+  fetchExamResource,
   listSpeechGenerationSelections
 } from '../features/templates/TemplateExamGeneration'
 
 describe('TemplateExamGeneration', () => {
+  it('通过 file-store IPC 读取本地试卷资源', async () => {
+    const readAsset = vi.fn().mockResolvedValue(new Uint8Array([4, 5, 6]))
+    const fetcher = vi.fn()
+
+    const response = await fetchExamResource(
+      'asset://local/interfaces/published/interface-1/picture-1.png',
+      new AbortController().signal,
+      { readAsset },
+      fetcher
+    )
+
+    expect(readAsset).toHaveBeenCalledWith(
+      'asset-key://v1/interfaces/published/interface-1/picture-1.png'
+    )
+    expect(fetcher).not.toHaveBeenCalled()
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array([4, 5, 6]))
+  })
+
   it('只列出同时启用的提供商、模型和音色组合', async () => {
     const client = {
       listSpeechProviderConfigs: vi.fn().mockResolvedValue([

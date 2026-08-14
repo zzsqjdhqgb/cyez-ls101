@@ -221,9 +221,9 @@ describe('validateInterfaceDef — varName 校验', () => {
     expectError(result.errors, 'INVALID_VAR_NAME', 'a', { varName: 'var@name' })
   })
 
-  it('varName 以数字开头 → INVALID_VAR_NAME', () => {
+  it('varName 以数字开头 → 通过（兼容旧模板题号前缀）', () => {
     const result = validateInterfaceDef(validDef({ fields: { a: textLeaf('1var') } }))
-    expectError(result.errors, 'INVALID_VAR_NAME', 'a', { varName: '1var' })
+    expect(result.valid).toBe(true)
   })
 
   it('varName 合法格式：字母开头 + 连字符 + 下划线 → 通过', () => {

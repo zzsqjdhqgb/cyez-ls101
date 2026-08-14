@@ -59,7 +59,7 @@ const validationMessages: Record<ValidationError['code'], string> = {
   INVALID_FIELD_ORDER: '字段顺序无效',
   INVALID_FIELD_KEY: '字段标识不能为空、包含点号或带有首尾空格',
   EMPTY_VAR_NAME: '变量名不能为空',
-  INVALID_VAR_NAME: '变量名应以字母或下划线开头，且只包含字母、数字、下划线或连字符',
+  INVALID_VAR_NAME: '变量名只能包含字母、数字、下划线或连字符',
   EMPTY_DESCRIPTION: '字段描述不能为空',
   EMPTY_EXAMPLE: '示例值不能为空',
   DUPLICATE_VAR_NAME: '变量名不能重复'

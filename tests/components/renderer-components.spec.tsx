@@ -134,7 +134,11 @@ test('FE-07 application shell keeps navigation usable while changing layouts', a
   await expect(component.getByRole('navigation', { name: '主导航' })).toBeVisible()
   await component.getByRole('button', { name: '收起侧边栏' }).click()
   await expect(sidebar).toHaveAttribute('data-collapsed', 'true')
-  await expect(component.getByRole('link', { name: '首页' })).toBeVisible()
+  const homeLink = component.getByRole('link', { name: '首页' })
+  await expect(homeLink).toBeVisible()
+  await expect(homeLink).toHaveCSS('width', '42px')
+  await expect(homeLink).toHaveCSS('justify-content', 'center')
+  await expect(homeLink.locator('span')).toBeHidden()
 
   await component.getByRole('link', { exact: true, name: '专注' }).click()
   await expect(component.getByRole('heading', { name: '专注页面' })).toBeVisible()

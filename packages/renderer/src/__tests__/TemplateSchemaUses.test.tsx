@@ -57,7 +57,9 @@ function repository(): SchemaRepository {
     saveDraftLibrary: vi.fn(),
     deleteDraftLibrary: vi.fn(),
     listSchemaIds: vi.fn().mockResolvedValue([SCHEMA_ID]),
+    listBuiltinSchemaIds: vi.fn().mockResolvedValue([]),
     getSchema: vi.fn().mockResolvedValue(definition),
+    registerBuiltinSchema: vi.fn(),
     publishDraft: vi.fn(),
     updateSchemaData: vi.fn(),
     deleteSchema: vi.fn()

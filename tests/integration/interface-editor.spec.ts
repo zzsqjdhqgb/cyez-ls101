@@ -52,7 +52,7 @@ interface SeededDraft {
 
 const BUILTIN_KEY = 'shanghai-gaokao-speaking'
 const BUNDLED_INTERFACE_ID =
-  'sha256:d1eb371653899bd7756f00d3871ca9d10437353c3c91a4398fbecb74c6cdbf25'
+  'sha256:20641a4a02ec151817fbd2dd20a82b6a127e87dae19c2bc01c003c2cb66f07d1'
 const BUNDLED_INTERFACE_PATH = path.join(
   process.cwd(),
   'resources/builtin/interface-editor/builtin/shanghai-gaokao-speaking/versions',
@@ -1050,11 +1050,13 @@ test('IE-15 drives the standalone AI image panel end to end', async () => {
   await expect(page.getByText('已取消 AI 生图')).toBeVisible()
 })
 
-test('IE-16 installs the bundled Shanghai speaking Interface on first launch', async () => {
+test('IE-16 installs all bundled Shanghai Interfaces on first launch', async () => {
   await page.getByRole('link', { name: '题型库' }).click()
   const builtin = page.getByRole('button', { name: '上海高考英语口语', exact: true })
   await expect(builtin).toBeVisible()
-  await expect(page.getByText('内置', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '上海中考英语口语', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '上海高考英语听力', exact: true })).toBeVisible()
+  await expect(page.getByText('内置', { exact: true })).toHaveCount(3)
   await builtin.click()
   await expect(page.getByText('内置题型')).toBeVisible()
   await expect(page.getByRole('button', { name: '新建题组' })).toBeVisible()
@@ -1415,7 +1417,7 @@ test('IE-21 can keep the previous bundled version as a published Interface', asy
 
   await page.getByRole('link', { name: '题型库' }).click()
   await expect(page.getByRole('button', { name: '上海高考英语口语', exact: true })).toHaveCount(2)
-  await expect(page.getByText('内置', { exact: true })).toHaveCount(1)
+  await expect(page.getByText('内置', { exact: true })).toHaveCount(3)
 })
 
 test('IE-22 refuses a bundled update that changes its variable contract', async () => {

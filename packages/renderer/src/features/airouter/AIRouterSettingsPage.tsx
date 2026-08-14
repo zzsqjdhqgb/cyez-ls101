@@ -929,7 +929,7 @@ function ModelSettings({
   const reasoningModes = reasoningModeOptions(options, providerType, metadata?.reasoning === true)
   const selectedMode = reasoningMode(model.reasoning)
   return (
-    <details className={styles.modelItem}>
+    <details className={styles.modelDetailsItem}>
       <summary className={styles.modelSummary}>
         <span className={styles.modelToggle}>
           <input

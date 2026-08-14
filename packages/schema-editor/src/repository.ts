@@ -35,7 +35,9 @@ export interface SchemaRepository {
   deleteDraftLibrary(libraryId: string): Promise<void>
 
   listSchemaIds(): Promise<string[]>
+  listBuiltinSchemaIds(): Promise<string[]>
   getSchema(schemaId: string): Promise<SchemaDefinition | null>
+  registerBuiltinSchema(definition: SchemaDefinition): Promise<SchemaDefinition>
   publishDraft(libraryId: string, draftId: string, data: SchemaData): Promise<SchemaDefinition>
   updateSchemaData(
     schemaId: string,
@@ -52,7 +54,8 @@ export class SchemaRepositoryError extends Error {
       | 'INVALID_ID'
       | 'NOT_FOUND'
       | 'REVISION_CONFLICT'
-      | 'IDENTITY_CONFLICT',
+      | 'IDENTITY_CONFLICT'
+      | 'BUILTIN_SCHEMA',
     message: string,
     public readonly details: Readonly<Record<string, string | number>> = {}
   ) {
@@ -64,6 +67,7 @@ export class SchemaRepositoryError extends Error {
 export class FileSchemaRepository implements SchemaRepository {
   private readonly draftLibraries: SchemaStore
   private readonly published: SchemaStore
+  private readonly builtinSchemaIds = new Set<string>()
 
   constructor(root: SchemaStore) {
     this.draftLibraries = root.scope('draft-libraries')
@@ -137,6 +141,10 @@ export class FileSchemaRepository implements SchemaRepository {
     return ids.sort()
   }
 
+  async listBuiltinSchemaIds(): Promise<string[]> {
+    return [...this.builtinSchemaIds].sort()
+  }
+
   async getSchema(schemaId: string): Promise<SchemaDefinition | null> {
     assertId(isSchemaId(schemaId), 'schemaId', schemaId)
     const value = await this.published.scope(schemaId).readText<unknown>(SCHEMA_FILE)
@@ -151,6 +159,45 @@ export class FileSchemaRepository implements SchemaRepository {
       throw invalidData(`Invalid published Schema: ${schemaId}`)
     }
     return definition
+  }
+
+  async registerBuiltinSchema(definition: SchemaDefinition): Promise<SchemaDefinition> {
+    if (
+      !parseSchemaDefinition(definition) ||
+      !validateSchemaDefinition(definition).valid ||
+      !(await verifySchemaDefinition(definition))
+    ) {
+      throw invalidData('Schema definition is invalid')
+    }
+    const scope = this.published.scope(definition.schemaId)
+    const storedValue = await scope.readText<unknown>(SCHEMA_FILE)
+    if (storedValue === null) {
+      const created = structuredClone(definition)
+      if (await scope.compareAndSwapText(SCHEMA_FILE, null, created)) {
+        this.builtinSchemaIds.add(definition.schemaId)
+        return created
+      }
+      return this.registerBuiltinSchema(definition)
+    }
+
+    const current = parseSchemaDefinition(storedValue)
+    if (
+      !current ||
+      current.schemaId !== definition.schemaId ||
+      !validateSchemaDefinition(current).valid ||
+      !(await verifySchemaDefinition(current))
+    ) {
+      throw invalidData(`Invalid published Schema: ${definition.schemaId}`)
+    }
+    if (current.structureHash !== definition.structureHash) {
+      throw new SchemaRepositoryError(
+        'IDENTITY_CONFLICT',
+        `Schema structure conflicts with registered definition: ${definition.schemaId}`,
+        { schemaId: definition.schemaId }
+      )
+    }
+    this.builtinSchemaIds.add(definition.schemaId)
+    return current
   }
 
   async publishDraft(
@@ -205,6 +252,13 @@ export class FileSchemaRepository implements SchemaRepository {
 
   async deleteSchema(schemaId: string): Promise<void> {
     assertId(isSchemaId(schemaId), 'schemaId', schemaId)
+    if (this.builtinSchemaIds.has(schemaId)) {
+      throw new SchemaRepositoryError(
+        'BUILTIN_SCHEMA',
+        `Builtin Schema cannot be deleted: ${schemaId}`,
+        { schemaId }
+      )
+    }
     await this.published.scope(schemaId).clear()
   }
 

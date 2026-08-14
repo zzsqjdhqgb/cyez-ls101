@@ -24,6 +24,7 @@ export function SchemaBrowserPage(): JSX.Element {
   const repository = useSchemaRepository()
   const navigate = useNavigate()
   const [schemas, setSchemas] = useState<SchemaDefinition[]>([])
+  const [builtinSchemaIds, setBuiltinSchemaIds] = useState<ReadonlySet<string>>(new Set())
   const [libraries, setLibraries] = useState<SchemaDraftLibraryDocument[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
@@ -34,8 +35,9 @@ export function SchemaBrowserPage(): JSX.Element {
     setLoading(true)
     setError(null)
     try {
-      const [schemaIds, libraryIds] = await Promise.all([
+      const [schemaIds, builtinIds, libraryIds] = await Promise.all([
         repository.listSchemaIds(),
+        repository.listBuiltinSchemaIds(),
         repository.listDraftLibraryIds()
       ])
       const [schemaItems, libraryItems] = await Promise.all([
@@ -43,6 +45,7 @@ export function SchemaBrowserPage(): JSX.Element {
         Promise.all(libraryIds.map((id) => repository.getDraftLibrary(id)))
       ])
       setSchemas(schemaItems.filter((item): item is SchemaDefinition => item !== null))
+      setBuiltinSchemaIds(new Set(builtinIds))
       setLibraries(libraryItems.filter((item): item is SchemaDraftLibraryDocument => item !== null))
     } catch (reason) {
       setError(schemaErrorMessage(reason))
@@ -53,16 +56,22 @@ export function SchemaBrowserPage(): JSX.Element {
 
   useEffect(() => {
     let active = true
-    void Promise.all([repository.listSchemaIds(), repository.listDraftLibraryIds()])
-      .then(([schemaIds, libraryIds]) =>
+    void Promise.all([
+      repository.listSchemaIds(),
+      repository.listBuiltinSchemaIds(),
+      repository.listDraftLibraryIds()
+    ])
+      .then(([schemaIds, builtinIds, libraryIds]) =>
         Promise.all([
           Promise.all(schemaIds.map((id) => repository.getSchema(id))),
+          builtinIds,
           Promise.all(libraryIds.map((id) => repository.getDraftLibrary(id)))
         ])
       )
-      .then(([schemaItems, libraryItems]) => {
+      .then(([schemaItems, builtinIds, libraryItems]) => {
         if (!active) return
         setSchemas(schemaItems.filter((item): item is SchemaDefinition => item !== null))
+        setBuiltinSchemaIds(new Set(builtinIds))
         setLibraries(
           libraryItems.filter((item): item is SchemaDraftLibraryDocument => item !== null)
         )
@@ -152,16 +161,20 @@ export function SchemaBrowserPage(): JSX.Element {
                 </p>
               </div>
               <div className={styles.rowActions}>
-                <span className={styles.badge}>正式版 r{item.revision}</span>
+                <span className={styles.badge}>
+                  {builtinSchemaIds.has(item.schemaId) ? '内置' : `正式版 r${item.revision}`}
+                </span>
                 <Button icon={ArrowRight} onClick={() => navigate(`/schemas/${item.schemaId}`)}>
                   编辑
                 </Button>
-                <IconButton
-                  icon={Trash2}
-                  label="删除正式 Schema"
-                  variant="danger"
-                  onClick={() => setPendingDelete({ kind: 'schema', item })}
-                />
+                {!builtinSchemaIds.has(item.schemaId) ? (
+                  <IconButton
+                    icon={Trash2}
+                    label="删除正式 Schema"
+                    variant="danger"
+                    onClick={() => setPendingDelete({ kind: 'schema', item })}
+                  />
+                ) : null}
               </div>
             </article>
           ))}
