@@ -34,7 +34,7 @@ xvfb-run -a yarn test:playwright:electron tests/integration/airouter.spec.ts
 
 操作流程：从侧栏进入设置，再打开 AI 引擎，依次点击四个分类标签并返回文本生成，最后再次切到语音合成和语音识别。
 
-测试内容：设置入口、分类路由和选中状态均正常；语音合成显示真实的 Provider 与 TTS 模型包设置区域，语音识别仍显示占位页；文本 Provider 空状态正常显示。
+测试内容：设置入口、分类路由和选中状态均正常；语音合成显示真实的 Provider 与 TTS 模型包设置区域，语音识别设置仍显示占位页；文本 Provider 空状态正常显示。内置 Qwen3 ASR 运行时不需要 Provider 配置，当前由 AI 评分页面直接枚举，因此本路径不把后端识别能力误判为尚未接入。
 
 ### AR-02 文本空状态与默认手动图像 Provider
 
@@ -310,5 +310,6 @@ xvfb-run -a yarn test:playwright:electron tests/integration/airouter.spec.ts
 - 手动图像请求的并发 FIFO 队列和调用方 `AbortSignal` 由 `ManualImageGeneration.test.ts` 覆盖，不在 Playwright 中重复构造并发业务页面。
 - 题型编辑器如何列出、选择和消费 AIRouter 模型，属于题型实例编辑器的独立集成测试路径。
 - 当前没有 Qwen TTS runtime 实现，未执行 Qwen 模型包推理；也未覆盖未来 Qwen Provider 的具体参数协议。
+- Qwen3 ASR 的模型资产发现、请求校验和 IPC 转发由 AIRouter Vitest 覆盖，打包后内置模型枚举由 Electron smoke 覆盖；本 Playwright 套件不加载约 942 MB 的识别模型执行真实推理，也不覆盖仍为占位状态的识别设置页交互。
 - 当前不覆盖损坏的 Provider 配置文件、应用退出时仍在进行的请求恢复，以及模型发现接口失败或畸形 SSE 的所有第三方变体。
 - 本套件不访问公网，不验证第三方服务的实时可用性、计费或限流策略。

@@ -13,7 +13,7 @@
 
 | 测试源文件                                                                                             | 路径数 | 详细文档                                          | 主要范围                                                                 |
 | ------------------------------------------------------------------------------------------------------ | -----: | ------------------------------------------------- | ------------------------------------------------------------------------ |
-| [`tests/integration/electron-app.spec.ts`](../../tests/integration/electron-app.spec.ts)               |      6 | [Electron 应用测试路径](./electron-app.md)        | 应用启动、preload、IPC、导航、配置与业务数据持久化、窗口控制             |
+| [`tests/integration/electron-app.spec.ts`](../../tests/integration/electron-app.spec.ts)               |      8 | [Electron 应用测试路径](./electron-app.md)        | 应用启动、preload、IPC、导航、导入导出、配置与业务数据持久化、窗口控制   |
 | [`tests/integration/airouter.spec.ts`](../../tests/integration/airouter.spec.ts)                       |     33 | [AIRouter 集成测试路径](./airouter.md)            | Provider、密钥、TTS 模型包、文本/语音流、图像生成、错误、取消与 UI 状态  |
 | [`tests/integration/interface-editor.spec.ts`](../../tests/integration/interface-editor.spec.ts)       |     16 | [题型编辑器集成测试路径](./interface-editor.md)   | 题型草稿、发布题型、题组、导入导出、内置题型、AI 文本/图像生成与失败处理 |
 | [`tests/components/renderer-components.spec.tsx`](../../tests/components/renderer-components.spec.tsx) |      8 | [Renderer 组件测试路径](./renderer-components.md) | 通用 UI、壳层导航、设置行、模型选择器、键盘和窄视口可用性                |
