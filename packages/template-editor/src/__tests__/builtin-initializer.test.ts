@@ -91,11 +91,25 @@ describe('内置函数库启动初始化', () => {
       await repository.getActiveBuiltinFunctionLibrary('builtin:shanghai-gaokao-basic')
     ).toMatchObject({
       libraryId: 'builtin:shanghai-gaokao-basic',
-      version: 2,
+      version: 3,
       content: {
         name: '高中基础题型',
         functions: [
-          { functionId: 'builtin:shanghai-gaokao-directions', content: { name: 'Directions页面' } },
+          {
+            functionId: 'builtin:shanghai-gaokao-directions',
+            content: {
+              name: 'Directions页面',
+              body: {
+                children: [
+                  {
+                    content: {
+                      blocks: [{ id: 'text' }, { id: 'text-1', x: 10, width: 79.4 }]
+                    }
+                  }
+                ]
+              }
+            }
+          },
           {
             functionId: 'builtin:shanghai-gaokao-reading-sentence',
             content: { name: '朗读句子' }

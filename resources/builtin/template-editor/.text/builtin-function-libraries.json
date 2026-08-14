@@ -436,8 +436,8 @@
     },
     {
       "libraryId": "builtin:shanghai-gaokao-basic",
-      "version": 2,
-      "contentHash": "sha256:08f1601f52a92091d06d16fd2635023acfcfcaf156fb3aed2322ea57c4786cac",
+      "version": 3,
+      "contentHash": "sha256:47acb1acb55dac202c868d645a7868a4a77117c32a13ce4cd969deaba892c3bc",
       "content": {
         "name": "高中基础题型",
         "functions": [
@@ -490,9 +490,9 @@
                         {
                           "id": "text-1",
                           "type": "text",
-                          "x": 13.5,
+                          "x": 10,
                           "y": 27.8,
-                          "width": 57.7,
+                          "width": 79.4,
                           "fontSize": 32,
                           "text": {
                             "type": "string",
