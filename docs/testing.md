@@ -7,18 +7,19 @@
 
 ## 测试分层
 
-项目使用三层自动化测试：
+项目使用四层自动化测试：
 
 - Vitest：包级单元测试和模块集成测试，覆盖领域逻辑、存储实现、renderer 组件和 IPC handler。
 - Playwright 浏览器组件测试：启动独立的 Vite renderer 测试页，直接操作真实浏览器中的 renderer 组件，覆盖语义、键盘、焦点、响应式布局和组件状态。
 - Playwright Electron 集成测试：启动构建产物并覆盖 main、sandbox preload、renderer 和持久化存储之间的调用链。
+- Playwright 产品文档测试：只覆盖已经确认的用户可见产品行为，并从成功运行的测试步骤和截图生成产品文档。
 
 Vitest 根配置在 `vitest.config.ts`，具体环境由各 workspace 的 `vitest.config.ts` 定义。React 测试使用 jsdom 和 `vitest.setup.ts` 中的 `@testing-library/jest-dom` matcher；Node 模块测试使用 node 环境。
 
 ## 运行命令
 
 ```bash
-yarn test                    # 依次运行 Vitest 和 Playwright 全部测试
+yarn test                    # 依次运行 Vitest、技术回归 Playwright 和产品文档测试
 yarn test:vitest             # Vitest 单元测试和包级集成测试
 yarn test:playwright         # 目录打包当前平台应用，再运行 Electron 和 renderer 组件测试
 yarn test:playwright:run     # 复用已有目录打包产物，运行两套 Playwright 测试
@@ -34,6 +35,16 @@ Linux 无桌面环境需要虚拟显示服务：
 xvfb-run -a yarn test
 xvfb-run -a yarn test:playwright
 ```
+
+产品行为文档测试保持独立配置和运行产物，也可以单独运行：
+
+```bash
+yarn test:product-docs
+xvfb-run -a yarn test:product-docs
+```
+
+只有 `tests/product-docs/` 全部通过时，才会更新 `docs/product/generated/`。
+完整的 `yarn test` 会在技术回归测试通过后复用已打包的 Electron 应用运行产品文档测试，不会重复构建应用。
 
 ## Renderer 组件测试
 

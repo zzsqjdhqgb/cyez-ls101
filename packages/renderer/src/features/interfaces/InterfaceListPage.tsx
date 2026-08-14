@@ -75,7 +75,7 @@ export function InterfaceListPage(): JSX.Element {
   return (
     <Page>
       <PageHeader
-        title="题型"
+        title="题型库"
         actions={
           <>
             <Button icon={FileDown} disabled={importing} onClick={() => void importInterface()}>

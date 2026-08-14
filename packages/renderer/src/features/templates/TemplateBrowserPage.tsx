@@ -77,7 +77,7 @@ export function TemplateBrowserPage(): JSX.Element {
   return (
     <Page>
       <PageHeader
-        title="模板"
+        title="试卷模板"
         actions={
           <Button
             icon={Plus}

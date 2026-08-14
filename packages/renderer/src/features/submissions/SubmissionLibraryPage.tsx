@@ -145,7 +145,7 @@ export function SubmissionLibraryPage(): JSX.Element {
   return (
     <Page>
       <PageHeader
-        title="收卷"
+        title="作答记录"
         actions={
           <Button
             disabled={importing}

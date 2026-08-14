@@ -438,7 +438,7 @@ describe('Interface pages', () => {
       </InterfaceApplicationProvider>
     )
 
-    expect(screen.getByRole('heading', { name: '题型' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '题型库' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '草稿' })).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: '上海高考听说' })).toBeInTheDocument()
     expect(screen.getByText('3 个题组')).toBeInTheDocument()

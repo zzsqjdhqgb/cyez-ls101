@@ -48,9 +48,9 @@ const unregisterRoutes = [
     component: InterfaceListPage,
     layout: 'standard',
     navigation: {
-      label: '题型',
+      label: '题型库',
       icon: Shapes,
-      order: 10
+      order: 30
     }
   }),
 
@@ -60,9 +60,9 @@ const unregisterRoutes = [
     component: SchemaBrowserPage,
     layout: 'standard',
     navigation: {
-      label: '评分 Schema',
+      label: '评分单元',
       icon: BookCheck,
-      order: 20
+      order: 50
     }
   }),
 
@@ -72,9 +72,9 @@ const unregisterRoutes = [
     component: ExamLibraryPage,
     layout: 'standard',
     navigation: {
-      label: '考试',
+      label: '试卷库',
       icon: ClipboardCheck,
-      order: 30
+      order: 10
     }
   }),
 
@@ -91,9 +91,9 @@ const unregisterRoutes = [
     component: SubmissionLibraryPage,
     layout: 'standard',
     navigation: {
-      label: '收卷',
+      label: '作答记录',
       icon: Inbox,
-      order: 40
+      order: 20
     }
   }),
 
@@ -110,9 +110,9 @@ const unregisterRoutes = [
     component: TemplateBrowserPage,
     layout: 'standard',
     navigation: {
-      label: '模板',
+      label: '试卷模板',
       icon: LayoutTemplate,
-      order: 50
+      order: 40
     }
   }),
 

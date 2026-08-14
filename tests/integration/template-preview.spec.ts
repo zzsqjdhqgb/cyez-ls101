@@ -216,7 +216,7 @@ test('previews a selected node tree as a vertical timeline filmstrip', async ({}
   await writeFileStoreText(['schema-editor', 'published', schema.schemaId], 'schema.json', schema)
   await writeFileStoreText(['template-editor', 'templates', TEMPLATE_ID], 'template.json', template)
 
-  await page.getByRole('link', { name: '模板' }).click()
+  await page.getByRole('link', { name: '试卷模板' }).click()
   await page.getByRole('button', { name: '纵向胶片预览' }).click()
 
   await expect(page.getByLabel('节点 choice-1 输出名称')).toHaveValue('choice-1-answer')

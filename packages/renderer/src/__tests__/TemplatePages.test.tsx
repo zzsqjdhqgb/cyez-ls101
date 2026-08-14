@@ -1144,7 +1144,7 @@ describe('Template pages', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '返回模板' }))
     fireEvent.click(screen.getByRole('button', { name: '放弃修改' }))
-    expect(await screen.findByRole('heading', { name: '模板' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '试卷模板' })).toBeInTheDocument()
   })
 
   it('guards route navigation and window unload while template edits are unsaved', async () => {
@@ -1175,7 +1175,7 @@ describe('Template pages', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '前往模板列表' }))
     fireEvent.click(screen.getByRole('button', { name: '放弃修改' }))
-    expect(await screen.findByRole('heading', { name: '模板' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '试卷模板' })).toBeInTheDocument()
   })
 
   it('clears the previous document and page state when the route parameter changes', async () => {

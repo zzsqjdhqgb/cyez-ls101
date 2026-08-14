@@ -229,17 +229,17 @@ test('round-trips data through file, config, asset protocol, AI and clipboard IP
 })
 
 test('navigates through every primary application area', async () => {
-  await page.getByRole('link', { name: '题型' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: '题型' })).toBeVisible()
+  await page.getByRole('link', { name: '题型库' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: '题型库' })).toBeVisible()
   await expect(page.getByText('正在加载题型...')).toBeHidden()
 
-  await page.getByRole('link', { name: '考试' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: '考试' })).toBeVisible()
+  await page.getByRole('link', { name: '试卷库' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: '试卷库' })).toBeVisible()
   await expect(page.getByText('正在加载考试库...')).toBeHidden()
   await expect(page.getByText('暂无试卷')).toBeVisible()
 
-  await page.getByRole('link', { name: '模板' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: '模板' })).toBeVisible()
+  await page.getByRole('link', { name: '试卷模板' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: '试卷模板' })).toBeVisible()
   await expect(page.getByText('正在加载模板...')).toBeHidden()
 
   await page.getByRole('link', { name: '设置' }).click()
@@ -269,7 +269,7 @@ test('exports a submission containing a large resource through the renderer ZIP 
   })
   await writeFile(examPath, examBytes)
 
-  await page.getByRole('link', { name: '考试' }).click()
+  await page.getByRole('link', { name: '试卷库' }).click()
   await electronApp.evaluate(({ dialog }, filePath) => {
     Object.defineProperty(dialog, 'showOpenDialog', {
       configurable: true,
@@ -335,7 +335,7 @@ test('persists appearance settings through the renderer and config store', async
 })
 
 test('creates, edits and reloads a persisted template', async () => {
-  await page.getByRole('link', { name: '模板' }).click()
+  await page.getByRole('link', { name: '试卷模板' }).click()
   await expect(page.getByText('正在加载模板...')).toBeHidden()
   await page.getByRole('button', { name: '新建模板' }).click()
 
@@ -390,7 +390,7 @@ test('creates, edits and reloads a persisted template', async () => {
   await expect(page.getByRole('button', { name: '集成测试模板', exact: true })).toBeVisible()
 
   await page.reload()
-  await page.getByRole('link', { name: '模板' }).click()
+  await page.getByRole('link', { name: '试卷模板' }).click()
   await expect(page.getByRole('button', { name: '集成测试模板', exact: true })).toBeVisible()
   await expect(page.getByText('由 Electron 集成测试创建')).toBeVisible()
 })
@@ -439,7 +439,7 @@ test('exports a persisted formal Schema through the native save dialog', async (
     })
   }, exportPath)
 
-  await page.getByRole('link', { name: '评分 Schema' }).click()
+  await page.getByRole('link', { name: '评分单元' }).click()
   await expect(page.getByText('正在加载 Schema...')).toBeHidden()
   await page.getByRole('button', { name: schema.data.name }).click()
   await page.getByRole('button', { name: '导出' }).click()

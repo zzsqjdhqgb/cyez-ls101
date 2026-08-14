@@ -7,6 +7,8 @@
 
 本目录记录 Playwright/Electron 集成测试的路径、操作流程、跨进程断言和覆盖边界。测试代码是行为的最终事实来源；新增或修改集成测试时，必须在同一个变更中更新这里对应的文档。
 
+本目录属于技术回归测试文档，不是产品行为文档。已经确认的用户可见主流程单独维护在 [`docs/product/generated/README.md`](../product/generated/README.md)，由 `tests/product-docs/` 的 Playwright 测试成功运行后自动生成。
+
 ## 测试目录
 
 | 测试源文件                                                                                             | 路径数 | 详细文档                                          | 主要范围                                                                 |

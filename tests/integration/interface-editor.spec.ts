@@ -449,14 +449,14 @@ async function restartIntegrationApp(): Promise<void> {
 }
 
 async function openInstanceEditor(interfaceId: string, interfaceName: string): Promise<void> {
-  await page.getByRole('link', { name: '题型' }).click()
+  await page.getByRole('link', { name: '题型库' }).click()
   await page.getByRole('button', { name: interfaceName, exact: true }).click()
   await page.getByRole('button', { name: '新建题组' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '未命名题组' })).toBeVisible()
 }
 
 async function openDraftEditor(): Promise<void> {
-  await page.getByRole('link', { name: '题型' }).click()
+  await page.getByRole('link', { name: '题型库' }).click()
   await page.getByRole('button', { name: '草稿' }).click()
   await page.getByRole('button', { name: '新建草稿' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '未命名题型' })).toBeVisible()
@@ -730,7 +730,7 @@ test('IE-06 deletes drafts and guards unsaved changes on leave', async () => {
     promptTemplate: '请生成内容。',
     fields: { order: [], nodes: {} }
   })
-  await page.getByRole('link', { name: '题型' }).click()
+  await page.getByRole('link', { name: '题型库' }).click()
   await page.getByRole('button', { name: '草稿' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '题型草稿' })).toBeVisible()
   await page.getByRole('button', { name: '删除草稿', exact: true }).click()
@@ -751,7 +751,7 @@ test('IE-06 deletes drafts and guards unsaved changes on leave', async () => {
   await expect(page.getByRole('button', { name: '未命名题型', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '未保存草稿', exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: '返回题型' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: '题型' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: '题型库' })).toBeVisible()
 })
 
 test('IE-07 edits and saves an instance and guards unsaved changes', async () => {
@@ -824,7 +824,7 @@ test('IE-09 deletes an instance through the real UI', async () => {
 
 test('IE-10 copies a published interface to a draft', async () => {
   await seedInterface(textInterface)
-  await page.getByRole('link', { name: '题型' }).click()
+  await page.getByRole('link', { name: '题型库' }).click()
   await page.getByRole('button', { name: textInterface.name, exact: true }).click()
   await page.getByRole('button', { name: '复制为草稿' }).click()
   await expect(page.getByRole('heading', { level: 1, name: textInterface.name })).toBeVisible()
@@ -852,7 +852,7 @@ test('IE-11 exports and re-imports an interface with its instances', async () =>
 
   await clearPublishedInterface(interfaceId)
   await page.reload()
-  await page.getByRole('link', { name: '题型' }).click()
+  await page.getByRole('link', { name: '题型库' }).click()
   await expect(page.getByRole('button', { name: textInterface.name, exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: '上海高考英语口语', exact: true })).toBeVisible()
 
@@ -961,7 +961,7 @@ test('IE-13 drives the instance image field buttons end to end', async () => {
 
 test('IE-14 covers list and details page action buttons', async () => {
   await seedInterface(textInterface)
-  await page.getByRole('link', { name: '题型' }).click()
+  await page.getByRole('link', { name: '题型库' }).click()
   const interfaceRow = page.locator('article').filter({ hasText: textInterface.name })
   await interfaceRow.getByRole('button', { name: '进入', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: textInterface.name })).toBeVisible()
@@ -1017,7 +1017,7 @@ test('IE-15 drives the standalone AI image panel end to end', async () => {
 })
 
 test('IE-16 installs the bundled Shanghai speaking Interface on first launch', async () => {
-  await page.getByRole('link', { name: '题型' }).click()
+  await page.getByRole('link', { name: '题型库' }).click()
   const builtin = page.getByRole('button', { name: '上海高考英语口语', exact: true })
   await expect(builtin).toBeVisible()
   await expect(page.getByText('内置', { exact: true })).toBeVisible()
@@ -1031,7 +1031,7 @@ test('IE-16 installs the bundled Shanghai speaking Interface on first launch', a
 test('IE-17 manages a bundled instance and copies the builtin to a draft', async () => {
   await saveTextProvider(textProvider('ie-builtin-manage-text', 'mock-json-shanghai'))
   await saveImageProvider(imageProvider('ie-builtin-manage-image', 'mock-image'))
-  await page.getByRole('link', { name: '题型' }).click()
+  await page.getByRole('link', { name: '题型库' }).click()
   await page.getByRole('button', { name: '上海高考英语口语', exact: true }).click()
   await expect(page.getByText('内置题型', { exact: true })).toBeVisible()
 
@@ -1082,7 +1082,7 @@ test('IE-17 manages a bundled instance and copies the builtin to a draft', async
 test('IE-18 generates and persists an image in a bundled picture field', async () => {
   await saveTextProvider(textProvider('ie-builtin-image-text', 'mock-json-shanghai'))
   await saveImageProvider(imageProvider('ie-builtin-image', 'mock-image'))
-  await page.getByRole('link', { name: '题型' }).click()
+  await page.getByRole('link', { name: '题型库' }).click()
   await page.getByRole('button', { name: '上海高考英语口语', exact: true }).click()
   await page.getByRole('button', { name: '新建题组' }).click()
   await page.getByRole('button', { name: 'AI 生成' }).click()
@@ -1169,7 +1169,7 @@ test('IE-18 generates and persists an image in a bundled picture field', async (
 test('IE-23 generates all four bundled story pictures through the AI pipeline', async () => {
   await saveTextProvider(textProvider('ie-builtin-text', 'mock-json-shanghai'))
   await saveImageProvider(imageProvider('ie-builtin-four-images', 'mock-image'))
-  await page.getByRole('link', { name: '题型' }).click()
+  await page.getByRole('link', { name: '题型库' }).click()
   await page.getByRole('button', { name: '上海高考英语口语', exact: true }).click()
   await page.getByRole('button', { name: '新建题组' }).click()
 
@@ -1246,7 +1246,7 @@ test('IE-19 keeps bundled Interface installation idempotent across restarts', as
 
   await restartIntegrationApp()
   await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
-  await page.getByRole('link', { name: '题型' }).click()
+  await page.getByRole('link', { name: '题型库' }).click()
   await expect(page.getByRole('button', { name: '上海高考英语口语', exact: true })).toHaveCount(1)
   await expect(
     listFileStoreScopes(['interfaces', 'builtin', BUILTIN_KEY, 'versions'])
@@ -1379,7 +1379,7 @@ test('IE-21 can keep the previous bundled version as a published Interface', asy
     ])
   ).resolves.toEqual([instanceId])
 
-  await page.getByRole('link', { name: '题型' }).click()
+  await page.getByRole('link', { name: '题型库' }).click()
   await expect(page.getByRole('button', { name: '上海高考英语口语', exact: true })).toHaveCount(2)
   await expect(page.getByText('内置', { exact: true })).toHaveCount(1)
 })
@@ -1402,6 +1402,6 @@ test('IE-22 refuses a bundled update that changes its variable contract', async 
   await expect(
     listFileStoreScopes(['interfaces', 'builtin', BUILTIN_KEY, 'versions'])
   ).resolves.toEqual([previous.id.slice('sha256:'.length)])
-  await page.getByRole('link', { name: '题型' }).click()
+  await page.getByRole('link', { name: '题型库' }).click()
   await expect(page.getByRole('button', { name: '上海高考英语口语', exact: true })).toHaveCount(1)
 })

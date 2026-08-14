@@ -111,7 +111,7 @@ export function SchemaBrowserPage(): JSX.Element {
   return (
     <Page>
       <PageHeader
-        title="评分 Schema"
+        title="评分单元"
         actions={
           <Button
             icon={Plus}

@@ -98,7 +98,7 @@ export function ExamLibraryPage(): JSX.Element {
   return (
     <Page>
       <PageHeader
-        title="考试"
+        title="试卷库"
         actions={
           <Button
             icon={Upload}
