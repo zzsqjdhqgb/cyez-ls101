@@ -7,9 +7,11 @@ import type { TemplateApplication, TemplateDocument } from '@ls101/template-edit
 import type { JSX } from 'react'
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { TemplateApplicationProvider } from '../features/templates/TemplateApplicationProvider'
-import { BuiltinTemplateDocumentPage } from '../features/templates/BuiltinTemplateDocumentPage'
 import { TemplateBrowserPage } from '../features/templates/TemplateBrowserPage'
-import { TemplateDocumentPage } from '../features/templates/TemplateDocumentPage'
+import {
+  BuiltinTemplateDocumentPage,
+  TemplateDocumentPage
+} from '../features/templates/TemplateDocumentPage'
 
 const functionLibraryFileDialog = vi.hoisted(() => ({
   readText: vi.fn(),
@@ -449,6 +451,31 @@ describe('Template pages', () => {
     expect(await screen.findByRole('heading', { name: '试卷生成设置' })).toBeInTheDocument()
   })
 
+  it('从只读编辑器进入内置模板生成路由且不尝试保存', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/builtin/${BUILTIN_TEMPLATE_ID}`]}>
+          <Routes>
+            <Route
+              path="/templates/builtin/:templateId"
+              element={<BuiltinTemplateDocumentPage />}
+            />
+            <Route
+              path="/templates/builtin/:templateId/generate"
+              element={<h1>内置模板生成设置</h1>}
+            />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: '生成试卷' }))
+
+    expect(await screen.findByRole('heading', { name: '内置模板生成设置' })).toBeInTheDocument()
+    expect(app.templates.save).not.toHaveBeenCalled()
+  })
+
   it('进入生成路由前先保存模板的未保存修改', async () => {
     const app = application()
     render(
@@ -615,7 +642,7 @@ describe('Template pages', () => {
     expect(screen.getByRole('button', { name: '基础试卷' })).toBeInTheDocument()
   })
 
-  it('opens a built-in template in a read-only structure viewer and creates a copy', async () => {
+  it('opens a built-in template in the original editor read-only mode and creates a copy', async () => {
     const app = application()
     render(
       <TemplateApplicationProvider application={app}>
@@ -633,13 +660,20 @@ describe('Template pages', () => {
 
     expect(await screen.findByRole('heading', { name: '基础试卷' })).toBeInTheDocument()
     expect(app.builtinTemplates.get).toHaveBeenCalledWith(BUILTIN_TEMPLATE_ID)
-    expect(screen.getByText('内置模板 · v1 · 只读')).toBeInTheDocument()
+    expect(app.templates.get).not.toHaveBeenCalled()
+    expect(screen.getByText('内置模板 · 只读')).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: '函数库' })).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: '属性' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '预览' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '添加框架' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '选择节点 builtin-root' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '选择节点 builtin-page' }))
     expect(screen.getByRole('tab', { name: '页面' })).toBeEnabled()
+    expect(screen.getByRole('textbox', { name: '名称', exact: true })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '查看节点 builtin-page 页面内容' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: '保存' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '编辑' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /删除/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /删除节点/ })).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '创建副本' }))
 

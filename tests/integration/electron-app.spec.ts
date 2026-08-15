@@ -591,7 +591,7 @@ test('generates an exam directly from an immutable builtin template', async () =
   await builtinRow.getByRole('button', { name: '查看' }).click()
 
   await expect(page.getByRole('heading', { level: 1, name: '基础试卷' })).toBeVisible()
-  await expect(page.getByText('内置模板 · v1 · 只读')).toBeVisible()
+  await expect(page.getByText('内置模板 · 只读')).toBeVisible()
   await expect(page.getByRole('button', { name: '选择节点 root' })).toBeVisible()
   await expect(page.getByRole('button', { name: '保存' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /删除/ })).toHaveCount(0)

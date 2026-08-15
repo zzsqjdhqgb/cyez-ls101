@@ -18,8 +18,10 @@ import { SettingsDetailPage } from '../pages/SettingsDetailPage'
 import { SettingsOverviewPage } from '../pages/SettingsOverviewPage'
 import { WorkbenchPage } from '../pages/WorkbenchPage'
 import { TemplateBrowserPage } from '../features/templates/TemplateBrowserPage'
-import { BuiltinTemplateDocumentPage } from '../features/templates/BuiltinTemplateDocumentPage'
-import { TemplateDocumentPage } from '../features/templates/TemplateDocumentPage'
+import {
+  BuiltinTemplateDocumentPage,
+  TemplateDocumentPage
+} from '../features/templates/TemplateDocumentPage'
 import {
   BuiltinTemplateExamGenerationPage,
   TemplateExamGenerationPage

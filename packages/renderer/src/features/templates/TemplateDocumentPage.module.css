@@ -536,6 +536,13 @@
   border: 0;
 }
 
+.readOnlyBoundary {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
 .centerTabs {
   display: flex;
   height: 100%;
