@@ -205,7 +205,7 @@ test(
     await page.getByRole('button', { name: '保存' }).click()
     await expect(page.getByText('题组已保存')).toBeVisible()
 
-    await test.step('打开 AI 生成并覆盖面板并选择模型', async () => {
+    await test.step('打开 AI 生成任务并选择模型', async () => {
       await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
       await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json' })
     })
@@ -298,6 +298,84 @@ test(
   }
 )
 
+test(
+  'IF-06 JSON 作为临时导入对话框完成覆盖',
+  {
+    annotation: [
+      { type: 'product-area', description: '题型库 / JSON 覆盖题组' },
+      {
+        type: 'summary',
+        description:
+          'JSON 是一次性导入命令；校验失败时保留临时输入，取消时清空，校验成功后原子保存并返回题组。'
+      },
+      { type: 'precondition', description: '题组已有手工保存的内容。' }
+    ]
+  },
+  // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture argument destructuring.
+  async ({}, testInfo) => {
+    await openInterfaceDetails()
+    await createInstance('JSON 覆盖题组', '手工填写')
+    await page.getByLabel('title 内容').fill('原有标题')
+    await page.getByLabel('answer 内容').fill('原有答案')
+    await page.getByRole('button', { name: '保存' }).click()
+    await expect(page.getByText('题组已保存')).toBeVisible()
+
+    await test.step('打开临时导入对话框，明确覆盖和立即保存语义', async () => {
+      await openJsonReplacementDialog()
+      const dialog = page.getByRole('dialog', { name: '从 JSON 覆盖题组' })
+      await expect(dialog).toContainText('校验通过后将覆盖整组内容并立即保存')
+    })
+
+    await test.step('JSON 校验失败时保留输入和错误，原题组内容保持不变', async () => {
+      const dialog = page.getByRole('dialog', { name: '从 JSON 覆盖题组' })
+      await dialog.getByLabel('JSON 内容').fill('{"title":')
+      await dialog.getByRole('button', { name: '校验并覆盖' }).click()
+      await page
+        .getByRole('alertdialog', { name: '覆盖当前题组内容？' })
+        .getByRole('button', { name: '校验并覆盖' })
+        .click()
+      await expect(dialog.getByRole('alert')).toContainText('JSON 格式不合法')
+      await expect(dialog.getByLabel('JSON 内容')).toHaveValue('{"title":')
+      await expect(page.getByLabel('title 内容')).toHaveValue('原有标题')
+      await expect(page.getByLabel('answer 内容')).toHaveValue('原有答案')
+      await testInfo.attach('JSON 校验错误', {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: 'image/png'
+      })
+    })
+
+    await test.step('取消会丢弃本次临时输入和校验错误', async () => {
+      await page
+        .getByRole('dialog', { name: '从 JSON 覆盖题组' })
+        .getByRole('button', { name: '取消' })
+        .click()
+      await openJsonReplacementDialog()
+      const dialog = page.getByRole('dialog', { name: '从 JSON 覆盖题组' })
+      await expect(dialog.getByLabel('JSON 内容')).toHaveValue('')
+      await expect(dialog.getByRole('alert')).toHaveCount(0)
+    })
+
+    await test.step('合法 JSON 经确认后原子保存，关闭对话框并返回题组', async () => {
+      const dialog = page.getByRole('dialog', { name: '从 JSON 覆盖题组' })
+      await dialog.getByLabel('JSON 内容').fill('{"title":"JSON 新标题","answer":"JSON 新答案"}')
+      await dialog.getByRole('button', { name: '校验并覆盖' }).click()
+      const confirmation = page.getByRole('alertdialog', { name: '覆盖当前题组内容？' })
+      await expect(confirmation).toContainText('立即保存')
+      await confirmation.getByRole('button', { name: '校验并覆盖' }).click()
+
+      await expect(page.getByRole('dialog', { name: '从 JSON 覆盖题组' })).toHaveCount(0)
+      await expect(page.getByText('已从 JSON 更新题组')).toBeVisible()
+      await expect(page.getByLabel('title 内容')).toHaveValue('JSON 新标题')
+      await expect(page.getByLabel('answer 内容')).toHaveValue('JSON 新答案')
+      await expect(page.getByRole('button', { name: '保存' })).toBeDisabled()
+      await testInfo.attach('JSON 覆盖后的已保存结果', {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: 'image/png'
+      })
+    })
+  }
+)
+
 async function openInterfaceDetails(): Promise<void> {
   await page.getByRole('link', { name: '题型库' }).click()
   await page.getByRole('button', { name: interfaceContent.name, exact: true }).click()
@@ -311,6 +389,11 @@ async function createInstance(name: string, mode: '手工填写' | 'AI 生成'):
   await dialog.getByLabel(mode).check()
   await dialog.getByRole('button', { name: '创建题组' }).click()
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible()
+}
+
+async function openJsonReplacementDialog(): Promise<void> {
+  await page.getByRole('button', { name: '高级操作' }).click()
+  await page.getByRole('menuitem', { name: '从 JSON 覆盖' }).click()
 }
 
 async function seedInterface(): Promise<string> {

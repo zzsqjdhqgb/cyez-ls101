@@ -673,11 +673,13 @@ describe('Interface pages', () => {
     expect(await screen.findByRole('heading', { name: '第一套题组' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '高级操作' }))
     fireEvent.click(screen.getByRole('menuitem', { name: '从 JSON 覆盖' }))
-    expect(screen.getByRole('complementary', { name: 'JSON 覆盖' })).toBeInTheDocument()
+    const jsonDialog = screen.getByRole('dialog', { name: '从 JSON 覆盖题组' })
+    expect(jsonDialog).toBeInTheDocument()
+    fireEvent.click(within(jsonDialog).getByRole('button', { name: '取消' }))
+    expect(screen.queryByRole('dialog', { name: '从 JSON 覆盖题组' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'AI 生成并覆盖' }))
 
-    expect(screen.queryByRole('complementary', { name: 'JSON 覆盖' })).not.toBeInTheDocument()
-    expect(screen.getByRole('complementary', { name: 'AI 生成并覆盖' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'AI 生成并覆盖' })).toBeInTheDocument()
     await waitFor(() => expect(listAIGenerationModels).toHaveBeenCalledOnce())
     fireEvent.change(screen.getByLabelText('生成模型'), { target: { value: '1' } })
     fireEvent.click(screen.getByRole('button', { name: '生成并覆盖' }))
@@ -697,7 +699,7 @@ describe('Interface pages', () => {
     expect(screen.getByRole('button', { name: '返回题型详情' })).toBeDisabled()
     expect(screen.getByRole('button', { name: '高级操作' })).toBeDisabled()
     expect(screen.getByRole('button', { name: '生成中' })).toBeDisabled()
-    expect(screen.queryByRole('button', { name: '完成' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '返回题组' })).not.toBeInTheDocument()
 
     await act(async () => {
       resolveCompletion({ status: 'completed', instance: completed })
@@ -706,7 +708,7 @@ describe('Interface pages', () => {
 
     expect(await screen.findByDisplayValue('AI 新题目')).toBeEnabled()
     expect(await screen.findByText('AI 生成内容已保存')).toBeInTheDocument()
-    expect(screen.getByRole('complementary', { name: 'AI 生成并覆盖' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'AI 生成并覆盖' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'AI 生成进度' })).toBeInTheDocument()
     expect(screen.getByText('生成完成')).toBeInTheDocument()
     expect(screen.getByLabelText('生成模型')).toBeEnabled()
@@ -727,9 +729,9 @@ describe('Interface pages', () => {
     })
     expect(await screen.findByRole('button', { name: '重新生成' })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '完成' }))
+    fireEvent.click(screen.getByRole('button', { name: '返回题组' }))
 
-    expect(screen.queryByRole('complementary', { name: 'AI 生成并覆盖' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'AI 生成并覆盖' })).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'AI 生成进度' })).not.toBeInTheDocument()
     expect(screen.getByDisplayValue('AI 新题目')).toBeEnabled()
   })
@@ -1041,7 +1043,7 @@ describe('Interface pages', () => {
 
     expect(await screen.findByRole('heading', { name: '批量生图题组' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '批量生图' }))
-    expect(screen.getByRole('complementary', { name: 'AI 生图' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'AI 生图' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '开始生图' }))
     await waitFor(() => expect(generateImage).toHaveBeenCalledOnce())
     expect(generateImage).toHaveBeenCalledWith('山的提示词', {
@@ -1068,7 +1070,7 @@ describe('Interface pages', () => {
       imageFiles: { firstImage, secondImage, thirdImage }
     })
     expect(await screen.findByText('生图完成')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '完成' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '返回题组' })).toBeInTheDocument()
   })
 
   it('keeps AI failures in the AI pane and allows retrying', async () => {
@@ -1145,7 +1147,7 @@ describe('Interface pages', () => {
     expect(screen.getByText('生成服务暂时不可用')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '重新生成' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '完成' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '返回题组' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '重新生成' }))
     fireEvent.click(

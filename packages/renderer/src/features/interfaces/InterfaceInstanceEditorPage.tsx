@@ -47,7 +47,7 @@ import { ActionMenu, ActionMenuItem } from '../../components/ui/ActionMenu'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { IconButton } from '../../components/ui/IconButton'
-import { ResizableSplit } from '../../components/ui/ResizableSplit'
+import { Modal, ModalDescription, ModalTitle } from '../../components/ui/Modal'
 import { TaskProgress } from '../../components/ui/TaskProgress'
 import { toast } from '../../components/ui/toast'
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard'
@@ -339,16 +339,30 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
     }
   }, [application])
 
-  const toggleAIPanel = (): void => {
-    if (panel === 'ai') {
-      modelLoadId.current += 1
-      setGeneration(null)
-      setPanel(null)
-      return
-    }
+  const openAIGenerationDialog = (): void => {
     setImageGeneration(null)
     setPanel('ai')
     void loadModels()
+  }
+
+  const closeAIGenerationDialog = (): void => {
+    modelLoadId.current += 1
+    setGeneration(null)
+    setPanel(null)
+  }
+
+  const openJsonReplacementDialog = (): void => {
+    setGeneration(null)
+    setImageGeneration(null)
+    setJson('')
+    setJsonErrors([])
+    setPanel('json')
+  }
+
+  const closeJsonReplacementDialog = (): void => {
+    setJson('')
+    setJsonErrors([])
+    setPanel(null)
   }
 
   useEffect(() => {
@@ -359,12 +373,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
     void loadModels()
   }, [details, loadModels, location.state])
 
-  const toggleImageAIPanel = (): void => {
-    if (panel === 'image-ai') {
-      setImageGeneration(null)
-      setPanel(null)
-      return
-    }
+  const openImageGenerationDialog = (): void => {
     setGeneration(null)
     setImageGeneration(null)
     setPanel('image-ai')
@@ -627,7 +636,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
             icon={generationRunning ? LoaderCircle : Bot}
             disabled={!details || saving || generationRunning || imageGenerationRunning || dirty}
             title={dirty ? '请先保存当前修改' : undefined}
-            onClick={toggleAIPanel}
+            onClick={openAIGenerationDialog}
           >
             {generationRunning ? '生成中' : 'AI 生成并覆盖'}
           </Button>
@@ -642,7 +651,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
                 !allImagePromptsFilled
               }
               title={!allImagePromptsFilled ? '请填写所有图片字段的提示词' : undefined}
-              onClick={toggleImageAIPanel}
+              onClick={openImageGenerationDialog}
             >
               {imageGenerationRunning ? '生图中' : '批量生图'}
             </Button>
@@ -654,11 +663,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
             <ActionMenuItem
               disabled={saving || generationRunning || imageGenerationRunning}
               icon={Braces}
-              onSelect={() => {
-                setGeneration(null)
-                setImageGeneration(null)
-                setPanel((current) => (current === 'json' ? null : 'json'))
-              }}
+              onSelect={openJsonReplacementDialog}
             >
               从 JSON 覆盖
             </ActionMenuItem>
@@ -678,13 +683,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       {!details || !definition ? (
         <main className={styles.missing}>题组不存在</main>
       ) : (
-        <ResizableSplit
-          className={styles.workspace}
-          initialSize={560}
-          minFirst={360}
-          minSecond={320}
-          label={`调整题组字段与${panel === 'ai' ? ' AI' : panel === 'image-ai' ? ' AI 生图' : ' JSON'}面板宽度`}
-        >
+        <main className={styles.workspace}>
           <section className={styles.formPane}>
             {error ? (
               <div className={shared.notice} role="alert">
@@ -766,15 +765,33 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
               })}
             </div>
           </section>
+        </main>
+      )}
 
-          {panel === 'json' ? (
-            <aside className={styles.jsonPane} aria-label="JSON 覆盖">
-              <header>
-                <div>
-                  <h2>从 JSON 覆盖</h2>
-                  <span>校验后替换整组内容并立即保存</span>
-                </div>
-              </header>
+      <Modal
+        open={panel === 'json'}
+        overlayClassName={styles.operationBackdrop}
+        onOpenChange={(open) => {
+          if (!open && !busy) closeJsonReplacementDialog()
+        }}
+      >
+        <section className={`${styles.operationDialog} ${styles.jsonDialog}`} role="dialog">
+          <header className={styles.operationHeader}>
+            <span className={styles.operationIcon}>
+              <Braces aria-hidden="true" />
+            </span>
+            <div>
+              <ModalTitle asChild>
+                <h2>从 JSON 覆盖题组</h2>
+              </ModalTitle>
+              <ModalDescription asChild>
+                <p>粘贴完整 JSON。校验通过后将覆盖整组内容并立即保存。</p>
+              </ModalDescription>
+            </div>
+          </header>
+          <div className={`${styles.operationBody} ${styles.jsonBody}`}>
+            <label className={styles.jsonInput}>
+              <span>JSON 内容</span>
               <textarea
                 aria-label="JSON 内容"
                 value={json}
@@ -783,91 +800,109 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
                 placeholder={'{\n  "section": {\n    "question": "..."\n  }\n}'}
                 spellCheck={false}
               />
-              {hasImageFields ? (
-                <div className={styles.jsonProvider}>
-                  <AIImageProviderSelect
-                    disabled={busy}
-                    error={imageProvidersError}
-                    label="图像 Provider"
-                    loading={imageProvidersLoading}
-                    options={imageProviderOptions}
-                    value={selectedImageProvider}
-                    onChange={setSelectedImageProvider}
-                  />
-                </div>
-              ) : null}
-              {jsonErrors.length ? (
-                <div className={styles.jsonErrors} role="alert">
-                  {jsonErrors.map((item, index) => (
-                    <span key={`${item.path}-${index}`}>
-                      {item.path || '$'}：{item.message}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-              <div className={styles.jsonActions}>
-                <Button variant="ghost" disabled={busy} onClick={() => setPanel(null)}>
-                  取消
-                </Button>
-                <Button
-                  variant="primary"
-                  disabled={
-                    !json.trim() ||
-                    busy ||
-                    (hasImageFields &&
-                      (!selectedImageProvider ||
-                        imageProvidersLoading ||
-                        Boolean(imageProvidersError)))
-                  }
-                  onClick={requestJsonReplacement}
-                >
-                  校验并覆盖
-                </Button>
+            </label>
+            {hasImageFields ? (
+              <AIImageProviderSelect
+                disabled={busy}
+                error={imageProvidersError}
+                label="图像 Provider"
+                loading={imageProvidersLoading}
+                options={imageProviderOptions}
+                value={selectedImageProvider}
+                onChange={setSelectedImageProvider}
+              />
+            ) : null}
+            {jsonErrors.length ? (
+              <div className={styles.jsonErrors} role="alert">
+                {jsonErrors.map((item, index) => (
+                  <span key={`${item.path}-${index}`}>
+                    {item.path || '$'}：{item.message}
+                  </span>
+                ))}
               </div>
-            </aside>
-          ) : panel === 'ai' ? (
-            <AIGenerationPane
-              dirty={dirty}
-              modelsError={modelsError}
-              modelsLoading={modelsLoading}
-              modelOptions={modelOptions}
-              imageProviderOptions={imageProviderOptions}
-              selectedImageProvider={selectedImageProvider}
-              imageProvidersLoading={imageProvidersLoading}
-              imageProvidersError={imageProvidersError}
-              hasImageFields={hasImageFields}
-              selectedModel={selectedModel}
-              session={generation}
-              onCancel={() => generation?.handle?.cancel()}
-              onClose={() => setPanel(null)}
-              onFinish={finishGeneration}
-              onRefresh={() => void loadModels()}
-              onRetry={requestAIGeneration}
-              onSelectModel={setSelectedModel}
-              onSelectImageProvider={setSelectedImageProvider}
-              onStart={requestAIGeneration}
-            />
-          ) : panel === 'image-ai' ? (
-            <ImageGenerationPane
-              imageProviderOptions={imageProviderOptions}
-              selectedImageProvider={selectedImageProvider}
-              imageProvidersLoading={imageProvidersLoading}
-              imageProvidersError={imageProvidersError}
-              targetCount={imageTargets.length}
-              session={imageGeneration}
-              onCancel={() => imageGenerationController.current?.abort()}
-              onClose={() => setPanel(null)}
-              onFinish={() => {
-                setImageGeneration(null)
-                setPanel(null)
-              }}
-              onRetry={() => void startImageGeneration()}
-              onSelectImageProvider={setSelectedImageProvider}
-              onStart={() => void startImageGeneration()}
-            />
-          ) : null}
-        </ResizableSplit>
-      )}
+            ) : null}
+          </div>
+          <footer className={styles.operationActions}>
+            <Button variant="ghost" disabled={busy} onClick={closeJsonReplacementDialog}>
+              取消
+            </Button>
+            <Button
+              variant="primary"
+              disabled={
+                !json.trim() ||
+                busy ||
+                (hasImageFields &&
+                  (!selectedImageProvider || imageProvidersLoading || Boolean(imageProvidersError)))
+              }
+              onClick={requestJsonReplacement}
+            >
+              校验并覆盖
+            </Button>
+          </footer>
+        </section>
+      </Modal>
+
+      <Modal
+        open={panel === 'ai'}
+        overlayClassName={styles.operationBackdrop}
+        onOpenChange={(open) => {
+          if (!open && !generationRunning) closeAIGenerationDialog()
+        }}
+      >
+        <AIGenerationDialog
+          dirty={dirty}
+          modelsError={modelsError}
+          modelsLoading={modelsLoading}
+          modelOptions={modelOptions}
+          imageProviderOptions={imageProviderOptions}
+          selectedImageProvider={selectedImageProvider}
+          imageProvidersLoading={imageProvidersLoading}
+          imageProvidersError={imageProvidersError}
+          hasImageFields={hasImageFields}
+          selectedModel={selectedModel}
+          session={generation}
+          onCancel={() => generation?.handle?.cancel()}
+          onClose={closeAIGenerationDialog}
+          onFinish={finishGeneration}
+          onRefresh={() => void loadModels()}
+          onRetry={requestAIGeneration}
+          onSelectModel={setSelectedModel}
+          onSelectImageProvider={setSelectedImageProvider}
+          onStart={requestAIGeneration}
+        />
+      </Modal>
+
+      <Modal
+        open={panel === 'image-ai'}
+        overlayClassName={styles.operationBackdrop}
+        onOpenChange={(open) => {
+          if (!open && !imageGenerationRunning) {
+            setImageGeneration(null)
+            setPanel(null)
+          }
+        }}
+      >
+        <ImageGenerationDialog
+          imageProviderOptions={imageProviderOptions}
+          selectedImageProvider={selectedImageProvider}
+          imageProvidersLoading={imageProvidersLoading}
+          imageProvidersError={imageProvidersError}
+          targetCount={imageTargets.length}
+          session={imageGeneration}
+          onCancel={() => imageGenerationController.current?.abort()}
+          onClose={() => {
+            setImageGeneration(null)
+            setPanel(null)
+          }}
+          onFinish={() => {
+            setImageGeneration(null)
+            setPanel(null)
+          }}
+          onRetry={() => void startImageGeneration()}
+          onSelectImageProvider={setSelectedImageProvider}
+          onStart={() => void startImageGeneration()}
+        />
+      </Modal>
       <ConfirmModal
         confirmLabel="放弃修改"
         danger
@@ -1025,7 +1060,7 @@ function ImageValueInput({
   )
 }
 
-function AIGenerationPane({
+function AIGenerationDialog({
   dirty,
   modelsError,
   modelsLoading,
@@ -1069,18 +1104,28 @@ function AIGenerationPane({
   const finished = session ? isGenerationFinished(session) : false
 
   return (
-    <aside className={styles.aiPane} aria-label="AI 生成并覆盖">
-      <header className={styles.aiHeader}>
-        <span className={styles.generationIcon}>
+    <section className={styles.operationDialog} aria-label="AI 生成并覆盖" role="dialog">
+      <header className={styles.operationHeader}>
+        <span className={styles.operationIcon}>
           <Bot aria-hidden="true" />
         </span>
         <div>
-          <h2>AI 生成并覆盖</h2>
-          <span>{session ? (finished ? '生成任务已结束' : '正在生成题组') : '生成设置'}</span>
+          <ModalTitle asChild>
+            <h2>AI 生成并覆盖</h2>
+          </ModalTitle>
+          <ModalDescription asChild>
+            <p>
+              {session
+                ? finished
+                  ? '生成任务已结束，可以查看结果或重新生成。'
+                  : '正在生成并校验，当前题组在任务成功前保持不变。'
+                : '选择生成模型。覆盖前会再次确认，成功后立即保存。'}
+            </p>
+          </ModalDescription>
         </div>
       </header>
 
-      <div className={styles.aiBody}>
+      <div className={styles.operationBody}>
         <AIModelSelect
           disabled={session !== null && !finished}
           error={modelsError}
@@ -1122,7 +1167,7 @@ function AIGenerationPane({
         ) : null}
       </div>
 
-      <footer className={styles.aiActions}>
+      <footer className={styles.operationActions}>
         {!session ? (
           <>
             <Button variant="ghost" onClick={onClose}>
@@ -1161,7 +1206,7 @@ function AIGenerationPane({
               重新生成
             </Button>
             <Button icon={Check} variant="primary" onClick={onFinish}>
-              完成
+              {session.result?.status === 'invalid-response' ? '检查 JSON' : '返回题组'}
             </Button>
           </>
         ) : (
@@ -1170,11 +1215,11 @@ function AIGenerationPane({
           </Button>
         )}
       </footer>
-    </aside>
+    </section>
   )
 }
 
-function ImageGenerationPane({
+function ImageGenerationDialog({
   imageProviderOptions,
   selectedImageProvider,
   imageProvidersLoading,
@@ -1205,24 +1250,28 @@ function ImageGenerationPane({
   const finished = session !== null && !running
 
   return (
-    <aside className={styles.aiPane} aria-label="AI 生图">
-      <header className={styles.aiHeader}>
-        <span className={styles.generationIcon}>
+    <section className={styles.operationDialog} aria-label="AI 生图" role="dialog">
+      <header className={styles.operationHeader}>
+        <span className={styles.operationIcon}>
           <Images aria-hidden="true" />
         </span>
         <div>
-          <h2>AI 生图</h2>
-          <span>
-            {session
-              ? running
-                ? `正在生成 ${targetCount} 张图片`
-                : '生图任务已结束'
-              : `${targetCount} 张图片待生成`}
-          </span>
+          <ModalTitle asChild>
+            <h2>AI 生图</h2>
+          </ModalTitle>
+          <ModalDescription asChild>
+            <p>
+              {session
+                ? running
+                  ? `正在生成 ${targetCount} 张图片`
+                  : '生图任务已结束，可以查看结果或重新生成。'
+                : `将为 ${targetCount} 个已填写提示词的字段生成图片，成功后立即保存。`}
+            </p>
+          </ModalDescription>
         </div>
       </header>
 
-      <div className={styles.aiBody}>
+      <div className={styles.operationBody}>
         <AIImageProviderSelect
           disabled={running}
           error={imageProvidersError}
@@ -1240,7 +1289,7 @@ function ImageGenerationPane({
         ) : null}
       </div>
 
-      <footer className={styles.aiActions}>
+      <footer className={styles.operationActions}>
         {!session ? (
           <>
             <Button variant="ghost" onClick={onClose}>
@@ -1279,12 +1328,12 @@ function ImageGenerationPane({
               重新生成
             </Button>
             <Button icon={Check} variant="primary" onClick={onFinish}>
-              完成
+              返回题组
             </Button>
           </>
         )}
       </footer>
-    </aside>
+    </section>
   )
 }
 
@@ -1321,7 +1370,7 @@ function GenerationResult({ session }: { session: GenerationSession }): JSX.Elem
     status = 'success'
   } else if (session.result?.status === 'invalid-response') {
     title = '生成内容未通过校验'
-    message = `发现 ${session.result.errors.length} 个字段错误，可点击完成后在 JSON 面板中检查。`
+    message = `发现 ${session.result.errors.length} 个字段错误，可检查原始 JSON 并修正后覆盖题组。`
   } else if (session.result?.status === 'failed') {
     title = '生成失败'
     message = session.result.message

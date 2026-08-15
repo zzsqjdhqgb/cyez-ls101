@@ -668,9 +668,13 @@ test('IE-03 reports invalid AI output and supports cancellation without saving',
   await expect(page.getByText('发现 1 个字段错误')).toBeVisible()
   await expect(page.getByLabel('title 内容')).toHaveValue('')
 
-  await page.getByRole('button', { name: '完成' }).click()
+  await page.getByRole('button', { name: '检查 JSON' }).click()
   await expect(page.getByLabel('JSON 内容')).toHaveValue('这不是一个合法的 JSON 响应')
   await expect(page.getByRole('alert')).toContainText('JSON 格式不合法')
+  await page
+    .getByRole('dialog', { name: '从 JSON 覆盖题组' })
+    .getByRole('button', { name: '取消' })
+    .click()
 
   await saveTextProvider(textProvider('ie-slow', 'mock-slow'))
   await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
@@ -841,13 +845,15 @@ test('IE-08b generates image fields from JSON without selecting a text model', a
 
   await page.getByRole('button', { name: '高级操作' }).click()
   await page.getByRole('menuitem', { name: '从 JSON 覆盖' }).click()
-  const jsonPanel = page.getByRole('complementary', { name: 'JSON 覆盖' })
-  await expect(jsonPanel.getByLabel('生成模型')).toHaveCount(0)
-  await jsonPanel.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
-  await jsonPanel
+  const jsonDialog = page.getByRole('dialog', { name: '从 JSON 覆盖题组' })
+  await expect(jsonDialog.getByLabel('生成模型')).toHaveCount(0)
+  await jsonDialog
+    .getByLabel('图像 Provider', { exact: true })
+    .selectOption({ label: 'mock-image' })
+  await jsonDialog
     .getByLabel('JSON 内容')
     .fill('{"title":"JSON 图片题","picture":"A JSON green circle icon"}')
-  await jsonPanel.getByRole('button', { name: '校验并覆盖' }).click()
+  await jsonDialog.getByRole('button', { name: '校验并覆盖' }).click()
 
   await expect(page.getByText('已从 JSON 更新题组')).toBeVisible({ timeout: 15_000 })
   await expect(page.getByLabel('title 内容')).toHaveValue('JSON 图片题')
@@ -1065,7 +1071,7 @@ test('IE-14 covers list and details page action buttons', async () => {
   }
 })
 
-test('IE-15 drives the standalone AI image panel end to end', async () => {
+test('IE-15 drives the standalone AI image task dialog end to end', async () => {
   await saveImageProvider(imageProvider('ie-panel-image', 'mock-image'))
   await saveImageProvider(imageProvider('ie-panel-slow', 'mock-slow'))
   const interfaceId = await seedInterface(imageInterface)
@@ -1073,14 +1079,14 @@ test('IE-15 drives the standalone AI image panel end to end', async () => {
   await page.getByLabel('picture图片提示词').fill('A green circle icon')
 
   await page.getByRole('button', { name: '批量生图' }).click()
-  const panel = page.getByLabel('AI 生图', { exact: true })
-  await expect(panel).toBeVisible()
-  await expect(panel.getByText('1 张图片待生成')).toBeVisible()
-  await panel.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
-  await panel.getByRole('button', { name: '开始生图' }).click()
-  await expect(panel.getByText('生图完成')).toBeVisible({ timeout: 15_000 })
+  const dialog = page.getByRole('dialog', { name: 'AI 生图' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog).toContainText('将为 1 个已填写提示词的字段生成图片，成功后立即保存')
+  await dialog.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await dialog.getByRole('button', { name: '开始生图' }).click()
+  await expect(dialog.getByText('生图完成')).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText('AI 生图结果已保存')).toBeVisible()
-  await panel.getByRole('button', { name: '完成' }).click()
+  await dialog.getByRole('button', { name: '返回题组' }).click()
   await expect(page.getByAltText('picture预览')).toBeVisible()
   await expectRenderedAssetsToLoad(1)
 
@@ -1120,7 +1126,7 @@ test('IE-17 manages a bundled instance and copies the builtin to a draft', async
   await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
   await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 30_000 })
-  await page.getByRole('button', { name: '完成' }).click()
+  await page.getByRole('button', { name: '返回题组' }).click()
   await page.getByLabel('题组名称').fill('上海内置回归题组')
   await page.getByLabel('sentence1 内容').fill('A saved sentence from the bundled Interface.')
   await page.getByRole('button', { name: '保存' }).click()
@@ -1171,7 +1177,7 @@ test('IE-18 generates and persists an image in a bundled picture field', async (
   await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
   await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 30_000 })
-  await page.getByRole('button', { name: '完成' }).click()
+  await page.getByRole('button', { name: '返回题组' }).click()
   await page.getByLabel('题组名称').fill('内置图片题组')
 
   const pictureField = page
