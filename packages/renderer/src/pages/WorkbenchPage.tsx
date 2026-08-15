@@ -208,7 +208,7 @@ export function WorkbenchPage(): JSX.Element {
     : 0
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-workbench>
       <div className={styles.inner}>
         <section className={styles.intro} aria-labelledby="workbench-title">
           <div className={styles.introCopy}>

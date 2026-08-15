@@ -2,6 +2,7 @@
   min-height: 100%;
   padding: 46px 0 64px;
   background: var(--color-surface-subtle);
+  animation: workbench-page-enter 360ms ease-out both;
 }
 
 .inner {
@@ -30,6 +31,8 @@
   width: 1px;
   content: '';
   background: var(--color-accent);
+  transform-origin: top;
+  animation: workbench-rule-enter 520ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
 }
 
 .introCopy {
@@ -37,6 +40,23 @@
   z-index: 1;
   min-width: 0;
   padding-left: 24px;
+}
+
+.introCopy > * {
+  animation: workbench-copy-enter 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.introCopy > :nth-child(1) {
+  animation-delay: 70ms;
+}
+.introCopy > :nth-child(2) {
+  animation-delay: 110ms;
+}
+.introCopy > :nth-child(3) {
+  animation-delay: 150ms;
+}
+.introCopy > :nth-child(4) {
+  animation-delay: 200ms;
 }
 
 .eyebrow {
@@ -100,6 +120,7 @@
   grid-template-rows: auto 1fr auto;
   overflow: hidden;
   color: var(--color-text-muted);
+  animation: workbench-visual-enter 560ms cubic-bezier(0.22, 1, 0.36, 1) 130ms both;
 }
 
 .heroVisual::before,
@@ -196,13 +217,26 @@
   transition:
     border-color 140ms ease,
     background-color 140ms ease,
-    transform 140ms ease;
+    transform 140ms ease,
+    box-shadow 140ms ease;
+  animation: workbench-rise 440ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.quickAction:nth-child(1) {
+  animation-delay: 220ms;
+}
+.quickAction:nth-child(2) {
+  animation-delay: 270ms;
+}
+.quickAction:nth-child(3) {
+  animation-delay: 320ms;
 }
 
 .quickAction:hover {
   border-color: var(--color-accent);
   background: var(--color-surface-hover);
   transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgb(25 35 34 / 8%);
 }
 
 .quickAction[data-primary] {
@@ -270,6 +304,14 @@
   width: 18px;
   height: 18px;
   color: var(--color-text-faint);
+  transition:
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.quickAction:hover > svg {
+  color: var(--color-accent);
+  transform: translateX(3px);
 }
 
 .quickAction[data-primary] > svg {
@@ -284,6 +326,7 @@
   grid-template-columns: repeat(5, minmax(0, 1fr));
   overflow: hidden;
   background: transparent;
+  animation: workbench-rise 480ms cubic-bezier(0.22, 1, 0.36, 1) 360ms both;
 }
 
 .statusItem {
@@ -294,6 +337,11 @@
   align-items: center;
   justify-content: center;
   gap: 11px;
+  transition: background-color 140ms ease;
+}
+
+.statusItem:hover {
+  background: var(--color-surface-hover);
 }
 
 .statusItem + .statusItem {
@@ -304,6 +352,11 @@
   width: 18px;
   height: 18px;
   color: var(--color-accent);
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.statusItem:hover > svg {
+  transform: translateY(-2px) scale(1.08);
 }
 
 .statusItem div {
@@ -331,6 +384,7 @@
   margin-top: 30px;
   grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.65fr);
   gap: 36px;
+  animation: workbench-rise 500ms cubic-bezier(0.22, 1, 0.36, 1) 430ms both;
 }
 
 .recentPanel,
@@ -426,12 +480,17 @@
   font-size: 12px;
   font-weight: 650;
   cursor: pointer;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    transform 140ms ease;
 }
 
 .emptyRecent button:hover,
 .pendingAction:hover {
   color: var(--color-accent);
   background: var(--color-surface-hover);
+  transform: translateY(-1px);
 }
 
 .emptyRecent button svg,
@@ -459,11 +518,25 @@
   background: transparent;
   text-align: left;
   cursor: pointer;
-  transition: background-color 120ms ease;
+  transition:
+    background-color 120ms ease,
+    padding-left 140ms ease;
+  animation: workbench-list-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.recentList > button:nth-child(2) {
+  animation-delay: 45ms;
+}
+.recentList > button:nth-child(3) {
+  animation-delay: 90ms;
+}
+.recentList > button:nth-child(4) {
+  animation-delay: 135ms;
 }
 
 .recentList > button:hover {
   background: var(--color-surface-hover);
+  padding-left: 8px;
 }
 
 .recentIcon {
@@ -525,6 +598,14 @@
   width: 15px;
   height: 15px;
   color: var(--color-text-faint);
+  transition:
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.recentList > button:hover > svg {
+  color: var(--color-accent);
+  transform: translateX(3px);
 }
 
 .pendingSummary {
@@ -571,7 +652,69 @@
   min-width: 0;
   height: 100%;
   background: var(--color-accent);
-  transition: width 300ms ease;
+  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes workbench-page-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes workbench-rule-enter {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes workbench-copy-enter {
+  from {
+    opacity: 0;
+    clip-path: inset(0 0 8px 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0);
+  }
+}
+
+@keyframes workbench-visual-enter {
+  from {
+    opacity: 0;
+    clip-path: inset(0 14px 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0);
+  }
+}
+
+@keyframes workbench-rise {
+  from {
+    opacity: 0;
+    clip-path: inset(0 0 9px 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0);
+  }
+}
+
+@keyframes workbench-list-enter {
+  from {
+    opacity: 0;
+    clip-path: inset(0 0 0 6px);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0);
+  }
 }
 
 .pendingStats {
