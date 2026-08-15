@@ -308,6 +308,7 @@ test('navigates through every primary application area', async () => {
   await page.getByRole('link', { name: '试卷模板' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '试卷模板' })).toBeVisible()
   await expect(page.getByText('正在加载模板...')).toBeHidden()
+  await expect(page.getByRole('tab', { name: '内置模板' })).toHaveAttribute('aria-selected', 'true')
   await expectValidStyleBindings(page)
 
   await page.getByRole('link', { name: '评分单元' }).click()
@@ -509,10 +510,12 @@ test('creates, edits and reloads a persisted template', async () => {
   await expect(page.getByText('Revision 1')).toBeVisible()
 
   await page.getByRole('button', { name: '返回模板' }).click()
+  await page.getByRole('tab', { name: '我的模板' }).click()
   await expect(page.getByRole('button', { name: '集成测试模板', exact: true })).toBeVisible()
 
   await page.reload()
   await page.getByRole('link', { name: '试卷模板' }).click()
+  await page.getByRole('tab', { name: '我的模板' }).click()
   await expect(page.getByRole('button', { name: '集成测试模板', exact: true })).toBeVisible()
   await expect(page.getByText('由 Electron 集成测试创建')).toBeVisible()
 
@@ -579,7 +582,7 @@ test('creates, edits and reloads a persisted template', async () => {
 test('generates an exam directly from an immutable builtin template', async () => {
   await page.getByRole('link', { name: '试卷模板' }).click()
   await expect(page.getByText('正在加载模板...')).toBeHidden()
-  await expect(page.getByRole('heading', { name: '内置模板' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: '内置模板' })).toHaveAttribute('aria-selected', 'true')
 
   const builtinRow = page.getByText('基础试卷', { exact: true }).locator('xpath=ancestor::article')
   await expect(builtinRow.getByText('v1', { exact: true })).toBeVisible()

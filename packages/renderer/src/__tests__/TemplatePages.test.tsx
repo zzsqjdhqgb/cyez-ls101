@@ -71,6 +71,10 @@ async function clickLibraryFunction(name: string): Promise<void> {
   )
 }
 
+async function openTemplateBrowserTab(name: '内置模板' | '我的模板' | '函数库'): Promise<void> {
+  fireEvent.click(await screen.findByRole('tab', { name }))
+}
+
 function TemplateRouteSwitcher(): JSX.Element {
   const navigate = useNavigate()
   return (
@@ -481,14 +485,27 @@ describe('Template pages', () => {
       </TemplateApplicationProvider>
     )
 
-    expect(await screen.findByRole('button', { name: '听力模板' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '内置模板' })).toBeInTheDocument()
+    expect(await screen.findByRole('tab', { name: '内置模板' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    expect(screen.getByRole('tab', { name: '我的模板' })).toHaveAttribute('aria-selected', 'false')
+    expect(screen.getByRole('tab', { name: '函数库' })).toHaveAttribute('aria-selected', 'false')
     expect(screen.getByText('基础试卷')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '生成试卷' })).toBeEnabled()
     const builtinRow = screen.getByText('基础试卷').closest('article')
     expect(builtinRow).not.toBeNull()
     expect(within(builtinRow as HTMLElement).queryByRole('button', { name: '编辑' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '听力模板' })).not.toBeInTheDocument()
+    expect(screen.queryByText('听力函数库')).not.toBeInTheDocument()
+
+    await openTemplateBrowserTab('函数库')
     expect(screen.getByText('听力函数库')).toBeInTheDocument()
+    expect(screen.queryByText('基础试卷')).not.toBeInTheDocument()
+
+    await openTemplateBrowserTab('我的模板')
+    expect(screen.getByRole('button', { name: '听力模板' })).toBeInTheDocument()
+    expect(screen.queryByText('听力函数库')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '听力模板' }))
 
     expect(await screen.findByRole('heading', { name: '结构' })).toBeInTheDocument()
@@ -578,6 +595,7 @@ describe('Template pages', () => {
       </TemplateApplicationProvider>
     )
 
+    await openTemplateBrowserTab('我的模板')
     await screen.findByRole('button', { name: '听力模板' })
     fireEvent.click(screen.getByRole('button', { name: '删除模板“听力模板”' }))
     fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: '删除' }))
@@ -599,6 +617,7 @@ describe('Template pages', () => {
       </TemplateApplicationProvider>
     )
 
+    await openTemplateBrowserTab('我的模板')
     await screen.findByRole('button', { name: '听力模板' })
     fireEvent.click(screen.getByRole('button', { name: '导出模板“听力模板”' }))
 
@@ -628,10 +647,14 @@ describe('Template pages', () => {
       </TemplateApplicationProvider>
     )
 
-    await screen.findByRole('button', { name: '听力模板' })
+    expect(await screen.findByRole('tab', { name: '内置模板' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
     fireEvent.click(screen.getByRole('button', { name: '导入模板' }))
 
     expect(await screen.findByRole('button', { name: '外部新模板' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '我的模板' })).toHaveAttribute('aria-selected', 'true')
     expect(app.templates.inspectImport).toHaveBeenCalledWith(source)
     expect(app.templates.importDocument).toHaveBeenCalledWith(source, 'preserve-id')
   })
@@ -657,6 +680,7 @@ describe('Template pages', () => {
       </TemplateApplicationProvider>
     )
 
+    await openTemplateBrowserTab('我的模板')
     await screen.findByRole('button', { name: '听力模板' })
     fireEvent.click(screen.getByRole('button', { name: '导入模板' }))
 
@@ -687,6 +711,7 @@ describe('Template pages', () => {
       </TemplateApplicationProvider>
     )
 
+    await openTemplateBrowserTab('我的模板')
     await screen.findByRole('button', { name: '听力模板' })
     fireEvent.click(screen.getByRole('button', { name: '导入模板' }))
     const dialog = await screen.findByRole('alertdialog', { name: '模板“外部模板”已存在' })
@@ -722,6 +747,7 @@ describe('Template pages', () => {
       </TemplateApplicationProvider>
     )
 
+    await openTemplateBrowserTab('我的模板')
     await screen.findByRole('button', { name: '听力模板' })
     fireEvent.click(screen.getByRole('button', { name: '导入模板' }))
     const dialog = await screen.findByRole('alertdialog', { name: '模板“覆盖后的模板”已存在' })
