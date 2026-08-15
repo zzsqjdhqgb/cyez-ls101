@@ -58,6 +58,32 @@ interface QuickAction {
   primary?: boolean
 }
 
+const WORKBENCH_QUOTES = [
+  {
+    text: 'Language is the dress of thought.',
+    translation: '语言，是思想穿上的衣裳。',
+    author: 'Samuel Johnson'
+  },
+  {
+    text: 'The limits of my language mean the limits of my world.',
+    translation: '语言的边界，也标记着世界的边界。',
+    author: 'Ludwig Wittgenstein'
+  },
+  {
+    text: 'A different language is a different vision of life.',
+    translation: '换一种语言，也就换一种观看生活的方式。',
+    author: 'Federico Fellini'
+  },
+  {
+    text: 'Knowledge of languages is the doorway to wisdom.',
+    translation: '懂得语言，便多了一扇通往智慧的门。',
+    author: 'Roger Bacon'
+  }
+] as const
+
+const STARTUP_QUOTE =
+  WORKBENCH_QUOTES[Math.floor(Math.random() * WORKBENCH_QUOTES.length)] ?? WORKBENCH_QUOTES[0]
+
 export function WorkbenchPage(): JSX.Element {
   const navigate = useNavigate()
   const exams = useExamLibrary()
@@ -155,7 +181,7 @@ export function WorkbenchPage(): JSX.Element {
     () => [
       {
         title: '制作试卷',
-        detail: '从试卷模板继续创作',
+        detail: '基于模板生成听说试卷',
         path: '/templates',
         icon: FilePenLine,
         primary: true
@@ -185,20 +211,33 @@ export function WorkbenchPage(): JSX.Element {
     <div className={styles.page}>
       <div className={styles.inner}>
         <section className={styles.intro} aria-labelledby="workbench-title">
-          <div>
-            <span className={styles.eyebrow}>英语听说工作台</span>
+          <div className={styles.introCopy}>
+            <span className={styles.eyebrow}>LS101 · 英语听说工作台</span>
             <h1 id="workbench-title">工作台</h1>
-            <h2>欢迎回来，开始今天的工作。</h2>
-            <p>继续处理尚未完成的内容，或从一项新的工作开始。</p>
+            <h2>{STARTUP_QUOTE.text}</h2>
+            <p className={styles.quoteMeta}>
+              <span>{STARTUP_QUOTE.translation}</span>
+              <cite>{STARTUP_QUOTE.author}</cite>
+            </p>
           </div>
-          <button
-            className={styles.introAction}
-            type="button"
-            onClick={() => navigate('/templates')}
-          >
-            <FilePenLine aria-hidden="true" />
-            进入试卷模板
-          </button>
+          <div className={styles.heroVisual} aria-hidden="true">
+            <div className={styles.visualHeader}>
+              <span>LISTEN / SPEAK</span>
+              <span>LS — 101</span>
+            </div>
+            <div className={styles.waveform}>
+              {[22, 40, 62, 34, 78, 48, 92, 55, 36, 69, 45, 82, 29, 57, 38, 74].map(
+                (height, index) => (
+                  <i key={`${height}-${index}`} style={{ height: `${height}%` }} />
+                )
+              )}
+            </div>
+            <div className={styles.visualFooter}>
+              <span>01</span>
+              <span>听力 · 口语 · 语言运用</span>
+            </div>
+            <strong className={styles.visualNumber}>101</strong>
+          </div>
         </section>
 
         <section className={styles.quickActions} aria-label="快捷操作">
@@ -321,7 +360,7 @@ export function WorkbenchPage(): JSX.Element {
               <ArrowRight aria-hidden="true" />
             </button>
             <div className={styles.draftSummary}>
-              <span>创作草稿</span>
+              <span>未完成草稿</span>
               <strong>
                 {loading ? '–' : snapshot.interfaceDrafts + snapshot.schemaDraftLibraries}
               </strong>

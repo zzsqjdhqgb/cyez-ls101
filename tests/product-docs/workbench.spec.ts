@@ -40,9 +40,14 @@ test(
   },
   // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture argument destructuring.
   async ({}, testInfo) => {
-    await test.step('启动应用后首先看到曹二听说 101 工作台封面', async () => {
+    await test.step('启动应用后首先看到曹二听说 101 工作台封面和英语摘句', async () => {
       await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
-      await expect(page.getByRole('heading', { name: '欢迎回来，开始今天的工作。' })).toBeVisible()
+      await expect(
+        page.getByRole('heading', {
+          level: 2,
+          name: /^(Language is the dress of thought\.|The limits of my language mean the limits of my world\.|A different language is a different vision of life\.|Knowledge of languages is the doorway to wisdom\.)$/
+        })
+      ).toBeVisible()
     })
 
     await test.step('工作台展示试卷、待评分、题型、模板和评分单元状态', async () => {
