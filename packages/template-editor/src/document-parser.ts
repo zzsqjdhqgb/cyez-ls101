@@ -1,4 +1,5 @@
 import type {
+  BuiltinTemplateRelease,
   ChoiceViewport,
   ContentBlock,
   FrameNode,
@@ -21,6 +22,29 @@ import type {
   ValueType,
   VariableRef
 } from './types'
+
+export function parseBuiltinTemplateRelease(value: unknown): BuiltinTemplateRelease | null {
+  if (
+    !isJsonTree(value) ||
+    !isRecord(value) ||
+    typeof value.templateId !== 'string' ||
+    !Number.isSafeInteger(value.version) ||
+    (value.version as number) < 1 ||
+    typeof value.releaseHash !== 'string' ||
+    !isRecord(value.document)
+  ) {
+    return null
+  }
+
+  const document = parseTemplateDocument({
+    templateId: value.templateId,
+    revision: 0,
+    content: value.document.content,
+    resources: value.document.resources,
+    editorState: value.document.editorState
+  })
+  return document ? (value as unknown as BuiltinTemplateRelease) : null
+}
 
 export function parseTemplateDocument(value: unknown): TemplateDocument | null {
   if (

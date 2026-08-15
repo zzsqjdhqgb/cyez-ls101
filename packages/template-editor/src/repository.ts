@@ -1,15 +1,19 @@
 import {
+  parseBuiltinTemplateRelease,
   parseFunctionLibraryRelease,
   parseLegacyLocalFunctionLibraryDocument,
   parseLocalFunctionLibraryDocument,
   parseTemplateDocument
 } from './document-parser'
 import {
+  canonicalizeBuiltinTemplateDocument,
   canonicalizeFunctionLibraryContent,
   verifyFunctionLibraryRelease,
-  verifyFunctionResourceId
+  verifyFunctionResourceId,
+  verifyBuiltinTemplateRelease
 } from './id'
 import type {
+  BuiltinTemplateRelease,
   FunctionDef,
   FunctionLibraryContent,
   FunctionLibraryRelease,
@@ -41,6 +45,14 @@ export interface TemplateRepository {
   createTemplate(document: TemplateDocument): Promise<TemplateDocument>
   saveTemplate(document: TemplateDocument): Promise<TemplateDocument>
   deleteTemplate(templateId: string): Promise<void>
+
+  listBuiltinTemplateIds(): Promise<string[]>
+  getActiveBuiltinTemplate(templateId: string): Promise<BuiltinTemplateRelease | null>
+  getBuiltinTemplate(templateId: string, version: number): Promise<BuiltinTemplateRelease | null>
+  registerBuiltinTemplate(release: BuiltinTemplateRelease): Promise<BuiltinTemplateRelease>
+  setActiveBuiltinTemplates(
+    templates: readonly { templateId: string; version: number }[]
+  ): Promise<void>
 
   listLocalFunctionLibraryIds(): Promise<string[]>
   getLocalFunctionLibrary(libraryId: string): Promise<LocalFunctionLibraryDocument | null>
@@ -84,12 +96,14 @@ export class TemplateRepositoryError extends Error {
 
 export class FileTemplateRepository implements TemplateRepository {
   private readonly templates: TemplateStore
+  private readonly builtinTemplates: TemplateStore
   private readonly localLibraries: TemplateStore
   private readonly importedLibraries: TemplateStore
   private readonly builtinLibraries: TemplateStore
 
   constructor(root: TemplateStore) {
     this.templates = root.scope('templates')
+    this.builtinTemplates = root.scope('builtin-templates')
     const libraries = root.scope('function-libraries')
     this.localLibraries = libraries.scope('local')
     this.importedLibraries = libraries.scope('imported')
@@ -184,6 +198,108 @@ export class FileTemplateRepository implements TemplateRepository {
   async deleteTemplate(templateId: string): Promise<void> {
     assertUuid(templateId, 'templateId')
     await this.templates.scope(templateId).clear()
+  }
+
+  async listBuiltinTemplateIds(): Promise<string[]> {
+    const active = await this.readActiveBuiltinTemplates()
+    return active.templates.map(({ templateId }) => templateId)
+  }
+
+  async getActiveBuiltinTemplate(templateId: string): Promise<BuiltinTemplateRelease | null> {
+    assertUuid(templateId, 'templateId')
+    const active = await this.readActiveBuiltinTemplates()
+    const entry = active.templates.find((item) => item.templateId === templateId)
+    if (!entry) return null
+    const release = await this.getBuiltinTemplate(templateId, entry.version)
+    if (!release) {
+      throw invalidData(
+        `Builtin template ${templateId} active release v${entry.version} is missing`
+      )
+    }
+    return release
+  }
+
+  async getBuiltinTemplate(
+    templateId: string,
+    version: number
+  ): Promise<BuiltinTemplateRelease | null> {
+    assertUuid(templateId, 'templateId')
+    assertVersion(version, 'template')
+    const value = await readStoredValue(
+      builtinTemplateReleaseScope(this.builtinTemplates, templateId, version),
+      TEMPLATE_FILE,
+      `Builtin template ${templateId} v${version}`
+    )
+    if (value === null) return null
+    const release = parseBuiltinTemplateRelease(value)
+    if (
+      !release ||
+      release.templateId !== templateId ||
+      release.version !== version ||
+      !(await verifyBuiltinTemplateRelease(release))
+    ) {
+      throw invalidData(`Builtin template ${templateId} v${version} is invalid`)
+    }
+    await validateBuiltinTemplateRelease(release)
+    return release
+  }
+
+  async registerBuiltinTemplate(release: BuiltinTemplateRelease): Promise<BuiltinTemplateRelease> {
+    await validateBuiltinTemplateRelease(release)
+    const scope = builtinTemplateReleaseScope(
+      this.builtinTemplates,
+      release.templateId,
+      release.version
+    )
+    const stored = await readStoredValue(
+      scope,
+      TEMPLATE_FILE,
+      `Builtin template ${release.templateId} v${release.version}`
+    )
+    if (stored !== null) {
+      const current = parseBuiltinTemplateRelease(stored)
+      if (!current || !(await verifyBuiltinTemplateRelease(current))) {
+        throw invalidData(`Builtin template ${release.templateId} v${release.version} is invalid`)
+      }
+      if (sameBuiltinTemplateRelease(current, release)) return current
+      throw templateReleaseConflict(release.templateId, release.version)
+    }
+    if (!(await scope.compareAndSwapText(TEMPLATE_FILE, null, release))) {
+      const current = await this.getBuiltinTemplate(release.templateId, release.version)
+      if (current && sameBuiltinTemplateRelease(current, release)) return current
+      throw templateReleaseConflict(release.templateId, release.version)
+    }
+    return release
+  }
+
+  async setActiveBuiltinTemplates(
+    templates: readonly { templateId: string; version: number }[]
+  ): Promise<void> {
+    const normalized = [...templates].sort((left, right) =>
+      left.templateId.localeCompare(right.templateId)
+    )
+    const ids = new Set<string>()
+    for (const { templateId, version } of normalized) {
+      assertUuid(templateId, 'templateId')
+      assertVersion(version, 'template')
+      if (ids.has(templateId)) throw invalidData(`Duplicate active builtin template: ${templateId}`)
+      ids.add(templateId)
+      if (!(await this.getBuiltinTemplate(templateId, version))) {
+        throw invalidData(`Builtin template ${templateId} release v${version} is missing`)
+      }
+    }
+    await this.builtinTemplates.writeText(ACTIVE_FILE, { templates: normalized })
+  }
+
+  private async readActiveBuiltinTemplates(): Promise<ActiveBuiltinTemplates> {
+    const value = await readStoredValue(
+      this.builtinTemplates,
+      ACTIVE_FILE,
+      'Active builtin templates'
+    )
+    if (value === null) return { templates: [] }
+    if (!isActiveBuiltinTemplates(value)) throw invalidData('Active builtin templates are invalid')
+    return value
   }
 
   async listLocalFunctionLibraryIds(): Promise<string[]> {
@@ -531,8 +647,28 @@ async function listVersionScopes(store: TemplateStore): Promise<number[]> {
 }
 
 function releaseScope(root: TemplateStore, libraryId: string, version: number): TemplateStore {
-  assertVersion(version)
+  assertVersion(version, 'function library')
   return root.scope(libraryId).scope('releases').scope(`v${version}`)
+}
+
+function builtinTemplateReleaseScope(
+  root: TemplateStore,
+  templateId: string,
+  version: number
+): TemplateStore {
+  assertVersion(version, 'template')
+  return root.scope('releases').scope(templateId).scope(`v${version}`)
+}
+
+export async function validateBuiltinTemplateRelease(
+  release: BuiltinTemplateRelease
+): Promise<void> {
+  if (!parseBuiltinTemplateRelease(release) || !(await verifyBuiltinTemplateRelease(release))) {
+    throw invalidData('Builtin template release is invalid')
+  }
+  assertUuid(release.templateId, 'templateId')
+  assertVersion(release.version, 'template')
+  await assertFunctionResources(release.document.resources.functions)
 }
 
 function assertLocalLibrary(document: LocalFunctionLibraryDocument): void {
@@ -666,10 +802,53 @@ function assertBuiltinLibraryId(libraryId: string): string {
   return match[1]
 }
 
-function assertVersion(version: number): void {
+function assertVersion(version: number, kind = 'function library'): void {
   if (!Number.isSafeInteger(version) || version < 1) {
-    throw new TemplateRepositoryError('INVALID_ID', `Invalid function library version: ${version}`)
+    throw new TemplateRepositoryError('INVALID_ID', `Invalid ${kind} version: ${version}`)
   }
+}
+
+interface ActiveBuiltinTemplates {
+  templates: { templateId: string; version: number }[]
+}
+
+function isActiveBuiltinTemplates(value: unknown): value is ActiveBuiltinTemplates {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    Reflect.ownKeys(value).length !== 1 ||
+    !Array.isArray(Reflect.get(value, 'templates'))
+  ) {
+    return false
+  }
+  const templates = Reflect.get(value, 'templates') as unknown[]
+  return (
+    templates.every(
+      (item) =>
+        typeof item === 'object' &&
+        item !== null &&
+        Reflect.ownKeys(item).length === 2 &&
+        typeof Reflect.get(item, 'templateId') === 'string' &&
+        UUID_V4_PATTERN.test(Reflect.get(item, 'templateId') as string) &&
+        Number.isSafeInteger(Reflect.get(item, 'version')) &&
+        (Reflect.get(item, 'version') as number) >= 1
+    ) &&
+    new Set(templates.map((item) => Reflect.get(item as object, 'templateId'))).size ===
+      templates.length
+  )
+}
+
+function sameBuiltinTemplateRelease(
+  first: BuiltinTemplateRelease,
+  second: BuiltinTemplateRelease
+): boolean {
+  return (
+    first.templateId === second.templateId &&
+    first.version === second.version &&
+    first.releaseHash === second.releaseHash &&
+    canonicalizeBuiltinTemplateDocument(first.document) ===
+      canonicalizeBuiltinTemplateDocument(second.document)
+  )
 }
 
 interface ActiveBuiltinFunctionLibraries {
@@ -739,5 +918,13 @@ function releaseConflict(libraryId: string, version: number): TemplateRepository
     'RELEASE_CONFLICT',
     `Function library release conflict: ${libraryId} v${version}`,
     { libraryId, version }
+  )
+}
+
+function templateReleaseConflict(templateId: string, version: number): TemplateRepositoryError {
+  return new TemplateRepositoryError(
+    'RELEASE_CONFLICT',
+    `Template release conflict: ${templateId} v${version}`,
+    { templateId, version }
   )
 }

@@ -1,10 +1,14 @@
-import { parseFunctionLibraryRelease } from './document-parser'
+import { parseBuiltinTemplateRelease, parseFunctionLibraryRelease } from './document-parser'
 import type { TemplateRepository } from './repository'
-import { validateFunctionLibraryRelease } from './repository'
-import type { FunctionLibraryRelease } from './types'
+import { validateBuiltinTemplateRelease, validateFunctionLibraryRelease } from './repository'
+import type { BuiltinTemplateRelease, FunctionLibraryRelease } from './types'
 
 export interface BundledFunctionLibraryManifest {
   libraries: FunctionLibraryRelease[]
+}
+
+export interface BundledTemplateManifest {
+  templates: BuiltinTemplateRelease[]
 }
 
 export class BuiltinFunctionLibraryInitializationError extends Error {
@@ -12,6 +16,29 @@ export class BuiltinFunctionLibraryInitializationError extends Error {
     super(message)
     this.name = 'BuiltinFunctionLibraryInitializationError'
   }
+}
+
+export class BuiltinTemplateInitializationError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'BuiltinTemplateInitializationError'
+  }
+}
+
+export async function initializeBuiltinTemplates(
+  repository: TemplateRepository,
+  manifestValue: unknown
+): Promise<readonly BuiltinTemplateRelease[]> {
+  const manifest = await parseAndValidateTemplateManifest(manifestValue)
+
+  for (const release of manifest.templates) {
+    await repository.registerBuiltinTemplate(release)
+  }
+  await repository.setActiveBuiltinTemplates(
+    manifest.templates.map(({ templateId, version }) => ({ templateId, version }))
+  )
+
+  return manifest.templates
 }
 
 export async function initializeBuiltinFunctionLibraries(
@@ -68,6 +95,42 @@ async function parseAndValidateManifest(value: unknown): Promise<BundledFunction
   }
 
   return { libraries }
+}
+
+async function parseAndValidateTemplateManifest(value: unknown): Promise<BundledTemplateManifest> {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    Reflect.ownKeys(value).length !== 1 ||
+    !Array.isArray(Reflect.get(value, 'templates'))
+  ) {
+    throw new BuiltinTemplateInitializationError('Bundled template manifest is invalid')
+  }
+
+  const templates: BuiltinTemplateRelease[] = []
+  const templateIds = new Set<string>()
+  for (const item of Reflect.get(value, 'templates') as unknown[]) {
+    const release = parseBuiltinTemplateRelease(item)
+    if (!release) {
+      throw new BuiltinTemplateInitializationError('Bundled template release is invalid')
+    }
+    if (templateIds.has(release.templateId)) {
+      throw new BuiltinTemplateInitializationError(
+        `Bundled template is duplicated: ${release.templateId}`
+      )
+    }
+    try {
+      await validateBuiltinTemplateRelease(release)
+    } catch (error) {
+      throw new BuiltinTemplateInitializationError(
+        `Bundled template ${release.templateId} is invalid: ${errorMessage(error)}`
+      )
+    }
+    templateIds.add(release.templateId)
+    templates.push(structuredClone(release))
+  }
+
+  return { templates }
 }
 
 function errorMessage(error: unknown): string {

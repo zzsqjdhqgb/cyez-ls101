@@ -28,6 +28,7 @@ export interface SpeechGenerationSelection extends AIRouterSpeechTarget {
 export interface GenerateExamInput {
   application: TemplateApplication
   document: TemplateDocument
+  source?: 'local' | 'builtin'
   examName: string
   bindings: readonly TemplateInterfaceBinding[]
   speech?: AIRouterSpeechRouting
@@ -188,7 +189,10 @@ async function runGeneration(
     update(id: string, next: Partial<TaskProgressItem>): void
   }
 ): Promise<ExamGenerationResult> {
-  const preview = await input.application.templates.preview(input.document, input.bindings)
+  const preview =
+    input.source === 'builtin'
+      ? await input.application.builtinTemplates.preview(input.document.templateId, input.bindings)
+      : await input.application.templates.preview(input.document, input.bindings)
   throwIfAborted(signal)
   if (!preview.success) {
     const message = templateCompileErrorsMessage(preview.errors)
@@ -232,7 +236,11 @@ async function runGeneration(
   ])
 
   let speechIndex = 0
-  const compiled = await input.application.templates.compile(
+  const compiler =
+    input.source === 'builtin'
+      ? input.application.builtinTemplates.compile.bind(input.application.builtinTemplates)
+      : input.application.templates.compile.bind(input.application.templates)
+  const compiled = await compiler(
     input.document.templateId,
     input.bindings,
     input.speech

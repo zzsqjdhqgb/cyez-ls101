@@ -4,6 +4,8 @@ export { createTemplateApplication, TemplateApplicationError } from './applicati
 export { TemplateRepositoryError } from './repository'
 export type {
   EmbeddedFunctionResult,
+  BuiltinTemplateApplication,
+  BuiltinTemplateSummary,
   InsertedFunctionCallResult,
   FunctionLibraryApplication,
   FunctionLibrarySummary,
@@ -34,6 +36,7 @@ export type {
 } from './mutations'
 
 export {
+  canonicalizeBuiltinTemplateDocument,
   canonicalizeFunctionContent,
   canonicalizeFunctionLibraryContent,
   createFunctionDocument,
@@ -44,14 +47,21 @@ export {
   createLocalFunctionLibraryDocument,
   createTemplateDocument,
   createTemplateId,
+  createBuiltinTemplateRelease,
+  deriveBuiltinTemplateReleaseHash,
   deriveFunctionResourceId,
   deriveFunctionLibraryContentHash,
   isFunctionResourceId,
   verifyFunctionLibraryRelease,
-  verifyFunctionResourceId
+  verifyFunctionResourceId,
+  verifyBuiltinTemplateRelease
 } from './id'
 export { compileTemplate, compileTemplatePreview } from './compiler'
-export { parseFunctionLibraryRelease, parseTemplateDocument } from './document-parser'
+export {
+  parseBuiltinTemplateRelease,
+  parseFunctionLibraryRelease,
+  parseTemplateDocument
+} from './document-parser'
 export type {
   TemplateCompileContext,
   TemplateCompileError,

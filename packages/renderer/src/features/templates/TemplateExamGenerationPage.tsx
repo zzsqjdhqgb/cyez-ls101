@@ -59,6 +59,18 @@ const SPEECH_ROLES: readonly { role: SpeechRole; label: string }[] = [
 ]
 
 export function TemplateExamGenerationPage(): JSX.Element {
+  return <TemplateExamGenerationPageContent source="local" />
+}
+
+export function BuiltinTemplateExamGenerationPage(): JSX.Element {
+  return <TemplateExamGenerationPageContent source="builtin" />
+}
+
+function TemplateExamGenerationPageContent({
+  source
+}: {
+  source: 'local' | 'builtin'
+}): JSX.Element {
   const { templateId = '' } = useParams()
   const application = useTemplateApplication()
   const examLibrary = useExamLibrary()
@@ -88,8 +100,21 @@ export function TemplateExamGenerationPage(): JSX.Element {
 
   useEffect(() => {
     let active = true
+    const loadDocument = async (): Promise<TemplateDocument | null> => {
+      if (source === 'local') return application.templates.get(templateId)
+      const release = await application.builtinTemplates.get(templateId)
+      return release
+        ? {
+            templateId: release.templateId,
+            revision: 0,
+            content: structuredClone(release.document.content),
+            resources: structuredClone(release.document.resources),
+            editorState: structuredClone(release.document.editorState)
+          }
+        : null
+    }
     void Promise.all([
-      application.templates.get(templateId),
+      loadDocument(),
       application.browser.listInterfaces(),
       listSpeechGenerationSelections()
     ])
@@ -134,7 +159,7 @@ export function TemplateExamGenerationPage(): JSX.Element {
       active = false
       sessionRef.current?.dispose()
     }
-  }, [application, templateId])
+  }, [application, source, templateId])
 
   const requiresSpeech = document ? containsSpeech(document) : false
   const bindings: TemplateInterfaceBinding[] = useMemo(
@@ -165,6 +190,7 @@ export function TemplateExamGenerationPage(): JSX.Element {
       session = createExamGenerationSession({
         application,
         document,
+        source,
         examName: examName.trim(),
         bindings,
         ...(requiresSpeech && speechChoices
@@ -192,7 +218,7 @@ export function TemplateExamGenerationPage(): JSX.Element {
   }
 
   const close = (): void => {
-    navigate(`/templates/${templateId}`)
+    navigate(source === 'builtin' ? '/templates' : `/templates/${templateId}`)
   }
 
   const confirmLeave = (): void => {

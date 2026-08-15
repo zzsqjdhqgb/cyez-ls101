@@ -19,6 +19,7 @@ export const templateApplication = createTemplateApplication({
   repository: templateRepository,
   getBuiltinFunctionLibraryManifest: () =>
     builtinTemplateStore.readText('builtin-function-libraries.json'),
+  getBuiltinTemplateManifest: () => builtinTemplateStore.readText('builtin-templates.json'),
   ...createTemplateInterfaceDependencies(interfaceApplication),
   ...createTemplateSchemaDependencies(schemaRepository)
 })

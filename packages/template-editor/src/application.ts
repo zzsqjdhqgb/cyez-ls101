@@ -1,8 +1,12 @@
 import type { InterfaceVarManifest, SchemaDefinition } from '@ls101/core-types'
 import stableStringify from 'fast-json-stable-stringify'
-import { initializeBuiltinFunctionLibraries } from './builtin-initializer'
+import {
+  initializeBuiltinFunctionLibraries,
+  initializeBuiltinTemplates
+} from './builtin-initializer'
 import { compileTemplate, compileTemplatePreview } from './compiler'
 import type {
+  BuiltinTemplateRelease,
   GeneratedTimelineAudio,
   LocatedInterfaceInstance,
   TemplateCompileResult,
@@ -40,6 +44,7 @@ import type {
 import {
   validateTemplateDocument,
   type TemplateDocumentValidationContext,
+  type TemplateValidationError,
   type TemplateValidationResult
 } from './validation'
 
@@ -47,6 +52,12 @@ export interface TemplateSummary {
   templateId: string
   name: string
   description: string
+}
+
+export interface BuiltinTemplateSummary extends TemplateSummary {
+  version: number
+  available: boolean
+  errors: readonly TemplateValidationError[]
 }
 
 export interface FunctionSummary {
@@ -76,9 +87,24 @@ export interface InsertedFunctionCallResult extends EmbeddedFunctionResult {
 
 export interface TemplateBrowserApplication {
   listTemplates(): Promise<TemplateSummary[]>
+  listBuiltinTemplates(): Promise<BuiltinTemplateSummary[]>
   listFunctionLibraries(): Promise<FunctionLibrarySummary[]>
   listInterfaces(): Promise<InterfaceVarManifest[]>
   listInterfaceInstances(interfaceId: string): Promise<TemplateInterfaceInstanceSummary[]>
+}
+
+export interface BuiltinTemplateApplication {
+  get(templateId: string): Promise<BuiltinTemplateRelease | null>
+  validate(templateId: string): Promise<TemplateValidationResult>
+  compile(
+    templateId: string,
+    selections: readonly TemplateInterfaceBinding[],
+    options?: TemplateCompileOptions
+  ): Promise<TemplateCompileResult>
+  preview(
+    templateId: string,
+    selections: readonly TemplateInterfaceBinding[]
+  ): Promise<TemplatePreviewResult>
 }
 
 export interface TemplateInterfaceInstanceSummary {
@@ -182,12 +208,14 @@ export interface TemplateApplication {
   initialize(): Promise<void>
   readonly browser: TemplateBrowserApplication
   readonly templates: TemplateDocumentApplication
+  readonly builtinTemplates: BuiltinTemplateApplication
   readonly functionLibraries: FunctionLibraryApplication
 }
 
 export interface TemplateApplicationDependencies {
   repository: TemplateRepository
   getBuiltinFunctionLibraryManifest?(): Promise<unknown | null>
+  getBuiltinTemplateManifest?(): Promise<unknown | null>
   listInterfaceManifests?(): Promise<InterfaceVarManifest[]>
   listInterfaceInstances?(interfaceId: string): Promise<TemplateInterfaceInstanceSummary[]>
   getInterfaceManifest(interfaceId: string): Promise<InterfaceVarManifest | null>
@@ -239,12 +267,16 @@ export function createTemplateApplication(
   const initialize = (): Promise<void> => {
     if (!initialization) {
       initialization = (async () => {
-        if (!dependencies.getBuiltinFunctionLibraryManifest) return
-        const manifest = await dependencies.getBuiltinFunctionLibraryManifest()
-        if (manifest === null) {
-          throw new Error('Builtin function library manifest is missing')
+        if (dependencies.getBuiltinFunctionLibraryManifest) {
+          const manifest = await dependencies.getBuiltinFunctionLibraryManifest()
+          if (manifest === null) throw new Error('Builtin function library manifest is missing')
+          await initializeBuiltinFunctionLibraries(repository, manifest)
         }
-        await initializeBuiltinFunctionLibraries(repository, manifest)
+        if (dependencies.getBuiltinTemplateManifest) {
+          const manifest = await dependencies.getBuiltinTemplateManifest()
+          if (manifest === null) throw new Error('Builtin template manifest is missing')
+          await initializeBuiltinTemplates(repository, manifest)
+        }
       })()
     }
     return initialization
@@ -262,6 +294,18 @@ export function createTemplateApplication(
       )
     }
     return document
+  }
+
+  const loadBuiltinTemplate = async (templateId: string): Promise<BuiltinTemplateRelease> => {
+    const release = await repository.getActiveBuiltinTemplate(templateId)
+    if (!release) {
+      throw new TemplateApplicationError(
+        'TEMPLATE_NOT_FOUND',
+        `Builtin template not found: ${templateId}`,
+        { templateId, source: 'builtin' }
+      )
+    }
+    return release
   }
 
   const loadValidationContext = async (
@@ -361,6 +405,29 @@ export function createTemplateApplication(
             name: content.name,
             description: content.description
           }))
+      },
+      async listBuiltinTemplates() {
+        const ids = await repository.listBuiltinTemplateIds()
+        const releases = await Promise.all(ids.map((id) => repository.getActiveBuiltinTemplate(id)))
+        return Promise.all(
+          releases
+            .filter((item) => item !== null)
+            .map(async (release) => {
+              const document = builtinReleaseDocument(release)
+              const validation = await validateTemplateDocument(
+                document,
+                await loadValidationContext(document)
+              )
+              return {
+                templateId: release.templateId,
+                version: release.version,
+                name: release.document.content.name,
+                description: release.document.content.description,
+                available: validation.valid,
+                errors: validation.errors
+              }
+            })
+        )
       },
       async listFunctionLibraries() {
         const [localIds, importedIds, builtinIds] = await Promise.all([
@@ -539,6 +606,35 @@ export function createTemplateApplication(
         })
       },
       async preview(document, selections) {
+        const manifests = await loadValidationContext(document)
+        return compileTemplatePreview(document, {
+          ...manifests,
+          interfaceBindings: selections,
+          locateInterfaceInstance: dependencies.locateInterfaceInstance
+        })
+      }
+    },
+    builtinTemplates: {
+      get: (templateId) => repository.getActiveBuiltinTemplate(templateId),
+      async validate(templateId) {
+        const release = await loadBuiltinTemplate(templateId)
+        const document = builtinReleaseDocument(release)
+        return validateTemplateDocument(document, await loadValidationContext(document))
+      },
+      async compile(templateId, selections, options = {}) {
+        const release = await loadBuiltinTemplate(templateId)
+        const document = builtinReleaseDocument(release)
+        const manifests = await loadValidationContext(document)
+        return compileTemplate(document, {
+          ...manifests,
+          interfaceBindings: selections,
+          synthesizeSpeech: options.synthesizeSpeech,
+          locateInterfaceInstance: dependencies.locateInterfaceInstance
+        })
+      },
+      async preview(templateId, selections) {
+        const release = await loadBuiltinTemplate(templateId)
+        const document = builtinReleaseDocument(release)
         const manifests = await loadValidationContext(document)
         return compileTemplatePreview(document, {
           ...manifests,
@@ -814,6 +910,16 @@ export function createTemplateApplication(
         }
       }
     }
+  }
+}
+
+function builtinReleaseDocument(release: BuiltinTemplateRelease): TemplateDocument {
+  return {
+    templateId: release.templateId,
+    revision: 0,
+    content: structuredClone(release.document.content),
+    resources: structuredClone(release.document.resources),
+    editorState: structuredClone(release.document.editorState)
   }
 }
 

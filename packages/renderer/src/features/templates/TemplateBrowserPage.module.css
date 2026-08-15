@@ -71,6 +71,28 @@
   color: var(--color-accent);
 }
 
+.builtinIdentity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.rowName {
+  overflow: hidden;
+  color: var(--color-text-strong);
+  font-size: 15px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.version {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
 .rowDescription {
   margin: 5px 0 0;
   overflow: hidden;
@@ -86,7 +108,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  margin: 42px 0 14px;
+  margin: 34px 0 14px;
 }
 
 .sectionHeader h2 {

@@ -1,5 +1,6 @@
 import { useEffect, useState, type JSX } from 'react'
 import type {
+  BuiltinTemplateSummary,
   FunctionLibrarySummary,
   TemplateDocument,
   TemplateImportMode,
@@ -22,6 +23,7 @@ export function TemplateBrowserPage(): JSX.Element {
   const application = useTemplateApplication()
   const navigate = useNavigate()
   const [templates, setTemplates] = useState<TemplateSummary[]>([])
+  const [builtinTemplates, setBuiltinTemplates] = useState<BuiltinTemplateSummary[]>([])
   const [functionLibraries, setFunctionLibraries] = useState<FunctionLibrarySummary[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
@@ -40,11 +42,13 @@ export function TemplateBrowserPage(): JSX.Element {
     let active = true
     void Promise.all([
       application.browser.listTemplates(),
+      application.browser.listBuiltinTemplates(),
       application.browser.listFunctionLibraries()
     ])
-      .then(([templateItems, libraryItems]) => {
+      .then(([templateItems, builtinItems, libraryItems]) => {
         if (!active) return
         setTemplates(templateItems)
+        setBuiltinTemplates(builtinItems)
         setFunctionLibraries(libraryItems)
       })
       .catch((reason: unknown) => {
@@ -196,41 +200,89 @@ export function TemplateBrowserPage(): JSX.Element {
         </div>
       ) : null}
       {loading ? <div className={styles.loading}>正在加载模板...</div> : null}
-      {!loading && templates.length === 0 ? (
-        <EmptyState icon={LayoutTemplate} title="暂无模板" />
+      {!loading ? (
+        <section aria-labelledby="builtin-templates-heading">
+          <div className={styles.sectionHeader}>
+            <h2 id="builtin-templates-heading">内置模板</h2>
+          </div>
+          {builtinTemplates.length === 0 ? (
+            <EmptyState icon={LayoutTemplate} title="暂无内置模板" />
+          ) : (
+            <div className={styles.list}>
+              {builtinTemplates.map((item) => (
+                <article className={styles.row} key={item.templateId}>
+                  <div className={styles.rowMain}>
+                    <div className={styles.builtinIdentity}>
+                      <span className={styles.rowName}>{item.name || '未命名模板'}</span>
+                      <span className={styles.version}>v{item.version}</span>
+                    </div>
+                    <p className={styles.rowDescription}>
+                      {item.available
+                        ? item.description || '暂无描述'
+                        : '缺少所需的题型或数据结构，当前版本暂不可用'}
+                    </p>
+                  </div>
+                  <div className={styles.rowActions}>
+                    <Button
+                      disabled={!item.available}
+                      title={
+                        item.available
+                          ? undefined
+                          : item.errors.map((error) => error.code).join(', ')
+                      }
+                      onClick={() => navigate(`/templates/builtin/${item.templateId}/generate`)}
+                    >
+                      生成试卷
+                    </Button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       ) : null}
-      {!loading && templates.length > 0 ? (
-        <div className={styles.list}>
-          {templates.map((item) => (
-            <article className={styles.row} key={item.templateId}>
-              <div className={styles.rowMain}>
-                <button
-                  className={styles.rowTitle}
-                  onClick={() => navigate(`/templates/${item.templateId}`)}
-                  type="button"
-                >
-                  {item.name || '未命名模板'}
-                </button>
-                <p className={styles.rowDescription}>{item.description || '暂无描述'}</p>
-              </div>
-              <div className={styles.rowActions}>
-                <Button onClick={() => navigate(`/templates/${item.templateId}`)}>编辑</Button>
-                <IconButton
-                  icon={Download}
-                  label={`导出模板“${item.name || '未命名模板'}”`}
-                  disabled={exportingId !== null}
-                  onClick={() => void exportTemplate(item.templateId)}
-                />
-                <IconButton
-                  icon={Trash2}
-                  label={`删除模板“${item.name || '未命名模板'}”`}
-                  variant="danger"
-                  onClick={() => setPendingDelete(item)}
-                />
-              </div>
-            </article>
-          ))}
-        </div>
+
+      {!loading ? (
+        <section aria-labelledby="local-templates-heading">
+          <div className={styles.sectionHeader}>
+            <h2 id="local-templates-heading">我的模板</h2>
+          </div>
+          {templates.length === 0 ? (
+            <EmptyState icon={LayoutTemplate} title="暂无本地模板" />
+          ) : (
+            <div className={styles.list}>
+              {templates.map((item) => (
+                <article className={styles.row} key={item.templateId}>
+                  <div className={styles.rowMain}>
+                    <button
+                      className={styles.rowTitle}
+                      onClick={() => navigate(`/templates/${item.templateId}`)}
+                      type="button"
+                    >
+                      {item.name || '未命名模板'}
+                    </button>
+                    <p className={styles.rowDescription}>{item.description || '暂无描述'}</p>
+                  </div>
+                  <div className={styles.rowActions}>
+                    <Button onClick={() => navigate(`/templates/${item.templateId}`)}>编辑</Button>
+                    <IconButton
+                      icon={Download}
+                      label={`导出模板“${item.name || '未命名模板'}”`}
+                      disabled={exportingId !== null}
+                      onClick={() => void exportTemplate(item.templateId)}
+                    />
+                    <IconButton
+                      icon={Trash2}
+                      label={`删除模板“${item.name || '未命名模板'}”`}
+                      variant="danger"
+                      onClick={() => setPendingDelete(item)}
+                    />
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       ) : null}
 
       <section aria-labelledby="template-functions-heading">

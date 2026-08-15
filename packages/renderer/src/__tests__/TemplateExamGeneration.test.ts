@@ -191,6 +191,30 @@ describe('TemplateExamGeneration', () => {
     )
   })
 
+  it('内置模板生成使用只读 builtin API，不按同名本地 ID 编译', async () => {
+    const application = generationApplication([])
+    const session = createExamGenerationSession(
+      {
+        application,
+        document: template(),
+        source: 'builtin',
+        examName: '内置试卷',
+        bindings: []
+      },
+      { speechClient: { synthesizeSpeech: vi.fn() }, fetchResource: vi.fn() }
+    )
+
+    await expect(session.start().completion).resolves.toMatchObject({ status: 'completed' })
+    expect(application.builtinTemplates.preview).toHaveBeenCalledWith(template().templateId, [])
+    expect(application.builtinTemplates.compile).toHaveBeenCalledWith(
+      template().templateId,
+      [],
+      undefined
+    )
+    expect(application.templates.preview).not.toHaveBeenCalled()
+    expect(application.templates.compile).not.toHaveBeenCalled()
+  })
+
   it('导出生成结果时使用经过清理的试卷名称', async () => {
     const writeBinary = vi.fn().mockResolvedValue(true)
     await expect(
@@ -204,46 +228,52 @@ describe('TemplateExamGeneration', () => {
 })
 
 function generationApplication(speechTexts: readonly string[]): TemplateApplication {
-  const compile = vi.fn(
-    async (_templateId: string, _bindings: unknown, options?: TemplateCompileOptions) => {
-      const generated = []
-      for (const text of speechTexts) {
-        const audio = await options?.synthesizeSpeech?.(text)
-        if (audio) generated.push(audio)
-      }
-      return {
-        success: true as const,
-        examPackage: exam(speechTexts.length),
-        resourceSources: [
-          ...generated.map((audio, index) => ({ assetKey: `speech-${index}`, data: audio.data })),
-          ...(speechTexts.length === 1
-            ? [{ assetKey: 'picture', sourceUrl: 'asset://picture' }]
-            : [])
-        ]
-      }
+  const compileImplementation = async (
+    _templateId: string,
+    _bindings: unknown,
+    options?: TemplateCompileOptions
+  ) => {
+    const generated = []
+    for (const text of speechTexts) {
+      const audio = await options?.synthesizeSpeech?.(text)
+      if (audio) generated.push(audio)
     }
-  )
+    return {
+      success: true as const,
+      examPackage: exam(speechTexts.length),
+      resourceSources: [
+        ...generated.map((audio, index) => ({ assetKey: `speech-${index}`, data: audio.data })),
+        ...(speechTexts.length === 1 ? [{ assetKey: 'picture', sourceUrl: 'asset://picture' }] : [])
+      ]
+    }
+  }
+  const compile = vi.fn(compileImplementation)
+  const preview = {
+    success: true,
+    preview: {
+      title: '模板',
+      pages: [
+        {
+          id: 'page',
+          sourceNodeId: 'page',
+          callPath: [],
+          content: [],
+          timeline: speechTexts.map((text) => ({ type: 'play', text }))
+        }
+      ],
+      recordingIndices: [],
+      resources: {}
+    },
+    resourceSources: []
+  }
   return {
     templates: {
-      preview: vi.fn().mockResolvedValue({
-        success: true,
-        preview: {
-          title: '模板',
-          pages: [
-            {
-              id: 'page',
-              sourceNodeId: 'page',
-              callPath: [],
-              content: [],
-              timeline: speechTexts.map((text) => ({ type: 'play', text }))
-            }
-          ],
-          recordingIndices: [],
-          resources: {}
-        },
-        resourceSources: []
-      }),
+      preview: vi.fn().mockResolvedValue(preview),
       compile
+    },
+    builtinTemplates: {
+      preview: vi.fn().mockResolvedValue(preview),
+      compile: vi.fn(compileImplementation)
     }
   } as unknown as TemplateApplication
 }

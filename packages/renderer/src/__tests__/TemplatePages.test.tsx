@@ -114,6 +114,16 @@ function application(document = template()): TemplateApplication {
           description: document.content.description
         }
       ]),
+      listBuiltinTemplates: vi.fn().mockResolvedValue([
+        {
+          templateId: '11111111-1111-4111-8111-111111111111',
+          version: 1,
+          name: '基础试卷',
+          description: '内置基础模板',
+          available: true,
+          errors: []
+        }
+      ]),
       listFunctionLibraries: vi.fn().mockResolvedValue([
         {
           source: 'builtin',
@@ -472,6 +482,12 @@ describe('Template pages', () => {
     )
 
     expect(await screen.findByRole('button', { name: '听力模板' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '内置模板' })).toBeInTheDocument()
+    expect(screen.getByText('基础试卷')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '生成试卷' })).toBeEnabled()
+    const builtinRow = screen.getByText('基础试卷').closest('article')
+    expect(builtinRow).not.toBeNull()
+    expect(within(builtinRow as HTMLElement).queryByRole('button', { name: '编辑' })).toBeNull()
     expect(screen.getByText('听力函数库')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '听力模板' }))
 
@@ -520,6 +536,34 @@ describe('Template pages', () => {
     expect(screen.getByText('page-1')).toBeInTheDocument()
     expect(app.templates.get).toHaveBeenCalledWith(TEMPLATE_ID)
     expect(app.browser.listFunctionLibraries).toHaveBeenCalledTimes(2)
+  })
+
+  it('disables generation for a builtin template with missing dependencies', async () => {
+    const app = application()
+    vi.mocked(app.browser.listBuiltinTemplates).mockResolvedValue([
+      {
+        templateId: '11111111-1111-4111-8111-111111111111',
+        version: 2,
+        name: '依赖缺失模板',
+        description: '',
+        available: false,
+        errors: [{ path: 'interfaces[0]', code: 'UNKNOWN_INTERFACE', params: {} }]
+      }
+    ])
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={['/templates']}>
+          <Routes>
+            <Route path="/templates" element={<TemplateBrowserPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    const row = (await screen.findByText('依赖缺失模板')).closest('article')
+    expect(row).not.toBeNull()
+    expect(within(row as HTMLElement).getByRole('button', { name: '生成试卷' })).toBeDisabled()
+    expect(within(row as HTMLElement).getByText(/当前版本暂不可用/)).toBeInTheDocument()
   })
 
   it('deletes a template from the browser after confirmation', async () => {

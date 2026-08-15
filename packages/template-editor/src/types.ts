@@ -478,6 +478,21 @@ export interface TemplateDocument {
   editorState: DslEditorState
 }
 
+/** 随软件发布的不可变 Template 快照；不具有本地工作文档 revision。 */
+export interface BuiltinTemplateRelease {
+  /** 跨版本稳定的 UUID。 */
+  templateId: string
+  /** 从 1 开始递增的发布版本。 */
+  version: number
+  /** document 规范化后的 sha256 摘要。 */
+  releaseHash: string
+  document: {
+    content: TemplateContent
+    resources: TemplateResources
+    editorState: DslEditorState
+  }
+}
+
 /** 编辑器私有 JSON 状态，例如画布位置、折叠和选中状态；不参与校验或编译。 */
 export type DslEditorState = Record<string, JsonValue>
 

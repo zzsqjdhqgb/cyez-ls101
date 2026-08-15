@@ -1,5 +1,6 @@
 import stableStringify from 'fast-json-stable-stringify'
 import type {
+  BuiltinTemplateRelease,
   DslEditorState,
   FunctionContent,
   FunctionDef,
@@ -145,6 +146,53 @@ export async function verifyFunctionLibraryRelease(
   release: FunctionLibraryRelease
 ): Promise<boolean> {
   return release.contentHash === (await deriveFunctionLibraryContentHash(release.content))
+}
+
+export function canonicalizeBuiltinTemplateDocument(
+  document: BuiltinTemplateRelease['document']
+): string {
+  return stableStringify(
+    normalizeCanonicalValue({
+      content: document.content,
+      resources: {
+        functions: [...document.resources.functions].sort((left, right) =>
+          left.id.localeCompare(right.id)
+        )
+      },
+      editorState: document.editorState
+    })
+  )
+}
+
+export async function deriveBuiltinTemplateReleaseHash(
+  document: BuiltinTemplateRelease['document']
+): Promise<string> {
+  const bytes = new TextEncoder().encode(canonicalizeBuiltinTemplateDocument(document))
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join(
+    ''
+  )
+  return `sha256:${hex}`
+}
+
+export async function createBuiltinTemplateRelease(
+  templateId: string,
+  version: number,
+  document: BuiltinTemplateRelease['document']
+): Promise<BuiltinTemplateRelease> {
+  const copy = structuredClone(document)
+  return {
+    templateId,
+    version,
+    releaseHash: await deriveBuiltinTemplateReleaseHash(copy),
+    document: copy
+  }
+}
+
+export async function verifyBuiltinTemplateRelease(
+  release: BuiltinTemplateRelease
+): Promise<boolean> {
+  return release.releaseHash === (await deriveBuiltinTemplateReleaseHash(release.document))
 }
 
 function normalizeCanonicalValue(value: unknown): unknown {

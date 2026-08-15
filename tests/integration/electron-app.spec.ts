@@ -564,6 +564,25 @@ test('creates, edits and reloads a persisted template', async () => {
   )
 })
 
+test('generates an exam directly from an immutable builtin template', async () => {
+  await page.getByRole('link', { name: '试卷模板' }).click()
+  await expect(page.getByText('正在加载模板...')).toBeHidden()
+  await expect(page.getByRole('heading', { name: '内置模板' })).toBeVisible()
+
+  const builtinRow = page.getByText('基础试卷', { exact: true }).locator('xpath=ancestor::article')
+  await expect(builtinRow.getByText('v1', { exact: true })).toBeVisible()
+  await expect(builtinRow.getByRole('button', { name: '编辑' })).toHaveCount(0)
+  await expect(builtinRow.getByRole('button', { name: /删除/ })).toHaveCount(0)
+  await builtinRow.getByRole('button', { name: '生成试卷' }).click()
+
+  await expect(page.getByRole('heading', { level: 1, name: '基础试卷' })).toBeVisible()
+  await expect(page.getByText('此模板不需要选择题组')).toBeVisible()
+  await page.getByRole('button', { name: '开始生成' }).click()
+  await expect(page.getByText('试卷生成完成')).toBeVisible()
+  await page.getByRole('button', { name: '加入试卷库' }).click()
+  await expect(page.getByRole('button', { name: '已加入试卷库' })).toBeDisabled()
+})
+
 test('exports a persisted formal Schema through the native save dialog', async () => {
   const schema = {
     formatVersion: 2,

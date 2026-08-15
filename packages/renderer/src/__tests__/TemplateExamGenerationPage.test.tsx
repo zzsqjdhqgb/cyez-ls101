@@ -15,7 +15,10 @@ import {
   exportGeneratedExam,
   listSpeechGenerationSelections
 } from '../features/templates/TemplateExamGeneration'
-import { TemplateExamGenerationPage } from '../features/templates/TemplateExamGenerationPage'
+import {
+  BuiltinTemplateExamGenerationPage,
+  TemplateExamGenerationPage
+} from '../features/templates/TemplateExamGenerationPage'
 
 vi.mock('../features/templates/TemplateExamGeneration', async (importOriginal) => {
   const original =
@@ -123,6 +126,49 @@ describe('TemplateExamGenerationPage', () => {
 
     expect(await screen.findByRole('heading', { name: '放弃尚未保存的试卷？' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '放弃结果并离开' })).toBeInTheDocument()
+  })
+
+  it('从内置路由加载 release 并创建 builtin 生成会话', async () => {
+    const app = {
+      ...application(),
+      builtinTemplates: {
+        get: vi.fn().mockResolvedValue({
+          templateId: TEMPLATE_ID,
+          version: 1,
+          releaseHash: `sha256:${'a'.repeat(64)}`,
+          document: {
+            content: template().content,
+            resources: template().resources,
+            editorState: template().editorState
+          }
+        })
+      }
+    } as TemplateApplication
+    render(
+      <ExamLibraryProvider repository={examRepository()}>
+        <TemplateApplicationProvider application={app}>
+          <MemoryRouter initialEntries={[`/templates/builtin/${TEMPLATE_ID}/generate`]}>
+            <Routes>
+              <Route
+                path="/templates/builtin/:templateId/generate"
+                element={<BuiltinTemplateExamGenerationPage />}
+              />
+              <Route path="/templates" element={<h1>试卷模板</h1>} />
+            </Routes>
+          </MemoryRouter>
+        </TemplateApplicationProvider>
+      </ExamLibraryProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: '开始生成' }))
+    await waitFor(() =>
+      expect(createExamGenerationSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          source: 'builtin',
+          document: expect.objectContaining({ revision: 0 })
+        })
+      )
+    )
   })
 })
 

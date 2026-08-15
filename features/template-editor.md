@@ -23,6 +23,8 @@ Schema Editor 向 Template Editor 提供完整的正式 `SchemaDefinition`。Tem
 
 Template 不区分草稿和发布状态。`createTemplateDocument()` 生成稳定 UUID `templateId`、初始 revision 0，并深拷贝正文、函数资源和编辑器状态；保存工作文档不触发严格业务校验，预览和导出才要求当前内容完整合法。导出后的 ExamPackage 不依赖 Template，后续修改或删除工作文档不会影响已经导出的试卷。
 
+随应用发布的内置 Template 使用独立的 `BuiltinTemplateRelease`。同一模板跨版本保持 UUID v4 `templateId`，以从 1 开始的 `version` 和覆盖完整文档快照的 `releaseHash` 标识不可变版本，不复用本地 CAS `revision`。release 自带 Template 正文、编辑器状态和完整函数快照，不依赖当前函数库版本；生成后的 ExamPackage 仍是独立快照。
+
 用户本地函数以函数库为工作文档边界。`LocalFunctionLibraryDocument` 使用稳定 UUID `libraryId` 和仓储 revision，库内每个函数使用稳定 UUID `functionId`；函数的语义正文和编辑器状态都随所属函数库统一读取、保存和删除。导入库和内置库使用不可变的 `FunctionLibraryRelease`，由 `libraryId + version + contentHash` 标识；内置库使用稳定的 `builtin:*` 库及函数 ID。
 
 Template 内的 `FunctionDef` 是从函数库复制后的不可变快照，其 `id` 由 `deriveFunctionResourceId()` 根据函数正文计算。嵌套 `functionRef`、节点顺序、输入输出和 Schema 消费参与哈希；对象 key 不影响结果，字符串统一为 LF 换行和 NFC Unicode。源函数后续修改、删除或内置 release 停用不会改变已经嵌入 Template 的快照。
@@ -41,6 +43,8 @@ Template 内的 `FunctionDef` 是从函数库复制后的不可变快照，其 `
 `TemplateRepository` 同时管理 Template、本地函数库工作文档、导入 release 和内置 release。`FileTemplateRepository` 使用 `@ls101/file-store` 兼容的作用域存储；适配器从 `@ls101/template-editor/adapters` 导出。renderer 可将持久化的完整 `TemplateDocument` 导出为 `.lstemplate` JSON 文件；编辑器中的未保存修改会先保存再导出，文件包含正文、内嵌函数资源和编辑器状态。导入时若源 ID 不存在则保留 ID 并把 revision 重置为 0；同 ID 且内容相同视为已存在；内容冲突时由用户选择通过本地 revision CAS 覆盖、以新 UUID 导入副本或取消。主要布局为：
 
 - `templates/<templateId>/template.json`：Template 工作文档。
+- `builtin-templates/releases/<templateId>/v<version>/template.json`：随应用登记的不可变 Template release。
+- `builtin-templates/active.json`：当前 bundled 清单中的内置 Template 及 active 版本；清单移除只停用，历史 release 保留。
 - `function-libraries/local/<libraryId>/library.json`：本地函数库工作文档，包含库内全部函数和编辑器状态。
 - `function-libraries/imported/<libraryId>/releases/v<version>/library.json`：导入的不可变 release。
 - `function-libraries/builtin/<builtinKey>/releases/v<version>/library.json`：随应用登记的不可变内置 release。
@@ -54,7 +58,7 @@ Template 和本地函数库工作文档都带 revision。首次保存使用 0，
 
 ## 应用门面
 
-`createTemplateApplication()` 提供 `browser`、`templates`、`functionLibraries.local` 和 `functionLibraries.imported` 分区。`browser.listFunctionLibraries()` 汇总当前 active 内置库、全部导入 release 和本地函数库，并返回每个库的来源、版本及函数摘要；renderer 左栏按“来源 → 函数库 → 函数”展示该数据。本地库可以直接创建函数、编辑函数、导出和删除；导入 release 可以登记并按具体版本删除，内置库不可删除且函数不可编辑。Template 和本地函数库的创建操作立即生成 UUID 并保存；获取、整份保存和删除直接对应仓储操作。`save()` 返回递增 revision 后的文档，过期 autosave 必须由调用方处理冲突，不能静默覆盖。
+`createTemplateApplication()` 提供 `browser`、`templates`、只读 `builtinTemplates`、`functionLibraries.local` 和 `functionLibraries.imported` 分区。`browser.listBuiltinTemplates()` 对 active release 组装当前 Interface/Schema 依赖并执行真实校验，缺少依赖的模板标记为不可用但不阻塞启动。renderer 将内置模板和本地模板分区展示；内置模板只能直接生成试卷，没有编辑、删除或导出工作文档入口。`browser.listFunctionLibraries()` 汇总当前 active 内置库、全部导入 release 和本地函数库，并返回每个库的来源、版本及函数摘要；renderer 左栏按“来源 → 函数库 → 函数”展示该数据。本地库可以直接创建函数、编辑函数、导出和删除；导入 release 可以登记并按具体版本删除，内置库不可删除且函数不可编辑。Template 和本地函数库的创建操作立即生成 UUID 并保存；获取、整份保存和删除直接对应仓储操作。`save()` 返回递增 revision 后的文档，过期 autosave 必须由调用方处理冲突，不能静默覆盖。
 
 函数库文件使用 `.lsfunclib` 扩展名，正文是经过规范化内容哈希保护的 `FunctionLibraryRelease` JSON。首次导出本地库使用 v1；内容未变化时重复导出保持版本，内容变化后再导出才递增版本，并在文件成功写入后更新工作文档的 `exportState`。导入必须经过 JSON 结构、内容哈希、UUID、函数 ID、依赖完整性和递归检查，不能把工作文档或任意 JSON 直接登记为导入 release。
 
