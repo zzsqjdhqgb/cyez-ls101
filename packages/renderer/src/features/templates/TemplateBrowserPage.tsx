@@ -343,6 +343,9 @@ export function TemplateBrowserPage(): JSX.Element {
                   </div>
                   <div className={styles.rowActions}>
                     <Button onClick={() => navigate(`/templates/${item.templateId}`)}>编辑</Button>
+                    <Button onClick={() => navigate(`/templates/${item.templateId}/generate`)}>
+                      生成试卷
+                    </Button>
                     <IconButton
                       icon={Download}
                       label={`导出模板“${item.name || '未命名模板'}”`}

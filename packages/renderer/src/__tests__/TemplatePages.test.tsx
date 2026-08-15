@@ -642,6 +642,28 @@ describe('Template pages', () => {
     expect(screen.getByRole('button', { name: '基础试卷' })).toBeInTheDocument()
   })
 
+  it('opens exam generation directly from a local template row', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={['/templates']}>
+          <Routes>
+            <Route path="/templates" element={<TemplateBrowserPage />} />
+            <Route path="/templates/:templateId/generate" element={<h1>试卷生成设置</h1>} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await openTemplateBrowserTab('我的模板')
+    const row = screen.getByRole('button', { name: '听力模板' }).closest('article')
+    expect(row).not.toBeNull()
+    fireEvent.click(within(row as HTMLElement).getByRole('button', { name: '生成试卷' }))
+
+    expect(await screen.findByRole('heading', { name: '试卷生成设置' })).toBeInTheDocument()
+    expect(app.templates.get).not.toHaveBeenCalled()
+  })
+
   it('opens a built-in template in the original editor read-only mode and creates a copy', async () => {
     const app = application()
     render(
