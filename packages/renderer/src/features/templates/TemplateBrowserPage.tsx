@@ -6,7 +6,17 @@ import type {
   TemplateImportMode,
   TemplateSummary
 } from '@ls101/template-editor'
-import { AlertCircle, Braces, Download, LayoutTemplate, Plus, Trash2, Upload } from 'lucide-react'
+import {
+  AlertCircle,
+  Braces,
+  Copy,
+  Download,
+  Eye,
+  LayoutTemplate,
+  Plus,
+  Trash2,
+  Upload
+} from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
@@ -37,6 +47,7 @@ export function TemplateBrowserPage(): JSX.Element {
   } | null>(null)
   const [importConflictError, setImportConflictError] = useState<string | null>(null)
   const [exportingId, setExportingId] = useState<string | null>(null)
+  const [copyingId, setCopyingId] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<TemplateSummary | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -173,6 +184,22 @@ export function TemplateBrowserPage(): JSX.Element {
     }
   }
 
+  const copyBuiltinTemplate = async (templateId: string): Promise<void> => {
+    if (copyingId) return
+    setCopyingId(templateId)
+    setError(null)
+    try {
+      const copy = await application.builtinTemplates.createCopy(templateId)
+      setTemplates((current) => [...current, templateSummary(copy)])
+      setActiveTab('mine')
+      toast.success(`已创建模板副本“${copy.content.name || '未命名模板'}”`)
+    } catch (reason) {
+      setError(templateErrorMessage(reason))
+    } finally {
+      setCopyingId(null)
+    }
+  }
+
   return (
     <Page>
       <PageHeader
@@ -264,6 +291,19 @@ export function TemplateBrowserPage(): JSX.Element {
                     </p>
                   </div>
                   <div className={styles.rowActions}>
+                    <Button
+                      icon={Eye}
+                      onClick={() => navigate(`/templates/builtin/${item.templateId}`)}
+                    >
+                      查看
+                    </Button>
+                    <Button
+                      icon={Copy}
+                      disabled={copyingId !== null}
+                      onClick={() => void copyBuiltinTemplate(item.templateId)}
+                    >
+                      {copyingId === item.templateId ? '正在创建' : '创建副本'}
+                    </Button>
                     <Button
                       disabled={!item.available}
                       title={

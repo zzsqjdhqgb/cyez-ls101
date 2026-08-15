@@ -95,6 +95,7 @@ export interface TemplateBrowserApplication {
 
 export interface BuiltinTemplateApplication {
   get(templateId: string): Promise<BuiltinTemplateRelease | null>
+  createCopy(templateId: string): Promise<TemplateDocument>
   validate(templateId: string): Promise<TemplateValidationResult>
   compile(
     templateId: string,
@@ -616,6 +617,16 @@ export function createTemplateApplication(
     },
     builtinTemplates: {
       get: (templateId) => repository.getActiveBuiltinTemplate(templateId),
+      async createCopy(templateId) {
+        const release = await loadBuiltinTemplate(templateId)
+        return repository.createTemplate(
+          createTemplateDocument(
+            release.document.content,
+            release.document.resources,
+            release.document.editorState
+          )
+        )
+      },
       async validate(templateId) {
         const release = await loadBuiltinTemplate(templateId)
         const document = builtinReleaseDocument(release)

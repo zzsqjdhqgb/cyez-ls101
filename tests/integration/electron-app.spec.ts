@@ -588,7 +588,25 @@ test('generates an exam directly from an immutable builtin template', async () =
   await expect(builtinRow.getByText('v1', { exact: true })).toBeVisible()
   await expect(builtinRow.getByRole('button', { name: '编辑' })).toHaveCount(0)
   await expect(builtinRow.getByRole('button', { name: /删除/ })).toHaveCount(0)
-  await builtinRow.getByRole('button', { name: '生成试卷' }).click()
+  await builtinRow.getByRole('button', { name: '查看' }).click()
+
+  await expect(page.getByRole('heading', { level: 1, name: '基础试卷' })).toBeVisible()
+  await expect(page.getByText('内置模板 · v1 · 只读')).toBeVisible()
+  await expect(page.getByRole('button', { name: '选择节点 root' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '保存' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /删除/ })).toHaveCount(0)
+  await page.getByRole('button', { name: '创建副本' }).click()
+
+  await expect(page.getByText('Revision 0')).toBeVisible()
+  await expect(page.getByRole('textbox', { name: '名称', exact: true })).toBeEnabled()
+  await expect(page.getByRole('button', { name: '保存' })).toBeVisible()
+  await page.getByRole('button', { name: '返回模板' }).click()
+
+  await expect(page.getByRole('tab', { name: '内置模板' })).toHaveAttribute('aria-selected', 'true')
+  const reloadedBuiltinRow = page
+    .getByText('基础试卷', { exact: true })
+    .locator('xpath=ancestor::article')
+  await reloadedBuiltinRow.getByRole('button', { name: '生成试卷' }).click()
 
   await expect(page.getByRole('heading', { level: 1, name: '基础试卷' })).toBeVisible()
   await expect(page.getByText('此模板不需要选择题组')).toBeVisible()

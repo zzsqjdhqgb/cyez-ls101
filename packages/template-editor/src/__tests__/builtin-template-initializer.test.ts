@@ -41,6 +41,33 @@ describe('内置 Template 启动初始化', () => {
     })
   })
 
+  it('将内置模板完整复制为 UUID 和 revision 重置的本地模板', async () => {
+    const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
+    const source = await release(1, '内置模板')
+    await initializeBuiltinTemplates(repository, { templates: [source] })
+    const application = createTemplateApplication({
+      repository,
+      getInterfaceManifest: async () => null,
+      getSchema: async () => null,
+      locateInterfaceInstance: () => null
+    })
+
+    const copy = await application.builtinTemplates.createCopy(TEMPLATE_ID)
+
+    expect(copy.templateId).not.toBe(TEMPLATE_ID)
+    expect(copy.templateId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+    expect(copy.revision).toBe(0)
+    expect(copy.content).toEqual(source.document.content)
+    expect(copy.resources).toEqual(source.document.resources)
+    expect(copy.editorState).toEqual(source.document.editorState)
+    expect(copy.content).not.toBe(source.document.content)
+    expect(copy.resources).not.toBe(source.document.resources)
+    expect(copy.editorState).not.toBe(source.document.editorState)
+    await expect(application.templates.get(copy.templateId)).resolves.toEqual(copy)
+    copy.content.name = '修改副本'
+    await expect(application.builtinTemplates.get(TEMPLATE_ID)).resolves.toEqual(source)
+  })
+
   it('升级 active 版本并停用已移除模板，同时保留历史 release', async () => {
     const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
     const first = await release(1, '第一版')
