@@ -198,7 +198,7 @@ function application(document = template()): TemplateApplication {
     },
     templates: {
       create: vi.fn().mockResolvedValue(document),
-      get: vi.fn().mockResolvedValue(document),
+      get: vi.fn().mockImplementation(async () => structuredClone(storedDocument)),
       save: vi.fn().mockImplementation(async (value: TemplateDocument) => {
         storedDocument = { ...value, revision: value.revision + 1 }
         return storedDocument
@@ -533,6 +533,61 @@ describe('Template pages', () => {
 
     await waitFor(() => expect(app.templates.delete).toHaveBeenCalledWith(TEMPLATE_ID))
     expect(screen.queryByRole('button', { name: '听力模板' })).not.toBeInTheDocument()
+  })
+
+  it('exports a persisted template from the browser row action', async () => {
+    const app = application()
+    functionLibraryFileDialog.writeText.mockResolvedValue(true)
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={['/templates']}>
+          <Routes>
+            <Route path="/templates" element={<TemplateBrowserPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '听力模板' })
+    fireEvent.click(screen.getByRole('button', { name: '导出模板“听力模板”' }))
+
+    await waitFor(() => expect(functionLibraryFileDialog.writeText).toHaveBeenCalledOnce())
+    expect(JSON.parse(functionLibraryFileDialog.writeText.mock.calls[0][0])).toEqual(template())
+    expect(functionLibraryFileDialog.writeText.mock.calls[0][1]).toEqual({
+      title: '导出模板',
+      defaultName: '听力模板-r1.lstemplate',
+      filters: [{ name: 'LS101 Template', extensions: ['lstemplate'] }]
+    })
+  })
+
+  it('saves editor changes before exporting the persisted template revision', async () => {
+    const app = application()
+    functionLibraryFileDialog.writeText.mockResolvedValue(true)
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/${TEMPLATE_ID}`]}>
+          <Routes>
+            <Route path="/templates/:templateId" element={<TemplateDocumentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    const properties = await screen.findByRole('complementary', { name: '属性' })
+    fireEvent.change(within(properties).getByLabelText('名称'), {
+      target: { value: '已修改模板' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: '导出模板' }))
+
+    await waitFor(() => expect(functionLibraryFileDialog.writeText).toHaveBeenCalledOnce())
+    expect(app.templates.save).toHaveBeenCalledOnce()
+    expect(JSON.parse(functionLibraryFileDialog.writeText.mock.calls[0][0])).toMatchObject({
+      revision: 2,
+      content: { name: '已修改模板' }
+    })
+    expect(functionLibraryFileDialog.writeText.mock.calls[0][1]).toMatchObject({
+      defaultName: '已修改模板-r2.lstemplate'
+    })
   })
 
   it('shows a source-aware empty state when a function library source is empty', async () => {

@@ -429,6 +429,24 @@ test('creates, edits and reloads a persisted template', async () => {
   await nameInput.fill('集成测试模板')
   await page.getByRole('textbox', { name: '描述' }).fill('由 Electron 集成测试创建')
 
+  const templateExportPath = path.join(userDataDir, 'export.lstemplate')
+  await electronApp.evaluate(({ dialog }, filePath) => {
+    Object.defineProperty(dialog, 'showSaveDialog', {
+      configurable: true,
+      value: async () => ({ canceled: false, filePath })
+    })
+  }, templateExportPath)
+  await page.getByRole('button', { name: '导出模板', exact: true }).click()
+  await expect(page.getByText('模板已导出')).toBeVisible()
+  expect(JSON.parse(await readFile(templateExportPath, 'utf8'))).toMatchObject({
+    revision: 1,
+    content: {
+      name: '集成测试模板',
+      description: '由 Electron 集成测试创建'
+    },
+    resources: { functions: [] }
+  })
+
   await expect(
     page.getByRole('button', { name: '高中基础题型，版本 3', exact: true })
   ).toBeVisible()

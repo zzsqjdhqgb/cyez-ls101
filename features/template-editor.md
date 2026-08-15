@@ -38,7 +38,7 @@ Template 内的 `FunctionDef` 是从函数库复制后的不可变快照，其 `
 
 ## 仓储
 
-`TemplateRepository` 同时管理 Template、本地函数库工作文档、导入 release 和内置 release。`FileTemplateRepository` 使用 `@ls101/file-store` 兼容的作用域存储；适配器从 `@ls101/template-editor/adapters` 导出。主要布局为：
+`TemplateRepository` 同时管理 Template、本地函数库工作文档、导入 release 和内置 release。`FileTemplateRepository` 使用 `@ls101/file-store` 兼容的作用域存储；适配器从 `@ls101/template-editor/adapters` 导出。renderer 可将持久化的完整 `TemplateDocument` 导出为 `.lstemplate` JSON 文件；编辑器中的未保存修改会先保存再导出，文件包含正文、内嵌函数资源和编辑器状态。主要布局为：
 
 - `templates/<templateId>/template.json`：Template 工作文档。
 - `function-libraries/local/<libraryId>/library.json`：本地函数库工作文档，包含库内全部函数和编辑器状态。

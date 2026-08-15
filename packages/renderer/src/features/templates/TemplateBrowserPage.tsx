@@ -1,13 +1,15 @@
 import { useEffect, useState, type JSX } from 'react'
 import type { FunctionLibrarySummary, TemplateSummary } from '@ls101/template-editor'
-import { AlertCircle, Braces, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
+import { AlertCircle, Braces, Download, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { IconButton } from '../../components/ui/IconButton'
 import { Page, PageHeader } from '../../components/ui/Page'
+import { toast } from '../../components/ui/toast'
 import { useTemplateApplication } from './TemplateApplicationContext'
+import { exportTemplateDocumentFile } from './TemplateDocumentFiles'
 import styles from './TemplateBrowserPage.module.css'
 import { templateErrorMessage } from './templateUi'
 
@@ -18,6 +20,7 @@ export function TemplateBrowserPage(): JSX.Element {
   const [functionLibraries, setFunctionLibraries] = useState<FunctionLibrarySummary[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [exportingId, setExportingId] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<TemplateSummary | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -74,6 +77,19 @@ export function TemplateBrowserPage(): JSX.Element {
     }
   }
 
+  const exportTemplate = async (templateId: string): Promise<void> => {
+    if (exportingId) return
+    setExportingId(templateId)
+    setError(null)
+    try {
+      if (await exportTemplateDocumentFile(application, templateId)) toast.success('模板已导出')
+    } catch (reason) {
+      setError(templateErrorMessage(reason))
+    } finally {
+      setExportingId(null)
+    }
+  }
+
   return (
     <Page>
       <PageHeader
@@ -116,6 +132,12 @@ export function TemplateBrowserPage(): JSX.Element {
               </div>
               <div className={styles.rowActions}>
                 <Button onClick={() => navigate(`/templates/${item.templateId}`)}>编辑</Button>
+                <IconButton
+                  icon={Download}
+                  label={`导出模板“${item.name || '未命名模板'}”`}
+                  disabled={exportingId !== null}
+                  onClick={() => void exportTemplate(item.templateId)}
+                />
                 <IconButton
                   icon={Trash2}
                   label={`删除模板“${item.name || '未命名模板'}”`}

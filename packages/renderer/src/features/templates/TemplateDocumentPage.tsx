@@ -48,9 +48,11 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { IconButton } from '../../components/ui/IconButton'
 import { ResizableSplit } from '../../components/ui/ResizableSplit'
+import { toast } from '../../components/ui/toast'
 import { useTemplateApplication } from './TemplateApplicationContext'
 import styles from './TemplateDocumentPage.module.css'
 import { TemplateInspectorSection } from './TemplateInspectorSection'
+import { exportTemplateDocumentFile } from './TemplateDocumentFiles'
 import { TemplateFunctionCallEditor } from './TemplateFunctionCallEditor'
 import { TemplateContentBlockInspector } from './TemplateContentBlockInspector'
 import { collectTemplateChoiceTargetPages } from './TemplateChoiceTargets'
@@ -108,6 +110,8 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
   const session = useTemplateEditorSession(application, templateId)
   const unsavedChanges = useUnsavedChangesGuard(session.dirty)
   const [confirmLeave, setConfirmLeave] = useState(false)
+  const [exportingTemplate, setExportingTemplate] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [centerView, setCenterView] = useState<'structure' | 'page' | 'preview'>('structure')
   const [previewTargetId, setPreviewTargetId] = useState('root')
@@ -305,6 +309,20 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
     if (session.dirty && !(await session.save())) return
     unsavedChanges.allowNextNavigation()
     navigate(`/templates/${templateId}/generate`)
+  }
+
+  const exportTemplate = async (): Promise<void> => {
+    if (!document || session.saving || exportingTemplate) return
+    setExportingTemplate(true)
+    setExportError(null)
+    try {
+      if (session.dirty && !(await session.save())) return
+      if (await exportTemplateDocumentFile(application, templateId)) toast.success('模板已导出')
+    } catch (reason) {
+      setExportError(templateErrorMessage(reason))
+    } finally {
+      setExportingTemplate(false)
+    }
   }
 
   const toggleCollapsed = (nodeId: string): void => {
@@ -614,14 +632,21 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
           <Button
             icon={Save}
             variant="primary"
-            disabled={!document || !session.dirty || session.saving}
+            disabled={!document || !session.dirty || session.saving || exportingTemplate}
             onClick={() => void session.save()}
           >
             {session.saving ? '正在保存' : '保存'}
           </Button>
           <Button
+            icon={Download}
+            disabled={!document || session.saving || exportingTemplate}
+            onClick={() => void exportTemplate()}
+          >
+            {exportingTemplate ? '正在导出' : '导出模板'}
+          </Button>
+          <Button
             icon={FileArchive}
-            disabled={!document || session.saving}
+            disabled={!document || session.saving || exportingTemplate}
             onClick={() => void openGeneration()}
           >
             生成试卷
@@ -1099,9 +1124,9 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
           ) : (
             <aside className={styles.properties} aria-label="属性">
               <TemplateInspectorSection title="全局属性" headingId="template-properties-heading">
-                {session.error ? (
+                {session.error || exportError ? (
                   <div className={styles.notice} role="alert">
-                    {session.error}
+                    {session.error || exportError}
                   </div>
                 ) : null}
                 <label>
