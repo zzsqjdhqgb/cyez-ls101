@@ -207,11 +207,21 @@ describe('Interface pages', () => {
     expect(structure.getByRole('button', { name: /picture/ })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '发布' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '发布当前题型草稿？' })).getByRole('button', {
+        name: '发布题型'
+      })
+    )
     expect(await screen.findByRole('alert')).toHaveTextContent('变量名不能为空')
     expect(publish).toHaveBeenCalledOnce()
     expect(save).toHaveBeenCalledWith(expect.objectContaining({ draftId: draft.draftId }))
 
     fireEvent.click(screen.getByRole('button', { name: '发布' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '发布当前题型草稿？' })).getByRole('button', {
+        name: '发布题型'
+      })
+    )
     expect(await screen.findByText('已发布题型')).toBeInTheDocument()
     expect(publish).toHaveBeenCalledTimes(2)
   })
@@ -290,16 +300,27 @@ describe('Interface pages', () => {
     )
     expect(await screen.findByText('题组已保存')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'JSON' }))
+    fireEvent.click(screen.getByRole('button', { name: '高级操作' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '从 JSON 覆盖' }))
     fireEvent.change(screen.getByLabelText('JSON 内容'), { target: { value: '{broken' } })
-    fireEvent.click(screen.getByRole('button', { name: '覆盖全部值' }))
+    fireEvent.click(screen.getByRole('button', { name: '校验并覆盖' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
+        name: '校验并覆盖'
+      })
+    )
     expect(await screen.findByRole('alert')).toHaveTextContent('JSON 格式不合法')
     expect(screen.getByDisplayValue('手动内容')).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('JSON 内容'), {
       target: { value: '{"question":"JSON 内容"}' }
     })
-    fireEvent.click(screen.getByRole('button', { name: '覆盖全部值' }))
+    fireEvent.click(screen.getByRole('button', { name: '校验并覆盖' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
+        name: '校验并覆盖'
+      })
+    )
     expect(await screen.findByDisplayValue('JSON 内容')).toBeInTheDocument()
     expect(await screen.findByText('已从 JSON 更新题组')).toBeInTheDocument()
     expect(replaceFromJson).toHaveBeenNthCalledWith(1, interfaceId, instanceId, '{broken')
@@ -346,7 +367,8 @@ describe('Interface pages', () => {
     )
 
     expect(await screen.findByRole('button', { name: '待删除题组' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '删除题组' }))
+    fireEvent.click(screen.getByRole('button', { name: '题组操作：待删除题组' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '删除题组' }))
     expect(screen.getByRole('alertdialog', { name: '删除题组“待删除题组”？' })).toBeInTheDocument()
     fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: '删除' }))
     await waitFor(() =>
@@ -439,10 +461,10 @@ describe('Interface pages', () => {
     )
 
     expect(screen.getByRole('heading', { name: '题型库' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '草稿' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '草稿' })).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: '上海高考听说' })).toBeInTheDocument()
     expect(screen.getByText('3 个题组')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '进入' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '进入' })).not.toBeInTheDocument()
     expect(screen.queryByText('正式')).not.toBeInTheDocument()
   })
 
@@ -461,7 +483,7 @@ describe('Interface pages', () => {
     )
 
     await waitFor(() => expect(screen.queryByText('正在加载草稿...')).not.toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: '新建草稿' }))
+    fireEvent.click(screen.getByRole('button', { name: '新建题型' }))
 
     expect(await screen.findByRole('heading', { name: '听说测试' })).toBeInTheDocument()
     expect(app.drafts.create).toHaveBeenCalledOnce()
@@ -529,6 +551,7 @@ describe('Interface pages', () => {
     )
 
     expect(await screen.findByText('题型定义')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: '题型定义' }))
     expect(screen.getByRole('button', { name: '复制完整提示词' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '复制单独提示词' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '复制 JSON Schema' })).toBeInTheDocument()
@@ -565,11 +588,12 @@ describe('Interface pages', () => {
       </InterfaceApplicationProvider>
     )
 
-    expect(await screen.findByRole('button', { name: '导出' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '导出' }))
+    expect(await screen.findByRole('tab', { name: '题型定义' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: '题型定义' }))
+    fireEvent.click(screen.getByRole('button', { name: '导出题型' }))
 
     await waitFor(() => expect(exportInterface).toHaveBeenCalledWith(interfaceId, { mode: 'all' }))
-    await waitFor(() => expect(screen.getByRole('button', { name: '导出' })).toBeEnabled())
+    await waitFor(() => expect(screen.getByRole('button', { name: '导出题型' })).toBeEnabled())
     expect(successToast).not.toHaveBeenCalledWith('题型已导出')
   })
 
@@ -647,15 +671,21 @@ describe('Interface pages', () => {
     )
 
     expect(await screen.findByRole('heading', { name: '第一套题组' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'JSON' }))
+    fireEvent.click(screen.getByRole('button', { name: '高级操作' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '从 JSON 覆盖' }))
     expect(screen.getByRole('complementary', { name: 'JSON 覆盖' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'AI 生成' }))
+    fireEvent.click(screen.getByRole('button', { name: 'AI 生成并覆盖' }))
 
     expect(screen.queryByRole('complementary', { name: 'JSON 覆盖' })).not.toBeInTheDocument()
-    expect(screen.getByRole('complementary', { name: 'AI 生成' })).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: 'AI 生成并覆盖' })).toBeInTheDocument()
     await waitFor(() => expect(listAIGenerationModels).toHaveBeenCalledOnce())
     fireEvent.change(screen.getByLabelText('生成模型'), { target: { value: '1' } })
-    fireEvent.click(screen.getByRole('button', { name: '开始生成' }))
+    fireEvent.click(screen.getByRole('button', { name: '生成并覆盖' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
+        name: '生成并覆盖'
+      })
+    )
 
     await waitFor(() =>
       expect(startAIGeneration).toHaveBeenCalledWith(interfaceId, instanceId, {
@@ -665,7 +695,7 @@ describe('Interface pages', () => {
     expect(screen.getByRole('region', { name: 'AI 生成进度' })).toBeInTheDocument()
     expect(screen.getByDisplayValue('旧题目')).toBeDisabled()
     expect(screen.getByRole('button', { name: '返回题型详情' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'JSON' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '高级操作' })).toBeDisabled()
     expect(screen.getByRole('button', { name: '生成中' })).toBeDisabled()
     expect(screen.queryByRole('button', { name: '完成' })).not.toBeInTheDocument()
 
@@ -676,16 +706,21 @@ describe('Interface pages', () => {
 
     expect(await screen.findByDisplayValue('AI 新题目')).toBeEnabled()
     expect(await screen.findByText('AI 生成内容已保存')).toBeInTheDocument()
-    expect(screen.getByRole('complementary', { name: 'AI 生成' })).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: 'AI 生成并覆盖' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'AI 生成进度' })).toBeInTheDocument()
     expect(screen.getByText('生成完成')).toBeInTheDocument()
     expect(screen.getByLabelText('生成模型')).toBeEnabled()
     expect(screen.getByRole('button', { name: '返回题型详情' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'JSON' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'AI 生成' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '高级操作' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'AI 生成并覆盖' })).toBeEnabled()
     expect(screen.getByRole('button', { name: '重新生成' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '重新生成' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
+        name: '生成并覆盖'
+      })
+    )
     await waitFor(() => expect(startAIGeneration).toHaveBeenCalledTimes(2))
     expect(startAIGeneration).toHaveBeenNthCalledWith(2, interfaceId, instanceId, {
       model: { providerId: 'provider-b', modelId: 'model-b' }
@@ -694,7 +729,7 @@ describe('Interface pages', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '完成' }))
 
-    expect(screen.queryByRole('complementary', { name: 'AI 生成' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: 'AI 生成并覆盖' })).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'AI 生成进度' })).not.toBeInTheDocument()
     expect(screen.getByDisplayValue('AI 新题目')).toBeEnabled()
   })
@@ -796,15 +831,21 @@ describe('Interface pages', () => {
     expect(await screen.findByDisplayValue('原始图片提示词')).toBeInTheDocument()
     expect(screen.getByText('尚未选择图片')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'JSON' }))
+    fireEvent.click(screen.getByRole('button', { name: '高级操作' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '从 JSON 覆盖' }))
     expect(screen.getByLabelText('图像 Provider')).toBeInTheDocument()
     expect(screen.queryByLabelText('生成模型')).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('JSON 内容'), {
       target: { value: '{"picture":"JSON 图片提示词"}' }
     })
-    const replaceButton = screen.getByRole('button', { name: '覆盖全部值' })
+    const replaceButton = screen.getByRole('button', { name: '校验并覆盖' })
     await waitFor(() => expect(replaceButton).toBeEnabled())
     fireEvent.click(replaceButton)
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
+        name: '校验并覆盖'
+      })
+    )
     await waitFor(() =>
       expect(replaceFromJson).toHaveBeenCalledWith(
         interfaceId,
@@ -999,7 +1040,7 @@ describe('Interface pages', () => {
     )
 
     expect(await screen.findByRole('heading', { name: '批量生图题组' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'AI 生图' }))
+    fireEvent.click(screen.getByRole('button', { name: '批量生图' }))
     expect(screen.getByRole('complementary', { name: 'AI 生图' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '开始生图' }))
     await waitFor(() => expect(generateImage).toHaveBeenCalledOnce())
@@ -1091,9 +1132,14 @@ describe('Interface pages', () => {
     )
 
     expect(await screen.findByRole('heading', { name: '失败测试题组' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'AI 生成' }))
+    fireEvent.click(screen.getByRole('button', { name: 'AI 生成并覆盖' }))
     await waitFor(() => expect(screen.getByLabelText('生成模型')).toBeEnabled())
-    fireEvent.click(screen.getByRole('button', { name: '开始生成' }))
+    fireEvent.click(screen.getByRole('button', { name: '生成并覆盖' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
+        name: '生成并覆盖'
+      })
+    )
 
     expect(await screen.findByText('生成失败')).toBeInTheDocument()
     expect(screen.getByText('生成服务暂时不可用')).toBeInTheDocument()
@@ -1102,6 +1148,11 @@ describe('Interface pages', () => {
     expect(screen.getByRole('button', { name: '完成' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '重新生成' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
+        name: '生成并覆盖'
+      })
+    )
     await waitFor(() => expect(startAIGeneration).toHaveBeenCalledTimes(2))
   })
 })

@@ -68,6 +68,7 @@ LS101 是一套覆盖英语听说考试完整工作流的全能桌面工具。
 
 - [试卷库](./modules/exam-library.md)
 - [作答记录](./modules/submission-records.md)
+- [题型库](./modules/interface-library.md)
 
 ## 文档维护
 

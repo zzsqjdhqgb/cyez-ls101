@@ -179,7 +179,7 @@ export interface PublishedInterfaceApplication {
   listInstances(interfaceId: string): Promise<InterfaceInstanceSummary[]>
   getPrompts(interfaceId: string): Promise<InterfacePromptBundle>
   getVarManifest(interfaceId: string): Promise<import('@ls101/core-types').InterfaceVarManifest>
-  createBlankInstance(interfaceId: string): Promise<InterfaceInstanceDetails>
+  createBlankInstance(interfaceId: string, name?: string): Promise<InterfaceInstanceDetails>
   copyToDraft(interfaceId: string): Promise<InterfaceDraft>
 }
 
@@ -495,10 +495,10 @@ export function createInterfaceApplication(
       async getVarManifest(interfaceId) {
         return buildVarManifest(await requireInterface(repository, interfaceId))
       },
-      async createBlankInstance(interfaceId) {
+      async createBlankInstance(interfaceId, name) {
         const def = await requireInterface(repository, interfaceId)
         const now = new Date().toISOString()
-        const instance = buildInstanceFromJson(def, {}, '未命名题组')
+        const instance = buildInstanceFromJson(def, {}, name?.trim() || '未命名题组')
         instance.generatedAt = now
         for (const key of Object.keys(instance.values)) instance.values[key] = ''
         await repository.saveInstance(interfaceId, instance)

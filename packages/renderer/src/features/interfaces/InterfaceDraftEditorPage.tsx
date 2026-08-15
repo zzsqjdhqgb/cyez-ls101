@@ -5,13 +5,15 @@ import {
   type FieldLeaf,
   type FieldNode,
   type InterfaceDraft,
-  type InterfaceDraftOperation
+  type InterfaceDraftOperation,
+  type ValidationError
 } from '@ls101/interface-editor'
 import {
   AlertCircle,
   ArrowLeft,
   Braces,
   Check,
+  ChevronDown,
   ChevronRight,
   FileText,
   FolderPlus,
@@ -26,6 +28,7 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { IconButton } from '../../components/ui/IconButton'
 import { ResizableSplit } from '../../components/ui/ResizableSplit'
 import { toast } from '../../components/ui/toast'
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard'
 import { useInterfaceApplication } from './InterfaceApplicationContext'
 import {
   errorMessage,
@@ -50,8 +53,11 @@ export function InterfaceDraftEditorPage(): JSX.Element {
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [validationErrors, setValidationErrors] = useState<string[]>([])
-  const [confirmLeave, setConfirmLeave] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<readonly ValidationError[]>([])
+  const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() => new Set())
+  const [confirmPublish, setConfirmPublish] = useState(false)
+  const [confirmRemoveGroup, setConfirmRemoveGroup] = useState(false)
+  const unsavedChanges = useUnsavedChangesGuard(dirty)
 
   useEffect(() => {
     let active = true
@@ -75,6 +81,20 @@ export function InterfaceDraftEditorPage(): JSX.Element {
     () => (draft && selectedPath.length ? getFieldNode(draft.fields, selectedPath) : null),
     [draft, selectedPath]
   )
+  const visibleNodes = useMemo(
+    () =>
+      draft
+        ? flattenNodes(draft.fields).filter(({ path }) =>
+            path.slice(0, -1).every((_segment, index) => {
+              const ancestor = path.slice(0, index + 1).join('.')
+              return !collapsedPaths.has(ancestor)
+            })
+          )
+        : [],
+    [collapsedPaths, draft]
+  )
+  const addTargetPath = selectedNode?.type === 'group' ? selectedPath : []
+  const addTargetLabel = addTargetPath.length ? addTargetPath.join(' / ') : '根级'
 
   const apply = (operation: InterfaceDraftOperation): boolean => {
     if (!draft) return false
@@ -110,10 +130,11 @@ export function InterfaceDraftEditorPage(): JSX.Element {
     try {
       const result = await application.drafts.publish(draftId)
       if (result.status === 'invalid') {
-        setValidationErrors(result.errors.map(validationMessage))
+        setValidationErrors(result.errors)
         return
       }
       toast.success('题型已发布')
+      unsavedChanges.allowNextNavigation()
       navigate(`/interfaces/${encodeURIComponent(result.interface.interfaceId)}`)
     } catch (reason) {
       setError(errorMessage(reason))
@@ -123,16 +144,12 @@ export function InterfaceDraftEditorPage(): JSX.Element {
   }
 
   const leave = (): void => {
-    if (dirty) {
-      setConfirmLeave(true)
-      return
-    }
     navigate('/interfaces/drafts')
   }
 
   const addNode = (node: FieldNode): void => {
     if (!draft) return
-    const parentPath = selectedNode?.type === 'group' ? selectedPath : []
+    const parentPath = addTargetPath
     const base = node.type === 'group' ? 'group' : 'field'
     const key = makeUniqueKey(draft.fields, parentPath, base)
     apply({ type: 'add-node', parentPath, key, node })
@@ -141,8 +158,45 @@ export function InterfaceDraftEditorPage(): JSX.Element {
 
   const removeSelected = (): void => {
     if (!selectedPath.length) return
+    if (
+      selectedNode?.type === 'group' &&
+      selectedNode.children.order.length > 0 &&
+      !confirmRemoveGroup
+    ) {
+      setConfirmRemoveGroup(true)
+      return
+    }
     apply({ type: 'remove-node', path: selectedPath })
     setSelectedPath(selectedPath.slice(0, -1))
+    setConfirmRemoveGroup(false)
+  }
+
+  const focusValidationError = (item: ValidationError): void => {
+    if (item.code === 'EMPTY_NAME') {
+      document.getElementById('interface-draft-name')?.focus()
+      return
+    }
+    if (item.code === 'EMPTY_PROMPT_TEMPLATE') {
+      document.getElementById('interface-draft-prompt')?.focus()
+      return
+    }
+    if (!item.path) return
+    const path = item.path.split('.')
+    setCollapsedPaths((current) => {
+      const next = new Set(current)
+      path
+        .slice(0, -1)
+        .forEach((_segment, index) => next.delete(path.slice(0, index + 1).join('.')))
+      return next
+    })
+    setSelectedPath(path)
+    window.requestAnimationFrame(() => {
+      const target = Array.from(document.querySelectorAll<HTMLElement>('[data-field-path]')).find(
+        (element) => element.dataset.fieldPath === item.path
+      )
+      target?.focus()
+      target?.scrollIntoView({ block: 'nearest' })
+    })
   }
 
   if (loading) return <div className={shared.loading}>正在加载草稿...</div>
@@ -165,7 +219,7 @@ export function InterfaceDraftEditorPage(): JSX.Element {
             icon={Send}
             variant="primary"
             disabled={!draft || saving}
-            onClick={() => void publish()}
+            onClick={() => setConfirmPublish(true)}
           >
             发布
           </Button>
@@ -192,8 +246,14 @@ export function InterfaceDraftEditorPage(): JSX.Element {
             {validationErrors.length ? (
               <div className={styles.validation} role="alert">
                 <strong>发布前需要修正以下内容</strong>
-                {validationErrors.map((message) => (
-                  <span key={message}>{message}</span>
+                {validationErrors.map((item, index) => (
+                  <button
+                    key={`${item.code}-${item.path}-${index}`}
+                    type="button"
+                    onClick={() => focusValidationError(item)}
+                  >
+                    {validationMessage(item)}
+                  </button>
                 ))}
               </div>
             ) : null}
@@ -206,6 +266,8 @@ export function InterfaceDraftEditorPage(): JSX.Element {
               <label>
                 <span>名称</span>
                 <input
+                  aria-invalid={validationErrors.some((item) => item.code === 'EMPTY_NAME')}
+                  id="interface-draft-name"
                   value={draft.name}
                   onChange={(event) => apply({ type: 'set-name', value: event.target.value })}
                   placeholder="例如：上海高考听说"
@@ -232,7 +294,11 @@ export function InterfaceDraftEditorPage(): JSX.Element {
               <label>
                 <span>生成要求</span>
                 <textarea
+                  aria-invalid={validationErrors.some(
+                    (item) => item.code === 'EMPTY_PROMPT_TEMPLATE'
+                  )}
                   className={styles.prompt}
+                  id="interface-draft-prompt"
                   value={draft.promptTemplate}
                   onChange={(event) => apply({ type: 'set-prompt', value: event.target.value })}
                   placeholder="描述 AI 应该如何生成这一题型的内容"
@@ -245,7 +311,9 @@ export function InterfaceDraftEditorPage(): JSX.Element {
             <header className={styles.paneHeader}>
               <div>
                 <h2>字段结构</h2>
-                <span>{flattenNodes(draft.fields).length} 个节点</span>
+                <span>
+                  {flattenNodes(draft.fields).length} 个节点 · 添加到：{addTargetLabel}
+                </span>
               </div>
               <div>
                 <IconButton icon={Plus} label="添加字段" onClick={() => addNode(newLeaf())} />
@@ -268,27 +336,57 @@ export function InterfaceDraftEditorPage(): JSX.Element {
                 {draft.fields.order.length === 0 ? (
                   <div className={styles.treeEmpty}>添加第一个字段或字段组</div>
                 ) : null}
-                {flattenNodes(draft.fields).map(({ key, node, path, depth }) => {
+                {visibleNodes.map(({ key, node, path, depth }) => {
                   const selected = path.join('.') === selectedPath.join('.')
+                  const pathKey = path.join('.')
+                  const collapsed = collapsedPaths.has(pathKey)
                   return (
-                    <button
+                    <div
                       className={styles.treeRow}
                       data-selected={selected || undefined}
-                      key={path.join('.')}
-                      onClick={() => setSelectedPath(path)}
-                      style={{ paddingLeft: 12 + depth * 20 }}
-                      type="button"
+                      key={pathKey}
+                      style={{ paddingLeft: 8 + depth * 20 }}
                     >
-                      {node.type === 'group' ? <ChevronRight aria-hidden="true" /> : <span />}
-                      <span className={styles.nodeType}>
-                        {node.type === 'group' ? '组' : node.type}
-                      </span>
-                      <strong>{key}</strong>
-                      {node.type === 'text' && node.varName ? <code>{node.varName}</code> : null}
-                      {node.type === 'image' && node.varName ? (
-                        <code>{node.varName}.inst / .img</code>
-                      ) : null}
-                    </button>
+                      {node.type === 'group' ? (
+                        <button
+                          aria-expanded={!collapsed}
+                          aria-label={`${collapsed ? '展开' : '折叠'}字段组“${key}”`}
+                          className={styles.treeToggle}
+                          type="button"
+                          onClick={() =>
+                            setCollapsedPaths((current) => {
+                              const next = new Set(current)
+                              if (collapsed) next.delete(pathKey)
+                              else next.add(pathKey)
+                              return next
+                            })
+                          }
+                        >
+                          {collapsed ? (
+                            <ChevronRight aria-hidden="true" />
+                          ) : (
+                            <ChevronDown aria-hidden="true" />
+                          )}
+                        </button>
+                      ) : (
+                        <span />
+                      )}
+                      <button
+                        className={styles.treeNode}
+                        data-field-path={pathKey}
+                        type="button"
+                        onClick={() => setSelectedPath(path)}
+                      >
+                        <span className={styles.nodeType}>
+                          {node.type === 'group' ? '组' : node.type}
+                        </span>
+                        <strong>{key}</strong>
+                        {node.type === 'text' && node.varName ? <code>{node.varName}</code> : null}
+                        {node.type === 'image' && node.varName ? (
+                          <code>{node.varName}.inst / .img</code>
+                        ) : null}
+                      </button>
+                    </div>
                   )
                 })}
               </div>
@@ -299,6 +397,9 @@ export function InterfaceDraftEditorPage(): JSX.Element {
                     key={selectedPath.join('.')}
                     node={selectedNode}
                     path={selectedPath}
+                    validationErrors={validationErrors.filter(
+                      (item) => item.path === selectedPath.join('.')
+                    )}
                     onApply={(operation) => {
                       const applied = apply(operation)
                       if (applied && operation.type === 'rename-node') {
@@ -323,10 +424,30 @@ export function InterfaceDraftEditorPage(): JSX.Element {
         confirmLabel="放弃修改"
         danger
         message="离开后，本次尚未保存的修改会丢失。"
-        open={confirmLeave}
+        open={unsavedChanges.navigationPending}
         title="放弃未保存的修改？"
-        onCancel={() => setConfirmLeave(false)}
-        onConfirm={() => navigate('/interfaces/drafts')}
+        onCancel={unsavedChanges.cancelNavigation}
+        onConfirm={unsavedChanges.confirmNavigation}
+      />
+      <ConfirmModal
+        confirmLabel="发布题型"
+        message="发布后会生成不可直接修改的稳定题型，当前草稿仍会保留。"
+        open={confirmPublish}
+        title="发布当前题型草稿？"
+        onCancel={() => setConfirmPublish(false)}
+        onConfirm={() => {
+          setConfirmPublish(false)
+          void publish()
+        }}
+      />
+      <ConfirmModal
+        confirmLabel="删除字段组"
+        danger
+        message="字段组中的所有子字段也会一并从当前草稿中删除。"
+        open={confirmRemoveGroup}
+        title={`删除字段组“${selectedPath.at(-1) ?? ''}”？`}
+        onCancel={() => setConfirmRemoveGroup(false)}
+        onConfirm={removeSelected}
       />
     </div>
   )
@@ -335,12 +456,20 @@ export function InterfaceDraftEditorPage(): JSX.Element {
 interface FieldInspectorProps {
   node: FieldNode
   path: string[]
+  validationErrors: readonly ValidationError[]
   onApply(operation: InterfaceDraftOperation): boolean
   onRemove(): void
 }
 
-function FieldInspector({ node, path, onApply, onRemove }: FieldInspectorProps): JSX.Element {
+function FieldInspector({
+  node,
+  path,
+  validationErrors,
+  onApply,
+  onRemove
+}: FieldInspectorProps): JSX.Element {
   const [key, setKey] = useState(path.at(-1) ?? '')
+  const [keyError, setKeyError] = useState<string | null>(null)
 
   const updateLeaf = (update: Partial<FieldLeaf>): void => {
     if (node.type === 'group') return
@@ -356,17 +485,33 @@ function FieldInspector({ node, path, onApply, onRemove }: FieldInspectorProps):
         </div>
         <IconButton icon={Trash2} label="删除节点" variant="danger" onClick={onRemove} />
       </div>
+      {validationErrors.length ? (
+        <div className={styles.inspectorValidation} role="alert">
+          {validationErrors.map((item, index) => (
+            <span key={`${item.code}-${index}`}>{validationMessage(item)}</span>
+          ))}
+        </div>
+      ) : null}
       <label>
         <span>字段标识</span>
         <input
           value={key}
-          onChange={(event) => setKey(event.target.value)}
+          aria-invalid={Boolean(keyError)}
+          onChange={(event) => {
+            setKey(event.target.value)
+            setKeyError(null)
+          }}
           onBlur={() => {
-            if (key !== path.at(-1) && !onApply({ type: 'rename-node', path, key })) {
-              setKey(path.at(-1) ?? '')
+            if (key === path.at(-1)) return
+            if (!key.trim() || key !== key.trim() || key.includes('.')) {
+              setKeyError('字段标识不能为空、包含点号或带有首尾空格。')
+              return
             }
+            if (!onApply({ type: 'rename-node', path, key }))
+              setKeyError('同一层级已经存在这个字段标识。')
           }}
         />
+        {keyError ? <small className={styles.fieldError}>{keyError}</small> : null}
       </label>
       {node.type !== 'group' ? (
         <>

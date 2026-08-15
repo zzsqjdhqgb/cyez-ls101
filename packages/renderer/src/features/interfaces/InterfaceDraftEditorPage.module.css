@@ -134,6 +134,19 @@
   line-height: 1.5;
 }
 
+.validation button {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
 .fieldsPane {
   height: 100%;
   display: grid;
@@ -158,8 +171,13 @@
 }
 
 .paneHeader span {
+  display: block;
+  max-width: 280px;
+  overflow: hidden;
   color: var(--color-text-muted);
   font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fieldWorkspace {
@@ -180,19 +198,13 @@
 
 .treeRow {
   display: grid;
-  grid-template-columns: 16px 42px minmax(70px, 1fr);
+  grid-template-columns: 22px minmax(0, 1fr);
   align-items: center;
-  gap: 6px;
   width: 100%;
   min-height: 38px;
-  padding-top: 0;
   padding-right: 10px;
-  padding-bottom: 0;
-  border: 0;
   color: var(--color-text);
   background: transparent;
-  text-align: left;
-  cursor: pointer;
 }
 
 .treeRow:hover {
@@ -202,6 +214,34 @@
 .treeRow[data-selected] {
   color: var(--color-text-strong);
   background: var(--color-accent-soft);
+}
+
+.treeToggle,
+.treeNode {
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.treeToggle {
+  display: grid;
+  width: 22px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+}
+
+.treeNode {
+  display: grid;
+  grid-template-columns: 42px minmax(70px, 1fr);
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0;
+  font: inherit;
+  text-align: left;
 }
 
 .treeRow svg {
@@ -216,10 +256,29 @@
   white-space: nowrap;
 }
 
-.treeRow code {
-  grid-column: 3;
+.treeNode code {
+  grid-column: 2;
   color: var(--color-accent);
   font-size: 10px;
+}
+
+.inspectorValidation {
+  display: grid;
+  gap: 4px;
+  margin: -8px 0 18px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--color-danger);
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.fieldError {
+  color: var(--color-danger);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 .nodeType {
