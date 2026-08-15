@@ -16,6 +16,8 @@ export type {
   TemplateCompileOptions,
   TemplateDocumentApplication,
   TemplateInterfaceInstanceSummary,
+  TemplateImportInspection,
+  TemplateImportMode,
   TemplateSummary
 } from './application'
 
@@ -49,7 +51,7 @@ export {
   verifyFunctionResourceId
 } from './id'
 export { compileTemplate, compileTemplatePreview } from './compiler'
-export { parseFunctionLibraryRelease } from './document-parser'
+export { parseFunctionLibraryRelease, parseTemplateDocument } from './document-parser'
 export type {
   TemplateCompileContext,
   TemplateCompileError,

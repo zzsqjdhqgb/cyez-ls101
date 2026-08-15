@@ -1,14 +1,39 @@
-import type { TemplateApplication, TemplateDocument } from '@ls101/template-editor'
+import {
+  parseTemplateDocument,
+  type TemplateApplication,
+  type TemplateDocument
+} from '@ls101/template-editor'
 import { fileDialog, type FileDialog } from '@ls101/file-dialog/renderer'
 
 const TEMPLATE_FILTER = [{ name: 'LS101 Template', extensions: ['lstemplate'] }] as const
 
-type TemplateFileDialog = Pick<FileDialog, 'writeText'>
+type TemplateImportFileDialog = Pick<FileDialog, 'readText'>
+type TemplateExportFileDialog = Pick<FileDialog, 'writeText'>
+
+export async function readTemplateDocumentFile(
+  dialog: TemplateImportFileDialog = fileDialog
+): Promise<TemplateDocument | null> {
+  const selected = await dialog.readText({
+    title: '导入模板',
+    filters: TEMPLATE_FILTER
+  })
+  if (!selected) return null
+
+  let value: unknown
+  try {
+    value = JSON.parse(selected.data)
+  } catch {
+    throw new Error('模板文件不是有效的 JSON')
+  }
+  const source = parseTemplateDocument(value)
+  if (!source) throw new Error('模板文件格式无效')
+  return source
+}
 
 export async function exportTemplateDocumentFile(
   application: TemplateApplication,
   templateId: string,
-  dialog: TemplateFileDialog = fileDialog
+  dialog: TemplateExportFileDialog = fileDialog
 ): Promise<TemplateDocument | null> {
   const document = await application.templates.get(templateId)
   if (!document) throw new Error(`模板不存在：${templateId}`)

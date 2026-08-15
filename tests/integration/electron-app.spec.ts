@@ -438,7 +438,8 @@ test('creates, edits and reloads a persisted template', async () => {
   }, templateExportPath)
   await page.getByRole('button', { name: '导出模板', exact: true }).click()
   await expect(page.getByText('模板已导出')).toBeVisible()
-  expect(JSON.parse(await readFile(templateExportPath, 'utf8'))).toMatchObject({
+  const exportedTemplate = JSON.parse(await readFile(templateExportPath, 'utf8'))
+  expect(exportedTemplate).toMatchObject({
     revision: 1,
     content: {
       name: '集成测试模板',
@@ -502,6 +503,65 @@ test('creates, edits and reloads a persisted template', async () => {
   await page.getByRole('link', { name: '试卷模板' }).click()
   await expect(page.getByRole('button', { name: '集成测试模板', exact: true })).toBeVisible()
   await expect(page.getByText('由 Electron 集成测试创建')).toBeVisible()
+
+  await electronApp.evaluate(({ dialog }, filePath) => {
+    Object.defineProperty(dialog, 'showOpenDialog', {
+      configurable: true,
+      value: async () => ({ canceled: false, filePaths: [filePath], bookmarks: [] })
+    })
+  }, templateExportPath)
+  await page.getByRole('button', { name: '导入模板' }).click()
+  await expect(page.getByText('模板“集成测试模板”已存在')).toBeVisible()
+  await expect(page.getByRole('button', { name: '集成测试模板', exact: true })).toHaveCount(1)
+
+  const conflictingTemplate = {
+    ...exportedTemplate,
+    revision: 9,
+    content: {
+      ...exportedTemplate.content,
+      name: '集成测试模板副本',
+      description: '来自冲突文件的副本'
+    }
+  }
+  await writeFile(templateExportPath, `${JSON.stringify(conflictingTemplate, null, 2)}\n`)
+  await page.getByRole('button', { name: '导入模板' }).click()
+  const importConflictDialog = page.getByRole('alertdialog', {
+    name: '模板“集成测试模板副本”已存在'
+  })
+  await expect(importConflictDialog).toBeVisible()
+  await importConflictDialog.getByRole('button', { name: '导入为副本' }).click()
+  await expect(page.getByText('已将模板“集成测试模板副本”导入为副本')).toBeVisible()
+  await expect(page.getByRole('button', { name: '集成测试模板副本', exact: true })).toBeVisible()
+
+  const storedTemplates = await page.evaluate(async () => {
+    const bridge = (
+      window as unknown as {
+        fileStore: { invoke(channel: string, ...args: unknown[]): Promise<unknown> }
+      }
+    ).fileStore
+    const scope = ['template-editor', 'templates']
+    const ids = (await bridge.invoke('file:list-scopes', scope)) as string[]
+    return Promise.all(
+      ids.map(async (templateId) => {
+        const value = (await bridge.invoke('file:read-text', {
+          scope: [...scope, templateId],
+          filename: 'template.json'
+        })) as string
+        return JSON.parse(value)
+      })
+    )
+  })
+  expect(storedTemplates).toHaveLength(2)
+  expect(storedTemplates).toContainEqual(
+    expect.objectContaining({ templateId: exportedTemplate.templateId })
+  )
+  expect(storedTemplates).toContainEqual(
+    expect.objectContaining({
+      templateId: expect.not.stringMatching(exportedTemplate.templateId),
+      revision: 0,
+      content: expect.objectContaining({ name: '集成测试模板副本' })
+    })
+  )
 })
 
 test('exports a persisted formal Schema through the native save dialog', async () => {

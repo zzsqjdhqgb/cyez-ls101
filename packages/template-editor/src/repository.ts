@@ -38,6 +38,7 @@ export interface TemplateStore {
 export interface TemplateRepository {
   listTemplateIds(): Promise<string[]>
   getTemplate(templateId: string): Promise<TemplateDocument | null>
+  createTemplate(document: TemplateDocument): Promise<TemplateDocument>
   saveTemplate(document: TemplateDocument): Promise<TemplateDocument>
   deleteTemplate(templateId: string): Promise<void>
 
@@ -112,6 +113,27 @@ export class FileTemplateRepository implements TemplateRepository {
       throw invalidData(`Template ${templateId} is invalid`)
     }
     await assertFunctionResources(document.resources.functions)
+    return document
+  }
+
+  async createTemplate(document: TemplateDocument): Promise<TemplateDocument> {
+    if (!parseTemplateDocument(document)) throw invalidData('Template is invalid')
+    assertUuid(document.templateId, 'templateId')
+    if (document.revision !== 0) {
+      throw revisionConflict('Template', document.templateId, 0, document.revision)
+    }
+    await assertFunctionResources(document.resources.functions)
+    const scope = this.templates.scope(document.templateId)
+    if (!(await scope.compareAndSwapText(TEMPLATE_FILE, null, document))) {
+      throw await latestRevisionConflict(
+        'Template',
+        document.templateId,
+        document.revision,
+        scope,
+        TEMPLATE_FILE,
+        parseTemplateDocument
+      )
+    }
     return document
   }
 

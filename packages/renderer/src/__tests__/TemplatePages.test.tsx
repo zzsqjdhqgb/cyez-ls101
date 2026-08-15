@@ -22,6 +22,7 @@ const FUNCTION_ID = '20000000-0000-4000-8000-000000000002'
 const MISSING_TEMPLATE_ID = '30000000-0000-4000-8000-000000000003'
 const NEW_LIBRARY_ID = '70000000-0000-4000-8000-000000000007'
 const NEW_FUNCTION_ID = '80000000-0000-4000-8000-000000000008'
+const IMPORTED_TEMPLATE_ID = '90000000-0000-4000-8000-000000000009'
 const INTERFACE_ID = `sha256:${'a'.repeat(64)}`
 
 beforeEach(() => {
@@ -198,6 +199,12 @@ function application(document = template()): TemplateApplication {
     },
     templates: {
       create: vi.fn().mockResolvedValue(document),
+      inspectImport: vi.fn().mockResolvedValue({ status: 'new', existing: null }),
+      importDocument: vi.fn().mockImplementation(async (source, mode) => ({
+        ...structuredClone(source),
+        templateId: mode === 'copy' ? IMPORTED_TEMPLATE_ID : source.templateId,
+        revision: 0
+      })),
       get: vi.fn().mockImplementation(async () => structuredClone(storedDocument)),
       save: vi.fn().mockImplementation(async (value: TemplateDocument) => {
         storedDocument = { ...value, revision: value.revision + 1 }
@@ -558,6 +565,129 @@ describe('Template pages', () => {
       defaultName: '听力模板-r1.lstemplate',
       filters: [{ name: 'LS101 Template', extensions: ['lstemplate'] }]
     })
+  })
+
+  it('imports a new template with its source ID and resets its revision', async () => {
+    const app = application()
+    const source = template(8, IMPORTED_TEMPLATE_ID, '外部新模板')
+    functionLibraryFileDialog.readText.mockResolvedValue({
+      name: 'import.lstemplate',
+      data: JSON.stringify(source)
+    })
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={['/templates']}>
+          <Routes>
+            <Route path="/templates" element={<TemplateBrowserPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '听力模板' })
+    fireEvent.click(screen.getByRole('button', { name: '导入模板' }))
+
+    expect(await screen.findByRole('button', { name: '外部新模板' })).toBeInTheDocument()
+    expect(app.templates.inspectImport).toHaveBeenCalledWith(source)
+    expect(app.templates.importDocument).toHaveBeenCalledWith(source, 'preserve-id')
+  })
+
+  it('does not import a source ID whose stored content is identical', async () => {
+    const existing = template()
+    const app = application(existing)
+    vi.mocked(app.templates.inspectImport).mockResolvedValue({
+      status: 'identical',
+      existing
+    })
+    functionLibraryFileDialog.readText.mockResolvedValue({
+      name: 'same.lstemplate',
+      data: JSON.stringify({ ...existing, revision: 9 })
+    })
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={['/templates']}>
+          <Routes>
+            <Route path="/templates" element={<TemplateBrowserPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '听力模板' })
+    fireEvent.click(screen.getByRole('button', { name: '导入模板' }))
+
+    await waitFor(() => expect(app.templates.inspectImport).toHaveBeenCalledOnce())
+    expect(app.templates.importDocument).not.toHaveBeenCalled()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  })
+
+  it('offers copy and overwrite actions when imported content conflicts', async () => {
+    const existing = template()
+    const source = template(4, TEMPLATE_ID, '外部模板')
+    const app = application(existing)
+    vi.mocked(app.templates.inspectImport).mockResolvedValue({
+      status: 'conflict',
+      existing
+    })
+    functionLibraryFileDialog.readText.mockResolvedValue({
+      name: 'conflict.lstemplate',
+      data: JSON.stringify(source)
+    })
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={['/templates']}>
+          <Routes>
+            <Route path="/templates" element={<TemplateBrowserPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '听力模板' })
+    fireEvent.click(screen.getByRole('button', { name: '导入模板' }))
+    const dialog = await screen.findByRole('alertdialog', { name: '模板“外部模板”已存在' })
+    expect(within(dialog).getByText(/本地 revision 1 与文件 revision 4/)).toBeInTheDocument()
+    fireEvent.click(within(dialog).getByRole('button', { name: '导入为副本' }))
+
+    await waitFor(() =>
+      expect(app.templates.importDocument).toHaveBeenCalledWith(source, 'copy', undefined)
+    )
+    expect(await screen.findByRole('button', { name: '外部模板' })).toBeInTheDocument()
+  })
+
+  it('replaces the existing row after a confirmed conflict overwrite', async () => {
+    const existing = template()
+    const source = template(4, TEMPLATE_ID, '覆盖后的模板')
+    const app = application(existing)
+    vi.mocked(app.templates.inspectImport).mockResolvedValue({
+      status: 'conflict',
+      existing
+    })
+    vi.mocked(app.templates.importDocument).mockResolvedValue({ ...source, revision: 2 })
+    functionLibraryFileDialog.readText.mockResolvedValue({
+      name: 'conflict.lstemplate',
+      data: JSON.stringify(source)
+    })
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={['/templates']}>
+          <Routes>
+            <Route path="/templates" element={<TemplateBrowserPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await screen.findByRole('button', { name: '听力模板' })
+    fireEvent.click(screen.getByRole('button', { name: '导入模板' }))
+    const dialog = await screen.findByRole('alertdialog', { name: '模板“覆盖后的模板”已存在' })
+    fireEvent.click(within(dialog).getByRole('button', { name: '覆盖本地模板' }))
+
+    await waitFor(() =>
+      expect(app.templates.importDocument).toHaveBeenCalledWith(source, 'overwrite', 1)
+    )
+    expect(screen.queryByRole('button', { name: '听力模板' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '覆盖后的模板' })).toBeInTheDocument()
   })
 
   it('saves editor changes before exporting the persisted template revision', async () => {

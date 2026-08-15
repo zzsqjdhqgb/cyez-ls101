@@ -1,4 +1,5 @@
 import type { InterfaceVarManifest, SchemaDefinition } from '@ls101/core-types'
+import stableStringify from 'fast-json-stable-stringify'
 import { initializeBuiltinFunctionLibraries } from './builtin-initializer'
 import { compileTemplate, compileTemplatePreview } from './compiler'
 import type {
@@ -95,6 +96,12 @@ export interface TemplateDocumentApplication {
     initial?: Partial<TemplateContent>,
     editorState?: DslEditorState
   ): Promise<TemplateDocument>
+  inspectImport(source: TemplateDocument): Promise<TemplateImportInspection>
+  importDocument(
+    source: TemplateDocument,
+    mode: TemplateImportMode,
+    expectedRevision?: number
+  ): Promise<TemplateDocument>
   get(templateId: string): Promise<TemplateDocument | null>
   save(document: TemplateDocument): Promise<TemplateDocument>
   delete(templateId: string): Promise<void>
@@ -117,6 +124,12 @@ export interface TemplateDocumentApplication {
     selections: readonly TemplateInterfaceBinding[]
   ): Promise<TemplatePreviewResult>
 }
+
+export type TemplateImportMode = 'preserve-id' | 'copy' | 'overwrite'
+
+export type TemplateImportInspection =
+  | { status: 'new'; existing: null }
+  | { status: 'identical' | 'conflict'; existing: TemplateDocument }
 
 export interface LocalFunctionLibraryApplication {
   create(name?: string): Promise<LocalFunctionLibraryDocument>
@@ -429,7 +442,36 @@ export function createTemplateApplication(
           { functions: [] },
           editorState
         )
-        return repository.saveTemplate(document)
+        return repository.createTemplate(document)
+      },
+      async inspectImport(source) {
+        const existing = await repository.getTemplate(source.templateId)
+        if (!existing) return { status: 'new', existing: null }
+        return {
+          status: sameTemplateSnapshot(existing, source) ? 'identical' : 'conflict',
+          existing
+        }
+      },
+      async importDocument(source, mode, expectedRevision) {
+        if (mode === 'copy') {
+          return repository.createTemplate(
+            createTemplateDocument(source.content, source.resources, source.editorState)
+          )
+        }
+
+        const imported = {
+          templateId: source.templateId,
+          revision: 0,
+          content: structuredClone(source.content),
+          resources: structuredClone(source.resources),
+          editorState: structuredClone(source.editorState)
+        }
+        if (mode === 'preserve-id') return repository.createTemplate(imported)
+
+        if (expectedRevision === undefined) {
+          throw new TypeError('Overwrite import requires the expected local revision')
+        }
+        return repository.saveTemplate({ ...imported, revision: expectedRevision })
       },
       get: (templateId) => repository.getTemplate(templateId),
       save: (document) => repository.saveTemplate(document),
@@ -773,6 +815,19 @@ export function createTemplateApplication(
       }
     }
   }
+}
+
+function sameTemplateSnapshot(first: TemplateDocument, second: TemplateDocument): boolean {
+  return (
+    stableStringify({
+      content: first.content,
+      resources: first.resources
+    }) ===
+    stableStringify({
+      content: second.content,
+      resources: second.resources
+    })
+  )
 }
 
 async function loadFunctionLibrary(

@@ -9,12 +9,14 @@ interface ConfirmModalProps {
   title: string
   message: string
   confirmLabel?: string
+  secondaryLabel?: string
   danger?: boolean
   error?: string | null
   busy?: boolean
   closeOnConfirm?: boolean
   onCancel(): void
   onConfirm(): void
+  onSecondary?(): void
 }
 
 export function ConfirmModal({
@@ -22,12 +24,14 @@ export function ConfirmModal({
   title,
   message,
   confirmLabel = '确认',
+  secondaryLabel,
   danger = false,
   error = null,
   busy = false,
   closeOnConfirm = true,
   onCancel,
-  onConfirm
+  onConfirm,
+  onSecondary
 }: ConfirmModalProps): JSX.Element | null {
   const actionTriggered = useRef(false)
   const restoreFocus = useRef<HTMLElement | null>(null)
@@ -90,6 +94,11 @@ export function ConfirmModal({
                       取消
                     </Button>
                   </AlertDialog.Cancel>
+                  {secondaryLabel && onSecondary ? (
+                    <Button disabled={busy} onClick={onSecondary}>
+                      {secondaryLabel}
+                    </Button>
+                  ) : null}
                   <AlertDialog.Action asChild>
                     <Button
                       aria-busy={busy}

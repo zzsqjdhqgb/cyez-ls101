@@ -1,6 +1,11 @@
 import { useEffect, useState, type JSX } from 'react'
-import type { FunctionLibrarySummary, TemplateSummary } from '@ls101/template-editor'
-import { AlertCircle, Braces, Download, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
+import type {
+  FunctionLibrarySummary,
+  TemplateDocument,
+  TemplateImportMode,
+  TemplateSummary
+} from '@ls101/template-editor'
+import { AlertCircle, Braces, Download, LayoutTemplate, Plus, Trash2, Upload } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
@@ -9,7 +14,7 @@ import { IconButton } from '../../components/ui/IconButton'
 import { Page, PageHeader } from '../../components/ui/Page'
 import { toast } from '../../components/ui/toast'
 import { useTemplateApplication } from './TemplateApplicationContext'
-import { exportTemplateDocumentFile } from './TemplateDocumentFiles'
+import { exportTemplateDocumentFile, readTemplateDocumentFile } from './TemplateDocumentFiles'
 import styles from './TemplateBrowserPage.module.css'
 import { templateErrorMessage } from './templateUi'
 
@@ -20,6 +25,12 @@ export function TemplateBrowserPage(): JSX.Element {
   const [functionLibraries, setFunctionLibraries] = useState<FunctionLibrarySummary[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [pendingImport, setPendingImport] = useState<{
+    source: TemplateDocument
+    existing: TemplateDocument
+  } | null>(null)
+  const [importConflictError, setImportConflictError] = useState<string | null>(null)
   const [exportingId, setExportingId] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<TemplateSummary | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -48,6 +59,7 @@ export function TemplateBrowserPage(): JSX.Element {
   }, [application])
 
   const createTemplate = async (): Promise<void> => {
+    if (creating || importing) return
     setCreating(true)
     setError(null)
     try {
@@ -58,6 +70,68 @@ export function TemplateBrowserPage(): JSX.Element {
     } finally {
       setCreating(false)
     }
+  }
+
+  const importTemplate = async (): Promise<void> => {
+    if (creating || importing) return
+    setImporting(true)
+    setError(null)
+    try {
+      const source = await readTemplateDocumentFile()
+      if (!source) return
+      const inspection = await application.templates.inspectImport(source)
+      if (inspection.status === 'identical') {
+        toast.info(`模板“${source.content.name || '未命名模板'}”已存在`)
+        return
+      }
+      if (inspection.status === 'conflict') {
+        setImportConflictError(null)
+        setPendingImport({ source, existing: inspection.existing })
+        return
+      }
+      const imported = await application.templates.importDocument(source, 'preserve-id')
+      addImportedTemplate(imported)
+      toast.success(`已导入模板“${imported.content.name || '未命名模板'}”`)
+    } catch (reason) {
+      setError(templateErrorMessage(reason))
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const commitConflictingImport = async (
+    mode: Extract<TemplateImportMode, 'copy' | 'overwrite'>
+  ): Promise<void> => {
+    if (!pendingImport || importing) return
+    setImporting(true)
+    setImportConflictError(null)
+    try {
+      const imported = await application.templates.importDocument(
+        pendingImport.source,
+        mode,
+        mode === 'overwrite' ? pendingImport.existing.revision : undefined
+      )
+      if (mode === 'overwrite') {
+        setTemplates((current) =>
+          current.map((item) =>
+            item.templateId === imported.templateId ? templateSummary(imported) : item
+          )
+        )
+        toast.success(`已覆盖模板“${imported.content.name || '未命名模板'}”`)
+      } else {
+        addImportedTemplate(imported)
+        toast.success(`已将模板“${imported.content.name || '未命名模板'}”导入为副本`)
+      }
+      setPendingImport(null)
+    } catch (reason) {
+      setImportConflictError(templateErrorMessage(reason))
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const addImportedTemplate = (document: TemplateDocument): void => {
+    setTemplates((current) => [...current, templateSummary(document)])
   }
 
   const deleteTemplate = async (): Promise<void> => {
@@ -95,14 +169,23 @@ export function TemplateBrowserPage(): JSX.Element {
       <PageHeader
         title="试卷模板"
         actions={
-          <Button
-            icon={Plus}
-            variant="primary"
-            disabled={creating}
-            onClick={() => void createTemplate()}
-          >
-            {creating ? '正在新建' : '新建模板'}
-          </Button>
+          <>
+            <Button
+              icon={Upload}
+              disabled={creating || importing}
+              onClick={() => void importTemplate()}
+            >
+              {importing ? '正在导入' : '导入模板'}
+            </Button>
+            <Button
+              icon={Plus}
+              variant="primary"
+              disabled={creating || importing}
+              onClick={() => void createTemplate()}
+            >
+              {creating ? '正在新建' : '新建模板'}
+            </Button>
+          </>
         }
       />
 
@@ -172,6 +255,23 @@ export function TemplateBrowserPage(): JSX.Element {
       </section>
 
       <ConfirmModal
+        busy={importing}
+        closeOnConfirm={false}
+        confirmLabel="覆盖本地模板"
+        danger
+        error={importConflictError}
+        message={`本地 revision ${pendingImport?.existing.revision ?? 0} 与文件 revision ${pendingImport?.source.revision ?? 0} 的内容不同。覆盖会保留当前模板 ID 并递增本地 revision。`}
+        open={pendingImport !== null}
+        secondaryLabel="导入为副本"
+        title={`模板“${pendingImport?.source.content.name || '未命名模板'}”已存在`}
+        onCancel={() => {
+          if (!importing) setPendingImport(null)
+        }}
+        onConfirm={() => void commitConflictingImport('overwrite')}
+        onSecondary={() => void commitConflictingImport('copy')}
+      />
+
+      <ConfirmModal
         busy={deleting}
         closeOnConfirm={false}
         confirmLabel="删除"
@@ -186,4 +286,12 @@ export function TemplateBrowserPage(): JSX.Element {
       />
     </Page>
   )
+}
+
+function templateSummary(document: TemplateDocument): TemplateSummary {
+  return {
+    templateId: document.templateId,
+    name: document.content.name,
+    description: document.content.description
+  }
 }

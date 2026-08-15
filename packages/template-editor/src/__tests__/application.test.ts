@@ -465,6 +465,67 @@ describe('TemplateApplication', () => {
     ])
   })
 
+  it('按源 ID、内容冲突和本地 revision 执行 Template 混合导入', async () => {
+    const { application } = setup()
+    const source: TemplateDocument = {
+      ...createTemplateDocument(emptyContent(), { functions: [] }, { selected: 'root' }),
+      templateId: TEMPLATE_ID,
+      revision: 7,
+      content: { ...emptyContent(), name: 'Imported template' }
+    }
+
+    await expect(application.templates.inspectImport(source)).resolves.toEqual({
+      status: 'new',
+      existing: null
+    })
+    const preserved = await application.templates.importDocument(source, 'preserve-id')
+    expect(preserved).toEqual({ ...source, revision: 0 })
+
+    await expect(
+      application.templates.inspectImport({
+        ...source,
+        editorState: { selected: 'another-node' }
+      })
+    ).resolves.toMatchObject({
+      status: 'identical',
+      existing: { templateId: TEMPLATE_ID, revision: 0 }
+    })
+    await expect(application.templates.importDocument(source, 'preserve-id')).rejects.toMatchObject(
+      { code: 'REVISION_CONFLICT' }
+    )
+
+    const conflicting = {
+      ...source,
+      revision: 2,
+      content: { ...source.content, name: 'Changed import' }
+    }
+    await expect(application.templates.inspectImport(conflicting)).resolves.toMatchObject({
+      status: 'conflict',
+      existing: { templateId: TEMPLATE_ID, revision: 0 }
+    })
+
+    const overwritten = await application.templates.importDocument(conflicting, 'overwrite', 0)
+    expect(overwritten).toMatchObject({
+      templateId: TEMPLATE_ID,
+      revision: 1,
+      content: { name: 'Changed import' }
+    })
+    await expect(
+      application.templates.importDocument(
+        { ...conflicting, content: { ...conflicting.content, name: 'Stale overwrite' } },
+        'overwrite',
+        0
+      )
+    ).rejects.toMatchObject({ code: 'REVISION_CONFLICT' })
+
+    const copy = await application.templates.importDocument(conflicting, 'copy')
+    expect(copy).toMatchObject({ revision: 0, content: { name: 'Changed import' } })
+    expect(copy.templateId).not.toBe(TEMPLATE_ID)
+    expect(copy.templateId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    )
+  })
+
   it('浏览函数库时隔离损坏的本地库，不阻塞其他库', async () => {
     const { store, application } = setup()
     const validId = '40000000-0000-4000-8000-000000000010'
@@ -1088,6 +1149,7 @@ function forwardRepository(
   return {
     listTemplateIds: () => base.listTemplateIds(),
     getTemplate: (id) => base.getTemplate(id),
+    createTemplate: (document) => base.createTemplate(document),
     saveTemplate: (document) => base.saveTemplate(document),
     deleteTemplate: (id) => base.deleteTemplate(id),
     listLocalFunctionLibraryIds: () => base.listLocalFunctionLibraryIds(),
