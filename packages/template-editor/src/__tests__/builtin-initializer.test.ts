@@ -148,8 +148,8 @@ describe('内置函数库启动初始化', () => {
     )
     expect(groups).toMatchObject({
       libraryId: 'builtin:shanghai-gaokao-groups',
-      version: 2,
-      contentHash: 'sha256:fc55f34be16b5c39ac4f9b2d2ffac4a07fcbdf727ab50f4c3ab9994719d82f5b',
+      version: 3,
+      contentHash: 'sha256:b7940275100fd0a19b4dfc808628018e456d017d8f25143a8d1031eacf6a8fb0',
       content: { name: '高中大题组' }
     })
     expect(
@@ -187,6 +187,37 @@ describe('内置函数库启动初始化', () => {
     )
     expect(passageResponse?.content.inputs).toContainEqual({ name: 'topic', type: 'string' })
     expect(JSON.stringify(passageResponse?.content.body)).not.toContain('{{LS_passage_topic}}')
+
+    const pictureGroup = groups?.content.functions.find(
+      ({ functionId }) => functionId === 'builtin:shanghai-gaokao-picture-group'
+    )
+    expect(pictureGroup?.content.inputs).toEqual(
+      expect.arrayContaining(
+        [1, 2, 3, 4].map((index) => ({ name: 'img' + index + '-inst', type: 'string' }))
+      )
+    )
+    const questionDescription =
+      pictureGroup?.content.schemaUses[0]?.inputBindings['question-description']
+    const serializedDescription = questionDescription?.parts
+      .map((part) => {
+        if (part.type === 'literal') return part.value
+        switch (part.ref.scope) {
+          case 'schema-use':
+            return `[@${part.ref.varName}]`
+          case 'local':
+            return `[@${part.ref.name}]`
+          case 'interface':
+            return `[@${part.ref.alias}.${part.ref.varName}]`
+        }
+      })
+      .join('')
+    for (const index of [1, 2, 3, 4]) {
+      expect(questionDescription?.parts).toContainEqual({
+        type: 'variable',
+        ref: { scope: 'local', name: 'img' + index + '-inst' }
+      })
+      expect(serializedDescription).toContain(`![[@img${index}-inst]]([@img${index}])`)
+    }
   })
 
   it('清单中任一 release 无效时不写入前面的有效 release', async () => {

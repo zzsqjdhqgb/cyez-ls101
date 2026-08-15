@@ -217,7 +217,7 @@ describe('submission grading UI', () => {
       'aria-selected',
       'true'
     )
-    expect(screen.getByRole('button', { name: '重新评分' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '重新评分' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '删除作答记录' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '查看报告' }))

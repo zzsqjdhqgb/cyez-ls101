@@ -22,7 +22,7 @@ const initiator: Person = {
 const developers: Person[] = [
   {
     name: '应昊廷',
-    role: '开发者',
+    role: '开发者 · 上海市曹杨第二中学 2027届永强班学生',
     avatarUrl: catAvatarUrl,
     profileUrl: 'https://github.com/zzsqjdhqgb'
   },
