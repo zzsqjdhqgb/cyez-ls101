@@ -38,7 +38,7 @@ describe('bundled Interface repository', () => {
     const entries = await repository.loadAll()
     const entry = entries.find(({ builtinKey }) => builtinKey === 'shanghai-gaokao-speaking')
     expect(entry?.currentInterface).toMatchObject({
-      id: 'sha256:20641a4a02ec151817fbd2dd20a82b6a127e87dae19c2bc01c003c2cb66f07d1',
+      id: 'sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14',
       name: '上海高考英语口语'
     })
     if (!entry) throw new Error('expected Shanghai Gaokao speaking builtin')
@@ -50,6 +50,7 @@ describe('bundled Interface repository', () => {
     )
     expect(entry.currentInterface.promptTemplate).toContain("As far as I'm concerned")
     expect(entry.currentInterface.promptTemplate).toContain('In the foreground/background')
+    expect(entry.currentInterface.promptTemplate).toContain('明确包含1:1正方形画幅要求')
 
     const leaves = flattenFields(entry.currentInterface.fields)
     const leavesByVarName = new Map(leaves.map(({ leaf }) => [leaf.varName, leaf]))
@@ -64,6 +65,8 @@ describe('bundled Interface repository', () => {
     expect(leavesByVarName.get('picture_start')?.example).toBe('It was Sunday morning.')
     for (const varName of ['picture_file1', 'picture_file2', 'picture_file3', 'picture_file4']) {
       expect(leavesByVarName.get(varName)?.example).not.toMatch(/[\u3400-\u9fff]/u)
+      expect(leavesByVarName.get(varName)?.description).toContain('1:1正方形画幅')
+      expect(leavesByVarName.get(varName)?.example).toContain('square 1:1 aspect ratio')
     }
     expect(legacyFields).toHaveLength(27)
   })
