@@ -109,7 +109,8 @@ describe('interface editor application integration', () => {
       section: { picture: '学生在校园里活动', answer: 'I enjoy school life.' }
     })
 
-    const instance = await app.published.createBlankInstance(interfaceId)
+    const instance = await app.published.createBlankInstance(interfaceId, '  第一套题组  ')
+    expect(instance.instance.name).toBe('第一套题组')
     expect(instance.instance.values).toEqual({ titleText: '', questionImage: '', answerText: '' })
     const saved = await app.instances.save(interfaceId, instance.instance.instanceId, {
       name: '第一套题组',

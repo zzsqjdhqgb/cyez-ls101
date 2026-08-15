@@ -48,8 +48,6 @@
 }
 
 .workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -81,7 +79,7 @@
 
 .nameField input,
 .valueField textarea,
-.jsonPane textarea {
+.jsonInput textarea {
   width: 100%;
   padding: 9px 10px;
   border: 1px solid var(--color-border-strong);
@@ -89,10 +87,6 @@
   color: var(--color-text-strong);
   background: var(--color-surface);
   font: 13px/1.55 var(--font-ui);
-}
-
-.jsonProvider {
-  margin-top: 16px;
 }
 
 .valueField textarea {
@@ -203,16 +197,14 @@
 }
 
 .fieldHeader h2,
-.jsonPane h2,
-.aiPane h2 {
+.operationDialog h2 {
   margin: 0;
   color: var(--color-text-strong);
   font-size: 16px;
   font-weight: 660;
 }
 
-.fieldHeader span,
-.jsonPane header span {
+.fieldHeader span {
   color: var(--color-text-muted);
   font-size: 11px;
 }
@@ -349,46 +341,60 @@
   overflow-wrap: anywhere;
 }
 
-.aiPane {
+.operationBackdrop {
+  position: fixed;
+  z-index: 90;
+  inset: 0;
+  display: grid;
+  padding: 24px;
+  overflow: hidden;
+  place-items: center;
+  background: rgb(18 25 24 / 34%);
+}
+
+.operationDialog {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  width: auto;
-  height: 100%;
+  width: min(100%, 720px);
+  max-height: min(86vh, 760px);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  border-left: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
   background: var(--color-surface-subtle);
 }
 
-.aiHeader {
+.operationHeader {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 18px 22px;
+  padding: 20px 24px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 
-.aiHeader > div {
+.operationHeader > div {
   min-width: 0;
 }
 
-.aiHeader span:not(.generationIcon) {
-  display: block;
-  margin-top: 2px;
+.operationHeader p {
+  max-width: 600px;
+  margin: 4px 0 0;
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
-.aiHeader h2 {
+.operationHeader h2 {
   margin: 0;
   color: var(--color-text-strong);
   font-size: 16px;
   font-weight: 660;
 }
 
-.generationIcon {
+.operationIcon {
   display: grid;
   width: 34px;
   height: 34px;
@@ -399,12 +405,12 @@
   background: var(--color-accent-soft);
 }
 
-.generationIcon svg {
+.operationIcon svg {
   width: 18px;
   height: 18px;
 }
 
-.aiBody {
+.operationBody {
   display: grid;
   align-content: start;
   gap: 22px;
@@ -472,7 +478,7 @@
   color: var(--color-text-muted);
 }
 
-.aiActions {
+.operationActions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
@@ -494,25 +500,28 @@
   }
 }
 
-.jsonPane {
+.jsonDialog {
+  width: min(100%, 760px);
+}
+
+.jsonBody {
+  gap: 16px;
+}
+
+.jsonInput {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
-  width: auto;
-  height: 100%;
-  min-width: 0;
+  gap: 8px;
   min-height: 0;
-  padding: 24px;
-  overflow: auto;
-  border-left: 1px solid var(--color-border);
-  background: var(--color-surface);
 }
 
-.jsonPane header {
-  margin-bottom: 16px;
+.jsonInput > span {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 650;
 }
 
-.jsonPane textarea {
-  min-height: 0;
+.jsonInput textarea {
+  min-height: 320px;
   resize: none;
   background: var(--color-surface-subtle);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
@@ -529,13 +538,6 @@
   line-height: 1.5;
 }
 
-.jsonActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  margin-top: 16px;
-}
-
 .missing {
   display: grid;
   place-items: center;
@@ -549,8 +551,20 @@
     padding-left: 24px;
   }
 
-  .aiBody {
+  .operationBackdrop {
+    padding: 12px;
+  }
+
+  .operationDialog {
+    max-height: calc(100vh - 24px);
+  }
+
+  .operationBody {
     padding: 16px;
+  }
+
+  .jsonInput textarea {
+    min-height: 260px;
   }
 
   .imagePickerFooter {

@@ -448,17 +448,32 @@ async function restartIntegrationApp(): Promise<void> {
   await expect(page.locator('[aria-modal="true"], h1').first()).toBeVisible()
 }
 
-async function openInstanceEditor(interfaceId: string, interfaceName: string): Promise<void> {
+async function createInstanceFromDetails(
+  instanceName = '集成测试题组',
+  mode: '手工填写' | 'AI 生成' = '手工填写'
+): Promise<void> {
+  await page.getByRole('button', { name: '新建题组' }).click()
+  const dialog = page.getByRole('dialog', { name: '新建题组' })
+  await dialog.getByLabel('题组名称').fill(instanceName)
+  await dialog.getByLabel(mode).check()
+  await dialog.getByRole('button', { name: '创建题组' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: instanceName })).toBeVisible()
+}
+
+async function openInstanceEditor(
+  interfaceId: string,
+  interfaceName: string,
+  instanceName = '集成测试题组'
+): Promise<void> {
   await page.getByRole('link', { name: '题型库' }).click()
   await page.getByRole('button', { name: interfaceName, exact: true }).click()
-  await page.getByRole('button', { name: '新建题组' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: '未命名题组' })).toBeVisible()
+  await createInstanceFromDetails(instanceName)
 }
 
 async function openDraftEditor(): Promise<void> {
   await page.getByRole('link', { name: '题型库' }).click()
-  await page.getByRole('button', { name: '草稿' }).click()
-  await page.getByRole('button', { name: '新建草稿' }).click()
+  await page.getByRole('tab', { name: '草稿' }).click()
+  await page.getByRole('button', { name: '新建题型' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '未命名题型' })).toBeVisible()
 }
 
@@ -583,11 +598,11 @@ test('IE-01 generates and saves an instance through the real AIRouter pipeline',
   const interfaceId = await seedInterface(textInterface)
   await openInstanceEditor(interfaceId, textInterface.name)
 
-  await page.getByRole('button', { name: 'AI 生成' }).click()
+  await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   const modelSelect = page.getByLabel('生成模型', { exact: true })
   await expect(modelSelect).toBeVisible()
   await modelSelect.selectOption({ label: 'mock-json' })
-  await page.getByRole('button', { name: '开始生成' }).click()
+  await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
 
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText('AI 生成内容已保存')).toBeVisible()
@@ -611,10 +626,10 @@ test('IE-02 generates text and images atomically through the real pipelines', as
   const interfaceId = await seedInterface(imageInterface)
   await openInstanceEditor(interfaceId, imageInterface.name)
 
-  await page.getByRole('button', { name: 'AI 生成' }).click()
+  await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-image' })
   await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
-  await page.getByRole('button', { name: '开始生成' }).click()
+  await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
 
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 20_000 })
   await expect(page.getByText('AI 生成内容已保存')).toBeVisible()
@@ -646,21 +661,25 @@ test('IE-03 reports invalid AI output and supports cancellation without saving',
   const interfaceId = await seedInterface(textInterface)
   await openInstanceEditor(interfaceId, textInterface.name)
 
-  await page.getByRole('button', { name: 'AI 生成' }).click()
+  await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-nonjson' })
-  await page.getByRole('button', { name: '开始生成' }).click()
+  await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
   await expect(page.getByText('生成内容未通过校验')).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText('发现 1 个字段错误')).toBeVisible()
   await expect(page.getByLabel('title 内容')).toHaveValue('')
 
-  await page.getByRole('button', { name: '完成' }).click()
+  await page.getByRole('button', { name: '检查 JSON' }).click()
   await expect(page.getByLabel('JSON 内容')).toHaveValue('这不是一个合法的 JSON 响应')
   await expect(page.getByRole('alert')).toContainText('JSON 格式不合法')
+  await page
+    .getByRole('dialog', { name: '从 JSON 覆盖题组' })
+    .getByRole('button', { name: '取消' })
+    .click()
 
   await saveTextProvider(textProvider('ie-slow', 'mock-slow'))
-  await page.getByRole('button', { name: 'AI 生成' }).click()
+  await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-slow' })
-  await page.getByRole('button', { name: '开始生成' }).click()
+  await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
   await page.getByRole('button', { name: '取消生成' }).click()
   await expect(page.getByText('生成已取消')).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText('已取消 AI 生成')).toBeVisible()
@@ -686,7 +705,7 @@ test('IE-04 creates, edits and persists a draft through the real UI', async () =
   await expect(page.getByText('草稿已保存')).toBeVisible()
 
   await page.getByRole('button', { name: '返回草稿列表' }).click()
-  await page.getByRole('button', { name: '编辑' }).click()
+  await page.getByRole('button', { name: '系统测试题型', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '系统测试题型' })).toBeVisible()
   const reopened = page.getByLabel('题型内容')
   await expect(reopened.getByLabel('名称')).toHaveValue('系统测试题型')
@@ -706,8 +725,15 @@ test('IE-05 validates and publishes a draft through the real UI', async () => {
   await page.getByRole('button', { name: '添加字段', exact: true }).click()
 
   await page.getByRole('button', { name: '发布' }).click()
-  await expect(page.getByRole('alert')).toContainText('发布前需要修正以下内容')
-  await expect(page.getByRole('alert')).toContainText('变量名不能为空')
+  await page
+    .getByRole('alertdialog', { name: '发布当前题型草稿？' })
+    .getByRole('button', { name: '发布题型' })
+    .click()
+  const publishSummary = page.getByRole('alert').filter({
+    hasText: '发布前需要修正以下内容'
+  })
+  await expect(publishSummary).toContainText('发布前需要修正以下内容')
+  await expect(publishSummary).toContainText('变量名不能为空')
 
   const inspector = page.getByLabel('字段结构')
   await inspector.getByLabel('变量名').fill('answerText')
@@ -716,6 +742,10 @@ test('IE-05 validates and publishes a draft through the real UI', async () => {
   await inspector.getByLabel('字段标识').fill('answer')
   await inspector.getByLabel('字段标识').press('Tab')
   await page.getByRole('button', { name: '发布' }).click()
+  await page
+    .getByRole('alertdialog', { name: '发布当前题型草稿？' })
+    .getByRole('button', { name: '发布题型' })
+    .click()
   await expect(page.getByRole('heading', { level: 1, name: '校验发布题型' })).toBeVisible()
 
   await page.getByRole('button', { name: '返回题型' }).click()
@@ -731,14 +761,14 @@ test('IE-06 deletes drafts and guards unsaved changes on leave', async () => {
     fields: { order: [], nodes: {} }
   })
   await page.getByRole('link', { name: '题型库' }).click()
-  await page.getByRole('button', { name: '草稿' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: '题型草稿' })).toBeVisible()
+  await page.getByRole('tab', { name: '草稿' }).click()
+  await expect(page.getByRole('tab', { name: '草稿', selected: true })).toBeVisible()
   await page.getByRole('button', { name: '删除草稿', exact: true }).click()
   await page.locator('[aria-modal="true"]').getByRole('button', { name: '删除' }).click()
   await expect(page.getByText('已删除草稿“待删除草稿”')).toBeVisible()
   await expect(page.getByText('暂无草稿')).toBeVisible()
 
-  await page.getByRole('button', { name: '新建草稿' }).click()
+  await page.getByRole('button', { name: '新建题型' }).click()
   await page.getByLabel('题型内容').getByLabel('名称').fill('未保存草稿')
   await page.getByRole('button', { name: '返回草稿列表' }).click()
   const dialog = page.locator('[aria-modal="true"]')
@@ -747,10 +777,10 @@ test('IE-06 deletes drafts and guards unsaved changes on leave', async () => {
   await expect(page.getByRole('heading', { level: 1, name: '未保存草稿' })).toBeVisible()
   await page.getByRole('button', { name: '返回草稿列表' }).click()
   await page.locator('[aria-modal="true"]').getByRole('button', { name: '放弃修改' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: '题型草稿' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: '草稿', selected: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '未命名题型', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '未保存草稿', exact: true })).toHaveCount(0)
-  await page.getByRole('button', { name: '返回题型' }).click()
+  await page.getByRole('tab', { name: '题型' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '题型库' })).toBeVisible()
 })
 
@@ -764,7 +794,7 @@ test('IE-07 edits and saves an instance and guards unsaved changes', async () =>
   await expect(page.getByText('题组已保存')).toBeVisible()
 
   await page.getByRole('button', { name: '返回题型详情' }).click()
-  await page.getByRole('button', { name: '系统测试题组' }).click()
+  await page.getByRole('button', { name: '系统测试题组', exact: true }).click()
   await expect(page.getByLabel('title 内容')).toHaveValue('保存的标题')
   await expect(page.getByLabel('answer 内容')).toHaveValue('保存的答案')
 
@@ -776,26 +806,32 @@ test('IE-07 edits and saves an instance and guards unsaved changes', async () =>
   await expect(page.getByLabel('title 内容')).toHaveValue('未保存的修改')
   await page.getByRole('button', { name: '返回题型详情' }).click()
   await page.locator('[aria-modal="true"]').getByRole('button', { name: '放弃修改' }).click()
-  await expect(page.getByRole('button', { name: '系统测试题组' })).toBeVisible()
-  await page.getByRole('button', { name: '系统测试题组' }).click()
+  await expect(page.getByRole('button', { name: '系统测试题组', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '系统测试题组', exact: true }).click()
   await expect(page.getByLabel('title 内容')).toHaveValue('保存的标题')
 })
 
 test('IE-08 replaces instance values from JSON and reports invalid JSON', async () => {
   const interfaceId = await seedInterface(textInterface)
   await openInstanceEditor(interfaceId, textInterface.name)
-  await page.getByRole('button', { name: 'JSON' }).click()
+  await page.getByRole('button', { name: '高级操作' }).click()
+  await page.getByRole('menuitem', { name: '从 JSON 覆盖' }).click()
   await page.getByLabel('JSON 内容').fill('{"title":"JSON 标题","answer":"JSON 答案"}')
-  await page.getByRole('button', { name: '覆盖全部值' }).click()
+  await page.getByRole('button', { name: '校验并覆盖' }).click()
   await expect(page.getByText('已从 JSON 更新题组')).toBeVisible()
   await expect(page.getByLabel('title 内容')).toHaveValue('JSON 标题')
   await expect(page.getByLabel('answer 内容')).toHaveValue('JSON 答案')
   const persisted = await readInstance(interfaceId)
   expect(persisted.instance.values).toEqual({ titleText: 'JSON 标题', answerText: 'JSON 答案' })
 
-  await page.getByRole('button', { name: 'JSON' }).click()
+  await page.getByRole('button', { name: '高级操作' }).click()
+  await page.getByRole('menuitem', { name: '从 JSON 覆盖' }).click()
   await page.getByLabel('JSON 内容').fill('{"broken":')
-  await page.getByRole('button', { name: '覆盖全部值' }).click()
+  await page.getByRole('button', { name: '校验并覆盖' }).click()
+  await page
+    .getByRole('alertdialog', { name: '覆盖当前题组内容？' })
+    .getByRole('button', { name: '校验并覆盖' })
+    .click()
   await expect(page.getByRole('alert')).toContainText('JSON 格式不合法')
   await expect(page.getByLabel('title 内容')).toHaveValue('JSON 标题')
   await page.getByRole('button', { name: '取消' }).click()
@@ -807,14 +843,17 @@ test('IE-08b generates image fields from JSON without selecting a text model', a
   const interfaceId = await seedInterface(imageInterface)
   await openInstanceEditor(interfaceId, imageInterface.name)
 
-  await page.getByRole('button', { name: 'JSON' }).click()
-  const jsonPanel = page.getByRole('complementary', { name: 'JSON 覆盖' })
-  await expect(jsonPanel.getByLabel('生成模型')).toHaveCount(0)
-  await jsonPanel.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
-  await jsonPanel
+  await page.getByRole('button', { name: '高级操作' }).click()
+  await page.getByRole('menuitem', { name: '从 JSON 覆盖' }).click()
+  const jsonDialog = page.getByRole('dialog', { name: '从 JSON 覆盖题组' })
+  await expect(jsonDialog.getByLabel('生成模型')).toHaveCount(0)
+  await jsonDialog
+    .getByLabel('图像 Provider', { exact: true })
+    .selectOption({ label: 'mock-image' })
+  await jsonDialog
     .getByLabel('JSON 内容')
     .fill('{"title":"JSON 图片题","picture":"A JSON green circle icon"}')
-  await jsonPanel.getByRole('button', { name: '覆盖全部值' }).click()
+  await jsonDialog.getByRole('button', { name: '校验并覆盖' }).click()
 
   await expect(page.getByText('已从 JSON 更新题组')).toBeVisible({ timeout: 15_000 })
   await expect(page.getByLabel('title 内容')).toHaveValue('JSON 图片题')
@@ -838,11 +877,12 @@ test('IE-08b generates image fields from JSON without selecting a text model', a
 
 test('IE-09 deletes an instance through the real UI', async () => {
   const interfaceId = await seedInterface(textInterface)
-  await openInstanceEditor(interfaceId, textInterface.name)
+  await openInstanceEditor(interfaceId, textInterface.name, '待删除题组')
   await page.getByRole('button', { name: '返回题型详情' }).click()
-  await page.getByRole('button', { name: '删除题组' }).click()
+  await page.getByRole('button', { name: '题组操作：待删除题组' }).click()
+  await page.getByRole('menuitem', { name: '删除题组' }).click()
   await page.locator('[aria-modal="true"]').getByRole('button', { name: '删除' }).click()
-  await expect(page.getByText('已删除题组“未命名题组”')).toBeVisible()
+  await expect(page.getByText('已删除题组“待删除题组”')).toBeVisible()
   await expect(page.getByText('暂无题组')).toBeVisible()
   const instanceIds = (await page.evaluate(
     (scope) =>
@@ -860,6 +900,7 @@ test('IE-10 copies a published interface to a draft', async () => {
   await seedInterface(textInterface)
   await page.getByRole('link', { name: '题型库' }).click()
   await page.getByRole('button', { name: textInterface.name, exact: true }).click()
+  await page.getByRole('tab', { name: '题型定义' }).click()
   await page.getByRole('button', { name: '复制为草稿' }).click()
   await expect(page.getByRole('heading', { level: 1, name: textInterface.name })).toBeVisible()
   await page.getByRole('button', { name: '返回草稿列表' }).click()
@@ -878,7 +919,8 @@ test('IE-11 exports and re-imports an interface with its instances', async () =>
       value: async () => ({ canceled: false, filePath })
     })
   }, exportPath)
-  await page.getByRole('button', { name: '导出' }).click()
+  await page.getByRole('tab', { name: '题型定义' }).click()
+  await page.getByRole('button', { name: '导出题型' }).click()
   await expect(page.getByText('题型已导出')).toBeVisible()
   const exported = await readFile(exportPath)
   expect(exported.length).toBeGreaterThan(0)
@@ -896,14 +938,15 @@ test('IE-11 exports and re-imports an interface with its instances', async () =>
       value: async () => ({ canceled: false, filePaths: [filePath], bookmarks: [] })
     })
   }, exportPath)
-  await page.getByRole('button', { name: '导入' }).click()
+  await page.getByRole('button', { name: '题型库操作' }).click()
+  await page.getByRole('menuitem', { name: '导入题型' }).click()
   await expect(page.getByText('题型已导入')).toBeVisible()
   const importedRow = page.locator('article').filter({ hasText: textInterface.name })
   await expect(
     importedRow.getByRole('button', { name: textInterface.name, exact: true })
   ).toBeVisible()
-  await importedRow.getByRole('button', { name: '进入', exact: true }).click()
-  await expect(page.getByRole('button', { name: '未命名题组' })).toBeVisible()
+  await importedRow.getByRole('button', { name: textInterface.name, exact: true }).click()
+  await expect(page.getByRole('button', { name: '集成测试题组', exact: true })).toBeVisible()
 })
 
 test('IE-12 manages draft field groups, image type and node deletion', async () => {
@@ -916,10 +959,10 @@ test('IE-12 manages draft field groups, image type and node deletion', async () 
   await page.getByRole('button', { name: '添加字段组', exact: true }).click()
   await expect(structure.getByText('选中此字段组后，新字段会添加到组内。')).toBeVisible()
   await page.getByRole('button', { name: '添加字段', exact: true }).click()
-  await expect(structure.getByRole('button', { name: /group1/ })).toBeVisible()
-  await expect(structure.getByRole('button', { name: /field1/ })).toBeVisible()
+  await expect(structure.locator('[data-field-path="group1"]')).toBeVisible()
+  await expect(structure.locator('[data-field-path="group1.field1"]')).toBeVisible()
 
-  await structure.getByRole('button', { name: /field1/ }).click()
+  await structure.locator('[data-field-path="group1.field1"]').click()
   await structure.getByLabel('类型').selectOption('image')
   await structure.getByLabel('变量名').fill('pictureText')
   await structure.getByLabel('描述').fill('配图提示词')
@@ -928,14 +971,14 @@ test('IE-12 manages draft field groups, image type and node deletion', async () 
   await structure.getByLabel('字段标识').press('Tab')
 
   await page.getByRole('button', { name: '删除节点' }).click()
-  await expect(structure.getByRole('button', { name: /picture/ })).toHaveCount(0)
-  await expect(structure.getByRole('button', { name: /group1/ })).toBeVisible()
+  await expect(structure.locator('[data-field-path="group1.picture"]')).toHaveCount(0)
+  await expect(structure.locator('[data-field-path="group1"]')).toBeVisible()
 
   await page.getByRole('button', { name: '保存' }).click()
   await expect(page.getByText('草稿已保存')).toBeVisible()
   await page.getByRole('button', { name: '返回草稿列表' }).click()
-  await page.getByRole('button', { name: '编辑' }).click()
-  await expect(structure.getByRole('button', { name: /group1/ })).toBeVisible()
+  await page.getByRole('button', { name: '字段树操作题型', exact: true }).click()
+  await expect(structure.locator('[data-field-path="group1"]')).toBeVisible()
 })
 
 test('IE-13 drives the instance image field buttons end to end', async () => {
@@ -993,24 +1036,28 @@ test('IE-13 drives the instance image field buttons end to end', async () => {
     expect(restored.text).toBe(originalClipboard.text)
     expect(Array.from(restored.image)).toEqual(Array.from(originalClipboard.image))
   }
+  await page.getByRole('button', { name: '返回题型详情' }).click()
+  await page
+    .getByRole('alertdialog', { name: '放弃未保存的修改？' })
+    .getByRole('button', { name: '放弃修改' })
+    .click()
 })
 
 test('IE-14 covers list and details page action buttons', async () => {
   await seedInterface(textInterface)
   await page.getByRole('link', { name: '题型库' }).click()
   const interfaceRow = page.locator('article').filter({ hasText: textInterface.name })
-  await interfaceRow.getByRole('button', { name: '进入', exact: true }).click()
+  await interfaceRow.getByRole('button', { name: textInterface.name, exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: textInterface.name })).toBeVisible()
-  await page.getByRole('button', { name: '新建题组' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: '未命名题组' })).toBeVisible()
+  await createInstanceFromDetails('操作按钮题组')
   await page.getByRole('button', { name: '返回题型详情' }).click()
-  await page.getByRole('button', { name: '编辑' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: '未命名题组' })).toBeVisible()
+  await page.getByRole('button', { name: '操作按钮题组', exact: true }).click()
+  await expect(page.getByRole('heading', { level: 1, name: '操作按钮题组' })).toBeVisible()
   await page.getByRole('button', { name: '返回题型详情' }).click()
 
   const originalText = await electronApp.evaluate(({ clipboard }) => clipboard.readText())
   try {
-    await page.getByText('题型定义').click()
+    await page.getByRole('tab', { name: '题型定义' }).click()
     await page.getByRole('button', { name: '复制完整提示词' }).click()
     await expect(page.getByText('已复制完整提示词')).toBeVisible()
     await expect
@@ -1024,26 +1071,26 @@ test('IE-14 covers list and details page action buttons', async () => {
   }
 })
 
-test('IE-15 drives the standalone AI image panel end to end', async () => {
+test('IE-15 drives the standalone AI image task dialog end to end', async () => {
   await saveImageProvider(imageProvider('ie-panel-image', 'mock-image'))
   await saveImageProvider(imageProvider('ie-panel-slow', 'mock-slow'))
   const interfaceId = await seedInterface(imageInterface)
   await openInstanceEditor(interfaceId, imageInterface.name)
   await page.getByLabel('picture图片提示词').fill('A green circle icon')
 
-  await page.getByRole('button', { name: 'AI 生图' }).click()
-  const panel = page.getByLabel('AI 生图', { exact: true })
-  await expect(panel).toBeVisible()
-  await expect(panel.getByText('1 张图片待生成')).toBeVisible()
-  await panel.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
-  await panel.getByRole('button', { name: '开始生图' }).click()
-  await expect(panel.getByText('生图完成')).toBeVisible({ timeout: 15_000 })
+  await page.getByRole('button', { name: '批量生图' }).click()
+  const dialog = page.getByRole('dialog', { name: 'AI 生图' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog).toContainText('将为 1 个已填写提示词的字段生成图片，成功后立即保存')
+  await dialog.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await dialog.getByRole('button', { name: '开始生图' }).click()
+  await expect(dialog.getByText('生图完成')).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText('AI 生图结果已保存')).toBeVisible()
-  await panel.getByRole('button', { name: '完成' }).click()
+  await dialog.getByRole('button', { name: '返回题组' }).click()
   await expect(page.getByAltText('picture预览')).toBeVisible()
   await expectRenderedAssetsToLoad(1)
 
-  await page.getByRole('button', { name: 'AI 生图' }).click()
+  await page.getByRole('button', { name: '批量生图' }).click()
   const slowPanel = page.getByLabel('AI 生图', { exact: true })
   await slowPanel.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-slow' })
   await slowPanel.getByRole('button', { name: '开始生图' }).click()
@@ -1062,7 +1109,7 @@ test('IE-16 installs all bundled Shanghai Interfaces on first launch', async () 
   await builtin.click()
   await expect(page.getByText('内置题型')).toBeVisible()
   await expect(page.getByRole('button', { name: '新建题组' })).toBeVisible()
-  await page.getByText('题型定义', { exact: true }).click()
+  await page.getByRole('tab', { name: '题型定义' }).click()
   await expect(page.getByText('sentence1', { exact: true })).toBeVisible()
 })
 
@@ -1073,34 +1120,36 @@ test('IE-17 manages a bundled instance and copies the builtin to a draft', async
   await page.getByRole('button', { name: '上海高考英语口语', exact: true }).click()
   await expect(page.getByText('内置题型', { exact: true })).toBeVisible()
 
-  await page.getByRole('button', { name: '新建题组' }).click()
-  await page.getByRole('button', { name: 'AI 生成' }).click()
+  await createInstanceFromDetails('上海内置回归题组')
+  await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-shanghai' })
   await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
-  await page.getByRole('button', { name: '开始生成' }).click()
+  await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 30_000 })
-  await page.getByRole('button', { name: '完成' }).click()
+  await page.getByRole('button', { name: '返回题组' }).click()
   await page.getByLabel('题组名称').fill('上海内置回归题组')
   await page.getByLabel('sentence1 内容').fill('A saved sentence from the bundled Interface.')
   await page.getByRole('button', { name: '保存' }).click()
   await expect(page.getByText('题组已保存')).toBeVisible()
 
   await page.getByRole('button', { name: '返回题型详情' }).click()
-  await expect(page.getByRole('button', { name: '上海内置回归题组' })).toBeVisible()
-  await page.getByRole('button', { name: '上海内置回归题组' }).click()
+  await expect(page.getByRole('button', { name: '上海内置回归题组', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '上海内置回归题组', exact: true }).click()
   await expect(page.getByLabel('sentence1 内容')).toHaveValue(
     'A saved sentence from the bundled Interface.'
   )
 
   await page.getByRole('button', { name: '返回题型详情' }).click()
+  await page.getByRole('tab', { name: '题型定义' }).click()
   await page.getByRole('button', { name: '复制为草稿' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '上海高考英语口语' })).toBeVisible()
   await page.getByRole('button', { name: '返回草稿列表' }).click()
   await expect(page.getByRole('button', { name: '上海高考英语口语', exact: true })).toBeVisible()
 
-  await page.getByRole('button', { name: '返回题型' }).click()
+  await page.getByRole('tab', { name: '题型' }).click()
   await page.getByRole('button', { name: '上海高考英语口语', exact: true }).click()
-  await page.getByRole('button', { name: '删除题组' }).click()
+  await page.getByRole('button', { name: '题组操作：上海内置回归题组' }).click()
+  await page.getByRole('menuitem', { name: '删除题组' }).click()
   await page.locator('[aria-modal="true"]').getByRole('button', { name: '删除' }).click()
   await expect(page.getByText('已删除题组“上海内置回归题组”')).toBeVisible()
   await expect(page.getByText('暂无题组')).toBeVisible()
@@ -1122,13 +1171,13 @@ test('IE-18 generates and persists an image in a bundled picture field', async (
   await saveImageProvider(imageProvider('ie-builtin-image', 'mock-image'))
   await page.getByRole('link', { name: '题型库' }).click()
   await page.getByRole('button', { name: '上海高考英语口语', exact: true }).click()
-  await page.getByRole('button', { name: '新建题组' }).click()
-  await page.getByRole('button', { name: 'AI 生成' }).click()
+  await createInstanceFromDetails('内置图片题组')
+  await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-shanghai' })
   await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
-  await page.getByRole('button', { name: '开始生成' }).click()
+  await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 30_000 })
-  await page.getByRole('button', { name: '完成' }).click()
+  await page.getByRole('button', { name: '返回题组' }).click()
   await page.getByLabel('题组名称').fill('内置图片题组')
 
   const pictureField = page
@@ -1155,7 +1204,7 @@ test('IE-18 generates and persists an image in a bundled picture field', async (
   await page.getByRole('button', { name: '保存' }).click()
   await expect(page.getByText('题组已保存')).toBeVisible()
   await page.getByRole('button', { name: '返回题型详情' }).click()
-  await page.getByRole('button', { name: '内置图片题组' }).click()
+  await page.getByRole('button', { name: '内置图片题组', exact: true }).click()
   await expect(page.getByLabel('picture1图片提示词')).toHaveValue(
     'A clean educational illustration of a park.'
   )
@@ -1209,12 +1258,12 @@ test('IE-23 generates all four bundled story pictures through the AI pipeline', 
   await saveImageProvider(imageProvider('ie-builtin-four-images', 'mock-image'))
   await page.getByRole('link', { name: '题型库' }).click()
   await page.getByRole('button', { name: '上海高考英语口语', exact: true }).click()
-  await page.getByRole('button', { name: '新建题组' }).click()
+  await createInstanceFromDetails('内置四图题组')
 
-  await page.getByRole('button', { name: 'AI 生成' }).click()
+  await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-shanghai' })
   await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
-  await page.getByRole('button', { name: '开始生成' }).click()
+  await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
 
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 30_000 })
   await expect(page.getByText('AI 生成内容已保存')).toBeVisible()

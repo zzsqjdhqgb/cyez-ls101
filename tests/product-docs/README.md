@@ -1,6 +1,6 @@
 # 产品文档测试
 
-本目录只存放已经确认的用户可见产品行为。这里的 Playwright 测试通过真实 Electron 界面执行，并在整套测试成功后自动生成 `docs/product/generated/` 下的产品行为文档。
+本目录只存放已经确认的用户可见产品行为。这里的 Playwright 测试通过真实 Electron 界面执行，并在整套测试成功后自动生成 `docs/product/generated/` 下的索引、分域产品行为文档和截图。
 
 技术实现、IPC、异常边界、组件状态和兼容性回归测试不放在本目录，继续由 `tests/integration/`、`tests/components/` 和各 package 的 Vitest 测试负责。
 

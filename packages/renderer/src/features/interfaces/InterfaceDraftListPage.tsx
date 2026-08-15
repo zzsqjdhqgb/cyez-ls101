@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type JSX } from 'react'
 import type { InterfaceDraftSummary } from '@ls101/interface-editor'
-import { AlertCircle, ArrowLeft, FilePenLine, Plus, Trash2 } from 'lucide-react'
+import { AlertCircle, FilePenLine, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
@@ -74,18 +74,27 @@ export function InterfaceDraftListPage(): JSX.Element {
   return (
     <Page>
       <PageHeader
-        title="题型草稿"
+        title="题型库"
         actions={
-          <>
-            <Button icon={ArrowLeft} variant="ghost" onClick={() => navigate('/interfaces')}>
-              返回题型
-            </Button>
-            <Button icon={Plus} variant="primary" onClick={() => void createDraft()}>
-              新建草稿
-            </Button>
-          </>
+          <Button icon={Plus} variant="primary" onClick={() => void createDraft()}>
+            新建题型
+          </Button>
         }
       />
+
+      <div className={shared.tabs} role="tablist" aria-label="题型库内容">
+        <button
+          aria-selected="false"
+          role="tab"
+          type="button"
+          onClick={() => navigate('/interfaces')}
+        >
+          题型
+        </button>
+        <button aria-selected="true" role="tab" type="button">
+          草稿
+        </button>
+      </div>
 
       {error ? (
         <div className={shared.notice} role="alert">
@@ -99,18 +108,16 @@ export function InterfaceDraftListPage(): JSX.Element {
         <div className={shared.list}>
           {items.map((item) => (
             <article className={shared.row} key={item.draftId}>
-              <div className={shared.rowMain}>
-                <button
-                  className={shared.rowTitle}
-                  onClick={() => navigate(`/interfaces/drafts/${item.draftId}`)}
-                  type="button"
-                >
-                  {item.name || '未命名题型'}
-                </button>
+              <button
+                aria-label={item.name || '未命名题型'}
+                className={shared.rowPrimary}
+                onClick={() => navigate(`/interfaces/drafts/${item.draftId}`)}
+                type="button"
+              >
+                <span className={shared.rowTitle}>{item.name || '未命名题型'}</span>
                 <p className={shared.rowDescription}>{item.description || '暂无描述'}</p>
-              </div>
+              </button>
               <div className={shared.rowActions}>
-                <Button onClick={() => navigate(`/interfaces/drafts/${item.draftId}`)}>编辑</Button>
                 <IconButton
                   icon={Trash2}
                   label="删除草稿"
@@ -125,7 +132,7 @@ export function InterfaceDraftListPage(): JSX.Element {
       <ConfirmModal
         danger
         confirmLabel="删除"
-        message="删除后无法恢复，这不会影响已经发布的题型。"
+        message="删除后无法恢复，但不会影响已经发布的题型。"
         open={pendingDelete !== null}
         title={`删除草稿“${pendingDelete?.name || '未命名题型'}”？`}
         onCancel={() => setPendingDelete(null)}

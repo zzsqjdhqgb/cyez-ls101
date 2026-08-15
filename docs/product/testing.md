@@ -21,6 +21,9 @@
 ## 文档生成
 
 - 整套产品文档测试通过后，reporter 根据实际执行的用例、步骤、注解和截图生成 `docs/product/generated/`；
+- `generated/README.md` 只作为索引，具体行为按产品域拆分到独立 Markdown 文档；
+- 截图用于证明关键选择、风险确认和最终可见结果，不为每个操作步骤重复截图；
+- 同一行为如果只有后台状态变化，由 Playwright 断言证明，不添加无法提供额外信息的截图；
 - 失败的产品文档测试不会覆盖上一次成功生成的文档；
 - `docs/product/generated/` 需要随代码提交和评审，不加入 `.gitignore`；
 - `test-results/`、trace 和 HTML report 等单次运行产物继续忽略。
@@ -31,4 +34,4 @@
 - `yarn test:product-docs:run`：使用已经构建的应用执行产品文档测试；
 - `yarn test`：技术回归测试通过后继续执行产品文档测试。
 
-当前自动生成文档入口：[产品行为文档](./generated/README.md)。
+当前自动生成文档入口：[产品行为文档索引](./generated/README.md)。
