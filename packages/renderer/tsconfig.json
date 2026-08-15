@@ -23,6 +23,7 @@
     { "path": "../template-editor" },
     { "path": "../interface-editor" },
     { "path": "../schema-editor" },
-    { "path": "../submission-library" }
+    { "path": "../submission-library" },
+    { "path": "../grading-engine" }
   ]
 }

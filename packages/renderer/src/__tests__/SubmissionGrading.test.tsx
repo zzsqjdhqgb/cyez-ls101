@@ -17,6 +17,33 @@ import { SubmissionLibraryPage } from '../features/submissions/SubmissionLibrary
 import { SubmissionLibraryProvider } from '../features/submissions/SubmissionLibraryProvider'
 import { SubmissionSettlementPage } from '../features/submissions/SubmissionSettlementPage'
 
+const aiAdapterMocks = vi.hoisted(() => ({
+  recognize: vi.fn().mockResolvedValue('recognized answer'),
+  generate: vi.fn().mockResolvedValue('{"score":4,"comment":"AI comment"}')
+}))
+
+vi.mock('../features/submissions/SubmissionAIRouterAdapter', () => ({
+  listSubmissionAIModels: vi.fn().mockResolvedValue({
+    speechRecognition: [
+      {
+        providerId: 'builtin-qwen3-asr',
+        providerName: '内置语音识别',
+        modelId: 'qwen3-asr-0.6b',
+        modelName: 'Qwen3 ASR 0.6B'
+      }
+    ],
+    text: [
+      {
+        providerId: 'provider',
+        providerName: 'Provider',
+        modelId: 'model'
+      }
+    ]
+  }),
+  createAIRouterSpeechRecognizer: vi.fn(() => ({ recognize: aiAdapterMocks.recognize })),
+  createAIRouterTextGradingModel: vi.fn(() => ({ generate: aiAdapterMocks.generate }))
+}))
+
 afterEach(cleanup)
 
 beforeEach(() => {
@@ -107,6 +134,69 @@ describe('submission grading UI', () => {
     expect(await screen.findByRole('heading', { name: '结算页' })).toBeInTheDocument()
   })
 
+  it('runs the whole AI session before allowing unreviewed completion', async () => {
+    const workspace = gradingWorkspace()
+    const saveAIGradingRun = persistentAIRunMock(workspace)
+    const submitGradingResult = vi
+      .fn()
+      .mockResolvedValue(readyWorkspace(workspace, 4, 'AI comment'))
+    const repository = mockRepository({
+      startGrading: vi.fn().mockResolvedValue(workspace),
+      saveAIGradingRun,
+      submitGradingResult
+    })
+
+    renderWithRepository(repository, '/submissions/grading?submissionId=submission-1', [
+      <Route element={<SubmissionGradingPage />} key="grade" path="/submissions/grading" />,
+      <Route element={<h1>结算页</h1>} key="settlement" path="/submissions/settlement" />
+    ])
+
+    fireEvent.click(await screen.findByRole('button', { name: 'AI 评分' }))
+    fireEvent.click(await screen.findByRole('button', { name: '开始 AI 评分' }))
+    expect(await screen.findByText('AI 评分已完成')).toBeInTheDocument()
+    expect(submitGradingResult).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: '完成' }))
+    await waitFor(() =>
+      expect(submitGradingResult).toHaveBeenCalledWith('submission-1', 'reading-1', 'ai', {
+        score: 4,
+        comment: 'AI comment'
+      })
+    )
+    expect(await screen.findByRole('heading', { name: '结算页' })).toBeInTheDocument()
+  })
+
+  it('allows a three-decimal edit during full AI review', async () => {
+    const workspace = gradingWorkspace()
+    const submitGradingResult = vi
+      .fn()
+      .mockResolvedValue(readyWorkspace(workspace, 3.125, 'Reviewed'))
+    const repository = mockRepository({
+      startGrading: vi.fn().mockResolvedValue(workspace),
+      saveAIGradingRun: persistentAIRunMock(workspace),
+      submitGradingResult
+    })
+
+    renderWithRepository(repository, '/submissions/grading?submissionId=submission-1', [
+      <Route element={<SubmissionGradingPage />} key="grade" path="/submissions/grading" />,
+      <Route element={<h1>结算页</h1>} key="settlement" path="/submissions/settlement" />
+    ])
+
+    fireEvent.click(await screen.findByRole('button', { name: 'AI 评分' }))
+    fireEvent.click(await screen.findByRole('button', { name: '开始 AI 评分' }))
+    fireEvent.click(await screen.findByRole('button', { name: '全部审查' }))
+    fireEvent.change(await screen.findByLabelText('分数'), { target: { value: '3.125' } })
+    fireEvent.change(screen.getByLabelText('评语'), { target: { value: 'Reviewed' } })
+    fireEvent.click(screen.getByRole('button', { name: '确认本题' }))
+
+    await waitFor(() =>
+      expect(submitGradingResult).toHaveBeenCalledWith('submission-1', 'reading-1', 'ai', {
+        score: 3.125,
+        comment: 'Reviewed'
+      })
+    )
+  })
+
   it('separates unsettled submissions and settled batches and opens their report', async () => {
     const pending = libraryEntry('pending', null)
     const completed = libraryEntry('completed', completedSummary(), true)
@@ -127,7 +217,7 @@ describe('submission grading UI', () => {
       'aria-selected',
       'true'
     )
-    expect(screen.getByRole('button', { name: '重新评分' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '重新评分' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '删除作答记录' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '查看报告' }))
@@ -236,6 +326,7 @@ function mockRepository(
     settleSubmissions: vi.fn(),
     startGrading: vi.fn(),
     submitGradingResult: vi.fn(),
+    saveAIGradingRun: vi.fn(),
     getGradingRecord: vi.fn().mockResolvedValue(null),
     getReport: vi.fn(),
     ...overrides
@@ -261,10 +352,61 @@ function gradingWorkspace(): SubmissionGradingWorkspace {
       submissionId: 'submission-1',
       status: 'grading',
       items: [],
+      aiRuns: [],
       totalScore: 0,
       maxScore: 5
     },
     inputs: [input]
+  }
+}
+
+function persistentAIRunMock(workspace: SubmissionGradingWorkspace) {
+  return vi.fn(
+    async (
+      _submissionId: string,
+      instanceId: string,
+      run: Omit<SubmissionGradingWorkspace['grading']['aiRuns'][number], 'instanceId' | 'updatedAt'>
+    ) => {
+      const next = {
+        ...workspace,
+        grading: {
+          ...workspace.grading,
+          aiRuns: [
+            {
+              instanceId,
+              ...structuredClone(run),
+              updatedAt: '2026-08-10T03:00:00Z'
+            }
+          ]
+        }
+      }
+      workspace.grading = next.grading
+      return next
+    }
+  )
+}
+
+function readyWorkspace(
+  workspace: SubmissionGradingWorkspace,
+  score: number,
+  comment: string
+): SubmissionGradingWorkspace {
+  return {
+    ...workspace,
+    grading: {
+      ...workspace.grading,
+      status: 'ready',
+      totalScore: score,
+      items: [
+        {
+          instanceId: 'reading-1',
+          engine: 'ai',
+          result: { score, comment },
+          gradedAt: '2026-08-10T03:00:00Z'
+        }
+      ],
+      readyAt: '2026-08-10T03:00:00Z'
+    }
   }
 }
 

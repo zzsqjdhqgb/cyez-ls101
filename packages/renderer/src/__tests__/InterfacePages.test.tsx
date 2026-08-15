@@ -857,7 +857,9 @@ describe('Interface pages', () => {
       'asset://local/questionImage-saved.png'
     )
 
-    fireEvent.click(screen.getByRole('button', { name: '移除图片' }))
+    const removeImageButton = screen.getByRole('button', { name: '移除图片' })
+    await waitFor(() => expect(removeImageButton).toBeEnabled())
+    fireEvent.click(removeImageButton)
     expect(screen.getByDisplayValue('新的图片提示词')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '保存' })).toBeDisabled()
     expect(screen.queryByAltText('picture预览')).not.toBeInTheDocument()

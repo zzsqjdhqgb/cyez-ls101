@@ -80,6 +80,7 @@ test(
       await page.getByRole('button', { name: '开始评分（2）' }).click()
 
       await expect(page.getByRole('navigation', { name: '主导航' })).toHaveCount(0)
+      await page.getByRole('button', { name: '人工评分' }).click()
       await expect(page.getByText('请朗读句子。')).toBeVisible()
       await page.getByLabel('分数').fill('4.5')
       await page.getByLabel('评语').fill('发音清晰，节奏自然。')
@@ -115,6 +116,7 @@ test(
     await test.step('再次进入结算并将两份作答原子结算为一个批次', async () => {
       await page.getByRole('checkbox', { name: '全选' }).check()
       await page.getByRole('button', { name: '开始评分（2）' }).click()
+      await page.getByRole('button', { name: '人工评分' }).click()
       await expect(page.getByRole('heading', { name: '评分结算' })).toBeVisible()
       await page.getByRole('button', { name: '本次结算（2）' }).click()
 

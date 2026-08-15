@@ -704,6 +704,20 @@ test('AR-18 generates an API image end to end with prompt and dimensions', async
     prompt: 'A green circle',
     size: '256x128'
   })
+
+  await saveImageProvider(imageProvider('compatible-image-runtime', 'mock-no-response-format'))
+  const compatibleEvent = await collectImage('compatible-image-runtime', 'mock-no-response-format')
+  expect(compatibleEvent.type).toBe('result')
+  const compatibleRequests = mockServer
+    .allRequests()
+    .filter(
+      (request) =>
+        request.path === '/v1/images/generations' &&
+        request.body.model === 'mock-no-response-format'
+    )
+  expect(compatibleRequests).toHaveLength(2)
+  expect(compatibleRequests[0]?.body.response_format).toBe('b64_json')
+  expect(compatibleRequests[1]?.body).not.toHaveProperty('response_format')
 })
 
 test('AR-19 reports image failures and suppresses results after cancellation', async () => {

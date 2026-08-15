@@ -35,6 +35,8 @@ import {
   type AIRouterSpeechModelPackageImportResult,
   type AIRouterSpeechProviderConfigInput,
   type AIRouterSpeechProviderType,
+  type AIRouterSpeechRecognitionEvent,
+  type AIRouterSpeechRecognitionRequest,
   type AIRouterSpeechSynthesisEvent,
   type AIRouterSpeechSynthesisRequest,
   type AIRouterSpeechVoiceListInput,
@@ -143,6 +145,34 @@ const airouterBridge: AIRouterBridge = {
   },
   testSpeechConnection(request: AIRouterSpeechConnectionTestInput) {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.testSpeechConnection, request)
+  },
+  listSpeechRecognitionModels() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listRecognitionModels)
+  },
+  startSpeechRecognition(
+    request: AIRouterSpeechRecognitionRequest,
+    listener: (event: AIRouterSpeechRecognitionEvent) => void
+  ) {
+    const requestId = crypto.randomUUID()
+    let completed = false
+    const handler = (
+      _event: IpcRendererEvent,
+      id: string,
+      event: AIRouterSpeechRecognitionEvent
+    ): void => {
+      if (id !== requestId) return
+      if (event.type === 'result' || event.type === 'error') {
+        completed = true
+        ipcRenderer.removeListener(AIROUTER_CHANNELS.speechRecognitionEvent, handler)
+      }
+      listener(event)
+    }
+    ipcRenderer.on(AIROUTER_CHANNELS.speechRecognitionEvent, handler)
+    ipcRenderer.send(AIROUTER_CHANNELS.speechRecognitionStart, requestId, request)
+    return () => {
+      ipcRenderer.removeListener(AIROUTER_CHANNELS.speechRecognitionEvent, handler)
+      if (!completed) ipcRenderer.send(AIROUTER_CHANNELS.speechRecognitionAbort, requestId)
+    }
   },
   startSpeechSynthesis(
     request: AIRouterSpeechSynthesisRequest,

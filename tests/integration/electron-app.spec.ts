@@ -137,6 +137,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       'listSpeechModelPackages',
       'listSpeechModels',
       'listSpeechProviderConfigs',
+      'listSpeechRecognitionModels',
       'listSpeechVoices',
       'readImageProviderApiKey',
       'readProviderApiKey',
@@ -145,6 +146,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       'saveProviderConfig',
       'saveSpeechProviderConfig',
       'startImageGeneration',
+      'startSpeechRecognition',
       'startSpeechSynthesis',
       'startTextGeneration',
       'testConnection',
@@ -171,6 +173,7 @@ test('round-trips data through file, config, asset protocol, AI and clipboard IP
         airouter: {
           listImageProviderConfigs(): Promise<unknown[]>
           listProviderConfigs(): Promise<unknown[]>
+          listSpeechRecognitionModels(): Promise<unknown[]>
         }
         configStore: { invoke(channel: string, ...args: unknown[]): Promise<unknown> }
         fileStore: { invoke(channel: string, ...args: unknown[]): Promise<unknown> }
@@ -232,6 +235,7 @@ test('round-trips data through file, config, asset protocol, AI and clipboard IP
         imageProviders: await runtimeWindow.airouter.listImageProviderConfigs(),
         maximized: await runtimeWindow.windowControls.getMaximized(),
         providers: await runtimeWindow.airouter.listProviderConfigs(),
+        recognitionModels: await runtimeWindow.airouter.listSpeechRecognitionModels(),
         swapped,
         text,
         unsupportedChannelError
@@ -263,6 +267,14 @@ test('round-trips data through file, config, asset protocol, AI and clipboard IP
       ],
       maximized: false,
       providers: [],
+      recognitionModels: [
+        {
+          modelId: 'qwen3-asr-0.6b',
+          modelName: 'Qwen3 ASR 0.6B',
+          providerId: 'builtin-qwen3-asr',
+          providerName: '内置语音识别'
+        }
+      ],
       swapped: true,
       text: '{"ready":true}'
     })

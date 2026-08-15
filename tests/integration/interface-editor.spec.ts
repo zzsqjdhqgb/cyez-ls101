@@ -52,7 +52,7 @@ interface SeededDraft {
 
 const BUILTIN_KEY = 'shanghai-gaokao-speaking'
 const BUNDLED_INTERFACE_ID =
-  'sha256:20641a4a02ec151817fbd2dd20a82b6a127e87dae19c2bc01c003c2cb66f07d1'
+  'sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14'
 const BUNDLED_INTERFACE_PATH = path.join(
   process.cwd(),
   'resources/builtin/interface-editor/builtin/shanghai-gaokao-speaking/versions',
@@ -947,7 +947,9 @@ test('IE-13 drives the instance image field buttons end to end', async () => {
   await page.getByLabel('picture图像 Provider').selectOption({ label: 'mock-image' })
   await page.getByRole('button', { name: '生成图片' }).click()
   await expect(page.getByText('图片已生成，请保存题组')).toBeVisible()
-  await expect(page.getByAltText('picture预览')).toBeVisible()
+  const preview = page.getByAltText('picture预览')
+  await expect(preview).toBeVisible()
+  await expect(preview).toHaveCSS('object-fit', 'scale-down')
   await page.getByRole('button', { name: '保存' }).click()
   await expect(page.getByText('题组已保存')).toBeVisible()
   const saved = await readInstance(interfaceId)

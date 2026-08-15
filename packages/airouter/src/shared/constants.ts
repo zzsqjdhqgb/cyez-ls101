@@ -27,6 +27,10 @@ export const AIROUTER_CHANNELS = {
   speechSynthesisStart: 'airouter:speech-synthesis-start',
   speechSynthesisAbort: 'airouter:speech-synthesis-abort',
   speechSynthesisEvent: 'airouter:speech-synthesis-event',
+  listRecognitionModels: 'airouter:list-recognition-models',
+  speechRecognitionStart: 'airouter:speech-recognition-start',
+  speechRecognitionAbort: 'airouter:speech-recognition-abort',
+  speechRecognitionEvent: 'airouter:speech-recognition-event',
   generateStart: 'airouter:generate-start',
   generateAbort: 'airouter:generate-abort',
   generateEvent: 'airouter:generate-event'

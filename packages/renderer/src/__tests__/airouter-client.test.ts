@@ -173,6 +173,40 @@ describe('AIRouter renderer client', () => {
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
     expect(cancel).toHaveBeenCalled()
   })
+
+  it('returns speech recognition text and supports aborting it', async () => {
+    const cancel = vi.fn()
+    const bridge = bridgeWith({
+      startSpeechRecognition: vi.fn((_request, listener) => {
+        queueMicrotask(() => listener({ type: 'result', result: { text: 'recognized' } }))
+        return cancel
+      })
+    })
+    await expect(
+      createAIRouterClient(bridge).recognizeSpeech({
+        providerConfigId: 'builtin-qwen3-asr',
+        modelId: 'qwen3-asr-0.6b',
+        audio: { data: new Uint8Array([1]), mediaType: 'audio/webm' }
+      })
+    ).resolves.toEqual({ text: 'recognized' })
+    expect(cancel).toHaveBeenCalledOnce()
+
+    const pendingCancel = vi.fn()
+    const controller = new AbortController()
+    const pending = createAIRouterClient(
+      bridgeWith({ startSpeechRecognition: vi.fn(() => pendingCancel) })
+    ).recognizeSpeech(
+      {
+        providerConfigId: 'builtin-qwen3-asr',
+        modelId: 'qwen3-asr-0.6b',
+        audio: { data: new Uint8Array([1]), mediaType: 'audio/webm' }
+      },
+      { signal: controller.signal }
+    )
+    controller.abort()
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
+    expect(pendingCancel).toHaveBeenCalledOnce()
+  })
 })
 
 function bridgeWith(overrides: Partial<AIRouterBridge>): AIRouterBridge {
@@ -189,6 +223,19 @@ function bridgeWith(overrides: Partial<AIRouterBridge>): AIRouterBridge {
     readImageProviderApiKey: vi.fn(),
     listImageModels: vi.fn(),
     testImageConnection: vi.fn(),
+    listSpeechProviderConfigs: vi.fn(),
+    saveSpeechProviderConfig: vi.fn(),
+    deleteSpeechProviderConfig: vi.fn(),
+    readSpeechProviderApiKey: vi.fn(),
+    listSpeechModelPackages: vi.fn(),
+    importSpeechModelPackage: vi.fn(),
+    deleteSpeechModelPackage: vi.fn(),
+    listSpeechModels: vi.fn(),
+    listSpeechVoices: vi.fn(),
+    testSpeechConnection: vi.fn(),
+    listSpeechRecognitionModels: vi.fn(),
+    startSpeechRecognition: vi.fn(),
+    startSpeechSynthesis: vi.fn(),
     startTextGeneration: vi.fn(),
     startImageGeneration: vi.fn(),
     ...overrides

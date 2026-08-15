@@ -1355,6 +1355,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@ls101/grading-engine@workspace:packages/grading-engine":
+  version: 0.0.0-use.local
+  resolution: "@ls101/grading-engine@workspace:packages/grading-engine"
+  dependencies:
+    "@ls101/core-types": "workspace:*"
+    "@ls101/submission-library": "workspace:*"
+  languageName: unknown
+  linkType: soft
+
 "@ls101/interface-editor@workspace:*, @ls101/interface-editor@workspace:packages/interface-editor":
   version: 0.0.0-use.local
   resolution: "@ls101/interface-editor@workspace:packages/interface-editor"

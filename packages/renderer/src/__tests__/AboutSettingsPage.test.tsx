@@ -23,7 +23,9 @@ describe('AboutSettingsPage', () => {
     expect(screen.getByRole('heading', { name: '项目发起人' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '开发者' })).toBeInTheDocument()
     expect(screen.getByText('周飞')).toBeInTheDocument()
-    expect(screen.getByText('2027届学生 开发者')).toBeInTheDocument()
+    expect(
+      screen.getByText('开发者 · 上海市曹杨第二中学 2027届永强班学生')
+    ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '应昊廷的 GitHub 主页' })).toHaveAttribute(
       'href',
       'https://github.com/zzsqjdhqgb'
