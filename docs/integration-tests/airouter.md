@@ -176,7 +176,7 @@ xvfb-run -a yarn test:playwright:electron tests/integration/airouter.spec.ts
 
 操作流程：保存 API 图像 Provider，通过 preload 提交提示词和 `256x128` 尺寸并等待 result 事件。
 
-测试内容：请求模型、提示词和尺寸正确；返回媒体类型为 PNG，renderer 收到的字节与 mock 原始 PNG 完全一致。
+测试内容：请求模型、提示词和尺寸正确；返回媒体类型为 PNG，renderer 收到的字节与 mock 原始 PNG 完全一致；Provider 拒绝 `response_format` 时会自动省略该参数重试。
 
 ### AR-19 图像生成错误、取消与结果限制
 

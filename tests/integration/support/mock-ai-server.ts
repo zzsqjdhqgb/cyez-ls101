@@ -372,6 +372,15 @@ export class MockAiServer {
 
   private handleImage(response: ServerResponse, request: RecordedAiRequest): void {
     const model = String(request.body.model ?? '')
+    if (model.includes('no-response-format') && 'response_format' in request.body) {
+      this.sendJson(response, 400, {
+        error: {
+          message:
+            'UnsupportedParamsError: Setting `response_format` is not supported by this model'
+        }
+      })
+      return
+    }
     if (model.includes('http-error')) {
       this.sendJson(response, 429, { error: { message: 'mock image quota exceeded' } })
       return

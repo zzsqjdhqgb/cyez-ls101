@@ -203,17 +203,104 @@ async function generate(
   signal?: AbortSignal
 ): Promise<AIRouterGeneratedImage> {
   const provider = createOpenAI({ apiKey, baseURL: config.baseUrl })
-  const result = await generateImageWithModel({
-    model: provider.image(modelId),
-    prompt,
-    size: size ? `${size.width}x${size.height}` : undefined,
-    abortSignal: signal
-  })
-  const data = new Uint8Array(result.image.uint8Array)
+  const imageSize = size ? `${size.width}x${size.height}` : undefined
+  let data: Uint8Array
+  try {
+    const result = await generateImageWithModel({
+      model: provider.image(modelId),
+      prompt,
+      size: imageSize,
+      abortSignal: signal
+    })
+    data = new Uint8Array(result.image.uint8Array)
+  } catch (error) {
+    if (!isUnsupportedResponseFormatError(error)) throw error
+    data = await generateWithoutResponseFormat(
+      config.baseUrl,
+      apiKey,
+      modelId,
+      prompt,
+      imageSize,
+      signal
+    )
+  }
   const mediaType = detectImageMediaType(data)
   if (!mediaType) throw new Error('生成结果不是图片')
   if (data.byteLength > MAX_IMAGE_BYTES) throw new Error('生成图片不能超过 20 MB')
   return { data, mediaType }
+}
+
+function isUnsupportedResponseFormatError(error: unknown): boolean {
+  const candidate = error as { message?: unknown; responseBody?: unknown }
+  const details = [candidate?.message, candidate?.responseBody]
+    .filter((value): value is string => typeof value === 'string')
+    .join('\n')
+  return /response_format/i.test(details) && /(unsupportedparams|not supported)/i.test(details)
+}
+
+async function generateWithoutResponseFormat(
+  baseUrl: string,
+  apiKey: string,
+  modelId: string,
+  prompt: string,
+  size: string | undefined,
+  signal: AbortSignal | undefined
+): Promise<Uint8Array> {
+  const response = await fetch(`${baseUrl}/images/generations`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({ model: modelId, prompt, n: 1, size }),
+    signal
+  })
+  const text = await response.text()
+  if (!response.ok) throw new Error(imageApiError(response.status, text))
+
+  let payload: unknown
+  try {
+    payload = JSON.parse(text)
+  } catch {
+    throw new Error('图像 Provider 返回了无效的 JSON')
+  }
+  const image = firstCompatibleImage(payload)
+  if (image?.b64Json) return new Uint8Array(Buffer.from(image.b64Json, 'base64'))
+  if (image?.url) return downloadGeneratedImage(image.url, signal)
+  throw new Error('图像 Provider 未返回可用的图片数据')
+}
+
+function firstCompatibleImage(payload: unknown): { b64Json?: string; url?: string } | null {
+  if (!payload || typeof payload !== 'object') return null
+  const data = (payload as { data?: unknown }).data
+  if (!Array.isArray(data) || !data[0] || typeof data[0] !== 'object') return null
+  const image = data[0] as { b64_json?: unknown; url?: unknown }
+  return {
+    b64Json: typeof image.b64_json === 'string' && image.b64_json ? image.b64_json : undefined,
+    url: typeof image.url === 'string' && image.url ? image.url : undefined
+  }
+}
+
+async function downloadGeneratedImage(
+  url: string,
+  signal: AbortSignal | undefined
+): Promise<Uint8Array> {
+  const response = await fetch(url, { signal })
+  if (!response.ok) throw new Error(`下载生成图片失败（HTTP ${response.status}）`)
+  return new Uint8Array(await response.arrayBuffer())
+}
+
+function imageApiError(status: number, body: string): string {
+  try {
+    const payload = JSON.parse(body) as { error?: { message?: unknown }; message?: unknown }
+    const message = payload.error?.message ?? payload.message
+    if (typeof message === 'string' && message) {
+      return `图像生成失败（HTTP ${status}）：${message}`
+    }
+  } catch {
+    // Use the status-only error below when the response is not JSON.
+  }
+  return `图像生成失败（HTTP ${status}）`
 }
 
 function detectImageMediaType(data: Uint8Array): string | null {
