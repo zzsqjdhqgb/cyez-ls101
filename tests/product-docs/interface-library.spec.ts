@@ -80,7 +80,15 @@ test(
     })
 
     await test.step('填写题组名称并选择手工填写后才正式创建', async () => {
-      await createInstance('校园生活第一套', '手工填写')
+      await page.getByRole('button', { name: '新建题组' }).click()
+      const dialog = page.getByRole('dialog', { name: '新建题组' })
+      await dialog.getByLabel('题组名称').fill('校园生活第一套')
+      await dialog.getByLabel('手工填写').check()
+      await testInfo.attach('命名创建题组', {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: 'image/png'
+      })
+      await dialog.getByRole('button', { name: '创建题组' }).click()
       await expect(page.getByRole('heading', { level: 1, name: '校园生活第一套' })).toBeVisible()
     })
 
@@ -146,7 +154,8 @@ test(
       { type: 'precondition', description: '已经创建一个尚未填写内容的题组。' }
     ]
   },
-  async () => {
+  // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture argument destructuring.
+  async ({}, testInfo) => {
     await openInterfaceDetails()
     await createInstance('离开保护题组', '手工填写')
 
@@ -154,6 +163,10 @@ test(
       await page.getByLabel('title 内容').fill('尚未保存的标题')
       await page.getByRole('button', { name: '返回题型详情' }).click()
       await expect(page.getByRole('alertdialog', { name: '放弃未保存的修改？' })).toBeVisible()
+      await testInfo.attach('未保存修改的离开确认', {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: 'image/png'
+      })
     })
 
     await test.step('取消离开会保留当前编辑状态', async () => {
@@ -214,6 +227,10 @@ test(
       await expect(page.getByLabel('title 内容')).toHaveValue('AI 标题')
       await expect(page.getByLabel('answer 内容')).toHaveValue('AI answer')
       await expect(page.getByRole('button', { name: '保存' })).toBeDisabled()
+      await testInfo.attach('AI 覆盖后的已保存结果', {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: 'image/png'
+      })
     })
   }
 )
@@ -273,6 +290,10 @@ test(
       await expect(page.getByRole('button', { name: '课堂口语题型', exact: true })).toBeVisible()
       await page.getByRole('tab', { name: '草稿' }).click()
       await expect(page.getByRole('button', { name: '课堂口语题型', exact: true })).toBeVisible()
+      await testInfo.attach('发布后保留的题型草稿', {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: 'image/png'
+      })
     })
   }
 )

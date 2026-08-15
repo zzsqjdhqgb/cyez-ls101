@@ -73,7 +73,7 @@ LS101 是一套覆盖英语听说考试完整工作流的全能桌面工具。
 ## 文档维护
 
 - [测试即文档约定](./testing.md)
-- [Playwright 自动生成的产品行为文档](./generated/README.md)
+- [Playwright 自动生成的产品行为文档索引](./generated/README.md)
 
 ## 待确认
 
