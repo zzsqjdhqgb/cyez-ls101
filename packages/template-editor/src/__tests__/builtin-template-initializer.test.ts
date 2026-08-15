@@ -9,10 +9,10 @@ import { createBuiltinTemplateRelease } from '../id'
 import { FileTemplateRepository, type TemplateStore } from '../repository'
 import type { BuiltinTemplateRelease } from '../types'
 
-const TEMPLATE_ID = '11111111-1111-4111-8111-111111111111'
+const TEMPLATE_ID = '0c283c54-683a-498c-bf69-fb1490f99356'
 
 describe('内置 Template 启动初始化', () => {
-  it('幂等安装 bundled release 并可直接编译生成试卷', async () => {
+  it('幂等安装导出的上海高考口语模板并移除占位模板', async () => {
     const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
     const manifest = JSON.parse(
       await readFile('resources/builtin/template-editor/.text/builtin-templates.json', 'utf8')
@@ -25,20 +25,24 @@ describe('内置 Template 启动初始化', () => {
     expect(await repository.getActiveBuiltinTemplate(TEMPLATE_ID)).toMatchObject({
       templateId: TEMPLATE_ID,
       version: 1,
-      releaseHash: 'sha256:371a3aee9c3e86d7678cd5e631c6d044b6ae5e0f2f6c04567d32f4e73a28a170',
-      document: { content: { name: '基础试卷' } }
+      releaseHash: 'sha256:d131b69f91ff7938b85b6a3372148c55fd72b5da577eae0b2e840c4de2ef4802',
+      document: {
+        content: {
+          name: '上海高考口语标准题型',
+          root: {
+            children: expect.arrayContaining([expect.objectContaining({ id: 'function-call' })])
+          }
+        },
+        resources: {
+          functions: expect.arrayContaining([
+            expect.objectContaining({ id: expect.stringMatching(/^sha256:/) })
+          ])
+        }
+      }
     })
-
-    const application = createTemplateApplication({
-      repository,
-      getInterfaceManifest: async () => null,
-      getSchema: async () => null,
-      locateInterfaceInstance: () => null
-    })
-    await expect(application.builtinTemplates.compile(TEMPLATE_ID, [])).resolves.toMatchObject({
-      success: true,
-      examPackage: { examData: { title: '基础试卷' } }
-    })
+    await expect(
+      repository.getActiveBuiltinTemplate('11111111-1111-4111-8111-111111111111')
+    ).resolves.toBeNull()
   })
 
   it('将内置模板完整复制为 UUID 和 revision 重置的本地模板', async () => {

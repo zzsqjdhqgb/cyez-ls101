@@ -26,7 +26,7 @@ const MISSING_TEMPLATE_ID = '30000000-0000-4000-8000-000000000003'
 const NEW_LIBRARY_ID = '70000000-0000-4000-8000-000000000007'
 const NEW_FUNCTION_ID = '80000000-0000-4000-8000-000000000008'
 const IMPORTED_TEMPLATE_ID = '90000000-0000-4000-8000-000000000009'
-const BUILTIN_TEMPLATE_ID = '11111111-1111-4111-8111-111111111111'
+const BUILTIN_TEMPLATE_ID = '0c283c54-683a-498c-bf69-fb1490f99356'
 const BUILTIN_COPY_ID = 'a0000000-0000-4000-8000-00000000000a'
 const INTERFACE_ID = `sha256:${'a'.repeat(64)}`
 
@@ -127,7 +127,7 @@ function application(document = template()): TemplateApplication {
         {
           templateId: BUILTIN_TEMPLATE_ID,
           version: 1,
-          name: '基础试卷',
+          name: '上海高考口语标准题型',
           description: '内置基础模板',
           available: true,
           errors: []
@@ -244,7 +244,7 @@ function application(document = template()): TemplateApplication {
         releaseHash: `sha256:${'b'.repeat(64)}`,
         document: {
           content: {
-            name: '基础试卷',
+            name: '上海高考口语标准题型',
             description: '内置基础模板',
             interfaces: [],
             root: {
@@ -266,7 +266,7 @@ function application(document = template()): TemplateApplication {
           editorState: { selectedNodeId: 'builtin-root' }
         }
       }),
-      createCopy: vi.fn().mockResolvedValue(template(0, BUILTIN_COPY_ID, '基础试卷')),
+      createCopy: vi.fn().mockResolvedValue(template(0, BUILTIN_COPY_ID, '上海高考口语标准题型')),
       validate: vi.fn(),
       compile: vi.fn(),
       preview: vi.fn()
@@ -555,11 +555,11 @@ describe('Template pages', () => {
     )
     expect(screen.getByRole('tab', { name: '我的模板' })).toHaveAttribute('aria-selected', 'false')
     expect(screen.getByRole('tab', { name: '函数库' })).toHaveAttribute('aria-selected', 'false')
-    expect(screen.getByText('基础试卷')).toBeInTheDocument()
+    expect(screen.getByText('上海高考口语标准题型')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '查看' })).toBeEnabled()
     expect(screen.getByRole('button', { name: '创建副本' })).toBeEnabled()
     expect(screen.getByRole('button', { name: '生成试卷' })).toBeEnabled()
-    const builtinRow = screen.getByText('基础试卷').closest('article')
+    const builtinRow = screen.getByText('上海高考口语标准题型').closest('article')
     expect(builtinRow).not.toBeNull()
     expect(within(builtinRow as HTMLElement).queryByRole('button', { name: '编辑' })).toBeNull()
     expect(screen.queryByRole('button', { name: '听力模板' })).not.toBeInTheDocument()
@@ -567,7 +567,7 @@ describe('Template pages', () => {
 
     await openTemplateBrowserTab('函数库')
     expect(screen.getByText('听力函数库')).toBeInTheDocument()
-    expect(screen.queryByText('基础试卷')).not.toBeInTheDocument()
+    expect(screen.queryByText('上海高考口语标准题型')).not.toBeInTheDocument()
 
     await openTemplateBrowserTab('我的模板')
     expect(screen.getByRole('button', { name: '听力模板' })).toBeInTheDocument()
@@ -639,7 +639,7 @@ describe('Template pages', () => {
       expect(app.builtinTemplates.createCopy).toHaveBeenCalledWith(BUILTIN_TEMPLATE_ID)
     )
     expect(screen.getByRole('tab', { name: '我的模板' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('button', { name: '基础试卷' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '上海高考口语标准题型' })).toBeInTheDocument()
   })
 
   it('opens exam generation directly from a local template row', async () => {
@@ -680,7 +680,9 @@ describe('Template pages', () => {
       </TemplateApplicationProvider>
     )
 
-    expect(await screen.findByRole('heading', { name: '基础试卷' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: '上海高考口语标准题型' })
+    ).toBeInTheDocument()
     expect(app.builtinTemplates.get).toHaveBeenCalledWith(BUILTIN_TEMPLATE_ID)
     expect(app.templates.get).not.toHaveBeenCalled()
     expect(screen.getByText('内置模板 · 只读')).toBeInTheDocument()
@@ -709,7 +711,7 @@ describe('Template pages', () => {
     const app = application()
     vi.mocked(app.browser.listBuiltinTemplates).mockResolvedValue([
       {
-        templateId: '11111111-1111-4111-8111-111111111111',
+        templateId: BUILTIN_TEMPLATE_ID,
         version: 2,
         name: '依赖缺失模板',
         description: '',
