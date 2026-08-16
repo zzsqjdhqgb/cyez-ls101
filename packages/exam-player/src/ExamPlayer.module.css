@@ -264,10 +264,11 @@
 }
 
 .micPanel {
-  width: 720px;
+  width: 780px;
+  padding: 38px 42px 34px;
+  text-align: left;
 }
 
-.micPanel p,
 .messageScreen p {
   margin: 12px 0 24px;
   color: #60706c;
@@ -278,9 +279,9 @@
 
 .micIcon {
   display: grid;
+  flex: 0 0 54px;
   width: 54px;
   height: 54px;
-  margin: 0 auto 18px;
   border: 1px solid #9ecbc6;
   border-radius: 50%;
   place-items: center;
@@ -293,9 +294,212 @@
   height: 26px;
 }
 
+.micHeader {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.micHeader h1 {
+  margin-top: 5px;
+}
+
+.micHeader p {
+  margin: 7px 0 0;
+  color: #60706c;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.micSteps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: 26px 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.micSteps li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  padding-bottom: 12px;
+  border-bottom: 3px solid #d8e1de;
+  color: #77837f;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.micSteps li > span {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  border: 1px solid #b8c5c1;
+  border-radius: 50%;
+  place-items: center;
+  box-sizing: border-box;
+  font-size: 12px;
+}
+
+.micSteps li > span svg {
+  width: 13px;
+  height: 13px;
+}
+
+.micSteps li[data-active] {
+  border-bottom-color: #c58b20;
+  color: #805b16;
+}
+
+.micSteps li[data-complete] {
+  border-bottom-color: #238d84;
+  color: #19776f;
+}
+
+.micSteps li[data-complete] > span {
+  border-color: #238d84;
+  color: #ffffff;
+  background: #238d84;
+}
+
+.micDeviceRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: end;
+  gap: 10px;
+}
+
+.iconButton {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid #b9c5c1;
+  border-radius: 4px;
+  place-items: center;
+  color: #26322f;
+  background: #f7f9f8;
+  cursor: pointer;
+}
+
+.iconButton:hover:not(:disabled) {
+  border-color: #8da09a;
+  background: #edf2f0;
+}
+
+.iconButton:focus-visible {
+  outline: 3px solid rgb(35 141 132 / 20%);
+  outline-offset: 1px;
+}
+
+.iconButton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.iconButton svg {
+  width: 18px;
+  height: 18px;
+}
+
+.micTestArea {
+  display: grid;
+  min-height: 164px;
+  margin-top: 22px;
+  padding: 20px 24px;
+  border-top: 1px solid #d8e1de;
+  border-bottom: 1px solid #d8e1de;
+  box-sizing: border-box;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  text-align: center;
+  background: #f7f9f8;
+}
+
+.micTestArea[data-state='recording'] {
+  color: #9b3434;
+  background: #fff8f7;
+}
+
+.micTestArea[data-state='confirmed'] {
+  background: #f3faf8;
+}
+
+.micTestArea strong {
+  color: #26322f;
+  font-size: 20px;
+}
+
+.micTestArea > span:not(.testResultIcon, .recordingIndicator) {
+  color: #687671;
+  font-size: 14px;
+}
+
+.micTestArea .secondaryButton {
+  margin-top: 5px;
+}
+
+.testResultIcon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  place-items: center;
+  color: #197f77;
+  background: #e1f1ee;
+}
+
+.testResultIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.recordingIndicator {
+  width: 16px;
+  height: 16px;
+  border: 5px solid #f4d9d9;
+  border-radius: 50%;
+  background: #c74747;
+  animation: recordingPulse 1.2s ease-out infinite;
+}
+
+@keyframes recordingPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(199 71 71 / 28%);
+  }
+
+  75%,
+  100% {
+    box-shadow: 0 0 0 10px rgb(199 71 71 / 0%);
+  }
+}
+
 .playback {
-  width: 100%;
-  margin-top: 18px;
+  display: none;
+}
+
+.micPanel > .formError {
+  margin-top: 14px;
+}
+
+.micActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 42px;
+  margin-top: 20px;
+}
+
+.micActions > div {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
 }
 
 .messageScreen {
