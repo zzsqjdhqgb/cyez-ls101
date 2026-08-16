@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { parentPort, workerData } from 'node:worker_threads'
+import { createRequire } from 'node:module'
 import type * as OnnxRuntime from 'onnxruntime-node'
 import { assessCtcPronunciation } from '@ls101/grading-engine/pronunciation'
 import type { AIRouterPronunciationAssessmentRequest } from '../shared'
@@ -14,15 +15,17 @@ interface WorkerConfig {
   ffmpegPath: string
 }
 
-const config = workerData as WorkerConfig
+const require = createRequire(import.meta.url)
+let workerConfig: WorkerConfig
 let runtime: typeof OnnxRuntime
 let session: OnnxRuntime.InferenceSession
 let vocabulary: Record<string, number>
 
-async function initialize(): Promise<void> {
-  // A top-level bundled import can resolve the Windows native addon through a \\?\ path and
-  // fail with ERROR_BAD_EXE_FORMAT. Loading it directly at worker initialization avoids that path.
-  runtime = await import('onnxruntime-node')
+async function initialize(config: WorkerConfig): Promise<void> {
+  // On Windows, loading the addon through the ESM/bundle import path can resolve it through a
+  // \\?\ path and fail with ERROR_BAD_EXE_FORMAT. Use the package's direct CommonJS path instead.
+  workerConfig = config
+  runtime = require('onnxruntime-node') as typeof OnnxRuntime
   vocabulary = JSON.parse(readFileSync(join(config.modelDir, 'vocab.json'), 'utf8')) as Record<
     string,
     number
@@ -65,7 +68,7 @@ async function assess(
 
 function decodeAudio(data: Uint8Array): Float32Array {
   const converted = spawnSync(
-    config.ffmpegPath,
+    workerConfig.ffmpegPath,
     [
       '-hide_banner',
       '-loglevel',
@@ -115,37 +118,70 @@ function normalizeSamples(samples: Float32Array): void {
 }
 
 function send(message: Record<string, unknown>): void {
-  parentPort?.postMessage(message)
+  if (parentPort) {
+    parentPort.postMessage(message)
+    return
+  }
+  if (typeof process.send === 'function') process.send(message)
 }
 
-const port = parentPort
-if (!port) throw new Error('发音评测 Worker 缺少 parentPort')
+function listen(): void {
+  const onMessage = (message: unknown): void => {
+    if (!message || typeof message !== 'object') return
+    const value = message as { type?: unknown; requestId?: unknown; request?: unknown }
+    if (
+      value.type !== 'assess' ||
+      typeof value.requestId !== 'string' ||
+      !value.request ||
+      typeof value.request !== 'object'
+    ) {
+      return
+    }
+    void assess(value.request as AIRouterPronunciationAssessmentRequest)
+      .then((result) => send({ type: 'result', requestId: value.requestId, result }))
+      .catch((error: unknown) =>
+        send({
+          type: 'error',
+          requestId: value.requestId,
+          message: error instanceof Error ? error.message : String(error)
+        })
+      )
+  }
+  if (parentPort) parentPort.on('message', onMessage)
+  else process.on('message', onMessage)
+}
 
-initialize()
-  .then(() => {
-    send({ type: 'ready' })
-    port.on('message', (message: unknown) => {
-      if (!message || typeof message !== 'object') return
-      const value = message as { type?: unknown; requestId?: unknown; request?: unknown }
-      if (
-        value.type !== 'assess' ||
-        typeof value.requestId !== 'string' ||
-        !value.request ||
-        typeof value.request !== 'object'
-      ) {
-        return
-      }
-      void assess(value.request as AIRouterPronunciationAssessmentRequest)
-        .then((result) => send({ type: 'result', requestId: value.requestId, result }))
-        .catch((error: unknown) =>
-          send({
-            type: 'error',
-            requestId: value.requestId,
-            message: error instanceof Error ? error.message : String(error)
-          })
-        )
+function start(config: WorkerConfig): void {
+  initialize(config)
+    .then(() => {
+      send({ type: 'ready' })
+      listen()
     })
+    .catch((error: unknown) => {
+      send({ type: 'init-error', message: error instanceof Error ? error.message : String(error) })
+    })
+}
+
+if (isWorkerConfig(workerData)) {
+  start(workerData)
+} else if (typeof process.send === 'function') {
+  process.once('message', (message: unknown) => {
+    if (!isWorkerConfig(message)) {
+      send({ type: 'init-error', message: '发音评测子进程初始化参数无效' })
+      return
+    }
+    start(message)
   })
-  .catch((error: unknown) => {
-    send({ type: 'init-error', message: error instanceof Error ? error.message : String(error) })
-  })
+} else {
+  throw new Error('发音评测 Worker 缺少启动通道')
+}
+
+function isWorkerConfig(value: unknown): value is WorkerConfig {
+  return (
+    isRecord(value) && typeof value.modelDir === 'string' && typeof value.ffmpegPath === 'string'
+  )
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}

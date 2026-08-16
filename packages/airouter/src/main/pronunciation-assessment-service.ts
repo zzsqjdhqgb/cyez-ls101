@@ -2,7 +2,8 @@ import { existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import { Worker } from 'node:worker_threads'
+import { fork, type ChildProcess } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import {
   BUILTIN_PRONUNCIATION_MODEL_ID,
   BUILTIN_PRONUNCIATION_PROVIDER_ID,
@@ -24,7 +25,7 @@ interface PendingRequest {
 }
 
 interface WorkerState {
-  worker: Worker
+  worker: ChildProcess
   pending: Map<string, PendingRequest>
   ready: Promise<void>
 }
@@ -72,7 +73,7 @@ export class AIRouterPronunciationAssessmentService {
       }
       state.pending.set(requestId, { resolve, reject, signal: options.signal, abort })
       options.signal?.addEventListener('abort', abort, { once: true })
-      state.worker.postMessage({ type: 'assess', requestId, request })
+      state.worker.send({ type: 'assess', requestId, request })
     })
   }
 
@@ -82,15 +83,25 @@ export class AIRouterPronunciationAssessmentService {
   }
 
   private async createWorker(): Promise<WorkerState> {
-    const worker = new Worker(
-      this.options.workerUrl ?? new URL('./pronunciation-assessment-worker.js', import.meta.url),
-      {
-        workerData: {
-          modelDir: join(this.options.assetsDir, MODEL_DIRECTORY),
-          ffmpegPath: this.options.ffmpegPath ?? resolveFfmpegPath()
-        }
-      }
+    const workerPath = unpackedPath(
+      fileURLToPath(
+        this.options.workerUrl ?? new URL('./pronunciation-assessment-worker.js', import.meta.url)
+      )
     )
+    const worker = fork(workerPath, [], {
+      env: {
+        ...process.env,
+        ELECTRON_RUN_AS_NODE: '1'
+      },
+      execPath: process.execPath,
+      serialization: 'advanced',
+      stdio: ['ignore', 'ignore', 'ignore', 'ipc']
+    })
+    worker.send({
+      type: 'initialize',
+      modelDir: join(this.options.assetsDir, MODEL_DIRECTORY),
+      ffmpegPath: this.options.ffmpegPath ?? resolveFfmpegPath()
+    })
     const state: WorkerState = { worker, pending: new Map(), ready: Promise.resolve() }
     state.ready = new Promise<void>((resolve, reject) => {
       worker.on('message', (message: unknown) => {
@@ -129,7 +140,7 @@ export class AIRouterPronunciationAssessmentService {
       return state
     } catch (error) {
       this.resetWorker(state, error)
-      await worker.terminate()
+      stopWorker(worker)
       throw error
     }
   }
@@ -141,7 +152,7 @@ export class AIRouterPronunciationAssessmentService {
     }
     state.pending.clear()
     if (this.statePromise) this.statePromise = null
-    void state.worker.terminate()
+    stopWorker(state.worker)
   }
 }
 
@@ -195,6 +206,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function stringValue(value: unknown, fallback: string): string {
   return typeof value === 'string' && value ? value : fallback
+}
+
+function stopWorker(worker: ChildProcess): void {
+  if (worker.connected) worker.disconnect()
+  if (!worker.killed) worker.kill()
+}
+
+function unpackedPath(value: string): string {
+  return value.replace(/([\\/])app\.asar([\\/])/, '$1app.asar.unpacked$2')
 }
 
 function abortError(): DOMException {

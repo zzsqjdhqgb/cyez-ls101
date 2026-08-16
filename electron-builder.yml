@@ -48,6 +48,7 @@ files:
   - 'out/**/*'
 asarUnpack:
   - resources/**
+  - out/main/pronunciation-assessment-worker.js
   - node_modules/onnxruntime-node/**
   - node_modules/sherpa-onnx-node/**
   - node_modules/sherpa-onnx-*/**
@@ -62,7 +63,7 @@ nsis:
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
   runAfterFinish: true
-  license: "LICENSE"
+  license: 'LICENSE'
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   icon: build/icon.png
