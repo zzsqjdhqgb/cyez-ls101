@@ -248,6 +248,8 @@ describe('submission grading UI', () => {
     )
     expect(await screen.findByRole('button', { name: '重新评分' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '删除作答记录' })).toBeInTheDocument()
+    expect(screen.getByText('批次 1')).toBeInTheDocument()
+    expect(screen.queryByText('batch-1')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '查看报告' }))
     expect(await screen.findByRole('heading', { name: '评分报告' })).toBeInTheDocument()

@@ -43,18 +43,18 @@ yarn test:product-docs
 xvfb-run -a yarn test:product-docs
 ```
 
-只有 `tests/product-docs/` 全部通过时，才会更新 `docs/product/generated/`。
+只有 `tests/product-docs/` 全部通过时，才会更新各产品模块或流程下的 `behaviors/`、按逻辑顺序组织的 [`docs/product/guide/`](product/guide/README.md) 和 `docs/product/coverage.md`。筛选运行只生成临时预览。
 完整的 `yarn test` 会在技术回归测试通过后复用已打包的 Electron 应用运行产品文档测试，不会重复构建应用。
 
 ## Renderer 组件测试
 
 配置文件为 `playwright.components.config.ts`，测试位于 `tests/components/`。Playwright 会启动 `tests/components/vite.config.ts` 指向的独立 Vite 页面；测试页直接导入 `packages/renderer/src` 中的组件，不加载 Electron、preload 或真实持久化服务。
 
-组件测试路径和审查范围维护在 [`docs/integration-tests/renderer-components.md`](./integration-tests/renderer-components.md)。
+组件测试数量、标题和源码入口由[Playwright 技术测试清单](./engineering/testing/inventory.md)自动生成。
 
 ## Electron 集成测试
 
-配置文件为 `playwright.config.ts`，测试位于 `tests/integration/`。`yarn test:playwright` 先调用 `build.js --dir --current-platform`，再直接启动 `dist/win-unpacked/CYEZ-LS101.exe` 或 `dist/linux-unpacked/cyez-ls101`。测试断言 `app.isPackaged`，不会使用开发 Electron 或 `out/` 入口。每条测试路径的操作流程、断言、数据隔离和覆盖边界统一维护在 [`docs/integration-tests/`](./integration-tests/README.md)。
+配置文件为 `playwright.config.ts`，测试位于 `tests/integration/`。`yarn test:playwright` 先调用 `build.js --dir --current-platform`，再直接启动 `dist/win-unpacked/CYEZ-LS101.exe` 或 `dist/linux-unpacked/cyez-ls101`。测试断言 `app.isPackaged`，不会使用开发 Electron 或 `out/` 入口。公共生命周期、数据隔离和维护规则参见[工程测试](./engineering/testing/README.md)。
 
 ## 测试产物
 

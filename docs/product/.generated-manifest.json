@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 4,
+  "owners": [
+    { "kind": "module", "slug": "workbench", "documentIds": ["WB-01", "WB-02"] },
+    { "kind": "journey", "slug": "content-preparation", "documentIds": ["PJ-01"] },
+    { "kind": "module", "slug": "submission-records", "documentIds": ["SR-01"] },
+    {
+      "kind": "module",
+      "slug": "interface-library",
+      "documentIds": ["IF-01", "IF-02", "IF-03", "IF-04", "IF-05", "IF-06"]
+    },
+    { "kind": "module", "slug": "template-library", "documentIds": ["TP-01"] },
+    { "kind": "module", "slug": "grading-units", "documentIds": ["GS-01"] },
+    { "kind": "journey", "slug": "exam-delivery", "documentIds": ["EX-01"] },
+    { "kind": "flow", "slug": "template-exam-generation", "documentIds": ["TG-01"] }
+  ],
+  "guideChapters": [
+    {
+      "slug": "understand-ls101",
+      "title": "认识 LS101 与完整工作流",
+      "journeyIds": [],
+      "operationIds": ["WB-01", "WB-02"]
+    },
+    {
+      "slug": "prepare-content",
+      "title": "准备评分标准与题型内容",
+      "journeyIds": ["PJ-01"],
+      "operationIds": ["GS-01", "IF-01", "IF-02", "IF-03", "IF-04", "IF-05", "IF-06"]
+    },
+    {
+      "slug": "build-generate-exam",
+      "title": "制作模板并生成试卷",
+      "journeyIds": [],
+      "operationIds": ["TG-01", "TP-01"]
+    },
+    {
+      "slug": "run-exam",
+      "title": "运行试卷并保存作答包",
+      "journeyIds": ["EX-01"],
+      "operationIds": []
+    },
+    {
+      "slug": "grade-settle",
+      "title": "评分、结算与查看结果",
+      "journeyIds": [],
+      "operationIds": ["SR-01"]
+    }
+  ],
+  "generatedFiles": [
+    ".generated-manifest.json",
+    "coverage.md",
+    "flows/template-exam-generation/behaviors/README.md",
+    "flows/template-exam-generation/behaviors/TG-01.md",
+    "flows/template-exam-generation/behaviors/assets/TG-01/generation-settings.png",
+    "flows/template-exam-generation/behaviors/assets/TG-01/saved-result.png",
+    "flows/template-exam-generation/behaviors/assets/TG-01/speech-failure.png",
+    "guide/01-understand-ls101.md",
+    "guide/02-prepare-content.md",
+    "guide/03-build-generate-exam.md",
+    "guide/04-run-exam.md",
+    "guide/05-grade-settle.md",
+    "guide/README.md",
+    "journeys/content-preparation/verified/PJ-01.md",
+    "journeys/content-preparation/verified/README.md",
+    "journeys/content-preparation/verified/assets/PJ-01/publish-confirmation.png",
+    "journeys/content-preparation/verified/assets/PJ-01/reopened-instance.png",
+    "journeys/content-preparation/verified/assets/PJ-01/saved-contract.png",
+    "journeys/exam-delivery/verified/EX-01.md",
+    "journeys/exam-delivery/verified/README.md",
+    "journeys/exam-delivery/verified/assets/EX-01/candidate-identity.png",
+    "journeys/exam-delivery/verified/assets/EX-01/submission-handoff.png",
+    "journeys/exam-delivery/verified/assets/EX-01/submission-saved.png",
+    "modules/grading-units/behaviors/GS-01.md",
+    "modules/grading-units/behaviors/README.md",
+    "modules/grading-units/behaviors/assets/GS-01/publish-data.png",
+    "modules/grading-units/behaviors/assets/GS-01/published-and-draft.png",
+    "modules/interface-library/behaviors/IF-01.md",
+    "modules/interface-library/behaviors/IF-02.md",
+    "modules/interface-library/behaviors/IF-03.md",
+    "modules/interface-library/behaviors/IF-04.md",
+    "modules/interface-library/behaviors/IF-05.md",
+    "modules/interface-library/behaviors/IF-06.md",
+    "modules/interface-library/behaviors/README.md",
+    "modules/interface-library/behaviors/assets/IF-01/creation-settings.png",
+    "modules/interface-library/behaviors/assets/IF-01/saved-instance.png",
+    "modules/interface-library/behaviors/assets/IF-03/unsaved-confirmation.png",
+    "modules/interface-library/behaviors/assets/IF-04/overwrite-confirmation.png",
+    "modules/interface-library/behaviors/assets/IF-04/saved-result.png",
+    "modules/interface-library/behaviors/assets/IF-05/publish-confirmation.png",
+    "modules/interface-library/behaviors/assets/IF-05/retained-draft.png",
+    "modules/interface-library/behaviors/assets/IF-06/replacement-result.png",
+    "modules/interface-library/behaviors/assets/IF-06/validation-error.png",
+    "modules/submission-records/behaviors/README.md",
+    "modules/submission-records/behaviors/SR-01.md",
+    "modules/submission-records/behaviors/assets/SR-01/settled-batch.png",
+    "modules/submission-records/behaviors/assets/SR-01/settlement-review.png",
+    "modules/submission-records/behaviors/assets/SR-01/unsettled-list.png",
+    "modules/template-library/behaviors/README.md",
+    "modules/template-library/behaviors/TP-01.md",
+    "modules/template-library/behaviors/assets/TP-01/saved-template.png",
+    "modules/workbench/behaviors/README.md",
+    "modules/workbench/behaviors/WB-01.md",
+    "modules/workbench/behaviors/WB-02.md",
+    "modules/workbench/behaviors/assets/WB-01/workbench-home.png"
+  ]
+}

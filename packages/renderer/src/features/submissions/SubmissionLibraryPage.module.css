@@ -244,12 +244,12 @@
 }
 
 .batchHeader small,
-.batchHeader code {
+.batchNumber {
   color: var(--color-text-faint);
   font-size: 10px;
 }
 
-.batchHeader code {
+.batchNumber {
   padding: 3px 6px;
   border-radius: 4px;
   background: var(--color-surface-subtle);
