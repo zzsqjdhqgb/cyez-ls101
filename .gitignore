@@ -8,6 +8,8 @@ out
 coverage
 playwright-report
 test-results
+docs/product/.product-docs-staging
+docs/product/**/*.product-docs-backup
 /assets/*
 !/assets/.gitkeep
 /model-assets/*

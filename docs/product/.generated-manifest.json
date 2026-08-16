@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 2,
+  "owners": [
+    { "kind": "module", "slug": "workbench", "behaviorIds": ["WB-01", "WB-02"] },
+    { "kind": "module", "slug": "submission-records", "behaviorIds": ["SR-01"] },
+    {
+      "kind": "module",
+      "slug": "interface-library",
+      "behaviorIds": ["IF-01", "IF-02", "IF-03", "IF-04", "IF-05", "IF-06"]
+    },
+    { "kind": "module", "slug": "template-library", "behaviorIds": ["TP-01"] },
+    { "kind": "module", "slug": "grading-units", "behaviorIds": ["GS-01"] },
+    { "kind": "flow", "slug": "take-exam", "behaviorIds": ["EX-01"] },
+    { "kind": "flow", "slug": "template-exam-generation", "behaviorIds": ["TG-01"] }
+  ],
+  "guideChapters": [
+    {
+      "slug": "understand-ls101",
+      "title": "认识 LS101 与完整工作流",
+      "behaviorIds": ["WB-01", "WB-02"]
+    },
+    {
+      "slug": "prepare-content",
+      "title": "准备评分标准与题型内容",
+      "behaviorIds": ["GS-01", "IF-01", "IF-02", "IF-03", "IF-04", "IF-05", "IF-06"]
+    },
+    {
+      "slug": "build-generate-exam",
+      "title": "制作模板并生成试卷",
+      "behaviorIds": ["TG-01", "TP-01"]
+    },
+    { "slug": "run-exam", "title": "运行试卷并保存作答包", "behaviorIds": ["EX-01"] },
+    { "slug": "grade-settle", "title": "评分、结算与查看结果", "behaviorIds": ["SR-01"] }
+  ],
+  "generatedFiles": [
+    ".generated-manifest.json",
+    "coverage.md",
+    "flows/take-exam/behaviors/EX-01.md",
+    "flows/take-exam/behaviors/README.md",
+    "flows/take-exam/behaviors/assets/EX-01/candidate-identity.png",
+    "flows/take-exam/behaviors/assets/EX-01/submission-saved.png",
+    "flows/template-exam-generation/behaviors/README.md",
+    "flows/template-exam-generation/behaviors/TG-01.md",
+    "flows/template-exam-generation/behaviors/assets/TG-01/generation-settings.png",
+    "flows/template-exam-generation/behaviors/assets/TG-01/saved-result.png",
+    "flows/template-exam-generation/behaviors/assets/TG-01/speech-failure.png",
+    "guide/01-understand-ls101.md",
+    "guide/02-prepare-content.md",
+    "guide/03-build-generate-exam.md",
+    "guide/04-run-exam.md",
+    "guide/05-grade-settle.md",
+    "guide/README.md",
+    "modules/grading-units/behaviors/GS-01.md",
+    "modules/grading-units/behaviors/README.md",
+    "modules/grading-units/behaviors/assets/GS-01/publish-data.png",
+    "modules/grading-units/behaviors/assets/GS-01/published-and-draft.png",
+    "modules/interface-library/behaviors/IF-01.md",
+    "modules/interface-library/behaviors/IF-02.md",
+    "modules/interface-library/behaviors/IF-03.md",
+    "modules/interface-library/behaviors/IF-04.md",
+    "modules/interface-library/behaviors/IF-05.md",
+    "modules/interface-library/behaviors/IF-06.md",
+    "modules/interface-library/behaviors/README.md",
+    "modules/interface-library/behaviors/assets/IF-01/creation-settings.png",
+    "modules/interface-library/behaviors/assets/IF-01/saved-instance.png",
+    "modules/interface-library/behaviors/assets/IF-03/unsaved-confirmation.png",
+    "modules/interface-library/behaviors/assets/IF-04/overwrite-confirmation.png",
+    "modules/interface-library/behaviors/assets/IF-04/saved-result.png",
+    "modules/interface-library/behaviors/assets/IF-05/publish-confirmation.png",
+    "modules/interface-library/behaviors/assets/IF-05/retained-draft.png",
+    "modules/interface-library/behaviors/assets/IF-06/replacement-result.png",
+    "modules/interface-library/behaviors/assets/IF-06/validation-error.png",
+    "modules/submission-records/behaviors/README.md",
+    "modules/submission-records/behaviors/SR-01.md",
+    "modules/submission-records/behaviors/assets/SR-01/settled-batch.png",
+    "modules/submission-records/behaviors/assets/SR-01/settlement-review.png",
+    "modules/submission-records/behaviors/assets/SR-01/unsettled-list.png",
+    "modules/template-library/behaviors/README.md",
+    "modules/template-library/behaviors/TP-01.md",
+    "modules/template-library/behaviors/assets/TP-01/saved-template.png",
+    "modules/workbench/behaviors/README.md",
+    "modules/workbench/behaviors/WB-01.md",
+    "modules/workbench/behaviors/WB-02.md",
+    "modules/workbench/behaviors/assets/WB-01/workbench-home.png"
+  ]
+}
