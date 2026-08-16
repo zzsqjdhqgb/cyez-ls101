@@ -6,7 +6,16 @@ import type {
   SubmissionCandidate
 } from '@ls101/core-types'
 import { collectSubmissionPackageFiles, encodeSubmissionPackage } from '@ls101/exam-package'
-import { AlertTriangle, Check, LogOut, Mic, Play, RefreshCw } from 'lucide-react'
+import {
+  AlertTriangle,
+  Check,
+  LogOut,
+  Mic,
+  Play,
+  RefreshCw,
+  RotateCcw,
+  Volume2
+} from 'lucide-react'
 import { assembleSubmission, type CapturedAudioAnswer } from './submission'
 import { ExamPageView } from './ExamPageView'
 import { loadExam, resourceKey, type LoadedExam } from './loading'
@@ -406,13 +415,7 @@ function ExamPlayerSession({
       )
     }
     if (phase === 'microphone') {
-      return (
-        <MicrophoneCheck
-          allowExit={allowExit}
-          onComplete={beginExam}
-          onExit={() => setExitConfirm(true)}
-        />
-      )
+      return <MicrophoneCheck allowExit={allowExit} onComplete={beginExam} onExit={onExit} />
     }
     if (phase === 'runtime-error') {
       return (
@@ -571,32 +574,57 @@ function MicrophoneCheck({
   onComplete(deviceId: string): void
   onExit(): void
 }): JSX.Element {
+  const TEST_DURATION_SECONDS = 3
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
   const [deviceId, setDeviceId] = useState('')
   const [loading, setLoading] = useState(true)
   const [recording, setRecording] = useState(false)
+  const [recordingRemaining, setRecordingRemaining] = useState(TEST_DURATION_SECONDS)
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null)
+  const [playing, setPlaying] = useState(false)
+  const [playbackComplete, setPlaybackComplete] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const recorderRef = useRef<MediaRecorder | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const recordingIntervalRef = useRef<number | null>(null)
+  const activeRef = useRef(true)
+
+  const clearPlayback = useCallback((): void => {
+    audioRef.current?.pause()
+    if (audioRef.current) audioRef.current.currentTime = 0
+    setPlaybackUrl(null)
+    setPlaying(false)
+    setPlaybackComplete(false)
+  }, [])
 
   const loadDevices = useCallback(async (): Promise<void> => {
+    setError(null)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       stream.getTracks().forEach((track) => track.stop())
+      if (!activeRef.current) return
       const available = (await navigator.mediaDevices.enumerateDevices()).filter(
-        (device) => device.kind === 'audioinput'
+        (device) => device.kind === 'audioinput' && device.deviceId
       )
+      if (!activeRef.current) return
       setDevices(available)
-      setDeviceId((current) => current || available[0]?.deviceId || '')
+      setDeviceId((current) =>
+        available.some((device) => device.deviceId === current)
+          ? current
+          : available[0]?.deviceId || ''
+      )
+      if (available.length === 0) setError('未检测到麦克风，请连接设备后重新检测。')
     } catch (reason) {
-      setError(errorDetails(reason instanceof Error ? reason : new Error(String(reason))))
+      if (activeRef.current) setError(microphoneErrorMessage(reason))
     } finally {
-      setLoading(false)
+      if (activeRef.current) setLoading(false)
     }
   }, [])
 
   const retryDevices = (): void => {
     setLoading(true)
-    setError(null)
+    clearPlayback()
     void loadDevices()
   }
 
@@ -605,23 +633,42 @@ function MicrophoneCheck({
     return () => window.clearTimeout(timeout)
   }, [loadDevices])
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    return () => {
       if (playbackUrl) URL.revokeObjectURL(playbackUrl)
-    },
-    [playbackUrl]
-  )
+    }
+  }, [playbackUrl])
+
+  useEffect(() => {
+    activeRef.current = true
+    return () => {
+      activeRef.current = false
+      if (recordingIntervalRef.current !== null) {
+        window.clearInterval(recordingIntervalRef.current)
+      }
+      if (recorderRef.current?.state === 'recording') {
+        recorderRef.current.stop()
+      }
+      streamRef.current?.getTracks().forEach((track) => track.stop())
+    }
+  }, [])
 
   const test = async (): Promise<void> => {
     setRecording(true)
+    setRecordingRemaining(TEST_DURATION_SECONDS)
     setError(null)
-    if (playbackUrl) URL.revokeObjectURL(playbackUrl)
-    setPlaybackUrl(null)
+    clearPlayback()
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: deviceId ? { deviceId: { exact: deviceId } } : true
       })
+      if (!activeRef.current) {
+        stream.getTracks().forEach((track) => track.stop())
+        return
+      }
+      streamRef.current = stream
       const recorder = new MediaRecorder(stream)
+      recorderRef.current = recorder
       const chunks: BlobPart[] = []
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) chunks.push(event.data)
@@ -631,68 +678,194 @@ function MicrophoneCheck({
           resolve(new Blob(chunks, { type: recorder.mimeType || 'audio/webm' }))
       })
       recorder.start()
-      await delay(2000)
-      recorder.stop()
+      const startedAt = performance.now()
+      recordingIntervalRef.current = window.setInterval(() => {
+        const elapsedSeconds = (performance.now() - startedAt) / 1000
+        setRecordingRemaining(Math.max(1, Math.ceil(TEST_DURATION_SECONDS - elapsedSeconds)))
+      }, 100)
+      await delay(TEST_DURATION_SECONDS * 1000)
+      if (recorder.state === 'recording') recorder.stop()
       const blob = await stopped
-      stream.getTracks().forEach((track) => track.stop())
       if (blob.size === 0) throw new Error('试录没有产生音频数据')
-      setPlaybackUrl(URL.createObjectURL(blob))
+      if (activeRef.current) setPlaybackUrl(URL.createObjectURL(blob))
     } catch (reason) {
-      setError(errorDetails(reason instanceof Error ? reason : new Error(String(reason))))
+      if (activeRef.current) {
+        setError(microphoneErrorMessage(reason))
+      }
     } finally {
-      setRecording(false)
+      if (recordingIntervalRef.current !== null) {
+        window.clearInterval(recordingIntervalRef.current)
+        recordingIntervalRef.current = null
+      }
+      streamRef.current?.getTracks().forEach((track) => track.stop())
+      streamRef.current = null
+      recorderRef.current = null
+      if (activeRef.current) setRecording(false)
     }
   }
 
+  const playTestRecording = async (): Promise<void> => {
+    if (!audioRef.current) return
+    setError(null)
+    audioRef.current.currentTime = 0
+    try {
+      await audioRef.current.play()
+    } catch (reason) {
+      setPlaying(false)
+      setError(microphoneErrorMessage(reason))
+    }
+  }
+
+  const selectDevice = (nextDeviceId: string): void => {
+    setDeviceId(nextDeviceId)
+    setError(null)
+    clearPlayback()
+  }
+
+  const testState = recording
+    ? 'recording'
+    : playbackComplete
+      ? 'confirmed'
+      : playbackUrl
+        ? 'playback'
+        : 'ready'
+
   return (
     <section className={styles.micPanel}>
-      <span className={styles.micIcon}>
-        <Mic aria-hidden="true" />
-      </span>
-      <h1>麦克风测试</h1>
-      <p>完成试录并确认回放声音正常后开始考试。</p>
-      <label>
-        <span>录音设备</span>
-        <select
-          disabled={loading || recording}
-          value={deviceId}
-          onChange={(event) => setDeviceId(event.target.value)}
+      <header className={styles.micHeader}>
+        <span className={styles.micIcon}>
+          <Mic aria-hidden="true" />
+        </span>
+        <div>
+          <span className={styles.eyebrow}>设备检查</span>
+          <h1>麦克风测试</h1>
+          <p>考试包含录音作答，请先确认录音和回放声音正常。</p>
+        </div>
+      </header>
+
+      <ol className={styles.micSteps} aria-label="麦克风检查进度">
+        <li data-complete={Boolean(deviceId) || undefined}>
+          <span>{deviceId ? <Check aria-hidden="true" /> : '1'}</span>选择设备
+        </li>
+        <li
+          data-active={testState === 'recording' || undefined}
+          data-complete={Boolean(playbackUrl) || undefined}
         >
-          {devices.map((device, index) => (
-            <option key={device.deviceId || index} value={device.deviceId}>
-              {device.label || `麦克风 ${index + 1}`}
-            </option>
-          ))}
-        </select>
-      </label>
-      {error ? <p className={styles.formError}>{error}</p> : null}
-      {playbackUrl ? <audio className={styles.playback} controls src={playbackUrl} /> : null}
-      <div className={styles.formActions}>
+          <span>{playbackUrl ? <Check aria-hidden="true" /> : '2'}</span>完成试录
+        </li>
+        <li
+          data-active={testState === 'playback' || undefined}
+          data-complete={playbackComplete || undefined}
+        >
+          <span>{playbackComplete ? <Check aria-hidden="true" /> : '3'}</span>回放确认
+        </li>
+      </ol>
+
+      <div className={styles.micDeviceRow}>
+        <label>
+          <span>录音设备</span>
+          <select
+            aria-busy={loading}
+            disabled={loading || recording}
+            value={deviceId}
+            onChange={(event) => selectDevice(event.target.value)}
+          >
+            {loading ? <option>正在检测设备...</option> : null}
+            {!loading && devices.length === 0 ? <option>未检测到麦克风</option> : null}
+            {devices.map((device, index) => (
+              <option key={device.deviceId} value={device.deviceId}>
+                {device.label || `麦克风 ${index + 1}`}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          aria-label="重新检测录音设备"
+          className={styles.iconButton}
+          disabled={loading || recording}
+          title="重新检测录音设备"
+          type="button"
+          onClick={retryDevices}
+        >
+          <RefreshCw aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className={styles.micTestArea} data-state={testState}>
+        {recording ? (
+          <>
+            <span className={styles.recordingIndicator} aria-hidden="true" />
+            <strong>正在录音</strong>
+            <span>请正常说话 · {recordingRemaining} 秒</span>
+          </>
+        ) : playbackUrl ? (
+          <>
+            <span className={styles.testResultIcon}>
+              {playbackComplete ? <Check aria-hidden="true" /> : <Volume2 aria-hidden="true" />}
+            </span>
+            <strong>{playbackComplete ? '回放完成' : '试录完成'}</strong>
+            <span>{playbackComplete ? '确认声音清晰后即可开始考试' : '请完整播放刚才的录音'}</span>
+            <audio
+              ref={audioRef}
+              className={styles.playback}
+              src={playbackUrl}
+              onEnded={() => {
+                setPlaying(false)
+                setPlaybackComplete(true)
+              }}
+              onError={() => {
+                setPlaying(false)
+                setError('试录回放失败，请重新试录。')
+              }}
+              onPlay={() => setPlaying(true)}
+            />
+            <PlayerButton
+              secondary
+              icon={Volume2}
+              disabled={playing}
+              onClick={() => void playTestRecording()}
+            >
+              {playing ? '正在回放' : playbackComplete ? '再听一次' : '播放试录'}
+            </PlayerButton>
+          </>
+        ) : (
+          <>
+            <span className={styles.testResultIcon}>
+              <Mic aria-hidden="true" />
+            </span>
+            <strong>{loading ? '正在检测麦克风' : '准备试录'}</strong>
+            <span>试录时长 {TEST_DURATION_SECONDS} 秒</span>
+            <PlayerButton icon={Mic} disabled={loading || !deviceId} onClick={() => void test()}>
+              开始试录
+            </PlayerButton>
+          </>
+        )}
+      </div>
+
+      {error ? (
+        <p className={styles.formError} role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      <div className={styles.micActions}>
         {allowExit ? (
           <PlayerButton secondary icon={LogOut} onClick={onExit}>
             退出
           </PlayerButton>
         ) : null}
-        {error ? (
-          <PlayerButton secondary icon={RefreshCw} onClick={retryDevices}>
-            重试设备
-          </PlayerButton>
-        ) : null}
-        <PlayerButton
-          secondary
-          icon={Mic}
-          disabled={loading || recording || !deviceId}
-          onClick={() => void test()}
-        >
-          {recording ? '正在试录' : '开始试录'}
-        </PlayerButton>
-        <PlayerButton
-          icon={Check}
-          disabled={!playbackUrl || recording}
-          onClick={() => onComplete(deviceId)}
-        >
-          声音正常，开始考试
-        </PlayerButton>
+        <div>
+          {playbackUrl && !recording ? (
+            <PlayerButton secondary icon={RotateCcw} onClick={() => void test()}>
+              重新试录
+            </PlayerButton>
+          ) : null}
+          {playbackComplete ? (
+            <PlayerButton icon={Check} onClick={() => onComplete(deviceId)}>
+              声音正常，开始考试
+            </PlayerButton>
+          ) : null}
+        </div>
       </div>
     </section>
   )
@@ -851,6 +1024,21 @@ function errorDetails(error: Error | null): string {
   if (!error) return '未知错误'
   const cause = 'cause' in error && error.cause instanceof Error ? `：${error.cause.message}` : ''
   return `${error.message}${cause}`
+}
+
+function microphoneErrorMessage(reason: unknown): string {
+  if (reason instanceof DOMException) {
+    if (reason.name === 'NotAllowedError' || reason.name === 'SecurityError') {
+      return '无法使用麦克风，请在系统设置中允许麦克风权限后重新检测。'
+    }
+    if (reason.name === 'NotFoundError' || reason.name === 'DevicesNotFoundError') {
+      return '未检测到麦克风，请连接设备后重新检测。'
+    }
+    if (reason.name === 'NotReadableError' || reason.name === 'TrackStartError') {
+      return '麦克风暂时无法使用，请关闭其他占用麦克风的应用后重试。'
+    }
+  }
+  return errorDetails(reason instanceof Error ? reason : new Error(String(reason)))
 }
 
 function copyArrayBuffer(data: Uint8Array): ArrayBuffer {

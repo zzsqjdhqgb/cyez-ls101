@@ -402,6 +402,105 @@ test('exports a submission containing a large resource through the renderer ZIP 
   })
 })
 
+test('guides microphone setup through recording and playback before the exam', async () => {
+  const examPath = path.join(userDataDir, 'microphone-check.lsexam')
+  const manifest = microphoneCheckExamManifest()
+  await writeFile(examPath, zipSync({ 'manifest.json': strToU8(JSON.stringify(manifest)) }))
+
+  await page.getByRole('link', { name: '试卷库' }).click()
+  await electronApp.evaluate(({ dialog }, filePath) => {
+    Object.defineProperty(dialog, 'showOpenDialog', {
+      configurable: true,
+      value: async () => ({ canceled: false, filePaths: [filePath] })
+    })
+  }, examPath)
+  await page.getByRole('button', { name: '导入试卷包' }).click()
+
+  await page.evaluate(() => {
+    const track = { stop: () => undefined }
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        enumerateDevices: async () => [
+          {
+            deviceId: 'integration-mic',
+            groupId: 'integration-group',
+            kind: 'audioinput',
+            label: '集成测试麦克风',
+            toJSON: () => ({})
+          }
+        ],
+        getUserMedia: async () => ({ getTracks: () => [track] })
+      }
+    })
+
+    class IntegrationMediaRecorder {
+      mimeType = 'audio/webm'
+      state: RecordingState = 'inactive'
+      ondataavailable: ((event: BlobEvent) => void) | null = null
+      onstop: (() => void) | null = null
+
+      start(): void {
+        this.state = 'recording'
+      }
+
+      stop(): void {
+        this.state = 'inactive'
+        this.ondataavailable?.({ data: new Blob(['integration recording']) } as BlobEvent)
+        this.onstop?.()
+      }
+    }
+
+    Object.defineProperty(window, 'MediaRecorder', {
+      configurable: true,
+      value: IntegrationMediaRecorder
+    })
+    Object.defineProperty(HTMLMediaElement.prototype, 'play', {
+      configurable: true,
+      value: function play(this: HTMLMediaElement): Promise<void> {
+        this.dispatchEvent(new Event('play'))
+        window.setTimeout(() => this.dispatchEvent(new Event('ended')), 20)
+        return Promise.resolve()
+      }
+    })
+  })
+
+  await page.getByRole('button', { name: '开始考试' }).click()
+  await page.getByLabel('姓名').fill('麦克风测试考生')
+  await page.getByLabel('考生号').fill('mic-001')
+  await page.getByRole('button', { name: '继续' }).click()
+
+  await expect(page.getByRole('heading', { name: '麦克风测试' })).toBeVisible()
+  await expect(page.getByRole('combobox', { name: '录音设备' })).toHaveValue('integration-mic')
+  await expect(page.getByText('准备试录')).toBeVisible()
+  await expect(page.getByRole('button', { name: '声音正常，开始考试' })).toHaveCount(0)
+
+  const panelBox = await page
+    .getByRole('heading', { name: '麦克风测试' })
+    .locator('xpath=ancestor::section')
+    .boundingBox()
+  const viewport = await page.evaluate(() => ({
+    height: window.innerHeight,
+    width: window.innerWidth
+  }))
+  expect(panelBox).not.toBeNull()
+  expect(panelBox?.x).toBeGreaterThanOrEqual(0)
+  expect(panelBox?.y).toBeGreaterThanOrEqual(0)
+  expect((panelBox?.x ?? 0) + (panelBox?.width ?? 0)).toBeLessThanOrEqual(viewport.width)
+  expect((panelBox?.y ?? 0) + (panelBox?.height ?? 0)).toBeLessThanOrEqual(viewport.height)
+
+  await page.getByRole('button', { name: '开始试录' }).click()
+  await expect(page.getByText('正在录音')).toBeVisible()
+  await expect(page.getByText('试录完成')).toBeVisible({ timeout: 5_000 })
+  await expect(page.getByRole('button', { name: '声音正常，开始考试' })).toHaveCount(0)
+  await page.getByRole('button', { name: '播放试录' }).click()
+  await expect(page.getByText('回放完成')).toBeVisible()
+  await expect(page.getByRole('button', { name: '声音正常，开始考试' })).toBeEnabled()
+
+  await page.getByRole('button', { name: '退出' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: '试卷库' })).toBeVisible()
+})
+
 test('persists appearance settings through the renderer and config store', async () => {
   await page.getByRole('link', { name: '设置' }).click()
   await page.getByRole('button', { name: /外观/ }).click()
@@ -713,6 +812,39 @@ function largeResourceExamManifest(): ExamPackage {
       },
       schemaUses: [],
       resources: { attachment }
+    }
+  }
+}
+
+function microphoneCheckExamManifest(): ExamPackage {
+  return {
+    format: 'ls101-exam',
+    formatVersion: 1,
+    packageId: '50000000-0000-4000-8000-000000000002',
+    examData: {
+      title: '麦克风检查测试',
+      player: {
+        pages: [
+          {
+            id: 'page-1',
+            content: [{ id: 'text-1', type: 'text', x: 10, y: 10, text: '请朗读' }],
+            timeline: [{ type: 'record', duration: 1, recordIndex: 0 }]
+          }
+        ],
+        recordingIndices: [0]
+      },
+      resources: {}
+    },
+    answerCapturePlan: { strings: [], audios: [] },
+    submissionTemplate: {
+      format: 'ls101-submission',
+      formatVersion: 1,
+      meta: {
+        examPackageId: '50000000-0000-4000-8000-000000000002',
+        examTitle: '麦克风检查测试'
+      },
+      schemaUses: [],
+      resources: {}
     }
   }
 }
