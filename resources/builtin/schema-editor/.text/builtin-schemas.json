@@ -270,6 +270,82 @@
         "inputDescriptions": {},
         "rubricMarkdown": "**考试要求**：1分钟准备，1分钟回答（共1题，共1.5分）。\n\n**评分标准**：\n\n  - 1.5分\n      - 能连贯流畅地表达思想\n      - 内容切题\n      - 语言正确\n  - 1分\n      - 基本能连贯完整地表达思想\n      - 能针对题目谈话\n  - 0.5分\n      - 能讲述几句，但内容不连贯\n      - 与题目的关系不大\n      - 语言结构或用词错误严重，使人理解困难\n  - 0分\n      - 没有答题或内容与题目无关"
       }
+    },
+    {
+      "formatVersion": 2,
+      "schemaId": "1e4e4080-c774-427d-a60a-149472def210",
+      "sourceDraftId": "f5ecb6df-1524-44fa-92eb-8be2c87f8e4f",
+      "structureHash": "sha256:d9e25c2dc0b0ce8760bc312ddaa4803d4c8c258cef5a8264e6ed5f00ed1e7b33",
+      "revision": 0,
+      "structure": {
+        "questionType": "objective",
+        "answerFormat": [
+          {
+            "answerId": "answer",
+            "type": "text"
+          }
+        ],
+        "templateInputs": [
+          {
+            "inputId": "question-description",
+            "type": "text",
+            "required": true
+          },
+          {
+            "inputId": "analysis",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      "data": {
+        "name": "上海高考 - 听力短对话选择题",
+        "description": "上海高考英语听力 Section A 短对话单项选择题，每题 1 分。",
+        "maxScore": 1,
+        "answerDescriptions": {
+          "answer": "选择答案"
+        },
+        "inputDescriptions": {},
+        "rubricMarkdown": "学生答案与标准答案一致得 1 分，否则得 0 分。"
+      }
+    },
+    {
+      "formatVersion": 2,
+      "schemaId": "c13cd52c-cb16-402b-9a75-b4c993b3eae6",
+      "sourceDraftId": "f5ecb6df-1524-44fa-92eb-8be2c87f8e4f",
+      "structureHash": "sha256:d9e25c2dc0b0ce8760bc312ddaa4803d4c8c258cef5a8264e6ed5f00ed1e7b33",
+      "revision": 0,
+      "structure": {
+        "questionType": "objective",
+        "answerFormat": [
+          {
+            "answerId": "answer",
+            "type": "text"
+          }
+        ],
+        "templateInputs": [
+          {
+            "inputId": "question-description",
+            "type": "text",
+            "required": true
+          },
+          {
+            "inputId": "analysis",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      "data": {
+        "name": "上海高考 - 听力语篇选择题",
+        "description": "上海高考英语听力 Section B 短文和长对话单项选择题，每题 1.5 分。",
+        "maxScore": 1.5,
+        "answerDescriptions": {
+          "answer": "选择答案"
+        },
+        "inputDescriptions": {},
+        "rubricMarkdown": "学生答案与标准答案一致得 1.5 分，否则得 0 分。"
+      }
     }
   ]
 }

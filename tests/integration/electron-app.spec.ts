@@ -331,7 +331,7 @@ test('navigates through every primary application area', async () => {
     'aria-selected',
     'true'
   )
-  await expect(page.getByText('内置', { exact: true })).toHaveCount(7)
+  await expect(page.getByText('内置', { exact: true })).toHaveCount(9)
   await expect(page.getByRole('button', { name: '删除评分单元' })).toHaveCount(0)
   await expectValidStyleBindings(page)
 
