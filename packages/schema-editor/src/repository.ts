@@ -181,20 +181,18 @@ export class FileSchemaRepository implements SchemaRepository {
     }
 
     const current = parseSchemaDefinition(storedValue)
-    if (
-      !current ||
-      current.schemaId !== definition.schemaId ||
-      !validateSchemaDefinition(current).valid ||
-      !(await verifySchemaDefinition(current))
-    ) {
-      throw invalidData(`Invalid published Schema: ${definition.schemaId}`)
-    }
-    if (current.structureHash !== definition.structureHash) {
-      throw new SchemaRepositoryError(
-        'IDENTITY_CONFLICT',
-        `Schema structure conflicts with registered definition: ${definition.schemaId}`,
-        { schemaId: definition.schemaId }
-      )
+    const currentIsValid =
+      current !== null &&
+      current.schemaId === definition.schemaId &&
+      validateSchemaDefinition(current).valid &&
+      (await verifySchemaDefinition(current))
+    if (!currentIsValid || current.structureHash !== definition.structureHash) {
+      const replacement = structuredClone(definition)
+      if (await scope.compareAndSwapText(SCHEMA_FILE, storedValue, replacement)) {
+        this.builtinSchemaIds.add(definition.schemaId)
+        return replacement
+      }
+      return this.registerBuiltinSchema(definition)
     }
     this.builtinSchemaIds.add(definition.schemaId)
     return current

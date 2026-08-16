@@ -168,6 +168,37 @@ describe('Schema domain', () => {
 })
 
 describe('Schema repository', () => {
+  it('replaces a persisted bundled Schema from an obsolete structure', async () => {
+    const manifest = JSON.parse(
+      await readFile('resources/builtin/schema-editor/.text/builtin-schemas.json', 'utf8')
+    ) as { schemas: unknown[] }
+    const bundled = parseSchemaDefinition(manifest.schemas[0])
+    if (!bundled) throw new Error('Bundled Schema fixture is invalid')
+
+    const legacyStructure: SchemaStructure = {
+      ...bundled.structure,
+      templateInputs: bundled.structure.templateInputs.filter(
+        (input) => input.inputId !== 'reference-answer'
+      )
+    }
+    const legacy = {
+      ...bundled,
+      structureHash: await deriveSchemaStructureHash(legacyStructure),
+      structure: legacyStructure
+    }
+    expect(await verifySchemaDefinition(legacy)).toBe(true)
+    expect(validateSchemaDefinition(legacy).valid).toBe(false)
+
+    const store = new MemorySchemaStore()
+    await store.scope('published').scope(bundled.schemaId).writeText('schema.json', legacy)
+    const repository = new FileSchemaRepository(store)
+
+    await initializeBuiltinSchemas(repository, manifest)
+
+    expect(await repository.getSchema(bundled.schemaId)).toEqual(bundled)
+    expect(await repository.listBuiltinSchemaIds()).toContain(bundled.schemaId)
+  })
+
   it('registers bundled schemas idempotently and preserves editable data', async () => {
     const repository = new FileSchemaRepository(new MemorySchemaStore())
     const manifest = JSON.parse(
