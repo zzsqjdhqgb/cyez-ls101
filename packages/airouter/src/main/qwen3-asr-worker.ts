@@ -21,11 +21,14 @@ const sherpaOnnx = require('sherpa-onnx-node') as {
   ) => {
     acceptWaveform(samples: Float32Array): void
     isEmpty(): boolean
-    front(): { samples: Float32Array; start: number }
+    front(enableExternalBuffer?: boolean): { samples: Float32Array; start: number }
     pop(): void
     flush(): void
   }
-  readWave(path: string): { samples: Float32Array; sampleRate: number }
+  readWave(
+    path: string,
+    enableExternalBuffer?: boolean
+  ): { samples: Float32Array; sampleRate: number }
 }
 
 interface WorkerConfig {
@@ -97,7 +100,8 @@ function recognize(data: Uint8Array, filename?: string): string {
     if (converted.status !== 0) {
       throw new Error(converted.stderr.trim() || `FFmpeg 退出（${converted.status}）`)
     }
-    const wave = sherpaOnnx.readWave(wavPath)
+    // Electron does not allow the external ArrayBuffers returned by sherpa-onnx by default.
+    const wave = sherpaOnnx.readWave(wavPath, false)
     if (wave.sampleRate !== 16000) throw new Error(`语音采样率无效：${wave.sampleRate}`)
     return recognizeWave(wave.samples, wave.sampleRate)
   } finally {
@@ -145,7 +149,7 @@ function drainVad(
   segments: Array<{ samples: Float32Array; start: number }>
 ): void {
   while (!vad.isEmpty()) {
-    const segment = vad.front()
+    const segment = vad.front(false)
     vad.pop()
     segments.push({ samples: segment.samples, start: segment.start })
   }

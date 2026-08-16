@@ -71,6 +71,12 @@ interface SpeechEvent {
   message?: string
 }
 
+interface SpeechRecognitionEvent {
+  type: 'result' | 'error'
+  result?: { text: string }
+  message?: string
+}
+
 interface SpeechTarget {
   providerConfigId: string
   modelId: string
@@ -242,6 +248,27 @@ async function collectSpeech(request: {
         window.airouter.startSpeechSynthesis(input, resolve)
       }),
     request
+  )
+}
+
+async function collectSpeechRecognition(audio: Uint8Array): Promise<SpeechRecognitionEvent> {
+  return page.evaluate(
+    (bytes) =>
+      new Promise((resolve) => {
+        window.airouter.startSpeechRecognition(
+          {
+            providerConfigId: 'builtin-qwen3-asr',
+            modelId: 'qwen3-asr-0.6b',
+            audio: {
+              data: new Uint8Array(bytes),
+              mediaType: 'audio/wav',
+              filename: 'silence.wav'
+            }
+          },
+          resolve
+        )
+      }),
+    Array.from(audio)
   )
 }
 
@@ -1426,6 +1453,14 @@ test('AR-32 executes the real Pocket TTS model package through the Electron stac
   expect(longResult.audio?.data.byteLength).toBeGreaterThan(44)
 })
 
+test('AR-32b executes Qwen3 ASR without external buffers in Electron', async () => {
+  test.setTimeout(180_000)
+  await expect(collectSpeechRecognition(createSilentWav())).resolves.toEqual({
+    type: 'result',
+    result: { text: '' }
+  })
+})
+
 test('AR-33 rejects invalid text and speech selections before making HTTP requests', async () => {
   await saveTextProvider({
     ...textProvider('text-validation', 'enabled-text'),
@@ -1541,6 +1576,26 @@ function createTestSpeechPackage(): Uint8Array {
     'manifest.json': strToU8(JSON.stringify(manifest)),
     ...Object.fromEntries(assets.map((asset) => [asset.path, bytes]))
   })
+}
+
+function createSilentWav(): Uint8Array {
+  const sampleRate = 16_000
+  const sampleCount = sampleRate
+  const bytes = new Uint8Array(44 + sampleCount * 2)
+  const view = new DataView(bytes.buffer)
+  bytes.set(strToU8('RIFF'), 0)
+  view.setUint32(4, bytes.byteLength - 8, true)
+  bytes.set(strToU8('WAVEfmt '), 8)
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true)
+  view.setUint16(22, 1, true)
+  view.setUint32(24, sampleRate, true)
+  view.setUint32(28, sampleRate * 2, true)
+  view.setUint16(32, 2, true)
+  view.setUint16(34, 16, true)
+  bytes.set(strToU8('data'), 36)
+  view.setUint32(40, sampleCount * 2, true)
+  return bytes
 }
 
 async function createRealPocketTtsPackage(): Promise<Uint8Array> {
