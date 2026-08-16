@@ -19,7 +19,10 @@ const definition: SchemaDefinition = {
   structure: {
     questionType: 'fixed-reading',
     answerFormat: [{ answerId: 'reading', type: 'fixed-speech' }],
-    templateInputs: [{ inputId: 'question-description', type: 'text', required: true }]
+    templateInputs: [
+      { inputId: 'question-description', type: 'text', required: true },
+      { inputId: 'reference-answer', type: 'text', required: true }
+    ]
   },
   data: {
     name: '固定朗读评分',
@@ -38,6 +41,10 @@ const use: SchemaUse = {
     'question-description': {
       type: 'string',
       parts: [{ type: 'literal', value: '请朗读' }]
+    },
+    'reference-answer': {
+      type: 'string',
+      parts: [{ type: 'literal', value: '朗读参考文本' }]
     }
   },
   answerBindings: {

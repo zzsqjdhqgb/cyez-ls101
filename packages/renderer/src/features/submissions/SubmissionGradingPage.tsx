@@ -14,7 +14,11 @@ import {
   type SubmissionAIGradingRunInput,
   type SubmissionGradingWorkspace
 } from '@ls101/submission-library'
-import { schemaBuiltinInputDescription } from '@ls101/schema-editor'
+import {
+  schemaBuiltinInputDescription,
+  SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID,
+  SCHEMA_QUESTION_DESCRIPTION_INPUT_ID
+} from '@ls101/schema-editor'
 import { ArrowLeft, Bot, Check, CircleAlert, LockKeyhole, RefreshCw, UserRound } from 'lucide-react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AIModelSelect, type AIModelOption } from '../../components/ai/AIModelSelect'
@@ -34,8 +38,6 @@ import {
 } from './reviewSampling'
 import { submissionErrorMessage } from './submissionUi'
 import styles from './SubmissionGradingPage.module.css'
-
-const QUESTION_DESCRIPTION_INPUT_ID = 'question-description'
 
 export function SubmissionGradingPage(): JSX.Element {
   const { submissionId: legacySubmissionId = '' } = useParams()
@@ -193,10 +195,10 @@ function HumanSubmissionGradingPage({
   }
 
   const question =
-    current.inputs.find((input) => input.inputId === QUESTION_DESCRIPTION_INPUT_ID)?.value ||
+    current.inputs.find((input) => input.inputId === SCHEMA_QUESTION_DESCRIPTION_INPUT_ID)?.value ||
     '无题目描述'
-  const auxiliaryInputs = current.inputs.filter(
-    (input) => input.inputId !== QUESTION_DESCRIPTION_INPUT_ID && input.inputId !== 'analysis'
+  const auxiliaryInputs = current.inputs.filter((input) =>
+    isVisibleGradingAuxiliaryInput(current, input.inputId)
   )
 
   return (
@@ -853,10 +855,10 @@ function AIReviewWorkspace({
 }): JSX.Element {
   const input = target.input
   const question =
-    input.inputs.find((item) => item.inputId === QUESTION_DESCRIPTION_INPUT_ID)?.value ??
+    input.inputs.find((item) => item.inputId === SCHEMA_QUESTION_DESCRIPTION_INPUT_ID)?.value ??
     '无题目描述'
-  const auxiliaryInputs = input.inputs.filter(
-    (item) => item.inputId !== QUESTION_DESCRIPTION_INPUT_ID && item.inputId !== 'analysis'
+  const auxiliaryInputs = input.inputs.filter((item) =>
+    isVisibleGradingAuxiliaryInput(input, item.inputId)
   )
   return (
     <div className={styles.page}>
@@ -1018,6 +1020,14 @@ function gradingInputLabel(input: GradingInput, inputId: string): string {
     schemaBuiltinInputDescription(input.schema.structure.questionType, inputId) ??
     input.schema.data.inputDescriptions[inputId] ??
     inputId
+  )
+}
+
+function isVisibleGradingAuxiliaryInput(input: GradingInput, inputId: string): boolean {
+  if (inputId === SCHEMA_QUESTION_DESCRIPTION_INPUT_ID) return false
+  return !(
+    input.schema.structure.questionType === 'objective' &&
+    inputId === SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID
   )
 }
 

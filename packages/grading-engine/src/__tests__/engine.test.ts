@@ -123,7 +123,10 @@ function gradingInput(): GradingInput {
           { answerId: 'reading', type: 'fixed-speech' },
           { answerId: 'talk', type: 'free-speech' }
         ],
-        templateInputs: [{ inputId: 'question-description', type: 'text', required: true }]
+        templateInputs: [
+          { inputId: 'question-description', type: 'text', required: true },
+          { inputId: 'reference-answer', type: 'text', required: true }
+        ]
       },
       data: {
         name: 'Speaking',
@@ -135,7 +138,10 @@ function gradingInput(): GradingInput {
         extraPromptMarkdown: 'Extra instruction'
       }
     },
-    inputs: [{ inputId: 'question-description', type: 'text', value: 'Question' }],
+    inputs: [
+      { inputId: 'question-description', type: 'text', value: 'Question' },
+      { inputId: 'reference-answer', type: 'text', value: 'Reference answer' }
+    ],
     answers: [
       {
         answerId: 'reading',

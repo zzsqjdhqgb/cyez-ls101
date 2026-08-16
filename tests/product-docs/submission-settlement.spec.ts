@@ -196,7 +196,10 @@ const readingSchema: SchemaDefinition = {
   structure: {
     questionType: 'fixed-reading',
     answerFormat: [{ answerId: 'reading', type: 'fixed-speech' }],
-    templateInputs: [{ inputId: 'question-description', type: 'text', required: true }]
+    templateInputs: [
+      { inputId: 'question-description', type: 'text', required: true },
+      { inputId: 'reference-answer', type: 'text', required: true }
+    ]
   },
   data: {
     name: '朗读题',
@@ -256,7 +259,14 @@ function readingSubmission(): SubmissionPackage {
       {
         instanceId: 'reading-use',
         schema: readingSchema,
-        inputs: [{ inputId: 'question-description', type: 'text', value: '请朗读句子。' }],
+        inputs: [
+          { inputId: 'question-description', type: 'text', value: '请朗读句子。' },
+          {
+            inputId: 'reference-answer',
+            type: 'text',
+            value: 'The weather is beautiful today.'
+          }
+        ],
         answers: [
           {
             answerId: 'reading',

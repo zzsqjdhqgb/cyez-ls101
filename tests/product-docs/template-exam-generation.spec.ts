@@ -68,6 +68,8 @@ test(
   async ({}, testInfo) => {
     await test.step('从试卷模板编辑器进入不带一级导航的生成设置页', async () => {
       await page.getByRole('link', { name: '试卷模板' }).click()
+      await expect(page.getByText('正在加载模板...')).toBeHidden()
+      await page.getByRole('tab', { name: '我的模板' }).click()
       await page.getByRole('button', { name: '生成流程文档模板', exact: true }).click()
       await page.getByRole('button', { name: '生成试卷' }).click()
 

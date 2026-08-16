@@ -120,6 +120,7 @@ describe('submission grading UI', () => {
 
     expect(await screen.findByText('请朗读句子。')).toBeInTheDocument()
     expect(screen.getByText('按准确度评分。')).toBeInTheDocument()
+    expect(screen.getByText('Expected reading.')).toBeInTheDocument()
     expect(screen.getByText('Read this sentence.')).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('分数'), { target: { value: '3.75' } })
@@ -195,6 +196,34 @@ describe('submission grading UI', () => {
         comment: 'Reviewed'
       })
     )
+  })
+
+  it('shows a subjective custom analysis input during full AI review', async () => {
+    const workspace = gradingWorkspace()
+    const input = workspace.inputs[0]
+    input.schema.structure.templateInputs.push({
+      inputId: 'analysis',
+      type: 'text',
+      required: true
+    })
+    input.schema.data.inputDescriptions.analysis = '审查依据'
+    input.inputs.push({ inputId: 'analysis', type: 'text', value: '主观题自定义分析内容' })
+    const repository = mockRepository({
+      startGrading: vi.fn().mockResolvedValue(workspace),
+      saveAIGradingRun: persistentAIRunMock(workspace),
+      submitGradingResult: vi.fn()
+    })
+
+    renderWithRepository(repository, '/submissions/grading?submissionId=submission-1', [
+      <Route element={<SubmissionGradingPage />} key="grade" path="/submissions/grading" />
+    ])
+
+    fireEvent.click(await screen.findByRole('button', { name: 'AI 评分' }))
+    fireEvent.click(await screen.findByRole('button', { name: '开始 AI 评分' }))
+    fireEvent.click(await screen.findByRole('button', { name: '全部审查' }))
+
+    expect(await screen.findByRole('heading', { name: '审查依据' })).toBeInTheDocument()
+    expect(screen.getByText('主观题自定义分析内容')).toBeInTheDocument()
   })
 
   it('separates unsettled submissions and settled batches and opens their report', async () => {
@@ -288,7 +317,7 @@ describe('submission grading UI', () => {
     )
 
     expect(await screen.findByRole('heading', { name: '评分结算' })).toBeInTheDocument()
-    expect(screen.getAllByText('可结算', { exact: true })).toHaveLength(2)
+    await waitFor(() => expect(screen.getAllByText('可结算', { exact: true })).toHaveLength(2))
     expect(screen.getByText('未评分', { exact: true })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '本次结算（1）' }))
 
@@ -430,7 +459,10 @@ function gradingInput(): GradingInput {
       structure: {
         questionType: 'fixed-reading',
         answerFormat: [{ answerId: 'answer', type: 'fixed-speech' }],
-        templateInputs: [{ inputId: 'question-description', type: 'text', required: true }]
+        templateInputs: [
+          { inputId: 'question-description', type: 'text', required: true },
+          { inputId: 'reference-answer', type: 'text', required: true }
+        ]
       },
       data: {
         name: '朗读题',
@@ -441,7 +473,10 @@ function gradingInput(): GradingInput {
         rubricMarkdown: '按准确度评分。'
       }
     },
-    inputs: [{ inputId: 'question-description', type: 'text', value: '请朗读句子。' }],
+    inputs: [
+      { inputId: 'question-description', type: 'text', value: '请朗读句子。' },
+      { inputId: 'reference-answer', type: 'text', value: 'Expected reading.' }
+    ],
     answers: [
       {
         answerId: 'answer',
