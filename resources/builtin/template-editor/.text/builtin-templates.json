@@ -3552,10 +3552,10 @@
     {
       "templateId": "261d2ad9-225e-41ac-a394-1887b912b917",
       "version": 1,
-      "releaseHash": "sha256:4e6e18350ea99933232c0f38841be2937feb996dc31a01f00ad86787149e2c85",
+      "releaseHash": "sha256:f7e2dbb9761f906fb9f4b6683b340d54f7481d50caa9af2a929161c7b634f2cc",
       "document": {
         "content": {
-          "name": "上海高考口语标准题型 - 朗读句子",
+          "name": "上海高考口语 - 朗读句子",
           "description": "",
           "interfaces": [
             {
@@ -4124,10 +4124,10 @@
     {
       "templateId": "c77c98f4-049d-4991-a5dc-3c39b7088100",
       "version": 1,
-      "releaseHash": "sha256:b503f4dbc86de7e1bfa140b5c24be2a55fcf1edda3aabbd9b3d9e267ebf87f8f",
+      "releaseHash": "sha256:36092d4de190804f0ffdc1a8930fd06fd9d0becdb4acf2b7d6d69336c881df0b",
       "document": {
         "content": {
-          "name": "上海高考口语标准题型 - 朗读短文",
+          "name": "上海高考口语 - 朗读短文",
           "description": "",
           "interfaces": [
             {
@@ -4577,10 +4577,10 @@
     {
       "templateId": "bf2dddd5-f85f-4fbe-8e2f-9f2aa86f5e05",
       "version": 1,
-      "releaseHash": "sha256:009396e47d81d625ae06e997919802c76612a75afc91f965667cbe46c7de9d8f",
+      "releaseHash": "sha256:9b7e1ffaa6fef924d7d9c432d25f39913b575a0c5431ec252ecf0ebb32d8c0f3",
       "document": {
         "content": {
-          "name": "上海高考口语标准题型 - 情景提问",
+          "name": "上海高考口语 - 情景提问",
           "description": "",
           "interfaces": [
             {
@@ -5218,10 +5218,10 @@
     {
       "templateId": "dccc9ca8-6b17-4b54-8fb8-bc5be6517e88",
       "version": 1,
-      "releaseHash": "sha256:3a51c3b28ad792f1123acfa4505932739ddd738f065489e623e79e06c1e463fb",
+      "releaseHash": "sha256:619f939518f3ca3c08a535dabe8beaed26e6db4f683b6b36ddf5d027f80428b9",
       "document": {
         "content": {
-          "name": "上海高考口语标准题型 - 看图说话",
+          "name": "上海高考口语 - 看图说话",
           "description": "",
           "interfaces": [
             {
@@ -6121,10 +6121,10 @@
     {
       "templateId": "490f6873-a39d-409e-954c-c345a90004a3",
       "version": 1,
-      "releaseHash": "sha256:a0fa57c5a5508d5315ac6bf1382361d43ca8deda5bc8208dfdba6a2fe905635c",
+      "releaseHash": "sha256:0d9a8af863ae131f4cee1e6698e1729e5f1624fdfe12c369419804ca306a313f",
       "document": {
         "content": {
-          "name": "上海高考口语标准题型 - 快速应答",
+          "name": "上海高考口语 - 快速应答",
           "description": "",
           "interfaces": [
             {
@@ -7038,10 +7038,10 @@
     {
       "templateId": "ef1dc645-eba5-4144-a82b-f52e24d5f925",
       "version": 1,
-      "releaseHash": "sha256:a55a749a579722677a4f4f86b8a2ffddf346fda41c0bae137ee52f1a673a37de",
+      "releaseHash": "sha256:280eab414bddc25ed25497c3e414b7fca053bd7af8e2dee8e8ce4f9bbb7db7a4",
       "document": {
         "content": {
-          "name": "上海高考口语标准题型 - 听短文回答",
+          "name": "上海高考口语 - 听短文回答",
           "description": "",
           "interfaces": [
             {

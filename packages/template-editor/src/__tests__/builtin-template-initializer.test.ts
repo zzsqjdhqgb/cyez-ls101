@@ -13,32 +13,32 @@ const TEMPLATE_ID = '0c283c54-683a-498c-bf69-fb1490f99356'
 const SECTION_TEMPLATES = [
   {
     templateId: '261d2ad9-225e-41ac-a394-1887b912b917',
-    name: '上海高考口语标准题型 - 朗读句子',
+    name: '上海高考口语 - 朗读句子',
     functionName: '朗读句子题组'
   },
   {
     templateId: 'c77c98f4-049d-4991-a5dc-3c39b7088100',
-    name: '上海高考口语标准题型 - 朗读短文',
+    name: '上海高考口语 - 朗读短文',
     functionName: '朗读短文题组'
   },
   {
     templateId: 'bf2dddd5-f85f-4fbe-8e2f-9f2aa86f5e05',
-    name: '上海高考口语标准题型 - 情景提问',
+    name: '上海高考口语 - 情景提问',
     functionName: '情景提问题组'
   },
   {
     templateId: 'dccc9ca8-6b17-4b54-8fb8-bc5be6517e88',
-    name: '上海高考口语标准题型 - 看图说话',
+    name: '上海高考口语 - 看图说话',
     functionName: '看图说话题组'
   },
   {
     templateId: '490f6873-a39d-409e-954c-c345a90004a3',
-    name: '上海高考口语标准题型 - 快速应答',
+    name: '上海高考口语 - 快速应答',
     functionName: '快速应答题组'
   },
   {
     templateId: 'ef1dc645-eba5-4144-a82b-f52e24d5f925',
-    name: '上海高考口语标准题型 - 听短文回答',
+    name: '上海高考口语 - 听短文回答',
     functionName: '听短文回答题组'
   }
 ] as const
