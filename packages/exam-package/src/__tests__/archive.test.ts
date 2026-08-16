@@ -1,4 +1,5 @@
 import type { ExamPackage, SchemaDefinition, SubmissionPackage } from '@ls101/core-types'
+import { verifySchemaDefinition } from '@ls101/schema-editor'
 import { strToU8, unzipSync, zipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
 import {
@@ -181,6 +182,21 @@ function submissionPackage(): SubmissionPackage {
 const pictureBytes = new Uint8Array([1, 2, 3])
 const recordingBytes = new Uint8Array([4, 5, 6, 7])
 
+function legacyExamArchive(exam: ExamPackage): Uint8Array {
+  return zipSync({
+    'manifest.json': strToU8(JSON.stringify(exam)),
+    [exam.examData.resources.picture.packagePath]: pictureBytes
+  })
+}
+
+function legacySubmissionArchive(submission: SubmissionPackage): Uint8Array {
+  return zipSync({
+    'manifest.json': strToU8(JSON.stringify(submission)),
+    [submission.resources.picture.packagePath]: pictureBytes,
+    [submission.resources['answer-audio-0'].packagePath]: recordingBytes
+  })
+}
+
 describe('ExamPackage ZIP archive', () => {
   it('往返保存 manifest 和考试资源', async () => {
     const exam = examPackage()
@@ -191,6 +207,32 @@ describe('ExamPackage ZIP archive', () => {
     const decoded = await decodeExamPackage(bytes)
     expect(decoded.exam).toEqual(exam)
     expect(decoded.resources.picture).toEqual(pictureBytes)
+  })
+
+  it('兼容缺少内置参考答案字段的旧考试包', async () => {
+    const exam = examPackage()
+    const readingUse = exam.submissionTemplate.schemaUses[1]
+    readingUse.schema = structuredClone(readingUse.schema)
+    readingUse.schema.structure.templateInputs = readingUse.schema.structure.templateInputs.filter(
+      (input) => input.inputId !== 'reference-answer'
+    )
+    readingUse.inputs = readingUse.inputs.filter((input) => input.inputId !== 'reference-answer')
+
+    expect(() => validateExamPackage(exam)).toThrow('Invalid ExamPackage manifest')
+    const bytes = await legacyExamArchive(exam)
+    const decoded = await decodeExamPackage(bytes)
+
+    expect(
+      decoded.exam.submissionTemplate.schemaUses[1].schema.structure.templateInputs
+    ).toContainEqual({ inputId: 'reference-answer', type: 'text', required: true })
+    expect(decoded.exam.submissionTemplate.schemaUses[1].inputs).toContainEqual({
+      inputId: 'reference-answer',
+      type: 'text',
+      value: 'Hello.'
+    })
+    expect(await verifySchemaDefinition(decoded.exam.submissionTemplate.schemaUses[1].schema)).toBe(
+      true
+    )
   })
 
   it('拒绝引用不存在播放器输出的捕获计划', () => {
@@ -268,6 +310,66 @@ describe('SubmissionPackage ZIP archive', () => {
       picture: pictureBytes,
       'answer-audio-0': recordingBytes
     })
+  })
+
+  it('兼容把参考答案作为自定义输入保存的旧作答包', async () => {
+    const submission = submissionPackage()
+    const readingUse = submission.schemaUses[1]
+    readingUse.schema.data.inputDescriptions['reference-answer'] = '参考答案'
+
+    expect(() => validateSubmissionPackage(submission)).toThrow(
+      'Invalid SubmissionPackage manifest'
+    )
+    const bytes = await legacySubmissionArchive(submission)
+    const decoded = await decodeSubmissionPackage(bytes)
+
+    expect(decoded.submission.schemaUses[1].schema.data.inputDescriptions).not.toHaveProperty(
+      'reference-answer'
+    )
+    expect(decoded.submission.schemaUses[1].inputs).toContainEqual({
+      inputId: 'reference-answer',
+      type: 'text',
+      value: 'Hello.'
+    })
+  })
+
+  it('旧主观题没有可恢复的参考答案时补充明确占位文本', async () => {
+    const submission = submissionPackage()
+    const readingUse = submission.schemaUses[1]
+    readingUse.schema.structure.questionType = 'freetalk'
+    readingUse.schema.structure.answerFormat = [{ answerId: 'sentence', type: 'free-speech' }]
+    readingUse.schema.structure.templateInputs = readingUse.schema.structure.templateInputs.filter(
+      (input) => input.inputId !== 'reference-answer'
+    )
+    readingUse.inputs = readingUse.inputs.filter((input) => input.inputId !== 'reference-answer')
+    readingUse.answers = [{ answerId: 'sentence', type: 'free-speech', audioAnswerIndex: 0 }]
+
+    const decoded = await decodeSubmissionPackage(await legacySubmissionArchive(submission))
+
+    expect(decoded.submission.schemaUses[1].inputs).toContainEqual({
+      inputId: 'reference-answer',
+      type: 'text',
+      value: '无参考答案'
+    })
+  })
+
+  it('兼容缺少参考答案的旧作答包，并拒绝其他缺失输入', async () => {
+    const submission = submissionPackage()
+    const readingUse = submission.schemaUses[1]
+    readingUse.schema.structure.templateInputs = readingUse.schema.structure.templateInputs.filter(
+      (input) => input.inputId !== 'reference-answer'
+    )
+    readingUse.inputs = readingUse.inputs.filter((input) => input.inputId !== 'reference-answer')
+    readingUse.schema.structure.templateInputs.push({
+      inputId: 'legacy-extra',
+      type: 'text',
+      required: true
+    })
+    readingUse.schema.data.inputDescriptions['legacy-extra'] = '旧自定义输入'
+
+    await expect(
+      decodeSubmissionPackage(await legacySubmissionArchive(submission))
+    ).rejects.toThrow('Invalid SubmissionPackage manifest')
   })
 
   it('拒绝越界答案索引和缺失音频资源引用', () => {

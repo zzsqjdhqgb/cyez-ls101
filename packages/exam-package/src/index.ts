@@ -1,5 +1,10 @@
 import { strToU8, unzip, zip } from 'fflate'
-import { parseSchemaDefinition, validateSchemaDefinition } from '@ls101/schema-editor'
+import {
+  deriveSchemaStructureHash,
+  parseSchemaDefinition,
+  SCHEMA_REFERENCE_ANSWER_INPUT_ID,
+  validateSchemaDefinition
+} from '@ls101/schema-editor'
 import type {
   ExamPackage,
   ResolvedChoiceViewport,
@@ -15,6 +20,7 @@ const MAX_UNCOMPRESSED_BYTES = 512 * 1024 * 1024
 const SAFE_RESOURCE_KEY = /^[A-Za-z0-9][A-Za-z0-9_.:%-]*$/
 const RESOURCE_URI = /^resource:([A-Za-z0-9][A-Za-z0-9_.:%-]*)$/
 const PACKAGE_URL_ROOT = new URL('https://exam-package.invalid/')
+const LEGACY_MISSING_REFERENCE_ANSWER = '无参考答案'
 
 type ResourcePathKind = 'static' | 'either'
 
@@ -46,7 +52,7 @@ export async function encodeExamPackage(
 
 export async function decodeExamPackage(data: Uint8Array): Promise<ExamArchive> {
   const files = await unzipArchive(data)
-  const exam = readJson<ExamPackage>(files, MANIFEST_PATH)
+  const exam = await upgradeLegacyArchiveSchemas(readJson<unknown>(files, MANIFEST_PATH))
   validateExamPackage(exam)
   const resources = readResources(files, exam.examData.resources)
   return { exam, resources }
@@ -86,7 +92,7 @@ export function collectSubmissionPackageFiles(
 
 export async function decodeSubmissionPackage(data: Uint8Array): Promise<SubmissionArchive> {
   const files = await unzipArchive(data)
-  const submission = readJson<SubmissionPackage>(files, MANIFEST_PATH)
+  const submission = await upgradeLegacyArchiveSchemas(readJson<unknown>(files, MANIFEST_PATH))
   validateSubmissionPackage(submission)
   const resources = readResources(files, submission.resources)
   return { submission, files: resources }
@@ -477,6 +483,67 @@ function isSubmissionSchemaUse(value: unknown): value is SubmissionSchemaUse {
 function isSchemaDefinition(value: unknown): value is SchemaDefinition {
   const parsed = parseSchemaDefinition(value)
   return parsed !== null && validateSchemaDefinition(parsed).valid
+}
+
+async function upgradeLegacyArchiveSchemas(value: unknown): Promise<unknown> {
+  if (!isRecord(value)) return value
+  const schemaUses =
+    value.format === 'ls101-exam' && isRecord(value.submissionTemplate)
+      ? value.submissionTemplate.schemaUses
+      : value.schemaUses
+  if (!Array.isArray(schemaUses)) return value
+  for (const use of schemaUses) await upgradeLegacySchemaUse(use)
+  return value
+}
+
+async function upgradeLegacySchemaUse(value: unknown): Promise<void> {
+  if (!isRecord(value)) return
+  const schema = parseSchemaDefinition(value.schema)
+  if (!schema || schema.structure.questionType === 'objective') return
+
+  const referenceInputId = SCHEMA_REFERENCE_ANSWER_INPUT_ID
+  const missingDefinition = !schema.structure.templateInputs.some(
+    (input) => input.inputId === referenceInputId
+  )
+  const legacyCustomDescription = Object.hasOwn(schema.data.inputDescriptions, referenceInputId)
+  if (!missingDefinition && !legacyCustomDescription) return
+
+  if (missingDefinition) {
+    schema.structure.templateInputs.push({
+      inputId: referenceInputId,
+      type: 'text',
+      required: true
+    })
+    schema.structureHash = await deriveSchemaStructureHash(schema.structure)
+  }
+  delete schema.data.inputDescriptions[referenceInputId]
+
+  if (
+    missingDefinition &&
+    Array.isArray(value.inputs) &&
+    !value.inputs.some((input) => isRecord(input) && input.inputId === referenceInputId)
+  ) {
+    value.inputs.push({
+      inputId: referenceInputId,
+      type: 'text',
+      value: legacyReferenceAnswer(value, schema.structure.questionType)
+    })
+  }
+}
+
+function legacyReferenceAnswer(
+  use: Record<string, unknown>,
+  questionType: SchemaDefinition['structure']['questionType']
+): string {
+  if (questionType !== 'fixed-reading' || !Array.isArray(use.answers)) {
+    return LEGACY_MISSING_REFERENCE_ANSWER
+  }
+  const texts = use.answers.flatMap((answer) =>
+    isRecord(answer) && answer.type === 'fixed-speech' && typeof answer.text === 'string'
+      ? [answer.text]
+      : []
+  )
+  return texts.length ? texts.join('\n') : LEGACY_MISSING_REFERENCE_ANSWER
 }
 
 function isPlayerExamData(value: unknown): boolean {
