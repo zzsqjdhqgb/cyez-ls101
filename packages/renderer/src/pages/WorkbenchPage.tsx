@@ -34,7 +34,6 @@ interface WorkbenchSnapshot {
   interfaceDrafts: number
   templates: number
   schemas: number
-  schemaDraftLibraries: number
   recent: RecentWorkItem[]
 }
 
@@ -46,7 +45,6 @@ const EMPTY_SNAPSHOT: WorkbenchSnapshot = {
   interfaceDrafts: 0,
   templates: 0,
   schemas: 0,
-  schemaDraftLibraries: 0,
   recent: []
 }
 
@@ -104,8 +102,7 @@ export function WorkbenchPage(): JSX.Element {
       interfaces.browser.listPublished(),
       interfaces.browser.listDrafts(),
       templates.browser.listTemplates(),
-      schemas.listSchemaIds(),
-      schemas.listDraftLibraryIds()
+      schemas.listSchemaIds()
     ])
       .then(
         ([
@@ -114,8 +111,7 @@ export function WorkbenchPage(): JSX.Element {
           publishedInterfaces,
           interfaceDrafts,
           templateItems,
-          schemaIds,
-          schemaDraftLibraryIds
+          schemaIds
         ]) => {
           if (!active) return
 
@@ -160,7 +156,6 @@ export function WorkbenchPage(): JSX.Element {
             interfaceDrafts: interfaceDrafts.length,
             templates: templateItems.length,
             schemas: schemaIds.length,
-            schemaDraftLibraries: schemaDraftLibraryIds.length,
             recent: [...recentExams, ...recentSubmissions, ...recentTemplates].slice(0, 4)
           })
         }
@@ -360,10 +355,8 @@ export function WorkbenchPage(): JSX.Element {
               <ArrowRight aria-hidden="true" />
             </button>
             <div className={styles.draftSummary}>
-              <span>未完成草稿</span>
-              <strong>
-                {loading ? '–' : snapshot.interfaceDrafts + snapshot.schemaDraftLibraries}
-              </strong>
+              <span>未完成题型</span>
+              <strong>{loading ? '–' : snapshot.interfaceDrafts}</strong>
             </div>
           </aside>
         </div>

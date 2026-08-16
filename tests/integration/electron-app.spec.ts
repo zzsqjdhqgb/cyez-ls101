@@ -327,8 +327,12 @@ test('navigates through every primary application area', async () => {
   ]) {
     await expect(page.getByRole('button', { name })).toBeVisible()
   }
-  await expect(page.getByText('内置')).toHaveCount(7)
-  await expect(page.getByRole('button', { name: '删除正式 Schema' })).toHaveCount(0)
+  await expect(page.getByRole('tab', { name: '内置评分单元' })).toHaveAttribute(
+    'aria-selected',
+    'true'
+  )
+  await expect(page.getByText('内置', { exact: true })).toHaveCount(7)
+  await expect(page.getByRole('button', { name: '删除评分单元' })).toHaveCount(0)
   await expectValidStyleBindings(page)
 
   await page.getByRole('link', { name: '设置' }).click()
@@ -656,6 +660,7 @@ test('exports a persisted formal Schema through the native save dialog', async (
 
   await page.getByRole('link', { name: '评分单元' }).click()
   await expect(page.getByText('正在加载 Schema...')).toBeHidden()
+  await page.getByRole('tab', { name: '我的评分单元' }).click()
   await page.getByRole('button', { name: schema.data.name }).click()
   await page.getByRole('button', { name: '导出' }).click()
 

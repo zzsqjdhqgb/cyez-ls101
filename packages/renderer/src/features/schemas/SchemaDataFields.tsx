@@ -9,12 +9,14 @@ import styles from './SchemaEditor.module.css'
 interface SchemaDataFieldsProps {
   data: SchemaData
   structure: SchemaStructure
+  readOnly?: boolean
   onChange(data: SchemaData): void
 }
 
 export function SchemaDataFields({
   data,
   structure,
+  readOnly = false,
   onChange
 }: SchemaDataFieldsProps): JSX.Element {
   const update = <Key extends keyof SchemaData>(key: Key, value: SchemaData[Key]): void => {
@@ -26,7 +28,11 @@ export function SchemaDataFields({
       <div className={styles.formGrid}>
         <label>
           <span>名称</span>
-          <input value={data.name} onChange={(event) => update('name', event.target.value)} />
+          <input
+            disabled={readOnly}
+            value={data.name}
+            onChange={(event) => update('name', event.target.value)}
+          />
         </label>
         <label>
           <span>满分</span>
@@ -34,6 +40,7 @@ export function SchemaDataFields({
             min="0"
             step="0.5"
             type="number"
+            disabled={readOnly}
             value={Number.isFinite(data.maxScore) ? data.maxScore : ''}
             onChange={(event) => update('maxScore', Number(event.target.value))}
           />
@@ -42,6 +49,7 @@ export function SchemaDataFields({
       <label>
         <span>描述</span>
         <textarea
+          disabled={readOnly}
           rows={3}
           value={data.description}
           onChange={(event) => update('description', event.target.value)}
@@ -56,6 +64,7 @@ export function SchemaDataFields({
               <code>{answer.answerId}</code>
             </span>
             <input
+              disabled={readOnly}
               value={data.answerDescriptions[answer.answerId] ?? ''}
               onChange={(event) =>
                 update('answerDescriptions', {
@@ -89,6 +98,7 @@ export function SchemaDataFields({
                 {input.required ? ' · 必填' : ' · 可选'}
               </span>
               <input
+                disabled={readOnly}
                 value={data.inputDescriptions[input.inputId] ?? ''}
                 onChange={(event) =>
                   update('inputDescriptions', {
@@ -106,6 +116,7 @@ export function SchemaDataFields({
         <label>
           <span>评分标准（Markdown）</span>
           <textarea
+            disabled={readOnly}
             className={styles.markdown}
             value={data.rubricMarkdown}
             onChange={(event) => update('rubricMarkdown', event.target.value)}
@@ -115,6 +126,7 @@ export function SchemaDataFields({
       <label>
         <span>AI 补充提示词（Markdown，可选）</span>
         <textarea
+          disabled={readOnly}
           className={styles.markdown}
           value={data.extraPromptMarkdown ?? ''}
           onChange={(event) => update('extraPromptMarkdown', event.target.value)}

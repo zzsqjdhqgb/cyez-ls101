@@ -92,14 +92,12 @@ afterEach(() => {
 })
 
 describe('Schema pages', () => {
-  it('lists formal schemas and draft libraries and creates a library', async () => {
-    const saveDraftLibrary = vi.fn(async (item: SchemaDraftLibraryDocument) => item)
+  it('lists schemas and opens a transient creation form', async () => {
+    const createSchema = vi.fn().mockResolvedValue(definition)
     const app = repository({
       listSchemaIds: vi.fn().mockResolvedValue([SCHEMA_ID]),
       getSchema: vi.fn().mockResolvedValue(definition),
-      listDraftLibraryIds: vi.fn().mockResolvedValue([LIBRARY_ID]),
-      getDraftLibrary: vi.fn().mockResolvedValue(library),
-      saveDraftLibrary
+      createSchema
     })
 
     render(
@@ -107,21 +105,19 @@ describe('Schema pages', () => {
         <MemoryRouter initialEntries={['/schemas']}>
           <Routes>
             <Route path="/schemas" element={<SchemaBrowserPage />} />
-            <Route path="/schemas/drafts/:libraryId" element={<SchemaDraftLibraryPage />} />
+            <Route path="/schemas/:schemaId" element={<SchemaDefinitionPage />} />
           </Routes>
         </MemoryRouter>
       </SchemaApplicationProvider>
     )
 
+    fireEvent.click(screen.getByRole('tab', { name: '我的评分单元' }))
     expect(await screen.findByRole('button', { name: '单句朗读评分' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '口语评分结构' })).toBeInTheDocument()
     expect(screen.getByText(/固定朗读 · 满分 10/)).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '新建草稿库' }))
-    await waitFor(() => expect(saveDraftLibrary).toHaveBeenCalledOnce())
-    expect(saveDraftLibrary.mock.calls[0][0]).toEqual(
-      expect.objectContaining({ name: '未命名草稿库', drafts: [] })
-    )
+    fireEvent.click(screen.getByRole('button', { name: '新建评分单元' }))
+    expect(await screen.findByRole('button', { name: '添加到我的评分单元' })).toBeInTheDocument()
+    expect(createSchema).not.toHaveBeenCalled()
   })
 
   it('marks builtin schemas and removes their deletion controls', async () => {
@@ -143,11 +139,12 @@ describe('Schema pages', () => {
     )
 
     expect(await screen.findByText('内置')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '删除正式 Schema' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '删除评分单元' })).not.toBeInTheDocument()
 
+    fireEvent.click(screen.getByRole('tab', { name: '内置评分单元' }))
     fireEvent.click(screen.getByRole('button', { name: '单句朗读评分' }))
     expect(await screen.findByText('内置 · r3')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '删除正式 Schema' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '删除评分单元' })).not.toBeInTheDocument()
     view.unmount()
   })
 
@@ -227,17 +224,22 @@ describe('Schema pages', () => {
     )
   })
 
-  it('keeps formal structure read-only and updates only formal data', async () => {
-    const updateSchemaData = vi
+  it('updates schema structure and data together', async () => {
+    const updateSchema = vi
       .fn()
       .mockImplementation(
-        async (_schemaId: string, _revision: number, data: SchemaDefinition['data']) => ({
+        async (
+          _schemaId: string,
+          _revision: number,
+          _structure: SchemaDefinition['structure'],
+          data: SchemaDefinition['data']
+        ) => ({
           ...definition,
           revision: 4,
           data
         })
       )
-    const app = repository({ getSchema: vi.fn().mockResolvedValue(definition), updateSchemaData })
+    const app = repository({ getSchema: vi.fn().mockResolvedValue(definition), updateSchema })
 
     render(
       <SchemaApplicationProvider repository={app}>
@@ -255,13 +257,14 @@ describe('Schema pages', () => {
     fireEvent.change(screen.getByLabelText('满分'), { target: { value: '15' } })
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
 
-    await waitFor(() => expect(updateSchemaData).toHaveBeenCalledOnce())
-    expect(updateSchemaData).toHaveBeenCalledWith(
+    await waitFor(() => expect(updateSchema).toHaveBeenCalledOnce())
+    expect(updateSchema).toHaveBeenCalledWith(
       SCHEMA_ID,
       3,
+      definition.structure,
       expect.objectContaining({ maxScore: 15 })
     )
-    expect(await screen.findByText('正式 Schema 已保存')).toBeInTheDocument()
+    expect(await screen.findByText('评分单元已保存')).toBeInTheDocument()
   })
 
   it('exports the saved formal Schema and blocks export while data is dirty', async () => {

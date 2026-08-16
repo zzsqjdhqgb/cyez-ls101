@@ -1,10 +1,13 @@
 import type { SchemaData, SchemaDefinition, SchemaDraftLibraryDocument } from '@ls101/core-types'
 import {
+  createDirectSchemaDefinition,
   createSchemaDefinition,
+  deriveSchemaStructureHash,
   isSchemaDraftId,
   isSchemaId,
   isSchemaLibraryId,
   updateSchemaDefinition,
+  updateDirectSchemaDefinition,
   verifySchemaDefinition
 } from './identity'
 import { parseSchemaDefinition, parseSchemaDraftLibrary } from './parser'
@@ -12,6 +15,7 @@ import {
   validateSchemaData,
   validateSchemaDefinition,
   validateSchemaDraft,
+  validateSchemaStructure,
   type SchemaValidationError
 } from './validation'
 
@@ -37,11 +41,21 @@ export interface SchemaRepository {
   listSchemaIds(): Promise<string[]>
   listBuiltinSchemaIds(): Promise<string[]>
   getSchema(schemaId: string): Promise<SchemaDefinition | null>
+  createSchema?(
+    structure: SchemaDefinition['structure'],
+    data: SchemaData
+  ): Promise<SchemaDefinition>
   registerBuiltinSchema(definition: SchemaDefinition): Promise<SchemaDefinition>
   publishDraft(libraryId: string, draftId: string, data: SchemaData): Promise<SchemaDefinition>
   updateSchemaData(
     schemaId: string,
     expectedRevision: number,
+    data: SchemaData
+  ): Promise<SchemaDefinition>
+  updateSchema?(
+    schemaId: string,
+    expectedRevision: number,
+    structure: SchemaDefinition['structure'],
     data: SchemaData
   ): Promise<SchemaDefinition>
   deleteSchema(schemaId: string): Promise<void>
@@ -161,6 +175,23 @@ export class FileSchemaRepository implements SchemaRepository {
     return definition
   }
 
+  async createSchema(
+    structure: SchemaDefinition['structure'],
+    data: SchemaData
+  ): Promise<SchemaDefinition> {
+    const definition = await createDirectSchemaDefinition(structure, data)
+    assertValid(validateSchemaDefinition(definition).errors)
+    const scope = this.published.scope(definition.schemaId)
+    if (!(await scope.compareAndSwapText(SCHEMA_FILE, null, definition))) {
+      throw new SchemaRepositoryError(
+        'IDENTITY_CONFLICT',
+        `Published Schema ID already exists: ${definition.schemaId}`,
+        { schemaId: definition.schemaId }
+      )
+    }
+    return definition
+  }
+
   async registerBuiltinSchema(definition: SchemaDefinition): Promise<SchemaDefinition> {
     if (
       !parseSchemaDefinition(definition) ||
@@ -232,6 +263,7 @@ export class FileSchemaRepository implements SchemaRepository {
     data: SchemaData
   ): Promise<SchemaDefinition> {
     assertId(isSchemaId(schemaId), 'schemaId', schemaId)
+    if (this.builtinSchemaIds.has(schemaId)) throw builtinSchemaError(schemaId)
     const current = await this.getSchema(schemaId)
     if (!current) throw notFound(`Published Schema not found: ${schemaId}`)
     if (current.revision !== expectedRevision) {
@@ -248,14 +280,38 @@ export class FileSchemaRepository implements SchemaRepository {
     return updated
   }
 
+  async updateSchema(
+    schemaId: string,
+    expectedRevision: number,
+    structure: SchemaDefinition['structure'],
+    data: SchemaData
+  ): Promise<SchemaDefinition> {
+    assertId(isSchemaId(schemaId), 'schemaId', schemaId)
+    if (this.builtinSchemaIds.has(schemaId)) throw builtinSchemaError(schemaId)
+    const current = await this.getSchema(schemaId)
+    if (!current) throw notFound(`Published Schema not found: ${schemaId}`)
+    if (current.revision !== expectedRevision) {
+      throw revisionConflict('Schema', schemaId, current.revision, expectedRevision)
+    }
+    assertValid(validateSchemaStructure(structure).errors)
+    assertValid(validateSchemaData(data, structure).errors)
+    if ((await deriveSchemaStructureHash(structure)) !== current.structureHash) {
+      throw invalidData('Schema structure is frozen after the first save')
+    }
+    const updated = await updateDirectSchemaDefinition(current, structure, data)
+    assertValid(validateSchemaDefinition(updated).errors)
+    const scope = this.published.scope(schemaId)
+    if (!(await scope.compareAndSwapText(SCHEMA_FILE, current, updated))) {
+      const latest = await this.getSchema(schemaId)
+      throw revisionConflict('Schema', schemaId, latest?.revision ?? 0, expectedRevision)
+    }
+    return updated
+  }
+
   async deleteSchema(schemaId: string): Promise<void> {
     assertId(isSchemaId(schemaId), 'schemaId', schemaId)
     if (this.builtinSchemaIds.has(schemaId)) {
-      throw new SchemaRepositoryError(
-        'BUILTIN_SCHEMA',
-        `Builtin Schema cannot be deleted: ${schemaId}`,
-        { schemaId }
-      )
+      throw builtinSchemaError(schemaId)
     }
     await this.published.scope(schemaId).clear()
   }
@@ -272,6 +328,14 @@ export class FileSchemaRepository implements SchemaRepository {
       providedRevision
     )
   }
+}
+
+function builtinSchemaError(schemaId: string): SchemaRepositoryError {
+  return new SchemaRepositoryError(
+    'BUILTIN_SCHEMA',
+    `Builtin Schema cannot be modified: ${schemaId}`,
+    { schemaId }
+  )
 }
 
 function assertValid(errors: readonly SchemaValidationError[]): void {

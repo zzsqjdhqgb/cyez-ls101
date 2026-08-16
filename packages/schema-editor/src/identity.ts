@@ -55,6 +55,25 @@ export async function createSchemaDefinition(
   }
 }
 
+/** Create a Schema directly from its complete structure and editable data. */
+export async function createDirectSchemaDefinition(
+  structure: SchemaStructure,
+  data: SchemaData
+): Promise<SchemaDefinition> {
+  const clonedStructure = structuredClone(structure)
+  return {
+    formatVersion: 2,
+    schemaId: createSchemaId(),
+    // Kept for compatibility with existing persisted definitions. Direct schemas do not
+    // expose or use this identifier as a user-facing draft.
+    sourceDraftId: createSchemaId(),
+    structureHash: await deriveSchemaStructureHash(clonedStructure),
+    revision: 0,
+    structure: clonedStructure,
+    data: structuredClone(data)
+  }
+}
+
 export function updateSchemaDefinition(
   definition: SchemaDefinition,
   data: SchemaData
@@ -63,6 +82,21 @@ export function updateSchemaDefinition(
     ...definition,
     revision: definition.revision + 1,
     structure: structuredClone(definition.structure),
+    data: structuredClone(data)
+  }
+}
+
+export async function updateDirectSchemaDefinition(
+  definition: SchemaDefinition,
+  structure: SchemaStructure,
+  data: SchemaData
+): Promise<SchemaDefinition> {
+  const clonedStructure = structuredClone(structure)
+  return {
+    ...definition,
+    revision: definition.revision + 1,
+    structure: clonedStructure,
+    structureHash: await deriveSchemaStructureHash(clonedStructure),
     data: structuredClone(data)
   }
 }

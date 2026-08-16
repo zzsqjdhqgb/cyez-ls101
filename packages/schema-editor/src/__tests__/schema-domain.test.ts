@@ -168,6 +168,40 @@ describe('Schema domain', () => {
 })
 
 describe('Schema repository', () => {
+  it('creates and updates a complete Schema without a draft', async () => {
+    const repository = new FileSchemaRepository(new MemorySchemaStore())
+    const created = await repository.createSchema(fixedReadingStructure(), schemaData())
+
+    expect(created.revision).toBe(0)
+    expect(created.data.name).toBe('朗读评分')
+    expect(created.sourceDraftId).not.toBe('')
+
+    const updated = await repository.updateSchema(
+      created.schemaId,
+      created.revision,
+      fixedReadingStructure(),
+      schemaData('已调整说明', 15)
+    )
+
+    expect(updated.revision).toBe(1)
+    expect(updated.structure).toEqual(created.structure)
+    expect(updated.structureHash).toBe(created.structureHash)
+
+    const changedStructure = createSchemaStructure('fixed-reading', [
+      ...fixedReadingStructure().answerFormat,
+      { answerId: 'sentence-3', type: 'fixed-speech' }
+    ])
+    await expect(
+      repository.updateSchema(updated.schemaId, updated.revision, changedStructure, {
+        ...schemaData('再次修改', 20),
+        answerDescriptions: {
+          ...schemaData('再次修改', 20).answerDescriptions,
+          'sentence-3': '第三句'
+        }
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_DATA' })
+  })
+
   it('replaces a persisted bundled Schema from an obsolete structure', async () => {
     const manifest = JSON.parse(
       await readFile('resources/builtin/schema-editor/.text/builtin-schemas.json', 'utf8')
@@ -199,7 +233,7 @@ describe('Schema repository', () => {
     expect(await repository.listBuiltinSchemaIds()).toContain(bundled.schemaId)
   })
 
-  it('registers bundled schemas idempotently and preserves editable data', async () => {
+  it('registers bundled schemas idempotently and keeps them immutable', async () => {
     const repository = new FileSchemaRepository(new MemorySchemaStore())
     const manifest = JSON.parse(
       await readFile('resources/builtin/schema-editor/.text/builtin-schemas.json', 'utf8')
@@ -224,14 +258,16 @@ describe('Schema repository', () => {
     )
 
     if (!sentenceSchema) throw new Error('Bundled sentence Schema was not found')
-    await repository.updateSchemaData(sentenceSchema.schemaId, 0, {
-      ...sentenceSchema.data,
-      description: '用户调整后的说明'
-    })
+    await expect(
+      repository.updateSchemaData(sentenceSchema.schemaId, 0, {
+        ...sentenceSchema.data,
+        description: '用户调整后的说明'
+      })
+    ).rejects.toMatchObject({ code: 'BUILTIN_SCHEMA' })
     await initializeBuiltinSchemas(repository, manifest)
 
     expect((await repository.getSchema(sentenceSchema.schemaId))?.data.description).toBe(
-      '用户调整后的说明'
+      sentenceSchema.data.description
     )
     expect(await repository.listSchemaIds()).toHaveLength(7)
     expect(await repository.listBuiltinSchemaIds()).toContain(

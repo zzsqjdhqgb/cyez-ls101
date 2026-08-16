@@ -5,6 +5,7 @@ export {
   createSchemaDraft,
   createSchemaDraftLibrary,
   createSchemaDefinition,
+  createDirectSchemaDefinition,
   createSchemaId,
   deriveSchemaStructureHash,
   isSchemaId,
@@ -12,6 +13,7 @@ export {
   isSchemaLibraryId,
   isSchemaStructureHash,
   updateSchemaDefinition,
+  updateDirectSchemaDefinition,
   updateSchemaDraft,
   verifySchemaDefinition
 } from './identity'

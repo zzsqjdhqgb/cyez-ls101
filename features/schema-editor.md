@@ -1,6 +1,6 @@
 # Schema 领域模块
 
-`@ls101/schema-editor` 实现 UI 无关的 Schema 结构、草稿库、正式 Schema、校验和持久化规则。Template 已接入新的 SchemaUse、附件变量、正式 Schema 快照和 ExamPackage 资源清单。
+`@ls101/schema-editor` 实现 UI 无关的 Schema 结构、评分单元、校验和持久化规则。Template 已接入新的 SchemaUse、附件变量、正式 Schema 快照和 ExamPackage 资源清单。
 
 ## 结构契约
 
@@ -16,7 +16,7 @@
 - `fixed-speech`，由固定原文和学生录音组成
 - `free-speech`，由学生录音组成
 
-冻结结构只包含：
+评分结构契约包含：
 
 - 题型。
 - 答案槽位的 ID、类型和顺序。
@@ -24,18 +24,19 @@
 
 答案和输入的显示说明、名称、满分、评分标准及 AI 额外提示词属于正式 Schema 的可编辑数据，不参与结构哈希。
 
-## 草稿与发布
+## 直接编辑与保存
 
-`SchemaDraftLibraryDocument` 是带 revision 的草稿库工作文档。草稿只定义结构，同一个草稿可以多次发布，每次产生具有独立稳定 `schemaId` 的 `SchemaDefinition`。
+评分单元不再要求先建立草稿库或执行发布。新建或从内置评分单元复制时产生 revision 0 的编辑阶段，结构、名称、分值和评分标准在同一个编辑页完成；第一次保存后结构固定，后续只允许修改名称、描述、分值和评分说明等数据。每次保存递增 revision，读取时仍会校验结构哈希。
 
-正式 Schema 保存发布时的结构快照和 SHA-256 `structureHash`。`updateSchemaData()` 只接受可编辑数据并递增 revision，不接受结构参数；读取正式 Schema 时同时校验结构哈希。
+内置评分单元完全只读。用户需要调整时必须“复制并修改”，完成后保存为“我的评分单元”。
+
+旧版本留下的草稿库仍可被仓储读取，作为数据兼容措施，但新界面不会创建、展示或依赖草稿库。
 
 `FileSchemaRepository` 使用 ScopedStore 兼容接口：
 
-- 草稿库保存使用 revision/CAS。
-- 发布时严格校验草稿结构和正式数据。
-- 正式数据更新使用 revision/CAS。
-- 正式 Schema 的结构不能通过仓储 API 修改。
+- 直接创建和更新使用 revision/CAS。
+- 创建和保存时同时严格校验结构和评分数据。
+- `updateSchema()` 只允许 revision 0 改变结构；后续调用只能保持原结构。
 
 ## 评分结果
 
