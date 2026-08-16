@@ -10,6 +10,38 @@ import { FileTemplateRepository, type TemplateStore } from '../repository'
 import type { BuiltinTemplateRelease } from '../types'
 
 const TEMPLATE_ID = '0c283c54-683a-498c-bf69-fb1490f99356'
+const SECTION_TEMPLATES = [
+  {
+    templateId: '261d2ad9-225e-41ac-a394-1887b912b917',
+    name: '上海高考口语标准题型 - 朗读句子',
+    functionName: '朗读句子题组'
+  },
+  {
+    templateId: 'c77c98f4-049d-4991-a5dc-3c39b7088100',
+    name: '上海高考口语标准题型 - 朗读短文',
+    functionName: '朗读短文题组'
+  },
+  {
+    templateId: 'bf2dddd5-f85f-4fbe-8e2f-9f2aa86f5e05',
+    name: '上海高考口语标准题型 - 情景提问',
+    functionName: '情景提问题组'
+  },
+  {
+    templateId: 'dccc9ca8-6b17-4b54-8fb8-bc5be6517e88',
+    name: '上海高考口语标准题型 - 看图说话',
+    functionName: '看图说话题组'
+  },
+  {
+    templateId: '490f6873-a39d-409e-954c-c345a90004a3',
+    name: '上海高考口语标准题型 - 快速应答',
+    functionName: '快速应答题组'
+  },
+  {
+    templateId: 'ef1dc645-eba5-4144-a82b-f52e24d5f925',
+    name: '上海高考口语标准题型 - 听短文回答',
+    functionName: '听短文回答题组'
+  }
+] as const
 
 describe('内置 Template 启动初始化', () => {
   it('幂等安装导出的上海高考口语模板并移除占位模板', async () => {
@@ -21,7 +53,9 @@ describe('内置 Template 启动初始化', () => {
     await initializeBuiltinTemplates(repository, manifest)
     await initializeBuiltinTemplates(repository, manifest)
 
-    expect(await repository.listBuiltinTemplateIds()).toEqual([TEMPLATE_ID])
+    expect(await repository.listBuiltinTemplateIds()).toEqual(
+      [TEMPLATE_ID, ...SECTION_TEMPLATES.map(({ templateId }) => templateId)].sort()
+    )
     expect(await repository.getActiveBuiltinTemplate(TEMPLATE_ID)).toMatchObject({
       templateId: TEMPLATE_ID,
       version: 2,
@@ -43,6 +77,37 @@ describe('内置 Template 启动初始化', () => {
     await expect(
       repository.getActiveBuiltinTemplate('11111111-1111-4111-8111-111111111111')
     ).resolves.toBeNull()
+
+    const standard = await repository.getActiveBuiltinTemplate(TEMPLATE_ID)
+    const standardInterface = standard?.document.content.interfaces[0]
+    expect(standardInterface).toBeDefined()
+
+    for (const expected of SECTION_TEMPLATES) {
+      const section = await repository.getActiveBuiltinTemplate(expected.templateId)
+      expect(section).toMatchObject({
+        templateId: expected.templateId,
+        version: 1,
+        document: {
+          content: {
+            name: expected.name,
+            interfaces: [standardInterface],
+            root: {
+              children: [{ type: 'function', name: expected.functionName }]
+            }
+          }
+        }
+      })
+
+      const rootCall = section?.document.content.root.children[0]
+      expect(rootCall?.type).toBe('function')
+      if (!section || rootCall?.type !== 'function') continue
+
+      const resources = new Map(
+        section.document.resources.functions.map((resource) => [resource.id, resource])
+      )
+      expect(resources.get(rootCall.functionRef)?.name).toBe(expected.functionName)
+      expect(resources.size).toBe(3)
+    }
   })
 
   it('将内置模板完整复制为 UUID 和 revision 重置的本地模板', async () => {
