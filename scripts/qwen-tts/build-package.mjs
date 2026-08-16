@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { createHash } from 'node:crypto'
-import { createReadStream, createWriteStream } from 'node:fs'
+import { createReadStream, createWriteStream, readFileSync } from 'node:fs'
 import { mkdir, readFile, readdir, rm, stat } from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
@@ -9,7 +9,22 @@ import { pathToFileURL } from 'node:url'
 import { Zip, ZipPassThrough, strToU8 } from 'fflate'
 
 const MAX_FFLATE_ARCHIVE_BYTES = 0xffffffff - 1024 * 1024
-const root = path.resolve(import.meta.dirname, '..')
+const root = path.resolve(import.meta.dirname, '..', '..')
+const assetConfig = loadAssetConfig()
+
+function loadAssetConfig() {
+  const file = path.join(import.meta.dirname, 'assets.json')
+  const value = JSON.parse(readFileSync(file, 'utf8'))
+  if (
+    value?.schemaVersion !== 1 ||
+    !/^[a-zA-Z0-9_.-]+$/.test(value.release?.version ?? '') ||
+    !/^[a-f0-9]{40}$/.test(value.runtime?.revision ?? '') ||
+    !/^[a-f0-9]{40}$/.test(value.model?.revision ?? '')
+  ) {
+    throw new Error(`Invalid Qwen TTS asset configuration: ${file}`)
+  }
+  return value
+}
 
 export function parseOptions(argv) {
   const options = {
@@ -19,7 +34,7 @@ export function parseOptions(argv) {
     voiceNames: new Map(),
     packageId: 'qwen3-tts-0.6b-base-en',
     packageName: 'Qwen3-TTS 0.6B Base English',
-    packageVersion: '1.0.0',
+    packageVersion: assetConfig.release.version,
     quantization: 'auto',
     output: null
   }
@@ -277,10 +292,12 @@ export async function buildPackage(options) {
       })),
       extensions: {
         upstream: {
-          runtime: 'predict-woo/qwen3-tts.cpp',
-          revision: 'b3ba14077cf1b3e11b86e5f84aa9184605c89b28',
-          model: 'Qwen/Qwen3-TTS-12Hz-0.6B-Base',
-          modelRevision: '5d83992436eae1d760afd27aff78a71d676296fc'
+          runtime: assetConfig.runtime.repository
+            .replace(/^https:\/\/github\.com\//, '')
+            .replace(/\.git$/, ''),
+          revision: assetConfig.runtime.revision,
+          model: assetConfig.model.id,
+          modelRevision: assetConfig.model.revision
         }
       }
     }
