@@ -51,7 +51,7 @@ LS101 是一套覆盖英语听说考试“准备内容、制作试卷、运行�
 
 ## 按工作顺序使用
 
-从第一次使用开始，建议严格按[LS101 用户指南](./guide/README.md)的章节顺序阅读：认识产品和对象链，准备评分标准与题型内容，制作模板并生成试卷，运行试卷保存作答包，最后导入作答记录并评分结算。
+从第一次使用开始，建议严格按[LS101 产品说明书](./guide/README.md)的章节顺序阅读：认识产品和对象链，准备评分标准与题型内容，制作模板并生成试卷，运行试卷保存作答包，最后导入作答记录并评分结算。
 
 ## 一级模块
 
@@ -86,8 +86,9 @@ LS101 是一套覆盖英语听说考试“准备内容、制作试卷、运行�
 
 ## 产品流程
 
-- [LS101 用户指南：按逻辑顺序完成一次考试](./guide/README.md)
+- [LS101 产品说明书：按操作逻辑完成一次考试](./guide/README.md)
 - [从零准备题型内容](./journeys/content-preparation/README.md)
+- [运行考试并移交作答](./journeys/exam-delivery/README.md)
 - [试卷模板生成试卷](./flows/template-exam-generation/README.md)
 - [运行试卷并保存作答包](./flows/take-exam/README.md)
 
@@ -101,21 +102,22 @@ LS101 是一套覆盖英语听说考试“准备内容、制作试卷、运行�
 - [试卷模板](./modules/template-library/README.md)
 - [设置与 AI 能力](./modules/settings/README.md)
 
-## 已验证行为
+## 执行覆盖
 
-[产品行为覆盖](./coverage.md)只汇总各模块和流程已经通过 Playwright 验证的行为数量与截图证据，不在此处重复场景摘要。
+[产品说明执行覆盖](./coverage.md)只汇总各模块和流程已经自动执行的任务数量与截图，不在此处重复说明书正文。
 
 ## 文档规则
 
 - [测试即文档约定](./standards/test-as-documentation.md)
+- [测试即文档重构方向](./standards/test-as-documentation-direction.md)
 
 ## 文档分层
 
-- `guide/` 是按用户任务顺序生成的产品说明，回答“先做什么、为什么做、产出什么、下一步是什么”。
+- `guide/` 是按用户任务顺序生成的产品说明书，回答“为什么做、先做什么、每一步看到什么、产出什么、下一步是什么”。
 - `journeys/` 记录从明确起点连续产出并消费业务对象的标准用户旅程，不通过仓储预置旅程中的核心对象。
 - `modules/` 和 `flows/` 是手写的产品设计约束，回答对象生命周期、边界和交互语义。
-- 各归属目录下的 `behaviors/` 是由 Playwright 成功运行生成的逐行为规格，提供操作步骤、截图和可执行测试源码链接。
-- `coverage.md` 和 `docs/engineering/testing/inventory.md` 只做覆盖审计，不替代用户指南。
+- 各归属目录下的 `behaviors/` 是成功执行后生成的详细操作页，提供与测试共同来源的用户动作、可见结果和界面截图。
+- `coverage.md` 和 `docs/engineering/testing/inventory.md` 只做覆盖审计，不替代产品说明书。
 
 ## 待确认
 

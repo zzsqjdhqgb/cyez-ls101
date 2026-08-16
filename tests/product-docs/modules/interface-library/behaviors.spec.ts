@@ -6,7 +6,7 @@ import path from 'node:path'
 import stableStringify from 'fast-json-stable-stringify'
 import { MockAiServer } from '../../../integration/support/mock-ai-server'
 import { launchIntegrationApp } from '../../../integration/support/electron-app'
-import { evidence, prepareProductPage, productStep, productTest } from '../../support/product-test'
+import { evidence, prepareProductPage, productTest } from '../../support/product-test'
 
 const interfaceContent = {
   name: '英语问答练习',
@@ -65,29 +65,41 @@ test(
     {
       id: 'IF-01',
       owner: { kind: 'module', slug: 'interface-library', title: '题型库', order: 40 },
-      capability: '题组创建',
+      section: '题组创建',
       title: '从题型库命名创建并保存题组',
-      intent: '题型详情以题组为默认工作区；用户先命名题组并选择进入方式，再填写和保存具体内容。',
+      purpose: '题型详情以题组为默认工作区；用户先命名题组并选择进入方式，再填写和保存具体内容。',
       preconditions: ['题型库中已有“英语问答练习”题型。'],
-      guarantees: [
+      outcomes: [
         '题组只有在确认名称和进入方式后才正式创建。',
         '手工填写内容需要明确保存，并能从题型详情重新进入。'
       ],
-      guide: [{ chapter: 'prepare-content', order: 30 }]
-    },
-    // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture argument destructuring.
-    async ({}, testInfo) => {
-      await productStep(
-        'open-instance-workspace',
-        '从题型库进入题型，默认看到题组工作区',
-        async () => {
-          await openInterfaceDetails()
-          await expect(page.getByRole('tab', { name: '题组', selected: true })).toBeVisible()
-          await expect(page.getByText('暂无题组')).toBeVisible()
+      manual: [{ chapter: 'prepare-content', order: 30 }],
+      steps: [
+        {
+          key: 'open-instance-workspace',
+          action: '从“题型库”打开要使用的题型。',
+          expected: '题型详情默认显示题组工作区；没有题组时会显示空状态。'
+        },
+        {
+          key: 'name-instance',
+          action: '选择“新建题组”，填写名称并选择“手工填写”，然后确认创建。',
+          expected: '应用在确认后创建题组并打开内容编辑页面。'
+        },
+        {
+          key: 'save-instance',
+          action: '填写题组中的各项内容并选择“保存”。',
+          expected: '页面提示题组已经保存；返回题型详情后可以再次找到该题组。'
         }
-      )
+      ]
+    },
+    async (testInfo, productStep) => {
+      await productStep('open-instance-workspace', async () => {
+        await openInterfaceDetails()
+        await expect(page.getByRole('tab', { name: '题组', selected: true })).toBeVisible()
+        await expect(page.getByText('暂无题组')).toBeVisible()
+      })
 
-      await productStep('name-instance', '填写题组名称并选择手工填写后才正式创建', async () => {
+      await productStep('name-instance', async () => {
         await page.getByRole('button', { name: '新建题组' }).click()
         const dialog = page.getByRole('dialog', { name: '新建题组' })
         await dialog.getByLabel('题组名称').fill('校园生活第一套')
@@ -102,7 +114,7 @@ test(
         await expect(page.getByRole('heading', { level: 1, name: '校园生活第一套' })).toBeVisible()
       })
 
-      await productStep('save-instance', '填写题组内容并明确保存', async () => {
+      await productStep('save-instance', async () => {
         await page.getByLabel('title 内容').fill('School life')
         await page.getByLabel('answer 内容').fill('I enjoy reading after class.')
         await page.getByRole('button', { name: '保存' }).click()
@@ -127,24 +139,36 @@ test(
     {
       id: 'IF-02',
       owner: { kind: 'module', slug: 'interface-library', title: '题型库', order: 40 },
-      capability: '题组创建',
+      section: '题组创建',
       title: '取消创建不会留下空题组',
-      intent: '打开新建题组设置不会立即写入空记录；只有确认名称和进入方式后才创建题组。',
+      purpose: '需要退出新建题组设置而不保留尚未确认的题组时使用。',
       preconditions: ['当前题型还没有任何题组。'],
-      guarantees: ['取消新建题组后，列表和本地存储都不会出现空记录。'],
-      guide: [{ chapter: 'prepare-content', order: 31 }]
+      outcomes: ['取消新建题组后，题组列表保持不变，可以稍后重新创建。'],
+      manual: [{ chapter: 'prepare-content', order: 31 }],
+      steps: [
+        {
+          key: 'prepare-instance',
+          action: '选择“新建题组”，填写一个题组名称，但不要确认创建。',
+          expected: '设置仍停留在新建题组对话框中，题组尚未出现在列表里。'
+        },
+        {
+          key: 'cancel-creation',
+          action: '选择“取消”。',
+          expected: '对话框关闭，题组列表仍为空，不会出现刚才填写的名称。'
+        }
+      ]
     },
-    async () => {
+    async (_testInfo, productStep) => {
       await openInterfaceDetails()
 
-      await productStep('prepare-instance', '打开新建题组设置并填写名称', async () => {
+      await productStep('prepare-instance', async () => {
         await page.getByRole('button', { name: '新建题组' }).click()
         const dialog = page.getByRole('dialog', { name: '新建题组' })
         await dialog.getByLabel('题组名称').fill('不会被创建的题组')
         await expect(dialog.getByLabel('手工填写')).toBeChecked()
       })
 
-      await productStep('cancel-creation', '取消后题组列表和本地记录都保持为空', async () => {
+      await productStep('cancel-creation', async () => {
         await page
           .getByRole('dialog', { name: '新建题组' })
           .getByRole('button', { name: '取消' })
@@ -162,22 +186,38 @@ test(
     {
       id: 'IF-03',
       owner: { kind: 'module', slug: 'interface-library', title: '题型库', order: 40 },
-      capability: '题组编辑',
+      section: '题组编辑',
       title: '未保存的题组修改受到保护',
-      intent: '手工修改不会静默保存；离开编辑器前可以继续编辑或明确放弃本次修改。',
+      purpose: '手工修改不会静默保存；离开编辑器前可以继续编辑或明确放弃本次修改。',
       preconditions: ['已经创建一个尚未填写内容的题组。'],
-      guarantees: [
+      outcomes: [
         '离开包含未保存修改的题组前必须确认。',
         '取消离开保留编辑状态，放弃修改不会写入题组。'
       ],
-      guide: [{ chapter: 'prepare-content', order: 40 }]
+      manual: [{ chapter: 'prepare-content', order: 40 }],
+      steps: [
+        {
+          key: 'request-leave',
+          action: '修改题组内容但不保存，然后选择返回题型详情。',
+          expected: '应用提示离开将放弃未保存的修改。'
+        },
+        {
+          key: 'continue-editing',
+          action: '在提示中选择“取消”。',
+          expected: '应用返回编辑页面，并保留刚才尚未保存的内容。'
+        },
+        {
+          key: 'discard-changes',
+          action: '再次返回，并明确选择“放弃修改”，然后重新打开该题组。',
+          expected: '题组只显示上次保存的内容，不包含已经放弃的修改。'
+        }
+      ]
     },
-    // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture argument destructuring.
-    async ({}, testInfo) => {
+    async (testInfo, productStep) => {
       await openInterfaceDetails()
       await createInstance('离开保护题组', '手工填写')
 
-      await productStep('request-leave', '修改字段后离开会提示未保存风险', async () => {
+      await productStep('request-leave', async () => {
         await page.getByLabel('title 内容').fill('尚未保存的标题')
         await page.getByRole('button', { name: '返回题型详情' }).click()
         await expect(page.getByRole('alertdialog', { name: '放弃未保存的修改？' })).toBeVisible()
@@ -189,21 +229,17 @@ test(
         })
       })
 
-      await productStep('continue-editing', '取消离开会保留当前编辑状态', async () => {
+      await productStep('continue-editing', async () => {
         await page.getByRole('alertdialog').getByRole('button', { name: '取消' }).click()
         await expect(page.getByLabel('title 内容')).toHaveValue('尚未保存的标题')
       })
 
-      await productStep(
-        'discard-changes',
-        '明确放弃后返回题组列表，重新进入时不包含未保存内容',
-        async () => {
-          await page.getByRole('button', { name: '返回题型详情' }).click()
-          await page.getByRole('alertdialog').getByRole('button', { name: '放弃修改' }).click()
-          await page.getByRole('button', { name: '离开保护题组', exact: true }).click()
-          await expect(page.getByLabel('title 内容')).toHaveValue('')
-        }
-      )
+      await productStep('discard-changes', async () => {
+        await page.getByRole('button', { name: '返回题型详情' }).click()
+        await page.getByRole('alertdialog').getByRole('button', { name: '放弃修改' }).click()
+        await page.getByRole('button', { name: '离开保护题组', exact: true }).click()
+        await expect(page.getByLabel('title 内容')).toHaveValue('')
+      })
     }
   )
 )
@@ -213,18 +249,34 @@ test(
     {
       id: 'IF-04',
       owner: { kind: 'module', slug: 'interface-library', title: '题型库', order: 40 },
-      capability: 'AI 生成题组',
-      title: 'AI 整组生成明确覆盖并原子保存',
-      intent: 'AI 整组生成使用明确的覆盖语义；已有内容时再次确认，成功后整组结果一次保存。',
+      section: 'AI 生成题组',
+      title: '使用 AI 生成并覆盖题组内容',
+      purpose: '需要使用 AI 一次生成整组内容，并用生成结果替换当前题组时使用。',
       preconditions: ['题组已有手工保存的内容，并配置了可用的 AI 文本模型。'],
-      guarantees: [
+      outcomes: [
         '已有内容时，生成前明确确认覆盖范围和立即保存语义。',
-        '只有生成、校验和保存全部成功后，才替换当前题组。'
+        '生成成功后，新内容会替换当前题组并立即保存。'
       ],
-      guide: [{ chapter: 'prepare-content', order: 50 }]
+      manual: [{ chapter: 'prepare-content', order: 50 }],
+      steps: [
+        {
+          key: 'configure-generation',
+          action: '在已有内容的题组中选择“AI 生成并覆盖”，再选择生成模型。',
+          expected: '页面显示本次 AI 生成任务的设置。'
+        },
+        {
+          key: 'confirm-overwrite',
+          action: '选择“生成并覆盖”，阅读覆盖说明后再次确认。',
+          expected: '应用明确说明现有内容将被全部替换，并在成功后立即保存。'
+        },
+        {
+          key: 'complete-generation',
+          action: '等待 AI 生成完成。',
+          expected: '页面显示生成的新内容和保存成功提示，不需要再次手工保存。'
+        }
+      ]
     },
-    // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture argument destructuring.
-    async ({}, testInfo) => {
+    async (testInfo, productStep) => {
       await configureTextProvider()
       await openInterfaceDetails()
       await createInstance('AI 覆盖题组', '手工填写')
@@ -233,29 +285,25 @@ test(
       await page.getByRole('button', { name: '保存' }).click()
       await expect(page.getByText('题组已保存')).toBeVisible()
 
-      await productStep('configure-generation', '打开 AI 生成任务并选择模型', async () => {
+      await productStep('configure-generation', async () => {
         await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
         await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json' })
       })
 
-      await productStep(
-        'confirm-overwrite',
-        '对已有内容执行生成前明确提示会覆盖并立即保存',
-        async () => {
-          await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
-          const dialog = page.getByRole('alertdialog', { name: '覆盖当前题组内容？' })
-          await expect(dialog).toContainText('全部文本')
-          await evidence(testInfo, page, {
-            key: 'overwrite-confirmation',
-            kind: 'decision',
-            step: 'confirm-overwrite',
-            caption: 'AI 生成前确认将覆盖当前题组并立即保存'
-          })
-          await dialog.getByRole('button', { name: '生成并覆盖', exact: true }).click()
-        }
-      )
+      await productStep('confirm-overwrite', async () => {
+        await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
+        const dialog = page.getByRole('alertdialog', { name: '覆盖当前题组内容？' })
+        await expect(dialog).toContainText('全部文本')
+        await evidence(testInfo, page, {
+          key: 'overwrite-confirmation',
+          kind: 'decision',
+          step: 'confirm-overwrite',
+          caption: 'AI 生成前确认将覆盖当前题组并立即保存'
+        })
+        await dialog.getByRole('button', { name: '生成并覆盖', exact: true }).click()
+      })
 
-      await productStep('complete-generation', 'AI 成功后整组内容被替换并已经保存', async () => {
+      await productStep('complete-generation', async () => {
         await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 15_000 })
         await expect(page.getByText('AI 生成内容已保存')).toBeVisible()
         await expect(page.getByLabel('title 内容')).toHaveValue('AI 标题')
@@ -277,28 +325,49 @@ test(
     {
       id: 'IF-05',
       owner: { kind: 'module', slug: 'interface-library', title: '题型库', order: 40 },
-      capability: '题型发布',
+      section: '题型发布',
       title: '从草稿发布稳定题型并保留草稿',
-      intent:
+      purpose:
         '题型草稿可以不完整地保存；发布前说明稳定契约，发布成功后已发布题型和原草稿同时保留。',
       preconditions: ['用户从题型库的“草稿”视图开始创建题型。'],
-      guarantees: [
+      outcomes: [
         '发布前明确说明将创建稳定题型，并保留当前草稿。',
         '发布成功后，稳定题型和原草稿可以分别找到。'
       ],
-      guide: [{ chapter: 'prepare-content', order: 20 }]
+      manual: [{ chapter: 'prepare-content', order: 20 }],
+      steps: [
+        {
+          key: 'create-draft',
+          action: '进入“题型库”的“草稿”视图，选择“新建题型”。',
+          expected: '应用打开一个未命名题型草稿。'
+        },
+        {
+          key: 'define-contract',
+          action: '填写题型基本信息、生成要求和字段契约。',
+          expected: '题型草稿具备发布所需的名称、说明、生成要求和内容字段。'
+        },
+        {
+          key: 'confirm-publish',
+          action: '选择“发布”，阅读说明后确认发布题型。',
+          expected: '应用说明将创建不可直接修改的稳定题型，同时保留当前草稿。'
+        },
+        {
+          key: 'verify-published-draft',
+          action: '返回题型库，分别查看已发布题型和“草稿”视图。',
+          expected: '稳定题型和原草稿都可以找到。'
+        }
+      ]
     },
-    // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture argument destructuring.
-    async ({}, testInfo) => {
+    async (testInfo, productStep) => {
       await page.getByRole('link', { name: '题型库' }).click()
 
-      await productStep('create-draft', '在题型库切换到草稿视图并新建题型', async () => {
+      await productStep('create-draft', async () => {
         await page.getByRole('tab', { name: '草稿' }).click()
         await page.getByRole('button', { name: '新建题型' }).click()
         await expect(page.getByRole('heading', { level: 1, name: '未命名题型' })).toBeVisible()
       })
 
-      await productStep('define-contract', '填写题型基本信息、生成要求和字段契约', async () => {
+      await productStep('define-contract', async () => {
         const content = page.getByLabel('题型内容')
         await content.getByLabel('名称').fill('课堂口语题型')
         await content.getByLabel('描述').fill('用于课堂口语练习')
@@ -312,45 +381,33 @@ test(
         await structure.getByLabel('字段标识').press('Tab')
       })
 
-      await productStep(
-        'confirm-publish',
-        '发布前明确说明将生成稳定题型并保留当前草稿',
-        async () => {
-          await page.getByRole('button', { name: '发布' }).click()
-          const dialog = page.getByRole('alertdialog', { name: '发布当前题型草稿？' })
-          await expect(dialog).toContainText('不可直接修改的稳定题型')
-          await expect(dialog).toContainText('草稿仍会保留')
-          await evidence(testInfo, page, {
-            key: 'publish-confirmation',
-            kind: 'decision',
-            step: 'confirm-publish',
-            caption: '发布前说明稳定题型与原草稿的关系'
-          })
-          await dialog.getByRole('button', { name: '发布题型' }).click()
-        }
-      )
+      await productStep('confirm-publish', async () => {
+        await page.getByRole('button', { name: '发布' }).click()
+        const dialog = page.getByRole('alertdialog', { name: '发布当前题型草稿？' })
+        await expect(dialog).toContainText('不可直接修改的稳定题型')
+        await expect(dialog).toContainText('草稿仍会保留')
+        await evidence(testInfo, page, {
+          key: 'publish-confirmation',
+          kind: 'decision',
+          step: 'confirm-publish',
+          caption: '发布前说明稳定题型与原草稿的关系'
+        })
+        await dialog.getByRole('button', { name: '发布题型' }).click()
+      })
 
-      await productStep(
-        'verify-published-draft',
-        '发布成功后可以查看稳定题型，并能在草稿视图找到原草稿',
-        async () => {
-          await expect(page.getByRole('heading', { level: 1, name: '课堂口语题型' })).toBeVisible()
-          await page.getByRole('button', { name: '返回题型' }).click()
-          await expect(
-            page.getByRole('button', { name: '课堂口语题型', exact: true })
-          ).toBeVisible()
-          await page.getByRole('tab', { name: '草稿' }).click()
-          await expect(
-            page.getByRole('button', { name: '课堂口语题型', exact: true })
-          ).toBeVisible()
-          await evidence(testInfo, page, {
-            key: 'retained-draft',
-            kind: 'result',
-            step: 'verify-published-draft',
-            caption: '发布后原题型草稿仍保留在草稿视图'
-          })
-        }
-      )
+      await productStep('verify-published-draft', async () => {
+        await expect(page.getByRole('heading', { level: 1, name: '课堂口语题型' })).toBeVisible()
+        await page.getByRole('button', { name: '返回题型' }).click()
+        await expect(page.getByRole('button', { name: '课堂口语题型', exact: true })).toBeVisible()
+        await page.getByRole('tab', { name: '草稿' }).click()
+        await expect(page.getByRole('button', { name: '课堂口语题型', exact: true })).toBeVisible()
+        await evidence(testInfo, page, {
+          key: 'retained-draft',
+          kind: 'result',
+          step: 'verify-published-draft',
+          caption: '发布后原题型草稿仍保留在草稿视图'
+        })
+      })
     }
   )
 )
@@ -360,20 +417,41 @@ test(
     {
       id: 'IF-06',
       owner: { kind: 'module', slug: 'interface-library', title: '题型库', order: 40 },
-      capability: '题组导入',
-      title: 'JSON 作为临时导入对话框完成覆盖',
-      intent:
-        'JSON 是一次性导入命令；校验失败时保留临时输入，取消时清空，校验成功后原子保存并返回题组。',
+      section: '题组导入',
+      title: '从 JSON 导入并替换题组内容',
+      purpose:
+        '已经准备好符合题型字段要求的 JSON 内容时，可以一次替换当前题组；校验失败不会改变原内容。',
       preconditions: ['题组已有手工保存的内容。'],
-      guarantees: [
+      outcomes: [
         '校验失败时保留临时输入和错误，原题组保持不变。',
         '取消导入会清空临时状态。',
-        '合法 JSON 经确认后原子保存并关闭对话框。'
+        '合法 JSON 经确认后替换并保存题组，然后关闭对话框。'
       ],
-      guide: [{ chapter: 'prepare-content', order: 60 }]
+      manual: [{ chapter: 'prepare-content', order: 60 }],
+      steps: [
+        {
+          key: 'open-import',
+          action: '在题组中打开“从 JSON 覆盖题组”。',
+          expected: '对话框说明校验通过后会覆盖整组内容并立即保存。'
+        },
+        {
+          key: 'reject-invalid-json',
+          action: '输入格式错误的 JSON，选择“校验并覆盖”并确认。',
+          expected: '对话框保留输入并显示格式错误，原题组内容保持不变。'
+        },
+        {
+          key: 'cancel-import',
+          action: '取消导入，然后重新打开 JSON 导入对话框。',
+          expected: '上次临时输入和错误已经清空。'
+        },
+        {
+          key: 'replace-instance',
+          action: '输入符合字段要求的 JSON，选择“校验并覆盖”并确认。',
+          expected: '对话框关闭，新内容替换当前题组并已经保存。'
+        }
+      ]
     },
-    // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture argument destructuring.
-    async ({}, testInfo) => {
+    async (testInfo, productStep) => {
       await openInterfaceDetails()
       await createInstance('JSON 覆盖题组', '手工填写')
       await page.getByLabel('title 内容').fill('原有标题')
@@ -381,37 +459,33 @@ test(
       await page.getByRole('button', { name: '保存' }).click()
       await expect(page.getByText('题组已保存')).toBeVisible()
 
-      await productStep('open-import', '打开临时导入对话框，明确覆盖和立即保存语义', async () => {
+      await productStep('open-import', async () => {
         await openJsonReplacementDialog()
         const dialog = page.getByRole('dialog', { name: '从 JSON 覆盖题组' })
         await expect(dialog).toContainText('校验通过后将覆盖整组内容并立即保存')
       })
 
-      await productStep(
-        'reject-invalid-json',
-        'JSON 校验失败时保留输入和错误，原题组内容保持不变',
-        async () => {
-          const dialog = page.getByRole('dialog', { name: '从 JSON 覆盖题组' })
-          await dialog.getByLabel('JSON 内容').fill('{"title":')
-          await dialog.getByRole('button', { name: '校验并覆盖' }).click()
-          await page
-            .getByRole('alertdialog', { name: '覆盖当前题组内容？' })
-            .getByRole('button', { name: '校验并覆盖' })
-            .click()
-          await expect(dialog.getByRole('alert')).toContainText('JSON 格式不合法')
-          await expect(dialog.getByLabel('JSON 内容')).toHaveValue('{"title":')
-          await expect(page.getByLabel('title 内容')).toHaveValue('原有标题')
-          await expect(page.getByLabel('answer 内容')).toHaveValue('原有答案')
-          await evidence(testInfo, page, {
-            key: 'validation-error',
-            kind: 'exception',
-            step: 'reject-invalid-json',
-            caption: '非法 JSON 保留在导入对话框中，原题组内容不变'
-          })
-        }
-      )
+      await productStep('reject-invalid-json', async () => {
+        const dialog = page.getByRole('dialog', { name: '从 JSON 覆盖题组' })
+        await dialog.getByLabel('JSON 内容').fill('{"title":')
+        await dialog.getByRole('button', { name: '校验并覆盖' }).click()
+        await page
+          .getByRole('alertdialog', { name: '覆盖当前题组内容？' })
+          .getByRole('button', { name: '校验并覆盖' })
+          .click()
+        await expect(dialog.getByRole('alert')).toContainText('JSON 格式不合法')
+        await expect(dialog.getByLabel('JSON 内容')).toHaveValue('{"title":')
+        await expect(page.getByLabel('title 内容')).toHaveValue('原有标题')
+        await expect(page.getByLabel('answer 内容')).toHaveValue('原有答案')
+        await evidence(testInfo, page, {
+          key: 'validation-error',
+          kind: 'exception',
+          step: 'reject-invalid-json',
+          caption: '非法 JSON 保留在导入对话框中，原题组内容不变'
+        })
+      })
 
-      await productStep('cancel-import', '取消会丢弃本次临时输入和校验错误', async () => {
+      await productStep('cancel-import', async () => {
         await page
           .getByRole('dialog', { name: '从 JSON 覆盖题组' })
           .getByRole('button', { name: '取消' })
@@ -422,32 +496,26 @@ test(
         await expect(dialog.getByRole('alert')).toHaveCount(0)
       })
 
-      await productStep(
-        'replace-instance',
-        '合法 JSON 经确认后原子保存，关闭对话框并返回题组',
-        async () => {
-          const dialog = page.getByRole('dialog', { name: '从 JSON 覆盖题组' })
-          await dialog
-            .getByLabel('JSON 内容')
-            .fill('{"title":"JSON 新标题","answer":"JSON 新答案"}')
-          await dialog.getByRole('button', { name: '校验并覆盖' }).click()
-          const confirmation = page.getByRole('alertdialog', { name: '覆盖当前题组内容？' })
-          await expect(confirmation).toContainText('立即保存')
-          await confirmation.getByRole('button', { name: '校验并覆盖' }).click()
+      await productStep('replace-instance', async () => {
+        const dialog = page.getByRole('dialog', { name: '从 JSON 覆盖题组' })
+        await dialog.getByLabel('JSON 内容').fill('{"title":"JSON 新标题","answer":"JSON 新答案"}')
+        await dialog.getByRole('button', { name: '校验并覆盖' }).click()
+        const confirmation = page.getByRole('alertdialog', { name: '覆盖当前题组内容？' })
+        await expect(confirmation).toContainText('立即保存')
+        await confirmation.getByRole('button', { name: '校验并覆盖' }).click()
 
-          await expect(page.getByRole('dialog', { name: '从 JSON 覆盖题组' })).toHaveCount(0)
-          await expect(page.getByText('已从 JSON 更新题组')).toBeVisible()
-          await expect(page.getByLabel('title 内容')).toHaveValue('JSON 新标题')
-          await expect(page.getByLabel('answer 内容')).toHaveValue('JSON 新答案')
-          await expect(page.getByRole('button', { name: '保存' })).toBeDisabled()
-          await evidence(testInfo, page, {
-            key: 'replacement-result',
-            kind: 'result',
-            step: 'replace-instance',
-            caption: 'JSON 内容已替换当前题组并完成保存'
-          })
-        }
-      )
+        await expect(page.getByRole('dialog', { name: '从 JSON 覆盖题组' })).toHaveCount(0)
+        await expect(page.getByText('已从 JSON 更新题组')).toBeVisible()
+        await expect(page.getByLabel('title 内容')).toHaveValue('JSON 新标题')
+        await expect(page.getByLabel('answer 内容')).toHaveValue('JSON 新答案')
+        await expect(page.getByRole('button', { name: '保存' })).toBeDisabled()
+        await evidence(testInfo, page, {
+          key: 'replacement-result',
+          kind: 'result',
+          step: 'replace-instance',
+          caption: 'JSON 内容已替换当前题组并完成保存'
+        })
+      })
     }
   )
 )

@@ -52,7 +52,7 @@
 - exports a submission containing a large resource through the renderer ZIP worker
 - persists appearance settings through the renderer and config store
 - creates, edits and reloads a persisted template
-- generates an exam directly from an immutable builtin template
+- opens and copies the bundled Shanghai Gaokao template
 - exports a persisted formal Schema through the native save dialog
 - routes window controls through preload to the owning BrowserWindow
 

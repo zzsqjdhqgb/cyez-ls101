@@ -1,15 +1,6 @@
-import {
-  test,
-  type Page,
-  type PlaywrightTestArgs,
-  type PlaywrightTestOptions,
-  type PlaywrightWorkerArgs,
-  type PlaywrightWorkerOptions,
-  type TestInfo
-} from '@playwright/test'
-import type { ProductGuidePlacement } from './product-guide'
+import { test, type Page, type TestInfo } from '@playwright/test'
 
-export const PRODUCT_BEHAVIOR_ANNOTATION = 'product-behavior'
+export const PRODUCT_MANUAL_ANNOTATION = 'product-manual'
 export const PRODUCT_STEP_PREFIX = '[product-step:'
 export const PRODUCT_EVIDENCE_PREFIX = 'product-evidence:'
 
@@ -23,15 +14,22 @@ export interface ProductOwner {
   order: number
 }
 
-export interface ProductBehaviorDefinition {
+export interface ProductManualStepDefinition {
+  key: string
+  action: string
+  expected: string
+}
+
+export interface ProductManualDefinition {
   id: string
   owner: ProductOwner
-  capability: string
+  section: string
   title: string
-  intent: string
+  purpose: string
   preconditions: readonly string[]
-  guarantees: readonly string[]
-  guide: readonly ProductGuidePlacement[]
+  outcomes: readonly string[]
+  manual: readonly ProductGuidePlacement[]
+  steps: readonly ProductManualStepDefinition[]
 }
 
 export interface ProductGuidePlacement {
@@ -46,46 +44,51 @@ export interface ProductEvidenceDefinition {
   caption: string
 }
 
-type ProductFixtures = PlaywrightTestArgs &
-  PlaywrightTestOptions &
-  PlaywrightWorkerArgs &
-  PlaywrightWorkerOptions
+export type ProductStepRunner = <T>(key: string, body: () => Promise<T>) => Promise<T>
 
-type ProductTestBody = (fixtures: ProductFixtures, testInfo: TestInfo) => Promise<void> | void
+type ProductTestBody = (testInfo: TestInfo, step: ProductStepRunner) => Promise<void> | void
 
 export function productTest(
-  definition: ProductBehaviorDefinition,
+  definition: ProductManualDefinition,
   body: ProductTestBody
 ): readonly [
   string,
   { annotation: Array<{ type: string; description: string }> },
-  ProductTestBody
+  (fixtures: Record<string, never>, testInfo: TestInfo) => Promise<void> | void
 ] {
-  validateBehaviorDefinition(definition)
+  validateManualDefinition(definition)
   return [
     `${definition.id} ${definition.title}`,
     {
       annotation: [
         {
-          type: PRODUCT_BEHAVIOR_ANNOTATION,
+          type: PRODUCT_MANUAL_ANNOTATION,
           description: JSON.stringify(definition)
         }
       ]
     },
-    body
+    // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture destructuring.
+    ({}, testInfo) => body(testInfo, (key, stepBody) => productStep(definition, key, stepBody))
   ]
 }
 
 export function productJourney(
-  definition: ProductBehaviorDefinition & { owner: ProductOwner & { kind: 'journey' } },
+  definition: ProductManualDefinition & { owner: ProductOwner & { kind: 'journey' } },
   body: ProductTestBody
 ): ReturnType<typeof productTest> {
   return productTest(definition, body)
 }
 
-export function productStep<T>(key: string, title: string, body: () => Promise<T>): Promise<T> {
+function productStep<T>(
+  definition: ProductManualDefinition,
+  key: string,
+  body: () => Promise<T>
+): Promise<T> {
   validateKey(key, '步骤')
-  return test.step(`${PRODUCT_STEP_PREFIX}${key}] ${title}`, body)
+  if (!definition.steps.some((step) => step.key === key)) {
+    throw new Error(`产品说明 ${definition.id} 执行了未声明的步骤：${key}`)
+  }
+  return test.step(`${PRODUCT_STEP_PREFIX}${key}]`, body)
 }
 
 export async function evidence(
@@ -133,38 +136,55 @@ export async function prepareProductPage(page: Page): Promise<void> {
   await page.clock.setFixedTime(new Date('2026-01-15T08:00:00.000Z'))
 }
 
-function validateBehaviorDefinition(definition: ProductBehaviorDefinition): void {
+function validateManualDefinition(definition: ProductManualDefinition): void {
   if (!/^[A-Z]{2}-\d{2}$/.test(definition.id)) {
-    throw new Error(`产品行为 ID 必须使用 XX-00 格式：${definition.id}`)
+    throw new Error(`产品说明 ID 必须使用 XX-00 格式：${definition.id}`)
   }
   validateKey(definition.owner.slug, '产品文档归属')
   if (!Number.isFinite(definition.owner.order)) {
-    throw new Error(`产品行为 ${definition.id} 的文档顺序无效`)
+    throw new Error(`产品说明 ${definition.id} 的文档顺序无效`)
   }
   for (const [field, value] of [
     ['归属标题', definition.owner.title],
-    ['能力', definition.capability],
+    ['说明书章节', definition.section],
     ['标题', definition.title],
-    ['意图', definition.intent]
+    ['用途', definition.purpose]
   ] as const) {
-    if (!value.trim()) throw new Error(`产品行为 ${definition.id} 缺少${field}`)
+    if (!value.trim()) throw new Error(`产品说明 ${definition.id} 缺少${field}`)
   }
-  if (definition.guarantees.length === 0) {
-    throw new Error(`产品行为 ${definition.id} 至少需要一条行为保证`)
+  if (definition.outcomes.length === 0) {
+    throw new Error(`产品说明 ${definition.id} 至少需要一条完成结果`)
   }
-  if (definition.guide.length === 0) {
-    throw new Error(`产品行为 ${definition.id} 至少需要一个用户指南位置`)
+  if (definition.manual.length === 0) {
+    throw new Error(`产品说明 ${definition.id} 至少需要一个产品说明书位置`)
   }
   const chapters = new Set<string>()
-  for (const placement of definition.guide) {
-    validateKey(placement.chapter, '用户指南章节')
+  for (const placement of definition.manual) {
+    validateKey(placement.chapter, '产品说明书章节')
     if (!Number.isFinite(placement.order)) {
-      throw new Error(`产品行为 ${definition.id} 的用户指南顺序无效`)
+      throw new Error(`产品说明 ${definition.id} 的说明书顺序无效`)
     }
     if (chapters.has(placement.chapter)) {
-      throw new Error(`产品行为 ${definition.id} 重复加入用户指南章节：${placement.chapter}`)
+      throw new Error(`产品说明 ${definition.id} 重复加入产品说明书章节：${placement.chapter}`)
     }
     chapters.add(placement.chapter)
+  }
+
+  if (definition.steps.length === 0) {
+    throw new Error(`产品说明 ${definition.id} 至少需要一个操作步骤`)
+  }
+  const stepKeys = new Set<string>()
+  for (const step of definition.steps) {
+    validateKey(step.key, '步骤')
+    if (stepKeys.has(step.key)) {
+      throw new Error(`产品说明 ${definition.id} 的步骤标识重复：${step.key}`)
+    }
+    stepKeys.add(step.key)
+    if (!step.action.trim())
+      throw new Error(`产品说明 ${definition.id} 的步骤 ${step.key} 缺少操作`)
+    if (!step.expected.trim()) {
+      throw new Error(`产品说明 ${definition.id} 的步骤 ${step.key} 缺少可见结果`)
+    }
   }
 }
 

@@ -1,58 +1,54 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "owners": [
-    { "kind": "module", "slug": "workbench", "specIds": ["WB-01", "WB-02"] },
-    { "kind": "journey", "slug": "content-preparation", "specIds": ["PJ-01"] },
-    { "kind": "module", "slug": "submission-records", "specIds": ["SR-01"] },
+    { "kind": "module", "slug": "workbench", "documentIds": ["WB-01", "WB-02"] },
+    { "kind": "journey", "slug": "content-preparation", "documentIds": ["PJ-01"] },
+    { "kind": "module", "slug": "submission-records", "documentIds": ["SR-01"] },
     {
       "kind": "module",
       "slug": "interface-library",
-      "specIds": ["IF-01", "IF-02", "IF-03", "IF-04", "IF-05", "IF-06"]
+      "documentIds": ["IF-01", "IF-02", "IF-03", "IF-04", "IF-05", "IF-06"]
     },
-    { "kind": "module", "slug": "template-library", "specIds": ["TP-01"] },
-    { "kind": "module", "slug": "grading-units", "specIds": ["GS-01"] },
-    { "kind": "flow", "slug": "take-exam", "specIds": ["EX-01"] },
-    { "kind": "flow", "slug": "template-exam-generation", "specIds": ["TG-01"] }
+    { "kind": "module", "slug": "template-library", "documentIds": ["TP-01"] },
+    { "kind": "module", "slug": "grading-units", "documentIds": ["GS-01"] },
+    { "kind": "journey", "slug": "exam-delivery", "documentIds": ["EX-01"] },
+    { "kind": "flow", "slug": "template-exam-generation", "documentIds": ["TG-01"] }
   ],
   "guideChapters": [
     {
       "slug": "understand-ls101",
       "title": "认识 LS101 与完整工作流",
       "journeyIds": [],
-      "behaviorIds": ["WB-01", "WB-02"]
+      "operationIds": ["WB-01", "WB-02"]
     },
     {
       "slug": "prepare-content",
       "title": "准备评分标准与题型内容",
       "journeyIds": ["PJ-01"],
-      "behaviorIds": ["GS-01", "IF-01", "IF-02", "IF-03", "IF-04", "IF-05", "IF-06"]
+      "operationIds": ["GS-01", "IF-01", "IF-02", "IF-03", "IF-04", "IF-05", "IF-06"]
     },
     {
       "slug": "build-generate-exam",
       "title": "制作模板并生成试卷",
       "journeyIds": [],
-      "behaviorIds": ["TG-01", "TP-01"]
+      "operationIds": ["TG-01", "TP-01"]
     },
     {
       "slug": "run-exam",
       "title": "运行试卷并保存作答包",
-      "journeyIds": [],
-      "behaviorIds": ["EX-01"]
+      "journeyIds": ["EX-01"],
+      "operationIds": []
     },
     {
       "slug": "grade-settle",
       "title": "评分、结算与查看结果",
       "journeyIds": [],
-      "behaviorIds": ["SR-01"]
+      "operationIds": ["SR-01"]
     }
   ],
   "generatedFiles": [
     ".generated-manifest.json",
     "coverage.md",
-    "flows/take-exam/behaviors/EX-01.md",
-    "flows/take-exam/behaviors/README.md",
-    "flows/take-exam/behaviors/assets/EX-01/candidate-identity.png",
-    "flows/take-exam/behaviors/assets/EX-01/submission-saved.png",
     "flows/template-exam-generation/behaviors/README.md",
     "flows/template-exam-generation/behaviors/TG-01.md",
     "flows/template-exam-generation/behaviors/assets/TG-01/generation-settings.png",
@@ -69,6 +65,11 @@
     "journeys/content-preparation/verified/assets/PJ-01/publish-confirmation.png",
     "journeys/content-preparation/verified/assets/PJ-01/reopened-instance.png",
     "journeys/content-preparation/verified/assets/PJ-01/saved-contract.png",
+    "journeys/exam-delivery/verified/EX-01.md",
+    "journeys/exam-delivery/verified/README.md",
+    "journeys/exam-delivery/verified/assets/EX-01/candidate-identity.png",
+    "journeys/exam-delivery/verified/assets/EX-01/submission-handoff.png",
+    "journeys/exam-delivery/verified/assets/EX-01/submission-saved.png",
     "modules/grading-units/behaviors/GS-01.md",
     "modules/grading-units/behaviors/README.md",
     "modules/grading-units/behaviors/assets/GS-01/publish-data.png",

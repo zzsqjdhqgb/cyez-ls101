@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { launchIntegrationApp } from '../../../integration/support/electron-app'
-import { evidence, prepareProductPage, productStep, productTest } from '../../support/product-test'
+import { evidence, prepareProductPage, productTest } from '../../support/product-test'
 
 let electronApp: ElectronApplication
 let page: Page
@@ -32,21 +32,42 @@ test(
     {
       id: 'GS-01',
       owner: { kind: 'module', slug: 'grading-units', title: '评分单元', order: 60 },
-      capability: '评分单元发布',
+      section: '评分单元发布',
       title: '从结构草稿填写评分资料并发布稳定评分单元',
-      intent:
+      purpose:
         '评分单元先以可保存的结构草稿存在，发布时补齐面向用户的名称、说明和答案解释，生成稳定契约并保留原草稿。',
       preconditions: ['评分单元库为空，用户需要创建第一个评分单元。'],
-      guarantees: [
+      outcomes: [
         '创建草稿库和结构草稿不会直接产生正式评分单元。',
         '发布对话框要求补齐正式名称、描述和答案槽位说明。',
         '发布成功后正式评分单元和结构草稿都保留，可以分别进入。'
       ],
-      guide: [{ chapter: 'prepare-content', order: 10 }]
+      manual: [{ chapter: 'prepare-content', order: 10 }],
+      steps: [
+        {
+          key: 'create-draft-library',
+          action: '进入“评分单元”，新建并命名一个草稿库，然后在其中新建结构。',
+          expected: '应用打开一个可以继续编辑的未命名结构草稿。'
+        },
+        {
+          key: 'define-draft',
+          action: '为结构草稿命名，确认题型，并选择“保存”。',
+          expected: '页面提示结构草稿已经保存。'
+        },
+        {
+          key: 'publish-unit',
+          action: '选择“发布正式版”，填写正式名称、描述和答案说明，然后确认发布。',
+          expected: '发布前会说明结构将被冻结；确认后页面提示正式评分单元已经发布。'
+        },
+        {
+          key: 'verify-lifecycle',
+          action: '返回评分单元列表，再进入原草稿库。',
+          expected: '正式评分单元可以使用，原结构草稿也仍然保留。'
+        }
+      ]
     },
-    // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture argument destructuring.
-    async ({}, testInfo) => {
-      await productStep('create-draft-library', '进入评分单元并新建结构草稿库', async () => {
+    async (testInfo, productStep) => {
+      await productStep('create-draft-library', async () => {
         await page.getByRole('link', { name: '评分单元' }).click()
         await page.getByRole('button', { name: '新建草稿库' }).click()
         await expect(page.getByRole('heading', { name: '未命名草稿库' })).toBeVisible()
@@ -57,7 +78,7 @@ test(
         await expect(page.getByRole('heading', { name: '未命名结构' })).toBeVisible()
       })
 
-      await productStep('define-draft', '命名结构草稿并明确评分管道', async () => {
+      await productStep('define-draft', async () => {
         await page.getByRole('textbox').first().fill('客观题评分规则')
         await expect(page.getByRole('button', { name: '客观题' })).toHaveAttribute(
           'data-active',
@@ -67,7 +88,7 @@ test(
         await expect(page.getByText('结构草稿已保存')).toBeVisible()
       })
 
-      await productStep('publish-unit', '补齐正式资料并确认发布冻结结构', async () => {
+      await productStep('publish-unit', async () => {
         await page.getByRole('button', { name: '发布正式版' }).click()
         const dialog = page.getByRole('dialog', { name: '发布正式 Schema' })
         await expect(dialog).toContainText('当前结构将被冻结')
@@ -84,7 +105,7 @@ test(
         await expect(page.getByText('正式 Schema 已发布')).toBeVisible()
       })
 
-      await productStep('verify-lifecycle', '发布后查看正式评分单元并保留结构草稿', async () => {
+      await productStep('verify-lifecycle', async () => {
         await expect(page.getByRole('heading', { level: 1, name: '客观题评分规则' })).toBeVisible()
         await page.getByRole('button', { name: '返回 Schema 列表' }).click()
         await expect(page.getByRole('button', { name: '客观题评分规则' })).toBeVisible()

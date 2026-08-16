@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { strFromU8, unzipSync } from 'fflate'
 import { launchIntegrationApp } from '../../../integration/support/electron-app'
-import { evidence, prepareProductPage, productStep, productTest } from '../../support/product-test'
+import { evidence, prepareProductPage, productJourney } from '../../support/product-test'
 
 let electronApp: ElectronApplication
 let page: Page
@@ -37,32 +37,63 @@ test.afterEach(async () => {
 })
 
 test(
-  ...productTest(
+  ...productJourney(
     {
       id: 'EX-01',
-      owner: { kind: 'flow', slug: 'take-exam', title: '运行试卷并保存作答包', order: 90 },
-      capability: '考试运行',
-      title: '从试卷库登记作答人并保存完成后的作答包',
-      intent:
-        '试卷库中的试卷通过沉浸式播放器运行；完成后将自包含作答包保存到本地，之后才能在作答记录中导入并评分。',
-      preconditions: ['试卷库中已有一份无需录音检查的可运行试卷。'],
-      guarantees: [
+      owner: {
+        kind: 'journey',
+        slug: 'exam-delivery',
+        title: '运行考试并移交作答',
+        order: 90
+      },
+      section: '考试运行与作答移交',
+      title: '运行一份试卷并把作答交给评分环节',
+      purpose:
+        '已有可运行试卷时，从试卷库启动考试、登记作答人并保存作答包，再把本次产生的作答导入作答记录。',
+      preconditions: ['本地有一份无需录音检查的可运行试卷包。'],
+      outcomes: [
         '开始考试前必须填写姓名和考生号。',
         '作答完成后必须成功保存作答包才能结束考试。',
-        '关闭播放器后返回试卷库，作答包文件可以独立导入作答记录。'
+        '本次考试产生的作答包可以立即导入作答记录，并保留试卷和作答人信息。'
       ],
-      guide: [{ chapter: 'run-exam', order: 20 }]
+      manual: [{ chapter: 'run-exam', order: 20 }],
+      steps: [
+        {
+          key: 'import-exam',
+          action: '进入“试卷库”，选择“导入试卷包”，再选择要运行的试卷文件。',
+          expected: '导入的试卷出现在试卷库中。'
+        },
+        {
+          key: 'identify-candidate',
+          action: '选择“开始考试”，填写作答人姓名和考生号。',
+          expected: '开始作答前，页面显示本次试卷并保留作答人身份信息。'
+        },
+        {
+          key: 'finish-exam',
+          action: '选择“继续”进入播放器，并完成试卷。',
+          expected: '完成页确认作答包已经保存，并提供结束考试的“完成”按钮。'
+        },
+        {
+          key: 'return-to-library',
+          action: '在完成页选择“完成”。',
+          expected: '播放器关闭并返回试卷库，原试卷仍可再次使用。'
+        },
+        {
+          key: 'handoff-submission',
+          action: '进入“作答记录”，选择“导入作答包”，再选择本次考试刚刚保存的文件。',
+          expected: '作答出现在“未结算”列表中，并显示刚才登记的姓名和试卷名称。'
+        }
+      ]
     },
-    // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture argument destructuring.
-    async ({}, testInfo) => {
-      await productStep('import-exam', '把可运行试卷导入试卷库', async () => {
+    async (testInfo, productStep) => {
+      await productStep('import-exam', async () => {
         await installOpenDialog(examPath)
         await page.getByRole('link', { name: '试卷库' }).click()
         await page.getByRole('button', { name: '导入试卷包' }).click()
         await expect(page.getByRole('cell', { name: /产品路径练习卷/ })).toBeVisible()
       })
 
-      await productStep('identify-candidate', '从试卷库开始考试并填写作答人姓名', async () => {
+      await productStep('identify-candidate', async () => {
         await page.getByRole('button', { name: '开始考试' }).click()
         await expect(page.getByRole('heading', { name: '产品路径练习卷' })).toBeVisible()
         await page.getByLabel('姓名').fill('林晓')
@@ -75,7 +106,7 @@ test(
         })
       })
 
-      await productStep('finish-exam', '继续进入播放器并完成无录音试卷', async () => {
+      await productStep('finish-exam', async () => {
         await configureSaveDialog(submissionPath)
         await page.getByRole('button', { name: '继续' }).click()
         await expect(page.getByRole('heading', { name: '考试完成' })).toBeVisible()
@@ -94,10 +125,28 @@ test(
         })
       })
 
-      await productStep('return-to-library', '关闭完成页后回到试卷库', async () => {
+      await productStep('return-to-library', async () => {
         await page.getByRole('button', { name: '完成' }).click()
         await expect(page.getByRole('heading', { level: 1, name: '试卷库' })).toBeVisible()
         await expect(page.getByRole('cell', { name: /产品路径练习卷/ })).toBeVisible()
+      })
+
+      await productStep('handoff-submission', async () => {
+        await installOpenDialog(submissionPath)
+        await page.getByRole('link', { name: '作答记录' }).click()
+        await page.getByRole('button', { name: '导入作答包' }).click()
+        await expect(page.getByRole('tab', { name: /未结算/ })).toHaveAttribute(
+          'aria-selected',
+          'true'
+        )
+        await expect(page.getByText('林晓', { exact: true })).toBeVisible()
+        await expect(page.getByText('产品路径练习卷', { exact: true })).toBeVisible()
+        await evidence(testInfo, page, {
+          key: 'submission-handoff',
+          kind: 'result',
+          step: 'handoff-submission',
+          caption: '本次考试保存的作答已经进入作答记录'
+        })
       })
     }
   )

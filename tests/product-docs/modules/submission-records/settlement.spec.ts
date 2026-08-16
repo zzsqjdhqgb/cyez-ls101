@@ -5,7 +5,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { launchIntegrationApp } from '../../../integration/support/electron-app'
-import { evidence, prepareProductPage, productStep, productTest } from '../../support/product-test'
+import { evidence, prepareProductPage, productTest } from '../../support/product-test'
 
 let electronApp: ElectronApplication
 let page: Page
@@ -46,21 +46,52 @@ test(
     {
       id: 'SR-01',
       owner: { kind: 'module', slug: 'submission-records', title: '作答记录', order: 30 },
-      capability: '评分结算',
+      section: '评分结算',
       title: '批量评分作答并在确认后结算为一个批次',
-      intent:
-        '作答记录分为未结算和已结算。用户可以批量评分、暂缓结算并保留进度，也可以将全部评分完成的作答原子结算为一个批次。',
+      purpose:
+        '作答记录分为未结算和已结算。用户可以批量评分、暂缓结算并保留进度，也可以把全部完成评分的作答确认为一个结算批次。',
       preconditions: ['本地有一份客观题作答包和一份需要人工评分的朗读作答包。'],
-      guarantees: [
+      outcomes: [
         '批量评分按照一次会话推进，并在结束后进入独立结算页。',
-        '下次结算会保留评分进度，本次结算会原子创建一个批次。',
+        '选择下次结算会保留评分进度，选择本次结算会创建一个批次。',
         '重新评分只重置目标作答，不改写原始作答内容。'
       ],
-      guide: [{ chapter: 'grade-settle', order: 20 }]
+      manual: [{ chapter: 'grade-settle', order: 20 }],
+      steps: [
+        {
+          key: 'import-submissions',
+          action: '进入“作答记录”，连续导入需要处理的两份作答包。',
+          expected: '两份作答都出现在“未结算”列表中。'
+        },
+        {
+          key: 'grade-selection',
+          action: '全选两份作答并选择“开始评分”，为需要人工判断的题目填写分数和评语。',
+          expected: '应用按顺序处理所选作答，并在提交最后一道题后进入结算。'
+        },
+        {
+          key: 'review-settlement',
+          action: '在“评分结算”页面检查本次评分结果。',
+          expected: '页面列出本次会话中全部可结算作答，并显示本次结算数量。'
+        },
+        {
+          key: 'defer-settlement',
+          action: '选择“下次结算”。',
+          expected: '应用返回未结算列表，两份作答保留评分并显示为可结算。'
+        },
+        {
+          key: 'settle-batch',
+          action: '再次选择两份作答进入评分，并在结算页选择“本次结算”。',
+          expected: '应用切换到“已结算”视图，两份作答归入同一个结算批次。'
+        },
+        {
+          key: 'restart-grading',
+          action: '在已结算记录中选择一份作答的“重新评分”，再确认删除原评分。',
+          expected: '目标作答回到未结算列表并显示为未评分，其他作答不受影响。'
+        }
+      ]
     },
-    // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture argument destructuring.
-    async ({}, testInfo) => {
-      await productStep('import-submissions', '从作答记录独立入口导入两份作答包', async () => {
+    async (testInfo, productStep) => {
+      await productStep('import-submissions', async () => {
         await page.getByRole('link', { name: '作答记录' }).click()
         await installOpenDialog([objectivePath, readingPath])
         await page.getByRole('button', { name: '导入作答包' }).click()
@@ -80,7 +111,7 @@ test(
         })
       })
 
-      await productStep('grade-selection', '勾选多条记录后按顺序进入一次评分会话', async () => {
+      await productStep('grade-selection', async () => {
         await page.getByRole('checkbox', { name: '全选' }).check()
         await page.getByRole('button', { name: '开始评分（2）' }).click()
 
@@ -92,7 +123,7 @@ test(
         await page.getByRole('button', { name: '提交本题' }).click()
       })
 
-      await productStep('review-settlement', '评分会话结束后进入沉浸式结算页', async () => {
+      await productStep('review-settlement', async () => {
         await expect(page.getByRole('heading', { name: '评分结算' })).toBeVisible()
         await expect(page.getByRole('navigation', { name: '主导航' })).toHaveCount(0)
         await expect(page.getByRole('button', { name: '本次结算（2）' })).toBeEnabled()
@@ -111,7 +142,7 @@ test(
         })
       })
 
-      await productStep('defer-settlement', '选择下次结算会保留评分并返回未结算列表', async () => {
+      await productStep('defer-settlement', async () => {
         await page.getByRole('button', { name: '下次结算' }).click()
         await expect(page.getByRole('tab', { name: /未结算/ })).toHaveAttribute(
           'aria-selected',
@@ -120,7 +151,7 @@ test(
         await expect(page.getByText('可结算', { exact: true })).toHaveCount(2)
       })
 
-      await productStep('settle-batch', '再次进入结算并将两份作答原子结算为一个批次', async () => {
+      await productStep('settle-batch', async () => {
         await page.getByRole('checkbox', { name: '全选' }).check()
         await page.getByRole('button', { name: '开始评分（2）' }).click()
         await page.getByRole('button', { name: '人工评分' }).click()
@@ -143,23 +174,19 @@ test(
         })
       })
 
-      await productStep(
-        'restart-grading',
-        '重新评分会删除原结果并把原始作答移回未评分列表',
-        async () => {
-          const row = page.getByRole('row').filter({ hasText: '张明' })
-          await row.getByRole('button', { name: '重新评分' }).click()
-          await expect(page.getByRole('heading', { name: '重新评分 张明 的作答？' })).toBeVisible()
-          await page.getByRole('button', { name: '删除评分并重新开始' }).click()
+      await productStep('restart-grading', async () => {
+        const row = page.getByRole('row').filter({ hasText: '张明' })
+        await row.getByRole('button', { name: '重新评分' }).click()
+        await expect(page.getByRole('heading', { name: '重新评分 张明 的作答？' })).toBeVisible()
+        await page.getByRole('button', { name: '删除评分并重新开始' }).click()
 
-          await expect(page.getByRole('tab', { name: /未结算/ })).toHaveAttribute(
-            'aria-selected',
-            'true'
-          )
-          const resetRow = page.getByRole('row').filter({ hasText: '张明' })
-          await expect(resetRow.getByText('未评分', { exact: true })).toBeVisible()
-        }
-      )
+        await expect(page.getByRole('tab', { name: /未结算/ })).toHaveAttribute(
+          'aria-selected',
+          'true'
+        )
+        const resetRow = page.getByRole('row').filter({ hasText: '张明' })
+        await expect(resetRow.getByText('未评分', { exact: true })).toBeVisible()
+      })
     }
   )
 )
