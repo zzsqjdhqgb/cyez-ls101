@@ -1,0 +1,12 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9ed4a0e..8ee9f30 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -11,6 +11,6 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ # Compiler flags
+ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic")
+-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -march=native")
++    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
+ endif()
