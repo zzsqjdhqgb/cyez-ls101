@@ -119,6 +119,49 @@
   gap: var(--space-3);
 }
 
+.speechResults {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.speechResult {
+  padding: 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.speechResult > strong {
+  color: var(--color-text-strong);
+  font-size: 13px;
+}
+
+.speechResultReference,
+.speechResultTranscript {
+  margin: 9px 0 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.speechResultCorrection {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.speechResultCorrection > :first-child {
+  margin-top: 0;
+}
+
+.speechResultCorrection > :last-child {
+  margin-bottom: 0;
+}
+
 .answer {
   padding: 14px;
   border: 1px solid var(--color-border-strong);

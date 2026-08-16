@@ -34,6 +34,62 @@ export type AIRouterSpeechRecognitionEvent =
   | { type: 'result'; result: AIRouterSpeechRecognitionResult }
   | { type: 'error'; message: string }
 
+export interface AIRouterPronunciationAssessmentModelOption {
+  providerId: string
+  providerName: string
+  modelId: string
+  modelName: string
+}
+
+export interface AIRouterPronunciationAssessmentRequest {
+  providerConfigId: string
+  modelId: string
+  referenceText: string
+  audio: {
+    data: Uint8Array
+    mediaType: string
+    filename?: string
+  }
+}
+
+export interface AIRouterPronunciationPhoneAssessment {
+  expected: string
+  observed?: string
+  score: number
+  confidence: number
+  startMs: number
+  endMs: number
+}
+
+export interface AIRouterPronunciationWordAssessment {
+  text: string
+  expectedPhones: string[]
+  score: number
+  startMs: number
+  endMs: number
+  phones: AIRouterPronunciationPhoneAssessment[]
+}
+
+export interface AIRouterPronunciationPauseAssessment {
+  afterWordIndex: number
+  durationMs: number
+  startMs: number
+  endMs: number
+}
+
+export interface AIRouterPronunciationAssessmentResult {
+  referenceText: string
+  recognizedPhones: string[]
+  overallScore: number
+  words: AIRouterPronunciationWordAssessment[]
+  pauses: AIRouterPronunciationPauseAssessment[]
+  feedbackMarkdown: string
+}
+
+export type AIRouterPronunciationAssessmentEvent =
+  | { type: 'result'; result: AIRouterPronunciationAssessmentResult }
+  | { type: 'error'; message: string }
+
 export type AIRouterReasoningEffort =
   | 'none'
   | 'minimal'
@@ -371,6 +427,11 @@ export interface AIRouterClient {
     request: AIRouterSpeechRecognitionRequest,
     options?: { signal?: AbortSignal }
   ): Promise<AIRouterSpeechRecognitionResult>
+  listPronunciationAssessmentModels(): Promise<AIRouterPronunciationAssessmentModelOption[]>
+  assessPronunciation(
+    request: AIRouterPronunciationAssessmentRequest,
+    options?: { signal?: AbortSignal }
+  ): Promise<AIRouterPronunciationAssessmentResult>
   synthesizeSpeech(
     request: AIRouterSpeechSynthesisRequest,
     options?: { signal?: AbortSignal }
@@ -420,6 +481,11 @@ export interface AIRouterBridge {
   startSpeechRecognition(
     request: AIRouterSpeechRecognitionRequest,
     listener: (event: AIRouterSpeechRecognitionEvent) => void
+  ): () => void
+  listPronunciationAssessmentModels(): Promise<AIRouterPronunciationAssessmentModelOption[]>
+  startPronunciationAssessment(
+    request: AIRouterPronunciationAssessmentRequest,
+    listener: (event: AIRouterPronunciationAssessmentEvent) => void
   ): () => void
   startSpeechSynthesis(
     request: AIRouterSpeechSynthesisRequest,

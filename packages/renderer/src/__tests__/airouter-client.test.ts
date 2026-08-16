@@ -235,6 +235,8 @@ function bridgeWith(overrides: Partial<AIRouterBridge>): AIRouterBridge {
     testSpeechConnection: vi.fn(),
     listSpeechRecognitionModels: vi.fn(),
     startSpeechRecognition: vi.fn(),
+    listPronunciationAssessmentModels: vi.fn(),
+    startPronunciationAssessment: vi.fn(),
     startSpeechSynthesis: vi.fn(),
     startTextGeneration: vi.fn(),
     startImageGeneration: vi.fn(),

@@ -72,6 +72,25 @@ interface AIRouterSpeechRecognitionResult {
 
 `设置 → AI 引擎 → 语音识别` 当前仍是占位页。内置 Qwen3 ASR 不需要用户配置，现阶段由 AI 评分会话直接枚举和选择；设置页尚未提供模型下载、路径选择或识别测试界面。
 
+## 发音评测
+
+发音评测与语音识别是两个独立能力。首版内置模型为 `facebook/wav2vec2-lv-60-espeak-cv-ft` 的固定 ONNX INT8 转换版本，Provider 和模型 ID 为：
+
+```text
+Provider: builtin-facebook-phoneme
+Model: wav2vec2-lv-60-espeak-cv-ft-int8-c69750f
+```
+
+模型输入是 16 kHz 单声道音频，输出逐帧音素 logits。main process 在 Worker 中完成 FFmpeg 解码、输入归一化和 ONNX 推理，再将结果交给 `@ls101/grading-engine/pronunciation` 做强制对齐。固定朗读文本由 CMUdict 生成美式英语参考音素，模型输出和参考音素都保留原生 eSpeak IPA token。
+
+发音评测结果不是普通 ASR 转写：它包含逐词/逐音素时间区间、参考音素、可能的替代音素、置信度、整体匹配度和 Markdown 反馈。当前结果明确标记为实验性；未经中国学生语料校准时，低置信度偏差会被过滤，但仍需结合原始录音复听。
+
+模型资产不默认写入源码仓库。运行 `node scripts/download-pronunciation-model.js` 可按固定 revision 和 SHA-256 断点下载；构建时复制到 `resources/assets/pronunciation`。完成构建后可以用以下命令验证真实录音：
+
+```text
+node scripts/test-pronunciation.js <audio-file> --text "Reference sentence"
+```
+
 ## 语音合成
 
 语音合成暂不考虑音频流式传输。AIRouter 将语音合成分为 Provider、模型包和角色路由三层：

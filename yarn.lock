@@ -1257,10 +1257,12 @@ __metadata:
     "@ai-sdk/anthropic": "npm:4.0.27"
     "@ai-sdk/openai": "npm:4.0.27"
     "@ls101/config-store": "workspace:*"
+    "@ls101/grading-engine": "workspace:*"
     "@ls101/secret-store": "workspace:*"
     ai: "npm:7.0.48"
     fflate: "npm:^0.8.2"
     ffmpeg-static: "npm:^5.3.0"
+    onnxruntime-node: "npm:1.24.3"
     zod: "npm:3.25.76"
   languageName: unknown
   linkType: soft
@@ -1355,12 +1357,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@ls101/grading-engine@workspace:packages/grading-engine":
+"@ls101/grading-engine@workspace:*, @ls101/grading-engine@workspace:packages/grading-engine":
   version: 0.0.0-use.local
   resolution: "@ls101/grading-engine@workspace:packages/grading-engine"
   dependencies:
     "@ls101/core-types": "workspace:*"
     "@ls101/submission-library": "workspace:*"
+    cmu-pronouncing-dictionary: "npm:3.0.0"
   languageName: unknown
   linkType: soft
 
@@ -2922,6 +2925,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"adm-zip@npm:^0.5.16":
+  version: 0.5.18
+  resolution: "adm-zip@npm:0.5.18"
+  checksum: 10c0/9b734aa7126a01913baec02bf495d086b5d7e63315522b7087620e3fc8279c8ebd65109da4d99f16fcf873d87522ae6ffd913aef65449fd22c68777b772685e9
+  languageName: node
+  linkType: hard
+
 "agent-base@npm:6":
   version: 6.0.2
   resolution: "agent-base@npm:6.0.2"
@@ -3599,6 +3609,13 @@ __metadata:
   dependencies:
     mimic-response: "npm:^1.0.0"
   checksum: 10c0/06a2b611824efb128810708baee3bd169ec9a1bf5976a5258cd7eb3f7db25f00166c6eee5961f075c7e38e194f373d4fdf86b8166ad5b9c7e82bbd2e333a6087
+  languageName: node
+  linkType: hard
+
+"cmu-pronouncing-dictionary@npm:3.0.0":
+  version: 3.0.0
+  resolution: "cmu-pronouncing-dictionary@npm:3.0.0"
+  checksum: 10c0/a595da61e30295ad82199e87686136006d463bf7ef115e3f4c781d95ba00d0dfa3c502644efbc7827c153d8c7d3c9ba73b2dc01a7006918c90f4e8d885ab277d
   languageName: node
   linkType: hard
 
@@ -7170,6 +7187,25 @@ __metadata:
   dependencies:
     wrappy: "npm:1"
   checksum: 10c0/5d48aca287dfefabd756621c5dfce5c91a549a93e9fdb7b8246bc4c4790aa2ec17b34a260530474635147aeb631a2dcc8b32c613df0675f96041cbb8244517d0
+  languageName: node
+  linkType: hard
+
+"onnxruntime-common@npm:1.24.3":
+  version: 1.24.3
+  resolution: "onnxruntime-common@npm:1.24.3"
+  checksum: 10c0/3160a08a8addf7b1c8f2ff0c12c126c84847d5b36f8c047cf05560d05faf7605fe4c3366c725cfbd305d4399d0930c632a22bd6a600488ac2c6f9ee3e2aebe25
+  languageName: node
+  linkType: hard
+
+"onnxruntime-node@npm:1.24.3":
+  version: 1.24.3
+  resolution: "onnxruntime-node@npm:1.24.3"
+  dependencies:
+    adm-zip: "npm:^0.5.16"
+    global-agent: "npm:^3.0.0"
+    onnxruntime-common: "npm:1.24.3"
+  checksum: 10c0/326899b4bb548859824b3c1320fa4554e1a8a779134b555b0d6a9d04828301261e47134f7d80ec27b32e07b4d80d2ab146dfeedcb6c13f0242e4f069ecaa0a5c
+  conditions: (os=win32 | os=darwin | os=linux)
   languageName: node
   linkType: hard
 

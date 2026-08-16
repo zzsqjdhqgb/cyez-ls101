@@ -3,6 +3,8 @@ import type {
   AIRouterClient,
   AIRouterGeneratedImage,
   AIRouterImageGenerationEvent,
+  AIRouterPronunciationAssessmentEvent,
+  AIRouterPronunciationAssessmentResult,
   AIRouterStreamEvent,
   AIRouterSpeechModelPackageImportResult,
   AIRouterSpeechProviderType,
@@ -63,6 +65,30 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
           reject(new DOMException('Speech recognition was aborted', 'AbortError'))
         }
         stop = getBridge().startSpeechRecognition(request, finish)
+        if (options.signal?.aborted) abort()
+        else options.signal?.addEventListener('abort', abort, { once: true })
+      })
+    },
+    listPronunciationAssessmentModels: () => getBridge().listPronunciationAssessmentModels(),
+    assessPronunciation(request, options = {}) {
+      return new Promise<AIRouterPronunciationAssessmentResult>((resolve, reject) => {
+        let settled = false
+        let stop = (): void => undefined
+        const finish = (event: AIRouterPronunciationAssessmentEvent): void => {
+          if (settled) return
+          settled = true
+          options.signal?.removeEventListener('abort', abort)
+          stop()
+          if (event.type === 'result') resolve(event.result)
+          else reject(new Error(event.message))
+        }
+        const abort = (): void => {
+          if (settled) return
+          settled = true
+          stop()
+          reject(new DOMException('Pronunciation assessment was aborted', 'AbortError'))
+        }
+        stop = getBridge().startPronunciationAssessment(request, finish)
         if (options.signal?.aborted) abort()
         else options.signal?.addEventListener('abort', abort, { once: true })
       })

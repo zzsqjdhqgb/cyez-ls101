@@ -14,17 +14,15 @@
 
 1. 按 Schema 答案格式中的稳定顺序处理每个录音答案。
 2. 将录音交给 AIRouter 语音识别，得到自然语言转写。
-3. 将原始录音交给语音纠错接口，得到自然语言纠错描述。`fixed-speech` 同时传入可选 `referenceText`；`free-speech` 不传参考文本，纠错接口也不接收 ASR 结果。
+3. 将原始录音交给发音评测接口，得到逐词、逐音素对齐后的自然语言纠错描述。`fixed-speech` 同时传入 `referenceText`；`free-speech` 没有固定参考文本，只记录不执行逐音素对齐。
 4. 将 Schema 类型、名称、满分、静态输入 Markdown、评分标准、额外提示词、转写和纠错描述组成文本评分 prompt。
 5. 调用所选文本模型并严格解析最终结果。
 
 静态附件的二进制内容不发送给模型。Markdown 本身会进入 prompt，因此题目 Markdown 中已经填写的图片描述或提示词仍然可供文本模型使用。
 
-语音纠错后端当前未实现。占位实现对每段录音返回：
+发音评测后端当前使用独立的内置 Facebook Wav2Vec2 音素 CTC 模型。模型输出逐帧音素 logits，评分引擎使用 CMUdict 生成参考发音，再做 CTC 强制对齐，结果包含逐音素分数、疑似替代音素、时间区间和停顿。反馈文本由确定性 formatter 生成，随后与 ASR 转写一起交给文本模型。
 
-```text
-当前未实现语音纠错，正在测试阶段，请直接当作该考生语音标准无错误，只根据内容评分
-```
+模型文件位于 `model-assets/pronunciation/facebook-wav2vec2-lv-60-espeak-cv-ft-int8`，由 `scripts/download-pronunciation-model.js` 按固定 revision 和 SHA-256 下载。模型及 ONNX Runtime 在独立 Worker 中运行，不阻塞 renderer。
 
 当前没有针对 `freetalk` 的专用评分或纠错策略；`free-speech` 只使用通用转写和占位纠错流程。
 
@@ -73,7 +71,9 @@
 
 - 首版只实现 Qwen3 ASR，不提供其他识别 Provider。
 - 评分单元和单元内录音均顺序处理，尚未实现有界并发。
-- 语音纠错只有占位实现，不进行发音或流利度分析。
+- 发音评测目前是实验性能力，CMUdict 到模型 eSpeak 音素的映射和阈值尚未用中国学生语料校准。
+- 当前只适合 `fixed-speech` 的固定文本朗读；不对自由表达做逐音素判断。
+- 目前可输出音素替换和明显停顿，不评估句子语调、重音、连读和弱读的完整韵律质量。
 - 静态附件字节不参与评分，也不直接发送给文本模型。
 - 文本模型仍可能产生无效结果；系统只负责拒绝并要求重试，不自动修复模型 JSON。
 

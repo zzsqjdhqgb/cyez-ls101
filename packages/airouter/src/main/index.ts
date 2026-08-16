@@ -7,6 +7,8 @@ import type {
   AIRouterImageGenerationEvent,
   AIRouterImageProviderConfigInput,
   AIRouterImageRequest,
+  AIRouterPronunciationAssessmentEvent,
+  AIRouterPronunciationAssessmentRequest,
   AIRouterProviderConfigInput,
   AIRouterSpeechConnectionTestInput,
   AIRouterSpeechRecognitionEvent,
@@ -22,12 +24,14 @@ import { AIRouterService, type AIRouterServiceOptions } from './service'
 import { AIRouterImageService } from './image-service'
 import { AIRouterSpeechService } from './speech-service'
 import { AIRouterSpeechRecognitionService } from './speech-recognition-service'
+import { AIRouterPronunciationAssessmentService } from './pronunciation-assessment-service'
 import { PocketTtsSynthesizer } from './pocket-tts'
 
 export { AIRouterService } from './service'
 export { AIRouterImageService } from './image-service'
 export { AIRouterSpeechService } from './speech-service'
 export { AIRouterSpeechRecognitionService } from './speech-recognition-service'
+export { AIRouterPronunciationAssessmentService } from './pronunciation-assessment-service'
 export { AIRouterSpeechModelStore } from './speech-model-store'
 export { PocketTtsSynthesizer } from './pocket-tts'
 export type { AIRouterServiceOptions } from './service'
@@ -54,6 +58,9 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
   })
   const recognitionService = new AIRouterSpeechRecognitionService({
     assetsDir: resolveRecognitionAssetsDir()
+  })
+  const pronunciationService = new AIRouterPronunciationAssessmentService({
+    assetsDir: resolvePronunciationAssetsDir()
   })
   const active = new Map<string, ActiveGeneration>()
 
@@ -128,6 +135,7 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
     (_event, request: AIRouterSpeechConnectionTestInput) => speechService.testConnection(request)
   )
   ipcMain.handle(AIROUTER_CHANNELS.listRecognitionModels, () => recognitionService.listModels())
+  ipcMain.handle(AIROUTER_CHANNELS.listPronunciationModels, () => pronunciationService.listModels())
   ipcMain.on(
     AIROUTER_CHANNELS.generateStart,
     (event, requestId: string, request: AIRouterTextRequest) => {
@@ -202,6 +210,45 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
   ipcMain.on(AIROUTER_CHANNELS.speechRecognitionAbort, (event, requestId: string) => {
     active.get(`${event.sender.id}:${requestId}`)?.controller.abort()
   })
+  ipcMain.on(
+    AIROUTER_CHANNELS.pronunciationAssessmentStart,
+    (event, requestId: string, request: AIRouterPronunciationAssessmentRequest) => {
+      const key = `${event.sender.id}:${requestId}`
+      active.get(key)?.controller.abort()
+      const controller = new AbortController()
+      active.set(key, { sender: event.sender, controller })
+      void pronunciationToRenderer(
+        pronunciationService,
+        event.sender,
+        requestId,
+        request,
+        controller.signal
+      ).finally(() => active.delete(key))
+    }
+  )
+  ipcMain.on(AIROUTER_CHANNELS.pronunciationAssessmentAbort, (event, requestId: string) => {
+    active.get(`${event.sender.id}:${requestId}`)?.controller.abort()
+  })
+}
+
+async function pronunciationToRenderer(
+  service: AIRouterPronunciationAssessmentService,
+  sender: WebContents,
+  requestId: string,
+  request: AIRouterPronunciationAssessmentRequest,
+  signal: AbortSignal
+): Promise<void> {
+  const send = (event: AIRouterPronunciationAssessmentEvent): void => {
+    if (!sender.isDestroyed()) {
+      sender.send(AIROUTER_CHANNELS.pronunciationAssessmentEvent, requestId, event)
+    }
+  }
+  try {
+    const result = await service.assess(request, { signal })
+    if (!signal.aborted) send({ type: 'result', result })
+  } catch (error) {
+    if (!signal.aborted) send({ type: 'error', message: errorMessage(error) })
+  }
 }
 
 async function recognitionToRenderer(
@@ -319,4 +366,10 @@ function resolveRecognitionAssetsDir(): string {
   const electronApp = app as typeof app & { isPackaged?: boolean; getAppPath?: () => string }
   if (electronApp.isPackaged) return join(process.resourcesPath, 'assets', 'stt')
   return join(electronApp.getAppPath?.() ?? process.cwd(), 'model-assets', 'stt')
+}
+
+function resolvePronunciationAssetsDir(): string {
+  const electronApp = app as typeof app & { isPackaged?: boolean; getAppPath?: () => string }
+  if (electronApp.isPackaged) return join(process.resourcesPath, 'assets', 'pronunciation')
+  return join(electronApp.getAppPath?.() ?? process.cwd(), 'model-assets', 'pronunciation')
 }

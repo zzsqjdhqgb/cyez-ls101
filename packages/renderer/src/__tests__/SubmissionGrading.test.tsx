@@ -19,6 +19,7 @@ import { SubmissionSettlementPage } from '../features/submissions/SubmissionSett
 
 const aiAdapterMocks = vi.hoisted(() => ({
   recognize: vi.fn().mockResolvedValue('recognized answer'),
+  correct: vi.fn().mockResolvedValue('pronunciation feedback'),
   generate: vi.fn().mockResolvedValue('{"score":4,"comment":"AI comment"}')
 }))
 
@@ -41,6 +42,7 @@ vi.mock('../features/submissions/SubmissionAIRouterAdapter', () => ({
     ]
   }),
   createAIRouterSpeechRecognizer: vi.fn(() => ({ recognize: aiAdapterMocks.recognize })),
+  createAIRouterSpeechCorrector: vi.fn(() => ({ correct: aiAdapterMocks.correct })),
   createAIRouterTextGradingModel: vi.fn(() => ({ generate: aiAdapterMocks.generate }))
 }))
 
@@ -186,6 +188,9 @@ describe('submission grading UI', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'AI 评分' }))
     fireEvent.click(await screen.findByRole('button', { name: '开始 AI 评分' }))
     fireEvent.click(await screen.findByRole('button', { name: '全部审查' }))
+    expect(await screen.findByText('语音识别与发音纠正')).toBeInTheDocument()
+    expect(screen.getByText('识别文本：recognized answer')).toBeInTheDocument()
+    expect(screen.getByText('pronunciation feedback')).toBeInTheDocument()
     fireEvent.change(await screen.findByLabelText('分数'), { target: { value: '3.125' } })
     fireEvent.change(screen.getByLabelText('评语'), { target: { value: 'Reviewed' } })
     fireEvent.click(screen.getByRole('button', { name: '确认本题' }))

@@ -11,10 +11,13 @@ export default defineConfig({
   main: {
     build: {
       rollupOptions: {
-        external: ['sherpa-onnx-node', 'ffmpeg-static'],
+        external: ['onnxruntime-node', 'sherpa-onnx-node', 'ffmpeg-static'],
         input: {
           index: resolve('src/main/index.ts'),
           'pocket-tts-worker': resolve('packages/airouter/src/main/pocket-tts-worker.ts'),
+          'pronunciation-assessment-worker': resolve(
+            'packages/airouter/src/main/pronunciation-assessment-worker.ts'
+          ),
           'qwen3-asr-worker': resolve('packages/airouter/src/main/qwen3-asr-worker.ts')
         }
       }

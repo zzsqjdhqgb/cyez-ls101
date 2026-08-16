@@ -1,4 +1,8 @@
-export { AIROUTER_CHANNELS } from './constants'
+export {
+  AIROUTER_CHANNELS,
+  BUILTIN_PRONUNCIATION_MODEL_ID,
+  BUILTIN_PRONUNCIATION_PROVIDER_ID
+} from './constants'
 export type { AIRouterChannel } from './constants'
 export type {
   AIRouterClient,
@@ -37,6 +41,13 @@ export type {
   AIRouterSpeechRecognitionRequest,
   AIRouterSpeechRecognitionResult,
   AIRouterSpeechRecognitionEvent,
+  AIRouterPronunciationAssessmentEvent,
+  AIRouterPronunciationAssessmentModelOption,
+  AIRouterPronunciationAssessmentRequest,
+  AIRouterPronunciationAssessmentResult,
+  AIRouterPronunciationPauseAssessment,
+  AIRouterPronunciationPhoneAssessment,
+  AIRouterPronunciationWordAssessment,
   AIRouterSpeechSynthesisRequest,
   AIRouterSpeechTarget,
   AIRouterSpeechTestResult,

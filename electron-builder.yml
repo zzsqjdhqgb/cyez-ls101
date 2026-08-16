@@ -48,6 +48,7 @@ files:
   - 'out/**/*'
 asarUnpack:
   - resources/**
+  - node_modules/onnxruntime-node/**
   - node_modules/sherpa-onnx-node/**
   - node_modules/sherpa-onnx-*/**
   - node_modules/ffmpeg-static/**
@@ -98,6 +99,8 @@ extraResources:
     to: tts
   - from: model-assets/stt
     to: assets/stt
+  - from: model-assets/pronunciation
+    to: assets/pronunciation
   - from: resources/media
     to: media
   - from: resources/builtin

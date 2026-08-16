@@ -13,6 +13,7 @@ type IpcListener = (...args: unknown[]) => void
 const {
   electronMocks,
   generateImageMock,
+  assessPronunciationMock,
   recognizeSpeechMock,
   speechSynthesizeMock,
   streamTextMock
@@ -37,6 +38,7 @@ const {
       app: { getVersion: vi.fn(() => '0.3.1') }
     },
     generateImageMock: vi.fn(),
+    assessPronunciationMock: vi.fn(),
     recognizeSpeechMock: vi.fn(),
     speechSynthesizeMock: vi.fn(),
     streamTextMock: vi.fn()
@@ -77,6 +79,23 @@ vi.mock('../main/speech-recognition-service', () => ({
   }
 }))
 
+vi.mock('../main/pronunciation-assessment-service', () => ({
+  AIRouterPronunciationAssessmentService: class {
+    listModels() {
+      return [
+        {
+          providerId: 'builtin-facebook-phoneme',
+          providerName: '内置发音评测',
+          modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f',
+          modelName: 'Facebook Wav2Vec2 Phoneme INT8'
+        }
+      ]
+    }
+
+    assess = assessPronunciationMock
+  }
+}))
+
 describe('AIRouter main integration', () => {
   let baseDir: string
 
@@ -88,6 +107,7 @@ describe('AIRouter main integration', () => {
     electronMocks.on.mockClear()
     generateImageMock.mockReset()
     recognizeSpeechMock.mockReset()
+    assessPronunciationMock.mockReset()
     speechSynthesizeMock.mockReset()
     streamTextMock.mockReset()
     baseDir = await mkdtemp(path.join(tmpdir(), 'airouter-main-'))
@@ -330,6 +350,41 @@ describe('AIRouter main integration', () => {
       result: { text: 'recognized answer' }
     })
     expect(recognizeSpeechMock).toHaveBeenCalledWith(request, {
+      signal: expect.any(AbortSignal)
+    })
+  })
+
+  it('lists the phoneme model and forwards pronunciation assessment through IPC', async () => {
+    const { registerAIRouter } = await import('../main')
+    registerAIRouter({ baseDir, secretStorage: createSecrets(baseDir) })
+    const result = {
+      referenceText: 'three',
+      recognizedPhones: ['s'],
+      overallScore: 20,
+      words: [],
+      pauses: [],
+      feedbackMarkdown: 'feedback'
+    }
+    assessPronunciationMock.mockResolvedValue(result)
+    expect(handler(AIROUTER_CHANNELS.listPronunciationModels)(undefined)).toEqual([
+      expect.objectContaining({ modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f' })
+    ])
+    const sender = createSender()
+    const requestId = 'pronunciation-request'
+    const request = {
+      providerConfigId: 'builtin-facebook-phoneme',
+      modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f',
+      referenceText: 'three',
+      audio: { data: new Uint8Array([1, 2, 3]), mediaType: 'audio/wav' }
+    }
+    listener(AIROUTER_CHANNELS.pronunciationAssessmentStart)({ sender }, requestId, request)
+    await waitForSentEvents(sender, 1)
+    expect(sender.send).toHaveBeenCalledWith(
+      AIROUTER_CHANNELS.pronunciationAssessmentEvent,
+      requestId,
+      { type: 'result', result }
+    )
+    expect(assessPronunciationMock).toHaveBeenCalledWith(request, {
       signal: expect.any(AbortSignal)
     })
   })

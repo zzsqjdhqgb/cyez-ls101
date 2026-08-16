@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import {
-  createPlaceholderSpeechCorrector,
   executeAIGrading,
   type AIGradingProgress,
   type SpeechRecognitionModelSelection,
@@ -26,6 +25,7 @@ import { Button } from '../../components/ui/Button'
 import { useSubmissionLibrary } from './SubmissionLibraryContext'
 import { SubmissionMarkdown } from './SubmissionMarkdown'
 import {
+  createAIRouterSpeechCorrector,
   createAIRouterSpeechRecognizer,
   createAIRouterTextGradingModel,
   listSubmissionAIModels
@@ -418,7 +418,7 @@ function AISubmissionGradingPage({
     let currentWorkspaces = workspacesRef.current
     const dependencies = {
       recognizer: createAIRouterSpeechRecognizer(recognitionModel),
-      corrector: createPlaceholderSpeechCorrector(),
+      corrector: createAIRouterSpeechCorrector(),
       textModel: createAIRouterTextGradingModel(textModel),
       speechRecognitionModel: recognitionModel,
       textModelSelection: textModel
@@ -559,7 +559,8 @@ function AISubmissionGradingPage({
   const beginReview = (selected: AIGradingTarget[]): void => {
     setReviewTargets(selected)
     setReviewIndex(0)
-    const first = selected[0] ? resultFor(selected[0]).result : null
+    const firstRun = selected[0] ? resultFor(selected[0]) : null
+    const first = firstRun?.result
     setReviewScore(first ? String(first.score) : '')
     setReviewComment(first?.comment ?? '')
     setPhase('review')
@@ -660,14 +661,20 @@ function AISubmissionGradingPage({
     }
   }
 
-  if (phase === 'review' && reviewTargets[reviewIndex]) {
+  const reviewTarget = reviewTargets[reviewIndex]
+  const reviewRun = reviewTarget
+    ? findAIRun(workspaces[reviewTarget.submissionId], reviewTarget.input.instanceId)
+    : undefined
+
+  if (phase === 'review' && reviewTarget && reviewRun?.status === 'succeeded' && reviewRun.result) {
     return (
       <AIReviewWorkspace
         comment={reviewComment}
         error={error}
         index={reviewIndex}
+        run={reviewRun}
         score={reviewScore}
-        target={reviewTargets[reviewIndex]}
+        target={reviewTarget}
         total={reviewTargets.length}
         onCommentChange={setReviewComment}
         onScoreChange={setReviewScore}
@@ -834,6 +841,7 @@ function SampleConfiguration({
 
 function AIReviewWorkspace({
   target,
+  run,
   index,
   total,
   score,
@@ -844,6 +852,7 @@ function AIReviewWorkspace({
   onSubmit
 }: {
   target: AIGradingTarget
+  run: SubmissionAIGradingRun
   index: number
   total: number
   score: string
@@ -911,6 +920,32 @@ function AIReviewWorkspace({
                 ))}
               </div>
             </section>
+            {run.answers.length > 0 ? (
+              <section className={styles.contentSection}>
+                <h2>语音识别与发音纠正</h2>
+                <div className={styles.speechResults}>
+                  {run.answers.map((answer) => (
+                    <article className={styles.speechResult} key={answer.answerId}>
+                      <strong>{answer.description}</strong>
+                      {answer.referenceText ? (
+                        <p className={styles.speechResultReference}>
+                          参考文本：{answer.referenceText}
+                        </p>
+                      ) : null}
+                      <p className={styles.speechResultTranscript}>
+                        识别文本：{answer.transcript || '未识别到清晰内容'}
+                      </p>
+                      <div className={styles.speechResultCorrection}>
+                        <SubmissionMarkdown
+                          content={answer.correction}
+                          resources={input.resources}
+                        />
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
             <form
               className={styles.form}
               onSubmit={(event) => {

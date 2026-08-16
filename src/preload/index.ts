@@ -31,6 +31,8 @@ import {
   type AIRouterImageGenerationEvent,
   type AIRouterImageProviderConfigInput,
   type AIRouterImageRequest,
+  type AIRouterPronunciationAssessmentEvent,
+  type AIRouterPronunciationAssessmentRequest,
   type AIRouterSpeechConnectionTestInput,
   type AIRouterSpeechModelPackageImportResult,
   type AIRouterSpeechProviderConfigInput,
@@ -149,6 +151,9 @@ const airouterBridge: AIRouterBridge = {
   listSpeechRecognitionModels() {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.listRecognitionModels)
   },
+  listPronunciationAssessmentModels() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listPronunciationModels)
+  },
   startSpeechRecognition(
     request: AIRouterSpeechRecognitionRequest,
     listener: (event: AIRouterSpeechRecognitionEvent) => void
@@ -172,6 +177,31 @@ const airouterBridge: AIRouterBridge = {
     return () => {
       ipcRenderer.removeListener(AIROUTER_CHANNELS.speechRecognitionEvent, handler)
       if (!completed) ipcRenderer.send(AIROUTER_CHANNELS.speechRecognitionAbort, requestId)
+    }
+  },
+  startPronunciationAssessment(
+    request: AIRouterPronunciationAssessmentRequest,
+    listener: (event: AIRouterPronunciationAssessmentEvent) => void
+  ) {
+    const requestId = crypto.randomUUID()
+    let completed = false
+    const handler = (
+      _event: IpcRendererEvent,
+      id: string,
+      event: AIRouterPronunciationAssessmentEvent
+    ): void => {
+      if (id !== requestId) return
+      if (event.type === 'result' || event.type === 'error') {
+        completed = true
+        ipcRenderer.removeListener(AIROUTER_CHANNELS.pronunciationAssessmentEvent, handler)
+      }
+      listener(event)
+    }
+    ipcRenderer.on(AIROUTER_CHANNELS.pronunciationAssessmentEvent, handler)
+    ipcRenderer.send(AIROUTER_CHANNELS.pronunciationAssessmentStart, requestId, request)
+    return () => {
+      ipcRenderer.removeListener(AIROUTER_CHANNELS.pronunciationAssessmentEvent, handler)
+      if (!completed) ipcRenderer.send(AIROUTER_CHANNELS.pronunciationAssessmentAbort, requestId)
     }
   },
   startSpeechSynthesis(

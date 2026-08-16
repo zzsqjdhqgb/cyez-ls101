@@ -31,9 +31,16 @@ export const AIROUTER_CHANNELS = {
   speechRecognitionStart: 'airouter:speech-recognition-start',
   speechRecognitionAbort: 'airouter:speech-recognition-abort',
   speechRecognitionEvent: 'airouter:speech-recognition-event',
+  listPronunciationModels: 'airouter:list-pronunciation-models',
+  pronunciationAssessmentStart: 'airouter:pronunciation-assessment-start',
+  pronunciationAssessmentAbort: 'airouter:pronunciation-assessment-abort',
+  pronunciationAssessmentEvent: 'airouter:pronunciation-assessment-event',
   generateStart: 'airouter:generate-start',
   generateAbort: 'airouter:generate-abort',
   generateEvent: 'airouter:generate-event'
 } as const
+
+export const BUILTIN_PRONUNCIATION_PROVIDER_ID = 'builtin-facebook-phoneme'
+export const BUILTIN_PRONUNCIATION_MODEL_ID = 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f'
 
 export type AIRouterChannel = (typeof AIROUTER_CHANNELS)[keyof typeof AIROUTER_CHANNELS]

@@ -12,6 +12,7 @@ const SCRIPTS_DIR = __dirname
 const tasks = [
   { script: 'download-tts-assets.js' },
   { script: 'download-stt-models.js' },
+  { script: 'download-pronunciation-model.js' },
   { script: 'generate-icons.js' }
 ]
 
