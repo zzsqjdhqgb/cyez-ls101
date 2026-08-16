@@ -23,6 +23,7 @@ import {
   productGuideChapter,
   type ProductGuideChapter
 } from './product-guide'
+import { preserveEquivalentEvidenceImages } from './evidence-image'
 
 const REPOSITORY_ROOT = process.cwd()
 const PRODUCT_ROOT = path.join(REPOSITORY_ROOT, 'docs', 'product')
@@ -583,6 +584,7 @@ async function publishCanonicalDocumentation(
   outputRoot: string,
   manifest: ProductManifest
 ): Promise<void> {
+  await preserveEquivalentEvidenceImages(PRODUCT_ROOT, outputRoot, manifest.generatedFiles)
   const previous = await readManifest()
   const generatedDirectories = new Set([
     ...[...(previous?.owners ?? []), ...manifest.owners].map((owner) =>
