@@ -5,15 +5,31 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
-const root = path.resolve(import.meta.dirname, '..')
+const root = path.resolve(import.meta.dirname, '..', '..')
 const sourceDir = path.join(root, '.cache', 'qwen3-tts.cpp')
 const ggmlBuildDir = path.join(sourceDir, 'ggml', 'build')
 const helperBuildDir = path.join(root, '.cache', 'qwen3-tts-helper-build')
 const outputDir = path.join(root, 'resources', 'qwen-tts', `${process.platform}-${process.arch}`)
-const repository = 'https://github.com/predict-woo/qwen3-tts.cpp.git'
-const commit = 'b3ba14077cf1b3e11b86e5f84aa9184605c89b28'
+const assetConfig = loadAssetConfig()
+const repository = assetConfig.runtime.repository
+const commit = assetConfig.runtime.revision
+const ggmlCommit = assetConfig.runtime.ggmlRevision
 const patchPath = path.join(root, 'native', 'qwen-tts', 'portable-cpu.patch')
 const jobs = String(Math.max(1, Math.min(os.availableParallelism?.() ?? os.cpus().length, 16)))
+
+function loadAssetConfig() {
+  const file = path.join(import.meta.dirname, 'assets.json')
+  const value = JSON.parse(readFileSync(file, 'utf8'))
+  if (
+    value?.schemaVersion !== 1 ||
+    typeof value.runtime?.repository !== 'string' ||
+    !/^[a-f0-9]{40}$/.test(value.runtime?.revision ?? '') ||
+    !/^[a-f0-9]{40}$/.test(value.runtime?.ggmlRevision ?? '')
+  ) {
+    throw new Error(`Invalid Qwen TTS asset configuration: ${file}`)
+  }
+  return value
+}
 
 function requireCommand(command) {
   try {
@@ -47,6 +63,9 @@ function ensurePinnedSource() {
     throw new Error('qwen3-tts.cpp checkout does not match the pinned commit')
   }
   run('git', ['-C', sourceDir, 'submodule', 'update', '--init'])
+  if (output('git', ['-C', path.join(sourceDir, 'ggml'), 'rev-parse', 'HEAD']) !== ggmlCommit) {
+    throw new Error('qwen3-tts.cpp GGML checkout does not match the pinned commit')
+  }
 
   const patch = readFileSync(patchPath, 'utf8')
   try {

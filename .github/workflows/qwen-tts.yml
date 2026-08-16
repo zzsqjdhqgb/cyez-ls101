@@ -2,28 +2,108 @@ name: Qwen TTS Bundle
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: Bundle release version (for example, 0.1.0)
-        required: true
-        default: 0.1.0
-        type: string
-      prerelease:
-        description: Mark the bundle release as a prerelease
-        required: true
-        default: true
-        type: boolean
 
 permissions:
   contents: read
 
 concurrency:
-  group: qwen-tts-bundle-${{ inputs.version }}
+  group: qwen-tts-bundle-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  metadata:
+    name: Read bundle configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.config.outputs.version }}
+      tag: ${{ steps.config.outputs.tag }}
+      prerelease: ${{ steps.config.outputs.prerelease }}
+      runtime_repository: ${{ steps.config.outputs.runtime_repository }}
+      runtime_revision: ${{ steps.config.outputs.runtime_revision }}
+      model_id: ${{ steps.config.outputs.model_id }}
+      model_revision: ${{ steps.config.outputs.model_revision }}
+      voice_id: ${{ steps.config.outputs.voice_id }}
+      voice_name: ${{ steps.config.outputs.voice_name }}
+      voice_file: ${{ steps.config.outputs.voice_file }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Validate bundle configuration
+        id: config
+        env:
+          CURRENT_REPOSITORY: ${{ github.repository }}
+        run: |
+          node <<'NODE'
+          const { appendFileSync, existsSync, readFileSync } = require('node:fs')
+
+          const file = 'scripts/qwen-tts/assets.json'
+          const config = JSON.parse(readFileSync(file, 'utf8'))
+          const fail = (message) => {
+            throw new Error(`Invalid ${file}: ${message}`)
+          }
+          if (config.schemaVersion !== 1) fail('schemaVersion must be 1')
+          if (!/^\d+\.\d+\.\d+([.-][0-9A-Za-z.-]+)?$/.test(config.release?.version ?? '')) {
+            fail('release.version must be a semantic version')
+          }
+          if (config.release?.tag !== `qwen-tts-v${config.release.version}`) {
+            fail('release.tag must match qwen-tts-v<release.version>')
+          }
+          if (config.release?.repository !== process.env.CURRENT_REPOSITORY) {
+            fail(`release.repository must be ${process.env.CURRENT_REPOSITORY}`)
+          }
+          if (typeof config.release?.prerelease !== 'boolean') {
+            fail('release.prerelease must be boolean')
+          }
+          if (!/^https:\/\/github\.com\/.+\.git$/.test(config.runtime?.repository ?? '')) {
+            fail('runtime.repository must be a GitHub HTTPS clone URL')
+          }
+          if (config.model?.id !== 'Qwen/Qwen3-TTS-12Hz-0.6B-Base') {
+            fail('model.id must be Qwen/Qwen3-TTS-12Hz-0.6B-Base')
+          }
+          for (const [name, revision] of [
+            ['runtime.revision', config.runtime?.revision],
+            ['runtime.ggmlRevision', config.runtime?.ggmlRevision],
+            ['model.revision', config.model?.revision],
+            ['voice.designModelRevision', config.voice?.designModelRevision]
+          ]) {
+            if (!/^[a-f0-9]{40}$/.test(revision ?? '')) fail(`${name} must be a full commit hash`)
+          }
+          if (config.model?.quantization !== 'q8_0') fail('model.quantization must be q8_0')
+          if (!/^[a-zA-Z0-9_.-]+$/.test(config.voice?.id ?? '')) fail('voice.id is invalid')
+          if (typeof config.voice?.name !== 'string' || !config.voice.name.trim()) {
+            fail('voice.name is invalid')
+          }
+          if (!existsSync(config.voice?.file ?? '')) fail('voice.file does not exist')
+
+          const outputs = {
+            version: config.release.version,
+            tag: config.release.tag,
+            prerelease: String(config.release.prerelease),
+            runtime_repository: config.runtime.repository,
+            runtime_revision: config.runtime.revision,
+            model_id: config.model.id,
+            model_revision: config.model.revision,
+            voice_id: config.voice.id,
+            voice_name: config.voice.name,
+            voice_file: config.voice.file
+          }
+          for (const [name, value] of Object.entries(outputs)) {
+            if (typeof value !== 'string' || !value || value.includes('\n')) {
+              fail(`${name} is invalid`)
+            }
+            appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${value}\n`)
+          }
+          console.log(`Bundle ${outputs.tag} configuration is valid`)
+          NODE
+
   build:
     name: Build ${{ matrix.runtime-directory }}
+    needs: metadata
     strategy:
       fail-fast: false
       matrix:
@@ -50,16 +130,6 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate release version
-        shell: bash
-        env:
-          RUNTIME_VERSION: ${{ inputs.version }}
-        run: |
-          if [[ ! "$RUNTIME_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::Invalid runtime version: $RUNTIME_VERSION"
-            exit 1
-          fi
-
       - name: Show native toolchain
         shell: bash
         run: |
@@ -68,7 +138,7 @@ jobs:
           node --version
 
       - name: Build CPU runtime
-        run: node scripts/build-qwen-tts-runtime.mjs
+        run: node scripts/qwen-tts/build-runtime.mjs
 
       - name: Smoke-test helper
         shell: bash
@@ -105,18 +175,19 @@ jobs:
           cp "$SOURCE_PATH" "release-assets/$RELEASE_ASSET"
           node <<'NODE'
           const { execFileSync } = require('node:child_process')
-          const { writeFileSync } = require('node:fs')
+          const { readFileSync, writeFileSync } = require('node:fs')
 
           const revision = (directory) =>
             execFileSync('git', ['-C', directory, 'rev-parse', 'HEAD'], {
               encoding: 'utf8'
             }).trim()
+          const config = JSON.parse(readFileSync('scripts/qwen-tts/assets.json', 'utf8'))
           const info = {
             schemaVersion: 1,
             runtimeDirectory: process.env.RUNTIME_DIRECTORY,
             sourceCommit: process.env.SOURCE_COMMIT,
             upstream: {
-              repository: 'https://github.com/predict-woo/qwen3-tts.cpp',
+              repository: config.runtime.repository,
               revision: revision('.cache/qwen3-tts.cpp'),
               ggmlRevision: revision('.cache/qwen3-tts.cpp/ggml')
             }
@@ -137,6 +208,7 @@ jobs:
 
   model:
     name: Build Q8_0 model package
+    needs: metadata
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -163,16 +235,6 @@ jobs:
         env:
           COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
 
-      - name: Validate release version
-        shell: bash
-        env:
-          BUNDLE_VERSION: ${{ inputs.version }}
-        run: |
-          if [[ ! "$BUNDLE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::Invalid bundle version: $BUNDLE_VERSION"
-            exit 1
-          fi
-
       - name: Install package-builder dependencies
         run: yarn install --immutable --mode=skip-build
         env:
@@ -181,11 +243,12 @@ jobs:
       - name: Fetch pinned converter source
         shell: bash
         env:
-          QWEN_CPP_REVISION: b3ba14077cf1b3e11b86e5f84aa9184605c89b28
+          QWEN_CPP_REPOSITORY: ${{ needs.metadata.outputs.runtime_repository }}
+          QWEN_CPP_REVISION: ${{ needs.metadata.outputs.runtime_revision }}
         run: |
           mkdir -p .cache/qwen3-tts.cpp
           git -C .cache/qwen3-tts.cpp init
-          git -C .cache/qwen3-tts.cpp remote add origin https://github.com/predict-woo/qwen3-tts.cpp.git
+          git -C .cache/qwen3-tts.cpp remote add origin "$QWEN_CPP_REPOSITORY"
           git -C .cache/qwen3-tts.cpp fetch --depth 1 origin "$QWEN_CPP_REVISION"
           git -C .cache/qwen3-tts.cpp checkout --detach FETCH_HEAD
           test "$(git -C .cache/qwen3-tts.cpp rev-parse HEAD)" = "$QWEN_CPP_REVISION"
@@ -201,7 +264,8 @@ jobs:
         env:
           HF_HOME: ${{ runner.temp }}/huggingface
           HF_HUB_DISABLE_TELEMETRY: 1
-          MODEL_REVISION: 5d83992436eae1d760afd27aff78a71d676296fc
+          MODEL_ID: ${{ needs.metadata.outputs.model_id }}
+          MODEL_REVISION: ${{ needs.metadata.outputs.model_revision }}
         run: |
           python <<'PYTHON'
           import os
@@ -209,7 +273,7 @@ jobs:
           from huggingface_hub import snapshot_download
 
           snapshot_download(
-              repo_id="Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+              repo_id=os.environ["MODEL_ID"],
               revision=os.environ["MODEL_REVISION"],
               local_dir=Path(".cache/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base"),
               allow_patterns=[
@@ -240,21 +304,24 @@ jobs:
       - name: Build model package
         shell: bash
         env:
-          BUNDLE_VERSION: ${{ inputs.version }}
+          BUNDLE_VERSION: ${{ needs.metadata.outputs.version }}
           SOURCE_COMMIT: ${{ github.sha }}
-          MODEL_REVISION: 5d83992436eae1d760afd27aff78a71d676296fc
+          VOICE_ID: ${{ needs.metadata.outputs.voice_id }}
+          VOICE_NAME: ${{ needs.metadata.outputs.voice_name }}
+          VOICE_FILE: ${{ needs.metadata.outputs.voice_file }}
         run: |
           mkdir -p release-assets
-          node scripts/build-qwen-tts-package.mjs \
+          node scripts/qwen-tts/build-package.mjs \
             --model-dir .cache/qwen3-tts.cpp/models \
-            --voice american-woman=native/qwen-tts/voices/american-woman.spk \
-            --voice-name american-woman="American English Woman" \
+            --voice "$VOICE_ID=$VOICE_FILE" \
+            --voice-name "$VOICE_ID=$VOICE_NAME" \
             --version "$BUNDLE_VERSION" \
             --output "release-assets/qwen3-tts-0.6b-base-q8_0-$BUNDLE_VERSION.zip"
           node <<'NODE'
           const { execFileSync } = require('node:child_process')
-          const { statSync, writeFileSync } = require('node:fs')
+          const { readFileSync, statSync, writeFileSync } = require('node:fs')
 
+          const config = JSON.parse(readFileSync('scripts/qwen-tts/assets.json', 'utf8'))
           const modelPackage = `release-assets/qwen3-tts-0.6b-base-q8_0-${process.env.BUNDLE_VERSION}.zip`
           const packageBytes = statSync(modelPackage).size
           if (packageBytes >= 2 * 1024 ** 3) {
@@ -263,19 +330,14 @@ jobs:
           const info = {
             schemaVersion: 1,
             sourceCommit: process.env.SOURCE_COMMIT,
-            modelRevision: process.env.MODEL_REVISION,
+            modelId: config.model.id,
+            modelRevision: config.model.revision,
             qwenCppRevision: execFileSync(
               'git',
               ['-C', '.cache/qwen3-tts.cpp', 'rev-parse', 'HEAD'],
               { encoding: 'utf8' }
             ).trim(),
-            voice: {
-              id: 'american-woman',
-              name: 'American English Woman',
-              designModel: 'Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign',
-              designModelRevision: '5ecdb67327fd37bb2e042aab12ff7391903235d3',
-              seed: 20260817
-            },
+            voice: config.voice,
             packageBytes
           }
           writeFileSync('release-assets/model-build-info.json', `${JSON.stringify(info, null, 2)}\n`)
@@ -304,7 +366,7 @@ jobs:
 
   release:
     name: Publish Qwen TTS release
-    needs: [build, model]
+    needs: [metadata, build, model]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -320,8 +382,8 @@ jobs:
 
       - name: Generate pinned release manifest
         env:
-          BUNDLE_VERSION: ${{ inputs.version }}
-          RELEASE_TAG: qwen-tts-v${{ inputs.version }}
+          BUNDLE_VERSION: ${{ needs.metadata.outputs.version }}
+          RELEASE_TAG: ${{ needs.metadata.outputs.tag }}
           SOURCE_COMMIT: ${{ github.sha }}
         run: |
           node <<'NODE'
@@ -403,7 +465,7 @@ jobs:
             sourceCommit: process.env.SOURCE_COMMIT,
             upstream: {
               ...first.upstream,
-              model: 'Qwen/Qwen3-TTS-12Hz-0.6B-Base',
+              model: modelInfo.modelId,
               modelRevision: modelInfo.modelRevision
             },
             voice: modelInfo.voice,
@@ -419,10 +481,10 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: qwen-tts-v${{ inputs.version }}
+          tag_name: ${{ needs.metadata.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: Qwen TTS v${{ inputs.version }}
-          prerelease: ${{ inputs.prerelease }}
+          name: Qwen TTS v${{ needs.metadata.outputs.version }}
+          prerelease: ${{ needs.metadata.outputs.prerelease }}
           make_latest: false
           generate_release_notes: false
           body: |

@@ -3065,6 +3065,7 @@ __metadata:
     eslint-plugin-react-hooks: "npm:^7.0.1"
     eslint-plugin-react-refresh: "npm:^0.4.24"
     execa: "npm:^9.6.1"
+    fflate: "npm:^0.8.2"
     ffmpeg-static: "npm:^5.3.0"
     jsdom: "npm:^29.1.1"
     lucide-react: "npm:^1.14.0"
