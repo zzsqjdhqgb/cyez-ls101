@@ -4,7 +4,6 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AIRouterProviderConfigInput, AIRouterProviderConfigSummary } from '@ls101/airouter'
-import { fileDialog } from '@ls101/file-dialog/renderer'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AIRouterSettingsPage } from '../features/airouter/AIRouterSettingsPage'
 import type { AIRouterApplication } from '../features/airouter/AIRouterApplication'
@@ -501,10 +500,6 @@ describe('AIRouterSettingsPage', () => {
 
   it('prompts for a local package and configures the imported package', async () => {
     const modelPackage = createSpeechPackageSummary()
-    vi.spyOn(fileDialog, 'readBinary').mockResolvedValue({
-      name: 'pocket-tts-en-1.0.0.zip',
-      data: new Uint8Array([1, 2, 3])
-    })
     const application = applicationWith({
       listSpeechConfigs: vi.fn().mockResolvedValue([]),
       listSpeechPackages: vi.fn().mockResolvedValueOnce([]).mockResolvedValue([modelPackage]),
@@ -538,9 +533,7 @@ describe('AIRouterSettingsPage', () => {
     expect(within(dialog).queryByRole('heading', { name: '启用模型' })).toBeNull()
 
     fireEvent.click(within(dialog).getByRole('button', { name: '导入模型包' }))
-    await waitFor(() =>
-      expect(application.importSpeechPackage).toHaveBeenCalledWith(new Uint8Array([1, 2, 3]))
-    )
+    await waitFor(() => expect(application.importSpeechPackage).toHaveBeenCalledWith())
     expect(await within(dialog).findByRole('heading', { name: '启用模型' })).toBeInTheDocument()
     expect(within(dialog).getByLabelText('Pocket English (pocket-en)')).toBeChecked()
     expect(within(dialog).getByLabelText('Alba (alba)')).toBeChecked()

@@ -131,8 +131,8 @@ const airouterBridge: AIRouterBridge = {
   listSpeechModelPackages(providerType?: AIRouterSpeechProviderType) {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.listSpeechPackages, providerType)
   },
-  importSpeechModelPackage(data: Uint8Array): Promise<AIRouterSpeechModelPackageImportResult> {
-    return ipcRenderer.invoke(AIROUTER_CHANNELS.importSpeechPackage, data)
+  importSpeechModelPackage(): Promise<AIRouterSpeechModelPackageImportResult | null> {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.importSpeechPackage)
   },
   deleteSpeechModelPackage(id: string, version: string) {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.deleteSpeechPackage, id, version)

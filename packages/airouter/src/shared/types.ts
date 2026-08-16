@@ -359,7 +359,7 @@ export interface AIRouterClient {
   listSpeechModelPackages(
     providerType?: AIRouterSpeechProviderType
   ): Promise<AIRouterSpeechModelPackageSummary[]>
-  importSpeechModelPackage(data: Uint8Array): Promise<AIRouterSpeechModelPackageImportResult>
+  importSpeechModelPackage(): Promise<AIRouterSpeechModelPackageImportResult | null>
   deleteSpeechModelPackage(id: string, version: string): Promise<void>
   listSpeechModels(config: AIRouterSpeechProviderConfigInput): Promise<AIRouterSpeechModelOption[]>
   listSpeechVoices(request: AIRouterSpeechVoiceListInput): Promise<AIRouterSpeechVoiceOption[]>
@@ -409,7 +409,7 @@ export interface AIRouterBridge {
   listSpeechModelPackages(
     providerType?: AIRouterSpeechProviderType
   ): Promise<AIRouterSpeechModelPackageSummary[]>
-  importSpeechModelPackage(data: Uint8Array): Promise<AIRouterSpeechModelPackageImportResult>
+  importSpeechModelPackage(): Promise<AIRouterSpeechModelPackageImportResult | null>
   deleteSpeechModelPackage(id: string, version: string): Promise<void>
   listSpeechModels(config: AIRouterSpeechProviderConfigInput): Promise<AIRouterSpeechModelOption[]>
   listSpeechVoices(request: AIRouterSpeechVoiceListInput): Promise<AIRouterSpeechVoiceOption[]>

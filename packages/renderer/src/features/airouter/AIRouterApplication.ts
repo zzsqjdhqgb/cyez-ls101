@@ -46,7 +46,7 @@ export interface AIRouterApplication {
   listSpeechPackages(
     providerType?: AIRouterSpeechProviderType
   ): Promise<AIRouterSpeechModelPackageSummary[]>
-  importSpeechPackage(data: Uint8Array): Promise<AIRouterSpeechModelPackageImportResult>
+  importSpeechPackage(): Promise<AIRouterSpeechModelPackageImportResult | null>
   deleteSpeechPackage(id: string, version: string): Promise<void>
   listSpeechModels(config: AIRouterSpeechProviderConfigInput): Promise<AIRouterSpeechModelOption[]>
   listSpeechVoices(request: AIRouterSpeechVoiceListInput): Promise<AIRouterSpeechVoiceOption[]>
@@ -76,7 +76,7 @@ export function createAIRouterApplication(
     deleteSpeechConfig: (id) => client.deleteSpeechProviderConfig(id),
     readSpeechApiKey: (id) => client.readSpeechProviderApiKey(id),
     listSpeechPackages: (providerType) => client.listSpeechModelPackages(providerType),
-    importSpeechPackage: (data) => client.importSpeechModelPackage(data),
+    importSpeechPackage: () => client.importSpeechModelPackage(),
     deleteSpeechPackage: (id, version) => client.deleteSpeechModelPackage(id, version),
     listSpeechModels: (config) => client.listSpeechModels(config),
     listSpeechVoices: (request) => client.listSpeechVoices(request),

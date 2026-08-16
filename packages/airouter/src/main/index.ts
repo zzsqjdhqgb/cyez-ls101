@@ -1,4 +1,4 @@
-import { app, ipcMain, type WebContents } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, type WebContents } from 'electron'
 import { join } from 'node:path'
 import { AIROUTER_CHANNELS } from '../shared'
 import type {
@@ -108,9 +108,21 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
     (_event, providerType?: AIRouterSpeechProviderConfigInput['type']) =>
       speechService.listModelPackages(providerType)
   )
-  ipcMain.handle(AIROUTER_CHANNELS.importSpeechPackage, (_event, data: Uint8Array) => {
-    if (!(data instanceof Uint8Array)) throw new TypeError('模型包必须是二进制数据')
-    return speechService.importModelPackage(data)
+  ipcMain.handle(AIROUTER_CHANNELS.importSpeechPackage, async (event) => {
+    const parent = BrowserWindow.fromWebContents(event.sender)
+    const result = parent
+      ? await dialog.showOpenDialog(parent, {
+          title: '导入 TTS 模型包',
+          filters: [{ name: 'TTS 模型包', extensions: ['zip'] }],
+          properties: ['openFile']
+        })
+      : await dialog.showOpenDialog({
+          title: '导入 TTS 模型包',
+          filters: [{ name: 'TTS 模型包', extensions: ['zip'] }],
+          properties: ['openFile']
+        })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return speechService.importModelPackage(result.filePaths[0])
   })
   ipcMain.handle(AIROUTER_CHANNELS.deleteSpeechPackage, (_event, id: string, version: string) =>
     speechService.deleteModelPackage(id, version)

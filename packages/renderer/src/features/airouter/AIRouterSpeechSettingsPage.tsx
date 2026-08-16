@@ -8,7 +8,6 @@ import type {
   AIRouterSpeechProviderType,
   AIRouterSpeechVoiceConfig
 } from '@ls101/airouter'
-import { fileDialog } from '@ls101/file-dialog/renderer'
 import {
   AudioLines,
   Box,
@@ -235,12 +234,8 @@ export function AIRouterSpeechSettingsPage({
   }
 
   const importPackage = async (): Promise<void> => {
-    const selected = await fileDialog.readBinary({
-      title: '导入 TTS 模型包',
-      filters: [{ name: 'TTS 模型包', extensions: ['zip'] }]
-    })
-    if (!selected) return
-    const result = await application.importSpeechPackage(selected.data)
+    const result = await application.importSpeechPackage()
+    if (!result) return
     const nextPackages = await application.listSpeechPackages()
     setPackages(nextPackages)
     setDraft((current) => {

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -34,7 +34,9 @@ const {
         encryptString: vi.fn((value: string) => new TextEncoder().encode(value)),
         decryptString: vi.fn((value: Uint8Array) => new TextDecoder().decode(value))
       },
-      app: { getVersion: vi.fn(() => '0.3.1') }
+      app: { getVersion: vi.fn(() => '0.3.1') },
+      BrowserWindow: { fromWebContents: vi.fn(() => null) },
+      dialog: { showOpenDialog: vi.fn() }
     },
     generateImageMock: vi.fn(),
     recognizeSpeechMock: vi.fn(),
@@ -45,6 +47,8 @@ const {
 
 vi.mock('electron', () => ({
   app: electronMocks.app,
+  BrowserWindow: electronMocks.BrowserWindow,
+  dialog: electronMocks.dialog,
   ipcMain: electronMocks,
   safeStorage: electronMocks.safeStorage
 }))
@@ -90,6 +94,10 @@ describe('AIRouter main integration', () => {
     recognizeSpeechMock.mockReset()
     speechSynthesizeMock.mockReset()
     streamTextMock.mockReset()
+    electronMocks.BrowserWindow.fromWebContents.mockReset()
+    electronMocks.BrowserWindow.fromWebContents.mockReturnValue(null)
+    electronMocks.dialog.showOpenDialog.mockReset()
+    electronMocks.dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] })
     baseDir = await mkdtemp(path.join(tmpdir(), 'airouter-main-'))
   })
 
@@ -161,10 +169,7 @@ describe('AIRouter main integration', () => {
     const { registerAIRouter } = await import('../main')
     registerAIRouter({ baseDir, secretStorage: createSecrets(baseDir) })
 
-    const imported = await handler(AIROUTER_CHANNELS.importSpeechPackage)(
-      undefined,
-      createSpeechPackage()
-    )
+    const imported = await importSpeechPackage(baseDir, createSpeechPackage())
     expect(imported).toEqual(
       expect.objectContaining({
         package: expect.objectContaining({
@@ -257,7 +262,7 @@ describe('AIRouter main integration', () => {
   it('forwards synthesized speech data through the IPC event channel', async () => {
     const { registerAIRouter } = await import('../main')
     registerAIRouter({ baseDir, secretStorage: createSecrets(baseDir) })
-    await handler(AIROUTER_CHANNELS.importSpeechPackage)(undefined, createSpeechPackage())
+    await importSpeechPackage(baseDir, createSpeechPackage())
     await handler(AIROUTER_CHANNELS.saveSpeechConfig)(undefined, {
       id: 'local-speech-provider',
       name: '本地语音 Provider',
@@ -381,6 +386,16 @@ function handler(channel: string): IpcHandler {
   const registered = electronMocks.handlers.get(channel)
   if (!registered) throw new Error(`No handler registered for ${channel}`)
   return registered
+}
+
+async function importSpeechPackage(directory: string, bytes: Uint8Array) {
+  const packagePath = path.join(directory, `speech-${Math.random().toString(36).slice(2)}.zip`)
+  await writeFile(packagePath, bytes)
+  electronMocks.dialog.showOpenDialog.mockResolvedValueOnce({
+    canceled: false,
+    filePaths: [packagePath]
+  })
+  return handler(AIROUTER_CHANNELS.importSpeechPackage)({ sender: {} })
 }
 
 function listener(channel: string): IpcListener {

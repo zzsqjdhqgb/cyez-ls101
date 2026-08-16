@@ -1261,6 +1261,7 @@ __metadata:
     ai: "npm:7.0.48"
     fflate: "npm:^0.8.2"
     ffmpeg-static: "npm:^5.3.0"
+    yauzl: "npm:^3.2.0"
     zod: "npm:3.25.76"
   languageName: unknown
   linkType: soft
@@ -9555,6 +9556,15 @@ __metadata:
     buffer-crc32: "npm:~0.2.3"
     fd-slicer: "npm:~1.1.0"
   checksum: 10c0/f265002af7541b9ec3589a27f5fb8f11cf348b53cc15e2751272e3c062cd73f3e715bc72d43257de71bbaecae446c3f1b14af7559e8ab0261625375541816422
+  languageName: node
+  linkType: hard
+
+"yauzl@npm:^3.2.0":
+  version: 3.4.0
+  resolution: "yauzl@npm:3.4.0"
+  dependencies:
+    pend: "npm:~1.2.0"
+  checksum: 10c0/17a98c42c0065e8af429eb8a61f7a0e4562181ed54080366b838f34f741b6829f167f804787c86b7646bb042707f35871739f053de0548285e405a2eae4da025
   languageName: node
   linkType: hard
 
