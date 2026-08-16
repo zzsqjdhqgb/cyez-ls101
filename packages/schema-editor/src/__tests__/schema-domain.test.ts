@@ -151,12 +151,16 @@ describe('Schema repository', () => {
 
     const first = await initializeBuiltinSchemas(repository, manifest)
     const sentenceSchema = first.find((item) => item.data.name === '上海高考 - 朗读句子')
+    const passageSchema = first.find((item) => item.data.name === '上海高考 - 朗读短文')
     expect(first).toHaveLength(7)
     expect(sentenceSchema?.structure.answerFormat).toEqual([
       { answerId: 'sentence-1', type: 'fixed-speech' },
       { answerId: 'sentence-2', type: 'fixed-speech' }
     ])
     expect(sentenceSchema?.data.maxScore).toBe(1)
+    expect(passageSchema?.data.rubricMarkdown).toContain(
+      '考生在规定时间内未朗读完整篇短文，不得因此扣分'
+    )
 
     if (!sentenceSchema) throw new Error('Bundled sentence Schema was not found')
     await repository.updateSchemaData(sentenceSchema.schemaId, 0, {
