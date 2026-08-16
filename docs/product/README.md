@@ -87,6 +87,7 @@ LS101 是一套覆盖英语听说考试“准备内容、制作试卷、运行�
 ## 产品流程
 
 - [LS101 用户指南：按逻辑顺序完成一次考试](./guide/README.md)
+- [从零准备题型内容](./journeys/content-preparation/README.md)
 - [试卷模板生成试卷](./flows/template-exam-generation/README.md)
 - [运行试卷并保存作答包](./flows/take-exam/README.md)
 
@@ -111,6 +112,7 @@ LS101 是一套覆盖英语听说考试“准备内容、制作试卷、运行�
 ## 文档分层
 
 - `guide/` 是按用户任务顺序生成的产品说明，回答“先做什么、为什么做、产出什么、下一步是什么”。
+- `journeys/` 记录从明确起点连续产出并消费业务对象的标准用户旅程，不通过仓储预置旅程中的核心对象。
 - `modules/` 和 `flows/` 是手写的产品设计约束，回答对象生命周期、边界和交互语义。
 - 各归属目录下的 `behaviors/` 是由 Playwright 成功运行生成的逐行为规格，提供操作步骤、截图和可执行测试源码链接。
 - `coverage.md` 和 `docs/engineering/testing/inventory.md` 只做覆盖审计，不替代用户指南。

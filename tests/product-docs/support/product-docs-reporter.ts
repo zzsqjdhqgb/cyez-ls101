@@ -50,15 +50,16 @@ interface ProductStep {
 }
 
 interface ProductManifest {
-  schemaVersion: 2
+  schemaVersion: 3
   owners: Array<{
     kind: ProductOwner['kind']
     slug: string
-    behaviorIds: string[]
+    specIds: string[]
   }>
   guideChapters: Array<{
     slug: string
     title: string
+    journeyIds: string[]
     behaviorIds: string[]
   }>
   generatedFiles: string[]
@@ -194,11 +195,15 @@ async function renderDocumentation(
         `产品文档归属缺少设计文档：${normalizePath(path.relative(REPOSITORY_ROOT, designPath))}`
       )
     }
-    const behaviorRoot = path.join(outputRoot, ownerRoot, 'behaviors')
+    const behaviorRoot = path.join(outputRoot, ownerRoot, ownerGeneratedDirectory(group.owner))
     await mkdir(path.join(behaviorRoot, 'assets'), { recursive: true })
 
     for (const behavior of group.behaviors) {
-      const scenarioRelativePath = path.join(ownerRoot, 'behaviors', `${behavior.definition.id}.md`)
+      const scenarioRelativePath = path.join(
+        ownerRoot,
+        ownerGeneratedDirectory(group.owner),
+        `${behavior.definition.id}.md`
+      )
       const scenarioPath = path.join(outputRoot, scenarioRelativePath)
       const scenarioMarkdown = await renderBehaviorPage(outputRoot, behavior, generatedFiles)
       await writeGeneratedFile(outputRoot, scenarioPath, scenarioMarkdown, generatedFiles)
@@ -219,20 +224,30 @@ async function renderDocumentation(
   await writeGeneratedFile(outputRoot, coveragePath, renderCoverage(ownerGroups), generatedFiles)
 
   const manifest: ProductManifest = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     owners: ownerGroups.map((group) => ({
       kind: group.owner.kind,
       slug: group.owner.slug,
-      behaviorIds: group.behaviors.map((behavior) => behavior.definition.id)
+      specIds: group.behaviors.map((behavior) => behavior.definition.id)
     })),
     guideChapters: [...PRODUCT_GUIDE_CHAPTERS]
       .sort((left, right) => left.order - right.order)
       .map((chapter) => ({
         slug: chapter.slug,
         title: chapter.title,
+        journeyIds: behaviors
+          .filter(
+            (behavior) =>
+              behavior.definition.owner.kind === 'journey' &&
+              behavior.definition.guide.some((placement) => placement.chapter === chapter.slug)
+          )
+          .sort((left, right) => left.definition.id.localeCompare(right.definition.id))
+          .map((behavior) => behavior.definition.id),
         behaviorIds: behaviors
-          .filter((behavior) =>
-            behavior.definition.guide.some((placement) => placement.chapter === chapter.slug)
+          .filter(
+            (behavior) =>
+              behavior.definition.owner.kind !== 'journey' &&
+              behavior.definition.guide.some((placement) => placement.chapter === chapter.slug)
           )
           .sort((left, right) => left.definition.id.localeCompare(right.definition.id))
           .map((behavior) => behavior.definition.id)
@@ -286,22 +301,27 @@ function renderGuideIndex(
     '',
     '# LS101 用户指南',
     '',
-    '本指南按一次考试从准备到产出结果的真实工作顺序组织，而不是按软件模块罗列功能。章节中的“已验证操作”来自完整通过的 Playwright 测试；“尚待自动验证”用于明确当前证据边界。',
+    '本指南按一次考试从准备到产出结果的真实工作顺序组织，而不是按软件模块罗列功能。“已验证用户旅程”通过界面从起点连续产出并消费业务对象；“已验证产品行为”证明局部规则和异常边界；“尚待自动验证”明确当前证据范围。',
     '',
     '## 完整路径',
     '',
     ...chapters.map((chapter, index) => {
-      const count = behaviors.filter((behavior) =>
+      const chapterSpecs = behaviors.filter((behavior) =>
         behavior.definition.guide.some((placement) => placement.chapter === chapter.slug)
+      )
+      const journeyCount = chapterSpecs.filter(
+        (behavior) => behavior.definition.owner.kind === 'journey'
       ).length
-      return `${index + 1}. [${chapter.title}](./${guideChapterFilename(chapter, index)})：${chapter.goal}（${count} 条已验证操作）`
+      const behaviorCount = chapterSpecs.length - journeyCount
+      return `${index + 1}. [${chapter.title}](./${guideChapterFilename(chapter, index)})：${chapter.goal}（${journeyCount} 条完整旅程，${behaviorCount} 条产品行为）`
     }),
     '',
     '## 阅读方法',
     '',
     '- 第一次使用时按章节顺序阅读，先理解对象关系，再进入具体操作。',
-    '- 只处理某个阶段时，直接进入对应章节；每条操作都链接到更细的行为保证、截图和可执行测试。',
-    '- 没有出现在“已验证操作”中的功能不表示不存在，只表示尚未进入产品文档测试的证据范围。',
+    '- 只处理某个阶段时，直接进入对应章节；每条旅程和行为都链接到保证、截图和可执行测试。',
+    '- 完整旅程不通过仓储预置核心业务对象；产品行为可以声明并构造自己的前置状态。',
+    '- 没有出现在已验证旅程或行为中的功能不表示不存在，只表示尚未进入产品文档测试的证据范围。',
     ''
   ].join('\n')
 }
@@ -323,6 +343,12 @@ function renderGuideChapter(
         left.order - right.order ||
         left.behavior.definition.id.localeCompare(right.behavior.definition.id)
     )
+  const journeys = chapterBehaviors.filter(
+    ({ behavior }) => behavior.definition.owner.kind === 'journey'
+  )
+  const supportingBehaviors = chapterBehaviors.filter(
+    ({ behavior }) => behavior.definition.owner.kind !== 'journey'
+  )
   const previous = chapters[chapterIndex - 1]
   const next = chapters[chapterIndex + 1]
   const navigation = [
@@ -352,11 +378,19 @@ function renderGuideChapter(
     '',
     ...chapter.inputs.map((item) => `- ${item}`),
     '',
-    '## 已验证操作',
+    '## 已验证用户旅程',
     '',
-    ...(chapterBehaviors.length > 0
-      ? chapterBehaviors.flatMap(({ behavior }, index) => renderGuideBehavior(behavior, index + 1))
-      : ['当前还没有进入产品文档测试的操作。']),
+    ...(journeys.length > 0
+      ? journeys.flatMap(({ behavior }, index) => renderGuideBehavior(behavior, index + 1))
+      : ['当前还没有通过界面完整跑通的用户旅程。']),
+    '',
+    '## 已验证产品行为',
+    '',
+    ...(supportingBehaviors.length > 0
+      ? supportingBehaviors.flatMap(({ behavior }, index) =>
+          renderGuideBehavior(behavior, index + 1)
+        )
+      : ['当前还没有独立验证的产品行为。']),
     '',
     '## 完成后的产物',
     '',
@@ -378,7 +412,12 @@ function renderGuideChapter(
 function renderGuideBehavior(behavior: BehaviorResult, index: number): string[] {
   const definition = behavior.definition
   const detail = normalizePath(
-    path.join('..', ownerRelativeRoot(definition.owner), 'behaviors', `${definition.id}.md`)
+    path.join(
+      '..',
+      ownerRelativeRoot(definition.owner),
+      ownerGeneratedDirectory(definition.owner),
+      `${definition.id}.md`
+    )
   )
   return [
     `### ${index}. ${definition.title}`,
@@ -426,7 +465,7 @@ async function renderBehaviorPage(
     for (const item of evidenceByStep.get(step.key) ?? []) {
       const assetRelativePath = path.join(
         ownerRelativeRoot(behavior.definition.owner),
-        'behaviors',
+        ownerGeneratedDirectory(behavior.definition.owner),
         'assets',
         behavior.definition.id,
         `${item.definition.key}.png`
@@ -450,13 +489,14 @@ async function renderBehaviorPage(
   const canonicalScenarioPath = path.join(
     PRODUCT_ROOT,
     ownerRelativeRoot(behavior.definition.owner),
-    'behaviors',
+    ownerGeneratedDirectory(behavior.definition.owner),
     `${behavior.definition.id}.md`
   )
   const sourceLink = normalizePath(
     path.relative(path.dirname(canonicalScenarioPath), behavior.sourceFile)
   )
   const { definition } = behavior
+  const journey = definition.owner.kind === 'journey'
   return [
     generatedNotice(),
     '',
@@ -464,7 +504,7 @@ async function renderBehaviorPage(
     '',
     `**归属：** ${definition.owner.title} / ${definition.capability}`,
     '',
-    '## 行为意图',
+    `## ${journey ? '旅程目标' : '行为意图'}`,
     '',
     definition.intent,
     '',
@@ -478,7 +518,7 @@ async function renderBehaviorPage(
     '',
     ...stepLines,
     '',
-    '## 行为保证',
+    `## ${journey ? '旅程保证' : '行为保证'}`,
     '',
     ...definition.guarantees.map((item) => `- ${item}`),
     '',
@@ -490,14 +530,15 @@ async function renderBehaviorPage(
 }
 
 function renderOwnerIndex(owner: ProductOwner, behaviors: readonly BehaviorResult[]): string {
+  const journey = owner.kind === 'journey'
   return [
     generatedNotice(),
     '',
-    `# ${owner.title}：已验证行为`,
+    `# ${owner.title}：${journey ? '已验证旅程' : '已验证行为'}`,
     '',
-    '本目录由完整通过的 Playwright 产品文档测试生成。产品设计和业务约束参见[模块或流程定义](../README.md)。',
+    `本目录由完整通过的 Playwright 产品文档测试生成。产品设计和业务约束参见[${journey ? '旅程' : '模块或流程'}定义](../README.md)。`,
     '',
-    '| 编号 | 能力 | 用户行为 | 证据 |',
+    `| 编号 | 能力 | ${journey ? '用户旅程' : '用户行为'} | 证据 |`,
     '| --- | --- | --- | ---: |',
     ...behaviors.map(
       (behavior) =>
@@ -513,11 +554,11 @@ function renderCoverage(
   return [
     generatedNotice(),
     '',
-    '# 产品行为覆盖',
+    '# 产品测试覆盖',
     '',
-    '这里只汇总产品域覆盖情况，不重复场景摘要。按工作顺序阅读请进入[用户指南](./guide/README.md)；按归属审计请进入对应模块或流程。',
+    '这里只汇总完整用户旅程与局部产品行为的覆盖情况，不重复场景摘要。按工作顺序阅读请进入[用户指南](./guide/README.md)；按归属审计请进入对应旅程、模块或流程。',
     '',
-    '| 类型 | 产品域 | 设计 | 已验证行为 | 截图证据 |',
+    '| 类型 | 产品域 | 设计 | 已验证规格 | 截图证据 |',
     '| --- | --- | --- | ---: | ---: |',
     ...groups.map((group) => {
       const root = `./${normalizePath(ownerRelativeRoot(group.owner))}`
@@ -525,10 +566,10 @@ function renderCoverage(
         (count, behavior) => count + behavior.evidence.length,
         0
       )
-      return `| ${group.owner.kind === 'module' ? '模块' : '流程'} | ${group.owner.title} | [产品定义](${root}/README.md) | [${group.behaviors.length}](${root}/behaviors/README.md) | ${evidenceCount} |`
+      return `| ${ownerKindLabel(group.owner.kind)} | ${group.owner.title} | [产品定义](${root}/README.md) | [${group.behaviors.length}](${root}/${ownerGeneratedDirectory(group.owner)}/README.md) | ${evidenceCount} |`
     }),
     '',
-    `合计：${groups.reduce((count, group) => count + group.behaviors.length, 0)} 个已验证行为，${groups.reduce((count, group) => count + group.behaviors.reduce((sum, behavior) => sum + behavior.evidence.length, 0), 0)} 张截图证据。`,
+    `合计：${groups.filter((group) => group.owner.kind === 'journey').reduce((count, group) => count + group.behaviors.length, 0)} 个已验证用户旅程，${groups.filter((group) => group.owner.kind !== 'journey').reduce((count, group) => count + group.behaviors.length, 0)} 个已验证产品行为，${groups.reduce((count, group) => count + group.behaviors.reduce((sum, behavior) => sum + behavior.evidence.length, 0), 0)} 张截图证据。`,
     ''
   ].join('\n')
 }
@@ -557,9 +598,9 @@ async function publishCanonicalDocumentation(
     ...[...(previous?.owners ?? []), ...manifest.owners].map((owner) =>
       path.join(
         PRODUCT_ROOT,
-        owner.kind === 'module' ? 'modules' : 'flows',
+        ownerKindDirectory(owner.kind),
         owner.slug,
-        'behaviors'
+        ownerGeneratedDirectory(owner)
       )
     ),
     path.join(PRODUCT_ROOT, 'guide')
@@ -673,7 +714,19 @@ function annotation(test: TestCase, type: string): string | null {
 }
 
 function ownerRelativeRoot(owner: ProductOwner): string {
-  return path.join(owner.kind === 'module' ? 'modules' : 'flows', owner.slug)
+  return path.join(ownerKindDirectory(owner.kind), owner.slug)
+}
+
+function ownerKindDirectory(kind: ProductOwner['kind']): string {
+  return kind === 'module' ? 'modules' : kind === 'flow' ? 'flows' : 'journeys'
+}
+
+function ownerKindLabel(kind: ProductOwner['kind']): string {
+  return kind === 'module' ? '模块' : kind === 'flow' ? '流程' : '旅程'
+}
+
+function ownerGeneratedDirectory(owner: ProductOwner): string {
+  return owner.kind === 'journey' ? 'verified' : 'behaviors'
 }
 
 function evidenceKindLabel(kind: ProductEvidenceDefinition['kind']): string {

@@ -6,7 +6,7 @@ import path from 'node:path'
 import stableStringify from 'fast-json-stable-stringify'
 import { MockAiServer } from '../../../integration/support/mock-ai-server'
 import { launchIntegrationApp } from '../../../integration/support/electron-app'
-import { evidence, productStep, productTest } from '../../support/product-test'
+import { evidence, prepareProductPage, productStep, productTest } from '../../support/product-test'
 
 const interfaceContent = {
   name: '英语问答练习',
@@ -47,6 +47,7 @@ test.beforeEach(async () => {
   pageErrors = []
   electronApp = await launchIntegrationApp(userDataDir)
   page = await electronApp.firstWindow()
+  await prepareProductPage(page)
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
   await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()

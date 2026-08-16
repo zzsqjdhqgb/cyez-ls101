@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { launchIntegrationApp } from '../../../integration/support/electron-app'
-import { evidence, productStep, productTest } from '../../support/product-test'
+import { evidence, prepareProductPage, productStep, productTest } from '../../support/product-test'
 
 let electronApp: ElectronApplication
 let page: Page
@@ -15,6 +15,7 @@ test.beforeEach(async () => {
   pageErrors = []
   electronApp = await launchIntegrationApp(userDataDir)
   page = await electronApp.firstWindow()
+  await prepareProductPage(page)
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
   await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()

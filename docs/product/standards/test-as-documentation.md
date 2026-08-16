@@ -1,19 +1,22 @@
 # 测试即文档约定
 
-已经确认的完整用户行为应实现为 Playwright 集成测试，并由成功执行的测试生成产品行为文档。
+已经确认的标准用户旅程和完整用户行为应实现为 Playwright 集成测试，并由成功执行的测试生成产品文档。
 
 ## 测试边界
 
-产品文档测试与其他自动化测试严格分离：
+产品文档测试内部区分完整用户旅程和局部产品行为，并与其他自动化测试严格分离：
 
-- `tests/product-docs/` 只覆盖已经确认的用户可见产品行为；
+- `tests/product-docs/journeys/` 覆盖已经确认的标准用户旅程。旅程从用户可理解的起点开始，通过界面连续产生并消费核心业务对象，不允许直接向仓储写入旅程中的中间对象；
+- `tests/product-docs/modules/` 和 `tests/product-docs/flows/` 覆盖已经确认的局部产品行为、交互规则和异常边界，可以构造声明过的前置状态；
 - `tests/integration/`、`tests/components/` 和 Vitest 继续覆盖技术回归、跨进程契约、组件状态和异常边界；
 - `playwright.product-docs.config.ts` 使用独立的测试目录、运行产物和文档 reporter。
 
 产品文档测试需要遵守以下规则：
 
 - 测试从用户可以操作的界面进入，覆盖完整操作路径和可见结果；
-- 使用 `productTest` 声明稳定行为 ID、产品归属、能力、意图、前置条件和行为保证；
+- 标准旅程使用 `productJourney` 声明，并保证前一步产生的业务对象被后一步真实使用；
+- 模块和流程中的局部产品行为使用 `productTest` 声明；
+- 两类测试都要提供稳定规格 ID、产品归属、能力、意图、前置条件和行为保证；
 - 使用 `productStep` 声明带稳定 key 的用户操作步骤，不依赖实现细节；
 - 配套产品文档记录测试无法直接表达的前置条件、边界和明确不覆盖的行为；
 - 新产品主线可以先建立一套独立的 Playwright 测试，再审查并删除旧测试中的重复覆盖；
@@ -22,7 +25,7 @@
 ## 文档生成
 
 - 整套产品文档测试通过后，reporter 在所属模块或流程的 `behaviors/` 中为每个行为生成独立 Markdown；
-- Reporter 同时按 `tests/product-docs/support/product-guide.ts` 的章节顺序生成 `docs/product/guide/`，把行为步骤展开为面向用户的操作路径；
+- Reporter 同时按 `tests/product-docs/support/product-guide.ts` 的章节顺序生成 `docs/product/guide/`，分别展示完整用户旅程和局部产品行为；
 - 旅程章节中的目标、输入、产物、下一步和“尚待自动验证”属于产品说明层，行为测试只负责提供可执行事实，不在 Reporter 中硬编码行为 ID；
 - `docs/product/coverage.md` 只汇总产品域、行为数量和截图数量，不重复场景摘要；
 - 正式生成先写入暂存目录，完成结构校验后再事务式替换已生成目录；发布失败时恢复上一次成功结果；
@@ -51,4 +54,4 @@
 - `yarn docs:product:check`：重新生成正式文档，并检查仓库中的生成结果是否最新；
 - `yarn test`：技术回归测试通过后继续执行产品文档测试。
 
-当前自动生成文档入口：[产品行为覆盖](../coverage.md)。
+当前自动生成文档入口：[产品测试覆盖](../coverage.md)。

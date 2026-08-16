@@ -492,7 +492,7 @@ function SettledBatches({
   if (batches.length === 0) return <EmptyState icon={Inbox} title="还没有已结算作答" />
   return (
     <div className={styles.batchList}>
-      {batches.map((batch) => {
+      {batches.map((batch, index) => {
         const expanded = expandedBatchIds.has(batch.batchId)
         const batchEntries = batch.records.flatMap((record) => {
           const entry = entriesById.get(record.submissionId)
@@ -515,7 +515,7 @@ function SettledBatches({
                 <strong>结算于 {formatDateTime(batch.settledAt)}</strong>
                 <small>{batch.records.length} 条作答</small>
               </span>
-              <code>{batch.batchId.slice(0, 8)}</code>
+              <span className={styles.batchNumber}>批次 {batches.length - index}</span>
             </button>
             {expanded ? (
               <div className={styles.batchBody}>

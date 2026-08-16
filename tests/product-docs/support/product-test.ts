@@ -13,7 +13,7 @@ export const PRODUCT_BEHAVIOR_ANNOTATION = 'product-behavior'
 export const PRODUCT_STEP_PREFIX = '[product-step:'
 export const PRODUCT_EVIDENCE_PREFIX = 'product-evidence:'
 
-export type ProductOwnerKind = 'module' | 'flow'
+export type ProductOwnerKind = 'module' | 'flow' | 'journey'
 export type ProductEvidenceKind = 'decision' | 'exception' | 'result'
 
 export interface ProductOwner {
@@ -76,6 +76,13 @@ export function productTest(
   ]
 }
 
+export function productJourney(
+  definition: ProductBehaviorDefinition & { owner: ProductOwner & { kind: 'journey' } },
+  body: ProductTestBody
+): ReturnType<typeof productTest> {
+  return productTest(definition, body)
+}
+
 export function productStep<T>(key: string, title: string, body: () => Promise<T>): Promise<T> {
   validateKey(key, '步骤')
   return test.step(`${PRODUCT_STEP_PREFIX}${key}] ${title}`, body)
@@ -90,13 +97,40 @@ export async function evidence(
   validateKey(definition.step, '截图步骤')
   if (!definition.caption.trim()) throw new Error('产品文档截图必须提供说明')
 
+  await page.evaluate(async () => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    await document.fonts.ready
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    )
+  })
+
   await testInfo.attach(
     `${PRODUCT_EVIDENCE_PREFIX}${Buffer.from(JSON.stringify(definition), 'utf8').toString('base64url')}`,
     {
-      body: await page.screenshot({ animations: 'disabled', caret: 'hide', fullPage: true }),
+      body: await page.screenshot({
+        animations: 'disabled',
+        caret: 'hide',
+        fullPage: true,
+        style: `
+          *, *::before, *::after {
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+          }
+
+          [role='presentation']:has(> [role='dialog']),
+          [role='presentation']:has(> [role='alertdialog']) {
+            background: rgb(178 181 181) !important;
+          }
+        `
+      }),
       contentType: 'image/png'
     }
   )
+}
+
+export async function prepareProductPage(page: Page): Promise<void> {
+  await page.clock.setFixedTime(new Date('2026-01-15T08:00:00.000Z'))
 }
 
 function validateBehaviorDefinition(definition: ProductBehaviorDefinition): void {

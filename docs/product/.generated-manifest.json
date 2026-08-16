@@ -1,36 +1,50 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "owners": [
-    { "kind": "module", "slug": "workbench", "behaviorIds": ["WB-01", "WB-02"] },
-    { "kind": "module", "slug": "submission-records", "behaviorIds": ["SR-01"] },
+    { "kind": "module", "slug": "workbench", "specIds": ["WB-01", "WB-02"] },
+    { "kind": "journey", "slug": "content-preparation", "specIds": ["PJ-01"] },
+    { "kind": "module", "slug": "submission-records", "specIds": ["SR-01"] },
     {
       "kind": "module",
       "slug": "interface-library",
-      "behaviorIds": ["IF-01", "IF-02", "IF-03", "IF-04", "IF-05", "IF-06"]
+      "specIds": ["IF-01", "IF-02", "IF-03", "IF-04", "IF-05", "IF-06"]
     },
-    { "kind": "module", "slug": "template-library", "behaviorIds": ["TP-01"] },
-    { "kind": "module", "slug": "grading-units", "behaviorIds": ["GS-01"] },
-    { "kind": "flow", "slug": "take-exam", "behaviorIds": ["EX-01"] },
-    { "kind": "flow", "slug": "template-exam-generation", "behaviorIds": ["TG-01"] }
+    { "kind": "module", "slug": "template-library", "specIds": ["TP-01"] },
+    { "kind": "module", "slug": "grading-units", "specIds": ["GS-01"] },
+    { "kind": "flow", "slug": "take-exam", "specIds": ["EX-01"] },
+    { "kind": "flow", "slug": "template-exam-generation", "specIds": ["TG-01"] }
   ],
   "guideChapters": [
     {
       "slug": "understand-ls101",
       "title": "认识 LS101 与完整工作流",
+      "journeyIds": [],
       "behaviorIds": ["WB-01", "WB-02"]
     },
     {
       "slug": "prepare-content",
       "title": "准备评分标准与题型内容",
+      "journeyIds": ["PJ-01"],
       "behaviorIds": ["GS-01", "IF-01", "IF-02", "IF-03", "IF-04", "IF-05", "IF-06"]
     },
     {
       "slug": "build-generate-exam",
       "title": "制作模板并生成试卷",
+      "journeyIds": [],
       "behaviorIds": ["TG-01", "TP-01"]
     },
-    { "slug": "run-exam", "title": "运行试卷并保存作答包", "behaviorIds": ["EX-01"] },
-    { "slug": "grade-settle", "title": "评分、结算与查看结果", "behaviorIds": ["SR-01"] }
+    {
+      "slug": "run-exam",
+      "title": "运行试卷并保存作答包",
+      "journeyIds": [],
+      "behaviorIds": ["EX-01"]
+    },
+    {
+      "slug": "grade-settle",
+      "title": "评分、结算与查看结果",
+      "journeyIds": [],
+      "behaviorIds": ["SR-01"]
+    }
   ],
   "generatedFiles": [
     ".generated-manifest.json",
@@ -50,6 +64,11 @@
     "guide/04-run-exam.md",
     "guide/05-grade-settle.md",
     "guide/README.md",
+    "journeys/content-preparation/verified/PJ-01.md",
+    "journeys/content-preparation/verified/README.md",
+    "journeys/content-preparation/verified/assets/PJ-01/publish-confirmation.png",
+    "journeys/content-preparation/verified/assets/PJ-01/reopened-instance.png",
+    "journeys/content-preparation/verified/assets/PJ-01/saved-contract.png",
     "modules/grading-units/behaviors/GS-01.md",
     "modules/grading-units/behaviors/README.md",
     "modules/grading-units/behaviors/assets/GS-01/publish-data.png",
