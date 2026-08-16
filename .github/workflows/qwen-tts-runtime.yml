@@ -252,9 +252,8 @@ jobs:
             --version "$BUNDLE_VERSION" \
             --output "release-assets/qwen3-tts-0.6b-base-q8_0-$BUNDLE_VERSION.zip"
           node <<'NODE'
-          const { createHash } = require('node:crypto')
           const { execFileSync } = require('node:child_process')
-          const { readFileSync, statSync, writeFileSync } = require('node:fs')
+          const { statSync, writeFileSync } = require('node:fs')
 
           const modelPackage = `release-assets/qwen3-tts-0.6b-base-q8_0-${process.env.BUNDLE_VERSION}.zip`
           const packageBytes = statSync(modelPackage).size
@@ -270,9 +269,13 @@ jobs:
               ['-C', '.cache/qwen3-tts.cpp', 'rev-parse', 'HEAD'],
               { encoding: 'utf8' }
             ).trim(),
-            speakerSha256: createHash('sha256')
-              .update(readFileSync('native/qwen-tts/voices/american-woman.spk'))
-              .digest('hex'),
+            voice: {
+              id: 'american-woman',
+              name: 'American English Woman',
+              designModel: 'Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign',
+              designModelRevision: '5ecdb67327fd37bb2e042aab12ff7391903235d3',
+              seed: 20260817
+            },
             packageBytes
           }
           writeFileSync('release-assets/model-build-info.json', `${JSON.stringify(info, null, 2)}\n`)
@@ -322,8 +325,7 @@ jobs:
           SOURCE_COMMIT: ${{ github.sha }}
         run: |
           node <<'NODE'
-          const { execFileSync } = require('node:child_process')
-          const { readFileSync, readdirSync, statSync, writeFileSync } = require('node:fs')
+          const { readFileSync, readdirSync, writeFileSync } = require('node:fs')
           const path = require('node:path')
 
           const directory = 'release-assets'
@@ -368,26 +370,18 @@ jobs:
           if (modelFiles.length !== 1) {
             throw new Error(`Expected one model package, found ${modelFiles.length}`)
           }
-          const sha256 = (file) =>
-            execFileSync('sha256sum', [file], { encoding: 'utf8' }).split(/\s+/, 1)[0]
           const assets = runtimeFiles.map((name) => {
-            const file = path.join(directory, name)
             const runtimeDirectory = name.includes('-win32-') ? 'win32-x64' : 'linux-x64'
             return {
               kind: 'native-runtime',
               runtimeDirectory,
-              name,
-              size: statSync(file).size,
-              sha256: sha256(file)
+              name
             }
           })
           for (const name of modelFiles) {
-            const file = path.join(directory, name)
             assets.push({
               kind: 'model-package',
-              name,
-              size: statSync(file).size,
-              sha256: sha256(file)
+              name
             })
           }
           const licenseFiles = readdirSync(directory)
@@ -397,12 +391,9 @@ jobs:
             throw new Error(`Expected three license files, found ${licenseFiles.length}`)
           }
           for (const name of licenseFiles) {
-            const file = path.join(directory, name)
             assets.push({
               kind: 'license',
-              name,
-              size: statSync(file).size,
-              sha256: sha256(file)
+              name
             })
           }
           const manifest = {
@@ -415,7 +406,7 @@ jobs:
               model: 'Qwen/Qwen3-TTS-12Hz-0.6B-Base',
               modelRevision: modelInfo.modelRevision
             },
-            speakerSha256: modelInfo.speakerSha256,
+            voice: modelInfo.voice,
             assets
           }
           writeFileSync(
@@ -423,14 +414,7 @@ jobs:
             `${JSON.stringify(manifest, null, 2)}\n`
           )
           NODE
-          cd release-assets
-          sha256sum \
-            ls101-qwen-tts-helper-* \
-            qwen3-tts-*.zip \
-            LICENSE.*.txt \
-            qwen-tts-release-manifest.json > SHA256SUMS
-          cat qwen-tts-release-manifest.json
-          cat SHA256SUMS
+          cat release-assets/qwen-tts-release-manifest.json
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
@@ -444,13 +428,13 @@ jobs:
           body: |
             CPU-only native helpers and the Qwen3-TTS 12Hz 0.6B Base Q8_0 model package.
 
-            Runtime, model, voice, source revisions, sizes, and hashes are recorded in
-            `qwen-tts-release-manifest.json`.
+            Runtime, model, voice, and source revisions are recorded in
+            `qwen-tts-release-manifest.json`. Asset sizes and SHA-256 digests are available
+            through the GitHub Release Assets API.
           files: |
             release-assets/ls101-qwen-tts-helper-*
             release-assets/qwen3-tts-*.zip
             release-assets/LICENSE.*.txt
             release-assets/qwen-tts-release-manifest.json
-            release-assets/SHA256SUMS
           fail_on_unmatched_files: true
           overwrite_files: true
