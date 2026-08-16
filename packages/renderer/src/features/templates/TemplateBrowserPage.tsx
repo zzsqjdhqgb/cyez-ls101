@@ -6,7 +6,17 @@ import type {
   TemplateImportMode,
   TemplateSummary
 } from '@ls101/template-editor'
-import { AlertCircle, Braces, Download, LayoutTemplate, Plus, Trash2, Upload } from 'lucide-react'
+import {
+  AlertCircle,
+  Braces,
+  Copy,
+  Download,
+  Eye,
+  LayoutTemplate,
+  Plus,
+  Trash2,
+  Upload
+} from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
@@ -19,12 +29,15 @@ import { exportTemplateDocumentFile, readTemplateDocumentFile } from './Template
 import styles from './TemplateBrowserPage.module.css'
 import { templateErrorMessage } from './templateUi'
 
+type TemplateBrowserTab = 'builtin' | 'mine' | 'functions'
+
 export function TemplateBrowserPage(): JSX.Element {
   const application = useTemplateApplication()
   const navigate = useNavigate()
   const [templates, setTemplates] = useState<TemplateSummary[]>([])
   const [builtinTemplates, setBuiltinTemplates] = useState<BuiltinTemplateSummary[]>([])
   const [functionLibraries, setFunctionLibraries] = useState<FunctionLibrarySummary[]>([])
+  const [activeTab, setActiveTab] = useState<TemplateBrowserTab>('builtin')
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [importing, setImporting] = useState(false)
@@ -34,6 +47,7 @@ export function TemplateBrowserPage(): JSX.Element {
   } | null>(null)
   const [importConflictError, setImportConflictError] = useState<string | null>(null)
   const [exportingId, setExportingId] = useState<string | null>(null)
+  const [copyingId, setCopyingId] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<TemplateSummary | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -95,6 +109,7 @@ export function TemplateBrowserPage(): JSX.Element {
       }
       const imported = await application.templates.importDocument(source, 'preserve-id')
       addImportedTemplate(imported)
+      setActiveTab('mine')
       toast.success(`已导入模板“${imported.content.name || '未命名模板'}”`)
     } catch (reason) {
       setError(templateErrorMessage(reason))
@@ -126,6 +141,7 @@ export function TemplateBrowserPage(): JSX.Element {
         addImportedTemplate(imported)
         toast.success(`已将模板“${imported.content.name || '未命名模板'}”导入为副本`)
       }
+      setActiveTab('mine')
       setPendingImport(null)
     } catch (reason) {
       setImportConflictError(templateErrorMessage(reason))
@@ -168,6 +184,22 @@ export function TemplateBrowserPage(): JSX.Element {
     }
   }
 
+  const copyBuiltinTemplate = async (templateId: string): Promise<void> => {
+    if (copyingId) return
+    setCopyingId(templateId)
+    setError(null)
+    try {
+      const copy = await application.builtinTemplates.createCopy(templateId)
+      setTemplates((current) => [...current, templateSummary(copy)])
+      setActiveTab('mine')
+      toast.success(`已创建模板副本“${copy.content.name || '未命名模板'}”`)
+    } catch (reason) {
+      setError(templateErrorMessage(reason))
+    } finally {
+      setCopyingId(null)
+    }
+  }
+
   return (
     <Page>
       <PageHeader
@@ -201,10 +233,46 @@ export function TemplateBrowserPage(): JSX.Element {
       ) : null}
       {loading ? <div className={styles.loading}>正在加载模板...</div> : null}
       {!loading ? (
-        <section aria-labelledby="builtin-templates-heading">
-          <div className={styles.sectionHeader}>
-            <h2 id="builtin-templates-heading">内置模板</h2>
-          </div>
+        <div className={styles.tabs} role="tablist" aria-label="试卷模板分类">
+          <button
+            aria-controls="builtin-templates-panel"
+            aria-selected={activeTab === 'builtin'}
+            id="builtin-templates-tab"
+            role="tab"
+            type="button"
+            onClick={() => setActiveTab('builtin')}
+          >
+            内置模板
+          </button>
+          <button
+            aria-controls="local-templates-panel"
+            aria-selected={activeTab === 'mine'}
+            id="local-templates-tab"
+            role="tab"
+            type="button"
+            onClick={() => setActiveTab('mine')}
+          >
+            我的模板
+          </button>
+          <button
+            aria-controls="function-libraries-panel"
+            aria-selected={activeTab === 'functions'}
+            id="function-libraries-tab"
+            role="tab"
+            type="button"
+            onClick={() => setActiveTab('functions')}
+          >
+            函数库
+          </button>
+        </div>
+      ) : null}
+
+      {!loading && activeTab === 'builtin' ? (
+        <section
+          aria-labelledby="builtin-templates-tab"
+          id="builtin-templates-panel"
+          role="tabpanel"
+        >
           {builtinTemplates.length === 0 ? (
             <EmptyState icon={LayoutTemplate} title="暂无内置模板" />
           ) : (
@@ -224,6 +292,19 @@ export function TemplateBrowserPage(): JSX.Element {
                   </div>
                   <div className={styles.rowActions}>
                     <Button
+                      icon={Eye}
+                      onClick={() => navigate(`/templates/builtin/${item.templateId}`)}
+                    >
+                      查看
+                    </Button>
+                    <Button
+                      icon={Copy}
+                      disabled={copyingId !== null}
+                      onClick={() => void copyBuiltinTemplate(item.templateId)}
+                    >
+                      {copyingId === item.templateId ? '正在创建' : '创建副本'}
+                    </Button>
+                    <Button
                       disabled={!item.available}
                       title={
                         item.available
@@ -242,11 +323,8 @@ export function TemplateBrowserPage(): JSX.Element {
         </section>
       ) : null}
 
-      {!loading ? (
-        <section aria-labelledby="local-templates-heading">
-          <div className={styles.sectionHeader}>
-            <h2 id="local-templates-heading">我的模板</h2>
-          </div>
+      {!loading && activeTab === 'mine' ? (
+        <section aria-labelledby="local-templates-tab" id="local-templates-panel" role="tabpanel">
           {templates.length === 0 ? (
             <EmptyState icon={LayoutTemplate} title="暂无本地模板" />
           ) : (
@@ -265,6 +343,9 @@ export function TemplateBrowserPage(): JSX.Element {
                   </div>
                   <div className={styles.rowActions}>
                     <Button onClick={() => navigate(`/templates/${item.templateId}`)}>编辑</Button>
+                    <Button onClick={() => navigate(`/templates/${item.templateId}/generate`)}>
+                      生成试卷
+                    </Button>
                     <IconButton
                       icon={Download}
                       label={`导出模板“${item.name || '未命名模板'}”`}
@@ -285,26 +366,28 @@ export function TemplateBrowserPage(): JSX.Element {
         </section>
       ) : null}
 
-      <section aria-labelledby="template-functions-heading">
-        <div className={styles.sectionHeader}>
-          <h2 id="template-functions-heading">函数库</h2>
-        </div>
-        {!loading && functionLibraries.length === 0 ? (
-          <EmptyState icon={Braces} title="暂无函数库" />
-        ) : null}
-        {!loading && functionLibraries.length > 0 ? (
-          <div className={styles.list}>
-            {functionLibraries.map((item) => (
-              <article
-                className={styles.row}
-                key={`${item.source}:${item.libraryId}:${item.version ?? 'local'}`}
-              >
-                <span className={styles.functionName}>{item.name || '未命名函数库'}</span>
-              </article>
-            ))}
-          </div>
-        ) : null}
-      </section>
+      {!loading && activeTab === 'functions' ? (
+        <section
+          aria-labelledby="function-libraries-tab"
+          id="function-libraries-panel"
+          role="tabpanel"
+        >
+          {functionLibraries.length === 0 ? (
+            <EmptyState icon={Braces} title="暂无函数库" />
+          ) : (
+            <div className={styles.list}>
+              {functionLibraries.map((item) => (
+                <article
+                  className={styles.row}
+                  key={`${item.source}:${item.libraryId}:${item.version ?? 'local'}`}
+                >
+                  <span className={styles.functionName}>{item.name || '未命名函数库'}</span>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
 
       <ConfirmModal
         busy={importing}

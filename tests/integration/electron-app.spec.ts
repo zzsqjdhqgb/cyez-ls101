@@ -308,6 +308,7 @@ test('navigates through every primary application area', async () => {
   await page.getByRole('link', { name: '试卷模板' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '试卷模板' })).toBeVisible()
   await expect(page.getByText('正在加载模板...')).toBeHidden()
+  await expect(page.getByRole('tab', { name: '内置模板' })).toHaveAttribute('aria-selected', 'true')
   await expectValidStyleBindings(page)
 
   await page.getByRole('link', { name: '评分单元' }).click()
@@ -509,10 +510,12 @@ test('creates, edits and reloads a persisted template', async () => {
   await expect(page.getByText('Revision 1')).toBeVisible()
 
   await page.getByRole('button', { name: '返回模板' }).click()
+  await page.getByRole('tab', { name: '我的模板' }).click()
   await expect(page.getByRole('button', { name: '集成测试模板', exact: true })).toBeVisible()
 
   await page.reload()
   await page.getByRole('link', { name: '试卷模板' }).click()
+  await page.getByRole('tab', { name: '我的模板' }).click()
   await expect(page.getByRole('button', { name: '集成测试模板', exact: true })).toBeVisible()
   await expect(page.getByText('由 Electron 集成测试创建')).toBeVisible()
 
@@ -576,23 +579,33 @@ test('creates, edits and reloads a persisted template', async () => {
   )
 })
 
-test('generates an exam directly from an immutable builtin template', async () => {
+test('opens and copies the bundled Shanghai Gaokao template', async () => {
   await page.getByRole('link', { name: '试卷模板' }).click()
   await expect(page.getByText('正在加载模板...')).toBeHidden()
-  await expect(page.getByRole('heading', { name: '内置模板' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: '内置模板' })).toHaveAttribute('aria-selected', 'true')
 
-  const builtinRow = page.getByText('基础试卷', { exact: true }).locator('xpath=ancestor::article')
+  const builtinRow = page
+    .getByText('上海高考口语标准题型', { exact: true })
+    .locator('xpath=ancestor::article')
   await expect(builtinRow.getByText('v1', { exact: true })).toBeVisible()
   await expect(builtinRow.getByRole('button', { name: '编辑' })).toHaveCount(0)
   await expect(builtinRow.getByRole('button', { name: /删除/ })).toHaveCount(0)
-  await builtinRow.getByRole('button', { name: '生成试卷' }).click()
+  await builtinRow.getByRole('button', { name: '查看' }).click()
 
-  await expect(page.getByRole('heading', { level: 1, name: '基础试卷' })).toBeVisible()
-  await expect(page.getByText('此模板不需要选择题组')).toBeVisible()
-  await page.getByRole('button', { name: '开始生成' }).click()
-  await expect(page.getByText('试卷生成完成')).toBeVisible()
-  await page.getByRole('button', { name: '加入试卷库' }).click()
-  await expect(page.getByRole('button', { name: '已加入试卷库' })).toBeDisabled()
+  await expect(page.getByRole('heading', { level: 1, name: '上海高考口语标准题型' })).toBeVisible()
+  await expect(page.getByText('内置模板 · 只读')).toBeVisible()
+  await expect(page.getByRole('button', { name: '选择节点 root' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '保存' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /删除/ })).toHaveCount(0)
+  await page.getByRole('button', { name: '创建副本' }).click()
+
+  await expect(page.getByText('Revision 0')).toBeVisible()
+  await expect(page.getByRole('textbox', { name: '名称', exact: true })).toBeEnabled()
+  await expect(page.getByRole('button', { name: '保存' })).toBeVisible()
+  await page.getByRole('button', { name: '返回模板' }).click()
+
+  await expect(page.getByRole('tab', { name: '内置模板' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByText('上海高考口语标准题型', { exact: true })).toBeVisible()
 })
 
 test('exports a persisted formal Schema through the native save dialog', async () => {

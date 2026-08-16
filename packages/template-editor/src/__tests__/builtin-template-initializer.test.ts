@@ -9,10 +9,10 @@ import { createBuiltinTemplateRelease } from '../id'
 import { FileTemplateRepository, type TemplateStore } from '../repository'
 import type { BuiltinTemplateRelease } from '../types'
 
-const TEMPLATE_ID = '11111111-1111-4111-8111-111111111111'
+const TEMPLATE_ID = '0c283c54-683a-498c-bf69-fb1490f99356'
 
 describe('内置 Template 启动初始化', () => {
-  it('幂等安装 bundled release 并可直接编译生成试卷', async () => {
+  it('幂等安装导出的上海高考口语模板并移除占位模板', async () => {
     const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
     const manifest = JSON.parse(
       await readFile('resources/builtin/template-editor/.text/builtin-templates.json', 'utf8')
@@ -25,20 +25,51 @@ describe('内置 Template 启动初始化', () => {
     expect(await repository.getActiveBuiltinTemplate(TEMPLATE_ID)).toMatchObject({
       templateId: TEMPLATE_ID,
       version: 1,
-      releaseHash: 'sha256:371a3aee9c3e86d7678cd5e631c6d044b6ae5e0f2f6c04567d32f4e73a28a170',
-      document: { content: { name: '基础试卷' } }
+      releaseHash: 'sha256:d131b69f91ff7938b85b6a3372148c55fd72b5da577eae0b2e840c4de2ef4802',
+      document: {
+        content: {
+          name: '上海高考口语标准题型',
+          root: {
+            children: expect.arrayContaining([expect.objectContaining({ id: 'function-call' })])
+          }
+        },
+        resources: {
+          functions: expect.arrayContaining([
+            expect.objectContaining({ id: expect.stringMatching(/^sha256:/) })
+          ])
+        }
+      }
     })
+    await expect(
+      repository.getActiveBuiltinTemplate('11111111-1111-4111-8111-111111111111')
+    ).resolves.toBeNull()
+  })
 
+  it('将内置模板完整复制为 UUID 和 revision 重置的本地模板', async () => {
+    const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
+    const source = await release(1, '内置模板')
+    await initializeBuiltinTemplates(repository, { templates: [source] })
     const application = createTemplateApplication({
       repository,
       getInterfaceManifest: async () => null,
       getSchema: async () => null,
       locateInterfaceInstance: () => null
     })
-    await expect(application.builtinTemplates.compile(TEMPLATE_ID, [])).resolves.toMatchObject({
-      success: true,
-      examPackage: { examData: { title: '基础试卷' } }
-    })
+
+    const copy = await application.builtinTemplates.createCopy(TEMPLATE_ID)
+
+    expect(copy.templateId).not.toBe(TEMPLATE_ID)
+    expect(copy.templateId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+    expect(copy.revision).toBe(0)
+    expect(copy.content).toEqual(source.document.content)
+    expect(copy.resources).toEqual(source.document.resources)
+    expect(copy.editorState).toEqual(source.document.editorState)
+    expect(copy.content).not.toBe(source.document.content)
+    expect(copy.resources).not.toBe(source.document.resources)
+    expect(copy.editorState).not.toBe(source.document.editorState)
+    await expect(application.templates.get(copy.templateId)).resolves.toEqual(copy)
+    copy.content.name = '修改副本'
+    await expect(application.builtinTemplates.get(TEMPLATE_ID)).resolves.toEqual(source)
   })
 
   it('升级 active 版本并停用已移除模板，同时保留历史 release', async () => {

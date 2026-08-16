@@ -8,7 +8,10 @@ import type { JSX } from 'react'
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { TemplateApplicationProvider } from '../features/templates/TemplateApplicationProvider'
 import { TemplateBrowserPage } from '../features/templates/TemplateBrowserPage'
-import { TemplateDocumentPage } from '../features/templates/TemplateDocumentPage'
+import {
+  BuiltinTemplateDocumentPage,
+  TemplateDocumentPage
+} from '../features/templates/TemplateDocumentPage'
 
 const functionLibraryFileDialog = vi.hoisted(() => ({
   readText: vi.fn(),
@@ -23,6 +26,8 @@ const MISSING_TEMPLATE_ID = '30000000-0000-4000-8000-000000000003'
 const NEW_LIBRARY_ID = '70000000-0000-4000-8000-000000000007'
 const NEW_FUNCTION_ID = '80000000-0000-4000-8000-000000000008'
 const IMPORTED_TEMPLATE_ID = '90000000-0000-4000-8000-000000000009'
+const BUILTIN_TEMPLATE_ID = '0c283c54-683a-498c-bf69-fb1490f99356'
+const BUILTIN_COPY_ID = 'a0000000-0000-4000-8000-00000000000a'
 const INTERFACE_ID = `sha256:${'a'.repeat(64)}`
 
 beforeEach(() => {
@@ -71,6 +76,10 @@ async function clickLibraryFunction(name: string): Promise<void> {
   )
 }
 
+async function openTemplateBrowserTab(name: '内置模板' | '我的模板' | '函数库'): Promise<void> {
+  fireEvent.click(await screen.findByRole('tab', { name }))
+}
+
 function TemplateRouteSwitcher(): JSX.Element {
   const navigate = useNavigate()
   return (
@@ -116,9 +125,9 @@ function application(document = template()): TemplateApplication {
       ]),
       listBuiltinTemplates: vi.fn().mockResolvedValue([
         {
-          templateId: '11111111-1111-4111-8111-111111111111',
+          templateId: BUILTIN_TEMPLATE_ID,
           version: 1,
-          name: '基础试卷',
+          name: '上海高考口语标准题型',
           description: '内置基础模板',
           available: true,
           errors: []
@@ -224,6 +233,40 @@ function application(document = template()): TemplateApplication {
       embedFunction: vi.fn(),
       insertFunctionCall: vi.fn(),
       pruneFunctionResources: vi.fn(),
+      validate: vi.fn(),
+      compile: vi.fn(),
+      preview: vi.fn()
+    },
+    builtinTemplates: {
+      get: vi.fn().mockResolvedValue({
+        templateId: BUILTIN_TEMPLATE_ID,
+        version: 1,
+        releaseHash: `sha256:${'b'.repeat(64)}`,
+        document: {
+          content: {
+            name: '上海高考口语标准题型',
+            description: '内置基础模板',
+            interfaces: [],
+            root: {
+              id: 'builtin-root',
+              type: 'frame',
+              children: [
+                {
+                  id: 'builtin-page',
+                  name: '封面',
+                  type: 'page',
+                  content: { blocks: [] },
+                  timeline: []
+                }
+              ]
+            },
+            schemaUses: []
+          },
+          resources: { functions: [] },
+          editorState: { selectedNodeId: 'builtin-root' }
+        }
+      }),
+      createCopy: vi.fn().mockResolvedValue(template(0, BUILTIN_COPY_ID, '上海高考口语标准题型')),
       validate: vi.fn(),
       compile: vi.fn(),
       preview: vi.fn()
@@ -408,6 +451,31 @@ describe('Template pages', () => {
     expect(await screen.findByRole('heading', { name: '试卷生成设置' })).toBeInTheDocument()
   })
 
+  it('从只读编辑器进入内置模板生成路由且不尝试保存', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/builtin/${BUILTIN_TEMPLATE_ID}`]}>
+          <Routes>
+            <Route
+              path="/templates/builtin/:templateId"
+              element={<BuiltinTemplateDocumentPage />}
+            />
+            <Route
+              path="/templates/builtin/:templateId/generate"
+              element={<h1>内置模板生成设置</h1>}
+            />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: '生成试卷' }))
+
+    expect(await screen.findByRole('heading', { name: '内置模板生成设置' })).toBeInTheDocument()
+    expect(app.templates.save).not.toHaveBeenCalled()
+  })
+
   it('进入生成路由前先保存模板的未保存修改', async () => {
     const app = application()
     render(
@@ -481,14 +549,29 @@ describe('Template pages', () => {
       </TemplateApplicationProvider>
     )
 
-    expect(await screen.findByRole('button', { name: '听力模板' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '内置模板' })).toBeInTheDocument()
-    expect(screen.getByText('基础试卷')).toBeInTheDocument()
+    expect(await screen.findByRole('tab', { name: '内置模板' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    expect(screen.getByRole('tab', { name: '我的模板' })).toHaveAttribute('aria-selected', 'false')
+    expect(screen.getByRole('tab', { name: '函数库' })).toHaveAttribute('aria-selected', 'false')
+    expect(screen.getByText('上海高考口语标准题型')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '查看' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '创建副本' })).toBeEnabled()
     expect(screen.getByRole('button', { name: '生成试卷' })).toBeEnabled()
-    const builtinRow = screen.getByText('基础试卷').closest('article')
+    const builtinRow = screen.getByText('上海高考口语标准题型').closest('article')
     expect(builtinRow).not.toBeNull()
     expect(within(builtinRow as HTMLElement).queryByRole('button', { name: '编辑' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '听力模板' })).not.toBeInTheDocument()
+    expect(screen.queryByText('听力函数库')).not.toBeInTheDocument()
+
+    await openTemplateBrowserTab('函数库')
     expect(screen.getByText('听力函数库')).toBeInTheDocument()
+    expect(screen.queryByText('上海高考口语标准题型')).not.toBeInTheDocument()
+
+    await openTemplateBrowserTab('我的模板')
+    expect(screen.getByRole('button', { name: '听力模板' })).toBeInTheDocument()
+    expect(screen.queryByText('听力函数库')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '听力模板' }))
 
     expect(await screen.findByRole('heading', { name: '结构' })).toBeInTheDocument()
@@ -538,11 +621,97 @@ describe('Template pages', () => {
     expect(app.browser.listFunctionLibraries).toHaveBeenCalledTimes(2)
   })
 
+  it('creates an editable local copy from the built-in template list', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={['/templates']}>
+          <Routes>
+            <Route path="/templates" element={<TemplateBrowserPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: '创建副本' }))
+
+    await waitFor(() =>
+      expect(app.builtinTemplates.createCopy).toHaveBeenCalledWith(BUILTIN_TEMPLATE_ID)
+    )
+    expect(screen.getByRole('tab', { name: '我的模板' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('button', { name: '上海高考口语标准题型' })).toBeInTheDocument()
+  })
+
+  it('opens exam generation directly from a local template row', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={['/templates']}>
+          <Routes>
+            <Route path="/templates" element={<TemplateBrowserPage />} />
+            <Route path="/templates/:templateId/generate" element={<h1>试卷生成设置</h1>} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    await openTemplateBrowserTab('我的模板')
+    const row = screen.getByRole('button', { name: '听力模板' }).closest('article')
+    expect(row).not.toBeNull()
+    fireEvent.click(within(row as HTMLElement).getByRole('button', { name: '生成试卷' }))
+
+    expect(await screen.findByRole('heading', { name: '试卷生成设置' })).toBeInTheDocument()
+    expect(app.templates.get).not.toHaveBeenCalled()
+  })
+
+  it('opens a built-in template in the original editor read-only mode and creates a copy', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/templates/builtin/${BUILTIN_TEMPLATE_ID}`]}>
+          <Routes>
+            <Route
+              path="/templates/builtin/:templateId"
+              element={<BuiltinTemplateDocumentPage />}
+            />
+            <Route path="/templates/:templateId" element={<div>可编辑副本</div>} />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: '上海高考口语标准题型' })
+    ).toBeInTheDocument()
+    expect(app.builtinTemplates.get).toHaveBeenCalledWith(BUILTIN_TEMPLATE_ID)
+    expect(app.templates.get).not.toHaveBeenCalled()
+    expect(screen.getByText('内置模板 · 只读')).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: '函数库' })).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: '属性' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '预览' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '添加框架' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '选择节点 builtin-root' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '选择节点 builtin-page' }))
+    expect(screen.getByRole('tab', { name: '页面' })).toBeEnabled()
+    expect(screen.getByRole('textbox', { name: '名称', exact: true })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '查看节点 builtin-page 页面内容' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: '保存' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '编辑' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /删除节点/ })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '创建副本' }))
+
+    await waitFor(() =>
+      expect(app.builtinTemplates.createCopy).toHaveBeenCalledWith(BUILTIN_TEMPLATE_ID)
+    )
+    expect(await screen.findByText('可编辑副本')).toBeInTheDocument()
+  })
+
   it('disables generation for a builtin template with missing dependencies', async () => {
     const app = application()
     vi.mocked(app.browser.listBuiltinTemplates).mockResolvedValue([
       {
-        templateId: '11111111-1111-4111-8111-111111111111',
+        templateId: BUILTIN_TEMPLATE_ID,
         version: 2,
         name: '依赖缺失模板',
         description: '',
@@ -578,6 +747,7 @@ describe('Template pages', () => {
       </TemplateApplicationProvider>
     )
 
+    await openTemplateBrowserTab('我的模板')
     await screen.findByRole('button', { name: '听力模板' })
     fireEvent.click(screen.getByRole('button', { name: '删除模板“听力模板”' }))
     fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: '删除' }))
@@ -599,6 +769,7 @@ describe('Template pages', () => {
       </TemplateApplicationProvider>
     )
 
+    await openTemplateBrowserTab('我的模板')
     await screen.findByRole('button', { name: '听力模板' })
     fireEvent.click(screen.getByRole('button', { name: '导出模板“听力模板”' }))
 
@@ -628,10 +799,14 @@ describe('Template pages', () => {
       </TemplateApplicationProvider>
     )
 
-    await screen.findByRole('button', { name: '听力模板' })
+    expect(await screen.findByRole('tab', { name: '内置模板' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
     fireEvent.click(screen.getByRole('button', { name: '导入模板' }))
 
     expect(await screen.findByRole('button', { name: '外部新模板' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '我的模板' })).toHaveAttribute('aria-selected', 'true')
     expect(app.templates.inspectImport).toHaveBeenCalledWith(source)
     expect(app.templates.importDocument).toHaveBeenCalledWith(source, 'preserve-id')
   })
@@ -657,6 +832,7 @@ describe('Template pages', () => {
       </TemplateApplicationProvider>
     )
 
+    await openTemplateBrowserTab('我的模板')
     await screen.findByRole('button', { name: '听力模板' })
     fireEvent.click(screen.getByRole('button', { name: '导入模板' }))
 
@@ -687,6 +863,7 @@ describe('Template pages', () => {
       </TemplateApplicationProvider>
     )
 
+    await openTemplateBrowserTab('我的模板')
     await screen.findByRole('button', { name: '听力模板' })
     fireEvent.click(screen.getByRole('button', { name: '导入模板' }))
     const dialog = await screen.findByRole('alertdialog', { name: '模板“外部模板”已存在' })
@@ -722,6 +899,7 @@ describe('Template pages', () => {
       </TemplateApplicationProvider>
     )
 
+    await openTemplateBrowserTab('我的模板')
     await screen.findByRole('button', { name: '听力模板' })
     fireEvent.click(screen.getByRole('button', { name: '导入模板' }))
     const dialog = await screen.findByRole('alertdialog', { name: '模板“覆盖后的模板”已存在' })

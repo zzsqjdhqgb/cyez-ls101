@@ -43,6 +43,8 @@ export interface TemplateEditorSession {
   clearError(): void
 }
 
+export type TemplateEditorSource = 'local' | 'builtin'
+
 const EMPTY_HISTORY: EditorHistory = {
   past: [],
   present: null,
@@ -55,7 +57,8 @@ const HISTORY_LIMIT = 200
 
 export function useTemplateEditorSession(
   application: TemplateApplication,
-  templateId: string
+  templateId: string,
+  source: TemplateEditorSource = 'local'
 ): TemplateEditorSession {
   const [history, setHistory] = useState<EditorHistory>(EMPTY_HISTORY)
   const historyRef = useRef(history)
@@ -80,8 +83,20 @@ export function useTemplateEditorSession(
   useEffect(() => {
     mountedRef.current = true
     let active = true
-    void application.templates
-      .get(templateId)
+    const loadDocument = async (): Promise<TemplateDocument | null> => {
+      if (source === 'local') return application.templates.get(templateId)
+      const release = await application.builtinTemplates.get(templateId)
+      return release
+        ? {
+            templateId: release.templateId,
+            revision: 0,
+            content: structuredClone(release.document.content),
+            resources: structuredClone(release.document.resources),
+            editorState: structuredClone(release.document.editorState)
+          }
+        : null
+    }
+    void loadDocument()
       .then((document) => {
         if (!active) return
         if (!document) {
@@ -107,9 +122,10 @@ export function useTemplateEditorSession(
       active = false
       mountedRef.current = false
     }
-  }, [application, templateId])
+  }, [application, source, templateId])
 
   const apply = (operation: TemplateDocumentOperation): boolean => {
+    if (source === 'builtin') return false
     const current = historyRef.current
     if (!current.present) return false
     const result = editTemplateDocument(current.present.document, operation)
@@ -155,6 +171,7 @@ export function useTemplateEditorSession(
   }
 
   const undo = (): void => {
+    if (source === 'builtin') return
     const current = historyRef.current
     const previous = current.past.at(-1)
     if (!current.present || !previous) return
@@ -169,6 +186,7 @@ export function useTemplateEditorSession(
   }
 
   const redo = (): void => {
+    if (source === 'builtin') return
     const current = historyRef.current
     const next = current.future[0]
     if (!current.present || !next) return
@@ -183,6 +201,7 @@ export function useTemplateEditorSession(
   }
 
   const save = async (): Promise<boolean> => {
+    if (source === 'builtin') return false
     const snapshot = historyRef.current.present
     if (!snapshot || savingRef.current) return false
     savingRef.current = true
@@ -214,6 +233,7 @@ export function useTemplateEditorSession(
     parentId: string,
     index?: number
   ): Promise<boolean> => {
+    if (source === 'builtin') return false
     let snapshot = historyRef.current.present
     if (!snapshot || savingRef.current) return false
     if (snapshot.id !== historyRef.current.cleanId) {
@@ -262,10 +282,10 @@ export function useTemplateEditorSession(
     selectedNodeId,
     loading,
     saving,
-    dirty: history.present !== null && history.present.id !== history.cleanId,
+    dirty: source === 'local' && history.present !== null && history.present.id !== history.cleanId,
     error,
-    canUndo: history.past.length > 0,
-    canRedo: history.future.length > 0,
+    canUndo: source === 'local' && history.past.length > 0,
+    canRedo: source === 'local' && history.future.length > 0,
     apply,
     selectNode,
     undo,

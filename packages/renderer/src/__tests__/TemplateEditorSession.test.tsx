@@ -39,6 +39,22 @@ function application(document: TemplateDocument = template()): TemplateApplicati
       validate: vi.fn(),
       compile: vi.fn()
     },
+    builtinTemplates: {
+      get: vi.fn().mockResolvedValue({
+        templateId: document.templateId,
+        version: 1,
+        releaseHash: `sha256:${'a'.repeat(64)}`,
+        document: {
+          content: document.content,
+          resources: document.resources,
+          editorState: document.editorState
+        }
+      }),
+      createCopy: vi.fn(),
+      validate: vi.fn(),
+      compile: vi.fn(),
+      preview: vi.fn()
+    },
     functionLibraries: {
       local: {}
     }
@@ -46,6 +62,49 @@ function application(document: TemplateDocument = template()): TemplateApplicati
 }
 
 describe('Template editor session', () => {
+  it('loads a built-in release as a read-only document and rejects every write path', async () => {
+    const source = template()
+    const app = application(source)
+    const { result } = renderHook(() =>
+      useTemplateEditorSession(app, TEMPLATE_ID, 'builtin')
+    )
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(app.builtinTemplates.get).toHaveBeenCalledWith(TEMPLATE_ID)
+    expect(app.templates.get).not.toHaveBeenCalled()
+    expect(result.current.document).toMatchObject({
+      templateId: TEMPLATE_ID,
+      revision: 0,
+      content: { name: '原模板' }
+    })
+
+    let applied = true
+    let saved = true
+    let inserted = true
+    act(() => {
+      applied = result.current.apply({ type: 'set-template-name', value: '不能修改' })
+      result.current.undo()
+      result.current.redo()
+    })
+    await act(async () => {
+      saved = await result.current.save()
+      inserted = await result.current.insertFunctionCall(
+        { source: 'builtin', libraryId: 'builtin:basic' },
+        'root'
+      )
+    })
+
+    expect(applied).toBe(false)
+    expect(saved).toBe(false)
+    expect(inserted).toBe(false)
+    expect(result.current.document?.content.name).toBe('原模板')
+    expect(result.current.dirty).toBe(false)
+    expect(result.current.canUndo).toBe(false)
+    expect(result.current.canRedo).toBe(false)
+    expect(app.templates.save).not.toHaveBeenCalled()
+    expect(app.templates.insertFunctionCall).not.toHaveBeenCalled()
+  })
+
   it('preserves history and dirty state after save failure and permits retry', async () => {
     const source = template()
     const app = application(source)

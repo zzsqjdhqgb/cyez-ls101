@@ -80,7 +80,7 @@ import {
   type TemplateVariableCandidate
 } from './TemplateVariableInputModel'
 import { templateErrorMessage } from './templateUi'
-import { useTemplateEditorSession } from './useTemplateEditorSession'
+import { useTemplateEditorSession, type TemplateEditorSource } from './useTemplateEditorSession'
 import { useTemplatePreview } from './useTemplatePreview'
 import { useUnsavedChangesGuard } from './useUnsavedChangesGuard'
 
@@ -101,16 +101,29 @@ const LIBRARY_SOURCES: readonly {
 
 export function TemplateDocumentPage(): JSX.Element {
   const { templateId = '' } = useParams()
-  return <TemplateDocumentEditor key={templateId} templateId={templateId} />
+  return <TemplateDocumentEditor key={templateId} templateId={templateId} source="local" />
 }
 
-function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Element {
+export function BuiltinTemplateDocumentPage(): JSX.Element {
+  const { templateId = '' } = useParams()
+  return <TemplateDocumentEditor key={templateId} templateId={templateId} source="builtin" />
+}
+
+function TemplateDocumentEditor({
+  templateId,
+  source
+}: {
+  templateId: string
+  source: TemplateEditorSource
+}): JSX.Element {
   const application = useTemplateApplication()
   const navigate = useNavigate()
-  const session = useTemplateEditorSession(application, templateId)
+  const readOnly = source === 'builtin'
+  const session = useTemplateEditorSession(application, templateId, source)
   const unsavedChanges = useUnsavedChangesGuard(session.dirty)
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [exportingTemplate, setExportingTemplate] = useState(false)
+  const [copyingTemplate, setCopyingTemplate] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [centerView, setCenterView] = useState<'structure' | 'page' | 'preview'>('structure')
@@ -306,9 +319,26 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
 
   const openGeneration = async (): Promise<void> => {
     if (!document || session.saving) return
-    if (session.dirty && !(await session.save())) return
+    if (!readOnly && session.dirty && !(await session.save())) return
     unsavedChanges.allowNextNavigation()
-    navigate(`/templates/${templateId}/generate`)
+    navigate(
+      readOnly ? `/templates/builtin/${templateId}/generate` : `/templates/${templateId}/generate`
+    )
+  }
+
+  const createEditableCopy = async (): Promise<void> => {
+    if (!readOnly || copyingTemplate) return
+    setCopyingTemplate(true)
+    setExportError(null)
+    try {
+      const copy = await application.builtinTemplates.createCopy(templateId)
+      toast.success(`已创建模板副本“${copy.content.name || '未命名模板'}”`)
+      navigate(`/templates/${copy.templateId}`)
+    } catch (reason) {
+      setExportError(templateErrorMessage(reason))
+    } finally {
+      setCopyingTemplate(false)
+    }
   }
 
   const exportTemplate = async (): Promise<void> => {
@@ -609,7 +639,9 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
             <h1>{document?.content.name || '未命名模板'}</h1>
             <span>
               {document
-                ? `Revision ${document.revision}${session.dirty ? ' · 未保存' : ''}`
+                ? readOnly
+                  ? '内置模板 · 只读'
+                  : `Revision ${document.revision}${session.dirty ? ' · 未保存' : ''}`
                 : session.loading
                   ? '正在加载'
                   : '无法加载'}
@@ -617,33 +649,45 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
           </div>
         </div>
         <div className={styles.actions}>
-          <IconButton
-            icon={Undo2}
-            label="撤销"
-            disabled={!session.canUndo || session.saving}
-            onClick={session.undo}
-          />
-          <IconButton
-            icon={Redo2}
-            label="重做"
-            disabled={!session.canRedo || session.saving}
-            onClick={session.redo}
-          />
-          <Button
-            icon={Save}
-            variant="primary"
-            disabled={!document || !session.dirty || session.saving || exportingTemplate}
-            onClick={() => void session.save()}
-          >
-            {session.saving ? '正在保存' : '保存'}
-          </Button>
-          <Button
-            icon={Download}
-            disabled={!document || session.saving || exportingTemplate}
-            onClick={() => void exportTemplate()}
-          >
-            {exportingTemplate ? '正在导出' : '导出模板'}
-          </Button>
+          {readOnly ? (
+            <Button
+              icon={Copy}
+              disabled={!document || copyingTemplate}
+              onClick={() => void createEditableCopy()}
+            >
+              {copyingTemplate ? '正在创建' : '创建副本'}
+            </Button>
+          ) : (
+            <>
+              <IconButton
+                icon={Undo2}
+                label="撤销"
+                disabled={!session.canUndo || session.saving}
+                onClick={session.undo}
+              />
+              <IconButton
+                icon={Redo2}
+                label="重做"
+                disabled={!session.canRedo || session.saving}
+                onClick={session.redo}
+              />
+              <Button
+                icon={Save}
+                variant="primary"
+                disabled={!document || !session.dirty || session.saving || exportingTemplate}
+                onClick={() => void session.save()}
+              >
+                {session.saving ? '正在保存' : '保存'}
+              </Button>
+              <Button
+                icon={Download}
+                disabled={!document || session.saving || exportingTemplate}
+                onClick={() => void exportTemplate()}
+              >
+                {exportingTemplate ? '正在导出' : '导出模板'}
+              </Button>
+            </>
+          )}
           <Button
             icon={FileArchive}
             disabled={!document || session.saving || exportingTemplate}
@@ -678,21 +722,25 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
               <div className={styles.libraryHeading}>
                 <h2 id="function-library-heading">函数库</h2>
                 <div className={styles.libraryHeadingActions}>
-                  <span>组件素材</span>
-                  <IconButton
-                    icon={Upload}
-                    label="导入函数库"
-                    size="small"
-                    disabled={libraryLoading || importingLibrary}
-                    onClick={() => void importFunctionLibrary()}
-                  />
-                  <IconButton
-                    icon={Plus}
-                    label="新建本地函数库"
-                    size="small"
-                    disabled={libraryLoading || creatingLibrary}
-                    onClick={() => void createLocalFunctionLibrary()}
-                  />
+                  <span>{readOnly ? '只读' : '组件素材'}</span>
+                  {!readOnly ? (
+                    <>
+                      <IconButton
+                        icon={Upload}
+                        label="导入函数库"
+                        size="small"
+                        disabled={libraryLoading || importingLibrary}
+                        onClick={() => void importFunctionLibrary()}
+                      />
+                      <IconButton
+                        icon={Plus}
+                        label="新建本地函数库"
+                        size="small"
+                        disabled={libraryLoading || creatingLibrary}
+                        onClick={() => void createLocalFunctionLibrary()}
+                      />
+                    </>
+                  ) : null}
                 </div>
               </div>
               <div className={styles.sourceTabs} role="tablist" aria-label="函数库来源">
@@ -721,7 +769,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                     <AlertCircle aria-hidden="true" />
                     <div>
                       <span>{libraryError}</span>
-                      {invalidLocalLibraryId ? (
+                      {invalidLocalLibraryId && !readOnly ? (
                         <Button
                           size="small"
                           variant="danger"
@@ -764,17 +812,19 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                                     <div>
                                       <strong>{library.name}</strong>
                                       <span>{library.error}</span>
-                                      <Button
-                                        size="small"
-                                        variant="danger"
-                                        onClick={() => {
-                                          setInvalidLocalLibraryId(library.libraryId)
-                                          setInvalidLibraryResetError(null)
-                                          setConfirmInvalidLibraryReset(true)
-                                        }}
-                                      >
-                                        重置损坏函数库
-                                      </Button>
+                                      {!readOnly ? (
+                                        <Button
+                                          size="small"
+                                          variant="danger"
+                                          onClick={() => {
+                                            setInvalidLocalLibraryId(library.libraryId)
+                                            setInvalidLibraryResetError(null)
+                                            setConfirmInvalidLibraryReset(true)
+                                          }}
+                                        >
+                                          重置损坏函数库
+                                        </Button>
+                                      ) : null}
                                     </div>
                                   </div>
                                 </li>
@@ -784,9 +834,12 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                               <li className={styles.libraryGroup} key={key}>
                                 <div
                                   className={styles.libraryGroupHeader}
-                                  data-actions={library.source !== 'builtin' || undefined}
+                                  data-actions={
+                                    (!readOnly && library.source !== 'builtin') || undefined
+                                  }
                                 >
-                                  {library.source === 'local' &&
+                                  {!readOnly &&
+                                  library.source === 'local' &&
                                   renamingLibrary?.libraryId === library.libraryId ? (
                                     <div className={styles.libraryRenameEditor}>
                                       <input
@@ -853,7 +906,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                                       </small>
                                     </button>
                                   )}
-                                  {library.source !== 'builtin' ? (
+                                  {!readOnly && library.source !== 'builtin' ? (
                                     <div className={styles.libraryGroupActions}>
                                       {library.source === 'local' ? (
                                         <>
@@ -924,46 +977,48 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                                                   : '函数'}
                                               </small>
                                             </span>
-                                            <span className={styles.functionActions}>
-                                              {library.source === 'local' ? (
-                                                <>
-                                                  <IconButton
-                                                    icon={Pencil}
-                                                    label={`编辑${item.name || '未命名函数'}`}
-                                                    size="small"
-                                                    disabled={session.saving}
-                                                    onClick={() =>
-                                                      void openFunctionEditor(
-                                                        library,
-                                                        item.functionId
-                                                      )
-                                                    }
-                                                  />
-                                                  <IconButton
-                                                    icon={Trash2}
-                                                    label={`删除本地函数“${item.name || '未命名函数'}”`}
-                                                    size="small"
-                                                    variant="danger"
-                                                    disabled={session.saving}
-                                                    onClick={() => {
-                                                      setLibraryDeleteError(null)
-                                                      setPendingFunctionDelete({
-                                                        library,
-                                                        functionId: item.functionId,
-                                                        functionName: item.name
-                                                      })
-                                                    }}
-                                                  />
-                                                </>
-                                              ) : null}
-                                              <IconButton
-                                                icon={Plus}
-                                                label={`添加${item.name || '未命名函数'}`}
-                                                size="small"
-                                                disabled={!document || session.saving}
-                                                onClick={() => insertLibraryItem(library, item)}
-                                              />
-                                            </span>
+                                            {!readOnly ? (
+                                              <span className={styles.functionActions}>
+                                                {library.source === 'local' ? (
+                                                  <>
+                                                    <IconButton
+                                                      icon={Pencil}
+                                                      label={`编辑${item.name || '未命名函数'}`}
+                                                      size="small"
+                                                      disabled={session.saving}
+                                                      onClick={() =>
+                                                        void openFunctionEditor(
+                                                          library,
+                                                          item.functionId
+                                                        )
+                                                      }
+                                                    />
+                                                    <IconButton
+                                                      icon={Trash2}
+                                                      label={`删除本地函数“${item.name || '未命名函数'}”`}
+                                                      size="small"
+                                                      variant="danger"
+                                                      disabled={session.saving}
+                                                      onClick={() => {
+                                                        setLibraryDeleteError(null)
+                                                        setPendingFunctionDelete({
+                                                          library,
+                                                          functionId: item.functionId,
+                                                          functionName: item.name
+                                                        })
+                                                      }}
+                                                    />
+                                                  </>
+                                                ) : null}
+                                                <IconButton
+                                                  icon={Plus}
+                                                  label={`添加${item.name || '未命名函数'}`}
+                                                  size="small"
+                                                  disabled={!document || session.saving}
+                                                  onClick={() => insertLibraryItem(library, item)}
+                                                />
+                                              </span>
+                                            ) : null}
                                           </div>
                                         </li>
                                       ))}
@@ -1062,6 +1117,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                     selectedNodeId={session.selectedNodeId}
                     collapsedIds={collapsedIds}
                     functions={document?.resources.functions ?? []}
+                    readOnly={readOnly}
                     variableCandidates={variableCandidates}
                     apply={session.apply}
                     onSelect={selectTemplateNode}
@@ -1085,7 +1141,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
               >
                 <TemplatePageCanvas
                   apply={session.apply}
-                  disabled={session.saving}
+                  disabled={readOnly || session.saving}
                   page={selectedNode}
                   selectedBlockId={selectedContentBlockId}
                   onSelectBlock={setSelectedContentBlockId}
@@ -1132,7 +1188,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                 <label>
                   名称
                   <input
-                    disabled={!document}
+                    disabled={!document || readOnly}
                     value={document?.content.name ?? ''}
                     onChange={(event) => editMetadata('set-template-name', event.target.value)}
                   />
@@ -1140,7 +1196,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                 <label>
                   描述
                   <textarea
-                    disabled={!document}
+                    disabled={!document || readOnly}
                     value={document?.content.description ?? ''}
                     onChange={(event) =>
                       editMetadata('set-template-description', event.target.value)
@@ -1148,7 +1204,7 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                   />
                 </label>
                 <TemplateInterfaceRequirements
-                  disabled={!document || session.saving}
+                  disabled={!document || readOnly || session.saving}
                   error={interfacesError}
                   loading={interfacesLoading}
                   manifests={interfaceManifests}
@@ -1159,19 +1215,21 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
               <TemplateInspectorSection title="评分 Schema" defaultExpanded={false}>
                 <TemplateSchemaUses
                   apply={session.apply}
-                  disabled={!document || session.saving}
+                  disabled={!document || readOnly || session.saving}
                   uses={document?.content.schemaUses ?? []}
                   variableCandidates={variableCandidates}
                 />
               </TemplateInspectorSection>
               {selectedNode ? (
                 <TemplateInspectorSection title="节点属性" headingId="node-properties-heading">
-                  <TemplateNodeInspector
-                    node={selectedNode}
-                    functions={document?.resources.functions ?? []}
-                    variableCandidates={variableCandidates}
-                    apply={session.apply}
-                  />
+                  <fieldset className={styles.readOnlyBoundary} disabled={readOnly}>
+                    <TemplateNodeInspector
+                      node={selectedNode}
+                      functions={document?.resources.functions ?? []}
+                      variableCandidates={variableCandidates}
+                      apply={session.apply}
+                    />
+                  </fieldset>
                 </TemplateInspectorSection>
               ) : null}
               {selectedNode?.type === 'page' && selectedContentBlock ? (
@@ -1179,14 +1237,16 @@ function TemplateDocumentEditor({ templateId }: { templateId: string }): JSX.Ele
                   title="内容块"
                   headingId="content-block-properties-heading"
                 >
-                  <TemplateContentBlockInspector
-                    apply={session.apply}
-                    block={selectedContentBlock}
-                    choiceTargetPages={choiceTargetPages}
-                    pageId={selectedNode.id}
-                    variableCandidates={variableCandidates}
-                    onBlockIdChange={setSelectedContentBlockId}
-                  />
+                  <fieldset className={styles.readOnlyBoundary} disabled={readOnly}>
+                    <TemplateContentBlockInspector
+                      apply={session.apply}
+                      block={selectedContentBlock}
+                      choiceTargetPages={choiceTargetPages}
+                      pageId={selectedNode.id}
+                      variableCandidates={variableCandidates}
+                      onBlockIdChange={setSelectedContentBlockId}
+                    />
+                  </fieldset>
                 </TemplateInspectorSection>
               ) : null}
             </aside>
@@ -1385,6 +1445,7 @@ export interface TemplateNodeTreeProps {
   selectedNodeId: string
   collapsedIds: ReadonlySet<string>
   functions: readonly FunctionDef[]
+  readOnly?: boolean
   variableCandidates: readonly TemplateVariableCandidate[]
   apply(operation: TemplateDocumentOperation): boolean
   onSelect(nodeId: string): void
@@ -1401,6 +1462,7 @@ export function TemplateNodeTree({
   selectedNodeId,
   collapsedIds,
   functions,
+  readOnly = false,
   variableCandidates,
   apply,
   onSelect,
@@ -1443,7 +1505,7 @@ export function TemplateNodeTree({
                 </small>
               </span>
             </button>
-            {selected && parent ? (
+            {selected && parent && !readOnly ? (
               <div className={styles.nodeCardActions}>
                 <IconButton
                   icon={ArrowUp}
@@ -1499,6 +1561,7 @@ export function TemplateNodeTree({
           {node.type === 'page' && !collapsed ? (
             <PageNodeSummary
               node={node}
+              readOnly={readOnly}
               variableCandidates={variableCandidates}
               apply={apply}
               onEdit={() => onEditPage(node.id)}
@@ -1506,14 +1569,16 @@ export function TemplateNodeTree({
           ) : null}
           {node.type === 'function' && !collapsed ? (
             <div className={`${styles.nodeSummary} ${styles.functionNodeSummary}`}>
-              <TemplateFunctionCallEditor
-                compact
-                node={node}
-                definition={functions.find((definition) => definition.id === node.functionRef)}
-                functions={functions}
-                variableCandidates={variableCandidates}
-                apply={apply}
-              />
+              <fieldset className={styles.readOnlyBoundary} disabled={readOnly}>
+                <TemplateFunctionCallEditor
+                  compact
+                  node={node}
+                  definition={functions.find((definition) => definition.id === node.functionRef)}
+                  functions={functions}
+                  variableCandidates={variableCandidates}
+                  apply={apply}
+                />
+              </fieldset>
             </div>
           ) : null}
           {node.type === 'choice-question' && !collapsed ? (
@@ -1522,24 +1587,28 @@ export function TemplateNodeTree({
                 <span>选择题内容</span>
                 <small>{node.options.length} 个选项</small>
               </div>
-              <ChoiceQuestionEditor
-                ariaLabelPrefix={`节点 ${node.id}`}
-                compact
-                node={node}
-                variableCandidates={variableCandidates}
-                apply={apply}
-              />
+              <fieldset className={styles.readOnlyBoundary} disabled={readOnly}>
+                <ChoiceQuestionEditor
+                  ariaLabelPrefix={`节点 ${node.id}`}
+                  compact
+                  node={node}
+                  variableCandidates={variableCandidates}
+                  apply={apply}
+                />
+              </fieldset>
             </div>
           ) : null}
           {node.type === 'variable' && !collapsed ? (
             <div className={styles.nodeSummary}>
-              <VariableEditor
-                ariaLabelPrefix={`节点 ${node.id}`}
-                compact
-                node={node}
-                variableCandidates={variableCandidates}
-                apply={apply}
-              />
+              <fieldset className={styles.readOnlyBoundary} disabled={readOnly}>
+                <VariableEditor
+                  ariaLabelPrefix={`节点 ${node.id}`}
+                  compact
+                  node={node}
+                  variableCandidates={variableCandidates}
+                  apply={apply}
+                />
+              </fieldset>
             </div>
           ) : null}
         </div>
@@ -1555,6 +1624,7 @@ export function TemplateNodeTree({
                 selectedNodeId={selectedNodeId}
                 collapsedIds={collapsedIds}
                 functions={functions}
+                readOnly={readOnly}
                 variableCandidates={variableCandidates}
                 apply={apply}
                 onSelect={onSelect}
@@ -1581,11 +1651,13 @@ function hasInlineNodeProperties(node: TemplateNode): boolean {
 
 function PageNodeSummary({
   node,
+  readOnly,
   variableCandidates,
   apply,
   onEdit
 }: {
   node: Extract<TemplateNode, { type: 'page' }>
+  readOnly: boolean
   variableCandidates: readonly TemplateVariableCandidate[]
   apply: TemplateNodeTreeProps['apply']
   onEdit(): void
@@ -1605,74 +1677,88 @@ function PageNodeSummary({
         <div className={styles.nodeSummaryActions}>
           <small>{node.timeline.length} 项</small>
           <Button
-            aria-label={`编辑节点 ${node.id} 页面内容`}
+            aria-label={`${readOnly ? '查看' : '编辑'}节点 ${node.id} 页面内容`}
             className={styles.nodeContentEdit}
             icon={LayoutTemplate}
             size="small"
             variant="ghost"
             onClick={onEdit}
           >
-            编辑内容
+            {readOnly ? '查看内容' : '编辑内容'}
           </Button>
-          <IconButton
-            aria-controls={addMenuId}
-            aria-expanded={adding}
-            className={styles.nodeSummaryAdd}
-            icon={Plus}
-            label={`添加节点 ${node.id} 时间线项目`}
-            size="small"
-            variant="ghost"
-            onClick={() => setAdding((current) => !current)}
-          />
+          {!readOnly ? (
+            <IconButton
+              aria-controls={addMenuId}
+              aria-expanded={adding}
+              className={styles.nodeSummaryAdd}
+              icon={Plus}
+              label={`添加节点 ${node.id} 时间线项目`}
+              size="small"
+              variant="ghost"
+              onClick={() => setAdding((current) => !current)}
+            />
+          ) : null}
         </div>
       </div>
       {node.timeline.length > 0 || adding ? (
-        <ol className={styles.timelineSummary} aria-label={`节点 ${node.id} 时间线`}>
-          {node.timeline.map((step, index) => (
-            <li className={styles.timelineSummaryItem} key={index}>
-              <span
-                aria-label={timelineStepLabel(step.type)}
-                className={styles.timelineTypeIcon}
-                title={timelineStepLabel(step.type)}
+        <fieldset className={styles.readOnlyBoundary} disabled={readOnly}>
+          <ol className={styles.timelineSummary} aria-label={`节点 ${node.id} 时间线`}>
+            {node.timeline.map((step, index) => (
+              <li className={styles.timelineSummaryItem} key={index}>
+                <span
+                  aria-label={timelineStepLabel(step.type)}
+                  className={styles.timelineTypeIcon}
+                  title={timelineStepLabel(step.type)}
+                >
+                  <TimelineStepIcon type={step.type} />
+                </span>
+                <TimelineStepFields
+                  index={index}
+                  nodeId={node.id}
+                  step={step}
+                  variableCandidates={variableCandidates}
+                  onChange={(nextStep) =>
+                    apply({
+                      type: 'update-timeline-step',
+                      pageId: node.id,
+                      index,
+                      step: nextStep
+                    })
+                  }
+                />
+                {!readOnly ? (
+                  <IconButton
+                    className={styles.timelineRemove}
+                    icon={Trash2}
+                    label={`删除节点 ${node.id} 时间线项目 ${index + 1}`}
+                    size="small"
+                    variant="danger"
+                    onClick={() => apply({ type: 'remove-timeline-step', pageId: node.id, index })}
+                  />
+                ) : null}
+              </li>
+            ))}
+            {adding ? (
+              <li
+                aria-label={`节点 ${node.id} 新增时间线项目`}
+                className={styles.timelineAddRow}
+                id={addMenuId}
               >
-                <TimelineStepIcon type={step.type} />
-              </span>
-              <TimelineStepFields
-                index={index}
-                nodeId={node.id}
-                step={step}
-                variableCandidates={variableCandidates}
-                onChange={(nextStep) =>
-                  apply({
-                    type: 'update-timeline-step',
-                    pageId: node.id,
-                    index,
-                    step: nextStep
-                  })
-                }
-              />
-              <IconButton
-                className={styles.timelineRemove}
-                icon={Trash2}
-                label={`删除节点 ${node.id} 时间线项目 ${index + 1}`}
-                size="small"
-                variant="danger"
-                onClick={() => apply({ type: 'remove-timeline-step', pageId: node.id, index })}
-              />
-            </li>
-          ))}
-          {adding ? (
-            <li
-              aria-label={`节点 ${node.id} 新增时间线项目`}
-              className={styles.timelineAddRow}
-              id={addMenuId}
-            >
-              <TimelineAddButton icon={Volume2} label="TTS 播放" onClick={() => addStep('play')} />
-              <TimelineAddButton icon={Timer} label="倒计时" onClick={() => addStep('countdown')} />
-              <TimelineAddButton icon={Mic} label="录音" onClick={() => addStep('record')} />
-            </li>
-          ) : null}
-        </ol>
+                <TimelineAddButton
+                  icon={Volume2}
+                  label="TTS 播放"
+                  onClick={() => addStep('play')}
+                />
+                <TimelineAddButton
+                  icon={Timer}
+                  label="倒计时"
+                  onClick={() => addStep('countdown')}
+                />
+                <TimelineAddButton icon={Mic} label="录音" onClick={() => addStep('record')} />
+              </li>
+            ) : null}
+          </ol>
+        </fieldset>
       ) : (
         <span className={styles.nodeSummaryEmpty}>暂无时间线</span>
       )}
