@@ -6,7 +6,6 @@ import type {
   AIRouterPronunciationAssessmentEvent,
   AIRouterPronunciationAssessmentResult,
   AIRouterStreamEvent,
-  AIRouterSpeechModelPackageImportResult,
   AIRouterSpeechProviderType,
   AIRouterSpeechRecognitionEvent,
   AIRouterSpeechRecognitionResult,
@@ -39,8 +38,7 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
     readSpeechProviderApiKey: (id) => getBridge().readSpeechProviderApiKey(id),
     listSpeechModelPackages: (providerType?: AIRouterSpeechProviderType) =>
       getBridge().listSpeechModelPackages(providerType),
-    importSpeechModelPackage: (data: Uint8Array): Promise<AIRouterSpeechModelPackageImportResult> =>
-      getBridge().importSpeechModelPackage(data),
+    importSpeechModelPackage: () => getBridge().importSpeechModelPackage(),
     deleteSpeechModelPackage: (id, version) => getBridge().deleteSpeechModelPackage(id, version),
     listSpeechModels: (config) => getBridge().listSpeechModels(config),
     listSpeechVoices: (request) => getBridge().listSpeechVoices(request),

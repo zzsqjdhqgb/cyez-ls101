@@ -1,4 +1,4 @@
-import { readFile, rm, stat } from 'node:fs/promises'
+import { rm, stat, writeFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -23,7 +23,11 @@ describe('AIRouterSpeechModelStore', () => {
 
   it('imports a package, validates assets, and lists compatible runtimes', async () => {
     const bytes = new Uint8Array([1, 2, 3, 4])
-    const result = await store.importPackage(createPackage('pocket-package', '1.0.0', bytes))
+    const result = await importPackageBytes(
+      store,
+      baseDir,
+      createPackage('pocket-package', '1.0.0', bytes)
+    )
 
     expect(result.package).toEqual(
       expect.objectContaining({
@@ -44,8 +48,12 @@ describe('AIRouterSpeechModelStore', () => {
 
   it('reuses shared blobs and removes them after the last package reference is deleted', async () => {
     const bytes = new Uint8Array([5, 6, 7])
-    await store.importPackage(createPackage('package-a', '1.0.0', bytes))
-    const second = await store.importPackage(createPackage('package-b', '1.0.0', bytes))
+    await importPackageBytes(store, baseDir, createPackage('package-a', '1.0.0', bytes))
+    const second = await importPackageBytes(
+      store,
+      baseDir,
+      createPackage('package-b', '1.0.0', bytes)
+    )
 
     expect(second.reusedAssetCount).toBe(1)
     expect(second.storedAssetCount).toBe(0)
@@ -61,7 +69,7 @@ describe('AIRouterSpeechModelStore', () => {
 
   it('rejects a package when an asset hash does not match its content', async () => {
     const packageBytes = createPackage('invalid-package', '1.0.0', new Uint8Array([8, 9]), true)
-    await expect(store.importPackage(packageBytes)).rejects.toThrow('资产哈希不匹配')
+    await expect(importPackageBytes(store, baseDir, packageBytes)).rejects.toThrow('资产哈希不匹配')
   })
 
   it('does not persist validated blobs when a later asset fails validation', async () => {
@@ -72,7 +80,7 @@ describe('AIRouterSpeechModelStore', () => {
       { path: 'model/invalid.bin', bytes: new Uint8Array([12]), sha256: '0'.repeat(64) }
     ])
 
-    await expect(store.importPackage(packageBytes)).rejects.toThrow('资产哈希不匹配')
+    await expect(importPackageBytes(store, baseDir, packageBytes)).rejects.toThrow('资产哈希不匹配')
     const blobPath = path.join(
       baseDir,
       'models',
@@ -83,6 +91,27 @@ describe('AIRouterSpeechModelStore', () => {
       validHash
     )
     await expect(stat(blobPath)).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
+  it('preserves the installed package when a replacement fails validation', async () => {
+    const originalBytes = new Uint8Array([21, 22, 23])
+    await importPackageBytes(
+      store,
+      baseDir,
+      createPackage('replace-package', '1.0.0', originalBytes)
+    )
+    const replacementBytes = new Uint8Array([31, 32, 33])
+    const replacementHash = createHash('sha256').update(replacementBytes).digest('hex')
+    const replacement = createPackageWithAssets('replace-package', [
+      { path: 'model/new.bin', bytes: replacementBytes, sha256: replacementHash },
+      { path: 'model/broken.bin', bytes: new Uint8Array([34]), sha256: '0'.repeat(64) }
+    ])
+
+    await expect(importPackageBytes(store, baseDir, replacement)).rejects.toThrow('资产哈希不匹配')
+    await expect(store.readAsset('replace-package', '1.0.0', 'model/model.bin')).resolves.toEqual(
+      originalBytes
+    )
+    await expect(store.listPackages()).resolves.toHaveLength(1)
   })
 
   it('rejects online provider runtimes in local model packages', async () => {
@@ -99,7 +128,9 @@ describe('AIRouterSpeechModelStore', () => {
       'openai-compatible'
     )
 
-    await expect(store.importPackage(packageBytes)).rejects.toThrow('manifest.json 格式无效')
+    await expect(importPackageBytes(store, baseDir, packageBytes)).rejects.toThrow(
+      'manifest.json 格式无效'
+    )
   })
 
   it('rejects imports above the current app version and hides them after a downgrade', async () => {
@@ -113,18 +144,32 @@ describe('AIRouterSpeechModelStore', () => {
     )
     const currentStore = new AIRouterSpeechModelStore({ baseDir, appVersion: '0.3.1' })
 
-    await expect(currentStore.importPackage(packageBytes)).rejects.toThrow(
+    await expect(importPackageBytes(currentStore, baseDir, packageBytes)).rejects.toThrow(
       '要求应用版本不低于 0.4.0'
     )
 
     const futureStore = new AIRouterSpeechModelStore({ baseDir, appVersion: '0.4.0' })
-    await futureStore.importPackage(packageBytes)
+    await importPackageBytes(futureStore, baseDir, packageBytes)
     await expect(currentStore.listPackages()).resolves.toEqual([])
     await expect(currentStore.getPackage('future-package', '1.0.0')).rejects.toThrow(
       '要求应用版本不低于 0.4.0'
     )
   })
 })
+
+async function importPackageBytes(
+  store: AIRouterSpeechModelStore,
+  directory: string,
+  bytes: Uint8Array
+): Promise<Awaited<ReturnType<AIRouterSpeechModelStore['importPackage']>>> {
+  const packagePath = path.join(directory, `package-${Math.random().toString(36).slice(2)}.zip`)
+  await writeFile(packagePath, bytes)
+  try {
+    return await store.importPackage(packagePath)
+  } finally {
+    await rm(packagePath, { force: true })
+  }
+}
 
 interface PackageAssetInput {
   path: string

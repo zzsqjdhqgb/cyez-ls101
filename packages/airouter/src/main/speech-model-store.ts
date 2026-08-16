@@ -1,7 +1,11 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdir, open, readFile, readdir, rename, rm, stat } from 'node:fs/promises'
+import { createReadStream, createWriteStream } from 'node:fs'
+import { mkdtemp, mkdir, open, readFile, readdir, rename, rm, stat, statfs } from 'node:fs/promises'
 import path from 'node:path'
-import { strFromU8, unzipSync } from 'fflate'
+import { Transform } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
+import yauzl, { type Entry, type ZipFile } from 'yauzl'
+import { strFromU8 } from 'fflate'
 import type {
   AIRouterSpeechInstalledAsset,
   AIRouterSpeechModelPackageAsset,
@@ -19,6 +23,13 @@ const BLOB_DIRECTORY = 'blobs/sha256'
 const PACKAGE_DIRECTORY = 'packages'
 const validSegment = /^[a-zA-Z0-9_.-]+$/
 const validSha256 = /^[a-f0-9]{64}$/
+const MAX_ARCHIVE_BYTES = 24 * 1024 ** 3
+const MAX_TOTAL_ASSET_BYTES = 20 * 1024 ** 3
+const MAX_ASSET_BYTES = 10 * 1024 ** 3
+const MAX_MANIFEST_BYTES = 4 * 1024 ** 2
+const MAX_ZIP_ENTRIES = 4096
+const MAX_MANIFEST_ASSETS = 2048
+const MIN_FREE_SPACE_HEADROOM = 512 * 1024 ** 2
 
 interface InstalledPackage {
   manifest: AIRouterSpeechModelPackageManifest
@@ -52,51 +63,84 @@ export class AIRouterSpeechModelStore {
       })
   }
 
-  async importPackage(data: Uint8Array): Promise<AIRouterSpeechModelPackageImportResult> {
-    if (!(data instanceof Uint8Array) || data.byteLength === 0) {
-      throw new TypeError('模型包必须是非空二进制数据')
+  async importPackage(filePath: string): Promise<AIRouterSpeechModelPackageImportResult> {
+    if (typeof filePath !== 'string' || !filePath.trim()) {
+      throw new TypeError('模型包文件路径无效')
     }
-
     return this.runMutation(async () => {
-      let entries: Record<string, Uint8Array>
+      const archivePath = path.resolve(filePath)
+      const archiveStats = await stat(archivePath).catch(() => null)
+      if (!archiveStats?.isFile()) throw new Error('模型包文件不存在')
+      if (archiveStats.size <= 0) throw new Error('模型包必须是非空文件')
+      if (archiveStats.size > MAX_ARCHIVE_BYTES) {
+        throw new Error(`模型包压缩文件超过 ${formatBytes(MAX_ARCHIVE_BYTES)} 限制`)
+      }
+
+      const zip = await openZip(archivePath)
+      const stagingRoot = path.join(this.options.baseDir, ROOT_DIRECTORY)
+      await mkdir(stagingRoot, { recursive: true })
+      const stagingDirectory = await mkdtemp(path.join(stagingRoot, '.import-'))
+      const createdBlobs: string[] = []
+      let packageCommitted = false
       try {
-        entries = unzipSync(data)
-      } catch {
-        throw new Error('模型包不是有效的 ZIP 文件')
-      }
-      const manifest = parseManifest(entries)
-      assertAppCompatible(manifest, this.options.appVersion)
-      const validatedAssets = manifest.assets.map((asset) => {
-        const bytes = entries[asset.path]
-        if (!bytes) throw new Error(`模型包缺少资产：${asset.path}`)
-        if (bytes.byteLength !== asset.size) {
-          throw new Error(`模型包资产大小不匹配：${asset.path}`)
+        const entries = await readZipEntries(zip)
+        const entryByPath = indexZipEntries(entries)
+        const manifestEntry = entryByPath.get('manifest.json')
+        if (!manifestEntry) throw new Error('模型包缺少 manifest.json')
+        const manifest = parseManifest(
+          await readZipEntryBytes(zip, manifestEntry, MAX_MANIFEST_BYTES)
+        )
+        assertAppCompatible(manifest, this.options.appVersion)
+        if (manifest.assets.length > MAX_MANIFEST_ASSETS) {
+          throw new Error(`模型包资产数量超过 ${MAX_MANIFEST_ASSETS} 个限制`)
         }
-        const hash = sha256(bytes)
-        if (hash !== asset.sha256) {
-          throw new Error(`模型包资产哈希不匹配：${asset.path}`)
+        const totalBytes = manifest.assets.reduce((total, asset) => total + asset.size, 0)
+        if (manifest.assets.some((asset) => asset.size > MAX_ASSET_BYTES)) {
+          throw new Error(`模型包单个资产超过 ${formatBytes(MAX_ASSET_BYTES)} 限制`)
         }
-        return { asset, bytes, hash }
-      })
+        if (totalBytes > MAX_TOTAL_ASSET_BYTES) {
+          throw new Error(`模型包资产总量超过 ${formatBytes(MAX_TOTAL_ASSET_BYTES)} 限制`)
+        }
+        await assertAvailableDiskSpace(stagingRoot, totalBytes + MIN_FREE_SPACE_HEADROOM)
 
-      const installedAssets: AIRouterSpeechInstalledAsset[] = []
-      let reusedAssetCount = 0
-      let storedAssetCount = 0
+        const installedAssets: AIRouterSpeechInstalledAsset[] = []
+        let reusedAssetCount = 0
+        let storedAssetCount = 0
 
-      for (const { asset, bytes, hash } of validatedAssets) {
-        const blob = `sha256:${hash}`
-        const reused = await this.ensureBlob(hash, bytes)
-        if (reused) reusedAssetCount++
-        else storedAssetCount++
-        installedAssets.push({ ...asset, blob })
-      }
+        for (const asset of manifest.assets) {
+          const entry = entryByPath.get(asset.path)
+          if (!entry) throw new Error(`模型包缺少资产：${asset.path}`)
+          if (entry.uncompressedSize !== asset.size) {
+            throw new Error(`模型包资产大小不匹配：${asset.path}`)
+          }
+          const temporaryPath = path.join(stagingDirectory, `${randomUUID()}.asset`)
+          const hash = await streamZipEntryToFile(zip, entry, temporaryPath, asset.size)
+          if (hash !== asset.sha256) {
+            throw new Error(`模型包资产哈希不匹配：${asset.path}`)
+          }
+          const reused = await this.ensureBlobFromFile(hash, temporaryPath)
+          if (reused) reusedAssetCount++
+          else {
+            storedAssetCount++
+            createdBlobs.push(hash)
+          }
+          installedAssets.push({ ...asset, blob: `sha256:${hash}` })
+        }
 
-      await this.writeInstalledPackage(manifest, installedAssets)
-      await this.collectUnreferencedBlobs()
-      return {
-        package: summarize(manifest),
-        reusedAssetCount,
-        storedAssetCount
+        await this.writeInstalledPackage(manifest, installedAssets, stagingDirectory)
+        packageCommitted = true
+        await this.collectUnreferencedBlobs()
+        return { package: summarize(manifest), reusedAssetCount, storedAssetCount }
+      } catch (error) {
+        if (!packageCommitted) {
+          await Promise.all(
+            createdBlobs.map((hash) => rm(this.resolveBlobPath(hash), { force: true }))
+          )
+        }
+        throw normalizeImportError(error)
+      } finally {
+        zip.close()
+        await rm(stagingDirectory, { recursive: true, force: true })
       }
     })
   }
@@ -182,24 +226,50 @@ export class AIRouterSpeechModelStore {
 
   private async writeInstalledPackage(
     manifest: AIRouterSpeechModelPackageManifest,
-    assets: AIRouterSpeechInstalledAsset[]
+    assets: AIRouterSpeechInstalledAsset[],
+    stagingDirectory: string
   ): Promise<void> {
-    const directory = this.resolvePackageDirectory(manifest.package.id, manifest.package.version)
-    await writeJsonAtomically(path.join(directory, 'manifest.json'), manifest)
-    await writeJsonAtomically(path.join(directory, 'assets.json'), assets)
-  }
+    const preparedDirectory = path.join(stagingDirectory, 'package')
+    await writeJsonAtomically(path.join(preparedDirectory, 'manifest.json'), manifest)
+    await writeJsonAtomically(path.join(preparedDirectory, 'assets.json'), assets)
 
-  private async ensureBlob(hash: string, data: Uint8Array): Promise<boolean> {
-    const filePath = this.resolveBlobPath(hash)
+    const targetDirectory = this.resolvePackageDirectory(
+      manifest.package.id,
+      manifest.package.version
+    )
+    const parentDirectory = path.dirname(targetDirectory)
+    const backupDirectory = path.join(stagingDirectory, 'previous-package')
+    await mkdir(parentDirectory, { recursive: true })
+    let backedUp = false
     try {
-      const existing = new Uint8Array(await readFile(filePath))
-      if (sha256(existing) !== hash) {
-        await rm(filePath, { force: true })
-      } else return true
+      await rename(targetDirectory, backupDirectory)
+      backedUp = true
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
     }
-    await writeBinaryAtomically(filePath, data)
+    try {
+      await rename(preparedDirectory, targetDirectory)
+    } catch (error) {
+      if (backedUp) await rename(backupDirectory, targetDirectory)
+      throw error
+    }
+    if (backedUp) await rm(backupDirectory, { recursive: true, force: true }).catch(() => undefined)
+  }
+
+  private async ensureBlobFromFile(hash: string, temporaryPath: string): Promise<boolean> {
+    const filePath = this.resolveBlobPath(hash)
+    try {
+      if ((await sha256File(filePath)) !== hash) {
+        await rm(filePath, { force: true })
+      } else {
+        await rm(temporaryPath, { force: true })
+        return true
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    }
+    await mkdir(path.dirname(filePath), { recursive: true })
+    await rename(temporaryPath, filePath)
     return false
   }
 
@@ -252,10 +322,185 @@ export class AIRouterSpeechModelStore {
   }
 }
 
-function parseManifest(entries: Record<string, Uint8Array>): AIRouterSpeechModelPackageManifest {
-  const manifestData = entries['manifest.json']
-  if (!manifestData) throw new Error('模型包缺少 manifest.json')
-  return parseManifestJson(strFromU8(manifestData))
+function openZip(filePath: string): Promise<ZipFile> {
+  return new Promise((resolve, reject) => {
+    yauzl.open(
+      filePath,
+      {
+        autoClose: false,
+        decodeStrings: true,
+        lazyEntries: true,
+        strictFileNames: true,
+        validateEntrySizes: true
+      },
+      (error, zip) => {
+        if (error || !zip) reject(error ?? new Error('模型包不是有效的 ZIP 文件'))
+        else resolve(zip)
+      }
+    )
+  }).catch(() => {
+    throw new Error('模型包不是有效的 ZIP 文件')
+  })
+}
+
+function readZipEntries(zip: ZipFile): Promise<Entry[]> {
+  return new Promise((resolve, reject) => {
+    const entries: Entry[] = []
+    let settled = false
+    const fail = (error: unknown): void => {
+      if (settled) return
+      settled = true
+      reject(error instanceof Error ? error : new Error(String(error)))
+    }
+    zip.on('entry', (entry: Entry) => {
+      if (settled) return
+      if (entries.length >= MAX_ZIP_ENTRIES) {
+        fail(new Error(`模型包 ZIP entry 数量超过 ${MAX_ZIP_ENTRIES} 个限制`))
+        zip.close()
+        return
+      }
+      entries.push(entry)
+      zip.readEntry()
+    })
+    zip.once('end', () => {
+      if (settled) return
+      settled = true
+      resolve(entries)
+    })
+    zip.once('error', fail)
+    zip.readEntry()
+  })
+}
+
+function indexZipEntries(entries: Entry[]): Map<string, Entry> {
+  const indexed = new Map<string, Entry>()
+  let totalUncompressedBytes = 0
+  for (const entry of entries) {
+    if (entry.uncompressedSize > MAX_ASSET_BYTES) {
+      throw new Error(
+        `模型包 ZIP entry 超过 ${formatBytes(MAX_ASSET_BYTES)} 限制：${entry.fileName}`
+      )
+    }
+    totalUncompressedBytes += entry.uncompressedSize
+    if (totalUncompressedBytes > MAX_TOTAL_ASSET_BYTES) {
+      throw new Error(`模型包 ZIP 解压总量超过 ${formatBytes(MAX_TOTAL_ASSET_BYTES)} 限制`)
+    }
+    const entryPath = entry.fileName
+    if (entryPath.endsWith('/')) {
+      const directoryPath = entryPath.slice(0, -1)
+      if (!isSafeAssetPath(directoryPath)) throw new Error(`模型包路径无效：${entryPath}`)
+      continue
+    }
+    if (entryPath !== 'manifest.json' && !isSafeAssetPath(entryPath)) {
+      throw new Error(`模型包路径无效：${entryPath}`)
+    }
+    if (indexed.has(entryPath)) throw new Error(`模型包存在重复路径：${entryPath}`)
+    indexed.set(entryPath, entry)
+  }
+  return indexed
+}
+
+function openZipEntryStream(zip: ZipFile, entry: Entry): Promise<NodeJS.ReadableStream> {
+  return new Promise((resolve, reject) => {
+    zip.openReadStream(entry, (error, stream) => {
+      if (error || !stream) reject(error ?? new Error(`无法读取模型包资产：${entry.fileName}`))
+      else resolve(stream)
+    })
+  })
+}
+
+async function readZipEntryBytes(zip: ZipFile, entry: Entry, limit: number): Promise<Uint8Array> {
+  if (entry.uncompressedSize > limit) {
+    throw new Error(`模型包文件超过 ${formatBytes(limit)} 限制：${entry.fileName}`)
+  }
+  const stream = await openZipEntryStream(zip, entry)
+  const chunks: Buffer[] = []
+  let total = 0
+  for await (const chunk of stream) {
+    const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+    total += bytes.byteLength
+    if (total > limit)
+      throw new Error(`模型包文件超过 ${formatBytes(limit)} 限制：${entry.fileName}`)
+    chunks.push(bytes)
+  }
+  return Buffer.concat(chunks, total)
+}
+
+async function streamZipEntryToFile(
+  zip: ZipFile,
+  entry: Entry,
+  temporaryPath: string,
+  expectedSize: number
+): Promise<string> {
+  const input = await openZipEntryStream(zip, entry)
+  const hash = createHash('sha256')
+  let total = 0
+  const counter = new Transform({
+    transform(chunk: Buffer, _encoding, callback) {
+      total += chunk.byteLength
+      if (total > expectedSize || total > MAX_ASSET_BYTES) {
+        callback(new Error(`模型包资产大小超过限制：${entry.fileName}`))
+        return
+      }
+      hash.update(chunk)
+      callback(null, chunk)
+    }
+  })
+  try {
+    await pipeline(input, counter, createWriteStream(temporaryPath, { flags: 'wx', mode: 0o600 }))
+    if (total !== expectedSize) {
+      throw new Error(`模型包资产大小不匹配：${entry.fileName}`)
+    }
+    await syncFile(temporaryPath)
+    return hash.digest('hex')
+  } catch (error) {
+    await rm(temporaryPath, { force: true })
+    throw error
+  }
+}
+
+async function syncFile(filePath: string): Promise<void> {
+  const handle = await open(filePath, 'r')
+  try {
+    await handle.sync()
+  } finally {
+    await handle.close()
+  }
+}
+
+async function sha256File(filePath: string): Promise<string> {
+  const hash = createHash('sha256')
+  const stream = createReadStream(filePath)
+  for await (const chunk of stream) hash.update(chunk)
+  return hash.digest('hex')
+}
+
+async function assertAvailableDiskSpace(directory: string, requiredBytes: number): Promise<void> {
+  const stats = await statfs(directory, { bigint: true })
+  const availableBytes = stats.bavail * stats.bsize
+  if (availableBytes < BigInt(requiredBytes)) {
+    throw new Error(
+      `模型包导入磁盘空间不足：需要至少 ${formatBytes(requiredBytes)}，当前可用 ${formatBytes(Number(availableBytes))}`
+    )
+  }
+}
+
+function formatBytes(value: number): string {
+  if (value >= 1024 ** 3) {
+    return `${(value / 1024 ** 3).toFixed(value % 1024 ** 3 === 0 ? 0 : 1)} GiB`
+  }
+  if (value >= 1024 ** 2) {
+    return `${(value / 1024 ** 2).toFixed(value % 1024 ** 2 === 0 ? 0 : 1)} MiB`
+  }
+  return `${Math.ceil(value / 1024)} KiB`
+}
+
+function normalizeImportError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error))
+}
+
+function parseManifest(data: Uint8Array): AIRouterSpeechModelPackageManifest {
+  return parseManifestJson(strFromU8(data))
 }
 
 function parseManifestJson(value: string): AIRouterSpeechModelPackageManifest {
