@@ -251,6 +251,7 @@ function isAudioAnswer(
 function builtinInputName(inputId: string): string {
   if (inputId === 'question-description') return '题目描述'
   if (inputId === 'analysis') return '解析'
+  if (inputId === 'reference-answer') return '参考答案'
   return inputId
 }
 

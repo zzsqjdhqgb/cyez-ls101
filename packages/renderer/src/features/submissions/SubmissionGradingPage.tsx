@@ -14,6 +14,7 @@ import {
   type SubmissionAIGradingRunInput,
   type SubmissionGradingWorkspace
 } from '@ls101/submission-library'
+import { schemaBuiltinInputDescription } from '@ls101/schema-editor'
 import { ArrowLeft, Bot, Check, CircleAlert, LockKeyhole, RefreshCw, UserRound } from 'lucide-react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AIModelSelect, type AIModelOption } from '../../components/ai/AIModelSelect'
@@ -235,7 +236,7 @@ function HumanSubmissionGradingPage({
 
             {auxiliaryInputs.map((input) => (
               <section className={styles.contentSection} key={input.inputId}>
-                <h2>{current.schema.data.inputDescriptions[input.inputId] ?? input.inputId}</h2>
+                <h2>{gradingInputLabel(current, input.inputId)}</h2>
                 <SubmissionMarkdown content={input.value} resources={current.resources} />
               </section>
             ))}
@@ -854,6 +855,9 @@ function AIReviewWorkspace({
   const question =
     input.inputs.find((item) => item.inputId === QUESTION_DESCRIPTION_INPUT_ID)?.value ??
     '无题目描述'
+  const auxiliaryInputs = input.inputs.filter(
+    (item) => item.inputId !== QUESTION_DESCRIPTION_INPUT_ID && item.inputId !== 'analysis'
+  )
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -876,6 +880,12 @@ function AIReviewWorkspace({
             <section className={styles.contentSection}>
               <SubmissionMarkdown content={question} resources={input.resources} />
             </section>
+            {auxiliaryInputs.map((item) => (
+              <section className={styles.contentSection} key={item.inputId}>
+                <h2>{gradingInputLabel(input, item.inputId)}</h2>
+                <SubmissionMarkdown content={item.value} resources={input.resources} />
+              </section>
+            ))}
             <section className={styles.contentSection}>
               <h2>评分标准</h2>
               <SubmissionMarkdown
@@ -1001,6 +1011,14 @@ function sameModel(
 
 function targetKey(target: AIGradingTarget): string {
   return `${target.submissionId}\u0000${target.input.instanceId}`
+}
+
+function gradingInputLabel(input: GradingInput, inputId: string): string {
+  return (
+    schemaBuiltinInputDescription(input.schema.structure.questionType, inputId) ??
+    input.schema.data.inputDescriptions[inputId] ??
+    inputId
+  )
 }
 
 function validReviewedScore(value: string, maxScore: number): boolean {

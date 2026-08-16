@@ -1544,8 +1544,8 @@
     },
     {
       "libraryId": "builtin:shanghai-gaokao-groups",
-      "version": 3,
-      "contentHash": "sha256:b7940275100fd0a19b4dfc808628018e456d017d8f25143a8d1031eacf6a8fb0",
+      "version": 4,
+      "contentHash": "sha256:320de89405b28e39438b8bf79753104b1596a6949ffa7005aa5ef6fd7f5a81db",
       "content": {
         "name": "高中大题组",
         "functions": [
@@ -1731,6 +1731,33 @@
                         {
                           "type": "literal",
                           "value": "\n\n1. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "sen1"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n2. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "sen2"
+                          }
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "1. "
                         },
                         {
                           "type": "variable",
@@ -2142,6 +2169,18 @@
                           "type": "literal",
                           "value": "\n\n"
                         },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "passage"
+                          }
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
                         {
                           "type": "variable",
                           "ref": {

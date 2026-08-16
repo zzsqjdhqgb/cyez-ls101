@@ -45,7 +45,10 @@ const readingSchema: SchemaDefinition = {
   structure: {
     questionType: 'fixed-reading',
     answerFormat: [{ answerId: 'sentence', type: 'fixed-speech' }],
-    templateInputs: [{ inputId: 'question-description', type: 'text', required: true }]
+    templateInputs: [
+      { inputId: 'question-description', type: 'text', required: true },
+      { inputId: 'reference-answer', type: 'text', required: true }
+    ]
   },
   data: {
     name: 'Reading question',
@@ -121,6 +124,11 @@ function examPackage(): ExamPackage {
               inputId: 'question-description',
               type: 'text',
               value: 'Read ![image](resource:picture).'
+            },
+            {
+              inputId: 'reference-answer',
+              type: 'text',
+              value: 'Hello.'
             }
           ],
           answers: [

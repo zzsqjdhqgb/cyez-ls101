@@ -11,7 +11,8 @@ import { isSchemaDraftId, isSchemaId, isSchemaLibraryId, isSchemaStructureHash }
 import {
   isSchemaBuiltinInput,
   SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID,
-  SCHEMA_QUESTION_DESCRIPTION_INPUT_ID
+  SCHEMA_QUESTION_DESCRIPTION_INPUT_ID,
+  SCHEMA_REFERENCE_ANSWER_INPUT_ID
 } from './structure'
 
 const IDENTIFIER_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_-]*$/
@@ -43,6 +44,7 @@ export type SchemaValidationErrorCode =
   | 'INVALID_INPUT_REQUIRED'
   | 'MISSING_QUESTION_DESCRIPTION'
   | 'MISSING_OBJECTIVE_ANALYSIS'
+  | 'MISSING_REFERENCE_ANSWER'
   | 'EMPTY_RUBRIC'
   | 'INVALID_EXTRA_PROMPT'
   | 'INVALID_DRAFT_ID'
@@ -288,6 +290,17 @@ function validateInputs(
       errors.push(
         error(at(path, 'templateInputs'), 'INVALID_INPUT_REQUIRED', {
           inputId: SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID
+        })
+      )
+    }
+  } else {
+    const referenceAnswer = inputsById.get(SCHEMA_REFERENCE_ANSWER_INPUT_ID)
+    if (!referenceAnswer) {
+      errors.push(error(at(path, 'templateInputs'), 'MISSING_REFERENCE_ANSWER'))
+    } else if (!referenceAnswer.required) {
+      errors.push(
+        error(at(path, 'templateInputs'), 'INVALID_INPUT_REQUIRED', {
+          inputId: SCHEMA_REFERENCE_ANSWER_INPUT_ID
         })
       )
     }

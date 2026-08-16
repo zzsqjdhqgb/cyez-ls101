@@ -39,6 +39,7 @@ const library: SchemaDraftLibraryDocument = {
         answerFormat: [{ answerId: 'recording', type: 'fixed-speech' }],
         templateInputs: [
           { inputId: 'question-description', type: 'text', required: true },
+          { inputId: 'reference-answer', type: 'text', required: true },
           { inputId: 'reference-text', type: 'text', required: true }
         ]
       }
@@ -183,7 +184,7 @@ describe('Schema pages', () => {
     await waitFor(() => expect(saveDraftLibrary).toHaveBeenCalledOnce())
     const saved = saveDraftLibrary.mock.calls[0][0]
     expect(saved.drafts[0].structure.answerFormat[0].answerId).toBe('speech')
-    expect(saved.drafts[0].structure.templateInputs[1].inputId).toBe('analysis')
+    expect(saved.drafts[0].structure.templateInputs[2].inputId).toBe('analysis')
     expect(saved.drafts[0].structure.templateInputs.at(-1)?.inputId).toBe('input1')
     expect(await screen.findByText('结构草稿已保存')).toBeInTheDocument()
   })
@@ -209,6 +210,7 @@ describe('Schema pages', () => {
     fireEvent.change(screen.getByLabelText('描述'), { target: { value: '单句朗读评分' } })
     fireEvent.change(screen.getByLabelText('recording'), { target: { value: '学生录音' } })
     expect(screen.getByText('题目描述')).toBeInTheDocument()
+    expect(screen.getByText('参考答案')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('reference-text · 必填'), {
       target: { value: '朗读原文' }
     })

@@ -464,7 +464,7 @@ test('creates, edits and reloads a persisted template', async () => {
   await expect(
     page.getByRole('button', { name: '高中基础题型，版本 3', exact: true })
   ).toBeVisible()
-  await expect(page.getByRole('button', { name: '高中大题组，版本 3', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '高中大题组，版本 4', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '添加听短文回答题组' })).toBeVisible()
 
   const createLibrary = page.getByRole('button', { name: '新建本地函数库' })
@@ -587,7 +587,7 @@ test('opens and copies the bundled Shanghai Gaokao template', async () => {
   const builtinRow = page
     .getByText('上海高考口语标准题型', { exact: true })
     .locator('xpath=ancestor::article')
-  await expect(builtinRow.getByText('v1', { exact: true })).toBeVisible()
+  await expect(builtinRow.getByText('v2', { exact: true })).toBeVisible()
   await expect(builtinRow.getByRole('button', { name: '编辑' })).toHaveCount(0)
   await expect(builtinRow.getByRole('button', { name: /删除/ })).toHaveCount(0)
   await builtinRow.getByRole('button', { name: '查看' }).click()
@@ -613,14 +613,14 @@ test('exports a persisted formal Schema through the native save dialog', async (
     formatVersion: 2,
     schemaId: '30000000-0000-4000-8000-000000000001',
     sourceDraftId: '20000000-0000-4000-8000-000000000001',
-    structureHash: 'sha256:986c85b99e222584ba4614bd520a7cf8b6d439c1aea53b06eda9b82bb15bdd1e',
+    structureHash: 'sha256:5a3b2576fd81a3253de1e46e7bb73eeadf7c3e34bcc4b04faaee4ba640df36e4',
     revision: 3,
     structure: {
       questionType: 'fixed-reading',
       answerFormat: [{ answerId: 'recording', type: 'fixed-speech' }],
       templateInputs: [
         { inputId: 'question-description', type: 'text', required: true },
-        { inputId: 'reference-text', type: 'text', required: true }
+        { inputId: 'reference-answer', type: 'text', required: true }
       ]
     },
     data: {
@@ -628,7 +628,7 @@ test('exports a persisted formal Schema through the native save dialog', async (
       description: '用于验证正式 Schema 导出',
       maxScore: 10,
       answerDescriptions: { recording: '学生朗读录音' },
-      inputDescriptions: { 'reference-text': '朗读原文' },
+      inputDescriptions: {},
       rubricMarkdown: '按准确度和流利度评分。',
       extraPromptMarkdown: ''
     }

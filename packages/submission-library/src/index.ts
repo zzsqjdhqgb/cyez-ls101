@@ -16,6 +16,7 @@ const SHA256_PATTERN = /^[0-9a-f]{64}$/
 const RESOURCE_REFERENCE_PATTERN = /resource:([A-Za-z0-9][A-Za-z0-9_.:%-]*)/g
 const QUESTION_DESCRIPTION_INPUT_ID = 'question-description'
 const OBJECTIVE_ANALYSIS_INPUT_ID = 'analysis'
+const REFERENCE_ANSWER_INPUT_ID = 'reference-answer'
 
 export interface SubmissionLibraryRecord {
   formatVersion: 1
@@ -839,6 +840,9 @@ export function buildSubmissionReportMarkdown(
     const analysis = input.inputs.find(
       (entry) => entry.inputId === OBJECTIVE_ANALYSIS_INPUT_ID
     )?.value
+    const referenceAnswer = input.inputs.find(
+      (entry) => entry.inputId === REFERENCE_ANSWER_INPUT_ID
+    )?.value
     lines.push(
       '---',
       '',
@@ -868,7 +872,7 @@ export function buildSubmissionReportMarkdown(
         ''
       )
     } else {
-      lines.push('### 学生答案', '')
+      lines.push('### 参考答案', '', referenceAnswer || '无', '', '### 学生答案', '')
       for (const answer of input.answers) {
         if (answer.type === 'text') {
           lines.push(`- ${answer.description}：${answer.value ?? '未作答'}`)

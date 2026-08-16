@@ -303,6 +303,7 @@ describe('FileSubmissionLibraryRepository', () => {
     expect(report.markdown).toContain('- 学生答案：A')
     expect(report.markdown).toContain('**分数：4.25/5**')
     expect(report.markdown).toContain('**评语：无**')
+    expect(report.markdown).toContain('### 参考答案\n\nThe weather is beautiful today.')
     expect(Object.keys(report.resources).sort()).toEqual(['objective-image', 'reading-image'])
 
     const [entry] = await repository.listEntries()
@@ -464,7 +465,10 @@ const readingSchema: SchemaDefinition = {
   structure: {
     questionType: 'fixed-reading',
     answerFormat: [{ answerId: 'reading', type: 'fixed-speech' }],
-    templateInputs: [{ inputId: 'question-description', type: 'text', required: true }]
+    templateInputs: [
+      { inputId: 'question-description', type: 'text', required: true },
+      { inputId: 'reference-answer', type: 'text', required: true }
+    ]
   },
   data: {
     name: '朗读题',
@@ -488,6 +492,11 @@ function mixedSubmission(): SubmissionPackage {
         inputId: 'question-description',
         type: 'text',
         value: '请朗读下面的句子。\n\n![Reading](resource:reading-image)'
+      },
+      {
+        inputId: 'reference-answer',
+        type: 'text',
+        value: 'The weather is beautiful today.'
       }
     ],
     answers: [
@@ -557,7 +566,10 @@ function readingInput(): GradingInput {
     submission: submission().meta,
     instanceId: 'schema-use:reading',
     schema: readingSchema,
-    inputs: [{ inputId: 'question-description', type: 'text', value: 'Read it.' }],
+    inputs: [
+      { inputId: 'question-description', type: 'text', value: 'Read it.' },
+      { inputId: 'reference-answer', type: 'text', value: 'Read it.' }
+    ],
     answers: [
       {
         answerId: 'reading',

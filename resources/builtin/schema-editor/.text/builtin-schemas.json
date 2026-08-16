@@ -4,7 +4,7 @@
       "formatVersion": 2,
       "schemaId": "69fc2dc6-31d6-4666-bf6f-4b65a1e996dd",
       "sourceDraftId": "2dd95767-659b-4d4b-b990-9fba6c8712ca",
-      "structureHash": "sha256:2b255b31dc91335f38e408dd624013489be58aed334ea288050490b38aef1353",
+      "structureHash": "sha256:2d3a9af51445b63d482888340b3a4d9c0f44119c4a0fe412015a907719233e9b",
       "revision": 0,
       "structure": {
         "questionType": "fixed-reading",
@@ -21,6 +21,11 @@
         "templateInputs": [
           {
             "inputId": "question-description",
+            "type": "text",
+            "required": true
+          },
+          {
+            "inputId": "reference-answer",
             "type": "text",
             "required": true
           }
@@ -42,7 +47,7 @@
       "formatVersion": 2,
       "schemaId": "b066147d-96c5-401b-9f08-79e583fdd473",
       "sourceDraftId": "d592a9c9-e5c4-4b9c-b9a2-9c1e10353520",
-      "structureHash": "sha256:125850f063a9be9157fa5daa6804ae12312a37c7a3b0eb0ddc34f57ca72e228e",
+      "structureHash": "sha256:dd024a217bcba5334456bd243765cc57d225e32340576815c1b9da209a77d261",
       "revision": 0,
       "structure": {
         "questionType": "fixed-reading",
@@ -55,6 +60,11 @@
         "templateInputs": [
           {
             "inputId": "question-description",
+            "type": "text",
+            "required": true
+          },
+          {
+            "inputId": "reference-answer",
             "type": "text",
             "required": true
           }
@@ -105,9 +115,7 @@
         "answerDescriptions": {
           "answer": "情景提问录音"
         },
-        "inputDescriptions": {
-          "reference-answer": "参考答案"
-        },
+        "inputDescriptions": {},
         "rubricMarkdown": "**考试要求**： 2个情景，各提2个问题\n\n**评分标准**：\n\n-   1分（共2题，共2分）\n    -   能对所给情景进行提问\n    -   内容恰当，问句结构正确\n\n-   0.5分\n    -   提问基本符合情景要求\n    -   语音结构有误\n\n-   0分\n    -   不能提问或不符要求\n\n\n**注意事项**：\n\n1.  至少一句特殊疑问句（可以先问特殊疑问句）\n2.  两个问题须针对不同的信息（可以问针对不同方面的两句特殊疑问句）"
       }
     },
@@ -145,9 +153,7 @@
         "answerDescriptions": {
           "answer": "看图说话录音"
         },
-        "inputDescriptions": {
-          "reference-answer": "参考答案"
-        },
+        "inputDescriptions": {},
         "rubricMarkdown": "**考试要求**： 1分钟准备，1分钟回答。时间分配：5s→10s×4→15s\n\n**评分标准**：\n\n-   3分（共1题，共折合为1.5分）\n    -   能有条理地、完整地叙述一个主题，内容与图片相符\n    -   表达清楚，叙述连贯流畅\n    -   语言结构和用词符合交际要求\n    -   语音正确\n\n-   2.5分\n    -   能有条理地、完整地叙述一个主题，内容与图片相符\n    -   表达基本清楚，叙述基本连贯流畅，但有较少的表达错误\n    -   语言结构和用词基本符合交际要求\n    -   语音正确\n\n-   2分\n    -   能连贯地叙述一个主题，内容基本与图片相符\n    -   语言结构与用词有错误，但不影响整段意义的表达与理解\n    -   语音基本正确\n\n-   1.5分\n    -   能较连贯地叙述一个主题，内容基本与图片相符\n    -   语言结构与用词有错误，但基本不影响整段意义的表达与理解\n    -   语音基本正确\n\n-   1分\n    -   能讲述几句，但主题不清楚，内容不连贯\n    -   与图片关系不大，叙述中大多数语言结构混乱，用词不正确\n    -   语音错误严重，使人理解困难\n\n-   0.5分\n    -   只能讲述1句\n\n-   0分\n    -   没有答题或答题内容与图片内容无关   \n\n\n**注意事项**：\n\n1.  利用好所给的句子，纵观所有图片，形成一个总体框架，然后按顺序讲述\n2.  看清图片中的人物和背景，读懂图片，明确图片立意和内涵主题\n3.  描述过程中的时态和人称以 Guided sentence 提供的时态为主"
       }
     },
@@ -185,9 +191,7 @@
         "answerDescriptions": {
           "answer": "快速应答录音"
         },
-        "inputDescriptions": {
-          "reference-answer": "参考答案"
-        },
+        "inputDescriptions": {},
         "rubricMarkdown": "**考试要求**：共4句，每句5秒回答。\n\n**评分标准**：\n\n  - 0.5分（共4题，共2分）\n      - 能作出准确合理的应答\n      - 语音正确\n      - 语言结构和用词符合交际要求\n  - 0.25分\n      - 应答较为准确合理\n      - 语音基本正确\n      - 有个别语言结构或用词错误\n  - 0分\n      - 没有答题或应答不准确合理，不符合交际要求\n\n**注意事项**：\n\n1.  须准备不同的功能话题；\n2.  快速判断所给题目是一般疑问句/特殊疑问句/陈述句/祈使句，听到考题时注意疑问词和时态。"
       }
     },
@@ -225,9 +229,7 @@
         "answerDescriptions": {
           "answer": "事实题回答录音"
         },
-        "inputDescriptions": {
-          "reference-answer": "参考答案"
-        },
+        "inputDescriptions": {},
         "rubricMarkdown": "**考试要求**：30秒准备，30秒回答（共1题，共1分）。\n\n**评分标准**：\n\n  - 1分\n      - 能针对问题作出清楚全面、正确合理的应答\n      - 语音正确\n      - 语言结构和用词符合交际要求\n  - 0.5分\n      - 能针对问题给出部分答案，不够完整合理\n      - 语音基本正确\n      - 有个别语言结构或用词错误\n  - 0分\n      - 没有答题或答题内容与问题无关"
       }
     },
@@ -265,9 +267,7 @@
         "answerDescriptions": {
           "answer": "观点题回答录音"
         },
-        "inputDescriptions": {
-          "reference-answer": "参考答案"
-        },
+        "inputDescriptions": {},
         "rubricMarkdown": "**考试要求**：1分钟准备，1分钟回答（共1题，共1.5分）。\n\n**评分标准**：\n\n  - 1.5分\n      - 能连贯流畅地表达思想\n      - 内容切题\n      - 语言正确\n  - 1分\n      - 基本能连贯完整地表达思想\n      - 能针对题目谈话\n  - 0.5分\n      - 能讲述几句，但内容不连贯\n      - 与题目的关系不大\n      - 语言结构或用词错误严重，使人理解困难\n  - 0分\n      - 没有答题或内容与题目无关"
       }
     }

@@ -1,5 +1,9 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
-import { createSchemaDefinition, createSchemaDraft } from '@ls101/schema-editor'
+import {
+  createSchemaDefinition,
+  createSchemaDraft,
+  createSchemaStructure
+} from '@ls101/schema-editor'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -31,11 +35,10 @@ test.afterEach(async () => {
 // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture argument destructuring.
 test('previews a selected node tree as a vertical timeline filmstrip', async ({}, testInfo) => {
   const schema = await createSchemaDefinition(
-    createSchemaDraft('预览评分结构', {
-      questionType: 'freetalk',
-      answerFormat: [{ answerId: 'recording', type: 'free-speech' }],
-      templateInputs: [{ inputId: 'question-description', type: 'text', required: true }]
-    }),
+    createSchemaDraft(
+      '预览评分结构',
+      createSchemaStructure('freetalk', [{ answerId: 'recording', type: 'free-speech' }])
+    ),
     {
       name: '预览评分',
       description: '用于预览集成测试',
@@ -193,6 +196,10 @@ test('previews a selected node tree as a vertical timeline filmstrip', async ({}
             'question-description': {
               type: 'string',
               parts: [{ type: 'literal', value: '预览题目' }]
+            },
+            'reference-answer': {
+              type: 'string',
+              parts: [{ type: 'literal', value: '预览参考答案' }]
             }
           },
           answerBindings: {
@@ -217,6 +224,8 @@ test('previews a selected node tree as a vertical timeline filmstrip', async ({}
   await writeFileStoreText(['template-editor', 'templates', TEMPLATE_ID], 'template.json', template)
 
   await page.getByRole('link', { name: '试卷模板' }).click()
+  await expect(page.getByText('正在加载模板...')).toBeHidden()
+  await page.getByRole('tab', { name: '我的模板' }).click()
   await page.getByRole('button', { name: '纵向胶片预览', exact: true }).click()
 
   await expect(page.getByLabel('节点 choice-1 输出名称')).toHaveValue('choice-1-answer')

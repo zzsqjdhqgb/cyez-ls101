@@ -32,7 +32,8 @@ export {
   isSchemaBuiltinInput,
   schemaBuiltinInputDescription,
   SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID,
-  SCHEMA_QUESTION_DESCRIPTION_INPUT_ID
+  SCHEMA_QUESTION_DESCRIPTION_INPUT_ID,
+  SCHEMA_REFERENCE_ANSWER_INPUT_ID
 } from './structure'
 export {
   addSchemaDraft,

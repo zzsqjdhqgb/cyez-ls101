@@ -24,8 +24,8 @@ describe('内置 Template 启动初始化', () => {
     expect(await repository.listBuiltinTemplateIds()).toEqual([TEMPLATE_ID])
     expect(await repository.getActiveBuiltinTemplate(TEMPLATE_ID)).toMatchObject({
       templateId: TEMPLATE_ID,
-      version: 1,
-      releaseHash: 'sha256:d131b69f91ff7938b85b6a3372148c55fd72b5da577eae0b2e840c4de2ef4802',
+      version: 2,
+      releaseHash: 'sha256:07ba9ec2f59740f555a69e87242d57dec7e95d871246074f5a05433b3b4cc38f',
       document: {
         content: {
           name: '上海高考口语标准题型',
@@ -59,7 +59,9 @@ describe('内置 Template 启动初始化', () => {
     const copy = await application.builtinTemplates.createCopy(TEMPLATE_ID)
 
     expect(copy.templateId).not.toBe(TEMPLATE_ID)
-    expect(copy.templateId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+    expect(copy.templateId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+    )
     expect(copy.revision).toBe(0)
     expect(copy.content).toEqual(source.document.content)
     expect(copy.resources).toEqual(source.document.resources)

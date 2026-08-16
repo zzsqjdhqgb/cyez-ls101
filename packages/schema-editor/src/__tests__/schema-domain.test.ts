@@ -57,6 +57,14 @@ describe('Schema domain', () => {
       'question-description',
       'analysis'
     ])
+    expect(fixedReadingStructure().templateInputs.map((input) => input.inputId)).toEqual([
+      'question-description',
+      'reference-answer'
+    ])
+    expect(freetalkStructure().templateInputs.map((input) => input.inputId)).toEqual([
+      'question-description',
+      'reference-answer'
+    ])
 
     const invalid: SchemaStructure = {
       ...fixedReadingStructure(),
@@ -73,13 +81,30 @@ describe('Schema domain', () => {
       validateSchemaData(
         {
           ...schemaData(),
-          inputDescriptions: { 'question-description': '重复的题目描述' }
+          inputDescriptions: {
+            'question-description': '重复的题目描述',
+            'reference-answer': '重复的参考答案'
+          }
         },
         fixedReadingStructure()
       ).errors
     ).toContainEqual(
       expect.objectContaining({
         path: 'inputDescriptions.question-description',
+        code: 'UNKNOWN_INPUT_DESCRIPTION'
+      })
+    )
+    expect(
+      validateSchemaData(
+        {
+          ...schemaData(),
+          inputDescriptions: { 'reference-answer': '重复的参考答案' }
+        },
+        fixedReadingStructure()
+      ).errors
+    ).toContainEqual(
+      expect.objectContaining({
+        path: 'inputDescriptions.reference-answer',
         code: 'UNKNOWN_INPUT_DESCRIPTION'
       })
     )
@@ -158,6 +183,11 @@ describe('Schema repository', () => {
       { answerId: 'sentence-2', type: 'fixed-speech' }
     ])
     expect(sentenceSchema?.data.maxScore).toBe(1)
+    expect(passageSchema?.structure.templateInputs).toContainEqual({
+      inputId: 'reference-answer',
+      type: 'text',
+      required: true
+    })
     expect(passageSchema?.data.rubricMarkdown).toContain(
       '考生在规定时间内未朗读完整篇短文，不得因此扣分'
     )

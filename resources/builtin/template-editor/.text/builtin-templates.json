@@ -2,8 +2,8 @@
   "templates": [
     {
       "templateId": "0c283c54-683a-498c-bf69-fb1490f99356",
-      "version": 1,
-      "releaseHash": "sha256:d131b69f91ff7938b85b6a3372148c55fd72b5da577eae0b2e840c4de2ef4802",
+      "version": 2,
+      "releaseHash": "sha256:07ba9ec2f59740f555a69e87242d57dec7e95d871246074f5a05433b3b4cc38f",
       "document": {
         "content": {
           "name": "上海高考口语标准题型",
@@ -56,7 +56,7 @@
                 "id": "function-call",
                 "name": "朗读句子题组",
                 "type": "function",
-                "functionRef": "sha256:f17c0bf65830dc8515ea28b88592cd961bea8524593151343369205a221e0ba1",
+                "functionRef": "sha256:e8864b20e35f3f6c2c2db7ad50ee39e3ff10b3a0b0c1327665e3c0a10033954e",
                 "inputs": {
                   "sen1": {
                     "type": "string",
@@ -91,7 +91,7 @@
                 "id": "function-call-1",
                 "name": "朗读短文题组",
                 "type": "function",
-                "functionRef": "sha256:0e2a13dd43820b8a28f519efb487cf8311ce23c5aafbe2fcdd598c3ca01673e8",
+                "functionRef": "sha256:7f20529a9a3903eed71189a9d177ff9c48262f110e2e954246e93714af913519",
                 "inputs": {
                   "passage": {
                     "type": "string",
@@ -897,6 +897,33 @@
                           }
                         }
                       ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "1. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "sen1"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n2. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "sen2"
+                          }
+                        }
+                      ]
                     }
                   },
                   "answerBindings": {
@@ -944,7 +971,7 @@
                   "attachments": []
                 }
               ],
-              "id": "sha256:f17c0bf65830dc8515ea28b88592cd961bea8524593151343369205a221e0ba1"
+              "id": "sha256:e8864b20e35f3f6c2c2db7ad50ee39e3ff10b3a0b0c1327665e3c0a10033954e"
             },
             {
               "name": "朗读短文",
@@ -1167,6 +1194,18 @@
                           }
                         }
                       ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "passage"
+                          }
+                        }
+                      ]
                     }
                   },
                   "answerBindings": {
@@ -1194,7 +1233,7 @@
                   "attachments": []
                 }
               ],
-              "id": "sha256:0e2a13dd43820b8a28f519efb487cf8311ce23c5aafbe2fcdd598c3ca01673e8"
+              "id": "sha256:7f20529a9a3903eed71189a9d177ff9c48262f110e2e954246e93714af913519"
             },
             {
               "name": "情景提问",
