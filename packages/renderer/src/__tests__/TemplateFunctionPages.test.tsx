@@ -270,6 +270,86 @@ describe('Template function pages', () => {
     )
   })
 
+  it('resets choice-group preview bindings when the input shape changes', async () => {
+    const app = application()
+    vi.mocked(app.functionLibraries.local.get).mockResolvedValueOnce(choicePreviewLibrary())
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter
+          initialEntries={[`/templates/libraries/${LIBRARY_ID}/functions/${FUNCTION_ID}`]}
+        >
+          <Routes>
+            <Route
+              path="/templates/libraries/:libraryId/functions/:functionId"
+              element={<TemplateFunctionDocumentPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    fireEvent.click(await screen.findByRole('tab', { name: '预览' }))
+    fireEvent.change(await screen.findByLabelText('预览输入 questions 页面'), {
+      target: { value: '2' }
+    })
+    await waitFor(() =>
+      expect(app.functionLibraries.local.preview).toHaveBeenLastCalledWith(
+        LIBRARY_ID,
+        expect.objectContaining({ functionId: FUNCTION_ID }),
+        {
+          questions: {
+            type: 'choice-group',
+            source: 'global',
+            selection: { kind: 'question', pageIndex: 2, questionIndex: 0 }
+          }
+        }
+      )
+    )
+
+    fireEvent.click(screen.getByRole('tab', { name: '结构' }))
+    fireEvent.change(screen.getByLabelText('输入 1 题组形状'), {
+      target: { value: 'range' }
+    })
+    fireEvent.click(screen.getByRole('tab', { name: '预览' }))
+    expect(await screen.findByLabelText('预览输入 questions 起始页')).toHaveValue(0)
+    await waitFor(() =>
+      expect(app.functionLibraries.local.preview).toHaveBeenLastCalledWith(
+        LIBRARY_ID,
+        expect.objectContaining({ functionId: FUNCTION_ID }),
+        {
+          questions: {
+            type: 'choice-group',
+            source: 'global',
+            selection: { kind: 'range', startPage: 0 }
+          }
+        }
+      )
+    )
+
+    fireEvent.change(screen.getByLabelText('预览输入 questions 起始页'), {
+      target: { value: '2' }
+    })
+    fireEvent.click(screen.getByRole('tab', { name: '结构' }))
+    fireEvent.change(screen.getByLabelText('输入 1 第 1 页题数'), {
+      target: { value: '2' }
+    })
+    fireEvent.click(screen.getByRole('tab', { name: '预览' }))
+    expect(await screen.findByLabelText('预览输入 questions 起始页')).toHaveValue(0)
+    await waitFor(() =>
+      expect(app.functionLibraries.local.preview).toHaveBeenLastCalledWith(
+        LIBRARY_ID,
+        expect.objectContaining({ functionId: FUNCTION_ID }),
+        {
+          questions: {
+            type: 'choice-group',
+            source: 'global',
+            selection: { kind: 'range', startPage: 0 }
+          }
+        }
+      )
+    )
+  })
+
   it('shows a non-editable error state for a missing local function', async () => {
     const app = application()
     vi.mocked(app.functionLibraries.local.get).mockResolvedValueOnce({
@@ -544,4 +624,12 @@ function previewLibrary(): LocalFunctionLibraryDocument {
       ]
     }
   }
+}
+
+function choicePreviewLibrary(): LocalFunctionLibraryDocument {
+  const library = previewLibrary()
+  library.content.functions[0].content.inputs = [
+    { name: 'questions', type: 'choice-group', shape: { kind: 'question' } }
+  ]
+  return library
 }

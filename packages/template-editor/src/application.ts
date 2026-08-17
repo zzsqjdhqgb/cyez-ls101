@@ -769,6 +769,16 @@ export function createTemplateApplication(
           }
 
           const rootResource = await snapshot(functionDocument.functionId, [])
+          const previewInputs: Record<string, FunctionInputExpression> = Object.fromEntries(
+            rootResource.inputs.map((input) => [
+              input.name,
+              structuredClone(inputs[input.name] ?? defaultFunctionInputExpression(input))
+            ])
+          )
+          const choicePageCounts = functionPreviewChoicePageCounts(
+            rootResource.inputs,
+            previewInputs
+          )
           const previewDocument = createTemplateDocument(
             {
               name: functionDocument.content.name || '函数预览',
@@ -779,22 +789,28 @@ export function createTemplateApplication(
                 name: '函数预览',
                 type: 'frame',
                 children: [
+                  ...functionPreviewChoiceQuestions(
+                    choicePageCounts,
+                    rootResource.outputs.map((output) => output.name)
+                  ),
                   {
                     id: 'function-preview-call',
                     name: functionDocument.content.name,
                     type: 'function',
                     functionRef: rootResource.id,
-                    inputs: Object.fromEntries(
-                      rootResource.inputs.map((input) => [
-                        input.name,
-                        structuredClone(inputs[input.name] ?? defaultFunctionInputExpression(input))
-                      ])
-                    ),
+                    inputs: previewInputs,
                     outputNames: Object.fromEntries(
                       rootResource.outputs.map((output) => [output.name, output.name])
                     )
                   }
-                ]
+                ],
+                ...(choicePageCounts.length > 0
+                  ? {
+                      choiceCollector: {
+                        pages: choicePageCounts.map((questionCount) => ({ questionCount }))
+                      }
+                    }
+                  : {})
               },
               schemaUses: []
             },
@@ -1134,6 +1150,81 @@ function collectFrameFunctionRefs(frame: FrameNode): string[] {
   }
   scan(frame)
   return refs
+}
+
+function functionPreviewChoicePageCounts(
+  inputDefs: readonly FunctionDef['inputs'][number][],
+  inputs: Readonly<Record<string, FunctionInputExpression>>
+): number[] {
+  const pageCounts: number[] = []
+  const requirePage = (pageIndex: number, questionCount: number): void => {
+    if (!Number.isInteger(pageIndex) || pageIndex < 0) return
+    while (pageCounts.length <= pageIndex) pageCounts.push(1)
+    pageCounts[pageIndex] = Math.max(pageCounts[pageIndex], normalizedQuestionCount(questionCount))
+  }
+
+  inputDefs.forEach((input) => {
+    if (input.type !== 'choice-group') return
+    const expression = inputs[input.name]
+    if (expression?.type !== 'choice-group' || expression.source !== 'global') return
+
+    if (input.shape.kind === 'question' && expression.selection.kind === 'question') {
+      requirePage(expression.selection.pageIndex, expression.selection.questionIndex + 1)
+      return
+    }
+    if (input.shape.kind === 'range' && expression.selection.kind === 'range') {
+      input.shape.pageCounts.forEach((count, index) =>
+        requirePage(expression.selection.startPage + index, count)
+      )
+      return
+    }
+    if (input.shape.kind === 'all' && expression.selection.kind === 'all') {
+      input.shape.pageCounts.forEach((count, index) => requirePage(index, count))
+    }
+  })
+
+  return pageCounts
+}
+
+function functionPreviewChoiceQuestions(
+  pageCounts: readonly number[],
+  reservedOutputNames: readonly string[]
+): TemplateNode[] {
+  const questions: TemplateNode[] = []
+  const outputNames = new Set(reservedOutputNames)
+  let questionIndex = 0
+  pageCounts.forEach((count) => {
+    for (let index = 0; index < count; index += 1) {
+      let outputName = `function-preview-answer-${questionIndex}`
+      while (outputNames.has(outputName)) outputName = `${outputName}-preview`
+      outputNames.add(outputName)
+      questions.push({
+        id: `function-preview-question-${questionIndex}`,
+        type: 'choice-question',
+        stem: {
+          type: 'string',
+          parts: [{ type: 'literal', value: `Preview question ${questionIndex + 1}` }]
+        },
+        options: [
+          {
+            id: `function-preview-option-${questionIndex}-a`,
+            content: { type: 'string', parts: [{ type: 'literal', value: 'Preview option A' }] }
+          },
+          {
+            id: `function-preview-option-${questionIndex}-b`,
+            content: { type: 'string', parts: [{ type: 'literal', value: 'Preview option B' }] }
+          }
+        ],
+        outputName
+      })
+      questionIndex += 1
+    }
+  })
+  return questions
+}
+
+function normalizedQuestionCount(value: number): number {
+  return Number.isInteger(value) && value > 0 ? value : 1
 }
 
 function rewriteCopiedFunctionRefs(

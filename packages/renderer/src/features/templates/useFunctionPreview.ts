@@ -16,13 +16,18 @@ export interface FunctionPreviewSession {
   setInput(name: string, value: FunctionInputExpression): void
 }
 
+interface StoredPreviewInput {
+  definition: FunctionInputDef
+  value: FunctionInputExpression
+}
+
 export function useFunctionPreview(
   application: TemplateApplication,
   libraryId: string,
   document: FunctionDocument | null,
   active: boolean
 ): FunctionPreviewSession {
-  const [storedInputs, setStoredInputs] = useState<Record<string, FunctionInputExpression>>({})
+  const [storedInputs, setStoredInputs] = useState<Record<string, StoredPreviewInput>>({})
   const [compiling, setCompiling] = useState(false)
   const [result, setResult] = useState<TemplatePreviewResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -32,7 +37,10 @@ export function useFunctionPreview(
       Object.fromEntries(
         (document?.content.inputs ?? []).map((input) => {
           const stored = storedInputs[input.name]
-          return [input.name, stored?.type === input.type ? stored : defaultInput(input)]
+          return [
+            input.name,
+            stored && isCompatibleInput(stored, input) ? stored.value : defaultInput(input)
+          ]
         })
       ),
     [document?.content.inputs, storedInputs]
@@ -71,8 +79,39 @@ export function useFunctionPreview(
     inputs,
     result,
     refresh: () => setRefreshToken((value) => value + 1),
-    setInput: (name, value) => setStoredInputs((current) => ({ ...current, [name]: value }))
+    setInput: (name, value) => {
+      const definition = document?.content.inputs.find((input) => input.name === name)
+      if (!definition) return
+      setStoredInputs((current) => ({
+        ...current,
+        [name]: { definition: structuredClone(definition), value }
+      }))
+    }
   }
+}
+
+function isCompatibleInput(stored: StoredPreviewInput, input: FunctionInputDef): boolean {
+  if (stored.value.type !== input.type || stored.definition.type !== input.type) return false
+  if (
+    input.type !== 'choice-group' ||
+    stored.value.type !== 'choice-group' ||
+    stored.definition.type !== 'choice-group'
+  ) {
+    return true
+  }
+  if (stored.definition.shape.kind !== input.shape.kind) return false
+  if (
+    input.shape.kind !== 'question' &&
+    (stored.definition.shape.kind === 'question' ||
+      !samePageCounts(stored.definition.shape.pageCounts, input.shape.pageCounts))
+  ) {
+    return false
+  }
+  return stored.value.selection.kind === input.shape.kind
+}
+
+function samePageCounts(left: readonly number[], right: readonly number[]): boolean {
+  return left.length === right.length && left.every((count, index) => count === right[index])
 }
 
 function defaultInput(input: FunctionInputDef): FunctionInputExpression {

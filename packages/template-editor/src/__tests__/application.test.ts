@@ -1140,6 +1140,67 @@ describe('TemplateApplication', () => {
     })
     expect(await repository.listTemplateIds()).toEqual([])
   })
+
+  it('为外部选择题组输入生成函数预览元数据', async () => {
+    const { application, repository } = setup()
+    const source = functionDocument(FUNCTION_A, 'Choice group preview')
+    source.content.inputs = [
+      {
+        name: 'questions',
+        type: 'choice-group',
+        shape: { kind: 'range', pageCounts: [1, 2] }
+      }
+    ]
+    source.content.body = root([
+      {
+        id: 'choice-preview-page',
+        type: 'page',
+        content: {
+          blocks: [
+            {
+              id: 'choice-preview-view',
+              type: 'choice-view',
+              x: 0,
+              y: 0,
+              width: 100,
+              height: 100,
+              defaultViewport: {
+                mode: 'free',
+                group: { scope: 'local', name: 'questions' }
+              }
+            }
+          ]
+        },
+        timeline: [{ type: 'countdown', seconds: { type: 'number', source: 'literal', value: 1 } }]
+      }
+    ])
+    await saveFunctions(repository, source)
+
+    const result = await application.functionLibraries.local.preview(LIBRARY_ID, source, {
+      questions: {
+        type: 'choice-group',
+        source: 'global',
+        selection: { kind: 'range', startPage: 1 }
+      }
+    })
+
+    expect(result).toMatchObject({
+      success: true,
+      preview: {
+        pages: [
+          {
+            sourceNodeId: 'choice-preview-page',
+            content: [
+              {
+                type: 'choice-view',
+                defaultViewport: { mode: 'range', startPage: 1, endPage: 2 }
+              }
+            ]
+          }
+        ]
+      }
+    })
+  })
 })
 
 function forwardRepository(
