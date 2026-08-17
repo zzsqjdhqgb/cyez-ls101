@@ -1,7 +1,9 @@
 import type { InterfaceVarInfo, SchemaAnswerDefinition, SchemaDefinition } from '@ls101/core-types'
 import type {
+  ChoiceGroupExpression,
   FrameNode,
   FunctionNode,
+  FunctionInputDef,
   FunctionOutputDef,
   SchemaAnswerBinding,
   SchemaTextExpression,
@@ -20,7 +22,7 @@ import { addError, isValidLocalName, type ScopeState, type ValidationState } fro
 export function validateDefinitionScope(
   body: FrameNode,
   schemaUses: readonly SchemaUse[],
-  inputs: readonly { name: string; type: ValueType }[],
+  inputs: readonly FunctionInputDef[],
   outputs: readonly FunctionOutputDef[],
   path: string,
   functionStack: readonly string[],
@@ -36,6 +38,21 @@ export function validateDefinitionScope(
 
   inputs.forEach((input, index) => {
     registerLocalName(input.name, input.type, `${path}.inputs[${index}].name`, true, scope, state)
+    if (input.type === 'choice-group' && input.shape.kind !== 'question') {
+      if (input.shape.pageCounts.length === 0) {
+        addError(state, `${path}.inputs[${index}].shape.pageCounts`, 'INVALID_CHOICE_GROUP_SHAPE')
+      }
+      input.shape.pageCounts.forEach((count, pageIndex) => {
+        if (!Number.isInteger(count) || count <= 0) {
+          addError(
+            state,
+            `${path}.inputs[${index}].shape.pageCounts[${pageIndex}]`,
+            'INVALID_CHOICE_GROUP_SHAPE',
+            { value: count }
+          )
+        }
+      })
+    }
   })
   scanScope(body, path, scope, state)
   validateVariableCycles(body, path, state)
@@ -234,6 +251,14 @@ function validateNodeExpressions(
         if (block.type === 'image') {
           validateValueExpression(block.src, 'file', `${blockPath}.src`, scope, state)
         }
+        if (block.type === 'choice-view') {
+          validateChoiceViewportGroup(
+            block.defaultViewport,
+            `${blockPath}.defaultViewport`,
+            scope,
+            state
+          )
+        }
       })
       node.timeline.forEach((step, index) => {
         const stepPath = `${path}.timeline[${index}]`
@@ -251,6 +276,14 @@ function validateNodeExpressions(
             })
           }
         }
+        Object.entries(step.choiceViewOverrides ?? {}).forEach(([blockId, viewport]) =>
+          validateChoiceViewportGroup(
+            viewport,
+            `${stepPath}.choiceViewOverrides[${JSON.stringify(blockId)}]`,
+            scope,
+            state
+          )
+        )
       })
       break
     case 'choice-question':
@@ -333,6 +366,68 @@ function staticExpressionLocalReferences(expression: StaticValueExpression): str
     : []
 }
 
+function validateChoiceViewportGroup(
+  viewport: import('../types').ChoiceViewport,
+  path: string,
+  scope: ScopeState,
+  state: ValidationState
+): void {
+  if (!('group' in viewport)) return
+  const group = viewport.group
+  const symbol = scope.symbols.get(group.name)
+  if (!symbol) {
+    addError(state, `${path}.group`, 'UNKNOWN_LOCAL_VARIABLE', { name: group.name })
+    return
+  }
+  if (symbol.type !== 'choice-group') {
+    addError(state, `${path}.group`, 'EXPRESSION_TYPE_MISMATCH', {
+      expected: 'choice-group',
+      actual: symbol.type
+    })
+  }
+}
+
+function validateChoiceGroupExpression(
+  expression: ChoiceGroupExpression,
+  path: string,
+  scope: ScopeState,
+  state: ValidationState
+): void {
+  if (expression.selection.kind === 'range') {
+    if (!Number.isInteger(expression.selection.startPage) || expression.selection.startPage < 0) {
+      addError(state, `${path}.selection.startPage`, 'INVALID_CHOICE_GROUP_SELECTION', {
+        value: expression.selection.startPage
+      })
+    }
+  } else if (expression.selection.kind === 'question') {
+    if (!Number.isInteger(expression.selection.pageIndex) || expression.selection.pageIndex < 0) {
+      addError(state, `${path}.selection.pageIndex`, 'INVALID_CHOICE_GROUP_SELECTION', {
+        value: expression.selection.pageIndex
+      })
+    }
+    if (
+      !Number.isInteger(expression.selection.questionIndex) ||
+      expression.selection.questionIndex < 0
+    ) {
+      addError(state, `${path}.selection.questionIndex`, 'INVALID_CHOICE_GROUP_SELECTION', {
+        value: expression.selection.questionIndex
+      })
+    }
+  }
+  if (expression.source !== 'local') return
+  const symbol = scope.symbols.get(expression.name)
+  if (!symbol) {
+    addError(state, path, 'UNKNOWN_LOCAL_VARIABLE', { name: expression.name })
+    return
+  }
+  if (symbol.type !== 'choice-group') {
+    addError(state, path, 'EXPRESSION_TYPE_MISMATCH', {
+      expected: 'choice-group',
+      actual: symbol.type
+    })
+  }
+}
+
 function validateFunctionCall(
   node: FunctionNode,
   path: string,
@@ -353,10 +448,22 @@ function validateFunctionCall(
       addError(state, `${path}.inputs`, 'MISSING_FUNCTION_INPUT', { name: input.name })
       return
     }
+    const inputPath = `${path}.inputs[${JSON.stringify(input.name)}]`
+    if (input.type === 'choice-group') {
+      if (expression.type !== 'choice-group') {
+        addError(state, inputPath, 'EXPRESSION_TYPE_MISMATCH', {
+          expected: 'choice-group',
+          actual: expression.type
+        })
+      } else {
+        validateChoiceGroupExpression(expression, inputPath, callerScope, state)
+      }
+      return
+    }
     validateStaticExpression(
-      expression,
+      expression as StaticValueExpression,
       input.type,
-      `${path}.inputs[${JSON.stringify(input.name)}]`,
+      inputPath,
       callerScope,
       state
     )

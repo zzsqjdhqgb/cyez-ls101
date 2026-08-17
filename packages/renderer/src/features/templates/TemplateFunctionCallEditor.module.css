@@ -76,7 +76,15 @@
   min-width: 0;
 }
 
+.groupControl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 4px;
+  min-width: 0;
+}
+
 .row input,
+.row select,
 .row textarea {
   width: 100%;
   min-width: 0;
@@ -89,6 +97,7 @@
 }
 
 .row input:focus,
+.row select:focus,
 .row textarea:focus {
   border-color: var(--color-accent);
   outline: 2px solid var(--color-focus-ring);

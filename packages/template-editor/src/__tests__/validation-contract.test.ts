@@ -445,6 +445,54 @@ describe('Template 校验错误契约', () => {
     ])
   })
 
+  it('允许函数通过题组入参使用函数外 Collector', () => {
+    const func: FunctionDef = {
+      id: FUNCTION_ID,
+      name: 'Scoped choice view',
+      inputs: [
+        {
+          name: 'questions',
+          type: 'choice-group',
+          shape: { kind: 'all', pageCounts: [1] }
+        }
+      ],
+      body: root([
+        pageWithViewport({
+          mode: 'free',
+          group: { scope: 'local', name: 'questions' }
+        })
+      ]),
+      outputs: [],
+      schemaUses: []
+    }
+    const template = content({
+      root: {
+        ...root([
+          question(),
+          {
+            id: 'call',
+            type: 'function',
+            functionRef: FUNCTION_ID,
+            inputs: {
+              questions: {
+                type: 'choice-group',
+                source: 'global',
+                selection: { kind: 'all' }
+              }
+            },
+            outputNames: {}
+          }
+        ]),
+        choiceCollector: { pages: [{ questionCount: 1 }] }
+      }
+    })
+
+    expect(validateTemplateContent(template, context({ functions: [func] }))).toEqual({
+      valid: true,
+      errors: []
+    })
+  })
+
   it('允许函数在内部封装题目、Collector 和 ChoiceView', () => {
     const func: FunctionDef = {
       id: FUNCTION_ID,

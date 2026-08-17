@@ -14,6 +14,7 @@ import type {
 import type {
   ExportInterfaceInstanceSelection,
   FunctionDef,
+  ChoiceGroupShape,
   TemplateValueType,
   ValueType
 } from '../types'
@@ -61,6 +62,10 @@ export type TemplateCompileErrorCode =
   | 'EMPTY_PLAYER_PAGES'
   | 'INVALID_RECORDING_DURATION'
   | 'UNKNOWN_FOCUS_QUESTION'
+  | 'UNKNOWN_CHOICE_GROUP'
+  | 'CHOICE_GROUP_NOT_AVAILABLE'
+  | 'CHOICE_GROUP_OUT_OF_RANGE'
+  | 'CHOICE_GROUP_SHAPE_MISMATCH'
 
 export type TemplateCompileError =
   | { stage: 'validation'; error: TemplateValidationError }
@@ -198,6 +203,19 @@ export interface ValueCell {
 export interface CompileScope {
   callPath: string[]
   symbols: Map<string, ValueCell>
+  choiceGroups: Map<string, ChoiceGroupCell>
+}
+
+export interface ChoiceGroupContext {
+  kind: ChoiceGroupShape['kind']
+  pages: number[][]
+  pageIndices: number[]
+}
+
+export interface ChoiceGroupCell {
+  type: 'choice-group'
+  label: string
+  get(): ChoiceGroupContext
 }
 
 export interface ChoiceCandidate {
@@ -218,6 +236,7 @@ export interface CompilerState {
   schemasById: Map<string, SchemaDefinition>
   interfaceValuesByAlias: Map<string, Map<string, BoundInterfaceValue>>
   staticCells: ValueCell[]
+  choiceGroupCells: ChoiceGroupCell[]
   pages: Array<() => ExpandedExamPage>
   questions: Array<() => PlayerChoiceQuestion>
   schemaUsages: Array<() => ExpandedSchemaUse>
@@ -228,6 +247,7 @@ export interface CompilerState {
   recordingIndices: number[]
   nextRecordIndex: number
   nextChoiceIndex: number
+  globalChoiceGroup: ChoiceGroupContext | undefined
 }
 
 export class CompileFailure extends Error {
@@ -246,6 +266,7 @@ export function createCompilerState(
     schemasById: new Map(context.schemaDefinitions.map((schema) => [schema.schemaId, schema])),
     interfaceValuesByAlias,
     staticCells: [],
+    choiceGroupCells: [],
     pages: [],
     questions: [],
     schemaUsages: [],
@@ -255,12 +276,33 @@ export function createCompilerState(
     questionIndicesByAddress: new Map(),
     recordingIndices: [],
     nextRecordIndex: 0,
-    nextChoiceIndex: 0
+    nextChoiceIndex: 0,
+    globalChoiceGroup: undefined
   }
 }
 
 export function fixedValueCell(value: CompiledValue, label: string): ValueCell {
   return { type: value.type, label, get: () => value }
+}
+
+export function lazyChoiceGroupCell(
+  label: string,
+  resolve: () => ChoiceGroupContext
+): ChoiceGroupCell {
+  let status: 'idle' | 'resolving' | 'resolved' = 'idle'
+  let cached: ChoiceGroupContext | undefined
+  return {
+    type: 'choice-group',
+    label,
+    get() {
+      if (status === 'resolved') return cached as ChoiceGroupContext
+      if (status === 'resolving') fail('STATIC_VALUE_CYCLE', label, { value: label })
+      status = 'resolving'
+      cached = resolve()
+      status = 'resolved'
+      return cached
+    }
+  }
 }
 
 export function lazyValueCell(

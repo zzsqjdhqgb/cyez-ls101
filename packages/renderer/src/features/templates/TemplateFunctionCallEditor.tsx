@@ -1,8 +1,9 @@
 import type {
+  ChoiceGroupExpression,
   FunctionDef,
   FunctionInputDef,
+  FunctionInputExpression,
   FunctionNode,
-  StaticValueExpression,
   TemplateDocumentOperation,
   TextExpression,
   ValueExpression
@@ -122,19 +123,21 @@ function FunctionInputRow({
   onChange
 }: {
   input: FunctionInputDef
-  value: StaticValueExpression | undefined
+  value: FunctionInputExpression | undefined
   label: string
   variableCandidates: readonly TemplateVariableCandidate[]
-  onChange(expression: StaticValueExpression): void
+  onChange(expression: FunctionInputExpression): void
 }): JSX.Element {
   return (
-    <label className={styles.row}>
+    <div className={styles.row}>
       <span className={styles.identity} title={input.name}>
         <strong>{input.name}</strong>
         <small>{valueTypeLabel(input.type)}</small>
       </span>
       <span className={styles.control}>
-        {input.type === 'string' ? (
+        {input.type === 'choice-group' ? (
+          <ChoiceGroupInput input={input} label={label} value={value} onChange={onChange} />
+        ) : input.type === 'string' ? (
           <TemplateVariableInput
             mode="text"
             ariaLabel={label}
@@ -166,18 +169,191 @@ function FunctionInputRow({
           />
         )}
       </span>
-    </label>
+    </div>
   )
 }
 
 function fallbackInputs(node: FunctionNode): FunctionInputDef[] {
-  return Object.entries(node.inputs).map(([name, expression]) => ({
-    name,
-    type: expression.type
-  }))
+  return Object.entries(node.inputs).map(([name, expression]) => {
+    if (expression.type !== 'choice-group') return { name, type: expression.type }
+    if (expression.selection.kind === 'question') {
+      return { name, type: 'choice-group', shape: { kind: 'question' } }
+    }
+    return {
+      name,
+      type: 'choice-group',
+      shape: {
+        kind: expression.selection.kind === 'range' ? 'range' : 'all',
+        pageCounts: []
+      }
+    }
+  })
 }
 
-function asTextExpression(value: StaticValueExpression | undefined): TextExpression {
+function ChoiceGroupInput({
+  input,
+  value,
+  label,
+  onChange
+}: {
+  input: Extract<FunctionInputDef, { type: 'choice-group' }>
+  value: FunctionInputExpression | undefined
+  label: string
+  onChange(expression: FunctionInputExpression): void
+}): JSX.Element {
+  const expression = value?.type === 'choice-group' ? value : defaultChoiceGroupInput(input)
+  const selectionKinds =
+    input.shape.kind === 'question'
+      ? (['question', 'all'] as const)
+      : input.shape.kind === 'range'
+        ? (['range', 'all'] as const)
+        : (['all'] as const)
+
+  return (
+    <span className={styles.groupControl}>
+      <select
+        aria-label={`${label} 来源`}
+        value={expression.source}
+        onChange={(event) =>
+          onChange(
+            event.target.value === 'global'
+              ? { type: 'choice-group', source: 'global', selection: expression.selection }
+              : {
+                  type: 'choice-group',
+                  source: 'local',
+                  name: expression.source === 'local' ? expression.name : '',
+                  selection: expression.selection
+                }
+          )
+        }
+      >
+        <option value="global">全局题组</option>
+        <option value="local">局部题组</option>
+      </select>
+      {expression.source === 'local' ? (
+        <input
+          aria-label={`${label} 局部题组名`}
+          placeholder="题组输入名"
+          value={expression.name}
+          onChange={(event) => onChange({ ...expression, name: event.target.value })}
+        />
+      ) : null}
+      <select
+        aria-label={`${label} 选择方式`}
+        value={expression.selection.kind}
+        onChange={(event) => {
+          const kind = event.target.value as ChoiceGroupExpression['selection']['kind']
+          onChange({
+            ...expression,
+            selection:
+              kind === 'question'
+                ? { kind, pageIndex: 0, questionIndex: 0 }
+                : kind === 'range'
+                  ? { kind, startPage: 0 }
+                  : { kind }
+          } as ChoiceGroupExpression)
+        }}
+      >
+        {selectionKinds.map((kind) => (
+          <option key={kind} value={kind}>
+            {kind === 'question' ? '指定题目' : kind === 'range' ? '连续范围' : '整个题组'}
+          </option>
+        ))}
+      </select>
+      {expression.selection.kind === 'range' ? (
+        <input
+          aria-label={`${label} 起始页`}
+          min={1}
+          type="number"
+          value={expression.selection.startPage + 1}
+          onChange={(event) => onChange(withRangeStart(expression, Number(event.target.value) - 1))}
+        />
+      ) : null}
+      {expression.selection.kind === 'question' ? (
+        <>
+          <input
+            aria-label={`${label} 页面`}
+            min={1}
+            type="number"
+            value={expression.selection.pageIndex + 1}
+            onChange={(event) =>
+              onChange(withQuestionPage(expression, Number(event.target.value) - 1))
+            }
+          />
+          <input
+            aria-label={`${label} 题目`}
+            min={1}
+            type="number"
+            value={expression.selection.questionIndex + 1}
+            onChange={(event) =>
+              onChange(withQuestionIndex(expression, Number(event.target.value) - 1))
+            }
+          />
+        </>
+      ) : null}
+    </span>
+  )
+}
+
+function defaultChoiceGroupInput(
+  input: Extract<FunctionInputDef, { type: 'choice-group' }>
+): ChoiceGroupExpression {
+  if (input.shape.kind === 'question') {
+    return {
+      type: 'choice-group',
+      source: 'global',
+      selection: { kind: 'question', pageIndex: 0, questionIndex: 0 }
+    }
+  }
+  if (input.shape.kind === 'range') {
+    return {
+      type: 'choice-group',
+      source: 'global',
+      selection: { kind: 'range', startPage: 0 }
+    }
+  }
+  return { type: 'choice-group', source: 'global', selection: { kind: 'all' } }
+}
+
+function withRangeStart(
+  expression: ChoiceGroupExpression,
+  startPage: number
+): ChoiceGroupExpression {
+  if (expression.selection.kind !== 'range') return expression
+  return { ...expression, selection: { kind: 'range', startPage } }
+}
+
+function withQuestionPage(
+  expression: ChoiceGroupExpression,
+  pageIndex: number
+): ChoiceGroupExpression {
+  if (expression.selection.kind !== 'question') return expression
+  return {
+    ...expression,
+    selection: {
+      kind: 'question',
+      pageIndex,
+      questionIndex: expression.selection.questionIndex
+    }
+  }
+}
+
+function withQuestionIndex(
+  expression: ChoiceGroupExpression,
+  questionIndex: number
+): ChoiceGroupExpression {
+  if (expression.selection.kind !== 'question') return expression
+  return {
+    ...expression,
+    selection: {
+      kind: 'question',
+      pageIndex: expression.selection.pageIndex,
+      questionIndex
+    }
+  }
+}
+
+function asTextExpression(value: FunctionInputExpression | undefined): TextExpression {
   if (!value || value.type !== 'string') {
     return { type: 'string', parts: [{ type: 'literal', value: '' }] }
   }
@@ -192,11 +368,11 @@ function asTextExpression(value: StaticValueExpression | undefined): TextExpress
   }
 }
 
-function asNumberExpression(value: StaticValueExpression | undefined): ValueExpression<'number'> {
+function asNumberExpression(value: FunctionInputExpression | undefined): ValueExpression<'number'> {
   return value?.type === 'number' ? value : { type: 'number', source: 'literal', value: 0 }
 }
 
-function asFileExpression(value: StaticValueExpression | undefined): ValueExpression<'file'> {
+function asFileExpression(value: FunctionInputExpression | undefined): ValueExpression<'file'> {
   return value?.type === 'file' ? value : { type: 'file', source: 'literal', value: '' }
 }
 
@@ -206,5 +382,6 @@ function valueTypeLabel(type: string): string {
   if (type === 'file') return '文件'
   if (type === 'audio') return '录音'
   if (type === 'choice') return '选择结果'
+  if (type === 'choice-group') return '选择题组'
   return type
 }

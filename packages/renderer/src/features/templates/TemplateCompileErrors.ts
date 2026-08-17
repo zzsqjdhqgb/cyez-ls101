@@ -63,6 +63,8 @@ const VALIDATION_MESSAGES: Record<TemplateValidationErrorCode, string> = {
   CHOICE_VIEW_WITHOUT_META: '选择题视图缺少选择题元数据',
   FUNCTION_CHOICE_VIEW_WITHOUT_LOCAL_COLLECTOR: '函数内选择题视图缺少本地收集器',
   INVALID_CHOICE_VIEWPORT: '选择题视图范围无效',
+  INVALID_CHOICE_GROUP_SHAPE: '选择题组形状无效',
+  INVALID_CHOICE_GROUP_SELECTION: '选择题组选择范围无效',
   EMPTY_FOCUS_REFERENCE: '聚焦题目引用不能为空',
   INVALID_FOCUS_CALL_PATH: '聚焦题目的函数调用路径无效'
 }
@@ -82,7 +84,11 @@ const COMPILE_MESSAGES: Record<string, string> = {
   INVALID_SYNTHESIZED_AUDIO: '语音合成结果无效',
   EMPTY_PLAYER_PAGES: '模板没有生成任何页面',
   INVALID_RECORDING_DURATION: '录音时长必须大于 0',
-  UNKNOWN_FOCUS_QUESTION: '选择题视图聚焦的题目不存在'
+  UNKNOWN_FOCUS_QUESTION: '选择题视图聚焦的题目不存在',
+  UNKNOWN_CHOICE_GROUP: '选择题组不存在',
+  CHOICE_GROUP_NOT_AVAILABLE: '当前模板没有可用的全局选择题组',
+  CHOICE_GROUP_OUT_OF_RANGE: '选择题组选择范围越界',
+  CHOICE_GROUP_SHAPE_MISMATCH: '选择题组形状与函数声明不匹配'
 }
 
 export function templateCompileErrorDetails(error: TemplateCompileError): {
@@ -90,7 +96,7 @@ export function templateCompileErrorDetails(error: TemplateCompileError): {
   path: string
 } {
   const value = error.stage === 'validation' ? error.error : error
-  const fallback = error.stage === 'validation' ? VALIDATION_MESSAGES[value.code] : undefined
+  const fallback = error.stage === 'validation' ? VALIDATION_MESSAGES[error.error.code] : undefined
   const message = typeof value.params.message === 'string' ? value.params.message : ''
   return {
     message: message || fallback || COMPILE_MESSAGES[value.code] || '模板处理失败',
@@ -114,7 +120,7 @@ export function templateErrorNodeId(root: FrameNode, path: string): string | nul
   const segments = [...path.matchAll(/\.children\[(\d+)\]/g)]
   for (const match of segments) {
     if (node.type !== 'frame') return node.id
-    const child = node.children[Number(match[1])]
+    const child: TemplateNode | undefined = node.children[Number(match[1])]
     if (!child) return node.id
     node = child
   }

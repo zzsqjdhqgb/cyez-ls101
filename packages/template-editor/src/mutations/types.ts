@@ -4,6 +4,7 @@ import type {
   ContentBlock,
   FrameNode,
   FunctionInputDef,
+  FunctionInputExpression,
   FunctionOutputDef,
   JsonValue,
   SchemaAnswerBinding,
@@ -36,7 +37,7 @@ export type DefinitionOperation =
       index?: number
       functionRef: string
       signature: FunctionCallSignature
-      inputs?: Readonly<Record<string, StaticValueExpression>>
+      inputs?: Readonly<Record<string, FunctionInputExpression>>
       nodeId?: string
     }
   | { type: 'remove-node'; nodeId: string }
@@ -79,7 +80,7 @@ export type DefinitionOperation =
       type: 'set-function-call-input'
       nodeId: string
       inputName: string
-      expression: StaticValueExpression | null
+      expression: FunctionInputExpression | null
     }
   | {
       type: 'set-function-call-output-name'

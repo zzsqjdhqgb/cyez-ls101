@@ -4,7 +4,7 @@ import {
   type FunctionInputDef,
   type FunctionOutputDef,
   type TemplateValueType,
-  type ValueType
+  type ValueExpression
 } from '@ls101/template-editor'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
@@ -21,8 +21,19 @@ interface FunctionSignatureEditorProps {
   apply(operation: FunctionDocumentOperation): boolean
 }
 
-const INPUT_TYPES: readonly ValueType[] = ['string', 'number', 'file']
-const OUTPUT_TYPES: readonly TemplateValueType[] = ['string', 'number', 'file', 'audio', 'choice']
+const INPUT_TYPES: readonly FunctionInputDef['type'][] = [
+  'string',
+  'number',
+  'file',
+  'choice-group'
+]
+const OUTPUT_TYPES: readonly FunctionOutputDef['type'][] = [
+  'string',
+  'number',
+  'file',
+  'audio',
+  'choice'
+]
 
 export function FunctionSignatureEditor({
   inputs,
@@ -115,7 +126,10 @@ export function FunctionSignatureEditor({
                     apply({
                       type: 'update-function-input',
                       name: input.name,
-                      input: { ...input, type: event.target.value as ValueType }
+                      input: inputWithType(
+                        input.name,
+                        event.target.value as FunctionInputDef['type']
+                      )
                     })
                   }
                 >
@@ -126,6 +140,60 @@ export function FunctionSignatureEditor({
                   ))}
                 </select>
               </label>
+              {input.type === 'choice-group' ? (
+                <>
+                  <label>
+                    形状
+                    <select
+                      aria-label={`输入 ${index + 1} 题组形状`}
+                      disabled={disabled}
+                      value={input.shape.kind}
+                      onChange={(event) => {
+                        const kind = event.target.value as 'question' | 'range' | 'all'
+                        apply({
+                          type: 'update-function-input',
+                          name: input.name,
+                          input: {
+                            name: input.name,
+                            type: 'choice-group',
+                            shape:
+                              kind === 'question'
+                                ? { kind }
+                                : {
+                                    kind,
+                                    pageCounts:
+                                      input.shape.kind === 'question' ? [1] : input.shape.pageCounts
+                                  }
+                          }
+                        })
+                      }}
+                    >
+                      <option value="question">单题</option>
+                      <option value="range">连续范围</option>
+                      <option value="all">完整题组</option>
+                    </select>
+                  </label>
+                  {input.shape.kind !== 'question' ? (
+                    <label>
+                      每页题数
+                      <input
+                        aria-label={`输入 ${index + 1} 每页题数`}
+                        disabled={disabled}
+                        inputMode="numeric"
+                        placeholder="例如 2, 3, 4"
+                        value={input.shape.pageCounts.join(', ')}
+                        onChange={(event) =>
+                          apply({
+                            type: 'update-function-input',
+                            name: input.name,
+                            input: inputWithPageCounts(input, event.target.value)
+                          })
+                        }
+                      />
+                    </label>
+                  ) : null}
+                </>
+              ) : null}
             </div>
           ))}
         </div>
@@ -187,7 +255,10 @@ export function FunctionSignatureEditor({
                     apply({
                       type: 'update-function-output',
                       name: output.name,
-                      output: defaultOutput(output.name, event.target.value as TemplateValueType)
+                      output: defaultOutput(
+                        output.name,
+                        event.target.value as FunctionOutputDef['type']
+                      )
                     })
                   }
                 >
@@ -239,9 +310,7 @@ function OutputExpressionEditor({
           aria-label={`输出 ${index + 1} 来源`}
           disabled={disabled}
           value={output.expression.name}
-          onChange={(event) =>
-            onChange({ ...output, expression: { ...output.expression, name: event.target.value } })
-          }
+          onChange={(event) => onChange(withRuntimeOutputName(output, event.target.value))}
         >
           <option value="">未选择</option>
           {candidates.map((candidate) => (
@@ -282,7 +351,7 @@ function OutputExpressionEditor({
           candidates={variableCandidates}
           disabled={disabled}
           mode="value"
-          value={output.expression}
+          value={output.expression as ValueExpression<'string'>}
           valueType="string"
           onChange={(expression) => onChange({ ...output, expression })}
         />
@@ -324,7 +393,7 @@ function OutputExpressionEditor({
   )
 }
 
-function defaultOutput(name: string, type: TemplateValueType): FunctionOutputDef {
+function defaultOutput(name: string, type: FunctionOutputDef['type']): FunctionOutputDef {
   if (type === 'string') {
     return {
       name,
@@ -344,6 +413,16 @@ function defaultOutput(name: string, type: TemplateValueType): FunctionOutputDef
   return { name, type, expression: { type: 'choice', source: 'choice-output', name: '' } }
 }
 
+function withRuntimeOutputName(
+  output: Extract<FunctionOutputDef, { type: 'audio' | 'choice' }>,
+  name: string
+): FunctionOutputDef {
+  if (output.type === 'audio') {
+    return { ...output, expression: { ...output.expression, name } }
+  }
+  return { ...output, expression: { ...output.expression, name } }
+}
+
 function availableName(prefix: string, names: readonly string[]): string {
   const used = new Set(names)
   if (!used.has(prefix)) return prefix
@@ -357,5 +436,29 @@ function typeLabel(type: TemplateValueType): string {
   if (type === 'number') return '数字'
   if (type === 'file') return '文件'
   if (type === 'audio') return '录音'
+  if (type === 'choice-group') return '选择题组'
   return '选择题答案'
+}
+
+function inputWithType(name: string, type: FunctionInputDef['type']): FunctionInputDef {
+  return type === 'choice-group' ? { name, type, shape: { kind: 'question' } } : { name, type }
+}
+
+function inputWithPageCounts(
+  input: Extract<FunctionInputDef, { type: 'choice-group' }>,
+  value: string
+): FunctionInputDef {
+  if (input.shape.kind === 'question') return input
+  return {
+    ...input,
+    shape: { kind: input.shape.kind, pageCounts: parsePageCounts(value) }
+  }
+}
+
+function parsePageCounts(value: string): number[] {
+  if (!value.trim()) return []
+  return value
+    .split(/[,，\s]+/)
+    .filter(Boolean)
+    .map(Number)
 }

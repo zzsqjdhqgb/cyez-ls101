@@ -86,7 +86,7 @@ describe('内置 Template 启动初始化', () => {
       const section = await repository.getActiveBuiltinTemplate(expected.templateId)
       expect(section).toMatchObject({
         templateId: expected.templateId,
-        version: 1,
+        version: 2,
         document: {
           content: {
             name: expected.name,
@@ -108,6 +108,30 @@ describe('内置 Template 启动初始化', () => {
       expect(resources.get(rootCall.functionRef)?.name).toBe(expected.functionName)
       expect(resources.size).toBe(3)
     }
+  })
+
+  it('保留已落盘的长名称 v1 并将拆分模板升级到短名称 v2', async () => {
+    const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
+    const manifest = JSON.parse(
+      await readFile('resources/builtin/template-editor/.text/builtin-templates.json', 'utf8')
+    ) as { templates: BuiltinTemplateRelease[] }
+    const current = manifest.templates.find(
+      ({ templateId }) => templateId === SECTION_TEMPLATES[0].templateId
+    )
+    if (!current) throw new Error('Bundled section Template was not found')
+
+    const previousDocument = structuredClone(current.document)
+    previousDocument.content.name = '上海高考口语标准题型 - 朗读句子'
+    const previous = await createBuiltinTemplateRelease(current.templateId, 1, previousDocument)
+    await repository.registerBuiltinTemplate(previous)
+
+    await initializeBuiltinTemplates(repository, manifest)
+
+    await expect(repository.getBuiltinTemplate(current.templateId, 1)).resolves.toEqual(previous)
+    await expect(repository.getActiveBuiltinTemplate(current.templateId)).resolves.toMatchObject({
+      version: 2,
+      document: { content: { name: '上海高考口语 - 朗读句子' } }
+    })
   })
 
   it('将内置模板完整复制为 UUID 和 revision 重置的本地模板', async () => {

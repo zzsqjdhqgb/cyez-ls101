@@ -1,4 +1,8 @@
-import type { FunctionDocument, StaticValueExpression, TemplateNode } from '@ls101/template-editor'
+import type {
+  FunctionDocument,
+  FunctionInputExpression,
+  TemplateNode
+} from '@ls101/template-editor'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import type { JSX } from 'react'
 import { Button } from '../../components/ui/Button'
@@ -49,14 +53,14 @@ export function TemplateFunctionPreviewInspector({
         <TemplateInspectorSection title="函数输入">
           <div className={styles.bindings}>
             {document?.content.inputs.map((input) => (
-              <label key={input.name}>
+              <div className={styles.binding} key={input.name}>
                 <span>{input.name}</span>
                 <PreviewInput
                   input={session.inputs[input.name]}
                   label={`预览输入 ${input.name}`}
                   onChange={(value) => session.setInput(input.name, value)}
                 />
-              </label>
+              </div>
             ))}
           </div>
         </TemplateInspectorSection>
@@ -121,10 +125,67 @@ function PreviewInput({
   label,
   onChange
 }: {
-  input: StaticValueExpression | undefined
+  input: FunctionInputExpression | undefined
   label: string
-  onChange(value: StaticValueExpression): void
+  onChange(value: FunctionInputExpression): void
 }): JSX.Element {
+  if (input?.type === 'choice-group') {
+    if (input.selection.kind === 'question') {
+      const selection = input.selection
+      return (
+        <span className={styles.groupPreviewInput}>
+          <input
+            aria-label={`${label} 页面`}
+            min={0}
+            type="number"
+            value={selection.pageIndex}
+            onChange={(event) =>
+              onChange({
+                ...input,
+                selection: {
+                  ...selection,
+                  pageIndex: Number(event.target.value)
+                }
+              })
+            }
+          />
+          <input
+            aria-label={`${label} 题目`}
+            min={0}
+            type="number"
+            value={selection.questionIndex}
+            onChange={(event) =>
+              onChange({
+                ...input,
+                selection: {
+                  ...selection,
+                  questionIndex: Number(event.target.value)
+                }
+              })
+            }
+          />
+        </span>
+      )
+    }
+    if (input.selection.kind === 'range') {
+      const selection = input.selection
+      return (
+        <input
+          aria-label={`${label} 起始页`}
+          min={0}
+          type="number"
+          value={selection.startPage}
+          onChange={(event) =>
+            onChange({
+              ...input,
+              selection: { ...selection, startPage: Number(event.target.value) }
+            })
+          }
+        />
+      )
+    }
+    return <span>完整题组</span>
+  }
   if (input?.type === 'number') {
     return (
       <input

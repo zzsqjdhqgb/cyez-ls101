@@ -1,5 +1,7 @@
 import type {
   BuiltinTemplateRelease,
+  ChoiceGroupExpression,
+  ChoiceGroupShape,
   ChoiceViewport,
   ContentBlock,
   FrameNode,
@@ -127,7 +129,7 @@ export function parseLegacyLocalFunctionLibraryDocument(
     content: value.content,
     editorState: value.editorState,
     ...(legacyExportState ? { exportState: { contentHash: legacyExportState.contentHash } } : {})
-  } as LocalFunctionLibraryDocument
+  } as unknown as LocalFunctionLibraryDocument
 }
 
 export function parseFunctionLibraryRelease(value: unknown): FunctionLibraryRelease | null {
@@ -154,9 +156,7 @@ function isFunctionContent(value: unknown): value is FunctionContent {
     isRecord(value) &&
     typeof value.name === 'string' &&
     Array.isArray(value.inputs) &&
-    value.inputs.every(
-      (input) => isRecord(input) && typeof input.name === 'string' && isValueType(input.type)
-    ) &&
+    value.inputs.every((input) => isRecord(input) && isFunctionInputDef(input)) &&
     isFrameNode(value.body) &&
     Array.isArray(value.outputs) &&
     value.outputs.every(isFunctionOutput) &&
@@ -252,7 +252,7 @@ function isTemplateNode(value: unknown): value is TemplateNode {
     case 'function':
       return (
         typeof value.functionRef === 'string' &&
-        isRecordOf(value.inputs, isStaticValueExpression) &&
+        isRecordOf(value.inputs, isFunctionInputExpression) &&
         isRecordOf(value.outputNames, (name) => typeof name === 'string')
       )
     case 'choice-question':
@@ -352,8 +352,18 @@ function isChoiceViewport(value: unknown): value is ChoiceViewport {
   if (!isRecord(value)) return false
   switch (value.mode) {
     case 'free':
+      if (value.group !== undefined) {
+        return isChoiceGroupRef(value.group) && isOptionalNumber(value.initialPage)
+      }
       return isOptionalNumber(value.initialPage)
     case 'focus':
+      if (value.group !== undefined) {
+        return (
+          isChoiceGroupRef(value.group) &&
+          isFiniteNumber(value.pageIndex) &&
+          isFiniteNumber(value.questionIndex)
+        )
+      }
       return (
         isRecord(value.questionRef) &&
         (value.questionRef.scope === 'relative' || value.questionRef.scope === 'absolute') &&
@@ -362,6 +372,14 @@ function isChoiceViewport(value: unknown): value is ChoiceViewport {
         typeof value.questionRef.questionId === 'string'
       )
     case 'range':
+      if (value.group !== undefined) {
+        return (
+          isChoiceGroupRef(value.group) &&
+          isFiniteNumber(value.startPage) &&
+          isFiniteNumber(value.endPage) &&
+          isOptionalNumber(value.initialPage)
+        )
+      }
       return (
         isFiniteNumber(value.startPage) &&
         isFiniteNumber(value.endPage) &&
@@ -440,6 +458,53 @@ function isStaticValueExpression(value: unknown): value is StaticValueExpression
   if (value.type === 'number') return isValueExpression(value, 'number')
   if (value.type === 'file') return isValueExpression(value, 'file')
   return false
+}
+
+function isFunctionInputDef(value: unknown): boolean {
+  if (!isRecord(value) || typeof value.name !== 'string') return false
+  if (isValueType(value.type)) return true
+  return value.type === 'choice-group' && isChoiceGroupShape(value.shape)
+}
+
+function isFunctionInputExpression(value: unknown): boolean {
+  return isStaticValueExpression(value) || isChoiceGroupExpression(value)
+}
+
+function isChoiceGroupExpression(value: unknown): value is ChoiceGroupExpression {
+  if (
+    !isRecord(value) ||
+    value.type !== 'choice-group' ||
+    !isChoiceGroupSelection(value.selection)
+  ) {
+    return false
+  }
+  if (value.source === 'global') return true
+  return value.source === 'local' && typeof value.name === 'string'
+}
+
+function isChoiceGroupShape(value: unknown): value is ChoiceGroupShape {
+  if (!isRecord(value) || typeof value.kind !== 'string') return false
+  if (value.kind === 'question') return true
+  return (
+    (value.kind === 'range' || value.kind === 'all') &&
+    Array.isArray(value.pageCounts) &&
+    value.pageCounts.every(isFiniteNumber)
+  )
+}
+
+function isChoiceGroupSelection(value: unknown): boolean {
+  if (!isRecord(value) || typeof value.kind !== 'string') return false
+  if (value.kind === 'all') return true
+  if (value.kind === 'range') return isFiniteNumber(value.startPage)
+  return (
+    value.kind === 'question' &&
+    isFiniteNumber(value.pageIndex) &&
+    isFiniteNumber(value.questionIndex)
+  )
+}
+
+function isChoiceGroupRef(value: unknown): boolean {
+  return isRecord(value) && value.scope === 'local' && typeof value.name === 'string'
 }
 
 function isStringExpression(value: unknown): boolean {

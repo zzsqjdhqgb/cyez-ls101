@@ -1,4 +1,4 @@
-import type { FrameNode, FunctionNode, StaticValueExpression, TemplateNode } from '../types'
+import type { FrameNode, FunctionInputExpression, FunctionNode, TemplateNode } from '../types'
 import {
   allocateId,
   allocateGeneratedName,
@@ -16,7 +16,7 @@ import {
 import { prepareTimelineStep, removeChoiceOverrides, renameChoiceOverrides } from './page'
 import {
   collectLocalNames,
-  defaultExpression,
+  defaultFunctionInputExpression,
   prepareInsertedSubtree,
   renameDefinitionLocalReferences,
   renameSchemaAttachmentReferences
@@ -43,10 +43,10 @@ export function applyDefinitionOperation(
       operation.signature.outputs.forEach((output) => {
         outputNames[output.name] = allocateGeneratedName(output.name, names)
       })
-      const inputs: Record<string, StaticValueExpression> = {}
+      const inputs: Record<string, FunctionInputExpression> = {}
       operation.signature.inputs.forEach((input) => {
         inputs[input.name] = structuredClone(
-          operation.inputs?.[input.name] ?? defaultExpression(input.type)
+          operation.inputs?.[input.name] ?? defaultFunctionInputExpression(input)
         )
       })
       const node: FunctionNode = {
@@ -714,11 +714,13 @@ function reconcileFunctionCall(
     return {
       error: error('WRONG_NODE_TYPE', found.path, { expected: 'function', actual: found.node.type })
     }
-  const inputs: Record<string, StaticValueExpression> = {}
+  const inputs: Record<string, FunctionInputExpression> = {}
   signature.inputs.forEach((input) => {
     const current = found.node.type === 'function' ? found.node.inputs[input.name] : undefined
     inputs[input.name] = structuredClone(
-      current?.type === input.type ? current : defaultExpression(input.type)
+      current && isCompatibleFunctionInput(current, input)
+        ? current
+        : defaultFunctionInputExpression(input)
     )
   })
   const outputNames: Record<string, string> = {}
@@ -736,6 +738,19 @@ function reconcileFunctionCall(
     state: { ...state, root },
     changes: [{ kind: 'update', path: found.path }]
   }
+}
+
+function isCompatibleFunctionInput(
+  expression: FunctionInputExpression,
+  input: FunctionCallSignature['inputs'][number]
+): boolean {
+  if (expression.type !== input.type) return false
+  if (input.type !== 'choice-group' || expression.type !== 'choice-group') return true
+  if (input.shape.kind === 'all') return expression.selection.kind === 'all'
+  if (input.shape.kind === 'range') {
+    return expression.selection.kind === 'range' || expression.selection.kind === 'all'
+  }
+  return expression.selection.kind === 'question' || expression.selection.kind === 'all'
 }
 
 type NodeEditResult<T extends TemplateNode> =

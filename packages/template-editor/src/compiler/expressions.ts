@@ -1,4 +1,7 @@
 import type {
+  ChoiceGroupExpression,
+  ChoiceGroupShape,
+  ChoiceGroupRef,
   SchemaTextExpression,
   StaticValueExpression,
   StringExpression,
@@ -9,6 +12,8 @@ import type {
 } from '../types'
 import {
   fail,
+  type ChoiceGroupCell,
+  type ChoiceGroupContext,
   type CompileScope,
   type CompiledValue,
   type CompilerState,
@@ -41,6 +46,121 @@ export function resolveStaticExpression(
     }
   }
   return resolveFileExpression(expression as ValueExpression<'file'>, scope, state, path)
+}
+
+export function resolveChoiceGroupExpression(
+  expression: ChoiceGroupExpression,
+  expected: ChoiceGroupShape,
+  scope: CompileScope,
+  state: CompilerState,
+  path: string
+): ChoiceGroupContext {
+  const source =
+    expression.source === 'global'
+      ? lazyGlobalChoiceGroup(state, path)
+      : scope.choiceGroups.get(expression.name)
+  if (!source)
+    fail('UNKNOWN_CHOICE_GROUP', path, {
+      name: expression.source === 'local' ? expression.name : 'global'
+    })
+
+  const selected = selectChoiceGroup(source.get(), expression.selection, expected, path)
+  assertChoiceGroupShape(selected, expected, path)
+  return selected
+}
+
+export function resolveChoiceGroupRef(
+  ref: ChoiceGroupRef,
+  scope: CompileScope,
+  path: string
+): ChoiceGroupContext {
+  const cell = scope.choiceGroups.get(ref.name)
+  if (!cell) fail('UNKNOWN_CHOICE_GROUP', path, { name: ref.name })
+  return cell.get()
+}
+
+function lazyGlobalChoiceGroup(state: CompilerState, path: string): ChoiceGroupCell {
+  return {
+    type: 'choice-group',
+    label: `${path}.global`,
+    get: () => {
+      if (!state.globalChoiceGroup) fail('CHOICE_GROUP_NOT_AVAILABLE', path)
+      return state.globalChoiceGroup
+    }
+  }
+}
+
+function selectChoiceGroup(
+  source: ChoiceGroupContext,
+  selection: ChoiceGroupExpression['selection'],
+  expected: ChoiceGroupShape,
+  path: string
+): ChoiceGroupContext {
+  if (selection.kind === 'all') return source
+  if (selection.kind === 'question') {
+    assertPageCoordinate(source, selection.pageIndex, selection.questionIndex, path)
+    return {
+      kind: 'question',
+      pages: [[source.pages[selection.pageIndex][selection.questionIndex]]],
+      pageIndices: [source.pageIndices[selection.pageIndex]]
+    }
+  }
+
+  if (!Number.isInteger(selection.startPage) || selection.startPage < 0) {
+    fail('CHOICE_GROUP_OUT_OF_RANGE', path, { startPage: selection.startPage })
+  }
+  if (expected.kind !== 'range') {
+    fail('CHOICE_GROUP_SHAPE_MISMATCH', path, {
+      expected: JSON.stringify(expected),
+      actual: JSON.stringify({ kind: 'range' })
+    })
+  }
+  const endPage = selection.startPage + expected.pageCounts.length
+  if (endPage > source.pages.length) {
+    fail('CHOICE_GROUP_OUT_OF_RANGE', path, { startPage: selection.startPage })
+  }
+  return {
+    kind: 'range',
+    pages: source.pages.slice(selection.startPage, endPage),
+    pageIndices: source.pageIndices.slice(selection.startPage, endPage)
+  }
+}
+
+function assertPageCoordinate(
+  source: ChoiceGroupContext,
+  pageIndex: number,
+  questionIndex: number,
+  path: string
+): void {
+  if (
+    !Number.isInteger(pageIndex) ||
+    !Number.isInteger(questionIndex) ||
+    pageIndex < 0 ||
+    pageIndex >= source.pages.length ||
+    questionIndex < 0 ||
+    questionIndex >= source.pages[pageIndex].length
+  ) {
+    fail('CHOICE_GROUP_OUT_OF_RANGE', path, { pageIndex, questionIndex })
+  }
+}
+
+function assertChoiceGroupShape(
+  actual: ChoiceGroupContext,
+  expected: ChoiceGroupShape,
+  path: string
+): void {
+  const actualPageCounts = actual.pages.map((page) => page.length)
+  if (
+    actual.kind !== expected.kind ||
+    (expected.kind !== 'question' &&
+      actualPageCounts.some((count, index) => count !== expected.pageCounts[index])) ||
+    (expected.kind !== 'question' && actualPageCounts.length !== expected.pageCounts.length)
+  ) {
+    fail('CHOICE_GROUP_SHAPE_MISMATCH', path, {
+      expected: JSON.stringify(expected),
+      actual: JSON.stringify({ kind: actual.kind, pageCounts: actualPageCounts })
+    })
+  }
 }
 
 export function resolveStringExpression(

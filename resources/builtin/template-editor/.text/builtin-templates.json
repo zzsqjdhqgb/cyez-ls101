@@ -3551,7 +3551,7 @@
     },
     {
       "templateId": "261d2ad9-225e-41ac-a394-1887b912b917",
-      "version": 1,
+      "version": 2,
       "releaseHash": "sha256:f7e2dbb9761f906fb9f4b6683b340d54f7481d50caa9af2a929161c7b634f2cc",
       "document": {
         "content": {
@@ -4123,7 +4123,7 @@
     },
     {
       "templateId": "c77c98f4-049d-4991-a5dc-3c39b7088100",
-      "version": 1,
+      "version": 2,
       "releaseHash": "sha256:36092d4de190804f0ffdc1a8930fd06fd9d0becdb4acf2b7d6d69336c881df0b",
       "document": {
         "content": {
@@ -4576,7 +4576,7 @@
     },
     {
       "templateId": "bf2dddd5-f85f-4fbe-8e2f-9f2aa86f5e05",
-      "version": 1,
+      "version": 2,
       "releaseHash": "sha256:9b7e1ffaa6fef924d7d9c432d25f39913b575a0c5431ec252ecf0ebb32d8c0f3",
       "document": {
         "content": {
@@ -5217,7 +5217,7 @@
     },
     {
       "templateId": "dccc9ca8-6b17-4b54-8fb8-bc5be6517e88",
-      "version": 1,
+      "version": 2,
       "releaseHash": "sha256:619f939518f3ca3c08a535dabe8beaed26e6db4f683b6b36ddf5d027f80428b9",
       "document": {
         "content": {
@@ -6120,7 +6120,7 @@
     },
     {
       "templateId": "490f6873-a39d-409e-954c-c345a90004a3",
-      "version": 1,
+      "version": 2,
       "releaseHash": "sha256:0d9a8af863ae131f4cee1e6698e1729e5f1624fdfe12c369419804ca306a313f",
       "document": {
         "content": {
@@ -7037,7 +7037,7 @@
     },
     {
       "templateId": "ef1dc645-eba5-4144-a82b-f52e24d5f925",
-      "version": 1,
+      "version": 2,
       "releaseHash": "sha256:280eab414bddc25ed25497c3e414b7fca053bd7af8e2dee8e8ce4f9bbb7db7a4",
       "document": {
         "content": {

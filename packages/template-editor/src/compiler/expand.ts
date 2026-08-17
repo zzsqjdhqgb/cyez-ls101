@@ -6,6 +6,7 @@ import type {
   ResolvedContentBlock
 } from '@ls101/core-types'
 import type {
+  ChoiceGroupExpression,
   ChoiceQuestionRef,
   ChoiceViewport,
   FrameNode,
@@ -13,12 +14,15 @@ import type {
   FunctionOutputDef,
   PageNode,
   SchemaUse,
+  StaticValueExpression,
   TemplateContent,
   TemplateNode,
   VariableNode
 } from '../types'
 import {
   resolveFileExpression,
+  resolveChoiceGroupExpression,
+  resolveChoiceGroupRef,
   resolveRuntimeOutput,
   resolveSchemaTextExpression,
   resolveStaticExpression,
@@ -32,6 +36,7 @@ import {
   fail,
   fixedValueCell,
   lazyValueCell,
+  lazyChoiceGroupCell,
   mergeStructuralResults,
   questionAddressKey,
   type ExpandedSchemaAnswer,
@@ -41,6 +46,7 @@ import {
   type CompiledValue,
   type CompileScope,
   type CompilerState,
+  type ChoiceGroupCell,
   type StructuralResult,
   type ValueCell
 } from './shared'
@@ -54,9 +60,17 @@ export function instantiateTemplate(
   content: TemplateContent,
   state: CompilerState
 ): StructuralResult {
-  const scope: CompileScope = { callPath: [], symbols: new Map() }
+  const scope: CompileScope = { callPath: [], symbols: new Map(), choiceGroups: new Map() }
   registerVariableCells(content.root, scope, 'root', state)
   const structure = instantiateFrame(content.root, scope, 'root', state)
+  const candidate = structure.candidates[0]
+  state.globalChoiceGroup = candidate
+    ? {
+        kind: 'all',
+        pages: candidate.pages,
+        pageIndices: candidate.pages.map((_page, index) => index)
+      }
+    : undefined
   instantiateSchemaUses(content.schemaUses, scope, 'schemaUses', state)
   return structure
 }
@@ -64,11 +78,16 @@ export function instantiateTemplate(
 function instantiateDefinition(
   func: FunctionDef,
   inputCells: Map<string, ValueCell>,
+  inputChoiceGroups: Map<string, ChoiceGroupCell>,
   callPath: string[],
   path: string,
   state: CompilerState
 ): InstantiatedDefinition {
-  const scope: CompileScope = { callPath, symbols: new Map(inputCells) }
+  const scope: CompileScope = {
+    callPath,
+    symbols: new Map(inputCells),
+    choiceGroups: new Map(inputChoiceGroups)
+  }
   registerVariableCells(func.body, scope, `${path}.body`, state)
   const structure = instantiateFrame(func.body, scope, `${path}.body`, state)
   instantiateSchemaUses(func.schemaUses, scope, `${path}.schemaUses`, state)
@@ -229,7 +248,7 @@ function resolvePage(
           height: block.height,
           defaultViewport: resolveChoiceViewport(
             block.defaultViewport,
-            scope.callPath,
+            scope,
             `${blockPath}.defaultViewport`,
             state
           )
@@ -242,7 +261,7 @@ function resolvePage(
     const choiceViewOverrides = resolveChoiceViewOverrides(
       step.choiceViewOverrides,
       page,
-      scope.callPath,
+      scope,
       stepPath,
       state
     )
@@ -296,17 +315,17 @@ function resolvePage(
 function resolveChoiceViewOverrides(
   overrides: PageNode['timeline'][number]['choiceViewOverrides'],
   page: PageNode,
-  callPath: readonly string[],
+  scope: CompileScope,
   path: string,
   state: CompilerState
 ): Record<string, ResolvedChoiceViewport> | undefined {
   if (!overrides) return undefined
   return Object.fromEntries(
     Object.entries(overrides).map(([blockId, viewport]) => [
-      expandedId('block', callPath, page.id, blockId),
+      expandedId('block', scope.callPath, page.id, blockId),
       resolveChoiceViewport(
         viewport,
-        callPath,
+        scope,
         `${path}.choiceViewOverrides[${JSON.stringify(blockId)}]`,
         state
       )
@@ -360,23 +379,46 @@ function instantiateFunctionCall(
 ): StructuralResult {
   const func = state.functionsById.get(node.functionRef) as FunctionDef
   const inputCells = new Map<string, ValueCell>()
+  const inputChoiceGroups = new Map<string, ChoiceGroupCell>()
   func.inputs.forEach((input) => {
+    const inputPath = `${path}.inputs[${JSON.stringify(input.name)}]`
+    if (input.type === 'choice-group') {
+      const cell = lazyChoiceGroupCell(inputPath, () =>
+        resolveChoiceGroupExpression(
+          node.inputs[input.name] as ChoiceGroupExpression,
+          input.shape,
+          callerScope,
+          state,
+          inputPath
+        )
+      )
+      state.choiceGroupCells.push(cell)
+      inputChoiceGroups.set(input.name, cell)
+      return
+    }
     inputCells.set(
       input.name,
-      lazyValueCell(state, input.type, `${path}.inputs[${JSON.stringify(input.name)}]`, () =>
+      lazyValueCell(state, input.type, inputPath, () =>
         resolveStaticExpression(
-          node.inputs[input.name],
+          node.inputs[input.name] as StaticValueExpression,
           input.type,
           callerScope,
           state,
-          `${path}.inputs[${JSON.stringify(input.name)}]`
+          inputPath
         )
       )
     )
   })
 
   const callPath = [...callerScope.callPath, node.id]
-  const instantiated = instantiateDefinition(func, inputCells, callPath, `${path}.function`, state)
+  const instantiated = instantiateDefinition(
+    func,
+    inputCells,
+    inputChoiceGroups,
+    callPath,
+    `${path}.function`,
+    state
+  )
   func.outputs.forEach((output) => {
     callerScope.symbols.set(
       node.outputNames[output.name],
@@ -576,17 +618,106 @@ function mediaTypeFor(filename: string): string | undefined {
 
 function resolveChoiceViewport(
   viewport: ChoiceViewport,
-  currentCallPath: readonly string[],
+  scope: CompileScope,
   path: string,
   state: CompilerState
 ): ResolvedChoiceViewport {
+  if ('group' in viewport) {
+    const group = resolveChoiceGroupRef(viewport.group, scope, `${path}.group`)
+    if (viewport.mode === 'focus') {
+      return {
+        mode: 'focus',
+        choiceIndex: choiceGroupQuestionIndex(
+          group,
+          viewport.pageIndex,
+          viewport.questionIndex,
+          path
+        )
+      }
+    }
+
+    if (group.kind === 'question') {
+      return { mode: 'focus', choiceIndex: group.pages[0][0] }
+    }
+
+    if (viewport.mode === 'free') {
+      if (group.kind === 'all') {
+        return {
+          mode: 'free',
+          ...(viewport.initialPage === undefined
+            ? {}
+            : { initialPage: choiceGroupPageIndex(group, viewport.initialPage, path) })
+        }
+      }
+      return {
+        mode: 'range',
+        startPage: group.pageIndices[0],
+        endPage: group.pageIndices[group.pageIndices.length - 1],
+        ...(viewport.initialPage === undefined
+          ? {}
+          : { initialPage: choiceGroupPageIndex(group, viewport.initialPage, path) })
+      }
+    }
+
+    const startPage = choiceGroupPageIndex(group, viewport.startPage, path)
+    const endPage = choiceGroupPageIndex(group, viewport.endPage, path)
+    if (viewport.startPage > viewport.endPage) {
+      fail('CHOICE_GROUP_OUT_OF_RANGE', path, {
+        startPage: viewport.startPage,
+        endPage: viewport.endPage
+      })
+    }
+    if (
+      viewport.initialPage !== undefined &&
+      (viewport.initialPage < viewport.startPage || viewport.initialPage > viewport.endPage)
+    ) {
+      fail('CHOICE_GROUP_OUT_OF_RANGE', path, { initialPage: viewport.initialPage })
+    }
+    return {
+      mode: 'range',
+      startPage,
+      endPage,
+      ...(viewport.initialPage === undefined
+        ? {}
+        : { initialPage: choiceGroupPageIndex(group, viewport.initialPage, path) })
+    }
+  }
+
   if (viewport.mode === 'free') return { ...viewport }
   if (viewport.mode === 'range') return { ...viewport }
 
   return {
     mode: 'focus',
-    choiceIndex: resolveQuestionRef(viewport.questionRef, currentCallPath, path, state)
+    choiceIndex: resolveQuestionRef(viewport.questionRef, scope.callPath, path, state)
   }
+}
+
+function choiceGroupPageIndex(
+  group: ReturnType<typeof resolveChoiceGroupRef>,
+  pageIndex: number,
+  path: string
+): number {
+  if (!Number.isInteger(pageIndex) || pageIndex < 0 || pageIndex >= group.pages.length) {
+    fail('CHOICE_GROUP_OUT_OF_RANGE', path, { pageIndex })
+  }
+  return group.pageIndices[pageIndex]
+}
+
+function choiceGroupQuestionIndex(
+  group: ReturnType<typeof resolveChoiceGroupRef>,
+  pageIndex: number,
+  questionIndex: number,
+  path: string
+): number {
+  choiceGroupPageIndex(group, pageIndex, path)
+  if (
+    !Number.isInteger(questionIndex) ||
+    questionIndex < 0 ||
+    questionIndex >= group.pages[pageIndex].length
+  ) {
+    fail('CHOICE_GROUP_OUT_OF_RANGE', path, { pageIndex, questionIndex })
+  }
+  return group.pages[pageIndex][questionIndex]
 }
 
 function resolveQuestionRef(
