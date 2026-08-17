@@ -92,10 +92,6 @@ publish:
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
 extraResources:
-  - from: exams
-    to: exams
-  - from: templates
-    to: templates
   - from: resources/tts
     to: tts
   - from: resources/qwen-tts
