@@ -462,9 +462,20 @@ async function streamZipEntryToFile(
 async function syncFile(filePath: string): Promise<void> {
   const handle = await open(filePath, 'r')
   try {
-    await handle.sync()
+    await syncHandle(handle)
   } finally {
     await handle.close()
+  }
+}
+
+async function syncHandle(handle: Awaited<ReturnType<typeof open>>): Promise<void> {
+  try {
+    await handle.sync()
+  } catch (error) {
+    // Windows can report EPERM for fsync on filesystems that do not expose a
+    // flush primitive. Integrity is still checked before the file is renamed.
+    const code = (error as NodeJS.ErrnoException).code
+    if (!['EINVAL', 'EISDIR', 'ENOTSUP', 'EPERM'].includes(code ?? '')) throw error
   }
 }
 
@@ -809,7 +820,7 @@ async function writeBinaryAtomically(filePath: string, data: Uint8Array): Promis
   try {
     handle = await open(temporaryPath, 'wx', 0o600)
     await handle.writeFile(data)
-    await handle.sync()
+    await syncHandle(handle)
     await handle.close()
     handle = null
     await rename(temporaryPath, filePath)

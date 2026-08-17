@@ -5,6 +5,7 @@ import { createReadStream, createWriteStream, readFileSync } from 'node:fs'
 import { chmod, copyFile, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { pipeline } from 'node:stream/promises'
+import { pathToFileURL } from 'node:url'
 
 const root = path.resolve(import.meta.dirname, '..', '..')
 const config = loadConfig()
@@ -28,7 +29,7 @@ export function runtimeTarget(platform = process.platform, architecture = proces
     return {
       directory: 'win32-x64',
       name: 'ls101-qwen-tts-helper-win32-x64.exe',
-      executable: 'ls101-qwen-tts-helper-win32-x64.exe'
+      executable: 'ls101-qwen-tts-helper.exe'
     }
   }
   return null
@@ -218,7 +219,7 @@ async function loadReleaseMetadata(cachePath) {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   main().catch((error) => {
     console.error(error instanceof Error ? error.message : error)
     process.exitCode = 1

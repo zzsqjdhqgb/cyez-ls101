@@ -191,6 +191,12 @@ async function main() {
       [path.join(root, 'scripts', 'build-tts-model-package.mjs'), version],
       { stdio: 'inherit', cwd: root }
     )
+    console.log('Building external Qwen TTS model package...')
+    execFileSync(
+      process.execPath,
+      [path.join(root, 'scripts', 'qwen-tts', 'prepare-package.mjs')],
+      { stdio: 'inherit', cwd: root }
+    )
   }
 
   console.log('Build completed successfully:', result)

@@ -6,11 +6,12 @@ to create VoiceDesign reference audio during development. Imported model package
 executables.
 
 The published runtime bundle is `qwen-tts-v0.1.0` in the application repository. `yarn setup`
-and normal application builds query the GitHub Release Assets API, verify each selected asset
+and application build setup query the GitHub Release Assets API, verify each selected asset
 against its API-provided size and SHA-256 digest. Release metadata and the helper download are
 cached under `model-assets/downloads/qwen-tts/`; the two downloaded GGUF files are stored directly
-under `model-assets/qwen-tts/models/`. The helper is staged under `resources/qwen-tts/`, and the
-locally prepared model ZIP is written under `dist/`. `yarn build:test` sets
+under `model-assets/qwen-tts/models/`. The helper is staged under `resources/qwen-tts/`. A full
+application build then prepares the local model ZIP under `dist/`, while `yarn qwen-tts:prepare`
+can build it explicitly. `yarn build:test` sets
 `LS101_SKIP_QWEN_TTS_DOWNLOAD=1` so smoke builds do not download the roughly 1.68 GB of models.
 If GitHub's anonymous API quota is exhausted, set `GITHUB_TOKEN` or `GH_TOKEN`; a previously
 validated API response is also cached at `model-assets/downloads/qwen-tts/release-api.json`.

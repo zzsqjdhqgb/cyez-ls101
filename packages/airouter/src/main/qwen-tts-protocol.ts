@@ -75,7 +75,7 @@ export class QwenTtsProtocolDecoder {
         return
       }
       if (newline > MAX_HEADER_BYTES) throw new Error('Qwen TTS helper 协议头超过限制')
-      const header = this.buffer.subarray(0, newline).toString('utf8')
+      const header = this.buffer.subarray(0, newline).toString('utf8').replace(/\r$/, '')
       this.buffer = this.buffer.subarray(newline + 1)
       this.parseHeader(header)
     }

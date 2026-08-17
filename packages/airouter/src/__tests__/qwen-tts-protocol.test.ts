@@ -26,6 +26,16 @@ describe('Qwen TTS helper protocol', () => {
     ])
   })
 
+  it('accepts CRLF protocol headers', () => {
+    const messages: unknown[] = []
+    const onError = vi.fn()
+    const decoder = new QwenTtsProtocolDecoder((message) => messages.push(message), onError)
+    decoder.push(Buffer.from('READY 1\r\n'))
+
+    expect(onError).not.toHaveBeenCalled()
+    expect(messages).toEqual([{ type: 'ready', version: 1 }])
+  })
+
   it.each([
     ['unknown message', 'HELLO 1\n'],
     ['invalid request ID', 'ERROR request! 0\n'],

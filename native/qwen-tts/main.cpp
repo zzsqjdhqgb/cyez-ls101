@@ -14,6 +14,11 @@
 #include <string>
 #include <vector>
 
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
+
 namespace {
 
 constexpr uint32_t kEmbeddingSize = 1024;
@@ -336,6 +341,11 @@ int serve(qwen3_tts::Qwen3TTS & engine, const Options & options) {
 } // namespace
 
 int main(int argc, char ** argv) {
+#ifdef _WIN32
+    _setmode(_fileno(stdin), _O_BINARY);
+    _setmode(_fileno(stdout), _O_BINARY);
+#endif
+
     Options options;
     if (!parse_options(argc, argv, options)) {
         print_usage(argv[0]);

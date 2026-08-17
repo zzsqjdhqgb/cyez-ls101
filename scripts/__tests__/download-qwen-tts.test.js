@@ -47,6 +47,15 @@ test('selects the pinned platform helper and raw models from GitHub metadata', a
   })
 })
 
+test('uses the canonical helper filename on Windows', async () => {
+  const { runtimeTarget } = await modulePromise
+  assert.deepEqual(runtimeTarget('win32', 'x64'), {
+    directory: 'win32-x64',
+    name: 'ls101-qwen-tts-helper-win32-x64.exe',
+    executable: 'ls101-qwen-tts-helper.exe'
+  })
+})
+
 test('rejects assets without the GitHub API digest', async () => {
   const { selectReleaseAssets } = await modulePromise
   assert.throws(
