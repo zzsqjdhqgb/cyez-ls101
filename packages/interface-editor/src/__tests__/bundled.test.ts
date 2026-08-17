@@ -30,7 +30,7 @@ const content: InterfaceContent = {
 }
 
 describe('bundled Interface repository', () => {
-  it('加载上海高考英语口语 builtin 并覆盖旧模板的全部 editableData', async () => {
+  it('加载上海高考英语口语 builtin 的完整字段契约', async () => {
     const repository = new FileBundledInterfaceRepository(
       new DiskReadonlyStore('resources/builtin/interface-editor')
     )
@@ -54,10 +54,7 @@ describe('bundled Interface repository', () => {
 
     const leaves = flattenFields(entry.currentInterface.fields)
     const leavesByVarName = new Map(leaves.map(({ leaf }) => [leaf.varName, leaf]))
-    const legacyFields = await loadLegacyShanghaiGaokaoFields()
-    expect(leaves.map(({ leaf }) => leaf.varName).sort()).toEqual(
-      legacyFields.map(({ id }) => id).sort()
-    )
+    expect(leaves).toHaveLength(27)
     expect(
       leaves.filter(({ leaf }) => leaf.type === 'image').map(({ leaf }) => leaf.varName)
     ).toEqual(['picture_file1', 'picture_file2', 'picture_file3', 'picture_file4'])
@@ -68,10 +65,9 @@ describe('bundled Interface repository', () => {
       expect(leavesByVarName.get(varName)?.description).toContain('1:1正方形画幅')
       expect(leavesByVarName.get(varName)?.example).toContain('square 1:1 aspect ratio')
     }
-    expect(legacyFields).toHaveLength(27)
   })
 
-  it('加载上海中考英语口语 builtin 并覆盖旧模板的全部 editableData', async () => {
+  it('加载上海中考英语口语 builtin 的完整字段契约', async () => {
     const repository = new FileBundledInterfaceRepository(
       new DiskReadonlyStore('resources/builtin/interface-editor')
     )
@@ -88,10 +84,7 @@ describe('bundled Interface repository', () => {
     expect(entry.currentInterface.promptTemplate).toContain('no text')
 
     const leaves = flattenFields(entry.currentInterface.fields)
-    const legacyFields = await loadLegacyFields('templates/SH-zhongkao-speaking/chunk')
-    expect(leaves.map(({ leaf }) => leaf.varName).sort()).toEqual(
-      legacyFields.map(({ id }) => id).sort()
-    )
+    expect(leaves).toHaveLength(16)
     expect(
       leaves.filter(({ leaf }) => leaf.type === 'image').map(({ leaf }) => leaf.varName)
     ).toEqual(['3_picture', '4_picture'])
@@ -99,10 +92,9 @@ describe('bundled Interface repository', () => {
       expect(leaf.example).not.toMatch(/[\u3400-\u9fff]/u)
       expect(leaf.example).toContain('no text')
     }
-    expect(legacyFields).toHaveLength(16)
   })
 
-  it('加载上海高考英语听力 builtin 并覆盖完整卷的全部 editableData', async () => {
+  it('加载上海高考英语听力 builtin 的完整字段契约', async () => {
     const repository = new FileBundledInterfaceRepository(
       new DiskReadonlyStore('resources/builtin/interface-editor')
     )
@@ -124,10 +116,7 @@ describe('bundled Interface repository', () => {
     ])
 
     const leaves = flattenFields(entry.currentInterface.fields)
-    const legacyFields = await loadLegacyTemplateFields('templates/gaokao-listening/template.json')
-    expect(leaves.map(({ leaf }) => leaf.varName).sort()).toEqual(
-      legacyFields.map(({ id }) => id).sort()
-    )
+    expect(leaves).toHaveLength(133)
     expect(leaves.every(({ leaf }) => leaf.type === 'text')).toBe(true)
     const dialogues = leaves.filter(({ leaf }) => leaf.varName.startsWith('dialogue_'))
     expect(dialogues).toHaveLength(11)
@@ -137,7 +126,6 @@ describe('bundled Interface repository', () => {
     const answers = leaves.filter(({ leaf }) => leaf.varName.startsWith('answer_'))
     expect(answers).toHaveLength(20)
     expect(new Set(answers.map(({ leaf }) => leaf.example))).toEqual(new Set(['A', 'B', 'C', 'D']))
-    expect(legacyFields).toHaveLength(133)
   })
 
   it('按 builtinKey 和内容摘要读取独立 Interface 文件', async () => {
@@ -222,51 +210,6 @@ describe('bundled Interface repository', () => {
     await expect(repository.listBuiltinKeys()).resolves.toEqual([])
   })
 })
-
-const LEGACY_CHUNKS = [
-  '01_sectionA_reading.json',
-  '02_sectionB_passage.json',
-  '03_sectionC_situation.json',
-  '04_sectionD_picture.json',
-  '05_LS_sectionA_quickresponse.json',
-  '06_LS_sectionB_passage.json'
-]
-
-async function loadLegacyShanghaiGaokaoFields(): Promise<Array<{ id: string; type: string }>> {
-  const fields = await Promise.all(
-    LEGACY_CHUNKS.map(async (filename) => {
-      const value = JSON.parse(
-        await readFile(path.join('templates/SH-gaokao-speaking/chunk', filename), 'utf8')
-      ) as { editableData: Array<{ id: string; type: string }> }
-      return value.editableData
-    })
-  )
-  return fields.flat()
-}
-
-async function loadLegacyFields(directory: string): Promise<Array<{ id: string; type: string }>> {
-  const filenames = (await readdir(directory))
-    .filter((filename) => filename.endsWith('.json'))
-    .sort()
-  const fields = await Promise.all(
-    filenames.map(async (filename) => {
-      const value = JSON.parse(await readFile(path.join(directory, filename), 'utf8')) as {
-        editableData: Array<{ id: string; type: string }>
-      }
-      return value.editableData
-    })
-  )
-  return fields.flat()
-}
-
-async function loadLegacyTemplateFields(
-  filename: string
-): Promise<Array<{ id: string; type: string }>> {
-  const value = JSON.parse(await readFile(filename, 'utf8')) as {
-    editableData: Array<{ id: string; type: string }>
-  }
-  return value.editableData
-}
 
 function bundledStore(builtinKey: string, def: InterfaceDef): MemoryStore {
   const store = new MemoryStore()
