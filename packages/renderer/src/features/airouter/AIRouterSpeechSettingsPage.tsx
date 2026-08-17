@@ -68,7 +68,13 @@ type SpeechFeedbackScope =
 const providerLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
   'pocket-tts': 'Pocket TTS (WASM)',
-  'qwen-tts': 'Qwen TTS'
+  'qwen-tts': 'Qwen3-TTS 0.6B (CPU)'
+}
+
+const modelPackageLabels: Record<AIRouterSpeechProviderType, string> = {
+  'openai-compatible': 'OpenAI Compatible',
+  'pocket-tts': 'Pocket TTS',
+  'qwen-tts': 'Qwen3-TTS 0.6B'
 }
 
 export function AIRouterSpeechSettingsPage({
@@ -470,7 +476,10 @@ export function AIRouterSpeechSettingsPage({
                     {draft.kind === 'online' ? (
                       <option value="openai-compatible">OpenAI Compatible</option>
                     ) : (
-                      <option value="pocket-tts">Pocket TTS (WASM)</option>
+                      <>
+                        <option value="pocket-tts">Pocket TTS (WASM)</option>
+                        <option value="qwen-tts">Qwen3-TTS 0.6B (CPU)</option>
+                      </>
                     )}
                   </select>
                 </SettingsRow>
@@ -606,7 +615,7 @@ export function AIRouterSpeechSettingsPage({
                 ) : (
                   <div className={styles.localPackagePrompt}>
                     <FolderOpen aria-hidden="true" />
-                    <strong>需要先导入 Pocket TTS 模型包</strong>
+                    <strong>需要先导入 {modelPackageLabels[draft.type]} 模型包</strong>
                     <span>当前没有与该本地 Provider 兼容的模型包。</span>
                     <Button
                       icon={Upload}

@@ -1,0 +1,26 @@
+{
+  "format": "ls101.qwen-tts-voice-design",
+  "formatVersion": 1,
+  "voice": {
+    "id": "american-woman",
+    "name": "American English Woman",
+    "speakerEmbedding": "../voices/american-woman.spk",
+    "speakerEmbeddingSha256": "4512244f683a9228f5e38302d93d5ec736cf043ae8871f305d621587db82f47b"
+  },
+  "source": {
+    "model": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "revision": "5ecdb67327fd37bb2e042aab12ff7391903235d3",
+    "language": "English",
+    "seed": 20260817,
+    "device": "cpu",
+    "dtype": "bfloat16",
+    "audio": {
+      "file": "american-woman.wav",
+      "sampleRate": 24000,
+      "durationSeconds": 10.88,
+      "sha256": "d84992242a33494813263e795d1bc401335b79dda96de6c829c3743bc15847ac"
+    },
+    "text": "Good morning. The library opens at eight thirty, and today's workshop begins just after nine. Please bring your notes, ask clear questions, and take your time.",
+    "instruct": "A native English-speaking adult woman with a neutral General American accent. Her voice is clear, warm, composed, and articulate, with natural conversational pacing, subtle expressiveness, and no theatrical or regional affectation. Studio-quality delivery."
+  }
+}

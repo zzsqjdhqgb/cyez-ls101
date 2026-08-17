@@ -6,6 +6,7 @@ out
 *.log*
 /repomix-output.md
 coverage
+.cache/
 playwright-report
 test-results
 docs/product/.product-docs-staging
@@ -14,6 +15,8 @@ docs/product/**/*.product-docs-backup
 !/assets/.gitkeep
 /model-assets/*
 !/model-assets/.gitkeep
+/resources/qwen-tts/*
+!/resources/qwen-tts/README.md
 /resources/file-icons/*.ico
 /resources/file-icons/*.icns
 /.yarn/*

@@ -14,6 +14,7 @@ export default defineConfig(
   {
     ignores: [
       '**/node_modules',
+      '**/.cache/**',
       '**/dist',
       '**/out',
       '**/model-assets/**',

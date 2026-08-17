@@ -120,8 +120,15 @@ function electronBuilderPlatform(platform) {
   return platform === 'linux' ? builder.Platform.LINUX : builder.Platform.WINDOWS
 }
 
-function runApplicationBuild(root) {
-  const options = { stdio: 'inherit', cwd: root }
+function runApplicationBuild(root, skipQwenTtsDownload) {
+  const options = {
+    stdio: 'inherit',
+    cwd: root,
+    env: {
+      ...process.env,
+      ...(skipQwenTtsDownload ? { LS101_SKIP_QWEN_TTS_DOWNLOAD: '1' } : {})
+    }
+  }
   if (process.platform === 'win32') {
     const commandInterpreter = process.env['ComSpec'] || process.env['COMSPEC'] || 'cmd.exe'
     execFileSync(commandInterpreter, ['/d', '/s', '/c', 'yarn build'], options)
@@ -168,7 +175,7 @@ async function main() {
   )
 
   console.log('Running application build...')
-  runApplicationBuild(root)
+  runApplicationBuild(root, options.skipModelPackage)
 
   console.log('Starting electron-builder...')
   const platform = electronBuilderPlatform(options.platform)

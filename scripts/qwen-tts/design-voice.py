@@ -29,7 +29,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Generate WAV candidates whose speaker embeddings can be used by Qwen3-TTS Base."
     )
-    parser.add_argument("--output-dir", type=Path, default=Path("model-assets/qwen-tts/voice-design"))
+    parser.add_argument("--output-dir", type=Path, default=Path("native/qwen-tts/voice-design"))
     parser.add_argument("--text", default=DEFAULT_TEXT, help="English reference text to speak")
     parser.add_argument("--instruct", default=DEFAULT_INSTRUCT, help="VoiceDesign description")
     parser.add_argument("--language", default="English")

@@ -23,9 +23,6 @@ jobs:
       runtime_revision: ${{ steps.config.outputs.runtime_revision }}
       model_id: ${{ steps.config.outputs.model_id }}
       model_revision: ${{ steps.config.outputs.model_revision }}
-      voice_id: ${{ steps.config.outputs.voice_id }}
-      voice_name: ${{ steps.config.outputs.voice_name }}
-      voice_file: ${{ steps.config.outputs.voice_file }}
 
     steps:
       - name: Check out source
@@ -87,10 +84,7 @@ jobs:
             runtime_repository: config.runtime.repository,
             runtime_revision: config.runtime.revision,
             model_id: config.model.id,
-            model_revision: config.model.revision,
-            voice_id: config.voice.id,
-            voice_name: config.voice.name,
-            voice_file: config.voice.file
+            model_revision: config.model.revision
           }
           for (const [name, value] of Object.entries(outputs)) {
             if (typeof value !== 'string' || !value || value.includes('\n')) {
@@ -108,7 +102,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: ubuntu-latest
+          # Build against the oldest supported hosted Linux image so the helper
+          # does not require the newer GLIBC symbols from ubuntu-latest.
+          - runner: ubuntu-22.04
             runtime-directory: linux-x64
             executable: ls101-qwen-tts-helper
             release-asset: ls101-qwen-tts-helper-linux-x64
@@ -188,8 +184,8 @@ jobs:
             sourceCommit: process.env.SOURCE_COMMIT,
             upstream: {
               repository: config.runtime.repository,
-              revision: revision('.cache/qwen3-tts.cpp'),
-              ggmlRevision: revision('.cache/qwen3-tts.cpp/ggml')
+              revision: revision('model-assets/downloads/qwen-tts/qwen3-tts.cpp'),
+              ggmlRevision: revision('model-assets/downloads/qwen-tts/qwen3-tts.cpp/ggml')
             }
           }
           writeFileSync(
@@ -207,7 +203,7 @@ jobs:
           retention-days: 7
 
   model:
-    name: Build Q8_0 model package
+    name: Build Q8_0 model assets
     needs: metadata
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -228,30 +224,18 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Enable Corepack
-        run: |
-          corepack enable
-          corepack prepare yarn@4.15.0 --activate
-        env:
-          COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
-
-      - name: Install package-builder dependencies
-        run: yarn install --immutable --mode=skip-build
-        env:
-          YARN_ENABLE_SCRIPTS: false
-
       - name: Fetch pinned converter source
         shell: bash
         env:
           QWEN_CPP_REPOSITORY: ${{ needs.metadata.outputs.runtime_repository }}
           QWEN_CPP_REVISION: ${{ needs.metadata.outputs.runtime_revision }}
         run: |
-          mkdir -p .cache/qwen3-tts.cpp
-          git -C .cache/qwen3-tts.cpp init
-          git -C .cache/qwen3-tts.cpp remote add origin "$QWEN_CPP_REPOSITORY"
-          git -C .cache/qwen3-tts.cpp fetch --depth 1 origin "$QWEN_CPP_REVISION"
-          git -C .cache/qwen3-tts.cpp checkout --detach FETCH_HEAD
-          test "$(git -C .cache/qwen3-tts.cpp rev-parse HEAD)" = "$QWEN_CPP_REVISION"
+          mkdir -p model-assets/downloads/qwen-tts/qwen3-tts.cpp
+          git -C model-assets/downloads/qwen-tts/qwen3-tts.cpp init
+          git -C model-assets/downloads/qwen-tts/qwen3-tts.cpp remote add origin "$QWEN_CPP_REPOSITORY"
+          git -C model-assets/downloads/qwen-tts/qwen3-tts.cpp fetch --depth 1 origin "$QWEN_CPP_REVISION"
+          git -C model-assets/downloads/qwen-tts/qwen3-tts.cpp checkout --detach FETCH_HEAD
+          test "$(git -C model-assets/downloads/qwen-tts/qwen3-tts.cpp rev-parse HEAD)" = "$QWEN_CPP_REVISION"
 
       - name: Install pinned conversion dependencies
         run: |
@@ -275,7 +259,7 @@ jobs:
           snapshot_download(
               repo_id=os.environ["MODEL_ID"],
               revision=os.environ["MODEL_REVISION"],
-              local_dir=Path(".cache/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base"),
+              local_dir=Path("model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base"),
               allow_patterns=[
                   "config.json",
                   "generation_config.json",
@@ -292,40 +276,41 @@ jobs:
       - name: Convert model to GGUF
         shell: bash
         run: |
-          python .cache/qwen3-tts.cpp/scripts/convert_tts_to_gguf.py \
-            --input .cache/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base \
-            --output .cache/qwen3-tts.cpp/models/qwen3-tts-0.6b-q8_0.gguf \
+          python model-assets/downloads/qwen-tts/qwen3-tts.cpp/scripts/convert_tts_to_gguf.py \
+            --input model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base \
+            --output model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/qwen3-tts-0.6b-q8_0.gguf \
             --type q8_0
-          python .cache/qwen3-tts.cpp/scripts/convert_tokenizer_to_gguf.py \
-            --input .cache/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base \
-            --output .cache/qwen3-tts.cpp/models/qwen3-tts-tokenizer-f16.gguf \
+          python model-assets/downloads/qwen-tts/qwen3-tts.cpp/scripts/convert_tokenizer_to_gguf.py \
+            --input model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base \
+            --output model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/qwen3-tts-tokenizer-f16.gguf \
             --type f16
 
-      - name: Build model package
+      - name: Stage model assets
         shell: bash
         env:
-          BUNDLE_VERSION: ${{ needs.metadata.outputs.version }}
           SOURCE_COMMIT: ${{ github.sha }}
-          VOICE_ID: ${{ needs.metadata.outputs.voice_id }}
-          VOICE_NAME: ${{ needs.metadata.outputs.voice_name }}
-          VOICE_FILE: ${{ needs.metadata.outputs.voice_file }}
         run: |
           mkdir -p release-assets
-          node scripts/qwen-tts/build-package.mjs \
-            --model-dir .cache/qwen3-tts.cpp/models \
-            --voice "$VOICE_ID=$VOICE_FILE" \
-            --voice-name "$VOICE_ID=$VOICE_NAME" \
-            --version "$BUNDLE_VERSION" \
-            --output "release-assets/qwen3-tts-0.6b-base-q8_0-$BUNDLE_VERSION.zip"
+          cp model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/qwen3-tts-0.6b-q8_0.gguf release-assets/
+          cp model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/qwen3-tts-tokenizer-f16.gguf release-assets/
           node <<'NODE'
           const { execFileSync } = require('node:child_process')
           const { readFileSync, statSync, writeFileSync } = require('node:fs')
 
           const config = JSON.parse(readFileSync('scripts/qwen-tts/assets.json', 'utf8'))
-          const modelPackage = `release-assets/qwen3-tts-0.6b-base-q8_0-${process.env.BUNDLE_VERSION}.zip`
-          const packageBytes = statSync(modelPackage).size
-          if (packageBytes >= 2 * 1024 ** 3) {
-            throw new Error(`Model package exceeds GitHub's 2 GiB asset limit: ${packageBytes}`)
+          const modelFiles = [
+            'qwen3-tts-0.6b-q8_0.gguf',
+            'qwen3-tts-tokenizer-f16.gguf'
+          ]
+          const assets = modelFiles.map((name) => {
+            const bytes = statSync(`release-assets/${name}`).size
+            if (bytes >= 2 * 1024 ** 3) {
+              throw new Error(`Model asset exceeds GitHub's 2 GiB asset limit: ${name} (${bytes})`)
+            }
+            return { name, bytes }
+          })
+          if (assets.some(({ bytes }) => bytes <= 0)) {
+            throw new Error('A staged model asset is empty')
           }
           const info = {
             schemaVersion: 1,
@@ -334,14 +319,13 @@ jobs:
             modelRevision: config.model.revision,
             qwenCppRevision: execFileSync(
               'git',
-              ['-C', '.cache/qwen3-tts.cpp', 'rev-parse', 'HEAD'],
+              ['-C', 'model-assets/downloads/qwen-tts/qwen3-tts.cpp', 'rev-parse', 'HEAD'],
               { encoding: 'utf8' }
             ).trim(),
-            voice: config.voice,
-            packageBytes
+            assets
           }
           writeFileSync('release-assets/model-build-info.json', `${JSON.stringify(info, null, 2)}\n`)
-          console.log(`Built ${modelPackage} (${packageBytes} bytes)`)
+          console.log(`Staged ${assets.map(({ name }) => name).join(', ')}`)
           NODE
 
       - name: Stage license notices
@@ -358,7 +342,7 @@ jobs:
       - name: Upload model artifact
         uses: actions/upload-artifact@v4
         with:
-          name: qwen-tts-model-package
+          name: qwen-tts-model-assets
           path: release-assets/*
           if-no-files-found: error
           retention-days: 1
@@ -387,7 +371,7 @@ jobs:
           SOURCE_COMMIT: ${{ github.sha }}
         run: |
           node <<'NODE'
-          const { readFileSync, readdirSync, writeFileSync } = require('node:fs')
+          const { readFileSync, readdirSync, statSync, writeFileSync } = require('node:fs')
           const path = require('node:path')
 
           const directory = 'release-assets'
@@ -417,7 +401,7 @@ jobs:
             modelInfo.sourceCommit !== first.sourceCommit ||
             modelInfo.qwenCppRevision !== first.upstream.revision
           ) {
-            throw new Error('Runtime and model package used different source revisions')
+            throw new Error('Runtime and model assets used different source revisions')
           }
 
           const runtimeFiles = readdirSync(directory)
@@ -427,10 +411,25 @@ jobs:
             throw new Error(`Expected two runtime assets, found ${runtimeFiles.length}`)
           }
           const modelFiles = readdirSync(directory)
-            .filter((name) => /^qwen3-tts-.*\.zip$/.test(name))
+            .filter((name) => /^qwen3-tts-.*\.gguf$/.test(name))
             .sort()
-          if (modelFiles.length !== 1) {
-            throw new Error(`Expected one model package, found ${modelFiles.length}`)
+          const expectedModelFiles = [
+            'qwen3-tts-0.6b-q8_0.gguf',
+            'qwen3-tts-tokenizer-f16.gguf'
+          ].sort()
+          if (JSON.stringify(modelFiles) !== JSON.stringify(expectedModelFiles)) {
+            throw new Error(`Unexpected model assets: ${modelFiles.join(', ')}`)
+          }
+          if (
+            JSON.stringify(modelInfo.assets.map(({ name }) => name).sort()) !==
+            JSON.stringify(expectedModelFiles)
+          ) {
+            throw new Error('Model build metadata does not match the staged assets')
+          }
+          for (const modelAsset of modelInfo.assets) {
+            if (statSync(path.join(directory, modelAsset.name)).size !== modelAsset.bytes) {
+              throw new Error(`Model asset size changed after staging: ${modelAsset.name}`)
+            }
           }
           const assets = runtimeFiles.map((name) => {
             const runtimeDirectory = name.includes('-win32-') ? 'win32-x64' : 'linux-x64'
@@ -442,7 +441,7 @@ jobs:
           })
           for (const name of modelFiles) {
             assets.push({
-              kind: 'model-package',
+              kind: name.includes('tokenizer') ? 'speech-tokenizer' : 'tts-model',
               name
             })
           }
@@ -468,7 +467,6 @@ jobs:
               model: modelInfo.modelId,
               modelRevision: modelInfo.modelRevision
             },
-            voice: modelInfo.voice,
             assets
           }
           writeFileSync(
@@ -477,6 +475,17 @@ jobs:
           )
           NODE
           cat release-assets/qwen-tts-release-manifest.json
+
+      - name: Remove obsolete bundled model asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.metadata.outputs.tag }}
+          BUNDLE_VERSION: ${{ needs.metadata.outputs.version }}
+        run: |
+          gh release delete-asset "$RELEASE_TAG" \
+            "qwen3-tts-0.6b-base-q8_0-$BUNDLE_VERSION.zip" \
+            --yes || true
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
@@ -488,14 +497,14 @@ jobs:
           make_latest: false
           generate_release_notes: false
           body: |
-            CPU-only native helpers and the Qwen3-TTS 12Hz 0.6B Base Q8_0 model package.
+            CPU-only native helpers and raw Qwen3-TTS 12Hz 0.6B Base Q8_0 GGUF assets.
 
-            Runtime, model, voice, and source revisions are recorded in
+            Runtime, model, and source revisions are recorded in
             `qwen-tts-release-manifest.json`. Asset sizes and SHA-256 digests are available
             through the GitHub Release Assets API.
           files: |
             release-assets/ls101-qwen-tts-helper-*
-            release-assets/qwen3-tts-*.zip
+            release-assets/qwen3-tts-*.gguf
             release-assets/LICENSE.*.txt
             release-assets/qwen-tts-release-manifest.json
           fail_on_unmatched_files: true

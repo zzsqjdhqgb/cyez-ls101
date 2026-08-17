@@ -26,6 +26,7 @@ import { AIRouterSpeechService } from './speech-service'
 import { AIRouterSpeechRecognitionService } from './speech-recognition-service'
 import { AIRouterPronunciationAssessmentService } from './pronunciation-assessment-service'
 import { PocketTtsSynthesizer } from './pocket-tts'
+import { QwenTtsSynthesizer } from './qwen-tts'
 
 export { AIRouterService } from './service'
 export { AIRouterImageService } from './image-service'
@@ -34,6 +35,7 @@ export { AIRouterSpeechRecognitionService } from './speech-recognition-service'
 export { AIRouterPronunciationAssessmentService } from './pronunciation-assessment-service'
 export { AIRouterSpeechModelStore } from './speech-model-store'
 export { PocketTtsSynthesizer } from './pocket-tts'
+export { QwenTtsSynthesizer } from './qwen-tts'
 export type { AIRouterServiceOptions } from './service'
 export type {
   AIRouterLocalSpeechRequest,
@@ -49,13 +51,18 @@ interface ActiveGeneration {
 export function registerAIRouter(options: AIRouterServiceOptions): void {
   const service = new AIRouterService(options)
   const imageService = new AIRouterImageService(options)
+  const qwenTtsSynthesizer = new QwenTtsSynthesizer()
   const speechService = new AIRouterSpeechService({
     baseDir: options.baseDir,
     appVersion: app.getVersion(),
     configStorage: options.configStorage,
     secretStorage: options.secretStorage,
-    localSynthesizers: { 'pocket-tts': new PocketTtsSynthesizer() }
+    localSynthesizers: {
+      'pocket-tts': new PocketTtsSynthesizer(),
+      'qwen-tts': qwenTtsSynthesizer
+    }
   })
+  app.once('will-quit', () => qwenTtsSynthesizer.dispose())
   const recognitionService = new AIRouterSpeechRecognitionService({
     assetsDir: resolveRecognitionAssetsDir()
   })

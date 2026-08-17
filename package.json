@@ -31,6 +31,8 @@
     "qwen-tts:build-runtime": "node scripts/qwen-tts/build-runtime.mjs",
     "qwen-tts:design-voice": "python scripts/qwen-tts/design-voice.py",
     "qwen-tts:build-package": "node scripts/qwen-tts/build-package.mjs",
+    "qwen-tts:download": "node scripts/qwen-tts/download-release-assets.mjs",
+    "qwen-tts:prepare": "node scripts/qwen-tts/prepare-package.mjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "start": "electron-vite preview",

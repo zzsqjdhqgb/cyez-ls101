@@ -98,6 +98,8 @@ extraResources:
     to: templates
   - from: resources/tts
     to: tts
+  - from: resources/qwen-tts
+    to: qwen-tts
   - from: model-assets/stt
     to: assets/stt
   - from: model-assets/pronunciation
