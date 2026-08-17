@@ -6,7 +6,6 @@ import {
 } from './builtin-initializer'
 import { compileTemplate, compileTemplatePreview } from './compiler'
 import type {
-  BuiltinTemplateRelease,
   GeneratedTimelineAudio,
   LocatedInterfaceInstance,
   TemplateCompileResult,
@@ -23,20 +22,22 @@ import {
   deriveFunctionLibraryContentHash
 } from './id'
 import { editFunctionDocument, editTemplateDocument } from './mutations'
+import { defaultFunctionInputExpression } from './mutations/rewrite'
 import { TemplateRepositoryError, type TemplateRepository } from './repository'
 import type {
+  BuiltinTemplateRelease,
   DslEditorState,
   FrameNode,
   FunctionContent,
   FunctionDef,
   FunctionDocument,
+  FunctionInputExpression,
   FunctionLibraryLocator,
   FunctionLibraryEntry,
   FunctionLibraryRelease,
   FunctionLocator,
   LocalFunctionLibraryDocument,
   SchemaUse,
-  StaticValueExpression,
   TemplateContent,
   TemplateDocument,
   TemplateNode
@@ -176,7 +177,7 @@ export interface LocalFunctionLibraryApplication {
   preview(
     libraryId: string,
     functionDocument: FunctionDocument,
-    inputs: Readonly<Record<string, StaticValueExpression>>
+    inputs: Readonly<Record<string, FunctionInputExpression>>
   ): Promise<TemplatePreviewResult>
   insertFunctionCall(
     libraryId: string,
@@ -786,7 +787,7 @@ export function createTemplateApplication(
                     inputs: Object.fromEntries(
                       rootResource.inputs.map((input) => [
                         input.name,
-                        structuredClone(inputs[input.name] ?? defaultPreviewInput(input.type))
+                        structuredClone(inputs[input.name] ?? defaultFunctionInputExpression(input))
                       ])
                     ),
                     outputNames: Object.fromEntries(
@@ -1092,11 +1093,6 @@ function collectSchemaIds(document: TemplateDocument): string[] {
 
 function unique(values: readonly string[]): string[] {
   return [...new Set(values)]
-}
-
-function defaultPreviewInput(type: 'string' | 'number' | 'file'): StaticValueExpression {
-  if (type === 'number') return { type, source: 'literal', value: 0 }
-  return { type, source: 'literal', value: '' }
 }
 
 function collectFunctionEntryClosure(

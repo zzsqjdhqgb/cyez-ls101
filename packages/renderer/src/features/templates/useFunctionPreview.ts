@@ -1,19 +1,19 @@
 import type {
   FunctionDocument,
-  StaticValueExpression,
+  FunctionInputDef,
+  FunctionInputExpression,
   TemplateApplication,
-  TemplatePreviewResult,
-  ValueType
+  TemplatePreviewResult
 } from '@ls101/template-editor'
 import { useEffect, useMemo, useState } from 'react'
 
 export interface FunctionPreviewSession {
   compiling: boolean
   error: string | null
-  inputs: Readonly<Record<string, StaticValueExpression>>
+  inputs: Readonly<Record<string, FunctionInputExpression>>
   result: TemplatePreviewResult | null
   refresh(): void
-  setInput(name: string, value: StaticValueExpression): void
+  setInput(name: string, value: FunctionInputExpression): void
 }
 
 export function useFunctionPreview(
@@ -22,7 +22,7 @@ export function useFunctionPreview(
   document: FunctionDocument | null,
   active: boolean
 ): FunctionPreviewSession {
-  const [storedInputs, setStoredInputs] = useState<Record<string, StaticValueExpression>>({})
+  const [storedInputs, setStoredInputs] = useState<Record<string, FunctionInputExpression>>({})
   const [compiling, setCompiling] = useState(false)
   const [result, setResult] = useState<TemplatePreviewResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -32,7 +32,7 @@ export function useFunctionPreview(
       Object.fromEntries(
         (document?.content.inputs ?? []).map((input) => {
           const stored = storedInputs[input.name]
-          return [input.name, stored?.type === input.type ? stored : defaultInput(input.type)]
+          return [input.name, stored?.type === input.type ? stored : defaultInput(input)]
         })
       ),
     [document?.content.inputs, storedInputs]
@@ -75,7 +75,24 @@ export function useFunctionPreview(
   }
 }
 
-function defaultInput(type: ValueType): StaticValueExpression {
-  if (type === 'number') return { type, source: 'literal', value: 0 }
-  return { type, source: 'literal', value: '' }
+function defaultInput(input: FunctionInputDef): FunctionInputExpression {
+  if (input.type === 'choice-group') {
+    if (input.shape.kind === 'question') {
+      return {
+        type: 'choice-group',
+        source: 'global',
+        selection: { kind: 'question', pageIndex: 0, questionIndex: 0 }
+      }
+    }
+    if (input.shape.kind === 'range') {
+      return {
+        type: 'choice-group',
+        source: 'global',
+        selection: { kind: 'range', startPage: 0 }
+      }
+    }
+    return { type: 'choice-group', source: 'global', selection: { kind: 'all' } }
+  }
+  if (input.type === 'number') return { type: 'number', source: 'literal', value: 0 }
+  return { type: input.type, source: 'literal', value: '' }
 }

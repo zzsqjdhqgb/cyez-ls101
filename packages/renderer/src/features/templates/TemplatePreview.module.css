@@ -498,7 +498,8 @@
   gap: 14px;
 }
 
-.bindings label {
+.bindings label,
+.binding {
   display: grid;
   gap: 6px;
   color: var(--color-text-muted);
@@ -506,6 +507,7 @@
   font-weight: 620;
 }
 
+.bindings input,
 .bindings select {
   width: 100%;
   min-width: 0;
@@ -517,9 +519,16 @@
   font: 12px/1.4 var(--font-ui);
 }
 
+.bindings input:focus,
 .bindings select:focus {
   border-color: var(--color-accent);
   outline: 2px solid var(--color-focus-ring);
+}
+
+.groupPreviewInput {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .error {

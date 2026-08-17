@@ -10,7 +10,7 @@ export type ValueType = 'string' | 'number' | 'file'
 /** 只能在 ExamPlayer 运行期间产生的值类型。 */
 export type RuntimeValueType = 'audio' | 'choice'
 
-export type TemplateValueType = ValueType | RuntimeValueType
+export type TemplateValueType = ValueType | RuntimeValueType | 'choice-group'
 
 export interface ValueTypeMap {
   string: string
@@ -76,6 +76,31 @@ export type StaticValueExpression =
   | ValueExpression<'number'>
   | ValueExpression<'file'>
 
+export type FunctionInputExpression = StaticValueExpression | ChoiceGroupExpression
+
+export type ChoiceGroupShape =
+  | { kind: 'question' }
+  | { kind: 'range'; pageCounts: number[] }
+  | { kind: 'all'; pageCounts: number[] }
+
+export type ChoiceGroupSelection =
+  | { kind: 'all' }
+  | { kind: 'range'; startPage: number }
+  | { kind: 'question'; pageIndex: number; questionIndex: number }
+
+export type ChoiceGroupExpression =
+  | {
+      type: 'choice-group'
+      source: 'global'
+      selection: ChoiceGroupSelection
+    }
+  | {
+      type: 'choice-group'
+      source: 'local'
+      name: string
+      selection: ChoiceGroupSelection
+    }
+
 // ============================================================
 // 页面内容和时间线
 // ============================================================
@@ -118,16 +143,40 @@ export interface ChoiceViewBlock {
   defaultViewport: ChoiceViewport
 }
 
-export type ChoiceViewport = FreeChoiceViewport | FocusChoiceViewport | RangeChoiceViewport
+export type ChoiceViewport =
+  | FreeChoiceViewport
+  | FocusChoiceViewport
+  | RangeChoiceViewport
+  | ChoiceGroupFreeViewport
+  | ChoiceGroupFocusViewport
+  | ChoiceGroupRangeViewport
 
 export interface FreeChoiceViewport {
   mode: 'free'
   initialPage?: number
 }
 
+export interface ChoiceGroupRef {
+  scope: 'local'
+  name: string
+}
+
+export interface ChoiceGroupFreeViewport {
+  mode: 'free'
+  group: ChoiceGroupRef
+  initialPage?: number
+}
+
 export interface FocusChoiceViewport {
   mode: 'focus'
   questionRef: ChoiceQuestionRef
+}
+
+export interface ChoiceGroupFocusViewport {
+  mode: 'focus'
+  group: ChoiceGroupRef
+  pageIndex: number
+  questionIndex: number
 }
 
 /**
@@ -142,6 +191,14 @@ export interface ChoiceQuestionRef {
 
 export interface RangeChoiceViewport {
   mode: 'range'
+  startPage: number
+  endPage: number
+  initialPage?: number
+}
+
+export interface ChoiceGroupRangeViewport {
+  mode: 'range'
+  group: ChoiceGroupRef
   startPage: number
   endPage: number
   initialPage?: number
@@ -199,7 +256,7 @@ export interface FunctionNode extends BaseNode {
   type: 'function'
   /** 在函数源文档中引用函数库 UUID；嵌入 Template 后改写为 FunctionDef 内容 ID。 */
   functionRef: string
-  inputs: Record<string, StaticValueExpression>
+  inputs: Record<string, FunctionInputExpression>
   /** key 是函数出参名，value 是该次调用在调用方作用域中暴露的名称。 */
   outputNames: Record<string, string>
 }
@@ -319,10 +376,16 @@ export interface FunctionDef extends FunctionContent {
   id: string
 }
 
-export interface FunctionInputDef {
-  name: string
-  type: ValueType
-}
+export type FunctionInputDef =
+  | {
+      name: string
+      type: ValueType
+    }
+  | {
+      name: string
+      type: 'choice-group'
+      shape: ChoiceGroupShape
+    }
 
 export interface StringFunctionOutputDef {
   name: string

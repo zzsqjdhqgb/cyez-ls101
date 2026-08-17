@@ -61,6 +61,7 @@ export async function compileTemplatePreview(
   const state = createCompilerState(context, bound.valuesByAlias, template.resources.functions)
   try {
     const structure = instantiateTemplate(template.content, state)
+    state.choiceGroupCells.forEach((cell) => cell.get())
     state.staticCells.forEach((cell) => cell.get())
 
     const expandedPages = state.pages.map((resolve) => resolve())
@@ -127,6 +128,7 @@ export async function compileTemplate(
   const state = createCompilerState(context, bound.valuesByAlias, template.resources.functions)
   try {
     const structure = instantiateTemplate(content, state)
+    state.choiceGroupCells.forEach((cell) => cell.get())
     state.staticCells.forEach((cell) => cell.get())
 
     const expandedPages = state.pages.map((resolve) => resolve())

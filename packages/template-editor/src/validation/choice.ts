@@ -85,7 +85,7 @@ function analyzeChoiceNode(
           viewports.push({
             path: `${path}.content.blocks[${index}].defaultViewport`,
             viewport: block.defaultViewport,
-            checkedAtFunctionBoundary: false
+            checkedAtFunctionBoundary: 'group' in block.defaultViewport
           })
         }
       })
@@ -94,7 +94,7 @@ function analyzeChoiceNode(
           viewports.push({
             path: `${path}.timeline[${stepIndex}].choiceViewOverrides[${JSON.stringify(blockId)}]`,
             viewport,
-            checkedAtFunctionBoundary: false
+            checkedAtFunctionBoundary: 'group' in viewport
           })
         }
       })
@@ -178,6 +178,51 @@ function validateChoiceViewport(
   path: string,
   state: ValidationState
 ): void {
+  if ('group' in viewport) {
+    if (viewport.mode === 'focus') {
+      validatePageIndex(viewport.pageIndex, undefined, `${path}.pageIndex`, state)
+      validatePageIndex(viewport.questionIndex, undefined, `${path}.questionIndex`, state)
+      return
+    }
+    if (viewport.mode === 'free') {
+      if (viewport.initialPage !== undefined) {
+        validatePageIndex(viewport.initialPage, undefined, `${path}.initialPage`, state)
+      }
+      return
+    }
+    const startIsValid = validatePageIndex(
+      viewport.startPage,
+      undefined,
+      `${path}.startPage`,
+      state
+    )
+    const endIsValid = validatePageIndex(viewport.endPage, undefined, `${path}.endPage`, state)
+    if (startIsValid && endIsValid && viewport.startPage > viewport.endPage) {
+      addError(state, path, 'INVALID_CHOICE_VIEWPORT', {
+        startPage: viewport.startPage,
+        endPage: viewport.endPage
+      })
+    }
+    if (viewport.initialPage !== undefined) {
+      const initialIsValid = validatePageIndex(
+        viewport.initialPage,
+        undefined,
+        `${path}.initialPage`,
+        state
+      )
+      if (
+        initialIsValid &&
+        (viewport.initialPage < viewport.startPage || viewport.initialPage > viewport.endPage)
+      ) {
+        addError(state, `${path}.initialPage`, 'INVALID_CHOICE_VIEWPORT', {
+          initialPage: viewport.initialPage,
+          startPage: viewport.startPage,
+          endPage: viewport.endPage
+        })
+      }
+    }
+    return
+  }
   if (viewport.mode === 'focus') {
     if (!viewport.questionRef.questionId.trim()) {
       addError(state, `${path}.questionRef.questionId`, 'EMPTY_FOCUS_REFERENCE')

@@ -11,6 +11,7 @@ import {
 import type {
   ChoiceViewport,
   ContentBlock,
+  FunctionInputDef,
   TemplateDocumentOperation
 } from '@ls101/template-editor'
 import { IconButton } from '../../components/ui/IconButton'
@@ -23,6 +24,7 @@ interface TemplateContentBlockInspectorProps {
   pageId: string
   block: ContentBlock
   choiceTargetPages: readonly TemplateChoiceTargetPage[]
+  choiceGroups?: readonly Extract<FunctionInputDef, { type: 'choice-group' }>[]
   variableCandidates: readonly TemplateVariableCandidate[]
   apply(operation: TemplateDocumentOperation): boolean
   onBlockIdChange(blockId: string): void
@@ -32,6 +34,7 @@ export function TemplateContentBlockInspector({
   pageId,
   block,
   choiceTargetPages,
+  choiceGroups = [],
   variableCandidates,
   apply,
   onBlockIdChange
@@ -171,6 +174,7 @@ export function TemplateContentBlockInspector({
       {block.type === 'choice-view' ? (
         <ChoiceViewportEditor
           choiceTargetPages={choiceTargetPages}
+          choiceGroups={choiceGroups}
           value={block.defaultViewport}
           onChange={(defaultViewport) => update({ ...block, defaultViewport })}
         />
@@ -181,21 +185,173 @@ export function TemplateContentBlockInspector({
 
 function ChoiceViewportEditor({
   choiceTargetPages,
+  choiceGroups,
   value,
   onChange
 }: {
   choiceTargetPages: readonly TemplateChoiceTargetPage[]
+  choiceGroups: readonly Extract<FunctionInputDef, { type: 'choice-group' }>[]
   value: ChoiceViewport
   onChange(value: ChoiceViewport): void
 }): JSX.Element {
   const allTargets = choiceTargetPages.flatMap((page) => page.questions)
   const selectedTarget =
-    value.mode === 'focus'
+    value.mode === 'focus' && !('group' in value)
       ? (allTargets.find((target) => sameChoiceQuestionRef(target.ref, value.questionRef)) ?? null)
       : null
   const selectedPage =
     choiceTargetPages.find((page) => page.pageIndex === selectedTarget?.pageIndex) ?? null
   const pageIndexes = choiceTargetPages.map((page) => page.pageIndex)
+
+  const setChoiceGroup = (name: string): void => {
+    if (!name) {
+      if (value.mode === 'free') onChange({ mode: 'free' })
+      else if (value.mode === 'range') {
+        const firstPage = pageIndexes[0] ?? 0
+        onChange({ mode: 'range', startPage: firstPage, endPage: firstPage })
+      } else {
+        onChange({
+          mode: 'focus',
+          questionRef: allTargets[0]?.ref ?? {
+            scope: 'absolute',
+            callPath: [],
+            questionId: ''
+          }
+        })
+      }
+      return
+    }
+    const group = { scope: 'local' as const, name }
+    if (value.mode === 'free') onChange({ mode: 'free', group })
+    else if (value.mode === 'range') {
+      onChange({ mode: 'range', group, startPage: 0, endPage: 0 })
+    } else {
+      onChange({ mode: 'focus', group, pageIndex: 0, questionIndex: 0 })
+    }
+  }
+
+  const groupField = (
+    <label>
+      选择题组
+      <select
+        value={'group' in value ? value.group.name : ''}
+        onChange={(event) => setChoiceGroup(event.target.value)}
+      >
+        <option value="">当前模板</option>
+        {choiceGroups.map((input) => (
+          <option key={input.name} value={input.name}>
+            {input.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+
+  if ('group' in value) {
+    const definition = choiceGroups.find((input) => input.name === value.group.name)
+    const pageCounts =
+      definition?.shape.kind === 'question'
+        ? [1]
+        : definition?.shape.kind === 'range' || definition?.shape.kind === 'all'
+          ? definition.shape.pageCounts
+          : []
+    const localPageIndexes = pageCounts.map((_count, index) => index)
+    const setGroupedMode = (mode: ChoiceViewport['mode']): void => {
+      const group = value.group
+      if (mode === 'free') onChange({ mode, group })
+      else if (mode === 'range') onChange({ mode, group, startPage: 0, endPage: 0 })
+      else onChange({ mode, group, pageIndex: 0, questionIndex: 0 })
+    }
+    return (
+      <div className={styles.viewportFields}>
+        {groupField}
+        <label>
+          显示模式
+          <select
+            value={value.mode}
+            onChange={(event) => setGroupedMode(event.target.value as ChoiceViewport['mode'])}
+          >
+            <option value="free">自由浏览</option>
+            <option value="focus">聚焦题目</option>
+            <option value="range">分页范围</option>
+          </select>
+        </label>
+        {value.mode === 'free' ? (
+          <PageSelect
+            label="初始页"
+            pageIndexes={localPageIndexes}
+            value={value.initialPage}
+            onChange={(initialPage) => onChange({ ...value, initialPage })}
+          />
+        ) : null}
+        {value.mode === 'range' ? (
+          <div className={styles.geometryGrid}>
+            <PageSelect
+              label="起始页"
+              optional={false}
+              pageIndexes={localPageIndexes}
+              value={value.startPage}
+              onChange={(startPage) => {
+                if (startPage === undefined) return
+                onChange({
+                  ...value,
+                  startPage,
+                  endPage: Math.max(startPage, value.endPage)
+                })
+              }}
+            />
+            <PageSelect
+              label="结束页"
+              optional={false}
+              pageIndexes={localPageIndexes}
+              value={value.endPage}
+              onChange={(endPage) => {
+                if (endPage === undefined) return
+                onChange({
+                  ...value,
+                  startPage: Math.min(value.startPage, endPage),
+                  endPage
+                })
+              }}
+            />
+            <PageSelect
+              label="初始页"
+              pageIndexes={localPageIndexes.filter(
+                (pageIndex) => pageIndex >= value.startPage && pageIndex <= value.endPage
+              )}
+              value={value.initialPage}
+              onChange={(initialPage) => onChange({ ...value, initialPage })}
+            />
+          </div>
+        ) : null}
+        {value.mode === 'focus' ? (
+          <div className={styles.geometryGrid}>
+            <PageSelect
+              label="页面"
+              optional={false}
+              pageIndexes={localPageIndexes}
+              value={value.pageIndex}
+              onChange={(pageIndex) => {
+                if (pageIndex !== undefined) onChange({ ...value, pageIndex, questionIndex: 0 })
+              }}
+            />
+            <PageSelect
+              label="题目"
+              optional={false}
+              pageIndexes={Array.from(
+                { length: pageCounts[value.pageIndex] ?? 0 },
+                (_item, index) => index
+              )}
+              value={value.questionIndex}
+              onChange={(questionIndex) => {
+                if (questionIndex !== undefined) onChange({ ...value, questionIndex })
+              }}
+            />
+          </div>
+        ) : null}
+      </div>
+    )
+  }
 
   const setMode = (mode: ChoiceViewport['mode']): void => {
     if (mode === 'free') onChange({ mode: 'free' })
@@ -215,6 +371,7 @@ function ChoiceViewportEditor({
   }
   return (
     <div className={styles.viewportFields}>
+      {groupField}
       <label>
         显示模式
         <select

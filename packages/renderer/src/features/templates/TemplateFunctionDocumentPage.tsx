@@ -3,6 +3,7 @@ import type {
   FrameNode,
   FunctionDef,
   FunctionDocumentOperation,
+  FunctionInputDef,
   FunctionLibrarySummary,
   FunctionLocator,
   FunctionLibraryEntry,
@@ -687,6 +688,10 @@ function TemplateFunctionDocumentEditor({
                   <TemplateContentBlockInspector
                     apply={applyDefinition}
                     block={selectedContentBlock}
+                    choiceGroups={
+                      document?.content.inputs.filter((input) => input.type === 'choice-group') ??
+                      []
+                    }
                     choiceTargetPages={choiceTargetPages}
                     pageId={selectedNode.id}
                     variableCandidates={variableCandidates}
@@ -791,15 +796,20 @@ function functionDefinition(entry: FunctionLibraryEntry): FunctionDef {
 function collectFunctionVariableCandidates(
   root: FrameNode,
   functions: readonly FunctionDef[],
-  inputs: readonly { name: string; type: 'string' | 'number' | 'file' }[]
+  inputs: readonly FunctionInputDef[]
 ): TemplateVariableCandidate[] {
-  const inputCandidates: TemplateVariableCandidate[] = inputs.map((input) => ({
-    key: `local:${input.name}`,
-    label: input.name,
-    sourceLabel: '函数输入',
-    type: input.type,
-    ref: { scope: 'local', name: input.name }
-  }))
+  const inputCandidates: TemplateVariableCandidate[] = inputs
+    .filter(
+      (input): input is Extract<FunctionInputDef, { type: 'string' | 'number' | 'file' }> =>
+        input.type !== 'choice-group'
+    )
+    .map((input) => ({
+      key: `local:${input.name}`,
+      label: input.name,
+      sourceLabel: '函数输入',
+      type: input.type,
+      ref: { scope: 'local', name: input.name }
+    }))
   const bodyCandidates = collectTemplateVariableCandidates(root, functions, [], [])
   const used = new Set(inputCandidates.map((candidate) => candidate.key))
   return [...inputCandidates, ...bodyCandidates.filter((candidate) => !used.has(candidate.key))]

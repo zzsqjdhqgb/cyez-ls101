@@ -3548,6 +3548,4400 @@
         },
         "editorState": {}
       }
+    },
+    {
+      "templateId": "261d2ad9-225e-41ac-a394-1887b912b917",
+      "version": 2,
+      "releaseHash": "sha256:f7e2dbb9761f906fb9f4b6683b340d54f7481d50caa9af2a929161c7b634f2cc",
+      "document": {
+        "content": {
+          "name": "上海高考口语 - 朗读句子",
+          "description": "",
+          "interfaces": [
+            {
+              "alias": "data",
+              "interfaceId": "sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14",
+              "acceptedVars": [
+                "sentence_1",
+                "sentence_2",
+                "passage_1",
+                "situation_1",
+                "situation_std_1",
+                "situation_2",
+                "situation_std_2",
+                "picture_file1.inst",
+                "picture_file1.img",
+                "picture_file2.inst",
+                "picture_file2.img",
+                "picture_file3.inst",
+                "picture_file3.img",
+                "picture_file4.inst",
+                "picture_file4.img",
+                "picture_start",
+                "picture_std",
+                "quickresp_1",
+                "quickresp_std_1",
+                "quickresp_2",
+                "quickresp_std_2",
+                "quickresp_3",
+                "quickresp_std_3",
+                "quickresp_4",
+                "quickresp_std_4",
+                "LS_passage_topic",
+                "LS_passage",
+                "LS_question_1",
+                "LS_question_std_1",
+                "LS_question_2",
+                "LS_question_std_2"
+              ]
+            }
+          ],
+          "root": {
+            "id": "root",
+            "name": "根框架",
+            "type": "frame",
+            "children": [
+              {
+                "id": "function-call",
+                "name": "朗读句子题组",
+                "type": "function",
+                "functionRef": "sha256:e8864b20e35f3f6c2c2db7ad50ee39e3ff10b3a0b0c1327665e3c0a10033954e",
+                "inputs": {
+                  "sen1": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "sentence_1"
+                        }
+                      }
+                    ]
+                  },
+                  "sen2": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "sentence_2"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "outputNames": {}
+              }
+            ]
+          },
+          "schemaUses": []
+        },
+        "resources": {
+          "functions": [
+            {
+              "name": "Directions页面",
+              "inputs": [
+                {
+                  "name": "title",
+                  "type": "string"
+                },
+                {
+                  "name": "direction",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "text",
+                          "type": "text",
+                          "x": 10,
+                          "y": 10,
+                          "width": 79.4,
+                          "fontSize": 50,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "title"
+                                }
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "text-1",
+                          "type": "text",
+                          "x": 10,
+                          "y": 27.8,
+                          "width": 79.4,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "direction"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "title"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": ".  "
+                            },
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "direction"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": "."
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "name": "页面"
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [],
+              "id": "sha256:a8cb8dff143584bdbf03b4a4a12feffd791e2467d089dc98f4c798a0c34af6e4"
+            },
+            {
+              "name": "朗读句子",
+              "inputs": [
+                {
+                  "name": "sentence",
+                  "type": "string"
+                },
+                {
+                  "name": "idx",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "text",
+                          "type": "text",
+                          "x": 10.8,
+                          "y": 20.3,
+                          "width": 76.7,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "idx"
+                                }
+                              },
+                              {
+                                "type": "literal",
+                                "value": ". "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "sentence"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 30
+                        }
+                      },
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 15
+                        },
+                        "outputName": "output"
+                      }
+                    ],
+                    "name": "页面"
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "ans",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "output"
+                  }
+                }
+              ],
+              "schemaUses": [],
+              "id": "sha256:a013912ae21697edef85a2ca1a0b72b49b42d27736a0174587e25ccedb53ad28"
+            },
+            {
+              "name": "朗读句子题组",
+              "inputs": [
+                {
+                  "name": "sen1",
+                  "type": "string"
+                },
+                {
+                  "name": "sen2",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "variable",
+                    "type": "variable",
+                    "variableName": "title",
+                    "value": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "Speaking. Section A"
+                        }
+                      ]
+                    },
+                    "name": "变量"
+                  },
+                  {
+                    "id": "variable-1",
+                    "type": "variable",
+                    "variableName": "direction",
+                    "value": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "Directions: Read aloud the following sentences. For each sentence, you will have thirty seconds to prepare and fifteen seconds to read."
+                        }
+                      ]
+                    },
+                    "name": "变量"
+                  },
+                  {
+                    "id": "function-call",
+                    "name": "Directions页面",
+                    "type": "function",
+                    "functionRef": "sha256:a8cb8dff143584bdbf03b4a4a12feffd791e2467d089dc98f4c798a0c34af6e4",
+                    "inputs": {
+                      "title": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "title"
+                            }
+                          }
+                        ]
+                      },
+                      "direction": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "direction"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {}
+                  },
+                  {
+                    "id": "function-call-1",
+                    "name": "朗读句子",
+                    "type": "function",
+                    "functionRef": "sha256:a013912ae21697edef85a2ca1a0b72b49b42d27736a0174587e25ccedb53ad28",
+                    "inputs": {
+                      "sentence": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "sen1"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "1"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans1"
+                    }
+                  },
+                  {
+                    "id": "function-call-2",
+                    "name": "朗读句子",
+                    "type": "function",
+                    "functionRef": "sha256:a013912ae21697edef85a2ca1a0b72b49b42d27736a0174587e25ccedb53ad28",
+                    "inputs": {
+                      "sentence": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "sen2"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "2"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans2"
+                    }
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [
+                {
+                  "useId": "schema-use-1",
+                  "schemaId": "69fc2dc6-31d6-4666-bf6f-4b65a1e996dd",
+                  "inputBindings": {
+                    "question-description": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "## "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "title"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "direction"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n1. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "sen1"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n2. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "sen2"
+                          }
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "1. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "sen1"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n2. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "sen2"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "answerBindings": {
+                    "sentence-1": {
+                      "type": "fixed-speech",
+                      "text": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "sen1"
+                            }
+                          }
+                        ]
+                      },
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans1"
+                      }
+                    },
+                    "sentence-2": {
+                      "type": "fixed-speech",
+                      "text": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "sen2"
+                            }
+                          }
+                        ]
+                      },
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans2"
+                      }
+                    }
+                  },
+                  "attachments": []
+                }
+              ],
+              "id": "sha256:e8864b20e35f3f6c2c2db7ad50ee39e3ff10b3a0b0c1327665e3c0a10033954e"
+            }
+          ]
+        },
+        "editorState": {}
+      }
+    },
+    {
+      "templateId": "c77c98f4-049d-4991-a5dc-3c39b7088100",
+      "version": 2,
+      "releaseHash": "sha256:36092d4de190804f0ffdc1a8930fd06fd9d0becdb4acf2b7d6d69336c881df0b",
+      "document": {
+        "content": {
+          "name": "上海高考口语 - 朗读短文",
+          "description": "",
+          "interfaces": [
+            {
+              "alias": "data",
+              "interfaceId": "sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14",
+              "acceptedVars": [
+                "sentence_1",
+                "sentence_2",
+                "passage_1",
+                "situation_1",
+                "situation_std_1",
+                "situation_2",
+                "situation_std_2",
+                "picture_file1.inst",
+                "picture_file1.img",
+                "picture_file2.inst",
+                "picture_file2.img",
+                "picture_file3.inst",
+                "picture_file3.img",
+                "picture_file4.inst",
+                "picture_file4.img",
+                "picture_start",
+                "picture_std",
+                "quickresp_1",
+                "quickresp_std_1",
+                "quickresp_2",
+                "quickresp_std_2",
+                "quickresp_3",
+                "quickresp_std_3",
+                "quickresp_4",
+                "quickresp_std_4",
+                "LS_passage_topic",
+                "LS_passage",
+                "LS_question_1",
+                "LS_question_std_1",
+                "LS_question_2",
+                "LS_question_std_2"
+              ]
+            }
+          ],
+          "root": {
+            "id": "root",
+            "name": "根框架",
+            "type": "frame",
+            "children": [
+              {
+                "id": "function-call-1",
+                "name": "朗读短文题组",
+                "type": "function",
+                "functionRef": "sha256:7f20529a9a3903eed71189a9d177ff9c48262f110e2e954246e93714af913519",
+                "inputs": {
+                  "passage": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "passage_1"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "outputNames": {}
+              }
+            ]
+          },
+          "schemaUses": []
+        },
+        "resources": {
+          "functions": [
+            {
+              "name": "Directions页面",
+              "inputs": [
+                {
+                  "name": "title",
+                  "type": "string"
+                },
+                {
+                  "name": "direction",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "text",
+                          "type": "text",
+                          "x": 10,
+                          "y": 10,
+                          "width": 79.4,
+                          "fontSize": 50,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "title"
+                                }
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "text-1",
+                          "type": "text",
+                          "x": 10,
+                          "y": 27.8,
+                          "width": 79.4,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "direction"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "title"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": ".  "
+                            },
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "direction"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": "."
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "name": "页面"
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [],
+              "id": "sha256:a8cb8dff143584bdbf03b4a4a12feffd791e2467d089dc98f4c798a0c34af6e4"
+            },
+            {
+              "name": "朗读短文",
+              "inputs": [
+                {
+                  "name": "passage",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "text",
+                          "type": "text",
+                          "x": 12.1,
+                          "y": 18.3,
+                          "width": 78.3,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "passage"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 60
+                        }
+                      },
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 30
+                        },
+                        "outputName": "output"
+                      }
+                    ],
+                    "name": "页面"
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "ans",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "output"
+                  }
+                }
+              ],
+              "schemaUses": [],
+              "id": "sha256:bd57b844d6a9ca0556204175aa4316227418b31d8b6494b2b3e039f1ed070588"
+            },
+            {
+              "name": "朗读短文题组",
+              "inputs": [
+                {
+                  "name": "passage",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "variable",
+                    "type": "variable",
+                    "variableName": "title",
+                    "value": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "Section B"
+                        }
+                      ]
+                    },
+                    "name": "变量"
+                  },
+                  {
+                    "id": "variable-1",
+                    "type": "variable",
+                    "variableName": "direction",
+                    "value": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "Directions: Read aloud the following passage. You will have one minute to prepare and thirty seconds to read."
+                        }
+                      ]
+                    },
+                    "name": "变量"
+                  },
+                  {
+                    "id": "function-call",
+                    "name": "Directions页面",
+                    "type": "function",
+                    "functionRef": "sha256:a8cb8dff143584bdbf03b4a4a12feffd791e2467d089dc98f4c798a0c34af6e4",
+                    "inputs": {
+                      "title": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "title"
+                            }
+                          }
+                        ]
+                      },
+                      "direction": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "direction"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {}
+                  },
+                  {
+                    "id": "function-call-1",
+                    "name": "朗读短文",
+                    "type": "function",
+                    "functionRef": "sha256:bd57b844d6a9ca0556204175aa4316227418b31d8b6494b2b3e039f1ed070588",
+                    "inputs": {
+                      "passage": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "passage"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans"
+                    }
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [
+                {
+                  "useId": "schema-use-1",
+                  "schemaId": "b066147d-96c5-401b-9f08-79e583fdd473",
+                  "inputBindings": {
+                    "question-description": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "## "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "title"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "direction"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "passage"
+                          }
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "passage"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "answerBindings": {
+                    "passage": {
+                      "type": "fixed-speech",
+                      "text": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "passage"
+                            }
+                          }
+                        ]
+                      },
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans"
+                      }
+                    }
+                  },
+                  "attachments": []
+                }
+              ],
+              "id": "sha256:7f20529a9a3903eed71189a9d177ff9c48262f110e2e954246e93714af913519"
+            }
+          ]
+        },
+        "editorState": {}
+      }
+    },
+    {
+      "templateId": "bf2dddd5-f85f-4fbe-8e2f-9f2aa86f5e05",
+      "version": 2,
+      "releaseHash": "sha256:9b7e1ffaa6fef924d7d9c432d25f39913b575a0c5431ec252ecf0ebb32d8c0f3",
+      "document": {
+        "content": {
+          "name": "上海高考口语 - 情景提问",
+          "description": "",
+          "interfaces": [
+            {
+              "alias": "data",
+              "interfaceId": "sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14",
+              "acceptedVars": [
+                "sentence_1",
+                "sentence_2",
+                "passage_1",
+                "situation_1",
+                "situation_std_1",
+                "situation_2",
+                "situation_std_2",
+                "picture_file1.inst",
+                "picture_file1.img",
+                "picture_file2.inst",
+                "picture_file2.img",
+                "picture_file3.inst",
+                "picture_file3.img",
+                "picture_file4.inst",
+                "picture_file4.img",
+                "picture_start",
+                "picture_std",
+                "quickresp_1",
+                "quickresp_std_1",
+                "quickresp_2",
+                "quickresp_std_2",
+                "quickresp_3",
+                "quickresp_std_3",
+                "quickresp_4",
+                "quickresp_std_4",
+                "LS_passage_topic",
+                "LS_passage",
+                "LS_question_1",
+                "LS_question_std_1",
+                "LS_question_2",
+                "LS_question_std_2"
+              ]
+            }
+          ],
+          "root": {
+            "id": "root",
+            "name": "根框架",
+            "type": "frame",
+            "children": [
+              {
+                "id": "function-call-2",
+                "name": "情景提问题组",
+                "type": "function",
+                "functionRef": "sha256:b668d7326faf9397000f74e9b9b2edfd2412c94c5140a1257f467e191fc46afe",
+                "inputs": {
+                  "situation1": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "situation_1"
+                        }
+                      }
+                    ]
+                  },
+                  "situation2": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "situation_2"
+                        }
+                      }
+                    ]
+                  },
+                  "std1": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "situation_std_1"
+                        }
+                      }
+                    ]
+                  },
+                  "std2": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "situation_std_2"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "outputNames": {}
+              }
+            ]
+          },
+          "schemaUses": []
+        },
+        "resources": {
+          "functions": [
+            {
+              "name": "Directions页面",
+              "inputs": [
+                {
+                  "name": "title",
+                  "type": "string"
+                },
+                {
+                  "name": "direction",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "text",
+                          "type": "text",
+                          "x": 10,
+                          "y": 10,
+                          "width": 79.4,
+                          "fontSize": 50,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "title"
+                                }
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "text-1",
+                          "type": "text",
+                          "x": 10,
+                          "y": 27.8,
+                          "width": 79.4,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "direction"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "title"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": ".  "
+                            },
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "direction"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": "."
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "name": "页面"
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [],
+              "id": "sha256:a8cb8dff143584bdbf03b4a4a12feffd791e2467d089dc98f4c798a0c34af6e4"
+            },
+            {
+              "name": "情景提问",
+              "inputs": [
+                {
+                  "name": "situation",
+                  "type": "string"
+                },
+                {
+                  "name": "idx",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "text",
+                          "type": "text",
+                          "x": 11.5,
+                          "y": 33.3,
+                          "width": 78.5,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Question "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "idx"
+                                }
+                              },
+                              {
+                                "type": "literal",
+                                "value": ": "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "situation"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "literal",
+                              "value": "Question "
+                            },
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "idx"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": ": "
+                            },
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "situation"
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 20
+                        },
+                        "outputName": "output"
+                      }
+                    ],
+                    "name": "页面"
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "ans",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "output"
+                  }
+                }
+              ],
+              "schemaUses": [],
+              "id": "sha256:09b417a3f3e344ac3b80526c3cc9da3270c5a2b3c3c2ffef9d2b22b57308fc79"
+            },
+            {
+              "name": "情景提问题组",
+              "inputs": [
+                {
+                  "name": "situation1",
+                  "type": "string"
+                },
+                {
+                  "name": "situation2",
+                  "type": "string"
+                },
+                {
+                  "name": "std1",
+                  "type": "string"
+                },
+                {
+                  "name": "std2",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "variable",
+                    "type": "variable",
+                    "variableName": "title",
+                    "value": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "Section C"
+                        }
+                      ]
+                    },
+                    "name": "变量"
+                  },
+                  {
+                    "id": "variable-1",
+                    "type": "variable",
+                    "variableName": "direction",
+                    "value": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "Directions: Ask two questions about each situation given below. At least one special question should be asked about each situation."
+                        }
+                      ]
+                    },
+                    "name": "变量"
+                  },
+                  {
+                    "id": "function-call",
+                    "name": "Directions页面",
+                    "type": "function",
+                    "functionRef": "sha256:a8cb8dff143584bdbf03b4a4a12feffd791e2467d089dc98f4c798a0c34af6e4",
+                    "inputs": {
+                      "title": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "title"
+                            }
+                          }
+                        ]
+                      },
+                      "direction": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "direction"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {}
+                  },
+                  {
+                    "id": "function-call-1",
+                    "name": "情景提问",
+                    "type": "function",
+                    "functionRef": "sha256:09b417a3f3e344ac3b80526c3cc9da3270c5a2b3c3c2ffef9d2b22b57308fc79",
+                    "inputs": {
+                      "situation": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "situation1"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "1~2"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans-1"
+                    }
+                  },
+                  {
+                    "id": "function-call-2",
+                    "name": "情景提问",
+                    "type": "function",
+                    "functionRef": "sha256:09b417a3f3e344ac3b80526c3cc9da3270c5a2b3c3c2ffef9d2b22b57308fc79",
+                    "inputs": {
+                      "situation": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "situation2"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "3~4"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans-2"
+                    }
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [
+                {
+                  "useId": "schema-use-1",
+                  "schemaId": "89d318a8-0e31-4650-a2d9-9ce7e968f397",
+                  "inputBindings": {
+                    "question-description": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "## "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "title"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "direction"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\nQuestion 1~2: "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "situation1"
+                          }
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "std1"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "answerBindings": {
+                    "answer": {
+                      "type": "free-speech",
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-1"
+                      }
+                    }
+                  },
+                  "attachments": []
+                },
+                {
+                  "useId": "schema-use-2",
+                  "schemaId": "89d318a8-0e31-4650-a2d9-9ce7e968f397",
+                  "inputBindings": {
+                    "question-description": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "## "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "title"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "direction"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\nQuestion 3~4: "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "situation2"
+                          }
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "std2"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "answerBindings": {
+                    "answer": {
+                      "type": "free-speech",
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-2"
+                      }
+                    }
+                  },
+                  "attachments": []
+                }
+              ],
+              "id": "sha256:b668d7326faf9397000f74e9b9b2edfd2412c94c5140a1257f467e191fc46afe"
+            }
+          ]
+        },
+        "editorState": {}
+      }
+    },
+    {
+      "templateId": "dccc9ca8-6b17-4b54-8fb8-bc5be6517e88",
+      "version": 2,
+      "releaseHash": "sha256:619f939518f3ca3c08a535dabe8beaed26e6db4f683b6b36ddf5d027f80428b9",
+      "document": {
+        "content": {
+          "name": "上海高考口语 - 看图说话",
+          "description": "",
+          "interfaces": [
+            {
+              "alias": "data",
+              "interfaceId": "sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14",
+              "acceptedVars": [
+                "sentence_1",
+                "sentence_2",
+                "passage_1",
+                "situation_1",
+                "situation_std_1",
+                "situation_2",
+                "situation_std_2",
+                "picture_file1.inst",
+                "picture_file1.img",
+                "picture_file2.inst",
+                "picture_file2.img",
+                "picture_file3.inst",
+                "picture_file3.img",
+                "picture_file4.inst",
+                "picture_file4.img",
+                "picture_start",
+                "picture_std",
+                "quickresp_1",
+                "quickresp_std_1",
+                "quickresp_2",
+                "quickresp_std_2",
+                "quickresp_3",
+                "quickresp_std_3",
+                "quickresp_4",
+                "quickresp_std_4",
+                "LS_passage_topic",
+                "LS_passage",
+                "LS_question_1",
+                "LS_question_std_1",
+                "LS_question_2",
+                "LS_question_std_2"
+              ]
+            }
+          ],
+          "root": {
+            "id": "root",
+            "name": "根框架",
+            "type": "frame",
+            "children": [
+              {
+                "id": "function-call-6",
+                "name": "看图说话题组",
+                "type": "function",
+                "functionRef": "sha256:3244c5e3f77e8ddfd6c8dd0e61f086618c02394f60566ad5fe70d947d7ac076a",
+                "inputs": {
+                  "img1": {
+                    "type": "file",
+                    "source": "variable",
+                    "ref": {
+                      "scope": "interface",
+                      "alias": "data",
+                      "varName": "picture_file1.img"
+                    }
+                  },
+                  "img2": {
+                    "type": "file",
+                    "source": "variable",
+                    "ref": {
+                      "scope": "interface",
+                      "alias": "data",
+                      "varName": "picture_file2.img"
+                    }
+                  },
+                  "img3": {
+                    "type": "file",
+                    "source": "variable",
+                    "ref": {
+                      "scope": "interface",
+                      "alias": "data",
+                      "varName": "picture_file3.img"
+                    }
+                  },
+                  "img4": {
+                    "type": "file",
+                    "source": "variable",
+                    "ref": {
+                      "scope": "interface",
+                      "alias": "data",
+                      "varName": "picture_file4.img"
+                    }
+                  },
+                  "img1-inst": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "picture_file1.inst"
+                        }
+                      }
+                    ]
+                  },
+                  "img2-inst": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "picture_file2.inst"
+                        }
+                      }
+                    ]
+                  },
+                  "img3-inst": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "picture_file3.inst"
+                        }
+                      }
+                    ]
+                  },
+                  "img4-inst": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "picture_file4.inst"
+                        }
+                      }
+                    ]
+                  },
+                  "prefix": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "picture_start"
+                        }
+                      }
+                    ]
+                  },
+                  "std": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "picture_std"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "outputNames": {}
+              }
+            ]
+          },
+          "schemaUses": []
+        },
+        "resources": {
+          "functions": [
+            {
+              "name": "Directions页面",
+              "inputs": [
+                {
+                  "name": "title",
+                  "type": "string"
+                },
+                {
+                  "name": "direction",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "text",
+                          "type": "text",
+                          "x": 10,
+                          "y": 10,
+                          "width": 79.4,
+                          "fontSize": 50,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "title"
+                                }
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "text-1",
+                          "type": "text",
+                          "x": 10,
+                          "y": 27.8,
+                          "width": 79.4,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "direction"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "title"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": ".  "
+                            },
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "direction"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": "."
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "name": "页面"
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [],
+              "id": "sha256:a8cb8dff143584bdbf03b4a4a12feffd791e2467d089dc98f4c798a0c34af6e4"
+            },
+            {
+              "name": "看图说话",
+              "inputs": [
+                {
+                  "name": "img1",
+                  "type": "file"
+                },
+                {
+                  "name": "img2",
+                  "type": "file"
+                },
+                {
+                  "name": "img3",
+                  "type": "file"
+                },
+                {
+                  "name": "img4",
+                  "type": "file"
+                },
+                {
+                  "name": "pic_start",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "text",
+                          "type": "text",
+                          "x": 11.2,
+                          "y": 18.8,
+                          "width": 40,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "1"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "id": "text-1",
+                          "type": "text",
+                          "x": 51.3,
+                          "y": 19.8,
+                          "width": 40,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "2"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "id": "text-1-1",
+                          "type": "text",
+                          "x": 11.2,
+                          "y": 61,
+                          "width": 40,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "3"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "id": "image",
+                          "type": "image",
+                          "x": 14.4,
+                          "y": 19.3,
+                          "width": 34.5,
+                          "height": 36.3,
+                          "src": {
+                            "type": "file",
+                            "source": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "img1"
+                            }
+                          }
+                        },
+                        {
+                          "id": "image-1",
+                          "type": "image",
+                          "x": 54.9,
+                          "y": 20,
+                          "width": 34.5,
+                          "height": 36.3,
+                          "src": {
+                            "type": "file",
+                            "source": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "img2"
+                            }
+                          }
+                        },
+                        {
+                          "id": "text-1-1-1",
+                          "type": "text",
+                          "x": 51.4,
+                          "y": 60.1,
+                          "width": 40,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "4"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "id": "image-1-1",
+                          "type": "image",
+                          "x": 54.8,
+                          "y": 60.4,
+                          "width": 34.5,
+                          "height": 36.3,
+                          "src": {
+                            "type": "file",
+                            "source": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "img4"
+                            }
+                          }
+                        },
+                        {
+                          "id": "image-1-1-1",
+                          "type": "image",
+                          "x": 14.2,
+                          "y": 59.7,
+                          "width": 34.5,
+                          "height": 36.3,
+                          "src": {
+                            "type": "file",
+                            "source": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "img3"
+                            }
+                          }
+                        },
+                        {
+                          "id": "text-2",
+                          "type": "text",
+                          "x": 9.9,
+                          "y": 3.6,
+                          "width": 79.4,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Begin your talk with the sentence given: "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "pic_start"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 60
+                        }
+                      },
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 60
+                        },
+                        "outputName": "output"
+                      }
+                    ],
+                    "name": "页面"
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "ans",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "output"
+                  }
+                }
+              ],
+              "schemaUses": [],
+              "id": "sha256:3ad1ce19fb81a2b3cecd549e513fcfc81367932d2b8b3a246ccae31e7284d0e5"
+            },
+            {
+              "name": "看图说话题组",
+              "inputs": [
+                {
+                  "name": "img1",
+                  "type": "file"
+                },
+                {
+                  "name": "img2",
+                  "type": "file"
+                },
+                {
+                  "name": "img3",
+                  "type": "file"
+                },
+                {
+                  "name": "img4",
+                  "type": "file"
+                },
+                {
+                  "name": "img1-inst",
+                  "type": "string"
+                },
+                {
+                  "name": "img2-inst",
+                  "type": "string"
+                },
+                {
+                  "name": "img3-inst",
+                  "type": "string"
+                },
+                {
+                  "name": "img4-inst",
+                  "type": "string"
+                },
+                {
+                  "name": "prefix",
+                  "type": "string"
+                },
+                {
+                  "name": "std",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "variable",
+                    "type": "variable",
+                    "variableName": "title",
+                    "value": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "Section D"
+                        }
+                      ]
+                    },
+                    "name": "变量"
+                  },
+                  {
+                    "id": "variable-1",
+                    "type": "variable",
+                    "variableName": "direction",
+                    "value": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "Directions: You will have one minute to prepare and another minute to talk about the following pictures with at least five sentences. Begin your talk with the sentence given."
+                        }
+                      ]
+                    },
+                    "name": "变量"
+                  },
+                  {
+                    "id": "function-call",
+                    "name": "Directions页面",
+                    "type": "function",
+                    "functionRef": "sha256:a8cb8dff143584bdbf03b4a4a12feffd791e2467d089dc98f4c798a0c34af6e4",
+                    "inputs": {
+                      "title": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "title"
+                            }
+                          }
+                        ]
+                      },
+                      "direction": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "direction"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {}
+                  },
+                  {
+                    "id": "function-call-1",
+                    "name": "看图说话",
+                    "type": "function",
+                    "functionRef": "sha256:3ad1ce19fb81a2b3cecd549e513fcfc81367932d2b8b3a246ccae31e7284d0e5",
+                    "inputs": {
+                      "img1": {
+                        "type": "file",
+                        "source": "variable",
+                        "ref": {
+                          "scope": "local",
+                          "name": "img1"
+                        }
+                      },
+                      "img2": {
+                        "type": "file",
+                        "source": "variable",
+                        "ref": {
+                          "scope": "local",
+                          "name": "img2"
+                        }
+                      },
+                      "img3": {
+                        "type": "file",
+                        "source": "variable",
+                        "ref": {
+                          "scope": "local",
+                          "name": "img3"
+                        }
+                      },
+                      "img4": {
+                        "type": "file",
+                        "source": "variable",
+                        "ref": {
+                          "scope": "local",
+                          "name": "img4"
+                        }
+                      },
+                      "pic_start": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "prefix"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans"
+                    }
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [
+                {
+                  "useId": "schema-use-1",
+                  "schemaId": "20b03294-5fc7-4880-98f3-e69f5b85262e",
+                  "inputBindings": {
+                    "question-description": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "## "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "title"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "direction"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "prefix"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n| 1!["
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "img1-inst"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "]("
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "schema-use",
+                            "varName": "img1"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": ") | 2!["
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "img2-inst"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "]("
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "schema-use",
+                            "varName": "img2"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": ") |\n| ------ | ------ |\n| 3!["
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "img3-inst"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "]("
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "schema-use",
+                            "varName": "img3"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": ") | 4!["
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "img4-inst"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "]("
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "schema-use",
+                            "varName": "img4"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": ") |"
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "std"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "answerBindings": {
+                    "answer": {
+                      "type": "free-speech",
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans"
+                      }
+                    }
+                  },
+                  "attachments": [
+                    {
+                      "varName": "img1",
+                      "description": "看图说话第一张图",
+                      "file": {
+                        "type": "file",
+                        "source": "variable",
+                        "ref": {
+                          "scope": "local",
+                          "name": "img1"
+                        }
+                      }
+                    },
+                    {
+                      "varName": "img2",
+                      "description": "看图说话第二张图",
+                      "file": {
+                        "type": "file",
+                        "source": "variable",
+                        "ref": {
+                          "scope": "local",
+                          "name": "img2"
+                        }
+                      }
+                    },
+                    {
+                      "varName": "img3",
+                      "description": "看图说话第三张图",
+                      "file": {
+                        "type": "file",
+                        "source": "variable",
+                        "ref": {
+                          "scope": "local",
+                          "name": "img3"
+                        }
+                      }
+                    },
+                    {
+                      "varName": "img4",
+                      "description": "看图说话第四张图",
+                      "file": {
+                        "type": "file",
+                        "source": "variable",
+                        "ref": {
+                          "scope": "local",
+                          "name": "img4"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ],
+              "id": "sha256:3244c5e3f77e8ddfd6c8dd0e61f086618c02394f60566ad5fe70d947d7ac076a"
+            }
+          ]
+        },
+        "editorState": {}
+      }
+    },
+    {
+      "templateId": "490f6873-a39d-409e-954c-c345a90004a3",
+      "version": 2,
+      "releaseHash": "sha256:0d9a8af863ae131f4cee1e6698e1729e5f1624fdfe12c369419804ca306a313f",
+      "document": {
+        "content": {
+          "name": "上海高考口语 - 快速应答",
+          "description": "",
+          "interfaces": [
+            {
+              "alias": "data",
+              "interfaceId": "sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14",
+              "acceptedVars": [
+                "sentence_1",
+                "sentence_2",
+                "passage_1",
+                "situation_1",
+                "situation_std_1",
+                "situation_2",
+                "situation_std_2",
+                "picture_file1.inst",
+                "picture_file1.img",
+                "picture_file2.inst",
+                "picture_file2.img",
+                "picture_file3.inst",
+                "picture_file3.img",
+                "picture_file4.inst",
+                "picture_file4.img",
+                "picture_start",
+                "picture_std",
+                "quickresp_1",
+                "quickresp_std_1",
+                "quickresp_2",
+                "quickresp_std_2",
+                "quickresp_3",
+                "quickresp_std_3",
+                "quickresp_4",
+                "quickresp_std_4",
+                "LS_passage_topic",
+                "LS_passage",
+                "LS_question_1",
+                "LS_question_std_1",
+                "LS_question_2",
+                "LS_question_std_2"
+              ]
+            }
+          ],
+          "root": {
+            "id": "root",
+            "name": "根框架",
+            "type": "frame",
+            "children": [
+              {
+                "id": "function-call-4",
+                "name": "快速应答题组",
+                "type": "function",
+                "functionRef": "sha256:e4364cc76a2b7a46380f9aa8ac4982cd4871467067381574f8cb81e9a08b4e5a",
+                "inputs": {
+                  "ques1": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "quickresp_1"
+                        }
+                      }
+                    ]
+                  },
+                  "std1": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "quickresp_std_1"
+                        }
+                      }
+                    ]
+                  },
+                  "ques2": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "quickresp_2"
+                        }
+                      }
+                    ]
+                  },
+                  "std2": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "quickresp_std_2"
+                        }
+                      }
+                    ]
+                  },
+                  "ques3": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "quickresp_3"
+                        }
+                      }
+                    ]
+                  },
+                  "std3": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "quickresp_std_3"
+                        }
+                      }
+                    ]
+                  },
+                  "ques4": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "quickresp_4"
+                        }
+                      }
+                    ]
+                  },
+                  "std4": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "quickresp_std_4"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "outputNames": {}
+              }
+            ]
+          },
+          "schemaUses": []
+        },
+        "resources": {
+          "functions": [
+            {
+              "name": "Directions页面",
+              "inputs": [
+                {
+                  "name": "title",
+                  "type": "string"
+                },
+                {
+                  "name": "direction",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "text",
+                          "type": "text",
+                          "x": 10,
+                          "y": 10,
+                          "width": 79.4,
+                          "fontSize": 50,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "title"
+                                }
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "text-1",
+                          "type": "text",
+                          "x": 10,
+                          "y": 27.8,
+                          "width": 79.4,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "direction"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "title"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": ".  "
+                            },
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "direction"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": "."
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "name": "页面"
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [],
+              "id": "sha256:a8cb8dff143584bdbf03b4a4a12feffd791e2467d089dc98f4c798a0c34af6e4"
+            },
+            {
+              "name": "快速应答",
+              "inputs": [
+                {
+                  "name": "question",
+                  "type": "string"
+                },
+                {
+                  "name": "idx",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "text",
+                          "type": "text",
+                          "x": 27.6,
+                          "y": 39.9,
+                          "width": 40,
+                          "fontSize": 60,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Please listen"
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "idx"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": ". "
+                            },
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "question"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "name": "页面"
+                  },
+                  {
+                    "id": "page-1",
+                    "type": "page",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "text",
+                          "type": "text",
+                          "x": 27.6,
+                          "y": 39.9,
+                          "width": 40,
+                          "fontSize": 60,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Please answer"
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 5
+                        },
+                        "outputName": "output"
+                      }
+                    ],
+                    "name": "页面"
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "ans",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "output"
+                  }
+                }
+              ],
+              "schemaUses": [],
+              "id": "sha256:36c90a8a32d8a906dd733d22f24c972d893ddb02234fee0616b353649bbca906"
+            },
+            {
+              "name": "快速应答题组",
+              "inputs": [
+                {
+                  "name": "ques1",
+                  "type": "string"
+                },
+                {
+                  "name": "std1",
+                  "type": "string"
+                },
+                {
+                  "name": "ques2",
+                  "type": "string"
+                },
+                {
+                  "name": "std2",
+                  "type": "string"
+                },
+                {
+                  "name": "ques3",
+                  "type": "string"
+                },
+                {
+                  "name": "std3",
+                  "type": "string"
+                },
+                {
+                  "name": "ques4",
+                  "type": "string"
+                },
+                {
+                  "name": "std4",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "variable",
+                    "type": "variable",
+                    "variableName": "title",
+                    "value": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "Listening & Speaking. Section A"
+                        }
+                      ]
+                    },
+                    "name": "变量"
+                  },
+                  {
+                    "id": "variable-1",
+                    "type": "variable",
+                    "variableName": "direction",
+                    "value": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "Directions: In Section A, you will hear four sentences. Make quick responses to the sentences you have heard."
+                        }
+                      ]
+                    },
+                    "name": "变量"
+                  },
+                  {
+                    "id": "function-call",
+                    "name": "Directions页面",
+                    "type": "function",
+                    "functionRef": "sha256:a8cb8dff143584bdbf03b4a4a12feffd791e2467d089dc98f4c798a0c34af6e4",
+                    "inputs": {
+                      "title": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "title"
+                            }
+                          }
+                        ]
+                      },
+                      "direction": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "direction"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {}
+                  },
+                  {
+                    "id": "function-call-1",
+                    "name": "快速应答",
+                    "type": "function",
+                    "functionRef": "sha256:36c90a8a32d8a906dd733d22f24c972d893ddb02234fee0616b353649bbca906",
+                    "inputs": {
+                      "question": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "ques1"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "1"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans-1"
+                    }
+                  },
+                  {
+                    "id": "function-call-2",
+                    "name": "快速应答",
+                    "type": "function",
+                    "functionRef": "sha256:36c90a8a32d8a906dd733d22f24c972d893ddb02234fee0616b353649bbca906",
+                    "inputs": {
+                      "question": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "ques2"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "2"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans-2"
+                    }
+                  },
+                  {
+                    "id": "function-call-3",
+                    "name": "快速应答",
+                    "type": "function",
+                    "functionRef": "sha256:36c90a8a32d8a906dd733d22f24c972d893ddb02234fee0616b353649bbca906",
+                    "inputs": {
+                      "question": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "ques3"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "3"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans-3"
+                    }
+                  },
+                  {
+                    "id": "function-call-4",
+                    "name": "快速应答",
+                    "type": "function",
+                    "functionRef": "sha256:36c90a8a32d8a906dd733d22f24c972d893ddb02234fee0616b353649bbca906",
+                    "inputs": {
+                      "question": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "ques4"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "4"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans-4"
+                    }
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [
+                {
+                  "useId": "schema-use-1",
+                  "schemaId": "3305545e-8ea6-4c5d-931b-20ab4f8a7362",
+                  "inputBindings": {
+                    "question-description": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "## "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "title"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "direction"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n1. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "ques1"
+                          }
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "std1"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "answerBindings": {
+                    "answer": {
+                      "type": "free-speech",
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-1"
+                      }
+                    }
+                  },
+                  "attachments": []
+                },
+                {
+                  "useId": "schema-use-2",
+                  "schemaId": "3305545e-8ea6-4c5d-931b-20ab4f8a7362",
+                  "inputBindings": {
+                    "question-description": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "## "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "title"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "direction"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n2. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "ques2"
+                          }
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "std2"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "answerBindings": {
+                    "answer": {
+                      "type": "free-speech",
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-2"
+                      }
+                    }
+                  },
+                  "attachments": []
+                },
+                {
+                  "useId": "schema-use-3",
+                  "schemaId": "3305545e-8ea6-4c5d-931b-20ab4f8a7362",
+                  "inputBindings": {
+                    "question-description": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "## "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "title"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "direction"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n3. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "ques3"
+                          }
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "std3"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "answerBindings": {
+                    "answer": {
+                      "type": "free-speech",
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-3"
+                      }
+                    }
+                  },
+                  "attachments": []
+                },
+                {
+                  "useId": "schema-use-4",
+                  "schemaId": "3305545e-8ea6-4c5d-931b-20ab4f8a7362",
+                  "inputBindings": {
+                    "question-description": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "## "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "title"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "direction"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n4. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "ques4"
+                          }
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "std4"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "answerBindings": {
+                    "answer": {
+                      "type": "free-speech",
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-4"
+                      }
+                    }
+                  },
+                  "attachments": []
+                }
+              ],
+              "id": "sha256:e4364cc76a2b7a46380f9aa8ac4982cd4871467067381574f8cb81e9a08b4e5a"
+            }
+          ]
+        },
+        "editorState": {}
+      }
+    },
+    {
+      "templateId": "ef1dc645-eba5-4144-a82b-f52e24d5f925",
+      "version": 2,
+      "releaseHash": "sha256:280eab414bddc25ed25497c3e414b7fca053bd7af8e2dee8e8ce4f9bbb7db7a4",
+      "document": {
+        "content": {
+          "name": "上海高考口语 - 听短文回答",
+          "description": "",
+          "interfaces": [
+            {
+              "alias": "data",
+              "interfaceId": "sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14",
+              "acceptedVars": [
+                "sentence_1",
+                "sentence_2",
+                "passage_1",
+                "situation_1",
+                "situation_std_1",
+                "situation_2",
+                "situation_std_2",
+                "picture_file1.inst",
+                "picture_file1.img",
+                "picture_file2.inst",
+                "picture_file2.img",
+                "picture_file3.inst",
+                "picture_file3.img",
+                "picture_file4.inst",
+                "picture_file4.img",
+                "picture_start",
+                "picture_std",
+                "quickresp_1",
+                "quickresp_std_1",
+                "quickresp_2",
+                "quickresp_std_2",
+                "quickresp_3",
+                "quickresp_std_3",
+                "quickresp_4",
+                "quickresp_std_4",
+                "LS_passage_topic",
+                "LS_passage",
+                "LS_question_1",
+                "LS_question_std_1",
+                "LS_question_2",
+                "LS_question_std_2"
+              ]
+            }
+          ],
+          "root": {
+            "id": "root",
+            "name": "根框架",
+            "type": "frame",
+            "children": [
+              {
+                "id": "function-call-5",
+                "name": "听短文回答题组",
+                "type": "function",
+                "functionRef": "sha256:56d44b09a5938eaac62d452a262bf4c9d84ab9fcab278812101268d24eb09f49",
+                "inputs": {
+                  "passage": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "LS_passage"
+                        }
+                      }
+                    ]
+                  },
+                  "ques1": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "LS_question_1"
+                        }
+                      }
+                    ]
+                  },
+                  "std1": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "LS_question_std_1"
+                        }
+                      }
+                    ]
+                  },
+                  "ques2": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "LS_question_2"
+                        }
+                      }
+                    ]
+                  },
+                  "std2": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "LS_question_std_2"
+                        }
+                      }
+                    ]
+                  },
+                  "topic": {
+                    "type": "string",
+                    "parts": [
+                      {
+                        "type": "variable",
+                        "ref": {
+                          "scope": "interface",
+                          "alias": "data",
+                          "varName": "LS_passage_topic"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "outputNames": {}
+              }
+            ]
+          },
+          "schemaUses": []
+        },
+        "resources": {
+          "functions": [
+            {
+              "name": "Directions页面",
+              "inputs": [
+                {
+                  "name": "title",
+                  "type": "string"
+                },
+                {
+                  "name": "direction",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "text",
+                          "type": "text",
+                          "x": 10,
+                          "y": 10,
+                          "width": 79.4,
+                          "fontSize": 50,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "title"
+                                }
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "text-1",
+                          "type": "text",
+                          "x": 10,
+                          "y": 27.8,
+                          "width": 79.4,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "direction"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "title"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": ".  "
+                            },
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "direction"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": "."
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "name": "页面"
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [],
+              "id": "sha256:a8cb8dff143584bdbf03b4a4a12feffd791e2467d089dc98f4c798a0c34af6e4"
+            },
+            {
+              "name": "听短文回答",
+              "inputs": [
+                {
+                  "name": "question1",
+                  "type": "string"
+                },
+                {
+                  "name": "question2",
+                  "type": "string"
+                },
+                {
+                  "name": "passage",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "text",
+                          "type": "text",
+                          "x": 10.5,
+                          "y": 9.5,
+                          "width": 40,
+                          "fontSize": 40,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Questions:"
+                              }
+                            ]
+                          },
+                          "bold": true
+                        },
+                        {
+                          "id": "text-1",
+                          "type": "text",
+                          "x": 10.5,
+                          "y": 18.5,
+                          "width": 79.2,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "1. "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "question1"
+                                }
+                              },
+                              {
+                                "type": "literal",
+                                "value": "\n2. "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "question2"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "passage"
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 1
+                        }
+                      },
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "passage"
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 1
+                        }
+                      }
+                    ],
+                    "name": "页面"
+                  },
+                  {
+                    "id": "page-1",
+                    "type": "page",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "text",
+                          "type": "text",
+                          "x": 10.5,
+                          "y": 9.5,
+                          "width": 40,
+                          "fontSize": 40,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Questions:"
+                              }
+                            ]
+                          },
+                          "bold": true
+                        },
+                        {
+                          "id": "text-1",
+                          "type": "text",
+                          "x": 10.5,
+                          "y": 18.5,
+                          "width": 79.2,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "1. "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "question1"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "literal",
+                              "value": "Questions. One. "
+                            },
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "question1"
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 30
+                        }
+                      },
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 30
+                        },
+                        "outputName": "output1"
+                      }
+                    ],
+                    "name": "页面"
+                  },
+                  {
+                    "id": "page-1-1",
+                    "type": "page",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "text",
+                          "type": "text",
+                          "x": 10.5,
+                          "y": 9.5,
+                          "width": 40,
+                          "fontSize": 40,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Questions:"
+                              }
+                            ]
+                          },
+                          "bold": true
+                        },
+                        {
+                          "id": "text-1",
+                          "type": "text",
+                          "x": 10.5,
+                          "y": 18.5,
+                          "width": 79.2,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "2. "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "question2"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "literal",
+                              "value": "Questions. Two. "
+                            },
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "question2"
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 60
+                        }
+                      },
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 60
+                        },
+                        "outputName": "output2"
+                      }
+                    ],
+                    "name": "页面"
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "ans-1",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "output1"
+                  }
+                },
+                {
+                  "name": "ans-2",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "output2"
+                  }
+                }
+              ],
+              "schemaUses": [],
+              "id": "sha256:cfabcdf1aab49e4eab5e660aeeb8165aaa1dc4bdb92e2eda547d36ca0ca092a1"
+            },
+            {
+              "name": "听短文回答题组",
+              "inputs": [
+                {
+                  "name": "passage",
+                  "type": "string"
+                },
+                {
+                  "name": "ques1",
+                  "type": "string"
+                },
+                {
+                  "name": "std1",
+                  "type": "string"
+                },
+                {
+                  "name": "ques2",
+                  "type": "string"
+                },
+                {
+                  "name": "std2",
+                  "type": "string"
+                },
+                {
+                  "name": "topic",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "variable",
+                    "type": "variable",
+                    "variableName": "title",
+                    "value": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "Section B"
+                        }
+                      ]
+                    },
+                    "name": "变量"
+                  },
+                  {
+                    "id": "variable-1",
+                    "type": "variable",
+                    "variableName": "direction",
+                    "value": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "Directions: In Section B, you will hear a short passage about "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "topic"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": ". The passage will be read twice. After you hear the passage, answer the first question with the information you hear and the second in your own opinion with at least 3 sentences. For the first question, you will have 30 seconds to prepare and 30 seconds to talk. For the second question, you will have one minute to prepare and another minute to talk."
+                        }
+                      ]
+                    },
+                    "name": "变量"
+                  },
+                  {
+                    "id": "function-call",
+                    "name": "Directions页面",
+                    "type": "function",
+                    "functionRef": "sha256:a8cb8dff143584bdbf03b4a4a12feffd791e2467d089dc98f4c798a0c34af6e4",
+                    "inputs": {
+                      "title": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "title"
+                            }
+                          }
+                        ]
+                      },
+                      "direction": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "direction"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {}
+                  },
+                  {
+                    "id": "function-call-1",
+                    "name": "听短文回答",
+                    "type": "function",
+                    "functionRef": "sha256:cfabcdf1aab49e4eab5e660aeeb8165aaa1dc4bdb92e2eda547d36ca0ca092a1",
+                    "inputs": {
+                      "question1": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "ques1"
+                            }
+                          }
+                        ]
+                      },
+                      "question2": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "ques2"
+                            }
+                          }
+                        ]
+                      },
+                      "passage": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "passage"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans-1": "ans-1",
+                      "ans-2": "ans-2"
+                    }
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [
+                {
+                  "useId": "schema-use-1",
+                  "schemaId": "a46b4930-9ed0-438e-8714-e6f5dd45428c",
+                  "inputBindings": {
+                    "question-description": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "## "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "title"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "direction"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "passage"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n1. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "ques1"
+                          }
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "std1"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "answerBindings": {
+                    "answer": {
+                      "type": "free-speech",
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-1"
+                      }
+                    }
+                  },
+                  "attachments": []
+                },
+                {
+                  "useId": "schema-use-2",
+                  "schemaId": "5b673f50-b3a8-485c-96fc-3e06e33429d5",
+                  "inputBindings": {
+                    "question-description": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "## "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "title"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "direction"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "passage"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n2. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "ques2"
+                          }
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "std2"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "answerBindings": {
+                    "answer": {
+                      "type": "free-speech",
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-2"
+                      }
+                    }
+                  },
+                  "attachments": []
+                }
+              ],
+              "id": "sha256:56d44b09a5938eaac62d452a262bf4c9d84ab9fcab278812101268d24eb09f49"
+            }
+          ]
+        },
+        "editorState": {}
+      }
     }
   ]
 }

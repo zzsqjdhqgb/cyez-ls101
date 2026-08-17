@@ -185,7 +185,439 @@ function focusExam(functionRef: string, callId = 'call-1'): TemplateContent {
   })
 }
 
+function choiceQuestions(count: number): TemplateContent['root']['children'] {
+  return Array.from({ length: count }, (_item, index) => ({
+    id: `question-${index}`,
+    type: 'choice-question' as const,
+    stem: text(`Question ${index + 1}`),
+    options: [
+      { id: 'a', content: text('A') },
+      { id: 'b', content: text('B') }
+    ],
+    outputName: `answer-${index}`
+  }))
+}
+
+function choiceGroupPage(
+  id: string,
+  defaultViewport: Extract<
+    PageNode['content']['blocks'][number],
+    { type: 'choice-view' }
+  >['defaultViewport']
+): PageNode {
+  return {
+    id,
+    type: 'page',
+    content: {
+      blocks: [
+        {
+          id: 'view',
+          type: 'choice-view',
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 100,
+          defaultViewport
+        }
+      ]
+    },
+    timeline: [{ type: 'countdown', seconds: number(1) }]
+  }
+}
+
 describe('Template 编译组合覆盖', () => {
+  it('把范围题组内的局部题号换算为全局 choiceIndex', async () => {
+    const page = choiceGroupPage('range-page', {
+      mode: 'focus',
+      group: { scope: 'local', name: 'questions' },
+      pageIndex: 0,
+      questionIndex: 1
+    })
+    page.content.blocks.push(
+      {
+        id: 'free-view',
+        type: 'choice-view',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        defaultViewport: {
+          mode: 'free',
+          group: { scope: 'local', name: 'questions' }
+        }
+      },
+      {
+        id: 'range-view',
+        type: 'choice-view',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        defaultViewport: {
+          mode: 'range',
+          group: { scope: 'local', name: 'questions' },
+          startPage: 1,
+          endPage: 2,
+          initialPage: 2
+        }
+      }
+    )
+    const resource = await createFunctionResource({
+      name: 'Range view',
+      inputs: [
+        {
+          name: 'questions',
+          type: 'choice-group',
+          shape: { kind: 'range', pageCounts: [2, 3, 4] }
+        }
+      ],
+      body: root([page]),
+      outputs: [],
+      schemaUses: []
+    })
+    const result = await compileTemplate(
+      document(
+        content({
+          root: {
+            ...root([
+              ...choiceQuestions(15),
+              call(
+                'range-call',
+                resource.id,
+                {},
+                {
+                  questions: {
+                    type: 'choice-group',
+                    source: 'global',
+                    selection: { kind: 'range', startPage: 1 }
+                  }
+                }
+              )
+            ]),
+            choiceCollector: {
+              pages: [1, 2, 3, 4, 5].map((questionCount) => ({ questionCount }))
+            }
+          },
+          schemaUses: []
+        }),
+        [resource]
+      ),
+      context()
+    )
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.examPackage.examData.player.pages[0].content[0]).toMatchObject({
+      defaultViewport: { mode: 'focus', choiceIndex: 2 }
+    })
+    expect(result.examPackage.examData.player.pages[0].content[1]).toMatchObject({
+      defaultViewport: { mode: 'range', startPage: 1, endPage: 3 }
+    })
+    expect(result.examPackage.examData.player.pages[0].content[2]).toMatchObject({
+      defaultViewport: { mode: 'range', startPage: 2, endPage: 3, initialPage: 3 }
+    })
+  })
+
+  it('用显式起始页区分重复的范围题组形状', async () => {
+    const resource = await createFunctionResource({
+      name: 'Repeated range view',
+      inputs: [
+        {
+          name: 'questions',
+          type: 'choice-group',
+          shape: { kind: 'range', pageCounts: [2, 3, 4] }
+        }
+      ],
+      body: root([
+        choiceGroupPage('range-page', {
+          mode: 'focus',
+          group: { scope: 'local', name: 'questions' },
+          pageIndex: 0,
+          questionIndex: 0
+        })
+      ]),
+      outputs: [],
+      schemaUses: []
+    })
+    const pageCounts = [2, 3, 4, 2, 3, 4]
+    const result = await compileTemplate(
+      document(
+        content({
+          root: {
+            ...root([
+              ...choiceQuestions(pageCounts.reduce((sum, count) => sum + count, 0)),
+              call(
+                'first-range',
+                resource.id,
+                {},
+                {
+                  questions: {
+                    type: 'choice-group',
+                    source: 'global',
+                    selection: { kind: 'range', startPage: 0 }
+                  }
+                }
+              ),
+              call(
+                'second-range',
+                resource.id,
+                {},
+                {
+                  questions: {
+                    type: 'choice-group',
+                    source: 'global',
+                    selection: { kind: 'range', startPage: 3 }
+                  }
+                }
+              )
+            ]),
+            choiceCollector: { pages: pageCounts.map((questionCount) => ({ questionCount })) }
+          },
+          schemaUses: []
+        }),
+        [resource]
+      ),
+      context()
+    )
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(
+      result.examPackage.examData.player.pages.map((page) =>
+        page.content[0]?.type === 'choice-view' ? page.content[0].defaultViewport : null
+      )
+    ).toEqual([
+      { mode: 'focus', choiceIndex: 0 },
+      { mode: 'focus', choiceIndex: 9 }
+    ])
+  })
+
+  it('嵌套函数继续传递范围题组时保留全局坐标', async () => {
+    const child = await createFunctionResource({
+      name: 'Nested range view',
+      inputs: [
+        {
+          name: 'questions',
+          type: 'choice-group',
+          shape: { kind: 'range', pageCounts: [3, 4] }
+        }
+      ],
+      body: root([
+        choiceGroupPage('child-page', {
+          mode: 'focus',
+          group: { scope: 'local', name: 'questions' },
+          pageIndex: 0,
+          questionIndex: 1
+        })
+      ]),
+      outputs: [],
+      schemaUses: []
+    })
+    const parent = await createFunctionResource({
+      name: 'Range wrapper',
+      inputs: [
+        {
+          name: 'questions',
+          type: 'choice-group',
+          shape: { kind: 'range', pageCounts: [2, 3, 4] }
+        }
+      ],
+      body: root([
+        call(
+          'child-call',
+          child.id,
+          {},
+          {
+            questions: {
+              type: 'choice-group',
+              source: 'local',
+              name: 'questions',
+              selection: { kind: 'range', startPage: 1 }
+            }
+          }
+        )
+      ]),
+      outputs: [],
+      schemaUses: []
+    })
+    const result = await compileTemplate(
+      document(
+        content({
+          root: {
+            ...root([
+              ...choiceQuestions(15),
+              call(
+                'parent-call',
+                parent.id,
+                {},
+                {
+                  questions: {
+                    type: 'choice-group',
+                    source: 'global',
+                    selection: { kind: 'range', startPage: 1 }
+                  }
+                }
+              )
+            ]),
+            choiceCollector: {
+              pages: [1, 2, 3, 4, 5].map((questionCount) => ({ questionCount }))
+            }
+          },
+          schemaUses: []
+        }),
+        [child, parent]
+      ),
+      context()
+    )
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.examPackage.examData.player.pages[0].content[0]).toMatchObject({
+      defaultViewport: { mode: 'focus', choiceIndex: 4 }
+    })
+  })
+
+  it('即使函数未读取题组入参也强制校验形状', async () => {
+    const resource = await createFunctionResource({
+      name: 'Unused range',
+      inputs: [
+        {
+          name: 'questions',
+          type: 'choice-group',
+          shape: { kind: 'range', pageCounts: [2, 4] }
+        }
+      ],
+      body: root([
+        {
+          id: 'page',
+          type: 'page',
+          content: { blocks: [] },
+          timeline: [{ type: 'countdown', seconds: number(1) }]
+        }
+      ]),
+      outputs: [],
+      schemaUses: []
+    })
+    const result = await compileTemplate(
+      document(
+        content({
+          root: {
+            ...root([
+              ...choiceQuestions(6),
+              call(
+                'range-call',
+                resource.id,
+                {},
+                {
+                  questions: {
+                    type: 'choice-group',
+                    source: 'global',
+                    selection: { kind: 'range', startPage: 1 }
+                  }
+                }
+              )
+            ]),
+            choiceCollector: {
+              pages: [1, 2, 3].map((questionCount) => ({ questionCount }))
+            }
+          },
+          schemaUses: []
+        }),
+        [resource]
+      ),
+      context()
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      errors: [{ stage: 'compile', code: 'CHOICE_GROUP_SHAPE_MISMATCH' }]
+    })
+  })
+
+  it('完整题组保持自由浏览，单题题组把 free 收敛为全局 focus', async () => {
+    const all = await createFunctionResource({
+      name: 'All view',
+      inputs: [
+        {
+          name: 'questions',
+          type: 'choice-group',
+          shape: { kind: 'all', pageCounts: [1, 2] }
+        }
+      ],
+      body: root([
+        choiceGroupPage('all-page', {
+          mode: 'free',
+          group: { scope: 'local', name: 'questions' },
+          initialPage: 1
+        })
+      ]),
+      outputs: [],
+      schemaUses: []
+    })
+    const question = await createFunctionResource({
+      name: 'Question view',
+      inputs: [{ name: 'question', type: 'choice-group', shape: { kind: 'question' } }],
+      body: root([
+        choiceGroupPage('question-page', {
+          mode: 'free',
+          group: { scope: 'local', name: 'question' }
+        })
+      ]),
+      outputs: [],
+      schemaUses: []
+    })
+    const result = await compileTemplate(
+      document(
+        content({
+          root: {
+            ...root([
+              ...choiceQuestions(3),
+              call(
+                'all-call',
+                all.id,
+                {},
+                {
+                  questions: {
+                    type: 'choice-group',
+                    source: 'global',
+                    selection: { kind: 'all' }
+                  }
+                }
+              ),
+              call(
+                'question-call',
+                question.id,
+                {},
+                {
+                  question: {
+                    type: 'choice-group',
+                    source: 'global',
+                    selection: { kind: 'question', pageIndex: 1, questionIndex: 1 }
+                  }
+                }
+              )
+            ]),
+            choiceCollector: { pages: [{ questionCount: 1 }, { questionCount: 2 }] }
+          },
+          schemaUses: []
+        }),
+        [all, question]
+      ),
+      context()
+    )
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(
+      result.examPackage.examData.player.pages.map((page) =>
+        page.content[0]?.type === 'choice-view' ? page.content[0].defaultViewport : null
+      )
+    ).toEqual([
+      { mode: 'free', initialPage: 1 },
+      { mode: 'focus', choiceIndex: 2 }
+    ])
+  })
+
   it('函数中的选择题可以由外部 Collector 收集和分页', async () => {
     const resource = await createFunctionResource({
       name: 'Question source',

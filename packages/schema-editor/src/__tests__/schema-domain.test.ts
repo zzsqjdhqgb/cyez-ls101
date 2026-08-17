@@ -242,7 +242,11 @@ describe('Schema repository', () => {
     const first = await initializeBuiltinSchemas(repository, manifest)
     const sentenceSchema = first.find((item) => item.data.name === '上海高考 - 朗读句子')
     const passageSchema = first.find((item) => item.data.name === '上海高考 - 朗读短文')
-    expect(first).toHaveLength(7)
+    const shortDialogueSchema = first.find(
+      (item) => item.data.name === '上海高考 - 听力短对话选择题'
+    )
+    const discourseSchema = first.find((item) => item.data.name === '上海高考 - 听力语篇选择题')
+    expect(first).toHaveLength(9)
     expect(sentenceSchema?.structure.answerFormat).toEqual([
       { answerId: 'sentence-1', type: 'fixed-speech' },
       { answerId: 'sentence-2', type: 'fixed-speech' }
@@ -256,6 +260,23 @@ describe('Schema repository', () => {
     expect(passageSchema?.data.rubricMarkdown).toContain(
       '考生在规定时间内未朗读完整篇短文，不得因此扣分'
     )
+    expect(shortDialogueSchema).toMatchObject({
+      structure: {
+        questionType: 'objective',
+        answerFormat: [{ answerId: 'answer', type: 'text' }],
+        templateInputs: [
+          { inputId: 'question-description', type: 'text', required: true },
+          { inputId: 'analysis', type: 'text', required: true }
+        ]
+      },
+      data: { maxScore: 1 }
+    })
+    expect(discourseSchema).toMatchObject({
+      structure: shortDialogueSchema?.structure,
+      structureHash: shortDialogueSchema?.structureHash,
+      sourceDraftId: shortDialogueSchema?.sourceDraftId,
+      data: { maxScore: 1.5 }
+    })
 
     if (!sentenceSchema) throw new Error('Bundled sentence Schema was not found')
     await expect(
@@ -269,7 +290,7 @@ describe('Schema repository', () => {
     expect((await repository.getSchema(sentenceSchema.schemaId))?.data.description).toBe(
       sentenceSchema.data.description
     )
-    expect(await repository.listSchemaIds()).toHaveLength(7)
+    expect(await repository.listSchemaIds()).toHaveLength(9)
     expect(await repository.listBuiltinSchemaIds()).toContain(
       '69fc2dc6-31d6-4666-bf6f-4b65a1e996dd'
     )

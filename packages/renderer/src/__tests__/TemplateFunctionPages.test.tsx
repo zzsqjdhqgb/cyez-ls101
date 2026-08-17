@@ -120,6 +120,64 @@ describe('Template function pages', () => {
     expect(screen.getByRole('button', { name: '保存' })).toBeDisabled()
   })
 
+  it('edits choice-group page counts as a constant number list', async () => {
+    const app = application()
+    render(
+      <TemplateApplicationProvider application={app}>
+        <MemoryRouter
+          initialEntries={[`/templates/libraries/${LIBRARY_ID}/functions/${FUNCTION_ID}`]}
+        >
+          <Routes>
+            <Route
+              path="/templates/libraries/:libraryId/functions/:functionId"
+              element={<TemplateFunctionDocumentPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </TemplateApplicationProvider>
+    )
+
+    const properties = await screen.findByRole('complementary', { name: '函数' })
+    fireEvent.click(within(properties).getByRole('button', { name: '添加输入' }))
+    fireEvent.change(within(properties).getByLabelText('输入 1 类型'), {
+      target: { value: 'choice-group' }
+    })
+    fireEvent.change(within(properties).getByLabelText('输入 1 题组形状'), {
+      target: { value: 'range' }
+    })
+
+    const firstPage = within(properties).getByLabelText('输入 1 第 1 页题数')
+    expect(firstPage).toHaveAttribute('type', 'number')
+    expect(firstPage).toHaveValue(1)
+    expect(within(properties).getByRole('button', { name: '输入 1 删除第 1 页' })).toBeDisabled()
+    fireEvent.change(firstPage, { target: { value: '2' } })
+
+    fireEvent.click(within(properties).getByRole('button', { name: '输入 1 添加页面' }))
+    fireEvent.change(within(properties).getByLabelText('输入 1 第 2 页题数'), {
+      target: { value: '3' }
+    })
+    fireEvent.click(within(properties).getByRole('button', { name: '输入 1 添加页面' }))
+    fireEvent.change(within(properties).getByLabelText('输入 1 第 3 页题数'), {
+      target: { value: '4' }
+    })
+    fireEvent.click(within(properties).getByRole('button', { name: '输入 1 删除第 2 页' }))
+
+    expect(within(properties).getByLabelText('输入 1 第 1 页题数')).toHaveValue(2)
+    expect(within(properties).getByLabelText('输入 1 第 2 页题数')).toHaveValue(4)
+    expect(within(properties).queryByLabelText('输入 1 第 3 页题数')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(app.functionLibraries.local.saveFunction).toHaveBeenCalledOnce())
+    const functionDocument = vi.mocked(app.functionLibraries.local.saveFunction).mock.calls[0][1]
+    expect(functionDocument.content.inputs).toEqual([
+      {
+        name: 'input',
+        type: 'choice-group',
+        shape: { kind: 'range', pageCounts: [2, 4] }
+      }
+    ])
+  })
+
   it('uses the template editor function library layout and filters the current function', async () => {
     const app = application()
     render(
