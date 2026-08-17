@@ -10,6 +10,7 @@ const { join } = require('node:path')
 const SCRIPTS_DIR = __dirname
 
 const tasks = [
+  { script: 'qwen-tts/download-release-assets.mjs' },
   { script: 'download-tts-assets.js' },
   { script: 'download-stt-models.js' },
   { script: 'download-pronunciation-model.js' },

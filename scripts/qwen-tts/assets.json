@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "release": {
+    "repository": "zzsqjdhqgb/cyez-ls101",
+    "version": "0.1.0",
+    "tag": "qwen-tts-v0.1.0",
+    "prerelease": true
+  },
+  "runtime": {
+    "repository": "https://github.com/predict-woo/qwen3-tts.cpp.git",
+    "revision": "b3ba14077cf1b3e11b86e5f84aa9184605c89b28",
+    "ggmlRevision": "3af5f5760e19a96427f5f7a93b79cbdf3d4b265b"
+  },
+  "model": {
+    "id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+    "revision": "5d83992436eae1d760afd27aff78a71d676296fc",
+    "quantization": "q8_0"
+  },
+  "voice": {
+    "id": "american-woman",
+    "name": "American English Woman",
+    "file": "native/qwen-tts/voices/american-woman.spk",
+    "designModel": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "designModelRevision": "5ecdb67327fd37bb2e042aab12ff7391903235d3",
+    "seed": 20260817
+  }
+}

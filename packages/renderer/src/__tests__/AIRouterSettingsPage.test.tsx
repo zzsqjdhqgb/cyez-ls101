@@ -532,6 +532,14 @@ describe('AIRouterSettingsPage', () => {
     expect(within(dialog).getByText('需要先导入 Pocket TTS 模型包')).toBeInTheDocument()
     expect(within(dialog).queryByRole('heading', { name: '启用模型' })).toBeNull()
 
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'qwen-tts' }
+    })
+    expect(within(dialog).getByText('需要先导入 Qwen3-TTS 0.6B 模型包')).toBeInTheDocument()
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'pocket-tts' }
+    })
+
     fireEvent.click(within(dialog).getByRole('button', { name: '导入模型包' }))
     await waitFor(() => expect(application.importSpeechPackage).toHaveBeenCalledWith())
     expect(await within(dialog).findByRole('heading', { name: '启用模型' })).toBeInTheDocument()

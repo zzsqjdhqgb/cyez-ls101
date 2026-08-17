@@ -35,7 +35,7 @@ const {
         encryptString: vi.fn((value: string) => new TextEncoder().encode(value)),
         decryptString: vi.fn((value: Uint8Array) => new TextDecoder().decode(value))
       },
-      app: { getVersion: vi.fn(() => '0.3.1') },
+      app: { getVersion: vi.fn(() => '0.3.1'), once: vi.fn() },
       BrowserWindow: { fromWebContents: vi.fn(() => null) },
       dialog: { showOpenDialog: vi.fn() }
     },
@@ -63,6 +63,13 @@ vi.mock('ai', async (importOriginal) => {
 vi.mock('../main/pocket-tts', () => ({
   PocketTtsSynthesizer: class {
     synthesize = speechSynthesizeMock
+  }
+}))
+
+vi.mock('../main/qwen-tts', () => ({
+  QwenTtsSynthesizer: class {
+    synthesize = speechSynthesizeMock
+    dispose = vi.fn()
   }
 }))
 
@@ -109,6 +116,7 @@ describe('AIRouter main integration', () => {
     electronMocks.listeners.clear()
     electronMocks.handle.mockClear()
     electronMocks.on.mockClear()
+    electronMocks.app.once.mockClear()
     generateImageMock.mockReset()
     recognizeSpeechMock.mockReset()
     assessPronunciationMock.mockReset()
