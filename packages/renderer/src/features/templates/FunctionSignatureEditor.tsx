@@ -174,23 +174,63 @@ export function FunctionSignatureEditor({
                     </select>
                   </label>
                   {input.shape.kind !== 'question' ? (
-                    <label>
-                      每页题数
-                      <input
-                        aria-label={`输入 ${index + 1} 每页题数`}
-                        disabled={disabled}
-                        inputMode="numeric"
-                        placeholder="例如 2, 3, 4"
-                        value={input.shape.pageCounts.join(', ')}
-                        onChange={(event) =>
-                          apply({
-                            type: 'update-function-input',
-                            name: input.name,
-                            input: inputWithPageCounts(input, event.target.value)
-                          })
-                        }
-                      />
-                    </label>
+                    <div className={styles.pageCounts}>
+                      <div className={styles.pageCountsHeading}>
+                        <span>每页题数</span>
+                        <Button
+                          aria-label={`输入 ${index + 1} 添加页面`}
+                          icon={Plus}
+                          size="small"
+                          disabled={disabled}
+                          onClick={() =>
+                            apply({
+                              type: 'update-function-input',
+                              name: input.name,
+                              input: addPageCount(input)
+                            })
+                          }
+                        >
+                          添加页面
+                        </Button>
+                      </div>
+                      <div className={styles.pageCountList}>
+                        {input.shape.pageCounts.map((questionCount, pageIndex) => (
+                          <div className={styles.pageCountRow} key={pageIndex}>
+                            <span>第 {pageIndex + 1} 页</span>
+                            <input
+                              aria-label={`输入 ${index + 1} 第 ${pageIndex + 1} 页题数`}
+                              disabled={disabled}
+                              inputMode="numeric"
+                              min={1}
+                              step={1}
+                              type="number"
+                              value={questionCount}
+                              onChange={(event) =>
+                                apply({
+                                  type: 'update-function-input',
+                                  name: input.name,
+                                  input: updatePageCount(input, pageIndex, event.target.value)
+                                })
+                              }
+                            />
+                            <IconButton
+                              icon={Trash2}
+                              label={`输入 ${index + 1} 删除第 ${pageIndex + 1} 页`}
+                              size="small"
+                              variant="danger"
+                              disabled={disabled || input.shape.pageCounts.length === 1}
+                              onClick={() =>
+                                apply({
+                                  type: 'update-function-input',
+                                  name: input.name,
+                                  input: removePageCount(input, pageIndex)
+                                })
+                              }
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   ) : null}
                 </>
               ) : null}
@@ -444,21 +484,45 @@ function inputWithType(name: string, type: FunctionInputDef['type']): FunctionIn
   return type === 'choice-group' ? { name, type, shape: { kind: 'question' } } : { name, type }
 }
 
-function inputWithPageCounts(
-  input: Extract<FunctionInputDef, { type: 'choice-group' }>,
-  value: string
+function addPageCount(
+  input: Extract<FunctionInputDef, { type: 'choice-group' }>
 ): FunctionInputDef {
   if (input.shape.kind === 'question') return input
   return {
     ...input,
-    shape: { kind: input.shape.kind, pageCounts: parsePageCounts(value) }
+    shape: { kind: input.shape.kind, pageCounts: [...input.shape.pageCounts, 1] }
   }
 }
 
-function parsePageCounts(value: string): number[] {
-  if (!value.trim()) return []
-  return value
-    .split(/[,，\s]+/)
-    .filter(Boolean)
-    .map(Number)
+function updatePageCount(
+  input: Extract<FunctionInputDef, { type: 'choice-group' }>,
+  pageIndex: number,
+  value: string
+): FunctionInputDef {
+  if (input.shape.kind === 'question') return input
+  const parsed = Number(value)
+  const questionCount = Number.isFinite(parsed) ? Math.max(1, Math.trunc(parsed)) : 1
+  return {
+    ...input,
+    shape: {
+      kind: input.shape.kind,
+      pageCounts: input.shape.pageCounts.map((count, index) =>
+        index === pageIndex ? questionCount : count
+      )
+    }
+  }
+}
+
+function removePageCount(
+  input: Extract<FunctionInputDef, { type: 'choice-group' }>,
+  pageIndex: number
+): FunctionInputDef {
+  if (input.shape.kind === 'question' || input.shape.pageCounts.length <= 1) return input
+  return {
+    ...input,
+    shape: {
+      kind: input.shape.kind,
+      pageCounts: input.shape.pageCounts.filter((_count, index) => index !== pageIndex)
+    }
+  }
 }
