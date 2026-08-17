@@ -19,11 +19,10 @@ import { describe, expect, it } from 'vitest'
 
 const BUILTIN_ROOT = path.resolve(import.meta.dirname, '../../../../resources/builtin')
 const TEMPLATE_ID = '0c283c54-683a-498c-bf69-fb1490f99356'
-const INSTANCE_ID = '10000000-0000-4000-8000-000000000001'
 const IMAGE_BYTES = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])
 
 describe('builtin content contract', () => {
-  it('loads the shipped catalogs and compiles the builtin template into a valid exam archive', async () => {
+  it('loads the shipped catalogs and compiles every builtin template into a valid exam archive', async () => {
     const store = new MemoryStore()
     const interfaceRepository = new FileInterfaceRepository(store.scope('interfaces'))
     const bundledInterfaces = await new FileBundledInterfaceRepository(
@@ -62,7 +61,8 @@ describe('builtin content contract', () => {
     const templateManifest = await readJson(
       path.join(BUILTIN_ROOT, 'template-editor', '.text', 'builtin-templates.json')
     )
-    let locatedInstance: ReturnType<typeof createLocatedInstance> | null = null
+    const locatedByInterface = new Map<string, ReturnType<typeof createLocatedInstance>>()
+    const locatedByInstance = new Map<string, ReturnType<typeof createLocatedInstance>>()
     const application = createTemplateApplication({
       repository: templateRepository,
       getBuiltinFunctionLibraryManifest: async () => functionLibraryManifest,
@@ -70,8 +70,7 @@ describe('builtin content contract', () => {
       listInterfaceManifests: async () => [...interfaceManifests.values()],
       getInterfaceManifest: async (interfaceId) => interfaceManifests.get(interfaceId) ?? null,
       getSchema: (schemaId) => schemaRepository.getSchema(schemaId),
-      locateInterfaceInstance: async (instanceId) =>
-        locatedInstance?.instance.instanceId === instanceId ? locatedInstance : null
+      locateInterfaceInstance: async (instanceId) => locatedByInstance.get(instanceId) ?? null
     })
 
     await application.initialize()
@@ -81,14 +80,21 @@ describe('builtin content contract', () => {
       'shanghai-gaokao-speaking',
       'shanghai-zhongkao-speaking'
     ])
-    await expect(application.browser.listBuiltinTemplates()).resolves.toEqual([
-      expect.objectContaining({
-        templateId: TEMPLATE_ID,
-        name: '上海高考口语标准题型',
-        available: true,
-        errors: []
-      })
-    ])
+    const templateSummaries = await application.browser.listBuiltinTemplates()
+    expect(templateSummaries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          templateId: TEMPLATE_ID,
+          name: '上海高考口语标准题型',
+          available: true,
+          errors: []
+        })
+      ])
+    )
+    expect(templateSummaries.length).toBeGreaterThan(0)
+    for (const summary of templateSummaries) {
+      expect(summary).toMatchObject({ available: true, errors: [] })
+    }
     expect(await application.browser.listFunctionLibraries()).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ libraryId: 'builtin:shanghai-gaokao-basic' }),
@@ -96,66 +102,76 @@ describe('builtin content contract', () => {
       ])
     )
 
-    const release = await application.builtinTemplates.get(TEMPLATE_ID)
-    expect(release).not.toBeNull()
-    if (!release) throw new Error('Builtin template was not initialized')
-    expect(release.document.content.interfaces).toHaveLength(1)
-    const requirement = release.document.content.interfaces[0]
-    const interfaceManifest = interfaceManifests.get(requirement.interfaceId)
-    expect(interfaceManifest).toBeDefined()
-    if (!interfaceManifest) throw new Error(`Missing Interface ${requirement.interfaceId}`)
-    locatedInstance = createLocatedInstance(interfaceManifest)
-    const bindings = [
-      {
-        alias: requirement.alias,
-        interfaceId: requirement.interfaceId,
-        instanceId: locatedInstance.instance.instanceId
-      }
-    ]
-
-    await expect(application.builtinTemplates.validate(TEMPLATE_ID)).resolves.toEqual({
-      valid: true,
-      errors: []
-    })
-    const preview = await application.builtinTemplates.preview(TEMPLATE_ID, bindings)
-    if (!preview.success) {
-      throw new Error(`Builtin template preview failed: ${JSON.stringify(preview.errors)}`)
-    }
-    expect(preview.preview.pages.length).toBeGreaterThan(0)
-    expect(preview.preview.recordingIndices.length).toBeGreaterThan(0)
-
-    const compiled = await application.builtinTemplates.compile(TEMPLATE_ID, bindings, {
-      synthesizeSpeech: async () => ({
-        data: new Uint8Array([1, 2, 3]),
-        mediaType: 'audio/wav'
+    for (const summary of templateSummaries) {
+      const release = await application.builtinTemplates.get(summary.templateId)
+      if (!release) throw new Error(`Builtin template was not initialized: ${summary.templateId}`)
+      const bindings = release.document.content.interfaces.map((requirement) => {
+        const manifest = interfaceManifests.get(requirement.interfaceId)
+        if (!manifest) throw new Error(`Missing Interface ${requirement.interfaceId}`)
+        let located = locatedByInterface.get(requirement.interfaceId)
+        if (!located) {
+          located = createLocatedInstance(manifest, locatedByInterface.size)
+          locatedByInterface.set(requirement.interfaceId, located)
+          locatedByInstance.set(located.instance.instanceId, located)
+        }
+        return {
+          alias: requirement.alias,
+          interfaceId: requirement.interfaceId,
+          instanceId: located.instance.instanceId
+        }
       })
-    })
-    if (!compiled.success) {
-      throw new Error(`Builtin template compilation failed: ${JSON.stringify(compiled.errors)}`)
-    }
-    expect(compiled.examPackage.examData.player.pages.length).toBeGreaterThan(0)
-    expect(compiled.examPackage.examData.player.recordingIndices.length).toBeGreaterThan(0)
-    expect(compiled.examPackage.submissionTemplate.schemaUses.length).toBeGreaterThan(0)
-    expect(compiled.resourceSources.length).toBeGreaterThan(0)
 
-    const resources = Object.fromEntries(
-      compiled.resourceSources.map((source) => [
-        source.assetKey,
-        'data' in source ? source.data : IMAGE_BYTES
-      ])
-    )
-    const decoded = await decodeExamPackage(
-      await encodeExamPackage(compiled.examPackage, resources)
-    )
-    expect(decoded.exam.examData.title).toBe('上海高考口语标准题型')
-    expect(decoded.exam.examData.player.pages.length).toBe(
-      compiled.examPackage.examData.player.pages.length
-    )
-    expect(Object.keys(decoded.resources).sort()).toEqual(Object.keys(resources).sort())
+      await expect(application.builtinTemplates.validate(summary.templateId)).resolves.toEqual({
+        valid: true,
+        errors: []
+      })
+      const preview = await application.builtinTemplates.preview(summary.templateId, bindings)
+      if (!preview.success) {
+        throw new Error(
+          `Builtin template preview failed (${summary.name}): ${JSON.stringify(preview.errors)}`
+        )
+      }
+      expect(preview.preview.pages.length).toBeGreaterThan(0)
+      expect(preview.preview.recordingIndices.length).toBeGreaterThan(0)
+
+      const compiled = await application.builtinTemplates.compile(summary.templateId, bindings, {
+        synthesizeSpeech: async () => ({
+          data: new Uint8Array([1, 2, 3]),
+          mediaType: 'audio/wav'
+        })
+      })
+      if (!compiled.success) {
+        throw new Error(
+          `Builtin template compilation failed (${summary.name}): ${JSON.stringify(compiled.errors)}`
+        )
+      }
+      expect(compiled.examPackage.examData.player.pages.length).toBeGreaterThan(0)
+      expect(compiled.examPackage.examData.player.recordingIndices.length).toBeGreaterThan(0)
+      expect(compiled.examPackage.submissionTemplate.schemaUses.length).toBeGreaterThan(0)
+      expect(compiled.resourceSources.length).toBeGreaterThan(0)
+
+      const resources = Object.fromEntries(
+        compiled.resourceSources.map((source) => [
+          source.assetKey,
+          'data' in source ? source.data : IMAGE_BYTES
+        ])
+      )
+      const decoded = await decodeExamPackage(
+        await encodeExamPackage(compiled.examPackage, resources)
+      )
+      expect(decoded.exam.examData.title).toBe(summary.name)
+      expect(decoded.exam.examData.player.pages.length).toBe(
+        compiled.examPackage.examData.player.pages.length
+      )
+      expect(Object.keys(decoded.resources).sort()).toEqual(Object.keys(resources).sort())
+    }
   })
 })
 
-function createLocatedInstance(manifest: InterfaceVarManifest): {
+function createLocatedInstance(
+  manifest: InterfaceVarManifest,
+  index: number
+): {
   interfaceId: string
   instance: InterfaceInstance
   assetUrls: Record<string, string>
@@ -174,7 +190,7 @@ function createLocatedInstance(manifest: InterfaceVarManifest): {
   return {
     interfaceId: manifest.interfaceId,
     instance: {
-      instanceId: INSTANCE_ID,
+      instanceId: `10000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
       name: 'Builtin content contract fixture',
       generatedAt: '2026-08-17T00:00:00.000Z',
       values
