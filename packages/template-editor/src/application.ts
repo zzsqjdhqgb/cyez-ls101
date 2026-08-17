@@ -779,6 +779,16 @@ export function createTemplateApplication(
             rootResource.inputs,
             previewInputs
           )
+          const choiceStructure = analyzeFunctionPreviewChoiceStructure(
+            rootResource,
+            new Map([...resources.values()].map((resource) => [resource.id, resource]))
+          )
+          const choiceLayout = functionPreviewChoiceLayout(
+            rootResource.inputs,
+            previewInputs,
+            choicePageCounts,
+            choiceStructure
+          )
           const previewDocument = createTemplateDocument(
             {
               name: functionDocument.content.name || '函数预览',
@@ -790,7 +800,7 @@ export function createTemplateApplication(
                 type: 'frame',
                 children: [
                   ...functionPreviewChoiceQuestions(
-                    choicePageCounts,
+                    choiceLayout.virtualQuestionCount,
                     rootResource.outputs.map((output) => output.name)
                   ),
                   {
@@ -804,10 +814,12 @@ export function createTemplateApplication(
                     )
                   }
                 ],
-                ...(choicePageCounts.length > 0
+                ...(choiceLayout.collectorPageCounts
                   ? {
                       choiceCollector: {
-                        pages: choicePageCounts.map((questionCount) => ({ questionCount }))
+                        pages: choiceLayout.collectorPageCounts.map((questionCount) => ({
+                          questionCount
+                        }))
                       }
                     }
                   : {})
@@ -1187,40 +1199,113 @@ function functionPreviewChoicePageCounts(
 }
 
 function functionPreviewChoiceQuestions(
-  pageCounts: readonly number[],
+  questionCount: number,
   reservedOutputNames: readonly string[]
 ): TemplateNode[] {
   const questions: TemplateNode[] = []
   const outputNames = new Set(reservedOutputNames)
-  let questionIndex = 0
-  pageCounts.forEach((count) => {
-    for (let index = 0; index < count; index += 1) {
-      let outputName = `function-preview-answer-${questionIndex}`
-      while (outputNames.has(outputName)) outputName = `${outputName}-preview`
-      outputNames.add(outputName)
-      questions.push({
-        id: `function-preview-question-${questionIndex}`,
-        type: 'choice-question',
-        stem: {
-          type: 'string',
-          parts: [{ type: 'literal', value: `Preview question ${questionIndex + 1}` }]
+  for (let questionIndex = 0; questionIndex < questionCount; questionIndex += 1) {
+    let outputName = `function-preview-answer-${questionIndex}`
+    while (outputNames.has(outputName)) outputName = `${outputName}-preview`
+    outputNames.add(outputName)
+    questions.push({
+      id: `function-preview-question-${questionIndex}`,
+      type: 'choice-question',
+      stem: {
+        type: 'string',
+        parts: [{ type: 'literal', value: `Preview question ${questionIndex + 1}` }]
+      },
+      options: [
+        {
+          id: `function-preview-option-${questionIndex}-a`,
+          content: { type: 'string', parts: [{ type: 'literal', value: 'Preview option A' }] }
         },
-        options: [
-          {
-            id: `function-preview-option-${questionIndex}-a`,
-            content: { type: 'string', parts: [{ type: 'literal', value: 'Preview option A' }] }
-          },
-          {
-            id: `function-preview-option-${questionIndex}-b`,
-            content: { type: 'string', parts: [{ type: 'literal', value: 'Preview option B' }] }
-          }
-        ],
-        outputName
-      })
-      questionIndex += 1
-    }
-  })
+        {
+          id: `function-preview-option-${questionIndex}-b`,
+          content: { type: 'string', parts: [{ type: 'literal', value: 'Preview option B' }] }
+        }
+      ],
+      outputName
+    })
+  }
   return questions
+}
+
+interface FunctionPreviewChoiceStructure {
+  uncollectedQuestionCount: number
+  collectorCount: number
+}
+
+interface FunctionPreviewChoiceLayout {
+  virtualQuestionCount: number
+  collectorPageCounts?: number[]
+}
+
+function analyzeFunctionPreviewChoiceStructure(
+  root: FunctionDef,
+  functionsById: ReadonlyMap<string, FunctionDef>
+): FunctionPreviewChoiceStructure {
+  const analyzeFrame = (frame: FrameNode): FunctionPreviewChoiceStructure => {
+    const children = frame.children.reduce<FunctionPreviewChoiceStructure>(
+      (result, node) => {
+        const child = analyzeNode(node)
+        return {
+          uncollectedQuestionCount:
+            result.uncollectedQuestionCount + child.uncollectedQuestionCount,
+          collectorCount: result.collectorCount + child.collectorCount
+        }
+      },
+      { uncollectedQuestionCount: 0, collectorCount: 0 }
+    )
+    if (!frame.choiceCollector) return children
+    return {
+      uncollectedQuestionCount: 0,
+      collectorCount: children.collectorCount + 1
+    }
+  }
+  const analyzeNode = (node: TemplateNode): FunctionPreviewChoiceStructure => {
+    if (node.type === 'choice-question') {
+      return { uncollectedQuestionCount: 1, collectorCount: 0 }
+    }
+    if (node.type === 'frame') return analyzeFrame(node)
+    if (node.type === 'function') {
+      const func = functionsById.get(node.functionRef)
+      return func ? analyzeFrame(func.body) : { uncollectedQuestionCount: 0, collectorCount: 0 }
+    }
+    return { uncollectedQuestionCount: 0, collectorCount: 0 }
+  }
+  return analyzeFrame(root.body)
+}
+
+function functionPreviewChoiceLayout(
+  inputDefs: readonly FunctionDef['inputs'][number][],
+  inputs: Readonly<Record<string, FunctionInputExpression>>,
+  requiredPageCounts: readonly number[],
+  structure: FunctionPreviewChoiceStructure
+): FunctionPreviewChoiceLayout {
+  if (requiredPageCounts.length === 0 || structure.collectorCount > 0) {
+    return { virtualQuestionCount: 0 }
+  }
+
+  const usesWholeGroup = inputDefs.some((input) => {
+    if (input.type !== 'choice-group' || input.shape.kind !== 'all') return false
+    const expression = inputs[input.name]
+    return expression?.type === 'choice-group' && expression.selection.kind === 'all'
+  })
+  const requiredQuestionCount = requiredPageCounts.reduce((sum, count) => sum + count, 0)
+  if (usesWholeGroup) {
+    return {
+      virtualQuestionCount: Math.max(0, requiredQuestionCount - structure.uncollectedQuestionCount),
+      collectorPageCounts: [...requiredPageCounts]
+    }
+  }
+  return {
+    virtualQuestionCount: requiredQuestionCount,
+    collectorPageCounts: [
+      ...requiredPageCounts,
+      ...(structure.uncollectedQuestionCount > 0 ? [structure.uncollectedQuestionCount] : [])
+    ]
+  }
 }
 
 function normalizedQuestionCount(value: number): number {
