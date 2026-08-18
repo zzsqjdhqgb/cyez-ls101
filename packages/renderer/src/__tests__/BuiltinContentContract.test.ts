@@ -98,9 +98,35 @@ describe('builtin content contract', () => {
     expect(await application.browser.listFunctionLibraries()).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ libraryId: 'builtin:shanghai-gaokao-basic' }),
+        expect.objectContaining({ libraryId: 'builtin:shanghai-gaokao-choice' }),
         expect.objectContaining({ libraryId: 'builtin:shanghai-gaokao-groups' })
       ])
     )
+
+    const choiceTemplate = await application.templates.create({ name: '选择题1~10契约' })
+    const insertedChoiceGroup = await application.templates.insertFunctionCall(
+      choiceTemplate.templateId,
+      {
+        library: { source: 'builtin', libraryId: 'builtin:shanghai-gaokao-choice' },
+        functionId: 'builtin:shanghai-gaokao-choice-group-1-10'
+      },
+      'root'
+    )
+    await expect(application.templates.validate(choiceTemplate.templateId)).resolves.toEqual({
+      valid: true,
+      errors: []
+    })
+    const choicePreview = await application.templates.preview(insertedChoiceGroup.template, [])
+    if (!choicePreview.success) {
+      throw new Error(
+        `Builtin choice group preview failed: ${JSON.stringify(choicePreview.errors)}`
+      )
+    }
+    expect(choicePreview.preview.pages).toHaveLength(11)
+    expect(choicePreview.preview.choiceMeta?.pages).toEqual([
+      { questionIndices: [0, 1, 2, 3, 4] },
+      { questionIndices: [5, 6, 7, 8, 9] }
+    ])
 
     for (const summary of templateSummaries) {
       const release = await application.builtinTemplates.get(summary.templateId)
