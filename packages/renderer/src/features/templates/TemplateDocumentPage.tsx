@@ -55,7 +55,11 @@ import { TemplateInspectorSection } from './TemplateInspectorSection'
 import { exportTemplateDocumentFile } from './TemplateDocumentFiles'
 import { TemplateFunctionCallEditor } from './TemplateFunctionCallEditor'
 import { TemplateContentBlockInspector } from './TemplateContentBlockInspector'
-import { collectTemplateChoiceTargetPages } from './TemplateChoiceTargets'
+import {
+  collectTemplateChoiceGroupCandidates,
+  collectTemplateChoiceTargetPages,
+  type TemplateChoiceGroupCandidate
+} from './TemplateChoiceTargets'
 import { TemplateInterfaceRequirements } from './TemplateInterfaceRequirements'
 import {
   exportLocalFunctionLibraryFile,
@@ -265,6 +269,10 @@ function TemplateDocumentEditor({
     () =>
       root && document ? collectTemplateChoiceTargetPages(root, document.resources.functions) : [],
     [document, root]
+  )
+  const choiceGroupCandidates = useMemo(
+    () => collectTemplateChoiceGroupCandidates(choiceTargetPages),
+    [choiceTargetPages]
   )
 
   const editMetadata = (
@@ -1119,6 +1127,7 @@ function TemplateDocumentEditor({
                     functions={document?.resources.functions ?? []}
                     readOnly={readOnly}
                     variableCandidates={variableCandidates}
+                    choiceGroupCandidates={choiceGroupCandidates}
                     apply={session.apply}
                     onSelect={selectTemplateNode}
                     onToggle={toggleCollapsed}
@@ -1227,6 +1236,7 @@ function TemplateDocumentEditor({
                       node={selectedNode}
                       functions={document?.resources.functions ?? []}
                       variableCandidates={variableCandidates}
+                      choiceGroupCandidates={choiceGroupCandidates}
                       apply={session.apply}
                     />
                   </fieldset>
@@ -1447,6 +1457,7 @@ export interface TemplateNodeTreeProps {
   functions: readonly FunctionDef[]
   readOnly?: boolean
   variableCandidates: readonly TemplateVariableCandidate[]
+  choiceGroupCandidates: readonly TemplateChoiceGroupCandidate[]
   apply(operation: TemplateDocumentOperation): boolean
   onSelect(nodeId: string): void
   onToggle(nodeId: string): void
@@ -1464,6 +1475,7 @@ export function TemplateNodeTree({
   functions,
   readOnly = false,
   variableCandidates,
+  choiceGroupCandidates,
   apply,
   onSelect,
   onToggle,
@@ -1576,6 +1588,7 @@ export function TemplateNodeTree({
                   definition={functions.find((definition) => definition.id === node.functionRef)}
                   functions={functions}
                   variableCandidates={variableCandidates}
+                  choiceGroupCandidates={choiceGroupCandidates}
                   apply={apply}
                 />
               </fieldset>
@@ -1626,6 +1639,7 @@ export function TemplateNodeTree({
                 functions={functions}
                 readOnly={readOnly}
                 variableCandidates={variableCandidates}
+                choiceGroupCandidates={choiceGroupCandidates}
                 apply={apply}
                 onSelect={onSelect}
                 onToggle={onToggle}

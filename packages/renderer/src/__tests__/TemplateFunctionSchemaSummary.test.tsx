@@ -7,6 +7,7 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SchemaApplicationProvider } from '../features/schemas/SchemaApplicationProvider'
 import { TemplateFunctionCallEditor } from '../features/templates/TemplateFunctionCallEditor'
+import type { TemplateChoiceGroupCandidate } from '../features/templates/TemplateChoiceTargets'
 
 const SCHEMA_ID = `sha256:${'a'.repeat(64)}`
 const ROOT_ID = `sha256:${'b'.repeat(64)}`
@@ -167,5 +168,101 @@ describe('Function call Schema summary', () => {
     )
 
     expect(screen.queryByRole('region', { name: '函数内 Schema（只读）' })).not.toBeInTheDocument()
+  })
+
+  it('derives choice-group source and range starts from available shapes', () => {
+    const choiceDefinition: FunctionDef = {
+      ...root,
+      inputs: [
+        {
+          name: 'group',
+          type: 'choice-group',
+          shape: { kind: 'range', pageCounts: [2, 3, 4] }
+        }
+      ]
+    }
+    const choiceNode: FunctionNode = {
+      ...node,
+      inputs: {
+        group: {
+          type: 'choice-group',
+          source: 'global',
+          selection: { kind: 'range', startPage: 0 }
+        }
+      }
+    }
+    const candidates: TemplateChoiceGroupCandidate[] = [
+      {
+        key: 'global',
+        label: '全局题组',
+        source: 'global',
+        shape: { kind: 'all', pageCounts: [1, 2, 3, 4, 5] }
+      }
+    ]
+
+    render(
+      <SchemaApplicationProvider repository={repository()}>
+        <TemplateFunctionCallEditor
+          compact
+          apply={() => true}
+          choiceGroupCandidates={candidates}
+          definition={choiceDefinition}
+          functions={[choiceDefinition]}
+          node={choiceNode}
+          variableCandidates={[]}
+        />
+      </SchemaApplicationProvider>
+    )
+
+    const rangeStart = screen.getByLabelText('节点 root-call 入参 group 起始页')
+    expect(rangeStart).toHaveValue('1')
+    expect(within(rangeStart).getAllByRole('option')).toHaveLength(1)
+    expect(within(rangeStart).getByRole('option')).toHaveTextContent('第 2 页')
+  })
+
+  it('derives question page and question options from the selected group shape', () => {
+    const choiceDefinition: FunctionDef = {
+      ...root,
+      inputs: [{ name: 'group', type: 'choice-group', shape: { kind: 'question' } }]
+    }
+    const choiceNode: FunctionNode = {
+      ...node,
+      inputs: {
+        group: {
+          type: 'choice-group',
+          source: 'global',
+          selection: { kind: 'question', pageIndex: 0, questionIndex: 0 }
+        }
+      }
+    }
+    render(
+      <SchemaApplicationProvider repository={repository()}>
+        <TemplateFunctionCallEditor
+          compact
+          apply={() => true}
+          choiceGroupCandidates={[
+            {
+              key: 'global',
+              label: '全局题组',
+              source: 'global',
+              shape: { kind: 'all', pageCounts: [2, 3] }
+            }
+          ]}
+          definition={choiceDefinition}
+          functions={[choiceDefinition]}
+          node={choiceNode}
+          variableCandidates={[]}
+        />
+      </SchemaApplicationProvider>
+    )
+
+    expect(screen.getByLabelText('节点 root-call 入参 group 页面')).toHaveValue('0')
+    expect(screen.getByLabelText('节点 root-call 入参 group 题目')).toHaveValue('0')
+    expect(
+      within(screen.getByLabelText('节点 root-call 入参 group 页面')).getAllByRole('option')
+    ).toHaveLength(2)
+    expect(
+      within(screen.getByLabelText('节点 root-call 入参 group 题目')).getAllByRole('option')
+    ).toHaveLength(2)
   })
 })
