@@ -20,6 +20,12 @@ export type {
   GradingResult,
   CompiledSchemaInput
 } from './schema'
+export {
+  SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID,
+  SCHEMA_OBJECTIVE_CORRECT_ANSWER_INPUT_ID,
+  SCHEMA_QUESTION_DESCRIPTION_INPUT_ID,
+  SCHEMA_REFERENCE_ANSWER_INPUT_ID
+} from './schema'
 export type {
   SubmissionFormatVersion,
   SubmissionCandidate,

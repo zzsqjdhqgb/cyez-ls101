@@ -46,7 +46,10 @@ export function schemaDefinition(
           .filter(
             (input) =>
               input.inputId !== 'question-description' &&
-              !(structure.questionType === 'objective' && input.inputId === 'analysis')
+              !(
+                structure.questionType === 'objective' &&
+                (input.inputId === 'correct-answer' || input.inputId === 'analysis')
+              )
           )
           .map((input) => [input.inputId, input.inputId])
       ),

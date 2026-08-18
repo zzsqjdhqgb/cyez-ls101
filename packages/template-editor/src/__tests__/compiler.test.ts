@@ -61,7 +61,11 @@ function schemaDefinitions(): SchemaDefinition[] {
     schemaDefinition(CHOICE_SCHEMA_ID, {
       questionType: 'objective',
       answerFormat: [{ answerId: 'answer', type: 'text' }],
-      templateInputs: []
+      templateInputs: [
+        { inputId: 'question-description', type: 'text', required: true },
+        { inputId: 'correct-answer', type: 'text', required: true },
+        { inputId: 'analysis', type: 'text', required: false }
+      ]
     }),
     schemaDefinition(FIXED_SCHEMA_ID, {
       questionType: 'fixed-reading',
@@ -156,7 +160,10 @@ function choiceSchemaUse(useId: string, outputName: string): SchemaUse {
   return {
     useId,
     schemaId: CHOICE_SCHEMA_ID,
-    inputBindings: {},
+    inputBindings: {
+      'question-description': schemaText('Choose one'),
+      'correct-answer': schemaText('A')
+    },
     answerBindings: { answer: { type: 'text', source: 'choice-output', name: outputName } },
     attachments: []
   }
@@ -752,7 +759,10 @@ describe('compileTemplate', () => {
       {
         instanceId: 'schema-use:choice-call/inner-choice',
         schema: schemaDefinitions()[2],
-        inputs: [],
+        inputs: [
+          { inputId: 'question-description', type: 'text', value: 'Choose one' },
+          { inputId: 'correct-answer', type: 'text', value: 'A' }
+        ],
         answers: [{ answerId: 'answer', type: 'text', stringAnswerIndex: 0 }]
       },
       {
@@ -788,7 +798,10 @@ describe('compileTemplate', () => {
       {
         instanceId: 'schema-use:root-choice',
         schema: schemaDefinitions()[2],
-        inputs: [],
+        inputs: [
+          { inputId: 'question-description', type: 'text', value: 'Choose one' },
+          { inputId: 'correct-answer', type: 'text', value: 'A' }
+        ],
         answers: [{ answerId: 'answer', type: 'text', stringAnswerIndex: 0 }]
       }
     ])

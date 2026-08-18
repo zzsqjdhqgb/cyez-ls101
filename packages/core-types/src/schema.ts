@@ -6,6 +6,12 @@ export type SchemaFormatVersion = 2
 /** Schema 选择的评分数据管道。 */
 export type SchemaQuestionType = 'objective' | 'fixed-reading' | 'freetalk'
 
+/** Schema、Template 和评分流程共享的内置输入 ID。 */
+export const SCHEMA_QUESTION_DESCRIPTION_INPUT_ID = 'question-description'
+export const SCHEMA_OBJECTIVE_CORRECT_ANSWER_INPUT_ID = 'correct-answer'
+export const SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID = 'analysis'
+export const SCHEMA_REFERENCE_ANSWER_INPUT_ID = 'reference-answer'
+
 /** 学生答案槽位的语义类型。 */
 export type SchemaAnswerType = 'text' | 'fixed-speech' | 'free-speech'
 

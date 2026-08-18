@@ -15,7 +15,7 @@ import {
 } from '@ls101/submission-library'
 import {
   schemaBuiltinInputDescription,
-  SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID,
+  SCHEMA_OBJECTIVE_CORRECT_ANSWER_INPUT_ID,
   SCHEMA_QUESTION_DESCRIPTION_INPUT_ID
 } from '@ls101/schema-editor'
 import { ArrowLeft, Bot, Check, CircleAlert, LockKeyhole, RefreshCw, UserRound } from 'lucide-react'
@@ -1062,7 +1062,7 @@ function isVisibleGradingAuxiliaryInput(input: GradingInput, inputId: string): b
   if (inputId === SCHEMA_QUESTION_DESCRIPTION_INPUT_ID) return false
   return !(
     input.schema.structure.questionType === 'objective' &&
-    inputId === SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID
+    inputId === SCHEMA_OBJECTIVE_CORRECT_ANSWER_INPUT_ID
   )
 }
 

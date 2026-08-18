@@ -24,7 +24,8 @@ const objectiveSchema: SchemaDefinition = {
     answerFormat: [{ answerId: 'answer', type: 'text' }],
     templateInputs: [
       { inputId: 'question-description', type: 'text', required: true },
-      { inputId: 'analysis', type: 'text', required: true }
+      { inputId: 'correct-answer', type: 'text', required: true },
+      { inputId: 'analysis', type: 'text', required: false }
     ]
   },
   data: {
@@ -113,7 +114,8 @@ function examPackage(): ExamPackage {
           schema: objectiveSchema,
           inputs: [
             { inputId: 'question-description', type: 'text', value: 'Choose one.' },
-            { inputId: 'analysis', type: 'text', value: 'A' }
+            { inputId: 'correct-answer', type: 'text', value: 'A' },
+            { inputId: 'analysis', type: 'text', value: 'Transcript and explanation.' }
           ],
           answers: [{ answerId: 'answer', type: 'text', stringAnswerIndex: 0 }]
         },

@@ -1,4 +1,10 @@
-import type { GradingResult } from '@ls101/core-types'
+import {
+  SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID,
+  SCHEMA_OBJECTIVE_CORRECT_ANSWER_INPUT_ID,
+  SCHEMA_QUESTION_DESCRIPTION_INPUT_ID,
+  SCHEMA_REFERENCE_ANSWER_INPUT_ID,
+  type GradingResult
+} from '@ls101/core-types'
 import type {
   GradingEngine,
   GradingInput,
@@ -249,9 +255,10 @@ function isAudioAnswer(
 }
 
 function builtinInputName(inputId: string): string {
-  if (inputId === 'question-description') return '题目描述'
-  if (inputId === 'analysis') return '解析'
-  if (inputId === 'reference-answer') return '参考答案'
+  if (inputId === SCHEMA_QUESTION_DESCRIPTION_INPUT_ID) return '题目描述'
+  if (inputId === SCHEMA_OBJECTIVE_CORRECT_ANSWER_INPUT_ID) return '正确答案'
+  if (inputId === SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID) return '解析'
+  if (inputId === SCHEMA_REFERENCE_ANSWER_INPUT_ID) return '参考答案'
   return inputId
 }
 

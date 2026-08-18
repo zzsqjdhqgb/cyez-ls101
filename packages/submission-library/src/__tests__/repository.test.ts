@@ -21,7 +21,8 @@ const schema: SchemaDefinition = {
     answerFormat: [{ answerId: 'answer', type: 'text' }],
     templateInputs: [
       { inputId: 'question-description', type: 'text', required: true },
-      { inputId: 'analysis', type: 'text', required: true }
+      { inputId: 'correct-answer', type: 'text', required: true },
+      { inputId: 'analysis', type: 'text', required: false }
     ]
   },
   data: {
@@ -53,7 +54,8 @@ function submission(answer = 'A'): SubmissionPackage {
         schema,
         inputs: [
           { inputId: 'question-description', type: 'text', value: 'Choose one.' },
-          { inputId: 'analysis', type: 'text', value: 'A' }
+          { inputId: 'correct-answer', type: 'text', value: 'A' },
+          { inputId: 'analysis', type: 'text', value: 'Dialogue transcript and explanation.' }
         ],
         answers: [{ answerId: 'answer', type: 'text', stringAnswerIndex: 0 }]
       }
@@ -169,7 +171,7 @@ describe('FileSubmissionLibraryRepository', () => {
     })
   })
 
-  it('客观题严格比较学生答案和解析，空答案计零分', async () => {
+  it('客观题严格比较学生答案和正确答案，空答案计零分', async () => {
     const correct = objectiveInput('A', 'A')
     await expect(objectiveGradingEngine.grade(correct)).resolves.toEqual({ score: 2, comment: '' })
     await expect(objectiveGradingEngine.grade(objectiveInput('a', 'A'))).resolves.toEqual({
@@ -301,6 +303,7 @@ describe('FileSubmissionLibraryRepository', () => {
     expect(report.markdown).toContain('| 6.25/7 |')
     expect(report.markdown).toContain('- 正确答案：A')
     expect(report.markdown).toContain('- 学生答案：A')
+    expect(report.markdown).toContain('### 解析\n\nDialogue transcript and explanation.')
     expect(report.markdown).toContain('**分数：4.25/5**')
     expect(report.markdown).toContain('**评语：无**')
     expect(report.markdown).toContain('### 参考答案\n\nThe weather is beautiful today.')
@@ -547,14 +550,14 @@ async function importedSubmissionScope(store: MemoryStore): Promise<SubmissionLi
   return submissions.scope(key)
 }
 
-function objectiveInput(answer: string | null, analysis: string): GradingInput {
+function objectiveInput(answer: string | null, correctAnswer: string): GradingInput {
   return {
     submission: submission().meta,
     instanceId: 'schema-use:objective',
     schema,
     inputs: [
       { inputId: 'question-description', type: 'text', value: 'Choose one.' },
-      { inputId: 'analysis', type: 'text', value: analysis }
+      { inputId: 'correct-answer', type: 'text', value: correctAnswer }
     ],
     answers: [{ answerId: 'answer', description: 'Student answer', type: 'text', value: answer }],
     resources: {}

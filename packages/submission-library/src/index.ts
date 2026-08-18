@@ -1,9 +1,13 @@
-import type {
-  GradingResult,
-  SchemaDefinition,
-  SubmissionMeta,
-  SubmissionPackage,
-  SubmissionSchemaUse
+import {
+  SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID as OBJECTIVE_ANALYSIS_INPUT_ID,
+  SCHEMA_OBJECTIVE_CORRECT_ANSWER_INPUT_ID as OBJECTIVE_CORRECT_ANSWER_INPUT_ID,
+  SCHEMA_QUESTION_DESCRIPTION_INPUT_ID as QUESTION_DESCRIPTION_INPUT_ID,
+  SCHEMA_REFERENCE_ANSWER_INPUT_ID as REFERENCE_ANSWER_INPUT_ID,
+  type GradingResult,
+  type SchemaDefinition,
+  type SubmissionMeta,
+  type SubmissionPackage,
+  type SubmissionSchemaUse
 } from '@ls101/core-types'
 import { decodeSubmissionPackage, ExamPackageArchiveError } from '@ls101/exam-package'
 
@@ -14,9 +18,6 @@ const SETTLEMENT_MUTATION_KEY = '__settlements__'
 const ARCHIVE_EXTENSION = '.lssubmission'
 const SHA256_PATTERN = /^[0-9a-f]{64}$/
 const RESOURCE_REFERENCE_PATTERN = /resource:([A-Za-z0-9][A-Za-z0-9_.:%-]*)/g
-const QUESTION_DESCRIPTION_INPUT_ID = 'question-description'
-const OBJECTIVE_ANALYSIS_INPUT_ID = 'analysis'
-const REFERENCE_ANSWER_INPUT_ID = 'reference-answer'
 
 export interface SubmissionLibraryRecord {
   formatVersion: 1
@@ -735,17 +736,18 @@ export const objectiveGradingEngine: GradingEngine = {
     const answer = input.answers.find(
       (item): item is Extract<ResolvedGradingAnswer, { type: 'text' }> => item.type === 'text'
     )
-    const analysis = input.inputs.find(
-      (item) => item.inputId === OBJECTIVE_ANALYSIS_INPUT_ID
+    const correctAnswer = input.inputs.find(
+      (item) => item.inputId === OBJECTIVE_CORRECT_ANSWER_INPUT_ID
     )?.value
-    if (!answer || analysis === undefined) {
+    if (!answer || correctAnswer === undefined) {
       throw new SubmissionLibraryError(
         'INVALID_GRADING_RESULT',
         'Objective grading input is incomplete'
       )
     }
     return {
-      score: answer.value !== null && answer.value === analysis ? input.schema.data.maxScore : 0,
+      score:
+        answer.value !== null && answer.value === correctAnswer ? input.schema.data.maxScore : 0,
       comment: ''
     }
   }
@@ -837,6 +839,9 @@ export function buildSubmissionReportMarkdown(
     const question = input.inputs.find(
       (entry) => entry.inputId === QUESTION_DESCRIPTION_INPUT_ID
     )?.value
+    const correctAnswer = input.inputs.find(
+      (entry) => entry.inputId === OBJECTIVE_CORRECT_ANSWER_INPUT_ID
+    )?.value
     const analysis = input.inputs.find(
       (entry) => entry.inputId === OBJECTIVE_ANALYSIS_INPUT_ID
     )?.value
@@ -862,15 +867,16 @@ export function buildSubmissionReportMarkdown(
       const answer = input.answers.find(
         (entry): entry is Extract<ResolvedGradingAnswer, { type: 'text' }> => entry.type === 'text'
       )
-      const correct = answer?.value !== null && answer?.value === analysis
+      const correct = answer?.value !== null && answer?.value === correctAnswer
       lines.push(
         '### 答题详情',
         '',
-        `- 正确答案：${analysis ?? ''}`,
+        `- 正确答案：${correctAnswer ?? ''}`,
         `- 学生答案：${answer?.value ?? '未作答'}`,
         `- 正误：${correct ? '正确' : '错误'}`,
         ''
       )
+      if (analysis?.trim()) lines.push('### 解析', '', analysis, '')
     } else {
       lines.push('### 参考答案', '', referenceAnswer || '无', '', '### 学生答案', '')
       for (const answer of input.answers) {
@@ -1234,13 +1240,15 @@ function objectiveResult(submission: SubmissionPackage, use: SubmissionSchemaUse
     (item): item is Extract<SubmissionSchemaUse['answers'][number], { type: 'text' }> =>
       item.type === 'text'
   )
-  const analysis = use.inputs.find((input) => input.inputId === OBJECTIVE_ANALYSIS_INPUT_ID)?.value
-  if (!answer || analysis === undefined) {
+  const correctAnswer = use.inputs.find(
+    (input) => input.inputId === OBJECTIVE_CORRECT_ANSWER_INPUT_ID
+  )?.value
+  if (!answer || correctAnswer === undefined) {
     throw invalidStorage(`Incomplete objective grading item: ${use.instanceId}`)
   }
   const studentAnswer = submission.answers.strings[answer.stringAnswerIndex] ?? null
   return {
-    score: studentAnswer !== null && studentAnswer === analysis ? use.schema.data.maxScore : 0,
+    score: studentAnswer !== null && studentAnswer === correctAnswer ? use.schema.data.maxScore : 0,
     comment: ''
   }
 }
