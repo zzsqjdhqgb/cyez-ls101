@@ -87,7 +87,8 @@ export function SchemaDataFields({
           return builtinDescription !== null ? (
             <div className={styles.builtinDescription} key={input.inputId}>
               <span>
-                <code>{input.inputId}</code> · 必填 · 系统内置
+                <code>{input.inputId}</code>
+                {input.required ? ' · 必填' : ' · 可选'} · 系统内置
               </span>
               <strong>{builtinDescription}</strong>
             </div>
