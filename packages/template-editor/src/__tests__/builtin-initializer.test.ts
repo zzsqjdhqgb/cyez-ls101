@@ -150,7 +150,7 @@ describe('内置函数库启动初始化', () => {
     expect(choices).toMatchObject({
       libraryId: 'builtin:shanghai-gaokao-choice',
       version: 2,
-      contentHash: 'sha256:2e710d161068ddf1660f32a2fb0db77254b9a81c7fcd627cf592208beb1d27ef',
+      contentHash: 'sha256:fe51d6b4f547ebe88923f4d11308fea6838b8a6b8dd4115fb416981aa42d0177',
       content: { name: '高中选择题' }
     })
     expect(
@@ -229,11 +229,31 @@ describe('内置函数库启动初始化', () => {
     const secondChoice = choices?.content.functions.find(
       ({ functionId }) => functionId === 'builtin:shanghai-gaokao-choice-question-11-20'
     )
-    if (!firstChoice || !secondChoice) throw new Error('Builtin choice functions are missing')
+    const internalChoice = choices?.content.functions.find(
+      ({ functionId }) => functionId === 'builtin:shanghai-gaokao-choice-question-1-10-internal'
+    )
+    if (!firstChoice || !secondChoice || !internalChoice) {
+      throw new Error('Builtin choice functions are missing')
+    }
     const expectedSecondContent = structuredClone(firstChoice.content)
     expectedSecondContent.name = '选择题11~20单题'
     expectedSecondContent.schemaUses[0].schemaId = 'c13cd52c-cb16-402b-9a75-b4c993b3eae6'
     expect(secondChoice.content).toEqual(expectedSecondContent)
+    for (const choice of [firstChoice, secondChoice, internalChoice]) {
+      const pageCall = choice.content.body.children.find((child) => child.type === 'function')
+      expect(pageCall?.inputs.tts).toEqual({
+        type: 'string',
+        parts: [
+          { type: 'variable', ref: { scope: 'local', name: 'tts' } },
+          { type: 'literal', value: '\nQuestion: ' },
+          { type: 'variable', ref: { scope: 'local', name: 'stem' } }
+        ]
+      })
+      expect(pageCall?.inputs.stem).toEqual({
+        type: 'string',
+        parts: [{ type: 'literal', value: '' }]
+      })
+    }
 
     const groups = await repository.getActiveBuiltinFunctionLibrary(
       'builtin:shanghai-gaokao-groups'

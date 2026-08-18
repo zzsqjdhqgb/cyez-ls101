@@ -4633,7 +4633,7 @@
     {
       "libraryId": "builtin:shanghai-gaokao-choice",
       "version": 2,
-      "contentHash": "sha256:2e710d161068ddf1660f32a2fb0db77254b9a81c7fcd627cf592208beb1d27ef",
+      "contentHash": "sha256:fe51d6b4f547ebe88923f4d11308fea6838b8a6b8dd4115fb416981aa42d0177",
       "content": {
         "name": "高中选择题",
         "functions": [
@@ -6306,6 +6306,17 @@
                               "scope": "local",
                               "name": "tts"
                             }
+                          },
+                          {
+                            "type": "literal",
+                            "value": "\nQuestion: "
+                          },
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "stem"
+                            }
                           }
                         ]
                       },
@@ -6321,11 +6332,8 @@
                         "type": "string",
                         "parts": [
                           {
-                            "type": "variable",
-                            "ref": {
-                              "scope": "local",
-                              "name": "stem"
-                            }
+                            "type": "literal",
+                            "value": ""
                           }
                         ]
                       },
@@ -6578,6 +6586,17 @@
                               "scope": "local",
                               "name": "tts"
                             }
+                          },
+                          {
+                            "type": "literal",
+                            "value": "\nQuestion: "
+                          },
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "stem"
+                            }
                           }
                         ]
                       },
@@ -6593,11 +6612,8 @@
                         "type": "string",
                         "parts": [
                           {
-                            "type": "variable",
-                            "ref": {
-                              "scope": "local",
-                              "name": "stem"
-                            }
+                            "type": "literal",
+                            "value": ""
                           }
                         ]
                       },
@@ -6850,6 +6866,17 @@
                               "scope": "local",
                               "name": "tts"
                             }
+                          },
+                          {
+                            "type": "literal",
+                            "value": "\nQuestion: "
+                          },
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "stem"
+                            }
                           }
                         ]
                       },
@@ -6865,11 +6892,8 @@
                         "type": "string",
                         "parts": [
                           {
-                            "type": "variable",
-                            "ref": {
-                              "scope": "local",
-                              "name": "stem"
-                            }
+                            "type": "literal",
+                            "value": ""
                           }
                         ]
                       },

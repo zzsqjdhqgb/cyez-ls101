@@ -116,6 +116,20 @@ describe('builtin content contract', () => {
       valid: true,
       errors: []
     })
+    const insertedChoiceCall = insertedChoiceGroup.template.content.root.children.find(
+      (child) => child.id === insertedChoiceGroup.callNodeId
+    )
+    if (insertedChoiceCall?.type !== 'function') {
+      throw new Error('Builtin choice group call was not inserted')
+    }
+    insertedChoiceCall.inputs.tts = {
+      type: 'string',
+      parts: [{ type: 'literal', value: 'Dialogue 1' }]
+    }
+    insertedChoiceCall.inputs.stem1 = {
+      type: 'string',
+      parts: [{ type: 'literal', value: 'Stem 1' }]
+    }
     const choicePreview = await application.templates.preview(insertedChoiceGroup.template, [])
     if (!choicePreview.success) {
       throw new Error(
@@ -127,6 +141,11 @@ describe('builtin content contract', () => {
       { questionIndices: [0, 1, 2, 3, 4] },
       { questionIndices: [5, 6, 7, 8, 9] }
     ])
+    expect(choicePreview.preview.pages[1]?.timeline[0]).toEqual({
+      type: 'play',
+      text: 'Dialogue 1\nQuestion: Stem 1'
+    })
+    expect(choicePreview.preview.choiceMeta?.questions[0]?.stem).toBe('')
 
     for (const summary of templateSummaries) {
       const release = await application.builtinTemplates.get(summary.templateId)
