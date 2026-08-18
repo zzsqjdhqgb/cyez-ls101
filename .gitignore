@@ -12,7 +12,6 @@ test-results
 docs/product/.product-docs-staging
 docs/product/**/*.product-docs-backup
 /assets/*
-!/assets/.gitkeep
 /externals/
 /.yarn/*
 !/.yarn/cache
