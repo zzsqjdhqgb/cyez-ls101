@@ -384,11 +384,17 @@ function errorMessage(error: unknown): string {
 function resolveRecognitionAssetsDir(): string {
   const electronApp = app as typeof app & { isPackaged?: boolean; getAppPath?: () => string }
   if (electronApp.isPackaged) return join(process.resourcesPath, 'assets', 'stt')
-  return join(electronApp.getAppPath?.() ?? process.cwd(), 'model-assets', 'stt')
+  return join(electronApp.getAppPath?.() ?? process.cwd(), 'externals', 'ai', 'stt', 'model')
 }
 
 function resolvePronunciationAssetsDir(): string {
   const electronApp = app as typeof app & { isPackaged?: boolean; getAppPath?: () => string }
   if (electronApp.isPackaged) return join(process.resourcesPath, 'assets', 'pronunciation')
-  return join(electronApp.getAppPath?.() ?? process.cwd(), 'model-assets', 'pronunciation')
+  return join(
+    electronApp.getAppPath?.() ?? process.cwd(),
+    'externals',
+    'ai',
+    'pronunciation',
+    'model'
+  )
 }

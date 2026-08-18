@@ -427,7 +427,15 @@ function resolveHelperPath(): string {
   const electronApp = app as typeof app & { isPackaged?: boolean; getAppPath?: () => string }
   return electronApp.isPackaged
     ? path.join(process.resourcesPath, relative)
-    : path.join(electronApp.getAppPath?.() ?? process.cwd(), 'resources', relative)
+    : path.join(
+        electronApp.getAppPath?.() ?? process.cwd(),
+        'externals',
+        'ai',
+        'qwen3-tts',
+        'runtime',
+        `${process.platform}-${process.arch}`,
+        executable
+      )
 }
 
 function resolveUserDataPath(): string {

@@ -94,11 +94,11 @@ electronDownload:
 extraResources:
   - from: resources/tts
     to: tts
-  - from: resources/qwen-tts
+  - from: externals/ai/qwen3-tts/runtime
     to: qwen-tts
-  - from: model-assets/stt
+  - from: externals/ai/stt/model
     to: assets/stt
-  - from: model-assets/pronunciation
+  - from: externals/ai/pronunciation/model
     to: assets/pronunciation
   - from: resources/media
     to: media

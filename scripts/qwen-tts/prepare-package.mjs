@@ -14,7 +14,7 @@ export async function preparePackage() {
     console.log('[qwen-tts] local package preparation skipped by LS101_SKIP_QWEN_TTS_DOWNLOAD')
     return null
   }
-  const modelDir = path.join(root, 'model-assets', 'qwen-tts', 'models')
+  const modelDir = path.join(root, 'externals', 'ai', 'qwen3-tts', 'models')
   const output = path.join(
     root,
     'dist',

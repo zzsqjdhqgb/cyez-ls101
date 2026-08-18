@@ -6,7 +6,7 @@ import { strToU8, zipSync } from 'fflate'
 const root = path.resolve(import.meta.dirname, '..')
 const appVersion = process.argv[2]
 const packageVersion = process.env.TTS_PACKAGE_VERSION || '1.0.0'
-const sourceRoot = path.join(root, 'model-assets', 'tts')
+const sourceRoot = path.join(root, 'externals', 'ai', 'pocket-tts', 'model')
 const outputRoot = path.join(root, 'dist')
 const packageId = 'pocket-tts-en'
 

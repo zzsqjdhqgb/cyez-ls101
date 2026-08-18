@@ -139,7 +139,7 @@ jobs:
       - name: Smoke-test helper
         shell: bash
         env:
-          HELPER_PATH: resources/qwen-tts/${{ matrix.runtime-directory }}/${{ matrix.executable }}
+          HELPER_PATH: externals/ai/qwen3-tts/runtime/${{ matrix.runtime-directory }}/${{ matrix.executable }}
         run: |
           node <<'NODE'
           const { spawnSync } = require('node:child_process')
@@ -162,7 +162,7 @@ jobs:
       - name: Stage runtime asset
         shell: bash
         env:
-          SOURCE_PATH: resources/qwen-tts/${{ matrix.runtime-directory }}/${{ matrix.executable }}
+          SOURCE_PATH: externals/ai/qwen3-tts/runtime/${{ matrix.runtime-directory }}/${{ matrix.executable }}
           RELEASE_ASSET: ${{ matrix.release-asset }}
           RUNTIME_DIRECTORY: ${{ matrix.runtime-directory }}
           SOURCE_COMMIT: ${{ github.sha }}
@@ -184,8 +184,8 @@ jobs:
             sourceCommit: process.env.SOURCE_COMMIT,
             upstream: {
               repository: config.runtime.repository,
-              revision: revision('model-assets/downloads/qwen-tts/qwen3-tts.cpp'),
-              ggmlRevision: revision('model-assets/downloads/qwen-tts/qwen3-tts.cpp/ggml')
+              revision: revision('externals/ai/qwen3-tts/downloads/qwen3-tts.cpp'),
+              ggmlRevision: revision('externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/ggml')
             }
           }
           writeFileSync(
@@ -230,12 +230,12 @@ jobs:
           QWEN_CPP_REPOSITORY: ${{ needs.metadata.outputs.runtime_repository }}
           QWEN_CPP_REVISION: ${{ needs.metadata.outputs.runtime_revision }}
         run: |
-          mkdir -p model-assets/downloads/qwen-tts/qwen3-tts.cpp
-          git -C model-assets/downloads/qwen-tts/qwen3-tts.cpp init
-          git -C model-assets/downloads/qwen-tts/qwen3-tts.cpp remote add origin "$QWEN_CPP_REPOSITORY"
-          git -C model-assets/downloads/qwen-tts/qwen3-tts.cpp fetch --depth 1 origin "$QWEN_CPP_REVISION"
-          git -C model-assets/downloads/qwen-tts/qwen3-tts.cpp checkout --detach FETCH_HEAD
-          test "$(git -C model-assets/downloads/qwen-tts/qwen3-tts.cpp rev-parse HEAD)" = "$QWEN_CPP_REVISION"
+          mkdir -p externals/ai/qwen3-tts/downloads/qwen3-tts.cpp
+          git -C externals/ai/qwen3-tts/downloads/qwen3-tts.cpp init
+          git -C externals/ai/qwen3-tts/downloads/qwen3-tts.cpp remote add origin "$QWEN_CPP_REPOSITORY"
+          git -C externals/ai/qwen3-tts/downloads/qwen3-tts.cpp fetch --depth 1 origin "$QWEN_CPP_REVISION"
+          git -C externals/ai/qwen3-tts/downloads/qwen3-tts.cpp checkout --detach FETCH_HEAD
+          test "$(git -C externals/ai/qwen3-tts/downloads/qwen3-tts.cpp rev-parse HEAD)" = "$QWEN_CPP_REVISION"
 
       - name: Install pinned conversion dependencies
         run: |
@@ -259,7 +259,7 @@ jobs:
           snapshot_download(
               repo_id=os.environ["MODEL_ID"],
               revision=os.environ["MODEL_REVISION"],
-              local_dir=Path("model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base"),
+              local_dir=Path("externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base"),
               allow_patterns=[
                   "config.json",
                   "generation_config.json",
@@ -276,13 +276,13 @@ jobs:
       - name: Convert model to GGUF
         shell: bash
         run: |
-          python model-assets/downloads/qwen-tts/qwen3-tts.cpp/scripts/convert_tts_to_gguf.py \
-            --input model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base \
-            --output model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/qwen3-tts-0.6b-q8_0.gguf \
+          python externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/scripts/convert_tts_to_gguf.py \
+            --input externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base \
+            --output externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/models/qwen3-tts-0.6b-q8_0.gguf \
             --type q8_0
-          python model-assets/downloads/qwen-tts/qwen3-tts.cpp/scripts/convert_tokenizer_to_gguf.py \
-            --input model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base \
-            --output model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/qwen3-tts-tokenizer-f16.gguf \
+          python externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/scripts/convert_tokenizer_to_gguf.py \
+            --input externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base \
+            --output externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/models/qwen3-tts-tokenizer-f16.gguf \
             --type f16
 
       - name: Stage model assets
@@ -291,8 +291,8 @@ jobs:
           SOURCE_COMMIT: ${{ github.sha }}
         run: |
           mkdir -p release-assets
-          cp model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/qwen3-tts-0.6b-q8_0.gguf release-assets/
-          cp model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/qwen3-tts-tokenizer-f16.gguf release-assets/
+          cp externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/models/qwen3-tts-0.6b-q8_0.gguf release-assets/
+          cp externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/models/qwen3-tts-tokenizer-f16.gguf release-assets/
           node <<'NODE'
           const { execFileSync } = require('node:child_process')
           const { readFileSync, statSync, writeFileSync } = require('node:fs')
@@ -319,7 +319,7 @@ jobs:
             modelRevision: config.model.revision,
             qwenCppRevision: execFileSync(
               'git',
-              ['-C', 'model-assets/downloads/qwen-tts/qwen3-tts.cpp', 'rev-parse', 'HEAD'],
+              ['-C', 'externals/ai/qwen3-tts/downloads/qwen3-tts.cpp', 'rev-parse', 'HEAD'],
               { encoding: 'utf8' }
             ).trim(),
             assets

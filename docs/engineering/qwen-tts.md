@@ -8,13 +8,13 @@ executables.
 The published runtime bundle is `qwen-tts-v0.1.0` in the application repository. `yarn setup`
 and application build setup query the GitHub Release Assets API, verify each selected asset
 against its API-provided size and SHA-256 digest. Release metadata and the helper download are
-cached under `model-assets/downloads/qwen-tts/`; the two downloaded GGUF files are stored directly
-under `model-assets/qwen-tts/models/`. The helper is staged under `resources/qwen-tts/`. A full
+cached under `externals/ai/qwen3-tts/downloads/`; the two downloaded GGUF files are stored directly
+under `externals/ai/qwen3-tts/models/`. The helper is staged under `externals/ai/qwen3-tts/runtime/`. A full
 application build then prepares the local model ZIP under `dist/`, while `yarn qwen-tts:prepare`
 can build it explicitly. `yarn build:test` sets
 `LS101_SKIP_QWEN_TTS_DOWNLOAD=1` so smoke builds do not download the roughly 1.68 GB of models.
 If GitHub's anonymous API quota is exhausted, set `GITHUB_TOKEN` or `GH_TOKEN`; a previously
-validated API response is also cached at `model-assets/downloads/qwen-tts/release-api.json`.
+validated API response is also cached at `externals/ai/qwen3-tts/downloads/release-api.json`.
 
 Release version, tag, upstream revisions, model selection, and fixed-voice metadata have one
 source of truth: `scripts/qwen-tts/assets.json`. Update that file before publishing a new bundle.
@@ -40,16 +40,16 @@ Install CMake, a C++17 compiler, Git, and the platform build tool, then run:
 yarn qwen-tts:build-runtime
 ```
 
-The helper is written to `resources/qwen-tts/<platform>-<arch>/`. Build it independently on every
+The helper is written to `externals/ai/qwen3-tts/runtime/<platform>-<arch>/`. Build it independently on every
 release target; do not copy a binary between operating systems or architectures.
 
 ## 2. Produce GGUF models
 
-The runtime build leaves the pinned upstream checkout under `model-assets/downloads/qwen-tts/qwen3-tts.cpp`. In a Python
+The runtime build leaves the pinned upstream checkout under `externals/ai/qwen3-tts/downloads/qwen3-tts.cpp`. In a Python
 environment with the upstream conversion dependencies, generate the CPU model files:
 
 ```bash
-cd model-assets/downloads/qwen-tts/qwen3-tts.cpp
+cd externals/ai/qwen3-tts/downloads/qwen3-tts.cpp
 huggingface-cli download Qwen/Qwen3-TTS-12Hz-0.6B-Base \
   --revision 5d83992436eae1d760afd27aff78a71d676296fc \
   --local-dir models/Qwen3-TTS-12Hz-0.6B-Base
@@ -59,9 +59,9 @@ python scripts/convert_tts_to_gguf.py \
   --output models/qwen3-tts-0.6b-q8_0.gguf \
   --type q8_0
 cd ../../../..
-mkdir -p model-assets/qwen-tts/models
-cp model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/qwen3-tts-0.6b-*.gguf model-assets/qwen-tts/models/
-cp model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/qwen3-tts-tokenizer-f16.gguf model-assets/qwen-tts/models/
+mkdir -p externals/ai/qwen3-tts/models
+cp externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/models/qwen3-tts-0.6b-*.gguf externals/ai/qwen3-tts/models/
+cp externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/models/qwen3-tts-tokenizer-f16.gguf externals/ai/qwen3-tts/models/
 ```
 
 The Base download is pinned to revision `5d83992436eae1d760afd27aff78a71d676296fc`. Q8_0 is
@@ -94,8 +94,8 @@ Run the same C++ speaker encoder used in production:
 
 ```bash
 mkdir -p native/qwen-tts/voices
-resources/qwen-tts/linux-x64/ls101-qwen-tts-helper \
-  --model-dir model-assets/qwen-tts/models \
+externals/ai/qwen3-tts/runtime/linux-x64/ls101-qwen-tts-helper \
+  --model-dir externals/ai/qwen3-tts/models \
   --extract-speaker native/qwen-tts/voice-design/candidate-20260816.wav \
   native/qwen-tts/voices/american-woman.spk
 ```

@@ -17,7 +17,7 @@ export default defineConfig(
       '**/.cache/**',
       '**/dist',
       '**/out',
-      '**/model-assets/**',
+      '**/externals/**',
       '**/coverage/**',
       '**/playwright-report/**',
       '**/test-results/**',

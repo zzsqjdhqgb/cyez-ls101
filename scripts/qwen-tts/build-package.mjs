@@ -28,7 +28,7 @@ function loadAssetConfig() {
 
 export function parseOptions(argv) {
   const options = {
-    modelDir: path.join(root, 'model-assets', 'qwen-tts', 'models'),
+    modelDir: path.join(root, 'externals', 'ai', 'qwen3-tts', 'models'),
     voicesDir: path.join(root, 'native', 'qwen-tts', 'voices'),
     voices: [],
     voiceNames: new Map(),

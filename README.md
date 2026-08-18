@@ -61,7 +61,7 @@ node scripts/download-tts-assets.js
 node scripts/download-stt-models.js
 ```
 
-脚本会在运行时读取 GitHub Release 与 Hugging Face API，并要求官方元数据、仓库内固定清单和下载文件的 SHA-256 一致；官方 API 暂时不可达时仍可使用固定清单校验本地缓存。脚本支持通过 `.part` 文件断点续传，并把已验证的压缩包保留在 `model-assets/downloads/stt/`。再次完整校验已解压模型可运行：
+脚本会在运行时读取 GitHub Release 与 Hugging Face API，并要求官方元数据、仓库内固定清单和下载文件的 SHA-256 一致；官方 API 暂时不可达时仍可使用固定清单校验本地缓存。脚本支持通过 `.part` 文件断点续传，并把已验证的压缩包保留在 `externals/ai/stt/downloads/`。再次完整校验已解压模型可运行：
 
 ```bash
 node scripts/download-stt-models.js --verify

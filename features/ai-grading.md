@@ -22,7 +22,7 @@
 
 发音评测后端当前使用独立的内置 Facebook Wav2Vec2 音素 CTC 模型。模型输出逐帧音素 logits，评分引擎使用 CMUdict 生成参考发音，再做 CTC 强制对齐，结果包含逐音素分数、疑似替代音素、时间区间和停顿。反馈文本由确定性 formatter 生成，随后与 ASR 转写一起交给文本模型。
 
-模型文件位于 `model-assets/pronunciation/facebook-wav2vec2-lv-60-espeak-cv-ft-int8`，由 `scripts/download-pronunciation-model.js` 按固定 revision 和 SHA-256 下载。模型及 ONNX Runtime 在独立 Worker 中运行，不阻塞 renderer。
+模型文件位于 `externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8`，由 `scripts/download-pronunciation-model.js` 按固定 revision 和 SHA-256 下载。模型及 ONNX Runtime 在独立 Worker 中运行，不阻塞 renderer。
 
 当前没有针对 `freetalk` 的专用评分或纠错策略；`free-speech` 只使用通用转写和占位纠错流程。
 

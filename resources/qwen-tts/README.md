@@ -1,6 +1,7 @@
 # Qwen TTS runtime
 
-Platform-specific `ls101-qwen-tts-helper` binaries are generated here by:
+Platform-specific `ls101-qwen-tts-helper` binaries are generated under
+`externals/ai/qwen3-tts/runtime/` by:
 
 ```bash
 yarn qwen-tts:build-runtime

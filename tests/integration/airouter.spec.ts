@@ -1608,7 +1608,7 @@ async function createRealPocketTtsPackage(): Promise<Uint8Array> {
   const assets = await Promise.all(
     sourceFiles.map(async (asset) => ({
       ...asset,
-      bytes: await readFile(path.join('model-assets', 'tts', asset.source))
+      bytes: await readFile(path.join('externals', 'ai', 'pocket-tts', 'model', asset.source))
     }))
   )
   const manifest = {
