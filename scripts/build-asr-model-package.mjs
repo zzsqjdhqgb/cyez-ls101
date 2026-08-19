@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
-import { mkdir, readdir, rm, stat } from 'node:fs/promises'
+import { mkdir, readdir, rename, rm, stat } from 'node:fs/promises'
 import { once } from 'node:events'
 import path from 'node:path'
 import process from 'node:process'
@@ -41,7 +41,8 @@ export async function buildAsrModelPackage({
   }
 
   await mkdir(path.dirname(output), { recursive: true })
-  const writer = createZipWriter(output)
+  const temporaryOutput = `${output}.${process.pid}.${randomUUID()}.part`
+  const writer = createZipWriter(temporaryOutput)
   try {
     const assets = []
     for (const [archivePath, file, kind] of inputs) {
@@ -77,11 +78,13 @@ export async function buildAsrModelPackage({
     await addBytes(writer, strToU8(`${JSON.stringify(manifest, null, 2)}\n`), 'manifest.json')
     writer.zip.end()
     await writer.done
+    await rm(output, { force: true })
+    await rename(temporaryOutput, output)
     return { outputPath: output, manifest }
   } catch (error) {
     writer.destroy(error instanceof Error ? error : new Error(String(error)))
     await writer.done.catch(() => undefined)
-    if (writer.wasCreated()) await rm(output, { force: true })
+    if (writer.wasCreated()) await rm(temporaryOutput, { force: true })
     throw error
   }
 }

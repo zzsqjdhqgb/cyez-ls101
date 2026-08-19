@@ -10,10 +10,7 @@ test('builds a Qwen3 ASR model package with verified assets', async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'ls101-asr-package-'))
   try {
     const sourceDir = path.join(directory, 'source')
-    const modelDir = path.join(
-      sourceDir,
-      'sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25'
-    )
+    const modelDir = path.join(sourceDir, 'sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25')
     await mkdir(path.join(modelDir, 'tokenizer'), { recursive: true })
     const files = {
       [path.join(modelDir, 'conv_frontend.onnx')]: 'frontend',
@@ -27,6 +24,9 @@ test('builds a Qwen3 ASR model package with verified assets', async () => {
     await Promise.all(Object.entries(files).map(([file, bytes]) => writeFile(file, bytes)))
     const output = path.join(directory, 'qwen3-asr.zip')
     const { buildAsrModelPackage } = await import('../build-asr-model-package.mjs')
+    await buildAsrModelPackage({ sourceDir, output })
+
+    await writeFile(path.join(modelDir, 'encoder.int8.onnx'), 'updated encoder')
     await buildAsrModelPackage({ sourceDir, output })
 
     const archive = unzipSync(new Uint8Array(await readFile(output)))
@@ -43,6 +43,12 @@ test('builds a Qwen3 ASR model package with verified assets', async () => {
       assert.equal(archive[asset.path].byteLength, asset.size)
       assert.equal(createHash('sha256').update(archive[asset.path]).digest('hex'), asset.sha256)
     }
+    assert.equal(Buffer.from(archive['model/encoder.int8.onnx']).toString(), 'updated encoder')
+
+    await rm(path.join(modelDir, 'decoder.int8.onnx'))
+    await assert.rejects(buildAsrModelPackage({ sourceDir, output }), /Missing ASR asset/)
+    const preserved = unzipSync(new Uint8Array(await readFile(output)))
+    assert.equal(Buffer.from(preserved['model/encoder.int8.onnx']).toString(), 'updated encoder')
   } finally {
     await rm(directory, { recursive: true, force: true })
   }

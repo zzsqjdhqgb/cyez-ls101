@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
-import { rm, stat } from 'node:fs/promises'
+import { mkdir, rename, rm, stat } from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 import { once } from 'node:events'
@@ -29,7 +29,9 @@ export async function buildPronunciationExtensionPackage({
     ? path.resolve(process.env.LS101_PRONUNCIATION_EXTENSION_OUTPUT)
     : path.join(root, 'dist', 'facebook-wav2vec2-pronunciation-1.0.0.zip')
 } = {}) {
-  const writer = createZipWriter(output)
+  await mkdir(path.dirname(output), { recursive: true })
+  const temporaryOutput = `${output}.${process.pid}.${randomUUID()}.part`
+  const writer = createZipWriter(temporaryOutput)
   try {
     const assets = []
     for (const [sourceName, archivePath, kind] of files) {
@@ -53,11 +55,13 @@ export async function buildPronunciationExtensionPackage({
     await addBytes(writer, strToU8(`${JSON.stringify(manifest, null, 2)}\n`), 'manifest.json')
     writer.zip.end()
     await writer.done
+    await rm(output, { force: true })
+    await rename(temporaryOutput, output)
     return { outputPath: output, manifest }
   } catch (error) {
     writer.destroy(error instanceof Error ? error : new Error(String(error)))
     await writer.done.catch(() => undefined)
-    await rm(output, { force: true })
+    await rm(temporaryOutput, { force: true })
     throw error
   }
 }

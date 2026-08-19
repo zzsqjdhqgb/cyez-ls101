@@ -20,6 +20,8 @@ test('builds the declared AI pronunciation extension package', async () => {
     const { buildPronunciationExtensionPackage } =
       await import('../build-pronunciation-extension-package.mjs')
     await buildPronunciationExtensionPackage({ sourceDir: path.join(directory, 'source'), output })
+    await writeFile(path.join(directory, 'source', 'vocab.json'), '{"updated":true}')
+    await buildPronunciationExtensionPackage({ sourceDir: path.join(directory, 'source'), output })
     const archive = unzipSync(new Uint8Array(await readFile(output)))
     const manifest = JSON.parse(strFromU8(archive['manifest.json']))
     assert.equal(manifest.format, 'ls101.extension-package')
@@ -30,6 +32,15 @@ test('builds the declared AI pronunciation extension package', async () => {
       description: 'Facebook Wav2Vec2 phoneme assessment extension.'
     })
     assert.equal(manifest.assets.length, 4)
+    assert.equal(strFromU8(archive['model/vocab.json']), '{"updated":true}')
+
+    await rm(path.join(directory, 'source', 'config.json'))
+    await assert.rejects(
+      buildPronunciationExtensionPackage({ sourceDir: path.join(directory, 'source'), output }),
+      /Missing pronunciation asset/
+    )
+    const preserved = unzipSync(new Uint8Array(await readFile(output)))
+    assert.equal(strFromU8(preserved['model/vocab.json']), '{"updated":true}')
   } finally {
     await rm(directory, { recursive: true, force: true })
   }
