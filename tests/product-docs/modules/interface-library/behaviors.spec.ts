@@ -719,6 +719,371 @@ test(
   )
 )
 
+test(
+  ...productTest(
+    {
+      id: 'IF-09',
+      owner: { kind: 'module', slug: 'interface-library', title: '题型库', order: 40 },
+      section: '题型草稿编辑',
+      title: '在草稿编辑器维护字段结构和属性',
+      purpose: '题型草稿需要在一个可检查的编辑器中同时维护基本信息、生成要求和字段契约。',
+      preconditions: ['题型库中没有需要继续编辑的本地草稿。'],
+      outcomes: [
+        '字段组和字段的层级关系在字段树中保持可见。',
+        '字段属性修改保存后，重新打开草稿仍然保持。',
+        '折叠字段组只影响浏览，不会删除其中的字段。'
+      ],
+      manual: [{ chapter: 'prepare-content', order: 72 }],
+      steps: [
+        {
+          key: 'open-draft-editor',
+          action: '进入题型库的“草稿”视图并选择“新建题型”。',
+          expected: '应用打开未命名题型草稿，并同时显示题型内容区和字段结构区。'
+        },
+        {
+          key: 'define-field-structure',
+          action: '填写题型名称、说明和生成要求，添加字段组“lesson”，再在组内添加字段“question”。',
+          expected: '字段树明确显示字段组和字段的层级，属性面板显示当前选中节点。'
+        },
+        {
+          key: 'edit-field-properties',
+          action:
+            '把“question”设置为文本字段，填写变量名、字段描述和示例，然后折叠并重新展开“lesson”。',
+          expected: '字段属性和层级关系保持不变，折叠不会删除字段。'
+        },
+        {
+          key: 'save-and-reopen',
+          action: '保存草稿，返回草稿列表后重新打开“课堂问答题型”。',
+          expected: '题型基本信息、字段组和字段属性都按上次保存的内容重新显示。'
+        }
+      ]
+    },
+    async (testInfo, productStep) => {
+      await page.getByRole('link', { name: '题型库' }).click()
+
+      await productStep('open-draft-editor', async () => {
+        await page.getByRole('tab', { name: '草稿' }).click()
+        await page.getByRole('button', { name: '新建题型' }).click()
+        await expect(page.getByRole('heading', { level: 1, name: '未命名题型' })).toBeVisible()
+        await expect(page.getByRole('region', { name: '题型内容' })).toBeVisible()
+        await expect(page.getByRole('region', { name: '字段结构' })).toBeVisible()
+      })
+
+      await productStep('define-field-structure', async () => {
+        const content = page.getByLabel('题型内容')
+        await content.getByLabel('名称').fill('课堂问答题型')
+        await content.getByLabel('描述').fill('用于课堂问答练习')
+        await content.getByLabel('生成要求').fill('生成一组适合课堂讨论的英语问题。')
+
+        const structure = page.getByLabel('字段结构')
+        await structure.getByRole('button', { name: '添加字段组' }).click()
+        await structure.getByLabel('字段标识').fill('lesson')
+        await structure.getByLabel('字段标识').press('Tab')
+        await expect(structure.getByText('添加到：lesson')).toBeVisible()
+        await structure.getByRole('button', { name: '添加字段', exact: true }).click()
+        await structure.getByLabel('字段标识').fill('question')
+        await structure.getByLabel('字段标识').press('Tab')
+        await expect(structure.getByRole('button', { name: /question/ })).toBeVisible()
+        await evidence(testInfo, page, {
+          key: 'draft-field-tree',
+          kind: 'decision',
+          step: 'define-field-structure',
+          caption: '字段组和字段在草稿结构树中形成明确层级'
+        })
+      })
+
+      await productStep('edit-field-properties', async () => {
+        const structure = page.getByLabel('字段结构')
+        await structure.getByLabel('变量名').fill('questionText')
+        await structure.getByLabel('描述').fill('课堂讨论问题')
+        await structure.getByLabel('示例').fill('What makes a good friend?')
+        await structure.getByRole('button', { name: '折叠字段组“lesson”' }).click()
+        await expect(structure.getByRole('button', { name: /question/ })).toHaveCount(0)
+        await structure.getByRole('button', { name: '展开字段组“lesson”' }).click()
+        await expect(structure.getByRole('button', { name: /question/ })).toBeVisible()
+        await evidence(testInfo, page, {
+          key: 'draft-field-properties',
+          kind: 'result',
+          step: 'edit-field-properties',
+          caption: '字段属性保存于可折叠的字段结构中'
+        })
+      })
+
+      await productStep('save-and-reopen', async () => {
+        await page.getByRole('button', { name: '保存', exact: true }).click()
+        await expect(page.getByText('草稿已保存')).toBeVisible()
+        await expect(page.getByRole('button', { name: '保存', exact: true })).toBeDisabled()
+        await page.getByRole('button', { name: '返回草稿列表' }).click()
+        await expect(page.getByRole('button', { name: '课堂问答题型', exact: true })).toBeVisible()
+        await page.getByRole('button', { name: '课堂问答题型', exact: true }).click()
+        await expect(page.getByRole('heading', { level: 1, name: '课堂问答题型' })).toBeVisible()
+        const structure = page.getByLabel('字段结构')
+        await expect(structure.locator('[data-field-path="lesson"]')).toBeVisible()
+        await expect(structure.locator('[data-field-path="lesson.question"]')).toBeVisible()
+        await structure.locator('[data-field-path="lesson.question"]').click()
+        await expect(structure.getByLabel('变量名')).toHaveValue('questionText')
+        await expect(structure.getByLabel('描述')).toHaveValue('课堂讨论问题')
+      })
+    }
+  )
+)
+
+test(
+  ...productTest(
+    {
+      id: 'IF-10',
+      owner: { kind: 'module', slug: 'interface-library', title: '题型库', order: 40 },
+      section: '题型草稿编辑',
+      title: '发布前定位草稿字段校验错误',
+      purpose: '草稿可以先保存不完整内容，但发布必须明确指出具体字段需要修正的位置。',
+      preconditions: ['题型库中没有需要继续编辑的本地草稿。'],
+      outcomes: [
+        '发布校验失败时，草稿内容不会被发布或静默修正。',
+        '错误消息关联到具体字段，用户可以直接回到该字段修正。',
+        '修正字段后可以再次发布，得到稳定题型。'
+      ],
+      manual: [{ chapter: 'prepare-content', order: 73 }],
+      steps: [
+        {
+          key: 'prepare-incomplete-draft',
+          action: '新建草稿，填写名称、说明、生成要求和字段标识，但故意不填写变量名。',
+          expected: '草稿可以保存，编辑器保留这个尚未完成的字段。'
+        },
+        {
+          key: 'review-validation-error',
+          action: '选择“发布”并确认发布题型。',
+          expected: '页面显示“变量名不能为空”，并标明错误字段路径；题型不会被发布。'
+        },
+        {
+          key: 'fix-and-publish',
+          action: '从校验错误进入字段，填写变量名后再次发布并确认。',
+          expected: '题型发布成功，进入稳定题型详情。'
+        }
+      ]
+    },
+    async (_testInfo, productStep) => {
+      await page.getByRole('link', { name: '题型库' }).click()
+      await page.getByRole('tab', { name: '草稿' }).click()
+      await page.getByRole('button', { name: '新建题型' }).click()
+
+      await productStep('prepare-incomplete-draft', async () => {
+        const content = page.getByLabel('题型内容')
+        await content.getByLabel('名称').fill('校验定位题型')
+        await content.getByLabel('描述').fill('用于验证字段错误定位')
+        await content.getByLabel('生成要求').fill('生成一个课堂问题。')
+        const structure = page.getByLabel('字段结构')
+        await structure.getByRole('button', { name: '添加字段', exact: true }).click()
+        await structure.getByLabel('字段标识').fill('question')
+        await structure.getByLabel('字段标识').press('Tab')
+        await structure.getByLabel('描述').fill('课堂问题')
+        await structure.getByLabel('示例').fill('What is your idea?')
+        await page.getByRole('button', { name: '保存', exact: true }).click()
+        await expect(page.getByText('草稿已保存')).toBeVisible()
+      })
+
+      await productStep('review-validation-error', async () => {
+        await page.getByRole('button', { name: '发布', exact: true }).click()
+        await page
+          .getByRole('alertdialog', { name: '发布当前题型草稿？' })
+          .getByRole('button', {
+            name: '发布题型'
+          })
+          .click()
+        await expect(
+          page.getByRole('region', { name: '题型内容' }).getByRole('alert')
+        ).toContainText('变量名不能为空')
+        await expect(page.getByRole('button', { name: /变量名不能为空/ })).toBeVisible()
+      })
+
+      await productStep('fix-and-publish', async () => {
+        await page.getByRole('button', { name: /变量名不能为空/ }).click()
+        const structure = page.getByLabel('字段结构')
+        await expect(structure.locator('[data-field-path="question"]')).toBeFocused()
+        await structure.getByLabel('变量名').fill('questionText')
+        await page.getByRole('button', { name: '发布', exact: true }).click()
+        await page
+          .getByRole('alertdialog', { name: '发布当前题型草稿？' })
+          .getByRole('button', {
+            name: '发布题型'
+          })
+          .click()
+        await expect(page.getByRole('heading', { level: 1, name: '校验定位题型' })).toBeVisible()
+      })
+    }
+  )
+)
+
+test(
+  ...productTest(
+    {
+      id: 'IF-11',
+      owner: { kind: 'module', slug: 'interface-library', title: '题型库', order: 40 },
+      section: '题型草稿编辑',
+      title: '未保存的草稿修改受到保护',
+      purpose: '草稿编辑器不能因为返回列表或切换页面而静默丢弃用户正在编辑的题型定义。',
+      preconditions: ['题型库中已有一个保存完成的题型草稿。'],
+      outcomes: [
+        '离开包含未保存修改的草稿前必须确认。',
+        '取消离开会保留编辑状态和未保存内容。',
+        '明确放弃后重新打开草稿只显示上次保存的内容。'
+      ],
+      manual: [{ chapter: 'prepare-content', order: 74 }],
+      steps: [
+        {
+          key: 'make-unsaved-change',
+          action: '打开已保存草稿，修改题型说明但不保存，然后返回草稿列表。',
+          expected: '应用提示离开会丢失未保存修改。'
+        },
+        {
+          key: 'continue-editing',
+          action: '在提示中选择“取消”。',
+          expected: '应用留在编辑器中，刚才的未保存说明仍然存在。'
+        },
+        {
+          key: 'discard-and-reopen',
+          action: '再次返回并选择“放弃修改”，重新打开草稿。',
+          expected: '草稿恢复到上次保存的说明，未保存内容没有写入。'
+        }
+      ]
+    },
+    async (_testInfo, productStep) => {
+      await page.getByRole('link', { name: '题型库' }).click()
+      await page.getByRole('tab', { name: '草稿' }).click()
+      await page.getByRole('button', { name: '新建题型' }).click()
+      const content = page.getByLabel('题型内容')
+      await content.getByLabel('名称').fill('草稿退出保护题型')
+      await content.getByLabel('描述').fill('已保存的原始说明')
+      await content.getByLabel('生成要求').fill('生成一组课堂问题。')
+      const structure = page.getByLabel('字段结构')
+      await structure.getByRole('button', { name: '添加字段', exact: true }).click()
+      await structure.getByLabel('字段标识').fill('question')
+      await structure.getByLabel('字段标识').press('Tab')
+      await structure.getByLabel('变量名').fill('questionText')
+      await structure.getByLabel('描述').fill('课堂问题')
+      await structure.getByLabel('示例').fill('What is your idea?')
+      await page.getByRole('button', { name: '保存', exact: true }).click()
+      await expect(page.getByText('草稿已保存')).toBeVisible()
+      await page.getByRole('button', { name: '返回草稿列表' }).click()
+      await page.getByRole('button', { name: '草稿退出保护题型', exact: true }).click()
+
+      await productStep('make-unsaved-change', async () => {
+        await page.getByLabel('题型内容').getByLabel('描述').fill('尚未保存的新说明')
+        await page.getByRole('button', { name: '返回草稿列表' }).click()
+        await expect(page.getByRole('alertdialog', { name: '放弃未保存的修改？' })).toBeVisible()
+      })
+
+      await productStep('continue-editing', async () => {
+        await page
+          .getByRole('alertdialog', { name: '放弃未保存的修改？' })
+          .getByRole('button', {
+            name: '取消'
+          })
+          .click()
+        await expect(page.getByLabel('题型内容').getByLabel('描述')).toHaveValue('尚未保存的新说明')
+      })
+
+      await productStep('discard-and-reopen', async () => {
+        await page.getByRole('button', { name: '返回草稿列表' }).click()
+        await page
+          .getByRole('alertdialog', { name: '放弃未保存的修改？' })
+          .getByRole('button', {
+            name: '放弃修改'
+          })
+          .click()
+        await page.getByRole('button', { name: '草稿退出保护题型', exact: true }).click()
+        await expect(page.getByLabel('题型内容').getByLabel('描述')).toHaveValue('已保存的原始说明')
+      })
+    }
+  )
+)
+
+test(
+  ...productTest(
+    {
+      id: 'IF-12',
+      owner: { kind: 'module', slug: 'interface-library', title: '题型库', order: 40 },
+      section: '题型草稿编辑',
+      title: '删除非空字段组前需要确认',
+      purpose: '删除字段组会同时删除其子字段，属于需要明确确认的破坏性编辑操作。',
+      preconditions: ['草稿编辑器中已有一个包含字段的字段组。'],
+      outcomes: [
+        '删除非空字段组时明确说明子字段也会被删除。',
+        '取消确认不会改变字段树。',
+        '确认后字段组及其子字段一起从当前草稿移除。'
+      ],
+      manual: [{ chapter: 'prepare-content', order: 75 }],
+      steps: [
+        {
+          key: 'prepare-group',
+          action: '新建草稿，添加字段组“lesson”，再在组内添加字段“question”。',
+          expected: '字段树显示一个包含子字段的字段组。'
+        },
+        {
+          key: 'review-delete',
+          action: '选中“lesson”并选择删除节点。',
+          expected: '应用提示字段组及其所有子字段将一并删除。'
+        },
+        {
+          key: 'cancel-delete',
+          action: '取消删除确认。',
+          expected: '字段组和子字段仍然存在。'
+        },
+        {
+          key: 'confirm-delete',
+          action: '再次选择删除节点并确认删除字段组。',
+          expected: '字段组和其中的“question”同时从字段树消失。'
+        }
+      ]
+    },
+    async (_testInfo, productStep) => {
+      await page.getByRole('link', { name: '题型库' }).click()
+      await page.getByRole('tab', { name: '草稿' }).click()
+      await page.getByRole('button', { name: '新建题型' }).click()
+      const structure = page.getByLabel('字段结构')
+      await productStep('prepare-group', async () => {
+        await structure.getByRole('button', { name: '添加字段组' }).click()
+        await structure.getByLabel('字段标识').fill('lesson')
+        await structure.getByLabel('字段标识').press('Tab')
+        await structure.getByRole('button', { name: '添加字段', exact: true }).click()
+        await structure.getByLabel('字段标识').fill('question')
+        await structure.getByLabel('字段标识').press('Tab')
+        await expect(structure.locator('[data-field-path="lesson.question"]')).toBeVisible()
+      })
+
+      await structure.locator('[data-field-path="lesson"]').click()
+      await productStep('review-delete', async () => {
+        await structure.getByRole('button', { name: '删除节点' }).click()
+        const dialog = page.getByRole('alertdialog', { name: '删除字段组“lesson”？' })
+        await expect(dialog).toContainText('所有子字段')
+      })
+
+      await productStep('cancel-delete', async () => {
+        await page
+          .getByRole('alertdialog', { name: '删除字段组“lesson”？' })
+          .getByRole('button', {
+            name: '取消'
+          })
+          .click()
+        await expect(structure.locator('[data-field-path="lesson.question"]')).toBeVisible()
+      })
+
+      await productStep('confirm-delete', async () => {
+        await structure.getByRole('button', { name: '删除节点' }).click()
+        await page
+          .getByRole('alertdialog', { name: '删除字段组“lesson”？' })
+          .getByRole('button', {
+            name: '删除字段组'
+          })
+          .click()
+        await expect(structure.locator('[data-field-path="lesson"]')).toHaveCount(0)
+        await expect(structure.locator('[data-field-path="lesson.question"]')).toHaveCount(0)
+        await page.getByRole('button', { name: '保存', exact: true }).click()
+        await expect(page.getByText('草稿已保存')).toBeVisible()
+      })
+    }
+  )
+)
+
 async function openInterfaceDetails(): Promise<void> {
   await page.getByRole('link', { name: '题型库' }).click()
   await page.getByRole('button', { name: interfaceContent.name, exact: true }).click()
