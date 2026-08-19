@@ -4632,8 +4632,8 @@
     },
     {
       "libraryId": "builtin:shanghai-gaokao-choice",
-      "version": 3,
-      "contentHash": "sha256:fe51d6b4f547ebe88923f4d11308fea6838b8a6b8dd4115fb416981aa42d0177",
+      "version": 6,
+      "contentHash": "sha256:ca912c2833e29ef966e43538844a154ebf858f781a9e90f8a25c0a2df1fcb76e",
       "content": {
         "name": "高中选择题",
         "functions": [
@@ -5017,6 +5017,10 @@
                           }
                         ]
                       },
+                      "idx": {
+                        "type": "string",
+                        "parts": [{ "type": "literal", "value": "1" }]
+                      },
                       "choice": {
                         "type": "choice-group",
                         "source": "local",
@@ -5136,6 +5140,10 @@
                             }
                           }
                         ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [{ "type": "literal", "value": "2" }]
                       },
                       "choice": {
                         "type": "choice-group",
@@ -5257,6 +5265,10 @@
                           }
                         ]
                       },
+                      "idx": {
+                        "type": "string",
+                        "parts": [{ "type": "literal", "value": "3" }]
+                      },
                       "choice": {
                         "type": "choice-group",
                         "source": "local",
@@ -5376,6 +5388,10 @@
                             }
                           }
                         ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [{ "type": "literal", "value": "4" }]
                       },
                       "choice": {
                         "type": "choice-group",
@@ -5497,6 +5513,10 @@
                           }
                         ]
                       },
+                      "idx": {
+                        "type": "string",
+                        "parts": [{ "type": "literal", "value": "5" }]
+                      },
                       "choice": {
                         "type": "choice-group",
                         "source": "local",
@@ -5616,6 +5636,10 @@
                             }
                           }
                         ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [{ "type": "literal", "value": "6" }]
                       },
                       "choice": {
                         "type": "choice-group",
@@ -5737,6 +5761,10 @@
                           }
                         ]
                       },
+                      "idx": {
+                        "type": "string",
+                        "parts": [{ "type": "literal", "value": "7" }]
+                      },
                       "choice": {
                         "type": "choice-group",
                         "source": "local",
@@ -5856,6 +5884,10 @@
                             }
                           }
                         ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [{ "type": "literal", "value": "8" }]
                       },
                       "choice": {
                         "type": "choice-group",
@@ -5977,6 +6009,10 @@
                           }
                         ]
                       },
+                      "idx": {
+                        "type": "string",
+                        "parts": [{ "type": "literal", "value": "9" }]
+                      },
                       "choice": {
                         "type": "choice-group",
                         "source": "local",
@@ -6097,6 +6133,10 @@
                           }
                         ]
                       },
+                      "idx": {
+                        "type": "string",
+                        "parts": [{ "type": "literal", "value": "10" }]
+                      },
                       "choice": {
                         "type": "choice-group",
                         "source": "local",
@@ -6199,17 +6239,7 @@
                     },
                     "outputNames": {}
                   }
-                ],
-                "choiceCollector": {
-                  "pages": [
-                    {
-                      "questionCount": 5
-                    },
-                    {
-                      "questionCount": 5
-                    }
-                  ]
-                }
+                ]
               },
               "outputs": [],
               "schemaUses": []
@@ -6222,6 +6252,10 @@
               "inputs": [
                 {
                   "name": "title",
+                  "type": "string"
+                },
+                {
+                  "name": "idx",
                   "type": "string"
                 },
                 {
@@ -6332,8 +6366,11 @@
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "idx"
+                            }
                           }
                         ]
                       },
@@ -6505,6 +6542,10 @@
                   "type": "string"
                 },
                 {
+                  "name": "idx",
+                  "type": "string"
+                },
+                {
                   "name": "choice",
                   "type": "choice-group",
                   "shape": {
@@ -6612,8 +6653,11 @@
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "idx"
+                            }
                           }
                         ]
                       },
@@ -6785,6 +6829,10 @@
                   "type": "string"
                 },
                 {
+                  "name": "idx",
+                  "type": "string"
+                },
+                {
                   "name": "choice",
                   "type": "choice-group",
                   "shape": {
@@ -6892,8 +6940,11 @@
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "idx"
+                            }
                           }
                         ]
                       },

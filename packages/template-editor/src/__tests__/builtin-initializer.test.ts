@@ -149,8 +149,8 @@ describe('内置函数库启动初始化', () => {
     )
     expect(choices).toMatchObject({
       libraryId: 'builtin:shanghai-gaokao-choice',
-      version: 3,
-      contentHash: 'sha256:fe51d6b4f547ebe88923f4d11308fea6838b8a6b8dd4115fb416981aa42d0177',
+      version: 6,
+      contentHash: 'sha256:ca912c2833e29ef966e43538844a154ebf858f781a9e90f8a25c0a2df1fcb76e',
       content: { name: '高中选择题' }
     })
     expect(
@@ -190,9 +190,7 @@ describe('内置函数库启动初始化', () => {
         })
       )
     )
-    expect(choiceGroup?.content.body.choiceCollector).toEqual({
-      pages: [{ questionCount: 5 }, { questionCount: 5 }]
-    })
+    expect(choiceGroup?.content.body.choiceCollector).toBeUndefined()
     const choiceCalls = choiceGroup?.content.body.children.filter(
       (child) => child.type === 'function'
     )
@@ -203,6 +201,12 @@ describe('内置函数库启动初始化', () => {
     })
     expect(choiceCalls?.slice(1).map((child) => child.functionRef)).toEqual(
       Array(10).fill('builtin:shanghai-gaokao-choice-question-1-10-internal')
+    )
+    expect(choiceCalls?.slice(1).map((child) => child.inputs.idx)).toEqual(
+      Array.from({ length: 10 }, (_value, index) => ({
+        type: 'string',
+        parts: [{ type: 'literal', value: String(index + 1) }]
+      }))
     )
     expect(choiceCalls?.slice(1).map((child) => child.inputs.choice)).toEqual(
       [
@@ -249,9 +253,13 @@ describe('内置函数库启动初始化', () => {
           { type: 'variable', ref: { scope: 'local', name: 'stem' } }
         ]
       })
+    }
+    for (const choice of [firstChoice, secondChoice, internalChoice]) {
+      expect(choice.content.inputs).toContainEqual({ name: 'idx', type: 'string' })
+      const pageCall = choice.content.body.children.find((child) => child.type === 'function')
       expect(pageCall?.inputs.stem).toEqual({
         type: 'string',
-        parts: [{ type: 'literal', value: '' }]
+        parts: [{ type: 'variable', ref: { scope: 'local', name: 'idx' } }]
       })
     }
 
@@ -413,9 +421,9 @@ describe('内置函数库启动初始化', () => {
     expect(await repository.getBuiltinFunctionLibrary('builtin:examples', 1)).toEqual(previous)
   })
 
-  it('选择题库升级到 v3 时保留已安装的 v2 release', async () => {
+  it('选择题库升级到 v6 时保留已安装的 v5 release', async () => {
     const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
-    const previous = await createFunctionLibraryRelease('builtin:shanghai-gaokao-choice', 2, {
+    const previous = await createFunctionLibraryRelease('builtin:shanghai-gaokao-choice', 5, {
       name: '旧高中选择题',
       functions: []
     })
@@ -433,10 +441,10 @@ describe('内置函数库启动初始化', () => {
       await repository.getActiveBuiltinFunctionLibrary('builtin:shanghai-gaokao-choice')
     ).toMatchObject({
       libraryId: 'builtin:shanghai-gaokao-choice',
-      version: 3,
-      contentHash: 'sha256:fe51d6b4f547ebe88923f4d11308fea6838b8a6b8dd4115fb416981aa42d0177'
+      version: 6,
+      contentHash: 'sha256:ca912c2833e29ef966e43538844a154ebf858f781a9e90f8a25c0a2df1fcb76e'
     })
-    expect(await repository.getBuiltinFunctionLibrary('builtin:shanghai-gaokao-choice', 2)).toEqual(
+    expect(await repository.getBuiltinFunctionLibrary('builtin:shanghai-gaokao-choice', 5)).toEqual(
       previous
     )
   })

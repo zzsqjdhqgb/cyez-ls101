@@ -112,11 +112,15 @@ describe('builtin content contract', () => {
       },
       'root'
     )
+    insertedChoiceGroup.template.content.root.choiceCollector = {
+      pages: [{ questionCount: 5 }, { questionCount: 5 }]
+    }
+    const savedChoiceTemplate = await application.templates.save(insertedChoiceGroup.template)
     await expect(application.templates.validate(choiceTemplate.templateId)).resolves.toEqual({
       valid: true,
       errors: []
     })
-    const insertedChoiceCall = insertedChoiceGroup.template.content.root.children.find(
+    const insertedChoiceCall = savedChoiceTemplate.content.root.children.find(
       (child) => child.id === insertedChoiceGroup.callNodeId
     )
     if (insertedChoiceCall?.type !== 'function') {
@@ -130,7 +134,7 @@ describe('builtin content contract', () => {
       type: 'string',
       parts: [{ type: 'literal', value: 'Stem 1' }]
     }
-    const choicePreview = await application.templates.preview(insertedChoiceGroup.template, [])
+    const choicePreview = await application.templates.preview(savedChoiceTemplate, [])
     if (!choicePreview.success) {
       throw new Error(
         `Builtin choice group preview failed: ${JSON.stringify(choicePreview.errors)}`
@@ -145,7 +149,9 @@ describe('builtin content contract', () => {
       type: 'play',
       text: 'Dialogue 1\nQuestion: Stem 1'
     })
-    expect(choicePreview.preview.choiceMeta?.questions[0]?.stem).toBe('')
+    expect(choicePreview.preview.choiceMeta?.questions.map(({ stem }) => stem)).toEqual(
+      Array.from({ length: 10 }, (_value, index) => String(index + 1))
+    )
 
     for (const summary of templateSummaries) {
       const release = await application.builtinTemplates.get(summary.templateId)
