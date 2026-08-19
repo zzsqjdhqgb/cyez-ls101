@@ -79,6 +79,19 @@ interface SpeechRecognitionEvent {
   message?: string
 }
 
+interface PronunciationAssessmentEvent {
+  type: 'result' | 'error'
+  result?: {
+    referenceText: string
+    recognizedPhones: string[]
+    overallScore: number
+    words: unknown[]
+    pauses: unknown[]
+    feedbackMarkdown: string
+  }
+  message?: string
+}
+
 interface SpeechTarget {
   providerConfigId: string
   modelId: string
@@ -160,7 +173,7 @@ test.afterEach(async () => {
 })
 
 async function openAirouter(
-  tab: '文本生成' | '图像生成' | '语音合成' | '语音识别' = '文本生成'
+  tab: '文本生成' | '图像生成' | '语音合成' | '语音识别' | 'AI 语音评测' = '文本生成'
 ): Promise<void> {
   await page.getByRole('link', { name: '设置' }).click()
   await page.getByRole('button', { name: /AI 引擎/ }).click()
@@ -318,6 +331,31 @@ async function collectSpeechRecognition(
   )
 }
 
+async function collectPronunciationAssessment(
+  audio: Uint8Array,
+  referenceText: string
+): Promise<PronunciationAssessmentEvent> {
+  return page.evaluate(
+    ({ bytes, text }) =>
+      new Promise((resolve) => {
+        window.airouter.startPronunciationAssessment(
+          {
+            providerConfigId: 'builtin-facebook-phoneme',
+            modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f',
+            referenceText: text,
+            audio: {
+              data: new Uint8Array(bytes),
+              mediaType: 'audio/wav',
+              filename: 'pronunciation.wav'
+            }
+          },
+          resolve
+        )
+      }),
+    { bytes: Array.from(audio), text: referenceText }
+  )
+}
+
 async function selectFileInElectronDialog(filePath: string): Promise<void> {
   await electronApp.evaluate(({ dialog }, selectedPath) => {
     Object.defineProperty(dialog, 'showOpenDialog', {
@@ -329,7 +367,7 @@ async function selectFileInElectronDialog(filePath: string): Promise<void> {
 
 test('AR-01 navigates through AI engine settings categories', async () => {
   await openAirouter()
-  for (const name of ['图像生成', '语音合成', '语音识别', '文本生成'] as const) {
+  for (const name of ['图像生成', '语音合成', '语音识别', 'AI 语音评测', '文本生成'] as const) {
     await page.getByRole('tab', { name }).click()
     await expect(page.getByRole('tab', { name })).toHaveAttribute('aria-selected', 'true')
   }
@@ -338,9 +376,10 @@ test('AR-01 navigates through AI engine settings categories', async () => {
   await expect(page.getByRole('heading', { name: '语音 Provider' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'TTS 模型包' })).toBeVisible()
   await page.getByRole('tab', { name: '语音识别' }).click()
-  await expect(
-    page.getByText('语音识别模型的 Provider、模型和连接测试将在这里配置。')
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: '语音识别 Provider' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'ASR 模型包' })).toBeVisible()
+  await page.getByRole('tab', { name: 'AI 语音评测' }).click()
+  await expect(page.getByText('未导入', { exact: true })).toBeVisible()
 })
 
 test('AR-02 exposes the text empty state and default manual image provider', async () => {
@@ -1656,6 +1695,70 @@ test('AR-32c executes Qwen3 ASR without external buffers in Electron', async () 
   ).resolves.toEqual({
     type: 'result',
     result: { text: '' }
+  })
+})
+
+test('AR-32d imports and executes the required pronunciation extension in Electron', async () => {
+  test.setTimeout(600_000)
+  const packageDirectory = await mkdtemp(
+    path.join(path.resolve('dist'), '.pronunciation-integration-')
+  )
+  temporaryPaths.push(packageDirectory)
+  const packagePath = path.join(packageDirectory, 'pronunciation-extension.zip')
+  execFileSync(
+    process.execPath,
+    [path.resolve('scripts', 'build-pronunciation-extension-package.mjs')],
+    {
+      cwd: process.cwd(),
+      env: { ...process.env, LS101_PRONUNCIATION_EXTENSION_OUTPUT: packagePath },
+      stdio: 'pipe',
+      timeout: 180_000
+    }
+  )
+
+  await openAirouter('AI 语音评测')
+  await expect(page.getByText('未导入', { exact: true })).toBeVisible()
+  await expect(page.getByText('AI 语音评测v1.0.0')).toBeVisible()
+  await selectFileInElectronDialog(packagePath)
+  await page.getByRole('button', { name: '导入扩展包' }).click()
+  await expect(page.getByText('已导入', { exact: true })).toBeVisible({ timeout: 30_000 })
+  await page.reload()
+  await openAirouter('AI 语音评测')
+  await expect(page.getByText('已导入', { exact: true })).toBeVisible({ timeout: 30_000 })
+
+  await expect(
+    page.evaluate(async () => ({
+      models: await window.airouter.listPronunciationAssessmentModels(),
+      status: await window.airouter.getPronunciationAssessmentExtensionStatus()
+    }))
+  ).resolves.toMatchObject({
+    status: {
+      extensionId: 'facebook-wav2vec2-pronunciation',
+      requiredVersion: '1.0.0',
+      installedVersion: '1.0.0',
+      state: 'imported',
+      assetCount: 4
+    },
+    models: [
+      {
+        providerId: 'builtin-facebook-phoneme',
+        modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f'
+      }
+    ]
+  })
+
+  const assessment = await collectPronunciationAssessment(createSilentWav(), 'Hi.')
+  if (assessment.type === 'error') throw new Error(assessment.message)
+  expect(assessment).toMatchObject({
+    type: 'result',
+    result: {
+      referenceText: 'Hi.',
+      recognizedPhones: expect.any(Array),
+      overallScore: expect.any(Number),
+      words: expect.any(Array),
+      pauses: expect.any(Array),
+      feedbackMarkdown: expect.any(String)
+    }
   })
 })
 

@@ -106,6 +106,25 @@ export interface AIRouterPronunciationAssessmentModelOption {
   modelName: string
 }
 
+export type AIRouterExtensionImportState = 'imported' | 'not-imported'
+
+export interface AIRouterPronunciationAssessmentExtensionStatus {
+  extensionId: string
+  requiredVersion: string
+  name: string
+  state: AIRouterExtensionImportState
+  installedVersion?: string
+  assetCount?: number
+  totalBytes?: number
+}
+
+export interface AIRouterPronunciationAssessmentExtensionImportResult {
+  extensionId: string
+  version: string
+  assetCount: number
+  totalBytes: number
+}
+
 export interface AIRouterPronunciationAssessmentRequest {
   providerConfigId: string
   modelId: string
@@ -507,6 +526,8 @@ export interface AIRouterClient {
     options?: { signal?: AbortSignal }
   ): Promise<AIRouterSpeechRecognitionResult>
   listPronunciationAssessmentModels(): Promise<AIRouterPronunciationAssessmentModelOption[]>
+  getPronunciationAssessmentExtensionStatus(): Promise<AIRouterPronunciationAssessmentExtensionStatus>
+  importPronunciationAssessmentExtension(): Promise<AIRouterPronunciationAssessmentExtensionImportResult | null>
   assessPronunciation(
     request: AIRouterPronunciationAssessmentRequest,
     options?: { signal?: AbortSignal }
@@ -576,6 +597,8 @@ export interface AIRouterBridge {
     listener: (event: AIRouterSpeechRecognitionEvent) => void
   ): () => void
   listPronunciationAssessmentModels(): Promise<AIRouterPronunciationAssessmentModelOption[]>
+  getPronunciationAssessmentExtensionStatus(): Promise<AIRouterPronunciationAssessmentExtensionStatus>
+  importPronunciationAssessmentExtension(): Promise<AIRouterPronunciationAssessmentExtensionImportResult | null>
   startPronunciationAssessment(
     request: AIRouterPronunciationAssessmentRequest,
     listener: (event: AIRouterPronunciationAssessmentEvent) => void

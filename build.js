@@ -202,6 +202,12 @@ async function main() {
       stdio: 'inherit',
       cwd: root
     })
+    console.log('Building external pronunciation assessment extension package...')
+    execFileSync(
+      process.execPath,
+      [path.join(root, 'scripts', 'build-pronunciation-extension-package.mjs')],
+      { stdio: 'inherit', cwd: root }
+    )
   }
 
   console.log('Build completed successfully:', result)

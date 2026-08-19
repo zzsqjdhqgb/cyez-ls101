@@ -82,6 +82,10 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
       })
     },
     listPronunciationAssessmentModels: () => getBridge().listPronunciationAssessmentModels(),
+    getPronunciationAssessmentExtensionStatus: () =>
+      getBridge().getPronunciationAssessmentExtensionStatus(),
+    importPronunciationAssessmentExtension: () =>
+      getBridge().importPronunciationAssessmentExtension(),
     assessPronunciation(request, options = {}) {
       return new Promise<AIRouterPronunciationAssessmentResult>((resolve, reject) => {
         let settled = false

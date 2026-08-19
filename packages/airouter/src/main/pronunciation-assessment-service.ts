@@ -1,18 +1,20 @@
-import { existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { fork, type ChildProcess } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import {
   BUILTIN_PRONUNCIATION_MODEL_ID,
   BUILTIN_PRONUNCIATION_PROVIDER_ID,
+  PRONUNCIATION_EXTENSION_ID,
+  PRONUNCIATION_EXTENSION_VERSION,
+  type AIRouterPronunciationAssessmentExtensionImportResult,
+  type AIRouterPronunciationAssessmentExtensionStatus,
   type AIRouterPronunciationAssessmentModelOption,
   type AIRouterPronunciationAssessmentRequest,
   type AIRouterPronunciationAssessmentResult
 } from '../shared'
+import { AIRouterExtensionStore } from './extension-store'
 
-const MODEL_DIRECTORY = 'facebook-wav2vec2-lv-60-espeak-cv-ft-int8'
 const MAX_AUDIO_BYTES = 100 * 1024 * 1024
 const MAX_REFERENCE_TEXT_LENGTH = 10_000
 const require = createRequire(import.meta.url)
@@ -31,18 +33,44 @@ interface WorkerState {
 }
 
 export interface AIRouterPronunciationAssessmentServiceOptions {
-  assetsDir: string
+  baseDir?: string
+  assetsDir?: string
+  extensionStore?: AIRouterExtensionStore
   workerUrl?: URL
   ffmpegPath?: string
 }
 
 export class AIRouterPronunciationAssessmentService {
   private statePromise: Promise<WorkerState> | null = null
+  private readonly extensionStore: AIRouterExtensionStore
 
-  constructor(private readonly options: AIRouterPronunciationAssessmentServiceOptions) {}
+  constructor(private readonly options: AIRouterPronunciationAssessmentServiceOptions) {
+    const baseDir = options.baseDir ?? options.assetsDir
+    if (!baseDir) throw new Error('AI 语音评测扩展存储目录未配置')
+    this.extensionStore = options.extensionStore ?? new AIRouterExtensionStore({ baseDir })
+  }
+
+  getExtensionStatus(): Promise<AIRouterPronunciationAssessmentExtensionStatus> {
+    return this.extensionStore.getStatus(
+      PRONUNCIATION_EXTENSION_ID,
+      PRONUNCIATION_EXTENSION_VERSION,
+      'AI 语音评测'
+    )
+  }
+
+  importExtension(filePath: string): Promise<AIRouterPronunciationAssessmentExtensionImportResult> {
+    return this.extensionStore.importPackage(
+      filePath,
+      PRONUNCIATION_EXTENSION_ID,
+      PRONUNCIATION_EXTENSION_VERSION
+    )
+  }
 
   listModels(): AIRouterPronunciationAssessmentModelOption[] {
-    return modelFiles(this.options.assetsDir).every(existsSync)
+    return this.extensionStore.isInstalled(
+      PRONUNCIATION_EXTENSION_ID,
+      PRONUNCIATION_EXTENSION_VERSION
+    )
       ? [
           {
             providerId: BUILTIN_PRONUNCIATION_PROVIDER_ID,
@@ -60,8 +88,14 @@ export class AIRouterPronunciationAssessmentService {
   ): Promise<AIRouterPronunciationAssessmentResult> {
     validateRequest(request)
     if (options.signal?.aborted) throw abortError()
-    if (this.listModels().length === 0) throw new Error('Wav2Vec2 发音评测模型文件不完整')
-    const state = await this.workerState()
+    if ((await this.getExtensionStatus()).state !== 'imported') {
+      throw new Error('AI 语音评测扩展包未导入')
+    }
+    const assets = await this.extensionStore.resolveAssetPaths(
+      PRONUNCIATION_EXTENSION_ID,
+      PRONUNCIATION_EXTENSION_VERSION
+    )
+    const state = await this.workerState(assets)
     if (options.signal?.aborted) throw abortError()
     const requestId = randomUUID()
     return new Promise<AIRouterPronunciationAssessmentResult>((resolve, reject) => {
@@ -77,12 +111,12 @@ export class AIRouterPronunciationAssessmentService {
     })
   }
 
-  private workerState(): Promise<WorkerState> {
-    this.statePromise ??= this.createWorker()
+  private workerState(assets: Record<string, string>): Promise<WorkerState> {
+    this.statePromise ??= this.createWorker(assets)
     return this.statePromise
   }
 
-  private async createWorker(): Promise<WorkerState> {
+  private async createWorker(assets: Record<string, string>): Promise<WorkerState> {
     const workerPath = unpackedPath(
       fileURLToPath(
         this.options.workerUrl ?? new URL('./pronunciation-assessment-worker.js', import.meta.url)
@@ -99,7 +133,7 @@ export class AIRouterPronunciationAssessmentService {
     })
     worker.send({
       type: 'initialize',
-      modelDir: join(this.options.assetsDir, MODEL_DIRECTORY),
+      assets,
       ffmpegPath: this.options.ffmpegPath ?? resolveFfmpegPath()
     })
     const state: WorkerState = { worker, pending: new Map(), ready: Promise.resolve() }
@@ -182,16 +216,6 @@ function validateRequest(request: AIRouterPronunciationAssessmentRequest): void 
   ) {
     throw new Error('发音评测音频输入无效')
   }
-}
-
-function modelFiles(assetsDir: string): string[] {
-  const modelDir = join(assetsDir, MODEL_DIRECTORY)
-  return [
-    join(modelDir, 'config.json'),
-    join(modelDir, 'preprocessor_config.json'),
-    join(modelDir, 'vocab.json'),
-    join(modelDir, 'onnx', 'model_quantized.onnx')
-  ]
 }
 
 function resolveFfmpegPath(): string {

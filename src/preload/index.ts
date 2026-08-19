@@ -32,6 +32,7 @@ import {
   type AIRouterImageProviderConfigInput,
   type AIRouterImageRequest,
   type AIRouterPronunciationAssessmentEvent,
+  type AIRouterPronunciationAssessmentExtensionImportResult,
   type AIRouterPronunciationAssessmentRequest,
   type AIRouterSpeechConnectionTestInput,
   type AIRouterSpeechModelPackageImportResult,
@@ -180,6 +181,12 @@ const airouterBridge: AIRouterBridge = {
   },
   listPronunciationAssessmentModels() {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.listPronunciationModels)
+  },
+  getPronunciationAssessmentExtensionStatus() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.pronunciationExtensionStatus)
+  },
+  importPronunciationAssessmentExtension(): Promise<AIRouterPronunciationAssessmentExtensionImportResult | null> {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.importPronunciationExtension)
   },
   startSpeechRecognition(
     request: AIRouterSpeechRecognitionRequest,

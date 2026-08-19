@@ -6,7 +6,6 @@ import {
   type OpenDialogOptions,
   type WebContents
 } from 'electron'
-import { join } from 'node:path'
 import { AIROUTER_CHANNELS } from '../shared'
 import type {
   AIRouterConnectionTestInput,
@@ -42,6 +41,7 @@ export { AIRouterSpeechService } from './speech-service'
 export { AIRouterSpeechRecognitionService } from './speech-recognition-service'
 export { AIRouterPronunciationAssessmentService } from './pronunciation-assessment-service'
 export { AIRouterSpeechModelStore, AIRouterSpeechRecognitionModelStore } from './speech-model-store'
+export { AIRouterExtensionStore } from './extension-store'
 export { PocketTtsSynthesizer } from './pocket-tts'
 export { QwenTtsSynthesizer } from './qwen-tts'
 export type { AIRouterServiceOptions } from './service'
@@ -79,7 +79,7 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
   })
   app.once('will-quit', () => recognitionService.dispose())
   const pronunciationService = new AIRouterPronunciationAssessmentService({
-    assetsDir: resolvePronunciationAssetsDir()
+    baseDir: options.baseDir
   })
   const active = new Map<string, ActiveGeneration>()
 
@@ -208,6 +208,22 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
   )
   ipcMain.handle(AIROUTER_CHANNELS.listRecognitionModels, () => recognitionService.listModels())
   ipcMain.handle(AIROUTER_CHANNELS.listPronunciationModels, () => pronunciationService.listModels())
+  ipcMain.handle(AIROUTER_CHANNELS.pronunciationExtensionStatus, () =>
+    pronunciationService.getExtensionStatus()
+  )
+  ipcMain.handle(AIROUTER_CHANNELS.importPronunciationExtension, async (event) => {
+    const parent = BrowserWindow.fromWebContents(event.sender)
+    const options = {
+      title: '导入 AI 语音评测扩展包',
+      filters: [{ name: 'AI 语音评测扩展包', extensions: ['zip'] }],
+      properties: ['openFile'] as const
+    }
+    const result = parent
+      ? await dialog.showOpenDialog(parent, options)
+      : await dialog.showOpenDialog(options)
+    if (result.canceled || result.filePaths.length === 0) return null
+    return pronunciationService.importExtension(result.filePaths[0])
+  })
   ipcMain.on(
     AIROUTER_CHANNELS.generateStart,
     (event, requestId: string, request: AIRouterTextRequest) => {
@@ -432,16 +448,4 @@ function summarizeSpeechRequest(request: AIRouterSpeechSynthesisRequest): string
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'AI 引擎请求失败'
-}
-
-function resolvePronunciationAssetsDir(): string {
-  const electronApp = app as typeof app & { isPackaged?: boolean; getAppPath?: () => string }
-  if (electronApp.isPackaged) return join(process.resourcesPath, 'assets', 'pronunciation')
-  return join(
-    electronApp.getAppPath?.() ?? process.cwd(),
-    'externals',
-    'ai',
-    'pronunciation',
-    'model'
-  )
 }

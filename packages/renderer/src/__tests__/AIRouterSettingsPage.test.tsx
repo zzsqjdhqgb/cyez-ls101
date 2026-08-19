@@ -693,6 +693,13 @@ function applicationWith(overrides: Partial<AIRouterApplication>): AIRouterAppli
     listSpeechModels: vi.fn(),
     listSpeechVoices: vi.fn(),
     testSpeechConnection: vi.fn(),
+    getPronunciationExtensionStatus: vi.fn().mockResolvedValue({
+      extensionId: 'facebook-wav2vec2-pronunciation',
+      requiredVersion: '1.0.0',
+      name: 'AI 语音评测',
+      state: 'not-imported'
+    }),
+    importPronunciationExtension: vi.fn(),
     listSpeechRecognitionConfigs: vi.fn().mockResolvedValue([]),
     saveSpeechRecognitionConfig: vi.fn(),
     deleteSpeechRecognitionConfig: vi.fn(),

@@ -22,6 +22,8 @@ import type {
   AIRouterSpeechTestResult,
   AIRouterSpeechVoiceListInput,
   AIRouterSpeechVoiceOption,
+  AIRouterPronunciationAssessmentExtensionImportResult,
+  AIRouterPronunciationAssessmentExtensionStatus,
   AIRouterTestResult
 } from '@ls101/airouter/shared'
 
@@ -59,6 +61,8 @@ export interface AIRouterApplication {
   testSpeechConnection(
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult>
+  getPronunciationExtensionStatus(): Promise<AIRouterPronunciationAssessmentExtensionStatus>
+  importPronunciationExtension(): Promise<AIRouterPronunciationAssessmentExtensionImportResult | null>
   listSpeechRecognitionConfigs(): Promise<AIRouterSpeechRecognitionProviderConfigSummary[]>
   saveSpeechRecognitionConfig(
     config: AIRouterSpeechRecognitionProviderConfigInput
@@ -101,6 +105,8 @@ export function createAIRouterApplication(
     listSpeechModels: (config) => client.listSpeechModels(config),
     listSpeechVoices: (request) => client.listSpeechVoices(request),
     testSpeechConnection: (request) => client.testSpeechConnection(request),
+    getPronunciationExtensionStatus: () => client.getPronunciationAssessmentExtensionStatus(),
+    importPronunciationExtension: () => client.importPronunciationAssessmentExtension(),
     listSpeechRecognitionConfigs: () => client.listSpeechRecognitionProviderConfigs(),
     saveSpeechRecognitionConfig: (config) => client.saveSpeechRecognitionProviderConfig(config),
     deleteSpeechRecognitionConfig: (id) => client.deleteSpeechRecognitionProviderConfig(id),

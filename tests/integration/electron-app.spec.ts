@@ -131,6 +131,8 @@ test('starts a hardened application window and exposes every preload bridge', as
       'deleteSpeechProviderConfig',
       'deleteSpeechRecognitionModelPackage',
       'deleteSpeechRecognitionProviderConfig',
+      'getPronunciationAssessmentExtensionStatus',
+      'importPronunciationAssessmentExtension',
       'importSpeechModelPackage',
       'importSpeechRecognitionModelPackage',
       'listImageModels',

@@ -49,6 +49,7 @@ files:
 asarUnpack:
   - resources/**
   - out/main/pronunciation-assessment-worker.js
+  - node_modules/onnxruntime-common/**
   - node_modules/onnxruntime-node/**
   - node_modules/sherpa-onnx-node/**
   - node_modules/sherpa-onnx-*/**
@@ -96,8 +97,6 @@ extraResources:
     to: tts
   - from: externals/ai/qwen3-tts/runtime
     to: qwen-tts
-  - from: externals/ai/pronunciation/model
-    to: assets/pronunciation
   - from: resources/media
     to: media
   - from: resources/builtin

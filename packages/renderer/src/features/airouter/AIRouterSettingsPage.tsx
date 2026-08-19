@@ -18,6 +18,7 @@ import {
   LockKeyhole,
   MessageSquareText,
   Mic,
+  Brain,
   Plus,
   Save,
   TestTube2,
@@ -50,6 +51,7 @@ import { formatAIRouterError } from './airouterError'
 import { AIRouterImageSettingsPage } from './AIRouterImageSettingsPage'
 import { AIRouterSpeechSettingsPage } from './AIRouterSpeechSettingsPage'
 import { AIRouterSpeechRecognitionSettingsPage } from './AIRouterSpeechRecognitionSettingsPage'
+import { AIRouterPronunciationSettingsPage } from './AIRouterPronunciationSettingsPage'
 import styles from './AIRouterSettingsPage.module.css'
 
 interface ProviderDraft {
@@ -182,7 +184,8 @@ const sections = [
   { id: 'text', label: '文本生成', icon: MessageSquareText },
   { id: 'image', label: '图像生成', icon: ImageIcon },
   { id: 'speech-synthesis', label: '语音合成', icon: AudioLines },
-  { id: 'speech-recognition', label: '语音识别', icon: Mic }
+  { id: 'speech-recognition', label: '语音识别', icon: Mic },
+  { id: 'pronunciation', label: 'AI 语音评测', icon: Brain }
 ] as const
 
 export function AIRouterSettingsPage({
@@ -227,6 +230,10 @@ export function AIRouterSettingsPage({
         <Route
           path="speech-recognition"
           element={<AIRouterSpeechRecognitionSettingsPage application={application} />}
+        />
+        <Route
+          path="pronunciation"
+          element={<AIRouterPronunciationSettingsPage application={application} />}
         />
         <Route path="*" element={<Navigate replace to="text" />} />
       </Routes>

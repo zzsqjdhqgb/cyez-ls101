@@ -1,7 +1,9 @@
 export {
   AIROUTER_CHANNELS,
   BUILTIN_PRONUNCIATION_MODEL_ID,
-  BUILTIN_PRONUNCIATION_PROVIDER_ID
+  BUILTIN_PRONUNCIATION_PROVIDER_ID,
+  PRONUNCIATION_EXTENSION_ID,
+  PRONUNCIATION_EXTENSION_VERSION
 } from './constants'
 export type { AIRouterChannel } from './constants'
 export type {
@@ -45,6 +47,9 @@ export type {
   AIRouterPronunciationAssessmentModelOption,
   AIRouterPronunciationAssessmentRequest,
   AIRouterPronunciationAssessmentResult,
+  AIRouterPronunciationAssessmentExtensionStatus,
+  AIRouterPronunciationAssessmentExtensionImportResult,
+  AIRouterExtensionImportState,
   AIRouterPronunciationPauseAssessment,
   AIRouterPronunciationPhoneAssessment,
   AIRouterPronunciationWordAssessment,
