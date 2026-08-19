@@ -304,7 +304,7 @@ export function TemplateBrowserPage(): JSX.Element {
                         <span className={styles.version}>v{item.version}</span>
                       </div>
                       <div className={styles.descriptionRow}>
-                        <TagList tags={item.tags} />
+                        <TagList tags={item.tags} highlighted={selectedBuiltinTags} />
                         <p className={styles.rowDescription}>
                           {item.available
                             ? item.description || '暂无描述'
@@ -371,7 +371,7 @@ export function TemplateBrowserPage(): JSX.Element {
                         </button>
                       </div>
                       <div className={styles.descriptionRow}>
-                        <TagList tags={item.tags} />
+                        <TagList tags={item.tags} highlighted={selectedTemplateTags} />
                         <p className={styles.rowDescription}>{item.description || '暂无描述'}</p>
                       </div>
                     </div>
@@ -515,12 +515,23 @@ function TagFilter({
   )
 }
 
-function TagList({ tags }: { tags?: readonly string[] }): JSX.Element | null {
+function TagList({
+  tags,
+  highlighted
+}: {
+  tags?: readonly string[]
+  highlighted: readonly string[]
+}): JSX.Element | null {
   if (!tags || tags.length === 0) return null
   return (
     <div className={styles.tags} aria-label="模板标签">
       {tags.map((tag) => (
-        <span className={styles.tag} key={tag} style={tagColorStyle(tag)}>
+        <span
+          className={styles.tag}
+          data-highlighted={highlighted.includes(tag) || undefined}
+          key={tag}
+          style={tagColorStyle(tag)}
+        >
           {tag}
         </span>
       ))}
