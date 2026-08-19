@@ -30,29 +30,12 @@ describe('visuallyEquivalentPng', () => {
     expect(visuallyEquivalentPng(original, png(1, 1, [220, 100, 100, 255]))).toBe(false)
   })
 
-  it('accepts sparse same-size rasterization differences but rejects material changes', () => {
-    const original = PNG.sync.read(solidPng(10, 10, [20, 40, 60, 255]))
-    const sparseDifference = PNG.sync.read(PNG.sync.write(original))
-    const materialDifference = PNG.sync.read(PNG.sync.write(original))
-    sparseDifference.data[0] = 240
-    for (let pixel = 0; pixel < 4; pixel += 1) {
-      materialDifference.data[pixel * 4] = 240
-    }
-
-    expect(visuallyEquivalentPng(PNG.sync.write(original), PNG.sync.write(sparseDifference))).toBe(
-      true
-    )
-    expect(
-      visuallyEquivalentPng(PNG.sync.write(original), PNG.sync.write(materialDifference))
-    ).toBe(false)
-  })
-
   it('rejects different dimensions and invalid PNG data', () => {
     expect(visuallyEquivalentPng(png(1, 1, [0, 0, 0, 255]), png(2, 1, [0, 0, 0, 255]))).toBe(false)
     expect(visuallyEquivalentPng(Buffer.from('not-png'), Buffer.from('also-not-png'))).toBe(false)
   })
 
-  it('accepts equivalent screenshots captured at an integer device scale factor', () => {
+  it('rejects equivalent screenshots captured at a different device scale factor', () => {
     const original = png(2, 1, [20, 40, 60, 255, 80, 100, 120, 255])
     const scaled = png(
       4,
@@ -63,21 +46,8 @@ describe('visuallyEquivalentPng', () => {
       ]
     )
 
-    expect(visuallyEquivalentPng(original, scaled)).toBe(true)
-    expect(visuallyEquivalentPng(scaled, original)).toBe(true)
-  })
-
-  it('rejects scaled screenshots with a material visual change', () => {
-    const original = solidPng(10, 10, [20, 40, 60, 255])
-    const scaled = PNG.sync.read(solidPng(20, 20, [20, 40, 60, 255]))
-    for (let y = 0; y < 4; y += 1) {
-      for (let x = 0; x < 20; x += 1) {
-        const offset = (y * scaled.width + x) * 4
-        scaled.data[offset] = 240
-      }
-    }
-
-    expect(visuallyEquivalentPng(original, PNG.sync.write(scaled))).toBe(false)
+    expect(visuallyEquivalentPng(original, scaled)).toBe(false)
+    expect(visuallyEquivalentPng(scaled, original)).toBe(false)
   })
 })
 
@@ -119,8 +89,4 @@ function png(width: number, height: number, rgba: readonly number[], deflateLeve
     image.data[index] = rgba[index % rgba.length] ?? 0
   }
   return PNG.sync.write(image, { deflateLevel })
-}
-
-function solidPng(width: number, height: number, rgba: readonly number[]): Buffer {
-  return png(width, height, rgba)
 }
