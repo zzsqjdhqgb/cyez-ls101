@@ -1,4 +1,4 @@
-import { useMemo, useState, type JSX } from 'react'
+import { useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import type { ChoiceOptionLabel, PlayerChoiceMeta, ResolvedChoiceViewport } from '@ls101/core-types'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -10,6 +10,7 @@ interface ChoiceViewProps {
 }
 
 export function ChoiceView({ meta, viewport, answers, onAnswer }: ChoiceViewProps): JSX.Element {
+  const focusedQuestionRef = useRef<HTMLFieldSetElement>(null)
   const focusedPage = useMemo(
     () =>
       viewport.mode === 'focus'
@@ -37,6 +38,11 @@ export function ChoiceView({ meta, viewport, answers, onAnswer }: ChoiceViewProp
     .map((index) => meta.questions.find((question) => question.choiceIndex === index))
     .filter((question) => question !== undefined)
 
+  useEffect(() => {
+    if (viewport.mode !== 'focus') return
+    focusedQuestionRef.current?.scrollIntoView({ behavior: 'auto', block: 'center' })
+  }, [viewport.mode, viewportKey, focusedPage])
+
   return (
     <div className="choiceView">
       <div className="choiceQuestions">
@@ -46,6 +52,7 @@ export function ChoiceView({ meta, viewport, answers, onAnswer }: ChoiceViewProp
             <fieldset
               className="choiceQuestion"
               data-focused={focused || undefined}
+              ref={focused ? focusedQuestionRef : undefined}
               key={question.choiceIndex}
             >
               <legend>{question.stem}</legend>
