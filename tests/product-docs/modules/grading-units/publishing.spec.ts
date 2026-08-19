@@ -67,7 +67,7 @@ test(
       await productStep('save-unit', async () => {
         await page.getByLabel('名称').fill('客观题评分规则')
         await page.getByLabel('描述').fill('用于选择题自动判定')
-        await page.getByLabel('answer').fill('学生选择的答案')
+        await page.getByLabel('answer', { exact: true }).fill('学生选择的答案')
         await expect(page.getByRole('button', { name: '客观题' })).toHaveAttribute(
           'data-active',
           'true'
