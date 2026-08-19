@@ -37,7 +37,11 @@ export type {
   InterfaceImportSession,
   InterfaceImportResult
 } from './application'
-export type { InstanceSelection } from './exchange'
+export type {
+  InstanceSelection,
+  InterfacePackageInspection,
+  InterfaceExchangePackage
+} from './exchange'
 export type {
   FieldLeaf,
   FieldGroup,

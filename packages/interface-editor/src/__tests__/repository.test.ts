@@ -533,6 +533,17 @@ describe('Interface 交换包', () => {
     ])
   })
 
+  it('导出内置题型时保留稳定 builtinKey 和当前内容 ID', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(content())
+    await repository.saveBuiltinInterface('speaking', def)
+    await repository.setBuiltinCurrent('speaking', def.id)
+
+    const bundle = await exportInterfacePackage(repository, def.id, { mode: 'none' })
+    expect(bundle.builtin).toEqual({ builtinKey: 'speaking', interfaceId: def.id })
+    expect(bundle.interface.id).toBe(def.id)
+  })
+
   it('检查包并按导入选择保存实例和资源', async () => {
     const source = setup().repository
     const target = setup().repository

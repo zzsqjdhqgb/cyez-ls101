@@ -6,7 +6,7 @@
 
 ## Electron 集成测试
 
-打包应用中的 renderer、preload、main、IPC 和持久化跨层回归。当前共 67 条测试。
+打包应用中的 renderer、preload、main、IPC 和持久化跨层回归。当前共 70 条测试。
 
 ### [airouter.spec.ts](../../../tests/integration/airouter.spec.ts)
 
@@ -42,7 +42,9 @@
 - AR-30 routes speech roles, merges adjacent segments, and returns requested formats
 - AR-31 reports speech failures, cancels slow synthesis, and reuses the pipeline
 - AR-32 executes the real Pocket TTS model package through the Electron stack
+- AR-32c executes Qwen3 ASR without external buffers in Electron
 - AR-33 rejects invalid text and speech selections before making HTTP requests
+- AR-32b executes Qwen3 TTS through the Electron stack
 
 ### [electron-app.spec.ts](../../../tests/integration/electron-app.spec.ts)
 
@@ -50,6 +52,7 @@
 - round-trips data through file, config, asset protocol, AI and clipboard IPC
 - navigates through every primary application area
 - exports a submission containing a large resource through the renderer ZIP worker
+- guides microphone setup through recording and playback before the exam
 - persists appearance settings through the renderer and config store
 - creates, edits and reloads a persisted template
 - opens and copies the bundled Shanghai Gaokao template
@@ -103,4 +106,4 @@
 - FE-08 settings rows remain usable in a narrow component viewport
 - FE-09 page compositions retain a heading and empty-state reading order
 
-合计：76 条 Playwright 技术回归测试。
+合计：79 条 Playwright 技术回归测试。

@@ -7,13 +7,15 @@
 }
 
 .header {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-6);
   min-height: 36px;
   margin-bottom: var(--space-8);
-  animation: page-header-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) 35ms both;
+  animation: page-header-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) 35ms backwards;
 }
 
 .header h1 {
@@ -36,7 +38,7 @@
 }
 
 .page > :not(.header) {
-  animation: page-section-enter 380ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+  animation: page-section-enter 380ms cubic-bezier(0.22, 1, 0.36, 1) 80ms backwards;
 }
 
 .page > :nth-child(3) {

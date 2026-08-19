@@ -10,6 +10,7 @@ import { createBuiltinInterfaceApplication } from '../builtin-entry'
 import { createInterfaceDraft, publishInterface } from '../id'
 import { FileInterfaceRepository, type InterfaceStore } from '../repository'
 import type { InterfaceFileDialog } from '../fileExchange'
+import { decodeInterfaceZip, encodeInterfaceZip } from '../zip'
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00])
 
@@ -452,6 +453,31 @@ describe('interface editor application integration', () => {
       targetRepository.readInstanceAsset(interfaceId, first.instance.instanceId, importedFilename)
     ).resolves.toEqual(PNG)
     await expect(session.commit({ mode: 'all' })).rejects.toThrow('no longer active')
+  })
+
+  it('未知 builtinKey 在导入预览和提交时都拒绝', async () => {
+    const sourceRepository = new FileInterfaceRepository(new MemoryStore())
+    const sourceDialog = new TestFileDialog()
+    const source = createInterfaceApplication({
+      repository: sourceRepository,
+      fileDialog: sourceDialog
+    })
+    const definition = await publishInterface(createInterfaceDraft(content))
+    await sourceRepository.saveBuiltinInterface('known-builtin', definition)
+    await sourceRepository.setBuiltinCurrent('known-builtin', definition.id)
+    await source.transfer.export(definition.id, { mode: 'none' })
+    const packageValue = await decodeInterfaceZip(sourceDialog.writtenData as Uint8Array)
+    packageValue.builtin = { builtinKey: 'removed-builtin', interfaceId: packageValue.interface.id }
+
+    const target = createInterfaceApplication({
+      repository: new FileInterfaceRepository(new MemoryStore()),
+      fileDialog: new TestFileDialog(await encodeInterfaceZip(packageValue))
+    })
+    const session = await target.transfer.beginImport()
+    if (!session) throw new Error('expected an import session')
+    expect(session.preview.builtin?.builtinKey).toBe('removed-builtin')
+    await expect(session.commit({ mode: 'all' })).rejects.toThrow('不认识这个内置题型')
+    await expect(target.browser.listPublished()).resolves.toEqual([])
   })
 
   it('keeps invalid drafts and cancelled transfers explicit at the application boundary', async () => {
