@@ -50,6 +50,9 @@ jobs:
           if (config.release?.tag !== `qwen-tts-v${config.release.version}`) {
             fail('release.tag must match qwen-tts-v<release.version>')
           }
+          if (!/^\d+\.\d+\.\d+([.-][0-9A-Za-z.-]+)?$/.test(config.package?.version ?? '')) {
+            fail('package.version must be a semantic version')
+          }
           if (config.release?.repository !== process.env.CURRENT_REPOSITORY) {
             fail(`release.repository must be ${process.env.CURRENT_REPOSITORY}`)
           }
@@ -66,16 +69,24 @@ jobs:
             ['runtime.revision', config.runtime?.revision],
             ['runtime.ggmlRevision', config.runtime?.ggmlRevision],
             ['model.revision', config.model?.revision],
-            ['voice.designModelRevision', config.voice?.designModelRevision]
+            ['voiceDesign.revision', config.voiceDesign?.revision]
           ]) {
             if (!/^[a-f0-9]{40}$/.test(revision ?? '')) fail(`${name} must be a full commit hash`)
           }
           if (config.model?.quantization !== 'q8_0') fail('model.quantization must be q8_0')
-          if (!/^[a-zA-Z0-9_.-]+$/.test(config.voice?.id ?? '')) fail('voice.id is invalid')
-          if (typeof config.voice?.name !== 'string' || !config.voice.name.trim()) {
-            fail('voice.name is invalid')
+          if (config.voiceDesign?.model !== 'Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign') {
+            fail('voiceDesign.model must be Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign')
           }
-          if (!existsSync(config.voice?.file ?? '')) fail('voice.file does not exist')
+          if (!Array.isArray(config.voices) || !config.voices.length) fail('voices must not be empty')
+          const voiceIds = new Set()
+          for (const voice of config.voices) {
+            if (!/^[a-zA-Z0-9_.-]+$/.test(voice?.id ?? '')) fail('voice.id is invalid')
+            if (voiceIds.has(voice.id)) fail(`duplicate voice.id: ${voice.id}`)
+            voiceIds.add(voice.id)
+            if (typeof voice.name !== 'string' || !voice.name.trim()) fail('voice.name is invalid')
+            if (!existsSync(voice.file ?? '')) fail(`voice.file does not exist: ${voice.file}`)
+            if (!Number.isSafeInteger(voice.seed)) fail(`voice.seed is invalid: ${voice.id}`)
+          }
 
           const outputs = {
             version: config.release.version,

@@ -1,5 +1,7 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
+import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
+import { existsSync, readFileSync } from 'node:fs'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -96,6 +98,38 @@ let page: Page
 let userDataDir: string
 let pageErrors: string[]
 let cachedPocketTtsPackage: Uint8Array | undefined
+const temporaryPaths: string[] = []
+
+const qwenTtsAssetConfig = JSON.parse(
+  readFileSync(path.resolve('scripts', 'qwen-tts', 'assets.json'), 'utf8')
+) as {
+  release: { version: string }
+  package: { version: string }
+  model: { quantization: string }
+  voices: Array<{ id: string; name: string; file: string }>
+}
+const qwenTtsModelDirectory = path.resolve('externals', 'ai', 'qwen3-tts', 'models')
+const qwenTtsHelperPath = path.resolve(
+  'externals',
+  'ai',
+  'qwen3-tts',
+  'runtime',
+  'linux-x64',
+  'ls101-qwen-tts-helper'
+)
+const qwenTtsModelId = `qwen3-tts-0.6b-base-${qwenTtsAssetConfig.model.quantization}`
+const qwenTtsAvailable =
+  process.platform === 'linux' &&
+  process.arch === 'x64' &&
+  [
+    qwenTtsHelperPath,
+    ...qwenTtsAssetConfig.voices.map((voice) => path.resolve(voice.file)),
+    path.join(
+      qwenTtsModelDirectory,
+      `qwen3-tts-0.6b-${qwenTtsAssetConfig.model.quantization}.gguf`
+    ),
+    path.join(qwenTtsModelDirectory, 'qwen3-tts-tokenizer-f16.gguf')
+  ].every(existsSync)
 
 test.beforeAll(async () => mockServer.start())
 test.afterAll(async () => mockServer.close())
@@ -113,7 +147,12 @@ test.beforeEach(async () => {
 
 test.afterEach(async () => {
   await electronApp?.close().catch(() => undefined)
-  await rm(userDataDir, { force: true, recursive: true })
+  await Promise.all([
+    rm(userDataDir, { force: true, recursive: true }),
+    ...temporaryPaths
+      .splice(0)
+      .map((temporaryPath) => rm(temporaryPath, { force: true, recursive: true }))
+  ])
   expect(pageErrors).toEqual([])
 })
 
@@ -1453,7 +1492,108 @@ test('AR-32 executes the real Pocket TTS model package through the Electron stac
   expect(longResult.audio?.data.byteLength).toBeGreaterThan(44)
 })
 
-test('AR-32b executes Qwen3 ASR without external buffers in Electron', async () => {
+test.describe('Qwen3 TTS runtime', () => {
+  test.skip(
+    !qwenTtsAvailable,
+    'Qwen3 TTS models, fixed voice, and Linux x64 helper are not available in this checkout'
+  )
+
+  test('AR-32b executes Qwen3 TTS through the Electron stack', async () => {
+    test.setTimeout(900_000)
+    const qwenTtsPackageDirectory = await mkdtemp(
+      path.join(path.resolve('dist'), '.qwen3-tts-integration-')
+    )
+    temporaryPaths.push(qwenTtsPackageDirectory)
+    const qwenTtsPackagePath = path.join(qwenTtsPackageDirectory, 'qwen3-tts-integration.zip')
+    execFileSync(
+      process.execPath,
+      [
+        path.resolve('scripts', 'qwen-tts', 'build-package.mjs'),
+        '--model-dir',
+        qwenTtsModelDirectory,
+        ...qwenTtsAssetConfig.voices.flatMap((voice) => [
+          '--voice',
+          `${voice.id}=${path.resolve(voice.file)}`,
+          '--voice-name',
+          `${voice.id}=${voice.name}`
+        ]),
+        '--version',
+        qwenTtsAssetConfig.package.version,
+        '--quantization',
+        qwenTtsAssetConfig.model.quantization,
+        '--output',
+        qwenTtsPackagePath
+      ],
+      { cwd: process.cwd(), stdio: 'pipe', timeout: 180_000 }
+    )
+    await selectFileInElectronDialog(qwenTtsPackagePath)
+    await openAirouter('语音合成')
+    await page.getByRole('button', { name: '添加 Provider' }).click()
+    const editor = page.getByRole('dialog')
+    await editor.getByLabel('语音配置名称').fill('Qwen3 TTS Integration')
+    await editor.getByLabel('语音运行方式').selectOption('local')
+    await editor.getByLabel('语音 Provider 类型').selectOption('qwen-tts')
+    await editor.getByRole('button', { name: '导入模型包' }).click()
+    await expect(
+      page.getByRole('button', {
+        includeHidden: true,
+        name: '删除模型包 Qwen3-TTS 0.6B Base English'
+      })
+    ).toBeVisible({ timeout: 60_000 })
+    await expect(
+      editor.getByRole('checkbox', { name: 'American English Man (american-man)' })
+    ).toBeChecked()
+    await expect(
+      editor.getByRole('checkbox', { name: 'American English Woman (american-woman)' })
+    ).toBeChecked()
+    await expect(
+      editor.getByRole('checkbox', { name: 'Qwen3-TTS 0.6B Base Q8_0 (qwen3-tts-0.6b-base-q8_0)' })
+    ).toBeChecked()
+
+    await editor.getByRole('button', { name: '测试合成' }).click()
+    await expect(editor.getByText('测试语音合成成功')).toBeVisible({ timeout: 600_000 })
+    await expect(editor.locator('audio')).toBeVisible()
+    await expect(editor.locator('audio')).toHaveAttribute('src', /^blob:/)
+
+    await editor.getByRole('button', { name: '保存 Provider' }).click()
+    await expect(page.getByText('已保存“Qwen3 TTS Integration”')).toBeVisible({ timeout: 10_000 })
+    const config = await page.evaluate(
+      async () => (await window.airouter.listSpeechProviderConfigs())[0]
+    )
+    expect(config).toEqual(
+      expect.objectContaining({
+        name: 'Qwen3 TTS Integration',
+        kind: 'local',
+        type: 'qwen-tts',
+        modelPackageId: 'qwen3-tts-0.6b-base-en',
+        modelPackageVersion: qwenTtsAssetConfig.package.version,
+        models: [{ id: qwenTtsModelId, enabled: true }],
+        voices: [
+          { id: 'american-man', enabled: true },
+          { id: 'american-woman', enabled: true }
+        ]
+      })
+    )
+
+    const result = await collectSpeech({
+      text: 'Hello from the Qwen3 TTS integration test.',
+      routing: {
+        default: {
+          providerConfigId: String(config?.id),
+          modelId: qwenTtsModelId,
+          voiceId: 'american-man'
+        }
+      }
+    })
+    expect(result).toMatchObject({
+      type: 'result',
+      audio: { mediaType: 'audio/wav', format: 'wav', channels: 1 }
+    })
+    expect(result.audio?.data.byteLength).toBeGreaterThan(44)
+  })
+})
+
+test('AR-32c executes Qwen3 ASR without external buffers in Electron', async () => {
   test.setTimeout(180_000)
   await expect(collectSpeechRecognition(createSilentWav())).resolves.toEqual({
     type: 'result',

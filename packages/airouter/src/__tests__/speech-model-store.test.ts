@@ -155,6 +155,33 @@ describe('AIRouterSpeechModelStore', () => {
       '要求应用版本不低于 0.4.0'
     )
   })
+
+  it('accepts development builds at the matching stable minimum version', async () => {
+    const bytes = new Uint8Array([15])
+    const hash = createHash('sha256').update(bytes).digest('hex')
+    const packageBytes = createPackageWithAssets(
+      'development-package',
+      [{ path: 'model/model.bin', bytes, sha256: hash }],
+      'qwen-tts',
+      '0.3.1'
+    )
+    const localStore = new AIRouterSpeechModelStore({
+      baseDir,
+      appVersion: '0.3.1-local.developer.20260818.abcdef0.dirty'
+    })
+    await expect(importPackageBytes(localStore, baseDir, packageBytes)).resolves.toBeTruthy()
+
+    for (const appVersion of ['0.3.1-dev.20260818.abcdef0', '0.3.1-nightly.20260818']) {
+      const developmentStore = new AIRouterSpeechModelStore({ baseDir, appVersion })
+      await expect(developmentStore.listPackages('qwen-tts')).resolves.toHaveLength(1)
+    }
+
+    const releaseCandidateStore = new AIRouterSpeechModelStore({
+      baseDir,
+      appVersion: '0.3.1-rc.1'
+    })
+    await expect(releaseCandidateStore.listPackages('qwen-tts')).resolves.toEqual([])
+  })
 })
 
 async function importPackageBytes(

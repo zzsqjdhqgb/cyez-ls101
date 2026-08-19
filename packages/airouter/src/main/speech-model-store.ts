@@ -597,9 +597,26 @@ function assertAppCompatible(
   if (!appVersion || !isSemanticVersion(appVersion)) {
     throw new Error('无法确定当前应用版本，不能校验模型包兼容性')
   }
-  if (compareSemanticVersions(appVersion, minimum) < 0) {
+  if (
+    compareSemanticVersions(appVersion, minimum) < 0 &&
+    !isDevelopmentBuildAtStableMinimum(appVersion, minimum)
+  ) {
     throw new Error(`模型包要求应用版本不低于 ${minimum}，当前版本为 ${appVersion}`)
   }
+}
+
+function isDevelopmentBuildAtStableMinimum(appVersion: string, minimum: string): boolean {
+  const current = parseSemanticVersion(appVersion)
+  const required = parseSemanticVersion(minimum)
+  const channel = current?.prerelease?.[0]
+  return Boolean(
+    current &&
+    required &&
+    channel &&
+    ['local', 'dev', 'nightly'].includes(channel) &&
+    !required.prerelease &&
+    current.core.every((part, index) => part === required.core[index])
+  )
 }
 
 function isAppCompatible(

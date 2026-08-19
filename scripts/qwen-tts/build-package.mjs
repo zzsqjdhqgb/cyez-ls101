@@ -18,6 +18,7 @@ function loadAssetConfig() {
   if (
     value?.schemaVersion !== 1 ||
     !/^[a-zA-Z0-9_.-]+$/.test(value.release?.version ?? '') ||
+    !/^[a-zA-Z0-9_.-]+$/.test(value.package?.version ?? '') ||
     !/^[a-f0-9]{40}$/.test(value.runtime?.revision ?? '') ||
     !/^[a-f0-9]{40}$/.test(value.model?.revision ?? '')
   ) {
@@ -34,7 +35,7 @@ export function parseOptions(argv) {
     voiceNames: new Map(),
     packageId: 'qwen3-tts-0.6b-base-en',
     packageName: 'Qwen3-TTS 0.6B Base English',
-    packageVersion: assetConfig.release.version,
+    packageVersion: assetConfig.package.version,
     quantization: 'auto',
     output: null
   }

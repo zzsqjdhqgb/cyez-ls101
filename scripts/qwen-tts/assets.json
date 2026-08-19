@@ -6,6 +6,9 @@
     "tag": "qwen-tts-v0.1.0",
     "prerelease": true
   },
+  "package": {
+    "version": "0.1.1"
+  },
   "runtime": {
     "repository": "https://github.com/predict-woo/qwen3-tts.cpp.git",
     "revision": "b3ba14077cf1b3e11b86e5f84aa9184605c89b28",
@@ -16,12 +19,22 @@
     "revision": "5d83992436eae1d760afd27aff78a71d676296fc",
     "quantization": "q8_0"
   },
-  "voice": {
-    "id": "american-woman",
-    "name": "American English Woman",
-    "file": "native/qwen-tts/voices/american-woman.spk",
-    "designModel": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
-    "designModelRevision": "5ecdb67327fd37bb2e042aab12ff7391903235d3",
-    "seed": 20260817
-  }
+  "voiceDesign": {
+    "model": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "revision": "5ecdb67327fd37bb2e042aab12ff7391903235d3"
+  },
+  "voices": [
+    {
+      "id": "american-man",
+      "name": "American English Man",
+      "file": "native/qwen-tts/voices/american-man.spk",
+      "seed": 20260818
+    },
+    {
+      "id": "american-woman",
+      "name": "American English Woman",
+      "file": "native/qwen-tts/voices/american-woman.spk",
+      "seed": 20260817
+    }
+  ]
 }
