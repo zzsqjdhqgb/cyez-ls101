@@ -30,6 +30,23 @@ describe('visuallyEquivalentPng', () => {
     expect(visuallyEquivalentPng(original, png(1, 1, [220, 100, 100, 255]))).toBe(false)
   })
 
+  it('accepts sparse same-size rasterization differences but rejects material changes', () => {
+    const original = PNG.sync.read(solidPng(10, 10, [20, 40, 60, 255]))
+    const sparseDifference = PNG.sync.read(PNG.sync.write(original))
+    const materialDifference = PNG.sync.read(PNG.sync.write(original))
+    sparseDifference.data[0] = 240
+    for (let pixel = 0; pixel < 4; pixel += 1) {
+      materialDifference.data[pixel * 4] = 240
+    }
+
+    expect(visuallyEquivalentPng(PNG.sync.write(original), PNG.sync.write(sparseDifference))).toBe(
+      true
+    )
+    expect(
+      visuallyEquivalentPng(PNG.sync.write(original), PNG.sync.write(materialDifference))
+    ).toBe(false)
+  })
+
   it('rejects different dimensions and invalid PNG data', () => {
     expect(visuallyEquivalentPng(png(1, 1, [0, 0, 0, 255]), png(2, 1, [0, 0, 0, 255]))).toBe(false)
     expect(visuallyEquivalentPng(Buffer.from('not-png'), Buffer.from('also-not-png'))).toBe(false)

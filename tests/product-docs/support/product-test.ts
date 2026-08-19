@@ -115,6 +115,7 @@ export async function evidence(
         animations: 'disabled',
         caret: 'hide',
         fullPage: true,
+        scale: 'css',
         style: `
           *, *::before, *::after {
             backdrop-filter: none !important;

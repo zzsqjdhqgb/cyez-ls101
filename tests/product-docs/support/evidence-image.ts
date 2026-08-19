@@ -4,7 +4,7 @@ import pixelmatch from 'pixelmatch'
 import { PNG } from 'pngjs'
 
 const COLOR_DIFFERENCE_THRESHOLD = 0.1
-const MAX_SCALED_DIFFERENCE_RATIO = 0.03
+const MAX_DIFFERENCE_RATIO = 0.03
 
 export function visuallyEquivalentPng(left: Buffer, right: Buffer): boolean {
   if (left.equals(right)) return true
@@ -13,22 +13,22 @@ export function visuallyEquivalentPng(left: Buffer, right: Buffer): boolean {
     const leftImage = PNG.sync.read(left)
     const rightImage = PNG.sync.read(right)
     if (leftImage.width === rightImage.width && leftImage.height === rightImage.height) {
-      return differentPixelCount(leftImage, rightImage) === 0
+      return differenceRatio(leftImage, rightImage) <= MAX_DIFFERENCE_RATIO
     }
 
     const normalized = normalizeIntegerScale(leftImage, rightImage)
     if (!normalized) return false
 
-    // A different device scale can introduce small rasterization changes after downscaling.
+    // Device scale and platform rasterization can introduce small visual differences.
     const [normalizedLeft, normalizedRight] = normalized
-    const pixelCount = normalizedLeft.width * normalizedLeft.height
-    return (
-      differentPixelCount(normalizedLeft, normalizedRight) / pixelCount <=
-      MAX_SCALED_DIFFERENCE_RATIO
-    )
+    return differenceRatio(normalizedLeft, normalizedRight) <= MAX_DIFFERENCE_RATIO
   } catch {
     return false
   }
+}
+
+function differenceRatio(left: PNG, right: PNG): number {
+  return differentPixelCount(left, right) / (left.width * left.height)
 }
 
 function differentPixelCount(left: PNG, right: PNG): number {
