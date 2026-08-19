@@ -15,6 +15,7 @@ import { AppToaster } from '../components/ui/ToastViewport'
 import { toast } from '../components/ui/toast'
 import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceApplicationProvider'
 import { InterfaceDetailsPage } from '../features/interfaces/InterfaceDetailsPage'
+import { InterfaceExportPage } from '../features/interfaces/InterfaceExportPage'
 import { InterfaceDraftEditorPage } from '../features/interfaces/InterfaceDraftEditorPage'
 import { InterfaceDraftListPage } from '../features/interfaces/InterfaceDraftListPage'
 import { InterfaceInstanceEditorPage } from '../features/interfaces/InterfaceInstanceEditorPage'
@@ -360,6 +361,7 @@ describe('Interface pages', () => {
         <MemoryRouter initialEntries={[`/interfaces/${interfaceId}`]}>
           <Routes>
             <Route path="/interfaces/:interfaceId" element={<InterfaceDetailsPage />} />
+            <Route path="/interfaces/:interfaceId/export" element={<InterfaceExportPage />} />
           </Routes>
         </MemoryRouter>
         <AppToaster />
@@ -544,6 +546,7 @@ describe('Interface pages', () => {
         <MemoryRouter initialEntries={[`/interfaces/${interfaceId}`]}>
           <Routes>
             <Route path="/interfaces/:interfaceId" element={<InterfaceDetailsPage />} />
+            <Route path="/interfaces/:interfaceId/export" element={<InterfaceExportPage />} />
           </Routes>
         </MemoryRouter>
         <AppToaster />
@@ -572,7 +575,13 @@ describe('Interface pages', () => {
           definition: { ...draft, id: interfaceId },
           source: { type: 'published' }
         }),
-        listInstances: vi.fn().mockResolvedValue([]),
+        listInstances: vi.fn().mockResolvedValue([
+          {
+            instanceId: '20000000-0000-4000-8000-000000000099',
+            name: '导出测试题组',
+            generatedAt: '2026-08-10T00:00:00.000Z'
+          }
+        ]),
         getPrompts: vi.fn().mockResolvedValue(null)
       },
       transfer: { export: exportInterface }
@@ -583,6 +592,7 @@ describe('Interface pages', () => {
         <MemoryRouter initialEntries={[`/interfaces/${interfaceId}`]}>
           <Routes>
             <Route path="/interfaces/:interfaceId" element={<InterfaceDetailsPage />} />
+            <Route path="/interfaces/:interfaceId/export" element={<InterfaceExportPage />} />
           </Routes>
         </MemoryRouter>
       </InterfaceApplicationProvider>
@@ -592,8 +602,14 @@ describe('Interface pages', () => {
     fireEvent.click(screen.getByRole('tab', { name: '题型定义' }))
     fireEvent.click(screen.getByRole('button', { name: '导出题型' }))
 
-    await waitFor(() => expect(exportInterface).toHaveBeenCalledWith(interfaceId, { mode: 'all' }))
-    await waitFor(() => expect(screen.getByRole('button', { name: '导出题型' })).toBeEnabled())
+    expect(await screen.findByRole('heading', { name: '选择要交付的题组' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '导出题型' }))
+    await waitFor(() =>
+      expect(exportInterface).toHaveBeenCalledWith(interfaceId, {
+        mode: 'selected',
+        instanceIds: ['20000000-0000-4000-8000-000000000099']
+      })
+    )
     expect(successToast).not.toHaveBeenCalledWith('题型已导出')
   })
 

@@ -11,7 +11,11 @@ import {
   buildInstanceFromJson,
   buildVarManifest
 } from './conversions'
-import { importInterfacePackage, inspectInterfacePackage } from './exchange'
+import {
+  exportedInstanceMatches,
+  importInterfacePackage,
+  inspectInterfacePackage
+} from './exchange'
 import type { InstanceSelection } from './exchange'
 import { exportInterfaceFile, readInterfaceFile, type InterfaceFileDialog } from './fileExchange'
 import { createInterfaceDraft, publishInterface } from './id'
@@ -223,11 +227,14 @@ export type ExportInterfaceResult = { status: 'exported' } | { status: 'cancelle
 export interface InterfaceImportPreview {
   filename: string
   interface: { interfaceId: string; name: string; description: string }
+  builtin?: { builtinKey: string; interfaceId: string }
   instances: Array<{
     instanceId: string
     name: string
     generatedAt: string
     assetFilenames: string[]
+    status: 'available' | 'existing' | 'conflict' | 'other-interface'
+    reason?: string
   }>
 }
 
@@ -773,6 +780,38 @@ export function createInterfaceApplication(
         const value = selected.package
         const inspection = await inspectInterfacePackage(value)
         let active = true
+        const previewInstances = await Promise.all(
+          inspection.instances.map(async (item) => {
+            const incoming = value.instances.find(
+              ({ instance }) => instance.instanceId === item.instanceId
+            )
+            if (!incoming) return { ...item, status: 'conflict' as const, reason: '文件内容不完整' }
+            const existing = await repository.findInstance(item.instanceId)
+            if (!existing) return { ...item, status: 'available' as const }
+            if (existing.interfaceId !== value.interface.id) {
+              return {
+                ...item,
+                status: 'other-interface' as const,
+                reason: '该题组标识已被另一题型占用'
+              }
+            }
+            const same = await exportedInstanceMatches(repository, existing, incoming)
+            return same
+              ? { ...item, status: 'existing' as const, reason: '本地已经存在相同内容' }
+              : { ...item, status: 'conflict' as const, reason: '同一题组标识对应的内容不同' }
+          })
+        )
+        if (inspection.builtin) {
+          const builtin = await repository.getBuiltin(inspection.builtin.builtinKey)
+          if (!builtin) {
+            for (const item of previewInstances) {
+              if (item.status === 'available') {
+                item.status = 'conflict'
+                item.reason = '接收设备不认识这个内置题型'
+              }
+            }
+          }
+        }
         return {
           preview: {
             filename: selected.filename,
@@ -781,11 +820,18 @@ export function createInterfaceApplication(
               name: inspection.interface.name,
               description: inspection.interface.description
             },
-            instances: inspection.instances
+            builtin: inspection.builtin,
+            instances: previewInstances
           },
           async commit(instances) {
             if (!active) throw new Error('Import session is no longer active')
             active = false
+            if (
+              inspection.builtin &&
+              !(await repository.getBuiltin(inspection.builtin.builtinKey))
+            ) {
+              throw new Error('接收设备不认识这个内置题型，无法导入')
+            }
             const result = await importInterfacePackage(repository, value, { instances })
             return {
               interfaceId: value.interface.id,

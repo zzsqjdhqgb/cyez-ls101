@@ -19,6 +19,7 @@ interface ZipManifest {
   version: 2
   exportedAt: string
   interfaceId: string
+  builtin?: { builtinKey: string; interfaceId: string }
   instances: Array<{
     instanceId: string
     assets: string[]
@@ -33,6 +34,7 @@ export async function encodeInterfaceZip(value: InterfaceExchangePackage): Promi
     version: 2,
     exportedAt: value.exportedAt,
     interfaceId: value.interface.id,
+    ...(value.builtin ? { builtin: value.builtin } : {}),
     instances: value.instances.map(({ instance, assets }) => ({
       instanceId: instance.instanceId,
       assets: Object.keys(assets).sort()
@@ -93,6 +95,7 @@ export async function decodeInterfaceZip(data: Uint8Array): Promise<InterfaceExc
     version: 2,
     exportedAt: manifest.exportedAt,
     interface: def,
+    ...(manifest.builtin ? { builtin: manifest.builtin } : {}),
     instances
   }
 }
@@ -106,6 +109,11 @@ function assertManifest(value: ZipManifest): void {
     Number.isNaN(Date.parse(value.exportedAt)) ||
     typeof value.interfaceId !== 'string' ||
     !isInterfaceId(value.interfaceId) ||
+    (value.builtin !== undefined &&
+      (!isRecord(value.builtin) ||
+        typeof value.builtin.builtinKey !== 'string' ||
+        typeof value.builtin.interfaceId !== 'string' ||
+        value.builtin.interfaceId !== value.interfaceId)) ||
     !Array.isArray(value.instances)
   ) {
     throw invalidZip('Invalid Interface ZIP manifest')

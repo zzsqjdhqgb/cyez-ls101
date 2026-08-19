@@ -1,6 +1,6 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { createHash } from 'node:crypto'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import stableStringify from 'fast-json-stable-stringify'
@@ -520,6 +520,205 @@ test(
   )
 )
 
+test(
+  ...productTest(
+    {
+      id: 'IF-07',
+      owner: { kind: 'module', slug: 'interface-library', title: '题型库', order: 40 },
+      section: '题型文件交换',
+      title: '在全屏工作页选择题组并导入到另一套 LS101',
+      purpose: '把题型和用户选择的题组作为一个文件交付，在另一套 LS101 中审查后继续使用。',
+      preconditions: ['题型库中已有“英语问答练习”题型。'],
+      outcomes: [
+        '导出前可以查看题型身份并选择需要交付的题组。',
+        '导入前可以查看文件内题型和题组状态，确认后题组及其内容可以继续使用。'
+      ],
+      manual: [{ chapter: 'prepare-content', order: 70 }],
+      steps: [
+        {
+          key: 'prepare-export',
+          action: '打开“英语问答练习”，新建题组“交付练习”，填写内容并保存。',
+          expected: '题组出现在题型详情中，并可以进入导出工作页。'
+        },
+        {
+          key: 'select-export-items',
+          action: '在导出题型工作页查看题型身份，只勾选“交付练习”，然后选择“导出题型”。',
+          expected: '页面显示已选择一个题组；确认后题型文件保存成功。'
+        },
+        {
+          key: 'review-import-items',
+          action: '在接收方题型库选择“导入题型”，打开刚才的题型文件。',
+          expected: '全屏审查页列出题型和文件内题组，并将可导入题组默认选中。'
+        },
+        {
+          key: 'confirm-import',
+          action: '确认导入选中的题组，再打开导入的题型和“交付练习”。',
+          expected: '题型和题组进入接收方题型库，已经保存的内容保持不变。'
+        }
+      ]
+    },
+    async (testInfo, productStep) => {
+      await openInterfaceDetails()
+      await createInstance('交付练习', '手工填写')
+      await page.getByLabel('title 内容').fill('Shared lesson')
+      await page.getByLabel('answer 内容').fill('The saved answer travels with the interface.')
+      await page.getByRole('button', { name: '保存' }).click()
+      await expect(page.getByText('题组已保存')).toBeVisible()
+      await page.getByRole('button', { name: '返回题型详情' }).click()
+
+      await productStep('prepare-export', async () => {
+        await page.getByRole('tab', { name: '题型定义' }).click()
+        await page.getByRole('button', { name: '导出题型' }).click()
+        await expect(page.getByRole('heading', { name: '选择要交付的题组' })).toBeVisible()
+      })
+
+      const exportPath = path.join(userDataDir, 'delivery.lsinterface')
+      await productStep('select-export-items', async () => {
+        await expect(page.getByText('已选择 1 个')).toBeVisible()
+        await evidence(testInfo, page, {
+          key: 'export-selection',
+          kind: 'decision',
+          step: 'select-export-items',
+          caption: '导出前只选择需要交付的题组'
+        })
+        await configureSaveDialog(exportPath)
+        await page.getByRole('button', { name: '导出题型' }).click()
+        await expect(page.getByText('题型已导出')).toBeVisible()
+        expect((await readFile(exportPath)).length).toBeGreaterThan(0)
+      })
+
+      await productStep('review-import-items', async () => {
+        await page.evaluate(
+          (scope) => window.fileStore.invoke('file:clear-scope', scope),
+          ['interfaces', 'published', interfaceId.slice('sha256:'.length)]
+        )
+        await page.reload()
+        await configureOpenDialog(exportPath)
+        await page.getByRole('link', { name: '题型库' }).click()
+        await page.getByRole('button', { name: '题型库操作' }).click()
+        await page.getByRole('menuitem', { name: '导入题型' }).click()
+        await expect(page.getByRole('heading', { name: '审查题型文件' })).toBeVisible()
+        await expect(page.getByText('交付练习')).toBeVisible()
+        await expect(page.getByText('可以导入')).toBeVisible()
+        await evidence(testInfo, page, {
+          key: 'import-review',
+          kind: 'result',
+          step: 'review-import-items',
+          caption: '导入前全屏列出题型和可导入题组'
+        })
+      })
+
+      await productStep('confirm-import', async () => {
+        await page.getByRole('button', { name: '导入选中的题组' }).click()
+        await expect(page.getByText('题型已导入')).toBeVisible()
+        await page.getByRole('button', { name: interfaceContent.name, exact: true }).click()
+        await page.getByRole('button', { name: '交付练习', exact: true }).click()
+        await expect(page.getByLabel('title 内容')).toHaveValue('Shared lesson')
+        await expect(page.getByLabel('answer 内容')).toHaveValue(
+          'The saved answer travels with the interface.'
+        )
+      })
+    }
+  )
+)
+
+test(
+  ...productTest(
+    {
+      id: 'IF-08',
+      owner: { kind: 'module', slug: 'interface-library', title: '题型库', order: 40 },
+      section: '题型文件交换',
+      title: '识别已经存在和发生分叉的题组',
+      purpose: '重复导入题型文件时，区分完全相同的题组和同一身份下内容不同的题组。',
+      preconditions: ['题型库中已有“英语问答练习”题型和一个保存完成的题组。'],
+      outcomes: [
+        '同一 UUID 且内容完全相同的题组显示为已经存在，不重复写入。',
+        '同一 UUID 但内容不同的题组显示身份冲突，不允许勾选或覆盖本地内容。'
+      ],
+      manual: [{ chapter: 'prepare-content', order: 71 }],
+      steps: [
+        {
+          key: 'export-reference-file',
+          action: '保存题组“身份检查题组”，从导出工作页把它保存为题型文件。',
+          expected: '题型文件保留题组当前的身份和内容。'
+        },
+        {
+          key: 'recognize-existing',
+          action: '不修改本地题组，立即导入刚导出的题型文件。',
+          expected: '审查页把该题组标记为本地已经存在相同内容，不能重复勾选。'
+        },
+        {
+          key: 'fork-local-content',
+          action: '取消导入，修改并保存本地“身份检查题组”的内容。',
+          expected: '本地题组保留原 UUID，但内容已经与题型文件中的版本不同。'
+        },
+        {
+          key: 'reject-identity-conflict',
+          action: '再次导入原来的题型文件。',
+          expected: '审查页显示同一题组标识对应的内容不同，题组不可勾选，也不能覆盖本地内容。'
+        }
+      ]
+    },
+    async (testInfo, productStep) => {
+      await openInterfaceDetails()
+      await createInstance('身份检查题组', '手工填写')
+      await page.getByLabel('title 内容').fill('Original identity content')
+      await page.getByLabel('answer 内容').fill('Original answer')
+      await page.getByRole('button', { name: '保存' }).click()
+      await expect(page.getByText('题组已保存')).toBeVisible()
+      await expect(page.getByRole('button', { name: '保存' })).toBeDisabled()
+      await expect(page.getByText(`${interfaceContent.name} · 编辑`)).toBeVisible()
+      await page.getByRole('button', { name: '返回题型详情' }).click()
+
+      const exportPath = path.join(userDataDir, 'identity-check.lsinterface')
+      await productStep('export-reference-file', async () => {
+        await page.getByRole('tab', { name: '题型定义' }).click()
+        await page.getByRole('button', { name: '导出题型' }).click()
+        await expect(page.getByText('已选择 1 个')).toBeVisible()
+        await configureSaveDialog(exportPath)
+        await page.getByRole('button', { name: '导出题型' }).click()
+        await expect(page.getByText('题型已导出')).toBeVisible()
+      })
+
+      await productStep('recognize-existing', async () => {
+        await openImportReview(exportPath)
+        await expect(page.getByText('本地已经存在相同内容')).toBeVisible()
+        await expect(page.getByRole('checkbox', { name: /身份检查题组/ })).toBeDisabled()
+        await evidence(testInfo, page, {
+          key: 'existing-instance',
+          kind: 'result',
+          step: 'recognize-existing',
+          caption: '完全相同的题组显示为本地已经存在'
+        })
+      })
+
+      await productStep('fork-local-content', async () => {
+        await page.getByRole('button', { name: '取消导入' }).click()
+        await page.getByRole('button', { name: interfaceContent.name, exact: true }).click()
+        await page.getByRole('button', { name: '身份检查题组', exact: true }).click()
+        await page.getByLabel('answer 内容').fill('Locally revised answer')
+        await page.getByRole('button', { name: '保存' }).click()
+        await expect(page.getByText('题组已保存')).toBeVisible()
+        await expect(page.getByRole('button', { name: '保存' })).toBeDisabled()
+        await expect(page.getByText(`${interfaceContent.name} · 编辑`)).toBeVisible()
+        await page.getByRole('button', { name: '返回题型详情' }).click()
+      })
+
+      await productStep('reject-identity-conflict', async () => {
+        await openImportReview(exportPath)
+        await expect(page.getByText('同一题组标识对应的内容不同')).toBeVisible()
+        await expect(page.getByRole('checkbox', { name: /身份检查题组/ })).toBeDisabled()
+        await evidence(testInfo, page, {
+          key: 'identity-conflict',
+          kind: 'exception',
+          step: 'reject-identity-conflict',
+          caption: '同一 UUID 内容不同的题组不可导入或覆盖'
+        })
+      })
+    }
+  )
+)
+
 async function openInterfaceDetails(): Promise<void> {
   await page.getByRole('link', { name: '题型库' }).click()
   await page.getByRole('button', { name: interfaceContent.name, exact: true }).click()
@@ -579,6 +778,33 @@ async function listInstanceIds(): Promise<string[]> {
     (scope) => window.fileStore.invoke('file:list-scopes', scope),
     ['interfaces', 'published', interfaceId.slice('sha256:'.length), 'instances']
   )) as string[]
+}
+
+async function configureSaveDialog(filePath: string): Promise<void> {
+  await electronApp.evaluate(({ dialog }, selectedPath) => {
+    Object.defineProperty(dialog, 'showSaveDialog', {
+      configurable: true,
+      value: async () => ({ canceled: false, filePath: selectedPath })
+    })
+  }, filePath)
+}
+
+async function configureOpenDialog(filePath: string): Promise<void> {
+  await electronApp.evaluate(({ dialog }, selectedPath) => {
+    Object.defineProperty(dialog, 'showOpenDialog', {
+      configurable: true,
+      value: async () => ({ canceled: false, filePaths: [selectedPath], bookmarks: [] })
+    })
+  }, filePath)
+}
+
+async function openImportReview(filePath: string): Promise<void> {
+  await configureOpenDialog(filePath)
+  await page.getByRole('link', { name: '题型库' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: '题型库' })).toBeVisible()
+  await page.getByRole('button', { name: '题型库操作' }).click()
+  await page.getByRole('menuitem', { name: '导入题型' }).click()
+  await expect(page.getByRole('heading', { name: '审查题型文件' })).toBeVisible()
 }
 
 async function configureTextProvider(): Promise<void> {

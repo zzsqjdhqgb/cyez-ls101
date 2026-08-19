@@ -50,6 +50,9 @@ jobs:
           if (config.release?.tag !== `qwen-tts-v${config.release.version}`) {
             fail('release.tag must match qwen-tts-v<release.version>')
           }
+          if (!/^\d+\.\d+\.\d+([.-][0-9A-Za-z.-]+)?$/.test(config.package?.version ?? '')) {
+            fail('package.version must be a semantic version')
+          }
           if (config.release?.repository !== process.env.CURRENT_REPOSITORY) {
             fail(`release.repository must be ${process.env.CURRENT_REPOSITORY}`)
           }
@@ -66,16 +69,24 @@ jobs:
             ['runtime.revision', config.runtime?.revision],
             ['runtime.ggmlRevision', config.runtime?.ggmlRevision],
             ['model.revision', config.model?.revision],
-            ['voice.designModelRevision', config.voice?.designModelRevision]
+            ['voiceDesign.revision', config.voiceDesign?.revision]
           ]) {
             if (!/^[a-f0-9]{40}$/.test(revision ?? '')) fail(`${name} must be a full commit hash`)
           }
           if (config.model?.quantization !== 'q8_0') fail('model.quantization must be q8_0')
-          if (!/^[a-zA-Z0-9_.-]+$/.test(config.voice?.id ?? '')) fail('voice.id is invalid')
-          if (typeof config.voice?.name !== 'string' || !config.voice.name.trim()) {
-            fail('voice.name is invalid')
+          if (config.voiceDesign?.model !== 'Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign') {
+            fail('voiceDesign.model must be Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign')
           }
-          if (!existsSync(config.voice?.file ?? '')) fail('voice.file does not exist')
+          if (!Array.isArray(config.voices) || !config.voices.length) fail('voices must not be empty')
+          const voiceIds = new Set()
+          for (const voice of config.voices) {
+            if (!/^[a-zA-Z0-9_.-]+$/.test(voice?.id ?? '')) fail('voice.id is invalid')
+            if (voiceIds.has(voice.id)) fail(`duplicate voice.id: ${voice.id}`)
+            voiceIds.add(voice.id)
+            if (typeof voice.name !== 'string' || !voice.name.trim()) fail('voice.name is invalid')
+            if (!existsSync(voice.file ?? '')) fail(`voice.file does not exist: ${voice.file}`)
+            if (!Number.isSafeInteger(voice.seed)) fail(`voice.seed is invalid: ${voice.id}`)
+          }
 
           const outputs = {
             version: config.release.version,
@@ -139,7 +150,7 @@ jobs:
       - name: Smoke-test helper
         shell: bash
         env:
-          HELPER_PATH: resources/qwen-tts/${{ matrix.runtime-directory }}/${{ matrix.executable }}
+          HELPER_PATH: externals/ai/qwen3-tts/runtime/${{ matrix.runtime-directory }}/${{ matrix.executable }}
         run: |
           node <<'NODE'
           const { spawnSync } = require('node:child_process')
@@ -162,7 +173,7 @@ jobs:
       - name: Stage runtime asset
         shell: bash
         env:
-          SOURCE_PATH: resources/qwen-tts/${{ matrix.runtime-directory }}/${{ matrix.executable }}
+          SOURCE_PATH: externals/ai/qwen3-tts/runtime/${{ matrix.runtime-directory }}/${{ matrix.executable }}
           RELEASE_ASSET: ${{ matrix.release-asset }}
           RUNTIME_DIRECTORY: ${{ matrix.runtime-directory }}
           SOURCE_COMMIT: ${{ github.sha }}
@@ -184,8 +195,8 @@ jobs:
             sourceCommit: process.env.SOURCE_COMMIT,
             upstream: {
               repository: config.runtime.repository,
-              revision: revision('model-assets/downloads/qwen-tts/qwen3-tts.cpp'),
-              ggmlRevision: revision('model-assets/downloads/qwen-tts/qwen3-tts.cpp/ggml')
+              revision: revision('externals/ai/qwen3-tts/downloads/qwen3-tts.cpp'),
+              ggmlRevision: revision('externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/ggml')
             }
           }
           writeFileSync(
@@ -230,12 +241,12 @@ jobs:
           QWEN_CPP_REPOSITORY: ${{ needs.metadata.outputs.runtime_repository }}
           QWEN_CPP_REVISION: ${{ needs.metadata.outputs.runtime_revision }}
         run: |
-          mkdir -p model-assets/downloads/qwen-tts/qwen3-tts.cpp
-          git -C model-assets/downloads/qwen-tts/qwen3-tts.cpp init
-          git -C model-assets/downloads/qwen-tts/qwen3-tts.cpp remote add origin "$QWEN_CPP_REPOSITORY"
-          git -C model-assets/downloads/qwen-tts/qwen3-tts.cpp fetch --depth 1 origin "$QWEN_CPP_REVISION"
-          git -C model-assets/downloads/qwen-tts/qwen3-tts.cpp checkout --detach FETCH_HEAD
-          test "$(git -C model-assets/downloads/qwen-tts/qwen3-tts.cpp rev-parse HEAD)" = "$QWEN_CPP_REVISION"
+          mkdir -p externals/ai/qwen3-tts/downloads/qwen3-tts.cpp
+          git -C externals/ai/qwen3-tts/downloads/qwen3-tts.cpp init
+          git -C externals/ai/qwen3-tts/downloads/qwen3-tts.cpp remote add origin "$QWEN_CPP_REPOSITORY"
+          git -C externals/ai/qwen3-tts/downloads/qwen3-tts.cpp fetch --depth 1 origin "$QWEN_CPP_REVISION"
+          git -C externals/ai/qwen3-tts/downloads/qwen3-tts.cpp checkout --detach FETCH_HEAD
+          test "$(git -C externals/ai/qwen3-tts/downloads/qwen3-tts.cpp rev-parse HEAD)" = "$QWEN_CPP_REVISION"
 
       - name: Install pinned conversion dependencies
         run: |
@@ -259,7 +270,7 @@ jobs:
           snapshot_download(
               repo_id=os.environ["MODEL_ID"],
               revision=os.environ["MODEL_REVISION"],
-              local_dir=Path("model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base"),
+              local_dir=Path("externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base"),
               allow_patterns=[
                   "config.json",
                   "generation_config.json",
@@ -276,13 +287,13 @@ jobs:
       - name: Convert model to GGUF
         shell: bash
         run: |
-          python model-assets/downloads/qwen-tts/qwen3-tts.cpp/scripts/convert_tts_to_gguf.py \
-            --input model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base \
-            --output model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/qwen3-tts-0.6b-q8_0.gguf \
+          python externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/scripts/convert_tts_to_gguf.py \
+            --input externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base \
+            --output externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/models/qwen3-tts-0.6b-q8_0.gguf \
             --type q8_0
-          python model-assets/downloads/qwen-tts/qwen3-tts.cpp/scripts/convert_tokenizer_to_gguf.py \
-            --input model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base \
-            --output model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/qwen3-tts-tokenizer-f16.gguf \
+          python externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/scripts/convert_tokenizer_to_gguf.py \
+            --input externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/models/Qwen3-TTS-12Hz-0.6B-Base \
+            --output externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/models/qwen3-tts-tokenizer-f16.gguf \
             --type f16
 
       - name: Stage model assets
@@ -291,8 +302,8 @@ jobs:
           SOURCE_COMMIT: ${{ github.sha }}
         run: |
           mkdir -p release-assets
-          cp model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/qwen3-tts-0.6b-q8_0.gguf release-assets/
-          cp model-assets/downloads/qwen-tts/qwen3-tts.cpp/models/qwen3-tts-tokenizer-f16.gguf release-assets/
+          cp externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/models/qwen3-tts-0.6b-q8_0.gguf release-assets/
+          cp externals/ai/qwen3-tts/downloads/qwen3-tts.cpp/models/qwen3-tts-tokenizer-f16.gguf release-assets/
           node <<'NODE'
           const { execFileSync } = require('node:child_process')
           const { readFileSync, statSync, writeFileSync } = require('node:fs')
@@ -319,7 +330,7 @@ jobs:
             modelRevision: config.model.revision,
             qwenCppRevision: execFileSync(
               'git',
-              ['-C', 'model-assets/downloads/qwen-tts/qwen3-tts.cpp', 'rev-parse', 'HEAD'],
+              ['-C', 'externals/ai/qwen3-tts/downloads/qwen3-tts.cpp', 'rev-parse', 'HEAD'],
               { encoding: 'utf8' }
             ).trim(),
             assets

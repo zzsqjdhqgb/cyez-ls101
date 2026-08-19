@@ -9,7 +9,7 @@ import { pathToFileURL } from 'node:url'
 
 const root = path.resolve(import.meta.dirname, '..', '..')
 const config = loadConfig()
-const downloadDirectory = path.join(root, 'model-assets', 'downloads', 'qwen-tts')
+const downloadDirectory = path.join(root, 'externals', 'ai', 'qwen3-tts', 'downloads')
 const apiBase = `https://api.github.com/repos/${config.release.repository}/releases/tags/${config.release.tag}`
 
 export function loadConfig() {
@@ -175,8 +175,16 @@ async function main() {
   const release = await loadReleaseMetadata(metadataPath)
   const assets = selectReleaseAssets(release, target)
   const helperCachePath = path.join(downloadDirectory, 'releases', assets.helper.name)
-  const helperPath = path.join(root, 'resources', 'qwen-tts', target.directory, target.executable)
-  const modelDirectory = path.join(root, 'model-assets', 'qwen-tts', 'models')
+  const helperPath = path.join(
+    root,
+    'externals',
+    'ai',
+    'qwen3-tts',
+    'runtime',
+    target.directory,
+    target.executable
+  )
+  const modelDirectory = path.join(root, 'externals', 'ai', 'qwen3-tts', 'models')
   const manifestPath = path.join(downloadDirectory, 'releases', assets.manifest.name)
   const helperDownloaded = await downloadAsset(assets.helper, helperCachePath)
   await mkdir(path.dirname(helperPath), { recursive: true })

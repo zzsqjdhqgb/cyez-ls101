@@ -14,6 +14,8 @@ import { InterfaceDraftEditorPage } from '../features/interfaces/InterfaceDraftE
 import { InterfaceDraftListPage } from '../features/interfaces/InterfaceDraftListPage'
 import { InterfaceInstanceEditorPage } from '../features/interfaces/InterfaceInstanceEditorPage'
 import { InterfaceListPage } from '../features/interfaces/InterfaceListPage'
+import { InterfaceExportPage } from '../features/interfaces/InterfaceExportPage'
+import { InterfaceImportPage } from '../features/interfaces/InterfaceImportPage'
 import { SettingsDetailPage } from '../pages/SettingsDetailPage'
 import { SettingsOverviewPage } from '../pages/SettingsOverviewPage'
 import { WorkbenchPage } from '../pages/WorkbenchPage'
@@ -183,6 +185,20 @@ const unregisterRoutes = [
     path: '/interfaces/drafts',
     component: InterfaceDraftListPage,
     layout: 'standard'
+  }),
+
+  registerAppRoute({
+    id: 'interface-export',
+    path: '/interfaces/:interfaceId/export',
+    component: InterfaceExportPage,
+    layout: 'focus'
+  }),
+
+  registerAppRoute({
+    id: 'interface-import',
+    path: '/interfaces/import',
+    component: InterfaceImportPage,
+    layout: 'focus'
   }),
 
   registerAppRoute({

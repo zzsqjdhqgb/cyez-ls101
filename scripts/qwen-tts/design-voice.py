@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Any
 
 ASSET_CONFIG = json.loads(Path(__file__).with_name("assets.json").read_text(encoding="utf-8"))
-MODEL_ID = ASSET_CONFIG["voice"]["designModel"]
-MODEL_REVISION = ASSET_CONFIG["voice"]["designModelRevision"]
+MODEL_ID = ASSET_CONFIG["voiceDesign"]["model"]
+MODEL_REVISION = ASSET_CONFIG["voiceDesign"]["revision"]
 DEFAULT_TEXT = (
     "Good morning. The library opens at eight thirty, and today's workshop begins "
     "just after nine. Please bring your notes, ask clear questions, and take your time."

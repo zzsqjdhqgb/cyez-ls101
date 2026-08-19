@@ -34,7 +34,7 @@ function mediaTypeFor(path) {
 async function main() {
   const { audioPath, referenceText } = parseArgs(process.argv.slice(2))
   const workerPath = resolve('out/main/pronunciation-assessment-worker.js')
-  const modelDir = resolve('model-assets/pronunciation', MODEL_DIRECTORY)
+  const modelDir = resolve('externals/ai/pronunciation/model', MODEL_DIRECTORY)
   if (!existsSync(workerPath)) throw new Error('请先运行 yarn electron-vite build')
   if (!existsSync(join(modelDir, 'onnx', 'model_quantized.onnx'))) {
     throw new Error('请先运行 node scripts/download-pronunciation-model.js')

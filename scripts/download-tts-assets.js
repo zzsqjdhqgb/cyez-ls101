@@ -10,7 +10,7 @@ const { join, dirname } = require('node:path')
 const isTTY = process.stdout.isTTY
 
 const BASE_URL = 'https://huggingface.co/kyutai/pocket-tts-without-voice-cloning/resolve/main'
-const ASSETS_DIR = join(process.cwd(), 'model-assets', 'tts')
+const ASSETS_DIR = join(process.cwd(), 'externals', 'ai', 'pocket-tts', 'model')
 const FILES = [
   { remote: 'tokenizer.model', local: 'tokenizer.model' },
   { remote: 'tts_b6369a24.safetensors', local: 'model.safetensors' },

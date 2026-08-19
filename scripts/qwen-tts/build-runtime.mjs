@@ -6,11 +6,18 @@ import path from 'node:path'
 import process from 'node:process'
 
 const root = path.resolve(import.meta.dirname, '..', '..')
-const downloadDirectory = path.join(root, 'model-assets', 'downloads', 'qwen-tts')
+const downloadDirectory = path.join(root, 'externals', 'ai', 'qwen3-tts', 'downloads')
 const sourceDir = path.join(downloadDirectory, 'qwen3-tts.cpp')
 const ggmlBuildDir = path.join(sourceDir, 'ggml', 'build')
 const helperBuildDir = path.join(downloadDirectory, 'qwen3-tts-helper-build')
-const outputDir = path.join(root, 'resources', 'qwen-tts', `${process.platform}-${process.arch}`)
+const outputDir = path.join(
+  root,
+  'externals',
+  'ai',
+  'qwen3-tts',
+  'runtime',
+  `${process.platform}-${process.arch}`
+)
 const assetConfig = loadAssetConfig()
 const repository = assetConfig.runtime.repository
 const commit = assetConfig.runtime.revision

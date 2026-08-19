@@ -12,7 +12,7 @@ const { downloadVerifiedAsset } = require('./download-stt-models.js')
 const ROOT_DIR = process.cwd()
 const MANIFEST_PATH = join(__dirname, 'pronunciation-model-assets.json')
 const MODEL_DIRECTORY = 'facebook-wav2vec2-lv-60-espeak-cv-ft-int8'
-const MODEL_DIR = join(ROOT_DIR, 'model-assets', 'pronunciation', MODEL_DIRECTORY)
+const MODEL_DIR = join(ROOT_DIR, 'externals', 'ai', 'pronunciation', 'model', MODEL_DIRECTORY)
 const PINNED_MANIFEST = readManifest()
 
 class MetadataMismatchError extends Error {}

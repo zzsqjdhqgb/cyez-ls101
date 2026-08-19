@@ -7,7 +7,7 @@
     {
       "kind": "module",
       "slug": "interface-library",
-      "documentIds": ["IF-01", "IF-02", "IF-03", "IF-04", "IF-05", "IF-06"]
+      "documentIds": ["IF-01", "IF-02", "IF-03", "IF-04", "IF-05", "IF-06", "IF-07", "IF-08"]
     },
     { "kind": "module", "slug": "template-library", "documentIds": ["TP-01"] },
     { "kind": "module", "slug": "grading-units", "documentIds": ["GS-01"] },
@@ -25,7 +25,17 @@
       "slug": "prepare-content",
       "title": "准备评分标准与题型内容",
       "journeyIds": ["PJ-01"],
-      "operationIds": ["GS-01", "IF-01", "IF-02", "IF-03", "IF-04", "IF-05", "IF-06"]
+      "operationIds": [
+        "GS-01",
+        "IF-01",
+        "IF-02",
+        "IF-03",
+        "IF-04",
+        "IF-05",
+        "IF-06",
+        "IF-07",
+        "IF-08"
+      ]
     },
     {
       "slug": "build-generate-exam",
@@ -72,14 +82,15 @@
     "journeys/exam-delivery/verified/assets/EX-01/submission-saved.png",
     "modules/grading-units/behaviors/GS-01.md",
     "modules/grading-units/behaviors/README.md",
-    "modules/grading-units/behaviors/assets/GS-01/publish-data.png",
-    "modules/grading-units/behaviors/assets/GS-01/published-and-draft.png",
+    "modules/grading-units/behaviors/assets/GS-01/saved-unit.png",
     "modules/interface-library/behaviors/IF-01.md",
     "modules/interface-library/behaviors/IF-02.md",
     "modules/interface-library/behaviors/IF-03.md",
     "modules/interface-library/behaviors/IF-04.md",
     "modules/interface-library/behaviors/IF-05.md",
     "modules/interface-library/behaviors/IF-06.md",
+    "modules/interface-library/behaviors/IF-07.md",
+    "modules/interface-library/behaviors/IF-08.md",
     "modules/interface-library/behaviors/README.md",
     "modules/interface-library/behaviors/assets/IF-01/creation-settings.png",
     "modules/interface-library/behaviors/assets/IF-01/saved-instance.png",
@@ -90,6 +101,10 @@
     "modules/interface-library/behaviors/assets/IF-05/retained-draft.png",
     "modules/interface-library/behaviors/assets/IF-06/replacement-result.png",
     "modules/interface-library/behaviors/assets/IF-06/validation-error.png",
+    "modules/interface-library/behaviors/assets/IF-07/export-selection.png",
+    "modules/interface-library/behaviors/assets/IF-07/import-review.png",
+    "modules/interface-library/behaviors/assets/IF-08/existing-instance.png",
+    "modules/interface-library/behaviors/assets/IF-08/identity-conflict.png",
     "modules/submission-records/behaviors/README.md",
     "modules/submission-records/behaviors/SR-01.md",
     "modules/submission-records/behaviors/assets/SR-01/settled-batch.png",

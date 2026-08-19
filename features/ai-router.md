@@ -46,7 +46,7 @@ interface AIRouterGeneratedImage {
 }
 ```
 
-开发环境从 `model-assets/stt/` 读取模型，打包后从 `resources/assets/stt/` 读取。只有 Qwen3 ASR 的 `conv_frontend.onnx`、量化 encoder/decoder、tokenizer 目录和 `silero_vad.onnx` 全部存在时，模型才会出现在可选列表中。
+开发环境从 `externals/ai/stt/model/` 读取模型，打包后从 `resources/assets/stt/` 读取。只有 Qwen3 ASR 的 `conv_frontend.onnx`、量化 encoder/decoder、tokenizer 目录和 `silero_vad.onnx` 全部存在时，模型才会出现在可选列表中。
 
 公共请求和结果为：
 
@@ -279,7 +279,7 @@ manifest v1 采用以下结构：
 
 `runtime.minimumAppVersion` 使用 SemVer 格式。导入模型包和加载已安装模型包时都必须与 Electron 应用当前版本比较，不能只校验字段类型。
 
-setup 阶段下载的模型原始文件统一放在仓库根目录的 `model-assets/`，不与图标等应用资源混放。Qwen3 ASR 下载脚本在运行时读取 GitHub Release 与 Hugging Face API，并要求官方元数据、仓库内固定清单和实际文件的 SHA-256 一致；API 不可达时固定清单仍支持离线缓存校验，上游变化则必须通过显式命令更新并审查清单。压缩包保留在不会进入安装包的 `model-assets/downloads/stt/`。构建阶段读取 `model-assets/tts/` 生成独立的 Pocket TTS ZIP；该 ZIP 输出到 `dist/`，与 exe、安装包并列发布，不写入 Electron 安装包。TTS WASM runtime 仍随应用本体发布。
+setup 阶段下载的 AI 外部文件统一放在仓库根目录的 `externals/ai/`，不与 Git 管理的源码和应用资源混放。Qwen3 ASR 下载脚本在运行时读取 GitHub Release 与 Hugging Face API，并要求官方元数据、仓库内固定清单和实际文件的 SHA-256 一致；API 不可达时固定清单仍支持离线缓存校验，上游变化则必须通过显式命令更新并审查清单。压缩包保留在不会进入安装包的 `externals/ai/stt/downloads/`。构建阶段读取 `externals/ai/pocket-tts/model/` 生成独立的 Pocket TTS ZIP；该 ZIP 输出到 `dist/`，与 exe、安装包并列发布，不写入 Electron 安装包。TTS WASM runtime 仍随应用本体发布。
 
 ### 模型文件去重
 

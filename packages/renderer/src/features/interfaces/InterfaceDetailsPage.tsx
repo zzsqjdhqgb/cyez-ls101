@@ -136,16 +136,7 @@ export function InterfaceDetailsPage(): JSX.Element {
   }
 
   const exportInterface = async (): Promise<void> => {
-    setWorking(true)
-    setError(null)
-    try {
-      const result = await application.transfer.export(interfaceId, { mode: 'all' })
-      if (result.status === 'exported') toast.success('题型已导出')
-    } catch (reason) {
-      setError(errorMessage(reason))
-    } finally {
-      setWorking(false)
-    }
+    navigate(`/interfaces/${encodeURIComponent(interfaceId)}/export`)
   }
 
   const deleteInstance = async (instance: InterfaceInstanceSummary): Promise<void> => {

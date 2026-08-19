@@ -24,8 +24,8 @@ const { basename, dirname, join } = require('node:path')
 
 const isTTY = process.stdout.isTTY
 const ROOT_DIR = process.cwd()
-const STT_DIR = join(ROOT_DIR, 'model-assets', 'stt')
-const DOWNLOAD_DIR = join(ROOT_DIR, 'model-assets', 'downloads', 'stt')
+const STT_DIR = join(ROOT_DIR, 'externals', 'ai', 'stt', 'model')
+const DOWNLOAD_DIR = join(ROOT_DIR, 'externals', 'ai', 'stt', 'downloads')
 const RELEASE_BASE_URL = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models'
 const MODEL_DIRECTORY = 'sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25'
 const MODEL_MARKER = '.source-verification.json'

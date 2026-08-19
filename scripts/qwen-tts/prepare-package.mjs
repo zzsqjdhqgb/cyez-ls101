@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
-import { readFileSync } from 'node:fs'
 import { rename, rm, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -14,31 +13,38 @@ export async function preparePackage() {
     console.log('[qwen-tts] local package preparation skipped by LS101_SKIP_QWEN_TTS_DOWNLOAD')
     return null
   }
-  const modelDir = path.join(root, 'model-assets', 'qwen-tts', 'models')
+  const modelDir = path.join(root, 'externals', 'ai', 'qwen3-tts', 'models')
   const output = path.join(
     root,
     'dist',
-    `qwen3-tts-0.6b-base-${config.model.quantization}-${config.release.version}.zip`
+    `qwen3-tts-0.6b-base-${config.model.quantization}-${config.package.version}.zip`
   )
   const temporaryOutput = `${output}.part`
   for (const name of Object.values(modelAssetNames())) {
     await assertFile(path.join(modelDir, name), 'Qwen TTS Release 模型')
   }
   const { buildPackage, parseOptions } = await import('./build-package.mjs')
-  const voiceMetadata = readVoiceMetadata()
+  const voiceMetadata = readVoiceMetadata(config.voices)
   const args = [
     '--model-dir',
     modelDir,
     '--voices-dir',
     path.join(root, 'native', 'qwen-tts', 'voices'),
     '--version',
-    config.release.version,
+    config.package.version,
     '--quantization',
     config.model.quantization,
     '--output',
     temporaryOutput
   ]
-  for (const voice of voiceMetadata) args.push('--voice-name', `${voice.id}=${voice.name}`)
+  for (const voice of voiceMetadata) {
+    args.push(
+      '--voice',
+      `${voice.id}=${path.resolve(root, voice.file)}`,
+      '--voice-name',
+      `${voice.id}=${voice.name}`
+    )
+  }
   await rm(temporaryOutput, { force: true })
   const result = await buildPackage(parseOptions(args))
   await rm(output, { force: true })
@@ -47,15 +53,18 @@ export async function preparePackage() {
   return { ...result, outputPath: output }
 }
 
-function readVoiceMetadata() {
-  const file = path.join(root, 'scripts', 'qwen-tts', 'voices.json')
-  const value = JSON.parse(readFileSync(file, 'utf8'))
+function readVoiceMetadata(value) {
   if (!Array.isArray(value)) throw new Error('Qwen TTS 音色元数据必须是数组')
   return value.map((voice) => {
-    if (!voice || !/^[a-zA-Z0-9_.-]+$/.test(voice.id) || typeof voice.name !== 'string') {
+    if (
+      !voice ||
+      !/^[a-zA-Z0-9_.-]+$/.test(voice.id) ||
+      typeof voice.name !== 'string' ||
+      typeof voice.file !== 'string'
+    ) {
       throw new Error('Qwen TTS 音色元数据无效')
     }
-    return { id: voice.id, name: voice.name }
+    return { id: voice.id, name: voice.name, file: voice.file }
   })
 }
 

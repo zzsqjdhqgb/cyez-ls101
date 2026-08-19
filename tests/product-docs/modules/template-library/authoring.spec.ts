@@ -56,7 +56,7 @@ test(
         },
         {
           key: 'reload-template',
-          action: '返回模板库，再次打开刚刚保存的模板。',
+          action: '返回模板库，打开“我的模板”，再次打开刚刚保存的模板。',
           expected: '模板名称和说明保持不变，可以继续编辑或进入生成流程。'
         }
       ]
@@ -84,6 +84,7 @@ test(
 
       await productStep('reload-template', async () => {
         await page.getByRole('button', { name: '返回模板' }).click()
+        await page.getByRole('tab', { name: '我的模板' }).click()
         await expect(
           page.getByRole('button', { name: '课堂口语练习模板', exact: true })
         ).toBeVisible()
