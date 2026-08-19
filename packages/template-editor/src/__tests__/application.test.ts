@@ -19,7 +19,8 @@ import type {
   FunctionLocator,
   LocalFunctionLibraryDocument,
   TemplateContent,
-  TemplateDocument
+  TemplateDocument,
+  TemplateNode
 } from '../types'
 import { root, schemaDefinition, schemaText } from './fixtures'
 
@@ -1201,7 +1202,158 @@ describe('TemplateApplication', () => {
       }
     })
   })
+
+  it('函数预览的外层 Collector 会同时收集函数自身题目', async () => {
+    const { application, repository } = setup()
+    const source = functionDocument(FUNCTION_A, 'Choice group preview with question')
+    source.content.inputs = [
+      {
+        name: 'questions',
+        type: 'choice-group',
+        shape: { kind: 'range', pageCounts: [1, 2] }
+      }
+    ]
+    source.content.body = root([previewChoiceQuestion(), previewChoicePage()])
+    await saveFunctions(repository, source)
+
+    const result = await application.functionLibraries.local.preview(LIBRARY_ID, source, {
+      questions: {
+        type: 'choice-group',
+        source: 'global',
+        selection: { kind: 'range', startPage: 0 }
+      }
+    })
+
+    expect(result).toMatchObject({
+      success: true,
+      preview: {
+        choiceMeta: {
+          pages: [{ questionIndices: [0] }, { questionIndices: [1, 2] }, { questionIndices: [3] }],
+          questions: [{}, {}, {}, { stem: 'Own question' }]
+        },
+        pages: [
+          {
+            sourceNodeId: 'choice-preview-page',
+            content: [
+              {
+                type: 'choice-view',
+                defaultViewport: { mode: 'range', startPage: 0, endPage: 1 }
+              }
+            ]
+          }
+        ]
+      }
+    })
+  })
+
+  it('全量题组输入会用函数自身题目填充目标形状', async () => {
+    const { application, repository } = setup()
+    const source = functionDocument(FUNCTION_A, 'Whole choice group preview with question')
+    source.content.inputs = [
+      {
+        name: 'questions',
+        type: 'choice-group',
+        shape: { kind: 'all', pageCounts: [1, 2] }
+      }
+    ]
+    source.content.body = root([previewChoiceQuestion(), previewChoicePage()])
+    await saveFunctions(repository, source)
+
+    const result = await application.functionLibraries.local.preview(LIBRARY_ID, source, {
+      questions: {
+        type: 'choice-group',
+        source: 'global',
+        selection: { kind: 'all' }
+      }
+    })
+
+    expect(result).toMatchObject({
+      success: true,
+      preview: {
+        choiceMeta: {
+          pages: [{ questionIndices: [0] }, { questionIndices: [1, 2] }],
+          questions: [{}, {}, { stem: 'Own question' }]
+        }
+      }
+    })
+  })
+
+  it('函数已有 Collector 时预览不会再创建嵌套 Collector', async () => {
+    const { application, repository } = setup()
+    const source = functionDocument(FUNCTION_A, 'Collected choice group preview')
+    source.content.inputs = [
+      {
+        name: 'questions',
+        type: 'choice-group',
+        shape: { kind: 'all', pageCounts: [1] }
+      }
+    ]
+    source.content.body = root([previewChoiceQuestion(), previewChoicePage()])
+    source.content.body.choiceCollector = { pages: [{ questionCount: 1 }] }
+    await saveFunctions(repository, source)
+
+    const result = await application.functionLibraries.local.preview(LIBRARY_ID, source, {
+      questions: {
+        type: 'choice-group',
+        source: 'global',
+        selection: { kind: 'all' }
+      }
+    })
+
+    expect(result).toMatchObject({
+      success: true,
+      preview: {
+        choiceMeta: {
+          pages: [{ questionIndices: [0] }],
+          questions: [{ stem: 'Own question' }]
+        }
+      }
+    })
+  })
 })
+
+function previewChoiceQuestion(): TemplateNode {
+  return {
+    id: 'own-question',
+    type: 'choice-question',
+    stem: { type: 'string', parts: [{ type: 'literal', value: 'Own question' }] },
+    options: [
+      {
+        id: 'own-option-a',
+        content: { type: 'string', parts: [{ type: 'literal', value: 'A' }] }
+      },
+      {
+        id: 'own-option-b',
+        content: { type: 'string', parts: [{ type: 'literal', value: 'B' }] }
+      }
+    ],
+    outputName: 'own-answer'
+  }
+}
+
+function previewChoicePage(): TemplateNode {
+  return {
+    id: 'choice-preview-page',
+    type: 'page',
+    content: {
+      blocks: [
+        {
+          id: 'choice-preview-view',
+          type: 'choice-view',
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 100,
+          defaultViewport: {
+            mode: 'free',
+            group: { scope: 'local', name: 'questions' }
+          }
+        }
+      ]
+    },
+    timeline: [{ type: 'countdown', seconds: { type: 'number', source: 'literal', value: 1 } }]
+  }
+}
 
 function forwardRepository(
   base: TemplateRepository,

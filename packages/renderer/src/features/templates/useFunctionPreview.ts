@@ -21,17 +21,44 @@ interface StoredPreviewInput {
   value: FunctionInputExpression
 }
 
+interface StoredPreviewState {
+  ownerKey: string
+  definitions: FunctionInputDef[]
+  inputs: Record<string, StoredPreviewInput>
+}
+
 export function useFunctionPreview(
   application: TemplateApplication,
   libraryId: string,
   document: FunctionDocument | null,
   active: boolean
 ): FunctionPreviewSession {
-  const [storedInputs, setStoredInputs] = useState<Record<string, StoredPreviewInput>>({})
   const [compiling, setCompiling] = useState(false)
   const [result, setResult] = useState<TemplatePreviewResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [refreshToken, setRefreshToken] = useState(0)
+  const ownerKey = document ? `${libraryId}:${document.functionId}` : ''
+  const definitions = document?.content.inputs ?? []
+  const [storedState, setStoredState] = useState<StoredPreviewState>(() => ({
+    ownerKey,
+    definitions: structuredClone(definitions),
+    inputs: {}
+  }))
+  let storedInputs = storedState.inputs
+  if (
+    storedState.ownerKey !== ownerKey ||
+    !sameInputDefinitions(storedState.definitions, definitions)
+  ) {
+    storedInputs =
+      storedState.ownerKey === ownerKey
+        ? compatibleStoredInputs(storedState.inputs, definitions)
+        : {}
+    setStoredState({
+      ownerKey,
+      definitions: structuredClone(definitions),
+      inputs: storedInputs
+    })
+  }
   const inputs = useMemo(
     () =>
       Object.fromEntries(
@@ -82,9 +109,13 @@ export function useFunctionPreview(
     setInput: (name, value) => {
       const definition = document?.content.inputs.find((input) => input.name === name)
       if (!definition) return
-      setStoredInputs((current) => ({
-        ...current,
-        [name]: { definition: structuredClone(definition), value }
+      setStoredState((current) => ({
+        ownerKey,
+        definitions: structuredClone(definitions),
+        inputs: {
+          ...(current.ownerKey === ownerKey ? current.inputs : {}),
+          [name]: { definition: structuredClone(definition), value }
+        }
       }))
     }
   }
@@ -108,6 +139,40 @@ function isCompatibleInput(stored: StoredPreviewInput, input: FunctionInputDef):
     return false
   }
   return stored.value.selection.kind === input.shape.kind
+}
+
+function compatibleStoredInputs(
+  storedInputs: Readonly<Record<string, StoredPreviewInput>>,
+  definitions: readonly FunctionInputDef[]
+): Record<string, StoredPreviewInput> {
+  return Object.fromEntries(
+    definitions.flatMap((definition) => {
+      const stored = storedInputs[definition.name]
+      return stored && isCompatibleInput(stored, definition)
+        ? [[definition.name, stored] as const]
+        : []
+    })
+  )
+}
+
+function sameInputDefinitions(
+  left: readonly FunctionInputDef[],
+  right: readonly FunctionInputDef[]
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every((input, index) => {
+      const other = right[index]
+      if (!other || input.name !== other.name || input.type !== other.type) return false
+      if (input.type !== 'choice-group' || other.type !== 'choice-group') return true
+      if (input.shape.kind !== other.shape.kind) return false
+      return (
+        input.shape.kind === 'question' ||
+        (other.shape.kind !== 'question' &&
+          samePageCounts(input.shape.pageCounts, other.shape.pageCounts))
+      )
+    })
+  )
 }
 
 function samePageCounts(left: readonly number[], right: readonly number[]): boolean {

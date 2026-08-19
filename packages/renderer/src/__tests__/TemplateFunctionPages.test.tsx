@@ -326,6 +326,20 @@ describe('Template function pages', () => {
       )
     )
 
+    fireEvent.click(screen.getByRole('tab', { name: '结构' }))
+    fireEvent.change(screen.getByLabelText('输入 1 题组形状'), {
+      target: { value: 'question' }
+    })
+    fireEvent.click(screen.getByRole('tab', { name: '预览' }))
+    expect(await screen.findByLabelText('预览输入 questions 页面')).toHaveValue(0)
+
+    fireEvent.click(screen.getByRole('tab', { name: '结构' }))
+    fireEvent.change(screen.getByLabelText('输入 1 题组形状'), {
+      target: { value: 'range' }
+    })
+    fireEvent.click(screen.getByRole('tab', { name: '预览' }))
+    expect(await screen.findByLabelText('预览输入 questions 起始页')).toHaveValue(0)
+
     fireEvent.change(screen.getByLabelText('预览输入 questions 起始页'), {
       target: { value: '2' }
     })
