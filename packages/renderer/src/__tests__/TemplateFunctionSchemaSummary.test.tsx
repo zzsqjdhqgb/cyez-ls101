@@ -3,7 +3,7 @@
 import '@testing-library/jest-dom/vitest'
 import type { SchemaDefinition, SchemaRepository } from '@ls101/schema-editor'
 import type { FunctionDef, FunctionNode, TemplateDocumentOperation } from '@ls101/template-editor'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SchemaApplicationProvider } from '../features/schemas/SchemaApplicationProvider'
 import { TemplateFunctionCallEditor } from '../features/templates/TemplateFunctionCallEditor'
@@ -218,6 +218,64 @@ describe('Function call Schema summary', () => {
     expect(rangeStart).toHaveValue('1')
     expect(within(rangeStart).getAllByRole('option')).toHaveLength(1)
     expect(within(rangeStart).getByRole('option')).toHaveTextContent('第 2 页')
+  })
+
+  it('persists the first matching range start when the saved binding is stale', async () => {
+    const apply = vi.fn((_operation: TemplateDocumentOperation) => true)
+    const choiceDefinition: FunctionDef = {
+      ...root,
+      inputs: [
+        {
+          name: 'group',
+          type: 'choice-group',
+          shape: { kind: 'range', pageCounts: [3, 3] }
+        }
+      ]
+    }
+    const choiceNode: FunctionNode = {
+      ...node,
+      inputs: {
+        group: {
+          type: 'choice-group',
+          source: 'global',
+          selection: { kind: 'range', startPage: 0 }
+        }
+      }
+    }
+
+    render(
+      <SchemaApplicationProvider repository={repository()}>
+        <TemplateFunctionCallEditor
+          compact
+          apply={apply}
+          choiceGroupCandidates={[
+            {
+              key: 'global',
+              label: '全局题组',
+              source: 'global',
+              shape: { kind: 'all', pageCounts: [5, 5, 3, 3, 4] }
+            }
+          ]}
+          definition={choiceDefinition}
+          functions={[choiceDefinition]}
+          node={choiceNode}
+          variableCandidates={[]}
+        />
+      </SchemaApplicationProvider>
+    )
+
+    await waitFor(() => {
+      expect(apply).toHaveBeenCalledWith({
+        type: 'set-function-call-input',
+        nodeId: 'root-call',
+        inputName: 'group',
+        expression: {
+          type: 'choice-group',
+          source: 'global',
+          selection: { kind: 'range', startPage: 2 }
+        }
+      })
+    })
   })
 
   it('derives question page and question options from the selected group shape', () => {

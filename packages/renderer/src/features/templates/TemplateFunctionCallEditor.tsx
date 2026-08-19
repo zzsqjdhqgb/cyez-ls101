@@ -8,7 +8,7 @@ import type {
   TextExpression,
   ValueExpression
 } from '@ls101/template-editor'
-import type { JSX } from 'react'
+import { useEffect, type JSX } from 'react'
 import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-react'
 import { TemplateFunctionSchemaSummary } from './TemplateFunctionSchemaSummary'
 import { TemplateVariableInput } from './TemplateVariableInput'
@@ -239,6 +239,14 @@ function ChoiceGroupInput({
     sourcePageCounts,
     expression.selection
   )
+  const normalizedExpression = createNormalizedExpression(selectedCandidate, normalizedSelection)
+
+  useEffect(() => {
+    if (!normalizedExpression || sameChoiceGroupExpression(expression, normalizedExpression)) {
+      return
+    }
+    onChange(normalizedExpression)
+  }, [expression, normalizedExpression, onChange])
 
   return (
     <span className={styles.groupControl}>
@@ -337,6 +345,42 @@ function ChoiceGroupInput({
       )}
     </span>
   )
+}
+
+function createNormalizedExpression(
+  candidate: TemplateChoiceGroupCandidate | undefined,
+  selection: ChoiceGroupExpression['selection']
+): ChoiceGroupExpression | null {
+  if (!candidate) return null
+  return {
+    type: 'choice-group',
+    ...(candidate.source === 'global'
+      ? { source: 'global' as const }
+      : { source: 'local' as const, name: candidate.name ?? '' }),
+    selection
+  }
+}
+
+function sameChoiceGroupExpression(
+  left: ChoiceGroupExpression,
+  right: ChoiceGroupExpression
+): boolean {
+  if (left.source !== right.source) return false
+  if (left.source === 'local' && right.source === 'local' && left.name !== right.name) {
+    return false
+  }
+  if (left.selection.kind !== right.selection.kind) return false
+  if (left.selection.kind === 'all' || right.selection.kind === 'all') return true
+  if (left.selection.kind === 'range' && right.selection.kind === 'range') {
+    return left.selection.startPage === right.selection.startPage
+  }
+  if (left.selection.kind === 'question' && right.selection.kind === 'question') {
+    return (
+      left.selection.pageIndex === right.selection.pageIndex &&
+      left.selection.questionIndex === right.selection.questionIndex
+    )
+  }
+  return false
 }
 
 function defaultChoiceGroupInput(
