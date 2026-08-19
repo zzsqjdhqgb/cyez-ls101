@@ -7945,8 +7945,8 @@
     },
     {
       "templateId": "4f4c8c1a-9b2a-4d71-8f1e-4a5e8c7d2b63",
-      "version": 1,
-      "releaseHash": "sha256:2e806dd8fdbdb0cb960922dd059514b5120741cbcaea39548bcfb81ddb30ef03",
+      "version": 2,
+      "releaseHash": "sha256:2b0a836dd7dc58244e0525b2f8c61710256fada3d560354a8dd9795f665040bc",
       "document": {
         "content": {
           "name": "上海高考英语听力标准题型",
@@ -9906,7 +9906,7 @@
                       "id": "text",
                       "type": "text",
                       "x": 10,
-                      "y": 40,
+                      "y": 5,
                       "width": 79.4,
                       "fontSize": 32,
                       "text": {
@@ -9919,6 +9919,17 @@
                         ]
                       },
                       "align": "center"
+                    },
+                    {
+                      "id": "choice-view",
+                      "type": "choice-view",
+                      "x": 5,
+                      "y": 18,
+                      "width": 90,
+                      "height": 77,
+                      "defaultViewport": {
+                        "mode": "free"
+                      }
                     }
                   ]
                 },

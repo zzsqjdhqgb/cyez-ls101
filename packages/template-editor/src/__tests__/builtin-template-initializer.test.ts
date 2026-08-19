@@ -92,8 +92,8 @@ describe('内置 Template 启动初始化', () => {
 
     expect(await repository.getActiveBuiltinTemplate(LISTENING_TEMPLATE.templateId)).toMatchObject({
       templateId: LISTENING_TEMPLATE.templateId,
-      version: 1,
-      releaseHash: 'sha256:2e806dd8fdbdb0cb960922dd059514b5120741cbcaea39548bcfb81ddb30ef03',
+      version: 2,
+      releaseHash: 'sha256:2b0a836dd7dc58244e0525b2f8c61710256fada3d560354a8dd9795f665040bc',
       document: {
         content: {
           name: LISTENING_TEMPLATE.name,
@@ -115,7 +115,19 @@ describe('内置 Template 启动初始化', () => {
               { type: 'function', name: '选择题1~10' },
               { type: 'function', name: '短文题组（11~16）' },
               { type: 'function', name: '长对话（17~20）' },
-              { type: 'page', name: '听力结束检查页' }
+              {
+                type: 'page',
+                name: '听力结束检查页',
+                content: {
+                  blocks: expect.arrayContaining([
+                    {
+                      id: 'choice-view',
+                      type: 'choice-view',
+                      defaultViewport: { mode: 'free' }
+                    }
+                  ])
+                }
+              }
             ]
           }
         },
