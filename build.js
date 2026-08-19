@@ -197,6 +197,11 @@ async function main() {
       [path.join(root, 'scripts', 'qwen-tts', 'prepare-package.mjs')],
       { stdio: 'inherit', cwd: root }
     )
+    console.log('Building external Qwen ASR model package...')
+    execFileSync(process.execPath, [path.join(root, 'scripts', 'build-asr-model-package.mjs')], {
+      stdio: 'inherit',
+      cwd: root
+    })
   }
 
   console.log('Build completed successfully:', result)

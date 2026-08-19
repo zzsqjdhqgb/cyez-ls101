@@ -426,7 +426,7 @@ describe('AIRouterSettingsPage', () => {
     expect(within(dialog).getByRole('button', { name: '保存 Provider' })).toBeDisabled()
   })
 
-  it('uses URL-backed model categories and keeps speech recognition as a placeholder', async () => {
+  it('uses URL-backed model categories and exposes speech recognition providers', async () => {
     const application = applicationWith({
       listSpeechConfigs: vi.fn().mockResolvedValue([]),
       listSpeechPackages: vi.fn().mockResolvedValue([])
@@ -442,8 +442,9 @@ describe('AIRouterSettingsPage', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: '语音识别' }))
     expect(screen.getByRole('tab', { name: '语音识别' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('heading', { name: '语音识别' })).toBeInTheDocument()
-    expect(screen.getByText('临时占位')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '语音识别 Provider' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'ASR 模型包' })).toBeInTheDocument()
+    expect(screen.queryByText('临时占位')).toBeNull()
   })
 
   it('saves an OpenAI-compatible speech Provider with model and voice IDs', async () => {
@@ -692,6 +693,14 @@ function applicationWith(overrides: Partial<AIRouterApplication>): AIRouterAppli
     listSpeechModels: vi.fn(),
     listSpeechVoices: vi.fn(),
     testSpeechConnection: vi.fn(),
+    listSpeechRecognitionConfigs: vi.fn().mockResolvedValue([]),
+    saveSpeechRecognitionConfig: vi.fn(),
+    deleteSpeechRecognitionConfig: vi.fn(),
+    readSpeechRecognitionApiKey: vi.fn(),
+    listSpeechRecognitionPackages: vi.fn().mockResolvedValue([]),
+    importSpeechRecognitionPackage: vi.fn(),
+    deleteSpeechRecognitionPackage: vi.fn(),
+    listSpeechRecognitionModels: vi.fn(),
     ...overrides
   }
 }

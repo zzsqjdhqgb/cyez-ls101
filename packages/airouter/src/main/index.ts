@@ -1,4 +1,11 @@
-import { app, BrowserWindow, dialog, ipcMain, type WebContents } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  type OpenDialogOptions,
+  type WebContents
+} from 'electron'
 import { join } from 'node:path'
 import { AIROUTER_CHANNELS } from '../shared'
 import type {
@@ -12,6 +19,7 @@ import type {
   AIRouterProviderConfigInput,
   AIRouterSpeechConnectionTestInput,
   AIRouterSpeechRecognitionEvent,
+  AIRouterSpeechRecognitionProviderConfigInput,
   AIRouterSpeechRecognitionRequest,
   AIRouterSpeechProviderConfigInput,
   AIRouterSpeechSynthesisEvent,
@@ -33,7 +41,7 @@ export { AIRouterImageService } from './image-service'
 export { AIRouterSpeechService } from './speech-service'
 export { AIRouterSpeechRecognitionService } from './speech-recognition-service'
 export { AIRouterPronunciationAssessmentService } from './pronunciation-assessment-service'
-export { AIRouterSpeechModelStore } from './speech-model-store'
+export { AIRouterSpeechModelStore, AIRouterSpeechRecognitionModelStore } from './speech-model-store'
 export { PocketTtsSynthesizer } from './pocket-tts'
 export { QwenTtsSynthesizer } from './qwen-tts'
 export type { AIRouterServiceOptions } from './service'
@@ -64,8 +72,12 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
   })
   app.once('will-quit', () => qwenTtsSynthesizer.dispose())
   const recognitionService = new AIRouterSpeechRecognitionService({
-    assetsDir: resolveRecognitionAssetsDir()
+    baseDir: options.baseDir,
+    appVersion: app.getVersion(),
+    configStorage: options.configStorage,
+    secretStorage: options.secretStorage
   })
+  app.once('will-quit', () => recognitionService.dispose())
   const pronunciationService = new AIRouterPronunciationAssessmentService({
     assetsDir: resolvePronunciationAssetsDir()
   })
@@ -152,6 +164,47 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
   ipcMain.handle(
     AIROUTER_CHANNELS.testSpeechConnection,
     (_event, request: AIRouterSpeechConnectionTestInput) => speechService.testConnection(request)
+  )
+  ipcMain.handle(AIROUTER_CHANNELS.listRecognitionConfigs, () =>
+    recognitionService.listProviderConfigs()
+  )
+  ipcMain.handle(
+    AIROUTER_CHANNELS.saveRecognitionConfig,
+    (_event, input: AIRouterSpeechRecognitionProviderConfigInput) =>
+      recognitionService.saveProviderConfig(input)
+  )
+  ipcMain.handle(AIROUTER_CHANNELS.deleteRecognitionConfig, (_event, id: string) =>
+    recognitionService.deleteProviderConfig(id)
+  )
+  ipcMain.handle(AIROUTER_CHANNELS.readRecognitionApiKey, (_event, id: string) =>
+    recognitionService.readProviderApiKey(id)
+  )
+  ipcMain.handle(
+    AIROUTER_CHANNELS.listRecognitionPackages,
+    (_event, providerType?: AIRouterSpeechRecognitionProviderConfigInput['type']) =>
+      recognitionService.listModelPackages(providerType)
+  )
+  ipcMain.handle(AIROUTER_CHANNELS.importRecognitionPackage, async (event) => {
+    const parent = BrowserWindow.fromWebContents(event.sender)
+    const dialogOptions: OpenDialogOptions = {
+      title: '导入 ASR 模型包',
+      filters: [{ name: 'ASR 模型包', extensions: ['zip'] }],
+      properties: ['openFile']
+    }
+    const result = parent
+      ? await dialog.showOpenDialog(parent, dialogOptions)
+      : await dialog.showOpenDialog(dialogOptions)
+    if (result.canceled || result.filePaths.length === 0) return null
+    return recognitionService.importModelPackage(result.filePaths[0])
+  })
+  ipcMain.handle(
+    AIROUTER_CHANNELS.deleteRecognitionPackage,
+    (_event, id: string, version: string) => recognitionService.deleteModelPackage(id, version)
+  )
+  ipcMain.handle(
+    AIROUTER_CHANNELS.listRecognitionProviderModels,
+    (_event, input: AIRouterSpeechRecognitionProviderConfigInput) =>
+      recognitionService.listProviderModels(input)
   )
   ipcMain.handle(AIROUTER_CHANNELS.listRecognitionModels, () => recognitionService.listModels())
   ipcMain.handle(AIROUTER_CHANNELS.listPronunciationModels, () => pronunciationService.listModels())
@@ -379,12 +432,6 @@ function summarizeSpeechRequest(request: AIRouterSpeechSynthesisRequest): string
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'AI 引擎请求失败'
-}
-
-function resolveRecognitionAssetsDir(): string {
-  const electronApp = app as typeof app & { isPackaged?: boolean; getAppPath?: () => string }
-  if (electronApp.isPackaged) return join(process.resourcesPath, 'assets', 'stt')
-  return join(electronApp.getAppPath?.() ?? process.cwd(), 'externals', 'ai', 'stt', 'model')
 }
 
 function resolvePronunciationAssetsDir(): string {

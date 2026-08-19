@@ -7,6 +7,10 @@ import { pipeline } from 'node:stream/promises'
 import yauzl, { type Entry, type ZipFile } from 'yauzl'
 import { strFromU8 } from 'fflate'
 import type {
+  AIRouterSpeechRecognitionModelPackageImportResult,
+  AIRouterSpeechRecognitionModelPackageManifest,
+  AIRouterSpeechRecognitionModelPackageSummary,
+  AIRouterSpeechRecognitionProviderType,
   AIRouterSpeechInstalledAsset,
   AIRouterSpeechModelPackageAsset,
   AIRouterSpeechModelPackageImportResult,
@@ -15,10 +19,8 @@ import type {
   AIRouterSpeechProviderType
 } from '../shared'
 
-const PACKAGE_FORMAT = 'ls101.tts-model-package'
 const PACKAGE_VERSION = 1
 const ENGINE_API_VERSION = 1
-const ROOT_DIRECTORY = 'models/tts'
 const BLOB_DIRECTORY = 'blobs/sha256'
 const PACKAGE_DIRECTORY = 'packages'
 const validSegment = /^[a-zA-Z0-9_.-]+$/
@@ -39,6 +41,7 @@ interface InstalledPackage {
 export interface AIRouterSpeechModelStoreOptions {
   baseDir: string
   appVersion?: string
+  packageKind?: 'tts' | 'asr'
 }
 
 export class AIRouterSpeechModelStore {
@@ -77,7 +80,7 @@ export class AIRouterSpeechModelStore {
       }
 
       const zip = await openZip(archivePath)
-      const stagingRoot = path.join(this.options.baseDir, ROOT_DIRECTORY)
+      const stagingRoot = path.join(this.options.baseDir, this.rootDirectory())
       await mkdir(stagingRoot, { recursive: true })
       const stagingDirectory = await mkdtemp(path.join(stagingRoot, '.import-'))
       const createdBlobs: string[] = []
@@ -88,7 +91,8 @@ export class AIRouterSpeechModelStore {
         const manifestEntry = entryByPath.get('manifest.json')
         if (!manifestEntry) throw new Error('模型包缺少 manifest.json')
         const manifest = parseManifest(
-          await readZipEntryBytes(zip, manifestEntry, MAX_MANIFEST_BYTES)
+          await readZipEntryBytes(zip, manifestEntry, MAX_MANIFEST_BYTES),
+          this.options.packageKind ?? 'tts'
         )
         assertAppCompatible(manifest, this.options.appVersion)
         if (manifest.assets.length > MAX_MANIFEST_ASSETS) {
@@ -207,7 +211,8 @@ export class AIRouterSpeechModelStore {
     validateSegment(version, '模型包版本')
     const directory = this.resolvePackageDirectory(id, version)
     const manifest = parseManifestJson(
-      await readFile(path.join(directory, 'manifest.json'), 'utf8')
+      await readFile(path.join(directory, 'manifest.json'), 'utf8'),
+      this.options.packageKind ?? 'tts'
     )
     const assets = JSON.parse(
       await readFile(path.join(directory, 'assets.json'), 'utf8')
@@ -289,11 +294,15 @@ export class AIRouterSpeechModelStore {
   }
 
   private resolvePackageRoot(): string {
-    return path.join(this.options.baseDir, ROOT_DIRECTORY, PACKAGE_DIRECTORY)
+    return path.join(this.options.baseDir, this.rootDirectory(), PACKAGE_DIRECTORY)
   }
 
   private resolveBlobRoot(): string {
-    return path.join(this.options.baseDir, ROOT_DIRECTORY, BLOB_DIRECTORY)
+    return path.join(this.options.baseDir, this.rootDirectory(), BLOB_DIRECTORY)
+  }
+
+  private rootDirectory(): string {
+    return this.options.packageKind === 'asr' ? 'models/asr' : 'models/tts'
   }
 
   private resolvePackageDirectory(id: string, version: string): string {
@@ -319,6 +328,51 @@ export class AIRouterSpeechModelStore {
     } finally {
       release()
     }
+  }
+}
+
+export class AIRouterSpeechRecognitionModelStore {
+  private readonly store: AIRouterSpeechModelStore
+
+  constructor(options: Omit<AIRouterSpeechModelStoreOptions, 'packageKind'>) {
+    this.store = new AIRouterSpeechModelStore({ ...options, packageKind: 'asr' })
+  }
+
+  listPackages(
+    providerType?: AIRouterSpeechRecognitionProviderType
+  ): Promise<AIRouterSpeechRecognitionModelPackageSummary[]> {
+    return this.store.listPackages(providerType as never) as unknown as Promise<
+      AIRouterSpeechRecognitionModelPackageSummary[]
+    >
+  }
+
+  importPackage(filePath: string): Promise<AIRouterSpeechRecognitionModelPackageImportResult> {
+    return this.store.importPackage(
+      filePath
+    ) as unknown as Promise<AIRouterSpeechRecognitionModelPackageImportResult>
+  }
+
+  deletePackage(id: string, version: string): Promise<void> {
+    return this.store.deletePackage(id, version)
+  }
+
+  readAsset(packageId: string, packageVersion: string, assetPath: string): Promise<Uint8Array> {
+    return this.store.readAsset(packageId, packageVersion, assetPath)
+  }
+
+  resolveAssetFilePath(
+    packageId: string,
+    packageVersion: string,
+    assetPath: string
+  ): Promise<string> {
+    return this.store.resolveAssetFilePath(packageId, packageVersion, assetPath)
+  }
+
+  getPackage(id: string, version: string): Promise<AIRouterSpeechRecognitionModelPackageManifest> {
+    return this.store.getPackage(
+      id,
+      version
+    ) as unknown as Promise<AIRouterSpeechRecognitionModelPackageManifest>
   }
 }
 
@@ -510,28 +564,38 @@ function normalizeImportError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error))
 }
 
-function parseManifest(data: Uint8Array): AIRouterSpeechModelPackageManifest {
-  return parseManifestJson(strFromU8(data))
+function parseManifest(
+  data: Uint8Array,
+  packageKind: 'tts' | 'asr'
+): AIRouterSpeechModelPackageManifest {
+  return parseManifestJson(strFromU8(data), packageKind)
 }
 
-function parseManifestJson(value: string): AIRouterSpeechModelPackageManifest {
+function parseManifestJson(
+  value: string,
+  packageKind: 'tts' | 'asr'
+): AIRouterSpeechModelPackageManifest {
   let parsed: unknown
   try {
     parsed = JSON.parse(value)
   } catch {
     throw new Error('模型包 manifest.json 不是有效 JSON')
   }
-  if (!isManifest(parsed)) throw new Error('模型包 manifest.json 格式无效')
-  return parsed
+  if (!isManifest(parsed, packageKind)) throw new Error('模型包 manifest.json 格式无效')
+  return parsed as AIRouterSpeechModelPackageManifest
 }
 
-function isManifest(value: unknown): value is AIRouterSpeechModelPackageManifest {
+function isManifest(value: unknown, packageKind: 'tts' | 'asr'): boolean {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const candidate = value as Partial<AIRouterSpeechModelPackageManifest>
-  if (candidate.format !== PACKAGE_FORMAT || candidate.formatVersion !== PACKAGE_VERSION)
+  if (
+    candidate.format !==
+      (packageKind === 'asr' ? 'ls101.asr-model-package' : 'ls101.tts-model-package') ||
+    candidate.formatVersion !== PACKAGE_VERSION
+  )
     return false
   if (!candidate.package || !isPackageInfo(candidate.package)) return false
-  if (!candidate.runtime || !isRuntime(candidate.runtime)) return false
+  if (!candidate.runtime || !isRuntime(candidate.runtime, packageKind)) return false
   if (!Array.isArray(candidate.assets) || !candidate.assets.every(isPackageAsset)) return false
   if (
     !Array.isArray(candidate.models) ||
@@ -539,19 +603,23 @@ function isManifest(value: unknown): value is AIRouterSpeechModelPackageManifest
     !candidate.models.every(isPackageModel)
   )
     return false
-  if (
-    !Array.isArray(candidate.voices) ||
-    candidate.voices.length === 0 ||
-    !candidate.voices.every(isPackageVoice)
-  )
+  if (packageKind === 'tts') {
+    if (
+      !Array.isArray(candidate.voices) ||
+      candidate.voices.length === 0 ||
+      !candidate.voices.every(isPackageVoice)
+    )
+      return false
+  } else if (candidate.voices !== undefined) {
     return false
+  }
 
   const assets = new Set(candidate.assets.map((asset) => asset.path))
   if (assets.size !== candidate.assets.length) return false
   if (new Set(candidate.models.map((model) => model.id)).size !== candidate.models.length)
     return false
-  if (new Set(candidate.voices.map((voice) => voice.id)).size !== candidate.voices.length)
-    return false
+  const voices = candidate.voices ?? []
+  if (new Set(voices.map((voice) => voice.id)).size !== voices.length) return false
   if (
     candidate.models.some((model) =>
       Object.values(model.artifacts)
@@ -561,7 +629,7 @@ function isManifest(value: unknown): value is AIRouterSpeechModelPackageManifest
   ) {
     return false
   }
-  return candidate.voices.every((voice) => voice.files.every((file) => assets.has(file)))
+  return voices.every((voice) => voice.files.every((file) => assets.has(file)))
 }
 
 function isPackageInfo(value: unknown): value is AIRouterSpeechModelPackageManifest['package'] {
@@ -578,11 +646,13 @@ function isPackageInfo(value: unknown): value is AIRouterSpeechModelPackageManif
   )
 }
 
-function isRuntime(value: unknown): value is AIRouterSpeechModelPackageManifest['runtime'] {
+function isRuntime(value: unknown, packageKind: 'tts' | 'asr'): boolean {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const candidate = value as Record<string, unknown>
   return (
-    (candidate.engine === 'pocket-tts' || candidate.engine === 'qwen-tts') &&
+    (packageKind === 'asr'
+      ? candidate.engine === 'qwen3-asr'
+      : candidate.engine === 'pocket-tts' || candidate.engine === 'qwen-tts') &&
     candidate.engineApiVersion === ENGINE_API_VERSION &&
     (candidate.minimumAppVersion === undefined || isSemanticVersion(candidate.minimumAppVersion))
   )
@@ -786,7 +856,7 @@ function summarize(
       ),
       parameters: structuredClone(model.parameters)
     })),
-    voices: manifest.voices.map((voice) => ({
+    voices: (manifest.voices ?? []).map((voice) => ({
       ...voice,
       languageCodes: voice.languageCodes ? [...voice.languageCodes] : undefined,
       files: [...voice.files]

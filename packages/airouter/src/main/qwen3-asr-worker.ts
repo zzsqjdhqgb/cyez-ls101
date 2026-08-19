@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { extname, join } from 'node:path'
 import { spawnSync } from 'node:child_process'
@@ -32,33 +32,41 @@ const sherpaOnnx = require('sherpa-onnx-node') as {
 }
 
 interface WorkerConfig {
-  assetsDir: string
+  assets: {
+    convFrontend: string
+    encoder: string
+    decoder: string
+    tokenizer: Array<{ name: string; path: string }>
+    vad: string
+  }
   ffmpegPath: string
 }
 
 const config = workerData as WorkerConfig
-const modelDir = join(config.assetsDir, 'sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25')
-const sileroPath = join(config.assetsDir, 'silero_vad.onnx')
+const tokenizerDir = join(tmpdir(), `ls101-qwen3-asr-tokenizer-${randomUUID()}`)
 let recognizer: InstanceType<typeof sherpaOnnx.OfflineRecognizer>
 
 function initialize(): void {
   for (const path of [
-    join(modelDir, 'conv_frontend.onnx'),
-    join(modelDir, 'encoder.int8.onnx'),
-    join(modelDir, 'decoder.int8.onnx'),
-    join(modelDir, 'tokenizer'),
-    sileroPath
+    config.assets.convFrontend,
+    config.assets.encoder,
+    config.assets.decoder,
+    ...config.assets.tokenizer.map((asset) => asset.path),
+    config.assets.vad
   ]) {
     if (!existsSync(path)) throw new Error(`Qwen3 ASR 模型文件不存在：${path}`)
   }
+  mkdirSync(tokenizerDir, { recursive: true })
+  for (const asset of config.assets.tokenizer)
+    copyFileSync(asset.path, join(tokenizerDir, asset.name))
   recognizer = new sherpaOnnx.OfflineRecognizer({
     featConfig: { sampleRate: 16000, featureDim: 80 },
     modelConfig: {
       qwen3Asr: {
-        convFrontend: join(modelDir, 'conv_frontend.onnx'),
-        encoder: join(modelDir, 'encoder.int8.onnx'),
-        decoder: join(modelDir, 'decoder.int8.onnx'),
-        tokenizer: join(modelDir, 'tokenizer'),
+        convFrontend: config.assets.convFrontend,
+        encoder: config.assets.encoder,
+        decoder: config.assets.decoder,
+        tokenizer: tokenizerDir,
         hotwords: ''
       },
       tokens: '',
@@ -113,7 +121,7 @@ function recognizeWave(samples: Float32Array, sampleRate: number): string {
   const vad = new sherpaOnnx.Vad(
     {
       sileroVad: {
-        model: sileroPath,
+        model: config.assets.vad,
         threshold: 0.5,
         minSpeechDuration: 0.25,
         minSilenceDuration: 0.5,
@@ -166,6 +174,8 @@ function send(message: Record<string, unknown>): void {
 }
 
 if (!parentPort) throw new Error('Qwen3 ASR Worker 缺少 parentPort')
+
+process.once('exit', () => rmSync(tokenizerDir, { recursive: true, force: true }))
 
 try {
   initialize()

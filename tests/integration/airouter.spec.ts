@@ -109,27 +109,30 @@ const qwenTtsAssetConfig = JSON.parse(
   voices: Array<{ id: string; name: string; file: string }>
 }
 const qwenTtsModelDirectory = path.resolve('externals', 'ai', 'qwen3-tts', 'models')
-const qwenTtsHelperPath = path.resolve(
-  'externals',
-  'ai',
-  'qwen3-tts',
-  'runtime',
-  'linux-x64',
-  'ls101-qwen-tts-helper'
-)
+const qwenTtsRuntimeTarget =
+  process.arch === 'x64' && process.platform === 'linux'
+    ? { directory: 'linux-x64', executable: 'ls101-qwen-tts-helper' }
+    : process.arch === 'x64' && process.platform === 'win32'
+      ? { directory: 'win32-x64', executable: 'ls101-qwen-tts-helper.exe' }
+      : null
+const qwenTtsHelperPath = qwenTtsRuntimeTarget
+  ? path.resolve(
+      'externals',
+      'ai',
+      'qwen3-tts',
+      'runtime',
+      qwenTtsRuntimeTarget.directory,
+      qwenTtsRuntimeTarget.executable
+    )
+  : null
 const qwenTtsModelId = `qwen3-tts-0.6b-base-${qwenTtsAssetConfig.model.quantization}`
-const qwenTtsAvailable =
-  process.platform === 'linux' &&
-  process.arch === 'x64' &&
-  [
-    qwenTtsHelperPath,
-    ...qwenTtsAssetConfig.voices.map((voice) => path.resolve(voice.file)),
-    path.join(
-      qwenTtsModelDirectory,
-      `qwen3-tts-0.6b-${qwenTtsAssetConfig.model.quantization}.gguf`
-    ),
-    path.join(qwenTtsModelDirectory, 'qwen3-tts-tokenizer-f16.gguf')
-  ].every(existsSync)
+const qwenTtsRequiredPaths = [
+  qwenTtsHelperPath,
+  ...qwenTtsAssetConfig.voices.map((voice) => path.resolve(voice.file)),
+  path.join(qwenTtsModelDirectory, `qwen3-tts-0.6b-${qwenTtsAssetConfig.model.quantization}.gguf`),
+  path.join(qwenTtsModelDirectory, 'qwen3-tts-tokenizer-f16.gguf')
+].filter((value): value is string => value !== null)
+const qwenTtsMissingPaths = qwenTtsRequiredPaths.filter((value) => !existsSync(value))
 
 test.beforeAll(async () => mockServer.start())
 test.afterAll(async () => mockServer.close())
@@ -290,14 +293,18 @@ async function collectSpeech(request: {
   )
 }
 
-async function collectSpeechRecognition(audio: Uint8Array): Promise<SpeechRecognitionEvent> {
+async function collectSpeechRecognition(
+  audio: Uint8Array,
+  providerConfigId: string,
+  modelId: string
+): Promise<SpeechRecognitionEvent> {
   return page.evaluate(
-    (bytes) =>
+    ({ bytes, providerConfigId, modelId }) =>
       new Promise((resolve) => {
         window.airouter.startSpeechRecognition(
           {
-            providerConfigId: 'builtin-qwen3-asr',
-            modelId: 'qwen3-asr-0.6b',
+            providerConfigId,
+            modelId,
             audio: {
               data: new Uint8Array(bytes),
               mediaType: 'audio/wav',
@@ -307,7 +314,7 @@ async function collectSpeechRecognition(audio: Uint8Array): Promise<SpeechRecogn
           resolve
         )
       }),
-    Array.from(audio)
+    { bytes: Array.from(audio), providerConfigId, modelId }
   )
 }
 
@@ -1493,10 +1500,16 @@ test('AR-32 executes the real Pocket TTS model package through the Electron stac
 })
 
 test.describe('Qwen3 TTS runtime', () => {
-  test.skip(
-    !qwenTtsAvailable,
-    'Qwen3 TTS models, fixed voice, and Linux x64 helper are not available in this checkout'
-  )
+  test.beforeAll(() => {
+    if (qwenTtsRuntimeTarget === null || qwenTtsMissingPaths.length > 0) {
+      const missing = qwenTtsMissingPaths.length
+        ? qwenTtsMissingPaths.map((value) => `- ${value}`).join('\n')
+        : '- no helper target for this platform/architecture'
+      throw new Error(
+        `Qwen3 TTS integration prerequisites are unavailable for ${process.platform}/${process.arch}:\n${missing}`
+      )
+    }
+  })
 
   test('AR-32b executes Qwen3 TTS through the Electron stack', async () => {
     test.setTimeout(900_000)
@@ -1594,8 +1607,53 @@ test.describe('Qwen3 TTS runtime', () => {
 })
 
 test('AR-32c executes Qwen3 ASR without external buffers in Electron', async () => {
-  test.setTimeout(180_000)
-  await expect(collectSpeechRecognition(createSilentWav())).resolves.toEqual({
+  test.setTimeout(600_000)
+  const packageDirectory = await mkdtemp(path.join(path.resolve('dist'), '.qwen3-asr-integration-'))
+  temporaryPaths.push(packageDirectory)
+  const packagePath = path.join(packageDirectory, 'qwen3-asr-integration.zip')
+  execFileSync(process.execPath, [path.resolve('scripts', 'build-asr-model-package.mjs')], {
+    cwd: process.cwd(),
+    env: { ...process.env, LS101_ASR_PACKAGE_OUTPUT: packagePath },
+    stdio: 'pipe',
+    timeout: 180_000
+  })
+  await selectFileInElectronDialog(packagePath)
+  await openAirouter('语音识别')
+  await page.getByRole('button', { name: '添加 Provider' }).click()
+  const editor = page.getByRole('dialog')
+  await editor.getByLabel('语音识别配置名称').fill('Qwen3 ASR Integration')
+  await editor.getByLabel('语音识别运行方式').selectOption('local')
+  await editor.getByRole('button', { name: '导入模型包' }).click()
+  await expect(
+    page.getByRole('button', {
+      includeHidden: true,
+      name: '删除模型包 Qwen3 ASR 0.6B Int8'
+    })
+  ).toBeVisible({ timeout: 180_000 })
+  await expect(
+    editor.getByRole('checkbox', {
+      name: 'Qwen3 ASR 0.6B Int8 (qwen3-asr-0.6b-int8)'
+    })
+  ).toBeChecked()
+  await editor.getByRole('button', { name: '保存 Provider' }).click()
+  await expect(page.getByText('已保存“Qwen3 ASR Integration”')).toBeVisible({ timeout: 10_000 })
+
+  const config = await page.evaluate(
+    async () => (await window.airouter.listSpeechRecognitionProviderConfigs())[0]
+  )
+  expect(config).toEqual(
+    expect.objectContaining({
+      name: 'Qwen3 ASR Integration',
+      kind: 'local',
+      type: 'qwen3-asr',
+      modelPackageId: 'qwen3-asr-0.6b-int8',
+      modelPackageVersion: '1.0.0',
+      models: [expect.objectContaining({ id: 'qwen3-asr-0.6b-int8', enabled: true })]
+    })
+  )
+  await expect(
+    collectSpeechRecognition(createSilentWav(), String(config?.id), 'qwen3-asr-0.6b-int8')
+  ).resolves.toEqual({
     type: 'result',
     result: { text: '' }
   })

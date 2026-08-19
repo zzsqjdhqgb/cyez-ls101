@@ -13,6 +13,12 @@ import type {
   AIRouterSpeechProviderConfigInput,
   AIRouterSpeechProviderConfigSummary,
   AIRouterSpeechProviderType,
+  AIRouterSpeechRecognitionModelOption,
+  AIRouterSpeechRecognitionModelPackageImportResult,
+  AIRouterSpeechRecognitionModelPackageSummary,
+  AIRouterSpeechRecognitionProviderConfigInput,
+  AIRouterSpeechRecognitionProviderConfigSummary,
+  AIRouterSpeechRecognitionProviderType,
   AIRouterSpeechTestResult,
   AIRouterSpeechVoiceListInput,
   AIRouterSpeechVoiceOption,
@@ -53,6 +59,20 @@ export interface AIRouterApplication {
   testSpeechConnection(
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult>
+  listSpeechRecognitionConfigs(): Promise<AIRouterSpeechRecognitionProviderConfigSummary[]>
+  saveSpeechRecognitionConfig(
+    config: AIRouterSpeechRecognitionProviderConfigInput
+  ): Promise<AIRouterSpeechRecognitionProviderConfigSummary>
+  deleteSpeechRecognitionConfig(id: string): Promise<void>
+  readSpeechRecognitionApiKey(id: string): Promise<string | null>
+  listSpeechRecognitionPackages(
+    providerType?: AIRouterSpeechRecognitionProviderType
+  ): Promise<AIRouterSpeechRecognitionModelPackageSummary[]>
+  importSpeechRecognitionPackage(): Promise<AIRouterSpeechRecognitionModelPackageImportResult | null>
+  deleteSpeechRecognitionPackage(id: string, version: string): Promise<void>
+  listSpeechRecognitionModels(
+    config: AIRouterSpeechRecognitionProviderConfigInput
+  ): Promise<AIRouterSpeechRecognitionModelOption[]>
 }
 
 export function createAIRouterApplication(
@@ -80,7 +100,17 @@ export function createAIRouterApplication(
     deleteSpeechPackage: (id, version) => client.deleteSpeechModelPackage(id, version),
     listSpeechModels: (config) => client.listSpeechModels(config),
     listSpeechVoices: (request) => client.listSpeechVoices(request),
-    testSpeechConnection: (request) => client.testSpeechConnection(request)
+    testSpeechConnection: (request) => client.testSpeechConnection(request),
+    listSpeechRecognitionConfigs: () => client.listSpeechRecognitionProviderConfigs(),
+    saveSpeechRecognitionConfig: (config) => client.saveSpeechRecognitionProviderConfig(config),
+    deleteSpeechRecognitionConfig: (id) => client.deleteSpeechRecognitionProviderConfig(id),
+    readSpeechRecognitionApiKey: (id) => client.readSpeechRecognitionProviderApiKey(id),
+    listSpeechRecognitionPackages: (providerType) =>
+      client.listSpeechRecognitionModelPackages(providerType),
+    importSpeechRecognitionPackage: () => client.importSpeechRecognitionModelPackage(),
+    deleteSpeechRecognitionPackage: (id, version) =>
+      client.deleteSpeechRecognitionModelPackage(id, version),
+    listSpeechRecognitionModels: (config) => client.listSpeechRecognitionProviderModels(config)
   }
 }
 

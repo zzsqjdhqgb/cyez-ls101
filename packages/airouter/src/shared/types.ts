@@ -9,11 +9,76 @@ export type AIRouterSpeechProviderKind = 'online' | 'local'
 export type AIRouterSpeechRole = 'default' | 'man' | 'woman'
 export type AIRouterSpeechAudioFormat = 'wav' | 'mp3' | 'opus' | 'pcm-s16le'
 
+export type AIRouterSpeechRecognitionProviderType = 'openai-compatible' | 'qwen3-asr'
+export type AIRouterLocalSpeechRecognitionProviderType = Exclude<
+  AIRouterSpeechRecognitionProviderType,
+  'openai-compatible'
+>
+export type AIRouterSpeechRecognitionProviderKind = 'online' | 'local'
+
+export interface AIRouterSpeechRecognitionProviderConfig {
+  id: string
+  name: string
+  kind: AIRouterSpeechRecognitionProviderKind
+  type: AIRouterSpeechRecognitionProviderType
+  baseUrl: string
+  modelPackageId: string
+  modelPackageVersion: string
+  models: AIRouterModelConfig[]
+}
+
+export interface AIRouterSpeechRecognitionProviderConfigInput {
+  id?: string
+  name: string
+  kind: AIRouterSpeechRecognitionProviderKind
+  type: AIRouterSpeechRecognitionProviderType
+  baseUrl?: string
+  modelPackageId?: string
+  modelPackageVersion?: string
+  models: AIRouterModelConfig[]
+  apiKey?: string
+  clearApiKey?: boolean
+}
+
+export interface AIRouterSpeechRecognitionProviderConfigSummary extends AIRouterSpeechRecognitionProviderConfig {
+  hasApiKey: boolean
+}
+
 export interface AIRouterSpeechRecognitionModelOption {
   providerId: string
   providerName: string
   modelId: string
   modelName: string
+}
+
+export interface AIRouterSpeechRecognitionModelPackageRuntime {
+  engine: AIRouterLocalSpeechRecognitionProviderType
+  engineApiVersion: number
+  minimumAppVersion?: string
+}
+
+export interface AIRouterSpeechRecognitionModelPackageManifest {
+  format: 'ls101.asr-model-package'
+  formatVersion: 1
+  package: AIRouterSpeechModelPackageInfo
+  runtime: AIRouterSpeechRecognitionModelPackageRuntime
+  assets: AIRouterSpeechModelPackageAsset[]
+  models: AIRouterSpeechModelPackageModel[]
+  extensions?: Record<string, unknown>
+}
+
+export interface AIRouterSpeechRecognitionModelPackageSummary {
+  package: AIRouterSpeechModelPackageInfo
+  runtime: AIRouterSpeechRecognitionModelPackageRuntime
+  models: AIRouterSpeechModelPackageModel[]
+  assetCount: number
+  totalBytes: number
+}
+
+export interface AIRouterSpeechRecognitionModelPackageImportResult {
+  package: AIRouterSpeechRecognitionModelPackageSummary
+  reusedAssetCount: number
+  storedAssetCount: number
 }
 
 export interface AIRouterSpeechRecognitionRequest {
@@ -422,6 +487,20 @@ export interface AIRouterClient {
   testSpeechConnection(
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult>
+  listSpeechRecognitionProviderConfigs(): Promise<AIRouterSpeechRecognitionProviderConfigSummary[]>
+  saveSpeechRecognitionProviderConfig(
+    config: AIRouterSpeechRecognitionProviderConfigInput
+  ): Promise<AIRouterSpeechRecognitionProviderConfigSummary>
+  deleteSpeechRecognitionProviderConfig(id: string): Promise<void>
+  readSpeechRecognitionProviderApiKey(id: string): Promise<string | null>
+  listSpeechRecognitionModelPackages(
+    providerType?: AIRouterSpeechRecognitionProviderType
+  ): Promise<AIRouterSpeechRecognitionModelPackageSummary[]>
+  importSpeechRecognitionModelPackage(): Promise<AIRouterSpeechRecognitionModelPackageImportResult | null>
+  deleteSpeechRecognitionModelPackage(id: string, version: string): Promise<void>
+  listSpeechRecognitionProviderModels(
+    config: AIRouterSpeechRecognitionProviderConfigInput
+  ): Promise<AIRouterSpeechRecognitionModelOption[]>
   listSpeechRecognitionModels(): Promise<AIRouterSpeechRecognitionModelOption[]>
   recognizeSpeech(
     request: AIRouterSpeechRecognitionRequest,
@@ -477,6 +556,20 @@ export interface AIRouterBridge {
   testSpeechConnection(
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult>
+  listSpeechRecognitionProviderConfigs(): Promise<AIRouterSpeechRecognitionProviderConfigSummary[]>
+  saveSpeechRecognitionProviderConfig(
+    config: AIRouterSpeechRecognitionProviderConfigInput
+  ): Promise<AIRouterSpeechRecognitionProviderConfigSummary>
+  deleteSpeechRecognitionProviderConfig(id: string): Promise<void>
+  readSpeechRecognitionProviderApiKey(id: string): Promise<string | null>
+  listSpeechRecognitionModelPackages(
+    providerType?: AIRouterSpeechRecognitionProviderType
+  ): Promise<AIRouterSpeechRecognitionModelPackageSummary[]>
+  importSpeechRecognitionModelPackage(): Promise<AIRouterSpeechRecognitionModelPackageImportResult | null>
+  deleteSpeechRecognitionModelPackage(id: string, version: string): Promise<void>
+  listSpeechRecognitionProviderModels(
+    config: AIRouterSpeechRecognitionProviderConfigInput
+  ): Promise<AIRouterSpeechRecognitionModelOption[]>
   listSpeechRecognitionModels(): Promise<AIRouterSpeechRecognitionModelOption[]>
   startSpeechRecognition(
     request: AIRouterSpeechRecognitionRequest,
