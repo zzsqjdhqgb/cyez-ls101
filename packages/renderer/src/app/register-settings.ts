@@ -1,10 +1,24 @@
-import { Cpu, Info, Palette } from 'lucide-react'
+import { Cpu, HardDrive, Info, Palette } from 'lucide-react'
 import { AIRouterSettingsPage } from '../features/airouter/AIRouterSettingsPage'
 import { AboutSettingsPage } from '../features/settings/AboutSettingsPage'
 import { AppearanceSettingsPage } from '../features/settings/AppearanceSettingsPage'
+import { StorageSettingsPage } from '../features/settings/StorageSettingsPage'
 import { registerSettingsPage } from './settings-registry'
 
 const unregisterSettingsPages = [
+  registerSettingsPage({
+    id: 'storage',
+    title: '存储',
+    description: '查看和更改软件数据的保存位置',
+    icon: HardDrive,
+    group: {
+      id: 'general',
+      label: '通用',
+      order: 0
+    },
+    order: 10,
+    component: StorageSettingsPage
+  }),
   registerSettingsPage({
     id: 'ai-router',
     title: 'AI 引擎',

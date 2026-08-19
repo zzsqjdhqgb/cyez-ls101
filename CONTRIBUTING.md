@@ -116,7 +116,7 @@ pnpm typecheck && pnpm lint
 
 ### 3. 数据存储
 
-- 所有持久化数据存储在 `app.getPath('userData')` 下
+- 业务持久化数据存储在主进程解析的可配置 `dataRoot` 下；Electron 缓存与数据目录引导配置保留在 `app.getPath('userData')`
 - 考试和批改记录使用 SHA-256 哈希作为标识符实现去重
 - 草稿、模板等使用 UUID v4 作为标识符
 

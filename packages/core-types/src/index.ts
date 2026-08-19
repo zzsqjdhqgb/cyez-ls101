@@ -65,5 +65,12 @@ export type {
 export type { TaskProgressItem, TaskProgressSnapshot, TaskProgressHandle } from './task-progress'
 export { APP_INFO_CHANNELS } from './app-info'
 export type { AppInfoBridge } from './app-info'
+export { DATA_DIRECTORY_CHANNELS } from './data-directory'
+export type {
+  DataDirectoryBridge,
+  DataDirectoryCandidate,
+  DataDirectoryCandidateKind,
+  DataDirectoryInfo
+} from './data-directory'
 export { WINDOW_CONTROL_CHANNELS, WINDOW_CONTROL_EVENTS } from './window-controls'
 export type { WindowControlsBridge } from './window-controls'

@@ -18,6 +18,7 @@
 | ------------------------ | ---------------------------------------- | ------------------------------------------------------- | -------------------------------------------- |
 | 应用私有文件存储         | `@ls101/file-store`                      | 基础设施已实现并完成 Electron 注册                      | [file-store.md](file-store.md)               |
 | 应用配置存储             | `@ls101/config-store`                    | JSON 后端已实现并完成 Electron 注册，外观模块已接入     | [config-store.md](config-store.md)           |
+| 可配置业务数据目录       | Electron main、preload、renderer         | 初始化、旧数据整理、迁移重启和恢复流程已接入            | [data-directory.md](data-directory.md)       |
 | 系统文件对话框           | `@ls101/file-dialog`                     | 基础设施已实现并完成 Electron 注册                      | [file-dialog.md](file-dialog.md)             |
 | 系统剪贴板图片读取       | `@ls101/clipboard`                       | 图片读取已实现并完成 Electron 注册，Interface 已接入    | [clipboard.md](clipboard.md)                 |
 | 通用长耗时任务进度       | `@ls101/core-types`                      | 跨模块契约已实现，Interface 已产生实际句柄              | [task-progress.md](task-progress.md)         |

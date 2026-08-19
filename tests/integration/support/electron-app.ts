@@ -4,7 +4,10 @@ import path from 'node:path'
 
 const projectRoot = process.cwd()
 
-export async function launchIntegrationApp(userDataDir: string): Promise<ElectronApplication> {
+export async function launchIntegrationApp(
+  userDataDir: string,
+  extraEnvironment: Record<string, string> = {}
+): Promise<ElectronApplication> {
   const executablePath = integrationExecutablePath()
   await access(executablePath).catch(() => {
     throw new Error(
@@ -12,7 +15,7 @@ export async function launchIntegrationApp(userDataDir: string): Promise<Electro
     )
   })
 
-  const environment = { ...process.env, LS101_INTEGRATION_TEST: '1' }
+  const environment = { ...process.env, LS101_INTEGRATION_TEST: '1', ...extraEnvironment }
   delete environment['ELECTRON_RENDERER_URL']
 
   return electron.launch({

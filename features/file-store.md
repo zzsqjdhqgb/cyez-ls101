@@ -4,13 +4,13 @@
 
 `@ls101/file-store` 已实现应用私有目录中的分层文件存储，并已接入 Electron main 与 preload。
 
-当前应用使用 `app.getPath('userData')` 作为存储根目录。renderer 公共 API 已可用，但当前业务 renderer 尚未发现对 `fileStore` 单例的实际调用；`@ls101/interface-editor` 定义了与 `ScopedStore` 兼容的仓储接口，但尚未在应用入口中连接真实 file store。
+当前应用使用主进程解析出的可配置 `dataRoot` 作为存储根目录。renderer 的 Template、Interface、Schema、Exam 和 Submission 仓储已连接真实 file store。
 
 ## 功能边界
 
 File Store 负责：
 
-- 管理应用私有 `userData` 目录中的持久化数据。
+- 管理应用私有 `dataRoot` 目录中的持久化数据。
 - 使用逐层派生的 scope 隔离业务数据。
 - 分别存储 JSON 文本数据和二进制资源。
 - 为 Asset 生成可传递的只读位置 Key，并支持通过 Key 读取资源。

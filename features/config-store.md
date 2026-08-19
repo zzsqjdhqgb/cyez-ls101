@@ -2,7 +2,7 @@
 
 ## 功能状态
 
-`@ls101/config-store` 已提供作用域化的结构化配置存储，并完成 Electron main、preload 和 renderer 接线。当前后端将配置写为 `userData/config/{scope}/{key}.json`；外观设置模块已使用该能力保存主题和减少动效偏好。
+`@ls101/config-store` 已提供作用域化的结构化配置存储，并完成 Electron main、preload 和 renderer 接线。当前后端将配置写为 `dataRoot/config/{scope}/{key}.json`；外观设置模块已使用该能力保存主题和减少动效偏好。
 
 Config Store 只负责持久化 JSON 值，不理解设置页面、默认值、业务校验或配置生效方式。这些行为归注册设置页所属的业务模块负责。
 
@@ -29,7 +29,7 @@ renderer 通过 preload 暴露的 `window.configStore` bridge 调用固定 IPC �
 - `config:delete`
 - `config:clear`
 
-main 在应用 ready 后使用 `app.getPath('userData')` 注册 JSON 后端。公共 renderer API 不暴露路径、文件名或 JSON 文件操作，因此后续可以在保持模块接口不变的情况下更换为 SQLite 等后端。
+main 在应用 ready 后解析可配置的业务数据目录，并以该目录注册 JSON 后端。公共 renderer API 不暴露路径、文件名或 JSON 文件操作，因此后续可以在保持模块接口不变的情况下更换为 SQLite 等后端。
 
 ## 写入语义
 
