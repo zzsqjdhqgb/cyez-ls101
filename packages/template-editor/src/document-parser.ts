@@ -24,6 +24,7 @@ import type {
   ValueType,
   VariableRef
 } from './types'
+import { normalizeTemplateTags } from './tags'
 
 export function parseBuiltinTemplateRelease(value: unknown): BuiltinTemplateRelease | null {
   if (
@@ -57,6 +58,9 @@ export function parseTemplateDocument(value: unknown): TemplateDocument | null {
     !isRecord(value.content) ||
     typeof value.content.name !== 'string' ||
     typeof value.content.description !== 'string' ||
+    (value.content.tags !== undefined &&
+      (!Array.isArray(value.content.tags) ||
+        !value.content.tags.every((tag) => typeof tag === 'string'))) ||
     !Array.isArray(value.content.interfaces) ||
     !value.content.interfaces.every(isInterfaceRequirement) ||
     !isFrameNode(value.content.root) ||
@@ -67,6 +71,11 @@ export function parseTemplateDocument(value: unknown): TemplateDocument | null {
     !value.resources.functions.every(isFunctionDef) ||
     !isJsonObject(value.editorState)
   ) {
+    return null
+  }
+  try {
+    normalizeTemplateTags(value.content.tags as string[] | undefined)
+  } catch {
     return null
   }
   return value as unknown as TemplateDocument

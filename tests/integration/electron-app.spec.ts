@@ -695,7 +695,7 @@ test('opens and copies the bundled Shanghai Gaokao template', async () => {
   const builtinRow = page
     .getByText('上海高考口语标准题型', { exact: true })
     .locator('xpath=ancestor::article')
-  await expect(builtinRow.getByText('v2', { exact: true })).toBeVisible()
+  await expect(builtinRow.getByText('v3', { exact: true })).toBeVisible()
   await expect(builtinRow.getByRole('button', { name: '编辑' })).toHaveCount(0)
   await expect(builtinRow.getByRole('button', { name: /删除/ })).toHaveCount(0)
   await builtinRow.getByRole('button', { name: '查看' }).click()

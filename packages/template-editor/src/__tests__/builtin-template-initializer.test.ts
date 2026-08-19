@@ -12,8 +12,26 @@ import type { BuiltinTemplateRelease } from '../types'
 const TEMPLATE_ID = '0c283c54-683a-498c-bf69-fb1490f99356'
 const LISTENING_TEMPLATE = {
   templateId: '4f4c8c1a-9b2a-4d71-8f1e-4a5e8c7d2b63',
-  name: '上海高考英语听力标准题型'
+  name: '上海高考英语听力标准题型',
+  tags: ['全卷', '听力', '高考']
 } as const
+const LISTENING_BLOCK_TEMPLATES = [
+  {
+    templateId: '5c2f1d4e-6a7b-4c8d-9e0f-1234567890ab',
+    name: '上海高考英语听力 - 短对话专项训练',
+    questionCounts: [5, 5]
+  },
+  {
+    templateId: '6d3e2f5a-7b8c-4d9e-a0f1-2345678901bc',
+    name: '上海高考英语听力 - 短文专项训练',
+    questionCounts: [3, 3]
+  },
+  {
+    templateId: '7e4f3a6b-8c9d-4e0f-a1b2-3456789012cd',
+    name: '上海高考英语听力 - 长对话专项训练',
+    questionCounts: [4]
+  }
+] as const
 const SECTION_TEMPLATES = [
   {
     templateId: '261d2ad9-225e-41ac-a394-1887b912b917',
@@ -48,7 +66,7 @@ const SECTION_TEMPLATES = [
 ] as const
 
 describe('内置 Template 启动初始化', () => {
-  it('幂等安装导出的上海高考口语模板并移除占位模板', async () => {
+  it('幂等安装内置模板并移除占位模板', async () => {
     const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
     const manifest = JSON.parse(
       await readFile('resources/builtin/template-editor/.text/builtin-templates.json', 'utf8')
@@ -61,16 +79,18 @@ describe('内置 Template 启动初始化', () => {
       [
         TEMPLATE_ID,
         LISTENING_TEMPLATE.templateId,
+        ...LISTENING_BLOCK_TEMPLATES.map(({ templateId }) => templateId),
         ...SECTION_TEMPLATES.map(({ templateId }) => templateId)
       ].sort()
     )
     expect(await repository.getActiveBuiltinTemplate(TEMPLATE_ID)).toMatchObject({
       templateId: TEMPLATE_ID,
-      version: 2,
-      releaseHash: 'sha256:07ba9ec2f59740f555a69e87242d57dec7e95d871246074f5a05433b3b4cc38f',
+      version: 3,
+      releaseHash: 'sha256:893d9b14836c9eea4e2600f4668313e00039dcf887f4f916176639938f5882af',
       document: {
         content: {
           name: '上海高考口语标准题型',
+          tags: ['全卷', '口语', '高考'],
           root: {
             children: expect.arrayContaining([expect.objectContaining({ id: 'function-call' })])
           }
@@ -92,11 +112,12 @@ describe('内置 Template 启动初始化', () => {
 
     expect(await repository.getActiveBuiltinTemplate(LISTENING_TEMPLATE.templateId)).toMatchObject({
       templateId: LISTENING_TEMPLATE.templateId,
-      version: 2,
-      releaseHash: 'sha256:2b0a836dd7dc58244e0525b2f8c61710256fada3d560354a8dd9795f665040bc',
+      version: 3,
+      releaseHash: 'sha256:77bc20103adeb7a716dbb6f55cb71b6e49ebdc0be3ede50a6772cb3333cac6e1',
       document: {
         content: {
           name: LISTENING_TEMPLATE.name,
+          tags: LISTENING_TEMPLATE.tags,
           interfaces: [
             {
               alias: 'data',
@@ -120,11 +141,11 @@ describe('内置 Template 启动初始化', () => {
                 name: '听力结束检查页',
                 content: {
                   blocks: expect.arrayContaining([
-                    {
+                    expect.objectContaining({
                       id: 'choice-view',
                       type: 'choice-view',
                       defaultViewport: { mode: 'free' }
-                    }
+                    })
                   ])
                 }
               }
@@ -139,14 +160,79 @@ describe('内置 Template 启动初始化', () => {
       }
     })
 
-    for (const expected of SECTION_TEMPLATES) {
-      const section = await repository.getActiveBuiltinTemplate(expected.templateId)
-      expect(section).toMatchObject({
+    for (const expected of LISTENING_BLOCK_TEMPLATES) {
+      const block = await repository.getActiveBuiltinTemplate(expected.templateId)
+      expect(block).toMatchObject({
         templateId: expected.templateId,
         version: 2,
         document: {
           content: {
             name: expected.name,
+            tags: ['分块练习', '听力', '高考'],
+            interfaces: [
+              {
+                alias: 'data',
+                interfaceId:
+                  'sha256:03e00d7f007b7b2281e13429ec89220d3d5abfa218f1f953f0d3c64ff1489838',
+                acceptedVars: expect.any(Array)
+              }
+            ],
+            root: {
+              choiceCollector: {
+                pages: expected.questionCounts.map((questionCount) => ({ questionCount }))
+              },
+              children: expected.name.includes('长对话')
+                ? [
+                    expect.objectContaining({ type: 'function', name: 'Directions页面' }),
+                    expect.objectContaining({ type: 'function', name: expected.name }),
+                    expect.objectContaining({
+                      type: 'page',
+                      name: '听力结束检查页',
+                      content: {
+                        blocks: expect.arrayContaining([
+                          expect.objectContaining({
+                            type: 'choice-view',
+                            defaultViewport: { mode: 'free' }
+                          })
+                        ])
+                      }
+                    })
+                  ]
+                : [
+                    expect.objectContaining({ type: 'function', name: expected.name }),
+                    expect.objectContaining({
+                      type: 'page',
+                      name: '听力结束检查页',
+                      content: {
+                        blocks: expect.arrayContaining([
+                          expect.objectContaining({
+                            type: 'choice-view',
+                            defaultViewport: { mode: 'free' }
+                          })
+                        ])
+                      }
+                    })
+                  ]
+            }
+          },
+          resources: {
+            functions: expect.arrayContaining([
+              expect.objectContaining({ id: expect.stringMatching(/^sha256:/) })
+            ])
+          }
+        }
+      })
+    }
+
+    for (const expected of SECTION_TEMPLATES) {
+      const section = await repository.getActiveBuiltinTemplate(expected.templateId)
+      expect(section).toMatchObject({
+        templateId: expected.templateId,
+        version: 3,
+        document: {
+          content: {
+            name: expected.name,
+            tags: ['分块练习', '口语', '高考'],
             interfaces: [standardInterface],
             root: {
               children: [{ type: 'function', name: expected.functionName }]
@@ -167,7 +253,7 @@ describe('内置 Template 启动初始化', () => {
     }
   })
 
-  it('保留已落盘的长名称 v1 并将拆分模板升级到短名称 v2', async () => {
+  it('保留已落盘的无标签 v2 并将拆分模板升级到带标签的 v3', async () => {
     const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
     const manifest = JSON.parse(
       await readFile('resources/builtin/template-editor/.text/builtin-templates.json', 'utf8')
@@ -178,16 +264,21 @@ describe('内置 Template 启动初始化', () => {
     if (!current) throw new Error('Bundled section Template was not found')
 
     const previousDocument = structuredClone(current.document)
-    previousDocument.content.name = '上海高考口语标准题型 - 朗读句子'
-    const previous = await createBuiltinTemplateRelease(current.templateId, 1, previousDocument)
+    delete previousDocument.content.tags
+    const previous = await createBuiltinTemplateRelease(current.templateId, 2, previousDocument)
     await repository.registerBuiltinTemplate(previous)
 
     await initializeBuiltinTemplates(repository, manifest)
 
-    await expect(repository.getBuiltinTemplate(current.templateId, 1)).resolves.toEqual(previous)
+    await expect(repository.getBuiltinTemplate(current.templateId, 2)).resolves.toEqual(previous)
     await expect(repository.getActiveBuiltinTemplate(current.templateId)).resolves.toMatchObject({
-      version: 2,
-      document: { content: { name: '上海高考口语 - 朗读句子' } }
+      version: 3,
+      document: {
+        content: {
+          name: '上海高考口语 - 朗读句子',
+          tags: ['分块练习', '口语', '高考']
+        }
+      }
     })
   })
 
@@ -209,7 +300,7 @@ describe('内置 Template 启动初始化', () => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
     )
     expect(copy.revision).toBe(0)
-    expect(copy.content).toEqual(source.document.content)
+    expect(copy.content).toEqual({ ...source.document.content, tags: [] })
     expect(copy.resources).toEqual(source.document.resources)
     expect(copy.editorState).toEqual(source.document.editorState)
     expect(copy.content).not.toBe(source.document.content)

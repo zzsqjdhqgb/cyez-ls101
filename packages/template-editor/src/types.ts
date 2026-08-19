@@ -517,6 +517,7 @@ export interface TemplateInterfaceRequirement {
 export interface TemplateContent {
   name: string
   description: string
+  tags?: string[]
   interfaces: TemplateInterfaceRequirement[]
   root: FrameNode
   schemaUses: SchemaUse[]

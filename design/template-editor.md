@@ -436,6 +436,8 @@ Template 是可持续编辑并直接保存的工作文档，不区分草稿和�
 interface TemplateContent {
   name: string
   description: string
+  /** 模板分类标签；规范化后按确定性顺序保存。 */
+  tags: string[]
   interfaces: TemplateInterfaceRequirement[]
   root: FrameNode
   schemaUses: SchemaUse[]
@@ -454,7 +456,11 @@ interface TemplateDocument {
 }
 ```
 
-`editorState` 保存画布位置、折叠、选择等编辑器私有 JSON 状态，不参与语义校验或试卷编译。工作文档可以处于不完整状态，保存不触发严格校验；预览和导出必须通过完整校验。
+`tags` 是模板作者可编辑的分类元数据，不参与试卷编译，但属于 Template 正文：会随 `.lstemplate` 导出、导入、创建副本和内置模板 release 一起传播。标签按无序集合处理；保存和导入时去除首尾空白、规范化 Unicode、丢弃空值、去重并按确定性顺序保存。单个标签最多 24 个 Unicode 字符，单个模板最多 12 个标签，控制字符不允许出现。标签变化属于模板内容变化，会进入现有 revision/CAS 保存、同 ID 导入冲突和内置 release 版本/hash 语义。
+
+解析器兼容历史文档中缺失的 `content.tags`；应用层将其视为空标签集合，新建或发生标签编辑时写出规范的数组字段。
+
+`editorState` 保存画布位置、折叠、选择等编辑器私有 JSON 状态，不参与语义校验或试卷编译。工作文档可以处于不完整状态，保存不触发严格校验；预览和导出必须通过完整校验。标签不是仓储 sidecar，不按模板 ID 另行保存；因此不会出现本地标签与导出文件标签分离的问题。
 
 Template 和本地函数库工作文档都带非负整数 `revision`。新文档从 0 开始，每次成功更新后由仓储递增；保存操作返回带新 revision 的完整文档，编辑器必须用返回值替换本地副本。仓储通过 File Store main 进程的原子 revision compare-and-swap 拒绝过期保存，该保证跨 renderer 和仓储实例成立；耗时的函数复制或资源清理不能覆盖期间完成的 autosave。导入和内置函数库是不可变 release，不使用工作文档 revision。
 
@@ -466,7 +472,7 @@ Template 本身不计算内容哈希。只有 `resources.functions` 中的内嵌
 
 ## 十一、预览与导出
 
-预览和正式导出都需要为每个 Interface 别名临时选择一个实例。选择结果不写入 Template。异步编译入口通过调用方提供的 Interface 仓储定位器按 `instanceId` 获取唯一定位结果，不直接信任选择 DTO 中自行声明的 `interfaceId`；定位结果的真实归属、选择结果和 Template requirement 必须三者一致。
+预览和正式导出都需要为每个 Interface 别名临时选择一个实例。选择结果不写入 Template。异步编译入口通过调用方提供的 Interface 仓储定位器按 `instanceId` 获取唯一定位结果，不直接信任选择 DTO 中自行声明的 `interfaceId`；定位结果的真实归属、选择结果和 Template requirement 必须三者一致。Template 的 `tags` 留在模板管理域，不写入导出的 ExamPackage。
 
 导出流程：
 
@@ -479,5 +485,7 @@ Template 本身不计算内容哈希。只有 `resources.functions` 中的内嵌
 7. 生成 ExamPlayer 可识别的页面、录音槽位和全局 ChoiceMeta。
 8. 生成 Schema 可识别的评分块映射。
 9. 写入最终试卷包。
+
+模板列表按来源分别聚合标签；多选标签使用 AND 过滤语义。内置模板标签只读，创建本地副本后可编辑；本地模板的标签通过 Template 正文保存，不使用额外的 ID 元数据表。
 
 除用户录制的音频和学生选择外，其他变量在第 2 步完成赋值，等价于编译期确定值。

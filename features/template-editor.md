@@ -15,7 +15,7 @@
 - 只保存稳定 `schemaId` 的 `SchemaUse`，按稳定 ID 分别绑定静态文本输入和 `text | fixed-speech | free-speech` 答案槽位。
 - 每次 `SchemaUse` 可动态声明 `file` 附件，并通过仅在当前评分单元有效的 `[@this.varName]` 引用编译后的逻辑资源 URI。
 - 多 Interface 依赖、命名空间和导出时实例选择 DTO。
-- `TemplateContent`、稳定 UUID 的 `TemplateDocument`、内嵌函数资源和 JSON 编辑器状态。
+- `TemplateContent`（包括可导入导出的分类 `tags`）、稳定 UUID 的 `TemplateDocument`、内嵌函数资源和 JSON 编辑器状态。
 
 Schema Editor 向 Template Editor 提供完整的正式 `SchemaDefinition`。Template 文档只保存 `schemaId`，校验和编译时读取最新 revision，并把当时的完整定义快照写入 ExamPackage。
 
@@ -40,7 +40,7 @@ Template 内的 `FunctionDef` 是从函数库复制后的不可变快照，其 `
 
 ## 仓储
 
-`TemplateRepository` 同时管理 Template、本地函数库工作文档、导入 release 和内置 release。`FileTemplateRepository` 使用 `@ls101/file-store` 兼容的作用域存储；适配器从 `@ls101/template-editor/adapters` 导出。renderer 可将持久化的完整 `TemplateDocument` 导出为 `.lstemplate` JSON 文件；编辑器中的未保存修改会先保存再导出，文件包含正文、内嵌函数资源和编辑器状态。导入时若源 ID 不存在则保留 ID 并把 revision 重置为 0；同 ID 且内容相同视为已存在；内容冲突时由用户选择通过本地 revision CAS 覆盖、以新 UUID 导入副本或取消。主要布局为：
+`TemplateRepository` 同时管理 Template、本地函数库工作文档、导入 release 和内置 release。`FileTemplateRepository` 使用 `@ls101/file-store` 兼容的作用域存储；适配器从 `@ls101/template-editor/adapters` 导出。renderer 可将持久化的完整 `TemplateDocument`（包括 `content.tags`）导出为 `.lstemplate` JSON 文件；编辑器中的未保存修改会先保存再导出，文件包含正文、内嵌函数资源和编辑器状态。导入时若源 ID 不存在则保留 ID 并把 revision 重置为 0；同 ID 且正文、资源和标签内容相同视为已存在；内容冲突时由用户选择通过本地 revision CAS 覆盖、以新 UUID 导入副本或取消。主要布局为：
 
 - `templates/<templateId>/template.json`：Template 工作文档。
 - `builtin-templates/releases/<templateId>/v<version>/template.json`：随应用登记的不可变 Template release。

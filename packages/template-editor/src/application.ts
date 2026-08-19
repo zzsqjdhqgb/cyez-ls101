@@ -22,6 +22,7 @@ import {
   deriveFunctionLibraryContentHash
 } from './id'
 import { editFunctionDocument, editTemplateDocument } from './mutations'
+import { normalizeTemplateTags } from './tags'
 import { defaultFunctionInputExpression } from './mutations/rewrite'
 import { TemplateRepositoryError, type TemplateRepository } from './repository'
 import type {
@@ -53,6 +54,7 @@ export interface TemplateSummary {
   templateId: string
   name: string
   description: string
+  tags?: readonly string[]
 }
 
 export interface BuiltinTemplateSummary extends TemplateSummary {
@@ -247,6 +249,7 @@ export class TemplateApplicationError extends Error {
 const EMPTY_TEMPLATE_CONTENT: TemplateContent = {
   name: '',
   description: '',
+  tags: [],
   interfaces: [],
   root: { id: 'root', name: '根框架', type: 'frame', children: [] },
   schemaUses: []
@@ -405,7 +408,8 @@ export function createTemplateApplication(
           .map(({ templateId, content }) => ({
             templateId,
             name: content.name,
-            description: content.description
+            description: content.description,
+            ...optionalTemplateTags(content.tags)
           }))
       },
       async listBuiltinTemplates() {
@@ -425,6 +429,7 @@ export function createTemplateApplication(
                 version: release.version,
                 name: release.document.content.name,
                 description: release.document.content.description,
+                ...optionalTemplateTags(release.document.content.tags),
                 available: validation.valid,
                 errors: validation.errors
               }
@@ -507,7 +512,11 @@ export function createTemplateApplication(
     templates: {
       async create(initial = {}, editorState = {}) {
         const document = createTemplateDocument(
-          { ...structuredClone(EMPTY_TEMPLATE_CONTENT), ...structuredClone(initial) },
+          {
+            ...structuredClone(EMPTY_TEMPLATE_CONTENT),
+            ...structuredClone(initial),
+            tags: normalizeTemplateTags(initial.tags)
+          },
           { functions: [] },
           editorState
         )
@@ -531,7 +540,7 @@ export function createTemplateApplication(
         const imported = {
           templateId: source.templateId,
           revision: 0,
-          content: structuredClone(source.content),
+          content: normalizedTemplateContent(source.content),
           resources: structuredClone(source.resources),
           editorState: structuredClone(source.editorState)
         }
@@ -543,7 +552,11 @@ export function createTemplateApplication(
         return repository.saveTemplate({ ...imported, revision: expectedRevision })
       },
       get: (templateId) => repository.getTemplate(templateId),
-      save: (document) => repository.saveTemplate(document),
+      save: (document) =>
+        repository.saveTemplate({
+          ...document,
+          content: normalizedTemplateContent(document.content)
+        }),
       delete: (templateId) => repository.deleteTemplate(templateId),
       async embedFunction(templateId, locator) {
         const template = await loadTemplate(templateId)
@@ -957,7 +970,10 @@ function builtinReleaseDocument(release: BuiltinTemplateRelease): TemplateDocume
   return {
     templateId: release.templateId,
     revision: 0,
-    content: structuredClone(release.document.content),
+    content: {
+      ...structuredClone(release.document.content),
+      tags: normalizeTemplateTags(release.document.content.tags)
+    },
     resources: structuredClone(release.document.resources),
     editorState: structuredClone(release.document.editorState)
   }
@@ -966,14 +982,24 @@ function builtinReleaseDocument(release: BuiltinTemplateRelease): TemplateDocume
 function sameTemplateSnapshot(first: TemplateDocument, second: TemplateDocument): boolean {
   return (
     stableStringify({
-      content: first.content,
+      content: { ...first.content, tags: normalizeTemplateTags(first.content.tags) },
       resources: first.resources
     }) ===
     stableStringify({
-      content: second.content,
+      content: { ...second.content, tags: normalizeTemplateTags(second.content.tags) },
       resources: second.resources
     })
   )
+}
+
+function normalizedTemplateContent(content: TemplateContent): TemplateContent {
+  const tags = content.tags === undefined ? undefined : normalizeTemplateTags(content.tags)
+  return { ...structuredClone(content), ...(tags === undefined ? {} : { tags }) }
+}
+
+function optionalTemplateTags(tags: readonly string[] | undefined): { tags?: readonly string[] } {
+  const normalized = normalizeTemplateTags(tags)
+  return normalized.length > 0 ? { tags: normalized } : {}
 }
 
 async function loadFunctionLibrary(

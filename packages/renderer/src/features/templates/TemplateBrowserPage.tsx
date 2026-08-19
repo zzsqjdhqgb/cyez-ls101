@@ -1,4 +1,4 @@
-import { useEffect, useState, type JSX } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties, type JSX } from 'react'
 import type {
   BuiltinTemplateSummary,
   FunctionLibrarySummary,
@@ -38,6 +38,8 @@ export function TemplateBrowserPage(): JSX.Element {
   const [builtinTemplates, setBuiltinTemplates] = useState<BuiltinTemplateSummary[]>([])
   const [functionLibraries, setFunctionLibraries] = useState<FunctionLibrarySummary[]>([])
   const [activeTab, setActiveTab] = useState<TemplateBrowserTab>('builtin')
+  const [selectedBuiltinTags, setSelectedBuiltinTags] = useState<string[]>([])
+  const [selectedTemplateTags, setSelectedTemplateTags] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [importing, setImporting] = useState(false)
@@ -51,6 +53,17 @@ export function TemplateBrowserPage(): JSX.Element {
   const [pendingDelete, setPendingDelete] = useState<TemplateSummary | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const builtinTagOptions = useMemo(() => collectTags(builtinTemplates), [builtinTemplates])
+  const templateTagOptions = useMemo(() => collectTags(templates), [templates])
+  const visibleBuiltinTemplates = useMemo(
+    () => filterByTags(builtinTemplates, selectedBuiltinTags),
+    [builtinTemplates, selectedBuiltinTags]
+  )
+  const visibleTemplates = useMemo(
+    () => filterByTags(templates, selectedTemplateTags),
+    [templates, selectedTemplateTags]
+  )
 
   useEffect(() => {
     let active = true
@@ -276,49 +289,59 @@ export function TemplateBrowserPage(): JSX.Element {
           {builtinTemplates.length === 0 ? (
             <EmptyState icon={LayoutTemplate} title="暂无内置模板" />
           ) : (
-            <div className={styles.list}>
-              {builtinTemplates.map((item) => (
-                <article className={styles.row} key={item.templateId}>
-                  <div className={styles.rowMain}>
-                    <div className={styles.builtinIdentity}>
-                      <span className={styles.rowName}>{item.name || '未命名模板'}</span>
-                      <span className={styles.version}>v{item.version}</span>
+            <>
+              <TagFilter
+                options={builtinTagOptions}
+                selected={selectedBuiltinTags}
+                onToggle={(tag) => setSelectedBuiltinTags((current) => toggleTag(current, tag))}
+              />
+              <div className={styles.list}>
+                {visibleBuiltinTemplates.map((item) => (
+                  <article className={styles.row} key={item.templateId}>
+                    <div className={styles.rowMain}>
+                      <div className={styles.builtinIdentity}>
+                        <span className={styles.rowName}>{item.name || '未命名模板'}</span>
+                        <span className={styles.version}>v{item.version}</span>
+                      </div>
+                      <div className={styles.descriptionRow}>
+                        <TagList tags={item.tags} highlighted={selectedBuiltinTags} />
+                        <p className={styles.rowDescription}>
+                          {item.available
+                            ? item.description || '暂无描述'
+                            : '缺少所需的题型或数据结构，当前版本暂不可用'}
+                        </p>
+                      </div>
                     </div>
-                    <p className={styles.rowDescription}>
-                      {item.available
-                        ? item.description || '暂无描述'
-                        : '缺少所需的题型或数据结构，当前版本暂不可用'}
-                    </p>
-                  </div>
-                  <div className={styles.rowActions}>
-                    <Button
-                      icon={Eye}
-                      onClick={() => navigate(`/templates/builtin/${item.templateId}`)}
-                    >
-                      查看
-                    </Button>
-                    <Button
-                      icon={Copy}
-                      disabled={copyingId !== null}
-                      onClick={() => void copyBuiltinTemplate(item.templateId)}
-                    >
-                      {copyingId === item.templateId ? '正在创建' : '创建副本'}
-                    </Button>
-                    <Button
-                      disabled={!item.available}
-                      title={
-                        item.available
-                          ? undefined
-                          : item.errors.map((error) => error.code).join(', ')
-                      }
-                      onClick={() => navigate(`/templates/builtin/${item.templateId}/generate`)}
-                    >
-                      生成试卷
-                    </Button>
-                  </div>
-                </article>
-              ))}
-            </div>
+                    <div className={styles.rowActions}>
+                      <Button
+                        icon={Eye}
+                        onClick={() => navigate(`/templates/builtin/${item.templateId}`)}
+                      >
+                        查看
+                      </Button>
+                      <Button
+                        icon={Copy}
+                        disabled={copyingId !== null}
+                        onClick={() => void copyBuiltinTemplate(item.templateId)}
+                      >
+                        {copyingId === item.templateId ? '正在创建' : '创建副本'}
+                      </Button>
+                      <Button
+                        disabled={!item.available}
+                        title={
+                          item.available
+                            ? undefined
+                            : item.errors.map((error) => error.code).join(', ')
+                        }
+                        onClick={() => navigate(`/templates/builtin/${item.templateId}/generate`)}
+                      >
+                        生成试卷
+                      </Button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </>
           )}
         </section>
       ) : null}
@@ -328,40 +351,54 @@ export function TemplateBrowserPage(): JSX.Element {
           {templates.length === 0 ? (
             <EmptyState icon={LayoutTemplate} title="暂无本地模板" />
           ) : (
-            <div className={styles.list}>
-              {templates.map((item) => (
-                <article className={styles.row} key={item.templateId}>
-                  <div className={styles.rowMain}>
-                    <button
-                      className={styles.rowTitle}
-                      onClick={() => navigate(`/templates/${item.templateId}`)}
-                      type="button"
-                    >
-                      {item.name || '未命名模板'}
-                    </button>
-                    <p className={styles.rowDescription}>{item.description || '暂无描述'}</p>
-                  </div>
-                  <div className={styles.rowActions}>
-                    <Button onClick={() => navigate(`/templates/${item.templateId}`)}>编辑</Button>
-                    <Button onClick={() => navigate(`/templates/${item.templateId}/generate`)}>
-                      生成试卷
-                    </Button>
-                    <IconButton
-                      icon={Download}
-                      label={`导出模板“${item.name || '未命名模板'}”`}
-                      disabled={exportingId !== null}
-                      onClick={() => void exportTemplate(item.templateId)}
-                    />
-                    <IconButton
-                      icon={Trash2}
-                      label={`删除模板“${item.name || '未命名模板'}”`}
-                      variant="danger"
-                      onClick={() => setPendingDelete(item)}
-                    />
-                  </div>
-                </article>
-              ))}
-            </div>
+            <>
+              <TagFilter
+                options={templateTagOptions}
+                selected={selectedTemplateTags}
+                onToggle={(tag) => setSelectedTemplateTags((current) => toggleTag(current, tag))}
+              />
+              <div className={styles.list}>
+                {visibleTemplates.map((item) => (
+                  <article className={styles.row} key={item.templateId}>
+                    <div className={styles.rowMain}>
+                      <div className={styles.templateIdentity}>
+                        <button
+                          className={styles.rowTitle}
+                          onClick={() => navigate(`/templates/${item.templateId}`)}
+                          type="button"
+                        >
+                          {item.name || '未命名模板'}
+                        </button>
+                      </div>
+                      <div className={styles.descriptionRow}>
+                        <TagList tags={item.tags} highlighted={selectedTemplateTags} />
+                        <p className={styles.rowDescription}>{item.description || '暂无描述'}</p>
+                      </div>
+                    </div>
+                    <div className={styles.rowActions}>
+                      <Button onClick={() => navigate(`/templates/${item.templateId}`)}>
+                        编辑
+                      </Button>
+                      <Button onClick={() => navigate(`/templates/${item.templateId}/generate`)}>
+                        生成试卷
+                      </Button>
+                      <IconButton
+                        icon={Download}
+                        label={`导出模板“${item.name || '未命名模板'}”`}
+                        disabled={exportingId !== null}
+                        onClick={() => void exportTemplate(item.templateId)}
+                      />
+                      <IconButton
+                        icon={Trash2}
+                        label={`删除模板“${item.name || '未命名模板'}”`}
+                        variant="danger"
+                        onClick={() => setPendingDelete(item)}
+                      />
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </>
           )}
         </section>
       ) : null}
@@ -427,6 +464,86 @@ function templateSummary(document: TemplateDocument): TemplateSummary {
   return {
     templateId: document.templateId,
     name: document.content.name,
-    description: document.content.description
+    description: document.content.description,
+    ...(document.content.tags?.length ? { tags: document.content.tags } : {})
   }
+}
+
+function collectTags(items: readonly TemplateSummary[]): string[] {
+  return [...new Set(items.flatMap((item) => item.tags ?? []))].sort((left, right) =>
+    left < right ? -1 : left > right ? 1 : 0
+  )
+}
+
+function filterByTags<T extends TemplateSummary>(
+  items: readonly T[],
+  selected: readonly string[]
+): T[] {
+  if (selected.length === 0) return [...items]
+  return items.filter((item) => selected.every((tag) => item.tags?.includes(tag)))
+}
+
+function toggleTag(selected: readonly string[], tag: string): string[] {
+  return selected.includes(tag) ? selected.filter((item) => item !== tag) : [...selected, tag]
+}
+
+function TagFilter({
+  options,
+  selected,
+  onToggle
+}: {
+  options: readonly string[]
+  selected: readonly string[]
+  onToggle(tag: string): void
+}): JSX.Element | null {
+  if (options.length === 0) return null
+  return (
+    <div className={styles.tagFilter} aria-label="按标签筛选">
+      {options.map((tag) => (
+        <button
+          className={styles.tagButton}
+          style={tagColorStyle(tag)}
+          aria-pressed={selected.includes(tag)}
+          key={tag}
+          type="button"
+          onClick={() => onToggle(tag)}
+        >
+          {tag}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function TagList({
+  tags,
+  highlighted
+}: {
+  tags?: readonly string[]
+  highlighted: readonly string[]
+}): JSX.Element | null {
+  if (!tags || tags.length === 0) return null
+  return (
+    <div className={styles.tags} aria-label="模板标签">
+      {tags.map((tag) => (
+        <span
+          className={styles.tag}
+          data-highlighted={highlighted.includes(tag) || undefined}
+          key={tag}
+          style={tagColorStyle(tag)}
+        >
+          {tag}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function tagColorStyle(tag: string): CSSProperties {
+  let hash = 2166136261
+  for (let index = 0; index < tag.length; index += 1) {
+    hash ^= tag.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return { '--template-tag-hue': `${((hash >>> 0) % 12) * 30}` } as CSSProperties
 }

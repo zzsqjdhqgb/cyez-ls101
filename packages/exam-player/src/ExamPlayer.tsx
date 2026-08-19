@@ -22,7 +22,7 @@ import { loadExam, resourceKey, type LoadedExam } from './loading'
 import styles from './ExamPlayer.module.css'
 
 const DESIGN_WIDTH = 1200
-const DESIGN_HEIGHT = 800
+const DESIGN_HEIGHT = 880
 const SUBMISSION_MEDIA_TYPE = 'application/x-ls101-submission'
 
 type Phase =

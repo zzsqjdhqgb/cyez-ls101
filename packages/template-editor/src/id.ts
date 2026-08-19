@@ -12,6 +12,7 @@ import type {
   TemplateDocument,
   TemplateResources
 } from './types'
+import { normalizeTemplateTags } from './tags'
 
 const CONTENT_ID_PATTERN = /^sha256:[0-9a-f]{64}$/
 
@@ -35,7 +36,7 @@ export function createTemplateDocument(
   return {
     templateId: createTemplateId(),
     revision: 0,
-    content: structuredClone(content),
+    content: { ...structuredClone(content), tags: normalizeTemplateTags(content.tags) },
     resources: structuredClone(resources),
     editorState: structuredClone(editorState)
   }
