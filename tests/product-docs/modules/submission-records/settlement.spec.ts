@@ -12,9 +12,10 @@ let page: Page
 let userDataDir: string
 let objectivePath: string
 let readingPath: string
-let pageErrors: string[]
+let pageErrors: string[] = []
 
 test.beforeEach(async () => {
+  pageErrors = []
   userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-product-docs-settlement-'))
   objectivePath = path.join(userDataDir, 'objective.lssubmission')
   readingPath = path.join(userDataDir, 'reading.lssubmission')
@@ -26,7 +27,6 @@ test.beforeEach(async () => {
     })
   )
 
-  pageErrors = []
   electronApp = await launchIntegrationApp(userDataDir)
   page = await electronApp.firstWindow()
   await prepareProductPage(page)
@@ -215,7 +215,8 @@ const objectiveSchema: SchemaDefinition = {
     answerFormat: [{ answerId: 'answer', type: 'text' }],
     templateInputs: [
       { inputId: 'question-description', type: 'text', required: true },
-      { inputId: 'analysis', type: 'text', required: true }
+      { inputId: 'correct-answer', type: 'text', required: true },
+      { inputId: 'analysis', type: 'text', required: false }
     ]
   },
   data: {
@@ -271,7 +272,8 @@ function objectiveSubmission(): SubmissionPackage {
         schema: objectiveSchema,
         inputs: [
           { inputId: 'question-description', type: 'text', value: '请选择正确答案。' },
-          { inputId: 'analysis', type: 'text', value: 'A' }
+          { inputId: 'correct-answer', type: 'text', value: 'A' },
+          { inputId: 'analysis', type: 'text', value: '正确答案为 A。' }
         ],
         answers: [{ answerId: 'answer', type: 'text', stringAnswerIndex: 0 }]
       }
