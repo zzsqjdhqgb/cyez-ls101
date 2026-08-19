@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type JSX } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties, type JSX } from 'react'
 import type {
   BuiltinTemplateSummary,
   FunctionLibrarySummary,
@@ -302,8 +302,8 @@ export function TemplateBrowserPage(): JSX.Element {
                       <div className={styles.builtinIdentity}>
                         <span className={styles.rowName}>{item.name || '未命名模板'}</span>
                         <span className={styles.version}>v{item.version}</span>
+                        <TagList tags={item.tags} />
                       </div>
-                      <TagList tags={item.tags} />
                       <p className={styles.rowDescription}>
                         {item.available
                           ? item.description || '暂无描述'
@@ -359,15 +359,17 @@ export function TemplateBrowserPage(): JSX.Element {
                 {visibleTemplates.map((item) => (
                   <article className={styles.row} key={item.templateId}>
                     <div className={styles.rowMain}>
-                      <button
-                        className={styles.rowTitle}
-                        onClick={() => navigate(`/templates/${item.templateId}`)}
-                        type="button"
-                      >
-                        {item.name || '未命名模板'}
-                      </button>
+                      <div className={styles.templateIdentity}>
+                        <button
+                          className={styles.rowTitle}
+                          onClick={() => navigate(`/templates/${item.templateId}`)}
+                          type="button"
+                        >
+                          {item.name || '未命名模板'}
+                        </button>
+                        <TagList tags={item.tags} />
+                      </div>
                       <p className={styles.rowDescription}>{item.description || '暂无描述'}</p>
-                      <TagList tags={item.tags} />
                     </div>
                     <div className={styles.rowActions}>
                       <Button onClick={() => navigate(`/templates/${item.templateId}`)}>
@@ -496,6 +498,7 @@ function TagFilter({
       {options.map((tag) => (
         <button
           className={styles.tagButton}
+          style={tagColorStyle(tag)}
           aria-pressed={selected.includes(tag)}
           key={tag}
           type="button"
@@ -513,10 +516,19 @@ function TagList({ tags }: { tags?: readonly string[] }): JSX.Element | null {
   return (
     <div className={styles.tags} aria-label="模板标签">
       {tags.map((tag) => (
-        <span className={styles.tag} key={tag}>
+        <span className={styles.tag} key={tag} style={tagColorStyle(tag)}>
           {tag}
         </span>
       ))}
     </div>
   )
+}
+
+function tagColorStyle(tag: string): CSSProperties {
+  let hash = 2166136261
+  for (let index = 0; index < tag.length; index += 1) {
+    hash ^= tag.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return { '--template-tag-hue': `${((hash >>> 0) % 12) * 30}` } as CSSProperties
 }
