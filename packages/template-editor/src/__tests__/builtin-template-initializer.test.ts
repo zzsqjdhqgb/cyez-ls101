@@ -14,6 +14,23 @@ const LISTENING_TEMPLATE = {
   templateId: '4f4c8c1a-9b2a-4d71-8f1e-4a5e8c7d2b63',
   name: '上海高考英语听力标准题型'
 } as const
+const LISTENING_BLOCK_TEMPLATES = [
+  {
+    templateId: '5c2f1d4e-6a7b-4c8d-9e0f-1234567890ab',
+    name: '上海高考英语听力 - 短对话专项训练',
+    questionCounts: [5, 5]
+  },
+  {
+    templateId: '6d3e2f5a-7b8c-4d9e-a0f1-2345678901bc',
+    name: '上海高考英语听力 - 短文专项训练',
+    questionCounts: [3, 3]
+  },
+  {
+    templateId: '7e4f3a6b-8c9d-4e0f-a1b2-3456789012cd',
+    name: '上海高考英语听力 - 长对话专项训练',
+    questionCounts: [4]
+  }
+] as const
 const SECTION_TEMPLATES = [
   {
     templateId: '261d2ad9-225e-41ac-a394-1887b912b917',
@@ -48,7 +65,7 @@ const SECTION_TEMPLATES = [
 ] as const
 
 describe('内置 Template 启动初始化', () => {
-  it('幂等安装导出的上海高考口语模板并移除占位模板', async () => {
+  it('幂等安装内置模板并移除占位模板', async () => {
     const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
     const manifest = JSON.parse(
       await readFile('resources/builtin/template-editor/.text/builtin-templates.json', 'utf8')
@@ -61,6 +78,7 @@ describe('内置 Template 启动初始化', () => {
       [
         TEMPLATE_ID,
         LISTENING_TEMPLATE.templateId,
+        ...LISTENING_BLOCK_TEMPLATES.map(({ templateId }) => templateId),
         ...SECTION_TEMPLATES.map(({ templateId }) => templateId)
       ].sort()
     )
@@ -120,11 +138,11 @@ describe('内置 Template 启动初始化', () => {
                 name: '听力结束检查页',
                 content: {
                   blocks: expect.arrayContaining([
-                    {
+                    expect.objectContaining({
                       id: 'choice-view',
                       type: 'choice-view',
                       defaultViewport: { mode: 'free' }
-                    }
+                    })
                   ])
                 }
               }
@@ -138,6 +156,69 @@ describe('内置 Template 启动初始化', () => {
         }
       }
     })
+
+    for (const expected of LISTENING_BLOCK_TEMPLATES) {
+      const block = await repository.getActiveBuiltinTemplate(expected.templateId)
+      expect(block).toMatchObject({
+        templateId: expected.templateId,
+        version: 1,
+        document: {
+          content: {
+            name: expected.name,
+            interfaces: [
+              {
+                alias: 'data',
+                interfaceId:
+                  'sha256:03e00d7f007b7b2281e13429ec89220d3d5abfa218f1f953f0d3c64ff1489838',
+                acceptedVars: expect.any(Array)
+              }
+            ],
+            root: {
+              choiceCollector: {
+                pages: expected.questionCounts.map((questionCount) => ({ questionCount }))
+              },
+              children: expected.name.includes('长对话')
+                ? [
+                    expect.objectContaining({ type: 'function', name: 'Directions页面' }),
+                    expect.objectContaining({ type: 'function', name: expected.name }),
+                    expect.objectContaining({
+                      type: 'page',
+                      name: '听力结束检查页',
+                      content: {
+                        blocks: expect.arrayContaining([
+                          expect.objectContaining({
+                            type: 'choice-view',
+                            defaultViewport: { mode: 'free' }
+                          })
+                        ])
+                      }
+                    })
+                  ]
+                : [
+                    expect.objectContaining({ type: 'function', name: expected.name }),
+                    expect.objectContaining({
+                      type: 'page',
+                      name: '听力结束检查页',
+                      content: {
+                        blocks: expect.arrayContaining([
+                          expect.objectContaining({
+                            type: 'choice-view',
+                            defaultViewport: { mode: 'free' }
+                          })
+                        ])
+                      }
+                    })
+                  ]
+            }
+          },
+          resources: {
+            functions: expect.arrayContaining([
+              expect.objectContaining({ id: expect.stringMatching(/^sha256:/) })
+            ])
+          }
+        }
+      })
+    }
 
     for (const expected of SECTION_TEMPLATES) {
       const section = await repository.getActiveBuiltinTemplate(expected.templateId)
