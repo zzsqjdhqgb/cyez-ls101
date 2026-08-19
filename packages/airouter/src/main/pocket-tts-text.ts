@@ -28,7 +28,7 @@ export function splitText(
     if (pieces.length > 1) {
       for (const piece of pieces) {
         const value = piece.trim()
-        refined.push({ text: value, tokens: tokenizer.encode(value).length })
+        refined.push(...splitOversized(value, tokenizer, options.maxTokensPerChunk))
       }
       continue
     }
@@ -36,6 +36,13 @@ export function splitText(
     let currentTokens = 0
     for (const word of trimmed.split(/(?<=\s)/)) {
       const wordTokens = tokenizer.encode(word).length
+      if (wordTokens > options.maxTokensPerChunk) {
+        if (current.trim()) refined.push({ text: current.trim(), tokens: currentTokens })
+        refined.push(...splitOversized(word.trim(), tokenizer, options.maxTokensPerChunk))
+        current = ''
+        currentTokens = 0
+        continue
+      }
       if (current && currentTokens + wordTokens > options.maxTokensPerChunk) {
         refined.push({ text: current.trim(), tokens: currentTokens })
         current = word
@@ -56,7 +63,7 @@ export function splitText(
       current = item.text
       currentTokens = item.tokens
     } else if (currentTokens + item.tokens <= options.maxTokensPerChunk) {
-      current += ` ${item.text}`
+      current += needsWordSeparator(current, item.text) ? ` ${item.text}` : item.text
       currentTokens += item.tokens
     } else {
       chunks.push(current)
@@ -66,6 +73,39 @@ export function splitText(
   }
   if (current) chunks.push(current)
   return chunks
+}
+
+function splitOversized(
+  text: string,
+  tokenizer: PocketTtsTokenizer,
+  maxTokensPerChunk: number
+): Array<{ text: string; tokens: number }> {
+  const chunks: Array<{ text: string; tokens: number }> = []
+  let current = ''
+  let currentTokens = 0
+  for (const character of Array.from(text)) {
+    const candidate = current + character
+    const tokens = tokenizer.encode(candidate).length
+    if (current && tokens > maxTokensPerChunk) {
+      chunks.push({ text: current, tokens: currentTokens })
+      current = character
+      currentTokens = tokenizer.encode(character).length
+    } else {
+      current = candidate
+      currentTokens = tokens
+    }
+  }
+  if (current) chunks.push({ text: current, tokens: currentTokens })
+  return chunks
+}
+
+function needsWordSeparator(left: string, right: string): boolean {
+  return (
+    !/\s$/.test(left) &&
+    !/^\s/.test(right) &&
+    /[\p{L}\p{N}]$/u.test(left) &&
+    /^[\p{L}\p{N}]/u.test(right)
+  )
 }
 
 function preprocessText(text: string, options: PocketTtsTextOptions): string {

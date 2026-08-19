@@ -10,7 +10,8 @@
   transition:
     color 120ms ease,
     border-color 120ms ease,
-    background-color 120ms ease;
+    background-color 120ms ease,
+    transform 120ms ease;
 }
 
 .button svg {
@@ -37,6 +38,7 @@
 .ghost:hover:not(:disabled) {
   color: var(--color-text-strong);
   background: var(--color-surface-hover);
+  transform: translateY(-1px);
 }
 
 .default:active:not(:disabled),

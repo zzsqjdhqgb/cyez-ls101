@@ -1,4 +1,7 @@
 import type {
+  BuiltinTemplateRelease,
+  ChoiceGroupExpression,
+  ChoiceGroupShape,
   ChoiceViewport,
   ContentBlock,
   FrameNode,
@@ -10,7 +13,8 @@ import type {
   FunctionOutputDef,
   JsonValue,
   LocalFunctionLibraryDocument,
-  SchemaBindingExpression,
+  SchemaAnswerBinding,
+  SchemaTextExpression,
   SchemaUse,
   StaticValueExpression,
   TemplateDocument,
@@ -20,6 +24,30 @@ import type {
   ValueType,
   VariableRef
 } from './types'
+import { normalizeTemplateTags } from './tags'
+
+export function parseBuiltinTemplateRelease(value: unknown): BuiltinTemplateRelease | null {
+  if (
+    !isJsonTree(value) ||
+    !isRecord(value) ||
+    typeof value.templateId !== 'string' ||
+    !Number.isSafeInteger(value.version) ||
+    (value.version as number) < 1 ||
+    typeof value.releaseHash !== 'string' ||
+    !isRecord(value.document)
+  ) {
+    return null
+  }
+
+  const document = parseTemplateDocument({
+    templateId: value.templateId,
+    revision: 0,
+    content: value.document.content,
+    resources: value.document.resources,
+    editorState: value.document.editorState
+  })
+  return document ? (value as unknown as BuiltinTemplateRelease) : null
+}
 
 export function parseTemplateDocument(value: unknown): TemplateDocument | null {
   if (
@@ -30,6 +58,9 @@ export function parseTemplateDocument(value: unknown): TemplateDocument | null {
     !isRecord(value.content) ||
     typeof value.content.name !== 'string' ||
     typeof value.content.description !== 'string' ||
+    (value.content.tags !== undefined &&
+      (!Array.isArray(value.content.tags) ||
+        !value.content.tags.every((tag) => typeof tag === 'string'))) ||
     !Array.isArray(value.content.interfaces) ||
     !value.content.interfaces.every(isInterfaceRequirement) ||
     !isFrameNode(value.content.root) ||
@@ -40,6 +71,11 @@ export function parseTemplateDocument(value: unknown): TemplateDocument | null {
     !value.resources.functions.every(isFunctionDef) ||
     !isJsonObject(value.editorState)
   ) {
+    return null
+  }
+  try {
+    normalizeTemplateTags(value.content.tags as string[] | undefined)
+  } catch {
     return null
   }
   return value as unknown as TemplateDocument
@@ -66,6 +102,7 @@ export function parseLocalFunctionLibraryDocument(
     !isRecord(value) ||
     typeof value.libraryId !== 'string' ||
     !isRevision(value.revision) ||
+    !isRevision(value.storageRevision) ||
     !isFunctionLibraryContent(value.content) ||
     !isFunctionLibraryEditorState(value.editorState) ||
     (value.exportState !== undefined && !isFunctionLibraryExportState(value.exportState))
@@ -73,6 +110,35 @@ export function parseLocalFunctionLibraryDocument(
     return null
   }
   return value as unknown as LocalFunctionLibraryDocument
+}
+
+export function parseLegacyLocalFunctionLibraryDocument(
+  value: unknown
+): LocalFunctionLibraryDocument | null {
+  if (
+    !isJsonTree(value) ||
+    !isRecord(value) ||
+    typeof value.libraryId !== 'string' ||
+    !isRevision(value.revision) ||
+    value.storageRevision !== undefined ||
+    !isFunctionLibraryContent(value.content) ||
+    !isFunctionLibraryEditorState(value.editorState) ||
+    (value.exportState !== undefined && !isLegacyFunctionLibraryExportState(value.exportState))
+  ) {
+    return null
+  }
+
+  const legacyExportState = value.exportState as
+    | { version: number; contentHash: string }
+    | undefined
+  return {
+    libraryId: value.libraryId,
+    revision: legacyExportState?.version ?? 0,
+    storageRevision: value.revision,
+    content: value.content,
+    editorState: value.editorState,
+    ...(legacyExportState ? { exportState: { contentHash: legacyExportState.contentHash } } : {})
+  } as unknown as LocalFunctionLibraryDocument
 }
 
 export function parseFunctionLibraryRelease(value: unknown): FunctionLibraryRelease | null {
@@ -99,9 +165,7 @@ function isFunctionContent(value: unknown): value is FunctionContent {
     isRecord(value) &&
     typeof value.name === 'string' &&
     Array.isArray(value.inputs) &&
-    value.inputs.every(
-      (input) => isRecord(input) && typeof input.name === 'string' && isValueType(input.type)
-    ) &&
+    value.inputs.every((input) => isRecord(input) && isFunctionInputDef(input)) &&
     isFrameNode(value.body) &&
     Array.isArray(value.outputs) &&
     value.outputs.every(isFunctionOutput) &&
@@ -117,7 +181,10 @@ function isFunctionLibraryContent(value: unknown): value is FunctionLibraryConte
     Array.isArray(value.functions) &&
     value.functions.every(
       (entry) =>
-        isRecord(entry) && typeof entry.functionId === 'string' && isFunctionContent(entry.content)
+        isRecord(entry) &&
+        typeof entry.functionId === 'string' &&
+        (entry.exposed === undefined || typeof entry.exposed === 'boolean') &&
+        isFunctionContent(entry.content)
     )
   )
 }
@@ -132,6 +199,10 @@ function isFunctionLibraryEditorState(value: unknown): boolean {
 }
 
 function isFunctionLibraryExportState(value: unknown): boolean {
+  return isRecord(value) && typeof value.contentHash === 'string'
+}
+
+function isLegacyFunctionLibraryExportState(value: unknown): boolean {
   return (
     isRecord(value) &&
     Number.isSafeInteger(value.version) &&
@@ -190,7 +261,7 @@ function isTemplateNode(value: unknown): value is TemplateNode {
     case 'function':
       return (
         typeof value.functionRef === 'string' &&
-        isRecordOf(value.inputs, isStaticValueExpression) &&
+        isRecordOf(value.inputs, isFunctionInputExpression) &&
         isRecordOf(value.outputNames, (name) => typeof name === 'string')
       )
     case 'choice-question':
@@ -203,6 +274,8 @@ function isTemplateNode(value: unknown): value is TemplateNode {
         ) &&
         typeof value.outputName === 'string'
       )
+    case 'variable':
+      return typeof value.variableName === 'string' && isStaticValueExpression(value.value)
     default:
       return false
   }
@@ -248,7 +321,11 @@ function isContentBlock(value: unknown): value is ContentBlock {
         isTextExpression(value.text)
       )
     case 'image':
-      return isFiniteNumber(value.width) && isValueExpression(value.src, 'file')
+      return (
+        isFiniteNumber(value.width) &&
+        isFiniteNumber(value.height) &&
+        isValueExpression(value.src, 'file')
+      )
     case 'choice-view':
       return (
         isFiniteNumber(value.width) &&
@@ -284,8 +361,18 @@ function isChoiceViewport(value: unknown): value is ChoiceViewport {
   if (!isRecord(value)) return false
   switch (value.mode) {
     case 'free':
+      if (value.group !== undefined) {
+        return isChoiceGroupRef(value.group) && isOptionalNumber(value.initialPage)
+      }
       return isOptionalNumber(value.initialPage)
     case 'focus':
+      if (value.group !== undefined) {
+        return (
+          isChoiceGroupRef(value.group) &&
+          isFiniteNumber(value.pageIndex) &&
+          isFiniteNumber(value.questionIndex)
+        )
+      }
       return (
         isRecord(value.questionRef) &&
         (value.questionRef.scope === 'relative' || value.questionRef.scope === 'absolute') &&
@@ -294,6 +381,14 @@ function isChoiceViewport(value: unknown): value is ChoiceViewport {
         typeof value.questionRef.questionId === 'string'
       )
     case 'range':
+      if (value.group !== undefined) {
+        return (
+          isChoiceGroupRef(value.group) &&
+          isFiniteNumber(value.startPage) &&
+          isFiniteNumber(value.endPage) &&
+          isOptionalNumber(value.initialPage)
+        )
+      }
       return (
         isFiniteNumber(value.startPage) &&
         isFiniteNumber(value.endPage) &&
@@ -309,34 +404,61 @@ function isSchemaUse(value: unknown): value is SchemaUse {
     isRecord(value) &&
     typeof value.useId === 'string' &&
     typeof value.schemaId === 'string' &&
-    typeof value.blockId === 'string' &&
-    isRecordOf(value.bindings, isSchemaBindingExpression)
+    isRecordOf(value.inputBindings, isSchemaTextExpression) &&
+    isRecordOf(value.answerBindings, isSchemaAnswerBinding) &&
+    Array.isArray(value.attachments) &&
+    value.attachments.every(
+      (attachment) =>
+        isRecord(attachment) &&
+        typeof attachment.varName === 'string' &&
+        typeof attachment.description === 'string' &&
+        isValueExpression(attachment.file, 'file')
+    )
   )
 }
 
-function isSchemaBindingExpression(value: unknown): value is SchemaBindingExpression {
+function isSchemaAnswerBinding(value: unknown): value is SchemaAnswerBinding {
   if (!isRecord(value)) return false
   switch (value.type) {
-    case 'literal':
-      return typeof value.value === 'string' || isFiniteNumber(value.value)
-    case 'variable':
-      return isVariableRef(value)
-    case 'concat':
-      return (
-        Array.isArray(value.parts) &&
-        value.parts.every(
-          (part) =>
-            isRecord(part) &&
-            ((part.type === 'literal' && typeof part.value === 'string') ||
-              (part.type === 'variable' && isVariableRef(part)))
-        )
-      )
-    case 'record-output':
-    case 'choice-output':
-      return typeof value.name === 'string'
+    case 'text':
+      return value.source === 'choice-output' && typeof value.name === 'string'
+    case 'fixed-speech':
+      return isSchemaTextExpression(value.text) && isRecordOutputExpression(value.audio)
+    case 'free-speech':
+      return isRecordOutputExpression(value.audio)
     default:
       return false
   }
+}
+
+function isRecordOutputExpression(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    value.type === 'audio' &&
+    value.source === 'record-output' &&
+    typeof value.name === 'string'
+  )
+}
+
+function isSchemaTextExpression(value: unknown): value is SchemaTextExpression {
+  return (
+    isRecord(value) &&
+    value.type === 'string' &&
+    Array.isArray(value.parts) &&
+    value.parts.every(
+      (part) =>
+        isRecord(part) &&
+        ((part.type === 'literal' && typeof part.value === 'string') ||
+          (part.type === 'variable' && isSchemaTextVariableRef(part.ref)))
+    )
+  )
+}
+
+function isSchemaTextVariableRef(value: unknown): boolean {
+  return (
+    isVariableRef(value) ||
+    (isRecord(value) && value.scope === 'schema-use' && typeof value.varName === 'string')
+  )
 }
 
 function isStaticValueExpression(value: unknown): value is StaticValueExpression {
@@ -345,6 +467,53 @@ function isStaticValueExpression(value: unknown): value is StaticValueExpression
   if (value.type === 'number') return isValueExpression(value, 'number')
   if (value.type === 'file') return isValueExpression(value, 'file')
   return false
+}
+
+function isFunctionInputDef(value: unknown): boolean {
+  if (!isRecord(value) || typeof value.name !== 'string') return false
+  if (isValueType(value.type)) return true
+  return value.type === 'choice-group' && isChoiceGroupShape(value.shape)
+}
+
+function isFunctionInputExpression(value: unknown): boolean {
+  return isStaticValueExpression(value) || isChoiceGroupExpression(value)
+}
+
+function isChoiceGroupExpression(value: unknown): value is ChoiceGroupExpression {
+  if (
+    !isRecord(value) ||
+    value.type !== 'choice-group' ||
+    !isChoiceGroupSelection(value.selection)
+  ) {
+    return false
+  }
+  if (value.source === 'global') return true
+  return value.source === 'local' && typeof value.name === 'string'
+}
+
+function isChoiceGroupShape(value: unknown): value is ChoiceGroupShape {
+  if (!isRecord(value) || typeof value.kind !== 'string') return false
+  if (value.kind === 'question') return true
+  return (
+    (value.kind === 'range' || value.kind === 'all') &&
+    Array.isArray(value.pageCounts) &&
+    value.pageCounts.every(isFiniteNumber)
+  )
+}
+
+function isChoiceGroupSelection(value: unknown): boolean {
+  if (!isRecord(value) || typeof value.kind !== 'string') return false
+  if (value.kind === 'all') return true
+  if (value.kind === 'range') return isFiniteNumber(value.startPage)
+  return (
+    value.kind === 'question' &&
+    isFiniteNumber(value.pageIndex) &&
+    isFiniteNumber(value.questionIndex)
+  )
+}
+
+function isChoiceGroupRef(value: unknown): boolean {
+  return isRecord(value) && value.scope === 'local' && typeof value.name === 'string'
 }
 
 function isStringExpression(value: unknown): boolean {

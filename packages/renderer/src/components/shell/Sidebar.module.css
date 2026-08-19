@@ -58,19 +58,24 @@
   font-weight: 540;
   text-decoration: none;
   white-space: nowrap;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    transform 140ms ease;
 }
 
 .link:hover {
   color: var(--color-text-strong);
   background: var(--color-surface-hover);
+  transform: translateX(2px);
 }
 
-.link.active {
+.link[aria-current='page'] {
   color: var(--color-accent);
   font-weight: 650;
 }
 
-.link.active::before {
+.link[aria-current='page']::before {
   content: '';
   position: absolute;
   top: 10px;
@@ -79,6 +84,8 @@
   width: 3px;
   border-radius: 3px;
   background: var(--color-accent);
+  transform-origin: center;
+  animation: active-nav-indicator 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .link svg {
@@ -124,11 +131,16 @@
   font-weight: 540;
   white-space: nowrap;
   cursor: pointer;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    transform 140ms ease;
 }
 
 .collapseButton:hover {
   color: var(--color-text-strong);
   background: var(--color-surface-hover);
+  transform: translateX(2px);
 }
 
 .collapseButton:active {
@@ -164,7 +176,7 @@
   width: auto;
 }
 
-.sidebar[data-collapsed] .link.active::before {
+.sidebar[data-collapsed] .link[aria-current='page']::before {
   left: 0;
 }
 
@@ -181,4 +193,16 @@
   width: 42px;
   justify-content: center;
   padding: 0;
+}
+
+@keyframes active-nav-indicator {
+  from {
+    opacity: 0;
+    transform: scaleY(0.35);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
 }

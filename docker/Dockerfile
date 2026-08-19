@@ -86,7 +86,7 @@ RUN corepack enable && corepack prepare yarn@4.15.0
 # 2. 安装 OpenCode (使用官方安装脚本)
 RUN npm i -g opencode-ai@1.18.7 --allow-scripts=opencode-ai
 
-RUN npm i -g @openai/codex@0.146.0
+RUN npm i -g @openai/codex@0.147.0
 
 # 设置工作目录为仓库代码挂载点
 WORKDIR /workspace

@@ -11,6 +11,7 @@ import {
   registerFileStoreScheme
 } from '@ls101/file-store/main'
 import { join } from 'node:path'
+import { registerAppInfoHandlers } from './app-info'
 import { createMainWindow } from './window'
 import { registerWindowControlHandlers } from './window-controls'
 
@@ -39,6 +40,7 @@ function initializeApplication(): void {
   registerAIRouter({ baseDir: userDataDir })
   registerClipboard()
   registerFileDialog()
+  registerAppInfoHandlers()
   registerWindowControlHandlers()
 
   app.on('browser-window-created', (_event, window) => {

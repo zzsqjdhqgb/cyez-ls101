@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import type {
   AIRouterModelConfig,
+  AIRouterModelOption,
   AIRouterProviderConfigSummary,
-  AIRouterProviderType
+  AIRouterProviderType,
+  AIRouterReasoningConfig,
+  AIRouterReasoningEffort,
+  AIRouterReasoningOption
 } from '@ls101/airouter'
 import {
   AudioLines,
@@ -14,12 +18,12 @@ import {
   LockKeyhole,
   MessageSquareText,
   Mic,
+  Brain,
   Plus,
   Save,
   TestTube2,
   Trash2,
-  X,
-  type LucideIcon
+  X
 } from 'lucide-react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import {
@@ -46,12 +50,15 @@ import {
 import { formatAIRouterError } from './airouterError'
 import { AIRouterImageSettingsPage } from './AIRouterImageSettingsPage'
 import { AIRouterSpeechSettingsPage } from './AIRouterSpeechSettingsPage'
+import { AIRouterSpeechRecognitionSettingsPage } from './AIRouterSpeechRecognitionSettingsPage'
+import { AIRouterPronunciationSettingsPage } from './AIRouterPronunciationSettingsPage'
 import styles from './AIRouterSettingsPage.module.css'
 
 interface ProviderDraft {
   id?: string
   name: string
   type: AIRouterProviderType
+  catalogProviderId: string
   baseUrl: string
   apiKey: string
   hasApiKey: boolean
@@ -70,12 +77,115 @@ const defaultBaseUrls: Record<AIRouterProviderType, string> = {
   anthropic: 'https://api.anthropic.com/v1'
 }
 
+interface ProviderPreset {
+  id: string
+  name: string
+  type: AIRouterProviderType
+  baseUrl: string
+  catalogProviderId: string
+}
+
+const providerPresets: ProviderPreset[] = [
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    type: 'openai-compatible',
+    baseUrl: 'https://api.openai.com/v1',
+    catalogProviderId: 'openai'
+  },
+  {
+    id: 'anthropic',
+    name: 'Anthropic',
+    type: 'anthropic',
+    baseUrl: 'https://api.anthropic.com/v1',
+    catalogProviderId: 'anthropic'
+  },
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    type: 'openai-compatible',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    catalogProviderId: 'openrouter'
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    type: 'openai-compatible',
+    baseUrl: 'https://api.deepseek.com',
+    catalogProviderId: 'deepseek'
+  },
+  {
+    id: 'zhipuai',
+    name: 'Zhipu AI',
+    type: 'openai-compatible',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    catalogProviderId: 'zhipuai'
+  },
+  {
+    id: 'moonshotai',
+    name: 'Moonshot AI',
+    type: 'openai-compatible',
+    baseUrl: 'https://api.moonshot.ai/v1',
+    catalogProviderId: 'moonshotai'
+  },
+  {
+    id: 'siliconflow',
+    name: 'SiliconFlow',
+    type: 'openai-compatible',
+    baseUrl: 'https://api.siliconflow.com/v1',
+    catalogProviderId: 'siliconflow'
+  },
+  {
+    id: 'groq',
+    name: 'Groq',
+    type: 'openai-compatible',
+    baseUrl: 'https://api.groq.com/openai/v1',
+    catalogProviderId: 'groq'
+  },
+  {
+    id: 'xai',
+    name: 'xAI',
+    type: 'openai-compatible',
+    baseUrl: 'https://api.x.ai/v1',
+    catalogProviderId: 'xai'
+  },
+  {
+    id: 'fireworks-ai',
+    name: 'Fireworks AI',
+    type: 'openai-compatible',
+    baseUrl: 'https://api.fireworks.ai/inference/v1',
+    catalogProviderId: 'fireworks-ai'
+  },
+  {
+    id: 'lmstudio',
+    name: 'LM Studio',
+    type: 'openai-compatible',
+    baseUrl: 'http://127.0.0.1:1234/v1',
+    catalogProviderId: 'lmstudio'
+  },
+  {
+    id: 'custom-openai',
+    name: '自定义 OpenAI Compatible',
+    type: 'openai-compatible',
+    baseUrl: '',
+    catalogProviderId: ''
+  },
+  {
+    id: 'custom-anthropic',
+    name: '自定义 Anthropic',
+    type: 'anthropic',
+    baseUrl: '',
+    catalogProviderId: ''
+  }
+]
+
 const sectionBasePath = '/settings/ai-router'
 const sections = [
   { id: 'text', label: '文本生成', icon: MessageSquareText },
   { id: 'image', label: '图像生成', icon: ImageIcon },
   { id: 'speech-synthesis', label: '语音合成', icon: AudioLines },
-  { id: 'speech-recognition', label: '语音识别', icon: Mic }
+  { id: 'speech-recognition', label: '语音识别', icon: Mic },
+  { id: 'pronunciation', label: 'AI 语音评测', icon: Brain }
 ] as const
 
 export function AIRouterSettingsPage({
@@ -119,13 +229,11 @@ export function AIRouterSettingsPage({
         />
         <Route
           path="speech-recognition"
-          element={
-            <AIRouterPlaceholder
-              icon={Mic}
-              title="语音识别"
-              description="语音识别模型的 Provider、模型和连接测试将在这里配置。"
-            />
-          }
+          element={<AIRouterSpeechRecognitionSettingsPage application={application} />}
+        />
+        <Route
+          path="pronunciation"
+          element={<AIRouterPronunciationSettingsPage application={application} />}
         />
         <Route path="*" element={<Navigate replace to="text" />} />
       </Routes>
@@ -288,9 +396,10 @@ export function AIRouterTextSettingsPage({
                 <span className={styles.providerText}>
                   <span className={styles.providerName}>{config.name}</span>
                   <span className={styles.providerMeta}>
-                    <span>{providerLabels[config.type]}</span>
+                    <span>{providerPresetName(config)}</span>
                     <span>
-                      {config.models.filter((model) => model.enabled).length} 个已启用模型
+                      {config.models.filter((model: AIRouterModelConfig) => model.enabled).length}{' '}
+                      个已启用模型
                     </span>
                     <span>{config.hasApiKey ? '已配置密钥' : '未配置密钥'}</span>
                   </span>
@@ -358,33 +467,45 @@ export function AIRouterTextSettingsPage({
                     value={draft.name}
                   />
                 </SettingsRow>
-                <SettingsRow label="Provider 类型">
+                <SettingsRow
+                  label="Provider"
+                  description="预设会自动配置兼容协议、Base URL 和 models.dev 模型目录。"
+                >
                   {draft.id ? (
                     <span className={styles.providerTypeControl}>
                       <input
-                        aria-label="Provider 类型"
+                        aria-label="Provider"
                         className={styles.input}
                         disabled
                         type="text"
-                        value={providerLabels[draft.type]}
+                        value={providerPresetName(draft)}
                       />
-                      <span className={styles.providerTypeLock} title="Provider 类型不可修改">
+                      <span className={styles.providerTypeLock} title="Provider 不可修改">
                         <LockKeyhole aria-hidden="true" />
                       </span>
                     </span>
                   ) : (
                     <select
-                      aria-label="Provider 类型"
+                      aria-label="Provider"
                       className={styles.input}
                       disabled={Boolean(busy)}
                       onChange={(event) => {
-                        const type = event.target.value as AIRouterProviderType
-                        setDraft({ ...draft, type, baseUrl: defaultBaseUrls[type] })
+                        const preset = providerPresets.find(({ id }) => id === event.target.value)
+                        if (!preset) return
+                        setDraft({
+                          ...draft,
+                          type: preset.type,
+                          baseUrl: preset.baseUrl || defaultBaseUrls[preset.type],
+                          catalogProviderId: preset.catalogProviderId
+                        })
                       }}
-                      value={draft.type}
+                      value={providerPresetId(draft)}
                     >
-                      <option value="openai-compatible">OpenAI Compatible</option>
-                      <option value="anthropic">Anthropic</option>
+                      {providerPresets.map((preset) => (
+                        <option key={preset.id} value={preset.id}>
+                          {preset.name}
+                        </option>
+                      ))}
                     </select>
                   )}
                 </SettingsRow>
@@ -396,7 +517,19 @@ export function AIRouterTextSettingsPage({
                     aria-label="Base URL"
                     className={styles.inputWide}
                     disabled={Boolean(busy)}
-                    onChange={(event) => setDraft({ ...draft, baseUrl: event.target.value })}
+                    onChange={(event) => {
+                      const baseUrl = event.target.value
+                      const preset = providerPresets.find(
+                        (candidate) =>
+                          candidate.type === draft.type &&
+                          candidate.baseUrl === baseUrl.replace(/\/$/, '')
+                      )
+                      setDraft({
+                        ...draft,
+                        baseUrl,
+                        catalogProviderId: preset?.catalogProviderId ?? ''
+                      })
+                    }}
                     value={draft.baseUrl}
                   />
                 </SettingsRow>
@@ -471,10 +604,7 @@ export function AIRouterTextSettingsPage({
                           setDraft({
                             ...draft,
                             models: discovered
-                              .map(
-                                (model) =>
-                                  existing.get(model.id) ?? { id: model.id, enabled: false }
-                              )
+                              .map((model) => mergeDiscoveredModel(existing.get(model.id), model))
                               .concat(
                                 draft.models.filter(
                                   (model) => !discovered.some((item) => item.id === model.id)
@@ -531,41 +661,26 @@ export function AIRouterTextSettingsPage({
                 {draft.models.length ? (
                   <div className={styles.modelList}>
                     {draft.models.map((model) => (
-                      <div className={styles.modelItem} key={model.id}>
-                        <label className={styles.modelToggle}>
-                          <input
-                            checked={model.enabled}
-                            disabled={Boolean(busy)}
-                            onChange={(event) =>
-                              setDraft({
-                                ...draft,
-                                models: draft.models.map((candidate) =>
-                                  candidate.id === model.id
-                                    ? { ...candidate, enabled: event.target.checked }
-                                    : candidate
-                                )
-                              })
-                            }
-                            type="checkbox"
-                          />
-                          <span>{model.id}</span>
-                        </label>
-                        <button
-                          aria-label={`移除模型 ${model.id}`}
-                          className={styles.removeModel}
-                          disabled={Boolean(busy)}
-                          onClick={() =>
-                            setDraft({
-                              ...draft,
-                              models: draft.models.filter((candidate) => candidate.id !== model.id)
-                            })
-                          }
-                          title="移除模型"
-                          type="button"
-                        >
-                          <Trash2 aria-hidden="true" />
-                        </button>
-                      </div>
+                      <ModelSettings
+                        busy={Boolean(busy)}
+                        key={model.id}
+                        model={model}
+                        providerType={draft.type}
+                        onChange={(next) =>
+                          setDraft({
+                            ...draft,
+                            models: draft.models.map((candidate) =>
+                              candidate.id === model.id ? next : candidate
+                            )
+                          })
+                        }
+                        onRemove={() =>
+                          setDraft({
+                            ...draft,
+                            models: draft.models.filter((candidate) => candidate.id !== model.id)
+                          })
+                        }
+                      />
                     ))}
                   </div>
                 ) : (
@@ -697,33 +812,11 @@ export function AIRouterTextSettingsPage({
   )
 }
 
-function AIRouterPlaceholder({
-  icon: Icon,
-  title,
-  description
-}: {
-  icon: LucideIcon
-  title: string
-  description: string
-}): JSX.Element {
-  return (
-    <section className={styles.placeholder}>
-      <div className={styles.placeholderIcon}>
-        <Icon aria-hidden="true" />
-      </div>
-      <div className={styles.placeholderText}>
-        <span className={styles.placeholderBadge}>临时占位</span>
-        <h2>{title}</h2>
-        <p>{description}</p>
-      </div>
-    </section>
-  )
-}
-
 function createDraft(): ProviderDraft {
   return {
     name: '',
     type: 'openai-compatible',
+    catalogProviderId: 'openai',
     baseUrl: defaultBaseUrls['openai-compatible'],
     apiKey: '',
     hasApiKey: false,
@@ -734,8 +827,9 @@ function createDraft(): ProviderDraft {
 function draftFromConfig(config: AIRouterProviderConfigSummary): ProviderDraft {
   return {
     ...config,
+    catalogProviderId: config.catalogProviderId || '',
     apiKey: '',
-    models: config.models.map((model) => ({ ...model }))
+    models: config.models.map((model: AIRouterModelConfig) => ({ ...model }))
   }
 }
 
@@ -755,6 +849,7 @@ function isDraftModified(
   if (
     draft.name !== persisted.name ||
     draft.type !== persisted.type ||
+    draft.catalogProviderId !== (persisted.catalogProviderId || '') ||
     draft.baseUrl !== persisted.baseUrl ||
     draft.models.length !== persisted.models.length
   ) {
@@ -762,7 +857,7 @@ function isDraftModified(
   }
   return draft.models.some((model, index) => {
     const savedModel = persisted.models[index]
-    return !savedModel || model.id !== savedModel.id || model.enabled !== savedModel.enabled
+    return !savedModel || JSON.stringify(model) !== JSON.stringify(savedModel)
   })
 }
 
@@ -776,6 +871,7 @@ function toConfigInput(
     id: draft.id,
     name: draft.name,
     type: draft.type,
+    catalogProviderId: draft.catalogProviderId,
     baseUrl: draft.baseUrl,
     models: draft.models,
     apiKey: !clearApiKey && draft.apiKey !== apiKeyBaseline ? draft.apiKey : undefined,
@@ -786,7 +882,298 @@ function toConfigInput(
 function addManualModel(draft: ProviderDraft, value: string): ProviderDraft {
   const id = value.trim()
   if (!id || draft.models.some((model) => model.id === id)) return draft
-  return { ...draft, models: [...draft.models, { id, enabled: true }] }
+  return {
+    ...draft,
+    models: [...draft.models, { id, enabled: true, maxOutputTokens: 128 * 1024 }]
+  }
+}
+
+function ModelSettings({
+  model,
+  providerType,
+  busy,
+  onChange,
+  onRemove
+}: {
+  model: AIRouterModelConfig
+  providerType: AIRouterProviderType
+  busy: boolean
+  onChange(model: AIRouterModelConfig): void
+  onRemove(): void
+}): JSX.Element {
+  const metadata = model.metadata
+  const options = metadata?.reasoningOptions ?? []
+  const maxOutput = metadata?.outputLimit
+  const reasoningModes = reasoningModeOptions(options, providerType, metadata?.reasoning === true)
+  const selectedMode = reasoningMode(model.reasoning)
+  return (
+    <details className={styles.modelDetailsItem}>
+      <summary className={styles.modelSummary}>
+        <span className={styles.modelToggle}>
+          <input
+            aria-label={model.id}
+            checked={model.enabled}
+            disabled={busy}
+            onChange={(event) => onChange({ ...model, enabled: event.target.checked })}
+            onClick={(event) => event.stopPropagation()}
+            type="checkbox"
+          />
+          <span className={styles.modelIdentity}>
+            <strong>{metadata?.name || model.id}</strong>
+            {metadata?.name ? <small>{model.id}</small> : null}
+            <small>{modelSummary(model)}</small>
+          </span>
+        </span>
+        <button
+          aria-label={`移除模型 ${model.id}`}
+          className={styles.removeModel}
+          disabled={busy}
+          onClick={(event) => {
+            event.preventDefault()
+            onRemove()
+          }}
+          title="移除模型"
+          type="button"
+        >
+          <Trash2 aria-hidden="true" />
+        </button>
+      </summary>
+      <div className={styles.modelSettings}>
+        <label className={styles.modelField}>
+          <span>最大输出</span>
+          <span className={styles.numberWithUnit}>
+            <input
+              aria-label={`${model.id} 最大输出`}
+              disabled={busy}
+              max={maxOutput}
+              min={1}
+              onChange={(event) => {
+                const value = Number(event.target.value)
+                if (Number.isInteger(value) && value > 0) {
+                  onChange({
+                    ...model,
+                    maxOutputTokens: maxOutput ? Math.min(value, maxOutput) : value
+                  })
+                }
+              }}
+              type="number"
+              value={model.maxOutputTokens ?? defaultModelOutput(model)}
+            />
+            <small>tokens{maxOutput ? ` / 官方上限 ${formatTokens(maxOutput)}` : ''}</small>
+          </span>
+        </label>
+        {metadata?.reasoning === false ? (
+          <p className={styles.modelNotice}>该模型不支持推理。</p>
+        ) : reasoningModes.length ? (
+          <>
+            <label className={styles.modelField}>
+              <span>推理模式</span>
+              <select
+                aria-label={`${model.id} 推理模式`}
+                disabled={busy}
+                onChange={(event) =>
+                  onChange({
+                    ...model,
+                    reasoning: initialReasoning(event.target.value, options)
+                  })
+                }
+                value={selectedMode}
+              >
+                <option value="default">Provider 默认</option>
+                {reasoningModes.map((mode) => (
+                  <option key={mode.value} value={mode.value}>
+                    {mode.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {model.reasoning?.type === 'effort' ? (
+              <label className={styles.modelField}>
+                <span>推理强度</span>
+                <select
+                  aria-label={`${model.id} 推理强度`}
+                  disabled={busy}
+                  onChange={(event) =>
+                    onChange({
+                      ...model,
+                      reasoning: {
+                        type: 'effort',
+                        effort: event.target.value as AIRouterReasoningEffort
+                      }
+                    })
+                  }
+                  value={model.reasoning.effort}
+                >
+                  {effortValues(options).map((effort) => (
+                    <option key={effort} value={effort}>
+                      {effortLabel(effort)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            {model.reasoning?.type === 'budget_tokens' ? (
+              <label className={styles.modelField}>
+                <span>推理预算</span>
+                <span className={styles.numberWithUnit}>
+                  <input
+                    aria-label={`${model.id} 推理预算`}
+                    disabled={busy}
+                    min={budgetOption(options)?.min ?? 1}
+                    max={budgetOption(options)?.max}
+                    onChange={(event) =>
+                      onChange({
+                        ...model,
+                        reasoning: {
+                          type: 'budget_tokens',
+                          budgetTokens: Number(event.target.value)
+                        }
+                      })
+                    }
+                    type="number"
+                    value={model.reasoning.budgetTokens}
+                  />
+                  <small>tokens</small>
+                </span>
+              </label>
+            ) : null}
+          </>
+        ) : metadata?.reasoning ? (
+          <p className={styles.modelNotice}>
+            支持推理，但 models.dev 未提供可调参数；使用 Provider 默认设置。
+          </p>
+        ) : (
+          <p className={styles.modelNotice}>暂无 models.dev 推理能力数据。</p>
+        )}
+      </div>
+    </details>
+  )
+}
+
+function mergeDiscoveredModel(
+  existing: AIRouterModelConfig | undefined,
+  discovered: AIRouterModelOption
+): AIRouterModelConfig {
+  const metadata = {
+    name: discovered.name,
+    contextLimit: discovered.contextLimit,
+    outputLimit: discovered.outputLimit,
+    reasoning: discovered.reasoning,
+    reasoningOptions: discovered.reasoningOptions,
+    structuredOutput: discovered.structuredOutput,
+    attachment: discovered.attachment
+  }
+  const cleanMetadata = Object.fromEntries(
+    Object.entries(metadata).filter(([, value]) => value !== undefined)
+  )
+  const next = existing ?? { id: discovered.id, enabled: false }
+  return {
+    ...next,
+    maxOutputTokens: Math.min(
+      next.maxOutputTokens ?? 128 * 1024,
+      discovered.outputLimit ?? 128 * 1024
+    ),
+    ...(Object.keys(cleanMetadata).length ? { metadata: cleanMetadata } : {})
+  }
+}
+
+function providerPresetId(
+  draft: Pick<ProviderDraft, 'type' | 'baseUrl' | 'catalogProviderId'>
+): string {
+  return (
+    providerPresets.find(
+      (preset) =>
+        preset.type === draft.type &&
+        preset.catalogProviderId === draft.catalogProviderId &&
+        preset.baseUrl === draft.baseUrl.replace(/\/$/, '')
+    )?.id ?? (draft.type === 'anthropic' ? 'custom-anthropic' : 'custom-openai')
+  )
+}
+
+function providerPresetName(
+  draft: Pick<ProviderDraft, 'type' | 'baseUrl' | 'catalogProviderId'>
+): string {
+  const id = providerPresetId(draft)
+  return providerPresets.find((preset) => preset.id === id)?.name ?? providerLabels[draft.type]
+}
+
+function defaultModelOutput(model: AIRouterModelConfig): number {
+  return Math.min(128 * 1024, model.metadata?.outputLimit ?? 128 * 1024)
+}
+
+function modelSummary(model: AIRouterModelConfig): string {
+  const values = [`输出 ${formatTokens(model.maxOutputTokens ?? defaultModelOutput(model))}`]
+  if (model.metadata?.contextLimit)
+    values.unshift(`上下文 ${formatTokens(model.metadata.contextLimit)}`)
+  if (model.metadata?.reasoning) values.push('推理')
+  if (model.metadata?.structuredOutput) values.push('结构化输出')
+  return values.join(' · ')
+}
+
+function formatTokens(value: number): string {
+  if (value >= 1_000_000) return `${Number((value / 1_000_000).toFixed(1))}M`
+  if (value >= 1_000) return `${Number((value / 1_000).toFixed(1))}K`
+  return String(value)
+}
+
+function reasoningMode(reasoning?: AIRouterReasoningConfig): string {
+  if (!reasoning) return 'default'
+  if (reasoning.type === 'effort' || reasoning.type === 'budget_tokens') return reasoning.type
+  return reasoning.type
+}
+
+function reasoningModeOptions(
+  options: AIRouterReasoningOption[],
+  providerType: AIRouterProviderType,
+  reasoningSupported: boolean
+): Array<{ value: string; label: string }> {
+  const modes: Array<{ value: string; label: string }> = []
+  const hasToggle = options.some((option) => option.type === 'toggle')
+  const hasEffort = options.some((option) => option.type === 'effort')
+  const hasBudget = options.some((option) => option.type === 'budget_tokens')
+  if (
+    hasToggle ||
+    (reasoningSupported && !hasEffort && (providerType !== 'anthropic' || !hasBudget)) ||
+    (providerType !== 'anthropic' && hasBudget && !hasEffort)
+  ) {
+    modes.push({ value: 'enabled', label: '开启' }, { value: 'disabled', label: '关闭' })
+  }
+  if (hasEffort) {
+    modes.push({ value: 'effort', label: '按强度' })
+  }
+  if (providerType === 'anthropic' && hasBudget) {
+    modes.push({ value: 'budget_tokens', label: '按 token 预算' })
+  }
+  return modes
+}
+
+function initialReasoning(
+  value: string,
+  options: AIRouterReasoningOption[]
+): AIRouterReasoningConfig | undefined {
+  if (value === 'default') return undefined
+  if (value === 'enabled' || value === 'disabled') return { type: value }
+  if (value === 'effort') return { type: 'effort', effort: effortValues(options)[0] ?? 'medium' }
+  if (value === 'budget_tokens') {
+    return { type: 'budget_tokens', budgetTokens: budgetOption(options)?.min ?? 1024 }
+  }
+  return undefined
+}
+
+function effortValues(options: AIRouterReasoningOption[]): AIRouterReasoningEffort[] {
+  const option = options.find((candidate) => candidate.type === 'effort')
+  return option?.type === 'effort' ? option.values : []
+}
+
+function budgetOption(
+  options: AIRouterReasoningOption[]
+): Extract<AIRouterReasoningOption, { type: 'budget_tokens' }> | undefined {
+  const option = options.find((candidate) => candidate.type === 'budget_tokens')
+  return option?.type === 'budget_tokens' ? option : undefined
+}
+
+function effortLabel(effort: AIRouterReasoningEffort): string {
+  return effort
 }
 
 function upsert(

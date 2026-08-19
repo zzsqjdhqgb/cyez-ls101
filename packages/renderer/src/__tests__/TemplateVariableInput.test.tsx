@@ -13,10 +13,52 @@ import type {
 import { TemplateVariableInput } from '../features/templates/TemplateVariableInput'
 import {
   collectTemplateVariableCandidates,
+  parseSchemaTextExpression,
+  parseTextExpression,
+  schemaTextExpressionInputValue,
+  type SchemaAttachmentVariableCandidate,
   type TemplateVariableCandidate
 } from '../features/templates/TemplateVariableInputModel'
 
 afterEach(cleanup)
+
+describe('SchemaUse 变量文本格式', () => {
+  it('只在 SchemaUse 文本中将 [@this.name] 解析为局部附件', () => {
+    const schemaExpression = parseSchemaTextExpression('![图]([@this.picture])')
+    expect(schemaExpression.parts[1]).toEqual({
+      type: 'variable',
+      ref: { scope: 'schema-use', varName: 'picture' }
+    })
+    expect(schemaTextExpressionInputValue(schemaExpression)).toBe('![图]([@this.picture])')
+
+    expect(parseTextExpression('[@this.picture]').parts[0]).toEqual({
+      type: 'variable',
+      ref: { scope: 'interface', alias: 'this', varName: 'picture' }
+    })
+  })
+
+  it('保留图片派生变量名中的点号', () => {
+    expect(parseTextExpression('[@exam.picture.inst]').parts[0]).toEqual({
+      type: 'variable',
+      ref: { scope: 'interface', alias: 'exam', varName: 'picture.inst' }
+    })
+    expect(parseSchemaTextExpression('[@exam.picture.img]').parts[0]).toEqual({
+      type: 'variable',
+      ref: { scope: 'interface', alias: 'exam', varName: 'picture.img' }
+    })
+  })
+
+  it('解析带题号前缀的 Interface 变量名', () => {
+    expect(parseTextExpression('[@oral.3_dialogue]').parts[0]).toEqual({
+      type: 'variable',
+      ref: { scope: 'interface', alias: 'oral', varName: '3_dialogue' }
+    })
+    expect(parseTextExpression('[@oral.4_picture.img]').parts[0]).toEqual({
+      type: 'variable',
+      ref: { scope: 'interface', alias: 'oral', varName: '4_picture.img' }
+    })
+  })
+})
 
 const candidates: TemplateVariableCandidate[] = [
   {
@@ -72,6 +114,31 @@ function TextHarness({
   )
 }
 
+function SchemaTextHarness(): JSX.Element {
+  const [value, setValue] = useState(parseSchemaTextExpression(''))
+  const attachments: SchemaAttachmentVariableCandidate[] = [
+    {
+      key: 'schema-use:reference',
+      label: 'this.reference',
+      sourceLabel: '当前评分单元附件',
+      type: 'file',
+      ref: { scope: 'schema-use', varName: 'reference' }
+    }
+  ]
+  return (
+    <>
+      <TemplateVariableInput
+        mode="schema-text"
+        ariaLabel="Schema 文本"
+        candidates={attachments}
+        value={value}
+        onChange={setValue}
+      />
+      <output data-testid="schema-value">{JSON.stringify(value)}</output>
+    </>
+  )
+}
+
 function NumberHarness(): JSX.Element {
   const [value, setValue] = useState<ValueExpression<'number'>>({
     type: 'number',
@@ -95,7 +162,60 @@ function NumberHarness(): JSX.Element {
   )
 }
 
+function StringValueHarness(): JSX.Element {
+  const [value, setValue] = useState<ValueExpression<'string'>>({
+    type: 'string',
+    source: 'literal',
+    value: ''
+  })
+  return (
+    <>
+      <TemplateVariableInput
+        mode="value"
+        valueType="string"
+        ariaLabel="字符串"
+        candidates={candidates}
+        value={value}
+        onChange={setValue}
+      />
+      <output data-testid="string-value">{JSON.stringify(value)}</output>
+    </>
+  )
+}
+
 describe('TemplateVariableInput', () => {
+  it('inserts a Schema attachment reference into multiline text', () => {
+    render(<SchemaTextHarness />)
+    const input = screen.getByLabelText('Schema 文本')
+    fireEvent.change(input, { target: { value: '@ref', selectionStart: 4 } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(input).toHaveValue('[@this.reference]')
+    expect(screen.getByTestId('schema-value')).toHaveTextContent('"scope":"schema-use"')
+  })
+
+  it('allows newlines in text expressions', () => {
+    render(<TextHarness />)
+    const input = screen.getByLabelText('文本')
+
+    expect(input.tagName).toBe('TEXTAREA')
+    fireEvent.change(input, { target: { value: '第一行\n第二行', selectionStart: 9 } })
+
+    expect(input).toHaveValue('第一行\n第二行')
+    expect(screen.getByTestId('value')).toHaveTextContent('第一行\\n第二行')
+  })
+
+  it('allows newlines in string value expressions', () => {
+    render(<StringValueHarness />)
+    const input = screen.getByLabelText('字符串')
+
+    expect(input.tagName).toBe('TEXTAREA')
+    fireEvent.change(input, { target: { value: '第一行\n第二行', selectionStart: 9 } })
+
+    expect(input).toHaveValue('第一行\n第二行')
+    expect(screen.getByTestId('string-value')).toHaveTextContent('第一行\\n第二行')
+  })
+
   it('filters text variables by the live prefix and restores matches after deletion', () => {
     render(<TextHarness />)
     const input = screen.getByLabelText('文本')

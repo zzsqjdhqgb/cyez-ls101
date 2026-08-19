@@ -23,11 +23,13 @@ export interface InterfaceExchangePackage {
   version: 2
   exportedAt: string
   interface: InterfaceDef
+  builtin?: { builtinKey: string; interfaceId: string }
   instances: InterfaceExchangeInstance[]
 }
 
 export interface InterfacePackageInspection {
   interface: InterfaceDef
+  builtin?: { builtinKey: string; interfaceId: string }
   instances: Array<{
     instanceId: string
     name: string
@@ -57,6 +59,7 @@ export async function exportInterfacePackage(
   if (!def) throw new InterfaceRepositoryError('NOT_FOUND', `Interface not found: ${interfaceId}`)
 
   const instanceIds = await resolveExportSelection(repository, interfaceId, selection)
+  const builtinKey = await findBuiltinKey(repository, interfaceId)
   const instances: InterfaceExchangeInstance[] = []
 
   for (const instanceId of instanceIds) {
@@ -84,8 +87,20 @@ export async function exportInterfacePackage(
     version: 2,
     exportedAt: new Date().toISOString(),
     interface: def,
+    ...(builtinKey ? { builtin: { builtinKey, interfaceId } } : {}),
     instances
   }
+}
+
+async function findBuiltinKey(
+  repository: InterfaceRepository,
+  interfaceId: string
+): Promise<string | undefined> {
+  for (const builtinKey of await repository.listBuiltinKeys()) {
+    if ((await repository.listBuiltinVersionIds(builtinKey)).includes(interfaceId))
+      return builtinKey
+  }
+  return undefined
 }
 
 /** 严格检查交换包，但不写入仓储。可用于导入选择界面的预览。 */
@@ -118,7 +133,10 @@ export async function inspectInterfacePackage(
     }
   })
 
-  return { interface: value.interface, instances }
+  if (value.builtin && value.builtin.interfaceId !== value.interface.id) {
+    throw invalidPackage('Builtin Interface identity does not match package content')
+  }
+  return { interface: value.interface, builtin: value.builtin, instances }
 }
 
 /**
@@ -270,7 +288,7 @@ function assertExchangeInstance(
   }
 }
 
-async function exportedInstanceMatches(
+export async function exportedInstanceMatches(
   repository: InterfaceRepository,
   stored: LocatedInterfaceInstance,
   incoming: InterfaceExchangeInstance

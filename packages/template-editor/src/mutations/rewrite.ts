@@ -2,8 +2,10 @@ import type {
   ChoiceViewport,
   FrameNode,
   FunctionContent,
+  FunctionInputDef,
+  FunctionInputExpression,
   FunctionOutputDef,
-  SchemaBindingExpression,
+  SchemaTextExpression,
   SchemaUse,
   StaticValueExpression,
   TemplateNode,
@@ -41,6 +43,11 @@ export function prepareInsertedSubtree(source: TemplateNode, state: DefinitionSt
       const outputName = allocateName(current.outputName, 'answer', usedNames)
       if (!nameMap.has(current.outputName)) nameMap.set(current.outputName, outputName)
       return { ...current, id, outputName }
+    }
+    if (current.type === 'variable') {
+      const variableName = allocateName(current.variableName, 'value', usedNames)
+      if (!nameMap.has(current.variableName)) nameMap.set(current.variableName, variableName)
+      return { ...current, id, variableName }
     }
     const outputNames = Object.fromEntries(
       Object.entries(current.outputNames).map(([key, value]) => {
@@ -88,6 +95,7 @@ export function collectLocalNames(
       })
     }
     if (node.type === 'choice-question') names.add(node.outputName)
+    if (node.type === 'variable') names.add(node.variableName)
     if (node.type === 'function') Object.values(node.outputNames).forEach((name) => names.add(name))
   }
   visit(root)
@@ -96,20 +104,24 @@ export function collectLocalNames(
 
 export function mapFrameExpressions(
   frame: FrameNode,
-  mapRef: (ref: VariableRef) => VariableRef
+  mapRef: (ref: VariableRef) => VariableRef,
+  mapChoiceGroupName: (name: string) => string = (name) => name
 ): FrameNode {
-  return mapNodeExpressions(frame, mapRef) as FrameNode
+  return mapNodeExpressions(frame, mapRef, (viewport) => viewport, mapChoiceGroupName) as FrameNode
 }
 
 export function mapNodeExpressions(
   node: TemplateNode,
   mapRef: (ref: VariableRef) => VariableRef,
-  mapViewport: (viewport: ChoiceViewport) => ChoiceViewport = (viewport) => viewport
+  mapViewport: (viewport: ChoiceViewport) => ChoiceViewport = (viewport) => viewport,
+  mapChoiceGroupName: (name: string) => string = (name) => name
 ): TemplateNode {
   if (node.type === 'frame') {
     return {
       ...node,
-      children: node.children.map((child) => mapNodeExpressions(child, mapRef, mapViewport))
+      children: node.children.map((child) =>
+        mapNodeExpressions(child, mapRef, mapViewport, mapChoiceGroupName)
+      )
     }
   }
   if (node.type === 'choice-question') {
@@ -128,10 +140,13 @@ export function mapNodeExpressions(
       inputs: Object.fromEntries(
         Object.entries(node.inputs).map(([key, expression]) => [
           key,
-          mapStaticExpression(expression, mapRef)
+          mapFunctionInputExpression(expression, mapRef, mapChoiceGroupName)
         ])
       )
     }
+  }
+  if (node.type === 'variable') {
+    return { ...node, value: mapStaticExpression(node.value, mapRef) }
   }
   return {
     ...node,
@@ -141,7 +156,13 @@ export function mapNodeExpressions(
         if (block.type === 'text') return { ...block, text: mapTextExpression(block.text, mapRef) }
         if (block.type === 'image')
           return { ...block, src: mapStaticExpression(block.src, mapRef) as typeof block.src }
-        return { ...block, defaultViewport: mapViewport(block.defaultViewport) }
+        return {
+          ...block,
+          defaultViewport: mapChoiceViewportGroup(
+            mapViewport(block.defaultViewport),
+            mapChoiceGroupName
+          )
+        }
       })
     },
     timeline: node.timeline.map((step) => ({
@@ -152,7 +173,7 @@ export function mapNodeExpressions(
             choiceViewOverrides: Object.fromEntries(
               Object.entries(step.choiceViewOverrides).map(([key, viewport]) => [
                 key,
-                mapViewport(viewport)
+                mapChoiceViewportGroup(mapViewport(viewport), mapChoiceGroupName)
               ])
             )
           })
@@ -180,6 +201,26 @@ export function mapStaticExpression(
     : expression
 }
 
+function mapFunctionInputExpression(
+  expression: FunctionInputExpression,
+  mapRef: (ref: VariableRef) => VariableRef,
+  mapChoiceGroupName: (name: string) => string
+): FunctionInputExpression {
+  if (expression.type !== 'choice-group') return mapStaticExpression(expression, mapRef)
+  return expression.source === 'local'
+    ? { ...expression, name: mapChoiceGroupName(expression.name) }
+    : expression
+}
+
+function mapChoiceViewportGroup(
+  viewport: ChoiceViewport,
+  mapChoiceGroupName: (name: string) => string
+): ChoiceViewport {
+  return 'group' in viewport
+    ? { ...viewport, group: { ...viewport.group, name: mapChoiceGroupName(viewport.group.name) } }
+    : viewport
+}
+
 export function mapTextExpression(
   expression: TextExpression,
   mapRef: (ref: VariableRef) => VariableRef
@@ -198,29 +239,69 @@ export function mapSchemaUses(
 ): SchemaUse[] {
   return uses.map((use) => ({
     ...use,
-    bindings: Object.fromEntries(
-      Object.entries(use.bindings).map(([key, expression]) => [
+    inputBindings: Object.fromEntries(
+      Object.entries(use.inputBindings).map(([key, expression]) => [
         key,
-        mapSchemaExpression(expression, mapRef)
+        mapSchemaTextExpression(expression, mapRef)
       ])
-    )
+    ),
+    answerBindings: Object.fromEntries(
+      Object.entries(use.answerBindings).map(([key, binding]) => [
+        key,
+        binding.type === 'fixed-speech'
+          ? { ...binding, text: mapSchemaTextExpression(binding.text, mapRef) }
+          : binding
+      ])
+    ),
+    attachments: use.attachments.map((attachment) => ({
+      ...attachment,
+      file: mapStaticExpression(attachment.file, mapRef) as typeof attachment.file
+    }))
   }))
 }
 
-export function mapSchemaExpression(
-  expression: SchemaBindingExpression,
+export function mapSchemaTextExpression(
+  expression: SchemaTextExpression,
   mapRef: (ref: VariableRef) => VariableRef
-): SchemaBindingExpression {
-  if (expression.type === 'variable') return { ...expression, ...mapRef(expression) }
-  if (expression.type === 'concat') {
-    return {
-      ...expression,
-      parts: expression.parts.map((part) =>
-        part.type === 'variable' ? { ...part, ...mapRef(part) } : part
-      )
-    }
+): SchemaTextExpression {
+  return {
+    ...expression,
+    parts: expression.parts.map((part) =>
+      part.type === 'variable' && part.ref.scope !== 'schema-use'
+        ? { ...part, ref: mapRef(part.ref) }
+        : part
+    )
   }
-  return expression
+}
+
+export function renameSchemaAttachmentReferences(
+  use: SchemaUse,
+  previous: string,
+  next: string
+): SchemaUse {
+  const rename = (expression: SchemaTextExpression): SchemaTextExpression => ({
+    ...expression,
+    parts: expression.parts.map((part) =>
+      part.type === 'variable' && part.ref.scope === 'schema-use' && part.ref.varName === previous
+        ? { ...part, ref: { ...part.ref, varName: next } }
+        : part
+    )
+  })
+  return {
+    ...use,
+    inputBindings: Object.fromEntries(
+      Object.entries(use.inputBindings).map(([inputId, expression]) => [
+        inputId,
+        rename(expression)
+      ])
+    ),
+    answerBindings: Object.fromEntries(
+      Object.entries(use.answerBindings).map(([answerId, binding]) => [
+        answerId,
+        binding.type === 'fixed-speech' ? { ...binding, text: rename(binding.text) } : binding
+      ])
+    )
+  }
 }
 
 export function renameLocalReferences(
@@ -285,7 +366,9 @@ export function renameDefinitionLocalReferences(
 }
 
 function renameFrameLocalReferences(frame: FrameNode, previous: string, next: string): FrameNode {
-  return mapFrameExpressions(frame, localReferenceRenamer(previous, next))
+  return mapFrameExpressions(frame, localReferenceRenamer(previous, next), (name) =>
+    name === previous ? next : name
+  )
 }
 
 function renameSchemaLocalReferences(
@@ -295,15 +378,15 @@ function renameSchemaLocalReferences(
 ): SchemaUse[] {
   return mapSchemaUses(uses, localReferenceRenamer(previous, next)).map((use) => ({
     ...use,
-    bindings: Object.fromEntries(
-      Object.entries(use.bindings).map(([key, expression]) => {
-        if (
-          (expression.type === 'record-output' || expression.type === 'choice-output') &&
-          expression.name === previous
-        ) {
-          return [key, { ...expression, name: next }]
+    answerBindings: Object.fromEntries(
+      Object.entries(use.answerBindings).map(([key, binding]) => {
+        if (binding.type === 'text' && binding.name === previous) {
+          return [key, { ...binding, name: next }]
         }
-        return [key, expression]
+        if (binding.type !== 'text' && binding.audio.name === previous) {
+          return [key, { ...binding, audio: { ...binding.audio, name: next } }]
+        }
+        return [key, binding]
       })
     )
   }))
@@ -317,7 +400,13 @@ export function rewriteChoiceViewport(
   viewport: ChoiceViewport,
   idMap: ReadonlyMap<string, string>
 ): ChoiceViewport {
-  if (viewport.mode !== 'focus' || viewport.questionRef.scope === 'absolute') return viewport
+  if (
+    viewport.mode !== 'focus' ||
+    'group' in viewport ||
+    viewport.questionRef.scope === 'absolute'
+  ) {
+    return viewport
+  }
   return {
     ...viewport,
     questionRef: {
@@ -332,4 +421,23 @@ export function defaultExpression(type: ValueType): StaticValueExpression {
   if (type === 'number') return { type: 'number', source: 'literal', value: 0 }
   if (type === 'file') return { type: 'file', source: 'literal', value: '' }
   return { type: 'string', source: 'literal', value: '' }
+}
+
+export function defaultFunctionInputExpression(input: FunctionInputDef): FunctionInputExpression {
+  if (input.type !== 'choice-group') return defaultExpression(input.type)
+  if (input.shape.kind === 'question') {
+    return {
+      type: 'choice-group',
+      source: 'global',
+      selection: { kind: 'question', pageIndex: 0, questionIndex: 0 }
+    }
+  }
+  if (input.shape.kind === 'range') {
+    return {
+      type: 'choice-group',
+      source: 'global',
+      selection: { kind: 'range', startPage: 0 }
+    }
+  }
+  return { type: 'choice-group', source: 'global', selection: { kind: 'all' } }
 }

@@ -1,6 +1,14 @@
 # AI Router
 
-`@ls101/airouter` 为 Electron main 和 renderer 提供文本生成、图像生成与语音合成基础设施。三类 Provider 使用相互独立的普通配置、模型列表和加密密钥；AIRouter 不保存业务图片文件。
+`@ls101/airouter` 为 Electron main 和 renderer 提供文本生成、图像生成、语音合成与语音识别基础设施。文本、图像和语音合成 Provider 使用相互独立的普通配置、模型列表和加密密钥；首版语音识别是无需 Provider 配置或密钥的内置运行时。AIRouter 不保存业务图片或录音文件。
+
+### 文本模型目录与生成参数
+
+文本 Provider 可以关联 [models.dev](https://models.dev) 的 Provider 目录。目录只用于补充模型名称、上下文/输出限制、推理能力和结构化输出能力；模型发现仍然使用用户配置的 Provider `/models` 接口。目录请求失败时不影响自定义模型使用。
+
+每个文本模型保存自己的最大输出长度和推理配置。未显式设置最大输出时，运行时默认使用 `min(131072, models.dev 的 limit.output)`；未匹配目录的模型默认使用 `131072`。当前不发送 `temperature`。
+
+推理控件按目录的 `reasoning_options` 动态显示：支持开关、effort 档位或 Anthropic 的 token budget。OpenAI/兼容协议使用 AI SDK 的标准 reasoning effort；Anthropic token budget 通过 `providerOptions.anthropic.thinking` 发送。没有对应目录能力时不向 Provider 发送推理参数。
 
 ## 文本生成
 
@@ -24,6 +32,64 @@ interface AIRouterGeneratedImage {
 `openai-compatible` Provider 使用 AI SDK `generateImage()` 和 OpenAI image model。一次调用只返回一张图片；prompt 不能为空，可选尺寸范围为 1 到 8192，结果必须是 `image/*` 且不能超过 20 MB。图像通过 IPC 返回 renderer，不创建临时文件。
 
 图像请求使用独立的 start/result/error/abort IPC 通道，因此 renderer 的 `AbortSignal` 可以取消 main 中的远端请求。取消时 client 以 `AbortError` 拒绝 Promise。
+
+## 语音识别
+
+语音识别首版只提供一个内置选项：
+
+```typescript
+{
+  providerId: 'builtin-qwen3-asr',
+  providerName: '内置语音识别',
+  modelId: 'qwen3-asr-0.6b',
+  modelName: 'Qwen3 ASR 0.6B'
+}
+```
+
+开发环境从 `externals/ai/stt/model/` 读取模型，打包后从 `resources/assets/stt/` 读取。只有 Qwen3 ASR 的 `conv_frontend.onnx`、量化 encoder/decoder、tokenizer 目录和 `silero_vad.onnx` 全部存在时，模型才会出现在可选列表中。
+
+公共请求和结果为：
+
+```typescript
+interface AIRouterSpeechRecognitionRequest {
+  providerConfigId: string
+  modelId: string
+  audio: {
+    data: Uint8Array
+    mediaType: string
+    filename?: string
+  }
+}
+
+interface AIRouterSpeechRecognitionResult {
+  text: string
+}
+```
+
+请求必须指向内置 Provider 和模型，音频必须非空、不超过 100 MB，且媒体类型以 `audio/` 开头。main process 将请求交给惰性初始化的持久 Worker；Worker 先用 FFmpeg 转换为 16 kHz 单声道 PCM WAV，再用 Silero VAD 分段，依次调用 sherpa-onnx Qwen3 离线识别并按顺序拼接文本。临时音频目录在每次请求结束后删除，模型本身留在 Worker 中供后续请求复用。
+
+识别使用独立的 start/result/error/abort IPC 通道。renderer client 接受 `AbortSignal`；取消会终止当前 Worker、拒绝尚未完成的识别并在下一次请求时重新初始化，以确保原生推理不会在后台继续占用资源。首版业务调用按顺序发起识别，尚未提供并发调度。
+
+`设置 → AI 引擎 → 语音识别` 当前仍是占位页。内置 Qwen3 ASR 不需要用户配置，现阶段由 AI 评分会话直接枚举和选择；设置页尚未提供模型下载、路径选择或识别测试界面。
+
+## 发音评测
+
+发音评测与语音识别是两个独立能力。首版内置模型为 `facebook/wav2vec2-lv-60-espeak-cv-ft` 的固定 ONNX INT8 转换版本，Provider 和模型 ID 为：
+
+```text
+Provider: builtin-facebook-phoneme
+Model: wav2vec2-lv-60-espeak-cv-ft-int8-c69750f
+```
+
+模型输入是 16 kHz 单声道音频，输出逐帧音素 logits。main process 在 Worker 中完成 FFmpeg 解码、输入归一化和 ONNX 推理，再将结果交给 `@ls101/grading-engine/pronunciation` 做强制对齐。固定朗读文本由 CMUdict 生成美式英语参考音素，模型输出和参考音素都保留原生 eSpeak IPA token。
+
+发音评测结果不是普通 ASR 转写：它包含逐词/逐音素时间区间、参考音素、可能的替代音素、置信度、整体匹配度和 Markdown 反馈。当前结果明确标记为实验性；未经中国学生语料校准时，低置信度偏差会被过滤，但仍需结合原始录音复听。
+
+模型资产不默认写入源码仓库。运行 `node scripts/download-pronunciation-model.js` 可按固定 revision 和 SHA-256 断点下载；构建时复制到 `resources/assets/pronunciation`。完成构建后可以用以下命令验证真实录音：
+
+```text
+node scripts/test-pronunciation.js <audio-file> --text "Reference sentence"
+```
 
 ## 语音合成
 
@@ -213,7 +279,7 @@ manifest v1 采用以下结构：
 
 `runtime.minimumAppVersion` 使用 SemVer 格式。导入模型包和加载已安装模型包时都必须与 Electron 应用当前版本比较，不能只校验字段类型。
 
-setup 阶段下载的模型原始文件统一放在仓库根目录的 `model-assets/`，不与图标等应用资源混放。构建阶段读取 `model-assets/tts/` 生成独立的 Pocket TTS ZIP；该 ZIP 输出到 `dist/`，与 exe、安装包并列发布，不写入 Electron 安装包。TTS WASM runtime 仍随应用本体发布。
+setup 阶段下载的 AI 外部文件统一放在仓库根目录的 `externals/ai/`，不与 Git 管理的源码和应用资源混放。Qwen3 ASR 下载脚本在运行时读取 GitHub Release 与 Hugging Face API，并要求官方元数据、仓库内固定清单和实际文件的 SHA-256 一致；API 不可达时固定清单仍支持离线缓存校验，上游变化则必须通过显式命令更新并审查清单。压缩包保留在不会进入安装包的 `externals/ai/stt/downloads/`。构建阶段读取 `externals/ai/pocket-tts/model/` 生成独立的 Pocket TTS ZIP；该 ZIP 输出到 `dist/`，与 exe、安装包并列发布，不写入 Electron 安装包。TTS WASM runtime 仍随应用本体发布。
 
 ### 模型文件去重
 
@@ -293,16 +359,20 @@ Interface 整套 AI 生成由用户分别选择文本模型和图像 Provider，
 
 ## 验证覆盖
 
-自动化测试覆盖独立配置和密钥、按 Provider 类型分派、两类文本协议的成功与失败流、调用时 Provider 选择、图片请求校验和二进制返回、IPC 取消、手动请求队列、模态框文件与剪贴板导入、手动测试生成、Interface 图片进度与原子资源保存。真实远端 Provider 的付费调用未纳入自动化测试。
+自动化测试覆盖独立配置和密钥、按 Provider 类型分派、两类文本协议的成功与失败流、调用时 Provider 选择、图片请求校验和二进制返回、IPC 取消、手动请求队列、模态框文件与剪贴板导入、手动测试生成、Interface 图片进度与原子资源保存。语音识别测试覆盖模型资产发现、输入拒绝、main IPC 事件转发、renderer 取消和打包后模型枚举；常规自动化测试不加载 942 MB Qwen3 模型执行真实推理。真实远端 Provider 的付费调用未纳入自动化测试。
 
 ## 代码依据
 
 - `packages/airouter/src/main/image-service.ts`
+- `packages/airouter/src/main/speech-recognition-service.ts`
+- `packages/airouter/src/main/qwen3-asr-worker.ts`
 - `packages/airouter/src/main/index.ts`
 - `packages/airouter/src/shared/types.ts`
 - `packages/airouter/src/renderer/index.ts`
 - `packages/renderer/src/features/airouter/AIRouterImageSettingsPage.tsx`
+- `packages/renderer/src/features/airouter/AIRouterSpeechSettingsPage.tsx`
 - `packages/renderer/src/features/airouter/ManualImageGenerationDialog.tsx`
+- `packages/renderer/src/features/submissions/SubmissionAIRouterAdapter.ts`
 - `packages/interface-editor/src/application.ts`
-- `packages/renderer/src/features/airouter/AIRouterSettingsPage.tsx`（语音合成入口当前为占位页面）
+- `packages/renderer/src/features/airouter/AIRouterSettingsPage.tsx`（语音识别设置入口当前为占位页面）
 - `old/src/main/tts/tts-worker.ts`（旧版 Pocket TTS 运行时所需模型资源和参数）

@@ -3,9 +3,12 @@ import type {
   AIRouterClient,
   AIRouterGeneratedImage,
   AIRouterImageGenerationEvent,
+  AIRouterPronunciationAssessmentEvent,
+  AIRouterPronunciationAssessmentResult,
   AIRouterStreamEvent,
-  AIRouterSpeechModelPackageImportResult,
   AIRouterSpeechProviderType,
+  AIRouterSpeechRecognitionEvent,
+  AIRouterSpeechRecognitionResult,
   AIRouterSpeechSynthesisEvent,
   AIRouterTextChunk,
   AIRouterTextRequest
@@ -35,13 +38,82 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
     readSpeechProviderApiKey: (id) => getBridge().readSpeechProviderApiKey(id),
     listSpeechModelPackages: (providerType?: AIRouterSpeechProviderType) =>
       getBridge().listSpeechModelPackages(providerType),
-    importSpeechModelPackage: (data: Uint8Array): Promise<AIRouterSpeechModelPackageImportResult> =>
-      getBridge().importSpeechModelPackage(data),
+    importSpeechModelPackage: () => getBridge().importSpeechModelPackage(),
     deleteSpeechModelPackage: (id, version) => getBridge().deleteSpeechModelPackage(id, version),
     listSpeechModels: (config) => getBridge().listSpeechModels(config),
     listSpeechVoices: (request) => getBridge().listSpeechVoices(request),
     testSpeechConnection: (request) => getBridge().testSpeechConnection(request),
+    listSpeechRecognitionProviderConfigs: () => getBridge().listSpeechRecognitionProviderConfigs(),
+    saveSpeechRecognitionProviderConfig: (config) =>
+      getBridge().saveSpeechRecognitionProviderConfig(config),
+    deleteSpeechRecognitionProviderConfig: (id) =>
+      getBridge().deleteSpeechRecognitionProviderConfig(id),
+    readSpeechRecognitionProviderApiKey: (id) =>
+      getBridge().readSpeechRecognitionProviderApiKey(id),
+    listSpeechRecognitionModelPackages: (providerType) =>
+      getBridge().listSpeechRecognitionModelPackages(providerType),
+    importSpeechRecognitionModelPackage: () => getBridge().importSpeechRecognitionModelPackage(),
+    deleteSpeechRecognitionModelPackage: (id, version) =>
+      getBridge().deleteSpeechRecognitionModelPackage(id, version),
+    listSpeechRecognitionProviderModels: (config) =>
+      getBridge().listSpeechRecognitionProviderModels(config),
+    listSpeechRecognitionModels: () => getBridge().listSpeechRecognitionModels(),
+    recognizeSpeech(request, options = {}) {
+      return new Promise<AIRouterSpeechRecognitionResult>((resolve, reject) => {
+        let settled = false
+        let stop = (): void => undefined
+        const finish = (event: AIRouterSpeechRecognitionEvent): void => {
+          if (settled) return
+          settled = true
+          options.signal?.removeEventListener('abort', abort)
+          stop()
+          if (event.type === 'result') resolve(event.result)
+          else reject(new Error(event.message))
+        }
+        const abort = (): void => {
+          if (settled) return
+          settled = true
+          stop()
+          reject(new DOMException('Speech recognition was aborted', 'AbortError'))
+        }
+        stop = getBridge().startSpeechRecognition(request, finish)
+        if (options.signal?.aborted) abort()
+        else options.signal?.addEventListener('abort', abort, { once: true })
+      })
+    },
+    listPronunciationAssessmentModels: () => getBridge().listPronunciationAssessmentModels(),
+    getPronunciationAssessmentExtensionStatus: () =>
+      getBridge().getPronunciationAssessmentExtensionStatus(),
+    importPronunciationAssessmentExtension: () =>
+      getBridge().importPronunciationAssessmentExtension(),
+    assessPronunciation(request, options = {}) {
+      return new Promise<AIRouterPronunciationAssessmentResult>((resolve, reject) => {
+        let settled = false
+        let stop = (): void => undefined
+        const finish = (event: AIRouterPronunciationAssessmentEvent): void => {
+          if (settled) return
+          settled = true
+          options.signal?.removeEventListener('abort', abort)
+          stop()
+          if (event.type === 'result') resolve(event.result)
+          else reject(new Error(event.message))
+        }
+        const abort = (): void => {
+          if (settled) return
+          settled = true
+          stop()
+          reject(new DOMException('Pronunciation assessment was aborted', 'AbortError'))
+        }
+        stop = getBridge().startPronunciationAssessment(request, finish)
+        if (options.signal?.aborted) abort()
+        else options.signal?.addEventListener('abort', abort, { once: true })
+      })
+    },
     synthesizeSpeech(request, options = {}) {
+      const startedAt = Date.now()
+      console.info(
+        `[AIRouter Speech Client] synthesis requested: chars=${request.text.length}, text="${summarizeText(request.text)}"`
+      )
       return new Promise((resolve, reject) => {
         let settled = false
         let stop = (): void => undefined
@@ -51,6 +123,9 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
           options.signal?.removeEventListener('abort', abort)
           stop()
           if (event.type === 'result') {
+            console.info(
+              `[AIRouter Speech Client] result received after ${Date.now() - startedAt}ms, bytes=${event.audio.data.byteLength}`
+            )
             resolve({
               data: new Uint8Array(event.audio.data as ArrayLike<number>),
               mediaType: event.audio.mediaType,
@@ -59,12 +134,18 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
               channels: event.audio.channels,
               durationMs: event.audio.durationMs
             })
-          } else reject(new Error(event.message))
+          } else {
+            console.error(
+              `[AIRouter Speech Client] error received after ${Date.now() - startedAt}ms: ${event.message}`
+            )
+            reject(new Error(event.message))
+          }
         }
         const abort = (): void => {
           if (settled) return
           settled = true
           stop()
+          console.warn(`[AIRouter Speech Client] request aborted after ${Date.now() - startedAt}ms`)
           reject(new DOMException('Speech synthesis was aborted', 'AbortError'))
         }
         stop = getBridge().startSpeechSynthesis(request, finish)
@@ -162,6 +243,11 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
       }
     }
   }
+}
+
+function summarizeText(text: string): string {
+  const normalized = text.replace(/\s+/g, ' ').trim()
+  return normalized.length > 80 ? `${normalized.slice(0, 77)}...` : normalized
 }
 
 export const airouterClient = createAIRouterClient()

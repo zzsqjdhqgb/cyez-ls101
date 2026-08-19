@@ -176,16 +176,25 @@ export async function applyBuiltinRemoval(
   if (choice !== 'delete' && choice !== 'backup-old') {
     throw new Error(`Builtin ${plan.builtinKey} requires a removal choice`)
   }
-  if (choice === 'backup-old') {
-    await repository.backupBuiltinInterface(plan.builtinKey, plan.previous.id)
+  let backedUpPrevious = false
+  try {
+    if (choice === 'backup-old') {
+      await repository.backupBuiltinInterface(plan.builtinKey, plan.previous.id)
+      backedUpPrevious = true
+    }
+    await repository.removeBuiltin(plan.builtinKey, plan.previous.id)
+  } catch (error) {
+    if (backedUpPrevious) {
+      await repository.installBuiltinInterface(plan.builtinKey, plan.previous)
+    }
+    throw error
   }
-  await repository.removeBuiltin(plan.builtinKey, plan.previous.id)
   return {
     kind: 'removal',
     previousInterfaceId: plan.previous.id,
     affectedInstanceIds: plan.instanceIds,
     affectedReferenceCount: plan.referenceCount,
-    backedUpPrevious: choice === 'backup-old'
+    backedUpPrevious
   }
 }
 

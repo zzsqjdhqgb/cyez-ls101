@@ -1,4 +1,4 @@
-import type { FrameNode, FunctionNode, StaticValueExpression, TemplateNode } from '../types'
+import type { FrameNode, FunctionInputExpression, FunctionNode, TemplateNode } from '../types'
 import {
   allocateId,
   allocateGeneratedName,
@@ -16,9 +16,10 @@ import {
 import { prepareTimelineStep, removeChoiceOverrides, renameChoiceOverrides } from './page'
 import {
   collectLocalNames,
-  defaultExpression,
+  defaultFunctionInputExpression,
   prepareInsertedSubtree,
-  renameDefinitionLocalReferences
+  renameDefinitionLocalReferences,
+  renameSchemaAttachmentReferences
 } from './rewrite'
 import type {
   DefinitionOperation,
@@ -42,10 +43,10 @@ export function applyDefinitionOperation(
       operation.signature.outputs.forEach((output) => {
         outputNames[output.name] = allocateGeneratedName(output.name, names)
       })
-      const inputs: Record<string, StaticValueExpression> = {}
+      const inputs: Record<string, FunctionInputExpression> = {}
       operation.signature.inputs.forEach((input) => {
         inputs[input.name] = structuredClone(
-          operation.inputs?.[input.name] ?? defaultExpression(input.type)
+          operation.inputs?.[input.name] ?? defaultFunctionInputExpression(input)
         )
       })
       const node: FunctionNode = {
@@ -305,6 +306,16 @@ export function applyDefinitionOperation(
       }))
       return withRenamedLocalReferences(result, previousName, operation.outputName)
     }
+    case 'set-variable': {
+      const current = findNode(state.root, operation.nodeId)
+      const previousName = current?.node.type === 'variable' ? current.node.variableName : undefined
+      const result = updateNodeByType(state, operation.nodeId, 'variable', (node) => ({
+        ...node,
+        ...(operation.variableName === undefined ? {} : { variableName: operation.variableName }),
+        ...(operation.value === undefined ? {} : { value: structuredClone(operation.value) })
+      }))
+      return withRenamedLocalReferences(result, previousName, operation.variableName)
+    }
     case 'insert-choice-option':
       return editChoiceQuestion(state, operation.nodeId, (node, path) => {
         const index = insertionIndex(operation.index, node.options.length)
@@ -465,22 +476,134 @@ export function applyDefinitionOperation(
         changes: [{ kind: 'remove', path: `schemaUses[${index}]` }]
       }
     }
-    case 'set-schema-binding': {
+    case 'set-schema-input-binding': {
       const index = state.schemaUses.findIndex((use) => use.useId === operation.useId)
       if (index < 0)
         return { error: error('SCHEMA_USE_NOT_FOUND', 'schemaUses', { useId: operation.useId }) }
       const use = state.schemaUses[index]
-      const bindings = { ...use.bindings }
-      if (operation.expression === null) delete bindings[operation.fieldName]
-      else bindings[operation.fieldName] = structuredClone(operation.expression)
+      const inputBindings = { ...use.inputBindings }
+      if (operation.expression === null) delete inputBindings[operation.inputId]
+      else inputBindings[operation.inputId] = structuredClone(operation.expression)
       return {
-        state: { ...state, schemaUses: replaceAt(state.schemaUses, index, { ...use, bindings }) },
+        state: {
+          ...state,
+          schemaUses: replaceAt(state.schemaUses, index, { ...use, inputBindings })
+        },
         changes: [
           {
             kind: 'update',
-            path: `schemaUses[${index}].bindings[${JSON.stringify(operation.fieldName)}]`
+            path: `schemaUses[${index}].inputBindings[${JSON.stringify(operation.inputId)}]`
           }
         ]
+      }
+    }
+    case 'set-schema-answer-binding': {
+      const index = state.schemaUses.findIndex((use) => use.useId === operation.useId)
+      if (index < 0)
+        return { error: error('SCHEMA_USE_NOT_FOUND', 'schemaUses', { useId: operation.useId }) }
+      const use = state.schemaUses[index]
+      const answerBindings = { ...use.answerBindings }
+      if (operation.binding === null) delete answerBindings[operation.answerId]
+      else answerBindings[operation.answerId] = structuredClone(operation.binding)
+      return {
+        state: {
+          ...state,
+          schemaUses: replaceAt(state.schemaUses, index, { ...use, answerBindings })
+        },
+        changes: [
+          {
+            kind: 'update',
+            path: `schemaUses[${index}].answerBindings[${JSON.stringify(operation.answerId)}]`
+          }
+        ]
+      }
+    }
+    case 'insert-schema-attachment': {
+      const useIndex = state.schemaUses.findIndex((use) => use.useId === operation.useId)
+      if (useIndex < 0)
+        return { error: error('SCHEMA_USE_NOT_FOUND', 'schemaUses', { useId: operation.useId }) }
+      const use = state.schemaUses[useIndex]
+      if (use.attachments.some((item) => item.varName === operation.attachment.varName)) {
+        return {
+          error: error('SCHEMA_ATTACHMENT_NAME_CONFLICT', `schemaUses[${useIndex}].attachments`, {
+            varName: operation.attachment.varName
+          })
+        }
+      }
+      const index = insertionIndex(operation.index, use.attachments.length)
+      if (index === null)
+        return { error: invalidIndex(`schemaUses[${useIndex}].attachments`, operation.index) }
+      const attachments = insertAt(use.attachments, index, structuredClone(operation.attachment))
+      return {
+        state: {
+          ...state,
+          schemaUses: replaceAt(state.schemaUses, useIndex, { ...use, attachments })
+        },
+        changes: [{ kind: 'insert', path: `schemaUses[${useIndex}].attachments[${index}]` }]
+      }
+    }
+    case 'update-schema-attachment': {
+      const useIndex = state.schemaUses.findIndex((use) => use.useId === operation.useId)
+      if (useIndex < 0)
+        return { error: error('SCHEMA_USE_NOT_FOUND', 'schemaUses', { useId: operation.useId }) }
+      const use = state.schemaUses[useIndex]
+      const index = use.attachments.findIndex((item) => item.varName === operation.varName)
+      if (index < 0) {
+        return {
+          error: error('SCHEMA_ATTACHMENT_NOT_FOUND', `schemaUses[${useIndex}].attachments`, {
+            varName: operation.varName
+          })
+        }
+      }
+      if (
+        operation.attachment.varName !== operation.varName &&
+        use.attachments.some((item) => item.varName === operation.attachment.varName)
+      ) {
+        return {
+          error: error('SCHEMA_ATTACHMENT_NAME_CONFLICT', `schemaUses[${useIndex}].attachments`, {
+            varName: operation.attachment.varName
+          })
+        }
+      }
+      const renamedUse =
+        operation.attachment.varName === operation.varName
+          ? use
+          : renameSchemaAttachmentReferences(use, operation.varName, operation.attachment.varName)
+      const attachments = replaceAt(
+        renamedUse.attachments,
+        index,
+        structuredClone(operation.attachment)
+      )
+      return {
+        state: {
+          ...state,
+          schemaUses: replaceAt(state.schemaUses, useIndex, { ...renamedUse, attachments })
+        },
+        changes: [{ kind: 'update', path: `schemaUses[${useIndex}].attachments[${index}]` }]
+      }
+    }
+    case 'remove-schema-attachment': {
+      const useIndex = state.schemaUses.findIndex((use) => use.useId === operation.useId)
+      if (useIndex < 0)
+        return { error: error('SCHEMA_USE_NOT_FOUND', 'schemaUses', { useId: operation.useId }) }
+      const use = state.schemaUses[useIndex]
+      const index = use.attachments.findIndex((item) => item.varName === operation.varName)
+      if (index < 0) {
+        return {
+          error: error('SCHEMA_ATTACHMENT_NOT_FOUND', `schemaUses[${useIndex}].attachments`, {
+            varName: operation.varName
+          })
+        }
+      }
+      return {
+        state: {
+          ...state,
+          schemaUses: replaceAt(state.schemaUses, useIndex, {
+            ...use,
+            attachments: removeAt(use.attachments, index)
+          })
+        },
+        changes: [{ kind: 'remove', path: `schemaUses[${useIndex}].attachments[${index}]` }]
       }
     }
     case 'set-editor-state': {
@@ -591,11 +714,13 @@ function reconcileFunctionCall(
     return {
       error: error('WRONG_NODE_TYPE', found.path, { expected: 'function', actual: found.node.type })
     }
-  const inputs: Record<string, StaticValueExpression> = {}
+  const inputs: Record<string, FunctionInputExpression> = {}
   signature.inputs.forEach((input) => {
     const current = found.node.type === 'function' ? found.node.inputs[input.name] : undefined
     inputs[input.name] = structuredClone(
-      current?.type === input.type ? current : defaultExpression(input.type)
+      current && isCompatibleFunctionInput(current, input)
+        ? current
+        : defaultFunctionInputExpression(input)
     )
   })
   const outputNames: Record<string, string> = {}
@@ -613,6 +738,19 @@ function reconcileFunctionCall(
     state: { ...state, root },
     changes: [{ kind: 'update', path: found.path }]
   }
+}
+
+function isCompatibleFunctionInput(
+  expression: FunctionInputExpression,
+  input: FunctionCallSignature['inputs'][number]
+): boolean {
+  if (expression.type !== input.type) return false
+  if (input.type !== 'choice-group' || expression.type !== 'choice-group') return true
+  if (input.shape.kind === 'all') return expression.selection.kind === 'all'
+  if (input.shape.kind === 'range') {
+    return expression.selection.kind === 'range' || expression.selection.kind === 'all'
+  }
+  return expression.selection.kind === 'question' || expression.selection.kind === 'all'
 }
 
 type NodeEditResult<T extends TemplateNode> =

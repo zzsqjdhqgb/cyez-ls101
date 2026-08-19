@@ -1,4 +1,4 @@
-import type { InterfaceVarManifest, SchemaBlockManifest } from '@ls101/core-types'
+import type { InterfaceVarManifest, SchemaDefinition } from '@ls101/core-types'
 import { describe, expect, it } from 'vitest'
 import type {
   ChoiceQuestionNode,
@@ -9,10 +9,11 @@ import type {
   TemplateContent
 } from '../types'
 import { validateTemplateContent, type TemplateValidationContext } from '../validation'
-import { number, root, text } from './fixtures'
+import { number, root, schemaDefinition, schemaText, text } from './fixtures'
 
 const INTERFACE_ID = `sha256:${'1'.repeat(64)}`
 const SCHEMA_ID = `sha256:${'2'.repeat(64)}`
+const CHOICE_SCHEMA_ID = `sha256:${'4'.repeat(64)}`
 const FUNCTION_ID = `sha256:${'3'.repeat(64)}`
 
 function interfaceManifest(): InterfaceVarManifest {
@@ -31,29 +32,29 @@ function interfaceManifest(): InterfaceVarManifest {
   }
 }
 
-function schemaManifest(): SchemaBlockManifest {
-  return {
-    schemaId: SCHEMA_ID,
-    schemaName: 'Scoring',
-    blocks: [
-      {
-        blockId: 'text',
-        blockName: 'Text',
-        fields: [{ varName: 'prompt', type: 'text' }]
-      },
-      {
-        blockId: 'choice',
-        blockName: 'Choice',
-        fields: [{ varName: 'answer', type: 'choice' }]
-      }
-    ]
-  }
+function schemaDefinitions(): SchemaDefinition[] {
+  return [
+    schemaDefinition(SCHEMA_ID, {
+      questionType: 'freetalk',
+      answerFormat: [],
+      templateInputs: [{ inputId: 'prompt', type: 'text', required: true }]
+    }),
+    schemaDefinition(CHOICE_SCHEMA_ID, {
+      questionType: 'objective',
+      answerFormat: [{ answerId: 'answer', type: 'text' }],
+      templateInputs: [
+        { inputId: 'question-description', type: 'text', required: true },
+        { inputId: 'correct-answer', type: 'text', required: true },
+        { inputId: 'analysis', type: 'text', required: false }
+      ]
+    })
+  ]
 }
 
 function context(overrides: Partial<TemplateValidationContext> = {}): TemplateValidationContext {
   return {
     interfaceManifests: [interfaceManifest()],
-    schemaManifests: [schemaManifest()],
+    schemaDefinitions: schemaDefinitions(),
     functions: [],
     ...overrides
   }
@@ -63,17 +64,22 @@ function textUse(): SchemaUse {
   return {
     useId: 'text-use',
     schemaId: SCHEMA_ID,
-    blockId: 'text',
-    bindings: { prompt: { type: 'literal', value: 'Prompt' } }
+    inputBindings: { prompt: schemaText('Prompt') },
+    answerBindings: {},
+    attachments: []
   }
 }
 
 function choiceUse(outputName = 'answer-1'): SchemaUse {
   return {
     useId: 'choice-use',
-    schemaId: SCHEMA_ID,
-    blockId: 'choice',
-    bindings: { answer: { type: 'choice-output', name: outputName } }
+    schemaId: CHOICE_SCHEMA_ID,
+    inputBindings: {
+      'question-description': schemaText('Choose one'),
+      'correct-answer': schemaText('A')
+    },
+    answerBindings: { answer: { type: 'text', source: 'choice-output', name: outputName } },
+    attachments: []
   }
 }
 
@@ -118,7 +124,7 @@ function pageWithViewport(viewport: ChoiceViewport): PageNode {
         }
       ]
     },
-    timeline: []
+    timeline: [{ type: 'countdown', seconds: number(1) }]
   }
 }
 
@@ -179,7 +185,7 @@ describe('Template 校验错误契约', () => {
       content(),
       context({
         interfaceManifests: [interfaceManifest(), interfaceManifest()],
-        schemaManifests: [schemaManifest(), schemaManifest()],
+        schemaDefinitions: [schemaDefinitions()[0], schemaDefinitions()[0]],
         functions: [emptyFunction, emptyFunction]
       })
     )
@@ -191,8 +197,8 @@ describe('Template 校验错误契约', () => {
         params: { id: INTERFACE_ID }
       },
       {
-        path: 'context.schemaManifests[1]',
-        code: 'DUPLICATE_SCHEMA_MANIFEST',
+        path: 'context.schemaDefinitions[1]',
+        code: 'DUPLICATE_SCHEMA_DEFINITION',
         params: { id: SCHEMA_ID }
       },
       {
@@ -395,6 +401,129 @@ describe('Template 校验错误契约', () => {
     ).toEqual({ valid: true, errors: [] })
   })
 
+  it('允许函数中的选择题由外部 Collector 收集', () => {
+    const func: FunctionDef = {
+      id: FUNCTION_ID,
+      name: 'Question source',
+      inputs: [],
+      body: root([question()]),
+      outputs: [],
+      schemaUses: []
+    }
+    const template = content({
+      root: {
+        ...root([
+          { id: 'call', type: 'function', functionRef: FUNCTION_ID, inputs: {}, outputNames: {} }
+        ]),
+        choiceCollector: { pages: [{ questionCount: 1 }] }
+      }
+    })
+
+    expect(validateTemplateContent(template, context({ functions: [func] }))).toEqual({
+      valid: true,
+      errors: []
+    })
+  })
+
+  it('拒绝函数内 ChoiceView 依赖函数外 Collector', () => {
+    const func: FunctionDef = {
+      id: FUNCTION_ID,
+      name: 'Leaky choice view',
+      inputs: [],
+      body: root([question(), pageWithViewport({ mode: 'free' })]),
+      outputs: [],
+      schemaUses: []
+    }
+    const template = content({
+      root: {
+        ...root([
+          { id: 'call', type: 'function', functionRef: FUNCTION_ID, inputs: {}, outputNames: {} }
+        ]),
+        choiceCollector: { pages: [{ questionCount: 1 }] }
+      }
+    })
+
+    expect(validateTemplateContent(template, context({ functions: [func] })).errors).toEqual([
+      {
+        path: 'root.children[0].function.body.children[1].content.blocks[0].defaultViewport',
+        code: 'FUNCTION_CHOICE_VIEW_WITHOUT_LOCAL_COLLECTOR',
+        params: {}
+      }
+    ])
+  })
+
+  it('允许函数通过题组入参使用函数外 Collector', () => {
+    const func: FunctionDef = {
+      id: FUNCTION_ID,
+      name: 'Scoped choice view',
+      inputs: [
+        {
+          name: 'questions',
+          type: 'choice-group',
+          shape: { kind: 'all', pageCounts: [1] }
+        }
+      ],
+      body: root([
+        pageWithViewport({
+          mode: 'free',
+          group: { scope: 'local', name: 'questions' }
+        })
+      ]),
+      outputs: [],
+      schemaUses: []
+    }
+    const template = content({
+      root: {
+        ...root([
+          question(),
+          {
+            id: 'call',
+            type: 'function',
+            functionRef: FUNCTION_ID,
+            inputs: {
+              questions: {
+                type: 'choice-group',
+                source: 'global',
+                selection: { kind: 'all' }
+              }
+            },
+            outputNames: {}
+          }
+        ]),
+        choiceCollector: { pages: [{ questionCount: 1 }] }
+      }
+    })
+
+    expect(validateTemplateContent(template, context({ functions: [func] }))).toEqual({
+      valid: true,
+      errors: []
+    })
+  })
+
+  it('允许函数在内部封装题目、Collector 和 ChoiceView', () => {
+    const func: FunctionDef = {
+      id: FUNCTION_ID,
+      name: 'Self-contained choice section',
+      inputs: [],
+      body: {
+        ...root([question(), pageWithViewport({ mode: 'free' })]),
+        choiceCollector: { pages: [{ questionCount: 1 }] }
+      },
+      outputs: [],
+      schemaUses: []
+    }
+    const template = content({
+      root: root([
+        { id: 'call', type: 'function', functionRef: FUNCTION_ID, inputs: {}, outputNames: {} }
+      ])
+    })
+
+    expect(validateTemplateContent(template, context({ functions: [func] }))).toEqual({
+      valid: true,
+      errors: []
+    })
+  })
+
   it('函数正文错误路径包含稳定的 function.body 段', () => {
     const func: FunctionDef = {
       id: FUNCTION_ID,
@@ -405,7 +534,7 @@ describe('Template 校验错误契约', () => {
           id: 'inner-page',
           type: 'page',
           content: { blocks: [{ id: '', type: 'text', x: 0, y: 0, text: text('') }] },
-          timeline: []
+          timeline: [{ type: 'countdown', seconds: number(1) }]
         }
       ]),
       outputs: [],
@@ -457,7 +586,7 @@ describe('Template 校验错误契约', () => {
               }
             ]
           },
-          timeline: []
+          timeline: [{ type: 'countdown', seconds: number(1) }]
         }
       ]),
       outputs: [],
@@ -504,7 +633,7 @@ describe('Template 校验错误契约', () => {
               }
             ]
           },
-          timeline: []
+          timeline: [{ type: 'countdown', seconds: number(1) }]
         }
       ]),
       outputs: [],

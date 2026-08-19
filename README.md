@@ -45,6 +45,7 @@ pnpm install
 
 此命令会自动执行以下初始化任务：
 - 下载 TTS 模型文件
+- 下载并校验 Qwen3 ASR 与 Silero VAD 模型文件
 - 下载开发者头像
 - 从 `resources/file-icons/*.png` 生成对应 `.ico` 文件
 
@@ -54,13 +55,31 @@ pnpm install
 node scripts/download-tts-assets.js
 ```
 
-### 3. 启动开发服务器
+### 3. 下载 Qwen3 ASR 模型文件
+
+```bash
+node scripts/download-stt-models.js
+```
+
+脚本会在运行时读取 GitHub Release 与 Hugging Face API，并要求官方元数据、仓库内固定清单和下载文件的 SHA-256 一致；官方 API 暂时不可达时仍可使用固定清单校验本地缓存。脚本支持通过 `.part` 文件断点续传，并把已验证的压缩包保留在 `externals/ai/stt/downloads/`。再次完整校验已解压模型可运行：
+
+```bash
+node scripts/download-stt-models.js --verify
+```
+
+上游模型确实更新后，可显式刷新固定清单。该命令只更新 `scripts/stt-model-assets.json`，需要审查 Git diff 后再提交：
+
+```bash
+node scripts/download-stt-models.js --refresh-metadata
+```
+
+### 4. 启动开发服务器
 
 ```bash
 pnpm dev
 ```
 
-### 4. 预览构建产物
+### 5. 预览构建产物
 
 ```bash
 pnpm start
@@ -85,6 +104,8 @@ pnpm start
 │   └── tts/                    # TTS WASM 运行时
 ├── scripts/                    # 辅助脚本
 │   ├── download-tts-assets.js  # 下载 TTS 模型文件
+│   ├── download-stt-models.js  # 下载并校验 Qwen3 ASR 模型文件
+│   ├── stt-model-assets.json   # 可审查的固定模型摘要清单
 │   ├── setup.js               # 统一下载模型 & 生成图标入口
 │   ├── generate-icons.js       # 从 PNG 生成 ICO 文件图标
 │   ├── generate_exam.py        # （旧版）MiniMax API 生成试卷

@@ -3,15 +3,19 @@
   min-height: 100%;
   margin: 0 auto;
   padding: 44px 0 56px;
+  animation: page-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .header {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-6);
   min-height: 36px;
   margin-bottom: var(--space-8);
+  animation: page-header-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) 35ms backwards;
 }
 
 .header h1 {
@@ -31,6 +35,52 @@
   flex: 0 0 auto;
   align-items: center;
   gap: var(--space-2);
+}
+
+.page > :not(.header) {
+  animation: page-section-enter 380ms cubic-bezier(0.22, 1, 0.36, 1) 80ms backwards;
+}
+
+.page > :nth-child(3) {
+  animation-delay: 120ms;
+}
+
+.page > :nth-child(4) {
+  animation-delay: 160ms;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes page-header-enter {
+  from {
+    opacity: 0;
+    clip-path: inset(0 0 20% 0);
+  }
+
+  to {
+    opacity: 1;
+    clip-path: inset(0);
+  }
+}
+
+@keyframes page-section-enter {
+  from {
+    opacity: 0;
+    clip-path: inset(0 0 7px 0);
+  }
+
+  to {
+    opacity: 1;
+    clip-path: inset(0);
+  }
 }
 
 @media (max-width: 880px) {

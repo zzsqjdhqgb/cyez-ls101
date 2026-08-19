@@ -9,12 +9,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@ls101/core-types": "workspace:*",
-    "@ls101/editor-kit": "workspace:*"
-  },
-  "peerDependencies": {
-    "react": "^19",
-    "react-dom": "^19"
+    "@ls101/core-types": "workspace:*"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

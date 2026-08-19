@@ -542,7 +542,7 @@ interface InterfaceInstance {
 }
 ```
 
-空白实例创建、手动保存、JSON 覆盖和 AI 覆盖都保留同一 UUID。实例 `name` 不进入 JSON Schema。JSON 和 AI 覆盖文本字段值并更新图片提示词，但不替换已有图片。导入和 builtin 迁移保留 UUID、名称和图片提示词编辑元数据。
+空白实例创建、手动保存、JSON 覆盖和 AI 覆盖都保留同一 UUID。实例 `name` 不进入 JSON Schema。JSON 覆盖不选择文本模型；当 Interface 存在图片字段时，用户选择图像 Provider，系统使用 JSON 中的提示词重新生成图片，再将文本、提示词和图片原子替换。AI 覆盖同样更新这些内容。导入和 builtin 迁移保留 UUID、名称和图片提示词编辑元数据。
 
 ### 物理分区
 

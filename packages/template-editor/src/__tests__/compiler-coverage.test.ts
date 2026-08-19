@@ -1,4 +1,4 @@
-import type { SchemaBlockManifest } from '@ls101/core-types'
+import type { SchemaDefinition } from '@ls101/core-types'
 import { describe, expect, it } from 'vitest'
 import { compileTemplate, type TemplateCompileContext } from '../compiler'
 import { createFunctionResource } from '../id'
@@ -11,38 +11,41 @@ import type {
   TemplateContent,
   TemplateDocument
 } from '../types'
-import { number, root, text } from './fixtures'
+import { number, root, schemaDefinition, schemaText, text } from './fixtures'
 
 const SCHEMA_ID = `sha256:${'2'.repeat(64)}`
+const AUDIO_SCHEMA_ID = `sha256:${'3'.repeat(64)}`
+const CHOICE_SCHEMA_ID = `sha256:${'4'.repeat(64)}`
 
-const schemaManifest: SchemaBlockManifest = {
-  schemaId: SCHEMA_ID,
-  schemaName: 'Scoring',
-  blocks: [
-    {
-      blockId: 'text',
-      blockName: 'Text',
-      fields: [{ varName: 'prompt', type: 'text' }]
-    },
-    {
-      blockId: 'audio',
-      blockName: 'Audio',
-      fields: [{ varName: 'recording', type: 'audio' }]
-    },
-    {
-      blockId: 'choice',
-      blockName: 'Choice',
-      fields: [{ varName: 'answer', type: 'choice' }]
-    }
-  ]
-}
+const schemaDefinitions: SchemaDefinition[] = [
+  schemaDefinition(SCHEMA_ID, {
+    questionType: 'freetalk',
+    answerFormat: [],
+    templateInputs: [{ inputId: 'prompt', type: 'text', required: true }]
+  }),
+  schemaDefinition(AUDIO_SCHEMA_ID, {
+    questionType: 'freetalk',
+    answerFormat: [{ answerId: 'recording', type: 'free-speech' }],
+    templateInputs: []
+  }),
+  schemaDefinition(CHOICE_SCHEMA_ID, {
+    questionType: 'objective',
+    answerFormat: [{ answerId: 'answer', type: 'text' }],
+    templateInputs: [
+      { inputId: 'question-description', type: 'text', required: true },
+      { inputId: 'correct-answer', type: 'text', required: true },
+      { inputId: 'analysis', type: 'text', required: false }
+    ]
+  })
+]
 
 function context(): TemplateCompileContext {
   return {
     interfaceManifests: [],
-    schemaManifests: [schemaManifest],
+    schemaDefinitions,
     interfaceBindings: [],
-    locateInterfaceInstance: () => null
+    locateInterfaceInstance: () => null,
+    synthesizeSpeech: async () => ({ data: new Uint8Array([1, 2, 3]), mediaType: 'audio/wav' })
   }
 }
 
@@ -74,26 +77,37 @@ function textUse(useId: string): SchemaUse {
   return {
     useId,
     schemaId: SCHEMA_ID,
-    blockId: 'text',
-    bindings: { prompt: { type: 'literal', value: 'Prompt' } }
+    inputBindings: { prompt: schemaText('Prompt') },
+    answerBindings: {},
+    attachments: []
   }
 }
 
 function audioUse(useId: string, outputName: string): SchemaUse {
   return {
     useId,
-    schemaId: SCHEMA_ID,
-    blockId: 'audio',
-    bindings: { recording: { type: 'record-output', name: outputName } }
+    schemaId: AUDIO_SCHEMA_ID,
+    inputBindings: {},
+    answerBindings: {
+      recording: {
+        type: 'free-speech',
+        audio: { type: 'audio', source: 'record-output', name: outputName }
+      }
+    },
+    attachments: []
   }
 }
 
 function choiceUse(useId: string, outputName: string): SchemaUse {
   return {
     useId,
-    schemaId: SCHEMA_ID,
-    blockId: 'choice',
-    bindings: { answer: { type: 'choice-output', name: outputName } }
+    schemaId: CHOICE_SCHEMA_ID,
+    inputBindings: {
+      'question-description': schemaText('Choose one'),
+      'correct-answer': schemaText('A')
+    },
+    answerBindings: { answer: { type: 'text', source: 'choice-output', name: outputName } },
+    attachments: []
   }
 }
 
@@ -111,45 +125,48 @@ function focusFunctionContent(questionRef: ChoiceQuestionRef): FunctionContent {
   return {
     name: 'Focused question',
     inputs: [{ name: 'stem', type: 'string' }],
-    body: root([
-      {
-        id: 'question',
-        type: 'choice-question',
-        stem: {
-          type: 'string',
-          parts: [{ type: 'variable', ref: { scope: 'local', name: 'stem' } }]
+    body: {
+      ...root([
+        {
+          id: 'question',
+          type: 'choice-question',
+          stem: {
+            type: 'string',
+            parts: [{ type: 'variable', ref: { scope: 'local', name: 'stem' } }]
+          },
+          options: [
+            { id: 'a', content: text('A') },
+            { id: 'b', content: text('B') }
+          ],
+          outputName: 'answer'
         },
-        options: [
-          { id: 'a', content: text('A') },
-          { id: 'b', content: text('B') }
-        ],
-        outputName: 'answer'
-      },
-      {
-        id: 'page',
-        type: 'page',
-        content: {
-          blocks: [
+        {
+          id: 'page',
+          type: 'page',
+          content: {
+            blocks: [
+              {
+                id: 'view',
+                type: 'choice-view',
+                x: 0,
+                y: 0,
+                width: 100,
+                height: 100,
+                defaultViewport: focus
+              }
+            ]
+          },
+          timeline: [
             {
-              id: 'view',
-              type: 'choice-view',
-              x: 0,
-              y: 0,
-              width: 100,
-              height: 100,
-              defaultViewport: focus
+              type: 'countdown',
+              seconds: number(1),
+              choiceViewOverrides: { view: focus }
             }
           ]
-        },
-        timeline: [
-          {
-            type: 'countdown',
-            seconds: number(1),
-            choiceViewOverrides: { view: focus }
-          }
-        ]
-      }
-    ]),
+        }
+      ]),
+      choiceCollector: { pages: [{ questionCount: 1 }] }
+    },
     outputs: [
       {
         name: 'result',
@@ -161,32 +178,523 @@ function focusFunctionContent(questionRef: ChoiceQuestionRef): FunctionContent {
   }
 }
 
-function focusExam(functionRef: string): TemplateContent {
-  const functionCall = (id: string, stem: string, outputName: string) =>
-    call(
-      id,
-      functionRef,
-      { result: outputName },
-      {
-        stem: { type: 'string', source: 'literal', value: stem }
-      }
-    )
+function focusExam(functionRef: string, callId = 'call-1'): TemplateContent {
   return content({
-    root: {
-      id: 'root',
-      type: 'frame',
-      children: [
-        functionCall('call-1', 'First', 'answer-1'),
-        functionCall('call-2', 'Second', 'answer-2')
-      ],
-      choiceCollector: { pages: [{ questionCount: 1 }, { questionCount: 1 }] }
-    },
-    schemaUses: [choiceUse('choice-1', 'answer-1'), choiceUse('choice-2', 'answer-2')]
+    root: root([
+      call(
+        callId,
+        functionRef,
+        { result: 'answer-1' },
+        { stem: { type: 'string', source: 'literal', value: 'First' } }
+      )
+    ]),
+    schemaUses: [choiceUse('choice-1', 'answer-1')]
   })
 }
 
+function choiceQuestions(count: number): TemplateContent['root']['children'] {
+  return Array.from({ length: count }, (_item, index) => ({
+    id: `question-${index}`,
+    type: 'choice-question' as const,
+    stem: text(`Question ${index + 1}`),
+    options: [
+      { id: 'a', content: text('A') },
+      { id: 'b', content: text('B') }
+    ],
+    outputName: `answer-${index}`
+  }))
+}
+
+function choiceGroupPage(
+  id: string,
+  defaultViewport: Extract<
+    PageNode['content']['blocks'][number],
+    { type: 'choice-view' }
+  >['defaultViewport']
+): PageNode {
+  return {
+    id,
+    type: 'page',
+    content: {
+      blocks: [
+        {
+          id: 'view',
+          type: 'choice-view',
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 100,
+          defaultViewport
+        }
+      ]
+    },
+    timeline: [{ type: 'countdown', seconds: number(1) }]
+  }
+}
+
 describe('Template 编译组合覆盖', () => {
-  it('relative focus 在每次函数调用中解析到当前实例，包括时间线 override', async () => {
+  it('把范围题组内的局部题号换算为全局 choiceIndex', async () => {
+    const page = choiceGroupPage('range-page', {
+      mode: 'focus',
+      group: { scope: 'local', name: 'questions' },
+      pageIndex: 0,
+      questionIndex: 1
+    })
+    page.content.blocks.push(
+      {
+        id: 'free-view',
+        type: 'choice-view',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        defaultViewport: {
+          mode: 'free',
+          group: { scope: 'local', name: 'questions' }
+        }
+      },
+      {
+        id: 'range-view',
+        type: 'choice-view',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        defaultViewport: {
+          mode: 'range',
+          group: { scope: 'local', name: 'questions' },
+          startPage: 1,
+          endPage: 2,
+          initialPage: 2
+        }
+      }
+    )
+    const resource = await createFunctionResource({
+      name: 'Range view',
+      inputs: [
+        {
+          name: 'questions',
+          type: 'choice-group',
+          shape: { kind: 'range', pageCounts: [2, 3, 4] }
+        }
+      ],
+      body: root([page]),
+      outputs: [],
+      schemaUses: []
+    })
+    const result = await compileTemplate(
+      document(
+        content({
+          root: {
+            ...root([
+              ...choiceQuestions(15),
+              call(
+                'range-call',
+                resource.id,
+                {},
+                {
+                  questions: {
+                    type: 'choice-group',
+                    source: 'global',
+                    selection: { kind: 'range', startPage: 1 }
+                  }
+                }
+              )
+            ]),
+            choiceCollector: {
+              pages: [1, 2, 3, 4, 5].map((questionCount) => ({ questionCount }))
+            }
+          },
+          schemaUses: []
+        }),
+        [resource]
+      ),
+      context()
+    )
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.examPackage.examData.player.pages[0].content[0]).toMatchObject({
+      defaultViewport: { mode: 'focus', choiceIndex: 2 }
+    })
+    expect(result.examPackage.examData.player.pages[0].content[1]).toMatchObject({
+      defaultViewport: { mode: 'range', startPage: 1, endPage: 3 }
+    })
+    expect(result.examPackage.examData.player.pages[0].content[2]).toMatchObject({
+      defaultViewport: { mode: 'range', startPage: 2, endPage: 3, initialPage: 3 }
+    })
+  })
+
+  it('用显式起始页区分重复的范围题组形状', async () => {
+    const resource = await createFunctionResource({
+      name: 'Repeated range view',
+      inputs: [
+        {
+          name: 'questions',
+          type: 'choice-group',
+          shape: { kind: 'range', pageCounts: [2, 3, 4] }
+        }
+      ],
+      body: root([
+        choiceGroupPage('range-page', {
+          mode: 'focus',
+          group: { scope: 'local', name: 'questions' },
+          pageIndex: 0,
+          questionIndex: 0
+        })
+      ]),
+      outputs: [],
+      schemaUses: []
+    })
+    const pageCounts = [2, 3, 4, 2, 3, 4]
+    const result = await compileTemplate(
+      document(
+        content({
+          root: {
+            ...root([
+              ...choiceQuestions(pageCounts.reduce((sum, count) => sum + count, 0)),
+              call(
+                'first-range',
+                resource.id,
+                {},
+                {
+                  questions: {
+                    type: 'choice-group',
+                    source: 'global',
+                    selection: { kind: 'range', startPage: 0 }
+                  }
+                }
+              ),
+              call(
+                'second-range',
+                resource.id,
+                {},
+                {
+                  questions: {
+                    type: 'choice-group',
+                    source: 'global',
+                    selection: { kind: 'range', startPage: 3 }
+                  }
+                }
+              )
+            ]),
+            choiceCollector: { pages: pageCounts.map((questionCount) => ({ questionCount })) }
+          },
+          schemaUses: []
+        }),
+        [resource]
+      ),
+      context()
+    )
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(
+      result.examPackage.examData.player.pages.map((page) =>
+        page.content[0]?.type === 'choice-view' ? page.content[0].defaultViewport : null
+      )
+    ).toEqual([
+      { mode: 'focus', choiceIndex: 0 },
+      { mode: 'focus', choiceIndex: 9 }
+    ])
+  })
+
+  it('嵌套函数继续传递范围题组时保留全局坐标', async () => {
+    const child = await createFunctionResource({
+      name: 'Nested range view',
+      inputs: [
+        {
+          name: 'questions',
+          type: 'choice-group',
+          shape: { kind: 'range', pageCounts: [3, 4] }
+        }
+      ],
+      body: root([
+        choiceGroupPage('child-page', {
+          mode: 'focus',
+          group: { scope: 'local', name: 'questions' },
+          pageIndex: 0,
+          questionIndex: 1
+        })
+      ]),
+      outputs: [],
+      schemaUses: []
+    })
+    const parent = await createFunctionResource({
+      name: 'Range wrapper',
+      inputs: [
+        {
+          name: 'questions',
+          type: 'choice-group',
+          shape: { kind: 'range', pageCounts: [2, 3, 4] }
+        }
+      ],
+      body: root([
+        call(
+          'child-call',
+          child.id,
+          {},
+          {
+            questions: {
+              type: 'choice-group',
+              source: 'local',
+              name: 'questions',
+              selection: { kind: 'range', startPage: 1 }
+            }
+          }
+        )
+      ]),
+      outputs: [],
+      schemaUses: []
+    })
+    const result = await compileTemplate(
+      document(
+        content({
+          root: {
+            ...root([
+              ...choiceQuestions(15),
+              call(
+                'parent-call',
+                parent.id,
+                {},
+                {
+                  questions: {
+                    type: 'choice-group',
+                    source: 'global',
+                    selection: { kind: 'range', startPage: 1 }
+                  }
+                }
+              )
+            ]),
+            choiceCollector: {
+              pages: [1, 2, 3, 4, 5].map((questionCount) => ({ questionCount }))
+            }
+          },
+          schemaUses: []
+        }),
+        [child, parent]
+      ),
+      context()
+    )
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.examPackage.examData.player.pages[0].content[0]).toMatchObject({
+      defaultViewport: { mode: 'focus', choiceIndex: 4 }
+    })
+  })
+
+  it('即使函数未读取题组入参也强制校验形状', async () => {
+    const resource = await createFunctionResource({
+      name: 'Unused range',
+      inputs: [
+        {
+          name: 'questions',
+          type: 'choice-group',
+          shape: { kind: 'range', pageCounts: [2, 4] }
+        }
+      ],
+      body: root([
+        {
+          id: 'page',
+          type: 'page',
+          content: { blocks: [] },
+          timeline: [{ type: 'countdown', seconds: number(1) }]
+        }
+      ]),
+      outputs: [],
+      schemaUses: []
+    })
+    const result = await compileTemplate(
+      document(
+        content({
+          root: {
+            ...root([
+              ...choiceQuestions(6),
+              call(
+                'range-call',
+                resource.id,
+                {},
+                {
+                  questions: {
+                    type: 'choice-group',
+                    source: 'global',
+                    selection: { kind: 'range', startPage: 1 }
+                  }
+                }
+              )
+            ]),
+            choiceCollector: {
+              pages: [1, 2, 3].map((questionCount) => ({ questionCount }))
+            }
+          },
+          schemaUses: []
+        }),
+        [resource]
+      ),
+      context()
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      errors: [{ stage: 'compile', code: 'CHOICE_GROUP_SHAPE_MISMATCH' }]
+    })
+  })
+
+  it('完整题组保持自由浏览，单题题组把 free 收敛为全局 focus', async () => {
+    const all = await createFunctionResource({
+      name: 'All view',
+      inputs: [
+        {
+          name: 'questions',
+          type: 'choice-group',
+          shape: { kind: 'all', pageCounts: [1, 2] }
+        }
+      ],
+      body: root([
+        choiceGroupPage('all-page', {
+          mode: 'free',
+          group: { scope: 'local', name: 'questions' },
+          initialPage: 1
+        })
+      ]),
+      outputs: [],
+      schemaUses: []
+    })
+    const question = await createFunctionResource({
+      name: 'Question view',
+      inputs: [{ name: 'question', type: 'choice-group', shape: { kind: 'question' } }],
+      body: root([
+        choiceGroupPage('question-page', {
+          mode: 'free',
+          group: { scope: 'local', name: 'question' }
+        })
+      ]),
+      outputs: [],
+      schemaUses: []
+    })
+    const result = await compileTemplate(
+      document(
+        content({
+          root: {
+            ...root([
+              ...choiceQuestions(3),
+              call(
+                'all-call',
+                all.id,
+                {},
+                {
+                  questions: {
+                    type: 'choice-group',
+                    source: 'global',
+                    selection: { kind: 'all' }
+                  }
+                }
+              ),
+              call(
+                'question-call',
+                question.id,
+                {},
+                {
+                  question: {
+                    type: 'choice-group',
+                    source: 'global',
+                    selection: { kind: 'question', pageIndex: 1, questionIndex: 1 }
+                  }
+                }
+              )
+            ]),
+            choiceCollector: { pages: [{ questionCount: 1 }, { questionCount: 2 }] }
+          },
+          schemaUses: []
+        }),
+        [all, question]
+      ),
+      context()
+    )
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(
+      result.examPackage.examData.player.pages.map((page) =>
+        page.content[0]?.type === 'choice-view' ? page.content[0].defaultViewport : null
+      )
+    ).toEqual([
+      { mode: 'free', initialPage: 1 },
+      { mode: 'focus', choiceIndex: 2 }
+    ])
+  })
+
+  it('函数中的选择题可以由外部 Collector 收集和分页', async () => {
+    const resource = await createFunctionResource({
+      name: 'Question source',
+      inputs: [{ name: 'stem', type: 'string' }],
+      body: root([
+        {
+          id: 'question',
+          type: 'choice-question',
+          stem: {
+            type: 'string',
+            parts: [{ type: 'variable', ref: { scope: 'local', name: 'stem' } }]
+          },
+          options: [
+            { id: 'a', content: text('A') },
+            { id: 'b', content: text('B') }
+          ],
+          outputName: 'answer'
+        }
+      ]),
+      outputs: [
+        {
+          name: 'result',
+          type: 'choice',
+          expression: { type: 'choice', source: 'choice-output', name: 'answer' }
+        }
+      ],
+      schemaUses: []
+    })
+    const result = await compileTemplate(
+      document(
+        content({
+          root: {
+            ...root([
+              call(
+                'call-1',
+                resource.id,
+                { result: 'answer-1' },
+                { stem: { type: 'string', source: 'literal', value: 'First' } }
+              ),
+              call(
+                'call-2',
+                resource.id,
+                { result: 'answer-2' },
+                { stem: { type: 'string', source: 'literal', value: 'Second' } }
+              ),
+              {
+                id: 'page',
+                type: 'page',
+                content: { blocks: [] },
+                timeline: [{ type: 'countdown', seconds: number(1) }]
+              }
+            ]),
+            choiceCollector: { pages: [{ questionCount: 1 }, { questionCount: 1 }] }
+          },
+          schemaUses: [choiceUse('choice-1', 'answer-1'), choiceUse('choice-2', 'answer-2')]
+        }),
+        [resource]
+      ),
+      context()
+    )
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.examPackage.examData.player.choiceMeta).toMatchObject({
+      pages: [{ questionIndices: [0] }, { questionIndices: [1] }],
+      questions: [{ stem: 'First' }, { stem: 'Second' }]
+    })
+  })
+
+  it('relative focus 在封装函数中解析到当前实例，包括时间线 override', async () => {
     const resource = await createFunctionResource(
       focusFunctionContent({ scope: 'relative', callPath: [], questionId: 'question' })
     )
@@ -194,16 +702,15 @@ describe('Template 编译组合覆盖', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    expect(result.examPackage.player.pages).toHaveLength(2)
-    result.examPackage.player.pages.forEach((page, choiceIndex) => {
-      expect(page.content[0]).toMatchObject({
-        defaultViewport: { mode: 'focus', choiceIndex }
-      })
-      expect(page.timeline[0]).toMatchObject({
-        choiceViewOverrides: {
-          [`block:call-${choiceIndex + 1}/page/view`]: { mode: 'focus', choiceIndex }
-        }
-      })
+    expect(result.examPackage.examData.player.pages).toHaveLength(1)
+    const page = result.examPackage.examData.player.pages[0]
+    expect(page.content[0]).toMatchObject({
+      defaultViewport: { mode: 'focus', choiceIndex: 0 }
+    })
+    expect(page.timeline[0]).toMatchObject({
+      choiceViewOverrides: {
+        'block:call-1/page/view': { mode: 'focus', choiceIndex: 0 }
+      }
     })
   })
 
@@ -215,18 +722,20 @@ describe('Template 编译组合覆盖', () => {
         questionId: 'question'
       })
     )
-    const result = await compileTemplate(document(focusExam(resource.id), [resource]), context())
+    const result = await compileTemplate(
+      document(focusExam(resource.id, 'call-2'), [resource]),
+      context()
+    )
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    result.examPackage.player.pages.forEach((page) => {
-      expect(page.content[0]).toMatchObject({
-        defaultViewport: { mode: 'focus', choiceIndex: 1 }
-      })
-      expect(page.timeline[0]).toMatchObject({
-        choiceViewOverrides: expect.objectContaining({
-          [page.content[0].id]: { mode: 'focus', choiceIndex: 1 }
-        })
+    const page = result.examPackage.examData.player.pages[0]
+    expect(page.content[0]).toMatchObject({
+      defaultViewport: { mode: 'focus', choiceIndex: 0 }
+    })
+    expect(page.timeline[0]).toMatchObject({
+      choiceViewOverrides: expect.objectContaining({
+        [page.content[0].id]: { mode: 'focus', choiceIndex: 0 }
       })
     })
   })
@@ -272,6 +781,7 @@ describe('Template 编译组合覆盖', () => {
             x: 0,
             y: 0,
             width: 100,
+            height: 50,
             src: {
               type: 'file',
               source: 'variable',
@@ -313,15 +823,17 @@ describe('Template 编译组合覆盖', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    expect(result.examPackage.player.pages[0].content[0]).toMatchObject({
+    expect(result.examPackage.examData.player.pages[0].content[0]).toMatchObject({
       type: 'image',
-      src: 'audio.mp3'
+      width: 100,
+      height: 50,
+      src: 'resource:player-block%3Apage%2Fmedia'
     })
-    expect(result.examPackage.player.pages[0].timeline).toEqual([
-      { type: 'play', text: 'Ready' },
+    expect(result.examPackage.examData.player.pages[0].timeline).toEqual([
+      { type: 'play', src: 'resource:player-tts-page%3Apage-0' },
       { type: 'countdown', seconds: 7 }
     ])
-    expect(result.examPackage.player).not.toHaveProperty('choiceMeta')
+    expect(result.examPackage.examData.player).not.toHaveProperty('choiceMeta')
   })
 
   it('按页面和嵌套函数展开顺序分配 recordIndex，并转发 audio 出参', async () => {
@@ -380,16 +892,16 @@ describe('Template 编译组合覆盖', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    expect(result.examPackage.player.recordingIndices).toEqual([0, 1, 2])
+    expect(result.examPackage.examData.player.recordingIndices).toEqual([0, 1, 2])
     expect(
-      result.examPackage.player.pages.map((page) =>
+      result.examPackage.examData.player.pages.map((page) =>
         page.timeline[0].type === 'record' ? page.timeline[0].recordIndex : -1
       )
     ).toEqual([0, 1, 2])
-    expect(result.examPackage.schema.usages.flatMap((usage) => usage.fields)).toEqual([
-      { varName: 'recording', type: 'audio', recordIndex: 0 },
-      { varName: 'recording', type: 'audio', recordIndex: 1 },
-      { varName: 'recording', type: 'audio', recordIndex: 2 }
+    expect(result.examPackage.submissionTemplate.schemaUses.flatMap((use) => use.answers)).toEqual([
+      { answerId: 'recording', type: 'free-speech', audioAnswerIndex: 0 },
+      { answerId: 'recording', type: 'free-speech', audioAnswerIndex: 1 },
+      { answerId: 'recording', type: 'free-speech', audioAnswerIndex: 2 }
     ])
   })
 
@@ -420,7 +932,7 @@ describe('Template 编译组合覆盖', () => {
                 }
               ]
             },
-            timeline: []
+            timeline: [{ type: 'countdown', seconds: number(1) }]
           },
           {
             id: 'question',
@@ -438,14 +950,18 @@ describe('Template 编译组合覆盖', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    expect(result.examPackage.player.pages[0].id).toBe('page:page%2F%25')
-    expect(result.examPackage.player.pages[0].content.map((block) => block.id)).toEqual([
+    expect(result.examPackage.examData.player.pages[0].id).toBe('page:page%2F%25')
+    expect(result.examPackage.examData.player.pages[0].content.map((block) => block.id)).toEqual([
       'block:page%2F%25/block%2F%25',
       'block:page%2F%25/view%2F%25'
     ])
-    expect(result.examPackage.schema.usages[0].useId).toBe('schema-use:use%2F%25')
+    expect(result.examPackage.submissionTemplate.schemaUses[0].instanceId).toBe(
+      'schema-use:use%2F%25'
+    )
     expect(
-      result.examPackage.player.choiceMeta?.questions[0].options.map((option) => option.label)
+      result.examPackage.examData.player.choiceMeta?.questions[0].options.map(
+        (option) => option.label
+      )
     ).toEqual('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''))
   })
 })

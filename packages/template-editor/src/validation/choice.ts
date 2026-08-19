@@ -10,6 +10,7 @@ export interface ChoiceAnalysis {
 interface ViewportUse {
   path: string
   viewport: ChoiceViewport
+  checkedAtFunctionBoundary: boolean
 }
 
 export function analyzeChoiceFrame(
@@ -75,13 +76,16 @@ function analyzeChoiceNode(
       return analyzeChoiceFrame(node, path, functionStack, state)
     case 'choice-question':
       return emptyChoiceAnalysis({ uncollectedQuestionCount: 1 })
+    case 'variable':
+      return emptyChoiceAnalysis()
     case 'page': {
       const viewports: ViewportUse[] = []
       node.content.blocks.forEach((block, index) => {
         if (block.type === 'choice-view') {
           viewports.push({
             path: `${path}.content.blocks[${index}].defaultViewport`,
-            viewport: block.defaultViewport
+            viewport: block.defaultViewport,
+            checkedAtFunctionBoundary: 'group' in block.defaultViewport
           })
         }
       })
@@ -89,7 +93,8 @@ function analyzeChoiceNode(
         for (const [blockId, viewport] of Object.entries(step.choiceViewOverrides ?? {})) {
           viewports.push({
             path: `${path}.timeline[${stepIndex}].choiceViewOverrides[${JSON.stringify(blockId)}]`,
-            viewport
+            viewport,
+            checkedAtFunctionBoundary: 'group' in viewport
           })
         }
       })
@@ -98,12 +103,27 @@ function analyzeChoiceNode(
     case 'function': {
       const func = state.functionsById.get(node.functionRef)
       if (!func || functionStack.includes(func.id)) return emptyChoiceAnalysis()
-      return analyzeChoiceFrame(
+      const result = analyzeChoiceFrame(
         func.body,
         `${path}.function.body`,
         [...functionStack, func.id],
         state
       )
+      const uncheckedViewports = result.viewports.filter(
+        (viewport) => !viewport.checkedAtFunctionBoundary
+      )
+      if (uncheckedViewports.length > 0 && result.candidatePageCounts.length !== 1) {
+        uncheckedViewports.forEach((viewport) =>
+          addError(state, viewport.path, 'FUNCTION_CHOICE_VIEW_WITHOUT_LOCAL_COLLECTOR')
+        )
+      }
+      return {
+        ...result,
+        viewports: result.viewports.map((viewport) => ({
+          ...viewport,
+          checkedAtFunctionBoundary: true
+        }))
+      }
     }
   }
 }
@@ -158,6 +178,51 @@ function validateChoiceViewport(
   path: string,
   state: ValidationState
 ): void {
+  if ('group' in viewport) {
+    if (viewport.mode === 'focus') {
+      validatePageIndex(viewport.pageIndex, undefined, `${path}.pageIndex`, state)
+      validatePageIndex(viewport.questionIndex, undefined, `${path}.questionIndex`, state)
+      return
+    }
+    if (viewport.mode === 'free') {
+      if (viewport.initialPage !== undefined) {
+        validatePageIndex(viewport.initialPage, undefined, `${path}.initialPage`, state)
+      }
+      return
+    }
+    const startIsValid = validatePageIndex(
+      viewport.startPage,
+      undefined,
+      `${path}.startPage`,
+      state
+    )
+    const endIsValid = validatePageIndex(viewport.endPage, undefined, `${path}.endPage`, state)
+    if (startIsValid && endIsValid && viewport.startPage > viewport.endPage) {
+      addError(state, path, 'INVALID_CHOICE_VIEWPORT', {
+        startPage: viewport.startPage,
+        endPage: viewport.endPage
+      })
+    }
+    if (viewport.initialPage !== undefined) {
+      const initialIsValid = validatePageIndex(
+        viewport.initialPage,
+        undefined,
+        `${path}.initialPage`,
+        state
+      )
+      if (
+        initialIsValid &&
+        (viewport.initialPage < viewport.startPage || viewport.initialPage > viewport.endPage)
+      ) {
+        addError(state, `${path}.initialPage`, 'INVALID_CHOICE_VIEWPORT', {
+          initialPage: viewport.initialPage,
+          startPage: viewport.startPage,
+          endPage: viewport.endPage
+        })
+      }
+    }
+    return
+  }
   if (viewport.mode === 'focus') {
     if (!viewport.questionRef.questionId.trim()) {
       addError(state, `${path}.questionRef.questionId`, 'EMPTY_FOCUS_REFERENCE')

@@ -22,8 +22,7 @@ const MESSAGES: Record<ValidationErrorCode, string> = {
   INVALID_FIELD_ORDER: '字段顺序与字段集合不一致',
   INVALID_FIELD_KEY: '字段名称 "{{key}}" 不能为空、包含点号或带有首尾空格',
   EMPTY_VAR_NAME: '变量名不能为空',
-  INVALID_VAR_NAME:
-    '变量名 "{{varName}}" 格式无效（仅允许字母、数字、下划线和连字符，以字母或下划线开头）',
+  INVALID_VAR_NAME: '变量名 "{{varName}}" 格式无效（仅允许字母、数字、下划线和连字符）',
   EMPTY_DESCRIPTION: '字段描述不能为空',
   EMPTY_EXAMPLE: '示例值不能为空',
   DUPLICATE_VAR_NAME: '变量名 "{{varName}}" 重复'

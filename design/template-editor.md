@@ -117,9 +117,12 @@ interface ImageBlock {
   x: number
   y: number
   width: number
+  height: number
   src: ValueExpression<'file'>
 }
 ```
+
+图片块使用固定宽高框。实际图片保持原始宽高比，通过 `object-fit: contain` 在框内居中缩放；较长的一边撑满图片框，另一方向允许留空，不裁剪或拉伸图片。
 
 文本支持固定内容与变量拼接。编辑器显示为带变量 token 的自然文本；内部使用结构化片段保存，避免用户直接修改变量标识。
 
@@ -354,6 +357,10 @@ type ChoiceViewport =
 
 focus 的 questionRef 可以引用全局 ChoiceMeta 中的任意题目，不受原 Collector 收集范围限制。relative 地址从当前 Template 或函数定义作用域开始，absolute 地址从 Template 根开始；callPath 由沿途 FunctionNode.id 组成，questionId 指向最终单题节点。持久化格式中的内页序号从 0 开始，编辑器向用户显示时从 1 开始。Collector 的分页规则或题目数量变化后，编辑器必须重新校验 initialPage、startPage 和 endPage。
 
+Template 编辑器不直接暴露 focus 的结构地址。编辑器按照 Collector 的展开和分页顺序向用户提供“第几页 / 第几题”选择器，并在内部把所选题目转换为 `questionRef`；函数调用路径和题目节点 ID 只属于持久化与编译定位细节。
+
+编辑器中所有页码字段都从当前唯一 Collector 的最终页面列表中选择，不提供数字输入。free 的 initialPage 可以保留默认值；range 的 startPage、endPage 和 initialPage 使用联动下拉框，编辑器始终维持有效闭区间。
+
 所有 ChoiceViewBlock 显示同一个全局 ChoiceMeta 并共享学生答案，但各自拥有独立的当前内页和视图状态。进入新的外层页面时，视图根据 defaultViewport 和当前时间步骤的覆盖参数初始化；答案不会被清除。学生可以改选，不能通过再次点击已选项取消；首版不强制作答，外层时间线结束时照常推进。
 
 ### 7.3 收集与函数组合
@@ -375,6 +382,8 @@ interface CompiledNode {
 首版整份 Template 最多只能产生一个 choiceMetaCandidate：Collector 不能嵌套；出现多个 Collector 候选是编译错误；带 Collector 的函数被调用两次同样会因产生两个候选而报错。没有选择题时允许没有 Collector；存在 ChoiceQuestionNode 时必须恰好产生一个候选，任何未被 Collector 消费的 choiceQuestions 都是编译错误。
 
 每次函数调用都会重新命名局部题目身份，因此同一个不带 Collector 的单题函数调用十次会生成十道独立题目，并可由外层同一个 Collector 组成全局 ChoiceMeta。带 Collector 的完整选择题函数则可以开箱即用，外部不需要再次配置分页。
+
+选择题节点可以从函数向外传播并由调用方 Collector 收集。显示依赖不跨函数边界反向传播：函数正文内出现 ChoiceView 时，该函数的展开范围内必须产生唯一 Collector，不能依赖调用方在函数外配置的 Collector。首版的完整题组函数因此在内部同时封装题目、Collector 和显示页面；外部只调用整体，不直接修改其内部题目。
 
 ## 八、Interface 依赖
 
@@ -427,6 +436,8 @@ Template 是可持续编辑并直接保存的工作文档，不区分草稿和�
 interface TemplateContent {
   name: string
   description: string
+  /** 模板分类标签；规范化后按确定性顺序保存。 */
+  tags: string[]
   interfaces: TemplateInterfaceRequirement[]
   root: FrameNode
   schemaUses: SchemaUse[]
@@ -445,7 +456,11 @@ interface TemplateDocument {
 }
 ```
 
-`editorState` 保存画布位置、折叠、选择等编辑器私有 JSON 状态，不参与语义校验或试卷编译。工作文档可以处于不完整状态，保存不触发严格校验；预览和导出必须通过完整校验。
+`tags` 是模板作者可编辑的分类元数据，不参与试卷编译，但属于 Template 正文：会随 `.lstemplate` 导出、导入、创建副本和内置模板 release 一起传播。标签按无序集合处理；保存和导入时去除首尾空白、规范化 Unicode、丢弃空值、去重并按确定性顺序保存。单个标签最多 24 个 Unicode 字符，单个模板最多 12 个标签，控制字符不允许出现。标签变化属于模板内容变化，会进入现有 revision/CAS 保存、同 ID 导入冲突和内置 release 版本/hash 语义。
+
+解析器兼容历史文档中缺失的 `content.tags`；应用层将其视为空标签集合，新建或发生标签编辑时写出规范的数组字段。
+
+`editorState` 保存画布位置、折叠、选择等编辑器私有 JSON 状态，不参与语义校验或试卷编译。工作文档可以处于不完整状态，保存不触发严格校验；预览和导出必须通过完整校验。标签不是仓储 sidecar，不按模板 ID 另行保存；因此不会出现本地标签与导出文件标签分离的问题。
 
 Template 和本地函数库工作文档都带非负整数 `revision`。新文档从 0 开始，每次成功更新后由仓储递增；保存操作返回带新 revision 的完整文档，编辑器必须用返回值替换本地副本。仓储通过 File Store main 进程的原子 revision compare-and-swap 拒绝过期保存，该保证跨 renderer 和仓储实例成立；耗时的函数复制或资源清理不能覆盖期间完成的 autosave。导入和内置函数库是不可变 release，不使用工作文档 revision。
 
@@ -457,7 +472,7 @@ Template 本身不计算内容哈希。只有 `resources.functions` 中的内嵌
 
 ## 十一、预览与导出
 
-预览和正式导出都需要为每个 Interface 别名临时选择一个实例。选择结果不写入 Template。异步编译入口通过调用方提供的 Interface 仓储定位器按 `instanceId` 获取唯一定位结果，不直接信任选择 DTO 中自行声明的 `interfaceId`；定位结果的真实归属、选择结果和 Template requirement 必须三者一致。
+预览和正式导出都需要为每个 Interface 别名临时选择一个实例。选择结果不写入 Template。异步编译入口通过调用方提供的 Interface 仓储定位器按 `instanceId` 获取唯一定位结果，不直接信任选择 DTO 中自行声明的 `interfaceId`；定位结果的真实归属、选择结果和 Template requirement 必须三者一致。Template 的 `tags` 留在模板管理域，不写入导出的 ExamPackage。
 
 导出流程：
 
@@ -470,5 +485,7 @@ Template 本身不计算内容哈希。只有 `resources.functions` 中的内嵌
 7. 生成 ExamPlayer 可识别的页面、录音槽位和全局 ChoiceMeta。
 8. 生成 Schema 可识别的评分块映射。
 9. 写入最终试卷包。
+
+模板列表按来源分别聚合标签；多选标签使用 AND 过滤语义。内置模板标签只读，创建本地副本后可编辑；本地模板的标签通过 Template 正文保存，不使用额外的 ID 元数据表。
 
 除用户录制的音频和学生选择外，其他变量在第 2 步完成赋值，等价于编译期确定值。

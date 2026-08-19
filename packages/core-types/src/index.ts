@@ -6,13 +6,47 @@
 
 export type { InterfaceVarInfo, InterfaceVarManifest, InterfaceInstance } from './interface'
 export type {
-  SchemaFieldType,
-  SchemaFieldDef,
-  SchemaBlockManifest,
-  SchemaBlockManifestEntry
+  SchemaFormatVersion,
+  SchemaQuestionType,
+  SchemaAnswerType,
+  SchemaTemplateInputType,
+  SchemaStructure,
+  SchemaAnswerDefinition,
+  SchemaTemplateInputDefinition,
+  SchemaData,
+  SchemaDraft,
+  SchemaDraftLibraryDocument,
+  SchemaDefinition,
+  GradingResult,
+  CompiledSchemaInput
+} from './schema'
+export {
+  SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID,
+  SCHEMA_OBJECTIVE_CORRECT_ANSWER_INPUT_ID,
+  SCHEMA_QUESTION_DESCRIPTION_INPUT_ID,
+  SCHEMA_REFERENCE_ANSWER_INPUT_ID
 } from './schema'
 export type {
+  SubmissionFormatVersion,
+  SubmissionCandidate,
+  SubmissionTemplate,
+  SubmissionPackage,
+  SubmissionMeta,
+  SubmissionAnswers,
+  SubmissionAudioAnswer,
+  SubmissionSchemaUse,
+  SubmissionSchemaAnswer,
+  SubmissionResourceManifest,
+  SubmissionResourceEntry
+} from './submission'
+export type {
+  ExamFormatVersion,
   ExamPackage,
+  AnswerCapturePlan,
+  StringAnswerCapture,
+  AudioAnswerCapture,
+  ExamResourceManifest,
+  ExamResourceEntry,
   PlayerExamData,
   ExamPage,
   ResolvedContentBlock,
@@ -26,11 +60,10 @@ export type {
   PlayerChoiceQuestion,
   PlayerChoiceOption,
   ChoiceOptionLabel,
-  ChoiceAnswer,
-  SchemaExportData,
-  SchemaUsageExport,
-  SchemaFieldValue
+  ChoiceAnswer
 } from './exam'
 export type { TaskProgressItem, TaskProgressSnapshot, TaskProgressHandle } from './task-progress'
+export { APP_INFO_CHANNELS } from './app-info'
+export type { AppInfoBridge } from './app-info'
 export { WINDOW_CONTROL_CHANNELS, WINDOW_CONTROL_EVENTS } from './window-controls'
 export type { WindowControlsBridge } from './window-controls'

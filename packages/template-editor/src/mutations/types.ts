@@ -4,9 +4,12 @@ import type {
   ContentBlock,
   FrameNode,
   FunctionInputDef,
+  FunctionInputExpression,
   FunctionOutputDef,
   JsonValue,
-  SchemaBindingExpression,
+  SchemaAnswerBinding,
+  SchemaTextExpression,
+  SchemaUseAttachment,
   SchemaUse,
   StaticValueExpression,
   TemplateInterfaceRequirement,
@@ -34,7 +37,7 @@ export type DefinitionOperation =
       index?: number
       functionRef: string
       signature: FunctionCallSignature
-      inputs?: Readonly<Record<string, StaticValueExpression>>
+      inputs?: Readonly<Record<string, FunctionInputExpression>>
       nodeId?: string
     }
   | { type: 'remove-node'; nodeId: string }
@@ -62,6 +65,12 @@ export type DefinitionOperation =
       stem?: TextExpression
       outputName?: string
     }
+  | {
+      type: 'set-variable'
+      nodeId: string
+      variableName?: string
+      value?: StaticValueExpression
+    }
   | { type: 'insert-choice-option'; nodeId: string; index?: number; option: ChoiceOptionDef }
   | { type: 'update-choice-option'; nodeId: string; optionId: string; option: ChoiceOptionDef }
   | { type: 'remove-choice-option'; nodeId: string; optionId: string }
@@ -71,7 +80,7 @@ export type DefinitionOperation =
       type: 'set-function-call-input'
       nodeId: string
       inputName: string
-      expression: StaticValueExpression | null
+      expression: FunctionInputExpression | null
     }
   | {
       type: 'set-function-call-output-name'
@@ -84,17 +93,37 @@ export type DefinitionOperation =
   | { type: 'update-schema-use'; useId: string; use: SchemaUse }
   | { type: 'remove-schema-use'; useId: string }
   | {
-      type: 'set-schema-binding'
+      type: 'set-schema-input-binding'
       useId: string
-      fieldName: string
-      expression: SchemaBindingExpression | null
+      inputId: string
+      expression: SchemaTextExpression | null
     }
+  | {
+      type: 'set-schema-answer-binding'
+      useId: string
+      answerId: string
+      binding: SchemaAnswerBinding | null
+    }
+  | {
+      type: 'insert-schema-attachment'
+      useId: string
+      index?: number
+      attachment: SchemaUseAttachment
+    }
+  | {
+      type: 'update-schema-attachment'
+      useId: string
+      varName: string
+      attachment: SchemaUseAttachment
+    }
+  | { type: 'remove-schema-attachment'; useId: string; varName: string }
   | { type: 'set-editor-state'; key: string; value: JsonValue | undefined }
 
 export type TemplateDocumentOperation =
   | DefinitionOperation
   | { type: 'set-template-name'; value: string }
   | { type: 'set-template-description'; value: string }
+  | { type: 'set-template-tags'; value: string[] }
   | {
       type: 'insert-interface-requirement'
       index?: number
@@ -118,6 +147,7 @@ export type FunctionDocumentOperation =
   | { type: 'remove-function-output'; name: string }
 
 export type DocumentEditErrorCode =
+  | 'INVALID_VALUE'
   | 'NODE_NOT_FOUND'
   | 'PARENT_NOT_FOUND'
   | 'PARENT_NOT_FRAME'
@@ -132,6 +162,8 @@ export type DocumentEditErrorCode =
   | 'CHOICE_OPTION_ID_CONFLICT'
   | 'SCHEMA_USE_NOT_FOUND'
   | 'SCHEMA_USE_ID_CONFLICT'
+  | 'SCHEMA_ATTACHMENT_NOT_FOUND'
+  | 'SCHEMA_ATTACHMENT_NAME_CONFLICT'
   | 'INTERFACE_REQUIREMENT_NOT_FOUND'
   | 'INTERFACE_ALIAS_CONFLICT'
   | 'FUNCTION_INPUT_NOT_FOUND'

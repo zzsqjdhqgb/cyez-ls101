@@ -10,10 +10,13 @@ import type {
   TemplateNode,
   TextExpression,
   TimelineStep,
+  VariableNode,
   ValueExpression
 } from '@ls101/template-editor'
 import { Button } from '../../components/ui/Button'
 import { IconButton } from '../../components/ui/IconButton'
+import { TemplateFunctionCallEditor } from './TemplateFunctionCallEditor'
+import type { TemplateChoiceGroupCandidate } from './TemplateChoiceTargets'
 import styles from './TemplateNodeInspector.module.css'
 import { TemplateVariableInput } from './TemplateVariableInput'
 import type { TemplateVariableCandidate } from './TemplateVariableInputModel'
@@ -22,6 +25,7 @@ interface TemplateNodeInspectorProps {
   node: TemplateNode
   functions: readonly FunctionDef[]
   variableCandidates: readonly TemplateVariableCandidate[]
+  choiceGroupCandidates: readonly TemplateChoiceGroupCandidate[]
   apply(operation: TemplateDocumentOperation): boolean
 }
 
@@ -29,6 +33,7 @@ export function TemplateNodeInspector({
   node,
   functions,
   variableCandidates,
+  choiceGroupCandidates,
   apply
 }: TemplateNodeInspectorProps): JSX.Element {
   const details =
@@ -37,7 +42,18 @@ export function TemplateNodeInspector({
     ) : node.type === 'page' ? (
       <PageInspector node={node} variableCandidates={variableCandidates} apply={apply} />
     ) : node.type === 'choice-question' ? (
-      <ChoiceQuestionInspector node={node} variableCandidates={variableCandidates} apply={apply} />
+      <ChoiceQuestionEditor node={node} variableCandidates={variableCandidates} apply={apply} />
+    ) : node.type === 'function' ? (
+      <TemplateFunctionCallEditor
+        node={node}
+        definition={functions.find((definition) => definition.id === node.functionRef)}
+        functions={functions}
+        variableCandidates={variableCandidates}
+        choiceGroupCandidates={choiceGroupCandidates}
+        apply={apply}
+      />
+    ) : node.type === 'variable' ? (
+      <VariableEditor node={node} variableCandidates={variableCandidates} apply={apply} />
     ) : null
 
   return (
@@ -54,6 +70,91 @@ export function TemplateNodeInspector({
       {details}
     </div>
   )
+}
+
+export function VariableEditor({
+  node,
+  variableCandidates,
+  apply,
+  compact = false,
+  ariaLabelPrefix
+}: {
+  node: VariableNode
+  variableCandidates: readonly TemplateVariableCandidate[]
+  apply: TemplateNodeInspectorProps['apply']
+  compact?: boolean
+  ariaLabelPrefix?: string
+}): JSX.Element {
+  const label = (value: string): string => (ariaLabelPrefix ? `${ariaLabelPrefix} ${value}` : value)
+  const valueCandidates = variableCandidates.filter(
+    (candidate) => candidate.ref.scope !== 'local' || candidate.ref.name !== node.variableName
+  )
+  const updateType = (type: VariableNode['value']['type']): void => {
+    if (type === node.value.type) return
+    apply({ type: 'set-variable', nodeId: node.id, value: defaultVariableValue(type) })
+  }
+
+  return (
+    <div className={`${styles.nodeEditor}${compact ? ` ${styles.compactVariableEditor}` : ''}`}>
+      <label>
+        变量名称
+        <input
+          aria-label={label('变量名称')}
+          value={node.variableName}
+          onChange={(event) =>
+            apply({ type: 'set-variable', nodeId: node.id, variableName: event.target.value })
+          }
+        />
+      </label>
+      <label>
+        类型
+        <select
+          aria-label={label('类型')}
+          value={node.value.type}
+          onChange={(event) => updateType(event.target.value as VariableNode['value']['type'])}
+        >
+          <option value="string">文本</option>
+          <option value="number">数字</option>
+          <option value="file">文件</option>
+        </select>
+      </label>
+      <div className={styles.expression}>
+        <span className={styles.fieldLabel}>值</span>
+        {node.value.type === 'string' ? (
+          <TemplateVariableInput
+            mode="text"
+            ariaLabel={label('值')}
+            candidates={valueCandidates}
+            multiline={!compact}
+            value={'parts' in node.value ? node.value : stringValueAsText(node.value)}
+            onChange={(value) => apply({ type: 'set-variable', nodeId: node.id, value })}
+          />
+        ) : (
+          <TemplateVariableInput
+            mode="value"
+            ariaLabel={label('值')}
+            candidates={valueCandidates}
+            inputMode={node.value.type === 'number' ? 'decimal' : 'text'}
+            value={node.value}
+            valueType={node.value.type}
+            onChange={(value) => apply({ type: 'set-variable', nodeId: node.id, value })}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function defaultVariableValue(type: VariableNode['value']['type']): VariableNode['value'] {
+  if (type === 'number') return { type, source: 'literal', value: 0 }
+  if (type === 'file') return { type, source: 'literal', value: '' }
+  return { type, parts: [{ type: 'literal', value: '' }] }
+}
+
+function stringValueAsText(value: ValueExpression<'string'>): TextExpression {
+  return value.source === 'literal'
+    ? text(value.value)
+    : { type: 'string', parts: [{ type: 'variable', ref: value.ref }] }
 }
 
 function FrameInspector({
@@ -141,24 +242,35 @@ function FrameInspector({
   )
 }
 
-function ChoiceQuestionInspector({
+export function ChoiceQuestionEditor({
   node,
   variableCandidates,
-  apply
+  apply,
+  compact = false,
+  ariaLabelPrefix
 }: {
   node: ChoiceQuestionNode
   variableCandidates: readonly TemplateVariableCandidate[]
   apply: TemplateNodeInspectorProps['apply']
+  compact?: boolean
+  ariaLabelPrefix?: string
 }): JSX.Element {
+  const controlLabel = (label: string): string =>
+    ariaLabelPrefix ? `${ariaLabelPrefix} ${label}` : label
   const updateOption = (optionId: string, option: ChoiceOptionDef): void => {
     apply({ type: 'update-choice-option', nodeId: node.id, optionId, option })
   }
 
   return (
-    <div className={styles.nodeEditor}>
+    <div
+      className={[styles.nodeEditor, compact ? styles.compactChoiceEditor : '']
+        .filter(Boolean)
+        .join(' ')}
+    >
       <label>
         输出名称
         <input
+          aria-label={controlLabel('输出名称')}
           value={node.outputName}
           onChange={(event) =>
             apply({ type: 'set-choice-question', nodeId: node.id, outputName: event.target.value })
@@ -167,6 +279,8 @@ function ChoiceQuestionInspector({
       </label>
 
       <TextExpressionEditor
+        ariaLabel={controlLabel('题干')}
+        compact={compact}
         label="题干"
         value={node.stem}
         candidates={variableCandidates}
@@ -180,7 +294,12 @@ function ChoiceQuestionInspector({
         </div>
         <div className={styles.itemList}>
           {node.options.map((option, index) => (
-            <div className={styles.editorItem} key={option.id}>
+            <div
+              className={[styles.editorItem, compact ? styles.compactChoiceOption : '']
+                .filter(Boolean)
+                .join(' ')}
+              key={option.id}
+            >
               <div className={styles.itemToolbar}>
                 <strong>{optionLabel(index)}</strong>
                 <ListActions
@@ -188,7 +307,7 @@ function ChoiceQuestionInspector({
                   index={index}
                   length={node.options.length}
                   removeDisabled={node.options.length <= 2}
-                  subject={`选项 ${optionLabel(index)}`}
+                  subject={controlLabel(`选项 ${optionLabel(index)}`)}
                   onCopy={() =>
                     apply({
                       type: 'copy-choice-option',
@@ -211,6 +330,7 @@ function ChoiceQuestionInspector({
                 />
               </div>
               <TextExpressionEditor
+                ariaLabel={controlLabel(`选项 ${optionLabel(index)} 内容`)}
                 compact
                 label={`选项 ${optionLabel(index)} 内容`}
                 value={option.content}
@@ -221,6 +341,7 @@ function ChoiceQuestionInspector({
           ))}
         </div>
         <Button
+          aria-label={controlLabel('添加选项')}
           className={styles.addButton}
           disabled={node.options.length >= 26}
           icon={Plus}
@@ -355,6 +476,7 @@ function PageInspector({
 
 interface TextExpressionEditorProps {
   label: string
+  ariaLabel?: string
   value: TextExpression
   candidates: readonly TemplateVariableCandidate[]
   compact?: boolean
@@ -363,6 +485,7 @@ interface TextExpressionEditorProps {
 
 function TextExpressionEditor({
   label,
+  ariaLabel = label,
   value,
   candidates,
   compact = false,
@@ -373,7 +496,7 @@ function TextExpressionEditor({
       <span className={styles.fieldLabel}>{label}</span>
       <TemplateVariableInput
         mode="text"
-        ariaLabel={label}
+        ariaLabel={ariaLabel}
         candidates={candidates}
         multiline={!compact}
         value={value}

@@ -8,8 +8,8 @@
   Section 引擎（纯函数）            - 系统对话框
   Interface / Template 管理         - 本地模型推理（TTS、本地 STT）
   批改系统                          - 配置存储（API Key 等）
-  考试播放器                       
-  云 API 调用（直接 fetch）        
+  考试播放器
+  云 API 调用（直接 fetch）
 ```
 
 IPC 表面积很小，主进程只暴露以下能力：
@@ -33,7 +33,7 @@ IPC 表面积很小，主进程只暴露以下能力：
 │  ├─ 试卷列表 ├─ 作答导入 ├─ AI 引擎配置           │
 │  ├─ Interface│─ 评分界面 ├─ 权重文件管理           │
 │  │  管理     │─ Schema  │                        │
-│  ├─ Template │  配置    │                        │
+│  ├─ Template │  管理    │                        │
 │  │  编辑器   │─ 成绩导出│                        │
 │  └─ 预览     └─ 结算    │                        │
 │                                                  │
@@ -44,8 +44,8 @@ IPC 表面积很小，主进程只暴露以下能力：
 │  Section 引擎 ── Interface ── Template           │
 │  (参数树展开)    (AI 生成)    (组装)              │
 │                                                  │
-│  评分系统 ── Schema ── Schema 配置                │
-│  (分数计算)    (结构)      (提示词)               │
+│  评分系统 ── Schema                              │
+│  (执行管道)    (评分单元定义)                     │
 ├──────────────────────────────────────────────────┤
 │  引擎层                                          │
 │                                                  │
@@ -59,7 +59,7 @@ IPC 表面积很小，主进程只暴露以下能力：
 │  ├── submissions/ (作答)                          │
 │  ├── interfaces/ (题型 + 数据实例)                 │
 │  ├── templates/  (试卷模板)                       │
-│  ├── schemas/    (评分 Schema + 配置)              │
+│  ├── schemas/    (评分 Schema)                     │
 │  └── config/     (AI 配置、API Key)               │
 └──────────────────────────────────────────────────┘
 ```
@@ -71,9 +71,8 @@ IPC 表面积很小，主进程只暴露以下能力：
 | Section 引擎 | 渲染进程 | 参数树 → Question[] 展开。纯函数，可单独测试 |
 | Interface | 渲染进程 | 题型管理：参数定义、AI 生成提示词模板、调用 LLM API、数据实例管理 |
 | Template | 渲染进程 | 模板管理：Section 结构定义、数据来源绑定（Interface 实例或自定义） |
-| Schema | 渲染进程 | 评分项结构、录音映射、配置格式定义 |
-| Schema 配置 | 渲染进程 | 评分提示词/参数填充 |
-| 考试播放器 | 渲染进程 | React 组件，fixed 覆盖层。接收 ExamPackage，产出 SubmissionPackage |
+| Schema | 渲染进程 | 定义评分题型、题型数据、答案格式和 Template 输入契约 |
+| 考试播放器 | 渲染进程 | React 组件，fixed 覆盖层。从 examBaseUrl 加载 ExamPackage，产出完整作答归档 Blob |
 | AI 引擎 | 渲染 + 主进程 | 云 API（渲染进程直接 fetch），本地推理（主进程 IPC） |
 | 存储 | 主进程 | 文件读写、导入导出 ZIP、系统对话框 |
 
@@ -304,13 +303,15 @@ AI 生成、导入导出和批量运算等长耗时操作使用 `@ls101/core-typ
 
 考试:
   主体 App 加载 ExamPackage → 传给 <ExamPlayer />
-  → 学生作答 → MediaRecorder 录音
-  → onFinish 回调返回 SubmissionPackage
-  → 主体 App 保存（IPC: file:write）
+  → 按答案捕获计划收集字符串答案和 MediaRecorder 录音
+  → 复制 SubmissionTemplate 并补充考生、时间和答案
+  → 播放器使用预检缓存中的静态附件生成完整作答归档 Blob
+  → onFinish 回调返回 Blob
+  → 主体 App 下载、上传或写入收卷库（Electron 保存时使用 IPC: file:write）
 
 批改:
   导入作答（IPC: file:unzip）
-  → Schema 匹配 gradingInfo
+  → 逐项读取 SubmissionPackage 中的完整 SchemaUse 批改快照
   → 转写录音（IPC: ai:sttTranscribe 或云 API fetch）
   → LLM 预评分（fetch）
   → 教师确认 → 结算 → 导出成绩
@@ -324,4 +325,4 @@ AI 生成、导入导出和批量运算等长耗时操作使用 `@ls101/core-typ
 
 3. **云 API 调用不走主进程。** LLM 和云端 STT 是 HTTP 请求，渲染进程直接 fetch。API Key 通过 IPC 从主进程的加密存储中获取。
 
-4. **考试播放器是独立组件。** CSS Modules 隔离样式，fixed 覆盖层独占全屏，props 进 callback 出，无任何 IPC 依赖（除了录音保存时调一次 file:write）。
+4. **考试播放器是独立组件。** CSS Modules 隔离样式，fixed 覆盖层独占全屏，通过兼容 HTTP GET 语义的 `examBaseUrl` 加载考试，callback 输出作答结果，不直接依赖 IPC。最终作答归档的保存或上传由宿主负责。

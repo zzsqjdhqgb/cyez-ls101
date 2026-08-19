@@ -26,8 +26,129 @@
   font-size: 13px;
 }
 
+.tabs {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 18px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tabs button {
+  display: flex;
+  min-width: max-content;
+  height: 42px;
+  align-items: center;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-muted);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.tabs button:hover {
+  color: var(--color-text-strong);
+}
+
+.tabs button[aria-selected='true'] {
+  border-bottom-color: var(--color-accent);
+  color: var(--color-text-strong);
+}
+
 .list {
   border-top: 1px solid var(--color-border);
+}
+
+.tagFilter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 14px;
+}
+
+.tagButton,
+.tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.tagButton {
+  border: 1px solid hsl(var(--template-tag-hue) 45% 68%);
+  color: hsl(var(--template-tag-hue) 48% 27%);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.tag {
+  border: 1px solid transparent;
+  color: hsl(var(--template-tag-hue) 38% 38%);
+  background: hsl(var(--template-tag-hue) 55% 97%);
+}
+
+.tag[data-highlighted='true'] {
+  border-color: hsl(var(--template-tag-hue) 58% 48%);
+  color: hsl(var(--template-tag-hue) 56% 22%);
+  background: hsl(var(--template-tag-hue) 70% 91%);
+  font-weight: 650;
+}
+
+.tagButton:hover {
+  background: hsl(var(--template-tag-hue) 70% 97%);
+}
+
+.tagButton[aria-pressed='true'] {
+  border-color: hsl(var(--template-tag-hue) 58% 48%);
+  color: hsl(var(--template-tag-hue) 56% 22%);
+  background: hsl(var(--template-tag-hue) 70% 91%);
+  font-weight: 650;
+}
+
+[data-theme='dark'] .tagButton,
+[data-theme='dark'] .tag {
+  color: hsl(var(--template-tag-hue) 72% 82%);
+}
+
+[data-theme='dark'] .tagButton {
+  border-color: hsl(var(--template-tag-hue) 42% 45%);
+  background: var(--color-surface);
+}
+
+[data-theme='dark'] .tag {
+  color: hsl(var(--template-tag-hue) 48% 70%);
+  background: hsl(var(--template-tag-hue) 22% 17%);
+}
+
+[data-theme='dark'] .tag[data-highlighted='true'] {
+  border-color: hsl(var(--template-tag-hue) 60% 62%);
+  color: hsl(var(--template-tag-hue) 80% 90%);
+  background: hsl(var(--template-tag-hue) 38% 25%);
+}
+
+[data-theme='dark'] .tagButton:hover {
+  background: hsl(var(--template-tag-hue) 30% 18%);
+}
+
+[data-theme='dark'] .tagButton[aria-pressed='true'] {
+  border-color: hsl(var(--template-tag-hue) 60% 62%);
+  color: hsl(var(--template-tag-hue) 80% 90%);
+  background: hsl(var(--template-tag-hue) 38% 25%);
+}
+
+.tags {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 5px;
+  white-space: nowrap;
 }
 
 .row {
@@ -42,6 +163,22 @@
 
 .rowMain {
   min-width: 0;
+}
+
+.descriptionRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  margin-top: 5px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .rowTitle {
@@ -65,29 +202,40 @@
   color: var(--color-accent);
 }
 
+.builtinIdentity,
+.templateIdentity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.rowName {
+  overflow: hidden;
+  color: var(--color-text-strong);
+  font-size: 15px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.version {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
 .rowDescription {
-  margin: 5px 0 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
   overflow: hidden;
   color: var(--color-text-muted);
   font-size: 13px;
   line-height: 1.5;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.sectionHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin: 42px 0 14px;
-}
-
-.sectionHeader h2 {
-  margin: 0;
-  color: var(--color-text-strong);
-  font-size: 17px;
-  font-weight: 660;
 }
 
 .functionName {

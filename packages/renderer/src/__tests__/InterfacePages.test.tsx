@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom/vitest'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import type { JSX } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { TaskProgressHandle, TaskProgressSnapshot } from '@ls101/core-types'
 import type {
@@ -9,11 +10,12 @@ import type {
   InterfaceApplication,
   InterfaceDraft
 } from '@ls101/interface-editor'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { AppToaster } from '../components/ui/ToastViewport'
 import { toast } from '../components/ui/toast'
 import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceApplicationProvider'
 import { InterfaceDetailsPage } from '../features/interfaces/InterfaceDetailsPage'
+import { InterfaceExportPage } from '../features/interfaces/InterfaceExportPage'
 import { InterfaceDraftEditorPage } from '../features/interfaces/InterfaceDraftEditorPage'
 import { InterfaceDraftListPage } from '../features/interfaces/InterfaceDraftListPage'
 import { InterfaceInstanceEditorPage } from '../features/interfaces/InterfaceInstanceEditorPage'
@@ -114,6 +116,328 @@ describe('Interface pages', () => {
     await waitFor(() => expect(resolve).toHaveBeenCalledWith(plan, 'delete'))
   })
 
+  it('shows builtin Interfaces and reloads after builtin maintenance changes', async () => {
+    const interfaceId = `sha256:${'9'.repeat(64)}`
+    const listPublished = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          interfaceId,
+          name: '上海高考听说',
+          description: '内置题型',
+          source: { type: 'builtin' as const, builtinKey: 'shanghai-gaokao-speaking' },
+          instanceCount: 0
+        }
+      ])
+    const app = application({
+      browser: { listDrafts: vi.fn().mockResolvedValue([]), listPublished }
+    })
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={['/interfaces']}>
+          <InterfaceListPage />
+        </MemoryRouter>
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByText('暂无题型')).toBeInTheDocument()
+    window.dispatchEvent(new Event('interface-builtins-changed'))
+
+    expect(await screen.findByRole('button', { name: '上海高考听说' })).toBeInTheDocument()
+    expect(screen.getByText('内置')).toBeInTheDocument()
+    expect(listPublished).toHaveBeenCalledTimes(2)
+  })
+
+  it('edits a nested field tree and reports publish validation before succeeding', async () => {
+    const save = vi.fn().mockResolvedValue(undefined)
+    const publish = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: 'invalid',
+        errors: [{ code: 'EMPTY_VAR_NAME', path: 'group1.field1' }]
+      })
+      .mockResolvedValueOnce({
+        status: 'published',
+        interface: {
+          interfaceId: `sha256:${'8'.repeat(64)}`,
+          name: '听说测试',
+          description: '用于课堂练习',
+          source: { type: 'published' },
+          instanceCount: 0
+        }
+      })
+    const app = application({
+      drafts: {
+        create: vi.fn().mockResolvedValue(draft),
+        get: vi.fn().mockResolvedValue(draft),
+        save,
+        delete: vi.fn(),
+        publish
+      }
+    })
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/interfaces/drafts/${draft.draftId}`]}>
+          <Routes>
+            <Route path="/interfaces/drafts/:draftId" element={<InterfaceDraftEditorPage />} />
+            <Route path="/interfaces/:interfaceId" element={<div>已发布题型</div>} />
+          </Routes>
+        </MemoryRouter>
+        <AppToaster />
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByRole('heading', { name: '听说测试' })).toBeInTheDocument()
+    const structure = within(screen.getByRole('region', { name: '字段结构' }))
+    fireEvent.click(screen.getByRole('button', { name: '添加字段组' }))
+    expect(structure.getByText('选中此字段组后，新字段会添加到组内。')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '添加字段' }))
+
+    const field = structure.getByRole('button', { name: /field1/ })
+    fireEvent.click(field)
+    fireEvent.change(structure.getByLabelText('类型'), { target: { value: 'image' } })
+    fireEvent.change(structure.getByLabelText('变量名'), { target: { value: 'pictureText' } })
+    fireEvent.change(structure.getByLabelText('描述'), { target: { value: '配图提示词' } })
+    fireEvent.change(structure.getByLabelText('示例'), { target: { value: '示例图片提示词' } })
+    const keyInput = structure.getByLabelText('字段标识')
+    fireEvent.change(keyInput, { target: { value: 'picture' } })
+    fireEvent.blur(keyInput)
+    expect(structure.getByRole('button', { name: /picture/ })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '发布' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '发布当前题型草稿？' })).getByRole('button', {
+        name: '发布题型'
+      })
+    )
+    expect(await screen.findByRole('alert')).toHaveTextContent('变量名不能为空')
+    expect(publish).toHaveBeenCalledOnce()
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ draftId: draft.draftId }))
+
+    fireEvent.click(screen.getByRole('button', { name: '发布' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '发布当前题型草稿？' })).getByRole('button', {
+        name: '发布题型'
+      })
+    )
+    expect(await screen.findByText('已发布题型')).toBeInTheDocument()
+    expect(publish).toHaveBeenCalledTimes(2)
+  })
+
+  it('saves an instance, replaces values from JSON, and preserves invalid state', async () => {
+    const interfaceId = `sha256:${'7'.repeat(64)}`
+    const instanceId = '20000000-0000-4000-8000-000000000005'
+    const initial = {
+      interfaceId,
+      instance: {
+        instanceId,
+        name: '原题组',
+        generatedAt: '2026-08-05T00:00:00.000Z',
+        values: { questionText: '旧内容' }
+      },
+      assetUrls: {}
+    }
+    const saved = {
+      ...initial,
+      instance: { ...initial.instance, name: '已保存题组', values: { questionText: '手动内容' } }
+    }
+    const replaced = {
+      ...saved,
+      instance: { ...saved.instance, values: { questionText: 'JSON 内容' } }
+    }
+    const save = vi.fn().mockResolvedValue(saved)
+    const replaceFromJson = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: 'invalid-json',
+        errors: [{ path: '', message: 'JSON 格式不合法' }]
+      })
+      .mockResolvedValueOnce({ status: 'replaced', instance: replaced })
+    const app = application({
+      published: {
+        get: vi.fn().mockResolvedValue({
+          definition: { ...draft, id: interfaceId },
+          source: { type: 'published' }
+        })
+      },
+      instances: {
+        get: vi.fn().mockResolvedValue(initial),
+        listImageGenerationProviders: vi.fn().mockResolvedValue([]),
+        save,
+        replaceFromJson,
+        startAIGeneration: vi.fn(),
+        generateImage: vi.fn()
+      }
+    })
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/interfaces/${interfaceId}/instances/${instanceId}`]}>
+          <Routes>
+            <Route
+              path="/interfaces/:interfaceId/instances/:instanceId"
+              element={<InterfaceInstanceEditorPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+        <AppToaster />
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByRole('heading', { name: '原题组' })).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('题组名称'), { target: { value: '已保存题组' } })
+    fireEvent.change(screen.getByLabelText('question 内容'), { target: { value: '手动内容' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() =>
+      expect(save).toHaveBeenCalledWith(interfaceId, instanceId, {
+        name: '已保存题组',
+        values: { questionText: '手动内容' },
+        imagePrompts: {},
+        imageFiles: {}
+      })
+    )
+    expect(await screen.findByText('题组已保存')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '高级操作' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '从 JSON 覆盖' }))
+    fireEvent.change(screen.getByLabelText('JSON 内容'), { target: { value: '{broken' } })
+    fireEvent.click(screen.getByRole('button', { name: '校验并覆盖' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
+        name: '校验并覆盖'
+      })
+    )
+    expect(await screen.findByRole('alert')).toHaveTextContent('JSON 格式不合法')
+    expect(screen.getByDisplayValue('手动内容')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('JSON 内容'), {
+      target: { value: '{"question":"JSON 内容"}' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: '校验并覆盖' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
+        name: '校验并覆盖'
+      })
+    )
+    expect(await screen.findByDisplayValue('JSON 内容')).toBeInTheDocument()
+    expect(await screen.findByText('已从 JSON 更新题组')).toBeInTheDocument()
+    expect(replaceFromJson).toHaveBeenNthCalledWith(1, interfaceId, instanceId, '{broken')
+    expect(replaceFromJson).toHaveBeenNthCalledWith(
+      2,
+      interfaceId,
+      instanceId,
+      '{"question":"JSON 内容"}'
+    )
+  })
+
+  it('deletes an instance from the details page after confirmation', async () => {
+    const interfaceId = `sha256:${'6'.repeat(64)}`
+    const instance = {
+      instanceId: '20000000-0000-4000-8000-000000000006',
+      name: '待删除题组',
+      generatedAt: '2026-08-06T00:00:00.000Z'
+    }
+    const listInstances = vi.fn().mockResolvedValueOnce([instance]).mockResolvedValueOnce([])
+    const deleteInstance = vi.fn().mockResolvedValue(undefined)
+    const app = application({
+      published: {
+        get: vi.fn().mockResolvedValue({
+          definition: { ...draft, id: interfaceId },
+          source: { type: 'published' }
+        }),
+        listInstances,
+        getPrompts: vi.fn().mockResolvedValue(null),
+        createBlankInstance: vi.fn(),
+        copyToDraft: vi.fn()
+      },
+      instances: { delete: deleteInstance }
+    })
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/interfaces/${interfaceId}`]}>
+          <Routes>
+            <Route path="/interfaces/:interfaceId" element={<InterfaceDetailsPage />} />
+            <Route path="/interfaces/:interfaceId/export" element={<InterfaceExportPage />} />
+          </Routes>
+        </MemoryRouter>
+        <AppToaster />
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByRole('button', { name: '待删除题组' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '题组操作：待删除题组' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '删除题组' }))
+    expect(screen.getByRole('alertdialog', { name: '删除题组“待删除题组”？' })).toBeInTheDocument()
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: '删除' }))
+    await waitFor(() =>
+      expect(deleteInstance).toHaveBeenCalledWith(interfaceId, instance.instanceId)
+    )
+    expect(await screen.findByText('暂无题组')).toBeInTheDocument()
+    expect(screen.getByText('已删除题组“待删除题组”')).toBeInTheDocument()
+  })
+
+  it('guards leaving an instance with unsaved changes', async () => {
+    const interfaceId = `sha256:${'5'.repeat(64)}`
+    const instanceId = '20000000-0000-4000-8000-000000000007'
+    const app = application({
+      published: {
+        get: vi.fn().mockResolvedValue({
+          definition: { ...draft, id: interfaceId },
+          source: { type: 'published' }
+        })
+      },
+      instances: {
+        get: vi.fn().mockResolvedValue({
+          interfaceId,
+          instance: {
+            instanceId,
+            name: '离开确认题组',
+            generatedAt: '2026-08-07T00:00:00.000Z',
+            values: { questionText: '原内容' }
+          },
+          assetUrls: {}
+        }),
+        listImageGenerationProviders: vi.fn().mockResolvedValue([])
+      }
+    })
+
+    function DetailsRoute(): JSX.Element {
+      const navigate = useNavigate()
+      return <button onClick={() => navigate(`/interfaces/${interfaceId}`)}>题型详情</button>
+    }
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={[`/interfaces/${interfaceId}/instances/${instanceId}`]}>
+          <Routes>
+            <Route
+              path="/interfaces/:interfaceId/instances/:instanceId"
+              element={<InterfaceInstanceEditorPage />}
+            />
+            <Route path="/interfaces/:interfaceId" element={<DetailsRoute />} />
+          </Routes>
+        </MemoryRouter>
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByDisplayValue('原内容')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('question 内容'), { target: { value: '未保存内容' } })
+    fireEvent.click(screen.getByRole('button', { name: '返回题型详情' }))
+    const dialog = screen.getByRole('alertdialog', { name: '放弃未保存的修改？' })
+    expect(dialog).toBeInTheDocument()
+    fireEvent.click(within(dialog).getByRole('button', { name: '取消' }))
+    expect(screen.getByDisplayValue('未保存内容')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '返回题型详情' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', { name: '放弃修改' })
+    )
+    expect(await screen.findByRole('button', { name: '题型详情' })).toBeInTheDocument()
+  })
+
   it('shows published interfaces and the draft entry', async () => {
     const app = application({
       browser: {
@@ -138,11 +462,11 @@ describe('Interface pages', () => {
       </InterfaceApplicationProvider>
     )
 
-    expect(screen.getByRole('heading', { name: '题型' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '草稿' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '题型库' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '草稿' })).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: '上海高考听说' })).toBeInTheDocument()
     expect(screen.getByText('3 个题组')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '进入' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '进入' })).not.toBeInTheDocument()
     expect(screen.queryByText('正式')).not.toBeInTheDocument()
   })
 
@@ -161,7 +485,7 @@ describe('Interface pages', () => {
     )
 
     await waitFor(() => expect(screen.queryByText('正在加载草稿...')).not.toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: '新建草稿' }))
+    fireEvent.click(screen.getByRole('button', { name: '新建题型' }))
 
     expect(await screen.findByRole('heading', { name: '听说测试' })).toBeInTheDocument()
     expect(app.drafts.create).toHaveBeenCalledOnce()
@@ -222,6 +546,7 @@ describe('Interface pages', () => {
         <MemoryRouter initialEntries={[`/interfaces/${interfaceId}`]}>
           <Routes>
             <Route path="/interfaces/:interfaceId" element={<InterfaceDetailsPage />} />
+            <Route path="/interfaces/:interfaceId/export" element={<InterfaceExportPage />} />
           </Routes>
         </MemoryRouter>
         <AppToaster />
@@ -229,6 +554,7 @@ describe('Interface pages', () => {
     )
 
     expect(await screen.findByText('题型定义')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: '题型定义' }))
     expect(screen.getByRole('button', { name: '复制完整提示词' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '复制单独提示词' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '复制 JSON Schema' })).toBeInTheDocument()
@@ -249,7 +575,13 @@ describe('Interface pages', () => {
           definition: { ...draft, id: interfaceId },
           source: { type: 'published' }
         }),
-        listInstances: vi.fn().mockResolvedValue([]),
+        listInstances: vi.fn().mockResolvedValue([
+          {
+            instanceId: '20000000-0000-4000-8000-000000000099',
+            name: '导出测试题组',
+            generatedAt: '2026-08-10T00:00:00.000Z'
+          }
+        ]),
         getPrompts: vi.fn().mockResolvedValue(null)
       },
       transfer: { export: exportInterface }
@@ -260,16 +592,24 @@ describe('Interface pages', () => {
         <MemoryRouter initialEntries={[`/interfaces/${interfaceId}`]}>
           <Routes>
             <Route path="/interfaces/:interfaceId" element={<InterfaceDetailsPage />} />
+            <Route path="/interfaces/:interfaceId/export" element={<InterfaceExportPage />} />
           </Routes>
         </MemoryRouter>
       </InterfaceApplicationProvider>
     )
 
-    expect(await screen.findByRole('button', { name: '导出' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '导出' }))
+    expect(await screen.findByRole('tab', { name: '题型定义' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: '题型定义' }))
+    fireEvent.click(screen.getByRole('button', { name: '导出题型' }))
 
-    await waitFor(() => expect(exportInterface).toHaveBeenCalledWith(interfaceId, { mode: 'all' }))
-    await waitFor(() => expect(screen.getByRole('button', { name: '导出' })).toBeEnabled())
+    expect(await screen.findByRole('heading', { name: '选择要交付的题组' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '导出题型' }))
+    await waitFor(() =>
+      expect(exportInterface).toHaveBeenCalledWith(interfaceId, {
+        mode: 'selected',
+        instanceIds: ['20000000-0000-4000-8000-000000000099']
+      })
+    )
     expect(successToast).not.toHaveBeenCalledWith('题型已导出')
   })
 
@@ -347,15 +687,23 @@ describe('Interface pages', () => {
     )
 
     expect(await screen.findByRole('heading', { name: '第一套题组' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'JSON' }))
-    expect(screen.getByRole('complementary', { name: 'JSON 覆盖' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'AI 生成' }))
+    fireEvent.click(screen.getByRole('button', { name: '高级操作' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '从 JSON 覆盖' }))
+    const jsonDialog = screen.getByRole('dialog', { name: '从 JSON 覆盖题组' })
+    expect(jsonDialog).toBeInTheDocument()
+    fireEvent.click(within(jsonDialog).getByRole('button', { name: '取消' }))
+    expect(screen.queryByRole('dialog', { name: '从 JSON 覆盖题组' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'AI 生成并覆盖' }))
 
-    expect(screen.queryByRole('complementary', { name: 'JSON 覆盖' })).not.toBeInTheDocument()
-    expect(screen.getByRole('complementary', { name: 'AI 生成' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'AI 生成并覆盖' })).toBeInTheDocument()
     await waitFor(() => expect(listAIGenerationModels).toHaveBeenCalledOnce())
     fireEvent.change(screen.getByLabelText('生成模型'), { target: { value: '1' } })
-    fireEvent.click(screen.getByRole('button', { name: '开始生成' }))
+    fireEvent.click(screen.getByRole('button', { name: '生成并覆盖' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
+        name: '生成并覆盖'
+      })
+    )
 
     await waitFor(() =>
       expect(startAIGeneration).toHaveBeenCalledWith(interfaceId, instanceId, {
@@ -365,9 +713,9 @@ describe('Interface pages', () => {
     expect(screen.getByRole('region', { name: 'AI 生成进度' })).toBeInTheDocument()
     expect(screen.getByDisplayValue('旧题目')).toBeDisabled()
     expect(screen.getByRole('button', { name: '返回题型详情' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'JSON' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '高级操作' })).toBeDisabled()
     expect(screen.getByRole('button', { name: '生成中' })).toBeDisabled()
-    expect(screen.queryByRole('button', { name: '完成' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '返回题组' })).not.toBeInTheDocument()
 
     await act(async () => {
       resolveCompletion({ status: 'completed', instance: completed })
@@ -376,25 +724,30 @@ describe('Interface pages', () => {
 
     expect(await screen.findByDisplayValue('AI 新题目')).toBeEnabled()
     expect(await screen.findByText('AI 生成内容已保存')).toBeInTheDocument()
-    expect(screen.getByRole('complementary', { name: 'AI 生成' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'AI 生成并覆盖' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'AI 生成进度' })).toBeInTheDocument()
     expect(screen.getByText('生成完成')).toBeInTheDocument()
     expect(screen.getByLabelText('生成模型')).toBeEnabled()
     expect(screen.getByRole('button', { name: '返回题型详情' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'JSON' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'AI 生成' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '高级操作' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'AI 生成并覆盖' })).toBeEnabled()
     expect(screen.getByRole('button', { name: '重新生成' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '重新生成' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
+        name: '生成并覆盖'
+      })
+    )
     await waitFor(() => expect(startAIGeneration).toHaveBeenCalledTimes(2))
     expect(startAIGeneration).toHaveBeenNthCalledWith(2, interfaceId, instanceId, {
       model: { providerId: 'provider-b', modelId: 'model-b' }
     })
     expect(await screen.findByRole('button', { name: '重新生成' })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '完成' }))
+    fireEvent.click(screen.getByRole('button', { name: '返回题组' }))
 
-    expect(screen.queryByRole('complementary', { name: 'AI 生成' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'AI 生成并覆盖' })).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'AI 生成进度' })).not.toBeInTheDocument()
     expect(screen.getByDisplayValue('AI 新题目')).toBeEnabled()
   })
@@ -464,6 +817,7 @@ describe('Interface pages', () => {
         }
       }
     )
+    const replaceFromJson = vi.fn().mockResolvedValue({ status: 'replaced', instance: initial })
     const app = application({
       published: { get: vi.fn().mockResolvedValue({ definition, source: { type: 'published' } }) },
       instances: {
@@ -473,7 +827,7 @@ describe('Interface pages', () => {
           .fn()
           .mockResolvedValue([{ providerId: 'manual', providerName: '手动生成' }]),
         save,
-        replaceFromJson: vi.fn(),
+        replaceFromJson,
         startAIGeneration: vi.fn(),
         generateImage: vi.fn().mockResolvedValue(generatedBytes)
       }
@@ -494,6 +848,30 @@ describe('Interface pages', () => {
 
     expect(await screen.findByDisplayValue('原始图片提示词')).toBeInTheDocument()
     expect(screen.getByText('尚未选择图片')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '高级操作' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '从 JSON 覆盖' }))
+    expect(screen.getByLabelText('图像 Provider')).toBeInTheDocument()
+    expect(screen.queryByLabelText('生成模型')).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('JSON 内容'), {
+      target: { value: '{"picture":"JSON 图片提示词"}' }
+    })
+    const replaceButton = screen.getByRole('button', { name: '校验并覆盖' })
+    await waitFor(() => expect(replaceButton).toBeEnabled())
+    fireEvent.click(replaceButton)
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
+        name: '校验并覆盖'
+      })
+    )
+    await waitFor(() =>
+      expect(replaceFromJson).toHaveBeenCalledWith(
+        interfaceId,
+        instanceId,
+        '{"picture":"JSON 图片提示词"}',
+        { imageProvider: { providerId: 'manual' } }
+      )
+    )
 
     fireEvent.click(screen.getByRole('button', { name: '选择文件' }))
     await waitFor(() => expect(imageInputMocks.readBinary).toHaveBeenCalledOnce())
@@ -538,16 +916,11 @@ describe('Interface pages', () => {
       'asset://local/questionImage-saved.png'
     )
 
-    fireEvent.click(screen.getByRole('button', { name: '移除图片' }))
+    const removeImageButton = screen.getByRole('button', { name: '移除图片' })
+    await waitFor(() => expect(removeImageButton).toBeEnabled())
+    fireEvent.click(removeImageButton)
     expect(screen.getByDisplayValue('新的图片提示词')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '保存' }))
-    await waitFor(() => expect(save).toHaveBeenCalledTimes(3))
-    expect(save).toHaveBeenLastCalledWith(interfaceId, instanceId, {
-      name: '图片题组',
-      values: { questionImage: 'questionImage-saved.png' },
-      imagePrompts: { questionImage: '新的图片提示词' },
-      imageFiles: { questionImage: null }
-    })
+    expect(screen.getByRole('button', { name: '保存' })).toBeDisabled()
     expect(screen.queryByAltText('picture预览')).not.toBeInTheDocument()
     expect(screen.getByDisplayValue('新的图片提示词')).toBeInTheDocument()
     expect(createObjectURL).toHaveBeenCalledTimes(2)
@@ -563,6 +936,15 @@ describe('Interface pages', () => {
       'src',
       'blob:generated-preview'
     )
+    expect(screen.getByRole('button', { name: '保存' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(3))
+    expect(save).toHaveBeenLastCalledWith(interfaceId, instanceId, {
+      name: '图片题组',
+      values: { questionImage: 'questionImage-saved.png' },
+      imagePrompts: { questionImage: '新的图片提示词' },
+      imageFiles: { questionImage: generatedBytes }
+    })
   })
 
   it('generates prompted images sequentially and saves them as one replacement', async () => {
@@ -606,7 +988,11 @@ describe('Interface pages', () => {
           secondImage: 'second-old.png',
           thirdImage: 'third-old.png'
         },
-        imagePrompts: { firstImage: '山的提示词', secondImage: '海的提示词' }
+        imagePrompts: {
+          firstImage: '山的提示词',
+          secondImage: '海的提示词',
+          thirdImage: '森林的提示词'
+        }
       },
       assetUrls: {
         'first-old.png': 'asset://local/first-old.png',
@@ -616,6 +1002,7 @@ describe('Interface pages', () => {
     }
     const firstImage = new Uint8Array([1, 2, 3])
     const secondImage = new Uint8Array([4, 5, 6])
+    const thirdImage = new Uint8Array([7, 8, 9])
     let resolveFirst!: (data: Uint8Array) => void
     const firstPending = new Promise<Uint8Array>((resolve) => {
       resolveFirst = resolve
@@ -624,6 +1011,7 @@ describe('Interface pages', () => {
       .fn()
       .mockReturnValueOnce(firstPending)
       .mockResolvedValueOnce(secondImage)
+      .mockResolvedValueOnce(thirdImage)
     const saved = {
       ...initial,
       instance: {
@@ -670,8 +1058,8 @@ describe('Interface pages', () => {
     )
 
     expect(await screen.findByRole('heading', { name: '批量生图题组' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'AI 生图' }))
-    expect(screen.getByRole('complementary', { name: 'AI 生图' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '批量生图' }))
+    expect(screen.getByRole('dialog', { name: 'AI 生图' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '开始生图' }))
     await waitFor(() => expect(generateImage).toHaveBeenCalledOnce())
     expect(generateImage).toHaveBeenCalledWith('山的提示词', {
@@ -681,8 +1069,12 @@ describe('Interface pages', () => {
     expect(generateImage).toHaveBeenCalledTimes(1)
 
     resolveFirst(firstImage)
-    await waitFor(() => expect(generateImage).toHaveBeenCalledTimes(2))
-    expect(generateImage).toHaveBeenLastCalledWith('海的提示词', {
+    await waitFor(() => expect(generateImage).toHaveBeenCalledTimes(3))
+    expect(generateImage).toHaveBeenNthCalledWith(2, '海的提示词', {
+      signal: expect.any(AbortSignal),
+      provider: { providerId: 'image-api', modelId: 'image-1' }
+    })
+    expect(generateImage).toHaveBeenNthCalledWith(3, '森林的提示词', {
       signal: expect.any(AbortSignal),
       provider: { providerId: 'image-api', modelId: 'image-1' }
     })
@@ -691,10 +1083,10 @@ describe('Interface pages', () => {
       name: '批量生图题组',
       values: initial.instance.values,
       imagePrompts: initial.instance.imagePrompts,
-      imageFiles: { firstImage, secondImage }
+      imageFiles: { firstImage, secondImage, thirdImage }
     })
     expect(await screen.findByText('生图完成')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '完成' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '返回题组' })).toBeInTheDocument()
   })
 
   it('keeps AI failures in the AI pane and allows retrying', async () => {
@@ -758,17 +1150,27 @@ describe('Interface pages', () => {
     )
 
     expect(await screen.findByRole('heading', { name: '失败测试题组' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'AI 生成' }))
+    fireEvent.click(screen.getByRole('button', { name: 'AI 生成并覆盖' }))
     await waitFor(() => expect(screen.getByLabelText('生成模型')).toBeEnabled())
-    fireEvent.click(screen.getByRole('button', { name: '开始生成' }))
+    fireEvent.click(screen.getByRole('button', { name: '生成并覆盖' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
+        name: '生成并覆盖'
+      })
+    )
 
     expect(await screen.findByText('生成失败')).toBeInTheDocument()
     expect(screen.getByText('生成服务暂时不可用')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '重新生成' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '完成' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '返回题组' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '重新生成' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
+        name: '生成并覆盖'
+      })
+    )
     await waitFor(() => expect(startAIGeneration).toHaveBeenCalledTimes(2))
   })
 })

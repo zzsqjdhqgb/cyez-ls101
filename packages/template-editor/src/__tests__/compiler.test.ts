@@ -1,6 +1,6 @@
-import type { InterfaceVarManifest, SchemaBlockManifest } from '@ls101/core-types'
-import { describe, expect, it } from 'vitest'
-import { compileTemplate, type TemplateCompileContext } from '../compiler'
+import type { InterfaceVarManifest, SchemaDefinition } from '@ls101/core-types'
+import { describe, expect, it, vi } from 'vitest'
+import { compileTemplate, compileTemplatePreview, type TemplateCompileContext } from '../compiler'
 import { createFunctionResource } from '../id'
 import type {
   FrameNode,
@@ -8,15 +8,19 @@ import type {
   FunctionDef,
   FunctionNode,
   PageNode,
+  SchemaTextExpression,
   SchemaUse,
   TemplateContent,
   TemplateDocument
 } from '../types'
-import { number, root, text } from './fixtures'
+import { number, root, schemaDefinition, schemaText, text } from './fixtures'
 
 const INTERFACE_ID = `sha256:${'1'.repeat(64)}`
 const OTHER_INTERFACE_ID = `sha256:${'9'.repeat(64)}`
 const SCHEMA_ID = `sha256:${'2'.repeat(64)}`
+const AUDIO_SCHEMA_ID = `sha256:${'3'.repeat(64)}`
+const CHOICE_SCHEMA_ID = `sha256:${'4'.repeat(64)}`
+const FIXED_SCHEMA_ID = `sha256:${'5'.repeat(64)}`
 const OTHER_SCHEMA_ID = `sha256:${'8'.repeat(64)}`
 
 function interfaceManifest(): InterfaceVarManifest {
@@ -42,34 +46,39 @@ function interfaceManifest(): InterfaceVarManifest {
   }
 }
 
-function schemaManifest(): SchemaBlockManifest {
-  return {
-    schemaId: SCHEMA_ID,
-    schemaName: 'Scoring',
-    blocks: [
-      {
-        blockId: 'text',
-        blockName: 'Text',
-        fields: [{ varName: 'prompt', type: 'text' }]
-      },
-      {
-        blockId: 'audio',
-        blockName: 'Audio',
-        fields: [{ varName: 'recording', type: 'audio' }]
-      },
-      {
-        blockId: 'choice',
-        blockName: 'Choice',
-        fields: [{ varName: 'answer', type: 'choice' }]
-      }
-    ]
-  }
+function schemaDefinitions(): SchemaDefinition[] {
+  return [
+    schemaDefinition(SCHEMA_ID, {
+      questionType: 'freetalk',
+      answerFormat: [],
+      templateInputs: [{ inputId: 'prompt', type: 'text', required: true }]
+    }),
+    schemaDefinition(AUDIO_SCHEMA_ID, {
+      questionType: 'freetalk',
+      answerFormat: [{ answerId: 'recording', type: 'free-speech' }],
+      templateInputs: []
+    }),
+    schemaDefinition(CHOICE_SCHEMA_ID, {
+      questionType: 'objective',
+      answerFormat: [{ answerId: 'answer', type: 'text' }],
+      templateInputs: [
+        { inputId: 'question-description', type: 'text', required: true },
+        { inputId: 'correct-answer', type: 'text', required: true },
+        { inputId: 'analysis', type: 'text', required: false }
+      ]
+    }),
+    schemaDefinition(FIXED_SCHEMA_ID, {
+      questionType: 'fixed-reading',
+      answerFormat: [{ answerId: 'reading', type: 'fixed-speech' }],
+      templateInputs: [{ inputId: 'prompt', type: 'text', required: true }]
+    })
+  ]
 }
 
 function compileContext(overrides: Partial<TemplateCompileContext> = {}): TemplateCompileContext {
   return {
     interfaceManifests: [interfaceManifest()],
-    schemaManifests: [schemaManifest()],
+    schemaDefinitions: schemaDefinitions(),
     interfaceBindings: [
       {
         alias: 'exam',
@@ -86,9 +95,11 @@ function compileContext(overrides: Partial<TemplateCompileContext> = {}): Templa
               name: 'Instance',
               generatedAt: '2026-08-04T00:00:00.000Z',
               values: { sentence: 'Hello', picture: 'picture.png' }
-            }
+            },
+            assetUrls: { 'picture.png': 'asset://instance-1/picture.png' }
           }
         : null,
+    synthesizeSpeech: async () => ({ data: new Uint8Array([1, 2, 3]), mediaType: 'audio/wav' }),
     ...overrides
   }
 }
@@ -115,35 +126,46 @@ function content(overrides: Partial<TemplateContent> = {}): TemplateContent {
       }
     ],
     root: root(),
-    schemaUses: [textSchemaUse('root-text', { type: 'literal', value: 'Prompt' })],
+    schemaUses: [textSchemaUse('root-text', schemaText('Prompt'))],
     ...overrides
   }
 }
 
-function textSchemaUse(useId: string, prompt: SchemaUse['bindings'][string]): SchemaUse {
+function textSchemaUse(useId: string, prompt: SchemaTextExpression): SchemaUse {
   return {
     useId,
     schemaId: SCHEMA_ID,
-    blockId: 'text',
-    bindings: { prompt }
+    inputBindings: { prompt },
+    answerBindings: {},
+    attachments: []
   }
 }
 
 function audioSchemaUse(useId: string, outputName: string): SchemaUse {
   return {
     useId,
-    schemaId: SCHEMA_ID,
-    blockId: 'audio',
-    bindings: { recording: { type: 'record-output', name: outputName } }
+    schemaId: AUDIO_SCHEMA_ID,
+    inputBindings: {},
+    answerBindings: {
+      recording: {
+        type: 'free-speech',
+        audio: { type: 'audio', source: 'record-output', name: outputName }
+      }
+    },
+    attachments: []
   }
 }
 
 function choiceSchemaUse(useId: string, outputName: string): SchemaUse {
   return {
     useId,
-    schemaId: SCHEMA_ID,
-    blockId: 'choice',
-    bindings: { answer: { type: 'choice-output', name: outputName } }
+    schemaId: CHOICE_SCHEMA_ID,
+    inputBindings: {
+      'question-description': schemaText('Choose one'),
+      'correct-answer': schemaText('A')
+    },
+    answerBindings: { answer: { type: 'text', source: 'choice-output', name: outputName } },
+    attachments: []
   }
 }
 
@@ -248,6 +270,7 @@ function mainPage(): PageNode {
           x: 10,
           y: 25,
           width: 80,
+          height: 35,
           src: {
             type: 'file',
             source: 'variable',
@@ -299,7 +322,336 @@ function mainPage(): PageNode {
   }
 }
 
+function speechOnlyContent(): TemplateContent {
+  return content({
+    root: root([
+      {
+        id: 'speech-page',
+        type: 'page',
+        content: { blocks: [] },
+        timeline: [{ type: 'play', text: text('Hello') }]
+      }
+    ])
+  })
+}
+
 describe('compileTemplate', () => {
+  it('生成没有 Schema 的试卷和空作答模板', async () => {
+    const result = await compileTemplate(
+      document(
+        content({
+          root: root([
+            {
+              id: 'page',
+              type: 'page',
+              content: { blocks: [] },
+              timeline: [{ type: 'countdown', seconds: number(1) }]
+            }
+          ]),
+          schemaUses: []
+        })
+      ),
+      compileContext()
+    )
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.examPackage.answerCapturePlan).toEqual({ strings: [], audios: [] })
+    expect(result.examPackage.submissionTemplate.schemaUses).toEqual([])
+    expect(result.examPackage.submissionTemplate.resources).toEqual({})
+  })
+
+  it('声明提升变量并且变量节点不生成页面', async () => {
+    const result = await compileTemplatePreview(
+      document(
+        content({
+          root: root([
+            {
+              id: 'page',
+              type: 'page',
+              content: {
+                blocks: [
+                  {
+                    id: 'message',
+                    type: 'text',
+                    x: 0,
+                    y: 0,
+                    text: {
+                      type: 'string',
+                      parts: [{ type: 'variable', ref: { scope: 'local', name: 'message' } }]
+                    }
+                  }
+                ]
+              },
+              timeline: [{ type: 'play', text: text('Ready') }]
+            },
+            {
+              id: 'outer',
+              type: 'frame',
+              children: [
+                {
+                  id: 'variable',
+                  type: 'variable',
+                  variableName: 'message',
+                  value: text('Hello')
+                }
+              ]
+            }
+          ])
+        })
+      ),
+      compileContext()
+    )
+
+    expect(result).toMatchObject({
+      success: true,
+      preview: {
+        pages: [{ sourceNodeId: 'page', content: [{ type: 'text', text: 'Hello' }] }]
+      }
+    })
+    if (result.success) expect(result.preview.pages).toHaveLength(1)
+  })
+
+  it('解析静态预览页面并跳过 TTS 音频生成', async () => {
+    const synthesizeSpeech = vi.fn()
+    const result = await compileTemplatePreview(
+      document(speechOnlyContent()),
+      compileContext({ synthesizeSpeech })
+    )
+
+    expect(result).toMatchObject({
+      success: true,
+      preview: {
+        pages: [
+          {
+            id: 'page:speech-page',
+            sourceNodeId: 'speech-page',
+            callPath: [],
+            timeline: [{ type: 'play', text: 'Hello' }]
+          }
+        ]
+      }
+    })
+    expect(synthesizeSpeech).not.toHaveBeenCalled()
+  })
+
+  it('拒绝编译没有页面的 Template', async () => {
+    const result = await compileTemplate(document(content()), compileContext())
+
+    expect(result).toMatchObject({
+      success: false,
+      errors: [{ stage: 'compile', path: 'root', code: 'EMPTY_PLAYER_PAGES' }]
+    })
+  })
+
+  it('拒绝静态求值后为零秒的录音动作', async () => {
+    const resource = await createFunctionResource({
+      name: 'Recording page',
+      inputs: [{ name: 'duration', type: 'number' }],
+      body: root([
+        {
+          id: 'recording-page',
+          type: 'page',
+          content: { blocks: [] },
+          timeline: [
+            {
+              type: 'record',
+              duration: {
+                type: 'number',
+                source: 'variable',
+                ref: { scope: 'local', name: 'duration' }
+              },
+              outputName: 'recording'
+            }
+          ]
+        }
+      ]),
+      outputs: [],
+      schemaUses: []
+    })
+    const exam = content({
+      root: root([
+        functionCall(
+          'recording-call',
+          resource.id,
+          { duration: { type: 'number', source: 'literal', value: 0 } },
+          {}
+        )
+      ])
+    })
+    const result = await compileTemplate(document(exam, [resource]), compileContext())
+
+    expect(result).toMatchObject({
+      success: false,
+      errors: [
+        {
+          stage: 'compile',
+          path: 'root.children[0].function.body.children[0].timeline[0].duration',
+          code: 'INVALID_RECORDING_DURATION',
+          params: { value: 0 }
+        }
+      ]
+    })
+  })
+
+  it('有播放动作但未提供语音合成器时返回稳定错误', async () => {
+    const result = await compileTemplate(
+      document(speechOnlyContent()),
+      compileContext({ synthesizeSpeech: undefined })
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      errors: [
+        {
+          stage: 'compile',
+          path: 'root.children[0].timeline[0].text',
+          code: 'SPEECH_SYNTHESIZER_MISSING'
+        }
+      ]
+    })
+  })
+
+  it('语音合成失败时保留来源路径和错误消息', async () => {
+    const result = await compileTemplate(
+      document(speechOnlyContent()),
+      compileContext({
+        synthesizeSpeech: async () => {
+          throw new Error('provider unavailable')
+        }
+      })
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      errors: [
+        {
+          stage: 'compile',
+          path: 'root.children[0].timeline[0].text',
+          code: 'SPEECH_SYNTHESIS_FAILED',
+          params: { message: 'provider unavailable' }
+        }
+      ]
+    })
+  })
+
+  it.each([
+    { name: '空音频', audio: { data: new Uint8Array(), mediaType: 'audio/wav' } },
+    {
+      name: '非音频媒体类型',
+      audio: { data: new Uint8Array([1]), mediaType: 'application/octet-stream' }
+    },
+    {
+      name: '非结构化返回值',
+      audio: null as never
+    }
+  ])('拒绝语音合成器返回的无效数据：$name', async ({ audio }) => {
+    const result = await compileTemplate(
+      document(speechOnlyContent()),
+      compileContext({ synthesizeSpeech: async () => audio })
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      errors: [
+        {
+          stage: 'compile',
+          path: 'root.children[0].timeline[0].text',
+          code: 'INVALID_SYNTHESIZED_AUDIO'
+        }
+      ]
+    })
+  })
+
+  it('编译 fixed-speech 双槽位和 SchemaUse 局部附件资源', async () => {
+    const exam = content({
+      root: root([
+        {
+          id: 'recording-page',
+          type: 'page',
+          content: { blocks: [] },
+          timeline: [{ type: 'record', duration: number(5), outputName: 'reading-audio' }]
+        }
+      ]),
+      schemaUses: [
+        {
+          useId: 'reading',
+          schemaId: FIXED_SCHEMA_ID,
+          inputBindings: {
+            prompt: {
+              type: 'string',
+              parts: [
+                { type: 'literal', value: '![题图](' },
+                { type: 'variable', ref: { scope: 'schema-use', varName: 'picture' } },
+                { type: 'literal', value: ')' }
+              ]
+            }
+          },
+          answerBindings: {
+            reading: {
+              type: 'fixed-speech',
+              text: {
+                type: 'string',
+                parts: [
+                  {
+                    type: 'variable',
+                    ref: { scope: 'interface', alias: 'exam', varName: 'sentence' }
+                  }
+                ]
+              },
+              audio: { type: 'audio', source: 'record-output', name: 'reading-audio' }
+            }
+          },
+          attachments: [
+            {
+              varName: 'picture',
+              description: 'Question image',
+              file: {
+                type: 'file',
+                source: 'variable',
+                ref: { scope: 'interface', alias: 'exam', varName: 'picture' }
+              }
+            }
+          ]
+        }
+      ]
+    })
+
+    const result = await compileTemplate(document(exam), compileContext())
+    expect(result.success).toBe(true)
+    if (!result.success) return
+
+    const assetKey = 'schema-schema-use%3Areading-picture'
+    expect(result.examPackage.submissionTemplate.schemaUses).toEqual([
+      {
+        instanceId: 'schema-use:reading',
+        schema: schemaDefinitions()[3],
+        inputs: [{ inputId: 'prompt', type: 'text', value: `![题图](resource:${assetKey})` }],
+        answers: [
+          {
+            answerId: 'reading',
+            type: 'fixed-speech',
+            text: 'Hello',
+            audioAnswerIndex: 0
+          }
+        ]
+      }
+    ])
+    expect(result.examPackage.examData.resources).toEqual({
+      [assetKey]: {
+        filename: 'picture.png',
+        packagePath: `resources/${assetKey}/picture.png`,
+        mediaType: 'image/png'
+      }
+    })
+    expect(result.examPackage.submissionTemplate.resources).toEqual(
+      result.examPackage.examData.resources
+    )
+    expect(result.resourceSources).toEqual([
+      { assetKey, sourceUrl: 'asset://instance-1/picture.png' }
+    ])
+  })
+
   it('展开完整 Template 为 Player 数据和 Schema 映射', async () => {
     const textResource = await createFunctionResource(textFunctionContent())
     const choiceResource = await createFunctionResource(choiceFunctionContent())
@@ -331,13 +683,14 @@ describe('compileTemplate', () => {
       root: collector([mainPage(), textCall, choiceCall], [1]),
       schemaUses: [
         textSchemaUse('root-text', {
-          type: 'concat',
+          type: 'string',
           parts: [
             { type: 'literal', value: 'Resolved: ' },
-            { type: 'variable', scope: 'local', name: 'outer-text' }
+            { type: 'variable', ref: { scope: 'local', name: 'outer-text' } }
           ]
         }),
         audioSchemaUse('root-audio', 'root-recording'),
+        audioSchemaUse('root-audio-copy', 'root-recording'),
         choiceSchemaUse('root-choice', 'outer-answer')
       ]
     })
@@ -349,9 +702,9 @@ describe('compileTemplate', () => {
     expect(result.success).toBe(true)
     if (!result.success) return
 
-    expect(result.examPackage.title).toBe('Compiled exam')
-    expect(result.examPackage.player.recordingIndices).toEqual([0])
-    expect(result.examPackage.player.choiceMeta).toEqual({
+    expect(result.examPackage.examData.title).toBe('Compiled exam')
+    expect(result.examPackage.examData.player.recordingIndices).toEqual([0])
+    expect(result.examPackage.examData.player.choiceMeta).toEqual({
       pages: [{ questionIndices: [0] }],
       questions: [
         {
@@ -365,7 +718,7 @@ describe('compileTemplate', () => {
       ]
     })
 
-    const compiledPage = result.examPackage.player.pages[0]
+    const compiledPage = result.examPackage.examData.player.pages[0]
     expect(compiledPage.id).toBe('page:main-page')
     expect(compiledPage.content[0]).toEqual({
       id: 'block:main-page/prompt',
@@ -381,14 +734,16 @@ describe('compileTemplate', () => {
     expect(compiledPage.content[1]).toMatchObject({
       id: 'block:main-page/picture',
       type: 'image',
-      src: 'picture.png'
+      width: 80,
+      height: 35,
+      src: 'resource:player-block%3Amain-page%2Fpicture'
     })
     expect(compiledPage.content[2]).toMatchObject({
       id: 'block:main-page/choices',
       defaultViewport: { mode: 'focus', choiceIndex: 0 }
     })
     expect(compiledPage.timeline).toEqual([
-      { type: 'play', text: 'Listen: Hello' },
+      { type: 'play', src: 'resource:player-tts-page%3Amain-page-0' },
       { type: 'countdown', seconds: 3 },
       {
         type: 'record',
@@ -400,32 +755,68 @@ describe('compileTemplate', () => {
       }
     ])
 
-    expect(result.examPackage.schema.usages).toEqual([
+    expect(result.examPackage.submissionTemplate.schemaUses).toEqual([
       {
-        useId: 'schema-use:choice-call/inner-choice',
-        schemaId: SCHEMA_ID,
-        blockId: 'choice',
-        fields: [{ varName: 'answer', type: 'choice', choiceIndex: 0 }]
+        instanceId: 'schema-use:choice-call/inner-choice',
+        schema: schemaDefinitions()[2],
+        inputs: [
+          { inputId: 'question-description', type: 'text', value: 'Choose one' },
+          { inputId: 'correct-answer', type: 'text', value: 'A' }
+        ],
+        answers: [{ answerId: 'answer', type: 'text', stringAnswerIndex: 0 }]
       },
       {
-        useId: 'schema-use:root-text',
-        schemaId: SCHEMA_ID,
-        blockId: 'text',
-        fields: [{ varName: 'prompt', type: 'text', value: 'Resolved: Hello!' }]
+        instanceId: 'schema-use:root-text',
+        schema: schemaDefinitions()[0],
+        inputs: [{ inputId: 'prompt', type: 'text', value: 'Resolved: Hello!' }],
+        answers: []
       },
       {
-        useId: 'schema-use:root-audio',
-        schemaId: SCHEMA_ID,
-        blockId: 'audio',
-        fields: [{ varName: 'recording', type: 'audio', recordIndex: 0 }]
+        instanceId: 'schema-use:root-audio',
+        schema: schemaDefinitions()[1],
+        inputs: [],
+        answers: [
+          {
+            answerId: 'recording',
+            type: 'free-speech',
+            audioAnswerIndex: 0
+          }
+        ]
       },
       {
-        useId: 'schema-use:root-choice',
-        schemaId: SCHEMA_ID,
-        blockId: 'choice',
-        fields: [{ varName: 'answer', type: 'choice', choiceIndex: 0 }]
+        instanceId: 'schema-use:root-audio-copy',
+        schema: schemaDefinitions()[1],
+        inputs: [],
+        answers: [
+          {
+            answerId: 'recording',
+            type: 'free-speech',
+            audioAnswerIndex: 0
+          }
+        ]
+      },
+      {
+        instanceId: 'schema-use:root-choice',
+        schema: schemaDefinitions()[2],
+        inputs: [
+          { inputId: 'question-description', type: 'text', value: 'Choose one' },
+          { inputId: 'correct-answer', type: 'text', value: 'A' }
+        ],
+        answers: [{ answerId: 'answer', type: 'text', stringAnswerIndex: 0 }]
       }
     ])
+    expect(result.examPackage.answerCapturePlan).toEqual({
+      strings: [{ stringAnswerIndex: 0, choiceIndex: 0 }],
+      audios: [{ audioAnswerIndex: 0, recordIndex: 0 }]
+    })
+    expect(result.examPackage.submissionTemplate.meta).toEqual({
+      examPackageId: result.examPackage.packageId,
+      examTitle: 'Compiled exam'
+    })
+    expect(result.examPackage.examData.resources).toHaveProperty(
+      'player-block%3Amain-page%2Fpicture'
+    )
+    expect(result.examPackage.submissionTemplate.resources).toEqual({})
   })
 
   it('为重复函数调用生成独立题目、出参和 Schema useId', async () => {
@@ -460,7 +851,7 @@ describe('compileTemplate', () => {
           }
         ]
       },
-      timeline: []
+      timeline: [{ type: 'countdown', seconds: number(1) }]
     }
     const exam = content({
       root: collector(
@@ -474,17 +865,17 @@ describe('compileTemplate', () => {
     expect(result.success).toBe(true)
     if (!result.success) return
 
-    expect(result.examPackage.player.choiceMeta?.pages).toEqual([
+    expect(result.examPackage.examData.player.choiceMeta?.pages).toEqual([
       { questionIndices: [0] },
       { questionIndices: [1] }
     ])
     expect(
-      result.examPackage.player.choiceMeta?.questions.map((question) => question.stem)
+      result.examPackage.examData.player.choiceMeta?.questions.map((question) => question.stem)
     ).toEqual(['First', 'Second'])
-    expect(result.examPackage.player.pages[0].content[0]).toMatchObject({
+    expect(result.examPackage.examData.player.pages[0].content[0]).toMatchObject({
       defaultViewport: { mode: 'focus', choiceIndex: 1 }
     })
-    expect(result.examPackage.schema.usages.map((usage) => usage.useId)).toEqual([
+    expect(result.examPackage.submissionTemplate.schemaUses.map((use) => use.instanceId)).toEqual([
       'schema-use:call-1/inner-choice',
       'schema-use:call-2/inner-choice'
     ])
@@ -526,9 +917,8 @@ describe('compileTemplate', () => {
       root: root([call('call-a', 'value-b', 'value-a'), call('call-b', 'value-a', 'value-b')]),
       schemaUses: [
         textSchemaUse('cycle', {
-          type: 'variable',
-          scope: 'local',
-          name: 'value-a'
+          type: 'string',
+          parts: [{ type: 'variable', ref: { scope: 'local', name: 'value-a' } }]
         })
       ]
     })
@@ -585,7 +975,8 @@ describe('compileTemplate', () => {
             name: 'Missing picture',
             generatedAt: '2026-08-04T00:00:00.000Z',
             values: { sentence: 'Hello' }
-          }
+          },
+          assetUrls: {}
         })
       })
     )
@@ -638,7 +1029,8 @@ describe('compileTemplate', () => {
             name: 'Wrong owner',
             generatedAt: '2026-08-04T00:00:00.000Z',
             values: { sentence: 'Hello', picture: 'picture.png' }
-          }
+          },
+          assetUrls: { 'picture.png': 'asset://wrong/picture.png' }
         })
       })
     )
@@ -690,41 +1082,54 @@ describe('compileTemplate', () => {
         }
       ]
     }
-    const otherSchema: SchemaBlockManifest = {
-      schemaId: OTHER_SCHEMA_ID,
-      schemaName: 'Other schema',
-      blocks: [
-        {
-          blockId: 'text',
-          blockName: 'Text',
-          fields: [{ varName: 'prompt', type: 'text' }]
-        }
-      ]
-    }
+    const otherSchema = schemaDefinition(
+      OTHER_SCHEMA_ID,
+      {
+        questionType: 'freetalk',
+        answerFormat: [],
+        templateInputs: [{ inputId: 'prompt', type: 'text', required: true }]
+      },
+      'Other schema'
+    )
     const exam = content({
+      root: root([
+        {
+          id: 'page',
+          type: 'page',
+          content: { blocks: [] },
+          timeline: [{ type: 'countdown', seconds: number(1) }]
+        }
+      ]),
       interfaces: [
         { alias: 'exam', interfaceId: INTERFACE_ID, acceptedVars: ['sentence'] },
         { alias: 'other', interfaceId: OTHER_INTERFACE_ID, acceptedVars: ['sentence'] }
       ],
       schemaUses: [
         textSchemaUse('exam-text', {
-          type: 'variable',
-          scope: 'interface',
-          alias: 'exam',
-          varName: 'sentence'
+          type: 'string',
+          parts: [
+            {
+              type: 'variable',
+              ref: { scope: 'interface', alias: 'exam', varName: 'sentence' }
+            }
+          ]
         }),
         {
           useId: 'other-text',
           schemaId: OTHER_SCHEMA_ID,
-          blockId: 'text',
-          bindings: {
+          inputBindings: {
             prompt: {
-              type: 'variable',
-              scope: 'interface',
-              alias: 'other',
-              varName: 'sentence'
+              type: 'string',
+              parts: [
+                {
+                  type: 'variable',
+                  ref: { scope: 'interface', alias: 'other', varName: 'sentence' }
+                }
+              ]
             }
-          }
+          },
+          answerBindings: {},
+          attachments: []
         }
       ]
     })
@@ -736,7 +1141,8 @@ describe('compileTemplate', () => {
           name: 'Empty value',
           generatedAt: '2026-08-04T00:00:00.000Z',
           values: { sentence: '', extra: 'allowed' }
-        }
+        },
+        assetUrls: {}
       },
       'instance-2': {
         interfaceId: OTHER_INTERFACE_ID,
@@ -745,14 +1151,15 @@ describe('compileTemplate', () => {
           name: 'Other value',
           generatedAt: '2026-08-04T00:00:00.000Z',
           values: { sentence: 'Other' }
-        }
+        },
+        assetUrls: {}
       }
     }
     const result = await compileTemplate(
       document(exam),
       compileContext({
         interfaceManifests: [interfaceManifest(), otherManifest],
-        schemaManifests: [schemaManifest(), otherSchema],
+        schemaDefinitions: [...schemaDefinitions(), otherSchema],
         interfaceBindings: [
           { alias: 'exam', interfaceId: INTERFACE_ID, instanceId: 'instance-1' },
           { alias: 'other', interfaceId: OTHER_INTERFACE_ID, instanceId: 'instance-2' }
@@ -764,18 +1171,18 @@ describe('compileTemplate', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    expect(result.examPackage.schema.usages).toEqual([
+    expect(result.examPackage.submissionTemplate.schemaUses).toEqual([
       {
-        useId: 'schema-use:exam-text',
-        schemaId: SCHEMA_ID,
-        blockId: 'text',
-        fields: [{ varName: 'prompt', type: 'text', value: '' }]
+        instanceId: 'schema-use:exam-text',
+        schema: schemaDefinitions()[0],
+        inputs: [{ inputId: 'prompt', type: 'text', value: '' }],
+        answers: []
       },
       {
-        useId: 'schema-use:other-text',
-        schemaId: OTHER_SCHEMA_ID,
-        blockId: 'text',
-        fields: [{ varName: 'prompt', type: 'text', value: 'Other' }]
+        instanceId: 'schema-use:other-text',
+        schema: otherSchema,
+        inputs: [{ inputId: 'prompt', type: 'text', value: 'Other' }],
+        answers: []
       }
     ])
   })
@@ -815,7 +1222,7 @@ describe('compileTemplate', () => {
           }
         ]
       },
-      timeline: []
+      timeline: [{ type: 'countdown', seconds: number(1) }]
     }
     const directQuestion = {
       id: 'question',

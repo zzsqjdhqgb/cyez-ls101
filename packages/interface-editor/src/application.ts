@@ -6,11 +6,16 @@ import type {
 } from '@ls101/core-types'
 import {
   buildAIPrompt,
+  buildExposedInstance,
   buildFormatInstructions,
   buildInstanceFromJson,
   buildVarManifest
 } from './conversions'
-import { importInterfacePackage, inspectInterfacePackage } from './exchange'
+import {
+  exportedInstanceMatches,
+  importInterfacePackage,
+  inspectInterfacePackage
+} from './exchange'
 import type { InstanceSelection } from './exchange'
 import { exportInterfaceFile, readInterfaceFile, type InterfaceFileDialog } from './fileExchange'
 import { createInterfaceDraft, publishInterface } from './id'
@@ -65,6 +70,7 @@ export interface InterfaceInstanceDetails {
 export interface InterfaceInstanceLocation {
   interfaceId: string
   instance: InterfaceInstance
+  assetUrls: Record<string, string>
 }
 
 export interface InterfaceInstanceEdit {
@@ -177,7 +183,7 @@ export interface PublishedInterfaceApplication {
   listInstances(interfaceId: string): Promise<InterfaceInstanceSummary[]>
   getPrompts(interfaceId: string): Promise<InterfacePromptBundle>
   getVarManifest(interfaceId: string): Promise<import('@ls101/core-types').InterfaceVarManifest>
-  createBlankInstance(interfaceId: string): Promise<InterfaceInstanceDetails>
+  createBlankInstance(interfaceId: string, name?: string): Promise<InterfaceInstanceDetails>
   copyToDraft(interfaceId: string): Promise<InterfaceDraft>
 }
 
@@ -198,7 +204,8 @@ export interface InterfaceInstanceApplication {
   replaceFromJson(
     interfaceId: string,
     instanceId: string,
-    json: string
+    json: string,
+    options?: { imageProvider?: InterfaceImageProviderSelection }
   ): Promise<ReplaceInstanceFromJsonResult>
   startAIGeneration(
     interfaceId: string,
@@ -220,11 +227,14 @@ export type ExportInterfaceResult = { status: 'exported' } | { status: 'cancelle
 export interface InterfaceImportPreview {
   filename: string
   interface: { interfaceId: string; name: string; description: string }
+  builtin?: { builtinKey: string; interfaceId: string }
   instances: Array<{
     instanceId: string
     name: string
     generatedAt: string
     assetFilenames: string[]
+    status: 'available' | 'existing' | 'conflict' | 'other-interface'
+    reason?: string
   }>
 }
 
@@ -346,9 +356,9 @@ export function createInterfaceApplication(
     interfaceId: string,
     instanceId: string,
     json: string,
-    allowActiveGeneration = false
+    options: { imageProvider?: InterfaceImageProviderSelection } = {}
   ): Promise<ReplaceInstanceFromJsonResult> => {
-    const release = allowActiveGeneration ? null : acquireInstance(interfaceId, instanceId)
+    const release = acquireInstance(interfaceId, instanceId)
     try {
       const def = await requireInterface(repository, interfaceId)
       const current = await requireInstance(repository, interfaceId, instanceId)
@@ -357,22 +367,56 @@ export function createInterfaceApplication(
         return { status: 'invalid-json', errors: jsonErrors(validation.errors) }
       }
       const mapped = buildInstanceFromJson(def, validation.data)
-      const values = { ...mapped.values }
-      for (const varName of flattenImageVarNames(def.fields)) {
-        const currentValue = current.instance.values[varName]
-        values[varName] = current.assetFilenames.includes(currentValue) ? currentValue : ''
+      const prompts = Object.entries(mapped.imagePrompts ?? {})
+      if (prompts.some(([, prompt]) => !prompt.trim())) {
+        throw new Error('图片变量的提示词不能为空')
       }
-      await repository.updateInstance(interfaceId, {
-        ...current.instance,
-        values,
-        imagePrompts: mapped.imagePrompts
-      })
+      if (prompts.length && !imageGenerator) {
+        throw new Error('Interface image generator is not configured')
+      }
+
+      const controller = new AbortController()
+      const generatedImages: Record<string, Uint8Array> = {}
+      for (const [varName, prompt] of prompts) {
+        const generated = await imageGenerator?.generate(prompt, {
+          signal: controller.signal,
+          ...(options.imageProvider ? { provider: options.imageProvider } : {})
+        })
+        if (!generated) throw new Error('Interface image generator is not configured')
+        assertSupportedImage(generated.data)
+        generatedImages[varName] = new Uint8Array(generated.data)
+      }
+
+      const values = { ...mapped.values }
+      const imageVarNames = new Set(flattenImageVarNames(def.fields))
+      const assets = await loadInstanceAssets(repository, interfaceId, instanceId, current)
+      const usedAssetNames = new Set(current.assetFilenames)
+      for (const varName of imageVarNames) {
+        const previous = current.instance.values[varName]
+        if (current.assetFilenames.includes(previous)) delete assets[previous]
+        const data = generatedImages[varName]
+        if (!data) continue
+        const filename = createImageFilename(varName, supportedImageExtension(data), usedAssetNames)
+        usedAssetNames.add(filename)
+        assets[filename] = data
+        values[varName] = filename
+      }
+      assertCompleteImageValues(imageVarNames, values, mapped.imagePrompts ?? {})
+      await repository.updateInstance(
+        interfaceId,
+        {
+          ...current.instance,
+          values,
+          imagePrompts: mapped.imagePrompts
+        },
+        prompts.length ? assets : undefined
+      )
       return {
         status: 'replaced',
         instance: (await getInstanceDetails(interfaceId, instanceId)) as InterfaceInstanceDetails
       }
     } finally {
-      release?.()
+      release()
     }
   }
 
@@ -458,10 +502,10 @@ export function createInterfaceApplication(
       async getVarManifest(interfaceId) {
         return buildVarManifest(await requireInterface(repository, interfaceId))
       },
-      async createBlankInstance(interfaceId) {
+      async createBlankInstance(interfaceId, name) {
         const def = await requireInterface(repository, interfaceId)
         const now = new Date().toISOString()
-        const instance = buildInstanceFromJson(def, {}, '未命名题组')
+        const instance = buildInstanceFromJson(def, {}, name?.trim() || '未命名题组')
         instance.generatedAt = now
         for (const key of Object.keys(instance.values)) instance.values[key] = ''
         await repository.saveInstance(interfaceId, instance)
@@ -488,9 +532,21 @@ export function createInterfaceApplication(
         const located = await repository.findInstance(instanceId)
         if (!located) return null
         const definition = await requireInterface(repository, located.interfaceId)
+        const assetUrls: Record<string, string> = {}
+        for (const filename of located.assetFilenames) {
+          assetUrls[filename] = await repository.getInstanceAssetUrl(
+            located.interfaceId,
+            instanceId,
+            filename
+          )
+        }
         return {
           interfaceId: located.interfaceId,
-          instance: normalizeImagePromptValues(definition.fields, located)
+          instance: buildExposedInstance(
+            definition,
+            normalizeImagePromptValues(definition.fields, located)
+          ),
+          assetUrls
         }
       },
       async listAIGenerationModels() {
@@ -552,6 +608,8 @@ export function createInterfaceApplication(
             selectedAssetData[filename] = new Uint8Array(selected)
             nextValues[varName] = filename
           }
+
+          assertCompleteImageValues(imageVarNames, nextValues, nextImagePrompts)
 
           const retainedAssetNames = new Set(
             [...imageVarNames]
@@ -616,6 +674,9 @@ export function createInterfaceApplication(
               const current = await requireInstance(repository, interfaceId, instanceId)
               const mapped = buildInstanceFromJson(def, validation.data)
               const prompts = Object.entries(mapped.imagePrompts ?? {})
+              if (prompts.some(([, prompt]) => !prompt.trim())) {
+                throw new Error('图片变量的提示词不能为空')
+              }
               if (prompts.length && !imageGenerator) {
                 throw new Error('Interface image generator is not configured')
               }
@@ -651,6 +712,8 @@ export function createInterfaceApplication(
                 assets[filename] = data
                 values[varName] = filename
               }
+
+              assertCompleteImageValues(imageVarNames, values, mapped.imagePrompts ?? {})
 
               progress.saving()
               await repository.updateInstance(
@@ -717,6 +780,38 @@ export function createInterfaceApplication(
         const value = selected.package
         const inspection = await inspectInterfacePackage(value)
         let active = true
+        const previewInstances = await Promise.all(
+          inspection.instances.map(async (item) => {
+            const incoming = value.instances.find(
+              ({ instance }) => instance.instanceId === item.instanceId
+            )
+            if (!incoming) return { ...item, status: 'conflict' as const, reason: '文件内容不完整' }
+            const existing = await repository.findInstance(item.instanceId)
+            if (!existing) return { ...item, status: 'available' as const }
+            if (existing.interfaceId !== value.interface.id) {
+              return {
+                ...item,
+                status: 'other-interface' as const,
+                reason: '该题组标识已被另一题型占用'
+              }
+            }
+            const same = await exportedInstanceMatches(repository, existing, incoming)
+            return same
+              ? { ...item, status: 'existing' as const, reason: '本地已经存在相同内容' }
+              : { ...item, status: 'conflict' as const, reason: '同一题组标识对应的内容不同' }
+          })
+        )
+        if (inspection.builtin) {
+          const builtin = await repository.getBuiltin(inspection.builtin.builtinKey)
+          if (!builtin) {
+            for (const item of previewInstances) {
+              if (item.status === 'available') {
+                item.status = 'conflict'
+                item.reason = '接收设备不认识这个内置题型'
+              }
+            }
+          }
+        }
         return {
           preview: {
             filename: selected.filename,
@@ -725,11 +820,18 @@ export function createInterfaceApplication(
               name: inspection.interface.name,
               description: inspection.interface.description
             },
-            instances: inspection.instances
+            builtin: inspection.builtin,
+            instances: previewInstances
           },
           async commit(instances) {
             if (!active) throw new Error('Import session is no longer active')
             active = false
+            if (
+              inspection.builtin &&
+              !(await repository.getBuiltin(inspection.builtin.builtinKey))
+            ) {
+              throw new Error('接收设备不认识这个内置题型，无法导入')
+            }
             const result = await importInterfacePackage(repository, value, { instances })
             return {
               interfaceId: value.interface.id,
@@ -780,6 +882,18 @@ function normalizeImagePromptValues(
     ...stored.instance,
     values,
     imagePrompts: Object.keys(imagePrompts).length ? imagePrompts : undefined
+  }
+}
+
+function assertCompleteImageValues(
+  imageVarNames: ReadonlySet<string>,
+  values: Readonly<Record<string, string>>,
+  imagePrompts: Readonly<Record<string, string>>
+): void {
+  for (const varName of imageVarNames) {
+    if (!values[varName]?.trim() || !imagePrompts[varName]?.trim()) {
+      throw new Error(`图片变量 ${varName} 的提示词和图片必须同时填写`)
+    }
   }
 }
 

@@ -17,12 +17,15 @@ describe('App', () => {
 
     expect(screen.getByRole('heading', { name: '工作台' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '工作台' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '题型' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '模板' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '题型库' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '评分单元' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '试卷库' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '作答记录' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '试卷模板' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '设置' })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('link', { name: '题型' }))
-    expect(screen.getByRole('heading', { name: '题型' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('link', { name: '题型库' }))
+    expect(screen.getByRole('heading', { name: '题型库' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('link', { name: '设置' }))
     expect(screen.getByRole('heading', { name: '设置' })).toBeInTheDocument()
@@ -31,15 +34,15 @@ describe('App', () => {
   it('opens the interface list from the workbench', () => {
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '打开题型' }))
-    expect(screen.getByRole('heading', { name: '题型' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('link', { name: '题型库' }))
+    expect(screen.getByRole('heading', { name: '题型库' })).toBeInTheDocument()
   })
 
   it('opens the template list from the workbench', () => {
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '打开模板' }))
-    expect(screen.getByRole('heading', { name: '模板' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /制作试卷/ }))
+    expect(screen.getByRole('heading', { name: '试卷模板' })).toBeInTheDocument()
   })
 
   it('registers list and details as standard and both editors as focus', () => {
@@ -51,6 +54,13 @@ describe('App', () => {
     expect(routes.get('interface-instance-editor')?.layout).toBe('focus')
     expect(routes.get('templates')?.layout).toBe('standard')
     expect(routes.get('template-editor')?.layout).toBe('focus')
+    expect(routes.get('exams')?.layout).toBe('standard')
+    expect(routes.get('exam-player')?.layout).toBe('immersive')
+    expect(routes.get('schemas')?.layout).toBe('standard')
+    expect(routes.get('schema-draft-library')?.layout).toBe('standard')
+    expect(routes.get('schema-draft-editor')?.layout).toBe('focus')
+    expect(routes.get('schema-definition-editor')?.layout).toBe('focus')
+    expect(routes.get('submission-grading')?.layout).toBe('focus')
     expect(routes.get('interface-drafts')?.navigation).toBeUndefined()
   })
 
@@ -59,6 +69,7 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '收起侧边栏' }))
     expect(screen.getByRole('button', { name: '展开侧边栏' })).toBeVisible()
+    expect(screen.getByRole('link', { name: '工作台' }).className).not.toContain('=>')
 
     fireEvent.click(screen.getByRole('link', { name: '设置' }))
     expect(screen.getByRole('button', { name: '展开侧边栏' })).toBeVisible()

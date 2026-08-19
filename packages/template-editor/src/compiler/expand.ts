@@ -1,14 +1,12 @@
 import type {
   ChoiceOptionLabel,
-  ExamPage,
+  CompiledSchemaInput,
   PlayerChoiceQuestion,
   ResolvedChoiceViewport,
-  ResolvedContentBlock,
-  ResolvedTimelineStep,
-  SchemaFieldValue,
-  SchemaUsageExport
+  ResolvedContentBlock
 } from '@ls101/core-types'
 import type {
+  ChoiceGroupExpression,
   ChoiceQuestionRef,
   ChoiceViewport,
   FrameNode,
@@ -16,12 +14,17 @@ import type {
   FunctionOutputDef,
   PageNode,
   SchemaUse,
+  StaticValueExpression,
   TemplateContent,
-  TemplateNode
+  TemplateNode,
+  VariableNode
 } from '../types'
 import {
+  resolveFileExpression,
+  resolveChoiceGroupExpression,
+  resolveChoiceGroupRef,
   resolveRuntimeOutput,
-  resolveSchemaTextBinding,
+  resolveSchemaTextExpression,
   resolveStaticExpression,
   resolveTextExpression,
   resolveValueExpression
@@ -33,10 +36,17 @@ import {
   fail,
   fixedValueCell,
   lazyValueCell,
+  lazyChoiceGroupCell,
   mergeStructuralResults,
   questionAddressKey,
+  type ExpandedSchemaAnswer,
+  type ExpandedExamPage,
+  type ExpandedTimelineStep,
+  type ExpandedSchemaUse,
+  type CompiledValue,
   type CompileScope,
   type CompilerState,
+  type ChoiceGroupCell,
   type StructuralResult,
   type ValueCell
 } from './shared'
@@ -50,8 +60,17 @@ export function instantiateTemplate(
   content: TemplateContent,
   state: CompilerState
 ): StructuralResult {
-  const scope: CompileScope = { callPath: [], symbols: new Map() }
+  const scope: CompileScope = { callPath: [], symbols: new Map(), choiceGroups: new Map() }
+  registerVariableCells(content.root, scope, 'root', state)
   const structure = instantiateFrame(content.root, scope, 'root', state)
+  const candidate = structure.candidates[0]
+  state.globalChoiceGroup = candidate
+    ? {
+        kind: 'all',
+        pages: candidate.pages,
+        pageIndices: candidate.pages.map((_page, index) => index)
+      }
+    : undefined
   instantiateSchemaUses(content.schemaUses, scope, 'schemaUses', state)
   return structure
 }
@@ -59,11 +78,17 @@ export function instantiateTemplate(
 function instantiateDefinition(
   func: FunctionDef,
   inputCells: Map<string, ValueCell>,
+  inputChoiceGroups: Map<string, ChoiceGroupCell>,
   callPath: string[],
   path: string,
   state: CompilerState
 ): InstantiatedDefinition {
-  const scope: CompileScope = { callPath, symbols: new Map(inputCells) }
+  const scope: CompileScope = {
+    callPath,
+    symbols: new Map(inputCells),
+    choiceGroups: new Map(inputChoiceGroups)
+  }
+  registerVariableCells(func.body, scope, `${path}.body`, state)
   const structure = instantiateFrame(func.body, scope, `${path}.body`, state)
   instantiateSchemaUses(func.schemaUses, scope, `${path}.schemaUses`, state)
 
@@ -118,7 +143,36 @@ function instantiateNode(
       return instantiateQuestion(node, scope, path, state)
     case 'function':
       return instantiateFunctionCall(node, scope, path, state)
+    case 'variable':
+      return emptyStructuralResult()
   }
+}
+
+function registerVariableCells(
+  node: TemplateNode,
+  scope: CompileScope,
+  path: string,
+  state: CompilerState
+): void {
+  if (node.type === 'frame') {
+    node.children.forEach((child, index) =>
+      registerVariableCells(child, scope, `${path}.children[${index}]`, state)
+    )
+    return
+  }
+  if (node.type !== 'variable') return
+  scope.symbols.set(node.variableName, createVariableCell(node, scope, `${path}.value`, state))
+}
+
+function createVariableCell(
+  node: VariableNode,
+  scope: CompileScope,
+  path: string,
+  state: CompilerState
+): ValueCell {
+  return lazyValueCell(state, node.value.type, path, () =>
+    resolveStaticExpression(node.value, node.value.type, scope, state, path)
+  )
 }
 
 function instantiatePage(
@@ -148,7 +202,7 @@ function resolvePage(
   path: string,
   recordIndices: ReadonlyMap<number, number>,
   state: CompilerState
-): ExamPage {
+): ExpandedExamPage {
   const pageId = expandedId('page', scope.callPath, page.id)
   const content = page.content.blocks.map<ResolvedContentBlock>((block, index) => {
     const blockPath = `${path}.content.blocks[${index}]`
@@ -166,15 +220,24 @@ function resolvePage(
           ...(block.align === undefined ? {} : { align: block.align }),
           text: resolveTextExpression(block.text, scope, state, `${blockPath}.text`)
         }
-      case 'image':
+      case 'image': {
+        const file = resolveFileExpression(block.src, scope, state, `${blockPath}.src`)
         return {
           id,
           type: 'image',
           x: block.x,
           y: block.y,
           width: block.width,
-          src: resolveValueExpression(block.src, 'file', scope, state, `${blockPath}.src`) as string
+          height: block.height,
+          src: registerResource(
+            file,
+            `player-${encodeURIComponent(id)}`,
+            block.id,
+            `${blockPath}.src`,
+            state
+          )
         }
+      }
       case 'choice-view':
         return {
           id,
@@ -185,7 +248,7 @@ function resolvePage(
           height: block.height,
           defaultViewport: resolveChoiceViewport(
             block.defaultViewport,
-            scope.callPath,
+            scope,
             `${blockPath}.defaultViewport`,
             state
           )
@@ -193,12 +256,12 @@ function resolvePage(
     }
   })
 
-  const timeline = page.timeline.map<ResolvedTimelineStep>((step, index) => {
+  const timeline = page.timeline.map<ExpandedTimelineStep>((step, index) => {
     const stepPath = `${path}.timeline[${index}]`
     const choiceViewOverrides = resolveChoiceViewOverrides(
       step.choiceViewOverrides,
       page,
-      scope.callPath,
+      scope,
       stepPath,
       state
     )
@@ -207,6 +270,7 @@ function resolvePage(
         return {
           type: 'play',
           text: resolveTextExpression(step.text, scope, state, `${stepPath}.text`),
+          sourcePath: `${stepPath}.text`,
           ...(choiceViewOverrides ? { choiceViewOverrides } : {})
         }
       case 'countdown':
@@ -232,28 +296,36 @@ function resolvePage(
             `${stepPath}.duration`
           ) as number,
           recordIndex: recordIndices.get(index) as number,
+          sourcePath: `${stepPath}.duration`,
           ...(choiceViewOverrides ? { choiceViewOverrides } : {})
         }
     }
   })
 
-  return { id: pageId, content, timeline }
+  return {
+    id: pageId,
+    sourceNodeId: page.id,
+    ...(page.name ? { sourceNodeName: page.name } : {}),
+    callPath: [...scope.callPath],
+    content,
+    timeline
+  }
 }
 
 function resolveChoiceViewOverrides(
   overrides: PageNode['timeline'][number]['choiceViewOverrides'],
   page: PageNode,
-  callPath: readonly string[],
+  scope: CompileScope,
   path: string,
   state: CompilerState
 ): Record<string, ResolvedChoiceViewport> | undefined {
   if (!overrides) return undefined
   return Object.fromEntries(
     Object.entries(overrides).map(([blockId, viewport]) => [
-      expandedId('block', callPath, page.id, blockId),
+      expandedId('block', scope.callPath, page.id, blockId),
       resolveChoiceViewport(
         viewport,
-        callPath,
+        scope,
         `${path}.choiceViewOverrides[${JSON.stringify(blockId)}]`,
         state
       )
@@ -307,23 +379,46 @@ function instantiateFunctionCall(
 ): StructuralResult {
   const func = state.functionsById.get(node.functionRef) as FunctionDef
   const inputCells = new Map<string, ValueCell>()
+  const inputChoiceGroups = new Map<string, ChoiceGroupCell>()
   func.inputs.forEach((input) => {
+    const inputPath = `${path}.inputs[${JSON.stringify(input.name)}]`
+    if (input.type === 'choice-group') {
+      const cell = lazyChoiceGroupCell(inputPath, () =>
+        resolveChoiceGroupExpression(
+          node.inputs[input.name] as ChoiceGroupExpression,
+          input.shape,
+          callerScope,
+          state,
+          inputPath
+        )
+      )
+      state.choiceGroupCells.push(cell)
+      inputChoiceGroups.set(input.name, cell)
+      return
+    }
     inputCells.set(
       input.name,
-      lazyValueCell(state, input.type, `${path}.inputs[${JSON.stringify(input.name)}]`, () =>
+      lazyValueCell(state, input.type, inputPath, () =>
         resolveStaticExpression(
-          node.inputs[input.name],
+          node.inputs[input.name] as StaticValueExpression,
           input.type,
           callerScope,
           state,
-          `${path}.inputs[${JSON.stringify(input.name)}]`
+          inputPath
         )
       )
     )
   })
 
   const callPath = [...callerScope.callPath, node.id]
-  const instantiated = instantiateDefinition(func, inputCells, callPath, `${path}.function`, state)
+  const instantiated = instantiateDefinition(
+    func,
+    inputCells,
+    inputChoiceGroups,
+    callPath,
+    `${path}.function`,
+    state
+  )
   func.outputs.forEach((output) => {
     callerScope.symbols.set(
       node.outputNames[output.name],
@@ -382,71 +477,247 @@ function resolveSchemaUse(
   scope: CompileScope,
   path: string,
   state: CompilerState
-): SchemaUsageExport {
+): ExpandedSchemaUse {
   const schema = state.schemasById.get(use.schemaId)
-  const block = schema?.blocks.find((candidate) => candidate.blockId === use.blockId)
-  if (!block) fail('UNRESOLVED_VALUE', path, { schemaId: use.schemaId, blockId: use.blockId })
+  if (!schema) fail('UNRESOLVED_VALUE', path, { schemaId: use.schemaId })
 
-  const fields = block.fields.map<SchemaFieldValue>((field) => {
-    const expression = use.bindings[field.varName]
-    const fieldPath = `${path}.bindings[${JSON.stringify(field.varName)}]`
-    switch (field.type) {
-      case 'text':
+  const instanceId = expandedSchemaUseId(scope.callPath, use.useId)
+  const attachmentValues = resolveSchemaAttachments(use, instanceId, scope, path, state)
+  const inputs = schema.structure.templateInputs.flatMap<CompiledSchemaInput>((input) => {
+    const expression = use.inputBindings[input.inputId]
+    if (!expression) return []
+    const fieldPath = `${path}.inputBindings[${JSON.stringify(input.inputId)}]`
+    return [
+      {
+        inputId: input.inputId,
+        type: 'text',
+        value: resolveSchemaTextExpression(expression, attachmentValues, scope, state, fieldPath)
+      }
+    ]
+  })
+
+  const answers = schema.structure.answerFormat.map<ExpandedSchemaAnswer>((answer) => {
+    const binding = use.answerBindings[answer.answerId]
+    const fieldPath = `${path}.answerBindings[${JSON.stringify(answer.answerId)}]`
+    switch (binding.type) {
+      case 'text': {
+        const value = resolveRuntimeOutput(scope, binding.name, 'choice', fieldPath)
         return {
-          varName: field.varName,
+          answerId: answer.answerId,
           type: 'text',
-          value: resolveSchemaTextBinding(expression, scope, state, fieldPath)
+          choiceIndex: (value as Extract<typeof value, { type: 'choice' }>).choiceIndex
         }
-      case 'audio': {
-        const value = resolveRuntimeOutput(
-          scope,
-          (expression as Extract<typeof expression, { type: 'record-output' }>).name,
-          'audio',
-          fieldPath
-        )
+      }
+      case 'fixed-speech': {
+        const value = resolveRuntimeOutput(scope, binding.audio.name, 'audio', `${fieldPath}.audio`)
         return {
-          varName: field.varName,
-          type: 'audio',
+          answerId: answer.answerId,
+          type: 'fixed-speech',
+          text: resolveSchemaTextExpression(
+            binding.text,
+            attachmentValues,
+            scope,
+            state,
+            `${fieldPath}.text`
+          ),
           recordIndex: (value as Extract<typeof value, { type: 'audio' }>).recordIndex
         }
       }
-      case 'choice': {
-        const value = resolveRuntimeOutput(
-          scope,
-          (expression as Extract<typeof expression, { type: 'choice-output' }>).name,
-          'choice',
-          fieldPath
-        )
+      case 'free-speech': {
+        const value = resolveRuntimeOutput(scope, binding.audio.name, 'audio', `${fieldPath}.audio`)
         return {
-          varName: field.varName,
-          type: 'choice',
-          choiceIndex: (value as Extract<typeof value, { type: 'choice' }>).choiceIndex
+          answerId: answer.answerId,
+          type: 'free-speech',
+          recordIndex: (value as Extract<typeof value, { type: 'audio' }>).recordIndex
         }
       }
     }
   })
 
   return {
-    useId: expandedSchemaUseId(scope.callPath, use.useId),
+    instanceId,
     schemaId: use.schemaId,
-    blockId: use.blockId,
-    fields
+    inputs,
+    answers
+  }
+}
+
+function resolveSchemaAttachments(
+  use: SchemaUse,
+  instanceId: string,
+  scope: CompileScope,
+  path: string,
+  state: CompilerState
+): Map<string, string> {
+  return new Map(
+    use.attachments.map((attachment, index) => {
+      const attachmentPath = `${path}.attachments[${index}]`
+      const file = resolveFileExpression(attachment.file, scope, state, `${attachmentPath}.file`)
+      const assetKey = `schema-${encodeURIComponent(instanceId)}-${encodeURIComponent(attachment.varName)}`
+      state.submissionResourceKeys.add(assetKey)
+      return [
+        attachment.varName,
+        registerResource(file, assetKey, attachment.varName, `${attachmentPath}.file`, state)
+      ]
+    })
+  )
+}
+
+function registerResource(
+  file: Extract<CompiledValue, { type: 'file' }>,
+  assetKey: string,
+  fallbackName: string,
+  path: string,
+  state: CompilerState
+): string {
+  if (!file.sourceUrl) {
+    fail('RESOURCE_SOURCE_NOT_FOUND', path, { filename: file.value })
+  }
+  const filename = resourceFilename(file.value, fallbackName)
+  state.resources.set(assetKey, {
+    filename,
+    packagePath: `resources/${assetKey}/${encodeURIComponent(filename)}`,
+    ...(mediaTypeFor(filename) ? { mediaType: mediaTypeFor(filename) } : {})
+  })
+  state.resourceSources.set(assetKey, file.sourceUrl)
+  return `resource:${assetKey}`
+}
+
+function resourceFilename(value: string, fallback: string): string {
+  const withoutQuery = value.split(/[?#]/, 1)[0]
+  const filename = withoutQuery.split(/[\\/]/).pop()
+  return filename?.trim() || fallback
+}
+
+function mediaTypeFor(filename: string): string | undefined {
+  const extension = filename.split('.').pop()?.toLowerCase()
+  switch (extension) {
+    case 'png':
+      return 'image/png'
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg'
+    case 'gif':
+      return 'image/gif'
+    case 'webp':
+      return 'image/webp'
+    case 'svg':
+      return 'image/svg+xml'
+    case 'mp3':
+      return 'audio/mpeg'
+    case 'wav':
+      return 'audio/wav'
+    case 'ogg':
+      return 'audio/ogg'
+    case 'pdf':
+      return 'application/pdf'
+    default:
+      return undefined
   }
 }
 
 function resolveChoiceViewport(
   viewport: ChoiceViewport,
-  currentCallPath: readonly string[],
+  scope: CompileScope,
   path: string,
   state: CompilerState
 ): ResolvedChoiceViewport {
+  if ('group' in viewport) {
+    const group = resolveChoiceGroupRef(viewport.group, scope, `${path}.group`)
+    if (viewport.mode === 'focus') {
+      return {
+        mode: 'focus',
+        choiceIndex: choiceGroupQuestionIndex(
+          group,
+          viewport.pageIndex,
+          viewport.questionIndex,
+          path
+        )
+      }
+    }
+
+    if (group.kind === 'question') {
+      return { mode: 'focus', choiceIndex: group.pages[0][0] }
+    }
+
+    if (viewport.mode === 'free') {
+      if (group.kind === 'all') {
+        return {
+          mode: 'free',
+          ...(viewport.initialPage === undefined
+            ? {}
+            : { initialPage: choiceGroupPageIndex(group, viewport.initialPage, path) })
+        }
+      }
+      return {
+        mode: 'range',
+        startPage: group.pageIndices[0],
+        endPage: group.pageIndices[group.pageIndices.length - 1],
+        ...(viewport.initialPage === undefined
+          ? {}
+          : { initialPage: choiceGroupPageIndex(group, viewport.initialPage, path) })
+      }
+    }
+
+    const startPage = choiceGroupPageIndex(group, viewport.startPage, path)
+    const endPage = choiceGroupPageIndex(group, viewport.endPage, path)
+    if (viewport.startPage > viewport.endPage) {
+      fail('CHOICE_GROUP_OUT_OF_RANGE', path, {
+        startPage: viewport.startPage,
+        endPage: viewport.endPage
+      })
+    }
+    if (
+      viewport.initialPage !== undefined &&
+      (viewport.initialPage < viewport.startPage || viewport.initialPage > viewport.endPage)
+    ) {
+      fail('CHOICE_GROUP_OUT_OF_RANGE', path, { initialPage: viewport.initialPage })
+    }
+    return {
+      mode: 'range',
+      startPage,
+      endPage,
+      ...(viewport.initialPage === undefined
+        ? {}
+        : { initialPage: choiceGroupPageIndex(group, viewport.initialPage, path) })
+    }
+  }
+
   if (viewport.mode === 'free') return { ...viewport }
   if (viewport.mode === 'range') return { ...viewport }
 
   return {
     mode: 'focus',
-    choiceIndex: resolveQuestionRef(viewport.questionRef, currentCallPath, path, state)
+    choiceIndex: resolveQuestionRef(viewport.questionRef, scope.callPath, path, state)
   }
+}
+
+function choiceGroupPageIndex(
+  group: ReturnType<typeof resolveChoiceGroupRef>,
+  pageIndex: number,
+  path: string
+): number {
+  if (!Number.isInteger(pageIndex) || pageIndex < 0 || pageIndex >= group.pages.length) {
+    fail('CHOICE_GROUP_OUT_OF_RANGE', path, { pageIndex })
+  }
+  return group.pageIndices[pageIndex]
+}
+
+function choiceGroupQuestionIndex(
+  group: ReturnType<typeof resolveChoiceGroupRef>,
+  pageIndex: number,
+  questionIndex: number,
+  path: string
+): number {
+  choiceGroupPageIndex(group, pageIndex, path)
+  if (
+    !Number.isInteger(questionIndex) ||
+    questionIndex < 0 ||
+    questionIndex >= group.pages[pageIndex].length
+  ) {
+    fail('CHOICE_GROUP_OUT_OF_RANGE', path, { pageIndex, questionIndex })
+  }
+  return group.pages[pageIndex][questionIndex]
 }
 
 function resolveQuestionRef(

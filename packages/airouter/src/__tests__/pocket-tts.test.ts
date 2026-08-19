@@ -92,7 +92,7 @@ describe('PocketTtsSynthesizer', () => {
     workerState.startup = startup
 
     await expect(new PocketTtsSynthesizer().synthesize(createRequest('text'))).rejects.toThrow(
-      message
+      `Pocket TTS 合成失败（模型 model，音色 voice，文本“text”）：${message}`
     )
     expect(workerState.workers[0].terminate).toHaveBeenCalledTimes(1)
   })
@@ -104,7 +104,9 @@ describe('PocketTtsSynthesizer', () => {
     const requestId = requestMessage(worker).requestId
     worker.emit('message', { type: 'error', requestId, message: 'mock synthesis failed' })
 
-    await expect(pending).rejects.toThrow('mock synthesis failed')
+    await expect(pending).rejects.toThrow(
+      'Pocket TTS 合成失败（模型 model，音色 voice，文本“worker failure”）：mock synthesis failed'
+    )
     expect(worker.terminate).not.toHaveBeenCalled()
 
     const retry = synthesizer.synthesize(createRequest('retry after failure'))
@@ -131,6 +133,26 @@ describe('PocketTtsSynthesizer', () => {
     await expect(
       new PocketTtsSynthesizer().synthesize(createRequest('post message failure'))
     ).rejects.toThrow('mock postMessage failed')
+  })
+
+  it('terminates a Worker that exceeds the configured synthesis timeout', async () => {
+    const pending = new PocketTtsSynthesizer().synthesize(
+      createRequest('stuck generation', undefined, 'wav', {
+        model: {
+          id: 'model',
+          name: 'Model',
+          artifacts: { weights: ['weights'], tokenizer: ['tokenizer'] },
+          parameters: { synthesis: { synthesisTimeoutMs: 10 } }
+        }
+      })
+    )
+    const rejection = expect(pending).rejects.toThrow(
+      'Pocket TTS 合成超时（1 秒），Worker 已终止'
+    )
+    const worker = await readyWorker()
+
+    await rejection
+    expect(worker.terminate).toHaveBeenCalledTimes(1)
   })
 
   it('reuses an idle Worker and sends each request with its text and voice', async () => {

@@ -9,7 +9,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@ls101/core-types": "workspace:*"
+    "@ls101/core-types": "workspace:*",
+    "@ls101/exam-package": "workspace:*",
+    "lucide-react": "^1.14.0"
   },
   "peerDependencies": {
     "react": "^19",

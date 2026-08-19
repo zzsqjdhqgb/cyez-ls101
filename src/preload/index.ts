@@ -1,7 +1,9 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import {
+  APP_INFO_CHANNELS,
   WINDOW_CONTROL_CHANNELS,
   WINDOW_CONTROL_EVENTS,
+  type AppInfoBridge,
   type WindowControlsBridge
 } from '@ls101/core-types'
 import {
@@ -29,10 +31,18 @@ import {
   type AIRouterImageGenerationEvent,
   type AIRouterImageProviderConfigInput,
   type AIRouterImageRequest,
+  type AIRouterPronunciationAssessmentEvent,
+  type AIRouterPronunciationAssessmentExtensionImportResult,
+  type AIRouterPronunciationAssessmentRequest,
   type AIRouterSpeechConnectionTestInput,
   type AIRouterSpeechModelPackageImportResult,
   type AIRouterSpeechProviderConfigInput,
   type AIRouterSpeechProviderType,
+  type AIRouterSpeechRecognitionEvent,
+  type AIRouterSpeechRecognitionModelPackageImportResult,
+  type AIRouterSpeechRecognitionProviderConfigInput,
+  type AIRouterSpeechRecognitionProviderType,
+  type AIRouterSpeechRecognitionRequest,
   type AIRouterSpeechSynthesisEvent,
   type AIRouterSpeechSynthesisRequest,
   type AIRouterSpeechVoiceListInput,
@@ -127,8 +137,8 @@ const airouterBridge: AIRouterBridge = {
   listSpeechModelPackages(providerType?: AIRouterSpeechProviderType) {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.listSpeechPackages, providerType)
   },
-  importSpeechModelPackage(data: Uint8Array): Promise<AIRouterSpeechModelPackageImportResult> {
-    return ipcRenderer.invoke(AIROUTER_CHANNELS.importSpeechPackage, data)
+  importSpeechModelPackage(): Promise<AIRouterSpeechModelPackageImportResult | null> {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.importSpeechPackage)
   },
   deleteSpeechModelPackage(id: string, version: string) {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.deleteSpeechPackage, id, version)
@@ -142,27 +152,120 @@ const airouterBridge: AIRouterBridge = {
   testSpeechConnection(request: AIRouterSpeechConnectionTestInput) {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.testSpeechConnection, request)
   },
+  listSpeechRecognitionProviderConfigs() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listRecognitionConfigs)
+  },
+  saveSpeechRecognitionProviderConfig(config: AIRouterSpeechRecognitionProviderConfigInput) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.saveRecognitionConfig, config)
+  },
+  deleteSpeechRecognitionProviderConfig(id: string) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.deleteRecognitionConfig, id)
+  },
+  readSpeechRecognitionProviderApiKey(id: string) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.readRecognitionApiKey, id)
+  },
+  listSpeechRecognitionModelPackages(providerType?: AIRouterSpeechRecognitionProviderType) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listRecognitionPackages, providerType)
+  },
+  importSpeechRecognitionModelPackage(): Promise<AIRouterSpeechRecognitionModelPackageImportResult | null> {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.importRecognitionPackage)
+  },
+  deleteSpeechRecognitionModelPackage(id: string, version: string) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.deleteRecognitionPackage, id, version)
+  },
+  listSpeechRecognitionProviderModels(config: AIRouterSpeechRecognitionProviderConfigInput) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listRecognitionProviderModels, config)
+  },
+  listSpeechRecognitionModels() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listRecognitionModels)
+  },
+  listPronunciationAssessmentModels() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listPronunciationModels)
+  },
+  getPronunciationAssessmentExtensionStatus() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.pronunciationExtensionStatus)
+  },
+  importPronunciationAssessmentExtension(): Promise<AIRouterPronunciationAssessmentExtensionImportResult | null> {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.importPronunciationExtension)
+  },
+  startSpeechRecognition(
+    request: AIRouterSpeechRecognitionRequest,
+    listener: (event: AIRouterSpeechRecognitionEvent) => void
+  ) {
+    const requestId = crypto.randomUUID()
+    let completed = false
+    const handler = (
+      _event: IpcRendererEvent,
+      id: string,
+      event: AIRouterSpeechRecognitionEvent
+    ): void => {
+      if (id !== requestId) return
+      if (event.type === 'result' || event.type === 'error') {
+        completed = true
+        ipcRenderer.removeListener(AIROUTER_CHANNELS.speechRecognitionEvent, handler)
+      }
+      listener(event)
+    }
+    ipcRenderer.on(AIROUTER_CHANNELS.speechRecognitionEvent, handler)
+    ipcRenderer.send(AIROUTER_CHANNELS.speechRecognitionStart, requestId, request)
+    return () => {
+      ipcRenderer.removeListener(AIROUTER_CHANNELS.speechRecognitionEvent, handler)
+      if (!completed) ipcRenderer.send(AIROUTER_CHANNELS.speechRecognitionAbort, requestId)
+    }
+  },
+  startPronunciationAssessment(
+    request: AIRouterPronunciationAssessmentRequest,
+    listener: (event: AIRouterPronunciationAssessmentEvent) => void
+  ) {
+    const requestId = crypto.randomUUID()
+    let completed = false
+    const handler = (
+      _event: IpcRendererEvent,
+      id: string,
+      event: AIRouterPronunciationAssessmentEvent
+    ): void => {
+      if (id !== requestId) return
+      if (event.type === 'result' || event.type === 'error') {
+        completed = true
+        ipcRenderer.removeListener(AIROUTER_CHANNELS.pronunciationAssessmentEvent, handler)
+      }
+      listener(event)
+    }
+    ipcRenderer.on(AIROUTER_CHANNELS.pronunciationAssessmentEvent, handler)
+    ipcRenderer.send(AIROUTER_CHANNELS.pronunciationAssessmentStart, requestId, request)
+    return () => {
+      ipcRenderer.removeListener(AIROUTER_CHANNELS.pronunciationAssessmentEvent, handler)
+      if (!completed) ipcRenderer.send(AIROUTER_CHANNELS.pronunciationAssessmentAbort, requestId)
+    }
+  },
   startSpeechSynthesis(
     request: AIRouterSpeechSynthesisRequest,
     listener: (event: AIRouterSpeechSynthesisEvent) => void
   ) {
     const requestId = crypto.randomUUID()
+    let completed = false
     const handler = (
       _event: IpcRendererEvent,
       id: string,
       event: AIRouterSpeechSynthesisEvent
     ): void => {
       if (id !== requestId) return
-      listener(event)
       if (event.type === 'result' || event.type === 'error') {
+        completed = true
         ipcRenderer.removeListener(AIROUTER_CHANNELS.speechSynthesisEvent, handler)
       }
+      console.info(`[AIRouter Speech ${requestId}] preload received ${event.type} event`)
+      listener(event)
     }
     ipcRenderer.on(AIROUTER_CHANNELS.speechSynthesisEvent, handler)
+    console.info(`[AIRouter Speech ${requestId}] preload sending synthesis request`)
     ipcRenderer.send(AIROUTER_CHANNELS.speechSynthesisStart, requestId, request)
     return () => {
       ipcRenderer.removeListener(AIROUTER_CHANNELS.speechSynthesisEvent, handler)
-      ipcRenderer.send(AIROUTER_CHANNELS.speechSynthesisAbort, requestId)
+      if (!completed) {
+        console.info(`[AIRouter Speech ${requestId}] preload sending abort`)
+        ipcRenderer.send(AIROUTER_CHANNELS.speechSynthesisAbort, requestId)
+      }
     }
   },
   startTextGeneration(
@@ -225,6 +328,12 @@ const clipboardBridge: ClipboardBridge = {
   }
 }
 
+const appInfoBridge: AppInfoBridge = {
+  getVersion() {
+    return ipcRenderer.invoke(APP_INFO_CHANNELS.getVersion)
+  }
+}
+
 const windowControlsBridge: WindowControlsBridge = {
   minimize() {
     return ipcRenderer.invoke(WINDOW_CONTROL_CHANNELS.minimize)
@@ -256,4 +365,5 @@ contextBridge.exposeInMainWorld('configStore', configStoreBridge)
 contextBridge.exposeInMainWorld('airouter', airouterBridge)
 contextBridge.exposeInMainWorld('fileDialog', fileDialogBridge)
 contextBridge.exposeInMainWorld('imageClipboard', clipboardBridge)
+contextBridge.exposeInMainWorld('appInfo', appInfoBridge)
 contextBridge.exposeInMainWorld('windowControls', windowControlsBridge)

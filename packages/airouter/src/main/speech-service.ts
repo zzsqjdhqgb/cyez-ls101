@@ -89,8 +89,8 @@ export class AIRouterSpeechService {
     return this.modelStore.listPackages(providerType)
   }
 
-  importModelPackage(data: Uint8Array): Promise<AIRouterSpeechModelPackageImportResult> {
-    return this.modelStore.importPackage(data)
+  importModelPackage(filePath: string): Promise<AIRouterSpeechModelPackageImportResult> {
+    return this.modelStore.importPackage(filePath)
   }
 
   deleteModelPackage(id: string, version: string): Promise<void> {

@@ -7,7 +7,7 @@
  * Template 编辑器的变量选择器使用此类型展示可用变量。
  */
 export interface InterfaceVarInfo {
-  /** 变量名，在 Template 中以 [@varName] 引用 */
+  /** 对外变量名，在 Template 中以 [@varName] 引用 */
   varName: string
 
   /** 变量类型：文本或图片 */
@@ -40,8 +40,8 @@ export interface InterfaceVarManifest {
 
 /**
  * Interface 实例——AI 生成完成后的一整套数据。
- * Template 编辑器中选定一个实例后，所有 varName → value 的映射注入为全局变量池。
- * Template 中的 [@varName] 引用解析时查此 values 表。
+ * Template 编辑器中选定一个实例后，所有导出变量名 → value 的映射注入为全局变量池。
+ * 图片字段会导出 `<varName>.inst`（提示词）和 `<varName>.img`（图片资源）。
  */
 export interface InterfaceInstance {
   /** 实例唯一标识 */
@@ -59,6 +59,6 @@ export interface InterfaceInstance {
    */
   values: Record<string, string>
 
-  /** Interface Editor 保存的图片提示词中间值；下游模块不将其作为变量值使用。 */
+  /** Interface Editor 内部按原字段名保存；下游通过 `<varName>.inst` 读取。 */
   imagePrompts?: Record<string, string>
 }

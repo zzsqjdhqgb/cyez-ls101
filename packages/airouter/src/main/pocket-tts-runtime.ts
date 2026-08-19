@@ -16,6 +16,8 @@ export interface PocketTtsRuntimeConfig extends PocketTtsTextOptions {
   sampleRate: number
   silenceBetweenChunksMs: number
   temperature: number
+  maxFramesPerChunk: number
+  onProgress?(message: string): void
 }
 
 export function synthesizePocketTts(
@@ -26,18 +28,37 @@ export function synthesizePocketTts(
   config: PocketTtsRuntimeConfig
 ): Uint8Array {
   const chunks = splitText(text, tokenizer, config)
+  config.onProgress?.(`split text into ${chunks.length} chunk(s)`)
   const audioChunks: Float32Array[] = []
   for (let index = 0; index < chunks.length; index++) {
+    const chunkLabel = `chunk ${index + 1}/${chunks.length}`
+    config.onProgress?.(`${chunkLabel}: preparing text`)
     const [processedText, framesAfterEos] = model.prepare_text(chunks[index])
     const tokenIds = tokenizer.encode(processedText)
-    if (tokenIds.length === 0) continue
+    config.onProgress?.(
+      `${chunkLabel}: prepared ${tokenIds.length} token(s), framesAfterEos=${framesAfterEos}`
+    )
+    if (tokenIds.length === 0) {
+      config.onProgress?.(`${chunkLabel}: skipped empty token sequence`)
+      continue
+    }
     model.start_generation(voiceIndex, tokenIds, framesAfterEos, config.temperature)
+    config.onProgress?.(`${chunkLabel}: generation loop started`)
     const frames: Float32Array[] = []
     while (true) {
       const frame = model.generation_step()
       if (!frame) break
+      if (frames.length >= config.maxFramesPerChunk) {
+        throw new Error(
+          `Pocket TTS 生成超过单段帧数限制（${config.maxFramesPerChunk}），请检查文本语言或缩短文本`
+        )
+      }
       frames.push(new Float32Array(frame))
+      if (frames.length === 1 || frames.length % 100 === 0) {
+        config.onProgress?.(`${chunkLabel}: generated ${frames.length} frame(s)`)
+      }
     }
+    config.onProgress?.(`${chunkLabel}: generation completed with ${frames.length} frame(s)`)
     const chunkSamples = new Float32Array(frames.reduce((total, frame) => total + frame.length, 0))
     let offset = 0
     for (const frame of frames) {
@@ -58,5 +79,7 @@ export function synthesizePocketTts(
     samples.set(chunk, offset)
     offset += chunk.length
   }
-  return encodeWav(samples, config.sampleRate)
+  const wav = encodeWav(samples, config.sampleRate)
+  config.onProgress?.(`encoded WAV with ${samples.length} sample(s), ${wav.byteLength} byte(s)`)
+  return wav
 }

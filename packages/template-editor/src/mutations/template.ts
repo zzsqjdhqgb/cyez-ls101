@@ -1,4 +1,5 @@
 import type { TemplateDocument } from '../types'
+import { normalizeTemplateTags } from '../tags'
 import { applyDefinitionOperation } from './definition'
 import { error, insertAt, insertionIndex, invalidIndex, removeAt, replaceAt } from './identifiers'
 import { pruneResources } from './resources'
@@ -74,6 +75,22 @@ function editTemplateMetadata(
       },
       [{ kind: 'update', path: 'content.description' }]
     )
+  }
+  if (operation.type === 'set-template-tags') {
+    try {
+      const tags = normalizeTemplateTags(operation.value)
+      return applied(document, operation, { ...document, content: { ...document.content, tags } }, [
+        { kind: 'update', path: 'content.tags' }
+      ])
+    } catch (cause) {
+      return rejected(
+        document,
+        operation,
+        error('INVALID_VALUE', 'content.tags', {
+          message: cause instanceof Error ? cause.message : 'Invalid template tags'
+        })
+      )
+    }
   }
   if (operation.type === 'insert-interface-requirement') {
     if (document.content.interfaces.some((item) => item.alias === operation.requirement.alias)) {

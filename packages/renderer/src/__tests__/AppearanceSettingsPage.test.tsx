@@ -100,6 +100,8 @@ describe('AppearanceSettingsPage', () => {
     expect((screen.getByRole('combobox', { name: '界面主题' }) as HTMLSelectElement).value).toBe(
       'light'
     )
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light')
+    await waitFor(() =>
+      expect(document.documentElement.getAttribute('data-theme')).toBe('light')
+    )
   })
 })

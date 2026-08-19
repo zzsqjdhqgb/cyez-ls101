@@ -1,4 +1,4 @@
-import type { InterfaceVarManifest, SchemaBlockManifest } from '@ls101/core-types'
+import type { InterfaceVarManifest, SchemaDefinition } from '@ls101/core-types'
 import { describe, expect, it } from 'vitest'
 import type {
   ChoiceQuestionNode,
@@ -15,10 +15,12 @@ import {
   type TemplateValidationContext,
   type TemplateValidationErrorCode
 } from '../validation'
-import { number, root, templateContent, text } from './fixtures'
+import { number, root, schemaDefinition, schemaText, templateContent, text } from './fixtures'
 
 const INTERFACE_ID = `sha256:${'1'.repeat(64)}`
 const SCHEMA_ID = `sha256:${'2'.repeat(64)}`
+const RECORDING_SCHEMA_ID = `sha256:${'4'.repeat(64)}`
+const CHOICE_SCHEMA_ID = `sha256:${'5'.repeat(64)}`
 const FUNCTION_ID = `sha256:${'3'.repeat(64)}`
 
 function interfaceManifest(): InterfaceVarManifest {
@@ -51,28 +53,28 @@ function interfaceManifest(): InterfaceVarManifest {
   }
 }
 
-function schemaManifest(): SchemaBlockManifest {
-  return {
-    schemaId: SCHEMA_ID,
-    schemaName: 'Scoring',
-    blocks: [
-      {
-        blockId: 'reading',
-        blockName: 'Reading',
-        fields: [{ varName: 'prompt', type: 'text' }]
-      },
-      {
-        blockId: 'recording',
-        blockName: 'Recording',
-        fields: [{ varName: 'recording', type: 'audio' }]
-      },
-      {
-        blockId: 'single-choice',
-        blockName: 'Single choice',
-        fields: [{ varName: 'answer', type: 'choice' }]
-      }
-    ]
-  }
+function schemaDefinitions(): SchemaDefinition[] {
+  return [
+    schemaDefinition(SCHEMA_ID, {
+      questionType: 'freetalk',
+      answerFormat: [],
+      templateInputs: [{ inputId: 'prompt', type: 'text', required: true }]
+    }),
+    schemaDefinition(RECORDING_SCHEMA_ID, {
+      questionType: 'freetalk',
+      answerFormat: [{ answerId: 'recording', type: 'free-speech' }],
+      templateInputs: []
+    }),
+    schemaDefinition(CHOICE_SCHEMA_ID, {
+      questionType: 'objective',
+      answerFormat: [{ answerId: 'answer', type: 'text' }],
+      templateInputs: [
+        { inputId: 'question-description', type: 'text', required: true },
+        { inputId: 'correct-answer', type: 'text', required: true },
+        { inputId: 'analysis', type: 'text', required: false }
+      ]
+    })
+  ]
 }
 
 function validationContext(
@@ -80,7 +82,7 @@ function validationContext(
 ): TemplateValidationContext {
   return {
     interfaceManifests: [interfaceManifest()],
-    schemaManifests: [schemaManifest()],
+    schemaDefinitions: schemaDefinitions(),
     functions: [],
     ...overrides
   }
@@ -106,10 +108,27 @@ function page(overrides: Partial<PageNode> = {}): PageNode {
     id: 'page-1',
     type: 'page',
     content: { blocks: [] },
-    timeline: [],
+    timeline: [{ type: 'countdown', seconds: number(1) }],
     ...overrides
   }
 }
+
+it('拒绝空页面时间线', () => {
+  expectCode(templateContent({ root: root([page({ timeline: [] })]) }), 'EMPTY_PAGE_TIMELINE')
+})
+
+it('拒绝零秒录音动作', () => {
+  expectCode(
+    templateContent({
+      root: root([
+        page({
+          timeline: [{ type: 'record', duration: number(0), outputName: 'recording' }]
+        })
+      ])
+    }),
+    'INVALID_RECORDING_DURATION'
+  )
+})
 
 function question(id = 'question-1', outputName = 'answer-1'): ChoiceQuestionNode {
   return {
@@ -127,11 +146,13 @@ function question(id = 'question-1', outputName = 'answer-1'): ChoiceQuestionNod
 function choiceSchemaUse(outputName = 'answer-1'): SchemaUse {
   return {
     useId: 'choice-use-1',
-    schemaId: SCHEMA_ID,
-    blockId: 'single-choice',
-    bindings: {
-      answer: { type: 'choice-output', name: outputName }
-    }
+    schemaId: CHOICE_SCHEMA_ID,
+    inputBindings: {
+      'question-description': schemaText('Choose one'),
+      'correct-answer': schemaText('A')
+    },
+    answerBindings: { answer: { type: 'text', source: 'choice-output', name: outputName } },
+    attachments: []
   }
 }
 
@@ -159,6 +180,54 @@ function interfaceText(varName: string): TextExpression {
 }
 
 describe('validateTemplateContent - 基础依赖', () => {
+  it('变量在整个定义内声明提升，并拒绝循环依赖', () => {
+    const forwardReference = templateContent({
+      root: root([
+        page({
+          content: {
+            blocks: [
+              {
+                id: 'text',
+                type: 'text',
+                x: 0,
+                y: 0,
+                text: {
+                  type: 'string',
+                  parts: [{ type: 'variable', ref: { scope: 'local', name: 'message' } }]
+                }
+              }
+            ]
+          }
+        }),
+        {
+          id: 'variable',
+          type: 'variable',
+          variableName: 'message',
+          value: text('Hello')
+        }
+      ])
+    })
+    expect(codes(forwardReference)).not.toContain('UNKNOWN_LOCAL_VARIABLE')
+
+    const cyclic = templateContent({
+      root: root([
+        {
+          id: 'a',
+          type: 'variable',
+          variableName: 'a',
+          value: { type: 'string', source: 'variable', ref: { scope: 'local', name: 'b' } }
+        },
+        {
+          id: 'b',
+          type: 'variable',
+          variableName: 'b',
+          value: { type: 'string', source: 'variable', ref: { scope: 'local', name: 'a' } }
+        }
+      ])
+    })
+    expect(codes(cyclic)).toContain('CYCLIC_VARIABLE_DEFINITION')
+  })
+
   it('接受没有选择题的完整 Template', () => {
     expect(validateTemplateContent(templateContent(), validationContext())).toEqual({
       valid: true,
@@ -195,6 +264,15 @@ describe('validateTemplateContent - 基础依赖', () => {
 
     expect(resultCodes).toContain('DUPLICATE_INTERFACE_ALIAS')
     expect(resultCodes).toContain('UNKNOWN_INTERFACE_VAR')
+  })
+
+  it('保留 this 作为 SchemaUse 附件命名空间', () => {
+    expectCode(
+      templateContent({
+        interfaces: [{ alias: 'this', interfaceId: INTERFACE_ID, acceptedVars: ['sentence'] }]
+      }),
+      'INVALID_INTERFACE_ALIAS'
+    )
   })
 
   it('Interface 变量必须被当前 Template 接受', () => {
@@ -391,11 +469,15 @@ describe('validateTemplateContent - 函数', () => {
       schemaUses: [
         {
           useId: 'recording-use',
-          schemaId: SCHEMA_ID,
-          blockId: 'recording',
-          bindings: {
-            recording: { type: 'record-output', name: 'recording-1' }
-          }
+          schemaId: RECORDING_SCHEMA_ID,
+          inputBindings: {},
+          answerBindings: {
+            recording: {
+              type: 'free-speech',
+              audio: { type: 'audio', source: 'record-output', name: 'recording-1' }
+            }
+          },
+          attachments: []
         }
       ]
     }
@@ -507,44 +589,86 @@ describe('validateTemplateContent - 函数', () => {
 })
 
 describe('validateTemplateContent - Schema 绑定', () => {
-  it('要求完整绑定且拒绝评分块外字段', () => {
+  it('限制 [@this.*] 在当前 SchemaUse 的附件命名空间内', () => {
+    const baseUse: SchemaUse = {
+      useId: 'attachment-use',
+      schemaId: SCHEMA_ID,
+      inputBindings: {
+        prompt: {
+          type: 'string',
+          parts: [
+            { type: 'variable', ref: { scope: 'schema-use', varName: 'picture' } },
+            { type: 'variable', ref: { scope: 'schema-use', varName: 'missing' } }
+          ]
+        }
+      },
+      answerBindings: {},
+      attachments: [
+        {
+          varName: 'picture',
+          description: 'Question image',
+          file: {
+            type: 'file',
+            source: 'variable',
+            ref: { scope: 'interface', alias: 'speaking', varName: 'picture' }
+          }
+        },
+        {
+          varName: 'picture',
+          description: 'Duplicate',
+          file: { type: 'file', source: 'literal', value: 'other.png' }
+        }
+      ]
+    }
+    const resultCodes = codes(
+      templateContent({
+        interfaces: [{ alias: 'speaking', interfaceId: INTERFACE_ID, acceptedVars: ['picture'] }],
+        schemaUses: [baseUse]
+      })
+    )
+
+    expect(resultCodes).toContain('DUPLICATE_SCHEMA_ATTACHMENT_NAME')
+    expect(resultCodes).toContain('UNKNOWN_SCHEMA_ATTACHMENT')
+  })
+
+  it('要求完整输入绑定且拒绝 Schema 外输入', () => {
     const content = templateContent({
       schemaUses: [
         {
           useId: 'reading-1',
           schemaId: SCHEMA_ID,
-          blockId: 'reading',
-          bindings: {
-            extra: { type: 'literal', value: 'extra' }
-          }
+          inputBindings: { extra: schemaText('extra') },
+          answerBindings: {},
+          attachments: []
         }
       ]
     })
     const resultCodes = codes(content)
 
-    expect(resultCodes).toContain('MISSING_SCHEMA_BINDING')
-    expect(resultCodes).toContain('UNKNOWN_SCHEMA_BINDING')
+    expect(resultCodes).toContain('MISSING_SCHEMA_INPUT_BINDING')
+    expect(resultCodes).toContain('UNKNOWN_SCHEMA_INPUT_BINDING')
   })
 
-  it('拒绝把 choice 作答绑定到 text 字段', () => {
+  it('按答案 ID 和类型校验运行期答案绑定', () => {
     const content = templateContent({
       root: collectedRoot([question()], [1]),
       schemaUses: [
         {
-          useId: 'reading-1',
-          schemaId: SCHEMA_ID,
-          blockId: 'reading',
-          bindings: {
-            prompt: { type: 'choice-output', name: 'answer-1' }
+          ...choiceSchemaUse(),
+          answerBindings: {
+            answer: {
+              type: 'free-speech',
+              audio: { type: 'audio', source: 'record-output', name: 'recording' }
+            }
           }
         }
       ]
     })
 
-    expectCode(content, 'SCHEMA_BINDING_TYPE_MISMATCH')
+    expect(codes(content)).toContain('SCHEMA_ANSWER_TYPE_MISMATCH')
   })
 
-  it('SchemaUse 必须引用存在的 Schema 和评分块', () => {
+  it('SchemaUse 必须引用存在的正式 Schema', () => {
     const unknownSchema = templateContent({
       schemaUses: [
         {
@@ -553,21 +677,16 @@ describe('validateTemplateContent - Schema 绑定', () => {
         }
       ]
     })
-    const unknownBlock = templateContent({
-      schemaUses: [
-        {
-          ...templateContent().schemaUses[0],
-          blockId: 'missing'
-        }
-      ]
-    })
-
     expectCode(unknownSchema, 'UNKNOWN_SCHEMA')
-    expectCode(unknownBlock, 'UNKNOWN_SCHEMA_BLOCK')
   })
 
-  it('展开后完全没有 Schema 消费时拒绝导出', () => {
-    expectCode(templateContent({ schemaUses: [] }), 'NO_SCHEMA_USE')
+  it('允许没有 Schema 的 Template', () => {
+    expect(
+      validateTemplateContent(templateContent({ schemaUses: [] }), validationContext())
+    ).toEqual({
+      valid: true,
+      errors: []
+    })
   })
 
   it('同一作用域的 Schema useId 必须非空且唯一', () => {

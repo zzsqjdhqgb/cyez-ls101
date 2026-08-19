@@ -533,6 +533,17 @@ describe('Interface 交换包', () => {
     ])
   })
 
+  it('导出内置题型时保留稳定 builtinKey 和当前内容 ID', async () => {
+    const { repository } = setup()
+    const def = await publishInterface(content())
+    await repository.saveBuiltinInterface('speaking', def)
+    await repository.setBuiltinCurrent('speaking', def.id)
+
+    const bundle = await exportInterfacePackage(repository, def.id, { mode: 'none' })
+    expect(bundle.builtin).toEqual({ builtinKey: 'speaking', interfaceId: def.id })
+    expect(bundle.interface.id).toBe(def.id)
+  })
+
   it('检查包并按导入选择保存实例和资源', async () => {
     const source = setup().repository
     const target = setup().repository
@@ -942,28 +953,32 @@ describe('Interface application', () => {
     })
     expect(withPrompt.assetUrls[previousFilename]).toContain(previousFilename)
 
-    const withoutImage = await app.instances.save(def.id, blank.instance.instanceId, {
-      name: '图片题组',
-      values: withPrompt.instance.values,
-      imagePrompts: withPrompt.instance.imagePrompts,
-      imageFiles: { questionImage: null }
-    })
-
-    expect(withoutImage.instance.values.questionImage).toBe('')
-    expect(withoutImage.instance.imagePrompts).toEqual({
-      questionImage: '一名学生站在操场上'
-    })
-    expect(withoutImage.assetUrls).toEqual({})
+    await expect(
+      app.instances.save(def.id, blank.instance.instanceId, {
+        name: '图片题组',
+        values: withPrompt.instance.values,
+        imagePrompts: withPrompt.instance.imagePrompts,
+        imageFiles: { questionImage: null }
+      })
+    ).rejects.toThrow('提示词和图片必须同时填写')
     await expect(
       repository.readInstanceAsset(def.id, blank.instance.instanceId, previousFilename)
-    ).resolves.toBeNull()
+    ).resolves.toEqual(PNG_BYTES)
   })
 
-  it('JSON 覆盖更新图片提示词但保留已绑定的图片值', async () => {
+  it('JSON 覆盖使用所选图像 Provider 更新提示词和图片', async () => {
     const { repository } = setup()
     const def = await publishInterface(contentWithImage())
     await repository.saveInterface(def)
-    const app = createInterfaceApplication({ repository, fileDialog: new TestFileDialog(null) })
+    const imageProvider = { providerId: 'json-provider', modelId: 'json-image-model' }
+    const imageGenerator: InterfaceImageGenerator = {
+      generate: vi.fn().mockResolvedValue({ data: PNG_BYTES })
+    }
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(null),
+      imageGenerator
+    })
     const blank = await app.published.createBlankInstance(def.id)
     const withImage = await app.instances.save(def.id, blank.instance.instanceId, {
       name: '图片题组',
@@ -976,19 +991,30 @@ describe('Interface application', () => {
     const replaced = await app.instances.replaceFromJson(
       def.id,
       blank.instance.instanceId,
-      '{"title":"JSON 标题","picture":"JSON 图片提示词"}'
+      '{"title":"JSON 标题","picture":"JSON 图片提示词"}',
+      { imageProvider }
     )
 
+    expect(imageGenerator.generate).toHaveBeenCalledWith('JSON 图片提示词', {
+      signal: expect.any(AbortSignal),
+      provider: imageProvider
+    })
     expect(replaced.status).toBe('replaced')
     if (replaced.status === 'replaced') {
+      const replacementFilename = replaced.instance.instance.values.questionImage
       expect(replaced.instance.instance.values).toEqual({
         title: 'JSON 标题',
-        questionImage: filename
+        questionImage: replacementFilename
       })
+      expect(replacementFilename).toMatch(/^questionImage-[0-9a-f-]{36}\.png$/)
+      expect(replacementFilename).not.toBe(filename)
       expect(replaced.instance.instance.imagePrompts).toEqual({
         questionImage: 'JSON 图片提示词'
       })
-      expect(replaced.instance.assetUrls[filename]).toContain(filename)
+      expect(replaced.instance.assetUrls[replacementFilename]).toContain(replacementFilename)
+      await expect(
+        repository.readInstanceAsset(def.id, blank.instance.instanceId, filename)
+      ).resolves.toBeNull()
     }
   })
 

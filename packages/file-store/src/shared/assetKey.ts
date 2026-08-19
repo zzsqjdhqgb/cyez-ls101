@@ -25,6 +25,17 @@ export function assetLocationToUrl(location: FileLocation): string {
   return `${ASSET_PROTOCOL_SCHEME}://${ASSET_PROTOCOL_HOST}/${encodeLocation(location)}`
 }
 
+export function assetUrlToKey(rawValue: string): AssetKey {
+  return createAssetKey(
+    parseLocationUrl(
+      rawValue,
+      `${ASSET_PROTOCOL_SCHEME}:`,
+      ASSET_PROTOCOL_HOST,
+      'Invalid asset URL'
+    )
+  )
+}
+
 export function createBuiltinAssetKey(location: FileLocation): AssetKey {
   validateLocation(location)
   return `${BUILTIN_ASSET_KEY_SCHEME}://${ASSET_KEY_VERSION}/${encodeLocation(location)}`

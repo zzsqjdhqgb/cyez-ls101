@@ -1,4 +1,11 @@
-import type { ExamPackage } from '@ls101/core-types'
+import type {
+  AnswerCapturePlan,
+  ExamPage,
+  ExamPackage,
+  SchemaDefinition,
+  SubmissionSchemaAnswer,
+  SubmissionSchemaUse
+} from '@ls101/core-types'
 import type { TemplateContent, TemplateDocument } from './types'
 import { validateTemplateDocument } from './validation'
 import { instantiateTemplate } from './compiler/expand'
@@ -8,9 +15,14 @@ import {
   createCompilerState,
   manifestMap,
   type BoundInterfaceValue,
+  type ExpandedExamPage,
+  type ExpandedSchemaUse,
+  type ExamResourceSource,
   type TemplateCompileContext,
   type TemplateCompileError,
-  type TemplateCompileResult
+  type TemplateCompileResult,
+  type TemplatePreviewResult,
+  type TemplatePreviewTimelineStep
 } from './compiler/shared'
 
 export type {
@@ -18,9 +30,84 @@ export type {
   TemplateCompileError,
   TemplateCompileErrorCode,
   TemplateCompileResult,
+  GeneratedTimelineAudio,
+  ExamResourceSource,
   TemplateInterfaceBinding,
   LocatedInterfaceInstance
 } from './compiler/shared'
+
+export type {
+  TemplatePreviewData,
+  TemplatePreviewPage,
+  TemplatePreviewResult,
+  TemplatePreviewTimelineStep
+} from './compiler/shared'
+
+export async function compileTemplatePreview(
+  template: TemplateDocument,
+  context: TemplateCompileContext
+): Promise<TemplatePreviewResult> {
+  const validation = await validateTemplateDocument(template, context)
+  if (!validation.valid) {
+    return {
+      success: false,
+      errors: validation.errors.map((error) => ({ stage: 'validation', error }))
+    }
+  }
+
+  const bound = await bindInterfaceValues(template.content, context)
+  if (bound.errors.length > 0) return { success: false, errors: bound.errors }
+
+  const state = createCompilerState(context, bound.valuesByAlias, template.resources.functions)
+  try {
+    const structure = instantiateTemplate(template.content, state)
+    state.choiceGroupCells.forEach((cell) => cell.get())
+    state.staticCells.forEach((cell) => cell.get())
+
+    const expandedPages = state.pages.map((resolve) => resolve())
+    if (expandedPages.length === 0) {
+      throw new CompileFailure(compileError('EMPTY_PLAYER_PAGES', 'root'))
+    }
+    validateResolvedRecordings(expandedPages)
+    const questions = state.questions.map((resolve) => resolve())
+    state.schemaUsages.forEach((resolve) => resolve())
+    const candidate = structure.candidates[0]
+
+    return {
+      success: true,
+      preview: {
+        title: template.content.name,
+        pages: expandedPages.map((page) => ({
+          id: page.id,
+          sourceNodeId: page.sourceNodeId,
+          ...(page.sourceNodeName ? { sourceNodeName: page.sourceNodeName } : {}),
+          callPath: page.callPath,
+          content: page.content,
+          timeline: page.timeline.map(toPreviewTimelineStep)
+        })),
+        recordingIndices: state.recordingIndices,
+        ...(candidate
+          ? {
+              choiceMeta: {
+                pages: candidate.pages.map((questionIndices) => ({ questionIndices })),
+                questions
+              }
+            }
+          : {}),
+        resources: Object.fromEntries(state.resources)
+      },
+      resourceSources: Array.from(state.resourceSources, ([assetKey, sourceUrl]) => ({
+        assetKey,
+        sourceUrl
+      }))
+    }
+  } catch (error) {
+    if (error instanceof CompileFailure) {
+      return { success: false, errors: [error.compileError] }
+    }
+    throw error
+  }
+}
 
 export async function compileTemplate(
   template: TemplateDocument,
@@ -41,35 +128,281 @@ export async function compileTemplate(
   const state = createCompilerState(context, bound.valuesByAlias, template.resources.functions)
   try {
     const structure = instantiateTemplate(content, state)
+    state.choiceGroupCells.forEach((cell) => cell.get())
     state.staticCells.forEach((cell) => cell.get())
 
-    const pages = state.pages.map((resolve) => resolve())
+    const expandedPages = state.pages.map((resolve) => resolve())
+    if (expandedPages.length === 0) {
+      throw new CompileFailure(compileError('EMPTY_PLAYER_PAGES', 'root'))
+    }
+    const generatedSources: ExamResourceSource[] = []
+    const pages = await compileTimelineAudio(
+      expandedPages,
+      context,
+      state.resources,
+      generatedSources
+    )
     const questions = state.questions.map((resolve) => resolve())
-    const schemaUsages = state.schemaUsages.map((resolve) => resolve())
+    const schemaBlocks = state.schemaUsages.map((resolve) => resolve())
     const candidate = structure.candidates[0]
+    const packageId = crypto.randomUUID()
+    const resources = Object.fromEntries(state.resources)
+    const submissionResources = Object.fromEntries(
+      [...state.resources].filter(([assetKey]) => state.submissionResourceKeys.has(assetKey))
+    )
+    const submission = buildSubmissionSnapshot(
+      packageId,
+      content.name,
+      schemaBlocks,
+      state.schemasById,
+      submissionResources
+    )
 
     const examPackage: ExamPackage = {
-      title: content.name,
-      player: {
-        pages,
-        recordingIndices: state.recordingIndices,
-        ...(candidate
-          ? {
-              choiceMeta: {
-                pages: candidate.pages.map((questionIndices) => ({ questionIndices })),
-                questions
+      format: 'ls101-exam',
+      formatVersion: 1,
+      packageId,
+      examData: {
+        title: content.name,
+        player: {
+          pages,
+          recordingIndices: state.recordingIndices,
+          ...(candidate
+            ? {
+                choiceMeta: {
+                  pages: candidate.pages.map((questionIndices) => ({ questionIndices })),
+                  questions
+                }
               }
-            }
-          : {})
+            : {})
+        },
+        resources
       },
-      schema: { usages: schemaUsages }
+      answerCapturePlan: submission.answerCapturePlan,
+      submissionTemplate: submission.template
     }
-    return { success: true, examPackage }
+    const resourceSources: ExamResourceSource[] = Array.from(
+      state.resourceSources,
+      ([assetKey, sourceUrl]) => ({ assetKey, sourceUrl })
+    )
+    return {
+      success: true,
+      examPackage,
+      resourceSources: [...resourceSources, ...generatedSources]
+    }
   } catch (error) {
     if (error instanceof CompileFailure) {
       return { success: false, errors: [error.compileError] }
     }
     throw error
+  }
+}
+
+async function compileTimelineAudio(
+  pages: readonly ExpandedExamPage[],
+  context: TemplateCompileContext,
+  resources: Map<string, ExamPackage['examData']['resources'][string]>,
+  sources: ExamResourceSource[]
+): Promise<ExamPage[]> {
+  const compiled: ExamPage[] = []
+  for (const [pageIndex, page] of pages.entries()) {
+    const timeline: ExamPage['timeline'] = []
+    for (const [stepIndex, step] of page.timeline.entries()) {
+      if (step.type !== 'play') {
+        if (step.type === 'record') {
+          if (!Number.isFinite(step.duration) || step.duration <= 0) {
+            throw new CompileFailure(
+              compileError('INVALID_RECORDING_DURATION', step.sourcePath, {
+                value: step.duration
+              })
+            )
+          }
+          timeline.push({
+            type: 'record',
+            duration: step.duration,
+            recordIndex: step.recordIndex,
+            ...(step.choiceViewOverrides ? { choiceViewOverrides: step.choiceViewOverrides } : {})
+          })
+        } else {
+          timeline.push(step)
+        }
+        continue
+      }
+      if (!context.synthesizeSpeech) {
+        throw new CompileFailure(compileError('SPEECH_SYNTHESIZER_MISSING', step.sourcePath))
+      }
+
+      let audio: Awaited<ReturnType<NonNullable<TemplateCompileContext['synthesizeSpeech']>>>
+      try {
+        audio = await context.synthesizeSpeech(step.text)
+      } catch (error) {
+        throw new CompileFailure(
+          compileError('SPEECH_SYNTHESIS_FAILED', step.sourcePath, {
+            message: error instanceof Error ? error.message : String(error)
+          })
+        )
+      }
+      if (
+        !audio ||
+        !(audio.data instanceof Uint8Array) ||
+        audio.data.byteLength === 0 ||
+        typeof audio.mediaType !== 'string' ||
+        !audio.mediaType.toLowerCase().startsWith('audio/')
+      ) {
+        throw new CompileFailure(compileError('INVALID_SYNTHESIZED_AUDIO', step.sourcePath))
+      }
+
+      const assetKey = `player-tts-${encodeURIComponent(page.id)}-${stepIndex}`
+      const filename = `speech-${pageIndex}-${stepIndex}.${speechExtension(audio.mediaType)}`
+      resources.set(assetKey, {
+        filename,
+        packagePath: `resources/${assetKey}/${filename}`,
+        mediaType: audio.mediaType
+      })
+      sources.push({ assetKey, data: audio.data })
+      timeline.push({
+        type: 'play',
+        src: `resource:${assetKey}`,
+        ...(step.choiceViewOverrides ? { choiceViewOverrides: step.choiceViewOverrides } : {})
+      })
+    }
+    compiled.push({ id: page.id, content: page.content, timeline })
+  }
+  return compiled
+}
+
+function toPreviewTimelineStep(
+  step: ExpandedExamPage['timeline'][number]
+): TemplatePreviewTimelineStep {
+  const choiceViewOverrides = step.choiceViewOverrides
+  if (step.type === 'play') {
+    return {
+      type: 'play',
+      text: step.text,
+      ...(choiceViewOverrides ? { choiceViewOverrides } : {})
+    }
+  }
+  if (step.type === 'countdown') {
+    return {
+      type: 'countdown',
+      seconds: step.seconds,
+      ...(choiceViewOverrides ? { choiceViewOverrides } : {})
+    }
+  }
+  return {
+    type: 'record',
+    duration: step.duration,
+    recordIndex: step.recordIndex,
+    ...(choiceViewOverrides ? { choiceViewOverrides } : {})
+  }
+}
+
+function validateResolvedRecordings(pages: readonly ExpandedExamPage[]): void {
+  pages.forEach((page) => {
+    page.timeline.forEach((step) => {
+      if (step.type === 'record' && (!Number.isFinite(step.duration) || step.duration <= 0)) {
+        throw new CompileFailure(
+          compileError('INVALID_RECORDING_DURATION', step.sourcePath, { value: step.duration })
+        )
+      }
+    })
+  })
+}
+
+function speechExtension(mediaType: string): string {
+  switch (mediaType.toLowerCase().split(';', 1)[0]) {
+    case 'audio/wav':
+    case 'audio/wave':
+      return 'wav'
+    case 'audio/mpeg':
+      return 'mp3'
+    case 'audio/ogg':
+    case 'audio/opus':
+      return 'ogg'
+    case 'audio/mp4':
+      return 'm4a'
+    default:
+      return 'bin'
+  }
+}
+
+function buildSubmissionSnapshot(
+  packageId: string,
+  examTitle: string,
+  expandedUses: readonly ExpandedSchemaUse[],
+  schemasById: ReadonlyMap<string, SchemaDefinition>,
+  resources: ExamPackage['examData']['resources']
+): {
+  answerCapturePlan: AnswerCapturePlan
+  template: ExamPackage['submissionTemplate']
+} {
+  const stringIndices = new Map<number, number>()
+  const audioIndices = new Map<number, number>()
+  const answerCapturePlan: AnswerCapturePlan = { strings: [], audios: [] }
+
+  const stringAnswerIndex = (choiceIndex: number): number => {
+    const existing = stringIndices.get(choiceIndex)
+    if (existing !== undefined) return existing
+    const index = stringIndices.size
+    stringIndices.set(choiceIndex, index)
+    answerCapturePlan.strings.push({ stringAnswerIndex: index, choiceIndex })
+    return index
+  }
+
+  const audioAnswerIndex = (recordIndex: number): number => {
+    const existing = audioIndices.get(recordIndex)
+    if (existing !== undefined) return existing
+    const index = audioIndices.size
+    audioIndices.set(recordIndex, index)
+    answerCapturePlan.audios.push({ audioAnswerIndex: index, recordIndex })
+    return index
+  }
+
+  const schemaUses = expandedUses.map<SubmissionSchemaUse>((use) => {
+    const schema = schemasById.get(use.schemaId)
+    if (!schema) throw new Error(`Schema disappeared during compilation: ${use.schemaId}`)
+
+    const answers = use.answers.map<SubmissionSchemaAnswer>((answer) => {
+      switch (answer.type) {
+        case 'text':
+          return {
+            answerId: answer.answerId,
+            type: answer.type,
+            stringAnswerIndex: stringAnswerIndex(answer.choiceIndex)
+          }
+        case 'fixed-speech':
+          return {
+            answerId: answer.answerId,
+            type: answer.type,
+            text: answer.text,
+            audioAnswerIndex: audioAnswerIndex(answer.recordIndex)
+          }
+        case 'free-speech':
+          return {
+            answerId: answer.answerId,
+            type: answer.type,
+            audioAnswerIndex: audioAnswerIndex(answer.recordIndex)
+          }
+      }
+    })
+
+    return {
+      instanceId: use.instanceId,
+      schema: structuredClone(schema),
+      inputs: structuredClone(use.inputs),
+      answers
+    }
+  })
+
+  return {
+    answerCapturePlan,
+    template: {
+      format: 'ls101-submission',
+      formatVersion: 1,
+      meta: { examPackageId: packageId, examTitle },
+      schemaUses,
+      resources: structuredClone(resources)
+    }
   }
 }
 
@@ -181,7 +514,10 @@ async function bindInterfaceValues(
       const variable = manifest?.vars.find((item) => item.varName === varName)
       values.set(varName, {
         type: variable?.type === 'image' ? 'file' : 'string',
-        value: located.instance.values[varName]
+        value: located.instance.values[varName],
+        ...(variable?.type === 'image'
+          ? { sourceUrl: located.assetUrls[located.instance.values[varName]] }
+          : {})
       })
     })
     valuesByAlias.set(requirement.alias, values)

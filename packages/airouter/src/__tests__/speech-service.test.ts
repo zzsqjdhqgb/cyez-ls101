@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { strToU8, zipSync } from 'fflate'
@@ -187,7 +187,9 @@ describe('AIRouterSpeechService', () => {
   it('uses an installed local model package and local synthesizer', async () => {
     const modelBytes = new Uint8Array([1, 2, 3])
     const modelStore = new AIRouterSpeechModelStore({ baseDir })
-    await modelStore.importPackage(createLocalPackage(modelBytes))
+    const packagePath = path.join(baseDir, 'local-package.zip')
+    await writeFile(packagePath, createLocalPackage(modelBytes))
+    await modelStore.importPackage(packagePath)
     const synthesize = vi.fn().mockResolvedValue({
       data: createWav([1, 2]),
       mediaType: 'audio/wav',

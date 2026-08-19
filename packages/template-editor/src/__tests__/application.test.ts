@@ -1,8 +1,4 @@
-import type {
-  InterfaceInstance,
-  InterfaceVarManifest,
-  SchemaBlockManifest
-} from '@ls101/core-types'
+import type { InterfaceInstance, InterfaceVarManifest } from '@ls101/core-types'
 import { describe, expect, it, vi } from 'vitest'
 import { createTemplateApplication, TemplateApplicationError } from '../application'
 import {
@@ -23,14 +19,16 @@ import type {
   FunctionLocator,
   LocalFunctionLibraryDocument,
   TemplateContent,
-  TemplateDocument
+  TemplateDocument,
+  TemplateNode
 } from '../types'
-import { root } from './fixtures'
+import { root, schemaDefinition, schemaText } from './fixtures'
 
 const FUNCTION_A = '10000000-0000-4000-8000-000000000001'
 const FUNCTION_B = '10000000-0000-4000-8000-000000000002'
 const FUNCTION_C = '10000000-0000-4000-8000-000000000003'
 const LIBRARY_ID = '40000000-0000-4000-8000-000000000001'
+const IMPORTED_LIBRARY_ID = '40000000-0000-4000-8000-000000000002'
 const TEMPLATE_ID = '20000000-0000-4000-8000-000000000001'
 const INTERFACE_ID = `sha256:${'1'.repeat(64)}`
 const SCHEMA_ID = `sha256:${'2'.repeat(64)}`
@@ -61,6 +59,7 @@ function localLibrary(
   return {
     libraryId: LIBRARY_ID,
     revision,
+    storageRevision: revision,
     content: {
       name: 'Local library',
       functions: functions.map(({ functionId, content }) => ({ functionId, content }))
@@ -129,17 +128,11 @@ function setup() {
       }
     ]
   }
-  const schemaManifest: SchemaBlockManifest = {
-    schemaId: SCHEMA_ID,
-    schemaName: 'Schema',
-    blocks: [
-      {
-        blockId: 'text',
-        blockName: 'Text',
-        fields: [{ varName: 'prompt', type: 'text' }]
-      }
-    ]
-  }
+  const schemaManifest = schemaDefinition(SCHEMA_ID, {
+    questionType: 'freetalk',
+    answerFormat: [],
+    templateInputs: [{ inputId: 'prompt', type: 'text', required: true }]
+  })
   const instance: InterfaceInstance = {
     instanceId: INSTANCE_ID,
     name: 'Instance',
@@ -149,12 +142,12 @@ function setup() {
   const requestedSchemas: string[] = []
   const externalDependencies = {
     getInterfaceManifest: async (id: string) => (id === INTERFACE_ID ? interfaceManifest : null),
-    getSchemaManifest: async (id: string) => {
+    getSchema: async (id: string) => {
       requestedSchemas.push(id)
       return id === SCHEMA_ID ? schemaManifest : null
     },
     locateInterfaceInstance: async (id: string) =>
-      id === INSTANCE_ID ? { interfaceId: INTERFACE_ID, instance } : null
+      id === INSTANCE_ID ? { interfaceId: INTERFACE_ID, instance, assetUrls: {} } : null
   }
   const application = createTemplateApplication({ repository, ...externalDependencies })
   return { store, repository, application, externalDependencies, requestedSchemas }
@@ -180,7 +173,7 @@ describe('FileTemplateRepository', () => {
     expect(await repository.getLocalFunctionLibrary(LIBRARY_ID)).toBeNull()
   })
 
-  it('登记不可变的导入和内置 release，并单独维护内置 active 版本', async () => {
+  it('登记和删除不可变的导入 release，并单独维护内置 active 版本', async () => {
     const { repository } = setup()
     const imported = await createFunctionLibraryRelease(LIBRARY_ID, 2, {
       name: 'Imported',
@@ -211,6 +204,11 @@ describe('FileTemplateRepository', () => {
     expect(await repository.listBuiltinFunctionLibraryIds()).toEqual(['builtin:basic'])
     expect(await repository.getActiveBuiltinFunctionLibrary('builtin:basic')).toEqual(builtin)
 
+    await repository.deleteImportedFunctionLibrary(LIBRARY_ID, 2)
+    expect(await repository.getImportedFunctionLibrary(LIBRARY_ID, 2)).toBeNull()
+    expect(await repository.listImportedFunctionLibraryVersions(LIBRARY_ID)).toEqual([])
+    expect(await repository.listImportedFunctionLibraryIds()).toEqual([])
+
     await expect(
       repository.registerBuiltinFunctionLibrary({
         ...builtin,
@@ -227,6 +225,22 @@ describe('FileTemplateRepository', () => {
         ...localLibrary([
           functionDocument(FUNCTION_A, 'First'),
           functionDocument(FUNCTION_A, 'Duplicate')
+        ])
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_DATA' })
+    await expect(
+      repository.saveLocalFunctionLibrary({
+        ...localLibrary([
+          functionDocument(FUNCTION_A, 'Recursive', [functionCall('call-self', FUNCTION_A)])
+        ])
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_DATA' })
+    await expect(
+      repository.saveLocalFunctionLibrary({
+        ...localLibrary([
+          functionDocument(FUNCTION_A, 'Missing dependency', [
+            functionCall('call-missing', FUNCTION_B)
+          ])
         ])
       })
     ).rejects.toMatchObject({ code: 'INVALID_DATA' })
@@ -270,7 +284,35 @@ describe('FileTemplateRepository', () => {
       content: { ...library.content, functions: [{ functionId: FUNCTION_A, content: {} }] }
     })
     await expect(repository.getLocalFunctionLibrary(LIBRARY_ID)).rejects.toMatchObject({
-      code: 'INVALID_DATA'
+      code: 'INVALID_DATA',
+      params: { libraryId: LIBRARY_ID }
+    })
+  })
+
+  it('无损升级 storageRevision 拆分前的本地函数库', async () => {
+    const { store, repository } = setup()
+    const libraryScope = store
+      .scope('template-editor')
+      .scope('function-libraries')
+      .scope('local')
+      .scope(LIBRARY_ID)
+    const current = localLibrary([functionDocument(FUNCTION_A, 'Legacy function')], 7)
+    const { storageRevision: _storageRevision, ...legacy } = current
+    await libraryScope.writeText('library.json', {
+      ...legacy,
+      exportState: { version: 3, contentHash: `sha256:${'a'.repeat(64)}` }
+    })
+
+    await expect(repository.getLocalFunctionLibrary(LIBRARY_ID)).resolves.toMatchObject({
+      revision: 3,
+      storageRevision: 7,
+      content: { functions: [{ content: { name: 'Legacy function' } }] },
+      exportState: { contentHash: `sha256:${'a'.repeat(64)}` }
+    })
+    await expect(libraryScope.readText('library.json')).resolves.toMatchObject({
+      revision: 3,
+      storageRevision: 7,
+      exportState: { contentHash: `sha256:${'a'.repeat(64)}` }
     })
   })
 
@@ -293,7 +335,8 @@ describe('FileTemplateRepository', () => {
       content: { ...library.content, name: 'Updated' }
     })
     expect(updatedTemplate.revision).toBe(1)
-    expect(updatedLibrary.revision).toBe(1)
+    expect(updatedLibrary.revision).toBe(0)
+    expect(updatedLibrary.storageRevision).toBe(1)
 
     await expect(repository.saveTemplate(template)).rejects.toMatchObject({
       code: 'REVISION_CONFLICT',
@@ -415,10 +458,100 @@ describe('TemplateApplication', () => {
     expect(await application.browser.listFunctionLibraries()).toEqual([
       {
         source: 'local',
+        exportStatus: 'never',
         libraryId: library.libraryId,
         name: 'Question library',
         functions: [{ functionId: created.function.functionId, name: 'Question' }]
       }
+    ])
+  })
+
+  it('按源 ID、内容冲突和本地 revision 执行 Template 混合导入', async () => {
+    const { application } = setup()
+    const source: TemplateDocument = {
+      ...createTemplateDocument(emptyContent(), { functions: [] }, { selected: 'root' }),
+      templateId: TEMPLATE_ID,
+      revision: 7,
+      content: { ...emptyContent(), name: 'Imported template' }
+    }
+
+    await expect(application.templates.inspectImport(source)).resolves.toEqual({
+      status: 'new',
+      existing: null
+    })
+    const preserved = await application.templates.importDocument(source, 'preserve-id')
+    expect(preserved).toEqual({ ...source, revision: 0 })
+
+    await expect(
+      application.templates.inspectImport({
+        ...source,
+        editorState: { selected: 'another-node' }
+      })
+    ).resolves.toMatchObject({
+      status: 'identical',
+      existing: { templateId: TEMPLATE_ID, revision: 0 }
+    })
+    await expect(application.templates.importDocument(source, 'preserve-id')).rejects.toMatchObject(
+      { code: 'REVISION_CONFLICT' }
+    )
+
+    const conflicting = {
+      ...source,
+      revision: 2,
+      content: { ...source.content, name: 'Changed import' }
+    }
+    await expect(application.templates.inspectImport(conflicting)).resolves.toMatchObject({
+      status: 'conflict',
+      existing: { templateId: TEMPLATE_ID, revision: 0 }
+    })
+
+    const overwritten = await application.templates.importDocument(conflicting, 'overwrite', 0)
+    expect(overwritten).toMatchObject({
+      templateId: TEMPLATE_ID,
+      revision: 1,
+      content: { name: 'Changed import' }
+    })
+    await expect(
+      application.templates.importDocument(
+        { ...conflicting, content: { ...conflicting.content, name: 'Stale overwrite' } },
+        'overwrite',
+        0
+      )
+    ).rejects.toMatchObject({ code: 'REVISION_CONFLICT' })
+
+    const copy = await application.templates.importDocument(conflicting, 'copy')
+    expect(copy).toMatchObject({ revision: 0, content: { name: 'Changed import' } })
+    expect(copy.templateId).not.toBe(TEMPLATE_ID)
+    expect(copy.templateId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    )
+  })
+
+  it('浏览函数库时隔离损坏的本地库，不阻塞其他库', async () => {
+    const { store, application } = setup()
+    const validId = '40000000-0000-4000-8000-000000000010'
+    const invalidId = '40000000-0000-4000-8000-000000000011'
+    await store
+      .scope('template-editor')
+      .scope('function-libraries')
+      .scope('local')
+      .scope(validId)
+      .writeText('library.json', { ...localLibrary([], 0), libraryId: validId })
+    await store
+      .scope('template-editor')
+      .scope('function-libraries')
+      .scope('local')
+      .scope(invalidId)
+      .writeText('library.json', { libraryId: invalidId, revision: 0, content: null })
+
+    await expect(application.browser.listFunctionLibraries()).resolves.toEqual([
+      expect.objectContaining({ source: 'local', libraryId: validId, name: 'Local library' }),
+      expect.objectContaining({
+        source: 'local',
+        libraryId: invalidId,
+        name: '损坏的本地函数库',
+        error: expect.stringContaining(invalidId)
+      })
     ])
   })
 
@@ -598,6 +731,104 @@ describe('TemplateApplication', () => {
     })
   })
 
+  it('把任意来源的函数依赖闭包复制为本地库内部快照后插入调用', async () => {
+    const { repository, application } = setup()
+    const target = functionDocument(FUNCTION_A, 'Target')
+    await saveFunctions(repository, target)
+    const imported = await createFunctionLibraryRelease(IMPORTED_LIBRARY_ID, 2, {
+      name: 'Imported library',
+      functions: [
+        {
+          functionId: FUNCTION_B,
+          content: functionDocument(FUNCTION_B, 'Imported parent', [
+            functionCall('nested-call', FUNCTION_C)
+          ]).content
+        },
+        {
+          functionId: FUNCTION_C,
+          content: functionDocument(FUNCTION_C, 'Imported leaf').content
+        }
+      ]
+    })
+    await repository.registerImportedFunctionLibrary(imported)
+
+    const inserted = await application.functionLibraries.local.insertFunctionCall(
+      LIBRARY_ID,
+      FUNCTION_A,
+      {
+        library: { source: 'imported', libraryId: IMPORTED_LIBRARY_ID, version: 2 },
+        functionId: FUNCTION_B
+      },
+      'root'
+    )
+
+    expect(inserted.library.content.functions).toHaveLength(3)
+    const internalEntries = inserted.library.content.functions.filter(
+      (entry) => entry.exposed === false
+    )
+    expect(internalEntries.map((entry) => entry.content.name).sort()).toEqual([
+      'Imported leaf',
+      'Imported parent'
+    ])
+    const call = inserted.function.content.body.children[0]
+    expect(call).toMatchObject({ id: inserted.callNodeId, type: 'function' })
+    if (call?.type !== 'function') return
+    const copiedParent = internalEntries.find((entry) => entry.functionId === call.functionRef)
+    const nested = copiedParent?.content.body.children[0]
+    expect(nested?.type).toBe('function')
+    if (nested?.type !== 'function') return
+    expect(internalEntries.some((entry) => entry.functionId === nested.functionRef)).toBe(true)
+    expect(await application.browser.listFunctionLibraries()).toEqual([
+      expect.objectContaining({
+        source: 'imported',
+        libraryId: IMPORTED_LIBRARY_ID,
+        functions: [
+          expect.objectContaining({ functionId: FUNCTION_B }),
+          expect.objectContaining({ functionId: FUNCTION_C })
+        ]
+      }),
+      expect.objectContaining({
+        source: 'local',
+        libraryId: LIBRARY_ID,
+        functions: [{ functionId: FUNCTION_A, name: 'Target' }]
+      })
+    ])
+
+    await repository.deleteImportedFunctionLibrary(IMPORTED_LIBRARY_ID, 2)
+    const template = await application.templates.create()
+    const embedded = await application.templates.embedFunction(
+      template.templateId,
+      functionLocator(FUNCTION_A)
+    )
+    expect(embedded.template.resources.functions).toHaveLength(3)
+
+    const cleaned = await application.functionLibraries.local.saveFunction(inserted.library, {
+      ...inserted.function,
+      content: { ...inserted.function.content, body: root() }
+    })
+    expect(cleaned.content.functions).toEqual([expect.objectContaining({ functionId: FUNCTION_A })])
+  })
+
+  it('拒绝插入会回指当前函数的同库调用', async () => {
+    const { repository, application } = setup()
+    await saveFunctions(
+      repository,
+      functionDocument(FUNCTION_A, 'A'),
+      functionDocument(FUNCTION_B, 'B', [functionCall('call-a', FUNCTION_A)])
+    )
+    const before = await repository.getLocalFunctionLibrary(LIBRARY_ID)
+
+    await expect(
+      application.functionLibraries.local.insertFunctionCall(
+        LIBRARY_ID,
+        FUNCTION_A,
+        functionLocator(FUNCTION_B),
+        'root'
+      )
+    ).rejects.toMatchObject({ code: 'RECURSIVE_FUNCTION_DEPENDENCY' })
+    expect(await repository.getLocalFunctionLibrary(LIBRARY_ID)).toEqual(before)
+  })
+
   it('调用节点插入失败时不保存刚复制的函数资源', async () => {
     const { repository, application } = setup()
     await saveFunctions(repository, functionDocument(FUNCTION_A, 'Question'))
@@ -624,8 +855,9 @@ describe('TemplateApplication', () => {
       {
         useId: 'function-text',
         schemaId: SCHEMA_ID,
-        blockId: 'text',
-        bindings: { prompt: { type: 'literal', value: 'Inside function' } }
+        inputBindings: { prompt: schemaText('Inside function') },
+        answerBindings: {},
+        attachments: []
       }
     ]
     await saveFunctions(repository, source)
@@ -651,16 +883,20 @@ describe('TemplateApplication', () => {
 
   it('拒绝递归或缺失的函数依赖', async () => {
     const { repository, application } = setup()
+    await expect(
+      saveFunctions(
+        repository,
+        functionDocument(FUNCTION_A, 'A', [functionCall('b', FUNCTION_B)]),
+        functionDocument(FUNCTION_B, 'B', [functionCall('a', FUNCTION_A)])
+      )
+    ).rejects.toMatchObject({ code: 'INVALID_DATA' })
     await saveFunctions(
       repository,
-      functionDocument(FUNCTION_A, 'A', [functionCall('b', FUNCTION_B)]),
-      functionDocument(FUNCTION_B, 'B', [functionCall('a', FUNCTION_A)])
+      functionDocument(FUNCTION_A, 'A'),
+      functionDocument(FUNCTION_B, 'B')
     )
     const template = await application.templates.create()
 
-    await expect(
-      application.templates.embedFunction(template.templateId, functionLocator(FUNCTION_A))
-    ).rejects.toMatchObject({ code: 'RECURSIVE_FUNCTION_DEPENDENCY' })
     await expect(
       application.templates.embedFunction(template.templateId, functionLocator(FUNCTION_C))
     ).rejects.toEqual(
@@ -774,15 +1010,34 @@ describe('TemplateApplication', () => {
     const { application } = setup()
     const template = await application.templates.create({
       name: 'Compiled exam',
+      root: root([
+        {
+          id: 'page',
+          type: 'page',
+          content: { blocks: [] },
+          timeline: [
+            { type: 'countdown', seconds: { type: 'number', source: 'literal', value: 1 } }
+          ]
+        }
+      ]),
       interfaces: [{ alias: 'data', interfaceId: INTERFACE_ID, acceptedVars: ['prompt'] }],
       schemaUses: [
         {
           useId: 'text',
           schemaId: SCHEMA_ID,
-          blockId: 'text',
-          bindings: {
-            prompt: { type: 'variable', scope: 'interface', alias: 'data', varName: 'prompt' }
-          }
+          inputBindings: {
+            prompt: {
+              type: 'string',
+              parts: [
+                {
+                  type: 'variable',
+                  ref: { scope: 'interface', alias: 'data', varName: 'prompt' }
+                }
+              ]
+            }
+          },
+          answerBindings: {},
+          attachments: []
         }
       ]
     })
@@ -797,18 +1052,308 @@ describe('TemplateApplication', () => {
     expect(result).toMatchObject({
       success: true,
       examPackage: {
-        title: 'Compiled exam',
-        schema: {
-          usages: [
+        examData: { title: 'Compiled exam' },
+        submissionTemplate: {
+          schemaUses: [
             {
-              fields: [{ varName: 'prompt', type: 'text', value: 'Resolved prompt' }]
+              schema: { schemaId: SCHEMA_ID },
+              inputs: [
+                {
+                  inputId: 'prompt',
+                  type: 'text',
+                  value: 'Resolved prompt'
+                }
+              ],
+              answers: []
             }
           ]
         }
       }
     })
+
+    const preview = await application.templates.preview(
+      {
+        ...template,
+        content: { ...template.content, name: 'Unsaved preview title' }
+      },
+      [{ alias: 'data', interfaceId: INTERFACE_ID, instanceId: INSTANCE_ID }]
+    )
+    expect(preview).toMatchObject({
+      success: true,
+      preview: {
+        title: 'Unsaved preview title',
+        pages: [{ sourceNodeId: 'page', timeline: [{ type: 'countdown', seconds: 1 }] }]
+      }
+    })
+  })
+
+  it('使用未保存的函数正文和临时输入生成无 Schema 预览', async () => {
+    const { application, repository } = setup()
+    const original = functionDocument(FUNCTION_A, 'Preview function')
+    original.content.inputs = [{ name: 'title', type: 'string' }]
+    await saveFunctions(repository, original)
+    const unsaved: FunctionDocument = {
+      ...original,
+      content: {
+        ...original.content,
+        body: root([
+          {
+            id: 'preview-page',
+            type: 'page',
+            content: {
+              blocks: [
+                {
+                  id: 'title',
+                  type: 'text',
+                  x: 10,
+                  y: 20,
+                  text: {
+                    type: 'string',
+                    parts: [{ type: 'variable', ref: { scope: 'local', name: 'title' } }]
+                  }
+                }
+              ]
+            },
+            timeline: [
+              { type: 'countdown', seconds: { type: 'number', source: 'literal', value: 3 } }
+            ]
+          }
+        ])
+      }
+    }
+
+    const result = await application.functionLibraries.local.preview(LIBRARY_ID, unsaved, {
+      title: { type: 'string', source: 'literal', value: 'Unsaved preview title' }
+    })
+
+    expect(result).toMatchObject({
+      success: true,
+      preview: {
+        title: 'Preview function',
+        pages: [
+          {
+            sourceNodeId: 'preview-page',
+            content: [{ id: expect.any(String), type: 'text', text: 'Unsaved preview title' }],
+            timeline: [{ type: 'countdown', seconds: 3 }]
+          }
+        ]
+      }
+    })
+    expect(await repository.listTemplateIds()).toEqual([])
+  })
+
+  it('为外部选择题组输入生成函数预览元数据', async () => {
+    const { application, repository } = setup()
+    const source = functionDocument(FUNCTION_A, 'Choice group preview')
+    source.content.inputs = [
+      {
+        name: 'questions',
+        type: 'choice-group',
+        shape: { kind: 'range', pageCounts: [1, 2] }
+      }
+    ]
+    source.content.body = root([
+      {
+        id: 'choice-preview-page',
+        type: 'page',
+        content: {
+          blocks: [
+            {
+              id: 'choice-preview-view',
+              type: 'choice-view',
+              x: 0,
+              y: 0,
+              width: 100,
+              height: 100,
+              defaultViewport: {
+                mode: 'free',
+                group: { scope: 'local', name: 'questions' }
+              }
+            }
+          ]
+        },
+        timeline: [{ type: 'countdown', seconds: { type: 'number', source: 'literal', value: 1 } }]
+      }
+    ])
+    await saveFunctions(repository, source)
+
+    const result = await application.functionLibraries.local.preview(LIBRARY_ID, source, {
+      questions: {
+        type: 'choice-group',
+        source: 'global',
+        selection: { kind: 'range', startPage: 1 }
+      }
+    })
+
+    expect(result).toMatchObject({
+      success: true,
+      preview: {
+        pages: [
+          {
+            sourceNodeId: 'choice-preview-page',
+            content: [
+              {
+                type: 'choice-view',
+                defaultViewport: { mode: 'range', startPage: 1, endPage: 2 }
+              }
+            ]
+          }
+        ]
+      }
+    })
+  })
+
+  it('函数预览的外层 Collector 会同时收集函数自身题目', async () => {
+    const { application, repository } = setup()
+    const source = functionDocument(FUNCTION_A, 'Choice group preview with question')
+    source.content.inputs = [
+      {
+        name: 'questions',
+        type: 'choice-group',
+        shape: { kind: 'range', pageCounts: [1, 2] }
+      }
+    ]
+    source.content.body = root([previewChoiceQuestion(), previewChoicePage()])
+    await saveFunctions(repository, source)
+
+    const result = await application.functionLibraries.local.preview(LIBRARY_ID, source, {
+      questions: {
+        type: 'choice-group',
+        source: 'global',
+        selection: { kind: 'range', startPage: 0 }
+      }
+    })
+
+    expect(result).toMatchObject({
+      success: true,
+      preview: {
+        choiceMeta: {
+          pages: [{ questionIndices: [0] }, { questionIndices: [1, 2] }, { questionIndices: [3] }],
+          questions: [{}, {}, {}, { stem: 'Own question' }]
+        },
+        pages: [
+          {
+            sourceNodeId: 'choice-preview-page',
+            content: [
+              {
+                type: 'choice-view',
+                defaultViewport: { mode: 'range', startPage: 0, endPage: 1 }
+              }
+            ]
+          }
+        ]
+      }
+    })
+  })
+
+  it('全量题组输入会用函数自身题目填充目标形状', async () => {
+    const { application, repository } = setup()
+    const source = functionDocument(FUNCTION_A, 'Whole choice group preview with question')
+    source.content.inputs = [
+      {
+        name: 'questions',
+        type: 'choice-group',
+        shape: { kind: 'all', pageCounts: [1, 2] }
+      }
+    ]
+    source.content.body = root([previewChoiceQuestion(), previewChoicePage()])
+    await saveFunctions(repository, source)
+
+    const result = await application.functionLibraries.local.preview(LIBRARY_ID, source, {
+      questions: {
+        type: 'choice-group',
+        source: 'global',
+        selection: { kind: 'all' }
+      }
+    })
+
+    expect(result).toMatchObject({
+      success: true,
+      preview: {
+        choiceMeta: {
+          pages: [{ questionIndices: [0] }, { questionIndices: [1, 2] }],
+          questions: [{}, {}, { stem: 'Own question' }]
+        }
+      }
+    })
+  })
+
+  it('函数已有 Collector 时预览不会再创建嵌套 Collector', async () => {
+    const { application, repository } = setup()
+    const source = functionDocument(FUNCTION_A, 'Collected choice group preview')
+    source.content.inputs = [
+      {
+        name: 'questions',
+        type: 'choice-group',
+        shape: { kind: 'all', pageCounts: [1] }
+      }
+    ]
+    source.content.body = root([previewChoiceQuestion(), previewChoicePage()])
+    source.content.body.choiceCollector = { pages: [{ questionCount: 1 }] }
+    await saveFunctions(repository, source)
+
+    const result = await application.functionLibraries.local.preview(LIBRARY_ID, source, {
+      questions: {
+        type: 'choice-group',
+        source: 'global',
+        selection: { kind: 'all' }
+      }
+    })
+
+    expect(result).toMatchObject({
+      success: true,
+      preview: {
+        choiceMeta: {
+          pages: [{ questionIndices: [0] }],
+          questions: [{ stem: 'Own question' }]
+        }
+      }
+    })
   })
 })
+
+function previewChoiceQuestion(): TemplateNode {
+  return {
+    id: 'own-question',
+    type: 'choice-question',
+    stem: { type: 'string', parts: [{ type: 'literal', value: 'Own question' }] },
+    options: [
+      {
+        id: 'own-option-a',
+        content: { type: 'string', parts: [{ type: 'literal', value: 'A' }] }
+      },
+      {
+        id: 'own-option-b',
+        content: { type: 'string', parts: [{ type: 'literal', value: 'B' }] }
+      }
+    ],
+    outputName: 'own-answer'
+  }
+}
+
+function previewChoicePage(): TemplateNode {
+  return {
+    id: 'choice-preview-page',
+    type: 'page',
+    content: {
+      blocks: [
+        {
+          id: 'choice-preview-view',
+          type: 'choice-view',
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 100,
+          defaultViewport: {
+            mode: 'free',
+            group: { scope: 'local', name: 'questions' }
+          }
+        }
+      ]
+    },
+    timeline: [{ type: 'countdown', seconds: { type: 'number', source: 'literal', value: 1 } }]
+  }
+}
 
 function forwardRepository(
   base: TemplateRepository,
@@ -817,6 +1362,7 @@ function forwardRepository(
   return {
     listTemplateIds: () => base.listTemplateIds(),
     getTemplate: (id) => base.getTemplate(id),
+    createTemplate: (document) => base.createTemplate(document),
     saveTemplate: (document) => base.saveTemplate(document),
     deleteTemplate: (id) => base.deleteTemplate(id),
     listLocalFunctionLibraryIds: () => base.listLocalFunctionLibraryIds(),
@@ -827,6 +1373,7 @@ function forwardRepository(
     listImportedFunctionLibraryVersions: (id) => base.listImportedFunctionLibraryVersions(id),
     getImportedFunctionLibrary: (id, version) => base.getImportedFunctionLibrary(id, version),
     registerImportedFunctionLibrary: (release) => base.registerImportedFunctionLibrary(release),
+    deleteImportedFunctionLibrary: (id, version) => base.deleteImportedFunctionLibrary(id, version),
     listBuiltinFunctionLibraryIds: () => base.listBuiltinFunctionLibraryIds(),
     getActiveBuiltinFunctionLibrary: (id) => base.getActiveBuiltinFunctionLibrary(id),
     getBuiltinFunctionLibrary: (id, version) => base.getBuiltinFunctionLibrary(id, version),

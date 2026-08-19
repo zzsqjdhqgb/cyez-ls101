@@ -1,9 +1,9 @@
-import type { InterfaceVarManifest, SchemaBlockManifest } from '@ls101/core-types'
+import type { InterfaceVarManifest, SchemaDefinition } from '@ls101/core-types'
 import type { FunctionDef, TemplateContent, TemplateValueType } from '../types'
 
 export interface TemplateValidationContext {
   interfaceManifests: readonly InterfaceVarManifest[]
-  schemaManifests: readonly SchemaBlockManifest[]
+  schemaDefinitions: readonly SchemaDefinition[]
   functions: readonly FunctionDef[]
 }
 
@@ -13,7 +13,7 @@ export type TemplateDocumentValidationContext = Omit<TemplateValidationContext, 
 export type TemplateValidationErrorCode =
   | 'EMPTY_TEMPLATE_NAME'
   | 'DUPLICATE_INTERFACE_MANIFEST'
-  | 'DUPLICATE_SCHEMA_MANIFEST'
+  | 'DUPLICATE_SCHEMA_DEFINITION'
   | 'DUPLICATE_FUNCTION_DEF'
   | 'INVALID_FUNCTION_RESOURCE_ID'
   | 'FUNCTION_RESOURCE_ID_MISMATCH'
@@ -28,9 +28,12 @@ export type TemplateValidationErrorCode =
   | 'DUPLICATE_NODE_ID'
   | 'EMPTY_CONTENT_BLOCK_ID'
   | 'DUPLICATE_CONTENT_BLOCK_ID'
+  | 'EMPTY_PAGE_TIMELINE'
+  | 'INVALID_RECORDING_DURATION'
   | 'UNKNOWN_CHOICE_VIEW_OVERRIDE'
   | 'INVALID_LOCAL_NAME'
   | 'DUPLICATE_LOCAL_NAME'
+  | 'CYCLIC_VARIABLE_DEFINITION'
   | 'UNKNOWN_LOCAL_VARIABLE'
   | 'UNKNOWN_INTERFACE_ALIAS'
   | 'INTERFACE_VARIABLE_IN_FUNCTION'
@@ -47,11 +50,14 @@ export type TemplateValidationErrorCode =
   | 'INVALID_SCHEMA_USE_ID'
   | 'DUPLICATE_SCHEMA_USE_ID'
   | 'UNKNOWN_SCHEMA'
-  | 'UNKNOWN_SCHEMA_BLOCK'
-  | 'MISSING_SCHEMA_BINDING'
-  | 'UNKNOWN_SCHEMA_BINDING'
-  | 'SCHEMA_BINDING_TYPE_MISMATCH'
-  | 'NO_SCHEMA_USE'
+  | 'MISSING_SCHEMA_INPUT_BINDING'
+  | 'UNKNOWN_SCHEMA_INPUT_BINDING'
+  | 'MISSING_SCHEMA_ANSWER_BINDING'
+  | 'UNKNOWN_SCHEMA_ANSWER_BINDING'
+  | 'SCHEMA_ANSWER_TYPE_MISMATCH'
+  | 'INVALID_SCHEMA_ATTACHMENT_NAME'
+  | 'DUPLICATE_SCHEMA_ATTACHMENT_NAME'
+  | 'UNKNOWN_SCHEMA_ATTACHMENT'
   | 'EMPTY_CHOICE_COLLECTOR'
   | 'EMPTY_CHOICE_COLLECTOR_PAGES'
   | 'INVALID_CHOICE_PAGE_SIZE'
@@ -60,7 +66,10 @@ export type TemplateValidationErrorCode =
   | 'MULTIPLE_CHOICE_COLLECTORS'
   | 'UNCOLLECTED_CHOICE_QUESTIONS'
   | 'CHOICE_VIEW_WITHOUT_META'
+  | 'FUNCTION_CHOICE_VIEW_WITHOUT_LOCAL_COLLECTOR'
   | 'INVALID_CHOICE_VIEWPORT'
+  | 'INVALID_CHOICE_GROUP_SHAPE'
+  | 'INVALID_CHOICE_GROUP_SELECTION'
   | 'EMPTY_FOCUS_REFERENCE'
   | 'INVALID_FOCUS_CALL_PATH'
 
@@ -78,10 +87,9 @@ export interface TemplateValidationResult {
 export interface ValidationState {
   errors: TemplateValidationError[]
   interfacesById: Map<string, InterfaceVarManifest>
-  schemasById: Map<string, SchemaBlockManifest>
+  schemasById: Map<string, SchemaDefinition>
   functionsById: Map<string, FunctionDef>
   requirementsByAlias: Map<string, RequirementState>
-  schemaUseCount: number
 }
 
 interface RequirementState {
@@ -101,6 +109,7 @@ export interface ScopeState {
 }
 
 const LOCAL_NAME_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_-]*$/
+const RESERVED_INTERFACE_ALIASES = new Set(['this'])
 
 export function createValidationState(context: TemplateValidationContext): ValidationState {
   const state: ValidationState = {
@@ -108,8 +117,7 @@ export function createValidationState(context: TemplateValidationContext): Valid
     interfacesById: new Map(),
     schemasById: new Map(),
     functionsById: new Map(),
-    requirementsByAlias: new Map(),
-    schemaUseCount: 0
+    requirementsByAlias: new Map()
   }
 
   indexUnique(
@@ -121,11 +129,11 @@ export function createValidationState(context: TemplateValidationContext): Valid
     state
   )
   indexUnique(
-    context.schemaManifests,
+    context.schemaDefinitions,
     (manifest) => manifest.schemaId,
     state.schemasById,
-    'context.schemaManifests',
-    'DUPLICATE_SCHEMA_MANIFEST',
+    'context.schemaDefinitions',
+    'DUPLICATE_SCHEMA_DEFINITION',
     state
   )
   indexUnique(
@@ -145,7 +153,7 @@ function indexUnique<T>(
   getId: (value: T) => string,
   target: Map<string, T>,
   path: string,
-  code: 'DUPLICATE_INTERFACE_MANIFEST' | 'DUPLICATE_SCHEMA_MANIFEST' | 'DUPLICATE_FUNCTION_DEF',
+  code: 'DUPLICATE_INTERFACE_MANIFEST' | 'DUPLICATE_SCHEMA_DEFINITION' | 'DUPLICATE_FUNCTION_DEF',
   state: ValidationState
 ): void {
   values.forEach((value, index) => {
@@ -164,7 +172,10 @@ export function validateInterfaceRequirements(
 ): void {
   content.interfaces.forEach((requirement, index) => {
     const path = `interfaces[${index}]`
-    if (!LOCAL_NAME_PATTERN.test(requirement.alias)) {
+    if (
+      !LOCAL_NAME_PATTERN.test(requirement.alias) ||
+      RESERVED_INTERFACE_ALIASES.has(requirement.alias)
+    ) {
       addError(state, `${path}.alias`, 'INVALID_INTERFACE_ALIAS', { alias: requirement.alias })
     }
     if (state.requirementsByAlias.has(requirement.alias)) {

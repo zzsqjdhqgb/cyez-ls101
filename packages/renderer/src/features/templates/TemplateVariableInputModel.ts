@@ -2,6 +2,9 @@ import type { InterfaceVarManifest } from '@ls101/core-types'
 import type {
   FrameNode,
   FunctionDef,
+  SchemaTextExpression,
+  SchemaTextVariableRef,
+  SchemaUseAttachment,
   TemplateInterfaceRequirement,
   TemplateNode,
   TemplateValueType,
@@ -17,9 +20,18 @@ export interface TemplateVariableCandidate {
   ref: VariableRef
 }
 
+export interface SchemaAttachmentVariableCandidate {
+  key: string
+  label: string
+  sourceLabel: string
+  type: 'file'
+  ref: Extract<SchemaTextVariableRef, { scope: 'schema-use' }>
+}
+
 const VARIABLE_NAME_PATTERN = '[a-zA-Z_][a-zA-Z0-9_-]*'
+const INTERFACE_VARIABLE_NAME_PATTERN = '[a-zA-Z0-9_][a-zA-Z0-9_-]*'
 const VARIABLE_TOKEN_PATTERN = new RegExp(
-  `\\[@(${VARIABLE_NAME_PATTERN})(?:\\.(${VARIABLE_NAME_PATTERN}))?\\]`,
+  `\\[@(${VARIABLE_NAME_PATTERN})(?:\\.(${INTERFACE_VARIABLE_NAME_PATTERN}(?:\\.${INTERFACE_VARIABLE_NAME_PATTERN})*))?\\]`,
   'g'
 )
 
@@ -53,6 +65,10 @@ export function collectTemplateVariableCandidates(
     }
     if (node.type === 'choice-question') {
       add(localCandidate(node.outputName, 'choice'))
+      return
+    }
+    if (node.type === 'variable') {
+      add(localCandidate(node.variableName, node.value.type))
       return
     }
 
@@ -112,8 +128,51 @@ export function parseTextExpression(value: string): TextExpression {
   return { type: 'string', parts }
 }
 
+export function schemaTextExpressionInputValue(value: SchemaTextExpression): string {
+  return value.parts
+    .map((part) => (part.type === 'literal' ? part.value : `[@${schemaVariableRefName(part.ref)}]`))
+    .join('')
+}
+
+export function parseSchemaTextExpression(value: string): SchemaTextExpression {
+  const parts: SchemaTextExpression['parts'] = []
+  let cursor = 0
+  VARIABLE_TOKEN_PATTERN.lastIndex = 0
+  for (const match of value.matchAll(VARIABLE_TOKEN_PATTERN)) {
+    const index = match.index ?? 0
+    if (index > cursor) parts.push({ type: 'literal', value: value.slice(cursor, index) })
+    const [, first, second] = match
+    const ref: SchemaTextVariableRef = second
+      ? first === 'this'
+        ? { scope: 'schema-use', varName: second }
+        : { scope: 'interface', alias: first, varName: second }
+      : { scope: 'local', name: first }
+    parts.push({ type: 'variable', ref })
+    cursor = index + match[0].length
+  }
+  if (cursor < value.length) parts.push({ type: 'literal', value: value.slice(cursor) })
+  if (parts.length === 0) parts.push({ type: 'literal', value: '' })
+  return { type: 'string', parts }
+}
+
+export function collectSchemaAttachmentCandidates(
+  attachments: readonly SchemaUseAttachment[]
+): SchemaAttachmentVariableCandidate[] {
+  return attachments.map((attachment) => ({
+    key: `schema-use:${attachment.varName}`,
+    label: `this.${attachment.varName}`,
+    sourceLabel: '当前评分单元附件',
+    type: 'file',
+    ref: { scope: 'schema-use', varName: attachment.varName }
+  }))
+}
+
 export function variableRefName(ref: VariableRef): string {
   return ref.scope === 'local' ? ref.name : `${ref.alias}.${ref.varName}`
+}
+
+export function schemaVariableRefName(ref: SchemaTextVariableRef): string {
+  return ref.scope === 'schema-use' ? `this.${ref.varName}` : variableRefName(ref)
 }
 
 function localCandidate(name: string, type: TemplateValueType): TemplateVariableCandidate {

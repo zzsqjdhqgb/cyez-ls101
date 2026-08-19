@@ -1,6 +1,7 @@
 // @ls101/interface-editor - UI-independent Interface application API
 
 export { createInterfaceApplication, editInterfaceDraft } from './application'
+export { imageAssetVarName, imagePromptVarName } from './conversions'
 export type {
   InterfaceApplication,
   InterfaceApplicationDependencies,
@@ -36,7 +37,11 @@ export type {
   InterfaceImportSession,
   InterfaceImportResult
 } from './application'
-export type { InstanceSelection } from './exchange'
+export type {
+  InstanceSelection,
+  InterfacePackageInspection,
+  InterfaceExchangePackage
+} from './exchange'
 export type {
   FieldLeaf,
   FieldGroup,

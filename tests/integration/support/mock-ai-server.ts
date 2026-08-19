@@ -214,9 +214,55 @@ export class MockAiServer {
       return
     }
     if (model.includes('mock-json')) {
-      const payload = model.includes('image')
-        ? '{"title":"AI 标题","picture":"A green circle icon"}'
-        : '{"title":"AI 标题","answer":"AI answer"}'
+      const payload = model.includes('shanghai')
+        ? JSON.stringify({
+            speaking: {
+              sentenceReading: {
+                sentence1: 'Taking part in volunteer work helps our community.',
+                sentence2: 'Our team solved the problem by sharing ideas.'
+              },
+              passageReading: {
+                passage: 'Students worked together to build a garden beside the library.'
+              },
+              situationalQuestions: {
+                situation1: 'Your class is planning a museum visit.',
+                situation1Reference: 'What time does it open? Do we need tickets?',
+                situation2: 'An exchange student invited you to a festival.',
+                situation2Reference: 'What activities will there be? May I bring a friend?'
+              },
+              pictureTalk: {
+                picture1: 'Shanghai story picture 1',
+                picture2: 'Shanghai story picture 2',
+                picture3: 'Shanghai story picture 3',
+                picture4: 'Shanghai story picture 4',
+                openingSentence: 'It was Sunday morning.',
+                referenceAnswer: 'The boy found a wallet and returned it to its owner.'
+              }
+            },
+            listeningAndSpeaking: {
+              quickResponses: {
+                prompt1: 'Would you like to join us?',
+                answer1: 'Yes, I would love to.',
+                prompt2: 'I forgot your book.',
+                answer2: 'That is all right.',
+                prompt3: 'How did your presentation go?',
+                answer3: 'It went quite well.',
+                prompt4: 'Take an umbrella today.',
+                answer4: 'Thanks for reminding me.'
+              },
+              passageResponse: {
+                topic: 'school clubs',
+                passage: 'Many students join clubs to make friends and learn skills.',
+                question1: 'Why do many students join school clubs?',
+                answer1: 'They join to make friends and learn skills.',
+                question2: 'Would you like to join a school club?',
+                answer2: 'Yes. I would like to join one because it is useful and fun.'
+              }
+            }
+          })
+        : model.includes('image')
+          ? '{"title":"AI 标题","picture":"A green circle icon"}'
+          : '{"title":"AI 标题","answer":"AI answer"}'
       this.sendOpenAiStream(response, model, 'stop', [payload])
       return
     }
@@ -326,6 +372,15 @@ export class MockAiServer {
 
   private handleImage(response: ServerResponse, request: RecordedAiRequest): void {
     const model = String(request.body.model ?? '')
+    if (model.includes('no-response-format') && 'response_format' in request.body) {
+      this.sendJson(response, 400, {
+        error: {
+          message:
+            'UnsupportedParamsError: Setting `response_format` is not supported by this model'
+        }
+      })
+      return
+    }
     if (model.includes('http-error')) {
       this.sendJson(response, 429, { error: { message: 'mock image quota exceeded' } })
       return

@@ -1,4 +1,10 @@
-export { AIROUTER_CHANNELS } from './constants'
+export {
+  AIROUTER_CHANNELS,
+  BUILTIN_PRONUNCIATION_MODEL_ID,
+  BUILTIN_PRONUNCIATION_PROVIDER_ID,
+  PRONUNCIATION_EXTENSION_ID,
+  PRONUNCIATION_EXTENSION_VERSION
+} from './constants'
 export type { AIRouterChannel } from './constants'
 export type {
   AIRouterClient,
@@ -33,6 +39,20 @@ export type {
   AIRouterSpeechRouting,
   AIRouterSpeechSegment,
   AIRouterSpeechSynthesisEvent,
+  AIRouterSpeechRecognitionModelOption,
+  AIRouterSpeechRecognitionRequest,
+  AIRouterSpeechRecognitionResult,
+  AIRouterSpeechRecognitionEvent,
+  AIRouterPronunciationAssessmentEvent,
+  AIRouterPronunciationAssessmentModelOption,
+  AIRouterPronunciationAssessmentRequest,
+  AIRouterPronunciationAssessmentResult,
+  AIRouterPronunciationAssessmentExtensionStatus,
+  AIRouterPronunciationAssessmentExtensionImportResult,
+  AIRouterExtensionImportState,
+  AIRouterPronunciationPauseAssessment,
+  AIRouterPronunciationPhoneAssessment,
+  AIRouterPronunciationWordAssessment,
   AIRouterSpeechSynthesisRequest,
   AIRouterSpeechTarget,
   AIRouterSpeechTestResult,
@@ -42,7 +62,11 @@ export type {
   AIRouterSpeechInstalledAsset,
   AIRouterImageTestResult,
   AIRouterModelConfig,
+  AIRouterModelMetadata,
   AIRouterModelOption,
+  AIRouterReasoningConfig,
+  AIRouterReasoningEffort,
+  AIRouterReasoningOption,
   AIRouterProviderConfig,
   AIRouterProviderConfigInput,
   AIRouterProviderConfigSummary,

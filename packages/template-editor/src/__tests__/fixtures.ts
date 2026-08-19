@@ -1,4 +1,11 @@
-import type { FrameNode, TemplateContent, TextExpression, ValueExpression } from '../types'
+import type { SchemaDefinition, SchemaStructure } from '@ls101/core-types'
+import type {
+  FrameNode,
+  SchemaTextExpression,
+  TemplateContent,
+  TextExpression,
+  ValueExpression
+} from '../types'
 
 export function text(value: string): TextExpression {
   return {
@@ -9,6 +16,46 @@ export function text(value: string): TextExpression {
 
 export function number(value: number): ValueExpression<'number'> {
   return { type: 'number', source: 'literal', value }
+}
+
+export function schemaText(value: string): SchemaTextExpression {
+  return { type: 'string', parts: [{ type: 'literal', value }] }
+}
+
+export function schemaDefinition(
+  schemaId: string,
+  structure: SchemaStructure,
+  name = 'Test schema'
+): SchemaDefinition {
+  return {
+    formatVersion: 2,
+    schemaId,
+    sourceDraftId: '10000000-0000-4000-8000-000000000001',
+    structureHash: `sha256:${'a'.repeat(64)}`,
+    revision: 0,
+    structure,
+    data: {
+      name,
+      description: '',
+      maxScore: 10,
+      answerDescriptions: Object.fromEntries(
+        structure.answerFormat.map((answer) => [answer.answerId, answer.answerId])
+      ),
+      inputDescriptions: Object.fromEntries(
+        structure.templateInputs
+          .filter(
+            (input) =>
+              input.inputId !== 'question-description' &&
+              !(
+                structure.questionType === 'objective' &&
+                (input.inputId === 'correct-answer' || input.inputId === 'analysis')
+              )
+          )
+          .map((input) => [input.inputId, input.inputId])
+      ),
+      rubricMarkdown: ''
+    }
+  }
 }
 
 export function root(children: FrameNode['children'] = []): FrameNode {
@@ -35,10 +82,9 @@ export function templateContent(overrides: Partial<TemplateContent> = {}): Templ
       {
         useId: 'reading-1',
         schemaId: `sha256:${'2'.repeat(64)}`,
-        blockId: 'reading',
-        bindings: {
-          prompt: { type: 'literal', value: 'Read the sentence.' }
-        }
+        inputBindings: { prompt: schemaText('Read the sentence.') },
+        answerBindings: {},
+        attachments: []
       }
     ],
     ...overrides

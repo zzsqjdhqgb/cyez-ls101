@@ -1,9 +1,44 @@
 // @ls101/core-types - Template Compiler、ExamPlayer 与评分系统的共享契约
 
+import type { SubmissionTemplate } from './submission'
+
+export type ExamFormatVersion = 1
+
 export interface ExamPackage {
-  title: string
-  player: PlayerExamData
-  schema: SchemaExportData
+  format: 'ls101-exam'
+  formatVersion: ExamFormatVersion
+  packageId: string
+  examData: {
+    title: string
+    player: PlayerExamData
+    resources: ExamResourceManifest
+  }
+  answerCapturePlan: AnswerCapturePlan
+  submissionTemplate: SubmissionTemplate
+}
+
+export interface AnswerCapturePlan {
+  strings: StringAnswerCapture[]
+  audios: AudioAnswerCapture[]
+}
+
+export interface StringAnswerCapture {
+  stringAnswerIndex: number
+  choiceIndex: number
+}
+
+export interface AudioAnswerCapture {
+  audioAnswerIndex: number
+  recordIndex: number
+}
+
+/** assetKey 到试卷包内资源元数据的映射。 */
+export type ExamResourceManifest = Record<string, ExamResourceEntry>
+
+export interface ExamResourceEntry {
+  filename: string
+  packagePath: string
+  mediaType?: string
 }
 
 export interface PlayerExamData {
@@ -38,6 +73,7 @@ export interface ResolvedImageBlock {
   x: number
   y: number
   width: number
+  height: number
   src: string
 }
 
@@ -56,8 +92,8 @@ export type ResolvedTimelineStep = ResolvedTimelineAction & {
 }
 
 export type ResolvedTimelineAction =
-  /** 已解析完成、供 ExamPlayer TTS 播放的文本。 */
-  | { type: 'play'; text: string }
+  /** Template 编译期生成、供 ExamPlayer 直接播放的音频资源。 */
+  | { type: 'play'; src: string }
   | { type: 'countdown'; seconds: number }
   | { type: 'record'; duration: number; recordIndex: number }
 
@@ -116,19 +152,3 @@ export type ChoiceOptionLabel =
   | 'Z'
 
 export type ChoiceAnswer = ChoiceOptionLabel | '-'
-
-export interface SchemaExportData {
-  usages: SchemaUsageExport[]
-}
-
-export interface SchemaUsageExport {
-  useId: string
-  schemaId: string
-  blockId: string
-  fields: SchemaFieldValue[]
-}
-
-export type SchemaFieldValue =
-  | { varName: string; type: 'text'; value: string }
-  | { varName: string; type: 'audio'; recordIndex: number }
-  | { varName: string; type: 'choice'; choiceIndex: number }

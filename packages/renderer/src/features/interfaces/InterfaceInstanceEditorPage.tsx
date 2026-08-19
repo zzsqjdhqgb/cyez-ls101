@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type JSX } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type JSX
+} from 'react'
 import { imageClipboard } from '@ls101/clipboard/renderer'
 import type { TaskProgressHandle, TaskProgressItem } from '@ls101/core-types'
 import { fileDialog } from '@ls101/file-dialog/renderer'
@@ -18,7 +26,6 @@ import {
   Braces,
   Check,
   ClipboardPaste,
-  Circle,
   FolderOpen,
   Image as ImageIcon,
   Images,
@@ -29,18 +36,21 @@ import {
   WandSparkles,
   X
 } from 'lucide-react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   AIModelSelect,
   type AIModelOption,
   type AIModelSelection
 } from '../../components/ai/AIModelSelect'
 import { AIImageProviderSelect } from '../../components/ai/AIImageProviderSelect'
+import { ActionMenu, ActionMenuItem } from '../../components/ui/ActionMenu'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { IconButton } from '../../components/ui/IconButton'
-import { ResizableSplit } from '../../components/ui/ResizableSplit'
+import { Modal, ModalDescription, ModalTitle } from '../../components/ui/Modal'
+import { TaskProgress } from '../../components/ui/TaskProgress'
 import { toast } from '../../components/ui/toast'
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard'
 import { useInterfaceApplication } from './InterfaceApplicationContext'
 import { errorMessage, flattenNodes } from './interfaceUi'
 import shared from './InterfaceShared.module.css'
@@ -73,9 +83,11 @@ interface PendingImage {
 }
 
 type AuxiliaryPanel = 'json' | 'ai' | 'image-ai' | null
+type PendingOverwrite = 'ai' | 'json' | null
 
 export function InterfaceInstanceEditorPage(): JSX.Element {
   const application = useInterfaceApplication()
+  const location = useLocation()
   const navigate = useNavigate()
   const { interfaceId = '', instanceId = '' } = useParams()
   const [definition, setDefinition] = useState<InterfaceDef | null>(null)
@@ -105,11 +117,13 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   const [imageGeneration, setImageGeneration] = useState<ImageGenerationSession | null>(null)
   const [dirty, setDirty] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [confirmLeave, setConfirmLeave] = useState(false)
+  const [pendingOverwrite, setPendingOverwrite] = useState<PendingOverwrite>(null)
   const modelLoadId = useRef(0)
   const imageProviderLoadId = useRef(0)
   const imageGenerationController = useRef<AbortController | null>(null)
   const previewUrls = useRef(new Set<string>())
+  const initialPanelOpened = useRef(false)
+  const unsavedChanges = useUnsavedChangesGuard(dirty)
 
   useEffect(() => {
     let active = true
@@ -297,7 +311,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
     }
   }
 
-  const loadModels = async (): Promise<void> => {
+  const loadModels = useCallback(async (): Promise<void> => {
     const loadId = ++modelLoadId.current
     setModelsLoading(true)
     setModelsError(null)
@@ -323,26 +337,43 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
     } finally {
       if (loadId === modelLoadId.current) setModelsLoading(false)
     }
-  }
+  }, [application])
 
-  const toggleAIPanel = (): void => {
-    if (panel === 'ai') {
-      modelLoadId.current += 1
-      setGeneration(null)
-      setPanel(null)
-      return
-    }
+  const openAIGenerationDialog = (): void => {
     setImageGeneration(null)
     setPanel('ai')
     void loadModels()
   }
 
-  const toggleImageAIPanel = (): void => {
-    if (panel === 'image-ai') {
-      setImageGeneration(null)
-      setPanel(null)
-      return
-    }
+  const closeAIGenerationDialog = (): void => {
+    modelLoadId.current += 1
+    setGeneration(null)
+    setPanel(null)
+  }
+
+  const openJsonReplacementDialog = (): void => {
+    setGeneration(null)
+    setImageGeneration(null)
+    setJson('')
+    setJsonErrors([])
+    setPanel('json')
+  }
+
+  const closeJsonReplacementDialog = (): void => {
+    setJson('')
+    setJsonErrors([])
+    setPanel(null)
+  }
+
+  useEffect(() => {
+    const state = location.state as { openAIGeneration?: boolean } | null
+    if (!details || !state?.openAIGeneration || initialPanelOpened.current) return
+    initialPanelOpened.current = true
+    setPanel('ai')
+    void loadModels()
+  }, [details, loadModels, location.state])
+
+  const openImageGenerationDialog = (): void => {
     setGeneration(null)
     setImageGeneration(null)
     setPanel('image-ai')
@@ -389,9 +420,33 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       varName: leaf.varName,
       prompt: imagePrompts[leaf.varName].trim()
     }))
+  const allImagePromptsFilled = leaves.every(
+    ({ leaf }) => leaf.type !== 'image' || Boolean(imagePrompts[leaf.varName]?.trim())
+  )
+  const hasSavedContent = leaves.some(({ leaf }) =>
+    leaf.type === 'image'
+      ? Boolean(imagePrompts[leaf.varName]?.trim() || values[leaf.varName]?.trim())
+      : Boolean(values[leaf.varName]?.trim())
+  )
+
+  const requestAIGeneration = (): void => {
+    if (hasSavedContent) {
+      setPendingOverwrite('ai')
+      return
+    }
+    void startGeneration()
+  }
+
+  const requestJsonReplacement = (): void => {
+    if (hasSavedContent) {
+      setPendingOverwrite('json')
+      return
+    }
+    void replaceJson()
+  }
 
   const startImageGeneration = async (): Promise<void> => {
-    if (!selectedImageProvider || imageTargets.length === 0 || dirty) return
+    if (!selectedImageProvider || imageTargets.length === 0) return
 
     const controller = new AbortController()
     imageGenerationController.current = controller
@@ -504,7 +559,11 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
     setError(null)
     setJsonErrors([])
     try {
-      const result = await application.instances.replaceFromJson(interfaceId, instanceId, json)
+      const result = hasImageFields
+        ? await application.instances.replaceFromJson(interfaceId, instanceId, json, {
+            ...(selectedImageProvider ? { imageProvider: selectedImageProvider } : {})
+          })
+        : await application.instances.replaceFromJson(interfaceId, instanceId, json)
       if (result.status === 'invalid-json') {
         setJsonErrors(result.errors)
         return
@@ -525,10 +584,6 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   }
 
   const leave = (): void => {
-    if (dirty) {
-      setConfirmLeave(true)
-      return
-    }
     navigate(`/interfaces/${encodeURIComponent(interfaceId)}`)
   }
 
@@ -537,6 +592,18 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   const imageGenerationRunning = imageGeneration?.status === 'running'
   const busy = saving || generationRunning || imageGenerationRunning || generatingImage !== null
   const hasImageFields = leaves.some(({ leaf }) => leaf.type === 'image')
+  const imagesComplete = leaves.every(({ leaf }) => {
+    if (leaf.type !== 'image') return true
+    const pending = pendingImages[leaf.varName]
+    const hasImage = Object.hasOwn(pendingImages, leaf.varName)
+      ? pending !== null
+      : Boolean(values[leaf.varName]?.trim())
+    return hasImage && Boolean(imagePrompts[leaf.varName]?.trim())
+  })
+  const exposedVariableCount = leaves.reduce(
+    (count, { leaf }) => count + (leaf.type === 'image' ? 2 : 1),
+    0
+  )
 
   const finishGeneration = (): void => {
     const openJson = generation?.result?.status === 'invalid-response'
@@ -566,49 +633,46 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
         </div>
         <div className={styles.actions}>
           <Button
-            icon={Braces}
-            disabled={saving || generationRunning || imageGenerationRunning}
-            onClick={() => {
-              setGeneration(null)
-              setImageGeneration(null)
-              setPanel((current) => (current === 'json' ? null : 'json'))
-            }}
-          >
-            JSON
-          </Button>
-          <Button
             icon={generationRunning ? LoaderCircle : Bot}
             disabled={!details || saving || generationRunning || imageGenerationRunning || dirty}
             title={dirty ? '请先保存当前修改' : undefined}
-            onClick={toggleAIPanel}
+            onClick={openAIGenerationDialog}
           >
-            {generationRunning ? '生成中' : 'AI 生成'}
+            {generationRunning ? '生成中' : 'AI 生成并覆盖'}
           </Button>
-          <Button
-            icon={imageGenerationRunning ? LoaderCircle : Images}
-            disabled={
-              !details ||
-              saving ||
-              generationRunning ||
-              imageGenerationRunning ||
-              dirty ||
-              imageTargets.length === 0
-            }
-            title={
-              dirty
-                ? '请先保存当前修改'
-                : imageTargets.length === 0
-                  ? '没有已填写提示词的图片字段'
-                  : undefined
-            }
-            onClick={toggleImageAIPanel}
+          {imageTargets.length > 0 ? (
+            <Button
+              icon={imageGenerationRunning ? LoaderCircle : Images}
+              disabled={
+                !details ||
+                saving ||
+                generationRunning ||
+                imageGenerationRunning ||
+                !allImagePromptsFilled
+              }
+              title={!allImagePromptsFilled ? '请填写所有图片字段的提示词' : undefined}
+              onClick={openImageGenerationDialog}
+            >
+              {imageGenerationRunning ? '生图中' : '批量生图'}
+            </Button>
+          ) : null}
+          <ActionMenu
+            disabled={saving || generationRunning || imageGenerationRunning}
+            label="高级操作"
           >
-            {imageGenerationRunning ? '生图中' : 'AI 生图'}
-          </Button>
+            <ActionMenuItem
+              disabled={saving || generationRunning || imageGenerationRunning}
+              icon={Braces}
+              onSelect={openJsonReplacementDialog}
+            >
+              从 JSON 覆盖
+            </ActionMenuItem>
+          </ActionMenu>
           <Button
             icon={Save}
             variant="primary"
-            disabled={!details || busy || !dirty}
+            disabled={!details || busy || !dirty || !imagesComplete}
+            title={!imagesComplete ? '图片字段的提示词和图片必须同时填写' : undefined}
             onClick={() => void save()}
           >
             保存
@@ -619,13 +683,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       {!details || !definition ? (
         <main className={styles.missing}>题组不存在</main>
       ) : (
-        <ResizableSplit
-          className={styles.workspace}
-          initialSize={560}
-          minFirst={360}
-          minSecond={320}
-          label={`调整题组字段与${panel === 'ai' ? ' AI' : panel === 'image-ai' ? ' AI 生图' : ' JSON'}面板宽度`}
-        >
+        <main className={styles.workspace}>
           <section className={styles.formPane}>
             {error ? (
               <div className={shared.notice} role="alert">
@@ -648,7 +706,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
             <div className={styles.fieldHeader}>
               <div>
                 <h2>内容字段</h2>
-                <span>{leaves.length} 个变量</span>
+                <span>{exposedVariableCount} 个变量</span>
               </div>
             </div>
 
@@ -662,7 +720,11 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
                       <span>
                         {leaf.type === 'image' ? <ImageIcon aria-hidden="true" /> : null}
                         <strong>{key}</strong>
-                        <code>[@{leaf.varName}]</code>
+                        <code>
+                          {leaf.type === 'image'
+                            ? `[@${leaf.varName}.inst] / [@${leaf.varName}.img]`
+                            : `[@${leaf.varName}]`}
+                        </code>
                       </span>
                       <small>{path.slice(0, -1).join(' / ')}</small>
                     </span>
@@ -703,15 +765,33 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
               })}
             </div>
           </section>
+        </main>
+      )}
 
-          {panel === 'json' ? (
-            <aside className={styles.jsonPane} aria-label="JSON 覆盖">
-              <header>
-                <div>
-                  <h2>JSON 覆盖</h2>
-                  <span>按题型字段结构替换全部值</span>
-                </div>
-              </header>
+      <Modal
+        open={panel === 'json'}
+        overlayClassName={styles.operationBackdrop}
+        onOpenChange={(open) => {
+          if (!open && !busy) closeJsonReplacementDialog()
+        }}
+      >
+        <section className={`${styles.operationDialog} ${styles.jsonDialog}`} role="dialog">
+          <header className={styles.operationHeader}>
+            <span className={styles.operationIcon}>
+              <Braces aria-hidden="true" />
+            </span>
+            <div>
+              <ModalTitle asChild>
+                <h2>从 JSON 覆盖题组</h2>
+              </ModalTitle>
+              <ModalDescription asChild>
+                <p>粘贴完整 JSON。校验通过后将覆盖整组内容并立即保存。</p>
+              </ModalDescription>
+            </div>
+          </header>
+          <div className={`${styles.operationBody} ${styles.jsonBody}`}>
+            <label className={styles.jsonInput}>
+              <span>JSON 内容</span>
               <textarea
                 aria-label="JSON 内容"
                 value={json}
@@ -720,80 +800,135 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
                 placeholder={'{\n  "section": {\n    "question": "..."\n  }\n}'}
                 spellCheck={false}
               />
-              {jsonErrors.length ? (
-                <div className={styles.jsonErrors} role="alert">
-                  {jsonErrors.map((item, index) => (
-                    <span key={`${item.path}-${index}`}>
-                      {item.path || '$'}：{item.message}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-              <div className={styles.jsonActions}>
-                <Button variant="ghost" disabled={busy} onClick={() => setPanel(null)}>
-                  取消
-                </Button>
-                <Button
-                  variant="primary"
-                  disabled={!json.trim() || busy}
-                  onClick={() => void replaceJson()}
-                >
-                  覆盖全部值
-                </Button>
+            </label>
+            {hasImageFields ? (
+              <AIImageProviderSelect
+                disabled={busy}
+                error={imageProvidersError}
+                label="图像 Provider"
+                loading={imageProvidersLoading}
+                options={imageProviderOptions}
+                value={selectedImageProvider}
+                onChange={setSelectedImageProvider}
+              />
+            ) : null}
+            {jsonErrors.length ? (
+              <div className={styles.jsonErrors} role="alert">
+                {jsonErrors.map((item, index) => (
+                  <span key={`${item.path}-${index}`}>
+                    {item.path || '$'}：{item.message}
+                  </span>
+                ))}
               </div>
-            </aside>
-          ) : panel === 'ai' ? (
-            <AIGenerationPane
-              dirty={dirty}
-              modelsError={modelsError}
-              modelsLoading={modelsLoading}
-              modelOptions={modelOptions}
-              imageProviderOptions={imageProviderOptions}
-              selectedImageProvider={selectedImageProvider}
-              imageProvidersLoading={imageProvidersLoading}
-              imageProvidersError={imageProvidersError}
-              hasImageFields={hasImageFields}
-              selectedModel={selectedModel}
-              session={generation}
-              onCancel={() => generation?.handle?.cancel()}
-              onClose={() => setPanel(null)}
-              onFinish={finishGeneration}
-              onRefresh={() => void loadModels()}
-              onRetry={() => void startGeneration()}
-              onSelectModel={setSelectedModel}
-              onSelectImageProvider={setSelectedImageProvider}
-              onStart={() => void startGeneration()}
-            />
-          ) : panel === 'image-ai' ? (
-            <ImageGenerationPane
-              dirty={dirty}
-              imageProviderOptions={imageProviderOptions}
-              selectedImageProvider={selectedImageProvider}
-              imageProvidersLoading={imageProvidersLoading}
-              imageProvidersError={imageProvidersError}
-              targetCount={imageTargets.length}
-              session={imageGeneration}
-              onCancel={() => imageGenerationController.current?.abort()}
-              onClose={() => setPanel(null)}
-              onFinish={() => {
-                setImageGeneration(null)
-                setPanel(null)
-              }}
-              onRetry={() => void startImageGeneration()}
-              onSelectImageProvider={setSelectedImageProvider}
-              onStart={() => void startImageGeneration()}
-            />
-          ) : null}
-        </ResizableSplit>
-      )}
+            ) : null}
+          </div>
+          <footer className={styles.operationActions}>
+            <Button variant="ghost" disabled={busy} onClick={closeJsonReplacementDialog}>
+              取消
+            </Button>
+            <Button
+              variant="primary"
+              disabled={
+                !json.trim() ||
+                busy ||
+                (hasImageFields &&
+                  (!selectedImageProvider || imageProvidersLoading || Boolean(imageProvidersError)))
+              }
+              onClick={requestJsonReplacement}
+            >
+              校验并覆盖
+            </Button>
+          </footer>
+        </section>
+      </Modal>
+
+      <Modal
+        open={panel === 'ai'}
+        overlayClassName={styles.operationBackdrop}
+        onOpenChange={(open) => {
+          if (!open && !generationRunning) closeAIGenerationDialog()
+        }}
+      >
+        <AIGenerationDialog
+          dirty={dirty}
+          modelsError={modelsError}
+          modelsLoading={modelsLoading}
+          modelOptions={modelOptions}
+          imageProviderOptions={imageProviderOptions}
+          selectedImageProvider={selectedImageProvider}
+          imageProvidersLoading={imageProvidersLoading}
+          imageProvidersError={imageProvidersError}
+          hasImageFields={hasImageFields}
+          selectedModel={selectedModel}
+          session={generation}
+          onCancel={() => generation?.handle?.cancel()}
+          onClose={closeAIGenerationDialog}
+          onFinish={finishGeneration}
+          onRefresh={() => void loadModels()}
+          onRetry={requestAIGeneration}
+          onSelectModel={setSelectedModel}
+          onSelectImageProvider={setSelectedImageProvider}
+          onStart={requestAIGeneration}
+        />
+      </Modal>
+
+      <Modal
+        open={panel === 'image-ai'}
+        overlayClassName={styles.operationBackdrop}
+        onOpenChange={(open) => {
+          if (!open && !imageGenerationRunning) {
+            setImageGeneration(null)
+            setPanel(null)
+          }
+        }}
+      >
+        <ImageGenerationDialog
+          imageProviderOptions={imageProviderOptions}
+          selectedImageProvider={selectedImageProvider}
+          imageProvidersLoading={imageProvidersLoading}
+          imageProvidersError={imageProvidersError}
+          targetCount={imageTargets.length}
+          session={imageGeneration}
+          onCancel={() => imageGenerationController.current?.abort()}
+          onClose={() => {
+            setImageGeneration(null)
+            setPanel(null)
+          }}
+          onFinish={() => {
+            setImageGeneration(null)
+            setPanel(null)
+          }}
+          onRetry={() => void startImageGeneration()}
+          onSelectImageProvider={setSelectedImageProvider}
+          onStart={() => void startImageGeneration()}
+        />
+      </Modal>
       <ConfirmModal
         confirmLabel="放弃修改"
         danger
         message="离开后，本次尚未保存的修改会丢失。"
-        open={confirmLeave}
+        open={unsavedChanges.navigationPending}
         title="放弃未保存的修改？"
-        onCancel={() => setConfirmLeave(false)}
-        onConfirm={() => navigate(`/interfaces/${encodeURIComponent(interfaceId)}`)}
+        onCancel={unsavedChanges.cancelNavigation}
+        onConfirm={unsavedChanges.confirmNavigation}
+      />
+      <ConfirmModal
+        confirmLabel={pendingOverwrite === 'ai' ? '生成并覆盖' : '校验并覆盖'}
+        danger
+        message={
+          pendingOverwrite === 'ai'
+            ? 'AI 生成成功后会替换当前题组的全部文本、图片提示词和图片，并立即保存。'
+            : 'JSON 校验通过后会替换当前题组的全部内容，并立即保存。'
+        }
+        open={pendingOverwrite !== null}
+        title="覆盖当前题组内容？"
+        onCancel={() => setPendingOverwrite(null)}
+        onConfirm={() => {
+          const action = pendingOverwrite
+          setPendingOverwrite(null)
+          if (action === 'ai') void startGeneration()
+          if (action === 'json') void replaceJson()
+        }}
       />
     </div>
   )
@@ -925,7 +1060,7 @@ function ImageValueInput({
   )
 }
 
-function AIGenerationPane({
+function AIGenerationDialog({
   dirty,
   modelsError,
   modelsLoading,
@@ -969,18 +1104,28 @@ function AIGenerationPane({
   const finished = session ? isGenerationFinished(session) : false
 
   return (
-    <aside className={styles.aiPane} aria-label="AI 生成">
-      <header className={styles.aiHeader}>
-        <span className={styles.generationIcon}>
+    <section className={styles.operationDialog} aria-label="AI 生成并覆盖" role="dialog">
+      <header className={styles.operationHeader}>
+        <span className={styles.operationIcon}>
           <Bot aria-hidden="true" />
         </span>
         <div>
-          <h2>AI 生成</h2>
-          <span>{session ? (finished ? '生成任务已结束' : '正在生成题组') : '生成设置'}</span>
+          <ModalTitle asChild>
+            <h2>AI 生成并覆盖</h2>
+          </ModalTitle>
+          <ModalDescription asChild>
+            <p>
+              {session
+                ? finished
+                  ? '生成任务已结束，可以查看结果或重新生成。'
+                  : '正在生成并校验，当前题组在任务成功前保持不变。'
+                : '选择生成模型。覆盖前会再次确认，成功后立即保存。'}
+            </p>
+          </ModalDescription>
         </div>
       </header>
 
-      <div className={styles.aiBody}>
+      <div className={styles.operationBody}>
         <AIModelSelect
           disabled={session !== null && !finished}
           error={modelsError}
@@ -1004,6 +1149,7 @@ function AIGenerationPane({
         ) : null}
         {session ? (
           <div className={styles.generationContent}>
+            {session.result?.status === 'failed' ? <GenerationResult session={session} /> : null}
             {session.handle ? <GenerationProgress handle={session.handle} /> : null}
             {!session.handle && !finished ? (
               <div className={styles.generationStarting} role="status">
@@ -1014,12 +1160,14 @@ function AIGenerationPane({
                 </div>
               </div>
             ) : null}
-            {finished ? <GenerationResult session={session} /> : null}
+            {finished && session.result?.status !== 'failed' ? (
+              <GenerationResult session={session} />
+            ) : null}
           </div>
         ) : null}
       </div>
 
-      <footer className={styles.aiActions}>
+      <footer className={styles.operationActions}>
         {!session ? (
           <>
             <Button variant="ghost" onClick={onClose}>
@@ -1038,7 +1186,7 @@ function AIGenerationPane({
               }
               onClick={onStart}
             >
-              开始生成
+              生成并覆盖
             </Button>
           </>
         ) : finished ? (
@@ -1058,7 +1206,7 @@ function AIGenerationPane({
               重新生成
             </Button>
             <Button icon={Check} variant="primary" onClick={onFinish}>
-              完成
+              {session.result?.status === 'invalid-response' ? '检查 JSON' : '返回题组'}
             </Button>
           </>
         ) : (
@@ -1067,12 +1215,11 @@ function AIGenerationPane({
           </Button>
         )}
       </footer>
-    </aside>
+    </section>
   )
 }
 
-function ImageGenerationPane({
-  dirty,
+function ImageGenerationDialog({
   imageProviderOptions,
   selectedImageProvider,
   imageProvidersLoading,
@@ -1086,7 +1233,6 @@ function ImageGenerationPane({
   onSelectImageProvider,
   onStart
 }: {
-  dirty: boolean
   imageProviderOptions: readonly InterfaceImageProviderOption[]
   selectedImageProvider: InterfaceImageProviderSelection | null
   imageProvidersLoading: boolean
@@ -1104,24 +1250,28 @@ function ImageGenerationPane({
   const finished = session !== null && !running
 
   return (
-    <aside className={styles.aiPane} aria-label="AI 生图">
-      <header className={styles.aiHeader}>
-        <span className={styles.generationIcon}>
+    <section className={styles.operationDialog} aria-label="AI 生图" role="dialog">
+      <header className={styles.operationHeader}>
+        <span className={styles.operationIcon}>
           <Images aria-hidden="true" />
         </span>
         <div>
-          <h2>AI 生图</h2>
-          <span>
-            {session
-              ? running
-                ? `正在生成 ${targetCount} 张图片`
-                : '生图任务已结束'
-              : `${targetCount} 张图片待生成`}
-          </span>
+          <ModalTitle asChild>
+            <h2>AI 生图</h2>
+          </ModalTitle>
+          <ModalDescription asChild>
+            <p>
+              {session
+                ? running
+                  ? `正在生成 ${targetCount} 张图片`
+                  : '生图任务已结束，可以查看结果或重新生成。'
+                : `将为 ${targetCount} 个已填写提示词的字段生成图片，成功后立即保存。`}
+            </p>
+          </ModalDescription>
         </div>
       </header>
 
-      <div className={styles.aiBody}>
+      <div className={styles.operationBody}>
         <AIImageProviderSelect
           disabled={running}
           error={imageProvidersError}
@@ -1133,13 +1283,13 @@ function ImageGenerationPane({
         />
         {session ? (
           <div className={styles.generationContent}>
-            <GenerationProgressItems label="AI 生图进度" items={session.items} />
+            <TaskProgress label="AI 生图进度" items={session.items} />
             {finished ? <ImageGenerationResult session={session} /> : null}
           </div>
         ) : null}
       </div>
 
-      <footer className={styles.aiActions}>
+      <footer className={styles.operationActions}>
         {!session ? (
           <>
             <Button variant="ghost" onClick={onClose}>
@@ -1152,8 +1302,7 @@ function ImageGenerationPane({
                 !selectedImageProvider ||
                 targetCount === 0 ||
                 imageProvidersLoading ||
-                Boolean(imageProvidersError) ||
-                dirty
+                Boolean(imageProvidersError)
               }
               onClick={onStart}
             >
@@ -1172,20 +1321,19 @@ function ImageGenerationPane({
                 !selectedImageProvider ||
                 targetCount === 0 ||
                 imageProvidersLoading ||
-                Boolean(imageProvidersError) ||
-                dirty
+                Boolean(imageProvidersError)
               }
               onClick={onRetry}
             >
               重新生成
             </Button>
             <Button icon={Check} variant="primary" onClick={onFinish}>
-              完成
+              返回题组
             </Button>
           </>
         )}
       </footer>
-    </aside>
+    </section>
   )
 }
 
@@ -1222,7 +1370,7 @@ function GenerationResult({ session }: { session: GenerationSession }): JSX.Elem
     status = 'success'
   } else if (session.result?.status === 'invalid-response') {
     title = '生成内容未通过校验'
-    message = `发现 ${session.result.errors.length} 个字段错误，可点击完成后在 JSON 面板中检查。`
+    message = `发现 ${session.result.errors.length} 个字段错误，可检查原始 JSON 并修正后覆盖题组。`
   } else if (session.result?.status === 'failed') {
     title = '生成失败'
     message = session.result.message
@@ -1285,35 +1433,5 @@ function GenerationProgress({
 }): JSX.Element {
   const snapshot = useSyncExternalStore(handle.subscribe, handle.getSnapshot, handle.getSnapshot)
 
-  return <GenerationProgressItems label="AI 生成进度" items={snapshot.items} />
-}
-
-function GenerationProgressItems({
-  label,
-  items
-}: {
-  label: string
-  items: readonly TaskProgressItem[]
-}): JSX.Element {
-  return (
-    <section aria-label={label} className={styles.generationProgress}>
-      <ol>
-        {items.map((item) => (
-          <li data-status={item.status} key={item.id}>
-            <ProgressIcon item={item} />
-            <div>
-              <strong>{item.label}</strong>
-              {item.log?.content ? <pre>{item.log.content}</pre> : null}
-            </div>
-          </li>
-        ))}
-      </ol>
-    </section>
-  )
-}
-
-function ProgressIcon({ item }: { item: TaskProgressItem }): JSX.Element {
-  if (item.status === 'completed') return <Check aria-hidden="true" />
-  if (item.status === 'running') return <LoaderCircle aria-hidden="true" />
-  return <Circle aria-hidden="true" />
+  return <TaskProgress label="AI 生成进度" items={snapshot.items} />
 }

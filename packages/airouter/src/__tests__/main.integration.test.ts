@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -10,36 +10,47 @@ import { AIROUTER_CHANNELS } from '../shared'
 type IpcHandler = (_event: unknown, ...args: unknown[]) => unknown
 type IpcListener = (...args: unknown[]) => void
 
-const { electronMocks, generateImageMock, speechSynthesizeMock, streamTextMock } = vi.hoisted(
-  () => {
-    const handlers = new Map<string, IpcHandler>()
-    const listeners = new Map<string, IpcListener>()
-    return {
-      electronMocks: {
-        handlers,
-        listeners,
-        handle: vi.fn((channel: string, handler: IpcHandler) => {
-          handlers.set(channel, handler)
-        }),
-        on: vi.fn((channel: string, listener: IpcListener) => {
-          listeners.set(channel, listener)
-        }),
-        safeStorage: {
-          isEncryptionAvailable: vi.fn(() => true),
-          encryptString: vi.fn((value: string) => new TextEncoder().encode(value)),
-          decryptString: vi.fn((value: Uint8Array) => new TextDecoder().decode(value))
-        },
-        app: { getVersion: vi.fn(() => '0.3.1') }
+const {
+  electronMocks,
+  generateImageMock,
+  assessPronunciationMock,
+  recognizeSpeechMock,
+  speechSynthesizeMock,
+  streamTextMock
+} = vi.hoisted(() => {
+  const handlers = new Map<string, IpcHandler>()
+  const listeners = new Map<string, IpcListener>()
+  return {
+    electronMocks: {
+      handlers,
+      listeners,
+      handle: vi.fn((channel: string, handler: IpcHandler) => {
+        handlers.set(channel, handler)
+      }),
+      on: vi.fn((channel: string, listener: IpcListener) => {
+        listeners.set(channel, listener)
+      }),
+      safeStorage: {
+        isEncryptionAvailable: vi.fn(() => true),
+        encryptString: vi.fn((value: string) => new TextEncoder().encode(value)),
+        decryptString: vi.fn((value: Uint8Array) => new TextDecoder().decode(value))
       },
-      generateImageMock: vi.fn(),
-      speechSynthesizeMock: vi.fn(),
-      streamTextMock: vi.fn()
-    }
+      app: { getVersion: vi.fn(() => '0.3.1'), once: vi.fn() },
+      BrowserWindow: { fromWebContents: vi.fn(() => null) },
+      dialog: { showOpenDialog: vi.fn() }
+    },
+    generateImageMock: vi.fn(),
+    assessPronunciationMock: vi.fn(),
+    recognizeSpeechMock: vi.fn(),
+    speechSynthesizeMock: vi.fn(),
+    streamTextMock: vi.fn()
   }
-)
+})
 
 vi.mock('electron', () => ({
   app: electronMocks.app,
+  BrowserWindow: electronMocks.BrowserWindow,
+  dialog: electronMocks.dialog,
   ipcMain: electronMocks,
   safeStorage: electronMocks.safeStorage
 }))
@@ -55,6 +66,47 @@ vi.mock('../main/pocket-tts', () => ({
   }
 }))
 
+vi.mock('../main/qwen-tts', () => ({
+  QwenTtsSynthesizer: class {
+    synthesize = speechSynthesizeMock
+    dispose = vi.fn()
+  }
+}))
+
+vi.mock('../main/speech-recognition-service', () => ({
+  AIRouterSpeechRecognitionService: class {
+    listModels() {
+      return [
+        {
+          providerId: 'builtin-qwen3-asr',
+          providerName: '内置语音识别',
+          modelId: 'qwen3-asr-0.6b',
+          modelName: 'Qwen3 ASR 0.6B'
+        }
+      ]
+    }
+
+    recognize = recognizeSpeechMock
+  }
+}))
+
+vi.mock('../main/pronunciation-assessment-service', () => ({
+  AIRouterPronunciationAssessmentService: class {
+    listModels() {
+      return [
+        {
+          providerId: 'builtin-facebook-phoneme',
+          providerName: '内置发音评测',
+          modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f',
+          modelName: 'Facebook Wav2Vec2 Phoneme INT8'
+        }
+      ]
+    }
+
+    assess = assessPronunciationMock
+  }
+}))
+
 describe('AIRouter main integration', () => {
   let baseDir: string
 
@@ -64,9 +116,16 @@ describe('AIRouter main integration', () => {
     electronMocks.listeners.clear()
     electronMocks.handle.mockClear()
     electronMocks.on.mockClear()
+    electronMocks.app.once.mockClear()
     generateImageMock.mockReset()
+    recognizeSpeechMock.mockReset()
+    assessPronunciationMock.mockReset()
     speechSynthesizeMock.mockReset()
     streamTextMock.mockReset()
+    electronMocks.BrowserWindow.fromWebContents.mockReset()
+    electronMocks.BrowserWindow.fromWebContents.mockReturnValue(null)
+    electronMocks.dialog.showOpenDialog.mockReset()
+    electronMocks.dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] })
     baseDir = await mkdtemp(path.join(tmpdir(), 'airouter-main-'))
   })
 
@@ -138,10 +197,7 @@ describe('AIRouter main integration', () => {
     const { registerAIRouter } = await import('../main')
     registerAIRouter({ baseDir, secretStorage: createSecrets(baseDir) })
 
-    const imported = await handler(AIROUTER_CHANNELS.importSpeechPackage)(
-      undefined,
-      createSpeechPackage()
-    )
+    const imported = await importSpeechPackage(baseDir, createSpeechPackage())
     expect(imported).toEqual(
       expect.objectContaining({
         package: expect.objectContaining({
@@ -195,7 +251,7 @@ describe('AIRouter main integration', () => {
       [requestId, { type: 'done' }]
     ])
     expect(streamTextMock).toHaveBeenCalledWith(
-      expect.objectContaining({ prompt: '测试', maxOutputTokens: 8192 })
+      expect.objectContaining({ prompt: '测试', maxOutputTokens: 128 * 1024 })
     )
   })
 
@@ -234,7 +290,7 @@ describe('AIRouter main integration', () => {
   it('forwards synthesized speech data through the IPC event channel', async () => {
     const { registerAIRouter } = await import('../main')
     registerAIRouter({ baseDir, secretStorage: createSecrets(baseDir) })
-    await handler(AIROUTER_CHANNELS.importSpeechPackage)(undefined, createSpeechPackage())
+    await importSpeechPackage(baseDir, createSpeechPackage())
     await handler(AIROUTER_CHANNELS.saveSpeechConfig)(undefined, {
       id: 'local-speech-provider',
       name: '本地语音 Provider',
@@ -278,6 +334,72 @@ describe('AIRouter main integration', () => {
         format: 'wav'
       })
     )
+  })
+
+  it('lists Qwen3 ASR and forwards recognition through the IPC event channel', async () => {
+    const { registerAIRouter } = await import('../main')
+    registerAIRouter({ baseDir, secretStorage: createSecrets(baseDir) })
+    recognizeSpeechMock.mockResolvedValue({ text: 'recognized answer' })
+
+    expect(handler(AIROUTER_CHANNELS.listRecognitionModels)(undefined)).toEqual([
+      expect.objectContaining({
+        providerId: 'builtin-qwen3-asr',
+        modelId: 'qwen3-asr-0.6b'
+      })
+    ])
+
+    const sender = createSender()
+    const requestId = 'recognition-request'
+    const request = {
+      providerConfigId: 'builtin-qwen3-asr',
+      modelId: 'qwen3-asr-0.6b',
+      audio: { data: new Uint8Array([1, 2, 3]), mediaType: 'audio/wav' }
+    }
+    listener(AIROUTER_CHANNELS.speechRecognitionStart)({ sender }, requestId, request)
+    await waitForSentEvents(sender, 1)
+
+    expect(sender.send).toHaveBeenCalledWith(AIROUTER_CHANNELS.speechRecognitionEvent, requestId, {
+      type: 'result',
+      result: { text: 'recognized answer' }
+    })
+    expect(recognizeSpeechMock).toHaveBeenCalledWith(request, {
+      signal: expect.any(AbortSignal)
+    })
+  })
+
+  it('lists the phoneme model and forwards pronunciation assessment through IPC', async () => {
+    const { registerAIRouter } = await import('../main')
+    registerAIRouter({ baseDir, secretStorage: createSecrets(baseDir) })
+    const result = {
+      referenceText: 'three',
+      recognizedPhones: ['s'],
+      overallScore: 20,
+      words: [],
+      pauses: [],
+      feedbackMarkdown: 'feedback'
+    }
+    assessPronunciationMock.mockResolvedValue(result)
+    expect(handler(AIROUTER_CHANNELS.listPronunciationModels)(undefined)).toEqual([
+      expect.objectContaining({ modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f' })
+    ])
+    const sender = createSender()
+    const requestId = 'pronunciation-request'
+    const request = {
+      providerConfigId: 'builtin-facebook-phoneme',
+      modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f',
+      referenceText: 'three',
+      audio: { data: new Uint8Array([1, 2, 3]), mediaType: 'audio/wav' }
+    }
+    listener(AIROUTER_CHANNELS.pronunciationAssessmentStart)({ sender }, requestId, request)
+    await waitForSentEvents(sender, 1)
+    expect(sender.send).toHaveBeenCalledWith(
+      AIROUTER_CHANNELS.pronunciationAssessmentEvent,
+      requestId,
+      { type: 'result', result }
+    )
+    expect(assessPronunciationMock).toHaveBeenCalledWith(request, {
+      signal: expect.any(AbortSignal)
+    })
   })
 })
 
@@ -327,6 +449,16 @@ function handler(channel: string): IpcHandler {
   const registered = electronMocks.handlers.get(channel)
   if (!registered) throw new Error(`No handler registered for ${channel}`)
   return registered
+}
+
+async function importSpeechPackage(directory: string, bytes: Uint8Array) {
+  const packagePath = path.join(directory, `speech-${Math.random().toString(36).slice(2)}.zip`)
+  await writeFile(packagePath, bytes)
+  electronMocks.dialog.showOpenDialog.mockResolvedValueOnce({
+    canceled: false,
+    filePaths: [packagePath]
+  })
+  return handler(AIROUTER_CHANNELS.importSpeechPackage)({ sender: {} })
 }
 
 function listener(channel: string): IpcListener {

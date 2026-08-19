@@ -31,7 +31,7 @@ describe('AIRouter renderer client', () => {
       { type: 'output', delta: 'A' },
       { type: 'reasoning', delta: 'B' }
     ])
-    expect(cancel).toHaveBeenCalled()
+    expect(cancel).toHaveBeenCalledOnce()
   })
 
   it('ends a pending stream when the caller aborts', async () => {
@@ -55,7 +55,7 @@ describe('AIRouter renderer client', () => {
     controller.abort()
 
     await expect(next).resolves.toEqual({ value: undefined, done: true })
-    expect(cancel).toHaveBeenCalled()
+    expect(cancel).toHaveBeenCalledTimes(2)
   })
 
   it('returns image bytes from a one-shot IPC generation', async () => {
@@ -79,7 +79,7 @@ describe('AIRouter renderer client', () => {
         prompt: 'prompt'
       })
     ).resolves.toEqual({ data: new Uint8Array([1, 2, 3]), mediaType: 'image/png' })
-    expect(cancel).toHaveBeenCalled()
+    expect(cancel).toHaveBeenCalledOnce()
   })
 
   it('rejects a pending image generation with AbortError', async () => {
@@ -93,7 +93,7 @@ describe('AIRouter renderer client', () => {
     controller.abort()
 
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
-    expect(cancel).toHaveBeenCalled()
+    expect(cancel).toHaveBeenCalledOnce()
   })
 
   it('returns speech audio from a one-shot IPC generation', async () => {
@@ -173,6 +173,40 @@ describe('AIRouter renderer client', () => {
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
     expect(cancel).toHaveBeenCalled()
   })
+
+  it('returns speech recognition text and supports aborting it', async () => {
+    const cancel = vi.fn()
+    const bridge = bridgeWith({
+      startSpeechRecognition: vi.fn((_request, listener) => {
+        queueMicrotask(() => listener({ type: 'result', result: { text: 'recognized' } }))
+        return cancel
+      })
+    })
+    await expect(
+      createAIRouterClient(bridge).recognizeSpeech({
+        providerConfigId: 'builtin-qwen3-asr',
+        modelId: 'qwen3-asr-0.6b',
+        audio: { data: new Uint8Array([1]), mediaType: 'audio/webm' }
+      })
+    ).resolves.toEqual({ text: 'recognized' })
+    expect(cancel).toHaveBeenCalledOnce()
+
+    const pendingCancel = vi.fn()
+    const controller = new AbortController()
+    const pending = createAIRouterClient(
+      bridgeWith({ startSpeechRecognition: vi.fn(() => pendingCancel) })
+    ).recognizeSpeech(
+      {
+        providerConfigId: 'builtin-qwen3-asr',
+        modelId: 'qwen3-asr-0.6b',
+        audio: { data: new Uint8Array([1]), mediaType: 'audio/webm' }
+      },
+      { signal: controller.signal }
+    )
+    controller.abort()
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
+    expect(pendingCancel).toHaveBeenCalledOnce()
+  })
 })
 
 function bridgeWith(overrides: Partial<AIRouterBridge>): AIRouterBridge {
@@ -189,6 +223,21 @@ function bridgeWith(overrides: Partial<AIRouterBridge>): AIRouterBridge {
     readImageProviderApiKey: vi.fn(),
     listImageModels: vi.fn(),
     testImageConnection: vi.fn(),
+    listSpeechProviderConfigs: vi.fn(),
+    saveSpeechProviderConfig: vi.fn(),
+    deleteSpeechProviderConfig: vi.fn(),
+    readSpeechProviderApiKey: vi.fn(),
+    listSpeechModelPackages: vi.fn(),
+    importSpeechModelPackage: vi.fn(),
+    deleteSpeechModelPackage: vi.fn(),
+    listSpeechModels: vi.fn(),
+    listSpeechVoices: vi.fn(),
+    testSpeechConnection: vi.fn(),
+    listSpeechRecognitionModels: vi.fn(),
+    startSpeechRecognition: vi.fn(),
+    listPronunciationAssessmentModels: vi.fn(),
+    startPronunciationAssessment: vi.fn(),
+    startSpeechSynthesis: vi.fn(),
     startTextGeneration: vi.fn(),
     startImageGeneration: vi.fn(),
     ...overrides

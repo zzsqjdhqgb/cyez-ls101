@@ -1,14 +1,12 @@
+import type { InterfaceVarInfo, SchemaAnswerDefinition, SchemaDefinition } from '@ls101/core-types'
 import type {
-  InterfaceVarInfo,
-  SchemaBlockManifestEntry,
-  SchemaFieldDef,
-  SchemaFieldType
-} from '@ls101/core-types'
-import type {
+  ChoiceGroupExpression,
   FrameNode,
   FunctionNode,
+  FunctionInputDef,
   FunctionOutputDef,
-  SchemaBindingExpression,
+  SchemaAnswerBinding,
+  SchemaTextExpression,
   SchemaUse,
   StaticValueExpression,
   StringExpression,
@@ -24,7 +22,7 @@ import { addError, isValidLocalName, type ScopeState, type ValidationState } fro
 export function validateDefinitionScope(
   body: FrameNode,
   schemaUses: readonly SchemaUse[],
-  inputs: readonly { name: string; type: ValueType }[],
+  inputs: readonly FunctionInputDef[],
   outputs: readonly FunctionOutputDef[],
   path: string,
   functionStack: readonly string[],
@@ -40,8 +38,24 @@ export function validateDefinitionScope(
 
   inputs.forEach((input, index) => {
     registerLocalName(input.name, input.type, `${path}.inputs[${index}].name`, true, scope, state)
+    if (input.type === 'choice-group' && input.shape.kind !== 'question') {
+      if (input.shape.pageCounts.length === 0) {
+        addError(state, `${path}.inputs[${index}].shape.pageCounts`, 'INVALID_CHOICE_GROUP_SHAPE')
+      }
+      input.shape.pageCounts.forEach((count, pageIndex) => {
+        if (!Number.isInteger(count) || count <= 0) {
+          addError(
+            state,
+            `${path}.inputs[${index}].shape.pageCounts[${pageIndex}]`,
+            'INVALID_CHOICE_GROUP_SHAPE',
+            { value: count }
+          )
+        }
+      })
+    }
   })
   scanScope(body, path, scope, state)
+  validateVariableCycles(body, path, state)
   outputs.forEach((output, index) => {
     registerLocalName(
       output.name,
@@ -74,6 +88,9 @@ function scanScope(
       break
     case 'page':
       validateContentBlockIds(node, path, state)
+      if (node.timeline.length === 0) {
+        addError(state, `${path}.timeline`, 'EMPTY_PAGE_TIMELINE')
+      }
       node.timeline.forEach((step, index) => {
         if (step.type === 'record') {
           registerLocalName(
@@ -90,6 +107,16 @@ function scanScope(
     case 'choice-question':
       registerLocalName(node.outputName, 'choice', `${path}.outputName`, true, scope, state)
       validateChoiceOptions(node, path, state)
+      break
+    case 'variable':
+      registerLocalName(
+        node.variableName,
+        node.value.type,
+        `${path}.variableName`,
+        true,
+        scope,
+        state
+      )
       break
     case 'function': {
       const func = state.functionsById.get(node.functionRef)
@@ -224,6 +251,14 @@ function validateNodeExpressions(
         if (block.type === 'image') {
           validateValueExpression(block.src, 'file', `${blockPath}.src`, scope, state)
         }
+        if (block.type === 'choice-view') {
+          validateChoiceViewportGroup(
+            block.defaultViewport,
+            `${blockPath}.defaultViewport`,
+            scope,
+            state
+          )
+        }
       })
       node.timeline.forEach((step, index) => {
         const stepPath = `${path}.timeline[${index}]`
@@ -235,7 +270,20 @@ function validateNodeExpressions(
         }
         if (step.type === 'record') {
           validateValueExpression(step.duration, 'number', `${stepPath}.duration`, scope, state)
+          if (step.duration.source === 'literal' && step.duration.value <= 0) {
+            addError(state, `${stepPath}.duration`, 'INVALID_RECORDING_DURATION', {
+              value: step.duration.value
+            })
+          }
         }
+        Object.entries(step.choiceViewOverrides ?? {}).forEach(([blockId, viewport]) =>
+          validateChoiceViewportGroup(
+            viewport,
+            `${stepPath}.choiceViewOverrides[${JSON.stringify(blockId)}]`,
+            scope,
+            state
+          )
+        )
       })
       break
     case 'choice-question':
@@ -247,6 +295,136 @@ function validateNodeExpressions(
     case 'function':
       validateFunctionCall(node, path, scope, functionStack, state)
       break
+    case 'variable':
+      validateStaticExpression(node.value, node.value.type, `${path}.value`, scope, state)
+      break
+  }
+}
+
+interface VariableDeclaration {
+  path: string
+  dependencies: string[]
+}
+
+function validateVariableCycles(body: FrameNode, path: string, state: ValidationState): void {
+  const declarations = new Map<string, VariableDeclaration>()
+  const collect = (node: TemplateNode, nodePath: string): void => {
+    if (node.type === 'frame') {
+      node.children.forEach((child, index) => collect(child, `${nodePath}.children[${index}]`))
+      return
+    }
+    if (node.type !== 'variable' || declarations.has(node.variableName)) return
+    declarations.set(node.variableName, {
+      path: `${nodePath}.value`,
+      dependencies: staticExpressionLocalReferences(node.value)
+    })
+  }
+  collect(body, path)
+
+  const visiting = new Set<string>()
+  const visited = new Set<string>()
+  const stack: string[] = []
+  const reported = new Set<string>()
+  const visit = (name: string): void => {
+    if (visited.has(name)) return
+    if (visiting.has(name)) {
+      const start = stack.indexOf(name)
+      const cycle = [...stack.slice(start), name]
+      for (const member of new Set(cycle)) {
+        if (reported.has(member)) continue
+        const declaration = declarations.get(member)
+        if (declaration) {
+          addError(state, declaration.path, 'CYCLIC_VARIABLE_DEFINITION', {
+            name: member,
+            chain: cycle.join(' -> ')
+          })
+          reported.add(member)
+        }
+      }
+      return
+    }
+    const declaration = declarations.get(name)
+    if (!declaration) return
+    visiting.add(name)
+    stack.push(name)
+    declaration.dependencies.forEach((dependency) => visit(dependency))
+    stack.pop()
+    visiting.delete(name)
+    visited.add(name)
+  }
+  declarations.forEach((_declaration, name) => visit(name))
+}
+
+function staticExpressionLocalReferences(expression: StaticValueExpression): string[] {
+  if ('parts' in expression) {
+    return expression.parts.flatMap((part) =>
+      part.type === 'variable' && part.ref.scope === 'local' ? [part.ref.name] : []
+    )
+  }
+  return expression.source === 'variable' && expression.ref.scope === 'local'
+    ? [expression.ref.name]
+    : []
+}
+
+function validateChoiceViewportGroup(
+  viewport: import('../types').ChoiceViewport,
+  path: string,
+  scope: ScopeState,
+  state: ValidationState
+): void {
+  if (!('group' in viewport)) return
+  const group = viewport.group
+  const symbol = scope.symbols.get(group.name)
+  if (!symbol) {
+    addError(state, `${path}.group`, 'UNKNOWN_LOCAL_VARIABLE', { name: group.name })
+    return
+  }
+  if (symbol.type !== 'choice-group') {
+    addError(state, `${path}.group`, 'EXPRESSION_TYPE_MISMATCH', {
+      expected: 'choice-group',
+      actual: symbol.type
+    })
+  }
+}
+
+function validateChoiceGroupExpression(
+  expression: ChoiceGroupExpression,
+  path: string,
+  scope: ScopeState,
+  state: ValidationState
+): void {
+  if (expression.selection.kind === 'range') {
+    if (!Number.isInteger(expression.selection.startPage) || expression.selection.startPage < 0) {
+      addError(state, `${path}.selection.startPage`, 'INVALID_CHOICE_GROUP_SELECTION', {
+        value: expression.selection.startPage
+      })
+    }
+  } else if (expression.selection.kind === 'question') {
+    if (!Number.isInteger(expression.selection.pageIndex) || expression.selection.pageIndex < 0) {
+      addError(state, `${path}.selection.pageIndex`, 'INVALID_CHOICE_GROUP_SELECTION', {
+        value: expression.selection.pageIndex
+      })
+    }
+    if (
+      !Number.isInteger(expression.selection.questionIndex) ||
+      expression.selection.questionIndex < 0
+    ) {
+      addError(state, `${path}.selection.questionIndex`, 'INVALID_CHOICE_GROUP_SELECTION', {
+        value: expression.selection.questionIndex
+      })
+    }
+  }
+  if (expression.source !== 'local') return
+  const symbol = scope.symbols.get(expression.name)
+  if (!symbol) {
+    addError(state, path, 'UNKNOWN_LOCAL_VARIABLE', { name: expression.name })
+    return
+  }
+  if (symbol.type !== 'choice-group') {
+    addError(state, path, 'EXPRESSION_TYPE_MISMATCH', {
+      expected: 'choice-group',
+      actual: symbol.type
+    })
   }
 }
 
@@ -270,10 +448,22 @@ function validateFunctionCall(
       addError(state, `${path}.inputs`, 'MISSING_FUNCTION_INPUT', { name: input.name })
       return
     }
+    const inputPath = `${path}.inputs[${JSON.stringify(input.name)}]`
+    if (input.type === 'choice-group') {
+      if (expression.type !== 'choice-group') {
+        addError(state, inputPath, 'EXPRESSION_TYPE_MISMATCH', {
+          expected: 'choice-group',
+          actual: expression.type
+        })
+      } else {
+        validateChoiceGroupExpression(expression, inputPath, callerScope, state)
+      }
+      return
+    }
     validateStaticExpression(
-      expression,
+      expression as StaticValueExpression,
       input.type,
-      `${path}.inputs[${JSON.stringify(input.name)}]`,
+      inputPath,
       callerScope,
       state
     )
@@ -498,7 +688,6 @@ function validateSchemaUses(
   scope: ScopeState,
   state: ValidationState
 ): void {
-  state.schemaUseCount += uses.length
   const useIds = new Set<string>()
 
   uses.forEach((use, index) => {
@@ -516,107 +705,140 @@ function validateSchemaUses(
       addError(state, `${usePath}.schemaId`, 'UNKNOWN_SCHEMA', { schemaId: use.schemaId })
       return
     }
-    const block = schema.blocks.find((item) => item.blockId === use.blockId)
-    if (!block) {
-      addError(state, `${usePath}.blockId`, 'UNKNOWN_SCHEMA_BLOCK', {
-        schemaId: use.schemaId,
-        blockId: use.blockId
-      })
-      return
-    }
-    validateSchemaBindings(use, block, usePath, scope, state)
+    validateSchemaBindings(use, schema, usePath, scope, state)
   })
 }
 
 function validateSchemaBindings(
   use: SchemaUse,
-  block: SchemaBlockManifestEntry,
+  schema: SchemaDefinition,
   path: string,
   scope: ScopeState,
   state: ValidationState
 ): void {
-  const fields = new Map(block.fields.map((field) => [field.varName, field]))
-  block.fields.forEach((field) => {
-    const expression = use.bindings[field.varName]
+  const attachments = new Set<string>()
+  use.attachments.forEach((attachment, index) => {
+    const attachmentPath = `${path}.attachments[${index}]`
+    if (!isValidLocalName(attachment.varName)) {
+      addError(state, `${attachmentPath}.varName`, 'INVALID_SCHEMA_ATTACHMENT_NAME', {
+        varName: attachment.varName
+      })
+    }
+    if (attachments.has(attachment.varName)) {
+      addError(state, `${attachmentPath}.varName`, 'DUPLICATE_SCHEMA_ATTACHMENT_NAME', {
+        varName: attachment.varName
+      })
+    }
+    attachments.add(attachment.varName)
+    validateValueExpression(attachment.file, 'file', `${attachmentPath}.file`, scope, state)
+  })
+
+  const inputs = new Map(schema.structure.templateInputs.map((input) => [input.inputId, input]))
+  schema.structure.templateInputs.forEach((input) => {
+    const expression = use.inputBindings[input.inputId]
     if (!expression) {
-      addError(state, `${path}.bindings`, 'MISSING_SCHEMA_BINDING', { varName: field.varName })
+      if (input.required) {
+        addError(state, `${path}.inputBindings`, 'MISSING_SCHEMA_INPUT_BINDING', {
+          inputId: input.inputId
+        })
+      }
       return
     }
-    validateSchemaBinding(
+    validateSchemaTextExpression(
       expression,
-      field,
-      `${path}.bindings[${JSON.stringify(field.varName)}]`,
+      `${path}.inputBindings[${JSON.stringify(input.inputId)}]`,
+      attachments,
       scope,
       state
     )
   })
-  for (const varName of Object.keys(use.bindings)) {
-    if (!fields.has(varName)) {
-      addError(state, `${path}.bindings[${JSON.stringify(varName)}]`, 'UNKNOWN_SCHEMA_BINDING', {
-        varName
+  for (const inputId of Object.keys(use.inputBindings)) {
+    if (!inputs.has(inputId)) {
+      addError(
+        state,
+        `${path}.inputBindings[${JSON.stringify(inputId)}]`,
+        'UNKNOWN_SCHEMA_INPUT_BINDING',
+        { inputId }
+      )
+    }
+  }
+
+  const answers = new Map(schema.structure.answerFormat.map((answer) => [answer.answerId, answer]))
+  schema.structure.answerFormat.forEach((answer) => {
+    const binding = use.answerBindings[answer.answerId]
+    if (!binding) {
+      addError(state, `${path}.answerBindings`, 'MISSING_SCHEMA_ANSWER_BINDING', {
+        answerId: answer.answerId
       })
+      return
+    }
+    validateSchemaAnswerBinding(
+      binding,
+      answer,
+      `${path}.answerBindings[${JSON.stringify(answer.answerId)}]`,
+      attachments,
+      scope,
+      state
+    )
+  })
+  for (const answerId of Object.keys(use.answerBindings)) {
+    if (!answers.has(answerId)) {
+      addError(
+        state,
+        `${path}.answerBindings[${JSON.stringify(answerId)}]`,
+        'UNKNOWN_SCHEMA_ANSWER_BINDING',
+        { answerId }
+      )
     }
   }
 }
 
-function validateSchemaBinding(
-  expression: SchemaBindingExpression,
-  field: SchemaFieldDef,
+function validateSchemaAnswerBinding(
+  binding: SchemaAnswerBinding,
+  answer: SchemaAnswerDefinition,
   path: string,
+  attachments: ReadonlySet<string>,
   scope: ScopeState,
   state: ValidationState
 ): void {
-  if (field.type === 'text') {
-    validateTextSchemaBinding(expression, path, scope, state)
+  if (binding.type !== answer.type) {
+    addError(state, path, 'SCHEMA_ANSWER_TYPE_MISMATCH', {
+      expected: answer.type,
+      actual: binding.type
+    })
     return
   }
 
-  const expected = field.type
-  if (expected === 'audio' && expression.type === 'record-output') {
-    validateOutputReference(expression.name, 'audio', path, scope, state)
-    return
+  switch (binding.type) {
+    case 'text':
+      validateOutputReference(binding.name, 'choice', path, scope, state)
+      break
+    case 'fixed-speech':
+      validateSchemaTextExpression(binding.text, `${path}.text`, attachments, scope, state)
+      validateOutputReference(binding.audio.name, 'audio', `${path}.audio`, scope, state)
+      break
+    case 'free-speech':
+      validateOutputReference(binding.audio.name, 'audio', `${path}.audio`, scope, state)
+      break
   }
-  if (expected === 'choice' && expression.type === 'choice-output') {
-    validateOutputReference(expression.name, 'choice', path, scope, state)
-    return
-  }
-  addSchemaTypeError(state, path, expected, expression.type)
 }
 
-function validateTextSchemaBinding(
-  expression: SchemaBindingExpression,
+function validateSchemaTextExpression(
+  expression: SchemaTextExpression,
   path: string,
+  attachments: ReadonlySet<string>,
   scope: ScopeState,
   state: ValidationState
 ): void {
-  switch (expression.type) {
-    case 'literal':
-      if (typeof expression.value !== 'string') {
-        addSchemaTypeError(state, path, 'text', 'number')
+  expression.parts.forEach((part, index) => {
+    if (part.type !== 'variable') return
+    const partPath = `${path}.parts[${index}]`
+    if (part.ref.scope === 'schema-use') {
+      if (!attachments.has(part.ref.varName)) {
+        addError(state, partPath, 'UNKNOWN_SCHEMA_ATTACHMENT', { varName: part.ref.varName })
       }
-      break
-    case 'variable':
-      validateVariableRef(expression, 'string', path, scope, state)
-      break
-    case 'concat':
-      expression.parts.forEach((part, index) => {
-        if (part.type === 'variable') {
-          validateVariableRef(part, 'string', `${path}.parts[${index}]`, scope, state)
-        }
-      })
-      break
-    case 'record-output':
-    case 'choice-output':
-      addSchemaTypeError(state, path, 'text', expression.type)
-      break
-  }
-}
-
-function addSchemaTypeError(
-  state: ValidationState,
-  path: string,
-  expected: SchemaFieldType,
-  actual: string
-): void {
-  addError(state, path, 'SCHEMA_BINDING_TYPE_MISMATCH', { expected, actual })
+      return
+    }
+    validateVariableRef(part.ref, 'string', partPath, scope, state)
+  })
 }

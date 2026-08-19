@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState, type JSX } from 'react'
 import type { PublishedInterfaceSummary } from '@ls101/interface-editor'
-import { AlertCircle, ArrowRight, FileDown, FilePenLine, Shapes } from 'lucide-react'
+import { AlertCircle, FileDown, Shapes } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { Button } from '../../components/ui/Button'
+import { ActionMenu, ActionMenuItem } from '../../components/ui/ActionMenu'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Page, PageHeader } from '../../components/ui/Page'
-import { toast } from '../../components/ui/toast'
 import { useInterfaceApplication } from './InterfaceApplicationContext'
 import { errorMessage } from './interfaceUi'
 import shared from './InterfaceShared.module.css'
@@ -62,9 +61,7 @@ export function InterfaceListPage(): JSX.Element {
     try {
       const session = await application.transfer.beginImport()
       if (!session) return
-      await session.commit({ mode: 'all' })
-      await load()
-      toast.success('题型已导入')
+      navigate('/interfaces/import', { state: { session } })
     } catch (reason) {
       setError(errorMessage(reason))
     } finally {
@@ -75,18 +72,33 @@ export function InterfaceListPage(): JSX.Element {
   return (
     <Page>
       <PageHeader
-        title="题型"
+        title="题型库"
         actions={
-          <>
-            <Button icon={FileDown} disabled={importing} onClick={() => void importInterface()}>
-              {importing ? '正在导入' : '导入'}
-            </Button>
-            <Button icon={FilePenLine} onClick={() => navigate('/interfaces/drafts')}>
-              草稿
-            </Button>
-          </>
+          <ActionMenu label="题型库操作">
+            <ActionMenuItem
+              disabled={importing}
+              icon={FileDown}
+              onSelect={() => void importInterface()}
+            >
+              {importing ? '正在导入' : '导入题型'}
+            </ActionMenuItem>
+          </ActionMenu>
         }
       />
+
+      <div className={shared.tabs} role="tablist" aria-label="题型库内容">
+        <button aria-selected="true" role="tab" type="button">
+          题型
+        </button>
+        <button
+          aria-selected="false"
+          role="tab"
+          type="button"
+          onClick={() => navigate('/interfaces/drafts')}
+        >
+          草稿
+        </button>
+      </div>
 
       {error ? (
         <div className={shared.notice} role="alert">
@@ -101,27 +113,20 @@ export function InterfaceListPage(): JSX.Element {
         <div className={shared.list}>
           {items.map((item) => (
             <article className={shared.row} key={item.interfaceId}>
-              <div className={shared.rowMain}>
-                <button
-                  className={shared.rowTitle}
-                  onClick={() => navigate(`/interfaces/${encodeURIComponent(item.interfaceId)}`)}
-                  type="button"
-                >
-                  {item.name}
-                </button>
+              <button
+                aria-label={item.name}
+                className={shared.rowPrimary}
+                onClick={() => navigate(`/interfaces/${encodeURIComponent(item.interfaceId)}`)}
+                type="button"
+              >
+                <span className={shared.rowTitle}>{item.name}</span>
                 <div className={shared.rowSubline}>
                   <span>{item.instanceCount} 个题组</span>
                   <p className={shared.rowDescription}>{item.description || '暂无描述'}</p>
                 </div>
-              </div>
+              </button>
               <div className={shared.rowActions}>
                 {item.source.type === 'builtin' ? <span className={shared.badge}>内置</span> : null}
-                <Button
-                  icon={ArrowRight}
-                  onClick={() => navigate(`/interfaces/${encodeURIComponent(item.interfaceId)}`)}
-                >
-                  进入
-                </Button>
               </div>
             </article>
           ))}

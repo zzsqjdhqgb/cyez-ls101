@@ -69,8 +69,6 @@ export function validateTemplateContent(
   const choice = analyzeChoiceFrame(content.root, 'root', [], state)
   validateChoiceResult(choice, state)
 
-  if (state.schemaUseCount === 0) addError(state, 'schemaUses', 'NO_SCHEMA_USE')
-
   return state.errors.length === 0
     ? { valid: true, errors: [] }
     : { valid: false, errors: state.errors }

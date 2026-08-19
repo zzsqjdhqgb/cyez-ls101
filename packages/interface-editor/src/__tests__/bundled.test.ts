@@ -29,8 +29,66 @@ const content: InterfaceContent = {
   }
 }
 
+const EXPECTED_GAOKAO_SPEAKING_VAR_NAMES = [
+  'sentence_1',
+  'sentence_2',
+  'passage_1',
+  'situation_1',
+  'situation_std_1',
+  'situation_2',
+  'situation_std_2',
+  'picture_file1',
+  'picture_file2',
+  'picture_file3',
+  'picture_file4',
+  'picture_start',
+  'picture_std',
+  'quickresp_1',
+  'quickresp_std_1',
+  'quickresp_2',
+  'quickresp_std_2',
+  'quickresp_3',
+  'quickresp_std_3',
+  'quickresp_4',
+  'quickresp_std_4',
+  'LS_passage_topic',
+  'LS_passage',
+  'LS_question_1',
+  'LS_question_std_1',
+  'LS_question_2',
+  'LS_question_std_2'
+]
+
+const EXPECTED_ZHONGKAO_SPEAKING_VAR_NAMES = [
+  'phrase_1_display',
+  'phrase_1',
+  'phrase_2',
+  'phrase_3',
+  'sentence_1',
+  'sentence_2',
+  'quickresponse_1',
+  'quickresponse_2',
+  'quickresponse_3',
+  'quickresponse_4',
+  'quickresponse_5',
+  '3_dialogue_topic',
+  '3_dialogue',
+  '3_picture',
+  '4_topic',
+  '4_picture'
+]
+
+const EXPECTED_GAOKAO_LISTENING_VAR_NAMES = [
+  ...Array.from({ length: 10 }, (_, index) => listeningQuestionVarNames(index + 1, 'dialogue')),
+  'passage_text_1',
+  ...Array.from({ length: 6 }, (_, index) => listeningQuestionVarNames(index + 11)),
+  'passage_text_2',
+  ...Array.from({ length: 4 }, (_, index) => listeningQuestionVarNames(index + 17)),
+  'dialogue_long_text'
+].flat()
+
 describe('bundled Interface repository', () => {
-  it('加载上海高考英语口语 builtin 并覆盖旧模板的全部 editableData', async () => {
+  it('加载上海高考英语口语 builtin 的完整字段契约', async () => {
     const repository = new FileBundledInterfaceRepository(
       new DiskReadonlyStore('resources/builtin/interface-editor')
     )
@@ -38,17 +96,23 @@ describe('bundled Interface repository', () => {
     const entries = await repository.loadAll()
     const entry = entries.find(({ builtinKey }) => builtinKey === 'shanghai-gaokao-speaking')
     expect(entry?.currentInterface).toMatchObject({
-      id: 'sha256:d1eb371653899bd7756f00d3871ca9d10437353c3c91a4398fbecb74c6cdbf25',
+      id: 'sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14',
       name: '上海高考英语口语'
     })
     if (!entry) throw new Error('expected Shanghai Gaokao speaking builtin')
+    expect(entry.currentInterface.promptTemplate).toContain('100至150词')
+    expect(entry.currentInterface.promptTemplate).toContain('适合约1分钟陈述')
+    expect(entry.currentInterface.promptTemplate).not.toContain('适合约1.5分钟陈述')
+    expect(entry.currentInterface.promptTemplate).toContain(
+      '不要为学生生成评分、训练建议或作答反馈'
+    )
+    expect(entry.currentInterface.promptTemplate).toContain("As far as I'm concerned")
+    expect(entry.currentInterface.promptTemplate).toContain('In the foreground/background')
+    expect(entry.currentInterface.promptTemplate).toContain('明确包含1:1正方形画幅要求')
 
     const leaves = flattenFields(entry.currentInterface.fields)
     const leavesByVarName = new Map(leaves.map(({ leaf }) => [leaf.varName, leaf]))
-    const legacyFields = await loadLegacyShanghaiGaokaoFields()
-    expect(leaves.map(({ leaf }) => leaf.varName).sort()).toEqual(
-      legacyFields.map(({ id }) => id).sort()
-    )
+    expectVarNames(leaves, EXPECTED_GAOKAO_SPEAKING_VAR_NAMES)
     expect(
       leaves.filter(({ leaf }) => leaf.type === 'image').map(({ leaf }) => leaf.varName)
     ).toEqual(['picture_file1', 'picture_file2', 'picture_file3', 'picture_file4'])
@@ -56,8 +120,70 @@ describe('bundled Interface repository', () => {
     expect(leavesByVarName.get('picture_start')?.example).toBe('It was Sunday morning.')
     for (const varName of ['picture_file1', 'picture_file2', 'picture_file3', 'picture_file4']) {
       expect(leavesByVarName.get(varName)?.example).not.toMatch(/[\u3400-\u9fff]/u)
+      expect(leavesByVarName.get(varName)?.description).toContain('1:1正方形画幅')
+      expect(leavesByVarName.get(varName)?.example).toContain('square 1:1 aspect ratio')
     }
-    expect(legacyFields).toHaveLength(27)
+  })
+
+  it('加载上海中考英语口语 builtin 的完整字段契约', async () => {
+    const repository = new FileBundledInterfaceRepository(
+      new DiskReadonlyStore('resources/builtin/interface-editor')
+    )
+
+    const entries = await repository.loadAll()
+    const entry = entries.find(({ builtinKey }) => builtinKey === 'shanghai-zhongkao-speaking')
+    expect(entry?.currentInterface).toMatchObject({
+      id: 'sha256:fd1bd229ebd711dce3655bdc3a4b41a9ecb93ce273b7643307a726ae403cc884',
+      name: '上海中考英语口语'
+    })
+    if (!entry) throw new Error('expected Shanghai Zhongkao speaking builtin')
+    expect(entry.currentInterface.promptTemplate).toContain('朗读词组')
+    expect(entry.currentInterface.promptTemplate).toContain('听后复述')
+    expect(entry.currentInterface.promptTemplate).toContain('no text')
+
+    const leaves = flattenFields(entry.currentInterface.fields)
+    expectVarNames(leaves, EXPECTED_ZHONGKAO_SPEAKING_VAR_NAMES)
+    expect(
+      leaves.filter(({ leaf }) => leaf.type === 'image').map(({ leaf }) => leaf.varName)
+    ).toEqual(['3_picture', '4_picture'])
+    for (const { leaf } of leaves.filter(({ leaf }) => leaf.type === 'image')) {
+      expect(leaf.example).not.toMatch(/[\u3400-\u9fff]/u)
+      expect(leaf.example).toContain('no text')
+    }
+  })
+
+  it('加载上海高考英语听力 builtin 的完整字段契约', async () => {
+    const repository = new FileBundledInterfaceRepository(
+      new DiskReadonlyStore('resources/builtin/interface-editor')
+    )
+
+    const entries = await repository.loadAll()
+    const entry = entries.find(({ builtinKey }) => builtinKey === 'shanghai-gaokao-listening')
+    expect(entry?.currentInterface).toMatchObject({
+      id: 'sha256:03e00d7f007b7b2281e13429ec89220d3d5abfa218f1f953f0d3c64ff1489838',
+      name: '上海高考英语听力'
+    })
+    if (!entry) throw new Error('expected Shanghai Gaokao listening builtin')
+    expect(entry.currentInterface.promptTemplate).toContain('10段短对话')
+    expect(entry.currentInterface.promptTemplate).toContain('只有一个无争议的最佳答案')
+    expect(entry.currentInterface.promptTemplate).toContain('“[Man]:”或“[Woman]:”')
+    expect(entry.currentInterface.fields.order).toEqual([
+      'shortDialogues',
+      'passages',
+      'longConversation'
+    ])
+
+    const leaves = flattenFields(entry.currentInterface.fields)
+    expectVarNames(leaves, EXPECTED_GAOKAO_LISTENING_VAR_NAMES)
+    expect(leaves.every(({ leaf }) => leaf.type === 'text')).toBe(true)
+    const dialogues = leaves.filter(({ leaf }) => leaf.varName.startsWith('dialogue_'))
+    expect(dialogues).toHaveLength(11)
+    for (const { leaf } of dialogues) {
+      expect(leaf.example.split('\n').every((line) => /^\[(Man|Woman)\]: /.test(line))).toBe(true)
+    }
+    const answers = leaves.filter(({ leaf }) => leaf.varName.startsWith('answer_'))
+    expect(answers).toHaveLength(20)
+    expect(new Set(answers.map(({ leaf }) => leaf.example))).toEqual(new Set(['A', 'B', 'C', 'D']))
   })
 
   it('按 builtinKey 和内容摘要读取独立 Interface 文件', async () => {
@@ -143,25 +269,23 @@ describe('bundled Interface repository', () => {
   })
 })
 
-const LEGACY_CHUNKS = [
-  '01_sectionA_reading.json',
-  '02_sectionB_passage.json',
-  '03_sectionC_situation.json',
-  '04_sectionD_picture.json',
-  '05_LS_sectionA_quickresponse.json',
-  '06_LS_sectionB_passage.json'
-]
+function listeningQuestionVarNames(questionNumber: number, prefix?: 'dialogue'): string[] {
+  return [
+    ...(prefix ? [`${prefix}_text_${questionNumber}`] : []),
+    `stem_${questionNumber}`,
+    `opt_${questionNumber}_A`,
+    `opt_${questionNumber}_B`,
+    `opt_${questionNumber}_C`,
+    `opt_${questionNumber}_D`,
+    `answer_${questionNumber}`
+  ]
+}
 
-async function loadLegacyShanghaiGaokaoFields(): Promise<Array<{ id: string; type: string }>> {
-  const fields = await Promise.all(
-    LEGACY_CHUNKS.map(async (filename) => {
-      const value = JSON.parse(
-        await readFile(path.join('templates/SH-gaokao-speaking/chunk', filename), 'utf8')
-      ) as { editableData: Array<{ id: string; type: string }> }
-      return value.editableData
-    })
-  )
-  return fields.flat()
+function expectVarNames(
+  leaves: readonly { leaf: { varName: string } }[],
+  expected: readonly string[]
+): void {
+  expect(leaves.map(({ leaf }) => leaf.varName).sort()).toEqual([...expected].sort())
 }
 
 function bundledStore(builtinKey: string, def: InterfaceDef): MemoryStore {

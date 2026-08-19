@@ -10,7 +10,7 @@ export type ValueType = 'string' | 'number' | 'file'
 /** 只能在 ExamPlayer 运行期间产生的值类型。 */
 export type RuntimeValueType = 'audio' | 'choice'
 
-export type TemplateValueType = ValueType | RuntimeValueType
+export type TemplateValueType = ValueType | RuntimeValueType | 'choice-group'
 
 export interface ValueTypeMap {
   string: string
@@ -76,6 +76,31 @@ export type StaticValueExpression =
   | ValueExpression<'number'>
   | ValueExpression<'file'>
 
+export type FunctionInputExpression = StaticValueExpression | ChoiceGroupExpression
+
+export type ChoiceGroupShape =
+  | { kind: 'question' }
+  | { kind: 'range'; pageCounts: number[] }
+  | { kind: 'all'; pageCounts: number[] }
+
+export type ChoiceGroupSelection =
+  | { kind: 'all' }
+  | { kind: 'range'; startPage: number }
+  | { kind: 'question'; pageIndex: number; questionIndex: number }
+
+export type ChoiceGroupExpression =
+  | {
+      type: 'choice-group'
+      source: 'global'
+      selection: ChoiceGroupSelection
+    }
+  | {
+      type: 'choice-group'
+      source: 'local'
+      name: string
+      selection: ChoiceGroupSelection
+    }
+
 // ============================================================
 // 页面内容和时间线
 // ============================================================
@@ -104,6 +129,7 @@ export interface ImageBlock {
   x: number
   y: number
   width: number
+  height: number
   src: ValueExpression<'file'>
 }
 
@@ -117,16 +143,40 @@ export interface ChoiceViewBlock {
   defaultViewport: ChoiceViewport
 }
 
-export type ChoiceViewport = FreeChoiceViewport | FocusChoiceViewport | RangeChoiceViewport
+export type ChoiceViewport =
+  | FreeChoiceViewport
+  | FocusChoiceViewport
+  | RangeChoiceViewport
+  | ChoiceGroupFreeViewport
+  | ChoiceGroupFocusViewport
+  | ChoiceGroupRangeViewport
 
 export interface FreeChoiceViewport {
   mode: 'free'
   initialPage?: number
 }
 
+export interface ChoiceGroupRef {
+  scope: 'local'
+  name: string
+}
+
+export interface ChoiceGroupFreeViewport {
+  mode: 'free'
+  group: ChoiceGroupRef
+  initialPage?: number
+}
+
 export interface FocusChoiceViewport {
   mode: 'focus'
   questionRef: ChoiceQuestionRef
+}
+
+export interface ChoiceGroupFocusViewport {
+  mode: 'focus'
+  group: ChoiceGroupRef
+  pageIndex: number
+  questionIndex: number
 }
 
 /**
@@ -141,6 +191,14 @@ export interface ChoiceQuestionRef {
 
 export interface RangeChoiceViewport {
   mode: 'range'
+  startPage: number
+  endPage: number
+  initialPage?: number
+}
+
+export interface ChoiceGroupRangeViewport {
+  mode: 'range'
+  group: ChoiceGroupRef
   startPage: number
   endPage: number
   initialPage?: number
@@ -174,7 +232,7 @@ export type TimelineStep = TimelineAction & {
 // DSL 节点
 // ============================================================
 
-export type TemplateNode = PageNode | FrameNode | FunctionNode | ChoiceQuestionNode
+export type TemplateNode = PageNode | FrameNode | FunctionNode | ChoiceQuestionNode | VariableNode
 
 export interface BaseNode {
   id: string
@@ -198,7 +256,7 @@ export interface FunctionNode extends BaseNode {
   type: 'function'
   /** 在函数源文档中引用函数库 UUID；嵌入 Template 后改写为 FunctionDef 内容 ID。 */
   functionRef: string
-  inputs: Record<string, StaticValueExpression>
+  inputs: Record<string, FunctionInputExpression>
   /** key 是函数出参名，value 是该次调用在调用方作用域中暴露的名称。 */
   outputNames: Record<string, string>
 }
@@ -208,6 +266,13 @@ export interface ChoiceQuestionNode extends BaseNode {
   stem: TextExpression
   options: ChoiceOptionDef[]
   outputName: string
+}
+
+/** 在当前 Template 或函数定义作用域内声明一个不可变的静态变量。 */
+export interface VariableNode extends BaseNode {
+  type: 'variable'
+  variableName: string
+  value: StaticValueExpression
 }
 
 export interface ChoiceOptionDef {
@@ -249,6 +314,8 @@ export interface FunctionDocument {
 export interface FunctionLibraryEntry {
   functionId: string
   content: FunctionContent
+  /** false 表示由跨库调用复制而来的内部依赖，不作为库的可编辑入口展示。 */
+  exposed?: boolean
 }
 
 export interface FunctionLibraryContent {
@@ -262,7 +329,6 @@ export interface FunctionLibraryEditorState {
 }
 
 export interface FunctionLibraryExportState {
-  version: number
   contentHash: string
 }
 
@@ -270,8 +336,10 @@ export interface FunctionLibraryExportState {
 export interface LocalFunctionLibraryDocument {
   /** 稳定 UUID。 */
   libraryId: string
-  /** 仓储乐观并发版本；每次成功更新后递增。 */
+  /** 导出修订号；仅在导出内容相对上次导出发生变化时递增。 */
   revision: number
+  /** 仓储乐观并发版本；每次成功保存后递增，不属于函数库导出语义。 */
+  storageRevision: number
   content: FunctionLibraryContent
   editorState: FunctionLibraryEditorState
   /** 仅用于辅助下一次导出，不属于函数库语义内容。 */
@@ -308,10 +376,16 @@ export interface FunctionDef extends FunctionContent {
   id: string
 }
 
-export interface FunctionInputDef {
-  name: string
-  type: ValueType
-}
+export type FunctionInputDef =
+  | {
+      name: string
+      type: ValueType
+    }
+  | {
+      name: string
+      type: 'choice-group'
+      shape: ChoiceGroupShape
+    }
 
 export interface StringFunctionOutputDef {
   name: string
@@ -371,50 +445,62 @@ export type OutputExpression =
 // Schema 消费
 // ============================================================
 
-/** 一次评分块消费；schemaId 和 blockId 共同锁定其字段契约。 */
+/** 仅在当前 SchemaUse 文本绑定内可见的附件变量。 */
+export interface SchemaAttachmentVariableRef {
+  scope: 'schema-use'
+  varName: string
+}
+
+export type SchemaTextVariableRef = VariableRef | SchemaAttachmentVariableRef
+
+export type SchemaTextExpressionPart = TextLiteralPart | SchemaTextVariablePart
+
+export interface SchemaTextVariablePart {
+  type: 'variable'
+  ref: SchemaTextVariableRef
+}
+
+/** 支持 [@this.varName] 附件引用的 SchemaUse 文本表达式。 */
+export interface SchemaTextExpression {
+  type: 'string'
+  parts: SchemaTextExpressionPart[]
+}
+
+/** 一次 Schema 消费，对应试卷中的一个实际评分单元。 */
 export interface SchemaUse {
   useId: string
   schemaId: string
-  blockId: string
-  bindings: Record<string, SchemaBindingExpression>
+  inputBindings: Record<string, SchemaTextExpression>
+  answerBindings: Record<string, SchemaAnswerBinding>
+  attachments: SchemaUseAttachment[]
 }
 
-export type SchemaBindingExpression =
-  | SchemaLiteralExpression
-  | SchemaVariableExpression
-  | SchemaConcatExpression
-  | SchemaRecordOutputExpression
-  | SchemaChoiceOutputExpression
-
-export interface SchemaLiteralExpression {
-  type: 'literal'
-  value: string | number
+export interface SchemaUseAttachment {
+  varName: string
+  description: string
+  file: ValueExpression<'file'>
 }
 
-export type SchemaVariableExpression = VariableRef & {
-  type: 'variable'
-}
+export type SchemaAnswerBinding =
+  | SchemaTextAnswerBinding
+  | SchemaFixedSpeechAnswerBinding
+  | SchemaFreeSpeechAnswerBinding
 
-export interface SchemaConcatExpression {
-  type: 'concat'
-  parts: SchemaConcatPart[]
-}
-
-export type SchemaConcatPart = SchemaConcatLiteralPart | SchemaVariableExpression
-
-export interface SchemaConcatLiteralPart {
-  type: 'literal'
-  value: string
-}
-
-export interface SchemaRecordOutputExpression {
-  type: 'record-output'
+export interface SchemaTextAnswerBinding {
+  type: 'text'
+  source: 'choice-output'
   name: string
 }
 
-export interface SchemaChoiceOutputExpression {
-  type: 'choice-output'
-  name: string
+export interface SchemaFixedSpeechAnswerBinding {
+  type: 'fixed-speech'
+  text: SchemaTextExpression
+  audio: RecordOutputExpression
+}
+
+export interface SchemaFreeSpeechAnswerBinding {
+  type: 'free-speech'
+  audio: RecordOutputExpression
 }
 
 // ============================================================
@@ -431,6 +517,7 @@ export interface TemplateInterfaceRequirement {
 export interface TemplateContent {
   name: string
   description: string
+  tags?: string[]
   interfaces: TemplateInterfaceRequirement[]
   root: FrameNode
   schemaUses: SchemaUse[]
@@ -453,6 +540,21 @@ export interface TemplateDocument {
   content: TemplateContent
   resources: TemplateResources
   editorState: DslEditorState
+}
+
+/** 随软件发布的不可变 Template 快照；不具有本地工作文档 revision。 */
+export interface BuiltinTemplateRelease {
+  /** 跨版本稳定的 UUID。 */
+  templateId: string
+  /** 从 1 开始递增的发布版本。 */
+  version: number
+  /** document 规范化后的 sha256 摘要。 */
+  releaseHash: string
+  document: {
+    content: TemplateContent
+    resources: TemplateResources
+    editorState: DslEditorState
+  }
 }
 
 /** 编辑器私有 JSON 状态，例如画布位置、折叠和选中状态；不参与校验或编译。 */

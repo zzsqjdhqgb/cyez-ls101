@@ -1,15 +1,20 @@
 import type {
-  ExamPage,
+  CompiledSchemaInput,
   ExamPackage,
+  ExamResourceManifest,
+  ExamResourceEntry,
   InterfaceInstance,
   InterfaceVarManifest,
+  PlayerChoiceMeta,
   PlayerChoiceQuestion,
-  SchemaBlockManifest,
-  SchemaUsageExport
+  ResolvedChoiceViewport,
+  ResolvedContentBlock,
+  SchemaDefinition
 } from '@ls101/core-types'
 import type {
   ExportInterfaceInstanceSelection,
   FunctionDef,
+  ChoiceGroupShape,
   TemplateValueType,
   ValueType
 } from '../types'
@@ -24,13 +29,21 @@ export type TemplateInterfaceBinding = ExportInterfaceInstanceSelection
 export interface LocatedInterfaceInstance {
   interfaceId: string
   instance: InterfaceInstance
+  /** 文件名到可读源 URL 的映射，仅供编译时收集资源。 */
+  assetUrls: Readonly<Record<string, string>>
 }
 
 export interface TemplateCompileContext extends TemplateDocumentValidationContext {
   interfaceBindings: readonly TemplateInterfaceBinding[]
+  synthesizeSpeech?(text: string): Promise<GeneratedTimelineAudio>
   locateInterfaceInstance(
     instanceId: string
   ): LocatedInterfaceInstance | null | Promise<LocatedInterfaceInstance | null>
+}
+
+export interface GeneratedTimelineAudio {
+  data: Uint8Array
+  mediaType: string
 }
 
 export type TemplateCompileErrorCode =
@@ -42,7 +55,17 @@ export type TemplateCompileErrorCode =
   | 'MISSING_INTERFACE_VALUE'
   | 'STATIC_VALUE_CYCLE'
   | 'UNRESOLVED_VALUE'
+  | 'RESOURCE_SOURCE_NOT_FOUND'
+  | 'SPEECH_SYNTHESIZER_MISSING'
+  | 'SPEECH_SYNTHESIS_FAILED'
+  | 'INVALID_SYNTHESIZED_AUDIO'
+  | 'EMPTY_PLAYER_PAGES'
+  | 'INVALID_RECORDING_DURATION'
   | 'UNKNOWN_FOCUS_QUESTION'
+  | 'UNKNOWN_CHOICE_GROUP'
+  | 'CHOICE_GROUP_NOT_AVAILABLE'
+  | 'CHOICE_GROUP_OUT_OF_RANGE'
+  | 'CHOICE_GROUP_SHAPE_MISMATCH'
 
 export type TemplateCompileError =
   | { stage: 'validation'; error: TemplateValidationError }
@@ -54,13 +77,120 @@ export type TemplateCompileError =
     }
 
 export type TemplateCompileResult =
-  | { success: true; examPackage: ExamPackage }
+  | {
+      success: true
+      examPackage: ExamPackage
+      /** 写入试卷归档时使用，不属于持久化 ExamPackage JSON。 */
+      resourceSources: readonly ExamResourceSource[]
+    }
   | { success: false; errors: readonly TemplateCompileError[] }
+
+export interface TemplatePreviewPage {
+  id: string
+  sourceNodeId: string
+  sourceNodeName?: string
+  callPath: readonly string[]
+  content: ResolvedContentBlock[]
+  timeline: TemplatePreviewTimelineStep[]
+}
+
+export type TemplatePreviewTimelineStep =
+  | {
+      type: 'play'
+      text: string
+      choiceViewOverrides?: Record<string, ResolvedChoiceViewport>
+    }
+  | {
+      type: 'countdown'
+      seconds: number
+      choiceViewOverrides?: Record<string, ResolvedChoiceViewport>
+    }
+  | {
+      type: 'record'
+      duration: number
+      recordIndex: number
+      choiceViewOverrides?: Record<string, ResolvedChoiceViewport>
+    }
+
+export interface TemplatePreviewData {
+  title: string
+  pages: readonly TemplatePreviewPage[]
+  recordingIndices: readonly number[]
+  choiceMeta?: PlayerChoiceMeta
+  resources: ExamResourceManifest
+}
+
+export type TemplatePreviewResult =
+  | {
+      success: true
+      preview: TemplatePreviewData
+      resourceSources: readonly ExamResourceSource[]
+    }
+  | { success: false; errors: readonly TemplateCompileError[] }
+
+export type ExamResourceSource =
+  | { assetKey: string; sourceUrl: string }
+  | { assetKey: string; data: Uint8Array }
+
+export interface ExpandedExamPage {
+  id: string
+  sourceNodeId: string
+  sourceNodeName?: string
+  callPath: readonly string[]
+  content: ResolvedContentBlock[]
+  timeline: ExpandedTimelineStep[]
+}
+
+export type ExpandedTimelineStep =
+  | {
+      type: 'play'
+      text: string
+      sourcePath: string
+      choiceViewOverrides?: Record<string, ResolvedChoiceViewport>
+    }
+  | {
+      type: 'countdown'
+      seconds: number
+      choiceViewOverrides?: Record<string, ResolvedChoiceViewport>
+    }
+  | {
+      type: 'record'
+      duration: number
+      recordIndex: number
+      sourcePath: string
+      choiceViewOverrides?: Record<string, ResolvedChoiceViewport>
+    }
+
+/** SchemaUse 展开后的编译器内部结构；运行期来源索引不会写入最终作答快照。 */
+export interface ExpandedSchemaUse {
+  instanceId: string
+  schemaId: string
+  inputs: CompiledSchemaInput[]
+  answers: ExpandedSchemaAnswer[]
+}
+
+export type ExpandedSchemaAnswer =
+  | {
+      answerId: string
+      type: 'text'
+      choiceIndex: number
+    }
+  | {
+      answerId: string
+      type: 'fixed-speech'
+      text: string
+      recordIndex: number
+    }
+  | {
+      answerId: string
+      type: 'free-speech'
+      recordIndex: number
+    }
 
 export type CompiledValue =
   | { type: 'string'; value: string }
   | { type: 'number'; value: number }
-  | { type: 'file'; value: string }
+  | { type: 'file'; value: string; sourceUrl?: string }
   | { type: 'audio'; recordIndex: number }
   | { type: 'choice'; choiceIndex: number }
 
@@ -73,6 +203,19 @@ export interface ValueCell {
 export interface CompileScope {
   callPath: string[]
   symbols: Map<string, ValueCell>
+  choiceGroups: Map<string, ChoiceGroupCell>
+}
+
+export interface ChoiceGroupContext {
+  kind: ChoiceGroupShape['kind']
+  pages: number[][]
+  pageIndices: number[]
+}
+
+export interface ChoiceGroupCell {
+  type: 'choice-group'
+  label: string
+  get(): ChoiceGroupContext
 }
 
 export interface ChoiceCandidate {
@@ -84,23 +227,27 @@ export interface StructuralResult {
   candidates: ChoiceCandidate[]
 }
 
-export interface BoundInterfaceValue {
-  type: 'string' | 'file'
-  value: string
-}
+export type BoundInterfaceValue =
+  | { type: 'string'; value: string }
+  | { type: 'file'; value: string; sourceUrl?: string }
 
 export interface CompilerState {
   functionsById: Map<string, FunctionDef>
-  schemasById: Map<string, SchemaBlockManifest>
+  schemasById: Map<string, SchemaDefinition>
   interfaceValuesByAlias: Map<string, Map<string, BoundInterfaceValue>>
   staticCells: ValueCell[]
-  pages: Array<() => ExamPage>
+  choiceGroupCells: ChoiceGroupCell[]
+  pages: Array<() => ExpandedExamPage>
   questions: Array<() => PlayerChoiceQuestion>
-  schemaUsages: Array<() => SchemaUsageExport>
+  schemaUsages: Array<() => ExpandedSchemaUse>
+  resources: Map<string, ExamResourceEntry>
+  submissionResourceKeys: Set<string>
+  resourceSources: Map<string, string>
   questionIndicesByAddress: Map<string, number>
   recordingIndices: number[]
   nextRecordIndex: number
   nextChoiceIndex: number
+  globalChoiceGroup: ChoiceGroupContext | undefined
 }
 
 export class CompileFailure extends Error {
@@ -116,21 +263,46 @@ export function createCompilerState(
 ): CompilerState {
   return {
     functionsById: new Map(functions.map((func) => [func.id, func])),
-    schemasById: new Map(context.schemaManifests.map((schema) => [schema.schemaId, schema])),
+    schemasById: new Map(context.schemaDefinitions.map((schema) => [schema.schemaId, schema])),
     interfaceValuesByAlias,
     staticCells: [],
+    choiceGroupCells: [],
     pages: [],
     questions: [],
     schemaUsages: [],
+    resources: new Map(),
+    submissionResourceKeys: new Set(),
+    resourceSources: new Map(),
     questionIndicesByAddress: new Map(),
     recordingIndices: [],
     nextRecordIndex: 0,
-    nextChoiceIndex: 0
+    nextChoiceIndex: 0,
+    globalChoiceGroup: undefined
   }
 }
 
 export function fixedValueCell(value: CompiledValue, label: string): ValueCell {
   return { type: value.type, label, get: () => value }
+}
+
+export function lazyChoiceGroupCell(
+  label: string,
+  resolve: () => ChoiceGroupContext
+): ChoiceGroupCell {
+  let status: 'idle' | 'resolving' | 'resolved' = 'idle'
+  let cached: ChoiceGroupContext | undefined
+  return {
+    type: 'choice-group',
+    label,
+    get() {
+      if (status === 'resolved') return cached as ChoiceGroupContext
+      if (status === 'resolving') fail('STATIC_VALUE_CYCLE', label, { value: label })
+      status = 'resolving'
+      cached = resolve()
+      status = 'resolved'
+      return cached
+    }
+  }
 }
 
 export function lazyValueCell(

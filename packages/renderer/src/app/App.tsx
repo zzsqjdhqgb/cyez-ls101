@@ -3,9 +3,12 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AppShell } from '../components/shell/AppShell'
 import { AppToaster } from '../components/ui/ToastViewport'
 import { ManualImageGenerationDialog } from '../features/airouter/ManualImageGenerationDialog'
+import { ExamLibraryProvider } from '../features/exams/ExamLibraryProvider'
 import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceApplicationProvider'
 import { BuiltinInterfaceMaintenanceDialog } from '../features/interfaces/BuiltinInterfaceMaintenanceDialog'
+import { SchemaApplicationProvider } from '../features/schemas/SchemaApplicationProvider'
 import { AppearanceSettingsProvider } from '../features/settings/AppearanceSettingsProvider'
+import { SubmissionLibraryProvider } from '../features/submissions/SubmissionLibraryProvider'
 import { TemplateApplicationProvider } from '../features/templates/TemplateApplicationProvider'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { useRegisteredRoutes } from './route-registry'
@@ -30,14 +33,20 @@ export function App(): JSX.Element {
   return (
     <AppearanceSettingsProvider>
       <InterfaceApplicationProvider>
-        <TemplateApplicationProvider>
-          <MemoryRouter>
-            <RegisteredAppRoutes />
-          </MemoryRouter>
-          <ManualImageGenerationDialog />
-          <BuiltinInterfaceMaintenanceDialog />
-          <AppToaster />
-        </TemplateApplicationProvider>
+        <SchemaApplicationProvider>
+          <ExamLibraryProvider>
+            <SubmissionLibraryProvider>
+              <TemplateApplicationProvider>
+                <MemoryRouter>
+                  <RegisteredAppRoutes />
+                </MemoryRouter>
+                <ManualImageGenerationDialog />
+                <BuiltinInterfaceMaintenanceDialog />
+                <AppToaster />
+              </TemplateApplicationProvider>
+            </SubmissionLibraryProvider>
+          </ExamLibraryProvider>
+        </SchemaApplicationProvider>
       </InterfaceApplicationProvider>
     </AppearanceSettingsProvider>
   )

@@ -48,6 +48,9 @@ files:
   - 'out/**/*'
 asarUnpack:
   - resources/**
+  - out/main/pronunciation-assessment-worker.js
+  - node_modules/onnxruntime-common/**
+  - node_modules/onnxruntime-node/**
   - node_modules/sherpa-onnx-node/**
   - node_modules/sherpa-onnx-*/**
   - node_modules/ffmpeg-static/**
@@ -61,7 +64,7 @@ nsis:
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
   runAfterFinish: true
-  license: "LICENSE"
+  license: 'LICENSE'
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   icon: build/icon.png
@@ -90,14 +93,10 @@ publish:
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
 extraResources:
-  - from: exams
-    to: exams
-  - from: templates
-    to: templates
   - from: resources/tts
     to: tts
-  - from: model-assets/stt
-    to: assets/stt
+  - from: externals/ai/qwen3-tts/runtime
+    to: qwen-tts
   - from: resources/media
     to: media
   - from: resources/builtin
