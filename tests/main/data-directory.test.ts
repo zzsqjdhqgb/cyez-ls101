@@ -140,7 +140,142 @@ describe('data directory initialization', () => {
     )
     await expect(readFile(path.join(target, 'unrelated.txt'), 'utf8')).resolves.toBe('keep')
   })
+
+  it('preserves files written to the target after migration is scheduled', async () => {
+    const { userData, target, migration } = await scheduledCopy('target-race')
+    await writeFile(path.join(target, 'external.txt'), 'do not delete')
+
+    await expect(initializeDataDirectory(userData)).rejects.toThrow(
+      '迁移目标在复制期间被写入，已停止迁移并保留目标内容'
+    )
+
+    await expect(readFile(path.join(target, 'external.txt'), 'utf8')).resolves.toBe('do not delete')
+    await expect(readJson(path.join(userData, 'data-location.json'))).resolves.toMatchObject({
+      state: 'migrating',
+      migrationId: migration.migrationId
+    })
+    await expect(readJson(path.join(migration.staging, '.ls101-data.json'))).resolves.toMatchObject(
+      {
+        migrationId: migration.migrationId
+      }
+    )
+  })
+
+  it('removes an incomplete owned staging directory and restarts the copy', async () => {
+    const { userData, source, target, migration } = await scheduledCopy('partial-staging')
+    await mkdir(migration.staging)
+    await writeFile(path.join(migration.staging, 'partial.bin'), 'partial')
+
+    const result = await initializeDataDirectory(userData)
+
+    expect(result).toBe(target)
+    await expect(readFile(path.join(target, 'document.json'), 'utf8')).resolves.toBe(
+      await readFile(path.join(source, 'document.json'), 'utf8')
+    )
+    await expect(readFile(path.join(target, 'partial.bin'))).rejects.toMatchObject({
+      code: 'ENOENT'
+    })
+  })
+
+  it('commits a completed staging directory when the empty target was already removed', async () => {
+    const { userData, target, migration } = await scheduledCopy('removed-target')
+    await rm(target, { recursive: true })
+    await mkdir(migration.staging)
+    await writeFile(path.join(migration.staging, 'document.json'), '{"from":"staging"}')
+    await writeMigrationMarker(migration.staging, migration.migrationId)
+
+    const result = await initializeDataDirectory(userData)
+
+    expect(result).toBe(target)
+    await expect(readFile(path.join(target, 'document.json'), 'utf8')).resolves.toBe(
+      '{"from":"staging"}'
+    )
+  })
+
+  it('commits ready when staging was already renamed to the target', async () => {
+    const { userData, source, target, migration } = await scheduledCopy('renamed-target')
+    await rm(target, { recursive: true })
+    await mkdir(target)
+    await writeFile(path.join(target, 'document.json'), '{"from":"target"}')
+    await writeMigrationMarker(target, migration.migrationId)
+    await mkdir(migration.staging)
+    await writeFile(path.join(migration.staging, 'orphan.bin'), 'owned staging')
+    await rm(source, { recursive: true })
+
+    const result = await initializeDataDirectory(userData)
+
+    expect(result).toBe(target)
+    await expect(readJson(path.join(userData, 'data-location.json'))).resolves.toMatchObject({
+      state: 'ready',
+      activeDataDirectory: target
+    })
+    await expect(readFile(path.join(migration.staging, 'orphan.bin'))).rejects.toMatchObject({
+      code: 'ENOENT'
+    })
+  })
+
+  it('preserves a default target written while legacy data is being organized', async () => {
+    const userData = await temporaryDirectory('ls101-data-legacy-race-')
+    const target = path.join(userData, 'data')
+    await mkdir(path.join(userData, 'config'), { recursive: true })
+    await writeFile(path.join(userData, 'config', 'settings.json'), '{}')
+    await mkdir(target)
+    await writeFile(path.join(target, 'external.txt'), 'keep')
+
+    await expect(initializeDataDirectory(userData)).rejects.toThrow(
+      '迁移目标在复制期间被写入，已停止迁移并保留目标内容'
+    )
+    await expect(readFile(path.join(target, 'external.txt'), 'utf8')).resolves.toBe('keep')
+
+    await rm(path.join(target, 'external.txt'))
+    await expect(initializeDataDirectory(userData)).resolves.toBe(target)
+    await expect(readFile(path.join(target, 'config', 'settings.json'), 'utf8')).resolves.toBe('{}')
+  })
 })
+
+interface StoredMigration {
+  migrationId: string
+  staging: string
+}
+
+async function scheduledCopy(label: string): Promise<{
+  userData: string
+  source: string
+  target: string
+  migration: StoredMigration
+}> {
+  const userData = await temporaryDirectory(`ls101-data-${label}-`)
+  const targetParent = await temporaryDirectory(`ls101-data-${label}-target-`)
+  const target = path.join(targetParent, 'selected')
+  await mkdir(target)
+  const source = await initializeDataDirectory(userData)
+  await writeFile(path.join(source, 'document.json'), `{"source":"${label}"}`)
+  registerDataDirectoryHandlers(userData, source)
+  const migrate = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.migrate)
+  expect(migrate).toBeDefined()
+  await migrate!({ sender: {} }, target as never)
+  const stored = (await readJson(path.join(userData, 'data-location.json'))) as Record<
+    string,
+    unknown
+  >
+  expect(stored).toMatchObject({ state: 'migrating', mode: 'copy' })
+  return {
+    userData,
+    source,
+    target,
+    migration: {
+      migrationId: String(stored.migrationId),
+      staging: String(stored.staging)
+    }
+  }
+}
+
+async function writeMigrationMarker(directory: string, migrationId: string): Promise<void> {
+  await writeFile(
+    path.join(directory, '.ls101-data.json'),
+    JSON.stringify({ formatVersion: 1, kind: 'ls101-data-directory', migrationId })
+  )
+}
 
 async function readJson(filename: string): Promise<unknown> {
   return JSON.parse(await readFile(filename, 'utf8')) as unknown

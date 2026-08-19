@@ -9,6 +9,7 @@ import {
   realpath,
   rename,
   rm,
+  rmdir,
   stat
 } from 'node:fs/promises'
 import path from 'node:path'
@@ -40,20 +41,43 @@ interface ReadyBootstrap {
   activeDataDirectory: string
 }
 
-interface MigratingBootstrap {
+interface CopyingBootstrap {
   formatVersion: typeof FORMAT_VERSION
   state: 'migrating'
-  activeDataDirectory: string
+  migrationId: string
   source: string
   target: string
-  mode: 'copy' | 'use-existing'
+  staging: string
+  mode: 'copy'
 }
 
+interface LegacyCopyingBootstrap {
+  formatVersion: typeof FORMAT_VERSION
+  state: 'migrating'
+  migrationId: string
+  source: string
+  target: string
+  staging: string
+  mode: 'legacy-copy'
+  legacyDirectories: string[]
+}
+
+interface UseExistingBootstrap {
+  formatVersion: typeof FORMAT_VERSION
+  state: 'migrating'
+  migrationId: string
+  source: string
+  target: string
+  mode: 'use-existing'
+}
+
+type MigratingBootstrap = CopyingBootstrap | LegacyCopyingBootstrap | UseExistingBootstrap
 type Bootstrap = ReadyBootstrap | MigratingBootstrap
 
 interface DataDirectoryMarker {
   formatVersion: typeof FORMAT_VERSION
   kind: 'ls101-data-directory'
+  migrationId?: string
 }
 
 interface FileManifestEntry {
@@ -78,7 +102,14 @@ export async function initializeDataDirectory(userDataDir: string): Promise<stri
 
   const legacyDirectories = await existingLegacyDirectories(userDataDir)
   if (legacyDirectories.length > 0) {
-    await migrateLegacyData(userDataDir, defaultPath, legacyDirectories)
+    const migration = await scheduleMigration(
+      userDataDir,
+      userDataDir,
+      defaultPath,
+      'legacy-copy',
+      legacyDirectories
+    )
+    return finishPendingMigration(userDataDir, migration)
   } else {
     await createManagedDirectory(defaultPath)
   }
@@ -198,15 +229,37 @@ async function finishPendingMigration(
   userDataDir: string,
   bootstrap: MigratingBootstrap
 ): Promise<string> {
+  const target = await normalizePotentialDirectory(bootstrap.target)
+  if (bootstrap.mode === 'use-existing') {
+    const existingTarget = await normalizeDirectory(target)
+    await assertManagedDirectory(existingTarget)
+    await writeReadyBootstrap(userDataDir, existingTarget)
+    return existingTarget
+  }
+
+  assertMigrationPaths(bootstrap, target)
+  if (await hasMigrationMarker(target, bootstrap.migrationId)) {
+    await removeOwnedStaging(bootstrap)
+    await writeReadyBootstrap(userDataDir, target)
+    return target
+  }
+
   const source = await normalizeDirectory(bootstrap.source)
-  const target = await normalizeDirectory(bootstrap.target)
-  assertSeparateDirectories(source, target)
-  await assertManagedDirectory(source)
-  if (bootstrap.mode === 'copy') {
-    await withMigrationWindow('正在迁移数据', `正在将软件数据复制到 ${target}`, () =>
-      copyManagedDirectory(source, target)
-    )
-  } else await assertManagedDirectory(target)
+  if (bootstrap.mode === 'copy') assertSeparateDirectories(source, target)
+  else if (!samePath(source, await normalizeDirectory(userDataDir))) {
+    throw new Error('旧数据迁移来源与 Electron 用户数据目录不一致')
+  }
+  if (bootstrap.mode === 'copy') await assertManagedDirectory(source)
+
+  const title = bootstrap.mode === 'copy' ? '正在迁移数据' : '正在整理数据'
+  const detail =
+    bootstrap.mode === 'copy' ? `正在将软件数据复制到 ${target}` : '正在准备新的软件数据目录'
+  await withMigrationWindow(title, detail, async () => {
+    if (bootstrap.mode === 'copy') await prepareManagedStaging(bootstrap, source)
+    else await prepareLegacyStaging(bootstrap)
+    await commitCompletedStaging(bootstrap, target)
+  })
+  await removeOwnedStaging(bootstrap)
   await writeReadyBootstrap(userDataDir, target)
   return target
 }
@@ -215,70 +268,95 @@ async function scheduleMigration(
   userDataDir: string,
   source: string,
   target: string,
-  mode: MigratingBootstrap['mode']
-): Promise<void> {
-  await writeBootstrap(userDataDir, {
+  mode: MigratingBootstrap['mode'],
+  legacyDirectories: readonly string[] = []
+): Promise<MigratingBootstrap> {
+  const migrationId = randomUUID()
+  const base = {
     formatVersion: FORMAT_VERSION,
-    state: 'migrating',
-    activeDataDirectory: source,
+    state: 'migrating' as const,
+    migrationId,
     source,
-    target,
-    mode
-  })
+    target
+  }
+  const migration: MigratingBootstrap =
+    mode === 'use-existing'
+      ? { ...base, mode }
+      : mode === 'legacy-copy'
+        ? {
+            ...base,
+            mode,
+            staging: stagingPath(target, migrationId),
+            legacyDirectories: [...legacyDirectories]
+          }
+        : { ...base, mode, staging: stagingPath(target, migrationId) }
+  await writeBootstrap(userDataDir, migration)
+  return migration
 }
 
-async function copyManagedDirectory(source: string, target: string): Promise<void> {
-  if (await pathExists(target)) {
-    const entries = await readdir(target)
-    if (entries.length > 0) throw new Error('迁移目标在重启前已不再是空目录')
-  }
-  const staging = path.join(
-    path.dirname(target),
-    `.${path.basename(target)}.migrating-${randomUUID()}`
-  )
-  await mkdir(staging, { recursive: false })
-  try {
-    const sourceManifest = await copyTree(source, staging)
-    const targetManifest = await buildManifest(staging)
+async function prepareManagedStaging(bootstrap: CopyingBootstrap, source: string): Promise<void> {
+  if (await hasMigrationMarker(bootstrap.staging, bootstrap.migrationId)) return
+  await recreateOwnedStaging(bootstrap)
+  const sourceManifest = await copyTree(source, bootstrap.staging)
+  const targetManifest = await buildManifest(bootstrap.staging)
+  assertMatchingManifests(sourceManifest, targetManifest)
+  await writeMarker(bootstrap.staging, bootstrap.migrationId)
+}
+
+async function prepareLegacyStaging(bootstrap: LegacyCopyingBootstrap): Promise<void> {
+  if (await hasMigrationMarker(bootstrap.staging, bootstrap.migrationId)) return
+  await recreateOwnedStaging(bootstrap)
+  for (const directory of bootstrap.legacyDirectories) {
+    const sourceManifest = await copyTree(
+      path.join(bootstrap.source, directory),
+      path.join(bootstrap.staging, directory)
+    )
+    const targetManifest = await buildManifest(path.join(bootstrap.staging, directory))
     assertMatchingManifests(sourceManifest, targetManifest)
-    await assertMarker(staging)
-    await rm(target, { recursive: true, force: true })
-    await rename(staging, target)
+  }
+  await writeMarker(bootstrap.staging, bootstrap.migrationId)
+}
+
+async function recreateOwnedStaging(
+  bootstrap: CopyingBootstrap | LegacyCopyingBootstrap
+): Promise<void> {
+  await rm(bootstrap.staging, { recursive: true, force: true })
+  await mkdir(bootstrap.staging, { recursive: false })
+}
+
+async function commitCompletedStaging(
+  bootstrap: CopyingBootstrap | LegacyCopyingBootstrap,
+  target: string
+): Promise<void> {
+  if (await hasMigrationMarker(target, bootstrap.migrationId)) return
+  if (!(await hasMigrationMarker(bootstrap.staging, bootstrap.migrationId))) {
+    throw new Error('迁移暂存目录尚未完成校验')
+  }
+  if (await pathExists(target)) {
+    try {
+      await rmdir(target)
+    } catch (error) {
+      if (isDirectoryNotEmpty(error)) {
+        throw new Error('迁移目标在复制期间被写入，已停止迁移并保留目标内容')
+      }
+      throw error
+    }
+  }
+  try {
+    await rename(bootstrap.staging, target)
   } catch (error) {
-    await rm(staging, { recursive: true, force: true }).catch(() => undefined)
+    if (await hasMigrationMarker(target, bootstrap.migrationId)) return
+    if (isTargetAlreadyExists(error)) {
+      throw new Error('迁移目标在提交期间被其他程序占用，已停止迁移并保留目标内容')
+    }
     throw error
   }
 }
 
-async function migrateLegacyData(
-  userDataDir: string,
-  target: string,
-  directories: readonly string[]
+async function removeOwnedStaging(
+  bootstrap: CopyingBootstrap | LegacyCopyingBootstrap
 ): Promise<void> {
-  if (await pathExists(target)) {
-    const entries = await readdir(target)
-    if (entries.length > 0) throw new Error(`默认数据目录不是空目录：${target}`)
-  }
-  const staging = path.join(userDataDir, `.data.migrating-${randomUUID()}`)
-  await mkdir(staging)
-  try {
-    await withMigrationWindow('正在整理数据', '正在准备新的软件数据目录', async () => {
-      for (const directory of directories) {
-        const sourceManifest = await copyTree(
-          path.join(userDataDir, directory),
-          path.join(staging, directory)
-        )
-        const targetManifest = await buildManifest(path.join(staging, directory))
-        assertMatchingManifests(sourceManifest, targetManifest)
-      }
-      await writeMarker(staging)
-      await rm(target, { recursive: true, force: true })
-      await rename(staging, target)
-    })
-  } catch (error) {
-    await rm(staging, { recursive: true, force: true }).catch(() => undefined)
-    throw error
-  }
+  await rm(bootstrap.staging, { recursive: true, force: true })
 }
 
 async function copyTree(source: string, target: string): Promise<FileManifestEntry[]> {
@@ -387,12 +465,26 @@ async function readBootstrap(userDataDir: string): Promise<Bootstrap | null> {
   }
   if (
     value.state === 'migrating' &&
-    typeof value.activeDataDirectory === 'string' &&
+    typeof value.migrationId === 'string' &&
+    isMigrationId(value.migrationId) &&
     typeof value.source === 'string' &&
     typeof value.target === 'string' &&
-    (value.mode === 'copy' || value.mode === 'use-existing')
+    (value.mode === 'copy' || value.mode === 'use-existing' || value.mode === 'legacy-copy')
   ) {
-    return value as unknown as MigratingBootstrap
+    if (value.mode === 'use-existing') return value as unknown as UseExistingBootstrap
+    if (typeof value.staging !== 'string') throw new Error('数据目录迁移暂存路径无效')
+    if (value.mode === 'copy') return value as unknown as CopyingBootstrap
+    if (
+      !Array.isArray(value.legacyDirectories) ||
+      value.legacyDirectories.some(
+        (directory) =>
+          typeof directory !== 'string' ||
+          !LEGACY_DIRECTORIES.includes(directory as (typeof LEGACY_DIRECTORIES)[number])
+      )
+    ) {
+      throw new Error('旧数据迁移目录列表无效')
+    }
+    return value as unknown as LegacyCopyingBootstrap
   }
   throw new Error('数据目录配置内容无效')
 }
@@ -412,10 +504,11 @@ async function writeBootstrap(userDataDir: string, value: Bootstrap): Promise<vo
   await atomicWriteJson(path.join(userDataDir, BOOTSTRAP_FILENAME), value)
 }
 
-async function writeMarker(directory: string): Promise<void> {
+async function writeMarker(directory: string, migrationId?: string): Promise<void> {
   const marker: DataDirectoryMarker = {
     formatVersion: FORMAT_VERSION,
-    kind: 'ls101-data-directory'
+    kind: 'ls101-data-directory',
+    ...(migrationId ? { migrationId } : {})
   }
   await atomicWriteJson(path.join(directory, MARKER_FILENAME), marker)
 }
@@ -443,7 +536,7 @@ async function assertManagedDirectory(directory: string): Promise<void> {
     throw new Error(`不是可识别的 LS101 数据目录：${directory}`)
 }
 
-async function assertMarker(directory: string): Promise<void> {
+async function readMarker(directory: string): Promise<DataDirectoryMarker> {
   const marker = JSON.parse(
     await readFile(path.join(directory, MARKER_FILENAME), 'utf8')
   ) as unknown
@@ -454,6 +547,25 @@ async function assertMarker(directory: string): Promise<void> {
   ) {
     throw new Error(`数据目录标记无效：${directory}`)
   }
+  if (marker.migrationId !== undefined && !isMigrationId(marker.migrationId)) {
+    throw new Error(`数据目录迁移标记无效：${directory}`)
+  }
+  return marker as unknown as DataDirectoryMarker
+}
+
+async function assertMarker(directory: string): Promise<void> {
+  await readMarker(directory)
+}
+
+async function hasMigrationMarker(directory: string, migrationId: string): Promise<boolean> {
+  try {
+    return (await readMarker(directory)).migrationId === migrationId
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+    if (error instanceof SyntaxError) return false
+    if (error instanceof Error && error.message.startsWith('数据目录')) return false
+    throw error
+  }
 }
 
 async function isManagedDirectory(directory: string): Promise<boolean> {
@@ -463,16 +575,43 @@ async function isManagedDirectory(directory: string): Promise<boolean> {
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
     if (error instanceof SyntaxError) return false
-    if (error instanceof Error && error.message.startsWith('数据目录标记无效')) return false
+    if (error instanceof Error && error.message.startsWith('数据目录')) return false
     throw error
   }
 }
 
 async function normalizeDirectory(directory: string): Promise<string> {
   const resolved = path.resolve(directory)
-  const stats = await stat(resolved).catch(() => null)
+  const stats = await statIfExists(resolved)
   if (!stats?.isDirectory()) throw new Error(`目录不存在或无法访问：${resolved}`)
   return path.normalize(await realpath(resolved))
+}
+
+async function normalizePotentialDirectory(directory: string): Promise<string> {
+  if (typeof directory !== 'string' || !path.isAbsolute(directory)) {
+    throw new Error('数据目录路径无效')
+  }
+  const resolved = path.resolve(directory)
+  const stats = await statIfExists(resolved)
+  if (stats) {
+    if (!stats.isDirectory()) throw new Error(`目标路径不是目录：${resolved}`)
+    return path.normalize(await realpath(resolved))
+  }
+  const parent = await normalizeDirectory(path.dirname(resolved))
+  return path.join(parent, path.basename(resolved))
+}
+
+function assertMigrationPaths(
+  bootstrap: CopyingBootstrap | LegacyCopyingBootstrap,
+  target: string
+): void {
+  const expected = stagingPath(target, bootstrap.migrationId)
+  const configured = path.normalize(path.resolve(bootstrap.staging))
+  if (!samePath(configured, expected)) throw new Error('数据目录迁移暂存路径与迁移事务不一致')
+}
+
+function stagingPath(target: string, migrationId: string): string {
+  return path.join(path.dirname(target), `.${path.basename(target)}.migrating-${migrationId}`)
 }
 
 function assertSeparateDirectories(source: string, target: string): void {
@@ -498,6 +637,32 @@ async function pathExists(filename: string): Promise<boolean> {
       if (error.code === 'ENOENT') return false
       throw error
     })
+}
+
+async function statIfExists(filename: string): Promise<Awaited<ReturnType<typeof stat>> | null> {
+  try {
+    return await stat(filename)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw error
+  }
+}
+
+function isDirectoryNotEmpty(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException).code
+  return code === 'ENOTEMPTY' || code === 'EEXIST'
+}
+
+function isTargetAlreadyExists(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException).code
+  return code === 'ENOTEMPTY' || code === 'EEXIST'
+}
+
+function isMigrationId(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+  )
 }
 
 function samePath(left: string, right: string): boolean {

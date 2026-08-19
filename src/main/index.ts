@@ -1,4 +1,4 @@
-import { app, BrowserWindow, safeStorage } from 'electron'
+import { app, BrowserWindow, dialog, safeStorage } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { registerConfigStore } from '@ls101/config-store/main'
 import { registerAIRouter } from '@ls101/airouter/main'
@@ -36,7 +36,13 @@ async function initializeApplication(): Promise<void> {
   }
 
   const userDataDir = app.getPath('userData')
-  const dataDir = await initializeDataDirectory(userDataDir)
+  let dataDir: string
+  try {
+    dataDir = await initializeDataDirectory(userDataDir)
+  } catch (error) {
+    console.error('Failed to initialize application data directory', error)
+    return recoverDataDirectory(userDataDir, error)
+  }
   registerFileStore({ baseDir: dataDir })
   registerBuiltinFileStore({
     baseDir: app.isPackaged
@@ -74,13 +80,7 @@ else {
     if (window.isMinimized()) window.restore()
     window.focus()
   })
-  void app
-    .whenReady()
-    .then(initializeApplication)
-    .catch((error: unknown) => {
-      console.error('Failed to initialize application data directory', error)
-      void recoverDataDirectory(app.getPath('userData'), error)
-    })
+  void app.whenReady().then(initializeApplication).catch(handleApplicationInitializationError)
 }
 
 app.on('window-all-closed', () => {
@@ -88,3 +88,10 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
+
+function handleApplicationInitializationError(error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error)
+  console.error('Failed to initialize application', error)
+  dialog.showErrorBox('应用启动失败', message)
+  app.exit(1)
+}

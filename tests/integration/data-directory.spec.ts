@@ -9,6 +9,11 @@ test('copies business data, switches directories after restart and retains the s
   const targetParent = await mkdtemp(path.join(tmpdir(), 'ls101-data-directory-target-'))
   const target = path.join(targetParent, 'data')
   const source = path.join(userDataDir, 'data')
+  const migrationId = '11111111-1111-4111-8111-111111111111'
+  const staging = path.join(
+    path.dirname(target),
+    `.${path.basename(target)}.migrating-${migrationId}`
+  )
   await mkdir(target)
   await mkdir(path.join(source, 'template-editor'), { recursive: true })
   await writeFile(
@@ -22,9 +27,10 @@ test('copies business data, switches directories after restart and retains the s
     JSON.stringify({
       formatVersion: 1,
       state: 'migrating',
-      activeDataDirectory: source,
+      migrationId,
       source,
       target,
+      staging,
       mode: 'copy'
     })
   )
