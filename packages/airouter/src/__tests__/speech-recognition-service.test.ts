@@ -1,69 +1,160 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
-import {
-  AIRouterSpeechRecognitionService,
-  BUILTIN_ASR_MODEL_ID,
-  BUILTIN_ASR_PROVIDER_ID
-} from '../main/speech-recognition-service'
-
-const temporaryDirectories: string[] = []
-
-afterEach(async () => {
-  await Promise.all(
-    temporaryDirectories
-      .splice(0)
-      .map((directory) => rm(directory, { recursive: true, force: true }))
-  )
-})
+import path from 'node:path'
+import { strToU8, zipSync } from 'fflate'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { EncryptedSecretStorage } from '@ls101/secret-store/main'
+import { AIRouterSpeechRecognitionService } from '../main/speech-recognition-service'
 
 describe('AIRouterSpeechRecognitionService', () => {
-  it('only exposes the built-in Qwen3 model when every model asset exists', async () => {
-    const assetsDir = await modelAssets()
-    const service = new AIRouterSpeechRecognitionService({ assetsDir })
-    expect(service.listModels()).toEqual([
-      {
-        providerId: BUILTIN_ASR_PROVIDER_ID,
-        providerName: '内置语音识别',
-        modelId: BUILTIN_ASR_MODEL_ID,
-        modelName: 'Qwen3 ASR 0.6B'
-      }
-    ])
+  let baseDir: string
+  let service: AIRouterSpeechRecognitionService
 
-    await rm(join(assetsDir, 'silero_vad.onnx'))
-    expect(service.listModels()).toEqual([])
+  beforeEach(async () => {
+    baseDir = await mkdtemp(path.join(tmpdir(), 'airouter-asr-'))
+    const secrets = new EncryptedSecretStorage(baseDir, {
+      encrypt: (value) => new TextEncoder().encode(value),
+      decrypt: (value) => new TextDecoder().decode(value)
+    })
+    service = new AIRouterSpeechRecognitionService({ baseDir, secretStorage: secrets })
   })
 
-  it('rejects invalid selections and non-audio data before creating a worker', async () => {
-    const service = new AIRouterSpeechRecognitionService({ assetsDir: await modelAssets() })
-    await expect(
-      service.recognize({
-        providerConfigId: 'other',
-        modelId: BUILTIN_ASR_MODEL_ID,
-        audio: { data: new Uint8Array([1]), mediaType: 'audio/wav' }
+  afterEach(async () => {
+    vi.unstubAllGlobals()
+    service.dispose()
+    await rm(baseDir, { recursive: true, force: true })
+  })
+
+  it('imports Qwen3 ASR packages and only exposes enabled configured models', async () => {
+    const packagePath = path.join(baseDir, 'qwen3-asr.zip')
+    await writeFile(packagePath, createAsrPackage())
+    const imported = await service.importModelPackage(packagePath)
+
+    expect(imported.package).toEqual(
+      expect.objectContaining({
+        package: expect.objectContaining({ id: 'qwen3-asr-test' }),
+        runtime: { engine: 'qwen3-asr', engineApiVersion: 1 },
+        assetCount: 7
       })
-    ).rejects.toThrow('Provider')
+    )
+    await service.saveProviderConfig({
+      id: 'local-qwen',
+      name: 'Local Qwen',
+      kind: 'local',
+      type: 'qwen3-asr',
+      modelPackageId: 'qwen3-asr-test',
+      modelPackageVersion: '1.0.0',
+      models: [{ id: 'qwen3-asr-test', enabled: true }]
+    })
+
+    await expect(service.listModels()).resolves.toEqual([
+      {
+        providerId: 'local-qwen',
+        providerName: 'Local Qwen',
+        modelId: 'qwen3-asr-test',
+        modelName: 'Qwen3 ASR Test'
+      }
+    ])
+    await expect(service.deleteModelPackage('qwen3-asr-test', '1.0.0')).rejects.toThrow(
+      '仍被 1 个语音识别 Provider 使用'
+    )
+  })
+
+  it('sends online recognition as an OpenAI-compatible multipart request', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ text: 'recognized text' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' }
+      })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await service.saveProviderConfig({
+      id: 'online-asr',
+      name: 'Online ASR',
+      kind: 'online',
+      type: 'openai-compatible',
+      baseUrl: 'https://asr.example.com/v1/',
+      apiKey: 'asr-secret',
+      models: [{ id: 'whisper-1', enabled: true }]
+    })
+
     await expect(
       service.recognize({
-        providerConfigId: BUILTIN_ASR_PROVIDER_ID,
-        modelId: BUILTIN_ASR_MODEL_ID,
+        providerConfigId: 'online-asr',
+        modelId: 'whisper-1',
+        audio: { data: new Uint8Array([1, 2]), mediaType: 'audio/webm', filename: 'answer.webm' }
+      })
+    ).resolves.toEqual({ text: 'recognized text' })
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://asr.example.com/v1/audio/transcriptions',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { authorization: 'Bearer asr-secret' },
+        body: expect.any(FormData)
+      })
+    )
+    const body = fetchMock.mock.calls[0][1].body as FormData
+    expect(body.get('model')).toBe('whisper-1')
+    expect((body.get('file') as File).name).toBe('answer.webm')
+  })
+
+  it('rejects non-audio input before resolving a Provider', async () => {
+    await expect(
+      service.recognize({
+        providerConfigId: 'missing',
+        modelId: 'missing',
         audio: { data: new Uint8Array([1]), mediaType: 'application/octet-stream' }
       })
     ).rejects.toThrow('音频输入无效')
   })
 })
 
-async function modelAssets(): Promise<string> {
-  const assetsDir = await mkdtemp(join(tmpdir(), 'ls101-asr-assets-'))
-  temporaryDirectories.push(assetsDir)
-  const modelDir = join(assetsDir, 'sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25')
-  await mkdir(join(modelDir, 'tokenizer'), { recursive: true })
-  await Promise.all(
-    ['conv_frontend.onnx', 'encoder.int8.onnx', 'decoder.int8.onnx'].map((filename) =>
-      writeFile(join(modelDir, filename), new Uint8Array([1]))
-    )
+function createAsrPackage(): Uint8Array {
+  const files = Object.fromEntries(
+    [
+      'model/conv_frontend.onnx',
+      'model/encoder.int8.onnx',
+      'model/decoder.int8.onnx',
+      'model/tokenizer/merges.txt',
+      'model/tokenizer/tokenizer_config.json',
+      'model/tokenizer/vocab.json',
+      'model/silero_vad.onnx'
+    ].map((name, index) => [name, new Uint8Array([index + 1])])
   )
-  await writeFile(join(assetsDir, 'silero_vad.onnx'), new Uint8Array([1]))
-  return assetsDir
+  const assets = Object.entries(files).map(([assetPath, bytes]) => ({
+    path: assetPath,
+    kind: 'model-asset',
+    size: bytes.byteLength,
+    sha256: createHash('sha256').update(bytes).digest('hex')
+  }))
+  const manifest = {
+    format: 'ls101.asr-model-package',
+    formatVersion: 1,
+    package: { id: 'qwen3-asr-test', version: '1.0.0', name: 'Qwen3 ASR Test' },
+    runtime: { engine: 'qwen3-asr', engineApiVersion: 1 },
+    assets,
+    models: [
+      {
+        id: 'qwen3-asr-test',
+        name: 'Qwen3 ASR Test',
+        artifacts: {
+          convFrontend: ['model/conv_frontend.onnx'],
+          encoder: ['model/encoder.int8.onnx'],
+          decoder: ['model/decoder.int8.onnx'],
+          tokenizer: [
+            'model/tokenizer/merges.txt',
+            'model/tokenizer/tokenizer_config.json',
+            'model/tokenizer/vocab.json'
+          ],
+          vad: ['model/silero_vad.onnx']
+        },
+        parameters: {}
+      }
+    ]
+  }
+  return zipSync({
+    'manifest.json': strToU8(JSON.stringify(manifest)),
+    ...files
+  })
 }

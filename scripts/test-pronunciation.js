@@ -40,7 +40,15 @@ async function main() {
     throw new Error('请先运行 node scripts/download-pronunciation-model.js')
   }
   const worker = new Worker(workerPath, {
-    workerData: { modelDir, ffmpegPath: require('ffmpeg-static') }
+    workerData: {
+      assets: {
+        'model/config.json': join(modelDir, 'config.json'),
+        'model/preprocessor_config.json': join(modelDir, 'preprocessor_config.json'),
+        'model/vocab.json': join(modelDir, 'vocab.json'),
+        'model/onnx/model_quantized.onnx': join(modelDir, 'onnx', 'model_quantized.onnx')
+      },
+      ffmpegPath: require('ffmpeg-static')
+    }
   })
   const result = await new Promise((resolveResult, reject) => {
     const timer = setTimeout(() => reject(new Error('发音评测超时')), 180_000)

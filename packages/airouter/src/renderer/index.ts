@@ -43,6 +43,20 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
     listSpeechModels: (config) => getBridge().listSpeechModels(config),
     listSpeechVoices: (request) => getBridge().listSpeechVoices(request),
     testSpeechConnection: (request) => getBridge().testSpeechConnection(request),
+    listSpeechRecognitionProviderConfigs: () => getBridge().listSpeechRecognitionProviderConfigs(),
+    saveSpeechRecognitionProviderConfig: (config) =>
+      getBridge().saveSpeechRecognitionProviderConfig(config),
+    deleteSpeechRecognitionProviderConfig: (id) =>
+      getBridge().deleteSpeechRecognitionProviderConfig(id),
+    readSpeechRecognitionProviderApiKey: (id) =>
+      getBridge().readSpeechRecognitionProviderApiKey(id),
+    listSpeechRecognitionModelPackages: (providerType) =>
+      getBridge().listSpeechRecognitionModelPackages(providerType),
+    importSpeechRecognitionModelPackage: () => getBridge().importSpeechRecognitionModelPackage(),
+    deleteSpeechRecognitionModelPackage: (id, version) =>
+      getBridge().deleteSpeechRecognitionModelPackage(id, version),
+    listSpeechRecognitionProviderModels: (config) =>
+      getBridge().listSpeechRecognitionProviderModels(config),
     listSpeechRecognitionModels: () => getBridge().listSpeechRecognitionModels(),
     recognizeSpeech(request, options = {}) {
       return new Promise<AIRouterSpeechRecognitionResult>((resolve, reject) => {
@@ -68,6 +82,10 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
       })
     },
     listPronunciationAssessmentModels: () => getBridge().listPronunciationAssessmentModels(),
+    getPronunciationAssessmentExtensionStatus: () =>
+      getBridge().getPronunciationAssessmentExtensionStatus(),
+    importPronunciationAssessmentExtension: () =>
+      getBridge().importPronunciationAssessmentExtension(),
     assessPronunciation(request, options = {}) {
       return new Promise<AIRouterPronunciationAssessmentResult>((resolve, reject) => {
         let settled = false

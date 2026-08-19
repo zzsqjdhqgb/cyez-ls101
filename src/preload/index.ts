@@ -32,12 +32,16 @@ import {
   type AIRouterImageProviderConfigInput,
   type AIRouterImageRequest,
   type AIRouterPronunciationAssessmentEvent,
+  type AIRouterPronunciationAssessmentExtensionImportResult,
   type AIRouterPronunciationAssessmentRequest,
   type AIRouterSpeechConnectionTestInput,
   type AIRouterSpeechModelPackageImportResult,
   type AIRouterSpeechProviderConfigInput,
   type AIRouterSpeechProviderType,
   type AIRouterSpeechRecognitionEvent,
+  type AIRouterSpeechRecognitionModelPackageImportResult,
+  type AIRouterSpeechRecognitionProviderConfigInput,
+  type AIRouterSpeechRecognitionProviderType,
   type AIRouterSpeechRecognitionRequest,
   type AIRouterSpeechSynthesisEvent,
   type AIRouterSpeechSynthesisRequest,
@@ -148,11 +152,41 @@ const airouterBridge: AIRouterBridge = {
   testSpeechConnection(request: AIRouterSpeechConnectionTestInput) {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.testSpeechConnection, request)
   },
+  listSpeechRecognitionProviderConfigs() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listRecognitionConfigs)
+  },
+  saveSpeechRecognitionProviderConfig(config: AIRouterSpeechRecognitionProviderConfigInput) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.saveRecognitionConfig, config)
+  },
+  deleteSpeechRecognitionProviderConfig(id: string) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.deleteRecognitionConfig, id)
+  },
+  readSpeechRecognitionProviderApiKey(id: string) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.readRecognitionApiKey, id)
+  },
+  listSpeechRecognitionModelPackages(providerType?: AIRouterSpeechRecognitionProviderType) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listRecognitionPackages, providerType)
+  },
+  importSpeechRecognitionModelPackage(): Promise<AIRouterSpeechRecognitionModelPackageImportResult | null> {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.importRecognitionPackage)
+  },
+  deleteSpeechRecognitionModelPackage(id: string, version: string) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.deleteRecognitionPackage, id, version)
+  },
+  listSpeechRecognitionProviderModels(config: AIRouterSpeechRecognitionProviderConfigInput) {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.listRecognitionProviderModels, config)
+  },
   listSpeechRecognitionModels() {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.listRecognitionModels)
   },
   listPronunciationAssessmentModels() {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.listPronunciationModels)
+  },
+  getPronunciationAssessmentExtensionStatus() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.pronunciationExtensionStatus)
+  },
+  importPronunciationAssessmentExtension(): Promise<AIRouterPronunciationAssessmentExtensionImportResult | null> {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.importPronunciationExtension)
   },
   startSpeechRecognition(
     request: AIRouterSpeechRecognitionRequest,

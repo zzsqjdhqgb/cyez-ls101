@@ -28,10 +28,20 @@ export const AIROUTER_CHANNELS = {
   speechSynthesisAbort: 'airouter:speech-synthesis-abort',
   speechSynthesisEvent: 'airouter:speech-synthesis-event',
   listRecognitionModels: 'airouter:list-recognition-models',
+  listRecognitionConfigs: 'airouter:list-recognition-configs',
+  saveRecognitionConfig: 'airouter:save-recognition-config',
+  deleteRecognitionConfig: 'airouter:delete-recognition-config',
+  readRecognitionApiKey: 'airouter:read-recognition-api-key',
+  listRecognitionPackages: 'airouter:list-recognition-packages',
+  importRecognitionPackage: 'airouter:import-recognition-package',
+  deleteRecognitionPackage: 'airouter:delete-recognition-package',
+  listRecognitionProviderModels: 'airouter:list-recognition-provider-models',
   speechRecognitionStart: 'airouter:speech-recognition-start',
   speechRecognitionAbort: 'airouter:speech-recognition-abort',
   speechRecognitionEvent: 'airouter:speech-recognition-event',
   listPronunciationModels: 'airouter:list-pronunciation-models',
+  pronunciationExtensionStatus: 'airouter:pronunciation-extension-status',
+  importPronunciationExtension: 'airouter:import-pronunciation-extension',
   pronunciationAssessmentStart: 'airouter:pronunciation-assessment-start',
   pronunciationAssessmentAbort: 'airouter:pronunciation-assessment-abort',
   pronunciationAssessmentEvent: 'airouter:pronunciation-assessment-event',
@@ -42,5 +52,7 @@ export const AIROUTER_CHANNELS = {
 
 export const BUILTIN_PRONUNCIATION_PROVIDER_ID = 'builtin-facebook-phoneme'
 export const BUILTIN_PRONUNCIATION_MODEL_ID = 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f'
+export const PRONUNCIATION_EXTENSION_ID = 'facebook-wav2vec2-pronunciation'
+export const PRONUNCIATION_EXTENSION_VERSION = '1.0.0'
 
 export type AIRouterChannel = (typeof AIROUTER_CHANNELS)[keyof typeof AIROUTER_CHANNELS]

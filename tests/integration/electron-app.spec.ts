@@ -129,7 +129,12 @@ test('starts a hardened application window and exposes every preload bridge', as
       'deleteProviderConfig',
       'deleteSpeechModelPackage',
       'deleteSpeechProviderConfig',
+      'deleteSpeechRecognitionModelPackage',
+      'deleteSpeechRecognitionProviderConfig',
+      'getPronunciationAssessmentExtensionStatus',
+      'importPronunciationAssessmentExtension',
       'importSpeechModelPackage',
+      'importSpeechRecognitionModelPackage',
       'listImageModels',
       'listImageProviderConfigs',
       'listModels',
@@ -138,14 +143,19 @@ test('starts a hardened application window and exposes every preload bridge', as
       'listSpeechModelPackages',
       'listSpeechModels',
       'listSpeechProviderConfigs',
+      'listSpeechRecognitionModelPackages',
       'listSpeechRecognitionModels',
+      'listSpeechRecognitionProviderConfigs',
+      'listSpeechRecognitionProviderModels',
       'listSpeechVoices',
       'readImageProviderApiKey',
       'readProviderApiKey',
       'readSpeechProviderApiKey',
+      'readSpeechRecognitionProviderApiKey',
       'saveImageProviderConfig',
       'saveProviderConfig',
       'saveSpeechProviderConfig',
+      'saveSpeechRecognitionProviderConfig',
       'startImageGeneration',
       'startPronunciationAssessment',
       'startSpeechRecognition',
@@ -269,14 +279,7 @@ test('round-trips data through file, config, asset protocol, AI and clipboard IP
       ],
       maximized: false,
       providers: [],
-      recognitionModels: [
-        {
-          modelId: 'qwen3-asr-0.6b',
-          modelName: 'Qwen3 ASR 0.6B',
-          providerId: 'builtin-qwen3-asr',
-          providerName: '内置语音识别'
-        }
-      ],
+      recognitionModels: [],
       swapped: true,
       text: '{"ready":true}'
     })

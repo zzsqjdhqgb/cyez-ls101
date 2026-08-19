@@ -1,5 +1,4 @@
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { parentPort, workerData } from 'node:worker_threads'
 import { createRequire } from 'node:module'
@@ -11,7 +10,7 @@ const SAMPLE_RATE = 16_000
 const MAX_PCM_BYTES = 256 * 1024 * 1024
 
 interface WorkerConfig {
-  modelDir: string
+  assets: Record<string, string>
   ffmpegPath: string
 }
 
@@ -26,12 +25,12 @@ async function initialize(config: WorkerConfig): Promise<void> {
   // \\?\ path and fail with ERROR_BAD_EXE_FORMAT. Use the package's direct CommonJS path instead.
   workerConfig = config
   runtime = require('onnxruntime-node') as typeof OnnxRuntime
-  vocabulary = JSON.parse(readFileSync(join(config.modelDir, 'vocab.json'), 'utf8')) as Record<
+  vocabulary = JSON.parse(readFileSync(config.assets['model/vocab.json'], 'utf8')) as Record<
     string,
     number
   >
   session = await runtime.InferenceSession.create(
-    join(config.modelDir, 'onnx', 'model_quantized.onnx'),
+    config.assets['model/onnx/model_quantized.onnx'],
     {
       executionProviders: ['cpu'],
       graphOptimizationLevel: 'all',
@@ -178,7 +177,10 @@ if (isWorkerConfig(workerData)) {
 
 function isWorkerConfig(value: unknown): value is WorkerConfig {
   return (
-    isRecord(value) && typeof value.modelDir === 'string' && typeof value.ffmpegPath === 'string'
+    isRecord(value) &&
+    isRecord(value.assets) &&
+    Object.values(value.assets).every((asset) => typeof asset === 'string') &&
+    typeof value.ffmpegPath === 'string'
   )
 }
 

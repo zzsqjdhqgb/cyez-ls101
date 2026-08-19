@@ -33,6 +33,8 @@
     "qwen-tts:build-package": "node scripts/qwen-tts/build-package.mjs",
     "qwen-tts:download": "node scripts/qwen-tts/download-release-assets.mjs",
     "qwen-tts:prepare": "node scripts/qwen-tts/prepare-package.mjs",
+    "qwen-asr:build-package": "node scripts/build-asr-model-package.mjs",
+    "pronunciation:build-extension": "node scripts/build-pronunciation-extension-package.mjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "start": "electron-vite preview",

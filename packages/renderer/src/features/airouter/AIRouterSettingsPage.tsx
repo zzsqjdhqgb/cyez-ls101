@@ -18,12 +18,12 @@ import {
   LockKeyhole,
   MessageSquareText,
   Mic,
+  Brain,
   Plus,
   Save,
   TestTube2,
   Trash2,
-  X,
-  type LucideIcon
+  X
 } from 'lucide-react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import {
@@ -50,6 +50,8 @@ import {
 import { formatAIRouterError } from './airouterError'
 import { AIRouterImageSettingsPage } from './AIRouterImageSettingsPage'
 import { AIRouterSpeechSettingsPage } from './AIRouterSpeechSettingsPage'
+import { AIRouterSpeechRecognitionSettingsPage } from './AIRouterSpeechRecognitionSettingsPage'
+import { AIRouterPronunciationSettingsPage } from './AIRouterPronunciationSettingsPage'
 import styles from './AIRouterSettingsPage.module.css'
 
 interface ProviderDraft {
@@ -182,7 +184,8 @@ const sections = [
   { id: 'text', label: '文本生成', icon: MessageSquareText },
   { id: 'image', label: '图像生成', icon: ImageIcon },
   { id: 'speech-synthesis', label: '语音合成', icon: AudioLines },
-  { id: 'speech-recognition', label: '语音识别', icon: Mic }
+  { id: 'speech-recognition', label: '语音识别', icon: Mic },
+  { id: 'pronunciation', label: 'AI 语音评测', icon: Brain }
 ] as const
 
 export function AIRouterSettingsPage({
@@ -226,13 +229,11 @@ export function AIRouterSettingsPage({
         />
         <Route
           path="speech-recognition"
-          element={
-            <AIRouterPlaceholder
-              icon={Mic}
-              title="语音识别"
-              description="语音识别模型的 Provider、模型和连接测试将在这里配置。"
-            />
-          }
+          element={<AIRouterSpeechRecognitionSettingsPage application={application} />}
+        />
+        <Route
+          path="pronunciation"
+          element={<AIRouterPronunciationSettingsPage application={application} />}
         />
         <Route path="*" element={<Navigate replace to="text" />} />
       </Routes>
@@ -808,29 +809,6 @@ export function AIRouterTextSettingsPage({
         title="删除 Provider 配置？"
       />
     </SettingsContent>
-  )
-}
-
-function AIRouterPlaceholder({
-  icon: Icon,
-  title,
-  description
-}: {
-  icon: LucideIcon
-  title: string
-  description: string
-}): JSX.Element {
-  return (
-    <section className={styles.placeholder}>
-      <div className={styles.placeholderIcon}>
-        <Icon aria-hidden="true" />
-      </div>
-      <div className={styles.placeholderText}>
-        <span className={styles.placeholderBadge}>临时占位</span>
-        <h2>{title}</h2>
-        <p>{description}</p>
-      </div>
-    </section>
   )
 }
 
