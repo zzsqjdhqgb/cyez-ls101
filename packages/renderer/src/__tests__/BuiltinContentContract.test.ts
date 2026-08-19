@@ -260,7 +260,11 @@ describe('builtin content contract', () => {
         )
       }
       expect(preview.preview.pages.length).toBeGreaterThan(0)
-      expect(preview.preview.recordingIndices.length).toBeGreaterThan(0)
+      if (summary.name === '上海高考英语听力标准题型') {
+        expect(preview.preview.recordingIndices).toEqual([])
+      } else {
+        expect(preview.preview.recordingIndices.length).toBeGreaterThan(0)
+      }
 
       const compiled = await application.builtinTemplates.compile(summary.templateId, bindings, {
         synthesizeSpeech: async () => ({
@@ -274,7 +278,11 @@ describe('builtin content contract', () => {
         )
       }
       expect(compiled.examPackage.examData.player.pages.length).toBeGreaterThan(0)
-      expect(compiled.examPackage.examData.player.recordingIndices.length).toBeGreaterThan(0)
+      if (summary.name === '上海高考英语听力标准题型') {
+        expect(compiled.examPackage.examData.player.recordingIndices).toEqual([])
+      } else {
+        expect(compiled.examPackage.examData.player.recordingIndices.length).toBeGreaterThan(0)
+      }
       expect(compiled.examPackage.submissionTemplate.schemaUses.length).toBeGreaterThan(0)
       expect(compiled.resourceSources.length).toBeGreaterThan(0)
 

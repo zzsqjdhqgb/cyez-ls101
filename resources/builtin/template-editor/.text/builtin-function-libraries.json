@@ -4632,8 +4632,8 @@
     },
     {
       "libraryId": "builtin:shanghai-gaokao-choice",
-      "version": 7,
-      "contentHash": "sha256:70cd1a0a32f22fe60c01baa7743c694d832a26a5b0f74c5c44d924ce1b8e5a19",
+      "version": 8,
+      "contentHash": "sha256:c33f684a8d26dd6bae49425ba5c3af0dee3f8700d197d98b1cec0f510bd2784f",
       "content": {
         "name": "高中选择题",
         "functions": [
@@ -4967,37 +4967,104 @@
                     "name": "变量"
                   },
                   {
-                    "id": "function-call",
+                    "id": "directions-page",
                     "name": "Directions页面",
-                    "type": "function",
-                    "functionRef": "builtin:shanghai-gaokao-directions",
-                    "inputs": {
-                      "title": {
-                        "type": "string",
-                        "parts": [
-                          {
-                            "type": "variable",
-                            "ref": {
-                              "scope": "local",
-                              "name": "title"
-                            }
+                    "type": "page",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "text",
+                          "type": "text",
+                          "x": 10,
+                          "y": 10,
+                          "width": 79.4,
+                          "fontSize": 50,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "I. Listening Comprehension"
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "text-1",
+                          "type": "text",
+                          "x": 10,
+                          "y": 27.8,
+                          "width": 79.4,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "title"
+                                }
+                              }
+                            ]
                           }
-                        ]
-                      },
-                      "direction": {
-                        "type": "string",
-                        "parts": [
-                          {
-                            "type": "variable",
-                            "ref": {
-                              "scope": "local",
-                              "name": "direction"
-                            }
+                        },
+                        {
+                          "id": "text-2",
+                          "type": "text",
+                          "x": 10,
+                          "y": 39,
+                          "width": 79.4,
+                          "fontSize": 24,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "direction"
+                                }
+                              }
+                            ]
                           }
-                        ]
-                      }
+                        }
+                      ]
                     },
-                    "outputNames": {}
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "title"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": ".  "
+                            },
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "direction"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": "."
+                            }
+                          ]
+                        }
+                      }
+                    ]
                   },
                   {
                     "id": "function-call-1",
@@ -5019,7 +5086,12 @@
                       },
                       "idx": {
                         "type": "string",
-                        "parts": [{ "type": "literal", "value": "1" }]
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "1"
+                          }
+                        ]
                       },
                       "choice": {
                         "type": "choice-group",
@@ -5143,7 +5215,12 @@
                       },
                       "idx": {
                         "type": "string",
-                        "parts": [{ "type": "literal", "value": "2" }]
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "2"
+                          }
+                        ]
                       },
                       "choice": {
                         "type": "choice-group",
@@ -5267,7 +5344,12 @@
                       },
                       "idx": {
                         "type": "string",
-                        "parts": [{ "type": "literal", "value": "3" }]
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "3"
+                          }
+                        ]
                       },
                       "choice": {
                         "type": "choice-group",
@@ -5391,7 +5473,12 @@
                       },
                       "idx": {
                         "type": "string",
-                        "parts": [{ "type": "literal", "value": "4" }]
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "4"
+                          }
+                        ]
                       },
                       "choice": {
                         "type": "choice-group",
@@ -5515,7 +5602,12 @@
                       },
                       "idx": {
                         "type": "string",
-                        "parts": [{ "type": "literal", "value": "5" }]
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "5"
+                          }
+                        ]
                       },
                       "choice": {
                         "type": "choice-group",
@@ -5542,7 +5634,7 @@
                       "timer": {
                         "type": "number",
                         "source": "literal",
-                        "value": 3
+                        "value": 5
                       },
                       "stem": {
                         "type": "string",
@@ -5639,7 +5731,12 @@
                       },
                       "idx": {
                         "type": "string",
-                        "parts": [{ "type": "literal", "value": "6" }]
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "6"
+                          }
+                        ]
                       },
                       "choice": {
                         "type": "choice-group",
@@ -5763,7 +5860,12 @@
                       },
                       "idx": {
                         "type": "string",
-                        "parts": [{ "type": "literal", "value": "7" }]
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "7"
+                          }
+                        ]
                       },
                       "choice": {
                         "type": "choice-group",
@@ -5887,7 +5989,12 @@
                       },
                       "idx": {
                         "type": "string",
-                        "parts": [{ "type": "literal", "value": "8" }]
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "8"
+                          }
+                        ]
                       },
                       "choice": {
                         "type": "choice-group",
@@ -6011,7 +6118,12 @@
                       },
                       "idx": {
                         "type": "string",
-                        "parts": [{ "type": "literal", "value": "9" }]
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "9"
+                          }
+                        ]
                       },
                       "choice": {
                         "type": "choice-group",
@@ -6135,7 +6247,12 @@
                       },
                       "idx": {
                         "type": "string",
-                        "parts": [{ "type": "literal", "value": "10" }]
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "10"
+                          }
+                        ]
                       },
                       "choice": {
                         "type": "choice-group",
@@ -6162,7 +6279,7 @@
                       "timer": {
                         "type": "number",
                         "source": "literal",
-                        "value": 3
+                        "value": 5
                       },
                       "stem": {
                         "type": "string",

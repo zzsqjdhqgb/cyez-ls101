@@ -10,6 +10,10 @@ import { FileTemplateRepository, type TemplateStore } from '../repository'
 import type { BuiltinTemplateRelease } from '../types'
 
 const TEMPLATE_ID = '0c283c54-683a-498c-bf69-fb1490f99356'
+const LISTENING_TEMPLATE = {
+  templateId: '4f4c8c1a-9b2a-4d71-8f1e-4a5e8c7d2b63',
+  name: '上海高考英语听力标准题型'
+} as const
 const SECTION_TEMPLATES = [
   {
     templateId: '261d2ad9-225e-41ac-a394-1887b912b917',
@@ -54,7 +58,11 @@ describe('内置 Template 启动初始化', () => {
     await initializeBuiltinTemplates(repository, manifest)
 
     expect(await repository.listBuiltinTemplateIds()).toEqual(
-      [TEMPLATE_ID, ...SECTION_TEMPLATES.map(({ templateId }) => templateId)].sort()
+      [
+        TEMPLATE_ID,
+        LISTENING_TEMPLATE.templateId,
+        ...SECTION_TEMPLATES.map(({ templateId }) => templateId)
+      ].sort()
     )
     expect(await repository.getActiveBuiltinTemplate(TEMPLATE_ID)).toMatchObject({
       templateId: TEMPLATE_ID,
@@ -81,6 +89,43 @@ describe('内置 Template 启动初始化', () => {
     const standard = await repository.getActiveBuiltinTemplate(TEMPLATE_ID)
     const standardInterface = standard?.document.content.interfaces[0]
     expect(standardInterface).toBeDefined()
+
+    expect(await repository.getActiveBuiltinTemplate(LISTENING_TEMPLATE.templateId)).toMatchObject({
+      templateId: LISTENING_TEMPLATE.templateId,
+      version: 1,
+      releaseHash: 'sha256:2e806dd8fdbdb0cb960922dd059514b5120741cbcaea39548bcfb81ddb30ef03',
+      document: {
+        content: {
+          name: LISTENING_TEMPLATE.name,
+          interfaces: [
+            {
+              alias: 'data',
+              interfaceId:
+                'sha256:03e00d7f007b7b2281e13429ec89220d3d5abfa218f1f953f0d3c64ff1489838',
+              acceptedVars: expect.arrayContaining([
+                'dialogue_text_1',
+                'passage_text_1',
+                'dialogue_long_text'
+              ])
+            }
+          ],
+          root: {
+            choiceCollector: { pages: [5, 5, 3, 3, 4].map((questionCount) => ({ questionCount })) },
+            children: [
+              { type: 'function', name: '选择题1~10' },
+              { type: 'function', name: '短文题组（11~16）' },
+              { type: 'function', name: '长对话（17~20）' },
+              { type: 'page', name: '听力结束检查页' }
+            ]
+          }
+        },
+        resources: {
+          functions: expect.arrayContaining([
+            expect.objectContaining({ id: expect.stringMatching(/^sha256:/) })
+          ])
+        }
+      }
+    })
 
     for (const expected of SECTION_TEMPLATES) {
       const section = await repository.getActiveBuiltinTemplate(expected.templateId)
