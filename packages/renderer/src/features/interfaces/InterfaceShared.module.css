@@ -34,7 +34,7 @@
   transition:
     background-color 140ms ease,
     padding-left 140ms ease;
-  animation: list-row-enter 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: list-row-enter 300ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 .list > .row:hover {
