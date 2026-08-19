@@ -123,6 +123,7 @@ export type TemplateDocumentOperation =
   | DefinitionOperation
   | { type: 'set-template-name'; value: string }
   | { type: 'set-template-description'; value: string }
+  | { type: 'set-template-tags'; value: string[] }
   | {
       type: 'insert-interface-requirement'
       index?: number
@@ -146,6 +147,7 @@ export type FunctionDocumentOperation =
   | { type: 'remove-function-output'; name: string }
 
 export type DocumentEditErrorCode =
+  | 'INVALID_VALUE'
   | 'NODE_NOT_FOUND'
   | 'PARENT_NOT_FOUND'
   | 'PARENT_NOT_FRAME'

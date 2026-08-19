@@ -77,6 +77,7 @@ export type {
   LocatedInterfaceInstance
 } from './compiler'
 export { validateTemplateContent, validateTemplateDocument } from './validation'
+export { normalizeTemplateTags } from './tags'
 export type {
   TemplateDocumentValidationContext,
   TemplateValidationContext,

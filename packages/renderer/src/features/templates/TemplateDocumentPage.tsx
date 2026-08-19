@@ -276,10 +276,14 @@ function TemplateDocumentEditor({
   )
 
   const editMetadata = (
-    type: 'set-template-name' | 'set-template-description',
+    type: 'set-template-name' | 'set-template-description' | 'set-template-tags',
     value: string
   ): void => {
-    session.apply({ type, value })
+    if (type === 'set-template-tags') {
+      session.apply({ type, value: value.split(',') })
+    } else {
+      session.apply({ type, value })
+    }
   }
 
   const insertLibraryItem = (
@@ -1210,6 +1214,22 @@ function TemplateDocumentEditor({
                     onChange={(event) =>
                       editMetadata('set-template-description', event.target.value)
                     }
+                  />
+                </label>
+                <label>
+                  标签
+                  <input
+                    key={JSON.stringify(document?.content.tags ?? [])}
+                    disabled={!document || readOnly}
+                    defaultValue={(document?.content.tags ?? []).join(', ')}
+                    placeholder="例如：听力, 高考"
+                    onBlur={(event) => editMetadata('set-template-tags', event.currentTarget.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        editMetadata('set-template-tags', event.currentTarget.value)
+                      }
+                    }}
                   />
                 </label>
                 <TemplateInterfaceRequirements
