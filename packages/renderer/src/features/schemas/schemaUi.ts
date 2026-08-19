@@ -51,6 +51,7 @@ const validationMessages: Record<SchemaValidationError['code'], string> = {
   INVALID_INPUT_TYPE: '输入项类型无效',
   INVALID_INPUT_REQUIRED: '输入项必填设置无效',
   MISSING_QUESTION_DESCRIPTION: '缺少内置题目描述输入',
+  MISSING_OBJECTIVE_CORRECT_ANSWER: '客观题缺少内置正确答案输入',
   MISSING_OBJECTIVE_ANALYSIS: '客观题缺少内置解析输入',
   MISSING_REFERENCE_ANSWER: '主观题缺少内置参考答案输入',
   EMPTY_RUBRIC: '评分标准不能为空',

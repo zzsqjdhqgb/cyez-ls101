@@ -31,7 +31,11 @@ const schemaDefinitions: SchemaDefinition[] = [
   schemaDefinition(CHOICE_SCHEMA_ID, {
     questionType: 'objective',
     answerFormat: [{ answerId: 'answer', type: 'text' }],
-    templateInputs: []
+    templateInputs: [
+      { inputId: 'question-description', type: 'text', required: true },
+      { inputId: 'correct-answer', type: 'text', required: true },
+      { inputId: 'analysis', type: 'text', required: false }
+    ]
   })
 ]
 
@@ -98,7 +102,10 @@ function choiceUse(useId: string, outputName: string): SchemaUse {
   return {
     useId,
     schemaId: CHOICE_SCHEMA_ID,
-    inputBindings: {},
+    inputBindings: {
+      'question-description': schemaText('Choose one'),
+      'correct-answer': schemaText('A')
+    },
     answerBindings: { answer: { type: 'text', source: 'choice-output', name: outputName } },
     attachments: []
   }

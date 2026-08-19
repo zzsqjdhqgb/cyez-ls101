@@ -4,16 +4,27 @@ import type {
   SchemaStructure,
   SchemaTemplateInputDefinition
 } from '@ls101/core-types'
+import {
+  SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID,
+  SCHEMA_OBJECTIVE_CORRECT_ANSWER_INPUT_ID,
+  SCHEMA_QUESTION_DESCRIPTION_INPUT_ID,
+  SCHEMA_REFERENCE_ANSWER_INPUT_ID
+} from '@ls101/core-types'
 
-export const SCHEMA_QUESTION_DESCRIPTION_INPUT_ID = 'question-description'
-export const SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID = 'analysis'
-export const SCHEMA_REFERENCE_ANSWER_INPUT_ID = 'reference-answer'
+export {
+  SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID,
+  SCHEMA_OBJECTIVE_CORRECT_ANSWER_INPUT_ID,
+  SCHEMA_QUESTION_DESCRIPTION_INPUT_ID,
+  SCHEMA_REFERENCE_ANSWER_INPUT_ID
+} from '@ls101/core-types'
 
 export function schemaBuiltinInputDescription(
   questionType: SchemaQuestionType,
   inputId: string
 ): string | null {
   if (inputId === SCHEMA_QUESTION_DESCRIPTION_INPUT_ID) return '题目描述'
+  if (questionType === 'objective' && inputId === SCHEMA_OBJECTIVE_CORRECT_ANSWER_INPUT_ID)
+    return '正确答案'
   if (questionType === 'objective' && inputId === SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID) return '解析'
   if (questionType !== 'objective' && inputId === SCHEMA_REFERENCE_ANSWER_INPUT_ID)
     return '参考答案'
@@ -33,7 +44,10 @@ export function createSchemaStructure(
     { inputId: SCHEMA_QUESTION_DESCRIPTION_INPUT_ID, type: 'text', required: true }
   ]
   if (questionType === 'objective') {
-    builtins.push({ inputId: SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID, type: 'text', required: true })
+    builtins.push(
+      { inputId: SCHEMA_OBJECTIVE_CORRECT_ANSWER_INPUT_ID, type: 'text', required: true },
+      { inputId: SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID, type: 'text', required: false }
+    )
   } else {
     builtins.push({ inputId: SCHEMA_REFERENCE_ANSWER_INPUT_ID, type: 'text', required: true })
   }

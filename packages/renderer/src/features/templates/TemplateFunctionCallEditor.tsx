@@ -8,11 +8,12 @@ import type {
   TextExpression,
   ValueExpression
 } from '@ls101/template-editor'
-import type { JSX } from 'react'
+import { useEffect, type JSX } from 'react'
 import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-react'
 import { TemplateFunctionSchemaSummary } from './TemplateFunctionSchemaSummary'
 import { TemplateVariableInput } from './TemplateVariableInput'
 import type { TemplateVariableCandidate } from './TemplateVariableInputModel'
+import type { TemplateChoiceGroupCandidate } from './TemplateChoiceTargets'
 import styles from './TemplateFunctionCallEditor.module.css'
 
 interface TemplateFunctionCallEditorProps {
@@ -20,6 +21,7 @@ interface TemplateFunctionCallEditorProps {
   definition: FunctionDef | undefined
   functions: readonly FunctionDef[]
   variableCandidates: readonly TemplateVariableCandidate[]
+  choiceGroupCandidates?: readonly TemplateChoiceGroupCandidate[]
   compact?: boolean
   apply(operation: TemplateDocumentOperation): boolean
 }
@@ -29,6 +31,7 @@ export function TemplateFunctionCallEditor({
   definition,
   functions,
   variableCandidates,
+  choiceGroupCandidates = [],
   compact = false,
   apply
 }: TemplateFunctionCallEditorProps): JSX.Element {
@@ -55,6 +58,7 @@ export function TemplateFunctionCallEditor({
                 label={`${labelPrefix} 入参 ${input.name}`}
                 value={node.inputs[input.name]}
                 variableCandidates={variableCandidates}
+                choiceGroupCandidates={choiceGroupCandidates}
                 onChange={(expression) =>
                   apply({
                     type: 'set-function-call-input',
@@ -120,12 +124,14 @@ function FunctionInputRow({
   value,
   label,
   variableCandidates,
+  choiceGroupCandidates,
   onChange
 }: {
   input: FunctionInputDef
   value: FunctionInputExpression | undefined
   label: string
   variableCandidates: readonly TemplateVariableCandidate[]
+  choiceGroupCandidates: readonly TemplateChoiceGroupCandidate[]
   onChange(expression: FunctionInputExpression): void
 }): JSX.Element {
   return (
@@ -136,7 +142,13 @@ function FunctionInputRow({
       </span>
       <span className={styles.control}>
         {input.type === 'choice-group' ? (
-          <ChoiceGroupInput input={input} label={label} value={value} onChange={onChange} />
+          <ChoiceGroupInput
+            choiceGroupCandidates={choiceGroupCandidates}
+            input={input}
+            label={label}
+            value={value}
+            onChange={onChange}
+          />
         ) : input.type === 'string' ? (
           <TemplateVariableInput
             mode="text"
@@ -192,107 +204,183 @@ function fallbackInputs(node: FunctionNode): FunctionInputDef[] {
 
 function ChoiceGroupInput({
   input,
+  choiceGroupCandidates,
   value,
   label,
   onChange
 }: {
   input: Extract<FunctionInputDef, { type: 'choice-group' }>
+  choiceGroupCandidates: readonly TemplateChoiceGroupCandidate[]
   value: FunctionInputExpression | undefined
   label: string
   onChange(expression: FunctionInputExpression): void
 }): JSX.Element {
   const expression = value?.type === 'choice-group' ? value : defaultChoiceGroupInput(input)
-  const selectionKinds =
-    input.shape.kind === 'question'
-      ? (['question', 'all'] as const)
-      : input.shape.kind === 'range'
-        ? (['range', 'all'] as const)
-        : (['all'] as const)
+  const availableCandidates = choiceGroupCandidates.filter((candidate) =>
+    canSelectShape(input.shape, shapePageCounts(candidate.shape), candidate.shape.kind)
+  )
+  const selectedCandidate =
+    availableCandidates.find((candidate) =>
+      expression.source === 'global'
+        ? candidate.source === 'global'
+        : candidate.source === 'local' && candidate.name === expression.name
+    ) ?? availableCandidates[0]
+  const sourceShape = selectedCandidate?.shape
+  const sourcePageCounts = sourceShape ? shapePageCounts(sourceShape) : []
+  const sourceValue = selectedCandidate
+    ? selectedCandidate.source === 'global'
+      ? { source: 'global' as const }
+      : { source: 'local' as const, name: selectedCandidate.name ?? '' }
+    : expression.source === 'global'
+      ? { source: 'global' as const }
+      : { source: 'local' as const, name: expression.name }
+  const normalizedSelection = normalizeSelection(
+    input.shape,
+    sourcePageCounts,
+    expression.selection
+  )
+  const normalizedExpression = createNormalizedExpression(selectedCandidate, normalizedSelection)
+
+  useEffect(() => {
+    if (!normalizedExpression || sameChoiceGroupExpression(expression, normalizedExpression)) {
+      return
+    }
+    onChange(normalizedExpression)
+  }, [expression, normalizedExpression, onChange])
 
   return (
     <span className={styles.groupControl}>
       <select
         aria-label={`${label} 来源`}
-        value={expression.source}
-        onChange={(event) =>
-          onChange(
-            event.target.value === 'global'
-              ? { type: 'choice-group', source: 'global', selection: expression.selection }
-              : {
-                  type: 'choice-group',
-                  source: 'local',
-                  name: expression.source === 'local' ? expression.name : '',
-                  selection: expression.selection
-                }
-          )
-        }
-      >
-        <option value="global">全局题组</option>
-        <option value="local">局部题组</option>
-      </select>
-      {expression.source === 'local' ? (
-        <input
-          aria-label={`${label} 局部题组名`}
-          placeholder="题组输入名"
-          value={expression.name}
-          onChange={(event) => onChange({ ...expression, name: event.target.value })}
-        />
-      ) : null}
-      <select
-        aria-label={`${label} 选择方式`}
-        value={expression.selection.kind}
+        value={selectedCandidate?.key ?? expressionSourceKey(expression)}
         onChange={(event) => {
-          const kind = event.target.value as ChoiceGroupExpression['selection']['kind']
+          const candidate = availableCandidates.find((item) => item.key === event.target.value)
+          if (!candidate) return
           onChange({
-            ...expression,
-            selection:
-              kind === 'question'
-                ? { kind, pageIndex: 0, questionIndex: 0 }
-                : kind === 'range'
-                  ? { kind, startPage: 0 }
-                  : { kind }
-          } as ChoiceGroupExpression)
+            type: 'choice-group',
+            ...(candidate.source === 'global'
+              ? { source: 'global' as const }
+              : { source: 'local' as const, name: candidate.name ?? '' }),
+            selection: defaultSelection(input.shape, shapePageCounts(candidate.shape))
+          })
         }}
       >
-        {selectionKinds.map((kind) => (
-          <option key={kind} value={kind}>
-            {kind === 'question' ? '指定题目' : kind === 'range' ? '连续范围' : '整个题组'}
-          </option>
-        ))}
+        {availableCandidates.length > 0 ? (
+          availableCandidates.map((candidate) => (
+            <option key={candidate.key} value={candidate.key}>
+              {candidate.label}
+            </option>
+          ))
+        ) : (
+          <option value={expressionSourceKey(expression)}>当前绑定不可用</option>
+        )}
       </select>
-      {expression.selection.kind === 'range' ? (
-        <input
+      {input.shape.kind === 'range' ? (
+        <select
           aria-label={`${label} 起始页`}
-          min={1}
-          type="number"
-          value={expression.selection.startPage + 1}
-          onChange={(event) => onChange(withRangeStart(expression, Number(event.target.value) - 1))}
-        />
-      ) : null}
-      {expression.selection.kind === 'question' ? (
+          value={normalizedSelection.kind === 'range' ? normalizedSelection.startPage : ''}
+          onChange={(event) =>
+            onChange({
+              ...sourceValue,
+              type: 'choice-group',
+              selection: { kind: 'range', startPage: Number(event.target.value) }
+            })
+          }
+        >
+          {rangeStarts(sourcePageCounts, input.shape.pageCounts).map((pageIndex) => (
+            <option key={pageIndex} value={pageIndex}>
+              第 {pageIndex + 1} 页
+            </option>
+          ))}
+        </select>
+      ) : input.shape.kind === 'question' ? (
         <>
-          <input
+          <select
             aria-label={`${label} 页面`}
-            min={1}
-            type="number"
-            value={expression.selection.pageIndex + 1}
+            value={normalizedSelection.kind === 'question' ? normalizedSelection.pageIndex : ''}
             onChange={(event) =>
-              onChange(withQuestionPage(expression, Number(event.target.value) - 1))
+              onChange(
+                withQuestionPage(
+                  { ...sourceValue, type: 'choice-group', selection: normalizedSelection },
+                  Number(event.target.value)
+                )
+              )
             }
-          />
-          <input
+          >
+            {sourcePageCounts.map((_count, pageIndex) => (
+              <option key={pageIndex} value={pageIndex}>
+                第 {pageIndex + 1} 页
+              </option>
+            ))}
+          </select>
+          <select
             aria-label={`${label} 题目`}
-            min={1}
-            type="number"
-            value={expression.selection.questionIndex + 1}
+            value={normalizedSelection.kind === 'question' ? normalizedSelection.questionIndex : ''}
             onChange={(event) =>
-              onChange(withQuestionIndex(expression, Number(event.target.value) - 1))
+              onChange(
+                withQuestionIndex(
+                  { ...sourceValue, type: 'choice-group', selection: normalizedSelection },
+                  Number(event.target.value)
+                )
+              )
             }
-          />
+          >
+            {Array.from(
+              {
+                length:
+                  sourcePageCounts[
+                    normalizedSelection.kind === 'question' ? normalizedSelection.pageIndex : 0
+                  ] ?? 0
+              },
+              (_item, index) => (
+                <option key={index} value={index}>
+                  第 {index + 1} 题
+                </option>
+              )
+            )}
+          </select>
         </>
-      ) : null}
+      ) : (
+        <span>整个题组</span>
+      )}
     </span>
   )
+}
+
+function createNormalizedExpression(
+  candidate: TemplateChoiceGroupCandidate | undefined,
+  selection: ChoiceGroupExpression['selection']
+): ChoiceGroupExpression | null {
+  if (!candidate) return null
+  return {
+    type: 'choice-group',
+    ...(candidate.source === 'global'
+      ? { source: 'global' as const }
+      : { source: 'local' as const, name: candidate.name ?? '' }),
+    selection
+  }
+}
+
+function sameChoiceGroupExpression(
+  left: ChoiceGroupExpression,
+  right: ChoiceGroupExpression
+): boolean {
+  if (left.source !== right.source) return false
+  if (left.source === 'local' && right.source === 'local' && left.name !== right.name) {
+    return false
+  }
+  if (left.selection.kind !== right.selection.kind) return false
+  if (left.selection.kind === 'all' || right.selection.kind === 'all') return true
+  if (left.selection.kind === 'range' && right.selection.kind === 'range') {
+    return left.selection.startPage === right.selection.startPage
+  }
+  if (left.selection.kind === 'question' && right.selection.kind === 'question') {
+    return (
+      left.selection.pageIndex === right.selection.pageIndex &&
+      left.selection.questionIndex === right.selection.questionIndex
+    )
+  }
+  return false
 }
 
 function defaultChoiceGroupInput(
@@ -315,12 +403,74 @@ function defaultChoiceGroupInput(
   return { type: 'choice-group', source: 'global', selection: { kind: 'all' } }
 }
 
-function withRangeStart(
-  expression: ChoiceGroupExpression,
-  startPage: number
-): ChoiceGroupExpression {
-  if (expression.selection.kind !== 'range') return expression
-  return { ...expression, selection: { kind: 'range', startPage } }
+function shapePageCounts(shape: TemplateChoiceGroupCandidate['shape']): number[] {
+  return shape.kind === 'question' ? [1] : shape.pageCounts
+}
+
+function expressionSourceKey(expression: ChoiceGroupExpression): string {
+  return expression.source === 'global' ? 'global' : `local:${expression.name}`
+}
+
+function defaultSelection(
+  shape: Extract<FunctionInputDef, { type: 'choice-group' }>['shape'],
+  sourcePageCounts: readonly number[]
+): ChoiceGroupExpression['selection'] {
+  if (shape.kind === 'question') return { kind: 'question', pageIndex: 0, questionIndex: 0 }
+  if (shape.kind === 'range') {
+    return { kind: 'range', startPage: rangeStarts(sourcePageCounts, shape.pageCounts)[0] ?? 0 }
+  }
+  return { kind: 'all' }
+}
+
+function canSelectShape(
+  shape: Extract<FunctionInputDef, { type: 'choice-group' }>['shape'],
+  sourcePageCounts: readonly number[],
+  sourceKind: TemplateChoiceGroupCandidate['shape']['kind']
+): boolean {
+  if (shape.kind === 'question') return sourcePageCounts.some((count) => count > 0)
+  if (shape.kind === 'range') return rangeStarts(sourcePageCounts, shape.pageCounts).length > 0
+  return (
+    sourceKind === 'all' &&
+    sourcePageCounts.length === shape.pageCounts.length &&
+    shape.pageCounts.every((count, index) => sourcePageCounts[index] === count)
+  )
+}
+
+function normalizeSelection(
+  shape: Extract<FunctionInputDef, { type: 'choice-group' }>['shape'],
+  sourcePageCounts: readonly number[],
+  selection: ChoiceGroupExpression['selection']
+): ChoiceGroupExpression['selection'] {
+  const fallback = defaultSelection(shape, sourcePageCounts)
+  if (shape.kind === 'all') return fallback
+  if (shape.kind === 'range') {
+    const starts = rangeStarts(sourcePageCounts, shape.pageCounts)
+    return selection.kind === 'range' && starts.includes(selection.startPage)
+      ? selection
+      : { kind: 'range', startPage: starts[0] ?? 0 }
+  }
+  const pageIndex = selection.kind === 'question' ? selection.pageIndex : 0
+  const safePage = Math.min(Math.max(pageIndex, 0), Math.max(0, sourcePageCounts.length - 1))
+  const questionCount = sourcePageCounts[safePage] ?? 0
+  const questionIndex =
+    selection.kind === 'question'
+      ? Math.min(Math.max(selection.questionIndex, 0), Math.max(0, questionCount - 1))
+      : 0
+  return { kind: 'question', pageIndex: safePage, questionIndex }
+}
+
+function rangeStarts(
+  sourcePageCounts: readonly number[],
+  expectedPageCounts: readonly number[]
+): number[] {
+  if (expectedPageCounts.length === 0) return []
+  const starts: number[] = []
+  for (let start = 0; start + expectedPageCounts.length <= sourcePageCounts.length; start += 1) {
+    if (expectedPageCounts.every((count, index) => sourcePageCounts[start + index] === count)) {
+      starts.push(start)
+    }
+  }
+  return starts
 }
 
 function withQuestionPage(

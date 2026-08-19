@@ -16,6 +16,7 @@ import type {
 import { Button } from '../../components/ui/Button'
 import { IconButton } from '../../components/ui/IconButton'
 import { TemplateFunctionCallEditor } from './TemplateFunctionCallEditor'
+import type { TemplateChoiceGroupCandidate } from './TemplateChoiceTargets'
 import styles from './TemplateNodeInspector.module.css'
 import { TemplateVariableInput } from './TemplateVariableInput'
 import type { TemplateVariableCandidate } from './TemplateVariableInputModel'
@@ -24,6 +25,7 @@ interface TemplateNodeInspectorProps {
   node: TemplateNode
   functions: readonly FunctionDef[]
   variableCandidates: readonly TemplateVariableCandidate[]
+  choiceGroupCandidates: readonly TemplateChoiceGroupCandidate[]
   apply(operation: TemplateDocumentOperation): boolean
 }
 
@@ -31,6 +33,7 @@ export function TemplateNodeInspector({
   node,
   functions,
   variableCandidates,
+  choiceGroupCandidates,
   apply
 }: TemplateNodeInspectorProps): JSX.Element {
   const details =
@@ -46,6 +49,7 @@ export function TemplateNodeInspector({
         definition={functions.find((definition) => definition.id === node.functionRef)}
         functions={functions}
         variableCandidates={variableCandidates}
+        choiceGroupCandidates={choiceGroupCandidates}
         apply={apply}
       />
     ) : node.type === 'variable' ? (

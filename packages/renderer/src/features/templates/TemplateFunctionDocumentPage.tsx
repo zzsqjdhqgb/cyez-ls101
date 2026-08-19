@@ -34,7 +34,10 @@ import { IconButton } from '../../components/ui/IconButton'
 import { ResizableSplit } from '../../components/ui/ResizableSplit'
 import { FunctionSignatureEditor } from './FunctionSignatureEditor'
 import { useTemplateApplication } from './TemplateApplicationContext'
-import { collectTemplateChoiceTargetPages } from './TemplateChoiceTargets'
+import {
+  collectTemplateChoiceGroupCandidates,
+  collectTemplateChoiceTargetPages
+} from './TemplateChoiceTargets'
 import { TemplateContentBlockInspector } from './TemplateContentBlockInspector'
 import { TemplateNodeTree } from './TemplateDocumentPage'
 import { TemplateFunctionPreviewInspector } from './TemplateFunctionPreviewInspector'
@@ -184,6 +187,10 @@ function TemplateFunctionDocumentEditor({
   const choiceTargetPages = useMemo(
     () => (root ? collectTemplateChoiceTargetPages(root, siblingDefinitions) : []),
     [root, siblingDefinitions]
+  )
+  const choiceGroupCandidates = useMemo(
+    () => collectTemplateChoiceGroupCandidates(choiceTargetPages, document?.content.inputs ?? []),
+    [choiceTargetPages, document?.content.inputs]
   )
   const backTarget = functionBackTarget(location.state)
 
@@ -581,6 +588,7 @@ function TemplateFunctionDocumentEditor({
                     rootId={root.id}
                     selectedNodeId={session.selectedNodeId}
                     variableCandidates={variableCandidates}
+                    choiceGroupCandidates={choiceGroupCandidates}
                     onDelete={setPendingDeleteId}
                     onEditPage={openPageEditor}
                     onSelect={selectNode}
@@ -680,6 +688,7 @@ function TemplateFunctionDocumentEditor({
                     functions={siblingDefinitions}
                     node={selectedNode}
                     variableCandidates={variableCandidates}
+                    choiceGroupCandidates={choiceGroupCandidates}
                   />
                 </TemplateInspectorSection>
               ) : null}

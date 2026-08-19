@@ -98,8 +98,136 @@ describe('builtin content contract', () => {
     expect(await application.browser.listFunctionLibraries()).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ libraryId: 'builtin:shanghai-gaokao-basic' }),
+        expect.objectContaining({ libraryId: 'builtin:shanghai-gaokao-choice' }),
         expect.objectContaining({ libraryId: 'builtin:shanghai-gaokao-groups' })
       ])
+    )
+
+    const choiceTemplate = await application.templates.create({ name: '选择题1~20契约' })
+    const insertedChoiceGroup = await application.templates.insertFunctionCall(
+      choiceTemplate.templateId,
+      {
+        library: { source: 'builtin', libraryId: 'builtin:shanghai-gaokao-choice' },
+        functionId: 'builtin:shanghai-gaokao-choice-group-1-10'
+      },
+      'root'
+    )
+    const insertedPassageGroup = await application.templates.insertFunctionCall(
+      choiceTemplate.templateId,
+      {
+        library: { source: 'builtin', libraryId: 'builtin:shanghai-gaokao-choice' },
+        functionId: 'builtin:shanghai-gaokao-choice-passage-group-11-16'
+      },
+      'root'
+    )
+    const insertedConversationGroup = await application.templates.insertFunctionCall(
+      choiceTemplate.templateId,
+      {
+        library: { source: 'builtin', libraryId: 'builtin:shanghai-gaokao-choice' },
+        functionId: 'builtin:shanghai-gaokao-choice-long-conversation-group-17-20'
+      },
+      'root'
+    )
+    const composedChoiceTemplate = insertedConversationGroup.template
+    composedChoiceTemplate.content.root.choiceCollector = {
+      pages: [5, 5, 3, 3, 4].map((questionCount) => ({ questionCount }))
+    }
+    const insertedChoiceCall = composedChoiceTemplate.content.root.children.find(
+      (child) => child.id === insertedChoiceGroup.callNodeId
+    )
+    const insertedPassageCall = composedChoiceTemplate.content.root.children.find(
+      (child) => child.id === insertedPassageGroup.callNodeId
+    )
+    const insertedConversationCall = composedChoiceTemplate.content.root.children.find(
+      (child) => child.id === insertedConversationGroup.callNodeId
+    )
+    if (
+      insertedChoiceCall?.type !== 'function' ||
+      insertedPassageCall?.type !== 'function' ||
+      insertedConversationCall?.type !== 'function'
+    ) {
+      throw new Error('Builtin choice group calls were not inserted')
+    }
+    insertedChoiceCall.inputs.choice = {
+      type: 'choice-group',
+      source: 'global',
+      selection: { kind: 'range', startPage: 0 }
+    }
+    insertedPassageCall.inputs.choice = {
+      type: 'choice-group',
+      source: 'global',
+      selection: { kind: 'range', startPage: 2 }
+    }
+    insertedConversationCall.inputs.choice = {
+      type: 'choice-group',
+      source: 'global',
+      selection: { kind: 'range', startPage: 4 }
+    }
+    const savedChoiceTemplate = await application.templates.save(composedChoiceTemplate)
+    await expect(application.templates.validate(choiceTemplate.templateId)).resolves.toEqual({
+      valid: true,
+      errors: []
+    })
+    insertedChoiceCall.inputs.tts = {
+      type: 'string',
+      parts: [{ type: 'literal', value: 'Dialogue 1' }]
+    }
+    insertedChoiceCall.inputs.stem1 = {
+      type: 'string',
+      parts: [{ type: 'literal', value: 'Stem 1' }]
+    }
+    insertedPassageCall.inputs.tts = {
+      type: 'string',
+      parts: [{ type: 'literal', value: 'Passage 1' }]
+    }
+    insertedPassageCall.inputs.stem11 = {
+      type: 'string',
+      parts: [{ type: 'literal', value: 'Stem 11' }]
+    }
+    insertedConversationCall.inputs.tts = {
+      type: 'string',
+      parts: [{ type: 'literal', value: 'Long conversation' }]
+    }
+    insertedConversationCall.inputs.stem17 = {
+      type: 'string',
+      parts: [{ type: 'literal', value: 'Stem 17' }]
+    }
+    const choicePreview = await application.templates.preview(savedChoiceTemplate, [])
+    if (!choicePreview.success) {
+      throw new Error(
+        `Builtin choice group preview failed: ${JSON.stringify(choicePreview.errors)}`
+      )
+    }
+    expect(choicePreview.preview.pages).toHaveLength(31)
+    expect(choicePreview.preview.choiceMeta?.pages).toEqual([
+      { questionIndices: [0, 1, 2, 3, 4] },
+      { questionIndices: [5, 6, 7, 8, 9] },
+      { questionIndices: [10, 11, 12] },
+      { questionIndices: [13, 14, 15] },
+      { questionIndices: [16, 17, 18, 19] }
+    ])
+    expect(choicePreview.preview.pages[1]?.timeline[0]).toEqual({
+      type: 'play',
+      text: 'Dialogue 1\nQuestion: Stem 1'
+    })
+    expect(choicePreview.preview.pages[13]?.timeline[0]).toEqual({
+      type: 'play',
+      text: 'Passage 1'
+    })
+    expect(choicePreview.preview.pages[14]?.timeline[0]).toEqual({
+      type: 'play',
+      text: 'Passage 1'
+    })
+    expect(choicePreview.preview.pages[15]?.timeline[0]).toEqual({
+      type: 'play',
+      text: '\nQuestion: Stem 11'
+    })
+    expect(choicePreview.preview.pages[25]?.timeline[0]).toEqual({
+      type: 'play',
+      text: 'Long conversation'
+    })
+    expect(choicePreview.preview.choiceMeta?.questions.map(({ stem }) => stem)).toEqual(
+      Array.from({ length: 20 }, (_value, index) => String(index + 1))
     )
 
     for (const summary of templateSummaries) {

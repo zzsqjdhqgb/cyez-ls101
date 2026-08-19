@@ -1,9 +1,19 @@
 import type {
   ChoiceQuestionRef,
+  ChoiceGroupShape,
   FrameNode,
   FunctionDef,
+  FunctionInputDef,
   TemplateNode
 } from '@ls101/template-editor'
+
+export interface TemplateChoiceGroupCandidate {
+  key: string
+  label: string
+  source: 'global' | 'local'
+  name?: string
+  shape: ChoiceGroupShape
+}
 
 export interface TemplateChoiceTarget {
   pageIndex: number
@@ -45,6 +55,32 @@ export function sameChoiceQuestionRef(
     first.callPath.length === second.callPath.length &&
     first.callPath.every((part, index) => part === second.callPath[index])
   )
+}
+
+export function collectTemplateChoiceGroupCandidates(
+  pages: readonly TemplateChoiceTargetPage[],
+  inputs: readonly FunctionInputDef[] = []
+): TemplateChoiceGroupCandidate[] {
+  const candidates: TemplateChoiceGroupCandidate[] = []
+  if (pages.length > 0) {
+    candidates.push({
+      key: 'global',
+      label: '全局题组',
+      source: 'global',
+      shape: { kind: 'all', pageCounts: pages.map((page) => page.questions.length) }
+    })
+  }
+  inputs.forEach((input) => {
+    if (input.type !== 'choice-group') return
+    candidates.push({
+      key: `local:${input.name}`,
+      label: input.name,
+      name: input.name,
+      source: 'local',
+      shape: structuredClone(input.shape)
+    })
+  })
+  return candidates
 }
 
 function traverseFrame(

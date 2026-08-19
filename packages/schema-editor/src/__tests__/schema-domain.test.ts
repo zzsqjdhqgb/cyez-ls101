@@ -55,6 +55,7 @@ describe('Schema domain', () => {
     expect(validateSchemaStructure(freetalkStructure()).valid).toBe(true)
     expect(objectiveStructure().templateInputs.map((input) => input.inputId)).toEqual([
       'question-description',
+      'correct-answer',
       'analysis'
     ])
     expect(fixedReadingStructure().templateInputs.map((input) => input.inputId)).toEqual([
@@ -72,6 +73,37 @@ describe('Schema domain', () => {
     }
     expect(validateSchemaStructure(invalid).errors.map((error) => error.code)).toContain(
       'INVALID_ANSWER_FORMAT_FOR_QUESTION_TYPE'
+    )
+  })
+
+  it('requires the objective correct answer and keeps analysis optional', () => {
+    const objective = objectiveStructure()
+    const withoutCorrectAnswer = {
+      ...objective,
+      templateInputs: objective.templateInputs.filter((input) => input.inputId !== 'correct-answer')
+    }
+    const withoutAnalysis = {
+      ...objective,
+      templateInputs: objective.templateInputs.filter((input) => input.inputId !== 'analysis')
+    }
+    const requiredAnalysis = {
+      ...objective,
+      templateInputs: objective.templateInputs.map((input) =>
+        input.inputId === 'analysis' ? { ...input, required: true } : input
+      )
+    }
+
+    expect(validateSchemaStructure(withoutCorrectAnswer).errors).toContainEqual(
+      expect.objectContaining({ code: 'MISSING_OBJECTIVE_CORRECT_ANSWER' })
+    )
+    expect(validateSchemaStructure(withoutAnalysis).errors).toContainEqual(
+      expect.objectContaining({ code: 'MISSING_OBJECTIVE_ANALYSIS' })
+    )
+    expect(validateSchemaStructure(requiredAnalysis).errors).toContainEqual(
+      expect.objectContaining({
+        code: 'INVALID_INPUT_REQUIRED',
+        params: { inputId: 'analysis' }
+      })
     )
   })
 
@@ -266,7 +298,8 @@ describe('Schema repository', () => {
         answerFormat: [{ answerId: 'answer', type: 'text' }],
         templateInputs: [
           { inputId: 'question-description', type: 'text', required: true },
-          { inputId: 'analysis', type: 'text', required: true }
+          { inputId: 'correct-answer', type: 'text', required: true },
+          { inputId: 'analysis', type: 'text', required: false }
         ]
       },
       data: { maxScore: 1 }

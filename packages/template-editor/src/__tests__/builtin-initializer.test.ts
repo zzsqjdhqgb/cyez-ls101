@@ -24,6 +24,7 @@ describe('内置函数库启动初始化', () => {
       'builtin:basic',
       'builtin:examples',
       'builtin:shanghai-gaokao-basic',
+      'builtin:shanghai-gaokao-choice',
       'builtin:shanghai-gaokao-groups'
     ])
     expect(await repository.getActiveBuiltinFunctionLibrary('builtin:basic')).toMatchObject({
@@ -142,6 +143,209 @@ describe('内置函数库启动初始化', () => {
         ]
       }
     })
+
+    const choices = await repository.getActiveBuiltinFunctionLibrary(
+      'builtin:shanghai-gaokao-choice'
+    )
+    expect(choices).toMatchObject({
+      libraryId: 'builtin:shanghai-gaokao-choice',
+      version: 7,
+      contentHash: 'sha256:70cd1a0a32f22fe60c01baa7743c694d832a26a5b0f74c5c44d924ce1b8e5a19',
+      content: { name: '高中选择题' }
+    })
+    expect(
+      choices?.content.functions
+        .filter((entry) => entry.exposed !== false)
+        .map(({ functionId, content }) => ({ functionId, name: content.name }))
+    ).toEqual([
+      {
+        functionId: 'builtin:shanghai-gaokao-choice-group-1-10',
+        name: '选择题1~10'
+      },
+      {
+        functionId: 'builtin:shanghai-gaokao-choice-passage-group-11-16',
+        name: '短文题组（11~16）'
+      },
+      {
+        functionId: 'builtin:shanghai-gaokao-choice-long-conversation-group-17-20',
+        name: '长对话（17~20）'
+      },
+      {
+        functionId: 'builtin:shanghai-gaokao-choice-question-1-10',
+        name: '选择题1~10单题'
+      },
+      {
+        functionId: 'builtin:shanghai-gaokao-choice-question-11-20',
+        name: '选择题11~20单题'
+      }
+    ])
+    const choiceGroup = choices?.content.functions.find(
+      ({ functionId }) => functionId === 'builtin:shanghai-gaokao-choice-group-1-10'
+    )
+    expect(choiceGroup?.content.inputs).toEqual(
+      expect.arrayContaining(
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].flatMap((index) => {
+          const suffix = String(index)
+          return [
+            { name: `stem${suffix}`, type: 'string' },
+            { name: `optA${suffix}`, type: 'string' },
+            { name: `optB${suffix}`, type: 'string' },
+            { name: `optC${suffix}`, type: 'string' },
+            { name: `optD${suffix}`, type: 'string' },
+            { name: index === 1 ? 'tts' : `tts${suffix}`, type: 'string' },
+            { name: `std${suffix}`, type: 'string' }
+          ]
+        })
+      )
+    )
+    expect(choiceGroup?.content.body.choiceCollector).toBeUndefined()
+    const choiceCalls = choiceGroup?.content.body.children.filter(
+      (child) => child.type === 'function'
+    )
+    expect(choiceCalls).toHaveLength(11)
+    expect(choiceCalls?.[0]).toMatchObject({
+      functionRef: 'builtin:shanghai-gaokao-directions',
+      inputs: { title: expect.any(Object), direction: expect.any(Object) }
+    })
+    expect(choiceCalls?.slice(1).map((child) => child.functionRef)).toEqual(
+      Array(10).fill('builtin:shanghai-gaokao-choice-question-1-10-internal')
+    )
+    expect(choiceCalls?.slice(1).map((child) => child.inputs.idx)).toEqual(
+      Array.from({ length: 10 }, (_value, index) => ({
+        type: 'string',
+        parts: [{ type: 'literal', value: String(index + 1) }]
+      }))
+    )
+    expect(choiceCalls?.slice(1).map((child) => child.inputs.choice)).toEqual(
+      [
+        [0, 0],
+        [0, 1],
+        [0, 2],
+        [0, 3],
+        [0, 4],
+        [1, 0],
+        [1, 1],
+        [1, 2],
+        [1, 3],
+        [1, 4]
+      ].map(([pageIndex, questionIndex]) => ({
+        type: 'choice-group',
+        source: 'local',
+        name: 'choice',
+        selection: { kind: 'question', pageIndex, questionIndex }
+      }))
+    )
+    const passageGroup = choices?.content.functions.find(
+      ({ functionId }) => functionId === 'builtin:shanghai-gaokao-choice-passage-group-11-16'
+    )
+    const conversationGroup = choices?.content.functions.find(
+      ({ functionId }) =>
+        functionId === 'builtin:shanghai-gaokao-choice-long-conversation-group-17-20'
+    )
+    if (!passageGroup || !conversationGroup) {
+      throw new Error('Builtin listening choice groups are missing')
+    }
+    expect(passageGroup.content.inputs[0]).toEqual({
+      name: 'choice',
+      type: 'choice-group',
+      shape: { kind: 'range', pageCounts: [3, 3] }
+    })
+    expect(conversationGroup.content.inputs[0]).toEqual({
+      name: 'choice',
+      type: 'choice-group',
+      shape: { kind: 'range', pageCounts: [4] }
+    })
+    for (const group of [passageGroup, conversationGroup]) {
+      expect(group.content.body.choiceCollector).toBeUndefined()
+    }
+    const passageQuestionCalls = passageGroup.content.body.children.filter(
+      (child) =>
+        child.type === 'function' &&
+        child.functionRef === 'builtin:shanghai-gaokao-choice-question-11-20'
+    )
+    const conversationQuestionCalls = conversationGroup.content.body.children.filter(
+      (child) =>
+        child.type === 'function' &&
+        child.functionRef === 'builtin:shanghai-gaokao-choice-question-11-20'
+    )
+    expect(passageQuestionCalls.map((child) => child.inputs.idx)).toEqual(
+      [11, 12, 13, 14, 15, 16].map((index) => ({
+        type: 'string',
+        parts: [{ type: 'literal', value: String(index) }]
+      }))
+    )
+    expect(conversationQuestionCalls.map((child) => child.inputs.idx)).toEqual(
+      [17, 18, 19, 20].map((index) => ({
+        type: 'string',
+        parts: [{ type: 'literal', value: String(index) }]
+      }))
+    )
+    expect(
+      [...passageQuestionCalls, ...conversationQuestionCalls].map((child) => child.inputs.tts)
+    ).toEqual(
+      Array.from({ length: 10 }, () => ({
+        type: 'string',
+        parts: [{ type: 'literal', value: '' }]
+      }))
+    )
+    expect(passageQuestionCalls.map((child) => child.inputs.choice)).toEqual(
+      [
+        [0, 0],
+        [0, 1],
+        [0, 2],
+        [1, 0],
+        [1, 1],
+        [1, 2]
+      ].map(([pageIndex, questionIndex]) => ({
+        type: 'choice-group',
+        source: 'local',
+        name: 'choice',
+        selection: { kind: 'question', pageIndex, questionIndex }
+      }))
+    )
+    expect(conversationQuestionCalls.map((child) => child.inputs.choice)).toEqual(
+      [0, 1, 2, 3].map((questionIndex) => ({
+        type: 'choice-group',
+        source: 'local',
+        name: 'choice',
+        selection: { kind: 'question', pageIndex: 0, questionIndex }
+      }))
+    )
+    const firstChoice = choices?.content.functions.find(
+      ({ functionId }) => functionId === 'builtin:shanghai-gaokao-choice-question-1-10'
+    )
+    const secondChoice = choices?.content.functions.find(
+      ({ functionId }) => functionId === 'builtin:shanghai-gaokao-choice-question-11-20'
+    )
+    const internalChoice = choices?.content.functions.find(
+      ({ functionId }) => functionId === 'builtin:shanghai-gaokao-choice-question-1-10-internal'
+    )
+    if (!firstChoice || !secondChoice || !internalChoice) {
+      throw new Error('Builtin choice functions are missing')
+    }
+    const expectedSecondContent = structuredClone(firstChoice.content)
+    expectedSecondContent.name = '选择题11~20单题'
+    expectedSecondContent.schemaUses[0].schemaId = 'c13cd52c-cb16-402b-9a75-b4c993b3eae6'
+    expect(secondChoice.content).toEqual(expectedSecondContent)
+    for (const choice of [firstChoice, secondChoice, internalChoice]) {
+      const pageCall = choice.content.body.children.find((child) => child.type === 'function')
+      expect(pageCall?.inputs.tts).toEqual({
+        type: 'string',
+        parts: [
+          { type: 'variable', ref: { scope: 'local', name: 'tts' } },
+          { type: 'literal', value: '\nQuestion: ' },
+          { type: 'variable', ref: { scope: 'local', name: 'stem' } }
+        ]
+      })
+    }
+    for (const choice of [firstChoice, secondChoice, internalChoice]) {
+      expect(choice.content.inputs).toContainEqual({ name: 'idx', type: 'string' })
+      const pageCall = choice.content.body.children.find((child) => child.type === 'function')
+      expect(pageCall?.inputs.stem).toEqual({
+        type: 'string',
+        parts: [{ type: 'variable', ref: { scope: 'local', name: 'idx' } }]
+      })
+    }
 
     const groups = await repository.getActiveBuiltinFunctionLibrary(
       'builtin:shanghai-gaokao-groups'
@@ -299,6 +503,34 @@ describe('内置函数库启动初始化', () => {
       content: { name: '示例组件库' }
     })
     expect(await repository.getBuiltinFunctionLibrary('builtin:examples', 1)).toEqual(previous)
+  })
+
+  it('选择题库升级到 v7 时保留已安装的 v6 release', async () => {
+    const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
+    const previous = await createFunctionLibraryRelease('builtin:shanghai-gaokao-choice', 6, {
+      name: '旧高中选择题',
+      functions: []
+    })
+    const manifest = JSON.parse(
+      await readFile(
+        'resources/builtin/template-editor/.text/builtin-function-libraries.json',
+        'utf8'
+      )
+    ) as unknown
+
+    await initializeBuiltinFunctionLibraries(repository, { libraries: [previous] })
+    await initializeBuiltinFunctionLibraries(repository, manifest)
+
+    expect(
+      await repository.getActiveBuiltinFunctionLibrary('builtin:shanghai-gaokao-choice')
+    ).toMatchObject({
+      libraryId: 'builtin:shanghai-gaokao-choice',
+      version: 7,
+      contentHash: 'sha256:70cd1a0a32f22fe60c01baa7743c694d832a26a5b0f74c5c44d924ce1b8e5a19'
+    })
+    expect(await repository.getBuiltinFunctionLibrary('builtin:shanghai-gaokao-choice', 6)).toEqual(
+      previous
+    )
   })
 
   it('新版本初始化不受已激活的损坏旧版本阻塞', async () => {

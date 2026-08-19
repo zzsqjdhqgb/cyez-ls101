@@ -11,6 +11,7 @@ import { isSchemaDraftId, isSchemaId, isSchemaLibraryId, isSchemaStructureHash }
 import {
   isSchemaBuiltinInput,
   SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID,
+  SCHEMA_OBJECTIVE_CORRECT_ANSWER_INPUT_ID,
   SCHEMA_QUESTION_DESCRIPTION_INPUT_ID,
   SCHEMA_REFERENCE_ANSWER_INPUT_ID
 } from './structure'
@@ -43,6 +44,7 @@ export type SchemaValidationErrorCode =
   | 'INVALID_INPUT_TYPE'
   | 'INVALID_INPUT_REQUIRED'
   | 'MISSING_QUESTION_DESCRIPTION'
+  | 'MISSING_OBJECTIVE_CORRECT_ANSWER'
   | 'MISSING_OBJECTIVE_ANALYSIS'
   | 'MISSING_REFERENCE_ANSWER'
   | 'EMPTY_RUBRIC'
@@ -283,10 +285,20 @@ function validateInputs(
     )
   }
   if (questionType === 'objective') {
+    const correctAnswer = inputsById.get(SCHEMA_OBJECTIVE_CORRECT_ANSWER_INPUT_ID)
+    if (!correctAnswer) {
+      errors.push(error(at(path, 'templateInputs'), 'MISSING_OBJECTIVE_CORRECT_ANSWER'))
+    } else if (!correctAnswer.required) {
+      errors.push(
+        error(at(path, 'templateInputs'), 'INVALID_INPUT_REQUIRED', {
+          inputId: SCHEMA_OBJECTIVE_CORRECT_ANSWER_INPUT_ID
+        })
+      )
+    }
     const analysis = inputsById.get(SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID)
     if (!analysis) {
       errors.push(error(at(path, 'templateInputs'), 'MISSING_OBJECTIVE_ANALYSIS'))
-    } else if (!analysis.required) {
+    } else if (analysis.required) {
       errors.push(
         error(at(path, 'templateInputs'), 'INVALID_INPUT_REQUIRED', {
           inputId: SCHEMA_OBJECTIVE_ANALYSIS_INPUT_ID
