@@ -2,12 +2,13 @@
   "templates": [
     {
       "templateId": "0c283c54-683a-498c-bf69-fb1490f99356",
-      "version": 2,
-      "releaseHash": "sha256:07ba9ec2f59740f555a69e87242d57dec7e95d871246074f5a05433b3b4cc38f",
+      "version": 3,
+      "releaseHash": "sha256:893d9b14836c9eea4e2600f4668313e00039dcf887f4f916176639938f5882af",
       "document": {
         "content": {
           "name": "上海高考口语标准题型",
           "description": "",
+          "tags": ["全卷", "口语", "高考"],
           "interfaces": [
             {
               "alias": "data",
@@ -3551,12 +3552,13 @@
     },
     {
       "templateId": "261d2ad9-225e-41ac-a394-1887b912b917",
-      "version": 2,
-      "releaseHash": "sha256:f7e2dbb9761f906fb9f4b6683b340d54f7481d50caa9af2a929161c7b634f2cc",
+      "version": 3,
+      "releaseHash": "sha256:59c20462af5ac5fe60bbaa592927faf55801ae04965aa0b447234e28fb25082a",
       "document": {
         "content": {
           "name": "上海高考口语 - 朗读句子",
           "description": "",
+          "tags": ["分块练习", "口语", "高考"],
           "interfaces": [
             {
               "alias": "data",
@@ -4123,12 +4125,13 @@
     },
     {
       "templateId": "c77c98f4-049d-4991-a5dc-3c39b7088100",
-      "version": 2,
-      "releaseHash": "sha256:36092d4de190804f0ffdc1a8930fd06fd9d0becdb4acf2b7d6d69336c881df0b",
+      "version": 3,
+      "releaseHash": "sha256:92e2f5463f6e677263781993e4b462d559090081b1cc3c72e20d8833bb4a9288",
       "document": {
         "content": {
           "name": "上海高考口语 - 朗读短文",
           "description": "",
+          "tags": ["分块练习", "口语", "高考"],
           "interfaces": [
             {
               "alias": "data",
@@ -4576,12 +4579,13 @@
     },
     {
       "templateId": "bf2dddd5-f85f-4fbe-8e2f-9f2aa86f5e05",
-      "version": 2,
-      "releaseHash": "sha256:9b7e1ffaa6fef924d7d9c432d25f39913b575a0c5431ec252ecf0ebb32d8c0f3",
+      "version": 3,
+      "releaseHash": "sha256:540b18d16f3affb30cf3978421cce3f4c32c31127820036eec1ef97eea1036d8",
       "document": {
         "content": {
           "name": "上海高考口语 - 情景提问",
           "description": "",
+          "tags": ["分块练习", "口语", "高考"],
           "interfaces": [
             {
               "alias": "data",
@@ -5217,12 +5221,13 @@
     },
     {
       "templateId": "dccc9ca8-6b17-4b54-8fb8-bc5be6517e88",
-      "version": 2,
-      "releaseHash": "sha256:619f939518f3ca3c08a535dabe8beaed26e6db4f683b6b36ddf5d027f80428b9",
+      "version": 3,
+      "releaseHash": "sha256:1622ccbb57336057874a7a2825593d9c6fd8d294ab92ff5fa063a7d625511c8a",
       "document": {
         "content": {
           "name": "上海高考口语 - 看图说话",
           "description": "",
+          "tags": ["分块练习", "口语", "高考"],
           "interfaces": [
             {
               "alias": "data",
@@ -6120,12 +6125,13 @@
     },
     {
       "templateId": "490f6873-a39d-409e-954c-c345a90004a3",
-      "version": 2,
-      "releaseHash": "sha256:0d9a8af863ae131f4cee1e6698e1729e5f1624fdfe12c369419804ca306a313f",
+      "version": 3,
+      "releaseHash": "sha256:fdd935ea38c553ff73e2589651e2371639fad625d882100eb8b1f06cd9ca3c2e",
       "document": {
         "content": {
           "name": "上海高考口语 - 快速应答",
           "description": "",
+          "tags": ["分块练习", "口语", "高考"],
           "interfaces": [
             {
               "alias": "data",
@@ -7037,12 +7043,13 @@
     },
     {
       "templateId": "ef1dc645-eba5-4144-a82b-f52e24d5f925",
-      "version": 2,
-      "releaseHash": "sha256:280eab414bddc25ed25497c3e414b7fca053bd7af8e2dee8e8ce4f9bbb7db7a4",
+      "version": 3,
+      "releaseHash": "sha256:73758183958da873b16f66e8f8a85ccabb137d82ee666b7832ad39befc0c51ea",
       "document": {
         "content": {
           "name": "上海高考口语 - 听短文回答",
           "description": "",
+          "tags": ["分块练习", "口语", "高考"],
           "interfaces": [
             {
               "alias": "data",
@@ -7945,12 +7952,13 @@
     },
     {
       "templateId": "4f4c8c1a-9b2a-4d71-8f1e-4a5e8c7d2b63",
-      "version": 2,
-      "releaseHash": "sha256:2b0a836dd7dc58244e0525b2f8c61710256fada3d560354a8dd9795f665040bc",
+      "version": 3,
+      "releaseHash": "sha256:77bc20103adeb7a716dbb6f55cb71b6e49ebdc0be3ede50a6772cb3333cac6e1",
       "document": {
         "content": {
           "name": "上海高考英语听力标准题型",
           "description": "上海高考英语听力完整题型，包含十段短对话、两篇听力短文和一段长对话，共20道选择题。",
+          "tags": ["全卷", "听力", "高考"],
           "interfaces": [
             {
               "alias": "data",
@@ -14787,12 +14795,13 @@
     },
     {
       "templateId": "5c2f1d4e-6a7b-4c8d-9e0f-1234567890ab",
-      "version": 1,
-      "releaseHash": "sha256:5080fbc081b33fdec0744379dc22e60735380b97bbe4194f2ce92a02520f2348",
+      "version": 2,
+      "releaseHash": "sha256:db030ecaf7278e85281b386f34801651e5686238c59c1c33104c957ca536dd98",
       "document": {
         "content": {
           "name": "上海高考英语听力 - 短对话专项训练",
           "description": "上海高考英语听力分块练习。",
+          "tags": ["分块练习", "听力", "高考"],
           "interfaces": [
             {
               "alias": "data",
@@ -18101,12 +18110,13 @@
     },
     {
       "templateId": "6d3e2f5a-7b8c-4d9e-a0f1-2345678901bc",
-      "version": 1,
-      "releaseHash": "sha256:ac5c2195f06578ef85ec8a2de1bff8453586308b76966f729ca1219f21bdcb80",
+      "version": 2,
+      "releaseHash": "sha256:2e4720b54402f04521b4ab422c65531d31251c5e46a5c3ba3477b0c844cbb76e",
       "document": {
         "content": {
           "name": "上海高考英语听力 - 短文专项训练",
           "description": "上海高考英语听力分块练习。",
+          "tags": ["分块练习", "听力", "高考"],
           "interfaces": [
             {
               "alias": "data",
@@ -20728,12 +20738,13 @@
     },
     {
       "templateId": "7e4f3a6b-8c9d-4e0f-a1b2-3456789012cd",
-      "version": 1,
-      "releaseHash": "sha256:2f10b2885237547aa1425754b0b339c64652ce34a050aa2d7ff3302caea92125",
+      "version": 2,
+      "releaseHash": "sha256:9e768061d4a8d6744bd454bb9fc8058612657fba4e7e43e55dc1fff268440de3",
       "document": {
         "content": {
           "name": "上海高考英语听力 - 长对话专项训练",
           "description": "上海高考英语听力分块练习。",
+          "tags": ["分块练习", "听力", "高考"],
           "interfaces": [
             {
               "alias": "data",

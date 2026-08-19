@@ -302,13 +302,15 @@ export function TemplateBrowserPage(): JSX.Element {
                       <div className={styles.builtinIdentity}>
                         <span className={styles.rowName}>{item.name || '未命名模板'}</span>
                         <span className={styles.version}>v{item.version}</span>
-                        <TagList tags={item.tags} />
                       </div>
-                      <p className={styles.rowDescription}>
-                        {item.available
-                          ? item.description || '暂无描述'
-                          : '缺少所需的题型或数据结构，当前版本暂不可用'}
-                      </p>
+                      <div className={styles.descriptionRow}>
+                        <TagList tags={item.tags} />
+                        <p className={styles.rowDescription}>
+                          {item.available
+                            ? item.description || '暂无描述'
+                            : '缺少所需的题型或数据结构，当前版本暂不可用'}
+                        </p>
+                      </div>
                     </div>
                     <div className={styles.rowActions}>
                       <Button
@@ -367,9 +369,11 @@ export function TemplateBrowserPage(): JSX.Element {
                         >
                           {item.name || '未命名模板'}
                         </button>
-                        <TagList tags={item.tags} />
                       </div>
-                      <p className={styles.rowDescription}>{item.description || '暂无描述'}</p>
+                      <div className={styles.descriptionRow}>
+                        <TagList tags={item.tags} />
+                        <p className={styles.rowDescription}>{item.description || '暂无描述'}</p>
+                      </div>
                     </div>
                     <div className={styles.rowActions}>
                       <Button onClick={() => navigate(`/templates/${item.templateId}`)}>
