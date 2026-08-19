@@ -4,7 +4,7 @@ import { encodeSubmissionPackage } from '@ls101/exam-package'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { launchIntegrationApp } from '../../../integration/support/electron-app'
+import { launchProductDocsApp } from '../../support/product-app'
 import { evidence, prepareProductPage, productTest } from '../../support/product-test'
 
 let electronApp: ElectronApplication
@@ -27,7 +27,7 @@ test.beforeEach(async () => {
     })
   )
 
-  electronApp = await launchIntegrationApp(userDataDir)
+  electronApp = await launchProductDocsApp(userDataDir)
   page = await electronApp.firstWindow()
   await prepareProductPage(page)
   page.on('pageerror', (error) => pageErrors.push(error.message))

@@ -2,7 +2,7 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { launchIntegrationApp } from '../../../integration/support/electron-app'
+import { launchProductDocsApp } from '../../support/product-app'
 import { evidence, prepareProductPage, productTest } from '../../support/product-test'
 
 let electronApp: ElectronApplication
@@ -13,7 +13,7 @@ let pageErrors: string[]
 test.beforeEach(async () => {
   userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-product-docs-grading-units-'))
   pageErrors = []
-  electronApp = await launchIntegrationApp(userDataDir)
+  electronApp = await launchProductDocsApp(userDataDir)
   page = await electronApp.firstWindow()
   await prepareProductPage(page)
   page.on('pageerror', (error) => pageErrors.push(error.message))

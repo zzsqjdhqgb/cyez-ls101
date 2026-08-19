@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import stableStringify from 'fast-json-stable-stringify'
 import { MockAiServer } from '../../../integration/support/mock-ai-server'
-import { launchIntegrationApp } from '../../../integration/support/electron-app'
+import { launchProductDocsApp } from '../../support/product-app'
 import { evidence, prepareProductPage, productTest } from '../../support/product-test'
 
 const interfaceContent = {
@@ -45,7 +45,7 @@ test.beforeEach(async () => {
   mockServer.reset()
   userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-product-docs-interface-'))
   pageErrors = []
-  electronApp = await launchIntegrationApp(userDataDir)
+  electronApp = await launchProductDocsApp(userDataDir)
   page = await electronApp.firstWindow()
   await prepareProductPage(page)
   page.on('pageerror', (error) => pageErrors.push(error.message))

@@ -34,6 +34,34 @@ describe('visuallyEquivalentPng', () => {
     expect(visuallyEquivalentPng(png(1, 1, [0, 0, 0, 255]), png(2, 1, [0, 0, 0, 255]))).toBe(false)
     expect(visuallyEquivalentPng(Buffer.from('not-png'), Buffer.from('also-not-png'))).toBe(false)
   })
+
+  it('accepts equivalent screenshots captured at an integer device scale factor', () => {
+    const original = png(2, 1, [20, 40, 60, 255, 80, 100, 120, 255])
+    const scaled = png(
+      4,
+      2,
+      [
+        20, 40, 60, 255, 20, 40, 60, 255, 80, 100, 120, 255, 80, 100, 120, 255, 20, 40, 60, 255, 20,
+        40, 60, 255, 80, 100, 120, 255, 80, 100, 120, 255
+      ]
+    )
+
+    expect(visuallyEquivalentPng(original, scaled)).toBe(true)
+    expect(visuallyEquivalentPng(scaled, original)).toBe(true)
+  })
+
+  it('rejects scaled screenshots with a material visual change', () => {
+    const original = solidPng(10, 10, [20, 40, 60, 255])
+    const scaled = PNG.sync.read(solidPng(20, 20, [20, 40, 60, 255]))
+    for (let y = 0; y < 4; y += 1) {
+      for (let x = 0; x < 20; x += 1) {
+        const offset = (y * scaled.width + x) * 4
+        scaled.data[offset] = 240
+      }
+    }
+
+    expect(visuallyEquivalentPng(original, PNG.sync.write(scaled))).toBe(false)
+  })
 })
 
 describe('preserveEquivalentEvidenceImages', () => {
@@ -74,4 +102,8 @@ function png(width: number, height: number, rgba: readonly number[], deflateLeve
     image.data[index] = rgba[index % rgba.length] ?? 0
   }
   return PNG.sync.write(image, { deflateLevel })
+}
+
+function solidPng(width: number, height: number, rgba: readonly number[]): Buffer {
+  return png(width, height, rgba)
 }
