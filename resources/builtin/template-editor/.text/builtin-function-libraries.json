@@ -4632,7 +4632,7 @@
     },
     {
       "libraryId": "builtin:shanghai-gaokao-choice",
-      "version": 2,
+      "version": 3,
       "contentHash": "sha256:fe51d6b4f547ebe88923f4d11308fea6838b8a6b8dd4115fb416981aa42d0177",
       "content": {
         "name": "高中选择题",

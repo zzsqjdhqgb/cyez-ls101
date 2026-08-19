@@ -149,7 +149,7 @@ describe('内置函数库启动初始化', () => {
     )
     expect(choices).toMatchObject({
       libraryId: 'builtin:shanghai-gaokao-choice',
-      version: 2,
+      version: 3,
       contentHash: 'sha256:fe51d6b4f547ebe88923f4d11308fea6838b8a6b8dd4115fb416981aa42d0177',
       content: { name: '高中选择题' }
     })
@@ -411,6 +411,34 @@ describe('内置函数库启动初始化', () => {
       content: { name: '示例组件库' }
     })
     expect(await repository.getBuiltinFunctionLibrary('builtin:examples', 1)).toEqual(previous)
+  })
+
+  it('选择题库升级到 v3 时保留已安装的 v2 release', async () => {
+    const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
+    const previous = await createFunctionLibraryRelease('builtin:shanghai-gaokao-choice', 2, {
+      name: '旧高中选择题',
+      functions: []
+    })
+    const manifest = JSON.parse(
+      await readFile(
+        'resources/builtin/template-editor/.text/builtin-function-libraries.json',
+        'utf8'
+      )
+    ) as unknown
+
+    await initializeBuiltinFunctionLibraries(repository, { libraries: [previous] })
+    await initializeBuiltinFunctionLibraries(repository, manifest)
+
+    expect(
+      await repository.getActiveBuiltinFunctionLibrary('builtin:shanghai-gaokao-choice')
+    ).toMatchObject({
+      libraryId: 'builtin:shanghai-gaokao-choice',
+      version: 3,
+      contentHash: 'sha256:fe51d6b4f547ebe88923f4d11308fea6838b8a6b8dd4115fb416981aa42d0177'
+    })
+    expect(await repository.getBuiltinFunctionLibrary('builtin:shanghai-gaokao-choice', 2)).toEqual(
+      previous
+    )
   })
 
   it('新版本初始化不受已激活的损坏旧版本阻塞', async () => {
