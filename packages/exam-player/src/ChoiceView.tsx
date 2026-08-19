@@ -40,7 +40,9 @@ export function ChoiceView({ meta, viewport, answers, onAnswer }: ChoiceViewProp
 
   useEffect(() => {
     if (viewport.mode !== 'focus') return
-    focusedQuestionRef.current?.scrollIntoView({ behavior: 'auto', block: 'center' })
+    const focusedQuestion = focusedQuestionRef.current
+    if (typeof focusedQuestion?.scrollIntoView !== 'function') return
+    focusedQuestion.scrollIntoView({ behavior: 'auto', block: 'center' })
   }, [viewport.mode, viewportKey, focusedPage])
 
   return (

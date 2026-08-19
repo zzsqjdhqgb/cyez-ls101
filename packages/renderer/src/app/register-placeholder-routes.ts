@@ -31,6 +31,8 @@ import {
 import { TemplateFunctionDocumentPage } from '../features/templates/TemplateFunctionDocumentPage'
 import { SchemaBrowserPage } from '../features/schemas/SchemaBrowserPage'
 import { SchemaDefinitionPage } from '../features/schemas/SchemaDefinitionPage'
+import { SchemaDraftEditorPage } from '../features/schemas/SchemaDraftEditorPage'
+import { SchemaDraftLibraryPage } from '../features/schemas/SchemaDraftLibraryPage'
 import { SubmissionLibraryPage } from '../features/submissions/SubmissionLibraryPage'
 import { SubmissionGradingPage } from '../features/submissions/SubmissionGradingPage'
 import { SubmissionSettlementPage } from '../features/submissions/SubmissionSettlementPage'
@@ -72,6 +74,20 @@ const unregisterRoutes = [
       icon: BookCheck,
       order: 50
     }
+  }),
+
+  registerAppRoute({
+    id: 'schema-draft-library',
+    path: '/schemas/drafts/:libraryId',
+    component: SchemaDraftLibraryPage,
+    layout: 'standard'
+  }),
+
+  registerAppRoute({
+    id: 'schema-draft-editor',
+    path: '/schemas/drafts/:libraryId/:draftId',
+    component: SchemaDraftEditorPage,
+    layout: 'focus'
   }),
 
   registerAppRoute({
