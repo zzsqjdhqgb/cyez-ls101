@@ -143,4 +143,38 @@ describe('StorageSettingsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '复制并重启' }))
     await waitFor(() => expect(resetDefault).toHaveBeenCalledTimes(1))
   })
+
+  it('keeps case-sensitive Linux paths distinct when checking the default location', async () => {
+    Object.defineProperty(window.navigator, 'platform', {
+      configurable: true,
+      value: 'Linux x86_64'
+    })
+    const chooseDefault = vi.fn().mockResolvedValue({
+      path: '/profile/data',
+      kind: 'empty',
+      sizeBytes: 0
+    })
+    window.dataDirectory = {
+      getInfo: vi.fn().mockResolvedValue({
+        currentPath: '/profile/Data',
+        defaultPath: '/profile/data',
+        sizeBytes: 8192,
+        oldDataDirectory: null
+      }),
+      choose: vi.fn(),
+      chooseDefault,
+      resetDefault: vi.fn(),
+      migrate: vi.fn(),
+      useExisting: vi.fn(),
+      deleteOld: vi.fn()
+    }
+
+    render(<StorageSettingsPage />)
+
+    expect(await screen.findByText('/profile/Data')).toBeInTheDocument()
+    expect(screen.getByText('8.0 KB · 自定义位置')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '恢复默认位置' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: '恢复默认位置' }))
+    await waitFor(() => expect(chooseDefault).toHaveBeenCalledTimes(1))
+  })
 })

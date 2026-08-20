@@ -269,10 +269,14 @@ function formatBytes(bytes: number): string {
 }
 
 function sameDisplayPath(left: string, right: string): boolean {
-  return (
-    left.replaceAll('\\', '/').toLocaleLowerCase() ===
-    right.replaceAll('\\', '/').toLocaleLowerCase()
-  )
+  const normalizedLeft = left.replaceAll('\\', '/')
+  const normalizedRight = right.replaceAll('\\', '/')
+  if (!isWindowsPlatform()) return normalizedLeft === normalizedRight
+  return normalizedLeft.toLocaleLowerCase() === normalizedRight.toLocaleLowerCase()
+}
+
+function isWindowsPlatform(): boolean {
+  return /windows/i.test(navigator.userAgent) || /^win/i.test(navigator.platform)
 }
 
 function errorMessage(error: unknown): string {
