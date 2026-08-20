@@ -17,7 +17,7 @@ import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceAp
 import { InterfaceDetailsPage } from '../features/interfaces/InterfaceDetailsPage'
 import { InterfaceExportPage } from '../features/interfaces/InterfaceExportPage'
 import { InterfaceDraftEditorPage } from '../features/interfaces/InterfaceDraftEditorPage'
-import { InterfaceDraftListPage } from '../features/interfaces/InterfaceDraftListPage'
+import { InterfaceDraftListRedirect } from '../features/interfaces/InterfaceDraftListPage'
 import { InterfaceInstanceEditorPage } from '../features/interfaces/InterfaceInstanceEditorPage'
 import { InterfaceListPage } from '../features/interfaces/InterfaceListPage'
 import { BuiltinInterfaceMaintenanceDialog } from '../features/interfaces/BuiltinInterfaceMaintenanceDialog'
@@ -470,14 +470,45 @@ describe('Interface pages', () => {
     expect(screen.queryByText('正式')).not.toBeInTheDocument()
   })
 
+  it('switches between published interfaces and drafts without reloading the library', async () => {
+    const listDrafts = vi.fn().mockResolvedValue([draft])
+    const listPublished = vi.fn().mockResolvedValue([
+      {
+        interfaceId: `sha256:${'a'.repeat(64)}`,
+        name: '上海高考听说',
+        description: '高考听说模拟题型',
+        source: { type: 'published' as const },
+        instanceCount: 3
+      }
+    ])
+    const app = application({ browser: { listDrafts, listPublished } })
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={['/interfaces']}>
+          <InterfaceListPage />
+        </MemoryRouter>
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByRole('button', { name: '上海高考听说' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: '草稿' }))
+    expect(screen.getByRole('button', { name: '听说测试' })).toBeInTheDocument()
+    expect(screen.queryByText('正在加载草稿...')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: '题型' }))
+    expect(screen.getByRole('button', { name: '上海高考听说' })).toBeInTheDocument()
+    expect(listPublished).toHaveBeenCalledOnce()
+    expect(listDrafts).toHaveBeenCalledOnce()
+  })
+
   it('creates a real draft and enters the focus editor route', async () => {
     const app = application()
 
     render(
       <InterfaceApplicationProvider application={app}>
-        <MemoryRouter initialEntries={['/interfaces/drafts']}>
+        <MemoryRouter initialEntries={['/interfaces?view=drafts']}>
           <Routes>
-            <Route path="/interfaces/drafts" element={<InterfaceDraftListPage />} />
+            <Route path="/interfaces" element={<InterfaceListPage />} />
             <Route path="/interfaces/drafts/:draftId" element={<InterfaceDraftEditorPage />} />
           </Routes>
         </MemoryRouter>
@@ -492,6 +523,27 @@ describe('Interface pages', () => {
     expect(app.drafts.get).toHaveBeenCalledWith(draft.draftId)
     expect(screen.getByRole('region', { name: '字段结构' })).toBeInTheDocument()
     expect(screen.getAllByRole('separator')).toHaveLength(2)
+  })
+
+  it('redirects the previous draft list route to the unified library view', async () => {
+    const app = application()
+
+    render(
+      <InterfaceApplicationProvider application={app}>
+        <MemoryRouter initialEntries={['/interfaces/drafts']}>
+          <Routes>
+            <Route path="/interfaces" element={<InterfaceListPage />} />
+            <Route path="/interfaces/drafts" element={<InterfaceDraftListRedirect />} />
+          </Routes>
+        </MemoryRouter>
+      </InterfaceApplicationProvider>
+    )
+
+    expect(await screen.findByRole('tab', { name: '草稿' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    expect(screen.getByRole('button', { name: '新建题型' })).toBeInTheDocument()
   })
 
   it('uses a toast for draft save completion', async () => {
