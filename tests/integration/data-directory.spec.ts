@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -102,3 +102,71 @@ test('copies business data, switches directories after restart and retains the s
     await rm(targetParent, { force: true, recursive: true })
   }
 })
+
+test('resets a custom data directory to the validated default location', async () => {
+  const userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-data-default-integration-'))
+  const customParent = await mkdtemp(path.join(tmpdir(), 'ls101-data-default-custom-'))
+  const custom = path.join(customParent, 'data')
+  const defaultPath = path.join(userDataDir, 'data')
+  await mkdir(path.join(custom, 'template-editor'), { recursive: true })
+  await writeFile(
+    path.join(custom, '.ls101-data.json'),
+    JSON.stringify({
+      formatVersion: 1,
+      kind: 'ls101-data-directory',
+      directoryId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+    })
+  )
+  const customFile = path.join(custom, 'template-editor', 'reset-default.json')
+  await writeFile(customFile, '{"reset":true}')
+  await writeFile(
+    path.join(userDataDir, 'data-location.json'),
+    JSON.stringify({
+      formatVersion: 1,
+      state: 'ready',
+      activeDataDirectory: custom
+    })
+  )
+
+  let electronApp = await launchIntegrationApp(userDataDir, {
+    LS101_DISABLE_AUTO_RELAUNCH: '1'
+  })
+  try {
+    const page = await mainApplicationWindow(electronApp)
+    await page.waitForLoadState('domcontentloaded')
+    await page.getByRole('link', { name: '设置' }).click()
+    await page.getByRole('button', { name: /存储/ }).click()
+    await expect(page.getByText(custom)).toBeVisible()
+    await page.getByRole('button', { name: '恢复默认位置' }).click()
+    await expect(page.getByRole('heading', { name: '迁移数据目录？' })).toBeVisible()
+    await expect(page.getByText(defaultPath, { exact: false })).toBeVisible()
+    await page.getByRole('button', { name: '复制并重启' }).click()
+    await electronApp.waitForEvent('close')
+
+    electronApp = await launchIntegrationApp(userDataDir)
+    const restartedPage = await mainApplicationWindow(electronApp)
+    await restartedPage.waitForLoadState('domcontentloaded')
+    const reset = await restartedPage.evaluate(() => window.dataDirectory!.getInfo())
+    expect(path.resolve(reset.currentPath)).toBe(path.resolve(defaultPath))
+    await expect(
+      readFile(path.join(defaultPath, 'template-editor', 'reset-default.json'), 'utf8')
+    ).resolves.toBe('{"reset":true}')
+    await expect(readFile(customFile, 'utf8')).resolves.toBe('{"reset":true}')
+  } finally {
+    await electronApp.close().catch(() => undefined)
+    await rm(userDataDir, { force: true, recursive: true })
+    await rm(customParent, { force: true, recursive: true })
+  }
+})
+
+async function mainApplicationWindow(electronApp: ElectronApplication): Promise<Page> {
+  await expect
+    .poll(async () =>
+      Promise.all(electronApp.windows().map((window) => window.title().catch(() => '')))
+    )
+    .toContain('曹二听说101')
+  for (const window of electronApp.windows()) {
+    if ((await window.title().catch(() => '')) === '曹二听说101') return window
+  }
+  throw new Error('Main application window was not found')
+}

@@ -14,6 +14,7 @@ export function StorageSettingsPage(): JSX.Element {
   const bridge = window.dataDirectory
   const [info, setInfo] = useState<DataDirectoryInfo | null>(null)
   const [candidate, setCandidate] = useState<DataDirectoryCandidate | null>(null)
+  const [resettingDefault, setResettingDefault] = useState(false)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -71,6 +72,20 @@ export function StorageSettingsPage(): JSX.Element {
     try {
       const selected = await bridge.choose()
       if (selected?.kind === 'current') return
+      setResettingDefault(false)
+      setCandidate(selected)
+    } catch (chooseError) {
+      setError(errorMessage(chooseError))
+    }
+  }
+
+  const chooseDefault = async (): Promise<void> => {
+    if (!bridge) return
+    setError(null)
+    try {
+      const selected = await bridge.chooseDefault()
+      if (selected.kind === 'current') return
+      setResettingDefault(true)
       setCandidate(selected)
     } catch (chooseError) {
       setError(errorMessage(chooseError))
@@ -82,11 +97,13 @@ export function StorageSettingsPage(): JSX.Element {
     setBusy(true)
     setError(null)
     try {
-      if (candidate.kind === 'managed') await bridge.useExisting(candidate.path)
+      if (resettingDefault) await bridge.resetDefault()
+      else if (candidate.kind === 'managed') await bridge.useExisting(candidate.path)
       else await bridge.migrate(candidate.path)
     } catch (migrationError) {
       setError(errorMessage(migrationError))
       setCandidate(null)
+      setResettingDefault(false)
       setBusy(false)
     }
   }
@@ -149,6 +166,15 @@ export function StorageSettingsPage(): JSX.Element {
             >
               更改位置
             </Button>
+            <Button
+              disabled={busy || usesDefault || oldDataDirectory !== null}
+              icon={RotateCcw}
+              title={oldDataDirectory ? '请先删除旧数据目录' : undefined}
+              variant="secondary"
+              onClick={() => void chooseDefault()}
+            >
+              恢复默认位置
+            </Button>
           </div>
         </SettingsRow>
         {oldDataDirectory ? (
@@ -188,7 +214,10 @@ export function StorageSettingsPage(): JSX.Element {
         confirmLabel={usingExisting ? '使用并重启' : '复制并重启'}
         error={null}
         message={confirmationMessage(candidate, info.sizeBytes)}
-        onCancel={() => setCandidate(null)}
+        onCancel={() => {
+          setCandidate(null)
+          setResettingDefault(false)
+        }}
         onConfirm={() => void confirm()}
         open={candidate !== null}
         title={usingExisting ? '使用已有数据目录？' : '迁移数据目录？'}

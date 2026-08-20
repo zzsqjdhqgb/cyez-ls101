@@ -343,6 +343,12 @@ const dataDirectoryBridge: DataDirectoryBridge = {
   choose() {
     return ipcRenderer.invoke(DATA_DIRECTORY_CHANNELS.choose)
   },
+  chooseDefault() {
+    return ipcRenderer.invoke(DATA_DIRECTORY_CHANNELS.chooseDefault)
+  },
+  resetDefault() {
+    return ipcRenderer.invoke(DATA_DIRECTORY_CHANNELS.resetDefault)
+  },
   migrate(path: string) {
     return ipcRenderer.invoke(DATA_DIRECTORY_CHANNELS.migrate, path)
   },

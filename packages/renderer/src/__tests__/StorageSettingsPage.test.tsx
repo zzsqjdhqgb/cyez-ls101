@@ -25,6 +25,8 @@ describe('StorageSettingsPage', () => {
         kind: 'empty',
         sizeBytes: 0
       }),
+      chooseDefault: vi.fn(),
+      resetDefault: vi.fn(),
       migrate,
       useExisting: vi.fn(),
       deleteOld: vi.fn()
@@ -34,6 +36,7 @@ describe('StorageSettingsPage', () => {
 
     expect(await screen.findByText('/profile/data')).toBeInTheDocument()
     expect(screen.getByText('2.0 MB · 默认位置')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '恢复默认位置' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: '更改位置' }))
     expect(await screen.findByRole('heading', { name: '迁移数据目录？' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '复制并重启' }))
@@ -54,6 +57,8 @@ describe('StorageSettingsPage', () => {
         kind: 'managed',
         sizeBytes: 4096
       }),
+      chooseDefault: vi.fn(),
+      resetDefault: vi.fn(),
       migrate: vi.fn(),
       useExisting,
       deleteOld: vi.fn()
@@ -89,6 +94,8 @@ describe('StorageSettingsPage', () => {
     window.dataDirectory = {
       getInfo,
       choose: vi.fn(),
+      chooseDefault: vi.fn(),
+      resetDefault: vi.fn(),
       migrate: vi.fn(),
       useExisting: vi.fn(),
       deleteOld
@@ -103,5 +110,37 @@ describe('StorageSettingsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '永久删除' }))
     await waitFor(() => expect(deleteOld).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(screen.getByRole('button', { name: '更改位置' })).toBeEnabled())
+  })
+
+  it('validates the default directory as a candidate before resetting', async () => {
+    const resetDefault = vi.fn().mockResolvedValue(undefined)
+    const chooseDefault = vi.fn().mockResolvedValue({
+      path: '/profile/data',
+      kind: 'empty',
+      sizeBytes: 0
+    })
+    window.dataDirectory = {
+      getInfo: vi.fn().mockResolvedValue({
+        currentPath: '/mnt/current',
+        defaultPath: '/profile/data',
+        sizeBytes: 8192,
+        oldDataDirectory: null
+      }),
+      choose: vi.fn(),
+      chooseDefault,
+      resetDefault,
+      migrate: vi.fn(),
+      useExisting: vi.fn(),
+      deleteOld: vi.fn()
+    }
+
+    render(<StorageSettingsPage />)
+
+    fireEvent.click(await screen.findByRole('button', { name: '恢复默认位置' }))
+    await waitFor(() => expect(chooseDefault).toHaveBeenCalledTimes(1))
+    expect(await screen.findByRole('heading', { name: '迁移数据目录？' })).toBeInTheDocument()
+    expect(screen.getByText(/\/profile\/data/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '复制并重启' }))
+    await waitFor(() => expect(resetDefault).toHaveBeenCalledTimes(1))
   })
 })

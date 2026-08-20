@@ -206,6 +206,27 @@ export function registerDataDirectoryHandlers(userDataDir: string, currentPath: 
     if (result.canceled || result.filePaths.length === 0) return null
     return inspectCandidate(userDataDir, result.filePaths[0], currentPath)
   })
+  ipcMain.handle(DATA_DIRECTORY_CHANNELS.chooseDefault, async () => {
+    await assertNoOldDataDirectory(userDataDir)
+    return inspectCandidate(userDataDir, path.join(userDataDir, 'data'), currentPath, true)
+  })
+  ipcMain.handle(DATA_DIRECTORY_CHANNELS.resetDefault, async () => {
+    await assertNoOldDataDirectory(userDataDir)
+    const candidate = await inspectCandidate(
+      userDataDir,
+      path.join(userDataDir, 'data'),
+      currentPath,
+      true
+    )
+    if (candidate.kind === 'current') throw new Error('当前已使用默认数据目录')
+    await scheduleMigration(
+      userDataDir,
+      currentPath,
+      candidate.path,
+      candidate.kind === 'managed' ? 'use-existing' : 'copy'
+    )
+    relaunchAfterReply()
+  })
   ipcMain.handle(DATA_DIRECTORY_CHANNELS.migrate, async (_event, target: string) => {
     await assertNoOldDataDirectory(userDataDir)
     const candidate = await inspectCandidate(userDataDir, target, currentPath)
@@ -289,10 +310,13 @@ export async function recoverDataDirectory(userDataDir: string, error: unknown):
 async function inspectCandidate(
   userDataDir: string,
   target: string,
-  currentPath: string
+  currentPath: string,
+  allowMissing = false
 ): Promise<DataDirectoryCandidate> {
   if (typeof target !== 'string' || !path.isAbsolute(target)) throw new Error('数据目录路径无效')
-  const normalizedTarget = await normalizeDirectory(target)
+  const normalizedTarget = allowMissing
+    ? await normalizePotentialDirectory(target)
+    : await normalizeDirectory(target)
   const normalizedCurrent = await normalizeDirectory(currentPath)
   await assertNotPendingCleanupTarget(userDataDir, normalizedTarget)
   if (samePath(normalizedTarget, normalizedCurrent)) {
@@ -310,6 +334,9 @@ async function inspectCandidate(
       kind: 'managed',
       sizeBytes: await directorySize(normalizedTarget)
     }
+  }
+  if (!(await pathExists(normalizedTarget))) {
+    return { path: normalizedTarget, kind: 'empty', sizeBytes: 0 }
   }
   const entries = await readdir(normalizedTarget)
   if (entries.length > 0) throw new Error('请选择空目录，或选择一个已有的 LS101 数据目录')

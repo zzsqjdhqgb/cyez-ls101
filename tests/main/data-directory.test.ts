@@ -133,9 +133,13 @@ describe('data directory initialization', () => {
     registerDataDirectoryHandlers(userData, target)
     const getInfo = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.getInfo)
     const migrate = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.migrate)
+    const chooseDefault = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.chooseDefault)
+    const resetDefault = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.resetDefault)
     const deleteOld = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.deleteOld)
     expect(getInfo).toBeDefined()
     expect(migrate).toBeDefined()
+    expect(chooseDefault).toBeDefined()
+    expect(resetDefault).toBeDefined()
     expect(deleteOld).toBeDefined()
 
     await expect(getInfo!({ sender: {} })).resolves.toMatchObject({
@@ -150,6 +154,12 @@ describe('data directory initialization', () => {
     await expect(migrate!({ sender: {} }, nextTarget as never)).rejects.toThrow(
       '请先删除旧数据目录，再更改数据位置'
     )
+    await expect(chooseDefault!({ sender: {} })).rejects.toThrow(
+      '请先删除旧数据目录，再更改数据位置'
+    )
+    await expect(resetDefault!({ sender: {} })).rejects.toThrow(
+      '请先删除旧数据目录，再更改数据位置'
+    )
 
     await expect(deleteOld!({ sender: {} })).resolves.toBeUndefined()
     await expect(readFile(path.join(source, 'document.json'))).rejects.toMatchObject({
@@ -157,6 +167,82 @@ describe('data directory initialization', () => {
     })
     await expect(getInfo!({ sender: {} })).resolves.toMatchObject({ oldDataDirectory: null })
     await expect(migrate!({ sender: {} }, nextTarget as never)).resolves.toBeUndefined()
+  })
+
+  it('resets to a missing default directory through the normal migration flow', async () => {
+    const { userData, source, target } = await scheduledCopy('reset-missing-default')
+    await initializeDataDirectory(userData)
+    registerDataDirectoryHandlers(userData, target)
+    const deleteOld = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.deleteOld)
+    const chooseDefault = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.chooseDefault)
+    const resetDefault = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.resetDefault)
+    expect(deleteOld).toBeDefined()
+    expect(chooseDefault).toBeDefined()
+    expect(resetDefault).toBeDefined()
+    await deleteOld!({ sender: {} })
+
+    await expect(chooseDefault!({ sender: {} })).resolves.toEqual({
+      path: source,
+      kind: 'empty',
+      sizeBytes: 0
+    })
+    await expect(resetDefault!({ sender: {} })).resolves.toBeUndefined()
+    await expect(initializeDataDirectory(userData)).resolves.toBe(source)
+    await expect(readFile(path.join(source, 'document.json'), 'utf8')).resolves.toBe(
+      '{"source":"reset-missing-default"}'
+    )
+  })
+
+  it('rejects resetting when the default directory is nested in the current directory', async () => {
+    const userData = await temporaryDirectory('ls101-data-reset-nested-')
+    await initializeDataDirectory(userData)
+    await writeManagedMarker(userData)
+    await writeFile(
+      path.join(userData, 'data-location.json'),
+      JSON.stringify({
+        formatVersion: 1,
+        state: 'ready',
+        activeDataDirectory: userData
+      })
+    )
+    registerDataDirectoryHandlers(userData, userData)
+    const chooseDefault = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.chooseDefault)
+    const resetDefault = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.resetDefault)
+    expect(chooseDefault).toBeDefined()
+    expect(resetDefault).toBeDefined()
+
+    await expect(chooseDefault!({ sender: {} })).rejects.toThrow('新旧数据目录不能互相包含')
+    await expect(resetDefault!({ sender: {} })).rejects.toThrow('新旧数据目录不能互相包含')
+  })
+
+  it('rejects resetting to an ordinary non-empty default directory', async () => {
+    const userData = await temporaryDirectory('ls101-data-reset-nonempty-')
+    const current = await temporaryDirectory('ls101-data-reset-current-')
+    await writeManagedMarker(current)
+    const defaultPath = path.join(userData, 'data')
+    await mkdir(defaultPath)
+    await writeFile(path.join(defaultPath, 'unrelated.txt'), 'keep')
+    await writeFile(
+      path.join(userData, 'data-location.json'),
+      JSON.stringify({
+        formatVersion: 1,
+        state: 'ready',
+        activeDataDirectory: current
+      })
+    )
+    registerDataDirectoryHandlers(userData, current)
+    const chooseDefault = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.chooseDefault)
+    const resetDefault = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.resetDefault)
+    expect(chooseDefault).toBeDefined()
+    expect(resetDefault).toBeDefined()
+
+    await expect(chooseDefault!({ sender: {} })).rejects.toThrow(
+      '请选择空目录，或选择一个已有的 LS101 数据目录'
+    )
+    await expect(resetDefault!({ sender: {} })).rejects.toThrow(
+      '请选择空目录，或选择一个已有的 LS101 数据目录'
+    )
+    await expect(readFile(path.join(defaultPath, 'unrelated.txt'), 'utf8')).resolves.toBe('keep')
   })
 
   it('does not delete an old path whose directory identity changed', async () => {
