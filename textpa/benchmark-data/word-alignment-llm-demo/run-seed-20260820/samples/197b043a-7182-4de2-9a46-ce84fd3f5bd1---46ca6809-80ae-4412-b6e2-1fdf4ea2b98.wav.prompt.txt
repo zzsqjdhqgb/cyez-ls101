@@ -1,0 +1,1078 @@
+下面是一段英语自由表达录音的完整词级 CTC 强制对齐。请生成中文发音反馈。
+
+输入口径：
+1. 输入没有经过问题筛选，也没有分数、阈值、置信度或预先作出的好坏判断。
+2. provisional transcript 来自 Whisper ASR，不是已知原文，可能转写错误。
+3. 每个 phone_id 表示 eSpeak 期望音素在强制对齐路径中的时间片；acoustic_winner 是
+   该时间片里声学模型 logit 最高的 token，不等于人工听到的真值，也不是错误概率。
+4. 强制对齐会把全部参考音素压到音频上。不得据此断言漏词、错词、语法问题或整体水平。
+5. 请自行考虑合法口音、自然弱读、闪音、复合 token、相邻音素错位和连锁对齐错误。
+   expected_phone 与 acoustic_winner 不同不自动等于发音错误；相同也不证明发音正确。
+6. 只把你认为具有实际教学价值的差异放进 feedback_items。证据不充分但值得复听的可标
+   needs_listening；很可能是自然变体、token 表示或对齐问题的差异放进 withheld_differences。
+7. 每个判断必须引用输入中真实存在的 phone_id，且不要捏造音高、重音、语调、音量、
+   情绪、流利度或停顿信息。没有可信问题时允许 feedback_items 为空。
+
+严格输出以下 JSON，不要 Markdown 代码块，不要增加字段：
+{
+  "summary_zh": "保守的一句话总结",
+  "feedback_items": [
+    {
+      "phone_ids": ["W001-P01"],
+      "word": "对应单词",
+      "decision": "likely_issue 或 needs_listening",
+      "finding_zh": "观察到的具体音素差异",
+      "rationale_zh": "为什么该差异值得反馈或复听",
+      "practice_zh": "具体且不过度承诺的练习建议"
+    }
+  ],
+  "withheld_differences": [
+    {
+      "phone_ids": ["W001-P01"],
+      "word": "对应单词",
+      "reason_zh": "为什么不应直接向学习者报错"
+    }
+  ],
+  "limitations_zh": ["本条分析的具体限制"]
+}
+
+完整词级对齐 JSON：
+{
+  "schema_version": 1,
+  "sample_id": "197b043a-7182-4de2-9a46-ce84fd3f5bd1---46ca6809-80ae-4412-b6e2-1fdf4ea2b98.wav",
+  "provisional_transcript": " Well, I think saving money is very important. Of course, spending money in a blind way, it means you have a plan for doing things. I think it's a good habit for anything.",
+  "transcript_source": "published MultiPA Whisper large-v3 output",
+  "transcript_is_ground_truth": false,
+  "reference_phones": "eSpeak NG en-us whole-utterance phonemization mapped back to words",
+  "alignment": "CTC Viterbi forced alignment using facebook/wav2vec2-lv-60-espeak-cv-ft ONNX INT8",
+  "acoustic_winner_definition": "the highest-logit phone token averaged over the forced span; not an error label or correctness probability",
+  "words": [
+    {
+      "word_id": "W001",
+      "word": "Well",
+      "start_ms": 60,
+      "end_ms": 361,
+      "phones": [
+        {
+          "phone_id": "W001-P01",
+          "expected_phone": "w",
+          "acoustic_winner": "w",
+          "start_ms": 60,
+          "end_ms": 80
+        },
+        {
+          "phone_id": "W001-P02",
+          "expected_phone": "ɛ",
+          "acoustic_winner": "ɛ",
+          "start_ms": 120,
+          "end_ms": 160
+        },
+        {
+          "phone_id": "W001-P03",
+          "expected_phone": "l",
+          "acoustic_winner": "l",
+          "start_ms": 341,
+          "end_ms": 361
+        }
+      ]
+    },
+    {
+      "word_id": "W002",
+      "word": "I",
+      "start_ms": 621,
+      "end_ms": 641,
+      "phones": [
+        {
+          "phone_id": "W002-P01",
+          "expected_phone": "aɪ",
+          "acoustic_winner": "aɪ",
+          "start_ms": 621,
+          "end_ms": 641
+        }
+      ]
+    },
+    {
+      "word_id": "W003",
+      "word": "think",
+      "start_ms": 881,
+      "end_ms": 1462,
+      "phones": [
+        {
+          "phone_id": "W003-P01",
+          "expected_phone": "θ",
+          "acoustic_winner": "θ",
+          "start_ms": 881,
+          "end_ms": 901
+        },
+        {
+          "phone_id": "W003-P02",
+          "expected_phone": "ɪ",
+          "acoustic_winner": "ɪ",
+          "start_ms": 982,
+          "end_ms": 1002
+        },
+        {
+          "phone_id": "W003-P03",
+          "expected_phone": "ŋ",
+          "acoustic_winner": "ŋ",
+          "start_ms": 1282,
+          "end_ms": 1322
+        },
+        {
+          "phone_id": "W003-P04",
+          "expected_phone": "k",
+          "acoustic_winner": "k",
+          "start_ms": 1442,
+          "end_ms": 1462
+        }
+      ]
+    },
+    {
+      "word_id": "W004",
+      "word": "saving",
+      "start_ms": 1582,
+      "end_ms": 1823,
+      "phones": [
+        {
+          "phone_id": "W004-P01",
+          "expected_phone": "s",
+          "acoustic_winner": "s",
+          "start_ms": 1582,
+          "end_ms": 1602
+        },
+        {
+          "phone_id": "W004-P02",
+          "expected_phone": "eɪ",
+          "acoustic_winner": "ɪ",
+          "start_ms": 1663,
+          "end_ms": 1683
+        },
+        {
+          "phone_id": "W004-P03",
+          "expected_phone": "v",
+          "acoustic_winner": "v",
+          "start_ms": 1743,
+          "end_ms": 1763
+        },
+        {
+          "phone_id": "W004-P04",
+          "expected_phone": "ɪ",
+          "acoustic_winner": "ɪ",
+          "start_ms": 1783,
+          "end_ms": 1803
+        },
+        {
+          "phone_id": "W004-P05",
+          "expected_phone": "ŋ",
+          "acoustic_winner": "n",
+          "start_ms": 1803,
+          "end_ms": 1823
+        }
+      ]
+    },
+    {
+      "word_id": "W005",
+      "word": "money",
+      "start_ms": 1903,
+      "end_ms": 2163,
+      "phones": [
+        {
+          "phone_id": "W005-P01",
+          "expected_phone": "m",
+          "acoustic_winner": "m",
+          "start_ms": 1903,
+          "end_ms": 1923
+        },
+        {
+          "phone_id": "W005-P02",
+          "expected_phone": "ʌ",
+          "acoustic_winner": "æ",
+          "start_ms": 1943,
+          "end_ms": 1963
+        },
+        {
+          "phone_id": "W005-P03",
+          "expected_phone": "n",
+          "acoustic_winner": "n",
+          "start_ms": 2083,
+          "end_ms": 2103
+        },
+        {
+          "phone_id": "W005-P04",
+          "expected_phone": "i",
+          "acoustic_winner": "i",
+          "start_ms": 2143,
+          "end_ms": 2163
+        }
+      ]
+    },
+    {
+      "word_id": "W006",
+      "word": "is",
+      "start_ms": 2243,
+      "end_ms": 2344,
+      "phones": [
+        {
+          "phone_id": "W006-P01",
+          "expected_phone": "ɪ",
+          "acoustic_winner": "ɪ",
+          "start_ms": 2243,
+          "end_ms": 2263
+        },
+        {
+          "phone_id": "W006-P02",
+          "expected_phone": "z",
+          "acoustic_winner": "z",
+          "start_ms": 2324,
+          "end_ms": 2344
+        }
+      ]
+    },
+    {
+      "word_id": "W007",
+      "word": "very",
+      "start_ms": 2424,
+      "end_ms": 2664,
+      "phones": [
+        {
+          "phone_id": "W007-P01",
+          "expected_phone": "v",
+          "acoustic_winner": "v",
+          "start_ms": 2424,
+          "end_ms": 2444
+        },
+        {
+          "phone_id": "W007-P02",
+          "expected_phone": "ɛ",
+          "acoustic_winner": "ɜː",
+          "start_ms": 2504,
+          "end_ms": 2524
+        },
+        {
+          "phone_id": "W007-P03",
+          "expected_phone": "ɹ",
+          "acoustic_winner": "ɹ",
+          "start_ms": 2604,
+          "end_ms": 2624
+        },
+        {
+          "phone_id": "W007-P04",
+          "expected_phone": "i",
+          "acoustic_winner": "i",
+          "start_ms": 2644,
+          "end_ms": 2664
+        }
+      ]
+    },
+    {
+      "word_id": "W008",
+      "word": "important",
+      "start_ms": 2704,
+      "end_ms": 3405,
+      "phones": [
+        {
+          "phone_id": "W008-P01",
+          "expected_phone": "ɪ",
+          "acoustic_winner": "ɪ",
+          "start_ms": 2704,
+          "end_ms": 2724
+        },
+        {
+          "phone_id": "W008-P02",
+          "expected_phone": "m",
+          "acoustic_winner": "m",
+          "start_ms": 2744,
+          "end_ms": 2764
+        },
+        {
+          "phone_id": "W008-P03",
+          "expected_phone": "p",
+          "acoustic_winner": "p",
+          "start_ms": 2824,
+          "end_ms": 2844
+        },
+        {
+          "phone_id": "W008-P04",
+          "expected_phone": "oːɹ",
+          "acoustic_winner": "ɔːɹ",
+          "start_ms": 2884,
+          "end_ms": 2904
+        },
+        {
+          "phone_id": "W008-P05",
+          "expected_phone": "t",
+          "acoustic_winner": "ɾ",
+          "start_ms": 3045,
+          "end_ms": 3065
+        },
+        {
+          "phone_id": "W008-P06",
+          "expected_phone": "ə",
+          "acoustic_winner": "ə",
+          "start_ms": 3105,
+          "end_ms": 3125
+        },
+        {
+          "phone_id": "W008-P07",
+          "expected_phone": "n",
+          "acoustic_winner": "n",
+          "start_ms": 3285,
+          "end_ms": 3305
+        },
+        {
+          "phone_id": "W008-P08",
+          "expected_phone": "t",
+          "acoustic_winner": "d",
+          "start_ms": 3385,
+          "end_ms": 3405
+        }
+      ]
+    },
+    {
+      "word_id": "W009",
+      "word": "Of",
+      "start_ms": 3445,
+      "end_ms": 3606,
+      "phones": [
+        {
+          "phone_id": "W009-P01",
+          "expected_phone": "ʌ",
+          "acoustic_winner": "æ",
+          "start_ms": 3445,
+          "end_ms": 3465
+        },
+        {
+          "phone_id": "W009-P02",
+          "expected_phone": "v",
+          "acoustic_winner": "t",
+          "start_ms": 3586,
+          "end_ms": 3606
+        }
+      ]
+    },
+    {
+      "word_id": "W010",
+      "word": "course",
+      "start_ms": 3686,
+      "end_ms": 4046,
+      "phones": [
+        {
+          "phone_id": "W010-P01",
+          "expected_phone": "k",
+          "acoustic_winner": "k",
+          "start_ms": 3686,
+          "end_ms": 3706
+        },
+        {
+          "phone_id": "W010-P02",
+          "expected_phone": "oːɹ",
+          "acoustic_winner": "ʌ",
+          "start_ms": 3766,
+          "end_ms": 3786
+        },
+        {
+          "phone_id": "W010-P03",
+          "expected_phone": "s",
+          "acoustic_winner": "z",
+          "start_ms": 4026,
+          "end_ms": 4046
+        }
+      ]
+    },
+    {
+      "word_id": "W011",
+      "word": "spending",
+      "start_ms": 4767,
+      "end_ms": 5068,
+      "phones": [
+        {
+          "phone_id": "W011-P01",
+          "expected_phone": "s",
+          "acoustic_winner": "s",
+          "start_ms": 4767,
+          "end_ms": 4787
+        },
+        {
+          "phone_id": "W011-P02",
+          "expected_phone": "p",
+          "acoustic_winner": "t",
+          "start_ms": 4868,
+          "end_ms": 4888
+        },
+        {
+          "phone_id": "W011-P03",
+          "expected_phone": "ɛ",
+          "acoustic_winner": "æ",
+          "start_ms": 4908,
+          "end_ms": 4928
+        },
+        {
+          "phone_id": "W011-P04",
+          "expected_phone": "n",
+          "acoustic_winner": "n",
+          "start_ms": 4988,
+          "end_ms": 5008
+        },
+        {
+          "phone_id": "W011-P05",
+          "expected_phone": "d",
+          "acoustic_winner": "i",
+          "start_ms": 5008,
+          "end_ms": 5028
+        },
+        {
+          "phone_id": "W011-P06",
+          "expected_phone": "ɪ",
+          "acoustic_winner": "i",
+          "start_ms": 5028,
+          "end_ms": 5048
+        },
+        {
+          "phone_id": "W011-P07",
+          "expected_phone": "ŋ",
+          "acoustic_winner": "n",
+          "start_ms": 5048,
+          "end_ms": 5068
+        }
+      ]
+    },
+    {
+      "word_id": "W012",
+      "word": "money",
+      "start_ms": 5128,
+      "end_ms": 5388,
+      "phones": [
+        {
+          "phone_id": "W012-P01",
+          "expected_phone": "m",
+          "acoustic_winner": "m",
+          "start_ms": 5128,
+          "end_ms": 5148
+        },
+        {
+          "phone_id": "W012-P02",
+          "expected_phone": "ʌ",
+          "acoustic_winner": "æ",
+          "start_ms": 5168,
+          "end_ms": 5188
+        },
+        {
+          "phone_id": "W012-P03",
+          "expected_phone": "n",
+          "acoustic_winner": "l",
+          "start_ms": 5308,
+          "end_ms": 5328
+        },
+        {
+          "phone_id": "W012-P04",
+          "expected_phone": "i",
+          "acoustic_winner": "i",
+          "start_ms": 5368,
+          "end_ms": 5388
+        }
+      ]
+    },
+    {
+      "word_id": "W013",
+      "word": "in",
+      "start_ms": 5388,
+      "end_ms": 5629,
+      "phones": [
+        {
+          "phone_id": "W013-P01",
+          "expected_phone": "ɪ",
+          "acoustic_winner": "ɪ",
+          "start_ms": 5388,
+          "end_ms": 5408
+        },
+        {
+          "phone_id": "W013-P02",
+          "expected_phone": "n",
+          "acoustic_winner": "ŋ",
+          "start_ms": 5609,
+          "end_ms": 5629
+        }
+      ]
+    },
+    {
+      "word_id": "W014",
+      "word": "a",
+      "start_ms": 5669,
+      "end_ms": 5689,
+      "phones": [
+        {
+          "phone_id": "W014-P01",
+          "expected_phone": "ɐ",
+          "acoustic_winner": "ɐ",
+          "start_ms": 5669,
+          "end_ms": 5689
+        }
+      ]
+    },
+    {
+      "word_id": "W015",
+      "word": "blind",
+      "start_ms": 5809,
+      "end_ms": 6290,
+      "phones": [
+        {
+          "phone_id": "W015-P01",
+          "expected_phone": "b",
+          "acoustic_winner": "p",
+          "start_ms": 5809,
+          "end_ms": 5829
+        },
+        {
+          "phone_id": "W015-P02",
+          "expected_phone": "l",
+          "acoustic_winner": "l",
+          "start_ms": 5909,
+          "end_ms": 5949
+        },
+        {
+          "phone_id": "W015-P03",
+          "expected_phone": "aɪ",
+          "acoustic_winner": "aɪ",
+          "start_ms": 5989,
+          "end_ms": 6009
+        },
+        {
+          "phone_id": "W015-P04",
+          "expected_phone": "n",
+          "acoustic_winner": "n",
+          "start_ms": 6230,
+          "end_ms": 6250
+        },
+        {
+          "phone_id": "W015-P05",
+          "expected_phone": "d",
+          "acoustic_winner": "d",
+          "start_ms": 6270,
+          "end_ms": 6290
+        }
+      ]
+    },
+    {
+      "word_id": "W016",
+      "word": "way",
+      "start_ms": 6410,
+      "end_ms": 6490,
+      "phones": [
+        {
+          "phone_id": "W016-P01",
+          "expected_phone": "w",
+          "acoustic_winner": "w",
+          "start_ms": 6410,
+          "end_ms": 6430
+        },
+        {
+          "phone_id": "W016-P02",
+          "expected_phone": "eɪ",
+          "acoustic_winner": "eɪ",
+          "start_ms": 6470,
+          "end_ms": 6490
+        }
+      ]
+    },
+    {
+      "word_id": "W017",
+      "word": "it",
+      "start_ms": 6911,
+      "end_ms": 7011,
+      "phones": [
+        {
+          "phone_id": "W017-P01",
+          "expected_phone": "ɪ",
+          "acoustic_winner": "ɪ",
+          "start_ms": 6911,
+          "end_ms": 6931
+        },
+        {
+          "phone_id": "W017-P02",
+          "expected_phone": "t",
+          "acoustic_winner": "ɾ",
+          "start_ms": 6991,
+          "end_ms": 7011
+        }
+      ]
+    },
+    {
+      "word_id": "W018",
+      "word": "means",
+      "start_ms": 7091,
+      "end_ms": 7431,
+      "phones": [
+        {
+          "phone_id": "W018-P01",
+          "expected_phone": "m",
+          "acoustic_winner": "m",
+          "start_ms": 7091,
+          "end_ms": 7131
+        },
+        {
+          "phone_id": "W018-P02",
+          "expected_phone": "iː",
+          "acoustic_winner": "eɪ",
+          "start_ms": 7151,
+          "end_ms": 7171
+        },
+        {
+          "phone_id": "W018-P03",
+          "expected_phone": "n",
+          "acoustic_winner": "n",
+          "start_ms": 7331,
+          "end_ms": 7351
+        },
+        {
+          "phone_id": "W018-P04",
+          "expected_phone": "z",
+          "acoustic_winner": "s",
+          "start_ms": 7411,
+          "end_ms": 7431
+        }
+      ]
+    },
+    {
+      "word_id": "W019",
+      "word": "you",
+      "start_ms": 7472,
+      "end_ms": 7512,
+      "phones": [
+        {
+          "phone_id": "W019-P01",
+          "expected_phone": "j",
+          "acoustic_winner": "j",
+          "start_ms": 7472,
+          "end_ms": 7492
+        },
+        {
+          "phone_id": "W019-P02",
+          "expected_phone": "uː",
+          "acoustic_winner": "iː",
+          "start_ms": 7492,
+          "end_ms": 7512
+        }
+      ]
+    },
+    {
+      "word_id": "W020",
+      "word": "have",
+      "start_ms": 7672,
+      "end_ms": 7912,
+      "phones": [
+        {
+          "phone_id": "W020-P01",
+          "expected_phone": "h",
+          "acoustic_winner": "h",
+          "start_ms": 7672,
+          "end_ms": 7712
+        },
+        {
+          "phone_id": "W020-P02",
+          "expected_phone": "æ",
+          "acoustic_winner": "æ",
+          "start_ms": 7752,
+          "end_ms": 7772
+        },
+        {
+          "phone_id": "W020-P03",
+          "expected_phone": "v",
+          "acoustic_winner": "ɹ",
+          "start_ms": 7892,
+          "end_ms": 7912
+        }
+      ]
+    },
+    {
+      "word_id": "W021",
+      "word": "a",
+      "start_ms": 7932,
+      "end_ms": 7952,
+      "phones": [
+        {
+          "phone_id": "W021-P01",
+          "expected_phone": "ɐ",
+          "acoustic_winner": "ɐ",
+          "start_ms": 7932,
+          "end_ms": 7952
+        }
+      ]
+    },
+    {
+      "word_id": "W022",
+      "word": "plan",
+      "start_ms": 8052,
+      "end_ms": 8433,
+      "phones": [
+        {
+          "phone_id": "W022-P01",
+          "expected_phone": "p",
+          "acoustic_winner": "p",
+          "start_ms": 8052,
+          "end_ms": 8072
+        },
+        {
+          "phone_id": "W022-P02",
+          "expected_phone": "l",
+          "acoustic_winner": "l",
+          "start_ms": 8113,
+          "end_ms": 8133
+        },
+        {
+          "phone_id": "W022-P03",
+          "expected_phone": "æ",
+          "acoustic_winner": "aɪ",
+          "start_ms": 8153,
+          "end_ms": 8173
+        },
+        {
+          "phone_id": "W022-P04",
+          "expected_phone": "n",
+          "acoustic_winner": "n",
+          "start_ms": 8393,
+          "end_ms": 8433
+        }
+      ]
+    },
+    {
+      "word_id": "W023",
+      "word": "for",
+      "start_ms": 8533,
+      "end_ms": 8633,
+      "phones": [
+        {
+          "phone_id": "W023-P01",
+          "expected_phone": "f",
+          "acoustic_winner": "t",
+          "start_ms": 8533,
+          "end_ms": 8553
+        },
+        {
+          "phone_id": "W023-P02",
+          "expected_phone": "ɔːɹ",
+          "acoustic_winner": "ɔːɹ",
+          "start_ms": 8613,
+          "end_ms": 8633
+        }
+      ]
+    },
+    {
+      "word_id": "W024",
+      "word": "doing",
+      "start_ms": 8754,
+      "end_ms": 9094,
+      "phones": [
+        {
+          "phone_id": "W024-P01",
+          "expected_phone": "d",
+          "acoustic_winner": "t",
+          "start_ms": 8754,
+          "end_ms": 8774
+        },
+        {
+          "phone_id": "W024-P02",
+          "expected_phone": "uː",
+          "acoustic_winner": "oʊ",
+          "start_ms": 8914,
+          "end_ms": 8934
+        },
+        {
+          "phone_id": "W024-P03",
+          "expected_phone": "ɪ",
+          "acoustic_winner": "ɪ",
+          "start_ms": 9014,
+          "end_ms": 9034
+        },
+        {
+          "phone_id": "W024-P04",
+          "expected_phone": "ŋ",
+          "acoustic_winner": "n",
+          "start_ms": 9074,
+          "end_ms": 9094
+        }
+      ]
+    },
+    {
+      "word_id": "W025",
+      "word": "things",
+      "start_ms": 9194,
+      "end_ms": 9495,
+      "phones": [
+        {
+          "phone_id": "W025-P01",
+          "expected_phone": "θ",
+          "acoustic_winner": "t",
+          "start_ms": 9194,
+          "end_ms": 9214
+        },
+        {
+          "phone_id": "W025-P02",
+          "expected_phone": "ɪ",
+          "acoustic_winner": "ɪ",
+          "start_ms": 9234,
+          "end_ms": 9254
+        },
+        {
+          "phone_id": "W025-P03",
+          "expected_phone": "ŋ",
+          "acoustic_winner": "ŋ",
+          "start_ms": 9394,
+          "end_ms": 9415
+        },
+        {
+          "phone_id": "W025-P04",
+          "expected_phone": "z",
+          "acoustic_winner": "s",
+          "start_ms": 9475,
+          "end_ms": 9495
+        }
+      ]
+    },
+    {
+      "word_id": "W026",
+      "word": "I",
+      "start_ms": 10176,
+      "end_ms": 10196,
+      "phones": [
+        {
+          "phone_id": "W026-P01",
+          "expected_phone": "aɪ",
+          "acoustic_winner": "aɪ",
+          "start_ms": 10176,
+          "end_ms": 10196
+        }
+      ]
+    },
+    {
+      "word_id": "W027",
+      "word": "think",
+      "start_ms": 10336,
+      "end_ms": 10656,
+      "phones": [
+        {
+          "phone_id": "W027-P01",
+          "expected_phone": "θ",
+          "acoustic_winner": "θ",
+          "start_ms": 10336,
+          "end_ms": 10356
+        },
+        {
+          "phone_id": "W027-P02",
+          "expected_phone": "ɪ",
+          "acoustic_winner": "ɪ",
+          "start_ms": 10376,
+          "end_ms": 10396
+        },
+        {
+          "phone_id": "W027-P03",
+          "expected_phone": "ŋ",
+          "acoustic_winner": "ŋ",
+          "start_ms": 10516,
+          "end_ms": 10536
+        },
+        {
+          "phone_id": "W027-P04",
+          "expected_phone": "k",
+          "acoustic_winner": "k",
+          "start_ms": 10636,
+          "end_ms": 10656
+        }
+      ]
+    },
+    {
+      "word_id": "W028",
+      "word": "it's",
+      "start_ms": 10717,
+      "end_ms": 10917,
+      "phones": [
+        {
+          "phone_id": "W028-P01",
+          "expected_phone": "ɪ",
+          "acoustic_winner": "ɪ",
+          "start_ms": 10717,
+          "end_ms": 10737
+        },
+        {
+          "phone_id": "W028-P02",
+          "expected_phone": "t",
+          "acoustic_winner": "t",
+          "start_ms": 10857,
+          "end_ms": 10877
+        },
+        {
+          "phone_id": "W028-P03",
+          "expected_phone": "s",
+          "acoustic_winner": "s",
+          "start_ms": 10877,
+          "end_ms": 10917
+        }
+      ]
+    },
+    {
+      "word_id": "W029",
+      "word": "a",
+      "start_ms": 10957,
+      "end_ms": 10977,
+      "phones": [
+        {
+          "phone_id": "W029-P01",
+          "expected_phone": "ɐ",
+          "acoustic_winner": "ɐ",
+          "start_ms": 10957,
+          "end_ms": 10977
+        }
+      ]
+    },
+    {
+      "word_id": "W030",
+      "word": "good",
+      "start_ms": 11137,
+      "end_ms": 11358,
+      "phones": [
+        {
+          "phone_id": "W030-P01",
+          "expected_phone": "ɡ",
+          "acoustic_winner": "ɡ",
+          "start_ms": 11137,
+          "end_ms": 11157
+        },
+        {
+          "phone_id": "W030-P02",
+          "expected_phone": "ʊ",
+          "acoustic_winner": "uː",
+          "start_ms": 11197,
+          "end_ms": 11217
+        },
+        {
+          "phone_id": "W030-P03",
+          "expected_phone": "d",
+          "acoustic_winner": "d",
+          "start_ms": 11337,
+          "end_ms": 11358
+        }
+      ]
+    },
+    {
+      "word_id": "W031",
+      "word": "habit",
+      "start_ms": 11438,
+      "end_ms": 12039,
+      "phones": [
+        {
+          "phone_id": "W031-P01",
+          "expected_phone": "h",
+          "acoustic_winner": "h",
+          "start_ms": 11438,
+          "end_ms": 11458
+        },
+        {
+          "phone_id": "W031-P02",
+          "expected_phone": "æ",
+          "acoustic_winner": "æ",
+          "start_ms": 11518,
+          "end_ms": 11538
+        },
+        {
+          "phone_id": "W031-P03",
+          "expected_phone": "b",
+          "acoustic_winner": "b",
+          "start_ms": 11658,
+          "end_ms": 11678
+        },
+        {
+          "phone_id": "W031-P04",
+          "expected_phone": "ɪ",
+          "acoustic_winner": "eɪ",
+          "start_ms": 11718,
+          "end_ms": 11738
+        },
+        {
+          "phone_id": "W031-P05",
+          "expected_phone": "t",
+          "acoustic_winner": "d",
+          "start_ms": 12019,
+          "end_ms": 12039
+        }
+      ]
+    },
+    {
+      "word_id": "W032",
+      "word": "for",
+      "start_ms": 12159,
+      "end_ms": 12279,
+      "phones": [
+        {
+          "phone_id": "W032-P01",
+          "expected_phone": "f",
+          "acoustic_winner": "f",
+          "start_ms": 12159,
+          "end_ms": 12179
+        },
+        {
+          "phone_id": "W032-P02",
+          "expected_phone": "ɔː",
+          "acoustic_winner": "ɔːɹ",
+          "start_ms": 12199,
+          "end_ms": 12219
+        },
+        {
+          "phone_id": "W032-P03",
+          "expected_phone": "ɹ",
+          "acoustic_winner": "ɹ",
+          "start_ms": 12259,
+          "end_ms": 12279
+        }
+      ]
+    },
+    {
+      "word_id": "W033",
+      "word": "anything",
+      "start_ms": 12359,
+      "end_ms": 12960,
+      "phones": [
+        {
+          "phone_id": "W033-P01",
+          "expected_phone": "ɛ",
+          "acoustic_winner": "ɛ",
+          "start_ms": 12359,
+          "end_ms": 12379
+        },
+        {
+          "phone_id": "W033-P02",
+          "expected_phone": "n",
+          "acoustic_winner": "n",
+          "start_ms": 12519,
+          "end_ms": 12539
+        },
+        {
+          "phone_id": "W033-P03",
+          "expected_phone": "ɪ",
+          "acoustic_winner": "i",
+          "start_ms": 12559,
+          "end_ms": 12579
+        },
+        {
+          "phone_id": "W033-P04",
+          "expected_phone": "θ",
+          "acoustic_winner": "θ",
+          "start_ms": 12700,
+          "end_ms": 12720
+        },
+        {
+          "phone_id": "W033-P05",
+          "expected_phone": "ɪ",
+          "acoustic_winner": "ɪ",
+          "start_ms": 12780,
+          "end_ms": 12800
+        },
+        {
+          "phone_id": "W033-P06",
+          "expected_phone": "ŋ",
+          "acoustic_winner": "ŋ",
+          "start_ms": 12940,
+          "end_ms": 12960
+        }
+      ]
+    }
+  ]
+}
