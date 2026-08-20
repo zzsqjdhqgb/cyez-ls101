@@ -10,6 +10,7 @@ import { FileTemplateRepository, type TemplateStore } from '../repository'
 import type { BuiltinTemplateRelease } from '../types'
 
 const TEMPLATE_ID = '0c283c54-683a-498c-bf69-fb1490f99356'
+const ZHONGKAO_TEMPLATE_ID = '8e96c4b2-5f31-4a7d-9c68-2b4f0d7e1a53'
 const LISTENING_TEMPLATE = {
   templateId: '4f4c8c1a-9b2a-4d71-8f1e-4a5e8c7d2b63',
   name: '上海高考英语听力标准题型',
@@ -80,7 +81,8 @@ describe('内置 Template 启动初始化', () => {
         TEMPLATE_ID,
         LISTENING_TEMPLATE.templateId,
         ...LISTENING_BLOCK_TEMPLATES.map(({ templateId }) => templateId),
-        ...SECTION_TEMPLATES.map(({ templateId }) => templateId)
+        ...SECTION_TEMPLATES.map(({ templateId }) => templateId),
+        ZHONGKAO_TEMPLATE_ID
       ].sort()
     )
     expect(await repository.getActiveBuiltinTemplate(TEMPLATE_ID)).toMatchObject({
@@ -105,6 +107,56 @@ describe('内置 Template 启动初始化', () => {
     await expect(
       repository.getActiveBuiltinTemplate('11111111-1111-4111-8111-111111111111')
     ).resolves.toBeNull()
+
+    const zhongkao = await repository.getActiveBuiltinTemplate(ZHONGKAO_TEMPLATE_ID)
+    expect(zhongkao).toMatchObject({
+      templateId: ZHONGKAO_TEMPLATE_ID,
+      version: 1,
+      releaseHash: 'sha256:a35d2f6eae2feaf7ea04bb179693ccbd1c6e10c45eff5940974e53e2ee4a6588',
+      document: {
+        content: {
+          name: '上海中考口语标准题型',
+          tags: ['全卷', '口语', '中考'],
+          interfaces: [
+            {
+              alias: 'data',
+              interfaceId:
+                'sha256:fd1bd229ebd711dce3655bdc3a4b41a9ecb93ce273b7643307a726ae403cc884',
+              acceptedVars: [
+                'phrase_1_display',
+                'phrase_1',
+                'phrase_2',
+                'phrase_3',
+                'sentence_1',
+                'sentence_2',
+                'quickresponse_1',
+                'quickresponse_2',
+                'quickresponse_3',
+                'quickresponse_4',
+                'quickresponse_5',
+                '3_dialogue_topic',
+                '3_dialogue',
+                '3_picture.inst',
+                '3_picture.img',
+                '4_topic',
+                '4_picture.inst',
+                '4_picture.img'
+              ]
+            }
+          ],
+          root: {
+            children: [
+              { type: 'function', name: '朗读词组题组' },
+              { type: 'function', name: '朗读句子题组' },
+              { type: 'function', name: '交际应答题组' },
+              { type: 'function', name: '复述题组' },
+              { type: 'function', name: '话题表达题组' }
+            ]
+          }
+        }
+      }
+    })
+    expect(zhongkao?.document.resources.functions).toHaveLength(11)
 
     const standard = await repository.getActiveBuiltinTemplate(TEMPLATE_ID)
     const standardInterface = standard?.document.content.interfaces[0]
