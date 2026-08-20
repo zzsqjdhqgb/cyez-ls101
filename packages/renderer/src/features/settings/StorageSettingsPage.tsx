@@ -269,9 +269,9 @@ function formatBytes(bytes: number): string {
 }
 
 function sameDisplayPath(left: string, right: string): boolean {
+  if (!isWindowsPlatform()) return left === right
   const normalizedLeft = left.replaceAll('\\', '/')
   const normalizedRight = right.replaceAll('\\', '/')
-  if (!isWindowsPlatform()) return normalizedLeft === normalizedRight
   return normalizedLeft.toLocaleLowerCase() === normalizedRight.toLocaleLowerCase()
 }
 
