@@ -534,38 +534,44 @@ async function abandonPendingMigration(
     const pendingCleanups = bootstrap.pendingCleanups ?? []
     assertSelectionSeparateFromPendingCleanups(selected, pendingCleanups)
     if (!bootstrap.oldDataDirectory) return { pendingCleanups }
-    if (samePath(selected, bootstrap.oldDataDirectory.path)) {
-      await assertSelectedOldDataDirectory(selected, bootstrap.oldDataDirectory)
-      return { pendingCleanups }
-    }
-    assertSeparateDirectories(selected, bootstrap.oldDataDirectory.path)
-    if (bootstrap.oldDataDirectory.deletionPath) {
-      assertSeparateDirectories(selected, bootstrap.oldDataDirectory.deletionPath)
-    }
-    return { pendingCleanups, oldDataDirectory: bootstrap.oldDataDirectory }
+    const oldDataDirectory = await coordinateRetiredSource(selected, bootstrap.oldDataDirectory)
+    return { pendingCleanups, ...(oldDataDirectory ? { oldDataDirectory } : {}) }
   }
   const existing = bootstrap.pendingCleanups ?? []
   assertSelectionSeparateFromPendingCleanups(selected, existing)
   if (bootstrap.mode === 'use-existing') {
+    const oldDataDirectory = await coordinateRetiredSource(selected, bootstrap.retiredSource)
     return {
       pendingCleanups: existing,
-      ...(!samePath(selected, bootstrap.retiredSource.path)
-        ? { oldDataDirectory: bootstrap.retiredSource }
-        : {})
+      ...(oldDataDirectory ? { oldDataDirectory } : {})
     }
   }
   if (bootstrap.mode === 'legacy-copy') return { pendingCleanups: existing }
   assertSelectionSeparateFromPendingCleanups(selected, [pendingCleanupFromMigration(bootstrap)])
+  const oldDataDirectory = await coordinateRetiredSource(selected, bootstrap.retiredSource)
   const cleanup = pendingCleanupFromMigration(bootstrap)
   const pendingCleanups = (await tryRemovePendingCleanup(cleanup))
     ? existing
     : [...existing, cleanup]
   return {
     pendingCleanups,
-    ...(!samePath(selected, bootstrap.retiredSource.path)
-      ? { oldDataDirectory: bootstrap.retiredSource }
-      : {})
+    ...(oldDataDirectory ? { oldDataDirectory } : {})
   }
+}
+
+async function coordinateRetiredSource(
+  selected: string,
+  retiredSource: OldDataDirectory
+): Promise<OldDataDirectory | undefined> {
+  if (samePath(selected, retiredSource.path)) {
+    await assertSelectedOldDataDirectory(selected, retiredSource)
+    return undefined
+  }
+  assertSeparateDirectories(selected, retiredSource.path)
+  if (retiredSource.deletionPath) {
+    assertSeparateDirectories(selected, retiredSource.deletionPath)
+  }
+  return retiredSource
 }
 
 async function assertSelectedOldDataDirectory(

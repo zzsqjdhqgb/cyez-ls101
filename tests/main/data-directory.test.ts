@@ -635,6 +635,79 @@ describe('data directory initialization', () => {
     })
   })
 
+  it('rejects a same-path recovery choice with a replaced retired source during copy migration', async () => {
+    const { userData, source, target } = await scheduledCopy('copy-recovery-retired-marker-changed')
+    await writeFile(
+      path.join(source, '.ls101-data.json'),
+      JSON.stringify({
+        formatVersion: 1,
+        kind: 'ls101-data-directory',
+        directoryId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      })
+    )
+    const exit = new Error('exit')
+    electronMocks.dialog.showMessageBox
+      .mockResolvedValueOnce({ response: 1 })
+      .mockResolvedValueOnce({ response: 2 })
+    electronMocks.dialog.showOpenDialog.mockResolvedValueOnce({
+      canceled: false,
+      filePaths: [source]
+    })
+    electronMocks.app.exit.mockImplementationOnce(() => {
+      throw exit
+    })
+
+    await expect(recoverDataDirectory(userData, new Error('copy migration failed'))).rejects.toBe(
+      exit
+    )
+    await expect(readJson(path.join(userData, 'data-location.json'))).resolves.toMatchObject({
+      state: 'migrating',
+      source,
+      target,
+      mode: 'copy'
+    })
+  })
+
+  it('rejects a same-path recovery choice with a replaced retired source during use-existing migration', async () => {
+    const userData = await temporaryDirectory('ls101-data-use-existing-recovery-')
+    const source = await initializeDataDirectory(userData)
+    const target = await temporaryDirectory('ls101-data-use-existing-target-')
+    await writeManagedMarker(target)
+    registerDataDirectoryHandlers(userData, source)
+    const useExisting = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.useExisting)
+    expect(useExisting).toBeDefined()
+    await useExisting!({ sender: {} }, target as never)
+    await writeFile(
+      path.join(source, '.ls101-data.json'),
+      JSON.stringify({
+        formatVersion: 1,
+        kind: 'ls101-data-directory',
+        directoryId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+      })
+    )
+    const exit = new Error('exit')
+    electronMocks.dialog.showMessageBox
+      .mockResolvedValueOnce({ response: 1 })
+      .mockResolvedValueOnce({ response: 2 })
+    electronMocks.dialog.showOpenDialog.mockResolvedValueOnce({
+      canceled: false,
+      filePaths: [source]
+    })
+    electronMocks.app.exit.mockImplementationOnce(() => {
+      throw exit
+    })
+
+    await expect(
+      recoverDataDirectory(userData, new Error('use-existing migration failed'))
+    ).rejects.toBe(exit)
+    await expect(readJson(path.join(userData, 'data-location.json'))).resolves.toMatchObject({
+      state: 'migrating',
+      source,
+      target,
+      mode: 'use-existing'
+    })
+  })
+
   it('clears a missing staging cleanup when its recorded parent is still online', async () => {
     const userData = await temporaryDirectory('ls101-data-missing-cleanup-')
     const source = await initializeDataDirectory(userData)
