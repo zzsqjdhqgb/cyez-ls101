@@ -186,6 +186,7 @@ export async function recoverDataDirectory(userDataDir: string, error: unknown):
       try {
         const selected = await normalizeDirectory(selection.filePaths[0])
         await assertManagedDirectory(selected)
+        await abandonPendingMigration(userDataDir, selected)
         await writeReadyBootstrap(userDataDir, selected)
         app.relaunch()
         app.exit(0)
@@ -212,6 +213,7 @@ async function inspectCandidate(
       sizeBytes: await directorySize(normalizedTarget)
     }
   }
+  await assertReplaceableMigrationTarget(normalizedTarget)
   assertSeparateDirectories(normalizedCurrent, normalizedTarget)
   if (await isManagedDirectory(normalizedTarget)) {
     return {
@@ -250,6 +252,7 @@ async function finishPendingMigration(
     throw new Error('旧数据迁移来源与 Electron 用户数据目录不一致')
   }
   if (bootstrap.mode === 'copy') await assertManagedDirectory(source)
+  await assertReplaceableMigrationTarget(target)
 
   const title = bootstrap.mode === 'copy' ? '正在迁移数据' : '正在整理数据'
   const detail =
@@ -320,7 +323,7 @@ async function prepareLegacyStaging(bootstrap: LegacyCopyingBootstrap): Promise<
 async function recreateOwnedStaging(
   bootstrap: CopyingBootstrap | LegacyCopyingBootstrap
 ): Promise<void> {
-  await rm(bootstrap.staging, { recursive: true, force: true })
+  await removeOwnedStaging(bootstrap)
   await mkdir(bootstrap.staging, { recursive: false })
 }
 
@@ -356,7 +359,26 @@ async function commitCompletedStaging(
 async function removeOwnedStaging(
   bootstrap: CopyingBootstrap | LegacyCopyingBootstrap
 ): Promise<void> {
+  assertStoredMigrationPaths(bootstrap)
+  const stagingStats = await lstatIfExists(bootstrap.staging)
+  if (!stagingStats) return
+  if (!stagingStats.isDirectory() || stagingStats.isSymbolicLink()) {
+    throw new Error('迁移暂存路径已被其他文件占用，未执行清理')
+  }
+  if (await isMountPoint(bootstrap.staging, path.dirname(bootstrap.staging))) {
+    throw new Error('迁移暂存路径已成为挂载点，未执行清理')
+  }
   await rm(bootstrap.staging, { recursive: true, force: true })
+}
+
+async function abandonPendingMigration(userDataDir: string, selected: string): Promise<void> {
+  const bootstrap = await readBootstrap(userDataDir).catch(() => null)
+  if (bootstrap?.state !== 'migrating' || bootstrap.mode === 'use-existing') return
+  const staging = path.normalize(path.resolve(bootstrap.staging))
+  if (samePath(staging, selected) || isPathWithin(staging, selected)) {
+    throw new Error('不能将迁移暂存目录作为数据目录')
+  }
+  await removeOwnedStaging(bootstrap)
 }
 
 async function copyTree(source: string, target: string): Promise<FileManifestEntry[]> {
@@ -610,6 +632,13 @@ function assertMigrationPaths(
   if (!samePath(configured, expected)) throw new Error('数据目录迁移暂存路径与迁移事务不一致')
 }
 
+function assertStoredMigrationPaths(bootstrap: CopyingBootstrap | LegacyCopyingBootstrap): void {
+  if (!path.isAbsolute(bootstrap.target) || !path.isAbsolute(bootstrap.staging)) {
+    throw new Error('数据目录迁移路径无效')
+  }
+  assertMigrationPaths(bootstrap, path.normalize(path.resolve(bootstrap.target)))
+}
+
 function stagingPath(target: string, migrationId: string): string {
   return path.join(path.dirname(target), `.${path.basename(target)}.migrating-${migrationId}`)
 }
@@ -624,6 +653,45 @@ function assertSeparateDirectories(source: string, target: string): void {
   ) {
     throw new Error('新旧数据目录不能互相包含')
   }
+}
+
+async function assertReplaceableMigrationTarget(directory: string): Promise<void> {
+  const parent = path.dirname(directory)
+  if (samePath(directory, parent) || (await isMountPoint(directory, parent))) {
+    throw new Error('不能选择文件系统根目录或挂载点，请在其中新建一个空目录')
+  }
+}
+
+async function isMountPoint(directory: string, parent: string): Promise<boolean> {
+  const [directoryStats, parentStats] = await Promise.all([
+    statIfExists(directory),
+    statIfExists(parent)
+  ])
+  if (!directoryStats || !parentStats) return false
+  if (directoryStats.dev !== parentStats.dev) return true
+  if (process.platform !== 'linux') return false
+  try {
+    const mountInfo = await readFile('/proc/self/mountinfo', 'utf8')
+    return mountInfo.split('\n').some((line) => {
+      const fields = line.split(' ')
+      return fields.length > 4 && samePath(decodeMountInfoPath(fields[4]), directory)
+    })
+  } catch {
+    return false
+  }
+}
+
+function decodeMountInfoPath(value: string): string {
+  return path.normalize(
+    value.replace(/\\([0-7]{3})/g, (_match, digits: string) =>
+      String.fromCharCode(Number.parseInt(digits, 8))
+    )
+  )
+}
+
+function isPathWithin(parent: string, candidate: string): boolean {
+  const relative = path.relative(parent, candidate)
+  return relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative)
 }
 
 async function directorySize(directory: string): Promise<number> {
@@ -642,6 +710,15 @@ async function pathExists(filename: string): Promise<boolean> {
 async function statIfExists(filename: string): Promise<Awaited<ReturnType<typeof stat>> | null> {
   try {
     return await stat(filename)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw error
+  }
+}
+
+async function lstatIfExists(filename: string): Promise<Awaited<ReturnType<typeof lstat>> | null> {
+  try {
+    return await lstat(filename)
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
     throw error

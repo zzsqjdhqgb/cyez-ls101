@@ -39,6 +39,7 @@ vi.mock('electron', () => ({
 
 import {
   initializeDataDirectory,
+  recoverDataDirectory,
   registerDataDirectoryHandlers
 } from '../../src/main/data-directory'
 
@@ -141,6 +142,37 @@ describe('data directory initialization', () => {
     await expect(readFile(path.join(target, 'unrelated.txt'), 'utf8')).resolves.toBe('keep')
   })
 
+  it('rejects a filesystem root before scheduling a migration', async () => {
+    const userData = await temporaryDirectory('ls101-data-root-target-')
+    const source = await initializeDataDirectory(userData)
+    registerDataDirectoryHandlers(userData, source)
+    const migrate = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.migrate)
+    expect(migrate).toBeDefined()
+
+    await expect(migrate!({ sender: {} }, path.parse(process.cwd()).root as never)).rejects.toThrow(
+      '不能选择文件系统根目录或挂载点，请在其中新建一个空目录'
+    )
+    await expect(readJson(path.join(userData, 'data-location.json'))).resolves.toMatchObject({
+      state: 'ready',
+      activeDataDirectory: source
+    })
+  })
+
+  it.skipIf(process.platform !== 'linux')(
+    'rejects a Linux mount point before scheduling a migration',
+    async () => {
+      const userData = await temporaryDirectory('ls101-data-mount-target-')
+      const source = await initializeDataDirectory(userData)
+      registerDataDirectoryHandlers(userData, source)
+      const migrate = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.migrate)
+      expect(migrate).toBeDefined()
+
+      await expect(migrate!({ sender: {} }, '/proc' as never)).rejects.toThrow(
+        '不能选择文件系统根目录或挂载点，请在其中新建一个空目录'
+      )
+    }
+  )
+
   it('preserves files written to the target after migration is scheduled', async () => {
     const { userData, target, migration } = await scheduledCopy('target-race')
     await writeFile(path.join(target, 'external.txt'), 'do not delete')
@@ -230,6 +262,38 @@ describe('data directory initialization', () => {
     await rm(path.join(target, 'external.txt'))
     await expect(initializeDataDirectory(userData)).resolves.toBe(target)
     await expect(readFile(path.join(target, 'config', 'settings.json'), 'utf8')).resolves.toBe('{}')
+  })
+
+  it('removes owned staging before abandoning a failed migration', async () => {
+    const { userData, source, target, migration } = await scheduledCopy('abandon-staging')
+    await writeFile(path.join(target, 'external.txt'), 'blocks commit')
+    await expect(initializeDataDirectory(userData)).rejects.toThrow('迁移目标在复制期间被写入')
+    await expect(readFile(path.join(migration.staging, 'document.json'), 'utf8')).resolves.toBe(
+      '{"source":"abandon-staging"}'
+    )
+    electronMocks.dialog.showMessageBox
+      .mockResolvedValueOnce({ response: 1 })
+      .mockResolvedValueOnce({ response: 2 })
+    electronMocks.dialog.showOpenDialog.mockResolvedValueOnce({
+      canceled: false,
+      filePaths: [source]
+    })
+    const exit = new Error('exit')
+    electronMocks.app.exit
+      .mockImplementationOnce(() => undefined)
+      .mockImplementationOnce(() => {
+        throw exit
+      })
+
+    await expect(recoverDataDirectory(userData, new Error('migration failed'))).rejects.toBe(exit)
+
+    await expect(readFile(path.join(migration.staging, 'document.json'))).rejects.toMatchObject({
+      code: 'ENOENT'
+    })
+    await expect(readJson(path.join(userData, 'data-location.json'))).resolves.toMatchObject({
+      state: 'ready',
+      activeDataDirectory: source
+    })
   })
 })
 
