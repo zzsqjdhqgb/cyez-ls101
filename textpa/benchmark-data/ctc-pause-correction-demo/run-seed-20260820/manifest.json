@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "completed_at": "2026-08-20T14:23:09.246645+00:00",
+  "selection": {
+    "seed": 20260820,
+    "requested_count": 3,
+    "population": "50 published MultiPA cues, filtered only for product-compatible CMUdict coverage",
+    "selected_ids": [
+      "0da366a3-a684-4c34-9109-11fdfc63227c---68bc2586-0cbd-4669-aa68-094aebd76b7.wav",
+      "197b043a-7182-4de2-9a46-ce84fd3f5bd1---46ca6809-80ae-4412-b6e2-1fdf4ea2b98.wav",
+      "5f97bbc9-c953-4143-a4fe-09006ba4c74a---92b07602-30f4-4899-831b-18091ea6063.wav"
+    ],
+    "skipped_before_selection": [
+      {
+        "id": "1abdb5b5-298d-49c1-ab9f-29f6f11e0a9d---b481a3b7-5d1c-4518-b64e-7193dfded9a.wav",
+        "reason": "CMUdict has no pronunciation for 'phallus'"
+      }
+    ]
+  },
+  "sources": {
+    "cues": {
+      "path": "/workspace/textpa/benchmark-data/multipa-reference/paper_cues.jsonl",
+      "sha256": "f0ab31f1c78bc7735ac1a9adae5266b6fd76d9f50d81f5e7341b12d92d82b02a"
+    },
+    "textpa_results_zip": {
+      "path": "/workspace/textpa/benchmark-data/multipa-reference/downloads/multiPA.zip",
+      "sha256": "9a019a2ac12b653c4411daf7caeba70631d4bf0721d8748b81ffa05a87c117d1"
+    },
+    "ctc_model": {
+      "path": "/workspace/externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8/onnx/model_quantized.onnx",
+      "sha256": "3d1479b5c70836645a4310902479f7f7e8bbc8c16c58745d918804f4f6f9d120"
+    },
+    "vocabulary": {
+      "path": "/workspace/externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8/vocab.json",
+      "sha256": "d732ab2456c0c017930001dc9af0b41b3b93d25b2eb9740bf9d925508d7d87d0"
+    },
+    "script": {
+      "path": "/workspace/textpa/scripts/run_ctc_pause_correction_demo.py",
+      "sha256": "06cc11a255669e6c94f1d1c6e9e1a9f6e8c0219583c8cd12b3a49b8b936546ae"
+    }
+  },
+  "llm": {
+    "endpoint": "https://apihub.agnes-ai.com/v1/chat/completions",
+    "model": "agnes-2.5-flash",
+    "max_tokens": 65535,
+    "temperature": 0.0,
+    "thinking": true
+  },
+  "result_count": 3
+}

@@ -1,0 +1,1687 @@
+{
+  "schema_version": 1,
+  "id": "197b043a-7182-4de2-9a46-ce84fd3f5bd1---46ca6809-80ae-4412-b6e2-1fdf4ea2b98.wav",
+  "audio_path": "audio/197b043a-7182-4de2-9a46-ce84fd3f5bd1---46ca6809-80ae-4412-b6e2-1fdf4ea2b98.wav",
+  "audio_sha256": "d932959a9b03829e80d37b10c713258f59e60093f7560f2d624db10d916dcc4b",
+  "transcript": " Well, I think saving money is very important. Of course, spending money in a blind way, it means you have a plan for doing things. I think it's a good habit for anything.",
+  "transcript_source": "published MultiPA Whisper large-v3 output",
+  "ctc": {
+    "reference_text": " Well, I think saving money is very important. Of course, spending money in a blind way, it means you have a plan for doing things. I think it's a good habit for anything.",
+    "reference_source": "published Whisper ASR hypothesis; not a known script",
+    "recognized_phones": [
+      "w",
+      "ɛ",
+      "aɪ",
+      "θ",
+      "ɪ",
+      "ŋ",
+      "k",
+      "s",
+      "ɪ",
+      "v",
+      "ɪ",
+      "m",
+      "æ",
+      "i",
+      "ɪ",
+      "z",
+      "v",
+      "ɜː",
+      "ɹ",
+      "ɪ",
+      "m",
+      "p",
+      "ɔːɹ",
+      "ɾ",
+      "ə",
+      "n",
+      "d",
+      "æ",
+      "n",
+      "t",
+      "k",
+      "ʌ",
+      "æ",
+      "s",
+      "æ",
+      "n",
+      "i",
+      "m",
+      "æ",
+      "l",
+      "ɪ",
+      "ɐ",
+      "p",
+      "l",
+      "aɪ",
+      "n",
+      "d",
+      "ə",
+      "w",
+      "eɪ",
+      "n",
+      "ɪ",
+      "ɾ",
+      "m",
+      "eɪ",
+      "ŋ",
+      "n",
+      "s",
+      "iː",
+      "h",
+      "æ",
+      "ɹ",
+      "ɐ",
+      "p",
+      "l",
+      "aɪ",
+      "n",
+      "t",
+      "ɔːɹ",
+      "oʊ",
+      "ɪ",
+      "n",
+      "t",
+      "ɪ",
+      "ŋ",
+      "s",
+      "aɪ",
+      "θ",
+      "ɪ",
+      "ŋ",
+      "k",
+      "ɪ",
+      "t",
+      "s",
+      "ɐ",
+      "ɡ",
+      "uː",
+      "d",
+      "h",
+      "æ",
+      "b",
+      "eɪ",
+      "d",
+      "f",
+      "ɔːɹ",
+      "ɛ",
+      "n",
+      "i",
+      "θ",
+      "ɪ",
+      "ŋ"
+    ],
+    "overall_score": 64,
+    "alignment_path_score": -0.306508,
+    "frame_count": 647,
+    "duration_ms": 12960,
+    "words": [
+      {
+        "word_index": 0,
+        "text": "Well",
+        "expected_phones": [
+          "w",
+          "ɛ",
+          "l"
+        ],
+        "score": 89,
+        "start_ms": 60,
+        "end_ms": 361,
+        "phones": [
+          {
+            "expected": "w",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 60,
+            "end_ms": 80
+          },
+          {
+            "expected": "ɛ",
+            "score": 69,
+            "confidence": 0.205,
+            "start_ms": 120,
+            "end_ms": 160
+          },
+          {
+            "expected": "l",
+            "score": 98,
+            "confidence": 1.0,
+            "start_ms": 341,
+            "end_ms": 361
+          }
+        ]
+      },
+      {
+        "word_index": 1,
+        "text": "I",
+        "expected_phones": [
+          "aɪ"
+        ],
+        "score": 96,
+        "start_ms": 621,
+        "end_ms": 641,
+        "phones": [
+          {
+            "expected": "aɪ",
+            "score": 96,
+            "confidence": 0.818,
+            "start_ms": 621,
+            "end_ms": 641
+          }
+        ]
+      },
+      {
+        "word_index": 2,
+        "text": "think",
+        "expected_phones": [
+          "θ",
+          "ɪ",
+          "ŋ",
+          "k"
+        ],
+        "score": 96,
+        "start_ms": 881,
+        "end_ms": 1462,
+        "phones": [
+          {
+            "expected": "θ",
+            "score": 97,
+            "confidence": 0.837,
+            "start_ms": 881,
+            "end_ms": 901
+          },
+          {
+            "expected": "ɪ",
+            "score": 98,
+            "confidence": 0.929,
+            "start_ms": 982,
+            "end_ms": 1002
+          },
+          {
+            "expected": "ŋ",
+            "score": 95,
+            "confidence": 0.73,
+            "start_ms": 1282,
+            "end_ms": 1322
+          },
+          {
+            "expected": "k",
+            "score": 93,
+            "confidence": 0.66,
+            "start_ms": 1442,
+            "end_ms": 1462
+          }
+        ]
+      },
+      {
+        "word_index": 3,
+        "text": "saving",
+        "expected_phones": [
+          "s",
+          "eɪ",
+          "v",
+          "ɪ",
+          "ŋ"
+        ],
+        "score": 52,
+        "start_ms": 1582,
+        "end_ms": 1823,
+        "phones": [
+          {
+            "expected": "s",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 1582,
+            "end_ms": 1602
+          },
+          {
+            "expected": "eɪ",
+            "observed": "ɪ",
+            "score": 2,
+            "confidence": 0.979,
+            "start_ms": 1663,
+            "end_ms": 1683
+          },
+          {
+            "expected": "v",
+            "score": 68,
+            "confidence": 0.183,
+            "start_ms": 1743,
+            "end_ms": 1763
+          },
+          {
+            "expected": "ɪ",
+            "score": 69,
+            "confidence": 0.205,
+            "start_ms": 1783,
+            "end_ms": 1803
+          },
+          {
+            "expected": "ŋ",
+            "observed": "n",
+            "score": 23,
+            "confidence": 0.304,
+            "start_ms": 1803,
+            "end_ms": 1823
+          }
+        ]
+      },
+      {
+        "word_index": 4,
+        "text": "money",
+        "expected_phones": [
+          "m",
+          "ʌ",
+          "n",
+          "i"
+        ],
+        "score": 62,
+        "start_ms": 1903,
+        "end_ms": 2163,
+        "phones": [
+          {
+            "expected": "m",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 1903,
+            "end_ms": 1923
+          },
+          {
+            "expected": "ʌ",
+            "observed": "æ",
+            "score": 3,
+            "confidence": 0.9,
+            "start_ms": 1943,
+            "end_ms": 1963
+          },
+          {
+            "expected": "n",
+            "score": 92,
+            "confidence": 0.621,
+            "start_ms": 2083,
+            "end_ms": 2103
+          },
+          {
+            "expected": "i",
+            "score": 52,
+            "confidence": 0.018,
+            "start_ms": 2143,
+            "end_ms": 2163
+          }
+        ]
+      },
+      {
+        "word_index": 5,
+        "text": "is",
+        "expected_phones": [
+          "ɪ",
+          "z"
+        ],
+        "score": 94,
+        "start_ms": 2243,
+        "end_ms": 2344,
+        "phones": [
+          {
+            "expected": "ɪ",
+            "score": 98,
+            "confidence": 0.955,
+            "start_ms": 2243,
+            "end_ms": 2263
+          },
+          {
+            "expected": "z",
+            "score": 89,
+            "confidence": 0.52,
+            "start_ms": 2324,
+            "end_ms": 2344
+          }
+        ]
+      },
+      {
+        "word_index": 6,
+        "text": "very",
+        "expected_phones": [
+          "v",
+          "ɛ",
+          "ɹ",
+          "i"
+        ],
+        "score": 66,
+        "start_ms": 2424,
+        "end_ms": 2664,
+        "phones": [
+          {
+            "expected": "v",
+            "score": 75,
+            "confidence": 0.27,
+            "start_ms": 2424,
+            "end_ms": 2444
+          },
+          {
+            "expected": "ɛ",
+            "observed": "ɜː",
+            "score": 6,
+            "confidence": 0.707,
+            "start_ms": 2504,
+            "end_ms": 2524
+          },
+          {
+            "expected": "ɹ",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 2604,
+            "end_ms": 2624
+          },
+          {
+            "expected": "i",
+            "score": 85,
+            "confidence": 0.424,
+            "start_ms": 2644,
+            "end_ms": 2664
+          }
+        ]
+      },
+      {
+        "word_index": 7,
+        "text": "important",
+        "expected_phones": [
+          "ɪ",
+          "m",
+          "p",
+          "ɔː",
+          "ɹ",
+          "t",
+          "ə",
+          "n",
+          "t"
+        ],
+        "score": 70,
+        "start_ms": 2704,
+        "end_ms": 3405,
+        "phones": [
+          {
+            "expected": "ɪ",
+            "score": 97,
+            "confidence": 0.896,
+            "start_ms": 2704,
+            "end_ms": 2724
+          },
+          {
+            "expected": "m",
+            "score": 82,
+            "confidence": 0.384,
+            "start_ms": 2744,
+            "end_ms": 2764
+          },
+          {
+            "expected": "p",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 2824,
+            "end_ms": 2844
+          },
+          {
+            "expected": "ɔː",
+            "observed": "ɔːɹ",
+            "score": 24,
+            "confidence": 0.29,
+            "start_ms": 2884,
+            "end_ms": 2904
+          },
+          {
+            "expected": "ɹ",
+            "score": 88,
+            "confidence": 0.496,
+            "start_ms": 2965,
+            "end_ms": 2985
+          },
+          {
+            "expected": "t",
+            "observed": "ɾ",
+            "score": 23,
+            "confidence": 0.297,
+            "start_ms": 3045,
+            "end_ms": 3065
+          },
+          {
+            "expected": "ə",
+            "score": 91,
+            "confidence": 0.58,
+            "start_ms": 3105,
+            "end_ms": 3125
+          },
+          {
+            "expected": "n",
+            "score": 97,
+            "confidence": 0.891,
+            "start_ms": 3285,
+            "end_ms": 3305
+          },
+          {
+            "expected": "t",
+            "observed": "d",
+            "score": 26,
+            "confidence": 0.255,
+            "start_ms": 3385,
+            "end_ms": 3405
+          }
+        ]
+      },
+      {
+        "word_index": 8,
+        "text": "Of",
+        "expected_phones": [
+          "ʌ",
+          "v"
+        ],
+        "score": 5,
+        "start_ms": 3445,
+        "end_ms": 3606,
+        "phones": [
+          {
+            "expected": "ʌ",
+            "observed": "æ",
+            "score": 10,
+            "confidence": 0.556,
+            "start_ms": 3445,
+            "end_ms": 3465
+          },
+          {
+            "expected": "v",
+            "observed": "t",
+            "score": 0,
+            "confidence": 1.0,
+            "start_ms": 3586,
+            "end_ms": 3606
+          }
+        ]
+      },
+      {
+        "word_index": 9,
+        "text": "course",
+        "expected_phones": [
+          "k",
+          "ɔː",
+          "ɹ",
+          "s"
+        ],
+        "score": 26,
+        "start_ms": 3686,
+        "end_ms": 4587,
+        "phones": [
+          {
+            "expected": "k",
+            "score": 97,
+            "confidence": 0.832,
+            "start_ms": 3686,
+            "end_ms": 3706
+          },
+          {
+            "expected": "ɔː",
+            "observed": "ʌ",
+            "score": 2,
+            "confidence": 1.0,
+            "start_ms": 3766,
+            "end_ms": 3786
+          },
+          {
+            "expected": "ɹ",
+            "observed": "p",
+            "score": 3,
+            "confidence": 0.829,
+            "start_ms": 4507,
+            "end_ms": 4527
+          },
+          {
+            "expected": "s",
+            "observed": "æ",
+            "score": 0,
+            "confidence": 1.0,
+            "start_ms": 4567,
+            "end_ms": 4587
+          }
+        ]
+      },
+      {
+        "word_index": 10,
+        "text": "spending",
+        "expected_phones": [
+          "s",
+          "p",
+          "ɛ",
+          "n",
+          "d",
+          "ɪ",
+          "ŋ"
+        ],
+        "score": 43,
+        "start_ms": 4767,
+        "end_ms": 5068,
+        "phones": [
+          {
+            "expected": "s",
+            "score": 94,
+            "confidence": 0.709,
+            "start_ms": 4767,
+            "end_ms": 4787
+          },
+          {
+            "expected": "p",
+            "observed": "t",
+            "score": 19,
+            "confidence": 0.361,
+            "start_ms": 4868,
+            "end_ms": 4888
+          },
+          {
+            "expected": "ɛ",
+            "observed": "æ",
+            "score": 24,
+            "confidence": 0.288,
+            "start_ms": 4908,
+            "end_ms": 4928
+          },
+          {
+            "expected": "n",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 4988,
+            "end_ms": 5008
+          },
+          {
+            "expected": "d",
+            "observed": "i",
+            "score": 7,
+            "confidence": 0.648,
+            "start_ms": 5008,
+            "end_ms": 5028
+          },
+          {
+            "expected": "ɪ",
+            "observed": "i",
+            "score": 42,
+            "confidence": 0.078,
+            "start_ms": 5028,
+            "end_ms": 5048
+          },
+          {
+            "expected": "ŋ",
+            "observed": "n",
+            "score": 18,
+            "confidence": 0.372,
+            "start_ms": 5048,
+            "end_ms": 5068
+          }
+        ]
+      },
+      {
+        "word_index": 11,
+        "text": "money",
+        "expected_phones": [
+          "m",
+          "ʌ",
+          "n",
+          "i"
+        ],
+        "score": 57,
+        "start_ms": 5128,
+        "end_ms": 5388,
+        "phones": [
+          {
+            "expected": "m",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 5128,
+            "end_ms": 5148
+          },
+          {
+            "expected": "ʌ",
+            "observed": "æ",
+            "score": 3,
+            "confidence": 0.901,
+            "start_ms": 5168,
+            "end_ms": 5188
+          },
+          {
+            "expected": "n",
+            "observed": "l",
+            "score": 46,
+            "confidence": 0.043,
+            "start_ms": 5308,
+            "end_ms": 5328
+          },
+          {
+            "expected": "i",
+            "score": 80,
+            "confidence": 0.339,
+            "start_ms": 5368,
+            "end_ms": 5388
+          }
+        ]
+      },
+      {
+        "word_index": 12,
+        "text": "in",
+        "expected_phones": [
+          "ɪ",
+          "n"
+        ],
+        "score": 38,
+        "start_ms": 5388,
+        "end_ms": 5629,
+        "phones": [
+          {
+            "expected": "ɪ",
+            "score": 56,
+            "confidence": 0.065,
+            "start_ms": 5388,
+            "end_ms": 5408
+          },
+          {
+            "expected": "n",
+            "observed": "ŋ",
+            "score": 19,
+            "confidence": 0.362,
+            "start_ms": 5609,
+            "end_ms": 5629
+          }
+        ]
+      },
+      {
+        "word_index": 13,
+        "text": "a",
+        "expected_phones": [
+          "ə"
+        ],
+        "score": 17,
+        "start_ms": 5669,
+        "end_ms": 5689,
+        "phones": [
+          {
+            "expected": "ə",
+            "observed": "ɐ",
+            "score": 17,
+            "confidence": 0.396,
+            "start_ms": 5669,
+            "end_ms": 5689
+          }
+        ]
+      },
+      {
+        "word_index": 14,
+        "text": "blind",
+        "expected_phones": [
+          "b",
+          "l",
+          "aɪ",
+          "n",
+          "d"
+        ],
+        "score": 83,
+        "start_ms": 5809,
+        "end_ms": 6290,
+        "phones": [
+          {
+            "expected": "b",
+            "observed": "p",
+            "score": 32,
+            "confidence": 0.186,
+            "start_ms": 5809,
+            "end_ms": 5829
+          },
+          {
+            "expected": "l",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 5909,
+            "end_ms": 5949
+          },
+          {
+            "expected": "aɪ",
+            "score": 95,
+            "confidence": 0.726,
+            "start_ms": 5989,
+            "end_ms": 6009
+          },
+          {
+            "expected": "n",
+            "score": 96,
+            "confidence": 0.827,
+            "start_ms": 6230,
+            "end_ms": 6250
+          },
+          {
+            "expected": "d",
+            "score": 94,
+            "confidence": 0.708,
+            "start_ms": 6270,
+            "end_ms": 6290
+          }
+        ]
+      },
+      {
+        "word_index": 15,
+        "text": "way",
+        "expected_phones": [
+          "w",
+          "eɪ"
+        ],
+        "score": 93,
+        "start_ms": 6410,
+        "end_ms": 6490,
+        "phones": [
+          {
+            "expected": "w",
+            "score": 98,
+            "confidence": 1.0,
+            "start_ms": 6410,
+            "end_ms": 6430
+          },
+          {
+            "expected": "eɪ",
+            "score": 88,
+            "confidence": 0.51,
+            "start_ms": 6470,
+            "end_ms": 6490
+          }
+        ]
+      },
+      {
+        "word_index": 16,
+        "text": "it",
+        "expected_phones": [
+          "ɪ",
+          "t"
+        ],
+        "score": 74,
+        "start_ms": 6911,
+        "end_ms": 7011,
+        "phones": [
+          {
+            "expected": "ɪ",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 6911,
+            "end_ms": 6931
+          },
+          {
+            "expected": "t",
+            "observed": "ɾ",
+            "score": 48,
+            "confidence": 0.018,
+            "start_ms": 6991,
+            "end_ms": 7011
+          }
+        ]
+      },
+      {
+        "word_index": 17,
+        "text": "means",
+        "expected_phones": [
+          "m",
+          "iː",
+          "n",
+          "z"
+        ],
+        "score": 58,
+        "start_ms": 7091,
+        "end_ms": 7431,
+        "phones": [
+          {
+            "expected": "m",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 7091,
+            "end_ms": 7131
+          },
+          {
+            "expected": "iː",
+            "observed": "eɪ",
+            "score": 3,
+            "confidence": 0.885,
+            "start_ms": 7151,
+            "end_ms": 7171
+          },
+          {
+            "expected": "n",
+            "score": 97,
+            "confidence": 0.83,
+            "start_ms": 7331,
+            "end_ms": 7351
+          },
+          {
+            "expected": "z",
+            "observed": "s",
+            "score": 33,
+            "confidence": 0.177,
+            "start_ms": 7411,
+            "end_ms": 7431
+          }
+        ]
+      },
+      {
+        "word_index": 18,
+        "text": "you",
+        "expected_phones": [
+          "j",
+          "uː"
+        ],
+        "score": 50,
+        "start_ms": 7472,
+        "end_ms": 7512,
+        "phones": [
+          {
+            "expected": "j",
+            "score": 92,
+            "confidence": 0.598,
+            "start_ms": 7472,
+            "end_ms": 7492
+          },
+          {
+            "expected": "uː",
+            "observed": "iː",
+            "score": 8,
+            "confidence": 0.598,
+            "start_ms": 7492,
+            "end_ms": 7512
+          }
+        ]
+      },
+      {
+        "word_index": 19,
+        "text": "have",
+        "expected_phones": [
+          "h",
+          "æ",
+          "v"
+        ],
+        "score": 65,
+        "start_ms": 7672,
+        "end_ms": 7912,
+        "phones": [
+          {
+            "expected": "h",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 7672,
+            "end_ms": 7712
+          },
+          {
+            "expected": "æ",
+            "score": 87,
+            "confidence": 0.467,
+            "start_ms": 7752,
+            "end_ms": 7772
+          },
+          {
+            "expected": "v",
+            "observed": "ɹ",
+            "score": 10,
+            "confidence": 0.55,
+            "start_ms": 7892,
+            "end_ms": 7912
+          }
+        ]
+      },
+      {
+        "word_index": 20,
+        "text": "a",
+        "expected_phones": [
+          "ə"
+        ],
+        "score": 49,
+        "start_ms": 7932,
+        "end_ms": 7952,
+        "phones": [
+          {
+            "expected": "ə",
+            "observed": "ɐ",
+            "score": 49,
+            "confidence": 0.014,
+            "start_ms": 7932,
+            "end_ms": 7952
+          }
+        ]
+      },
+      {
+        "word_index": 21,
+        "text": "plan",
+        "expected_phones": [
+          "p",
+          "l",
+          "æ",
+          "n"
+        ],
+        "score": 74,
+        "start_ms": 8052,
+        "end_ms": 8433,
+        "phones": [
+          {
+            "expected": "p",
+            "score": 92,
+            "confidence": 0.603,
+            "start_ms": 8052,
+            "end_ms": 8072
+          },
+          {
+            "expected": "l",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 8113,
+            "end_ms": 8133
+          },
+          {
+            "expected": "æ",
+            "observed": "aɪ",
+            "score": 7,
+            "confidence": 0.652,
+            "start_ms": 8153,
+            "end_ms": 8173
+          },
+          {
+            "expected": "n",
+            "score": 98,
+            "confidence": 1.0,
+            "start_ms": 8393,
+            "end_ms": 8433
+          }
+        ]
+      },
+      {
+        "word_index": 22,
+        "text": "for",
+        "expected_phones": [
+          "f",
+          "ɚ"
+        ],
+        "score": 10,
+        "start_ms": 8533,
+        "end_ms": 8633,
+        "phones": [
+          {
+            "expected": "f",
+            "observed": "t",
+            "score": 9,
+            "confidence": 0.573,
+            "start_ms": 8533,
+            "end_ms": 8553
+          },
+          {
+            "expected": "ɚ",
+            "observed": "ɔːɹ",
+            "score": 10,
+            "confidence": 0.537,
+            "start_ms": 8613,
+            "end_ms": 8633
+          }
+        ]
+      },
+      {
+        "word_index": 23,
+        "text": "doing",
+        "expected_phones": [
+          "d",
+          "uː",
+          "ɪ",
+          "ŋ"
+        ],
+        "score": 52,
+        "start_ms": 8754,
+        "end_ms": 9094,
+        "phones": [
+          {
+            "expected": "d",
+            "observed": "t",
+            "score": 21,
+            "confidence": 0.336,
+            "start_ms": 8754,
+            "end_ms": 8774
+          },
+          {
+            "expected": "uː",
+            "observed": "oʊ",
+            "score": 49,
+            "confidence": 0.014,
+            "start_ms": 8914,
+            "end_ms": 8934
+          },
+          {
+            "expected": "ɪ",
+            "score": 91,
+            "confidence": 0.565,
+            "start_ms": 9014,
+            "end_ms": 9034
+          },
+          {
+            "expected": "ŋ",
+            "observed": "n",
+            "score": 48,
+            "confidence": 0.019,
+            "start_ms": 9074,
+            "end_ms": 9094
+          }
+        ]
+      },
+      {
+        "word_index": 24,
+        "text": "things",
+        "expected_phones": [
+          "θ",
+          "ɪ",
+          "ŋ",
+          "z"
+        ],
+        "score": 55,
+        "start_ms": 9194,
+        "end_ms": 9495,
+        "phones": [
+          {
+            "expected": "θ",
+            "observed": "t",
+            "score": 0,
+            "confidence": 1.0,
+            "start_ms": 9194,
+            "end_ms": 9214
+          },
+          {
+            "expected": "ɪ",
+            "score": 98,
+            "confidence": 0.933,
+            "start_ms": 9234,
+            "end_ms": 9254
+          },
+          {
+            "expected": "ŋ",
+            "score": 89,
+            "confidence": 0.526,
+            "start_ms": 9394,
+            "end_ms": 9415
+          },
+          {
+            "expected": "z",
+            "observed": "s",
+            "score": 31,
+            "confidence": 0.198,
+            "start_ms": 9475,
+            "end_ms": 9495
+          }
+        ]
+      },
+      {
+        "word_index": 25,
+        "text": "I",
+        "expected_phones": [
+          "aɪ"
+        ],
+        "score": 96,
+        "start_ms": 10176,
+        "end_ms": 10196,
+        "phones": [
+          {
+            "expected": "aɪ",
+            "score": 96,
+            "confidence": 0.799,
+            "start_ms": 10176,
+            "end_ms": 10196
+          }
+        ]
+      },
+      {
+        "word_index": 26,
+        "text": "think",
+        "expected_phones": [
+          "θ",
+          "ɪ",
+          "ŋ",
+          "k"
+        ],
+        "score": 85,
+        "start_ms": 10336,
+        "end_ms": 10656,
+        "phones": [
+          {
+            "expected": "θ",
+            "score": 52,
+            "confidence": 0.021,
+            "start_ms": 10336,
+            "end_ms": 10356
+          },
+          {
+            "expected": "ɪ",
+            "score": 96,
+            "confidence": 0.796,
+            "start_ms": 10376,
+            "end_ms": 10396
+          },
+          {
+            "expected": "ŋ",
+            "score": 95,
+            "confidence": 0.742,
+            "start_ms": 10516,
+            "end_ms": 10536
+          },
+          {
+            "expected": "k",
+            "score": 95,
+            "confidence": 0.761,
+            "start_ms": 10636,
+            "end_ms": 10656
+          }
+        ]
+      },
+      {
+        "word_index": 27,
+        "text": "it's",
+        "expected_phones": [
+          "ɪ",
+          "t",
+          "s"
+        ],
+        "score": 97,
+        "start_ms": 10717,
+        "end_ms": 10917,
+        "phones": [
+          {
+            "expected": "ɪ",
+            "score": 98,
+            "confidence": 1.0,
+            "start_ms": 10717,
+            "end_ms": 10737
+          },
+          {
+            "expected": "t",
+            "score": 98,
+            "confidence": 0.955,
+            "start_ms": 10857,
+            "end_ms": 10877
+          },
+          {
+            "expected": "s",
+            "score": 94,
+            "confidence": 0.706,
+            "start_ms": 10877,
+            "end_ms": 10917
+          }
+        ]
+      },
+      {
+        "word_index": 28,
+        "text": "a",
+        "expected_phones": [
+          "ə"
+        ],
+        "score": 9,
+        "start_ms": 10957,
+        "end_ms": 10977,
+        "phones": [
+          {
+            "expected": "ə",
+            "observed": "ɐ",
+            "score": 9,
+            "confidence": 0.569,
+            "start_ms": 10957,
+            "end_ms": 10977
+          }
+        ]
+      },
+      {
+        "word_index": 29,
+        "text": "good",
+        "expected_phones": [
+          "ɡ",
+          "ʊ",
+          "d"
+        ],
+        "score": 67,
+        "start_ms": 11137,
+        "end_ms": 11358,
+        "phones": [
+          {
+            "expected": "ɡ",
+            "score": 88,
+            "confidence": 0.5,
+            "start_ms": 11137,
+            "end_ms": 11157
+          },
+          {
+            "expected": "ʊ",
+            "observed": "uː",
+            "score": 19,
+            "confidence": 0.369,
+            "start_ms": 11197,
+            "end_ms": 11217
+          },
+          {
+            "expected": "d",
+            "score": 95,
+            "confidence": 0.756,
+            "start_ms": 11337,
+            "end_ms": 11358
+          }
+        ]
+      },
+      {
+        "word_index": 30,
+        "text": "habit",
+        "expected_phones": [
+          "h",
+          "æ",
+          "b",
+          "ə",
+          "t"
+        ],
+        "score": 55,
+        "start_ms": 11438,
+        "end_ms": 12039,
+        "phones": [
+          {
+            "expected": "h",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 11438,
+            "end_ms": 11458
+          },
+          {
+            "expected": "æ",
+            "score": 73,
+            "confidence": 0.247,
+            "start_ms": 11518,
+            "end_ms": 11538
+          },
+          {
+            "expected": "b",
+            "score": 93,
+            "confidence": 0.646,
+            "start_ms": 11658,
+            "end_ms": 11678
+          },
+          {
+            "expected": "ə",
+            "observed": "eɪ",
+            "score": 0,
+            "confidence": 1.0,
+            "start_ms": 11718,
+            "end_ms": 11738
+          },
+          {
+            "expected": "t",
+            "observed": "d",
+            "score": 10,
+            "confidence": 0.558,
+            "start_ms": 12019,
+            "end_ms": 12039
+          }
+        ]
+      },
+      {
+        "word_index": 31,
+        "text": "for",
+        "expected_phones": [
+          "f",
+          "ɚ"
+        ],
+        "score": 61,
+        "start_ms": 12159,
+        "end_ms": 12219,
+        "phones": [
+          {
+            "expected": "f",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 12159,
+            "end_ms": 12179
+          },
+          {
+            "expected": "ɚ",
+            "observed": "ɔːɹ",
+            "score": 23,
+            "confidence": 0.302,
+            "start_ms": 12199,
+            "end_ms": 12219
+          }
+        ]
+      },
+      {
+        "word_index": 32,
+        "text": "anything",
+        "expected_phones": [
+          "ɛ",
+          "n",
+          "i",
+          "θ",
+          "ɪ",
+          "ŋ"
+        ],
+        "score": 87,
+        "start_ms": 12359,
+        "end_ms": 12960,
+        "phones": [
+          {
+            "expected": "ɛ",
+            "score": 77,
+            "confidence": 0.3,
+            "start_ms": 12359,
+            "end_ms": 12379
+          },
+          {
+            "expected": "n",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 12519,
+            "end_ms": 12539
+          },
+          {
+            "expected": "i",
+            "score": 55,
+            "confidence": 0.051,
+            "start_ms": 12559,
+            "end_ms": 12579
+          },
+          {
+            "expected": "θ",
+            "score": 97,
+            "confidence": 0.881,
+            "start_ms": 12700,
+            "end_ms": 12720
+          },
+          {
+            "expected": "ɪ",
+            "score": 97,
+            "confidence": 0.868,
+            "start_ms": 12780,
+            "end_ms": 12800
+          },
+          {
+            "expected": "ŋ",
+            "score": 96,
+            "confidence": 0.817,
+            "start_ms": 12940,
+            "end_ms": 12960
+          }
+        ]
+      }
+    ]
+  },
+  "pronunciation_candidates": {
+    "threshold_policy": {
+      "high": "score < 40 and confidence >= 0.35",
+      "tentative": "alternative phone is stronger, but evidence does not meet the high threshold"
+    },
+    "candidates": [
+      {
+        "evidence_id": "P-W009-P02",
+        "strength": "high",
+        "word": "Of",
+        "word_index": 8,
+        "expected_phone": "v",
+        "observed_phone": "t",
+        "match_score": 0,
+        "confidence": 1.0,
+        "start_ms": 3586,
+        "end_ms": 3606
+      },
+      {
+        "evidence_id": "P-W010-P04",
+        "strength": "high",
+        "word": "course",
+        "word_index": 9,
+        "expected_phone": "s",
+        "observed_phone": "æ",
+        "match_score": 0,
+        "confidence": 1.0,
+        "start_ms": 4567,
+        "end_ms": 4587
+      },
+      {
+        "evidence_id": "P-W025-P01",
+        "strength": "high",
+        "word": "things",
+        "word_index": 24,
+        "expected_phone": "θ",
+        "observed_phone": "t",
+        "match_score": 0,
+        "confidence": 1.0,
+        "start_ms": 9194,
+        "end_ms": 9214
+      },
+      {
+        "evidence_id": "P-W031-P04",
+        "strength": "high",
+        "word": "habit",
+        "word_index": 30,
+        "expected_phone": "ə",
+        "observed_phone": "eɪ",
+        "match_score": 0,
+        "confidence": 1.0,
+        "start_ms": 11718,
+        "end_ms": 11738
+      },
+      {
+        "evidence_id": "P-W010-P02",
+        "strength": "high",
+        "word": "course",
+        "word_index": 9,
+        "expected_phone": "ɔː",
+        "observed_phone": "ʌ",
+        "match_score": 2,
+        "confidence": 1.0,
+        "start_ms": 3766,
+        "end_ms": 3786
+      },
+      {
+        "evidence_id": "P-W004-P02",
+        "strength": "high",
+        "word": "saving",
+        "word_index": 3,
+        "expected_phone": "eɪ",
+        "observed_phone": "ɪ",
+        "match_score": 2,
+        "confidence": 0.979,
+        "start_ms": 1663,
+        "end_ms": 1683
+      },
+      {
+        "evidence_id": "P-W012-P02",
+        "strength": "high",
+        "word": "money",
+        "word_index": 11,
+        "expected_phone": "ʌ",
+        "observed_phone": "æ",
+        "match_score": 3,
+        "confidence": 0.901,
+        "start_ms": 5168,
+        "end_ms": 5188
+      },
+      {
+        "evidence_id": "P-W005-P02",
+        "strength": "high",
+        "word": "money",
+        "word_index": 4,
+        "expected_phone": "ʌ",
+        "observed_phone": "æ",
+        "match_score": 3,
+        "confidence": 0.9,
+        "start_ms": 1943,
+        "end_ms": 1963
+      },
+      {
+        "evidence_id": "P-W018-P02",
+        "strength": "high",
+        "word": "means",
+        "word_index": 17,
+        "expected_phone": "iː",
+        "observed_phone": "eɪ",
+        "match_score": 3,
+        "confidence": 0.885,
+        "start_ms": 7151,
+        "end_ms": 7171
+      },
+      {
+        "evidence_id": "P-W010-P03",
+        "strength": "high",
+        "word": "course",
+        "word_index": 9,
+        "expected_phone": "ɹ",
+        "observed_phone": "p",
+        "match_score": 3,
+        "confidence": 0.829,
+        "start_ms": 4507,
+        "end_ms": 4527
+      },
+      {
+        "evidence_id": "P-W007-P02",
+        "strength": "high",
+        "word": "very",
+        "word_index": 6,
+        "expected_phone": "ɛ",
+        "observed_phone": "ɜː",
+        "match_score": 6,
+        "confidence": 0.707,
+        "start_ms": 2504,
+        "end_ms": 2524
+      },
+      {
+        "evidence_id": "P-W022-P03",
+        "strength": "high",
+        "word": "plan",
+        "word_index": 21,
+        "expected_phone": "æ",
+        "observed_phone": "aɪ",
+        "match_score": 7,
+        "confidence": 0.652,
+        "start_ms": 8153,
+        "end_ms": 8173
+      }
+    ],
+    "omitted_candidate_count": 23
+  },
+  "textpa_phonemes_cmu": "W EH L AY TH IH NG K T UW S IH G N AH M AY HH IH Z R IH IY IH N P R OW JH AH N DH AH AE T AH (0.03s pause) K AO Z (0.14s pause) AE S (0.03s pause) EH N IY M AH D IY AH V (0.02s pause) V L AY IH NG AH W EY N EY (0.03s pause) IH T M IY N Z Y UW HH AE V AH (0.06s pause) P L AE N AE N F AO R (0.07s pause) T UW EH N F IH N TH S (0.02s pause) S (0.21s pause) AY D IH N T G T G IH T S OW (0.06s pause) G UH D AH HH EH V IY (0.01s pause) F AO R EH N IY TH IH NG IH NG",
+  "textpa_pauses": {
+    "source": "published TextPA Charsiu 10 ms CMU frame alignment",
+    "word_mapping": "approximate mapping through independent CTC word timestamps",
+    "alignment_duration_ms": 12940,
+    "events": [
+      {
+        "evidence_id": "F-001",
+        "start_ms": 3610,
+        "end_ms": 3640,
+        "duration_ms": 30,
+        "salience": "short",
+        "previous_cmu_phone": "AH",
+        "next_cmu_phone": "K",
+        "after_word_approx": "Of",
+        "before_word_approx": "course"
+      },
+      {
+        "evidence_id": "F-002",
+        "start_ms": 4330,
+        "end_ms": 4470,
+        "duration_ms": 140,
+        "salience": "short",
+        "previous_cmu_phone": "Z",
+        "next_cmu_phone": "AE",
+        "after_word_approx": "Of",
+        "before_word_approx": "spending"
+      },
+      {
+        "evidence_id": "F-003",
+        "start_ms": 4830,
+        "end_ms": 4860,
+        "duration_ms": 30,
+        "salience": "short",
+        "previous_cmu_phone": "S",
+        "next_cmu_phone": "EH",
+        "after_word_approx": "course",
+        "before_word_approx": "money"
+      },
+      {
+        "evidence_id": "F-004",
+        "start_ms": 5770,
+        "end_ms": 5790,
+        "duration_ms": 20,
+        "salience": "short",
+        "previous_cmu_phone": "V",
+        "next_cmu_phone": "V",
+        "after_word_approx": "a",
+        "before_word_approx": "blind"
+      },
+      {
+        "evidence_id": "F-005",
+        "start_ms": 6820,
+        "end_ms": 6850,
+        "duration_ms": 30,
+        "salience": "short",
+        "previous_cmu_phone": "EY",
+        "next_cmu_phone": "IH",
+        "after_word_approx": "way",
+        "before_word_approx": "it"
+      },
+      {
+        "evidence_id": "F-006",
+        "start_ms": 7990,
+        "end_ms": 8050,
+        "duration_ms": 60,
+        "salience": "short",
+        "previous_cmu_phone": "AH",
+        "next_cmu_phone": "P",
+        "after_word_approx": "a",
+        "before_word_approx": "plan"
+      },
+      {
+        "evidence_id": "F-007",
+        "start_ms": 8730,
+        "end_ms": 8800,
+        "duration_ms": 70,
+        "salience": "short",
+        "previous_cmu_phone": "R",
+        "next_cmu_phone": "T",
+        "after_word_approx": "for",
+        "before_word_approx": "things"
+      },
+      {
+        "evidence_id": "F-008",
+        "start_ms": 9800,
+        "end_ms": 9820,
+        "duration_ms": 20,
+        "salience": "short",
+        "previous_cmu_phone": "S",
+        "next_cmu_phone": "S",
+        "after_word_approx": "things",
+        "before_word_approx": "I"
+      },
+      {
+        "evidence_id": "F-009",
+        "start_ms": 9870,
+        "end_ms": 10080,
+        "duration_ms": 210,
+        "salience": "short",
+        "previous_cmu_phone": "S",
+        "next_cmu_phone": "AY",
+        "after_word_approx": "things",
+        "before_word_approx": "I"
+      },
+      {
+        "evidence_id": "F-010",
+        "start_ms": 11020,
+        "end_ms": 11080,
+        "duration_ms": 60,
+        "salience": "short",
+        "previous_cmu_phone": "OW",
+        "next_cmu_phone": "G",
+        "after_word_approx": "a",
+        "before_word_approx": "good"
+      },
+      {
+        "evidence_id": "F-011",
+        "start_ms": 12070,
+        "end_ms": 12080,
+        "duration_ms": 10,
+        "salience": "short",
+        "previous_cmu_phone": "IY",
+        "next_cmu_phone": "F",
+        "after_word_approx": "habit",
+        "before_word_approx": "for"
+      }
+    ]
+  }
+}

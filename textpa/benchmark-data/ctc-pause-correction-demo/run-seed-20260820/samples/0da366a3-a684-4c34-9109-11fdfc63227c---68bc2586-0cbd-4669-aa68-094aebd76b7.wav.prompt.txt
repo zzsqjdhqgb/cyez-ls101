@@ -1,0 +1,342 @@
+请根据下面的结构化声学证据生成中文语音纠错，不要评分。
+
+证据边界：
+1. 这是自由表达录音；reference 是 Whisper ASR 假设，不是题目给定原文。ASR 可能错误。
+2. CTC 强制对齐会把 reference 的全部音素压到音频上。因此不得把它用于断言漏词、错词或
+   语法错误；只能描述列出的 expected/observed 音素冲突。
+3. strength=high 的 P 证据可以写成“较可能”；strength=tentative 只能写成“建议复听确认”。
+4. TextPA 的 F 证据来自独立 Charsiu [SIL] 检测。short 停顿不要单独报错；noticeable 只有
+   在明显影响节奏时才可温和提示；long 可以作为长停顿反馈。相邻词映射是近似的。
+5. 每条问题必须引用存在的 evidence_id。不要从 overall score 推导等级或总评。
+6. 没有足够证据时宁可输出空问题列表。练习建议必须针对证据里的具体音素或停顿。
+7. pronunciation_issues 最多 6 条，fluency_issues 最多 4 条；同一个词的多个 P 证据应尽量
+   合并为一条，不要把候选列表机械复述一遍。
+
+严格输出以下 JSON 对象，不要 Markdown 代码块，不要增加字段：
+{
+  "summary": "一句简短、保守的总结",
+  "pronunciation_issues": [
+    {
+      "evidence_ids": ["P-..."],
+      "certainty": "high 或 tentative",
+      "location": "词和大致时间",
+      "finding": "证据支持的发现",
+      "practice": "具体练习建议"
+    }
+  ],
+  "fluency_issues": [
+    {
+      "evidence_ids": ["F-..."],
+      "certainty": "high 或 tentative",
+      "location": "相邻词和大致时间",
+      "finding": "证据支持的发现",
+      "practice": "具体练习建议"
+    }
+  ],
+  "positive_observations": ["仅限证据直接支持的保守观察"],
+  "limitations": ["本条结果需要人工复听时应说明原因"]
+}
+
+声学证据 JSON：
+{
+  "sample_id": "0da366a3-a684-4c34-9109-11fdfc63227c---68bc2586-0cbd-4669-aa68-094aebd76b7.wav",
+  "provisional_reference": {
+    "text": " depends I mean it depends on what I'm looking for if I'm going to buy like a phone or computer I would definitely choose big ones because the quality of the product is more reliable for sure",
+    "source": "published Whisper ASR hypothesis",
+    "is_ground_truth": false
+  },
+  "ctc_forced_alignment": {
+    "model": "facebook/wav2vec2-lv-60-espeak-cv-ft ONNX INT8",
+    "overall_match_score_experimental": 64,
+    "threshold_policy": {
+      "high": "score < 40 and confidence >= 0.35",
+      "tentative": "alternative phone is stronger, but evidence does not meet the high threshold"
+    },
+    "candidates": [
+      {
+        "evidence_id": "P-W009-P02",
+        "strength": "high",
+        "word": "looking",
+        "word_index": 8,
+        "expected_phone": "ʊ",
+        "observed_phone": "ə",
+        "match_score": 0,
+        "confidence": 1.0,
+        "start_ms": 3762,
+        "end_ms": 3782
+      },
+      {
+        "evidence_id": "P-W010-P01",
+        "strength": "high",
+        "word": "for",
+        "word_index": 9,
+        "expected_phone": "f",
+        "observed_phone": "w",
+        "match_score": 0,
+        "confidence": 1.0,
+        "start_ms": 4183,
+        "end_ms": 4203
+      },
+      {
+        "evidence_id": "P-W027-P01",
+        "strength": "high",
+        "word": "because",
+        "word_index": 26,
+        "expected_phone": "b",
+        "observed_phone": "s",
+        "match_score": 0,
+        "confidence": 1.0,
+        "start_ms": 11387,
+        "end_ms": 11407
+      },
+      {
+        "evidence_id": "P-W027-P04",
+        "strength": "high",
+        "word": "because",
+        "word_index": 26,
+        "expected_phone": "ɔː",
+        "observed_phone": "ɪ",
+        "match_score": 0,
+        "confidence": 1.0,
+        "start_ms": 11707,
+        "end_ms": 11727
+      },
+      {
+        "evidence_id": "P-W037-P02",
+        "strength": "high",
+        "word": "sure",
+        "word_index": 36,
+        "expected_phone": "ʊ",
+        "observed_phone": "ɚ",
+        "match_score": 0,
+        "confidence": 1.0,
+        "start_ms": 16670,
+        "end_ms": 16690
+      },
+      {
+        "evidence_id": "P-W021-P01",
+        "strength": "high",
+        "word": "I",
+        "word_index": 20,
+        "expected_phone": "aɪ",
+        "observed_phone": "aʊ",
+        "match_score": 1,
+        "confidence": 1.0,
+        "start_ms": 9586,
+        "end_ms": 9606
+      },
+      {
+        "evidence_id": "P-W023-P08",
+        "strength": "high",
+        "word": "definitely",
+        "word_index": 22,
+        "expected_phone": "l",
+        "observed_phone": "k",
+        "match_score": 1,
+        "confidence": 1.0,
+        "start_ms": 10206,
+        "end_ms": 10226
+      },
+      {
+        "evidence_id": "P-W023-P09",
+        "strength": "high",
+        "word": "definitely",
+        "word_index": 22,
+        "expected_phone": "i",
+        "observed_phone": "t",
+        "match_score": 1,
+        "confidence": 1.0,
+        "start_ms": 10226,
+        "end_ms": 10246
+      },
+      {
+        "evidence_id": "P-W035-P07",
+        "strength": "high",
+        "word": "reliable",
+        "word_index": 34,
+        "expected_phone": "ə",
+        "observed_phone": "əl",
+        "match_score": 1,
+        "confidence": 1.0,
+        "start_ms": 16150,
+        "end_ms": 16170
+      },
+      {
+        "evidence_id": "P-W023-P04",
+        "strength": "high",
+        "word": "definitely",
+        "word_index": 22,
+        "expected_phone": "ə",
+        "observed_phone": "n",
+        "match_score": 2,
+        "confidence": 1.0,
+        "start_ms": 10066,
+        "end_ms": 10086
+      },
+      {
+        "evidence_id": "P-W023-P06",
+        "strength": "high",
+        "word": "definitely",
+        "word_index": 22,
+        "expected_phone": "ə",
+        "observed_phone": "ɪ",
+        "match_score": 2,
+        "confidence": 1.0,
+        "start_ms": 10106,
+        "end_ms": 10126
+      },
+      {
+        "evidence_id": "P-W020-P07",
+        "strength": "high",
+        "word": "computer",
+        "word_index": 19,
+        "expected_phone": "t",
+        "observed_phone": "ɾ",
+        "match_score": 3,
+        "confidence": 0.885,
+        "start_ms": 9165,
+        "end_ms": 9185
+      }
+    ],
+    "omitted_candidate_count": 28
+  },
+  "textpa_pause_analysis": {
+    "source": "published TextPA Charsiu 10 ms CMU frame alignment",
+    "word_mapping": "approximate mapping through independent CTC word timestamps",
+    "alignment_duration_ms": 16710,
+    "events": [
+      {
+        "evidence_id": "F-001",
+        "start_ms": 1080,
+        "end_ms": 1310,
+        "duration_ms": 230,
+        "salience": "short",
+        "previous_cmu_phone": "Z",
+        "next_cmu_phone": "AY",
+        "after_word_approx": "depends",
+        "before_word_approx": "I"
+      },
+      {
+        "evidence_id": "F-002",
+        "start_ms": 1320,
+        "end_ms": 1390,
+        "duration_ms": 70,
+        "salience": "short",
+        "previous_cmu_phone": "AY",
+        "next_cmu_phone": "AY",
+        "after_word_approx": "depends",
+        "before_word_approx": "I"
+      },
+      {
+        "evidence_id": "F-003",
+        "start_ms": 2760,
+        "end_ms": 2790,
+        "duration_ms": 30,
+        "salience": "short",
+        "previous_cmu_phone": "Z",
+        "next_cmu_phone": "AO",
+        "after_word_approx": "depends",
+        "before_word_approx": "on"
+      },
+      {
+        "evidence_id": "F-004",
+        "start_ms": 4430,
+        "end_ms": 4800,
+        "duration_ms": 370,
+        "salience": "noticeable",
+        "previous_cmu_phone": "R",
+        "next_cmu_phone": "AH",
+        "after_word_approx": "for",
+        "before_word_approx": "if"
+      },
+      {
+        "evidence_id": "F-005",
+        "start_ms": 4830,
+        "end_ms": 4840,
+        "duration_ms": 10,
+        "salience": "short",
+        "previous_cmu_phone": "AH",
+        "next_cmu_phone": "AH",
+        "after_word_approx": "for",
+        "before_word_approx": "if"
+      },
+      {
+        "evidence_id": "F-006",
+        "start_ms": 6590,
+        "end_ms": 7480,
+        "duration_ms": 890,
+        "salience": "long",
+        "previous_cmu_phone": "AY",
+        "next_cmu_phone": "L",
+        "after_word_approx": "buy",
+        "before_word_approx": "like"
+      },
+      {
+        "evidence_id": "F-007",
+        "start_ms": 9360,
+        "end_ms": 9430,
+        "duration_ms": 70,
+        "salience": "short",
+        "previous_cmu_phone": "ER",
+        "next_cmu_phone": "AY",
+        "after_word_approx": "computer",
+        "before_word_approx": "I"
+      },
+      {
+        "evidence_id": "F-008",
+        "start_ms": 11530,
+        "end_ms": 11610,
+        "duration_ms": 80,
+        "salience": "short",
+        "previous_cmu_phone": "Z",
+        "next_cmu_phone": "HH",
+        "after_word_approx": "ones",
+        "before_word_approx": "the"
+      },
+      {
+        "evidence_id": "F-009",
+        "start_ms": 12060,
+        "end_ms": 12390,
+        "duration_ms": 330,
+        "salience": "noticeable",
+        "previous_cmu_phone": "Z",
+        "next_cmu_phone": "DH",
+        "after_word_approx": "because",
+        "before_word_approx": "the"
+      },
+      {
+        "evidence_id": "F-010",
+        "start_ms": 12700,
+        "end_ms": 12800,
+        "duration_ms": 100,
+        "salience": "short",
+        "previous_cmu_phone": "T",
+        "next_cmu_phone": "DH",
+        "after_word_approx": "because",
+        "before_word_approx": "the"
+      },
+      {
+        "evidence_id": "F-011",
+        "start_ms": 14650,
+        "end_ms": 14990,
+        "duration_ms": 340,
+        "salience": "noticeable",
+        "previous_cmu_phone": "T",
+        "next_cmu_phone": "IH",
+        "after_word_approx": "product",
+        "before_word_approx": "is"
+      },
+      {
+        "evidence_id": "F-012",
+        "start_ms": 16310,
+        "end_ms": 16340,
+        "duration_ms": 30,
+        "salience": "short",
+        "previous_cmu_phone": "L",
+        "next_cmu_phone": "F",
+        "after_word_approx": "reliable",
+        "before_word_approx": "for"
+      }
+    ]
+  }
+}

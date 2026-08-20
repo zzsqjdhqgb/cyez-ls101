@@ -1,0 +1,16 @@
+{
+  "seed": 20260820,
+  "requested_count": 3,
+  "population": "50 published MultiPA cues, filtered only for product-compatible CMUdict coverage",
+  "selected_ids": [
+    "0da366a3-a684-4c34-9109-11fdfc63227c---68bc2586-0cbd-4669-aa68-094aebd76b7.wav",
+    "197b043a-7182-4de2-9a46-ce84fd3f5bd1---46ca6809-80ae-4412-b6e2-1fdf4ea2b98.wav",
+    "5f97bbc9-c953-4143-a4fe-09006ba4c74a---92b07602-30f4-4899-831b-18091ea6063.wav"
+  ],
+  "skipped_before_selection": [
+    {
+      "id": "1abdb5b5-298d-49c1-ab9f-29f6f11e0a9d---b481a3b7-5d1c-4518-b64e-7193dfded9a.wav",
+      "reason": "CMUdict has no pronunciation for 'phallus'"
+    }
+  ]
+}

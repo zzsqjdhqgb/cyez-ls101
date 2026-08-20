@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "id": "0da366a3-a684-4c34-9109-11fdfc63227c---68bc2586-0cbd-4669-aa68-094aebd76b7.wav",
+  "prompt_sha256": "b5085745cc08ddd796f747da09b5d6b78c9c383b50a29d9b7cf916817106a9de",
+  "request_config": {
+    "endpoint": "https://apihub.agnes-ai.com/v1/chat/completions",
+    "model": "agnes-2.5-flash",
+    "max_tokens": 65535,
+    "temperature": 0.0,
+    "thinking": true
+  },
+  "api_response": {
+    "id": "356e11a0c6ef4e8c9ef51019cda2230e",
+    "created": 1787235342,
+    "model": "agnes-2.5-flash",
+    "object": "chat.completion",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "content": "\n\n```json\n{\n  \"summary\": \"整体匹配度中等，发现多处音素发音偏差以及一处较长停顿，建议重点复听确认\",\n  \"pronunciation_issues\": [\n    {\n      \"evidence_ids\": [\"P-W009-P02\"],\n      \"certainty\": \"high\",\n      \"location\": \"looking，约3.76s\",\n      \"finding\": \"预期元音/ʊ/可能被发成中央元音/ə/，导致音质偏中性、不够紧圆\",\n      \"practice\": \"练习/lʊkɪŋ/中的/ʊ/，保持嘴唇圆拢、舌头后缩，避免滑向松弛的/ə/\"\n    },\n    {\n      \"evidence_ids\": [\"P-W010-P01\"],\n      \"certainty\": \"high\",\n      \"location\": \"for，约4.18s\",\n      \"finding\": \"预期声母/f/可能被替代为/w/，唇齿摩擦音位置偏后\",\n      \"practice\": \"练习/f/发音：下唇轻触上齿，气流通过窄缝摩擦；与/w/（双唇圆拢近接触）对比跟读\"\n    },\n    {\n      \"evidence_ids\": [\"P-W021-P01\"],\n      \"certainty\": \"high\",\n      \"location\": \"I，约9.59s\",\n      \"finding\": \"预期双元音/aɪ/可能被发成/aʊ/，结尾舌位偏后\",\n      \"practice\": \"练习/aɪ/：起始开口度大，结尾舌位向前滑动、嘴唇放松不圆，避免滑向后圆的/aʊ/\"\n    },\n    {\n      \"evidence_ids\": [\"P-W027-P01\", \"P-W027-P04\"],\n      \"certainty\": \"high\",\n      \"location\": \"because，约11.39s\",\n      \"finding\": \"首辅音/b/可能被发成/s/，主重元音/ɔː/可能被替代为/ɪ/；两个音段均偏离预期\",\n      \"practice\": \"分音节练习/ˈbiːkɒz/：先单独练习重读音节/biː/的/b/清塞音起始和/iː/长元音，再练习次重音/kɒz/的/ɔː/圆唇后元音\"\n    },\n    {\n      \"evidence_ids\": [\"P-W037-P02\"],\n      \"certainty\": \"high\",\n      \"location\": \"sure，约16.67s\",\n      \"finding\": \"预期元音/ʊ/可能被发成卷舌元音/ɚ/，出现不必要的儿化色彩\",\n      \"practice\": \"练习/ʃʊr/：/ʊ/保持短促不卷舌，再过渡到/r/；与/ʃɚr/对比跟读，注意/ʊ/阶段舌头不前突不卷起\"\n    },\n    {\n      \"evidence_ids\": [\"P-W023-P04\", \"P-W023-P06\", \"P-W023-P08\", \"P-W023-P09\"],\n      \"certainty\": \"high\",\n      \"location\": \"definitely，约10.07s-10.25s\",\n      \"finding\": \"词内多个音段存在系统性偏差：非重读元音/ə/被替代为/n/和/ɪ/，/l/被发成/k/，末尾/i/被发成/t/；整体出现辅音-元音混淆与音节结构重构\",\n      \"practice\": \"逐音素拆解/ˈdefɪnətli/：先放慢速度练习每个音节的起始辅音（d-e-f-n-t-l），确保每个音素独立清晰后再连读；重点区分/l/与/t/、/n/与/i/，可对照镜像口型练习\"\n    }\n  ],\n  \"fluency_issues\": [\n    {\n      \"evidence_ids\": [\"F-006\"],\n      \"certainty\": \"high\",\n      \"location\": \"buy → like，约6.59s-7.48s\",\n      \"finding\": \"出现约890ms的长停顿，打断相邻词的语流连续性\",\n      \"practice\": \"尝试在/haɪ/结尾与/l/开头之间做无缝衔接，可将两个词作为一个短语单元（like a phone）整体跟读，减少中间空白\"\n    }\n  ],\n  \"positive_observations\": [\n    \"整体匹配度64，部分词汇（如depends、what、phone、computer、quality）未发现明显音素冲突\",\n    \"多数停顿为short级别，未对节奏造成系统性干扰\"\n  ],\n  \"limitations\": [\n    \"definitely一词存在4处音段偏差，涉及/ə/-/n/-/ɪ/-/l/-/k/-/i/-/t/多个音素，人工复听可确认是否存在系统性混淆模式\",\n    \"CTC强制对齐的音素边界为近似值，时间戳可能存在±10-20ms偏差，关键案例建议人工复听核对\",\n    \"for的/f/→/w/偏差在快速口语中有时与连读弱化相关，需人工区分是发音缺陷还是语境驱动的自然变体\"\n  ]\n}\n```",
+          "role": "assistant",
+          "reasoning_content": "根据用户提供的声学证据，我需要生成中文语音纠错反馈。首先，我需要仔细分析CTC强制对齐和TextPA停顿证据，然后根据边界条件生成合适的问题列表。\n\n让我先理解每个证据：\n\nCTC对齐证据（P-）：\n1. P-W009-P02: \"looking\" - 期望音素ʊ，观察到ə - strength=high\n2. P-W010-P01: \"for\" - 期望音素f，观察到w - strength=high\n3. P-W027-P01: \"because\" - 期望音素b，观察到s - strength=high\n4. P-W027-P04: \"because\" - 期望音素ɔː，观察到ɪ - strength=high\n5. P-W037-P02: \"sure\" - 期望音素ʊ，观察到ɚ - strength=high\n6. P-W021-P01: \"I\" - 期望音素aɪ，观察到aʊ - strength=high\n7. P-W023-P08: \"definitely\" - 期望音素l，观察到k - strength=high\n8. P-W023-P09: \"definitely\" - 期望音素i，观察到t - strength=high\n\n\n9. P-W035-P07: \"reliable\" - 期望音素ə，观察到əl - strength=high\n10. P-W023-P04: \"definitely\" - 期望音素ə，观察到n - strength=high\n11. P-W023-P06: \"definitely\" - 期望音素ə，观察到ɪ - strength=high\n12. P-W020-P07: \"computer\" - 期望音素t，观察到ɾ - strength=high\n\n这些音素级别的对比显示了许多发音差异，需要进一步分析哪些是系统性错误。\n\n关于\"definitely\"这个词，P-W023-P08、P-W023-P09、P-W023-P04和P-W023-P06都指向同一个词的不同音素位置，应该合并成一个问题条目。其他如\"because\"、\"looking\"、\"for\"、\"sure\"和\"I\"等词各有特定的音素偏差。\n\n对于\"because\"，有两个证据显示b到s和ɔː到ɪ的替换，这反映了该词开头辅音和中间元音的发音问题。现在需要考虑流畅性方面的问题。\n\n从TextPA的停顿证据来看，我主要关注明显的长停顿或影响节奏的模式。F-004在\"for\"和\"if\"之间有一个370毫秒的noticeable停顿，F-006在\"buy\"和\"like\"之间有890毫秒的长停顿，F-009在\"because\"和\"the\"之间有330毫秒的noticeable停顿，F-011在\"product\"和\"is\"之间有340毫秒的noticeable停顿。这些都是值得注意的停顿事件，需要根据它们的持续时间来判断是否构成流畅性问题。\n\n虽然\"long\"停顿理论上可以报告，但只有F-006达到了890毫秒的显著程度。现在检查\"definitely\"这个单词——证据显示该词有多个音素偏差，包括第4位从/ə/到/n/、第6位从/ə/到/ɪ/、第8位从/l/到/k/、第9位从/i/到/t/，这些偏差可能反映了发音中的系统性错误或混淆。\n\n根据边界条件5，我应该避免推断总体评分或等级，而仅基于具体证据输出问题。对于\"definitely\"，我可以将所有这些证据组合成一条发现，描述其音素发音问题。关于\"computer\"中的/ɾ/取代/t/，这是美式英语中常见的flap音变，可能不是真正的错误。\n\n不过证据显示match_score=3表明存在一定程度的偏差，但由于这在美式英语中属于正常变异，我会将其标注为观察性而非问题性。\n\n现在整理最终的反馈：\n\n**发音问题**（最多6条）：\n1. \"looking\" - /ʊ/ → /ə/ (P-W009-P02)\n2. \"for\" - /f/ → /w/ (P-W010-P01)  \n3. \"I\" - /aɪ/ → /aʊ/ (P-W021-P01)\n4. \"because\" - /b/ → /s/，/ɔː/ → /ɪ/ (P-W027-P01, P-W027-P04)\n5. \"sure\" - /ʊ/ → /ɚ/ (P-W037-P02)\n6. \"definitely\" - 多个音素偏差 (P-W023-P04, P-W023-P06, P-W023-P08, P-W023-P09)\n7. \"reliable\" - /ə/ → /əl/ (P-W035-P07)\n\n等等，最多6条，所以需要合并或删除一些。我把\"definitely\"的多条证据合并成一条，这样可以控制在6条以内。\n\n**流畅性**方面，我需要关注最明显的停顿模式。F-006有890毫秒的长停顿，F-004、F-009和F-011都有300多毫秒的noticeable停顿。根据规则，short停顿不应该单独报错，noticeable只有在明显影响节奏时才能温和提示，而long停顿可以作为长停顿反馈。我需要检查这些停顿的位置和持续时间，看看哪些最有可能干扰语流的自然度。 Looking at the pause data, I need to identify the most significant disruptions to fluency. The longest pause at F-006 stands out at nearly a second between \"buy\" and \"like\", which is substantial enough to flag as a fluency issue. The other noticeable pauses are around 300-370ms, so they're less critical unless they're clustered or particularly disruptive to the rhythm. me just focus on the most impactful ones. Actually, I'll create:\n\nFor fluency:\n- F-006 (long pause 890ms between \"buy\" and \"like\") - this is a clear long pause that affects rhythm\n- F-004 (noticeable 370ms between \"for\" and \"if\") - this could be a hesitation\n- F-009 (noticeable 330ms between \"because\" and \"the\") - this could be a hesitation\n- F-011 (noticeable 340ms between \"product\" and \"is\") - this could be a hesitation\n\nBut wait, I need to be careful. The instructions say \"noticeable 只有在明显影响节奏时才可温和提示\". These pauses are 300-370ms which are not extremely long. Let me think about whether these are actually problematic...\n\nA 300-400ms pause between words isn't inherently disfluent—it's within normal speech ranges. The 890ms pause stands out more as potentially problematic. I'm reconsidering whether to flag any of these at all since they might just be natural speech patterns rather than true fluency issues. Given the constraint to only report what's supported by evidence and not invent observations, I should probably limit this to just the clear outlier—the F-006 pause at 890ms. I'm seeing the full list of pause durations now. F-006 stands out significantly at 890ms, which is genuinely long. F-004, F-009, and F-011 cluster around 330-370ms—noticeable but not extreme. Since the guidelines allow reporting long pauses, I'll include F-006 as the primary fluency concern, though I'm considering whether F-009 also warrants mention given its position near the stress boundary between \"because\" and \"the\". Now I'm working through the pronunciation issue descriptions for each problem word. For \"looking,\" the vowel should be a back rounded vowel but sounds more like a schwa instead. For \"for,\" there's a consonant substitution where the fricative becomes a glide. The word \"I\" shows a diphthong shift from a high front vowel to a high back one. For \"because,\" there are two separate issues: the initial consonant is being produced as a sibilant rather than a stop, and the stressed vowel is shifting toward a higher, fronter position. For \"sure,\" I need to describe the vowel quality issue as well.\n\nFor \"sure,\" the vowel is drifting from a tight back rounded sound to an r-colored mid vowel. The word \"definitely\" has multiple problems: the unstressed vowels are being replaced with nasal and vowel sounds instead, and both the lateral consonant and the final vowel are being substituted with plosives. For \"reliable,\" there's an epenthetic consonant being added after the vowel, creating an extra syllable. I'm realizing that \"definitely\" has four separate instances that should be consolidated into one entry, so I need to combine those related evidence points rather than keeping them scattered.\n\nNow looking at the positive observations supported by the evidence—the match scores show good alignment overall with a score of 64, and several words like \"depends,\" \"what,\" \"phone,\" \"computer,\" and \"quality\" appear to have clean phonetic matches without issues.\n\nFor the limitations section, I need to flag cases where manual listening would help, particularly for the \"definitely\" example where the pattern suggests systematic confusion rather than isolated errors. I should also note that the CTC alignment's confidence levels are quite high, so while the evidence is strong, there's still room for manual verification. The overall match score of 64 suggests this might be non-native speech, so I should avoid drawing firm conclusions about proficiency levels from the available data.\n"
+        },
+        "provider_specific_fields": {
+          "matched_stop": 248046
+        }
+      }
+    ],
+    "usage": {
+      "completion_tokens": 3412,
+      "prompt_tokens": 3830,
+      "total_tokens": 7242,
+      "completion_tokens_details": {
+        "reasoning_tokens": 2179,
+        "text_tokens": 1233
+      },
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      }
+    },
+    "metadata": {
+      "weight_version": "default"
+    }
+  },
+  "feedback": {
+    "summary": "整体匹配度中等，发现多处音素发音偏差以及一处较长停顿，建议重点复听确认",
+    "pronunciation_issues": [
+      {
+        "evidence_ids": [
+          "P-W009-P02"
+        ],
+        "certainty": "high",
+        "location": "looking，约3.76s",
+        "finding": "预期元音/ʊ/可能被发成中央元音/ə/，导致音质偏中性、不够紧圆",
+        "practice": "练习/lʊkɪŋ/中的/ʊ/，保持嘴唇圆拢、舌头后缩，避免滑向松弛的/ə/"
+      },
+      {
+        "evidence_ids": [
+          "P-W010-P01"
+        ],
+        "certainty": "high",
+        "location": "for，约4.18s",
+        "finding": "预期声母/f/可能被替代为/w/，唇齿摩擦音位置偏后",
+        "practice": "练习/f/发音：下唇轻触上齿，气流通过窄缝摩擦；与/w/（双唇圆拢近接触）对比跟读"
+      },
+      {
+        "evidence_ids": [
+          "P-W021-P01"
+        ],
+        "certainty": "high",
+        "location": "I，约9.59s",
+        "finding": "预期双元音/aɪ/可能被发成/aʊ/，结尾舌位偏后",
+        "practice": "练习/aɪ/：起始开口度大，结尾舌位向前滑动、嘴唇放松不圆，避免滑向后圆的/aʊ/"
+      },
+      {
+        "evidence_ids": [
+          "P-W027-P01",
+          "P-W027-P04"
+        ],
+        "certainty": "high",
+        "location": "because，约11.39s",
+        "finding": "首辅音/b/可能被发成/s/，主重元音/ɔː/可能被替代为/ɪ/；两个音段均偏离预期",
+        "practice": "分音节练习/ˈbiːkɒz/：先单独练习重读音节/biː/的/b/清塞音起始和/iː/长元音，再练习次重音/kɒz/的/ɔː/圆唇后元音"
+      },
+      {
+        "evidence_ids": [
+          "P-W037-P02"
+        ],
+        "certainty": "high",
+        "location": "sure，约16.67s",
+        "finding": "预期元音/ʊ/可能被发成卷舌元音/ɚ/，出现不必要的儿化色彩",
+        "practice": "练习/ʃʊr/：/ʊ/保持短促不卷舌，再过渡到/r/；与/ʃɚr/对比跟读，注意/ʊ/阶段舌头不前突不卷起"
+      },
+      {
+        "evidence_ids": [
+          "P-W023-P04",
+          "P-W023-P06",
+          "P-W023-P08",
+          "P-W023-P09"
+        ],
+        "certainty": "high",
+        "location": "definitely，约10.07s-10.25s",
+        "finding": "词内多个音段存在系统性偏差：非重读元音/ə/被替代为/n/和/ɪ/，/l/被发成/k/，末尾/i/被发成/t/；整体出现辅音-元音混淆与音节结构重构",
+        "practice": "逐音素拆解/ˈdefɪnətli/：先放慢速度练习每个音节的起始辅音（d-e-f-n-t-l），确保每个音素独立清晰后再连读；重点区分/l/与/t/、/n/与/i/，可对照镜像口型练习"
+      }
+    ],
+    "fluency_issues": [
+      {
+        "evidence_ids": [
+          "F-006"
+        ],
+        "certainty": "high",
+        "location": "buy → like，约6.59s-7.48s",
+        "finding": "出现约890ms的长停顿，打断相邻词的语流连续性",
+        "practice": "尝试在/haɪ/结尾与/l/开头之间做无缝衔接，可将两个词作为一个短语单元（like a phone）整体跟读，减少中间空白"
+      }
+    ],
+    "positive_observations": [
+      "整体匹配度64，部分词汇（如depends、what、phone、computer、quality）未发现明显音素冲突",
+      "多数停顿为short级别，未对节奏造成系统性干扰"
+    ],
+    "limitations": [
+      "definitely一词存在4处音段偏差，涉及/ə/-/n/-/ɪ/-/l/-/k/-/i/-/t/多个音素，人工复听可确认是否存在系统性混淆模式",
+      "CTC强制对齐的音素边界为近似值，时间戳可能存在±10-20ms偏差，关键案例建议人工复听核对",
+      "for的/f/→/w/偏差在快速口语中有时与连读弱化相关，需人工区分是发音缺陷还是语境驱动的自然变体"
+    ]
+  }
+}

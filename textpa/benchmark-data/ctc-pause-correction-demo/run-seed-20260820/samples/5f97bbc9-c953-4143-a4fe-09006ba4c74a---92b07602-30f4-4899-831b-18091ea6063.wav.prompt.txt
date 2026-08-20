@@ -1,0 +1,215 @@
+请根据下面的结构化声学证据生成中文语音纠错，不要评分。
+
+证据边界：
+1. 这是自由表达录音；reference 是 Whisper ASR 假设，不是题目给定原文。ASR 可能错误。
+2. CTC 强制对齐会把 reference 的全部音素压到音频上。因此不得把它用于断言漏词、错词或
+   语法错误；只能描述列出的 expected/observed 音素冲突。
+3. strength=high 的 P 证据可以写成“较可能”；strength=tentative 只能写成“建议复听确认”。
+4. TextPA 的 F 证据来自独立 Charsiu [SIL] 检测。short 停顿不要单独报错；noticeable 只有
+   在明显影响节奏时才可温和提示；long 可以作为长停顿反馈。相邻词映射是近似的。
+5. 每条问题必须引用存在的 evidence_id。不要从 overall score 推导等级或总评。
+6. 没有足够证据时宁可输出空问题列表。练习建议必须针对证据里的具体音素或停顿。
+7. pronunciation_issues 最多 6 条，fluency_issues 最多 4 条；同一个词的多个 P 证据应尽量
+   合并为一条，不要把候选列表机械复述一遍。
+
+严格输出以下 JSON 对象，不要 Markdown 代码块，不要增加字段：
+{
+  "summary": "一句简短、保守的总结",
+  "pronunciation_issues": [
+    {
+      "evidence_ids": ["P-..."],
+      "certainty": "high 或 tentative",
+      "location": "词和大致时间",
+      "finding": "证据支持的发现",
+      "practice": "具体练习建议"
+    }
+  ],
+  "fluency_issues": [
+    {
+      "evidence_ids": ["F-..."],
+      "certainty": "high 或 tentative",
+      "location": "相邻词和大致时间",
+      "finding": "证据支持的发现",
+      "practice": "具体练习建议"
+    }
+  ],
+  "positive_observations": ["仅限证据直接支持的保守观察"],
+  "limitations": ["本条结果需要人工复听时应说明原因"]
+}
+
+声学证据 JSON：
+{
+  "sample_id": "5f97bbc9-c953-4143-a4fe-09006ba4c74a---92b07602-30f4-4899-831b-18091ea6063.wav",
+  "provisional_reference": {
+    "text": " Yes, I agree with you. It depends on what things we are doing now and what things we like to do. And apparently what Cherry is doing now is what she likes to do.",
+    "source": "published Whisper ASR hypothesis",
+    "is_ground_truth": false
+  },
+  "ctc_forced_alignment": {
+    "model": "facebook/wav2vec2-lv-60-espeak-cv-ft ONNX INT8",
+    "overall_match_score_experimental": 87,
+    "threshold_policy": {
+      "high": "score < 40 and confidence >= 0.35",
+      "tentative": "alternative phone is stronger, but evidence does not meet the high threshold"
+    },
+    "candidates": [
+      {
+        "evidence_id": "P-W023-P03",
+        "strength": "high",
+        "word": "apparently",
+        "word_index": 22,
+        "expected_phone": "ɛ",
+        "observed_phone": "ɪ",
+        "match_score": 1,
+        "confidence": 1.0,
+        "start_ms": 10713,
+        "end_ms": 10734
+      },
+      {
+        "evidence_id": "P-W023-P07",
+        "strength": "high",
+        "word": "apparently",
+        "word_index": 22,
+        "expected_phone": "t",
+        "observed_phone": "n",
+        "match_score": 3,
+        "confidence": 0.895,
+        "start_ms": 11074,
+        "end_ms": 11094
+      },
+      {
+        "evidence_id": "P-W025-P02",
+        "strength": "high",
+        "word": "Cherry",
+        "word_index": 24,
+        "expected_phone": "ɛ",
+        "observed_phone": "ɜː",
+        "match_score": 7,
+        "confidence": 0.65,
+        "start_ms": 12456,
+        "end_ms": 12476
+      },
+      {
+        "evidence_id": "P-W025-P04",
+        "strength": "high",
+        "word": "Cherry",
+        "word_index": 24,
+        "expected_phone": "i",
+        "observed_phone": "ɪ",
+        "match_score": 8,
+        "confidence": 0.621,
+        "start_ms": 12676,
+        "end_ms": 12696
+      },
+      {
+        "evidence_id": "P-W023-P01",
+        "strength": "high",
+        "word": "apparently",
+        "word_index": 22,
+        "expected_phone": "ə",
+        "observed_phone": "ɐ",
+        "match_score": 8,
+        "confidence": 0.596,
+        "start_ms": 10513,
+        "end_ms": 10533
+      },
+      {
+        "evidence_id": "P-W012-P01",
+        "strength": "high",
+        "word": "are",
+        "word_index": 11,
+        "expected_phone": "ɚ",
+        "observed_phone": "ɑːɹ",
+        "match_score": 14,
+        "confidence": 0.459,
+        "start_ms": 5247,
+        "end_ms": 5267
+      }
+    ],
+    "omitted_candidate_count": 0
+  },
+  "textpa_pause_analysis": {
+    "source": "published TextPA Charsiu 10 ms CMU frame alignment",
+    "word_mapping": "approximate mapping through independent CTC word timestamps",
+    "alignment_duration_ms": 15780,
+    "events": [
+      {
+        "evidence_id": "F-001",
+        "start_ms": 1920,
+        "end_ms": 2190,
+        "duration_ms": 270,
+        "salience": "noticeable",
+        "previous_cmu_phone": "UW",
+        "next_cmu_phone": "AH",
+        "after_word_approx": "you",
+        "before_word_approx": "It"
+      },
+      {
+        "evidence_id": "F-002",
+        "start_ms": 2700,
+        "end_ms": 3080,
+        "duration_ms": 380,
+        "salience": "noticeable",
+        "previous_cmu_phone": "V",
+        "next_cmu_phone": "IH",
+        "after_word_approx": "you",
+        "before_word_approx": "It"
+      },
+      {
+        "evidence_id": "F-003",
+        "start_ms": 6230,
+        "end_ms": 6530,
+        "duration_ms": 300,
+        "salience": "noticeable",
+        "previous_cmu_phone": "AW",
+        "next_cmu_phone": "AE",
+        "after_word_approx": "now",
+        "before_word_approx": "and"
+      },
+      {
+        "evidence_id": "F-004",
+        "start_ms": 7030,
+        "end_ms": 7100,
+        "duration_ms": 70,
+        "salience": "short",
+        "previous_cmu_phone": "D",
+        "next_cmu_phone": "W",
+        "after_word_approx": "and",
+        "before_word_approx": "what"
+      },
+      {
+        "evidence_id": "F-005",
+        "start_ms": 8960,
+        "end_ms": 9950,
+        "duration_ms": 990,
+        "salience": "long",
+        "previous_cmu_phone": "UW",
+        "next_cmu_phone": "AE",
+        "after_word_approx": "do",
+        "before_word_approx": "And"
+      },
+      {
+        "evidence_id": "F-006",
+        "start_ms": 11500,
+        "end_ms": 11840,
+        "duration_ms": 340,
+        "salience": "noticeable",
+        "previous_cmu_phone": "IY",
+        "next_cmu_phone": "B",
+        "after_word_approx": "apparently",
+        "before_word_approx": "what"
+      },
+      {
+        "evidence_id": "F-007",
+        "start_ms": 14660,
+        "end_ms": 14810,
+        "duration_ms": 150,
+        "salience": "short",
+        "previous_cmu_phone": "IH",
+        "next_cmu_phone": "SH",
+        "after_word_approx": "what",
+        "before_word_approx": "she"
+      }
+    ]
+  }
+}
