@@ -1,0 +1,68 @@
+{
+  "dataset": "SpeechOcean762",
+  "derived_file": "speechocean762-test-human-scores.jsonl",
+  "derived_sha256": "bf340a6940518c24d9c42309ac41447761f4b30732a3ba47786b05bc707e6282",
+  "records": 2500,
+  "reference_output_check": {
+    "gemini-2.0-flash": {
+      "accuracy": {
+        "pcc": 0.456681229295974,
+        "prediction_distribution": {
+          "1.0": 121,
+          "2.0": 368,
+          "3.0": 663,
+          "4.0": 1275,
+          "5.0": 73
+        }
+      },
+      "fluency": {
+        "pcc": 0.5580716839430495,
+        "prediction_distribution": {
+          "1.0": 117,
+          "2.0": 248,
+          "3.0": 553,
+          "4.0": 1447,
+          "5.0": 135
+        }
+      },
+      "n": 2500
+    },
+    "gpt4omini": {
+      "accuracy": {
+        "pcc": 0.420883446114977,
+        "prediction_distribution": {
+          "1.0": 27,
+          "2.0": 593,
+          "3.0": 628,
+          "4.0": 971,
+          "5.0": 281
+        }
+      },
+      "fluency": {
+        "pcc": 0.46665998417659166,
+        "prediction_distribution": {
+          "1.0": 26,
+          "2.0": 462,
+          "3.0": 609,
+          "4.0": 1185,
+          "5.0": 218
+        }
+      },
+      "n": 2500
+    }
+  },
+  "schema_version": 1,
+  "source": {
+    "repository": "https://github.com/jimbozhang/speechocean762",
+    "revision": "613968e3b0b789fc33936fb5eba1973176ba7d11",
+    "scores_sha256": "31c847b8ee29d61d8fe338bcbb1d4c4721425f05481d2144ad57cd19ea1159f8",
+    "scores_url": "https://raw.githubusercontent.com/jimbozhang/speechocean762/main/resource/scores.json",
+    "test_utt2spk_sha256": "061291f397f8c281ff1bf6bf388e875ab9c4cc0de66f37d8559e690af08964be",
+    "test_utt2spk_url": "https://raw.githubusercontent.com/jimbozhang/speechocean762/main/test/utt2spk"
+  },
+  "split": "test",
+  "textpa_snapshot": {
+    "path": "benchmark-data/upstream-reference/speechocean.zip",
+    "sha256": "eb89fd4cb86ebf84012ab47b10d507b9b3d2c8f5de2392855fd897f7d85e8faa"
+  }
+}

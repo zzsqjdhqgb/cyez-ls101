@@ -1,0 +1,20 @@
+{
+  "dataset": "MultiPA paper_cues",
+  "anchor_protocol": "four transductive MultiPA anchors in prompt; anchor records excluded",
+  "n": 46,
+  "metrics": {
+    "no_anchor_thinking": {
+      "llm_accuracy_pcc": 0.43628390833105646,
+      "fluency_pcc": 0.595165860532316,
+      "paper_fused_accuracy_pcc": 0.5749257714354156,
+      "deployment_accuracy_pcc": 0.5795814939733396
+    },
+    "four_anchor_thinking": {
+      "llm_accuracy_pcc": 0.25795930997234967,
+      "fluency_pcc": 0.5706390816685615,
+      "paper_fused_accuracy_pcc": 0.5196485380873199,
+      "deployment_accuracy_pcc": 0.4802393819101319
+    }
+  },
+  "interpretation": "On this transductive 46-item comparison, adding the four anchors reduced all reported PCCs. This is a benchmark observation, not an out-of-sample deployment estimate."
+}
