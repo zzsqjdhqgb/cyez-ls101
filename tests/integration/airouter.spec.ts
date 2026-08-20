@@ -1642,6 +1642,7 @@ test.describe('Qwen3 TTS runtime', () => {
       audio: { mediaType: 'audio/wav', format: 'wav', channels: 1 }
     })
     expect(result.audio?.data.byteLength).toBeGreaterThan(44)
+    expect(existsSync(path.join(userDataDir, 'qwen-tts-runtime'))).toBe(false)
   })
 })
 

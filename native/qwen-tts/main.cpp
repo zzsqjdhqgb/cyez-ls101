@@ -26,7 +26,8 @@ constexpr size_t kMaxTextBytes = 64 * 1024;
 constexpr size_t kMaxAudioBytes = 100 * 1024 * 1024;
 
 struct Options {
-    std::string model_dir;
+    std::string tts_model_file;
+    std::string tokenizer_model_file;
     std::string speaker_file;
     std::string extract_input;
     std::string extract_output;
@@ -65,8 +66,10 @@ bool parse_options(int argc, char ** argv, Options & options) {
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         std::string value;
-        if (arg == "--model-dir") {
-            if (!next_value(argc, argv, i, options.model_dir)) return false;
+        if (arg == "--tts-model") {
+            if (!next_value(argc, argv, i, options.tts_model_file)) return false;
+        } else if (arg == "--tokenizer-model") {
+            if (!next_value(argc, argv, i, options.tokenizer_model_file)) return false;
         } else if (arg == "--speaker") {
             if (!next_value(argc, argv, i, options.speaker_file)) return false;
         } else if (arg == "--extract-speaker") {
@@ -86,7 +89,7 @@ bool parse_options(int argc, char ** argv, Options & options) {
             return false;
         }
     }
-    return !options.model_dir.empty() &&
+    return !options.tts_model_file.empty() && !options.tokenizer_model_file.empty() &&
         ((!options.speaker_file.empty() && options.extract_input.empty()) ||
          (options.speaker_file.empty() && !options.extract_input.empty() && !options.extract_output.empty()));
 }
@@ -94,8 +97,8 @@ bool parse_options(int argc, char ** argv, Options & options) {
 void print_usage(const char * program) {
     std::fprintf(stderr,
         "Usage:\n"
-        "  %s --model-dir DIR --speaker VOICE.spk [generation options]\n"
-        "  %s --model-dir DIR --extract-speaker INPUT.wav OUTPUT.spk [--threads N]\n",
+        "  %s --tts-model TTS.gguf --tokenizer-model TOKENIZER.gguf --speaker VOICE.spk [generation options]\n"
+        "  %s --tts-model TTS.gguf --tokenizer-model TOKENIZER.gguf --extract-speaker INPUT.wav OUTPUT.spk [--threads N]\n",
         program, program);
 }
 
@@ -359,7 +362,7 @@ int main(int argc, char ** argv) {
 #endif
 
     qwen3_tts::Qwen3TTS engine;
-    if (!engine.load_models(options.model_dir)) {
+    if (!engine.load_models(options.tts_model_file, options.tokenizer_model_file)) {
         std::fprintf(stderr, "Failed to load Qwen3-TTS models: %s\n", engine.get_error().c_str());
         return 1;
     }

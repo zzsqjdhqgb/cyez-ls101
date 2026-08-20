@@ -162,7 +162,11 @@ jobs:
             throw new Error(`Built helper is unexpectedly small: ${stats.size} bytes`)
           }
           const result = spawnSync(helper, [], { encoding: 'utf8' })
-          if (result.status !== 2 || !result.stderr.includes('Usage:')) {
+          if (
+            result.status !== 2 ||
+            !result.stderr.includes('--tts-model') ||
+            !result.stderr.includes('--tokenizer-model')
+          ) {
             throw new Error(
               `Helper smoke test failed (status=${result.status}): ${result.stderr || result.error}`
             )

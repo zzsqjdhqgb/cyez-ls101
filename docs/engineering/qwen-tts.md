@@ -5,7 +5,7 @@ The application runs `Qwen3-TTS-12Hz-0.6B-Base` on CPU through a pinned build of
 to create VoiceDesign reference audio during development. Imported model packages never contain
 executables.
 
-The published runtime bundle is `qwen-tts-v0.1.0` in the application repository. `yarn setup`
+The published runtime bundle is `qwen-tts-v0.2.0` in the application repository. `yarn setup`
 and application build setup query the GitHub Release Assets API, verify each selected asset
 against its API-provided size and SHA-256 digest. Release metadata and the helper download are
 cached under `externals/ai/qwen3-tts/downloads/`; the two downloaded GGUF files are stored directly
@@ -27,8 +27,8 @@ before publishing new raw assets or changing the locally assembled model package
 - The Electron main process communicates with the helper through a bounded binary protocol and
   forces `QWEN3_TTS_BACKEND=cpu`.
 - The GitHub Release contains two raw GGUF assets. A local model ZIP combines those models with
-  one or more Git-managed `.spk` files. Content-addressed installed
-  assets are linked into the filenames expected by the upstream runtime.
+  one or more Git-managed `.spk` files. The Electron main process resolves content-addressed
+  installed assets and passes every model and speaker file to the helper by its absolute path.
 - The upstream runtime is pinned to commit
   `b3ba14077cf1b3e11b86e5f84aa9184605c89b28`. The build removes `-march=native` so release
   binaries can run on CPUs other than the build host.
@@ -100,7 +100,8 @@ Run the same C++ speaker encoder used in production:
 ```bash
 mkdir -p native/qwen-tts/voices
 externals/ai/qwen3-tts/runtime/linux-x64/ls101-qwen-tts-helper \
-  --model-dir externals/ai/qwen3-tts/models \
+  --tts-model externals/ai/qwen3-tts/models/qwen3-tts-0.6b-q8_0.gguf \
+  --tokenizer-model externals/ai/qwen3-tts/models/qwen3-tts-tokenizer-f16.gguf \
   --extract-speaker native/qwen-tts/voice-design/candidate-20260816.wav \
   native/qwen-tts/voices/american-woman.spk
 ```

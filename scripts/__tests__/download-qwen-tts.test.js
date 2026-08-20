@@ -11,7 +11,7 @@ test('selects the pinned platform helper and raw models from GitHub metadata', a
   const modelNames = modelAssetNames()
   const digest = 'a'.repeat(64)
   const release = {
-    tag_name: 'qwen-tts-v0.1.0',
+    tag_name: 'qwen-tts-v0.2.0',
     draft: false,
     prerelease: true,
     assets: [
@@ -62,7 +62,7 @@ test('rejects assets without the GitHub API digest', async () => {
     () =>
       selectReleaseAssets(
         {
-          tag_name: 'qwen-tts-v0.1.0',
+          tag_name: 'qwen-tts-v0.2.0',
           prerelease: true,
           assets: [
             asset('qwen3-tts-0.6b-q8_0.gguf', 'missing'),

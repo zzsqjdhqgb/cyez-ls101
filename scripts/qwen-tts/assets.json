@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "release": {
     "repository": "zzsqjdhqgb/cyez-ls101",
-    "version": "0.1.0",
-    "tag": "qwen-tts-v0.1.0",
+    "version": "0.2.0",
+    "tag": "qwen-tts-v0.2.0",
     "prerelease": true
   },
   "package": {
