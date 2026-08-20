@@ -45,3 +45,8 @@ human-listening report are retained in the run directory.
 
 The script executes samples sequentially. HTTP 429 and transient server errors
 are retried; an explicit billing or credit error stops the run immediately.
+
+The follow-up [CMUdict vs eSpeak reference A/B](../ctc-espeak-reference-ab/README.md)
+reuses these three recordings without making LLM requests. It should be reviewed
+before treating this demo's CMU-derived pronunciation candidates as product
+evidence.

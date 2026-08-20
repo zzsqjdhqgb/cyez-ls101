@@ -25,7 +25,7 @@ import subprocess
 import sys
 import time
 import unicodedata
-from typing import Any, Iterable, Sequence
+from typing import Any, Callable, Iterable, Sequence
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -283,13 +283,22 @@ def dictionary_pronunciations(word: str, dictionary: dict[str, str]) -> list[tup
     return list(unique)
 
 
-def reference_word_variants(
-    reference_text: str, dictionary: dict[str, str]
-) -> tuple[str, list[list[ReferenceWord]]]:
-    normalized = unicodedata.normalize("NFKC", reference_text).replace("‘", "'").replace("’", "'")
+def normalized_reference_words(reference_text: str) -> tuple[str, list[str]]:
+    normalized = (
+        unicodedata.normalize("NFKC", reference_text)
+        .replace("‘", "'")
+        .replace("’", "'")
+    )
     surface_words = re.findall(r"[A-Za-z]+(?:'[A-Za-z]+)*", normalized)
     if not surface_words:
         raise ValueError("reference text contains no English words")
+    return normalized, surface_words
+
+
+def reference_word_variants(
+    reference_text: str, dictionary: dict[str, str]
+) -> tuple[str, list[list[ReferenceWord]]]:
+    normalized, surface_words = normalized_reference_words(reference_text)
     variants_by_word: list[list[ReferenceWord]] = []
     for surface_word in surface_words:
         variants = dictionary_pronunciations(surface_word.lower(), dictionary)
@@ -299,6 +308,19 @@ def reference_word_variants(
             [ReferenceWord(text=surface_word, phones=phones) for phones in variants]
         )
     return normalized, variants_by_word
+
+
+def create_phonemized_reference(
+    reference_text: str, phonemize_word: Callable[[str], str]
+) -> PronunciationReference:
+    normalized, surface_words = normalized_reference_words(reference_text)
+    words: list[ReferenceWord] = []
+    for surface_word in surface_words:
+        phones = tuple(phonemize_word(surface_word).split())
+        if not phones:
+            raise ValueError(f"phonemizer produced no phones for {surface_word!r}")
+        words.append(ReferenceWord(text=surface_word, phones=phones))
+    return PronunciationReference(text=normalized, words=tuple(words))
 
 
 def create_pronunciation_references(
@@ -381,6 +403,83 @@ def align_phone_sequences(expected: Sequence[str], observed: Sequence[str]) -> l
         else:
             break
     return observed_by_expected
+
+
+def create_contextual_phonemized_reference(
+    reference_text: str,
+    phonemize_word: Callable[[str], str],
+    phonemize_utterance: Callable[[str], str],
+    phonemize_utterance_groups: Callable[
+        [str], Sequence[Sequence[str]]
+    ]
+    | None = None,
+) -> PronunciationReference:
+    independent = create_phonemized_reference(reference_text, phonemize_word)
+    contextual_boundaries: set[int] = set()
+    if phonemize_utterance_groups is None:
+        contextual_phones = tuple(phonemize_utterance(reference_text).split())
+    else:
+        groups = [tuple(group) for group in phonemize_utterance_groups(reference_text)]
+        contextual_phones = tuple(phone for group in groups for phone in group)
+        cursor = 0
+        for group in groups:
+            cursor += len(group)
+            contextual_boundaries.add(cursor)
+    if not contextual_phones:
+        raise ValueError("utterance phonemizer produced no phones")
+    if len(contextual_phones) < len(independent.words):
+        raise ValueError("utterance phonemizer produced fewer phones than reference words")
+
+    total_independent_phones = len(independent.phones)
+    expected_cumulative = 0
+    # State: consumed phones -> edit, length, missed source boundary, drift, ends.
+    states: dict[int, tuple[int, int, int, int, tuple[int, ...]]] = {
+        0: (0, 0, 0, 0, ())
+    }
+    for word_index, word in enumerate(independent.words):
+        expected_cumulative += len(word.phones)
+        remaining_words = len(independent.words) - word_index - 1
+        next_states: dict[int, tuple[int, int, int, int, tuple[int, ...]]] = {}
+        for start, previous in states.items():
+            maximum_end = len(contextual_phones) - remaining_words
+            for end in range(start + 1, maximum_end + 1):
+                segment = contextual_phones[start:end]
+                candidate = (
+                    previous[0] + phone_edit_distance(word.phones, segment),
+                    previous[1] + abs(len(word.phones) - len(segment)),
+                    previous[2]
+                    + int(
+                        bool(contextual_boundaries)
+                        and remaining_words > 0
+                        and end not in contextual_boundaries
+                    ),
+                    previous[3]
+                    + abs(
+                        end * total_independent_phones
+                        - expected_cumulative * len(contextual_phones)
+                    ),
+                    previous[4] + (end,),
+                )
+                current = next_states.get(end)
+                if current is None or candidate[:4] < current[:4]:
+                    next_states[end] = candidate
+        states = next_states
+
+    final = states.get(len(contextual_phones))
+    if final is None:
+        raise ValueError("could not partition contextual eSpeak phones by reference word")
+    starts = (0, *final[4][:-1])
+    contextual_words = [
+        ReferenceWord(
+            text=word.text,
+            phones=contextual_phones[start:end],
+        )
+        for word, start, end in zip(independent.words, starts, final[4])
+    ]
+    return PronunciationReference(
+        text=independent.text,
+        words=tuple(contextual_words),
+    )
 
 
 def evidence_selected_reference(
@@ -520,6 +619,9 @@ def assess_ctc_pronunciation(
     reference_text: str,
     duration_ms: float,
     dictionary: dict[str, str],
+    *,
+    candidate_references: Sequence[PronunciationReference] | None = None,
+    reference_source: str = "published Whisper ASR hypothesis; not a known script",
 ) -> dict[str, Any]:
     import numpy as np
 
@@ -532,11 +634,16 @@ def assess_ctc_pronunciation(
         if 0 <= int(token_id) < vocabulary_size:
             token_by_id[int(token_id)] = token
     recognized = greedy_decode(logits, token_by_id, blank_token_id)
-    evidence_reference = evidence_selected_reference(reference_text, recognized, dictionary)
-    references = [
-        evidence_reference,
-        *create_pronunciation_references(reference_text, dictionary),
-    ]
+    if candidate_references is None:
+        evidence_reference = evidence_selected_reference(reference_text, recognized, dictionary)
+        references = [
+            evidence_reference,
+            *create_pronunciation_references(reference_text, dictionary),
+        ]
+    else:
+        references = list(candidate_references)
+        if not references:
+            raise ValueError("candidate references must not be empty")
     references = sorted(
         references, key=lambda reference: phone_edit_distance(reference.phones, recognized)
     )[:ALIGNMENT_REFERENCE_CANDIDATES]
@@ -569,7 +676,9 @@ def assess_ctc_pronunciation(
         alternative_ids = [
             token_id
             for token_id, token in enumerate(token_by_id)
-            if token_id not in {blank_token_id, expected_id} and token
+            if token_id not in {blank_token_id, expected_id}
+            and token
+            and not token.startswith("<")
         ]
         observed_id = max(alternative_ids, key=lambda token_id: float(mean_logits[token_id]))
         margin = float(mean_logits[expected_id] - mean_logits[observed_id])
@@ -608,7 +717,7 @@ def assess_ctc_pronunciation(
         )
     return {
         "reference_text": best_reference.text,
-        "reference_source": "published Whisper ASR hypothesis; not a known script",
+        "reference_source": reference_source,
         "recognized_phones": recognized,
         "overall_score": rounded_average(phone["score"] for phone in phone_results),
         "alignment_path_score": round(best_alignment.path_score, 6),
