@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -293,6 +293,100 @@ describe('data directory initialization', () => {
     await expect(readJson(path.join(userData, 'data-location.json'))).resolves.toMatchObject({
       state: 'ready',
       activeDataDirectory: source
+    })
+  })
+
+  it('retains an offline staging cleanup and removes it after the volume returns', async () => {
+    const { userData, source, target, migration } = await scheduledCopy('offline-staging')
+    await writeFile(path.join(target, 'external.txt'), 'blocks commit')
+    await expect(initializeDataDirectory(userData)).rejects.toThrow('迁移目标在复制期间被写入')
+
+    const targetParent = path.dirname(target)
+    const offlineParent = `${targetParent}-offline`
+    roots.push(offlineParent)
+    await rename(targetParent, offlineParent)
+    electronMocks.dialog.showMessageBox
+      .mockResolvedValueOnce({ response: 1 })
+      .mockResolvedValueOnce({ response: 2 })
+    electronMocks.dialog.showOpenDialog.mockResolvedValueOnce({
+      canceled: false,
+      filePaths: [source]
+    })
+    const exit = new Error('exit')
+    electronMocks.app.exit
+      .mockImplementationOnce(() => undefined)
+      .mockImplementationOnce(() => {
+        throw exit
+      })
+
+    await expect(recoverDataDirectory(userData, new Error('volume offline'))).rejects.toBe(exit)
+    await expect(readJson(path.join(userData, 'data-location.json'))).resolves.toMatchObject({
+      state: 'ready',
+      activeDataDirectory: source,
+      pendingCleanups: [
+        {
+          migrationId: migration.migrationId,
+          target,
+          staging: migration.staging
+        }
+      ]
+    })
+
+    await rename(offlineParent, targetParent)
+    await expect(initializeDataDirectory(userData)).resolves.toBe(source)
+    await expect(readFile(path.join(migration.staging, 'document.json'))).rejects.toMatchObject({
+      code: 'ENOENT'
+    })
+    const ready = (await readJson(path.join(userData, 'data-location.json'))) as Record<
+      string,
+      unknown
+    >
+    expect(ready).not.toHaveProperty('pendingCleanups')
+  })
+
+  it('preserves deferred cleanups through a later migration', async () => {
+    const userData = await temporaryDirectory('ls101-data-deferred-cleanup-')
+    const source = await initializeDataDirectory(userData)
+    const abandonedParent = await temporaryDirectory('ls101-data-abandoned-volume-')
+    const abandonedTarget = path.join(abandonedParent, 'data')
+    const migrationId = '22222222-2222-4222-8222-222222222222'
+    const abandonedStaging = path.join(abandonedParent, `.data.migrating-${migrationId}`)
+    await writeFile(
+      path.join(userData, 'data-location.json'),
+      JSON.stringify({
+        formatVersion: 1,
+        state: 'ready',
+        activeDataDirectory: source,
+        pendingCleanups: [
+          {
+            migrationId,
+            target: abandonedTarget,
+            staging: abandonedStaging
+          }
+        ]
+      })
+    )
+    await initializeDataDirectory(userData)
+
+    const targetParent = await temporaryDirectory('ls101-data-next-target-')
+    const target = path.join(targetParent, 'selected')
+    await mkdir(target)
+    registerDataDirectoryHandlers(userData, source)
+    const migrate = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.migrate)
+    expect(migrate).toBeDefined()
+    await migrate!({ sender: {} }, target as never)
+
+    await expect(initializeDataDirectory(userData)).resolves.toBe(target)
+    await expect(readJson(path.join(userData, 'data-location.json'))).resolves.toMatchObject({
+      state: 'ready',
+      activeDataDirectory: target,
+      pendingCleanups: [
+        {
+          migrationId,
+          target: abandonedTarget,
+          staging: abandonedStaging
+        }
+      ]
     })
   })
 })
