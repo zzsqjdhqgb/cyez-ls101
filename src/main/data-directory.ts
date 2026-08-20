@@ -47,6 +47,9 @@ interface PendingCleanup {
   migrationId: string
   target: string
   staging: string
+  parentPath: string
+  parentIdentity: FileSystemIdentity
+  stagingIdentity?: FileSystemIdentity
 }
 
 interface FileSystemIdentity {
@@ -72,6 +75,9 @@ interface CopyingBootstrap {
   source: string
   target: string
   staging: string
+  parentPath: string
+  parentIdentity: FileSystemIdentity
+  stagingIdentity?: FileSystemIdentity
   mode: 'copy'
   retiredSource: OldDataDirectory
   pendingCleanups?: PendingCleanup[]
@@ -84,6 +90,9 @@ interface LegacyCopyingBootstrap {
   source: string
   target: string
   staging: string
+  parentPath: string
+  parentIdentity: FileSystemIdentity
+  stagingIdentity?: FileSystemIdentity
   mode: 'legacy-copy'
   legacyDirectories: string[]
   pendingCleanups?: PendingCleanup[]
@@ -348,8 +357,8 @@ async function finishPendingMigration(
   const detail =
     bootstrap.mode === 'copy' ? `正在将软件数据复制到 ${target}` : '正在准备新的软件数据目录'
   await withMigrationWindow(title, detail, async () => {
-    if (bootstrap.mode === 'copy') await prepareManagedStaging(bootstrap, source)
-    else await prepareLegacyStaging(bootstrap)
+    if (bootstrap.mode === 'copy') await prepareManagedStaging(userDataDir, bootstrap, source)
+    else await prepareLegacyStaging(userDataDir, bootstrap)
     await commitCompletedStaging(bootstrap, target)
   })
   await removeOwnedStaging(bootstrap)
@@ -391,30 +400,39 @@ async function scheduleMigration(
             ...base,
             mode,
             staging: stagingPath(target, migrationId),
+            ...(await captureStagingParent(target)),
             legacyDirectories: [...legacyDirectories]
           }
         : {
             ...base,
             mode,
             staging: stagingPath(target, migrationId),
+            ...(await captureStagingParent(target)),
             retiredSource: await captureOldDataDirectory(source)
           }
   await writeBootstrap(userDataDir, migration)
   return migration
 }
 
-async function prepareManagedStaging(bootstrap: CopyingBootstrap, source: string): Promise<void> {
+async function prepareManagedStaging(
+  userDataDir: string,
+  bootstrap: CopyingBootstrap,
+  source: string
+): Promise<void> {
   if (await hasMigrationMarker(bootstrap.staging, bootstrap.migrationId)) return
-  await recreateOwnedStaging(bootstrap)
+  await recreateOwnedStaging(userDataDir, bootstrap)
   const sourceManifest = await copyTree(source, bootstrap.staging)
   const targetManifest = await buildManifest(bootstrap.staging)
   assertMatchingManifests(sourceManifest, targetManifest)
   await writeMarker(bootstrap.staging, bootstrap.migrationId)
 }
 
-async function prepareLegacyStaging(bootstrap: LegacyCopyingBootstrap): Promise<void> {
+async function prepareLegacyStaging(
+  userDataDir: string,
+  bootstrap: LegacyCopyingBootstrap
+): Promise<void> {
   if (await hasMigrationMarker(bootstrap.staging, bootstrap.migrationId)) return
-  await recreateOwnedStaging(bootstrap)
+  await recreateOwnedStaging(userDataDir, bootstrap)
   for (const directory of bootstrap.legacyDirectories) {
     const sourceManifest = await copyTree(
       path.join(bootstrap.source, directory),
@@ -427,10 +445,13 @@ async function prepareLegacyStaging(bootstrap: LegacyCopyingBootstrap): Promise<
 }
 
 async function recreateOwnedStaging(
+  userDataDir: string,
   bootstrap: CopyingBootstrap | LegacyCopyingBootstrap
 ): Promise<void> {
   await removeOwnedStaging(bootstrap)
   await mkdir(bootstrap.staging, { recursive: false })
+  bootstrap.stagingIdentity = fileSystemIdentity(await lstat(bootstrap.staging))
+  await writeBootstrap(userDataDir, bootstrap)
 }
 
 async function commitCompletedStaging(
@@ -464,6 +485,9 @@ async function commitCompletedStaging(
 
 async function removeOwnedStaging(bootstrap: PendingCleanup): Promise<void> {
   assertStoredMigrationPaths(bootstrap)
+  if (!(await hasExpectedCleanupParentIdentity(bootstrap))) {
+    throw new Error('迁移暂存目录所在位置不可访问或身份已变化')
+  }
   const stagingStats = await lstatIfExists(bootstrap.staging)
   if (!stagingStats) return
   await removeExistingOwnedStaging(bootstrap, stagingStats)
@@ -479,6 +503,21 @@ async function removeExistingOwnedStaging(
   if (await isMountPoint(bootstrap.staging, path.dirname(bootstrap.staging))) {
     throw new Error('迁移暂存路径已成为挂载点，未执行清理')
   }
+  if (bootstrap.stagingIdentity) {
+    if (!sameFileSystemIdentity(fileSystemIdentity(stagingStats), bootstrap.stagingIdentity)) {
+      throw new Error('迁移暂存路径身份不匹配，未执行清理')
+    }
+  } else if (!(await hasMigrationMarker(bootstrap.staging, bootstrap.migrationId))) {
+    try {
+      await rmdir(bootstrap.staging)
+      return
+    } catch (error) {
+      if (isDirectoryNotEmpty(error)) {
+        throw new Error('迁移暂存路径所有权无法确认，未执行清理')
+      }
+      throw error
+    }
+  }
   await rm(bootstrap.staging, { recursive: true, force: true })
 }
 
@@ -489,9 +528,21 @@ async function abandonPendingMigration(
   pendingCleanups: PendingCleanup[]
   oldDataDirectory?: OldDataDirectory
 }> {
-  const bootstrap = await readBootstrap(userDataDir).catch(() => null)
-  if (bootstrap?.state !== 'migrating') return { pendingCleanups: [] }
+  const bootstrap = await readBootstrap(userDataDir)
+  if (!bootstrap) return { pendingCleanups: [] }
+  if (bootstrap.state === 'ready') {
+    const pendingCleanups = bootstrap.pendingCleanups ?? []
+    assertSelectionSeparateFromPendingCleanups(selected, pendingCleanups)
+    if (!bootstrap.oldDataDirectory) return { pendingCleanups }
+    if (samePath(selected, bootstrap.oldDataDirectory.path)) return { pendingCleanups }
+    assertSeparateDirectories(selected, bootstrap.oldDataDirectory.path)
+    if (bootstrap.oldDataDirectory.deletionPath) {
+      assertSeparateDirectories(selected, bootstrap.oldDataDirectory.deletionPath)
+    }
+    return { pendingCleanups, oldDataDirectory: bootstrap.oldDataDirectory }
+  }
   const existing = bootstrap.pendingCleanups ?? []
+  assertSelectionSeparateFromPendingCleanups(selected, existing)
   if (bootstrap.mode === 'use-existing') {
     return {
       pendingCleanups: existing,
@@ -501,10 +552,7 @@ async function abandonPendingMigration(
     }
   }
   if (bootstrap.mode === 'legacy-copy') return { pendingCleanups: existing }
-  const staging = path.normalize(path.resolve(bootstrap.staging))
-  if (samePath(staging, selected) || isPathWithin(staging, selected)) {
-    throw new Error('不能将迁移暂存目录作为数据目录')
-  }
+  assertSelectionSeparateFromPendingCleanups(selected, [pendingCleanupFromMigration(bootstrap)])
   const cleanup = pendingCleanupFromMigration(bootstrap)
   const pendingCleanups = (await tryRemovePendingCleanup(cleanup))
     ? existing
@@ -530,8 +578,9 @@ async function retryPendingCleanups(
 async function tryRemovePendingCleanup(cleanup: PendingCleanup): Promise<boolean> {
   try {
     assertStoredMigrationPaths(cleanup)
+    if (!(await hasExpectedCleanupParentIdentity(cleanup))) return false
     const stagingStats = await lstatIfExists(cleanup.staging)
-    if (!stagingStats) return false
+    if (!stagingStats) return true
     await removeExistingOwnedStaging(cleanup, stagingStats)
     return true
   } catch (error) {
@@ -543,14 +592,25 @@ async function tryRemovePendingCleanup(cleanup: PendingCleanup): Promise<boolean
   }
 }
 
-async function assertNotPendingCleanupTarget(userDataDir: string, target: string): Promise<void> {
-  const bootstrap = await readBootstrap(userDataDir)
-  for (const cleanup of bootstrap?.pendingCleanups ?? []) {
+function assertSelectionSeparateFromPendingCleanups(
+  selected: string,
+  pendingCleanups: readonly PendingCleanup[]
+): void {
+  for (const cleanup of pendingCleanups) {
     const staging = path.normalize(path.resolve(cleanup.staging))
-    if (samePath(staging, target) || isPathWithin(staging, target)) {
-      throw new Error('不能将待清理的迁移暂存目录作为数据目录')
+    if (
+      samePath(staging, selected) ||
+      isPathWithin(staging, selected) ||
+      isPathWithin(selected, staging)
+    ) {
+      throw new Error('不能将迁移暂存目录或其父子目录作为数据目录')
     }
   }
+}
+
+async function assertNotPendingCleanupTarget(userDataDir: string, target: string): Promise<void> {
+  const bootstrap = await readBootstrap(userDataDir)
+  assertSelectionSeparateFromPendingCleanups(target, bootstrap?.pendingCleanups ?? [])
 }
 
 async function readReadyBootstrap(userDataDir: string): Promise<ReadyBootstrap> {
@@ -572,6 +632,16 @@ async function captureOldDataDirectory(directory: string): Promise<OldDataDirect
   return {
     path: normalized,
     directoryId: marker.directoryId,
+    parentPath,
+    parentIdentity: fileSystemIdentity(await stat(parentPath))
+  }
+}
+
+async function captureStagingParent(
+  target: string
+): Promise<Pick<PendingCleanup, 'parentPath' | 'parentIdentity'>> {
+  const parentPath = await normalizeDirectory(path.dirname(target))
+  return {
     parentPath,
     parentIdentity: fileSystemIdentity(await stat(parentPath))
   }
@@ -696,6 +766,13 @@ async function hasExpectedParentIdentity(oldDataDirectory: OldDataDirectory): Pr
     : false
 }
 
+async function hasExpectedCleanupParentIdentity(cleanup: PendingCleanup): Promise<boolean> {
+  const parentStats = await statIfExists(cleanup.parentPath)
+  return parentStats
+    ? sameFileSystemIdentity(fileSystemIdentity(parentStats), cleanup.parentIdentity)
+    : false
+}
+
 function fileSystemIdentity(stats: Awaited<ReturnType<typeof stat>>): FileSystemIdentity {
   return { device: String(stats.dev), inode: String(stats.ino) }
 }
@@ -710,7 +787,10 @@ function pendingCleanupFromMigration(
   return {
     migrationId: bootstrap.migrationId,
     target: bootstrap.target,
-    staging: bootstrap.staging
+    staging: bootstrap.staging,
+    parentPath: bootstrap.parentPath,
+    parentIdentity: bootstrap.parentIdentity,
+    ...(bootstrap.stagingIdentity ? { stagingIdentity: bootstrap.stagingIdentity } : {})
   }
 }
 
@@ -852,6 +932,7 @@ async function readBootstrap(userDataDir: string): Promise<Bootstrap | null> {
     if (value.mode === 'copy') {
       const retiredSource = parseOldDataDirectory(value.retiredSource, false)
       if (!retiredSource) throw new Error('迁移来源目录记录缺失')
+      const stagingLocation = parseStagingLocation(value)
       const migration: CopyingBootstrap = {
         formatVersion: FORMAT_VERSION,
         state: 'migrating',
@@ -859,6 +940,7 @@ async function readBootstrap(userDataDir: string): Promise<Bootstrap | null> {
         source: value.source,
         target: value.target,
         staging: value.staging,
+        ...stagingLocation,
         mode: value.mode,
         retiredSource,
         ...(pendingCleanups.length > 0 ? { pendingCleanups } : {})
@@ -883,6 +965,7 @@ async function readBootstrap(userDataDir: string): Promise<Bootstrap | null> {
       source: value.source,
       target: value.target,
       staging: value.staging,
+      ...parseStagingLocation(value),
       mode: value.mode,
       legacyDirectories: [...value.legacyDirectories] as string[],
       ...(pendingCleanups.length > 0 ? { pendingCleanups } : {})
@@ -908,7 +991,8 @@ function parsePendingCleanups(value: unknown): PendingCleanup[] {
     const cleanup: PendingCleanup = {
       migrationId: entry.migrationId,
       target: entry.target,
-      staging: entry.staging
+      staging: entry.staging,
+      ...parseStagingLocation(entry)
     }
     assertStoredMigrationPaths(cleanup)
     return cleanup
@@ -920,6 +1004,29 @@ function parsePendingCleanups(value: unknown): PendingCleanup[] {
     keys.add(key)
   }
   return pendingCleanups
+}
+
+function parseStagingLocation(
+  value: Record<string, unknown>
+): Pick<PendingCleanup, 'parentPath' | 'parentIdentity' | 'stagingIdentity'> {
+  if (typeof value.parentPath !== 'string') throw new Error('迁移暂存父目录记录无效')
+  const parentIdentity = parseFileSystemIdentity(value.parentIdentity, '迁移暂存父目录身份无效')
+  const stagingIdentity =
+    value.stagingIdentity === undefined
+      ? undefined
+      : parseFileSystemIdentity(value.stagingIdentity, '迁移暂存目录身份无效')
+  return {
+    parentPath: value.parentPath,
+    parentIdentity,
+    ...(stagingIdentity ? { stagingIdentity } : {})
+  }
+}
+
+function parseFileSystemIdentity(value: unknown, message: string): FileSystemIdentity {
+  if (!isRecord(value) || typeof value.device !== 'string' || typeof value.inode !== 'string') {
+    throw new Error(message)
+  }
+  return { device: value.device, inode: value.inode }
 }
 
 function parseOldDataDirectory(
@@ -1133,10 +1240,20 @@ function assertMigrationPaths(
 }
 
 function assertStoredMigrationPaths(bootstrap: PendingCleanup): void {
-  if (!path.isAbsolute(bootstrap.target) || !path.isAbsolute(bootstrap.staging)) {
+  if (
+    !path.isAbsolute(bootstrap.target) ||
+    !path.isAbsolute(bootstrap.staging) ||
+    !path.isAbsolute(bootstrap.parentPath)
+  ) {
     throw new Error('数据目录迁移路径无效')
   }
-  assertMigrationPaths(bootstrap, path.normalize(path.resolve(bootstrap.target)))
+  const target = path.normalize(path.resolve(bootstrap.target))
+  const staging = path.normalize(path.resolve(bootstrap.staging))
+  const parentPath = path.normalize(path.resolve(bootstrap.parentPath))
+  assertMigrationPaths(bootstrap, target)
+  if (!samePath(path.dirname(target), parentPath) || !samePath(path.dirname(staging), parentPath)) {
+    throw new Error('数据目录迁移父路径无效')
+  }
 }
 
 function stagingPath(target: string, migrationId: string): string {

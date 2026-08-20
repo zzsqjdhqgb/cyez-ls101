@@ -28,6 +28,7 @@ test('copies business data, switches directories after restart and retains the s
   const sourceFile = path.join(source, 'template-editor', 'migration-test.json')
   await writeFile(sourceFile, '{"migrated":true}')
   const sourceParentStats = await stat(userDataDir)
+  const targetParentStats = await stat(targetParent)
   await writeFile(
     path.join(userDataDir, 'data-location.json'),
     JSON.stringify({
@@ -37,6 +38,11 @@ test('copies business data, switches directories after restart and retains the s
       source,
       target,
       staging,
+      parentPath: targetParent,
+      parentIdentity: {
+        device: String(targetParentStats.dev),
+        inode: String(targetParentStats.ino)
+      },
       mode: 'copy',
       retiredSource: {
         path: source,

@@ -325,6 +325,7 @@ describe('data directory initialization', () => {
     const { userData, source, target, migration } = await scheduledCopy('partial-staging')
     await mkdir(migration.staging)
     await writeFile(path.join(migration.staging, 'partial.bin'), 'partial')
+    await recordStagingIdentity(userData, migration.staging)
 
     const result = await initializeDataDirectory(userData)
 
@@ -360,6 +361,7 @@ describe('data directory initialization', () => {
     await writeMigrationMarker(target, migration.migrationId)
     await mkdir(migration.staging)
     await writeFile(path.join(migration.staging, 'orphan.bin'), 'owned staging')
+    await recordStagingIdentity(userData, migration.staging)
     await rm(source, { recursive: true })
 
     const result = await initializeDataDirectory(userData)
@@ -472,6 +474,201 @@ describe('data directory initialization', () => {
     expect(ready).not.toHaveProperty('pendingCleanups')
   })
 
+  it('preserves ready cleanup records when recovery selects another managed directory', async () => {
+    const { userData, source, target } = await scheduledCopy('ready-recovery-cleanups')
+    await initializeDataDirectory(userData)
+    const bootstrapPath = path.join(userData, 'data-location.json')
+    const ready = (await readJson(bootstrapPath)) as Record<string, unknown>
+    const oldDataDirectory = ready.oldDataDirectory as Record<string, unknown>
+    const deletionPath = path.join(
+      path.dirname(source),
+      `.${path.basename(source)}.deleting-${String(oldDataDirectory.directoryId)}`
+    )
+    const cleanupParent = await temporaryDirectory('ls101-data-ready-cleanup-')
+    const cleanupParentStats = await stat(cleanupParent)
+    const cleanupTarget = path.join(cleanupParent, 'abandoned')
+    const cleanupId = '55555555-5555-4555-8555-555555555555'
+    const cleanupStaging = path.join(cleanupParent, `.abandoned.migrating-${cleanupId}`)
+    await mkdir(cleanupStaging)
+    await writeMigrationMarker(cleanupStaging, cleanupId)
+    const selected = await temporaryDirectory('ls101-data-ready-selected-')
+    await writeManagedMarker(selected)
+    await writeFile(
+      bootstrapPath,
+      JSON.stringify({
+        ...ready,
+        pendingCleanups: [
+          {
+            migrationId: cleanupId,
+            target: cleanupTarget,
+            staging: cleanupStaging,
+            parentPath: cleanupParent,
+            parentIdentity: {
+              device: String(cleanupParentStats.dev),
+              inode: String(cleanupParentStats.ino)
+            }
+          }
+        ],
+        oldDataDirectory: {
+          ...oldDataDirectory,
+          deleting: true,
+          deletionPath
+        }
+      })
+    )
+    const targetParent = path.dirname(target)
+    const offlineTargetParent = `${targetParent}-offline`
+    roots.push(offlineTargetParent)
+    await rename(targetParent, offlineTargetParent)
+    electronMocks.dialog.showMessageBox
+      .mockResolvedValueOnce({ response: 1 })
+      .mockResolvedValueOnce({ response: 2 })
+    electronMocks.dialog.showOpenDialog.mockResolvedValueOnce({
+      canceled: false,
+      filePaths: [selected]
+    })
+    const exit = new Error('exit')
+    electronMocks.app.exit
+      .mockImplementationOnce(() => undefined)
+      .mockImplementationOnce(() => {
+        throw exit
+      })
+
+    await expect(recoverDataDirectory(userData, new Error('active volume offline'))).rejects.toBe(
+      exit
+    )
+
+    await expect(readJson(bootstrapPath)).resolves.toMatchObject({
+      state: 'ready',
+      activeDataDirectory: selected,
+      pendingCleanups: [{ migrationId: cleanupId, staging: cleanupStaging }],
+      oldDataDirectory: {
+        path: source,
+        deleting: true,
+        deletionPath
+      }
+    })
+  })
+
+  it('clears a missing staging cleanup when its recorded parent is still online', async () => {
+    const userData = await temporaryDirectory('ls101-data-missing-cleanup-')
+    const source = await initializeDataDirectory(userData)
+    const cleanupParent = await temporaryDirectory('ls101-data-missing-cleanup-parent-')
+    const cleanupParentStats = await stat(cleanupParent)
+    const migrationId = '66666666-6666-4666-8666-666666666666'
+    await writeFile(
+      path.join(userData, 'data-location.json'),
+      JSON.stringify({
+        formatVersion: 1,
+        state: 'ready',
+        activeDataDirectory: source,
+        pendingCleanups: [
+          {
+            migrationId,
+            target: path.join(cleanupParent, 'missing'),
+            staging: path.join(cleanupParent, `.missing.migrating-${migrationId}`),
+            parentPath: cleanupParent,
+            parentIdentity: {
+              device: String(cleanupParentStats.dev),
+              inode: String(cleanupParentStats.ino)
+            }
+          }
+        ]
+      })
+    )
+
+    await expect(initializeDataDirectory(userData)).resolves.toBe(source)
+    await expect(readJson(path.join(userData, 'data-location.json'))).resolves.not.toHaveProperty(
+      'pendingCleanups'
+    )
+  })
+
+  it('does not delete a staging path under a replacement parent directory', async () => {
+    const userData = await temporaryDirectory('ls101-data-replaced-cleanup-parent-')
+    const source = await initializeDataDirectory(userData)
+    const cleanupParent = await temporaryDirectory('ls101-data-original-cleanup-parent-')
+    const cleanupParentStats = await stat(cleanupParent)
+    const offlineCleanupParent = `${cleanupParent}-offline`
+    roots.push(offlineCleanupParent)
+    await rename(cleanupParent, offlineCleanupParent)
+    await mkdir(cleanupParent)
+    const migrationId = '77777777-7777-4777-8777-777777777777'
+    const staging = path.join(cleanupParent, `.replacement.migrating-${migrationId}`)
+    await mkdir(staging)
+    await writeFile(path.join(staging, 'unrelated.txt'), 'keep')
+    await writeFile(
+      path.join(userData, 'data-location.json'),
+      JSON.stringify({
+        formatVersion: 1,
+        state: 'ready',
+        activeDataDirectory: source,
+        pendingCleanups: [
+          {
+            migrationId,
+            target: path.join(cleanupParent, 'replacement'),
+            staging,
+            parentPath: cleanupParent,
+            parentIdentity: {
+              device: String(cleanupParentStats.dev),
+              inode: String(cleanupParentStats.ino)
+            }
+          }
+        ]
+      })
+    )
+
+    await expect(initializeDataDirectory(userData)).resolves.toBe(source)
+    await expect(readFile(path.join(staging, 'unrelated.txt'), 'utf8')).resolves.toBe('keep')
+    await expect(readJson(path.join(userData, 'data-location.json'))).resolves.toHaveProperty(
+      'pendingCleanups.0.staging',
+      staging
+    )
+  })
+
+  it('does not delete an unclaimed non-empty staging path under the original parent', async () => {
+    const userData = await temporaryDirectory('ls101-data-unclaimed-cleanup-')
+    const source = await initializeDataDirectory(userData)
+    const cleanupParent = await temporaryDirectory('ls101-data-unclaimed-cleanup-parent-')
+    const cleanupParentStats = await stat(cleanupParent)
+    const migrationId = '88888888-8888-4888-8888-888888888888'
+    const staging = path.join(cleanupParent, `.unclaimed.migrating-${migrationId}`)
+    await mkdir(staging)
+    await writeFile(path.join(staging, 'unrelated.txt'), 'keep')
+    await writeFile(
+      path.join(userData, 'data-location.json'),
+      JSON.stringify({
+        formatVersion: 1,
+        state: 'ready',
+        activeDataDirectory: source,
+        pendingCleanups: [
+          {
+            migrationId,
+            target: path.join(cleanupParent, 'unclaimed'),
+            staging,
+            parentPath: cleanupParent,
+            parentIdentity: {
+              device: String(cleanupParentStats.dev),
+              inode: String(cleanupParentStats.ino)
+            }
+          }
+        ]
+      })
+    )
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    await expect(initializeDataDirectory(userData)).resolves.toBe(source)
+    await expect(readFile(path.join(staging, 'unrelated.txt'), 'utf8')).resolves.toBe('keep')
+    await expect(readJson(path.join(userData, 'data-location.json'))).resolves.toHaveProperty(
+      'pendingCleanups.0.staging',
+      staging
+    )
+    expect(warning).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to clean pending data migration staging directory'),
+      expect.objectContaining({ message: '迁移暂存路径所有权无法确认，未执行清理' })
+    )
+    warning.mockRestore()
+  })
+
   it('preserves deferred cleanups through a later migration', async () => {
     const userData = await temporaryDirectory('ls101-data-deferred-cleanup-')
     const source = await initializeDataDirectory(userData)
@@ -479,6 +676,10 @@ describe('data directory initialization', () => {
     const abandonedTarget = path.join(abandonedParent, 'data')
     const migrationId = '22222222-2222-4222-8222-222222222222'
     const abandonedStaging = path.join(abandonedParent, `.data.migrating-${migrationId}`)
+    const abandonedParentStats = await stat(abandonedParent)
+    const offlineAbandonedParent = `${abandonedParent}-offline`
+    roots.push(offlineAbandonedParent)
+    await rename(abandonedParent, offlineAbandonedParent)
     await writeFile(
       path.join(userData, 'data-location.json'),
       JSON.stringify({
@@ -489,7 +690,12 @@ describe('data directory initialization', () => {
           {
             migrationId,
             target: abandonedTarget,
-            staging: abandonedStaging
+            staging: abandonedStaging,
+            parentPath: abandonedParent,
+            parentIdentity: {
+              device: String(abandonedParentStats.dev),
+              inode: String(abandonedParentStats.ino)
+            }
           }
         ]
       })
@@ -560,6 +766,29 @@ async function writeMigrationMarker(directory: string, migrationId: string): Pro
   await writeFile(
     path.join(directory, '.ls101-data.json'),
     JSON.stringify({ formatVersion: 1, kind: 'ls101-data-directory', migrationId })
+  )
+}
+
+async function writeManagedMarker(directory: string): Promise<void> {
+  await writeFile(
+    path.join(directory, '.ls101-data.json'),
+    JSON.stringify({ formatVersion: 1, kind: 'ls101-data-directory' })
+  )
+}
+
+async function recordStagingIdentity(userData: string, staging: string): Promise<void> {
+  const bootstrapPath = path.join(userData, 'data-location.json')
+  const bootstrap = (await readJson(bootstrapPath)) as Record<string, unknown>
+  const stagingStats = await stat(staging)
+  await writeFile(
+    bootstrapPath,
+    JSON.stringify({
+      ...bootstrap,
+      stagingIdentity: {
+        device: String(stagingStats.dev),
+        inode: String(stagingStats.ino)
+      }
+    })
   )
 }
 
