@@ -70,7 +70,8 @@ export type {
   DataDirectoryBridge,
   DataDirectoryCandidate,
   DataDirectoryCandidateKind,
-  DataDirectoryInfo
+  DataDirectoryInfo,
+  DataDirectoryOldLocation
 } from './data-directory'
 export { WINDOW_CONTROL_CHANNELS, WINDOW_CONTROL_EVENTS } from './window-controls'
 export type { WindowControlsBridge } from './window-controls'

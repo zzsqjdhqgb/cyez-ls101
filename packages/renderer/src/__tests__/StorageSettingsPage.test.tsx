@@ -17,7 +17,8 @@ describe('StorageSettingsPage', () => {
       getInfo: vi.fn().mockResolvedValue({
         currentPath: '/profile/data',
         defaultPath: '/profile/data',
-        sizeBytes: 2 * 1024 * 1024
+        sizeBytes: 2 * 1024 * 1024,
+        oldDataDirectory: null
       }),
       choose: vi.fn().mockResolvedValue({
         path: '/mnt/storage/ls101',
@@ -25,7 +26,8 @@ describe('StorageSettingsPage', () => {
         sizeBytes: 0
       }),
       migrate,
-      useExisting: vi.fn()
+      useExisting: vi.fn(),
+      deleteOld: vi.fn()
     }
 
     render(<StorageSettingsPage />)
@@ -44,7 +46,8 @@ describe('StorageSettingsPage', () => {
       getInfo: vi.fn().mockResolvedValue({
         currentPath: '/profile/data',
         defaultPath: '/profile/data',
-        sizeBytes: 0
+        sizeBytes: 0,
+        oldDataDirectory: null
       }),
       choose: vi.fn().mockResolvedValue({
         path: '/mnt/existing',
@@ -52,7 +55,8 @@ describe('StorageSettingsPage', () => {
         sizeBytes: 4096
       }),
       migrate: vi.fn(),
-      useExisting
+      useExisting,
+      deleteOld: vi.fn()
     }
 
     render(<StorageSettingsPage />)
@@ -60,5 +64,44 @@ describe('StorageSettingsPage', () => {
     expect(await screen.findByText(/直接使用/)).toHaveTextContent('/mnt/existing')
     fireEvent.click(screen.getByRole('button', { name: '使用并重启' }))
     await waitFor(() => expect(useExisting).toHaveBeenCalledWith('/mnt/existing'))
+  })
+
+  it('deletes the recorded old directory before allowing another location change', async () => {
+    const deleteOld = vi.fn().mockResolvedValue(undefined)
+    const getInfo = vi
+      .fn()
+      .mockResolvedValueOnce({
+        currentPath: '/mnt/current',
+        defaultPath: '/profile/data',
+        sizeBytes: 4096,
+        oldDataDirectory: {
+          path: '/profile/data',
+          sizeBytes: 2048,
+          deleting: false
+        }
+      })
+      .mockResolvedValueOnce({
+        currentPath: '/mnt/current',
+        defaultPath: '/profile/data',
+        sizeBytes: 4096,
+        oldDataDirectory: null
+      })
+    window.dataDirectory = {
+      getInfo,
+      choose: vi.fn(),
+      migrate: vi.fn(),
+      useExisting: vi.fn(),
+      deleteOld
+    }
+
+    render(<StorageSettingsPage />)
+
+    expect(await screen.findByText('/profile/data')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '更改位置' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: '删除旧数据' }))
+    expect(screen.getByRole('heading', { name: '删除旧数据目录？' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '永久删除' }))
+    await waitFor(() => expect(deleteOld).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.getByRole('button', { name: '更改位置' })).toBeEnabled())
   })
 })

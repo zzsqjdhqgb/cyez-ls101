@@ -168,7 +168,7 @@ test('starts a hardened application window and exposes every preload bridge', as
     ],
     appInfo: ['getVersion'],
     configStore: ['invoke'],
-    dataDirectory: ['choose', 'getInfo', 'migrate', 'useExisting'],
+    dataDirectory: ['choose', 'deleteOld', 'getInfo', 'migrate', 'useExisting'],
     fileDialog: ['read', 'write'],
     fileStore: ['invoke'],
     imageClipboard: ['readImage', 'writeText'],

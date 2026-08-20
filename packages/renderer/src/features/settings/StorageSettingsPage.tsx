@@ -1,4 +1,4 @@
-import { HardDrive, RotateCcw } from 'lucide-react'
+import { HardDrive, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useState, type JSX } from 'react'
 import type { DataDirectoryCandidate, DataDirectoryInfo } from '@ls101/core-types'
 import {
@@ -17,6 +17,8 @@ export function StorageSettingsPage(): JSX.Element {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const load = async (): Promise<void> => {
     if (!bridge) {
@@ -89,6 +91,21 @@ export function StorageSettingsPage(): JSX.Element {
     }
   }
 
+  const deleteOld = async (): Promise<void> => {
+    if (!bridge || !info.oldDataDirectory) return
+    setBusy(true)
+    setDeleteError(null)
+    try {
+      await bridge.deleteOld()
+      setDeleteOpen(false)
+      await load()
+    } catch (deleteFailure) {
+      setDeleteError(errorMessage(deleteFailure))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (!info) {
     return (
       <div className={styles.status} role={error ? 'alert' : undefined}>
@@ -104,6 +121,7 @@ export function StorageSettingsPage(): JSX.Element {
 
   const usesDefault = sameDisplayPath(info.currentPath, info.defaultPath)
   const usingExisting = candidate?.kind === 'managed'
+  const oldDataDirectory = info.oldDataDirectory
   return (
     <SettingsContent>
       {error ? (
@@ -123,14 +141,46 @@ export function StorageSettingsPage(): JSX.Element {
             <code className={styles.path} title={info.currentPath}>
               {info.currentPath}
             </code>
-            <Button disabled={busy} icon={HardDrive} onClick={() => void choose()}>
+            <Button
+              disabled={busy || oldDataDirectory !== null}
+              icon={HardDrive}
+              title={oldDataDirectory ? '请先删除旧数据目录' : undefined}
+              onClick={() => void choose()}
+            >
               更改位置
             </Button>
           </div>
         </SettingsRow>
+        {oldDataDirectory ? (
+          <SettingsRow
+            label="旧数据目录"
+            description={
+              oldDataDirectory.sizeBytes === null
+                ? '暂时不可访问'
+                : `${formatBytes(oldDataDirectory.sizeBytes)} · ${oldDataDirectory.deleting ? '等待继续删除' : '迁移前的数据副本'}`
+            }
+          >
+            <div className={styles.directoryControl}>
+              <code className={styles.path} title={oldDataDirectory.path}>
+                {oldDataDirectory.path}
+              </code>
+              <Button
+                disabled={busy}
+                icon={Trash2}
+                variant="danger"
+                onClick={() => {
+                  setDeleteError(null)
+                  setDeleteOpen(true)
+                }}
+              >
+                {oldDataDirectory.deleting ? '继续删除' : '删除旧数据'}
+              </Button>
+            </div>
+          </SettingsRow>
+        ) : null}
       </SettingsSection>
       <p className={styles.note}>
-        Electron 缓存和可重新生成的 Qwen TTS 运行文件不会移动。切换完成后，原数据目录会保留。
+        Electron 缓存和可重新生成的 Qwen TTS 运行文件不会移动。旧数据删除前不能再次更改位置。
       </p>
       <ConfirmModal
         busy={busy}
@@ -142,6 +192,25 @@ export function StorageSettingsPage(): JSX.Element {
         onConfirm={() => void confirm()}
         open={candidate !== null}
         title={usingExisting ? '使用已有数据目录？' : '迁移数据目录？'}
+      />
+      <ConfirmModal
+        busy={busy}
+        closeOnConfirm={false}
+        confirmLabel="永久删除"
+        danger
+        error={deleteError}
+        message={
+          oldDataDirectory
+            ? `将永久删除“${oldDataDirectory.path}”及其中的全部数据。当前目录不受影响，此操作无法撤销。`
+            : ''
+        }
+        onCancel={() => {
+          setDeleteError(null)
+          setDeleteOpen(false)
+        }}
+        onConfirm={() => void deleteOld()}
+        open={deleteOpen && oldDataDirectory !== null}
+        title="删除旧数据目录？"
       />
     </SettingsContent>
   )

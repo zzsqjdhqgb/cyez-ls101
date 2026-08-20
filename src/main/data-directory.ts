@@ -40,12 +40,29 @@ interface ReadyBootstrap {
   state: 'ready'
   activeDataDirectory: string
   pendingCleanups?: PendingCleanup[]
+  oldDataDirectory?: OldDataDirectory
 }
 
 interface PendingCleanup {
   migrationId: string
   target: string
   staging: string
+}
+
+interface FileSystemIdentity {
+  device: string
+  inode: string
+}
+
+interface OldDataDirectory {
+  path: string
+  directoryId: string
+  parentPath: string
+  parentIdentity: FileSystemIdentity
+  deleting?: true
+  deletionPath?: string
+  deletionClaimed?: true
+  deletionIdentity?: FileSystemIdentity
 }
 
 interface CopyingBootstrap {
@@ -56,6 +73,7 @@ interface CopyingBootstrap {
   target: string
   staging: string
   mode: 'copy'
+  retiredSource: OldDataDirectory
   pendingCleanups?: PendingCleanup[]
 }
 
@@ -78,6 +96,7 @@ interface UseExistingBootstrap {
   source: string
   target: string
   mode: 'use-existing'
+  retiredSource: OldDataDirectory
   pendingCleanups?: PendingCleanup[]
 }
 
@@ -87,6 +106,7 @@ type Bootstrap = ReadyBootstrap | MigratingBootstrap
 interface DataDirectoryMarker {
   formatVersion: typeof FORMAT_VERSION
   kind: 'ls101-data-directory'
+  directoryId?: string
   migrationId?: string
 }
 
@@ -102,14 +122,26 @@ export async function initializeDataDirectory(userDataDir: string): Promise<stri
     const activeDataDirectory = await normalizeDirectory(bootstrap.activeDataDirectory)
     await assertManagedDirectory(activeDataDirectory)
     const pendingCleanups = await retryPendingCleanups(bootstrap.pendingCleanups ?? [])
-    if (pendingCleanups.length !== (bootstrap.pendingCleanups?.length ?? 0)) {
-      await writeReadyBootstrap(userDataDir, activeDataDirectory, pendingCleanups)
+    const oldDataDirectory = bootstrap.oldDataDirectory?.deleting
+      ? await retryOldDataDirectoryDeletion(
+          bootstrap.oldDataDirectory,
+          activeDataDirectory,
+          async (claimed) =>
+            writeReadyBootstrap(userDataDir, activeDataDirectory, pendingCleanups, claimed)
+        )
+      : bootstrap.oldDataDirectory
+    if (
+      pendingCleanups.length !== (bootstrap.pendingCleanups?.length ?? 0) ||
+      oldDataDirectory !== bootstrap.oldDataDirectory
+    ) {
+      await writeReadyBootstrap(userDataDir, activeDataDirectory, pendingCleanups, oldDataDirectory)
     }
     return activeDataDirectory
   }
 
   const defaultPath = path.join(userDataDir, 'data')
   if (await isManagedDirectory(defaultPath)) {
+    await ensureDirectoryId(defaultPath)
     await writeReadyBootstrap(userDataDir, defaultPath)
     return defaultPath
   }
@@ -132,15 +164,26 @@ export async function initializeDataDirectory(userDataDir: string): Promise<stri
 }
 
 export function registerDataDirectoryHandlers(userDataDir: string, currentPath: string): void {
-  ipcMain.handle(
-    DATA_DIRECTORY_CHANNELS.getInfo,
-    async (): Promise<DataDirectoryInfo> => ({
+  ipcMain.handle(DATA_DIRECTORY_CHANNELS.getInfo, async (): Promise<DataDirectoryInfo> => {
+    const bootstrap = await readReadyBootstrap(userDataDir)
+    const oldDataDirectory = bootstrap.oldDataDirectory
+    return {
       currentPath,
       defaultPath: path.join(userDataDir, 'data'),
-      sizeBytes: await directorySize(currentPath)
-    })
-  )
+      sizeBytes: await directorySize(currentPath),
+      oldDataDirectory: oldDataDirectory
+        ? {
+            path: oldDataDirectory.path,
+            sizeBytes: await directorySize(
+              oldDataDirectory.deletionPath ?? oldDataDirectory.path
+            ).catch(() => null),
+            deleting: oldDataDirectory.deleting === true
+          }
+        : null
+    }
+  })
   ipcMain.handle(DATA_DIRECTORY_CHANNELS.choose, async (event) => {
+    await assertNoOldDataDirectory(userDataDir)
     const parent = BrowserWindow.fromWebContents(event.sender)
     const result = parent
       ? await dialog.showOpenDialog(parent, {
@@ -155,16 +198,32 @@ export function registerDataDirectoryHandlers(userDataDir: string, currentPath: 
     return inspectCandidate(userDataDir, result.filePaths[0], currentPath)
   })
   ipcMain.handle(DATA_DIRECTORY_CHANNELS.migrate, async (_event, target: string) => {
+    await assertNoOldDataDirectory(userDataDir)
     const candidate = await inspectCandidate(userDataDir, target, currentPath)
     if (candidate.kind !== 'empty') throw new Error('迁移目标必须是空目录')
     await scheduleMigration(userDataDir, currentPath, candidate.path, 'copy')
     relaunchAfterReply()
   })
   ipcMain.handle(DATA_DIRECTORY_CHANNELS.useExisting, async (_event, target: string) => {
+    await assertNoOldDataDirectory(userDataDir)
     const candidate = await inspectCandidate(userDataDir, target, currentPath)
     if (candidate.kind !== 'managed') throw new Error('所选目录不是可识别的 LS101 数据目录')
     await scheduleMigration(userDataDir, currentPath, candidate.path, 'use-existing')
     relaunchAfterReply()
+  })
+  ipcMain.handle(DATA_DIRECTORY_CHANNELS.deleteOld, async () => {
+    const bootstrap = await readReadyBootstrap(userDataDir)
+    if (!bootstrap.oldDataDirectory) throw new Error('没有可删除的旧数据目录')
+    const deleting = markOldDataDirectoryDeleting(bootstrap.oldDataDirectory)
+    if (!bootstrap.oldDataDirectory.deleting) {
+      await validateOldDataDirectory(deleting, currentPath)
+      await writeReadyBootstrap(userDataDir, currentPath, bootstrap.pendingCleanups, deleting)
+    }
+    const remaining = await retryOldDataDirectoryDeletion(deleting, currentPath, async (claimed) =>
+      writeReadyBootstrap(userDataDir, currentPath, bootstrap.pendingCleanups, claimed)
+    )
+    await writeReadyBootstrap(userDataDir, currentPath, bootstrap.pendingCleanups, remaining)
+    if (remaining) throw new Error('旧数据目录暂时不可访问，将在后续启动时继续删除')
   })
 }
 
@@ -200,8 +259,13 @@ export async function recoverDataDirectory(userDataDir: string, error: unknown):
       try {
         const selected = await normalizeDirectory(selection.filePaths[0])
         await assertManagedDirectory(selected)
-        const pendingCleanups = await abandonPendingMigration(userDataDir, selected)
-        await writeReadyBootstrap(userDataDir, selected, pendingCleanups)
+        const abandonment = await abandonPendingMigration(userDataDir, selected)
+        await writeReadyBootstrap(
+          userDataDir,
+          selected,
+          abandonment.pendingCleanups,
+          abandonment.oldDataDirectory
+        )
         app.relaunch()
         app.exit(0)
       } catch (selectionError) {
@@ -251,14 +315,24 @@ async function finishPendingMigration(
   if (bootstrap.mode === 'use-existing') {
     const existingTarget = await normalizeDirectory(target)
     await assertManagedDirectory(existingTarget)
-    await writeReadyBootstrap(userDataDir, existingTarget, bootstrap.pendingCleanups)
+    await writeReadyBootstrap(
+      userDataDir,
+      existingTarget,
+      bootstrap.pendingCleanups,
+      bootstrap.retiredSource
+    )
     return existingTarget
   }
 
   assertMigrationPaths(bootstrap, target)
   if (await hasMigrationMarker(target, bootstrap.migrationId)) {
     await removeOwnedStaging(bootstrap)
-    await writeReadyBootstrap(userDataDir, target, bootstrap.pendingCleanups)
+    await writeReadyBootstrap(
+      userDataDir,
+      target,
+      bootstrap.pendingCleanups,
+      bootstrap.mode === 'copy' ? bootstrap.retiredSource : undefined
+    )
     return target
   }
 
@@ -279,7 +353,12 @@ async function finishPendingMigration(
     await commitCompletedStaging(bootstrap, target)
   })
   await removeOwnedStaging(bootstrap)
-  await writeReadyBootstrap(userDataDir, target, bootstrap.pendingCleanups)
+  await writeReadyBootstrap(
+    userDataDir,
+    target,
+    bootstrap.pendingCleanups,
+    bootstrap.mode === 'copy' ? bootstrap.retiredSource : undefined
+  )
   return target
 }
 
@@ -292,6 +371,9 @@ async function scheduleMigration(
 ): Promise<MigratingBootstrap> {
   const migrationId = randomUUID()
   const currentBootstrap = await readBootstrap(userDataDir)
+  if (currentBootstrap?.state === 'ready' && currentBootstrap.oldDataDirectory) {
+    throw new Error('请先删除旧数据目录，再更改数据位置')
+  }
   const pendingCleanups = currentBootstrap?.pendingCleanups ?? []
   const base = {
     formatVersion: FORMAT_VERSION,
@@ -303,7 +385,7 @@ async function scheduleMigration(
   }
   const migration: MigratingBootstrap =
     mode === 'use-existing'
-      ? { ...base, mode }
+      ? { ...base, mode, retiredSource: await captureOldDataDirectory(source) }
       : mode === 'legacy-copy'
         ? {
             ...base,
@@ -311,7 +393,12 @@ async function scheduleMigration(
             staging: stagingPath(target, migrationId),
             legacyDirectories: [...legacyDirectories]
           }
-        : { ...base, mode, staging: stagingPath(target, migrationId) }
+        : {
+            ...base,
+            mode,
+            staging: stagingPath(target, migrationId),
+            retiredSource: await captureOldDataDirectory(source)
+          }
   await writeBootstrap(userDataDir, migration)
   return migration
 }
@@ -398,17 +485,36 @@ async function removeExistingOwnedStaging(
 async function abandonPendingMigration(
   userDataDir: string,
   selected: string
-): Promise<PendingCleanup[]> {
+): Promise<{
+  pendingCleanups: PendingCleanup[]
+  oldDataDirectory?: OldDataDirectory
+}> {
   const bootstrap = await readBootstrap(userDataDir).catch(() => null)
-  if (bootstrap?.state !== 'migrating') return []
+  if (bootstrap?.state !== 'migrating') return { pendingCleanups: [] }
   const existing = bootstrap.pendingCleanups ?? []
-  if (bootstrap.mode === 'use-existing') return existing
+  if (bootstrap.mode === 'use-existing') {
+    return {
+      pendingCleanups: existing,
+      ...(!samePath(selected, bootstrap.retiredSource.path)
+        ? { oldDataDirectory: bootstrap.retiredSource }
+        : {})
+    }
+  }
+  if (bootstrap.mode === 'legacy-copy') return { pendingCleanups: existing }
   const staging = path.normalize(path.resolve(bootstrap.staging))
   if (samePath(staging, selected) || isPathWithin(staging, selected)) {
     throw new Error('不能将迁移暂存目录作为数据目录')
   }
   const cleanup = pendingCleanupFromMigration(bootstrap)
-  return (await tryRemovePendingCleanup(cleanup)) ? existing : [...existing, cleanup]
+  const pendingCleanups = (await tryRemovePendingCleanup(cleanup))
+    ? existing
+    : [...existing, cleanup]
+  return {
+    pendingCleanups,
+    ...(!samePath(selected, bootstrap.retiredSource.path)
+      ? { oldDataDirectory: bootstrap.retiredSource }
+      : {})
+  }
 }
 
 async function retryPendingCleanups(
@@ -445,6 +551,157 @@ async function assertNotPendingCleanupTarget(userDataDir: string, target: string
       throw new Error('不能将待清理的迁移暂存目录作为数据目录')
     }
   }
+}
+
+async function readReadyBootstrap(userDataDir: string): Promise<ReadyBootstrap> {
+  const bootstrap = await readBootstrap(userDataDir)
+  if (bootstrap?.state !== 'ready') throw new Error('数据目录尚未准备完成')
+  return bootstrap
+}
+
+async function assertNoOldDataDirectory(userDataDir: string): Promise<void> {
+  if ((await readReadyBootstrap(userDataDir)).oldDataDirectory) {
+    throw new Error('请先删除旧数据目录，再更改数据位置')
+  }
+}
+
+async function captureOldDataDirectory(directory: string): Promise<OldDataDirectory> {
+  const normalized = await normalizeDirectory(directory)
+  const marker = await ensureDirectoryId(normalized)
+  const parentPath = await normalizeDirectory(path.dirname(normalized))
+  return {
+    path: normalized,
+    directoryId: marker.directoryId,
+    parentPath,
+    parentIdentity: fileSystemIdentity(await stat(parentPath))
+  }
+}
+
+async function ensureDirectoryId(
+  directory: string
+): Promise<DataDirectoryMarker & { directoryId: string }> {
+  const marker = await readMarker(directory)
+  if (marker.directoryId) return marker as DataDirectoryMarker & { directoryId: string }
+  const directoryId = randomUUID()
+  await writeMarker(directory, marker.migrationId, directoryId)
+  return { ...marker, directoryId }
+}
+
+async function validateOldDataDirectory(
+  oldDataDirectory: OldDataDirectory,
+  currentPath: string
+): Promise<void> {
+  assertOldDataDirectoryRecord(oldDataDirectory)
+  const normalizedCurrent = await normalizeDirectory(currentPath)
+  const oldPath = path.normalize(path.resolve(oldDataDirectory.path))
+  assertSeparateDirectories(normalizedCurrent, oldPath)
+  const oldStats = await lstatIfExists(oldPath)
+  if (!oldStats) {
+    if (!(await hasExpectedParentIdentity(oldDataDirectory))) {
+      throw new Error('旧数据目录所在位置不可访问')
+    }
+    return
+  }
+  if (!oldStats.isDirectory() || oldStats.isSymbolicLink()) {
+    throw new Error('旧数据目录路径已被其他文件占用')
+  }
+  if (!samePath(await normalizeDirectory(oldPath), oldPath)) {
+    throw new Error('旧数据目录路径已发生变化')
+  }
+  const marker = await readMarker(oldPath)
+  if (marker.directoryId !== oldDataDirectory.directoryId) {
+    throw new Error('旧数据目录标识不匹配，未执行删除')
+  }
+}
+
+function markOldDataDirectoryDeleting(oldDataDirectory: OldDataDirectory): OldDataDirectory {
+  return {
+    ...oldDataDirectory,
+    deleting: true,
+    deletionPath: path.join(
+      oldDataDirectory.parentPath,
+      `.${path.basename(oldDataDirectory.path)}.deleting-${oldDataDirectory.directoryId}`
+    )
+  }
+}
+
+async function retryOldDataDirectoryDeletion(
+  initialOldDataDirectory: OldDataDirectory,
+  currentPath: string,
+  persistClaim: (oldDataDirectory: OldDataDirectory) => Promise<void>
+): Promise<OldDataDirectory | undefined> {
+  let oldDataDirectory = initialOldDataDirectory
+  try {
+    if (!oldDataDirectory.deleting || !oldDataDirectory.deletionPath) {
+      throw new Error('旧数据目录删除状态无效')
+    }
+    assertSeparateDirectories(
+      await normalizeDirectory(currentPath),
+      path.normalize(path.resolve(oldDataDirectory.deletionPath))
+    )
+    const deletionStats = await lstatIfExists(oldDataDirectory.deletionPath)
+    if (deletionStats) {
+      if (!deletionStats.isDirectory() || deletionStats.isSymbolicLink()) {
+        throw new Error('旧数据删除路径已被其他文件占用')
+      }
+      if (!(await hasExpectedParentIdentity(oldDataDirectory))) return oldDataDirectory
+      if (!oldDataDirectory.deletionClaimed) {
+        if (await pathExists(oldDataDirectory.path)) {
+          throw new Error('旧数据删除路径已被占用，原目录仍然存在')
+        }
+        const marker = await readMarker(oldDataDirectory.deletionPath)
+        if (marker.directoryId !== oldDataDirectory.directoryId) {
+          throw new Error('旧数据删除路径标识不匹配')
+        }
+        oldDataDirectory = {
+          ...oldDataDirectory,
+          deletionClaimed: true,
+          deletionIdentity: fileSystemIdentity(deletionStats)
+        }
+        await persistClaim(oldDataDirectory)
+      } else if (
+        !oldDataDirectory.deletionIdentity ||
+        !sameFileSystemIdentity(
+          fileSystemIdentity(deletionStats),
+          oldDataDirectory.deletionIdentity
+        )
+      ) {
+        throw new Error('旧数据删除路径身份不匹配')
+      }
+    } else {
+      await validateOldDataDirectory(oldDataDirectory, currentPath)
+      if (!(await pathExists(oldDataDirectory.path))) return undefined
+      await rename(oldDataDirectory.path, oldDataDirectory.deletionPath)
+      const claimedStats = await lstat(oldDataDirectory.deletionPath)
+      oldDataDirectory = {
+        ...oldDataDirectory,
+        deletionClaimed: true,
+        deletionIdentity: fileSystemIdentity(claimedStats)
+      }
+      await persistClaim(oldDataDirectory)
+    }
+    await rm(oldDataDirectory.deletionPath, { recursive: true, force: true })
+    if (await pathExists(oldDataDirectory.deletionPath)) return oldDataDirectory
+    return undefined
+  } catch (error) {
+    console.warn(`Failed to delete old data directory: ${oldDataDirectory.path}`, error)
+    return oldDataDirectory
+  }
+}
+
+async function hasExpectedParentIdentity(oldDataDirectory: OldDataDirectory): Promise<boolean> {
+  const parentStats = await statIfExists(oldDataDirectory.parentPath)
+  return parentStats
+    ? sameFileSystemIdentity(fileSystemIdentity(parentStats), oldDataDirectory.parentIdentity)
+    : false
+}
+
+function fileSystemIdentity(stats: Awaited<ReturnType<typeof stat>>): FileSystemIdentity {
+  return { device: String(stats.dev), inode: String(stats.ino) }
+}
+
+function sameFileSystemIdentity(left: FileSystemIdentity, right: FileSystemIdentity): boolean {
+  return left.device === right.device && left.inode === right.inode
 }
 
 function pendingCleanupFromMigration(
@@ -560,11 +817,13 @@ async function readBootstrap(userDataDir: string): Promise<Bootstrap | null> {
   }
   const pendingCleanups = parsePendingCleanups(value.pendingCleanups)
   if (value.state === 'ready' && typeof value.activeDataDirectory === 'string') {
+    const oldDataDirectory = parseOldDataDirectory(value.oldDataDirectory)
     return {
       formatVersion: FORMAT_VERSION,
       state: 'ready',
       activeDataDirectory: value.activeDataDirectory,
-      ...(pendingCleanups.length > 0 ? { pendingCleanups } : {})
+      ...(pendingCleanups.length > 0 ? { pendingCleanups } : {}),
+      ...(oldDataDirectory ? { oldDataDirectory } : {})
     }
   }
   if (
@@ -576,6 +835,8 @@ async function readBootstrap(userDataDir: string): Promise<Bootstrap | null> {
     (value.mode === 'copy' || value.mode === 'use-existing' || value.mode === 'legacy-copy')
   ) {
     if (value.mode === 'use-existing') {
+      const retiredSource = parseOldDataDirectory(value.retiredSource, false)
+      if (!retiredSource) throw new Error('迁移来源目录记录缺失')
       return {
         formatVersion: FORMAT_VERSION,
         state: 'migrating',
@@ -583,11 +844,14 @@ async function readBootstrap(userDataDir: string): Promise<Bootstrap | null> {
         source: value.source,
         target: value.target,
         mode: value.mode,
+        retiredSource,
         ...(pendingCleanups.length > 0 ? { pendingCleanups } : {})
       }
     }
     if (typeof value.staging !== 'string') throw new Error('数据目录迁移暂存路径无效')
     if (value.mode === 'copy') {
+      const retiredSource = parseOldDataDirectory(value.retiredSource, false)
+      if (!retiredSource) throw new Error('迁移来源目录记录缺失')
       const migration: CopyingBootstrap = {
         formatVersion: FORMAT_VERSION,
         state: 'migrating',
@@ -596,6 +860,7 @@ async function readBootstrap(userDataDir: string): Promise<Bootstrap | null> {
         target: value.target,
         staging: value.staging,
         mode: value.mode,
+        retiredSource,
         ...(pendingCleanups.length > 0 ? { pendingCleanups } : {})
       }
       assertStoredMigrationPaths(migration)
@@ -657,16 +922,95 @@ function parsePendingCleanups(value: unknown): PendingCleanup[] {
   return pendingCleanups
 }
 
+function parseOldDataDirectory(
+  value: unknown,
+  allowDeleting: boolean = true
+): OldDataDirectory | undefined {
+  if (value === undefined) return undefined
+  if (
+    !isRecord(value) ||
+    typeof value.path !== 'string' ||
+    !isMigrationId(value.directoryId) ||
+    typeof value.parentPath !== 'string' ||
+    !isRecord(value.parentIdentity) ||
+    typeof value.parentIdentity.device !== 'string' ||
+    typeof value.parentIdentity.inode !== 'string' ||
+    (value.deleting !== undefined && value.deleting !== true) ||
+    (value.deletionPath !== undefined && typeof value.deletionPath !== 'string') ||
+    (value.deletionClaimed !== undefined && value.deletionClaimed !== true) ||
+    (value.deletionIdentity !== undefined &&
+      (!isRecord(value.deletionIdentity) ||
+        typeof value.deletionIdentity.device !== 'string' ||
+        typeof value.deletionIdentity.inode !== 'string'))
+  ) {
+    throw new Error('旧数据目录记录无效')
+  }
+  if (!allowDeleting && value.deleting === true) throw new Error('迁移来源目录状态无效')
+  const oldDataDirectory: OldDataDirectory = {
+    path: value.path,
+    directoryId: value.directoryId,
+    parentPath: value.parentPath,
+    parentIdentity: {
+      device: value.parentIdentity.device,
+      inode: value.parentIdentity.inode
+    },
+    ...(value.deleting === true ? { deleting: true as const } : {}),
+    ...(typeof value.deletionPath === 'string' ? { deletionPath: value.deletionPath } : {}),
+    ...(value.deletionClaimed === true ? { deletionClaimed: true as const } : {}),
+    ...(isRecord(value.deletionIdentity)
+      ? {
+          deletionIdentity: {
+            device: value.deletionIdentity.device as string,
+            inode: value.deletionIdentity.inode as string
+          }
+        }
+      : {})
+  }
+  assertOldDataDirectoryRecord(oldDataDirectory)
+  return oldDataDirectory
+}
+
+function assertOldDataDirectoryRecord(oldDataDirectory: OldDataDirectory): void {
+  if (!path.isAbsolute(oldDataDirectory.path) || !path.isAbsolute(oldDataDirectory.parentPath)) {
+    throw new Error('旧数据目录路径无效')
+  }
+  const oldPath = path.normalize(path.resolve(oldDataDirectory.path))
+  const parentPath = path.normalize(path.resolve(oldDataDirectory.parentPath))
+  if (!samePath(path.dirname(oldPath), parentPath)) throw new Error('旧数据目录父路径无效')
+  const expectedDeletionPath = path.join(
+    parentPath,
+    `.${path.basename(oldPath)}.deleting-${oldDataDirectory.directoryId}`
+  )
+  if (
+    oldDataDirectory.deleting === true &&
+    (!oldDataDirectory.deletionPath ||
+      !samePath(path.normalize(path.resolve(oldDataDirectory.deletionPath)), expectedDeletionPath))
+  ) {
+    throw new Error('旧数据目录删除路径无效')
+  }
+  if (oldDataDirectory.deleting !== true && oldDataDirectory.deletionPath) {
+    throw new Error('旧数据目录删除状态无效')
+  }
+  if (oldDataDirectory.deletionClaimed && oldDataDirectory.deleting !== true) {
+    throw new Error('旧数据目录接管状态无效')
+  }
+  if (Boolean(oldDataDirectory.deletionClaimed) !== Boolean(oldDataDirectory.deletionIdentity)) {
+    throw new Error('旧数据目录接管身份无效')
+  }
+}
+
 async function writeReadyBootstrap(
   userDataDir: string,
   activeDataDirectory: string,
-  pendingCleanups: readonly PendingCleanup[] = []
+  pendingCleanups: readonly PendingCleanup[] = [],
+  oldDataDirectory?: OldDataDirectory
 ): Promise<void> {
   await writeBootstrap(userDataDir, {
     formatVersion: FORMAT_VERSION,
     state: 'ready',
     activeDataDirectory,
-    ...(pendingCleanups.length > 0 ? { pendingCleanups: [...pendingCleanups] } : {})
+    ...(pendingCleanups.length > 0 ? { pendingCleanups: [...pendingCleanups] } : {}),
+    ...(oldDataDirectory ? { oldDataDirectory } : {})
   })
 }
 
@@ -674,10 +1018,15 @@ async function writeBootstrap(userDataDir: string, value: Bootstrap): Promise<vo
   await atomicWriteJson(path.join(userDataDir, BOOTSTRAP_FILENAME), value)
 }
 
-async function writeMarker(directory: string, migrationId?: string): Promise<void> {
+async function writeMarker(
+  directory: string,
+  migrationId?: string,
+  directoryId: string = randomUUID()
+): Promise<void> {
   const marker: DataDirectoryMarker = {
     formatVersion: FORMAT_VERSION,
     kind: 'ls101-data-directory',
+    directoryId,
     ...(migrationId ? { migrationId } : {})
   }
   await atomicWriteJson(path.join(directory, MARKER_FILENAME), marker)
@@ -719,6 +1068,9 @@ async function readMarker(directory: string): Promise<DataDirectoryMarker> {
   }
   if (marker.migrationId !== undefined && !isMigrationId(marker.migrationId)) {
     throw new Error(`数据目录迁移标记无效：${directory}`)
+  }
+  if (marker.directoryId !== undefined && !isMigrationId(marker.directoryId)) {
+    throw new Error(`数据目录标识无效：${directory}`)
   }
   return marker as unknown as DataDirectoryMarker
 }

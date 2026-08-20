@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -125,6 +125,134 @@ describe('data directory initialization', () => {
       state: 'ready',
       activeDataDirectory: target
     })
+  })
+
+  it('requires deleting the recorded old directory before another migration', async () => {
+    const { userData, source, target } = await scheduledCopy('delete-old-before-next')
+    await initializeDataDirectory(userData)
+    registerDataDirectoryHandlers(userData, target)
+    const getInfo = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.getInfo)
+    const migrate = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.migrate)
+    const deleteOld = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.deleteOld)
+    expect(getInfo).toBeDefined()
+    expect(migrate).toBeDefined()
+    expect(deleteOld).toBeDefined()
+
+    await expect(getInfo!({ sender: {} })).resolves.toMatchObject({
+      currentPath: target,
+      oldDataDirectory: {
+        path: source,
+        deleting: false
+      }
+    })
+    const nextTarget = path.join(await temporaryDirectory('ls101-data-next-'), 'selected')
+    await mkdir(nextTarget)
+    await expect(migrate!({ sender: {} }, nextTarget as never)).rejects.toThrow(
+      '请先删除旧数据目录，再更改数据位置'
+    )
+
+    await expect(deleteOld!({ sender: {} })).resolves.toBeUndefined()
+    await expect(readFile(path.join(source, 'document.json'))).rejects.toMatchObject({
+      code: 'ENOENT'
+    })
+    await expect(getInfo!({ sender: {} })).resolves.toMatchObject({ oldDataDirectory: null })
+    await expect(migrate!({ sender: {} }, nextTarget as never)).resolves.toBeUndefined()
+  })
+
+  it('does not delete an old path whose directory identity changed', async () => {
+    const { userData, source, target } = await scheduledCopy('old-identity-changed')
+    await initializeDataDirectory(userData)
+    await writeFile(
+      path.join(source, '.ls101-data.json'),
+      JSON.stringify({
+        formatVersion: 1,
+        kind: 'ls101-data-directory',
+        directoryId: '44444444-4444-4444-8444-444444444444'
+      })
+    )
+    registerDataDirectoryHandlers(userData, target)
+    const deleteOld = electronMocks.handlers.get(DATA_DIRECTORY_CHANNELS.deleteOld)
+    expect(deleteOld).toBeDefined()
+
+    await expect(deleteOld!({ sender: {} })).rejects.toThrow('旧数据目录标识不匹配')
+    await expect(readFile(path.join(source, 'document.json'), 'utf8')).resolves.toBe(
+      '{"source":"old-identity-changed"}'
+    )
+  })
+
+  it('resumes old directory deletion after the source was renamed before the claim was saved', async () => {
+    const { userData, source, target } = await scheduledCopy('resume-old-deletion')
+    await initializeDataDirectory(userData)
+    const bootstrapPath = path.join(userData, 'data-location.json')
+    const ready = (await readJson(bootstrapPath)) as Record<string, unknown>
+    const oldDataDirectory = ready.oldDataDirectory as Record<string, unknown>
+    const deletionPath = path.join(
+      path.dirname(source),
+      `.${path.basename(source)}.deleting-${String(oldDataDirectory.directoryId)}`
+    )
+    await rename(source, deletionPath)
+    await writeFile(
+      bootstrapPath,
+      JSON.stringify({
+        ...ready,
+        oldDataDirectory: {
+          ...oldDataDirectory,
+          deleting: true,
+          deletionPath
+        }
+      })
+    )
+
+    await expect(initializeDataDirectory(userData)).resolves.toBe(target)
+    await expect(readFile(path.join(deletionPath, 'document.json'))).rejects.toMatchObject({
+      code: 'ENOENT'
+    })
+    await expect(readJson(bootstrapPath)).resolves.not.toHaveProperty('oldDataDirectory')
+  })
+
+  it('does not resume deletion when the claimed hidden directory identity changed', async () => {
+    const { userData, source, target } = await scheduledCopy('changed-deletion-identity')
+    await initializeDataDirectory(userData)
+    const bootstrapPath = path.join(userData, 'data-location.json')
+    const ready = (await readJson(bootstrapPath)) as Record<string, unknown>
+    const oldDataDirectory = ready.oldDataDirectory as Record<string, unknown>
+    const deletionPath = path.join(
+      path.dirname(source),
+      `.${path.basename(source)}.deleting-${String(oldDataDirectory.directoryId)}`
+    )
+    await rename(source, deletionPath)
+    const deletionStats = await stat(deletionPath)
+    await writeFile(
+      bootstrapPath,
+      JSON.stringify({
+        ...ready,
+        oldDataDirectory: {
+          ...oldDataDirectory,
+          deleting: true,
+          deletionPath,
+          deletionClaimed: true,
+          deletionIdentity: {
+            device: String(deletionStats.dev),
+            inode: `${deletionStats.ino}-changed`
+          }
+        }
+      })
+    )
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    await expect(initializeDataDirectory(userData)).resolves.toBe(target)
+    await expect(readFile(path.join(deletionPath, 'document.json'), 'utf8')).resolves.toBe(
+      '{"source":"changed-deletion-identity"}'
+    )
+    await expect(readJson(bootstrapPath)).resolves.toHaveProperty(
+      'oldDataDirectory.deletionClaimed',
+      true
+    )
+    expect(warning).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to delete old data directory'),
+      expect.objectContaining({ message: '旧数据删除路径身份不匹配' })
+    )
+    warning.mockRestore()
   })
 
   it('rejects ordinary non-empty migration targets', async () => {

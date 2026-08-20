@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { launchIntegrationApp } from './support/electron-app'
@@ -10,6 +10,7 @@ test('copies business data, switches directories after restart and retains the s
   const target = path.join(targetParent, 'data')
   const source = path.join(userDataDir, 'data')
   const migrationId = '11111111-1111-4111-8111-111111111111'
+  const sourceDirectoryId = '33333333-3333-4333-8333-333333333333'
   const staging = path.join(
     path.dirname(target),
     `.${path.basename(target)}.migrating-${migrationId}`
@@ -18,10 +19,15 @@ test('copies business data, switches directories after restart and retains the s
   await mkdir(path.join(source, 'template-editor'), { recursive: true })
   await writeFile(
     path.join(source, '.ls101-data.json'),
-    JSON.stringify({ formatVersion: 1, kind: 'ls101-data-directory' })
+    JSON.stringify({
+      formatVersion: 1,
+      kind: 'ls101-data-directory',
+      directoryId: sourceDirectoryId
+    })
   )
   const sourceFile = path.join(source, 'template-editor', 'migration-test.json')
   await writeFile(sourceFile, '{"migrated":true}')
+  const sourceParentStats = await stat(userDataDir)
   await writeFile(
     path.join(userDataDir, 'data-location.json'),
     JSON.stringify({
@@ -31,7 +37,16 @@ test('copies business data, switches directories after restart and retains the s
       source,
       target,
       staging,
-      mode: 'copy'
+      mode: 'copy',
+      retiredSource: {
+        path: source,
+        directoryId: sourceDirectoryId,
+        parentPath: userDataDir,
+        parentIdentity: {
+          device: String(sourceParentStats.dev),
+          inode: String(sourceParentStats.ino)
+        }
+      }
     })
   )
   const electronApp = await launchIntegrationApp(userDataDir)
@@ -69,7 +84,12 @@ test('copies business data, switches directories after restart and retains the s
     await page.getByRole('button', { name: /存储/ }).click()
     await expect(page.getByRole('heading', { level: 1, name: '存储' })).toBeVisible()
     await expect(page.getByText(target)).toBeVisible()
+    await expect(page.getByText(source)).toBeVisible()
+    await expect(page.getByRole('button', { name: '更改位置' })).toBeDisabled()
+    await page.getByRole('button', { name: '删除旧数据' }).click()
+    await page.getByRole('button', { name: '永久删除' }).click()
     await expect(page.getByRole('button', { name: '更改位置' })).toBeEnabled()
+    await expect(readFile(sourceFile)).rejects.toMatchObject({ code: 'ENOENT' })
   } finally {
     await electronApp.close().catch(() => undefined)
     await rm(userDataDir, { force: true, recursive: true })

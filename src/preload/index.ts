@@ -348,6 +348,9 @@ const dataDirectoryBridge: DataDirectoryBridge = {
   },
   useExisting(path: string) {
     return ipcRenderer.invoke(DATA_DIRECTORY_CHANNELS.useExisting, path)
+  },
+  deleteOld() {
+    return ipcRenderer.invoke(DATA_DIRECTORY_CHANNELS.deleteOld)
   }
 }
 
