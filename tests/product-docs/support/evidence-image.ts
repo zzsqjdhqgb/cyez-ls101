@@ -12,15 +12,16 @@ export function visuallyEquivalentPng(left: Buffer, right: Buffer): boolean {
     const leftImage = PNG.sync.read(left)
     const rightImage = PNG.sync.read(right)
     if (leftImage.width !== rightImage.width || leftImage.height !== rightImage.height) return false
-
-    return (
-      pixelmatch(leftImage.data, rightImage.data, undefined, leftImage.width, leftImage.height, {
-        threshold: COLOR_DIFFERENCE_THRESHOLD
-      }) === 0
-    )
+    return differentPixelCount(leftImage, rightImage) === 0
   } catch {
     return false
   }
+}
+
+function differentPixelCount(left: PNG, right: PNG): number {
+  return pixelmatch(left.data, right.data, undefined, left.width, left.height, {
+    threshold: COLOR_DIFFERENCE_THRESHOLD
+  })
 }
 
 export async function preserveEquivalentEvidenceImages(

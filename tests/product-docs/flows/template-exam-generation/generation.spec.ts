@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { access, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { launchIntegrationApp } from '../../../integration/support/electron-app'
+import { launchProductDocsApp } from '../../support/product-app'
 import { evidence, prepareProductPage, productTest } from '../../support/product-test'
 
 const TEMPLATE_ID = '82000000-0000-4000-8000-000000000001'
@@ -26,7 +26,7 @@ test.beforeEach(async () => {
 
   userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-product-docs-generation-'))
   pageErrors = []
-  electronApp = await launchIntegrationApp(userDataDir)
+  electronApp = await launchProductDocsApp(userDataDir)
   page = await electronApp.firstWindow()
   await prepareProductPage(page)
   page.on('pageerror', (error) => pageErrors.push(error.message))

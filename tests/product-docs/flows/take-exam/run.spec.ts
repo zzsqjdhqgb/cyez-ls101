@@ -5,7 +5,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { strFromU8, unzipSync } from 'fflate'
-import { launchIntegrationApp } from '../../../integration/support/electron-app'
+import { launchProductDocsApp } from '../../support/product-app'
 import { evidence, prepareProductPage, productJourney } from '../../support/product-test'
 
 let electronApp: ElectronApplication
@@ -22,7 +22,7 @@ test.beforeEach(async () => {
   await writeFile(examPath, await encodeExamPackage(practiceExam(), {}))
 
   pageErrors = []
-  electronApp = await launchIntegrationApp(userDataDir)
+  electronApp = await launchProductDocsApp(userDataDir)
   page = await electronApp.firstWindow()
   await prepareProductPage(page)
   page.on('pageerror', (error) => pageErrors.push(error.message))

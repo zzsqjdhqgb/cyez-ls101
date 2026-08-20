@@ -129,7 +129,7 @@ test('resets a custom data directory to the validated default location', async (
   )
 
   let electronApp = await launchIntegrationApp(userDataDir, {
-    LS101_DISABLE_AUTO_RELAUNCH: '1'
+    environment: { LS101_DISABLE_AUTO_RELAUNCH: '1' }
   })
   try {
     const page = await mainApplicationWindow(electronApp)

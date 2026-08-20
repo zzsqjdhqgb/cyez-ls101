@@ -34,6 +34,21 @@ describe('visuallyEquivalentPng', () => {
     expect(visuallyEquivalentPng(png(1, 1, [0, 0, 0, 255]), png(2, 1, [0, 0, 0, 255]))).toBe(false)
     expect(visuallyEquivalentPng(Buffer.from('not-png'), Buffer.from('also-not-png'))).toBe(false)
   })
+
+  it('rejects equivalent screenshots captured at a different device scale factor', () => {
+    const original = png(2, 1, [20, 40, 60, 255, 80, 100, 120, 255])
+    const scaled = png(
+      4,
+      2,
+      [
+        20, 40, 60, 255, 20, 40, 60, 255, 80, 100, 120, 255, 80, 100, 120, 255, 20, 40, 60, 255, 20,
+        40, 60, 255, 80, 100, 120, 255, 80, 100, 120, 255
+      ]
+    )
+
+    expect(visuallyEquivalentPng(original, scaled)).toBe(false)
+    expect(visuallyEquivalentPng(scaled, original)).toBe(false)
+  })
 })
 
 describe('preserveEquivalentEvidenceImages', () => {

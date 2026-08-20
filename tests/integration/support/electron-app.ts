@@ -4,9 +4,19 @@ import path from 'node:path'
 
 const projectRoot = process.cwd()
 
+interface IntegrationAppLaunchOptions {
+  contentSize?: {
+    width: number
+    height: number
+  }
+  deviceScaleFactor?: number
+  environment?: Record<string, string>
+  randomSeed?: number
+}
+
 export async function launchIntegrationApp(
   userDataDir: string,
-  extraEnvironment: Record<string, string> = {}
+  options: IntegrationAppLaunchOptions = {}
 ): Promise<ElectronApplication> {
   const executablePath = integrationExecutablePath()
   await access(executablePath).catch(() => {
@@ -15,15 +25,34 @@ export async function launchIntegrationApp(
     )
   })
 
-  const environment = { ...process.env, LS101_INTEGRATION_TEST: '1', ...extraEnvironment }
+  const environment = { ...process.env, LS101_INTEGRATION_TEST: '1', ...options.environment }
   delete environment['ELECTRON_RENDERER_URL']
 
-  return electron.launch({
+  const args = ['--no-sandbox', '--password-store=basic', `--user-data-dir=${userDataDir}`]
+  if (options.deviceScaleFactor !== undefined) {
+    args.push(`--force-device-scale-factor=${options.deviceScaleFactor}`)
+  }
+  if (options.randomSeed !== undefined) {
+    args.push(`--js-flags=--random-seed=${options.randomSeed}`)
+  }
+
+  const electronApp = await electron.launch({
     executablePath,
-    args: ['--no-sandbox', '--password-store=basic', `--user-data-dir=${userDataDir}`],
+    args,
     cwd: path.dirname(executablePath),
     env: environment
   })
+
+  if (options.contentSize) {
+    await electronApp.firstWindow()
+    await electronApp.evaluate(({ BrowserWindow }, contentSize) => {
+      const window = BrowserWindow.getAllWindows()[0]
+      if (!window) throw new Error('Integration application did not create a browser window')
+      window.setContentSize(contentSize.width, contentSize.height)
+    }, options.contentSize)
+  }
+
+  return electronApp
 }
 
 export function integrationExecutablePath(platform = process.platform): string {
