@@ -550,6 +550,91 @@ describe('data directory initialization', () => {
     })
   })
 
+  it('rejects selecting the old path when its directory marker identity changed', async () => {
+    const { userData, source, target } = await scheduledCopy('recovery-old-marker-changed')
+    await initializeDataDirectory(userData)
+    const bootstrapPath = path.join(userData, 'data-location.json')
+    const ready = (await readJson(bootstrapPath)) as Record<string, unknown>
+    const oldDataDirectory = ready.oldDataDirectory as Record<string, unknown>
+    await writeFile(
+      path.join(source, '.ls101-data.json'),
+      JSON.stringify({
+        formatVersion: 1,
+        kind: 'ls101-data-directory',
+        directoryId: '99999999-9999-4999-8999-999999999999'
+      })
+    )
+    const exit = new Error('exit')
+    electronMocks.dialog.showMessageBox
+      .mockResolvedValueOnce({ response: 1 })
+      .mockResolvedValueOnce({ response: 2 })
+    electronMocks.dialog.showOpenDialog.mockResolvedValueOnce({
+      canceled: false,
+      filePaths: [source]
+    })
+    electronMocks.app.exit.mockImplementationOnce(() => {
+      throw exit
+    })
+
+    await expect(recoverDataDirectory(userData, new Error('active volume offline'))).rejects.toBe(
+      exit
+    )
+    await expect(readJson(bootstrapPath)).resolves.toMatchObject({
+      state: 'ready',
+      activeDataDirectory: target,
+      oldDataDirectory
+    })
+  })
+
+  it('rejects selecting the old path when its parent identity changed', async () => {
+    const { userData, source, target } = await scheduledCopy('recovery-old-parent-changed')
+    await initializeDataDirectory(userData)
+    const bootstrapPath = path.join(userData, 'data-location.json')
+    const ready = (await readJson(bootstrapPath)) as Record<string, unknown>
+    const oldDataDirectory = ready.oldDataDirectory as Record<string, unknown>
+    await writeFile(
+      bootstrapPath,
+      JSON.stringify({
+        ...ready,
+        oldDataDirectory: {
+          ...oldDataDirectory,
+          parentIdentity: {
+            device: 'wrong-device',
+            inode: 'wrong-inode'
+          }
+        }
+      })
+    )
+    const exit = new Error('exit')
+    electronMocks.dialog.showMessageBox
+      .mockResolvedValueOnce({ response: 1 })
+      .mockResolvedValueOnce({ response: 2 })
+    electronMocks.dialog.showOpenDialog.mockResolvedValueOnce({
+      canceled: false,
+      filePaths: [source]
+    })
+    electronMocks.app.exit.mockImplementationOnce(() => {
+      throw exit
+    })
+
+    await expect(recoverDataDirectory(userData, new Error('active volume offline'))).rejects.toBe(
+      exit
+    )
+    await expect(readJson(bootstrapPath)).resolves.toMatchObject({
+      state: 'ready',
+      activeDataDirectory: target,
+      oldDataDirectory: {
+        path: source,
+        directoryId: oldDataDirectory.directoryId,
+        parentPath: oldDataDirectory.parentPath,
+        parentIdentity: {
+          device: 'wrong-device',
+          inode: 'wrong-inode'
+        }
+      }
+    })
+  })
+
   it('clears a missing staging cleanup when its recorded parent is still online', async () => {
     const userData = await temporaryDirectory('ls101-data-missing-cleanup-')
     const source = await initializeDataDirectory(userData)

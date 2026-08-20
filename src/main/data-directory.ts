@@ -534,7 +534,10 @@ async function abandonPendingMigration(
     const pendingCleanups = bootstrap.pendingCleanups ?? []
     assertSelectionSeparateFromPendingCleanups(selected, pendingCleanups)
     if (!bootstrap.oldDataDirectory) return { pendingCleanups }
-    if (samePath(selected, bootstrap.oldDataDirectory.path)) return { pendingCleanups }
+    if (samePath(selected, bootstrap.oldDataDirectory.path)) {
+      await assertSelectedOldDataDirectory(selected, bootstrap.oldDataDirectory)
+      return { pendingCleanups }
+    }
     assertSeparateDirectories(selected, bootstrap.oldDataDirectory.path)
     if (bootstrap.oldDataDirectory.deletionPath) {
       assertSeparateDirectories(selected, bootstrap.oldDataDirectory.deletionPath)
@@ -562,6 +565,32 @@ async function abandonPendingMigration(
     ...(!samePath(selected, bootstrap.retiredSource.path)
       ? { oldDataDirectory: bootstrap.retiredSource }
       : {})
+  }
+}
+
+async function assertSelectedOldDataDirectory(
+  selected: string,
+  oldDataDirectory: OldDataDirectory
+): Promise<void> {
+  if (oldDataDirectory.deleting) {
+    throw new Error('旧数据目录正在删除，不能选择该目录')
+  }
+  assertOldDataDirectoryRecord(oldDataDirectory)
+  const normalizedSelected = await normalizeDirectory(selected)
+  const normalizedOld = path.normalize(path.resolve(oldDataDirectory.path))
+  if (!samePath(normalizedSelected, normalizedOld)) {
+    throw new Error('所选目录不是记录中的旧数据目录')
+  }
+  if (!(await hasExpectedParentIdentity(oldDataDirectory))) {
+    throw new Error('旧数据目录所在位置不可访问或身份已变化')
+  }
+  const oldStats = await lstatIfExists(normalizedOld)
+  if (!oldStats || !oldStats.isDirectory() || oldStats.isSymbolicLink()) {
+    throw new Error('旧数据目录路径已被其他文件占用')
+  }
+  const marker = await readMarker(normalizedOld)
+  if (marker.directoryId !== oldDataDirectory.directoryId) {
+    throw new Error('旧数据目录标识不匹配，未执行选择')
   }
 }
 
