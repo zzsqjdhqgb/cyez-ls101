@@ -116,7 +116,6 @@ const temporaryPaths: string[] = []
 const qwenTtsAssetConfig = JSON.parse(
   readFileSync(path.resolve('scripts', 'qwen-tts', 'assets.json'), 'utf8')
 ) as {
-  release: { version: string }
   package: { version: string }
   model: { quantization: string }
   voices: Array<{ id: string; name: string; file: string }>

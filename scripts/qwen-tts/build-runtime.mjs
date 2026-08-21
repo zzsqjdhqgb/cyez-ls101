@@ -31,7 +31,7 @@ function loadAssetConfig() {
   const file = path.join(import.meta.dirname, 'assets.json')
   const value = JSON.parse(readFileSync(file, 'utf8'))
   if (
-    value?.schemaVersion !== 1 ||
+    value?.schemaVersion !== 2 ||
     typeof value.runtime?.repository !== 'string' ||
     !/^[a-f0-9]{40}$/.test(value.runtime?.revision ?? '') ||
     !/^[a-f0-9]{40}$/.test(value.runtime?.ggmlRevision ?? '')
