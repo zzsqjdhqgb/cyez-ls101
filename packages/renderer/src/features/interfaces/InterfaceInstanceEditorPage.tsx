@@ -415,9 +415,10 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   }
 
   const retryGeneration = async (): Promise<void> => {
-    const failedHandle = generation?.handle
-    if (!failedHandle || generation.result?.status !== 'failed') return
-    setGeneration({ handle: null, result: null, startError: null })
+    const failedSession = generation
+    const failedHandle = failedSession?.handle
+    if (!failedHandle || failedSession.result?.status !== 'failed') return
+    setGeneration({ ...failedSession, result: null, startError: null })
     setError(null)
     try {
       const handle = await failedHandle.retry()
@@ -437,7 +438,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       } else if (result.status === 'cancelled') toast.info('已取消 AI 生成')
     } catch (reason) {
       const message = errorMessage(reason)
-      setGeneration((current) => (current ? { ...current, startError: message } : current))
+      setGeneration({ ...failedSession, startError: message })
     }
   }
 
@@ -1407,7 +1408,9 @@ function GenerationResult({ session }: { session: GenerationSession }): JSX.Elem
     message = `发现 ${session.result.errors.length} 个字段错误，可检查原始 JSON 并修正后覆盖题组。`
   } else if (session.result?.status === 'failed') {
     title = '生成失败'
-    message = session.result.message
+    message = session.startError
+      ? `${session.result.message}；续跑启动失败：${session.startError}`
+      : session.result.message
   } else if (session.result?.status === 'cancelled') {
     title = '生成已取消'
     message = '任务已停止，当前题组内容没有被生成结果覆盖。'

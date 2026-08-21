@@ -689,11 +689,13 @@ export function createInterfaceApplication(
                     else state.output += chunk.delta
                     publish(generationProgressItems(state))
                   }
+                  if (controller.signal.aborted) throw new GenerationCancelledError()
                   state.phase = 'validate'
                   publish(generationProgressItems(state))
                 }
 
                 if (state.phase === 'validate') {
+                  if (controller.signal.aborted) throw new GenerationCancelledError()
                   const validation = validateJson(
                     buildJsonSchema(generationDef.fields),
                     normalizeAIJsonOutput(state.output)
@@ -741,6 +743,7 @@ export function createInterfaceApplication(
                       signal: controller.signal,
                       ...(options.imageProvider ? { provider: options.imageProvider } : {})
                     })
+                    if (controller.signal.aborted) throw new GenerationCancelledError()
                     if (!generated) throw new Error('Interface image generator is not configured')
                     assertSupportedImage(generated.data)
                     state.generatedImages[varName] = new Uint8Array(generated.data)
@@ -751,6 +754,7 @@ export function createInterfaceApplication(
                   publish(generationProgressItems(state))
                 }
 
+                if (controller.signal.aborted) throw new GenerationCancelledError()
                 if (!state.mapped) throw new Error('Validated Interface output is unavailable')
                 const current = await requireInstance(repository, interfaceId, instanceId)
                 const values = { ...state.mapped.values }
@@ -779,6 +783,7 @@ export function createInterfaceApplication(
 
                 assertCompleteImageValues(imageVarNames, values, state.mapped.imagePrompts ?? {})
 
+                if (controller.signal.aborted) throw new GenerationCancelledError()
                 await repository.updateInstance(
                   interfaceId,
                   {
@@ -1129,6 +1134,7 @@ function createGenerationHandle(
 ): InterfaceAIGenerationHandle {
   let snapshot: TaskProgressSnapshot = { items: initialItems }
   let retryStarted = false
+  let retryStarting = false
   const listeners = new Set<() => void>()
   const publish = (items: readonly TaskProgressItem[]): void => {
     snapshot = { items }
@@ -1178,8 +1184,15 @@ function createGenerationHandle(
       const result = await completion
       if (result.status !== 'failed') throw new Error('Only a failed generation can be retried')
       if (retryStarted) throw new Error('This failed generation is already being retried')
-      retryStarted = true
-      return retryAttempt()
+      if (retryStarting) throw new Error('This failed generation retry is already starting')
+      retryStarting = true
+      try {
+        const handle = await retryAttempt()
+        retryStarted = true
+        return handle
+      } finally {
+        retryStarting = false
+      }
     }
   }
 }

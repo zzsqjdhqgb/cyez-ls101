@@ -1171,7 +1171,7 @@ describe('Interface pages', () => {
       retry,
       completion: Promise.resolve(result)
     }
-    retry.mockResolvedValue(handle)
+    retry.mockRejectedValueOnce(new Error('实例暂时忙碌')).mockResolvedValueOnce(handle)
     const startAIGeneration = vi.fn().mockResolvedValue(handle)
     const app = application({
       published: {
@@ -1224,6 +1224,11 @@ describe('Interface pages', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '从失败位置重试' }))
     await waitFor(() => expect(retry).toHaveBeenCalledOnce())
+    expect(await screen.findByText(/续跑启动失败：实例暂时忙碌/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '从失败位置重试' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '从失败位置重试' }))
+    await waitFor(() => expect(retry).toHaveBeenCalledTimes(2))
     expect(startAIGeneration).toHaveBeenCalledOnce()
   })
 })

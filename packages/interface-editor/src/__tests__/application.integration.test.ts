@@ -345,6 +345,95 @@ describe('interface editor application integration', () => {
     ).resolves.toMatchObject({ instance: { name: '锁已释放' } })
   })
 
+  it('does not validate or save when a cancelled text stream ends normally', async () => {
+    const repository = new FileInterfaceRepository(new MemoryStore())
+    let outputConsumed!: () => void
+    const consumed = new Promise<void>((resolve) => {
+      outputConsumed = resolve
+    })
+    const textGenerator: InterfaceTextGenerator = {
+      async *generate(_prompt, { signal }) {
+        yield {
+          type: 'output',
+          delta: '{"title":"AI 标题","section":{"picture":"AI 配图","answer":"AI answer"}}'
+        }
+        outputConsumed()
+        await new Promise<void>((resolve) => {
+          if (signal.aborted) resolve()
+          else signal.addEventListener('abort', () => resolve(), { once: true })
+        })
+      }
+    }
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(),
+      textGenerator,
+      imageGenerator: { generate: vi.fn().mockResolvedValue({ data: PNG }) }
+    })
+    const draft = await app.drafts.create(content)
+    const published = await app.drafts.publish(draft.draftId)
+    if (published.status === 'invalid') throw new Error('expected a valid draft')
+    const blank = await app.published.createBlankInstance(published.interface.interfaceId)
+    const update = vi.spyOn(repository, 'updateInstance')
+
+    const handle = await app.instances.startAIGeneration(
+      published.interface.interfaceId,
+      blank.instance.instanceId
+    )
+    await consumed
+    handle.cancel()
+
+    await expect(handle.completion).resolves.toEqual({ status: 'cancelled' })
+    expect(update).not.toHaveBeenCalled()
+    await expect(
+      app.instances.get(published.interface.interfaceId, blank.instance.instanceId)
+    ).resolves.toEqual(blank)
+  })
+
+  it('does not save when an image generator returns after cancellation', async () => {
+    const repository = new FileInterfaceRepository(new MemoryStore())
+    let imageStarted!: () => void
+    let finishImage!: (value: { data: Uint8Array }) => void
+    const started = new Promise<void>((resolve) => {
+      imageStarted = resolve
+    })
+    const imageResult = new Promise<{ data: Uint8Array }>((resolve) => {
+      finishImage = resolve
+    })
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(),
+      textGenerator: new ScriptedTextGenerator(
+        '{"title":"AI 标题","section":{"picture":"AI 配图","answer":"AI answer"}}'
+      ),
+      imageGenerator: {
+        async generate() {
+          imageStarted()
+          return imageResult
+        }
+      }
+    })
+    const draft = await app.drafts.create(content)
+    const published = await app.drafts.publish(draft.draftId)
+    if (published.status === 'invalid') throw new Error('expected a valid draft')
+    const blank = await app.published.createBlankInstance(published.interface.interfaceId)
+    const update = vi.spyOn(repository, 'updateInstance')
+
+    const handle = await app.instances.startAIGeneration(
+      published.interface.interfaceId,
+      blank.instance.instanceId
+    )
+    await started
+    handle.cancel()
+    finishImage({ data: PNG })
+
+    await expect(handle.completion).resolves.toEqual({ status: 'cancelled' })
+    expect(update).not.toHaveBeenCalled()
+    await expect(
+      app.instances.get(published.interface.interfaceId, blank.instance.instanceId)
+    ).resolves.toEqual(blank)
+  })
+
   it('retries from the failed image without regenerating text or completed images', async () => {
     const repository = new FileInterfaceRepository(new MemoryStore())
     const twoImageContent = {
@@ -407,6 +496,9 @@ describe('interface editor application integration', () => {
       'waiting'
     ])
     await expect(app.instances.get(interfaceId, blank.instance.instanceId)).resolves.toEqual(blank)
+
+    vi.spyOn(repository, 'getInstance').mockRejectedValueOnce(new Error('temporary read failure'))
+    await expect(failedHandle.retry()).rejects.toThrow('temporary read failure')
 
     const retryHandle = await failedHandle.retry()
     await expect(retryHandle.completion).resolves.toMatchObject({ status: 'completed' })
