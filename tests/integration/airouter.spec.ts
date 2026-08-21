@@ -123,9 +123,9 @@ const qwenTtsAssetConfig = JSON.parse(
 const qwenTtsModelDirectory = path.resolve('externals', 'ai', 'qwen3-tts', 'models')
 const qwenTtsRuntimeTarget =
   process.arch === 'x64' && process.platform === 'linux'
-    ? { directory: 'linux-x64', executable: 'ls101-qwen-tts-helper' }
+    ? { directory: 'linux-x64', executable: 'ls101-qwen-tts-helper-cpu' }
     : process.arch === 'x64' && process.platform === 'win32'
-      ? { directory: 'win32-x64', executable: 'ls101-qwen-tts-helper.exe' }
+      ? { directory: 'win32-x64', executable: 'ls101-qwen-tts-helper-cpu.exe' }
       : null
 const qwenTtsHelperPath = qwenTtsRuntimeTarget
   ? path.resolve(

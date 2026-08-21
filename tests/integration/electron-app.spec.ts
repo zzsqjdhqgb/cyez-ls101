@@ -141,6 +141,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       'listModels',
       'listPronunciationAssessmentModels',
       'listProviderConfigs',
+      'probeQwenTtsCuda',
       'listSpeechModelPackages',
       'listSpeechModels',
       'listSpeechProviderConfigs',

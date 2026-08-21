@@ -154,6 +154,9 @@ const airouterBridge: AIRouterBridge = {
   testSpeechConnection(request: AIRouterSpeechConnectionTestInput) {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.testSpeechConnection, request)
   },
+  probeQwenTtsCuda() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.probeQwenTtsCuda)
+  },
   listSpeechRecognitionProviderConfigs() {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.listRecognitionConfigs)
   },

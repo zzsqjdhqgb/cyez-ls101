@@ -128,7 +128,7 @@ jobs:
           NODE
 
   build:
-    name: Build ${{ matrix.runtime-directory }}
+    name: Build ${{ matrix.runtime-directory }} ${{ matrix.backend }}
     needs: metadata
     if: ${{ inputs.target == 'runtime' || inputs.target == 'both' }}
     strategy:
@@ -139,14 +139,26 @@ jobs:
           # does not require the newer GLIBC symbols from ubuntu-latest.
           - runner: ubuntu-22.04
             runtime-directory: linux-x64
-            executable: ls101-qwen-tts-helper
-            release-asset: ls101-qwen-tts-helper-linux-x64
+            backend: cpu
+            executable: ls101-qwen-tts-helper-cpu
+            release-asset: ls101-qwen-tts-helper-cpu-linux-x64
+          - runner: ubuntu-22.04
+            runtime-directory: linux-x64
+            backend: cuda
+            executable: ls101-qwen-tts-helper-cuda
+            release-asset: ls101-qwen-tts-helper-cuda-linux-x64
           - runner: windows-latest
             runtime-directory: win32-x64
-            executable: ls101-qwen-tts-helper.exe
-            release-asset: ls101-qwen-tts-helper-win32-x64.exe
+            backend: cpu
+            executable: ls101-qwen-tts-helper-cpu.exe
+            release-asset: ls101-qwen-tts-helper-cpu-win32-x64.exe
+          - runner: windows-latest
+            runtime-directory: win32-x64
+            backend: cuda
+            executable: ls101-qwen-tts-helper-cuda.exe
+            release-asset: ls101-qwen-tts-helper-cuda-win32-x64.exe
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 60
+    timeout-minutes: 120
 
     steps:
       - name: Check out source
@@ -166,8 +178,15 @@ jobs:
           git --version
           node --version
 
-      - name: Build CPU runtime
-        run: node scripts/qwen-tts/build-runtime.mjs
+      - name: Set up CUDA toolkit
+        if: matrix.backend == 'cuda'
+        uses: Jimver/cuda-toolkit@v0.2.28
+        with:
+          cuda: '12.8.1'
+          method: network
+
+      - name: Build runtime
+        run: node scripts/qwen-tts/build-runtime.mjs --backend ${{ matrix.backend }}
 
       - name: Smoke-test helper
         shell: bash
@@ -202,6 +221,7 @@ jobs:
           SOURCE_PATH: externals/ai/qwen3-tts/runtime/${{ matrix.runtime-directory }}/${{ matrix.executable }}
           RELEASE_ASSET: ${{ matrix.release-asset }}
           RUNTIME_DIRECTORY: ${{ matrix.runtime-directory }}
+          RUNTIME_BACKEND: ${{ matrix.backend }}
           SOURCE_COMMIT: ${{ github.sha }}
         run: |
           mkdir -p release-assets
@@ -218,6 +238,7 @@ jobs:
           const info = {
             schemaVersion: 1,
             runtimeDirectory: process.env.RUNTIME_DIRECTORY,
+            backend: process.env.RUNTIME_BACKEND,
             sourceCommit: process.env.SOURCE_COMMIT,
             upstream: {
               repository: config.runtime.repository,
@@ -226,7 +247,7 @@ jobs:
             }
           }
           writeFileSync(
-            `release-assets/build-info-${process.env.RUNTIME_DIRECTORY}.json`,
+            `release-assets/build-info-${process.env.RUNTIME_DIRECTORY}-${process.env.RUNTIME_BACKEND}.json`,
             `${JSON.stringify(info, null, 2)}\n`
           )
           NODE
@@ -234,7 +255,7 @@ jobs:
       - name: Upload runtime artifact
         uses: actions/upload-artifact@v4
         with:
-          name: qwen-tts-runtime-${{ matrix.runtime-directory }}
+          name: qwen-tts-runtime-${{ matrix.runtime-directory }}-${{ matrix.backend }}
           path: release-assets/*
           if-no-files-found: error
           retention-days: 7
@@ -424,8 +445,8 @@ jobs:
           const buildInfoFiles = readdirSync(directory)
             .filter((name) => name.startsWith('build-info-') && name.endsWith('.json'))
             .sort()
-          if (buildInfoFiles.length !== 2) {
-            throw new Error(`Expected two build-info files, found ${buildInfoFiles.length}`)
+          if (buildInfoFiles.length !== 4) {
+            throw new Error(`Expected four build-info files, found ${buildInfoFiles.length}`)
           }
           const buildInfo = buildInfoFiles.map((name) =>
             JSON.parse(readFileSync(path.join(directory, name), 'utf8'))
@@ -445,8 +466,10 @@ jobs:
             .filter((name) => name.startsWith('ls101-qwen-tts-helper-'))
             .sort()
           const expectedRuntimeFiles = [
-            'ls101-qwen-tts-helper-linux-x64',
-            'ls101-qwen-tts-helper-win32-x64.exe'
+            'ls101-qwen-tts-helper-cpu-linux-x64',
+            'ls101-qwen-tts-helper-cpu-win32-x64.exe',
+            'ls101-qwen-tts-helper-cuda-linux-x64',
+            'ls101-qwen-tts-helper-cuda-win32-x64.exe'
           ].sort()
           if (JSON.stringify(runtimeFiles) !== JSON.stringify(expectedRuntimeFiles)) {
             throw new Error(`Unexpected runtime assets: ${runtimeFiles.join(', ')}`)
@@ -458,6 +481,7 @@ jobs:
           const assets = runtimeFiles.map((name) => ({
             kind: 'native-runtime',
             runtimeDirectory: name.includes('-win32-') ? 'win32-x64' : 'linux-x64',
+            backend: name.includes('-cuda-') ? 'cuda' : 'cpu',
             name
           }))
           assets.push(...licenseFiles.map((name) => ({ kind: 'license', name })))
@@ -498,7 +522,7 @@ jobs:
           make_latest: false
           generate_release_notes: false
           body: |
-            CPU-only native Qwen3-TTS helpers for Linux x64 and Windows x64.
+            CPU and NVIDIA CUDA native Qwen3-TTS helpers for Linux x64 and Windows x64.
 
             Runtime and source revisions are recorded in `qwen-tts-runtime-manifest.json`.
             This release is immutable; publish a new runtime version for any binary change.

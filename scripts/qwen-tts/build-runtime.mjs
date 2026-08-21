@@ -8,8 +8,8 @@ import process from 'node:process'
 const root = path.resolve(import.meta.dirname, '..', '..')
 const downloadDirectory = path.join(root, 'externals', 'ai', 'qwen3-tts', 'downloads')
 const sourceDir = path.join(downloadDirectory, 'qwen3-tts.cpp')
-const ggmlBuildDir = path.join(sourceDir, 'ggml', 'build')
-const helperBuildDir = path.join(downloadDirectory, 'qwen3-tts-helper-build')
+const backend = parseBackend(process.argv.slice(2))
+const helperBuildDir = path.join(downloadDirectory, `qwen3-tts-helper-build-${backend}`)
 const outputDir = path.join(
   root,
   'externals',
@@ -22,10 +22,19 @@ const assetConfig = loadAssetConfig()
 const repository = assetConfig.runtime.repository
 const commit = assetConfig.runtime.revision
 const ggmlCommit = assetConfig.runtime.ggmlRevision
-const patchPaths = ['portable-cpu.patch', 'explicit-model-paths.patch'].map((file) =>
-  path.join(root, 'native', 'qwen-tts', file)
-)
+const patchPaths = [
+  'portable-cpu.patch',
+  'explicit-model-paths.patch',
+  'strict-explicit-backend.patch'
+].map((file) => path.join(root, 'native', 'qwen-tts', file))
 const jobs = String(Math.max(1, Math.min(os.availableParallelism?.() ?? os.cpus().length, 16)))
+
+function parseBackend(args) {
+  if (args.length !== 2 || args[0] !== '--backend' || !['cpu', 'cuda'].includes(args[1])) {
+    throw new Error('Usage: yarn qwen-tts:build-runtime --backend cpu|cuda')
+  }
+  return args[1]
+}
 
 function loadAssetConfig() {
   const file = path.join(import.meta.dirname, 'assets.json')
@@ -100,23 +109,6 @@ function applyPatch(patchPath) {
 }
 
 function configureAndBuild() {
-  run('cmake', [
-    '-S',
-    path.join(sourceDir, 'ggml'),
-    '-B',
-    ggmlBuildDir,
-    '-DCMAKE_BUILD_TYPE=Release',
-    '-DBUILD_SHARED_LIBS=OFF',
-    '-DGGML_NATIVE=OFF',
-    '-DGGML_METAL=OFF',
-    '-DGGML_CUDA=OFF',
-    '-DGGML_VULKAN=OFF',
-    '-DGGML_OPENMP=OFF',
-    `-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=${path.join(ggmlBuildDir, 'src')}`,
-    `-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE=${path.join(ggmlBuildDir, 'src')}`
-  ])
-  run('cmake', ['--build', ggmlBuildDir, '--config', 'Release', '--parallel', jobs])
-
   rmSync(helperBuildDir, { recursive: true, force: true })
   run('cmake', [
     '-S',
@@ -124,6 +116,14 @@ function configureAndBuild() {
     '-B',
     helperBuildDir,
     '-DCMAKE_BUILD_TYPE=Release',
+    '-DBUILD_SHARED_LIBS=OFF',
+    '-DGGML_STATIC=ON',
+    '-DGGML_NATIVE=OFF',
+    '-DGGML_METAL=OFF',
+    `-DGGML_CUDA=${backend === 'cuda' ? 'ON' : 'OFF'}`,
+    '-DGGML_CUDA_NCCL=OFF',
+    '-DGGML_VULKAN=OFF',
+    '-DGGML_OPENMP=OFF',
     `-DQWEN3_TTS_SOURCE_DIR=${sourceDir}`
   ])
   run('cmake', [
@@ -148,7 +148,9 @@ function copyResult() {
   const source = candidates.find(existsSync)
   if (!source) throw new Error(`built helper was not found under ${helperBuildDir}`)
   mkdirSync(outputDir, { recursive: true })
-  const target = path.join(outputDir, executable)
+  const extension = process.platform === 'win32' ? '.exe' : ''
+  const target = path.join(outputDir, `ls101-qwen-tts-helper-${backend}${extension}`)
+  rmSync(path.join(outputDir, `ls101-qwen-tts-helper${extension}`), { force: true })
   copyFileSync(source, target)
   if (process.platform !== 'win32') chmodSync(target, 0o755)
   console.log(`[qwen-tts] runtime written: ${target}`)

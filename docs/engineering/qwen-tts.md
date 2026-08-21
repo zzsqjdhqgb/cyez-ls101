@@ -1,12 +1,12 @@
 # Qwen3-TTS 0.6B Base runtime
 
-The application runs `Qwen3-TTS-12Hz-0.6B-Base` on CPU through a pinned build of
+The application runs `Qwen3-TTS-12Hz-0.6B-Base` through pinned CPU and NVIDIA CUDA builds of
 [`predict-woo/qwen3-tts.cpp`](https://github.com/predict-woo/qwen3-tts.cpp). Python is used only
 to create VoiceDesign reference audio during development. Imported model packages never contain
 executables.
 
 Published assets use two independent immutable releases in the application repository:
-`qwen-tts-runtime-v0.2.0` contains the native helpers, while `qwen-tts-model-v1.0.0` contains the
+`qwen-tts-runtime-v0.3.0` contains the native helpers, while `qwen-tts-model-v1.0.0` contains the
 two GGUF files. `yarn setup` and application build setup query both GitHub Release Assets APIs and
 verify every selected asset against its API-provided size and SHA-256 digest. Validated metadata is
 cached as `runtime-release-api.json` and `model-release-api.json` under
@@ -26,27 +26,56 @@ assembled model package.
 
 ## Runtime architecture
 
-- `ls101-qwen-tts-helper` loads the Base talker, speech tokenizer/vocoder, and one 1024-float
-  speaker embedding, then remains alive for serialized synthesis requests.
-- The Electron main process communicates with the helper through a bounded binary protocol and
-  forces `QWEN3_TTS_BACKEND=cpu`.
+- Each supported operating-system target has separate `cpu` and `cuda` helper assets. The CPU
+  helper is the guaranteed baseline; the CUDA helper is built with the CUDA and CPU GGML components
+  required by the upstream scheduler. Explicit CUDA backend initialization never falls back to a
+  CPU-only session. Application resources contain both helpers, so neither helper is staged under
+  the user's data directory.
+- A helper loads the Base talker, speech tokenizer/vocoder, and one 1024-float speaker embedding,
+  then remains alive for serialized synthesis requests. Normal execution requires an explicit
+  `--backend cpu` or `--backend cuda` argument and never falls back to another backend.
+- `--probe-backend cuda` performs a fresh CUDA device/backend initialization without loading GGUF
+  models. A successful probe means that the CUDA runtime and at least one device are usable; the
+  Provider's full synthesis test remains responsible for detecting insufficient VRAM or unsupported
+  model operations.
+- Qwen TTS Provider configuration stores the explicit `cpu` or `cuda` selection. CPU is always
+  available. CUDA becomes selectable after the user runs the CUDA probe successfully. Failed CUDA
+  synthesis is reported to the user instead of silently falling back to CPU.
+- The Electron main process communicates with the selected helper through a bounded binary
+  protocol. It does not probe CUDA during ordinary synthesis or override the configured backend.
 - The model Release contains two raw GGUF assets. A local model ZIP combines those models with one
   or more Git-managed `.spk` files. The Electron main process resolves content-addressed installed
   assets and passes every model and speaker file to the helper by its absolute path.
 - The upstream runtime is pinned to commit
-  `b3ba14077cf1b3e11b86e5f84aa9184605c89b28`. The build removes `-march=native` so release
+  `b3ba14077cf1b3e11b86e5f84aa9184605c89b28`. Both builds remove `-march=native` so release
   binaries can run on CPUs other than the build host.
 
 ## 1. Build the native helper
 
-Install CMake, a C++17 compiler, Git, and the platform build tool, then run:
+Install CMake, a C++17 compiler, Git, and the platform build tool. Build the portable CPU helper
+with:
 
 ```bash
-yarn qwen-tts:build-runtime
+yarn qwen-tts:build-runtime --backend cpu
 ```
 
-The helper is written to `externals/ai/qwen3-tts/runtime/<platform>-<arch>/`. Build it independently on every
-release target; do not copy a binary between operating systems or architectures.
+Build the NVIDIA CUDA helper on a machine with the CUDA toolkit with:
+
+```bash
+yarn qwen-tts:build-runtime --backend cuda
+```
+
+Release CUDA helpers are built with CUDA Toolkit 12.8. On Windows, GGML links cuBLAS dynamically,
+so the compatible CUDA 12 `bin` directory must be available to the application through `PATH`;
+the NVIDIA display driver alone does not provide those libraries. The CUDA probe reports the
+helper launch failure when the required DLLs are unavailable. Linux builds link the redistributable
+CUDA runtime libraries statically and still require a compatible NVIDIA driver.
+
+The helpers are written to `externals/ai/qwen3-tts/runtime/<platform>-<arch>/` with the backend in
+the executable name. Build both variants independently on every release target; do not copy a
+binary between operating systems or architectures. CUDA compilation does not require a GPU, but
+the resulting helper must be probed and exercised on a machine with a compatible NVIDIA driver
+before release.
 
 ## 2. Produce GGUF models
 
@@ -103,7 +132,8 @@ Run the same C++ speaker encoder used in production:
 
 ```bash
 mkdir -p native/qwen-tts/voices
-externals/ai/qwen3-tts/runtime/linux-x64/ls101-qwen-tts-helper \
+externals/ai/qwen3-tts/runtime/linux-x64/ls101-qwen-tts-helper-cpu \
+  --backend cpu \
   --tts-model externals/ai/qwen3-tts/models/qwen3-tts-0.6b-q8_0.gguf \
   --tokenizer-model externals/ai/qwen3-tts/models/qwen3-tts-tokenizer-f16.gguf \
   --extract-speaker native/qwen-tts/voice-design/candidate-20260816.wav \
@@ -129,8 +159,8 @@ This command packages exactly the voices declared in `scripts/qwen-tts/assets.js
 configured quantization, and writes a ZIP under `dist/`. The lower-level
 `yarn qwen-tts:build-package` command discovers every `.spk` under `native/qwen-tts/voices` by
 default; use `--voice id=/path/to/voice.spk` for explicit files or `--quantization f16` to select
-F16. Import the ZIP in AI Router, create a local
-`Qwen3-TTS 0.6B (CPU)` provider, and run its connection test.
+F16. Import the ZIP in AI Router, create a local `Qwen3-TTS 0.6B` provider, select its tested
+compute backend, and run its connection test.
 
 The runtime, raw model, and assembled package versions are independent. Reuse the existing model
 Release when only the helper or Git-managed voices change, but increment `package.version` whenever

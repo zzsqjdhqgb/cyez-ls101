@@ -57,6 +57,26 @@ class FakeHelper extends EventEmitter {
   }
 }
 
+class FakeProbe extends EventEmitter {
+  readonly stdin = new PassThrough()
+  readonly stdout = new PassThrough()
+  readonly stderr = new PassThrough()
+  killed = false
+
+  constructor(output: object, code = 0) {
+    super()
+    queueMicrotask(() => {
+      this.stdout.write(`${JSON.stringify(output)}\n`)
+      this.emit('exit', code, null)
+    })
+  }
+
+  kill(): boolean {
+    this.killed = true
+    return true
+  }
+}
+
 describe('QwenTtsSynthesizer', () => {
   let directory: string
   let helperPath: string
@@ -93,27 +113,32 @@ describe('QwenTtsSynthesizer', () => {
     expect(second.data).toHaveLength(48)
     expect(helper.received).toEqual(['Hello from Qwen.', 'Second request.'])
     expect(spawnProcess).toHaveBeenCalledOnce()
-    expect(spawnProcess.mock.calls[0][1]).toEqual([
-      '--tts-model',
-      path.join(directory, 'talker.gguf'),
-      '--tokenizer-model',
-      path.join(directory, 'tokenizer.gguf'),
-      '--speaker',
-      path.join(directory, 'voice.spk'),
-      '--threads',
-      '4',
-      '--max-audio-tokens',
-      '2048',
-      '--top-k',
-      '50',
-      '--temperature',
-      '0.9',
-      '--repetition-penalty',
-      '1.05'
-    ])
-    expect(spawnProcess.mock.calls[0][2]).toMatchObject({
-      env: expect.objectContaining({ QWEN3_TTS_BACKEND: 'cpu' })
-    })
+    expect(spawnProcess).toHaveBeenCalledWith(
+      helperPath,
+      [
+        '--backend',
+        'cpu',
+        '--tts-model',
+        path.join(directory, 'talker.gguf'),
+        '--tokenizer-model',
+        path.join(directory, 'tokenizer.gguf'),
+        '--speaker',
+        path.join(directory, 'voice.spk'),
+        '--threads',
+        '4',
+        '--max-audio-tokens',
+        '2048',
+        '--top-k',
+        '50',
+        '--temperature',
+        '0.9',
+        '--repetition-penalty',
+        '1.05'
+      ],
+      expect.objectContaining({
+        env: expect.not.objectContaining({ QWEN3_TTS_BACKEND: expect.anything() })
+      })
+    )
     synthesizer.dispose()
     expect(helper.killed).toBe(true)
   })
@@ -149,6 +174,38 @@ describe('QwenTtsSynthesizer', () => {
     )
     expect(spawnProcess).not.toHaveBeenCalled()
   })
+
+  it('probes the CUDA helper without loading models', async () => {
+    const spawnProcess = vi.fn(
+      () =>
+        new FakeProbe({
+          available: true,
+          backend: 'cuda',
+          device: 'CUDA0',
+          description: 'NVIDIA Test GPU',
+          memoryFree: 6,
+          memoryTotal: 8
+        }) as unknown as ChildProcessWithoutNullStreams
+    )
+    const synthesizer = new QwenTtsSynthesizer({
+      helperPaths: { cuda: helperPath },
+      spawnProcess: spawnProcess as unknown as typeof spawn
+    })
+
+    await expect(synthesizer.probeCuda()).resolves.toEqual({
+      available: true,
+      device: 'CUDA0',
+      description: 'NVIDIA Test GPU',
+      memoryFree: 6,
+      memoryTotal: 8,
+      message: undefined
+    })
+    expect(spawnProcess).toHaveBeenCalledWith(
+      helperPath,
+      ['--probe-backend', 'cuda'],
+      expect.objectContaining({ windowsHide: true })
+    )
+  })
 })
 
 function createRequest(directory: string): AIRouterLocalSpeechRequest {
@@ -162,7 +219,8 @@ function createRequest(directory: string): AIRouterLocalSpeechRequest {
       modelPackageId: 'qwen-package',
       modelPackageVersion: '1.0.0',
       models: [{ id: 'qwen-model', enabled: true }],
-      voices: [{ id: 'voice', enabled: true }]
+      voices: [{ id: 'voice', enabled: true }],
+      backend: 'cpu'
     },
     manifest: {
       format: 'ls101.tts-model-package',

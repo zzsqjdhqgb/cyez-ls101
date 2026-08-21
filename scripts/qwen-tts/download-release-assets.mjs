@@ -20,15 +20,31 @@ export function runtimeTarget(platform = process.platform, architecture = proces
   if (platform === 'linux') {
     return {
       directory: 'linux-x64',
-      name: 'ls101-qwen-tts-helper-linux-x64',
-      executable: 'ls101-qwen-tts-helper'
+      helpers: {
+        cpu: {
+          name: 'ls101-qwen-tts-helper-cpu-linux-x64',
+          executable: 'ls101-qwen-tts-helper-cpu'
+        },
+        cuda: {
+          name: 'ls101-qwen-tts-helper-cuda-linux-x64',
+          executable: 'ls101-qwen-tts-helper-cuda'
+        }
+      }
     }
   }
   if (platform === 'win32') {
     return {
       directory: 'win32-x64',
-      name: 'ls101-qwen-tts-helper-win32-x64.exe',
-      executable: 'ls101-qwen-tts-helper.exe'
+      helpers: {
+        cpu: {
+          name: 'ls101-qwen-tts-helper-cpu-win32-x64.exe',
+          executable: 'ls101-qwen-tts-helper-cpu.exe'
+        },
+        cuda: {
+          name: 'ls101-qwen-tts-helper-cuda-win32-x64.exe',
+          executable: 'ls101-qwen-tts-helper-cuda.exe'
+        }
+      }
     }
   }
   return null
@@ -46,7 +62,12 @@ export function selectRuntimeReleaseAssets(release, target = runtimeTarget()) {
   const assets = Array.isArray(release.assets) ? release.assets : []
   if (!target) throw new Error('当前平台没有 Qwen TTS 原生运行时')
   return {
-    helper: findAsset(assets, target.name),
+    helpers: Object.fromEntries(
+      Object.entries(target.helpers).map(([backend, helper]) => [
+        backend,
+        findAsset(assets, helper.name)
+      ])
+    ),
     manifest: findAsset(assets, 'qwen-tts-runtime-manifest.json')
   }
 }
@@ -197,20 +218,34 @@ async function main() {
   ])
   const runtimeAssets = selectRuntimeReleaseAssets(runtimeRelease, target)
   const modelAssets = selectModelReleaseAssets(modelRelease)
-  const helperCachePath = path.join(downloadDirectory, 'releases', runtimeAssets.helper.name)
-  const helperPath = path.join(
+  const runtimeDirectory = path.join(
     root,
     'externals',
     'ai',
     'qwen3-tts',
     'runtime',
-    target.directory,
-    target.executable
+    target.directory
   )
   const modelDirectory = path.join(root, 'externals', 'ai', 'qwen3-tts', 'models')
-  const helperDownloaded = await downloadAsset(runtimeAssets.helper, helperCachePath)
-  await mkdir(path.dirname(helperPath), { recursive: true })
-  await copyFile(helperCachePath, helperPath)
+  const helperDownloads = await Promise.all(
+    Object.entries(runtimeAssets.helpers).map(async ([backend, asset]) => {
+      const helper = target.helpers[backend]
+      const cachePath = path.join(downloadDirectory, 'releases', asset.name)
+      const helperPath = path.join(runtimeDirectory, helper.executable)
+      const downloaded = await downloadAsset(asset, cachePath)
+      await mkdir(path.dirname(helperPath), { recursive: true })
+      await copyFile(cachePath, helperPath)
+      if (process.platform !== 'win32') await chmod(helperPath, 0o755)
+      return { backend, downloaded, helperPath }
+    })
+  )
+  await rm(
+    path.join(
+      runtimeDirectory,
+      process.platform === 'win32' ? 'ls101-qwen-tts-helper.exe' : 'ls101-qwen-tts-helper'
+    ),
+    { force: true }
+  )
   const modelDownloads = await Promise.all(
     Object.values(modelAssets.models).map(async (asset) => ({
       asset,
@@ -227,8 +262,11 @@ async function main() {
       path.join(downloadDirectory, 'releases', modelAssets.manifest.name)
     )
   ])
-  if (process.platform !== 'win32') await chmod(helperPath, 0o755)
-  console.log(`[qwen-tts] helper ${helperDownloaded ? 'downloaded' : 'cached'}: ${helperPath}`)
+  for (const { backend, downloaded, helperPath } of helperDownloads) {
+    console.log(
+      `[qwen-tts] ${backend} helper ${downloaded ? 'downloaded' : 'cached'}: ${helperPath}`
+    )
+  }
   for (const { asset, downloaded } of modelDownloads) {
     console.log(
       `[qwen-tts] model ${downloaded ? 'downloaded' : 'cached'}: ${path.join(modelDirectory, asset.name)}`

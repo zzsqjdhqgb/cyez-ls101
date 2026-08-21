@@ -69,6 +69,7 @@ vi.mock('../main/pocket-tts', () => ({
 vi.mock('../main/qwen-tts', () => ({
   QwenTtsSynthesizer: class {
     synthesize = speechSynthesizeMock
+    probeCuda = vi.fn().mockResolvedValue({ available: false })
     dispose = vi.fn()
   }
 }))
@@ -191,6 +192,9 @@ describe('AIRouter main integration', () => {
     await expect(
       handler(AIROUTER_CHANNELS.readSpeechApiKey)(undefined, 'speech-provider')
     ).resolves.toBe('speech-secret')
+    await expect(handler(AIROUTER_CHANNELS.probeQwenTtsCuda)(undefined)).resolves.toEqual({
+      available: false
+    })
   })
 
   it('imports, lists, filters, and deletes speech model packages through IPC', async () => {

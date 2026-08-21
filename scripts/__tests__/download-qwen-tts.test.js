@@ -10,14 +10,22 @@ test('selects the pinned platform helper from runtime release metadata', async (
   const target = runtimeTarget('linux', 'x64')
   const digest = 'a'.repeat(64)
   const release = {
-    tag_name: 'qwen-tts-runtime-v0.2.0',
+    tag_name: 'qwen-tts-runtime-v0.3.0',
     draft: false,
     prerelease: true,
-    assets: [asset(target.name, digest), asset('qwen-tts-runtime-manifest.json', digest)]
+    assets: [
+      ...Object.values(target.helpers).map((helper) => asset(helper.name, digest)),
+      asset('qwen-tts-runtime-manifest.json', digest)
+    ]
   }
 
   assert.deepEqual(selectRuntimeReleaseAssets(release, target), {
-    helper: { name: target.name, size: 1, digest, url: `https://example.test/${target.name}` },
+    helpers: Object.fromEntries(
+      Object.entries(target.helpers).map(([backend, helper]) => [
+        backend,
+        { name: helper.name, size: 1, digest, url: `https://example.test/${helper.name}` }
+      ])
+    ),
     manifest: {
       name: 'qwen-tts-runtime-manifest.json',
       size: 1,
@@ -70,8 +78,16 @@ test('uses the canonical helper filename on Windows', async () => {
   const { runtimeTarget } = await modulePromise
   assert.deepEqual(runtimeTarget('win32', 'x64'), {
     directory: 'win32-x64',
-    name: 'ls101-qwen-tts-helper-win32-x64.exe',
-    executable: 'ls101-qwen-tts-helper.exe'
+    helpers: {
+      cpu: {
+        name: 'ls101-qwen-tts-helper-cpu-win32-x64.exe',
+        executable: 'ls101-qwen-tts-helper-cpu.exe'
+      },
+      cuda: {
+        name: 'ls101-qwen-tts-helper-cuda-win32-x64.exe',
+        executable: 'ls101-qwen-tts-helper-cuda.exe'
+      }
+    }
   })
 })
 

@@ -26,6 +26,29 @@ describe('AIRouterSpeechService', () => {
     await rm(baseDir, { recursive: true, force: true })
   })
 
+  it('stores an explicit Qwen backend and defaults new Qwen providers to CPU', async () => {
+    const cuda = await service.saveProviderConfig({
+      id: 'qwen-cuda',
+      name: 'Qwen CUDA',
+      kind: 'local',
+      type: 'qwen-tts',
+      backend: 'cuda',
+      models: [],
+      voices: []
+    })
+    const cpu = await service.saveProviderConfig({
+      id: 'qwen-cpu',
+      name: 'Qwen CPU',
+      kind: 'local',
+      type: 'qwen-tts',
+      models: [],
+      voices: []
+    })
+
+    expect(cuda.backend).toBe('cuda')
+    expect(cpu.backend).toBe('cpu')
+  })
+
   it('stores online speech providers separately and maps OpenAI speech requests', async () => {
     const audio = createWav([0, 0, 0, 0])
     const fetchMock = vi

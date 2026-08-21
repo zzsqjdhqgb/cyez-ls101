@@ -567,6 +567,48 @@ describe('AIRouterSettingsPage', () => {
     )
   })
 
+  it('enables the Qwen CUDA backend only after a successful explicit probe', async () => {
+    const probeQwenTtsCuda = vi
+      .fn()
+      .mockResolvedValueOnce({
+        available: true,
+        device: 'CUDA0',
+        description: 'NVIDIA Test GPU',
+        memoryTotal: 8 * 1024 ** 3
+      })
+      .mockResolvedValueOnce({ available: false, message: 'CUDA driver unavailable' })
+    const application = applicationWith({ probeQwenTtsCuda })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('语音运行方式'), {
+      target: { value: 'local' }
+    })
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'qwen-tts' }
+    })
+
+    const cuda = within(dialog).getByRole('radio', { name: 'CUDA' })
+    expect(cuda).toBeDisabled()
+    fireEvent.click(within(dialog).getByRole('button', { name: '检测 CUDA' }))
+    expect(
+      await within(dialog).findByText('CUDA 可用：NVIDIA Test GPU，显存 8.0 GiB')
+    ).toBeVisible()
+    expect(cuda).toBeEnabled()
+    fireEvent.click(cuda)
+    expect(cuda).toHaveAttribute('aria-checked', 'true')
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '检测 CUDA' }))
+    expect(await within(dialog).findByText('CUDA driver unavailable')).toBeVisible()
+    expect(cuda).toBeDisabled()
+    expect(within(dialog).getByRole('radio', { name: 'CPU' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    )
+    expect(probeQwenTtsCuda).toHaveBeenCalledTimes(2)
+  })
+
   it('manages image Providers without a default Provider control', async () => {
     const manualProvider = {
       id: 'manual',
@@ -693,6 +735,7 @@ function applicationWith(overrides: Partial<AIRouterApplication>): AIRouterAppli
     listSpeechModels: vi.fn(),
     listSpeechVoices: vi.fn(),
     testSpeechConnection: vi.fn(),
+    probeQwenTtsCuda: vi.fn().mockResolvedValue({ available: false }),
     getPronunciationExtensionStatus: vi.fn().mockResolvedValue({
       extensionId: 'facebook-wav2vec2-pronunciation',
       requiredVersion: '1.0.0',
