@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CYEZ-LS101 wordmark review</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #18324b;
+        --muted: #6e7d8c;
+        --blue: #0256bf;
+        --gold: #fda616;
+        --orange: #fd5108;
+        --red: #ef2218;
+        --green: #0a9422;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        min-height: 100%;
+        margin: 0;
+      }
+
+      body {
+        display: grid;
+        min-width: 680px;
+        min-height: 420px;
+        place-items: center;
+        background: #fff;
+        font-family:
+          Inter,
+          Avenir Next,
+          Segoe UI,
+          Arial,
+          sans-serif;
+      }
+
+      .reviewFrame {
+        display: grid;
+        width: min(680px, calc(100vw - 80px));
+        gap: 32px;
+        padding: 72px 64px 64px;
+        border: 1px solid #edf1f4;
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 22px 60px rgb(24 50 75 / 9%);
+      }
+
+      .eyebrow {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .lockup {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+      }
+
+      .iconWindow {
+        width: 112px;
+        height: 112px;
+        flex: 0 0 112px;
+        overflow: hidden;
+      }
+
+      .iconWindow img {
+        display: block;
+        width: 294px;
+        height: 112px;
+        max-width: none;
+      }
+
+      .wordmark {
+        display: grid;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      .wordmarkText {
+        color: var(--ink);
+        font-size: 52px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        line-height: 0.98;
+        white-space: nowrap;
+      }
+
+      .wordmarkText .accent {
+        color: var(--blue);
+      }
+
+      .brandRule {
+        display: flex;
+        width: 232px;
+        height: 4px;
+        overflow: hidden;
+        border-radius: 3px;
+      }
+
+      .brandRule span {
+        flex: 1;
+      }
+
+      .brandRule .blue {
+        background: var(--blue);
+      }
+
+      .brandRule .gold {
+        background: var(--gold);
+      }
+
+      .brandRule .orange {
+        background: var(--orange);
+      }
+
+      .brandRule .red {
+        background: var(--red);
+      }
+
+      .brandRule .green {
+        background: var(--green);
+      }
+
+      .note {
+        max-width: 360px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.02em;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="reviewFrame" aria-label="CYEZ-LS101 wordmark review">
+      <div class="eyebrow">Startup identity / wordmark study</div>
+      <div class="lockup">
+        <div class="iconWindow" aria-hidden="true">
+          <img src="./logo.svg" alt="" />
+        </div>
+        <div class="wordmark">
+          <div class="wordmarkText">CYEZ <span class="accent">LS101</span></div>
+          <div class="brandRule" aria-hidden="true">
+            <span class="blue"></span>
+            <span class="gold"></span>
+            <span class="orange"></span>
+            <span class="red"></span>
+            <span class="green"></span>
+          </div>
+        </div>
+      </div>
+      <p class="note">
+        A compact lockup for the startup screen: clear at small sizes, calm on white, and connected
+        to the listening mark.
+      </p>
+    </main>
+  </body>
+</html>
