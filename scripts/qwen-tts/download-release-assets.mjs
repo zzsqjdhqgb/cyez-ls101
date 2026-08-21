@@ -57,6 +57,12 @@ export function modelAssetNames() {
   }
 }
 
+export function downloadMode(environment = process.env) {
+  if (environment.LS101_SKIP_QWEN_TTS_DOWNLOAD === '1') return 'skip'
+  if (environment.LS101_QWEN_TTS_RUNTIME_ONLY === '1') return 'runtime-only'
+  return 'all'
+}
+
 export function selectRuntimeReleaseAssets(release, target = runtimeTarget()) {
   validateRelease(release, config.runtimeRelease)
   const assets = Array.isArray(release.assets) ? release.assets : []
@@ -193,7 +199,8 @@ async function hashFile(filePath) {
 }
 
 async function main() {
-  if (process.env.LS101_SKIP_QWEN_TTS_DOWNLOAD === '1') {
+  const mode = downloadMode()
+  if (mode === 'skip') {
     console.log('[qwen-tts] download skipped by LS101_SKIP_QWEN_TTS_DOWNLOAD')
     return
   }
@@ -204,20 +211,12 @@ async function main() {
     )
     return
   }
-  const [runtimeRelease, modelRelease] = await Promise.all([
-    loadReleaseMetadata(
-      config.runtimeRelease,
-      path.join(downloadDirectory, 'runtime-release-api.json'),
-      (release) => selectRuntimeReleaseAssets(release, target)
-    ),
-    loadReleaseMetadata(
-      config.modelRelease,
-      path.join(downloadDirectory, 'model-release-api.json'),
-      selectModelReleaseAssets
-    )
-  ])
+  const runtimeRelease = await loadReleaseMetadata(
+    config.runtimeRelease,
+    path.join(downloadDirectory, 'runtime-release-api.json'),
+    (release) => selectRuntimeReleaseAssets(release, target)
+  )
   const runtimeAssets = selectRuntimeReleaseAssets(runtimeRelease, target)
-  const modelAssets = selectModelReleaseAssets(modelRelease)
   const runtimeDirectory = path.join(
     root,
     'externals',
@@ -226,7 +225,6 @@ async function main() {
     'runtime',
     target.directory
   )
-  const modelDirectory = path.join(root, 'externals', 'ai', 'qwen3-tts', 'models')
   const helperDownloads = await Promise.all(
     Object.entries(runtimeAssets.helpers).map(async ([backend, asset]) => {
       const helper = target.helpers[backend]
@@ -246,27 +244,37 @@ async function main() {
     ),
     { force: true }
   )
+  await downloadAsset(
+    runtimeAssets.manifest,
+    path.join(downloadDirectory, 'releases', runtimeAssets.manifest.name)
+  )
+  for (const { backend, downloaded, helperPath } of helperDownloads) {
+    console.log(
+      `[qwen-tts] ${backend} helper ${downloaded ? 'downloaded' : 'cached'}: ${helperPath}`
+    )
+  }
+  if (mode === 'runtime-only') {
+    console.log('[qwen-tts] model download skipped in runtime-only mode')
+    return
+  }
+
+  const modelRelease = await loadReleaseMetadata(
+    config.modelRelease,
+    path.join(downloadDirectory, 'model-release-api.json'),
+    selectModelReleaseAssets
+  )
+  const modelAssets = selectModelReleaseAssets(modelRelease)
+  const modelDirectory = path.join(root, 'externals', 'ai', 'qwen3-tts', 'models')
   const modelDownloads = await Promise.all(
     Object.values(modelAssets.models).map(async (asset) => ({
       asset,
       downloaded: await downloadAsset(asset, path.join(modelDirectory, asset.name))
     }))
   )
-  await Promise.all([
-    downloadAsset(
-      runtimeAssets.manifest,
-      path.join(downloadDirectory, 'releases', runtimeAssets.manifest.name)
-    ),
-    downloadAsset(
-      modelAssets.manifest,
-      path.join(downloadDirectory, 'releases', modelAssets.manifest.name)
-    )
-  ])
-  for (const { backend, downloaded, helperPath } of helperDownloads) {
-    console.log(
-      `[qwen-tts] ${backend} helper ${downloaded ? 'downloaded' : 'cached'}: ${helperPath}`
-    )
-  }
+  await downloadAsset(
+    modelAssets.manifest,
+    path.join(downloadDirectory, 'releases', modelAssets.manifest.name)
+  )
   for (const { asset, downloaded } of modelDownloads) {
     console.log(
       `[qwen-tts] model ${downloaded ? 'downloaded' : 'cached'}: ${path.join(modelDirectory, asset.name)}`

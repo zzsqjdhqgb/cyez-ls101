@@ -1,0 +1,4 @@
+**
+!docker/
+!docker/product-docs/
+!docker/product-docs/**

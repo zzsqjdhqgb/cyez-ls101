@@ -5,6 +5,20 @@ const assert = require('node:assert/strict')
 
 const modulePromise = import('../qwen-tts/download-release-assets.mjs')
 
+test('selects runtime-only downloads for product documentation setup', async () => {
+  const { downloadMode } = await modulePromise
+
+  assert.equal(downloadMode({}), 'all')
+  assert.equal(downloadMode({ LS101_QWEN_TTS_RUNTIME_ONLY: '1' }), 'runtime-only')
+  assert.equal(
+    downloadMode({
+      LS101_QWEN_TTS_RUNTIME_ONLY: '1',
+      LS101_SKIP_QWEN_TTS_DOWNLOAD: '1'
+    }),
+    'skip'
+  )
+})
+
 test('selects the pinned platform helper from runtime release metadata', async () => {
   const { runtimeTarget, selectRuntimeReleaseAssets } = await modulePromise
   const target = runtimeTarget('linux', 'x64')

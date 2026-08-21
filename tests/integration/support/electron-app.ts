@@ -10,6 +10,7 @@ interface IntegrationAppLaunchOptions {
     height: number
   }
   deviceScaleFactor?: number
+  extraArgs?: readonly string[]
   environment?: Record<string, string>
   randomSeed?: number
 }
@@ -35,6 +36,7 @@ export async function launchIntegrationApp(
   if (options.randomSeed !== undefined) {
     args.push(`--js-flags=--random-seed=${options.randomSeed}`)
   }
+  if (options.extraArgs) args.push(...options.extraArgs)
 
   const electronApp = await electron.launch({
     executablePath,

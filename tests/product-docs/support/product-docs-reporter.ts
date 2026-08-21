@@ -1,6 +1,7 @@
 import { copyFile, cp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { format, resolveConfig } from 'prettier'
+import { PNG } from 'pngjs'
 import type {
   FullConfig,
   FullResult,
@@ -92,6 +93,12 @@ export default class ProductDocsReporter implements Reporter {
     validateBehaviors(behaviors)
 
     const canonical = process.env.PRODUCT_DOCS_CANONICAL === '1'
+    if (canonical && process.env.PRODUCT_DOCS_CANONICAL_RUNNER !== '1') {
+      throw new Error('canonical 产品文档只能由受保护的 container runner 启动')
+    }
+    if (!canonical && process.env.PRODUCT_DOCS_CANONICAL_RUNNER === '1') {
+      throw new Error('canonical runner 缺少 PRODUCT_DOCS_CANONICAL=1')
+    }
     const outputRoot = canonical ? STAGING_ROOT : PREVIEW_ROOT
     await rm(outputRoot, { force: true, recursive: true })
     await mkdir(outputRoot, { recursive: true })
@@ -479,6 +486,7 @@ async function renderBehaviorPage(
       if (item.attachment.path) await copyFile(item.attachment.path, assetPath)
       else if (item.attachment.body) await writeFile(assetPath, item.attachment.body)
       else throw new Error(`产品说明 ${behavior.definition.id} 的截图没有内容`)
+      if (outputRoot === STAGING_ROOT) await assertCanonicalEvidenceSize(assetPath)
       generatedFiles.push(normalizePath(assetRelativePath))
       stepLines.push(
         '',
@@ -518,6 +526,15 @@ async function renderBehaviorPage(
     ...definition.outcomes.map((item) => `- ${item}`),
     ''
   ].join('\n')
+}
+
+async function assertCanonicalEvidenceSize(filename: string): Promise<void> {
+  const image = PNG.sync.read(await readFile(filename))
+  if (image.width !== 1280 || image.height !== 800) {
+    throw new Error(
+      `canonical 产品文档截图必须为 1280x800：${normalizePath(path.relative(REPOSITORY_ROOT, filename))} 实际为 ${image.width}x${image.height}`
+    )
+  }
 }
 
 function renderOwnerIndex(owner: ProductOwner, behaviors: readonly BehaviorResult[]): string {
