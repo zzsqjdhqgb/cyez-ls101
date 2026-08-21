@@ -3,12 +3,18 @@ import { createRoot } from 'react-dom/client'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { App } from './app/App'
 import { appIconUrl } from './assets'
+import startupLogoMarkup from '../../../design/startup-motion-review/logo.svg?raw'
+import startupLogoMotionCss from '../../../design/startup-motion-review/motion.css?inline'
 import { templateApplication } from './features/templates/TemplateApplicationRuntime'
 import { builtinInterfaceMaintenance } from './features/interfaces/BuiltinInterfaceRuntime'
 import { initializeSchemaApplication } from './features/schemas/SchemaApplicationRuntime'
 import {
+  applyStartupLogoMotion,
   applyStartupPlaceholderIcon,
-  waitForMinimumStartupPlaceholderDuration
+  MINIMUM_STARTUP_PROGRESS_DURATION_MS,
+  showStartupProgress,
+  waitForMinimumStartupProgressDuration,
+  waitForStartupLogoAnimation
 } from './startup-placeholder'
 import './app/register-settings'
 import './app/register-placeholder-routes'
@@ -22,15 +28,39 @@ if (!root) {
 }
 
 applyStartupPlaceholderIcon(root, appIconUrl)
+applyStartupLogoMotion(root, {
+  logoMarkup: startupLogoMarkup,
+  motionCss: startupLogoMotionCss
+})
 const reactRoot = createRoot(root)
-const minimumStartupPlaceholderDuration = waitForMinimumStartupPlaceholderDuration()
+const startupLogoAnimation = waitForStartupLogoAnimation(root)
 
 async function renderApplication(): Promise<void> {
+  let initializationSettled = false
   const initializationResult = initializeApplicationContent().then(
-    () => ({ status: 'fulfilled' as const }),
-    (reason: unknown) => ({ status: 'rejected' as const, reason })
+    () => {
+      initializationSettled = true
+      return { status: 'fulfilled' as const }
+    },
+    (reason: unknown) => {
+      initializationSettled = true
+      return { status: 'rejected' as const, reason }
+    }
   )
-  const [result] = await Promise.all([initializationResult, minimumStartupPlaceholderDuration])
+
+  await startupLogoAnimation
+
+  let result: Awaited<typeof initializationResult>
+  if (!initializationSettled || MINIMUM_STARTUP_PROGRESS_DURATION_MS > 0) {
+    showStartupProgress(root)
+    const [settledResult] = await Promise.all([
+      initializationResult,
+      waitForMinimumStartupProgressDuration()
+    ])
+    result = settledResult
+  } else {
+    result = await initializationResult
+  }
   if (result.status === 'rejected') throw result.reason
 
   reactRoot.render(

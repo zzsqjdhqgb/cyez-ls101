@@ -1,13 +1,64 @@
-export const MINIMUM_STARTUP_PLACEHOLDER_DURATION_MS = 2_000
+export const STARTUP_LOGO_ANIMATION_DURATION_MS = 1_500
+export const MINIMUM_STARTUP_PROGRESS_DURATION_MS = 1_000
+
+interface StartupLogoMotionOptions {
+  logoMarkup: string
+  motionCss: string
+}
 
 export function applyStartupPlaceholderIcon(root: HTMLElement, iconUrl: string): void {
   const icon = root.querySelector<HTMLImageElement>('[data-startup-icon]')
   if (icon) icon.src = iconUrl
 }
 
-export function waitForMinimumStartupPlaceholderDuration(): Promise<void> {
-  // TODO: Remove this test-only minimum duration when the final startup animation replaces the placeholder.
+export function applyStartupLogoMotion(
+  root: HTMLElement,
+  { logoMarkup, motionCss }: StartupLogoMotionOptions
+): void {
+  const logo = root.querySelector<HTMLElement>('[data-startup-logo]')
+  if (!logo) return
+
+  const parsed = new DOMParser().parseFromString(logoMarkup, 'image/svg+xml')
+  const svg = parsed.documentElement
+  if (svg.localName !== 'svg') throw new Error('Startup logo SVG is invalid')
+
+  const style = document.createElement('style')
+  style.dataset.startupLogoMotion = ''
+  style.media = '(prefers-reduced-motion: no-preference)'
+  style.textContent = motionCss
+  document.head.appendChild(style)
+  logo.replaceChildren(document.importNode(svg, true))
+}
+
+export function waitForStartupLogoAnimation(root: HTMLElement): Promise<void> {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return Promise.resolve()
+
+  const animatedTile = root.querySelector<SVGElement>('#icon-tile')
+  if (!animatedTile) return wait(STARTUP_LOGO_ANIMATION_DURATION_MS)
+
   return new Promise((resolve) => {
-    window.setTimeout(resolve, MINIMUM_STARTUP_PLACEHOLDER_DURATION_MS)
+    const fallback = window.setTimeout(finish, STARTUP_LOGO_ANIMATION_DURATION_MS + 100)
+    animatedTile.addEventListener('animationend', finish, { once: true })
+
+    function finish(): void {
+      window.clearTimeout(fallback)
+      resolve()
+    }
+  })
+}
+
+export function showStartupProgress(root: HTMLElement): void {
+  const progress = root.querySelector<HTMLElement>('[data-startup-progress]')
+  if (progress) progress.hidden = false
+}
+
+export function waitForMinimumStartupProgressDuration(): Promise<void> {
+  // TODO: Remove this test-only minimum once the loading-bar review is complete.
+  return wait(MINIMUM_STARTUP_PROGRESS_DURATION_MS)
+}
+
+function wait(durationMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, durationMs)
   })
 }
