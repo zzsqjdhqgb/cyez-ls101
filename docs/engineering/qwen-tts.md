@@ -73,8 +73,8 @@ yarn qwen-tts:build-runtime --backend cuda
 ```
 
 Release CUDA helpers are built with CUDA Toolkit 12.8.1. On Windows, the runtime Release includes
-the matching `cublas64_12.dll`, `cublasLt64_12.dll`, and `nvJitLink_12.dll` beside the helpers, and
-setup stages these files in the same runtime directory. Development and packaged helper processes prepend that
+the matching `cublas64_12.dll`, `cublasLt64_12.dll`, and `nvJitLink_120_0.dll` beside the helpers,
+and setup stages these files in the same runtime directory. Development and packaged helper processes prepend that
 directory to their private `PATH`, so users need only a compatible NVIDIA display driver rather
 than a system CUDA Toolkit installation. Linux builds link the redistributable CUDA runtime
 libraries statically and still require a compatible NVIDIA driver.

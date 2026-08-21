@@ -40,7 +40,7 @@ export function runtimeTarget(platform = process.platform, architecture = proces
       dependencies: [
         { name: 'cublas64_12.dll', file: 'cublas64_12.dll' },
         { name: 'cublasLt64_12.dll', file: 'cublasLt64_12.dll' },
-        { name: 'nvJitLink_12.dll', file: 'nvJitLink_12.dll' }
+        { name: 'nvJitLink_120_0.dll', file: 'nvJitLink_120_0.dll' }
       ],
       licenses: [{ name: 'LICENSE.NVIDIA-CUDA.html', file: 'LICENSE.NVIDIA-CUDA.html' }],
       helpers: {

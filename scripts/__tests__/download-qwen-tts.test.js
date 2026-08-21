@@ -97,7 +97,7 @@ test('uses the canonical helper filename on Windows', async () => {
     dependencies: [
       { name: 'cublas64_12.dll', file: 'cublas64_12.dll' },
       { name: 'cublasLt64_12.dll', file: 'cublasLt64_12.dll' },
-      { name: 'nvJitLink_12.dll', file: 'nvJitLink_12.dll' }
+      { name: 'nvJitLink_120_0.dll', file: 'nvJitLink_120_0.dll' }
     ],
     licenses: [{ name: 'LICENSE.NVIDIA-CUDA.html', file: 'LICENSE.NVIDIA-CUDA.html' }],
     helpers: {
@@ -132,7 +132,7 @@ test('selects CUDA DLLs and their license for the Windows runtime', async () => 
   const selected = selectRuntimeReleaseAssets(release, target)
   assert.deepEqual(
     selected.dependencies.map(({ name }) => name),
-    ['cublas64_12.dll', 'cublasLt64_12.dll', 'nvJitLink_12.dll']
+    ['cublas64_12.dll', 'cublasLt64_12.dll', 'nvJitLink_120_0.dll']
   )
   assert.deepEqual(
     selected.licenses.map(({ name }) => name),
