@@ -418,7 +418,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
     const failedSession = generation
     const failedHandle = failedSession?.handle
     if (!failedHandle || failedSession.result?.status !== 'failed') return
-    setGeneration({ ...failedSession, result: null, startError: null })
+    setGeneration({ handle: null, result: null, startError: null })
     setError(null)
     try {
       const handle = await failedHandle.retry()
@@ -1245,9 +1245,7 @@ function AIGenerationDialog({
             </Button>
           </>
         ) : (
-          <Button icon={X} disabled={!session.handle} variant="ghost" onClick={onCancel}>
-            取消生成
-          </Button>
+          <GenerationCancelAction handle={session.handle} onCancel={onCancel} />
         )}
       </footer>
     </section>
@@ -1467,4 +1465,39 @@ function GenerationProgress({ handle }: { handle: InterfaceAIGenerationHandle })
   const snapshot = useSyncExternalStore(handle.subscribe, handle.getSnapshot, handle.getSnapshot)
 
   return <TaskProgress label="AI 生成进度" items={snapshot.items} />
+}
+
+function GenerationCancelAction({
+  handle,
+  onCancel
+}: {
+  handle: InterfaceAIGenerationHandle | null
+  onCancel(): void
+}): JSX.Element {
+  if (!handle) {
+    return (
+      <Button icon={LoaderCircle} disabled variant="ghost">
+        正在启动
+      </Button>
+    )
+  }
+  return <ActiveGenerationCancelAction handle={handle} onCancel={onCancel} />
+}
+
+function ActiveGenerationCancelAction({
+  handle,
+  onCancel
+}: {
+  handle: InterfaceAIGenerationHandle
+  onCancel(): void
+}): JSX.Element {
+  const snapshot = useSyncExternalStore(handle.subscribe, handle.getSnapshot, handle.getSnapshot)
+  const saving = snapshot.items.some(
+    (item) => item.id === 'save' && (item.status === 'running' || item.status === 'completed')
+  )
+  return (
+    <Button icon={saving ? LoaderCircle : X} disabled={saving} variant="ghost" onClick={onCancel}>
+      {saving ? '正在保存' : '取消生成'}
+    </Button>
+  )
 }

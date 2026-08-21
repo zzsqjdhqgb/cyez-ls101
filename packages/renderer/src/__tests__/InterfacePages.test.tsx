@@ -690,16 +690,24 @@ describe('Interface pages', () => {
     const completion = new Promise<InterfaceAIGenerationResult>((resolve) => {
       resolveCompletion = resolve
     })
-    const snapshot: TaskProgressSnapshot = {
+    let snapshot: TaskProgressSnapshot = {
       items: [
         { id: 'ai', label: 'AI 生成', status: 'running' },
         { id: 'validate', label: '校验生成结果', status: 'waiting' },
         { id: 'save', label: '保存实例', status: 'waiting' }
       ]
     }
+    const progressListeners = new Set<() => void>()
+    const publishSnapshot = (next: TaskProgressSnapshot): void => {
+      snapshot = next
+      for (const listener of progressListeners) listener()
+    }
     const handle: InterfaceAIGenerationHandle = {
       getSnapshot: () => snapshot,
-      subscribe: () => () => undefined,
+      subscribe(listener) {
+        progressListeners.add(listener)
+        return () => progressListeners.delete(listener)
+      },
       cancel: vi.fn(),
       retry: vi.fn(),
       completion
@@ -770,6 +778,19 @@ describe('Interface pages', () => {
     expect(screen.getByRole('button', { name: '高级操作' })).toBeDisabled()
     expect(screen.getByRole('button', { name: '生成中' })).toBeDisabled()
     expect(screen.queryByRole('button', { name: '返回题组' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '取消生成' })).toBeEnabled()
+
+    act(() => {
+      publishSnapshot({
+        items: [
+          { id: 'ai', label: 'AI 生成', status: 'completed' },
+          { id: 'validate', label: '校验生成结果', status: 'completed' },
+          { id: 'save', label: '保存实例', status: 'running' }
+        ]
+      })
+    })
+    await waitFor(() => expect(screen.getByRole('button', { name: '正在保存' })).toBeDisabled())
+    expect(screen.queryByRole('button', { name: '取消生成' })).not.toBeInTheDocument()
 
     await act(async () => {
       resolveCompletion({ status: 'completed', instance: completed })
@@ -1163,15 +1184,20 @@ describe('Interface pages', () => {
     const snapshot: TaskProgressSnapshot = {
       items: [{ id: 'ai', label: 'AI 生成', status: 'completed' }]
     }
+    let rejectRetryStart: (reason: Error) => void = () => undefined
+    const retryStarting = new Promise<InterfaceAIGenerationHandle>((_resolve, reject) => {
+      rejectRetryStart = reject
+    })
+    const cancel = vi.fn()
     const retry = vi.fn()
     const handle: InterfaceAIGenerationHandle = {
       getSnapshot: () => snapshot,
       subscribe: () => () => undefined,
-      cancel: vi.fn(),
+      cancel,
       retry,
       completion: Promise.resolve(result)
     }
-    retry.mockRejectedValueOnce(new Error('实例暂时忙碌')).mockResolvedValueOnce(handle)
+    retry.mockReturnValueOnce(retryStarting).mockResolvedValueOnce(handle)
     const startAIGeneration = vi.fn().mockResolvedValue(handle)
     const app = application({
       published: {
@@ -1224,6 +1250,13 @@ describe('Interface pages', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '从失败位置重试' }))
     await waitFor(() => expect(retry).toHaveBeenCalledOnce())
+    expect(screen.getByRole('button', { name: '正在启动' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: '取消生成' })).not.toBeInTheDocument()
+    expect(cancel).not.toHaveBeenCalled()
+    await act(async () => {
+      rejectRetryStart(new Error('实例暂时忙碌'))
+      await retryStarting.catch(() => undefined)
+    })
     expect(await screen.findByText(/续跑启动失败：实例暂时忙碌/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '从失败位置重试' })).toBeInTheDocument()
 
