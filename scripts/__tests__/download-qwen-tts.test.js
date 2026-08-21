@@ -5,25 +5,44 @@ const assert = require('node:assert/strict')
 
 const modulePromise = import('../qwen-tts/download-release-assets.mjs')
 
-test('selects the pinned platform helper and raw models from GitHub metadata', async () => {
-  const { modelAssetNames, runtimeTarget, selectReleaseAssets } = await modulePromise
+test('selects the pinned platform helper from runtime release metadata', async () => {
+  const { runtimeTarget, selectRuntimeReleaseAssets } = await modulePromise
   const target = runtimeTarget('linux', 'x64')
-  const modelNames = modelAssetNames()
   const digest = 'a'.repeat(64)
   const release = {
-    tag_name: 'qwen-tts-v0.1.0',
+    tag_name: 'qwen-tts-runtime-v0.2.0',
+    draft: false,
+    prerelease: true,
+    assets: [asset(target.name, digest), asset('qwen-tts-runtime-manifest.json', digest)]
+  }
+
+  assert.deepEqual(selectRuntimeReleaseAssets(release, target), {
+    helper: { name: target.name, size: 1, digest, url: `https://example.test/${target.name}` },
+    manifest: {
+      name: 'qwen-tts-runtime-manifest.json',
+      size: 1,
+      digest,
+      url: 'https://example.test/qwen-tts-runtime-manifest.json'
+    }
+  })
+})
+
+test('selects raw models independently from model release metadata', async () => {
+  const { modelAssetNames, selectModelReleaseAssets } = await modulePromise
+  const modelNames = modelAssetNames()
+  const digest = 'b'.repeat(64)
+  const release = {
+    tag_name: 'qwen-tts-model-v1.0.0',
     draft: false,
     prerelease: true,
     assets: [
-      asset(target.name, digest),
       asset(modelNames.talker, digest),
       asset(modelNames.tokenizer, digest),
-      asset('qwen-tts-release-manifest.json', digest)
+      asset('qwen-tts-model-manifest.json', digest)
     ]
   }
 
-  assert.deepEqual(selectReleaseAssets(release, target), {
-    helper: { name: target.name, size: 1, digest, url: `https://example.test/${target.name}` },
+  assert.deepEqual(selectModelReleaseAssets(release), {
     models: {
       talker: {
         name: modelNames.talker,
@@ -39,10 +58,10 @@ test('selects the pinned platform helper and raw models from GitHub metadata', a
       }
     },
     manifest: {
-      name: 'qwen-tts-release-manifest.json',
+      name: 'qwen-tts-model-manifest.json',
       size: 1,
       digest,
-      url: 'https://example.test/qwen-tts-release-manifest.json'
+      url: 'https://example.test/qwen-tts-model-manifest.json'
     }
   })
 })
@@ -57,21 +76,19 @@ test('uses the canonical helper filename on Windows', async () => {
 })
 
 test('rejects assets without the GitHub API digest', async () => {
-  const { selectReleaseAssets } = await modulePromise
+  const { selectModelReleaseAssets } = await modulePromise
   assert.throws(
     () =>
-      selectReleaseAssets(
-        {
-          tag_name: 'qwen-tts-v0.1.0',
-          prerelease: true,
-          assets: [
-            asset('qwen3-tts-0.6b-q8_0.gguf', 'missing'),
-            asset('qwen3-tts-tokenizer-f16.gguf', 'a'.repeat(64)),
-            asset('qwen-tts-release-manifest.json', 'a'.repeat(64))
-          ]
-        },
-        null
-      ),
+      selectModelReleaseAssets({
+        tag_name: 'qwen-tts-model-v1.0.0',
+        draft: false,
+        prerelease: true,
+        assets: [
+          asset('qwen3-tts-0.6b-q8_0.gguf', 'missing'),
+          asset('qwen3-tts-tokenizer-f16.gguf', 'a'.repeat(64)),
+          asset('qwen-tts-model-manifest.json', 'a'.repeat(64))
+        ]
+      }),
     /缺少 SHA-256 digest/
   )
 })

@@ -2,7 +2,7 @@
 
 ## 功能状态
 
-应用将业务数据统一写入可配置的 `dataRoot`。默认位置是 `app.getPath('userData')/data`；Electron Cache、GPUCache 和可重新生成的 `qwen-tts-runtime` 仍位于 Electron `userData`，不会随业务数据迁移。
+应用将业务数据统一写入可配置的 `dataRoot`。默认位置是 `app.getPath('userData')/data`；Electron Cache 和 GPUCache 仍位于 Electron `userData`，不会随业务数据迁移。
 
 固定位置的 `userData/data-location.json` 是启动引导配置，记录格式版本、当前业务数据目录和挂起迁移。每个有效业务数据目录包含 `.ls101-data.json` 标记。主进程在注册 File Store、Config Store 和 AI Router 前解析或迁移目录。
 
@@ -20,7 +20,7 @@
 
 ## 旧数据整理
 
-没有引导配置和数据目录标记，但 Electron `userData` 根目录存在已知业务目录时，应用执行一次旧数据整理。只复制 `config`、`secrets`、`models`、`extensions`、`template-editor`、`interfaces`、`schema-editor`、`exam-library` 和 `submission-library`；Electron 缓存与 `qwen-tts-runtime` 不复制。原目录内容会保留。
+没有引导配置和数据目录标记，但 Electron `userData` 根目录存在已知业务目录时，应用执行一次旧数据整理。只复制 `config`、`secrets`、`models`、`extensions`、`template-editor`、`interfaces`、`schema-editor`、`exam-library` 和 `submission-library`；Electron 缓存不复制。原目录内容会保留。
 
 ## 进程边界
 

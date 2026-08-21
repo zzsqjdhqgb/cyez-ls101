@@ -5,20 +5,24 @@ The application runs `Qwen3-TTS-12Hz-0.6B-Base` on CPU through a pinned build of
 to create VoiceDesign reference audio during development. Imported model packages never contain
 executables.
 
-The published runtime bundle is `qwen-tts-v0.1.0` in the application repository. `yarn setup`
-and application build setup query the GitHub Release Assets API, verify each selected asset
-against its API-provided size and SHA-256 digest. Release metadata and the helper download are
-cached under `externals/ai/qwen3-tts/downloads/`; the two downloaded GGUF files are stored directly
-under `externals/ai/qwen3-tts/models/`. The helper is staged under `externals/ai/qwen3-tts/runtime/`. A full
-application build then prepares the local model ZIP under `dist/`, while `yarn qwen-tts:prepare`
-can build it explicitly. `yarn build:test` sets
-`LS101_SKIP_QWEN_TTS_DOWNLOAD=1` so smoke builds do not download the roughly 1.68 GB of models.
-If GitHub's anonymous API quota is exhausted, set `GITHUB_TOKEN` or `GH_TOKEN`; a previously
-validated API response is also cached at `externals/ai/qwen3-tts/downloads/release-api.json`.
+Published assets use two independent immutable releases in the application repository:
+`qwen-tts-runtime-v0.2.0` contains the native helpers, while `qwen-tts-model-v1.0.0` contains the
+two GGUF files. `yarn setup` and application build setup query both GitHub Release Assets APIs and
+verify every selected asset against its API-provided size and SHA-256 digest. Validated metadata is
+cached as `runtime-release-api.json` and `model-release-api.json` under
+`externals/ai/qwen3-tts/downloads/`.
 
-Release version, package version, upstream revisions, model selection, VoiceDesign model, and
-fixed-voice metadata have one source of truth: `scripts/qwen-tts/assets.json`. Update that file
-before publishing new raw assets or changing the locally assembled model package.
+Downloaded GGUF files are stored directly under `externals/ai/qwen3-tts/models/`, and the helper is
+staged under `externals/ai/qwen3-tts/runtime/`. A full application build then prepares the local
+model ZIP under `dist/`, while `yarn qwen-tts:prepare` can build it explicitly. Test builds run the
+same complete setup as other application builds; `--skip-model-package` skips only the separately
+distributed package outputs, not asset setup. If GitHub's anonymous API quota is exhausted, set
+`GITHUB_TOKEN` or `GH_TOKEN`; previously validated API responses support offline cached setup.
+
+Runtime release version, model release version, package version, upstream revisions, model
+selection, VoiceDesign model, and fixed-voice metadata have one source of truth:
+`scripts/qwen-tts/assets.json`. Update that file before publishing assets or changing the locally
+assembled model package.
 
 ## Runtime architecture
 
@@ -26,9 +30,9 @@ before publishing new raw assets or changing the locally assembled model package
   speaker embedding, then remains alive for serialized synthesis requests.
 - The Electron main process communicates with the helper through a bounded binary protocol and
   forces `QWEN3_TTS_BACKEND=cpu`.
-- The GitHub Release contains two raw GGUF assets. A local model ZIP combines those models with
-  one or more Git-managed `.spk` files. Content-addressed installed
-  assets are linked into the filenames expected by the upstream runtime.
+- The model Release contains two raw GGUF assets. A local model ZIP combines those models with one
+  or more Git-managed `.spk` files. The Electron main process resolves content-addressed installed
+  assets and passes every model and speaker file to the helper by its absolute path.
 - The upstream runtime is pinned to commit
   `b3ba14077cf1b3e11b86e5f84aa9184605c89b28`. The build removes `-march=native` so release
   binaries can run on CPUs other than the build host.
@@ -100,7 +104,8 @@ Run the same C++ speaker encoder used in production:
 ```bash
 mkdir -p native/qwen-tts/voices
 externals/ai/qwen3-tts/runtime/linux-x64/ls101-qwen-tts-helper \
-  --model-dir externals/ai/qwen3-tts/models \
+  --tts-model externals/ai/qwen3-tts/models/qwen3-tts-0.6b-q8_0.gguf \
+  --tokenizer-model externals/ai/qwen3-tts/models/qwen3-tts-tokenizer-f16.gguf \
   --extract-speaker native/qwen-tts/voice-design/candidate-20260816.wav \
   native/qwen-tts/voices/american-woman.spk
 ```
@@ -127,14 +132,18 @@ default; use `--voice id=/path/to/voice.spk` for explicit files or `--quantizati
 F16. Import the ZIP in AI Router, create a local
 `Qwen3-TTS 0.6B (CPU)` provider, and run its connection test.
 
-The raw model Release version and assembled package version are independent. Reuse the existing
-Release when only Git-managed voices change, but increment `package.version` whenever the model,
-voice list, or package manifest changes so installed packages are not mistaken for older content.
+The runtime, raw model, and assembled package versions are independent. Reuse the existing model
+Release when only the helper or Git-managed voices change, but increment `package.version` whenever
+the model, voice list, or package manifest changes so installed packages are not mistaken for
+older content.
 
-The Qwen Release workflow publishes `qwen3-tts-0.6b-q8_0.gguf` and
-`qwen3-tts-tokenizer-f16.gguf` directly rather than wrapping them in another ZIP. `yarn setup`
-downloads those files independently with resume support, then builds the importable ZIP from the
-downloaded models and the voices committed under `native/qwen-tts/`.
+The Qwen Assets workflow accepts `runtime`, `model`, or `both`. For a helper-only change, increment
+`runtimeRelease.version` and publish `runtime`; the expensive model conversion job does not run.
+Only a GGUF change requires incrementing `modelRelease.version` and publishing `model`. Both jobs
+reject an existing tag instead of overwriting assets. The model Release publishes
+`qwen3-tts-0.6b-q8_0.gguf` and `qwen3-tts-tokenizer-f16.gguf` directly rather than wrapping them in
+another ZIP. `yarn setup` downloads those files independently with resume support, then builds the
+importable ZIP from the downloaded models and the voices committed under `native/qwen-tts/`.
 
 The ZIP builder streams multi-gigabyte GGUF files and verifies each asset's SHA-256. It deliberately
 does not accept or include a helper executable.

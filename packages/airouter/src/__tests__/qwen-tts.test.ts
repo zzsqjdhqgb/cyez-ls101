@@ -83,7 +83,6 @@ describe('QwenTtsSynthesizer', () => {
     const spawnProcess = vi.fn(() => helper as unknown as ChildProcessWithoutNullStreams)
     const synthesizer = new QwenTtsSynthesizer({
       helperPath,
-      runtimeRoot: path.join(directory, 'runtime'),
       spawnProcess: spawnProcess as unknown as typeof spawn
     })
 
@@ -94,6 +93,24 @@ describe('QwenTtsSynthesizer', () => {
     expect(second.data).toHaveLength(48)
     expect(helper.received).toEqual(['Hello from Qwen.', 'Second request.'])
     expect(spawnProcess).toHaveBeenCalledOnce()
+    expect(spawnProcess.mock.calls[0][1]).toEqual([
+      '--tts-model',
+      path.join(directory, 'talker.gguf'),
+      '--tokenizer-model',
+      path.join(directory, 'tokenizer.gguf'),
+      '--speaker',
+      path.join(directory, 'voice.spk'),
+      '--threads',
+      '4',
+      '--max-audio-tokens',
+      '2048',
+      '--top-k',
+      '50',
+      '--temperature',
+      '0.9',
+      '--repetition-penalty',
+      '1.05'
+    ])
     expect(spawnProcess.mock.calls[0][2]).toMatchObject({
       env: expect.objectContaining({ QWEN3_TTS_BACKEND: 'cpu' })
     })
@@ -106,7 +123,6 @@ describe('QwenTtsSynthesizer', () => {
     const spawnProcess = vi.fn(() => helper as unknown as ChildProcessWithoutNullStreams)
     const synthesizer = new QwenTtsSynthesizer({
       helperPath,
-      runtimeRoot: path.join(directory, 'runtime'),
       spawnProcess: spawnProcess as unknown as typeof spawn
     })
     const controller = new AbortController()
@@ -122,7 +138,6 @@ describe('QwenTtsSynthesizer', () => {
     const spawnProcess = vi.fn()
     const synthesizer = new QwenTtsSynthesizer({
       helperPath,
-      runtimeRoot: path.join(directory, 'runtime'),
       spawnProcess: spawnProcess as unknown as typeof spawn
     })
 

@@ -1,6 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { copyFile, link, mkdir, rename, rm, stat } from 'node:fs/promises'
+import { stat } from 'node:fs/promises'
 import path from 'node:path'
 import { app } from 'electron'
 import type {
@@ -45,7 +45,6 @@ interface HelperSession {
 
 export interface QwenTtsSynthesizerOptions {
   helperPath?: string
-  runtimeRoot?: string
   spawnProcess?: typeof spawn
 }
 
@@ -98,14 +97,9 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
       request.resolveAssetPath(tokenizerAsset),
       request.resolveAssetPath(speakerAsset)
     ])
-    const modelDirectory = await this.prepareModelDirectory(
-      request,
-      model,
+    const key = JSON.stringify([
       ttsModelPath,
-      tokenizerPath
-    )
-    const key = [
-      modelDirectory,
+      tokenizerPath,
       speakerPath,
       parameters.threads,
       parameters.maxAudioTokens,
@@ -113,10 +107,16 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
       parameters.temperature,
       parameters.repetitionPenalty,
       parameters.lowMemory
-    ].join(':')
+    ])
     return this.enqueue(key, async () => {
       if (request.signal?.aborted) throw abortError()
-      const session = await this.getSession(key, modelDirectory, speakerPath, parameters)
+      const session = await this.getSession(
+        key,
+        ttsModelPath,
+        tokenizerPath,
+        speakerPath,
+        parameters
+      )
       return this.dispatch(session, request.text, parameters, request.signal)
     })
   }
@@ -135,40 +135,16 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     return operation
   }
 
-  private async prepareModelDirectory(
-    request: AIRouterLocalSpeechRequest,
-    model: AIRouterSpeechModelPackageModel,
-    ttsModelPath: string,
-    tokenizerPath: string
-  ): Promise<string> {
-    const root = this.options.runtimeRoot ?? path.join(resolveUserDataPath(), 'qwen-tts-runtime')
-    const key = [
-      safeSegment(request.provider.modelPackageId),
-      safeSegment(request.provider.modelPackageVersion),
-      safeSegment(model.id),
-      path.basename(ttsModelPath).slice(0, 16),
-      path.basename(tokenizerPath).slice(0, 16)
-    ].join('-')
-    const directory = path.join(root, key)
-    await mkdir(directory, { recursive: true })
-    const quantization = stringValue(recordValue(model.parameters.load).quantization)
-    const ttsName = quantization === 'q8_0' ? 'qwen3-tts-0.6b-q8_0.gguf' : 'qwen3-tts-0.6b-f16.gguf'
-    await Promise.all([
-      ensureLinkedFile(ttsModelPath, path.join(directory, ttsName)),
-      ensureLinkedFile(tokenizerPath, path.join(directory, 'qwen3-tts-tokenizer-f16.gguf'))
-    ])
-    return directory
-  }
-
   private getSession(
     key: string,
-    modelDirectory: string,
+    ttsModelPath: string,
+    tokenizerPath: string,
     speakerPath: string,
     parameters: QwenRuntimeParameters
   ): Promise<HelperSession> {
     const existing = this.sessions.get(key)
     if (existing) return existing
-    const created = this.startSession(key, modelDirectory, speakerPath, parameters)
+    const created = this.startSession(key, ttsModelPath, tokenizerPath, speakerPath, parameters)
     this.sessions.set(key, created)
     void created.catch(() => {
       if (this.sessions.get(key) === created) this.sessions.delete(key)
@@ -178,15 +154,18 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
 
   private async startSession(
     key: string,
-    modelDirectory: string,
+    ttsModelPath: string,
+    tokenizerPath: string,
     speakerPath: string,
     parameters: QwenRuntimeParameters
   ): Promise<HelperSession> {
     const helperPath = this.options.helperPath ?? resolveHelperPath()
     await assertExecutableExists(helperPath)
     const args = [
-      '--model-dir',
-      modelDirectory,
+      '--tts-model',
+      ttsModelPath,
+      '--tokenizer-model',
+      tokenizerPath,
       '--speaker',
       speakerPath,
       '--threads',
@@ -396,30 +375,6 @@ function parseRuntimeParameters(parameters: Record<string, unknown>): QwenRuntim
   }
 }
 
-async function ensureLinkedFile(source: string, target: string): Promise<void> {
-  const [sourceStats, targetStats] = await Promise.all([
-    stat(source),
-    stat(target).catch(() => null)
-  ])
-  if (!sourceStats.isFile()) throw new Error(`Qwen TTS 模型资产不是文件：${source}`)
-  if (targetStats?.isFile() && targetStats.size === sourceStats.size) return
-  const temporary = `${target}.${randomUUID()}.tmp`
-  await rm(temporary, { force: true })
-  try {
-    await link(source, temporary)
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code
-    if (!['EXDEV', 'EPERM', 'EACCES', 'ENOTSUP'].includes(code ?? '')) throw error
-    await copyFile(source, temporary)
-  }
-  try {
-    await rename(temporary, target)
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
-    await rm(temporary, { force: true })
-  }
-}
-
 function resolveHelperPath(): string {
   const executable =
     process.platform === 'win32' ? 'ls101-qwen-tts-helper.exe' : 'ls101-qwen-tts-helper'
@@ -436,14 +391,6 @@ function resolveHelperPath(): string {
         `${process.platform}-${process.arch}`,
         executable
       )
-}
-
-function resolveUserDataPath(): string {
-  try {
-    return app.getPath('userData')
-  } catch {
-    return path.join(process.cwd(), '.cache')
-  }
 }
 
 async function assertExecutableExists(filePath: string): Promise<void> {
@@ -481,10 +428,6 @@ function recordValue(value: unknown): Record<string, unknown> {
     : {}
 }
 
-function stringValue(value: unknown): string | null {
-  return typeof value === 'string' ? value : null
-}
-
 function integerValue(value: unknown, min: number, max: number): number | null {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= min && value <= max
     ? value
@@ -495,11 +438,6 @@ function numberValue(value: unknown, min: number, max: number): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max
     ? value
     : null
-}
-
-function safeSegment(value: string): string {
-  const normalized = value.replace(/[^a-zA-Z0-9_.-]/g, '_')
-  return normalized || 'unnamed'
 }
 
 function summarizeText(text: string): string {

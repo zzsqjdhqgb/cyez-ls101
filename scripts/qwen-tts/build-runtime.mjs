@@ -22,14 +22,16 @@ const assetConfig = loadAssetConfig()
 const repository = assetConfig.runtime.repository
 const commit = assetConfig.runtime.revision
 const ggmlCommit = assetConfig.runtime.ggmlRevision
-const patchPath = path.join(root, 'native', 'qwen-tts', 'portable-cpu.patch')
+const patchPaths = ['portable-cpu.patch', 'explicit-model-paths.patch'].map((file) =>
+  path.join(root, 'native', 'qwen-tts', file)
+)
 const jobs = String(Math.max(1, Math.min(os.availableParallelism?.() ?? os.cpus().length, 16)))
 
 function loadAssetConfig() {
   const file = path.join(import.meta.dirname, 'assets.json')
   const value = JSON.parse(readFileSync(file, 'utf8'))
   if (
-    value?.schemaVersion !== 1 ||
+    value?.schemaVersion !== 2 ||
     typeof value.runtime?.repository !== 'string' ||
     !/^[a-f0-9]{40}$/.test(value.runtime?.revision ?? '') ||
     !/^[a-f0-9]{40}$/.test(value.runtime?.ggmlRevision ?? '')
@@ -75,6 +77,10 @@ function ensurePinnedSource() {
     throw new Error('qwen3-tts.cpp GGML checkout does not match the pinned commit')
   }
 
+  for (const patchPath of patchPaths) applyPatch(patchPath)
+}
+
+function applyPatch(patchPath) {
   const patch = readFileSync(patchPath, 'utf8')
   try {
     execFileSync('git', ['-C', sourceDir, 'apply', '--check', '-'], {

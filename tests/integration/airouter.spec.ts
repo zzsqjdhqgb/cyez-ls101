@@ -116,7 +116,6 @@ const temporaryPaths: string[] = []
 const qwenTtsAssetConfig = JSON.parse(
   readFileSync(path.resolve('scripts', 'qwen-tts', 'assets.json'), 'utf8')
 ) as {
-  release: { version: string }
   package: { version: string }
   model: { quantization: string }
   voices: Array<{ id: string; name: string; file: string }>
@@ -1642,6 +1641,7 @@ test.describe('Qwen3 TTS runtime', () => {
       audio: { mediaType: 'audio/wav', format: 'wav', channels: 1 }
     })
     expect(result.audio?.data.byteLength).toBeGreaterThan(44)
+    expect(existsSync(path.join(userDataDir, 'qwen-tts-runtime'))).toBe(false)
   })
 })
 

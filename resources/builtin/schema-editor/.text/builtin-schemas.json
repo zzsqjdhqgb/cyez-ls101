@@ -356,6 +356,236 @@
         "inputDescriptions": {},
         "rubricMarkdown": "学生答案与标准答案一致得 1.5 分，否则得 0 分。"
       }
+    },
+    {
+      "formatVersion": 2,
+      "schemaId": "a8c95c76-6f12-4d43-8ae1-5b9e2c7d1041",
+      "sourceDraftId": "b7d42f18-1c63-4e95-9a20-6f8b3d5c1041",
+      "structureHash": "sha256:c6d81bab7d7fee536af735228d185331116bf949cb4174989caae55a6bc88091",
+      "revision": 0,
+      "structure": {
+        "questionType": "fixed-reading",
+        "answerFormat": [
+          {
+            "answerId": "phrase-1",
+            "type": "fixed-speech"
+          },
+          {
+            "answerId": "phrase-2",
+            "type": "fixed-speech"
+          },
+          {
+            "answerId": "phrase-3",
+            "type": "fixed-speech"
+          }
+        ],
+        "templateInputs": [
+          {
+            "inputId": "question-description",
+            "type": "text",
+            "required": true
+          },
+          {
+            "inputId": "reference-answer",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      "data": {
+        "name": "上海中考 - 朗读词组",
+        "description": "三个词组合并评分，考查连读、失爆和弱读。",
+        "maxScore": 1.5,
+        "answerDescriptions": {
+          "phrase-1": "第一个词组",
+          "phrase-2": "第二个词组",
+          "phrase-3": "第三个词组"
+        },
+        "rubricMarkdown": "**考试要求**：3个词组，每题10秒准备、15秒朗读。\n\n**评分标准**：每题0.5分，重点考查发音清晰度、连读、失爆和弱读；发音自然准确得满分，明显错误按题扣分。",
+        "inputDescriptions": {},
+        "extraPromptMarkdown": ""
+      }
+    },
+    {
+      "formatVersion": 2,
+      "schemaId": "a8c95c76-6f12-4d43-8ae1-5b9e2c7d1042",
+      "sourceDraftId": "b7d42f18-1c63-4e95-9a20-6f8b3d5c1042",
+      "structureHash": "sha256:2d3a9af51445b63d482888340b3a4d9c0f44119c4a0fe412015a907719233e9b",
+      "revision": 0,
+      "structure": {
+        "questionType": "fixed-reading",
+        "answerFormat": [
+          {
+            "answerId": "sentence-1",
+            "type": "fixed-speech"
+          },
+          {
+            "answerId": "sentence-2",
+            "type": "fixed-speech"
+          }
+        ],
+        "templateInputs": [
+          {
+            "inputId": "question-description",
+            "type": "text",
+            "required": true
+          },
+          {
+            "inputId": "reference-answer",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      "data": {
+        "name": "上海中考 - 朗读句子",
+        "description": "两个句子合并评分，考查语调、意群停顿和流畅度。",
+        "maxScore": 1,
+        "answerDescriptions": {
+          "sentence-1": "第一句",
+          "sentence-2": "第二句"
+        },
+        "rubricMarkdown": "**考试要求**：2个句子，每题10秒准备、10秒朗读。\n\n**评分标准**：每题0.5分，重点考查语调、意群停顿、发音和流畅度；朗读自然准确得满分，明显错误按题扣分。",
+        "inputDescriptions": {},
+        "extraPromptMarkdown": ""
+      }
+    },
+    {
+      "formatVersion": 2,
+      "schemaId": "a8c95c76-6f12-4d43-8ae1-5b9e2c7d1043",
+      "sourceDraftId": "b7d42f18-1c63-4e95-9a20-6f8b3d5c1043",
+      "structureHash": "sha256:ff94fed1a27ed31b9456d26b8d31cdc3b7c6ae3425feca2c4f0366c0c51f09e5",
+      "revision": 0,
+      "structure": {
+        "questionType": "freetalk",
+        "answerFormat": [
+          {
+            "answerId": "answer-1",
+            "type": "free-speech"
+          },
+          {
+            "answerId": "answer-2",
+            "type": "free-speech"
+          },
+          {
+            "answerId": "answer-3",
+            "type": "free-speech"
+          },
+          {
+            "answerId": "answer-4",
+            "type": "free-speech"
+          },
+          {
+            "answerId": "answer-5",
+            "type": "free-speech"
+          }
+        ],
+        "templateInputs": [
+          {
+            "inputId": "question-description",
+            "type": "text",
+            "required": true
+          },
+          {
+            "inputId": "reference-answer",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      "data": {
+        "name": "上海中考 - 交际应答",
+        "description": "听五个句子并分别作出快速应答。",
+        "maxScore": 2.5,
+        "answerDescriptions": {
+          "answer-1": "第1题应答",
+          "answer-2": "第2题应答",
+          "answer-3": "第3题应答",
+          "answer-4": "第4题应答",
+          "answer-5": "第5题应答"
+        },
+        "rubricMarkdown": "**考试要求**：5题，每题10秒作答。\n\n**评分标准**：每题0.5分，回答应符合语境，时态一致，表达完整自然，介词和常用搭配使用准确。",
+        "inputDescriptions": {},
+        "extraPromptMarkdown": ""
+      }
+    },
+    {
+      "formatVersion": 2,
+      "schemaId": "a8c95c76-6f12-4d43-8ae1-5b9e2c7d1044",
+      "sourceDraftId": "b7d42f18-1c63-4e95-9a20-6f8b3d5c1044",
+      "structureHash": "sha256:de759d3988be2ad2174b20af6b8bf4cacb2ac2235066b98db5fe5640ef218cf8",
+      "revision": 0,
+      "structure": {
+        "questionType": "freetalk",
+        "answerFormat": [
+          {
+            "answerId": "answer",
+            "type": "free-speech"
+          }
+        ],
+        "templateInputs": [
+          {
+            "inputId": "question-description",
+            "type": "text",
+            "required": true
+          },
+          {
+            "inputId": "reference-answer",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      "data": {
+        "name": "上海中考 - 复述",
+        "description": "听两遍对话后根据提示图复述。",
+        "maxScore": 2.5,
+        "answerDescriptions": {
+          "answer": "对话复述录音"
+        },
+        "rubricMarkdown": "**考试要求**：对话播放两遍，60秒准备、60秒复述。\n\n**评分标准**：重点考查关键信息完整性、转述连贯性、语言准确性和表达流畅度。",
+        "inputDescriptions": {},
+        "extraPromptMarkdown": ""
+      }
+    },
+    {
+      "formatVersion": 2,
+      "schemaId": "a8c95c76-6f12-4d43-8ae1-5b9e2c7d1045",
+      "sourceDraftId": "b7d42f18-1c63-4e95-9a20-6f8b3d5c1045",
+      "structureHash": "sha256:de759d3988be2ad2174b20af6b8bf4cacb2ac2235066b98db5fe5640ef218cf8",
+      "revision": 0,
+      "structure": {
+        "questionType": "freetalk",
+        "answerFormat": [
+          {
+            "answerId": "answer",
+            "type": "free-speech"
+          }
+        ],
+        "templateInputs": [
+          {
+            "inputId": "question-description",
+            "type": "text",
+            "required": true
+          },
+          {
+            "inputId": "reference-answer",
+            "type": "text",
+            "required": true
+          }
+        ]
+      },
+      "data": {
+        "name": "上海中考 - 话题表达",
+        "description": "根据话题和思维导图完成不少于五句话的表达。",
+        "maxScore": 2.5,
+        "answerDescriptions": {
+          "answer": "话题表达录音"
+        },
+        "rubricMarkdown": "**考试要求**：75秒准备、60秒表达，不少于5句话。\n\n**评分标准**：重点考查内容完整性、语言准确性、逻辑连贯性、发音和流畅度。",
+        "inputDescriptions": {},
+        "extraPromptMarkdown": ""
+      }
     }
   ]
 }
