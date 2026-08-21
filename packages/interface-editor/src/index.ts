@@ -25,6 +25,7 @@ export type {
   InstanceDataError,
   ReplaceInstanceFromJsonResult,
   InterfaceAIGenerationResult,
+  InterfaceAIGenerationHandle,
   InterfaceTextGenerationChunk,
   InterfaceTextModelSelection,
   InterfaceTextModelOption,

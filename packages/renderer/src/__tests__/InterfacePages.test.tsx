@@ -4,8 +4,9 @@ import '@testing-library/jest-dom/vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { JSX } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { TaskProgressHandle, TaskProgressSnapshot } from '@ls101/core-types'
+import type { TaskProgressSnapshot } from '@ls101/core-types'
 import type {
+  InterfaceAIGenerationHandle,
   InterfaceAIGenerationResult,
   InterfaceApplication,
   InterfaceDraft
@@ -696,10 +697,11 @@ describe('Interface pages', () => {
         { id: 'save', label: '保存实例', status: 'waiting' }
       ]
     }
-    const handle: TaskProgressHandle<InterfaceAIGenerationResult> = {
+    const handle: InterfaceAIGenerationHandle = {
       getSnapshot: () => snapshot,
       subscribe: () => () => undefined,
       cancel: vi.fn(),
+      retry: vi.fn(),
       completion
     }
     const models = [
@@ -1161,12 +1163,15 @@ describe('Interface pages', () => {
     const snapshot: TaskProgressSnapshot = {
       items: [{ id: 'ai', label: 'AI 生成', status: 'completed' }]
     }
-    const handle: TaskProgressHandle<InterfaceAIGenerationResult> = {
+    const retry = vi.fn()
+    const handle: InterfaceAIGenerationHandle = {
       getSnapshot: () => snapshot,
       subscribe: () => () => undefined,
       cancel: vi.fn(),
+      retry,
       completion: Promise.resolve(result)
     }
+    retry.mockResolvedValue(handle)
     const startAIGeneration = vi.fn().mockResolvedValue(handle)
     const app = application({
       published: {
@@ -1214,15 +1219,11 @@ describe('Interface pages', () => {
     expect(await screen.findByText('生成失败')).toBeInTheDocument()
     expect(screen.getByText('生成服务暂时不可用')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '重新生成' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '从失败位置重试' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '返回题组' })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '重新生成' }))
-    fireEvent.click(
-      within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
-        name: '生成并覆盖'
-      })
-    )
-    await waitFor(() => expect(startAIGeneration).toHaveBeenCalledTimes(2))
+    fireEvent.click(screen.getByRole('button', { name: '从失败位置重试' }))
+    await waitFor(() => expect(retry).toHaveBeenCalledOnce())
+    expect(startAIGeneration).toHaveBeenCalledOnce()
   })
 })

@@ -656,6 +656,38 @@ test('IE-02 generates text and images atomically through the real pipelines', as
   expect(persisted.assets).toHaveLength(1)
 })
 
+test('IE-02b retries a failed image step without regenerating completed text', async () => {
+  await saveTextProvider(textProvider('ie-retry-text', 'mock-json-image'))
+  await saveImageProvider(imageProvider('ie-retry-image', 'mock-image'))
+  const interfaceId = await seedInterface(imageInterface)
+  await openInstanceEditor(interfaceId, imageInterface.name)
+  mockServer.failNextRequest('/v1/images/generations', 200, {
+    created: 1,
+    data: [{ b64_json: 'bm90IGFuIGltYWdl', revised_prompt: 'A green circle icon' }]
+  })
+
+  await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
+  await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-image' })
+  await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
+
+  await expect(page.getByText('生成失败', { exact: true })).toBeVisible({ timeout: 20_000 })
+  await expect(
+    page.getByRole('region', { name: 'AI 生成进度' }).locator('li[data-status="failed"]')
+  ).toContainText('生成图片：pictureImage')
+  await page.getByRole('button', { name: '从失败位置重试' }).click()
+
+  await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByLabel('title 内容')).toHaveValue('AI 标题')
+  expect(
+    mockServer.allRequests().filter((request) => request.path === '/v1/chat/completions')
+  ).toHaveLength(1)
+  expect(
+    mockServer.allRequests().filter((request) => request.path === '/v1/images/generations')
+  ).toHaveLength(2)
+  expect((await readInstance(interfaceId)).assets).toHaveLength(1)
+})
+
 test('IE-03 reports invalid AI output and supports cancellation without saving', async () => {
   await saveTextProvider(textProvider('ie-errors', 'mock-nonjson'))
   const interfaceId = await seedInterface(textInterface)
