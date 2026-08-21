@@ -5,6 +5,18 @@
 Reduce Qwen TTS CUDA download and release-build overhead without requiring users to install the
 complete CUDA Toolkit or weakening the model package's data-only security boundary.
 
+## Current Temporary State
+
+- Application setup and packaging include only the CPU helper. Published CUDA helpers and runtime
+  libraries remain available in the runtime release, but the application does not download or
+  bundle them.
+- The Qwen Provider settings UI keeps CUDA selection and probing unavailable and saves Qwen
+  Providers with the CPU backend.
+- Re-enable CUDA consumption only after the optional, on-demand runtime bundle described below is
+  implemented. Restoring it requires asset selection and integrity checks, install/update/removal
+  handling, removal of the main-package CUDA exclusions, UI installation/probe/selection states,
+  and packaged-application tests for both an installed bundle and CPU-only operation.
+
 ## CUDA Runtime Bundle
 
 - Publish the required platform CUDA dynamic libraries as a separately versioned, on-demand runtime

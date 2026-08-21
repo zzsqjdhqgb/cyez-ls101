@@ -26,10 +26,6 @@ export function runtimeTarget(platform = process.platform, architecture = proces
         cpu: {
           name: 'ls101-qwen-tts-helper-cpu-linux-x64',
           executable: 'ls101-qwen-tts-helper-cpu'
-        },
-        cuda: {
-          name: 'ls101-qwen-tts-helper-cuda-linux-x64',
-          executable: 'ls101-qwen-tts-helper-cuda'
         }
       }
     }
@@ -37,25 +33,47 @@ export function runtimeTarget(platform = process.platform, architecture = proces
   if (platform === 'win32') {
     return {
       directory: 'win32-x64',
-      dependencies: [
-        { name: 'cublas64_12.dll', file: 'cublas64_12.dll' },
-        { name: 'cublasLt64_12.dll', file: 'cublasLt64_12.dll' },
-        { name: 'nvJitLink_120_0.dll', file: 'nvJitLink_120_0.dll' }
-      ],
-      licenses: [{ name: 'LICENSE.NVIDIA-CUDA.html', file: 'LICENSE.NVIDIA-CUDA.html' }],
+      dependencies: [],
+      licenses: [],
       helpers: {
         cpu: {
           name: 'ls101-qwen-tts-helper-cpu-win32-x64.exe',
           executable: 'ls101-qwen-tts-helper-cpu.exe'
-        },
-        cuda: {
-          name: 'ls101-qwen-tts-helper-cuda-win32-x64.exe',
-          executable: 'ls101-qwen-tts-helper-cuda.exe'
         }
       }
     }
   }
   return null
+}
+
+export function disabledCudaRuntimeFiles(platform = process.platform) {
+  if (platform === 'linux') return ['ls101-qwen-tts-helper-cuda']
+  if (platform === 'win32') {
+    return [
+      'ls101-qwen-tts-helper-cuda.exe',
+      'cublas64_12.dll',
+      'cublasLt64_12.dll',
+      'nvJitLink_120_0.dll',
+      'LICENSE.NVIDIA-CUDA.html'
+    ]
+  }
+  return []
+}
+
+export async function cleanupDisabledCudaRuntimeFiles(
+  runtimeDirectory,
+  platform = process.platform
+) {
+  for (const file of disabledCudaRuntimeFiles(platform)) {
+    await rm(path.join(runtimeDirectory, file), { force: true })
+  }
+}
+
+export async function cleanupStagedCudaRuntimes(runtimeRoot) {
+  await Promise.all([
+    cleanupDisabledCudaRuntimeFiles(path.join(runtimeRoot, 'linux-x64'), 'linux'),
+    cleanupDisabledCudaRuntimeFiles(path.join(runtimeRoot, 'win32-x64'), 'win32')
+  ])
 }
 
 export function modelAssetNames() {
@@ -210,11 +228,14 @@ async function hashFile(filePath) {
 
 async function main() {
   const mode = downloadMode()
+  const target = runtimeTarget()
+  const runtimeRoot = path.join(root, 'externals', 'ai', 'qwen3-tts', 'runtime')
+  const runtimeDirectory = target ? path.join(runtimeRoot, target.directory) : null
+  await cleanupStagedCudaRuntimes(runtimeRoot)
   if (mode === 'skip') {
     console.log('[qwen-tts] download skipped by LS101_SKIP_QWEN_TTS_DOWNLOAD')
     return
   }
-  const target = runtimeTarget()
   if (!target) {
     console.warn(
       `[qwen-tts] 当前平台 ${process.platform}/${process.arch} 没有已发布的 CPU helper，跳过下载`
@@ -227,14 +248,7 @@ async function main() {
     (release) => selectRuntimeReleaseAssets(release, target)
   )
   const runtimeAssets = selectRuntimeReleaseAssets(runtimeRelease, target)
-  const runtimeDirectory = path.join(
-    root,
-    'externals',
-    'ai',
-    'qwen3-tts',
-    'runtime',
-    target.directory
-  )
+  if (!runtimeDirectory) throw new Error('当前平台没有 Qwen TTS 原生运行时目录')
   const helperDownloads = await Promise.all(
     Object.entries(runtimeAssets.helpers).map(async ([backend, asset]) => {
       const helper = target.helpers[backend]

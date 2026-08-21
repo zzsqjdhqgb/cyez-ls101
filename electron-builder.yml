@@ -97,6 +97,12 @@ extraResources:
     to: tts
   - from: externals/ai/qwen3-tts/runtime
     to: qwen-tts
+    filter:
+      - '**/*'
+      - '!**/ls101-qwen-tts-helper-cuda*'
+      - '!**/cublas*.dll'
+      - '!**/nvJitLink*.dll'
+      - '!**/LICENSE.NVIDIA-CUDA.html'
   - from: resources/media
     to: media
   - from: resources/builtin

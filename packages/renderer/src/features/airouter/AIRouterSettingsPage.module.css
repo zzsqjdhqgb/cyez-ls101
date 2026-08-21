@@ -598,56 +598,6 @@
   padding: var(--space-3) var(--space-4);
 }
 
-.backendControl {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--space-2);
-}
-
-.backendSegmented {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(84px, 1fr));
-  min-height: 36px;
-  padding: 2px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-subtle);
-}
-
-.backendOption {
-  display: inline-flex;
-  min-width: 0;
-  min-height: 30px;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 3px;
-  color: var(--color-text-muted);
-  background: transparent;
-  cursor: pointer;
-}
-
-.backendOption svg {
-  width: 15px;
-  height: 15px;
-}
-
-.backendOption[data-selected='true'] {
-  color: var(--color-text-strong);
-  box-shadow: var(--shadow-xs);
-  background: var(--color-surface);
-}
-
-.backendOption:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
 .addModel {
   display: flex;
   min-width: 0;
@@ -941,15 +891,12 @@
 
   .providerToolbar,
   .modelToolbar,
-  .backendControl,
   .speechTestControls {
     align-items: flex-start;
     flex-direction: column;
   }
 
   .providerToolbar > button,
-  .backendControl > button,
-  .backendSegmented,
   .addModel,
   .speechTestControls > button,
   .speechTestControls > .input,
