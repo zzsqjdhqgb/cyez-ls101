@@ -397,7 +397,7 @@ export class AIRouterSpeechService {
       modelPackageVersion,
       models: modelPackageId ? models : [],
       voices: modelPackageId ? voices : [],
-      ...(input.type === 'qwen-tts' ? { backend: input.backend ?? 'cpu' } : {})
+      ...(input.type === 'qwen-tts' ? { backend: 'cpu' as const } : {})
     }
   }
 
@@ -423,7 +423,12 @@ export class AIRouterSpeechService {
     const value = await this.configStorage.read<JsonValue>({ scope: ['airouter'], key: CONFIG_KEY })
     if (!value) return { version: CONFIG_VERSION, providers: [] }
     if (!isStoredDocument(value)) throw new Error('语音 Provider 配置数据无效')
-    return value
+    return {
+      ...value,
+      providers: value.providers.map((config) =>
+        config.type === 'qwen-tts' ? { ...config, backend: 'cpu' } : config
+      )
+    }
   }
 
   private writeDocument(document: StoredDocument): Promise<void> {

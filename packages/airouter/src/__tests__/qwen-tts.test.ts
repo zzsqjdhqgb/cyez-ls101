@@ -149,6 +149,30 @@ describe('QwenTtsSynthesizer', () => {
     expect(helper.killed).toBe(true)
   })
 
+  it('forces a CUDA provider request through the CPU helper', async () => {
+    const helper = new FakeHelper()
+    const spawnProcess = vi.fn(() => helper as unknown as ChildProcessWithoutNullStreams)
+    const synthesizer = new QwenTtsSynthesizer({
+      helperPaths: {
+        cpu: helperPath,
+        cuda: path.join(directory, 'missing-cuda-helper')
+      },
+      spawnProcess: spawnProcess as unknown as typeof spawn
+    })
+
+    await synthesizer.synthesize({
+      ...request,
+      provider: { ...request.provider, backend: 'cuda' }
+    })
+
+    expect(spawnProcess).toHaveBeenCalledWith(
+      helperPath,
+      expect.arrayContaining(['--backend', 'cpu']),
+      expect.any(Object)
+    )
+    synthesizer.dispose()
+  })
+
   it('terminates the helper when synthesis is aborted', async () => {
     const helper = new FakeHelper(false)
     const spawnProcess = vi.fn(() => helper as unknown as ChildProcessWithoutNullStreams)

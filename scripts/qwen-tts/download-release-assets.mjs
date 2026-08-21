@@ -226,16 +226,18 @@ async function hashFile(filePath) {
   return hash.digest('hex')
 }
 
-async function main() {
-  const mode = downloadMode()
-  const target = runtimeTarget()
-  const runtimeRoot = path.join(root, 'externals', 'ai', 'qwen3-tts', 'runtime')
-  const runtimeDirectory = target ? path.join(runtimeRoot, target.directory) : null
-  await cleanupStagedCudaRuntimes(runtimeRoot)
+export async function main(options = {}) {
+  const environment = options.environment ?? process.env
+  const mode = downloadMode(environment)
   if (mode === 'skip') {
     console.log('[qwen-tts] download skipped by LS101_SKIP_QWEN_TTS_DOWNLOAD')
     return
   }
+  const target = runtimeTarget()
+  const runtimeRoot =
+    options.runtimeRoot ?? path.join(root, 'externals', 'ai', 'qwen3-tts', 'runtime')
+  const runtimeDirectory = target ? path.join(runtimeRoot, target.directory) : null
+  await cleanupStagedCudaRuntimes(runtimeRoot)
   if (!target) {
     console.warn(
       `[qwen-tts] 当前平台 ${process.platform}/${process.arch} 没有已发布的 CPU helper，跳过下载`

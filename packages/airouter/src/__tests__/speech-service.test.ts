@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { strToU8, zipSync } from 'fflate'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { JsonConfigStorage } from '@ls101/config-store/main'
 import { EncryptedSecretStorage } from '@ls101/secret-store/main'
 import { AIRouterSpeechModelStore } from '../main/speech-model-store'
 import { AIRouterSpeechService } from '../main/speech-service'
@@ -26,7 +27,7 @@ describe('AIRouterSpeechService', () => {
     await rm(baseDir, { recursive: true, force: true })
   })
 
-  it('stores an explicit Qwen backend and defaults new Qwen providers to CPU', async () => {
+  it('normalizes every new Qwen provider to CPU', async () => {
     const cuda = await service.saveProviderConfig({
       id: 'qwen-cuda',
       name: 'Qwen CUDA',
@@ -45,8 +46,36 @@ describe('AIRouterSpeechService', () => {
       voices: []
     })
 
-    expect(cuda.backend).toBe('cuda')
+    expect(cuda.backend).toBe('cpu')
     expect(cpu.backend).toBe('cpu')
+  })
+
+  it('normalizes a stored CUDA provider to CPU before returning it', async () => {
+    const configStorage = new JsonConfigStorage(baseDir)
+    await configStorage.write(
+      { scope: ['airouter'], key: 'speech-providers' },
+      {
+        version: 1,
+        providers: [
+          {
+            id: 'legacy-qwen',
+            name: 'Legacy Qwen',
+            kind: 'local',
+            type: 'qwen-tts',
+            baseUrl: '',
+            modelPackageId: '',
+            modelPackageVersion: '',
+            models: [],
+            voices: [],
+            backend: 'cuda'
+          }
+        ]
+      }
+    )
+
+    await expect(service.listProviderConfigs()).resolves.toEqual([
+      expect.objectContaining({ id: 'legacy-qwen', backend: 'cpu' })
+    ])
   })
 
   it('stores online speech providers separately and maps OpenAI speech requests', async () => {

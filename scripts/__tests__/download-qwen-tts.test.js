@@ -22,6 +22,28 @@ test('selects runtime-only downloads for product documentation setup', async () 
   )
 })
 
+test('skip mode exits before cleaning locally built CUDA runtime files', async (context) => {
+  const { main } = await modulePromise
+  const runtimeRoot = await mkdtemp(path.join(tmpdir(), 'qwen-runtime-skip-'))
+  context.after(() => rm(runtimeRoot, { recursive: true, force: true }))
+  const linuxDirectory = path.join(runtimeRoot, 'linux-x64')
+  const windowsDirectory = path.join(runtimeRoot, 'win32-x64')
+  const cudaFiles = [
+    path.join(linuxDirectory, 'ls101-qwen-tts-helper-cuda'),
+    path.join(windowsDirectory, 'ls101-qwen-tts-helper-cuda.exe'),
+    path.join(windowsDirectory, 'cublas64_12.dll')
+  ]
+  await Promise.all([
+    mkdir(linuxDirectory, { recursive: true }),
+    mkdir(windowsDirectory, { recursive: true })
+  ])
+  await Promise.all(cudaFiles.map((file) => writeFile(file, 'locally built cuda runtime')))
+
+  await main({ environment: { LS101_SKIP_QWEN_TTS_DOWNLOAD: '1' }, runtimeRoot })
+
+  await Promise.all(cudaFiles.map((file) => access(file)))
+})
+
 test('selects the pinned platform helper from runtime release metadata', async () => {
   const { runtimeTarget, selectRuntimeReleaseAssets } = await modulePromise
   const target = runtimeTarget('linux', 'x64')
