@@ -11,8 +11,8 @@ against its API-provided size and SHA-256 digest. Release metadata and the helpe
 cached under `externals/ai/qwen3-tts/downloads/`; the two downloaded GGUF files are stored directly
 under `externals/ai/qwen3-tts/models/`. The helper is staged under `externals/ai/qwen3-tts/runtime/`. A full
 application build then prepares the local model ZIP under `dist/`, while `yarn qwen-tts:prepare`
-can build it explicitly. `yarn build:test` sets
-`LS101_SKIP_QWEN_TTS_DOWNLOAD=1` so smoke builds do not download the roughly 1.68 GB of models.
+can build it explicitly. Test builds run the same complete setup as other application builds;
+`--skip-model-package` skips only the separately distributed package outputs, not asset setup.
 If GitHub's anonymous API quota is exhausted, set `GITHUB_TOKEN` or `GH_TOKEN`; a previously
 validated API response is also cached at `externals/ai/qwen3-tts/downloads/release-api.json`.
 

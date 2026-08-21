@@ -120,14 +120,10 @@ function electronBuilderPlatform(platform) {
   return platform === 'linux' ? builder.Platform.LINUX : builder.Platform.WINDOWS
 }
 
-function runApplicationBuild(root, skipQwenTtsDownload) {
+function runApplicationBuild(root) {
   const options = {
     stdio: 'inherit',
-    cwd: root,
-    env: {
-      ...process.env,
-      ...(skipQwenTtsDownload ? { LS101_SKIP_QWEN_TTS_DOWNLOAD: '1' } : {})
-    }
+    cwd: root
   }
   if (process.platform === 'win32') {
     const commandInterpreter = process.env['ComSpec'] || process.env['COMSPEC'] || 'cmd.exe'
@@ -175,7 +171,7 @@ async function main() {
   )
 
   console.log('Running application build...')
-  runApplicationBuild(root, options.skipModelPackage)
+  runApplicationBuild(root)
 
   console.log('Starting electron-builder...')
   const platform = electronBuilderPlatform(options.platform)
