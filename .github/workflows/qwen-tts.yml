@@ -147,12 +147,14 @@ jobs:
             backend: cuda
             executable: ls101-qwen-tts-helper-cuda
             release-asset: ls101-qwen-tts-helper-cuda-linux-x64
-          - runner: windows-latest
+          # CUDA 12.8 supports MSVC 193x / Visual Studio 2022. Pin both
+          # Windows variants so the CPU and CUDA helpers use the same toolchain.
+          - runner: windows-2022
             runtime-directory: win32-x64
             backend: cpu
             executable: ls101-qwen-tts-helper-cpu.exe
             release-asset: ls101-qwen-tts-helper-cpu-win32-x64.exe
-          - runner: windows-latest
+          - runner: windows-2022
             runtime-directory: win32-x64
             backend: cuda
             executable: ls101-qwen-tts-helper-cuda.exe
