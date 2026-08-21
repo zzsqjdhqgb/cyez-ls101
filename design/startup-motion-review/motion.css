@@ -10,24 +10,45 @@
   animation: startup-logo-move var(--startup-logo-duration) linear both;
 }
 
+#gold-sweep,
+#orange-sweep,
+#red-sweep,
+#leaf {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+#gold-sweep {
+  transform-origin: 58% 54%;
+  animation: startup-gold-arrive var(--startup-logo-duration) linear both;
+}
+
+#orange-sweep {
+  transform-origin: 57% 55%;
+  animation: startup-orange-arrive var(--startup-logo-duration) linear both;
+}
+
+#red-sweep {
+  transform-origin: 54% 57%;
+  animation: startup-red-arrive var(--startup-logo-duration) linear both;
+}
+
+#leaf {
+  transform-origin: left center;
+  animation: startup-leaf-arrive var(--startup-logo-duration) linear both;
+}
+
+#headphones {
+  animation: startup-headphones-fade var(--startup-logo-duration) linear both;
+}
+
 #wordmark-reveal {
   animation: startup-wordmark-reveal var(--startup-logo-duration) linear both;
 }
 
 @keyframes startup-logo-move {
-  0% {
-    opacity: 0;
-    transform: translateX(1023px) scale(0.76);
-    animation-timing-function: var(--startup-logo-enter);
-  }
-
-  28% {
-    opacity: 1;
-    transform: translateX(1023px) scale(0.82);
-  }
-
+  0%,
   46% {
-    opacity: 1;
     transform: translateX(1023px) scale(0.82);
     animation-timing-function: var(--startup-logo-expand);
   }
@@ -36,6 +57,18 @@
   100% {
     opacity: 1;
     transform: translateX(90px) scale(0.82);
+  }
+}
+
+@keyframes startup-headphones-fade {
+  0%,
+  48% {
+    opacity: 0;
+  }
+
+  68%,
+  100% {
+    opacity: 1;
   }
 }
 
@@ -53,5 +86,94 @@
   82%,
   100% {
     width: 3100px;
+  }
+}
+
+@keyframes startup-gold-arrive {
+  0%,
+  17% {
+    opacity: 0;
+    transform: rotate(-24deg) scale(0.62);
+    animation-timing-function: var(--startup-logo-enter);
+  }
+
+  57% {
+    opacity: 1;
+    transform: rotate(2.5deg) scale(1.025);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  79%,
+  100% {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+}
+
+@keyframes startup-orange-arrive {
+  0%,
+  22% {
+    opacity: 0;
+    transform: rotate(20deg) scale(0.6);
+    animation-timing-function: var(--startup-logo-enter);
+  }
+
+  61% {
+    opacity: 1;
+    transform: rotate(-2.5deg) scale(1.024);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  81%,
+  100% {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+}
+
+@keyframes startup-red-arrive {
+  0%,
+  27% {
+    opacity: 0;
+    transform: rotate(22deg) scale(0.58);
+    animation-timing-function: var(--startup-logo-enter);
+  }
+
+  65% {
+    opacity: 1;
+    transform: rotate(-2deg) scale(1.02);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  84%,
+  100% {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+}
+
+@keyframes startup-leaf-arrive {
+  0%,
+  57% {
+    opacity: 0;
+    transform: translate(-28px, 18px) rotate(-18deg) scale(0.45);
+    animation-timing-function: var(--startup-logo-enter);
+  }
+
+  76% {
+    opacity: 1;
+    transform: translate(3px, -3px) rotate(3deg) scale(1.08);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  91% {
+    opacity: 1;
+    transform: translate(0, 1px) rotate(-1deg) scale(0.985);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(0) rotate(0) scale(1);
   }
 }
