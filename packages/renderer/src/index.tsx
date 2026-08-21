@@ -5,6 +5,7 @@ import { App } from './app/App'
 import { templateApplication } from './features/templates/TemplateApplicationRuntime'
 import { builtinInterfaceMaintenance } from './features/interfaces/BuiltinInterfaceRuntime'
 import { initializeSchemaApplication } from './features/schemas/SchemaApplicationRuntime'
+import { waitForMinimumStartupPlaceholderDuration } from './startup-placeholder'
 import './app/register-settings'
 import './app/register-placeholder-routes'
 import './styles/tokens.css'
@@ -17,16 +18,27 @@ if (!root) {
 }
 
 const reactRoot = createRoot(root)
+const minimumStartupPlaceholderDuration = waitForMinimumStartupPlaceholderDuration()
 
 async function renderApplication(): Promise<void> {
-  await initializeSchemaApplication()
-  await builtinInterfaceMaintenance.initialize()
-  await templateApplication.initialize()
+  const initializationResult = initializeApplicationContent().then(
+    () => ({ status: 'fulfilled' as const }),
+    (reason: unknown) => ({ status: 'rejected' as const, reason })
+  )
+  const [result] = await Promise.all([initializationResult, minimumStartupPlaceholderDuration])
+  if (result.status === 'rejected') throw result.reason
+
   reactRoot.render(
     <StrictMode>
       <App />
     </StrictMode>
   )
+}
+
+async function initializeApplicationContent(): Promise<void> {
+  await initializeSchemaApplication()
+  await builtinInterfaceMaintenance.initialize()
+  await templateApplication.initialize()
 }
 
 function renderStartupError(reason: unknown): void {
