@@ -345,15 +345,205 @@ describe('interface editor application integration', () => {
     ).resolves.toMatchObject({ instance: { name: '锁已释放' } })
   })
 
-  it('does not persist generated data when the final repository update fails', async () => {
+  it('does not validate or save when a cancelled text stream ends normally', async () => {
     const repository = new FileInterfaceRepository(new MemoryStore())
+    let outputConsumed!: () => void
+    const consumed = new Promise<void>((resolve) => {
+      outputConsumed = resolve
+    })
+    const textGenerator: InterfaceTextGenerator = {
+      async *generate(_prompt, { signal }) {
+        yield {
+          type: 'output',
+          delta: '{"title":"AI 标题","section":{"picture":"AI 配图","answer":"AI answer"}}'
+        }
+        outputConsumed()
+        await new Promise<void>((resolve) => {
+          if (signal.aborted) resolve()
+          else signal.addEventListener('abort', () => resolve(), { once: true })
+        })
+      }
+    }
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(),
+      textGenerator,
+      imageGenerator: { generate: vi.fn().mockResolvedValue({ data: PNG }) }
+    })
+    const draft = await app.drafts.create(content)
+    const published = await app.drafts.publish(draft.draftId)
+    if (published.status === 'invalid') throw new Error('expected a valid draft')
+    const blank = await app.published.createBlankInstance(published.interface.interfaceId)
+    const update = vi.spyOn(repository, 'updateInstance')
+
+    const handle = await app.instances.startAIGeneration(
+      published.interface.interfaceId,
+      blank.instance.instanceId
+    )
+    await consumed
+    handle.cancel()
+
+    await expect(handle.completion).resolves.toEqual({ status: 'cancelled' })
+    expect(update).not.toHaveBeenCalled()
+    await expect(
+      app.instances.get(published.interface.interfaceId, blank.instance.instanceId)
+    ).resolves.toEqual(blank)
+  })
+
+  it('does not save when an image generator returns after cancellation', async () => {
+    const repository = new FileInterfaceRepository(new MemoryStore())
+    let imageStarted!: () => void
+    let finishImage!: (value: { data: Uint8Array }) => void
+    const started = new Promise<void>((resolve) => {
+      imageStarted = resolve
+    })
+    const imageResult = new Promise<{ data: Uint8Array }>((resolve) => {
+      finishImage = resolve
+    })
     const app = createInterfaceApplication({
       repository,
       fileDialog: new TestFileDialog(),
       textGenerator: new ScriptedTextGenerator(
         '{"title":"AI 标题","section":{"picture":"AI 配图","answer":"AI answer"}}'
       ),
-      imageGenerator: { generate: vi.fn().mockResolvedValue({ data: PNG }) }
+      imageGenerator: {
+        async generate() {
+          imageStarted()
+          return imageResult
+        }
+      }
+    })
+    const draft = await app.drafts.create(content)
+    const published = await app.drafts.publish(draft.draftId)
+    if (published.status === 'invalid') throw new Error('expected a valid draft')
+    const blank = await app.published.createBlankInstance(published.interface.interfaceId)
+    const update = vi.spyOn(repository, 'updateInstance')
+
+    const handle = await app.instances.startAIGeneration(
+      published.interface.interfaceId,
+      blank.instance.instanceId
+    )
+    await started
+    handle.cancel()
+    finishImage({ data: PNG })
+
+    await expect(handle.completion).resolves.toEqual({ status: 'cancelled' })
+    expect(update).not.toHaveBeenCalled()
+    await expect(
+      app.instances.get(published.interface.interfaceId, blank.instance.instanceId)
+    ).resolves.toEqual(blank)
+  })
+
+  it('retries from the failed image without regenerating text or completed images', async () => {
+    const repository = new FileInterfaceRepository(new MemoryStore())
+    const twoImageContent = {
+      ...content,
+      fields: {
+        order: ['first', 'second'],
+        nodes: {
+          first: {
+            type: 'image' as const,
+            varName: 'firstImage',
+            description: '第一张图片',
+            example: '第一张示例图'
+          },
+          second: {
+            type: 'image' as const,
+            varName: 'secondImage',
+            description: '第二张图片',
+            example: '第二张示例图'
+          }
+        }
+      }
+    }
+    const textGenerator = new ScriptedTextGenerator(
+      '{"first":"第一张提示词","second":"第二张提示词"}'
+    )
+    let secondAttempts = 0
+    const imageGenerator: InterfaceImageGenerator = {
+      generate: vi.fn().mockImplementation(async (prompt: string) => {
+        if (prompt === '第二张提示词' && ++secondAttempts === 1) {
+          throw new Error('第二张图片生成失败')
+        }
+        return { data: PNG }
+      })
+    }
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(),
+      textGenerator,
+      imageGenerator
+    })
+    const draft = await app.drafts.create(twoImageContent)
+    const published = await app.drafts.publish(draft.draftId)
+    if (published.status === 'invalid') throw new Error('expected a valid draft')
+    const interfaceId = published.interface.interfaceId
+    const blank = await app.published.createBlankInstance(interfaceId)
+
+    const failedHandle = await app.instances.startAIGeneration(
+      interfaceId,
+      blank.instance.instanceId
+    )
+    await expect(failedHandle.completion).resolves.toEqual({
+      status: 'failed',
+      message: '第二张图片生成失败'
+    })
+    expect(failedHandle.getSnapshot().items.map(({ status }) => status)).toEqual([
+      'completed',
+      'completed',
+      'completed',
+      'failed',
+      'waiting'
+    ])
+    await expect(app.instances.get(interfaceId, blank.instance.instanceId)).resolves.toEqual(blank)
+
+    vi.spyOn(repository, 'getInstance').mockRejectedValueOnce(new Error('temporary read failure'))
+    await expect(failedHandle.retry()).rejects.toThrow('temporary read failure')
+
+    const retryHandle = await failedHandle.retry()
+    await expect(retryHandle.completion).resolves.toMatchObject({ status: 'completed' })
+    expect(textGenerator.generateCalls).toBe(1)
+    expect(imageGenerator.generate).toHaveBeenCalledTimes(3)
+    expect(imageGenerator.generate).toHaveBeenNthCalledWith(1, '第一张提示词', {
+      signal: expect.any(AbortSignal)
+    })
+    expect(imageGenerator.generate).toHaveBeenNthCalledWith(2, '第二张提示词', {
+      signal: expect.any(AbortSignal)
+    })
+    expect(imageGenerator.generate).toHaveBeenNthCalledWith(3, '第二张提示词', {
+      signal: expect.any(AbortSignal)
+    })
+    expect(retryHandle.getSnapshot().items.map(({ status }) => status)).toEqual([
+      'completed',
+      'completed',
+      'completed',
+      'completed',
+      'completed'
+    ])
+    const saved = await app.instances.get(interfaceId, blank.instance.instanceId)
+    expect(saved?.instance.imagePrompts).toEqual({
+      firstImage: '第一张提示词',
+      secondImage: '第二张提示词'
+    })
+    expect(Object.keys(saved?.assetUrls ?? {})).toEqual([
+      saved?.instance.values.firstImage,
+      saved?.instance.values.secondImage
+    ])
+  })
+
+  it('retries only the final save after an atomic repository write fails', async () => {
+    const repository = new FileInterfaceRepository(new MemoryStore())
+    const textGenerator = new ScriptedTextGenerator(
+      '{"title":"AI 标题","section":{"picture":"AI 配图","answer":"AI answer"}}'
+    )
+    const imageGenerator: InterfaceImageGenerator = {
+      generate: vi.fn().mockResolvedValue({ data: PNG })
+    }
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(),
+      textGenerator,
+      imageGenerator
     })
     const draft = await app.drafts.create(content)
     const published = await app.drafts.publish(draft.draftId)
@@ -370,19 +560,28 @@ describe('interface editor application integration', () => {
       new Error('simulated write failure')
     )
 
-    const handle = await app.instances.startAIGeneration(interfaceId, blank.instance.instanceId)
+    const failedHandle = await app.instances.startAIGeneration(
+      interfaceId,
+      blank.instance.instanceId
+    )
 
-    await expect(handle.completion).resolves.toEqual({
+    await expect(failedHandle.completion).resolves.toEqual({
       status: 'failed',
       message: 'simulated write failure'
     })
     await expect(app.instances.get(interfaceId, blank.instance.instanceId)).resolves.toEqual(before)
-    await expect(
-      app.instances.save(interfaceId, blank.instance.instanceId, {
-        name: '锁已释放',
-        values: before.instance.values
-      })
-    ).resolves.toMatchObject({ instance: { name: '锁已释放' } })
+
+    const retryHandle = await failedHandle.retry()
+    await expect(retryHandle.completion).resolves.toMatchObject({ status: 'completed' })
+    expect(textGenerator.generateCalls).toBe(1)
+    expect(imageGenerator.generate).toHaveBeenCalledOnce()
+    await expect(app.instances.get(interfaceId, blank.instance.instanceId)).resolves.toMatchObject({
+      instance: {
+        name: '原题组',
+        values: { titleText: 'AI 标题', answerText: 'AI answer' },
+        imagePrompts: { questionImage: 'AI 配图' }
+      }
+    })
   })
 
   it('exports an app package and imports a selected instance into another app', async () => {
@@ -994,6 +1193,7 @@ class ScriptedTextGenerator implements InterfaceTextGenerator {
   ]
   lastModel: InterfaceTextModelSelection | undefined
   lastPrompt = ''
+  generateCalls = 0
 
   constructor(private readonly response: string) {}
 
@@ -1005,6 +1205,7 @@ class ScriptedTextGenerator implements InterfaceTextGenerator {
     prompt: string,
     options: { signal: AbortSignal; model?: InterfaceTextModelSelection }
   ): AsyncIterable<InterfaceTextGenerationChunk> {
+    this.generateCalls += 1
     this.lastPrompt = prompt
     this.lastModel = options.model
     if (options.signal.aborted) return

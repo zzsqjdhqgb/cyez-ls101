@@ -278,7 +278,8 @@ describe('Schema repository', () => {
       (item) => item.data.name === '上海高考 - 听力短对话选择题'
     )
     const discourseSchema = first.find((item) => item.data.name === '上海高考 - 听力语篇选择题')
-    expect(first).toHaveLength(9)
+    const zhongkaoSchemas = first.filter((item) => item.data.name.startsWith('上海中考 - '))
+    expect(first).toHaveLength(14)
     expect(sentenceSchema?.structure.answerFormat).toEqual([
       { answerId: 'sentence-1', type: 'fixed-speech' },
       { answerId: 'sentence-2', type: 'fixed-speech' }
@@ -310,6 +311,19 @@ describe('Schema repository', () => {
       sourceDraftId: shortDialogueSchema?.sourceDraftId,
       data: { maxScore: 1.5 }
     })
+    expect(
+      zhongkaoSchemas.map(({ data, structure }) => ({
+        name: data.name,
+        maxScore: data.maxScore,
+        answers: structure.answerFormat.length
+      }))
+    ).toEqual([
+      { name: '上海中考 - 朗读词组', maxScore: 1.5, answers: 3 },
+      { name: '上海中考 - 朗读句子', maxScore: 1, answers: 2 },
+      { name: '上海中考 - 交际应答', maxScore: 2.5, answers: 5 },
+      { name: '上海中考 - 复述', maxScore: 2.5, answers: 1 },
+      { name: '上海中考 - 话题表达', maxScore: 2.5, answers: 1 }
+    ])
 
     if (!sentenceSchema) throw new Error('Bundled sentence Schema was not found')
     await expect(
@@ -323,7 +337,7 @@ describe('Schema repository', () => {
     expect((await repository.getSchema(sentenceSchema.schemaId))?.data.description).toBe(
       sentenceSchema.data.description
     )
-    expect(await repository.listSchemaIds()).toHaveLength(9)
+    expect(await repository.listSchemaIds()).toHaveLength(14)
     expect(await repository.listBuiltinSchemaIds()).toContain(
       '69fc2dc6-31d6-4666-bf6f-4b65a1e996dd'
     )

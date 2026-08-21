@@ -3,7 +3,11 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { AIRouterProviderConfigInput, AIRouterProviderConfigSummary } from '@ls101/airouter'
+import type {
+  AIRouterProviderConfigInput,
+  AIRouterProviderConfigSummary,
+  AIRouterSpeechProviderConfigInput
+} from '@ls101/airouter'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AIRouterSettingsPage } from '../features/airouter/AIRouterSettingsPage'
 import type { AIRouterApplication } from '../features/airouter/AIRouterApplication'
@@ -16,17 +20,38 @@ afterEach(() => {
 
 describe('AIRouterSettingsPage', () => {
   it('offers common provider presets and applies their base URLs', async () => {
-    renderAIRouter(applicationWith({ listConfigs: vi.fn().mockResolvedValue([]) }))
+    const application = applicationWith({
+      listConfigs: vi.fn().mockResolvedValue([]),
+      listModels: vi.fn().mockResolvedValue([])
+    })
+    renderAIRouter(application)
 
     fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
     const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
     const provider = within(dialog).getByLabelText('Provider') as HTMLSelectElement
     expect(Array.from(provider.options).map((option) => option.text)).toEqual(
-      expect.arrayContaining(['OpenAI', 'Anthropic', 'OpenRouter', 'DeepSeek', 'Zhipu AI', 'Groq'])
+      expect.arrayContaining([
+        'OpenAI',
+        'Anthropic',
+        'OpenRouter',
+        'DeepSeek',
+        'Zhipu AI',
+        'Groq',
+        'Agnes AI'
+      ])
     )
 
-    fireEvent.change(provider, { target: { value: 'deepseek' } })
-    expect(within(dialog).getByLabelText('Base URL')).toHaveValue('https://api.deepseek.com')
+    fireEvent.change(provider, { target: { value: 'agnes-ai' } })
+    expect(within(dialog).getByLabelText('Base URL')).toHaveValue('https://apihub.agnes-ai.com/v1')
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取模型列表' }))
+    await waitFor(() =>
+      expect(application.listModels).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: 'https://apihub.agnes-ai.com/v1',
+          catalogProviderId: 'agnes-ai'
+        })
+      )
+    )
   })
 
   it('edits models.dev output limits and reasoning effort per model', async () => {
@@ -567,6 +592,55 @@ describe('AIRouterSettingsPage', () => {
     )
   })
 
+  it('keeps Qwen on CPU while CUDA runtime packaging is disabled', async () => {
+    const probeQwenTtsCuda = vi.fn()
+    const saveSpeechConfig = vi
+      .fn()
+      .mockImplementation(async (input: AIRouterSpeechProviderConfigInput) => ({
+        ...input,
+        id: input.id ?? 'qwen-local',
+        baseUrl: '',
+        modelPackageId: '',
+        modelPackageVersion: '',
+        hasApiKey: false
+      }))
+    const application = applicationWith({
+      probeQwenTtsCuda,
+      saveSpeechConfig,
+      listSpeechConfigs: vi.fn().mockResolvedValue([
+        {
+          id: 'qwen-local',
+          name: 'Qwen 本地语音',
+          kind: 'local',
+          type: 'qwen-tts',
+          baseUrl: '',
+          modelPackageId: '',
+          modelPackageVersion: '',
+          models: [],
+          voices: [],
+          backend: 'cuda',
+          hasApiKey: false
+        }
+      ])
+    })
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+    const provider = await screen.findByRole('button', { name: /Qwen 本地语音/ })
+    expect(within(provider).getByText('CPU')).toBeInTheDocument()
+    fireEvent.click(provider)
+    const dialog = screen.getByRole('dialog', { name: 'Qwen 本地语音' })
+
+    expect(within(dialog).queryByRole('radiogroup', { name: 'Qwen TTS 计算后端' })).toBeNull()
+    expect(within(dialog).queryByRole('button', { name: '检测 CUDA' })).toBeNull()
+    expect(probeQwenTtsCuda).not.toHaveBeenCalled()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+    await waitFor(() =>
+      expect(saveSpeechConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'qwen-local', backend: 'cpu' })
+      )
+    )
+  })
+
   it('manages image Providers without a default Provider control', async () => {
     const manualProvider = {
       id: 'manual',
@@ -693,6 +767,7 @@ function applicationWith(overrides: Partial<AIRouterApplication>): AIRouterAppli
     listSpeechModels: vi.fn(),
     listSpeechVoices: vi.fn(),
     testSpeechConnection: vi.fn(),
+    probeQwenTtsCuda: vi.fn().mockResolvedValue({ available: false }),
     getPronunciationExtensionStatus: vi.fn().mockResolvedValue({
       extensionId: 'facebook-wav2vec2-pronunciation',
       requiredVersion: '1.0.0',

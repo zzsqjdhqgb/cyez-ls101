@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
 import type {
   AIRouterModelConfig,
+  AIRouterQwenTtsBackend,
   AIRouterSpeechModelPackageSummary,
   AIRouterSpeechProviderConfigInput,
   AIRouterSpeechProviderConfigSummary,
@@ -52,6 +53,7 @@ interface SpeechProviderDraft {
   modelPackageVersion: string
   models: AIRouterModelConfig[]
   voices: AIRouterSpeechVoiceConfig[]
+  backend: AIRouterQwenTtsBackend
   apiKey: string
   hasApiKey: boolean
 }
@@ -68,7 +70,7 @@ type SpeechFeedbackScope =
 const providerLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
   'pocket-tts': 'Pocket TTS (WASM)',
-  'qwen-tts': 'Qwen3-TTS 0.6B (CPU)'
+  'qwen-tts': 'Qwen3-TTS 0.6B'
 }
 
 const modelPackageLabels: Record<AIRouterSpeechProviderType, string> = {
@@ -294,6 +296,7 @@ export function AIRouterSpeechSettingsPage({
                   <span className={styles.providerMeta}>
                     <span>{providerLabels[config.type]}</span>
                     <span>{config.kind === 'local' ? '本地' : '在线'}</span>
+                    {config.type === 'qwen-tts' ? <span>CPU</span> : null}
                     <span>{config.models.filter((model) => model.enabled).length} 个模型</span>
                     <span>{config.voices.filter((voice) => voice.enabled).length} 个音色</span>
                   </span>
@@ -461,16 +464,17 @@ export function AIRouterSpeechSettingsPage({
                     aria-label="语音 Provider 类型"
                     className={styles.input}
                     disabled={Boolean(draft.id) || Boolean(busy)}
-                    onChange={(event) =>
+                    onChange={(event) => {
                       setDraft({
                         ...draft,
                         type: event.target.value as AIRouterSpeechProviderType,
+                        backend: 'cpu',
                         modelPackageId: '',
                         modelPackageVersion: '',
                         models: [],
                         voices: []
                       })
-                    }
+                    }}
                     value={draft.type}
                   >
                     {draft.kind === 'online' ? (
@@ -478,7 +482,7 @@ export function AIRouterSpeechSettingsPage({
                     ) : (
                       <>
                         <option value="pocket-tts">Pocket TTS (WASM)</option>
-                        <option value="qwen-tts">Qwen3-TTS 0.6B (CPU)</option>
+                        <option value="qwen-tts">Qwen3-TTS 0.6B</option>
                       </>
                     )}
                   </select>
@@ -1059,6 +1063,7 @@ function createDraft(): SpeechProviderDraft {
     modelPackageVersion: '',
     models: [],
     voices: [],
+    backend: 'cpu',
     apiKey: '',
     hasApiKey: false
   }
@@ -1069,6 +1074,7 @@ function fromConfig(config: AIRouterSpeechProviderConfigSummary): SpeechProvider
     ...config,
     models: config.models.map((model) => ({ ...model })),
     voices: config.voices.map((voice) => ({ ...voice })),
+    backend: config.type === 'qwen-tts' ? 'cpu' : (config.backend ?? 'cpu'),
     apiKey: ''
   }
 }
@@ -1087,6 +1093,7 @@ function toInput(
     baseUrl: draft.kind === 'online' ? draft.baseUrl : undefined,
     modelPackageId: draft.kind === 'local' ? draft.modelPackageId : undefined,
     modelPackageVersion: draft.kind === 'local' ? draft.modelPackageVersion : undefined,
+    backend: draft.kind === 'local' && draft.type === 'qwen-tts' ? 'cpu' : undefined,
     models: draft.models,
     voices: draft.voices,
     apiKey:
@@ -1117,6 +1124,7 @@ function isModified(
     draft.baseUrl !== saved.baseUrl ||
     draft.modelPackageId !== saved.modelPackageId ||
     draft.modelPackageVersion !== saved.modelPackageVersion ||
+    draft.backend !== (saved.backend ?? 'cpu') ||
     JSON.stringify(draft.models) !== JSON.stringify(saved.models) ||
     JSON.stringify(draft.voices) !== JSON.stringify(saved.voices)
   )

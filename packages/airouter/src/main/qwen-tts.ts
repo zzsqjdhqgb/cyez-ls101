@@ -1,10 +1,12 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { copyFile, link, mkdir, rename, rm, stat } from 'node:fs/promises'
+import { stat } from 'node:fs/promises'
 import path from 'node:path'
 import { app } from 'electron'
 import type {
   AIRouterGeneratedAudio,
+  AIRouterQwenTtsBackend,
+  AIRouterQwenTtsCudaProbeResult,
   AIRouterSpeechModelPackageModel,
   AIRouterSpeechModelPackageVoice
 } from '../shared'
@@ -15,6 +17,8 @@ const PROTOCOL_VERSION = 1
 const MAX_TEXT_BYTES = 64 * 1024
 const DEFAULT_STARTUP_TIMEOUT_MS = 180_000
 const DEFAULT_SYNTHESIS_TIMEOUT_MS = 600_000
+const CUDA_PROBE_TIMEOUT_MS = 10_000
+const MAX_PROBE_OUTPUT_BYTES = 64 * 1024
 
 interface QwenRuntimeParameters {
   threads: number
@@ -45,7 +49,7 @@ interface HelperSession {
 
 export interface QwenTtsSynthesizerOptions {
   helperPath?: string
-  runtimeRoot?: string
+  helperPaths?: Partial<Record<AIRouterQwenTtsBackend, string>>
   spawnProcess?: typeof spawn
 }
 
@@ -80,6 +84,56 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     this.sessions.clear()
   }
 
+  async probeCuda(): Promise<AIRouterQwenTtsCudaProbeResult> {
+    const helperPath = this.resolveHelperPath('cuda')
+    try {
+      await assertExecutableExists(helperPath)
+    } catch (error) {
+      return { available: false, message: error instanceof Error ? error.message : String(error) }
+    }
+
+    return new Promise((resolve) => {
+      const child = this.spawnProcess(helperPath, ['--probe-backend', 'cuda'], {
+        env: helperEnvironment(helperPath),
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true
+      })
+      let settled = false
+      let stdout = ''
+      let stderr = ''
+      const finish = (result: AIRouterQwenTtsCudaProbeResult): void => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        resolve(result)
+      }
+      const append = (current: string, chunk: Buffer): string =>
+        `${current}${chunk.toString('utf8')}`.slice(-MAX_PROBE_OUTPUT_BYTES)
+      child.stdout.on('data', (chunk: Buffer) => {
+        stdout = append(stdout, chunk)
+      })
+      child.stderr.on('data', (chunk: Buffer) => {
+        stderr = append(stderr, chunk)
+      })
+      child.once('error', (error) => finish({ available: false, message: error.message }))
+      child.once('exit', (code) => {
+        const result = parseCudaProbe(stdout)
+        if (code === 0 && result?.available) {
+          finish(result)
+          return
+        }
+        finish({
+          available: false,
+          message: result?.message || stderr.trim() || `CUDA 检测失败（code=${code ?? 'null'}）`
+        })
+      })
+      const timer = setTimeout(() => {
+        if (!child.killed) child.kill()
+        finish({ available: false, message: 'CUDA 检测超时' })
+      }, CUDA_PROBE_TIMEOUT_MS)
+    })
+  }
+
   private async synthesizeRequest(
     request: AIRouterLocalSpeechRequest
   ): Promise<AIRouterGeneratedAudio> {
@@ -93,30 +147,34 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
       throw new Error('Qwen TTS 模型包缺少 TTS、语音解码器或音色资产')
     }
     const parameters = parseRuntimeParameters(model.parameters)
+    const backend = request.provider.backend ?? 'cpu'
     const [ttsModelPath, tokenizerPath, speakerPath] = await Promise.all([
       request.resolveAssetPath(ttsModelAsset),
       request.resolveAssetPath(tokenizerAsset),
       request.resolveAssetPath(speakerAsset)
     ])
-    const modelDirectory = await this.prepareModelDirectory(
-      request,
-      model,
+    const key = JSON.stringify([
       ttsModelPath,
-      tokenizerPath
-    )
-    const key = [
-      modelDirectory,
+      tokenizerPath,
       speakerPath,
+      backend,
       parameters.threads,
       parameters.maxAudioTokens,
       parameters.topK,
       parameters.temperature,
       parameters.repetitionPenalty,
       parameters.lowMemory
-    ].join(':')
+    ])
     return this.enqueue(key, async () => {
       if (request.signal?.aborted) throw abortError()
-      const session = await this.getSession(key, modelDirectory, speakerPath, parameters)
+      const session = await this.getSession(
+        key,
+        ttsModelPath,
+        tokenizerPath,
+        speakerPath,
+        backend,
+        parameters
+      )
       return this.dispatch(session, request.text, parameters, request.signal)
     })
   }
@@ -135,40 +193,24 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     return operation
   }
 
-  private async prepareModelDirectory(
-    request: AIRouterLocalSpeechRequest,
-    model: AIRouterSpeechModelPackageModel,
-    ttsModelPath: string,
-    tokenizerPath: string
-  ): Promise<string> {
-    const root = this.options.runtimeRoot ?? path.join(resolveUserDataPath(), 'qwen-tts-runtime')
-    const key = [
-      safeSegment(request.provider.modelPackageId),
-      safeSegment(request.provider.modelPackageVersion),
-      safeSegment(model.id),
-      path.basename(ttsModelPath).slice(0, 16),
-      path.basename(tokenizerPath).slice(0, 16)
-    ].join('-')
-    const directory = path.join(root, key)
-    await mkdir(directory, { recursive: true })
-    const quantization = stringValue(recordValue(model.parameters.load).quantization)
-    const ttsName = quantization === 'q8_0' ? 'qwen3-tts-0.6b-q8_0.gguf' : 'qwen3-tts-0.6b-f16.gguf'
-    await Promise.all([
-      ensureLinkedFile(ttsModelPath, path.join(directory, ttsName)),
-      ensureLinkedFile(tokenizerPath, path.join(directory, 'qwen3-tts-tokenizer-f16.gguf'))
-    ])
-    return directory
-  }
-
   private getSession(
     key: string,
-    modelDirectory: string,
+    ttsModelPath: string,
+    tokenizerPath: string,
     speakerPath: string,
+    backend: AIRouterQwenTtsBackend,
     parameters: QwenRuntimeParameters
   ): Promise<HelperSession> {
     const existing = this.sessions.get(key)
     if (existing) return existing
-    const created = this.startSession(key, modelDirectory, speakerPath, parameters)
+    const created = this.startSession(
+      key,
+      ttsModelPath,
+      tokenizerPath,
+      speakerPath,
+      backend,
+      parameters
+    )
     this.sessions.set(key, created)
     void created.catch(() => {
       if (this.sessions.get(key) === created) this.sessions.delete(key)
@@ -178,15 +220,21 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
 
   private async startSession(
     key: string,
-    modelDirectory: string,
+    ttsModelPath: string,
+    tokenizerPath: string,
     speakerPath: string,
+    backend: AIRouterQwenTtsBackend,
     parameters: QwenRuntimeParameters
   ): Promise<HelperSession> {
-    const helperPath = this.options.helperPath ?? resolveHelperPath()
+    const helperPath = this.resolveHelperPath(backend)
     await assertExecutableExists(helperPath)
     const args = [
-      '--model-dir',
-      modelDirectory,
+      '--backend',
+      backend,
+      '--tts-model',
+      ttsModelPath,
+      '--tokenizer-model',
+      tokenizerPath,
       '--speaker',
       speakerPath,
       '--threads',
@@ -201,11 +249,9 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
       String(parameters.repetitionPenalty)
     ]
     const child = this.spawnProcess(helperPath, args, {
-      env: {
-        ...process.env,
-        QWEN3_TTS_BACKEND: 'cpu',
+      env: helperEnvironment(helperPath, {
         QWEN3_TTS_LOW_MEM: parameters.lowMemory ? '1' : '0'
-      },
+      }),
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true
     })
@@ -265,6 +311,14 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     } finally {
       clearTimeout(timer)
     }
+  }
+
+  private resolveHelperPath(backend: AIRouterQwenTtsBackend): string {
+    return (
+      this.options.helperPaths?.[backend] ??
+      (backend === 'cpu' ? this.options.helperPath : undefined) ??
+      resolveHelperPath(backend)
+    )
   }
 
   private handleMessage(
@@ -396,33 +450,9 @@ function parseRuntimeParameters(parameters: Record<string, unknown>): QwenRuntim
   }
 }
 
-async function ensureLinkedFile(source: string, target: string): Promise<void> {
-  const [sourceStats, targetStats] = await Promise.all([
-    stat(source),
-    stat(target).catch(() => null)
-  ])
-  if (!sourceStats.isFile()) throw new Error(`Qwen TTS 模型资产不是文件：${source}`)
-  if (targetStats?.isFile() && targetStats.size === sourceStats.size) return
-  const temporary = `${target}.${randomUUID()}.tmp`
-  await rm(temporary, { force: true })
-  try {
-    await link(source, temporary)
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code
-    if (!['EXDEV', 'EPERM', 'EACCES', 'ENOTSUP'].includes(code ?? '')) throw error
-    await copyFile(source, temporary)
-  }
-  try {
-    await rename(temporary, target)
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
-    await rm(temporary, { force: true })
-  }
-}
-
-function resolveHelperPath(): string {
-  const executable =
-    process.platform === 'win32' ? 'ls101-qwen-tts-helper.exe' : 'ls101-qwen-tts-helper'
+function resolveHelperPath(backend: AIRouterQwenTtsBackend): string {
+  const extension = process.platform === 'win32' ? '.exe' : ''
+  const executable = `ls101-qwen-tts-helper-${backend}${extension}`
   const relative = path.join('qwen-tts', `${process.platform}-${process.arch}`, executable)
   const electronApp = app as typeof app & { isPackaged?: boolean; getAppPath?: () => string }
   return electronApp.isPackaged
@@ -438,11 +468,34 @@ function resolveHelperPath(): string {
       )
 }
 
-function resolveUserDataPath(): string {
+function helperEnvironment(
+  helperPath: string,
+  overrides: NodeJS.ProcessEnv = {}
+): NodeJS.ProcessEnv {
+  const environment = { ...process.env }
+  const pathKeys = Object.keys(environment).filter((key) => key.toLowerCase() === 'path')
+  const pathKey = pathKeys[0] ?? 'PATH'
+  for (const duplicateKey of pathKeys.slice(1)) delete environment[duplicateKey]
+  environment[pathKey] = [path.dirname(helperPath), environment[pathKey]]
+    .filter(Boolean)
+    .join(path.delimiter)
+  return { ...environment, ...overrides }
+}
+
+function parseCudaProbe(output: string): AIRouterQwenTtsCudaProbeResult | null {
   try {
-    return app.getPath('userData')
+    const value = JSON.parse(output.trim()) as Partial<AIRouterQwenTtsCudaProbeResult>
+    if (typeof value.available !== 'boolean') return null
+    return {
+      available: value.available,
+      device: typeof value.device === 'string' ? value.device : undefined,
+      description: typeof value.description === 'string' ? value.description : undefined,
+      memoryFree: typeof value.memoryFree === 'number' ? value.memoryFree : undefined,
+      memoryTotal: typeof value.memoryTotal === 'number' ? value.memoryTotal : undefined,
+      message: typeof value.message === 'string' ? value.message : undefined
+    }
   } catch {
-    return path.join(process.cwd(), '.cache')
+    return null
   }
 }
 
@@ -481,10 +534,6 @@ function recordValue(value: unknown): Record<string, unknown> {
     : {}
 }
 
-function stringValue(value: unknown): string | null {
-  return typeof value === 'string' ? value : null
-}
-
 function integerValue(value: unknown, min: number, max: number): number | null {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= min && value <= max
     ? value
@@ -495,11 +544,6 @@ function numberValue(value: unknown, min: number, max: number): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max
     ? value
     : null
-}
-
-function safeSegment(value: string): string {
-  const normalized = value.replace(/[^a-zA-Z0-9_.-]/g, '_')
-  return normalized || 'unnamed'
 }
 
 function summarizeText(text: string): string {

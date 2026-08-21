@@ -11,7 +11,8 @@ if(NOT QWEN3_TTS_SOURCE_DIR OR NOT EXISTS "${QWEN3_TTS_SOURCE_DIR}/CMakeLists.tx
 endif()
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build static libraries" FORCE)
-set(QWEN3_TTS_COREML OFF CACHE BOOL "Disable non-CPU backends" FORCE)
+set(QWEN3_TTS_COREML OFF CACHE BOOL "Disable CoreML" FORCE)
+add_subdirectory("${QWEN3_TTS_SOURCE_DIR}/ggml" ggml EXCLUDE_FROM_ALL)
 add_subdirectory("${QWEN3_TTS_SOURCE_DIR}" qwen3-tts EXCLUDE_FROM_ALL)
 
 add_executable(ls101-qwen-tts-helper main.cpp)

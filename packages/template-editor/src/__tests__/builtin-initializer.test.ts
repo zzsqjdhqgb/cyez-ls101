@@ -25,7 +25,9 @@ describe('内置函数库启动初始化', () => {
       'builtin:examples',
       'builtin:shanghai-gaokao-basic',
       'builtin:shanghai-gaokao-choice',
-      'builtin:shanghai-gaokao-groups'
+      'builtin:shanghai-gaokao-groups',
+      'builtin:shanghai-zhongkao-basic',
+      'builtin:shanghai-zhongkao-groups'
     ])
     expect(await repository.getActiveBuiltinFunctionLibrary('builtin:basic')).toMatchObject({
       libraryId: 'builtin:basic',
@@ -143,6 +145,42 @@ describe('内置函数库启动初始化', () => {
         ]
       }
     })
+
+    const zhongkaoBasic = await repository.getActiveBuiltinFunctionLibrary(
+      'builtin:shanghai-zhongkao-basic'
+    )
+    expect(zhongkaoBasic).toMatchObject({
+      libraryId: 'builtin:shanghai-zhongkao-basic',
+      version: 1,
+      contentHash: 'sha256:df6f21acf2b6c34551278fd33b566df24303cc38203c58dc2723f8817e2e45ed',
+      content: { name: '初中基础题型' }
+    })
+    expect(
+      zhongkaoBasic?.content.functions.map(({ functionId, content }) => ({
+        functionId,
+        name: content.name
+      }))
+    ).toEqual([
+      { functionId: 'builtin:shanghai-zhongkao-directions', name: 'Directions页面' },
+      { functionId: 'builtin:shanghai-zhongkao-phrase-reading', name: '朗读词组' },
+      { functionId: 'builtin:shanghai-zhongkao-sentence-reading', name: '朗读句子' },
+      { functionId: 'builtin:shanghai-zhongkao-quick-response', name: '交际应答' },
+      { functionId: 'builtin:shanghai-zhongkao-retelling', name: '复述' },
+      { functionId: 'builtin:shanghai-zhongkao-topic-speaking', name: '话题表达' }
+    ])
+    const phrase = zhongkaoBasic?.content.functions.find(
+      ({ functionId }) => functionId === 'builtin:shanghai-zhongkao-phrase-reading'
+    )
+    expect(phrase?.content.body.children.map((child) => child.timeline)).toEqual([
+      [{ type: 'countdown', seconds: { type: 'number', source: 'literal', value: 10 } }],
+      [
+        {
+          type: 'record',
+          duration: { type: 'number', source: 'literal', value: 15 },
+          outputName: 'recording'
+        }
+      ]
+    ])
 
     const choices = await repository.getActiveBuiltinFunctionLibrary(
       'builtin:shanghai-gaokao-choice'
@@ -443,6 +481,40 @@ describe('内置函数库启动初始化', () => {
       })
       expect(serializedDescription).toContain(`![[@img${index}-inst]]([@img${index}])`)
     }
+
+    const zhongkaoGroups = await repository.getActiveBuiltinFunctionLibrary(
+      'builtin:shanghai-zhongkao-groups'
+    )
+    expect(zhongkaoGroups).toMatchObject({
+      libraryId: 'builtin:shanghai-zhongkao-groups',
+      version: 1,
+      contentHash: 'sha256:b0626d0a4ec26c1a1e92cb0fdc03c7b5993ae518018982c1bdfe64dc121af1b7',
+      content: { name: '初中大题组' }
+    })
+    const zhongkaoGroupDetails = zhongkaoGroups?.content.functions.filter(
+      (entry) => entry.exposed !== false
+    )
+    expect(
+      zhongkaoGroupDetails?.map(({ functionId, content }) => ({ functionId, name: content.name }))
+    ).toEqual([
+      { functionId: 'builtin:shanghai-zhongkao-phrase-group', name: '朗读词组题组' },
+      { functionId: 'builtin:shanghai-zhongkao-sentence-group', name: '朗读句子题组' },
+      { functionId: 'builtin:shanghai-zhongkao-quick-response-group', name: '交际应答题组' },
+      { functionId: 'builtin:shanghai-zhongkao-retelling-group', name: '复述题组' },
+      { functionId: 'builtin:shanghai-zhongkao-topic-speaking-group', name: '话题表达题组' }
+    ])
+    expect(
+      zhongkaoGroupDetails?.map(
+        ({ content }) => content.body.children.filter((child) => child.type === 'function').length
+      )
+    ).toEqual([4, 3, 6, 2, 2])
+    expect(zhongkaoGroupDetails?.map(({ content }) => content.schemaUses[0]?.schemaId)).toEqual([
+      'a8c95c76-6f12-4d43-8ae1-5b9e2c7d1041',
+      'a8c95c76-6f12-4d43-8ae1-5b9e2c7d1042',
+      'a8c95c76-6f12-4d43-8ae1-5b9e2c7d1043',
+      'a8c95c76-6f12-4d43-8ae1-5b9e2c7d1044',
+      'a8c95c76-6f12-4d43-8ae1-5b9e2c7d1045'
+    ])
   })
 
   it('清单中任一 release 无效时不写入前面的有效 release', async () => {

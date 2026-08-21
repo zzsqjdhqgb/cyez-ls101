@@ -132,6 +132,7 @@ function mockClient(): AIRouterClient {
     listSpeechModels: vi.fn(),
     listSpeechVoices: vi.fn(),
     testSpeechConnection: vi.fn(),
+    probeQwenTtsCuda: vi.fn().mockResolvedValue({ available: false }),
     listSpeechRecognitionModels: vi.fn().mockResolvedValue([]),
     recognizeSpeech: vi.fn(),
     listPronunciationAssessmentModels: vi.fn().mockResolvedValue([]),

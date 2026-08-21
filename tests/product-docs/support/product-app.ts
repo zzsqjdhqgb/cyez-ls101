@@ -7,6 +7,7 @@ export function launchProductDocsApp(userDataDir: string): Promise<ElectronAppli
   return launchIntegrationApp(userDataDir, {
     contentSize: PRODUCT_DOCS_CONTENT_SIZE,
     deviceScaleFactor: 1,
+    extraArgs: ['--disable-gpu'],
     randomSeed: 1
   })
 }

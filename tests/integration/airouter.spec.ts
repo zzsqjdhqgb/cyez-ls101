@@ -116,7 +116,6 @@ const temporaryPaths: string[] = []
 const qwenTtsAssetConfig = JSON.parse(
   readFileSync(path.resolve('scripts', 'qwen-tts', 'assets.json'), 'utf8')
 ) as {
-  release: { version: string }
   package: { version: string }
   model: { quantization: string }
   voices: Array<{ id: string; name: string; file: string }>
@@ -124,9 +123,9 @@ const qwenTtsAssetConfig = JSON.parse(
 const qwenTtsModelDirectory = path.resolve('externals', 'ai', 'qwen3-tts', 'models')
 const qwenTtsRuntimeTarget =
   process.arch === 'x64' && process.platform === 'linux'
-    ? { directory: 'linux-x64', executable: 'ls101-qwen-tts-helper' }
+    ? { directory: 'linux-x64', executable: 'ls101-qwen-tts-helper-cpu' }
     : process.arch === 'x64' && process.platform === 'win32'
-      ? { directory: 'win32-x64', executable: 'ls101-qwen-tts-helper.exe' }
+      ? { directory: 'win32-x64', executable: 'ls101-qwen-tts-helper-cpu.exe' }
       : null
 const qwenTtsHelperPath = qwenTtsRuntimeTarget
   ? path.resolve(
@@ -386,6 +385,10 @@ test('AR-02 exposes the text empty state and default manual image provider', asy
   await openAirouter()
   await expect(page.getByText('共 0 个 Provider')).toBeVisible()
   await expect(page.getByText('尚未添加文本生成 Provider')).toBeVisible()
+  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByLabel('Provider', { exact: true }).selectOption('agnes-ai')
+  await expect(page.getByLabel('Base URL')).toHaveValue('https://apihub.agnes-ai.com/v1')
+  await page.getByRole('button', { name: '关闭 Provider 编辑器' }).click()
   await page.getByRole('tab', { name: '图像生成' }).click()
   await expect(page.getByRole('button', { name: /手动生成/ })).toBeVisible()
   const state = await page.evaluate(async () => ({
@@ -1642,6 +1645,7 @@ test.describe('Qwen3 TTS runtime', () => {
       audio: { mediaType: 'audio/wav', format: 'wav', channels: 1 }
     })
     expect(result.audio?.data.byteLength).toBeGreaterThan(44)
+    expect(existsSync(path.join(userDataDir, 'qwen-tts-runtime'))).toBe(false)
   })
 })
 

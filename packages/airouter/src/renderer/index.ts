@@ -43,6 +43,7 @@ export function createAIRouterClient(bridge?: AIRouterBridge): AIRouterClient {
     listSpeechModels: (config) => getBridge().listSpeechModels(config),
     listSpeechVoices: (request) => getBridge().listSpeechVoices(request),
     testSpeechConnection: (request) => getBridge().testSpeechConnection(request),
+    probeQwenTtsCuda: () => getBridge().probeQwenTtsCuda(),
     listSpeechRecognitionProviderConfigs: () => getBridge().listSpeechRecognitionProviderConfigs(),
     saveSpeechRecognitionProviderConfig: (config) =>
       getBridge().saveSpeechRecognitionProviderConfig(config),

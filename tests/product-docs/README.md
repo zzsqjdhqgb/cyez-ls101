@@ -10,6 +10,25 @@
 yarn test:product-docs
 ```
 
+该命令只运行预览模式：生成的 Markdown、manifest、截图、trace 和失败证据都保存在
+`test-results/product-docs-preview`，不会修改 `docs/product`。
+
+正式生成必须通过专用 Docker 渲染镜像：
+
+```bash
+yarn docs:product:image
+yarn docs:product:publish
+```
+
+检查从当前提交重新生成的 canonical 文档是否干净：
+
+```bash
+yarn docs:product:check
+```
+
+`docs:product:publish` 和 `docs:product:check` 会由跨平台 Node runner 调用 Docker，Windows、macOS、Linux 和 CI 使用同一套命令。首次使用时请确认 Docker Desktop 或 Docker Engine 已启动。
+专用镜像安装时只下载打包所需的轻量 Qwen TTS runtime，不下载 Qwen、Pocket TTS、STT 或发音模型本体。
+
 Linux 无桌面环境：
 
 ```bash
@@ -30,6 +49,6 @@ xvfb-run -a yarn test:product-docs
 
 产品说明书章节由 `tests/product-docs/support/product-guide.ts` 定义。章节提供阶段目标、输入、产物和下一步，具体任务的动作与可见结果来自同一份可执行产品说明定义。测试统计只进入独立覆盖页，不进入说明书叙事。
 
-完整生成使用 `yarn test:product-docs` 或 `yarn test:product-docs:run`。筛选调试使用 `yarn test:product-docs:preview --grep <pattern>`，只会更新 `test-results/product-docs-preview/`。
+完整预览使用 `yarn test:product-docs` 或 `yarn test:product-docs:run`。筛选调试使用 `yarn test:product-docs:preview --grep <pattern>`，只会更新 `test-results/product-docs-preview/`。
 
 生成的 Markdown、manifest 和图片不手工编辑。

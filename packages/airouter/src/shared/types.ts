@@ -6,6 +6,7 @@ export type AIRouterLocalSpeechProviderType = Exclude<
   'openai-compatible'
 >
 export type AIRouterSpeechProviderKind = 'online' | 'local'
+export type AIRouterQwenTtsBackend = 'cpu' | 'cuda'
 export type AIRouterSpeechRole = 'default' | 'man' | 'woman'
 export type AIRouterSpeechAudioFormat = 'wav' | 'mp3' | 'opus' | 'pcm-s16le'
 
@@ -328,6 +329,7 @@ export interface AIRouterSpeechProviderConfig {
   modelPackageVersion: string
   models: AIRouterModelConfig[]
   voices: AIRouterSpeechVoiceConfig[]
+  backend?: AIRouterQwenTtsBackend
 }
 
 export interface AIRouterSpeechProviderConfigInput {
@@ -340,6 +342,7 @@ export interface AIRouterSpeechProviderConfigInput {
   modelPackageVersion?: string
   models: AIRouterModelConfig[]
   voices: AIRouterSpeechVoiceConfig[]
+  backend?: AIRouterQwenTtsBackend
   apiKey?: string
   clearApiKey?: boolean
 }
@@ -466,6 +469,15 @@ export interface AIRouterSpeechTestResult {
   audio: AIRouterGeneratedAudio
 }
 
+export interface AIRouterQwenTtsCudaProbeResult {
+  available: boolean
+  device?: string
+  description?: string
+  memoryFree?: number
+  memoryTotal?: number
+  message?: string
+}
+
 export interface AIRouterSpeechVoiceListInput {
   config: AIRouterSpeechProviderConfigInput
   modelId: string
@@ -506,6 +518,7 @@ export interface AIRouterClient {
   testSpeechConnection(
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult>
+  probeQwenTtsCuda(): Promise<AIRouterQwenTtsCudaProbeResult>
   listSpeechRecognitionProviderConfigs(): Promise<AIRouterSpeechRecognitionProviderConfigSummary[]>
   saveSpeechRecognitionProviderConfig(
     config: AIRouterSpeechRecognitionProviderConfigInput
@@ -577,6 +590,7 @@ export interface AIRouterBridge {
   testSpeechConnection(
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult>
+  probeQwenTtsCuda(): Promise<AIRouterQwenTtsCudaProbeResult>
   listSpeechRecognitionProviderConfigs(): Promise<AIRouterSpeechRecognitionProviderConfigSummary[]>
   saveSpeechRecognitionProviderConfig(
     config: AIRouterSpeechRecognitionProviderConfigInput

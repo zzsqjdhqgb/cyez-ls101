@@ -33,12 +33,12 @@ describe('AppearanceSettingsApplication', () => {
     const store = createMemoryStore()
     const application = createAppearanceSettingsApplication(store)
 
-    await expect(application.load()).resolves.toEqual(defaultAppearanceSettings)
+    await expect(application.load()).resolves.toEqual({ theme: 'light', reduceMotion: false })
 
     await application.save({ theme: 'dark', reduceMotion: true })
     await expect(application.load()).resolves.toEqual({ theme: 'dark', reduceMotion: true })
 
-    await expect(application.reset()).resolves.toEqual(defaultAppearanceSettings)
+    await expect(application.reset()).resolves.toEqual({ theme: 'light', reduceMotion: false })
     await expect(application.load()).resolves.toEqual(defaultAppearanceSettings)
   })
 

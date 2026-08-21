@@ -10,6 +10,8 @@ interface IntegrationAppLaunchOptions {
     height: number
   }
   deviceScaleFactor?: number
+  extraArgs?: readonly string[]
+  environment?: Record<string, string>
   randomSeed?: number
 }
 
@@ -24,7 +26,7 @@ export async function launchIntegrationApp(
     )
   })
 
-  const environment = { ...process.env, LS101_INTEGRATION_TEST: '1' }
+  const environment = { ...process.env, LS101_INTEGRATION_TEST: '1', ...options.environment }
   delete environment['ELECTRON_RENDERER_URL']
 
   const args = ['--no-sandbox', '--password-store=basic', `--user-data-dir=${userDataDir}`]
@@ -34,6 +36,7 @@ export async function launchIntegrationApp(
   if (options.randomSeed !== undefined) {
     args.push(`--js-flags=--random-seed=${options.randomSeed}`)
   }
+  if (options.extraArgs) args.push(...options.extraArgs)
 
   const electronApp = await electron.launch({
     executablePath,

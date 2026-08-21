@@ -165,6 +165,7 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
     AIROUTER_CHANNELS.testSpeechConnection,
     (_event, request: AIRouterSpeechConnectionTestInput) => speechService.testConnection(request)
   )
+  ipcMain.handle(AIROUTER_CHANNELS.probeQwenTtsCuda, () => qwenTtsSynthesizer.probeCuda())
   ipcMain.handle(AIROUTER_CHANNELS.listRecognitionConfigs, () =>
     recognitionService.listProviderConfigs()
   )

@@ -351,6 +351,14 @@ export class AIRouterSpeechService {
     if (input.kind === 'local' && input.type === 'openai-compatible') {
       throw new Error('离线语音 Provider 类型无效')
     }
+    if (
+      input.type === 'qwen-tts' &&
+      input.backend !== undefined &&
+      input.backend !== 'cpu' &&
+      input.backend !== 'cuda'
+    ) {
+      throw new Error('Qwen TTS 计算后端无效')
+    }
     if (input.kind === 'online') {
       const baseUrl = (input.baseUrl?.trim() || DEFAULT_BASE_URL).replace(/\/$/, '')
       assertHttpUrl(baseUrl)
@@ -388,7 +396,8 @@ export class AIRouterSpeechService {
       modelPackageId,
       modelPackageVersion,
       models: modelPackageId ? models : [],
-      voices: modelPackageId ? voices : []
+      voices: modelPackageId ? voices : [],
+      ...(input.type === 'qwen-tts' ? { backend: input.backend ?? 'cpu' } : {})
     }
   }
 
@@ -507,7 +516,8 @@ function isProviderConfig(value: unknown): value is AIRouterSpeechProviderConfig
     candidate.voices.every(
       (voice) =>
         Boolean(voice) && typeof voice.id === 'string' && typeof voice.enabled === 'boolean'
-    )
+    ) &&
+    (candidate.backend === undefined || candidate.backend === 'cpu' || candidate.backend === 'cuda')
   )
 }
 

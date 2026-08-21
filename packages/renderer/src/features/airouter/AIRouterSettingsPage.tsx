@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type JSX
+} from 'react'
 import type {
   AIRouterModelConfig,
   AIRouterModelOption,
@@ -157,6 +166,13 @@ const providerPresets: ProviderPreset[] = [
     catalogProviderId: 'fireworks-ai'
   },
   {
+    id: 'agnes-ai',
+    name: 'Agnes AI',
+    type: 'openai-compatible',
+    baseUrl: 'https://apihub.agnes-ai.com/v1',
+    catalogProviderId: 'agnes-ai'
+  },
+  {
     id: 'lmstudio',
     name: 'LM Studio',
     type: 'openai-compatible',
@@ -194,20 +210,63 @@ export function AIRouterSettingsPage({
   application?: AIRouterApplication
 }): JSX.Element {
   const location = useLocation()
+  const tabsRef = useRef<HTMLElement>(null)
+  const activeSectionId =
+    sections.find(
+      (section) =>
+        location.pathname === `${sectionBasePath}/${section.id}` ||
+        (section.id === 'text' && location.pathname === sectionBasePath)
+    )?.id ?? 'text'
+  const [tabIndicator, setTabIndicator] = useState({ x: 0, width: 0, ready: false })
+
+  useLayoutEffect(() => {
+    const tabs = tabsRef.current
+    if (!tabs) return
+    const activeTab = tabs.querySelector<HTMLElement>('[data-active]')
+    if (!activeTab) return
+
+    const updateIndicator = (): void => {
+      const x = Math.round(activeTab.offsetLeft)
+      const width = Math.round(activeTab.offsetWidth)
+      setTabIndicator((current) =>
+        current.x === x && current.width === width && current.ready
+          ? current
+          : { x, width, ready: true }
+      )
+    }
+
+    updateIndicator()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(updateIndicator)
+    observer.observe(tabs)
+    observer.observe(activeTab)
+    return () => observer.disconnect()
+  }, [activeSectionId])
 
   return (
     <div className={styles.routerPage}>
-      <nav aria-label="AI 引擎设置分类" className={styles.tabs} role="tablist">
+      <nav ref={tabsRef} aria-label="AI 引擎设置分类" className={styles.tabs} role="tablist">
+        <span
+          aria-hidden="true"
+          className={styles.tabIndicator}
+          data-ready={tabIndicator.ready || undefined}
+          style={
+            {
+              '--airouter-tab-x': `${tabIndicator.x}px`,
+              '--airouter-tab-width': `${tabIndicator.width}px`
+            } as CSSProperties
+          }
+        />
         {sections.map((section) => {
           const Icon = section.icon
-          const active =
-            location.pathname === `${sectionBasePath}/${section.id}` ||
-            (section.id === 'text' && location.pathname === sectionBasePath)
+          const active = section.id === activeSectionId
           return (
             <Link
+              aria-controls={`ai-router-panel-${section.id}`}
               aria-selected={active}
               className={styles.tab}
               data-active={active || undefined}
+              id={`ai-router-tab-${section.id}`}
               key={section.id}
               role="tab"
               to={`${sectionBasePath}/${section.id}`}
@@ -219,24 +278,32 @@ export function AIRouterSettingsPage({
         })}
       </nav>
 
-      <Routes>
-        <Route index element={<Navigate replace to="text" />} />
-        <Route path="text" element={<AIRouterTextSettingsPage application={application} />} />
-        <Route path="image" element={<AIRouterImageSettingsPage application={application} />} />
-        <Route
-          path="speech-synthesis"
-          element={<AIRouterSpeechSettingsPage application={application} />}
-        />
-        <Route
-          path="speech-recognition"
-          element={<AIRouterSpeechRecognitionSettingsPage application={application} />}
-        />
-        <Route
-          path="pronunciation"
-          element={<AIRouterPronunciationSettingsPage application={application} />}
-        />
-        <Route path="*" element={<Navigate replace to="text" />} />
-      </Routes>
+      <div
+        aria-labelledby={`ai-router-tab-${activeSectionId}`}
+        className={styles.sectionContent}
+        id={`ai-router-panel-${activeSectionId}`}
+        key={activeSectionId}
+        role="tabpanel"
+      >
+        <Routes>
+          <Route index element={<Navigate replace to="text" />} />
+          <Route path="text" element={<AIRouterTextSettingsPage application={application} />} />
+          <Route path="image" element={<AIRouterImageSettingsPage application={application} />} />
+          <Route
+            path="speech-synthesis"
+            element={<AIRouterSpeechSettingsPage application={application} />}
+          />
+          <Route
+            path="speech-recognition"
+            element={<AIRouterSpeechRecognitionSettingsPage application={application} />}
+          />
+          <Route
+            path="pronunciation"
+            element={<AIRouterPronunciationSettingsPage application={application} />}
+          />
+          <Route path="*" element={<Navigate replace to="text" />} />
+        </Routes>
+      </div>
     </div>
   )
 }
@@ -469,7 +536,7 @@ export function AIRouterTextSettingsPage({
                 </SettingsRow>
                 <SettingsRow
                   label="Provider"
-                  description="预设会自动配置兼容协议、Base URL 和 models.dev 模型目录。"
+                  description="预设会自动配置兼容协议、Base URL 和内置模型目录。"
                 >
                   {draft.id ? (
                     <span className={styles.providerTypeControl}>
@@ -1040,10 +1107,10 @@ function ModelSettings({
           </>
         ) : metadata?.reasoning ? (
           <p className={styles.modelNotice}>
-            支持推理，但 models.dev 未提供可调参数；使用 Provider 默认设置。
+            支持推理，但模型目录未提供可调参数；使用 Provider 默认设置。
           </p>
         ) : (
-          <p className={styles.modelNotice}>暂无 models.dev 推理能力数据。</p>
+          <p className={styles.modelNotice}>暂无模型目录推理能力数据。</p>
         )}
       </div>
     </details>

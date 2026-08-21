@@ -1,9 +1,11 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import {
   APP_INFO_CHANNELS,
+  DATA_DIRECTORY_CHANNELS,
   WINDOW_CONTROL_CHANNELS,
   WINDOW_CONTROL_EVENTS,
   type AppInfoBridge,
+  type DataDirectoryBridge,
   type WindowControlsBridge
 } from '@ls101/core-types'
 import {
@@ -151,6 +153,9 @@ const airouterBridge: AIRouterBridge = {
   },
   testSpeechConnection(request: AIRouterSpeechConnectionTestInput) {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.testSpeechConnection, request)
+  },
+  probeQwenTtsCuda() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.probeQwenTtsCuda)
   },
   listSpeechRecognitionProviderConfigs() {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.listRecognitionConfigs)
@@ -334,6 +339,30 @@ const appInfoBridge: AppInfoBridge = {
   }
 }
 
+const dataDirectoryBridge: DataDirectoryBridge = {
+  getInfo() {
+    return ipcRenderer.invoke(DATA_DIRECTORY_CHANNELS.getInfo)
+  },
+  choose() {
+    return ipcRenderer.invoke(DATA_DIRECTORY_CHANNELS.choose)
+  },
+  chooseDefault() {
+    return ipcRenderer.invoke(DATA_DIRECTORY_CHANNELS.chooseDefault)
+  },
+  resetDefault() {
+    return ipcRenderer.invoke(DATA_DIRECTORY_CHANNELS.resetDefault)
+  },
+  migrate(path: string) {
+    return ipcRenderer.invoke(DATA_DIRECTORY_CHANNELS.migrate, path)
+  },
+  useExisting(path: string) {
+    return ipcRenderer.invoke(DATA_DIRECTORY_CHANNELS.useExisting, path)
+  },
+  deleteOld() {
+    return ipcRenderer.invoke(DATA_DIRECTORY_CHANNELS.deleteOld)
+  }
+}
+
 const windowControlsBridge: WindowControlsBridge = {
   minimize() {
     return ipcRenderer.invoke(WINDOW_CONTROL_CHANNELS.minimize)
@@ -366,4 +395,5 @@ contextBridge.exposeInMainWorld('airouter', airouterBridge)
 contextBridge.exposeInMainWorld('fileDialog', fileDialogBridge)
 contextBridge.exposeInMainWorld('imageClipboard', clipboardBridge)
 contextBridge.exposeInMainWorld('appInfo', appInfoBridge)
+contextBridge.exposeInMainWorld('dataDirectory', dataDirectoryBridge)
 contextBridge.exposeInMainWorld('windowControls', windowControlsBridge)

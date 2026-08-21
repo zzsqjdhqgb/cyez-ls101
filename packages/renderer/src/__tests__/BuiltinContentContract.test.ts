@@ -19,6 +19,7 @@ import { describe, expect, it } from 'vitest'
 
 const BUILTIN_ROOT = path.resolve(import.meta.dirname, '../../../../resources/builtin')
 const TEMPLATE_ID = '0c283c54-683a-498c-bf69-fb1490f99356'
+const ZHONGKAO_TEMPLATE_ID = '8e96c4b2-5f31-4a7d-9c68-2b4f0d7e1a53'
 const IMAGE_BYTES = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])
 
 describe('builtin content contract', () => {
@@ -88,6 +89,12 @@ describe('builtin content contract', () => {
           name: '上海高考口语标准题型',
           available: true,
           errors: []
+        }),
+        expect.objectContaining({
+          templateId: ZHONGKAO_TEMPLATE_ID,
+          name: '上海中考口语标准题型',
+          available: true,
+          errors: []
         })
       ])
     )
@@ -99,7 +106,9 @@ describe('builtin content contract', () => {
       expect.arrayContaining([
         expect.objectContaining({ libraryId: 'builtin:shanghai-gaokao-basic' }),
         expect.objectContaining({ libraryId: 'builtin:shanghai-gaokao-choice' }),
-        expect.objectContaining({ libraryId: 'builtin:shanghai-gaokao-groups' })
+        expect.objectContaining({ libraryId: 'builtin:shanghai-gaokao-groups' }),
+        expect.objectContaining({ libraryId: 'builtin:shanghai-zhongkao-basic' }),
+        expect.objectContaining({ libraryId: 'builtin:shanghai-zhongkao-groups' })
       ])
     )
 
@@ -163,11 +172,6 @@ describe('builtin content contract', () => {
       source: 'global',
       selection: { kind: 'range', startPage: 4 }
     }
-    const savedChoiceTemplate = await application.templates.save(composedChoiceTemplate)
-    await expect(application.templates.validate(choiceTemplate.templateId)).resolves.toEqual({
-      valid: true,
-      errors: []
-    })
     insertedChoiceCall.inputs.tts = {
       type: 'string',
       parts: [{ type: 'literal', value: 'Dialogue 1' }]
@@ -192,6 +196,11 @@ describe('builtin content contract', () => {
       type: 'string',
       parts: [{ type: 'literal', value: 'Stem 17' }]
     }
+    const savedChoiceTemplate = await application.templates.save(composedChoiceTemplate)
+    await expect(application.templates.validate(choiceTemplate.templateId)).resolves.toEqual({
+      valid: true,
+      errors: []
+    })
     const choicePreview = await application.templates.preview(savedChoiceTemplate, [])
     if (!choicePreview.success) {
       throw new Error(
@@ -265,6 +274,22 @@ describe('builtin content contract', () => {
       } else {
         expect(preview.preview.recordingIndices.length).toBeGreaterThan(0)
       }
+      if (summary.templateId === ZHONGKAO_TEMPLATE_ID) {
+        expect(preview.preview.pages).toHaveLength(28)
+        expect(preview.preview.recordingIndices).toEqual(
+          Array.from({ length: 12 }, (_value, index) => index)
+        )
+        expect(preview.preview.pages[1]?.timeline).toEqual([{ type: 'countdown', seconds: 10 }])
+        expect(preview.preview.pages[2]?.timeline).toEqual([
+          { type: 'record', duration: 15, recordIndex: 0 }
+        ])
+        expect(preview.preview.pages[8]?.timeline).toEqual([
+          { type: 'countdown', seconds: 10 },
+          { type: 'record', duration: 10, recordIndex: 3 }
+        ])
+        expect(preview.preview.pages[23]?.timeline).toEqual([{ type: 'countdown', seconds: 60 }])
+        expect(preview.preview.pages[26]?.timeline).toEqual([{ type: 'countdown', seconds: 75 }])
+      }
 
       const compiled = await application.builtinTemplates.compile(summary.templateId, bindings, {
         synthesizeSpeech: async () => ({
@@ -284,6 +309,9 @@ describe('builtin content contract', () => {
         expect(compiled.examPackage.examData.player.recordingIndices.length).toBeGreaterThan(0)
       }
       expect(compiled.examPackage.submissionTemplate.schemaUses.length).toBeGreaterThan(0)
+      if (summary.templateId === ZHONGKAO_TEMPLATE_ID) {
+        expect(compiled.examPackage.submissionTemplate.schemaUses).toHaveLength(5)
+      }
       expect(compiled.resourceSources.length).toBeGreaterThan(0)
 
       const resources = Object.fromEntries(

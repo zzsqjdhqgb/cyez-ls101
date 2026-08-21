@@ -17,7 +17,7 @@ export interface AppearanceSettingsApplication {
 }
 
 export const defaultAppearanceSettings: AppearanceSettings = {
-  theme: 'system',
+  theme: 'light',
   reduceMotion: false
 }
 

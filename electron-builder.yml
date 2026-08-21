@@ -46,17 +46,38 @@ files:
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
   - 'out/**/*'
+  # Main-process dependencies are bundled by electron-vite. Keep only packages
+  # that are loaded dynamically at runtime or contain native binaries.
+  - '!**/node_modules/**/*'
+  - 'node_modules/@electron-toolkit/utils/package.json'
+  - 'node_modules/@electron-toolkit/utils/dist/index.cjs'
+  - 'node_modules/fflate/package.json'
+  - 'node_modules/fflate/lib/*.cjs'
+  - 'node_modules/ffmpeg-static/{index.js,package.json,ffmpeg,ffmpeg.exe}'
+  - 'node_modules/onnxruntime-common/package.json'
+  - 'node_modules/onnxruntime-common/dist/cjs/*.{js,json}'
+  - 'node_modules/onnxruntime-node/package.json'
+  - 'node_modules/onnxruntime-node/dist/*.js'
+  - 'node_modules/sherpa-onnx-node/package.json'
+  - 'node_modules/sherpa-onnx-node/*.js'
 asarUnpack:
-  - resources/**
   - out/main/pronunciation-assessment-worker.js
-  - node_modules/onnxruntime-common/**
   - node_modules/onnxruntime-node/**
-  - node_modules/sherpa-onnx-node/**
   - node_modules/sherpa-onnx-*/**
   - node_modules/ffmpeg-static/**
 win:
   executableName: CYEZ-LS101
   icon: build/icon.png
+  electronLanguages:
+    - zh-CN
+    - en-US
+  files:
+    - from: node_modules/onnxruntime-node/bin/napi-v6/win32/${arch}
+      to: node_modules/onnxruntime-node/bin/napi-v6/win32/${arch}
+      filter: '**/*'
+    - from: node_modules/sherpa-onnx-win-${arch}
+      to: node_modules/sherpa-onnx-win-${arch}
+      filter: '**/*'
 nsis:
   oneClick: false
   artifactName: ${name}-${version}-setup.${ext}
@@ -74,6 +95,13 @@ mac:
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
+  files:
+    - from: node_modules/onnxruntime-node/bin/napi-v6/darwin/${arch}
+      to: node_modules/onnxruntime-node/bin/napi-v6/darwin/${arch}
+      filter: '**/*'
+    - from: node_modules/sherpa-onnx-darwin-${arch}
+      to: node_modules/sherpa-onnx-darwin-${arch}
+      filter: '**/*'
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
@@ -84,6 +112,16 @@ linux:
   icon: build/icon.png
   maintainer: electronjs.org
   category: Utility
+  electronLanguages:
+    - zh-CN
+    - en-US
+  files:
+    - from: node_modules/onnxruntime-node/bin/napi-v6/linux/${arch}
+      to: node_modules/onnxruntime-node/bin/napi-v6/linux/${arch}
+      filter: '**/*'
+    - from: node_modules/sherpa-onnx-linux-${arch}
+      to: node_modules/sherpa-onnx-linux-${arch}
+      filter: '**/*'
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
@@ -97,6 +135,12 @@ extraResources:
     to: tts
   - from: externals/ai/qwen3-tts/runtime
     to: qwen-tts
+    filter:
+      - '**/*'
+      - '!**/ls101-qwen-tts-helper-cuda*'
+      - '!**/cublas*.dll'
+      - '!**/nvJitLink*.dll'
+      - '!**/LICENSE.NVIDIA-CUDA.html'
   - from: resources/media
     to: media
   - from: resources/builtin

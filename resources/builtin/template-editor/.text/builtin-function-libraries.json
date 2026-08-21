@@ -9773,6 +9773,3051 @@
           }
         ]
       }
+    },
+    {
+      "libraryId": "builtin:shanghai-zhongkao-basic",
+      "version": 1,
+      "contentHash": "sha256:df6f21acf2b6c34551278fd33b566df24303cc38203c58dc2723f8817e2e45ed",
+      "content": {
+        "name": "初中基础题型",
+        "functions": [
+          {
+            "functionId": "builtin:shanghai-zhongkao-directions",
+            "content": {
+              "name": "Directions页面",
+              "inputs": [
+                {
+                  "name": "title",
+                  "type": "string"
+                },
+                {
+                  "name": "direction",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "name": "Directions页面",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "title",
+                          "type": "text",
+                          "x": 10,
+                          "y": 10,
+                          "width": 80,
+                          "fontSize": 50,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "title"
+                                }
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "direction",
+                          "type": "text",
+                          "x": 10,
+                          "y": 28,
+                          "width": 80,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "direction"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "title"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": ". "
+                            },
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "direction"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": []
+            }
+          },
+          {
+            "functionId": "builtin:shanghai-zhongkao-phrase-reading",
+            "content": {
+              "name": "朗读词组",
+              "inputs": [
+                {
+                  "name": "display",
+                  "type": "string"
+                },
+                {
+                  "name": "phrase",
+                  "type": "string"
+                },
+                {
+                  "name": "idx",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "prepare",
+                    "type": "page",
+                    "name": "答题准备",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "phrase",
+                          "type": "text",
+                          "x": 10,
+                          "y": 34,
+                          "width": 80,
+                          "fontSize": 42,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "idx"
+                                }
+                              },
+                              {
+                                "type": "literal",
+                                "value": ". "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "display"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 10
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "answer",
+                    "type": "page",
+                    "name": "朗读词组",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "phrase",
+                          "type": "text",
+                          "x": 10,
+                          "y": 34,
+                          "width": 80,
+                          "fontSize": 42,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "idx"
+                                }
+                              },
+                              {
+                                "type": "literal",
+                                "value": ". "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "phrase"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 15
+                        },
+                        "outputName": "recording"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "ans",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "recording"
+                  }
+                }
+              ],
+              "schemaUses": []
+            }
+          },
+          {
+            "functionId": "builtin:shanghai-zhongkao-sentence-reading",
+            "content": {
+              "name": "朗读句子",
+              "inputs": [
+                {
+                  "name": "sentence",
+                  "type": "string"
+                },
+                {
+                  "name": "idx",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "name": "朗读句子",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "sentence",
+                          "type": "text",
+                          "x": 10,
+                          "y": 30,
+                          "width": 80,
+                          "fontSize": 38,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "idx"
+                                }
+                              },
+                              {
+                                "type": "literal",
+                                "value": ". "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "sentence"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 10
+                        }
+                      },
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 10
+                        },
+                        "outputName": "recording"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "ans",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "recording"
+                  }
+                }
+              ],
+              "schemaUses": []
+            }
+          },
+          {
+            "functionId": "builtin:shanghai-zhongkao-quick-response",
+            "content": {
+              "name": "交际应答",
+              "inputs": [
+                {
+                  "name": "prompt",
+                  "type": "string"
+                },
+                {
+                  "name": "idx",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "listen",
+                    "type": "page",
+                    "name": "听语音",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "status",
+                          "type": "text",
+                          "x": 10,
+                          "y": 38,
+                          "width": 80,
+                          "fontSize": 56,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Please listen"
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "idx"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": ". "
+                            },
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "prompt"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "answer",
+                    "type": "page",
+                    "name": "交际应答",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "status",
+                          "type": "text",
+                          "x": 10,
+                          "y": 38,
+                          "width": 80,
+                          "fontSize": 56,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Please answer"
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 10
+                        },
+                        "outputName": "recording"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "ans",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "recording"
+                  }
+                }
+              ],
+              "schemaUses": []
+            }
+          },
+          {
+            "functionId": "builtin:shanghai-zhongkao-retelling",
+            "content": {
+              "name": "复述",
+              "inputs": [
+                {
+                  "name": "topic",
+                  "type": "string"
+                },
+                {
+                  "name": "dialogue",
+                  "type": "string"
+                },
+                {
+                  "name": "picture",
+                  "type": "file"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "listen",
+                    "type": "page",
+                    "name": "听对话",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "status",
+                          "type": "text",
+                          "x": 10,
+                          "y": 6,
+                          "width": 80,
+                          "fontSize": 38,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Please listen"
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "picture",
+                          "type": "image",
+                          "x": 14,
+                          "y": 16,
+                          "width": 72,
+                          "height": 76,
+                          "src": {
+                            "type": "file",
+                            "source": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "picture"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "dialogue"
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 1
+                        }
+                      },
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "dialogue"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "prepare",
+                    "type": "page",
+                    "name": "答题准备",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "status",
+                          "type": "text",
+                          "x": 10,
+                          "y": 6,
+                          "width": 80,
+                          "fontSize": 38,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Prepare your retelling"
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "picture",
+                          "type": "image",
+                          "x": 14,
+                          "y": 16,
+                          "width": 72,
+                          "height": 76,
+                          "src": {
+                            "type": "file",
+                            "source": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "picture"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 60
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "answer",
+                    "type": "page",
+                    "name": "复述",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "status",
+                          "type": "text",
+                          "x": 10,
+                          "y": 6,
+                          "width": 80,
+                          "fontSize": 38,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Please retell the dialogue"
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "picture",
+                          "type": "image",
+                          "x": 14,
+                          "y": 16,
+                          "width": 72,
+                          "height": 76,
+                          "src": {
+                            "type": "file",
+                            "source": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "picture"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 60
+                        },
+                        "outputName": "recording"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "ans",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "recording"
+                  }
+                }
+              ],
+              "schemaUses": []
+            }
+          },
+          {
+            "functionId": "builtin:shanghai-zhongkao-topic-speaking",
+            "content": {
+              "name": "话题表达",
+              "inputs": [
+                {
+                  "name": "topic",
+                  "type": "string"
+                },
+                {
+                  "name": "picture",
+                  "type": "file"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "prepare",
+                    "type": "page",
+                    "name": "答题准备",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "topic",
+                          "type": "text",
+                          "x": 10,
+                          "y": 6,
+                          "width": 80,
+                          "fontSize": 40,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Topic: "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "topic"
+                                }
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "picture",
+                          "type": "image",
+                          "x": 14,
+                          "y": 17,
+                          "width": 72,
+                          "height": 74,
+                          "src": {
+                            "type": "file",
+                            "source": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "picture"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 75
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "answer",
+                    "type": "page",
+                    "name": "话题表达",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "topic",
+                          "type": "text",
+                          "x": 10,
+                          "y": 6,
+                          "width": 80,
+                          "fontSize": 40,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Topic: "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "topic"
+                                }
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "picture",
+                          "type": "image",
+                          "x": 14,
+                          "y": 17,
+                          "width": 72,
+                          "height": 74,
+                          "src": {
+                            "type": "file",
+                            "source": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "picture"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 60
+                        },
+                        "outputName": "recording"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "ans",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "recording"
+                  }
+                }
+              ],
+              "schemaUses": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "libraryId": "builtin:shanghai-zhongkao-groups",
+      "version": 1,
+      "contentHash": "sha256:b0626d0a4ec26c1a1e92cb0fdc03c7b5993ae518018982c1bdfe64dc121af1b7",
+      "content": {
+        "name": "初中大题组",
+        "functions": [
+          {
+            "functionId": "builtin:shanghai-zhongkao-phrase-group",
+            "content": {
+              "name": "朗读词组题组",
+              "inputs": [
+                {
+                  "name": "phrase1Display",
+                  "type": "string"
+                },
+                {
+                  "name": "phrase1",
+                  "type": "string"
+                },
+                {
+                  "name": "phrase2",
+                  "type": "string"
+                },
+                {
+                  "name": "phrase3",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "directions",
+                    "name": "Directions页面",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-directions",
+                    "inputs": {
+                      "title": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "一A. 朗读词组"
+                          }
+                        ]
+                      },
+                      "direction": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "Read the following phrases. You will have ten seconds to prepare and fifteen seconds to read. Pay attention to linking, elision and weak forms."
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {}
+                  },
+                  {
+                    "id": "phrase-1",
+                    "name": "朗读词组",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-phrase-reading",
+                    "inputs": {
+                      "display": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "phrase1Display"
+                            }
+                          }
+                        ]
+                      },
+                      "phrase": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "phrase1"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "1"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans-1"
+                    }
+                  },
+                  {
+                    "id": "phrase-2",
+                    "name": "朗读词组",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-phrase-reading",
+                    "inputs": {
+                      "display": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "phrase2"
+                            }
+                          }
+                        ]
+                      },
+                      "phrase": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "phrase2"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "2"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans-2"
+                    }
+                  },
+                  {
+                    "id": "phrase-3",
+                    "name": "朗读词组",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-phrase-reading",
+                    "inputs": {
+                      "display": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "phrase3"
+                            }
+                          }
+                        ]
+                      },
+                      "phrase": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "phrase3"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "3"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans-3"
+                    }
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [
+                {
+                  "useId": "schema-use-1",
+                  "schemaId": "a8c95c76-6f12-4d43-8ae1-5b9e2c7d1041",
+                  "inputBindings": {
+                    "question-description": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "## 一A. 朗读词组\n\n1. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "phrase1"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n2. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "phrase2"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n3. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "phrase3"
+                          }
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "phrase1"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "phrase2"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "phrase3"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "answerBindings": {
+                    "phrase-1": {
+                      "type": "fixed-speech",
+                      "text": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "phrase1"
+                            }
+                          }
+                        ]
+                      },
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-1"
+                      }
+                    },
+                    "phrase-2": {
+                      "type": "fixed-speech",
+                      "text": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "phrase2"
+                            }
+                          }
+                        ]
+                      },
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-2"
+                      }
+                    },
+                    "phrase-3": {
+                      "type": "fixed-speech",
+                      "text": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "phrase3"
+                            }
+                          }
+                        ]
+                      },
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-3"
+                      }
+                    }
+                  },
+                  "attachments": []
+                }
+              ]
+            }
+          },
+          {
+            "functionId": "builtin:shanghai-zhongkao-sentence-group",
+            "content": {
+              "name": "朗读句子题组",
+              "inputs": [
+                {
+                  "name": "sentence1",
+                  "type": "string"
+                },
+                {
+                  "name": "sentence2",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "directions",
+                    "name": "Directions页面",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-directions",
+                    "inputs": {
+                      "title": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "一B. 朗读句子"
+                          }
+                        ]
+                      },
+                      "direction": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "Read the following sentences. You will have ten seconds to prepare and ten seconds to read. Pay attention to intonation and sense-group pauses."
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {}
+                  },
+                  {
+                    "id": "sentence-1",
+                    "name": "朗读句子",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-sentence-reading",
+                    "inputs": {
+                      "sentence": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "sentence1"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "1"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans-1"
+                    }
+                  },
+                  {
+                    "id": "sentence-2",
+                    "name": "朗读句子",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-sentence-reading",
+                    "inputs": {
+                      "sentence": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "sentence2"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "2"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans-2"
+                    }
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [
+                {
+                  "useId": "schema-use-1",
+                  "schemaId": "a8c95c76-6f12-4d43-8ae1-5b9e2c7d1042",
+                  "inputBindings": {
+                    "question-description": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "## 一B. 朗读句子\n\n1. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "sentence1"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n2. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "sentence2"
+                          }
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "sentence1"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "sentence2"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "answerBindings": {
+                    "sentence-1": {
+                      "type": "fixed-speech",
+                      "text": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "sentence1"
+                            }
+                          }
+                        ]
+                      },
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-1"
+                      }
+                    },
+                    "sentence-2": {
+                      "type": "fixed-speech",
+                      "text": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "sentence2"
+                            }
+                          }
+                        ]
+                      },
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-2"
+                      }
+                    }
+                  },
+                  "attachments": []
+                }
+              ]
+            }
+          },
+          {
+            "functionId": "builtin:shanghai-zhongkao-quick-response-group",
+            "content": {
+              "name": "交际应答题组",
+              "inputs": [
+                {
+                  "name": "prompt1",
+                  "type": "string"
+                },
+                {
+                  "name": "prompt2",
+                  "type": "string"
+                },
+                {
+                  "name": "prompt3",
+                  "type": "string"
+                },
+                {
+                  "name": "prompt4",
+                  "type": "string"
+                },
+                {
+                  "name": "prompt5",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "directions",
+                    "name": "Directions页面",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-directions",
+                    "inputs": {
+                      "title": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "二. 交际应答"
+                          }
+                        ]
+                      },
+                      "direction": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "You will hear five sentences. Make a quick response to each sentence. For each sentence, you will have ten seconds to respond."
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {}
+                  },
+                  {
+                    "id": "response-1",
+                    "name": "交际应答",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-quick-response",
+                    "inputs": {
+                      "prompt": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "prompt1"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "1"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans-1"
+                    }
+                  },
+                  {
+                    "id": "response-2",
+                    "name": "交际应答",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-quick-response",
+                    "inputs": {
+                      "prompt": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "prompt2"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "2"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans-2"
+                    }
+                  },
+                  {
+                    "id": "response-3",
+                    "name": "交际应答",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-quick-response",
+                    "inputs": {
+                      "prompt": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "prompt3"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "3"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans-3"
+                    }
+                  },
+                  {
+                    "id": "response-4",
+                    "name": "交际应答",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-quick-response",
+                    "inputs": {
+                      "prompt": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "prompt4"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "4"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans-4"
+                    }
+                  },
+                  {
+                    "id": "response-5",
+                    "name": "交际应答",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-quick-response",
+                    "inputs": {
+                      "prompt": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "prompt5"
+                            }
+                          }
+                        ]
+                      },
+                      "idx": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "5"
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans-5"
+                    }
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [
+                {
+                  "useId": "schema-use-1",
+                  "schemaId": "a8c95c76-6f12-4d43-8ae1-5b9e2c7d1043",
+                  "inputBindings": {
+                    "question-description": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "## 二. 交际应答\n\n"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "1. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "prompt1"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "2. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "prompt2"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "3. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "prompt3"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "4. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "prompt4"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "5. "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "prompt5"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": ""
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "根据所听句子作出自然、完整且符合语境的应答。"
+                        }
+                      ]
+                    }
+                  },
+                  "answerBindings": {
+                    "answer-1": {
+                      "type": "free-speech",
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-1"
+                      }
+                    },
+                    "answer-2": {
+                      "type": "free-speech",
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-2"
+                      }
+                    },
+                    "answer-3": {
+                      "type": "free-speech",
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-3"
+                      }
+                    },
+                    "answer-4": {
+                      "type": "free-speech",
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-4"
+                      }
+                    },
+                    "answer-5": {
+                      "type": "free-speech",
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans-5"
+                      }
+                    }
+                  },
+                  "attachments": []
+                }
+              ]
+            }
+          },
+          {
+            "functionId": "builtin:shanghai-zhongkao-retelling-group",
+            "content": {
+              "name": "复述题组",
+              "inputs": [
+                {
+                  "name": "topic",
+                  "type": "string"
+                },
+                {
+                  "name": "dialogue",
+                  "type": "string"
+                },
+                {
+                  "name": "picture",
+                  "type": "file"
+                },
+                {
+                  "name": "picture-inst",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "directions",
+                    "name": "Directions页面",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-directions",
+                    "inputs": {
+                      "title": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "三. 复述"
+                          }
+                        ]
+                      },
+                      "direction": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "You will hear a dialogue about "
+                          },
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "topic"
+                            }
+                          },
+                          {
+                            "type": "literal",
+                            "value": ". It will be read twice. Retell the dialogue with the given points. You will have sixty seconds to prepare and sixty seconds to retell."
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {}
+                  },
+                  {
+                    "id": "retelling",
+                    "name": "复述",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-retelling",
+                    "inputs": {
+                      "topic": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "topic"
+                            }
+                          }
+                        ]
+                      },
+                      "dialogue": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "dialogue"
+                            }
+                          }
+                        ]
+                      },
+                      "picture": {
+                        "type": "file",
+                        "source": "variable",
+                        "ref": {
+                          "scope": "local",
+                          "name": "picture"
+                        }
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans"
+                    }
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [
+                {
+                  "useId": "schema-use-1",
+                  "schemaId": "a8c95c76-6f12-4d43-8ae1-5b9e2c7d1044",
+                  "inputBindings": {
+                    "question-description": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "## 三. 复述\n\nTopic: "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "topic"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n!["
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "picture-inst"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "]("
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "schema-use",
+                            "varName": "picture"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": ")\n\nDialogue:\n"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "dialogue"
+                          }
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "dialogue"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "answerBindings": {
+                    "answer": {
+                      "type": "free-speech",
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans"
+                      }
+                    }
+                  },
+                  "attachments": [
+                    {
+                      "varName": "picture",
+                      "description": "复述题提示图",
+                      "file": {
+                        "type": "file",
+                        "source": "variable",
+                        "ref": {
+                          "scope": "local",
+                          "name": "picture"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "functionId": "builtin:shanghai-zhongkao-topic-speaking-group",
+            "content": {
+              "name": "话题表达题组",
+              "inputs": [
+                {
+                  "name": "topic",
+                  "type": "string"
+                },
+                {
+                  "name": "picture",
+                  "type": "file"
+                },
+                {
+                  "name": "picture-inst",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "directions",
+                    "name": "Directions页面",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-directions",
+                    "inputs": {
+                      "title": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "四. 话题表达"
+                          }
+                        ]
+                      },
+                      "direction": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "literal",
+                            "value": "Say at least five sentences according to the following topic and mind map. You will have seventy-five seconds to prepare and sixty seconds to talk."
+                          }
+                        ]
+                      }
+                    },
+                    "outputNames": {}
+                  },
+                  {
+                    "id": "topic-speaking",
+                    "name": "话题表达",
+                    "type": "function",
+                    "functionRef": "builtin:shanghai-zhongkao-topic-speaking",
+                    "inputs": {
+                      "topic": {
+                        "type": "string",
+                        "parts": [
+                          {
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "topic"
+                            }
+                          }
+                        ]
+                      },
+                      "picture": {
+                        "type": "file",
+                        "source": "variable",
+                        "ref": {
+                          "scope": "local",
+                          "name": "picture"
+                        }
+                      }
+                    },
+                    "outputNames": {
+                      "ans": "ans"
+                    }
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": [
+                {
+                  "useId": "schema-use-1",
+                  "schemaId": "a8c95c76-6f12-4d43-8ae1-5b9e2c7d1045",
+                  "inputBindings": {
+                    "question-description": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "## 四. 话题表达\n\nTopic: "
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "topic"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "\n\n!["
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "picture-inst"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "]("
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "schema-use",
+                            "varName": "picture"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": ")"
+                        }
+                      ]
+                    },
+                    "reference-answer": {
+                      "type": "string",
+                      "parts": [
+                        {
+                          "type": "literal",
+                          "value": "围绕话题“"
+                        },
+                        {
+                          "type": "variable",
+                          "ref": {
+                            "scope": "local",
+                            "name": "topic"
+                          }
+                        },
+                        {
+                          "type": "literal",
+                          "value": "”完成不少于五句话的连贯表达。"
+                        }
+                      ]
+                    }
+                  },
+                  "answerBindings": {
+                    "answer": {
+                      "type": "free-speech",
+                      "audio": {
+                        "type": "audio",
+                        "source": "record-output",
+                        "name": "ans"
+                      }
+                    }
+                  },
+                  "attachments": [
+                    {
+                      "varName": "picture",
+                      "description": "话题表达思维导图",
+                      "file": {
+                        "type": "file",
+                        "source": "variable",
+                        "ref": {
+                          "scope": "local",
+                          "name": "picture"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "functionId": "builtin:shanghai-zhongkao-directions",
+            "content": {
+              "name": "Directions页面",
+              "inputs": [
+                {
+                  "name": "title",
+                  "type": "string"
+                },
+                {
+                  "name": "direction",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "name": "Directions页面",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "title",
+                          "type": "text",
+                          "x": 10,
+                          "y": 10,
+                          "width": 80,
+                          "fontSize": 50,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "title"
+                                }
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "direction",
+                          "type": "text",
+                          "x": 10,
+                          "y": 28,
+                          "width": 80,
+                          "fontSize": 32,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "direction"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "title"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": ". "
+                            },
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "direction"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "outputs": [],
+              "schemaUses": []
+            },
+            "exposed": false
+          },
+          {
+            "functionId": "builtin:shanghai-zhongkao-phrase-reading",
+            "content": {
+              "name": "朗读词组",
+              "inputs": [
+                {
+                  "name": "display",
+                  "type": "string"
+                },
+                {
+                  "name": "phrase",
+                  "type": "string"
+                },
+                {
+                  "name": "idx",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "prepare",
+                    "type": "page",
+                    "name": "答题准备",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "phrase",
+                          "type": "text",
+                          "x": 10,
+                          "y": 34,
+                          "width": 80,
+                          "fontSize": 42,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "idx"
+                                }
+                              },
+                              {
+                                "type": "literal",
+                                "value": ". "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "display"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 10
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "answer",
+                    "type": "page",
+                    "name": "朗读词组",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "phrase",
+                          "type": "text",
+                          "x": 10,
+                          "y": 34,
+                          "width": 80,
+                          "fontSize": 42,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "idx"
+                                }
+                              },
+                              {
+                                "type": "literal",
+                                "value": ". "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "phrase"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 15
+                        },
+                        "outputName": "recording"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "ans",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "recording"
+                  }
+                }
+              ],
+              "schemaUses": []
+            },
+            "exposed": false
+          },
+          {
+            "functionId": "builtin:shanghai-zhongkao-sentence-reading",
+            "content": {
+              "name": "朗读句子",
+              "inputs": [
+                {
+                  "name": "sentence",
+                  "type": "string"
+                },
+                {
+                  "name": "idx",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "page",
+                    "type": "page",
+                    "name": "朗读句子",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "sentence",
+                          "type": "text",
+                          "x": 10,
+                          "y": 30,
+                          "width": 80,
+                          "fontSize": 38,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "idx"
+                                }
+                              },
+                              {
+                                "type": "literal",
+                                "value": ". "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "sentence"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 10
+                        }
+                      },
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 10
+                        },
+                        "outputName": "recording"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "ans",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "recording"
+                  }
+                }
+              ],
+              "schemaUses": []
+            },
+            "exposed": false
+          },
+          {
+            "functionId": "builtin:shanghai-zhongkao-quick-response",
+            "content": {
+              "name": "交际应答",
+              "inputs": [
+                {
+                  "name": "prompt",
+                  "type": "string"
+                },
+                {
+                  "name": "idx",
+                  "type": "string"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "listen",
+                    "type": "page",
+                    "name": "听语音",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "status",
+                          "type": "text",
+                          "x": 10,
+                          "y": 38,
+                          "width": 80,
+                          "fontSize": 56,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Please listen"
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "idx"
+                              }
+                            },
+                            {
+                              "type": "literal",
+                              "value": ". "
+                            },
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "prompt"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "answer",
+                    "type": "page",
+                    "name": "交际应答",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "status",
+                          "type": "text",
+                          "x": 10,
+                          "y": 38,
+                          "width": 80,
+                          "fontSize": 56,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Please answer"
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 10
+                        },
+                        "outputName": "recording"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "ans",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "recording"
+                  }
+                }
+              ],
+              "schemaUses": []
+            },
+            "exposed": false
+          },
+          {
+            "functionId": "builtin:shanghai-zhongkao-retelling",
+            "content": {
+              "name": "复述",
+              "inputs": [
+                {
+                  "name": "topic",
+                  "type": "string"
+                },
+                {
+                  "name": "dialogue",
+                  "type": "string"
+                },
+                {
+                  "name": "picture",
+                  "type": "file"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "listen",
+                    "type": "page",
+                    "name": "听对话",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "status",
+                          "type": "text",
+                          "x": 10,
+                          "y": 6,
+                          "width": 80,
+                          "fontSize": 38,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Please listen"
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "picture",
+                          "type": "image",
+                          "x": 14,
+                          "y": 16,
+                          "width": 72,
+                          "height": 76,
+                          "src": {
+                            "type": "file",
+                            "source": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "picture"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "dialogue"
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 1
+                        }
+                      },
+                      {
+                        "type": "play",
+                        "text": {
+                          "type": "string",
+                          "parts": [
+                            {
+                              "type": "variable",
+                              "ref": {
+                                "scope": "local",
+                                "name": "dialogue"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "prepare",
+                    "type": "page",
+                    "name": "答题准备",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "status",
+                          "type": "text",
+                          "x": 10,
+                          "y": 6,
+                          "width": 80,
+                          "fontSize": 38,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Prepare your retelling"
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "picture",
+                          "type": "image",
+                          "x": 14,
+                          "y": 16,
+                          "width": 72,
+                          "height": 76,
+                          "src": {
+                            "type": "file",
+                            "source": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "picture"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 60
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "answer",
+                    "type": "page",
+                    "name": "复述",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "status",
+                          "type": "text",
+                          "x": 10,
+                          "y": 6,
+                          "width": 80,
+                          "fontSize": 38,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Please retell the dialogue"
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "picture",
+                          "type": "image",
+                          "x": 14,
+                          "y": 16,
+                          "width": 72,
+                          "height": 76,
+                          "src": {
+                            "type": "file",
+                            "source": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "picture"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 60
+                        },
+                        "outputName": "recording"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "ans",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "recording"
+                  }
+                }
+              ],
+              "schemaUses": []
+            },
+            "exposed": false
+          },
+          {
+            "functionId": "builtin:shanghai-zhongkao-topic-speaking",
+            "content": {
+              "name": "话题表达",
+              "inputs": [
+                {
+                  "name": "topic",
+                  "type": "string"
+                },
+                {
+                  "name": "picture",
+                  "type": "file"
+                }
+              ],
+              "body": {
+                "id": "root",
+                "name": "根框架",
+                "type": "frame",
+                "children": [
+                  {
+                    "id": "prepare",
+                    "type": "page",
+                    "name": "答题准备",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "topic",
+                          "type": "text",
+                          "x": 10,
+                          "y": 6,
+                          "width": 80,
+                          "fontSize": 40,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Topic: "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "topic"
+                                }
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "picture",
+                          "type": "image",
+                          "x": 14,
+                          "y": 17,
+                          "width": 72,
+                          "height": 74,
+                          "src": {
+                            "type": "file",
+                            "source": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "picture"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "countdown",
+                        "seconds": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 75
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "answer",
+                    "type": "page",
+                    "name": "话题表达",
+                    "content": {
+                      "blocks": [
+                        {
+                          "id": "topic",
+                          "type": "text",
+                          "x": 10,
+                          "y": 6,
+                          "width": 80,
+                          "fontSize": 40,
+                          "text": {
+                            "type": "string",
+                            "parts": [
+                              {
+                                "type": "literal",
+                                "value": "Topic: "
+                              },
+                              {
+                                "type": "variable",
+                                "ref": {
+                                  "scope": "local",
+                                  "name": "topic"
+                                }
+                              }
+                            ]
+                          },
+                          "align": "center",
+                          "bold": true
+                        },
+                        {
+                          "id": "picture",
+                          "type": "image",
+                          "x": 14,
+                          "y": 17,
+                          "width": 72,
+                          "height": 74,
+                          "src": {
+                            "type": "file",
+                            "source": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "picture"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "timeline": [
+                      {
+                        "type": "record",
+                        "duration": {
+                          "type": "number",
+                          "source": "literal",
+                          "value": 60
+                        },
+                        "outputName": "recording"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "outputs": [
+                {
+                  "name": "ans",
+                  "type": "audio",
+                  "expression": {
+                    "type": "audio",
+                    "source": "record-output",
+                    "name": "recording"
+                  }
+                }
+              ],
+              "schemaUses": []
+            },
+            "exposed": false
+          }
+        ]
+      }
     }
   ]
 }

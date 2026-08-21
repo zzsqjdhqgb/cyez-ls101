@@ -2,28 +2,74 @@
 
 const test = require('node:test')
 const assert = require('node:assert/strict')
+const { access, mkdir, mkdtemp, rm, writeFile } = require('node:fs/promises')
+const { tmpdir } = require('node:os')
+const path = require('node:path')
 
 const modulePromise = import('../qwen-tts/download-release-assets.mjs')
 
-test('selects the pinned platform helper and raw models from GitHub metadata', async () => {
-  const { modelAssetNames, runtimeTarget, selectReleaseAssets } = await modulePromise
+test('selects runtime-only downloads for product documentation setup', async () => {
+  const { downloadMode } = await modulePromise
+
+  assert.equal(downloadMode({}), 'all')
+  assert.equal(downloadMode({ LS101_QWEN_TTS_RUNTIME_ONLY: '1' }), 'runtime-only')
+  assert.equal(
+    downloadMode({
+      LS101_QWEN_TTS_RUNTIME_ONLY: '1',
+      LS101_SKIP_QWEN_TTS_DOWNLOAD: '1'
+    }),
+    'skip'
+  )
+})
+
+test('selects the pinned platform helper from runtime release metadata', async () => {
+  const { runtimeTarget, selectRuntimeReleaseAssets } = await modulePromise
   const target = runtimeTarget('linux', 'x64')
-  const modelNames = modelAssetNames()
   const digest = 'a'.repeat(64)
   const release = {
-    tag_name: 'qwen-tts-v0.1.0',
+    tag_name: 'qwen-tts-runtime-v0.3.1',
     draft: false,
     prerelease: true,
     assets: [
-      asset(target.name, digest),
-      asset(modelNames.talker, digest),
-      asset(modelNames.tokenizer, digest),
-      asset('qwen-tts-release-manifest.json', digest)
+      ...Object.values(target.helpers).map((helper) => asset(helper.name, digest)),
+      asset('qwen-tts-runtime-manifest.json', digest)
     ]
   }
 
-  assert.deepEqual(selectReleaseAssets(release, target), {
-    helper: { name: target.name, size: 1, digest, url: `https://example.test/${target.name}` },
+  assert.deepEqual(selectRuntimeReleaseAssets(release, target), {
+    helpers: Object.fromEntries(
+      Object.entries(target.helpers).map(([backend, helper]) => [
+        backend,
+        { name: helper.name, size: 1, digest, url: `https://example.test/${helper.name}` }
+      ])
+    ),
+    dependencies: [],
+    licenses: [],
+    manifest: {
+      name: 'qwen-tts-runtime-manifest.json',
+      size: 1,
+      digest,
+      url: 'https://example.test/qwen-tts-runtime-manifest.json'
+    }
+  })
+})
+
+test('selects raw models independently from model release metadata', async () => {
+  const { modelAssetNames, selectModelReleaseAssets } = await modulePromise
+  const modelNames = modelAssetNames()
+  const digest = 'b'.repeat(64)
+  const release = {
+    tag_name: 'qwen-tts-model-v1.0.0',
+    draft: false,
+    prerelease: true,
+    assets: [
+      asset(modelNames.talker, digest),
+      asset(modelNames.tokenizer, digest),
+      asset('qwen-tts-model-manifest.json', digest)
+    ]
+  }
+
+  assert.deepEqual(selectModelReleaseAssets(release), {
     models: {
       talker: {
         name: modelNames.talker,
@@ -39,10 +85,10 @@ test('selects the pinned platform helper and raw models from GitHub metadata', a
       }
     },
     manifest: {
-      name: 'qwen-tts-release-manifest.json',
+      name: 'qwen-tts-model-manifest.json',
       size: 1,
       digest,
-      url: 'https://example.test/qwen-tts-release-manifest.json'
+      url: 'https://example.test/qwen-tts-model-manifest.json'
     }
   })
 })
@@ -51,27 +97,92 @@ test('uses the canonical helper filename on Windows', async () => {
   const { runtimeTarget } = await modulePromise
   assert.deepEqual(runtimeTarget('win32', 'x64'), {
     directory: 'win32-x64',
-    name: 'ls101-qwen-tts-helper-win32-x64.exe',
-    executable: 'ls101-qwen-tts-helper.exe'
+    dependencies: [],
+    licenses: [],
+    helpers: {
+      cpu: {
+        name: 'ls101-qwen-tts-helper-cpu-win32-x64.exe',
+        executable: 'ls101-qwen-tts-helper-cpu.exe'
+      }
+    }
   })
 })
 
+test('selects only the CPU helper and manifest for the Windows runtime', async () => {
+  const { runtimeTarget, selectRuntimeReleaseAssets } = await modulePromise
+  const target = runtimeTarget('win32', 'x64')
+  const digest = 'c'.repeat(64)
+  const release = {
+    tag_name: 'qwen-tts-runtime-v0.3.1',
+    draft: false,
+    prerelease: true,
+    assets: [
+      asset(target.helpers.cpu.name, digest),
+      asset('qwen-tts-runtime-manifest.json', digest)
+    ]
+  }
+
+  const selected = selectRuntimeReleaseAssets(release, target)
+  assert.deepEqual(Object.keys(selected.helpers), ['cpu'])
+  assert.deepEqual(selected.dependencies, [])
+  assert.deepEqual(selected.licenses, [])
+})
+
+test('lists staged CUDA files that setup must remove while CUDA packaging is disabled', async () => {
+  const { disabledCudaRuntimeFiles } = await modulePromise
+
+  assert.deepEqual(disabledCudaRuntimeFiles('linux'), ['ls101-qwen-tts-helper-cuda'])
+  assert.deepEqual(disabledCudaRuntimeFiles('win32'), [
+    'ls101-qwen-tts-helper-cuda.exe',
+    'cublas64_12.dll',
+    'cublasLt64_12.dll',
+    'nvJitLink_120_0.dll',
+    'LICENSE.NVIDIA-CUDA.html'
+  ])
+})
+
+test('removes staged CUDA files for every platform without removing CPU helpers', async (context) => {
+  const { cleanupStagedCudaRuntimes, disabledCudaRuntimeFiles } = await modulePromise
+  const runtimeRoot = await mkdtemp(path.join(tmpdir(), 'qwen-runtime-'))
+  context.after(() => rm(runtimeRoot, { recursive: true, force: true }))
+  const linuxDirectory = path.join(runtimeRoot, 'linux-x64')
+  const windowsDirectory = path.join(runtimeRoot, 'win32-x64')
+  await Promise.all([
+    mkdir(linuxDirectory, { recursive: true }),
+    mkdir(windowsDirectory, { recursive: true })
+  ])
+  const linuxCudaHelper = path.join(linuxDirectory, 'ls101-qwen-tts-helper-cuda')
+  const windowsCpuHelper = path.join(windowsDirectory, 'ls101-qwen-tts-helper-cpu.exe')
+  const windowsCudaFiles = disabledCudaRuntimeFiles('win32').map((file) =>
+    path.join(windowsDirectory, file)
+  )
+  await Promise.all([
+    writeFile(linuxCudaHelper, 'cuda'),
+    writeFile(windowsCpuHelper, 'cpu'),
+    ...windowsCudaFiles.map((file) => writeFile(file, 'cuda'))
+  ])
+
+  await cleanupStagedCudaRuntimes(runtimeRoot)
+
+  await access(windowsCpuHelper)
+  await assert.rejects(access(linuxCudaHelper))
+  await Promise.all(windowsCudaFiles.map((file) => assert.rejects(access(file))))
+})
+
 test('rejects assets without the GitHub API digest', async () => {
-  const { selectReleaseAssets } = await modulePromise
+  const { selectModelReleaseAssets } = await modulePromise
   assert.throws(
     () =>
-      selectReleaseAssets(
-        {
-          tag_name: 'qwen-tts-v0.1.0',
-          prerelease: true,
-          assets: [
-            asset('qwen3-tts-0.6b-q8_0.gguf', 'missing'),
-            asset('qwen3-tts-tokenizer-f16.gguf', 'a'.repeat(64)),
-            asset('qwen-tts-release-manifest.json', 'a'.repeat(64))
-          ]
-        },
-        null
-      ),
+      selectModelReleaseAssets({
+        tag_name: 'qwen-tts-model-v1.0.0',
+        draft: false,
+        prerelease: true,
+        assets: [
+          asset('qwen3-tts-0.6b-q8_0.gguf', 'missing'),
+          asset('qwen3-tts-tokenizer-f16.gguf', 'a'.repeat(64)),
+          asset('qwen-tts-model-manifest.json', 'a'.repeat(64))
+        ]
+      }),
     /缺少 SHA-256 digest/
   )
 })

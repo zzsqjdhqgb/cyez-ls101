@@ -11,7 +11,7 @@ import { ExamLibraryPage } from '../features/exams/ExamLibraryPage'
 import { ExamSessionPage } from '../features/exams/ExamSessionPage'
 import { InterfaceDetailsPage } from '../features/interfaces/InterfaceDetailsPage'
 import { InterfaceDraftEditorPage } from '../features/interfaces/InterfaceDraftEditorPage'
-import { InterfaceDraftListPage } from '../features/interfaces/InterfaceDraftListPage'
+import { InterfaceDraftListRedirect } from '../features/interfaces/InterfaceDraftListPage'
 import { InterfaceInstanceEditorPage } from '../features/interfaces/InterfaceInstanceEditorPage'
 import { InterfaceListPage } from '../features/interfaces/InterfaceListPage'
 import { InterfaceExportPage } from '../features/interfaces/InterfaceExportPage'
@@ -199,7 +199,7 @@ const unregisterRoutes = [
   registerAppRoute({
     id: 'interface-drafts',
     path: '/interfaces/drafts',
-    component: InterfaceDraftListPage,
+    component: InterfaceDraftListRedirect,
     layout: 'standard'
   }),
 

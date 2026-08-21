@@ -8,10 +8,11 @@ import {
   type JSX
 } from 'react'
 import { imageClipboard } from '@ls101/clipboard/renderer'
-import type { TaskProgressHandle, TaskProgressItem } from '@ls101/core-types'
+import type { TaskProgressItem } from '@ls101/core-types'
 import { fileDialog } from '@ls101/file-dialog/renderer'
 import type {
   FieldLeaf,
+  InterfaceAIGenerationHandle,
   InterfaceAIGenerationResult,
   InterfaceDef,
   InterfaceImageProviderOption,
@@ -63,7 +64,7 @@ interface LeafEntry {
 }
 
 interface GenerationSession {
-  handle: TaskProgressHandle<InterfaceAIGenerationResult> | null
+  handle: InterfaceAIGenerationHandle | null
   result: InterfaceAIGenerationResult | null
   startError: string | null
 }
@@ -410,6 +411,34 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
     } catch (reason) {
       const message = errorMessage(reason)
       setGeneration((current) => (current ? { ...current, startError: message } : current))
+    }
+  }
+
+  const retryGeneration = async (): Promise<void> => {
+    const failedSession = generation
+    const failedHandle = failedSession?.handle
+    if (!failedHandle || failedSession.result?.status !== 'failed') return
+    setGeneration({ handle: null, result: null, startError: null })
+    setError(null)
+    try {
+      const handle = await failedHandle.retry()
+      setGeneration({ handle, result: null, startError: null })
+      const result = await handle.completion
+      setGeneration((current) => (current ? { ...current, result } : current))
+      if (result.status === 'completed') {
+        discardAllPendingImages()
+        setDetails(result.instance)
+        setValues(result.instance.instance.values)
+        setImagePrompts(result.instance.instance.imagePrompts ?? {})
+        setDirty(false)
+        toast.success('AI 生成内容已保存')
+      } else if (result.status === 'invalid-response') {
+        setJson(result.rawOutput)
+        setJsonErrors(result.errors)
+      } else if (result.status === 'cancelled') toast.info('已取消 AI 生成')
+    } catch (reason) {
+      const message = errorMessage(reason)
+      setGeneration({ ...failedSession, startError: message })
     }
   }
 
@@ -866,6 +895,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
           onFinish={finishGeneration}
           onRefresh={() => void loadModels()}
           onRetry={requestAIGeneration}
+          onResume={() => void retryGeneration()}
           onSelectModel={setSelectedModel}
           onSelectImageProvider={setSelectedImageProvider}
           onStart={requestAIGeneration}
@@ -1077,6 +1107,7 @@ function AIGenerationDialog({
   onFinish,
   onRefresh,
   onRetry,
+  onResume,
   onSelectModel,
   onSelectImageProvider,
   onStart
@@ -1097,11 +1128,13 @@ function AIGenerationDialog({
   onFinish(): void
   onRefresh(): void
   onRetry(): void
+  onResume(): void
   onSelectModel(value: AIModelSelection | null): void
   onSelectImageProvider(value: InterfaceImageProviderSelection | null): void
   onStart(): void
 }): JSX.Element {
   const finished = session ? isGenerationFinished(session) : false
+  const resumable = session?.result?.status === 'failed' && Boolean(session.handle)
 
   return (
     <section className={styles.operationDialog} aria-label="AI 生成并覆盖" role="dialog">
@@ -1117,7 +1150,9 @@ function AIGenerationDialog({
             <p>
               {session
                 ? finished
-                  ? '生成任务已结束，可以查看结果或重新生成。'
+                  ? resumable
+                    ? '生成已中断，可以保留已完成步骤并从失败位置继续。'
+                    : '生成任务已结束，可以查看结果或重新生成。'
                   : '正在生成并校验，当前题组在任务成功前保持不变。'
                 : '选择生成模型。覆盖前会再次确认，成功后立即保存。'}
             </p>
@@ -1127,7 +1162,7 @@ function AIGenerationDialog({
 
       <div className={styles.operationBody}>
         <AIModelSelect
-          disabled={session !== null && !finished}
+          disabled={(session !== null && !finished) || resumable}
           error={modelsError}
           label="生成模型"
           loading={modelsLoading}
@@ -1138,7 +1173,7 @@ function AIGenerationDialog({
         />
         {hasImageFields ? (
           <AIImageProviderSelect
-            disabled={session !== null && !finished}
+            disabled={(session !== null && !finished) || resumable}
             error={imageProvidersError}
             label="图像 Provider"
             loading={imageProvidersLoading}
@@ -1201,18 +1236,16 @@ function AIGenerationDialog({
                 (hasImageFields && Boolean(imageProvidersError)) ||
                 dirty
               }
-              onClick={onRetry}
+              onClick={resumable ? onResume : onRetry}
             >
-              重新生成
+              {resumable ? '从失败位置重试' : '重新生成'}
             </Button>
             <Button icon={Check} variant="primary" onClick={onFinish}>
               {session.result?.status === 'invalid-response' ? '检查 JSON' : '返回题组'}
             </Button>
           </>
         ) : (
-          <Button icon={X} disabled={!session.handle} variant="ghost" onClick={onCancel}>
-            取消生成
-          </Button>
+          <GenerationCancelAction handle={session.handle} onCancel={onCancel} />
         )}
       </footer>
     </section>
@@ -1373,7 +1406,9 @@ function GenerationResult({ session }: { session: GenerationSession }): JSX.Elem
     message = `发现 ${session.result.errors.length} 个字段错误，可检查原始 JSON 并修正后覆盖题组。`
   } else if (session.result?.status === 'failed') {
     title = '生成失败'
-    message = session.result.message
+    message = session.startError
+      ? `${session.result.message}；续跑启动失败：${session.startError}`
+      : session.result.message
   } else if (session.result?.status === 'cancelled') {
     title = '生成已取消'
     message = '任务已停止，当前题组内容没有被生成结果覆盖。'
@@ -1426,12 +1461,43 @@ function ImageGenerationResult({ session }: { session: ImageGenerationSession })
   )
 }
 
-function GenerationProgress({
-  handle
-}: {
-  handle: TaskProgressHandle<InterfaceAIGenerationResult>
-}): JSX.Element {
+function GenerationProgress({ handle }: { handle: InterfaceAIGenerationHandle }): JSX.Element {
   const snapshot = useSyncExternalStore(handle.subscribe, handle.getSnapshot, handle.getSnapshot)
 
   return <TaskProgress label="AI 生成进度" items={snapshot.items} />
+}
+
+function GenerationCancelAction({
+  handle,
+  onCancel
+}: {
+  handle: InterfaceAIGenerationHandle | null
+  onCancel(): void
+}): JSX.Element {
+  if (!handle) {
+    return (
+      <Button icon={LoaderCircle} disabled variant="ghost">
+        正在启动
+      </Button>
+    )
+  }
+  return <ActiveGenerationCancelAction handle={handle} onCancel={onCancel} />
+}
+
+function ActiveGenerationCancelAction({
+  handle,
+  onCancel
+}: {
+  handle: InterfaceAIGenerationHandle
+  onCancel(): void
+}): JSX.Element {
+  const snapshot = useSyncExternalStore(handle.subscribe, handle.getSnapshot, handle.getSnapshot)
+  const saving = snapshot.items.some(
+    (item) => item.id === 'save' && (item.status === 'running' || item.status === 'completed')
+  )
+  return (
+    <Button icon={saving ? LoaderCircle : X} disabled={saving} variant="ghost" onClick={onCancel}>
+      {saving ? '正在保存' : '取消生成'}
+    </Button>
+  )
 }

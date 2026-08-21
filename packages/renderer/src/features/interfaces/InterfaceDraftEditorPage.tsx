@@ -144,7 +144,7 @@ export function InterfaceDraftEditorPage(): JSX.Element {
   }
 
   const leave = (): void => {
-    navigate('/interfaces/drafts')
+    navigate('/interfaces?view=drafts')
   }
 
   const addNode = (node: FieldNode): void => {

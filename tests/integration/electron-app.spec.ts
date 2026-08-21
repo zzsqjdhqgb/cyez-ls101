@@ -114,6 +114,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       airouter: methods('airouter'),
       appInfo: methods('appInfo'),
       configStore: methods('configStore'),
+      dataDirectory: methods('dataDirectory'),
       fileDialog: methods('fileDialog'),
       fileStore: methods('fileStore'),
       imageClipboard: methods('imageClipboard'),
@@ -148,6 +149,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       'listSpeechRecognitionProviderConfigs',
       'listSpeechRecognitionProviderModels',
       'listSpeechVoices',
+      'probeQwenTtsCuda',
       'readImageProviderApiKey',
       'readProviderApiKey',
       'readSpeechProviderApiKey',
@@ -167,6 +169,15 @@ test('starts a hardened application window and exposes every preload bridge', as
     ],
     appInfo: ['getVersion'],
     configStore: ['invoke'],
+    dataDirectory: [
+      'choose',
+      'chooseDefault',
+      'deleteOld',
+      'getInfo',
+      'migrate',
+      'resetDefault',
+      'useExisting'
+    ],
     fileDialog: ['read', 'write'],
     fileStore: ['invoke'],
     imageClipboard: ['readImage', 'writeText'],
@@ -326,7 +337,12 @@ test('navigates through every primary application area', async () => {
     '上海高考 - 看图说话',
     '上海高考 - 快速应答',
     '上海高考 - 听短文回答事实题',
-    '上海高考 - 听短文回答观点题'
+    '上海高考 - 听短文回答观点题',
+    '上海中考 - 朗读词组',
+    '上海中考 - 朗读句子',
+    '上海中考 - 交际应答',
+    '上海中考 - 复述',
+    '上海中考 - 话题表达'
   ]) {
     await expect(page.getByRole('button', { name })).toBeVisible()
   }
@@ -334,7 +350,7 @@ test('navigates through every primary application area', async () => {
     'aria-selected',
     'true'
   )
-  await expect(page.getByText('内置', { exact: true })).toHaveCount(9)
+  await expect(page.getByText('内置', { exact: true })).toHaveCount(14)
   await expect(page.getByRole('button', { name: '删除评分单元' })).toHaveCount(0)
   await expectValidStyleBindings(page)
 
@@ -516,6 +532,8 @@ test('persists appearance settings through the renderer and config store', async
     )
 
   await expect(theme).toBeEnabled()
+  await expect(theme).toHaveValue('light')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
   await theme.selectOption('dark')
   await expect.poll(readStoredSettings).toEqual({
     version: 1,
@@ -574,6 +592,11 @@ test('creates, edits and reloads a persisted template', async () => {
   ).toBeVisible()
   await expect(page.getByRole('button', { name: '高中大题组，版本 4', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '添加听短文回答题组' })).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '初中基础题型，版本 1', exact: true })
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: '初中大题组，版本 1', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '添加话题表达题组' })).toBeVisible()
 
   const createLibrary = page.getByRole('button', { name: '新建本地函数库' })
   await expect(createLibrary).toBeEnabled()
@@ -687,10 +710,15 @@ test('creates, edits and reloads a persisted template', async () => {
   )
 })
 
-test('opens and copies the bundled Shanghai Gaokao template', async () => {
+test('opens and copies bundled Shanghai speaking templates', async () => {
   await page.getByRole('link', { name: '试卷模板' }).click()
   await expect(page.getByText('正在加载模板...')).toBeHidden()
   await expect(page.getByRole('tab', { name: '内置模板' })).toHaveAttribute('aria-selected', 'true')
+  const zhongkaoRow = page
+    .getByText('上海中考口语标准题型', { exact: true })
+    .locator('xpath=ancestor::article')
+  await expect(zhongkaoRow.getByText('v1', { exact: true })).toBeVisible()
+  await expect(zhongkaoRow.getByText('中考', { exact: true })).toBeVisible()
 
   const builtinRow = page
     .getByText('上海高考口语标准题型', { exact: true })
@@ -714,6 +742,7 @@ test('opens and copies the bundled Shanghai Gaokao template', async () => {
 
   await expect(page.getByRole('tab', { name: '内置模板' })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByText('上海高考口语标准题型', { exact: true })).toBeVisible()
+  await expect(page.getByText('上海中考口语标准题型', { exact: true })).toBeVisible()
 })
 
 test('exports a persisted formal Schema through the native save dialog', async () => {

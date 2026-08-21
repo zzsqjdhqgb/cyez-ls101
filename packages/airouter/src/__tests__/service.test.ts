@@ -88,6 +88,82 @@ describe('AIRouterService', () => {
     expect(await service.listProviderConfigs()).toEqual([])
   })
 
+  it('uses official built-in Agnes metadata without requesting models.dev', async () => {
+    const draft: AIRouterProviderConfigInput = {
+      name: 'Agnes AI',
+      type: 'openai-compatible',
+      catalogProviderId: 'agnes-ai',
+      baseUrl: 'https://apihub.agnes-ai.com/v1',
+      models: []
+    }
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: [{ id: 'agnes-2.5-flash' }, { id: 'agnes-2.0-flash' }]
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(service.listModels(draft)).resolves.toEqual([
+      {
+        id: 'agnes-2.0-flash',
+        name: 'Agnes 2.0 Flash',
+        contextLimit: 512 * 1024,
+        outputLimit: 64 * 1024,
+        reasoning: true,
+        attachment: true
+      },
+      {
+        id: 'agnes-2.5-flash',
+        name: 'Agnes 2.5 Flash',
+        contextLimit: 512 * 1024,
+        outputLimit: 64 * 1024,
+        reasoning: true,
+        attachment: true
+      }
+    ])
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://apihub.agnes-ai.com/v1/models',
+      expect.any(Object)
+    )
+  })
+
+  it('uses bundled models.dev metadata while provider fields take precedence', async () => {
+    const draft: AIRouterProviderConfigInput = {
+      name: 'OpenAI',
+      type: 'openai-compatible',
+      catalogProviderId: 'openai',
+      baseUrl: 'https://api.openai.com/v1',
+      models: []
+    }
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: [{ id: 'gpt-4o', display_name: 'Provider GPT-4o', context_length: 42 }]
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(service.listModels(draft)).resolves.toEqual([
+      {
+        id: 'gpt-4o',
+        name: 'Provider GPT-4o',
+        contextLimit: 42,
+        outputLimit: 16_384,
+        reasoning: false,
+        structuredOutput: true,
+        attachment: true
+      }
+    ])
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(fetchMock).toHaveBeenCalledWith('https://api.openai.com/v1/models', expect.any(Object))
+  })
+
   it('tests a model from an unsaved provider draft without persisting it', async () => {
     generateTextMock.mockResolvedValue({ text: 'OK' })
     const draft: AIRouterProviderConfigInput = {
