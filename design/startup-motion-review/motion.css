@@ -7,9 +7,6 @@
 
 #icon-tile,
 #logo-lockup,
-#earcup-left,
-#earcup-right,
-#boom-tip,
 #gold-sweep,
 #orange-sweep,
 #red-sweep,
@@ -26,27 +23,42 @@
   animation: p2m-lockup-settle var(--p2m-duration) linear both;
 }
 
-#headphone-arch {
-  animation: p2m-arch-draw var(--p2m-duration) linear both;
+#headphones {
+  mask: url(#headphones-reveal-mask);
 }
 
-#earcup-left {
-  transform-origin: right center;
-  animation: p2m-left-cup var(--p2m-duration) linear both;
+#headphones-left-cup-reveal,
+#headphones-right-cup-reveal {
+  transform-box: view-box;
 }
 
-#earcup-right {
-  transform-origin: left center;
-  animation: p2m-right-cup var(--p2m-duration) linear both;
+#headphones-left-cup-reveal {
+  transform-origin: 86px 720px;
+  animation: p2m-headphones-left-cup var(--p2m-duration) linear both;
 }
 
-#boom-line {
-  animation: p2m-boom-draw var(--p2m-duration) linear both;
+#headphones-arch-reveal-path,
+#headphones-boom-reveal-path,
+#headphones-mic-reveal-path {
+  stroke-dasharray: 1 1.2;
+  stroke-dashoffset: 1.1;
 }
 
-#boom-tip {
-  transform-origin: right center;
-  animation: p2m-boom-tip var(--p2m-duration) linear both;
+#headphones-arch-reveal-path {
+  animation: p2m-headphones-arch-draw var(--p2m-duration) linear both;
+}
+
+#headphones-right-cup-reveal {
+  transform-origin: 1060px 575px;
+  animation: p2m-headphones-right-cup var(--p2m-duration) linear both;
+}
+
+#headphones-boom-reveal-path {
+  animation: p2m-headphones-boom-draw var(--p2m-duration) linear both;
+}
+
+#headphones-mic-reveal-path {
+  animation: p2m-headphones-mic-draw var(--p2m-duration) linear both;
 }
 
 #gold-sweep {
@@ -119,84 +131,53 @@
   }
 }
 
-@keyframes p2m-arch-draw {
-  0%, 14% {
-    opacity: 0;
-    stroke-dasharray: 1 1;
-    stroke-dashoffset: 1;
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+@keyframes p2m-headphones-left-cup {
+  0%, 4% {
+    transform: scale(0);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
   }
-  22% { opacity: 1; }
+  24%, 100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes p2m-headphones-arch-draw {
+  0%, 10% {
+    stroke-dashoffset: 1.1;
+    animation-timing-function: cubic-bezier(0.34, 0, 0.14, 1);
+  }
+  52%, 100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes p2m-headphones-right-cup {
+  0%, 46% {
+    transform: scale(0);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
   60%, 100% {
-    opacity: 1;
-    stroke-dasharray: 1 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes p2m-headphones-boom-draw {
+  0%, 56% {
+    stroke-dashoffset: 1.1;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  70%, 100% {
     stroke-dashoffset: 0;
   }
 }
 
-@keyframes p2m-left-cup {
-  0%, 27% {
-    opacity: 0;
-    transform: translateX(-34px) scale(0.82);
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  57% {
-    opacity: 1;
-    transform: translateX(2px) scale(1.018);
+@keyframes p2m-headphones-mic-draw {
+  0%, 66% {
+    stroke-dashoffset: 1.1;
     animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   }
-  78%, 100% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-@keyframes p2m-right-cup {
-  0%, 31% {
-    opacity: 0;
-    transform: translateX(34px) scale(0.82);
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  61% {
-    opacity: 1;
-    transform: translateX(-2px) scale(1.018);
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  80%, 100% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-@keyframes p2m-boom-draw {
-  0%, 44% {
-    opacity: 0;
-    stroke-dasharray: 1 1;
-    stroke-dashoffset: 1;
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  50% { opacity: 1; }
-  76%, 100% {
-    opacity: 1;
-    stroke-dasharray: 1 1;
+  74%, 100% {
     stroke-dashoffset: 0;
-  }
-}
-
-@keyframes p2m-boom-tip {
-  0%, 64% {
-    opacity: 0;
-    transform: translateX(18px) scaleX(0.35);
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  82% {
-    opacity: 1;
-    transform: translateX(-2px) scaleX(1.025);
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) scaleX(1);
   }
 }
 

@@ -38,6 +38,19 @@ function colored(pixel) {
   return a > 24 && Math.max(r, g, b) - Math.min(r, g, b) > 28 && r + g + b < 690
 }
 
+function blue(pixel) {
+  const [r, g, b, a] = pixel
+  return a > 24 && b > 70 && b > r * 1.45 && b > g * 1.18
+}
+
+function countBlue(image) {
+  let count = 0
+  for (let index = 0; index < image.data.length; index += 4) {
+    if (blue(imagePixel(image, index))) count += 1
+  }
+  return count
+}
+
 function imagePixel(image, index) {
   return [image.data[index], image.data[index + 1], image.data[index + 2], image.data[index + 3]]
 }
@@ -149,35 +162,30 @@ async function capturePage(path, clip) {
 
 try {
   await page.setViewportSize({ width: 1254, height: 1254 })
-  await page.goto(pathToFileURL(join(workspace, 'output.svg')).href)
-  const sourceRenderPath = join(outputs, 'source_svg_render.png')
-  await capturePage(sourceRenderPath)
-
-  await page.setViewportSize({ width: 1254, height: 1254 })
   await page.goto(pathToFileURL(join(root, 'logo.svg')).href)
   await capturePage(join(outputs, 'final_render.png'))
 
-  await page.setViewportSize({ width: 1800, height: 1800 })
+  await page.setViewportSize({ width: 3000, height: 3000 })
   await page.goto(pathToFileURL(join(root, 'logo.svg')).href)
   await capturePage(join(outputs, 'smoothness_zoom.png'))
 
-  const source = png(sourceRenderPath)
+  const source = png(join(workspace, 'icon1.png'))
   const rendered = png(join(outputs, 'final_render.png'))
   const metrics = fitMetrics(source, rendered)
   const overlay = overlayImage(source, rendered)
 
-  const firstRenderPath = join(fitWorkDir, '02_output_clean_render.png')
+  const firstRenderPath = join(outputs, 'fit_program', 'renders', '01_scale25.png')
   const firstRendered = png(firstRenderPath)
   const firstMetrics = fitMetrics(source, firstRendered)
   const firstOverlay = overlayImage(source, firstRendered)
-  savePng(join(fitDir, '03_output_clean_overlay.png'), firstOverlay)
-  savePng(join(fitDir, '04_refined_overlay.png'), overlay)
+  savePng(join(fitDir, '05_png_scale25_overlay.png'), firstOverlay)
+  savePng(join(fitDir, '06_png_scale40_overlay.png'), overlay)
   savePng(
     join(outputs, 'overlay_progress_strip.png'),
     fitStrip([source, firstOverlay, overlay, rendered])
   )
 
-  const times = [0, 300, 650, 900, 1140, 1500]
+  const times = [0, 90, 150, 210, 300, 420, 560, 700, 850, 980, 1120, 1300, 1500]
   const framePaths = []
   const easingProbe = []
   for (const time of times) {
@@ -186,16 +194,20 @@ try {
     await screenshotElement('#logo-root', path)
     framePaths.push(path)
     easingProbe.push(await page.evaluate((t) => {
-      const arch = document.querySelector('#headphone-arch')
+      const archReveal = document.querySelector('#headphones-arch-reveal-path')
+      const boomReveal = document.querySelector('#headphones-boom-reveal-path')
+      const micReveal = document.querySelector('#headphones-mic-reveal-path')
+      const leftCupReveal = document.querySelector('#headphones-left-cup-reveal')
+      const rightCupReveal = document.querySelector('#headphones-right-cup-reveal')
       const orange = document.querySelector('#orange-sweep')
       const red = document.querySelector('#red-sweep')
       return {
         time_ms: t,
-        arch_dashoffset: arch ? getComputedStyle(arch).strokeDashoffset : null,
-        arch_opacity: arch ? getComputedStyle(arch).opacity : null,
-        left_cup_opacity: document.querySelector('#earcup-left')
-          ? getComputedStyle(document.querySelector('#earcup-left')).opacity
-          : null,
+        headphones_arch_dashoffset: archReveal ? getComputedStyle(archReveal).strokeDashoffset : null,
+        headphones_boom_dashoffset: boomReveal ? getComputedStyle(boomReveal).strokeDashoffset : null,
+        headphones_mic_dashoffset: micReveal ? getComputedStyle(micReveal).strokeDashoffset : null,
+        headphones_left_cup_transform: leftCupReveal ? getComputedStyle(leftCupReveal).transform : null,
+        headphones_right_cup_transform: rightCupReveal ? getComputedStyle(rightCupReveal).transform : null,
         orange_opacity: orange ? getComputedStyle(orange).opacity : null,
         red_opacity: red ? getComputedStyle(red).opacity : null,
         red_transform: red ? getComputedStyle(red).transform : null
@@ -212,22 +224,36 @@ try {
 
   const continuity = []
   let previous = null
-  for (let time = 580; time <= 1000; time += 20) {
+  for (let time = 0; time <= 1160; time += 10) {
     await gotoMotion(`?t=${time}`)
+    await page.evaluate(() => {
+      const lockup = document.querySelector('#logo-lockup')
+      const mark = document.querySelector('#listening-mark')
+      const tile = document.querySelector('#icon-tile')
+      if (lockup) {
+        lockup.style.animation = 'none'
+        lockup.style.transform = 'none'
+      }
+      if (mark) mark.style.display = 'none'
+      if (tile) tile.style.display = 'none'
+    })
     const bytes = await screenshotElement('#logo-root')
     const current = PNG.sync.read(bytes)
+    const blueInk = countBlue(current)
     continuity.push({
       time_ms: time,
-      changed_pixels_from_previous: previous ? frameDifference(previous, current) : null
+      changed_pixels_from_previous: previous ? frameDifference(previous.image, current) : null,
+      blue_ink_pixels: blueInk,
+      blue_ink_delta: previous ? blueInk - previous.blueInk : null
     })
-    previous = current
+    previous = { image: current, blueInk }
   }
 
   const stripHtml = `<!doctype html><meta charset="utf-8"><style>
     *{box-sizing:border-box}html,body{margin:0;background:#f6f8fb;font-family:Arial,sans-serif;color:#344054}
     body{display:flex;gap:1px;padding:0}.frame{width:420px;background:#fff}.frame img{display:block;width:420px;height:420px;object-fit:contain}
     .label{height:44px;display:flex;align-items:center;justify-content:center;border-top:1px solid #e4e7ec;font-size:16px;font-variant-numeric:tabular-nums}
-  </style>${times.map((time, index) => `<div class="frame"><img src="${pathToFileURL(framePaths[index]).href}"><div class="label">t=${time}ms</div></div>`).join('')}`
+  </style>${times.map((time, index) => `<div class="frame"><img src="${pathToFileURL(framePaths[index]).href}?v=${Date.now()}"><div class="label">t=${time}ms</div></div>`).join('')}`
   const stripHtmlPath = join(outputs, 'motion_strip.html')
   writeFileSync(stripHtmlPath, stripHtml)
   await page.setViewportSize({ width: 420 * times.length, height: 464 })
@@ -269,32 +295,35 @@ try {
   )
   await capturePage(join(outputs, 'reduced_motion.png'))
 
+  const fitEvaluation = JSON.parse(readFileSync(join(outputs, 'fit_program', 'evaluation.json'), 'utf8'))
+  const selectedFit = fitEvaluation.ranking.find((candidate) => candidate.name === '03_scale40')
   const report = {
-    source: '../../output.svg',
-    source_render: 'outputs/source_svg_render.png',
+    source: '../../icon1.png',
     static_svg: 'logo.svg',
     fit_metrics: metrics,
+    semantic_color_fit: selectedFit?.metrics ?? null,
     fit_iterations: [
       {
         iteration: 1,
-        candidate: 'clean semantic fit before local refinement',
+        candidate: '25% Lanczos measurement scale',
         metrics: firstMetrics,
-        verdict: 'Refined: right arch, boom curve, and red sweep were visibly too broad.'
+        verdict: 'Rejected: smooth, but the small leaf and tight inner curves lost too much area.'
       },
       {
         iteration: 2,
-        candidate: 'refined clean semantic fit',
+        candidate: '40% Lanczos measurement scale',
         metrics,
-        verdict: 'Accepted: smooth editable geometry with closer macro silhouette.'
+        verdict: 'Accepted: smooth cubic geometry with strong per-color silhouette fidelity.'
       }
     ],
-    geometry_verdict: 'Smooth semantic fit accepted. The 102-path VTracer source was reduced to stable animated parts; tiny antialiasing and color-fringe paths were intentionally removed.',
+    geometry_verdict: 'Smooth semantic fit accepted directly from icon1.png. Gradients were flattened by hue segmentation; the five fitted paths use 105 cubic segments with no tangent-angle warnings.',
+    headset_motion_verdict: 'The blue headset remains one continuous fill. Five transparent semantic masks reveal the left cup, centerline arch, right cup, curved boom, and microphone tip clockwise with width-matched geometry and hidden overlaps.',
     intentional_path_audit_corners: ['gold sweep tips', 'orange sweep tips', 'red sweep tips', 'leaf tips'],
     motion_times_ms: times,
     easing_probe: easingProbe,
     continuity_sweep: continuity,
-    continuity_verdict: continuity.every((row) => row.changed_pixels_from_previous === null || row.changed_pixels_from_previous > 0)
-      ? 'No frozen 20ms interval detected in the draw and handoff window.'
+    continuity_verdict: continuity.every((row) => row.blue_ink_delta === null || row.blue_ink_delta >= 0)
+      ? 'Blue ink grows monotonically in the 10ms draw-on sweep.'
       : 'Potential frozen interval detected; inspect the sweep.',
     final_frame_contract: {
       same_pipeline_static_vs_t1500_changed_pixels: samePipelineDiff,

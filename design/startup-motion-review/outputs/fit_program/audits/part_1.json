@@ -1,0 +1,45 @@
+{
+  "segment_count": 35,
+  "cubic_segments": 31,
+  "line_segments": 4,
+  "closed": true,
+  "budget": null,
+  "over_budget": false,
+  "median_segment_length": 212.252,
+  "short_segment_warnings": [
+    {
+      "segment": 7,
+      "length": 45.412
+    },
+    {
+      "segment": 8,
+      "length": 21.068
+    },
+    {
+      "segment": 9,
+      "length": 24.962
+    },
+    {
+      "segment": 14,
+      "length": 20.848
+    }
+  ],
+  "join_angle_threshold_degrees": 8.0,
+  "join_angle_warnings": [
+    {
+      "join_after_segment": 8,
+      "angle_degrees": 10.62
+    },
+    {
+      "join_after_segment": 32,
+      "angle_degrees": 99.028
+    },
+    {
+      "join_after_segment": 34,
+      "angle_degrees": 86.934
+    }
+  ],
+  "input_svg": "design/startup-motion-review/outputs/fit_program/candidates/08_tight_smooth.svg",
+  "selected_path_index": 1,
+  "path_count": 8
+}

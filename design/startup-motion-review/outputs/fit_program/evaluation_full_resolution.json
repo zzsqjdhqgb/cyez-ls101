@@ -1,0 +1,415 @@
+{
+  "source": "outputs/source_svg_render.png",
+  "ranking": [
+    {
+      "name": "10_corner_safe",
+      "alphamax": 0.5,
+      "opttolerance": 0.05,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/10_corner_safe.svg",
+      "cubic_commands": 93,
+      "line_commands": 155,
+      "metrics": {
+        "overall_iou": 0.989991,
+        "mean_color_iou": 0.984152,
+        "selection_score": 0.987072,
+        "per_color": {
+          "blue": {
+            "iou": 0.99291,
+            "source_only_px": 1425,
+            "render_only_px": 47
+          },
+          "gold": {
+            "iou": 0.984876,
+            "source_only_px": 750,
+            "render_only_px": 283
+          },
+          "orange": {
+            "iou": 0.986769,
+            "source_only_px": 702,
+            "render_only_px": 153
+          },
+          "red": {
+            "iou": 0.990566,
+            "source_only_px": 567,
+            "render_only_px": 3
+          },
+          "green": {
+            "iou": 0.965639,
+            "source_only_px": 111,
+            "render_only_px": 6
+          }
+        }
+      },
+      "render": "/workspace/design/startup-motion-review/outputs/fit_program/renders/10_corner_safe.png"
+    },
+    {
+      "name": "05_low_corner",
+      "alphamax": 0.6,
+      "opttolerance": 0.15,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/05_low_corner.svg",
+      "cubic_commands": 81,
+      "line_commands": 143,
+      "metrics": {
+        "overall_iou": 0.989675,
+        "mean_color_iou": 0.983939,
+        "selection_score": 0.986807,
+        "per_color": {
+          "blue": {
+            "iou": 0.992472,
+            "source_only_px": 1506,
+            "render_only_px": 57
+          },
+          "gold": {
+            "iou": 0.985036,
+            "source_only_px": 742,
+            "render_only_px": 280
+          },
+          "orange": {
+            "iou": 0.986585,
+            "source_only_px": 706,
+            "render_only_px": 161
+          },
+          "red": {
+            "iou": 0.989971,
+            "source_only_px": 595,
+            "render_only_px": 11
+          },
+          "green": {
+            "iou": 0.965629,
+            "source_only_px": 112,
+            "render_only_px": 5
+          }
+        }
+      },
+      "render": "/workspace/design/startup-motion-review/outputs/fit_program/renders/05_low_corner.png"
+    },
+    {
+      "name": "02_precise",
+      "alphamax": 0.8,
+      "opttolerance": 0.1,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/02_precise.svg",
+      "cubic_commands": 58,
+      "line_commands": 118,
+      "metrics": {
+        "overall_iou": 0.9895,
+        "mean_color_iou": 0.983158,
+        "selection_score": 0.986329,
+        "per_color": {
+          "blue": {
+            "iou": 0.992366,
+            "source_only_px": 1532,
+            "render_only_px": 53
+          },
+          "gold": {
+            "iou": 0.984787,
+            "source_only_px": 761,
+            "render_only_px": 278
+          },
+          "orange": {
+            "iou": 0.986492,
+            "source_only_px": 712,
+            "render_only_px": 161
+          },
+          "red": {
+            "iou": 0.989724,
+            "source_only_px": 605,
+            "render_only_px": 16
+          },
+          "green": {
+            "iou": 0.962419,
+            "source_only_px": 121,
+            "render_only_px": 7
+          }
+        }
+      },
+      "render": "/workspace/design/startup-motion-review/outputs/fit_program/renders/02_precise.png"
+    },
+    {
+      "name": "07_tight",
+      "alphamax": 0.9,
+      "opttolerance": 0.05,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/07_tight.svg",
+      "cubic_commands": 49,
+      "line_commands": 109,
+      "metrics": {
+        "overall_iou": 0.989334,
+        "mean_color_iou": 0.983227,
+        "selection_score": 0.986281,
+        "per_color": {
+          "blue": {
+            "iou": 0.992014,
+            "source_only_px": 1600,
+            "render_only_px": 58
+          },
+          "gold": {
+            "iou": 0.98448,
+            "source_only_px": 778,
+            "render_only_px": 282
+          },
+          "orange": {
+            "iou": 0.9864,
+            "source_only_px": 714,
+            "render_only_px": 165
+          },
+          "red": {
+            "iou": 0.990236,
+            "source_only_px": 578,
+            "render_only_px": 12
+          },
+          "green": {
+            "iou": 0.963006,
+            "source_only_px": 119,
+            "render_only_px": 7
+          }
+        }
+      },
+      "render": "/workspace/design/startup-motion-review/outputs/fit_program/renders/07_tight.png"
+    },
+    {
+      "name": "08_tight_smooth",
+      "alphamax": 1.2,
+      "opttolerance": 0.05,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/08_tight_smooth.svg",
+      "cubic_commands": 32,
+      "line_commands": 91,
+      "metrics": {
+        "overall_iou": 0.989248,
+        "mean_color_iou": 0.983181,
+        "selection_score": 0.986214,
+        "per_color": {
+          "blue": {
+            "iou": 0.991875,
+            "source_only_px": 1624,
+            "render_only_px": 63
+          },
+          "gold": {
+            "iou": 0.984466,
+            "source_only_px": 779,
+            "render_only_px": 282
+          },
+          "orange": {
+            "iou": 0.98637,
+            "source_only_px": 714,
+            "render_only_px": 167
+          },
+          "red": {
+            "iou": 0.990187,
+            "source_only_px": 581,
+            "render_only_px": 12
+          },
+          "green": {
+            "iou": 0.963006,
+            "source_only_px": 119,
+            "render_only_px": 7
+          }
+        }
+      },
+      "render": "/workspace/design/startup-motion-review/outputs/fit_program/renders/08_tight_smooth.png"
+    },
+    {
+      "name": "04_precise_smooth",
+      "alphamax": 1.1,
+      "opttolerance": 0.1,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/04_precise_smooth.svg",
+      "cubic_commands": 40,
+      "line_commands": 99,
+      "metrics": {
+        "overall_iou": 0.989213,
+        "mean_color_iou": 0.982993,
+        "selection_score": 0.986103,
+        "per_color": {
+          "blue": {
+            "iou": 0.991927,
+            "source_only_px": 1628,
+            "render_only_px": 48
+          },
+          "gold": {
+            "iou": 0.984656,
+            "source_only_px": 766,
+            "render_only_px": 282
+          },
+          "orange": {
+            "iou": 0.986369,
+            "source_only_px": 719,
+            "render_only_px": 162
+          },
+          "red": {
+            "iou": 0.989592,
+            "source_only_px": 613,
+            "render_only_px": 16
+          },
+          "green": {
+            "iou": 0.962419,
+            "source_only_px": 121,
+            "render_only_px": 7
+          }
+        }
+      },
+      "render": "/workspace/design/startup-motion-review/outputs/fit_program/renders/04_precise_smooth.png"
+    },
+    {
+      "name": "01_balanced",
+      "alphamax": 1,
+      "opttolerance": 0.2,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/01_balanced.svg",
+      "cubic_commands": 45,
+      "line_commands": 105,
+      "metrics": {
+        "overall_iou": 0.989033,
+        "mean_color_iou": 0.982961,
+        "selection_score": 0.985997,
+        "per_color": {
+          "blue": {
+            "iou": 0.99162,
+            "source_only_px": 1672,
+            "render_only_px": 68
+          },
+          "gold": {
+            "iou": 0.984541,
+            "source_only_px": 767,
+            "render_only_px": 289
+          },
+          "orange": {
+            "iou": 0.986242,
+            "source_only_px": 740,
+            "render_only_px": 149
+          },
+          "red": {
+            "iou": 0.989691,
+            "source_only_px": 606,
+            "render_only_px": 17
+          },
+          "green": {
+            "iou": 0.962713,
+            "source_only_px": 120,
+            "render_only_px": 7
+          }
+        }
+      },
+      "render": "/workspace/design/startup-motion-review/outputs/fit_program/renders/01_balanced.png"
+    },
+    {
+      "name": "03_smooth",
+      "alphamax": 1.2,
+      "opttolerance": 0.2,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/03_smooth.svg",
+      "cubic_commands": 32,
+      "line_commands": 91,
+      "metrics": {
+        "overall_iou": 0.988971,
+        "mean_color_iou": 0.982933,
+        "selection_score": 0.985952,
+        "per_color": {
+          "blue": {
+            "iou": 0.991509,
+            "source_only_px": 1690,
+            "render_only_px": 73
+          },
+          "gold": {
+            "iou": 0.984511,
+            "source_only_px": 769,
+            "render_only_px": 289
+          },
+          "orange": {
+            "iou": 0.986242,
+            "source_only_px": 740,
+            "render_only_px": 149
+          },
+          "red": {
+            "iou": 0.989691,
+            "source_only_px": 606,
+            "render_only_px": 17
+          },
+          "green": {
+            "iou": 0.962713,
+            "source_only_px": 120,
+            "render_only_px": 7
+          }
+        }
+      },
+      "render": "/workspace/design/startup-motion-review/outputs/fit_program/renders/03_smooth.png"
+    },
+    {
+      "name": "06_high_smooth",
+      "alphamax": 1.3,
+      "opttolerance": 0.3,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/06_high_smooth.svg",
+      "cubic_commands": 31,
+      "line_commands": 88,
+      "metrics": {
+        "overall_iou": 0.988837,
+        "mean_color_iou": 0.98275,
+        "selection_score": 0.985793,
+        "per_color": {
+          "blue": {
+            "iou": 0.991553,
+            "source_only_px": 1670,
+            "render_only_px": 84
+          },
+          "gold": {
+            "iou": 0.983874,
+            "source_only_px": 786,
+            "render_only_px": 316
+          },
+          "orange": {
+            "iou": 0.986168,
+            "source_only_px": 728,
+            "render_only_px": 166
+          },
+          "red": {
+            "iou": 0.989443,
+            "source_only_px": 622,
+            "render_only_px": 16
+          },
+          "green": {
+            "iou": 0.962713,
+            "source_only_px": 120,
+            "render_only_px": 7
+          }
+        }
+      },
+      "render": "/workspace/design/startup-motion-review/outputs/fit_program/renders/06_high_smooth.png"
+    },
+    {
+      "name": "09_soft",
+      "alphamax": 1,
+      "opttolerance": 0.35,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/09_soft.svg",
+      "cubic_commands": 45,
+      "line_commands": 105,
+      "metrics": {
+        "overall_iou": 0.988851,
+        "mean_color_iou": 0.982731,
+        "selection_score": 0.985791,
+        "per_color": {
+          "blue": {
+            "iou": 0.991663,
+            "source_only_px": 1654,
+            "render_only_px": 77
+          },
+          "gold": {
+            "iou": 0.983143,
+            "source_only_px": 831,
+            "render_only_px": 321
+          },
+          "orange": {
+            "iou": 0.986429,
+            "source_only_px": 722,
+            "render_only_px": 155
+          },
+          "red": {
+            "iou": 0.989708,
+            "source_only_px": 602,
+            "render_only_px": 20
+          },
+          "green": {
+            "iou": 0.962713,
+            "source_only_px": 120,
+            "render_only_px": 7
+          }
+        }
+      },
+      "render": "/workspace/design/startup-motion-review/outputs/fit_program/renders/09_soft.png"
+    }
+  ]
+}

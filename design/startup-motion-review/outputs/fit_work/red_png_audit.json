@@ -1,0 +1,28 @@
+{
+  "segment_count": 16,
+  "cubic_segments": 16,
+  "line_segments": 0,
+  "closed": true,
+  "budget": 20,
+  "over_budget": false,
+  "median_segment_length": 365.932,
+  "short_segment_warnings": [
+    {
+      "segment": 9,
+      "length": 79.371
+    },
+    {
+      "segment": 15,
+      "length": 63.636
+    },
+    {
+      "segment": 16,
+      "length": 64.082
+    }
+  ],
+  "join_angle_threshold_degrees": 8.0,
+  "join_angle_warnings": [],
+  "input_svg": "design/startup-motion-review/logo.svg",
+  "selected_path_index": 3,
+  "path_count": 5
+}
