@@ -2,11 +2,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   applyStartupLogoMotion,
   applyStartupPlaceholderIcon,
+  STARTUP_PROGRESS_DELAY_MS,
   showStartupProgress,
-  waitForStartupLogoAnimation
+  waitForStartupLogoAnimation,
+  waitForStartupProgressDelay
 } from '../startup-placeholder'
 
 afterEach(() => {
+  vi.useRealTimers()
   document.body.replaceChildren()
   document.head.querySelector('[data-startup-logo-motion]')?.remove()
 })
@@ -50,6 +53,18 @@ describe('startup placeholder', () => {
 
     root.querySelector('#logo-lockup')?.dispatchEvent(new Event('animationend'))
     await Promise.resolve()
+    expect(completed).toHaveBeenCalledOnce()
+  })
+
+  it('waits one second after the logo animation before continuing', async () => {
+    vi.useFakeTimers()
+    const completed = vi.fn()
+
+    void waitForStartupProgressDelay().then(completed)
+    await vi.advanceTimersByTimeAsync(STARTUP_PROGRESS_DELAY_MS - 1)
+    expect(completed).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
     expect(completed).toHaveBeenCalledOnce()
   })
 

@@ -532,6 +532,8 @@ test('persists appearance settings through the renderer and config store', async
     )
 
   await expect(theme).toBeEnabled()
+  await expect(theme).toHaveValue('light')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
   await theme.selectOption('dark')
   await expect.poll(readStoredSettings).toEqual({
     version: 1,

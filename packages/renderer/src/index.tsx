@@ -12,7 +12,8 @@ import {
   applyStartupLogoMotion,
   applyStartupPlaceholderIcon,
   showStartupProgress,
-  waitForStartupLogoAnimation
+  waitForStartupLogoAnimation,
+  waitForStartupProgressDelay
 } from './startup-placeholder'
 import './app/register-settings'
 import './app/register-placeholder-routes'
@@ -47,6 +48,7 @@ async function renderApplication(): Promise<void> {
   )
 
   await startupLogoAnimation
+  await waitForStartupProgressDelay()
 
   if (!initializationSettled) showStartupProgress(root)
 
