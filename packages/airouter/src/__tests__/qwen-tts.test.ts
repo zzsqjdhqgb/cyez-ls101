@@ -136,9 +136,15 @@ describe('QwenTtsSynthesizer', () => {
         '1.05'
       ],
       expect.objectContaining({
-        env: expect.not.objectContaining({ QWEN3_TTS_BACKEND: expect.anything() })
+        env: expect.objectContaining({
+          QWEN3_TTS_LOW_MEM: '0'
+        })
       })
     )
+    const environment = spawnProcess.mock.calls[0][2]?.env
+    const pathKey = Object.keys(environment ?? {}).find((key) => key.toLowerCase() === 'path')
+    expect(pathKey).toBeDefined()
+    expect(environment?.[pathKey!]?.split(path.delimiter)[0]).toBe(directory)
     synthesizer.dispose()
     expect(helper.killed).toBe(true)
   })
@@ -205,6 +211,10 @@ describe('QwenTtsSynthesizer', () => {
       ['--probe-backend', 'cuda'],
       expect.objectContaining({ windowsHide: true })
     )
+    const environment = spawnProcess.mock.calls[0][2]?.env
+    const pathKey = Object.keys(environment ?? {}).find((key) => key.toLowerCase() === 'path')
+    expect(pathKey).toBeDefined()
+    expect(environment?.[pathKey!]?.split(path.delimiter)[0]).toBe(directory)
   })
 })
 

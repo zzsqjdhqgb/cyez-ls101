@@ -191,7 +191,15 @@ jobs:
         uses: Jimver/cuda-toolkit@v0.2.36
         with:
           cuda: '12.8.1'
+          # Both platforms use a component allowlist. The helper only needs
+          # the CUDA compiler chain, runtime/dev files, cuBLAS, nvJitLink, and
+          # CCCL headers; skip samples, profilers, docs, Nsight, and VS
+          # project integration.
           method: network
+          sub-packages: >-
+            ${{ runner.os == 'Windows' && '["nvcc","cudart","cublas","cublas_dev","nvjitlink","thrust"]' || '["nvcc"]' }}
+          non-cuda-sub-packages: >-
+            ${{ runner.os == 'Windows' && '[]' || '["libcublas","libcublas-dev","libnvjitlink"]' }}
 
       - name: Build runtime
         if: runner.os != 'Windows'
@@ -208,6 +216,20 @@ jobs:
         run: |
           call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64
           node scripts/qwen-tts/build-runtime.mjs --backend ${{ matrix.backend }}
+
+      - name: Prepare bundled Windows CUDA DLLs for smoke test
+        if: runner.os == 'Windows' && matrix.backend == 'cuda'
+        shell: pwsh
+        run: |
+          $sourceDirectory = Join-Path $env:CUDA_PATH 'bin'
+          $destinationDirectory = 'externals/ai/qwen3-tts/runtime/win32-x64'
+          foreach ($name in @('cublas64_12.dll', 'cublasLt64_12.dll', 'nvJitLink_120_0.dll')) {
+            $source = Join-Path $sourceDirectory $name
+            if (!(Test-Path -LiteralPath $source -PathType Leaf)) {
+              throw "CUDA runtime dependency is missing: $source"
+            }
+            Copy-Item -LiteralPath $source -Destination (Join-Path $destinationDirectory $name)
+          }
 
       - name: Smoke-test helper
         shell: bash
@@ -277,6 +299,23 @@ jobs:
             `${JSON.stringify(info, null, 2)}\n`
           )
           NODE
+
+      - name: Stage Windows CUDA runtime dependencies
+        if: runner.os == 'Windows' && matrix.backend == 'cuda'
+        shell: pwsh
+        run: |
+          $sourceDirectory = Join-Path $env:CUDA_PATH 'bin'
+          $destinationDirectory = 'release-assets'
+          foreach ($name in @('cublas64_12.dll', 'cublasLt64_12.dll', 'nvJitLink_120_0.dll')) {
+            $source = Join-Path $sourceDirectory $name
+            if (!(Test-Path -LiteralPath $source -PathType Leaf)) {
+              throw "CUDA runtime dependency is missing: $source"
+            }
+            if ((Get-Item -LiteralPath $source).Length -lt 1MB) {
+              throw "CUDA runtime dependency is unexpectedly small: $source"
+            }
+            Copy-Item -LiteralPath $source -Destination (Join-Path $destinationDirectory $name)
+          }
 
       - name: Upload runtime artifact
         uses: actions/upload-artifact@v4
@@ -463,8 +502,11 @@ jobs:
         run: |
           cp thirdparty-licenses/LICENSE.qwen3-tts-cpp.txt release-assets/
           cp thirdparty-licenses/LICENSE.ggml.txt release-assets/
+          curl --fail --location --silent --show-error \
+            https://docs.nvidia.com/cuda/eula/index.html \
+            --output release-assets/LICENSE.NVIDIA-CUDA.html
           node <<'NODE'
-          const { readFileSync, readdirSync, writeFileSync } = require('node:fs')
+          const { readFileSync, readdirSync, statSync, writeFileSync } = require('node:fs')
           const path = require('node:path')
 
           const directory = 'release-assets'
@@ -500,7 +542,24 @@ jobs:
           if (JSON.stringify(runtimeFiles) !== JSON.stringify(expectedRuntimeFiles)) {
             throw new Error(`Unexpected runtime assets: ${runtimeFiles.join(', ')}`)
           }
+          const dependencyFiles = readdirSync(directory)
+            .filter((name) => name.endsWith('.dll'))
+            .sort()
+          const expectedDependencyFiles = [
+            'cublas64_12.dll',
+            'cublasLt64_12.dll',
+            'nvJitLink_120_0.dll'
+          ].sort()
+          if (JSON.stringify(dependencyFiles) !== JSON.stringify(expectedDependencyFiles)) {
+            throw new Error(`Unexpected Windows CUDA dependencies: ${dependencyFiles.join(', ')}`)
+          }
+          for (const name of dependencyFiles) {
+            if (statSync(path.join(directory, name)).size < 1024 * 1024) {
+              throw new Error(`Windows CUDA dependency is unexpectedly small: ${name}`)
+            }
+          }
           const licenseFiles = [
+            'LICENSE.NVIDIA-CUDA.html',
             'LICENSE.ggml.txt',
             'LICENSE.qwen3-tts-cpp.txt'
           ]
@@ -510,6 +569,14 @@ jobs:
             backend: name.includes('-cuda-') ? 'cuda' : 'cpu',
             name
           }))
+          assets.push(
+            ...dependencyFiles.map((name) => ({
+              kind: 'native-runtime-dependency',
+              runtimeDirectory: 'win32-x64',
+              backend: 'cuda',
+              name
+            }))
+          )
           assets.push(...licenseFiles.map((name) => ({ kind: 'license', name })))
           const manifest = {
             schemaVersion: 1,
@@ -548,12 +615,15 @@ jobs:
           make_latest: false
           generate_release_notes: false
           body: |
-            CPU and NVIDIA CUDA native Qwen3-TTS helpers for Linux x64 and Windows x64.
+            CPU and NVIDIA CUDA native Qwen3-TTS helpers for Linux x64 and Windows x64. The
+            Windows runtime also bundles the CUDA 12.8.1 cuBLAS DLLs required by the CUDA helper.
 
             Runtime and source revisions are recorded in `qwen-tts-runtime-manifest.json`.
             This release is immutable; publish a new runtime version for any binary change.
           files: |
             release-assets/ls101-qwen-tts-helper-*
+            release-assets/*.dll
+            release-assets/LICENSE.NVIDIA-CUDA.html
             release-assets/LICENSE.ggml.txt
             release-assets/LICENSE.qwen3-tts-cpp.txt
             release-assets/qwen-tts-runtime-manifest.json

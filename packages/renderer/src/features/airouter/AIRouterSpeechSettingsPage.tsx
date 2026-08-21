@@ -13,14 +13,12 @@ import {
   AudioLines,
   Box,
   ChevronRight,
-  Cpu,
   Download,
   Eye,
   EyeOff,
   FolderOpen,
   Plus,
   Save,
-  Search,
   TestTube2,
   Trash2,
   Upload,
@@ -62,7 +60,6 @@ interface SpeechProviderDraft {
 
 type SpeechFeedbackScope =
   | 'api-key'
-  | 'cuda'
   | 'package'
   | 'models'
   | 'test'
@@ -109,7 +106,6 @@ export function AIRouterSpeechSettingsPage({
   const [deletePackageTarget, setDeletePackageTarget] =
     useState<AIRouterSpeechModelPackageSummary | null>(null)
   const [testAudioUrl, setTestAudioUrl] = useState<string | null>(null)
-  const [cudaAvailable, setCudaAvailable] = useState(false)
 
   const loadSettings = useCallback(async (): Promise<void> => {
     const requestId = loadRequest.current + 1
@@ -205,13 +201,11 @@ export function AIRouterSpeechSettingsPage({
     setApiKeyVisible(false)
     setApiKeyBaseline('')
     setApiKeyLoaded(false)
-    setCudaAvailable(false)
     setFeedback({})
   }
 
   const openEditor = (nextDraft: SpeechProviderDraft): void => {
     resetEditorState()
-    setCudaAvailable(nextDraft.type === 'qwen-tts' && nextDraft.backend === 'cuda')
     setDraft(nextDraft)
   }
 
@@ -302,9 +296,7 @@ export function AIRouterSpeechSettingsPage({
                   <span className={styles.providerMeta}>
                     <span>{providerLabels[config.type]}</span>
                     <span>{config.kind === 'local' ? '本地' : '在线'}</span>
-                    {config.type === 'qwen-tts' ? (
-                      <span>{(config.backend ?? 'cpu').toUpperCase()}</span>
-                    ) : null}
+                    {config.type === 'qwen-tts' ? <span>CPU</span> : null}
                     <span>{config.models.filter((model) => model.enabled).length} 个模型</span>
                     <span>{config.voices.filter((voice) => voice.enabled).length} 个音色</span>
                   </span>
@@ -460,7 +452,6 @@ export function AIRouterSpeechSettingsPage({
                         apiKey: '',
                         hasApiKey: false
                       })
-                      setCudaAvailable(false)
                     }}
                     value={draft.kind}
                   >
@@ -483,7 +474,6 @@ export function AIRouterSpeechSettingsPage({
                         models: [],
                         voices: []
                       })
-                      setCudaAvailable(false)
                     }}
                     value={draft.type}
                   >
@@ -565,78 +555,6 @@ export function AIRouterSpeechSettingsPage({
                   </>
                 ) : null}
               </SettingsSection>
-
-              {draft.kind === 'local' && draft.type === 'qwen-tts' ? (
-                <SettingsSection title="计算后端">
-                  <SettingsRow label="后端">
-                    <div className={styles.backendControl}>
-                      <div
-                        aria-label="Qwen TTS 计算后端"
-                        className={styles.backendSegmented}
-                        role="radiogroup"
-                      >
-                        <button
-                          aria-checked={draft.backend === 'cpu'}
-                          className={styles.backendOption}
-                          data-selected={draft.backend === 'cpu'}
-                          disabled={Boolean(busy)}
-                          onClick={() => setDraft({ ...draft, backend: 'cpu' })}
-                          role="radio"
-                          type="button"
-                        >
-                          <Cpu aria-hidden="true" />
-                          CPU
-                        </button>
-                        <button
-                          aria-checked={draft.backend === 'cuda'}
-                          className={styles.backendOption}
-                          data-selected={draft.backend === 'cuda'}
-                          disabled={Boolean(busy) || !cudaAvailable}
-                          onClick={() => setDraft({ ...draft, backend: 'cuda' })}
-                          role="radio"
-                          type="button"
-                        >
-                          CUDA
-                        </button>
-                      </div>
-                      <Button
-                        icon={Search}
-                        disabled={Boolean(busy)}
-                        onClick={() =>
-                          void run(
-                            'cuda',
-                            async () => {
-                              const result = await application.probeQwenTtsCuda()
-                              if (!result.available) {
-                                setCudaAvailable(false)
-                                setDraft((current) =>
-                                  current?.type === 'qwen-tts'
-                                    ? { ...current, backend: 'cpu' }
-                                    : current
-                                )
-                                throw new Error(result.message || '未检测到可用的 CUDA 设备')
-                              }
-                              setCudaAvailable(true)
-                              const device = result.description || result.device || 'CUDA 设备'
-                              const memory = result.memoryTotal
-                                ? `，显存 ${(result.memoryTotal / 1024 ** 3).toFixed(1)} GiB`
-                                : ''
-                              setFeedback((current) => ({
-                                ...current,
-                                cuda: { kind: 'success', text: `CUDA 可用：${device}${memory}` }
-                              }))
-                            },
-                            'cuda'
-                          )
-                        }
-                      >
-                        检测 CUDA
-                      </Button>
-                      <AIRouterOperationFeedback value={feedback.cuda} />
-                    </div>
-                  </SettingsRow>
-                </SettingsSection>
-              ) : null}
 
               {draft.kind === 'local' ? (
                 localPackages.length ? (
@@ -1156,7 +1074,7 @@ function fromConfig(config: AIRouterSpeechProviderConfigSummary): SpeechProvider
     ...config,
     models: config.models.map((model) => ({ ...model })),
     voices: config.voices.map((voice) => ({ ...voice })),
-    backend: config.backend ?? 'cpu',
+    backend: config.type === 'qwen-tts' ? 'cpu' : (config.backend ?? 'cpu'),
     apiKey: ''
   }
 }
@@ -1175,7 +1093,7 @@ function toInput(
     baseUrl: draft.kind === 'online' ? draft.baseUrl : undefined,
     modelPackageId: draft.kind === 'local' ? draft.modelPackageId : undefined,
     modelPackageVersion: draft.kind === 'local' ? draft.modelPackageVersion : undefined,
-    backend: draft.kind === 'local' && draft.type === 'qwen-tts' ? draft.backend : undefined,
+    backend: draft.kind === 'local' && draft.type === 'qwen-tts' ? 'cpu' : undefined,
     models: draft.models,
     voices: draft.voices,
     apiKey:

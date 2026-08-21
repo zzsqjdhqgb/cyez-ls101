@@ -3,7 +3,11 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { AIRouterProviderConfigInput, AIRouterProviderConfigSummary } from '@ls101/airouter'
+import type {
+  AIRouterProviderConfigInput,
+  AIRouterProviderConfigSummary,
+  AIRouterSpeechProviderConfigInput
+} from '@ls101/airouter'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AIRouterSettingsPage } from '../features/airouter/AIRouterSettingsPage'
 import type { AIRouterApplication } from '../features/airouter/AIRouterApplication'
@@ -588,46 +592,53 @@ describe('AIRouterSettingsPage', () => {
     )
   })
 
-  it('enables the Qwen CUDA backend only after a successful explicit probe', async () => {
-    const probeQwenTtsCuda = vi
+  it('keeps Qwen on CPU while CUDA runtime packaging is disabled', async () => {
+    const probeQwenTtsCuda = vi.fn()
+    const saveSpeechConfig = vi
       .fn()
-      .mockResolvedValueOnce({
-        available: true,
-        device: 'CUDA0',
-        description: 'NVIDIA Test GPU',
-        memoryTotal: 8 * 1024 ** 3
-      })
-      .mockResolvedValueOnce({ available: false, message: 'CUDA driver unavailable' })
-    const application = applicationWith({ probeQwenTtsCuda })
-
+      .mockImplementation(async (input: AIRouterSpeechProviderConfigInput) => ({
+        ...input,
+        id: input.id ?? 'qwen-local',
+        baseUrl: '',
+        modelPackageId: '',
+        modelPackageVersion: '',
+        hasApiKey: false
+      }))
+    const application = applicationWith({
+      probeQwenTtsCuda,
+      saveSpeechConfig,
+      listSpeechConfigs: vi.fn().mockResolvedValue([
+        {
+          id: 'qwen-local',
+          name: 'Qwen 本地语音',
+          kind: 'local',
+          type: 'qwen-tts',
+          baseUrl: '',
+          modelPackageId: '',
+          modelPackageVersion: '',
+          models: [],
+          voices: [],
+          backend: 'cuda',
+          hasApiKey: false
+        }
+      ])
+    })
     renderAIRouter(application, '/settings/ai-router/speech-synthesis')
-    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
-    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
-    fireEvent.change(within(dialog).getByLabelText('语音运行方式'), {
-      target: { value: 'local' }
-    })
-    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
-      target: { value: 'qwen-tts' }
-    })
+    const provider = await screen.findByRole('button', { name: /Qwen 本地语音/ })
+    expect(within(provider).getByText('CPU')).toBeInTheDocument()
+    fireEvent.click(provider)
+    const dialog = screen.getByRole('dialog', { name: 'Qwen 本地语音' })
 
-    const cuda = within(dialog).getByRole('radio', { name: 'CUDA' })
-    expect(cuda).toBeDisabled()
-    fireEvent.click(within(dialog).getByRole('button', { name: '检测 CUDA' }))
-    expect(
-      await within(dialog).findByText('CUDA 可用：NVIDIA Test GPU，显存 8.0 GiB')
-    ).toBeVisible()
-    expect(cuda).toBeEnabled()
-    fireEvent.click(cuda)
-    expect(cuda).toHaveAttribute('aria-checked', 'true')
+    expect(within(dialog).queryByRole('radiogroup', { name: 'Qwen TTS 计算后端' })).toBeNull()
+    expect(within(dialog).queryByRole('button', { name: '检测 CUDA' })).toBeNull()
+    expect(probeQwenTtsCuda).not.toHaveBeenCalled()
 
-    fireEvent.click(within(dialog).getByRole('button', { name: '检测 CUDA' }))
-    expect(await within(dialog).findByText('CUDA driver unavailable')).toBeVisible()
-    expect(cuda).toBeDisabled()
-    expect(within(dialog).getByRole('radio', { name: 'CPU' })).toHaveAttribute(
-      'aria-checked',
-      'true'
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+    await waitFor(() =>
+      expect(saveSpeechConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'qwen-local', backend: 'cpu' })
+      )
     )
-    expect(probeQwenTtsCuda).toHaveBeenCalledTimes(2)
   })
 
   it('manages image Providers without a default Provider control', async () => {

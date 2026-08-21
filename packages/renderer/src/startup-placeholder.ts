@@ -1,4 +1,5 @@
 export const STARTUP_LOGO_ANIMATION_DURATION_MS = 1_500
+export const STARTUP_PROGRESS_DELAY_MS = 1_000
 
 interface StartupLogoMotionOptions {
   logoMarkup: string
@@ -49,6 +50,10 @@ export function waitForStartupLogoAnimation(root: HTMLElement): Promise<void> {
       resolve()
     }
   })
+}
+
+export function waitForStartupProgressDelay(): Promise<void> {
+  return wait(STARTUP_PROGRESS_DELAY_MS)
 }
 
 export function showStartupProgress(root: HTMLElement): void {

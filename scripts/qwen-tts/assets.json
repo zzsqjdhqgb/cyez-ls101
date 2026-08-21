@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "runtimeRelease": {
     "repository": "zzsqjdhqgb/cyez-ls101",
-    "version": "0.3.0",
-    "tag": "qwen-tts-runtime-v0.3.0",
+    "version": "0.3.1",
+    "tag": "qwen-tts-runtime-v0.3.1",
     "prerelease": true
   },
   "modelRelease": {

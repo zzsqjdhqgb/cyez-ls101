@@ -2,6 +2,9 @@
 
 const test = require('node:test')
 const assert = require('node:assert/strict')
+const { access, mkdir, mkdtemp, rm, writeFile } = require('node:fs/promises')
+const { tmpdir } = require('node:os')
+const path = require('node:path')
 
 const modulePromise = import('../qwen-tts/download-release-assets.mjs')
 
@@ -24,7 +27,7 @@ test('selects the pinned platform helper from runtime release metadata', async (
   const target = runtimeTarget('linux', 'x64')
   const digest = 'a'.repeat(64)
   const release = {
-    tag_name: 'qwen-tts-runtime-v0.3.0',
+    tag_name: 'qwen-tts-runtime-v0.3.1',
     draft: false,
     prerelease: true,
     assets: [
@@ -40,6 +43,8 @@ test('selects the pinned platform helper from runtime release metadata', async (
         { name: helper.name, size: 1, digest, url: `https://example.test/${helper.name}` }
       ])
     ),
+    dependencies: [],
+    licenses: [],
     manifest: {
       name: 'qwen-tts-runtime-manifest.json',
       size: 1,
@@ -92,17 +97,76 @@ test('uses the canonical helper filename on Windows', async () => {
   const { runtimeTarget } = await modulePromise
   assert.deepEqual(runtimeTarget('win32', 'x64'), {
     directory: 'win32-x64',
+    dependencies: [],
+    licenses: [],
     helpers: {
       cpu: {
         name: 'ls101-qwen-tts-helper-cpu-win32-x64.exe',
         executable: 'ls101-qwen-tts-helper-cpu.exe'
-      },
-      cuda: {
-        name: 'ls101-qwen-tts-helper-cuda-win32-x64.exe',
-        executable: 'ls101-qwen-tts-helper-cuda.exe'
       }
     }
   })
+})
+
+test('selects only the CPU helper and manifest for the Windows runtime', async () => {
+  const { runtimeTarget, selectRuntimeReleaseAssets } = await modulePromise
+  const target = runtimeTarget('win32', 'x64')
+  const digest = 'c'.repeat(64)
+  const release = {
+    tag_name: 'qwen-tts-runtime-v0.3.1',
+    draft: false,
+    prerelease: true,
+    assets: [
+      asset(target.helpers.cpu.name, digest),
+      asset('qwen-tts-runtime-manifest.json', digest)
+    ]
+  }
+
+  const selected = selectRuntimeReleaseAssets(release, target)
+  assert.deepEqual(Object.keys(selected.helpers), ['cpu'])
+  assert.deepEqual(selected.dependencies, [])
+  assert.deepEqual(selected.licenses, [])
+})
+
+test('lists staged CUDA files that setup must remove while CUDA packaging is disabled', async () => {
+  const { disabledCudaRuntimeFiles } = await modulePromise
+
+  assert.deepEqual(disabledCudaRuntimeFiles('linux'), ['ls101-qwen-tts-helper-cuda'])
+  assert.deepEqual(disabledCudaRuntimeFiles('win32'), [
+    'ls101-qwen-tts-helper-cuda.exe',
+    'cublas64_12.dll',
+    'cublasLt64_12.dll',
+    'nvJitLink_120_0.dll',
+    'LICENSE.NVIDIA-CUDA.html'
+  ])
+})
+
+test('removes staged CUDA files for every platform without removing CPU helpers', async (context) => {
+  const { cleanupStagedCudaRuntimes, disabledCudaRuntimeFiles } = await modulePromise
+  const runtimeRoot = await mkdtemp(path.join(tmpdir(), 'qwen-runtime-'))
+  context.after(() => rm(runtimeRoot, { recursive: true, force: true }))
+  const linuxDirectory = path.join(runtimeRoot, 'linux-x64')
+  const windowsDirectory = path.join(runtimeRoot, 'win32-x64')
+  await Promise.all([
+    mkdir(linuxDirectory, { recursive: true }),
+    mkdir(windowsDirectory, { recursive: true })
+  ])
+  const linuxCudaHelper = path.join(linuxDirectory, 'ls101-qwen-tts-helper-cuda')
+  const windowsCpuHelper = path.join(windowsDirectory, 'ls101-qwen-tts-helper-cpu.exe')
+  const windowsCudaFiles = disabledCudaRuntimeFiles('win32').map((file) =>
+    path.join(windowsDirectory, file)
+  )
+  await Promise.all([
+    writeFile(linuxCudaHelper, 'cuda'),
+    writeFile(windowsCpuHelper, 'cpu'),
+    ...windowsCudaFiles.map((file) => writeFile(file, 'cuda'))
+  ])
+
+  await cleanupStagedCudaRuntimes(runtimeRoot)
+
+  await access(windowsCpuHelper)
+  await assert.rejects(access(linuxCudaHelper))
+  await Promise.all(windowsCudaFiles.map((file) => assert.rejects(access(file))))
 })
 
 test('rejects assets without the GitHub API digest', async () => {
