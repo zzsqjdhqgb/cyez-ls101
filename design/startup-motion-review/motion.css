@@ -1,5 +1,6 @@
 :root {
   --startup-logo-duration: 1500ms;
+  --startup-mark-duration: 700ms;
   --startup-logo-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --startup-logo-expand: cubic-bezier(0.65, 0, 0.35, 1);
 }
@@ -20,22 +21,22 @@
 
 #gold-sweep {
   transform-origin: 58% 54%;
-  animation: startup-gold-arrive var(--startup-logo-duration) linear both;
+  animation: startup-gold-arrive var(--startup-mark-duration) linear both;
 }
 
 #orange-sweep {
   transform-origin: 57% 55%;
-  animation: startup-orange-arrive var(--startup-logo-duration) linear both;
+  animation: startup-orange-arrive var(--startup-mark-duration) linear both;
 }
 
 #red-sweep {
   transform-origin: 54% 57%;
-  animation: startup-red-arrive var(--startup-logo-duration) linear both;
+  animation: startup-red-arrive var(--startup-mark-duration) linear both;
 }
 
 #leaf {
   transform-origin: left center;
-  animation: startup-leaf-arrive var(--startup-logo-duration) linear both;
+  animation: startup-leaf-arrive var(--startup-mark-duration) linear both;
 }
 
 #headphones {
@@ -48,12 +49,12 @@
 
 @keyframes startup-logo-move {
   0%,
-  46% {
+  46.666% {
     transform: translateX(1023px) scale(0.82);
     animation-timing-function: var(--startup-logo-expand);
   }
 
-  82%,
+  70%,
   100% {
     opacity: 1;
     transform: translateX(90px) scale(0.82);
@@ -62,11 +63,11 @@
 
 @keyframes startup-headphones-fade {
   0%,
-  48% {
+  70% {
     opacity: 0;
   }
 
-  68%,
+  88%,
   100% {
     opacity: 1;
   }
@@ -74,16 +75,12 @@
 
 @keyframes startup-wordmark-reveal {
   0%,
-  48% {
-    width: 0;
-  }
-
-  52% {
+  70% {
     width: 0;
     animation-timing-function: var(--startup-logo-expand);
   }
 
-  82%,
+  96%,
   100% {
     width: 3100px;
   }
