@@ -38,6 +38,9 @@ assembled model package.
   models. A successful probe means that the CUDA runtime and at least one device are usable; the
   Provider's full synthesis test remains responsible for detecting insufficient VRAM or unsupported
   model operations.
+- CUDA helpers disable GGML's virtual-memory-management allocator so the executable does not import
+  the NVIDIA driver at process load time. The explicit probe still initializes CUDA normally and
+  reports an unavailable or incompatible driver before CUDA can be selected.
 - Qwen TTS Provider configuration stores the explicit `cpu` or `cuda` selection. CPU is always
   available. CUDA becomes selectable after the user runs the CUDA probe successfully. Failed CUDA
   synthesis is reported to the user instead of silently falling back to CPU.

@@ -122,6 +122,7 @@ function configureAndBuild() {
     '-DGGML_METAL=OFF',
     `-DGGML_CUDA=${backend === 'cuda' ? 'ON' : 'OFF'}`,
     '-DGGML_CUDA_NCCL=OFF',
+    '-DGGML_CUDA_NO_VMM=ON',
     '-DGGML_VULKAN=OFF',
     '-DGGML_OPENMP=OFF',
     `-DQWEN3_TTS_SOURCE_DIR=${sourceDir}`
