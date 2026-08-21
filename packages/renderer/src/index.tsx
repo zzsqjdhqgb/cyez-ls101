@@ -2,10 +2,14 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { App } from './app/App'
+import { appIconUrl } from './assets'
 import { templateApplication } from './features/templates/TemplateApplicationRuntime'
 import { builtinInterfaceMaintenance } from './features/interfaces/BuiltinInterfaceRuntime'
 import { initializeSchemaApplication } from './features/schemas/SchemaApplicationRuntime'
-import { waitForMinimumStartupPlaceholderDuration } from './startup-placeholder'
+import {
+  applyStartupPlaceholderIcon,
+  waitForMinimumStartupPlaceholderDuration
+} from './startup-placeholder'
 import './app/register-settings'
 import './app/register-placeholder-routes'
 import './styles/tokens.css'
@@ -17,6 +21,7 @@ if (!root) {
   throw new Error('Renderer root element was not found')
 }
 
+applyStartupPlaceholderIcon(root, appIconUrl)
 const reactRoot = createRoot(root)
 const minimumStartupPlaceholderDuration = waitForMinimumStartupPlaceholderDuration()
 
