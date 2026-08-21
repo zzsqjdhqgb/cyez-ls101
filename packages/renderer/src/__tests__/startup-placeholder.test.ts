@@ -41,10 +41,14 @@ describe('startup placeholder', () => {
 
   it('waits for the logo animation end signal', async () => {
     const root = document.createElement('div')
-    root.innerHTML = '<svg><g id="logo-lockup" /></svg>'
+    root.innerHTML = '<svg><g id="logo-lockup"><g id="leaf" /></g></svg>'
     const completed = vi.fn()
 
     void waitForStartupLogoAnimation(root).then(completed)
+    expect(completed).not.toHaveBeenCalled()
+
+    root.querySelector('#leaf')?.dispatchEvent(new Event('animationend', { bubbles: true }))
+    await Promise.resolve()
     expect(completed).not.toHaveBeenCalled()
 
     root.querySelector('#logo-lockup')?.dispatchEvent(new Event('animationend'))

@@ -38,10 +38,15 @@ export function waitForStartupLogoAnimation(root: HTMLElement): Promise<void> {
 
   return new Promise((resolve) => {
     const fallback = window.setTimeout(finish, STARTUP_LOGO_ANIMATION_DURATION_MS + 100)
-    animatedLogo.addEventListener('animationend', finish, { once: true })
+    animatedLogo.addEventListener('animationend', handleAnimationEnd)
+
+    function handleAnimationEnd(event: AnimationEvent): void {
+      if (event.target === animatedLogo) finish()
+    }
 
     function finish(): void {
       window.clearTimeout(fallback)
+      animatedLogo.removeEventListener('animationend', handleAnimationEnd)
       resolve()
     }
   })
