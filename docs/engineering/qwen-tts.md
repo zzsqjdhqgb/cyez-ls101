@@ -41,6 +41,10 @@ assembled model package.
 - CUDA helpers disable GGML's virtual-memory-management allocator so the executable does not import
   the NVIDIA driver at process load time. The explicit probe still initializes CUDA normally and
   reports an unavailable or incompatible driver before CUDA can be selected.
+- Release CUDA helpers target Turing (`sm_75`) and newer NVIDIA GPUs. Native code is included for
+  Turing, RTX 30 (`sm_86`), RTX 40 (`sm_89`), and Blackwell (`sm_120a`); the Turing PTX image is the
+  compatibility path for Ampere data-center, Hopper, and later architectures. Maxwell, Pascal, and
+  Volta are intentionally excluded to keep release build time and helper size bounded.
 - Qwen TTS Provider configuration stores the explicit `cpu` or `cuda` selection. CPU is always
   available. CUDA becomes selectable after the user runs the CUDA probe successfully. Failed CUDA
   synthesis is reported to the user instead of silently falling back to CPU.
@@ -73,6 +77,10 @@ so the compatible CUDA 12 `bin` directory must be available to the application t
 the NVIDIA display driver alone does not provide those libraries. The CUDA probe reports the
 helper launch failure when the required DLLs are unavailable. Linux builds link the redistributable
 CUDA runtime libraries statically and still require a compatible NVIDIA driver.
+
+The release workflow uses Ninja and a shared sccache backend for CUDA compilation. Clean builds
+compile five device-code images per CUDA source instead of GGML's nine-image default; later reruns
+can also reuse completed NVCC outputs from the GitHub Actions cache.
 
 The helpers are written to `externals/ai/qwen3-tts/runtime/<platform>-<arch>/` with the backend in
 the executable name. Build both variants independently on every release target; do not copy a

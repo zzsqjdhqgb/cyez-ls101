@@ -173,6 +173,12 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Set up CUDA compiler cache
+        if: matrix.backend == 'cuda'
+        uses: mozilla-actions/sccache-action@v0.0.11
+        with:
+          version: v0.17.0
+
       - name: Show native toolchain
         shell: bash
         run: |
@@ -188,7 +194,20 @@ jobs:
           method: network
 
       - name: Build runtime
+        if: runner.os != 'Windows'
+        env:
+          SCCACHE_GHA_ENABLED: ${{ matrix.backend == 'cuda' && 'true' || 'false' }}
         run: node scripts/qwen-tts/build-runtime.mjs --backend ${{ matrix.backend }}
+
+      - name: Build runtime on Windows
+        if: runner.os == 'Windows'
+        shell: cmd
+        env:
+          QWEN_TTS_CMAKE_GENERATOR: Ninja
+          SCCACHE_GHA_ENABLED: ${{ matrix.backend == 'cuda' && 'true' || 'false' }}
+        run: |
+          call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64
+          node scripts/qwen-tts/build-runtime.mjs --backend ${{ matrix.backend }}
 
       - name: Smoke-test helper
         shell: bash

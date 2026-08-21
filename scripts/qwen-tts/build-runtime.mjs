@@ -22,6 +22,9 @@ const assetConfig = loadAssetConfig()
 const repository = assetConfig.runtime.repository
 const commit = assetConfig.runtime.revision
 const ggmlCommit = assetConfig.runtime.ggmlRevision
+const cudaArchitectures = '75;86-real;89-real;120a-real'
+const cmakeGenerator = process.env.QWEN_TTS_CMAKE_GENERATOR?.trim()
+const compilerLauncher = process.env.SCCACHE_PATH?.trim()
 const patchPaths = [
   'portable-cpu.patch',
   'explicit-model-paths.patch',
@@ -111,16 +114,25 @@ function applyPatch(patchPath) {
 function configureAndBuild() {
   rmSync(helperBuildDir, { recursive: true, force: true })
   run('cmake', [
+    ...(cmakeGenerator ? ['-G', cmakeGenerator] : []),
     '-S',
     path.join(root, 'native', 'qwen-tts'),
     '-B',
     helperBuildDir,
     '-DCMAKE_BUILD_TYPE=Release',
+    ...(compilerLauncher
+      ? [
+          `-DCMAKE_C_COMPILER_LAUNCHER=${compilerLauncher}`,
+          `-DCMAKE_CXX_COMPILER_LAUNCHER=${compilerLauncher}`,
+          `-DCMAKE_CUDA_COMPILER_LAUNCHER=${compilerLauncher}`
+        ]
+      : []),
     '-DBUILD_SHARED_LIBS=OFF',
     '-DGGML_STATIC=ON',
     '-DGGML_NATIVE=OFF',
     '-DGGML_METAL=OFF',
     `-DGGML_CUDA=${backend === 'cuda' ? 'ON' : 'OFF'}`,
+    ...(backend === 'cuda' ? [`-DCMAKE_CUDA_ARCHITECTURES=${cudaArchitectures}`] : []),
     '-DGGML_CUDA_NCCL=OFF',
     '-DGGML_CUDA_NO_VMM=ON',
     '-DGGML_VULKAN=OFF',
