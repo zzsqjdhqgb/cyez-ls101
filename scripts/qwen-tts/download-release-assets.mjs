@@ -20,6 +20,8 @@ export function runtimeTarget(platform = process.platform, architecture = proces
   if (platform === 'linux') {
     return {
       directory: 'linux-x64',
+      dependencies: [],
+      licenses: [],
       helpers: {
         cpu: {
           name: 'ls101-qwen-tts-helper-cpu-linux-x64',
@@ -35,6 +37,12 @@ export function runtimeTarget(platform = process.platform, architecture = proces
   if (platform === 'win32') {
     return {
       directory: 'win32-x64',
+      dependencies: [
+        { name: 'cublas64_12.dll', file: 'cublas64_12.dll' },
+        { name: 'cublasLt64_12.dll', file: 'cublasLt64_12.dll' },
+        { name: 'nvJitLink_12.dll', file: 'nvJitLink_12.dll' }
+      ],
+      licenses: [{ name: 'LICENSE.NVIDIA-CUDA.html', file: 'LICENSE.NVIDIA-CUDA.html' }],
       helpers: {
         cpu: {
           name: 'ls101-qwen-tts-helper-cpu-win32-x64.exe',
@@ -74,6 +82,8 @@ export function selectRuntimeReleaseAssets(release, target = runtimeTarget()) {
         findAsset(assets, helper.name)
       ])
     ),
+    dependencies: target.dependencies.map((dependency) => findAsset(assets, dependency.name)),
+    licenses: target.licenses.map((license) => findAsset(assets, license.name)),
     manifest: findAsset(assets, 'qwen-tts-runtime-manifest.json')
   }
 }
@@ -237,6 +247,20 @@ async function main() {
       return { backend, downloaded, helperPath }
     })
   )
+  const dependencyDownloads = await Promise.all(
+    [...target.dependencies, ...target.licenses].map(async (dependency) => {
+      const asset = [...runtimeAssets.dependencies, ...runtimeAssets.licenses].find(
+        (candidate) => candidate.name === dependency.name
+      )
+      if (!asset) throw new Error(`Qwen TTS Release 缺少运行时文件：${dependency.name}`)
+      const cachePath = path.join(downloadDirectory, 'releases', asset.name)
+      const dependencyPath = path.join(runtimeDirectory, dependency.file)
+      const downloaded = await downloadAsset(asset, cachePath)
+      await mkdir(path.dirname(dependencyPath), { recursive: true })
+      await copyFile(cachePath, dependencyPath)
+      return { downloaded, dependencyPath }
+    })
+  )
   await rm(
     path.join(
       runtimeDirectory,
@@ -251,6 +275,11 @@ async function main() {
   for (const { backend, downloaded, helperPath } of helperDownloads) {
     console.log(
       `[qwen-tts] ${backend} helper ${downloaded ? 'downloaded' : 'cached'}: ${helperPath}`
+    )
+  }
+  for (const { downloaded, dependencyPath } of dependencyDownloads) {
+    console.log(
+      `[qwen-tts] runtime file ${downloaded ? 'downloaded' : 'cached'}: ${dependencyPath}`
     )
   }
   if (mode === 'runtime-only') {

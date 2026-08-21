@@ -94,7 +94,7 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
 
     return new Promise((resolve) => {
       const child = this.spawnProcess(helperPath, ['--probe-backend', 'cuda'], {
-        env: process.env,
+        env: helperEnvironment(helperPath),
         stdio: ['ignore', 'pipe', 'pipe'],
         windowsHide: true
       })
@@ -249,10 +249,9 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
       String(parameters.repetitionPenalty)
     ]
     const child = this.spawnProcess(helperPath, args, {
-      env: {
-        ...process.env,
+      env: helperEnvironment(helperPath, {
         QWEN3_TTS_LOW_MEM: parameters.lowMemory ? '1' : '0'
-      },
+      }),
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true
     })
@@ -467,6 +466,20 @@ function resolveHelperPath(backend: AIRouterQwenTtsBackend): string {
         `${process.platform}-${process.arch}`,
         executable
       )
+}
+
+function helperEnvironment(
+  helperPath: string,
+  overrides: NodeJS.ProcessEnv = {}
+): NodeJS.ProcessEnv {
+  const environment = { ...process.env }
+  const pathKeys = Object.keys(environment).filter((key) => key.toLowerCase() === 'path')
+  const pathKey = pathKeys[0] ?? 'PATH'
+  for (const duplicateKey of pathKeys.slice(1)) delete environment[duplicateKey]
+  environment[pathKey] = [path.dirname(helperPath), environment[pathKey]]
+    .filter(Boolean)
+    .join(path.delimiter)
+  return { ...environment, ...overrides }
 }
 
 function parseCudaProbe(output: string): AIRouterQwenTtsCudaProbeResult | null {

@@ -6,7 +6,7 @@ to create VoiceDesign reference audio during development. Imported model package
 executables.
 
 Published assets use two independent immutable releases in the application repository:
-`qwen-tts-runtime-v0.3.0` contains the native helpers, while `qwen-tts-model-v1.0.0` contains the
+`qwen-tts-runtime-v0.3.1` contains the native helpers, while `qwen-tts-model-v1.0.0` contains the
 two GGUF files. `yarn setup` and application build setup query both GitHub Release Assets APIs and
 verify every selected asset against its API-provided size and SHA-256 digest. Validated metadata is
 cached as `runtime-release-api.json` and `model-release-api.json` under
@@ -72,11 +72,12 @@ Build the NVIDIA CUDA helper on a machine with the CUDA toolkit with:
 yarn qwen-tts:build-runtime --backend cuda
 ```
 
-Release CUDA helpers are built with CUDA Toolkit 12.8. On Windows, GGML links cuBLAS dynamically,
-so the compatible CUDA 12 `bin` directory must be available to the application through `PATH`;
-the NVIDIA display driver alone does not provide those libraries. The CUDA probe reports the
-helper launch failure when the required DLLs are unavailable. Linux builds link the redistributable
-CUDA runtime libraries statically and still require a compatible NVIDIA driver.
+Release CUDA helpers are built with CUDA Toolkit 12.8.1. On Windows, the runtime Release includes
+the matching `cublas64_12.dll`, `cublasLt64_12.dll`, and `nvJitLink_12.dll` beside the helpers, and
+setup stages these files in the same runtime directory. Development and packaged helper processes prepend that
+directory to their private `PATH`, so users need only a compatible NVIDIA display driver rather
+than a system CUDA Toolkit installation. Linux builds link the redistributable CUDA runtime
+libraries statically and still require a compatible NVIDIA driver.
 
 The release workflow uses Ninja and a shared sccache backend for CUDA compilation. Clean builds
 compile five device-code images per CUDA source instead of GGML's nine-image default; later reruns

@@ -24,7 +24,7 @@ test('selects the pinned platform helper from runtime release metadata', async (
   const target = runtimeTarget('linux', 'x64')
   const digest = 'a'.repeat(64)
   const release = {
-    tag_name: 'qwen-tts-runtime-v0.3.0',
+    tag_name: 'qwen-tts-runtime-v0.3.1',
     draft: false,
     prerelease: true,
     assets: [
@@ -40,6 +40,8 @@ test('selects the pinned platform helper from runtime release metadata', async (
         { name: helper.name, size: 1, digest, url: `https://example.test/${helper.name}` }
       ])
     ),
+    dependencies: [],
+    licenses: [],
     manifest: {
       name: 'qwen-tts-runtime-manifest.json',
       size: 1,
@@ -92,6 +94,12 @@ test('uses the canonical helper filename on Windows', async () => {
   const { runtimeTarget } = await modulePromise
   assert.deepEqual(runtimeTarget('win32', 'x64'), {
     directory: 'win32-x64',
+    dependencies: [
+      { name: 'cublas64_12.dll', file: 'cublas64_12.dll' },
+      { name: 'cublasLt64_12.dll', file: 'cublasLt64_12.dll' },
+      { name: 'nvJitLink_12.dll', file: 'nvJitLink_12.dll' }
+    ],
+    licenses: [{ name: 'LICENSE.NVIDIA-CUDA.html', file: 'LICENSE.NVIDIA-CUDA.html' }],
     helpers: {
       cpu: {
         name: 'ls101-qwen-tts-helper-cpu-win32-x64.exe',
@@ -103,6 +111,33 @@ test('uses the canonical helper filename on Windows', async () => {
       }
     }
   })
+})
+
+test('selects CUDA DLLs and their license for the Windows runtime', async () => {
+  const { runtimeTarget, selectRuntimeReleaseAssets } = await modulePromise
+  const target = runtimeTarget('win32', 'x64')
+  const digest = 'c'.repeat(64)
+  const release = {
+    tag_name: 'qwen-tts-runtime-v0.3.1',
+    draft: false,
+    prerelease: true,
+    assets: [
+      ...Object.values(target.helpers).map((helper) => asset(helper.name, digest)),
+      ...target.dependencies.map((dependency) => asset(dependency.name, digest)),
+      ...target.licenses.map((license) => asset(license.name, digest)),
+      asset('qwen-tts-runtime-manifest.json', digest)
+    ]
+  }
+
+  const selected = selectRuntimeReleaseAssets(release, target)
+  assert.deepEqual(
+    selected.dependencies.map(({ name }) => name),
+    ['cublas64_12.dll', 'cublasLt64_12.dll', 'nvJitLink_12.dll']
+  )
+  assert.deepEqual(
+    selected.licenses.map(({ name }) => name),
+    ['LICENSE.NVIDIA-CUDA.html']
+  )
 })
 
 test('rejects assets without the GitHub API digest', async () => {
