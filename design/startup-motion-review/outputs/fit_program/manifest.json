@@ -1,0 +1,106 @@
+{
+  "source": "icon1.png",
+  "size": [
+    1254,
+    1254
+  ],
+  "palette": {
+    "blue": [
+      2,
+      86,
+      191
+    ],
+    "gold": [
+      253,
+      166,
+      22
+    ],
+    "orange": [
+      253,
+      81,
+      8
+    ],
+    "red": [
+      239,
+      34,
+      24
+    ],
+    "green": [
+      10,
+      148,
+      34
+    ]
+  },
+  "candidates": [
+    {
+      "name": "01_scale25",
+      "scale": 0.25,
+      "alphamax": 1.2,
+      "opttolerance": 0.2,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/01_scale25.svg"
+    },
+    {
+      "name": "02_scale33",
+      "scale": 0.33,
+      "alphamax": 1.2,
+      "opttolerance": 0.2,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/02_scale33.svg"
+    },
+    {
+      "name": "03_scale40",
+      "scale": 0.4,
+      "alphamax": 1.2,
+      "opttolerance": 0.2,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/03_scale40.svg"
+    },
+    {
+      "name": "04_scale50",
+      "scale": 0.5,
+      "alphamax": 1.2,
+      "opttolerance": 0.2,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/04_scale50.svg"
+    },
+    {
+      "name": "05_scale60",
+      "scale": 0.6,
+      "alphamax": 1.2,
+      "opttolerance": 0.2,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/05_scale60.svg"
+    },
+    {
+      "name": "06_scale75",
+      "scale": 0.75,
+      "alphamax": 1.2,
+      "opttolerance": 0.2,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/06_scale75.svg"
+    },
+    {
+      "name": "07_scale50_balanced",
+      "scale": 0.5,
+      "alphamax": 1.0,
+      "opttolerance": 0.2,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/07_scale50_balanced.svg"
+    },
+    {
+      "name": "08_scale50_soft",
+      "scale": 0.5,
+      "alphamax": 1.3,
+      "opttolerance": 0.3,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/08_scale50_soft.svg"
+    },
+    {
+      "name": "09_scale40_balanced",
+      "scale": 0.4,
+      "alphamax": 1.0,
+      "opttolerance": 0.15,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/09_scale40_balanced.svg"
+    },
+    {
+      "name": "10_scale60_balanced",
+      "scale": 0.6,
+      "alphamax": 1.0,
+      "opttolerance": 0.15,
+      "svg": "design/startup-motion-review/outputs/fit_program/candidates/10_scale60_balanced.svg"
+    }
+  ]
+}

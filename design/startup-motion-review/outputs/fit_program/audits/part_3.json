@@ -1,0 +1,33 @@
+{
+  "segment_count": 48,
+  "cubic_segments": 46,
+  "line_segments": 2,
+  "closed": true,
+  "budget": null,
+  "over_budget": false,
+  "median_segment_length": 251.358,
+  "short_segment_warnings": [
+    {
+      "segment": 4,
+      "length": 24.242
+    },
+    {
+      "segment": 13,
+      "length": 42.291
+    },
+    {
+      "segment": 35,
+      "length": 40.926
+    }
+  ],
+  "join_angle_threshold_degrees": 8.0,
+  "join_angle_warnings": [
+    {
+      "join_after_segment": 47,
+      "angle_degrees": 90.542
+    }
+  ],
+  "input_svg": "design/startup-motion-review/outputs/fit_program/candidates/08_tight_smooth.svg",
+  "selected_path_index": 3,
+  "path_count": 8
+}

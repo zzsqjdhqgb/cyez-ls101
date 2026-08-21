@@ -1,0 +1,71 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  applyStartupLogoMotion,
+  applyStartupPlaceholderIcon,
+  MINIMUM_STARTUP_PROGRESS_DURATION_MS,
+  showStartupProgress,
+  waitForMinimumStartupProgressDuration,
+  waitForStartupLogoAnimation
+} from '../startup-placeholder'
+
+afterEach(() => {
+  vi.useRealTimers()
+  document.body.replaceChildren()
+  document.head.querySelector('[data-startup-logo-motion]')?.remove()
+})
+
+describe('startup placeholder', () => {
+  it('replaces the source HTML path with the Vite-resolved icon URL', () => {
+    const root = document.createElement('div')
+    root.innerHTML = '<img src="../../resources/icon.png" data-startup-icon>'
+
+    applyStartupPlaceholderIcon(root, '/assets/icon-resolved.png')
+
+    expect(root.querySelector('img')).toHaveAttribute('src', '/assets/icon-resolved.png')
+  })
+
+  it('injects the animated SVG and its motion CSS', () => {
+    const root = document.createElement('div')
+    root.innerHTML = '<div data-startup-logo></div>'
+
+    applyStartupLogoMotion(root, {
+      logoMarkup: '<svg xmlns="http://www.w3.org/2000/svg"><rect id="icon-tile" /></svg>',
+      motionCss: '#icon-tile { animation: startup 1s; }'
+    })
+
+    expect(root.querySelector('svg #icon-tile')).not.toBeNull()
+    expect(document.head.querySelector('[data-startup-logo-motion]')).toHaveTextContent(
+      '#icon-tile { animation: startup 1s; }'
+    )
+  })
+
+  it('waits for the logo animation end signal', async () => {
+    const root = document.createElement('div')
+    root.innerHTML = '<svg><rect id="icon-tile" /></svg>'
+    const completed = vi.fn()
+
+    void waitForStartupLogoAnimation(root).then(completed)
+    expect(completed).not.toHaveBeenCalled()
+
+    root.querySelector('#icon-tile')?.dispatchEvent(new Event('animationend'))
+    await Promise.resolve()
+    expect(completed).toHaveBeenCalledOnce()
+  })
+
+  it('shows the loading bar for at least the temporary minimum duration', async () => {
+    vi.useFakeTimers()
+    const root = document.createElement('div')
+    root.innerHTML = '<div data-startup-progress hidden></div>'
+    const completed = vi.fn()
+
+    showStartupProgress(root)
+    void waitForMinimumStartupProgressDuration().then(completed)
+    expect(root.querySelector('[data-startup-progress]')).not.toHaveAttribute('hidden')
+
+    await vi.advanceTimersByTimeAsync(MINIMUM_STARTUP_PROGRESS_DURATION_MS - 1)
+    expect(completed).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(completed).toHaveBeenCalledOnce()
+  })
+})

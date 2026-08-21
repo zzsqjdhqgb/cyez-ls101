@@ -1,0 +1,25 @@
+{
+  "segment_count": 17,
+  "cubic_segments": 17,
+  "line_segments": 0,
+  "closed": true,
+  "budget": null,
+  "over_budget": false,
+  "median_segment_length": 309.136,
+  "short_segment_warnings": [
+    {
+      "segment": 7,
+      "length": 24.254
+    }
+  ],
+  "join_angle_threshold_degrees": 8.0,
+  "join_angle_warnings": [
+    {
+      "join_after_segment": 13,
+      "angle_degrees": 22.62
+    }
+  ],
+  "input_svg": "design/startup-motion-review/outputs/fit_program/candidates/06_scale75.svg",
+  "selected_path_index": 1,
+  "path_count": 8
+}

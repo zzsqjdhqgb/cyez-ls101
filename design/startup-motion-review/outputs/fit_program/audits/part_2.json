@@ -1,0 +1,25 @@
+{
+  "segment_count": 36,
+  "cubic_segments": 34,
+  "line_segments": 2,
+  "closed": true,
+  "budget": null,
+  "over_budget": false,
+  "median_segment_length": 199.448,
+  "short_segment_warnings": [
+    {
+      "segment": 10,
+      "length": 24.031
+    }
+  ],
+  "join_angle_threshold_degrees": 8.0,
+  "join_angle_warnings": [
+    {
+      "join_after_segment": 35,
+      "angle_degrees": 99.462
+    }
+  ],
+  "input_svg": "design/startup-motion-review/outputs/fit_program/candidates/08_tight_smooth.svg",
+  "selected_path_index": 2,
+  "path_count": 8
+}

@@ -1,0 +1,255 @@
+:root {
+  --p2m-duration: 1500ms;
+  --p2m-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --p2m-ease-narrative: cubic-bezier(0.34, 0, 0.14, 1);
+  --p2m-ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#icon-tile,
+#logo-lockup,
+#gold-sweep,
+#orange-sweep,
+#red-sweep,
+#leaf {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+#icon-tile {
+  animation: p2m-tile var(--p2m-duration) linear both;
+}
+
+#logo-lockup {
+  animation: p2m-lockup-settle var(--p2m-duration) linear both;
+}
+
+#headphones {
+  mask: url(#headphones-reveal-mask);
+}
+
+#headphones-left-cup-reveal,
+#headphones-right-cup-reveal {
+  transform-box: view-box;
+}
+
+#headphones-left-cup-reveal {
+  transform-origin: 86px 720px;
+  animation: p2m-headphones-left-cup var(--p2m-duration) linear both;
+}
+
+#headphones-arch-reveal-path,
+#headphones-boom-reveal-path,
+#headphones-mic-reveal-path {
+  stroke-dasharray: 1 1.2;
+  stroke-dashoffset: 1.1;
+}
+
+#headphones-arch-reveal-path {
+  animation: p2m-headphones-arch-draw var(--p2m-duration) linear both;
+}
+
+#headphones-right-cup-reveal {
+  transform-origin: 1060px 575px;
+  animation: p2m-headphones-right-cup var(--p2m-duration) linear both;
+}
+
+#headphones-boom-reveal-path {
+  animation: p2m-headphones-boom-draw var(--p2m-duration) linear both;
+}
+
+#headphones-mic-reveal-path {
+  animation: p2m-headphones-mic-draw var(--p2m-duration) linear both;
+}
+
+#gold-sweep {
+  transform-origin: 58% 54%;
+  animation: p2m-gold-arrive var(--p2m-duration) linear both;
+}
+
+#orange-sweep {
+  transform-origin: 57% 55%;
+  animation: p2m-orange-arrive var(--p2m-duration) linear both;
+}
+
+#red-sweep {
+  transform-origin: 54% 57%;
+  animation: p2m-red-arrive var(--p2m-duration) linear both;
+}
+
+#leaf {
+  transform-origin: left center;
+  animation: p2m-leaf-arrive var(--p2m-duration) linear both;
+}
+
+@keyframes p2m-tile {
+  0% {
+    opacity: 0;
+    transform: translateY(26px) scale(0.92);
+    filter: blur(10px);
+    animation-timing-function: cubic-bezier(0.34, 0, 0.14, 1);
+  }
+  20% {
+    opacity: 0.58;
+    transform: translateY(8px) scale(0.965);
+    filter: blur(3px);
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  46% {
+    opacity: 1;
+    transform: translateY(0) scale(1.006);
+    filter: blur(0);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  78% {
+    opacity: 1;
+    transform: translateY(0) scale(0.998);
+    filter: blur(0);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes p2m-lockup-settle {
+  0%, 16% {
+    transform: translateY(14px) scale(0.965);
+    animation-timing-function: cubic-bezier(0.34, 0, 0.14, 1);
+  }
+  68% {
+    transform: translateY(-4px) scale(1.012);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  88% {
+    transform: translateY(1px) scale(0.998);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes p2m-headphones-left-cup {
+  0%, 4% {
+    transform: scale(0);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  24%, 100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes p2m-headphones-arch-draw {
+  0%, 10% {
+    stroke-dashoffset: 1.1;
+    animation-timing-function: cubic-bezier(0.34, 0, 0.14, 1);
+  }
+  52%, 100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes p2m-headphones-right-cup {
+  0%, 46% {
+    transform: scale(0);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  60%, 100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes p2m-headphones-boom-draw {
+  0%, 56% {
+    stroke-dashoffset: 1.1;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  70%, 100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes p2m-headphones-mic-draw {
+  0%, 66% {
+    stroke-dashoffset: 1.1;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  74%, 100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes p2m-gold-arrive {
+  0%, 17% {
+    opacity: 0;
+    transform: rotate(-24deg) scale(0.62);
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  57% {
+    opacity: 1;
+    transform: rotate(2.5deg) scale(1.025);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  79%, 100% {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+}
+
+@keyframes p2m-orange-arrive {
+  0%, 22% {
+    opacity: 0;
+    transform: rotate(20deg) scale(0.6);
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  61% {
+    opacity: 1;
+    transform: rotate(-2.5deg) scale(1.024);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  81%, 100% {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+}
+
+@keyframes p2m-red-arrive {
+  0%, 27% {
+    opacity: 0;
+    transform: rotate(22deg) scale(0.58);
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  65% {
+    opacity: 1;
+    transform: rotate(-2deg) scale(1.02);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  84%, 100% {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+}
+
+@keyframes p2m-leaf-arrive {
+  0%, 57% {
+    opacity: 0;
+    transform: translate(-28px, 18px) rotate(-18deg) scale(0.45);
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  76% {
+    opacity: 1;
+    transform: translate(3px, -3px) rotate(3deg) scale(1.08);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  91% {
+    opacity: 1;
+    transform: translate(0, 1px) rotate(-1deg) scale(0.985);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0) rotate(0) scale(1);
+  }
+}
