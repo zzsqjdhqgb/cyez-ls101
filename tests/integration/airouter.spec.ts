@@ -385,6 +385,10 @@ test('AR-02 exposes the text empty state and default manual image provider', asy
   await openAirouter()
   await expect(page.getByText('共 0 个 Provider')).toBeVisible()
   await expect(page.getByText('尚未添加文本生成 Provider')).toBeVisible()
+  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByLabel('Provider', { exact: true }).selectOption('agnes-ai')
+  await expect(page.getByLabel('Base URL')).toHaveValue('https://apihub.agnes-ai.com/v1')
+  await page.getByRole('button', { name: '关闭 Provider 编辑器' }).click()
   await page.getByRole('tab', { name: '图像生成' }).click()
   await expect(page.getByRole('button', { name: /手动生成/ })).toBeVisible()
   const state = await page.evaluate(async () => ({

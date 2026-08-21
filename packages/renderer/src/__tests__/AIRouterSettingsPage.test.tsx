@@ -16,17 +16,38 @@ afterEach(() => {
 
 describe('AIRouterSettingsPage', () => {
   it('offers common provider presets and applies their base URLs', async () => {
-    renderAIRouter(applicationWith({ listConfigs: vi.fn().mockResolvedValue([]) }))
+    const application = applicationWith({
+      listConfigs: vi.fn().mockResolvedValue([]),
+      listModels: vi.fn().mockResolvedValue([])
+    })
+    renderAIRouter(application)
 
     fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
     const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
     const provider = within(dialog).getByLabelText('Provider') as HTMLSelectElement
     expect(Array.from(provider.options).map((option) => option.text)).toEqual(
-      expect.arrayContaining(['OpenAI', 'Anthropic', 'OpenRouter', 'DeepSeek', 'Zhipu AI', 'Groq'])
+      expect.arrayContaining([
+        'OpenAI',
+        'Anthropic',
+        'OpenRouter',
+        'DeepSeek',
+        'Zhipu AI',
+        'Groq',
+        'Agnes AI'
+      ])
     )
 
-    fireEvent.change(provider, { target: { value: 'deepseek' } })
-    expect(within(dialog).getByLabelText('Base URL')).toHaveValue('https://api.deepseek.com')
+    fireEvent.change(provider, { target: { value: 'agnes-ai' } })
+    expect(within(dialog).getByLabelText('Base URL')).toHaveValue('https://apihub.agnes-ai.com/v1')
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取模型列表' }))
+    await waitFor(() =>
+      expect(application.listModels).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: 'https://apihub.agnes-ai.com/v1',
+          catalogProviderId: 'agnes-ai'
+        })
+      )
+    )
   })
 
   it('edits models.dev output limits and reasoning effort per model', async () => {

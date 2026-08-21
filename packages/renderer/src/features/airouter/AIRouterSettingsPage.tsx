@@ -166,6 +166,13 @@ const providerPresets: ProviderPreset[] = [
     catalogProviderId: 'fireworks-ai'
   },
   {
+    id: 'agnes-ai',
+    name: 'Agnes AI',
+    type: 'openai-compatible',
+    baseUrl: 'https://apihub.agnes-ai.com/v1',
+    catalogProviderId: 'agnes-ai'
+  },
+  {
     id: 'lmstudio',
     name: 'LM Studio',
     type: 'openai-compatible',
@@ -529,7 +536,7 @@ export function AIRouterTextSettingsPage({
                 </SettingsRow>
                 <SettingsRow
                   label="Provider"
-                  description="预设会自动配置兼容协议、Base URL 和 models.dev 模型目录。"
+                  description="预设会自动配置兼容协议、Base URL 和内置模型目录。"
                 >
                   {draft.id ? (
                     <span className={styles.providerTypeControl}>
@@ -1100,10 +1107,10 @@ function ModelSettings({
           </>
         ) : metadata?.reasoning ? (
           <p className={styles.modelNotice}>
-            支持推理，但 models.dev 未提供可调参数；使用 Provider 默认设置。
+            支持推理，但模型目录未提供可调参数；使用 Provider 默认设置。
           </p>
         ) : (
-          <p className={styles.modelNotice}>暂无 models.dev 推理能力数据。</p>
+          <p className={styles.modelNotice}>暂无模型目录推理能力数据。</p>
         )}
       </div>
     </details>

@@ -11,6 +11,7 @@ const SCRIPTS_DIR = __dirname
 const PRODUCT_DOCS_MODE = 'product-docs'
 
 const tasks = [
+  { script: 'airouter/update-model-catalog.mjs', arguments: ['--check'] },
   {
     script: 'qwen-tts/download-release-assets.mjs',
     productDocsEnvironment: { LS101_QWEN_TTS_RUNTIME_ONLY: '1' }
@@ -29,6 +30,7 @@ function setupTasks(mode = process.env.LS101_SETUP_MODE) {
     .filter((task) => mode !== PRODUCT_DOCS_MODE || !task.modelDownload)
     .map((task) => ({
       script: task.script,
+      arguments: task.arguments ?? [],
       environment: mode === PRODUCT_DOCS_MODE ? (task.productDocsEnvironment ?? {}) : {}
     }))
 }
@@ -39,7 +41,7 @@ function main() {
     console.log('[setup] product-docs mode: skip model downloads, keep required runtime assets')
   }
   for (const task of setupTasks(mode)) {
-    execFileSync(process.execPath, [join(SCRIPTS_DIR, task.script)], {
+    execFileSync(process.execPath, [join(SCRIPTS_DIR, task.script), ...task.arguments], {
       env: { ...process.env, ...task.environment },
       stdio: 'inherit'
     })

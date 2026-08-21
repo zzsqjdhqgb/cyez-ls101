@@ -31,6 +31,8 @@
     "docs:product:publish:container": "node scripts/product-docs/container-runner.mjs publish",
     "test:smoke": "yarn build:test && playwright test --config=playwright.config.ts tests/integration/electron-app.spec.ts",
     "test:pronunciation": "node scripts/test-pronunciation.js",
+    "airouter:catalog:update": "node scripts/airouter/update-model-catalog.mjs --update",
+    "airouter:catalog:check": "node scripts/airouter/update-model-catalog.mjs --check",
     "qwen-tts:build-runtime": "node scripts/qwen-tts/build-runtime.mjs",
     "qwen-tts:design-voice": "python scripts/qwen-tts/design-voice.py",
     "qwen-tts:build-package": "node scripts/qwen-tts/build-package.mjs",

@@ -6,6 +6,7 @@ import { generateText, streamText, type LanguageModel } from 'ai'
 import { JsonConfigStorage } from '@ls101/config-store/main'
 import type { JsonValue } from '@ls101/config-store/shared'
 import { createElectronSecretStorage, type EncryptedSecretStorage } from '@ls101/secret-store/main'
+import modelCatalog from './model-catalog.generated.json'
 import type {
   AIRouterConnectionTestInput,
   AIRouterModelConfig,
@@ -26,7 +27,6 @@ import type {
 const CONFIG_VERSION = 1
 const CONFIG_KEY = 'providers'
 const DEFAULT_MAX_OUTPUT_TOKENS = 128 * 1024
-const MODELS_DEV_API_URL = 'https://models.dev/api.json'
 const validConfigId = /^[a-zA-Z0-9_-]+$/
 const DEFAULT_BASE_URLS: Record<AIRouterProviderType, string> = {
   'openai-compatible': 'https://api.openai.com/v1',
@@ -108,10 +108,7 @@ export class AIRouterService {
       .map((item): AIRouterModelOption | null => {
         if (typeof item === 'string') return { id: item }
         if (!item || typeof item !== 'object') return null
-        const value = item as { id?: unknown; name?: unknown }
-        return typeof value.id === 'string'
-          ? { id: value.id, name: typeof value.name === 'string' ? value.name : undefined }
-          : null
+        return toProviderModelOption(item)
       })
       .filter((model): model is AIRouterModelOption => model !== null)
       .sort((left, right) => left.id.localeCompare(right.id))
@@ -485,59 +482,77 @@ function reasoningCallOptions(
   }
 }
 
-interface ModelsDevProvider {
-  models?: Record<string, ModelsDevModel>
+function toProviderModelOption(item: object): AIRouterModelOption | null {
+  const value = item as {
+    id?: unknown
+    name?: unknown
+    display_name?: unknown
+    context_length?: unknown
+    max_output_tokens?: unknown
+    input_modalities?: unknown
+    capabilities?: { reasoning?: unknown; structured_output?: unknown }
+  }
+  if (typeof value.id !== 'string') return null
+  const model: AIRouterModelOption = { id: value.id }
+  const name =
+    typeof value.name === 'string'
+      ? value.name
+      : typeof value.display_name === 'string'
+        ? value.display_name
+        : undefined
+  if (name) model.name = name
+  if (typeof value.context_length === 'number') model.contextLimit = value.context_length
+  if (typeof value.max_output_tokens === 'number') model.outputLimit = value.max_output_tokens
+  if (typeof value.capabilities?.reasoning === 'boolean') {
+    model.reasoning = value.capabilities.reasoning
+  }
+  if (typeof value.capabilities?.structured_output === 'boolean') {
+    model.structuredOutput = value.capabilities.structured_output
+  }
+  if (Array.isArray(value.input_modalities)) {
+    model.attachment = value.input_modalities.includes('image')
+  }
+  return model
 }
 
-interface ModelsDevModel {
+interface CatalogModel {
   name?: unknown
+  contextLimit?: unknown
+  outputLimit?: unknown
   reasoning?: unknown
-  reasoning_options?: unknown
-  structured_output?: unknown
+  reasoningOptions?: unknown
+  structuredOutput?: unknown
   attachment?: unknown
-  limit?: { context?: unknown; output?: unknown }
 }
 
-let modelsDevCache: Promise<Record<string, ModelsDevProvider>> | null = null
+interface CatalogProvider {
+  models?: Record<string, CatalogModel>
+}
 
-async function enrichModelsFromCatalog(
+function enrichModelsFromCatalog(
   models: AIRouterModelOption[],
   providerId: string
-): Promise<AIRouterModelOption[]> {
+): AIRouterModelOption[] {
   if (!providerId) return models
-  try {
-    const catalog = await loadModelsDevCatalog()
-    const providerModels = catalog[providerId]?.models ?? {}
-    return models.map((model) => ({ ...model, ...toModelMetadata(providerModels[model.id]) }))
-  } catch {
-    return models
-  }
+  const providers = modelCatalog.providers as Record<string, CatalogProvider>
+  const providerModels = providers[providerId]?.models ?? {}
+  return models.map((model) => ({
+    ...toModelMetadata(providerModels[model.id]),
+    ...model
+  }))
 }
 
-function loadModelsDevCatalog(): Promise<Record<string, ModelsDevProvider>> {
-  modelsDevCache ??= fetch(MODELS_DEV_API_URL, { signal: AbortSignal.timeout(5_000) })
-    .then((response) => {
-      if (!response.ok) throw new Error(`models.dev request failed (${response.status})`)
-      return response.json() as Promise<Record<string, ModelsDevProvider>>
-    })
-    .catch((error) => {
-      modelsDevCache = null
-      throw error
-    })
-  return modelsDevCache
-}
-
-function toModelMetadata(model?: ModelsDevModel): AIRouterModelMetadata {
+function toModelMetadata(model?: CatalogModel): AIRouterModelMetadata {
   if (!model) return {}
   const metadata: AIRouterModelMetadata = {}
   if (typeof model.name === 'string') metadata.name = model.name
-  if (typeof model.limit?.context === 'number') metadata.contextLimit = model.limit.context
-  if (typeof model.limit?.output === 'number') metadata.outputLimit = model.limit.output
+  if (typeof model.contextLimit === 'number') metadata.contextLimit = model.contextLimit
+  if (typeof model.outputLimit === 'number') metadata.outputLimit = model.outputLimit
   if (typeof model.reasoning === 'boolean') metadata.reasoning = model.reasoning
-  const reasoningOptions = normalizeReasoningOptions(model.reasoning_options)
+  const reasoningOptions = normalizeReasoningOptions(model.reasoningOptions)
   if (reasoningOptions.length) metadata.reasoningOptions = reasoningOptions
-  if (typeof model.structured_output === 'boolean') {
-    metadata.structuredOutput = model.structured_output
+  if (typeof model.structuredOutput === 'boolean') {
+    metadata.structuredOutput = model.structuredOutput
   }
   if (typeof model.attachment === 'boolean') metadata.attachment = model.attachment
   return metadata
