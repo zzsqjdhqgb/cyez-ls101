@@ -1,4 +1,5 @@
 #include "qwen3_tts.h"
+#include "ggml-backend.h"
 
 #include <algorithm>
 #include <cctype>
@@ -26,6 +27,8 @@ constexpr size_t kMaxTextBytes = 64 * 1024;
 constexpr size_t kMaxAudioBytes = 100 * 1024 * 1024;
 
 struct Options {
+    std::string backend;
+    std::string probe_backend;
     std::string tts_model_file;
     std::string tokenizer_model_file;
     std::string speaker_file;
@@ -66,7 +69,13 @@ bool parse_options(int argc, char ** argv, Options & options) {
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         std::string value;
-        if (arg == "--tts-model") {
+        if (arg == "--backend") {
+            if (!next_value(argc, argv, i, options.backend) ||
+                (options.backend != "cpu" && options.backend != "cuda")) return false;
+        } else if (arg == "--probe-backend") {
+            if (!next_value(argc, argv, i, options.probe_backend) ||
+                options.probe_backend != "cuda") return false;
+        } else if (arg == "--tts-model") {
             if (!next_value(argc, argv, i, options.tts_model_file)) return false;
         } else if (arg == "--tokenizer-model") {
             if (!next_value(argc, argv, i, options.tokenizer_model_file)) return false;
@@ -89,7 +98,13 @@ bool parse_options(int argc, char ** argv, Options & options) {
             return false;
         }
     }
-    return !options.tts_model_file.empty() && !options.tokenizer_model_file.empty() &&
+    if (!options.probe_backend.empty()) {
+        return options.backend.empty() && options.tts_model_file.empty() &&
+            options.tokenizer_model_file.empty() && options.speaker_file.empty() &&
+            options.extract_input.empty() && options.extract_output.empty();
+    }
+    return !options.backend.empty() && !options.tts_model_file.empty() &&
+        !options.tokenizer_model_file.empty() &&
         ((!options.speaker_file.empty() && options.extract_input.empty()) ||
          (options.speaker_file.empty() && !options.extract_input.empty() && !options.extract_output.empty()));
 }
@@ -97,9 +112,74 @@ bool parse_options(int argc, char ** argv, Options & options) {
 void print_usage(const char * program) {
     std::fprintf(stderr,
         "Usage:\n"
-        "  %s --tts-model TTS.gguf --tokenizer-model TOKENIZER.gguf --speaker VOICE.spk [generation options]\n"
-        "  %s --tts-model TTS.gguf --tokenizer-model TOKENIZER.gguf --extract-speaker INPUT.wav OUTPUT.spk [--threads N]\n",
-        program, program);
+        "  %s --backend cpu|cuda --tts-model TTS.gguf --tokenizer-model TOKENIZER.gguf --speaker VOICE.spk [generation options]\n"
+        "  %s --backend cpu|cuda --tts-model TTS.gguf --tokenizer-model TOKENIZER.gguf --extract-speaker INPUT.wav OUTPUT.spk [--threads N]\n"
+        "  %s --probe-backend cuda\n",
+        program, program, program);
+}
+
+std::string json_escape(const char * value) {
+    std::string escaped;
+    if (!value) return escaped;
+    for (const unsigned char character : std::string(value)) {
+        switch (character) {
+            case '\\': escaped += "\\\\"; break;
+            case '"': escaped += "\\\""; break;
+            case '\b': escaped += "\\b"; break;
+            case '\f': escaped += "\\f"; break;
+            case '\n': escaped += "\\n"; break;
+            case '\r': escaped += "\\r"; break;
+            case '\t': escaped += "\\t"; break;
+            default:
+                if (character < 0x20) {
+                    char buffer[7];
+                    std::snprintf(buffer, sizeof(buffer), "\\u%04x", character);
+                    escaped += buffer;
+                } else {
+                    escaped += static_cast<char>(character);
+                }
+        }
+    }
+    return escaped;
+}
+
+bool is_cuda_device(ggml_backend_dev_t device) {
+    ggml_backend_reg_t registry = ggml_backend_dev_backend_reg(device);
+    const char * name = registry ? ggml_backend_reg_name(registry) : nullptr;
+    return name && std::strcmp(name, "CUDA") == 0;
+}
+
+bool probe_cuda_backend(bool emit_result) {
+    const size_t device_count = ggml_backend_dev_count();
+    for (size_t index = 0; index < device_count; ++index) {
+        ggml_backend_dev_t device = ggml_backend_dev_get(index);
+        if (!is_cuda_device(device)) continue;
+
+        ggml_backend_t backend = ggml_backend_dev_init(device, nullptr);
+        if (!backend) continue;
+
+        size_t memory_free = 0;
+        size_t memory_total = 0;
+        ggml_backend_dev_memory(device, &memory_free, &memory_total);
+        if (emit_result) {
+            std::printf(
+                "{\"available\":true,\"backend\":\"cuda\",\"device\":\"%s\","
+                "\"description\":\"%s\",\"memoryFree\":%zu,\"memoryTotal\":%zu}\n",
+                json_escape(ggml_backend_dev_name(device)).c_str(),
+                json_escape(ggml_backend_dev_description(device)).c_str(),
+                memory_free,
+                memory_total);
+        }
+        ggml_backend_free(backend);
+        return true;
+    }
+
+    if (emit_result) {
+        std::printf(
+            "{\"available\":false,\"backend\":\"cuda\","
+            "\"message\":\"CUDA backend or device is unavailable\"}\n");
+    }
+    return false;
 }
 
 bool read_embedding(const std::string & path, std::vector<float> & embedding, std::string & error) {
@@ -355,10 +435,19 @@ int main(int argc, char ** argv) {
         return 2;
     }
 
+    if (!options.probe_backend.empty()) {
+        return probe_cuda_backend(true) ? 0 : 1;
+    }
+
+    if (options.backend == "cuda" && !probe_cuda_backend(false)) {
+        std::fprintf(stderr, "CUDA backend or device is unavailable\n");
+        return 1;
+    }
+
 #ifdef _WIN32
-    _putenv_s("QWEN3_TTS_BACKEND", "cpu");
+    _putenv_s("QWEN3_TTS_BACKEND", options.backend.c_str());
 #else
-    setenv("QWEN3_TTS_BACKEND", "cpu", 1);
+    setenv("QWEN3_TTS_BACKEND", options.backend.c_str(), 1);
 #endif
 
     qwen3_tts::Qwen3TTS engine;
