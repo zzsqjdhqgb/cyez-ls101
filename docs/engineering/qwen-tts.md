@@ -79,7 +79,10 @@ directory to their private `PATH`, so users need only a compatible NVIDIA displa
 than a system CUDA Toolkit installation. Linux builds link the redistributable CUDA runtime
 libraries statically and still require a compatible NVIDIA driver.
 
-The release workflow uses Ninja and a shared sccache backend for CUDA compilation. Clean builds
+The release workflow uses Ninja and a shared sccache backend for CUDA compilation. On Windows the
+workflow installs only the CUDA compiler, runtime, cuBLAS runtime/development files, nvJitLink, and
+CCCL headers through the network installer; Visual Studio integration, samples, documentation,
+profilers, and Nsight are not needed. Clean builds
 compile five device-code images per CUDA source instead of GGML's nine-image default; later reruns
 can also reuse completed NVCC outputs from the GitHub Actions cache.
 

@@ -191,7 +191,13 @@ jobs:
         uses: Jimver/cuda-toolkit@v0.2.36
         with:
           cuda: '12.8.1'
-          method: network
+          # The Windows network installer accepts a component allowlist. The
+          # helper only needs nvcc, CUDA runtime files, cuBLAS, nvJitLink,
+          # and CCCL headers; skip samples, profilers, docs, Nsight, and VS
+          # project integration. Linux keeps the full toolkit path for now.
+          method: ${{ runner.os == 'Windows' && 'network' || 'local' }}
+          sub-packages: >-
+            ${{ runner.os == 'Windows' && '["nvcc","cudart","cublas","cublas_dev","nvjitlink","thrust"]' || '[]' }}
 
       - name: Build runtime
         if: runner.os != 'Windows'
