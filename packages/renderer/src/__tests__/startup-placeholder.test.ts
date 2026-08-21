@@ -29,25 +29,25 @@ describe('startup placeholder', () => {
     root.innerHTML = '<div data-startup-logo></div>'
 
     applyStartupLogoMotion(root, {
-      logoMarkup: '<svg xmlns="http://www.w3.org/2000/svg"><rect id="icon-tile" /></svg>',
-      motionCss: '#icon-tile { animation: startup 1s; }'
+      logoMarkup: '<svg xmlns="http://www.w3.org/2000/svg"><g id="logo-lockup" /></svg>',
+      motionCss: '#logo-lockup { animation: startup 1s; }'
     })
 
-    expect(root.querySelector('svg #icon-tile')).not.toBeNull()
+    expect(root.querySelector('svg #logo-lockup')).not.toBeNull()
     expect(document.head.querySelector('[data-startup-logo-motion]')).toHaveTextContent(
-      '#icon-tile { animation: startup 1s; }'
+      '#logo-lockup { animation: startup 1s; }'
     )
   })
 
   it('waits for the logo animation end signal', async () => {
     const root = document.createElement('div')
-    root.innerHTML = '<svg><rect id="icon-tile" /></svg>'
+    root.innerHTML = '<svg><g id="logo-lockup" /></svg>'
     const completed = vi.fn()
 
     void waitForStartupLogoAnimation(root).then(completed)
     expect(completed).not.toHaveBeenCalled()
 
-    root.querySelector('#icon-tile')?.dispatchEvent(new Event('animationend'))
+    root.querySelector('#logo-lockup')?.dispatchEvent(new Event('animationend'))
     await Promise.resolve()
     expect(completed).toHaveBeenCalledOnce()
   })

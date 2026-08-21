@@ -33,12 +33,12 @@ export function applyStartupLogoMotion(
 export function waitForStartupLogoAnimation(root: HTMLElement): Promise<void> {
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return Promise.resolve()
 
-  const animatedTile = root.querySelector<SVGElement>('#icon-tile')
-  if (!animatedTile) return wait(STARTUP_LOGO_ANIMATION_DURATION_MS)
+  const animatedLogo = root.querySelector<SVGElement>('#logo-lockup')
+  if (!animatedLogo) return wait(STARTUP_LOGO_ANIMATION_DURATION_MS)
 
   return new Promise((resolve) => {
     const fallback = window.setTimeout(finish, STARTUP_LOGO_ANIMATION_DURATION_MS + 100)
-    animatedTile.addEventListener('animationend', finish, { once: true })
+    animatedLogo.addEventListener('animationend', finish, { once: true })
 
     function finish(): void {
       window.clearTimeout(fallback)

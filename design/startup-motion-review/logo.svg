@@ -17,7 +17,6 @@
         fill="none" stroke="#fff" stroke-width="106" stroke-linecap="round" stroke-linejoin="round"/>
     </mask>
   </defs>
-  <rect id="icon-tile" x="0" y="0" width="1254" height="1254" rx="214" fill="#fdfcfc"/>
   <g id="logo-lockup">
     <g id="headphones" fill="#0256bf"><use href="#headphones-shape"/></g>
     <g id="listening-mark">
