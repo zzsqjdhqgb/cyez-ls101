@@ -1,5 +1,4 @@
 export const STARTUP_LOGO_ANIMATION_DURATION_MS = 1_500
-export const MINIMUM_STARTUP_PROGRESS_DURATION_MS = 1_000
 
 interface StartupLogoMotionOptions {
   logoMarkup: string
@@ -55,11 +54,6 @@ export function waitForStartupLogoAnimation(root: HTMLElement): Promise<void> {
 export function showStartupProgress(root: HTMLElement): void {
   const progress = root.querySelector<HTMLElement>('[data-startup-progress]')
   if (progress) progress.hidden = false
-}
-
-export function waitForMinimumStartupProgressDuration(): Promise<void> {
-  // TODO: Remove this test-only minimum once the loading-bar review is complete.
-  return wait(MINIMUM_STARTUP_PROGRESS_DURATION_MS)
 }
 
 function wait(durationMs: number): Promise<void> {

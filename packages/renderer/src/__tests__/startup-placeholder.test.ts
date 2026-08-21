@@ -2,14 +2,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   applyStartupLogoMotion,
   applyStartupPlaceholderIcon,
-  MINIMUM_STARTUP_PROGRESS_DURATION_MS,
   showStartupProgress,
-  waitForMinimumStartupProgressDuration,
   waitForStartupLogoAnimation
 } from '../startup-placeholder'
 
 afterEach(() => {
-  vi.useRealTimers()
   document.body.replaceChildren()
   document.head.querySelector('[data-startup-logo-motion]')?.remove()
 })
@@ -56,20 +53,12 @@ describe('startup placeholder', () => {
     expect(completed).toHaveBeenCalledOnce()
   })
 
-  it('shows the loading bar for at least the temporary minimum duration', async () => {
-    vi.useFakeTimers()
+  it('shows the loading bar while startup work is pending', () => {
     const root = document.createElement('div')
     root.innerHTML = '<div data-startup-progress hidden></div>'
-    const completed = vi.fn()
 
     showStartupProgress(root)
-    void waitForMinimumStartupProgressDuration().then(completed)
+
     expect(root.querySelector('[data-startup-progress]')).not.toHaveAttribute('hidden')
-
-    await vi.advanceTimersByTimeAsync(MINIMUM_STARTUP_PROGRESS_DURATION_MS - 1)
-    expect(completed).not.toHaveBeenCalled()
-
-    await vi.advanceTimersByTimeAsync(1)
-    expect(completed).toHaveBeenCalledOnce()
   })
 })
