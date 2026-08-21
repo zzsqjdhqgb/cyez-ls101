@@ -1,0 +1,36 @@
+{
+  "segment_count": 11,
+  "cubic_segments": 11,
+  "line_segments": 0,
+  "closed": true,
+  "budget": 12,
+  "over_budget": false,
+  "median_segment_length": 197.455,
+  "short_segment_warnings": [],
+  "join_angle_threshold_degrees": 8.0,
+  "join_angle_warnings": [
+    {
+      "join_after_segment": 5,
+      "angle_degrees": 170.911
+    },
+    {
+      "join_after_segment": 7,
+      "angle_degrees": 63.85
+    },
+    {
+      "join_after_segment": 8,
+      "angle_degrees": 126.469
+    },
+    {
+      "join_after_segment": 9,
+      "angle_degrees": 23.042
+    },
+    {
+      "join_after_segment": 11,
+      "angle_degrees": 168.959
+    }
+  ],
+  "input_svg": "design/startup-motion-review/logo.svg",
+  "selected_path_index": 4,
+  "path_count": 9
+}

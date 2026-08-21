@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1254" height="1254" viewBox="0 0 1254 1254" role="img" aria-labelledby="logo-title logo-desc">
+  <title id="logo-title">曹二听说101 application icon</title>
+  <desc id="logo-desc">Blue headphones surrounding a gold, orange, red, and green listening mark.</desc>
+
+  <rect id="icon-tile" x="0" y="0" width="1254" height="1254" rx="214" fill="#fdfcfc"/>
+
+  <g id="logo-lockup">
+    <g id="headphones" fill="#0256bf">
+      <path id="headphone-arch" d="M 199 573 A 425.5 402 0 0 1 1050 573" fill="none" stroke="#0256bf" stroke-width="72" stroke-linecap="butt" pathLength="1"/>
+      <path id="earcup-left" d="M 238 571 C 263 571 279 584 279 604 L 279 847 C 279 870 264 883 239 883 C 152 883 84 813 84 727 C 84 664 116 615 163 591 C 187 578 210 570 238 571 Z"/>
+      <path id="earcup-right" d="M 1016 571 C 991 571 974 584 974 604 L 974 847 C 974 870 990 882 1015 882 C 1101 882 1168 813 1168 727 C 1168 664 1136 615 1086 591 C 1064 579 1043 570 1016 571 Z"/>
+      <g id="boom">
+        <path id="boom-line" d="M 1048 823 C 1024 933 927 1010 790 1036" fill="none" stroke="#0256bf" stroke-width="55" stroke-linecap="round" pathLength="1"/>
+        <rect id="boom-tip" x="639" y="1004" width="154" height="82" rx="41"/>
+      </g>
+    </g>
+
+    <g id="listening-mark">
+      <path id="gold-sweep" d="M 497 706 C 489 665 498 622 521 584 C 558 522 620 473 686 463 C 780 449 867 505 907 593 C 954 696 918 814 842 891 C 774 960 682 994 587 986 C 694 978 780 914 812 822 C 831 766 823 706 794 641 C 809 623 816 601 816 575 C 793 592 771 597 753 590 C 712 550 658 542 610 559 C 541 584 497 643 497 706 Z" fill="#fda616"/>
+      <path id="orange-sweep" d="M 850 493 C 794 453 735 438 682 442 C 580 449 502 532 488 633 C 479 696 497 761 545 800 C 575 824 616 813 642 787 C 656 773 666 759 669 746 C 674 775 664 807 641 830 C 614 857 571 866 528 854 C 438 829 374 749 375 660 C 376 531 471 412 597 389 C 684 373 783 410 850 493 Z" fill="#fd5108"/>
+      <path id="red-sweep" d="M 361 574 C 341 618 329 668 334 720 C 345 836 430 929 535 958 C 642 988 724 938 759 854 C 790 780 767 702 707 661 C 670 636 619 632 584 647 C 629 651 665 683 674 727 C 687 789 643 846 583 861 C 522 876 454 845 414 795 C 366 736 347 648 361 574 Z" fill="#ef2218"/>
+      <g id="leaf">
+        <path id="leaf-body" d="M 675 636 C 691 629 699 614 714 607 C 738 596 768 611 800 596 C 796 617 786 638 767 649 C 746 662 727 654 706 646 C 695 642 685 639 675 637 Z" fill="#0a9422"/>
+        <path id="leaf-vein" d="M 689 635 C 714 635 739 638 766 620 C 749 640 725 646 702 641 C 697 640 693 638 689 635 Z" fill="#fdfcfc"/>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,115 @@
+{
+  "source_svg": "../../output.svg",
+  "source_path_count": 102,
+  "final_svg": "../logo.svg",
+  "final_path_count": 9,
+  "audited_parts": {
+    "gold": {
+      "segment_count": 11,
+      "cubic_segments": 11,
+      "line_segments": 0,
+      "closed": true,
+      "budget": 12,
+      "over_budget": false,
+      "median_segment_length": 197.455,
+      "short_segment_warnings": [],
+      "join_angle_threshold_degrees": 8,
+      "join_angle_warnings": [
+        {
+          "join_after_segment": 5,
+          "angle_degrees": 170.911
+        },
+        {
+          "join_after_segment": 7,
+          "angle_degrees": 63.85
+        },
+        {
+          "join_after_segment": 8,
+          "angle_degrees": 126.469
+        },
+        {
+          "join_after_segment": 9,
+          "angle_degrees": 23.042
+        },
+        {
+          "join_after_segment": 11,
+          "angle_degrees": 168.959
+        }
+      ],
+      "input_svg": "design/startup-motion-review/logo.svg",
+      "selected_path_index": 4,
+      "path_count": 9
+    },
+    "orange": {
+      "segment_count": 10,
+      "cubic_segments": 10,
+      "line_segments": 0,
+      "closed": true,
+      "budget": 12,
+      "over_budget": false,
+      "median_segment_length": 184.473,
+      "short_segment_warnings": [],
+      "join_angle_threshold_degrees": 8,
+      "join_angle_warnings": [
+        {
+          "join_after_segment": 5,
+          "angle_degrees": 157.223
+        },
+        {
+          "join_after_segment": 10,
+          "angle_degrees": 164.449
+        }
+      ],
+      "input_svg": "design/startup-motion-review/logo.svg",
+      "selected_path_index": 5,
+      "path_count": 9
+    },
+    "red": {
+      "segment_count": 9,
+      "cubic_segments": 9,
+      "line_segments": 0,
+      "closed": true,
+      "budget": 12,
+      "over_budget": false,
+      "median_segment_length": 191.05,
+      "short_segment_warnings": [],
+      "join_angle_threshold_degrees": 8,
+      "join_angle_warnings": [
+        {
+          "join_after_segment": 5,
+          "angle_degrees": 151.722
+        },
+        {
+          "join_after_segment": 9,
+          "angle_degrees": 166.269
+        }
+      ],
+      "input_svg": "design/startup-motion-review/logo.svg",
+      "selected_path_index": 6,
+      "path_count": 9
+    },
+    "leaf": {
+      "segment_count": 5,
+      "cubic_segments": 5,
+      "line_segments": 0,
+      "closed": true,
+      "budget": 8,
+      "over_budget": false,
+      "median_segment_length": 63.816,
+      "short_segment_warnings": [],
+      "join_angle_threshold_degrees": 8,
+      "join_angle_warnings": [
+        {
+          "join_after_segment": 2,
+          "angle_degrees": 125.899
+        }
+      ],
+      "input_svg": "design/startup-motion-review/logo.svg",
+      "selected_path_index": 7,
+      "path_count": 9
+    }
+  },
+  "total_audited_cubic_segments": 35,
+  "total_short_segment_warnings": 0,
+  "smoothness_verdict": "Pass: no short trace fragments or pixel-grid runs; angle warnings correspond to intentional sweep tips, the leaf tip, and the gold-to-leaf notch."
+}

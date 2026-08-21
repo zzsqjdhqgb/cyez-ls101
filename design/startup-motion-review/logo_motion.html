@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>启动图标动效审稿</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #f6f8fb;
+      --surface: #f5f5f3;
+      --border: rgba(0,0,0,0.08);
+      --text-primary: #0d0d0d;
+      --text-secondary: #777;
+      --text-tertiary: #aaa;
+      --accent: #e64036;
+      --speed-progress: 9%;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      padding: 2rem;
+    }
+
+    #logo-root {
+      width: min(92vw, 877.8px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: visible;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #logo-root svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      overflow: visible;
+      text-rendering: geometricPrecision;
+    }
+
+    .atomic-motions {
+      display: flex;
+      gap: 1.5rem;
+      align-items: flex-end;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .atom {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .atom-stage {
+      width: 74px;
+      height: 74px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .atom-stage img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      transition: transform 260ms cubic-bezier(0.34,1.56,0.64,1);
+      transform-origin: center;
+    }
+
+    .atom-label {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      white-space: nowrap;
+    }
+
+    .principles {
+      max-width: 760px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .pill {
+      font-size: 11px;
+      line-height: 1;
+      padding: 5px 10px;
+      border: 0.5px solid var(--border);
+      border-radius: 999px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .pill.active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      font: 12px/1.2 inherit;
+      letter-spacing: 0.04em;
+      padding: 8px 18px;
+      border: 0.5px solid var(--border);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
+    button.primary {
+      color: var(--bg);
+      background: var(--text-primary);
+      border-color: var(--text-primary);
+    }
+
+    .speed-control {
+      width: min(340px, 80vw);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 12px;
+      border: 0.5px solid var(--border);
+      border-radius: 999px;
+      color: var(--text-secondary);
+    }
+
+    .speed-caption,
+    .speed-value {
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .speed-value {
+      min-width: 46px;
+      text-align: right;
+      color: var(--text-primary);
+      text-transform: none;
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      min-width: 120px;
+      height: 24px;
+      appearance: none;
+      -webkit-appearance: none;
+      background: transparent;
+      cursor: grab;
+      accent-color: var(--accent);
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 3px;
+      border-radius: 999px;
+      background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--speed-progress), var(--border) var(--speed-progress), var(--border) 100%);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      margin-top: -6.5px;
+      border-radius: 50%;
+      border: 2px solid var(--bg);
+      background: var(--accent);
+      box-shadow: 0 1px 6px rgba(0,0,0,0.18);
+    }
+
+    .footer {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      text-align: center;
+      line-height: 1.7;
+    }
+
+    .p2m-chromeless .atomic-motions,
+    .p2m-chromeless .principles,
+    .p2m-chromeless .controls,
+    .p2m-chromeless .footer {
+      display: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      :root {
+        --p2m-duration: 1500ms;
+        --p2m-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+        --p2m-ease-narrative: cubic-bezier(0.34, 0, 0.14, 1);
+        --p2m-ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      #icon-tile,
+      #logo-lockup,
+      #earcup-left,
+      #earcup-right,
+      #boom-tip,
+      #gold-sweep,
+      #orange-sweep,
+      #red-sweep,
+      #leaf {
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+
+      #icon-tile {
+        animation: p2m-tile var(--p2m-duration) linear both;
+      }
+
+      #logo-lockup {
+        animation: p2m-lockup-settle var(--p2m-duration) linear both;
+      }
+
+      #headphone-arch {
+        animation: p2m-arch-draw var(--p2m-duration) linear both;
+      }
+
+      #earcup-left {
+        transform-origin: right center;
+        animation: p2m-left-cup var(--p2m-duration) linear both;
+      }
+
+      #earcup-right {
+        transform-origin: left center;
+        animation: p2m-right-cup var(--p2m-duration) linear both;
+      }
+
+      #boom-line {
+        animation: p2m-boom-draw var(--p2m-duration) linear both;
+      }
+
+      #boom-tip {
+        transform-origin: right center;
+        animation: p2m-boom-tip var(--p2m-duration) linear both;
+      }
+
+      #gold-sweep {
+        transform-origin: 58% 54%;
+        animation: p2m-gold-arrive var(--p2m-duration) linear both;
+      }
+
+      #orange-sweep {
+        transform-origin: 57% 55%;
+        animation: p2m-orange-arrive var(--p2m-duration) linear both;
+      }
+
+      #red-sweep {
+        transform-origin: 54% 57%;
+        animation: p2m-red-arrive var(--p2m-duration) linear both;
+      }
+
+      #leaf {
+        transform-origin: left center;
+        animation: p2m-leaf-arrive var(--p2m-duration) linear both;
+      }
+
+      @keyframes p2m-tile {
+        0% {
+          opacity: 0;
+          transform: translateY(26px) scale(0.92);
+          filter: blur(10px);
+          animation-timing-function: cubic-bezier(0.34, 0, 0.14, 1);
+        }
+        20% {
+          opacity: 0.58;
+          transform: translateY(8px) scale(0.965);
+          filter: blur(3px);
+          animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        46% {
+          opacity: 1;
+          transform: translateY(0) scale(1.006);
+          filter: blur(0);
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        78% {
+          opacity: 1;
+          transform: translateY(0) scale(0.998);
+          filter: blur(0);
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+          filter: blur(0);
+        }
+      }
+
+      @keyframes p2m-lockup-settle {
+        0%, 16% {
+          transform: translateY(14px) scale(0.965);
+          animation-timing-function: cubic-bezier(0.34, 0, 0.14, 1);
+        }
+        68% {
+          transform: translateY(-4px) scale(1.012);
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        88% {
+          transform: translateY(1px) scale(0.998);
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        100% {
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      @keyframes p2m-arch-draw {
+        0%, 14% {
+          opacity: 0;
+          stroke-dasharray: 1 1;
+          stroke-dashoffset: 1;
+          animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        22% { opacity: 1; }
+        60%, 100% {
+          opacity: 1;
+          stroke-dasharray: 1 1;
+          stroke-dashoffset: 0;
+        }
+      }
+
+      @keyframes p2m-left-cup {
+        0%, 27% {
+          opacity: 0;
+          transform: translateX(-34px) scale(0.82);
+          animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        57% {
+          opacity: 1;
+          transform: translateX(2px) scale(1.018);
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        78%, 100% {
+          opacity: 1;
+          transform: translateX(0) scale(1);
+        }
+      }
+
+      @keyframes p2m-right-cup {
+        0%, 31% {
+          opacity: 0;
+          transform: translateX(34px) scale(0.82);
+          animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        61% {
+          opacity: 1;
+          transform: translateX(-2px) scale(1.018);
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        80%, 100% {
+          opacity: 1;
+          transform: translateX(0) scale(1);
+        }
+      }
+
+      @keyframes p2m-boom-draw {
+        0%, 44% {
+          opacity: 0;
+          stroke-dasharray: 1 1;
+          stroke-dashoffset: 1;
+          animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        50% { opacity: 1; }
+        76%, 100% {
+          opacity: 1;
+          stroke-dasharray: 1 1;
+          stroke-dashoffset: 0;
+        }
+      }
+
+      @keyframes p2m-boom-tip {
+        0%, 64% {
+          opacity: 0;
+          transform: translateX(18px) scaleX(0.35);
+          animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        82% {
+          opacity: 1;
+          transform: translateX(-2px) scaleX(1.025);
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        100% {
+          opacity: 1;
+          transform: translateX(0) scaleX(1);
+        }
+      }
+
+      @keyframes p2m-gold-arrive {
+        0%, 17% {
+          opacity: 0;
+          transform: rotate(-24deg) scale(0.62);
+          animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        57% {
+          opacity: 1;
+          transform: rotate(2.5deg) scale(1.025);
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        79%, 100% {
+          opacity: 1;
+          transform: rotate(0) scale(1);
+        }
+      }
+
+      @keyframes p2m-orange-arrive {
+        0%, 22% {
+          opacity: 0;
+          transform: rotate(20deg) scale(0.6);
+          animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        61% {
+          opacity: 1;
+          transform: rotate(-2.5deg) scale(1.024);
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        81%, 100% {
+          opacity: 1;
+          transform: rotate(0) scale(1);
+        }
+      }
+
+      @keyframes p2m-red-arrive {
+        0%, 27% {
+          opacity: 0;
+          transform: rotate(22deg) scale(0.58);
+          animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        65% {
+          opacity: 1;
+          transform: rotate(-2deg) scale(1.02);
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        84%, 100% {
+          opacity: 1;
+          transform: rotate(0) scale(1);
+        }
+      }
+
+      @keyframes p2m-leaf-arrive {
+        0%, 57% {
+          opacity: 0;
+          transform: translate(-28px, 18px) rotate(-18deg) scale(0.45);
+          animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        76% {
+          opacity: 1;
+          transform: translate(3px, -3px) rotate(3deg) scale(1.08);
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        91% {
+          opacity: 1;
+          transform: translate(0, 1px) rotate(-1deg) scale(0.985);
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        100% {
+          opacity: 1;
+          transform: translate(0) rotate(0) scale(1);
+        }
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="logo-root" aria-label="启动图标动画" data-p2m-duration="1500"></main>
+
+  <section class="atomic-motions" aria-label="基础动作研究">
+    <div class="atom" data-atom="hover"><div class="atom-stage"></div><span class="atom-label">悬停</span></div>
+    <div class="atom" data-atom="pulse"><div class="atom-stage"></div><span class="atom-label">呼吸</span></div>
+    <div class="atom" data-atom="arc"><div class="atom-stage"></div><span class="atom-label">弧线</span></div>
+    <div class="atom" data-atom="press"><div class="atom-stage"></div><span class="atom-label">按压</span></div>
+  </section>
+
+  <div class="principles" id="principlesRow">
+    <span class="pill" data-p="squashstretch">Squash &amp; stretch</span>
+    <span class="pill" data-p="anticipation">Anticipation</span>
+    <span class="pill" data-p="staging">Staging</span>
+    <span class="pill" data-p="followthrough">Follow through</span>
+    <span class="pill" data-p="overlap">Overlapping</span>
+    <span class="pill" data-p="slowinout">Slow in / out</span>
+    <span class="pill" data-p="arc">Arc</span>
+    <span class="pill" data-p="secondary">Secondary action</span>
+    <span class="pill" data-p="timing">Timing</span>
+    <span class="pill" data-p="appeal">Appeal</span>
+  </div>
+
+  <div class="controls">
+    <button class="primary" id="btnReplay" type="button">重播</button>
+    <button id="btnSlow" type="button">慢速</button>
+    <label class="speed-control" for="speedSlider">
+      <span class="speed-caption">速度</span>
+      <input id="speedSlider" type="range" min="0.25" max="2.5" step="0.05" value="1" aria-label="动画速度">
+      <span class="speed-value" id="speedValue">1.0x</span>
+    </label>
+  </div>
+
+  <p class="footer">点击主图标重播 · 拖动调速 · 可尝试上方基础动作</p>
+
+  <script>
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    const LOGO = {"tag":"svg","attrs":{"width":"1254","height":"1254","viewBox":"0 0 1254 1254","role":"img","aria-labelledby":"logo-title logo-desc"},"children":[{"tag":"title","attrs":{"id":"logo-title"},"children":[],"text":"曹二听说101 application icon"},{"tag":"desc","attrs":{"id":"logo-desc"},"children":[],"text":"Blue headphones surrounding a gold, orange, red, and green listening mark."},{"tag":"rect","attrs":{"id":"icon-tile","x":"0","y":"0","width":"1254","height":"1254","rx":"214","fill":"#fdfcfc"},"children":[]},{"tag":"g","attrs":{"id":"logo-lockup"},"children":[{"tag":"g","attrs":{"id":"headphones","fill":"#0256bf"},"children":[{"tag":"path","attrs":{"id":"headphone-arch","d":"M 199 573 A 425.5 402 0 0 1 1050 573","fill":"none","stroke":"#0256bf","stroke-width":"72","stroke-linecap":"butt","pathLength":"1"},"children":[]},{"tag":"path","attrs":{"id":"earcup-left","d":"M 238 571 C 263 571 279 584 279 604 L 279 847 C 279 870 264 883 239 883 C 152 883 84 813 84 727 C 84 664 116 615 163 591 C 187 578 210 570 238 571 Z"},"children":[]},{"tag":"path","attrs":{"id":"earcup-right","d":"M 1016 571 C 991 571 974 584 974 604 L 974 847 C 974 870 990 882 1015 882 C 1101 882 1168 813 1168 727 C 1168 664 1136 615 1086 591 C 1064 579 1043 570 1016 571 Z"},"children":[]},{"tag":"g","attrs":{"id":"boom"},"children":[{"tag":"path","attrs":{"id":"boom-line","d":"M 1048 823 C 1024 933 927 1010 790 1036","fill":"none","stroke":"#0256bf","stroke-width":"55","stroke-linecap":"round","pathLength":"1"},"children":[]},{"tag":"rect","attrs":{"id":"boom-tip","x":"639","y":"1004","width":"154","height":"82","rx":"41"},"children":[]}]}]},{"tag":"g","attrs":{"id":"listening-mark"},"children":[{"tag":"path","attrs":{"id":"gold-sweep","d":"M 497 706 C 489 665 498 622 521 584 C 558 522 620 473 686 463 C 780 449 867 505 907 593 C 954 696 918 814 842 891 C 774 960 682 994 587 986 C 694 978 780 914 812 822 C 831 766 823 706 794 641 C 809 623 816 601 816 575 C 793 592 771 597 753 590 C 712 550 658 542 610 559 C 541 584 497 643 497 706 Z","fill":"#fda616"},"children":[]},{"tag":"path","attrs":{"id":"orange-sweep","d":"M 850 493 C 794 453 735 438 682 442 C 580 449 502 532 488 633 C 479 696 497 761 545 800 C 575 824 616 813 642 787 C 656 773 666 759 669 746 C 674 775 664 807 641 830 C 614 857 571 866 528 854 C 438 829 374 749 375 660 C 376 531 471 412 597 389 C 684 373 783 410 850 493 Z","fill":"#fd5108"},"children":[]},{"tag":"path","attrs":{"id":"red-sweep","d":"M 361 574 C 341 618 329 668 334 720 C 345 836 430 929 535 958 C 642 988 724 938 759 854 C 790 780 767 702 707 661 C 670 636 619 632 584 647 C 629 651 665 683 674 727 C 687 789 643 846 583 861 C 522 876 454 845 414 795 C 366 736 347 648 361 574 Z","fill":"#ef2218"},"children":[]},{"tag":"g","attrs":{"id":"leaf"},"children":[{"tag":"path","attrs":{"id":"leaf-body","d":"M 675 636 C 691 629 699 614 714 607 C 738 596 768 611 800 596 C 796 617 786 638 767 649 C 746 662 727 654 706 646 C 695 642 685 639 675 637 Z","fill":"#0a9422"},"children":[]},{"tag":"path","attrs":{"id":"leaf-vein","d":"M 689 635 C 714 635 739 638 766 620 C 749 640 725 646 702 641 C 697 640 693 638 689 635 Z","fill":"#fdfcfc"},"children":[]}]}]}]}]};
+    const SVG_TEXT = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1254\" height=\"1254\" viewBox=\"0 0 1254 1254\" role=\"img\" aria-labelledby=\"logo-title logo-desc\"><style>:root,svg{--bg:#ffffff;--surface:#f5f5f3;--text-primary:#0d0d0d;--text-secondary:#777;--text-tertiary:#aaa;--logo-wordmark:#363e47;--accent:#e64036;--red:#e64036;--red-bright:#ff493f;}<\/style>\n  <title id=\"logo-title\">曹二听说101 application icon<\/title>\n  <desc id=\"logo-desc\">Blue headphones surrounding a gold, orange, red, and green listening mark.<\/desc>\n\n  <rect id=\"icon-tile\" x=\"0\" y=\"0\" width=\"1254\" height=\"1254\" rx=\"214\" fill=\"#fdfcfc\"/>\n\n  <g id=\"logo-lockup\">\n    <g id=\"headphones\" fill=\"#0256bf\">\n      <path id=\"headphone-arch\" d=\"M 199 573 A 425.5 402 0 0 1 1050 573\" fill=\"none\" stroke=\"#0256bf\" stroke-width=\"72\" stroke-linecap=\"butt\" pathLength=\"1\"/>\n      <path id=\"earcup-left\" d=\"M 238 571 C 263 571 279 584 279 604 L 279 847 C 279 870 264 883 239 883 C 152 883 84 813 84 727 C 84 664 116 615 163 591 C 187 578 210 570 238 571 Z\"/>\n      <path id=\"earcup-right\" d=\"M 1016 571 C 991 571 974 584 974 604 L 974 847 C 974 870 990 882 1015 882 C 1101 882 1168 813 1168 727 C 1168 664 1136 615 1086 591 C 1064 579 1043 570 1016 571 Z\"/>\n      <g id=\"boom\">\n        <path id=\"boom-line\" d=\"M 1048 823 C 1024 933 927 1010 790 1036\" fill=\"none\" stroke=\"#0256bf\" stroke-width=\"55\" stroke-linecap=\"round\" pathLength=\"1\"/>\n        <rect id=\"boom-tip\" x=\"639\" y=\"1004\" width=\"154\" height=\"82\" rx=\"41\"/>\n      <\/g>\n    <\/g>\n\n    <g id=\"listening-mark\">\n      <path id=\"gold-sweep\" d=\"M 497 706 C 489 665 498 622 521 584 C 558 522 620 473 686 463 C 780 449 867 505 907 593 C 954 696 918 814 842 891 C 774 960 682 994 587 986 C 694 978 780 914 812 822 C 831 766 823 706 794 641 C 809 623 816 601 816 575 C 793 592 771 597 753 590 C 712 550 658 542 610 559 C 541 584 497 643 497 706 Z\" fill=\"#fda616\"/>\n      <path id=\"orange-sweep\" d=\"M 850 493 C 794 453 735 438 682 442 C 580 449 502 532 488 633 C 479 696 497 761 545 800 C 575 824 616 813 642 787 C 656 773 666 759 669 746 C 674 775 664 807 641 830 C 614 857 571 866 528 854 C 438 829 374 749 375 660 C 376 531 471 412 597 389 C 684 373 783 410 850 493 Z\" fill=\"#fd5108\"/>\n      <path id=\"red-sweep\" d=\"M 361 574 C 341 618 329 668 334 720 C 345 836 430 929 535 958 C 642 988 724 938 759 854 C 790 780 767 702 707 661 C 670 636 619 632 584 647 C 629 651 665 683 674 727 C 687 789 643 846 583 861 C 522 876 454 845 414 795 C 366 736 347 648 361 574 Z\" fill=\"#ef2218\"/>\n      <g id=\"leaf\">\n        <path id=\"leaf-body\" d=\"M 675 636 C 691 629 699 614 714 607 C 738 596 768 611 800 596 C 796 617 786 638 767 649 C 746 662 727 654 706 646 C 695 642 685 639 675 637 Z\" fill=\"#0a9422\"/>\n        <path id=\"leaf-vein\" d=\"M 689 635 C 714 635 739 638 766 620 C 749 640 725 646 702 641 C 697 640 693 638 689 635 Z\" fill=\"#fdfcfc\"/>\n      <\/g>\n    <\/g>\n  <\/g>\n<\/svg>\n";
+    const SVG_URI = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(SVG_TEXT);
+    const DURATION = 1500;
+
+    let playbackRate = 1;
+    let pulseRaf = null;
+    let arcRaf = null;
+    window.__p2mReady = false;
+
+    function createSvgNode(node) {
+      const element = document.createElementNS(SVG_NS, node.tag);
+      for (const [name, value] of Object.entries(node.attrs || {})) {
+        element.setAttribute(name, value);
+      }
+      if (node.text) {
+        element.appendChild(document.createTextNode(node.text));
+      }
+      for (const child of node.children || []) {
+        element.appendChild(createSvgNode(child));
+      }
+      return element;
+    }
+
+    function heroAnimations() {
+      const root = document.getElementById("logo-root");
+      if (root.getAnimations) return root.getAnimations({ subtree: true });
+      return document.getAnimations().filter(animation => {
+        const target = animation.effect && animation.effect.target;
+        return target && root.contains(target);
+      });
+    }
+
+    function applyPlaybackRate() {
+      for (const animation of heroAnimations()) {
+        if (animation.updatePlaybackRate) animation.updatePlaybackRate(playbackRate);
+        else animation.playbackRate = playbackRate;
+      }
+    }
+
+    function renderHero() {
+      const root = document.getElementById("logo-root");
+      root.replaceChildren(createSvgNode(LOGO));
+      const svg = root.querySelector("svg");
+      if (svg) {
+        svg.removeAttribute("width");
+        svg.removeAttribute("height");
+        svg.style.width = "100%";
+        svg.style.height = "auto";
+        svg.style.overflow = "visible";
+      }
+      requestAnimationFrame(() => requestAnimationFrame(applyPlaybackRate));
+    }
+
+    function flashPills(...names) {
+      document.querySelectorAll(".pill").forEach(pill => pill.classList.remove("active"));
+      names.forEach(name => {
+        const pill = document.querySelector(`[data-p="${name}"]`);
+        if (pill) pill.classList.add("active");
+      });
+    }
+
+    function cyclePrinciples() {
+      const phases = [
+        ["staging", "timing"],
+        ["anticipation", "squashstretch"],
+        ["arc", "slowinout"],
+        ["overlap", "followthrough"],
+        ["appeal"]
+      ];
+      let i = 0;
+      flashPills(...phases[0]);
+      return setInterval(() => {
+        i = (i + 1) % phases.length;
+        flashPills(...phases[i]);
+      }, Math.max(240, DURATION / phases.length / Math.max(playbackRate, 0.25)));
+    }
+
+    let pillTimer = null;
+    function replayMain() {
+      clearInterval(pillTimer);
+      renderHero();
+      pillTimer = cyclePrinciples();
+      setTimeout(() => {
+        clearInterval(pillTimer);
+        document.querySelectorAll(".pill").forEach(pill => pill.classList.remove("active"));
+      }, DURATION / Math.max(playbackRate, 0.25) + 600);
+    }
+
+    function formatSpeed(rate) {
+      return `${rate.toFixed(1)}x`;
+    }
+
+    function updateSpeedUI() {
+      const slider = document.getElementById("speedSlider");
+      const value = Number(slider.value);
+      const min = Number(slider.min);
+      const max = Number(slider.max);
+      const progress = ((value - min) / (max - min)) * 100;
+      document.getElementById("speedValue").textContent = formatSpeed(value);
+      slider.style.setProperty("--speed-progress", `${progress}%`);
+      const slow = value <= 0.351;
+      const btnSlow = document.getElementById("btnSlow");
+      btnSlow.textContent = slow ? "正常速度" : "慢速";
+      btnSlow.style.background = slow ? "var(--surface)" : "";
+      btnSlow.style.borderColor = slow ? "var(--text-secondary)" : "";
+    }
+
+    function setPlaybackRate(rate, replay = false) {
+      const slider = document.getElementById("speedSlider");
+      const min = Number(slider.min);
+      const max = Number(slider.max);
+      playbackRate = Math.min(max, Math.max(min, Number(rate)));
+      slider.value = String(playbackRate);
+      updateSpeedUI();
+      applyPlaybackRate();
+      if (replay) replayMain();
+    }
+
+    function setupAtomImages() {
+      document.querySelectorAll(".atom-stage").forEach(stage => {
+        const img = new Image();
+        img.src = SVG_URI;
+        img.alt = "";
+        stage.appendChild(img);
+      });
+    }
+
+    function setupAtoms() {
+      const hover = document.querySelector('[data-atom="hover"] img');
+      const pulse = document.querySelector('[data-atom="pulse"] img');
+      const arc = document.querySelector('[data-atom="arc"] img');
+      const press = document.querySelector('[data-atom="press"] img');
+
+      hover.parentElement.addEventListener("mouseenter", () => {
+        flashPills("squashstretch", "appeal");
+        hover.style.transform = "scale(1.08) rotate(-1.5deg)";
+      });
+      hover.parentElement.addEventListener("mouseleave", () => {
+        hover.style.transform = "scale(1)";
+      });
+
+      function pulseTick(ts) {
+        const p = (Math.sin(ts / 900) + 1) / 2;
+        pulse.style.transform = `scale(${1 + 0.1 * p})`;
+        pulseRaf = requestAnimationFrame(pulseTick);
+      }
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        pulseRaf = requestAnimationFrame(pulseTick);
+      }
+
+      let arcAngle = -14;
+      let arcVel = 0;
+      function arcTick() {
+        arcVel += (0 - arcAngle) * 0.08;
+        arcVel *= 0.86;
+        arcAngle += arcVel;
+        arc.style.transform = `rotate(${arcAngle}deg)`;
+        arcRaf = requestAnimationFrame(arcTick);
+      }
+      arc.parentElement.addEventListener("mouseenter", () => {
+        flashPills("arc", "anticipation", "appeal");
+        cancelAnimationFrame(arcRaf);
+        arcAngle = 28;
+        arcVel = 0;
+        arcTick();
+      });
+      arc.parentElement.addEventListener("mouseleave", () => {
+        arcAngle = 0;
+      });
+
+      press.parentElement.addEventListener("mousedown", () => {
+        flashPills("squashstretch", "anticipation");
+        press.style.transform = "scaleX(1.10) scaleY(0.88)";
+      });
+      ["mouseup", "mouseleave"].forEach(ev => {
+        press.parentElement.addEventListener(ev, () => {
+          press.style.transform = "scale(1)";
+        });
+      });
+    }
+
+    function applyQaMode() {
+      const params = new URLSearchParams(location.search);
+      const seekMs = params.get("t");
+      const staticMode = params.get("static");
+      if (seekMs === null && staticMode === null) {
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          applyPlaybackRate();
+          window.__p2mReady = true;
+        }));
+        return;
+      }
+
+      document.documentElement.classList.add("p2m-chromeless");
+      cancelAnimationFrame(pulseRaf);
+      cancelAnimationFrame(arcRaf);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        for (const animation of heroAnimations()) {
+          if (staticMode !== null) {
+            try {
+              animation.finish();
+            } catch (err) {
+              animation.cancel();
+            }
+          } else {
+            animation.pause();
+            animation.currentTime = Number(seekMs);
+          }
+        }
+        window.__p2mReady = true;
+      }));
+    }
+
+    document.getElementById("btnReplay").addEventListener("click", replayMain);
+    document.getElementById("logo-root").addEventListener("click", replayMain);
+    document.getElementById("speedSlider").addEventListener("input", event => {
+      setPlaybackRate(event.target.value, false);
+    });
+    document.getElementById("btnSlow").addEventListener("click", () => {
+      const slow = Number(document.getElementById("speedSlider").value) <= 0.351;
+      setPlaybackRate(slow ? 1 : 0.35, true);
+    });
+
+    setupAtomImages();
+    setupAtoms();
+    setPlaybackRate(1, false);
+    renderHero();
+    applyQaMode();
+  </script>
+</body>
+</html>
