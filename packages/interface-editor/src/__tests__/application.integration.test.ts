@@ -145,6 +145,15 @@ describe('interface editor application integration', () => {
       '{"title":"缺少 section"}'
     )
     expect(invalid.status).toBe('invalid-json')
+    vi.mocked(imageGenerator.generate).mockClear()
+    await expect(
+      app.instances.replaceFromJson(
+        interfaceId,
+        instance.instance.instanceId,
+        '{"title":"","section":{"picture":"不应生成的配图","answer":"New answer"}}'
+      )
+    ).rejects.toThrow('变量 titleText 不能为空')
+    expect(imageGenerator.generate).not.toHaveBeenCalled()
     const replaced = await app.instances.replaceFromJson(
       interfaceId,
       instance.instance.instanceId,
@@ -315,6 +324,7 @@ describe('interface editor application integration', () => {
       status: 'failed',
       message: '变量 titleText 不能为空'
     })
+    expect(imageGenerator.generate).not.toHaveBeenCalled()
     await expect(app.instances.get(interfaceId, blank.instance.instanceId)).resolves.toEqual(blank)
   })
 

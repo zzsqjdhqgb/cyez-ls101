@@ -376,10 +376,8 @@ export function createInterfaceApplication(
         return { status: 'invalid-json', errors: jsonErrors(validation.errors) }
       }
       const mapped = buildInstanceFromJson(def, validation.data)
+      assertCompleteTextAndImagePrompts(def.fields, mapped.values, mapped.imagePrompts ?? {})
       const prompts = Object.entries(mapped.imagePrompts ?? {})
-      if (prompts.some(([, prompt]) => !prompt.trim())) {
-        throw new Error('图片变量的提示词不能为空')
-      }
       if (prompts.length && !imageGenerator) {
         throw new Error('Interface image generator is not configured')
       }
@@ -734,10 +732,12 @@ export function createInterfaceApplication(
                     }
                   }
                   state.mapped = buildInstanceFromJson(generationDef, validation.data)
+                  assertCompleteTextAndImagePrompts(
+                    generationDef.fields,
+                    state.mapped.values,
+                    state.mapped.imagePrompts ?? {}
+                  )
                   state.prompts = Object.entries(state.mapped.imagePrompts ?? {})
-                  if (state.prompts.some(([, prompt]) => !prompt.trim())) {
-                    throw new Error('图片变量的提示词不能为空')
-                  }
                   if (state.prompts.length && !imageGenerator) {
                     throw new Error('Interface image generator is not configured')
                   }
@@ -1007,6 +1007,24 @@ function assertCompleteInstanceValues(
       (!imagePrompts[leaf.varName]?.trim() || !assetFilenames.has(value))
     ) {
       throw new Error(`图片变量 ${leaf.varName} 的提示词和图片必须同时填写`)
+    }
+  }
+}
+
+function assertCompleteTextAndImagePrompts(
+  fields: FieldCollection,
+  values: Readonly<Record<string, string>>,
+  imagePrompts: Readonly<Record<string, string>>
+): void {
+  for (const { leaf } of flattenFields(fields)) {
+    if (leaf.type === 'image') {
+      if (!imagePrompts[leaf.varName]?.trim()) {
+        throw new Error(`图片变量 ${leaf.varName} 的提示词不能为空`)
+      }
+      continue
+    }
+    if (!values[leaf.varName]?.trim()) {
+      throw new Error(`变量 ${leaf.varName} 不能为空`)
     }
   }
 }
