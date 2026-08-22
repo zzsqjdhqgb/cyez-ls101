@@ -1,24 +1,32 @@
-import { dictionary } from 'cmu-pronouncing-dictionary'
+import type { PronunciationAssessmentResult } from './pronunciation'
 import type { TextGradingModel } from './index'
 
-export type SpeechWordAlignmentOperation = 'match' | 'substitution' | 'deletion' | 'insertion'
+export interface SpeechPhoneAlignmentEvidence {
+  phoneId: string
+  expectedPhone: string
+  acousticWinner: string
+  startMs: number
+  endMs: number
+}
 
 export interface SpeechWordAlignmentEvidence {
-  evidenceId: string
-  operation: SpeechWordAlignmentOperation
-  referenceWord?: string
-  transcriptWord?: string
-  referencePronunciations: string[][]
-  transcriptPronunciations: string[][]
+  wordId: string
+  word: string
+  startMs: number
+  endMs: number
+  phones: SpeechPhoneAlignmentEvidence[]
 }
 
 export interface SpeechCorrectionEvidence {
   schemaVersion: 1
-  referenceText: string
   provisionalTranscript: string
-  transcriptIsGroundTruth: false
-  phonemeSource: 'CMUdict 0.7b ARPAbet'
-  alignment: SpeechWordAlignmentEvidence[]
+  referenceText: string
+  referenceSource: 'known-script' | 'asr-provisional-transcript'
+  referencePhones: 'CMUdict 0.7b mapped from ARPAbet to model-compatible IPA'
+  alignment: 'whole-utterance CTC Viterbi forced alignment'
+  acousticModel: 'facebook/wav2vec2-lv-60-espeak-cv-ft ONNX INT8'
+  acousticWinnerDefinition: string
+  words: SpeechWordAlignmentEvidence[]
 }
 
 export interface SpeechCorrectionTrace {
@@ -32,247 +40,279 @@ export interface SpeechCorrectionResult {
   trace: SpeechCorrectionTrace
 }
 
-interface CorrectionDecision {
-  evidenceId: string
-  decision: 'likely_issue' | 'uncertain' | 'no_issue'
-  feedback: string
+export interface SpeechFeedbackItem {
+  phoneIds: string[]
+  word: string
+  decision: 'likely_issue' | 'needs_listening'
+  findingZh: string
+  rationaleZh: string
+  practiceZh: string
 }
 
-interface AlignedWordPair {
-  operation: SpeechWordAlignmentOperation
-  reference?: string
-  transcript?: string
+export interface WithheldSpeechDifference {
+  phoneIds: string[]
+  word: string
+  reasonZh: string
 }
 
-const FREE_SPEECH_CORRECTION =
-  '自由表达没有固定参考文本，无法执行参考文本与 ASR 转写的单词级对齐；本次不据此判断发音错误。'
-const NO_DIFFERENCE_CORRECTION =
-  '参考文本与 ASR 转写的单词序列一致。由于 ASR 结果不是人工听辨真值，本结果不代表逐音素发音完全正确。'
+export interface SpeechCorrectionDecision {
+  summaryZh: string
+  feedbackItems: SpeechFeedbackItem[]
+  withheldDifferences: WithheldSpeechDifference[]
+  limitationsZh: string[]
+}
 
 export async function correctSpeechWithLLM(
-  request: { transcript: string; referenceText?: string },
+  request: {
+    transcript: string
+    referenceText: string
+    referenceSource: SpeechCorrectionEvidence['referenceSource']
+    assessment: PronunciationAssessmentResult
+  },
   textModel: TextGradingModel,
   options: { signal?: AbortSignal } = {}
 ): Promise<SpeechCorrectionResult> {
-  if (!request.referenceText?.trim()) {
-    return { correction: FREE_SPEECH_CORRECTION, trace: {} }
-  }
-  const evidence = createSpeechCorrectionEvidence(request.referenceText, request.transcript)
-  const candidateIds = evidence.alignment
-    .filter((item) => item.operation !== 'match')
-    .map((item) => item.evidenceId)
-  if (candidateIds.length === 0) {
-    return { correction: NO_DIFFERENCE_CORRECTION, trace: { evidence } }
-  }
-
+  const evidence = createSpeechCorrectionEvidence(request)
   options.signal?.throwIfAborted()
   const prompt = buildSpeechCorrectionPrompt(evidence)
   const rawResponse = await textModel.generate(prompt, options)
-  const decisions = parseSpeechCorrectionResponse(rawResponse, candidateIds)
+  const decision = parseSpeechCorrectionResponse(rawResponse, evidence)
   return {
-    correction: formatSpeechCorrection(decisions),
+    correction: formatSpeechCorrection(decision),
     trace: { evidence, prompt, rawResponse }
   }
 }
 
-export function createSpeechCorrectionEvidence(
-  referenceText: string,
+export function createSpeechCorrectionEvidence(request: {
   transcript: string
-): SpeechCorrectionEvidence {
-  const referenceWords = tokenizeEnglishWords(referenceText)
-  if (referenceWords.length === 0) throw new Error('语音纠错参考文本中没有英文单词')
-  const transcriptWords = tokenizeEnglishWords(transcript)
-  const pairs = alignWords(referenceWords, transcriptWords)
+  referenceText: string
+  referenceSource: SpeechCorrectionEvidence['referenceSource']
+  assessment: PronunciationAssessmentResult
+}): SpeechCorrectionEvidence {
+  if (!request.referenceText.trim()) throw new Error('语音纠错参考文本不能为空')
+  if (request.assessment.words.length === 0) throw new Error('CTC 发音评测没有生成词级对齐')
   return {
     schemaVersion: 1,
-    referenceText,
-    provisionalTranscript: transcript,
-    transcriptIsGroundTruth: false,
-    phonemeSource: 'CMUdict 0.7b ARPAbet',
-    alignment: pairs.map((pair, index) => ({
-      evidenceId: `W${String(index + 1).padStart(3, '0')}`,
-      operation: pair.operation,
-      ...(pair.reference ? { referenceWord: pair.reference } : {}),
-      ...(pair.transcript ? { transcriptWord: pair.transcript } : {}),
-      referencePronunciations: pair.reference ? dictionaryPronunciations(pair.reference) : [],
-      transcriptPronunciations: pair.transcript ? dictionaryPronunciations(pair.transcript) : []
-    }))
+    provisionalTranscript: request.transcript,
+    referenceText: request.referenceText,
+    referenceSource: request.referenceSource,
+    referencePhones: 'CMUdict 0.7b mapped from ARPAbet to model-compatible IPA',
+    alignment: 'whole-utterance CTC Viterbi forced alignment',
+    acousticModel: 'facebook/wav2vec2-lv-60-espeak-cv-ft ONNX INT8',
+    acousticWinnerDefinition:
+      'The highest mean-logit non-blank phone token in the forced span; it is not an error label, correctness probability, or human transcription.',
+    words: request.assessment.words.map((word, wordIndex) => {
+      const wordId = `W${String(wordIndex + 1).padStart(3, '0')}`
+      return {
+        wordId,
+        word: word.text,
+        startMs: word.startMs,
+        endMs: word.endMs,
+        phones: word.phones.map((phone, phoneIndex) => ({
+          phoneId: `${wordId}-P${String(phoneIndex + 1).padStart(2, '0')}`,
+          expectedPhone: phone.expected,
+          acousticWinner: phone.observed ?? phone.expected,
+          startMs: phone.startMs,
+          endMs: phone.endMs
+        }))
+      }
+    })
   }
 }
 
 export function buildSpeechCorrectionPrompt(evidence: SpeechCorrectionEvidence): string {
-  const candidateIds = evidence.alignment
-    .filter((item) => item.operation !== 'match')
-    .map((item) => item.evidenceId)
+  const referenceNote =
+    evidence.referenceSource === 'known-script'
+      ? 'referenceText 是本题已知朗读原文；provisionalTranscript 是 ASR 转写，只能作为辅助上下文。'
+      : 'referenceText 与 provisionalTranscript 均来自 ASR 临时转写，不是已知原文，可能转写错误。'
   return [
-    '你是英语学习场景中的保守语音纠错助手。请审查参考文本与 ASR 临时转写的单词级对齐证据。',
+    '下面是一段英语录音的完整词级 CTC 强制对齐。请生成中文发音反馈。',
     '',
-    '证据边界：',
-    '1. provisionalTranscript 来自 ASR，可能转写错误，不是人工听辨真值。',
-    '2. operation 只表示单词序列的编辑对齐，不直接证明漏读、错读或发音错误。',
-    '3. pronunciations 是 CMUdict 的 ARPAbet 词典读音，不是从录音中识别出的音素。',
-    '4. 同音词、缩读、合法变体、专有名词和词典缺词应优先判为 uncertain 或 no_issue。',
-    '5. 不得捏造录音中的具体音素、重音、语调、音量、语速、停顿或情绪。',
-    '6. 只有证据足以支持且有教学价值时才使用 likely_issue；没有可信问题时允许全部为 no_issue。',
-    `7. 必须且只能各判断一次这些候选 evidenceId：${candidateIds.join(', ')}。match 项不得输出。`,
+    '输入口径：',
+    `1. ${referenceNote}`,
+    '2. 输入没有经过问题筛选，也没有分数、阈值、置信度或预先作出的好坏判断。',
+    '3. 每个 phoneId 表示 CMUdict 期望音素在强制对齐路径中的时间片；acousticWinner 是该时间片里声学模型平均 logit 最高的非空白音素 token，不等于人工听到的真值，也不是错误概率。',
+    '4. 强制对齐会把全部参考音素压到音频上。不得据此断言漏词、错词、语法问题或整体水平。',
+    '5. 请自行考虑合法口音、自然弱读、闪音、复合 token、相邻音素错位和连锁对齐错误。尤其要识别 CMUdict 拆分音素与模型复合 token 的等价表示，例如 /ə/ + /l/ 对 /əl/；expectedPhone 与 acousticWinner 不同不自动等于发音错误，相同也不证明发音正确。',
+    '6. 只把具有实际教学价值且有足够声学依据的差异放进 feedbackItems。证据不充分但值得人工复听的可标 needs_listening；很可能是自然变体、token 表示或对齐问题的差异放进 withheldDifferences。',
+    '7. 每个判断必须引用输入中真实存在的 phoneId，不得重复引用；不要捏造音高、重音、语调、音量、情绪、流利度或停顿信息。没有可信问题时允许 feedbackItems 为空。',
     '',
-    '严格输出以下 JSON，不要使用 Markdown 代码块，不要增加字段：',
-    'decision 只能是 likely_issue、uncertain 或 no_issue。',
-    '{"items":[{"evidenceId":"W001","decision":"uncertain","feedback":"简洁中文反馈；no_issue 时可为空字符串"}]}',
+    '严格输出以下 JSON，不要增加字段：',
+    '{',
+    '  "summaryZh": "保守的一句话总结",',
+    '  "feedbackItems": [',
+    '    {',
+    '      "phoneIds": ["W001-P01"],',
+    '      "word": "对应单词",',
+    '      "decision": "likely_issue 或 needs_listening",',
+    '      "findingZh": "观察到的具体音素差异",',
+    '      "rationaleZh": "为什么该差异值得反馈或复听",',
+    '      "practiceZh": "具体且不过度承诺的练习建议"',
+    '    }',
+    '  ],',
+    '  "withheldDifferences": [',
+    '    {',
+    '      "phoneIds": ["W001-P01"],',
+    '      "word": "对应单词",',
+    '      "reasonZh": "为什么不应直接向学习者报错"',
+    '    }',
+    '  ],',
+    '  "limitationsZh": ["本条分析的具体限制"]',
+    '}',
     '',
-    '单词级对齐证据 JSON：',
+    '完整词级对齐 JSON：',
     JSON.stringify(evidence, null, 2)
   ].join('\n')
 }
 
 export function parseSpeechCorrectionResponse(
   response: string,
-  candidateIds: readonly string[]
-): CorrectionDecision[] {
-  let value: unknown
-  try {
-    value = JSON.parse(response.replace(/^\uFEFF/, '').trim())
-  } catch {
-    throw new Error('LLM 语音纠错结果不是严格 JSON')
+  evidence: SpeechCorrectionEvidence
+): SpeechCorrectionDecision {
+  const value = parseJsonObject(response)
+  if (
+    !hasExactKeys(value, ['summaryZh', 'feedbackItems', 'withheldDifferences', 'limitationsZh']) ||
+    typeof value.summaryZh !== 'string' ||
+    !Array.isArray(value.feedbackItems) ||
+    !Array.isArray(value.withheldDifferences) ||
+    !Array.isArray(value.limitationsZh) ||
+    !value.limitationsZh.every((item) => typeof item === 'string')
+  ) {
+    throw new Error('LLM 语音纠错结果不符合顶层证据协议')
   }
-  if (!isRecord(value) || Object.keys(value).length !== 1 || !Array.isArray(value.items)) {
-    throw new Error('LLM 语音纠错结果必须只包含 items 数组')
-  }
-  const candidates = new Set(candidateIds)
-  const seen = new Set<string>()
-  const decisions: CorrectionDecision[] = []
-  for (const item of value.items) {
+
+  const phoneWords = new Map(
+    evidence.words.flatMap((word) =>
+      word.phones.map((phone) => [phone.phoneId, word.word] as const)
+    )
+  )
+  const cited = new Set<string>()
+  const feedbackItems = value.feedbackItems.map((item) => {
     if (
       !isRecord(item) ||
-      Object.keys(item).length !== 3 ||
-      typeof item.evidenceId !== 'string' ||
-      !candidates.has(item.evidenceId) ||
-      seen.has(item.evidenceId) ||
-      (item.decision !== 'likely_issue' &&
-        item.decision !== 'uncertain' &&
-        item.decision !== 'no_issue') ||
-      typeof item.feedback !== 'string'
+      !hasExactKeys(item, [
+        'phoneIds',
+        'word',
+        'decision',
+        'findingZh',
+        'rationaleZh',
+        'practiceZh'
+      ]) ||
+      (item.decision !== 'likely_issue' && item.decision !== 'needs_listening') ||
+      typeof item.word !== 'string' ||
+      typeof item.findingZh !== 'string' ||
+      typeof item.rationaleZh !== 'string' ||
+      typeof item.practiceZh !== 'string'
     ) {
-      throw new Error('LLM 语音纠错条目不符合证据约束')
+      throw new Error('LLM 语音纠错反馈项不符合证据协议')
     }
-    if (item.decision !== 'no_issue' && !item.feedback.trim()) {
-      throw new Error('LLM 语音纠错问题和不确定项必须包含反馈')
-    }
-    seen.add(item.evidenceId)
-    decisions.push({
-      evidenceId: item.evidenceId,
+    const phoneIds = validatePhoneIds(item.phoneIds, item.word, phoneWords, cited)
+    return {
+      phoneIds,
+      word: item.word,
       decision: item.decision,
-      feedback: item.feedback.trim()
-    })
+      findingZh: item.findingZh,
+      rationaleZh: item.rationaleZh,
+      practiceZh: item.practiceZh
+    }
+  })
+  const withheldDifferences = value.withheldDifferences.map((item) => {
+    if (
+      !isRecord(item) ||
+      !hasExactKeys(item, ['phoneIds', 'word', 'reasonZh']) ||
+      typeof item.word !== 'string' ||
+      typeof item.reasonZh !== 'string'
+    ) {
+      throw new Error('LLM 语音纠错暂缓项不符合证据协议')
+    }
+    return {
+      phoneIds: validatePhoneIds(item.phoneIds, item.word, phoneWords, cited),
+      word: item.word,
+      reasonZh: item.reasonZh
+    }
+  })
+  return {
+    summaryZh: value.summaryZh,
+    feedbackItems,
+    withheldDifferences,
+    limitationsZh: value.limitationsZh as string[]
   }
-  if (seen.size !== candidates.size) throw new Error('LLM 语音纠错未覆盖全部候选证据')
-  return decisions
 }
 
-function formatSpeechCorrection(decisions: readonly CorrectionDecision[]): string {
-  const issues = decisions.filter((item) => item.decision === 'likely_issue')
-  const uncertain = decisions.filter((item) => item.decision === 'uncertain')
-  const lines = ['**语音纠错（CMUdict + ASR 单词级对齐）**', '']
-  if (issues.length === 0) {
-    lines.push('未发现有充分证据可以确认的发音问题。')
+function formatSpeechCorrection(decision: SpeechCorrectionDecision): string {
+  const lines = ['**语音纠错（CMUdict + 完整词级 CTC 对齐）**', '', decision.summaryZh]
+  if (decision.feedbackItems.length === 0) {
+    lines.push('', '未发现有充分证据、值得向学习者反馈的发音问题。')
   } else {
-    lines.push('可能需要纠正：')
-    for (const item of issues) lines.push(`- \`${item.evidenceId}\`：${item.feedback}`)
+    lines.push('', '建议关注：')
+    for (const item of decision.feedbackItems) {
+      const label = item.decision === 'likely_issue' ? '较可能' : '需复听'
+      lines.push(
+        `- \`${item.word}\`（${label}；${item.phoneIds.join(', ')}）：${item.findingZh}`,
+        `  ${item.rationaleZh}`,
+        `  练习：${item.practiceZh}`
+      )
+    }
   }
-  if (uncertain.length > 0) {
-    lines.push('', '暂不判错、建议复听：')
-    for (const item of uncertain) lines.push(`- \`${item.evidenceId}\`：${item.feedback}`)
-  }
-  lines.push('', '> ASR 单词差异不是发音错误的直接证明；不确定项不应作为确定错误扣分。')
+  lines.push(
+    '',
+    '> 复合/拆分 token、自然变体和疑似对齐差异已保留在审计记录中，不直接向学习者报错。'
+  )
   return lines.join('\n')
 }
 
-function tokenizeEnglishWords(text: string): string[] {
-  return (
-    text
-      .normalize('NFKC')
-      .replace(/[‘’]/g, "'")
-      .match(/[A-Za-z]+(?:'[A-Za-z]+)*/g) ?? []
-  ).map((word) => word.toLowerCase())
+function validatePhoneIds(
+  value: unknown,
+  word: string,
+  phoneWords: ReadonlyMap<string, string>,
+  cited: Set<string>
+): string[] {
+  if (
+    !Array.isArray(value) ||
+    value.length === 0 ||
+    !value.every((item) => typeof item === 'string')
+  ) {
+    throw new Error('LLM 语音纠错引用了无效的音素证据 ID')
+  }
+  const phoneIds = value as string[]
+  if (
+    new Set(phoneIds).size !== phoneIds.length ||
+    phoneIds.some((phoneId) => !phoneWords.has(phoneId) || cited.has(phoneId)) ||
+    phoneIds.some((phoneId) => phoneWords.get(phoneId) !== word)
+  ) {
+    throw new Error('LLM 语音纠错引用与单词不匹配、重复或不存在的音素证据 ID')
+  }
+  phoneIds.forEach((phoneId) => cited.add(phoneId))
+  return phoneIds
 }
 
-function alignWords(
-  reference: readonly string[],
-  transcript: readonly string[]
-): AlignedWordPair[] {
-  const columns = transcript.length + 1
-  const costs = new Uint32Array((reference.length + 1) * columns)
-  const operations = new Uint8Array(costs.length)
-  for (let refIndex = 1; refIndex <= reference.length; refIndex += 1) {
-    costs[refIndex * columns] = refIndex
-    operations[refIndex * columns] = 1
+function parseJsonObject(response: string): Record<string, unknown> {
+  let candidate = response.replace(/^\uFEFF/, '').trim()
+  if (candidate.startsWith('```')) {
+    const lines = candidate.split(/\r?\n/).slice(1)
+    if (lines.at(-1)?.trim() === '```') lines.pop()
+    candidate = lines.join('\n').trim()
   }
-  for (let transcriptIndex = 1; transcriptIndex <= transcript.length; transcriptIndex += 1) {
-    costs[transcriptIndex] = transcriptIndex
-    operations[transcriptIndex] = 2
-  }
-  for (let refIndex = 1; refIndex <= reference.length; refIndex += 1) {
-    for (let transcriptIndex = 1; transcriptIndex <= transcript.length; transcriptIndex += 1) {
-      const offset = refIndex * columns + transcriptIndex
-      const diagonal =
-        costs[(refIndex - 1) * columns + transcriptIndex - 1] +
-        Number(reference[refIndex - 1] !== transcript[transcriptIndex - 1])
-      const deletion = costs[(refIndex - 1) * columns + transcriptIndex] + 1
-      const insertion = costs[refIndex * columns + transcriptIndex - 1] + 1
-      if (diagonal <= deletion && diagonal <= insertion) {
-        costs[offset] = diagonal
-        operations[offset] = 0
-      } else if (deletion <= insertion) {
-        costs[offset] = deletion
-        operations[offset] = 1
-      } else {
-        costs[offset] = insertion
-        operations[offset] = 2
-      }
+  let value: unknown
+  try {
+    value = JSON.parse(candidate)
+  } catch {
+    const start = candidate.indexOf('{')
+    const end = candidate.lastIndexOf('}')
+    if (start < 0 || end <= start) throw new Error('LLM 语音纠错结果不包含 JSON 对象')
+    try {
+      value = JSON.parse(candidate.slice(start, end + 1))
+    } catch {
+      throw new Error('LLM 语音纠错结果不是有效 JSON')
     }
   }
-
-  const reversed: AlignedWordPair[] = []
-  let refIndex = reference.length
-  let transcriptIndex = transcript.length
-  while (refIndex > 0 || transcriptIndex > 0) {
-    const operation = operations[refIndex * columns + transcriptIndex]
-    if (operation === 0 && refIndex > 0 && transcriptIndex > 0) {
-      const referenceWord = reference[refIndex - 1]
-      const transcriptWord = transcript[transcriptIndex - 1]
-      reversed.push({
-        operation: referenceWord === transcriptWord ? 'match' : 'substitution',
-        reference: referenceWord,
-        transcript: transcriptWord
-      })
-      refIndex -= 1
-      transcriptIndex -= 1
-    } else if (operation === 1 && refIndex > 0) {
-      reversed.push({ operation: 'deletion', reference: reference[refIndex - 1] })
-      refIndex -= 1
-    } else if (transcriptIndex > 0) {
-      reversed.push({ operation: 'insertion', transcript: transcript[transcriptIndex - 1] })
-      transcriptIndex -= 1
-    } else {
-      break
-    }
-  }
-  return reversed.reverse()
+  if (!isRecord(value)) throw new Error('LLM 语音纠错结果必须是 JSON 对象')
+  return value
 }
 
-function dictionaryPronunciations(word: string): string[][] {
-  const pronunciations: string[][] = []
-  const primary = dictionary[word]
-  if (primary) pronunciations.push(splitPronunciation(primary))
-  for (let index = 1; index <= 20; index += 1) {
-    const variant = dictionary[`${word}(${index})`]
-    if (variant) pronunciations.push(splitPronunciation(variant))
-  }
-  return pronunciations
-}
-
-function splitPronunciation(value: string): string[] {
-  return value.trim().split(/\s+/)
+function hasExactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
+  const actual = Object.keys(value)
+  return actual.length === keys.length && keys.every((key) => Object.hasOwn(value, key))
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

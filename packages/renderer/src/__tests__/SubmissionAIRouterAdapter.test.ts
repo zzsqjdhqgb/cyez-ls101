@@ -1,6 +1,7 @@
 import type { AIRouterClient } from '@ls101/airouter'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  createAIRouterPronunciationAssessor,
   createAIRouterSpeechRecognizer,
   createAIRouterTextGradingModel,
   listSubmissionAIModels
@@ -61,6 +62,14 @@ describe('submission AIRouter adapter', () => {
         yield { type: 'output' as const, delta: '4,"comment":"ok"}' }
       })()
     )
+    vi.mocked(client.assessPronunciation).mockResolvedValue({
+      referenceText: 'Read this.',
+      recognizedPhones: ['ɹ'],
+      overallScore: 100,
+      words: [],
+      pauses: [],
+      feedbackMarkdown: ''
+    })
     const selection = { providerId: 'provider', modelId: 'model' }
     const audio = {
       resourceKey: 'audio',
@@ -77,6 +86,20 @@ describe('submission AIRouter adapter', () => {
     await expect(
       createAIRouterTextGradingModel(selection, client).generate('prompt')
     ).resolves.toBe('{"score":4,"comment":"ok"}')
+    await expect(
+      createAIRouterPronunciationAssessor(client).assess({
+        audio,
+        referenceText: 'Read this.'
+      })
+    ).resolves.toMatchObject({ referenceText: 'Read this.' })
+    expect(client.assessPronunciation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerConfigId: 'builtin-facebook-phoneme',
+        modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f',
+        referenceText: 'Read this.'
+      }),
+      undefined
+    )
   })
 })
 

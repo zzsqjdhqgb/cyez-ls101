@@ -12,6 +12,7 @@ import type {
   ResolvedGradingAnswer
 } from '@ls101/submission-library'
 import { correctSpeechWithLLM, type SpeechCorrectionTrace } from './speech-correction'
+import type { PronunciationAssessmentResult } from './pronunciation'
 
 export {
   buildSpeechCorrectionPrompt,
@@ -21,10 +22,13 @@ export {
 } from './speech-correction'
 export type {
   SpeechCorrectionEvidence,
+  SpeechCorrectionDecision,
   SpeechCorrectionResult,
   SpeechCorrectionTrace,
+  SpeechFeedbackItem,
+  SpeechPhoneAlignmentEvidence,
   SpeechWordAlignmentEvidence,
-  SpeechWordAlignmentOperation
+  WithheldSpeechDifference
 } from './speech-correction'
 
 export interface SpeechRecognitionModelSelection {
@@ -43,6 +47,18 @@ export interface SpeechRecognitionRequest {
 
 export interface SpeechRecognizer {
   recognize(request: SpeechRecognitionRequest, options?: { signal?: AbortSignal }): Promise<string>
+}
+
+export interface PronunciationAssessmentRequest {
+  audio: GradingResourceInput & { durationMs: number }
+  referenceText: string
+}
+
+export interface PronunciationAssessor {
+  assess(
+    request: PronunciationAssessmentRequest,
+    options?: { signal?: AbortSignal }
+  ): Promise<PronunciationAssessmentResult>
 }
 
 export interface TextGradingModel {
@@ -81,6 +97,7 @@ export interface AIGradingProgress {
 
 export interface AIGradingDependencies {
   recognizer: SpeechRecognizer
+  pronunciationAssessor: PronunciationAssessor
   textModel: TextGradingModel
   speechRecognitionModel: SpeechRecognitionModelSelection
   textModelSelection: TextGradingModelSelection
@@ -139,10 +156,18 @@ export async function executeAIGrading(
     if (typeof transcript !== 'string') {
       throw new AIGradingError('INVALID_SPEECH_RESULT', '语音识别和语音纠错必须返回字符串')
     }
+    const referenceText = answer.type === 'fixed-speech' ? answer.text : transcript
+    const assessment = await dependencies.pronunciationAssessor.assess(
+      { audio: answer.audio, referenceText },
+      { signal: options.signal }
+    )
     const correctionResult = await correctSpeechWithLLM(
       {
         transcript,
-        ...(answer.type === 'fixed-speech' ? { referenceText: answer.text } : {})
+        referenceText,
+        referenceSource:
+          answer.type === 'fixed-speech' ? 'known-script' : 'asr-provisional-transcript',
+        assessment
       },
       dependencies.textModel,
       { signal: options.signal }

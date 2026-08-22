@@ -11,27 +11,38 @@ describe('AI grading engine', () => {
   it('recognizes and corrects every answer separately before one text grading call', async () => {
     const input = gradingInput()
     const recognize = vi.fn().mockResolvedValueOnce('Read won.').mockResolvedValueOnce('Free talk.')
+    const assess = vi
+      .fn()
+      .mockImplementation(({ referenceText }: { referenceText: string }) =>
+        Promise.resolve(pronunciationAssessment(referenceText))
+      )
     const generate = vi
       .fn()
       .mockResolvedValueOnce(
-        '{"items":[{"evidenceId":"W002","decision":"uncertain","feedback":"one 可能被 ASR 识别为 won，建议复听。"}]}'
+        '{"summaryZh":"未发现可信问题。","feedbackItems":[],"withheldDifferences":[],"limitationsZh":[]}'
+      )
+      .mockResolvedValueOnce(
+        '{"summaryZh":"自由表达未发现可信问题。","feedbackItems":[],"withheldDifferences":[],"limitationsZh":[]}'
       )
       .mockResolvedValueOnce('{"score":4.125,"comment":"Good answer"}')
 
-    const execution = await executeAIGrading(input, dependencies({ recognize, generate }))
+    const execution = await executeAIGrading(input, dependencies({ recognize, assess, generate }))
 
     expect(recognize).toHaveBeenCalledTimes(2)
-    expect(generate).toHaveBeenCalledTimes(2)
-    expect(generate.mock.calls[0][0]).toContain('CMUdict 0.7b ARPAbet')
-    expect(generate.mock.calls[0][0]).toContain('"operation": "substitution"')
-    expect(generate.mock.calls[1][0]).toContain('Read won.')
-    expect(generate.mock.calls[1][0]).toContain('Free talk.')
-    expect(generate.mock.calls[1][0]).toContain('建议复听')
-    expect(generate.mock.calls[1][0]).not.toContain('correctionTrace')
+    expect(assess).toHaveBeenCalledTimes(2)
+    expect(assess.mock.calls[0][0].referenceText).toBe('Read one.')
+    expect(assess.mock.calls[1][0].referenceText).toBe('Free talk.')
+    expect(generate).toHaveBeenCalledTimes(3)
+    expect(generate.mock.calls[0][0]).toContain('CMUdict 0.7b')
+    expect(generate.mock.calls[0][0]).toContain('"phoneId": "W001-P01"')
+    expect(generate.mock.calls[1][0]).toContain('"referenceSource": "asr-provisional-transcript"')
+    expect(generate.mock.calls[2][0]).toContain('Read won.')
+    expect(generate.mock.calls[2][0]).toContain('Free talk.')
+    expect(generate.mock.calls[2][0]).not.toContain('correctionTrace')
     expect(execution.result).toEqual({ score: 4.125, comment: 'Good answer' })
     expect(execution.trace.answers.map((answer) => answer.answerId)).toEqual(['reading', 'talk'])
-    expect(execution.trace.answers[0].correctionTrace.evidence?.alignment).toHaveLength(2)
-    expect(execution.trace.answers[0].correctionTrace.rawResponse).toContain('W002')
+    expect(execution.trace.answers[0].correctionTrace.evidence?.words).toHaveLength(2)
+    expect(execution.trace.answers[0].correctionTrace.rawResponse).toContain('feedbackItems')
   })
 
   it('stops the item before text grading when speech processing fails', async () => {
@@ -68,16 +79,53 @@ describe('AI grading engine', () => {
 function dependencies(
   overrides: Partial<{
     recognize: AIGradingDependencies['recognizer']['recognize']
+    assess: AIGradingDependencies['pronunciationAssessor']['assess']
     generate: AIGradingDependencies['textModel']['generate']
   }> = {}
 ): AIGradingDependencies {
   return {
     recognizer: { recognize: overrides.recognize ?? vi.fn().mockResolvedValue('transcript') },
+    pronunciationAssessor: {
+      assess:
+        overrides.assess ??
+        vi
+          .fn()
+          .mockImplementation(({ referenceText }) =>
+            Promise.resolve(pronunciationAssessment(referenceText))
+          )
+    },
     textModel: {
       generate: overrides.generate ?? vi.fn().mockResolvedValue('{"score":4,"comment":"comment"}')
     },
     speechRecognitionModel: { providerId: 'builtin', modelId: 'qwen3-asr' },
     textModelSelection: { providerId: 'provider', modelId: 'model' }
+  }
+}
+
+function pronunciationAssessment(referenceText: string) {
+  const words = referenceText.match(/[A-Za-z]+/g) ?? []
+  return {
+    referenceText,
+    recognizedPhones: words.map(() => 'ə'),
+    overallScore: 100,
+    words: words.map((text, index) => ({
+      text,
+      expectedPhones: ['ə'],
+      score: 100,
+      startMs: index * 100,
+      endMs: (index + 1) * 100,
+      phones: [
+        {
+          expected: 'ə',
+          score: 100,
+          confidence: 1,
+          startMs: index * 100,
+          endMs: (index + 1) * 100
+        }
+      ]
+    })),
+    pauses: [],
+    feedbackMarkdown: ''
   }
 }
 

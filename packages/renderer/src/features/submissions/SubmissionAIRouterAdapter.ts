@@ -1,5 +1,10 @@
 import { airouterClient, type AIRouterClient } from '@ls101/airouter/renderer'
+import {
+  BUILTIN_PRONUNCIATION_MODEL_ID,
+  BUILTIN_PRONUNCIATION_PROVIDER_ID
+} from '@ls101/airouter/shared'
 import type {
+  PronunciationAssessor,
   SpeechRecognizer,
   SpeechRecognitionModelSelection,
   TextGradingModel,
@@ -58,6 +63,28 @@ export function createAIRouterSpeechRecognizer(
         options
       )
       return result.text
+    }
+  }
+}
+
+export function createAIRouterPronunciationAssessor(
+  client: AIRouterClient = airouterClient
+): PronunciationAssessor {
+  return {
+    assess({ audio, referenceText }, options) {
+      return client.assessPronunciation(
+        {
+          providerConfigId: BUILTIN_PRONUNCIATION_PROVIDER_ID,
+          modelId: BUILTIN_PRONUNCIATION_MODEL_ID,
+          referenceText,
+          audio: {
+            data: audio.data,
+            mediaType: audio.mediaType ?? 'audio/webm',
+            filename: audio.filename
+          }
+        },
+        options
+      )
     }
   }
 }

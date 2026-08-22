@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { PronunciationAssessmentResult } from '../pronunciation'
 import {
   correctSpeechWithLLM,
   createSpeechCorrectionEvidence,
@@ -6,94 +7,178 @@ import {
 } from '../speech-correction'
 
 describe('LLM speech correction', () => {
-  it('aligns reference and ASR words and attaches CMUdict ARPAbet evidence', () => {
-    const evidence = createSpeechCorrectionEvidence(
-      'Three weather reports.',
-      'Free weather report.'
-    )
+  it('creates complete unscored CMUdict CTC evidence with stable phone IDs', () => {
+    const evidence = createSpeechCorrectionEvidence({
+      transcript: 'reliable',
+      referenceText: 'reliable',
+      referenceSource: 'known-script',
+      assessment: assessment([
+        {
+          text: 'reliable',
+          phones: [
+            phone('ɹ', undefined, 0, 80),
+            phone('ə', 'əl', 80, 160),
+            phone('l', undefined, 160, 220)
+          ]
+        }
+      ])
+    })
 
-    expect(evidence.phonemeSource).toBe('CMUdict 0.7b ARPAbet')
-    expect(
-      evidence.alignment.map(({ evidenceId, operation }) => ({ evidenceId, operation }))
-    ).toEqual([
-      { evidenceId: 'W001', operation: 'substitution' },
-      { evidenceId: 'W002', operation: 'match' },
-      { evidenceId: 'W003', operation: 'substitution' }
+    expect(evidence.referencePhones).toContain('CMUdict')
+    expect(evidence.words[0].phones).toEqual([
+      {
+        phoneId: 'W001-P01',
+        expectedPhone: 'ɹ',
+        acousticWinner: 'ɹ',
+        startMs: 0,
+        endMs: 80
+      },
+      {
+        phoneId: 'W001-P02',
+        expectedPhone: 'ə',
+        acousticWinner: 'əl',
+        startMs: 80,
+        endMs: 160
+      },
+      {
+        phoneId: 'W001-P03',
+        expectedPhone: 'l',
+        acousticWinner: 'l',
+        startMs: 160,
+        endMs: 220
+      }
     ])
-    expect(evidence.alignment[0].referencePronunciations[0]).toEqual(['TH', 'R', 'IY1'])
-    expect(evidence.alignment[0].transcriptPronunciations[0]).toEqual(['F', 'R', 'IY1'])
-    expect(JSON.stringify(evidence).toLowerCase()).not.toContain('espeak')
+    expect(JSON.stringify(evidence)).not.toMatch(/score|confidence|threshold|pause/i)
   })
 
-  it('represents word deletion and insertion explicitly', () => {
-    const deletion = createSpeechCorrectionEvidence('I really like it.', 'I like it.')
-    const insertion = createSpeechCorrectionEvidence('I like it.', 'I really like it.')
-
-    expect(deletion.alignment.map((item) => item.operation)).toEqual([
-      'match',
-      'deletion',
-      'match',
-      'match'
-    ])
-    expect(insertion.alignment.map((item) => item.operation)).toEqual([
-      'match',
-      'insertion',
-      'match',
-      'match'
-    ])
-  })
-
-  it('uses the LLM only for non-matching evidence and retains its audit trace', async () => {
+  it('always sends the complete alignment to the LLM and retains the audit trace', async () => {
     const generate = vi.fn().mockResolvedValue(
       JSON.stringify({
-        items: [
+        summaryZh: '未发现需要纠正的问题。',
+        feedbackItems: [],
+        withheldDifferences: [
           {
-            evidenceId: 'W001',
-            decision: 'likely_issue',
-            feedback: 'three 的开头可能没有清楚读成目标词，建议对照录音复听。'
+            phoneIds: ['W001-P02'],
+            word: 'reliable',
+            reasonZh: '/ə/ + /l/ 与复合 token /əl/ 很可能是等价表示。'
           }
-        ]
+        ],
+        limitationsZh: ['声学赢家不是人工听辨真值。']
       })
     )
-
     const result = await correctSpeechWithLLM(
-      { referenceText: 'three', transcript: 'free' },
+      {
+        transcript: 'reliable',
+        referenceText: 'reliable',
+        referenceSource: 'known-script',
+        assessment: assessment([
+          {
+            text: 'reliable',
+            phones: [phone('ɹ'), phone('ə', 'əl'), phone('l')]
+          }
+        ])
+      },
       { generate }
     )
 
     expect(generate).toHaveBeenCalledOnce()
-    expect(generate.mock.calls[0][0]).toContain('"evidenceId": "W001"')
-    expect(result.correction).toContain('可能需要纠正')
-    expect(result.correction).toContain('three 的开头')
-    expect(result.trace.rawResponse).toContain('likely_issue')
+    expect(generate.mock.calls[0][0]).toContain('完整词级对齐 JSON')
+    expect(generate.mock.calls[0][0]).toContain('/ə/ + /l/ 对 /əl/')
+    expect(generate.mock.calls[0][0]).toContain('"phoneId": "W001-P03"')
+    expect(result.correction).toContain('未发现有充分证据')
+    expect(result.correction).not.toContain('reliable')
+    expect(result.trace.rawResponse).toContain('withheldDifferences')
   })
 
-  it('does not ask the LLM to invent issues when all words match', async () => {
-    const generate = vi.fn()
+  it('still asks the LLM to review a fully matching acoustic alignment', async () => {
+    const generate = vi.fn().mockResolvedValue(
+      JSON.stringify({
+        summaryZh: '完整对齐未显示有教学价值的问题。',
+        feedbackItems: [],
+        withheldDifferences: [],
+        limitationsZh: []
+      })
+    )
 
-    const result = await correctSpeechWithLLM(
-      { referenceText: 'Read this.', transcript: 'read this' },
+    await correctSpeechWithLLM(
+      {
+        transcript: 'three',
+        referenceText: 'three',
+        referenceSource: 'known-script',
+        assessment: assessment([{ text: 'three', phones: [phone('θ'), phone('ɹ'), phone('iː')] }])
+      },
       { generate }
     )
 
-    expect(generate).not.toHaveBeenCalled()
-    expect(result.correction).toContain('单词序列一致')
-    expect(result.trace.evidence?.alignment.every((item) => item.operation === 'match')).toBe(true)
+    expect(generate).toHaveBeenCalledOnce()
   })
 
-  it('rejects unknown, duplicate, or omitted evidence IDs', () => {
+  it('rejects unknown, duplicate, or cross-word evidence IDs', () => {
+    const evidence = createSpeechCorrectionEvidence({
+      transcript: 'three free',
+      referenceText: 'three free',
+      referenceSource: 'known-script',
+      assessment: assessment([
+        { text: 'three', phones: [phone('θ')] },
+        { text: 'free', phones: [phone('f')] }
+      ])
+    })
+    const response = (feedbackItems: unknown[], withheldDifferences: unknown[] = []): string =>
+      JSON.stringify({ summaryZh: 'x', feedbackItems, withheldDifferences, limitationsZh: [] })
+    const item = (phoneIds: string[], word = 'three') => ({
+      phoneIds,
+      word,
+      decision: 'needs_listening',
+      findingZh: 'x',
+      rationaleZh: 'x',
+      practiceZh: 'x'
+    })
+
+    expect(() => parseSpeechCorrectionResponse(response([item(['W999-P01'])]), evidence)).toThrow(
+      '证据 ID'
+    )
     expect(() =>
       parseSpeechCorrectionResponse(
-        '{"items":[{"evidenceId":"W999","decision":"uncertain","feedback":"x"}]}',
-        ['W001']
+        response([item(['W001-P01'])], [{ phoneIds: ['W001-P01'], word: 'three', reasonZh: 'x' }]),
+        evidence
       )
-    ).toThrow('证据约束')
-    expect(() => parseSpeechCorrectionResponse('{"items":[]}', ['W001'])).toThrow('未覆盖')
+    ).toThrow('证据 ID')
     expect(() =>
-      parseSpeechCorrectionResponse(
-        '{"items":[{"evidenceId":"W001","decision":"no_issue","feedback":""},{"evidenceId":"W001","decision":"no_issue","feedback":""}]}',
-        ['W001']
-      )
-    ).toThrow('证据约束')
+      parseSpeechCorrectionResponse(response([item(['W002-P01'], 'three')]), evidence)
+    ).toThrow('证据 ID')
   })
 })
+
+function phone(
+  expected: string,
+  observed?: string,
+  startMs = 0,
+  endMs = 100
+): PronunciationAssessmentResult['words'][number]['phones'][number] {
+  return { expected, ...(observed ? { observed } : {}), score: 50, confidence: 0.5, startMs, endMs }
+}
+
+function assessment(
+  words: Array<{
+    text: string
+    phones: PronunciationAssessmentResult['words'][number]['phones']
+  }>
+): PronunciationAssessmentResult {
+  return {
+    referenceText: words.map((word) => word.text).join(' '),
+    recognizedPhones: words.flatMap((word) =>
+      word.phones.map((item) => item.observed ?? item.expected)
+    ),
+    overallScore: 50,
+    words: words.map((word) => ({
+      text: word.text,
+      expectedPhones: word.phones.map((item) => item.expected),
+      score: 50,
+      startMs: word.phones[0]?.startMs ?? 0,
+      endMs: word.phones.at(-1)?.endMs ?? 0,
+      phones: word.phones
+    })),
+    pauses: [],
+    feedbackMarkdown: 'ignored'
+  }
+}

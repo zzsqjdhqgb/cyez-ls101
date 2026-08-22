@@ -19,20 +19,31 @@ import { SubmissionSettlementPage } from '../features/submissions/SubmissionSett
 
 const aiAdapterMocks = vi.hoisted(() => ({
   recognize: vi.fn().mockResolvedValue('recognized answer'),
-  generate: vi.fn().mockImplementation(async (prompt: string) => {
-    const marker = '单词级对齐证据 JSON：\n'
-    if (prompt.includes(marker)) {
-      const evidence = JSON.parse(prompt.slice(prompt.indexOf(marker) + marker.length)) as {
-        alignment: Array<{ evidenceId: string; operation: string }>
+  assess: vi.fn().mockImplementation(async ({ referenceText }: { referenceText: string }) => ({
+    referenceText,
+    recognizedPhones: ['ɹ'],
+    overallScore: 100,
+    words: [
+      {
+        text: referenceText.split(/\s+/)[0],
+        expectedPhones: ['ɹ'],
+        score: 100,
+        startMs: 0,
+        endMs: 100,
+        phones: [{ expected: 'ɹ', score: 100, confidence: 1, startMs: 0, endMs: 100 }]
       }
+    ],
+    pauses: [],
+    feedbackMarkdown: ''
+  })),
+  generate: vi.fn().mockImplementation(async (prompt: string) => {
+    const marker = '完整词级对齐 JSON：\n'
+    if (prompt.includes(marker)) {
       return JSON.stringify({
-        items: evidence.alignment
-          .filter((item) => item.operation !== 'match')
-          .map((item) => ({
-            evidenceId: item.evidenceId,
-            decision: 'uncertain',
-            feedback: 'ASR 单词差异需要复听确认。'
-          }))
+        summaryZh: '完整声学对齐未发现可信问题。',
+        feedbackItems: [],
+        withheldDifferences: [],
+        limitationsZh: []
       })
     }
     return '{"score":4,"comment":"AI comment"}'
@@ -57,6 +68,7 @@ vi.mock('../features/submissions/SubmissionAIRouterAdapter', () => ({
       }
     ]
   }),
+  createAIRouterPronunciationAssessor: vi.fn(() => ({ assess: aiAdapterMocks.assess })),
   createAIRouterSpeechRecognizer: vi.fn(() => ({ recognize: aiAdapterMocks.recognize })),
   createAIRouterTextGradingModel: vi.fn(() => ({ generate: aiAdapterMocks.generate }))
 }))
@@ -205,7 +217,7 @@ describe('submission grading UI', () => {
     fireEvent.click(await screen.findByRole('button', { name: '全部审查' }))
     expect(await screen.findByText('语音识别与发音纠正')).toBeInTheDocument()
     expect(screen.getByText('识别文本：recognized answer')).toBeInTheDocument()
-    expect(screen.getAllByText(/ASR 单词差异需要复听确认/)).not.toHaveLength(0)
+    expect(screen.getAllByText(/完整声学对齐未发现可信问题/)).not.toHaveLength(0)
     fireEvent.change(await screen.findByLabelText('分数'), { target: { value: '3.125' } })
     fireEvent.change(screen.getByLabelText('评语'), { target: { value: 'Reviewed' } })
     fireEvent.click(screen.getByRole('button', { name: '确认本题' }))
