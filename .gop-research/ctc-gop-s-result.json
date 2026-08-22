@@ -1,0 +1,823 @@
+{
+  "source": "frank613/CTC-based-GOP is24/generate-GOP/gop-ctc-af-S.py",
+  "model": "/workspace/.gop-research/model",
+  "reference": "The rapid development of artificial intelligence has raised important questions about the future of employment and the skills that young people need to acquire.",
+  "ctc_frames": 746,
+  "phone_count": 116,
+  "canonical_log_likelihood_loss": 17.198623663268837,
+  "phones": [
+    {
+      "index": 0,
+      "word": "the",
+      "phone": "DH",
+      "token_id": 10,
+      "gop": -0.000173574767860174
+    },
+    {
+      "index": 1,
+      "word": "the",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.000303274474891424
+    },
+    {
+      "index": 2,
+      "word": "rapid",
+      "phone": "R",
+      "token_id": 28,
+      "gop": -6.86705930554865e-05
+    },
+    {
+      "index": 3,
+      "word": "rapid",
+      "phone": "AE",
+      "token_id": 2,
+      "gop": -0.0002670348508679865
+    },
+    {
+      "index": 4,
+      "word": "rapid",
+      "phone": "P",
+      "token_id": 27,
+      "gop": -7.0577941688299e-05
+    },
+    {
+      "index": 5,
+      "word": "rapid",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -4.445069319091591
+    },
+    {
+      "index": 6,
+      "word": "rapid",
+      "phone": "D",
+      "token_id": 9,
+      "gop": -0.000146871887000799
+    },
+    {
+      "index": 7,
+      "word": "development",
+      "phone": "D",
+      "token_id": 9,
+      "gop": -9.3466125282049e-05
+    },
+    {
+      "index": 8,
+      "word": "development",
+      "phone": "IH",
+      "token_id": 17,
+      "gop": -0.002725607238563299
+    },
+    {
+      "index": 9,
+      "word": "development",
+      "phone": "V",
+      "token_id": 35,
+      "gop": -0.0001678527219617365
+    },
+    {
+      "index": 10,
+      "word": "development",
+      "phone": "EH",
+      "token_id": 11,
+      "gop": -0.000371939025672674
+    },
+    {
+      "index": 11,
+      "word": "development",
+      "phone": "L",
+      "token_id": 21,
+      "gop": -3.2430969032049006e-05
+    },
+    {
+      "index": 12,
+      "word": "development",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.000661856017860174
+    },
+    {
+      "index": 13,
+      "word": "development",
+      "phone": "P",
+      "token_id": 27,
+      "gop": -0.000135427795203924
+    },
+    {
+      "index": 14,
+      "word": "development",
+      "phone": "M",
+      "token_id": 22,
+      "gop": -7.62999875867365e-05
+    },
+    {
+      "index": 15,
+      "word": "development",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.0003318847043836115
+    },
+    {
+      "index": 16,
+      "word": "development",
+      "phone": "N",
+      "token_id": 23,
+      "gop": -4.0060363563299006e-05
+    },
+    {
+      "index": 17,
+      "word": "development",
+      "phone": "T",
+      "token_id": 31,
+      "gop": -0.000150686584266424
+    },
+    {
+      "index": 18,
+      "word": "of",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.000455862365516424
+    },
+    {
+      "index": 19,
+      "word": "of",
+      "phone": "V",
+      "token_id": 35,
+      "gop": -6.2948547157049e-05
+    },
+    {
+      "index": 20,
+      "word": "artificial",
+      "phone": "AA",
+      "token_id": 1,
+      "gop": -0.0001983703000867365
+    },
+    {
+      "index": 21,
+      "word": "artificial",
+      "phone": "R",
+      "token_id": 28,
+      "gop": -8.5836730750799e-05
+    },
+    {
+      "index": 22,
+      "word": "artificial",
+      "phone": "T",
+      "token_id": 31,
+      "gop": -7.62999875867365e-05
+    },
+    {
+      "index": 23,
+      "word": "artificial",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.000654226623328924
+    },
+    {
+      "index": 24,
+      "word": "artificial",
+      "phone": "F",
+      "token_id": 14,
+      "gop": -3.820739539861506e-06
+    },
+    {
+      "index": 25,
+      "word": "artificial",
+      "phone": "IH",
+      "token_id": 17,
+      "gop": -0.0001564086301648615
+    },
+    {
+      "index": 26,
+      "word": "artificial",
+      "phone": "SH",
+      "token_id": 30,
+      "gop": -0.0005645812375867365
+    },
+    {
+      "index": 27,
+      "word": "artificial",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.0001258910520398615
+    },
+    {
+      "index": 28,
+      "word": "artificial",
+      "phone": "L",
+      "token_id": 21,
+      "gop": -3.4338317664861506e-05
+    },
+    {
+      "index": 29,
+      "word": "intelligence",
+      "phone": "IH",
+      "token_id": 17,
+      "gop": -0.000154501281532049
+    },
+    {
+      "index": 30,
+      "word": "intelligence",
+      "phone": "N",
+      "token_id": 23,
+      "gop": -6.042274236506273e-09
+    },
+    {
+      "index": 31,
+      "word": "intelligence",
+      "phone": "T",
+      "token_id": 31,
+      "gop": -7.4392638953924e-05
+    },
+    {
+      "index": 32,
+      "word": "intelligence",
+      "phone": "EH",
+      "token_id": 11,
+      "gop": -0.000204092345985174
+    },
+    {
+      "index": 33,
+      "word": "intelligence",
+      "phone": "L",
+      "token_id": 21,
+      "gop": -2.4801574500799006e-05
+    },
+    {
+      "index": 34,
+      "word": "intelligence",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.0028190673215711115
+    },
+    {
+      "index": 35,
+      "word": "intelligence",
+      "phone": "JH",
+      "token_id": 19,
+      "gop": -0.0004577697141492365
+    },
+    {
+      "index": 36,
+      "word": "intelligence",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.0002288878782117365
+    },
+    {
+      "index": 37,
+      "word": "intelligence",
+      "phone": "N",
+      "token_id": 23,
+      "gop": -3.8153014930486506e-05
+    },
+    {
+      "index": 38,
+      "word": "intelligence",
+      "phone": "S",
+      "token_id": 29,
+      "gop": -0.000867849670203924
+    },
+    {
+      "index": 39,
+      "word": "has",
+      "phone": "HH",
+      "token_id": 16,
+      "gop": -8.5836730750799e-05
+    },
+    {
+      "index": 40,
+      "word": "has",
+      "phone": "AE",
+      "token_id": 2,
+      "gop": -1.7880544722898328
+    },
+    {
+      "index": 41,
+      "word": "has",
+      "phone": "Z",
+      "token_id": 38,
+      "gop": -0.000211721740516424
+    },
+    {
+      "index": 42,
+      "word": "raised",
+      "phone": "R",
+      "token_id": 28,
+      "gop": -0.000154501281532049
+    },
+    {
+      "index": 43,
+      "word": "raised",
+      "phone": "EY",
+      "token_id": 13,
+      "gop": -0.0003967345578992365
+    },
+    {
+      "index": 44,
+      "word": "raised",
+      "phone": "Z",
+      "token_id": 38,
+      "gop": -0.0012550414426648615
+    },
+    {
+      "index": 45,
+      "word": "raised",
+      "phone": "D",
+      "token_id": 9,
+      "gop": -0.000474935851844549
+    },
+    {
+      "index": 46,
+      "word": "important",
+      "phone": "IH",
+      "token_id": 17,
+      "gop": -0.0002784789426648615
+    },
+    {
+      "index": 47,
+      "word": "important",
+      "phone": "M",
+      "token_id": 22,
+      "gop": -1.3357482703924006e-05
+    },
+    {
+      "index": 48,
+      "word": "important",
+      "phone": "P",
+      "token_id": 27,
+      "gop": -8.2022033485174e-05
+    },
+    {
+      "index": 49,
+      "word": "important",
+      "phone": "AO",
+      "token_id": 4,
+      "gop": -0.002161032043250799
+    },
+    {
+      "index": 50,
+      "word": "important",
+      "phone": "R",
+      "token_id": 28,
+      "gop": -8.9651428016424e-05
+    },
+    {
+      "index": 51,
+      "word": "important",
+      "phone": "T",
+      "token_id": 31,
+      "gop": -0.0001373351438367365
+    },
+    {
+      "index": 52,
+      "word": "important",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.000211721740516424
+    },
+    {
+      "index": 53,
+      "word": "important",
+      "phone": "N",
+      "token_id": 23,
+      "gop": -4.7689758094549006e-05
+    },
+    {
+      "index": 54,
+      "word": "important",
+      "phone": "T",
+      "token_id": 31,
+      "gop": -0.001203543029578924
+    },
+    {
+      "index": 55,
+      "word": "questions",
+      "phone": "K",
+      "token_id": 20,
+      "gop": -9.15587766492365e-05
+    },
+    {
+      "index": 56,
+      "word": "questions",
+      "phone": "W",
+      "token_id": 36,
+      "gop": -0.000104910217078924
+    },
+    {
+      "index": 57,
+      "word": "questions",
+      "phone": "EH",
+      "token_id": 11,
+      "gop": -0.0002555907590711115
+    },
+    {
+      "index": 58,
+      "word": "questions",
+      "phone": "S",
+      "token_id": 29,
+      "gop": -0.0001335204465711115
+    },
+    {
+      "index": 59,
+      "word": "questions",
+      "phone": "CH",
+      "token_id": 8,
+      "gop": -0.0015831054075086115
+    },
+    {
+      "index": 60,
+      "word": "questions",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.000398641906532049
+    },
+    {
+      "index": 61,
+      "word": "questions",
+      "phone": "N",
+      "token_id": 23,
+      "gop": -4.7689758094549006e-05
+    },
+    {
+      "index": 62,
+      "word": "questions",
+      "phone": "Z",
+      "token_id": 38,
+      "gop": -0.000291830383094549
+    },
+    {
+      "index": 63,
+      "word": "about",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -3.820739539861506e-06
+    },
+    {
+      "index": 64,
+      "word": "about",
+      "phone": "B",
+      "token_id": 7,
+      "gop": -0.0001297057493054865
+    },
+    {
+      "index": 65,
+      "word": "about",
+      "phone": "AW",
+      "token_id": 5,
+      "gop": -0.0003738463743054865
+    },
+    {
+      "index": 66,
+      "word": "about",
+      "phone": "T",
+      "token_id": 31,
+      "gop": -0.000501638732703924
+    },
+    {
+      "index": 67,
+      "word": "the",
+      "phone": "DH",
+      "token_id": 10,
+      "gop": -0.000104910217078924
+    },
+    {
+      "index": 68,
+      "word": "the",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.0014915526731336115
+    },
+    {
+      "index": 69,
+      "word": "future",
+      "phone": "F",
+      "token_id": 14,
+      "gop": -3.820739539861506e-06
+    },
+    {
+      "index": 70,
+      "word": "future",
+      "phone": "Y",
+      "token_id": 37,
+      "gop": -6.042274236506273e-09
+    },
+    {
+      "index": 71,
+      "word": "future",
+      "phone": "UW",
+      "token_id": 34,
+      "gop": -0.000253683410438299
+    },
+    {
+      "index": 72,
+      "word": "future",
+      "phone": "CH",
+      "token_id": 8,
+      "gop": -0.000806814513953924
+    },
+    {
+      "index": 73,
+      "word": "future",
+      "phone": "ER",
+      "token_id": 12,
+      "gop": -0.000177389465125799
+    },
+    {
+      "index": 74,
+      "word": "of",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.0010681212766492365
+    },
+    {
+      "index": 75,
+      "word": "of",
+      "phone": "V",
+      "token_id": 35,
+      "gop": -0.0002594054563367365
+    },
+    {
+      "index": 76,
+      "word": "employment",
+      "phone": "EH",
+      "token_id": 11,
+      "gop": -4.319240576110634
+    },
+    {
+      "index": 77,
+      "word": "employment",
+      "phone": "M",
+      "token_id": 22,
+      "gop": -8.01146848523615e-05
+    },
+    {
+      "index": 78,
+      "word": "employment",
+      "phone": "P",
+      "token_id": 27,
+      "gop": -6.10411985242365e-05
+    },
+    {
+      "index": 79,
+      "word": "employment",
+      "phone": "L",
+      "token_id": 21,
+      "gop": -3.6245666297674006e-05
+    },
+    {
+      "index": 80,
+      "word": "employment",
+      "phone": "OY",
+      "token_id": 26,
+      "gop": -0.0004921019895398615
+    },
+    {
+      "index": 81,
+      "word": "employment",
+      "phone": "M",
+      "token_id": 22,
+      "gop": -5.9133849891424006e-05
+    },
+    {
+      "index": 82,
+      "word": "employment",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.0006332457883679865
+    },
+    {
+      "index": 83,
+      "word": "employment",
+      "phone": "N",
+      "token_id": 23,
+      "gop": -5.9133849891424006e-05
+    },
+    {
+      "index": 84,
+      "word": "employment",
+      "phone": "T",
+      "token_id": 31,
+      "gop": -0.000177389465125799
+    },
+    {
+      "index": 85,
+      "word": "and",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -3.34619522698954
+    },
+    {
+      "index": 86,
+      "word": "and",
+      "phone": "N",
+      "token_id": 23,
+      "gop": -4.9597106727361506e-05
+    },
+    {
+      "index": 87,
+      "word": "and",
+      "phone": "D",
+      "token_id": 9,
+      "gop": -0.0002136290891492365
+    },
+    {
+      "index": 88,
+      "word": "the",
+      "phone": "DH",
+      "token_id": 10,
+      "gop": -0.0001716674192273615
+    },
+    {
+      "index": 89,
+      "word": "the",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.0002403319700086115
+    },
+    {
+      "index": 90,
+      "word": "skills",
+      "phone": "S",
+      "token_id": 29,
+      "gop": -8.39293821179865e-05
+    },
+    {
+      "index": 91,
+      "word": "skills",
+      "phone": "K",
+      "token_id": 20,
+      "gop": -0.0001983703000867365
+    },
+    {
+      "index": 92,
+      "word": "skills",
+      "phone": "IH",
+      "token_id": 17,
+      "gop": -0.000421530090125799
+    },
+    {
+      "index": 93,
+      "word": "skills",
+      "phone": "L",
+      "token_id": 21,
+      "gop": -3.4338317664861506e-05
+    },
+    {
+      "index": 94,
+      "word": "skills",
+      "phone": "Z",
+      "token_id": 38,
+      "gop": -0.000162130676063299
+    },
+    {
+      "index": 95,
+      "word": "that",
+      "phone": "DH",
+      "token_id": 10,
+      "gop": -0.0001907409055554865
+    },
+    {
+      "index": 96,
+      "word": "that",
+      "phone": "AE",
+      "token_id": 2,
+      "gop": -0.07982254632547736
+    },
+    {
+      "index": 97,
+      "word": "that",
+      "phone": "T",
+      "token_id": 31,
+      "gop": -0.0003128112180554865
+    },
+    {
+      "index": 98,
+      "word": "young",
+      "phone": "Y",
+      "token_id": 37,
+      "gop": -0.0001373351438367365
+    },
+    {
+      "index": 99,
+      "word": "young",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.000165945373328924
+    },
+    {
+      "index": 100,
+      "word": "young",
+      "phone": "NG",
+      "token_id": 24,
+      "gop": -0.000185018859657049
+    },
+    {
+      "index": 101,
+      "word": "people",
+      "phone": "P",
+      "token_id": 27,
+      "gop": -8.77440793836115e-05
+    },
+    {
+      "index": 102,
+      "word": "people",
+      "phone": "IY",
+      "token_id": 18,
+      "gop": -0.0001335204465711115
+    },
+    {
+      "index": 103,
+      "word": "people",
+      "phone": "P",
+      "token_id": 27,
+      "gop": -8.01146848523615e-05
+    },
+    {
+      "index": 104,
+      "word": "people",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.0001678527219617365
+    },
+    {
+      "index": 105,
+      "word": "people",
+      "phone": "L",
+      "token_id": 21,
+      "gop": -0.004667288146766424
+    },
+    {
+      "index": 106,
+      "word": "need",
+      "phone": "N",
+      "token_id": 23,
+      "gop": -0.024511343322547674
+    },
+    {
+      "index": 107,
+      "word": "need",
+      "phone": "IY",
+      "token_id": 18,
+      "gop": -0.0032386840207898615
+    },
+    {
+      "index": 108,
+      "word": "need",
+      "phone": "D",
+      "token_id": 9,
+      "gop": -0.0065002501828992365
+    },
+    {
+      "index": 109,
+      "word": "to",
+      "phone": "T",
+      "token_id": 31,
+      "gop": -0.000108724914344549
+    },
+    {
+      "index": 110,
+      "word": "to",
+      "phone": "UW",
+      "token_id": 34,
+      "gop": -0.002828604064735174
+    },
+    {
+      "index": 111,
+      "word": "acquire",
+      "phone": "AH",
+      "token_id": 3,
+      "gop": -0.0003814757688367365
+    },
+    {
+      "index": 112,
+      "word": "acquire",
+      "phone": "K",
+      "token_id": 20,
+      "gop": -7.24852903211115e-05
+    },
+    {
+      "index": 113,
+      "word": "acquire",
+      "phone": "W",
+      "token_id": 36,
+      "gop": -1.9133909070490063e-06
+    },
+    {
+      "index": 114,
+      "word": "acquire",
+      "phone": "AY",
+      "token_id": 6,
+      "gop": -0.000165945373328924
+    },
+    {
+      "index": 115,
+      "word": "acquire",
+      "phone": "ER",
+      "token_id": 12,
+      "gop": -0.3414382994993055
+    }
+  ],
+  "decode": "<pad>"
+}

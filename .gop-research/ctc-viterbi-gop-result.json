@@ -1,0 +1,821 @@
+{
+  "source": "frank613/CTC-based-GOP is24/generate-GOP/gop_ctc_align.py",
+  "reference": "The rapid development of artificial intelligence has raised important questions about the future of employment and the skills that young people need to acquire.",
+  "ctc_frames": 746,
+  "phone_count": 116,
+  "rows": [
+    {
+      "index": 0,
+      "phone": "DH",
+      "start_frame": 68,
+      "end_frame": 69,
+      "gop_log_p": -0.00023504873613934758
+    },
+    {
+      "index": 1,
+      "phone": "AH",
+      "start_frame": 71,
+      "end_frame": 72,
+      "gop_log_p": -0.00033944645278005615
+    },
+    {
+      "index": 2,
+      "phone": "R",
+      "start_frame": 75,
+      "end_frame": 76,
+      "gop_log_p": -7.856200772768156e-05
+    },
+    {
+      "index": 3,
+      "phone": "AE",
+      "start_frame": 80,
+      "end_frame": 81,
+      "gop_log_p": -0.0002963385931224356
+    },
+    {
+      "index": 4,
+      "phone": "P",
+      "start_frame": 84,
+      "end_frame": 85,
+      "gop_log_p": -8.607281121380266e-05
+    },
+    {
+      "index": 5,
+      "phone": "AH",
+      "start_frame": 88,
+      "end_frame": 89,
+      "gop_log_p": -4.445116303053316
+    },
+    {
+      "index": 6,
+      "phone": "D",
+      "start_frame": 90,
+      "end_frame": 91,
+      "gop_log_p": -0.00024327614457012674
+    },
+    {
+      "index": 7,
+      "phone": "D",
+      "start_frame": 94,
+      "end_frame": 95,
+      "gop_log_p": -0.00022789452296057675
+    },
+    {
+      "index": 8,
+      "phone": "IH",
+      "start_frame": 96,
+      "end_frame": 97,
+      "gop_log_p": -0.0029484542463975626
+    },
+    {
+      "index": 9,
+      "phone": "V",
+      "start_frame": 99,
+      "end_frame": 100,
+      "gop_log_p": -0.00018258569470052958
+    },
+    {
+      "index": 10,
+      "phone": "EH",
+      "start_frame": 103,
+      "end_frame": 104,
+      "gop_log_p": -0.0005661063100864917
+    },
+    {
+      "index": 11,
+      "phone": "L",
+      "start_frame": 105,
+      "end_frame": 106,
+      "gop_log_p": -7.486623624461969e-05
+    },
+    {
+      "index": 12,
+      "phone": "AH",
+      "start_frame": 108,
+      "end_frame": 109,
+      "gop_log_p": -0.0007575042411336916
+    },
+    {
+      "index": 13,
+      "phone": "P",
+      "start_frame": 111,
+      "end_frame": 112,
+      "gop_log_p": -0.0001613031774202746
+    },
+    {
+      "index": 14,
+      "phone": "M",
+      "start_frame": 115,
+      "end_frame": 116,
+      "gop_log_p": -9.489509687970817e-05
+    },
+    {
+      "index": 15,
+      "phone": "AH",
+      "start_frame": 119,
+      "end_frame": 120,
+      "gop_log_p": -0.0003533987722192323
+    },
+    {
+      "index": 16,
+      "phone": "N",
+      "start_frame": 121,
+      "end_frame": 122,
+      "gop_log_p": -9.239146736203407e-05
+    },
+    {
+      "index": 17,
+      "phone": "T",
+      "start_frame": 125,
+      "end_frame": 126,
+      "gop_log_p": -0.00018473185603761275
+    },
+    {
+      "index": 18,
+      "phone": "AH",
+      "start_frame": 133,
+      "end_frame": 134,
+      "gop_log_p": -0.0005019970884658811
+    },
+    {
+      "index": 19,
+      "phone": "V",
+      "start_frame": 135,
+      "end_frame": 137,
+      "gop_log_p": -0.24874398485421984
+    },
+    {
+      "index": 20,
+      "phone": "AA",
+      "start_frame": 142,
+      "end_frame": 143,
+      "gop_log_p": -0.000291926551874851
+    },
+    {
+      "index": 21,
+      "phone": "R",
+      "start_frame": 143,
+      "end_frame": 144,
+      "gop_log_p": -0.00023004078154002268
+    },
+    {
+      "index": 22,
+      "phone": "T",
+      "start_frame": 146,
+      "end_frame": 147,
+      "gop_log_p": -0.0002698666376238242
+    },
+    {
+      "index": 23,
+      "phone": "AH",
+      "start_frame": 149,
+      "end_frame": 150,
+      "gop_log_p": -0.0007285745004665182
+    },
+    {
+      "index": 24,
+      "phone": "F",
+      "start_frame": 152,
+      "end_frame": 154,
+      "gop_log_p": -0.006646589345582356
+    },
+    {
+      "index": 25,
+      "phone": "IH",
+      "start_frame": 158,
+      "end_frame": 159,
+      "gop_log_p": -0.00016905306124657412
+    },
+    {
+      "index": 26,
+      "phone": "SH",
+      "start_frame": 162,
+      "end_frame": 163,
+      "gop_log_p": -0.0005907372713432051
+    },
+    {
+      "index": 27,
+      "phone": "AH",
+      "start_frame": 167,
+      "end_frame": 168,
+      "gop_log_p": -0.0001665492460581795
+    },
+    {
+      "index": 28,
+      "phone": "L",
+      "start_frame": 168,
+      "end_frame": 169,
+      "gop_log_p": -0.000522213413280054
+    },
+    {
+      "index": 29,
+      "phone": "IH",
+      "start_frame": 172,
+      "end_frame": 173,
+      "gop_log_p": -0.00028536814815690426
+    },
+    {
+      "index": 30,
+      "phone": "N",
+      "start_frame": 173,
+      "end_frame": 175,
+      "gop_log_p": -0.010021848851460013
+    },
+    {
+      "index": 31,
+      "phone": "T",
+      "start_frame": 177,
+      "end_frame": 178,
+      "gop_log_p": -0.00048339127457786945
+    },
+    {
+      "index": 32,
+      "phone": "EH",
+      "start_frame": 184,
+      "end_frame": 185,
+      "gop_log_p": -0.0002541268881800395
+    },
+    {
+      "index": 33,
+      "phone": "L",
+      "start_frame": 186,
+      "end_frame": 187,
+      "gop_log_p": -9.668340751570404e-05
+    },
+    {
+      "index": 34,
+      "phone": "AH",
+      "start_frame": 190,
+      "end_frame": 191,
+      "gop_log_p": -0.002937394888101471
+    },
+    {
+      "index": 35,
+      "phone": "JH",
+      "start_frame": 194,
+      "end_frame": 195,
+      "gop_log_p": -0.00047635455057121564
+    },
+    {
+      "index": 36,
+      "phone": "AH",
+      "start_frame": 199,
+      "end_frame": 200,
+      "gop_log_p": -0.0002934767263112109
+    },
+    {
+      "index": 37,
+      "phone": "N",
+      "start_frame": 200,
+      "end_frame": 201,
+      "gop_log_p": -0.00023969900215245756
+    },
+    {
+      "index": 38,
+      "phone": "S",
+      "start_frame": 207,
+      "end_frame": 208,
+      "gop_log_p": -0.0009636752454395316
+    },
+    {
+      "index": 39,
+      "phone": "HH",
+      "start_frame": 212,
+      "end_frame": 213,
+      "gop_log_p": -0.00012994656829995455
+    },
+    {
+      "index": 40,
+      "phone": "AE",
+      "start_frame": 216,
+      "end_frame": 217,
+      "gop_log_p": -1.7880993871681314
+    },
+    {
+      "index": 41,
+      "phone": "Z",
+      "start_frame": 219,
+      "end_frame": 220,
+      "gop_log_p": -0.00021823641635718266
+    },
+    {
+      "index": 42,
+      "phone": "R",
+      "start_frame": 225,
+      "end_frame": 226,
+      "gop_log_p": -0.00020822070062600443
+    },
+    {
+      "index": 43,
+      "phone": "EY",
+      "start_frame": 230,
+      "end_frame": 231,
+      "gop_log_p": -0.00042393847821716363
+    },
+    {
+      "index": 44,
+      "phone": "Z",
+      "start_frame": 236,
+      "end_frame": 237,
+      "gop_log_p": -0.0013017779221955925
+    },
+    {
+      "index": 45,
+      "phone": "D",
+      "start_frame": 239,
+      "end_frame": 240,
+      "gop_log_p": -0.0006050509415903626
+    },
+    {
+      "index": 46,
+      "phone": "IH",
+      "start_frame": 245,
+      "end_frame": 246,
+      "gop_log_p": -0.0003241825997897439
+    },
+    {
+      "index": 47,
+      "phone": "M",
+      "start_frame": 246,
+      "end_frame": 248,
+      "gop_log_p": -0.08644194632336731
+    },
+    {
+      "index": 48,
+      "phone": "P",
+      "start_frame": 250,
+      "end_frame": 251,
+      "gop_log_p": -0.00020058974644728372
+    },
+    {
+      "index": 49,
+      "phone": "AO",
+      "start_frame": 256,
+      "end_frame": 257,
+      "gop_log_p": -0.0022112719868973515
+    },
+    {
+      "index": 50,
+      "phone": "R",
+      "start_frame": 257,
+      "end_frame": 258,
+      "gop_log_p": -0.0012262826785838807
+    },
+    {
+      "index": 51,
+      "phone": "T",
+      "start_frame": 260,
+      "end_frame": 261,
+      "gop_log_p": -0.00020190131255260027
+    },
+    {
+      "index": 52,
+      "phone": "AH",
+      "start_frame": 263,
+      "end_frame": 264,
+      "gop_log_p": -0.00041523254796401295
+    },
+    {
+      "index": 53,
+      "phone": "N",
+      "start_frame": 264,
+      "end_frame": 265,
+      "gop_log_p": -0.00043371783272379174
+    },
+    {
+      "index": 54,
+      "phone": "T",
+      "start_frame": 265,
+      "end_frame": 266,
+      "gop_log_p": -0.0013464212696041675
+    },
+    {
+      "index": 55,
+      "phone": "K",
+      "start_frame": 270,
+      "end_frame": 271,
+      "gop_log_p": -0.00010049848089447238
+    },
+    {
+      "index": 56,
+      "phone": "W",
+      "start_frame": 273,
+      "end_frame": 274,
+      "gop_log_p": -0.00011075156272059316
+    },
+    {
+      "index": 57,
+      "phone": "EH",
+      "start_frame": 277,
+      "end_frame": 278,
+      "gop_log_p": -0.00027475554961912534
+    },
+    {
+      "index": 58,
+      "phone": "S",
+      "start_frame": 281,
+      "end_frame": 282,
+      "gop_log_p": -0.0015699663984018604
+    },
+    {
+      "index": 59,
+      "phone": "CH",
+      "start_frame": 285,
+      "end_frame": 286,
+      "gop_log_p": -0.003171281537008207
+    },
+    {
+      "index": 60,
+      "phone": "AH",
+      "start_frame": 289,
+      "end_frame": 290,
+      "gop_log_p": -0.00047814354350594635
+    },
+    {
+      "index": 61,
+      "phone": "N",
+      "start_frame": 291,
+      "end_frame": 292,
+      "gop_log_p": -0.000208816871373599
+    },
+    {
+      "index": 62,
+      "phone": "Z",
+      "start_frame": 297,
+      "end_frame": 298,
+      "gop_log_p": -0.00040998517455762966
+    },
+    {
+      "index": 63,
+      "phone": "AH",
+      "start_frame": 303,
+      "end_frame": 305,
+      "gop_log_p": -0.004080443423976484
+    },
+    {
+      "index": 64,
+      "phone": "B",
+      "start_frame": 306,
+      "end_frame": 307,
+      "gop_log_p": -0.0001607070349982731
+    },
+    {
+      "index": 65,
+      "phone": "AW",
+      "start_frame": 311,
+      "end_frame": 312,
+      "gop_log_p": -0.0003909040488254908
+    },
+    {
+      "index": 66,
+      "phone": "T",
+      "start_frame": 314,
+      "end_frame": 315,
+      "gop_log_p": -0.0005372417425756017
+    },
+    {
+      "index": 67,
+      "phone": "DH",
+      "start_frame": 316,
+      "end_frame": 317,
+      "gop_log_p": -0.001159684491856023
+    },
+    {
+      "index": 68,
+      "phone": "AH",
+      "start_frame": 319,
+      "end_frame": 320,
+      "gop_log_p": -0.0024719367108981334
+    },
+    {
+      "index": 69,
+      "phone": "F",
+      "start_frame": 325,
+      "end_frame": 327,
+      "gop_log_p": -0.004845059010213315
+    },
+    {
+      "index": 70,
+      "phone": "Y",
+      "start_frame": 328,
+      "end_frame": 330,
+      "gop_log_p": -0.0011526728440619236
+    },
+    {
+      "index": 71,
+      "phone": "UW",
+      "start_frame": 330,
+      "end_frame": 331,
+      "gop_log_p": -0.00027404009759027324
+    },
+    {
+      "index": 72,
+      "phone": "CH",
+      "start_frame": 336,
+      "end_frame": 337,
+      "gop_log_p": -0.0008118466969840515
+    },
+    {
+      "index": 73,
+      "phone": "ER",
+      "start_frame": 341,
+      "end_frame": 342,
+      "gop_log_p": -0.00018485108735805908
+    },
+    {
+      "index": 74,
+      "phone": "AH",
+      "start_frame": 348,
+      "end_frame": 349,
+      "gop_log_p": -0.0011569991741260948
+    },
+    {
+      "index": 75,
+      "phone": "V",
+      "start_frame": 351,
+      "end_frame": 352,
+      "gop_log_p": -0.000279763728153546
+    },
+    {
+      "index": 76,
+      "phone": "EH",
+      "start_frame": 357,
+      "end_frame": 358,
+      "gop_log_p": -4.319374468450095
+    },
+    {
+      "index": 77,
+      "phone": "M",
+      "start_frame": 359,
+      "end_frame": 360,
+      "gop_log_p": -0.00010729411640355392
+    },
+    {
+      "index": 78,
+      "phone": "P",
+      "start_frame": 362,
+      "end_frame": 363,
+      "gop_log_p": -0.00011540125075335965
+    },
+    {
+      "index": 79,
+      "phone": "L",
+      "start_frame": 366,
+      "end_frame": 367,
+      "gop_log_p": -8.261545022102158e-05
+    },
+    {
+      "index": 80,
+      "phone": "OY",
+      "start_frame": 371,
+      "end_frame": 372,
+      "gop_log_p": -0.0004967492597549982
+    },
+    {
+      "index": 81,
+      "phone": "M",
+      "start_frame": 377,
+      "end_frame": 378,
+      "gop_log_p": -7.450858166467099e-05
+    },
+    {
+      "index": 82,
+      "phone": "AH",
+      "start_frame": 381,
+      "end_frame": 382,
+      "gop_log_p": -0.0006825868828183149
+    },
+    {
+      "index": 83,
+      "phone": "N",
+      "start_frame": 383,
+      "end_frame": 384,
+      "gop_log_p": -0.0005677761865937569
+    },
+    {
+      "index": 84,
+      "phone": "T",
+      "start_frame": 388,
+      "end_frame": 389,
+      "gop_log_p": -0.00029001864817509727
+    },
+    {
+      "index": 85,
+      "phone": "AH",
+      "start_frame": 400,
+      "end_frame": 401,
+      "gop_log_p": -3.3462489380500355
+    },
+    {
+      "index": 86,
+      "phone": "N",
+      "start_frame": 402,
+      "end_frame": 403,
+      "gop_log_p": -0.00026485850865543047
+    },
+    {
+      "index": 87,
+      "phone": "D",
+      "start_frame": 404,
+      "end_frame": 405,
+      "gop_log_p": -0.0004005638232233237
+    },
+    {
+      "index": 88,
+      "phone": "DH",
+      "start_frame": 409,
+      "end_frame": 410,
+      "gop_log_p": -0.00027105905297977316
+    },
+    {
+      "index": 89,
+      "phone": "AH",
+      "start_frame": 412,
+      "end_frame": 413,
+      "gop_log_p": -0.00028989940431472513
+    },
+    {
+      "index": 90,
+      "phone": "S",
+      "start_frame": 418,
+      "end_frame": 419,
+      "gop_log_p": -0.00019450887152621204
+    },
+    {
+      "index": 91,
+      "phone": "K",
+      "start_frame": 422,
+      "end_frame": 423,
+      "gop_log_p": -0.00026366610069307846
+    },
+    {
+      "index": 92,
+      "phone": "IH",
+      "start_frame": 428,
+      "end_frame": 429,
+      "gop_log_p": -0.0004649050715760543
+    },
+    {
+      "index": 93,
+      "phone": "L",
+      "start_frame": 432,
+      "end_frame": 433,
+      "gop_log_p": -4.625427405814446e-05
+    },
+    {
+      "index": 94,
+      "phone": "Z",
+      "start_frame": 439,
+      "end_frame": 440,
+      "gop_log_p": -0.00045715289460073247
+    },
+    {
+      "index": 95,
+      "phone": "DH",
+      "start_frame": 445,
+      "end_frame": 446,
+      "gop_log_p": -0.00030856124148131715
+    },
+    {
+      "index": 96,
+      "phone": "AE",
+      "start_frame": 448,
+      "end_frame": 449,
+      "gop_log_p": -0.07994346093099883
+    },
+    {
+      "index": 97,
+      "phone": "T",
+      "start_frame": 450,
+      "end_frame": 451,
+      "gop_log_p": -0.0005322322743825238
+    },
+    {
+      "index": 98,
+      "phone": "Y",
+      "start_frame": 456,
+      "end_frame": 457,
+      "gop_log_p": -0.00017745877237291467
+    },
+    {
+      "index": 99,
+      "phone": "AH",
+      "start_frame": 461,
+      "end_frame": 462,
+      "gop_log_p": -0.00018663955887068915
+    },
+    {
+      "index": 100,
+      "phone": "NG",
+      "start_frame": 463,
+      "end_frame": 464,
+      "gop_log_p": -0.0001941511741529746
+    },
+    {
+      "index": 101,
+      "phone": "P",
+      "start_frame": 469,
+      "end_frame": 470,
+      "gop_log_p": -0.00011611658929268846
+    },
+    {
+      "index": 102,
+      "phone": "IY",
+      "start_frame": 473,
+      "end_frame": 474,
+      "gop_log_p": -0.00014401519146722683
+    },
+    {
+      "index": 103,
+      "phone": "P",
+      "start_frame": 477,
+      "end_frame": 478,
+      "gop_log_p": -0.00011015545043378301
+    },
+    {
+      "index": 104,
+      "phone": "AH",
+      "start_frame": 480,
+      "end_frame": 481,
+      "gop_log_p": -0.00035232550996646783
+    },
+    {
+      "index": 105,
+      "phone": "L",
+      "start_frame": 482,
+      "end_frame": 484,
+      "gop_log_p": -0.08789957708790493
+    },
+    {
+      "index": 106,
+      "phone": "N",
+      "start_frame": 495,
+      "end_frame": 496,
+      "gop_log_p": -0.03194369757787455
+    },
+    {
+      "index": 107,
+      "phone": "IY",
+      "start_frame": 499,
+      "end_frame": 500,
+      "gop_log_p": -0.0018997941702748474
+    },
+    {
+      "index": 108,
+      "phone": "D",
+      "start_frame": 501,
+      "end_frame": 502,
+      "gop_log_p": -0.020506961107887866
+    },
+    {
+      "index": 109,
+      "phone": "T",
+      "start_frame": 505,
+      "end_frame": 506,
+      "gop_log_p": -0.00030748802734987727
+    },
+    {
+      "index": 110,
+      "phone": "UW",
+      "start_frame": 510,
+      "end_frame": 511,
+      "gop_log_p": -0.0028535868617541515
+    },
+    {
+      "index": 111,
+      "phone": "AH",
+      "start_frame": 515,
+      "end_frame": 516,
+      "gop_log_p": -0.000473492168532661
+    },
+    {
+      "index": 112,
+      "phone": "K",
+      "start_frame": 519,
+      "end_frame": 520,
+      "gop_log_p": -8.893408452334645e-05
+    },
+    {
+      "index": 113,
+      "phone": "W",
+      "start_frame": 522,
+      "end_frame": 524,
+      "gop_log_p": -0.006666630258446608
+    },
+    {
+      "index": 114,
+      "phone": "AY",
+      "start_frame": 528,
+      "end_frame": 529,
+      "gop_log_p": -0.00017084150450508243
+    },
+    {
+      "index": 115,
+      "phone": "ER",
+      "start_frame": 538,
+      "end_frame": 539,
+      "gop_log_p": -0.34356018502940605
+    }
+  ],
+  "decode": "<pad>"
+}
