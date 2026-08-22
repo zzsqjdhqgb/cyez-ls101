@@ -1,7 +1,6 @@
 import type { AIRouterClient } from '@ls101/airouter'
 import { describe, expect, it, vi } from 'vitest'
 import {
-  createAIRouterSpeechCorrector,
   createAIRouterSpeechRecognizer,
   createAIRouterTextGradingModel,
   listSubmissionAIModels
@@ -78,33 +77,6 @@ describe('submission AIRouter adapter', () => {
     await expect(
       createAIRouterTextGradingModel(selection, client).generate('prompt')
     ).resolves.toBe('{"score":4,"comment":"ok"}')
-  })
-
-  it('uses pronunciation assessment for fixed reading and skips free speech', async () => {
-    const client = mockClient()
-    vi.mocked(client.assessPronunciation).mockResolvedValue({
-      referenceText: 'three',
-      recognizedPhones: ['s', 'ɹ', 'iː'],
-      overallScore: 60,
-      words: [],
-      pauses: [],
-      feedbackMarkdown: 'phoneme feedback'
-    })
-    const audio = {
-      resourceKey: 'audio',
-      filename: 'answer.webm',
-      mediaType: 'audio/webm',
-      kind: 'recording' as const,
-      data: new Uint8Array([1]),
-      durationMs: 1000
-    }
-    const corrector = createAIRouterSpeechCorrector(client)
-
-    await expect(corrector.correct({ audio, referenceText: 'three' })).resolves.toBe(
-      'phoneme feedback'
-    )
-    await expect(corrector.correct({ audio })).resolves.toContain('不执行逐音素')
-    expect(client.assessPronunciation).toHaveBeenCalledOnce()
   })
 })
 

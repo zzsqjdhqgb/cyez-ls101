@@ -19,8 +19,24 @@ import { SubmissionSettlementPage } from '../features/submissions/SubmissionSett
 
 const aiAdapterMocks = vi.hoisted(() => ({
   recognize: vi.fn().mockResolvedValue('recognized answer'),
-  correct: vi.fn().mockResolvedValue('pronunciation feedback'),
-  generate: vi.fn().mockResolvedValue('{"score":4,"comment":"AI comment"}')
+  generate: vi.fn().mockImplementation(async (prompt: string) => {
+    const marker = '单词级对齐证据 JSON：\n'
+    if (prompt.includes(marker)) {
+      const evidence = JSON.parse(prompt.slice(prompt.indexOf(marker) + marker.length)) as {
+        alignment: Array<{ evidenceId: string; operation: string }>
+      }
+      return JSON.stringify({
+        items: evidence.alignment
+          .filter((item) => item.operation !== 'match')
+          .map((item) => ({
+            evidenceId: item.evidenceId,
+            decision: 'uncertain',
+            feedback: 'ASR 单词差异需要复听确认。'
+          }))
+      })
+    }
+    return '{"score":4,"comment":"AI comment"}'
+  })
 }))
 
 vi.mock('../features/submissions/SubmissionAIRouterAdapter', () => ({
@@ -42,7 +58,6 @@ vi.mock('../features/submissions/SubmissionAIRouterAdapter', () => ({
     ]
   }),
   createAIRouterSpeechRecognizer: vi.fn(() => ({ recognize: aiAdapterMocks.recognize })),
-  createAIRouterSpeechCorrector: vi.fn(() => ({ correct: aiAdapterMocks.correct })),
   createAIRouterTextGradingModel: vi.fn(() => ({ generate: aiAdapterMocks.generate }))
 }))
 
@@ -190,7 +205,7 @@ describe('submission grading UI', () => {
     fireEvent.click(await screen.findByRole('button', { name: '全部审查' }))
     expect(await screen.findByText('语音识别与发音纠正')).toBeInTheDocument()
     expect(screen.getByText('识别文本：recognized answer')).toBeInTheDocument()
-    expect(screen.getByText('pronunciation feedback')).toBeInTheDocument()
+    expect(screen.getAllByText(/ASR 单词差异需要复听确认/)).not.toHaveLength(0)
     fireEvent.change(await screen.findByLabelText('分数'), { target: { value: '3.125' } })
     fireEvent.change(screen.getByLabelText('评语'), { target: { value: 'Reviewed' } })
     fireEvent.click(screen.getByRole('button', { name: '确认本题' }))

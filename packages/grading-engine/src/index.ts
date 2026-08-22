@@ -11,9 +11,21 @@ import type {
   GradingResourceInput,
   ResolvedGradingAnswer
 } from '@ls101/submission-library'
+import { correctSpeechWithLLM, type SpeechCorrectionTrace } from './speech-correction'
 
-export const PLACEHOLDER_SPEECH_CORRECTION =
-  '当前未实现语音纠错，正在测试阶段，请直接当作该考生语音标准无错误，只根据内容评分'
+export {
+  buildSpeechCorrectionPrompt,
+  correctSpeechWithLLM,
+  createSpeechCorrectionEvidence,
+  parseSpeechCorrectionResponse
+} from './speech-correction'
+export type {
+  SpeechCorrectionEvidence,
+  SpeechCorrectionResult,
+  SpeechCorrectionTrace,
+  SpeechWordAlignmentEvidence,
+  SpeechWordAlignmentOperation
+} from './speech-correction'
 
 export interface SpeechRecognitionModelSelection {
   providerId: string
@@ -33,15 +45,6 @@ export interface SpeechRecognizer {
   recognize(request: SpeechRecognitionRequest, options?: { signal?: AbortSignal }): Promise<string>
 }
 
-export interface SpeechCorrectionRequest {
-  audio: GradingResourceInput & { durationMs: number }
-  referenceText?: string
-}
-
-export interface SpeechCorrector {
-  correct(request: SpeechCorrectionRequest, options?: { signal?: AbortSignal }): Promise<string>
-}
-
 export interface TextGradingModel {
   generate(prompt: string, options?: { signal?: AbortSignal }): Promise<string>
 }
@@ -51,6 +54,7 @@ export interface ProcessedGradingAnswer {
   description: string
   transcript: string
   correction: string
+  correctionTrace: SpeechCorrectionTrace
   referenceText?: string
 }
 
@@ -77,7 +81,6 @@ export interface AIGradingProgress {
 
 export interface AIGradingDependencies {
   recognizer: SpeechRecognizer
-  corrector: SpeechCorrector
   textModel: TextGradingModel
   speechRecognitionModel: SpeechRecognitionModelSelection
   textModelSelection: TextGradingModelSelection
@@ -93,14 +96,6 @@ export class AIGradingError extends Error {
   ) {
     super(message)
     this.name = 'AIGradingError'
-  }
-}
-
-export function createPlaceholderSpeechCorrector(): SpeechCorrector {
-  return {
-    async correct() {
-      return PLACEHOLDER_SPEECH_CORRECTION
-    }
   }
 }
 
@@ -141,21 +136,23 @@ export async function executeAIGrading(
       { audio: answer.audio },
       { signal: options.signal }
     )
-    const correction = await dependencies.corrector.correct(
-      {
-        audio: answer.audio,
-        ...(answer.type === 'fixed-speech' ? { referenceText: answer.text } : {})
-      },
-      { signal: options.signal }
-    )
-    if (typeof transcript !== 'string' || typeof correction !== 'string') {
+    if (typeof transcript !== 'string') {
       throw new AIGradingError('INVALID_SPEECH_RESULT', '语音识别和语音纠错必须返回字符串')
     }
+    const correctionResult = await correctSpeechWithLLM(
+      {
+        transcript,
+        ...(answer.type === 'fixed-speech' ? { referenceText: answer.text } : {})
+      },
+      dependencies.textModel,
+      { signal: options.signal }
+    )
     answers.push({
       answerId: answer.answerId,
       description: answer.description,
       transcript,
-      correction,
+      correction: correctionResult.correction,
+      correctionTrace: correctionResult.trace,
       ...(answer.type === 'fixed-speech' ? { referenceText: answer.text } : {})
     })
     await options.onProgress?.({ answers: structuredClone(answers) })
@@ -201,7 +198,13 @@ export function buildAIGradingPrompt(
     })),
     rubricMarkdown: input.schema.data.rubricMarkdown,
     extraPromptMarkdown: input.schema.data.extraPromptMarkdown ?? '',
-    answers
+    answers: answers.map((answer) => ({
+      answerId: answer.answerId,
+      description: answer.description,
+      transcript: answer.transcript,
+      correction: answer.correction,
+      ...(answer.referenceText === undefined ? {} : { referenceText: answer.referenceText })
+    }))
   }
   return [
     '你是英语听说考试的评分员。请严格依据评分材料和评分标准对整个评分单元打分。',

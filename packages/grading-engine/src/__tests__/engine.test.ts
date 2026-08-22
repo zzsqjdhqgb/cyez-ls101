@@ -2,8 +2,6 @@ import type { GradingInput } from '@ls101/submission-library'
 import { describe, expect, it, vi } from 'vitest'
 import {
   AIGradingError,
-  PLACEHOLDER_SPEECH_CORRECTION,
-  createPlaceholderSpeechCorrector,
   executeAIGrading,
   parseAIGradingResponse,
   type AIGradingDependencies
@@ -12,35 +10,28 @@ import {
 describe('AI grading engine', () => {
   it('recognizes and corrects every answer separately before one text grading call', async () => {
     const input = gradingInput()
-    const recognize = vi
+    const recognize = vi.fn().mockResolvedValueOnce('Read won.').mockResolvedValueOnce('Free talk.')
+    const generate = vi
       .fn()
-      .mockResolvedValueOnce('first transcript')
-      .mockResolvedValueOnce('second transcript')
-    const correct = vi.fn().mockResolvedValue('no speech errors')
-    const generate = vi.fn().mockResolvedValue('{"score":4.125,"comment":"Good answer"}')
+      .mockResolvedValueOnce(
+        '{"items":[{"evidenceId":"W002","decision":"uncertain","feedback":"one 可能被 ASR 识别为 won，建议复听。"}]}'
+      )
+      .mockResolvedValueOnce('{"score":4.125,"comment":"Good answer"}')
 
-    const execution = await executeAIGrading(input, dependencies({ recognize, correct, generate }))
+    const execution = await executeAIGrading(input, dependencies({ recognize, generate }))
 
     expect(recognize).toHaveBeenCalledTimes(2)
-    expect(correct).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ referenceText: 'Read one.' }),
-      { signal: undefined }
-    )
-    expect(correct.mock.calls[1][0]).not.toHaveProperty('referenceText')
-    expect(generate).toHaveBeenCalledTimes(1)
-    expect(generate.mock.calls[0][0]).toContain('first transcript')
-    expect(generate.mock.calls[0][0]).toContain('second transcript')
+    expect(generate).toHaveBeenCalledTimes(2)
+    expect(generate.mock.calls[0][0]).toContain('CMUdict 0.7b ARPAbet')
+    expect(generate.mock.calls[0][0]).toContain('"operation": "substitution"')
+    expect(generate.mock.calls[1][0]).toContain('Read won.')
+    expect(generate.mock.calls[1][0]).toContain('Free talk.')
+    expect(generate.mock.calls[1][0]).toContain('建议复听')
+    expect(generate.mock.calls[1][0]).not.toContain('correctionTrace')
     expect(execution.result).toEqual({ score: 4.125, comment: 'Good answer' })
     expect(execution.trace.answers.map((answer) => answer.answerId)).toEqual(['reading', 'talk'])
-  })
-
-  it('provides the agreed placeholder speech correction', async () => {
-    const answer = gradingInput().answers[0]
-    if (answer.type === 'text') throw new Error('Expected an audio answer')
-    await expect(createPlaceholderSpeechCorrector().correct({ audio: answer.audio })).resolves.toBe(
-      PLACEHOLDER_SPEECH_CORRECTION
-    )
+    expect(execution.trace.answers[0].correctionTrace.evidence?.alignment).toHaveLength(2)
+    expect(execution.trace.answers[0].correctionTrace.rawResponse).toContain('W002')
   })
 
   it('stops the item before text grading when speech processing fails', async () => {
@@ -77,13 +68,11 @@ describe('AI grading engine', () => {
 function dependencies(
   overrides: Partial<{
     recognize: AIGradingDependencies['recognizer']['recognize']
-    correct: AIGradingDependencies['corrector']['correct']
     generate: AIGradingDependencies['textModel']['generate']
   }> = {}
 ): AIGradingDependencies {
   return {
     recognizer: { recognize: overrides.recognize ?? vi.fn().mockResolvedValue('transcript') },
-    corrector: { correct: overrides.correct ?? vi.fn().mockResolvedValue('correction') },
     textModel: {
       generate: overrides.generate ?? vi.fn().mockResolvedValue('{"score":4,"comment":"comment"}')
     },

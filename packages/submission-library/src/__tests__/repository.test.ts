@@ -213,6 +213,15 @@ describe('FileSubmissionLibraryRepository', () => {
             description: 'Reading',
             transcript: 'read this sentence',
             correction: '语音标准无错误',
+            correctionTrace: {
+              evidence: {
+                schemaVersion: 1,
+                phonemeSource: 'CMUdict 0.7b ARPAbet',
+                alignment: [{ evidenceId: 'W001', operation: 'match' }]
+              },
+              prompt: 'correction prompt',
+              rawResponse: '{"items":[]}'
+            },
             referenceText: 'Read this sentence.'
           }
         ],
@@ -233,6 +242,14 @@ describe('FileSubmissionLibraryRepository', () => {
         instanceId: 'schema-use:reading',
         status: 'succeeded',
         rawResponse: '{"score":4.125,"comment":"Good"}',
+        answers: [
+          expect.objectContaining({
+            correctionTrace: expect.objectContaining({
+              prompt: 'correction prompt',
+              rawResponse: '{"items":[]}'
+            })
+          })
+        ],
         review: expect.objectContaining({ reviewed: true })
       })
     ])

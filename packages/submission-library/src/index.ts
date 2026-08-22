@@ -102,6 +102,11 @@ export interface SubmissionAIProcessedAnswer {
   description: string
   transcript: string
   correction: string
+  correctionTrace?: {
+    evidence?: unknown
+    prompt?: string
+    rawResponse?: string
+  }
   referenceText?: string
 }
 
@@ -1213,7 +1218,16 @@ function isAIProcessedAnswer(value: unknown): value is SubmissionAIProcessedAnsw
     typeof value.description === 'string' &&
     typeof value.transcript === 'string' &&
     typeof value.correction === 'string' &&
+    (value.correctionTrace === undefined || isAICorrectionTrace(value.correctionTrace)) &&
     (value.referenceText === undefined || typeof value.referenceText === 'string')
+  )
+}
+
+function isAICorrectionTrace(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    (value.prompt === undefined || typeof value.prompt === 'string') &&
+    (value.rawResponse === undefined || typeof value.rawResponse === 'string')
   )
 }
 
