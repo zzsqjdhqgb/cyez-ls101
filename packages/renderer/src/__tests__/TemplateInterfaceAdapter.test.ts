@@ -33,16 +33,31 @@ describe('Template Interface adapter', () => {
     const published = await application.drafts.publish(draft.draftId)
     if (published.status === 'invalid') throw new Error('expected valid Interface content')
     const interfaceId = published.interface.interfaceId
+    const incomplete = await application.published.createBlankInstance(interfaceId, '未完成题组')
     const instance = await application.published.createBlankInstance(interfaceId)
     const saved = await application.instances.save(interfaceId, instance.instance.instanceId, {
       name: '完整题组',
-      values: instance.instance.values,
+      values: { ...instance.instance.values, firstValue: '第一项内容' },
       imagePrompts: { secondValue: '操场上的学生' },
       imageFiles: {
         secondValue: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
       }
     })
     const adapter = createTemplateInterfaceDependencies(application)
+
+    await expect(adapter.listInterfaceInstances(interfaceId)).resolves.toEqual([
+      {
+        instanceId: saved.instance.instanceId,
+        name: '完整题组',
+        generatedAt: saved.instance.generatedAt
+      }
+    ])
+    await expect(application.published.listInstances(interfaceId)).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ instanceId: incomplete.instance.instanceId }),
+        expect.objectContaining({ instanceId: saved.instance.instanceId })
+      ])
+    )
 
     await expect(adapter.listInterfaceManifests()).resolves.toEqual([
       {
@@ -86,7 +101,7 @@ describe('Template Interface adapter', () => {
         interfaceId,
         instance: {
           values: {
-            firstValue: '',
+            firstValue: '第一项内容',
             'secondValue.inst': '操场上的学生',
             'secondValue.img': expect.stringMatching(/^secondValue-.*\.png$/)
           }

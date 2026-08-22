@@ -499,6 +499,24 @@ async function bindInterfaceValues(
     }
 
     const manifest = manifests.get(requirement.interfaceId)
+    const incompleteVariables =
+      manifest?.vars.filter(({ varName, type }) => {
+        const value = located.instance.values[varName]
+        if (typeof value !== 'string' || !value.trim()) return true
+        return type === 'image' && !Object.hasOwn(located.assetUrls, value)
+      }) ?? []
+    if (incompleteVariables.length > 0) {
+      incompleteVariables.forEach(({ varName }) => {
+        errors.push(
+          compileError('MISSING_INTERFACE_VALUE', `interfaceBindings[${bindingIndex}].instanceId`, {
+            alias: requirement.alias,
+            instanceId: binding.instanceId,
+            varName
+          })
+        )
+      })
+      continue
+    }
     const values = new Map<string, BoundInterfaceValue>()
     requirement.acceptedVars.forEach((varName) => {
       if (!Object.hasOwn(located.instance.values, varName)) {
