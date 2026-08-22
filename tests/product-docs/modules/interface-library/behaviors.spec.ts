@@ -567,7 +567,6 @@ test(
       await page.getByRole('button', { name: '返回题型详情' }).click()
 
       await productStep('prepare-export', async () => {
-        await page.getByRole('tab', { name: '题型定义' }).click()
         await page.getByRole('button', { name: '导出题型' }).click()
         await expect(page.getByRole('heading', { name: '选择要交付的题组' })).toBeVisible()
       })
@@ -672,7 +671,6 @@ test(
 
       const exportPath = path.join(userDataDir, 'identity-check.lsinterface')
       await productStep('export-reference-file', async () => {
-        await page.getByRole('tab', { name: '题型定义' }).click()
         await page.getByRole('button', { name: '导出题型' }).click()
         await expect(page.getByText('已选择 1 个')).toBeVisible()
         await configureSaveDialog(exportPath)
