@@ -14,6 +14,7 @@ test('activates with an invitation code and reuses the hash receipt after restar
   const pageErrors: string[] = []
 
   try {
+    await writeFile(path.join(userDataDir, 'version'), '0.3.2')
     await mkdir(path.join(userDataDir, 'drafts'))
     await writeFile(path.join(userDataDir, 'drafts', 'before-license.json'), '{"legacy":true}')
     electronApp = await launchIntegrationApp(userDataDir, { license: 'not-activated' })

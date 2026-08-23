@@ -13,6 +13,7 @@ const MAX_MANIFEST_BYTES = 16 * 1024 * 1024
 export interface LegacyArchiveSourceFile {
   archivePath: string
   sourcePath: string
+  duplicatePath?: string
   sizeBytes: number
   identity: { device: string; inode: string }
 }
@@ -22,6 +23,7 @@ export interface LegacyArchiveManifest {
   createdAt: string
   sourceDirectories: LegacyDataSourceInfo[]
   files: Array<{ path: string; sizeBytes: number; sha256: string }>
+  duplicateFiles: Array<{ path: string; sizeBytes: number; sha256: string }>
 }
 
 export interface CreateLegacyArchiveRequest {
@@ -58,22 +60,31 @@ export async function createLegacyArchive(
   request: CreateLegacyArchiveRequest
 ): Promise<CreateLegacyArchiveResult> {
   const manifestFiles: LegacyArchiveManifest['files'] = []
+  const duplicateFiles: LegacyArchiveManifest['duplicateFiles'] = []
+  const archivedFiles: LegacyArchiveSourceFile[] = []
   for (const file of request.files) {
+    const duplicate = file.duplicatePath ? await measureMatchingDuplicate(file) : null
+    if (duplicate) {
+      duplicateFiles.push({ path: file.archivePath, ...duplicate })
+      continue
+    }
     const measured = await hashSourceFile(file)
     manifestFiles.push({
       path: file.archivePath,
       sizeBytes: measured.sizeBytes,
       sha256: measured.sha256
     })
+    archivedFiles.push(file)
   }
 
   const manifest: LegacyArchiveManifest = {
     formatVersion: 1,
     createdAt: request.createdAt,
     sourceDirectories: request.sourceDirectories,
-    files: manifestFiles.sort((left, right) => left.path.localeCompare(right.path))
+    files: manifestFiles.sort((left, right) => left.path.localeCompare(right.path)),
+    duplicateFiles: duplicateFiles.sort((left, right) => left.path.localeCompare(right.path))
   }
-  const generated = await writeArchiveAtomically(request.archivePath, request.files, manifest)
+  const generated = await writeArchiveAtomically(request.archivePath, archivedFiles, manifest)
   return { ...generated, manifest }
 }
 
@@ -162,6 +173,7 @@ async function writeArchiveAtomically(
   let outputDrain: Promise<void> | null = null
   let archiveError: unknown
   let completed = false
+  const manifestFiles = new Map(manifest.files.map((file) => [file.path, file] as const))
 
   output.once('error', (error) => {
     archiveError ??= error
@@ -205,7 +217,7 @@ async function writeArchiveAtomically(
       })
       entry.push(new Uint8Array(), true)
       await waitForOutput()
-      const expected = manifest.files.find((candidate) => candidate.path === file.archivePath)
+      const expected = manifestFiles.get(file.archivePath)
       if (
         !expected ||
         measured.sizeBytes !== expected.sizeBytes ||
@@ -268,6 +280,89 @@ async function hashSourceFile(
   return { sizeBytes, sha256: hash.digest('hex') }
 }
 
+export async function measureMatchingDuplicate(
+  file: LegacyArchiveSourceFile
+): Promise<{ sizeBytes: number; sha256: string } | null> {
+  if (!file.duplicatePath) return null
+  const sourceBefore = await lstat(file.sourcePath)
+  assertExpectedSourceFile(file, sourceBefore)
+  const duplicateBefore = await lstatIfExists(file.duplicatePath)
+  if (
+    !duplicateBefore ||
+    !duplicateBefore.isFile() ||
+    duplicateBefore.isSymbolicLink() ||
+    duplicateBefore.size !== sourceBefore.size
+  ) {
+    return null
+  }
+
+  let duplicate: Awaited<ReturnType<typeof open>>
+  try {
+    duplicate = await open(file.duplicatePath, 'r')
+  } catch {
+    return null
+  }
+  let source: Awaited<ReturnType<typeof open>>
+  try {
+    source = await open(file.sourcePath, 'r')
+  } catch (error) {
+    await duplicate.close()
+    throw error
+  }
+  let equal = true
+  let sizeBytes = 0
+  const hash = createHash('sha256')
+  try {
+    const sourceBuffer = Buffer.allocUnsafe(256 * 1024)
+    const duplicateBuffer = Buffer.allocUnsafe(sourceBuffer.byteLength)
+    while (true) {
+      const sourceRead = await source.read(sourceBuffer, 0, sourceBuffer.byteLength, null)
+      let duplicateRead: Awaited<ReturnType<typeof duplicate.read>>
+      try {
+        duplicateRead = await duplicate.read(duplicateBuffer, 0, duplicateBuffer.byteLength, null)
+      } catch {
+        equal = false
+        break
+      }
+      sizeBytes += sourceRead.bytesRead
+      hash.update(sourceBuffer.subarray(0, sourceRead.bytesRead))
+      if (
+        sourceRead.bytesRead !== duplicateRead.bytesRead ||
+        !sourceBuffer
+          .subarray(0, sourceRead.bytesRead)
+          .equals(duplicateBuffer.subarray(0, duplicateRead.bytesRead))
+      ) {
+        equal = false
+        break
+      }
+      if (sourceRead.bytesRead === 0) break
+    }
+  } finally {
+    await Promise.all([source.close(), duplicate.close()])
+  }
+
+  const sourceAfter = await lstat(file.sourcePath)
+  assertExpectedSourceFile(file, sourceAfter)
+  if (
+    sourceBefore.dev !== sourceAfter.dev ||
+    sourceBefore.ino !== sourceAfter.ino ||
+    sourceBefore.size !== sourceAfter.size
+  ) {
+    throw new Error(`旧数据在比较期间发生变化：${file.sourcePath}`)
+  }
+  const duplicateAfter = await lstatIfExists(file.duplicatePath)
+  if (
+    !duplicateAfter ||
+    duplicateBefore.dev !== duplicateAfter.dev ||
+    duplicateBefore.ino !== duplicateAfter.ino ||
+    duplicateBefore.size !== duplicateAfter.size
+  ) {
+    return null
+  }
+  if (!equal || sizeBytes !== file.sizeBytes) return null
+  return { sizeBytes, sha256: hash.digest('hex') }
+}
+
 function assertExpectedSourceFile(
   file: LegacyArchiveSourceFile,
   stats: Awaited<ReturnType<typeof lstat>>
@@ -286,4 +381,13 @@ function assertExpectedSourceFile(
 function asUint8Array(chunk: unknown): Uint8Array {
   if (!(chunk instanceof Uint8Array)) throw new TypeError('文件流返回了无效数据')
   return new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength)
+}
+
+async function lstatIfExists(filename: string): Promise<Awaited<ReturnType<typeof lstat>> | null> {
+  try {
+    return await lstat(filename)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw error
+  }
 }

@@ -22,20 +22,26 @@ import {
 import {
   type LegacyArchiveManifest,
   type LegacyArchiveOperations,
-  type LegacyArchiveSourceFile
+  type LegacyArchiveSourceFile,
+  measureMatchingDuplicate
 } from './legacy-data-archive'
 import { workerLegacyArchiveOperations } from './legacy-data-archive-client'
 
 export const LEGACY_DATA_JOURNAL_FILENAME = 'legacy-migration.json'
 export const LEGACY_ARCHIVE_DIRECTORY = 'legacy-archives'
+export const LEGACY_VERSION_FILENAME = 'version'
 
-/** Directories used by the legacy application and the intermediate data layout. */
-export const LEGACY_DATA_DIRECTORIES = [
+/** Business data from the legacy application that must always be archived. */
+export const LEGACY_BUSINESS_DATA_DIRECTORIES = [
   'drafts',
   'exams',
   'submissions',
   'templates',
-  'grading',
+  'grading'
+] as const
+
+/** Source copies left behind by the retired legacy-copy migration. */
+export const LEGACY_MIGRATION_RESIDUE_DIRECTORIES = [
   'config',
   'secrets',
   'models',
@@ -47,8 +53,15 @@ export const LEGACY_DATA_DIRECTORIES = [
   'submission-library'
 ] as const
 
+export const LEGACY_DATA_DIRECTORIES = [
+  ...LEGACY_BUSINESS_DATA_DIRECTORIES,
+  ...LEGACY_MIGRATION_RESIDUE_DIRECTORIES
+] as const
+
 const JOURNAL_FORMAT_VERSION = 1
 const ARCHIVE_FORMAT_VERSION = 1
+const FIRST_CURRENT_DATA_VERSION = '0.4.0'
+const MAX_LEGACY_VERSION_BYTES = 256
 const UUID_PATTERN = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 const ARCHIVE_RELATIVE_PATH_PATTERN = new RegExp(
   `^${LEGACY_ARCHIVE_DIRECTORY}/legacy-\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}\\.\\d{3}Z-${UUID_PATTERN}\\.zip$`,
@@ -70,6 +83,13 @@ interface JournalSource extends LegacyDataSourceInfo {
   identity: FileSystemIdentity
 }
 
+interface LegacyVersionMarker {
+  version: string
+  sizeBytes: number
+  sha256: string
+  identity: FileSystemIdentity
+}
+
 interface LegacyMigrationJournal {
   formatVersion: typeof JOURNAL_FORMAT_VERSION
   state: JournalState
@@ -77,9 +97,12 @@ interface LegacyMigrationJournal {
   archiveSizeBytes?: number
   archiveSha256?: string
   sourceDirectories: JournalSource[]
+  versionMarker: LegacyVersionMarker
   quarantineRelativePath?: string
   quarantineIdentity?: FileSystemIdentity
   movedDirectories?: string[]
+  deletingDirectories?: string[]
+  versionDeletionStarted?: boolean
   createdAt: string
   error?: string
 }
@@ -139,6 +162,8 @@ export class LegacyDataService {
         quarantineRelativePath: undefined,
         quarantineIdentity: undefined,
         movedDirectories: undefined,
+        deletingDirectories: undefined,
+        versionDeletionStarted: undefined,
         error: undefined
       }
       await this.saveJournal(retrying)
@@ -192,6 +217,11 @@ export class LegacyDataService {
     const verifiedArchive = await verifyArchive(archivePath, this.journal, this.archiveOperations)
 
     let journal = this.journal
+    await assertLegacyVersionMarker(
+      this.userDataDirectory,
+      journal.versionMarker,
+      journal.versionDeletionStarted === true
+    )
     await assertNoUnexpectedLegacyDirectories(
       this.userDataDirectory,
       this.currentDataDirectory,
@@ -214,6 +244,8 @@ export class LegacyDataService {
         quarantineRelativePath,
         quarantineIdentity,
         movedDirectories: journal.movedDirectories ?? [],
+        deletingDirectories: journal.deletingDirectories ?? [],
+        versionDeletionStarted: journal.versionDeletionStarted ?? false,
         error: undefined
       }
       await this.saveJournal(journal)
@@ -234,6 +266,7 @@ export class LegacyDataService {
     this.journal = journal
     this.status = this.infoFromJournal(journal)
     const moved = new Set(journal.movedDirectories ?? [])
+    const deleting = new Set(journal.deletingDirectories ?? [])
 
     for (const source of journal.sourceDirectories) {
       const sourcePath = path.join(this.userDataDirectory, source.name)
@@ -252,19 +285,25 @@ export class LegacyDataService {
       }
       if (!sourceStats && !targetStats) {
         moved.add(source.name)
-        await this.persistMovedDirectories(moved)
+        deleting.add(source.name)
+        await this.persistCleanupProgress(moved, deleting)
         continue
       }
       if (!sourceStats) {
         moved.add(source.name)
-        await this.persistMovedDirectories(moved)
+        await this.persistCleanupProgress(moved, deleting)
         continue
       }
       assertLegacyDirectory(sourcePath, sourceStats)
       if (!sameIdentity(fileSystemIdentity(sourceStats), source.identity)) {
         throw new Error(`旧数据目录标识已变化，未执行清理：${source.name}`)
       }
-      await verifyLegacyDirectoryContents(sourcePath, source.name, verifiedArchive.manifest)
+      await verifyLegacyDirectoryContents(
+        sourcePath,
+        source,
+        this.currentDataDirectory,
+        verifiedArchive.manifest
+      )
       await rename(sourcePath, targetPath)
       const movedStats = await lstat(targetPath)
       assertLegacyDirectory(targetPath, movedStats)
@@ -272,7 +311,7 @@ export class LegacyDataService {
         throw new Error(`旧数据暂存目录标识校验失败：${source.name}`)
       }
       moved.add(source.name)
-      await this.persistMovedDirectories(moved)
+      await this.persistCleanupProgress(moved, deleting)
     }
 
     await assertNoUnexpectedLegacyDirectories(
@@ -288,7 +327,27 @@ export class LegacyDataService {
       if (!sameIdentity(fileSystemIdentity(targetStats), source.identity)) {
         throw new Error(`旧数据暂存目录标识已变化，未执行删除：${source.name}`)
       }
-      await verifyLegacyDirectoryContents(targetPath, source.name, verifiedArchive.manifest)
+      const deletionStarted = deleting.has(source.name)
+      await verifyLegacyDirectoryContents(
+        targetPath,
+        source,
+        this.currentDataDirectory,
+        verifiedArchive.manifest,
+        {
+          allowMissingFiles: deletionStarted
+        }
+      )
+      if (!deletionStarted) {
+        deleting.add(source.name)
+        await this.persistCleanupProgress(moved, deleting)
+        await verifyLegacyDirectoryContents(
+          targetPath,
+          source,
+          this.currentDataDirectory,
+          verifiedArchive.manifest,
+          { allowMissingFiles: true }
+        )
+      }
       await rm(targetPath, { recursive: true, force: true })
     }
     const finalQuarantineStats = await lstat(quarantinePath)
@@ -297,12 +356,28 @@ export class LegacyDataService {
       throw new Error('旧数据清理暂存目录标识已变化，未执行删除')
     }
     await rmdir(quarantinePath)
+
+    const versionJournal = this.journal!
+    if (!versionJournal.versionDeletionStarted) {
+      await assertLegacyVersionMarker(this.userDataDirectory, versionJournal.versionMarker, false)
+      await this.persistVersionDeletionStarted()
+    }
+    const markerExists = await assertLegacyVersionMarker(
+      this.userDataDirectory,
+      this.journal!.versionMarker,
+      true
+    )
+    if (markerExists) {
+      await rm(path.join(this.userDataDirectory, LEGACY_VERSION_FILENAME))
+    }
     journal = {
       ...this.journal!,
       state: 'cleaned',
       quarantineRelativePath: undefined,
       quarantineIdentity: undefined,
       movedDirectories: undefined,
+      deletingDirectories: undefined,
+      versionDeletionStarted: undefined,
       error: undefined
     }
     await this.saveJournal(journal)
@@ -328,8 +403,15 @@ export class LegacyDataService {
       return
     }
 
+    const versionMarker = await detectLegacyVersionMarker(this.userDataDirectory)
+    if (!versionMarker) {
+      this.status = emptyInfo('none')
+      return
+    }
     const sources = await scanLegacySources(this.userDataDirectory, this.currentDataDirectory)
     if (sources.length === 0) {
+      await assertLegacyVersionMarker(this.userDataDirectory, versionMarker, false)
+      await rm(path.join(this.userDataDirectory, LEGACY_VERSION_FILENAME))
       this.status = emptyInfo('none')
       return
     }
@@ -339,6 +421,7 @@ export class LegacyDataService {
       state: 'archiving',
       archiveRelativePath: archiveRelativePath(),
       sourceDirectories: sources.map(({ info }) => info),
+      versionMarker,
       createdAt: new Date().toISOString()
     }
     await this.saveJournal(journal)
@@ -351,6 +434,7 @@ export class LegacyDataService {
     journal: LegacyMigrationJournal,
     scannedSources?: ScannedSource[]
   ): Promise<void> {
+    await assertLegacyVersionMarker(this.userDataDirectory, journal.versionMarker, false)
     const sources =
       scannedSources ?? (await scanLegacySources(this.userDataDirectory, this.currentDataDirectory))
     const archiveJournal: LegacyMigrationJournal = {
@@ -374,6 +458,7 @@ export class LegacyDataService {
       sourceDirectories,
       files: sources.flatMap((source) => source.files)
     })
+    await assertLegacyVersionMarker(this.userDataDirectory, journal.versionMarker, false)
     const manifest = parseArchiveManifest(generated.manifest)
     assertManifestMatchesJournal(manifest, archiveJournal)
     const next: LegacyMigrationJournal = {
@@ -388,9 +473,22 @@ export class LegacyDataService {
     this.status = this.infoFromJournal(next)
   }
 
-  private async persistMovedDirectories(moved: Set<string>): Promise<void> {
+  private async persistCleanupProgress(moved: Set<string>, deleting: Set<string>): Promise<void> {
     if (!this.journal) return
-    const next = { ...this.journal, state: 'cleaning' as const, movedDirectories: [...moved] }
+    const next = {
+      ...this.journal,
+      state: 'cleaning' as const,
+      movedDirectories: [...moved],
+      deletingDirectories: [...deleting]
+    }
+    await this.saveJournal(next)
+    this.journal = next
+    this.status = this.infoFromJournal(next)
+  }
+
+  private async persistVersionDeletionStarted(): Promise<void> {
+    if (!this.journal) return
+    const next = { ...this.journal, state: 'cleaning' as const, versionDeletionStarted: true }
     await this.saveJournal(next)
     this.journal = next
     this.status = this.infoFromJournal(next)
@@ -493,7 +591,10 @@ async function scanLegacySources(
       throw new Error(`旧数据目录与当前数据目录重叠：${name}`)
     }
     const files: ScannedSource['files'] = []
-    await collectFiles(sourcePath, name, sourcePath, files)
+    const duplicateRoot = isMigrationResidueDirectory(name)
+      ? path.join(currentDataDirectory, name)
+      : undefined
+    await collectFiles(sourcePath, name, sourcePath, files, duplicateRoot)
     sources.push({
       info: {
         name,
@@ -511,7 +612,8 @@ async function collectFiles(
   directory: string,
   archivePrefix: string,
   sourceRoot: string,
-  output: ScannedSource['files']
+  output: ScannedSource['files'],
+  duplicateRoot?: string
 ): Promise<void> {
   const entries = await readdir(directory, { withFileTypes: true })
   for (const entry of entries) {
@@ -519,7 +621,7 @@ async function collectFiles(
     const stats = await lstat(fullPath)
     if (stats.isSymbolicLink()) throw new Error(`旧数据包含不支持的符号链接：${fullPath}`)
     if (stats.isDirectory()) {
-      await collectFiles(fullPath, archivePrefix, sourceRoot, output)
+      await collectFiles(fullPath, archivePrefix, sourceRoot, output, duplicateRoot)
       continue
     }
     if (!stats.isFile()) throw new Error(`旧数据包含不支持的文件类型：${fullPath}`)
@@ -529,6 +631,7 @@ async function collectFiles(
     output.push({
       archivePath,
       sourcePath: fullPath,
+      ...(duplicateRoot ? { duplicatePath: path.join(duplicateRoot, relative) } : {}),
       sizeBytes: stats.size,
       identity: fileSystemIdentity(stats)
     })
@@ -599,6 +702,7 @@ function parseJournal(value: unknown): LegacyMigrationJournal {
   }
   const sourceDirectories = value.sourceDirectories.map(parseJournalSource)
   assertUniqueNames(sourceDirectories, '旧数据迁移日志来源重复')
+  const versionMarker = parseLegacyVersionMarker(value.versionMarker)
 
   if (typeof value.archiveRelativePath !== 'string') throw new Error('旧数据归档路径无效')
   assertArchiveRelativePath(value.archiveRelativePath)
@@ -617,6 +721,8 @@ function parseJournal(value: unknown): LegacyMigrationJournal {
   let quarantineRelativePath: string | undefined
   let quarantineIdentity: FileSystemIdentity | undefined
   let movedDirectories: string[] | undefined
+  let deletingDirectories: string[] | undefined
+  let versionDeletionStarted: boolean | undefined
   if (state === 'cleaning') {
     if (typeof value.quarantineRelativePath !== 'string') throw new Error('旧数据清理路径无效')
     assertQuarantineRelativePath(value.quarantineRelativePath)
@@ -636,10 +742,29 @@ function parseJournal(value: unknown): LegacyMigrationJournal {
     if (new Set(movedDirectories).size !== movedDirectories.length) {
       throw new Error('旧数据清理进度包含重复目录')
     }
+    if (!Array.isArray(value.deletingDirectories)) throw new Error('旧数据删除进度无效')
+    deletingDirectories = value.deletingDirectories.map((name) => {
+      if (typeof name !== 'string' || !sourceNames.has(name) || !movedDirectories!.includes(name)) {
+        throw new Error('旧数据删除进度无效')
+      }
+      return name
+    })
+    if (new Set(deletingDirectories).size !== deletingDirectories.length) {
+      throw new Error('旧数据删除进度包含重复目录')
+    }
+    if (typeof value.versionDeletionStarted !== 'boolean') {
+      throw new Error('旧版版本标记删除进度无效')
+    }
+    versionDeletionStarted = value.versionDeletionStarted
+    if (versionDeletionStarted && deletingDirectories.length !== sourceDirectories.length) {
+      throw new Error('旧版版本标记删除进度无效')
+    }
   } else if (
     value.quarantineRelativePath !== undefined ||
     value.quarantineIdentity !== undefined ||
-    value.movedDirectories !== undefined
+    value.movedDirectories !== undefined ||
+    value.deletingDirectories !== undefined ||
+    value.versionDeletionStarted !== undefined
   ) {
     throw new Error('旧数据清理状态与进度不一致')
   }
@@ -659,9 +784,12 @@ function parseJournal(value: unknown): LegacyMigrationJournal {
     ...(archiveSizeBytes !== undefined ? { archiveSizeBytes } : {}),
     ...(archiveSha256 !== undefined ? { archiveSha256 } : {}),
     sourceDirectories,
+    versionMarker,
     ...(quarantineRelativePath ? { quarantineRelativePath } : {}),
     ...(quarantineIdentity ? { quarantineIdentity } : {}),
     ...(movedDirectories ? { movedDirectories } : {}),
+    ...(deletingDirectories ? { deletingDirectories } : {}),
+    ...(versionDeletionStarted !== undefined ? { versionDeletionStarted } : {}),
     createdAt: value.createdAt,
     ...(error ? { error } : {})
   }
@@ -674,7 +802,8 @@ function parseArchiveManifest(value: unknown): ArchiveManifest {
     !isIsoTimestamp(value.createdAt) ||
     !Array.isArray(value.sourceDirectories) ||
     value.sourceDirectories.length === 0 ||
-    !Array.isArray(value.files)
+    !Array.isArray(value.files) ||
+    (value.duplicateFiles !== undefined && !Array.isArray(value.duplicateFiles))
   ) {
     throw new Error('旧数据归档格式无效')
   }
@@ -682,7 +811,7 @@ function parseArchiveManifest(value: unknown): ArchiveManifest {
   const sourceDirectories = value.sourceDirectories.map(parseLegacyDataSourceInfo)
   assertUniqueNames(sourceDirectories, '旧数据归档来源重复')
   const sourceNames = new Set(sourceDirectories.map((source) => source.name))
-  const files = value.files.map((file): ArchiveManifest['files'][number] => {
+  const parseManifestFile = (file: unknown): ArchiveManifest['files'][number] => {
     if (
       !isRecord(file) ||
       typeof file.path !== 'string' ||
@@ -696,14 +825,22 @@ function parseArchiveManifest(value: unknown): ArchiveManifest {
     const sourceName = file.path.split('/')[0]
     if (!sourceNames.has(sourceName)) throw new Error('旧数据归档文件来源无效')
     return { path: file.path, sizeBytes: file.sizeBytes, sha256: file.sha256 }
-  })
-  if (new Set(files.map((file) => file.path)).size !== files.length) {
+  }
+  const files = value.files.map(parseManifestFile)
+  const duplicateFiles = (value.duplicateFiles ?? []).map(parseManifestFile)
+  for (const file of duplicateFiles) {
+    if (!isMigrationResidueDirectory(file.path.split('/')[0])) {
+      throw new Error('旧数据归档重复文件来源无效')
+    }
+  }
+  const allPaths = [...files, ...duplicateFiles].map((file) => file.path)
+  if (new Set(allPaths).size !== allPaths.length) {
     throw new Error('旧数据归档文件清单包含重复路径')
   }
 
   const totals = new Map<string, { fileCount: number; sizeBytes: number }>()
   for (const source of sourceDirectories) totals.set(source.name, { fileCount: 0, sizeBytes: 0 })
-  for (const file of files) {
+  for (const file of [...files, ...duplicateFiles]) {
     const total = totals.get(file.path.split('/')[0])!
     total.fileCount += 1
     total.sizeBytes += file.sizeBytes
@@ -719,7 +856,8 @@ function parseArchiveManifest(value: unknown): ArchiveManifest {
     formatVersion: ARCHIVE_FORMAT_VERSION,
     createdAt: value.createdAt,
     sourceDirectories,
-    files
+    files,
+    duplicateFiles
   }
 }
 
@@ -729,6 +867,26 @@ function parseJournalSource(value: unknown): JournalSource {
   return {
     ...source,
     identity: parseFileSystemIdentity(value.identity, '旧数据迁移日志来源标识无效')
+  }
+}
+
+function parseLegacyVersionMarker(value: unknown): LegacyVersionMarker {
+  if (
+    !isRecord(value) ||
+    typeof value.version !== 'string' ||
+    !isLegacyVersion(value.version) ||
+    !isNonNegativeSafeInteger(value.sizeBytes) ||
+    value.sizeBytes > MAX_LEGACY_VERSION_BYTES ||
+    typeof value.sha256 !== 'string' ||
+    !isSha256(value.sha256)
+  ) {
+    throw new Error('旧版版本标记无效')
+  }
+  return {
+    version: value.version,
+    sizeBytes: value.sizeBytes,
+    sha256: value.sha256,
+    identity: parseFileSystemIdentity(value.identity, '旧版版本标记标识无效')
   }
 }
 
@@ -794,29 +952,66 @@ function assertManifestMatchesJournal(
 
 async function verifyLegacyDirectoryContents(
   directory: string,
-  sourceName: string,
-  manifest: ArchiveManifest
+  source: JournalSource,
+  currentDataDirectory: string,
+  manifest: ArchiveManifest,
+  options: { allowMissingFiles?: boolean } = {}
 ): Promise<void> {
   const actualFiles: ScannedSource['files'] = []
-  await collectFiles(directory, sourceName, directory, actualFiles)
-  const prefix = `${sourceName}/`
+  const duplicateRoot = isMigrationResidueDirectory(source.name)
+    ? path.join(currentDataDirectory, source.name)
+    : undefined
+  await collectFiles(directory, source.name, directory, actualFiles, duplicateRoot)
+  const prefix = `${source.name}/`
   const expectedFiles = new Map(
     manifest.files
       .filter((file) => file.path.startsWith(prefix))
       .map((file) => [file.path, file] as const)
   )
-  if (actualFiles.length !== expectedFiles.size) {
-    throw new Error(`旧数据在归档后发生变化，未执行清理：${sourceName}`)
+  const expectedDuplicates = new Map(
+    manifest.duplicateFiles
+      .filter((file) => file.path.startsWith(prefix))
+      .map((file) => [file.path, file] as const)
+  )
+  const actualSizeBytes = actualFiles.reduce((total, file) => total + file.sizeBytes, 0)
+  if (
+    !options.allowMissingFiles &&
+    (actualFiles.length !== source.fileCount || actualSizeBytes !== source.sizeBytes)
+  ) {
+    throw new Error(`旧数据在归档后发生变化，未执行清理：${source.name}`)
   }
+  const verifiedArchivePaths = new Set<string>()
+  const verifiedDuplicatePaths = new Set<string>()
   for (const actual of actualFiles) {
     const expected = expectedFiles.get(actual.archivePath)
-    if (
-      !expected ||
-      actual.sizeBytes !== expected.sizeBytes ||
-      (await sha256File(actual.sourcePath)) !== expected.sha256
-    ) {
-      throw new Error(`旧数据在归档后发生变化，未执行清理：${sourceName}`)
+    if (expected) {
+      if (
+        actual.sizeBytes !== expected.sizeBytes ||
+        (await sha256File(actual.sourcePath)) !== expected.sha256
+      ) {
+        throw new Error(`旧数据在归档后发生变化，未执行清理：${source.name}`)
+      }
+      verifiedArchivePaths.add(actual.archivePath)
+      continue
     }
+    const expectedDuplicate = expectedDuplicates.get(actual.archivePath)
+    const measuredDuplicate = expectedDuplicate ? await measureMatchingDuplicate(actual) : null
+    if (
+      !expectedDuplicate ||
+      !measuredDuplicate ||
+      measuredDuplicate.sizeBytes !== expectedDuplicate.sizeBytes ||
+      measuredDuplicate.sha256 !== expectedDuplicate.sha256
+    ) {
+      throw new Error(`旧数据没有归档或相同的数据副本，未执行清理：${source.name}`)
+    }
+    verifiedDuplicatePaths.add(actual.archivePath)
+  }
+  if (
+    !options.allowMissingFiles &&
+    (verifiedArchivePaths.size !== expectedFiles.size ||
+      verifiedDuplicatePaths.size !== expectedDuplicates.size)
+  ) {
+    throw new Error(`旧数据在归档后发生变化，未执行清理：${source.name}`)
   }
 }
 
@@ -876,6 +1071,34 @@ function isLegacyDirectoryName(value: unknown): value is (typeof LEGACY_DATA_DIR
     typeof value === 'string' &&
     LEGACY_DATA_DIRECTORIES.includes(value as (typeof LEGACY_DATA_DIRECTORIES)[number])
   )
+}
+
+function isMigrationResidueDirectory(
+  value: string
+): value is (typeof LEGACY_MIGRATION_RESIDUE_DIRECTORIES)[number] {
+  return LEGACY_MIGRATION_RESIDUE_DIRECTORIES.includes(
+    value as (typeof LEGACY_MIGRATION_RESIDUE_DIRECTORIES)[number]
+  )
+}
+
+function isLegacyVersion(value: string): boolean {
+  // The legacy application compared only the stable numeric core of its version.
+  const version = parseBaseVersion(value)
+  const firstCurrentVersion = parseBaseVersion(FIRST_CURRENT_DATA_VERSION)!
+  if (!version) return false
+  for (let index = 0; index < firstCurrentVersion.length; index += 1) {
+    if (version[index] < firstCurrentVersion[index]) return true
+    if (version[index] > firstCurrentVersion[index]) return false
+  }
+  return false
+}
+
+function parseBaseVersion(value: string): [number, number, number] | null {
+  const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.exec(value)
+  if (!match) return null
+  const parts = match.slice(1).map(Number)
+  if (parts.some((part) => !Number.isSafeInteger(part))) return null
+  return parts as [number, number, number]
 }
 
 function isNonNegativeSafeInteger(value: unknown): value is number {
@@ -947,6 +1170,75 @@ async function lstatIfExists(filename: string): Promise<Awaited<ReturnType<typeo
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
     throw error
+  }
+}
+
+async function detectLegacyVersionMarker(
+  userDataDirectory: string
+): Promise<LegacyVersionMarker | null> {
+  const filename = path.join(userDataDirectory, LEGACY_VERSION_FILENAME)
+  const stats = await lstatIfExists(filename)
+  if (
+    !stats ||
+    !stats.isFile() ||
+    stats.isSymbolicLink() ||
+    stats.size > MAX_LEGACY_VERSION_BYTES
+  ) {
+    return null
+  }
+  try {
+    const marker = await readLegacyVersionMarker(filename, stats)
+    return isLegacyVersion(marker.version) ? marker : null
+  } catch {
+    return null
+  }
+}
+
+async function assertLegacyVersionMarker(
+  userDataDirectory: string,
+  expected: LegacyVersionMarker,
+  allowMissing: boolean
+): Promise<boolean> {
+  const filename = path.join(userDataDirectory, LEGACY_VERSION_FILENAME)
+  const stats = await lstatIfExists(filename)
+  if (!stats) {
+    if (allowMissing) return false
+    throw new Error('旧版版本标记缺失，未执行清理')
+  }
+  if (!stats.isFile() || stats.isSymbolicLink() || stats.size > MAX_LEGACY_VERSION_BYTES) {
+    throw new Error('旧版版本标记已变化，未执行清理')
+  }
+  const actual = await readLegacyVersionMarker(filename, stats)
+  if (
+    actual.version !== expected.version ||
+    actual.sizeBytes !== expected.sizeBytes ||
+    actual.sha256 !== expected.sha256 ||
+    !sameIdentity(actual.identity, expected.identity)
+  ) {
+    throw new Error('旧版版本标记已变化，未执行清理')
+  }
+  return true
+}
+
+async function readLegacyVersionMarker(
+  filename: string,
+  before: Awaited<ReturnType<typeof lstat>>
+): Promise<LegacyVersionMarker> {
+  const contents = await readFile(filename)
+  const after = await lstat(filename)
+  if (
+    before.dev !== after.dev ||
+    before.ino !== after.ino ||
+    before.size !== after.size ||
+    contents.byteLength !== before.size
+  ) {
+    throw new Error('旧版版本标记在读取期间发生变化')
+  }
+  return {
+    version: contents.toString('utf8').trim(),
+    sizeBytes: contents.byteLength,
+    sha256: createHash('sha256').update(contents).digest('hex'),
+    identity: fileSystemIdentity(after)
   }
 }
 
