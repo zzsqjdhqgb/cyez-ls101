@@ -1,6 +1,11 @@
 import { app, BrowserWindow, dialog, safeStorage } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
-import { createMainLogger, registerRendererLogger, type MainLogger } from '@ls101/logger/main'
+import {
+  createConsoleLogger,
+  createMainLogger,
+  registerRendererLogger,
+  type Logger
+} from '@ls101/logger/main'
 import { registerConfigStore } from '@ls101/config-store/main'
 import { registerAIRouter } from '@ls101/airouter/main'
 import { registerClipboard } from '@ls101/clipboard/main'
@@ -24,21 +29,16 @@ import { registerWindowControlHandlers } from './window-controls'
 registerFileStoreScheme()
 registerBuiltinFileStoreScheme()
 let applicationInitialized = false
-let logger: MainLogger | null = null
+let logger: Logger | null = null
 
 process.on('uncaughtExceptionMonitor', (error) => {
   if (logger) logger.errorSync('Main process uncaught exception', error)
   else console.error('Main process uncaught exception', error)
 })
 
-process.on('unhandledRejection', (reason) => {
-  if (logger) logger.error('Main process unhandled rejection', reason)
-  else console.error('Main process unhandled rejection', reason)
-})
-
 async function initializeApplication(): Promise<void> {
   electronApp.setAppUserModelId('io.github.zzsqjdhqgb.cyez-ls101')
-  logger = await createMainLogger({ directory: app.getPath('logs') })
+  logger = await initializeApplicationLogger()
   const applicationLogger = logger
   applicationLogger.info('Application initialization started', {
     version: app.getVersion(),
@@ -90,6 +90,16 @@ async function initializeApplication(): Promise<void> {
       createMainWindow(applicationLogger)
     }
   })
+}
+
+async function initializeApplicationLogger(): Promise<Logger> {
+  try {
+    return await createMainLogger({ directory: app.getPath('logs') })
+  } catch (error) {
+    const fallback = createConsoleLogger()
+    fallback.error('Persistent logger unavailable; using console-only logging', error)
+    return fallback
+  }
 }
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock()
