@@ -346,6 +346,9 @@ const clipboardBridge: ClipboardBridge = {
 const appInfoBridge: AppInfoBridge = {
   getVersion() {
     return ipcRenderer.invoke(APP_INFO_CHANNELS.getVersion)
+  },
+  ensureInstallationMarker() {
+    return ipcRenderer.invoke(APP_INFO_CHANNELS.ensureInstallationMarker)
   }
 }
 

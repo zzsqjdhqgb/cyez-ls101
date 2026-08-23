@@ -14,7 +14,8 @@ afterEach(() => {
 describe('AboutSettingsPage', () => {
   it('shows product, team and runtime version information', async () => {
     window.appInfo = {
-      getVersion: vi.fn().mockResolvedValue('0.3.1-test')
+      getVersion: vi.fn().mockResolvedValue('0.3.1-test'),
+      ensureInstallationMarker: vi.fn().mockResolvedValue(undefined)
     }
 
     render(

@@ -13,7 +13,8 @@ afterEach(() => {
 describe('ReleaseNotesModal', () => {
   it('presents the current release using the shared modal', async () => {
     window.appInfo = {
-      getVersion: vi.fn().mockResolvedValue('0.4.0-test')
+      getVersion: vi.fn().mockResolvedValue('0.4.0-test'),
+      ensureInstallationMarker: vi.fn().mockResolvedValue(undefined)
     }
     const onOpenChange = vi.fn()
 

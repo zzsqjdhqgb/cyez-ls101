@@ -169,7 +169,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       'testImageConnection',
       'testSpeechConnection'
     ],
-    appInfo: ['getVersion'],
+    appInfo: ['ensureInstallationMarker', 'getVersion'],
     configStore: ['invoke'],
     dataDirectory: [
       'choose',

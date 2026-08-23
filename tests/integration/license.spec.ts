@@ -28,6 +28,9 @@ test('activates with an invitation code and reuses the hash receipt after restar
     await expect(
       readFile(path.join(userDataDir, 'legacy-migration.json'), 'utf8')
     ).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(
+      readFile(path.join(userDataDir, '.ls101-installation.json'), 'utf8')
+    ).rejects.toMatchObject({ code: 'ENOENT' })
 
     const guideWindowPromise = electronApp.waitForEvent('window')
     await page.getByRole('button', { name: '参与激活方式意见征集' }).click()
@@ -78,8 +81,21 @@ test('activates with an invitation code and reuses the hash receipt after restar
     await expect(
       readFile(path.join(userDataDir, 'legacy-migration.json'), 'utf8')
     ).resolves.toContain('"state": "archived"')
+    await expect(
+      readFile(path.join(userDataDir, '.ls101-installation.json'), 'utf8')
+    ).rejects.toMatchObject({ code: 'ENOENT' })
     await page.getByRole('button', { name: '清理并继续' }).click()
     await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
+
+    const installationMarker = JSON.parse(
+      await readFile(path.join(userDataDir, '.ls101-installation.json'), 'utf8')
+    ) as Record<string, unknown>
+    expect(installationMarker).toMatchObject({
+      kind: 'ls101-installation',
+      formatVersion: 1,
+      firstAppVersion: expect.stringContaining('0.4.0'),
+      lastAppVersion: expect.stringContaining('0.4.0')
+    })
 
     const receipt = await readFile(path.join(userDataDir, 'license.json'), 'utf8')
     expect(receipt).toContain(INTEGRATION_LICENSE_CODE_HASH)

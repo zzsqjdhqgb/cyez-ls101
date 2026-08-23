@@ -115,8 +115,15 @@ function renderLicenseActivation(status: LicenseStatus): void {
 
 async function openActiveApplication(): Promise<void> {
   await completeLegacyDataMigration()
+  await ensureInstallationMarker()
   await initializeApplicationContent()
   renderMainApplication()
+}
+
+async function ensureInstallationMarker(): Promise<void> {
+  const appInfo = window.appInfo
+  if (!appInfo) throw new Error('应用信息服务不可用')
+  await appInfo.ensureInstallationMarker()
 }
 
 function completeLegacyDataMigration(): Promise<void> {
