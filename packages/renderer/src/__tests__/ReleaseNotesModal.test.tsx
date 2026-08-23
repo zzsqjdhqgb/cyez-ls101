@@ -28,6 +28,10 @@ describe('ReleaseNotesModal', () => {
     expect(screen.getByRole('heading', { name: '已知限制' })).toBeInTheDocument()
     expect(screen.getByRole('table')).toHaveTextContent('内置模板')
     expect(await screen.findByText('已安装 0.4.0-test')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /查看完整变更/ })).toHaveAttribute(
+      'href',
+      'https://github.com/zzsqjdhqgb/cyez-ls101/compare/v0.3.2...v0.4.0'
+    )
 
     expect(screen.getByRole('button', { name: '关闭版本说明' })).toBeInTheDocument()
   })

@@ -3,6 +3,7 @@ import { ArrowRight, ExternalLink, Sparkles } from 'lucide-react'
 import { SettingsContent, SettingsSection } from '../../components/settings/SettingsContent'
 import { appIconUrl, catAvatarUrl, zhoufeiAvatarUrl, zoujuanAvatarUrl } from '../../assets'
 import { ReleaseNotesModal } from '../release-notes/ReleaseNotesModal'
+import { latestReleaseVersion } from '../release-notes/release-notes'
 import styles from './AboutSettingsPage.module.css'
 
 const projectUrl = 'https://github.com/zzsqjdhqgb/cyez-ls101'
@@ -109,7 +110,7 @@ export function AboutSettingsPage(): JSX.Element {
         </span>
         <span>
           <strong>版本说明</strong>
-          <small>查看 0.4.0 发布预览与本次更新亮点</small>
+          <small>查看 {latestReleaseVersion} 发布预览与本次更新亮点</small>
         </span>
         <ArrowRight aria-hidden="true" />
       </button>
