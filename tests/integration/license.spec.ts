@@ -20,7 +20,7 @@ test('activates with an invitation code and reuses the hash receipt after restar
     await page.waitForLoadState('domcontentloaded')
 
     await expect(page.getByRole('heading', { name: '激活曹二听说101' })).toBeVisible()
-    await expect(page.getByRole('button', { name: '查看激活方式说明' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '参与激活方式意见征集' })).toBeVisible()
     await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toHaveCount(0)
 
     await page.getByLabel('邀请码').fill('not-the-code')
@@ -65,7 +65,7 @@ test('blocks activation and application access after the license deadline', asyn
 
     await expect(page.getByRole('heading', { name: '使用权限已到期' })).toBeVisible()
     await expect(page.getByText(/2026年10月1日 23:59/)).toBeVisible()
-    await expect(page.getByRole('button', { name: '查看激活方式说明' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '参与激活方式意见征集' })).toBeVisible()
     await expect(page.getByLabel('邀请码')).toHaveCount(0)
     await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toHaveCount(0)
     expect(pageErrors).toEqual([])

@@ -21,7 +21,7 @@ describe('LicenseSettingsPage', () => {
     }
 
     render(<LicenseSettingsPage />)
-    fireEvent.click(screen.getByRole('button', { name: '查看说明' }))
+    fireEvent.click(screen.getByRole('button', { name: '参与意见征集' }))
 
     await waitFor(() => expect(openActivationGuide).toHaveBeenCalledOnce())
   })

@@ -72,7 +72,7 @@ describe('LicenseActivationPage', () => {
     expect(screen.getByRole('heading', { name: '使用权限已到期' })).toBeInTheDocument()
     expect(screen.queryByLabelText('邀请码')).not.toBeInTheDocument()
     expect(screen.getByText(/2026年10月1日 23:59/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '查看激活方式说明' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '参与激活方式意见征集' })).toBeInTheDocument()
   })
 
   it('opens the bundled activation guide', async () => {
@@ -85,7 +85,7 @@ describe('LicenseActivationPage', () => {
     }
 
     render(<LicenseActivationPage initialStatus={notActivated} onActivated={vi.fn()} />)
-    fireEvent.click(screen.getByRole('button', { name: '查看激活方式说明' }))
+    fireEvent.click(screen.getByRole('button', { name: '参与激活方式意见征集' }))
 
     await waitFor(() => expect(openActivationGuide).toHaveBeenCalledOnce())
   })

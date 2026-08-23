@@ -17,7 +17,7 @@ export function LicenseSettingsPage(): JSX.Element {
   const openActivationGuide = async (): Promise<void> => {
     const license = window.license
     if (!license) {
-      setGuideError('激活方式说明暂时无法打开，请重新启动软件后重试。')
+      setGuideError('意见征集页面暂时无法打开，请重新启动软件后重试。')
       return
     }
 
@@ -25,7 +25,7 @@ export function LicenseSettingsPage(): JSX.Element {
     try {
       await license.openActivationGuide()
     } catch {
-      setGuideError('激活方式说明暂时无法打开，请稍后重试。')
+      setGuideError('意见征集页面暂时无法打开，请稍后重试。')
     }
   }
 
@@ -50,11 +50,11 @@ export function LicenseSettingsPage(): JSX.Element {
     <SettingsContent>
       <SettingsSection title="许可管理">
         <SettingsRow
-          label="激活方式说明"
-          description={guideError ?? '了解后续可能采用的软件激活方式。'}
+          label="激活方式意见征集"
+          description={guideError ?? '了解候选方案，并反馈你更能接受的激活方式。'}
         >
           <Button icon={ExternalLink} onClick={() => void openActivationGuide()}>
-            查看说明
+            参与意见征集
           </Button>
         </SettingsRow>
         <SettingsRow label="软件激活" description="当前软件已激活。">

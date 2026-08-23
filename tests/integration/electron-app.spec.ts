@@ -366,7 +366,7 @@ test('navigates through every primary application area', async () => {
 
   await licenseSettings.click()
   await expect(page.getByRole('heading', { level: 1, name: '许可' })).toBeVisible()
-  await expect(page.getByRole('button', { name: '查看说明' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '参与意见征集' })).toBeVisible()
   await expect(page.getByRole('button', { name: '取消激活' })).toBeVisible()
   await page.getByRole('button', { name: '返回设置' }).click()
 

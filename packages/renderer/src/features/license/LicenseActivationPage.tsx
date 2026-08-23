@@ -66,7 +66,7 @@ export function LicenseActivationPage({
   async function openActivationGuide(): Promise<void> {
     const license = window.license
     if (!license) {
-      setGuideError('激活方式说明暂时无法打开，请重新启动应用。')
+      setGuideError('意见征集页面暂时无法打开，请重新启动应用。')
       return
     }
 
@@ -74,7 +74,7 @@ export function LicenseActivationPage({
     try {
       await license.openActivationGuide()
     } catch {
-      setGuideError('激活方式说明暂时无法打开，请稍后重试。')
+      setGuideError('意见征集页面暂时无法打开，请稍后重试。')
     }
   }
 
@@ -161,7 +161,7 @@ export function LicenseActivationPage({
 
           <div className={styles.guide}>
             <Button icon={ExternalLink} onClick={() => void openActivationGuide()} variant="ghost">
-              查看激活方式说明
+              参与激活方式意见征集
             </Button>
             {guideError ? (
               <p className={styles.error} role="alert">
