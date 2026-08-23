@@ -53,6 +53,9 @@ export function SubmissionGradingPage(): JSX.Element {
     submissionIds.length > 0 ? 'checking' : 'available'
   )
   const [preflightError, setPreflightError] = useState<string | null>(null)
+  const [preflightWorkspaces, setPreflightWorkspaces] = useState<
+    Record<string, SubmissionGradingWorkspace>
+  >({})
 
   useEffect(() => {
     if (submissionIds.length === 0) return
@@ -64,6 +67,11 @@ export function SubmissionGradingPage(): JSX.Element {
       void Promise.all(submissionIds.map((submissionId) => repository.startGrading(submissionId)))
         .then((workspaces) => {
           if (!active) return
+          setPreflightWorkspaces(
+            Object.fromEntries(
+              workspaces.map((workspace) => [workspace.submission.meta.submissionId, workspace])
+            )
+          )
           if (workspaces.every((workspace) => workspace.grading.status === 'ready')) {
             navigate(settlementUrl(submissionIds), { replace: true })
             return
@@ -99,8 +107,22 @@ export function SubmissionGradingPage(): JSX.Element {
     )
   }
 
-  if (mode === 'human') return <HumanSubmissionGradingPage submissionIds={submissionIds} />
-  if (mode === 'ai') return <AISubmissionGradingPage submissionIds={submissionIds} />
+  if (mode === 'human') {
+    return (
+      <HumanSubmissionGradingPage
+        initialWorkspaces={preflightWorkspaces}
+        submissionIds={submissionIds}
+      />
+    )
+  }
+  if (mode === 'ai') {
+    return (
+      <AISubmissionGradingPage
+        initialWorkspaces={preflightWorkspaces}
+        submissionIds={submissionIds}
+      />
+    )
+  }
   return <GradingModeChooser onSelect={setMode} />
 }
 
@@ -134,9 +156,11 @@ function GradingModeChooser({ onSelect }: { onSelect(mode: 'human' | 'ai'): void
 }
 
 function HumanSubmissionGradingPage({
-  submissionIds
+  submissionIds,
+  initialWorkspaces
 }: {
   submissionIds: readonly string[]
+  initialWorkspaces: Readonly<Record<string, SubmissionGradingWorkspace>>
 }): JSX.Element {
   const repository = useSubmissionLibrary()
   const navigate = useNavigate()
@@ -167,8 +191,11 @@ function HumanSubmissionGradingPage({
         setError('未指定需要评分的作答记录。')
         return
       }
-      void repository
-        .startGrading(submissionId)
+      const cached = initialWorkspaces[submissionId]
+      const workspacePromise = cached
+        ? Promise.resolve(cached)
+        : repository.startGrading(submissionId)
+      void workspacePromise
         .then((next) => {
           if (!active) return
           if (next.grading.status === 'ready') {
@@ -185,7 +212,7 @@ function HumanSubmissionGradingPage({
       active = false
       window.clearTimeout(timeout)
     }
-  }, [finishOrAdvance, repository, submissionId])
+  }, [finishOrAdvance, initialWorkspaces, repository, submissionId])
 
   const current = useMemo(() => {
     if (!workspace) return null
@@ -385,13 +412,16 @@ interface AIGradingTarget {
 type AIPhase = 'configure' | 'running' | 'decision' | 'sample' | 'review' | 'submitting'
 
 function AISubmissionGradingPage({
-  submissionIds
+  submissionIds,
+  initialWorkspaces
 }: {
   submissionIds: readonly string[]
+  initialWorkspaces: Readonly<Record<string, SubmissionGradingWorkspace>>
 }): JSX.Element {
   const repository = useSubmissionLibrary()
   const navigate = useNavigate()
-  const [workspaces, setWorkspaces] = useState<Record<string, SubmissionGradingWorkspace>>({})
+  const [workspaces, setWorkspaces] =
+    useState<Record<string, SubmissionGradingWorkspace>>(initialWorkspaces)
   const workspacesRef = useRef(workspaces)
   const [recognitionModels, setRecognitionModels] = useState<AIModelOption[]>([])
   const [textModels, setTextModels] = useState<AIModelOption[]>([])
@@ -419,16 +449,9 @@ function AISubmissionGradingPage({
 
   useEffect(() => {
     let active = true
-    void Promise.all([
-      listSubmissionAIModels(),
-      Promise.all(submissionIds.map((submissionId) => repository.startGrading(submissionId)))
-    ])
-      .then(([models, loaded]) => {
+    void listSubmissionAIModels()
+      .then((models) => {
         if (!active) return
-        const next = Object.fromEntries(
-          loaded.map((workspace) => [workspace.submission.meta.submissionId, workspace])
-        )
-        updateWorkspaces(next)
         setRecognitionModels(models.speechRecognition)
         setTextModels(models.text)
         setRecognitionModel(models.speechRecognition[0] ?? null)
@@ -444,7 +467,7 @@ function AISubmissionGradingPage({
       active = false
       controllerRef.current?.abort()
     }
-  }, [repository, submissionIds, updateWorkspaces])
+  }, [updateWorkspaces])
 
   const targets = useMemo(() => aiTargets(workspaces), [workspaces])
   const samplingRules = useMemo(() => {

@@ -122,8 +122,9 @@ describe('submission grading UI', () => {
         readyAt: '2026-08-10T03:00:00Z'
       }
     })
+    const startGrading = vi.fn().mockResolvedValue(workspace)
     const repository = mockRepository({
-      startGrading: vi.fn().mockResolvedValue(workspace),
+      startGrading,
       submitGradingResult
     })
 
@@ -137,6 +138,7 @@ describe('submission grading UI', () => {
     ])
 
     expect(await screen.findByText('请朗读句子。')).toBeInTheDocument()
+    expect(startGrading).toHaveBeenCalledTimes(1)
     expect(screen.getByText('按准确度评分。')).toBeInTheDocument()
     expect(screen.getByText('Expected reading.')).toBeInTheDocument()
     expect(screen.getByText('Read this sentence.')).toBeInTheDocument()
@@ -159,8 +161,9 @@ describe('submission grading UI', () => {
     const submitGradingResult = vi
       .fn()
       .mockResolvedValue(readyWorkspace(workspace, 4, 'AI comment'))
+    const startGrading = vi.fn().mockResolvedValue(workspace)
     const repository = mockRepository({
-      startGrading: vi.fn().mockResolvedValue(workspace),
+      startGrading,
       saveAIGradingRun,
       submitGradingResult
     })
@@ -171,6 +174,7 @@ describe('submission grading UI', () => {
     ])
 
     fireEvent.click(await screen.findByRole('button', { name: 'AI 评分' }))
+    expect(startGrading).toHaveBeenCalledTimes(1)
     fireEvent.click(await screen.findByRole('button', { name: '开始 AI 评分' }))
     expect(await screen.findByText('AI 评分已完成')).toBeInTheDocument()
     expect(submitGradingResult).not.toHaveBeenCalled()
