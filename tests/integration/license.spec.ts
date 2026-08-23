@@ -30,6 +30,17 @@ test('activates with an invitation code and reuses the hash receipt after restar
     await expect(
       guideWindow.getByRole('heading', { name: '一起选出更方便的软件激活方式' })
     ).toBeVisible()
+    await expect.poll(() => guideWindow.title()).toBe('软件激活方式意见征集')
+    const surveyLinks = guideWindow.getByRole('link', { name: '打开问卷' })
+    await expect(surveyLinks).toHaveCount(2)
+    await expect(surveyLinks.first()).toHaveAttribute(
+      'href',
+      'https://forms.cloud.microsoft/r/QJw61zh8dn'
+    )
+    await expect(surveyLinks.last()).toHaveAttribute(
+      'href',
+      'https://forms.cloud.microsoft/r/QJw61zh8dn'
+    )
     const guideUrl = guideWindow.url()
     await expect(guideWindow.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveAttribute(
       'content',

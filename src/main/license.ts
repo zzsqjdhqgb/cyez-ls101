@@ -1,10 +1,12 @@
-import { app, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, type IpcMainInvokeEvent } from 'electron'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { LICENSE_CHANNELS } from '@ls101/core-types'
 import { LicenseService, type LicenseServiceOptions } from './license-service'
 
 let activationGuideWindow: BrowserWindow | null = null
+const ACTIVATION_SURVEY_URL = 'https://forms.cloud.microsoft/r/QJw61zh8dn'
+const ACTIVATION_GUIDE_TITLE = '软件激活方式意见征集'
 
 export function registerLicenseHandlers(options: LicenseServiceOptions): void {
   const service = new LicenseService(options)
@@ -38,7 +40,7 @@ async function openActivationGuide(event: IpcMainInvokeEvent): Promise<void> {
     show: false,
     parent,
     autoHideMenuBar: true,
-    title: '软件激活方式意见征集',
+    title: ACTIVATION_GUIDE_TITLE,
     backgroundColor: '#f3f6f4',
     webPreferences: {
       contextIsolation: true,
@@ -50,9 +52,16 @@ async function openActivationGuide(event: IpcMainInvokeEvent): Promise<void> {
   })
   activationGuideWindow = guideWindow
 
-  guideWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  guideWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url === ACTIVATION_SURVEY_URL) void shell.openExternal(url)
+    return { action: 'deny' }
+  })
   guideWindow.webContents.on('will-navigate', (navigationEvent, url) => {
     if (!isSameGuideDocument(url, guideUrl)) navigationEvent.preventDefault()
+  })
+  guideWindow.webContents.on('page-title-updated', (titleEvent) => {
+    titleEvent.preventDefault()
+    guideWindow.setTitle(ACTIVATION_GUIDE_TITLE)
   })
   guideWindow.once('ready-to-show', () => {
     if (!guideWindow.isDestroyed()) guideWindow.show()

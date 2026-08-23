@@ -8,7 +8,7 @@
       content="default-src 'none'; style-src 'unsafe-inline'; script-src 'none'; connect-src 'none'; img-src 'none'; font-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"
     />
     <meta name="description" content="用更直观的方式了解软件激活方案，并参与选择。" />
-    <title>一起选择更方便的软件激活方式</title>
+    <title>软件激活方式意见征集</title>
     <style>
       :root {
         color-scheme: light;
@@ -433,6 +433,32 @@
         color: var(--ink);
       }
 
+      .survey-box p {
+        margin: 0;
+      }
+
+      .survey-link {
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+        margin-top: 14px;
+        padding: 0 16px;
+        border-radius: 5px;
+        background: var(--accent-dark);
+        color: #ffffff;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .survey-link:hover {
+        background: #154f45;
+      }
+
+      .survey-link:focus-visible {
+        outline: 3px solid rgb(32 112 98 / 28%);
+        outline-offset: 3px;
+      }
+
       .sidebar {
         position: sticky;
         top: 20px;
@@ -593,11 +619,18 @@
         <p class="eyebrow">先看懂，再参与选择</p>
         <h1 id="page-title">一起选出更方便的软件激活方式</h1>
         <p class="hero-lead">
-          我们正在为教师和学生设计软件的首次使用、换电脑和重装系统流程。请花几分钟了解下面的做法，再通过随文附上的问卷告诉我们：哪一种最适合你的日常使用。
+          我们正在为教师和学生设计软件的首次使用、换电脑和重装系统流程。请花几分钟了解下面的做法，再通过页面末尾的问卷告诉我们：哪一种最适合你的日常使用。
         </p>
         <div class="hero-meta">
-          这是一份候选方案说明，不是最终决定。本文不会收集信息；问卷链接会在发送本文时一并附上。
+          这是一份候选方案说明，不是最终决定。本文不会收集信息；问卷将在浏览器中打开。
         </div>
+        <a
+          class="survey-link"
+          href="https://forms.cloud.microsoft/r/QJw61zh8dn"
+          target="_blank"
+          rel="noopener noreferrer"
+          >打开问卷</a
+        >
       </div>
     </section>
 
@@ -850,7 +883,7 @@
         <section class="section" id="questions" aria-labelledby="questions-title">
           <h2 id="questions-title">请在问卷里告诉我们</h2>
           <p class="section-intro">
-            没有“标准答案”，真实的使用习惯比技术偏好更重要。问卷链接会随本文一起发送。
+            没有“标准答案”，真实的使用习惯比技术偏好更重要。可在本页下方打开问卷。
           </p>
           <ol class="questions">
             <li>你是教师、学生还是其他使用者？通常使用笔记本还是台式机？</li>
@@ -862,7 +895,16 @@
           </ol>
           <div class="survey-box">
             <strong>下一步：填写问卷</strong>
-            请使用发送本文时附上的问卷链接。问卷结果会帮助我们决定后续方案；软件里目前显示的固定邀请码只是临时过渡，长期激活方式尚未确定。
+            <p>
+              具体激活方式会根据问卷投票结果和软件最终采用的许可方式综合决定。软件里目前显示的固定邀请码只是临时过渡，长期激活方式尚未确定。
+            </p>
+            <a
+              class="survey-link"
+              href="https://forms.cloud.microsoft/r/QJw61zh8dn"
+              target="_blank"
+              rel="noopener noreferrer"
+              >打开问卷</a
+            >
           </div>
         </section>
       </main>

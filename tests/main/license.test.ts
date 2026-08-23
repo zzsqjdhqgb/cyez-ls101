@@ -12,6 +12,7 @@ const electronMocks = vi.hoisted(() => {
     focus: ReturnType<typeof vi.fn>
     loadFile: ReturnType<typeof vi.fn>
     options: Record<string, unknown>
+    setTitle: ReturnType<typeof vi.fn>
     webContents: {
       on: ReturnType<typeof vi.fn>
       setWindowOpenHandler: ReturnType<typeof vi.fn>
@@ -27,6 +28,7 @@ const electronMocks = vi.hoisted(() => {
         on: vi.fn(),
         once: vi.fn(),
         options,
+        setTitle: vi.fn(),
         show: vi.fn(),
         webContents: { on: vi.fn(), setWindowOpenHandler: vi.fn() }
       }
@@ -47,6 +49,7 @@ const electronMocks = vi.hoisted(() => {
     ipcMain: {
       handle: vi.fn((channel: string, handler: IpcHandler) => handlers.set(channel, handler))
     },
+    shell: { openExternal: vi.fn(() => Promise.resolve()) },
     windows
   }
 })
@@ -54,7 +57,8 @@ const electronMocks = vi.hoisted(() => {
 vi.mock('electron', () => ({
   app: electronMocks.app,
   BrowserWindow: electronMocks.BrowserWindow,
-  ipcMain: electronMocks.ipcMain
+  ipcMain: electronMocks.ipcMain,
+  shell: electronMocks.shell
 }))
 
 import { registerLicenseHandlers } from '../../src/main/license'
@@ -69,6 +73,7 @@ beforeEach(() => {
   electronMocks.app.relaunch.mockClear()
   electronMocks.BrowserWindow.mockClear()
   electronMocks.BrowserWindow.fromWebContents.mockClear()
+  electronMocks.shell.openExternal.mockClear()
   electronMocks.windows.length = 0
   vi.useFakeTimers()
 })
@@ -106,6 +111,20 @@ describe('license IPC', () => {
     )
     expect(electronMocks.windows[0]?.webContents.setWindowOpenHandler).toHaveBeenCalledOnce()
 
+    const windowOpenHandler = electronMocks.windows[0]?.webContents.setWindowOpenHandler.mock
+      .calls[0]?.[0] as ((details: { url: string }) => { action: string }) | undefined
+    expect(windowOpenHandler).toBeDefined()
+    expect(windowOpenHandler!({ url: 'https://example.com/constructed-link' })).toEqual({
+      action: 'deny'
+    })
+    expect(electronMocks.shell.openExternal).not.toHaveBeenCalled()
+    expect(windowOpenHandler!({ url: 'https://forms.cloud.microsoft/r/QJw61zh8dn' })).toEqual({
+      action: 'deny'
+    })
+    expect(electronMocks.shell.openExternal).toHaveBeenCalledWith(
+      'https://forms.cloud.microsoft/r/QJw61zh8dn'
+    )
+
     const navigationHandler = electronMocks.windows[0]?.webContents.on.mock.calls.find(
       ([event]) => event === 'will-navigate'
     )?.[1] as ((event: { preventDefault(): void }, url: string) => void) | undefined
@@ -121,6 +140,15 @@ describe('license IPC', () => {
       `${new URL('file:///app/docs/license-activation.html').href}#compare`
     )
     expect(internalNavigation.preventDefault).not.toHaveBeenCalled()
+
+    const titleHandler = electronMocks.windows[0]?.webContents.on.mock.calls.find(
+      ([event]) => event === 'page-title-updated'
+    )?.[1] as ((event: { preventDefault(): void }) => void) | undefined
+    expect(titleHandler).toBeDefined()
+    const titleEvent = { preventDefault: vi.fn() }
+    titleHandler!(titleEvent)
+    expect(titleEvent.preventDefault).toHaveBeenCalledOnce()
+    expect(electronMocks.windows[0]?.setTitle).toHaveBeenCalledWith('软件激活方式意见征集')
 
     await expect(openGuide!({ sender: {} })).resolves.toBeUndefined()
     expect(electronMocks.BrowserWindow).toHaveBeenCalledOnce()
