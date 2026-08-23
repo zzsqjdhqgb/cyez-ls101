@@ -1364,6 +1364,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@ls101/logger@workspace:*, @ls101/logger@workspace:packages/logger":
+  version: 0.0.0-use.local
+  resolution: "@ls101/logger@workspace:packages/logger"
+  peerDependencies:
+    electron: ^39
+  peerDependenciesMeta:
+    electron:
+      optional: true
+  languageName: unknown
+  linkType: soft
+
 "@ls101/page-renderer@workspace:*, @ls101/page-renderer@workspace:packages/page-renderer":
   version: 0.0.0-use.local
   resolution: "@ls101/page-renderer@workspace:packages/page-renderer"
@@ -1390,6 +1401,7 @@ __metadata:
     "@ls101/file-dialog": "workspace:*"
     "@ls101/file-store": "workspace:*"
     "@ls101/interface-editor": "workspace:*"
+    "@ls101/logger": "workspace:*"
     "@ls101/page-renderer": "workspace:*"
     "@ls101/schema-editor": "workspace:*"
     "@ls101/section-engine": "workspace:*"

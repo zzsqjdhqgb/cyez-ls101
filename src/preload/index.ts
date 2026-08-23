@@ -53,6 +53,7 @@ import {
   type AIRouterTextRequest
 } from '@ls101/airouter/shared'
 import { CLIPBOARD_CHANNELS, type ClipboardBridge } from '@ls101/clipboard/shared'
+import { LOGGER_CHANNELS, type LogEvent, type LoggerBridge } from '@ls101/logger/shared'
 
 const allowedChannels = new Set<FileStoreChannel>(Object.values(FILE_STORE_CHANNELS))
 const allowedBuiltinChannels = new Set<BuiltinFileStoreChannel>(
@@ -388,6 +389,12 @@ const windowControlsBridge: WindowControlsBridge = {
   }
 }
 
+const loggerBridge: LoggerBridge = {
+  write(event: LogEvent) {
+    ipcRenderer.send(LOGGER_CHANNELS.write, event)
+  }
+}
+
 contextBridge.exposeInMainWorld('fileStore', fileStoreBridge)
 contextBridge.exposeInMainWorld('builtinFileStore', builtinFileStoreBridge)
 contextBridge.exposeInMainWorld('configStore', configStoreBridge)
@@ -397,3 +404,4 @@ contextBridge.exposeInMainWorld('imageClipboard', clipboardBridge)
 contextBridge.exposeInMainWorld('appInfo', appInfoBridge)
 contextBridge.exposeInMainWorld('dataDirectory', dataDirectoryBridge)
 contextBridge.exposeInMainWorld('windowControls', windowControlsBridge)
+contextBridge.exposeInMainWorld('logger', loggerBridge)
