@@ -6,7 +6,7 @@
 
 ## Electron 集成测试
 
-打包应用中的 renderer、preload、main、IPC 和持久化跨层回归。当前共 70 条测试。
+打包应用中的 renderer、preload、main、IPC 和持久化跨层回归。当前共 74 条测试。
 
 ### [airouter.spec.ts](../../../tests/integration/airouter.spec.ts)
 
@@ -43,8 +43,14 @@
 - AR-31 reports speech failures, cancels slow synthesis, and reuses the pipeline
 - AR-32 executes the real Pocket TTS model package through the Electron stack
 - AR-32c executes Qwen3 ASR without external buffers in Electron
+- AR-32d imports and executes the required pronunciation extension in Electron
 - AR-33 rejects invalid text and speech selections before making HTTP requests
 - AR-32b executes Qwen3 TTS through the Electron stack
+
+### [data-directory.spec.ts](../../../tests/integration/data-directory.spec.ts)
+
+- copies business data, switches directories after restart and retains the source
+- resets a custom data directory to the validated default location
 
 ### [electron-app.spec.ts](../../../tests/integration/electron-app.spec.ts)
 
@@ -55,7 +61,7 @@
 - guides microphone setup through recording and playback before the exam
 - persists appearance settings through the renderer and config store
 - creates, edits and reloads a persisted template
-- opens and copies the bundled Shanghai Gaokao template
+- opens and copies bundled Shanghai speaking templates
 - exports a persisted formal Schema through the native save dialog
 - routes window controls through preload to the owning BrowserWindow
 
@@ -63,6 +69,7 @@
 
 - IE-01 generates and saves an instance through the real AIRouter pipeline
 - IE-02 generates text and images atomically through the real pipelines
+- IE-02b retries a failed image step without regenerating completed text
 - IE-03 reports invalid AI output and supports cancellation without saving
 - IE-04 creates, edits and persists a draft through the real UI
 - IE-05 validates and publishes a draft through the real UI
@@ -106,4 +113,4 @@
 - FE-08 settings rows remain usable in a narrow component viewport
 - FE-09 page compositions retain a heading and empty-state reading order
 
-合计：79 条 Playwright 技术回归测试。
+合计：83 条 Playwright 技术回归测试。
