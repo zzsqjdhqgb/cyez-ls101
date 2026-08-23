@@ -101,6 +101,8 @@ textpa prepare-reference \
 [`PRONUNCIATION_GOP_DEMO.md`](PRONUNCIATION_GOP_DEMO.md)。该入口可在一个
 Python 命令内完成 Qwen3 ASR（自由表达时）、音频解码、CMUdict 参考音素、
 CTC 对齐、GOP 证据和保守中文报告，不分析语法、内容或停顿。
+当前实现状态、已验证样本、限制和后续建议见
+[`PRONUNCIATION_GOP_PROGRESS.md`](PRONUNCIATION_GOP_PROGRESS.md)。
 
 面向上海英语听说练习及相似题型的版本化输入协议见
 [`SCORING_INPUT_FORMAT.md`](SCORING_INPUT_FORMAT.md)。它定义题目上下文、参考
