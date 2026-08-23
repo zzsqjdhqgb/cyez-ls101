@@ -11,16 +11,11 @@
   },
   "dependencies": {
     "@ls101/core-types": "workspace:*",
-    "@ls101/editor-kit": "workspace:*",
     "@ls101/section-engine": "workspace:*",
     "fast-json-stable-stringify": "^2.1.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
-  },
-  "peerDependencies": {
-    "react": "^19",
-    "react-dom": "^19"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

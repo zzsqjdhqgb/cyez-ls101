@@ -951,7 +951,6 @@ test('IE-11 exports and re-imports an interface with its instances', async () =>
       value: async () => ({ canceled: false, filePath })
     })
   }, exportPath)
-  await page.getByRole('tab', { name: '题型定义' }).click()
   await page.getByRole('button', { name: '导出题型' }).click()
   await expect(page.getByRole('heading', { name: '选择要交付的题组' })).toBeVisible()
   await expect(page.getByText('已选择 1 个')).toBeVisible()

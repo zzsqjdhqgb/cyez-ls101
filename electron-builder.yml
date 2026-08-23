@@ -62,6 +62,7 @@ files:
   - 'node_modules/sherpa-onnx-node/*.js'
 asarUnpack:
   - out/main/pronunciation-assessment-worker.js
+  - node_modules/onnxruntime-common/**
   - node_modules/onnxruntime-node/**
   - node_modules/sherpa-onnx-*/**
   - node_modules/ffmpeg-static/**

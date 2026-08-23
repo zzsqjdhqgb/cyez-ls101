@@ -55,6 +55,22 @@ beforeEach(() => {
 })
 
 describe('submission grading UI', () => {
+  it('opens settlement directly when all selected submissions are already ready', async () => {
+    const workspace = readyWorkspace(gradingWorkspace(), 2, '客观题已完成')
+    const startGrading = vi.fn().mockResolvedValue(workspace)
+    const repository = mockRepository({ startGrading })
+
+    renderWithRepository(repository, '/submissions/grading?submissionId=submission-1', [
+      <Route element={<SubmissionGradingPage />} key="grade" path="/submissions/grading" />,
+      <Route element={<h1>结算页</h1>} key="settlement" path="/submissions/settlement" />
+    ])
+
+    expect(await screen.findByRole('heading', { name: '结算页' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '人工评分' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'AI 评分' })).not.toBeInTheDocument()
+    expect(startGrading).toHaveBeenCalledWith('submission-1')
+  })
+
   it('keeps the current recording URL alive across StrictMode effect checks', async () => {
     const repository = mockRepository({
       startGrading: vi.fn().mockResolvedValue(gradingWorkspace())
@@ -106,8 +122,9 @@ describe('submission grading UI', () => {
         readyAt: '2026-08-10T03:00:00Z'
       }
     })
+    const startGrading = vi.fn().mockResolvedValue(workspace)
     const repository = mockRepository({
-      startGrading: vi.fn().mockResolvedValue(workspace),
+      startGrading,
       submitGradingResult
     })
 
@@ -121,6 +138,7 @@ describe('submission grading UI', () => {
     ])
 
     expect(await screen.findByText('请朗读句子。')).toBeInTheDocument()
+    expect(startGrading).toHaveBeenCalledTimes(1)
     expect(screen.getByText('按准确度评分。')).toBeInTheDocument()
     expect(screen.getByText('Expected reading.')).toBeInTheDocument()
     expect(screen.getByText('Read this sentence.')).toBeInTheDocument()
@@ -143,8 +161,9 @@ describe('submission grading UI', () => {
     const submitGradingResult = vi
       .fn()
       .mockResolvedValue(readyWorkspace(workspace, 4, 'AI comment'))
+    const startGrading = vi.fn().mockResolvedValue(workspace)
     const repository = mockRepository({
-      startGrading: vi.fn().mockResolvedValue(workspace),
+      startGrading,
       saveAIGradingRun,
       submitGradingResult
     })
@@ -155,6 +174,7 @@ describe('submission grading UI', () => {
     ])
 
     fireEvent.click(await screen.findByRole('button', { name: 'AI 评分' }))
+    expect(startGrading).toHaveBeenCalledTimes(1)
     fireEvent.click(await screen.findByRole('button', { name: '开始 AI 评分' }))
     expect(await screen.findByText('AI 评分已完成')).toBeInTheDocument()
     expect(submitGradingResult).not.toHaveBeenCalled()

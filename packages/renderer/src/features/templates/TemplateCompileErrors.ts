@@ -75,7 +75,7 @@ const COMPILE_MESSAGES: Record<string, string> = {
   UNKNOWN_INTERFACE_BINDING: '选择了模板未使用的 Interface 实例',
   INTERFACE_BINDING_ID_MISMATCH: 'Interface 实例与模板要求不匹配',
   INTERFACE_INSTANCE_NOT_FOUND: '找不到所选 Interface 实例',
-  MISSING_INTERFACE_VALUE: 'Interface 实例缺少必需变量',
+  MISSING_INTERFACE_VALUE: 'Interface 实例存在未填写的变量',
   STATIC_VALUE_CYCLE: '静态变量之间存在循环引用',
   UNRESOLVED_VALUE: '表达式无法求值',
   RESOURCE_SOURCE_NOT_FOUND: '找不到资源文件',

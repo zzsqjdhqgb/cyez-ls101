@@ -154,7 +154,6 @@ test(
       await productStep('settle-batch', async () => {
         await page.getByRole('checkbox', { name: '全选' }).check()
         await page.getByRole('button', { name: '开始评分（2）' }).click()
-        await page.getByRole('button', { name: '人工评分' }).click()
         await expect(page.getByRole('heading', { name: '评分结算' })).toBeVisible()
         await page.getByRole('button', { name: '本次结算（2）' }).click()
 

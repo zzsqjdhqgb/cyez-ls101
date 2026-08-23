@@ -145,6 +145,15 @@ describe('interface editor application integration', () => {
       '{"title":"缺少 section"}'
     )
     expect(invalid.status).toBe('invalid-json')
+    vi.mocked(imageGenerator.generate).mockClear()
+    await expect(
+      app.instances.replaceFromJson(
+        interfaceId,
+        instance.instance.instanceId,
+        '{"title":"","section":{"picture":"不应生成的配图","answer":"New answer"}}'
+      )
+    ).rejects.toThrow('变量 titleText 不能为空')
+    expect(imageGenerator.generate).not.toHaveBeenCalled()
     const replaced = await app.instances.replaceFromJson(
       interfaceId,
       instance.instance.instanceId,
@@ -288,6 +297,35 @@ describe('interface editor application integration', () => {
         values: before.instance.values
       })
     ).resolves.toMatchObject({ instance: { name: '锁已释放' } })
+  })
+
+  it('does not save an AI result with an empty text variable', async () => {
+    const repository = new FileInterfaceRepository(new MemoryStore())
+    const imageGenerator: InterfaceImageGenerator = {
+      generate: vi.fn().mockResolvedValue({ data: PNG })
+    }
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(),
+      textGenerator: new ScriptedTextGenerator(
+        '{"title":"","section":{"picture":"AI 配图","answer":"AI answer"}}'
+      ),
+      imageGenerator
+    })
+    const draft = await app.drafts.create(content)
+    const published = await app.drafts.publish(draft.draftId)
+    if (published.status === 'invalid') throw new Error('expected a valid draft')
+    const interfaceId = published.interface.interfaceId
+    const blank = await app.published.createBlankInstance(interfaceId)
+
+    const handle = await app.instances.startAIGeneration(interfaceId, blank.instance.instanceId)
+
+    await expect(handle.completion).resolves.toMatchObject({
+      status: 'failed',
+      message: '变量 titleText 不能为空'
+    })
+    expect(imageGenerator.generate).not.toHaveBeenCalled()
+    await expect(app.instances.get(interfaceId, blank.instance.instanceId)).resolves.toEqual(blank)
   })
 
   it('cancels during image generation without replacing values or assets', async () => {

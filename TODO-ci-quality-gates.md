@@ -1,5 +1,16 @@
 # TODO: Systematic CI Quality Gates
 
+## Current Foundation
+
+The `.github/workflows/ci.yml` workflow now provides the `Required quality gate` check for `dev`
+and `main`; repository branch protection must mark it as required. It covers lint, type checking,
+script and Vitest suites, a packaged Windows build, Electron integration tests, renderer component
+tests, and product journeys. Release tags are rejected unless the exact tagged `main` commit has
+passed that workflow. Branch protection and local reproduction details are documented in
+`.github/CI.md`.
+
+The items below remain the broader cross-platform and generated-artifact roadmap.
+
 ## Goal
 
 Design and introduce project-wide CI quality gates as one coherent workflow strategy. Do not add

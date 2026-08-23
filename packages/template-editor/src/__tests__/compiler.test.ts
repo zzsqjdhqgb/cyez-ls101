@@ -1068,7 +1068,7 @@ describe('compileTemplate', () => {
     })
   })
 
-  it('隔离多个 Interface 的值并允许空字符串和多余实例值', async () => {
+  it('拒绝任一 Interface 变量为空，即使模板没有引用该变量', async () => {
     const otherManifest: InterfaceVarManifest = {
       interfaceId: OTHER_INTERFACE_ID,
       interfaceName: 'Other data',
@@ -1140,7 +1140,7 @@ describe('compileTemplate', () => {
           instanceId: 'instance-1',
           name: 'Empty value',
           generatedAt: '2026-08-04T00:00:00.000Z',
-          values: { sentence: '', extra: 'allowed' }
+          values: { sentence: 'Exam', picture: '', extra: 'allowed' }
         },
         assetUrls: {}
       },
@@ -1169,22 +1169,16 @@ describe('compileTemplate', () => {
       })
     )
 
-    expect(result.success).toBe(true)
-    if (!result.success) return
-    expect(result.examPackage.submissionTemplate.schemaUses).toEqual([
-      {
-        instanceId: 'schema-use:exam-text',
-        schema: schemaDefinitions()[0],
-        inputs: [{ inputId: 'prompt', type: 'text', value: '' }],
-        answers: []
-      },
-      {
-        instanceId: 'schema-use:other-text',
-        schema: otherSchema,
-        inputs: [{ inputId: 'prompt', type: 'text', value: 'Other' }],
-        answers: []
-      }
-    ])
+    expect(result).toMatchObject({
+      success: false,
+      errors: [
+        {
+          stage: 'compile',
+          code: 'MISSING_INTERFACE_VALUE',
+          params: { alias: 'exam', instanceId: 'instance-1', varName: 'picture' }
+        }
+      ]
+    })
   })
 
   it('返回严格校验错误而不进入编译', async () => {

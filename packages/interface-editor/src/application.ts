@@ -20,6 +20,7 @@ import type { InstanceSelection } from './exchange'
 import { exportInterfaceFile, readInterfaceFile, type InterfaceFileDialog } from './fileExchange'
 import { createInterfaceDraft, publishInterface } from './id'
 import { addNode, removeNode, renameNode, updateNode } from './mutations'
+import { flattenFields } from './queries'
 import type { InterfaceRepository } from './repository'
 import { buildJsonExample, buildJsonSchema, validateJson } from './schema'
 import type {
@@ -185,7 +186,10 @@ export interface InterfaceDraftApplication {
 
 export interface PublishedInterfaceApplication {
   get(interfaceId: string): Promise<PublishedInterfaceDetails | null>
-  listInstances(interfaceId: string): Promise<InterfaceInstanceSummary[]>
+  listInstances(
+    interfaceId: string,
+    options?: { completeOnly?: boolean }
+  ): Promise<InterfaceInstanceSummary[]>
   getPrompts(interfaceId: string): Promise<InterfacePromptBundle>
   getVarManifest(interfaceId: string): Promise<import('@ls101/core-types').InterfaceVarManifest>
   createBlankInstance(interfaceId: string, name?: string): Promise<InterfaceInstanceDetails>
@@ -372,10 +376,8 @@ export function createInterfaceApplication(
         return { status: 'invalid-json', errors: jsonErrors(validation.errors) }
       }
       const mapped = buildInstanceFromJson(def, validation.data)
+      assertCompleteTextAndImagePrompts(def.fields, mapped.values, mapped.imagePrompts ?? {})
       const prompts = Object.entries(mapped.imagePrompts ?? {})
-      if (prompts.some(([, prompt]) => !prompt.trim())) {
-        throw new Error('图片变量的提示词不能为空')
-      }
       if (prompts.length && !imageGenerator) {
         throw new Error('Interface image generator is not configured')
       }
@@ -406,7 +408,12 @@ export function createInterfaceApplication(
         assets[filename] = data
         values[varName] = filename
       }
-      assertCompleteImageValues(imageVarNames, values, mapped.imagePrompts ?? {})
+      assertCompleteInstanceValues(
+        def.fields,
+        values,
+        mapped.imagePrompts ?? {},
+        new Set(Object.keys(assets))
+      )
       await repository.updateInstance(
         interfaceId,
         {
@@ -480,7 +487,8 @@ export function createInterfaceApplication(
         const definition = await repository.getInterface(interfaceId)
         return definition ? { definition, source: await sourceOf(interfaceId) } : null
       },
-      async listInstances(interfaceId) {
+      async listInstances(interfaceId, options = {}) {
+        const def = await requireInterface(repository, interfaceId)
         const values = await Promise.all(
           (await repository.listInstanceIds(interfaceId)).map((id) =>
             repository.getInstance(interfaceId, id)
@@ -488,6 +496,7 @@ export function createInterfaceApplication(
         )
         return values
           .filter((stored): stored is NonNullable<typeof stored> => stored !== null)
+          .filter((stored) => !options.completeOnly || isCompleteInstance(def, stored))
           .map(({ instance }) => ({
             instanceId: instance.instanceId,
             name: instance.name,
@@ -723,10 +732,12 @@ export function createInterfaceApplication(
                     }
                   }
                   state.mapped = buildInstanceFromJson(generationDef, validation.data)
+                  assertCompleteTextAndImagePrompts(
+                    generationDef.fields,
+                    state.mapped.values,
+                    state.mapped.imagePrompts ?? {}
+                  )
                   state.prompts = Object.entries(state.mapped.imagePrompts ?? {})
-                  if (state.prompts.some(([, prompt]) => !prompt.trim())) {
-                    throw new Error('图片变量的提示词不能为空')
-                  }
                   if (state.prompts.length && !imageGenerator) {
                     throw new Error('Interface image generator is not configured')
                   }
@@ -781,7 +792,12 @@ export function createInterfaceApplication(
                   values[varName] = filename
                 }
 
-                assertCompleteImageValues(imageVarNames, values, state.mapped.imagePrompts ?? {})
+                assertCompleteInstanceValues(
+                  generationDef.fields,
+                  values,
+                  state.mapped.imagePrompts ?? {},
+                  new Set(Object.keys(assets))
+                )
 
                 if (controller.signal.aborted) throw new GenerationCancelledError()
                 await repository.updateInstance(
@@ -954,6 +970,62 @@ function normalizeImagePromptValues(
     ...stored.instance,
     values,
     imagePrompts: Object.keys(imagePrompts).length ? imagePrompts : undefined
+  }
+}
+
+function isCompleteInstance(
+  def: InterfaceDef,
+  stored: { instance: InterfaceInstance; assetFilenames: readonly string[] }
+): boolean {
+  const instance = normalizeImagePromptValues(def.fields, stored)
+  try {
+    assertCompleteInstanceValues(
+      def.fields,
+      instance.values,
+      instance.imagePrompts ?? {},
+      new Set(stored.assetFilenames)
+    )
+    return true
+  } catch {
+    return false
+  }
+}
+
+function assertCompleteInstanceValues(
+  fields: FieldCollection,
+  values: Readonly<Record<string, string>>,
+  imagePrompts: Readonly<Record<string, string>>,
+  assetFilenames: ReadonlySet<string>
+): void {
+  for (const { leaf } of flattenFields(fields)) {
+    const value = values[leaf.varName]
+    if (typeof value !== 'string' || !value.trim()) {
+      throw new Error(`变量 ${leaf.varName} 不能为空`)
+    }
+    if (
+      leaf.type === 'image' &&
+      (!imagePrompts[leaf.varName]?.trim() || !assetFilenames.has(value))
+    ) {
+      throw new Error(`图片变量 ${leaf.varName} 的提示词和图片必须同时填写`)
+    }
+  }
+}
+
+function assertCompleteTextAndImagePrompts(
+  fields: FieldCollection,
+  values: Readonly<Record<string, string>>,
+  imagePrompts: Readonly<Record<string, string>>
+): void {
+  for (const { leaf } of flattenFields(fields)) {
+    if (leaf.type === 'image') {
+      if (!imagePrompts[leaf.varName]?.trim()) {
+        throw new Error(`图片变量 ${leaf.varName} 的提示词不能为空`)
+      }
+      continue
+    }
+    if (!values[leaf.varName]?.trim()) {
+      throw new Error(`变量 ${leaf.varName} 不能为空`)
+    }
   }
 }
 
