@@ -1,0 +1,289 @@
+{
+  "schema_version": 2,
+  "request_sha256": "aa50f93e745303476a0d2891a323dfba7201ac7204dbb2998001108510ec4ec7",
+  "request_config": {
+    "schema_version": 2,
+    "input_sha256": "8a45d99d30395cbec63936b92682bdc55f7264279807c2f7326202249ddd6321",
+    "prompt_sha256": "a8b4a7d91e9edbaad88cb7b126219db1edc9bd4608f38638ff3077db9930aa98",
+    "endpoint": "https://apihub.agnes-ai.com/v1/chat/completions",
+    "model": "agnes-2.5-flash",
+    "max_tokens": 65535,
+    "temperature": 0.0,
+    "thinking": true,
+    "threshold": -0.35
+  },
+  "api_response": {
+    "id": "7c34cd376e5c49619d399f098e5ca965",
+    "created": 1787460094,
+    "model": "agnes-2.5-flash",
+    "object": "chat.completion",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "content": "\n\n```json\n{\n  \"summary_zh\": \"多数低GOP证据指向个别音素的高置信偏离，但部分现象可能受对齐边界、连读或弱读影响，建议优先关注重复出现的模式。\",\n  \"feedback_items\": [\n    {\n      \"evidence_ids\": [\"GOP-0012\", \"GOP-0080\"],\n      \"decision\": \"likely_issue\",\n      \"observations\": [\n        {\n          \"evidence_id\": \"GOP-0012\",\n          \"expected\": \"B\",\n          \"expected_ipa\": \"b\",\n          \"acoustic_winner\": \"P\",\n          \"acoustic_winner_ipa\": \"p\"\n        },\n        {\n          \"evidence_id\": \"GOP-0080\",\n          \"expected\": \"B\",\n          \"expected_ipa\": \"b\",\n          \"acoustic_winner\": \"P\",\n          \"acoustic_winner_ipa\": \"p\"\n        }\n      ],\n      \"finding_zh\": \"单词 books 两次出现时，首音 /b/ 均被声学赢家识别为清辅音 /p/，且第二次置信度达 1.0。\",\n      \"rationale_zh\": \"同一音素在同一词中多次出现相同模式的偏离，属于值得明确的发音观察。\",\n      \"practice_zh\": \"练习 books 时，注意首音 b 是浊辅音，发声时声带应振动；可对比 bare 与 pair 起始音的差异，刻意让 /b/ 带上振动感。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0102\"],\n      \"decision\": \"likely_issue\",\n      \"observations\": [\n        {\n          \"evidence_id\": \"GOP-0102\",\n          \"expected\": \"AH\",\n          \"expected_ipa\": \"ʌ\",\n          \"acoustic_winner\": \"IY\",\n          \"acoustic_winner_ipa\": \"iː\"\n        }\n      ],\n      \"finding_zh\": \"storage 中第三个音素参考为 /ʌ/，但声学赢家识别为长元音 /iː/，置信度 1.0。\",\n      \"rationale_zh\": \"高置信度的元音替代，且 /ʌ/ 与 /iː/ 听感差异明显，值得反馈。\",\n      \"practice_zh\": \"练习 storage 时，注意重读音节是短促的 /ʌ/（类似 'uh' 音），不要将口腔前伸或拉长成 /iː/；可对比 cut 与 seat 的元音差异。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0261\"],\n      \"decision\": \"likely_issue\",\n      \"observations\": [\n        {\n          \"evidence_id\": \"GOP-0261\",\n          \"expected\": \"UW\",\n          \"expected_ipa\": \"uː\",\n          \"acoustic_winner\": \"EY\",\n          \"acoustic_winner_ipa\": \"eɪ\"\n        }\n      ],\n      \"finding_zh\": \"to 的元音参考为 /uː/，但声学赢家识别为双元音 /eɪ/，置信度 1.0。\",\n      \"rationale_zh\": \"高置信度元音偏离，且 to 作为功能词在弱读时通常不会是 /eɪ/，值得明确反馈。\",\n      \"practice_zh\": \"练习 to 时，元音应保持圆唇的 /uː/ 或弱读时的中央元音 /ə/，避免开口度过大滑向 /eɪ/；可对比 too 与 day 的元音位置。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0268\"],\n      \"decision\": \"likely_issue\",\n      \"observations\": [\n        {\n          \"evidence_id\": \"GOP-0268\",\n          \"expected\": \"D\",\n          \"expected_ipa\": \"d\",\n          \"acoustic_winner\": \"DH\",\n          \"acoustic_winner_ipa\": \"ð\"\n        }\n      ],\n      \"finding_zh\": \"advantages 第二音素参考为清辅音 /d/，但声学赢家识别为浊齿擦音 /ð/，置信度 0.993。\",\n      \"rationale_zh\": \"高置信度辅音替换，/d/ 与 /ð/ 发音部位接近但方式不同，值得反馈。\",\n      \"practice_zh\": \"练习 advantages 时，注意第一个辅音是塞音 /d/，舌尖抵上齿龈后迅速释放，而非将舌尖置于齿间摩擦；可对比 dot 与 the 起始音。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0267\"],\n      \"decision\": \"needs_listening\",\n      \"observations\": [\n        {\n          \"evidence_id\": \"GOP-0267\",\n          \"expected\": \"AE\",\n          \"expected_ipa\": \"æ\",\n          \"acoustic_winner\": \"AH\",\n          \"acoustic_winner_ipa\": \"ʌ\"\n        }\n      ],\n      \"finding_zh\": \"advantages 首音节参考为 /æ/，声学赢家识别为 /ʌ/，置信度 1.0。\",\n      \"rationale_zh\": \"高置信度但 /æ/ 与 /ʌ/ 在非重读语境中可能存在合法变体或边界偏移，需人工复听确认。\",\n      \"practice_zh\": \"练习 advantages 时，注意首音节 /æ/ 的口腔开口度应大于 /ʌ/；可对比 cat 与 cut 的元音差异，留意两者口腔开合位置。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0256\", \"GOP-0257\"],\n      \"decision\": \"needs_listening\",\n      \"observations\": [\n        {\n          \"evidence_id\": \"GOP-0256\",\n          \"expected\": \"N\",\n          \"expected_ipa\": \"n\",\n          \"acoustic_winner\": \"L\",\n          \"acoustic_winner_ipa\": \"l\"\n        },\n        {\n          \"evidence_id\": \"GOP-0257\",\n          \"expected\": \"T\",\n          \"expected_ipa\": \"t\",\n          \"acoustic_winner\": \"L\",\n          \"acoustic_winner_ipa\": \"l\"\n        }\n      ],\n      \"finding_zh\": \"want 中 /n/ 和 /t/ 先后被识别为 /l/，置信度分别为 0.778 和 0.836。\",\n      \"rationale_zh\": \"连续两个音素被同一替代音覆盖，可能反映连读、语境同化或对齐偏差，需人工复听。\",\n      \"practice_zh\": \"练习 want 时，注意 /n/ 是舌尖抵上齿龈的鼻音，/t/ 是清晰的塞音；在快速口语中可能弱化，但仍需与 /l/ 区分；可对比 night 与 light、top 与 loop 的起始差异。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0210\"],\n      \"decision\": \"needs_listening\",\n      \"observations\": [\n        {\n          \"evidence_id\": \"GOP-0210\",\n          \"expected\": \"EH\",\n          \"expected_ipa\": \"ɛ\",\n          \"acoustic_winner\": \"AE\",\n          \"acoustic_winner_ipa\": \"æ\"\n        }\n      ],\n      \"finding_zh\": \"best 中元音参考为 /ɛ/，声学赢家识别为 /æ/，置信度 0.818。\",\n      \"rationale_zh\": \"中等偏高置信度，但 /ɛ/ 与 /æ/ 在某些口音中存在接近区域，需人工复听确认是否为系统性偏离。\",\n      \"practice_zh\": \"练习 best 时，注意元音 /ɛ/ 的开口度小于 /æ/；可对比 bed 与 bad 的元音差异，留意口腔前部的舌位高度。\"\n    }\n  ],\n  \"withheld_differences\": [\n    {\n      \"evidence_ids\": [\"GOP-0081\"],\n      \"observations\": [\n        {\n          \"evidence_id\": \"GOP-0081\",\n          \"expected\": \"UH\",\n          \"expected_ipa\": \"ʊ\",\n          \"acoustic_winner\": \"AH\",\n          \"acoustic_winner_ipa\": \"ʌ\"\n        }\n      ],\n      \"reason_zh\": \"置信度仅 0.244，且 books 中 /ʊ/ 处于非重读位置，可能与相邻音素协同发音或弱读变体有关，不宜直接报错。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0137\"],\n      \"observations\": [\n        {\n          \"evidence_id\": \"GOP-0137\",\n          \"expected\": \"EH\",\n          \"expected_ipa\": \"ɛ\",\n          \"acoustic_winner\": \"AE\",\n          \"acoustic_winner_ipa\": \"æ\"\n        }\n      ],\n      \"reason_zh\": \"置信度 0.578 中等，且 any 在口语中常弱读，/ɛ/ 与 /æ/ 的区分在非重读语境中可能不显著，需结合音频判断。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0211\", \"GOP-0212\"],\n      \"observations\": [\n        {\n          \"evidence_id\": \"GOP-0211\",\n          \"expected\": \"S\",\n          \"expected_ipa\": \"s\",\n          \"acoustic_winner\": \"T\",\n          \"acoustic_winner_ipa\": \"t\"\n        },\n        {\n          \"evidence_id\": \"GOP-0212\",\n          \"expected\": \"T\",\n          \"expected_ipa\": \"t\",\n          \"acoustic_winner\": \"S\",\n          \"acoustic_winner_ipa\": \"s\"\n        }\n      ],\n      \"reason_zh\": \"best 末尾 /s/ 和 /t/ 相互替换，置信度分别为 0.359 和 0.661，可能反映对齐窗口偏移或连读中的音素顺序混淆，不宜直接归因于发音错误。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0255\"],\n      \"observations\": [\n        {\n          \"evidence_id\": \"GOP-0255\",\n          \"expected\": \"AA\",\n          \"expected_ipa\": \"ɑː\",\n          \"acoustic_winner\": \"AH\",\n          \"acoustic_winner_ipa\": \"ʌ\"\n        }\n      ],\n      \"reason_zh\": \"want 中 /ɑː/ 被识别为 /ʌ/，置信度 0.557 中等；在非重读或快速语速中，美式英语 want 的元音可能接近 /ɑ/ 或 /ʌ/，存在合法变体可能。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0259\"],\n      \"observations\": [\n        {\n          \"evidence_id\": \"GOP-0259\",\n          \"expected\": \"IY\",\n          \"expected_ipa\": \"iː\",\n          \"acoustic_winner\": \"EY\",\n          \"acoustic_winner_ipa\": \"eɪ\"\n        }\n      ],\n      \"reason_zh\": \"me 中 /iː/ 被识别为 /eɪ/，但置信度仅 0.297；me 作为功能词常弱读，边界偏移或语速可能导致识别不稳定，不宜直接报错。\"\n    }\n  ],\n  \"limitations_zh\": [\n    \"所有证据来自强制对齐窗口的声学赢家，而非独立单词级识别，边界可能偏移。\",\n    \"置信度反映模型对参考音素与赢家音素的相对偏好，不是发音错误的校准概率。\",\n    \"部分现象可能由连读、弱读、语境同化或对齐偏差导致，需人工复听确认。\",\n    \"未评估音高、重音、语调、流利度、停顿等韵律特征。\",\n    \"相邻单词的 ASR 上下文可能有错词，仅用于提供局部语境，不作为发音判断依据。\"\n  ]\n}\n```",
+          "role": "assistant",
+          "reasoning_content": "用户要求将所有低GOP证据整理成保守的中文发音反馈，不评分。需要输出特定格式的JSON。\n\n让我逐一分析每个证据：\n\n**word: books (word_index 5)**\n- GOP-0012: expected B/b, acoustic_winner P/p, confidence 0.569\n  - 这是清浊辅音问题，但confidence中等\n\n**word: books (word_index 23)**\n- GOP-0080: expected B/b, acoustic_winner P/p, confidence 1.0\n  - 同样的问题，但这次confidence很高\n- GOP-0081: expected UH/ʊ, acoustic_winner AH/ʌ, confidence 0.244\n  - confidence很低，可能不确信\n\n**word: storage (word_index 27)**\n- GOP-0102: expected AH/ʌ, acoustic_winner IY/iː, confidence 1.0\n  - 元音问题，confidence很高\n\n**word: any (word_index 36)**\n- GOP-0137: expected EH/ɛ, acoustic_winner AE/æ, confidence 0.578\n  - 中等confidence\n\n**word: best (word_index 54)**\n- GOP-0210: expected EH/ɛ, acoustic_winner AE/æ, confidence 0.818\n  - 高confidence\n- GOP-0211: expected S/s, acoustic_winner T/t, confidence 0.359\n  - 低confidence\n- GOP-0212: expected T/t, acoustic_winner S/s, confidence 0.661\n  - 中等confidence\n\n**word: want (word_index 66)**\n- GOP-0255: expected AA/ɑː, acoustic_winner AH/ʌ, confidence 0.557\n  - 中等confidence\n- GOP-0256: expected N/n, acoustic_winner L/l, confidence 0.778\n  - 高confidence\n- GOP-0257: expected T/t, acoustic_winner L/l, confidence 0.836\n  - 高confidence，但这里把T变成了L，这可能是连读或弱读问题\n\n**word: me (word_index 67)**\n- GOP-0259: expected IY/iː, acoustic_winner EY/eɪ, confidence 0.297\n  - 低confidence，可能是弱读或边界问题\n\n**word: to (word_index 68)**\n- GOP-0261: expected UW/uː, acoustic_winner EY/eɪ, confidence 1.0\n  - 高confidence，元音问题\n\n**word: advantages (word_index 71)**\n- GOP-0267: expected AE/æ, acoustic_winner AH/ʌ, confidence 1.0\n  - 高confidence\n- GOP-0268: expected D/d, acoustic_winner DH/ð, confidence 0.993\n  - 高confidence，清浊辅音问题\n\n现在我需要根据conservative原则进行分类：\n- likely_issue: 值得明确反馈的重复或相对清晰模式\n- needs_listening: 值得人工复听但不能确定的模式\n- withheld_differences: 其他，说明为什么不应直接报错\n\n分析：\n1. books (两次出现): B->P 清浊问题，GOP-0012 和 GOP-0080 都显示这个模式，可以合并为likely_issue\n2. storage: AH->IY 是明显的元音问题，confidence 1.0，likely_issue\n3. any: EH->AE，中等confidence，可以needs_listening或withheld\n4. best: EH->AE有高confidence，但S/T互换是低/中等confidence，可能是boundary问题\n5. want: N->L和T->L是lateralization问题，但可能是连读或语境影响\n6. me: IY->EY低confidence，可能是弱读\n7. to: UW->EY高confidence，likely_issue\n8. advantages: AE->AH和D->DH，两个高confidence问题\n\n让我整理成反馈：\n\n对于books两次出现的B->P问题，这是重复模式，可以作为likely_issue。\n\n对于storage的AH->IY，这是元音替代，confidence很高。\n\n对于to的UW->EY，也是高confidence的元音问题。\n\n对于advantages的D->DH，这是th浊音问题（d vs ð），high confidence。\n\n对于advantages的AE->AH，元音问题，high confidence。\n\n对于best的EH->AE，高confidence。\n\n我需要保守一点，很多情况可能是边界、连读或弱读导致的。\n\n让我构建最终的JSON。\n"
+        },
+        "provider_specific_fields": {
+          "matched_stop": 248046
+        }
+      }
+    ],
+    "usage": {
+      "completion_tokens": 3910,
+      "prompt_tokens": 9483,
+      "total_tokens": 13393,
+      "completion_tokens_details": {
+        "reasoning_tokens": 1052,
+        "text_tokens": 2858
+      },
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      }
+    },
+    "metadata": {
+      "weight_version": "default"
+    }
+  },
+  "feedback": {
+    "summary_zh": "多数低GOP证据指向个别音素的高置信偏离，但部分现象可能受对齐边界、连读或弱读影响，建议优先关注重复出现的模式。",
+    "feedback_items": [
+      {
+        "evidence_ids": [
+          "GOP-0012",
+          "GOP-0080"
+        ],
+        "decision": "likely_issue",
+        "observations": [
+          {
+            "evidence_id": "GOP-0012",
+            "expected": "B",
+            "expected_ipa": "b",
+            "acoustic_winner": "P",
+            "acoustic_winner_ipa": "p"
+          },
+          {
+            "evidence_id": "GOP-0080",
+            "expected": "B",
+            "expected_ipa": "b",
+            "acoustic_winner": "P",
+            "acoustic_winner_ipa": "p"
+          }
+        ],
+        "finding_zh": "单词 books 两次出现时，首音 /b/ 均被声学赢家识别为清辅音 /p/，且第二次置信度达 1.0。",
+        "rationale_zh": "同一音素在同一词中多次出现相同模式的偏离，属于值得明确的发音观察。",
+        "practice_zh": "练习 books 时，注意首音 b 是浊辅音，发声时声带应振动；可对比 bare 与 pair 起始音的差异，刻意让 /b/ 带上振动感。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0102"
+        ],
+        "decision": "likely_issue",
+        "observations": [
+          {
+            "evidence_id": "GOP-0102",
+            "expected": "AH",
+            "expected_ipa": "ʌ",
+            "acoustic_winner": "IY",
+            "acoustic_winner_ipa": "iː"
+          }
+        ],
+        "finding_zh": "storage 中第三个音素参考为 /ʌ/，但声学赢家识别为长元音 /iː/，置信度 1.0。",
+        "rationale_zh": "高置信度的元音替代，且 /ʌ/ 与 /iː/ 听感差异明显，值得反馈。",
+        "practice_zh": "练习 storage 时，注意重读音节是短促的 /ʌ/（类似 'uh' 音），不要将口腔前伸或拉长成 /iː/；可对比 cut 与 seat 的元音差异。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0261"
+        ],
+        "decision": "likely_issue",
+        "observations": [
+          {
+            "evidence_id": "GOP-0261",
+            "expected": "UW",
+            "expected_ipa": "uː",
+            "acoustic_winner": "EY",
+            "acoustic_winner_ipa": "eɪ"
+          }
+        ],
+        "finding_zh": "to 的元音参考为 /uː/，但声学赢家识别为双元音 /eɪ/，置信度 1.0。",
+        "rationale_zh": "高置信度元音偏离，且 to 作为功能词在弱读时通常不会是 /eɪ/，值得明确反馈。",
+        "practice_zh": "练习 to 时，元音应保持圆唇的 /uː/ 或弱读时的中央元音 /ə/，避免开口度过大滑向 /eɪ/；可对比 too 与 day 的元音位置。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0268"
+        ],
+        "decision": "likely_issue",
+        "observations": [
+          {
+            "evidence_id": "GOP-0268",
+            "expected": "D",
+            "expected_ipa": "d",
+            "acoustic_winner": "DH",
+            "acoustic_winner_ipa": "ð"
+          }
+        ],
+        "finding_zh": "advantages 第二音素参考为清辅音 /d/，但声学赢家识别为浊齿擦音 /ð/，置信度 0.993。",
+        "rationale_zh": "高置信度辅音替换，/d/ 与 /ð/ 发音部位接近但方式不同，值得反馈。",
+        "practice_zh": "练习 advantages 时，注意第一个辅音是塞音 /d/，舌尖抵上齿龈后迅速释放，而非将舌尖置于齿间摩擦；可对比 dot 与 the 起始音。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0267"
+        ],
+        "decision": "needs_listening",
+        "observations": [
+          {
+            "evidence_id": "GOP-0267",
+            "expected": "AE",
+            "expected_ipa": "æ",
+            "acoustic_winner": "AH",
+            "acoustic_winner_ipa": "ʌ"
+          }
+        ],
+        "finding_zh": "advantages 首音节参考为 /æ/，声学赢家识别为 /ʌ/，置信度 1.0。",
+        "rationale_zh": "高置信度但 /æ/ 与 /ʌ/ 在非重读语境中可能存在合法变体或边界偏移，需人工复听确认。",
+        "practice_zh": "练习 advantages 时，注意首音节 /æ/ 的口腔开口度应大于 /ʌ/；可对比 cat 与 cut 的元音差异，留意两者口腔开合位置。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0256",
+          "GOP-0257"
+        ],
+        "decision": "needs_listening",
+        "observations": [
+          {
+            "evidence_id": "GOP-0256",
+            "expected": "N",
+            "expected_ipa": "n",
+            "acoustic_winner": "L",
+            "acoustic_winner_ipa": "l"
+          },
+          {
+            "evidence_id": "GOP-0257",
+            "expected": "T",
+            "expected_ipa": "t",
+            "acoustic_winner": "L",
+            "acoustic_winner_ipa": "l"
+          }
+        ],
+        "finding_zh": "want 中 /n/ 和 /t/ 先后被识别为 /l/，置信度分别为 0.778 和 0.836。",
+        "rationale_zh": "连续两个音素被同一替代音覆盖，可能反映连读、语境同化或对齐偏差，需人工复听。",
+        "practice_zh": "练习 want 时，注意 /n/ 是舌尖抵上齿龈的鼻音，/t/ 是清晰的塞音；在快速口语中可能弱化，但仍需与 /l/ 区分；可对比 night 与 light、top 与 loop 的起始差异。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0210"
+        ],
+        "decision": "needs_listening",
+        "observations": [
+          {
+            "evidence_id": "GOP-0210",
+            "expected": "EH",
+            "expected_ipa": "ɛ",
+            "acoustic_winner": "AE",
+            "acoustic_winner_ipa": "æ"
+          }
+        ],
+        "finding_zh": "best 中元音参考为 /ɛ/，声学赢家识别为 /æ/，置信度 0.818。",
+        "rationale_zh": "中等偏高置信度，但 /ɛ/ 与 /æ/ 在某些口音中存在接近区域，需人工复听确认是否为系统性偏离。",
+        "practice_zh": "练习 best 时，注意元音 /ɛ/ 的开口度小于 /æ/；可对比 bed 与 bad 的元音差异，留意口腔前部的舌位高度。"
+      }
+    ],
+    "withheld_differences": [
+      {
+        "evidence_ids": [
+          "GOP-0081"
+        ],
+        "observations": [
+          {
+            "evidence_id": "GOP-0081",
+            "expected": "UH",
+            "expected_ipa": "ʊ",
+            "acoustic_winner": "AH",
+            "acoustic_winner_ipa": "ʌ"
+          }
+        ],
+        "reason_zh": "置信度仅 0.244，且 books 中 /ʊ/ 处于非重读位置，可能与相邻音素协同发音或弱读变体有关，不宜直接报错。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0137"
+        ],
+        "observations": [
+          {
+            "evidence_id": "GOP-0137",
+            "expected": "EH",
+            "expected_ipa": "ɛ",
+            "acoustic_winner": "AE",
+            "acoustic_winner_ipa": "æ"
+          }
+        ],
+        "reason_zh": "置信度 0.578 中等，且 any 在口语中常弱读，/ɛ/ 与 /æ/ 的区分在非重读语境中可能不显著，需结合音频判断。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0211",
+          "GOP-0212"
+        ],
+        "observations": [
+          {
+            "evidence_id": "GOP-0211",
+            "expected": "S",
+            "expected_ipa": "s",
+            "acoustic_winner": "T",
+            "acoustic_winner_ipa": "t"
+          },
+          {
+            "evidence_id": "GOP-0212",
+            "expected": "T",
+            "expected_ipa": "t",
+            "acoustic_winner": "S",
+            "acoustic_winner_ipa": "s"
+          }
+        ],
+        "reason_zh": "best 末尾 /s/ 和 /t/ 相互替换，置信度分别为 0.359 和 0.661，可能反映对齐窗口偏移或连读中的音素顺序混淆，不宜直接归因于发音错误。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0255"
+        ],
+        "observations": [
+          {
+            "evidence_id": "GOP-0255",
+            "expected": "AA",
+            "expected_ipa": "ɑː",
+            "acoustic_winner": "AH",
+            "acoustic_winner_ipa": "ʌ"
+          }
+        ],
+        "reason_zh": "want 中 /ɑː/ 被识别为 /ʌ/，置信度 0.557 中等；在非重读或快速语速中，美式英语 want 的元音可能接近 /ɑ/ 或 /ʌ/，存在合法变体可能。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0259"
+        ],
+        "observations": [
+          {
+            "evidence_id": "GOP-0259",
+            "expected": "IY",
+            "expected_ipa": "iː",
+            "acoustic_winner": "EY",
+            "acoustic_winner_ipa": "eɪ"
+          }
+        ],
+        "reason_zh": "me 中 /iː/ 被识别为 /eɪ/，但置信度仅 0.297；me 作为功能词常弱读，边界偏移或语速可能导致识别不稳定，不宜直接报错。"
+      }
+    ],
+    "limitations_zh": [
+      "所有证据来自强制对齐窗口的声学赢家，而非独立单词级识别，边界可能偏移。",
+      "置信度反映模型对参考音素与赢家音素的相对偏好，不是发音错误的校准概率。",
+      "部分现象可能由连读、弱读、语境同化或对齐偏差导致，需人工复听确认。",
+      "未评估音高、重音、语调、流利度、停顿等韵律特征。",
+      "相邻单词的 ASR 上下文可能有错词，仅用于提供局部语境，不作为发音判断依据。"
+    ]
+  }
+}

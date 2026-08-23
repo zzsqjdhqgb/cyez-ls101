@@ -103,6 +103,13 @@ Python 命令内完成 Qwen3 ASR（自由表达时）、音频解码、CMUdict �
 CTC 对齐、GOP 证据和保守中文报告，不分析语法、内容或停顿。
 当前实现状态、已验证样本、限制和后续建议见
 [`PRONUNCIATION_GOP_PROGRESS.md`](PRONUNCIATION_GOP_PROGRESS.md)。
+如需把全部低 GOP 音素行交给 LLM 做二次整理，可使用
+[`run_pronunciation_gop_llm_demo.py`](scripts/run_pronunciation_gop_llm_demo.py)；
+它会按问题单词附带前后各两个 ASR 单词、目标词的完整参考/观测音素序列和逐条 GOP
+证据，并要求模型逐条归档为反馈、待复听或暂缓项；完整 ASR 文本只保存在本地审计文件，
+不会随请求发送。当前冻结协议见
+[`PRONUNCIATION_GOP_LLM_V3_FREEZE.md`](PRONUNCIATION_GOP_LLM_V3_FREEZE.md)。
+当前上下文版的默认输出目录是 `.gop-research/exam/stable-gop-demo-llm-v3`。
 
 面向上海英语听说练习及相似题型的版本化输入协议见
 [`SCORING_INPUT_FORMAT.md`](SCORING_INPUT_FORMAT.md)。它定义题目上下文、参考

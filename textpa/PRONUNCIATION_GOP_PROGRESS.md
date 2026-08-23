@@ -4,6 +4,11 @@
 方便人工复核的本地发音纠错 demo，再决定是否投入时间自研和调优。它不是正式考试评分器，
 也不是已经完成准确率验证的产品系统。
 
+当前暂时冻结版本为 `gop-llm-word-context-v3`。后续软件内 AI 批改引擎的重写以
+[`PRONUNCIATION_GOP_LLM_V3_FREEZE.md`](PRONUNCIATION_GOP_LLM_V3_FREEZE.md) 和
+`.gop-research/exam/stable-gop-demo-llm-v3/` 为行为基准；改变阈值、上下文、prompt
+或输出合同时必须另起版本号。
+
 ## 当前结论
 
 目前已经有一条单命令、端到端的本地链路：
@@ -172,6 +177,56 @@ IPA 路径出现的多处 `/ð/`、`/θ/`、`/z/` 报告没有在当前 CMU 音�
 - [report.md](../.gop-research/exam/stable-gop-demo/report.md)
 - [result.json](../.gop-research/exam/stable-gop-demo/result.json)
 
+## 低 GOP 的 LLM 二次整理实验
+
+在基础 GOP 结果之上新增了独立的
+[`scripts/run_pronunciation_gop_llm_demo.py`](scripts/run_pronunciation_gop_llm_demo.py)。
+它不重新推理音频，也不改变 GOP；只按可配置阈值选择原始 phone rows，再按问题单词组织后
+交给 OpenAI-compatible chat endpoint 进行归纳。当前默认阈值是 `gop_log_ratio <= -0.35`，
+因此不会偷偷复用基础脚本中“只保留辅音/重复模式”的人工规则。
+
+当前上下文版输入中，每个至少含一条低 GOP 行的单词都会带上前后各最多两个 ASR 单词、
+该词完整的 CMU/IPA 参考序列、所有对齐位置的 `acoustic_winner` 序列，以及该词内每条
+低 GOP 行的完整证据。观测序列明确标为强制对齐窗口赢家，不冒充独立词级 ASR。完整
+ASR 文本只保存在本地 `evidence.json` 供审计，不再随请求发送给 LLM。
+
+程序要求 LLM：
+
+- 对每个输入 `evidence_id` 恰好归档一次；
+- 在 `feedback_items` 和 `withheld_differences` 之间覆盖全部输入行；
+- 为每条归档复制 ARPAbet 和 IPA 原始字段。
+
+程序会校验上下文包、ID、覆盖关系和原始音素字段，另行保存 `evidence.json`、`prompt.txt`、
+`response.json`、`result.json`、`report.md` 和 `manifest.json`。模型的自然语言理由和
+练习建议仍然是未听音频的草稿，不会因为 JSON 合法就被视为真值。
+
+### 历史 v2 样本结果
+
+下面的 v2 结果保留作历史对照。它使用了较早的 prompt，输入仍是扁平 phone rows；不要
+把它当作当前冻结协议：
+
+结果文件：
+
+- v2 报告：`../.gop-research/exam/stable-gop-demo-llm-v2/report.md`
+- v2 结构化结果：`../.gop-research/exam/stable-gop-demo-llm-v2/result.json`
+- v1（较宽松 prompt，用于对照）：`../.gop-research/exam/stable-gop-demo-llm/report.md`
+
+上下文版默认输出目录为
+`../.gop-research/exam/stable-gop-demo-llm-v3/`；重新调用 LLM 前应确认 prompt 中的
+问题词窗口和完整音素序列符合预期。
+
+### 当前冻结 v3 样本结果
+
+已用同一条 `recording-11.webm` 实际运行上下文版：15 条低 GOP 行被组织成 9 个问题词，
+模型返回 7 个反馈/复听项和 5 个暂缓项，15/15 条 evidence ID 通过程序校验。新的
+`prompt.txt`、`evidence.json` 和 `report.md` 均保存在上述 v3 目录；本次请求共使用
+9483 个输入 token 和 3910 个输出 token。
+
+第一次较宽松调用虽然也覆盖了 15 条，但出现了把 `B` 写成其他音素、把 `AH` 重述为
+`/ɒ/`、补写整词 IPA 等事实漂移。v2 增加了逐行原始字段合同后，这些字段层面的错误被
+程序约束住；自然语言解释仍可能使用不严谨的语言，因此当前定位是“LLM 整理草稿 + 原始
+证据审计”，不是自动发音判定。
+
 ## 复现方式
 
 自由表达：
@@ -211,7 +266,7 @@ python3 textpa/scripts/run_pronunciation_gop_demo.py \
 
 ## 测试和验证状态
 
-当前定向测试共 11 条，全部通过，覆盖：
+当前定向测试共 15 条，全部通过，覆盖：
 
 - Qwen3 ASR chunk 收集和带空格路径；
 - CMUdict JS 解析、合法变体和 OOV 显式读音；
@@ -219,8 +274,9 @@ python3 textpa/scripts/run_pronunciation_gop_demo.py \
 - exact 工作量保护和长输入 fallback；
 - 保守辅音诊断及词首/词尾位置约束；
 - 输出冲突快速失败和原子写入。
+- 低 GOP 全量选择、LLM evidence ID 覆盖和原始音素字段校验。
 
-全量 TextPA Python 测试最近一次结果为 62 条中 54 条通过、1 条因缺少 eSpeak 跳过、
+全量 TextPA Python 测试最近一次结果为 66 条中 58 条通过、1 条因缺少 eSpeak 跳过、
 7 条因当前全局 Python 环境没有 `numpy` 或 `openai` 报错。那 7 条不是本 demo 的断言
 失败；没有为绕过它们安装临时依赖。脚本自身还通过了 `py_compile`、`git diff --check`、
 CLI `--help` 和完整录音端到端运行。
@@ -239,6 +295,8 @@ CLI `--help` 和完整录音端到端运行。
 6. 当前 demo 只支持 CPU，长录音的推理速度和内存仍有限；模型权重不在 Git 中。
 7. 该入口不处理语法、内容、停顿、流利度或考试总分，也没有把结果接回 TextPA 的
    `assess` 评分协议。
+8. LLM 二次整理的程序校验只能保证引用和原始音素字段没有丢失；它不能证明自然语言
+   理由、练习建议或“likely_issue”判断正确，仍需人工听音审阅。
 
 ## 下一步建议
 
@@ -264,5 +322,7 @@ CLI `--help` 和完整录音端到端运行。
 - 入口脚本：[`scripts/run_pronunciation_gop_demo.py`](scripts/run_pronunciation_gop_demo.py)
 - 使用说明：[`PRONUNCIATION_GOP_DEMO.md`](PRONUNCIATION_GOP_DEMO.md)
 - 定向测试：[`tests/test_pronunciation_gop_demo.py`](tests/test_pronunciation_gop_demo.py)
+- LLM 后处理测试：[`tests/test_pronunciation_gop_llm_demo.py`](tests/test_pronunciation_gop_llm_demo.py)
+- LLM v3 冻结协议：[`PRONUNCIATION_GOP_LLM_V3_FREEZE.md`](PRONUNCIATION_GOP_LLM_V3_FREEZE.md)
 - README 入口：[`README.md`](README.md)
 - 当前样本报告：`../.gop-research/exam/stable-gop-demo/`

@@ -1,0 +1,25 @@
+{
+  "schema_version": 2,
+  "completed_at": "2026-08-23T04:41:33.943789+00:00",
+  "input": {
+    "path": "/workspace/.gop-research/exam/stable-gop-demo/result.json",
+    "sha256": "8a45d99d30395cbec63936b92682bdc55f7264279807c2f7326202249ddd6321"
+  },
+  "script": {
+    "path": "/workspace/textpa/scripts/run_pronunciation_gop_llm_demo.py",
+    "sha256": "ad82ae099dac4d0294c1788c36cf4a04edd2cb70d58c06f24e638d2ba9be1257"
+  },
+  "llm": {
+    "input": "/workspace/.gop-research/exam/stable-gop-demo/result.json",
+    "output_dir": "/workspace/.gop-research/exam/stable-gop-demo-llm-v3",
+    "endpoint": "https://apihub.agnes-ai.com/v1/chat/completions",
+    "model": "agnes-2.5-flash",
+    "threshold": -0.35,
+    "temperature": 0.0,
+    "thinking": true
+  },
+  "selected_count": 15,
+  "word_context_count": 9,
+  "feedback_item_count": 7,
+  "withheld_count": 5
+}

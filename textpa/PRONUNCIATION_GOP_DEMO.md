@@ -91,3 +91,38 @@ The feedback layer reports only repeated, ordinary English consonant
 confusions that pass conservative evidence thresholds. Raw phone rows remain
 available in `result.json`; a low GOP value alone is not presented as an
 established pronunciation error.
+
+## Optional LLM organization pass
+
+To let an LLM review every phone row below a GOP threshold, run the separate
+post-processing entry point after the local GOP demo:
+
+```bash
+python3 textpa/scripts/run_pronunciation_gop_llm_demo.py \
+  --input .gop-research/exam/stable-gop-demo/result.json \
+  --output-dir .gop-research/exam/stable-gop-demo-llm-v3 \
+  --threshold -0.35
+```
+
+This pass does not recompute GOP or hear the recording. It selects every phone
+row at or below the threshold, groups the rows by problem word, and sends each
+problem word with up to two neighboring ASR words on either side. Each group
+also contains the target word's complete reference CMU/IPA sequence, the
+alignment-conditioned acoustic-winner sequence for all of its phones, and a
+detailed list of the low-GOP rows for that word. The acoustic-winner sequence
+is evidence from forced-alignment windows, not an independent word-level ASR
+result. The full ASR transcript is retained in local `evidence.json` for audit,
+but is deliberately not included in the LLM request; only the local windows are
+sent.
+
+The application validates that every evidence ID appears exactly once in the
+model's feedback or withheld list, with the raw ARPAbet/IPA fields copied and
+checked against the input. It writes `evidence.json`, `prompt.txt`,
+`response.json`, `result.json`, `report.md`, and `manifest.json`. Set
+`--overwrite-llm` to intentionally make a new request after changing the saved
+response.
+
+The current word-context behavior is temporarily frozen as
+[`PRONUNCIATION_GOP_LLM_V3_FREEZE.md`](PRONUNCIATION_GOP_LLM_V3_FREEZE.md). Use
+that document as the compatibility contract when replacing the in-application
+AI correction engine.

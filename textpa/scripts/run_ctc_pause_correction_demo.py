@@ -1076,11 +1076,12 @@ def call_llm(
     thinking: bool,
     timeout: float,
     retries: int,
+    system_prompt: str = SYSTEM_PROMPT,
 ) -> dict[str, Any]:
     request_body: dict[str, Any] = {
         "model": model,
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt},
         ],
         "max_tokens": max_tokens,
