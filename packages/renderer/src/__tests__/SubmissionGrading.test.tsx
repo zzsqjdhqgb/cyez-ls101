@@ -55,6 +55,22 @@ beforeEach(() => {
 })
 
 describe('submission grading UI', () => {
+  it('opens settlement directly when all selected submissions are already ready', async () => {
+    const workspace = readyWorkspace(gradingWorkspace(), 2, '客观题已完成')
+    const startGrading = vi.fn().mockResolvedValue(workspace)
+    const repository = mockRepository({ startGrading })
+
+    renderWithRepository(repository, '/submissions/grading?submissionId=submission-1', [
+      <Route element={<SubmissionGradingPage />} key="grade" path="/submissions/grading" />,
+      <Route element={<h1>结算页</h1>} key="settlement" path="/submissions/settlement" />
+    ])
+
+    expect(await screen.findByRole('heading', { name: '结算页' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '人工评分' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'AI 评分' })).not.toBeInTheDocument()
+    expect(startGrading).toHaveBeenCalledWith('submission-1')
+  })
+
   it('keeps the current recording URL alive across StrictMode effect checks', async () => {
     const repository = mockRepository({
       startGrading: vi.fn().mockResolvedValue(gradingWorkspace())

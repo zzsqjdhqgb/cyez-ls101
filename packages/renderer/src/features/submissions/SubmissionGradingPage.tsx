@@ -42,11 +42,62 @@ import styles from './SubmissionGradingPage.module.css'
 export function SubmissionGradingPage(): JSX.Element {
   const { submissionId: legacySubmissionId = '' } = useParams()
   const [searchParams] = useSearchParams()
+  const repository = useSubmissionLibrary()
+  const navigate = useNavigate()
   const submissionIds = useMemo(() => {
     const queued = searchParams.getAll('submissionId').filter((value) => value.trim() !== '')
     return queued.length > 0 ? [...new Set(queued)] : legacySubmissionId ? [legacySubmissionId] : []
   }, [legacySubmissionId, searchParams])
   const [mode, setMode] = useState<'human' | 'ai' | null>(legacySubmissionId ? 'human' : null)
+  const [preflight, setPreflight] = useState<'checking' | 'available' | 'error'>(
+    submissionIds.length > 0 ? 'checking' : 'available'
+  )
+  const [preflightError, setPreflightError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (submissionIds.length === 0) return
+
+    let active = true
+    const timeout = window.setTimeout(() => {
+      setPreflight('checking')
+      setPreflightError(null)
+      void Promise.all(submissionIds.map((submissionId) => repository.startGrading(submissionId)))
+        .then((workspaces) => {
+          if (!active) return
+          if (workspaces.every((workspace) => workspace.grading.status === 'ready')) {
+            navigate(settlementUrl(submissionIds), { replace: true })
+            return
+          }
+          setPreflight('available')
+        })
+        .catch((reason: unknown) => {
+          if (!active) return
+          setPreflightError(submissionErrorMessage(reason))
+          setPreflight('error')
+        })
+    }, 0)
+
+    return () => {
+      active = false
+      window.clearTimeout(timeout)
+    }
+  }, [navigate, repository, submissionIds])
+
+  if (preflight === 'checking') {
+    return <div className={styles.centerState}>正在准备评分...</div>
+  }
+
+  if (preflight === 'error') {
+    return (
+      <div className={styles.centerState}>
+        <CircleAlert aria-hidden="true" />
+        <p>{preflightError || '无法准备评分'}</p>
+        <Button icon={ArrowLeft} onClick={() => navigate('/submissions')}>
+          返回作答记录
+        </Button>
+      </div>
+    )
+  }
 
   if (mode === 'human') return <HumanSubmissionGradingPage submissionIds={submissionIds} />
   if (mode === 'ai') return <AISubmissionGradingPage submissionIds={submissionIds} />
