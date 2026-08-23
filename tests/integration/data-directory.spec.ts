@@ -16,8 +16,9 @@ test('archives root-level legacy data after startup and cleans it only after con
   try {
     const page = await mainApplicationWindow(electronApp)
     await page.waitForLoadState('domcontentloaded')
-    await expect(page.getByRole('heading', { name: '检测到旧版数据' })).toBeVisible()
-    await expect(page.getByText(/2 个目录、2 个文件/)).toBeVisible()
+    await expect(page.getByRole('heading', { name: '旧数据已归档' })).toBeVisible()
+    await expect(page.getByText('2 个')).toHaveCount(2)
+    await expect(page.getByRole('button', { name: '关闭' })).toBeDisabled()
 
     const blocked = await page.evaluate(
       async (target) => {
@@ -42,8 +43,9 @@ test('archives root-level legacy data after startup and cleans it only after con
       '{"legacy":true}'
     )
 
-    await page.getByRole('button', { name: '继续并清理' }).click()
-    await expect(page.getByRole('heading', { name: '检测到旧版数据' })).toHaveCount(0)
+    await page.getByRole('button', { name: '清理并继续' }).click()
+    await expect(page.getByRole('heading', { name: '旧数据已归档' })).toHaveCount(0)
+    await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
     await expect(readFile(path.join(userDataDir, 'drafts', 'draft.json'))).rejects.toMatchObject({
       code: 'ENOENT'
     })

@@ -11,6 +11,7 @@ import { templateApplication } from './features/templates/TemplateApplicationRun
 import { builtinInterfaceMaintenance } from './features/interfaces/BuiltinInterfaceRuntime'
 import { initializeSchemaApplication } from './features/schemas/SchemaApplicationRuntime'
 import { LicenseActivationPage } from './features/license/LicenseActivationPage'
+import { LegacyDataMigrationPage } from './features/legacy-data/LegacyDataMigrationPage'
 import {
   applyStartupLogoMotion,
   applyStartupPlaceholderIcon,
@@ -76,7 +77,7 @@ async function renderApplication(): Promise<void> {
   const result = await initializationResult
   if (result.status === 'rejected') throw result.reason
 
-  if (result.licenseStatus.state === 'active') renderMainApplication()
+  if (result.licenseStatus.state === 'active') await openActiveApplication()
   else renderLicenseActivation(result.licenseStatus)
 }
 
@@ -84,9 +85,7 @@ async function prepareApplication(): Promise<LicenseStatus> {
   const license = window.license
   if (!license) throw new Error('许可证服务不可用')
 
-  const status = await license.getStatus()
-  if (status.state === 'active') await initializeApplicationContent()
-  return status
+  return license.getStatus()
 }
 
 function renderMainApplication(): void {
@@ -104,8 +103,7 @@ function renderLicenseActivation(status: LicenseStatus): void {
         initialStatus={status}
         onActivated={async () => {
           try {
-            await initializeApplicationContent()
-            renderMainApplication()
+            await openActiveApplication()
           } catch (error) {
             renderStartupError(error)
           }
@@ -113,6 +111,23 @@ function renderLicenseActivation(status: LicenseStatus): void {
       />
     </StrictMode>
   )
+}
+
+async function openActiveApplication(): Promise<void> {
+  await completeLegacyDataMigration()
+  await initializeApplicationContent()
+  renderMainApplication()
+}
+
+function completeLegacyDataMigration(): Promise<void> {
+  if (!window.legacyData) throw new Error('旧数据整理服务不可用')
+  return new Promise((resolve) => {
+    reactRoot.render(
+      <StrictMode>
+        <LegacyDataMigrationPage onComplete={resolve} />
+      </StrictMode>
+    )
+  })
 }
 
 async function initializeApplicationContent(): Promise<void> {

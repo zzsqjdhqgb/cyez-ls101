@@ -18,7 +18,8 @@ export default defineConfig({
           'pronunciation-assessment-worker': resolve(
             'packages/airouter/src/main/pronunciation-assessment-worker.ts'
           ),
-          'qwen3-asr-worker': resolve('packages/airouter/src/main/qwen3-asr-worker.ts')
+          'qwen3-asr-worker': resolve('packages/airouter/src/main/qwen3-asr-worker.ts'),
+          'legacy-data-worker': resolve('src/main/legacy-data-worker.ts')
         }
       }
     }

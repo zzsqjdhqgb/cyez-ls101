@@ -91,7 +91,6 @@ async function initializeApplication(): Promise<void> {
   })
 
   createMainWindow(applicationLogger)
-  void legacyDataService.initialize()
   applicationInitialized = true
 
   app.on('activate', () => {

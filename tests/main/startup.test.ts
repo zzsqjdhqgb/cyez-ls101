@@ -33,6 +33,20 @@ vi.mock('@electron-toolkit/utils', () => ({
   optimizer: { watchWindowShortcuts: vi.fn() }
 }))
 
+vi.mock('@ls101/logger/main', () => {
+  const logger = {
+    error: vi.fn(),
+    errorSync: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn()
+  }
+  return {
+    createConsoleLogger: vi.fn(() => logger),
+    createMainLogger: vi.fn(async () => logger),
+    registerRendererLogger: vi.fn()
+  }
+})
+
 vi.mock('@ls101/config-store/main', () => ({ registerConfigStore: vi.fn() }))
 vi.mock('@ls101/airouter/main', () => ({ registerAIRouter: vi.fn() }))
 vi.mock('@ls101/clipboard/main', () => ({ registerClipboard: vi.fn() }))
@@ -72,6 +86,13 @@ beforeEach(() => {
 })
 
 describe('application startup error handling', () => {
+  it('waits for the licensed renderer flow before initializing legacy data', async () => {
+    await import('../../src/main/index')
+
+    await vi.waitFor(() => expect(mocks.createMainWindow).toHaveBeenCalledOnce())
+    expect(mocks.initializeLegacyData).not.toHaveBeenCalled()
+  })
+
   it('uses data-directory recovery only when data-directory initialization fails', async () => {
     const failure = new Error('data directory unavailable')
     mocks.initializeDataDirectory.mockRejectedValue(failure)

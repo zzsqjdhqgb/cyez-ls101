@@ -21,6 +21,7 @@ vi.mock('electron', () => ({
 }))
 
 import { LEGACY_DATA_JOURNAL_FILENAME, LegacyDataService } from '../../src/main/legacy-data'
+import { inProcessLegacyArchiveOperations } from '../../src/main/legacy-data-archive'
 
 let roots: string[]
 
@@ -39,7 +40,7 @@ describe('legacy data archival', () => {
     const userData = await temporaryDirectory('ls101-legacy-empty-')
     const current = path.join(userData, 'data')
     await mkdir(current)
-    const service = new LegacyDataService(userData, current)
+    const service = legacyDataService(userData, current)
 
     expect(service.hasPendingCleanup()).toBe(true)
     await expect(service.initialize()).resolves.toEqual({
@@ -53,7 +54,7 @@ describe('legacy data archival', () => {
 
   it('archives legacy directories, exports the ZIP and only then removes the sources', async () => {
     const userData = await legacyProfile('archive-cleanup')
-    const service = new LegacyDataService(userData, path.join(userData, 'data'))
+    const service = legacyDataService(userData, path.join(userData, 'data'))
 
     const archived = await service.initialize()
 
@@ -102,7 +103,7 @@ describe('legacy data archival', () => {
     const userData = await temporaryDirectory('ls101-legacy-empty-directory-')
     await mkdir(path.join(userData, 'data'))
     await mkdir(path.join(userData, 'drafts'))
-    const service = new LegacyDataService(userData, path.join(userData, 'data'))
+    const service = legacyDataService(userData, path.join(userData, 'data'))
 
     await expect(service.initialize()).resolves.toMatchObject({
       status: 'archived',
@@ -116,7 +117,7 @@ describe('legacy data archival', () => {
     const userData = await legacyProfile('retry-archive')
     const archiveDirectory = path.join(userData, 'legacy-archives')
     await writeFile(archiveDirectory, 'blocks archive directory creation')
-    const service = new LegacyDataService(userData, path.join(userData, 'data'))
+    const service = legacyDataService(userData, path.join(userData, 'data'))
 
     await expect(service.initialize()).resolves.toMatchObject({ status: 'error' })
     await expect(
@@ -139,7 +140,7 @@ describe('legacy data archival', () => {
 
   it('does not clean a legacy directory changed after archival', async () => {
     const userData = await legacyProfile('content-change')
-    const service = new LegacyDataService(userData, path.join(userData, 'data'))
+    const service = legacyDataService(userData, path.join(userData, 'data'))
     await service.initialize()
     await writeFile(path.join(userData, 'drafts', 'draft.json'), 'changed after archive')
 
@@ -152,7 +153,7 @@ describe('legacy data archival', () => {
   it('resumes cleanup after a source directory was moved into quarantine', async () => {
     const userData = await legacyProfile('resume-cleanup')
     const current = path.join(userData, 'data')
-    const first = new LegacyDataService(userData, current)
+    const first = legacyDataService(userData, current)
     await first.initialize()
 
     const journalPath = path.join(userData, LEGACY_DATA_JOURNAL_FILENAME)
@@ -176,7 +177,7 @@ describe('legacy data archival', () => {
       })
     )
 
-    const resumed = new LegacyDataService(userData, current)
+    const resumed = legacyDataService(userData, current)
     await expect(resumed.initialize()).resolves.toMatchObject({ status: 'cleaned' })
     await expect(readFile(path.join(quarantine, 'drafts', 'draft.json'))).rejects.toMatchObject({
       code: 'ENOENT'
@@ -190,7 +191,7 @@ describe('legacy data archival', () => {
     const userData = await legacyProfile('invalid-quarantine-path')
     const current = path.join(userData, 'data')
     await writeFile(path.join(current, 'current-data.txt'), 'keep current data')
-    const first = new LegacyDataService(userData, current)
+    const first = legacyDataService(userData, current)
     await first.initialize()
 
     const journalPath = path.join(userData, LEGACY_DATA_JOURNAL_FILENAME)
@@ -207,7 +208,7 @@ describe('legacy data archival', () => {
       })
     )
 
-    const resumed = new LegacyDataService(userData, current)
+    const resumed = legacyDataService(userData, current)
     await expect(resumed.initialize()).resolves.toMatchObject({
       status: 'error',
       error: expect.stringContaining('旧数据清理路径无效')
@@ -223,7 +224,7 @@ describe('legacy data archival', () => {
   it('does not use a replaced quarantine directory while resuming cleanup', async () => {
     const userData = await legacyProfile('quarantine-identity-change')
     const current = path.join(userData, 'data')
-    const first = new LegacyDataService(userData, current)
+    const first = legacyDataService(userData, current)
     await first.initialize()
 
     const journalPath = path.join(userData, LEGACY_DATA_JOURNAL_FILENAME)
@@ -250,7 +251,7 @@ describe('legacy data archival', () => {
     await mkdir(quarantine)
     await writeFile(path.join(quarantine, 'replacement.txt'), 'do not delete')
 
-    const resumed = new LegacyDataService(userData, current)
+    const resumed = legacyDataService(userData, current)
     await expect(resumed.initialize()).resolves.toMatchObject({
       status: 'cleaning',
       error: expect.stringContaining('暂存目录标识已变化')
@@ -265,7 +266,7 @@ describe('legacy data archival', () => {
 
   it('refuses to delete a source directory whose identity changed after archival', async () => {
     const userData = await legacyProfile('identity-change')
-    const service = new LegacyDataService(userData, path.join(userData, 'data'))
+    const service = legacyDataService(userData, path.join(userData, 'data'))
     await service.initialize()
 
     await rename(path.join(userData, 'drafts'), path.join(userData, 'drafts-preserved'))
@@ -290,6 +291,10 @@ async function legacyProfile(label: string): Promise<string> {
   await mkdir(path.join(userData, 'submissions', 'recordings'), { recursive: true })
   await writeFile(path.join(userData, 'submissions', 'recordings', '0.mp3'), 'audio')
   return userData
+}
+
+function legacyDataService(userData: string, current: string): LegacyDataService {
+  return new LegacyDataService(userData, current, inProcessLegacyArchiveOperations)
 }
 
 async function temporaryDirectory(prefix: string): Promise<string> {

@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
+import { createReadStream } from 'node:fs'
 import {
   copyFile,
   lstat,
@@ -12,12 +13,18 @@ import {
 } from 'node:fs/promises'
 import path from 'node:path'
 import { BrowserWindow, dialog, ipcMain } from 'electron'
-import { strToU8, unzipSync, zipSync } from 'fflate'
+import { strToU8 } from 'fflate'
 import {
   LEGACY_DATA_CHANNELS,
   type LegacyDataInfo,
   type LegacyDataSourceInfo
 } from '@ls101/core-types'
+import {
+  type LegacyArchiveManifest,
+  type LegacyArchiveOperations,
+  type LegacyArchiveSourceFile
+} from './legacy-data-archive'
+import { workerLegacyArchiveOperations } from './legacy-data-archive-client'
 
 export const LEGACY_DATA_JOURNAL_FILENAME = 'legacy-migration.json'
 export const LEGACY_ARCHIVE_DIRECTORY = 'legacy-archives'
@@ -42,7 +49,6 @@ export const LEGACY_DATA_DIRECTORIES = [
 
 const JOURNAL_FORMAT_VERSION = 1
 const ARCHIVE_FORMAT_VERSION = 1
-const ARCHIVE_MANIFEST_FILENAME = 'manifest.json'
 const UUID_PATTERN = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 const ARCHIVE_RELATIVE_PATH_PATTERN = new RegExp(
   `^${LEGACY_ARCHIVE_DIRECTORY}/legacy-\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}\\.\\d{3}Z-${UUID_PATTERN}\\.zip$`,
@@ -80,15 +86,10 @@ interface LegacyMigrationJournal {
 
 interface ScannedSource {
   info: JournalSource
-  files: Array<{ archivePath: string; data: Uint8Array; sizeBytes: number }>
+  files: LegacyArchiveSourceFile[]
 }
 
-interface ArchiveManifest {
-  formatVersion: typeof ARCHIVE_FORMAT_VERSION
-  createdAt: string
-  sourceDirectories: LegacyDataSourceInfo[]
-  files: Array<{ path: string; sizeBytes: number; sha256: string }>
-}
+type ArchiveManifest = LegacyArchiveManifest
 
 interface VerifiedArchive {
   sizeBytes: number
@@ -101,11 +102,15 @@ export class LegacyDataService {
   private journal: LegacyMigrationJournal | null = null
   // Treat the initial scan as pending so data-directory IPC cannot race ahead of it.
   private status: LegacyDataInfo = emptyInfo('archiving')
+  private readonly archiveOperations: LegacyArchiveOperations
 
   constructor(
     private readonly userDataDirectory: string,
-    private readonly currentDataDirectory: string
-  ) {}
+    private readonly currentDataDirectory: string,
+    archiveOperations: LegacyArchiveOperations = workerLegacyArchiveOperations
+  ) {
+    this.archiveOperations = archiveOperations
+  }
 
   /** Start the one-time scan/archive operation after the application is ready. */
   async initialize(): Promise<LegacyDataInfo> {
@@ -153,7 +158,7 @@ export class LegacyDataService {
     await this.initialize()
     const archivePath = this.requireArchivePath()
     if (!this.journal) throw new Error('旧数据归档不存在')
-    await verifyArchive(archivePath, this.journal)
+    await verifyArchive(archivePath, this.journal, this.archiveOperations)
     const defaultName = path.basename(archivePath)
     const options = {
       title: '导出旧数据归档',
@@ -184,7 +189,7 @@ export class LegacyDataService {
     if (!this.journal || this.journal.state === 'cleaned') return this.getStatus()
     if (this.journal.state === 'error') throw new Error(this.journal.error ?? '旧数据归档失败')
     const archivePath = this.requireArchivePath()
-    const verifiedArchive = await verifyArchive(archivePath, this.journal)
+    const verifiedArchive = await verifyArchive(archivePath, this.journal, this.archiveOperations)
 
     let journal = this.journal
     await assertNoUnexpectedLegacyDirectories(
@@ -318,7 +323,7 @@ export class LegacyDataService {
       } else if (existing.state === 'error') {
         return
       } else if (existing.state === 'archived') {
-        await verifyArchive(this.requireArchivePath(), existing)
+        await verifyArchive(this.requireArchivePath(), existing, this.archiveOperations)
       }
       return
     }
@@ -348,18 +353,6 @@ export class LegacyDataService {
   ): Promise<void> {
     const sources =
       scannedSources ?? (await scanLegacySources(this.userDataDirectory, this.currentDataDirectory))
-    const files: Record<string, Uint8Array> = {}
-    const manifestFiles: ArchiveManifest['files'] = []
-    for (const source of sources) {
-      for (const file of source.files) {
-        files[file.archivePath] = file.data
-        manifestFiles.push({
-          path: file.archivePath,
-          sizeBytes: file.sizeBytes,
-          sha256: sha256(file.data)
-        })
-      }
-    }
     const archiveJournal: LegacyMigrationJournal = {
       ...journal,
       sourceDirectories: sources.map(({ info }) => info),
@@ -367,26 +360,27 @@ export class LegacyDataService {
       archiveSha256: undefined,
       error: undefined
     }
-    const manifest: ArchiveManifest = {
-      formatVersion: ARCHIVE_FORMAT_VERSION,
-      createdAt: journal.createdAt,
-      sourceDirectories: archiveJournal.sourceDirectories.map(({ name, fileCount, sizeBytes }) => ({
+    const sourceDirectories = archiveJournal.sourceDirectories.map(
+      ({ name, fileCount, sizeBytes }) => ({
         name,
         fileCount,
         sizeBytes
-      })),
-      files: manifestFiles.sort((left, right) => left.path.localeCompare(right.path))
-    }
-    files[ARCHIVE_MANIFEST_FILENAME] = strToU8(`${JSON.stringify(manifest, null, 2)}\n`)
-    const archiveBytes = zipSync(files, { level: 6, os: 3 })
+      })
+    )
     const archivePath = this.requireArchivePath(journal)
-    await writeBinaryAtomically(archivePath, archiveBytes)
-    const verified = await verifyArchive(archivePath, archiveJournal)
+    const generated = await this.archiveOperations.create({
+      archivePath,
+      createdAt: journal.createdAt,
+      sourceDirectories,
+      files: sources.flatMap((source) => source.files)
+    })
+    const manifest = parseArchiveManifest(generated.manifest)
+    assertManifestMatchesJournal(manifest, archiveJournal)
     const next: LegacyMigrationJournal = {
       ...archiveJournal,
       state: 'archived',
-      archiveSizeBytes: verified.sizeBytes,
-      archiveSha256: verified.sha256,
+      archiveSizeBytes: generated.archiveSizeBytes,
+      archiveSha256: generated.archiveSha256,
       error: undefined
     }
     await this.saveJournal(next)
@@ -529,78 +523,64 @@ async function collectFiles(
       continue
     }
     if (!stats.isFile()) throw new Error(`旧数据包含不支持的文件类型：${fullPath}`)
-    const data = new Uint8Array(await readFile(fullPath))
-    const after = await lstat(fullPath)
-    if (
-      !sameIdentity(fileSystemIdentity(stats), fileSystemIdentity(after)) ||
-      after.size !== stats.size
-    ) {
-      throw new Error(`旧数据在归档期间发生变化：${fullPath}`)
-    }
     const relative = path.relative(sourceRoot, fullPath).split(path.sep).join('/')
     const archivePath = `${archivePrefix}/${relative}`
     assertArchiveEntryPath(archivePath)
     output.push({
       archivePath,
-      data,
-      sizeBytes: data.byteLength
+      sourcePath: fullPath,
+      sizeBytes: stats.size,
+      identity: fileSystemIdentity(stats)
     })
   }
 }
 
 async function verifyArchive(
   archivePath: string,
-  journal: LegacyMigrationJournal
+  journal: LegacyMigrationJournal,
+  operations: LegacyArchiveOperations
 ): Promise<VerifiedArchive> {
-  const data = new Uint8Array(await readFile(archivePath))
-  const archiveSha256 = sha256(data)
-  if (journal.archiveSizeBytes !== undefined && data.byteLength !== journal.archiveSizeBytes) {
+  const verified = await operations.verify(archivePath)
+  if (
+    journal.archiveSizeBytes !== undefined &&
+    verified.archiveSizeBytes !== journal.archiveSizeBytes
+  ) {
     throw new Error('旧数据归档大小不匹配')
   }
-  if (journal.archiveSha256 && archiveSha256 !== journal.archiveSha256) {
+  if (journal.archiveSha256 && verified.archiveSha256 !== journal.archiveSha256) {
     throw new Error('旧数据归档摘要不匹配')
   }
-  let files: Record<string, Uint8Array>
-  try {
-    files = unzipSync(data)
-  } catch {
-    throw new Error('旧数据归档无法读取')
-  }
-  const manifestData = files[ARCHIVE_MANIFEST_FILENAME]
-  if (!manifestData) throw new Error('旧数据归档缺少清单文件')
   let manifestValue: unknown
   try {
-    manifestValue = JSON.parse(new TextDecoder().decode(manifestData)) as unknown
+    manifestValue = JSON.parse(verified.manifestText) as unknown
   } catch {
     throw new Error('旧数据归档清单无效')
   }
   const manifest = parseArchiveManifest(manifestValue)
   assertManifestMatchesJournal(manifest, journal)
 
-  const expectedPaths = new Set([
-    ARCHIVE_MANIFEST_FILENAME,
-    ...manifest.files.map((file) => file.path)
-  ])
-  const actualPaths = Object.keys(files)
+  const expectedPaths = new Set(manifest.files.map((file) => file.path))
+  const actualPaths = verified.files.map((file) => file.path)
   if (
     actualPaths.length !== expectedPaths.size ||
     actualPaths.some((filename) => !expectedPaths.has(filename))
   ) {
     throw new Error('旧数据归档包含未记录的文件')
   }
+  const actualFiles = new Map(verified.files.map((file) => [file.path, file] as const))
   for (const file of manifest.files) {
-    const archivedFile = hasOwn(files, file.path) ? files[file.path] : undefined
+    const archivedFile = actualFiles.get(file.path)
     if (
       !archivedFile ||
-      archivedFile.byteLength !== file.sizeBytes ||
-      sha256(archivedFile) !== file.sha256
+      archivedFile.sizeBytes !== file.sizeBytes ||
+      archivedFile.sha256 !== file.sha256
     ) {
       throw new Error(`旧数据归档文件校验失败：${file.path}`)
     }
   }
   return {
-    sizeBytes: data.byteLength,
-    sha256: archiveSha256,
+    sizeBytes: verified.archiveSizeBytes,
+    sha256: verified.archiveSha256,
     manifest
   }
 }
@@ -833,7 +813,7 @@ async function verifyLegacyDirectoryContents(
     if (
       !expected ||
       actual.sizeBytes !== expected.sizeBytes ||
-      sha256(actual.data) !== expected.sha256
+      (await sha256File(actual.sourcePath)) !== expected.sha256
     ) {
       throw new Error(`旧数据在归档后发生变化，未执行清理：${sourceName}`)
     }
@@ -974,12 +954,10 @@ function emptyInfo(status: LegacyDataInfo['status']): LegacyDataInfo {
   return { status, archivePath: null, archiveSizeBytes: null, sourceDirectories: [] }
 }
 
-function sha256(data: Uint8Array): string {
-  return createHash('sha256').update(data).digest('hex')
-}
-
-function hasOwn(value: object, key: PropertyKey): boolean {
-  return Object.prototype.hasOwnProperty.call(value, key)
+async function sha256File(filename: string): Promise<string> {
+  const hash = createHash('sha256')
+  for await (const chunk of createReadStream(filename)) hash.update(chunk)
+  return hash.digest('hex')
 }
 
 async function writeBinaryAtomically(filename: string, data: Uint8Array): Promise<void> {

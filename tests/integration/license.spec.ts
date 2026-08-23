@@ -1,5 +1,5 @@
 import { expect, test, type ElectronApplication } from '@playwright/test'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import {
@@ -14,6 +14,8 @@ test('activates with an invitation code and reuses the hash receipt after restar
   const pageErrors: string[] = []
 
   try {
+    await mkdir(path.join(userDataDir, 'drafts'))
+    await writeFile(path.join(userDataDir, 'drafts', 'before-license.json'), '{"legacy":true}')
     electronApp = await launchIntegrationApp(userDataDir, { license: 'not-activated' })
     let page = await electronApp.firstWindow()
     page.on('pageerror', (error) => pageErrors.push(error.message))
@@ -22,6 +24,9 @@ test('activates with an invitation code and reuses the hash receipt after restar
     await expect(page.getByRole('heading', { name: '激活曹二听说101' })).toBeVisible()
     await expect(page.getByRole('button', { name: '参与激活方式意见征集' })).toBeVisible()
     await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toHaveCount(0)
+    await expect(
+      readFile(path.join(userDataDir, 'legacy-migration.json'), 'utf8')
+    ).rejects.toMatchObject({ code: 'ENOENT' })
 
     const guideWindowPromise = electronApp.waitForEvent('window')
     await page.getByRole('button', { name: '参与激活方式意见征集' }).click()
@@ -68,6 +73,11 @@ test('activates with an invitation code and reuses the hash receipt after restar
 
     await page.getByLabel('邀请码').fill(`  ${INTEGRATION_LICENSE_CODE.toLowerCase()}  `)
     await page.getByRole('button', { name: '激活并进入' }).click()
+    await expect(page.getByRole('heading', { name: '旧数据已归档' })).toBeVisible()
+    await expect(
+      readFile(path.join(userDataDir, 'legacy-migration.json'), 'utf8')
+    ).resolves.toContain('"state": "archived"')
+    await page.getByRole('button', { name: '清理并继续' }).click()
     await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
 
     const receipt = await readFile(path.join(userDataDir, 'license.json'), 'utf8')
