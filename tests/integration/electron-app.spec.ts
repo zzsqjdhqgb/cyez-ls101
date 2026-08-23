@@ -70,6 +70,7 @@ test.beforeEach(async () => {
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
   await expect(page.getByRole('dialog', { name: '曹二听说101 v0.4.0' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /旧数据/ })).toHaveCount(0)
   await page.getByRole('button', { name: '关闭版本说明' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
 })

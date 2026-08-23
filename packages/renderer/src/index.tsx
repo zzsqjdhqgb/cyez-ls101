@@ -134,12 +134,16 @@ async function claimReleaseNotesVersion(): Promise<boolean> {
   return appInfo.claimReleaseNotesVersion(latestReleaseVersion)
 }
 
-function completeLegacyDataMigration(): Promise<void> {
-  if (!window.legacyData) throw new Error('旧数据整理服务不可用')
+async function completeLegacyDataMigration(): Promise<void> {
+  const legacyData = window.legacyData
+  if (!legacyData) throw new Error('旧数据整理服务不可用')
+  const initialInfo = await legacyData.getInfo()
+  if (initialInfo.status === 'none' || initialInfo.status === 'cleaned') return
+
   return new Promise((resolve) => {
     reactRoot.render(
       <StrictMode>
-        <LegacyDataMigrationPage onComplete={resolve} />
+        <LegacyDataMigrationPage initialInfo={initialInfo} onComplete={resolve} />
       </StrictMode>
     )
   })
