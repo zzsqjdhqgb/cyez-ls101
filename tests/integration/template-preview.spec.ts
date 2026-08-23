@@ -7,7 +7,7 @@ import {
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { launchIntegrationApp } from './support/electron-app'
+import { closeStartupReleaseNotes, launchIntegrationApp } from './support/electron-app'
 
 const TEMPLATE_ID = '71000000-0000-4000-8000-000000000001'
 
@@ -23,6 +23,7 @@ test.beforeEach(async () => {
   page = await electronApp.firstWindow()
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
+  await closeStartupReleaseNotes(page)
   await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
 })
 

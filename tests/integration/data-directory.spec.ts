@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { unzipSync } from 'fflate'
-import { launchIntegrationApp } from './support/electron-app'
+import { closeStartupReleaseNotes, launchIntegrationApp } from './support/electron-app'
 
 test('archives root-level legacy data after startup and cleans it only after confirmation', async () => {
   const userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-legacy-data-integration-'))
@@ -55,7 +55,7 @@ test('archives root-level legacy data after startup and cleans it only after con
 
     await page.getByRole('button', { name: '清理并继续' }).click()
     await expect(page.getByRole('heading', { name: '旧数据已归档' })).toHaveCount(0)
-    await closeReleaseNotes(page)
+    await closeStartupReleaseNotes(page)
     await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
     await expect(readFile(path.join(userDataDir, 'drafts', 'draft.json'))).rejects.toMatchObject({
       code: 'ENOENT'
@@ -163,7 +163,7 @@ test('copies business data, switches directories after restart and retains the s
       '"state": "ready"'
     )
 
-    await closeReleaseNotes(page)
+    await closeStartupReleaseNotes(page)
     await page.getByRole('link', { name: '设置' }).click()
     await page.getByRole('button', { name: /存储/ }).click()
     await expect(page.getByRole('heading', { level: 1, name: '存储' })).toBeVisible()
@@ -212,7 +212,7 @@ test('resets a custom data directory to the validated default location', async (
   try {
     const page = await mainApplicationWindow(electronApp)
     await page.waitForLoadState('domcontentloaded')
-    await closeReleaseNotes(page)
+    await closeStartupReleaseNotes(page)
     await page.getByRole('link', { name: '设置' }).click()
     await page.getByRole('button', { name: /存储/ }).click()
     await expect(page.getByText(custom)).toBeVisible()
@@ -248,10 +248,4 @@ async function mainApplicationWindow(electronApp: ElectronApplication): Promise<
     if ((await window.title().catch(() => '')) === '曹二听说101') return window
   }
   throw new Error('Main application window was not found')
-}
-
-async function closeReleaseNotes(page: Page): Promise<void> {
-  const closeButton = page.getByRole('button', { name: '关闭版本说明' })
-  await expect(closeButton).toBeVisible()
-  await closeButton.click()
 }

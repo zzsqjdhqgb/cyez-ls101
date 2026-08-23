@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import {
+  closeStartupReleaseNotes,
   INTEGRATION_LICENSE_CODE,
   INTEGRATION_LICENSE_CODE_HASH,
   launchIntegrationApp
@@ -85,6 +86,7 @@ test('activates with an invitation code and reuses the hash receipt after restar
       readFile(path.join(userDataDir, '.ls101-installation.json'), 'utf8')
     ).rejects.toMatchObject({ code: 'ENOENT' })
     await page.getByRole('button', { name: '清理并继续' }).click()
+    await closeStartupReleaseNotes(page)
     await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
 
     const installationMarker = JSON.parse(
