@@ -71,6 +71,9 @@ src/
 
 项目使用 ESLint + Prettier 统一风格：
 
+Prettier 使用精确版本；升级约束和 3.9 联合类型排版变更的处理决定参见
+[Prettier 版本策略](docs/engineering/prettier-version.md)。
+
 ```bash
 # 检查
 pnpm lint
@@ -86,6 +89,7 @@ pnpm typecheck
 ```
 
 风格要点：
+
 - 单引号
 - 无分号
 - 100 字符行宽
