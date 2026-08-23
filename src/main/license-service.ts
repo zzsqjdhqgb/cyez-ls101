@@ -103,6 +103,10 @@ export class LicenseService {
     }
   }
 
+  async deactivate(): Promise<void> {
+    await rm(this.options.storagePath, { force: true })
+  }
+
   private currentTime(): number {
     return this.currentDate().getTime()
   }

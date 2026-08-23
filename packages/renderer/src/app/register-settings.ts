@@ -1,7 +1,8 @@
-import { Cpu, HardDrive, Info, Palette } from 'lucide-react'
+import { Cpu, HardDrive, Info, KeyRound, Palette } from 'lucide-react'
 import { AIRouterSettingsPage } from '../features/airouter/AIRouterSettingsPage'
 import { AboutSettingsPage } from '../features/settings/AboutSettingsPage'
 import { AppearanceSettingsPage } from '../features/settings/AppearanceSettingsPage'
+import { LicenseSettingsPage } from '../features/settings/LicenseSettingsPage'
 import { StorageSettingsPage } from '../features/settings/StorageSettingsPage'
 import { registerSettingsPage } from './settings-registry'
 
@@ -18,6 +19,19 @@ const unregisterSettingsPages = [
     },
     order: 10,
     component: StorageSettingsPage
+  }),
+  registerSettingsPage({
+    id: 'license',
+    title: '许可',
+    description: '管理软件激活状态',
+    icon: KeyRound,
+    group: {
+      id: 'general',
+      label: '通用',
+      order: 0
+    },
+    order: 20,
+    component: LicenseSettingsPage
   }),
   registerSettingsPage({
     id: 'ai-router',

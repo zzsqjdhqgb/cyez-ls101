@@ -20,7 +20,47 @@ test('activates with an invitation code and reuses the hash receipt after restar
     await page.waitForLoadState('domcontentloaded')
 
     await expect(page.getByRole('heading', { name: '激活曹二听说101' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '参与激活方式意见征集' })).toBeVisible()
     await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toHaveCount(0)
+
+    const guideWindowPromise = electronApp.waitForEvent('window')
+    await page.getByRole('button', { name: '参与激活方式意见征集' }).click()
+    const guideWindow = await guideWindowPromise
+    await guideWindow.waitForLoadState('domcontentloaded')
+    await expect(
+      guideWindow.getByRole('heading', { name: '一起选出更方便的软件激活方式' })
+    ).toBeVisible()
+    await expect.poll(() => guideWindow.title()).toBe('软件激活方式意见征集')
+    const surveyLinks = guideWindow.getByRole('link', { name: '打开问卷' })
+    await expect(surveyLinks).toHaveCount(2)
+    await expect(surveyLinks.first()).toHaveAttribute(
+      'href',
+      'https://forms.cloud.microsoft/r/QJw61zh8dn'
+    )
+    await expect(surveyLinks.last()).toHaveAttribute(
+      'href',
+      'https://forms.cloud.microsoft/r/QJw61zh8dn'
+    )
+    const guideUrl = guideWindow.url()
+    await expect(guideWindow.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveAttribute(
+      'content',
+      /default-src 'none'/
+    )
+    const blockedUrls = [
+      'https://example.com/constructed-link',
+      page.url(),
+      'asset://local/integration/constructed-link'
+    ]
+    for (const blockedUrl of blockedUrls) {
+      await guideWindow.evaluate((url) => {
+        const link = document.createElement('a')
+        link.href = url
+        document.body.append(link)
+        link.click()
+      }, blockedUrl)
+      await expect.poll(() => guideWindow.url()).toBe(guideUrl)
+    }
+    await guideWindow.close()
 
     await page.getByLabel('邀请码').fill('not-the-code')
     await page.getByRole('button', { name: '激活并进入' }).click()
@@ -64,6 +104,7 @@ test('blocks activation and application access after the license deadline', asyn
 
     await expect(page.getByRole('heading', { name: '使用权限已到期' })).toBeVisible()
     await expect(page.getByText(/2026年10月1日 23:59/)).toBeVisible()
+    await expect(page.getByRole('button', { name: '参与激活方式意见征集' })).toBeVisible()
     await expect(page.getByLabel('邀请码')).toHaveCount(0)
     await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toHaveCount(0)
     expect(pageErrors).toEqual([])

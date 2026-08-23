@@ -2,6 +2,7 @@ import { useState, type FormEvent, type JSX } from 'react'
 import {
   AlertCircle,
   CalendarClock,
+  ExternalLink,
   KeyRound,
   LoaderCircle,
   ShieldCheck,
@@ -26,6 +27,7 @@ export function LicenseActivationPage({
   const [invitationCode, setInvitationCode] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [guideError, setGuideError] = useState<string | null>(null)
   const deadline = formatLicenseDeadline(status.expiresAt)
 
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -58,6 +60,21 @@ export function LicenseActivationPage({
       setError('暂时无法验证邀请码，请稍后重试。')
     } finally {
       if (!applicationOpened) setSubmitting(false)
+    }
+  }
+
+  async function openActivationGuide(): Promise<void> {
+    const license = window.license
+    if (!license) {
+      setGuideError('意见征集页面暂时无法打开，请重新启动应用。')
+      return
+    }
+
+    setGuideError(null)
+    try {
+      await license.openActivationGuide()
+    } catch {
+      setGuideError('意见征集页面暂时无法打开，请稍后重试。')
     }
   }
 
@@ -141,6 +158,18 @@ export function LicenseActivationPage({
               </div>
             </>
           )}
+
+          <div className={styles.guide}>
+            <Button icon={ExternalLink} onClick={() => void openActivationGuide()} variant="ghost">
+              参与激活方式意见征集
+            </Button>
+            {guideError ? (
+              <p className={styles.error} role="alert">
+                <AlertCircle aria-hidden="true" />
+                {guideError}
+              </p>
+            ) : null}
+          </div>
         </section>
       </main>
     </div>

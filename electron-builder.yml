@@ -146,6 +146,8 @@ extraResources:
     to: media
   - from: resources/builtin
     to: builtin
+  - from: docs/license-activation.html
+    to: docs/license-activation.html
 extraFiles:
   - from: LICENSE
     to: LICENSE.txt

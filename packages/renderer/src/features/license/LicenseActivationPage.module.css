@@ -230,6 +230,16 @@
   margin-top: 24px;
 }
 
+.guide {
+  display: grid;
+  margin-top: 12px;
+  justify-items: center;
+}
+
+.guide .error {
+  width: 100%;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);

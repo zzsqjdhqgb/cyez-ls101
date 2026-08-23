@@ -184,7 +184,7 @@ test('starts a hardened application window and exposes every preload bridge', as
     fileStore: ['invoke'],
     imageClipboard: ['readImage', 'writeText'],
     legacyData: ['cleanup', 'exportArchive', 'getInfo', 'retry'],
-    license: ['activate', 'getStatus'],
+    license: ['activate', 'deactivate', 'getStatus', 'openActivationGuide'],
     nodeProcess: 'undefined',
     nodeRequire: 'undefined',
     windowControls: ['close', 'getMaximized', 'minimize', 'onMaximizedChange', 'toggleMaximize']
@@ -361,8 +361,17 @@ test('navigates through every primary application area', async () => {
   await page.getByRole('link', { name: '设置' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '设置' })).toBeVisible()
   await expect(page.getByRole('button', { name: /外观/ })).toBeVisible()
+  const licenseSettings = page.getByRole('button', { name: /^许可 / })
+  await expect(licenseSettings).toBeVisible()
   await expect(page.getByRole('button', { name: /AI 引擎/ })).toBeVisible()
   await expectValidStyleBindings(page)
+
+  await licenseSettings.click()
+  await expect(page.getByRole('heading', { level: 1, name: '许可' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '参与意见征集' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '取消激活' })).toBeVisible()
+  await page.getByRole('button', { name: '返回设置' }).click()
+
   await page.getByRole('button', { name: /关于/ }).click()
   await expect(page.getByRole('heading', { level: 1, name: '关于' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '曹二听说101' })).toBeVisible()

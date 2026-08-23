@@ -355,6 +355,12 @@ const licenseBridge: LicenseBridge = {
   },
   activate(invitationCode: string) {
     return ipcRenderer.invoke(LICENSE_CHANNELS.activate, invitationCode)
+  },
+  deactivate() {
+    return ipcRenderer.invoke(LICENSE_CHANNELS.deactivate)
+  },
+  openActivationGuide() {
+    return ipcRenderer.invoke(LICENSE_CHANNELS.openActivationGuide)
   }
 }
 
