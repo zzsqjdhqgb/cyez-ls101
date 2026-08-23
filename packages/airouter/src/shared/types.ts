@@ -556,6 +556,7 @@ export interface AIRouterClient {
   listPronunciationAssessmentModels(): Promise<AIRouterPronunciationAssessmentModelOption[]>
   getPronunciationAssessmentExtensionStatus(): Promise<AIRouterPronunciationAssessmentExtensionStatus>
   importPronunciationAssessmentExtension(): Promise<AIRouterPronunciationAssessmentExtensionImportResult | null>
+  deletePronunciationAssessmentExtension(): Promise<void>
   assessPronunciation(
     request: AIRouterPronunciationAssessmentRequest,
     options?: { signal?: AbortSignal }
@@ -628,6 +629,7 @@ export interface AIRouterBridge {
   listPronunciationAssessmentModels(): Promise<AIRouterPronunciationAssessmentModelOption[]>
   getPronunciationAssessmentExtensionStatus(): Promise<AIRouterPronunciationAssessmentExtensionStatus>
   importPronunciationAssessmentExtension(): Promise<AIRouterPronunciationAssessmentExtensionImportResult | null>
+  deletePronunciationAssessmentExtension(): Promise<void>
   startPronunciationAssessment(
     request: AIRouterPronunciationAssessmentRequest,
     listener: (event: AIRouterPronunciationAssessmentEvent) => void

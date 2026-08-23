@@ -199,6 +199,43 @@ describe('AIRouterSettingsPage', () => {
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
   })
 
+  it('deletes an imported pronunciation assessment extension after confirmation', async () => {
+    const getPronunciationExtensionStatus = vi
+      .fn()
+      .mockResolvedValueOnce({
+        extensionId: 'facebook-wav2vec2-pronunciation',
+        requiredVersion: '1.0.0',
+        installedVersion: '1.0.0',
+        name: 'AI 语音评测',
+        state: 'imported',
+        assetCount: 4,
+        totalBytes: 1024
+      })
+      .mockResolvedValueOnce({
+        extensionId: 'facebook-wav2vec2-pronunciation',
+        requiredVersion: '1.0.0',
+        name: 'AI 语音评测',
+        state: 'not-imported'
+      })
+    const application = applicationWith({
+      getPronunciationExtensionStatus,
+      deletePronunciationExtension: vi.fn()
+    })
+
+    renderAIRouter(application, '/settings/ai-router/pronunciation')
+
+    fireEvent.click(await screen.findByRole('button', { name: '删除扩展包 AI 语音评测' }))
+    const confirmation = screen.getByRole('alertdialog', {
+      name: '删除 AI 语音评测扩展包？'
+    })
+    fireEvent.click(within(confirmation).getByRole('button', { name: '删除扩展包' }))
+
+    await waitFor(() => expect(application.deletePronunciationExtension).toHaveBeenCalledOnce())
+    expect(await screen.findByText('未导入', { exact: true })).toBeInTheDocument()
+    expect(getPronunciationExtensionStatus).toHaveBeenCalledTimes(2)
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+  })
+
   it('keeps image save failures in the editor feedback area', async () => {
     const application = applicationWith({
       listImageConfigs: vi.fn().mockResolvedValue([
@@ -775,6 +812,7 @@ function applicationWith(overrides: Partial<AIRouterApplication>): AIRouterAppli
       state: 'not-imported'
     }),
     importPronunciationExtension: vi.fn(),
+    deletePronunciationExtension: vi.fn(),
     listSpeechRecognitionConfigs: vi.fn().mockResolvedValue([]),
     saveSpeechRecognitionConfig: vi.fn(),
     deleteSpeechRecognitionConfig: vi.fn(),

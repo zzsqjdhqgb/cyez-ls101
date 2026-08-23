@@ -43,6 +43,7 @@ export const AIROUTER_CHANNELS = {
   listPronunciationModels: 'airouter:list-pronunciation-models',
   pronunciationExtensionStatus: 'airouter:pronunciation-extension-status',
   importPronunciationExtension: 'airouter:import-pronunciation-extension',
+  deletePronunciationExtension: 'airouter:delete-pronunciation-extension',
   pronunciationAssessmentStart: 'airouter:pronunciation-assessment-start',
   pronunciationAssessmentAbort: 'airouter:pronunciation-assessment-abort',
   pronunciationAssessmentEvent: 'airouter:pronunciation-assessment-event',

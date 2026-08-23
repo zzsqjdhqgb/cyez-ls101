@@ -207,6 +207,16 @@ describe('AIRouter renderer client', () => {
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
     expect(pendingCancel).toHaveBeenCalledOnce()
   })
+
+  it('forwards pronunciation extension deletion to the preload bridge', async () => {
+    const deleteExtension = vi.fn().mockResolvedValue(undefined)
+
+    await createAIRouterClient(
+      bridgeWith({ deletePronunciationAssessmentExtension: deleteExtension })
+    ).deletePronunciationAssessmentExtension()
+
+    expect(deleteExtension).toHaveBeenCalledOnce()
+  })
 })
 
 function bridgeWith(overrides: Partial<AIRouterBridge>): AIRouterBridge {
@@ -237,6 +247,9 @@ function bridgeWith(overrides: Partial<AIRouterBridge>): AIRouterBridge {
     listSpeechRecognitionModels: vi.fn(),
     startSpeechRecognition: vi.fn(),
     listPronunciationAssessmentModels: vi.fn(),
+    getPronunciationAssessmentExtensionStatus: vi.fn(),
+    importPronunciationAssessmentExtension: vi.fn(),
+    deletePronunciationAssessmentExtension: vi.fn(),
     startPronunciationAssessment: vi.fn(),
     startSpeechSynthesis: vi.fn(),
     startTextGeneration: vi.fn(),

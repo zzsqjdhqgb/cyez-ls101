@@ -127,6 +127,7 @@ test('starts a hardened application window and exposes every preload bridge', as
   expect(rendererState).toEqual({
     airouter: [
       'deleteImageProviderConfig',
+      'deletePronunciationAssessmentExtension',
       'deleteProviderConfig',
       'deleteSpeechModelPackage',
       'deleteSpeechProviderConfig',

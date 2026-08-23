@@ -66,6 +66,19 @@ export class AIRouterPronunciationAssessmentService {
     )
   }
 
+  async deleteExtension(): Promise<void> {
+    const statePromise = this.statePromise
+    if (statePromise) {
+      const state = await statePromise.catch(() => null)
+      if (state) this.resetWorker(state, new Error('AI 语音评测扩展包已删除'))
+      else this.statePromise = null
+    }
+    await this.extensionStore.deletePackage(
+      PRONUNCIATION_EXTENSION_ID,
+      PRONUNCIATION_EXTENSION_VERSION
+    )
+  }
+
   listModels(): AIRouterPronunciationAssessmentModelOption[] {
     return this.extensionStore.isInstalled(
       PRONUNCIATION_EXTENSION_ID,

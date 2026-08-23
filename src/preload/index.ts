@@ -193,6 +193,9 @@ const airouterBridge: AIRouterBridge = {
   importPronunciationAssessmentExtension(): Promise<AIRouterPronunciationAssessmentExtensionImportResult | null> {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.importPronunciationExtension)
   },
+  deletePronunciationAssessmentExtension() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.deletePronunciationExtension)
+  },
   startSpeechRecognition(
     request: AIRouterSpeechRecognitionRequest,
     listener: (event: AIRouterSpeechRecognitionEvent) => void

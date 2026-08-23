@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { BUILTIN_PRONUNCIATION_MODEL_ID, BUILTIN_PRONUNCIATION_PROVIDER_ID } from '../shared'
 import { AIRouterPronunciationAssessmentService } from '../main/pronunciation-assessment-service'
 
@@ -59,6 +59,26 @@ describe('AIRouterPronunciationAssessmentService', () => {
     await expect(
       service.assess({ ...valid, audio: { ...valid.audio, mediaType: 'application/octet-stream' } })
     ).rejects.toThrow('音频输入无效')
+  })
+
+  it('deletes the required extension and stops exposing its model', async () => {
+    let installed = true
+    const deletePackage = vi.fn(async () => {
+      installed = false
+    })
+    const service = new AIRouterPronunciationAssessmentService({
+      baseDir: await modelAssets(),
+      extensionStore: {
+        isInstalled: () => installed,
+        deletePackage
+      } as never
+    })
+
+    expect(service.listModels()).toHaveLength(1)
+    await service.deleteExtension()
+
+    expect(deletePackage).toHaveBeenCalledWith('facebook-wav2vec2-pronunciation', '1.0.0')
+    expect(service.listModels()).toEqual([])
   })
 })
 

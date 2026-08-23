@@ -1764,6 +1764,26 @@ test('AR-32d imports and executes the required pronunciation extension in Electr
       words: expect.any(Array)
     }
   })
+
+  await page.getByRole('button', { name: '删除扩展包 AI 语音评测' }).click()
+  const deleteConfirmation = page.getByRole('alertdialog', {
+    name: '删除 AI 语音评测扩展包？'
+  })
+  await deleteConfirmation.getByRole('button', { name: '删除扩展包' }).click()
+  await expect(page.getByText('未导入', { exact: true })).toBeVisible()
+  await expect(
+    page.evaluate(async () => ({
+      models: await window.airouter.listPronunciationAssessmentModels(),
+      status: await window.airouter.getPronunciationAssessmentExtensionStatus()
+    }))
+  ).resolves.toMatchObject({
+    models: [],
+    status: {
+      extensionId: 'facebook-wav2vec2-pronunciation',
+      requiredVersion: '1.0.0',
+      state: 'not-imported'
+    }
+  })
 })
 
 test('AR-33 rejects invalid text and speech selections before making HTTP requests', async () => {

@@ -14,6 +14,7 @@ const {
   electronMocks,
   generateImageMock,
   assessPronunciationMock,
+  deletePronunciationExtensionMock,
   recognizeSpeechMock,
   speechSynthesizeMock,
   streamTextMock
@@ -41,6 +42,7 @@ const {
     },
     generateImageMock: vi.fn(),
     assessPronunciationMock: vi.fn(),
+    deletePronunciationExtensionMock: vi.fn(),
     recognizeSpeechMock: vi.fn(),
     speechSynthesizeMock: vi.fn(),
     streamTextMock: vi.fn()
@@ -105,6 +107,7 @@ vi.mock('../main/pronunciation-assessment-service', () => ({
     }
 
     assess = assessPronunciationMock
+    deleteExtension = deletePronunciationExtensionMock
   }
 }))
 
@@ -121,6 +124,7 @@ describe('AIRouter main integration', () => {
     generateImageMock.mockReset()
     recognizeSpeechMock.mockReset()
     assessPronunciationMock.mockReset()
+    deletePronunciationExtensionMock.mockReset()
     speechSynthesizeMock.mockReset()
     streamTextMock.mockReset()
     electronMocks.BrowserWindow.fromWebContents.mockReset()
@@ -412,6 +416,9 @@ describe('AIRouter main integration', () => {
     expect(assessPronunciationMock).toHaveBeenCalledWith(request, {
       signal: expect.any(AbortSignal)
     })
+
+    await handler(AIROUTER_CHANNELS.deletePronunciationExtension)(undefined)
+    expect(deletePronunciationExtensionMock).toHaveBeenCalledOnce()
   })
 })
 
