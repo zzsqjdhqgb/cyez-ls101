@@ -47,6 +47,7 @@ vi.mock('../../src/main/data-directory', () => ({
   recoverDataDirectory: mocks.recoverDataDirectory,
   registerDataDirectoryHandlers: vi.fn()
 }))
+vi.mock('../../src/main/license', () => ({ registerLicenseHandlers: vi.fn() }))
 vi.mock('../../src/main/window', () => ({ createMainWindow: mocks.createMainWindow }))
 vi.mock('../../src/main/window-controls', () => ({ registerWindowControlHandlers: vi.fn() }))
 

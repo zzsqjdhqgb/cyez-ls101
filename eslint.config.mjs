@@ -21,6 +21,7 @@ export default defineConfig(
       '**/coverage/**',
       '**/playwright-report/**',
       '**/test-results/**',
+      '.gop-research/{model,site,hf,venv,venv2,pip-cache,tmp}/**',
       'resources/tts',
       '**/__tests__/**'
     ]

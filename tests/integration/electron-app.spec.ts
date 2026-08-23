@@ -118,6 +118,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       fileDialog: methods('fileDialog'),
       fileStore: methods('fileStore'),
       imageClipboard: methods('imageClipboard'),
+      license: methods('license'),
       nodeProcess: typeof runtimeWindow.process,
       nodeRequire: typeof runtimeWindow.require,
       windowControls: methods('windowControls')
@@ -181,6 +182,7 @@ test('starts a hardened application window and exposes every preload bridge', as
     fileDialog: ['read', 'write'],
     fileStore: ['invoke'],
     imageClipboard: ['readImage', 'writeText'],
+    license: ['activate', 'getStatus'],
     nodeProcess: 'undefined',
     nodeRequire: 'undefined',
     windowControls: ['close', 'getMaximized', 'minimize', 'onMaximizedChange', 'toggleMaximize']

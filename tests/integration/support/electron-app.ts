@@ -1,8 +1,15 @@
 import { _electron as electron, type ElectronApplication } from '@playwright/test'
-import { access } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { access, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const projectRoot = process.cwd()
+
+export const INTEGRATION_LICENSE_CODE = 'ls101-integration-license'
+export const INTEGRATION_LICENSE_CODE_HASH = createHash('sha256')
+  .update(INTEGRATION_LICENSE_CODE.toUpperCase(), 'utf8')
+  .digest('hex')
+const INTEGRATION_LICENSE_NOW = '2026-08-23T08:00:00.000Z'
 
 interface IntegrationAppLaunchOptions {
   contentSize?: {
@@ -12,6 +19,7 @@ interface IntegrationAppLaunchOptions {
   deviceScaleFactor?: number
   extraArgs?: readonly string[]
   environment?: Record<string, string>
+  license?: 'activated' | 'not-activated'
   randomSeed?: number
 }
 
@@ -26,8 +34,30 @@ export async function launchIntegrationApp(
     )
   })
 
-  const environment = { ...process.env, LS101_INTEGRATION_TEST: '1', ...options.environment }
+  const environment = {
+    ...process.env,
+    LS101_INTEGRATION_TEST: '1',
+    LS101_LICENSE_TEST_CODE_HASH: INTEGRATION_LICENSE_CODE_HASH,
+    LS101_LICENSE_TEST_NOW: INTEGRATION_LICENSE_NOW,
+    ...options.environment
+  }
   delete environment['ELECTRON_RENDERER_URL']
+
+  if (options.license !== 'not-activated') {
+    await writeFile(
+      path.join(userDataDir, 'license.json'),
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          invitationCodeHash: environment['LS101_LICENSE_TEST_CODE_HASH'],
+          activatedAt: environment['LS101_LICENSE_TEST_NOW']
+        },
+        null,
+        2
+      )}\n`,
+      { encoding: 'utf8', mode: 0o600 }
+    )
+  }
 
   const args = ['--no-sandbox', '--password-store=basic', `--user-data-dir=${userDataDir}`]
   if (options.deviceScaleFactor !== undefined) {
