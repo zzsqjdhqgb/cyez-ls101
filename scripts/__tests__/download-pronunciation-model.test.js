@@ -35,7 +35,11 @@ test('rejects pronunciation model metadata changes', () => {
 })
 
 test('only accepts pronunciation downloader verification option', () => {
-  assert.deepEqual(parseOptions([]), { verify: false })
-  assert.deepEqual(parseOptions(['--verify']), { verify: true })
+  assert.deepEqual(parseOptions([]), { verify: false, verifyUpstream: false })
+  assert.deepEqual(parseOptions(['--verify']), { verify: true, verifyUpstream: false })
+  assert.deepEqual(parseOptions(['--verify-upstream']), {
+    verify: false,
+    verifyUpstream: true
+  })
   assert.throws(() => parseOptions(['--refresh']), /未知参数/)
 })

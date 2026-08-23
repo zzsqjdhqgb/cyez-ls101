@@ -8,17 +8,18 @@ and packaging.
 
 Published assets use two independent immutable releases in the application repository:
 `qwen-tts-runtime-v0.3.1` contains the native helpers, while `qwen-tts-model-v1.0.0` contains the
-two GGUF files. `yarn setup` and application build setup query both GitHub Release Assets APIs and
-verify every selected asset against its API-provided size and SHA-256 digest. Validated metadata is
-cached as `runtime-release-api.json` and `model-release-api.json` under
-`externals/ai/qwen3-tts/downloads/`.
+two GGUF files. Their selected filenames, sizes, and SHA-256 digests are pinned in
+`scripts/qwen-tts/assets.json`. Normal `yarn setup` is offline-capable and verifies those pinned
+values without querying GitHub. `yarn setup --verify-upstream` compares the pinned metadata with
+both GitHub Release Assets APIs and caches the reviewed responses as `runtime-release-api.json`
+and `model-release-api.json` under `externals/ai/qwen3-tts/downloads/`.
 
 Downloaded GGUF files are stored directly under `externals/ai/qwen3-tts/models/`, and the helper is
 staged under `externals/ai/qwen3-tts/runtime/`. A full application build then prepares the local
 model ZIP under `dist/`, while `yarn qwen-tts:prepare` can build it explicitly. Test builds run the
 same complete setup as other application builds; `--skip-model-package` skips only the separately
-distributed package outputs, not asset setup. If GitHub's anonymous API quota is exhausted, set
-`GITHUB_TOKEN` or `GH_TOKEN`; previously validated API responses support offline cached setup.
+distributed package outputs, not asset setup. `GITHUB_TOKEN` or `GH_TOKEN` is only needed to avoid
+anonymous API limits during explicit upstream verification.
 
 Runtime release version, model release version, package version, upstream revisions, model
 selection, VoiceDesign model, and fixed-voice metadata have one source of truth:
