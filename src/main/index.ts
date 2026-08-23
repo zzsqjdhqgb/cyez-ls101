@@ -17,6 +17,8 @@ import {
   recoverDataDirectory,
   registerDataDirectoryHandlers
 } from './data-directory'
+import { registerLicenseHandlers } from './license'
+import { LICENSE_RECEIPT_FILENAME, type LicenseServiceOptions } from './license-service'
 import { createMainWindow } from './window'
 import { registerWindowControlHandlers } from './window-controls'
 
@@ -27,11 +29,11 @@ let applicationInitialized = false
 async function initializeApplication(): Promise<void> {
   electronApp.setAppUserModelId('io.github.zzsqjdhqgb.cyez-ls101')
 
-  if (
-    process.platform === 'linux' &&
+  const isLocalIntegrationTest =
     process.env['LS101_INTEGRATION_TEST'] === '1' &&
     (!app.isPackaged || app.getVersion().includes('-local.'))
-  ) {
+
+  if (process.platform === 'linux' && isLocalIntegrationTest) {
     safeStorage.setUsePlainTextEncryption(true)
   }
 
@@ -54,6 +56,7 @@ async function initializeApplication(): Promise<void> {
   registerClipboard()
   registerFileDialog()
   registerAppInfoHandlers()
+  registerLicenseHandlers(createLicenseOptions(userDataDir, isLocalIntegrationTest))
   registerDataDirectoryHandlers(userDataDir, dataDir)
   registerWindowControlHandlers()
 
@@ -69,6 +72,28 @@ async function initializeApplication(): Promise<void> {
       createMainWindow()
     }
   })
+}
+
+function createLicenseOptions(
+  userDataDir: string,
+  isLocalIntegrationTest: boolean
+): LicenseServiceOptions {
+  const options: LicenseServiceOptions = {
+    storagePath: join(userDataDir, LICENSE_RECEIPT_FILENAME)
+  }
+  if (!isLocalIntegrationTest) return options
+
+  const expectedCodeHash = process.env['LS101_LICENSE_TEST_CODE_HASH']
+  if (expectedCodeHash) options.expectedCodeHash = expectedCodeHash
+
+  const fixedNow = process.env['LS101_LICENSE_TEST_NOW']
+  if (fixedNow) {
+    const fixedTime = Date.parse(fixedNow)
+    if (!Number.isFinite(fixedTime)) throw new Error('LS101_LICENSE_TEST_NOW is invalid')
+    options.now = () => new Date(fixedTime)
+  }
+
+  return options
 }
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock()

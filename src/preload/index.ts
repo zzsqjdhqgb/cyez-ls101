@@ -2,10 +2,12 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import {
   APP_INFO_CHANNELS,
   DATA_DIRECTORY_CHANNELS,
+  LICENSE_CHANNELS,
   WINDOW_CONTROL_CHANNELS,
   WINDOW_CONTROL_EVENTS,
   type AppInfoBridge,
   type DataDirectoryBridge,
+  type LicenseBridge,
   type WindowControlsBridge
 } from '@ls101/core-types'
 import {
@@ -339,6 +341,15 @@ const appInfoBridge: AppInfoBridge = {
   }
 }
 
+const licenseBridge: LicenseBridge = {
+  getStatus() {
+    return ipcRenderer.invoke(LICENSE_CHANNELS.getStatus)
+  },
+  activate(invitationCode: string) {
+    return ipcRenderer.invoke(LICENSE_CHANNELS.activate, invitationCode)
+  }
+}
+
 const dataDirectoryBridge: DataDirectoryBridge = {
   getInfo() {
     return ipcRenderer.invoke(DATA_DIRECTORY_CHANNELS.getInfo)
@@ -395,5 +406,6 @@ contextBridge.exposeInMainWorld('airouter', airouterBridge)
 contextBridge.exposeInMainWorld('fileDialog', fileDialogBridge)
 contextBridge.exposeInMainWorld('imageClipboard', clipboardBridge)
 contextBridge.exposeInMainWorld('appInfo', appInfoBridge)
+contextBridge.exposeInMainWorld('license', licenseBridge)
 contextBridge.exposeInMainWorld('dataDirectory', dataDirectoryBridge)
 contextBridge.exposeInMainWorld('windowControls', windowControlsBridge)

@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AlertCircle, RefreshCw } from 'lucide-react'
+import type { LicenseStatus } from '@ls101/core-types'
 import { App } from './app/App'
 import { appIconUrl } from './assets'
 import startupLogoMarkup from './startup-assets/logo.svg?raw'
@@ -8,6 +9,7 @@ import startupLogoMotionCss from './startup-assets/motion.css?inline'
 import { templateApplication } from './features/templates/TemplateApplicationRuntime'
 import { builtinInterfaceMaintenance } from './features/interfaces/BuiltinInterfaceRuntime'
 import { initializeSchemaApplication } from './features/schemas/SchemaApplicationRuntime'
+import { LicenseActivationPage } from './features/license/LicenseActivationPage'
 import {
   applyStartupLogoMotion,
   applyStartupPlaceholderIcon,
@@ -36,10 +38,10 @@ const startupLogoAnimation = waitForStartupLogoAnimation(root)
 
 async function renderApplication(): Promise<void> {
   let initializationSettled = false
-  const initializationResult = initializeApplicationContent().then(
-    () => {
+  const initializationResult = prepareApplication().then(
+    (licenseStatus) => {
       initializationSettled = true
-      return { status: 'fulfilled' as const }
+      return { status: 'fulfilled' as const, licenseStatus }
     },
     (reason: unknown) => {
       initializationSettled = true
@@ -55,9 +57,41 @@ async function renderApplication(): Promise<void> {
   const result = await initializationResult
   if (result.status === 'rejected') throw result.reason
 
+  if (result.licenseStatus.state === 'active') renderMainApplication()
+  else renderLicenseActivation(result.licenseStatus)
+}
+
+async function prepareApplication(): Promise<LicenseStatus> {
+  const license = window.license
+  if (!license) throw new Error('许可证服务不可用')
+
+  const status = await license.getStatus()
+  if (status.state === 'active') await initializeApplicationContent()
+  return status
+}
+
+function renderMainApplication(): void {
   reactRoot.render(
     <StrictMode>
       <App />
+    </StrictMode>
+  )
+}
+
+function renderLicenseActivation(status: LicenseStatus): void {
+  reactRoot.render(
+    <StrictMode>
+      <LicenseActivationPage
+        initialStatus={status}
+        onActivated={async () => {
+          try {
+            await initializeApplicationContent()
+            renderMainApplication()
+          } catch (error) {
+            renderStartupError(error)
+          }
+        }}
+      />
     </StrictMode>
   )
 }
