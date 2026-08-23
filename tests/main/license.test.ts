@@ -1,6 +1,7 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LICENSE_CHANNELS } from '@ls101/core-types'
 
@@ -106,9 +107,8 @@ describe('license IPC', () => {
         }
       })
     )
-    expect(electronMocks.windows[0]?.loadFile).toHaveBeenCalledWith(
-      path.join('/app', 'docs', 'license-activation.html')
-    )
+    const guidePath = path.join('/app', 'docs', 'license-activation.html')
+    expect(electronMocks.windows[0]?.loadFile).toHaveBeenCalledWith(guidePath)
     expect(electronMocks.windows[0]?.webContents.setWindowOpenHandler).toHaveBeenCalledOnce()
 
     const windowOpenHandler = electronMocks.windows[0]?.webContents.setWindowOpenHandler.mock
@@ -135,10 +135,7 @@ describe('license IPC', () => {
     expect(externalNavigation.preventDefault).toHaveBeenCalledOnce()
 
     const internalNavigation = { preventDefault: vi.fn() }
-    navigationHandler!(
-      internalNavigation,
-      `${new URL('file:///app/docs/license-activation.html').href}#compare`
-    )
+    navigationHandler!(internalNavigation, `${pathToFileURL(guidePath).href}#compare`)
     expect(internalNavigation.preventDefault).not.toHaveBeenCalled()
 
     const titleHandler = electronMocks.windows[0]?.webContents.on.mock.calls.find(
