@@ -12,6 +12,7 @@ import { builtinInterfaceMaintenance } from './features/interfaces/BuiltinInterf
 import { initializeSchemaApplication } from './features/schemas/SchemaApplicationRuntime'
 import { LicenseActivationPage } from './features/license/LicenseActivationPage'
 import { LegacyDataMigrationPage } from './features/legacy-data/LegacyDataMigrationPage'
+import { latestReleaseVersion } from './features/release-notes/release-notes'
 import {
   applyStartupLogoMotion,
   applyStartupPlaceholderIcon,
@@ -88,10 +89,10 @@ async function prepareApplication(): Promise<LicenseStatus> {
   return license.getStatus()
 }
 
-function renderMainApplication(): void {
+function renderMainApplication(showReleaseNotes: boolean): void {
   reactRoot.render(
     <StrictMode>
-      <App />
+      <App showReleaseNotesOnStartup={showReleaseNotes} />
     </StrictMode>
   )
 }
@@ -117,13 +118,20 @@ async function openActiveApplication(): Promise<void> {
   await completeLegacyDataMigration()
   await ensureInstallationMarker()
   await initializeApplicationContent()
-  renderMainApplication()
+  const showReleaseNotes = await claimReleaseNotesVersion()
+  renderMainApplication(showReleaseNotes)
 }
 
 async function ensureInstallationMarker(): Promise<void> {
   const appInfo = window.appInfo
   if (!appInfo) throw new Error('应用信息服务不可用')
   await appInfo.ensureInstallationMarker()
+}
+
+async function claimReleaseNotesVersion(): Promise<boolean> {
+  const appInfo = window.appInfo
+  if (!appInfo) throw new Error('应用信息服务不可用')
+  return appInfo.claimReleaseNotesVersion(latestReleaseVersion)
 }
 
 function completeLegacyDataMigration(): Promise<void> {

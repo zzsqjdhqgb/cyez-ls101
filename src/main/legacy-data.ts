@@ -1264,11 +1264,28 @@ async function writeBinaryAtomically(filename: string, data: Uint8Array): Promis
     await handle.sync()
     await handle.close()
     handle = null
-    await rename(temporary, filename)
+    await replaceExistingFile(temporary, filename)
     renamed = true
   } finally {
     if (handle) await handle.close().catch(() => undefined)
     if (!renamed) await rm(temporary, { force: true }).catch(() => undefined)
+  }
+}
+
+async function replaceExistingFile(temporary: string, filename: string): Promise<void> {
+  try {
+    await rename(temporary, filename)
+    return
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code
+    if (process.platform !== 'win32' || !['EEXIST', 'ENOTEMPTY', 'EPERM'].includes(code ?? '')) {
+      throw error
+    }
+    if (!(await lstatIfExists(filename))) throw error
+    // Windows rename cannot replace an existing file. The journal writer is single-owner;
+    // remove the known target only after confirming this is a destination-conflict failure.
+    await rm(filename, { force: true })
+    await rename(temporary, filename)
   }
 }
 

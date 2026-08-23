@@ -69,6 +69,8 @@ test.beforeEach(async () => {
   page = await electronApp.firstWindow()
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
+  await expect(page.getByRole('dialog', { name: '曹二听说101 v0.4.0' })).toBeVisible()
+  await page.getByRole('button', { name: '关闭版本说明' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
 })
 
@@ -169,7 +171,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       'testImageConnection',
       'testSpeechConnection'
     ],
-    appInfo: ['ensureInstallationMarker', 'getVersion'],
+    appInfo: ['claimReleaseNotesVersion', 'ensureInstallationMarker', 'getVersion'],
     configStore: ['invoke'],
     dataDirectory: [
       'choose',
@@ -189,6 +191,17 @@ test('starts a hardened application window and exposes every preload bridge', as
     nodeRequire: 'undefined',
     windowControls: ['close', 'getMaximized', 'minimize', 'onMaximizedChange', 'toggleMaximize']
   })
+})
+
+test('shows release notes only once for the current release', async () => {
+  await electronApp.close()
+  electronApp = await launchIntegrationApp(userDataDir)
+  page = await electronApp.firstWindow()
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+  await page.waitForLoadState('domcontentloaded')
+
+  await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '关闭版本说明' })).toHaveCount(0)
 })
 
 test('round-trips data through file, config, asset protocol, AI and clipboard IPC', async () => {

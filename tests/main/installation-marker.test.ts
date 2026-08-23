@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  claimReleaseNotesVersion,
   ensureInstallationMarker,
   INSTALLATION_MARKER_FILENAME
 } from '../../src/main/installation-marker'
@@ -86,6 +87,34 @@ describe('current installation marker', () => {
     await expect(readMarker(userData)).resolves.toMatchObject({
       lastAppVersion: '0.4.1',
       updatedAt: '2026-08-23T14:00:00.000Z'
+    })
+  })
+
+  it('claims release notes once per version and preserves the claim across marker updates', async () => {
+    const userData = await temporaryDirectory('ls101-installation-release-notes-')
+    await ensureInstallationMarker(userData, '0.4.0', {
+      createId: () => INSTALLATION_ID,
+      now: () => new Date('2026-08-23T14:00:00.000Z')
+    })
+
+    await expect(claimReleaseNotesVersion(userData, '0.4.0')).resolves.toBe(true)
+    await expect(claimReleaseNotesVersion(userData, '0.4.0')).resolves.toBe(false)
+    await expect(readMarker(userData)).resolves.toMatchObject({
+      lastShownReleaseNotesVersion: '0.4.0'
+    })
+
+    await expect(claimReleaseNotesVersion(userData, '0.5.0')).resolves.toBe(true)
+    await expect(
+      ensureInstallationMarker(userData, '0.5.0', {
+        now: () => new Date('2026-08-24T14:00:00.000Z')
+      })
+    ).resolves.toMatchObject({
+      lastAppVersion: '0.5.0',
+      lastShownReleaseNotesVersion: '0.5.0'
+    })
+    await expect(readMarker(userData)).resolves.toMatchObject({
+      lastAppVersion: '0.5.0',
+      lastShownReleaseNotesVersion: '0.5.0'
     })
   })
 
