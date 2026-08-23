@@ -1060,18 +1060,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@eslint/js@npm:^10.0.1":
-  version: 10.0.1
-  resolution: "@eslint/js@npm:10.0.1"
-  peerDependencies:
-    eslint: ^10.0.0
-  peerDependenciesMeta:
-    eslint:
-      optional: true
-  checksum: 10c0/9f3fcaf71ba7fdf65d82e8faad6ecfe97e11801cc3c362b306a88ea1ed1344ae0d35330dddb0e8ad18f010f6687a70b75491b9e01c8af57acd7987cee6b3ec6c
-  languageName: node
-  linkType: hard
-
 "@eslint/js@npm:^9.24.0":
   version: 9.39.4
   resolution: "@eslint/js@npm:9.39.4"
@@ -1323,6 +1311,8 @@ __metadata:
     "@ls101/core-types": "workspace:*"
     "@ls101/exam-package": "workspace:*"
     lucide-react: "npm:^1.33.0"
+    react: "npm:^19.2.8"
+    react-dom: "npm:^19.2.8"
   peerDependencies:
     react: ^19
     react-dom: ^19
@@ -1345,6 +1335,9 @@ __metadata:
   resolution: "@ls101/file-store@workspace:packages/file-store"
   peerDependencies:
     electron: ^39
+  peerDependenciesMeta:
+    electron:
+      optional: true
   languageName: unknown
   linkType: soft
 
@@ -1364,14 +1357,10 @@ __metadata:
   dependencies:
     "@ls101/airouter": "workspace:*"
     "@ls101/core-types": "workspace:*"
-    "@ls101/editor-kit": "workspace:*"
     "@ls101/file-dialog": "workspace:*"
     "@sinclair/typebox": "npm:^0.34.52"
     fast-json-stable-stringify: "npm:^2.1.0"
     fflate: "npm:^0.8.2"
-  peerDependencies:
-    react: ^19
-    react-dom: ^19
   languageName: unknown
   linkType: soft
 
@@ -1409,6 +1398,8 @@ __metadata:
     "@radix-ui/react-alert-dialog": "npm:^1.1.23"
     "@radix-ui/react-dialog": "npm:^1.1.23"
     "@radix-ui/react-tooltip": "npm:^1.2.16"
+    "@types/react": "npm:^19.2.18"
+    "@types/react-dom": "npm:^19.2.4"
     lucide-react: "npm:^1.33.0"
     react: "npm:^19.2.8"
     react-dom: "npm:^19.2.8"
@@ -1460,13 +1451,9 @@ __metadata:
   resolution: "@ls101/template-editor@workspace:packages/template-editor"
   dependencies:
     "@ls101/core-types": "workspace:*"
-    "@ls101/editor-kit": "workspace:*"
     "@ls101/section-engine": "workspace:*"
     fast-json-stable-stringify: "npm:^2.1.0"
     typescript: "npm:^5.9.3"
-  peerDependencies:
-    react: ^19
-    react-dom: ^19
   languageName: unknown
   linkType: soft
 
@@ -3937,7 +3924,6 @@ __metadata:
     "@electron-toolkit/eslint-config-ts": "npm:^3.1.0"
     "@electron-toolkit/tsconfig": "npm:^2.0.0"
     "@electron-toolkit/utils": "npm:^4.0.0"
-    "@eslint/js": "npm:^10.0.1"
     "@playwright/test": "npm:^1.62.1"
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/jest-dom": "npm:^6.9.1"

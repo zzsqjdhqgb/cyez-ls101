@@ -36,6 +36,10 @@
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.8"
   },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit"
   }

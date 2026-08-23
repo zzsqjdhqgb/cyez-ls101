@@ -13,6 +13,10 @@
     "@ls101/exam-package": "workspace:*",
     "lucide-react": "^1.33.0"
   },
+  "devDependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
   "peerDependencies": {
     "react": "^19",
     "react-dom": "^19"
