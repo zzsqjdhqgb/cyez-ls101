@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, realpath, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -48,6 +48,10 @@ let roots: string[]
 beforeEach(() => {
   roots = []
   electronMocks.handlers.clear()
+  electronMocks.app.exit.mockReset()
+  electronMocks.app.relaunch.mockReset()
+  electronMocks.dialog.showMessageBox.mockReset()
+  electronMocks.dialog.showOpenDialog.mockReset()
   vi.useFakeTimers()
 })
 
@@ -59,7 +63,7 @@ afterEach(async () => {
 async function temporaryDirectory(prefix: string): Promise<string> {
   const directory = await mkdtemp(path.join(tmpdir(), prefix))
   roots.push(directory)
-  return directory
+  return realpath(directory)
 }
 
 describe('data directory initialization', () => {

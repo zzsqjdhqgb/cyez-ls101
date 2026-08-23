@@ -6,7 +6,7 @@ import path from 'node:path'
 import stableStringify from 'fast-json-stable-stringify'
 import type { FieldCollection, FieldNode, InterfaceDef } from '@ls101/interface-editor'
 import { MOCK_PNG_BASE64, MockAiServer } from './support/mock-ai-server'
-import { launchIntegrationApp } from './support/electron-app'
+import { closeStartupReleaseNotes, launchIntegrationApp } from './support/electron-app'
 
 interface ProviderInput {
   id?: string
@@ -124,6 +124,7 @@ test.beforeEach(async () => {
   page = await electronApp.firstWindow()
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
+  await closeStartupReleaseNotes(page)
   await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
 })
 

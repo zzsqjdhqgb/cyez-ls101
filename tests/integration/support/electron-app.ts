@@ -1,4 +1,9 @@
-import { _electron as electron, type ElectronApplication } from '@playwright/test'
+import {
+  expect,
+  _electron as electron,
+  type ElectronApplication,
+  type Page
+} from '@playwright/test'
 import { createHash } from 'node:crypto'
 import { access, writeFile } from 'node:fs/promises'
 import path from 'node:path'
@@ -85,6 +90,12 @@ export async function launchIntegrationApp(
   }
 
   return electronApp
+}
+
+export async function closeStartupReleaseNotes(page: Page): Promise<void> {
+  const closeButton = page.getByRole('button', { name: '关闭版本说明' })
+  await expect(closeButton).toBeVisible()
+  await closeButton.click()
 }
 
 export function integrationExecutablePath(platform = process.platform): string {

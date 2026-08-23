@@ -1201,10 +1201,30 @@ async function atomicWriteJson(filename: string, value: object): Promise<void> {
     await handle.close()
   }
   try {
-    await rename(temporary, filename)
+    await replaceExistingFile(temporary, filename)
   } catch (error) {
     await rm(temporary, { force: true }).catch(() => undefined)
     throw error
+  }
+}
+
+async function replaceExistingFile(temporary: string, filename: string): Promise<void> {
+  try {
+    await rename(temporary, filename)
+    return
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code
+    if (process.platform !== 'win32' || !['EEXIST', 'ENOTEMPTY', 'EPERM'].includes(code ?? '')) {
+      throw error
+    }
+    try {
+      await lstat(filename)
+    } catch (targetError) {
+      if ((targetError as NodeJS.ErrnoException).code === 'ENOENT') throw error
+      throw targetError
+    }
+    await rm(filename, { force: true })
+    await rename(temporary, filename)
   }
 }
 

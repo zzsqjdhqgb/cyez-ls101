@@ -16,6 +16,23 @@ export interface InstallationMarker {
   lastAppVersion: string
   createdAt: string
   updatedAt: string
+  lastShownReleaseNotesVersion?: string
+}
+
+export async function claimReleaseNotesVersion(
+  userDataDirectory: string,
+  releaseVersion: string
+): Promise<boolean> {
+  assertAppVersion(releaseVersion)
+  const filename = path.join(userDataDirectory, INSTALLATION_MARKER_FILENAME)
+  const existing = await readInstallationMarker(filename)
+  if (!existing) throw new Error('当前安装标记不存在')
+  if (existing.lastShownReleaseNotesVersion === releaseVersion) return false
+  await writeJsonAtomically(filename, {
+    ...existing.raw,
+    lastShownReleaseNotesVersion: releaseVersion
+  })
+  return true
 }
 
 interface InstallationMarkerDocument extends InstallationMarker {
@@ -63,7 +80,10 @@ export async function ensureInstallationMarker(
     firstAppVersion: existing.firstAppVersion,
     lastAppVersion: appVersion,
     createdAt: existing.createdAt,
-    updatedAt
+    updatedAt,
+    ...(existing.lastShownReleaseNotesVersion
+      ? { lastShownReleaseNotesVersion: existing.lastShownReleaseNotesVersion }
+      : {})
   }
   await writeJsonAtomically(filename, { ...existing.raw, ...marker })
   return marker
@@ -94,6 +114,9 @@ async function readInstallationMarker(
     typeof value.lastAppVersion !== 'string' ||
     !isAppVersion(value.firstAppVersion) ||
     !isAppVersion(value.lastAppVersion) ||
+    (value.lastShownReleaseNotesVersion !== undefined &&
+      (typeof value.lastShownReleaseNotesVersion !== 'string' ||
+        !isAppVersion(value.lastShownReleaseNotesVersion))) ||
     !isIsoTimestamp(value.createdAt) ||
     !isIsoTimestamp(value.updatedAt) ||
     Date.parse(value.updatedAt) < Date.parse(value.createdAt)
@@ -108,6 +131,9 @@ async function readInstallationMarker(
     lastAppVersion: value.lastAppVersion,
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
+    ...(typeof value.lastShownReleaseNotesVersion === 'string'
+      ? { lastShownReleaseNotesVersion: value.lastShownReleaseNotesVersion }
+      : {}),
     raw: value
   }
 }
@@ -155,10 +181,25 @@ async function writeJsonAtomically(filename: string, value: object): Promise<voi
     await handle.sync()
     await handle.close()
     handle = null
-    await rename(temporary, filename)
+    await replaceExistingFile(temporary, filename)
     renamed = true
   } finally {
     if (handle) await handle.close().catch(() => undefined)
     if (!renamed) await rm(temporary, { force: true }).catch(() => undefined)
+  }
+}
+
+async function replaceExistingFile(temporary: string, filename: string): Promise<void> {
+  try {
+    await rename(temporary, filename)
+    return
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code
+    if (process.platform !== 'win32' || !['EEXIST', 'ENOTEMPTY', 'EPERM'].includes(code ?? '')) {
+      throw error
+    }
+    if (!(await lstatIfExists(filename))) throw error
+    await rm(filename, { force: true })
+    await rename(temporary, filename)
   }
 }

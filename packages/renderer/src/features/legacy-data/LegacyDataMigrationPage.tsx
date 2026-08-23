@@ -14,12 +14,16 @@ import { Button } from '../../components/ui/Button'
 import styles from './LegacyDataMigrationPage.module.css'
 
 interface LegacyDataMigrationPageProps {
+  initialInfo?: LegacyDataInfo
   onComplete(): void
 }
 
-export function LegacyDataMigrationPage({ onComplete }: LegacyDataMigrationPageProps): JSX.Element {
+export function LegacyDataMigrationPage({
+  initialInfo,
+  onComplete
+}: LegacyDataMigrationPageProps): JSX.Element {
   const bridge = window.legacyData
-  const [info, setInfo] = useState<LegacyDataInfo | null>(null)
+  const [info, setInfo] = useState<LegacyDataInfo | null>(initialInfo ?? null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(() =>
     bridge ? null : '旧数据整理服务不可用，请重新启动应用。'
@@ -29,7 +33,7 @@ export function LegacyDataMigrationPage({ onComplete }: LegacyDataMigrationPageP
 
   useEffect(() => {
     let active = true
-    if (!bridge) return () => undefined
+    if (!bridge || initialInfo) return () => undefined
     void bridge.getInfo().then(
       (loaded) => {
         if (active) setInfo(loaded)
@@ -51,7 +55,7 @@ export function LegacyDataMigrationPage({ onComplete }: LegacyDataMigrationPageP
     return () => {
       active = false
     }
-  }, [bridge])
+  }, [bridge, initialInfo])
 
   useEffect(() => {
     if (!completed.current && info && (info.status === 'none' || info.status === 'cleaned')) {

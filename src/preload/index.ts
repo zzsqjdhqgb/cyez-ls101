@@ -349,6 +349,9 @@ const appInfoBridge: AppInfoBridge = {
   },
   ensureInstallationMarker() {
     return ipcRenderer.invoke(APP_INFO_CHANNELS.ensureInstallationMarker)
+  },
+  claimReleaseNotesVersion(version: string) {
+    return ipcRenderer.invoke(APP_INFO_CHANNELS.claimReleaseNotesVersion, version)
   }
 }
 

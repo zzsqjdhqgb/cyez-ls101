@@ -18,16 +18,18 @@ describe('LegacyDataMigrationPage', () => {
     const onComplete = vi.fn()
     const exportArchive = vi.fn().mockResolvedValue(true)
     const cleanupLegacy = vi.fn().mockResolvedValue({ ...archived, status: 'cleaned' })
+    const getInfo = vi.fn().mockResolvedValue(archived)
     window.legacyData = {
-      getInfo: vi.fn().mockResolvedValue(archived),
+      getInfo,
       exportArchive,
       cleanup: cleanupLegacy,
       retry: vi.fn()
     }
 
-    render(<LegacyDataMigrationPage onComplete={onComplete} />)
+    render(<LegacyDataMigrationPage initialInfo={archived} onComplete={onComplete} />)
 
     expect(await screen.findByRole('heading', { name: '旧数据已归档' })).toBeInTheDocument()
+    expect(getInfo).not.toHaveBeenCalled()
     expect(screen.getAllByText('2 个')).toHaveLength(2)
     expect(screen.queryByRole('button', { name: '稍后处理' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '关闭' })).toBeDisabled()

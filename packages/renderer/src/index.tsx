@@ -12,6 +12,7 @@ import { builtinInterfaceMaintenance } from './features/interfaces/BuiltinInterf
 import { initializeSchemaApplication } from './features/schemas/SchemaApplicationRuntime'
 import { LicenseActivationPage } from './features/license/LicenseActivationPage'
 import { LegacyDataMigrationPage } from './features/legacy-data/LegacyDataMigrationPage'
+import { latestReleaseVersion } from './features/release-notes/release-notes'
 import {
   applyStartupLogoMotion,
   applyStartupPlaceholderIcon,
@@ -88,10 +89,10 @@ async function prepareApplication(): Promise<LicenseStatus> {
   return license.getStatus()
 }
 
-function renderMainApplication(): void {
+function renderMainApplication(showReleaseNotes: boolean): void {
   reactRoot.render(
     <StrictMode>
-      <App />
+      <App showReleaseNotesOnStartup={showReleaseNotes} />
     </StrictMode>
   )
 }
@@ -117,7 +118,8 @@ async function openActiveApplication(): Promise<void> {
   await completeLegacyDataMigration()
   await ensureInstallationMarker()
   await initializeApplicationContent()
-  renderMainApplication()
+  const showReleaseNotes = await claimReleaseNotesVersion()
+  renderMainApplication(showReleaseNotes)
 }
 
 async function ensureInstallationMarker(): Promise<void> {
@@ -126,12 +128,22 @@ async function ensureInstallationMarker(): Promise<void> {
   await appInfo.ensureInstallationMarker()
 }
 
-function completeLegacyDataMigration(): Promise<void> {
-  if (!window.legacyData) throw new Error('旧数据整理服务不可用')
+async function claimReleaseNotesVersion(): Promise<boolean> {
+  const appInfo = window.appInfo
+  if (!appInfo) throw new Error('应用信息服务不可用')
+  return appInfo.claimReleaseNotesVersion(latestReleaseVersion)
+}
+
+async function completeLegacyDataMigration(): Promise<void> {
+  const legacyData = window.legacyData
+  if (!legacyData) throw new Error('旧数据整理服务不可用')
+  const initialInfo = await legacyData.getInfo()
+  if (initialInfo.status === 'none' || initialInfo.status === 'cleaned') return
+
   return new Promise((resolve) => {
     reactRoot.render(
       <StrictMode>
-        <LegacyDataMigrationPage onComplete={resolve} />
+        <LegacyDataMigrationPage initialInfo={initialInfo} onComplete={resolve} />
       </StrictMode>
     )
   })
