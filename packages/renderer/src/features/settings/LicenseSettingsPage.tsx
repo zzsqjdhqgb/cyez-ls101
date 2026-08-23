@@ -1,4 +1,4 @@
-import { ShieldOff } from 'lucide-react'
+import { ExternalLink, ShieldOff } from 'lucide-react'
 import { useState, type JSX } from 'react'
 import {
   SettingsContent,
@@ -12,6 +12,22 @@ export function LicenseSettingsPage(): JSX.Element {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [guideError, setGuideError] = useState<string | null>(null)
+
+  const openActivationGuide = async (): Promise<void> => {
+    const license = window.license
+    if (!license) {
+      setGuideError('激活方式说明暂时无法打开，请重新启动软件后重试。')
+      return
+    }
+
+    setGuideError(null)
+    try {
+      await license.openActivationGuide()
+    } catch {
+      setGuideError('激活方式说明暂时无法打开，请稍后重试。')
+    }
+  }
 
   const deactivate = async (): Promise<void> => {
     const license = window.license
@@ -33,6 +49,14 @@ export function LicenseSettingsPage(): JSX.Element {
   return (
     <SettingsContent>
       <SettingsSection title="许可管理">
+        <SettingsRow
+          label="激活方式说明"
+          description={guideError ?? '了解后续可能采用的软件激活方式。'}
+        >
+          <Button icon={ExternalLink} onClick={() => void openActivationGuide()}>
+            查看说明
+          </Button>
+        </SettingsRow>
         <SettingsRow label="软件激活" description="当前软件已激活。">
           <Button
             icon={ShieldOff}
