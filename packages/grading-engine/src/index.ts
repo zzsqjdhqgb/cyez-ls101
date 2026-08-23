@@ -18,16 +18,24 @@ export {
   buildSpeechCorrectionPrompt,
   correctSpeechWithLLM,
   createSpeechCorrectionEvidence,
-  parseSpeechCorrectionResponse
+  parseSpeechCorrectionResponse,
+  SPEECH_CORRECTION_SYSTEM_PROMPT,
+  SPEECH_GOP_THRESHOLD,
+  SPEECH_WORD_CONTEXT_RADIUS,
+  validateSpeechCorrectionEvidence
 } from './speech-correction'
 export type {
   SpeechCorrectionEvidence,
   SpeechCorrectionDecision,
   SpeechCorrectionResult,
   SpeechCorrectionTrace,
+  SpeechContextWord,
+  SpeechEvidenceObservation,
   SpeechFeedbackItem,
-  SpeechPhoneAlignmentEvidence,
-  SpeechWordAlignmentEvidence,
+  SpeechGopEvidenceRow,
+  SpeechObservedPhoneSequence,
+  SpeechPhoneSequence,
+  SpeechWordContext,
   WithheldSpeechDifference
 } from './speech-correction'
 
@@ -61,8 +69,15 @@ export interface PronunciationAssessor {
   ): Promise<PronunciationAssessmentResult>
 }
 
+export interface TextGenerationOptions {
+  signal?: AbortSignal
+  systemPrompt?: string
+  temperature?: number
+  maxOutputTokens?: number
+}
+
 export interface TextGradingModel {
-  generate(prompt: string, options?: { signal?: AbortSignal }): Promise<string>
+  generate(prompt: string, options?: TextGenerationOptions): Promise<string>
 }
 
 export interface ProcessedGradingAnswer {
@@ -156,17 +171,13 @@ export async function executeAIGrading(
     if (typeof transcript !== 'string') {
       throw new AIGradingError('INVALID_SPEECH_RESULT', '语音识别和语音纠错必须返回字符串')
     }
-    const referenceText = answer.type === 'fixed-speech' ? answer.text : transcript
     const assessment = await dependencies.pronunciationAssessor.assess(
-      { audio: answer.audio, referenceText },
+      { audio: answer.audio, referenceText: transcript },
       { signal: options.signal }
     )
     const correctionResult = await correctSpeechWithLLM(
       {
         transcript,
-        referenceText,
-        referenceSource:
-          answer.type === 'fixed-speech' ? 'known-script' : 'asr-provisional-transcript',
         assessment
       },
       dependencies.textModel,

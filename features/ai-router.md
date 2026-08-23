@@ -81,9 +81,11 @@ Provider: builtin-facebook-phoneme
 Model: wav2vec2-lv-60-espeak-cv-ft-int8-c69750f
 ```
 
-模型输入是 16 kHz 单声道音频，输出逐帧音素 logits。main process 在 Worker 中完成 FFmpeg 解码、输入归一化和 ONNX 推理，再将结果交给 `@ls101/grading-engine/pronunciation` 做强制对齐。固定朗读文本由 CMUdict 生成美式英语参考音素，模型输出和参考音素都保留原生 eSpeak IPA token。
+模型输入是 16 kHz 单声道音频，输出逐帧音素 logits。main process 在 Worker 中完成 FFmpeg 解码、输入归一化和 ONNX 推理，再将结果交给 `@ls101/grading-engine/pronunciation` 做整句 CTC Viterbi 强制对齐。业务侧传入 ASR 临时转写，CMUdict 生成去重音的 CMU/ARPAbet 参考序列；当前 eSpeak 词表只取与 39 个 CMU 音素一一对应的 canonical IPA token，复合 token 和其他语言 token 不进入声学竞争集合。实现同时支持未来直接提供大小写 CMU token 的模型词表。
 
-发音评测结果不是普通 ASR 转写：它包含逐词/逐音素时间区间、参考音素、可能的替代音素、置信度、整体匹配度和 Markdown 反馈。当前结果明确标记为实验性；未经中国学生语料校准时，低置信度偏差会被过滤，但仍需结合原始录音复听。
+发音评测结果不是普通 ASR 转写，也不直接生成学习者反馈。schema 2 结果包含完整扁平 `phones` 和完整 `words`：每个音素记录 CMU/IPA 参考、对齐段声学赢家、排除参考后的最强替代项、平均 log posterior、Viterbi GOP、相对证据强度和时间范围。下游严格按 `gop_log_ratio <= -0.35` 选择全部候选，再执行冻结的局部上下文 LLM 后处理。GOP 和 `confidence` 都不是校准后的错误概率。
+
+文本流请求支持可选的 `systemPrompt`、`temperature` 和单次 `maxOutputTokens`。AI 语音纠错使用固定 system message、`temperature=0`、`maxOutputTokens=65535`；AIRouter 会在已配置模型输出上限内约束单次请求。
 
 模型资产不默认写入源码仓库。运行 `node scripts/download-pronunciation-model.js` 可按固定 revision 和 SHA-256 断点下载；构建时复制到 `resources/assets/pronunciation`。完成构建后可以用以下命令验证真实录音：
 

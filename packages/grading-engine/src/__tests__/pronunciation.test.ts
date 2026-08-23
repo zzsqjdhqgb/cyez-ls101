@@ -1,45 +1,49 @@
 import { describe, expect, it } from 'vitest'
 import {
   assessCtcPronunciation,
+  CMU_PHONE_TO_IPA,
   createPronunciationReferences
 } from '../pronunciation'
 
-describe('pronunciation assessment', () => {
-  it('creates model-compatible IPA references from CMUdict', () => {
+describe('pronunciation GOP assessment', () => {
+  it('creates complete CMU and IPA references from CMUdict', () => {
     const references = createPronunciationReferences('Three weather reports.')
 
     expect(references.length).toBeGreaterThan(0)
     expect(references[0].words.map((word) => word.text)).toEqual(['Three', 'weather', 'reports'])
-    expect(references[0].words[0].phones).toEqual(['θ', 'ɹ', 'iː'])
-    expect(references[0].phones).toContain('ð')
+    expect(references[0].words[0]).toMatchObject({
+      phones: ['TH', 'R', 'IY'],
+      ipaPhones: ['θ', 'ɹ', 'iː']
+    })
+    expect(references[0].phones).toContain('DH')
+    expect(references[0].ipaPhones).toContain('ð')
   })
 
-  it('derives an auditable pronunciation for a missing y-suffix word', () => {
-    const [reference] = createPronunciationReferences('slushy')
+  it('derives auditable pronunciations for supported word suffixes', () => {
+    const [slushy] = createPronunciationReferences('slushy')
+    const [schoolrooms] = createPronunciationReferences('schoolrooms')
 
-    expect(reference.words[0].phones).toEqual(['s', 'l', 'ʌ', 'ʃ', 'i'])
-  })
-
-  it('derives a plural pronunciation from a known singular compound', () => {
-    const [reference] = createPronunciationReferences('schoolrooms')
-
-    expect(reference.words[0].phones.at(-1)).toBe('z')
+    expect(slushy.words[0]).toMatchObject({
+      phones: ['S', 'L', 'AH', 'SH', 'IY'],
+      ipaPhones: ['s', 'l', 'ʌ', 'ʃ', 'i']
+    })
+    expect(schoolrooms.words[0].phones.at(-1)).toBe('Z')
   })
 
   it('loads dictionary variants even when their numeric suffix skips one', () => {
     const references = createPronunciationReferences('to')
 
     expect(references.map((reference) => reference.phones)).toEqual([
-      ['t', 'uː'],
-      ['t', 'ɪ'],
-      ['t', 'ə']
+      ['T', 'UW'],
+      ['T', 'IH'],
+      ['T', 'AH']
     ])
   })
 
-  it('aligns expected phones and reports a confident substitution', () => {
-    const vocabulary = { '<pad>': 0, 'θ': 1, 'ɹ': 2, 'iː': 3, s: 4 }
-    const dominant = [0, 4, 0, 2, 0, 3, 0]
-    const logits = syntheticLogits(dominant, Object.keys(vocabulary).length)
+  it('emits a complete low-GOP row for a forced-alignment substitution', () => {
+    const vocabulary = pronunciationVocabulary('ipa')
+    const dominant = ['<pad>', 'S', '<pad>', 'R', '<pad>', 'IY', '<pad>']
+    const logits = syntheticLogits(dominant, vocabulary)
 
     const result = assessCtcPronunciation({
       logits,
@@ -50,23 +54,44 @@ describe('pronunciation assessment', () => {
       durationMs: 700
     })
 
-    expect(result.words).toHaveLength(1)
-    expect(result.words[0].phones[0]).toMatchObject({
-      expected: 'θ',
-      observed: 's'
+    expect(result).toMatchObject({
+      schema_version: 2,
+      reference_text: 'three',
+      recognized_phones: ['S', 'R', 'IY'],
+      gop_method: 'viterbi'
     })
-    expect(result.words[0].phones[0].score).toBeLessThan(40)
-    expect(result.feedbackMarkdown).toContain('three')
-    expect(result.feedbackMarkdown).toContain('/θ/')
-    expect(result.recognizedPhones).toEqual(['s', 'ɹ', 'iː'])
+    expect(result.phones).toHaveLength(3)
+    expect(result.words[0]).toMatchObject({
+      word_index: 0,
+      text: 'three',
+      expected_arpabet: ['TH', 'R', 'IY'],
+      expected_ipa: ['θ', 'ɹ', 'iː']
+    })
+    expect(result.phones[0]).toMatchObject({
+      index: 0,
+      word_index: 0,
+      phone_index: 0,
+      word: 'three',
+      expected: 'TH',
+      expected_ipa: 'θ',
+      acoustic_winner: 'S',
+      acoustic_winner_ipa: 's',
+      best_alternative: 'S',
+      best_alternative_ipa: 's',
+      start_ms: 100,
+      end_ms: 200
+    })
+    expect(result.phones[0].expected_log_p).toBeLessThan(result.phones[0].alternative_log_p)
+    expect(result.phones[0].gop_log_ratio).toBeLessThanOrEqual(-0.35)
+    expect(result.phones[0].confidence).toBe(1)
   })
 
-  it('does not claim a pronunciation error for a matching path', () => {
-    const vocabulary = { '<pad>': 0, 'θ': 1, 'ɹ': 2, 'iː': 3, s: 4 }
-    const dominant = [0, 1, 0, 2, 0, 3, 0]
+  it('keeps a matching phone above the frozen low-GOP threshold', () => {
+    const vocabulary = pronunciationVocabulary('ipa')
+    const dominant = ['<pad>', 'TH', '<pad>', 'R', '<pad>', 'IY', '<pad>']
 
     const result = assessCtcPronunciation({
-      logits: syntheticLogits(dominant, Object.keys(vocabulary).length),
+      logits: syntheticLogits(dominant, vocabulary),
       frameCount: dominant.length,
       vocabularySize: Object.keys(vocabulary).length,
       vocabulary,
@@ -74,14 +99,44 @@ describe('pronunciation assessment', () => {
       durationMs: 700
     })
 
-    expect(result.overallScore).toBeGreaterThan(90)
-    expect(result.feedbackMarkdown).toContain('未发现高置信度')
+    expect(result.phones.every((phone) => phone.gop_log_ratio > -0.35)).toBe(true)
+    expect(result.phones[0].acoustic_winner).toBe('TH')
+  })
+
+  it('supports a native uppercase CMU-phone model vocabulary', () => {
+    const vocabulary = pronunciationVocabulary('cmu')
+    const dominant = ['<pad>', 'B', '<pad>', 'UH', '<pad>', 'K', '<pad>', 'S', '<pad>']
+
+    const result = assessCtcPronunciation({
+      logits: syntheticLogits(dominant, vocabulary),
+      frameCount: dominant.length,
+      vocabularySize: Object.keys(vocabulary).length,
+      vocabulary,
+      referenceText: 'books',
+      durationMs: 900
+    })
+
+    expect(result.acoustic_phone_inventory).toContain('uppercase ARPAbet')
+    expect(result.recognized_phones).toEqual(['B', 'UH', 'K', 'S'])
+    expect(result.words[0].expected_arpabet).toEqual(['B', 'UH', 'K', 'S'])
   })
 })
 
-function syntheticLogits(dominantTokenIds: readonly number[], vocabularySize: number): Float32Array {
-  const logits = new Float32Array(dominantTokenIds.length * vocabularySize).fill(-4)
-  dominantTokenIds.forEach((tokenId, frame) => {
+function pronunciationVocabulary(mode: 'cmu' | 'ipa'): Record<string, number> {
+  const tokens = Object.entries(CMU_PHONE_TO_IPA).map(([cmu, ipa]) => (mode === 'cmu' ? cmu : ipa))
+  return Object.fromEntries(['<pad>', ...tokens].map((token, index) => [token, index]))
+}
+
+function syntheticLogits(
+  dominantPhones: readonly string[],
+  vocabulary: Readonly<Record<string, number>>
+): Float32Array {
+  const vocabularySize = Object.keys(vocabulary).length
+  const logits = new Float32Array(dominantPhones.length * vocabularySize).fill(-4)
+  dominantPhones.forEach((phone, frame) => {
+    const token = phone === '<pad>' ? phone : (CMU_PHONE_TO_IPA[phone] ?? phone)
+    const tokenId = vocabulary[token] ?? vocabulary[phone]
+    if (tokenId === undefined) throw new Error(`missing synthetic token ${phone}`)
     logits[frame * vocabularySize + tokenId] = 4
   })
   return logits

@@ -63,12 +63,20 @@ describe('submission AIRouter adapter', () => {
       })()
     )
     vi.mocked(client.assessPronunciation).mockResolvedValue({
-      referenceText: 'Read this.',
-      recognizedPhones: ['ɹ'],
-      overallScore: 100,
-      words: [],
-      pauses: [],
-      feedbackMarkdown: ''
+      schema_version: 2,
+      reference_text: 'Read this.',
+      audio_duration_ms: 1000,
+      frame_count: 10,
+      recognized_phones: ['R'],
+      recognized_phones_ipa: ['ɹ'],
+      gop_method: 'viterbi',
+      alignment_path_score: -0.1,
+      acoustic_model: 'test model',
+      acoustic_phone_inventory: '39 CMU phones',
+      reference_source: 'CMUdict',
+      dictionary_source: 'test dictionary',
+      phones: [],
+      words: []
     })
     const selection = { providerId: 'provider', modelId: 'model' }
     const audio = {
@@ -84,14 +92,29 @@ describe('submission AIRouter adapter', () => {
       createAIRouterSpeechRecognizer(selection, client).recognize({ audio })
     ).resolves.toBe('recognized')
     await expect(
-      createAIRouterTextGradingModel(selection, client).generate('prompt')
+      createAIRouterTextGradingModel(selection, client).generate('prompt', {
+        systemPrompt: 'system',
+        temperature: 0,
+        maxOutputTokens: 65_535
+      })
     ).resolves.toBe('{"score":4,"comment":"ok"}')
     await expect(
       createAIRouterPronunciationAssessor(client).assess({
         audio,
         referenceText: 'Read this.'
       })
-    ).resolves.toMatchObject({ referenceText: 'Read this.' })
+    ).resolves.toMatchObject({ reference_text: 'Read this.' })
+    expect(client.generateText).toHaveBeenCalledWith(
+      {
+        providerConfigId: 'provider',
+        modelId: 'model',
+        prompt: 'prompt',
+        systemPrompt: 'system',
+        temperature: 0,
+        maxOutputTokens: 65_535
+      },
+      { signal: undefined }
+    )
     expect(client.assessPronunciation).toHaveBeenCalledWith(
       expect.objectContaining({
         providerConfigId: 'builtin-facebook-phoneme',

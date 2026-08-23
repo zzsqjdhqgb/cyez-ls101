@@ -375,12 +375,20 @@ describe('AIRouter main integration', () => {
     const { registerAIRouter } = await import('../main')
     registerAIRouter({ baseDir, secretStorage: createSecrets(baseDir) })
     const result = {
-      referenceText: 'three',
-      recognizedPhones: ['s'],
-      overallScore: 20,
-      words: [],
-      pauses: [],
-      feedbackMarkdown: 'feedback'
+      schema_version: 2,
+      reference_text: 'three',
+      audio_duration_ms: 1000,
+      frame_count: 10,
+      recognized_phones: ['S'],
+      recognized_phones_ipa: ['s'],
+      gop_method: 'viterbi',
+      alignment_path_score: -0.5,
+      acoustic_model: 'test model',
+      acoustic_phone_inventory: '39 CMU phones',
+      reference_source: 'CMUdict',
+      dictionary_source: 'test dictionary',
+      phones: [],
+      words: []
     }
     assessPronunciationMock.mockResolvedValue(result)
     expect(handler(AIROUTER_CHANNELS.listPronunciationModels)(undefined)).toEqual([

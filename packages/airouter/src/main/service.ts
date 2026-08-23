@@ -135,11 +135,19 @@ export class AIRouterService {
   ): AsyncGenerator<AIRouterTextChunk> {
     const { model, config, selected } = await this.resolveModel(request)
     const reasoning = reasoningCallOptions(config.type, selected.reasoning)
+    const configuredMaxOutputTokens =
+      selected.maxOutputTokens ?? defaultMaxOutputTokens(selected.metadata)
+    const maxOutputTokens =
+      request.maxOutputTokens === undefined
+        ? configuredMaxOutputTokens
+        : Math.min(request.maxOutputTokens, configuredMaxOutputTokens)
     const result = streamText({
       model,
       prompt: request.prompt,
+      ...(request.systemPrompt === undefined ? {} : { system: request.systemPrompt }),
+      ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
       abortSignal: options.signal,
-      maxOutputTokens: selected.maxOutputTokens ?? defaultMaxOutputTokens(selected.metadata),
+      maxOutputTokens,
       ...reasoning
     })
     for await (const part of result.fullStream as AsyncIterable<unknown>) {
@@ -644,4 +652,19 @@ function validateTextSelection(request: Omit<AIRouterTextRequest, 'prompt'>): vo
 function validateTextRequest(request: AIRouterTextRequest): void {
   validateTextSelection(request)
   if (typeof request.prompt !== 'string') throw new Error('Prompt 必须是字符串')
+  if (request.systemPrompt !== undefined && typeof request.systemPrompt !== 'string') {
+    throw new Error('System Prompt 必须是字符串')
+  }
+  if (
+    request.temperature !== undefined &&
+    (!Number.isFinite(request.temperature) || request.temperature < 0 || request.temperature > 2)
+  ) {
+    throw new Error('Temperature 必须是 0 到 2 之间的有限数值')
+  }
+  if (
+    request.maxOutputTokens !== undefined &&
+    (!Number.isSafeInteger(request.maxOutputTokens) || request.maxOutputTokens <= 0)
+  ) {
+    throw new Error('单次请求最大输出长度必须是正整数')
+  }
 }

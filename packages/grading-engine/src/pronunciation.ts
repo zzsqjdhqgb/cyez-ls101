@@ -3,82 +3,11 @@ import { dictionary } from 'cmu-pronouncing-dictionary'
 const NEGATIVE_INFINITY = Number.NEGATIVE_INFINITY
 const MAX_REFERENCE_CANDIDATES = 32
 const ALIGNMENT_REFERENCE_CANDIDATES = 8
-const ISSUE_SCORE_THRESHOLD = 40
-const ISSUE_CONFIDENCE_THRESHOLD = 0.35
 
-export interface PronunciationReferenceWord {
-  text: string
-  phones: string[]
-}
-
-export interface PronunciationReference {
-  text: string
-  words: PronunciationReferenceWord[]
-  phones: string[]
-}
-
-export interface PronunciationPhoneAssessment {
-  expected: string
-  observed?: string
-  score: number
-  confidence: number
-  startMs: number
-  endMs: number
-}
-
-export interface PronunciationWordAssessment {
-  text: string
-  expectedPhones: string[]
-  score: number
-  startMs: number
-  endMs: number
-  phones: PronunciationPhoneAssessment[]
-}
-
-export interface PronunciationPauseAssessment {
-  afterWordIndex: number
-  durationMs: number
-  startMs: number
-  endMs: number
-}
-
-export interface PronunciationAssessmentResult {
-  referenceText: string
-  recognizedPhones: string[]
-  overallScore: number
-  words: PronunciationWordAssessment[]
-  pauses: PronunciationPauseAssessment[]
-  feedbackMarkdown: string
-}
-
-export interface CtcPronunciationInput {
-  logits: Float32Array
-  frameCount: number
-  vocabularySize: number
-  vocabulary: Readonly<Record<string, number>>
-  referenceText: string
-  durationMs: number
-  blankTokenId?: number
-}
-
-interface CtcAlignment {
-  pathScore: number
-  states: Int32Array
-  spans: Array<{ startFrame: number; endFrame: number }>
-}
-
-interface CandidateAssessment {
-  reference: PronunciationReference
-  alignment: CtcAlignment
-  phones: PronunciationPhoneAssessment[]
-}
-
-const ARPABET_TO_IPA: Readonly<Record<string, string>> = {
+export const CMU_PHONE_TO_IPA: Readonly<Record<string, string>> = {
   AA: 'ɑː',
   AE: 'æ',
-  AH0: 'ə',
-  AH1: 'ʌ',
-  AH2: 'ʌ',
+  AH: 'ʌ',
   AO: 'ɔː',
   AW: 'aʊ',
   AY: 'aɪ',
@@ -118,12 +47,123 @@ const ARPABET_TO_IPA: Readonly<Record<string, string>> = {
 }
 
 const STRESS_SENSITIVE_ARPABET_TO_IPA: Readonly<Record<string, string>> = {
+  AH0: 'ə',
+  AH1: 'ʌ',
+  AH2: 'ʌ',
   IY0: 'i',
   IY1: 'iː',
   IY2: 'iː',
   UW0: 'u',
   UW1: 'uː',
   UW2: 'uː'
+}
+
+export interface PronunciationReferenceWord {
+  text: string
+  phones: string[]
+  ipaPhones: string[]
+}
+
+export interface PronunciationReference {
+  text: string
+  words: PronunciationReferenceWord[]
+  phones: string[]
+  ipaPhones: string[]
+}
+
+export interface PronunciationPhoneAssessment {
+  index: number
+  word_index: number
+  phone_index: number
+  word: string
+  expected: string
+  expected_ipa: string
+  acoustic_winner: string
+  acoustic_winner_ipa: string
+  best_alternative: string
+  best_alternative_ipa: string
+  expected_log_p: number
+  alternative_log_p: number
+  gop_log_ratio: number
+  confidence: number
+  start_ms: number
+  end_ms: number
+}
+
+export interface PronunciationWordAssessment {
+  word_index: number
+  text: string
+  expected_arpabet: string[]
+  expected_ipa: string[]
+  start_ms: number
+  end_ms: number
+  phones: PronunciationPhoneAssessment[]
+}
+
+export interface PronunciationAssessmentResult {
+  schema_version: 2
+  reference_text: string
+  audio_duration_ms: number
+  frame_count: number
+  recognized_phones: string[]
+  recognized_phones_ipa: string[]
+  gop_method: 'viterbi'
+  alignment_path_score: number
+  acoustic_model: string
+  acoustic_phone_inventory: string
+  reference_source: string
+  dictionary_source: string
+  phones: PronunciationPhoneAssessment[]
+  words: PronunciationWordAssessment[]
+}
+
+export interface CtcPronunciationInput {
+  logits: Float32Array
+  frameCount: number
+  vocabularySize: number
+  vocabulary: Readonly<Record<string, number>>
+  referenceText: string
+  durationMs: number
+  blankTokenId?: number
+}
+
+interface CtcAlignment {
+  pathScore: number
+  states: Int32Array
+  spans: Array<{ startFrame: number; endFrame: number }>
+}
+
+interface CandidateAssessment {
+  reference: PronunciationReference
+  alignment: CtcAlignment
+}
+
+interface AcousticPhoneToken {
+  cmu: string
+  token: string
+  tokenId: number
+}
+
+interface AcousticPhoneInventory {
+  description: string
+  phones: AcousticPhoneToken[]
+  byCmu: ReadonlyMap<string, AcousticPhoneToken>
+  byTokenId: ReadonlyMap<number, AcousticPhoneToken>
+}
+
+interface AlignedPhoneEvidence {
+  expected: string
+  expected_ipa: string
+  acoustic_winner: string
+  acoustic_winner_ipa: string
+  best_alternative: string
+  best_alternative_ipa: string
+  expected_log_p: number
+  alternative_log_p: number
+  gop_log_ratio: number
+  confidence: number
+  start_ms: number
+  end_ms: number
 }
 
 export function createPronunciationReferences(
@@ -150,11 +190,7 @@ export function createPronunciationReferences(
     }
     candidates = next
   }
-  return candidates.map((words) => ({
-    text: normalizedText,
-    words,
-    phones: words.flatMap((word) => word.phones)
-  }))
+  return candidates.map((words) => referenceFromWords(normalizedText, words))
 }
 
 export function assessCtcPronunciation(
@@ -162,16 +198,24 @@ export function assessCtcPronunciation(
 ): PronunciationAssessmentResult {
   validateCtcInput(input)
   const blankTokenId = input.blankTokenId ?? 0
-  const tokenById = invertVocabulary(input.vocabulary, input.vocabularySize)
+  const inventory = resolveAcousticPhoneInventory(
+    input.vocabulary,
+    input.vocabularySize,
+    blankTokenId
+  )
   const recognizedPhones = greedyDecode(
     input.logits,
     input.frameCount,
     input.vocabularySize,
-    tokenById,
+    inventory,
     blankTokenId
   )
   const evidenceReference = createEvidenceSelectedReference(input.referenceText, recognizedPhones)
   const references = [evidenceReference, ...createPronunciationReferences(input.referenceText)]
+    .filter(
+      (reference, index, values) =>
+        values.findIndex((candidate) => samePhones(candidate.phones, reference.phones)) === index
+    )
     .map((reference) => ({
       reference,
       distance: phoneEditDistance(reference.phones, recognizedPhones)
@@ -179,117 +223,62 @@ export function assessCtcPronunciation(
     .sort((left, right) => left.distance - right.distance)
     .slice(0, ALIGNMENT_REFERENCE_CANDIDATES)
     .map((candidate) => candidate.reference)
+  const logProbabilities = computeLogProbabilities(
+    input.logits,
+    input.frameCount,
+    input.vocabularySize
+  )
   let best: CandidateAssessment | undefined
 
   for (const reference of references) {
     const tokenIds = reference.phones.map((phone) => {
-      const tokenId = input.vocabulary[phone]
+      const tokenId = inventory.byCmu.get(phone)?.tokenId
       if (!Number.isSafeInteger(tokenId)) {
-        throw new Error(`音素模型词表不包含“${phone}”`)
+        throw new Error(`音素模型词表不包含 CMU 音素“${phone}”`)
       }
       return tokenId
     })
     if (tokenIds.length > input.frameCount) continue
     const alignment = alignCtc(
-      input.logits,
+      logProbabilities,
       input.frameCount,
       input.vocabularySize,
       tokenIds,
       blankTokenId
     )
     if (!alignment) continue
-    const phones = assessAlignedPhones(
-      input.logits,
-      input.frameCount,
-      input.vocabularySize,
-      reference.phones,
-      tokenIds,
-      alignment.spans,
-      tokenById,
-      blankTokenId,
-      input.durationMs
-    )
     if (!best || alignment.pathScore > best.alignment.pathScore) {
-      best = { reference, alignment, phones }
+      best = { reference, alignment }
     }
   }
   if (!best) throw new Error('录音帧数不足以对齐参考文本')
 
-  const words = groupPhonesByWord(best.reference, best.phones)
-  const pauses = findInternalPauses(
-    best.alignment.states,
-    best.reference,
+  const alignedPhones = assessAlignedPhones(
+    logProbabilities,
     input.frameCount,
+    input.vocabularySize,
+    best.reference.phones,
+    best.alignment.spans,
+    inventory,
     input.durationMs
   )
-  const overallScore = roundedAverage(best.phones.map((phone) => phone.score))
-  const result: PronunciationAssessmentResult = {
-    referenceText: best.reference.text,
-    recognizedPhones,
-    overallScore,
-    words,
-    pauses,
-    feedbackMarkdown: ''
+  const { phones, words } = groupPhonesByWord(best.reference, alignedPhones)
+  return {
+    schema_version: 2,
+    reference_text: best.reference.text,
+    audio_duration_ms: Math.round(input.durationMs),
+    frame_count: input.frameCount,
+    recognized_phones: recognizedPhones,
+    recognized_phones_ipa: recognizedPhones.map(cmuPhoneToIpa),
+    gop_method: 'viterbi',
+    alignment_path_score: round(best.alignment.pathScore, 6),
+    acoustic_model: 'facebook/wav2vec2-lv-60-espeak-cv-ft ONNX INT8',
+    acoustic_phone_inventory: inventory.description,
+    reference_source: 'CMUdict; selected legal variant using acoustic evidence',
+    dictionary_source: 'cmu-pronouncing-dictionary',
+    phones,
+    words
   }
-  result.feedbackMarkdown = formatPronunciationFeedback(result)
-  return result
-}
-
-export function formatPronunciationFeedback(result: PronunciationAssessmentResult): string {
-  const issues = result.words.flatMap((word) =>
-    word.phones
-      .filter(
-        (phone) =>
-          phone.score < ISSUE_SCORE_THRESHOLD && phone.confidence >= ISSUE_CONFIDENCE_THRESHOLD
-      )
-      .map((phone) => ({ word, phone }))
-  )
-  const lines = [`**发音评测（实验性）**：整体音素匹配度 ${result.overallScore}/100。`, '']
-  if (issues.length === 0) {
-    lines.push('未发现高置信度的单音素错误。')
-  } else {
-    lines.push('需要重点复听的发音：')
-    for (const { word, phone } of issues.slice(0, 8)) {
-      const observed = phone.observed ? `，声学上更接近 /${phone.observed}/` : ''
-      lines.push(
-        `- \`${word.text}\` 中的 /${phone.expected}/ 匹配度 ${phone.score}/100${observed}。${articulationTip(phone.expected, phone.observed)}`
-      )
-    }
-  }
-  const longPauses = result.pauses.filter((pause) => pause.durationMs >= 600)
-  if (longPauses.length > 0) {
-    lines.push('', '流利度：')
-    for (const pause of longPauses.slice(0, 4)) {
-      const word = result.words[pause.afterWordIndex]
-      lines.push(
-        `- \`${word?.text ?? '句中'}\` 后停顿约 ${(pause.durationMs / 1000).toFixed(1)} 秒。`
-      )
-    }
-  }
-  lines.push(
-    '',
-    `模型自由识别音素：/${result.recognizedPhones.join(' ') || '无'}/`,
-    '',
-    '> 该结果来自声学模型和强制对齐；低置信度偏差已被过滤，仍应结合录音复听。'
-  )
-  return lines.join('\n')
-}
-
-function dictionaryPronunciations(word: string): string[][] {
-  const values = rawDictionaryPronunciations(word)
-  if (values.length === 0 && word.endsWith('y')) {
-    const baseValues = rawDictionaryPronunciations(word.slice(0, -1))
-    for (const value of baseValues) values.push(`${value} IY0`)
-  }
-  if (values.length === 0 && word.endsWith("'s")) {
-    const baseValues = rawDictionaryPronunciations(word.slice(0, -2))
-    for (const value of baseValues) values.push(`${value} Z`)
-  }
-  if (values.length === 0 && word.endsWith('s')) {
-    const baseValues = rawDictionaryPronunciations(word.slice(0, -1))
-    for (const value of baseValues) values.push(`${value} ${pluralSuffix(value)}`)
-  }
-  return ipaPronunciationVariants(values)
 }
 
 function referenceWordVariants(referenceText: string): {
@@ -304,9 +293,34 @@ function referenceWordVariants(referenceText: string): {
     variantsByWord: surfaceWords.map((surfaceWord) => {
       const variants = dictionaryPronunciations(surfaceWord.toLowerCase())
       if (variants.length === 0) throw new Error(`CMUdict 中没有单词“${surfaceWord}”`)
-      return variants.map((phones) => ({ text: surfaceWord, phones }))
+      return variants.map((variant) => ({ text: surfaceWord, ...variant }))
     })
   }
+}
+
+function dictionaryPronunciations(word: string): Array<{ phones: string[]; ipaPhones: string[] }> {
+  const values = rawDictionaryPronunciations(word)
+  if (values.length === 0 && word.endsWith('y')) {
+    for (const value of rawDictionaryPronunciations(word.slice(0, -1))) values.push(`${value} IY0`)
+  }
+  if (values.length === 0 && word.endsWith("'s")) {
+    for (const value of rawDictionaryPronunciations(word.slice(0, -2))) values.push(`${value} Z`)
+  }
+  if (values.length === 0 && word.endsWith('s')) {
+    for (const value of rawDictionaryPronunciations(word.slice(0, -1))) {
+      values.push(`${value} ${pluralSuffix(value)}`)
+    }
+  }
+
+  const unique = new Map<string, { phones: string[]; ipaPhones: string[] }>()
+  for (const value of values) {
+    const rawPhones = value.trim().split(/\s+/)
+    const phones = rawPhones.map(stripStress)
+    const key = phones.join(' ')
+    if (!key || unique.has(key)) continue
+    unique.set(key, { phones, ipaPhones: rawPhones.map(arpabetPhoneToIpa) })
+  }
+  return [...unique.values()]
 }
 
 function createEvidenceSelectedReference(
@@ -333,18 +347,23 @@ function createEvidenceSelectedReference(
         : best
     )
   })
-  return { text: normalizedText, words, phones: words.flatMap((word) => word.phones) }
+  return referenceFromWords(normalizedText, words)
 }
 
-function pluralSuffix(pronunciation: string): string {
-  const finalPhone = pronunciation
-    .trim()
-    .split(/\s+/)
-    .at(-1)
-    ?.replace(/[012]$/, '')
-  if (finalPhone && ['S', 'Z', 'SH', 'ZH', 'CH', 'JH'].includes(finalPhone)) return 'IH0 Z'
-  if (finalPhone && ['P', 'T', 'K', 'F', 'TH'].includes(finalPhone)) return 'S'
-  return 'Z'
+function referenceFromWords(
+  text: string,
+  words: readonly PronunciationReferenceWord[]
+): PronunciationReference {
+  return {
+    text,
+    words: words.map((word) => ({
+      text: word.text,
+      phones: [...word.phones],
+      ipaPhones: [...word.ipaPhones]
+    })),
+    phones: words.flatMap((word) => word.phones),
+    ipaPhones: words.flatMap((word) => word.ipaPhones)
+  }
 }
 
 function rawDictionaryPronunciations(word: string): string[] {
@@ -358,24 +377,303 @@ function rawDictionaryPronunciations(word: string): string[] {
   return values
 }
 
-function ipaPronunciationVariants(values: readonly string[]): string[][] {
-  const unique = new Map<string, string[]>()
-  for (const value of values) {
-    const phones = value.split(/\s+/).map(arpabetPhoneToIpa)
-    unique.set(phones.join(' '), phones)
-  }
-  return [...unique.values()]
+function pluralSuffix(pronunciation: string): string {
+  const finalPhone = pronunciation.trim().split(/\s+/).at(-1)
+  const final = finalPhone ? stripStress(finalPhone) : ''
+  if (['S', 'Z', 'SH', 'ZH', 'CH', 'JH'].includes(final)) return 'IH0 Z'
+  if (['P', 'T', 'K', 'F', 'TH'].includes(final)) return 'S'
+  return 'Z'
+}
+
+function stripStress(phone: string): string {
+  return phone.toUpperCase().replace(/[012]$/, '')
 }
 
 function arpabetPhoneToIpa(phone: string): string {
-  const stressSensitive = STRESS_SENSITIVE_ARPABET_TO_IPA[phone]
-  if (stressSensitive) return stressSensitive
-  const exact = ARPABET_TO_IPA[phone]
-  if (exact) return exact
-  const withoutStress = phone.replace(/[012]$/, '')
-  const mapped = ARPABET_TO_IPA[withoutStress]
-  if (!mapped) throw new Error(`不支持的 ARPAbet 音素：${phone}`)
-  return mapped
+  const stressSensitive = STRESS_SENSITIVE_ARPABET_TO_IPA[phone.toUpperCase()]
+  return stressSensitive ?? cmuPhoneToIpa(stripStress(phone))
+}
+
+function cmuPhoneToIpa(phone: string): string {
+  const ipa = CMU_PHONE_TO_IPA[phone]
+  if (!ipa) throw new Error(`不支持的 CMU 音素：${phone}`)
+  return ipa
+}
+
+function resolveAcousticPhoneInventory(
+  vocabulary: Readonly<Record<string, number>>,
+  vocabularySize: number,
+  blankTokenId: number
+): AcousticPhoneInventory {
+  const cmuPhones = Object.keys(CMU_PHONE_TO_IPA)
+  const modes: Array<{ description: string; token(phone: string): string }> = [
+    { description: '39 CMU phones from uppercase ARPAbet model tokens', token: (phone) => phone },
+    {
+      description: '39 CMU phones from lowercase ARPAbet model tokens',
+      token: (phone) => phone.toLowerCase()
+    },
+    {
+      description: '39 CMU phones mapped one-to-one to canonical IPA model tokens',
+      token: cmuPhoneToIpa
+    }
+  ]
+
+  for (const mode of modes) {
+    const phones = cmuPhones.map((cmu) => ({
+      cmu,
+      token: mode.token(cmu),
+      tokenId: vocabulary[mode.token(cmu)]
+    }))
+    if (
+      phones.every(
+        ({ tokenId }) =>
+          Number.isSafeInteger(tokenId) &&
+          tokenId >= 0 &&
+          tokenId < vocabularySize &&
+          tokenId !== blankTokenId
+      ) &&
+      new Set(phones.map(({ tokenId }) => tokenId)).size === cmuPhones.length
+    ) {
+      return {
+        description: mode.description,
+        phones,
+        byCmu: new Map(phones.map((phone) => [phone.cmu, phone])),
+        byTokenId: new Map(phones.map((phone) => [phone.tokenId, phone]))
+      }
+    }
+  }
+  throw new Error('音素模型词表不能提供与 39 个 CMU 音素一一对应的声学 token')
+}
+
+function validateCtcInput(input: CtcPronunciationInput): void {
+  if (!(input.logits instanceof Float32Array)) throw new Error('音素 logits 必须是 Float32Array')
+  if (!Number.isSafeInteger(input.frameCount) || input.frameCount <= 0) {
+    throw new Error('音素帧数无效')
+  }
+  if (!Number.isSafeInteger(input.vocabularySize) || input.vocabularySize <= 1) {
+    throw new Error('音素词表大小无效')
+  }
+  if (input.logits.length !== input.frameCount * input.vocabularySize) {
+    throw new Error('音素 logits 尺寸与帧数不匹配')
+  }
+  if (!Number.isFinite(input.durationMs) || input.durationMs <= 0) {
+    throw new Error('录音时长无效')
+  }
+  const blankTokenId = input.blankTokenId ?? 0
+  if (
+    !Number.isSafeInteger(blankTokenId) ||
+    blankTokenId < 0 ||
+    blankTokenId >= input.vocabularySize
+  ) {
+    throw new Error('CTC 空白 token 无效')
+  }
+  for (const value of input.logits) {
+    if (!Number.isFinite(value)) throw new Error('音素 logits 必须是有限数值')
+  }
+}
+
+function computeLogProbabilities(
+  logits: Float32Array,
+  frameCount: number,
+  vocabularySize: number
+): Float64Array {
+  const result = new Float64Array(logits.length)
+  for (let frame = 0; frame < frameCount; frame += 1) {
+    const offset = frame * vocabularySize
+    let maximum = NEGATIVE_INFINITY
+    for (let tokenId = 0; tokenId < vocabularySize; tokenId += 1) {
+      maximum = Math.max(maximum, logits[offset + tokenId])
+    }
+    let sum = 0
+    for (let tokenId = 0; tokenId < vocabularySize; tokenId += 1) {
+      sum += Math.exp(logits[offset + tokenId] - maximum)
+    }
+    const normalization = maximum + Math.log(sum)
+    for (let tokenId = 0; tokenId < vocabularySize; tokenId += 1) {
+      result[offset + tokenId] = logits[offset + tokenId] - normalization
+    }
+  }
+  return result
+}
+
+function alignCtc(
+  logProbabilities: Float64Array,
+  frameCount: number,
+  vocabularySize: number,
+  tokenIds: readonly number[],
+  blankTokenId: number
+): CtcAlignment | null {
+  const stateCount = tokenIds.length * 2 + 1
+  const backPointers = new Int32Array(frameCount * stateCount).fill(-1)
+  let previous = new Float64Array(stateCount).fill(NEGATIVE_INFINITY)
+  previous[0] = logProbabilities[blankTokenId]
+  if (tokenIds.length > 0) previous[1] = logProbabilities[tokenIds[0]]
+
+  for (let frame = 1; frame < frameCount; frame += 1) {
+    const current = new Float64Array(stateCount).fill(NEGATIVE_INFINITY)
+    for (let state = 0; state < stateCount; state += 1) {
+      let bestState = state
+      let bestScore = previous[state]
+      if (state > 0 && previous[state - 1] > bestScore) {
+        bestState = state - 1
+        bestScore = previous[state - 1]
+      }
+      if (
+        state > 1 &&
+        state % 2 === 1 &&
+        tokenIds[(state - 1) / 2] !== tokenIds[(state - 3) / 2] &&
+        previous[state - 2] > bestScore
+      ) {
+        bestState = state - 2
+        bestScore = previous[state - 2]
+      }
+      if (bestScore === NEGATIVE_INFINITY) continue
+      const tokenId = state % 2 === 0 ? blankTokenId : tokenIds[(state - 1) / 2]
+      current[state] = bestScore + logProbabilities[frame * vocabularySize + tokenId]
+      backPointers[frame * stateCount + state] = bestState
+    }
+    previous = current
+  }
+
+  let state = stateCount - 1
+  if (stateCount > 1 && previous[stateCount - 2] > previous[state]) state = stateCount - 2
+  const finalScore = previous[state]
+  if (finalScore === NEGATIVE_INFINITY) return null
+  const states = new Int32Array(frameCount)
+  states[frameCount - 1] = state
+  for (let frame = frameCount - 1; frame > 0; frame -= 1) {
+    state = backPointers[frame * stateCount + state]
+    if (state < 0) return null
+    states[frame - 1] = state
+  }
+
+  const spans = tokenIds.map((_, tokenIndex) => {
+    const targetState = tokenIndex * 2 + 1
+    let startFrame = -1
+    let endFrame = -1
+    for (let frame = 0; frame < frameCount; frame += 1) {
+      if (states[frame] !== targetState) continue
+      if (startFrame < 0) startFrame = frame
+      endFrame = frame + 1
+    }
+    return { startFrame, endFrame }
+  })
+  if (spans.some((span) => span.startFrame < 0 || span.endFrame <= span.startFrame)) return null
+  return { pathScore: finalScore / frameCount, states, spans }
+}
+
+function assessAlignedPhones(
+  logProbabilities: Float64Array,
+  frameCount: number,
+  vocabularySize: number,
+  expectedPhones: readonly string[],
+  spans: readonly { startFrame: number; endFrame: number }[],
+  inventory: AcousticPhoneInventory,
+  durationMs: number
+): AlignedPhoneEvidence[] {
+  const frameDurationMs = durationMs / frameCount
+  return spans.map((span, index) => {
+    const expected = expectedPhones[index]
+    const expectedToken = inventory.byCmu.get(expected)
+    if (!expectedToken) throw new Error(`音素模型词表不包含 CMU 音素“${expected}”`)
+    const means = inventory.phones.map((phone) => {
+      let total = 0
+      for (let frame = span.startFrame; frame < span.endFrame; frame += 1) {
+        total += logProbabilities[frame * vocabularySize + phone.tokenId]
+      }
+      return total / (span.endFrame - span.startFrame)
+    })
+    const expectedIndex = inventory.phones.findIndex((phone) => phone.cmu === expected)
+    const alternativeIndexes = means
+      .map((_, phoneIndex) => phoneIndex)
+      .filter((phoneIndex) => phoneIndex !== expectedIndex)
+    const acousticIndex = maxIndex(means)
+    const alternativeIndex = alternativeIndexes.reduce((best, candidate) =>
+      means[candidate] > means[best] ? candidate : best
+    )
+    const expectedLogP = means[expectedIndex]
+    const alternativeLogP = means[alternativeIndex]
+    const gop = expectedLogP - logSumExp(alternativeIndexes.map((phoneIndex) => means[phoneIndex]))
+    const acousticWinner = inventory.phones[acousticIndex]
+    const bestAlternative = inventory.phones[alternativeIndex]
+    return {
+      expected,
+      expected_ipa: cmuPhoneToIpa(expected),
+      acoustic_winner: acousticWinner.cmu,
+      acoustic_winner_ipa: cmuPhoneToIpa(acousticWinner.cmu),
+      best_alternative: bestAlternative.cmu,
+      best_alternative_ipa: cmuPhoneToIpa(bestAlternative.cmu),
+      expected_log_p: round(expectedLogP, 6),
+      alternative_log_p: round(alternativeLogP, 6),
+      gop_log_ratio: round(gop, 6),
+      confidence: round(Math.min(1, Math.abs(gop) / 4), 3),
+      start_ms: Math.round(span.startFrame * frameDurationMs),
+      end_ms: Math.round(span.endFrame * frameDurationMs)
+    }
+  })
+}
+
+function groupPhonesByWord(
+  reference: PronunciationReference,
+  alignedPhones: readonly AlignedPhoneEvidence[]
+): { phones: PronunciationPhoneAssessment[]; words: PronunciationWordAssessment[] } {
+  const phones: PronunciationPhoneAssessment[] = []
+  let offset = 0
+  const words = reference.words.map((word, wordIndex) => {
+    const wordPhones = alignedPhones
+      .slice(offset, offset + word.phones.length)
+      .map((phone, phoneIndex): PronunciationPhoneAssessment => {
+        const row = {
+          index: offset + phoneIndex,
+          word_index: wordIndex,
+          phone_index: phoneIndex,
+          word: word.text,
+          ...phone
+        }
+        phones.push(row)
+        return row
+      })
+    offset += word.phones.length
+    return {
+      word_index: wordIndex,
+      text: word.text,
+      expected_arpabet: [...word.phones],
+      expected_ipa: [...word.ipaPhones],
+      start_ms: wordPhones[0]?.start_ms ?? 0,
+      end_ms: wordPhones.at(-1)?.end_ms ?? 0,
+      phones: wordPhones
+    }
+  })
+  return { phones, words }
+}
+
+function greedyDecode(
+  logits: Float32Array,
+  frameCount: number,
+  vocabularySize: number,
+  inventory: AcousticPhoneInventory,
+  blankTokenId: number
+): string[] {
+  const result: string[] = []
+  let previous = -1
+  for (let frame = 0; frame < frameCount; frame += 1) {
+    const offset = frame * vocabularySize
+    let bestId = blankTokenId
+    let bestValue = logits[offset + blankTokenId]
+    for (const phone of inventory.phones) {
+      const value = logits[offset + phone.tokenId]
+      if (value > bestValue) {
+        bestId = phone.tokenId
+        bestValue = value
+      }
+    }
+    if (bestId !== previous && bestId !== blankTokenId) {
+      const phone = inventory.byTokenId.get(bestId)
+      if (phone) result.push(phone.cmu)
+    }
+    previous = bestId
+  }
+  return result
 }
 
 function phoneEditDistance(left: readonly string[], right: readonly string[]): number {
@@ -450,282 +748,23 @@ function alignPhoneSequences(expected: readonly string[], observed: readonly str
   return observedByExpected
 }
 
-function validateCtcInput(input: CtcPronunciationInput): void {
-  if (!(input.logits instanceof Float32Array)) throw new Error('音素 logits 必须是 Float32Array')
-  if (!Number.isSafeInteger(input.frameCount) || input.frameCount <= 0) {
-    throw new Error('音素帧数无效')
+function maxIndex(values: readonly number[]): number {
+  if (values.length === 0) throw new Error('声学音素候选为空')
+  let best = 0
+  for (let index = 1; index < values.length; index += 1) {
+    if (values[index] > values[best]) best = index
   }
-  if (!Number.isSafeInteger(input.vocabularySize) || input.vocabularySize <= 1) {
-    throw new Error('音素词表大小无效')
-  }
-  if (input.logits.length !== input.frameCount * input.vocabularySize) {
-    throw new Error('音素 logits 尺寸与帧数不匹配')
-  }
-  if (!Number.isFinite(input.durationMs) || input.durationMs <= 0) {
-    throw new Error('录音时长无效')
-  }
+  return best
 }
 
-function invertVocabulary(
-  vocabulary: Readonly<Record<string, number>>,
-  vocabularySize: number
-): string[] {
-  const result = Array<string>(vocabularySize).fill('')
-  for (const [token, id] of Object.entries(vocabulary)) {
-    if (Number.isSafeInteger(id) && id >= 0 && id < vocabularySize) result[id] = token
-  }
-  return result
+function logSumExp(values: readonly number[]): number {
+  if (values.length === 0) return NEGATIVE_INFINITY
+  const maximum = Math.max(...values)
+  return maximum + Math.log(values.reduce((sum, value) => sum + Math.exp(value - maximum), 0))
 }
 
-function alignCtc(
-  logits: Float32Array,
-  frameCount: number,
-  vocabularySize: number,
-  tokenIds: readonly number[],
-  blankTokenId: number
-): CtcAlignment | null {
-  const stateCount = tokenIds.length * 2 + 1
-  const backPointers = new Int32Array(frameCount * stateCount).fill(-1)
-  let previous = new Float64Array(stateCount).fill(NEGATIVE_INFINITY)
-  previous[0] = logProbability(logits, 0, blankTokenId, vocabularySize)
-  if (tokenIds.length > 0) {
-    previous[1] = logProbability(logits, 0, tokenIds[0], vocabularySize)
-  }
-
-  for (let frame = 1; frame < frameCount; frame += 1) {
-    const current = new Float64Array(stateCount).fill(NEGATIVE_INFINITY)
-    for (let state = 0; state < stateCount; state += 1) {
-      let bestState = state
-      let bestScore = previous[state]
-      if (state > 0 && previous[state - 1] > bestScore) {
-        bestState = state - 1
-        bestScore = previous[state - 1]
-      }
-      if (
-        state > 1 &&
-        state % 2 === 1 &&
-        tokenIds[(state - 1) / 2] !== tokenIds[(state - 3) / 2] &&
-        previous[state - 2] > bestScore
-      ) {
-        bestState = state - 2
-        bestScore = previous[state - 2]
-      }
-      if (bestScore === NEGATIVE_INFINITY) continue
-      const tokenId = state % 2 === 0 ? blankTokenId : tokenIds[(state - 1) / 2]
-      current[state] = bestScore + logProbability(logits, frame, tokenId, vocabularySize)
-      backPointers[frame * stateCount + state] = bestState
-    }
-    previous = current
-  }
-
-  let state = stateCount - 1
-  if (stateCount > 1 && previous[stateCount - 2] > previous[state]) state = stateCount - 2
-  const finalScore = previous[state]
-  if (finalScore === NEGATIVE_INFINITY) return null
-  const states = new Int32Array(frameCount)
-  states[frameCount - 1] = state
-  for (let frame = frameCount - 1; frame > 0; frame -= 1) {
-    state = backPointers[frame * stateCount + state]
-    if (state < 0) return null
-    states[frame - 1] = state
-  }
-
-  const spans = tokenIds.map((_, tokenIndex) => {
-    const targetState = tokenIndex * 2 + 1
-    let startFrame = -1
-    let endFrame = -1
-    for (let frame = 0; frame < frameCount; frame += 1) {
-      if (states[frame] !== targetState) continue
-      if (startFrame < 0) startFrame = frame
-      endFrame = frame + 1
-    }
-    return { startFrame, endFrame }
-  })
-  if (spans.some((span) => span.startFrame < 0 || span.endFrame <= span.startFrame)) return null
-  return { pathScore: finalScore / frameCount, states, spans }
-}
-
-function assessAlignedPhones(
-  logits: Float32Array,
-  frameCount: number,
-  vocabularySize: number,
-  expectedPhones: readonly string[],
-  tokenIds: readonly number[],
-  spans: readonly { startFrame: number; endFrame: number }[],
-  tokenById: readonly string[],
-  blankTokenId: number,
-  durationMs: number
-): PronunciationPhoneAssessment[] {
-  const frameDurationMs = durationMs / frameCount
-  return spans.map((span, index) => {
-    const expectedId = tokenIds[index]
-    const meanLogits = new Float64Array(vocabularySize)
-    const frames = span.endFrame - span.startFrame
-    for (let frame = span.startFrame; frame < span.endFrame; frame += 1) {
-      const offset = frame * vocabularySize
-      for (let tokenId = 0; tokenId < vocabularySize; tokenId += 1) {
-        meanLogits[tokenId] += logits[offset + tokenId]
-      }
-    }
-    let observedId = expectedId
-    let observedLogit = NEGATIVE_INFINITY
-    for (let tokenId = 0; tokenId < vocabularySize; tokenId += 1) {
-      if (tokenId === blankTokenId || tokenId === expectedId || !tokenById[tokenId]) continue
-      const value = meanLogits[tokenId] / frames
-      if (value > observedLogit) {
-        observedLogit = value
-        observedId = tokenId
-      }
-    }
-    const expectedLogit = meanLogits[expectedId] / frames
-    const margin = expectedLogit - observedLogit
-    const score = Math.round(sigmoid(margin) * 100)
-    const confidence = round(Math.min(1, Math.abs(margin) / 4), 3)
-    return {
-      expected: expectedPhones[index],
-      ...(observedId !== expectedId && margin < 0 ? { observed: tokenById[observedId] } : {}),
-      score,
-      confidence,
-      startMs: Math.round(span.startFrame * frameDurationMs),
-      endMs: Math.round(span.endFrame * frameDurationMs)
-    }
-  })
-}
-
-function groupPhonesByWord(
-  reference: PronunciationReference,
-  phones: readonly PronunciationPhoneAssessment[]
-): PronunciationWordAssessment[] {
-  let offset = 0
-  return reference.words.map((word) => {
-    const wordPhones = phones.slice(offset, offset + word.phones.length)
-    offset += word.phones.length
-    return {
-      text: word.text,
-      expectedPhones: [...word.phones],
-      score: roundedAverage(wordPhones.map((phone) => phone.score)),
-      startMs: wordPhones[0]?.startMs ?? 0,
-      endMs: wordPhones.at(-1)?.endMs ?? 0,
-      phones: wordPhones
-    }
-  })
-}
-
-function findInternalPauses(
-  states: Int32Array,
-  reference: PronunciationReference,
-  frameCount: number,
-  durationMs: number
-): PronunciationPauseAssessment[] {
-  const phoneToWord: number[] = []
-  reference.words.forEach((word, wordIndex) => {
-    for (let index = 0; index < word.phones.length; index += 1) phoneToWord.push(wordIndex)
-  })
-  const frameDurationMs = durationMs / frameCount
-  const pauses: PronunciationPauseAssessment[] = []
-  let start = -1
-  for (let frame = 0; frame <= states.length; frame += 1) {
-    const isBlank = frame < states.length && states[frame] % 2 === 0
-    if (isBlank && start < 0) start = frame
-    if (isBlank || start < 0) continue
-    const end = frame
-    const previousState = start > 0 ? states[start - 1] : -1
-    const nextState = frame < states.length ? states[frame] : -1
-    if (previousState % 2 === 1 && nextState % 2 === 1) {
-      const previousPhoneIndex = (previousState - 1) / 2
-      const nextPhoneIndex = (nextState - 1) / 2
-      const afterWordIndex = phoneToWord[previousPhoneIndex]
-      if (
-        Number.isSafeInteger(afterWordIndex) &&
-        phoneToWord[nextPhoneIndex] !== undefined &&
-        end - start >= 2
-      ) {
-        pauses.push({
-          afterWordIndex,
-          durationMs: Math.round((end - start) * frameDurationMs),
-          startMs: Math.round(start * frameDurationMs),
-          endMs: Math.round(end * frameDurationMs)
-        })
-      }
-    }
-    start = -1
-  }
-  return pauses
-}
-
-function greedyDecode(
-  logits: Float32Array,
-  frameCount: number,
-  vocabularySize: number,
-  tokenById: readonly string[],
-  blankTokenId: number
-): string[] {
-  const result: string[] = []
-  let previous = -1
-  for (let frame = 0; frame < frameCount; frame += 1) {
-    const offset = frame * vocabularySize
-    let bestId = 0
-    let bestValue = NEGATIVE_INFINITY
-    for (let tokenId = 0; tokenId < vocabularySize; tokenId += 1) {
-      if (logits[offset + tokenId] > bestValue) {
-        bestValue = logits[offset + tokenId]
-        bestId = tokenId
-      }
-    }
-    if (bestId !== previous && bestId !== blankTokenId && tokenById[bestId]) {
-      const token = tokenById[bestId]
-      if (!token.startsWith('<')) result.push(token)
-    }
-    previous = bestId
-  }
-  return result
-}
-
-function logProbability(
-  logits: Float32Array,
-  frame: number,
-  tokenId: number,
-  vocabularySize: number
-): number {
-  const offset = frame * vocabularySize
-  let maximum = NEGATIVE_INFINITY
-  for (let index = 0; index < vocabularySize; index += 1) {
-    maximum = Math.max(maximum, logits[offset + index])
-  }
-  let sum = 0
-  for (let index = 0; index < vocabularySize; index += 1) {
-    sum += Math.exp(logits[offset + index] - maximum)
-  }
-  return logits[offset + tokenId] - maximum - Math.log(sum)
-}
-
-function articulationTip(expected: string, observed?: string): string {
-  const key = `${expected}>${observed ?? ''}`
-  const confusionTips: Readonly<Record<string, string>> = {
-    'θ>s': '建议舌尖轻触上下齿之间送气，不要只从齿缝送气。',
-    'ð>d': '建议保持舌尖轻触齿间并持续振动，避免变成短促的 /d/。',
-    'ɹ>l': '建议舌尖不触上齿龈，舌身稍向后收。',
-    'l>ɹ': '建议让舌尖触及上齿龈，不要向后卷舌。',
-    'v>w': '建议上齿轻触下唇送气，不要圆唇起音。',
-    'w>v': '建议先圆唇再快速展开，上齿不要碰下唇。'
-  }
-  const genericTips: Readonly<Record<string, string>> = {
-    θ: '建议舌尖轻放于上下齿之间持续送气。',
-    ð: '建议舌尖轻放于齿间，同时保持声带振动。',
-    ɹ: '建议舌身稍向后收，舌尖不触上齿龈。',
-    v: '建议上齿轻触下唇并持续送气。',
-    ŋ: '建议舌根抬起贴近软腭，不要在词尾额外加 /g/。'
-  }
-  return confusionTips[key] ?? genericTips[expected] ?? '建议对照标准录音慢速跟读并复听。'
-}
-
-function sigmoid(value: number): number {
-  return 1 / (1 + Math.exp(-value))
-}
-
-function roundedAverage(values: readonly number[]): number {
-  if (values.length === 0) return 0
-  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+function samePhones(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((phone, index) => phone === right[index])
 }
 
 function round(value: number, decimals: number): number {

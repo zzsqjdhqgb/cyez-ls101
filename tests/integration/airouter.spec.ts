@@ -82,12 +82,12 @@ interface SpeechRecognitionEvent {
 interface PronunciationAssessmentEvent {
   type: 'result' | 'error'
   result?: {
-    referenceText: string
-    recognizedPhones: string[]
-    overallScore: number
+    schema_version: 2
+    reference_text: string
+    recognized_phones: string[]
+    gop_method: 'viterbi'
+    phones: unknown[]
     words: unknown[]
-    pauses: unknown[]
-    feedbackMarkdown: string
   }
   message?: string
 }
@@ -1756,12 +1756,12 @@ test('AR-32d imports and executes the required pronunciation extension in Electr
   expect(assessment).toMatchObject({
     type: 'result',
     result: {
-      referenceText: 'Hi.',
-      recognizedPhones: expect.any(Array),
-      overallScore: expect.any(Number),
-      words: expect.any(Array),
-      pauses: expect.any(Array),
-      feedbackMarkdown: expect.any(String)
+      schema_version: 2,
+      reference_text: 'Hi.',
+      recognized_phones: expect.any(Array),
+      gop_method: 'viterbi',
+      phones: expect.any(Array),
+      words: expect.any(Array)
     }
   })
 })

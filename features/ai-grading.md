@@ -14,17 +14,20 @@
 
 1. 按 Schema 答案格式中的稳定顺序处理每个录音答案。
 2. 将录音交给 AIRouter 语音识别，得到自然语言转写。
-3. 将原始录音交给发音评测接口，得到逐词、逐音素对齐后的自然语言纠错描述。`fixed-speech` 同时传入 `referenceText`；`free-speech` 没有固定参考文本，只记录不执行逐音素对齐。
-4. 将 Schema 类型、名称、满分、静态输入 Markdown、评分标准、额外提示词、转写和纠错描述组成文本评分 prompt。
-5. 调用所选文本模型并严格解析最终结果。
+3. 将 ASR 临时转写和原始录音交给发音评测接口，以 CMUdict 生成完整参考音素并执行整句 CTC Viterbi 强制对齐和 GOP 计算。固定朗读原文不用于这一步，避免绕过冻结版的 ASR 输入边界。
+4. 选择全部 `gop_log_ratio <= -0.35` 的原始音素行，按问题词组织前后各最多两个 ASR 单词的局部上下文，再由所选文本模型生成证据受限的保守中文纠错描述。完整 ASR 转写只保留在本地 trace 中，不进入该次模型请求。
+5. 将 Schema 类型、名称、满分、静态输入 Markdown、评分标准、额外提示词、转写和纠错描述组成文本评分 prompt。`fixed-speech` 的原始朗读文本仍作为最终评分材料保留。
+6. 调用所选文本模型并严格解析最终结果。
 
 静态附件的二进制内容不发送给模型。Markdown 本身会进入 prompt，因此题目 Markdown 中已经填写的图片描述或提示词仍然可供文本模型使用。
 
-发音评测后端当前使用独立的内置 Facebook Wav2Vec2 音素 CTC 模型。模型输出逐帧音素 logits，评分引擎使用 CMUdict 生成参考发音，再做 CTC 强制对齐，结果包含逐音素分数、疑似替代音素、时间区间和停顿。反馈文本由确定性 formatter 生成，随后与 ASR 转写一起交给文本模型。
+发音评测后端当前使用独立的内置 Facebook Wav2Vec2 eSpeak 音素 CTC 模型。模型输出逐帧 logits；评分引擎只使用与 39 个 CMU 音素一一对应的 canonical IPA token，排除复合 token 和其他语言 token。结果保留完整的扁平音素行和词级记录，包括 CMU/IPA 参考、声学赢家、排除参考后的最强替代项、两类平均 log posterior、GOP、相对证据强度、时间区间和完整词音素序列。证据中如实记录当前 eSpeak ONNX 模型来源，不冒充冻结研究样本使用的 CMU-phone 模型。
 
 模型文件位于 `externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8`，由 `scripts/download-pronunciation-model.js` 按固定 revision 和 SHA-256 下载。模型及 ONNX Runtime 在独立 Worker 中运行，不阻塞 renderer。
 
-当前没有针对 `freetalk` 的专用评分或纠错策略；`free-speech` 只使用通用转写和占位纠错流程。
+LLM 后处理遵循 `gop-llm-word-context-v3` 冻结合同。请求使用固定 system message、`temperature=0` 和单次 `maxOutputTokens=65535`；输出只能包含 snake_case 的四个顶层字段。每条低 GOP 证据 ID 必须且只能在反馈项或暂缓项中出现一次，`observations` 必须按 ID 顺序逐字复制四个原始音素字段。校验失败时整题失败，不生成面向学习者的报告。没有音素越过阈值时跳过 LLM，并生成确定性的保守说明。
+
+`free-speech` 与 `fixed-speech` 使用同一套基于 ASR 临时转写的 GOP 证据流程；两者都可能受 ASR 错词影响。当前没有针对自由表达的专用发音或评分策略。
 
 ## 模型输出契约
 
@@ -71,15 +74,15 @@
 
 - 首版只实现 Qwen3 ASR，不提供其他识别 Provider。
 - 评分单元和单元内录音均顺序处理，尚未实现有界并发。
-- 发音评测目前是实验性能力，CMUdict 到模型 eSpeak 音素的映射和阈值尚未用中国学生语料校准。
-- 当前只适合 `fixed-speech` 的固定文本朗读；不对自由表达做逐音素判断。
-- 目前可输出音素替换和明显停顿，不评估句子语调、重音、连读和弱读的完整韵律质量。
+- 发音评测目前是实验性能力，GOP 和 `confidence` 不是校准后的发音错误概率，阈值尚未用中国学生语料标定。
+- ASR 错词会改变 CMUdict 参考和强制对齐目标；局部上下文不会修复错词。
+- 连读、弱读、合法口音变体和 CTC 边界偏移仍需人工复听；系统不评估停顿、流利度、音高、重音、语调、音量或情绪。
 - 静态附件字节不参与评分，也不直接发送给文本模型。
 - 文本模型仍可能产生无效结果；系统只负责拒绝并要求重试，不自动修复模型 JSON。
 
 ## 验证覆盖
 
-Vitest 覆盖多录音顺序处理、`referenceText` 传递、纠错占位结果、语音失败中止单题、严格 JSON 和小数精度校验、AI 中间状态持久化、AIRouter 适配、整场完成、审查编辑及按 `schemaId` 抽查分组。Electron smoke 覆盖新增 preload 方法和打包后内置识别模型的枚举。
+Vitest 覆盖多录音顺序处理、ASR 对齐文本传递、Viterbi GOP 原始字段、冻结样本的 15 条证据和 9 个词窗、证据 ID 全量覆盖、原始音素逐字校验、无低 GOP 跳过模型、语音失败中止单题、最终评分严格 JSON 和小数精度、AI 中间状态持久化、AIRouter 参数转发、整场完成、审查编辑及按 `schemaId` 抽查分组。Electron smoke 覆盖 preload 方法和打包后内置模型运行。
 
 ## 代码依据
 

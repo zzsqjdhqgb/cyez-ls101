@@ -52,7 +52,6 @@ export type {
   AIRouterPronunciationAssessmentExtensionStatus,
   AIRouterPronunciationAssessmentExtensionImportResult,
   AIRouterExtensionImportState,
-  AIRouterPronunciationPauseAssessment,
   AIRouterPronunciationPhoneAssessment,
   AIRouterPronunciationWordAssessment,
   AIRouterSpeechSynthesisRequest,

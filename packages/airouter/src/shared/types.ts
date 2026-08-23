@@ -138,37 +138,49 @@ export interface AIRouterPronunciationAssessmentRequest {
 }
 
 export interface AIRouterPronunciationPhoneAssessment {
+  index: number
+  word_index: number
+  phone_index: number
+  word: string
   expected: string
-  observed?: string
-  score: number
+  expected_ipa: string
+  acoustic_winner: string
+  acoustic_winner_ipa: string
+  best_alternative: string
+  best_alternative_ipa: string
+  expected_log_p: number
+  alternative_log_p: number
+  gop_log_ratio: number
   confidence: number
-  startMs: number
-  endMs: number
+  start_ms: number
+  end_ms: number
 }
 
 export interface AIRouterPronunciationWordAssessment {
+  word_index: number
   text: string
-  expectedPhones: string[]
-  score: number
-  startMs: number
-  endMs: number
+  expected_arpabet: string[]
+  expected_ipa: string[]
+  start_ms: number
+  end_ms: number
   phones: AIRouterPronunciationPhoneAssessment[]
 }
 
-export interface AIRouterPronunciationPauseAssessment {
-  afterWordIndex: number
-  durationMs: number
-  startMs: number
-  endMs: number
-}
-
 export interface AIRouterPronunciationAssessmentResult {
-  referenceText: string
-  recognizedPhones: string[]
-  overallScore: number
+  schema_version: 2
+  reference_text: string
+  audio_duration_ms: number
+  frame_count: number
+  recognized_phones: string[]
+  recognized_phones_ipa: string[]
+  gop_method: 'viterbi'
+  alignment_path_score: number
+  acoustic_model: string
+  acoustic_phone_inventory: string
+  reference_source: string
+  dictionary_source: string
+  phones: AIRouterPronunciationPhoneAssessment[]
   words: AIRouterPronunciationWordAssessment[]
-  pauses: AIRouterPronunciationPauseAssessment[]
-  feedbackMarkdown: string
 }
 
 export type AIRouterPronunciationAssessmentEvent =
@@ -267,6 +279,9 @@ export interface AIRouterTextRequest {
   providerConfigId: string
   modelId: string
   prompt: string
+  systemPrompt?: string
+  temperature?: number
+  maxOutputTokens?: number
 }
 
 export type AIRouterTextChunk =

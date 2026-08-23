@@ -100,9 +100,14 @@ export function createAIRouterTextGradingModel(
         {
           providerConfigId: selection.providerId,
           modelId: selection.modelId,
-          prompt
+          prompt,
+          ...(options?.systemPrompt === undefined ? {} : { systemPrompt: options.systemPrompt }),
+          ...(options?.temperature === undefined ? {} : { temperature: options.temperature }),
+          ...(options?.maxOutputTokens === undefined
+            ? {}
+            : { maxOutputTokens: options.maxOutputTokens })
         },
-        options
+        { signal: options?.signal }
       )) {
         if (chunk.type === 'output') output += chunk.delta
       }

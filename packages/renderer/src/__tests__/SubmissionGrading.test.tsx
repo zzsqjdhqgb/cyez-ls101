@@ -19,31 +19,75 @@ import { SubmissionSettlementPage } from '../features/submissions/SubmissionSett
 
 const aiAdapterMocks = vi.hoisted(() => ({
   recognize: vi.fn().mockResolvedValue('recognized answer'),
-  assess: vi.fn().mockImplementation(async ({ referenceText }: { referenceText: string }) => ({
-    referenceText,
-    recognizedPhones: ['ɹ'],
-    overallScore: 100,
-    words: [
-      {
-        text: referenceText.split(/\s+/)[0],
-        expectedPhones: ['ɹ'],
-        score: 100,
-        startMs: 0,
-        endMs: 100,
-        phones: [{ expected: 'ɹ', score: 100, confidence: 1, startMs: 0, endMs: 100 }]
-      }
-    ],
-    pauses: [],
-    feedbackMarkdown: ''
-  })),
+  assess: vi.fn().mockImplementation(async ({ referenceText }: { referenceText: string }) => {
+    const text = referenceText.split(/\s+/)[0]
+    const phone = {
+      index: 0,
+      word_index: 0,
+      phone_index: 0,
+      word: text,
+      expected: 'R',
+      expected_ipa: 'ɹ',
+      acoustic_winner: 'L',
+      acoustic_winner_ipa: 'l',
+      best_alternative: 'L',
+      best_alternative_ipa: 'l',
+      expected_log_p: -2,
+      alternative_log_p: -0.1,
+      gop_log_ratio: -1,
+      confidence: 0.25,
+      start_ms: 0,
+      end_ms: 100
+    }
+    return {
+      schema_version: 2,
+      reference_text: referenceText,
+      audio_duration_ms: 100,
+      frame_count: 10,
+      recognized_phones: ['L'],
+      recognized_phones_ipa: ['l'],
+      gop_method: 'viterbi',
+      alignment_path_score: -0.5,
+      acoustic_model: 'test model',
+      acoustic_phone_inventory: '39 CMU phones',
+      reference_source: 'CMUdict',
+      dictionary_source: 'test dictionary',
+      phones: [phone],
+      words: [
+        {
+          word_index: 0,
+          text,
+          expected_arpabet: ['R'],
+          expected_ipa: ['ɹ'],
+          start_ms: 0,
+          end_ms: 100,
+          phones: [phone]
+        }
+      ]
+    }
+  }),
   generate: vi.fn().mockImplementation(async (prompt: string) => {
-    const marker = '完整词级对齐 JSON：\n'
+    const marker = '按单词组织的低 GOP 证据 JSON：\n'
     if (prompt.includes(marker)) {
       return JSON.stringify({
-        summaryZh: '完整声学对齐未发现可信问题。',
-        feedbackItems: [],
-        withheldDifferences: [],
-        limitationsZh: []
+        summary_zh: '单条声学证据暂不直接反馈。',
+        feedback_items: [],
+        withheld_differences: [
+          {
+            evidence_ids: ['GOP-0000'],
+            observations: [
+              {
+                evidence_id: 'GOP-0000',
+                expected: 'R',
+                expected_ipa: 'ɹ',
+                acoustic_winner: 'L',
+                acoustic_winner_ipa: 'l'
+              }
+            ],
+            reason_zh: '需要结合原录音复听。'
+          }
+        ],
+        limitations_zh: ['文本模型不能听音频。']
       })
     }
     return '{"score":4,"comment":"AI comment"}'
@@ -217,7 +261,7 @@ describe('submission grading UI', () => {
     fireEvent.click(await screen.findByRole('button', { name: '全部审查' }))
     expect(await screen.findByText('语音识别与发音纠正')).toBeInTheDocument()
     expect(screen.getByText('识别文本：recognized answer')).toBeInTheDocument()
-    expect(screen.getAllByText(/完整声学对齐未发现可信问题/)).not.toHaveLength(0)
+    expect(screen.getAllByText(/单条声学证据暂不直接反馈/)).not.toHaveLength(0)
     fireEvent.change(await screen.findByLabelText('分数'), { target: { value: '3.125' } })
     fireEvent.change(screen.getByLabelText('评语'), { target: { value: 'Reviewed' } })
     fireEvent.click(screen.getByRole('button', { name: '确认本题' }))
