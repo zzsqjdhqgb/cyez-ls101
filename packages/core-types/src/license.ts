@@ -1,6 +1,7 @@
 export const LICENSE_CHANNELS = {
   getStatus: 'license:get-status',
-  activate: 'license:activate'
+  activate: 'license:activate',
+  deactivate: 'license:deactivate'
 } as const
 
 export type LicenseState = 'active' | 'not-activated' | 'expired'
@@ -22,4 +23,5 @@ export interface LicenseActivationResult {
 export interface LicenseBridge {
   getStatus(): Promise<LicenseStatus>
   activate(invitationCode: string): Promise<LicenseActivationResult>
+  deactivate(): Promise<void>
 }

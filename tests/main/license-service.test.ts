@@ -103,4 +103,22 @@ describe('LicenseService', () => {
     )
     await expect(service.getStatus()).resolves.toMatchObject({ state: 'not-activated' })
   })
+
+  it('deactivates by deleting the stored receipt', async () => {
+    const storagePath = await createStoragePath()
+    const service = new LicenseService({
+      storagePath,
+      expectedCodeHash,
+      expiresAt,
+      now: () => new Date('2026-08-23T08:00:00.000Z')
+    })
+
+    await service.activate(invitationCode)
+    await expect(service.getStatus()).resolves.toMatchObject({ state: 'active' })
+
+    await service.deactivate()
+
+    await expect(service.getStatus()).resolves.toEqual({ state: 'not-activated', expiresAt })
+    await expect(service.deactivate()).resolves.toBeUndefined()
+  })
 })
