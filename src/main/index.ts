@@ -23,6 +23,7 @@ import {
   recoverDataDirectory,
   registerDataDirectoryHandlers
 } from './data-directory'
+import { LegacyDataService, registerLegacyDataHandlers } from './legacy-data'
 import { registerLicenseHandlers } from './license'
 import { LICENSE_RECEIPT_FILENAME, type LicenseServiceOptions } from './license-service'
 import { createMainWindow } from './window'
@@ -65,6 +66,7 @@ async function initializeApplication(): Promise<void> {
     applicationLogger.error('Failed to initialize application data directory', error)
     return recoverDataDirectory(userDataDir, error)
   }
+  const legacyDataService = new LegacyDataService(userDataDir, dataDir)
   registerFileStore({ baseDir: dataDir })
   registerBuiltinFileStore({
     baseDir: app.isPackaged
@@ -77,7 +79,10 @@ async function initializeApplication(): Promise<void> {
   registerFileDialog()
   registerAppInfoHandlers()
   registerLicenseHandlers(createLicenseOptions(userDataDir, isLocalIntegrationTest))
-  registerDataDirectoryHandlers(userDataDir, dataDir)
+  registerDataDirectoryHandlers(userDataDir, dataDir, {
+    isLegacyCleanupPending: () => legacyDataService.hasPendingCleanup()
+  })
+  registerLegacyDataHandlers(legacyDataService)
   registerWindowControlHandlers()
   registerRendererLogger(applicationLogger)
 
@@ -86,6 +91,7 @@ async function initializeApplication(): Promise<void> {
   })
 
   createMainWindow(applicationLogger)
+  void legacyDataService.initialize()
   applicationInitialized = true
 
   app.on('activate', () => {

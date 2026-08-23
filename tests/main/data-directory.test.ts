@@ -78,7 +78,7 @@ describe('data directory initialization', () => {
     })
   })
 
-  it('copies only known legacy business data into the managed directory', async () => {
+  it('leaves root-level legacy data untouched for post-startup archival', async () => {
     const userData = await temporaryDirectory('ls101-data-legacy-')
     await mkdir(path.join(userData, 'template-editor'), { recursive: true })
     await writeFile(path.join(userData, 'template-editor', 'draft.json'), '{"draft":true}')
@@ -92,11 +92,19 @@ describe('data directory initialization', () => {
     const result = await initializeDataDirectory(userData)
 
     await expect(
-      readFile(path.join(result, 'template-editor', 'draft.json'), 'utf8')
+      readFile(path.join(userData, 'template-editor', 'draft.json'), 'utf8')
     ).resolves.toBe('{"draft":true}')
-    await expect(readFile(path.join(result, 'models', 'tts', 'model.bin'), 'utf8')).resolves.toBe(
+    await expect(readFile(path.join(userData, 'models', 'tts', 'model.bin'), 'utf8')).resolves.toBe(
       'model'
     )
+    await expect(
+      readFile(path.join(result, 'template-editor', 'draft.json'))
+    ).rejects.toMatchObject({
+      code: 'ENOENT'
+    })
+    await expect(readFile(path.join(result, 'models', 'tts', 'model.bin'))).rejects.toMatchObject({
+      code: 'ENOENT'
+    })
     await expect(readFile(path.join(result, 'Cache', 'cache.bin'))).rejects.toMatchObject({
       code: 'ENOENT'
     })
@@ -462,7 +470,7 @@ describe('data directory initialization', () => {
     })
   })
 
-  it('preserves a default target written while legacy data is being organized', async () => {
+  it('preserves a non-empty default target without touching root-level legacy data', async () => {
     const userData = await temporaryDirectory('ls101-data-legacy-race-')
     const target = path.join(userData, 'data')
     await mkdir(path.join(userData, 'config'), { recursive: true })
@@ -470,14 +478,17 @@ describe('data directory initialization', () => {
     await mkdir(target)
     await writeFile(path.join(target, 'external.txt'), 'keep')
 
-    await expect(initializeDataDirectory(userData)).rejects.toThrow(
-      '迁移目标在复制期间被写入，已停止迁移并保留目标内容'
-    )
+    await expect(initializeDataDirectory(userData)).rejects.toThrow('数据目录不是空目录')
     await expect(readFile(path.join(target, 'external.txt'), 'utf8')).resolves.toBe('keep')
 
     await rm(path.join(target, 'external.txt'))
     await expect(initializeDataDirectory(userData)).resolves.toBe(target)
-    await expect(readFile(path.join(target, 'config', 'settings.json'), 'utf8')).resolves.toBe('{}')
+    await expect(readFile(path.join(userData, 'config', 'settings.json'), 'utf8')).resolves.toBe(
+      '{}'
+    )
+    await expect(readFile(path.join(target, 'config', 'settings.json'))).rejects.toMatchObject({
+      code: 'ENOENT'
+    })
   })
 
   it('removes owned staging before abandoning a failed migration', async () => {

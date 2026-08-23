@@ -81,5 +81,12 @@ export type {
   DataDirectoryInfo,
   DataDirectoryOldLocation
 } from './data-directory'
+export { LEGACY_DATA_CHANNELS } from './legacy-data'
+export type {
+  LegacyDataBridge,
+  LegacyDataInfo,
+  LegacyDataSourceInfo,
+  LegacyDataStatus
+} from './legacy-data'
 export { WINDOW_CONTROL_CHANNELS, WINDOW_CONTROL_EVENTS } from './window-controls'
 export type { WindowControlsBridge } from './window-controls'

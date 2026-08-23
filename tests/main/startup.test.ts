@@ -14,6 +14,8 @@ const mocks = vi.hoisted(() => ({
   },
   createMainWindow: vi.fn(),
   initializeDataDirectory: vi.fn<() => Promise<string>>(),
+  initializeLegacyData: vi.fn().mockResolvedValue(undefined),
+  hasPendingLegacyCleanup: vi.fn(() => false),
   recoverDataDirectory: vi.fn<() => Promise<never>>(),
   registerFileStore: vi.fn(),
   showErrorBox: vi.fn()
@@ -48,6 +50,15 @@ vi.mock('../../src/main/data-directory', () => ({
   registerDataDirectoryHandlers: vi.fn()
 }))
 vi.mock('../../src/main/license', () => ({ registerLicenseHandlers: vi.fn() }))
+vi.mock('../../src/main/legacy-data', () => ({
+  LegacyDataService: vi.fn(function LegacyDataServiceMock() {
+    return {
+      hasPendingCleanup: mocks.hasPendingLegacyCleanup,
+      initialize: mocks.initializeLegacyData
+    }
+  }),
+  registerLegacyDataHandlers: vi.fn()
+}))
 vi.mock('../../src/main/window', () => ({ createMainWindow: mocks.createMainWindow }))
 vi.mock('../../src/main/window-controls', () => ({ registerWindowControlHandlers: vi.fn() }))
 

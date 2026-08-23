@@ -1,6 +1,7 @@
 import type {
   AppInfoBridge,
   DataDirectoryBridge,
+  LegacyDataBridge,
   LicenseBridge,
   WindowControlsBridge
 } from '@ls101/core-types'
@@ -10,6 +11,7 @@ declare global {
   interface Window {
     appInfo?: AppInfoBridge
     dataDirectory?: DataDirectoryBridge
+    legacyData?: LegacyDataBridge
     license?: LicenseBridge
     windowControls?: WindowControlsBridge
     logger?: LoggerBridge

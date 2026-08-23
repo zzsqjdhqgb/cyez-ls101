@@ -2,11 +2,13 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import {
   APP_INFO_CHANNELS,
   DATA_DIRECTORY_CHANNELS,
+  LEGACY_DATA_CHANNELS,
   LICENSE_CHANNELS,
   WINDOW_CONTROL_CHANNELS,
   WINDOW_CONTROL_EVENTS,
   type AppInfoBridge,
   type DataDirectoryBridge,
+  type LegacyDataBridge,
   type LicenseBridge,
   type WindowControlsBridge
 } from '@ls101/core-types'
@@ -380,6 +382,21 @@ const dataDirectoryBridge: DataDirectoryBridge = {
   }
 }
 
+const legacyDataBridge: LegacyDataBridge = {
+  getInfo() {
+    return ipcRenderer.invoke(LEGACY_DATA_CHANNELS.getInfo)
+  },
+  exportArchive() {
+    return ipcRenderer.invoke(LEGACY_DATA_CHANNELS.exportArchive)
+  },
+  cleanup() {
+    return ipcRenderer.invoke(LEGACY_DATA_CHANNELS.cleanup)
+  },
+  retry() {
+    return ipcRenderer.invoke(LEGACY_DATA_CHANNELS.retry)
+  }
+}
+
 const windowControlsBridge: WindowControlsBridge = {
   minimize() {
     return ipcRenderer.invoke(WINDOW_CONTROL_CHANNELS.minimize)
@@ -425,5 +442,6 @@ contextBridge.exposeInMainWorld('imageClipboard', clipboardBridge)
 contextBridge.exposeInMainWorld('appInfo', appInfoBridge)
 contextBridge.exposeInMainWorld('license', licenseBridge)
 contextBridge.exposeInMainWorld('dataDirectory', dataDirectoryBridge)
+contextBridge.exposeInMainWorld('legacyData', legacyDataBridge)
 contextBridge.exposeInMainWorld('windowControls', windowControlsBridge)
 contextBridge.exposeInMainWorld('logger', loggerBridge)
