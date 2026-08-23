@@ -236,7 +236,7 @@ async function writeArchiveAtomically(
     await outputFinished
     if (archiveError) throw archiveError
 
-    const handle = await open(temporaryPath, 'r')
+    const handle = await open(temporaryPath, 'r+')
     try {
       await handle.sync()
     } finally {
