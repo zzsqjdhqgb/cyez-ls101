@@ -4,6 +4,7 @@ import type {
   LicenseBridge,
   WindowControlsBridge
 } from '@ls101/core-types'
+import type { LoggerBridge } from '@ls101/logger/shared'
 
 declare global {
   interface Window {
@@ -11,6 +12,7 @@ declare global {
     dataDirectory?: DataDirectoryBridge
     license?: LicenseBridge
     windowControls?: WindowControlsBridge
+    logger?: LoggerBridge
   }
 }
 

@@ -1,5 +1,11 @@
 import { app, BrowserWindow, dialog, safeStorage } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
+import {
+  createConsoleLogger,
+  createMainLogger,
+  registerRendererLogger,
+  type Logger
+} from '@ls101/logger/main'
 import { registerConfigStore } from '@ls101/config-store/main'
 import { registerAIRouter } from '@ls101/airouter/main'
 import { registerClipboard } from '@ls101/clipboard/main'
@@ -25,9 +31,23 @@ import { registerWindowControlHandlers } from './window-controls'
 registerFileStoreScheme()
 registerBuiltinFileStoreScheme()
 let applicationInitialized = false
+let logger: Logger | null = null
+
+process.on('uncaughtExceptionMonitor', (error) => {
+  if (logger) logger.errorSync('Main process uncaught exception', error)
+  else console.error('Main process uncaught exception', error)
+})
 
 async function initializeApplication(): Promise<void> {
   electronApp.setAppUserModelId('io.github.zzsqjdhqgb.cyez-ls101')
+  logger = await initializeApplicationLogger()
+  const applicationLogger = logger
+  applicationLogger.info('Application initialization started', {
+    version: app.getVersion(),
+    packaged: app.isPackaged,
+    platform: process.platform,
+    arch: process.arch
+  })
 
   const isLocalIntegrationTest =
     process.env['LS101_INTEGRATION_TEST'] === '1' &&
@@ -42,7 +62,7 @@ async function initializeApplication(): Promise<void> {
   try {
     dataDir = await initializeDataDirectory(userDataDir)
   } catch (error) {
-    console.error('Failed to initialize application data directory', error)
+    applicationLogger.error('Failed to initialize application data directory', error)
     return recoverDataDirectory(userDataDir, error)
   }
   registerFileStore({ baseDir: dataDir })
@@ -59,19 +79,30 @@ async function initializeApplication(): Promise<void> {
   registerLicenseHandlers(createLicenseOptions(userDataDir, isLocalIntegrationTest))
   registerDataDirectoryHandlers(userDataDir, dataDir)
   registerWindowControlHandlers()
+  registerRendererLogger(applicationLogger)
 
   app.on('browser-window-created', (_event, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  createMainWindow()
+  createMainWindow(applicationLogger)
   applicationInitialized = true
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow()
+      createMainWindow(applicationLogger)
     }
   })
+}
+
+async function initializeApplicationLogger(): Promise<Logger> {
+  try {
+    return await createMainLogger({ directory: app.getPath('logs') })
+  } catch (error) {
+    const fallback = createConsoleLogger()
+    fallback.error('Persistent logger unavailable; using console-only logging', error)
+    return fallback
+  }
 }
 
 function createLicenseOptions(
@@ -116,7 +147,8 @@ app.on('window-all-closed', () => {
 
 function handleApplicationInitializationError(error: unknown): void {
   const message = error instanceof Error ? error.message : String(error)
-  console.error('Failed to initialize application', error)
+  if (logger) logger.errorSync('Failed to initialize application', error)
+  else console.error('Failed to initialize application', error)
   dialog.showErrorBox('应用启动失败', message)
   app.exit(1)
 }

@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AlertCircle, RefreshCw } from 'lucide-react'
+import { logger } from '@ls101/logger/renderer'
 import type { LicenseStatus } from '@ls101/core-types'
 import { App } from './app/App'
 import { appIconUrl } from './assets'
@@ -33,7 +34,25 @@ applyStartupLogoMotion(root, {
   logoMarkup: startupLogoMarkup,
   motionCss: startupLogoMotionCss
 })
-const reactRoot = createRoot(root)
+const reactRoot = createRoot(root, {
+  onUncaughtError: (error, errorInfo) => {
+    logger.error('Uncaught React renderer error', error, {
+      componentStack: errorInfo.componentStack ?? undefined
+    })
+  },
+  onCaughtError: (error, errorInfo) => {
+    logger.error('Caught React renderer error', error, {
+      componentStack: errorInfo.componentStack ?? undefined
+    })
+  },
+  onRecoverableError: (error, errorInfo) => {
+    logger.warn('Recoverable React renderer error', {
+      error: serializeReason(error),
+      componentStack: errorInfo.componentStack ?? undefined
+    })
+  }
+})
+installGlobalErrorLogging()
 const startupLogoAnimation = waitForStartupLogoAnimation(root)
 
 async function renderApplication(): Promise<void> {
@@ -103,6 +122,7 @@ async function initializeApplicationContent(): Promise<void> {
 }
 
 function renderStartupError(reason: unknown): void {
+  logger.error('Renderer application initialization failed', reason)
   const message = reason instanceof Error ? reason.message : '未知初始化错误'
   reactRoot.render(
     <main className="startupError" role="alert">
@@ -118,3 +138,24 @@ function renderStartupError(reason: unknown): void {
 }
 
 void renderApplication().catch(renderStartupError)
+
+function installGlobalErrorLogging(): void {
+  window.addEventListener('error', (event) => {
+    logger.error('Unhandled renderer error', event.error, {
+      filename: event.filename,
+      lineNumber: event.lineno,
+      columnNumber: event.colno,
+      url: window.location.href
+    })
+  })
+
+  window.addEventListener('unhandledrejection', (event) => {
+    logger.error('Unhandled renderer promise rejection', event.reason, {
+      url: window.location.href
+    })
+  })
+}
+
+function serializeReason(reason: unknown): string {
+  return reason instanceof Error ? `${reason.name}: ${reason.message}` : String(reason)
+}

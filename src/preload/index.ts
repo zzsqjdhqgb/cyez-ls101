@@ -55,6 +55,12 @@ import {
   type AIRouterTextRequest
 } from '@ls101/airouter/shared'
 import { CLIPBOARD_CHANNELS, type ClipboardBridge } from '@ls101/clipboard/shared'
+import {
+  LOGGER_CHANNELS,
+  validateRendererLogEvent,
+  type LogEvent,
+  type LoggerBridge
+} from '@ls101/logger/shared'
 
 const allowedChannels = new Set<FileStoreChannel>(Object.values(FILE_STORE_CHANNELS))
 const allowedBuiltinChannels = new Set<BuiltinFileStoreChannel>(
@@ -399,6 +405,17 @@ const windowControlsBridge: WindowControlsBridge = {
   }
 }
 
+const loggerBridge: LoggerBridge = {
+  write(event: LogEvent) {
+    try {
+      const result = validateRendererLogEvent(event)
+      if (result.ok) ipcRenderer.send(LOGGER_CHANNELS.write, result.event)
+    } catch (error) {
+      console.error('[logger] failed to forward renderer log event', error)
+    }
+  }
+}
+
 contextBridge.exposeInMainWorld('fileStore', fileStoreBridge)
 contextBridge.exposeInMainWorld('builtinFileStore', builtinFileStoreBridge)
 contextBridge.exposeInMainWorld('configStore', configStoreBridge)
@@ -409,3 +426,4 @@ contextBridge.exposeInMainWorld('appInfo', appInfoBridge)
 contextBridge.exposeInMainWorld('license', licenseBridge)
 contextBridge.exposeInMainWorld('dataDirectory', dataDirectoryBridge)
 contextBridge.exposeInMainWorld('windowControls', windowControlsBridge)
+contextBridge.exposeInMainWorld('logger', loggerBridge)

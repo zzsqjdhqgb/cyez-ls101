@@ -20,6 +20,7 @@
     "@ls101/file-dialog": "workspace:*",
     "@ls101/file-store": "workspace:*",
     "@ls101/interface-editor": "workspace:*",
+    "@ls101/logger": "workspace:*",
     "@ls101/page-renderer": "workspace:*",
     "@ls101/schema-editor": "workspace:*",
     "@ls101/section-engine": "workspace:*",
