@@ -11,12 +11,28 @@ afterEach(() => {
 })
 
 describe('LicenseSettingsPage', () => {
+  it('opens the bundled activation guide', async () => {
+    const openActivationGuide = vi.fn().mockResolvedValue(undefined)
+    window.license = {
+      getStatus: vi.fn(),
+      activate: vi.fn(),
+      deactivate: vi.fn(),
+      openActivationGuide
+    }
+
+    render(<LicenseSettingsPage />)
+    fireEvent.click(screen.getByRole('button', { name: '查看说明' }))
+
+    await waitFor(() => expect(openActivationGuide).toHaveBeenCalledOnce())
+  })
+
   it('deactivates after confirmation', async () => {
     const deactivate = vi.fn().mockResolvedValue(undefined)
     window.license = {
       getStatus: vi.fn(),
       activate: vi.fn(),
-      deactivate
+      deactivate,
+      openActivationGuide: vi.fn()
     }
 
     render(<LicenseSettingsPage />)
@@ -34,7 +50,8 @@ describe('LicenseSettingsPage', () => {
     window.license = {
       getStatus: vi.fn(),
       activate: vi.fn(),
-      deactivate: vi.fn().mockRejectedValue(new Error('failed'))
+      deactivate: vi.fn().mockRejectedValue(new Error('failed')),
+      openActivationGuide: vi.fn()
     }
 
     render(<LicenseSettingsPage />)

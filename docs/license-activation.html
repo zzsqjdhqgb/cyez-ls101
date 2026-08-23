@@ -228,6 +228,39 @@
         font-weight: 700;
       }
 
+      .tradeoffs {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin: 18px 0 20px;
+      }
+
+      .tradeoff {
+        padding: 16px 18px;
+        border-left: 4px solid var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .tradeoff.negative {
+        border-left-color: var(--warm);
+        background: var(--warm-soft);
+      }
+
+      .tradeoff h3 {
+        font-size: 16px;
+      }
+
+      .tradeoff ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+        color: var(--ink-soft);
+        font-size: 14px;
+      }
+
+      .tradeoff li + li {
+        margin-top: 5px;
+      }
+
       .steps {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -272,11 +305,17 @@
         margin-bottom: 4px;
       }
 
-      .method-name {
-        display: block;
-        margin-bottom: 10px;
-        color: var(--ink-faint);
+      .method .cost-note {
+        margin: 12px 0 0;
+        padding: 9px 11px;
+        border-left: 3px solid var(--warm);
+        color: var(--warm);
+        background: var(--warm-soft);
         font-size: 13px;
+      }
+
+      .cost-note strong {
+        color: var(--ink);
       }
 
       .method ol,
@@ -483,6 +522,7 @@
 
         .choice-grid,
         .method-grid,
+        .tradeoffs,
         .steps {
           grid-template-columns: 1fr;
         }
@@ -560,25 +600,21 @@
     <div class="layout">
       <main>
         <section class="section" id="start" aria-labelledby="start-title">
-          <h2 id="start-title">先看你属于哪种情况</h2>
-          <p class="section-intro">你不需要先理解技术名词，只要找到和自己最接近的一项。</p>
+          <h2 id="start-title">这次要选择什么</h2>
+          <p class="section-intro">
+            这次只讨论个人电脑，也就是你自己的笔记本或台式机。我们正在比较两种激活思路：
+          </p>
           <div class="choice-grid">
             <article class="choice">
-              <span class="choice-label">情况一 · 学校公共电脑</span>
-              <h3>图书馆、机房等统一管理的电脑</h3>
-              <p>
-                管理员会把一份授权文件统一安装到指定电脑上。你通常只需要打开软件，不用提交个人信息。
-              </p>
+              <span class="choice-label">做法一</span>
+              <h3>登记这台电脑</h3>
+              <p>使用权固定在当前电脑上。拿到授权后可以离线使用，但换电脑时通常需要重新登记。</p>
             </article>
             <article class="choice">
-              <span class="choice-label">情况二 · 个人电脑</span>
-              <h3>自己的笔记本或台式机</h3>
-              <p>我们正在比较两种思路：把使用权登记在“这台电脑”上，或登记在“你的个人账号”上。</p>
+              <span class="choice-label">做法二</span>
+              <h3>使用个人账号</h3>
+              <p>使用权跟着账号走。换电脑时更灵活，但需要保管账号密码，并遵守多设备使用规则。</p>
             </article>
-          </div>
-          <div class="notice warm" style="margin-top: 16px">
-            <strong>已经确定的一点：</strong
-            >公共电脑和“登记这台电脑”的方案，都可以把授权合并成一份文件统一发送。软件只会读取与当前电脑匹配的部分，不会因为合并发送而暴露个人信息。
           </div>
         </section>
 
@@ -599,66 +635,99 @@
           <p class="section-intro">
             软件会读取少量电脑信息，生成一个只代表这台电脑的登记信息。拿到授权文件后可以离线使用；换电脑或大幅更换硬件时，通常需要重新登记。
           </p>
+          <div class="tradeoffs">
+            <div class="tradeoff">
+              <h3>优点</h3>
+              <ul>
+                <li>所有人的授权和许可文件都可以统一发放，不需要给每位用户单独发送账号或文件。</li>
+                <li>
+                  授权只对已登记的电脑有效。即使文件被转发，其他电脑也无法使用，软件不会因此外泄。
+                </li>
+              </ul>
+            </div>
+            <div class="tradeoff negative">
+              <h3>缺点</h3>
+              <ul>
+                <li>更换电脑或大幅更换硬件后，需要专门联系老师重新登记并补办授权。</li>
+                <li>
+                  使用临时服务器需要付费：每个激活周期开放约一个月，预计云资源成本约
+                  ￥20～￥100。手机扫码只需写入数据后统一计算，成本通常较低；链接自动激活需要动态保存和查询设备数据，成本通常较高。
+                </li>
+                <li>如果不使用临时服务器，则需要教师大规模收集并处理电脑信息文件或二维码图片。</li>
+              </ul>
+            </div>
+          </div>
           <div class="method-grid">
             <article class="method" id="file-flow">
               <h3>A1 · 发送电脑信息文件</h3>
-              <span class="method-name">原方案：离线收集电脑信息文件</span>
-              <p>软件生成一个小文件，你把它发给教师或管理员，对方按批次生成授权文件再发回。</p>
+              <p>
+                软件为每台电脑生成一个小文件。所有用户分别提交后，教师需要大规模收集和整理，再按批次生成授权文件。
+              </p>
               <ol>
                 <li>软件生成电脑信息文件。</li>
-                <li>你提交文件，等待本批次处理。</li>
+                <li>所有用户分别提交，教师统一收集和整理大量文件。</li>
                 <li>收到统一发放的授权文件并导入软件。</li>
               </ol>
               <div class="method-note">
-                <strong>适合：</strong>网络受限、愿意按批次办理的人。<br /><strong>留意：</strong
-                >换机、重装后的补办需要等待。
+                <strong>适合：</strong>网络受限，并且可以接受按批次办理。
               </div>
             </article>
 
             <article class="method" id="qr-photo-flow">
               <h3>A2 · 拍下二维码发过去</h3>
-              <span class="method-name">原方案：批量收集二维码</span>
-              <p>软件显示一个二维码，你用手机拍照或截图发给管理员，不用找文件，也不用登录网站。</p>
+              <p>
+                软件显示一个二维码，你用手机拍照或截图发给教师。所有用户分别提交后，教师需要大规模收集和整理二维码图片。
+              </p>
               <ol>
                 <li>在软件里打开二维码。</li>
-                <li>拍照或截图后发送给管理员。</li>
+                <li>拍照或截图后发送，教师统一收集和整理大量图片。</li>
                 <li>收到统一发放的授权文件并导入软件。</li>
               </ol>
               <div class="method-note">
-                <strong>适合：</strong>不熟悉文件操作的人。<br /><strong>留意：</strong
-                >照片要清晰，管理员需要检查重复和遗漏。
+                <strong>适合：</strong>不熟悉文件操作，希望通过拍照完成提交。<br /><strong
+                  >留意：</strong
+                >照片可能不清晰，教师需要检查重复和遗漏，并联系个别用户重新拍摄和提交。
               </div>
             </article>
 
             <article class="method" id="scan-flow">
               <h3>A3 · 开学时用手机扫一次</h3>
-              <span class="method-name">原方案：临时网页 + 手机扫码</span>
               <p>
-                每学期开学临时开放一个网页，手机完成身份确认后扫描电脑二维码，预计只在办理期间运行。
+                每学期开学临时开放一个网页。办理时需要同时使用手机和电脑：手机完成身份确认，再扫描电脑上显示的二维码。
+                设备数据只写入存储，网页不能读取已经提交的设备数据，之后再统一计算授权。
+              </p>
+              <p class="cost-note">
+                <strong>需要临时服务器：</strong>每个激活周期开放约一个月，预计云资源成本约
+                ￥20～￥100；因为设备数据只写入、不在办理过程中查询，费用通常接近区间低端。
               </p>
               <ol>
-                <li>手机打开认证网页并登录。</li>
-                <li>扫描软件显示的电脑二维码。</li>
-                <li>等待教师生成授权文件并导入软件。</li>
+                <li>在电脑软件中打开二维码，同时用手机打开认证网页并登录。</li>
+                <li>用手机扫描电脑屏幕上的二维码。</li>
+                <li>设备数据写入后统一计算，再等待教师发放授权文件并导入软件。</li>
               </ol>
               <div class="method-note">
-                <strong>适合：</strong>希望网页自动登记对应关系的人。<br /><strong>留意：</strong
-                >办理时需要网络，网页也需要按学期维护。
+                <strong>适合：</strong>不希望教师大规模收集文件或图片。<br /><strong>留意：</strong
+                >办理时需要同时使用手机和电脑，并且需要网络。
               </div>
             </article>
 
             <article class="method" id="link-flow">
               <h3>A4 · 点链接直接激活</h3>
-              <span class="method-name">原方案：临时网页 + 激活链接</span>
-              <p>教师发一个链接，你在软件中输入后打开网页，完成确认，软件自动拿到结果。</p>
+              <p>
+                教师发放一个包含当期服务器地址的激活链接。即使以后更换服务器网址（域名），也只需换发链接，不需要更新软件。用户完成网页确认后，软件会自动拿到结果。
+              </p>
+              <p class="cost-note">
+                <strong>需要临时服务器：</strong>每个激活周期开放约一个月，预计云资源成本约
+                ￥20～￥100；服务器需要动态保存和查询已登记的设备数据，费用通常接近区间高端。
+              </p>
               <ol>
                 <li>在软件中输入教师发来的链接。</li>
                 <li>网页中完成个人信息确认。</li>
-                <li>验证成功后软件自动完成激活。</li>
+                <li>服务器保存并查询设备数据，验证成功后软件自动完成激活。</li>
               </ol>
               <div class="method-note">
-                <strong>适合：</strong>希望少传文件、少等一步的人。<br /><strong>留意：</strong
-                >办理时依赖网络，过期链接和失败重试需要有明确处理方式。
+                <strong>适合：</strong>希望少传文件、少等一步。<br /><strong>留意：</strong
+                >办理时依赖网络。
               </div>
             </article>
           </div>
@@ -668,33 +737,37 @@
           <h2 id="account-title">个人电脑做法二：使用个人账号</h2>
           <p class="section-intro">
             使用权跟着账号走，而不是固定在某一台电脑上。因此换电脑或重装通常更灵活，但需要记住账号密码，也要遵守多设备使用规则。
+            导入许可文件和账号验证都在本地完成，不需要连接网络。
           </p>
+          <div class="tradeoffs">
+            <div class="tradeoff">
+              <h3>优点</h3>
+              <ul>
+                <li>不需要教师收集电脑信息文件或二维码。</li>
+                <li>更换电脑或重装系统时，不需要重新提交电脑信息。</li>
+                <li>导入许可文件和登录账号时不需要网络。</li>
+              </ul>
+            </div>
+            <div class="tradeoff negative">
+              <h3>缺点</h3>
+              <ul>
+                <li>需要给每位用户单独发送账号和随机密码。</li>
+                <li>
+                  如果个人账号和许可文件同时泄露，其他人就可能激活并使用软件，造成软件被未经授权地传播。
+                </li>
+              </ul>
+            </div>
+          </div>
           <div class="account-card">
-            <h3>B · 教师发放公共授权和个人账号</h3>
+            <h3>B · 教师发放通用许可文件和个人账号</h3>
             <ol class="steps">
               <li>教师发一份本学期通用的授权文件，并为每个人生成账号和随机密码。</li>
               <li>你导入授权文件，再输入自己的账号密码。</li>
-              <li>以后换电脑时按账号重新登录，具体次数和离线规则待确定。</li>
+              <li>软件在本地核对账号和许可文件，完成激活，不需要连接网络。</li>
             </ol>
-            <div class="choice-grid" style="margin-top: 16px">
-              <div>
-                <h3>可能更方便的地方</h3>
-                <ul class="plain-list">
-                  <li>换电脑、重装系统时不必重新提交电脑信息。</li>
-                  <li>可以按账号管理使用资格。</li>
-                </ul>
-              </div>
-              <div>
-                <h3>需要提前想清楚</h3>
-                <ul class="plain-list">
-                  <li>账号如何发送、找回和重置。</li>
-                  <li>如何防止账号共享，以及没有网络时如何验证。</li>
-                </ul>
-              </div>
-            </div>
             <p class="notice warm" style="margin-top: 16px">
-              <strong>发放上的区别：</strong
-              >只有这个方案需要逐人发送账号和随机密码；通用授权文件仍可以统一发送。账号不会使用学籍号、身份证号等敏感信息。
+              <strong>账号信息：</strong
+              >不能使用学籍号、身份证号等敏感信息，否则密码学上会导致隐私泄露。
             </p>
           </div>
         </section>
@@ -708,52 +781,51 @@
                   <th>做法</th>
                   <th>办理时要做什么</th>
                   <th>办理时是否需要网络</th>
+                  <th>临时服务器预计成本</th>
                   <th>换电脑</th>
                   <th>主要负担</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>公共电脑</td>
-                  <td>管理员统一安装授权</td>
-                  <td>由学校安排</td>
-                  <td>需要管理员重新处理</td>
-                  <td>几乎不用操作</td>
-                </tr>
-                <tr>
                   <td>A1 发送文件</td>
                   <td>生成并发送电脑信息文件</td>
                   <td>可用文件传递</td>
+                  <td>不需要</td>
                   <td>需要重新登记</td>
-                  <td>等待批次处理</td>
+                  <td>大规模收集文件、等待批次处理</td>
                 </tr>
                 <tr>
                   <td>A2 拍二维码</td>
                   <td>拍照或截图后发送</td>
                   <td>可用图片传递</td>
+                  <td>不需要</td>
                   <td>需要重新登记</td>
-                  <td>照片必须清晰</td>
+                  <td>大规模收集图片，模糊时需个别重新收集</td>
                 </tr>
                 <tr>
                   <td>A3 手机扫码</td>
-                  <td>登录网页并扫码</td>
+                  <td>同时使用手机和电脑，登录网页并扫码</td>
                   <td>需要</td>
+                  <td>每周期约 ￥20～￥100，通常接近低端</td>
                   <td>需要重新登记</td>
-                  <td>开学时按网页办理</td>
+                  <td>办理时需要同时使用手机和电脑</td>
                 </tr>
                 <tr>
                   <td>A4 点链接</td>
                   <td>输入链接并网页确认</td>
                   <td>需要</td>
+                  <td>每周期约 ￥20～￥100，通常接近高端</td>
                   <td>需要重新办理</td>
-                  <td>依赖链接和网络</td>
+                  <td>服务器需要动态保存和查询设备数据</td>
                 </tr>
                 <tr>
                   <td>B 使用账号</td>
                   <td>导入授权并登录账号</td>
-                  <td>最终规则待定</td>
+                  <td>不需要</td>
+                  <td>不需要</td>
                   <td>相对灵活</td>
-                  <td>保管账号密码</td>
+                  <td>账号和许可文件同时泄露时，软件可能外泄</td>
                 </tr>
               </tbody>
             </table>
@@ -777,7 +849,7 @@
             没有“标准答案”，真实的使用习惯比技术偏好更重要。问卷链接会随本文一起发送。
           </p>
           <ol class="questions">
-            <li>你是教师、学生还是其他使用者？通常使用个人电脑还是学校公共电脑？</li>
+            <li>你是教师、学生还是其他使用者？通常使用笔记本还是台式机？</li>
             <li>你更愿意发送一个文件、拍二维码，还是在网页上扫码/点链接？为什么？</li>
             <li>你多久会换电脑或重装系统？等待一批授权处理，最长能接受多久？</li>
             <li>首次激活或换电脑时暂时没有网络，会不会影响你？</li>
@@ -794,7 +866,7 @@
       <aside class="sidebar" aria-label="页面目录">
         <h2>快速跳转</h2>
         <ol>
-          <li><a href="#start">先看你的情况</a></li>
+          <li><a href="#start">这次要选择什么</a></li>
           <li><a href="#how-it-works">激活怎么进行</a></li>
           <li><a href="#computer">登记这台电脑</a></li>
           <li><a href="#account">使用个人账号</a></li>

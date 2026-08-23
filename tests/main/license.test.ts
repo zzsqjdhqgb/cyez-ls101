@@ -9,17 +9,24 @@ type IpcHandler = (...args: unknown[]) => unknown
 const electronMocks = vi.hoisted(() => {
   const handlers = new Map<string, IpcHandler>()
   return {
-    app: { exit: vi.fn(), relaunch: vi.fn() },
+    app: {
+      exit: vi.fn(),
+      getAppPath: vi.fn(() => '/app'),
+      isPackaged: false,
+      relaunch: vi.fn()
+    },
     handlers,
     ipcMain: {
       handle: vi.fn((channel: string, handler: IpcHandler) => handlers.set(channel, handler))
-    }
+    },
+    shell: { openPath: vi.fn(() => Promise.resolve('')) }
   }
 })
 
 vi.mock('electron', () => ({
   app: electronMocks.app,
-  ipcMain: electronMocks.ipcMain
+  ipcMain: electronMocks.ipcMain,
+  shell: electronMocks.shell
 }))
 
 import { registerLicenseHandlers } from '../../src/main/license'
@@ -30,7 +37,9 @@ beforeEach(() => {
   directories = []
   electronMocks.handlers.clear()
   electronMocks.app.exit.mockClear()
+  electronMocks.app.getAppPath.mockClear()
   electronMocks.app.relaunch.mockClear()
+  electronMocks.shell.openPath.mockClear()
   vi.useFakeTimers()
 })
 
@@ -40,6 +49,20 @@ afterEach(async () => {
 })
 
 describe('license IPC', () => {
+  it('opens the bundled activation guide from a fixed application path', async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), 'ls101-license-ipc-'))
+    directories.push(directory)
+    registerLicenseHandlers({ storagePath: path.join(directory, 'license.json') })
+
+    const openGuide = electronMocks.handlers.get(LICENSE_CHANNELS.openActivationGuide)
+    expect(openGuide).toBeDefined()
+
+    await expect(openGuide!()).resolves.toBeUndefined()
+    expect(electronMocks.shell.openPath).toHaveBeenCalledWith(
+      path.join('/app', 'docs', 'license-activation.html')
+    )
+  })
+
   it('deletes the receipt and relaunches after replying', async () => {
     const directory = await mkdtemp(path.join(tmpdir(), 'ls101-license-ipc-'))
     directories.push(directory)

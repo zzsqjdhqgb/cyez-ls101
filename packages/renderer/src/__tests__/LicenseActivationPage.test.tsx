@@ -22,7 +22,12 @@ describe('LicenseActivationPage', () => {
       reason: 'invalid-code',
       status: notActivated
     })
-    window.license = { getStatus: vi.fn(), activate }
+    window.license = {
+      getStatus: vi.fn(),
+      activate,
+      deactivate: vi.fn(),
+      openActivationGuide: vi.fn()
+    }
 
     render(<LicenseActivationPage initialStatus={notActivated} onActivated={onActivated} />)
     fireEvent.change(screen.getByLabelText('邀请码'), { target: { value: 'wrong' } })
@@ -44,7 +49,9 @@ describe('LicenseActivationPage', () => {
           expiresAt,
           activatedAt: '2026-08-23T08:00:00.000Z'
         }
-      })
+      }),
+      deactivate: vi.fn(),
+      openActivationGuide: vi.fn()
     }
 
     render(<LicenseActivationPage initialStatus={notActivated} onActivated={onActivated} />)
@@ -65,5 +72,21 @@ describe('LicenseActivationPage', () => {
     expect(screen.getByRole('heading', { name: '使用权限已到期' })).toBeInTheDocument()
     expect(screen.queryByLabelText('邀请码')).not.toBeInTheDocument()
     expect(screen.getByText(/2026年10月1日 23:59/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '查看激活方式说明' })).toBeInTheDocument()
+  })
+
+  it('opens the bundled activation guide', async () => {
+    const openActivationGuide = vi.fn().mockResolvedValue(undefined)
+    window.license = {
+      getStatus: vi.fn(),
+      activate: vi.fn(),
+      deactivate: vi.fn(),
+      openActivationGuide
+    }
+
+    render(<LicenseActivationPage initialStatus={notActivated} onActivated={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: '查看激活方式说明' }))
+
+    await waitFor(() => expect(openActivationGuide).toHaveBeenCalledOnce())
   })
 })
