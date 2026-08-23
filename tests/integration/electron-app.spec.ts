@@ -376,6 +376,27 @@ test('navigates through every primary application area', async () => {
   await expect(page.getByText(/^版本 \S+/)).toBeVisible()
   await expectValidStyleBindings(page)
 
+  await page.getByRole('button', { name: /版本说明/ }).click()
+  const releaseNotes = page.getByRole('dialog', { name: '曹二听说101 v0.4.0' })
+  await expect(releaseNotes).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: '曹二听说101 v0.4.0' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '内容准备' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '升级注意事项' })).toBeAttached()
+  await expect(page.getByText(/^已安装 \S+$/)).toBeVisible()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth
+    )
+  ).toBe(true)
+  await expectValidStyleBindings(page)
+  await page.screenshot({
+    path: test.info().outputPath('release-notes.png'),
+    fullPage: true
+  })
+  await page.getByRole('button', { name: '关闭版本说明' }).click()
+  await expect(releaseNotes).toBeHidden()
+  await expect(page.getByRole('heading', { level: 1, name: '关于' })).toBeVisible()
+
   await page.getByRole('link', { name: '工作台' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
   await page.getByRole('button', { name: '收起侧边栏' }).click()
