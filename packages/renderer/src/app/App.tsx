@@ -8,6 +8,7 @@ import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceAp
 import { BuiltinInterfaceMaintenanceDialog } from '../features/interfaces/BuiltinInterfaceMaintenanceDialog'
 import { SchemaApplicationProvider } from '../features/schemas/SchemaApplicationProvider'
 import { AppearanceSettingsProvider } from '../features/settings/AppearanceSettingsProvider'
+import { LegacyDataDialog } from '../features/settings/LegacyDataDialog'
 import { SubmissionLibraryProvider } from '../features/submissions/SubmissionLibraryProvider'
 import { TemplateApplicationProvider } from '../features/templates/TemplateApplicationProvider'
 import { NotFoundPage } from '../pages/NotFoundPage'
@@ -42,6 +43,7 @@ export function App(): JSX.Element {
                 </MemoryRouter>
                 <ManualImageGenerationDialog />
                 <BuiltinInterfaceMaintenanceDialog />
+                <LegacyDataDialog />
                 <AppToaster />
               </TemplateApplicationProvider>
             </SubmissionLibraryProvider>

@@ -14,6 +14,7 @@ export interface DataDirectoryInfo {
   currentPath: string
   defaultPath: string
   sizeBytes: number
+  legacyCleanupPending: boolean
   oldDataDirectory: DataDirectoryOldLocation | null
 }
 

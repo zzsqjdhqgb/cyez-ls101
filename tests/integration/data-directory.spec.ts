@@ -2,7 +2,60 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { unzipSync } from 'fflate'
 import { launchIntegrationApp } from './support/electron-app'
+
+test('archives root-level legacy data after startup and cleans it only after confirmation', async () => {
+  const userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-legacy-data-integration-'))
+  await mkdir(path.join(userDataDir, 'drafts'), { recursive: true })
+  await writeFile(path.join(userDataDir, 'drafts', 'draft.json'), '{"legacy":true}')
+  await mkdir(path.join(userDataDir, 'submissions', 'recordings'), { recursive: true })
+  await writeFile(path.join(userDataDir, 'submissions', 'recordings', '0.mp3'), 'legacy-audio')
+  const electronApp = await launchIntegrationApp(userDataDir)
+
+  try {
+    const page = await mainApplicationWindow(electronApp)
+    await page.waitForLoadState('domcontentloaded')
+    await expect(page.getByRole('heading', { name: '检测到旧版数据' })).toBeVisible()
+    await expect(page.getByText(/2 个目录、2 个文件/)).toBeVisible()
+
+    const blocked = await page.evaluate(
+      async (target) => {
+        try {
+          await window.dataDirectory!.migrate(target)
+          return ''
+        } catch (error) {
+          return error instanceof Error ? error.message : String(error)
+        }
+      },
+      path.join(userDataDir, 'blocked-target')
+    )
+    expect(blocked).toContain('请先完成旧版数据归档清理')
+
+    const legacyInfo = await page.evaluate(() => window.legacyData!.getInfo())
+    expect(legacyInfo.status).toBe('archived')
+    const archivePath = legacyInfo.archivePath!
+    const archive = unzipSync(new Uint8Array(await readFile(archivePath)))
+    expect(new TextDecoder().decode(archive['drafts/draft.json'])).toBe('{"legacy":true}')
+    expect(new TextDecoder().decode(archive['submissions/recordings/0.mp3'])).toBe('legacy-audio')
+    await expect(readFile(path.join(userDataDir, 'drafts', 'draft.json'), 'utf8')).resolves.toBe(
+      '{"legacy":true}'
+    )
+
+    await page.getByRole('button', { name: '继续并清理' }).click()
+    await expect(page.getByRole('heading', { name: '检测到旧版数据' })).toHaveCount(0)
+    await expect(readFile(path.join(userDataDir, 'drafts', 'draft.json'))).rejects.toMatchObject({
+      code: 'ENOENT'
+    })
+    await expect(readFile(archivePath)).resolves.not.toHaveLength(0)
+    await expect(
+      readFile(path.join(userDataDir, 'legacy-migration.json'), 'utf8')
+    ).resolves.toContain('"state": "cleaned"')
+  } finally {
+    await electronApp.close().catch(() => undefined)
+    await rm(userDataDir, { force: true, recursive: true })
+  }
+})
 
 test('copies business data, switches directories after restart and retains the source', async () => {
   const userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-data-directory-integration-'))

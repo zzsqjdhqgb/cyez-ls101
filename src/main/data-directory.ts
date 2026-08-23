@@ -23,18 +23,6 @@ import {
 const FORMAT_VERSION = 1
 const BOOTSTRAP_FILENAME = 'data-location.json'
 const MARKER_FILENAME = '.ls101-data.json'
-const LEGACY_DIRECTORIES = [
-  'config',
-  'secrets',
-  'models',
-  'extensions',
-  'template-editor',
-  'interfaces',
-  'schema-editor',
-  'exam-library',
-  'submission-library'
-] as const
-
 interface ReadyBootstrap {
   formatVersion: typeof FORMAT_VERSION
   state: 'ready'
@@ -155,24 +143,22 @@ export async function initializeDataDirectory(userDataDir: string): Promise<stri
     return defaultPath
   }
 
-  const legacyDirectories = await existingLegacyDirectories(userDataDir)
-  if (legacyDirectories.length > 0) {
-    const migration = await scheduleMigration(
-      userDataDir,
-      userDataDir,
-      defaultPath,
-      'legacy-copy',
-      legacyDirectories
-    )
-    return finishPendingMigration(userDataDir, migration)
-  } else {
-    await createManagedDirectory(defaultPath)
-  }
+  // Legacy profiles are archived and cleaned after the application has started.
+  // Creating the new directory here must not copy or remove any old root-level data.
+  await createManagedDirectory(defaultPath)
   await writeReadyBootstrap(userDataDir, defaultPath)
   return defaultPath
 }
 
-export function registerDataDirectoryHandlers(userDataDir: string, currentPath: string): void {
+export interface DataDirectoryHandlerOptions {
+  isLegacyCleanupPending?: () => boolean
+}
+
+export function registerDataDirectoryHandlers(
+  userDataDir: string,
+  currentPath: string,
+  options: DataDirectoryHandlerOptions = {}
+): void {
   ipcMain.handle(DATA_DIRECTORY_CHANNELS.getInfo, async (): Promise<DataDirectoryInfo> => {
     const bootstrap = await readReadyBootstrap(userDataDir)
     const oldDataDirectory = bootstrap.oldDataDirectory
@@ -180,6 +166,7 @@ export function registerDataDirectoryHandlers(userDataDir: string, currentPath: 
       currentPath,
       defaultPath: path.join(userDataDir, 'data'),
       sizeBytes: await directorySize(currentPath),
+      legacyCleanupPending: options.isLegacyCleanupPending?.() ?? false,
       oldDataDirectory: oldDataDirectory
         ? {
             path: oldDataDirectory.path,
@@ -192,6 +179,7 @@ export function registerDataDirectoryHandlers(userDataDir: string, currentPath: 
     }
   })
   ipcMain.handle(DATA_DIRECTORY_CHANNELS.choose, async (event) => {
+    assertNoPendingLegacyCleanup(options)
     await assertNoOldDataDirectory(userDataDir)
     const parent = BrowserWindow.fromWebContents(event.sender)
     const result = parent
@@ -207,10 +195,12 @@ export function registerDataDirectoryHandlers(userDataDir: string, currentPath: 
     return inspectCandidate(userDataDir, result.filePaths[0], currentPath)
   })
   ipcMain.handle(DATA_DIRECTORY_CHANNELS.chooseDefault, async () => {
+    assertNoPendingLegacyCleanup(options)
     await assertNoOldDataDirectory(userDataDir)
     return inspectCandidate(userDataDir, path.join(userDataDir, 'data'), currentPath, true)
   })
   ipcMain.handle(DATA_DIRECTORY_CHANNELS.resetDefault, async () => {
+    assertNoPendingLegacyCleanup(options)
     await assertNoOldDataDirectory(userDataDir)
     const candidate = await inspectCandidate(
       userDataDir,
@@ -228,6 +218,7 @@ export function registerDataDirectoryHandlers(userDataDir: string, currentPath: 
     relaunchAfterReply()
   })
   ipcMain.handle(DATA_DIRECTORY_CHANNELS.migrate, async (_event, target: string) => {
+    assertNoPendingLegacyCleanup(options)
     await assertNoOldDataDirectory(userDataDir)
     const candidate = await inspectCandidate(userDataDir, target, currentPath)
     if (candidate.kind !== 'empty') throw new Error('迁移目标必须是空目录')
@@ -235,6 +226,7 @@ export function registerDataDirectoryHandlers(userDataDir: string, currentPath: 
     relaunchAfterReply()
   })
   ipcMain.handle(DATA_DIRECTORY_CHANNELS.useExisting, async (_event, target: string) => {
+    assertNoPendingLegacyCleanup(options)
     await assertNoOldDataDirectory(userDataDir)
     const candidate = await inspectCandidate(userDataDir, target, currentPath)
     if (candidate.kind !== 'managed') throw new Error('所选目录不是可识别的 LS101 数据目录')
@@ -255,6 +247,12 @@ export function registerDataDirectoryHandlers(userDataDir: string, currentPath: 
     await writeReadyBootstrap(userDataDir, currentPath, bootstrap.pendingCleanups, remaining)
     if (remaining) throw new Error('旧数据目录暂时不可访问，将在后续启动时继续删除')
   })
+}
+
+function assertNoPendingLegacyCleanup(options: DataDirectoryHandlerOptions): void {
+  if (options.isLegacyCleanupPending?.()) {
+    throw new Error('请先完成旧版数据归档清理，再更改数据位置')
+  }
 }
 
 export async function recoverDataDirectory(userDataDir: string, error: unknown): Promise<never> {
@@ -924,15 +922,6 @@ function assertMatchingManifests(
       throw new Error(`迁移校验失败：${source[index].relativePath}`)
     }
   }
-}
-
-async function existingLegacyDirectories(userDataDir: string): Promise<string[]> {
-  const found: string[] = []
-  for (const directory of LEGACY_DIRECTORIES) {
-    const stats = await stat(path.join(userDataDir, directory)).catch(() => null)
-    if (stats?.isDirectory()) found.push(directory)
-  }
-  return found
 }
 
 async function createManagedDirectory(directory: string): Promise<void> {
