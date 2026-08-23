@@ -22,3 +22,20 @@ docs/product/**/*.product-docs-backup
 !/.yarn/versions
 ~$*.docx
 *.tsbuildinfo
+
+# Local CTC-GOP research artifacts (keep scripts and JSON reports visible)
+.gop-research/model/
+.gop-research/site/
+.gop-research/hf/
+.gop-research/venv/
+.gop-research/venv2/
+.gop-research/pip-cache/
+.gop-research/tmp/
+.gop-research/*.bin
+.gop-research/**/*.pt
+.gop-research/**/*.wav
+.gop-research/**/*.webm
+.gop-research/**/__pycache__/
+
+# Local TextPA environment overrides
+/textpa/.env.local
