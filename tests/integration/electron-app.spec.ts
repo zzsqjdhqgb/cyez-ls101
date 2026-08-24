@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { strToU8, unzipSync, zipSync } from 'fflate'
-import { launchIntegrationApp } from './support/electron-app'
+import { APPLICATION_STARTUP_TIMEOUT, launchIntegrationApp } from './support/electron-app'
 
 let electronApp: ElectronApplication
 let page: Page
@@ -69,7 +69,9 @@ test.beforeEach(async () => {
   page = await electronApp.firstWindow()
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
-  await expect(page.getByRole('dialog', { name: '曹二听说101 v0.4.0' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: '曹二听说101 v0.4.0' })).toBeVisible({
+    timeout: APPLICATION_STARTUP_TIMEOUT
+  })
   await expect(page.getByRole('heading', { name: /旧数据/ })).toHaveCount(0)
   await page.getByRole('button', { name: '关闭版本说明' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()

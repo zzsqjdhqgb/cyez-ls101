@@ -9,7 +9,7 @@ import { access, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const projectRoot = process.cwd()
-const APPLICATION_STARTUP_TIMEOUT = 20_000
+export const APPLICATION_STARTUP_TIMEOUT = 20_000
 
 export const INTEGRATION_LICENSE_CODE = 'ls101-integration-license'
 export const INTEGRATION_LICENSE_CODE_HASH = createHash('sha256')
