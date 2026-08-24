@@ -1,0 +1,195 @@
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { AlertCircle, RefreshCw } from 'lucide-react'
+import { logger } from '@ls101/logger/renderer'
+import type { LicenseStatus } from '@ls101/core-types'
+import { App } from './app/App'
+import { appIconUrl } from './assets'
+import startupLogoMarkup from './startup-assets/logo.svg?raw'
+import startupLogoMotionCss from './startup-assets/motion.css?inline'
+import { templateApplication } from './features/templates/TemplateApplicationRuntime'
+import { builtinInterfaceMaintenance } from './features/interfaces/BuiltinInterfaceRuntime'
+import { initializeSchemaApplication } from './features/schemas/SchemaApplicationRuntime'
+import { LicenseActivationPage } from './features/license/LicenseActivationPage'
+import { LegacyDataMigrationPage } from './features/legacy-data/LegacyDataMigrationPage'
+import { latestReleaseVersion } from './features/release-notes/release-notes'
+import {
+  applyStartupLogoMotion,
+  applyStartupPlaceholderIcon,
+  showStartupProgress,
+  waitForStartupLogoAnimation,
+  waitForStartupProgressDelay
+} from './startup-placeholder'
+import './app/register-settings'
+import './app/register-placeholder-routes'
+import './styles/tokens.css'
+import './styles/global.css'
+
+const root = document.getElementById('root')
+
+if (!root) {
+  throw new Error('Renderer root element was not found')
+}
+
+applyStartupPlaceholderIcon(root, appIconUrl)
+applyStartupLogoMotion(root, {
+  logoMarkup: startupLogoMarkup,
+  motionCss: startupLogoMotionCss
+})
+const reactRoot = createRoot(root, {
+  onUncaughtError: (error, errorInfo) => {
+    logger.error('Uncaught React renderer error', error, {
+      componentStack: errorInfo.componentStack ?? undefined
+    })
+  },
+  onCaughtError: (error, errorInfo) => {
+    logger.error('Caught React renderer error', error, {
+      componentStack: errorInfo.componentStack ?? undefined
+    })
+  },
+  onRecoverableError: (error, errorInfo) => {
+    logger.warn('Recoverable React renderer error', {
+      error: serializeReason(error),
+      componentStack: errorInfo.componentStack ?? undefined
+    })
+  }
+})
+installGlobalErrorLogging()
+const startupLogoAnimation = waitForStartupLogoAnimation(root)
+
+async function renderApplication(): Promise<void> {
+  let initializationSettled = false
+  const initializationResult = prepareApplication().then(
+    (licenseStatus) => {
+      initializationSettled = true
+      return { status: 'fulfilled' as const, licenseStatus }
+    },
+    (reason: unknown) => {
+      initializationSettled = true
+      return { status: 'rejected' as const, reason }
+    }
+  )
+
+  await startupLogoAnimation
+  await waitForStartupProgressDelay()
+
+  if (!initializationSettled) showStartupProgress(root)
+
+  const result = await initializationResult
+  if (result.status === 'rejected') throw result.reason
+
+  if (result.licenseStatus.state === 'active') await openActiveApplication()
+  else renderLicenseActivation(result.licenseStatus)
+}
+
+async function prepareApplication(): Promise<LicenseStatus> {
+  const license = window.license
+  if (!license) throw new Error('许可证服务不可用')
+
+  return license.getStatus()
+}
+
+function renderMainApplication(showReleaseNotes: boolean): void {
+  reactRoot.render(
+    <StrictMode>
+      <App showReleaseNotesOnStartup={showReleaseNotes} />
+    </StrictMode>
+  )
+}
+
+function renderLicenseActivation(status: LicenseStatus): void {
+  reactRoot.render(
+    <StrictMode>
+      <LicenseActivationPage
+        initialStatus={status}
+        onActivated={async () => {
+          try {
+            await openActiveApplication()
+          } catch (error) {
+            renderStartupError(error)
+          }
+        }}
+      />
+    </StrictMode>
+  )
+}
+
+async function openActiveApplication(): Promise<void> {
+  await completeLegacyDataMigration()
+  await ensureInstallationMarker()
+  await initializeApplicationContent()
+  const showReleaseNotes = await claimReleaseNotesVersion()
+  renderMainApplication(showReleaseNotes)
+}
+
+async function ensureInstallationMarker(): Promise<void> {
+  const appInfo = window.appInfo
+  if (!appInfo) throw new Error('应用信息服务不可用')
+  await appInfo.ensureInstallationMarker()
+}
+
+async function claimReleaseNotesVersion(): Promise<boolean> {
+  const appInfo = window.appInfo
+  if (!appInfo) throw new Error('应用信息服务不可用')
+  return appInfo.claimReleaseNotesVersion(latestReleaseVersion)
+}
+
+async function completeLegacyDataMigration(): Promise<void> {
+  const legacyData = window.legacyData
+  if (!legacyData) throw new Error('旧数据整理服务不可用')
+  const initialInfo = await legacyData.getInfo()
+  if (initialInfo.status === 'none' || initialInfo.status === 'cleaned') return
+
+  return new Promise((resolve) => {
+    reactRoot.render(
+      <StrictMode>
+        <LegacyDataMigrationPage initialInfo={initialInfo} onComplete={resolve} />
+      </StrictMode>
+    )
+  })
+}
+
+async function initializeApplicationContent(): Promise<void> {
+  await initializeSchemaApplication()
+  await builtinInterfaceMaintenance.initialize()
+  await templateApplication.initialize()
+}
+
+function renderStartupError(reason: unknown): void {
+  logger.error('Renderer application initialization failed', reason)
+  const message = reason instanceof Error ? reason.message : '未知初始化错误'
+  reactRoot.render(
+    <main className="startupError" role="alert">
+      <AlertCircle aria-hidden="true" />
+      <h1>应用初始化失败</h1>
+      <p>{message}</p>
+      <button type="button" onClick={() => window.location.reload()}>
+        <RefreshCw aria-hidden="true" />
+        重新加载
+      </button>
+    </main>
+  )
+}
+
+void renderApplication().catch(renderStartupError)
+
+function installGlobalErrorLogging(): void {
+  window.addEventListener('error', (event) => {
+    logger.error('Unhandled renderer error', event.error, {
+      filename: event.filename,
+      lineNumber: event.lineno,
+      columnNumber: event.colno,
+      url: window.location.href
+    })
+  })
+
+  window.addEventListener('unhandledrejection', (event) => {
+    logger.error('Unhandled renderer promise rejection', event.reason, {
+      url: window.location.href
+    })
+  })
+}
+
+function serializeReason(reason: unknown): string {
+  return reason instanceof Error ? `${reason.name}: ${reason.message}` : String(reason)
+}

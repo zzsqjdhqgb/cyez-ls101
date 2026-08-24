@@ -1,0 +1,26 @@
+{
+  "format": "ls101.qwen-tts-voice-design",
+  "formatVersion": 1,
+  "voice": {
+    "id": "american-man",
+    "name": "American English Man",
+    "speakerEmbedding": "../voices/american-man.spk",
+    "speakerEmbeddingSha256": "1beba50ff1d84c79b9ff9e29989ba8bcf7af2df6ccbe9a0b5efeeb9e61b290b8"
+  },
+  "source": {
+    "model": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "revision": "5ecdb67327fd37bb2e042aab12ff7391903235d3",
+    "language": "English",
+    "seed": 20260818,
+    "device": "cpu",
+    "dtype": "bfloat16",
+    "audio": {
+      "file": "american-man.wav",
+      "sampleRate": 24000,
+      "durationSeconds": 9.52,
+      "sha256": "1ae5ac5b80ba218a08441f623896368db080af2a47250fe979e7950b08ca7a66"
+    },
+    "text": "Good morning. The library opens at eight thirty, and today's workshop begins just after nine. Please bring your notes, ask clear questions, and take your time.",
+    "instruct": "A native English-speaking adult man with a neutral General American accent. His voice is clear, warm, composed, and articulate, with a natural medium-low pitch, conversational pacing, subtle expressiveness, and no theatrical or regional affectation. Studio-quality delivery."
+  }
+}

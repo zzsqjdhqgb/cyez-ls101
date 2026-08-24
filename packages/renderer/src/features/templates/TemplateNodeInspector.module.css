@@ -1,0 +1,240 @@
+.nodeEditor {
+  display: grid;
+  gap: 14px;
+}
+
+.nodeEditor label,
+.expression,
+.compactExpression {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+}
+
+.nodeEditor label {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.nodeEditor input,
+.nodeEditor textarea,
+.nodeEditor select {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font: 13px/1.4 var(--font-ui);
+}
+
+.nodeEditor textarea {
+  min-height: 64px;
+  resize: vertical;
+}
+
+.nodeEditor input:focus,
+.nodeEditor textarea:focus,
+.nodeEditor select:focus {
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 0;
+}
+
+.fieldLabel,
+.groupHeading {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.checkField {
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  color: var(--color-text-strong) !important;
+}
+
+.checkField input {
+  width: 16px !important;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+.fieldGroup,
+.itemList {
+  display: grid;
+  gap: 7px;
+}
+
+.groupHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.validCount {
+  color: var(--color-success, #237a42);
+}
+
+.invalidCount {
+  color: var(--color-danger);
+}
+
+.editorItem,
+.compactItem {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-subtle);
+}
+
+.editorItem {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+}
+
+.compactItem {
+  display: grid;
+  grid-template-columns: minmax(62px, 1fr) 64px auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+}
+
+.itemIndex {
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.numberInput {
+  min-width: 0;
+}
+
+.itemToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.itemToolbar strong {
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.listActions,
+.commandRow,
+.verticalActions {
+  display: flex;
+  gap: 4px;
+}
+
+.commandRow {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.verticalActions {
+  flex-direction: column;
+}
+
+.addButton {
+  justify-self: start;
+}
+
+.compactExpression textarea {
+  min-height: 46px;
+}
+
+.compactChoiceEditor {
+  gap: 8px;
+}
+
+.compactVariableEditor {
+  grid-template-columns: minmax(100px, 0.8fr) 86px minmax(150px, 1.5fr);
+  align-items: end;
+  gap: 8px;
+}
+
+.compactVariableEditor input,
+.compactVariableEditor select {
+  min-height: 26px;
+  padding: 3px 7px;
+  font-size: 11px;
+}
+
+.compactVariableEditor label,
+.compactVariableEditor .fieldLabel {
+  font-size: 10px;
+}
+
+.compactChoiceEditor > label,
+.compactChoiceEditor > .expression {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.compactChoiceEditor > label,
+.compactChoiceEditor .fieldLabel,
+.compactChoiceEditor .groupHeading {
+  font-size: 10px;
+}
+
+.compactChoiceEditor input,
+.compactChoiceEditor textarea {
+  min-height: 26px;
+  padding: 3px 7px;
+  font-size: 11px;
+}
+
+.compactChoiceOption {
+  position: relative;
+  gap: 5px;
+  padding: 6px;
+}
+
+.compactChoiceOption .itemToolbar strong {
+  font-size: 11px;
+}
+
+.compactChoiceOption .compactExpression {
+  grid-template-columns: 68px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.compactChoiceEditor .addButton {
+  min-height: 26px;
+  padding: 3px 8px;
+  font-size: 10px;
+}
+
+.emptyValue {
+  margin: 0;
+  padding: 12px;
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle);
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .compactVariableEditor {
+    grid-template-columns: 1fr;
+  }
+  .compactItem {
+    grid-template-columns: minmax(0, 1fr) 64px;
+  }
+
+  .compactItem .listActions {
+    grid-column: 1 / -1;
+  }
+}

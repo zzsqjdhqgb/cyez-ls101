@@ -10,7 +10,7 @@
 // It mirrors the reference code pattern provided by the User.
 //
 // Options:
-//   --model-dir <path>  Custom path to assets/stt directory (tests paths with spaces, etc.)
+//   --model-dir <path>  Custom path to externals/ai/stt/model (tests paths with spaces, etc.)
 
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/explicit-function-return-type */
 const { existsSync, unlinkSync } = require('node:fs')
@@ -29,18 +29,18 @@ function resolveAssetsDir(argv) {
     argv.splice(idx, 2)
     return dir
   }
-  return join(__dirname, '..', 'assets', 'stt')
+  return join(__dirname, '..', 'externals', 'ai', 'stt', 'model')
 }
 
 const ASSETS_DIR = resolveAssetsDir(process.argv)
-const whisperDir = join(ASSETS_DIR, 'sherpa-onnx-whisper-small.en')
+const qwen3AsrDir = join(ASSETS_DIR, 'sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25')
 const sileroPath = join(ASSETS_DIR, 'silero_vad.onnx')
 
 function checkModels() {
   const files = [
-    join(whisperDir, 'small.en-encoder.int8.onnx'),
-    join(whisperDir, 'small.en-decoder.int8.onnx'),
-    join(whisperDir, 'small.en-tokens.txt'),
+    join(qwen3AsrDir, 'conv_frontend.onnx'),
+    join(qwen3AsrDir, 'encoder.int8.onnx'),
+    join(qwen3AsrDir, 'decoder.int8.onnx'),
     sileroPath
   ]
   let ok = true
@@ -49,6 +49,11 @@ function checkModels() {
       console.error(`MISSING: ${f}`)
       ok = false
     }
+  }
+  const tokenizerDir = join(qwen3AsrDir, 'tokenizer')
+  if (!existsSync(tokenizerDir)) {
+    console.error(`MISSING: ${tokenizerDir}`)
+    ok = false
   }
   if (!ok) {
     console.error('\nPlease run: node scripts/download-stt-models.js')
@@ -64,14 +69,17 @@ function createRecognizer() {
       featureDim: 80
     },
     modelConfig: {
-      whisper: {
-        encoder: join(whisperDir, 'small.en-encoder.int8.onnx'),
-        decoder: join(whisperDir, 'small.en-decoder.int8.onnx')
+      qwen3Asr: {
+        convFrontend: join(qwen3AsrDir, 'conv_frontend.onnx'),
+        encoder: join(qwen3AsrDir, 'encoder.int8.onnx'),
+        decoder: join(qwen3AsrDir, 'decoder.int8.onnx'),
+        tokenizer: join(qwen3AsrDir, 'tokenizer'),
+        hotwords: ''
       },
-      tokens: join(whisperDir, 'small.en-tokens.txt'),
+      tokens: '',
       numThreads: 2,
       provider: 'cpu',
-      debug: 0
+      debug: 1
     }
   }
 
@@ -148,6 +156,7 @@ function convertToWav(inputPath) {
     const start = Date.now()
 
     const windowSize = vad.config.sileroVad.windowSize
+    const speechSegments = []
     for (let i = 0; i < wave.samples.length; i += windowSize) {
       const thisWindow = wave.samples.subarray(i, i + windowSize)
       vad.acceptWaveform(thisWindow)
@@ -155,25 +164,10 @@ function convertToWav(inputPath) {
       while (!vad.isEmpty()) {
         const segment = vad.front()
         vad.pop()
-
-        let start_time = segment.start / wave.sampleRate
-        let end_time = start_time + segment.samples.length / wave.sampleRate
-
-        start_time = start_time.toFixed(2)
-        end_time = end_time.toFixed(2)
-
-        const stream = recognizer.createStream()
-        stream.acceptWaveform({
+        speechSegments.push({
           samples: segment.samples,
-          sampleRate: wave.sampleRate
+          startSample: segment.start
         })
-
-        recognizer.decode(stream)
-        const r = recognizer.getResult(stream)
-        if (r.text.length > 0) {
-          const text = r.text.toLowerCase().trim()
-          console.log(`${start_time} -- ${end_time}: ${text}`)
-        }
       }
     }
 
@@ -182,25 +176,105 @@ function convertToWav(inputPath) {
     while (!vad.isEmpty()) {
       const segment = vad.front()
       vad.pop()
+      speechSegments.push({
+        samples: segment.samples,
+        startSample: segment.start
+      })
+    }
 
-      let start_time = segment.start / wave.sampleRate
-      let end_time = start_time + segment.samples.length / wave.sampleRate
+    // Build contiguous timeline: interleave speech and silence, covering entire audio
+    const timeline = []
+    let cursor = 0
 
-      start_time = start_time.toFixed(2)
-      end_time = end_time.toFixed(2)
+    for (const seg of speechSegments) {
+      if (seg.startSample > cursor) {
+        timeline.push({
+          samples: wave.samples.subarray(cursor, seg.startSample),
+          startSample: cursor,
+          endSample: seg.startSample,
+          kind: 'silence'
+        })
+      }
+      timeline.push({
+        samples: seg.samples,
+        startSample: seg.startSample,
+        endSample: seg.startSample + seg.samples.length,
+        kind: 'speech'
+      })
+      cursor = seg.startSample + seg.samples.length
+    }
 
+    if (cursor < wave.samples.length) {
+      timeline.push({
+        samples: wave.samples.subarray(cursor),
+        startSample: cursor,
+        endSample: wave.samples.length,
+        kind: 'silence'
+      })
+    }
+
+    // Log timeline
+    for (const entry of timeline) {
+      const s = entry.startSample / wave.sampleRate
+      const e = entry.endSample / wave.sampleRate
+      console.log(
+        `[VAD] ${entry.kind}: ${s.toFixed(2)}s - ${e.toFixed(2)}s (${(e - s).toFixed(2)}s)`
+      )
+    }
+
+    // Greedy merge contiguous timeline entries, max 30s per chunk
+    const MAX_MERGE_DURATION = 30
+    const chunks = []
+    let buf = null
+    let bufStart = 0
+    let bufEnd = 0
+
+    for (const entry of timeline) {
+      const bufDuration = buf ? buf.length / wave.sampleRate : 0
+      const entryDuration = (entry.endSample - entry.startSample) / wave.sampleRate
+
+      if (bufDuration + entryDuration <= MAX_MERGE_DURATION) {
+        if (!buf) {
+          bufStart = entry.startSample
+          buf = new Float32Array(entry.samples)
+        } else {
+          const combined = new Float32Array(buf.length + entry.samples.length)
+          combined.set(buf)
+          combined.set(entry.samples, buf.length)
+          buf = combined
+        }
+        bufEnd = entry.endSample
+      } else {
+        if (buf) {
+          chunks.push({ samples: buf, startSample: bufStart, endSample: bufEnd })
+        }
+        buf = new Float32Array(entry.samples)
+        bufStart = entry.startSample
+        bufEnd = entry.endSample
+      }
+    }
+    if (buf) {
+      chunks.push({ samples: buf, startSample: bufStart, endSample: bufEnd })
+    }
+
+    console.log(`Timeline entries: ${timeline.length}, chunks: ${chunks.length}`)
+
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i]
       const stream = recognizer.createStream()
       stream.acceptWaveform({
-        samples: segment.samples,
+        samples: chunk.samples,
         sampleRate: wave.sampleRate
       })
 
       recognizer.decode(stream)
       const r = recognizer.getResult(stream)
-      if (r.text.length > 0) {
-        const text = r.text.toLowerCase().trim()
-        console.log(`${start_time} -- ${end_time}: ${text}`)
-      }
+      const text = r.text.trim()
+      const s = chunk.startSample / wave.sampleRate
+      const e = chunk.endSample / wave.sampleRate
+      console.log(
+        `[ASR] chunk #${i + 1}: ${s.toFixed(2)}s - ${e.toFixed(2)}s (${(e - s).toFixed(2)}s) "${text}"`
+      )
     }
 
     const stop = Date.now()

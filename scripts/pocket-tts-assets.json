@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "modelId": "kyutai/pocket-tts-without-voice-cloning",
+  "revision": "e041936c75475d350b405bc870bcf7c22da4e9e6",
+  "sourceApi": "https://huggingface.co/api/models/kyutai/pocket-tts-without-voice-cloning?blobs=true",
+  "files": [
+    {
+      "remote": "tokenizer.model",
+      "path": "tokenizer.model",
+      "size": 59339,
+      "sha256": "d461765ae179566678c93091c5fa6f2984c31bbe990bf1aa62d92c64d91bc3f6"
+    },
+    {
+      "remote": "tts_b6369a24.safetensors",
+      "path": "model.safetensors",
+      "size": 235738732,
+      "sha256": "58aa704a88faad35f22c34ea1cb55c4c5629de8b8e035c6e4936e2673dc07617"
+    },
+    {
+      "remote": "embeddings_v2/alba.safetensors",
+      "path": "voices/alba.safetensors",
+      "size": 6148328,
+      "sha256": "413fc94e6bd73e1b6f25e850b25652f5163e41d92a403954f86cbbedd0c414d1"
+    },
+    {
+      "remote": "embeddings_v2/marius.safetensors",
+      "path": "voices/marius.safetensors",
+      "size": 6148328,
+      "sha256": "c227d8f12a07af0e76b5e59fd30d86cbb7d31df1e23662f8a412ef417244ea67"
+    },
+    {
+      "remote": "embeddings_v2/javert.safetensors",
+      "path": "voices/javert.safetensors",
+      "size": 6148328,
+      "sha256": "7740a9b0caa6be2f47b049d2c507a1e579ae3ecd4787ab744ad39636ac24c001"
+    },
+    {
+      "remote": "embeddings_v2/fantine.safetensors",
+      "path": "voices/fantine.safetensors",
+      "size": 6492560,
+      "sha256": "6d9478d276b583ce0304824ff264cd9e09cb03db175f780232fe4ebb2fa8f533"
+    },
+    {
+      "remote": "embeddings_v2/cosette.safetensors",
+      "path": "voices/cosette.safetensors",
+      "size": 6148328,
+      "sha256": "026d596b666026d31276157f0c0f7923142d1c3b432cc69f783407e1a7950f26"
+    },
+    {
+      "remote": "embeddings_v2/eponine.safetensors",
+      "path": "voices/eponine.safetensors",
+      "size": 6885968,
+      "sha256": "727b29fabec8c982988f0194da54796afae638b934e10d812091c878b1f02331"
+    },
+    {
+      "remote": "embeddings_v2/azelma.safetensors",
+      "path": "voices/azelma.safetensors",
+      "size": 7918664,
+      "sha256": "dc5fa4e8dbfaa49f6670f3053de8c9deeaedde4900ef4e131d38df6a4e4303d6"
+    }
+  ]
+}

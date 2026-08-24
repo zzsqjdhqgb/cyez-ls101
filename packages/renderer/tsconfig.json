@@ -1,0 +1,30 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "jsx": "react-jsx",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "types": ["vite/client"]
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../core-types" },
+    { "path": "../logger" },
+    { "path": "../config-store" },
+    { "path": "../section-engine" },
+    { "path": "../airouter" },
+    { "path": "../editor-kit" },
+    { "path": "../exam-library" },
+    { "path": "../exam-player" },
+    { "path": "../exam-package" },
+    { "path": "../page-renderer" },
+    { "path": "../file-dialog" },
+    { "path": "../file-store" },
+    { "path": "../template-editor" },
+    { "path": "../interface-editor" },
+    { "path": "../schema-editor" },
+    { "path": "../submission-library" },
+    { "path": "../grading-engine" }
+  ]
+}

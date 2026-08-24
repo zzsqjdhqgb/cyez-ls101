@@ -1,0 +1,59 @@
+.button {
+  display: inline-grid;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  place-items: center;
+  color: var(--color-text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background-color 120ms ease,
+    transform 120ms ease;
+}
+
+.button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.small {
+  width: 30px;
+  height: 30px;
+}
+
+.medium {
+  width: 36px;
+  height: 36px;
+}
+
+.default {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+.default:hover:not(:disabled),
+.ghost:hover:not(:disabled) {
+  color: var(--color-text-strong);
+  background: var(--color-surface-hover);
+  transform: translateY(-1px);
+}
+
+.default:active:not(:disabled),
+.ghost:active:not(:disabled) {
+  background: var(--color-surface-pressed);
+}
+
+.danger {
+  color: var(--color-danger);
+}
+
+.danger:hover:not(:disabled) {
+  background: var(--color-danger-soft);
+}
+
+.button:disabled {
+  opacity: 0.42;
+}

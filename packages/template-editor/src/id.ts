@@ -1,0 +1,217 @@
+import stableStringify from 'fast-json-stable-stringify'
+import type {
+  BuiltinTemplateRelease,
+  DslEditorState,
+  FunctionContent,
+  FunctionDef,
+  FunctionDocument,
+  FunctionLibraryContent,
+  FunctionLibraryRelease,
+  LocalFunctionLibraryDocument,
+  TemplateContent,
+  TemplateDocument,
+  TemplateResources
+} from './types'
+import { normalizeTemplateTags } from './tags'
+
+const CONTENT_ID_PATTERN = /^sha256:[0-9a-f]{64}$/
+
+export function createTemplateId(): string {
+  return crypto.randomUUID()
+}
+
+export function createFunctionId(): string {
+  return crypto.randomUUID()
+}
+
+export function createFunctionLibraryId(): string {
+  return crypto.randomUUID()
+}
+
+export function createTemplateDocument(
+  content: TemplateContent,
+  resources: TemplateResources = { functions: [] },
+  editorState: DslEditorState = {}
+): TemplateDocument {
+  return {
+    templateId: createTemplateId(),
+    revision: 0,
+    content: { ...structuredClone(content), tags: normalizeTemplateTags(content.tags) },
+    resources: structuredClone(resources),
+    editorState: structuredClone(editorState)
+  }
+}
+
+export function createFunctionDocument(
+  content: FunctionContent,
+  editorState: DslEditorState = {}
+): FunctionDocument {
+  return {
+    functionId: createFunctionId(),
+    content: structuredClone(content),
+    editorState: structuredClone(editorState)
+  }
+}
+
+export function createLocalFunctionLibraryDocument(
+  name = '',
+  editorState: LocalFunctionLibraryDocument['editorState'] = { library: {}, functions: {} }
+): LocalFunctionLibraryDocument {
+  return {
+    libraryId: createFunctionLibraryId(),
+    revision: 0,
+    storageRevision: 0,
+    content: { name, functions: [] },
+    editorState: structuredClone(editorState)
+  }
+}
+
+/** 为已经改写完嵌套 functionRef 的函数快照计算内容 ID。 */
+export async function deriveFunctionResourceId(content: FunctionContent): Promise<string> {
+  const bytes = new TextEncoder().encode(canonicalizeFunctionContent(content))
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join(
+    ''
+  )
+  return `sha256:${hex}`
+}
+
+export async function createFunctionResource(content: FunctionContent): Promise<FunctionDef> {
+  const copy = structuredClone(content)
+  return { ...copy, id: await deriveFunctionResourceId(copy) }
+}
+
+export async function verifyFunctionResourceId(resource: FunctionDef): Promise<boolean> {
+  return (
+    isFunctionResourceId(resource.id) && resource.id === (await deriveFunctionResourceId(resource))
+  )
+}
+
+export function isFunctionResourceId(value: string): boolean {
+  return CONTENT_ID_PATTERN.test(value)
+}
+
+export function canonicalizeFunctionContent(content: FunctionContent): string {
+  return stableStringify(
+    normalizeCanonicalValue({
+      name: content.name,
+      inputs: content.inputs,
+      body: content.body,
+      outputs: content.outputs,
+      schemaUses: content.schemaUses
+    })
+  )
+}
+
+export function canonicalizeFunctionLibraryContent(content: FunctionLibraryContent): string {
+  return stableStringify(
+    normalizeCanonicalValue({
+      name: content.name,
+      functions: [...content.functions]
+        .sort((left, right) => left.functionId.localeCompare(right.functionId))
+        .map((entry) => ({
+          functionId: entry.functionId,
+          ...(entry.exposed === false ? { exposed: false } : {}),
+          content: JSON.parse(canonicalizeFunctionContent(entry.content)) as unknown
+        }))
+    })
+  )
+}
+
+export async function deriveFunctionLibraryContentHash(
+  content: FunctionLibraryContent
+): Promise<string> {
+  const bytes = new TextEncoder().encode(canonicalizeFunctionLibraryContent(content))
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join(
+    ''
+  )
+  return `sha256:${hex}`
+}
+
+export async function createFunctionLibraryRelease(
+  libraryId: string,
+  version: number,
+  content: FunctionLibraryContent
+): Promise<FunctionLibraryRelease> {
+  const copy = structuredClone(content)
+  return {
+    libraryId,
+    version,
+    contentHash: await deriveFunctionLibraryContentHash(copy),
+    content: copy
+  }
+}
+
+export async function verifyFunctionLibraryRelease(
+  release: FunctionLibraryRelease
+): Promise<boolean> {
+  return release.contentHash === (await deriveFunctionLibraryContentHash(release.content))
+}
+
+export function canonicalizeBuiltinTemplateDocument(
+  document: BuiltinTemplateRelease['document']
+): string {
+  return stableStringify(
+    normalizeCanonicalValue({
+      content: document.content,
+      resources: {
+        functions: [...document.resources.functions].sort((left, right) =>
+          left.id.localeCompare(right.id)
+        )
+      },
+      editorState: document.editorState
+    })
+  )
+}
+
+export async function deriveBuiltinTemplateReleaseHash(
+  document: BuiltinTemplateRelease['document']
+): Promise<string> {
+  const bytes = new TextEncoder().encode(canonicalizeBuiltinTemplateDocument(document))
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join(
+    ''
+  )
+  return `sha256:${hex}`
+}
+
+export async function createBuiltinTemplateRelease(
+  templateId: string,
+  version: number,
+  document: BuiltinTemplateRelease['document']
+): Promise<BuiltinTemplateRelease> {
+  const copy = structuredClone(document)
+  return {
+    templateId,
+    version,
+    releaseHash: await deriveBuiltinTemplateReleaseHash(copy),
+    document: copy
+  }
+}
+
+export async function verifyBuiltinTemplateRelease(
+  release: BuiltinTemplateRelease
+): Promise<boolean> {
+  return release.releaseHash === (await deriveBuiltinTemplateReleaseHash(release.document))
+}
+
+function normalizeCanonicalValue(value: unknown): unknown {
+  if (typeof value === 'string') return value.replace(/\r\n?/g, '\n').normalize('NFC')
+  if (Array.isArray(value)) return value.map(normalizeCanonicalValue)
+
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        normalizeText(key),
+        normalizeCanonicalValue(entry)
+      ])
+    )
+  }
+
+  return value
+}
+
+function normalizeText(value: string): string {
+  return value.replace(/\r\n?/g, '\n').normalize('NFC')
+}

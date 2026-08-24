@@ -1,0 +1,96 @@
+.markdown {
+  min-width: 0;
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3 {
+  color: var(--color-text-strong);
+  line-height: 1.35;
+}
+
+.markdown h1 {
+  margin: 0 0 20px;
+  font-size: 23px;
+}
+
+.markdown h2 {
+  margin: 28px 0 12px;
+  font-size: 18px;
+}
+
+.markdown h3 {
+  margin: 20px 0 8px;
+  font-size: 15px;
+}
+
+.markdown p,
+.markdown ul,
+.markdown ol,
+.markdown blockquote {
+  margin: 8px 0;
+}
+
+.markdown ul,
+.markdown ol {
+  padding-left: 24px;
+}
+
+.markdown blockquote {
+  padding: 8px 14px;
+  border-left: 3px solid var(--color-border-strong);
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle);
+}
+
+.markdown table {
+  width: 100%;
+  margin: 12px 0 20px;
+  border-collapse: collapse;
+}
+
+.markdown th,
+.markdown td {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border-strong);
+  text-align: left;
+}
+
+.markdown th {
+  color: var(--color-text-strong);
+  background: var(--color-surface-subtle);
+  font-weight: 650;
+}
+
+.markdown hr {
+  margin: 24px 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.markdown img {
+  display: block;
+  max-width: 100%;
+  max-height: 420px;
+  margin: 12px auto;
+  object-fit: contain;
+}
+
+.markdown code {
+  padding: 1px 4px;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-subtle);
+  font-size: 0.92em;
+}

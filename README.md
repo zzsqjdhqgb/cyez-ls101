@@ -5,280 +5,151 @@
 
 # 曹二听说101
 
-基于 Electron + React + TypeScript 的英语听说考试系统，支持多媒体播放、录音、草稿编辑、模板管理、批改评分等功能。
+基于 Electron、React 和 TypeScript 的英语听说考试工具，覆盖内容准备、试卷生成、考试作答、语音处理和批改结算。
 
-## 核心功能
+> **项目状态：概念验证（PoC）**
+>
+> 当前版本仍在快速迭代，数据格式、界面和运行时依赖可能变化。软件不是稳定的公开发行版；请在受控环境中使用，并先备份重要数据。项目目前不接受外部代码贡献，参见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-- **多媒体试卷播放**：支持文本、图片、音频、视频、四宫格图片等多种内容类型
-- **三种时间控制模式**：倒计时准备、自动录音、媒体播放控制
-- **试卷模板与草稿系统**：基于模板创建草稿，填写文本/上传文件，一键导出完整考试包
-- **离线语音合成（TTS）**：内置 Pocket TTS 引擎（WASM），无需网络，7 种英语音色
-- **录音功能**：考试过程中自动录音，录音前后有提示音
-- **批改系统**：导入作答包 → 分项评分 → 结算 → 导出 CSV/PDF 批改报告
-- **自适应缩放**：固定 3:2 比例（1200×800 设计尺寸），在任何窗口大小下等比缩放
-- **试卷格式校验**：内置结构合法性检查及资源文件存在性验证
-- **开发者模式**：题目序号显示、跳过按钮、F12 DevTools、数据重置等功能
+## 功能概览
+
+- 试卷和模板：编辑题型、模板、函数库和评分单元，生成可运行的 .lsexam 试卷包
+- 考试作答：播放文本、图片、音频和视频，支持倒计时、录音、回放和作答包导出
+- 语音能力：内置 Pocket TTS；可安装 Qwen TTS、Qwen3 ASR 和发音评测扩展包
+- 批改结算：导入 .lssubmission 作答包，进行人工或 AI 评分，结算批次并导出结果
+- 本地数据：业务数据可放在受管理的自定义目录，应用通过 sandbox、preload 和 IPC 隔离系统访问
 
 ## 技术栈
 
-| 类别 | 技术 | 版本 |
-|------|------|------|
-| 前端框架 | React + TypeScript | 19 |
-| 桌面框架 | Electron | 39 |
-| 构建工具 | electron-vite + Vite | 5.0 / 7.2 |
-| 代码规范 | ESLint 9 + Prettier 3 | |
-| 打包分发 | electron-builder | 26 |
-| TTS 引擎 | Pocket TTS (WASM) | 本地离线 |
+| 类别     | 技术                               |
+| -------- | ---------------------------------- |
+| 桌面应用 | Electron 39                        |
+| 前端     | React 19 + TypeScript              |
+| 构建     | electron-vite + Vite 7             |
+| 打包     | electron-builder 26                |
+| 测试     | Vitest + Playwright                |
+| 包管理   | Yarn 4.15.0（Node-modules linker） |
 
 ## 环境要求
 
-- Node.js >= 18
-- pnpm
+- Node.js 24（CI 和发行构建使用的版本）
+- Corepack，以及可访问模型下载源的网络环境
+- Linux 无桌面环境运行 Electron 测试时需要 xvfb
 
-## 快速开始
+## 开始使用
 
-### 1. 安装依赖
-
-```bash
-pnpm install
-```
-
-此命令会自动执行以下初始化任务：
-- 下载 TTS 模型文件
-- 下载开发者头像
-- 从 `resources/file-icons/*.png` 生成对应 `.ico` 文件
-
-### 2. 下载 TTS 模型文件（可选，但不下载则 TTS 功能不可用）
+启用项目指定的 Yarn 版本并安装依赖：
 
 ```bash
-node scripts/download-tts-assets.js
+corepack enable
+corepack prepare yarn@4.15.0 --activate
+yarn install
 ```
 
-### 3. 启动开发服务器
+安装后的 setup 会校验或下载模型、运行时和图标资源。需要单独重新执行时：
 
 ```bash
-pnpm dev
+yarn setup
 ```
 
-### 4. 预览构建产物
+资产首次通过完整 SHA-256 校验后，后续 setup 使用文件类型、大小和文件系统指纹进行快速自检；
+文件或目录被替换、改写、截断或混入额外文件时，会自动退化为完整哈希校验并恢复受影响的
+资产。需要主动重算所有本地哈希或核对固定清单与上游元数据时，可分别运行：
 
 ```bash
-pnpm start
+yarn setup --verify
+yarn setup --verify-upstream
 ```
+
+启动开发环境：
+
+```bash
+yarn dev
+```
+
+Linux 容器或无桌面环境可使用：
+
+```bash
+yarn dev:docker
+```
+
+## 测试
+
+常用分层测试命令：
+
+```bash
+yarn lint
+yarn typecheck
+yarn test:scripts
+yarn test:vitest
+```
+
+Electron、renderer 组件和产品文档测试需要打包应用；Linux 无桌面环境应通过 Xvfb 运行：
+
+```bash
+xvfb-run -a yarn test:smoke
+xvfb-run -a yarn test:playwright
+xvfb-run -a yarn test:product-docs:run
+```
+
+完整测试入口是 `yarn test`。测试说明和失败产物位置见 [docs/testing.md](docs/testing.md)。
+
+## 构建和分发
+
+```bash
+yarn build:test       # 当前平台 unpacked 测试包，不生成外部分发模型包
+yarn build:win        # Windows 安装包
+yarn build:linux      # Linux AppImage、Snap 和 deb
+yarn build:release    # 发行构建流程
+yarn start            # 预览已构建的 Electron 产物
+```
+
+输出位于 `dist/`。模型包和原生运行时资产可能需要额外下载，构建脚本会在缺少或校验失败时终止。发行流程的分支约定是先验证 `dev`，再合入 `main`，最后从目标版本提交创建 `vX.Y.Z` 标签。
 
 ## 项目结构
 
-```
-├── assets/                     # TTS 模型文件（需通过脚本下载）
-│   ├── tts_b6369a24.safetensors
-│   ├── tokenizer.model
-│   └── embeddings_v2/          # 7 种音色嵌入向量
-├── build/
-│   ├── icon.png                # 应用图标
-│   └── icon.icns               # macOS 应用图标
-├── exams/                      # 预置考试包（首次启动复制到 userData）
-├── templates/                  # 预置模板（首次启动复制到 userData）
-├── resources/
-│   ├── icon.png                # 备用应用图标
-│   ├── file-icons/             # 文件类型图标（.png 源文件在 git，.ico/.icns 生成后 gitignore）
-│   ├── media/                  # 内置媒体资源（提示音、头像）
-│   └── tts/                    # TTS WASM 运行时
-├── scripts/                    # 辅助脚本
-│   ├── download-tts-assets.js  # 下载 TTS 模型文件
-│   ├── setup.js               # 统一下载模型 & 生成图标入口
-│   ├── generate-icons.js       # 从 PNG 生成 ICO 文件图标
-│   ├── generate_exam.py        # （旧版）MiniMax API 生成试卷
-│   └── insert_ready_and_stop.py # （旧版）插入录音提示音
-├── src/
-│   ├── main/                   # Electron 主进程
-│   │   ├── index.ts            # 入口，初始化、协议注册、文件关联
-│   │   ├── win.ts              # 窗口管理
-│   │   ├── utils.ts            # 文件系统工具函数
-│   │   ├── utils/
-│   │   │   └── file-association.ts  # 文件扩展名注册/移除
-│   │   ├── ipc/                # IPC 处理器
-│   │   │   ├── app.ts          # 应用级 IPC（双击打开文件导入）
-│   │   │   ├── exam.ts         # 考试管理
-│   │   │   ├── submission.ts   # 作答管理
-│   │   │   ├── template.ts     # 模板管理
-│   │   │   ├── draft/          # 草稿管理（管理/导出/传输）
-│   │   │   ├── grading.ts      # 批改管理
-│   │   │   └── dev.ts          # 开发者工具
-│   │   └── tts/
-│   │       └── tts.ts          # Pocket TTS 引擎封装
-│   ├── preload/                # 预加载脚本
-│   │   └── index.ts            # contextBridge 暴露 API
-│   ├── renderer/               # 渲染进程（React）
-│   │   └── src/
-│   │       ├── App.tsx          # 路由入口
-│   │       ├── types.ts         # 类型定义
-│   │       ├── hooks/           # 自定义 Hooks
-│   │       │   └── useOpenFileHandler.ts  # 双击打开文件处理
-│   │       ├── pages/           # 页面组件
-│   │       └── components/      # UI 组件
-│   └── shared/
-│       ├── file-types.ts       # 文件类型常量与工具函数
-│       └── validation.ts       # 试卷格式校验
-├── docs/                       # 文档
-│   ├── file-types.md           # 文件类型与扩展名规范
-│   ├── architecture.md         # 系统架构
-│   ├── exam-format.md          # 试卷格式规范
-│   ├── template-format.md      # 模板格式规范
-│   ├── grading-system.md       # 批改系统
-│   ├── data-storage.md         # 数据存储结构
-│   ├── tts-engine.md           # TTS 引擎
-│   ├── user-guide.md           # 用户使用手册
-│   ├── troubleshooting.md      # 常见问题排查
-│   └── testing-checklist.md    # 测试清单
-├── electron-builder.yml        # 打包配置
-├── package.json
-└── tsconfig.json
+```text
+src/main/                 Electron 主进程、IPC、协议和窗口管理
+src/preload/              contextBridge 预加载桥
+packages/                 领域包和 renderer（airouter、template-editor 等）
+resources/builtin/         随应用发布的内置题型、模板和评分单元
+resources/media/           提示音、头像等应用资源
+scripts/                  setup、模型下载、打包和校验脚本
+native/                   Qwen TTS 等原生运行时源码和补丁
+tests/integration/         打包 Electron 集成测试
+tests/components/          renderer 组件测试
+tests/product-docs/        产品行为和文档测试
+docs/                      工程文档与产品使用指南
+electron-builder.yml       安装包、文件关联和额外资源配置
 ```
 
-## 文件类型与扩展名
+## 文件格式
 
-本应用使用自定义文件扩展名标识不同类型的交换文件。所有自定义文件内部均为标准 ZIP 格式，数据读取与写入由 `adm-zip` 处理。
+应用使用 ZIP 容器保存可交换文件，并通过扩展名区分用途：
 
-| 扩展名 | 用途 | 模块 |
-|--------|------|------|
-| `.cyexam` | 考试包 | 考试管理 |
-| `.cytmpl` | 模板包 | 创建试卷 > 模板 |
-| `.cydraft` | 草稿包 | 创建试卷 > 草稿 |
-| `.cysubm` | 作答包 | 作答列表 / 批改管理 |
+| 扩展名        | 用途                 |
+| ------------- | -------------------- |
+| .lsexam       | 试卷包               |
+| .lsinterface  | 题型定义和题组交换包 |
+| .lstemplate   | 试卷模板工作文档     |
+| .lsfunclib    | 模板函数库发布包     |
+| .lsschema     | 评分单元定义         |
+| .lssubmission | 考生作答包           |
 
-文件扩展名在安装时由 `electron-builder` 写入系统关联，启动时由 `src/main/utils/file-association.ts` 补充注册。文件图标在 `pnpm install` 时由 `scripts/generate-icons.js` 自动生成（PNG → ICO）。
+AI 模型、TTS runtime 和发音评测扩展使用带 manifest 和校验信息的 ZIP 包；它们不应直接放入 Git 管理的源码目录。
 
-详见：[文件类型与扩展名文档 (docs/file-types.md)](docs/file-types.md)
+## 文档
 
-## 试卷格式
-
-试卷使用 JSON 格式定义，包含以下核心结构：
-
-```json
-{
-  "title": "考试标题",
-  "questions": [
-    {
-      "id": "1",
-      "content": [ /* 内容节点数组 */ ],
-      "time": { /* 时间控制 */ },
-      "statusText": "可选的状态栏文本"
-    }
-  ],
-  "gradingInfo": [ /* 可选：批改评分项 */ ]
-}
-```
-
-支持五种内容节点：`text`、`image`、`video`、`audio`、`quad-image`。
-三种时间控制模式：`countdown`（倒计时）、`record`（录音）、`content-controlled`（内容控制）。
-
-详细的格式规范请参阅：[试卷格式规范 (exam-format.md)](docs/exam-format.md)
-
-## 试卷模板
-
-模板通过占位符（`{{id}}`）定义可定制的试卷。用户基于模板创建草稿，填写文本、上传文件后导出标准考试包。模板中的 `audio` 节点在导出时自动通过内置 TTS 引擎合成音频。
-
-详见：[模板格式规范 (docs/template-format.md)](docs/template-format.md)
-
-## 时间控制模式说明
-
-### 倒计时（countdown）
-- 显示倒计时秒数，归零后自动进入下一题
-- 适用于准备阶段、审题阶段
-
-### 录音（record）
-- 显示录音进度条及剩余秒数
-- 播放"准备录音"提示音 → 开始录音 → 超时自动停止 → 播放"停止录音"提示音
-- 录音文件按 `recordIndex` 保存为 MP3
-
-### 内容控制（content-controlled）
-- 由音频/视频播放结束自动触发下一题
-- **必须且只能**包含一个视频或音频节点
-- 可同时包含文本、图片等辅助内容
-
-## 批改系统
-
-支持完整的批改工作流：
-1. **导入作答包**：教师导入学生提交的作答 ZIP，自动去重
-2. **分项评分**：按评分项逐一打分并撰写评语，通过分屏界面播放录音
-3. **结算**：全部打分完成后创建批次，计算总分
-4. **导出**：批次可导出为 CSV 表格或 PDF 报告
-
-详见：[批改系统文档 (docs/grading-system.md)](docs/grading-system.md)
-
-## 自定义资源协议
-
-应用使用自定义 Electron 协议加载本地资源，无需启动本地 HTTP 服务器：
-
-| 协议 | 用途 |
-|------|------|
-| `exam-resource://{eid}/` | 加载考试媒体资源 |
-| `grading-resource://{rid}/` | 加载批改相关资源（录音、试卷） |
-| `app-resource://` | 加载内置应用资源（提示音、头像） |
-
-所有协议均支持流式传输，绕过 CSP，并内置路径遍历防护。
-
-## 自适应缩放
-
-应用固定采用 **3:2** 设计比例（1200×800 像素），通过 CSS `transform: scale()` 实现内容缩放：
-- 在任意分辨率和窗口大小下保持内容比例不变
-- 多余空间用黑色背景填充
-- 所有文字、图片、按钮等元素自动等比缩放
-
-## TTS 引擎
-
-内置 Pocket TTS 语音合成引擎（WebAssembly），离线运行，支持 7 种英语音色（默认使用 alba）。合成参数：24000 Hz 采样率、PCM 16-bit、单声道 WAV 输出。
-
-详见：[TTS 引擎文档 (docs/tts-engine.md)](docs/tts-engine.md)
-
-## 可用脚本
-
-| 命令 | 说明 |
-|------|------|
-| `pnpm dev` | 启动开发服务器（热重载） |
-| `pnpm start` | 预览构建产物 |
-| `pnpm build` | 构建生产版本 |
-| `pnpm build:win` | 构建 Windows 安装包 |
-| `pnpm build:mac` | 构建 macOS 安装包 |
-| `pnpm build:linux` | 构建 Linux 安装包 |
-| `pnpm lint` | 运行 ESLint 检查 |
-| `pnpm lint:fix` | 自动修复 ESLint 问题 |
-| `pnpm format` | 使用 Prettier 格式化代码 |
-| `pnpm typecheck` | TypeScript 类型检查 |
-
-## 构建与分发
-
-| 平台 | 命令 | 产物格式 |
-|------|------|----------|
-| Windows | `pnpm build:win` | NSIS 安装包 |
-| macOS | `pnpm build:mac` | DMG |
-| Linux | `pnpm build:linux` | AppImage / Snap / deb |
-
-构建输出位于 `dist/` 目录。
-
-## 文档索引
-
-| 文档 | 说明 |
-|------|------|
-| [file-types.md](docs/file-types.md) | 文件类型与扩展名规范 |
-| [architecture.md](docs/architecture.md) | 系统架构概览 |
-| [exam-format.md](docs/exam-format.md) | 试卷格式规范 |
-| [template-format.md](docs/template-format.md) | 模板格式规范 |
-| [grading-system.md](docs/grading-system.md) | 批改系统 |
-| [data-storage.md](docs/data-storage.md) | 数据存储结构 |
-| [tts-engine.md](docs/tts-engine.md) | TTS 引擎 |
-| [user-guide.md](docs/user-guide.md) | 用户使用手册 |
-| [troubleshooting.md](docs/troubleshooting.md) | 常见问题排查 |
+- [docs/product/guide/README.md](docs/product/guide/README.md)：按内容准备、生成试卷、考试和批改组织的用户指南
+- [docs/testing.md](docs/testing.md)：测试分层、命令和诊断产物
+- [docs/engineering/testing/README.md](docs/engineering/testing/README.md)：Electron 测试维护约定
+- [docs/engineering/qwen-tts.md](docs/engineering/qwen-tts.md)：Qwen TTS runtime 和模型包
+- [docs/engineering/airouter-model-catalog.md](docs/engineering/airouter-model-catalog.md)：AI Router 模型目录
 
 ## 许可证
 
-Copyright (c) 2026 Haoting Ying (zzsqjdhqgb). All rights reserved.
-
-本软件为私有且机密。未经著作权人明确授权，严禁以任何媒介复制、修改或分发本软件。
+本项目为私有软件，使用限制和免责声明见根目录 [LICENSE](LICENSE)。未经著作权人明确授权，不得复制、修改、编译、运行或分发本项目及其编译产物。
 
 ## 第三方组件
 
-- **Pocket TTS**（MIT）：语音合成模型及 ONNX WASM 导出
-- **adm-zip**（MIT）：ZIP 压缩/解压
-- **marked**（MIT）：Markdown 转 HTML
-- **react-markdown + remark-gfm**（MIT）：React Markdown 渲染
+第三方许可证随发行包放在 thirdparty-licenses/。源码仓库中的许可证文件包括 Pocket TTS、Qwen TTS、GGML、语音识别和相关模型运行时的说明。

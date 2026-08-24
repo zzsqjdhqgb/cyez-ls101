@@ -1,0 +1,81 @@
+:root {
+  color-scheme: light;
+
+  --font-ui:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+
+  --color-canvas: #ffffff;
+  --color-sidebar: #fbfcfc;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f6f8f8;
+  --color-surface-hover: #f1f5f4;
+  --color-surface-pressed: #e9efee;
+  --color-border: #e7eaea;
+  --color-border-strong: #d7dcdc;
+
+  --color-text-strong: #171b1b;
+  --color-text: #3f4847;
+  --color-text-muted: #737e7c;
+  --color-text-faint: #9aa3a2;
+
+  --color-accent: #087c72;
+  --color-accent-hover: #06685f;
+  --color-accent-pressed: #05584f;
+  --color-accent-soft: #e8f4f2;
+  --color-accent-contrast: #ffffff;
+
+  --color-danger: #b42318;
+  --color-danger-hover: #961c13;
+  --color-danger-soft: #fef0ee;
+  --color-focus-ring: rgb(8 124 114 / 24%);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+
+  --shadow-popover: 0 8px 24px rgb(25 35 34 / 12%);
+
+  --titlebar-height: 44px;
+  --sidebar-width: 244px;
+  --sidebar-collapsed-width: 68px;
+  --content-max-width: 1180px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-canvas: #151918;
+  --color-sidebar: #181d1c;
+  --color-surface: #1d2322;
+  --color-surface-subtle: #222927;
+  --color-surface-hover: #28312f;
+  --color-surface-pressed: #303a38;
+  --color-border: #2d3533;
+  --color-border-strong: #3a4542;
+
+  --color-text-strong: #f1f5f4;
+  --color-text: #c8d0ce;
+  --color-text-muted: #98a4a1;
+  --color-text-faint: #74807d;
+
+  --color-accent: #55b8ac;
+  --color-accent-hover: #70c8bd;
+  --color-accent-pressed: #3e9f94;
+  --color-accent-soft: #1d3935;
+  --color-accent-contrast: #0f1d1b;
+
+  --color-danger: #ff8a80;
+  --color-danger-hover: #ffaaa3;
+  --color-danger-soft: #3b2422;
+  --color-focus-ring: rgb(85 184 172 / 30%);
+}

@@ -5,161 +5,68 @@
 
 # 自动化测试
 
-## 概述
+## 测试分层
 
-项目使用 **vitest 4.1.6** 作为测试框架，配合 `@testing-library/react`、`@testing-library/jest-dom` 和 `jsdom` 环境。配置定义在 `vitest.config.ts`，测试环境初始化在 `vitest.setup.ts`。
+项目使用四层自动化测试：
 
-### 运行测试
+- Vitest：包级单元测试和模块集成测试，覆盖领域逻辑、存储实现、renderer 组件和 IPC handler。
+- Playwright 浏览器组件测试：启动独立的 Vite renderer 测试页，直接操作真实浏览器中的 renderer 组件，覆盖语义、键盘、焦点、响应式布局和组件状态。
+- Playwright Electron 集成测试：启动构建产物并覆盖 main、sandbox preload、renderer 和持久化存储之间的调用链。
+- Playwright 产品文档测试：只覆盖已经确认的用户可见产品行为，并从成功运行的测试步骤和截图生成产品文档。
+
+Vitest 根配置在 `vitest.config.ts`，具体环境由各 workspace 的 `vitest.config.ts` 定义。React 测试使用 jsdom 和 `vitest.setup.ts` 中的 `@testing-library/jest-dom` matcher；Node 模块测试使用 node 环境。
+
+## 运行命令
 
 ```bash
-pnpm test          # 运行所有测试
-pnpm test:watch    # 监视模式
+yarn test                    # 依次运行 Vitest、技术回归 Playwright 和产品文档测试
+yarn test:vitest             # Vitest 单元测试和包级集成测试
+yarn test:playwright         # 目录打包当前平台应用，再运行 Electron 和 renderer 组件测试
+yarn test:playwright:run     # 复用已有目录打包产物，运行两套 Playwright 测试
+yarn test:playwright:electron # 仅运行 Electron 集成测试
+yarn test:playwright:components # 仅运行 renderer 组件测试
+yarn test:watch              # Vitest 监视模式
+yarn test:coverage           # Vitest 覆盖率
 ```
 
-## 测试配置
+Linux 无桌面环境需要虚拟显示服务：
 
-**`vitest.config.ts`**:
-- 环境：`jsdom`
-- 插件：`@vitejs/plugin-react`（JSX 转换）
-- 别名：`@renderer` → `src/renderer/src`
-- 排除：`node_modules`、`out/`、`.git/`
+```bash
+xvfb-run -a yarn test
+xvfb-run -a yarn test:playwright
+```
 
-**`vitest.setup.ts`**:
-- 引入 `@testing-library/jest-dom/vitest`（toBeInTheDocument 等自定义 matcher）
-- Mock `electron` 模块（ipcRenderer, app, BrowserWindow, contextBridge, net 等）
+产品行为文档测试保持独立配置和运行产物，也可以单独运行：
 
-## 测试文件总览
+```bash
+yarn test:product-docs
+xvfb-run -a yarn test:product-docs
+```
 
-10 个测试文件，共 **127 个测试用例**，全部通过。
+只有 `tests/product-docs/` 全部通过时，才会更新各产品模块或流程下的 `behaviors/`、按逻辑顺序组织的 [`docs/product/guide/`](product/guide/README.md) 和 `docs/product/coverage.md`。筛选运行只生成临时预览。
+完整的 `yarn test` 会在技术回归测试通过后复用已打包的 Electron 应用运行产品文档测试，不会重复构建应用。
 
-| # | 测试文件 | 测试数 | 模块 | 覆盖内容 |
-|---|----------|--------|------|----------|
-| 1 | `src/shared/__tests__/validation.test.ts` | 33 | shared/validation | validateExamPackage 全部验证规则 |
-| 2 | `src/main/__tests__/utils.test.ts` | 10 | main/utils | isSafeMediaPath 路径安全 |
-| 3 | `src/main/__tests__/utils-prefix.test.ts` | 7 | main/utils | prefixContentNodesForExam 协议前缀 |
-| 4 | `src/main/tts/__tests__/wav-encoder.test.ts` | 11 | main/tts | encodeWav WAV 编码 |
-| 5 | `src/main/tts/__tests__/tokenizer.test.ts` | 9 | main/tts | UnigramTokenizer 分词 |
-| 6 | `src/main/protocols/__tests__/factory.test.ts` | 11 | main/protocols | 协议工厂函数 |
-| 7 | `src/main/services/__tests__/template-service.test.ts` | 14 | main/services | 模板验证逻辑 |
-| 8 | `src/main/services/__tests__/grading-service.test.ts` | 8 | main/services | computeRid, records 加载/保存 |
-| 9 | `src/main/services/__tests__/grading-session.test.ts` | 9 | main/services | GradingSession 核心流程 |
-| 10 | `src/renderer/src/components/__tests__/Modal.test.tsx` | 15 | renderer/components | Modal 组件渲染和交互 |
+## Renderer 组件测试
 
----
+配置文件为 `playwright.components.config.ts`，测试位于 `tests/components/`。Playwright 会启动 `tests/components/vite.config.ts` 指向的独立 Vite 页面；测试页直接导入 `packages/renderer/src` 中的组件，不加载 Electron、preload 或真实持久化服务。
 
-## 各模块测试详情
+## Electron 集成测试
 
-### 1. validation.test.ts (33 tests)
+配置文件为 `playwright.config.ts`，测试位于 `tests/integration/`。`yarn test:playwright` 先调用 `build.js --dir --current-platform`，再直接启动 `dist/win-unpacked/CYEZ-LS101.exe` 或 `dist/linux-unpacked/cyez-ls101`。测试断言 `app.isPackaged`，不会使用开发 Electron 或 `out/` 入口。公共生命周期、数据隔离和维护规则参见[工程测试](./engineering/testing/README.md)。
 
-测试 `validateExamPackage()` 函数，覆盖共享验证层全部规则：
+## 测试产物
 
-- **根对象验证** (2): null、非对象输入
-- **questions 数组** (1): 缺失
-- **题目结构** (4): 非对象题目、缺少 id、缺少 content、缺少 time
-- **内容节点类型** (8): 无效 type、text 缺少 text、image 缺少 src、video 缺少 src、audio 缺少 src、audio 缺少 text、quad-image 非 4 图片、quad-image 正确 4 图片
-- **时间控制** (6): 无效 time type、countdown 缺少 seconds、record 缺少 duration、content-controlled 媒体数为 0/1/多个
-- **gradingInfo** (10): 非数组、id 非数字、id 跳跃、recordIndex 不匹配、recordIndex 重复、缺少 problemInfo、缺少 gradingInfo、fullScore 非正数、覆盖不完整、合法 gradingInfo
-- **合法试卷** (2): 最小合法试卷、完整 gradingInfo 试卷
+失败时 Playwright 会把截图、trace 和错误上下文写入 `test-results/`，HTML 报告写入 `playwright-report/`。这些目录已加入 `.gitignore`。
 
-### 2. utils.test.ts (10 tests)
+查看 trace：
 
-测试 `isSafeMediaPath()` 路径安全验证：
+```bash
+yarn playwright show-trace test-results/<test-name>/trace.zip
+```
 
-- 合法相对路径、子目录路径
-- 空字符串、非字符串、null
-- 绝对路径（`/`开头）、反斜杠开头
-- 路径遍历（`..`）、目录外路径、反向遍历
-- media 目录本身（边界）
+## 添加测试
 
-### 3. utils-prefix.test.ts (7 tests)
-
-测试 `prefixContentNodesForExam()` 协议前缀转换：
-
-- image/video/audio 节点的 src 前缀
-- quad-image 节点的 images 数组前缀
-- text 节点不变、无 src 节点不变
-- 不修改原始数组（不可变性）
-
-### 4. wav-encoder.test.ts (11 tests)
-
-测试 `encodeWav()` WAV 编码器：
-
-- RIFF 头部、WAVE 标识、fmt chunk、PCM format
-- 采样率、声道数、位深度
-- data chunk 和数据大小
-- 静音编码、非静音编码
-- 样本钳制、ByteRate 和 BlockAlign 计算
-
-### 5. tokenizer.test.ts (9 tests)
-
-测试 `UnigramTokenizer` 分词器：
-
-- protobuf 解码：单个 piece、多个 pieces
-- 分词：空文本、英文文本、带标点文本
-- 未知字符处理
-- 控制 token、边界 case
-
-### 6. factory.test.ts (11 tests)
-
-测试协议工厂函数：
-
-- `createSimpleProtocolHandler` 基本路径服务
-- `createResourceProtocolHandler` ID 提取和路径构建
-- 空 URL、无斜杠 URL
-- 子目录请求
-- 路径遍历防护（禁止访问基准目录外部）
-
-### 7. template-service.test.ts (14 tests)
-
-测试模板验证逻辑：
-
-- ID 唯一性、fileName 重复
-- 占位符完整性（引用未定义、定义了未引用）
-- audio 节点验证（缺少 text、缺少 src）
-- 文件引用完整性
-- 边界情况
-
-### 8. grading-service.test.ts (8 tests)
-
-测试批改数据导入模块：
-
-- `computeRid` 的确定性（相同输入产生相同 RID）
-- `loadRecords` 空文件返回空对象
-- `saveRecords` / `loadRecords` 往返
-- `loadExamPackage` 文件不存在返回 null
-- `getSubmissionMeta` 缺失返回 undefined
-
-### 9. grading-session.test.ts (9 tests)
-
-测试 `GradingSession` 类核心流程：
-
-- 空列表 start 返回错误
-- 有效列表 start 返回 firstItem
-- submitScore 保存分数并返回下一项
-- 最后一题 submitScore 返回 settle: true
-- pause/finish 清空会话状态
-- getSettlementInfo 返回结算数据
-- findNextUngradedGradingInfoId 查找逻辑
-
-### 10. Modal.test.tsx (15 tests)
-
-测试 Modal 组件族渲染和交互：
-
-- MessageModal 的打开/关闭、title/message 渲染、error 类型样式
-- ConfirmModal 的确认/取消按钮回调
-- ProgressModal 的进度条、步骤文本、错误列表
-- ResultModal 的成功/失败状态、详情列表
-- 各 Modal 关闭时不渲染
-
-## Mock 策略
-
-- **electron 模块**：在 `vitest.setup.ts` 中全局 mock（`vi.mock('electron', ...)`）
-- **文件系统依赖**：`grading-service.test.ts` 和 `grading-session.test.ts` 使用 `vi.mock('../../utils', ...)` mock `getGradingPath`
-- **React 组件**：Modal 测试通过设置 `vi.mock('lucide-react', ...)` 解决图标库解析问题
-- **命名导出**：Modal 测试使用 `import { MessageModal, ... }` 命名导出而非默认导出，便于 vitest 正确追踪
-
-## Typecheck 和 Lint
-
-- `tsconfig.node.json` 和 `tsconfig.web.json` 均排除 `**/__tests__/**`
-- `eslint.config.mjs` 忽略 `**/__tests__/**`
-- 测试文件不受类型检查和 lint 约束
+- 纯函数和单个模块行为放在所属 package 的 `src/__tests__/`。
+- 多模块但不需要真实 Electron 的流程使用 Vitest 集成测试。
+- 依赖 BrowserWindow、preload、真实 IPC 或跨页面持久化的流程放在 `tests/integration/`。
+- Electron 集成测试不得访问真实用户目录、真实 AI 服务或留下剪贴板内容。
