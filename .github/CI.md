@@ -23,10 +23,10 @@ for 14 days. Each command shown in the workflow is directly reproducible with th
 `yarn` script in `package.json`.
 
 The separate `Canonical Product Documentation` workflow regenerates the checked-in product guide
-inside the pinned Linux renderer image and reports stale Markdown, screenshots, manifests, or test
-inventory. Its BuildKit layers use the GitHub Actions cache. This check is advisory while its CI
-reliability is being observed: do not add it to branch protection yet. Failed runs upload the
-generated documentation for 14 days so differences can be inspected without rerunning the image.
+inside the pinned Linux renderer image and reports stale Markdown, screenshots, or manifests. Its
+BuildKit layers use the GitHub Actions cache. This check is advisory while its CI reliability is
+being observed: do not add it to branch protection yet. Failed runs upload the generated
+documentation for 14 days so differences can be inspected without rerunning the image.
 
 Release tags must point to a commit contained in `main`. Before packaging or publishing, the
 release workflow waits for the exact tagged commit to have a successful `CI` run from a push to

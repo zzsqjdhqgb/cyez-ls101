@@ -24,7 +24,6 @@
     "test:product-docs": "yarn build:test && yarn test:product-docs:run",
     "test:product-docs:run": "node scripts/run-product-docs.mjs preview",
     "test:product-docs:preview": "playwright test --config=playwright.product-docs.config.ts",
-    "docs:playwright-inventory": "node scripts/generate-playwright-inventory.mjs",
     "docs:product:image": "node scripts/product-docs/docker.mjs build",
     "docs:product:publish": "node scripts/product-docs/docker.mjs publish",
     "docs:product:check": "node scripts/product-docs/docker.mjs check",

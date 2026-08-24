@@ -78,4 +78,3 @@ jobs:
           retention-days: 14
           path: |
             docs/product/
-            docs/engineering/testing/inventory.md

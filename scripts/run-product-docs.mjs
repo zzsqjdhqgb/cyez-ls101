@@ -40,16 +40,4 @@ const testResult = spawnSync(
 
 if (testResult.error) throw testResult.error
 if (testResult.status !== 0) process.exit(testResult.status ?? 1)
-
-if (mode === 'publish') {
-  const inventoryResult = spawnSync(
-    process.execPath,
-    [path.join(repositoryRoot, 'scripts', 'generate-playwright-inventory.mjs')],
-    { cwd: repositoryRoot, stdio: 'inherit' }
-  )
-
-  if (inventoryResult.error) throw inventoryResult.error
-  process.exit(inventoryResult.status ?? 1)
-}
-
 process.exit(0)
