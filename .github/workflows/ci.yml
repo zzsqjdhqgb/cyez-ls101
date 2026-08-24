@@ -59,8 +59,46 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
+      # Verification fingerprints contain runner-local filesystem identities and must be rebuilt.
+      - name: Restore setup assets
+        id: setup-assets-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            externals/ai/pocket-tts/model
+            externals/ai/stt/downloads/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2
+            externals/ai/stt/model/silero_vad.onnx
+            externals/ai/stt/model/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25
+            externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8
+            externals/ai/qwen3-tts/downloads/releases/ls101-qwen-tts-helper-cpu-win32-x64.exe
+            externals/ai/qwen3-tts/downloads/releases/qwen-tts-runtime-manifest.json
+            externals/ai/qwen3-tts/downloads/releases/qwen-tts-model-manifest.json
+            externals/ai/qwen3-tts/runtime/win32-x64
+            externals/ai/qwen3-tts/models
+            assets/file-icons
+          key: ${{ runner.os }}-${{ runner.arch }}-setup-assets-v1-${{ hashFiles('scripts/*-assets.json', 'scripts/qwen-tts/assets.json', 'resources/file-icons/*.png') }}
+
       - name: Install dependencies
         run: yarn install --immutable
+
+      # Save before builds and tests can add unrelated files under externals/ or assets/.
+      - name: Save setup assets
+        if: steps.setup-assets-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            externals/ai/pocket-tts/model
+            externals/ai/stt/downloads/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2
+            externals/ai/stt/model/silero_vad.onnx
+            externals/ai/stt/model/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25
+            externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8
+            externals/ai/qwen3-tts/downloads/releases/ls101-qwen-tts-helper-cpu-win32-x64.exe
+            externals/ai/qwen3-tts/downloads/releases/qwen-tts-runtime-manifest.json
+            externals/ai/qwen3-tts/downloads/releases/qwen-tts-model-manifest.json
+            externals/ai/qwen3-tts/runtime/win32-x64
+            externals/ai/qwen3-tts/models
+            assets/file-icons
+          key: ${{ steps.setup-assets-cache.outputs.cache-primary-key }}
 
       - name: Run lint
         run: yarn lint
