@@ -12,7 +12,19 @@ export default defineConfig({
     timeout: 5_000
   },
   fullyParallel: false,
-  workers: 1,
+  workers: 2,
+  projects: [
+    {
+      name: 'airouter',
+      testMatch: '**/airouter.spec.ts',
+      workers: 1
+    },
+    {
+      name: 'application',
+      testIgnore: '**/airouter.spec.ts',
+      workers: 1
+    }
+  ],
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     screenshot: 'only-on-failure',
