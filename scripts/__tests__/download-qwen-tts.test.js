@@ -146,7 +146,7 @@ test('only performs expensive verification when explicitly requested', async () 
   assert.throws(() => parseOptions(['--unknown']), /未知参数/)
 })
 
-test('atomically replaces a wrong staged runtime path with a verified executable', async (context) => {
+test('atomically replaces a wrong staged runtime path with a verified helper', async (context) => {
   const { copyVerifiedAsset } = await modulePromise
   const directory = await mkdtemp(path.join(tmpdir(), 'qwen-runtime-copy-'))
   context.after(() => rm(directory, { recursive: true, force: true }))
@@ -156,17 +156,20 @@ test('atomically replaces a wrong staged runtime path with a verified executable
   await mkdir(path.dirname(source), { recursive: true })
   await mkdir(destination, { recursive: true })
   await writeFile(source, content)
+  const executableMode = process.platform === 'win32' ? undefined : 0o755
   const asset = {
     path: 'helper',
     size: content.byteLength,
     sha256: createHash('sha256').update(content).digest('hex'),
-    mode: 0o755
+    ...(executableMode === undefined ? {} : { mode: executableMode })
   }
 
   await copyVerifiedAsset(source, destination, asset)
 
   assert.deepEqual(await readFile(destination), content)
-  assert.equal((await stat(destination)).mode & 0o777, 0o755)
+  if (executableMode !== undefined) {
+    assert.equal((await stat(destination)).mode & 0o777, executableMode)
+  }
 })
 
 test('uses the canonical helper filename on Windows', async () => {
