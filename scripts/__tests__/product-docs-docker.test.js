@@ -45,6 +45,27 @@ test('rejects incomplete Docker actions before invoking Docker', async () => {
   assert.throws(() => parseDockerAction(['publish', '--grep', 'x']), /build\|publish\|check/)
 })
 
+test('runs a check from an explicitly prebuilt renderer image', async () => {
+  const root = await repositoryFixture()
+  const { main } = await import('../product-docs/docker.mjs')
+  const calls = []
+  const spawn = (command, args) => {
+    calls.push([command, args])
+    return { status: 0 }
+  }
+
+  assert.equal(main(['check'], { repositoryRoot: root, spawn, usePrebuiltImage: true }), 0)
+  assert.deepEqual(calls[0], ['docker', ['version', '--format', '{{.Server.Version}}']])
+  assert.deepEqual(calls[1], ['docker', ['image', 'inspect', 'ls101-product-docs-renderer:7.2']])
+  assert.equal(calls[2][0], 'docker')
+  assert.equal(calls[2][1][0], 'run')
+  assert.equal(calls[2][1].at(-1), 'check')
+  assert.equal(
+    calls.some(([, args]) => args[0] === 'build'),
+    false
+  )
+})
+
 test('container runner rejects a caller-supplied canonical flag', async () => {
   const { parseContainerAction } = await import('../product-docs/container-runner.mjs')
   assert.equal(parseContainerAction(['publish']), 'publish')
