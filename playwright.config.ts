@@ -1,6 +1,10 @@
 import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
+  captureGitInfo: {
+    commit: true,
+    diff: false
+  },
   testDir: './tests/integration',
   outputDir: './test-results/integration',
   timeout: 30_000,
