@@ -4,7 +4,13 @@ The `CI` workflow runs for pull requests targeting `dev` or `main` and for every
 branch. Configure the `Required quality gate` check as required in the branch protection rules for
 both branches and do not configure bypass actors. Merge queues run the same check.
 
-The gate runs on Windows, the release platform, and covers:
+The verification runs as two isolated Windows jobs in parallel: the complete packaged Electron
+integration suite, and all remaining checks. Each job installs dependencies and builds its own
+packaged application so no mutable workspace or build output is shared between runners. Playwright
+suites remain serial within each job. A final `Required quality gate` job succeeds only when both
+Windows jobs succeed.
+
+Together, the jobs cover:
 
 - ESLint and TypeScript checks;
 - script tests and the complete Vitest suite;
