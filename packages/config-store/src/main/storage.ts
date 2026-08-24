@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, open, readFile, rename, rm } from 'node:fs/promises'
+import { lstat, mkdir, open, readFile, rename, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { validateConfigKey, validateConfigScope } from '../shared/pathUtils'
 import type { ConfigLocation, ConfigScope, JsonValue } from '../shared/types'
@@ -37,7 +37,28 @@ function assertJsonValue(value: unknown, seen = new Set<object>()): asserts valu
   seen.delete(value)
 }
 
-async function atomicWriteFile(filePath: string, data: string): Promise<void> {
+interface AtomicWriteOperations {
+  lstat: typeof lstat
+  open: typeof open
+  rename: typeof rename
+  rm: typeof rm
+  platform: NodeJS.Platform
+}
+
+const atomicWriteOperations: AtomicWriteOperations = {
+  lstat,
+  open,
+  rename,
+  rm,
+  platform: process.platform
+}
+
+export async function atomicWriteFile(
+  filePath: string,
+  data: string,
+  operationOverrides: Partial<AtomicWriteOperations> = {}
+): Promise<void> {
+  const operations = { ...atomicWriteOperations, ...operationOverrides }
   const directory = path.dirname(filePath)
   const temporaryPath = path.join(directory, `.config-store-${randomUUID()}.tmp`)
   let temporaryFile: Awaited<ReturnType<typeof open>> | null = null
@@ -45,16 +66,40 @@ async function atomicWriteFile(filePath: string, data: string): Promise<void> {
 
   await mkdir(directory, { recursive: true })
   try {
-    temporaryFile = await open(temporaryPath, 'wx', 0o600)
+    temporaryFile = await operations.open(temporaryPath, 'wx', 0o600)
     await temporaryFile.writeFile(data, 'utf8')
     await temporaryFile.sync()
     await temporaryFile.close()
     temporaryFile = null
-    await rename(temporaryPath, filePath)
+    await replaceExistingFile(temporaryPath, filePath, operations)
     renamed = true
   } finally {
     if (temporaryFile) await temporaryFile.close().catch(() => undefined)
-    if (!renamed) await rm(temporaryPath, { force: true }).catch(() => undefined)
+    if (!renamed) await operations.rm(temporaryPath, { force: true }).catch(() => undefined)
+  }
+}
+
+async function replaceExistingFile(
+  temporaryPath: string,
+  filePath: string,
+  operations: AtomicWriteOperations
+): Promise<void> {
+  try {
+    await operations.rename(temporaryPath, filePath)
+    return
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code
+    if (operations.platform !== 'win32' || !['EEXIST', 'ENOTEMPTY', 'EPERM'].includes(code ?? '')) {
+      throw error
+    }
+    try {
+      await operations.lstat(filePath)
+    } catch (targetError) {
+      if ((targetError as NodeJS.ErrnoException).code === 'ENOENT') throw error
+      throw targetError
+    }
+    await operations.rm(filePath, { force: true })
+    await operations.rename(temporaryPath, filePath)
   }
 }
 
