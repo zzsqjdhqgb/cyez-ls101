@@ -9,6 +9,7 @@ import { access, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const projectRoot = process.cwd()
+const APPLICATION_STARTUP_TIMEOUT = 20_000
 
 export const INTEGRATION_LICENSE_CODE = 'ls101-integration-license'
 export const INTEGRATION_LICENSE_CODE_HASH = createHash('sha256')
@@ -94,7 +95,7 @@ export async function launchIntegrationApp(
 
 export async function closeStartupReleaseNotes(page: Page): Promise<void> {
   const closeButton = page.getByRole('button', { name: '关闭版本说明' })
-  await expect(closeButton).toBeVisible()
+  await expect(closeButton).toBeVisible({ timeout: APPLICATION_STARTUP_TIMEOUT })
   await closeButton.click()
 }
 
