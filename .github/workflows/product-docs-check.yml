@@ -51,10 +51,10 @@ jobs:
           echo "image=ls101-product-docs-renderer:$version" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build canonical renderer image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/product-docs/Dockerfile
@@ -71,7 +71,7 @@ jobs:
 
       - name: Upload generated documentation on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: canonical-product-docs-${{ github.run_attempt }}
           if-no-files-found: ignore
