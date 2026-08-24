@@ -91,6 +91,8 @@ export function main(args = process.argv.slice(2), dependencies = {}) {
   const action = parseDockerAction(args)
   const repositoryRoot = dependencies.repositoryRoot ?? defaultRepositoryRoot
   const spawn = dependencies.spawn ?? spawnSync
+  const usePrebuiltImage =
+    dependencies.usePrebuiltImage ?? process.env['LS101_PRODUCT_DOCS_PREBUILT_IMAGE'] === '1'
 
   const daemonStatus = runDocker(['version', '--format', '{{.Server.Version}}'], {
     repositoryRoot,
@@ -98,7 +100,9 @@ export function main(args = process.argv.slice(2), dependencies = {}) {
   })
   if (daemonStatus !== 0) return daemonStatus
 
-  const buildStatus = runDocker(dockerBuildArguments(repositoryRoot), { repositoryRoot, spawn })
+  const buildStatus = usePrebuiltImage
+    ? runDocker(['image', 'inspect', imageName(repositoryRoot)], { repositoryRoot, spawn })
+    : runDocker(dockerBuildArguments(repositoryRoot), { repositoryRoot, spawn })
   if (buildStatus !== 0 || action === 'build') return buildStatus
 
   return runDocker(dockerRunArguments(action, repositoryRoot), { repositoryRoot, spawn })

@@ -22,10 +22,20 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  quality-gate:
-    name: Required quality gate
+  test_suites:
+    name: ${{ matrix.name }}
     runs-on: windows-latest
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: other-checks
+            name: All checks except Electron integration
+            save_setup_assets: true
+          - suite: electron-integration
+            name: Electron integration tests
+            save_setup_assets: false
 
     steps:
       - name: Check out source
@@ -83,7 +93,7 @@ jobs:
 
       # Save before builds and tests can add unrelated files under externals/ or assets/.
       - name: Save setup assets
-        if: steps.setup-assets-cache.outputs.cache-hit != 'true'
+        if: matrix.save_setup_assets && steps.setup-assets-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
         with:
           path: |
@@ -101,39 +111,64 @@ jobs:
           key: ${{ steps.setup-assets-cache.outputs.cache-primary-key }}
 
       - name: Run lint
+        if: matrix.suite == 'other-checks'
         run: yarn lint
 
       - name: Run type checking
+        if: matrix.suite == 'other-checks'
         run: yarn typecheck
 
       - name: Run script tests
+        if: matrix.suite == 'other-checks'
         run: yarn test:scripts
 
       - name: Run Vitest suite
+        if: matrix.suite == 'other-checks'
         run: yarn test:vitest
 
       - name: Install Playwright Chromium
+        if: matrix.suite == 'other-checks'
         run: yarn playwright install chromium
 
       - name: Build packaged application
         run: yarn build:test
 
       - name: Run Electron integration tests
+        if: matrix.suite == 'electron-integration'
         run: yarn test:playwright:electron
 
       - name: Run renderer component tests
+        if: matrix.suite == 'other-checks'
         run: yarn test:playwright:components
 
       - name: Run product journeys
+        if: matrix.suite == 'other-checks'
         run: yarn test:product-docs:run
 
       - name: Upload test diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: ci-test-diagnostics-${{ github.run_attempt }}
+          name: ci-${{ matrix.suite }}-diagnostics-${{ github.run_attempt }}
           if-no-files-found: ignore
           retention-days: 14
           path: |
             playwright-report/
             test-results/
+
+  quality-gate:
+    name: Required quality gate
+    if: always()
+    needs: test_suites
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every test suite to pass
+        shell: bash
+        env:
+          TEST_SUITES_RESULT: ${{ needs.test_suites.result }}
+        run: |
+          if [ "$TEST_SUITES_RESULT" != "success" ]; then
+            echo "::error::One or more required CI test suites did not complete successfully."
+            exit 1
+          fi
