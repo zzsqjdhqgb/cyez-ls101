@@ -31,13 +31,10 @@ jobs:
       matrix:
         include:
           - suite: other-checks
-            name: Technical checks
+            name: All checks except Electron integration
             save_setup_assets: true
           - suite: electron-integration
             name: Electron integration tests
-            save_setup_assets: false
-          - suite: product-docs-windows
-            name: Windows product documentation tests
             save_setup_assets: false
 
     steps:
@@ -134,20 +131,19 @@ jobs:
         run: yarn playwright install chromium
 
       - name: Build packaged application
-        if: matrix.suite == 'electron-integration' || matrix.suite == 'product-docs-windows'
         run: yarn build:test
 
       - name: Run Electron integration tests
         if: matrix.suite == 'electron-integration'
         run: yarn test:playwright:electron
 
-      - name: Run Windows product documentation tests
-        if: matrix.suite == 'product-docs-windows'
-        run: yarn test:product-docs:preview
-
       - name: Run renderer component tests
         if: matrix.suite == 'other-checks'
         run: yarn test:playwright:components
+
+      - name: Run product journeys
+        if: matrix.suite == 'other-checks'
+        run: yarn test:product-docs:run
 
       - name: Upload test diagnostics
         if: failure()
