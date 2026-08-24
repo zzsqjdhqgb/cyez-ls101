@@ -108,6 +108,9 @@
     },
     "ffmpeg-static": {
       "built": true
+    },
+    "onnxruntime-node": {
+      "built": true
     }
   },
   "packageManager": "yarn@4.15.0"
