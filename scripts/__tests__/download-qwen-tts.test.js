@@ -2,7 +2,8 @@
 
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const { access, mkdir, mkdtemp, rm, writeFile } = require('node:fs/promises')
+const { createHash } = require('node:crypto')
+const { access, mkdir, mkdtemp, readFile, rm, stat, writeFile } = require('node:fs/promises')
 const { tmpdir } = require('node:os')
 const path = require('node:path')
 
@@ -113,6 +114,59 @@ test('selects raw models independently from model release metadata', async () =>
       url: 'https://example.test/qwen-tts-model-manifest.json'
     }
   })
+})
+
+test('uses repository-pinned release sizes and hashes for normal setup', async () => {
+  const { pinnedModelReleaseAssets, pinnedRuntimeReleaseAssets, runtimeTarget } =
+    await modulePromise
+  const runtime = pinnedRuntimeReleaseAssets(runtimeTarget('linux', 'x64'))
+  const models = pinnedModelReleaseAssets()
+  const selected = [
+    ...Object.values(runtime.helpers),
+    runtime.manifest,
+    ...Object.values(models.models),
+    models.manifest
+  ]
+
+  for (const asset of selected) {
+    assert.equal(Number.isSafeInteger(asset.size) && asset.size > 0, true)
+    assert.match(asset.digest, /^[a-f0-9]{64}$/)
+    assert.match(asset.url, /^https:\/\/github\.com\/zzsqjdhqgb\/cyez-ls101\/releases\/download\//)
+  }
+})
+
+test('only performs expensive verification when explicitly requested', async () => {
+  const { parseOptions } = await modulePromise
+  assert.deepEqual(parseOptions([]), { verify: false, verifyUpstream: false })
+  assert.deepEqual(parseOptions(['--verify']), { verify: true, verifyUpstream: false })
+  assert.deepEqual(parseOptions(['--verify-upstream']), {
+    verify: false,
+    verifyUpstream: true
+  })
+  assert.throws(() => parseOptions(['--unknown']), /未知参数/)
+})
+
+test('atomically replaces a wrong staged runtime path with a verified executable', async (context) => {
+  const { copyVerifiedAsset } = await modulePromise
+  const directory = await mkdtemp(path.join(tmpdir(), 'qwen-runtime-copy-'))
+  context.after(() => rm(directory, { recursive: true, force: true }))
+  const source = path.join(directory, 'cache', 'helper')
+  const destination = path.join(directory, 'runtime', 'helper')
+  const content = Buffer.from('verified helper')
+  await mkdir(path.dirname(source), { recursive: true })
+  await mkdir(destination, { recursive: true })
+  await writeFile(source, content)
+  const asset = {
+    path: 'helper',
+    size: content.byteLength,
+    sha256: createHash('sha256').update(content).digest('hex'),
+    mode: 0o755
+  }
+
+  await copyVerifiedAsset(source, destination, asset)
+
+  assert.deepEqual(await readFile(destination), content)
+  assert.equal((await stat(destination)).mode & 0o777, 0o755)
 })
 
 test('uses the canonical helper filename on Windows', async () => {

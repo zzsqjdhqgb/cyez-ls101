@@ -1,15 +1,19 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
-import { createHash } from 'node:crypto'
-import { createReadStream, createWriteStream, readFileSync } from 'node:fs'
-import { chmod, copyFile, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { chmod, copyFile, mkdir, rename, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { pipeline } from 'node:stream/promises'
 import { pathToFileURL } from 'node:url'
+import assetIntegrity from '../asset-integrity.js'
+import assetDownload from '../download-asset.js'
 
+const { assertAssetFile, ensureAssetSet, ensureManagedDirectory } = assetIntegrity
+const { downloadVerifiedAsset } = assetDownload
 const root = path.resolve(import.meta.dirname, '..', '..')
 const config = loadConfig()
-const downloadDirectory = path.join(root, 'externals', 'ai', 'qwen3-tts', 'downloads')
+const defaultExternalRoot = path.join(root, 'externals', 'ai', 'qwen3-tts')
+const defaultStateDirectory = path.join(root, 'externals', 'ai', '.setup-verification')
 
 export function loadConfig() {
   return JSON.parse(readFileSync(path.join(root, 'scripts', 'qwen-tts', 'assets.json'), 'utf8'))
@@ -65,7 +69,9 @@ export async function cleanupDisabledCudaRuntimeFiles(
   platform = process.platform
 ) {
   for (const file of disabledCudaRuntimeFiles(platform)) {
-    await rm(path.join(runtimeDirectory, file), { force: true })
+    await rm(path.join(runtimeDirectory, file), { force: true }).catch((error) => {
+      if (error?.code !== 'ENOENT' && error?.code !== 'ENOTDIR') throw error
+    })
   }
 }
 
@@ -89,6 +95,16 @@ export function downloadMode(environment = process.env) {
   return 'all'
 }
 
+export function parseOptions(argv) {
+  const allowed = new Set(['--verify', '--verify-upstream'])
+  const unknown = argv.filter((argument) => !allowed.has(argument))
+  if (unknown.length > 0) throw new Error(`未知参数：${unknown.join(', ')}`)
+  return {
+    verify: argv.includes('--verify'),
+    verifyUpstream: argv.includes('--verify-upstream')
+  }
+}
+
 export function selectRuntimeReleaseAssets(release, target = runtimeTarget()) {
   validateRelease(release, config.runtimeRelease)
   const assets = Array.isArray(release.assets) ? release.assets : []
@@ -97,12 +113,14 @@ export function selectRuntimeReleaseAssets(release, target = runtimeTarget()) {
     helpers: Object.fromEntries(
       Object.entries(target.helpers).map(([backend, helper]) => [
         backend,
-        findAsset(assets, helper.name)
+        findReleaseAsset(assets, helper.name)
       ])
     ),
-    dependencies: target.dependencies.map((dependency) => findAsset(assets, dependency.name)),
-    licenses: target.licenses.map((license) => findAsset(assets, license.name)),
-    manifest: findAsset(assets, 'qwen-tts-runtime-manifest.json')
+    dependencies: target.dependencies.map((dependency) =>
+      findReleaseAsset(assets, dependency.name)
+    ),
+    licenses: target.licenses.map((license) => findReleaseAsset(assets, license.name)),
+    manifest: findReleaseAsset(assets, 'qwen-tts-runtime-manifest.json')
   }
 }
 
@@ -112,10 +130,40 @@ export function selectModelReleaseAssets(release) {
   const modelNames = modelAssetNames()
   return {
     models: {
-      talker: findAsset(assets, modelNames.talker),
-      tokenizer: findAsset(assets, modelNames.tokenizer)
+      talker: findReleaseAsset(assets, modelNames.talker),
+      tokenizer: findReleaseAsset(assets, modelNames.tokenizer)
     },
-    manifest: findAsset(assets, 'qwen-tts-model-manifest.json')
+    manifest: findReleaseAsset(assets, 'qwen-tts-model-manifest.json')
+  }
+}
+
+export function pinnedRuntimeReleaseAssets(target = runtimeTarget()) {
+  if (!target) throw new Error('当前平台没有 Qwen TTS 原生运行时')
+  return {
+    helpers: Object.fromEntries(
+      Object.entries(target.helpers).map(([backend, helper]) => [
+        backend,
+        findPinnedAsset(config.runtimeRelease, helper.name)
+      ])
+    ),
+    dependencies: target.dependencies.map((dependency) =>
+      findPinnedAsset(config.runtimeRelease, dependency.name)
+    ),
+    licenses: target.licenses.map((license) =>
+      findPinnedAsset(config.runtimeRelease, license.name)
+    ),
+    manifest: findPinnedAsset(config.runtimeRelease, 'qwen-tts-runtime-manifest.json')
+  }
+}
+
+export function pinnedModelReleaseAssets() {
+  const modelNames = modelAssetNames()
+  return {
+    models: {
+      talker: findPinnedAsset(config.modelRelease, modelNames.talker),
+      tokenizer: findPinnedAsset(config.modelRelease, modelNames.tokenizer)
+    },
+    manifest: findPinnedAsset(config.modelRelease, 'qwen-tts-model-manifest.json')
   }
 }
 
@@ -130,7 +178,7 @@ function validateRelease(release, expected) {
   }
 }
 
-function findAsset(assets, name) {
+function findReleaseAsset(assets, name) {
   const asset = assets.find((candidate) => candidate?.name === name)
   if (!asset || !Number.isSafeInteger(asset.size) || asset.size <= 0) {
     throw new Error(`Qwen TTS Release 缺少有效资产：${name}`)
@@ -153,77 +201,160 @@ function findAsset(assets, name) {
   }
 }
 
+function findPinnedAsset(release, name) {
+  const assets = Array.isArray(release.assets) ? release.assets : []
+  const asset = assets.find((candidate) => candidate?.name === name)
+  if (
+    !asset ||
+    !Number.isSafeInteger(asset.size) ||
+    asset.size <= 0 ||
+    !/^[a-f0-9]{64}$/.test(asset.sha256 || '')
+  ) {
+    throw new Error(`Qwen TTS 固定资产无效：${name}`)
+  }
+  return {
+    name,
+    size: asset.size,
+    digest: asset.sha256,
+    url: `https://github.com/${release.repository}/releases/download/${release.tag}/${encodeURIComponent(name)}`
+  }
+}
+
 async function fetchJson(url) {
-  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
-  const response = await fetch(url, {
-    headers: {
-      accept: 'application/vnd.github+json',
-      'user-agent': 'cyez-ls101-qwen-tts',
-      ...(token ? { authorization: `Bearer ${token}` } : {})
-    }
-  })
+  const response = await fetch(url, { headers: githubHeaders() })
   if (!response.ok) throw new Error(`Qwen TTS Release API 请求失败（HTTP ${response.status}）`)
   return response.json()
 }
 
-async function downloadAsset(asset, destination) {
-  const existing = await stat(destination).catch(() => null)
-  if (
-    existing?.isFile() &&
-    existing.size === asset.size &&
-    (await hashFile(destination)) === asset.digest
-  ) {
-    return false
-  }
-  await mkdir(path.dirname(destination), { recursive: true })
-  const temporary = `${destination}.part`
-  let offset = (await stat(temporary).catch(() => null))?.size ?? 0
-  if (offset > asset.size) {
-    await rm(temporary, { force: true })
-    offset = 0
-  }
-  if (offset === asset.size && (await hashFile(temporary)) === asset.digest) {
-    await rename(temporary, destination)
-    return true
-  }
+function githubHeaders() {
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
-  const rangeHeaders = {
-    accept: 'application/octet-stream',
+  return {
+    accept: 'application/vnd.github+json',
     'user-agent': 'cyez-ls101-qwen-tts',
-    ...(token ? { authorization: `Bearer ${token}` } : {}),
-    ...(offset > 0 ? { range: `bytes=${offset}-` } : {})
+    ...(token ? { authorization: `Bearer ${token}` } : {})
   }
-  const response = await fetch(asset.url, {
-    headers: rangeHeaders
-  })
-  if (!response.ok || !response.body)
-    throw new Error(`下载 Qwen TTS 资产失败（${asset.name}，HTTP ${response.status}）`)
-  if (offset > 0 && response.status !== 206) {
-    await rm(temporary, { force: true })
-    offset = 0
-  }
-  const contentRange = response.headers.get('content-range')
-  if (offset > 0 && contentRange !== `bytes ${offset}-${asset.size - 1}/${asset.size}`) {
-    throw new Error(`Qwen TTS 资产续传响应无效：${asset.name}`)
-  }
-  await pipeline(response.body, createWriteStream(temporary, { flags: offset > 0 ? 'a' : 'w' }))
-  const details = await stat(temporary)
-  const digest = await hashFile(temporary)
-  if (details.size > asset.size || (details.size === asset.size && digest !== asset.digest)) {
-    await rm(temporary, { force: true })
-    throw new Error(`Qwen TTS 资产校验失败：${asset.name}`)
-  }
-  if (details.size !== asset.size) {
-    throw new Error(`Qwen TTS 资产下载未完成：${asset.name}（${details.size}/${asset.size}）`)
-  }
-  await rename(temporary, destination)
-  return true
 }
 
-async function hashFile(filePath) {
-  const hash = createHash('sha256')
-  for await (const chunk of createReadStream(filePath)) hash.update(chunk)
-  return hash.digest('hex')
+function githubDownloadHeaders() {
+  return { ...githubHeaders(), accept: 'application/octet-stream' }
+}
+
+async function verifyUpstreamMetadata(target, downloadDirectory, boundary) {
+  const [runtimeRelease, modelRelease] = await Promise.all([
+    fetchRelease(config.runtimeRelease),
+    fetchRelease(config.modelRelease)
+  ])
+  assertSelectedAssetsMatch(
+    selectRuntimeReleaseAssets(runtimeRelease, target),
+    pinnedRuntimeReleaseAssets(target),
+    'runtime'
+  )
+  assertSelectedAssetsMatch(
+    selectModelReleaseAssets(modelRelease),
+    pinnedModelReleaseAssets(),
+    'model'
+  )
+  await ensureManagedDirectory(downloadDirectory, boundary)
+  await Promise.all([
+    writeMetadataCache(path.join(downloadDirectory, 'runtime-release-api.json'), runtimeRelease),
+    writeMetadataCache(path.join(downloadDirectory, 'model-release-api.json'), modelRelease)
+  ])
+}
+
+async function writeMetadataCache(filename, value) {
+  const temporary = `${filename}.${process.pid}.${randomUUID()}.tmp`
+  try {
+    await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, {
+      encoding: 'utf8',
+      flag: 'wx'
+    })
+    await rm(filename, { recursive: true, force: true })
+    await rename(temporary, filename)
+  } finally {
+    await rm(temporary, { force: true }).catch(() => undefined)
+  }
+}
+
+async function fetchRelease(release) {
+  return fetchJson(
+    `https://api.github.com/repos/${release.repository}/releases/tags/${release.tag}`
+  )
+}
+
+function assertSelectedAssetsMatch(actual, expected, label) {
+  const actualAssets = flattenSelectedAssets(actual)
+  const expectedAssets = flattenSelectedAssets(expected)
+  if (actualAssets.length !== expectedAssets.length) {
+    throw new Error(`Qwen TTS ${label} Release 资产数量与固定清单不一致`)
+  }
+  for (const pinned of expectedAssets) {
+    const upstream = actualAssets.find((asset) => asset.name === pinned.name)
+    if (
+      !upstream ||
+      upstream.size !== pinned.size ||
+      upstream.digest !== pinned.digest ||
+      upstream.url !== pinned.url
+    ) {
+      throw new Error(`Qwen TTS ${label} Release 资产与固定清单不一致：${pinned.name}`)
+    }
+  }
+}
+
+function flattenSelectedAssets(selected) {
+  return [
+    ...Object.values(selected.helpers ?? {}),
+    ...Object.values(selected.models ?? {}),
+    ...(selected.dependencies ?? []),
+    ...(selected.licenses ?? []),
+    selected.manifest
+  ].filter(Boolean)
+}
+
+function managedAsset(asset, assetPath, mode) {
+  return {
+    path: assetPath,
+    size: asset.size,
+    sha256: asset.digest,
+    url: asset.url,
+    name: asset.name,
+    ...(mode === undefined ? {} : { mode })
+  }
+}
+
+async function ensureDownloadedAssets({
+  assets,
+  boundary,
+  exact,
+  forceHash,
+  root: assetRoot,
+  statePath
+}) {
+  return ensureAssetSet({
+    boundary,
+    root: assetRoot,
+    statePath,
+    assets,
+    exact,
+    forceHash,
+    repair: (asset, destination) =>
+      downloadVerifiedAsset(asset, destination, `[qwen-tts] ${asset.name}`, {
+        headers: githubDownloadHeaders
+      })
+  })
+}
+
+export async function copyVerifiedAsset(source, destination, asset) {
+  await mkdir(path.dirname(destination), { recursive: true })
+  const temporary = `${destination}.${process.pid}.${randomUUID()}.part`
+  try {
+    await copyFile(source, temporary)
+    if (asset.mode !== undefined) await chmod(temporary, asset.mode)
+    await assertAssetFile(temporary, asset)
+    await rm(destination, { recursive: true, force: true })
+    await rename(temporary, destination)
+  } finally {
+    await rm(temporary, { force: true }).catch(() => undefined)
+  }
 }
 
 export async function main(options = {}) {
@@ -233,126 +364,114 @@ export async function main(options = {}) {
     console.log('[qwen-tts] download skipped by LS101_SKIP_QWEN_TTS_DOWNLOAD')
     return
   }
-  const target = runtimeTarget()
-  const runtimeRoot =
-    options.runtimeRoot ?? path.join(root, 'externals', 'ai', 'qwen3-tts', 'runtime')
-  const runtimeDirectory = target ? path.join(runtimeRoot, target.directory) : null
-  await cleanupStagedCudaRuntimes(runtimeRoot)
+
+  const commandOptions = parseOptions(options.arguments ?? [])
+  const platform = options.platform ?? process.platform
+  const architecture = options.architecture ?? process.arch
+  const target = runtimeTarget(platform, architecture)
   if (!target) {
     console.warn(
-      `[qwen-tts] 当前平台 ${process.platform}/${process.arch} 没有已发布的 CPU helper，跳过下载`
+      `[qwen-tts] 当前平台 ${platform}/${architecture} 没有已发布的 CPU helper，跳过下载`
     )
-    return
-  }
-  const runtimeRelease = await loadReleaseMetadata(
-    config.runtimeRelease,
-    path.join(downloadDirectory, 'runtime-release-api.json'),
-    (release) => selectRuntimeReleaseAssets(release, target)
-  )
-  const runtimeAssets = selectRuntimeReleaseAssets(runtimeRelease, target)
-  if (!runtimeDirectory) throw new Error('当前平台没有 Qwen TTS 原生运行时目录')
-  const helperDownloads = await Promise.all(
-    Object.entries(runtimeAssets.helpers).map(async ([backend, asset]) => {
-      const helper = target.helpers[backend]
-      const cachePath = path.join(downloadDirectory, 'releases', asset.name)
-      const helperPath = path.join(runtimeDirectory, helper.executable)
-      const downloaded = await downloadAsset(asset, cachePath)
-      await mkdir(path.dirname(helperPath), { recursive: true })
-      await copyFile(cachePath, helperPath)
-      if (process.platform !== 'win32') await chmod(helperPath, 0o755)
-      return { backend, downloaded, helperPath }
-    })
-  )
-  const dependencyDownloads = await Promise.all(
-    [...target.dependencies, ...target.licenses].map(async (dependency) => {
-      const asset = [...runtimeAssets.dependencies, ...runtimeAssets.licenses].find(
-        (candidate) => candidate.name === dependency.name
-      )
-      if (!asset) throw new Error(`Qwen TTS Release 缺少运行时文件：${dependency.name}`)
-      const cachePath = path.join(downloadDirectory, 'releases', asset.name)
-      const dependencyPath = path.join(runtimeDirectory, dependency.file)
-      const downloaded = await downloadAsset(asset, cachePath)
-      await mkdir(path.dirname(dependencyPath), { recursive: true })
-      await copyFile(cachePath, dependencyPath)
-      return { downloaded, dependencyPath }
-    })
-  )
-  await rm(
-    path.join(
-      runtimeDirectory,
-      process.platform === 'win32' ? 'ls101-qwen-tts-helper.exe' : 'ls101-qwen-tts-helper'
-    ),
-    { force: true }
-  )
-  await downloadAsset(
-    runtimeAssets.manifest,
-    path.join(downloadDirectory, 'releases', runtimeAssets.manifest.name)
-  )
-  for (const { backend, downloaded, helperPath } of helperDownloads) {
-    console.log(
-      `[qwen-tts] ${backend} helper ${downloaded ? 'downloaded' : 'cached'}: ${helperPath}`
-    )
-  }
-  for (const { downloaded, dependencyPath } of dependencyDownloads) {
-    console.log(
-      `[qwen-tts] runtime file ${downloaded ? 'downloaded' : 'cached'}: ${dependencyPath}`
-    )
-  }
-  if (mode === 'runtime-only') {
-    console.log('[qwen-tts] model download skipped in runtime-only mode')
     return
   }
 
-  const modelRelease = await loadReleaseMetadata(
-    config.modelRelease,
-    path.join(downloadDirectory, 'model-release-api.json'),
-    selectModelReleaseAssets
-  )
-  const modelAssets = selectModelReleaseAssets(modelRelease)
-  const modelDirectory = path.join(root, 'externals', 'ai', 'qwen3-tts', 'models')
-  const modelDownloads = await Promise.all(
-    Object.values(modelAssets.models).map(async (asset) => ({
-      asset,
-      downloaded: await downloadAsset(asset, path.join(modelDirectory, asset.name))
-    }))
-  )
-  await downloadAsset(
-    modelAssets.manifest,
-    path.join(downloadDirectory, 'releases', modelAssets.manifest.name)
-  )
-  for (const { asset, downloaded } of modelDownloads) {
-    console.log(
-      `[qwen-tts] model ${downloaded ? 'downloaded' : 'cached'}: ${path.join(modelDirectory, asset.name)}`
-    )
+  const boundary = options.boundary ?? root
+  const externalRoot = options.externalRoot ?? defaultExternalRoot
+  const downloadDirectory = options.downloadDirectory ?? path.join(externalRoot, 'downloads')
+  const releaseDirectory = path.join(downloadDirectory, 'releases')
+  const runtimeRoot = options.runtimeRoot ?? path.join(externalRoot, 'runtime')
+  const runtimeDirectory = path.join(runtimeRoot, target.directory)
+  const modelDirectory = options.modelDirectory ?? path.join(externalRoot, 'models')
+  const stateDirectory = options.stateDirectory ?? defaultStateDirectory
+
+  if (commandOptions.verifyUpstream) {
+    await verifyUpstreamMetadata(target, downloadDirectory, boundary)
+    console.log('[qwen-tts] official release metadata matches the pinned manifests')
   }
+
+  const runtimeAssets = pinnedRuntimeReleaseAssets(target)
+  const runtimeCacheAssets = flattenSelectedAssets(runtimeAssets).map((asset) =>
+    managedAsset(asset, asset.name)
+  )
+  const runtimeCache = await ensureDownloadedAssets({
+    assets: runtimeCacheAssets,
+    boundary,
+    exact: false,
+    forceHash: commandOptions.verify,
+    root: releaseDirectory,
+    statePath: path.join(stateDirectory, `qwen-tts-runtime-cache-${target.directory}.json`)
+  })
+
+  const stagedRuntimeAssets = [
+    ...Object.entries(runtimeAssets.helpers).map(([backend, asset]) => {
+      const helper = target.helpers[backend]
+      return {
+        ...managedAsset(asset, helper.executable, platform === 'win32' ? undefined : 0o755),
+        source: path.join(releaseDirectory, asset.name)
+      }
+    }),
+    ...[...runtimeAssets.dependencies, ...runtimeAssets.licenses].map((asset) => {
+      const targetFile = [...target.dependencies, ...target.licenses].find(
+        (candidate) => candidate.name === asset.name
+      )
+      if (!targetFile) throw new Error(`Qwen TTS Release 缺少运行时文件：${asset.name}`)
+      return {
+        ...managedAsset(asset, targetFile.file),
+        source: path.join(releaseDirectory, asset.name)
+      }
+    })
+  ]
+  const stagedRuntime = await ensureAssetSet({
+    boundary,
+    root: runtimeDirectory,
+    statePath: path.join(stateDirectory, `qwen-tts-runtime-${target.directory}.json`),
+    assets: stagedRuntimeAssets,
+    exact: true,
+    forceHash: commandOptions.verify,
+    repair: (asset, destination) => copyVerifiedAsset(asset.source, destination, asset)
+  })
+  await cleanupStagedCudaRuntimes(runtimeRoot)
+  logAssetSet('runtime cache', runtimeCache)
+  logAssetSet('staged runtime', stagedRuntime)
+
+  if (mode === 'runtime-only') {
+    console.log('[qwen-tts] model verification skipped in runtime-only mode')
+    return
+  }
+
+  const modelAssets = pinnedModelReleaseAssets()
+  const modelFiles = Object.values(modelAssets.models).map((asset) =>
+    managedAsset(asset, asset.name)
+  )
+  const models = await ensureDownloadedAssets({
+    assets: modelFiles,
+    boundary,
+    exact: true,
+    forceHash: commandOptions.verify,
+    root: modelDirectory,
+    statePath: path.join(stateDirectory, 'qwen-tts-models.json')
+  })
+  const modelManifest = await ensureDownloadedAssets({
+    assets: [managedAsset(modelAssets.manifest, modelAssets.manifest.name)],
+    boundary,
+    exact: false,
+    forceHash: commandOptions.verify,
+    root: releaseDirectory,
+    statePath: path.join(stateDirectory, 'qwen-tts-model-manifest.json')
+  })
+  logAssetSet('models', models)
+  logAssetSet('model manifest', modelManifest)
 }
 
-async function loadReleaseMetadata(releaseConfig, cachePath, selectAssets) {
-  try {
-    const release = await fetchJson(
-      `https://api.github.com/repos/${releaseConfig.repository}/releases/tags/${releaseConfig.tag}`
-    )
-    selectAssets(release)
-    await mkdir(path.dirname(cachePath), { recursive: true })
-    await writeFile(cachePath, `${JSON.stringify(release, null, 2)}\n`, 'utf8')
-    return release
-  } catch (error) {
-    const cached = await readFile(cachePath, 'utf8')
-      .then((value) => JSON.parse(value))
-      .catch(() => null)
-    if (cached) {
-      selectAssets(cached)
-      console.warn(
-        `[qwen-tts] ${releaseConfig.tag} API 不可用，使用已缓存的元数据：${error instanceof Error ? error.message : error}`
-      )
-      return cached
-    }
-    throw error
-  }
+function logAssetSet(label, result) {
+  if (result.method === 'fast') console.log(`[qwen-tts] ${label} quickly verified`)
+  else if (result.repaired > 0) console.log(`[qwen-tts] ${label}: ${result.repaired} restored`)
+  else console.log(`[qwen-tts] ${label} fully verified`)
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  main().catch((error) => {
+  main({ arguments: process.argv.slice(2) }).catch((error) => {
     console.error(error instanceof Error ? error.message : error)
     process.exitCode = 1
   })

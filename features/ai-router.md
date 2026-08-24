@@ -279,7 +279,7 @@ manifest v1 采用以下结构：
 
 `runtime.minimumAppVersion` 使用 SemVer 格式。导入模型包和加载已安装模型包时都必须与 Electron 应用当前版本比较，不能只校验字段类型。
 
-setup 阶段下载的 AI 外部文件统一放在仓库根目录的 `externals/ai/`，不与 Git 管理的源码和应用资源混放。Qwen3 ASR 下载脚本在运行时读取 GitHub Release 与 Hugging Face API，并要求官方元数据、仓库内固定清单和实际文件的 SHA-256 一致；API 不可达时固定清单仍支持离线缓存校验，上游变化则必须通过显式命令更新并审查清单。压缩包保留在不会进入安装包的 `externals/ai/stt/downloads/`。构建阶段读取 `externals/ai/pocket-tts/model/` 生成独立的 Pocket TTS ZIP；该 ZIP 输出到 `dist/`，与 exe、安装包并列发布，不写入 Electron 安装包。TTS WASM runtime 仍随应用本体发布。
+setup 阶段下载的 AI 外部文件统一放在仓库根目录的 `externals/ai/`，不与 Git 管理的源码和应用资源混放。Pocket TTS、Qwen TTS、Qwen3 ASR 和发音评测资产均由仓库内固定清单声明大小与 SHA-256；首次完整校验后，普通 setup 通过受信文件系统指纹快速自检，发现文件或目录变化时再完整哈希并自动重下或重建。`yarn setup --verify` 强制重算全部本地哈希，`yarn setup --verify-upstream` 显式核对官方 API 元数据。Qwen3 ASR 压缩包保留在不会进入安装包的 `externals/ai/stt/downloads/`，损坏的解压目录从已校验压缩包原子重建。构建阶段读取 `externals/ai/pocket-tts/model/` 生成独立的 Pocket TTS ZIP；该 ZIP 输出到 `dist/`，与 exe、安装包并列发布，不写入 Electron 安装包。TTS WASM runtime 仍随应用本体发布。
 
 ### 模型文件去重
 

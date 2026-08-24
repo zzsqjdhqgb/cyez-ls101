@@ -52,6 +52,15 @@ yarn install
 yarn setup
 ```
 
+资产首次通过完整 SHA-256 校验后，后续 setup 使用文件类型、大小和文件系统指纹进行快速自检；
+文件或目录被替换、改写、截断或混入额外文件时，会自动退化为完整哈希校验并恢复受影响的
+资产。需要主动重算所有本地哈希或核对固定清单与上游元数据时，可分别运行：
+
+```bash
+yarn setup --verify
+yarn setup --verify-upstream
+```
+
 启动开发环境：
 
 ```bash
