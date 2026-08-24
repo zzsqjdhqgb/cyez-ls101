@@ -16,8 +16,9 @@ function loadAssetConfig() {
   const file = path.join(import.meta.dirname, 'assets.json')
   const value = JSON.parse(readFileSync(file, 'utf8'))
   if (
-    value?.schemaVersion !== 1 ||
-    !/^[a-zA-Z0-9_.-]+$/.test(value.release?.version ?? '') ||
+    value?.schemaVersion !== 2 ||
+    !/^[a-zA-Z0-9_.-]+$/.test(value.modelRelease?.version ?? '') ||
+    !/^[a-zA-Z0-9_.-]+$/.test(value.package?.version ?? '') ||
     !/^[a-f0-9]{40}$/.test(value.runtime?.revision ?? '') ||
     !/^[a-f0-9]{40}$/.test(value.model?.revision ?? '')
   ) {
@@ -28,13 +29,13 @@ function loadAssetConfig() {
 
 export function parseOptions(argv) {
   const options = {
-    modelDir: path.join(root, 'model-assets', 'qwen-tts', 'models'),
-    voicesDir: path.join(root, 'model-assets', 'qwen-tts', 'voices'),
+    modelDir: path.join(root, 'externals', 'ai', 'qwen3-tts', 'models'),
+    voicesDir: path.join(root, 'native', 'qwen-tts', 'voices'),
     voices: [],
     voiceNames: new Map(),
     packageId: 'qwen3-tts-0.6b-base-en',
     packageName: 'Qwen3-TTS 0.6B Base English',
-    packageVersion: assetConfig.release.version,
+    packageVersion: assetConfig.package.version,
     quantization: 'auto',
     output: null
   }

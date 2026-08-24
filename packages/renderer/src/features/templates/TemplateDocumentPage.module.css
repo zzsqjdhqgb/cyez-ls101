@@ -1,0 +1,927 @@
+.editor {
+  display: grid;
+  grid-template-rows: 62px minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-surface-subtle);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0 20px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.identity,
+.actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.identity > div {
+  min-width: 0;
+}
+
+.identity h1 {
+  max-width: 520px;
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text-strong);
+  font-size: 15px;
+  font-weight: 660;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identity span {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.workspace {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.editorMain {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.library,
+.properties,
+.center {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.library,
+.properties {
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.library {
+  background: var(--color-surface);
+}
+
+.properties {
+  background: var(--color-surface);
+}
+
+.inspectorSection {
+  padding: 24px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.librarySection {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  padding: 16px 12px 24px;
+  border-bottom: 0;
+}
+
+.libraryHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+}
+
+.libraryHeading h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 15px;
+  font-weight: 660;
+}
+
+.libraryHeadingActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.libraryHeadingActions > span {
+  color: var(--color-text-faint);
+  font-size: 11px;
+}
+
+.sourceTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  margin-top: 14px;
+  padding: 3px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-subtle);
+}
+
+.sourceTab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 32px;
+  padding: 5px 7px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  color: var(--color-text-muted);
+  background: transparent;
+  font: 620 12px/1.3 var(--font-ui);
+  cursor: pointer;
+}
+
+.sourceTab:hover {
+  color: var(--color-text-strong);
+  background: var(--color-surface-hover);
+}
+
+.sourceTab[aria-selected='true'] {
+  color: var(--color-accent);
+  background: var(--color-surface);
+  box-shadow:
+    inset 0 -2px var(--color-accent),
+    0 1px 2px rgb(20 31 29 / 8%);
+}
+
+.sourceTab:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.sourceTab small {
+  min-width: 16px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  color: var(--color-text-muted);
+  background: var(--color-surface-pressed);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.sourceTab[aria-selected='true'] small {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.libraryGroups {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.libraryPanel,
+.libraryList,
+.libraryGroup {
+  display: grid;
+}
+
+.libraryList {
+  gap: 14px;
+}
+
+.libraryGroup {
+  gap: 8px;
+}
+
+.libraryGroupHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  align-items: center;
+}
+
+.libraryGroupHeader[data-actions] {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.libraryGroupActions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.libraryAction {
+  width: 28px;
+  height: 28px;
+}
+
+.libraryRenameEditor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px 28px;
+  gap: 3px;
+  align-items: center;
+  min-width: 0;
+}
+
+.libraryRenameEditor input {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 5px 8px;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font: 600 12px/1.4 var(--font-ui);
+  outline: 2px solid var(--color-focus-ring);
+}
+
+.libraryNotice {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 7px;
+  color: var(--color-danger);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.libraryNotice svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+}
+
+.libraryNotice > div {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.libraryNotice span {
+  overflow-wrap: anywhere;
+}
+
+.libraryStatus,
+.emptyLibrary {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.libraryEmptyState {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  min-height: 180px;
+  padding: 30px 16px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle);
+  text-align: center;
+}
+
+.libraryEmptyIcon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 3px;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.libraryEmptyIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.libraryEmptyState strong {
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.libraryEmptyState > span:last-child {
+  max-width: 190px;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.libraryList,
+.functionList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.libraryButton {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-strong);
+  background: var(--color-surface-subtle);
+  font: 600 13px/1.4 var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+
+.libraryButton:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.libraryButton svg {
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-muted);
+}
+
+.libraryButton span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.libraryButton small {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 520;
+  white-space: nowrap;
+}
+
+.functionList {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.functionList li {
+  min-width: 0;
+}
+
+.functionCard {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  min-height: 58px;
+  padding: 9px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  background: var(--color-surface);
+  font: 600 12px/1.35 var(--font-ui);
+  text-align: left;
+}
+
+.functionActions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.functionCard:focus-within {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.functionIcon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: var(--radius-xs);
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.functionIcon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.functionIdentity {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.functionIdentity strong {
+  overflow: hidden;
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 640;
+  overflow-wrap: anywhere;
+}
+
+.functionIdentity small {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 520;
+}
+
+.emptyLibrary {
+  display: block;
+  padding: 12px 8px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.properties label {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 16px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.properties label:last-child {
+  margin-bottom: 0;
+}
+
+.properties input,
+.properties textarea {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font: 13px/1.5 var(--font-ui);
+}
+
+.properties input:focus,
+.properties textarea:focus {
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 0;
+}
+
+.properties textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.notice {
+  margin-bottom: 18px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--color-danger);
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.structure {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 24px 28px 36px;
+  overflow: auto;
+  background: var(--color-surface-subtle);
+}
+
+.center {
+  display: grid;
+  grid-template-rows: 44px minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--color-surface-subtle);
+}
+
+.centerHeader {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.readOnlyBoundary {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.centerTabs {
+  display: flex;
+  height: 100%;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.centerTab {
+  position: relative;
+  display: inline-flex;
+  min-width: 78px;
+  padding: 0 12px;
+  border: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--color-text-muted);
+  background: transparent;
+  font: 620 12px/1.3 var(--font-ui);
+  cursor: pointer;
+}
+
+.centerTab svg {
+  width: 15px;
+  height: 15px;
+}
+
+.centerTab:hover:not(:disabled) {
+  color: var(--color-text-strong);
+  background: var(--color-surface-hover);
+}
+
+.centerTab[aria-selected='true'] {
+  color: var(--color-accent);
+}
+
+.centerTab[aria-selected='true']::after {
+  position: absolute;
+  right: 8px;
+  bottom: 0;
+  left: 8px;
+  height: 2px;
+  background: var(--color-accent);
+  content: '';
+}
+
+.centerTab:disabled {
+  opacity: 0.38;
+}
+
+.pagePanel {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.nodeList {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nodeCard {
+  overflow: visible;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.nodeCard:hover {
+  border-color: var(--color-border-strong);
+}
+
+.nodeCard[data-selected] {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-focus-ring);
+}
+
+.nodeRow {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: stretch;
+  min-height: 46px;
+}
+
+.nodeCard[data-selected] .nodeRow {
+  background: var(--color-accent-soft);
+}
+
+.nodeSummary {
+  display: grid;
+  gap: 4px;
+  padding: 7px 10px 8px 40px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-subtle);
+}
+
+.nodeCard[data-selected] .nodeSummary {
+  border-top-color: color-mix(in srgb, var(--color-accent) 18%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 3%, var(--color-surface-subtle));
+}
+
+.functionNodeSummary {
+  gap: 0;
+}
+
+.choiceQuestionNodeSummary {
+  gap: 8px;
+}
+
+.nodeSummaryHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 660;
+}
+
+.nodeSummaryHeading small {
+  color: var(--color-text-faint);
+  font-size: 10px;
+  font-weight: 520;
+}
+
+.nodeSummaryActions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.nodeContentEdit {
+  min-height: 24px;
+  padding: 2px 7px;
+  font-size: 10px;
+}
+
+.nodeContentEdit svg {
+  width: 13px;
+  height: 13px;
+}
+
+.nodeSummaryAdd,
+.timelineRemove {
+  width: 22px;
+  height: 22px;
+}
+
+.timelineAddOption {
+  width: 24px;
+  height: 24px;
+}
+
+.timelineSummary {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timelineSummaryItem,
+.timelineAddRow {
+  min-height: 29px;
+  background: transparent;
+}
+
+.timelineSummary > li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.timelineSummaryItem {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 22px;
+  gap: 5px;
+  align-items: center;
+  padding: 2px 2px 2px 4px;
+  color: var(--color-text);
+}
+
+.timelineTypeIcon {
+  display: grid;
+  width: 16px;
+  height: 22px;
+  place-items: center;
+  color: var(--color-text-muted);
+}
+
+.timelineTypeIcon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.timelineStepFields {
+  display: grid;
+  min-width: 0;
+}
+
+.timelineStepFields[data-field-count='2'] {
+  grid-template-columns: minmax(58px, 0.7fr) minmax(82px, 1fr);
+  gap: 4px;
+}
+
+.timelineStepFields input {
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  padding: 2px 6px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font: 11px/1.35 var(--font-ui);
+}
+
+.timelineStepFields input:focus {
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 0;
+}
+
+.timelineStepFields input::placeholder {
+  color: var(--color-text-faint);
+}
+
+.timelineAddRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 2px 4px;
+}
+
+.nodeSummaryEmpty {
+  color: var(--color-text-faint);
+  font-size: 11px;
+}
+
+.collapseButton,
+.nodeSelect {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.nodeCardActions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding-right: 8px;
+}
+
+.collapseButton {
+  display: grid;
+  width: 28px;
+  place-items: center;
+  color: var(--color-text-muted);
+}
+
+.collapseButton svg {
+  width: 15px;
+  height: 15px;
+}
+
+.collapseButton:disabled {
+  cursor: default;
+  opacity: 0.24;
+}
+
+.nodeSelect {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  min-width: 0;
+  padding: 7px 12px 7px 4px;
+  text-align: left;
+}
+
+.nodeSelect > svg {
+  width: 17px;
+  height: 17px;
+  color: var(--color-text-muted);
+}
+
+.nodeIdentity {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.nodeIdentity strong {
+  overflow: hidden;
+  color: var(--color-text-strong);
+  font-size: 13px;
+  font-weight: 640;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nodeIdentity small {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.nodeChildren {
+  display: grid;
+  gap: 7px;
+  margin: 7px 0 0 18px;
+  padding-left: 14px;
+  border-left: 1px solid var(--color-border-strong);
+}
+
+@media (max-width: 1040px) {
+  .structure {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+}
+
+@media (max-width: 800px) {
+  .editor {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .workspace,
+  .editorMain {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    overflow: visible;
+  }
+
+  .workspace > [role='separator'],
+  .editorMain > [role='separator'] {
+    display: none;
+  }
+
+  .workspace > div,
+  .editorMain > div {
+    overflow: visible;
+  }
+
+  .library,
+  .properties,
+  .center,
+  .structure {
+    height: auto;
+    overflow: visible;
+  }
+
+  .library {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .properties {
+    border-left: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .center {
+    grid-template-rows: 44px minmax(560px, auto);
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "name": "@ls101/renderer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "dependencies": {
+    "@ls101/airouter": "workspace:*",
+    "@ls101/clipboard": "workspace:*",
+    "@ls101/config-store": "workspace:*",
+    "@ls101/core-types": "workspace:*",
+    "@ls101/editor-kit": "workspace:*",
+    "@ls101/exam-library": "workspace:*",
+    "@ls101/exam-package": "workspace:*",
+    "@ls101/exam-player": "workspace:*",
+    "@ls101/file-dialog": "workspace:*",
+    "@ls101/file-store": "workspace:*",
+    "@ls101/interface-editor": "workspace:*",
+    "@ls101/logger": "workspace:*",
+    "@ls101/page-renderer": "workspace:*",
+    "@ls101/schema-editor": "workspace:*",
+    "@ls101/section-engine": "workspace:*",
+    "@ls101/submission-library": "workspace:*",
+    "@ls101/template-editor": "workspace:*",
+    "@radix-ui/react-alert-dialog": "^1.1.23",
+    "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-tooltip": "^1.2.16",
+    "lucide-react": "^1.33.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.18.2",
+    "remark-gfm": "^4.0.1",
+    "sonner": "^2.0.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

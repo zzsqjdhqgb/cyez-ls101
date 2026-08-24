@@ -1,4 +1,26 @@
 {
   "files": [],
-  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }]
+  "references": [
+    { "path": "./tsconfig.node.json" },
+    { "path": "./packages/core-types" },
+    { "path": "./packages/logger" },
+    { "path": "./packages/clipboard" },
+    { "path": "./packages/config-store" },
+    { "path": "./packages/secret-store" },
+    { "path": "./packages/section-engine" },
+    { "path": "./packages/airouter" },
+    { "path": "./packages/editor-kit" },
+    { "path": "./packages/exam-player" },
+    { "path": "./packages/exam-package" },
+    { "path": "./packages/exam-library" },
+    { "path": "./packages/submission-library" },
+    { "path": "./packages/grading-engine" },
+    { "path": "./packages/page-renderer" },
+    { "path": "./packages/template-editor" },
+    { "path": "./packages/interface-editor" },
+    { "path": "./packages/schema-editor" },
+    { "path": "./packages/file-store" },
+    { "path": "./packages/file-dialog" },
+    { "path": "./packages/renderer" }
+  ]
 }

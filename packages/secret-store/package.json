@@ -1,0 +1,27 @@
+{
+  "name": "@ls101/secret-store",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./main": {
+      "types": "./src/main/index.ts",
+      "default": "./src/main/index.ts"
+    },
+    "./shared": {
+      "types": "./src/shared/index.ts",
+      "default": "./src/shared/index.ts"
+    }
+  },
+  "peerDependencies": {
+    "electron": "^39"
+  },
+  "peerDependenciesMeta": {
+    "electron": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

@@ -1,0 +1,208 @@
+.sidebar {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: visible;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-sidebar);
+}
+
+.navigation {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 3px;
+  padding: 24px 10px 14px;
+}
+
+.group {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.group + .group {
+  margin-top: var(--space-4);
+}
+
+.group > span {
+  width: 100%;
+}
+
+.groupLabel {
+  padding: 0 11px 5px;
+  overflow: hidden;
+  color: var(--color-text-faint);
+  font-size: 11px;
+  font-weight: 620;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  gap: 11px;
+  padding: 0 11px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 540;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    transform 140ms ease;
+}
+
+.link:hover {
+  color: var(--color-text-strong);
+  background: var(--color-surface-hover);
+  transform: translateX(2px);
+}
+
+.link[aria-current='page'] {
+  color: var(--color-accent);
+  font-weight: 650;
+}
+
+.link[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: -10px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--color-accent);
+  transform-origin: center;
+  animation: active-nav-indicator 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.link svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  stroke-width: 1.8;
+}
+
+.link span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.footer {
+  padding: 0 10px 10px;
+  border-top: 1px solid var(--color-border);
+}
+
+.footer .navigation {
+  padding: 10px 0 4px;
+}
+
+.collapseRow {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+}
+
+.collapseButton {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  gap: 11px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 540;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    transform 140ms ease;
+}
+
+.collapseButton:hover {
+  color: var(--color-text-strong);
+  background: var(--color-surface-hover);
+  transform: translateX(2px);
+}
+
+.collapseButton:active {
+  background: var(--color-surface-pressed);
+}
+
+.collapseButton svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  stroke-width: 1.8;
+}
+
+.sidebar[data-collapsed] .navigation {
+  align-items: center;
+  padding-right: 8px;
+  padding-left: 8px;
+}
+
+.sidebar[data-collapsed] .link {
+  width: 42px;
+  justify-content: center;
+  padding: 0;
+}
+
+.sidebar[data-collapsed] .link span,
+.sidebar[data-collapsed] .collapseButton span,
+.sidebar[data-collapsed] .groupLabel {
+  display: none;
+}
+
+.sidebar[data-collapsed] .group > span {
+  width: auto;
+}
+
+.sidebar[data-collapsed] .link[aria-current='page']::before {
+  left: 0;
+}
+
+.sidebar[data-collapsed] .footer {
+  padding-right: 8px;
+  padding-left: 8px;
+}
+
+.sidebar[data-collapsed] .collapseRow {
+  justify-content: center;
+}
+
+.sidebar[data-collapsed] .collapseButton {
+  width: 42px;
+  justify-content: center;
+  padding: 0;
+}
+
+@keyframes active-nav-indicator {
+  from {
+    opacity: 0;
+    transform: scaleY(0.35);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}

@@ -1,0 +1,48 @@
+.loading,
+.message {
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.loading {
+  display: grid;
+  place-items: center;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  text-align: center;
+}
+
+.message > svg {
+  width: 34px;
+  height: 34px;
+  color: var(--color-danger);
+}
+
+.message h1 {
+  margin: 18px 0 8px;
+  color: var(--color-text-strong);
+  font-size: 24px;
+  letter-spacing: 0;
+}
+
+.message p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.message div {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: 24px;
+}

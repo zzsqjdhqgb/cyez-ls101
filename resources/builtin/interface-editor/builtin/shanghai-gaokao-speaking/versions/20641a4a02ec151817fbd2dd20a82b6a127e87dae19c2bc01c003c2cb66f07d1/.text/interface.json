@@ -1,0 +1,253 @@
+{
+  "id": "sha256:20641a4a02ec151817fbd2dd20a82b6a127e87dae19c2bc01c003c2cb66f07d1",
+  "name": "上海高考英语口语",
+  "description": "上海高考英语口语完整题型，包含朗读、情景提问、看图说话、快速应答和听短文回答问题。",
+  "promptTemplate": "你是一名熟悉上海高考英语听说考试的资深命题教师。请生成一套完整、可直接用于学生自主训练的上海高考英语口语考试内容。\n\n总体要求：\n1. 所有题目、短文、情景、问题、参考答案和图片生图提示词均使用自然、准确、地道且适合高中生的英语；语言难度贴近高考，避免生僻词、歧义、事实错误和中式英语。\n2. 主题从日常生活、校园、社会实践、交通出行、兴趣爱好、科技、文化、环境或个人成长等健康内容中选择；同一套试题各部分主题、人物和情境避免重复。\n3. 命题兼顾发音与朗读表现、内容相关性、语法准确性、词汇丰富度、逻辑连贯性和表达流利度。参考答案须切题、信息完整、时态和主谓一致正确、搭配自然，并适当使用多样句式和连接词；不要为学生生成评分、训练建议或作答反馈。\n\n题型要求：\n1. 朗读句子：每句长度与难度适合15秒内朗读，并自然包含可考查重音、停顿、语调和连读的表达。两句主题不同。\n2. 朗读短文：生成一篇100至150词、结构完整、叙述连贯的英文短文，适合约1分钟朗读；长短句搭配，断句与重音层次清楚。考生不要求在30秒内读完，不得以30秒可读完为长度限制。\n3. 情景提问：每个情景用一至两句交代人物关系、沟通目的和必要背景，使考生能够提出两个不同且答案明确的问题；两句参考问题中至少一句为特殊疑问句，并根据情景正确使用过去、现在或将来时态，避免仅替换个别词的重复问题。\n4. 看图说话：四幅图组成时间、人物和因果连续、适合约1分钟陈述的完整故事，覆盖开端、发展、关键行动和结局。每幅图的英文生图提示词必须能独立使用，完整重复一致的人物外貌、服装、场景和视觉风格，不得使用“同上图”等依赖其他图片的表述；画面不得包含文字。开头句仅作简短自然的故事引入。参考答案须与四幅图逐一一致，按图序有条理地叙述，至少五个完整句子，并通过恰当时态、连接词和多样句式体现内容完整性、逻辑性与语言丰富性。\n5. 快速应答：四题分别覆盖邀请、道歉、询问信息、提醒、请求、建议、感谢等不同交际功能中的四类；参考答案简洁、自然、符合真实交流习惯，不使用只有Yes或No的残缺回答。\n6. 听短文回答问题：短文结构清楚、信息密度适中，包含可直接提取的事实信息，并留有联系个人经验表达观点的空间。问题1考查事实理解，答案准确覆盖关键信息；问题2要求表达个人观点，参考答案采用“观点、理由、例子或补充、结论”的清晰逻辑且不少于三句。\n\n命题语言素材与质量检查：\n1. 需要表达观点时，可根据语境选用“In my opinion, ...”“As far as I'm concerned, ...”或“From my point of view, ...”等开头句式。\n2. 需要组织论述时，可自然选用表示递进的“Furthermore”“Moreover”“In addition”，表示转折的“However”“Nevertheless”“On the other hand”，以及表示因果的“Therefore”“Thus”“As a result”。结尾可选用“To sum up, ...”“In conclusion, ...”或“All in all, ...”。不要机械堆砌连接词，同一答案中避免功能和表达重复。\n3. 描述画面时，可根据任务选用“In the picture, we can see ...”“On the left/right ...”“In the foreground/background ...”“It seems that ...”或“The picture shows ...”。静态画面描述可使用现在进行时；连续故事叙述应承接开头句统一使用恰当的叙事时态，不要无理由切换时态。\n4. 生成后检查并消除以下命题质量问题：观点模糊或缺少理由，内容空泛，逻辑跳跃，词汇或句式反复，全部使用简单主谓宾句式，时态混乱，主谓不一致，搭配不自然，以及题目与参考答案信息不对应。\n\n严格按字段结构输出，保证所有字段彼此一致，不要遗漏字段，也不要添加结构之外的内容。",
+  "fields": {
+    "order": ["speaking", "listeningAndSpeaking"],
+    "nodes": {
+      "speaking": {
+        "type": "group",
+        "children": {
+          "order": ["sentenceReading", "passageReading", "situationalQuestions", "pictureTalk"],
+          "nodes": {
+            "sentenceReading": {
+              "type": "group",
+              "children": {
+                "order": ["sentence1", "sentence2"],
+                "nodes": {
+                  "sentence1": {
+                    "type": "text",
+                    "varName": "sentence_1",
+                    "description": "第一句朗读句子。使用自然的高中英语，长度适合15秒内朗读。",
+                    "example": "Taking part in volunteer work helps us understand our community and learn how small actions can make a real difference."
+                  },
+                  "sentence2": {
+                    "type": "text",
+                    "varName": "sentence_2",
+                    "description": "第二句朗读句子。与第一句主题不同，包含适合考查重音、停顿和连读的表达。",
+                    "example": "Although the science project was challenging at first, our team solved each problem by sharing ideas and supporting one another."
+                  }
+                }
+              }
+            },
+            "passageReading": {
+              "type": "group",
+              "children": {
+                "order": ["passage"],
+                "nodes": {
+                  "passage": {
+                    "type": "text",
+                    "varName": "passage_1",
+                    "description": "完整的英文朗读短文，叙述连贯；考生不要求在30秒内读完，不以30秒可读完为长度限制。",
+                    "example": "Last autumn, our school opened a small garden beside the library. Students from different grades worked together to grow vegetables and flowers. At first, many of us knew little about gardening, but our biology teacher showed us how to prepare the soil and care for each plant. Several months later, we shared the vegetables with the school kitchen. The garden has become more than a place to learn about nature. It also teaches us patience, responsibility, and the value of teamwork."
+                  }
+                }
+              }
+            },
+            "situationalQuestions": {
+              "type": "group",
+              "children": {
+                "order": ["situation1", "situation1Reference", "situation2", "situation2Reference"],
+                "nodes": {
+                  "situation1": {
+                    "type": "text",
+                    "varName": "situation_1",
+                    "description": "情景提问1。用一至两句英语提供明确场景，考生可据此提出两个不同问题。",
+                    "example": "Your class is planning a weekend visit to the Shanghai Science and Technology Museum. You are calling the museum for more information."
+                  },
+                  "situation1Reference": {
+                    "type": "text",
+                    "varName": "situation_std_1",
+                    "description": "情景提问1的两句参考问题，至少包含一个特殊疑问句。",
+                    "example": "What time does the museum open on Saturday? Do students need to book tickets in advance?"
+                  },
+                  "situation2": {
+                    "type": "text",
+                    "varName": "situation_2",
+                    "description": "情景提问2。主题与情景1不同，用一至两句英语提供明确场景。",
+                    "example": "An exchange student has invited you to a cultural festival at her school. You want to know more before accepting the invitation."
+                  },
+                  "situation2Reference": {
+                    "type": "text",
+                    "varName": "situation_std_2",
+                    "description": "情景提问2的两句参考问题，至少包含一个特殊疑问句。",
+                    "example": "What activities will there be at the festival? May I bring a friend with me?"
+                  }
+                }
+              }
+            },
+            "pictureTalk": {
+              "type": "group",
+              "children": {
+                "order": [
+                  "picture1",
+                  "picture2",
+                  "picture3",
+                  "picture4",
+                  "openingSentence",
+                  "referenceAnswer"
+                ],
+                "nodes": {
+                  "picture1": {
+                    "type": "image",
+                    "varName": "picture_file1",
+                    "description": "看图说话第1幅图的英文生图提示词。独立完整地交代人物外貌、服装、地点、视觉风格和故事开端。",
+                    "example": "Realistic educational illustration, horizontal composition, no text. On a spring Sunday morning in a Shanghai community park, a Chinese teenage boy with short black hair, wearing a blue school jacket, white T-shirt, black trousers, and white sneakers, notices a brown wallet beside a wooden bench. Full-body view, clear surroundings, soft natural daylight."
+                  },
+                  "picture2": {
+                    "type": "image",
+                    "varName": "picture_file2",
+                    "description": "看图说话第2幅图的英文生图提示词。独立重复完整的人物、场景和视觉风格信息，并表现故事发展。",
+                    "example": "Realistic educational illustration, horizontal composition, no text. On a spring Sunday morning in a Shanghai community park, a Chinese teenage boy with short black hair, wearing a blue school jacket, white T-shirt, black trousers, and white sneakers, picks up a brown wallet and looks around. An elderly Chinese man in a gray coat searches anxiously in the background. Full-body view, clear surroundings, soft natural daylight."
+                  },
+                  "picture3": {
+                    "type": "image",
+                    "varName": "picture_file3",
+                    "description": "看图说话第3幅图的英文生图提示词。独立重复完整的人物、场景和视觉风格信息，并表现关键行动。",
+                    "example": "Realistic educational illustration, horizontal composition, no text. On a spring Sunday morning in a Shanghai community park, a Chinese teenage boy with short black hair, wearing a blue school jacket, white T-shirt, black trousers, and white sneakers, holds up a brown wallet while speaking to an elderly Chinese man in a gray coat. The elderly man looks surprised and hopeful. Full-body view, clear surroundings, soft natural daylight."
+                  },
+                  "picture4": {
+                    "type": "image",
+                    "varName": "picture_file4",
+                    "description": "看图说话第4幅图的英文生图提示词。独立重复完整的人物、场景和视觉风格信息，并清楚表现故事结局。",
+                    "example": "Realistic educational illustration, horizontal composition, no text. On a spring Sunday morning in a Shanghai community park, an elderly Chinese man in a gray coat receives his brown wallet and thanks a Chinese teenage boy with short black hair, a blue school jacket, white T-shirt, black trousers, and white sneakers. Both are smiling. Full-body view, clear surroundings, soft natural daylight."
+                  },
+                  "openingSentence": {
+                    "type": "text",
+                    "varName": "picture_start",
+                    "description": "看图说话的简短英文开头句，使用 It was... 等常见形式自然引出故事，不在开头句中讲述具体情节。",
+                    "example": "It was Sunday morning."
+                  },
+                  "referenceAnswer": {
+                    "type": "text",
+                    "varName": "picture_std",
+                    "description": "看图说话英文参考答案。承接开头句，按图片顺序用至少五句完整叙述故事。",
+                    "example": "It was Sunday morning. Li Ming was walking through a community park when he noticed a wallet beside a bench. He picked it up and looked around for its owner. Soon, he saw an elderly man searching the area anxiously. Li Ming went over and asked whether the wallet belonged to him. After checking it, the man thanked Li Ming warmly for his honesty. Li Ming felt happy that he had been able to help someone."
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "listeningAndSpeaking": {
+        "type": "group",
+        "children": {
+          "order": ["quickResponses", "passageResponse"],
+          "nodes": {
+            "quickResponses": {
+              "type": "group",
+              "children": {
+                "order": [
+                  "prompt1",
+                  "answer1",
+                  "prompt2",
+                  "answer2",
+                  "prompt3",
+                  "answer3",
+                  "prompt4",
+                  "answer4"
+                ],
+                "nodes": {
+                  "prompt1": {
+                    "type": "text",
+                    "varName": "quickresp_1",
+                    "description": "快速应答1的英文输入句，使用常见交际场景。",
+                    "example": "Would you like to join us for a bike ride this Sunday?"
+                  },
+                  "answer1": {
+                    "type": "text",
+                    "varName": "quickresp_std_1",
+                    "description": "快速应答1的简洁自然英文参考回答。",
+                    "example": "I'd love to. What time shall we meet?"
+                  },
+                  "prompt2": {
+                    "type": "text",
+                    "varName": "quickresp_2",
+                    "description": "快速应答2的英文输入句，交际功能与第1题不同。",
+                    "example": "I'm sorry I forgot to return the book you lent me."
+                  },
+                  "answer2": {
+                    "type": "text",
+                    "varName": "quickresp_std_2",
+                    "description": "快速应答2的简洁自然英文参考回答。",
+                    "example": "That's all right. You can bring it tomorrow."
+                  },
+                  "prompt3": {
+                    "type": "text",
+                    "varName": "quickresp_3",
+                    "description": "快速应答3的英文输入句，交际功能与前两题不同。",
+                    "example": "How did your presentation go this morning?"
+                  },
+                  "answer3": {
+                    "type": "text",
+                    "varName": "quickresp_std_3",
+                    "description": "快速应答3的简洁自然英文参考回答。",
+                    "example": "It went quite well, and my classmates asked some interesting questions."
+                  },
+                  "prompt4": {
+                    "type": "text",
+                    "varName": "quickresp_4",
+                    "description": "快速应答4的英文输入句，交际功能与前三题不同。",
+                    "example": "Remember to take an umbrella. The weather report says it may rain."
+                  },
+                  "answer4": {
+                    "type": "text",
+                    "varName": "quickresp_std_4",
+                    "description": "快速应答4的简洁自然英文参考回答。",
+                    "example": "Thanks for reminding me. I'll put one in my bag."
+                  }
+                }
+              }
+            },
+            "passageResponse": {
+              "type": "group",
+              "children": {
+                "order": ["topic", "passage", "question1", "answer1", "question2", "answer2"],
+                "nodes": {
+                  "topic": {
+                    "type": "text",
+                    "varName": "LS_passage_topic",
+                    "description": "听短文回答问题的英文主题短语，可直接接在 about 后。",
+                    "example": "the benefits of joining school clubs"
+                  },
+                  "passage": {
+                    "type": "text",
+                    "varName": "LS_passage",
+                    "description": "听力英文短文。内容适合高中生，结构清楚，包含可供问题1作答的事实信息，并为问题2提供讨论空间。",
+                    "example": "Many students join school clubs because they want to make friends or develop a new skill. At Green Hill High School, more than two thirds of the students take part in at least one club. The school offers over thirty choices, including robotics, drama, basketball, and community service. Teachers have found that club members often become better at managing their time because they must balance activities with homework. Clubs can also give quiet students a comfortable place to share their ideas. However, students are advised to choose one or two activities that truly interest them instead of filling every afternoon. This allows them to enjoy the experience without feeling too much pressure."
+                  },
+                  "question1": {
+                    "type": "text",
+                    "varName": "LS_question_1",
+                    "description": "听力问题1。答案应能直接依据短文中的事实信息得出。",
+                    "example": "What benefits of joining school clubs are mentioned in the passage?"
+                  },
+                  "answer1": {
+                    "type": "text",
+                    "varName": "LS_question_std_1",
+                    "description": "听力问题1的英文参考答案，准确覆盖短文中的关键信息。",
+                    "example": "School clubs help students make friends, develop new skills, manage their time better, and find a comfortable place to share ideas."
+                  },
+                  "question2": {
+                    "type": "text",
+                    "varName": "LS_question_2",
+                    "description": "听力问题2。要求考生结合短文主题表达个人观点，适合用至少三句回答。",
+                    "example": "Which school club would you most like to join, and why?"
+                  },
+                  "answer2": {
+                    "type": "text",
+                    "varName": "LS_question_std_2",
+                    "description": "听力问题2的英文参考答案。观点明确，理由充分，不少于三句。",
+                    "example": "I would most like to join the community service club. It would give me a chance to help people in my neighborhood and understand their needs. I could also work with students who care about the same things. I believe the experience would make me more responsible and confident."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

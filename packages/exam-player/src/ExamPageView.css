@@ -1,0 +1,184 @@
+:host {
+  all: initial;
+  display: block;
+  width: 1200px;
+  height: 800px;
+  contain: layout paint style;
+  isolation: isolate;
+  color: #17211f;
+  background: #ffffff;
+  color-scheme: light;
+  font-family: Inter, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  letter-spacing: 0;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+button,
+input {
+  font: inherit;
+  letter-spacing: 0;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid rgb(35 141 132 / 42%);
+  outline-offset: 2px;
+}
+
+::selection {
+  color: #ffffff;
+  background: #238d84;
+}
+
+.page {
+  position: relative;
+  width: 1200px;
+  height: 800px;
+  overflow: hidden;
+  color: #17211f;
+  background: #ffffff;
+}
+
+.textBlock,
+.imageBlock,
+.choiceBlock {
+  position: absolute;
+  min-width: 1px;
+  min-height: 1px;
+  box-sizing: border-box;
+}
+
+.textBlock {
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.imageBlock img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+
+.choiceBlock {
+  overflow: hidden;
+  border: 1px solid #cbd6d2;
+  background: #fbfcfc;
+}
+
+.choiceView {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 48px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.choiceQuestions {
+  min-height: 0;
+  padding: 14px;
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+.choiceQuestion {
+  margin: 0 0 12px;
+  padding: 12px;
+  border: 1px solid #d3ddda;
+  border-radius: 4px;
+  color: #1d2926;
+}
+
+.choiceQuestion[data-focused] {
+  border-color: #238d84;
+  background: #eaf6f4;
+}
+
+.choiceQuestion legend {
+  max-width: calc(100% - 18px);
+  padding: 0 6px;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.choiceOptions {
+  display: grid;
+  gap: 6px;
+}
+
+.choiceOption {
+  display: grid;
+  grid-template-columns: 20px 28px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  color: #33413d;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.choiceOption:hover {
+  background: #edf4f2;
+}
+
+.choiceOption input {
+  width: 17px;
+  height: 17px;
+  margin: 2px 0 0;
+  accent-color: #197f77;
+}
+
+.optionLabel {
+  color: #197f77;
+  font-weight: 700;
+}
+
+.choiceNavigation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  border-top: 1px solid #d3ddda;
+  color: #60706c;
+  font-size: 14px;
+}
+
+.choiceNavigation button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #b9c6c2;
+  border-radius: 4px;
+  place-items: center;
+  color: #26322f;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.choiceNavigation button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.choiceNavigation button:hover:not(:disabled) {
+  border-color: #7ca9a3;
+  color: #126d66;
+  background: #edf5f3;
+}
+
+.choiceNavigation svg {
+  width: 18px;
+  height: 18px;
+}

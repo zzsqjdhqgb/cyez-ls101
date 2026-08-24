@@ -1,297 +1,159 @@
-/*
- * Copyright (c) 2026 Haoting Ying (zzsqjdhqgb). All rights reserved.
- * Proprietary code. Use is subject to the LICENSE file in the repository root.
- */
-
-// src/main/index.ts
-import process from 'node:process'
-process.stdout.setDefaultEncoding('utf-8')
-process.stderr.setDefaultEncoding('utf-8')
-
-import { app, BrowserWindow, protocol, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, safeStorage } from 'electron'
+import { electronApp, optimizer } from '@electron-toolkit/utils'
 import {
-  ensureDir,
-  getExamsPath,
-  getSubmissionsPath,
-  getTemplatesPath,
-  getDraftsPath,
-  getGradingPath
-} from './utils'
-import { existsSync } from 'node:fs'
-
-// IPC 处理器注册（side-effect imports）
-import './ipc/exam'
-import './ipc/submission'
-import './ipc/template'
+  createConsoleLogger,
+  createMainLogger,
+  registerRendererLogger,
+  type Logger
+} from '@ls101/logger/main'
+import { registerConfigStore } from '@ls101/config-store/main'
+import { registerAIRouter } from '@ls101/airouter/main'
+import { registerClipboard } from '@ls101/clipboard/main'
+import { registerFileDialog } from '@ls101/file-dialog/main'
 import {
-  registerDraftManageHandlers,
-  registerDraftExportHandlers,
-  registerDraftTransferHandlers
-} from './ipc/draft'
-import { registerGradingHandlers } from './ipc/grading'
-import { registerDevHandlers } from './ipc/dev'
-import { registerWindowIpcHandlersOnce } from './ipc/window'
-import './ipc/app'
-
-// 提取后的模块
-import { createWindow } from './app/create-window'
-import { initializeBundledData, reimportBundledTemplatesOnStartup } from './app/initialize'
-import { runMigrations } from './app/migrate'
+  registerBuiltinFileStore,
+  registerBuiltinFileStoreScheme,
+  registerFileStore,
+  registerFileStoreScheme
+} from '@ls101/file-store/main'
+import { join } from 'node:path'
+import { registerAppInfoHandlers } from './app-info'
 import {
-  getStoredVersion,
-  getCurrentVersion,
-  writeVersionFile,
-  writeUpdateNotificationFlag,
-  writeResetRequiredFlag
-} from './utils/version'
-import { registerExamResourceProtocol } from './protocols/exam-resource'
-import { registerDraftResourceProtocol } from './protocols/draft-resource'
-import { registerGradingResourceProtocol } from './protocols/grading-resource'
-import { registerAppResourceProtocol } from './protocols/app-resource'
-import { registerFileAssociations, resolveFileType } from './utils/file-association'
-import type { FileType } from '../shared/file-types'
-import { getMainWindow } from './win'
-import { isExpired, getExpirationMessage } from './license'
-import { registerLicenseHandlers } from './ipc/license'
-import {
-  getCacheClearFlagPath,
-  clearSessionData,
-  deepRemove,
-  isDev,
-  triggerHardReset
-} from './services/dev-service'
-;(() => {
-  const flagPath = getCacheClearFlagPath()
-  if (!existsSync(flagPath)) return
+  initializeDataDirectory,
+  recoverDataDirectory,
+  registerDataDirectoryHandlers
+} from './data-directory'
+import { LegacyDataService, registerLegacyDataHandlers } from './legacy-data'
+import { registerLicenseHandlers } from './license'
+import { LICENSE_RECEIPT_FILENAME, type LicenseServiceOptions } from './license-service'
+import { createMainWindow } from './window'
+import { registerWindowControlHandlers } from './window-controls'
 
-  const failed = deepRemove(app.getPath('userData'))
-  if (failed.length > 0) {
-    console.warn('[clear] 以下文件未能删除:', failed)
-  }
-})()
+registerFileStoreScheme()
+registerBuiltinFileStoreScheme()
+let applicationInitialized = false
+let logger: Logger | null = null
 
-const gotTheLock = app.requestSingleInstanceLock()
-
-let pendingOpenFile: { path: string; type: FileType } | null = null
-let isClearingCache = false
-let pendingResetFailedPaths: string[] | null = null
-
-export function getIsClearingCache(): boolean {
-  return isClearingCache
-}
-
-export function getAndClearPendingResetFailedPaths(): string[] {
-  const paths = pendingResetFailedPaths || []
-  pendingResetFailedPaths = null
-  return paths
-}
-
-function setPendingOpenFile(filePath: string): void {
-  const fileType = resolveFileType(filePath)
-  if (fileType) {
-    pendingOpenFile = { path: filePath, type: fileType }
-    const win = getMainWindow()
-    if (win && !win.isDestroyed()) {
-      win.webContents.send('app:open-file', pendingOpenFile)
-      win.focus()
-    }
-  }
-}
-
-app.on('open-file', (event, filePath) => {
-  event.preventDefault()
-  setPendingOpenFile(filePath)
+process.on('uncaughtExceptionMonitor', (error) => {
+  if (logger) logger.errorSync('Main process uncaught exception', error)
+  else console.error('Main process uncaught exception', error)
 })
 
-app.on('second-instance', (_event, argv) => {
-  for (const arg of argv.slice(1)) {
-    if (resolveFileType(arg)) {
-      setPendingOpenFile(arg)
-      break
-    }
-  }
-  const win = getMainWindow()
-  if (win) {
-    if (win.isMinimized()) win.restore()
-    win.focus()
-  }
-})
-
-function processArgvFile(): void {
-  const args = process.argv.slice(app.isPackaged ? 1 : 2)
-  for (const arg of args) {
-    if (resolveFileType(arg)) {
-      pendingOpenFile = { path: arg, type: resolveFileType(arg)! }
-      break
-    }
-  }
-}
-
-if (!gotTheLock) {
-  app.quit()
-} else {
-  startApp()
-}
-
-function registerPrivilegedSchemes(): void {
-  protocol.registerSchemesAsPrivileged([
-    {
-      scheme: 'exam-resource',
-      privileges: {
-        bypassCSP: true,
-        stream: true,
-        standard: true,
-        supportFetchAPI: true,
-        secure: true
-      }
-    },
-    {
-      scheme: 'grading-resource',
-      privileges: {
-        bypassCSP: true,
-        stream: true,
-        standard: true,
-        supportFetchAPI: true,
-        secure: true
-      }
-    },
-    {
-      scheme: 'app-resource',
-      privileges: {
-        bypassCSP: true,
-        stream: true,
-        standard: true,
-        supportFetchAPI: true,
-        secure: true
-      }
-    },
-    {
-      scheme: 'draft-resource',
-      privileges: {
-        bypassCSP: true,
-        stream: true,
-        standard: true,
-        supportFetchAPI: true,
-        secure: true
-      }
-    }
-  ])
-}
-
-function registerAllIpcHandlers(): void {
-  registerDraftManageHandlers()
-  registerDraftExportHandlers()
-  registerDraftTransferHandlers()
-  registerGradingHandlers()
-  registerDevHandlers()
-  registerWindowIpcHandlersOnce()
-  registerLicenseHandlers()
-}
-
-function recreateDataDirs(): void {
-  ensureDir(getExamsPath())
-  ensureDir(getSubmissionsPath())
-  ensureDir(getTemplatesPath())
-  ensureDir(getDraftsPath())
-  ensureDir(getGradingPath())
-}
-
-export async function performSoftReset(): Promise<void> {
-  if (!isDev()) {
-    triggerHardReset()
-    return
-  }
-
-  isClearingCache = true
-  pendingResetFailedPaths = []
-
-  const windows = BrowserWindow.getAllWindows()
-  windows.forEach((win) => {
-    if (!win.isDestroyed()) {
-      win.destroy()
-    }
+async function initializeApplication(): Promise<void> {
+  electronApp.setAppUserModelId('io.github.zzsqjdhqgb.cyez-ls101')
+  logger = await initializeApplicationLogger()
+  const applicationLogger = logger
+  applicationLogger.info('Application initialization started', {
+    version: app.getVersion(),
+    packaged: app.isPackaged,
+    platform: process.platform,
+    arch: process.arch
   })
 
-  await new Promise((resolve) => setTimeout(resolve, 800))
+  const isLocalIntegrationTest =
+    process.env['LS101_INTEGRATION_TEST'] === '1' &&
+    (!app.isPackaged || app.getVersion().includes('-local.'))
 
-  clearSessionData()
-
-  const failed = deepRemove(app.getPath('userData'))
-
-  recreateDataDirs()
-
-  if (failed.length > 0) {
-    pendingResetFailedPaths = failed
+  if (process.platform === 'linux' && isLocalIntegrationTest) {
+    safeStorage.setUsePlainTextEncryption(true)
   }
 
-  await initializeBundledData()
+  const userDataDir = app.getPath('userData')
+  let dataDir: string
+  try {
+    dataDir = await initializeDataDirectory(userDataDir)
+  } catch (error) {
+    applicationLogger.error('Failed to initialize application data directory', error)
+    return recoverDataDirectory(userDataDir, error)
+  }
+  const legacyDataService = new LegacyDataService(userDataDir, dataDir)
+  registerFileStore({ baseDir: dataDir })
+  registerBuiltinFileStore({
+    baseDir: app.isPackaged
+      ? join(process.resourcesPath, 'builtin')
+      : join(app.getAppPath(), 'resources', 'builtin')
+  })
+  registerConfigStore({ baseDir: dataDir })
+  registerAIRouter({ baseDir: dataDir })
+  registerClipboard()
+  registerFileDialog()
+  registerAppInfoHandlers()
+  registerLicenseHandlers(createLicenseOptions(userDataDir, isLocalIntegrationTest))
+  registerDataDirectoryHandlers(userDataDir, dataDir, {
+    isLegacyCleanupPending: () => legacyDataService.hasPendingCleanup()
+  })
+  registerLegacyDataHandlers(legacyDataService)
+  registerWindowControlHandlers()
+  registerRendererLogger(applicationLogger)
 
-  await reimportBundledTemplatesOnStartup()
-
-  createWindow()
-
-  isClearingCache = false
-}
-
-function startApp(): void {
-  app.whenReady().then(async () => {
-    if (isExpired()) {
-      const { dialog } = await import('electron')
-      dialog.showErrorBox('试用期已到期', getExpirationMessage())
-      app.quit()
-      return
-    }
-
-    recreateDataDirs()
-
-    await initializeBundledData()
-
-    await reimportBundledTemplatesOnStartup()
-
-    registerExamResourceProtocol()
-    registerDraftResourceProtocol()
-    registerGradingResourceProtocol()
-    registerAppResourceProtocol()
-    registerAllIpcHandlers()
-
-    ipcMain.handle('app:getPendingOpenFile', () => {
-      const file = pendingOpenFile
-      pendingOpenFile = null
-      return file
-    })
-
-    const storedVersion = getStoredVersion()
-    const currentVersion = getCurrentVersion()
-    console.log(`[version] stored=${storedVersion}, current=${currentVersion}`)
-
-    if (storedVersion === null) {
-      console.log('[version] storedVersion is null, writing reset-required flag')
-      writeResetRequiredFlag()
-    } else if (storedVersion !== currentVersion) {
-      console.log(
-        `[version] version changed: ${storedVersion} -> ${currentVersion}, running migrations`
-      )
-      await runMigrations(storedVersion)
-      writeUpdateNotificationFlag(storedVersion)
-      writeVersionFile(currentVersion)
-    } else {
-      console.log('[version] no version change, skipping migrations')
-    }
-
-    createWindow()
-
-    registerFileAssociations()
-    processArgvFile()
+  app.on('browser-window-created', (_event, window) => {
+    optimizer.watchWindowShortcuts(window)
   })
 
-  app.on('window-all-closed', () => {
-    if (isClearingCache) return
-    if (process.platform !== 'darwin') app.quit()
-  })
+  createMainWindow(applicationLogger)
+  applicationInitialized = true
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createMainWindow(applicationLogger)
+    }
   })
 }
 
-registerPrivilegedSchemes()
+async function initializeApplicationLogger(): Promise<Logger> {
+  try {
+    return await createMainLogger({ directory: app.getPath('logs') })
+  } catch (error) {
+    const fallback = createConsoleLogger()
+    fallback.error('Persistent logger unavailable; using console-only logging', error)
+    return fallback
+  }
+}
+
+function createLicenseOptions(
+  userDataDir: string,
+  isLocalIntegrationTest: boolean
+): LicenseServiceOptions {
+  const options: LicenseServiceOptions = {
+    storagePath: join(userDataDir, LICENSE_RECEIPT_FILENAME)
+  }
+  if (!isLocalIntegrationTest) return options
+
+  const expectedCodeHash = process.env['LS101_LICENSE_TEST_CODE_HASH']
+  if (expectedCodeHash) options.expectedCodeHash = expectedCodeHash
+
+  const fixedNow = process.env['LS101_LICENSE_TEST_NOW']
+  if (fixedNow) {
+    const fixedTime = Date.parse(fixedNow)
+    if (!Number.isFinite(fixedTime)) throw new Error('LS101_LICENSE_TEST_NOW is invalid')
+    options.now = () => new Date(fixedTime)
+  }
+
+  return options
+}
+
+const hasSingleInstanceLock = app.requestSingleInstanceLock()
+if (!hasSingleInstanceLock) app.quit()
+else {
+  app.on('second-instance', () => {
+    const window = BrowserWindow.getAllWindows()[0]
+    if (!window) return
+    if (window.isMinimized()) window.restore()
+    window.focus()
+  })
+  void app.whenReady().then(initializeApplication).catch(handleApplicationInitializationError)
+}
+
+app.on('window-all-closed', () => {
+  if (applicationInitialized && process.platform !== 'darwin') {
+    app.quit()
+  }
+})
+
+function handleApplicationInitializationError(error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error)
+  if (logger) logger.errorSync('Failed to initialize application', error)
+  else console.error('Failed to initialize application', error)
+  dialog.showErrorBox('应用启动失败', message)
+  app.exit(1)
+}

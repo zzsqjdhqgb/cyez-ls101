@@ -1,0 +1,23 @@
+diff --git a/src/gguf_loader.cpp b/src/gguf_loader.cpp
+index 39f45d3..79987fd 100644
+--- a/src/gguf_loader.cpp
++++ b/src/gguf_loader.cpp
+@@ -128,9 +128,6 @@ ggml_backend_t init_tensor_loader_backend(enum ggml_backend_dev_type preferred_b
+     }
+     if (mode == backend_mode::CUDA) {
+         ggml_backend_t backend = init_cuda_backend_from_env();
+-        if (!backend) {
+-            backend = ggml_backend_init_by_type(GGML_BACKEND_DEVICE_TYPE_CPU, nullptr);
+-        }
+         return backend;
+     }
+ 
+@@ -165,7 +162,6 @@ ggml_backend_t init_preferred_backend(const char * component_name, std::string *
+     } else if (mode == backend_mode::CUDA) {
+         backend = init_cuda_backend_from_env();
+         if (!backend) {
+-            fprintf(stderr, "  [backend] CUDA requested but unavailable, falling back to CPU\n");
+-            backend = ggml_backend_init_by_type(GGML_BACKEND_DEVICE_TYPE_CPU, nullptr);
++            fprintf(stderr, "  [backend] CUDA requested but unavailable\n");
+         }
+     } else {

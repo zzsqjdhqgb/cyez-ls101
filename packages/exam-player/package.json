@@ -1,0 +1,27 @@
+{
+  "name": "@ls101/exam-player",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ls101/core-types": "workspace:*",
+    "@ls101/exam-package": "workspace:*",
+    "lucide-react": "^1.33.0"
+  },
+  "devDependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "peerDependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

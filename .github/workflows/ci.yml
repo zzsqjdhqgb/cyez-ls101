@@ -1,0 +1,231 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+  pull_request:
+    branches:
+      - dev
+      - main
+  merge_group:
+    types:
+      - checks_requested
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test_suites:
+    name: ${{ matrix.name }}
+    runs-on: windows-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: other-checks
+            name: All checks except Electron integration
+            save_setup_assets: true
+          - suite: electron-integration
+            name: Electron integration tests
+            save_setup_assets: false
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Enable Corepack
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare yarn@4.15.0 --activate
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+
+      - name: Get Yarn cache directory
+        id: yarn-cache-dir
+        shell: bash
+        run: echo "dir=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Yarn dependencies
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.yarn-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      # Verification fingerprints contain runner-local filesystem identities and must be rebuilt.
+      - name: Restore setup assets
+        id: setup-assets-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            externals/ai/pocket-tts/model
+            externals/ai/stt/downloads/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2
+            externals/ai/stt/model/silero_vad.onnx
+            externals/ai/stt/model/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25
+            externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8
+            externals/ai/qwen3-tts/downloads/releases/ls101-qwen-tts-helper-cpu-win32-x64.exe
+            externals/ai/qwen3-tts/downloads/releases/qwen-tts-runtime-manifest.json
+            externals/ai/qwen3-tts/downloads/releases/qwen-tts-model-manifest.json
+            externals/ai/qwen3-tts/runtime/win32-x64
+            externals/ai/qwen3-tts/models
+            assets/file-icons
+          key: ${{ runner.os }}-${{ runner.arch }}-setup-assets-v1-${{ hashFiles('scripts/*-assets.json', 'scripts/qwen-tts/assets.json', 'resources/file-icons/*.png') }}
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      # Save before builds and tests can add unrelated files under externals/ or assets/.
+      - name: Save setup assets
+        if: matrix.save_setup_assets && steps.setup-assets-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            externals/ai/pocket-tts/model
+            externals/ai/stt/downloads/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2
+            externals/ai/stt/model/silero_vad.onnx
+            externals/ai/stt/model/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25
+            externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8
+            externals/ai/qwen3-tts/downloads/releases/ls101-qwen-tts-helper-cpu-win32-x64.exe
+            externals/ai/qwen3-tts/downloads/releases/qwen-tts-runtime-manifest.json
+            externals/ai/qwen3-tts/downloads/releases/qwen-tts-model-manifest.json
+            externals/ai/qwen3-tts/runtime/win32-x64
+            externals/ai/qwen3-tts/models
+            assets/file-icons
+          key: ${{ steps.setup-assets-cache.outputs.cache-primary-key }}
+
+      - name: Run lint
+        if: matrix.suite == 'other-checks'
+        run: yarn lint
+
+      - name: Run type checking
+        if: matrix.suite == 'other-checks'
+        run: yarn typecheck
+
+      - name: Run script tests
+        if: matrix.suite == 'other-checks'
+        run: yarn test:scripts
+
+      - name: Run Vitest suite
+        if: matrix.suite == 'other-checks'
+        run: yarn test:vitest
+
+      - name: Install Playwright Chromium
+        if: matrix.suite == 'other-checks'
+        run: yarn playwright install chromium
+
+      - name: Build packaged application
+        run: yarn build:test
+
+      - name: Run Electron integration tests
+        if: matrix.suite == 'electron-integration'
+        run: yarn test:playwright:electron
+
+      - name: Run renderer component tests
+        if: matrix.suite == 'other-checks'
+        run: yarn test:playwright:components
+
+      - name: Run product journeys
+        if: matrix.suite == 'other-checks'
+        run: yarn test:product-docs:run
+
+      - name: Upload test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ci-${{ matrix.suite }}-diagnostics-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            playwright-report/
+            test-results/
+
+  canonical_docs:
+    name: Canonical product documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Read renderer version
+        id: renderer
+        shell: bash
+        run: |
+          version="$(tr -d '\r\n' < docker/product-docs/renderer-version)"
+          if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+            echo "::error::Invalid product documentation renderer version: $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "image=ls101-product-docs-renderer:$version" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build canonical renderer image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/product-docs/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: ${{ steps.renderer.outputs.image }}
+          cache-from: type=gha,scope=product-docs-renderer
+          cache-to: type=gha,mode=max,scope=product-docs-renderer
+
+      - name: Check canonical product documentation
+        env:
+          LS101_PRODUCT_DOCS_PREBUILT_IMAGE: '1'
+        run: node scripts/product-docs/docker.mjs check
+
+      - name: Upload generated documentation on failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: canonical-product-docs-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 14
+          path: docs/product/
+
+  quality-gate:
+    name: Required quality gate
+    if: always()
+    needs: [test_suites, canonical_docs]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every CI suite to pass
+        shell: bash
+        env:
+          TEST_SUITES_RESULT: ${{ needs.test_suites.result }}
+          CANONICAL_DOCS_RESULT: ${{ needs.canonical_docs.result }}
+        run: |
+          if [ "$TEST_SUITES_RESULT" != "success" ] || [ "$CANONICAL_DOCS_RESULT" != "success" ]; then
+            echo "::error::One or more required CI suites did not complete successfully."
+            exit 1
+          fi

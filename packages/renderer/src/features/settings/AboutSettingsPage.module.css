@@ -1,0 +1,244 @@
+.product {
+  display: flex;
+  min-height: 112px;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-subtle);
+}
+
+.appIcon {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 auto;
+  border-radius: 16px;
+  object-fit: cover;
+}
+
+.productText {
+  min-width: 0;
+}
+
+.productText h2,
+.productText p {
+  margin: 0;
+}
+
+.productText h2 {
+  color: var(--color-text-strong);
+  font-size: 20px;
+  font-weight: 680;
+  line-height: 1.35;
+}
+
+.productText p {
+  margin-top: 3px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.version {
+  display: inline-block;
+  margin-top: var(--space-2);
+  color: var(--color-text-faint);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.releaseLink {
+  display: grid;
+  width: 100%;
+  min-height: 68px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  color: inherit;
+  background: var(--color-surface);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.releaseLink:hover {
+  border-color: var(--color-accent);
+  background: var(--color-surface-hover);
+}
+
+.releaseLinkIcon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  place-items: center;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.releaseLinkIcon svg,
+.releaseLink > svg {
+  width: 17px;
+  height: 17px;
+}
+
+.releaseLink > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.releaseLink strong {
+  color: var(--color-text-strong);
+  font-size: 13px;
+}
+
+.releaseLink small {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.releaseLink > svg {
+  color: var(--color-text-faint);
+}
+
+.personRow {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  min-height: 72px;
+  padding: var(--space-3) var(--space-5);
+  align-items: center;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  color: inherit;
+  text-decoration: none;
+}
+
+.personRow:last-child {
+  border-bottom: 0;
+}
+
+a.personRow {
+  transition: background-color 120ms ease;
+}
+
+a.personRow:hover {
+  background: var(--color-surface-hover);
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.personText {
+  min-width: 0;
+}
+
+.personName,
+.personRole {
+  display: block;
+}
+
+.personName {
+  color: var(--color-text-strong);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.personRole {
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.rowIcon {
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-faint);
+}
+
+.license {
+  display: flex;
+  min-height: 92px;
+  padding: var(--space-4) var(--space-5);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.copyright,
+.licenseDescription {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.copyright {
+  color: var(--color-text-strong);
+  font-size: 13px;
+}
+
+.licenseDescription {
+  margin-top: 4px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.projectLink {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-accent);
+  font-size: 13px;
+  font-weight: 620;
+  text-decoration: none;
+}
+
+.projectLink:hover {
+  color: var(--color-accent-hover);
+  text-decoration: underline;
+}
+
+.projectLink svg {
+  width: 15px;
+  height: 15px;
+}
+
+@media (max-width: 620px) {
+  .product {
+    min-height: 96px;
+    padding: var(--space-4);
+  }
+
+  .appIcon {
+    width: 60px;
+    height: 60px;
+    border-radius: 14px;
+  }
+
+  .personRow {
+    padding-right: var(--space-4);
+    padding-left: var(--space-4);
+  }
+
+  .license {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+}

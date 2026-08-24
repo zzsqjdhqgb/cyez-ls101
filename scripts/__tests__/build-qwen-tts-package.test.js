@@ -15,7 +15,7 @@ afterEach(async () => {
   )
 })
 
-test('streams a Qwen Base package with a fixed speaker embedding', async () => {
+test('streams a Qwen Base package with fixed speaker embeddings', async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'qwen-package-test-'))
   temporaryDirectories.push(directory)
   const modelDir = path.join(directory, 'models')
@@ -25,6 +25,7 @@ test('streams a Qwen Base package with a fixed speaker embedding', async () => {
   await Promise.all([
     writeFile(path.join(modelDir, 'qwen3-tts-0.6b-q8_0.gguf'), 'talker'),
     writeFile(path.join(modelDir, 'qwen3-tts-tokenizer-f16.gguf'), 'tokenizer'),
+    writeFile(path.join(voicesDir, 'american-man.spk'), speakerEmbedding()),
     writeFile(path.join(voicesDir, 'american-woman.spk'), speakerEmbedding())
   ])
   const { buildPackage, parseOptions } = await import('../qwen-tts/build-package.mjs')
@@ -36,6 +37,8 @@ test('streams a Qwen Base package with a fixed speaker embedding', async () => {
       '--voices-dir',
       voicesDir,
       '--voice-name',
+      'american-man=American Man',
+      '--voice-name',
       'american-woman=American Woman',
       '--output',
       output
@@ -46,6 +49,12 @@ test('streams a Qwen Base package with a fixed speaker embedding', async () => {
   assert.equal(result.manifest.models[0].parameters.load.quantization, 'q8_0')
   assert.deepEqual(result.manifest.voices, [
     {
+      id: 'american-man',
+      name: 'American Man',
+      languageCodes: ['en'],
+      files: ['voices/american-man.spk']
+    },
+    {
       id: 'american-woman',
       name: 'American Woman',
       languageCodes: ['en'],
@@ -54,7 +63,8 @@ test('streams a Qwen Base package with a fixed speaker embedding', async () => {
   ])
   const zip = unzipSync(new Uint8Array(await readFile(output)))
   const manifest = JSON.parse(strFromU8(zip['manifest.json']))
-  assert.equal(manifest.assets.length, 3)
+  assert.equal(manifest.assets.length, 4)
+  assert.equal(zip['voices/american-man.spk'].byteLength, 4100)
   assert.equal(zip['voices/american-woman.spk'].byteLength, 4100)
   assert.equal(zip['models/qwen3-tts-0.6b-q8_0.gguf'].byteLength, 6)
 })

@@ -12,7 +12,19 @@ import eslintPluginReactRefresh from 'eslint-plugin-react-refresh'
 
 export default defineConfig(
   {
-    ignores: ['**/node_modules', '**/dist', '**/out', 'resources/tts', '**/__tests__/**']
+    ignores: [
+      '**/node_modules',
+      '**/.cache/**',
+      '**/dist',
+      '**/out',
+      '**/externals/**',
+      '**/coverage/**',
+      '**/playwright-report/**',
+      '**/test-results/**',
+      '.gop-research/{model,site,hf,venv,venv2,pip-cache,tmp}/**',
+      'resources/tts',
+      '**/__tests__/**'
+    ]
   },
   tseslint.configs.recommended,
   eslintPluginReact.configs.flat.recommended,

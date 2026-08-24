@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "modelId": "facebook/wav2vec2-lv-60-espeak-cv-ft",
+  "sourceModelId": "onnx-community/wav2vec2-lv-60-espeak-cv-ft-ONNX",
+  "revision": "c69750f5043e5e1f8a71ab95dd3b98338c280c92",
+  "sourceApi": "https://huggingface.co/api/models/onnx-community/wav2vec2-lv-60-espeak-cv-ft-ONNX?blobs=true",
+  "files": [
+    {
+      "path": "config.json",
+      "size": 2382,
+      "sha256": "428b7781d080ad9463dca0e17e5066073cb691bfc14a178a85e76ac79c1f4a0f"
+    },
+    {
+      "path": "preprocessor_config.json",
+      "size": 212,
+      "sha256": "a2254a5b58f72cd4de3632f8eee64f3f098b7c1402128d2f419e7d00ae13e335"
+    },
+    {
+      "path": "vocab.json",
+      "size": 4637,
+      "sha256": "d732ab2456c0c017930001dc9af0b41b3b93d25b2eb9740bf9d925508d7d87d0"
+    },
+    {
+      "path": "onnx/model_quantized.onnx",
+      "size": 317712852,
+      "sha256": "3d1479b5c70836645a4310902479f7f7e8bbc8c16c58745d918804f4f6f9d120"
+    }
+  ]
+}

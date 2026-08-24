@@ -1,10 +1,53 @@
 {
-  "schemaVersion": 1,
-  "release": {
+  "schemaVersion": 2,
+  "runtimeRelease": {
     "repository": "zzsqjdhqgb/cyez-ls101",
-    "version": "0.1.0",
-    "tag": "qwen-tts-v0.1.0",
-    "prerelease": true
+    "version": "0.3.1",
+    "tag": "qwen-tts-runtime-v0.3.1",
+    "prerelease": true,
+    "assets": [
+      {
+        "name": "ls101-qwen-tts-helper-cpu-linux-x64",
+        "size": 2030832,
+        "sha256": "7f11e9fff9bf9375237f4392468c50ae34c9f2896c22eda97a645b637b6e0f15"
+      },
+      {
+        "name": "ls101-qwen-tts-helper-cpu-win32-x64.exe",
+        "size": 1345536,
+        "sha256": "8b33dec6a31ca976d9190ab943f12bc9f5ae7d2404bdbe2d3494858c8056fbbb"
+      },
+      {
+        "name": "qwen-tts-runtime-manifest.json",
+        "size": 1735,
+        "sha256": "a104310e7be74bc153853606e0172c86a2d6cb148eee6648076a15685bff9525"
+      }
+    ]
+  },
+  "modelRelease": {
+    "repository": "zzsqjdhqgb/cyez-ls101",
+    "version": "1.0.0",
+    "tag": "qwen-tts-model-v1.0.0",
+    "prerelease": true,
+    "assets": [
+      {
+        "name": "qwen3-tts-0.6b-q8_0.gguf",
+        "size": 1342925920,
+        "sha256": "c6ed09d25e6ce06d5804233fcce3f0c62661cc12ab5549bc25edf3d61f0dd4f8"
+      },
+      {
+        "name": "qwen3-tts-tokenizer-f16.gguf",
+        "size": 341157120,
+        "sha256": "d1ad9660bd99343f4851d5a4b17e31f65648feb3559f6ea062ae6575e5cd9d90"
+      },
+      {
+        "name": "qwen-tts-model-manifest.json",
+        "size": 852,
+        "sha256": "23ac50379a217145557926ddb5a84bc8dfb69c87ed915542faf321b6745b394b"
+      }
+    ]
+  },
+  "package": {
+    "version": "0.1.1"
   },
   "runtime": {
     "repository": "https://github.com/predict-woo/qwen3-tts.cpp.git",
@@ -16,12 +59,22 @@
     "revision": "5d83992436eae1d760afd27aff78a71d676296fc",
     "quantization": "q8_0"
   },
-  "voice": {
-    "id": "american-woman",
-    "name": "American English Woman",
-    "file": "native/qwen-tts/voices/american-woman.spk",
-    "designModel": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
-    "designModelRevision": "5ecdb67327fd37bb2e042aab12ff7391903235d3",
-    "seed": 20260817
-  }
+  "voiceDesign": {
+    "model": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "revision": "5ecdb67327fd37bb2e042aab12ff7391903235d3"
+  },
+  "voices": [
+    {
+      "id": "american-man",
+      "name": "American English Man",
+      "file": "native/qwen-tts/voices/american-man.spk",
+      "seed": 20260818
+    },
+    {
+      "id": "american-woman",
+      "name": "American English Woman",
+      "file": "native/qwen-tts/voices/american-woman.spk",
+      "seed": 20260817
+    }
+  ]
 }

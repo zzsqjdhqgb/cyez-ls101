@@ -1,0 +1,564 @@
+.filmstrip,
+.inspector,
+.canvas {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.filmstrip,
+.inspector {
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--color-surface);
+}
+
+.filmstrip {
+  display: grid;
+  grid-template-rows: 58px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.filmstripHeader {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filmstripHeader > div {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.filmstripHeader h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 14px;
+  font-weight: 660;
+}
+
+.filmstripHeader span {
+  color: var(--color-text-faint);
+  font-size: 11px;
+}
+
+.filmstripBody {
+  min-height: 0;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.filmstripNotice {
+  margin: 0;
+  padding: 24px 12px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.snapshotList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pageGroupHeading {
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 5px 4px 1px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.pageGroupHeading svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pageGroupHeading span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.snapshotCard {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 9px;
+  padding: 7px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.snapshotCard:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
+}
+
+.snapshotCard[data-current] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  box-shadow: 0 0 0 1px var(--color-focus-ring);
+}
+
+.snapshotSelect {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.snapshotSelect:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.errorList li > button,
+.errorList li > span {
+  display: grid;
+  width: 100%;
+  gap: 3px;
+  padding: 7px 8px;
+  border: 0;
+  color: var(--color-danger);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+}
+
+.errorList li > button {
+  cursor: pointer;
+}
+
+.errorList li > button:hover {
+  background: var(--color-danger-soft);
+}
+
+.errorList strong {
+  font-size: 11px;
+}
+
+.errorList small {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.thumbnailViewport {
+  position: relative;
+  display: block;
+  width: 120px;
+  height: 80px;
+  overflow: hidden;
+  border: 1px solid #303a38;
+  background: #0b0e0e;
+  pointer-events: none;
+}
+
+.thumbnailPage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 1200px;
+  height: 800px;
+  transform: scale(0.1);
+  transform-origin: top left;
+}
+
+.snapshotMeta {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-content: center;
+  align-items: center;
+  gap: 3px 5px;
+  font-size: 11px;
+  font-weight: 620;
+}
+
+.snapshotMeta svg {
+  width: 14px;
+  height: 14px;
+  color: var(--color-accent);
+}
+
+.snapshotIndex {
+  grid-column: 1 / -1;
+  color: var(--color-text-faint);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.snapshotMeta small {
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 520;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas {
+  display: grid;
+  grid-template-rows: 52px minmax(0, 1fr) 58px;
+  overflow: hidden;
+  background: var(--color-surface-subtle);
+}
+
+.canvasEmpty {
+  display: grid;
+  min-height: 0;
+  grid-row: 1 / -1;
+  overflow: auto;
+}
+
+.canvasHeader,
+.stepBar {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.canvasHeader {
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 16px;
+}
+
+.canvasHeading,
+.stepBar > div {
+  display: grid;
+  min-width: 0;
+}
+
+.canvasHeading strong,
+.canvasHeading span,
+.stepBar strong,
+.stepBar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvasHeading strong,
+.stepBar strong {
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.canvasHeading span,
+.stepBar span {
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.position {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.canvasHeaderActions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.choiceInfoAnchor {
+  position: relative;
+  display: flex;
+}
+
+.choiceInfoButton {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-xs);
+  place-items: center;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.choiceInfoButton:hover,
+.choiceInfoButton[aria-expanded='true'] {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.choiceInfoButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.choiceInfoButton svg {
+  width: 15px;
+  height: 15px;
+}
+
+.choiceInfoPopover {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(320px, calc(100vw - 48px));
+  max-height: min(480px, calc(100vh - 180px));
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popover);
+}
+
+.choiceInfoTitle,
+.choiceInfoItemHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.choiceInfoTitle {
+  margin-bottom: 10px;
+}
+
+.choiceInfoTitle strong,
+.choiceInfoItemHeading strong {
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 660;
+}
+
+.choiceInfoTitle span,
+.choiceInfoItemHeading span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-faint);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.choiceInfoList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.choiceInfoList > li {
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-subtle);
+}
+
+.choiceInfoList dl {
+  display: grid;
+  gap: 5px;
+  margin: 9px 0 0;
+}
+
+.choiceInfoList dl > div {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.choiceInfoList dt {
+  color: var(--color-text-muted);
+}
+
+.choiceInfoList dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text-strong);
+  overflow-wrap: anywhere;
+}
+
+.canvasViewport {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  padding: 32px;
+  overflow: hidden;
+  place-items: center;
+  background-color: #f8faf9;
+  background-image:
+    linear-gradient(rgb(78 98 94 / 10%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(78 98 94 / 10%) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.scaledPreview {
+  position: relative;
+  flex: 0 0 auto;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgb(63 80 76 / 24%),
+    0 10px 34px rgb(20 31 29 / 24%);
+}
+
+.scaledPreviewInner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1200px;
+  height: 800px;
+  transform-origin: top left;
+}
+
+.stepBar {
+  gap: 10px;
+  padding: 0 16px;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 0;
+}
+
+.stepIcon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-xs);
+  place-items: center;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.stepIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.details {
+  display: grid;
+  gap: 9px;
+  margin: 0 0 14px;
+}
+
+.details > div {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.details dt {
+  color: var(--color-text-muted);
+}
+
+.details dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text-strong);
+}
+
+.bindings {
+  display: grid;
+  gap: 14px;
+}
+
+.bindings label,
+.binding {
+  display: grid;
+  gap: 6px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.bindings input,
+.bindings select {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font: 12px/1.4 var(--font-ui);
+}
+
+.bindings input:focus,
+.bindings select:focus {
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
+}
+
+.groupPreviewInput {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.error {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 7px;
+  color: var(--color-danger);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.error svg {
+  width: 16px;
+  height: 16px;
+}
+
+.errorList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-danger);
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.emptyValue {
+  margin: 0;
+  color: var(--color-text-faint);
+  font-size: 12px;
+}

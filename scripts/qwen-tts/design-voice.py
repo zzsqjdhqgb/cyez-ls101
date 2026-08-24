@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Any
 
 ASSET_CONFIG = json.loads(Path(__file__).with_name("assets.json").read_text(encoding="utf-8"))
-MODEL_ID = ASSET_CONFIG["voice"]["designModel"]
-MODEL_REVISION = ASSET_CONFIG["voice"]["designModelRevision"]
+MODEL_ID = ASSET_CONFIG["voiceDesign"]["model"]
+MODEL_REVISION = ASSET_CONFIG["voiceDesign"]["revision"]
 DEFAULT_TEXT = (
     "Good morning. The library opens at eight thirty, and today's workshop begins "
     "just after nine. Please bring your notes, ask clear questions, and take your time."
@@ -29,7 +29,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Generate WAV candidates whose speaker embeddings can be used by Qwen3-TTS Base."
     )
-    parser.add_argument("--output-dir", type=Path, default=Path("model-assets/qwen-tts/voice-design"))
+    parser.add_argument("--output-dir", type=Path, default=Path("native/qwen-tts/voice-design"))
     parser.add_argument("--text", default=DEFAULT_TEXT, help="English reference text to speak")
     parser.add_argument("--instruct", default=DEFAULT_INSTRUCT, help="VoiceDesign description")
     parser.add_argument("--language", default="English")

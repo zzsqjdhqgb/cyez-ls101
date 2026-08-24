@@ -1,0 +1,195 @@
+.screen {
+  --current-sidebar-width: auto;
+
+  display: grid;
+  width: 100%;
+  height: 100%;
+  grid-template-rows: var(--titlebar-height) minmax(0, 1fr);
+  background: var(--color-canvas);
+}
+
+.content {
+  display: grid;
+  min-height: 0;
+  padding: 32px 24px;
+  overflow: auto;
+  place-items: center;
+  background: var(--color-surface-subtle);
+}
+
+.panel {
+  width: min(560px, 100%);
+  padding: 32px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: 0 16px 40px rgb(31 43 41 / 10%);
+}
+
+.stateIcon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  place-items: center;
+}
+
+.stateIcon[data-state='busy'] {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.stateIcon[data-state='done'] {
+  color: var(--color-text-strong);
+  background: var(--color-surface-pressed);
+}
+
+.stateIcon[data-state='failed'] {
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.stateIcon svg {
+  width: 23px;
+  height: 23px;
+}
+
+.stateIcon[data-state='busy'] svg,
+.progress svg,
+.retryButton svg[class*='loader'] {
+  animation: spin 800ms linear infinite;
+}
+
+.heading {
+  margin-top: 18px;
+}
+
+.heading h1,
+.heading p {
+  margin: 0;
+}
+
+.heading h1 {
+  color: var(--color-text-strong);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.heading p {
+  margin-top: 7px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.summary {
+  display: grid;
+  margin: 24px 0 0;
+  padding: 16px 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.summary div {
+  min-width: 0;
+  padding: 0 16px;
+  border-right: 1px solid var(--color-border);
+}
+
+.summary div:first-child {
+  padding-left: 0;
+}
+
+.summary div:last-child {
+  padding-right: 0;
+  border-right: 0;
+}
+
+.summary dt,
+.summary dd {
+  margin: 0;
+}
+
+.summary dt {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.summary dd {
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  color: var(--color-text-strong);
+  font-size: 16px;
+  font-weight: 680;
+  line-height: 1.35;
+}
+
+.error,
+.success,
+.progress {
+  display: flex;
+  min-height: 40px;
+  margin: 18px 0 0;
+  padding: 10px 12px;
+  align-items: flex-start;
+  gap: 9px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.error {
+  border: 1px solid color-mix(in srgb, var(--color-danger) 24%, var(--color-border));
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.success {
+  border: 1px solid color-mix(in srgb, var(--color-accent) 24%, var(--color-border));
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.progress {
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle);
+}
+
+.error svg,
+.success svg,
+.progress svg {
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+  flex: 0 0 auto;
+}
+
+.actions {
+  display: flex;
+  margin-top: 22px;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.retryButton {
+  margin-top: 20px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 760px) {
+  .content {
+    padding: 24px 16px;
+  }
+
+  .panel {
+    padding: 24px;
+  }
+}

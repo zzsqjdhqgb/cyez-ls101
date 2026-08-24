@@ -3,9 +3,7 @@
   "include": [
     "electron.vite.config.*",
     "src/main/**/*",
-    "src/preload/**/*",
-    "src/renderer/src/types.ts",
-    "src/shared/**/*"
+    "src/preload/**/*"
   ],
   "exclude": [
     "src/**/__tests__/**"
@@ -13,5 +11,15 @@
   "compilerOptions": {
     "composite": true,
     "types": ["electron-vite/node"]
-  }
+  },
+  "references": [
+    { "path": "./packages/core-types" },
+    { "path": "./packages/logger" },
+    { "path": "./packages/clipboard" },
+    { "path": "./packages/config-store" },
+    { "path": "./packages/secret-store" },
+    { "path": "./packages/airouter" },
+    { "path": "./packages/file-dialog" },
+    { "path": "./packages/file-store" }
+  ]
 }

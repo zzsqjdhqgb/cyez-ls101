@@ -1,0 +1,40 @@
+#
+# Copyright (c) 2026 Haoting Ying (zzsqjdhqgb). All rights reserved.
+# Proprietary code. Use is subject to the LICENSE file in the repository root.
+#
+
+services:
+  cyez-ls101-dev-docker:
+    build: .
+    container_name: cyez-ls101-dev-docker
+    volumes:
+      # 将当前目录（项目根目录）挂载到容器的 /workspace
+      - ../:/workspace
+      # 持久化 OpenCode 的配置和缓存，避免重启后需要重新登录
+      - opencode-data-plain:/root/.local
+      - opencode-config-plain:/root/.config/opencode
+      - codex_home:/root/.codex
+      - yarn:/workspace/.yarn
+      - yarn-cache:/yarn/store
+      - node_modules:/workspace/node_modules
+      - assets:/workspace/assets
+      - /workspace/dist
+      - /workspace/out
+      - ../.git:/workspace/.git:ro
+      - ../assets/.gitkeep:/workspace/assets/.gitkeep:ro
+      - ../docker/:/workspace/docker/:ro
+    working_dir: /workspace
+    shm_size: 1gb
+    # 保持容器运行并支持交互式终端
+    stdin_open: true
+    tty: true
+    # 自动重启（可选）
+
+volumes:
+  opencode-data-plain:
+  opencode-config-plain:
+  codex_home:
+  yarn:
+  yarn-cache:
+  node_modules:
+  assets:

@@ -1,0 +1,132 @@
+.root,
+.group,
+.list,
+.item {
+  display: grid;
+}
+
+.root {
+  gap: 22px;
+}
+
+.group {
+  gap: 10px;
+}
+
+.heading,
+.itemHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.heading > div {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.heading strong,
+.itemHeading strong {
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 660;
+}
+
+.heading span {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.list {
+  gap: 9px;
+}
+
+.item {
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-subtle);
+}
+
+.item label {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 620;
+}
+
+.item input,
+.item select {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font: 12px/1.4 var(--font-ui);
+}
+
+.item input:focus,
+.item select:focus {
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
+}
+
+.pageCounts {
+  display: grid;
+  gap: 6px;
+}
+
+.pageCountsHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 620;
+}
+
+.pageCountList {
+  display: grid;
+  border-top: 1px solid var(--color-border);
+}
+
+.pageCountRow {
+  display: grid;
+  grid-template-columns: minmax(54px, auto) minmax(0, 1fr) 28px;
+  gap: 7px;
+  align-items: center;
+  min-width: 0;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pageCountRow > span {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.pageCountRow input {
+  min-height: 30px;
+  padding: 5px 8px;
+}
+
+.empty {
+  margin: 0;
+  padding: 10px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle);
+  font-size: 11px;
+  text-align: center;
+}

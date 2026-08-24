@@ -1,0 +1,96 @@
+.select {
+  width: 180px;
+  min-height: 36px;
+  padding: 0 34px 0 11px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+}
+
+.status,
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.error {
+  border-color: color-mix(in srgb, var(--color-danger) 24%, var(--color-border));
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.switch {
+  position: relative;
+  display: inline-flex;
+  width: 38px;
+  height: 22px;
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.switchTrack {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 11px;
+  background: var(--color-surface-pressed);
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+.switchTrack::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: 0 1px 3px rgb(25 35 34 / 18%);
+  content: '';
+  transition: transform 120ms ease;
+}
+
+.switch input:checked + .switchTrack {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.switch input:checked + .switchTrack::after {
+  transform: translateX(16px);
+}
+
+.switch input:focus-visible + .switchTrack {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switchTrack,
+  .switchTrack::after {
+    transition: none;
+  }
+}
