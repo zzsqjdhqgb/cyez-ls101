@@ -572,6 +572,7 @@ test('AR-10 edits and deletes a text provider with its secret without affecting 
   await page.getByRole('button', { name: '保存 Provider' }).click()
   await page.getByRole('button', { name: '删除 Provider' }).click()
   await page.getByRole('button', { name: '删除配置' }).click()
+  await expect(page.getByText('已删除“edited-provider”', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /edited-provider/ })).toBeHidden()
   const state = await page.evaluate(async () => {
     let deletedKeyError = ''
