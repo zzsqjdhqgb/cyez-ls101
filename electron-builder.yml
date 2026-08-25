@@ -60,8 +60,14 @@ files:
   - 'node_modules/onnxruntime-node/dist/*.js'
   - 'node_modules/sherpa-onnx-node/package.json'
   - 'node_modules/sherpa-onnx-node/*.js'
+  - 'node_modules/buffer-from/{index.js,package.json}'
+  - 'node_modules/source-map/package.json'
+  - 'node_modules/source-map/source-map.js'
+  - 'node_modules/source-map/lib/*.js'
+  - 'node_modules/source-map-support/{package.json,source-map-support.js}'
 asarUnpack:
   - out/main/pronunciation-assessment-worker.js
+  - out/main/pronunciation-assessment-worker.js.map
   - node_modules/onnxruntime-common/**
   - node_modules/onnxruntime-node/**
   - node_modules/sherpa-onnx-*/**

@@ -94,6 +94,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       contextIsolation: preferences.contextIsolation,
       nodeIntegration: preferences.nodeIntegration,
       sandbox: preferences.sandbox,
+      sourceMapStackTraceInstalled: typeof Error.prepareStackTrace === 'function',
       title: window.getTitle(),
       userDataPath: app.getPath('userData'),
       visible: window.isVisible()
@@ -107,6 +108,7 @@ test('starts a hardened application window and exposes every preload bridge', as
     isPackaged: true,
     nodeIntegration: false,
     sandbox: true,
+    sourceMapStackTraceInstalled: true,
     title: '曹二听说101',
     visible: true
   })

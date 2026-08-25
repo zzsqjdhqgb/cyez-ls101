@@ -4,6 +4,9 @@ import {
   verifyLegacyArchive,
   type CreateLegacyArchiveRequest
 } from './legacy-data-archive'
+import { installSourceMapSupport } from './source-map-support'
+
+installSourceMapSupport()
 
 type WorkerRequest =
   | { type: 'create'; request: CreateLegacyArchiveRequest }
