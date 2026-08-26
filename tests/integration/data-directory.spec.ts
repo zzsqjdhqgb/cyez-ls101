@@ -137,20 +137,12 @@ test('copies business data, switches directories after restart and retains the s
   electronApp.process().stderr?.on('data', (chunk: Buffer) => processErrors.push(chunk.toString()))
 
   try {
+    let page: Page
     try {
-      await expect
-        .poll(async () =>
-          Promise.all(electronApp.windows().map((window) => window.title().catch(() => '')))
-        )
-        .toContain('曹二听说101')
+      page = await mainApplicationWindow(electronApp)
     } catch (error) {
       throw new Error(`${String(error)}\napplication stderr:\n${processErrors.join('')}`)
     }
-    let mainWindow = electronApp.windows()[0]
-    for (const window of electronApp.windows()) {
-      if ((await window.title().catch(() => '')) === '曹二听说101') mainWindow = window
-    }
-    const page = mainWindow
     await page.waitForLoadState('domcontentloaded')
     const migrated = await page.evaluate(() => window.dataDirectory!.getInfo())
 
@@ -247,7 +239,9 @@ async function mainApplicationWindow(electronApp: ElectronApplication): Promise<
     )
     .toContain('曹二听说101')
   for (const window of electronApp.windows()) {
-    if ((await window.title().catch(() => '')) === '曹二听说101') return window
+    if ((await window.title().catch(() => '')) !== '曹二听说101') continue
+    await window.evaluate(() => window.startup!.whenReady())
+    return window
   }
   throw new Error('Main application window was not found')
 }

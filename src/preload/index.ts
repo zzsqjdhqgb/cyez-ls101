@@ -4,12 +4,14 @@ import {
   DATA_DIRECTORY_CHANNELS,
   LEGACY_DATA_CHANNELS,
   LICENSE_CHANNELS,
+  STARTUP_CHANNELS,
   WINDOW_CONTROL_CHANNELS,
   WINDOW_CONTROL_EVENTS,
   type AppInfoBridge,
   type DataDirectoryBridge,
   type LegacyDataBridge,
   type LicenseBridge,
+  type StartupBridge,
   type WindowControlsBridge
 } from '@ls101/core-types'
 import {
@@ -445,6 +447,13 @@ const loggerBridge: LoggerBridge = {
   }
 }
 
+const startupBridge: StartupBridge = {
+  whenReady() {
+    return ipcRenderer.invoke(STARTUP_CHANNELS.whenReady)
+  }
+}
+
+contextBridge.exposeInMainWorld('startup', startupBridge)
 contextBridge.exposeInMainWorld('fileStore', fileStoreBridge)
 contextBridge.exposeInMainWorld('builtinFileStore', builtinFileStoreBridge)
 contextBridge.exposeInMainWorld('configStore', configStoreBridge)

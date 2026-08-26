@@ -6,7 +6,6 @@ import { generateText, streamText, type LanguageModel } from 'ai'
 import { JsonConfigStorage } from '@ls101/config-store/main'
 import type { JsonValue } from '@ls101/config-store/shared'
 import { createElectronSecretStorage, type EncryptedSecretStorage } from '@ls101/secret-store/main'
-import modelCatalog from './model-catalog.generated.json'
 import type {
   AIRouterConnectionTestInput,
   AIRouterModelConfig,
@@ -112,7 +111,8 @@ export class AIRouterService {
       })
       .filter((model): model is AIRouterModelOption => model !== null)
       .sort((left, right) => left.id.localeCompare(right.id))
-    return enrichModelsFromCatalog(models, config.catalogProviderId)
+    if (!config.catalogProviderId) return models
+    return enrichModelsFromCatalog(models, config.catalogProviderId, await loadCatalogProviders())
   }
 
   async testConnection(request: AIRouterConnectionTestInput): Promise<AIRouterTestResult> {
@@ -529,12 +529,22 @@ interface CatalogProvider {
   models?: Record<string, CatalogModel>
 }
 
+let catalogProviders: Promise<Record<string, CatalogProvider>> | null = null
+
+function loadCatalogProviders(): Promise<Record<string, CatalogProvider>> {
+  if (!catalogProviders) {
+    catalogProviders = import('./model-catalog.generated.json').then(
+      ({ default: catalog }) => catalog.providers as Record<string, CatalogProvider>
+    )
+  }
+  return catalogProviders
+}
+
 function enrichModelsFromCatalog(
   models: AIRouterModelOption[],
-  providerId: string
+  providerId: string,
+  providers: Record<string, CatalogProvider>
 ): AIRouterModelOption[] {
-  if (!providerId) return models
-  const providers = modelCatalog.providers as Record<string, CatalogProvider>
   const providerModels = providers[providerId]?.models ?? {}
   return models.map((model) => ({
     ...toModelMetadata(providerModels[model.id]),

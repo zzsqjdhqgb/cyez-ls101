@@ -1241,6 +1241,7 @@ __metadata:
     fflate: "npm:^0.8.2"
     ffmpeg-static: "npm:^5.3.0"
     onnxruntime-node: "npm:1.24.3"
+    source-map-support: "npm:^0.5.21"
     yauzl: "npm:^3.2.0"
     zod: "npm:3.25.76"
   languageName: unknown
@@ -3962,6 +3963,7 @@ __metadata:
     react: "npm:^19.2.8"
     react-dom: "npm:^19.2.8"
     sherpa-onnx-node: "npm:^1.13.6"
+    source-map-support: "npm:^0.5.21"
     typescript: "npm:^5.9.3"
     typescript-eslint: "npm:^8.67.0"
     vite: "npm:^7.3.6"
@@ -8648,7 +8650,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"source-map-support@npm:^0.5.19":
+"source-map-support@npm:^0.5.19, source-map-support@npm:^0.5.21":
   version: 0.5.21
   resolution: "source-map-support@npm:0.5.21"
   dependencies:

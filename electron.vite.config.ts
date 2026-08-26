@@ -10,24 +10,35 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   main: {
     build: {
+      minify: 'esbuild',
+      sourcemap: true,
       rollupOptions: {
         external: ['onnxruntime-node', 'sherpa-onnx-node', 'ffmpeg-static'],
         input: {
-          index: resolve('src/main/index.ts'),
+          index: resolve('src/main/bootstrap.ts'),
+          application: resolve('src/main/index.ts'),
           'pocket-tts-worker': resolve('packages/airouter/src/main/pocket-tts-worker.ts'),
           'pronunciation-assessment-worker': resolve(
             'packages/airouter/src/main/pronunciation-assessment-worker.ts'
           ),
           'qwen3-asr-worker': resolve('packages/airouter/src/main/qwen3-asr-worker.ts'),
           'legacy-data-worker': resolve('src/main/legacy-data-worker.ts')
+        },
+        output: {
+          sourcemapExcludeSources: true
         }
       }
     }
   },
-  preload: {},
+  preload: {
+    build: {
+      minify: 'esbuild'
+    }
+  },
   renderer: {
     root: resolve('packages/renderer'),
     build: {
+      minify: 'esbuild',
       rollupOptions: {
         input: resolve('packages/renderer/index.html')
       }

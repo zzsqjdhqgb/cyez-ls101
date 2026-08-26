@@ -69,6 +69,7 @@ test.beforeEach(async () => {
   page = await electronApp.firstWindow()
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
+  await expect(page.locator('.startupPlaceholder')).toBeVisible()
   await expect(page.getByRole('dialog', { name: '曹二听说101 v0.4.0' })).toBeVisible({
     timeout: APPLICATION_STARTUP_TIMEOUT
   })
@@ -94,6 +95,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       contextIsolation: preferences.contextIsolation,
       nodeIntegration: preferences.nodeIntegration,
       sandbox: preferences.sandbox,
+      sourceMapStackTraceInstalled: typeof Error.prepareStackTrace === 'function',
       title: window.getTitle(),
       userDataPath: app.getPath('userData'),
       visible: window.isVisible()
@@ -107,6 +109,7 @@ test('starts a hardened application window and exposes every preload bridge', as
     isPackaged: true,
     nodeIntegration: false,
     sandbox: true,
+    sourceMapStackTraceInstalled: true,
     title: '曹二听说101',
     visible: true
   })
@@ -127,6 +130,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       license: methods('license'),
       nodeProcess: typeof runtimeWindow.process,
       nodeRequire: typeof runtimeWindow.require,
+      startup: methods('startup'),
       windowControls: methods('windowControls')
     }
   })
@@ -192,8 +196,32 @@ test('starts a hardened application window and exposes every preload bridge', as
     license: ['activate', 'deactivate', 'getStatus', 'openActivationGuide'],
     nodeProcess: 'undefined',
     nodeRequire: 'undefined',
+    startup: ['whenReady'],
     windowControls: ['close', 'getMaximized', 'minimize', 'onMaximizedChange', 'toggleMaximize']
   })
+})
+
+test('packages every worker referenced by the application bundle', async () => {
+  const packagedWorkers = await electronApp.evaluate(({ app }) => {
+    const fs = process.getBuiltinModule('node:fs')
+    const path = process.getBuiltinModule('node:path')
+    return [
+      'legacy-data-worker.js',
+      'pocket-tts-worker.js',
+      'pronunciation-assessment-worker.js',
+      'qwen3-asr-worker.js'
+    ].map((name) => ({
+      name,
+      exists: fs.existsSync(path.join(app.getAppPath(), 'out', 'main', name))
+    }))
+  })
+
+  expect(packagedWorkers).toEqual([
+    { name: 'legacy-data-worker.js', exists: true },
+    { name: 'pocket-tts-worker.js', exists: true },
+    { name: 'pronunciation-assessment-worker.js', exists: true },
+    { name: 'qwen3-asr-worker.js', exists: true }
+  ])
 })
 
 test('shows release notes only once for the current release', async () => {

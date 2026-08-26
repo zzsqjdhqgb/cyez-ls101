@@ -5,6 +5,8 @@ import { ASSET_PROTOCOL_SCHEME, BUILTIN_ASSET_PROTOCOL_SCHEME } from '../shared/
 import { assetUrlToLocation, builtinAssetUrlToLocation } from './assetUrl'
 import { resolveAssetPath } from './storage'
 
+type BaseDirectorySource = string | (() => Promise<string>)
+
 export function registerAssetScheme(): void {
   protocol.registerSchemesAsPrivileged([
     {
@@ -33,26 +35,27 @@ export function registerBuiltinAssetScheme(): void {
   ])
 }
 
-export function registerAssetProtocol(baseDir: string): void {
+export function registerAssetProtocol(baseDir: BaseDirectorySource): void {
   protocol.handle(ASSET_PROTOCOL_SCHEME, (request) =>
     readAssetResponse(baseDir, request.url, assetUrlToLocation)
   )
 }
 
-export function registerBuiltinAssetProtocol(baseDir: string): void {
+export function registerBuiltinAssetProtocol(baseDir: BaseDirectorySource): void {
   protocol.handle(BUILTIN_ASSET_PROTOCOL_SCHEME, (request) =>
     readAssetResponse(baseDir, request.url, builtinAssetUrlToLocation)
   )
 }
 
 async function readAssetResponse(
-  baseDir: string,
+  baseDir: BaseDirectorySource,
   rawUrl: string,
   parseUrl: typeof assetUrlToLocation
 ): Promise<Response> {
   let filePath: string
   try {
-    filePath = resolveAssetPath(baseDir, parseUrl(rawUrl))
+    const resolvedBaseDir = typeof baseDir === 'string' ? baseDir : await baseDir()
+    filePath = resolveAssetPath(resolvedBaseDir, parseUrl(rawUrl))
   } catch {
     return new Response('Forbidden', { status: 403 })
   }
