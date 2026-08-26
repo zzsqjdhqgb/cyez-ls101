@@ -133,7 +133,7 @@ describe('bundled Interface repository', () => {
     const entries = await repository.loadAll()
     const entry = entries.find(({ builtinKey }) => builtinKey === 'shanghai-zhongkao-speaking')
     expect(entry?.currentInterface).toMatchObject({
-      id: 'sha256:fd1bd229ebd711dce3655bdc3a4b41a9ecb93ce273b7643307a726ae403cc884',
+      id: 'sha256:e315a7e3f6c39e8f440272d7e922f78e3a98f6f7715a6b4a885e6b2fc3faf0c6',
       name: '上海中考英语口语'
     })
     if (!entry) throw new Error('expected Shanghai Zhongkao speaking builtin')
@@ -143,6 +143,12 @@ describe('bundled Interface repository', () => {
 
     const leaves = flattenFields(entry.currentInterface.fields)
     expectVarNames(leaves, EXPECTED_ZHONGKAO_SPEAKING_VAR_NAMES)
+    const dialogue = leaves.find(({ leaf }) => leaf.varName === '3_dialogue')?.leaf
+    expect(dialogue?.description).toContain('[Man]:或[Woman]:')
+    expect(dialogue?.example.split('\n').every((line) => /^\[(Man|Woman)\]: /.test(line))).toBe(
+      true
+    )
+    expect(dialogue?.example).not.toMatch(/\b(?:Boy|Girl):/)
     expect(
       leaves.filter(({ leaf }) => leaf.type === 'image').map(({ leaf }) => leaf.varName)
     ).toEqual(['3_picture', '4_picture'])

@@ -14,6 +14,7 @@ import {
   type AIRouterPronunciationAssessmentResult
 } from '../shared'
 import { AIRouterExtensionStore } from './extension-store'
+import { sourceMapExecArgv } from './source-map-support'
 
 const MAX_AUDIO_BYTES = 100 * 1024 * 1024
 const MAX_REFERENCE_TEXT_LENGTH = 10_000
@@ -127,6 +128,7 @@ export class AIRouterPronunciationAssessmentService {
         ...process.env,
         ELECTRON_RUN_AS_NODE: '1'
       },
+      execArgv: sourceMapExecArgv(),
       execPath: process.execPath,
       serialization: 'advanced',
       stdio: ['ignore', 'ignore', 'ignore', 'ipc']

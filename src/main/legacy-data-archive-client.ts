@@ -16,17 +16,23 @@ interface WorkerResponse {
   error?: string
 }
 
-export const workerLegacyArchiveOperations: LegacyArchiveOperations = {
-  create(request) {
-    return runWorker<CreateLegacyArchiveResult>({ type: 'create', request })
-  },
-  verify(archivePath) {
-    return runWorker<VerifyLegacyArchiveResult>({ type: 'verify', archivePath })
+export function createWorkerLegacyArchiveOperations(workerUrl: URL): LegacyArchiveOperations {
+  return {
+    create(request) {
+      return runWorker<CreateLegacyArchiveResult>({ type: 'create', request }, workerUrl)
+    },
+    verify(archivePath) {
+      return runWorker<VerifyLegacyArchiveResult>({ type: 'verify', archivePath }, workerUrl)
+    }
   }
 }
 
-function runWorker<Result>(request: WorkerRequest): Promise<Result> {
-  const worker = new Worker(new URL('./legacy-data-worker.js', import.meta.url), {
+export const workerLegacyArchiveOperations = createWorkerLegacyArchiveOperations(
+  new URL('./legacy-data-worker.js', import.meta.url)
+)
+
+function runWorker<Result>(request: WorkerRequest, workerUrl: URL): Promise<Result> {
+  const worker = new Worker(workerUrl, {
     workerData: request
   })
   return new Promise<Result>((resolve, reject) => {

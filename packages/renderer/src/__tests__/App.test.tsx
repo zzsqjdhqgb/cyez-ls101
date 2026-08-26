@@ -41,9 +41,9 @@ describe('App', () => {
   it('shows release notes on startup when requested and returns to the workbench after closing', () => {
     render(<App showReleaseNotesOnStartup />)
 
-    expect(screen.getByRole('dialog', { name: '曹二听说101 v0.4.0' })).toBeVisible()
+    expect(screen.getByRole('dialog', { name: '曹二听说101 v0.4.1' })).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: '关闭版本说明' }))
-    expect(screen.queryByRole('dialog', { name: '曹二听说101 v0.4.0' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '曹二听说101 v0.4.1' })).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('link', { name: '题型库' }))
     expect(screen.getByRole('heading', { name: '题型库' })).toBeInTheDocument()

@@ -36,6 +36,7 @@ function NavigationLink({
     <NavLink
       aria-label={navigation.label}
       className={styles.link}
+      draggable={false}
       end={route.path === '/'}
       to={route.path}
     >

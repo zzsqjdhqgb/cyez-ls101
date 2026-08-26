@@ -2,7 +2,10 @@ import { parentPort, workerData } from 'node:worker_threads'
 import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { synthesizePocketTts, type PocketTtsModel } from './pocket-tts-runtime'
+import { installSourceMapSupport } from './source-map-support'
 import { decodeSentencepieceModel, UnigramTokenizer } from './tts/tokenizer'
+
+installSourceMapSupport()
 
 interface WorkerConfig {
   pttsWasmJsPath: string

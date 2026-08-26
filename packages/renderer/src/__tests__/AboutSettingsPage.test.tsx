@@ -41,7 +41,7 @@ describe('AboutSettingsPage', () => {
     )
     expect(screen.getByRole('button', { name: /版本说明/ })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /版本说明/ }))
-    expect(screen.getByRole('dialog', { name: '曹二听说101 v0.4.0' })).toBeVisible()
+    expect(screen.getByRole('dialog', { name: '曹二听说101 v0.4.1' })).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: '关闭版本说明' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })

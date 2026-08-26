@@ -111,8 +111,8 @@ describe('内置 Template 启动初始化', () => {
     const zhongkao = await repository.getActiveBuiltinTemplate(ZHONGKAO_TEMPLATE_ID)
     expect(zhongkao).toMatchObject({
       templateId: ZHONGKAO_TEMPLATE_ID,
-      version: 1,
-      releaseHash: 'sha256:a35d2f6eae2feaf7ea04bb179693ccbd1c6e10c45eff5940974e53e2ee4a6588',
+      version: 2,
+      releaseHash: 'sha256:ce0ce7a51b22cea8dc4e3305ec0b0e779580b601144c5e00f89b23a52d7e9a7e',
       document: {
         content: {
           name: '上海中考口语标准题型',
@@ -121,7 +121,7 @@ describe('内置 Template 启动初始化', () => {
             {
               alias: 'data',
               interfaceId:
-                'sha256:fd1bd229ebd711dce3655bdc3a4b41a9ecb93ce273b7643307a726ae403cc884',
+                'sha256:e315a7e3f6c39e8f440272d7e922f78e3a98f6f7715a6b4a885e6b2fc3faf0c6',
               acceptedVars: [
                 'phrase_1_display',
                 'phrase_1',

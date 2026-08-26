@@ -212,10 +212,109 @@ jobs:
           retention-days: 14
           path: docs/product/
 
+  linux_electron_smoke:
+    name: Linux packaged Electron startup tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Enable Corepack
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare yarn@4.15.0 --activate
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+
+      - name: Get Yarn cache directory
+        id: yarn-cache-dir
+        shell: bash
+        run: echo "dir=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Yarn dependencies
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.yarn-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Restore setup assets
+        id: setup-assets-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            externals/ai/pocket-tts/model
+            externals/ai/stt/downloads/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2
+            externals/ai/stt/model/silero_vad.onnx
+            externals/ai/stt/model/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25
+            externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8
+            externals/ai/qwen3-tts/downloads/releases/ls101-qwen-tts-helper-cpu-linux-x64
+            externals/ai/qwen3-tts/downloads/releases/qwen-tts-runtime-manifest.json
+            externals/ai/qwen3-tts/downloads/releases/qwen-tts-model-manifest.json
+            externals/ai/qwen3-tts/runtime/linux-x64
+            externals/ai/qwen3-tts/models
+            assets/file-icons
+          key: ${{ runner.os }}-${{ runner.arch }}-setup-assets-v1-${{ hashFiles('scripts/*-assets.json', 'scripts/qwen-tts/assets.json', 'resources/file-icons/*.png') }}
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Save setup assets
+        if: steps.setup-assets-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            externals/ai/pocket-tts/model
+            externals/ai/stt/downloads/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2
+            externals/ai/stt/model/silero_vad.onnx
+            externals/ai/stt/model/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25
+            externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8
+            externals/ai/qwen3-tts/downloads/releases/ls101-qwen-tts-helper-cpu-linux-x64
+            externals/ai/qwen3-tts/downloads/releases/qwen-tts-runtime-manifest.json
+            externals/ai/qwen3-tts/downloads/releases/qwen-tts-model-manifest.json
+            externals/ai/qwen3-tts/runtime/linux-x64
+            externals/ai/qwen3-tts/models
+            assets/file-icons
+          key: ${{ steps.setup-assets-cache.outputs.cache-primary-key }}
+
+      - name: Build packaged application
+        run: yarn build:test
+
+      - name: Run Linux Electron startup tests
+        run: >-
+          xvfb-run -a yarn playwright test
+          --config=playwright.config.ts
+          tests/integration/electron-app.spec.ts
+          tests/integration/startup-progress.spec.ts
+          tests/integration/data-directory.spec.ts
+          --project=application
+
+      - name: Upload test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ci-linux-electron-smoke-diagnostics-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            playwright-report/
+            test-results/
+
   quality-gate:
     name: Required quality gate
     if: always()
-    needs: [test_suites, canonical_docs]
+    needs: [test_suites, canonical_docs, linux_electron_smoke]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -224,8 +323,9 @@ jobs:
         env:
           TEST_SUITES_RESULT: ${{ needs.test_suites.result }}
           CANONICAL_DOCS_RESULT: ${{ needs.canonical_docs.result }}
+          LINUX_ELECTRON_SMOKE_RESULT: ${{ needs.linux_electron_smoke.result }}
         run: |
-          if [ "$TEST_SUITES_RESULT" != "success" ] || [ "$CANONICAL_DOCS_RESULT" != "success" ]; then
+          if [ "$TEST_SUITES_RESULT" != "success" ] || [ "$CANONICAL_DOCS_RESULT" != "success" ] || [ "$LINUX_ELECTRON_SMOKE_RESULT" != "success" ]; then
             echo "::error::One or more required CI suites did not complete successfully."
             exit 1
           fi

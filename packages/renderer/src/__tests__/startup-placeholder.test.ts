@@ -2,10 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   applyStartupLogoMotion,
   applyStartupPlaceholderIcon,
-  STARTUP_PROGRESS_DELAY_MS,
-  showStartupProgress,
-  waitForStartupLogoAnimation,
-  waitForStartupProgressDelay
+  STARTUP_COMPLETION_DELAY_MS,
+  waitForStartupCompletionDelay,
+  waitForStartupLogoAnimation
 } from '../startup-placeholder'
 
 afterEach(() => {
@@ -37,6 +36,7 @@ describe('startup placeholder', () => {
     expect(document.head.querySelector('[data-startup-logo-motion]')).toHaveTextContent(
       '#logo-lockup { animation: startup 1s; }'
     )
+    expect(document.head.querySelector('[data-startup-logo-motion]')).not.toHaveAttribute('media')
   })
 
   it('waits for the logo animation end signal', async () => {
@@ -56,24 +56,15 @@ describe('startup placeholder', () => {
     expect(completed).toHaveBeenCalledOnce()
   })
 
-  it('waits one second after the logo animation before continuing', async () => {
+  it('waits one second after completed logo motion before opening the application', async () => {
     vi.useFakeTimers()
     const completed = vi.fn()
 
-    void waitForStartupProgressDelay().then(completed)
-    await vi.advanceTimersByTimeAsync(STARTUP_PROGRESS_DELAY_MS - 1)
+    void waitForStartupCompletionDelay().then(completed)
+    await vi.advanceTimersByTimeAsync(STARTUP_COMPLETION_DELAY_MS - 1)
     expect(completed).not.toHaveBeenCalled()
 
     await vi.advanceTimersByTimeAsync(1)
     expect(completed).toHaveBeenCalledOnce()
-  })
-
-  it('shows the loading bar while startup work is pending', () => {
-    const root = document.createElement('div')
-    root.innerHTML = '<div data-startup-progress hidden></div>'
-
-    showStartupProgress(root)
-
-    expect(root.querySelector('[data-startup-progress]')).not.toHaveAttribute('hidden')
   })
 })

@@ -52,6 +52,7 @@ function PersonRow({ person }: { person: Person }): JSX.Element {
     <a
       aria-label={`${person.name}的 GitHub 主页`}
       className={styles.personRow}
+      draggable={false}
       href={person.profileUrl}
       rel="noreferrer"
       target="_blank"
@@ -135,7 +136,13 @@ export function AboutSettingsPage(): JSX.Element {
             </p>
             <p className={styles.licenseDescription}>本软件为专有软件，使用须遵守项目许可证。</p>
           </div>
-          <a className={styles.projectLink} href={projectUrl} rel="noreferrer" target="_blank">
+          <a
+            className={styles.projectLink}
+            draggable={false}
+            href={projectUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
             项目主页
             <ExternalLink aria-hidden="true" />
           </a>

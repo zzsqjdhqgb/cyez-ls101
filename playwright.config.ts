@@ -7,7 +7,7 @@ export default defineConfig({
   },
   testDir: './tests/integration',
   outputDir: './test-results/integration',
-  timeout: 30_000,
+  timeout: process.platform === 'win32' ? 75_000 : 30_000,
   expect: {
     timeout: 5_000
   },
