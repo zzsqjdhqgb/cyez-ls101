@@ -82,7 +82,16 @@ export async function launchIntegrationApp(
   })
 
   if (options.contentSize) {
-    await electronApp.firstWindow()
+    const page = await electronApp.firstWindow()
+    // Main-process evaluation can lose its inspector promise while the startup bundle is importing.
+    await page.evaluate(async () => {
+      const startup = (
+        window as unknown as {
+          startup?: { whenReady(): Promise<void> }
+        }
+      ).startup
+      await startup?.whenReady()
+    })
     await electronApp.evaluate(({ BrowserWindow }, contentSize) => {
       const window = BrowserWindow.getAllWindows()[0]
       if (!window) throw new Error('Integration application did not create a browser window')
