@@ -795,7 +795,7 @@ test('opens and copies bundled Shanghai speaking templates', async () => {
   const zhongkaoRow = page
     .getByText('上海中考口语标准题型', { exact: true })
     .locator('xpath=ancestor::article')
-  await expect(zhongkaoRow.getByText('v1', { exact: true })).toBeVisible()
+  await expect(zhongkaoRow.getByText('v2', { exact: true })).toBeVisible()
   await expect(zhongkaoRow.getByText('中考', { exact: true })).toBeVisible()
 
   const builtinRow = page
