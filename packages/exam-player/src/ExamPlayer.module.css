@@ -9,6 +9,13 @@
   background: #e8eeec;
   color-scheme: light;
   font-family: Inter, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  user-select: none;
+}
+
+.root input,
+.root textarea,
+.root select {
+  user-select: text;
 }
 
 .stage {

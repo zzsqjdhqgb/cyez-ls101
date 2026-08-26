@@ -4,6 +4,7 @@
   font-size: 14px;
   line-height: 1.7;
   overflow-wrap: anywhere;
+  user-select: text;
 }
 
 .markdown > :first-child {

@@ -26,6 +26,17 @@ input {
   letter-spacing: 0;
 }
 
+input,
+select,
+textarea {
+  user-select: text;
+}
+
+label,
+legend {
+  user-select: none;
+}
+
 button:focus-visible,
 input:focus-visible {
   outline: 2px solid rgb(35 141 132 / 42%);
@@ -44,6 +55,7 @@ input:focus-visible {
   overflow: hidden;
   color: #17211f;
   background: #ffffff;
+  user-select: none;
 }
 
 .textBlock,
