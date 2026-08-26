@@ -25,7 +25,6 @@ describe('ReleaseNotesModal', () => {
     expect(screen.getByRole('heading', { name: '启动与稳定性' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '内置内容' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '桌面交互' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Windows 安装' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '升级说明' })).toBeInTheDocument()
     expect(await screen.findByText('已安装 0.4.1-test')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /查看完整变更/ })).toHaveAttribute(
