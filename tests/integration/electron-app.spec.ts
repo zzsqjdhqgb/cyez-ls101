@@ -69,6 +69,7 @@ test.beforeEach(async () => {
   page = await electronApp.firstWindow()
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
+  await expect(page.locator('.startupPlaceholder')).toBeVisible()
   await expect(page.getByRole('dialog', { name: '曹二听说101 v0.4.0' })).toBeVisible({
     timeout: APPLICATION_STARTUP_TIMEOUT
   })
@@ -129,6 +130,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       license: methods('license'),
       nodeProcess: typeof runtimeWindow.process,
       nodeRequire: typeof runtimeWindow.require,
+      startup: methods('startup'),
       windowControls: methods('windowControls')
     }
   })
@@ -194,6 +196,7 @@ test('starts a hardened application window and exposes every preload bridge', as
     license: ['activate', 'deactivate', 'getStatus', 'openActivationGuide'],
     nodeProcess: 'undefined',
     nodeRequire: 'undefined',
+    startup: ['whenReady'],
     windowControls: ['close', 'getMaximized', 'minimize', 'onMaximizedChange', 'toggleMaximize']
   })
 })

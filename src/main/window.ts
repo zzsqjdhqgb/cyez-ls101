@@ -5,7 +5,10 @@ import { bindWindowControlEvents } from './window-controls'
 
 const DEVELOPMENT_RENDERER_URL = process.env['ELECTRON_RENDERER_URL']
 
-export function createMainWindow(logger?: Logger): BrowserWindow {
+type LoggerSource = Logger | (() => Logger | null)
+
+export function createMainWindow(logger?: LoggerSource): BrowserWindow {
+  const getLogger = typeof logger === 'function' ? logger : () => logger ?? null
   Menu.setApplicationMenu(null)
 
   const window = new BrowserWindow({
@@ -31,11 +34,11 @@ export function createMainWindow(logger?: Logger): BrowserWindow {
 
   window.once('ready-to-show', () => {
     window.show()
-    logger?.info('Main window ready to show')
+    getLogger()?.info('Main window ready to show')
   })
 
   window.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
-    logger?.error('Renderer failed to load', undefined, {
+    getLogger()?.error('Renderer failed to load', undefined, {
       errorCode,
       errorDescription,
       validatedURL
@@ -43,14 +46,14 @@ export function createMainWindow(logger?: Logger): BrowserWindow {
   })
 
   window.webContents.on('render-process-gone', (_event, details) => {
-    logger?.error('Renderer process exited', undefined, {
+    getLogger()?.error('Renderer process exited', undefined, {
       reason: details.reason,
       exitCode: details.exitCode
     })
   })
 
-  window.on('unresponsive', () => logger?.warn('Main window became unresponsive'))
-  window.on('responsive', () => logger?.info('Main window became responsive'))
+  window.on('unresponsive', () => getLogger()?.warn('Main window became unresponsive'))
+  window.on('responsive', () => getLogger()?.info('Main window became responsive'))
 
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https://') || url.startsWith('http://')) {

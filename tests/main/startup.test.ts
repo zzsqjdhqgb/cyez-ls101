@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
     requestSingleInstanceLock: vi.fn(() => true),
     whenReady: vi.fn(() => Promise.resolve())
   },
+  ipcMain: { handle: vi.fn() },
+  mainWindow: { once: vi.fn() },
   createMainWindow: vi.fn(),
   initializeDataDirectory: vi.fn<() => Promise<string>>(),
   initializeLegacyData: vi.fn().mockResolvedValue(undefined),
@@ -25,6 +27,7 @@ vi.mock('electron', () => ({
   app: mocks.app,
   BrowserWindow: { getAllWindows: vi.fn(() => []) },
   dialog: { showErrorBox: mocks.showErrorBox },
+  ipcMain: mocks.ipcMain,
   safeStorage: { setUsePlainTextEncryption: vi.fn() }
 }))
 
@@ -73,8 +76,11 @@ vi.mock('../../src/main/legacy-data', () => ({
   }),
   registerLegacyDataHandlers: vi.fn()
 }))
+vi.mock('../../src/main/source-map-support', () => ({ installSourceMapSupport: vi.fn() }))
 vi.mock('../../src/main/window', () => ({ createMainWindow: mocks.createMainWindow }))
 vi.mock('../../src/main/window-controls', () => ({ registerWindowControlHandlers: vi.fn() }))
+
+let readyToShow: (() => void) | null = null
 
 beforeEach(() => {
   vi.resetModules()
@@ -83,13 +89,22 @@ beforeEach(() => {
   mocks.app.whenReady.mockReturnValue(Promise.resolve())
   mocks.initializeDataDirectory.mockResolvedValue('/data')
   mocks.recoverDataDirectory.mockReturnValue(new Promise<never>(() => undefined))
+  readyToShow = null
+  mocks.mainWindow.once.mockImplementation((event: string, listener: () => void) => {
+    if (event === 'ready-to-show') readyToShow = listener
+  })
+  mocks.createMainWindow.mockReturnValue(mocks.mainWindow)
 })
 
 describe('application startup error handling', () => {
-  it('waits for the licensed renderer flow before initializing legacy data', async () => {
-    await import('../../src/main/index')
+  it('creates the window before loading application services', async () => {
+    await import('../../src/main/bootstrap')
 
     await vi.waitFor(() => expect(mocks.createMainWindow).toHaveBeenCalledOnce())
+    expect(mocks.initializeDataDirectory).not.toHaveBeenCalled()
+
+    readyToShow?.()
+    await vi.waitFor(() => expect(mocks.initializeDataDirectory).toHaveBeenCalledOnce())
     expect(mocks.initializeLegacyData).not.toHaveBeenCalled()
   })
 
@@ -97,7 +112,9 @@ describe('application startup error handling', () => {
     const failure = new Error('data directory unavailable')
     mocks.initializeDataDirectory.mockRejectedValue(failure)
 
-    await import('../../src/main/index')
+    await import('../../src/main/bootstrap')
+    await vi.waitFor(() => expect(mocks.createMainWindow).toHaveBeenCalledOnce())
+    readyToShow?.()
 
     await vi.waitFor(() => {
       expect(mocks.recoverDataDirectory).toHaveBeenCalledWith('/user-data', failure)
@@ -112,7 +129,9 @@ describe('application startup error handling', () => {
       throw failure
     })
 
-    await import('../../src/main/index')
+    await import('../../src/main/bootstrap')
+    await vi.waitFor(() => expect(mocks.createMainWindow).toHaveBeenCalledOnce())
+    readyToShow?.()
 
     await vi.waitFor(() => {
       expect(mocks.showErrorBox).toHaveBeenCalledWith('应用启动失败', failure.message)
