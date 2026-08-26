@@ -70,7 +70,7 @@ test.beforeEach(async () => {
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
   await expect(page.locator('.startupPlaceholder')).toBeVisible()
-  await expect(page.getByRole('dialog', { name: '曹二听说101 v0.4.0' })).toBeVisible({
+  await expect(page.getByRole('dialog', { name: '曹二听说101 v0.4.1' })).toBeVisible({
     timeout: APPLICATION_STARTUP_TIMEOUT
   })
   await expect(page.getByRole('heading', { name: /旧数据/ })).toHaveCount(0)
@@ -423,11 +423,11 @@ test('navigates through every primary application area', async () => {
   await expectValidStyleBindings(page)
 
   await page.getByRole('button', { name: /版本说明/ }).click()
-  const releaseNotes = page.getByRole('dialog', { name: '曹二听说101 v0.4.0' })
+  const releaseNotes = page.getByRole('dialog', { name: '曹二听说101 v0.4.1' })
   await expect(releaseNotes).toBeVisible()
-  await expect(page.getByRole('heading', { level: 1, name: '曹二听说101 v0.4.0' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: '内容准备' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: '升级注意事项' })).toBeAttached()
+  await expect(page.getByRole('heading', { level: 1, name: '曹二听说101 v0.4.1' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '启动与稳定性' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '升级说明' })).toBeAttached()
   await expect(page.getByText(/^已安装 \S+$/)).toBeVisible()
   expect(
     await page.evaluate(

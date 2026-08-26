@@ -95,8 +95,8 @@ test('activates with an invitation code and reuses the hash receipt after restar
     expect(installationMarker).toMatchObject({
       kind: 'ls101-installation',
       formatVersion: 1,
-      firstAppVersion: expect.stringContaining('0.4.0'),
-      lastAppVersion: expect.stringContaining('0.4.0')
+      firstAppVersion: expect.stringContaining('0.4.1'),
+      lastAppVersion: expect.stringContaining('0.4.1')
     })
 
     const receipt = await readFile(path.join(userDataDir, 'license.json'), 'utf8')
