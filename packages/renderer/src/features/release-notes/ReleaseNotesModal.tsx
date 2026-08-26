@@ -56,7 +56,7 @@ export function ReleaseNotesModal({ open, onOpenChange }: ReleaseNotesModalProps
             <ReactMarkdown
               components={{
                 a: ({ children, href }) => (
-                  <a href={href} rel="noreferrer" target="_blank">
+                  <a draggable={false} href={href} rel="noreferrer" target="_blank">
                     {children}
                   </a>
                 ),

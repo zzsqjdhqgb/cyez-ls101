@@ -68,6 +68,10 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+a {
+  -webkit-user-drag: none;
+}
+
 img {
   user-select: none;
   -webkit-user-drag: none;
