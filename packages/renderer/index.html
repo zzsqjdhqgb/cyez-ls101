@@ -67,6 +67,9 @@
         overflow: hidden;
         border-radius: 2px;
         background: #dfe3e8;
+        opacity: 0;
+        will-change: opacity;
+        animation: startup-progress-reveal 100ms ease-out 2500ms both;
       }
 
       .startupProgress::after {
@@ -88,6 +91,16 @@
           transform: translateX(340%);
         }
       }
+
+      @keyframes startup-progress-reveal {
+        from {
+          opacity: 0;
+        }
+
+        to {
+          opacity: 1;
+        }
+      }
     </style>
   </head>
   <body>
@@ -100,7 +113,6 @@
             role="progressbar"
             aria-label="正在加载"
             aria-valuetext="正在加载"
-            hidden
             data-startup-progress
           ></div>
         </div>

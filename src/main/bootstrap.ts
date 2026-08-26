@@ -91,6 +91,7 @@ function startApplication(): void {
 
 async function initializeApplication(): Promise<StartupResult> {
   try {
+    await waitForIntegrationStartupDelay()
     const application = await import('./index')
     const initialized = await application.initializeApplication()
     logger = initialized.logger
@@ -104,6 +105,13 @@ async function initializeApplication(): Promise<StartupResult> {
     handleApplicationInitializationError(error)
     return { ok: false, message: errorMessage(error) }
   }
+}
+
+async function waitForIntegrationStartupDelay(): Promise<void> {
+  if (process.env['LS101_INTEGRATION_TEST'] !== '1') return
+  const milliseconds = Number(process.env['LS101_INTEGRATION_STARTUP_DELAY_MS'] ?? 0)
+  if (!Number.isFinite(milliseconds) || milliseconds <= 0) return
+  await new Promise((resolve) => setTimeout(resolve, Math.min(milliseconds, 30_000)))
 }
 
 async function initializedDataDirectory(kind: 'application' | 'builtin'): Promise<string> {

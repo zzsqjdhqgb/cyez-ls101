@@ -10,7 +10,8 @@ import { initializeSchemaApplication } from './features/schemas/SchemaApplicatio
 import { LicenseActivationPage } from './features/license/LicenseActivationPage'
 import { LegacyDataMigrationPage } from './features/legacy-data/LegacyDataMigrationPage'
 import { latestReleaseVersion } from './features/release-notes/release-notes'
-import { showStartupProgress, waitForStartupProgressDelay } from './startup-placeholder'
+import { runStartupPhase } from './startup-phase'
+import { waitForStartupCompletionDelay } from './startup-placeholder'
 import './app/register-settings'
 import './app/register-placeholder-routes'
 import './styles/tokens.css'
@@ -43,23 +44,12 @@ export function startApplication(root: HTMLElement, startupLogoAnimation: Promis
     }
   })
   installGlobalErrorLogging()
-  void renderApplication(root, startupLogoAnimation).catch(renderStartupError)
+  void renderApplication(startupLogoAnimation).catch(renderStartupError)
 }
 
-async function renderApplication(
-  root: HTMLElement,
-  startupLogoAnimation: Promise<void>
-): Promise<void> {
-  let preparationSettled = false
-  const preparation = prepareApplication().finally(() => {
-    preparationSettled = true
-  })
-
-  void waitForStartupProgressDelay().then(() => {
-    if (!preparationSettled) showStartupProgress(root)
-  })
-
-  const [prepared] = await Promise.all([preparation, startupLogoAnimation])
+async function renderApplication(startupLogoAnimation: Promise<void>): Promise<void> {
+  const minimumStartupDuration = startupLogoAnimation.then(waitForStartupCompletionDelay)
+  const [prepared] = await Promise.all([prepareApplication(), minimumStartupDuration])
   if (prepared.kind === 'license') {
     renderLicenseActivation(prepared.status)
     return
@@ -75,25 +65,25 @@ async function renderApplication(
 async function prepareApplication(): Promise<PreparedApplication> {
   const startup = window.startup
   if (!startup) throw new Error('启动服务不可用')
-  await startup.whenReady()
+  await runStartupPhase('main-process-readiness', () => startup.whenReady())
 
   const license = window.license
   if (!license) throw new Error('许可证服务不可用')
-  const status = await license.getStatus()
+  const status = await runStartupPhase('license-status', () => license.getStatus())
   if (status.state !== 'active') return { kind: 'license', status }
 
   const legacyData = window.legacyData
   if (!legacyData) throw new Error('旧数据整理服务不可用')
-  const info = await legacyData.getInfo()
+  const info = await runStartupPhase('legacy-data-status', () => legacyData.getInfo())
   if (info.status !== 'none' && info.status !== 'cleaned') return { kind: 'migration', info }
 
   return { kind: 'active', showReleaseNotes: await initializeActiveApplication() }
 }
 
 async function initializeActiveApplication(): Promise<boolean> {
-  await ensureInstallationMarker()
+  await runStartupPhase('installation-marker', ensureInstallationMarker)
   await initializeApplicationContent()
-  return claimReleaseNotesVersion()
+  return runStartupPhase('release-notes', claimReleaseNotesVersion)
 }
 
 function renderMainApplication(showReleaseNotes: boolean): void {
@@ -150,9 +140,9 @@ function completeLegacyDataMigration(initialInfo: LegacyDataInfo): Promise<void>
 }
 
 async function initializeApplicationContent(): Promise<void> {
-  await initializeSchemaApplication()
-  await builtinInterfaceMaintenance.initialize()
-  await templateApplication.initialize()
+  await runStartupPhase('builtin-schemas', initializeSchemaApplication)
+  await runStartupPhase('builtin-interfaces', () => builtinInterfaceMaintenance.initialize())
+  await runStartupPhase('builtin-templates-and-functions', () => templateApplication.initialize())
 }
 
 function renderStartupError(reason: unknown): void {
