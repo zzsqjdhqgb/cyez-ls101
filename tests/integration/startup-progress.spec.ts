@@ -21,6 +21,23 @@ test('keeps the startup animation visible for its full animation and settle dela
   await expect(page.getByRole('dialog', { name: '曹二听说101 v0.4.0' })).toBeVisible()
   const elapsed = await page.evaluate(() => performance.now())
   expect(elapsed).toBeGreaterThanOrEqual(2_400)
+  const startupMilestones = await page.evaluate(() =>
+    performance
+      .getEntriesByType('mark')
+      .map((entry) => entry.name)
+      .filter((name) => name.startsWith('ls101-startup:'))
+  )
+  expect(startupMilestones).toEqual(
+    expect.arrayContaining([
+      'ls101-startup:document-script-started',
+      'ls101-startup:startup-logo-ready',
+      'ls101-startup:application-bundle-requested',
+      'ls101-startup:application-bundle-loaded',
+      'ls101-startup:main-process-ready',
+      'ls101-startup:main-interface-render-requested',
+      'ls101-startup:main-interface-first-frame'
+    ])
+  )
 })
 
 test('shows an animated progress indicator while application initialization is pending', async () => {

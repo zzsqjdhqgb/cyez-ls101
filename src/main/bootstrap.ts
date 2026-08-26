@@ -15,7 +15,11 @@ import {
 import type { Logger } from '@ls101/logger/main'
 import { installSourceMapSupport } from './source-map-support'
 import { createMainWindow } from './window'
+import type { MainWindowLifecycleEvent } from './window'
 import { registerWindowControlHandlers } from './window-controls'
+
+const mainStartupStartedAt = performance.now()
+const pendingStartupMilestones: MainStartupMilestoneEntry[] = []
 
 installSourceMapSupport()
 registerFileStoreScheme()
@@ -29,6 +33,25 @@ type StartupResult =
 let applicationInitialized = false
 let logger: Logger | null = null
 let startupResult: Promise<StartupResult> | null = null
+
+type MainStartupMilestone =
+  | 'bootstrap-loaded'
+  | 'electron-ready'
+  | 'asset-protocols-registered'
+  | 'window-created'
+  | 'renderer-dom-ready'
+  | 'window-ready-to-show'
+  | 'window-shown'
+  | 'application-initialization-started'
+  | 'application-module-imported'
+  | 'application-initialized'
+
+interface MainStartupMilestoneEntry {
+  milestone: MainStartupMilestone
+  elapsedMs: number
+}
+
+recordMainStartupMilestone('bootstrap-loaded')
 
 process.on('uncaughtExceptionMonitor', (error) => {
   if (logger) logger.errorSync('Main process uncaught exception', error)
@@ -69,11 +92,16 @@ app.on('window-all-closed', () => {
 })
 
 function startApplication(): void {
+  recordMainStartupMilestone('electron-ready')
   electronApp.setAppUserModelId('io.github.zzsqjdhqgb.cyez-ls101')
 
   let resolveStartup: (result: StartupResult) => void = () => undefined
   startupResult = new Promise((resolve) => {
     resolveStartup = resolve
+  })
+  let resolveWindowShown: () => void = () => undefined
+  const windowShown = new Promise<void>((resolve) => {
+    resolveWindowShown = resolve
   })
 
   registerFileStoreProtocol({
@@ -82,19 +110,29 @@ function startApplication(): void {
   registerBuiltinFileStoreProtocol({
     baseDir: () => initializedDataDirectory('builtin')
   })
+  recordMainStartupMilestone('asset-protocols-registered')
 
-  const window = createMainWindow(() => logger)
-  window.once('ready-to-show', () => {
-    void initializeApplication().then(resolveStartup)
-  })
+  createMainWindow(
+    () => logger,
+    (event) => {
+      recordMainWindowLifecycleEvent(event)
+      if (event === 'shown') resolveWindowShown()
+    }
+  )
+  recordMainStartupMilestone('window-created')
+  recordMainStartupMilestone('application-initialization-started')
+  void initializeApplication(windowShown).then(resolveStartup)
 }
 
-async function initializeApplication(): Promise<StartupResult> {
+async function initializeApplication(waitForWindowShown: Promise<void>): Promise<StartupResult> {
   try {
     await waitForIntegrationStartupDelay()
     const application = await import('./index')
-    const initialized = await application.initializeApplication()
+    recordMainStartupMilestone('application-module-imported')
+    const initialized = await application.initializeApplication({ waitForWindowShown })
     logger = initialized.logger
+    flushMainStartupMilestones()
+    recordMainStartupMilestone('application-initialized')
     applicationInitialized = true
     return {
       ok: true,
@@ -105,6 +143,31 @@ async function initializeApplication(): Promise<StartupResult> {
     handleApplicationInitializationError(error)
     return { ok: false, message: errorMessage(error) }
   }
+}
+
+function recordMainWindowLifecycleEvent(event: MainWindowLifecycleEvent): void {
+  const milestone: Record<MainWindowLifecycleEvent, MainStartupMilestone> = {
+    'renderer-dom-ready': 'renderer-dom-ready',
+    'ready-to-show': 'window-ready-to-show',
+    shown: 'window-shown'
+  }
+  recordMainStartupMilestone(milestone[event])
+}
+
+function recordMainStartupMilestone(milestone: MainStartupMilestone): void {
+  const entry = {
+    milestone,
+    elapsedMs: Math.max(0, Math.round((performance.now() - mainStartupStartedAt) * 10) / 10)
+  }
+  if (logger) logger.info('Main startup milestone', entry)
+  else pendingStartupMilestones.push(entry)
+}
+
+function flushMainStartupMilestones(): void {
+  if (!logger) return
+  pendingStartupMilestones.splice(0).forEach((entry) => {
+    logger?.info('Main startup milestone', entry)
+  })
 }
 
 async function waitForIntegrationStartupDelay(): Promise<void> {

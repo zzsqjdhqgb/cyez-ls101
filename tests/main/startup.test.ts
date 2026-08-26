@@ -13,7 +13,13 @@ const mocks = vi.hoisted(() => ({
     whenReady: vi.fn(() => Promise.resolve())
   },
   ipcMain: { handle: vi.fn() },
-  mainWindow: { once: vi.fn() },
+  logger: {
+    error: vi.fn(),
+    errorSync: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn()
+  },
+  mainWindow: {},
   createMainWindow: vi.fn(),
   initializeDataDirectory: vi.fn<() => Promise<string>>(),
   initializeLegacyData: vi.fn().mockResolvedValue(undefined),
@@ -22,7 +28,8 @@ const mocks = vi.hoisted(() => ({
   registerFileStoreHandlers: vi.fn(),
   registerFileStoreProtocol: vi.fn(),
   registerBuiltinFileStoreProtocol: vi.fn(),
-  showErrorBox: vi.fn()
+  showErrorBox: vi.fn(),
+  windowShown: vi.fn()
 }))
 
 vi.mock('electron', () => ({
@@ -39,15 +46,9 @@ vi.mock('@electron-toolkit/utils', () => ({
 }))
 
 vi.mock('@ls101/logger/main', () => {
-  const logger = {
-    error: vi.fn(),
-    errorSync: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn()
-  }
   return {
-    createConsoleLogger: vi.fn(() => logger),
-    createMainLogger: vi.fn(async () => logger),
+    createConsoleLogger: vi.fn(() => mocks.logger),
+    createMainLogger: vi.fn(async () => mocks.logger),
     registerRendererLogger: vi.fn()
   }
 })
@@ -84,8 +85,6 @@ vi.mock('../../src/main/source-map-support', () => ({ installSourceMapSupport: v
 vi.mock('../../src/main/window', () => ({ createMainWindow: mocks.createMainWindow }))
 vi.mock('../../src/main/window-controls', () => ({ registerWindowControlHandlers: vi.fn() }))
 
-let readyToShow: (() => void) | null = null
-
 beforeEach(() => {
   vi.resetModules()
   vi.clearAllMocks()
@@ -93,15 +92,19 @@ beforeEach(() => {
   mocks.app.whenReady.mockReturnValue(Promise.resolve())
   mocks.initializeDataDirectory.mockResolvedValue('/data')
   mocks.recoverDataDirectory.mockReturnValue(new Promise<never>(() => undefined))
-  readyToShow = null
-  mocks.mainWindow.once.mockImplementation((event: string, listener: () => void) => {
-    if (event === 'ready-to-show') readyToShow = listener
-  })
-  mocks.createMainWindow.mockReturnValue(mocks.mainWindow)
+  mocks.createMainWindow.mockImplementation(
+    (_logger: unknown, onLifecycleEvent?: (event: string) => void) => {
+      queueMicrotask(() => {
+        mocks.windowShown()
+        onLifecycleEvent?.('shown')
+      })
+      return mocks.mainWindow
+    }
+  )
 })
 
 describe('application startup error handling', () => {
-  it('creates the window before loading application services', async () => {
+  it('creates the window before loading application services and initializes immediately', async () => {
     await import('../../src/main/bootstrap')
 
     await vi.waitFor(() => expect(mocks.createMainWindow).toHaveBeenCalledOnce())
@@ -110,11 +113,37 @@ describe('application startup error handling', () => {
     expect(mocks.registerFileStoreProtocol.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.createMainWindow.mock.invocationCallOrder[0]
     )
-    expect(mocks.initializeDataDirectory).not.toHaveBeenCalled()
-
-    readyToShow?.()
     await vi.waitFor(() => expect(mocks.initializeDataDirectory).toHaveBeenCalledOnce())
+    expect(mocks.createMainWindow.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.initializeDataDirectory.mock.invocationCallOrder[0]
+    )
+    await vi.waitFor(() => expect(mocks.registerFileStoreHandlers).toHaveBeenCalledOnce())
+    expect(mocks.windowShown.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.registerFileStoreHandlers.mock.invocationCallOrder[0]
+    )
     expect(mocks.initializeLegacyData).not.toHaveBeenCalled()
+
+    await vi.waitFor(() => {
+      expect(mocks.logger.info).toHaveBeenCalledWith(
+        'Main startup milestone',
+        expect.objectContaining({ milestone: 'application-initialized' })
+      )
+    })
+    const milestones = mocks.logger.info.mock.calls
+      .filter(([message]) => message === 'Main startup milestone')
+      .map(([, context]) => context as { elapsedMs: number; milestone: string })
+    expect(milestones.map(({ milestone }) => milestone)).toEqual(
+      expect.arrayContaining([
+        'bootstrap-loaded',
+        'electron-ready',
+        'asset-protocols-registered',
+        'window-created',
+        'application-initialization-started',
+        'application-module-imported',
+        'application-initialized'
+      ])
+    )
+    expect(milestones.every(({ elapsedMs }) => elapsedMs >= 0)).toBe(true)
   })
 
   it('uses data-directory recovery only when data-directory initialization fails', async () => {
@@ -123,7 +152,6 @@ describe('application startup error handling', () => {
 
     await import('../../src/main/bootstrap')
     await vi.waitFor(() => expect(mocks.createMainWindow).toHaveBeenCalledOnce())
-    readyToShow?.()
 
     await vi.waitFor(() => {
       expect(mocks.recoverDataDirectory).toHaveBeenCalledWith('/user-data', failure)
@@ -140,7 +168,6 @@ describe('application startup error handling', () => {
 
     await import('../../src/main/bootstrap')
     await vi.waitFor(() => expect(mocks.createMainWindow).toHaveBeenCalledOnce())
-    readyToShow?.()
 
     await vi.waitFor(() => {
       expect(mocks.showErrorBox).toHaveBeenCalledWith('应用启动失败', failure.message)

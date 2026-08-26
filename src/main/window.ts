@@ -6,8 +6,12 @@ import { bindWindowControlEvents } from './window-controls'
 const DEVELOPMENT_RENDERER_URL = process.env['ELECTRON_RENDERER_URL']
 
 type LoggerSource = Logger | (() => Logger | null)
+export type MainWindowLifecycleEvent = 'renderer-dom-ready' | 'ready-to-show' | 'shown'
 
-export function createMainWindow(logger?: LoggerSource): BrowserWindow {
+export function createMainWindow(
+  logger?: LoggerSource,
+  onLifecycleEvent?: (event: MainWindowLifecycleEvent) => void
+): BrowserWindow {
   const getLogger = typeof logger === 'function' ? logger : () => logger ?? null
   Menu.setApplicationMenu(null)
 
@@ -32,9 +36,18 @@ export function createMainWindow(logger?: LoggerSource): BrowserWindow {
 
   bindWindowControlEvents(window)
 
+  window.webContents.once('dom-ready', () => {
+    onLifecycleEvent?.('renderer-dom-ready')
+    setImmediate(() => {
+      if (window.isDestroyed() || window.isVisible()) return
+      window.show()
+      onLifecycleEvent?.('shown')
+      getLogger()?.info('Main window shown after renderer DOM ready')
+    })
+  })
+
   window.once('ready-to-show', () => {
-    window.show()
-    getLogger()?.info('Main window ready to show')
+    onLifecycleEvent?.('ready-to-show')
   })
 
   window.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {

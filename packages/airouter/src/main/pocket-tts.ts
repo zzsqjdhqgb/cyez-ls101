@@ -30,6 +30,10 @@ interface WorkerSession {
 export class PocketTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
   private readonly sessions = new Map<string, Set<WorkerSession>>()
 
+  constructor(
+    private readonly workerUrl: URL = new URL('./pocket-tts-worker.js', import.meta.url)
+  ) {}
+
   async synthesize(request: AIRouterLocalSpeechRequest): Promise<AIRouterGeneratedAudio> {
     try {
       return await this.synthesizeRequest(request)
@@ -164,7 +168,7 @@ export class PocketTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
       }
     }
     const runtime = resolveRuntimePaths()
-    const worker = new Worker(new URL('./pocket-tts-worker.js', import.meta.url), {
+    const worker = new Worker(this.workerUrl, {
       workerData: {
         ...runtime,
         modelPath: await request.resolveAssetPath(weights),

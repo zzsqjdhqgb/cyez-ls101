@@ -56,7 +56,15 @@ interface ActiveGeneration {
   controller: AbortController
 }
 
-export function registerAIRouter(options: AIRouterServiceOptions): void {
+export interface AIRouterRegistrationOptions extends AIRouterServiceOptions {
+  workerUrls?: {
+    pocketTts?: URL
+    pronunciationAssessment?: URL
+    speechRecognition?: URL
+  }
+}
+
+export function registerAIRouter(options: AIRouterRegistrationOptions): void {
   const service = new AIRouterService(options)
   const imageService = new AIRouterImageService(options)
   const qwenTtsSynthesizer = new QwenTtsSynthesizer()
@@ -66,7 +74,7 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
     configStorage: options.configStorage,
     secretStorage: options.secretStorage,
     localSynthesizers: {
-      'pocket-tts': new PocketTtsSynthesizer(),
+      'pocket-tts': new PocketTtsSynthesizer(options.workerUrls?.pocketTts),
       'qwen-tts': qwenTtsSynthesizer
     }
   })
@@ -75,11 +83,13 @@ export function registerAIRouter(options: AIRouterServiceOptions): void {
     baseDir: options.baseDir,
     appVersion: app.getVersion(),
     configStorage: options.configStorage,
-    secretStorage: options.secretStorage
+    secretStorage: options.secretStorage,
+    workerUrl: options.workerUrls?.speechRecognition
   })
   app.once('will-quit', () => recognitionService.dispose())
   const pronunciationService = new AIRouterPronunciationAssessmentService({
-    baseDir: options.baseDir
+    baseDir: options.baseDir,
+    workerUrl: options.workerUrls?.pronunciationAssessment
   })
   const active = new Map<string, ActiveGeneration>()
 

@@ -3,24 +3,18 @@ import { createRoot, type Root } from 'react-dom/client'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { logger } from '@ls101/logger/renderer'
 import type { LegacyDataInfo, LicenseStatus } from '@ls101/core-types'
-import { App } from './app/App'
-import { templateApplication } from './features/templates/TemplateApplicationRuntime'
-import { builtinInterfaceMaintenance } from './features/interfaces/BuiltinInterfaceRuntime'
-import { initializeSchemaApplication } from './features/schemas/SchemaApplicationRuntime'
-import { LicenseActivationPage } from './features/license/LicenseActivationPage'
-import { LegacyDataMigrationPage } from './features/legacy-data/LegacyDataMigrationPage'
-import { latestReleaseVersion } from './features/release-notes/release-notes'
 import { runStartupPhase } from './startup-phase'
 import { waitForStartupCompletionDelay } from './startup-placeholder'
-import './app/register-settings'
-import './app/register-placeholder-routes'
+import { enableRendererStartupTimingLogging, markRendererStartupMilestone } from './startup-timing'
 import './styles/tokens.css'
 import './styles/global.css'
+
+type ActiveApplication = typeof import('./startup-active-application')
 
 type PreparedApplication =
   | { kind: 'license'; status: LicenseStatus }
   | { kind: 'migration'; info: LegacyDataInfo }
-  | { kind: 'active'; showReleaseNotes: boolean }
+  | { kind: 'active'; application: ActiveApplication; showReleaseNotes: boolean }
 
 let reactRoot: Root
 
@@ -43,6 +37,7 @@ export function startApplication(root: HTMLElement, startupLogoAnimation: Promis
       })
     }
   })
+  markRendererStartupMilestone('react-root-created')
   installGlobalErrorLogging()
   void renderApplication(startupLogoAnimation).catch(renderStartupError)
 }
@@ -51,21 +46,24 @@ async function renderApplication(startupLogoAnimation: Promise<void>): Promise<v
   const minimumStartupDuration = startupLogoAnimation.then(waitForStartupCompletionDelay)
   const [prepared] = await Promise.all([prepareApplication(), minimumStartupDuration])
   if (prepared.kind === 'license') {
-    renderLicenseActivation(prepared.status)
+    await renderLicenseActivation(prepared.status)
     return
   }
   if (prepared.kind === 'migration') {
     await completeLegacyDataMigration(prepared.info)
-    renderMainApplication(await initializeActiveApplication())
+    const application = await loadActiveApplication()
+    application.renderActiveApplication(reactRoot, await application.initializeActiveApplication())
     return
   }
-  renderMainApplication(prepared.showReleaseNotes)
+  prepared.application.renderActiveApplication(reactRoot, prepared.showReleaseNotes)
 }
 
 async function prepareApplication(): Promise<PreparedApplication> {
   const startup = window.startup
   if (!startup) throw new Error('启动服务不可用')
   await runStartupPhase('main-process-readiness', () => startup.whenReady())
+  enableRendererStartupTimingLogging()
+  markRendererStartupMilestone('main-process-ready')
 
   const license = window.license
   if (!license) throw new Error('许可证服务不可用')
@@ -77,24 +75,17 @@ async function prepareApplication(): Promise<PreparedApplication> {
   const info = await runStartupPhase('legacy-data-status', () => legacyData.getInfo())
   if (info.status !== 'none' && info.status !== 'cleaned') return { kind: 'migration', info }
 
-  return { kind: 'active', showReleaseNotes: await initializeActiveApplication() }
+  const application = await loadActiveApplication()
+  return {
+    kind: 'active',
+    application,
+    showReleaseNotes: await application.initializeActiveApplication()
+  }
 }
 
-async function initializeActiveApplication(): Promise<boolean> {
-  await runStartupPhase('installation-marker', ensureInstallationMarker)
-  await initializeApplicationContent()
-  return runStartupPhase('release-notes', claimReleaseNotesVersion)
-}
-
-function renderMainApplication(showReleaseNotes: boolean): void {
-  reactRoot.render(
-    <StrictMode>
-      <App showReleaseNotesOnStartup={showReleaseNotes} />
-    </StrictMode>
-  )
-}
-
-function renderLicenseActivation(status: LicenseStatus): void {
+async function renderLicenseActivation(status: LicenseStatus): Promise<void> {
+  const { LicenseActivationPage } = await import('./features/license/LicenseActivationPage')
+  markRendererStartupMilestone('license-interface-render-requested')
   reactRoot.render(
     <StrictMode>
       <LicenseActivationPage
@@ -107,7 +98,11 @@ function renderLicenseActivation(status: LicenseStatus): void {
             if (info.status !== 'none' && info.status !== 'cleaned') {
               await completeLegacyDataMigration(info)
             }
-            renderMainApplication(await initializeActiveApplication())
+            const application = await loadActiveApplication()
+            application.renderActiveApplication(
+              reactRoot,
+              await application.initializeActiveApplication()
+            )
           } catch (error) {
             renderStartupError(error)
           }
@@ -117,19 +112,9 @@ function renderLicenseActivation(status: LicenseStatus): void {
   )
 }
 
-async function ensureInstallationMarker(): Promise<void> {
-  const appInfo = window.appInfo
-  if (!appInfo) throw new Error('应用信息服务不可用')
-  await appInfo.ensureInstallationMarker()
-}
-
-async function claimReleaseNotesVersion(): Promise<boolean> {
-  const appInfo = window.appInfo
-  if (!appInfo) throw new Error('应用信息服务不可用')
-  return appInfo.claimReleaseNotesVersion(latestReleaseVersion)
-}
-
-function completeLegacyDataMigration(initialInfo: LegacyDataInfo): Promise<void> {
+async function completeLegacyDataMigration(initialInfo: LegacyDataInfo): Promise<void> {
+  const { LegacyDataMigrationPage } = await import('./features/legacy-data/LegacyDataMigrationPage')
+  markRendererStartupMilestone('migration-interface-render-requested')
   return new Promise((resolve) => {
     reactRoot.render(
       <StrictMode>
@@ -139,10 +124,8 @@ function completeLegacyDataMigration(initialInfo: LegacyDataInfo): Promise<void>
   })
 }
 
-async function initializeApplicationContent(): Promise<void> {
-  await runStartupPhase('builtin-schemas', initializeSchemaApplication)
-  await runStartupPhase('builtin-interfaces', () => builtinInterfaceMaintenance.initialize())
-  await runStartupPhase('builtin-templates-and-functions', () => templateApplication.initialize())
+function loadActiveApplication(): Promise<ActiveApplication> {
+  return import('./startup-active-application')
 }
 
 function renderStartupError(reason: unknown): void {

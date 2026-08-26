@@ -1,6 +1,9 @@
 import startupLogoMarkup from './startup-assets/logo.svg?raw'
 import startupLogoMotionCss from './startup-assets/motion.css?inline'
 import { applyStartupLogoMotion, waitForStartupLogoAnimation } from './startup-placeholder'
+import { markRendererStartupMilestone } from './startup-timing'
+
+markRendererStartupMilestone('document-script-started')
 
 const root = document.getElementById('root')
 
@@ -12,14 +15,19 @@ applyStartupLogoMotion(root, {
   logoMarkup: startupLogoMarkup,
   motionCss: startupLogoMotionCss
 })
+markRendererStartupMilestone('startup-logo-ready')
 
 const startupLogoAnimation = waitForStartupLogoAnimation(root)
 
 // Two frames guarantee one startup-placeholder paint before application CSS and JS are requested.
 window.requestAnimationFrame(() => {
   window.requestAnimationFrame(() => {
+    markRendererStartupMilestone('application-bundle-requested')
     void import('./startup-application')
-      .then(({ startApplication }) => startApplication(root, startupLogoAnimation))
+      .then(({ startApplication }) => {
+        markRendererStartupMilestone('application-bundle-loaded')
+        startApplication(root, startupLogoAnimation)
+      })
       .catch((error: unknown) => renderBootstrapError(root, error))
   })
 })
