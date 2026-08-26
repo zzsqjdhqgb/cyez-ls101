@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import type { Root } from 'react-dom/client'
-import { App } from './app/App'
+import { StartupApplicationView } from './StartupApplicationView'
 import { builtinInterfaceMaintenance } from './features/interfaces/BuiltinInterfaceRuntime'
 import { latestReleaseVersion } from './features/release-notes/release-notes'
 import { initializeSchemaApplication } from './features/schemas/SchemaApplicationRuntime'
@@ -20,12 +20,9 @@ export function renderActiveApplication(root: Root, showReleaseNotes: boolean): 
   markRendererStartupMilestone('main-interface-render-requested')
   root.render(
     <StrictMode>
-      <App showReleaseNotesOnStartup={showReleaseNotes} />
+      <StartupApplicationView showReleaseNotes={showReleaseNotes} />
     </StrictMode>
   )
-  window.requestAnimationFrame(() => {
-    markRendererStartupMilestone('main-interface-first-frame')
-  })
 }
 
 async function ensureInstallationMarker(): Promise<void> {
