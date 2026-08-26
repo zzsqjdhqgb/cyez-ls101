@@ -262,13 +262,19 @@ test('previews a selected node tree as a vertical timeline filmstrip', async ({}
   await expect(freeChoicePage.getByText('1 / 3')).toBeVisible()
   expect(
     await freeChoicePage.evaluate((host) => {
-      const styleText = host.shadowRoot?.querySelector('style')?.textContent ?? ''
+      const stylesheet = host.shadowRoot?.querySelector<HTMLStyleElement>(
+        'style[data-exam-page-view-styles]'
+      )?.sheet
+      const hostRule = Array.from(stylesheet?.cssRules ?? []).find(
+        (rule): rule is CSSStyleRule =>
+          rule instanceof CSSStyleRule && rule.selectorText === ':host'
+      )
       return {
         isolation: host.getAttribute('data-style-isolation'),
         lightDomInputs: host.querySelectorAll('input').length,
         shadowInputs: host.shadowRoot?.querySelectorAll('input').length ?? 0,
         shadowRoot: Boolean(host.shadowRoot),
-        privateReset: styleText.includes(':host') && styleText.includes('all: initial')
+        privateReset: hostRule?.style.getPropertyValue('all') === 'initial'
       }
     })
   ).toEqual({
