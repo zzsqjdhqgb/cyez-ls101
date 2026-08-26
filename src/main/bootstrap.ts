@@ -42,6 +42,8 @@ type MainStartupMilestone =
   | 'renderer-dom-ready'
   | 'window-ready-to-show'
   | 'window-shown'
+  | 'window-destroyed-before-shown'
+  | 'window-load-failed-before-shown'
   | 'application-initialization-started'
   | 'application-module-imported'
   | 'application-initialized'
@@ -100,9 +102,12 @@ function startApplication(): void {
     resolveStartup = resolve
   })
   let resolveWindowShown: () => void = () => undefined
-  const windowShown = new Promise<void>((resolve) => {
+  let rejectWindowShown: (error: Error) => void = () => undefined
+  const windowShown = new Promise<void>((resolve, reject) => {
     resolveWindowShown = resolve
+    rejectWindowShown = reject
   })
+  void windowShown.catch(() => undefined)
 
   registerFileStoreProtocol({
     baseDir: () => initializedDataDirectory('application')
@@ -117,6 +122,12 @@ function startApplication(): void {
     (event) => {
       recordMainWindowLifecycleEvent(event)
       if (event === 'shown') resolveWindowShown()
+      if (event === 'destroyed-before-shown') {
+        rejectWindowShown(new Error('主窗口在启动界面显示前已关闭'))
+      }
+      if (event === 'load-failed-before-shown') {
+        rejectWindowShown(new Error('启动界面加载失败'))
+      }
     }
   )
   recordMainStartupMilestone('window-created')
@@ -149,7 +160,9 @@ function recordMainWindowLifecycleEvent(event: MainWindowLifecycleEvent): void {
   const milestone: Record<MainWindowLifecycleEvent, MainStartupMilestone> = {
     'renderer-dom-ready': 'renderer-dom-ready',
     'ready-to-show': 'window-ready-to-show',
-    shown: 'window-shown'
+    shown: 'window-shown',
+    'destroyed-before-shown': 'window-destroyed-before-shown',
+    'load-failed-before-shown': 'window-load-failed-before-shown'
   }
   recordMainStartupMilestone(milestone[event])
 }

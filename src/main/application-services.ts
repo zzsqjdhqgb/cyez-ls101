@@ -6,6 +6,7 @@ import { registerBuiltinFileStoreHandlers, registerFileStoreHandlers } from '@ls
 import { registerRendererLogger, type Logger } from '@ls101/logger/main'
 import { join } from 'node:path'
 import { registerAppInfoHandlers } from './app-info'
+import type { ApplicationWorkerUrls } from './application-worker-urls'
 import { registerDataDirectoryHandlers } from './data-directory'
 import { createWorkerLegacyArchiveOperations } from './legacy-data-archive-client'
 import { LegacyDataService, registerLegacyDataHandlers } from './legacy-data'
@@ -18,12 +19,7 @@ interface ApplicationServiceOptions {
   isLocalIntegrationTest: boolean
   logger: Logger
   userDataDirectory: string
-  workerUrls: {
-    legacyData: URL
-    pocketTts: URL
-    pronunciationAssessment: URL
-    speechRecognition: URL
-  }
+  workerUrls: ApplicationWorkerUrls
 }
 
 export function registerApplicationServices(options: ApplicationServiceOptions): void {

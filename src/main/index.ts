@@ -1,6 +1,7 @@
 import { app, safeStorage } from 'electron'
 import { createConsoleLogger, createMainLogger, type Logger } from '@ls101/logger/main'
 import { join } from 'node:path'
+import { createApplicationWorkerUrls } from './application-worker-urls'
 
 export interface ApplicationInitialization {
   logger: Logger
@@ -57,12 +58,7 @@ export async function initializeApplication(
     isLocalIntegrationTest,
     logger: applicationLogger,
     userDataDirectory: userDataDir,
-    workerUrls: {
-      legacyData: new URL('./legacy-data-worker.js', import.meta.url),
-      pocketTts: new URL('./pocket-tts-worker.js', import.meta.url),
-      pronunciationAssessment: new URL('./pronunciation-assessment-worker.js', import.meta.url),
-      speechRecognition: new URL('./qwen3-asr-worker.js', import.meta.url)
-    }
+    workerUrls: createApplicationWorkerUrls(import.meta.url)
   })
   return {
     logger: applicationLogger,

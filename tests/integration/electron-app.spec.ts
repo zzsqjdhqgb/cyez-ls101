@@ -201,6 +201,29 @@ test('starts a hardened application window and exposes every preload bridge', as
   })
 })
 
+test('packages every worker referenced by the application bundle', async () => {
+  const packagedWorkers = await electronApp.evaluate(({ app }) => {
+    const fs = process.getBuiltinModule('node:fs')
+    const path = process.getBuiltinModule('node:path')
+    return [
+      'legacy-data-worker.js',
+      'pocket-tts-worker.js',
+      'pronunciation-assessment-worker.js',
+      'qwen3-asr-worker.js'
+    ].map((name) => ({
+      name,
+      exists: fs.existsSync(path.join(app.getAppPath(), 'out', 'main', name))
+    }))
+  })
+
+  expect(packagedWorkers).toEqual([
+    { name: 'legacy-data-worker.js', exists: true },
+    { name: 'pocket-tts-worker.js', exists: true },
+    { name: 'pronunciation-assessment-worker.js', exists: true },
+    { name: 'qwen3-asr-worker.js', exists: true }
+  ])
+})
+
 test('shows release notes only once for the current release', async () => {
   await electronApp.close()
   electronApp = await launchIntegrationApp(userDataDir)

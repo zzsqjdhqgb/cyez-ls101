@@ -24,20 +24,29 @@ test('keeps the startup animation visible for its full animation and settle dela
   const startupMilestones = await page.evaluate(() =>
     performance
       .getEntriesByType('mark')
-      .map((entry) => entry.name)
-      .filter((name) => name.startsWith('ls101-startup:'))
+      .filter((entry) => entry.name.startsWith('ls101-startup:'))
+      .map((entry) => ({ name: entry.name, startTime: entry.startTime }))
   )
-  expect(startupMilestones).toEqual(
-    expect.arrayContaining([
-      'ls101-startup:document-script-started',
-      'ls101-startup:startup-logo-ready',
-      'ls101-startup:application-bundle-requested',
-      'ls101-startup:application-bundle-loaded',
-      'ls101-startup:main-process-ready',
-      'ls101-startup:main-interface-render-requested',
-      'ls101-startup:main-interface-first-frame'
-    ])
-  )
+  const expectedMilestones = [
+    'ls101-startup:document-script-started',
+    'ls101-startup:startup-logo-ready',
+    'ls101-startup:application-bundle-requested',
+    'ls101-startup:application-bundle-loaded',
+    'ls101-startup:main-process-ready',
+    'ls101-startup:main-interface-render-requested',
+    'ls101-startup:main-interface-first-frame'
+  ]
+  for (const expectedMilestone of expectedMilestones) {
+    expect(startupMilestones.filter(({ name }) => name === expectedMilestone)).toHaveLength(1)
+  }
+  expect(
+    startupMilestones.map(({ name }) => name).filter((name) => expectedMilestones.includes(name))
+  ).toEqual(expectedMilestones)
+  expect(
+    startupMilestones.every(
+      (entry, index) => index === 0 || entry.startTime >= startupMilestones[index - 1]!.startTime
+    )
+  ).toBe(true)
 })
 
 test('shows an animated progress indicator while application initialization is pending', async () => {
@@ -47,6 +56,22 @@ test('shows an animated progress indicator while application initialization is p
   })
   const page = await electronApp.firstWindow()
   await page.waitForLoadState('domcontentloaded')
+
+  await expect(page.getByLabel('曹二听说101 正在启动')).toBeVisible()
+  await expect
+    .poll(() =>
+      electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible())
+    )
+    .toBe(true)
+  expect(
+    await page.evaluate(async () => {
+      const readiness = window.startup!.whenReady().then(() => 'ready')
+      return Promise.race([
+        readiness,
+        new Promise<'pending'>((resolve) => window.setTimeout(() => resolve('pending'), 100))
+      ])
+    })
+  ).toBe('pending')
 
   const progress = page.getByRole('progressbar', { name: '正在加载' })
   await expect(progress).toBeAttached()

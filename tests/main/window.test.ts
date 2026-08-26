@@ -1,17 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => {
+  const webContentsOn = new Map<string, (...args: unknown[]) => void>()
   const webContentsOnce = new Map<string, () => void>()
   const windowOnce = new Map<string, () => void>()
+  let destroyed = false
   let visible = false
   const webContents = {
     getURL: vi.fn(() => 'file:///app/index.html'),
-    on: vi.fn(),
+    on: vi.fn((event: string, listener: (...args: unknown[]) => void) =>
+      webContentsOn.set(event, listener)
+    ),
     once: vi.fn((event: string, listener: () => void) => webContentsOnce.set(event, listener)),
     setWindowOpenHandler: vi.fn()
   }
   const window = {
-    isDestroyed: vi.fn(() => false),
+    isDestroyed: vi.fn(() => destroyed),
     isVisible: vi.fn(() => visible),
     loadFile: vi.fn(),
     loadURL: vi.fn(),
@@ -27,10 +31,19 @@ const mocks = vi.hoisted(() => {
       return window
     }),
     reset: () => {
+      destroyed = false
       visible = false
+      webContentsOn.clear()
       webContentsOnce.clear()
       windowOnce.clear()
     },
+    setDestroyed: (value: boolean) => {
+      destroyed = value
+    },
+    setVisible: (value: boolean) => {
+      visible = value
+    },
+    webContentsOn,
     webContentsOnce,
     window,
     windowOnce
@@ -70,5 +83,43 @@ describe('main window startup visibility', () => {
 
     mocks.windowOnce.get('ready-to-show')?.()
     expect(lifecycleEvents).toEqual(['renderer-dom-ready', 'shown', 'ready-to-show'])
+  })
+
+  it('reports shown without showing again when the window became visible before the callback', async () => {
+    const lifecycleEvents: string[] = []
+    const { createMainWindow } = await import('../../src/main/window')
+
+    createMainWindow(undefined, (event) => lifecycleEvents.push(event))
+    mocks.webContentsOnce.get('dom-ready')?.()
+    mocks.setVisible(true)
+
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    expect(mocks.window.show).not.toHaveBeenCalled()
+    expect(lifecycleEvents).toEqual(['renderer-dom-ready', 'shown'])
+  })
+
+  it('reports a terminal event when the window is destroyed before DOM readiness', async () => {
+    const lifecycleEvents: string[] = []
+    const { createMainWindow } = await import('../../src/main/window')
+
+    createMainWindow(undefined, (event) => lifecycleEvents.push(event))
+    mocks.setDestroyed(true)
+    mocks.windowOnce.get('closed')?.()
+
+    expect(mocks.window.show).not.toHaveBeenCalled()
+    expect(lifecycleEvents).toEqual(['destroyed-before-shown'])
+  })
+
+  it('reports a terminal event and prevents showing when the initial renderer load fails', async () => {
+    const lifecycleEvents: string[] = []
+    const { createMainWindow } = await import('../../src/main/window')
+
+    createMainWindow(undefined, (event) => lifecycleEvents.push(event))
+    mocks.webContentsOn.get('did-fail-load')?.({}, -2, 'failed', 'file:///app/index.html', true)
+    mocks.webContentsOnce.get('dom-ready')?.()
+
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    expect(mocks.window.show).not.toHaveBeenCalled()
+    expect(lifecycleEvents).toEqual(['load-failed-before-shown', 'renderer-dom-ready'])
   })
 })

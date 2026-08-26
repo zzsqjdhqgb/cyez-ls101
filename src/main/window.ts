@@ -6,7 +6,12 @@ import { bindWindowControlEvents } from './window-controls'
 const DEVELOPMENT_RENDERER_URL = process.env['ELECTRON_RENDERER_URL']
 
 type LoggerSource = Logger | (() => Logger | null)
-export type MainWindowLifecycleEvent = 'renderer-dom-ready' | 'ready-to-show' | 'shown'
+export type MainWindowLifecycleEvent =
+  | 'renderer-dom-ready'
+  | 'ready-to-show'
+  | 'shown'
+  | 'destroyed-before-shown'
+  | 'load-failed-before-shown'
 
 export function createMainWindow(
   logger?: LoggerSource,
@@ -36,12 +41,25 @@ export function createMainWindow(
 
   bindWindowControlEvents(window)
 
+  let startupTerminated = false
+  let shownEmitted = false
+  const emitShown = (): void => {
+    if (shownEmitted || startupTerminated) return
+    shownEmitted = true
+    onLifecycleEvent?.('shown')
+  }
+
   window.webContents.once('dom-ready', () => {
     onLifecycleEvent?.('renderer-dom-ready')
     setImmediate(() => {
-      if (window.isDestroyed() || window.isVisible()) return
-      window.show()
-      onLifecycleEvent?.('shown')
+      if (startupTerminated) return
+      if (window.isDestroyed()) {
+        startupTerminated = true
+        onLifecycleEvent?.('destroyed-before-shown')
+        return
+      }
+      if (!window.isVisible()) window.show()
+      emitShown()
       getLogger()?.info('Main window shown after renderer DOM ready')
     })
   })
@@ -50,13 +68,26 @@ export function createMainWindow(
     onLifecycleEvent?.('ready-to-show')
   })
 
-  window.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
-    getLogger()?.error('Renderer failed to load', undefined, {
-      errorCode,
-      errorDescription,
-      validatedURL
-    })
+  window.once('closed', () => {
+    if (shownEmitted || startupTerminated) return
+    startupTerminated = true
+    onLifecycleEvent?.('destroyed-before-shown')
   })
+
+  window.webContents.on(
+    'did-fail-load',
+    (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+      getLogger()?.error('Renderer failed to load', undefined, {
+        errorCode,
+        errorDescription,
+        validatedURL
+      })
+      if (isMainFrame && !shownEmitted && !startupTerminated) {
+        startupTerminated = true
+        onLifecycleEvent?.('load-failed-before-shown')
+      }
+    }
+  )
 
   window.webContents.on('render-process-gone', (_event, details) => {
     getLogger()?.error('Renderer process exited', undefined, {

@@ -105,6 +105,14 @@ beforeEach(() => {
 
 describe('application startup error handling', () => {
   it('creates the window before loading application services and initializes immediately', async () => {
+    let emitLifecycle: ((event: string) => void) | undefined
+    mocks.createMainWindow.mockImplementation(
+      (_logger: unknown, onLifecycleEvent?: (event: string) => void) => {
+        emitLifecycle = onLifecycleEvent
+        return mocks.mainWindow
+      }
+    )
+
     await import('../../src/main/bootstrap')
 
     await vi.waitFor(() => expect(mocks.createMainWindow).toHaveBeenCalledOnce())
@@ -117,6 +125,11 @@ describe('application startup error handling', () => {
     expect(mocks.createMainWindow.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.initializeDataDirectory.mock.invocationCallOrder[0]
     )
+    expect(mocks.registerFileStoreHandlers).not.toHaveBeenCalled()
+    expect(mocks.initializeLegacyData).not.toHaveBeenCalled()
+
+    mocks.windowShown()
+    emitLifecycle?.('shown')
     await vi.waitFor(() => expect(mocks.registerFileStoreHandlers).toHaveBeenCalledOnce())
     expect(mocks.windowShown.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.registerFileStoreHandlers.mock.invocationCallOrder[0]
@@ -144,6 +157,28 @@ describe('application startup error handling', () => {
       ])
     )
     expect(milestones.every(({ elapsedMs }) => elapsedMs >= 0)).toBe(true)
+  })
+
+  it('fails startup instead of leaving initialization pending when the startup window fails', async () => {
+    let emitLifecycle: ((event: string) => void) | undefined
+    mocks.createMainWindow.mockImplementation(
+      (_logger: unknown, onLifecycleEvent?: (event: string) => void) => {
+        emitLifecycle = onLifecycleEvent
+        return mocks.mainWindow
+      }
+    )
+
+    await import('../../src/main/bootstrap')
+    await vi.waitFor(() => expect(mocks.initializeDataDirectory).toHaveBeenCalledOnce())
+    expect(mocks.registerFileStoreHandlers).not.toHaveBeenCalled()
+
+    emitLifecycle?.('load-failed-before-shown')
+
+    await vi.waitFor(() => {
+      expect(mocks.showErrorBox).toHaveBeenCalledWith('应用启动失败', '启动界面加载失败')
+    })
+    expect(mocks.registerFileStoreHandlers).not.toHaveBeenCalled()
+    expect(mocks.app.exit).toHaveBeenCalledWith(1)
   })
 
   it('uses data-directory recovery only when data-directory initialization fails', async () => {
