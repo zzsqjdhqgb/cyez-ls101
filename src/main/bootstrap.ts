@@ -6,7 +6,12 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { STARTUP_CHANNELS } from '@ls101/core-types'
-import { registerBuiltinFileStoreScheme, registerFileStoreScheme } from '@ls101/file-store/main'
+import {
+  registerBuiltinFileStoreProtocol,
+  registerBuiltinFileStoreScheme,
+  registerFileStoreProtocol,
+  registerFileStoreScheme
+} from '@ls101/file-store/main'
 import type { Logger } from '@ls101/logger/main'
 import { installSourceMapSupport } from './source-map-support'
 import { createMainWindow } from './window'
@@ -17,10 +22,9 @@ registerFileStoreScheme()
 registerBuiltinFileStoreScheme()
 registerWindowControlHandlers()
 
-interface StartupResult {
-  ok: boolean
-  message?: string
-}
+type StartupResult =
+  | { ok: true; dataDirectory: string; builtinDataDirectory: string }
+  | { ok: false; message: string }
 
 let applicationInitialized = false
 let logger: Logger | null = null
@@ -72,6 +76,13 @@ function startApplication(): void {
     resolveStartup = resolve
   })
 
+  registerFileStoreProtocol({
+    baseDir: () => initializedDataDirectory('application')
+  })
+  registerBuiltinFileStoreProtocol({
+    baseDir: () => initializedDataDirectory('builtin')
+  })
+
   const window = createMainWindow(() => logger)
   window.once('ready-to-show', () => {
     void initializeApplication().then(resolveStartup)
@@ -81,13 +92,25 @@ function startApplication(): void {
 async function initializeApplication(): Promise<StartupResult> {
   try {
     const application = await import('./index')
-    logger = await application.initializeApplication()
+    const initialized = await application.initializeApplication()
+    logger = initialized.logger
     applicationInitialized = true
-    return { ok: true }
+    return {
+      ok: true,
+      dataDirectory: initialized.dataDirectory,
+      builtinDataDirectory: initialized.builtinDataDirectory
+    }
   } catch (error) {
     handleApplicationInitializationError(error)
     return { ok: false, message: errorMessage(error) }
   }
+}
+
+async function initializedDataDirectory(kind: 'application' | 'builtin'): Promise<string> {
+  if (!startupResult) throw new Error('应用启动尚未开始')
+  const result = await startupResult
+  if (!result.ok) throw new Error(result.message)
+  return kind === 'application' ? result.dataDirectory : result.builtinDataDirectory
 }
 
 function handleApplicationInitializationError(error: unknown): void {

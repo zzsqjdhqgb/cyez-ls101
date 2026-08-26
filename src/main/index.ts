@@ -9,7 +9,7 @@ import { registerConfigStore } from '@ls101/config-store/main'
 import { registerAIRouter } from '@ls101/airouter/main'
 import { registerClipboard } from '@ls101/clipboard/main'
 import { registerFileDialog } from '@ls101/file-dialog/main'
-import { registerBuiltinFileStore, registerFileStore } from '@ls101/file-store/main'
+import { registerBuiltinFileStoreHandlers, registerFileStoreHandlers } from '@ls101/file-store/main'
 import { join } from 'node:path'
 import { registerAppInfoHandlers } from './app-info'
 import {
@@ -21,7 +21,13 @@ import { LegacyDataService, registerLegacyDataHandlers } from './legacy-data'
 import { registerLicenseHandlers } from './license'
 import { LICENSE_RECEIPT_FILENAME, type LicenseServiceOptions } from './license-service'
 
-export async function initializeApplication(): Promise<Logger> {
+export interface ApplicationInitialization {
+  logger: Logger
+  dataDirectory: string
+  builtinDataDirectory: string
+}
+
+export async function initializeApplication(): Promise<ApplicationInitialization> {
   const applicationLogger = await initializeApplicationLogger()
   applicationLogger.info('Application initialization started', {
     version: app.getVersion(),
@@ -47,12 +53,11 @@ export async function initializeApplication(): Promise<Logger> {
     return recoverDataDirectory(userDataDir, error)
   }
   const legacyDataService = new LegacyDataService(userDataDir, dataDir)
-  registerFileStore({ baseDir: dataDir })
-  registerBuiltinFileStore({
-    baseDir: app.isPackaged
-      ? join(process.resourcesPath, 'builtin')
-      : join(app.getAppPath(), 'resources', 'builtin')
-  })
+  const builtinDataDir = app.isPackaged
+    ? join(process.resourcesPath, 'builtin')
+    : join(app.getAppPath(), 'resources', 'builtin')
+  registerFileStoreHandlers({ baseDir: dataDir })
+  registerBuiltinFileStoreHandlers({ baseDir: builtinDataDir })
   registerConfigStore({ baseDir: dataDir })
   registerAIRouter({ baseDir: dataDir })
   registerClipboard()
@@ -64,7 +69,11 @@ export async function initializeApplication(): Promise<Logger> {
   })
   registerLegacyDataHandlers(legacyDataService)
   registerRendererLogger(applicationLogger)
-  return applicationLogger
+  return {
+    logger: applicationLogger,
+    dataDirectory: dataDir,
+    builtinDataDirectory: builtinDataDir
+  }
 }
 
 async function initializeApplicationLogger(): Promise<Logger> {

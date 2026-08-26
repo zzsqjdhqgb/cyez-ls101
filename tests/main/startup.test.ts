@@ -19,7 +19,9 @@ const mocks = vi.hoisted(() => ({
   initializeLegacyData: vi.fn().mockResolvedValue(undefined),
   hasPendingLegacyCleanup: vi.fn(() => false),
   recoverDataDirectory: vi.fn<() => Promise<never>>(),
-  registerFileStore: vi.fn(),
+  registerFileStoreHandlers: vi.fn(),
+  registerFileStoreProtocol: vi.fn(),
+  registerBuiltinFileStoreProtocol: vi.fn(),
   showErrorBox: vi.fn()
 }))
 
@@ -55,9 +57,11 @@ vi.mock('@ls101/airouter/main', () => ({ registerAIRouter: vi.fn() }))
 vi.mock('@ls101/clipboard/main', () => ({ registerClipboard: vi.fn() }))
 vi.mock('@ls101/file-dialog/main', () => ({ registerFileDialog: vi.fn() }))
 vi.mock('@ls101/file-store/main', () => ({
-  registerBuiltinFileStore: vi.fn(),
+  registerBuiltinFileStoreHandlers: vi.fn(),
+  registerBuiltinFileStoreProtocol: mocks.registerBuiltinFileStoreProtocol,
   registerBuiltinFileStoreScheme: vi.fn(),
-  registerFileStore: mocks.registerFileStore,
+  registerFileStoreHandlers: mocks.registerFileStoreHandlers,
+  registerFileStoreProtocol: mocks.registerFileStoreProtocol,
   registerFileStoreScheme: vi.fn()
 }))
 vi.mock('../../src/main/app-info', () => ({ registerAppInfoHandlers: vi.fn() }))
@@ -101,6 +105,11 @@ describe('application startup error handling', () => {
     await import('../../src/main/bootstrap')
 
     await vi.waitFor(() => expect(mocks.createMainWindow).toHaveBeenCalledOnce())
+    expect(mocks.registerFileStoreProtocol).toHaveBeenCalledOnce()
+    expect(mocks.registerBuiltinFileStoreProtocol).toHaveBeenCalledOnce()
+    expect(mocks.registerFileStoreProtocol.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.createMainWindow.mock.invocationCallOrder[0]
+    )
     expect(mocks.initializeDataDirectory).not.toHaveBeenCalled()
 
     readyToShow?.()
@@ -119,13 +128,13 @@ describe('application startup error handling', () => {
     await vi.waitFor(() => {
       expect(mocks.recoverDataDirectory).toHaveBeenCalledWith('/user-data', failure)
     })
-    expect(mocks.registerFileStore).not.toHaveBeenCalled()
+    expect(mocks.registerFileStoreHandlers).not.toHaveBeenCalled()
     expect(mocks.showErrorBox).not.toHaveBeenCalled()
   })
 
   it('reports failures after data-directory initialization as application startup errors', async () => {
     const failure = new Error('file store registration failed')
-    mocks.registerFileStore.mockImplementation(() => {
+    mocks.registerFileStoreHandlers.mockImplementation(() => {
       throw failure
     })
 
