@@ -580,6 +580,8 @@ JSON 控制请求单独限制为 1 MiB，入网文件单独限制为 64 KiB，�
 
 恢复操作通过服务机本地管理流程在服务停止或隔离状态进行，不提供会覆盖正在运行服务的远程恢复接口。恢复旧快照的边界沿用功能设计，不自动要求学生补齐历史。
 
+备份归档不包含其他备份文件。恢复时按[存储设计](./lab-server-storage-design.md)在启用恢复目录前清空快照中的备份索引及备份创建幂等记录；恢复后的备份列表初始为空，查询或下载旧备份 ID 返回 `NOT_FOUND`。原目录和用于恢复的备份文件仍保留供本机管理员使用，不自动加入新目录的可下载列表。
+
 ## 13. 持久化与清理边界
 
 API 不规定数据库产品，但实现必须持久化以下业务事实：服务身份与模式、管理密码安全配置及其修订号、有效入网批次、设备凭证及设备配置修订号、设备编号和机房座位等配置、禁用状态、按设备凭证绑定隔离的心跳最大运行代次与运行 ID 及序号、试卷索引与归档、练习准入、成功作答与回执、删除去重标记、维护任务及其执行结果。
@@ -628,6 +630,8 @@ OpenAPI 中为每个操作声明唯一 operationId、必需的客户端版本头
 `GET /teacher/service` 返回 modeRevision、设备数量汇总、当前开放批次 ID、活动任务、存储统计和 `blockers`。退出维护的 RESOURCE_BUSY 使用 `details.blockers` 返回资源类型及 ID。设备列表/详情中的 `heartbeat` 和 `submissionSummaryUpdatedAt` 允许为 null；心跳观测包含客户端发布版本。作答详情与列表的 `deviceAtReceipt` 固定接收时标签，`currentDevice` 是最新配置；room 筛选按接收时机房。`id` 等于回执 submissionId。
 
 测试详情包含每设备的自动用例结果及 `confirmation`，后者始终有 revision，初始为 1、更新时间为 null。人工确认只接受该套件需要人工确认的用例，重复 caseId 拒绝；重试创建请求可带 retryOf。批次状态由设备任务聚合：有运行或停止中任务时为 running/cancel-requested，尚有待执行为 pending；终结后取消或到期优先保留该事实，否则任一失败为 failed，全部成功才 succeeded。离线是单独观测，不能替代任务状态。
+
+测试详情和导出报告共用 `TestDeviceResult`：尚未收到执行报告时 `report` 为 null；已收到时包含 leaseId、status、completedAt 和必需的 `error` 字段。`report.error` 返回已持久化并脱敏的任务级错误（code、message、occurredAt），没有错误时为 null，独立于用例级错误和设备最近心跳错误。执行器在产生用例结果前提交 failed、result 为 null 时，cases 可为空，但任务级错误仍须在详情和导出报告中保留；迟到报告也遵循此规则。
 
 任务结果的 `result.kind` 必须匹配已签发任务类型和阶段；仅失败、取消或过期允许 result 为 null，成功必须有完整结果。服务端验证用例 ID 属于固定任务，成功测试不能遗漏必需用例；清理计数满足 selectedCount 等于 deletedCount、alreadyAbsentCount、skippedCount、failedCount 之和，失败/跳过项目不能宣称全部成功。结果不可覆盖，late 单独返回。
 

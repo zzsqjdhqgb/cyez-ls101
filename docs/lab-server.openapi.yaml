@@ -3276,10 +3276,14 @@ components:
         report:
           type: object
           nullable: true
+          description: >-
+            Persisted task-level report, including the sanitized error submitted by the
+            executor even when no case results were produced. Null until a report is received.
           required:
             - leaseId
             - status
             - completedAt
+            - error
           properties:
             leaseId:
               type: string
@@ -3289,6 +3293,8 @@ components:
             completedAt:
               type: string
               format: date-time
+            error:
+              $ref: '#/components/schemas/DiagnosticError'
         late:
           type: boolean
     TestRun:
