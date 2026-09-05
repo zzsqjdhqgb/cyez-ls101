@@ -163,6 +163,10 @@ paths:
       - $ref: '#/components/parameters/ClientVersion'
     put:
       operationId: putTeacherServiceMode
+      description: >-
+        Exiting maintenance checks the current revision and all blockers. A pending or running
+        backup returns 409 RESOURCE_BUSY with details.blockers, including during its write barrier.
+        Initialization or unavailable storage may still return 503.
       tags:
         - teacher
       security:
@@ -185,7 +189,9 @@ paths:
               schema:
                 type: string
         '409':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/StateConflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
         default:
           $ref: '#/components/responses/Error'
   /student/state:
@@ -964,6 +970,12 @@ paths:
       - $ref: '#/components/parameters/Id'
     post:
       operationId: postStudentTasksIdClaim
+      description: >-
+        Requires maintenance, matching version, enabled device and the current heartbeat runtime.
+        Backup reservation or encryption returns 409 RESOURCE_BUSY with relevant blockers and
+        Retry-After. A closed write gate returns 503 SERVICE_NOT_READY without issuing a lease.
+        Other mode, runtime or task eligibility conflicts return 409 RESOURCE_BUSY.
+        Retry only after the delay, refreshed state, successful heartbeat and local idle checks.
       tags:
         - student
       security:
@@ -994,12 +1006,21 @@ paths:
                 type: string
         default:
           $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /student/tasks/{id}/lease:
     parameters:
       - $ref: '#/components/parameters/ClientVersion'
       - $ref: '#/components/parameters/Id'
     put:
       operationId: putStudentTasksIdLease
+      description: >-
+        A closed write gate returns 503 SERVICE_NOT_READY without extending the lease.
+        Otherwise an expired/cancelled lease, wrong runtime or normal mode returns 409 RESOURCE_BUSY.
+        Any renewal failure stops new side effects and releases audio resources; Retry-After
+        never extends the lease or authorizes resuming stopped execution.
       tags:
         - student
       security:
@@ -1034,6 +1055,10 @@ paths:
                 type: string
         default:
           $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /student/tasks/{id}/result:
     parameters:
       - $ref: '#/components/parameters/ClientVersion'
@@ -1569,6 +1594,14 @@ paths:
           $ref: '#/components/responses/Error'
     post:
       operationId: postTeacherBackups
+      description: >-
+        Requires maintenance and no conflicting execution, valid lease or unfinished backup.
+        The acceptance transaction persists a backup reservation before returning 202.
+        Normal mode returns 409 RESOURCE_BUSY with details.mode and modeRevision; conflicts
+        return 409 RESOURCE_BUSY with details.blockers, even during another backup's write barrier.
+        Authorized same-key/same-input replay returns the original 202 and backup ID without
+        enqueueing again; read its current state using GET. Different input returns CONTENT_CONFLICT.
+        Failed jobs require a new key and password input. Initialization/storage failures return 503.
       tags:
         - teacher
       security:
@@ -1603,6 +1636,10 @@ paths:
                 type: string
         default:
           $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /teacher/backups/{id}:
     parameters:
       - $ref: '#/components/parameters/ClientVersion'
@@ -1632,6 +1669,7 @@ paths:
       - $ref: '#/components/parameters/Id'
     get:
       operationId: getTeacherBackupsIdArchive
+      description: Only ready backups are downloadable; all other states return 409 RESOURCE_BUSY.
       tags:
         - teacher
       security:
@@ -1658,6 +1696,8 @@ paths:
               schema:
                 type: string
                 format: binary
+        '409':
+          $ref: '#/components/responses/StateConflict'
         default:
           $ref: '#/components/responses/Error'
 components:
@@ -1787,6 +1827,93 @@ components:
             type: string
             format: binary
   responses:
+    StateConflict:
+      description: >-
+        409 RESOURCE_BUSY for current mode, task eligibility or resource blockers;
+        VERSION_MISMATCH, REVISION_CONFLICT and CONTENT_CONFLICT retain their normal meaning.
+        Busy backup/task responses include details.blockers when a blocking resource exists;
+        normal-mode rejection includes mode and modeRevision. Backup-blocked claim responses
+        provide Retry-After; this is not authority to repeat side effects.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+        Retry-After:
+          description: Minimum whole seconds before retrying a backup-blocked claim.
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Error'
+              - type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        enum: [RESOURCE_BUSY, VERSION_MISMATCH, REVISION_CONFLICT, CONTENT_CONFLICT]
+          examples:
+            backupPending:
+              value:
+                error:
+                  code: RESOURCE_BUSY
+                  message: Backup is queued.
+                  requestId: request-backup-pending
+                  details:
+                    blockers:
+                      - kind: backup-pending
+                        resourceId: 11111111-1111-4111-8111-111111111111
+            normalMode:
+              value:
+                error:
+                  code: RESOURCE_BUSY
+                  message: Maintenance mode is required.
+                  requestId: request-normal-mode
+                  details:
+                    mode: normal
+                    modeRevision: 7
+    ServiceUnavailable:
+      description: >-
+        503 SERVICE_NOT_READY during initialization or a closed backup write gate;
+        STORAGE_UNAVAILABLE for a storage failure. Backup write rejection provides Retry-After
+        and relevant blockers, never extends a lease, and does not prove a submission was not received.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+        Retry-After:
+          description: Minimum whole seconds to wait; not a lease extension.
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Error'
+              - type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        enum: [SERVICE_NOT_READY, STORAGE_UNAVAILABLE]
+          examples:
+            backupBarrier:
+              value:
+                error:
+                  code: SERVICE_NOT_READY
+                  message: Backup snapshot is in progress.
+                  requestId: request-backup-barrier
+                  details:
+                    blockers:
+                      - kind: backup-write-barrier
+                        resourceId: 11111111-1111-4111-8111-111111111111
     Error:
       description: >-
         400 INVALID_REQUEST; 401 AUTH_REQUIRED/TOKEN_EXPIRED/TOKEN_REVOKED; 403
@@ -1997,6 +2124,12 @@ components:
           $ref: '#/components/schemas/PositiveInteger'
     Blocker:
       type: object
+      additionalProperties: false
+      description: >-
+        One entry per (kind, resourceId). A backup has exactly one current blocker:
+        backup-pending before write admission closes, backup-write-barrier while draining/copying,
+        or backup-running during encryption/publication after the gate reopens. Ready/failed
+        backups do not block. Student errors include only blockers relevant to that request.
       required:
         - kind
         - resourceId
@@ -2007,11 +2140,14 @@ components:
             - enrollment
             - test-run
             - history-cleanup
-            - lease
-            - backup
+            - active-task-lease
+            - backup-pending
+            - backup-running
+            - backup-write-barrier
         resourceId:
           type: string
           format: uuid
+          description: Enrollment, test run, cleanup plan, active lease or backup ID, according to kind.
     ServiceState:
       allOf:
         - $ref: '#/components/schemas/Info'
@@ -3596,6 +3732,11 @@ components:
                 $ref: '#/components/schemas/LogEntry'
     Backup:
       type: object
+      description: >-
+        pending reserves maintenance; running covers both snapshot and encryption/publication.
+        The write barrier ends after staging is durable, but claims and exit remain blocked until
+        ready/failed. Either pending or running can fail. Restart fails unfinished jobs because
+        passwords are memory-only; replay never restarts them. Only ready is downloadable.
       required:
         - id
         - status
