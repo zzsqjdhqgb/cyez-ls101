@@ -4,6 +4,8 @@
 
 本文件细化[机房练习软件设计](./lab-deployment-design.md)中的跨端契约，不改变其中已经确认的功能边界。历史文档不作为接口要求来源。路径、字段及默认参数在本草案确认后再作为实现依据。
 
+完整请求响应形状见 [OpenAPI 3.0 契约](./lab-server.openapi.yaml)；持久化、客户端与教师流程见[实现设计审核清单](./lab-implementation-design.md)。这些均为本轮待审核设计，不表示已有服务实现。
+
 ## 1. 范围与基本约定
 
 服务仅随教师端安装，远程通信使用 HTTPS。API 根路径为 `/api/v1`，下文路径均相对于此根路径。
@@ -48,18 +50,18 @@
 
 客户端依赖 `code`，不解析 `message`。响应同时提供 `X-Request-Id`。错误响应不包含文件系统路径、密钥、令牌或完整作答。
 
-| HTTP 状态 | 常见错误码 | 含义 |
-| --- | --- | --- |
-| 400 | `INVALID_REQUEST` | 参数、请求头或格式错误 |
-| 401 | `AUTH_REQUIRED`、`TOKEN_EXPIRED`、`TOKEN_REVOKED` | 无有效凭证 |
-| 403 | `DEVICE_DISABLED`、`LICENSE_INACTIVE`、`ENROLLMENT_REJECTED` | 无操作权限或许可无效 |
-| 404 | `NOT_FOUND` | 资源不存在或不属于调用者 |
-| 409 | `SERVICE_MAINTENANCE`、`VERSION_MISMATCH`、`REVISION_CONFLICT`、`CONTENT_CONFLICT`、`RESOURCE_BUSY` | 当前状态不允许或内容冲突 |
-| 413 | `PAYLOAD_TOO_LARGE` | 请求或解压结果超限 |
-| 415 | `UNSUPPORTED_MEDIA_TYPE` | 请求内容类型不支持 |
-| 422 | `INVALID_EXAM`、`INVALID_SUBMISSION` | 包内容校验失败 |
-| 429 | `RATE_LIMITED` | 超出频率或并发限制 |
-| 503 | `SERVICE_NOT_READY`、`STORAGE_UNAVAILABLE` | 服务初始化、数据升级、备份写入屏障或存储异常 |
+| HTTP 状态 | 常见错误码                                                                                          | 含义                                         |
+| --------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 400       | `INVALID_REQUEST`                                                                                   | 参数、请求头或格式错误                       |
+| 401       | `AUTH_REQUIRED`、`TOKEN_EXPIRED`、`TOKEN_REVOKED`                                                   | 无有效凭证                                   |
+| 403       | `DEVICE_DISABLED`、`LICENSE_INACTIVE`、`ENROLLMENT_REJECTED`                                        | 无操作权限或许可无效                         |
+| 404       | `NOT_FOUND`                                                                                         | 资源不存在或不属于调用者                     |
+| 409       | `SERVICE_MAINTENANCE`、`VERSION_MISMATCH`、`REVISION_CONFLICT`、`CONTENT_CONFLICT`、`RESOURCE_BUSY` | 当前状态不允许或内容冲突                     |
+| 413       | `PAYLOAD_TOO_LARGE`                                                                                 | 请求或解压结果超限                           |
+| 415       | `UNSUPPORTED_MEDIA_TYPE`                                                                            | 请求内容类型不支持                           |
+| 422       | `INVALID_EXAM`、`INVALID_SUBMISSION`                                                                | 包内容校验失败                               |
+| 429       | `RATE_LIMITED`                                                                                      | 超出频率或并发限制                           |
+| 503       | `SERVICE_NOT_READY`、`STORAGE_UNAVAILABLE`                                                          | 服务初始化、数据升级、备份写入屏障或存储异常 |
 
 需要等待的响应可提供 `Retry-After`。网络超时、认证失败和维护拒绝均不表示作答未收取，客户端必须按交卷规则处理。
 
@@ -96,18 +98,18 @@ HTTPS 对端公钥必须先通过客户端已有信任配置校验；不能从 `
 
 ### 2.2 教师会话
 
-| 方法与路径 | 请求 | 响应与规则 |
-| --- | --- | --- |
-| `POST /teacher/sessions` | 远程为 `{ "password": "..." }`；本机免密为 `{}` | 返回 `token`、`expiresAt`、`serverId` |
-| `DELETE /teacher/sessions/current` | 无 | 撤销当前会话，返回 `204` |
-| `GET /teacher/security` | 无 | 返回 `{ "revision": 1 }`，不返回密码或密码校验值 |
-| `PUT /teacher/security/password` | `newPassword`、`expectedRevision` | 更改管理密码，返回更新后的 `{ "revision": 2 }`，撤销既有教师会话，要求重新登录 |
+| 方法与路径                         | 请求                                            | 响应与规则                                                                     |
+| ---------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------ |
+| `POST /teacher/sessions`           | 远程为 `{ "password": "..." }`；本机免密为 `{}` | 返回 `token`、`expiresAt`、`serverId`                                          |
+| `DELETE /teacher/sessions/current` | 无                                              | 撤销当前会话，返回 `204`                                                       |
+| `GET /teacher/security`            | 无                                              | 返回 `{ "revision": 1 }`，不返回密码或密码校验值                               |
+| `PUT /teacher/security/password`   | `newPassword`、`expectedRevision`               | 更改管理密码，返回更新后的 `{ "revision": 2 }`，撤销既有教师会话，要求重新登录 |
 
 安全配置使用独立、持久化的 `revision`，初始为 1，与 `/teacher/settings` 的修订号互不通用。教师登录后通过 `GET /teacher/security` 取得修改密码所需的 `expectedRevision`。密码更新、修订号递增及既有教师会话撤销必须原子生效；版本冲突返回 `REVISION_CONFLICT`，在 `details.revision` 中提供当前安全配置版本，不修改密码或撤销会话。成功修改后，包括发起修改的会话在内，所有既有教师会话均失效。
 
 会话默认有效 8 小时，过期重新认证，不建设用户账户或多级教师角色。服务许可无效时不能创建管理会话。
 
-本机免密同时要求实际连接为回环来源，以及本机调用来源校验。会话入口只接受 JSON，不接受表单或查询参数密码；拒绝任意网页 Origin 和宽泛 CORS，不相信 `X-Forwarded-For`。具体 Electron 本机调用标识由宿主接口提供，不作为远程权限证明。
+本机免密同时要求实际连接为回环来源，以及本机调用来源校验。宿主通过受操作系统权限保护的本地 IPC 获取短期单次证明，以 `X-LS101-Local-Authorization` 请求头携带，正文为 `{}`；具体签发与校验见[桌面设计](./lab-desktop-design.md)。会话入口只接受 JSON，不接受表单或查询参数密码；拒绝任意网页 Origin 和宽泛 CORS，不相信 `X-Forwarded-For`。本机证明不能作为远程权限证明。
 
 ### 2.3 学生凭证
 
@@ -119,12 +121,12 @@ HTTPS 对端公钥必须先通过客户端已有信任配置校验；不能从 `
 
 ### 3.1 教师接口
 
-| 方法与路径 | 请求或用途 | 规则 |
-| --- | --- | --- |
-| `POST /teacher/enrollments` | `validForSeconds`，默认 600；`expectedModeRevision` | 自动进入维护，创建批次，返回批次及当前模式 |
-| `GET /teacher/enrollments` | 列表 | 返回状态、有效期和注册数量，不返回入网秘密 |
-| `GET /teacher/enrollments/{id}/file` | 下载签名入网文件 | 仅有效且未撤销批次可下载；不刷新有效期 |
-| `DELETE /teacher/enrollments/{id}` | 关闭或撤销批次 | 幂等，保持维护模式，不影响已绑定设备 |
+| 方法与路径                           | 请求或用途                                          | 规则                                       |
+| ------------------------------------ | --------------------------------------------------- | ------------------------------------------ |
+| `POST /teacher/enrollments`          | `validForSeconds`，默认 600；`expectedModeRevision` | 自动进入维护，创建批次，返回批次及当前模式 |
+| `GET /teacher/enrollments`           | 列表                                                | 返回状态、有效期和注册数量，不返回入网秘密 |
+| `GET /teacher/enrollments/{id}/file` | 下载签名入网文件                                    | 仅有效且未撤销批次可下载；不刷新有效期     |
+| `DELETE /teacher/enrollments/{id}`   | 关闭或撤销批次                                      | 幂等，保持维护模式，不影响已绑定设备       |
 
 首版一个服务同时只开放一个入网批次。新建前需关闭旧批次；相同幂等键的重试返回原批次。有效期按服务端签发时间计算，不能由学生机时钟延长。
 
@@ -180,10 +182,10 @@ JWS 头只接受固定 `alg`、用途 `typ` 和公钥标识 `kid`，拒绝 `none
 
 ### 4.1 教师切换模式
 
-| 方法与路径 | 用途 |
-| --- | --- |
-| `GET /teacher/service` | 服务模式、修订号、版本、健康状态、开放入网批次、活动任务和设备汇总 |
-| `PUT /teacher/service/mode` | `{ "mode": "maintenance", "expectedRevision": 6 }` |
+| 方法与路径                  | 用途                                                               |
+| --------------------------- | ------------------------------------------------------------------ |
+| `GET /teacher/service`      | 服务模式、修订号、版本、健康状态、开放入网批次、活动任务和设备汇总 |
+| `PUT /teacher/service/mode` | `{ "mode": "maintenance", "expectedRevision": 6 }`                 |
 
 模式只有 `normal` 和 `maintenance`，默认维护。切换成功返回当前模式和递增的 `modeRevision`。
 
@@ -214,13 +216,19 @@ JWS 头只接受固定 `alg`、用途 `typ` 和公钥标识 `kid`，拒绝 `none
   "availability": "maintenance",
   "allowedOperations": ["heartbeat", "maintenance-task"],
   "heartbeatIntervalSeconds": 5,
-  "offlineAfterSeconds": 20
+  "offlineAfterSeconds": 20,
+  "limits": {
+    "maxExamArchiveBytes": 268435456,
+    "maxSubmissionArchiveBytes": 268435456,
+    "maxUncompressedBytes": 536870912,
+    "maxArchiveFiles": 10000
+  }
 }
 ```
 
 `availability` 为 `ready`、`maintenance`、`version-mismatch`、`disabled`、`license-inactive` 或 `service-unavailable`。返回状态便于 UI 展示，所有业务接口仍需独立执行同样检查。
 
-`device` 是教师配置的完整设备信息，`room`、`seat`、`displayName` 未设置时为 `null`；`revision` 是第 4.4 节的设备配置修订号。每次状态查询和心跳响应均返回最新完整 `device`，学生端据此更新维护画面，无需重新入网。并发状态查询与心跳响应乱序时，同一绑定下较小的设备修订号不得覆盖较大的修订号；切换绑定时清除旧设备配置缓存。
+`device` 是教师配置的完整设备信息，`room`、`seat`、`displayName` 未设置时为 `null`；`revision` 是第 4.4 节的设备配置修订号。每次状态查询和心跳响应均返回最新完整 `device`，学生端据此更新维护画面，无需重新入网。并发状态查询与心跳响应乱序时，同一可信连接内较小的设备或模式修订号不得覆盖较大的修订号；断线重连成功后用首次状态重建基线，以支持服务恢复旧备份后的修订号回退。客户端使用本地连接 epoch 丢弃上一连接的迟到状态响应；切换绑定时清除旧设备配置缓存。
 
 凭证有效但版本不一致的设备可以读取最小状态、发送诊断心跳，不领取任务、浏览试卷、交卷或查询回执。已撤销凭证则返回 `401`，不提供设备信息。
 
@@ -266,12 +274,12 @@ JWS 头只接受固定 `alg`、用途 `typ` 和公钥标识 `kid`，拒绝 `none
 
 ### 4.4 教师设备管理
 
-| 方法与路径 | 请求或用途 |
-| --- | --- |
-| `GET /teacher/devices` | 按机房、在线状态、版本异常、关键字筛选 |
-| `GET /teacher/devices/{id}` | 设备详情、最后心跳、练习状态、作答统计和任务状态 |
-| `PATCH /teacher/devices/{id}` | 修改 `number`、`room`、`seat`、`displayName`、`enabled`，携带 `expectedRevision`；返回更新后的完整设备信息 |
-| `POST /teacher/devices/{id}/reset-binding` | 撤销凭证及待执行任务；必须确认，使用幂等键 |
+| 方法与路径                                 | 请求或用途                                                                                                 |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `GET /teacher/devices`                     | 按机房、在线状态、版本异常、关键字筛选                                                                     |
+| `GET /teacher/devices/{id}`                | 设备详情、最后心跳、练习状态、作答统计和任务状态                                                           |
+| `PATCH /teacher/devices/{id}`              | 修改 `number`、`room`、`seat`、`displayName`、`enabled`，携带 `expectedRevision`；返回更新后的完整设备信息 |
+| `POST /teacher/devices/{id}/reset-binding` | 撤销凭证及待执行任务；必须确认，使用幂等键                                                                 |
 
 设备 `id` 是不可变身份主键，计算机名不作为唯一键。`number` 对应注册响应中的 `deviceNumber`，由服务端初次分配，之后只有教师明确修改才改变。编号为保留前导零的字符串，去除首尾空白后不得为空，在同一服务的全部设备记录中唯一（包括禁用设备，按大小写敏感的完整字符串比较）。编号占用返回 `CONTENT_CONFLICT`，不应用同一请求中的其他修改；修改编号不改变设备 ID、凭证、既有作答或任务归属。
 
@@ -285,14 +293,14 @@ JWS 头只接受固定 `alg`、用途 `typ` 和公钥标识 `kid`，拒绝 `none
 
 ### 5.1 教师试卷管理
 
-| 方法与路径 | 用途 |
-| --- | --- |
-| `GET /teacher/exams` | 全部试卷列表，按关键字和上架状态筛选 |
-| `POST /teacher/exams` | 上传原始 `.lsexam` 二进制 |
-| `GET /teacher/exams/{examId}` | 获取元数据 |
-| `GET /teacher/exams/{examId}/archive` | 下载完整原归档 |
-| `PATCH /teacher/exams/{examId}` | 仅修改 `published`，携带 `expectedRevision` |
-| `DELETE /teacher/exams/{examId}` | 删除试卷，不删除作答 |
+| 方法与路径                            | 用途                                        |
+| ------------------------------------- | ------------------------------------------- |
+| `GET /teacher/exams`                  | 全部试卷列表，按关键字和上架状态筛选        |
+| `POST /teacher/exams`                 | 上传原始 `.lsexam` 二进制                   |
+| `GET /teacher/exams/{examId}`         | 获取元数据                                  |
+| `GET /teacher/exams/{examId}/archive` | 下载完整原归档                              |
+| `PATCH /teacher/exams/{examId}`       | 仅修改 `published`，携带 `expectedRevision` |
+| `DELETE /teacher/exams/{examId}`      | 删除试卷，不删除作答                        |
 
 上传内容类型为 `application/x-ls101-exam`，使用 `X-LS101-Archive-SHA256` 声明摘要，服务端自行计算并核对。服务端流式接收至临时文件，完成包校验后才发布记录。
 
@@ -302,9 +310,9 @@ JWS 头只接受固定 `alg`、用途 `typ` 和公钥标识 `kid`，拒绝 `none
 
 ### 5.2 学生下载与缓存
 
-| 方法与路径 | 用途 |
-| --- | --- |
-| `GET /student/exams` | 正常模式下列出已上架试卷 |
+| 方法与路径                            | 用途                     |
+| ------------------------------------- | ------------------------ |
+| `GET /student/exams`                  | 正常模式下列出已上架试卷 |
 | `GET /student/exams/{examId}/archive` | 正常模式下下载已上架试卷 |
 
 列表提供学生缓存所需元数据，不包含教师管理配置。下载返回 `Content-Length`、固定归档摘要和安全的 `Content-Disposition`。首版完整文件下载，失败重新下载，不建设分片上传或断点传输协议。
@@ -364,12 +372,12 @@ X-LS101-Client-Version: <当前发布版本>
 
 成功返回 `200`，按 `status` 区分：
 
-| `status` | 含义 | 客户端处理 |
-| --- | --- | --- |
+| `status`       | 含义                                               | 客户端处理                                         |
+| -------------- | -------------------------------------------------- | -------------------------------------------------- |
 | `not-received` | 已核实该编号归本设备，当前没有已提交记录或在途接收 | 按任务来源决定首次发送、维护恢复自动重发或手动重试 |
-| `receiving` | 同一编号尚在接收或提交 | 保留待核对，按 `retryAfterSeconds` 查询 |
-| `received` | 已可靠收取，文件仍在服务端 | 持久化回执，归入历史 |
-| `deleted` | 曾成功收取，后来由教师删除 | 持久化原回执及删除状态，归入历史，不重传 |
+| `receiving`    | 同一编号尚在接收或提交                             | 保留待核对，按 `retryAfterSeconds` 查询            |
+| `received`     | 已可靠收取，文件仍在服务端                         | 持久化回执，归入历史                               |
+| `deleted`      | 曾成功收取，后来由教师删除                         | 持久化原回执及删除状态，归入历史，不重传           |
 
 成功回执形状如下，`deleted` 状态额外包含 `deletedAt`：
 
@@ -411,14 +419,14 @@ X-LS101-Client-Version: <当前发布版本>
 
 ### 7.4 教师作答管理
 
-| 方法与路径 | 用途 |
-| --- | --- |
-| `GET /teacher/submissions` | 按试卷、学生、机房、设备和接收时间筛选 |
-| `GET /teacher/submissions/{id}` | 归档元数据、来源设备、接收时间及摘要 |
-| `GET /teacher/submissions/{id}/archive` | 下载原始 `.lssubmission` |
-| `POST /teacher/submissions/export` | `{ "submissionIds": [...] }`，返回外层 ZIP，内部保留原作答包 |
-| `DELETE /teacher/submissions/{id}` | 删除原归档，保留最小回执、摘要、归属和删除时间 |
-| `POST /teacher/submissions/delete` | 显式 ID 列表及幂等键，批量删除 |
+| 方法与路径                              | 用途                                                         |
+| --------------------------------------- | ------------------------------------------------------------ |
+| `GET /teacher/submissions`              | 按试卷、学生、机房、设备和接收时间筛选                       |
+| `GET /teacher/submissions/{id}`         | 归档元数据、来源设备、接收时间及摘要                         |
+| `GET /teacher/submissions/{id}/archive` | 下载原始 `.lssubmission`                                     |
+| `POST /teacher/submissions/export`      | `{ "submissionIds": [...] }`，返回外层 ZIP，内部保留原作答包 |
+| `DELETE /teacher/submissions/{id}`      | 删除原归档，保留最小回执、摘要、归属和删除时间               |
+| `POST /teacher/submissions/delete`      | 显式 ID 列表及幂等键，批量删除                               |
 
 单次批量操作最多 500 个 ID，不能用实时筛选条件直接表示删除范围。批量删除返回逐项结果，UI 明确成功、已删除及失败项，不假装跨多个文件删除天然全有或全无。
 
@@ -428,17 +436,17 @@ X-LS101-Client-Version: <当前发布版本>
 
 ## 8. 权限与模式矩阵
 
-| 操作 | 正常模式 | 维护模式 | 学生版本不一致 |
-| --- | --- | --- | --- |
-| 最小服务信息 | 允许 | 允许 | 允许 |
-| 有效凭证的学生状态、诊断心跳 | 允许 | 允许 | 仅诊断 |
-| 教师管理已有试卷、作答 | 允许 | 允许 | 不适用，教师检查管理协议 |
-| 学生浏览试卷、发起正式下载 | 允许 | 拒绝 | 拒绝 |
-| 申请开始许可 | 允许 | 拒绝 | 拒绝 |
-| 正式作答上传和回执查询 | 允许 | 拒绝 | 拒绝 |
-| 有效文件注册设备 | 拒绝 | 入网窗口开放时允许 | 拒绝 |
-| 领取部署测试或清理任务 | 拒绝 | 授权且空闲时允许 | 拒绝 |
-| 已执行维护任务的结果回报 | 允许补报 | 允许 | 拒绝，等版本恢复一致 |
+| 操作                         | 正常模式 | 维护模式           | 学生版本不一致           |
+| ---------------------------- | -------- | ------------------ | ------------------------ |
+| 最小服务信息                 | 允许     | 允许               | 允许                     |
+| 有效凭证的学生状态、诊断心跳 | 允许     | 允许               | 仅诊断                   |
+| 教师管理已有试卷、作答       | 允许     | 允许               | 不适用，教师检查管理协议 |
+| 学生浏览试卷、发起正式下载   | 允许     | 拒绝               | 拒绝                     |
+| 申请开始许可                 | 允许     | 拒绝               | 拒绝                     |
+| 正式作答上传和回执查询       | 允许     | 拒绝               | 拒绝                     |
+| 有效文件注册设备             | 拒绝     | 入网窗口开放时允许 | 拒绝                     |
+| 领取部署测试或清理任务       | 拒绝     | 授权且空闲时允许   | 拒绝                     |
+| 已执行维护任务的结果回报     | 允许补报 | 允许               | 拒绝，等版本恢复一致     |
 
 表中允许均以激活、服务就绪、凭证和相应权限有效为前提。设备禁用时仅保留状态诊断；撤销凭证后不再提供设备接口。已开始本地练习的断网保护是客户端规则，不扩展任何远程接口权限。
 
@@ -454,14 +462,14 @@ X-LS101-Client-Version: <当前发布版本>
 
 ### 9.2 学生领取与回报
 
-| 方法与路径 | 请求或用途 |
-| --- | --- |
-| `GET /student/tasks` | 返回本设备在当前模式和版本下可领取的任务 |
+| 方法与路径                       | 请求或用途                                                    |
+| -------------------------------- | ------------------------------------------------------------- |
+| `GET /student/tasks`             | 返回本设备在当前模式和版本下可领取的任务                      |
 | `POST /student/tasks/{id}/claim` | `runtimeId`，领取并取得 `leaseId`、`leaseExpiresAt`、任务参数 |
-| `PUT /student/tasks/{id}/lease` | `leaseId`、`runtimeId`，续租并取得取消状态 |
-| `PUT /student/tasks/{id}/result` | 提交固定结果，包含 `leaseId`、状态、各项结果及错误 |
+| `PUT /student/tasks/{id}/lease`  | `leaseId`、`runtimeId`，续租并取得取消状态                    |
+| `PUT /student/tasks/{id}/result` | 提交固定结果，包含 `leaseId`、状态、各项结果及错误            |
 
-领取和续租必须维护、版本一致、设备启用。学生端本机也检查空闲且未在录音、保存归档或执行另一个维护任务。同一设备只允许一个正在执行的维护任务。
+领取和续租必须维护、版本一致、设备启用，且 `runtimeId` 与本凭证最新已接受心跳的运行一致；客户端先发送本次运行的有效心跳，再领取任务。学生端本机也检查空闲且未在录音、保存归档或执行另一个维护任务。同一设备只允许一个正在执行的维护任务。新运行心跳不自动重发旧任务或提前释放旧租约，仍须等原租约结束；已完成结果可按原租约补报。
 
 执行租约建议 30 秒，每 5 秒续租，不能超过任务最终有效期。客户端依据服务端时间及本地单调计时维护保守的剩余期限，失联不无限执行；续租失败、取消或租约到期时停止测试和新的清理操作，释放设备资源。
 
@@ -477,25 +485,25 @@ X-LS101-Client-Version: <当前发布版本>
 
 ### 10.1 教师接口
 
-| 方法与路径 | 请求或用途 |
-| --- | --- |
-| `GET /teacher/test-suites` | 列出安装包内支持的套件、版本和测试项 |
-| `POST /teacher/test-runs` | `suiteId`、`caseIds`、`deviceIds`、`expiresAt`；创建测试批次 |
-| `GET /teacher/test-runs` | 测试批次列表 |
-| `GET /teacher/test-runs/{id}` | 每台设备、每项测试状态和失败原因 |
-| `POST /teacher/test-runs/{id}/cancel` | 取消未开始任务，并请求运行中的任务停止 |
-| `GET /teacher/test-runs/{id}/report` | 导出 JSON 报告，含版本、设备、时间、自动结果和人工确认项 |
-| `PUT /teacher/test-runs/{id}/devices/{deviceId}/confirmation` | 教师记录声音等人工核对结果，携带 `expectedRevision` |
+| 方法与路径                                                    | 请求或用途                                                   |
+| ------------------------------------------------------------- | ------------------------------------------------------------ |
+| `GET /teacher/test-suites`                                    | 列出安装包内支持的套件、版本和测试项                         |
+| `POST /teacher/test-runs`                                     | `suiteId`、`caseIds`、`deviceIds`、`expiresAt`；创建测试批次 |
+| `GET /teacher/test-runs`                                      | 测试批次列表                                                 |
+| `GET /teacher/test-runs/{id}`                                 | 每台设备、每项测试状态和失败原因                             |
+| `POST /teacher/test-runs/{id}/cancel`                         | 取消未开始任务，并请求运行中的任务停止                       |
+| `GET /teacher/test-runs/{id}/report`                          | 导出 JSON 报告，含版本、设备、时间、自动结果和人工确认项     |
+| `PUT /teacher/test-runs/{id}/devices/{deviceId}/confirmation` | 教师记录声音等人工核对结果，携带 `expectedRevision`          |
 
 创建测试只引用内置套件，不允许上传新的执行代码。教师重试失败项时创建新的测试批次并记录 `retryOf`，原结果不被改写。人工确认单独保存，不把自动失败覆盖为自动通过。
 
 ### 10.2 测试资源与作答
 
-| 方法与路径 | 用途 |
-| --- | --- |
-| `GET /student/tasks/{taskId}/test/exam` | 下载该任务指定的内置测试考试包 |
-| `PUT /student/tasks/{taskId}/test/submission` | 上传本次测试产生的归档 |
-| `GET /student/tasks/{taskId}/test/receipt` | 查询该测试提交结果 |
+| 方法与路径                                    | 用途                           |
+| --------------------------------------------- | ------------------------------ |
+| `GET /student/tasks/{taskId}/test/exam`       | 下载该任务指定的内置测试考试包 |
+| `PUT /student/tasks/{taskId}/test/submission` | 上传本次测试产生的归档         |
+| `GET /student/tasks/{taskId}/test/receipt`    | 查询该测试提交结果             |
 
 这些接口要求有效设备凭证、该设备拥有的测试任务、有效执行租约及维护模式。请求携带 `X-LS101-Task-Lease`，任务上下文固定测试包、测试作答 ID 和大小限制。
 
@@ -511,13 +519,13 @@ X-LS101-Client-Version: <当前发布版本>
 
 ### 11.1 创建、预览与确认
 
-| 方法与路径 | 请求或用途 |
-| --- | --- |
-| `POST /teacher/history-cleanups` | `deviceIds`、`submittedBefore`、`expiresAt`；创建待确认清理计划 |
-| `GET /teacher/history-cleanups` | 清理计划列表 |
-| `GET /teacher/history-cleanups/{id}` | 各设备预览数量、字节数、执行状态和错误 |
-| `POST /teacher/history-cleanups/{id}/confirm` | `expectedRevision`、选中的设备及各自 `selectionDigest` |
-| `POST /teacher/history-cleanups/{id}/cancel` | 取消未执行部分，运行部分按任务协议停止 |
+| 方法与路径                                    | 请求或用途                                                      |
+| --------------------------------------------- | --------------------------------------------------------------- |
+| `POST /teacher/history-cleanups`              | `deviceIds`、`submittedBefore`、`expiresAt`；创建待确认清理计划 |
+| `GET /teacher/history-cleanups`               | 清理计划列表                                                    |
+| `GET /teacher/history-cleanups/{id}`          | 各设备预览数量、字节数、执行状态和错误                          |
+| `POST /teacher/history-cleanups/{id}/confirm` | `expectedRevision`、选中的设备及各自 `selectionDigest`          |
+| `POST /teacher/history-cleanups/{id}/cancel`  | 取消未执行部分，运行部分按任务协议停止                          |
 
 计划创建只触发只读预览，不删除文件。预览与执行均使用 `history-cleanup` 任务，参数中的 `phase` 分别为 `preview` 和 `execute`。
 
@@ -541,11 +549,11 @@ X-LS101-Client-Version: <当前发布版本>
 
 ### 12.1 服务设置
 
-| 方法与路径 | 用途 |
-| --- | --- |
-| `GET /teacher/settings` | 服务名称、对外连接地址、容量和传输限制及修订号 |
-| `PATCH /teacher/settings` | 修改可热更新配置，携带 `expectedRevision` |
-| `GET /teacher/logs` | 按时间、级别和请求 ID 分页读取脱敏运行日志 |
+| 方法与路径                | 用途                                           |
+| ------------------------- | ---------------------------------------------- |
+| `GET /teacher/settings`   | 服务名称、对外连接地址、容量和传输限制及修订号 |
+| `PATCH /teacher/settings` | 修改可热更新配置，携带 `expectedRevision`      |
+| `GET /teacher/logs`       | 按时间、级别和请求 ID 分页读取脱敏运行日志     |
 
 此处设置修订号只用于 `PATCH /teacher/settings`，不覆盖管理密码；密码使用第 2.2 节独立的安全配置修订号。
 
@@ -559,12 +567,12 @@ JSON 控制请求单独限制为 1 MiB，入网文件单独限制为 64 KiB，�
 
 ### 12.2 备份
 
-| 方法与路径 | 请求或用途 |
-| --- | --- |
-| `POST /teacher/backups` | `encryptionPassword` 和幂等键，创建加密的一致性备份，返回 `202` 与备份 ID |
-| `GET /teacher/backups` | 备份时间、版本、状态和大小列表 |
-| `GET /teacher/backups/{id}` | 查询 `pending`、`running`、`ready` 或 `failed` |
-| `GET /teacher/backups/{id}/archive` | 仅完成后下载加密备份 |
+| 方法与路径                          | 请求或用途                                                                |
+| ----------------------------------- | ------------------------------------------------------------------------- |
+| `POST /teacher/backups`             | `encryptionPassword` 和幂等键，创建加密的一致性备份，返回 `202` 与备份 ID |
+| `GET /teacher/backups`              | 备份时间、版本、状态和大小列表                                            |
+| `GET /teacher/backups/{id}`         | 查询 `pending`、`running`、`ready` 或 `failed`                            |
+| `GET /teacher/backups/{id}/archive` | 仅完成后下载加密备份                                                      |
 
 创建备份只允许维护模式且没有正在执行的测试、清理或其他冲突写入。快照期间建立写入屏障，相关变更返回 `SERVICE_NOT_READY`，快照完成后释放屏障并保持维护模式。
 
@@ -605,6 +613,24 @@ API 不规定数据库产品，但实现必须持久化以下业务事实：服�
 
 ## 15. 下一步设计顺序
 
-先确认本草案的资源划分、维护边界和关键请求响应，再据此整理可机器校验的 OpenAPI 契约及共享类型。随后设计服务端持久化与事务边界、学生端状态机和教师端页面流程，最后分阶段实现。
+OpenAPI、服务端持久化、学生端状态机、桌面边界和教师流程已整理为[本轮整体审核材料](./lab-implementation-design.md)。审核后先生成共享类型与运行时校验产物，再按审核清单分阶段实现。
 
 本次不增加 OpenAPI 生成工具、服务框架依赖、数据库或后台进程代码。接口实现也不要求先建设未来浏览器端或独立服务端 CLI。
+
+## 16. 机器契约的补充约定
+
+OpenAPI 中为每个操作声明唯一 operationId、必需的客户端版本头、成功响应、公共错误响应和身份要求。`bearerAuth` 的实际角色按路由判断：教师凭证不能调用学生接口，学生凭证不能调用教师接口；公开 info、登录和设备注册不要求已有 Bearer。登录的本机证明与远程密码是两种互斥的认证方式，缺失两者或混用时拒绝。
+
+所有响应都携带 `X-Request-Id`；公共错误响应 `default` 覆盖第 1.2 节规定的 HTTP 状态。幂等回放保持原操作成功状态与资源，注册、试卷导入、准入及作答 PUT 的重复成功使用文档中明确的 200。取消测试与清理、清理确认通过资源状态或 expectedRevision 幂等，不另建任务；同一确认内容已成功时回放原确认结果，不重复执行。
+
+列表查询参数为 `cursor`、`limit`；关键字为 `q`。时间筛选 `from` 包含起点、`before` 不含终点，作答按服务接收时间过滤。设备按编号与 ID 升序；试卷按导入时间与 ID 降序；作答、批次、备份按创建或接收时间与 ID 降序；任务按到期时间与 ID 升序；套件按 ID 升序；日志按时间与 ID 降序。已删除试卷与作答不再出现在普通列表或详情，作答删除事实仅通过允许的回执查询保留。
+
+`GET /teacher/service` 返回 modeRevision、设备数量汇总、当前开放批次 ID、活动任务、存储统计和 `blockers`。退出维护的 RESOURCE_BUSY 使用 `details.blockers` 返回资源类型及 ID。设备列表/详情中的 `heartbeat` 和 `submissionSummaryUpdatedAt` 允许为 null；心跳观测包含客户端发布版本。作答详情与列表的 `deviceAtReceipt` 固定接收时标签，`currentDevice` 是最新配置；room 筛选按接收时机房。`id` 等于回执 submissionId。
+
+测试详情包含每设备的自动用例结果及 `confirmation`，后者始终有 revision，初始为 1、更新时间为 null。人工确认只接受该套件需要人工确认的用例，重复 caseId 拒绝；重试创建请求可带 retryOf。批次状态由设备任务聚合：有运行或停止中任务时为 running/cancel-requested，尚有待执行为 pending；终结后取消或到期优先保留该事实，否则任一失败为 failed，全部成功才 succeeded。离线是单独观测，不能替代任务状态。
+
+任务结果的 `result.kind` 必须匹配已签发任务类型和阶段；仅失败、取消或过期允许 result 为 null，成功必须有完整结果。服务端验证用例 ID 属于固定任务，成功测试不能遗漏必需用例；清理计数满足 selectedCount 等于 deletedCount、alreadyAbsentCount、skippedCount、failedCount 之和，失败/跳过项目不能宣称全部成功。结果不可覆盖，late 单独返回。
+
+清理计划 revision 在预览到达、确认、取消及状态转换时递增；确认请求的 selections 使用唯一 deviceId 与其已保存 selectionDigest。确认事务冻结已选范围并取消未选设备的未完成预览。快照摘要采用固定字段、固定排序和 RFC 8785 JSON 规范化后计算 SHA-256，字段为 submissionId、archiveSha256、submittedAt、receiptId、receiptServerId，排序按 receiptServerId、submissionId。空预览使用空数组摘要；预览尚未到达则摘要和数量均为 null。教师只比较服务保存的摘要，具体删除由学生再验证本地候选。
+
+设置 PATCH 只包含可热更新字段；传 limits 时提供完整限制对象。storage 的 usedBytes、freeBytes、pendingGcBytes 是观测值，不计入配置 revision。机器契约限定编号最多 64 字符、标签最多 200 字符、密码最多 1024 字符、入网批次最长 24 小时，作为本轮可审核的初始参数；所有控制 JSON 仍受 1 MiB 限制。清理和测试的 expiresAt 必须晚于服务端当前时间，过期请求不创建任务。

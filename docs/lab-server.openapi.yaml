@@ -1,0 +1,3708 @@
+openapi: 3.0.3
+info:
+  title: LS101 Lab Server API
+  version: 1.0.0-draft
+  description: 机房服务端 API 基线。详细规则以 lab-server-api-design.md 为准；本文件用于 生成共享类型、检查路径覆盖和验证请求响应形状。
+servers:
+  - url: https://{host}:{port}/api/v1
+    variables:
+      host:
+        default: 127.0.0.1
+      port:
+        default: '8443'
+security: []
+tags:
+  - name: public
+  - name: teacher
+  - name: student
+paths:
+  /info:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    get:
+      operationId: getInfo
+      tags:
+        - public
+      responses:
+        '200':
+          description: Service information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Info'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/sessions:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    post:
+      operationId: postTeacherSessions
+      parameters:
+        - $ref: '#/components/parameters/LocalAuthorization'
+      tags:
+        - teacher
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionRequest'
+      responses:
+        '200':
+          description: Authenticated session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Error'
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/sessions/current:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    delete:
+      operationId: deleteTeacherSessionsCurrent
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Revoked
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/security:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    get:
+      operationId: getTeacherSecurity
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Security revision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Revision'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/security/password:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    put:
+      operationId: putTeacherSecurityPassword
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordUpdate'
+      responses:
+        '200':
+          description: Updated revision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Revision'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        '409':
+          $ref: '#/components/responses/Error'
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/service:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    get:
+      operationId: getTeacherService
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Service state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceState'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/service/mode:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    put:
+      operationId: putTeacherServiceMode
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModeUpdate'
+      responses:
+        '200':
+          description: Updated mode
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mode'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        '409':
+          $ref: '#/components/responses/Error'
+        default:
+          $ref: '#/components/responses/Error'
+  /student/state:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    get:
+      operationId: getStudentState
+      tags:
+        - student
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current student state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentState'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /student/heartbeat:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    post:
+      operationId: postStudentHeartbeat
+      tags:
+        - student
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Heartbeat'
+      responses:
+        '200':
+          description: Heartbeat result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeartbeatResponse'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        '409':
+          $ref: '#/components/responses/Error'
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/devices:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    get:
+      operationId: getTeacherDevices
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Room'
+        - $ref: '#/components/parameters/Query'
+        - name: online
+          in: query
+          schema:
+            type: boolean
+        - name: versionMismatch
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Device list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/devices/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getTeacherDevicesId
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Device details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceDetails'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      operationId: patchTeacherDevicesId
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DevicePatch'
+      responses:
+        '200':
+          description: Updated device
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        '409':
+          $ref: '#/components/responses/Error'
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/devices/{id}/reset-binding:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: postTeacherDevicesIdResetBinding
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '204':
+          description: Binding reset; device identity and history retained
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/enrollments:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    get:
+      operationId: getTeacherEnrollments
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Enrollment batches
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: postTeacherEnrollments
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentCreate'
+      responses:
+        '201':
+          description: Batch created and maintenance entered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentCreated'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/enrollments/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    delete:
+      operationId: deleteTeacherEnrollmentsId
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Closed without changing mode
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/enrollments/{id}/file:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getTeacherEnrollmentsIdFile
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Signed enrollment JWS
+          content:
+            application/jose:
+              schema:
+                type: string
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /enrollment/devices/{installationId}:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - name: installationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: putEnrollmentDevicesInstallationId
+      tags:
+        - public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Registration'
+      responses:
+        '200':
+          description: Existing registration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisteredDevice'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        '201':
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisteredDevice'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/exams:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    get:
+      operationId: getTeacherExams
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Query'
+        - name: published
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Exams
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: postTeacherExams
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ArchiveDigest'
+      requestBody:
+        $ref: '#/components/requestBodies/ExamArchive'
+      responses:
+        '200':
+          description: Identical existing exam
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamImport'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        '201':
+          description: Imported and published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamImport'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/exams/{examId}:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/ExamId'
+    get:
+      operationId: getTeacherExamsExamId
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Exam metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exam'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      operationId: patchTeacherExamsExamId
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - published
+                - expectedRevision
+              additionalProperties: false
+              properties:
+                published:
+                  type: boolean
+                expectedRevision:
+                  $ref: '#/components/schemas/PositiveInteger'
+      responses:
+        '200':
+          description: Updated exam
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exam'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      operationId: deleteTeacherExamsExamId
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Exam deleted; grants and submissions retained
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/exams/{examId}/archive:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/ExamId'
+    get:
+      operationId: getTeacherExamsExamIdArchive
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/ExamArchive'
+        default:
+          $ref: '#/components/responses/Error'
+  /student/exams:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    get:
+      operationId: getStudentExams
+      tags:
+        - student
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Query'
+      responses:
+        '200':
+          description: Published exams in normal mode
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentExamList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /student/exams/{examId}/archive:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/ExamId'
+    get:
+      operationId: getStudentExamsExamIdArchive
+      tags:
+        - student
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/ExamArchive'
+        default:
+          $ref: '#/components/responses/Error'
+  /student/practices/{submissionId}:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/SubmissionId'
+    put:
+      operationId: putStudentPracticesSubmissionId
+      tags:
+        - student
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PracticeRequest'
+      responses:
+        '200':
+          description: Same unexpired grant after current authorization check
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeGrant'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        '201':
+          description: New start grant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeGrant'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /student/submissions/{submissionId}:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/SubmissionId'
+    put:
+      operationId: putStudentSubmissionsSubmissionId
+      tags:
+        - student
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ArchiveDigest'
+      requestBody:
+        $ref: '#/components/requestBodies/SubmissionArchive'
+      responses:
+        '200':
+          description: Original receipt including deletion tombstone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompletedReceipt'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        '201':
+          description: Durably received
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Received'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /student/submissions/{submissionId}/receipt:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/SubmissionId'
+    get:
+      operationId: getStudentSubmissionsSubmissionIdReceipt
+      tags:
+        - student
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Owned submission result; normal mode only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiptQuery'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/submissions:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    get:
+      operationId: getTeacherSubmissions
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Room'
+        - name: examId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: deviceId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: candidateId
+          in: query
+          schema:
+            type: string
+        - name: candidateName
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/Before'
+      responses:
+        '200':
+          description: Received submissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/submissions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getTeacherSubmissionsId
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Submission metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Submission'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      operationId: deleteTeacherSubmissionsId
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Logically deleted; original receipt retained
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/submissions/{id}/archive:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getTeacherSubmissionsIdArchive
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/SubmissionArchive'
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/submissions/export:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    post:
+      operationId: postTeacherSubmissionsExport
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmissionSelection'
+      responses:
+        '200':
+          description: Complete outer ZIP containing original submission packages
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/submissions/delete:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    post:
+      operationId: postTeacherSubmissionsDelete
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmissionSelection'
+      responses:
+        '200':
+          description: Per-item outcomes for fixed selection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchDeleteResult'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /student/tasks:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    get:
+      operationId: getStudentTasks
+      tags:
+        - student
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Currently claimable tasks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /student/tasks/{id}/claim:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: postStudentTasksIdClaim
+      tags:
+        - student
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - runtimeId
+              additionalProperties: false
+              properties:
+                runtimeId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Lease bound to this runtime
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskLease'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /student/tasks/{id}/lease:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    put:
+      operationId: putStudentTasksIdLease
+      tags:
+        - student
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - runtimeId
+                - leaseId
+              additionalProperties: false
+              properties:
+                runtimeId:
+                  type: string
+                  format: uuid
+                leaseId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Renewed lease and cancellation state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskLease'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /student/tasks/{id}/result:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    put:
+      operationId: putStudentTasksIdResult
+      tags:
+        - student
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskResultInput'
+      responses:
+        '200':
+          description: Immutable result receipt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResult'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/test-suites:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    get:
+      operationId: getTeacherTestSuites
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Installed suites
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestSuiteList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/test-runs:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    get:
+      operationId: getTeacherTestRuns
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Test runs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestRunList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: postTeacherTestRuns
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestRunCreate'
+      responses:
+        '201':
+          description: Fixed test batch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestRun'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/test-runs/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getTeacherTestRunsId
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Per-device details and confirmation revisions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestRun'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/test-runs/{id}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: postTeacherTestRunsIdCancel
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Pending tasks cancelled; running tasks stopping
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestRun'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/test-runs/{id}/report:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getTeacherTestRunsIdReport
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Downloadable report
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestReport'
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/test-runs/{id}/devices/{deviceId}/confirmation:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+      - name: deviceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: putTeacherTestRunsIdDevicesDeviceIdConfirmation
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmationInput'
+      responses:
+        '200':
+          description: Updated manual confirmation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Confirmation'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /student/tasks/{taskId}/test/exam:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/TaskId'
+      - $ref: '#/components/parameters/TaskLease'
+    get:
+      operationId: getStudentTasksTaskIdTestExam
+      tags:
+        - student
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/ExamArchive'
+        default:
+          $ref: '#/components/responses/Error'
+  /student/tasks/{taskId}/test/submission:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/TaskId'
+      - $ref: '#/components/parameters/TaskLease'
+    put:
+      operationId: putStudentTasksTaskIdTestSubmission
+      tags:
+        - student
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ArchiveDigest'
+      requestBody:
+        $ref: '#/components/requestBodies/SubmissionArchive'
+      responses:
+        '200':
+          description: Same test receipt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Received'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        '201':
+          description: Isolated test submission received
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Received'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /student/tasks/{taskId}/test/receipt:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/TaskId'
+      - $ref: '#/components/parameters/TaskLease'
+    get:
+      operationId: getStudentTasksTaskIdTestReceipt
+      tags:
+        - student
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Result within active test lease
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/NotReceived'
+                  - $ref: '#/components/schemas/Receiving'
+                  - $ref: '#/components/schemas/Received'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/history-cleanups:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    get:
+      operationId: getTeacherHistoryCleanups
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Cleanup plans
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: postTeacherHistoryCleanups
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CleanupCreate'
+      responses:
+        '201':
+          description: Read-only preview scheduled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupPlan'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/history-cleanups/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getTeacherHistoryCleanupsId
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current previews, revision and execution results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupPlan'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/history-cleanups/{id}/confirm:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: postTeacherHistoryCleanupsIdConfirm
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CleanupConfirm'
+      responses:
+        '200':
+          description: Selected snapshots frozen for execution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupPlan'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/history-cleanups/{id}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: postTeacherHistoryCleanupsIdCancel
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Cancellation requested without undoing completed deletions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupPlan'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/settings:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    get:
+      operationId: getTeacherSettings
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Hot settings and independent revision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settings'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      operationId: patchTeacherSettings
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsPatch'
+      responses:
+        '200':
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settings'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/logs:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    get:
+      operationId: getTeacherLogs
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/Before'
+        - name: level
+          in: query
+          schema:
+            type: string
+            enum:
+              - debug
+              - info
+              - warn
+              - error
+        - name: requestId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Redacted logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/backups:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    get:
+      operationId: getTeacherBackups
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Backup jobs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: postTeacherBackups
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - encryptionPassword
+              additionalProperties: false
+              properties:
+                encryptionPassword:
+                  type: string
+                  minLength: 1
+                  maxLength: 1024
+                  writeOnly: true
+      responses:
+        '202':
+          description: Backup queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Backup'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/backups/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getTeacherBackupsId
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Backup state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Backup'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /teacher/backups/{id}/archive:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getTeacherBackupsIdArchive
+      tags:
+        - teacher
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Completed encrypted backup
+          headers:
+            Content-Length:
+              schema:
+                type: integer
+                minimum: 0
+            Content-Disposition:
+              schema:
+                type: string
+            X-LS101-Archive-SHA256:
+              schema:
+                $ref: '#/components/schemas/Digest'
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/x-7z-compressed:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: '#/components/responses/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ExamId:
+      name: examId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SubmissionId:
+      name: submissionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ClientVersion:
+      name: X-LS101-Client-Version
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    LocalAuthorization:
+      name: X-LS101-Local-Authorization
+      in: header
+      description: Required for loopback password-free sessions; single-use proof from protected local IPC.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 4096
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ArchiveDigest:
+      name: X-LS101-Archive-SHA256
+      in: header
+      required: true
+      schema:
+        $ref: '#/components/schemas/Digest'
+    TaskLease:
+      name: X-LS101-Task-Lease
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 2048
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    Query:
+      name: q
+      in: query
+      schema:
+        type: string
+        maxLength: 200
+    Room:
+      name: room
+      in: query
+      schema:
+        type: string
+        maxLength: 200
+    From:
+      name: from
+      in: query
+      description: Inclusive timestamp; receivedAt for submissions.
+      schema:
+        type: string
+        format: date-time
+    Before:
+      name: before
+      in: query
+      description: Exclusive timestamp; receivedAt for submissions.
+      schema:
+        type: string
+        format: date-time
+  requestBodies:
+    ExamArchive:
+      required: true
+      content:
+        application/x-ls101-exam:
+          schema:
+            type: string
+            format: binary
+    SubmissionArchive:
+      required: true
+      content:
+        application/x-ls101-submission:
+          schema:
+            type: string
+            format: binary
+  responses:
+    Error:
+      description: >-
+        400 INVALID_REQUEST; 401 AUTH_REQUIRED/TOKEN_EXPIRED/TOKEN_REVOKED; 403
+        DEVICE_DISABLED/LICENSE_INACTIVE/ENROLLMENT_REJECTED; 404 NOT_FOUND; 409
+        SERVICE_MAINTENANCE/VERSION_MISMATCH/REVISION_CONFLICT/CONTENT_CONFLICT/RESOURCE_BUSY; 413
+        PAYLOAD_TOO_LARGE; 415 UNSUPPORTED_MEDIA_TYPE; 422 INVALID_EXAM/INVALID_SUBMISSION; 429
+        RATE_LIMITED; 503 SERVICE_NOT_READY/STORAGE_UNAVAILABLE. Current authorization is checked
+        even on replay.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+        Retry-After:
+          description: Whole seconds before retry; does not imply a submission was not received.
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ExamArchive:
+      description: Original complete exam archive; no range protocol.
+      headers:
+        Content-Length:
+          schema:
+            type: integer
+            minimum: 0
+        Content-Disposition:
+          schema:
+            type: string
+        X-LS101-Archive-SHA256:
+          schema:
+            $ref: '#/components/schemas/Digest'
+        X-Request-Id:
+          schema:
+            type: string
+      content:
+        application/x-ls101-exam:
+          schema:
+            type: string
+            format: binary
+    SubmissionArchive:
+      description: Original complete submission archive.
+      headers:
+        Content-Length:
+          schema:
+            type: integer
+            minimum: 0
+        Content-Disposition:
+          schema:
+            type: string
+        X-LS101-Archive-SHA256:
+          schema:
+            $ref: '#/components/schemas/Digest'
+        X-Request-Id:
+          schema:
+            type: string
+      content:
+        application/x-ls101-submission:
+          schema:
+            type: string
+            format: binary
+  schemas:
+    PositiveInteger:
+      type: integer
+      minimum: 1
+      maximum: 9007199254740991
+    Count:
+      type: integer
+      minimum: 0
+      maximum: 9007199254740991
+    Digest:
+      type: string
+      pattern: ^[a-f0-9]{64}$
+    NullableDigest:
+      type: string
+      nullable: true
+      pattern: ^[a-f0-9]{64}$
+    NullableLabel:
+      type: string
+      nullable: true
+      maxLength: 200
+    NullableTime:
+      type: string
+      format: date-time
+      nullable: true
+    Ids:
+      type: array
+      minItems: 1
+      uniqueItems: true
+      items:
+        type: string
+        format: uuid
+    Revision:
+      type: object
+      required:
+        - revision
+      properties:
+        revision:
+          $ref: '#/components/schemas/PositiveInteger'
+      additionalProperties: false
+    Page:
+      type: object
+      required:
+        - nextCursor
+      properties:
+        nextCursor:
+          type: string
+          nullable: true
+    Info:
+      type: object
+      required:
+        - serverId
+        - name
+        - apiVersion
+        - releaseVersion
+        - serverTime
+        - readiness
+      properties:
+        serverId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        apiVersion:
+          type: integer
+          enum:
+            - 1
+        releaseVersion:
+          type: string
+        serverTime:
+          type: string
+          format: date-time
+        readiness:
+          type: string
+          enum:
+            - ready
+            - initializing
+            - upgrading
+            - unavailable
+            - license-inactive
+    SessionRequest:
+      type: object
+      properties:
+        password:
+          type: string
+          minLength: 1
+          maxLength: 1024
+          writeOnly: true
+      additionalProperties: false
+    Session:
+      type: object
+      required:
+        - token
+        - expiresAt
+        - serverId
+      properties:
+        token:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        serverId:
+          type: string
+          format: uuid
+    PasswordUpdate:
+      type: object
+      required:
+        - newPassword
+        - expectedRevision
+      properties:
+        newPassword:
+          type: string
+          minLength: 1
+          maxLength: 1024
+          writeOnly: true
+        expectedRevision:
+          $ref: '#/components/schemas/PositiveInteger'
+      additionalProperties: false
+    ModeUpdate:
+      type: object
+      required:
+        - mode
+        - expectedRevision
+      properties:
+        mode:
+          type: string
+          enum:
+            - normal
+            - maintenance
+        expectedRevision:
+          type: integer
+          minimum: 1
+      additionalProperties: false
+    Mode:
+      type: object
+      required:
+        - mode
+        - modeRevision
+      properties:
+        mode:
+          type: string
+          enum:
+            - normal
+            - maintenance
+        modeRevision:
+          $ref: '#/components/schemas/PositiveInteger'
+    Blocker:
+      type: object
+      required:
+        - kind
+        - resourceId
+      properties:
+        kind:
+          type: string
+          enum:
+            - enrollment
+            - test-run
+            - history-cleanup
+            - lease
+            - backup
+        resourceId:
+          type: string
+          format: uuid
+    ServiceState:
+      allOf:
+        - $ref: '#/components/schemas/Info'
+        - $ref: '#/components/schemas/Mode'
+        - type: object
+          required:
+            - openEnrollment
+            - activeTasks
+            - blockers
+            - deviceSummary
+            - storage
+          properties:
+            openEnrollment:
+              type: string
+              format: uuid
+              nullable: true
+            activeTasks:
+              type: array
+              items:
+                $ref: '#/components/schemas/Task'
+            blockers:
+              type: array
+              items:
+                $ref: '#/components/schemas/Blocker'
+            deviceSummary:
+              type: object
+              required:
+                - total
+                - online
+                - versionMismatch
+                - practicing
+                - unknownStatistics
+              properties:
+                total:
+                  $ref: '#/components/schemas/Count'
+                online:
+                  $ref: '#/components/schemas/Count'
+                versionMismatch:
+                  $ref: '#/components/schemas/Count'
+                practicing:
+                  $ref: '#/components/schemas/Count'
+                unknownStatistics:
+                  $ref: '#/components/schemas/Count'
+            storage:
+              $ref: '#/components/schemas/StorageSummary'
+    Device:
+      type: object
+      required:
+        - id
+        - number
+        - room
+        - seat
+        - displayName
+        - enabled
+        - revision
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+          minLength: 1
+          maxLength: 64
+        room:
+          $ref: '#/components/schemas/NullableLabel'
+        seat:
+          $ref: '#/components/schemas/NullableLabel'
+        displayName:
+          $ref: '#/components/schemas/NullableLabel'
+        enabled:
+          type: boolean
+        revision:
+          $ref: '#/components/schemas/PositiveInteger'
+    DevicePatch:
+      type: object
+      required:
+        - expectedRevision
+      minProperties: 2
+      properties:
+        number:
+          type: string
+          minLength: 1
+          maxLength: 64
+        room:
+          $ref: '#/components/schemas/NullableLabel'
+        seat:
+          $ref: '#/components/schemas/NullableLabel'
+        displayName:
+          $ref: '#/components/schemas/NullableLabel'
+        enabled:
+          type: boolean
+        expectedRevision:
+          $ref: '#/components/schemas/PositiveInteger'
+      additionalProperties: false
+    DeviceDetails:
+      allOf:
+        - $ref: '#/components/schemas/Device'
+        - type: object
+          required:
+            - computerName
+            - platform
+            - registeredAt
+            - online
+            - lastHeartbeatAt
+            - heartbeat
+            - submissionSummaryUpdatedAt
+            - tasks
+          properties:
+            computerName:
+              type: string
+            platform:
+              type: string
+              enum:
+                - win32
+                - linux
+            registeredAt:
+              type: string
+              format: date-time
+            online:
+              type: boolean
+            lastHeartbeatAt:
+              $ref: '#/components/schemas/NullableTime'
+            heartbeat:
+              $ref: '#/components/schemas/HeartbeatObservation'
+            submissionSummaryUpdatedAt:
+              $ref: '#/components/schemas/NullableTime'
+            tasks:
+              type: array
+              items:
+                $ref: '#/components/schemas/Task'
+    DeviceList:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/DeviceDetails'
+    Limits:
+      type: object
+      required:
+        - maxExamArchiveBytes
+        - maxSubmissionArchiveBytes
+        - maxUncompressedBytes
+        - maxArchiveFiles
+      additionalProperties: false
+      properties:
+        maxExamArchiveBytes:
+          $ref: '#/components/schemas/PositiveInteger'
+        maxSubmissionArchiveBytes:
+          $ref: '#/components/schemas/PositiveInteger'
+        maxUncompressedBytes:
+          $ref: '#/components/schemas/PositiveInteger'
+        maxArchiveFiles:
+          $ref: '#/components/schemas/PositiveInteger'
+    StudentState:
+      allOf:
+        - $ref: '#/components/schemas/Mode'
+        - type: object
+          required:
+            - serverId
+            - serverTime
+            - releaseVersion
+            - device
+            - availability
+            - allowedOperations
+            - heartbeatIntervalSeconds
+            - offlineAfterSeconds
+            - limits
+          properties:
+            serverId:
+              type: string
+              format: uuid
+            serverTime:
+              type: string
+              format: date-time
+            releaseVersion:
+              type: string
+            device:
+              $ref: '#/components/schemas/Device'
+            availability:
+              type: string
+              enum:
+                - ready
+                - maintenance
+                - version-mismatch
+                - disabled
+                - license-inactive
+                - service-unavailable
+            allowedOperations:
+              type: array
+              uniqueItems: true
+              items:
+                type: string
+                enum:
+                  - heartbeat
+                  - browse-exams
+                  - download-exam
+                  - start-practice
+                  - submit
+                  - query-receipt
+                  - maintenance-task
+                  - report-task-result
+            heartbeatIntervalSeconds:
+              $ref: '#/components/schemas/PositiveInteger'
+            offlineAfterSeconds:
+              $ref: '#/components/schemas/PositiveInteger'
+            limits:
+              $ref: '#/components/schemas/Limits'
+    SubmissionSummary:
+      type: object
+      required:
+        - waitingFirstUpload
+        - unconfirmed
+        - failed
+      additionalProperties: false
+      properties:
+        waitingFirstUpload:
+          $ref: '#/components/schemas/Count'
+        unconfirmed:
+          $ref: '#/components/schemas/Count'
+        failed:
+          $ref: '#/components/schemas/Count'
+    Candidate:
+      type: object
+      required:
+        - candidateId
+        - displayName
+      additionalProperties: false
+      properties:
+        candidateId:
+          type: string
+          minLength: 1
+          maxLength: 200
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 200
+    CurrentPractice:
+      type: object
+      nullable: true
+      required:
+        - submissionId
+        - examId
+        - candidate
+        - pageIndex
+        - stepIndex
+      additionalProperties: false
+      properties:
+        submissionId:
+          type: string
+          format: uuid
+        examId:
+          type: string
+          format: uuid
+        candidate:
+          $ref: '#/components/schemas/Candidate'
+        pageIndex:
+          type: integer
+          minimum: 0
+          nullable: true
+        stepIndex:
+          type: integer
+          minimum: 0
+          nullable: true
+    DiagnosticError:
+      type: object
+      nullable: true
+      required:
+        - code
+        - message
+        - occurredAt
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          maxLength: 128
+        message:
+          type: string
+          maxLength: 2000
+        occurredAt:
+          type: string
+          format: date-time
+    Heartbeat:
+      type: object
+      required:
+        - runtimeId
+        - runtimeGeneration
+        - sequence
+        - activationState
+        - phase
+        - currentPractice
+        - submissionSummary
+        - lastError
+      additionalProperties: false
+      properties:
+        runtimeId:
+          type: string
+          format: uuid
+        runtimeGeneration:
+          $ref: '#/components/schemas/PositiveInteger'
+        sequence:
+          $ref: '#/components/schemas/PositiveInteger'
+        activationState:
+          type: string
+          enum:
+            - active
+            - inactive
+        phase:
+          type: string
+          enum:
+            - idle
+            - preparing
+            - practicing
+            - saving
+            - maintenance-idle
+            - testing
+            - error
+        currentPractice:
+          $ref: '#/components/schemas/CurrentPractice'
+        submissionSummary:
+          $ref: '#/components/schemas/SubmissionSummary'
+        lastError:
+          $ref: '#/components/schemas/DiagnosticError'
+    HeartbeatObservation:
+      type: object
+      nullable: true
+      required:
+        - releaseVersion
+        - runtimeId
+        - runtimeGeneration
+        - sequence
+        - activationState
+        - phase
+        - currentPractice
+        - submissionSummary
+        - lastError
+      properties:
+        releaseVersion:
+          type: string
+        runtimeId:
+          type: string
+          format: uuid
+        runtimeGeneration:
+          $ref: '#/components/schemas/PositiveInteger'
+        sequence:
+          $ref: '#/components/schemas/PositiveInteger'
+        activationState:
+          type: string
+          enum:
+            - active
+            - inactive
+        phase:
+          type: string
+          enum:
+            - idle
+            - preparing
+            - practicing
+            - saving
+            - maintenance-idle
+            - testing
+            - error
+        currentPractice:
+          $ref: '#/components/schemas/CurrentPractice'
+        submissionSummary:
+          type: object
+          nullable: true
+          required:
+            - waitingFirstUpload
+            - unconfirmed
+            - failed
+          properties:
+            waitingFirstUpload:
+              $ref: '#/components/schemas/Count'
+            unconfirmed:
+              $ref: '#/components/schemas/Count'
+            failed:
+              $ref: '#/components/schemas/Count'
+        lastError:
+          $ref: '#/components/schemas/DiagnosticError'
+    HeartbeatResponse:
+      allOf:
+        - $ref: '#/components/schemas/StudentState'
+        - type: object
+          required:
+            - heartbeatAccepted
+            - taskIds
+          properties:
+            heartbeatAccepted:
+              type: boolean
+            taskIds:
+              type: array
+              items:
+                type: string
+                format: uuid
+    EnrollmentCreate:
+      type: object
+      required:
+        - expectedModeRevision
+      additionalProperties: false
+      properties:
+        expectedModeRevision:
+          $ref: '#/components/schemas/PositiveInteger'
+        validForSeconds:
+          type: integer
+          minimum: 1
+          maximum: 86400
+          default: 600
+    Enrollment:
+      type: object
+      required:
+        - id
+        - status
+        - issuedAt
+        - expiresAt
+        - registeredCount
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - active
+            - expired
+            - revoked
+        issuedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        registeredCount:
+          $ref: '#/components/schemas/Count'
+    EnrollmentCreated:
+      allOf:
+        - $ref: '#/components/schemas/Mode'
+        - type: object
+          required:
+            - enrollment
+          properties:
+            enrollment:
+              $ref: '#/components/schemas/Enrollment'
+    EnrollmentList:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Enrollment'
+    Registration:
+      type: object
+      required:
+        - enrollmentFile
+        - deviceSecret
+        - computerName
+        - platform
+        - releaseVersion
+      additionalProperties: false
+      properties:
+        enrollmentFile:
+          type: string
+          maxLength: 65536
+        deviceSecret:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{43}$
+          writeOnly: true
+        computerName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        platform:
+          type: string
+          enum:
+            - win32
+            - linux
+        releaseVersion:
+          type: string
+          minLength: 1
+          maxLength: 128
+    RegisteredDevice:
+      allOf:
+        - $ref: '#/components/schemas/Mode'
+        - type: object
+          required:
+            - deviceId
+            - deviceNumber
+            - registeredAt
+          properties:
+            deviceId:
+              type: string
+              format: uuid
+            deviceNumber:
+              type: string
+            registeredAt:
+              type: string
+              format: date-time
+    StudentExam:
+      type: object
+      required:
+        - examId
+        - packageId
+        - title
+        - archiveSha256
+        - archiveBytes
+        - pageCount
+        - resourceCount
+      properties:
+        examId:
+          type: string
+          format: uuid
+        packageId:
+          type: string
+        title:
+          type: string
+        archiveSha256:
+          $ref: '#/components/schemas/Digest'
+        archiveBytes:
+          $ref: '#/components/schemas/Count'
+        pageCount:
+          $ref: '#/components/schemas/Count'
+        resourceCount:
+          $ref: '#/components/schemas/Count'
+    Exam:
+      allOf:
+        - $ref: '#/components/schemas/StudentExam'
+        - type: object
+          required:
+            - published
+            - importedAt
+            - revision
+          properties:
+            published:
+              type: boolean
+            importedAt:
+              type: string
+              format: date-time
+            revision:
+              $ref: '#/components/schemas/PositiveInteger'
+    ExamImport:
+      allOf:
+        - $ref: '#/components/schemas/Exam'
+        - type: object
+          required:
+            - duplicate
+          properties:
+            duplicate:
+              type: boolean
+    ExamList:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Exam'
+    StudentExamList:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/StudentExam'
+    PracticeRequest:
+      type: object
+      required:
+        - examId
+        - archiveSha256
+        - candidate
+      additionalProperties: false
+      properties:
+        examId:
+          type: string
+          format: uuid
+        archiveSha256:
+          $ref: '#/components/schemas/Digest'
+        candidate:
+          $ref: '#/components/schemas/Candidate'
+    PracticeGrant:
+      type: object
+      required:
+        - submissionId
+        - grantedAt
+        - startBefore
+        - modeRevision
+      properties:
+        submissionId:
+          type: string
+          format: uuid
+        grantedAt:
+          type: string
+          format: date-time
+        startBefore:
+          type: string
+          format: date-time
+        modeRevision:
+          $ref: '#/components/schemas/PositiveInteger'
+    Receipt:
+      type: object
+      required:
+        - receiptId
+        - serverId
+        - deviceId
+        - submissionId
+        - archiveSha256
+        - receivedAt
+      properties:
+        receiptId:
+          type: string
+          format: uuid
+        serverId:
+          type: string
+          format: uuid
+        deviceId:
+          type: string
+          format: uuid
+        submissionId:
+          type: string
+          format: uuid
+        archiveSha256:
+          $ref: '#/components/schemas/Digest'
+        receivedAt:
+          type: string
+          format: date-time
+    Received:
+      type: object
+      required:
+        - status
+        - receipt
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum:
+            - received
+        receipt:
+          $ref: '#/components/schemas/Receipt'
+    Deleted:
+      type: object
+      required:
+        - status
+        - receipt
+        - deletedAt
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum:
+            - deleted
+        receipt:
+          $ref: '#/components/schemas/Receipt'
+        deletedAt:
+          type: string
+          format: date-time
+    NotReceived:
+      type: object
+      required:
+        - status
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum:
+            - not-received
+    Receiving:
+      type: object
+      required:
+        - status
+        - retryAfterSeconds
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum:
+            - receiving
+        retryAfterSeconds:
+          $ref: '#/components/schemas/PositiveInteger'
+    CompletedReceipt:
+      oneOf:
+        - $ref: '#/components/schemas/Received'
+        - $ref: '#/components/schemas/Deleted'
+    ReceiptQuery:
+      oneOf:
+        - $ref: '#/components/schemas/NotReceived'
+        - $ref: '#/components/schemas/Receiving'
+        - $ref: '#/components/schemas/Received'
+        - $ref: '#/components/schemas/Deleted'
+    DeviceLabels:
+      type: object
+      required:
+        - id
+        - number
+        - room
+        - seat
+        - displayName
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        room:
+          $ref: '#/components/schemas/NullableLabel'
+        seat:
+          $ref: '#/components/schemas/NullableLabel'
+        displayName:
+          $ref: '#/components/schemas/NullableLabel'
+    Submission:
+      type: object
+      required:
+        - id
+        - examId
+        - packageId
+        - candidate
+        - submittedAt
+        - receipt
+        - archiveBytes
+        - deviceAtReceipt
+        - currentDevice
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Same as submissionId in receipt.
+        examId:
+          type: string
+          format: uuid
+        packageId:
+          type: string
+        candidate:
+          $ref: '#/components/schemas/Candidate'
+        submittedAt:
+          type: string
+          format: date-time
+        receipt:
+          $ref: '#/components/schemas/Receipt'
+        archiveBytes:
+          $ref: '#/components/schemas/Count'
+        deviceAtReceipt:
+          $ref: '#/components/schemas/DeviceLabels'
+        currentDevice:
+          $ref: '#/components/schemas/Device'
+    SubmissionList:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Submission'
+    SubmissionSelection:
+      type: object
+      required:
+        - submissionIds
+      additionalProperties: false
+      properties:
+        submissionIds:
+          type: array
+          minItems: 1
+          maxItems: 500
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+    BatchDeleteResult:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            oneOf:
+              - type: object
+                required:
+                  - submissionId
+                  - status
+                additionalProperties: false
+                properties:
+                  submissionId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum:
+                      - deleted
+                      - already-deleted
+              - type: object
+                required:
+                  - submissionId
+                  - status
+                  - error
+                additionalProperties: false
+                properties:
+                  submissionId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum:
+                      - failed
+                  error:
+                    $ref: '#/components/schemas/ErrorBody'
+    TaskState:
+      type: string
+      enum:
+        - pending
+        - running
+        - cancel-requested
+        - succeeded
+        - failed
+        - cancelled
+        - expired
+    TestParameters:
+      type: object
+      required:
+        - type
+        - suiteId
+        - suiteVersion
+        - caseIds
+        - testSubmissionId
+        - testExamSha256
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          enum:
+            - deployment-test
+        suiteId:
+          type: string
+        suiteVersion:
+          type: string
+        caseIds:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+        testSubmissionId:
+          type: string
+          format: uuid
+        testExamSha256:
+          $ref: '#/components/schemas/Digest'
+    CleanupPreviewParameters:
+      type: object
+      required:
+        - type
+        - phase
+        - planId
+        - submittedBefore
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          enum:
+            - history-cleanup
+        phase:
+          type: string
+          enum:
+            - preview
+        planId:
+          type: string
+          format: uuid
+        submittedBefore:
+          type: string
+          format: date-time
+    CleanupExecuteParameters:
+      type: object
+      required:
+        - type
+        - phase
+        - planId
+        - submittedBefore
+        - selectionDigest
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          enum:
+            - history-cleanup
+        phase:
+          type: string
+          enum:
+            - execute
+        planId:
+          type: string
+          format: uuid
+        submittedBefore:
+          type: string
+          format: date-time
+        selectionDigest:
+          $ref: '#/components/schemas/Digest'
+    TaskParameters:
+      oneOf:
+        - $ref: '#/components/schemas/TestParameters'
+        - $ref: '#/components/schemas/CleanupPreviewParameters'
+        - $ref: '#/components/schemas/CleanupExecuteParameters'
+    Task:
+      type: object
+      required:
+        - id
+        - deviceId
+        - status
+        - expiresAt
+        - parameters
+        - revision
+      properties:
+        id:
+          type: string
+          format: uuid
+        deviceId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/TaskState'
+        expiresAt:
+          type: string
+          format: date-time
+        parameters:
+          $ref: '#/components/schemas/TaskParameters'
+        revision:
+          $ref: '#/components/schemas/PositiveInteger'
+    TaskList:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Task'
+    TaskLease:
+      type: object
+      required:
+        - taskId
+        - runtimeId
+        - leaseId
+        - leaseExpiresAt
+        - serverTime
+        - cancelRequested
+        - parameters
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        runtimeId:
+          type: string
+          format: uuid
+        leaseId:
+          type: string
+          format: uuid
+        leaseExpiresAt:
+          type: string
+          format: date-time
+        serverTime:
+          type: string
+          format: date-time
+        cancelRequested:
+          type: boolean
+        parameters:
+          $ref: '#/components/schemas/TaskParameters'
+    CaseResult:
+      type: object
+      required:
+        - caseId
+        - status
+        - error
+      additionalProperties: false
+      properties:
+        caseId:
+          type: string
+        status:
+          type: string
+          enum:
+            - passed
+            - failed
+            - cancelled
+            - timed-out
+            - not-run
+            - manual-required
+        error:
+          $ref: '#/components/schemas/DiagnosticError'
+    PreviewResult:
+      type: object
+      required:
+        - kind
+        - selectionDigest
+        - selectedCount
+        - selectedBytes
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          enum:
+            - history-preview
+        selectionDigest:
+          $ref: '#/components/schemas/Digest'
+        selectedCount:
+          $ref: '#/components/schemas/Count'
+        selectedBytes:
+          $ref: '#/components/schemas/Count'
+    CleanupResult:
+      type: object
+      required:
+        - kind
+        - selectedCount
+        - deletedCount
+        - alreadyAbsentCount
+        - skippedCount
+        - failedCount
+        - deletedBytes
+        - errors
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          enum:
+            - history-execute
+        selectedCount:
+          $ref: '#/components/schemas/Count'
+        deletedCount:
+          $ref: '#/components/schemas/Count'
+        alreadyAbsentCount:
+          $ref: '#/components/schemas/Count'
+        skippedCount:
+          $ref: '#/components/schemas/Count'
+        failedCount:
+          $ref: '#/components/schemas/Count'
+        deletedBytes:
+          $ref: '#/components/schemas/Count'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiagnosticError'
+    TestResult:
+      type: object
+      required:
+        - kind
+        - cases
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          enum:
+            - deployment-test
+        cases:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaseResult'
+    TaskResultInput:
+      type: object
+      required:
+        - leaseId
+        - status
+        - completedAt
+        - result
+        - error
+      additionalProperties: false
+      properties:
+        leaseId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - succeeded
+            - failed
+            - cancelled
+            - expired
+        completedAt:
+          type: string
+          format: date-time
+        result:
+          oneOf:
+            - $ref: '#/components/schemas/PreviewResult'
+            - $ref: '#/components/schemas/CleanupResult'
+            - $ref: '#/components/schemas/TestResult'
+            - type: object
+              nullable: true
+              enum:
+                - null
+        error:
+          $ref: '#/components/schemas/DiagnosticError'
+    TaskResult:
+      type: object
+      required:
+        - taskId
+        - leaseId
+        - receivedAt
+        - late
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        leaseId:
+          type: string
+          format: uuid
+        receivedAt:
+          type: string
+          format: date-time
+        late:
+          type: boolean
+    TestSuite:
+      type: object
+      required:
+        - id
+        - version
+        - name
+        - cases
+      properties:
+        id:
+          type: string
+        version:
+          type: string
+        name:
+          type: string
+        cases:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - name
+              - requiresManualConfirmation
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              requiresManualConfirmation:
+                type: boolean
+    TestSuiteList:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/TestSuite'
+    TestRunCreate:
+      type: object
+      required:
+        - suiteId
+        - caseIds
+        - deviceIds
+        - expiresAt
+      additionalProperties: false
+      properties:
+        suiteId:
+          type: string
+          minLength: 1
+        caseIds:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+        deviceIds:
+          $ref: '#/components/schemas/Ids'
+        expiresAt:
+          type: string
+          format: date-time
+        retryOf:
+          type: string
+          format: uuid
+    ConfirmationCase:
+      type: object
+      required:
+        - caseId
+        - status
+        - note
+      additionalProperties: false
+      properties:
+        caseId:
+          type: string
+        status:
+          type: string
+          enum:
+            - pending
+            - passed
+            - failed
+        note:
+          type: string
+          maxLength: 2000
+    ConfirmationInput:
+      type: object
+      required:
+        - expectedRevision
+        - cases
+      additionalProperties: false
+      properties:
+        expectedRevision:
+          $ref: '#/components/schemas/PositiveInteger'
+        cases:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConfirmationCase'
+    Confirmation:
+      type: object
+      required:
+        - revision
+        - cases
+        - updatedAt
+      properties:
+        revision:
+          $ref: '#/components/schemas/PositiveInteger'
+        cases:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConfirmationCase'
+        updatedAt:
+          $ref: '#/components/schemas/NullableTime'
+    TestDeviceResult:
+      type: object
+      required:
+        - device
+        - task
+        - releaseVersion
+        - lastHeartbeatAt
+        - cases
+        - confirmation
+        - report
+        - late
+      properties:
+        device:
+          $ref: '#/components/schemas/DeviceLabels'
+        task:
+          $ref: '#/components/schemas/Task'
+        releaseVersion:
+          type: string
+          nullable: true
+        lastHeartbeatAt:
+          $ref: '#/components/schemas/NullableTime'
+        cases:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaseResult'
+        confirmation:
+          $ref: '#/components/schemas/Confirmation'
+        report:
+          type: object
+          nullable: true
+          required:
+            - leaseId
+            - status
+            - completedAt
+          properties:
+            leaseId:
+              type: string
+              format: uuid
+            status:
+              $ref: '#/components/schemas/TaskState'
+            completedAt:
+              type: string
+              format: date-time
+        late:
+          type: boolean
+    TestRun:
+      type: object
+      required:
+        - id
+        - suiteId
+        - suiteVersion
+        - createdAt
+        - expiresAt
+        - status
+        - retryOf
+        - devices
+      properties:
+        id:
+          type: string
+          format: uuid
+        suiteId:
+          type: string
+        suiteVersion:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/TaskState'
+        retryOf:
+          type: string
+          format: uuid
+          nullable: true
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestDeviceResult'
+    TestRunList:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/TestRun'
+    TestReport:
+      allOf:
+        - $ref: '#/components/schemas/TestRun'
+        - type: object
+          required:
+            - serverId
+            - releaseVersion
+            - generatedAt
+          properties:
+            serverId:
+              type: string
+              format: uuid
+            releaseVersion:
+              type: string
+            generatedAt:
+              type: string
+              format: date-time
+    CleanupCreate:
+      type: object
+      required:
+        - deviceIds
+        - submittedBefore
+        - expiresAt
+      additionalProperties: false
+      properties:
+        deviceIds:
+          $ref: '#/components/schemas/Ids'
+        submittedBefore:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+    CleanupConfirm:
+      type: object
+      required:
+        - expectedRevision
+        - selections
+      additionalProperties: false
+      properties:
+        expectedRevision:
+          $ref: '#/components/schemas/PositiveInteger'
+        selections:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - deviceId
+              - selectionDigest
+            additionalProperties: false
+            properties:
+              deviceId:
+                type: string
+                format: uuid
+              selectionDigest:
+                $ref: '#/components/schemas/Digest'
+    CleanupDevice:
+      type: object
+      required:
+        - deviceId
+        - previewTaskId
+        - executionTaskId
+        - status
+        - selectionDigest
+        - selectedCount
+        - selectedBytes
+        - previewedAt
+        - confirmed
+        - result
+        - error
+      properties:
+        deviceId:
+          type: string
+          format: uuid
+        previewTaskId:
+          type: string
+          format: uuid
+        executionTaskId:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          $ref: '#/components/schemas/TaskState'
+        selectionDigest:
+          $ref: '#/components/schemas/NullableDigest'
+        selectedCount:
+          type: integer
+          minimum: 0
+          nullable: true
+        selectedBytes:
+          type: integer
+          minimum: 0
+          nullable: true
+        previewedAt:
+          $ref: '#/components/schemas/NullableTime'
+        confirmed:
+          type: boolean
+        result:
+          oneOf:
+            - $ref: '#/components/schemas/CleanupResult'
+            - type: object
+              nullable: true
+              enum:
+                - null
+        error:
+          $ref: '#/components/schemas/DiagnosticError'
+    CleanupPlan:
+      type: object
+      required:
+        - id
+        - revision
+        - status
+        - createdAt
+        - submittedBefore
+        - expiresAt
+        - devices
+      properties:
+        id:
+          type: string
+          format: uuid
+        revision:
+          $ref: '#/components/schemas/PositiveInteger'
+        status:
+          type: string
+          enum:
+            - previewing
+            - awaiting-confirmation
+            - executing
+            - cancel-requested
+            - succeeded
+            - failed
+            - cancelled
+            - expired
+        createdAt:
+          type: string
+          format: date-time
+        submittedBefore:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/CleanupDevice'
+    CleanupList:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/CleanupPlan'
+    StorageSummary:
+      type: object
+      required:
+        - usedBytes
+        - freeBytes
+        - pendingGcBytes
+      properties:
+        usedBytes:
+          $ref: '#/components/schemas/Count'
+        freeBytes:
+          $ref: '#/components/schemas/Count'
+        pendingGcBytes:
+          $ref: '#/components/schemas/Count'
+    Settings:
+      type: object
+      required:
+        - name
+        - baseUrl
+        - limits
+        - revision
+        - storage
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        baseUrl:
+          type: string
+          format: uri
+          pattern: ^https://
+        limits:
+          $ref: '#/components/schemas/Limits'
+        revision:
+          $ref: '#/components/schemas/PositiveInteger'
+        storage:
+          $ref: '#/components/schemas/StorageSummary'
+    SettingsPatch:
+      type: object
+      required:
+        - expectedRevision
+      minProperties: 2
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        baseUrl:
+          type: string
+          format: uri
+          pattern: ^https://
+        limits:
+          $ref: '#/components/schemas/Limits'
+        expectedRevision:
+          $ref: '#/components/schemas/PositiveInteger'
+    LogEntry:
+      type: object
+      required:
+        - id
+        - at
+        - level
+        - message
+        - requestId
+      properties:
+        id:
+          type: string
+          format: uuid
+        at:
+          type: string
+          format: date-time
+        level:
+          type: string
+          enum:
+            - debug
+            - info
+            - warn
+            - error
+        message:
+          type: string
+        requestId:
+          type: string
+          nullable: true
+    LogList:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/LogEntry'
+    Backup:
+      type: object
+      required:
+        - id
+        - status
+        - createdAt
+        - snapshotAt
+        - releaseVersion
+        - archiveBytes
+        - archiveSha256
+        - error
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - pending
+            - running
+            - ready
+            - failed
+        createdAt:
+          type: string
+          format: date-time
+        snapshotAt:
+          $ref: '#/components/schemas/NullableTime'
+        releaseVersion:
+          type: string
+        archiveBytes:
+          type: integer
+          minimum: 0
+          nullable: true
+        archiveSha256:
+          $ref: '#/components/schemas/NullableDigest'
+        error:
+          $ref: '#/components/schemas/DiagnosticError'
+    BackupList:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Backup'
+    ErrorDetails:
+      type: object
+      description: Only known diagnostic fields; never credentials or filesystem paths.
+      additionalProperties: false
+      properties:
+        revision:
+          $ref: '#/components/schemas/PositiveInteger'
+        modeRevision:
+          $ref: '#/components/schemas/PositiveInteger'
+        mode:
+          type: string
+          enum:
+            - normal
+            - maintenance
+        blockers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Blocker'
+        expectedReleaseVersion:
+          type: string
+        actualReleaseVersion:
+          type: string
+        field:
+          type: string
+        limit:
+          $ref: '#/components/schemas/Count'
+    ErrorBody:
+      type: object
+      required:
+        - code
+        - message
+        - requestId
+      properties:
+        code:
+          type: string
+          enum:
+            - INVALID_REQUEST
+            - AUTH_REQUIRED
+            - TOKEN_EXPIRED
+            - TOKEN_REVOKED
+            - DEVICE_DISABLED
+            - LICENSE_INACTIVE
+            - ENROLLMENT_REJECTED
+            - NOT_FOUND
+            - SERVICE_MAINTENANCE
+            - VERSION_MISMATCH
+            - REVISION_CONFLICT
+            - CONTENT_CONFLICT
+            - RESOURCE_BUSY
+            - PAYLOAD_TOO_LARGE
+            - UNSUPPORTED_MEDIA_TYPE
+            - INVALID_EXAM
+            - INVALID_SUBMISSION
+            - RATE_LIMITED
+            - SERVICE_NOT_READY
+            - STORAGE_UNAVAILABLE
+        message:
+          type: string
+        requestId:
+          type: string
+        details:
+          $ref: '#/components/schemas/ErrorDetails'
+    Error:
+      type: object
+      required:
+        - error
+      additionalProperties: false
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorBody'
