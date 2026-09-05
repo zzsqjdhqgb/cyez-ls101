@@ -112,4 +112,18 @@ test('blocker contract accepts current phases and rejects ambiguous or malformed
     '#/components/schemas/Blocker')
   const service = api.components.schemas.ServiceState.allOf.find((item) => item.properties?.blockers)
   assert.equal(service.properties.blockers.items.$ref, '#/components/schemas/Blocker')
+  assert.equal(service.properties.blockers.uniqueItems, true)
+  assert.equal(api.components.schemas.ErrorDetails.properties.blockers.uniqueItems, true)
+})
+
+test('backup and student retry policy are documented consistently', () => {
+  const storage = fs.readFileSync(path.join(root, 'docs/lab-server-storage-design.md'), 'utf8')
+  const apiDoc = fs.readFileSync(path.join(root, 'docs/lab-server-api-design.md'), 'utf8')
+  const student = fs.readFileSync(path.join(root, 'docs/lab-student-state-design.md'), 'utf8')
+  assert.match(storage, /pending -> running -> ready/)
+  assert.match(storage, /barrierState=reserved/)
+  assert.match(apiDoc, /正式上传和回执查询在普通维护模式返回 `409 SERVICE_MAINTENANCE`/)
+  assert.match(apiDoc, /最多自动重试 3 次/)
+  assert.match(student, /连续 3 次/)
+  assert.match(student, /不打断已经开始的本地练习和保存/)
 })

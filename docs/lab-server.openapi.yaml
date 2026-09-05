@@ -2170,6 +2170,7 @@ components:
                 $ref: '#/components/schemas/Task'
             blockers:
               type: array
+              uniqueItems: true
               items:
                 $ref: '#/components/schemas/Blocker'
             deviceSummary:
@@ -3799,6 +3800,7 @@ components:
             - maintenance
         blockers:
           type: array
+          uniqueItems: true
           items:
             $ref: '#/components/schemas/Blocker'
         expectedReleaseVersion:
