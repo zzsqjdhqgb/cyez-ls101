@@ -10,10 +10,10 @@ services:
     volumes:
       # 将当前目录（项目根目录）挂载到容器的 /workspace
       - ../:/workspace
-      # 持久化 OpenCode 的配置和缓存，避免重启后需要重新登录
-      - opencode-data-plain:/root/.local
-      - opencode-config-plain:/root/.config/opencode
+      # 持久化 CLI 配置和 Electron keyring，避免重启后需要重新登录
+      - local_data:/root/.local
       - codex_home:/root/.codex
+      - claude_home:/root/.claude
       - yarn:/workspace/.yarn
       - yarn-cache:/yarn/store
       - node_modules:/workspace/node_modules
@@ -31,9 +31,9 @@ services:
     # 自动重启（可选）
 
 volumes:
-  opencode-data-plain:
-  opencode-config-plain:
+  local_data:
   codex_home:
+  claude_home:
   yarn:
   yarn-cache:
   node_modules:
