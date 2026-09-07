@@ -1,0 +1,25 @@
+{
+  "name": "@ls101/lab-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "engines": {
+    "node": ">=24.20.0 <25"
+  },
+  "dependencies": {
+    "7zip-bin": "^5.2.0",
+    "@ls101/exam-package": "workspace:*",
+    "@ls101/lab-contracts": "workspace:*",
+    "@ls101/license": "workspace:*",
+    "@peculiar/x509": "^1.14.0",
+    "canonicalize": "^2.1.0",
+    "fflate": "^0.8.2",
+    "jose": "^6.1.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

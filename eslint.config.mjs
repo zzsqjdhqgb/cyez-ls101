@@ -23,7 +23,8 @@ export default defineConfig(
       '**/test-results/**',
       '.gop-research/{model,site,hf,venv,venv2,pip-cache,tmp}/**',
       'resources/tts',
-      '**/__tests__/**'
+      '**/__tests__/**',
+      'packages/lab-contracts/src/validators.generated.ts'
     ]
   },
   tseslint.configs.recommended,

@@ -30,6 +30,7 @@ type Phase =
   | 'load-error'
   | 'candidate'
   | 'microphone'
+  | 'authorizing'
   | 'exam'
   | 'runtime-error'
   | 'submitting'
@@ -55,6 +56,16 @@ export interface ExamPlayerProps {
   onFinish(archive: Blob): void | Promise<void>
   onExit(): void
   onError?(error: Error): void
+  beforeStart?(context: {
+    candidate: SubmissionCandidate
+    signal: AbortSignal
+  }): Promise<{ submissionId: string }>
+  onPhaseChange?(event: {
+    phase: 'preparing' | 'practicing' | 'saving' | 'complete' | 'error'
+    submissionId: string | null
+    pageIndex: number | null
+    stepIndex: number | null
+  }): void
 }
 
 export function ExamPlayer({ examBaseUrl, ...props }: ExamPlayerProps): JSX.Element {
@@ -68,7 +79,9 @@ function ExamPlayerSession({
   recordingCueUrls,
   onFinish,
   onExit,
-  onError
+  onError,
+  beforeStart,
+  onPhaseChange
 }: ExamPlayerProps): JSX.Element {
   const [phase, setPhase] = useState<Phase>('loading')
   const [loaded, setLoaded] = useState<LoadedExam | null>(null)
@@ -89,6 +102,11 @@ function ExamPlayerSession({
 
   const candidateRef = useRef<SubmissionCandidate | null>(null)
   const startedAtRef = useRef('')
+  const submissionIdRef = useRef<string | null>(null)
+  const submittedAtRef = useRef<string | null>(null)
+  const archiveRef = useRef<Blob | null>(null)
+  const authorizationRef = useRef<AbortController | null>(null)
+  const phaseCallbackRef = useRef(onPhaseChange)
   const choiceAnswersRef = useRef<Record<number, ChoiceOptionLabel>>({})
   const recordingsRef = useRef<Array<CapturedAudioAnswer | undefined>>([])
   const finishingRef = useRef(false)
@@ -97,6 +115,10 @@ function ExamPlayerSession({
   useEffect(() => {
     onErrorRef.current = onError
   }, [onError])
+  useEffect(() => {
+    phaseCallbackRef.current = onPhaseChange
+  }, [onPhaseChange])
+  useEffect(() => () => authorizationRef.current?.abort(), [])
 
   const reportError = useCallback((reason: unknown): Error => {
     const error = reason instanceof Error ? reason : new Error(String(reason))
@@ -107,6 +129,29 @@ function ExamPlayerSession({
     }
     return error
   }, [])
+
+  useEffect(() => {
+    const stage =
+      phase === 'exam'
+        ? 'practicing'
+        : phase === 'submitting'
+          ? 'saving'
+          : phase === 'complete'
+            ? 'complete'
+            : phase.endsWith('error')
+              ? 'error'
+              : 'preparing'
+    try {
+      phaseCallbackRef.current?.({
+        phase: stage,
+        submissionId: submissionIdRef.current,
+        pageIndex: stage === 'practicing' ? pageIndex : null,
+        stepIndex: stage === 'practicing' ? stepIndex : null
+      })
+    } catch (error) {
+      reportError(error)
+    }
+  }, [phase, pageIndex, stepIndex, reportError])
 
   useEffect(() => {
     let active = true
@@ -145,26 +190,30 @@ function ExamPlayerSession({
     setPhase('submitting')
     setTimelineStatus(null)
     try {
-      const bundle = assembleSubmission(loaded.exam, {
-        submissionId: crypto.randomUUID(),
-        candidate: candidateRef.current,
-        startedAt: startedAtRef.current,
-        submittedAt: new Date().toISOString(),
-        choiceAnswers: choiceAnswerArray(choiceAnswersRef.current),
-        recordings: recordingsRef.current
-      })
-      const recordingBytes: Record<string, Uint8Array> = {}
-      for (const [key, blob] of Object.entries(bundle.files)) {
-        recordingBytes[key] = new Uint8Array(await blob.arrayBuffer())
+      if (!submissionIdRef.current) throw new Error('Practice identity is unavailable')
+      submittedAtRef.current ??= new Date().toISOString()
+      if (!archiveRef.current) {
+        const bundle = assembleSubmission(loaded.exam, {
+          submissionId: submissionIdRef.current,
+          candidate: candidateRef.current,
+          startedAt: startedAtRef.current,
+          submittedAt: submittedAtRef.current,
+          choiceAnswers: choiceAnswerArray(choiceAnswersRef.current),
+          recordings: recordingsRef.current
+        })
+        const recordingBytes: Record<string, Uint8Array> = {}
+        for (const [key, blob] of Object.entries(bundle.files)) {
+          recordingBytes[key] = new Uint8Array(await blob.arrayBuffer())
+        }
+        const files = collectSubmissionPackageFiles(
+          bundle.submission,
+          loaded.resources,
+          recordingBytes
+        )
+        const bytes = await encodeSubmissionPackage(bundle.submission, files)
+        archiveRef.current = new Blob([copyArrayBuffer(bytes)], { type: SUBMISSION_MEDIA_TYPE })
       }
-      const files = collectSubmissionPackageFiles(
-        bundle.submission,
-        loaded.resources,
-        recordingBytes
-      )
-      const bytes = await encodeSubmissionPackage(bundle.submission, files)
-      const archive = new Blob([copyArrayBuffer(bytes)], { type: SUBMISSION_MEDIA_TYPE })
-      await onFinish(archive)
+      await onFinish(archiveRef.current)
       setPhase('complete')
     } catch (reason) {
       finishingRef.current = false
@@ -325,11 +374,31 @@ function ExamPlayerSession({
   }
 
   const beginExam = (deviceId: string): void => {
-    setMicrophoneId(deviceId)
-    startedAtRef.current = new Date().toISOString()
-    setPageIndex(0)
-    setStepIndex(0)
-    setPhase('exam')
+    if (authorizationRef.current || !candidateRef.current) return
+    const controller = new AbortController()
+    authorizationRef.current = controller
+    setPhase('authorizing')
+    void (async () => {
+      try {
+        const result = beforeStart
+          ? await beforeStart({ candidate: candidateRef.current!, signal: controller.signal })
+          : { submissionId: crypto.randomUUID() }
+        if (controller.signal.aborted) return
+        if (!result.submissionId?.trim()) throw new Error('Practice identity is unavailable')
+        submissionIdRef.current = result.submissionId
+        setMicrophoneId(deviceId)
+        startedAtRef.current = new Date().toISOString()
+        setPageIndex(0)
+        setStepIndex(0)
+        setPhase('exam')
+      } catch (error) {
+        if (controller.signal.aborted) return
+        setCandidateError(reportError(error).message)
+        setPhase('candidate')
+      } finally {
+        if (authorizationRef.current === controller) authorizationRef.current = null
+      }
+    })()
   }
 
   const answer = (choiceIndex: number, value: ChoiceOptionLabel): void => {
@@ -354,6 +423,28 @@ function ExamPlayerSession({
   const content = renderPhase()
 
   function renderPhase(): JSX.Element {
+    if (phase === 'authorizing') {
+      return (
+        <MessageScreen
+          title="正在确认练习许可"
+          message=""
+          actions={
+            allowExit ? (
+              <PlayerButton
+                secondary
+                icon={LogOut}
+                onClick={() => {
+                  authorizationRef.current?.abort()
+                  onExit()
+                }}
+              >
+                退出
+              </PlayerButton>
+            ) : undefined
+          }
+        />
+      )
+    }
     if (phase === 'loading') {
       return <MessageScreen title="正在加载考试" message="正在验证清单和全部考试资源..." />
     }

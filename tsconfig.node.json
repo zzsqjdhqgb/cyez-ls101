@@ -13,6 +13,7 @@
     "types": ["electron-vite/node"]
   },
   "references": [
+    { "path": "./packages/license" },
     { "path": "./packages/core-types" },
     { "path": "./packages/logger" },
     { "path": "./packages/clipboard" },

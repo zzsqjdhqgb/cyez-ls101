@@ -3,13 +3,19 @@
   "version": "0.4.1",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "description": "An Electron application with React and TypeScript",
   "main": "./out/main/index.js",
   "author": "example.com",
   "homepage": "https://electron-vite.org",
   "scripts": {
+    "lab:contracts": "node scripts/lab/generate-contracts.mjs",
+    "lab:contracts:check": "node scripts/lab/generate-contracts.mjs --check",
+    "lab:build:student": "electron-vite build --config electron.vite.lab-student.config.ts",
+    "lab:build:teacher": "electron-vite build --config electron.vite.lab-teacher.config.ts",
+    "lab:test:integration": "yarn lab:build:student && yarn lab:build:teacher && playwright test --config=playwright.lab.config.ts",
     "format": "prettier --write .",
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --fix --cache",
@@ -62,6 +68,7 @@
   },
   "dependencies": {
     "@electron-toolkit/utils": "^4.0.0",
+    "@ls101/license": "workspace:*",
     "fflate": "^0.8.2",
     "ffmpeg-static": "^5.3.0",
     "sherpa-onnx-node": "^1.13.6",
@@ -89,6 +96,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "jsdom": "^29.1.1",
+    "openapi-typescript": "^7.10.1",
     "pixelmatch": "^7.1.0",
     "pngjs": "^7.0.0",
     "prettier": "3.8.5",

@@ -1,6 +1,11 @@
 {
   "files": [],
   "references": [
+    { "path": "./packages/license" },
+    { "path": "./packages/lab-contracts" },
+    { "path": "./packages/lab-client" },
+    { "path": "./packages/lab-server" },
+    { "path": "./packages/lab-desktop-host" },
     { "path": "./tsconfig.node.json" },
     { "path": "./packages/core-types" },
     { "path": "./packages/logger" },

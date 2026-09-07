@@ -34,6 +34,16 @@ export interface SubmissionArchive {
   files: Record<string, Uint8Array>
 }
 
+export interface ArchiveReadLimits {
+  maxArchiveFiles: number
+  maxUncompressedBytes: number
+}
+
+const DEFAULT_READ_LIMITS: ArchiveReadLimits = {
+  maxArchiveFiles: MAX_FILES,
+  maxUncompressedBytes: MAX_UNCOMPRESSED_BYTES
+}
+
 export class ExamPackageArchiveError extends Error {
   constructor(message: string) {
     super(message)
@@ -50,8 +60,11 @@ export async function encodeExamPackage(
   return encodeArchive(exam, files)
 }
 
-export async function decodeExamPackage(data: Uint8Array): Promise<ExamArchive> {
-  const files = await unzipArchive(data)
+export async function decodeExamPackage(
+  data: Uint8Array,
+  limits = DEFAULT_READ_LIMITS
+): Promise<ExamArchive> {
+  const files = await unzipArchive(data, limits)
   const exam = await upgradeLegacyArchiveSchemas(readJson<unknown>(files, MANIFEST_PATH))
   validateExamPackage(exam)
   const resources = readResources(files, exam.examData.resources)
@@ -90,8 +103,11 @@ export function collectSubmissionPackageFiles(
   return files
 }
 
-export async function decodeSubmissionPackage(data: Uint8Array): Promise<SubmissionArchive> {
-  const files = await unzipArchive(data)
+export async function decodeSubmissionPackage(
+  data: Uint8Array,
+  limits = DEFAULT_READ_LIMITS
+): Promise<SubmissionArchive> {
+  const files = await unzipArchive(data, limits)
   const submission = await upgradeLegacyArchiveSchemas(readJson<unknown>(files, MANIFEST_PATH))
   validateSubmissionPackage(submission)
   const resources = readResources(files, submission.resources)
@@ -782,12 +798,13 @@ function readResources(
   return resources
 }
 
-function validatePaths(files: Record<string, Uint8Array>): void {
-  if (Object.keys(files).length > MAX_FILES) throw invalidArchive('Archive contains too many files')
+function validatePaths(files: Record<string, Uint8Array>, limits = DEFAULT_READ_LIMITS): void {
+  if (Object.keys(files).length > limits.maxArchiveFiles)
+    throw invalidArchive('Archive contains too many files')
   let totalBytes = 0
   for (const path of Object.keys(files)) {
     totalBytes += files[path].byteLength
-    if (totalBytes > MAX_UNCOMPRESSED_BYTES)
+    if (totalBytes > limits.maxUncompressedBytes)
       throw invalidArchive('Archive is too large after decompression')
     if (!safePath(path)) throw invalidArchive(`Unsafe archive path: ${path}`)
   }
@@ -841,9 +858,18 @@ function zipAsync(files: Record<string, Uint8Array>): Promise<Uint8Array> {
   })
 }
 
-function unzipArchive(data: Uint8Array): Promise<Record<string, Uint8Array>> {
+function unzipArchive(
+  data: Uint8Array,
+  limits: ArchiveReadLimits
+): Promise<Record<string, Uint8Array>> {
   if (!(data instanceof Uint8Array))
     return Promise.reject(invalidArchive('Archive must be binary data'))
+  if (
+    ![limits.maxArchiveFiles, limits.maxUncompressedBytes].every(
+      (value) => Number.isSafeInteger(value) && value > 0
+    )
+  )
+    return Promise.reject(invalidArchive('Invalid archive limits'))
   let fileCount = 0
   let totalBytes = 0
   return new Promise((resolve, reject) => {
@@ -853,18 +879,19 @@ function unzipArchive(data: Uint8Array): Promise<Record<string, Uint8Array>> {
         filter(file) {
           fileCount += 1
           totalBytes += file.originalSize
-          return fileCount <= MAX_FILES && totalBytes <= MAX_UNCOMPRESSED_BYTES
+          return fileCount <= limits.maxArchiveFiles && totalBytes <= limits.maxUncompressedBytes
         }
       },
       (error, files) => {
         if (error) return reject(invalidArchive(`Cannot read archive: ${error.message}`))
-        if (fileCount > MAX_FILES) return reject(invalidArchive('Archive contains too many files'))
-        if (totalBytes > MAX_UNCOMPRESSED_BYTES)
+        if (fileCount > limits.maxArchiveFiles)
+          return reject(invalidArchive('Archive contains too many files'))
+        if (totalBytes > limits.maxUncompressedBytes)
           return reject(invalidArchive('Archive is too large after decompression'))
         if (fileCount !== Object.keys(files).length)
           return reject(invalidArchive('Archive contains duplicate file paths'))
         try {
-          validatePaths(files)
+          validatePaths(files, limits)
           resolve(files)
         } catch (validationError) {
           reject(validationError)
