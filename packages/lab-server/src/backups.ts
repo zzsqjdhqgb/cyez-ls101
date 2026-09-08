@@ -1,7 +1,7 @@
 import { backup } from 'node:sqlite'
 import { spawn } from 'node:child_process'
 import { path7za } from '7zip-bin'
-import { chmod, copyFile, mkdir, open, rename, rm, stat } from 'node:fs/promises'
+import { chmod, copyFile, mkdir, open, rename, stat } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { Schema, RequestBody } from '@ls101/lab-contracts'
@@ -84,8 +84,26 @@ export class BackupStore {
     )
   }
 
+  private queueCleanup(id: string, published: boolean): void {
+    for (const [path, reason] of [
+      [join(this.service.options.root, 'backup-staging', id), 'backup-staging'],
+      [join(this.service.options.root, 'backups', `${id}.part.7z`), 'backup-incomplete'],
+      ...(published
+        ? [[join(this.service.options.root, 'backups', `${id}.7z`), 'backup-incomplete']]
+        : [])
+    ])
+      this.service.db.run('INSERT OR IGNORE INTO file_gc VALUES (?,?,?)', path, 0, reason)
+  }
+
   create(context: Context): Result {
     const body = context.body as RequestBody<'postTeacherBackups'>
+    requireCondition(
+      typeof body.encryptionPassword === 'string' &&
+        body.encryptionPassword.length >= 1 &&
+        body.encryptionPassword.length <= 1024 &&
+        !/[\r\n\0]/.test(body.encryptionPassword),
+      'INVALID_REQUEST'
+    )
     const digest = this.service.operationDigest(body, true)
     const replay = this.service.replay(context, digest)
     if (replay) return replay
@@ -196,6 +214,16 @@ export class BackupStore {
         'identity/server-id',
         'identity/idempotency.key'
       ]
+      for (const name of ['license.json', 'service-runtime.json']) {
+        const present = await stat(join(this.service.options.root, name)).then(
+          () => true,
+          (error: NodeJS.ErrnoException) => {
+            if (error.code === 'ENOENT') return false
+            throw error
+          }
+        )
+        if (present) files.push(name)
+      }
       for (const kind of ['exams', 'submissions'] as const) {
         for (const archive of db.all<{ archive_id: string }>(
           `SELECT archive_id FROM ${kind} WHERE deleted_at IS NULL`
@@ -252,18 +280,19 @@ export class BackupStore {
       await this.service.options.fault?.('backup-file-published')
       const size = (await stat(target)).size,
         digest = await digestFile(target)
-      db.transaction(() =>
+      db.transaction(() => {
         this.save(
           { ...this.get(id), status: 'ready', archiveBytes: size, archiveSha256: digest },
           'released'
         )
-      )
+        this.queueCleanup(id, false)
+      })
       await this.service.options.fault?.('backup-ready')
     } catch {
       const value = this.get(id)
       if (value.status !== 'ready')
         db.transaction(
-          () =>
+          () => {
             this.save(
               {
                 ...value,
@@ -275,7 +304,9 @@ export class BackupStore {
                 }
               },
               'released'
-            ),
+            )
+            this.queueCleanup(id, true)
+          },
           ownsGate ? id : undefined
         )
       if (ownsGate) {
@@ -284,8 +315,7 @@ export class BackupStore {
       }
     } finally {
       if (!ownsGate) {
-        await rm(staging, { recursive: true, force: true })
-        await rm(temporary, { force: true })
+        await this.service.archives.collectGarbage()
       }
     }
   }
@@ -297,7 +327,7 @@ export class BackupStore {
       'running'
     )
     this.service.db.transaction(() => {
-      for (const row of unfinished)
+      for (const row of unfinished) {
         this.save(
           {
             ...JSON.parse(row.data),
@@ -310,15 +340,9 @@ export class BackupStore {
           },
           'released'
         )
+        this.queueCleanup(row.id, true)
+      }
     })
-    for (const row of unfinished) {
-      await rm(join(this.service.options.root, 'backup-staging', row.id), {
-        recursive: true,
-        force: true
-      })
-      await rm(join(this.service.options.root, 'backups', `${row.id}.part.7z`), { force: true })
-      await rm(join(this.service.options.root, 'backups', `${row.id}.7z`), { force: true })
-    }
     for (const row of this.service.db.all<BackupRow>(
       'SELECT * FROM backups WHERE state=?',
       'ready'

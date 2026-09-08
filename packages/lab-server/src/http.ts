@@ -15,7 +15,10 @@ import {
 import { LabService, type Context, type Result } from './service'
 import { LabError, requireCondition } from './errors'
 
+const activeHandlers = new WeakMap<Server, Set<Promise<void>>>()
+
 export function createLabHttpServer(service: LabService): Server {
+  const handlers = new Set<Promise<void>>()
   const server = createServer(
     {
       key: service.identity.privatePem,
@@ -26,12 +29,23 @@ export function createLabHttpServer(service: LabService): Server {
       headersTimeout: 10000
     },
     (request, response) => {
-      void handle(service, request, response)
+      const work = handle(service, request, response)
+      handlers.add(work)
+      void work.finally(() => handlers.delete(work))
     }
   )
   server.maxRequestsPerSocket = 1000
   server.keepAliveTimeout = 5000
+  activeHandlers.set(server, handlers)
   return server
+}
+
+export async function closeLabHttpServer(server: Server): Promise<void> {
+  await new Promise<void>((done) => {
+    server.close(() => done())
+    server.closeAllConnections()
+  })
+  await Promise.allSettled(activeHandlers.get(server) ?? [])
 }
 
 async function readBody(request: IncomingMessage): Promise<unknown> {

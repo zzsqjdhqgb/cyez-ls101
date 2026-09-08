@@ -10,7 +10,7 @@ const databases: LabDatabase[] = []
 async function temporary(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'ls101-storage-'))
   roots.push(root)
-  return root
+  return join(root, 'data')
 }
 afterEach(async () => {
   for (const db of databases.splice(0)) await db.close()

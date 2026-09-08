@@ -37,8 +37,9 @@ const exam: ExamPackage = {
 }
 
 async function fixture() {
-  const root = await mkdtemp(join(tmpdir(), 'ls101-archive-'))
-  cleanups.push(() => rm(root, { recursive: true, force: true }))
+  const parent = await mkdtemp(join(tmpdir(), 'ls101-archive-'))
+  const root = join(parent, 'data')
+  cleanups.push(() => rm(parent, { recursive: true, force: true }))
   const service = await LabService.initialize(
     { root, releaseVersion: 'test', isLicenseActive: () => true },
     { name: 'Lab', baseUrl: 'https://127.0.0.1:8443/', password: 'secret' }

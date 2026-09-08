@@ -13,6 +13,8 @@
   "scripts": {
     "lab:contracts": "node scripts/lab/generate-contracts.mjs",
     "lab:contracts:check": "node scripts/lab/generate-contracts.mjs --check",
+    "lab:build:server": "node scripts/lab/build-server.mjs",
+    "lab:test:server": "yarn lab:build:server && node --test tests/lab/server-runtime.mjs",
     "lab:build:student": "electron-vite build --config electron.vite.lab-student.config.ts",
     "lab:build:teacher": "electron-vite build --config electron.vite.lab-teacher.config.ts",
     "lab:test:integration": "yarn lab:build:student && yarn lab:build:teacher && playwright test --config=playwright.lab.config.ts",

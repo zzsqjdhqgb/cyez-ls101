@@ -15,8 +15,9 @@ afterEach(async () => {
 })
 
 async function fixture() {
-  const root = await mkdtemp(join(tmpdir(), 'ls101-api-'))
-  cleanup.push(() => rm(root, { recursive: true, force: true }))
+  const parent = await mkdtemp(join(tmpdir(), 'ls101-api-'))
+  const root = join(parent, 'data')
+  cleanup.push(() => rm(parent, { recursive: true, force: true }))
   const service = await LabService.initialize(
     { root, releaseVersion: 'test-release', isLicenseActive: () => true },
     { name: 'Lab', baseUrl: 'https://127.0.0.1:8443/', password: 'teacher-secret' }
@@ -91,6 +92,21 @@ async function send(
 }
 
 describe('HTTPS service contracts', () => {
+  it('rejects unrepresentable backup passwords before creating a job', async () => {
+    const { api, service } = await fixture()
+    const token = (await api('POST', '/teacher/sessions', { password: 'teacher-secret' })).body
+      .token
+    for (const encryptionPassword of ['line\nbreak', 'line\rbreak', 'null\0byte']) {
+      expect(
+        (
+          await api('POST', '/teacher/backups', { encryptionPassword }, token, {
+            'idempotency-key': randomUUID()
+          })
+        ).status
+      ).toBe(400)
+    }
+    expect(service.db.all('SELECT * FROM backups')).toEqual([])
+  })
   it('registers every documented HTTP operation', async () => {
     const { service } = await fixture()
     expect(Object.keys(service.handlers).sort()).toEqual(Object.keys(operationDefinitions).sort())

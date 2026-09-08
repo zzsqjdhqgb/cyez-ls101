@@ -56466,9 +56466,16 @@ var validators = {}
     required: ['encryptionPassword'],
     additionalProperties: false,
     properties: {
-      encryptionPassword: { type: 'string', minLength: 1, maxLength: 1024, writeOnly: true }
+      encryptionPassword: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 1024,
+        pattern: '^[^\\r\\n\\u0000]+$',
+        writeOnly: true
+      }
     }
   }
+  const pattern11 = new RegExp('^[^\\r\\n\\u0000]+$', 'u')
   function validate1305(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
@@ -56541,8 +56548,23 @@ var validators = {}
             }
             errors++
           }
+          if (!pattern11.test(data0)) {
+            const err4 = {
+              instancePath: instancePath + '/encryptionPassword',
+              schemaPath: '#/properties/encryptionPassword/pattern',
+              keyword: 'pattern',
+              params: { pattern: '^[^\\r\\n\\u0000]+$' },
+              message: 'must match pattern "^[^\\r\\n\\u0000]+$"'
+            }
+            if (vErrors === null) {
+              vErrors = [err4]
+            } else {
+              vErrors.push(err4)
+            }
+            errors++
+          }
         } else {
-          const err4 = {
+          const err5 = {
             instancePath: instancePath + '/encryptionPassword',
             schemaPath: '#/properties/encryptionPassword/type',
             keyword: 'type',
@@ -56550,15 +56572,15 @@ var validators = {}
             message: 'must be string'
           }
           if (vErrors === null) {
-            vErrors = [err4]
+            vErrors = [err5]
           } else {
-            vErrors.push(err4)
+            vErrors.push(err5)
           }
           errors++
         }
       }
     } else {
-      const err5 = {
+      const err6 = {
         instancePath,
         schemaPath: '#/type',
         keyword: 'type',
@@ -56566,9 +56588,9 @@ var validators = {}
         message: 'must be object'
       }
       if (vErrors === null) {
-        vErrors = [err5]
+        vErrors = [err6]
       } else {
-        vErrors.push(err5)
+        vErrors.push(err6)
       }
       errors++
     }

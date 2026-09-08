@@ -7945,6 +7945,7 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 1024,
+                  "pattern": "^[^\\r\\n\\u0000]+$",
                   "writeOnly": true
                 }
               }

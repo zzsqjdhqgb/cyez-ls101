@@ -4,6 +4,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const yaml = require('js-yaml')
 const Ajv = require('ajv')
+const addFormats = require('ajv-formats')
 
 const root = path.resolve(__dirname, '../..')
 const api = yaml.load(fs.readFileSync(path.join(root, 'docs/lab-server.openapi.yaml'), 'utf8'))
@@ -65,7 +66,7 @@ function dereference(value) {
 }
 
 test('backup conflict responses expose valid examples and reject wrong error classes', () => {
-  const ajv = new Ajv({ allErrors: true, nullable: true })
+  const ajv = addFormats(new Ajv({ allErrors: true, strict: false }))
   const routes = [
     ['/teacher/backups', 'post'],
     ['/teacher/service/mode', 'put'],
@@ -92,7 +93,7 @@ test('backup conflict responses expose valid examples and reject wrong error cla
 })
 
 test('blocker contract accepts current phases and rejects ambiguous or malformed entries', () => {
-  const validate = new Ajv().compile(api.components.schemas.Blocker)
+  const validate = addFormats(new Ajv()).compile(api.components.schemas.Blocker)
   const resourceId = '11111111-1111-4111-8111-111111111111'
   for (const kind of [
     'enrollment', 'test-run', 'history-cleanup', 'active-task-lease',

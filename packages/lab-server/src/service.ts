@@ -156,6 +156,7 @@ export class LabService {
       await service.prepareDirectories()
       await service.backups.recover()
       await service.archives.recover()
+      await service.archives.collectGarbage()
       return service
     } catch (error) {
       await db.close()

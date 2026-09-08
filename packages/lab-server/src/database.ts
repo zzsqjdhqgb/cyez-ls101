@@ -3,6 +3,7 @@ import { mkdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { WriteGate } from './write-gate'
 import { LabError } from './errors'
+import { directoryPaths, lockDirectory } from './directory-lock'
 
 const SCHEMA_VERSION = 1
 const SCHEMA = `
@@ -49,18 +50,18 @@ export class LabDatabase {
   ) {}
 
   static async open(root: string, initialize = false): Promise<LabDatabase> {
-    await mkdir(root, { recursive: true, mode: 0o700 })
-    // A separate SQLite exclusive transaction provides a kernel-backed lifetime lock.
-    // It is never copied into backups or unlinked; process death releases it atomically.
-    const directoryLock = new DatabaseSync(join(root, 'directory-lock.sqlite'))
-    try {
-      directoryLock.exec('PRAGMA busy_timeout=0; BEGIN EXCLUSIVE;')
-    } catch {
-      directoryLock.close()
-      throw new LabError('RESOURCE_BUSY')
-    }
+    const directoryLock = await lockDirectory(root)
     let db: DatabaseSync | undefined
     try {
+      const interruptedRestore = await stat(directoryPaths(root).journal).then(
+        () => true,
+        (error: NodeJS.ErrnoException) => {
+          if (error.code === 'ENOENT') return false
+          throw error
+        }
+      )
+      if (interruptedRestore) throw new LabError('STORAGE_UNAVAILABLE')
+      await mkdir(root, { recursive: true, mode: 0o700 })
       const filename = join(root, 'service.sqlite')
       const exists = await stat(filename).then(
         () => true,

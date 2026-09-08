@@ -268,10 +268,17 @@ export class ArchiveStore {
     if (db.gate.closed) return
     const release = db.gate.enter()
     try {
-      for (const row of db.all<{ path: string }>('SELECT path FROM file_gc')) {
+      for (const row of db.all<{ path: string; reason: string }>(
+        'SELECT path,reason FROM file_gc'
+      )) {
         if (this.service.fileReferences.has(row.path)) continue
-        await rm(row.path, { force: true })
-        await syncDirectory(dirname(row.path))
+        try {
+          await this.service.options.fault?.('gc-before-remove')
+          await rm(row.path, { force: true, recursive: row.reason === 'backup-staging' })
+          await syncDirectory(dirname(row.path))
+        } catch {
+          continue
+        }
         db.transaction(() => db.run('DELETE FROM file_gc WHERE path=?', row.path), release)
       }
     } finally {
