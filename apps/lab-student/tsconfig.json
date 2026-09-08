@@ -5,6 +5,7 @@
   "references": [
     { "path": "../../packages/core-types" },
     { "path": "../../packages/exam-player" },
+    { "path": "../../packages/exam-package" },
     { "path": "../../packages/lab-client" },
     { "path": "../../packages/lab-contracts" },
     { "path": "../../packages/lab-desktop-host" }

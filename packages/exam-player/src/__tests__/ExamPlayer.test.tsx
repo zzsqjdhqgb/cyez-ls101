@@ -22,6 +22,28 @@ afterEach(() => {
 })
 
 describe('ExamPlayer', () => {
+  it('宿主提供考生身份后仍须取得开始许可，拒绝时不自动重试', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json(admissionExam()))
+    )
+    const beforeStart = vi.fn().mockRejectedValue(new Error('任务租约已结束')),
+      onFinish = vi.fn(),
+      candidate = { displayName: '部署测试', candidateId: 'deployment-test' }
+    render(
+      <ExamPlayer
+        examBaseUrl="https://exam.test/host-start/"
+        startSession={{ candidate }}
+        beforeStart={beforeStart}
+        onFinish={onFinish}
+        onExit={vi.fn()}
+      />
+    )
+    expect(await screen.findByText('任务租约已结束')).toBeInTheDocument()
+    expect(beforeStart).toHaveBeenCalledOnce()
+    expect(beforeStart.mock.calls[0][0].candidate).toEqual(candidate)
+    expect(onFinish).not.toHaveBeenCalled()
+  })
   it('开始许可被拒绝时不启动时间线，也不生成作答', async () => {
     vi.stubGlobal(
       'fetch',

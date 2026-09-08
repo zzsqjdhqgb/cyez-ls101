@@ -13,6 +13,7 @@ import type { ExamPackage } from '@ls101/core-types'
 import type { Schema } from '@ls101/lab-contracts'
 
 test('student enrollment, maintenance, practice and durable receipt run through real host capabilities', async () => {
+  test.setTimeout(180000)
   const root = await mkdtemp(join(tmpdir(), 'ls101-lab-e2e-'))
   let app: ElectronApplication | undefined
   let studentApp: ElectronApplication | undefined
@@ -60,7 +61,7 @@ test('student enrollment, maintenance, practice and durable receipt run through 
     delete env.ELECTRON_RENDERER_URL
     app = await electron.launch({
       args: [
-        resolve('out/lab-student/main/index.js'),
+        resolve('tests/lab/student-entry.mjs'),
         '--no-sandbox',
         '--password-store=basic',
         `--user-data-dir=${join(root, 'student')}`,
@@ -176,6 +177,145 @@ test('student enrollment, maintenance, practice and durable receipt run through 
     await expect(teacherPage.getByText('维护模式', { exact: true })).toBeVisible()
     await teacherPage.screenshot({ path: 'test-results/lab/teacher-devices.png' })
     const registered = await teacher.request<Schema<'DeviceList'>>('getTeacherDevices')
+    await page.evaluate(() => {
+      const tracks: MediaStreamTrack[] = []
+      const media = navigator.mediaDevices,
+        getUserMedia = media.getUserMedia.bind(media)
+      media.getUserMedia = async (constraints) => {
+        const stream = await getUserMedia(constraints)
+        tracks.push(...stream.getTracks())
+        return stream
+      }
+      Object.assign(window, { deploymentTracks: tracks })
+    })
+    const testRun = await teacher.request<Schema<'TestRun'>>('postTeacherTestRuns', {
+      body: {
+        suiteId: 'ls101-lab-deployment',
+        deviceIds: [registered.items[0].id],
+        caseIds: [
+          'identity',
+          'storage',
+          'download',
+          'playback',
+          'audio',
+          'submission',
+          'duplicate',
+          'recovery'
+        ],
+        expiresAt: new Date(Date.now() + 600000).toISOString()
+      },
+      idempotencyKey: randomUUID()
+    })
+    await page.getByRole('button', { name: '刷新连接' }).click()
+    await expect(page.getByText('显示与选择测试', { exact: true })).toBeVisible({ timeout: 20000 })
+    await page.getByRole('radio', { name: 'A 确认', exact: true }).check()
+    await page.screenshot({ path: 'test-results/lab/student-deployment.png' })
+    let completedTest = testRun
+    await expect
+      .poll(
+        async () => {
+          completedTest = await teacher.request('getTeacherTestRunsId', {
+            path: { id: testRun.id }
+          })
+          return completedTest.devices[0].report
+        },
+        { timeout: 45000 }
+      )
+      .not.toBeNull()
+    expect(completedTest.devices[0].cases).toEqual(
+      expect.arrayContaining(
+        testRun.devices[0].task.parameters.type === 'deployment-test'
+          ? testRun.devices[0].task.parameters.caseIds.map((caseId) => ({
+              caseId,
+              status: ['playback', 'audio'].includes(caseId) ? 'manual-required' : 'passed',
+              error: null
+            }))
+          : []
+      )
+    )
+    expect(completedTest.status).toBe('succeeded')
+    expect(completedTest.devices[0].confirmation.cases).toHaveLength(2)
+    expect(
+      service.db.get<{ total: number }>('SELECT count(*) AS total FROM test_submissions')?.total
+    ).toBe(1)
+    const studentRecords = await page.evaluate(() =>
+      (window as unknown as { lab: { invoke(name: string): Promise<unknown[]> } }).lab.invoke(
+        'records.list'
+      )
+    )
+    expect(studentRecords).toHaveLength(1)
+    const journal = JSON.parse(
+      await readFile(join(studentPath, 'tasks', testRun.devices[0].task.id, 'journal.json'), 'utf8')
+    )
+    const staleLeaseRejected = await page.evaluate(
+      async (input) => {
+        try {
+          await (
+            window as unknown as { lab: { invoke(name: string, input: unknown): Promise<unknown> } }
+          ).lab.invoke('tests.storage', input)
+          return false
+        } catch {
+          return true
+        }
+      },
+      { taskId: testRun.devices[0].task.id, leaseId: journal.lease.leaseId }
+    )
+    expect(staleLeaseRejected).toBe(true)
+    await teacherPage.getByRole('button', { name: '维护', exact: true }).click()
+    await teacherPage.getByRole('button', { name: '部署测试', exact: true }).click()
+    await teacherPage.locator('tbody .text-button').first().click()
+    await teacherPage.getByRole('button', { name: '人工确认', exact: true }).click()
+    await teacherPage.getByLabel('播放与选择人工确认', { exact: true }).selectOption('passed')
+    await teacherPage.getByLabel('麦克风与耳机人工确认', { exact: true }).selectOption('failed')
+    await teacherPage.getByRole('button', { name: '保存人工结果' }).click()
+    await expect(teacherPage.getByRole('button', { name: '重试失败项' })).toBeVisible()
+    const confirmedTest = await teacher.request<Schema<'TestRun'>>('getTeacherTestRunsId', {
+      path: { id: testRun.id }
+    })
+    expect(confirmedTest.devices[0].cases).toEqual(completedTest.devices[0].cases)
+    await teacherPage.screenshot({ path: 'test-results/lab/teacher-deployment.png' })
+    await teacherPage.getByRole('button', { name: '重试失败项' }).click()
+    let retry: Schema<'TestRun'> | undefined
+    await expect
+      .poll(async () => {
+        const runs = await teacher.request<Schema<'TestRunList'>>('getTeacherTestRuns')
+        retry = runs.items.find((item) => item.retryOf === testRun.id)
+        return retry?.devices[0].task.parameters
+      })
+      .toMatchObject({ caseIds: ['audio'] })
+    await expect(page.getByText('显示与选择测试', { exact: true })).toBeVisible({ timeout: 20000 })
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() =>
+            (window as unknown as { deploymentTracks: MediaStreamTrack[] }).deploymentTracks.some(
+              (track) => track.readyState === 'live'
+            )
+          ),
+        { timeout: 20000, intervals: [50, 100] }
+      )
+      .toBe(true)
+    await teacherPage.getByRole('button', { name: '取消测试', exact: true }).click()
+    await expect
+      .poll(
+        async () => {
+          retry = await teacher.request('getTeacherTestRunsId', { path: { id: retry!.id } })
+          return retry?.devices[0].report?.status
+        },
+        { timeout: 15000 }
+      )
+      .toBe('cancelled')
+    await expect(page.getByRole('heading', { name: '机房维护中' })).toBeVisible()
+    expect(
+      await page.evaluate(() =>
+        (window as unknown as { deploymentTracks: MediaStreamTrack[] }).deploymentTracks.every(
+          (track) => track.readyState === 'ended'
+        )
+      )
+    ).toBe(true)
+    expect(
+      service.db.get<{ total: number }>('SELECT count(*) AS total FROM test_submissions')?.total
+    ).toBe(1)
     const plan = await teacher.request<Schema<'CleanupPlan'>>('postTeacherHistoryCleanups', {
       body: {
         deviceIds: [registered.items[0].id],
@@ -234,6 +374,12 @@ test('student enrollment, maintenance, practice and durable receipt run through 
     app = undefined
     await studentApp.close()
     studentApp = undefined
+  } catch (error) {
+    await test.info().attach('deployment-task-reports', {
+      body: JSON.stringify(service.db.all('SELECT data FROM task_results'), null, 2),
+      contentType: 'application/json'
+    })
+    throw error
   } finally {
     await app?.close().catch(() => undefined)
     await studentApp?.close().catch(() => undefined)

@@ -1,9 +1,10 @@
 import { useState, type JSX } from 'react'
-import { Download, Plus, Square } from 'lucide-react'
+import { Download, Plus, Square, RefreshCw } from 'lucide-react'
 import type { Schema } from '@ls101/lab-contracts'
 import type { TeacherController } from './controller'
 import { Dialog, Notice } from './ui'
 import { bytes, time, useAction, useRead } from './hooks'
+import { failedTestCases, testCaseLabels, testStatusLabels } from './test-results'
 
 export function Maintenance({ controller }: { controller: TeacherController }): JSX.Element {
   const [tab, setTab] = useState<'enrollments' | 'tests' | 'cleanup' | 'backups'>('enrollments')
@@ -201,7 +202,16 @@ function Tests({ controller }: { controller: TeacherController }): JSX.Element {
         />
       )}
       {selected && (
-        <TestDetails controller={controller} id={selected} close={() => setSelected(null)} />
+        <TestDetails
+          key={selected}
+          controller={controller}
+          id={selected}
+          close={() => setSelected(null)}
+          retried={(id) => {
+            setSelected(id)
+            list.refresh()
+          }}
+        />
       )}
     </>
   )
@@ -209,11 +219,13 @@ function Tests({ controller }: { controller: TeacherController }): JSX.Element {
 function TestDetails({
   controller,
   id,
-  close
+  close,
+  retried
 }: {
   controller: TeacherController
   id: string
   close(): void
+  retried(id: string): void
 }): JSX.Element {
   const result = useRead<Schema<'TestRun'>>(
     controller,
@@ -252,9 +264,10 @@ function TestDetails({
             {device.device.number} / {device.device.room ?? '-'} / {device.device.seat ?? '-'}
           </h3>
           <p>
-            {device.task.status}
+            {testStatusLabels[device.task.status] ?? device.task.status}
             {device.late ? ' (迟到报告)' : ''} / 最后心跳 {time(device.lastHeartbeatAt)}
           </p>
+          {device.report?.error && <Notice error={device.report.error.message} />}
           <table>
             <thead>
               <tr>
@@ -266,14 +279,22 @@ function TestDetails({
             <tbody>
               {device.cases.map((item) => (
                 <tr key={item.caseId}>
-                  <td>{item.caseId}</td>
+                  <td>{testCaseLabels[item.caseId] ?? item.caseId}</td>
                   <td>
-                    {item.status}
+                    {testStatusLabels[item.status] ?? item.status}
                     {item.error && <small>{item.error.message}</small>}
                   </td>
                   <td>
-                    {device.confirmation.cases.find((entry) => entry.caseId === item.caseId)
-                      ?.status ?? '-'}
+                    {(() => {
+                      const status = device.confirmation.cases.find(
+                        (entry) => entry.caseId === item.caseId
+                      )?.status
+                      return status === 'pending'
+                        ? '待确认'
+                        : status
+                          ? testStatusLabels[status]
+                          : '-'
+                    })()}
                   </td>
                 </tr>
               ))}
@@ -281,6 +302,30 @@ function TestDetails({
           </table>
           {device.confirmation.cases.length > 0 && (
             <button onClick={() => setConfirming(device)}>人工确认</button>
+          )}
+          {failedTestCases(device).length > 0 && (
+            <button
+              disabled={action.busy}
+              onClick={() => {
+                const caseIds = failedTestCases(device),
+                  suiteId = result.data!.suiteId
+                action.run(async () => {
+                  const next = await controller.mutate<Schema<'TestRun'>>('postTeacherTestRuns', {
+                    body: {
+                      suiteId,
+                      deviceIds: [device.device.id],
+                      caseIds,
+                      retryOf: id,
+                      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString()
+                    }
+                  })
+                  retried(next.id)
+                })
+              }}
+            >
+              <RefreshCw />
+              重试失败项
+            </button>
           )}
         </section>
       ))}
@@ -330,8 +375,9 @@ function ManualConfirmation({
         {cases.map((item, index) => (
           <div className="confirmation-row" key={item.caseId}>
             <label>
-              {item.caseId}
+              {testCaseLabels[item.caseId] ?? item.caseId}
               <select
+                aria-label={`${testCaseLabels[item.caseId] ?? item.caseId}人工确认`}
                 value={item.status}
                 onChange={(event) =>
                   setCases(

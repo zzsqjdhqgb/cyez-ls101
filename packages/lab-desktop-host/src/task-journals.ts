@@ -15,6 +15,16 @@ export class TaskJournals {
     validateSchema('Task', next.task)
     if (next.lease) validateSchema('TaskLease', next.lease)
     if (next.result) validateSchema('TaskResultInput', next.result)
+    if (next.testCases) {
+      validateSchema('TestResult', { kind: 'deployment-test', cases: next.testCases })
+      const parameters = next.task.parameters
+      if (
+        parameters.type !== 'deployment-test' ||
+        new Set(next.testCases.map((item) => item.caseId)).size !== next.testCases.length ||
+        next.testCases.some((item) => !parameters.caseIds.includes(item.caseId))
+      )
+        throw new Error('Invalid test case journal')
+    }
     if (
       next.schemaVersion !== 1 ||
       typeof next.reported !== 'boolean' ||
@@ -35,6 +45,9 @@ export class TaskJournals {
           current.runtimeId !== next.runtimeId ||
           canonicalize(current.task) !== canonicalize(next.task) ||
           (current.result && canonicalize(current.result) !== canonicalize(next.result)) ||
+          current.testCases?.some(
+            (item, index) => canonicalize(item) !== canonicalize(next.testCases?.[index])
+          ) ||
           (current.reported && !next.reported))
       )
         throw new Error('Task journal conflict')

@@ -246,7 +246,7 @@ describe('HTTPS service contracts', () => {
       '/teacher/test-runs',
       {
         suiteId: 'ls101-lab-deployment',
-        caseIds: ['identity'],
+        caseIds: ['identity', 'playback'],
         deviceIds: [deviceId],
         expiresAt: new Date(Date.now() + 600000).toISOString()
       },
@@ -254,6 +254,45 @@ describe('HTTPS service contracts', () => {
       { 'idempotency-key': randomUUID() }
     )
     expect(run.status).toBe(201)
+    expect(run.body.devices[0].confirmation).toMatchObject({
+      revision: 1,
+      updatedAt: null,
+      cases: [{ caseId: 'playback', status: 'pending', note: '' }]
+    })
+    const confirmationPath = `/teacher/test-runs/${run.body.id}/devices/${deviceId}/confirmation`
+    expect(
+      (
+        await api(
+          'PUT',
+          confirmationPath,
+          { expectedRevision: 1, cases: [{ caseId: 'audio', status: 'passed', note: '' }] },
+          token
+        )
+      ).status
+    ).toBe(400)
+    expect(
+      (
+        await api(
+          'PUT',
+          confirmationPath,
+          {
+            expectedRevision: 1,
+            cases: [{ caseId: 'playback', status: 'failed', note: '声音不可听' }]
+          },
+          token
+        )
+      ).status
+    ).toBe(200)
+    expect(
+      (
+        await api(
+          'PUT',
+          confirmationPath,
+          { expectedRevision: 1, cases: [{ caseId: 'playback', status: 'passed', note: '' }] },
+          token
+        )
+      ).status
+    ).toBe(409)
     const task = run.body.devices[0].task
     expect(
       (await api('POST', `/student/tasks/${task.id}/claim`, { runtimeId }, credential)).status
@@ -322,6 +361,7 @@ describe('HTTPS service contracts', () => {
     const detail = await api('GET', `/teacher/test-runs/${run.body.id}`, undefined, token)
     expect(detail.body.status).toBe('cancelled')
     expect(detail.body.devices[0].report.error.code).toBe('EXECUTOR_FAILED')
+    expect(detail.body.devices[0].confirmation.cases[0].status).toBe('failed')
   })
 
   it('backup barriers reject writes, release before encryption, and keep idempotent replay read-only', async () => {

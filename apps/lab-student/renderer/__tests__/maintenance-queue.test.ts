@@ -5,6 +5,101 @@ import type { TaskJournal } from '@ls101/lab-desktop-host'
 import { MaintenanceQueue, type MaintenancePorts } from '../maintenance-queue'
 
 afterEach(() => vi.useRealTimers())
+
+it('persists partial deployment cases before stopping on renewal failure', async () => {
+  vi.useFakeTimers()
+  const f = fixture()
+  f.task.parameters = {
+    type: 'deployment-test',
+    suiteId: 'ls101-lab-deployment',
+    suiteVersion: '1',
+    caseIds: ['identity', 'audio'],
+    testSubmissionId: crypto.randomUUID(),
+    testExamSha256: 'a'.repeat(64)
+  }
+  f.lease.parameters = f.task.parameters
+  const original = f.request.getMockImplementation()!
+  f.request.mockImplementation(async (operation) => {
+    if (operation === 'putStudentTasksIdLease') throw new Error('offline')
+    return original(operation)
+  })
+  f.ports.test = vi.fn(async (_lease, signal, progress) => {
+    await progress([{ caseId: 'identity', status: 'passed', error: null }])
+    await new Promise<void>((_resolve, reject) =>
+      signal.addEventListener('abort', () => reject(new Error('stopped')), { once: true })
+    )
+    throw new Error('must not continue')
+  })
+  const running = f.queue.pump(f.contextId, f.runtimeId)
+  await vi.advanceTimersByTimeAsync(5001)
+  await running
+  expect(f.journals[0].result).toMatchObject({
+    status: 'cancelled',
+    result: {
+      kind: 'deployment-test',
+      cases: [{ caseId: 'identity', status: 'passed' }]
+    }
+  })
+  await f.queue.pump(f.contextId, f.runtimeId)
+  expect(f.ports.test).toHaveBeenCalledOnce()
+})
+
+it('restores partial test reports after restart without replaying the old execution', async () => {
+  const f = fixture()
+  f.task.parameters = {
+    type: 'deployment-test',
+    suiteId: 'ls101-lab-deployment',
+    suiteVersion: '1',
+    caseIds: ['identity', 'audio'],
+    testSubmissionId: crypto.randomUUID(),
+    testExamSha256: 'a'.repeat(64)
+  }
+  f.lease.parameters = f.task.parameters
+  f.journals.push({
+    schemaVersion: 1,
+    contextId: f.contextId,
+    task: f.task,
+    runtimeId: f.runtimeId,
+    lease: f.lease,
+    result: null,
+    reported: false,
+    testCases: [{ caseId: 'identity', status: 'passed', error: null }]
+  })
+  f.ports.test = vi.fn()
+  await f.queue.pump(f.contextId, crypto.randomUUID())
+  expect(f.ports.test).not.toHaveBeenCalled()
+  expect(f.journals[0]).toMatchObject({
+    reported: true,
+    result: {
+      status: 'expired',
+      result: {
+        kind: 'deployment-test',
+        cases: [{ caseId: 'identity', status: 'passed' }]
+      }
+    }
+  })
+})
+
+it('does not describe failed deployment cases as successful tasks', async () => {
+  const f = fixture()
+  f.task.parameters = {
+    type: 'deployment-test',
+    suiteId: 'ls101-lab-deployment',
+    suiteVersion: '1',
+    caseIds: ['audio'],
+    testSubmissionId: crypto.randomUUID(),
+    testExamSha256: 'a'.repeat(64)
+  }
+  f.lease.parameters = f.task.parameters
+  f.ports.test = vi.fn(
+    async (): Promise<Schema<'TestResult'>> => ({
+      kind: 'deployment-test',
+      cases: [{ caseId: 'audio', status: 'failed', error: null }]
+    })
+  )
+  await f.queue.pump(f.contextId, f.runtimeId)
+  expect(f.journals[0].result?.status).toBe('failed')
+})
 function fixture() {
   const contextId = crypto.randomUUID(),
     runtimeId = crypto.randomUUID()

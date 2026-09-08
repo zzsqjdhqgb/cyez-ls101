@@ -636,7 +636,15 @@ export function registerTaskHandlers(service: LabService, store: TaskStore): voi
           'INSERT INTO test_confirmations VALUES (?,?,?)',
           id,
           deviceId,
-          JSON.stringify({ revision: 1, cases: [], updatedAt: null })
+          JSON.stringify({
+            revision: 1,
+            cases: TEST_SUITE.cases
+              .filter(
+                (entry) => entry.requiresManualConfirmation && body.caseIds.includes(entry.id)
+              )
+              .map((entry) => ({ caseId: entry.id, status: 'pending', note: '' })),
+            updatedAt: null
+          })
         )
       }
       return service.remember(context, digest, { status: 201, body: store.run(id) })
@@ -681,8 +689,11 @@ export function registerTaskHandlers(service: LabService, store: TaskStore): voi
       const ids = body.cases.map((entry) => entry.caseId)
       requireCondition(
         new Set(ids).size === ids.length &&
-          ids.every((id) =>
-            TEST_SUITE.cases.some((entry) => entry.id === id && entry.requiresManualConfirmation)
+          ids.every(
+            (id) =>
+              device.task.parameters.type === 'deployment-test' &&
+              device.task.parameters.caseIds.includes(id) &&
+              TEST_SUITE.cases.some((entry) => entry.id === id && entry.requiresManualConfirmation)
           ),
         'INVALID_REQUEST'
       )

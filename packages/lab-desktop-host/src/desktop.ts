@@ -99,6 +99,8 @@ export function startLabDesktop(options: DesktopOptions): void {
             : Buffer.from(value.slice(11), 'base64').toString('utf8')
       })
       const cache = new ExamCache(join(root, 'exam-cache'))
+      const testCache = new ExamCache(join(root, 'test-data', 'exam-cache'))
+      const testRecords = new Map<string, StudentRecords>()
       const teacherOperations = new TeacherOperations(join(root, 'teacher-operations'))
       const taskJournals = new TaskJournals(join(root, 'tasks'))
       const taskLeases = new Map<
@@ -118,7 +120,8 @@ export function startLabDesktop(options: DesktopOptions): void {
       }
       protocol.handle('ls101-exam', (request) => {
         if (license.getStatusSync().state !== 'active') return new Response(null, { status: 403 })
-        return cache.respond(request.url)
+        const response = cache.respond(request.url)
+        return response.status === 404 ? testCache.respond(request.url) : response
       })
       Menu.setApplicationMenu(null)
       window = new BrowserWindow({
@@ -347,6 +350,8 @@ export function startLabDesktop(options: DesktopOptions): void {
               request.signal
             )
             if (operation) await teacherOperations.finish(operation, result)
+            if (value.operationId === 'putStudentTasksIdResult' && result.status === 200)
+              taskLeases.delete(value.input.path!.id)
             if (['postStudentTasksIdClaim', 'putStudentTasksIdLease'].includes(value.operationId)) {
               const taskId = value.input.path!.id
               taskLeases.delete(taskId)
@@ -427,6 +432,91 @@ export function startLabDesktop(options: DesktopOptions): void {
             summary = await binding.summary()
           if (journal.contextId !== summary?.contextId) throw new Error('Binding changed')
           return taskJournals.save(journal)
+        }
+        if (capability.startsWith('tests.')) {
+          const value = input as {
+            taskId: string
+            leaseId: string
+            handle: string
+            sha256: string
+            bytes: number | Uint8Array
+            sequence: number
+            baseUrl: string
+            connectionId: string
+            record: StudentRecord
+          }
+          requireId(value.taskId)
+          if (options.role !== 'student') throw new Error('Student test required')
+          if (capability === 'tests.release') {
+            testCache.release(value.baseUrl)
+            return null
+          }
+          const trusted = taskLeases.get(value.taskId),
+            summary = await binding.summary()
+          if (
+            !trusted ||
+            !summary ||
+            trusted.contextId !== summary.contextId ||
+            trusted.lease.leaseId !== value.leaseId ||
+            trusted.lease.cancelRequested ||
+            trusted.deadline <= performance.now() ||
+            foreground !== 'testing' ||
+            knownState?.availability !== 'maintenance' ||
+            knownState.releaseVersion !== options.releaseVersion ||
+            trusted.lease.parameters.type !== 'deployment-test'
+          )
+            throw new Error('No current deployment-test lease')
+          const parameters = trusted.lease.parameters
+          let storage = testRecords.get(value.taskId)
+          if (!storage) {
+            storage = new StudentRecords(join(root, 'test-data', value.taskId))
+            await storage.initialize()
+            testRecords.set(value.taskId, storage)
+          }
+          if (capability === 'tests.storage') {
+            const path = join(storage.root, 'probe.json'),
+              probe = { taskId: value.taskId, nonce: randomUUID() }
+            await saveFile(path, JSON.stringify(probe))
+            if (JSON.stringify(await loadJson(path)) !== JSON.stringify(probe))
+              throw new Error('Durable storage verification failed')
+            return null
+          }
+          if (capability === 'tests.prepare')
+            return testCache.prepare(transport.file(value.handle), parameters.testExamSha256)
+          if (capability === 'tests.begin')
+            return storage.begin(
+              sender,
+              {
+                submissionId: parameters.testSubmissionId,
+                examId: value.taskId,
+                candidate: { candidateId: 'deployment-test', displayName: '部署测试' },
+                binding: summary
+              },
+              { sha256: value.sha256, bytes: value.bytes as number }
+            )
+          if (capability === 'tests.chunk')
+            return storage.chunk(sender, value.handle, value.sequence, value.bytes as Uint8Array)
+          if (capability === 'tests.finish')
+            return storage.finish(sender, value.handle, value.sha256)
+          if (capability === 'tests.list') return storage.list()
+          if (capability === 'tests.cas') {
+            if (value.record.submissionId !== parameters.testSubmissionId)
+              throw new Error('Test identity mismatch')
+            return storage.compareAndSwap(
+              value.record.submissionId,
+              value.record.revision,
+              value.record
+            )
+          }
+          if (capability === 'tests.uploadHandle') {
+            if (studentConnections.get(value.connectionId)?.contextId !== summary.contextId)
+              throw new Error('Test connection changed')
+            return transport.registerArchive(
+              value.connectionId,
+              storage.archivePath(parameters.testSubmissionId)
+            )
+          }
+          throw new Error('Unsupported test capability')
         }
         if (capability.startsWith('cleanup.')) {
           const value = input as { taskId: string; leaseId: string; index?: number }
@@ -558,7 +648,7 @@ export function startLabDesktop(options: DesktopOptions): void {
         )
           throw new Error('Untrusted IPC sender')
         if (
-          capability !== 'records.chunk' &&
+          !['records.chunk', 'tests.chunk'].includes(capability) &&
           Buffer.byteLength(JSON.stringify(input ?? null)) > 1024 * 1024
         )
           throw new Error('IPC message too large')

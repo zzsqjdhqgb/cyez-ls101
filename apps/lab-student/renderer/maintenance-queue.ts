@@ -8,6 +8,11 @@ export interface MaintenancePorts {
   admitted(): boolean
   busy(value: boolean): Promise<void>
   changed(): void
+  test?(
+    lease: Schema<'TaskLease'>,
+    signal: AbortSignal,
+    progress: (cases: Schema<'CaseResult'>[]) => Promise<void>
+  ): Promise<Schema<'TestResult'>>
 }
 export class MaintenanceQueue {
   private running = false
@@ -48,7 +53,9 @@ export class MaintenanceQueue {
               leaseId: journal.lease.leaseId,
               status: 'expired',
               completedAt: new Date().toISOString(),
-              result: null,
+              result: journal.testCases
+                ? { kind: 'deployment-test', cases: journal.testCases }
+                : null,
               error: {
                 code: 'EXECUTION_INTERRUPTED',
                 message: '执行已中断，未继续旧租约。',
@@ -78,7 +85,7 @@ export class MaintenanceQueue {
       for (const task of tasks.items) {
         if (!this.ports.admitted()) break
         if (
-          task.parameters.type !== 'history-cleanup' ||
+          (task.parameters.type === 'deployment-test' && !this.ports.test) ||
           !['pending', 'running'].includes(task.status)
         )
           continue
@@ -133,8 +140,13 @@ export class MaintenanceQueue {
         clearTimeout(expiry)
         const remaining =
           sent + Date.parse(value.leaseExpiresAt) - Date.parse(value.serverTime) - this.now()
-        if (value.cancelRequested || remaining <= 0) abort.abort()
-        else expiry = setTimeout(() => abort.abort(), remaining)
+        if (value.cancelRequested) abort.abort()
+        else if (remaining <= 0) abort.abort(new DOMException('Task lease expired', 'TimeoutError'))
+        else
+          expiry = setTimeout(
+            () => abort.abort(new DOMException('Task lease expired', 'TimeoutError')),
+            remaining
+          )
       }
       setDeadline(lease, started)
       const renew = async (): Promise<void> => {
@@ -165,10 +177,15 @@ export class MaintenanceQueue {
       if (!this.ports.admitted()) throw new Error('维护准入已变化')
       await this.ports.busy(true)
       const parameters = lease.parameters
-      if (parameters.type !== 'history-cleanup') throw new Error('Unsupported maintenance task')
       const capabilityInput = { taskId: journal.task.id, leaseId: lease.leaseId }
-      let result: Schema<'PreviewResult'> | Schema<'CleanupResult'>
-      if (parameters.phase === 'preview') {
+      let result: Schema<'PreviewResult'> | Schema<'CleanupResult'> | Schema<'TestResult'>
+      if (parameters.type === 'deployment-test') {
+        if (!this.ports.test) throw new Error('Unsupported maintenance task')
+        result = await this.ports.test(lease, abort.signal, async (testCases) => {
+          journal = { ...journal, testCases: [...testCases] }
+          await this.save(journal)
+        })
+      } else if (parameters.phase === 'preview') {
         const snapshot = await this.ports.host.invoke<{
           digest: string
           bytes: number
@@ -203,7 +220,10 @@ export class MaintenanceQueue {
         result: {
           leaseId: lease.leaseId,
           status:
-            result.kind === 'history-execute' && (result.failedCount > 0 || result.skippedCount > 0)
+            (result.kind === 'history-execute' &&
+              (result.failedCount > 0 || result.skippedCount > 0)) ||
+            (result.kind === 'deployment-test' &&
+              result.cases.some((item) => !['passed', 'manual-required'].includes(item.status)))
               ? 'failed'
               : 'succeeded',
           completedAt: new Date().toISOString(),
@@ -224,12 +244,18 @@ export class MaintenanceQueue {
               taskId: journal.task.id,
               selectedCount
             })
-          : null
+          : journal.testCases
+            ? { kind: 'deployment-test' as const, cases: journal.testCases }
+            : null
       journal = {
         ...journal,
         result: {
           leaseId: journal.lease.leaseId,
-          status: abort.signal.aborted ? 'cancelled' : 'failed',
+          status: abort.signal.aborted
+            ? abort.signal.reason?.name === 'TimeoutError'
+              ? 'expired'
+              : 'cancelled'
+            : 'failed',
           completedAt: new Date().toISOString(),
           result: partial,
           error: {

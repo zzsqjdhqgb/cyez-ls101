@@ -72,4 +72,5 @@ export interface TaskJournal {
   result: Schema<'TaskResultInput'> | null
   reported: boolean
   selectedCount?: number
+  testCases?: Schema<'CaseResult'>[]
 }

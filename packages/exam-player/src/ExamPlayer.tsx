@@ -53,6 +53,7 @@ export interface ExamPlayerProps {
   fetcher?: typeof fetch
   allowExit?: boolean
   recordingCueUrls?: { start?: string; stop?: string }
+  startSession?: { candidate: SubmissionCandidate; microphoneId?: string }
   onFinish(archive: Blob): void | Promise<void>
   onExit(): void
   onError?(error: Error): void
@@ -77,6 +78,7 @@ function ExamPlayerSession({
   fetcher = fetch,
   allowExit = true,
   recordingCueUrls,
+  startSession,
   onFinish,
   onExit,
   onError,
@@ -106,6 +108,7 @@ function ExamPlayerSession({
   const submittedAtRef = useRef<string | null>(null)
   const archiveRef = useRef<Blob | null>(null)
   const authorizationRef = useRef<AbortController | null>(null)
+  const startedSessionRef = useRef(false)
   const phaseCallbackRef = useRef(onPhaseChange)
   const choiceAnswersRef = useRef<Record<number, ChoiceOptionLabel>>({})
   const recordingsRef = useRef<Array<CapturedAudioAnswer | undefined>>([])
@@ -373,33 +376,43 @@ function ExamPlayerSession({
     }
   }
 
-  const beginExam = (deviceId: string): void => {
-    if (authorizationRef.current || !candidateRef.current) return
-    const controller = new AbortController()
-    authorizationRef.current = controller
-    setPhase('authorizing')
-    void (async () => {
-      try {
-        const result = beforeStart
-          ? await beforeStart({ candidate: candidateRef.current!, signal: controller.signal })
-          : { submissionId: crypto.randomUUID() }
-        if (controller.signal.aborted) return
-        if (!result.submissionId?.trim()) throw new Error('Practice identity is unavailable')
-        submissionIdRef.current = result.submissionId
-        setMicrophoneId(deviceId)
-        startedAtRef.current = new Date().toISOString()
-        setPageIndex(0)
-        setStepIndex(0)
-        setPhase('exam')
-      } catch (error) {
-        if (controller.signal.aborted) return
-        setCandidateError(reportError(error).message)
-        setPhase('candidate')
-      } finally {
-        if (authorizationRef.current === controller) authorizationRef.current = null
-      }
-    })()
-  }
+  const beginExam = useCallback(
+    (deviceId: string): void => {
+      if (authorizationRef.current || !candidateRef.current) return
+      const controller = new AbortController()
+      authorizationRef.current = controller
+      setPhase('authorizing')
+      void (async () => {
+        try {
+          const result = beforeStart
+            ? await beforeStart({ candidate: candidateRef.current!, signal: controller.signal })
+            : { submissionId: crypto.randomUUID() }
+          if (controller.signal.aborted) return
+          if (!result.submissionId?.trim()) throw new Error('Practice identity is unavailable')
+          submissionIdRef.current = result.submissionId
+          setMicrophoneId(deviceId)
+          startedAtRef.current = new Date().toISOString()
+          setPageIndex(0)
+          setStepIndex(0)
+          setPhase('exam')
+        } catch (error) {
+          if (controller.signal.aborted) return
+          setCandidateError(reportError(error).message)
+          setPhase('candidate')
+        } finally {
+          if (authorizationRef.current === controller) authorizationRef.current = null
+        }
+      })()
+    },
+    [beforeStart, reportError]
+  )
+
+  useEffect(() => {
+    if (!startSession || phase !== 'candidate' || !loaded || startedSessionRef.current) return
+    startedSessionRef.current = true
+    candidateRef.current = startSession.candidate
+    beginExam(startSession.microphoneId ?? '')
+  }, [startSession, phase, loaded, beginExam])
 
   const answer = (choiceIndex: number, value: ChoiceOptionLabel): void => {
     const next = { ...choiceAnswersRef.current, [choiceIndex]: value }

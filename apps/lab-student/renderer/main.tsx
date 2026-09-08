@@ -5,6 +5,7 @@ import { ExamPlayer } from '@ls101/exam-player'
 import type { LabHost } from '@ls101/lab-desktop-host'
 import { admission, canViewRecords } from './admission'
 import { StudentController } from './controller'
+import { DeploymentPlayer } from './deployment-player'
 import './style.css'
 
 declare global {
@@ -71,6 +72,8 @@ export function App(): JSX.Element {
     event.preventDefault()
     run(() => controller.activate(code))
   }
+  if (view.testPlayer && gate === 'maintenance')
+    return <DeploymentPlayer player={view.testPlayer} />
   if (view.player)
     return (
       <>
@@ -145,6 +148,23 @@ export function App(): JSX.Element {
       ) : gate === 'maintenance' || (!recordsAllowed && gate !== 'ready') ? (
         <main className="standby">
           <h1>{labels[gate]}</h1>
+          {view.testCase && (
+            <p role="status">
+              部署测试：
+              {
+                {
+                  identity: '连接与身份',
+                  storage: '本地存储',
+                  download: '试卷下载',
+                  playback: '播放与选择',
+                  audio: '麦克风与耳机',
+                  submission: '作答提交',
+                  duplicate: '重复请求',
+                  recovery: '异常恢复'
+                }[view.testCase]
+              }
+            </p>
+          )}
           {view.binding && (
             <dl className="device-details">
               <dt>设备编号</dt>

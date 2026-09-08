@@ -11,6 +11,7 @@ import type {
 import { admission, canViewRecords, type AdmissionFacts } from './admission'
 import { SubmissionQueue } from './submission-queue'
 import { MaintenanceQueue } from './maintenance-queue'
+import { runDeploymentTests } from './deployment-tests'
 
 type Phase = 'idle' | 'preparing' | 'practicing' | 'saving' | 'testing' | 'error'
 interface Connection {
@@ -31,6 +32,14 @@ export interface StudentView extends AdmissionFacts {
   records: StudentRecord[]
   exams: Schema<'StudentExam'>[]
   player: { exam: Schema<'StudentExam'>; baseUrl: string } | null
+  testPlayer: {
+    baseUrl: string
+    lease: Schema<'TaskLease'>
+    signal: AbortSignal
+    finish(archive: Blob): void
+    fail(error: Error): void
+  } | null
+  testCase: string | null
   error: string | null
 }
 
@@ -48,6 +57,8 @@ export class StudentController {
     records: [],
     exams: [],
     player: null,
+    testPlayer: null,
+    testCase: null,
     error: null
   }
   private readonly listeners = new Set<() => void>()
@@ -148,6 +159,50 @@ export class StudentController {
         this.view.phase === 'idle' &&
         !this.view.player,
       busy: (busy) => this.setPhase(busy ? 'testing' : 'idle'),
+      test: async (lease, signal, progress) => {
+        const connection = this.connection!
+        try {
+          return await runDeploymentTests(
+            {
+              host,
+              connectionId: connection.connectionId,
+              request: (operation, input, signal) =>
+                this.client(connection).request(operation, input, signal),
+              status: (testCase) => this.update({ testCase }),
+              play: (baseUrl, lease, signal) =>
+                new Promise<Blob>((resolve, reject) => {
+                  signal.throwIfAborted()
+                  let settled = false
+                  const finish = (archive?: Blob, error?: Error): void => {
+                    if (settled) return
+                    settled = true
+                    signal.removeEventListener('abort', cancel)
+                    this.update({ testPlayer: null })
+                    if (archive) resolve(archive)
+                    else reject(error ?? new Error('Deployment playback stopped'))
+                  }
+                  const cancel = (): void =>
+                    finish(undefined, new Error('Deployment lease stopped'))
+                  signal.addEventListener('abort', cancel, { once: true })
+                  this.update({
+                    testPlayer: {
+                      baseUrl,
+                      lease,
+                      signal,
+                      finish: (archive) => finish(archive),
+                      fail: (error) => finish(undefined, error)
+                    }
+                  })
+                })
+            },
+            lease,
+            signal,
+            progress
+          )
+        } finally {
+          this.update({ testPlayer: null, testCase: null })
+        }
+      },
       changed: () => {
         void this.refreshRecords().catch((error) => this.fail(error))
       }
