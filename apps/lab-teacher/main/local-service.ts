@@ -61,7 +61,7 @@ export function localServiceHost(
         const key = randomBytes(32)
         await writeFile(join(channel, 'control.key'), key, { mode: 0o600, flag: 'wx', flush: true })
         let requested = false
-        let result: { ok: boolean; value?: unknown; error?: string } | undefined
+        let result: { ok: boolean; value?: unknown; error?: string; detail?: string } | undefined
         listener = await listenLocalControl(channel, key, async (method, value) => {
           if (method === 'request' && !requested && value === undefined) {
             requested = true
@@ -75,7 +75,7 @@ export function localServiceHost(
             typeof value === 'object' &&
             typeof (value as { ok?: unknown }).ok === 'boolean'
           ) {
-            result = value as { ok: boolean; value?: unknown; error?: string }
+            result = value as { ok: boolean; value?: unknown; error?: string; detail?: string }
             return null
           }
           throw new Error('INVALID_REQUEST')
@@ -102,10 +102,15 @@ export function localServiceHost(
           )
         } else throw new Error('UNSUPPORTED_PLATFORM')
         if (!result) throw new Error('LOCAL_HELPER_INCOMPLETE')
-        if (!result.ok)
-          throw new Error(
+        if (!result.ok) {
+          const code =
             result.error && /^[A-Z_]+$/.test(result.error) ? result.error : 'LOCAL_OPERATION_FAILED'
-          )
+          const detail =
+            ['install', 'upgrade'].includes(operation) && typeof result.detail === 'string'
+              ? result.detail.slice(0, 8192).trim()
+              : ''
+          throw new Error(detail ? `${code}\n${detail}` : code)
+        }
         return result.value
       } finally {
         try {

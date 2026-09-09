@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFile } from 'node:child_process'
 import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
-import { manageLocalService } from '../local-manager'
+import { localManagerFailure, manageLocalService } from '../local-manager'
 import { requestLocalControl } from '../control'
 import { lockDirectory } from '../directory-lock'
 
@@ -20,6 +20,54 @@ describe('fixed local manager capabilities', () => {
     runtime: '/fixture/old-release',
     source: '/fixture/new-release'
   }
+
+  it.each(['linux', 'win32'])('keeps installer stderr and exit status on %s', async (platform) => {
+    vi.stubGlobal('process', { ...process, platform })
+    vi.mocked(execFile).mockImplementation((_file, _args, options: any, callback: any) => {
+      expect(options.timeout).toBe(35 * 60000)
+      callback(
+        Object.assign(new Error('Command failed'), { code: 1 }),
+        'WinSW: service was installed successfully',
+        'LS101_INSTALL_ERROR [configure-service-account]: Access denied'
+      )
+      return {} as any
+    })
+    const failure = await manageLocalService('install', undefined, paths).catch(localManagerFailure)
+    expect(failure).toMatchObject({
+      ok: false,
+      error: 'STORAGE_UNAVAILABLE',
+      detail: expect.stringContaining('[configure-service-account]: Access denied')
+    })
+    expect((failure as { detail: string }).detail).toContain('安装程序退出状态：1')
+    expect((failure as { detail: string }).detail).toContain('service was installed successfully')
+  })
+
+  it('bounds installer diagnostics and keeps other operation failures code-only', async () => {
+    vi.mocked(execFile).mockImplementation((_file, _args, _options, callback: any) => {
+      callback(
+        Object.assign(new Error('failed'), { code: 1 }),
+        'x'.repeat(10000),
+        'y'.repeat(10000)
+      )
+      return {} as any
+    })
+    const failure = (await manageLocalService('install', undefined, paths).catch(
+      localManagerFailure
+    )) as { detail: string }
+    expect(failure.detail.length).toBeLessThan(8192)
+    expect(await manageLocalService('start', undefined, paths).catch(localManagerFailure)).toEqual({
+      ok: false,
+      error: 'STORAGE_UNAVAILABLE'
+    })
+    expect(
+      localManagerFailure(
+        Object.assign(new Error('private password'), {
+          code: 'LICENSE_INACTIVE',
+          installerDetail: 'private activation code'
+        })
+      )
+    ).toEqual({ ok: false, error: 'LICENSE_INACTIVE' })
+  })
 
   it('prepares the bundled target version before stopping an older running service', async () => {
     vi.stubGlobal('__LAB_VERSION__', 'next-release')

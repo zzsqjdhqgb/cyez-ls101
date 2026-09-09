@@ -1,5 +1,12 @@
 param([switch]$Verify)
 $ErrorActionPreference = 'Stop'
+$stage = 'verify-runtime'
+trap {
+  [Console]::Error.WriteLine(('LS101_INSTALL_ERROR [{0}]: {1}' -f $stage, $_.Exception.Message))
+  exit 1
+}
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Console]::OutputEncoding
 Set-StrictMode -Version Latest
 $source = $PSScriptRoot
 $manifestPath = Join-Path $source 'runtime-manifest.json'
@@ -19,10 +26,13 @@ foreach ($required in @('server.cjs', 'manager.cjs', 'runtime/node.exe', 'LS101L
 }
 if ((& (Join-Path $source 'runtime/node.exe') --version) -ne 'v24.20.0' -or $LASTEXITCODE -ne 0) { throw 'Incorrect packaged Node version' }
 if ($Verify) { Write-Output 'Service runtime verified.'; exit 0 }
+$stage = 'authorize'
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 if (-not ([Security.Principal.WindowsPrincipal]$identity).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Administrator required' }
+$stage = 'prepare-upgrade'
 & (Join-Path $source 'runtime/node.exe') (Join-Path $source 'manager.cjs') --prepare-install
 if ($LASTEXITCODE -ne 0) { throw 'Service upgrade preparation failed. Check maintenance mode, active devices and the latest backup.' }
+$stage = 'check-existing-installation'
 $service = Get-Service -Name LS101Lab -ErrorAction SilentlyContinue
 if ($service -and $service.Status -ne 'Stopped') { throw 'Stop the service before installation or upgrade' }
 $program = Join-Path $env:ProgramFiles 'LS101LabService'
@@ -53,7 +63,9 @@ function Set-PrivateDirectory([string]$Path, [string]$ServiceSid, [bool]$Readabl
   if ($Readable) { $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new('S-1-5-32-545'), 'ReadAndExecute', 'ContainerInherit,ObjectInherit', 'None', 'Allow')) }
   Set-Acl -LiteralPath $Path -AclObject $acl
 }
+$stage = 'permissions-program'
 Set-PrivateDirectory $program '' $true
+$stage = 'copy-runtime'
 $digest = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant().Substring(0,16)
 $identifier = "$($manifest.releaseVersion)-$digest"
 $destination = Join-Path $program "releases\$identifier"
@@ -74,14 +86,29 @@ foreach ($file in $manifest.files) {
 Copy-Item -LiteralPath $manifestPath -Destination (Join-Path $destination 'runtime-manifest.json')
 }
 $wrapper = Join-Path $destination 'LS101Lab.exe'
+$stage = 'register-service'
 if (-not $service) { & $wrapper install; if ($LASTEXITCODE -ne 0) { throw 'Service registration failed' } }
+$stage = 'permissions-data'
 $serviceSid = ([Security.Principal.NTAccount]::new('NT SERVICE', 'LS101Lab')).Translate([Security.Principal.SecurityIdentifier]).Value
 Set-PrivateDirectory $data $serviceSid $false
 New-Item -ItemType Directory -Path (Join-Path $data 'logs') -Force | Out-Null
-& sc.exe config LS101Lab binPath= ('"' + $wrapper + '"') obj= 'NT SERVICE\LS101Lab' password= ''
-if ($LASTEXITCODE -ne 0) { throw 'Service account configuration failed' }
+$stage = 'configure-service-path'
+# CIM preserves the embedded quotes required by an executable path with spaces.
+$serviceConfiguration = Get-CimInstance Win32_Service -Filter "Name='LS101Lab'"
+if (-not $serviceConfiguration) { throw 'Registered service was not found' }
+$configured = Invoke-CimMethod -InputObject $serviceConfiguration -MethodName Change -Arguments @{
+  PathName = ('"' + $wrapper + '"')
+}
+if ($configured.ReturnValue -ne 0) { throw "Service executable configuration failed (Win32_Service.Change: $($configured.ReturnValue))" }
+$stage = 'configure-service-sid'
 & sc.exe sidtype LS101Lab unrestricted
 if ($LASTEXITCODE -ne 0) { throw 'Service SID configuration failed' }
+$stage = 'configure-service-account'
+# Virtual accounts require a null password, not an empty string. Omitting password=
+# also avoids Windows PowerShell dropping an empty native command argument.
+& sc.exe config LS101Lab obj= 'NT SERVICE\LS101Lab'
+if ($LASTEXITCODE -ne 0) { throw "Service account configuration failed (sc.exe: $LASTEXITCODE)" }
+$stage = 'write-installation-record'
 $record = Join-Path $program 'installation.json'
 $temporary = Join-Path $program ('installation-' + [Guid]::NewGuid().ToString() + '.json')
 [IO.File]::WriteAllText($temporary, (@{ release = $identifier } | ConvertTo-Json -Compress))

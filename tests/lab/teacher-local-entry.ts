@@ -16,6 +16,7 @@ startLabDesktop({
         const filename = resolve(root, 'management.json')
         const fixture = JSON.parse(await readFile(filename, 'utf8'))
         if (operation === 'status') return fixture.status
+        if (operation === 'install') throw new Error(fixture.installError)
         if (operation === 'uninstall') {
           if (fixture.rejectUninstall) throw new Error('RESOURCE_BUSY')
           fixture.status = { ...fixture.status, state: 'not-installed', autostart: false }

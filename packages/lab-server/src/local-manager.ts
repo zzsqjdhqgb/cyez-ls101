@@ -27,6 +27,26 @@ export interface ManagerPaths {
   source: string
   unit?: string
 }
+
+class LocalInstallerError extends LabError {
+  constructor(readonly installerDetail: string) {
+    super('STORAGE_UNAVAILABLE')
+  }
+}
+
+export function localManagerFailure(error: unknown): {
+  ok: false
+  error: string
+  detail?: string
+} {
+  const code = (error as { code?: unknown } | null)?.code
+  return {
+    ok: false,
+    error: typeof code === 'string' && /^[A-Z_]+$/.test(code) ? code : 'LOCAL_OPERATION_FAILED',
+    ...(error instanceof LocalInstallerError ? { detail: error.installerDetail } : {})
+  }
+}
+
 export function installedPaths(): ManagerPaths {
   if (process.platform === 'win32') {
     const program = join(process.env.ProgramFiles || 'C:\\Program Files', 'LS101LabService')
@@ -53,16 +73,35 @@ export function installedPaths(): ManagerPaths {
 async function command(
   executable: string,
   args: string[],
-  allowedExitCodes: number[] = []
+  options: { allowedExitCodes?: number[]; installer?: boolean } = {}
 ): Promise<string> {
   return new Promise((done, fail) => {
     execFile(
       executable,
       args,
-      { windowsHide: true, timeout: 120000, maxBuffer: 256 * 1024, encoding: 'utf8' },
-      (error, stdout) => {
-        if (error && !allowedExitCodes.includes(Number(error.code))) {
-          fail(new LabError('STORAGE_UNAVAILABLE'))
+      {
+        windowsHide: true,
+        timeout: options.installer ? 35 * 60000 : 120000,
+        maxBuffer: 256 * 1024,
+        encoding: 'utf8'
+      },
+      (error, stdout, stderr) => {
+        if (error && !options.allowedExitCodes?.includes(Number(error.code))) {
+          // Only the fixed installer commands expose output. They accept no secrets;
+          // other operations may handle credentials and retain code-only errors.
+          fail(
+            options.installer
+              ? new LocalInstallerError(
+                  [
+                    `安装程序退出状态：${error.killed ? '超时或被终止' : (error.code ?? '未知')}`,
+                    stderr?.trim().slice(-4096),
+                    stdout?.trim().slice(-2048)
+                  ]
+                    .filter(Boolean)
+                    .join('\n')
+                )
+              : new LabError('STORAGE_UNAVAILABLE')
+          )
           return
         }
         done(stdout.trim())
@@ -86,7 +125,7 @@ async function serviceRegistration(): Promise<{
         '--property=ActiveState',
         '--property=UnitFileState'
       ],
-      [1]
+      { allowedExitCodes: [1] }
     )
     const fields = Object.fromEntries(output.split('\n').map((line) => line.split('=')))
     requireCondition(Boolean(fields.LoadState && fields.ActiveState), 'STORAGE_UNAVAILABLE')
@@ -344,16 +383,24 @@ export async function manageLocalService(
   if (operation === 'install') {
     requireCondition(input === undefined, 'INVALID_REQUEST')
     if (process.platform === 'linux') {
-      await command(join(source, 'runtime/node'), [join(source, 'install-linux.mjs'), '--install'])
+      await command(
+        join(source, 'runtime/node'),
+        [join(source, 'install-linux.mjs'), '--install'],
+        { installer: true }
+      )
     } else {
-      await command('powershell.exe', [
-        '-NoProfile',
-        '-NonInteractive',
-        '-ExecutionPolicy',
-        'Bypass',
-        '-File',
-        join(source, 'install-windows.ps1')
-      ])
+      await command(
+        'powershell.exe',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-File',
+          join(source, 'install-windows.ps1')
+        ],
+        { installer: true }
+      )
     }
     return null
   }

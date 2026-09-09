@@ -5,6 +5,36 @@ import { requestLocalControl } from '@ls101/lab-server/control'
 import { localServiceHost } from '../local-service'
 
 describe.skipIf(process.platform !== 'linux')('elevated helper exchange', () => {
+  it.each(['install', 'upgrade'])(
+    'preserves installer diagnostics for %s through the authenticated helper channel',
+    async (operation) => {
+      const manager = localServiceHost('/fixed/runtime', async (_file, args) => {
+        const channel = args.at(-1)!
+        expect(await requestLocalControl(channel, 'request')).toEqual({ operation })
+        await requestLocalControl(channel, 'complete', {
+          ok: false,
+          error: 'STORAGE_UNAVAILABLE',
+          detail: 'LS101_INSTALL_ERROR [configure-service-account]: Access denied'
+        })
+      })
+      await expect(manager.invoke(operation, undefined)).rejects.toThrow(
+        'STORAGE_UNAVAILABLE\nLS101_INSTALL_ERROR [configure-service-account]: Access denied'
+      )
+    }
+  )
+
+  it('does not expose helper details for operations that accept credentials', async () => {
+    const manager = localServiceHost('/fixed/runtime', async (_file, args) => {
+      const channel = args.at(-1)!
+      await requestLocalControl(channel, 'request')
+      await requestLocalControl(channel, 'complete', {
+        ok: false,
+        error: 'LICENSE_INACTIVE',
+        detail: 'private activation code'
+      })
+    })
+    await expect(manager.invoke('initialize', {})).rejects.toThrow(/^LICENSE_INACTIVE$/)
+  })
   it('routes uninstall through the authenticated administrator helper', async () => {
     const manager = localServiceHost('/fixed/runtime', async (_file, args) => {
       const channel = args.at(-1)!

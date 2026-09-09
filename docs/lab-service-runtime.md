@@ -139,6 +139,8 @@ Get-Service LS101Lab
 
 首次初始化通过教师端本机服务完成。SCM 停止通过随包 Node 发出正常 shutdown，等待持久操作结束。安装不会自动开放防火墙；在目标机按机房网段配置所选 HTTPS 端口。
 
+开发模式也安装真实系统服务；`installation.json` 仍位于 `%ProgramFiles%\LS101LabService`，并在安装全部成功后写入。WinSW 日志中的“installed successfully”只表示服务注册成功，不代表后续账户、权限和安装记录都完成。完整安装应输出 `Service installed and stopped. Autostart is unchanged.`。安装失败时教师端保留安装器退出状态、标准错误及输出摘要；Windows 错误带 `LS101_INSTALL_ERROR [步骤]`，可据此定位失败阶段。带空格的程序路径通过 CIM 配置；虚拟服务账户通过 `sc.exe config` 配置并省略密码参数，避免把空字符串密码传给 CIM 或被 Windows PowerShell 丢弃。
+
 ## 保留与恢复操作
 
 教师端“未确认操作”保留结果未知的写入及原幂等键，按服务隔离。重新输入敏感字段或选择摘要相同的原归档后重试；仅成功重放会结束原未知记录。密码不写入操作日志。

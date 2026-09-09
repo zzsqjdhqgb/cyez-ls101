@@ -22,6 +22,8 @@ test('service uninstall requires a stopped service and confirmation, handles fai
       error: null
     },
     rejectUninstall: true,
+    installError:
+      'STORAGE_UNAVAILABLE\nLS101_INSTALL_ERROR [configure-service-account]: Access denied',
     uninstalled: false
   }
   const filename = join(root, 'management.json')
@@ -73,6 +75,14 @@ test('service uninstall requires a stopped service and confirmation, handles fai
     await expect(uninstall).toBeDisabled()
     await expect(page.getByRole('button', { name: '安装程序', exact: true })).toBeEnabled()
     expect(JSON.parse(await readFile(filename, 'utf8')).uninstalled).toBe(true)
+    await page.getByRole('button', { name: '安装程序', exact: true }).click()
+    await page
+      .getByRole('alertdialog', { name: '安装本机服务程序' })
+      .getByRole('button', { name: '确认', exact: true })
+      .click()
+    await expect(page.getByRole('alert')).toContainText(
+      'LS101_INSTALL_ERROR [configure-service-account]: Access denied'
+    )
   } finally {
     await app?.close()
     await rm(root, { recursive: true, force: true })

@@ -1,6 +1,6 @@
 import { isAbsolute } from 'node:path'
 import { requestLocalControl } from './control'
-import { manageLocalService } from './local-manager'
+import { localManagerFailure, manageLocalService } from './local-manager'
 
 async function main(): Promise<void> {
   const [flag, channel, ...extra] = process.argv.slice(2)
@@ -18,18 +18,11 @@ async function main(): Promise<void> {
   try {
     result = { ok: true, value: await manageLocalService(request.operation, request.input) }
   } catch (error) {
-    const code = (error as { code?: string }).code
-    result = {
-      ok: false,
-      error: typeof code === 'string' && /^[A-Z_]+$/.test(code) ? code : 'LOCAL_OPERATION_FAILED'
-    }
+    result = localManagerFailure(error)
   }
   await requestLocalControl(channel, 'complete', result)
 }
 void main().catch((error: unknown) => {
-  const code = (error as { code?: string }).code
-  process.stderr.write(
-    `${JSON.stringify({ error: typeof code === 'string' && /^[A-Z_]+$/.test(code) ? code : 'LOCAL_OPERATION_FAILED' })}\n`
-  )
+  process.stderr.write(`${JSON.stringify(localManagerFailure(error))}\n`)
   process.exitCode = 1
 })
