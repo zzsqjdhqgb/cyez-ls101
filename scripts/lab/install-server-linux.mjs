@@ -81,14 +81,23 @@ if (mode === '--verify') {
     timeout: 35 * 60000,
     stdio: ['ignore', 'pipe', 'pipe']
   })
+  // Re-registering the exact retained runtime after uninstall is not an upgrade.
+  const sameRuntime = await readFile('/opt/ls101-lab/current/runtime-manifest.json').then(
+    (installed) => installed.equals(bytes),
+    (error) => {
+      if (error.code !== 'ENOENT') throw error
+      return false
+    }
+  )
   if (
-    await lstat('/var/lib/ls101-lab/data/service.sqlite').then(
+    !sameRuntime &&
+    (await lstat('/var/lib/ls101-lab/data/service.sqlite').then(
       () => true,
       (error) => {
         if (error.code !== 'ENOENT') throw error
         return false
       }
-    )
+    ))
   ) {
     const ready = JSON.parse(await readFile('/var/lib/ls101-lab/data/upgrade-ready.json', 'utf8'))
     if (

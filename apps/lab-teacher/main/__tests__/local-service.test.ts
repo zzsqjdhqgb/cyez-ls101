@@ -5,6 +5,14 @@ import { requestLocalControl } from '@ls101/lab-server/control'
 import { localServiceHost } from '../local-service'
 
 describe.skipIf(process.platform !== 'linux')('elevated helper exchange', () => {
+  it('routes uninstall through the authenticated administrator helper', async () => {
+    const manager = localServiceHost('/fixed/runtime', async (_file, args) => {
+      const channel = args.at(-1)!
+      expect(await requestLocalControl(channel, 'request')).toEqual({ operation: 'uninstall' })
+      await requestLocalControl(channel, 'complete', { ok: true, value: null })
+    })
+    await expect(manager.invoke('uninstall', undefined)).resolves.toBeNull()
+  })
   it('transfers secrets through the private authenticated channel and removes it after completion', async () => {
     let channel = ''
     const manager = localServiceHost('/fixed/runtime', async (_file, args) => {

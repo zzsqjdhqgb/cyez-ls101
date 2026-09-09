@@ -84,12 +84,16 @@ test('student enrollment, maintenance, practice and durable receipt run through 
       const host = (
         window as unknown as { lab: { invoke(name: string, input?: unknown): Promise<unknown> } }
       ).lab
-      return host.invoke('connections.open', {}).then(
-        () => false,
-        () => true
+      return Promise.all(
+        ['connections.open', 'localService.uninstall'].map((capability) =>
+          host.invoke(capability).then(
+            () => false,
+            () => true
+          )
+        )
       )
     })
-    expect(denied).toBe(true)
+    expect(denied).toEqual([true, true])
     await page.evaluate(async () => {
       const host = (
         window as unknown as { lab: { invoke(name: string, input?: unknown): Promise<unknown> } }

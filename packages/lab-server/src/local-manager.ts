@@ -1,20 +1,31 @@
 import { execFile } from 'node:child_process'
 import { readFileSync } from 'node:fs'
-import { open, stat, readFile } from 'node:fs/promises'
+import { open, stat, readFile, unlink } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { requestLocalControl } from './control'
 import { restoreOffline, recoverOfflineRestore } from './restore'
 import { LabError, requireCondition } from './errors'
 import { validateRuntimeConfig } from './runtime-config'
 import { lockDirectory } from './directory-lock'
-import { durableWrite } from './durable-files'
+import { durableWrite, syncDirectory } from './durable-files'
 
 declare const __LAB_VERSION__: string
+
+const notInstalledStatus = {
+  state: 'not-installed',
+  autostart: false,
+  releaseVersion: null,
+  license: null,
+  info: null,
+  port: null,
+  error: null
+} as const
 
 export interface ManagerPaths {
   root: string
   runtime: string
   source: string
+  unit?: string
 }
 export function installedPaths(): ManagerPaths {
   if (process.platform === 'win32') {
@@ -39,14 +50,18 @@ export function installedPaths(): ManagerPaths {
   return { root: '/var/lib/ls101-lab/data', runtime: '/opt/ls101-lab/current', source: __dirname }
 }
 
-async function command(executable: string, args: string[]): Promise<string> {
+async function command(
+  executable: string,
+  args: string[],
+  allowedExitCodes: number[] = []
+): Promise<string> {
   return new Promise((done, fail) => {
     execFile(
       executable,
       args,
       { windowsHide: true, timeout: 120000, maxBuffer: 256 * 1024, encoding: 'utf8' },
       (error, stdout) => {
-        if (error) {
+        if (error && !allowedExitCodes.includes(Number(error.code))) {
           fail(new LabError('STORAGE_UNAVAILABLE'))
           return
         }
@@ -56,12 +71,79 @@ async function command(executable: string, args: string[]): Promise<string> {
   })
 }
 
+async function serviceRegistration(): Promise<{
+  installed: boolean
+  stopped: boolean
+  autostart: boolean
+}> {
+  if (process.platform === 'linux') {
+    const output = await command(
+      'systemctl',
+      [
+        'show',
+        'ls101-lab.service',
+        '--property=LoadState',
+        '--property=ActiveState',
+        '--property=UnitFileState'
+      ],
+      [1]
+    )
+    const fields = Object.fromEntries(output.split('\n').map((line) => line.split('=')))
+    requireCondition(Boolean(fields.LoadState && fields.ActiveState), 'STORAGE_UNAVAILABLE')
+    return {
+      installed: fields.LoadState !== 'not-found',
+      stopped: ['inactive', 'failed'].includes(fields.ActiveState),
+      autostart: fields.UnitFileState === 'enabled'
+    }
+  }
+  const output = await command('powershell.exe', [
+    '-NoProfile',
+    '-NonInteractive',
+    '-Command',
+    '$ErrorActionPreference = "Stop"; Get-CimInstance Win32_Service -Filter "Name=\'LS101Lab\'" | Select-Object State, StartMode | ConvertTo-Json -Compress'
+  ])
+  const service = output ? JSON.parse(output) : null
+  requireCondition(!service || typeof service.State === 'string', 'STORAGE_UNAVAILABLE')
+  return {
+    installed: service !== null,
+    stopped: !service || service.State === 'Stopped',
+    autostart: service?.StartMode === 'Auto'
+  }
+}
+
 export async function manageLocalService(
   operation: string,
   input: unknown,
   paths: ManagerPaths = installedPaths()
 ): Promise<unknown> {
   const { root, runtime, source } = paths
+  if (operation === 'uninstall') {
+    requireCondition(input === undefined, 'INVALID_REQUEST')
+    const registration = await serviceRegistration()
+    requireCondition(registration.stopped, 'RESOURCE_BUSY')
+    if (!registration.installed) return { ...notInstalledStatus }
+    // Holding the daemon's lifetime lock prevents it from starting during removal.
+    const lifetime = await lockDirectory(`${root}.runtime`)
+    try {
+      requireCondition((await serviceRegistration()).stopped, 'RESOURCE_BUSY')
+      if (process.platform === 'linux') {
+        await command('systemctl', ['disable', 'ls101-lab.service'])
+        const unit = paths.unit ?? '/etc/systemd/system/ls101-lab.service'
+        await unlink(unit).catch((error: NodeJS.ErrnoException) => {
+          if (error.code !== 'ENOENT') throw error
+        })
+        await syncDirectory(dirname(unit))
+        await command('systemctl', ['daemon-reload'])
+      } else {
+        await command('sc.exe', ['config', 'LS101Lab', 'start=', 'disabled'])
+        await command('sc.exe', ['delete', 'LS101Lab'])
+      }
+      requireCondition(!(await serviceRegistration()).installed, 'RESOURCE_BUSY')
+      return { ...notInstalledStatus }
+    } finally {
+      lifetime.close()
+    }
+  }
   if (operation === 'configure') {
     requireCondition(
       input &&
@@ -116,33 +198,9 @@ export async function manageLocalService(
         throw error
       }
     )
-    if (!installed)
-      return {
-        state: 'not-installed',
-        autostart: false,
-        releaseVersion: null,
-        license: null,
-        info: null,
-        port: null,
-        error: null
-      }
-    let autostart = false
-    if (process.platform === 'linux') {
-      autostart = await command('systemctl', ['is-enabled', 'ls101-lab.service']).then(
-        (value) => value === 'enabled',
-        () => false
-      )
-    } else {
-      autostart = await command('powershell.exe', [
-        '-NoProfile',
-        '-NonInteractive',
-        '-Command',
-        '(Get-CimInstance Win32_Service -Filter "Name=\'LS101Lab\'").StartMode'
-      ]).then(
-        (value) => value === 'Auto',
-        () => false
-      )
-    }
+    const registration = installed ? await serviceRegistration() : null
+    if (!installed || !registration?.installed) return { ...notInstalledStatus }
+    const { autostart } = registration
     try {
       return {
         ...(await requestLocalControl<Record<string, unknown>>(root, 'status')),

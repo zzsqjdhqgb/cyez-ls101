@@ -1,10 +1,11 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFile } from 'node:child_process'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { manageLocalService } from '../local-manager'
 import { requestLocalControl } from '../control'
+import { lockDirectory } from '../directory-lock'
 
 vi.mock('../control', () => ({ requestLocalControl: vi.fn() }))
 vi.mock('node:child_process', () => ({ execFile: vi.fn() }))
@@ -97,6 +98,7 @@ describe('fixed local manager capabilities', () => {
       for (const [operation, input] of [
         ['execute', { command: 'anything' }],
         ['start', {}],
+        ['uninstall', { deleteData: true }],
         ['autostart', 'yes'],
         ['configure', { port: 8443, directory: '/arbitrary' }],
         ['initialize', { port: -1 }]
@@ -108,5 +110,141 @@ describe('fixed local manager capabilities', () => {
     } finally {
       await rm(root, { recursive: true, force: true })
     }
+  })
+})
+
+describe.each(['linux', 'win32'])('service removal on %s', (platform) => {
+  async function fixture(): Promise<{
+    paths: { root: string; runtime: string; source: string; unit: string }
+    state: { installed: boolean; stopped: boolean; fail: string | null; pending: boolean }
+    commands: string[]
+  }> {
+    const parent = await mkdtemp(join(tmpdir(), 'ls101-uninstall-'))
+    const paths = {
+      root: join(parent, 'data'),
+      runtime: join(parent, 'runtime'),
+      source: join(parent, 'bundle'),
+      unit: join(parent, 'ls101-lab.service')
+    }
+    await mkdir(paths.root)
+    await mkdir(paths.runtime)
+    await writeFile(join(paths.root, 'service.sqlite'), 'preserved answers')
+    await writeFile(
+      join(paths.runtime, 'runtime-manifest.json'),
+      JSON.stringify({ releaseVersion: 'test-release' })
+    )
+    await writeFile(paths.unit, 'service registration')
+    const state = { installed: true, stopped: true, fail: null as string | null, pending: false }
+    const commands: string[] = []
+    vi.stubGlobal('process', { ...process, platform })
+    vi.mocked(requestLocalControl).mockRejectedValue(Object.assign(new Error(), { code: 'ENOENT' }))
+    vi.mocked(execFile).mockImplementation((file, args, _options, callback: any) => {
+      const argv = args as string[]
+      const operation = `${file} ${argv.join(' ')}`
+      commands.push(operation)
+      if (state.fail && operation.includes(state.fail)) {
+        callback(Object.assign(new Error('OS failure'), { code: 1 }), '', '')
+        return {} as any
+      }
+      let output = ''
+      if (file === 'systemctl' && argv[0] === 'show')
+        output = `LoadState=${state.installed ? 'loaded' : 'not-found'}\nActiveState=${state.stopped ? 'inactive' : 'active'}\nUnitFileState=disabled`
+      if (file === 'powershell.exe' && state.installed)
+        output = JSON.stringify({
+          State: state.stopped ? 'Stopped' : 'Running',
+          StartMode: 'Manual'
+        })
+      if (
+        !state.pending &&
+        ((file === 'systemctl' && argv[0] === 'daemon-reload') ||
+          (file === 'sc.exe' && argv[0] === 'delete'))
+      )
+        state.installed = false
+      callback(null, output, '')
+      return {} as any
+    })
+    onTestFinished(async () => rm(parent, { recursive: true, force: true }))
+    return { paths, state, commands }
+  }
+
+  it('removes registration, retains data and runtime, and reports not installed', async () => {
+    const { paths, commands } = await fixture()
+    await expect(manageLocalService('uninstall', undefined, paths)).resolves.toMatchObject({
+      state: 'not-installed'
+    })
+    expect(await readFile(join(paths.root, 'service.sqlite'), 'utf8')).toBe('preserved answers')
+    expect(await stat(join(paths.runtime, 'runtime-manifest.json'))).toBeDefined()
+    expect(await manageLocalService('status', undefined, paths)).toMatchObject({
+      state: 'not-installed',
+      autostart: false
+    })
+    if (platform === 'linux') {
+      await expect(stat(paths.unit)).rejects.toMatchObject({ code: 'ENOENT' })
+      expect(commands).toContain('systemctl disable ls101-lab.service')
+      expect(commands).toContain('systemctl daemon-reload')
+    } else {
+      expect(commands).toContain('sc.exe config LS101Lab start= disabled')
+      expect(commands).toContain('sc.exe delete LS101Lab')
+    }
+    const count = commands.length
+    await expect(manageLocalService('uninstall', undefined, paths)).resolves.toMatchObject({
+      state: 'not-installed'
+    })
+    expect(commands.length).toBe(count + 1)
+  })
+
+  it('rejects running services without changing their registration', async () => {
+    const { paths, state, commands } = await fixture()
+    state.stopped = false
+    await expect(manageLocalService('uninstall', undefined, paths)).rejects.toMatchObject({
+      code: 'RESOURCE_BUSY'
+    })
+    expect(commands).toHaveLength(1)
+    expect(state.installed).toBe(true)
+  })
+
+  it('refuses removal while the daemon lifetime lock is held', async () => {
+    const { paths, commands } = await fixture()
+    const lifetime = await lockDirectory(`${paths.root}.runtime`)
+    try {
+      await expect(manageLocalService('uninstall', undefined, paths)).rejects.toMatchObject({
+        code: 'RESOURCE_BUSY'
+      })
+      expect(commands).toHaveLength(1)
+    } finally {
+      lifetime.close()
+    }
+  })
+
+  it('keeps registration if disabling fails and releases the lifetime lock', async () => {
+    const { paths, state, commands } = await fixture()
+    state.fail = platform === 'linux' ? ' disable ' : ' config '
+    await expect(manageLocalService('uninstall', undefined, paths)).rejects.toMatchObject({
+      code: 'STORAGE_UNAVAILABLE'
+    })
+    expect(state.installed).toBe(true)
+    expect(commands.some((command) => /daemon-reload|sc.exe delete/.test(command))).toBe(false)
+    expect(await stat(paths.unit)).toBeDefined()
+    const lifetime = await lockDirectory(`${paths.root}.runtime`)
+    lifetime.close()
+  })
+
+  it('does not treat a service manager failure as an absent service', async () => {
+    const { paths, state } = await fixture()
+    state.fail = platform === 'linux' ? ' show ' : 'powershell.exe'
+    await expect(manageLocalService('status', undefined, paths)).rejects.toMatchObject({
+      code: 'STORAGE_UNAVAILABLE'
+    })
+    await expect(manageLocalService('uninstall', undefined, paths)).rejects.toMatchObject({
+      code: 'STORAGE_UNAVAILABLE'
+    })
+  })
+
+  it('does not report success while the OS still retains the registration', async () => {
+    const { paths, state } = await fixture()
+    state.pending = true
+    await expect(manageLocalService('uninstall', undefined, paths)).rejects.toMatchObject({
+      code: 'RESOURCE_BUSY'
+    })
   })
 })

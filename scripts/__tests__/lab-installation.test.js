@@ -9,7 +9,7 @@ const { tmpdir } = require('node:os')
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 const scripts = path.resolve(__dirname, '../lab')
 
-async function installerFixture(t, prepare, mode = '--install') {
+async function installerFixture(t, prepare, mode = '--install', retained = null) {
   const root = await fs.mkdtemp(path.join(tmpdir(), 'ls101-install-preflight-'))
   t.after(() => fs.rm(root, { recursive: true, force: true }))
   const source = path.join(root, 'bundle'),
@@ -35,6 +35,12 @@ async function installerFixture(t, prepare, mode = '--install') {
     })
   }
   await fs.writeFile(path.join(source, 'runtime-manifest.json'), JSON.stringify(manifest))
+  const retainedManifest = path.join(root, 'retained-manifest.json')
+  if (retained)
+    await fs.writeFile(
+      retainedManifest,
+      JSON.stringify(retained === 'same' ? manifest : { ...manifest, releaseVersion: 'old' })
+    )
   const script = await fs.readFile(path.join(scripts, 'install-server-linux.mjs'), 'utf8')
   // Run production verification and preparation with isolated paths and a fake OS helper.
   // Stop before service registration so the test never changes the host's installation.
@@ -42,6 +48,7 @@ async function installerFixture(t, prepare, mode = '--install') {
     script.slice(script.indexOf('const source ='), script.indexOf('  let state')) + '\n}'
   )
     .replace('import.meta.dirname', JSON.stringify(source))
+    .replace("'/opt/ls101-lab/current/runtime-manifest.json'", JSON.stringify(retainedManifest))
     .replace(/'\/var\/lib\/ls101-lab\/data([^']*)'/g, (_match, suffix) =>
       JSON.stringify(path.join(data, suffix))
     )
@@ -110,6 +117,13 @@ test('verification does not prepare or stop an installed service', async (t) => 
     '--verify'
   )
   await run()
+})
+
+test('the exact retained runtime can be reinstalled without an upgrade marker', async (t) => {
+  const same = await installerFixture(t, () => {}, '--install', 'same')
+  await same()
+  const different = await installerFixture(t, () => {}, '--install', 'different')
+  await assert.rejects(different, { code: 'ENOENT' })
 })
 
 test('desktop packaging creates missing output directories before checking their permissions', async (t) => {

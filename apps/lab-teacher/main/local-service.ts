@@ -36,6 +36,7 @@ export function localServiceHost(
           'restore',
           'recover-restore',
           'install',
+          'uninstall',
           'upgrade',
           'configure'
         ].includes(operation)

@@ -1,4 +1,5 @@
 import { resolve } from 'node:path'
+import { readFile, writeFile } from 'node:fs/promises'
 import { startLabDesktop } from '../../packages/lab-desktop-host/src/desktop'
 import { requestLocalControl } from '../../packages/lab-server/src/control'
 
@@ -11,6 +12,19 @@ startLabDesktop({
   renderer: resolve('out/lab-teacher/renderer/index.html'),
   localService: {
     async invoke(operation, input) {
+      if (process.env.LS101_TEST_SERVICE_MANAGEMENT === '1') {
+        const filename = resolve(root, 'management.json')
+        const fixture = JSON.parse(await readFile(filename, 'utf8'))
+        if (operation === 'status') return fixture.status
+        if (operation === 'uninstall') {
+          if (fixture.rejectUninstall) throw new Error('RESOURCE_BUSY')
+          fixture.status = { ...fixture.status, state: 'not-installed', autostart: false }
+          fixture.uninstalled = true
+          await writeFile(filename, JSON.stringify(fixture))
+          return fixture.status
+        }
+        throw new Error('Unsupported service management fixture operation')
+      }
       if (operation === 'status')
         return {
           ...(await requestLocalControl<Record<string, unknown>>(root, 'status')),

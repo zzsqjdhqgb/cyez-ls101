@@ -51,6 +51,7 @@ const capabilities = new Set([
   'cleanup.item',
   'localService.status',
   'localService.install',
+  'localService.uninstall',
   'localService.upgrade',
   'localService.configure',
   'localService.selectBackup',

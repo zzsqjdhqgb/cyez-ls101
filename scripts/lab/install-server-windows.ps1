@@ -27,7 +27,17 @@ $service = Get-Service -Name LS101Lab -ErrorAction SilentlyContinue
 if ($service -and $service.Status -ne 'Stopped') { throw 'Stop the service before installation or upgrade' }
 $program = Join-Path $env:ProgramFiles 'LS101LabService'
 $data = Join-Path $env:ProgramData 'LS101Lab'
-if (Test-Path -LiteralPath (Join-Path $data 'data\service.sqlite')) {
+$sameRuntime = $false
+$recordPath = Join-Path $program 'installation.json'
+if (Test-Path -LiteralPath $recordPath) {
+  $previous = Get-Content -LiteralPath $recordPath -Raw | ConvertFrom-Json
+  if ($previous.release -notmatch '^[0-9A-Za-z.+-]+$') { throw 'Invalid installed release' }
+  $previousManifest = Join-Path $program "releases\$($previous.release)\runtime-manifest.json"
+  if (Test-Path -LiteralPath $previousManifest) {
+    $sameRuntime = (Get-FileHash -LiteralPath $previousManifest -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash
+  }
+}
+if (-not $sameRuntime -and (Test-Path -LiteralPath (Join-Path $data 'data\service.sqlite'))) {
   $ready = Get-Content -LiteralPath (Join-Path $data 'data\upgrade-ready.json') -Raw | ConvertFrom-Json
   if ($ready.targetVersion -ne $manifest.releaseVersion -or [DateTime]::Parse($ready.preparedAt).ToUniversalTime() -lt [DateTime]::UtcNow.AddDays(-1)) { throw 'Prepare the upgrade with a current backup before installation' }
 }

@@ -1,5 +1,5 @@
 import { useState, type JSX } from 'react'
-import { Download, Play, Square, RefreshCw, FileText, FolderOpen } from 'lucide-react'
+import { Download, Play, Square, RefreshCw, FileText, FolderOpen, Trash2 } from 'lucide-react'
 import type { LocalServiceStatus, LocalServiceInitialization } from '@ls101/lab-desktop-host'
 import type { TeacherController } from './controller'
 import { Dialog, Notice } from './ui'
@@ -44,8 +44,11 @@ export function LocalService({
     if (next.port) setPort(next.port)
   }
   const invoke = async (operation: string, input?: unknown): Promise<void> => {
-    await controller.host.invoke(`localService.${operation}`, input)
-    setStatus(null)
+    const result = await controller.host.invoke<LocalServiceStatus>(
+      `localService.${operation}`,
+      input
+    )
+    setStatus(operation === 'uninstall' ? result : null)
   }
   return (
     <Dialog
@@ -82,6 +85,13 @@ export function LocalService({
         >
           <Download />
           安装程序
+        </button>
+        <button
+          disabled={action.busy || status?.state !== 'stopped'}
+          onClick={() => setConfirmation({ operation: 'uninstall', title: '卸载本机服务' })}
+        >
+          <Trash2 />
+          卸载服务
         </button>
         <button
           disabled={action.busy || status?.state !== 'stopped'}
@@ -291,6 +301,11 @@ export function LocalService({
           )}
           {confirmation.operation === 'restore' && (
             <p>当前数据目录将保留，活动数据将回到备份时间点。</p>
+          )}
+          {confirmation.operation === 'uninstall' && (
+            <p>
+              将移除本机的系统服务注册和开机启动设置，保留试卷、作答、备份和服务程序。卸载后学生端无法连接本机服务；可重新安装并启动以恢复使用。
+            </p>
           )}
           <div className="actions">
             <button
