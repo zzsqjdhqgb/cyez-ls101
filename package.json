@@ -17,6 +17,8 @@
     "lab:test:server": "yarn lab:build:server && node --test tests/lab/server-runtime.mjs",
     "lab:build:student": "electron-vite build --config electron.vite.lab-student.config.ts",
     "lab:build:teacher": "electron-vite build --config electron.vite.lab-teacher.config.ts",
+    "lab:dev:student": "ELECTRON_ENTRY=out/lab-student/main/index.js electron-vite dev --config electron.vite.lab-student.config.ts",
+    "lab:dev:teacher": "yarn lab:build:server && ELECTRON_ENTRY=out/lab-teacher/main/index.js electron-vite dev --config electron.vite.lab-teacher.config.ts",
     "lab:package:student": "node scripts/lab/package-desktop.mjs student",
     "lab:package:teacher": "node scripts/lab/package-desktop.mjs teacher",
     "lab:test:integration": "yarn lab:build:student && yarn lab:build:teacher && node scripts/lab/build-test-host.mjs && playwright test --config=playwright.lab.config.ts",
