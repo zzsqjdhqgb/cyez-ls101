@@ -14,7 +14,7 @@ import { Security, type Principal } from './security'
 import { ServerIdentity, hash, equalSecret } from './identity'
 import { LabError, requireCondition } from './errors'
 import type { FaultPoint } from './durable-files'
-import { registerDeviceHandlers } from './devices'
+import { DEVICE_OFFLINE_AFTER_MS, registerDeviceHandlers } from './devices'
 import { ArchiveStore, registerArchiveHandlers } from './archives'
 import { TaskStore, registerTaskHandlers } from './tasks'
 import { BackupStore, registerBackupHandlers } from './backups'
@@ -292,7 +292,7 @@ export class LabService {
       availability,
       allowedOperations,
       heartbeatIntervalSeconds: 5,
-      offlineAfterSeconds: 20,
+      offlineAfterSeconds: DEVICE_OFFLINE_AFTER_MS / 1000,
       limits: data.limits
     }
   }

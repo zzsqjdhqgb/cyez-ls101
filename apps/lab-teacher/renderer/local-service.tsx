@@ -284,6 +284,11 @@ export function LocalService({
       {confirmation && (
         <section className="settings-band" role="alertdialog" aria-label={confirmation.title}>
           <h3>{confirmation.title}</h3>
+          {['stop', 'upgrade'].includes(confirmation.operation) && (
+            <p>
+              请先在设备列表核对离线设备的最后上报状态。离线不表示作答已保存；在线设备仍有活动时无法继续。
+            </p>
+          )}
           {confirmation.operation === 'restore' && (
             <p>当前数据目录将保留，活动数据将回到备份时间点。</p>
           )}

@@ -4,10 +4,10 @@ import { tmpdir } from 'node:os'
 import { request } from 'node:https'
 import { randomBytes, randomUUID } from 'node:crypto'
 import type { Server } from 'node:https'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LabService } from '../service'
 import { createLabHttpServer } from '../http'
-import { operationDefinitions } from '@ls101/lab-contracts'
+import { operationDefinitions, validateResponse } from '@ls101/lab-contracts'
 
 const cleanup: Array<() => Promise<void>> = []
 afterEach(async () => {
@@ -55,7 +55,7 @@ async function send(
   extra: Record<string, string> = {}
 ) {
   const address = server.address() as { port: number }
-  return new Promise<{ status: number; body: any }>((resolve, reject) => {
+  return new Promise<{ status: number; body: any; retryAfter?: string }>((resolve, reject) => {
     const call = request(
       {
         host: '127.0.0.1',
@@ -82,7 +82,11 @@ async function send(
           } catch {
             /* Enrollment files are JWS. */
           }
-          resolve({ status: response.statusCode!, body: parsed })
+          resolve({
+            status: response.statusCode!,
+            body: parsed,
+            retryAfter: response.headers['retry-after']
+          })
         })
       }
     )
@@ -92,6 +96,34 @@ async function send(
 }
 
 describe('HTTPS service contracts', () => {
+  it('returns a valid retryable error at capacity and accepts requests again after draining', async () => {
+    const { api, service } = await fixture()
+    let release!: () => void,
+      entered = 0
+    const held = new Promise<void>((done) => {
+      release = done
+    })
+    const original = service.handlers.getInfo!
+    service.handlers.getInfo = async (context) => {
+      entered++
+      await held
+      return original(context)
+    }
+    const requests = Array.from({ length: 64 }, () => api('GET', '/info'))
+    try {
+      await vi.waitFor(() => expect(entered).toBe(64), { timeout: 5000 })
+      const response = await api('GET', '/info')
+      expect(response.status).toBe(503)
+      expect(response.retryAfter).toBe('1')
+      expect(() => validateResponse('getInfo', response.status, response.body)).not.toThrow()
+      expect(response.body.error.code).toBe('SERVICE_NOT_READY')
+    } finally {
+      release()
+      await Promise.all(requests)
+    }
+    expect((await api('GET', '/info')).status).toBe(200)
+  })
+
   it('rejects unrepresentable backup passwords before creating a job', async () => {
     const { api, service } = await fixture()
     const token = (await api('POST', '/teacher/sessions', { password: 'teacher-secret' })).body

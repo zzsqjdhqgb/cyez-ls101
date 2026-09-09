@@ -10,6 +10,7 @@ import { durableWrite, verifiedFile, syncDirectory } from './durable-files'
 import { createLabHttpServer, closeLabHttpServer } from './http'
 import { listenLocalControl } from './control'
 import { validateRuntimeConfig, type RuntimeConfig } from './runtime-config'
+import { DEVICE_OFFLINE_AFTER_MS } from './devices'
 
 export interface RuntimeStatus {
   state: 'running' | 'unavailable' | 'uninitialized'
@@ -160,7 +161,8 @@ export async function startServiceRuntime(
           try {
             requireCondition(service.blockers().length === 0, 'RESOURCE_BUSY')
             const observations = service.db.all<{ data: string }>(
-              'SELECT h.data FROM heartbeats h JOIN device_credentials c ON c.id=h.credential_id WHERE c.revoked_at IS NULL'
+              'SELECT h.data FROM heartbeats h JOIN device_credentials c ON c.id=h.credential_id WHERE c.revoked_at IS NULL AND h.accepted_at>?',
+              service.now() - DEVICE_OFFLINE_AFTER_MS
             )
             requireCondition(
               !observations.some((row) =>

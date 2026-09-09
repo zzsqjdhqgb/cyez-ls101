@@ -37,9 +37,11 @@ export function createLabHttpServer(service: LabService): Server {
         })
         response.end(
           JSON.stringify({
-            code: 'SERVICE_NOT_READY',
-            message: 'Request capacity reached',
-            requestId: randomUUID()
+            error: {
+              code: 'SERVICE_NOT_READY',
+              message: 'Request capacity reached',
+              requestId: randomUUID()
+            }
           })
         )
         return

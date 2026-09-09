@@ -1,10 +1,11 @@
 import { build, Platform, Arch } from 'electron-builder'
 import { build as buildDesktop } from 'electron-vite'
 import { execFileSync } from 'node:child_process'
-import { access, readFile, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { constants } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { createRequire } from 'node:module'
+import { createHash } from 'node:crypto'
 
 const require = createRequire(import.meta.url)
 const [role, mode, ...extra] = process.argv.slice(2)
@@ -13,7 +14,9 @@ if (!['student', 'teacher'].includes(role) || (mode && mode !== '--dir') || extr
 if (!['linux', 'win32'].includes(process.platform)) throw new Error('Unsupported lab platform')
 const root = resolve(import.meta.dirname, '../..')
 await access(resolve(root, 'node_modules'), constants.W_OK)
+await mkdir(resolve(root, 'out'), { recursive: true })
 await access(resolve(root, 'out'), constants.W_OK)
+await mkdir(resolve(root, 'dist'), { recursive: true })
 await access(resolve(root, 'dist'), constants.W_OK)
 await buildDesktop({ configFile: resolve(root, `electron.vite.lab-${role}.config.ts`) })
 if (role === 'teacher')
@@ -65,7 +68,14 @@ await build({
     files: ['main/**', 'preload/**', 'renderer/**', 'package.json', '!**/node_modules/**'],
     extraResources:
       role === 'teacher'
-        ? [{ from: resolve(root, 'out/lab-server'), to: 'lab-server' }]
+        ? [
+            { from: resolve(root, 'out/lab-server'), to: 'lab-server' },
+            // electron-builder excludes a resource root's node_modules directory.
+            {
+              from: resolve(root, 'out/lab-server/node_modules/7zip-bin'),
+              to: 'lab-server/node_modules/7zip-bin'
+            }
+          ]
         : process.platform === 'linux'
           ? [
               {
@@ -113,9 +123,25 @@ await build({
       )
       if (unexpected.length)
         throw new Error(`Unexpected packaged dependencies: ${unexpected.join(', ')}`)
+      let runtimeManifest
+      if (role === 'teacher') {
+        const sourceManifest = await readFile(resolve(root, 'out/lab-server/runtime-manifest.json'))
+        const serviceRoot = resolve(appOutDir, 'resources/lab-server')
+        if (!(await readFile(resolve(serviceRoot, 'runtime-manifest.json'))).equals(sourceManifest))
+          throw new Error('Packaged service manifest differs from the build')
+        runtimeManifest = JSON.parse(sourceManifest.toString('utf8'))
+        for (const file of runtimeManifest.files) {
+          const bytes = await readFile(resolve(serviceRoot, file.path))
+          if (
+            bytes.length !== file.bytes ||
+            createHash('sha256').update(bytes).digest('hex') !== file.sha256
+          )
+            throw new Error(`Packaged service integrity mismatch: ${file.path}`)
+        }
+      }
       await writeFile(
         resolve(appOutDir, 'resources/package-audit.json'),
-        `${JSON.stringify({ role, entries }, null, 2)}\n`
+        `${JSON.stringify({ role, entries, runtimeManifest }, null, 2)}\n`
       )
     }
   }

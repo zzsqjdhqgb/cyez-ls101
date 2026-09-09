@@ -64,7 +64,7 @@ for (const file of manifest.files) {
   )
     throw new Error('Runtime digest mismatch')
 }
-for (const name of ['server.cjs', 'runtime/node', 'ls101-lab.service'])
+for (const name of ['server.cjs', 'manager.cjs', 'runtime/node', 'ls101-lab.service'])
   if (!seen.has(name)) throw new Error('Incomplete service runtime')
 await access(join(source, 'runtime/node'), constants.X_OK)
 if (
@@ -76,6 +76,11 @@ if (mode === '--verify') {
   process.stdout.write('Service runtime verified.\n')
 } else {
   if (process.getuid() !== 0) throw new Error('Install as a system administrator')
+  // The new bundle supplies its target version; the installed teacher need not know it.
+  execFileSync(join(source, 'runtime/node'), [join(source, 'manager.cjs'), '--prepare-install'], {
+    timeout: 35 * 60000,
+    stdio: ['ignore', 'pipe', 'pipe']
+  })
   if (
     await lstat('/var/lib/ls101-lab/data/service.sqlite').then(
       () => true,

@@ -3,6 +3,8 @@ import { createServer, createConnection } from 'node:net'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { request } from 'node:https'
+import { DatabaseSync } from 'node:sqlite'
+import { createHash, randomUUID } from 'node:crypto'
 import { afterEach, describe, expect, it } from 'vitest'
 import { INVITATION_CODE_HASH } from '@ls101/license'
 import { startServiceRuntime } from '../runtime'
@@ -45,6 +47,74 @@ async function fixture() {
 }
 
 describe('independent service runtime and local authentication', () => {
+  it('blocks live activity but permits stop and upgrade with stale offline observations', async () => {
+    const f = await fixture()
+    await f.activate()
+    await f.initialize()
+    const db = new DatabaseSync(join(f.root, 'service.sqlite'))
+    try {
+      const device = randomUUID(),
+        credential = randomUUID()
+      db.prepare('INSERT INTO devices VALUES (?,?,?,?)').run(device, randomUUID(), '001', '{}')
+      db.prepare('INSERT INTO device_credentials VALUES (?,?,?,NULL)').run(
+        credential,
+        device,
+        'hash'
+      )
+      db.prepare('INSERT INTO heartbeats VALUES (?,?,?,?,?,?)').run(
+        credential,
+        1,
+        randomUUID(),
+        1,
+        Date.now(),
+        '{}'
+      )
+      for (const phase of ['preparing', 'practicing', 'saving', 'testing']) {
+        db.prepare('UPDATE heartbeats SET accepted_at=?,data=?').run(
+          Date.now(),
+          JSON.stringify({ phase })
+        )
+        await expect(requestLocalControl(f.root, 'prepare-stop')).rejects.toThrow('RESOURCE_BUSY')
+        await expect(
+          requestLocalControl(f.root, 'prepare-upgrade', 'next-release')
+        ).rejects.toThrow('RESOURCE_BUSY')
+      }
+      db.prepare('UPDATE heartbeats SET accepted_at=?').run(Date.now() - 30 * 86400000)
+      await expect(requestLocalControl(f.root, 'prepare-stop')).resolves.toBeNull()
+      await requestLocalControl(f.root, 'cancel-stop')
+      // Offline observations do not bypass the separate backup requirement.
+      await expect(requestLocalControl(f.root, 'prepare-upgrade', 'next-release')).rejects.toThrow(
+        'RESOURCE_BUSY'
+      )
+      const backupId = randomUUID(),
+        bytes = Buffer.from('verified backup fixture')
+      await durableWrite(join(f.root, 'backups', `${backupId}.7z`), bytes)
+      db.prepare('INSERT INTO backups VALUES (?,?,?,?)').run(
+        backupId,
+        'ready',
+        'released',
+        JSON.stringify({
+          id: backupId,
+          snapshotAt: new Date().toISOString(),
+          archiveBytes: bytes.length,
+          archiveSha256: createHash('sha256').update(bytes).digest('hex')
+        })
+      )
+      await expect(
+        requestLocalControl(f.root, 'prepare-upgrade', 'next-release')
+      ).resolves.toBeNull()
+      expect(JSON.parse(await readFile(join(f.root, 'upgrade-ready.json'), 'utf8'))).toMatchObject({
+        targetVersion: 'next-release',
+        backupId
+      })
+      expect(db.prepare('SELECT data FROM heartbeats').get()).toEqual({
+        data: JSON.stringify({ phase: 'testing' })
+      })
+    } finally {
+      db.close()
+    }
+  })
+
   it('rejects an upgrade without a backup, releases failed admission and accepts a clean local shutdown', async () => {
     const f = await fixture()
     await f.activate()

@@ -7,6 +7,7 @@
 ```sh
 yarn lab:contracts:check
 node --test scripts/__tests__/lab-design-contract.test.js
+node --test scripts/__tests__/lab-installation.test.js
 yarn exec vitest run --config packages/lab-server/vitest.config.ts
 yarn exec vitest run --config packages/lab-desktop-host/vitest.config.ts
 yarn exec vitest run --config apps/lab-student/vitest.config.ts
@@ -30,7 +31,7 @@ yarn lab:package:teacher
 3. 执行 `systemctl status ls101-lab.service`、`systemctl show ls101-lab.service -p User -p MainPID`，确认专用账户。用普通学生账户读取 `/var/lib/ls101-lab/data/control.key` 必须失败。
 4. 退出教师端、注销、重启系统，分别验证服务继续运行或按显式自启动设置启动；关闭自启动后再次重启验证。
 5. 另一台机器按固定指纹连接，导入入网文件、录制作答、提交并导出。替换证书后应阻止凭据发送，不能自动信任新指纹。
-6. 进行备份、维护和升级，比较升级前后 serverId、回执、作答摘要、自启动设置；停在程序安装前后分别模拟中断并重试。
+6. 进行维护和备份，保持旧服务运行，直接安装新版教师 deb（不先运行新版解包目录），确认自动检查、停服和升级；缺少备份或在线设备仍在活动时安装应失败且旧服务继续运行。比较升级前后 serverId、回执、作答摘要、自启动设置；停在程序安装前后分别模拟中断并重试。离线设备的陈旧活动心跳不得无限期阻塞升级，最后上报状态应仍可核对。
 7. 离线恢复，验证原数据目录仍保留、备份索引已清理、正式回执仍存在、服务处于维护模式；中断恢复后执行 recover-restore。
 
 ## Windows x64 / NTFS
@@ -42,7 +43,7 @@ yarn lab:package:teacher
 3. 执行 `sc.exe qc LS101Lab`、`sc.exe qsidtype LS101Lab` 和 `icacls "$env:ProgramData\LS101Lab"`，确认虚拟服务账户、受保护 ACL、普通用户不能读取控制密钥或业务数据。
 4. 执行服务初始化、保存正式作答、备份和恢复。重点检查目录 fsync 是否成功；任一屏障失败都必须阻止成功结果，记录错误，不得降级忽略。
 5. 退出教师端、注销用户、重启系统，验证启停与自启动设置。确认 Windows SCM 停止等待正在完成的写入。
-6. 完成维护和新备份，使用新版本教师端执行升级，验证旧程序及数据保留、版本更新、自启动未变；重复安装已验证版本应可恢复。
+6. 完成维护和新备份，保持旧服务运行，直接执行新版教师 NSIS 安装器（不先运行新版解包目录），验证自动检查、停服、旧程序及数据保留、版本更新、自启动未变；准备检查失败不得停止旧服务，重复安装已验证版本应可恢复。
 7. 用普通学生账户检查登录自启动、`.lsjoin` 关联、再次启动传入绑定命令、安装路径含空格；卸载客户端后验证业务数据和服务保留。
 
 ## 真实音频与故障

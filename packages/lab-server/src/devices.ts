@@ -2,6 +2,8 @@ import type { RequestBody, Schema } from '@ls101/lab-contracts'
 import type { LabService } from './service'
 import { requireCondition } from './errors'
 
+export const DEVICE_OFFLINE_AFTER_MS = 20000
+
 export function deviceDetails(service: LabService, id: string): Schema<'DeviceDetails'> {
   const device = service.device(id)
   const observation = service.db.get<{ data: string; accepted_at: number }>(
@@ -10,7 +12,7 @@ export function deviceDetails(service: LabService, id: string): Schema<'DeviceDe
   )
   return {
     ...device,
-    online: !!observation && observation.accepted_at > service.now() - 20000,
+    online: !!observation && observation.accepted_at > service.now() - DEVICE_OFFLINE_AFTER_MS,
     lastHeartbeatAt: observation ? new Date(observation.accepted_at).toISOString() : null,
     heartbeat: observation ? JSON.parse(observation.data) : null,
     submissionSummaryUpdatedAt: observation

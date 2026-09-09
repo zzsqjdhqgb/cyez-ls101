@@ -21,6 +21,8 @@ if ((& (Join-Path $source 'runtime/node.exe') --version) -ne 'v24.20.0' -or $LAS
 if ($Verify) { Write-Output 'Service runtime verified.'; exit 0 }
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 if (-not ([Security.Principal.WindowsPrincipal]$identity).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Administrator required' }
+& (Join-Path $source 'runtime/node.exe') (Join-Path $source 'manager.cjs') --prepare-install
+if ($LASTEXITCODE -ne 0) { throw 'Service upgrade preparation failed. Check maintenance mode, active devices and the latest backup.' }
 $service = Get-Service -Name LS101Lab -ErrorAction SilentlyContinue
 if ($service -and $service.Status -ne 'Stopped') { throw 'Stop the service before installation or upgrade' }
 $program = Join-Path $env:ProgramFiles 'LS101LabService'

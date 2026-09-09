@@ -84,8 +84,19 @@ export async function manageLocalService(
       lifetime.close()
     }
   }
-  if (operation === 'upgrade') {
+  if (operation === 'upgrade' || operation === 'prepare-install') {
     requireCondition(input === undefined, 'INVALID_REQUEST')
+    if (operation === 'prepare-install') {
+      try {
+        await requestLocalControl(root, 'status')
+      } catch (error) {
+        // A stopped/absent daemon cannot prepare a new upgrade. The installer still
+        // requires the matching durable preparation record before replacing data's runtime.
+        if (['ENOENT', 'ECONNREFUSED'].includes((error as NodeJS.ErrnoException).code ?? ''))
+          return null
+        throw error
+      }
+    }
     await requestLocalControl(root, 'prepare-upgrade', __LAB_VERSION__)
     try {
       if (process.platform === 'linux') await command('systemctl', ['stop', 'ls101-lab.service'])
@@ -94,7 +105,7 @@ export async function manageLocalService(
       await requestLocalControl(root, 'cancel-stop').catch(() => undefined)
       throw error
     }
-    return manageLocalService('install', undefined, paths)
+    return operation === 'upgrade' ? manageLocalService('install', undefined, paths) : null
   }
   if (operation === 'status') {
     requireCondition(input === undefined, 'INVALID_REQUEST')
