@@ -20,6 +20,10 @@ yarn lab:package:student
 yarn lab:package:teacher
 ```
 
+Windows 的 WinSW 2.12.0 由 `yarn setup` 下载到 `externals/lab/windows/WinSW.NET461.exe`。已有文件会先核对固定 SHA-256，通过后不再联网；下载失败会重试，并支持 `HTTPS_PROXY`。只准备这一项依赖可运行 `node scripts/lab/download-service-assets.mjs`；`--verify` 校验本地文件，`--verify-upstream` 重新下载并核对固定摘要。Linux setup 跳过此 Windows 资产。
+
+服务构建、教师端开发启动和打包只读取并校验本地 WinSW，缺失或损坏时提示重新运行 setup，不临时下载。文件随服务复制为 `LS101Lab.exe` 并记录到运行清单，教师端安装包携带该文件；目标电脑安装和运行时无需下载 WinSW。
+
 产物分别位于 `dist/lab-student` 和 `dist/lab-teacher`。Linux 为 deb，Windows 为每机 NSIS 安装器；追加 `--dir` 只生成解包目录。学生包不携带服务端、SQLite、AI 模型或编辑器 UI，教师包额外携带独立服务。Vite 输出模块依赖审计，打包后另检查实际 ASAR 文件清单并生成 `resources/package-audit.json`；教师包还按服务运行清单逐文件核对字节数和摘要，包括归档引擎依赖，缺失或不一致时打包失败。审计允许归档校验所必需的纯 Schema 解析、结构与校验函数。
 
 学生端安装器设置系统登录自启动和 `.lsjoin` 关联。教师端安装器安装服务，但启动服务与开启服务自启动仍需管理员明确操作。卸载客户端保留服务程序版本和业务数据。

@@ -12,6 +12,7 @@ const PRODUCT_DOCS_MODE = 'product-docs'
 
 const tasks = [
   { script: 'airouter/update-model-catalog.mjs', arguments: ['--check'] },
+  { script: 'lab/download-service-assets.mjs', assetVerification: true },
   {
     script: 'qwen-tts/download-release-assets.mjs',
     assetVerification: true,

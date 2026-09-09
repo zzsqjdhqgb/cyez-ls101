@@ -10,6 +10,11 @@ test('product documentation setup keeps runtime assets and skips full models', (
       environment: {}
     },
     {
+      script: 'lab/download-service-assets.mjs',
+      arguments: [],
+      environment: {}
+    },
+    {
       script: 'qwen-tts/download-release-assets.mjs',
       arguments: [],
       environment: { LS101_QWEN_TTS_RUNTIME_ONLY: '1' }
@@ -23,6 +28,7 @@ test('default setup retains all installation tasks', () => {
     setupTasks('').map((task) => task.script),
     [
       'airouter/update-model-catalog.mjs',
+      'lab/download-service-assets.mjs',
       'qwen-tts/download-release-assets.mjs',
       'download-tts-assets.js',
       'download-stt-models.js',
@@ -44,6 +50,7 @@ test('setup forwards explicit verification to every downloaded asset task', () =
       .filter((task) => task.script.includes('download'))
       .map((task) => [task.script, task.arguments]),
     [
+      ['lab/download-service-assets.mjs', ['--verify-upstream']],
       ['qwen-tts/download-release-assets.mjs', ['--verify-upstream']],
       ['download-tts-assets.js', ['--verify-upstream']],
       ['download-stt-models.js', ['--verify-upstream']],

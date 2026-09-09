@@ -4,6 +4,7 @@ import { access, chmod, copyFile, mkdir, readFile, writeFile } from 'node:fs/pro
 import { createHash } from 'node:crypto'
 import { dirname, resolve } from 'node:path'
 import { createRequire } from 'node:module'
+import { readServiceWrapper } from './download-service-assets.mjs'
 
 const require = createRequire(import.meta.url)
 const expectedNode = '24.20.0'
@@ -15,6 +16,11 @@ const output = resolve(root, 'out/lab-server')
 await access(resolve(root, 'node_modules'), constants.W_OK)
 await mkdir(output, { recursive: true })
 await access(output, constants.W_OK)
+let wrapper
+if (process.platform === 'win32') {
+  if (process.arch !== 'x64') throw new Error('Windows service currently requires x64')
+  wrapper = await readServiceWrapper(root)
+}
 const metadata = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'))
 await build({
   configFile: false,
@@ -56,21 +62,7 @@ await access(engine, constants.X_OK)
 if (process.platform !== 'win32' && engine.endsWith('.exe'))
   throw new Error('Required native archive tool is Windows-only')
 const runtimeName = process.platform === 'win32' ? 'node.exe' : 'node'
-let wrapper
-if (process.platform === 'win32') {
-  if (process.arch !== 'x64') throw new Error('Windows service currently requires x64')
-  const response = await fetch(
-    'https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW.NET461.exe'
-  )
-  if (!response.ok) throw new Error('Unable to fetch pinned service wrapper')
-  wrapper = Buffer.from(await response.arrayBuffer())
-  if (
-    createHash('sha256').update(wrapper).digest('hex') !==
-    'b5066b7bbdfba1293e5d15cda3caaea88fbeab35bd5b38c41c913d492aadfc4f'
-  )
-    throw new Error('Service wrapper digest mismatch')
-  await writeFile(resolve(output, 'LS101Lab.exe'), wrapper)
-}
+if (wrapper) await writeFile(resolve(output, 'LS101Lab.exe'), wrapper)
 const engineRelative = `${process.platform === 'win32' ? 'win' : 'linux'}/${process.arch}/${process.platform === 'win32' ? '7za.exe' : '7za'}`
 const files = [
   [process.execPath, `runtime/${runtimeName}`],
