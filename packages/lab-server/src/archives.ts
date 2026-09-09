@@ -374,7 +374,9 @@ export function registerArchiveHandlers(service: LabService, store: ArchiveStore
   handlers.getTeacherExams = (context) => {
     const { published, q } = context.query
     const exams = db
-      .all<{ data: string }>('SELECT data FROM exams WHERE deleted_at IS NULL ORDER BY rowid DESC')
+      .all<{ data: string }>(
+        "SELECT data FROM exams WHERE deleted_at IS NULL ORDER BY json_extract(data,'$.importedAt') DESC,id DESC"
+      )
       .map((row) => JSON.parse(row.data) as Schema<'Exam'>)
       .filter(
         (exam) =>

@@ -1421,7 +1421,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@ls101/lab-server@workspace:packages/lab-server":
+"@ls101/lab-server@workspace:*, @ls101/lab-server@workspace:packages/lab-server":
   version: 0.0.0-use.local
   resolution: "@ls101/lab-server@workspace:packages/lab-server"
   dependencies:
@@ -1460,6 +1460,7 @@ __metadata:
     "@ls101/lab-client": "workspace:*"
     "@ls101/lab-contracts": "workspace:*"
     "@ls101/lab-desktop-host": "workspace:*"
+    "@ls101/lab-server": "workspace:*"
     lucide-react: "npm:^1.33.0"
     react: "npm:^19.2.8"
     react-dom: "npm:^19.2.8"

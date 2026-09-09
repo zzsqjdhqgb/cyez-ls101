@@ -17,7 +17,7 @@ interface BindingData {
   current: BindingRecord | null
   previous: BindingRecord[]
   installationId: string
-  pendingSecret: string | null
+  pending: { target: TrustedTarget; secret: string } | null
 }
 export class BindingStore {
   private readonly writes = new SerialWrites()
@@ -39,7 +39,7 @@ export class BindingStore {
         current: null,
         previous: [],
         installationId: randomUUID(),
-        pendingSecret: null
+        pending: null
       }
     )
   }
@@ -52,13 +52,13 @@ export class BindingStore {
 
   async connect(
     contextId?: string
-  ): Promise<{ connectionId: string; epoch: number; info: Schema<'Info'> }> {
+  ): Promise<{ connectionId: string; epoch: number; info: Schema<'Info'>; contextId: string }> {
     const data = await this.data()
     const record = contextId
       ? [data.current, ...data.previous].find((entry) => entry?.summary.contextId === contextId)
       : data.current
     if (!record) throw new Error('Device is not bound')
-    return this.transport.open(
+    const connection = await this.transport.open(
       {
         baseUrl: record.summary.baseUrl,
         fingerprint: record.summary.fingerprint,
@@ -67,6 +67,7 @@ export class BindingStore {
       'student',
       `d.${record.summary.deviceId}.${this.codec.decrypt(record.secret)}`
     )
+    return { ...connection, contextId: record.summary.contextId }
   }
 
   async enroll(file: string, administratorFingerprint?: string): Promise<BindingSummary> {
@@ -116,10 +117,14 @@ export class BindingStore {
         socket.destroy()
       }
       const same = data.current?.summary.serverId === payload.serverId
-      let secret = data.pendingSecret
-        ? this.codec.decrypt(data.pendingSecret)
+      const pending =
+        data.pending && JSON.stringify(data.pending.target) === JSON.stringify(target)
+          ? data.pending
+          : null
+      let secret = pending
+        ? this.codec.decrypt(pending.secret)
         : randomBytes(32).toString('base64url')
-      if (same && !data.pendingSecret) {
+      if (same && !pending) {
         const currentSecret = this.codec.decrypt(data.current!.secret)
         const probe = await this.transport.open(
           target,
@@ -132,10 +137,10 @@ export class BindingStore {
           else if (response.status !== 401)
             throw new Error('Current device credential could not be checked')
         } finally {
-          this.transport.close(probe.connectionId)
+          await this.transport.close(probe.connectionId)
         }
       }
-      data.pendingSecret = this.codec.encrypt(secret)
+      data.pending = { target, secret: this.codec.encrypt(secret) }
       await this.save(data)
       const connected = await this.transport.open(target, 'public')
       try {
@@ -163,7 +168,7 @@ export class BindingStore {
           data.current!.summary.deviceId === registered.deviceId &&
           response.status === 200
         ) {
-          data.pendingSecret = null
+          data.pending = null
           await this.save(data)
           return data.current!.summary
         }
@@ -183,12 +188,12 @@ export class BindingStore {
           secret: this.codec.encrypt(secret),
           installationId: data.installationId
         }
-        data.pendingSecret = null
+        data.pending = null
         await this.save(data)
         this.allocatedContext = null
         return summary
       } finally {
-        this.transport.close(connected.connectionId)
+        await this.transport.close(connected.connectionId)
       }
     })
   }

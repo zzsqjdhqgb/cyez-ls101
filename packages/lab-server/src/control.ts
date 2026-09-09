@@ -4,6 +4,8 @@ import { chmod, lstat, readFile, rm } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 
 const LIMIT = 64 * 1024
+const operationTimeout = (operation: string): number =>
+  operation === 'prepare-upgrade' ? 30 * 60 * 1000 : 30000
 export function controlPath(root: string): string {
   return process.platform === 'win32'
     ? `\\\\.\\pipe\\ls101-lab-${createHmac('sha256', 'ls101-path').update(resolve(root).toLowerCase()).digest('hex').slice(0, 32)}`
@@ -50,9 +52,9 @@ function readMessage(socket: Socket): Promise<string> {
       socket.off('end', end)
       socket.off('close', end)
     }
-    const error = (): void => {
+    const error = (reason?: Error): void => {
       cleanup()
-      fail(new Error('Local control connection failed'))
+      fail(reason ?? new Error('Local control connection failed'))
     }
     const end = (): void => {
       cleanup()
@@ -114,10 +116,11 @@ export async function requestLocalControl<T>(
     const envelope = encrypt(key, 'request', message)
     if (Buffer.byteLength(envelope) >= LIMIT) throw new Error('Local control message too large')
     const response = readMessage(socket)
+    socket.setTimeout(operationTimeout(operation))
     socket.write(`${envelope}\n`)
     const result = JSON.parse(decrypt(key, 'response', await response))
     if (result.nonce !== nonce) throw new Error('Stale local control response')
-    if (!result.ok) throw new Error(result.error)
+    if (!result.ok) throw Object.assign(new Error(result.error), { code: result.error })
     return result.value as T
   } finally {
     socket.destroy()
@@ -147,6 +150,7 @@ export async function listenLocalControl(
       const message = JSON.parse(decrypt(key, 'request', await request))
       if (message.nonce !== nonce || typeof message.operation !== 'string')
         throw new Error('Invalid local control request')
+      socket.setTimeout(operationTimeout(message.operation))
       let response: string
       try {
         response = JSON.stringify({

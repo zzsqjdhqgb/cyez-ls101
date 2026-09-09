@@ -4,7 +4,12 @@ export type StartupCommand =
   | { id: string; type: 'activate'; code: string }
   | { id: string; type: 'enroll'; filename: string; fingerprint?: string }
 
-export function parseCommand(args: string[], cwd: string, id: string): StartupCommand | null {
+export function parseCommand(
+  args: string[],
+  cwd: string,
+  id: string,
+  development = false
+): StartupCommand | null {
   let activation: string | undefined, filename: string | undefined, fingerprint: string | undefined
   for (let index = 0; index < args.length; index++) {
     const argument = args[index]
@@ -21,9 +26,12 @@ export function parseCommand(args: string[], cwd: string, id: string): StartupCo
         !['--no-sandbox', '--password-store=basic', '--password-store=gnome-libsecret'].includes(
           argument
         ) &&
-        !argument.startsWith('--user-data-dir=') &&
-        !argument.startsWith('--inspect=') &&
-        !argument.startsWith('--remote-debugging-port=')
+        !(
+          development &&
+          ['--user-data-dir=', '--inspect=', '--inspect-brk=', '--remote-debugging-port='].some(
+            (prefix) => argument.startsWith(prefix)
+          )
+        )
       )
         throw new Error('Unknown startup argument')
     } else {

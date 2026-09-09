@@ -373,7 +373,9 @@ export function registerBackupHandlers(service: LabService, store: BackupStore):
     body: service.page(
       context,
       service.db
-        .all<{ id: string }>('SELECT id FROM backups ORDER BY rowid DESC')
+        .all<{
+          id: string
+        }>("SELECT id FROM backups ORDER BY json_extract(data,'$.createdAt') DESC,id DESC")
         .map((row) => store.get(row.id)),
       (row) => row.id
     )

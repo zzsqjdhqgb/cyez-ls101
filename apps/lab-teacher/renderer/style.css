@@ -158,3 +158,13 @@ dl {
   border-block: 1px solid #dce2e6;
   margin: 18px 0;
 }
+.local-logs {
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.path-value {
+  overflow-wrap: anywhere;
+}

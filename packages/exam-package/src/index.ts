@@ -4,7 +4,7 @@ import {
   parseSchemaDefinition,
   SCHEMA_REFERENCE_ANSWER_INPUT_ID,
   validateSchemaDefinition
-} from '@ls101/schema-editor'
+} from '@ls101/schema-editor/package-validation'
 import type {
   ExamPackage,
   ResolvedChoiceViewport,

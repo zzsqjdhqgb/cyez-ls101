@@ -61,8 +61,9 @@ export class TeacherController {
     await this.start()
   }
   async connect(target: SavedConnection, password: string): Promise<void> {
-    await this.disconnect()
-    const serial = this.serial
+    const serial = ++this.serial
+    await this.clearConnection()
+    if (serial !== this.serial) throw new Error('连接已取消')
     const connection = await this.host.invoke<Connection>('connections.open', target)
     try {
       await this.host.invoke('connections.authenticate', {
@@ -72,25 +73,45 @@ export class TeacherController {
       if (serial !== this.serial) throw new Error('连接已取消')
       const saved = { ...target, serverId: connection.info.serverId, name: connection.info.name }
       await this.host.invoke('connections.save', saved)
+      const connections = await this.host.invoke<SavedConnection[]>('connections.list')
+      if (serial !== this.serial) throw new Error('连接已取消')
       this.update({
         connection,
         target: saved,
         error: null,
-        connections: await this.host.invoke('connections.list')
+        connections
       })
       await this.refreshService()
     } catch (error) {
       await this.host.invoke('connections.close', connection.connectionId)
-      this.update({ connection: null, service: null })
+      if (serial === this.serial) this.update({ connection: null, target: null, service: null })
       throw error
     }
   }
   async disconnect(): Promise<void> {
     this.serial++
+    await this.clearConnection()
+  }
+  private async clearConnection(): Promise<void> {
     for (const request of this.requests.values()) request.abort()
     const connection = this.view.connection
     this.update({ connection: null, target: null, service: null })
     if (connection) await this.host.invoke('connections.close', connection.connectionId)
+  }
+  async connectLocal(): Promise<void> {
+    const serial = ++this.serial
+    await this.clearConnection()
+    if (serial !== this.serial) throw new Error('连接已取消')
+    const connection = await this.host.invoke<Connection>('localService.connection')
+    try {
+      if (serial !== this.serial) throw new Error('连接已取消')
+      this.update({ connection, target: null, error: null })
+      await this.refreshService()
+    } catch (error) {
+      await this.host.invoke('connections.close', connection.connectionId)
+      if (serial === this.serial) this.update({ connection: null, service: null })
+      throw error
+    }
   }
   async request<T>(operationId: OperationId, input: OperationInput = {}): Promise<T> {
     const connection = this.view.connection
@@ -134,6 +155,8 @@ export class TeacherController {
     }
   }
   async mutate<T>(operationId: OperationId, input: OperationInput = {}): Promise<T> {
+    const connection = this.view.connection
+    if (!connection) throw new Error('请先连接服务')
     const operation = operationDefinitions[operationId]
     const idempotent = operation.parameters.some(
       (parameter) => parameter.name.toLowerCase() === 'idempotency-key'
@@ -146,6 +169,7 @@ export class TeacherController {
       new Uint8Array(await crypto.subtle.digest('SHA-256', encoded)),
       (byte) => byte.toString(16).padStart(2, '0')
     ).join('')
+    if (connection !== this.view.connection) throw new Error('服务连接已切换')
     const key = input.idempotencyKey ?? this.pendingKeys.get(signature) ?? crypto.randomUUID()
     this.pendingKeys.set(signature, key)
     const result = await this.request<T>(operationId, { ...input, idempotencyKey: key })
@@ -153,8 +177,9 @@ export class TeacherController {
     return result
   }
   async refreshService(): Promise<void> {
+    const connection = this.view.connection
     const service = await this.request<Schema<'ServiceState'>>('getTeacherService')
-    this.update({ service })
+    if (connection === this.view.connection) this.update({ service })
   }
   async changeMode(mode: 'normal' | 'maintenance'): Promise<void> {
     await this.refreshService()

@@ -2,8 +2,8 @@ import { useState, type JSX } from 'react'
 import { Download, Plus, Square, RefreshCw } from 'lucide-react'
 import type { Schema } from '@ls101/lab-contracts'
 import type { TeacherController } from './controller'
-import { Dialog, Notice } from './ui'
-import { bytes, time, useAction, useRead } from './hooks'
+import { Dialog, Notice, Pager } from './ui'
+import { bytes, time, useAction, useRead, usePagedRead } from './hooks'
 import { failedTestCases, testCaseLabels, testStatusLabels } from './test-results'
 
 export function Maintenance({ controller }: { controller: TeacherController }): JSX.Element {
@@ -45,7 +45,7 @@ export function Maintenance({ controller }: { controller: TeacherController }): 
 }
 function Enrollments({ controller }: { controller: TeacherController }): JSX.Element {
   const [minutes, setMinutes] = useState(10)
-  const list = useRead<Schema<'EnrollmentList'>>(
+  const list = usePagedRead<Schema<'EnrollmentList'>>(
     controller,
     'getTeacherEnrollments',
     { query: { limit: 100 } },
@@ -141,11 +141,17 @@ function Enrollments({ controller }: { controller: TeacherController }): JSX.Ele
         </tbody>
       </table>
       {!list.loading && !list.data?.items.length && <p className="empty">暂无入网批次</p>}
+      <Pager
+        cursor={list.cursor}
+        nextCursor={list.data?.nextCursor ?? null}
+        onChange={list.setCursor}
+        refresh={list.refresh}
+      />
     </>
   )
 }
 function Tests({ controller }: { controller: TeacherController }): JSX.Element {
-  const list = useRead<Schema<'TestRunList'>>(
+  const list = usePagedRead<Schema<'TestRunList'>>(
     controller,
     'getTeacherTestRuns',
     { query: { limit: 100 } },
@@ -190,6 +196,12 @@ function Tests({ controller }: { controller: TeacherController }): JSX.Element {
         </tbody>
       </table>
       {!list.loading && !list.data?.items.length && <p className="empty">暂无测试</p>}
+      <Pager
+        cursor={list.cursor}
+        nextCursor={list.data?.nextCursor ?? null}
+        onChange={list.setCursor}
+        refresh={list.refresh}
+      />
       {creating && (
         <CreateTask
           controller={controller}
@@ -421,7 +433,7 @@ function ManualConfirmation({
   )
 }
 function Cleanup({ controller }: { controller: TeacherController }): JSX.Element {
-  const list = useRead<Schema<'CleanupList'>>(
+  const list = usePagedRead<Schema<'CleanupList'>>(
     controller,
     'getTeacherHistoryCleanups',
     { query: { limit: 100 } },
@@ -464,6 +476,12 @@ function Cleanup({ controller }: { controller: TeacherController }): JSX.Element
         </tbody>
       </table>
       {!list.loading && !list.data?.items.length && <p className="empty">暂无清理计划</p>}
+      <Pager
+        cursor={list.cursor}
+        nextCursor={list.data?.nextCursor ?? null}
+        onChange={list.setCursor}
+        refresh={list.refresh}
+      />
       {creating && (
         <CreateTask
           controller={controller}
@@ -630,7 +648,7 @@ function CreateTask({
     [caseIds, setCases] = useState(new Set<string>())
   const [before, setBefore] = useState(''),
     [duration, setDuration] = useState(30)
-  const devices = useRead<Schema<'DeviceList'>>(controller, 'getTeacherDevices', {
+  const devices = usePagedRead<Schema<'DeviceList'>>(controller, 'getTeacherDevices', {
     query: { room: room || undefined, limit: 100 }
   })
   const suites = useRead<Schema<'TestSuiteList'>>(controller, 'getTeacherTestSuites', {
@@ -730,7 +748,13 @@ function CreateTask({
         </label>
         <label>
           机房筛选
-          <input value={room} onChange={(event) => setRoom(event.target.value)} />
+          <input
+            value={room}
+            onChange={(event) => {
+              setRoom(event.target.value)
+              devices.setCursor(null)
+            }}
+          />
         </label>
         <div className="device-picker">
           {devices.data?.items.map((device) => (
@@ -753,6 +777,12 @@ function CreateTask({
           ))}
         </div>
         <Notice error={action.error ?? devices.error ?? suites.error} />
+        <Pager
+          cursor={devices.cursor}
+          nextCursor={devices.data?.nextCursor ?? null}
+          onChange={devices.setCursor}
+          refresh={devices.refresh}
+        />
         <button
           className="primary"
           type="submit"
@@ -765,7 +795,7 @@ function CreateTask({
   )
 }
 function Backups({ controller }: { controller: TeacherController }): JSX.Element {
-  const list = useRead<Schema<'BackupList'>>(
+  const list = usePagedRead<Schema<'BackupList'>>(
     controller,
     'getTeacherBackups',
     { query: { limit: 100 } },
@@ -858,6 +888,12 @@ function Backups({ controller }: { controller: TeacherController }): JSX.Element
         </tbody>
       </table>
       {!list.loading && !list.data?.items.length && <p className="empty">暂无备份</p>}
+      <Pager
+        cursor={list.cursor}
+        nextCursor={list.data?.nextCursor ?? null}
+        onChange={list.setCursor}
+        refresh={list.refresh}
+      />
     </>
   )
 }

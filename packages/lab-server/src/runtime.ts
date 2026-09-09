@@ -1,12 +1,12 @@
 import { randomBytes } from 'node:crypto'
-import { mkdir, readFile, stat } from 'node:fs/promises'
+import { mkdir, readFile, stat, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { Server } from 'node:https'
 import { LicenseService } from '@ls101/license'
 import { LabService } from './service'
 import { LabError, requireCondition } from './errors'
 import { lockDirectory } from './directory-lock'
-import { durableWrite } from './durable-files'
+import { durableWrite, verifiedFile, syncDirectory } from './durable-files'
 import { createLabHttpServer, closeLabHttpServer } from './http'
 import { listenLocalControl } from './control'
 import { validateRuntimeConfig, type RuntimeConfig } from './runtime-config'
@@ -17,6 +17,7 @@ export interface RuntimeStatus {
   license: Awaited<ReturnType<LicenseService['getStatus']>>
   info: ReturnType<LabService['info']> | null
   port: number | null
+  fingerprint: string | null
 }
 
 export async function startServiceRuntime(
@@ -28,11 +29,25 @@ export async function startServiceRuntime(
   let http: Server | undefined
   let control: Awaited<ReturnType<typeof listenLocalControl>> | undefined
   let closing = false
+  let closeWork: Promise<void> | undefined
   let busy = false
   let config: RuntimeConfig | undefined
   let collecting: Promise<void> | undefined
+  let stopTimer: ReturnType<typeof setTimeout> | undefined
+  const cancelStop = async (): Promise<void> => {
+    clearTimeout(stopTimer)
+    stopTimer = undefined
+    await rm(join(root, 'upgrade-ready.json'), { force: true })
+    await syncDirectory(root)
+    if (service?.db.gate.backupId === 'local-stop') service.db.gate.release('local-stop')
+  }
   const gcTimer = setInterval(() => {
     if (!service || collecting || closing) return
+    try {
+      service.tasks.retain()
+    } catch {
+      return
+    }
     collecting = service.archives
       .collectGarbage()
       .catch(() => undefined)
@@ -57,28 +72,31 @@ export async function startServiceRuntime(
       })
     })
   }
-  const close = async (): Promise<void> => {
-    if (closing) return
-    closing = true
-    clearInterval(gcTimer)
-    await control?.close()
-    if (http) await closeLabHttpServer(http)
-    for (const transfer of service?.transfers.values() ?? [])
-      transfer.abort(new LabError('SERVICE_NOT_READY'))
-    await service?.backups.wait()
-    await collecting
-    await service?.db.close()
-    lifetime.close()
-  }
+  const close = (): Promise<void> =>
+    (closeWork ??= (async () => {
+      closing = true
+      clearInterval(gcTimer)
+      clearTimeout(stopTimer)
+      await control?.close()
+      if (http) await closeLabHttpServer(http)
+      for (const transfer of service?.transfers.values() ?? [])
+        transfer.abort(new LabError('SERVICE_NOT_READY'))
+      await service?.backups.wait()
+      await collecting
+      await service?.db.close()
+      lifetime.close()
+    })())
   const status = async (): Promise<RuntimeStatus> => ({
     state: service ? (http?.listening ? 'running' : 'unavailable') : 'uninitialized',
     releaseVersion,
     license: await license.getStatus(),
     info: service?.info() ?? null,
-    port: config?.port ?? null
+    port: config?.port ?? null,
+    fingerprint: service?.identity.fingerprint ?? null
   })
   try {
     await mkdir(root, { recursive: true, mode: 0o700 })
+    await rm(join(root, 'upgrade-ready.json'), { force: true })
     const initialized = await stat(join(root, 'service.sqlite')).then(
       () => true,
       (error: NodeJS.ErrnoException) => {
@@ -101,6 +119,15 @@ export async function startServiceRuntime(
         requireCondition(input === undefined, 'INVALID_REQUEST')
         return status()
       }
+      if (operation === 'shutdown') {
+        requireCondition(input === undefined, 'INVALID_REQUEST')
+        setImmediate(() => {
+          void close().catch(() => {
+            process.exitCode = 1
+          })
+        })
+        return null
+      }
       if (operation === 'connection') {
         requireCondition(input === undefined, 'INVALID_REQUEST')
         requireCondition(service && http?.listening && config, 'SERVICE_NOT_READY')
@@ -112,9 +139,76 @@ export async function startServiceRuntime(
           localProof: service.security.issueLocalProof()
         }
       }
+      if (operation === 'cancel-stop') {
+        requireCondition(input === undefined, 'INVALID_REQUEST')
+        await cancelStop()
+        return null
+      }
       requireCondition(!busy, 'RESOURCE_BUSY')
       busy = true
       try {
+        if (operation === 'prepare-stop' || operation === 'prepare-upgrade') {
+          requireCondition(
+            operation === 'prepare-stop'
+              ? input === undefined
+              : typeof input === 'string' && /^[0-9A-Za-z.+-]+$/.test(input) && input.length <= 100,
+            'INVALID_REQUEST'
+          )
+          if (!service) return null
+          requireCondition(service.mode().mode === 'maintenance', 'SERVICE_MAINTENANCE')
+          await service.db.gate.close('local-stop')
+          try {
+            requireCondition(service.blockers().length === 0, 'RESOURCE_BUSY')
+            const observations = service.db.all<{ data: string }>(
+              'SELECT h.data FROM heartbeats h JOIN device_credentials c ON c.id=h.credential_id WHERE c.revoked_at IS NULL'
+            )
+            requireCondition(
+              !observations.some((row) =>
+                ['preparing', 'practicing', 'saving', 'testing'].includes(
+                  JSON.parse(row.data).phase
+                )
+              ),
+              'RESOURCE_BUSY'
+            )
+            if (operation === 'prepare-upgrade') {
+              const ready = service.db.get<{ id: string }>(
+                "SELECT id FROM backups WHERE state='ready' ORDER BY json_extract(data,'$.snapshotAt') DESC LIMIT 1"
+              )
+              requireCondition(ready, 'RESOURCE_BUSY')
+              const backup = service.backups.get(ready.id)
+              requireCondition(
+                backup.snapshotAt &&
+                  Date.parse(backup.snapshotAt) >= Date.now() - 86400000 &&
+                  backup.archiveBytes !== null &&
+                  backup.archiveSha256,
+                'RESOURCE_BUSY'
+              )
+              await verifiedFile(
+                join(root, 'backups', `${backup.id}.7z`),
+                backup.archiveBytes,
+                backup.archiveSha256
+              )
+              await durableWrite(
+                join(root, 'upgrade-ready.json'),
+                JSON.stringify({
+                  targetVersion: input,
+                  serverId: service.identity.serverId,
+                  backupId: backup.id,
+                  snapshotAt: backup.snapshotAt,
+                  preparedAt: new Date().toISOString()
+                })
+              )
+            }
+            stopTimer = setTimeout(() => {
+              void cancelStop().catch(() => undefined)
+            }, 120000)
+            stopTimer.unref()
+            return null
+          } catch (error) {
+            await cancelStop()
+            throw error
+          }
+        }
         if (operation === 'activate') {
           requireCondition(typeof input === 'string' && input.length <= 256, 'INVALID_REQUEST')
           const release = service?.db.gate.enter()

@@ -44,6 +44,7 @@ export function Pager({
   return (
     <div className="pager">
       <button
+        type="button"
         title="返回首页"
         aria-label="返回首页"
         disabled={!cursor}
@@ -51,10 +52,11 @@ export function Pager({
       >
         <ChevronLeft />
       </button>
-      <button title="刷新列表" aria-label="刷新列表" onClick={refresh}>
+      <button type="button" title="刷新列表" aria-label="刷新列表" onClick={refresh}>
         <RefreshCw />
       </button>
       <button
+        type="button"
         title="下一页"
         aria-label="下一页"
         disabled={!nextCursor}

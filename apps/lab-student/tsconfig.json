@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "jsx": "react-jsx", "lib": ["ESNext", "DOM", "DOM.Iterable"], "noEmit": true },
-  "include": ["renderer"],
+  "include": ["renderer", "main", "preload"],
   "references": [
     { "path": "../../packages/core-types" },
     { "path": "../../packages/exam-player" },

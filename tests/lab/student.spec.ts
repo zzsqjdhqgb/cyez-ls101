@@ -90,6 +90,22 @@ test('student enrollment, maintenance, practice and durable receipt run through 
       )
     })
     expect(denied).toBe(true)
+    await page.evaluate(async () => {
+      const host = (
+        window as unknown as { lab: { invoke(name: string, input?: unknown): Promise<unknown> } }
+      ).lab
+      await host.invoke('foreground.set', 'saving')
+      await host.invoke('window.close')
+    })
+    await expect(
+      page.getByText('正在保存作答，请在保存完成后关闭。', { exact: true })
+    ).toBeVisible()
+    expect(page.isClosed()).toBe(false)
+    await page.evaluate(async () =>
+      (
+        window as unknown as { lab: { invoke(name: string, input?: unknown): Promise<unknown> } }
+      ).lab.invoke('foreground.set', 'idle')
+    )
     const exam: ExamPackage = {
       format: 'ls101-exam',
       formatVersion: 1,

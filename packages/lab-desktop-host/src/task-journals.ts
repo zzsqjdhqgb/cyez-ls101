@@ -1,4 +1,4 @@
-import { readdir, mkdir } from 'node:fs/promises'
+import { readdir, mkdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import canonicalize from 'canonicalize'
 import { validateSchema } from '@ls101/lab-contracts'
@@ -63,5 +63,22 @@ export class TaskJournals {
       if (value) result.push(value)
     }
     return result
+  }
+  async collect(testRoot: string): Promise<void> {
+    await this.writes.run(async () => {
+      for (const journal of await this.list()) {
+        requireId(journal.task.id)
+        const expired = Date.parse(journal.task.expiresAt)
+        if (!Number.isFinite(expired) || !journal.reported) continue
+        if (
+          expired < Date.now() - 7 * 86400000 &&
+          journal.task.parameters.type === 'deployment-test'
+        ) {
+          await rm(join(testRoot, journal.task.id), { recursive: true, force: true })
+        }
+        if (expired < Date.now() - 90 * 86400000)
+          await rm(join(this.root, journal.task.id), { recursive: true, force: true })
+      }
+    })
   }
 }

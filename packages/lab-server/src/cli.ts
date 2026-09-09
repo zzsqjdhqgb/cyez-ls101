@@ -23,9 +23,15 @@ async function main(): Promise<void> {
     return
   }
   if (
-    !['serve', 'status', 'activate', 'initialize', 'restore', 'recover-restore'].includes(
-      command
-    ) ||
+    ![
+      'serve',
+      'status',
+      'shutdown',
+      'activate',
+      'initialize',
+      'restore',
+      'recover-restore'
+    ].includes(command) ||
     flag !== '--data-dir' ||
     !directory ||
     extra.length
@@ -69,7 +75,7 @@ async function main(): Promise<void> {
     result = await requestLocalControl(
       root,
       command,
-      command === 'status' ? undefined : await input()
+      ['status', 'shutdown'].includes(command) ? undefined : await input()
     )
   }
   process.stdout.write(`${JSON.stringify(result)}\n`)

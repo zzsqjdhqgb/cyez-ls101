@@ -45,6 +45,21 @@ async function fixture() {
 }
 
 describe('independent service runtime and local authentication', () => {
+  it('rejects an upgrade without a backup, releases failed admission and accepts a clean local shutdown', async () => {
+    const f = await fixture()
+    await f.activate()
+    await f.initialize()
+    await expect(requestLocalControl(f.root, 'prepare-upgrade', 'next-release')).rejects.toThrow(
+      'RESOURCE_BUSY'
+    )
+    await expect(requestLocalControl(f.root, 'prepare-stop')).resolves.toBeNull()
+    await expect(requestLocalControl(f.root, 'prepare-stop')).rejects.toThrow('RESOURCE_BUSY')
+    await expect(requestLocalControl(f.root, 'cancel-stop')).resolves.toBeNull()
+    await expect(requestLocalControl(f.root, 'prepare-stop')).resolves.toBeNull()
+    await expect(requestLocalControl(f.root, 'shutdown')).resolves.toBeNull()
+    await f.runtime.close()
+    await expect(requestLocalControl(f.root, 'status')).rejects.toThrow()
+  })
   it('keeps credentials and local proofs encrypted even through a forwarding pipe', async () => {
     const f = await fixture()
     await f.activate()

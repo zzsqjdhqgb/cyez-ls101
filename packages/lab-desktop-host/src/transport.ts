@@ -2,8 +2,8 @@ import { Agent, request as httpsRequest } from 'node:https'
 import { connect, type TLSSocket } from 'node:tls'
 import { createHash, randomUUID, X509Certificate } from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
-import { mkdir, open, rename, rm, stat } from 'node:fs/promises'
-import { join } from 'node:path'
+import { mkdir, open, readdir, rename, rm, stat } from 'node:fs/promises'
+import { dirname, join, resolve } from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import { Transform } from 'node:stream'
 import {
@@ -48,12 +48,21 @@ export class PinnedTransport {
     readonly version: string
   ) {}
 
+  async initialize(): Promise<void> {
+    await mkdir(this.directory, { recursive: true, mode: 0o700 })
+    for (const name of await readdir(this.directory)) {
+      if (/^[a-f0-9-]{36}(\.part)?$/.test(name))
+        await rm(join(this.directory, name), { force: true })
+    }
+  }
+
   async open(
     target: TrustedTarget,
     role: Connection['role'],
     token?: string
   ): Promise<{ connectionId: string; epoch: number; info: Schema<'Info'> }> {
     validateTarget(target)
+    if (this.connections.size >= 64) throw new Error('Connection limit reached')
     const connection: Connection = {
       ...target,
       id: randomUUID(),
@@ -83,8 +92,15 @@ export class PinnedTransport {
     return connection
   }
 
-  close(id: string): void {
+  async close(id: string): Promise<void> {
     this.connections.delete(id)
+    const owned: string[] = []
+    for (const [handle, file] of this.files) {
+      if (file.connectionId !== id) continue
+      this.files.delete(handle)
+      if (dirname(resolve(file.path)) === resolve(this.directory)) owned.push(file.path)
+    }
+    await Promise.all(owned.map((path) => rm(path, { force: true })))
   }
 
   async authenticate(id: string, password?: string, localProof?: string): Promise<void> {
@@ -113,6 +129,8 @@ export class PinnedTransport {
     for await (const chunk of createReadStream(filename)) hash.update(chunk)
     const handle = randomUUID(),
       sha256 = hash.digest('hex')
+    this.get(connectionId)
+    if (this.files.size >= 256) throw new Error('Archive handle limit reached')
     this.files.set(handle, { path: filename, connectionId, digest: sha256, bytes })
     return { handle, sha256, bytes }
   }
@@ -264,6 +282,8 @@ export class PinnedTransport {
                   await file.close()
                 }
                 await rename(temporary, target)
+                this.get(connection.id)
+                if (this.files.size >= 256) throw new Error('Archive handle limit reached')
                 this.files.set(handle, {
                   path: target,
                   connectionId: connection.id,
@@ -273,6 +293,7 @@ export class PinnedTransport {
                 resolve({ status, archive: { handle, sha256: digest, bytes: received } })
               } finally {
                 await rm(temporary, { force: true })
+                if (!this.files.has(handle)) await rm(target, { force: true })
               }
             })().catch((error) => {
               response.destroy()

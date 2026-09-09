@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { OperationId } from '@ls101/lab-contracts'
 import { RemoteError, type OperationInput } from '@ls101/lab-client'
 import type { TeacherController } from './controller'
 
 export function errorMessage(error: unknown): string {
   if (error instanceof RemoteError) {
+    if (error.code === 'REVISION_CONFLICT')
+      return '数据已被其他操作更新。请重新载入最新数据，核对后再次保存。'
     const details = error.details?.blockers
       ?.map((item) => `${item.kind} (${item.resourceId})`)
       .join(', ')
@@ -28,6 +30,8 @@ export function useRead<T>(
     [error, setError] = useState<string | null>(null)
   const [revision, setRevision] = useState(0)
   const serialized = JSON.stringify(input)
+  const query = `${operation}:${serialized}`
+  const [resolved, setResolved] = useState<{ query: string; revision: number } | null>(null)
   useEffect(() => {
     let active = true,
       timer: ReturnType<typeof setTimeout> | undefined
@@ -43,6 +47,7 @@ export function useRead<T>(
       } finally {
         if (active) {
           setLoading(false)
+          setResolved({ query, revision })
           if (poll)
             timer = setTimeout(() => {
               void read()
@@ -55,8 +60,13 @@ export function useRead<T>(
       active = false
       clearTimeout(timer)
     }
-  }, [controller, operation, serialized, revision, poll])
-  return { data, loading, error, refresh: () => setRevision((value) => value + 1) }
+  }, [controller, operation, serialized, query, revision, poll])
+  return {
+    data: resolved?.query === query ? data : null,
+    loading: loading || resolved?.query !== query || resolved?.revision !== revision,
+    error: resolved?.query === query && resolved.revision === revision ? error : null,
+    refresh: () => setRevision((value) => value + 1)
+  }
 }
 export function useAction(refresh?: () => void): {
   busy: boolean
@@ -65,19 +75,43 @@ export function useAction(refresh?: () => void): {
 } {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null)
+  const running = useRef(false)
   return {
     busy,
     error,
     run(action) {
-      if (busy) return
+      if (running.current) return
+      running.current = true
       setBusy(true)
       setError(null)
-      void action()
+      void Promise.resolve()
+        .then(action)
         .then(() => refresh?.())
         .catch((reason) => setError(errorMessage(reason)))
-        .finally(() => setBusy(false))
+        .finally(() => {
+          running.current = false
+          setBusy(false)
+        })
     }
   }
+}
+export function usePagedRead<T>(
+  controller: TeacherController,
+  operation: OperationId,
+  input: OperationInput = {},
+  poll = false
+): ReturnType<typeof useRead<T>> & {
+  cursor: string | null
+  setCursor(value: string | null): void
+} {
+  const [cursor, setCursor] = useState<string | null>(null)
+  const read = useRead<T>(
+    controller,
+    operation,
+    { ...input, query: { ...input.query, cursor: cursor ?? undefined } },
+    poll
+  )
+  return { ...read, cursor, setCursor }
 }
 export function time(value: string | null | undefined): string {
   return value ? new Date(value).toLocaleString('zh-CN') : '-'

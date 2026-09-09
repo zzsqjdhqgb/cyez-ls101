@@ -70,6 +70,9 @@ export class StudentController {
   private timer: ReturnType<typeof setTimeout> | undefined
   private stopped = false
   private pollRunning = false
+  private rebinding = false
+  private commandsPending = false
+  private generation = 0
   private reconnectFailures = 0
   private revoked = false
   private intent: PracticeIntent | null = null
@@ -232,6 +235,7 @@ export class StudentController {
   async start(): Promise<void> {
     this.unsubscribe = this.host.onEvent((event) => {
       if (event.type === 'startup-command') void this.commands().catch((error) => this.fail(error))
+      if (event.type === 'close-blocked') this.fail(String(event.value))
     })
     try {
       const startup = await this.host.invoke<{
@@ -255,11 +259,13 @@ export class StudentController {
   }
   async stop(): Promise<void> {
     this.stopped = true
+    this.generation++
     clearTimeout(this.timer)
     this.unsubscribe?.()
     this.queue.suspend('shutdown')
     this.maintenance.suspend()
     for (const request of this.requests) request.abort()
+    await Promise.all([this.queue.settle(), this.maintenance.settle()])
     await this.disconnect()
   }
   async activate(code: string): Promise<void> {
@@ -269,13 +275,29 @@ export class StudentController {
     await this.refresh()
   }
   private async commands(): Promise<void> {
-    this.queue.suspend('rebind')
-    this.maintenance.suspend()
-    await Promise.all([this.queue.settle(), this.maintenance.settle()])
-    const results = await this.host.invoke<Array<{ error?: string }>>('startup.commands')
-    const failure = results.find((result) => result.error)
-    if (failure) this.update({ error: failure.error })
-    if (results.length) await this.disconnect()
+    this.commandsPending = true
+    if (this.rebinding) return
+    this.rebinding = true
+    this.generation++
+    clearTimeout(this.timer)
+    try {
+      this.queue.suspend('rebind')
+      this.maintenance.suspend()
+      await Promise.all([this.queue.settle(), this.maintenance.settle()])
+      do {
+        this.commandsPending = false
+        const results = await this.host.invoke<Array<{ error?: string }>>('startup.commands')
+        const failure = results.find((result) => result.error)
+        if (failure) this.update({ error: failure.error })
+        if (results.length) await this.disconnect()
+      } while (this.commandsPending && !this.stopped)
+    } finally {
+      this.rebinding = false
+      if (!this.stopped)
+        this.timer = setTimeout(() => {
+          void this.poll()
+        }, 0)
+    }
   }
   private async disconnect(): Promise<void> {
     const connections = [
@@ -297,18 +319,26 @@ export class StudentController {
     await this.poll()
   }
   private async poll(): Promise<void> {
-    if (this.stopped || this.pollRunning) return
+    if (this.stopped || this.rebinding || this.pollRunning) return
+    const generation = this.generation
     this.pollRunning = true
     let delay = 5000
     try {
       const license = await this.host.invoke<LicenseStatus>('license.status')
+      if (generation !== this.generation) return
       this.update({ active: license.state === 'active' })
       if (!this.view.active || !this.view.initialized) return
       const binding = await this.host.invoke<BindingSummary | null>('binding.summary')
+      if (generation !== this.generation) return
       this.update({ binding })
       if (!binding || this.revoked) return
       if (!this.connection) {
-        this.connection = await this.host.invoke<Connection>('binding.connect')
+        const opened = await this.host.invoke<Connection>('binding.connect')
+        if (generation !== this.generation) {
+          await this.host.invoke('connections.close', opened.connectionId)
+          return
+        }
+        this.connection = opened
         this.update({ state: null })
         await this.queue.recover(binding.contextId)
       }
@@ -341,7 +371,7 @@ export class StudentController {
         'postStudentHeartbeat',
         { body: heartbeat }
       )
-      if (connection !== this.connection || this.stopped) return
+      if (connection !== this.connection || this.stopped || generation !== this.generation) return
       if (!state.heartbeatAccepted) throw new Error('设备运行代次已失效，请重新入网')
       const prior = this.view.state
       if (
@@ -354,6 +384,7 @@ export class StudentController {
         epoch: connection.epoch,
         state
       })
+      if (generation !== this.generation || connection !== this.connection) return
       this.update({ state, binding: observed, connected: true, records })
       this.reconnectFailures = 0
       if (this.ready()) {
@@ -366,6 +397,7 @@ export class StudentController {
           .pump(binding.contextId, runtime.runtimeId)
           .catch((error) => this.fail(error))
     } catch (error) {
+      if (generation !== this.generation) return
       const code = error instanceof RemoteError ? error.code : null
       if (code === 'AUTH_REQUIRED' || code === 'TOKEN_REVOKED' || code === 'TOKEN_EXPIRED')
         this.revoked = true
@@ -379,24 +411,32 @@ export class StudentController {
         error instanceof RemoteError ? (error.retryAfter ?? 0) * 1000 : 0
       )
     } finally {
-      const gate = admission(this.view)
-      if (gate !== 'ready') this.queue.suspend(gate)
-      if (gate !== 'maintenance') this.maintenance.suspend()
-      if (
-        ['activation-required', 'version-mismatch'].includes(gate) &&
-        this.view.phase !== 'saving'
-      )
-        await this.exitPractice()
-      if (this.view.active && this.view.initialized)
-        await this.host.invoke(
-          'window.maintenance',
-          this.view.binding?.maintenanceLocked === true && !this.view.player
-        )
       this.pollRunning = false
-      if (!this.stopped)
-        this.timer = setTimeout(() => {
-          void this.poll()
-        }, delay)
+      if (generation !== this.generation) {
+        if (!this.stopped && !this.rebinding)
+          this.timer = setTimeout(() => {
+            void this.poll()
+          }, 0)
+      } else {
+        const gate = admission(this.view)
+        if (gate !== 'ready') this.queue.suspend(gate)
+        if (gate !== 'maintenance') this.maintenance.suspend()
+        if (
+          ['activation-required', 'version-mismatch'].includes(gate) &&
+          this.view.phase !== 'saving'
+        )
+          await this.exitPractice()
+        if (this.view.active && this.view.initialized)
+          await this.host.invoke(
+            'window.maintenance',
+            this.view.binding?.maintenanceLocked === true && !this.view.player
+          )
+        this.pollRunning = false
+        if (!this.stopped)
+          this.timer = setTimeout(() => {
+            void this.poll()
+          }, delay)
+      }
     }
   }
 
@@ -518,7 +558,7 @@ export class StudentController {
         bytes: new Uint8Array(bytes.slice(offset, offset + 1024 * 1024))
       })
     await this.host.invoke('records.finish', { handle, sha256 })
-    await this.refreshRecords()
+    await this.refreshRecords().catch((error) => this.fail(error))
     void this.queue.pump().catch((error) => this.fail(error))
   }
   phaseChanged: NonNullable<ExamPlayerProps['onPhaseChange']> = (event) => {

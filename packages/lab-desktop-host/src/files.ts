@@ -1,9 +1,11 @@
-import { mkdir, open, readFile, rename, rm } from 'node:fs/promises'
+import { copyFile, mkdir, open, readFile, rename, rm } from 'node:fs/promises'
+import { constants } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 
 export async function syncFolder(directory: string): Promise<void> {
-  const handle = await open(directory, 'r')
+  // Windows FlushFileBuffers requires write access; libuv opens directories with backup semantics.
+  const handle = await open(directory, process.platform === 'win32' ? 'r+' : 'r')
   try {
     await handle.sync()
   } finally {
@@ -22,6 +24,24 @@ export async function saveFile(filename: string, bytes: Uint8Array | string): Pr
     await handle.close()
   }
   try {
+    await rename(temporary, filename)
+    await syncFolder(dirname(filename))
+  } finally {
+    await rm(temporary, { force: true })
+  }
+}
+
+export async function exportFile(source: string, filename: string): Promise<void> {
+  await mkdir(dirname(filename), { recursive: true, mode: 0o700 })
+  const temporary = join(dirname(filename), `.${randomUUID()}.tmp`)
+  try {
+    await copyFile(source, temporary, constants.COPYFILE_EXCL)
+    const handle = await open(temporary, 'r+')
+    try {
+      await handle.sync()
+    } finally {
+      await handle.close()
+    }
     await rename(temporary, filename)
     await syncFolder(dirname(filename))
   } finally {

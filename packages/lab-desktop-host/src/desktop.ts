@@ -1,22 +1,23 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, safeStorage } from 'electron'
 import { hostname } from 'node:os'
 import { join } from 'node:path'
-import { readFile, mkdir, copyFile } from 'node:fs/promises'
+import { readFile, mkdir, copyFile, rm } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 import { LicenseService } from '@ls101/license'
 import { validateSchema, operationDefinitions, type Schema } from '@ls101/lab-contracts'
-import { PinnedTransport, type TrustedTarget } from './transport'
+import { PinnedTransport, validateTarget, type TrustedTarget } from './transport'
 import { StudentRecords } from './records'
 import { BindingStore } from './binding'
 import { ExamCache } from './cache'
-import { loadJson, saveFile, requireId } from './files'
+import { exportFile, loadJson, saveFile, requireId } from './files'
 import { parseCommand, type StartupCommand } from './commands'
 import type { HostRequest, PracticeIntent, StudentRecord } from './shared'
 import { checkStudentOperation } from './policy'
-import { TeacherOperations } from './teacher-operations'
+import { TeacherOperations, type TeacherOperation } from './teacher-operations'
 import { TaskJournals } from './task-journals'
 import type { TaskJournal } from './shared'
+import type { LocalServiceConnection } from './local-service-types'
 
 export interface DesktopOptions {
   role: 'student' | 'teacher'
@@ -60,7 +61,7 @@ export function startLabDesktop(options: DesktopOptions): void {
   let versionMismatch = false
   const dispatch = (argv: string[], cwd: string): void => {
     try {
-      const command = parseCommand(argv, cwd, randomUUID())
+      const command = parseCommand(argv, cwd, randomUUID(), !app.isPackaged)
       if (command) {
         pending.push(command)
         window?.webContents.send('lab:event', { type: 'startup-command', value: command.id })
@@ -108,13 +109,19 @@ export function startLabDesktop(options: DesktopOptions): void {
         { deadline: number; lease: Schema<'TaskLease'>; contextId: string }
       >()
       const requests = new Map<string, AbortController>()
+      const invocations = new Set<Promise<unknown>>()
+      let closingWindow = false
+      let allowClose = false
+      let askingClose = false
       const studentConnections = new Map<
         string,
         { contextId: string; state: Schema<'StudentState'> | null }
       >()
       let initializationError: string | null = null
       try {
+        await transport.initialize()
         await records.initialize()
+        if (options.role === 'student') await taskJournals.collect(join(root, 'test-data'))
       } catch {
         initializationError = '本地作答数据无法初始化，请联系管理员。'
       }
@@ -139,6 +146,47 @@ export function startLabDesktop(options: DesktopOptions): void {
         }
       })
       const contents = window.webContents
+      window.on('close', (event) => {
+        if (allowClose) return
+        event.preventDefault()
+        if (askingClose || closingWindow) return
+        if (options.role === 'student' && foreground === 'saving') {
+          contents.send('lab:event', {
+            type: 'close-blocked',
+            value: '正在保存作答，请在保存完成后关闭。'
+          })
+          return
+        }
+        askingClose = true
+        void (async () => {
+          try {
+            if (
+              options.role === 'student' &&
+              ['preparing', 'practicing', 'testing', 'error'].includes(foreground)
+            ) {
+              const answer = await dialog.showMessageBox(window!, {
+                type: 'warning',
+                message: '退出当前活动？',
+                detail: '尚未保存的当前作答将丢失。已保存的作答会保留。',
+                buttons: ['继续当前活动', '退出'],
+                defaultId: 0,
+                cancelId: 0
+              })
+              if (answer.response !== 1) return
+            }
+            if (options.role === 'student' && foreground === 'saving') return
+            closingWindow = true
+            for (const request of requests.values()) request.abort()
+            await Promise.allSettled([...invocations])
+            allowClose = true
+            window?.close()
+          } finally {
+            askingClose = false
+          }
+        })().catch(() => {
+          closingWindow = false
+        })
+      })
       contents.setWindowOpenHandler(() => ({ action: 'deny' }))
       contents.on('will-navigate', (event) => event.preventDefault())
       contents.on('render-process-gone', () => {
@@ -208,11 +256,15 @@ export function startLabDesktop(options: DesktopOptions): void {
                 if (versionMismatch || initializationError || foreground !== 'idle')
                   throw new Error('当前状态拒绝部署命令')
                 if (command.type === 'activate') throw new Error('软件已激活')
+                if (options.role !== 'student') throw new Error('仅学生端可以入网')
                 for (const request of requests.values()) request.abort()
                 const summary = await binding.enroll(
                   await readFile(command.filename, 'utf8'),
                   command.fingerprint
                 )
+                currentEpoch = 0
+                knownState = null
+                versionMismatch = false
                 result.push({ id: command.id, type: command.type, result: summary })
               }
             } catch (error) {
@@ -226,7 +278,14 @@ export function startLabDesktop(options: DesktopOptions): void {
           await saveFile(join(root, 'last-command-results.json'), JSON.stringify(result))
           return result
         }
-        active()
+        const completingSave =
+          options.role === 'student' &&
+          ((['records.begin', 'records.chunk', 'records.finish'].includes(capability) &&
+            foreground === 'saving') ||
+            (capability === 'foreground.set' &&
+              foreground !== 'idle' &&
+              ['saving', 'idle', 'error'].includes(String(input))))
+        if (!completingSave) active()
         if (initializationError) throw new Error(initializationError)
         if (
           options.role === 'student' &&
@@ -234,12 +293,45 @@ export function startLabDesktop(options: DesktopOptions): void {
           capability !== 'connections.close'
         )
           throw new Error('Teacher connection required')
-        if (options.role === 'teacher' && /^(binding\.|records\.|practice\.)/.test(capability))
+        if (
+          options.role === 'teacher' &&
+          /^(binding\.|records\.|practice\.|cache\.|tasks\.|tests\.|cleanup\.)/.test(capability)
+        )
           throw new Error('Student capability required')
         if (capability.startsWith('localService.')) {
           if (options.role !== 'teacher' || !options.localService)
             throw new Error('本机服务能力不可用')
-          return options.localService.invoke(capability.slice(13), input)
+          if (capability === 'localService.selectBackup') {
+            const chosen = await dialog.showOpenDialog(window!, {
+              properties: ['openFile'],
+              filters: [{ name: 'Lab backup', extensions: ['7z'] }]
+            })
+            return chosen.canceled ? null : chosen.filePaths[0]
+          }
+          const result = await options.localService.invoke(capability.slice(13), input)
+          if (capability !== 'localService.connection') return result
+          const target = result as LocalServiceConnection
+          const url = new URL(target.baseUrl)
+          if (
+            url.protocol !== 'https:' ||
+            url.hostname !== '127.0.0.1' ||
+            url.username ||
+            url.password ||
+            typeof target.localProof !== 'string'
+          )
+            throw new Error('INVALID_LOCAL_CONNECTION')
+          const connection = await transport.open(
+            { baseUrl: target.baseUrl, serverId: target.serverId, fingerprint: target.fingerprint },
+            'teacher'
+          )
+          try {
+            await transport.authenticate(connection.connectionId, undefined, target.localProof)
+            currentEpoch = connection.epoch
+            return connection
+          } catch (error) {
+            await transport.close(connection.connectionId)
+            throw error
+          }
         }
         if (capability === 'foreground.set') {
           if (
@@ -258,7 +350,7 @@ export function startLabDesktop(options: DesktopOptions): void {
         if (capability === 'binding.connect') {
           const connected = await binding.connect(typeof input === 'string' ? input : undefined)
           const summary = await binding.summary()
-          const contextId = typeof input === 'string' ? input : summary!.contextId
+          const contextId = connected.contextId
           studentConnections.set(connected.connectionId, { contextId, state: null })
           if (contextId === summary?.contextId) {
             currentEpoch = connected.epoch
@@ -271,9 +363,17 @@ export function startLabDesktop(options: DesktopOptions): void {
           const value = input as { contextId: string; epoch: number; state: Schema<'StudentState'> }
           validateSchema('StudentState', value.state)
           if (value.epoch !== currentEpoch) throw new Error('Stale connection')
+          const trusted = [...studentConnections.entries()].find(
+            ([id, connection]) =>
+              connection.contextId === value.contextId && transport.get(id).epoch === currentEpoch
+          )?.[1].state
+          if (!trusted || JSON.stringify(trusted) !== JSON.stringify(value.state))
+            throw new Error('Untrusted admission state')
+          const observed = await binding.observe(value.contextId, value.state)
+          if (value.epoch !== currentEpoch) throw new Error('Stale connection')
           knownState = value.state
           versionMismatch = knownState.releaseVersion !== options.releaseVersion
-          return binding.observe(value.contextId, value.state)
+          return observed
         }
         if (capability === 'connections.list')
           return (await loadJson<SavedConnection[]>(join(root, 'connections.json'))) ?? []
@@ -287,6 +387,19 @@ export function startLabDesktop(options: DesktopOptions): void {
           const connections =
             (await loadJson<SavedConnection[]>(join(root, 'connections.json'))) ?? []
           requireId(target.id)
+          validateTarget(target)
+          if (
+            typeof target.name !== 'string' ||
+            !target.name.trim() ||
+            target.name.length > 200 ||
+            Object.keys(target).some(
+              (key) => !['id', 'name', 'baseUrl', 'fingerprint', 'serverId'].includes(key)
+            )
+          )
+            throw new Error('Invalid saved connection')
+          if (target.serverId !== undefined) requireId(target.serverId)
+          if (connections.filter((entry) => entry.id !== target.id).length >= 100)
+            throw new Error('Saved connection limit reached')
           await saveFile(
             join(root, 'connections.json'),
             JSON.stringify([...connections.filter((entry) => entry.id !== target.id), target])
@@ -300,12 +413,17 @@ export function startLabDesktop(options: DesktopOptions): void {
           return connected
         }
         if (capability === 'connections.authenticate') {
-          const value = input as { connectionId: string; password?: string; localProof?: string }
-          await transport.authenticate(value.connectionId, value.password, value.localProof)
+          const value = input as { connectionId: string; password: string }
+          if (
+            typeof value.password !== 'string' ||
+            Object.keys(value).some((key) => !['connectionId', 'password'].includes(key))
+          )
+            throw new Error('INVALID_REQUEST')
+          await transport.authenticate(value.connectionId, value.password)
           return null
         }
         if (capability === 'connections.close') {
-          transport.close(String(input))
+          await transport.close(String(input))
           studentConnections.delete(String(input))
           return null
         }
@@ -331,18 +449,21 @@ export function startLabDesktop(options: DesktopOptions): void {
               id ? await records.get(id) : null
             )
           }
+          if (requests.size >= 64) throw new Error('Concurrent request limit reached')
           const request = new AbortController()
           requests.set(value.requestId, request)
           const startedAt = performance.now()
-          const operation =
-            options.role === 'teacher' && operationDefinitions[value.operationId].method !== 'GET'
-              ? await teacherOperations.begin(
-                  transport.get(value.connectionId).serverId!,
-                  value.operationId,
-                  value.input
-                )
-              : null
+          let operation: TeacherOperation | null = null
           try {
+            if (
+              options.role === 'teacher' &&
+              operationDefinitions[value.operationId].method !== 'GET'
+            )
+              operation = await teacherOperations.begin(
+                transport.get(value.connectionId).serverId!,
+                value.operationId,
+                value.input
+              )
             const result = await transport.request(
               value.connectionId,
               value.operationId,
@@ -350,8 +471,10 @@ export function startLabDesktop(options: DesktopOptions): void {
               request.signal
             )
             if (operation) await teacherOperations.finish(operation, result)
-            if (value.operationId === 'putStudentTasksIdResult' && result.status === 200)
+            if (value.operationId === 'putStudentTasksIdResult' && result.status === 200) {
               taskLeases.delete(value.input.path!.id)
+              testRecords.delete(value.input.path!.id)
+            }
             if (['postStudentTasksIdClaim', 'putStudentTasksIdLease'].includes(value.operationId)) {
               const taskId = value.input.path!.id
               taskLeases.delete(taskId)
@@ -403,14 +526,19 @@ export function startLabDesktop(options: DesktopOptions): void {
           const temporary = join(root, 'transfers', randomUUID())
           await mkdir(join(root, 'transfers'), { recursive: true })
           await copyFile(selected.filePaths[0], temporary)
-          return transport.registerArchive(connectionId, temporary)
+          try {
+            return await transport.registerArchive(connectionId, temporary)
+          } catch (error) {
+            await rm(temporary, { force: true })
+            throw error
+          }
         }
         if (capability === 'transfer.export') {
           if (options.role !== 'teacher') await mayExport()
           const value = input as { handle: string; filename: string }
           const selected = await dialog.showSaveDialog(window!, { defaultPath: value.filename })
           if (selected.canceled || !selected.filePath) return false
-          await saveFile(selected.filePath, await readFile(transport.file(value.handle)))
+          await exportFile(transport.file(value.handle), selected.filePath)
           return true
         }
         if (capability === 'transfer.exportJson') {
@@ -586,6 +714,7 @@ export function startLabDesktop(options: DesktopOptions): void {
             sha256,
             bytes
           } = input as { intent: PracticeIntent; sha256: string; bytes: number }
+          requireId(value.submissionId)
           const saved = await loadJson<PracticeIntent>(
             join(root, 'practices', `${value.submissionId}.json`)
           )
@@ -635,6 +764,7 @@ export function startLabDesktop(options: DesktopOptions): void {
         throw new Error('Unsupported host capability')
       }
       ipcMain.handle('lab:invoke', async (event, capability: unknown, input: unknown) => {
+        if (closingWindow) throw new Error('WINDOW_CLOSING')
         const expected = options.developmentUrl ? new URL(options.developmentUrl).origin : null
         const senderUrl = event.senderFrame?.url
         if (
@@ -652,7 +782,13 @@ export function startLabDesktop(options: DesktopOptions): void {
           Buffer.byteLength(JSON.stringify(input ?? null)) > 1024 * 1024
         )
           throw new Error('IPC message too large')
-        return invoke(capability, input, event.sender.id)
+        const work = invoke(capability, input, event.sender.id)
+        invocations.add(work)
+        try {
+          return await work
+        } finally {
+          invocations.delete(work)
+        }
       })
       dispatch(initialArgs, process.cwd())
       if (options.developmentUrl) await window.loadURL(options.developmentUrl)

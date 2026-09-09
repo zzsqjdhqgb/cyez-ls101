@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { constants } from 'node:fs'
 import {
   access,
@@ -6,6 +6,7 @@ import {
   copyFile,
   lstat,
   mkdir,
+  open,
   readFile,
   rename,
   symlink,
@@ -15,6 +16,16 @@ import { dirname, join, resolve } from 'node:path'
 import { execFileSync } from 'node:child_process'
 
 const source = import.meta.dirname
+// This installer runs as native JavaScript in the bundled Node runtime.
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+async function syncPath(path) {
+  const handle = await open(path, 'r')
+  try {
+    await handle.sync()
+  } finally {
+    await handle.close()
+  }
+}
 const mode = process.argv[2]
 if (!['--verify', '--install'].includes(mode) || process.argv.length !== 3)
   throw new Error('Use --verify or --install')
@@ -65,6 +76,23 @@ if (mode === '--verify') {
   process.stdout.write('Service runtime verified.\n')
 } else {
   if (process.getuid() !== 0) throw new Error('Install as a system administrator')
+  if (
+    await lstat('/var/lib/ls101-lab/data/service.sqlite').then(
+      () => true,
+      (error) => {
+        if (error.code !== 'ENOENT') throw error
+        return false
+      }
+    )
+  ) {
+    const ready = JSON.parse(await readFile('/var/lib/ls101-lab/data/upgrade-ready.json', 'utf8'))
+    if (
+      ready.targetVersion !== manifest.releaseVersion ||
+      !Number.isFinite(Date.parse(ready.preparedAt)) ||
+      Date.parse(ready.preparedAt) < Date.now() - 86400000
+    )
+      throw new Error('Prepare the upgrade with a current backup before installation')
+  }
   let state
   try {
     state = execFileSync('systemctl', ['is-active', 'ls101-lab.service'], {
@@ -88,18 +116,65 @@ if (mode === '--verify') {
   const destination = join(releases, identifier)
   await mkdir(releases, { recursive: true, mode: 0o755 })
   // Each install gets an immutable version directory; existing program and data are retained.
-  await mkdir(destination, { mode: 0o755 })
-  for (const file of manifest.files) {
-    const target = join(destination, file.path)
-    await mkdir(dirname(target), { recursive: true, mode: 0o755 })
-    await copyFile(join(source, file.path), target, constants.COPYFILE_EXCL)
-    await chmod(target, file.path === 'runtime/node' || file.path.endsWith('/7za') ? 0o755 : 0o644)
+  const existing = await lstat(destination).catch((error) => {
+    if (error.code !== 'ENOENT') throw error
+    return null
+  })
+  if (existing) {
+    if (
+      !existing.isDirectory() ||
+      existing.isSymbolicLink() ||
+      !(await readFile(join(destination, 'runtime-manifest.json'))).equals(bytes)
+    )
+      throw new Error('Existing release is incomplete or different')
+    for (const file of manifest.files) {
+      const info = await lstat(join(destination, file.path))
+      if (
+        !info.isFile() ||
+        info.isSymbolicLink() ||
+        createHash('sha256')
+          .update(await readFile(join(destination, file.path)))
+          .digest('hex') !== file.sha256
+      )
+        throw new Error('Existing release integrity mismatch')
+    }
+  } else {
+    await mkdir(destination, { mode: 0o755 })
+    for (const file of manifest.files) {
+      const target = join(destination, file.path)
+      await mkdir(dirname(target), { recursive: true, mode: 0o755 })
+      await copyFile(join(source, file.path), target, constants.COPYFILE_EXCL)
+      await chmod(
+        target,
+        file.path === 'runtime/node' || file.path.endsWith('/7za') ? 0o755 : 0o644
+      )
+    }
+    await writeFile(join(destination, 'runtime-manifest.json'), bytes, { flag: 'wx', mode: 0o644 })
   }
-  await writeFile(join(destination, 'runtime-manifest.json'), bytes, { flag: 'wx', mode: 0o644 })
-  const next = join(installation, `current-${identifier}`)
+  const directories = new Set([destination])
+  for (const file of manifest.files) {
+    await syncPath(join(destination, file.path))
+    let parent = dirname(join(destination, file.path))
+    while (parent !== destination) {
+      directories.add(parent)
+      parent = dirname(parent)
+    }
+  }
+  await syncPath(join(destination, 'runtime-manifest.json'))
+  for (const directory of [...directories].sort((a, b) => b.length - a.length))
+    await syncPath(directory)
+  await syncPath(releases)
+  await syncPath(installation)
+  await syncPath(dirname(installation))
+  const next = join(installation, `current-${randomUUID()}`)
   await symlink(destination, next)
-  await copyFile(join(destination, 'ls101-lab.service'), '/etc/systemd/system/ls101-lab.service')
+  const unit = `/etc/systemd/system/ls101-lab-${randomUUID()}.service`
+  await copyFile(join(destination, 'ls101-lab.service'), unit, constants.COPYFILE_EXCL)
+  await syncPath(unit)
+  await rename(unit, '/etc/systemd/system/ls101-lab.service')
+  await syncPath('/etc/systemd/system')
   await rename(next, join(installation, 'current'))
+  await syncPath(installation)
   execFileSync('systemctl', ['daemon-reload'], { stdio: ['ignore', 'pipe', 'pipe'] })
   process.stdout.write('Service installed and stopped. Autostart is unchanged.\n')
 }

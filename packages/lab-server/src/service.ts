@@ -79,6 +79,7 @@ export class LabService {
   readonly now: () => number
   readonly transfers = new Map<string, AbortController>()
   readonly fileReferences = new Map<string, number>()
+  private readonly pages = new Map<string, { signature: string; ids: string[]; expires: number }>()
   private constructor(
     readonly options: ServiceOptions,
     readonly db: LabDatabase,
@@ -132,6 +133,7 @@ export class LabService {
       )
       await service.prepareDirectories()
       await service.archives.recover()
+      service.tasks.retain()
       return service
     } catch (error) {
       await db.close()
@@ -435,28 +437,62 @@ export class LabService {
     identity: (item: T) => string
   ): { items: T[]; nextCursor: string | null } {
     const { cursor, limit = 50, ...filters } = context.query
-    const signature = this.operationDigest({ operation: context.id, filters })
+    const signature = this.operationDigest({
+      operation: context.id,
+      path: context.path,
+      principal: context.principal,
+      filters
+    })
+    for (const [id, snapshot] of this.pages)
+      if (snapshot.expires <= this.now()) this.pages.delete(id)
     let start = 0
+    let snapshotId: string
+    let ids: string[]
     if (cursor !== undefined) {
       try {
         const encoded = Buffer.from(String(cursor), 'base64url').toString('utf8')
-        const value = JSON.parse(encoded) as { signature: string; last: string }
-        requireCondition(value.signature === signature, 'INVALID_REQUEST')
-        const index = items.findIndex((item) => identity(item) === value.last)
-        requireCondition(index >= 0, 'INVALID_REQUEST')
-        start = index + 1
+        const value = JSON.parse(encoded) as { id: string; offset: number }
+        const snapshot = this.pages.get(value.id)
+        requireCondition(
+          snapshot?.signature === signature &&
+            Number.isSafeInteger(value.offset) &&
+            value.offset >= 0 &&
+            value.offset <= snapshot.ids.length,
+          'INVALID_REQUEST'
+        )
+        snapshotId = value.id
+        ids = snapshot.ids
+        start = value.offset
       } catch {
         throw new LabError('INVALID_REQUEST')
       }
+    } else {
+      snapshotId = randomUUID()
+      ids = items.map(identity)
+      if (ids.length > Number(limit)) {
+        let count = ids.length
+        for (const snapshot of this.pages.values()) count += snapshot.ids.length
+        requireCondition(ids.length <= 100000, 'RESOURCE_BUSY')
+        while (this.pages.size && (this.pages.size >= 128 || count > 100000)) {
+          const oldest = this.pages.keys().next().value!
+          count -= this.pages.get(oldest)!.ids.length
+          this.pages.delete(oldest)
+        }
+        this.pages.set(snapshotId, { signature, ids, expires: this.now() + 15 * 60000 })
+      }
     }
-    const page = items.slice(start, start + Number(limit))
+    // A bounded ID snapshot preserves order when the previous page's rows are deleted or edited.
+    const current = new Map(items.map((item) => [identity(item), item]))
+    const page: T[] = []
+    while (start < ids.length && page.length < Number(limit)) {
+      const item = current.get(ids[start++])
+      if (item !== undefined) page.push(item)
+    }
     return {
       items: page,
       nextCursor:
-        start + page.length < items.length
-          ? Buffer.from(
-              JSON.stringify({ signature, last: identity(page[page.length - 1]) })
-            ).toString('base64url')
+        start < ids.length
+          ? Buffer.from(JSON.stringify({ id: snapshotId, offset: start })).toString('base64url')
           : null
     }
   }
@@ -604,7 +640,9 @@ export class LabService {
       body: this.page(
         context,
         this.db
-          .all<EnrollmentRow>('SELECT * FROM enrollments ORDER BY rowid DESC')
+          .all<EnrollmentRow>(
+            "SELECT * FROM enrollments ORDER BY json_extract(data,'$.issuedAt') DESC,id DESC"
+          )
           .map((row) => this.enrollment(row)),
         (row) => row.id
       )

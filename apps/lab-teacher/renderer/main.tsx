@@ -14,6 +14,7 @@ import { TeacherController } from './controller'
 import { Devices, Exams, Submissions } from './lists'
 import { Maintenance } from './maintenance'
 import { Settings } from './settings'
+import { LocalService } from './local-service'
 import { Dialog, Notice } from './ui'
 import { useAction } from './hooks'
 import './style.css'
@@ -34,6 +35,7 @@ export function App(): JSX.Element {
     [password, setPassword] = useState(''),
     [trusted, setTrusted] = useState(false)
   const [leavingMaintenance, setLeaving] = useState(false)
+  const [local, setLocal] = useState(false)
   const action = useAction()
   useEffect(() => {
     void controller.start()
@@ -88,7 +90,9 @@ export function App(): JSX.Element {
           <strong>
             听说101 <span>教师端</span>
           </strong>
+          <button onClick={() => setLocal(true)}>本机服务</button>
         </header>
+        {local && <LocalService controller={controller} close={() => setLocal(false)} />}
         <main className="connection-page">
           <h1>连接服务</h1>
           {view.connections.length > 0 && (
@@ -194,10 +198,11 @@ export function App(): JSX.Element {
         <div className="service-identity">
           <b>{view.service?.name ?? view.connection.info.name}</b>
           <span>
-            {view.target?.baseUrl} / {view.connection.info.releaseVersion}
+            {view.target?.baseUrl ?? '本机服务'} / {view.connection.info.releaseVersion}
           </span>
         </div>
         <div className="actions">
+          <button onClick={() => setLocal(true)}>本机服务</button>
           <span className="status">
             {view.service?.mode === 'maintenance' ? '维护模式' : '正常模式'}
           </span>
@@ -226,6 +231,7 @@ export function App(): JSX.Element {
           </button>
         </div>
       </header>
+      {local && <LocalService controller={controller} close={() => setLocal(false)} />}
       <Notice error={action.error} />
       <nav className="tabs">
         {[

@@ -122,14 +122,14 @@ export function Submissions({ controller }: { controller: TeacherController }): 
     [candidateId, setId] = useState(''),
     [room, setRoom] = useState('')
   const [selection, setSelection] = useState(new Map<string, Schema<'Submission'>>())
-  const [confirm, setConfirm] = useState(false),
+  const [confirm, setConfirm] = useState<Schema<'Submission'>[] | null>(null),
     [details, setDetails] = useState<Schema<'Submission'> | null>(null),
     [result, setResult] = useState<Schema<'BatchDeleteResult'> | null>(null)
   const list = useRead<Schema<'SubmissionList'>>(controller, 'getTeacherSubmissions', {
     query: {
       cursor: cursor ?? undefined,
       limit: 50,
-      candidateName: candidateName || undefined,
+      displayName: candidateName || undefined,
       candidateId: candidateId || undefined,
       room: room || undefined
     }
@@ -165,7 +165,7 @@ export function Submissions({ controller }: { controller: TeacherController }): 
           </button>
           <button
             disabled={action.busy || !selection.size || selection.size > 500}
-            onClick={() => setConfirm(true)}
+            onClick={() => setConfirm([...selection.values()])}
           >
             <Trash2 />
             删除
@@ -280,10 +280,15 @@ export function Submissions({ controller }: { controller: TeacherController }): 
         refresh={list.refresh}
       />
       {confirm && (
-        <Dialog title="删除所选作答" close={() => setConfirm(false)}>
-          <p>确认删除 {selection.size} 份作答，成功回执将保留。此操作无法撤销。</p>
+        <Dialog
+          title="删除所选作答"
+          close={() => {
+            if (!action.busy) setConfirm(null)
+          }}
+        >
+          <p>确认删除 {confirm.length} 份作答，成功回执将保留。此操作无法撤销。</p>
           <ul>
-            {[...selection.values()].map((item) => (
+            {confirm.map((item) => (
               <li key={item.id}>
                 {item.candidate.displayName} / {item.candidate.candidateId} /{' '}
                 {time(item.receipt.receivedAt)}
@@ -297,10 +302,10 @@ export function Submissions({ controller }: { controller: TeacherController }): 
               action.run(async () => {
                 setResult(
                   await controller.mutate('postTeacherSubmissionsDelete', {
-                    body: { submissionIds: [...selection.keys()] }
+                    body: { submissionIds: confirm.map((item) => item.id) }
                   })
                 )
-                setConfirm(false)
+                setConfirm(null)
                 setSelection(new Map())
               })
             }
@@ -508,6 +513,8 @@ function DeviceEditor({
   close(): void
   saved(): void
 }): JSX.Element {
+  const [current, setCurrent] = useState(device)
+  const reload = useAction()
   const [draft, setDraft] = useState({
     number: device.number,
     room: device.room ?? '',
@@ -529,7 +536,7 @@ function DeviceEditor({
                 room: draft.room || null,
                 seat: draft.seat || null,
                 displayName: draft.displayName || null,
-                expectedRevision: device.revision
+                expectedRevision: current.revision
               }
             })
           )
@@ -562,6 +569,29 @@ function DeviceEditor({
         </label>
         {!draft.enabled && <p>停用将阻止后续远程业务，当前本地作答可以继续保存。</p>}
         <Notice error={action.error} />
+        <Notice error={reload.error} />
+        {action.error && (
+          <>
+            <button
+              type="button"
+              disabled={reload.busy}
+              onClick={() =>
+                reload.run(async () =>
+                  setCurrent(
+                    await controller.request('getTeacherDevicesId', { path: { id: device.id } })
+                  )
+                )
+              }
+            >
+              载入最新版本
+            </button>
+            <p>
+              服务器：{current.number} / {current.room ?? '-'} / {current.seat ?? '-'} /{' '}
+              {current.displayName ?? '-'} / {current.enabled ? '启用' : '停用'}（版本{' '}
+              {current.revision}）
+            </p>
+          </>
+        )}
         <button className="primary" type="submit" disabled={action.busy}>
           保存
         </button>

@@ -2,9 +2,11 @@ import { resolve } from 'node:path'
 import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import metadata from './package.json'
+import { labBundleAudit } from './scripts/lab/bundle-audit'
 
 export default defineConfig({
   main: {
+    plugins: [labBundleAudit('student')],
     define: { __LAB_VERSION__: JSON.stringify(metadata.version) },
     build: {
       externalizeDeps: false,
@@ -13,6 +15,7 @@ export default defineConfig({
     }
   },
   preload: {
+    plugins: [labBundleAudit('student')],
     build: {
       externalizeDeps: false,
       outDir: 'out/lab-student/preload',
@@ -21,7 +24,7 @@ export default defineConfig({
   },
   renderer: {
     root: resolve('apps/lab-student/renderer'),
-    plugins: [react()],
+    plugins: [react(), labBundleAudit('student')],
     build: {
       outDir: resolve('out/lab-student/renderer'),
       rollupOptions: { input: resolve('apps/lab-student/renderer/index.html') }

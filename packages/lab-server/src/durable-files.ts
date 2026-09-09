@@ -7,7 +7,11 @@ import { LabError } from './errors'
 export type FaultPoint = (point: string) => void | Promise<void>
 
 export async function syncDirectory(directory: string): Promise<void> {
-  const handle = await open(directory, constants.O_RDONLY)
+  // Windows FlushFileBuffers requires a writable directory handle. Never ignore a failed barrier.
+  const handle = await open(
+    directory,
+    process.platform === 'win32' ? constants.O_RDWR : constants.O_RDONLY
+  )
   try {
     await handle.sync()
   } finally {

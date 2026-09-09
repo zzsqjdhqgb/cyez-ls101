@@ -46,13 +46,21 @@ export class TaskStore {
       ['pending', 'running', 'cancel-requested'].includes(task.status) &&
       row.expires_at <= this.service.now()
     )
-      return { ...task, status: 'expired' }
+      return { ...task, status: 'expired', revision: task.revision + 1 }
     const lease = this.service.db.get<LeaseRow>(
       'SELECT * FROM task_leases WHERE task_id=? AND ended_at IS NULL',
       row.id
     )
-    if (lease && lease.expires_at <= this.service.now())
-      return { ...task, status: task.status === 'cancel-requested' ? 'cancelled' : 'expired' }
+    if (
+      lease &&
+      lease.expires_at <= this.service.now() &&
+      ['pending', 'running', 'cancel-requested'].includes(task.status)
+    )
+      return {
+        ...task,
+        status: task.status === 'cancel-requested' ? 'cancelled' : 'expired',
+        revision: task.revision + 1
+      }
     return task
   }
 
@@ -63,6 +71,104 @@ export class TaskStore {
       JSON.stringify(task),
       task.id
     )
+  }
+  expire(): void {
+    const { db } = this.service
+    if (db.gate.closed) return
+    const rows = db.all<TaskRow>(
+      'SELECT t.* FROM tasks t WHERE t.state IN (?,?,?) AND (t.expires_at<=? OR EXISTS (SELECT 1 FROM task_leases l WHERE l.task_id=t.id AND l.ended_at IS NULL AND l.expires_at<=?))',
+      'pending',
+      'running',
+      'cancel-requested',
+      this.service.now(),
+      this.service.now()
+    )
+    if (rows.length)
+      db.transaction(() => {
+        for (const row of rows) {
+          this.update(this.task(row))
+          db.run(
+            'UPDATE task_leases SET ended_at=? WHERE task_id=? AND ended_at IS NULL',
+            this.service.now(),
+            row.id
+          )
+        }
+      })
+    const plans = db.all<{ id: string; data: string }>(
+      "SELECT id,data FROM cleanup_plans WHERE json_extract(data,'$.status') NOT IN ('succeeded','failed','cancelled','expired')"
+    )
+    const changed = plans
+      .map((row) => ({
+        before: JSON.parse(row.data) as Schema<'CleanupPlan'>,
+        after: this.cleanup(row.id)
+      }))
+      .filter(({ before, after }) => before.status !== after.status)
+    if (changed.length)
+      db.transaction(() => {
+        for (const { before, after } of changed)
+          db.run(
+            'UPDATE cleanup_plans SET data=? WHERE id=?',
+            JSON.stringify({ ...after, revision: before.revision + 1 }),
+            before.id
+          )
+      })
+  }
+
+  retain(): void {
+    const { db, archives } = this.service
+    if (db.gate.closed) return
+    this.expire()
+    const day = 86400000
+    db.transaction(() => {
+      for (const row of db.all<{ task_id: string; archive_id: string }>(
+        'SELECT s.task_id,s.archive_id FROM test_submissions s JOIN tasks t ON t.id=s.task_id WHERE t.expires_at<? AND t.state NOT IN (?,?,?)',
+        this.service.now() - 7 * day,
+        'pending',
+        'running',
+        'cancel-requested'
+      )) {
+        db.run(
+          'INSERT OR IGNORE INTO file_gc VALUES (?,?,?)',
+          archives.path('test', row.archive_id),
+          0,
+          'test-retention'
+        )
+        db.run('DELETE FROM test_submissions WHERE task_id=?', row.task_id)
+      }
+      const cutoff = this.service.now() - 90 * day
+      for (const row of db.all<{ id: string }>(
+        'SELECT id FROM tasks WHERE expires_at<? AND state NOT IN (?,?,?)',
+        cutoff,
+        'pending',
+        'running',
+        'cancel-requested'
+      )) {
+        db.run('DELETE FROM task_results WHERE task_id=?', row.id)
+        db.run('DELETE FROM task_leases WHERE task_id=?', row.id)
+        db.run('DELETE FROM tasks WHERE id=?', row.id)
+      }
+      const timestamp = new Date(cutoff).toISOString()
+      for (const row of db.all<{ id: string }>(
+        "SELECT id FROM test_runs WHERE json_extract(data,'$.expiresAt')<? AND NOT EXISTS (SELECT 1 FROM tasks WHERE batch_id=test_runs.id)",
+        timestamp
+      )) {
+        db.run('DELETE FROM test_confirmations WHERE run_id=?', row.id)
+        db.run('DELETE FROM test_runs WHERE id=?', row.id)
+      }
+      for (const row of db.all<{ id: string }>(
+        "SELECT id FROM cleanup_plans WHERE json_extract(data,'$.expiresAt')<? AND NOT EXISTS (SELECT 1 FROM tasks WHERE batch_id=cleanup_plans.id)",
+        timestamp
+      )) {
+        db.run('DELETE FROM cleanup_selections WHERE plan_id=?', row.id)
+        db.run('DELETE FROM cleanup_plans WHERE id=?', row.id)
+      }
+      db.run('DELETE FROM logs WHERE time<?', cutoff)
+      db.run('DELETE FROM teacher_sessions WHERE expires_at<=?', this.service.now())
+      db.run(
+        'DELETE FROM idempotency WHERE expires_at IS NOT NULL AND expires_at<=?',
+        this.service.now()
+      )
+    })
   }
 
   create(
@@ -280,7 +386,7 @@ export class TaskStore {
       const summary = aggregate(selected.map((device) => device.status))
       status = summary === 'pending' || summary === 'running' ? 'executing' : summary
     }
-    return { ...plan, status, devices }
+    return { ...plan, status, devices, revision: plan.revision + (status === plan.status ? 0 : 1) }
   }
 
   validateResult(task: Schema<'Task'>, body: Schema<'TaskResultInput'>): void {
@@ -654,7 +760,9 @@ export function registerTaskHandlers(service: LabService, store: TaskStore): voi
     body: service.page(
       context,
       db
-        .all<{ id: string }>('SELECT id FROM test_runs ORDER BY rowid DESC')
+        .all<{
+          id: string
+        }>("SELECT id FROM test_runs ORDER BY json_extract(data,'$.createdAt') DESC,id DESC")
         .map((row) => store.run(row.id)),
       (run) => run.id
     )
@@ -757,7 +865,9 @@ export function registerTaskHandlers(service: LabService, store: TaskStore): voi
     body: service.page(
       context,
       db
-        .all<{ id: string }>('SELECT id FROM cleanup_plans ORDER BY rowid DESC')
+        .all<{
+          id: string
+        }>("SELECT id FROM cleanup_plans ORDER BY json_extract(data,'$.createdAt') DESC,id DESC")
         .map((row) => store.cleanup(row.id)),
       (plan) => plan.id
     )

@@ -2,7 +2,7 @@ import { createServer } from 'node:https'
 import { createHash, randomUUID, X509Certificate } from 'node:crypto'
 import { X509CertificateGenerator, BasicConstraintsExtension } from '@peculiar/x509'
 import { exportPKCS8, generateKeyPair } from 'jose'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterEach, expect, it } from 'vitest'
@@ -79,4 +79,15 @@ it('does not transmit HTTP headers or credentials when the SPKI pin is wrong', a
   )
   expect(opened.info.serverId).toBe(identity.serverId)
   expect(received).toEqual(['anonymous'])
+  await transport.initialize()
+  const original = join(root, 'original.lssubmission')
+  const temporary = join(transport.directory, randomUUID())
+  await writeFile(original, 'formal submission')
+  await writeFile(temporary, 'temporary download')
+  const archive = await transport.registerArchive(opened.connectionId, original)
+  await transport.registerArchive(opened.connectionId, temporary)
+  await transport.close(opened.connectionId)
+  expect(() => transport.file(archive.handle)).toThrow('Invalid archive handle')
+  expect(await readFile(original, 'utf8')).toBe('formal submission')
+  await expect(readFile(temporary)).rejects.toMatchObject({ code: 'ENOENT' })
 })

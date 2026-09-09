@@ -9,6 +9,7 @@ export type Principal =
 
 export class Security {
   private readonly localProofs = new Map<string, number>()
+  private authenticating = 0
   constructor(
     private readonly db: LabDatabase,
     private readonly now: () => number
@@ -24,6 +25,7 @@ export class Security {
     const token = randomBytes(32).toString('base64url')
     for (const [key, expiration] of this.localProofs)
       if (expiration <= this.now()) this.localProofs.delete(key)
+    requireCondition(this.localProofs.size < 128, 'RATE_LIMITED')
     this.localProofs.set(hash(token), this.now() + 30000)
     return token
   }
@@ -38,33 +40,39 @@ export class Security {
     localProof?: string,
     loopback = false
   ): Promise<{ token: string; expiresAt: string }> {
-    requireCondition(Boolean(input.password) !== Boolean(localProof), 'AUTH_REQUIRED')
-    const security = this.db.get<{ revision: number; salt: string; hash: string }>(
-      'SELECT * FROM security WHERE singleton=1'
-    )!
-    if (localProof) {
-      const key = hash(localProof)
-      const expiry = this.localProofs.get(key) ?? 0
-      this.localProofs.delete(key)
-      requireCondition(loopback && expiry > this.now(), 'AUTH_REQUIRED')
-    } else {
-      requireCondition(
-        equalSecret(await passwordHash(input.password!, security.salt), security.hash),
-        'AUTH_REQUIRED'
-      )
+    requireCondition(this.authenticating < 4, 'RATE_LIMITED')
+    this.authenticating++
+    try {
+      requireCondition(Boolean(input.password) !== Boolean(localProof), 'AUTH_REQUIRED')
+      const security = this.db.get<{ revision: number; salt: string; hash: string }>(
+        'SELECT * FROM security WHERE singleton=1'
+      )!
+      if (localProof) {
+        const key = hash(localProof)
+        const expiry = this.localProofs.get(key) ?? 0
+        this.localProofs.delete(key)
+        requireCondition(loopback && expiry > this.now(), 'AUTH_REQUIRED')
+      } else {
+        requireCondition(
+          equalSecret(await passwordHash(input.password!, security.salt), security.hash),
+          'AUTH_REQUIRED'
+        )
+      }
+      const token = `t.${randomBytes(32).toString('base64url')}`
+      const expiration = this.now() + 8 * 3600000
+      this.db.transaction(() => {
+        requireCondition(this.revision() === security.revision, 'TOKEN_REVOKED')
+        this.db.run(
+          'INSERT INTO teacher_sessions VALUES (?,?,?)',
+          hash(token),
+          security.revision,
+          expiration
+        )
+      })
+      return { token, expiresAt: new Date(expiration).toISOString() }
+    } finally {
+      this.authenticating--
     }
-    const token = `t.${randomBytes(32).toString('base64url')}`
-    const expiration = this.now() + 8 * 3600000
-    this.db.transaction(() => {
-      requireCondition(this.revision() === security.revision, 'TOKEN_REVOKED')
-      this.db.run(
-        'INSERT INTO teacher_sessions VALUES (?,?,?)',
-        hash(token),
-        security.revision,
-        expiration
-      )
-    })
-    return { token, expiresAt: new Date(expiration).toISOString() }
   }
 
   authenticate(token: string | undefined, role: 'teacher' | 'student'): Principal {

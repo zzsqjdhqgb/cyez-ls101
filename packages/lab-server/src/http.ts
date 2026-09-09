@@ -29,12 +29,28 @@ export function createLabHttpServer(service: LabService): Server {
       headersTimeout: 10000
     },
     (request, response) => {
+      if (handlers.size >= 64) {
+        response.writeHead(503, {
+          'Content-Type': 'application/json',
+          'Retry-After': '1',
+          Connection: 'close'
+        })
+        response.end(
+          JSON.stringify({
+            code: 'SERVICE_NOT_READY',
+            message: 'Request capacity reached',
+            requestId: randomUUID()
+          })
+        )
+        return
+      }
       const work = handle(service, request, response)
       handlers.add(work)
       void work.finally(() => handlers.delete(work))
     }
   )
   server.maxRequestsPerSocket = 1000
+  server.maxConnections = 256
   server.keepAliveTimeout = 5000
   activeHandlers.set(server, handlers)
   return server
@@ -151,6 +167,7 @@ async function handle(
     }
     const handler = service.handlers[match.id]
     requireCondition(handler, 'NOT_FOUND')
+    service.tasks.expire()
     result = await handler(context)
     if (!result.file && !result.bytes) {
       try {

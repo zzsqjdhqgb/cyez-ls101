@@ -1,0 +1,19 @@
+<service>
+  <id>LS101Lab</id>
+  <name>LS101 Lab Service</name>
+  <description>LS101 classroom service</description>
+  <executable>%BASE%\runtime\node.exe</executable>
+  <arguments>"%BASE%\server.cjs" serve --data-dir "%ProgramData%\LS101Lab\data"</arguments>
+  <stopexecutable>%BASE%\runtime\node.exe</stopexecutable>
+  <stoparguments>"%BASE%\server.cjs" shutdown --data-dir "%ProgramData%\LS101Lab\data"</stoparguments>
+  <stoptimeout>1900 sec</stoptimeout>
+  <workingdirectory>%BASE%</workingdirectory>
+  <startmode>Manual</startmode>
+  <logpath>%ProgramData%\LS101Lab\logs</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>5</keepFiles>
+  </log>
+  <onfailure action="restart" delay="10 sec" />
+  <resetfailure>1 hour</resetfailure>
+</service>

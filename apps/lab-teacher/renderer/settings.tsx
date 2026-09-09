@@ -1,12 +1,13 @@
 import { useState, type JSX } from 'react'
 import type { Schema } from '@ls101/lab-contracts'
 import type { TeacherController } from './controller'
-import { Dialog, Notice } from './ui'
-import { bytes, time, useAction, useRead } from './hooks'
+import { Dialog, Notice, Pager } from './ui'
+import { bytes, time, useAction, useRead, usePagedRead } from './hooks'
+import { Operations } from './operations'
 
 export function Settings({ controller }: { controller: TeacherController }): JSX.Element {
   const settings = useRead<Schema<'Settings'>>(controller, 'getTeacherSettings')
-  const logs = useRead<Schema<'LogList'>>(
+  const logs = usePagedRead<Schema<'LogList'>>(
     controller,
     'getTeacherLogs',
     { query: { limit: 50 } },
@@ -85,7 +86,14 @@ export function Settings({ controller }: { controller: TeacherController }): JSX
             ))}
           </tbody>
         </table>
+        <Pager
+          cursor={logs.cursor}
+          nextCursor={logs.data?.nextCursor ?? null}
+          onChange={logs.setCursor}
+          refresh={logs.refresh}
+        />
       </section>
+      <Operations controller={controller} />
       {editing && settings.data && (
         <SettingsEditor
           controller={controller}
@@ -114,6 +122,8 @@ function SettingsEditor({
   const [name, setName] = useState(initial.name),
     [baseUrl, setUrl] = useState(initial.baseUrl),
     [limits, setLimits] = useState(initial.limits)
+  const [current, setCurrent] = useState(initial)
+  const reload = useAction()
   const action = useAction(saved)
   return (
     <Dialog title="编辑服务设置" close={close}>
@@ -122,7 +132,7 @@ function SettingsEditor({
           event.preventDefault()
           action.run(() =>
             controller.mutate('patchTeacherSettings', {
-              body: { name, baseUrl, limits, expectedRevision: initial.revision }
+              body: { name, baseUrl, limits, expectedRevision: current.revision }
             })
           )
         }}
@@ -166,6 +176,24 @@ function SettingsEditor({
           </label>
         ))}
         <Notice error={action.error} />
+        <Notice error={reload.error} />
+        {action.error && (
+          <>
+            <button
+              type="button"
+              disabled={reload.busy}
+              onClick={() =>
+                reload.run(async () => setCurrent(await controller.request('getTeacherSettings')))
+              }
+            >
+              载入最新版本
+            </button>
+            <p>
+              服务器：{current.name} / {current.baseUrl}（版本 {current.revision}）
+            </p>
+            <pre className="local-logs">{JSON.stringify(current.limits, null, 2)}</pre>
+          </>
+        )}
         <button className="primary" disabled={action.busy} type="submit">
           保存
         </button>
