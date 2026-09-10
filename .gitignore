@@ -39,3 +39,8 @@ docs/product/**/*.product-docs-backup
 
 # Local TextPA environment overrides
 /textpa/.env.local
+
+# Local Windows/VMware lab: downloads, tools, boxes, VM disks and credentials
+/infra/windows-vm/.local/
+/infra/windows-vm/config.local.psd1
+/infra/windows-vm/.vagrant/

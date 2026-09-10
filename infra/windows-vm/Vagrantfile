@@ -1,0 +1,44 @@
+require 'json'
+
+lab_root = File.expand_path(__dir__)
+local_root = File.join(lab_root, '.local')
+expected_home = File.join(local_root, 'vagrant-home')
+unless ENV['VAGRANT_HOME'] && File.expand_path(ENV['VAGRANT_HOME']).downcase == expected_home.downcase
+  abort 'Run through .\Lab.ps1 so Vagrant storage remains inside this project.'
+end
+
+Vagrant.configure('2') do |config|
+  config.vm.box = 'ls101/windows-server-2022-local'
+  config.vm.box_url = File.join(local_root, 'boxes', 'ls101-windows-server-2022-vmware.box')
+  config.vm.box_check_update = false
+  checksum_file = "#{config.vm.box_url}.sha256"
+  if File.file?(checksum_file)
+    config.vm.box_download_checksum_type = 'sha256'
+    config.vm.box_download_checksum = File.read(checksum_file).strip
+  end
+  config.vm.guest = :windows
+  config.vm.communicator = 'winrm'
+  credentials_file = File.join(local_root, 'generated', 'guest.json')
+  credentials = File.file?(credentials_file) ? JSON.parse(File.read(credentials_file)) : {}
+  config.winrm.username = credentials.fetch('username', 'vagrant')
+  config.winrm.password = credentials.fetch('password', '')
+  config.winrm.transport = :ssl
+  config.winrm.ssl_peer_verification = false
+  config.winrm.port = 5986
+  config.vm.boot_timeout = 900
+  config.vm.network 'forwarded_port', guest: 5986, host: 55986,
+                    host_ip: '127.0.0.1', id: 'winrm-ssl', auto_correct: true
+  config.vm.network 'forwarded_port', guest: 5985, host: 55985,
+                    id: 'winrm', disabled: true
+  config.vm.network 'forwarded_port', guest: 3389, host: 53389,
+                    id: 'rdp', disabled: true
+  # Do not mount the host repo: in particular, never share host node_modules or out.
+  config.vm.synced_folder '.', '/vagrant', disabled: true
+  config.vm.provider 'vmware_desktop' do |vmware|
+    vmware.gui = true
+    vmware.linked_clone = false
+    vmware.clone_directory = File.join(local_root, 'vms')
+    vmware.vmx['memsize'] = credentials.fetch('memory', 8192).to_s
+    vmware.vmx['numvcpus'] = credentials.fetch('cpus', 4).to_s
+  end
+end
