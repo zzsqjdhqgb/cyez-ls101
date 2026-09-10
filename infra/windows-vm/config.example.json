@@ -1,0 +1,20 @@
+{
+  "PackerVersion": "1.14.1",
+  "PackerSha256": "3b9a51744e343b696a15a490500758ce1f864632878d710ed18688e221639b97",
+  "NodeVersion": "24.20.0",
+  "NodeSha256": "6cac9ffbca8f6a47091e4b5c772e0606049c3871cb67d900c0cedde630e545ba",
+  "MinGitVersion": "2.49.0",
+  "MinGitRelease": "v2.49.0.windows.1",
+  "MinGitSha256": "971cdee7c0feaa1e41369c46da88d1000a24e79a6f50191c820100338fb7eca5",
+  "WindowsIso": ".local/downloads/windows-server-2022-eval.iso",
+  "WindowsIsoUrl": "https://software-static.download.prss.microsoft.com/sg/download/888969d5-f34g-4e03-ac9d-1f9786c66749/SERVER_EVAL_x64FRE_en-us.iso",
+  "WindowsIsoSha256": "auto",
+  "VMwareToolsIso": ".local/downloads/windows-vmware-tools.iso",
+  "VMwareToolsIsoUrl": "https://packages.vmware.com/tools/releases/13.1.5/windows/VMware-tools-windows-13.1.5-25544008.iso",
+  "VMwareToolsIsoSha256": "auto",
+  "WindowsImageIndex": 2,
+  "GuestPassword": "REPLACE_WITH_A_LOCAL_LAB_PASSWORD",
+  "Cpus": 4,
+  "MemoryMB": 8192,
+  "DiskMB": 131072
+}
