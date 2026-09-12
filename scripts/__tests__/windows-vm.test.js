@@ -142,7 +142,7 @@ test('validation leaves published credentials intact and does not build; existin
   )
 })
 
-test('failed build does not publish box credentials', async () => {
+test('failed build requests preservation of the VM and does not publish box credentials', async () => {
   const { buildBox, exists } = await api
   const { root, config } = await fixture()
   await assert.rejects(
@@ -150,7 +150,10 @@ test('failed build does not publish box credentials', async () => {
       root,
       config,
       (_command, args) => {
-        if (args[0] === 'build') throw new Error('Packer failed')
+        if (args[0] === 'build') {
+          assert.ok(args.includes('-on-error=abort'), 'Packer must not delete the failed VM')
+          throw new Error('Packer failed')
+        }
       },
       false
     ),

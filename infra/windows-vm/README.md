@@ -42,6 +42,46 @@ yarn vm:box:build
 - `box:validate` 校验 Packer 模板，不创建 VM，不更新已构建 box 的 guest 凭据。
 - `box:build` 使用已配置/锁定的摘要重新校验文件，从 ISO 安装系统并导出 box。不会读取或复制应用代码，也不执行 Yarn install。
 
+构建默认使用 `headless = true`，通过 `vmrun start ... nogui` 启动 VM。部分 Windows Workstation 环境的 GUI 启动命令会一直等待窗口关闭，导致 VM 已进入桌面，Packer 却还未执行 VNC 按键和 WinRM 连接（见 [上游报告 #280](https://github.com/vmware/packer-plugin-vmware/issues/280)）。后台启动仍支持 VNC；需要观察安装界面时，使用 Packer 输出的 VNC 地址和密码。
+
+构建传入 `-on-error=abort`，遇到构建步骤错误时退出并跳过自动清理，保留 VM、磁盘和安装介质供排查。VM 可能仍在运行，排查后应在 Workstation 中关闭它，再归档 `.local/build/windows-server-2022` 后重建。`vm:halt` / `vm:destroy` 管理的是 Vagrant VM，不能用来关闭或清理 Packer 构建 VM；Packer 也不能直接从失败步骤续建。旧版默认清理会打印 `Deleting output directory...`；如果 VMX/VMDK 已被删除，Workstation 中残留的条目无法重新启动，需要重新构建。
+
+### 启动停滞与端口排查
+
+Packer 的顺序为：启动 VM → 连接 VNC → 发送启动按键 → 等待 WinRM → 上传并安装工具。先查看 `.local/logs/packer.log` 最后完成的阶段：
+
+- 停在 `Executing: ... vmrun.exe -T ws start ... gui`，直到关闭 VM 才出现 `Connecting to VNC...`：符合 GUI 启动命令阻塞的现象，确认使用当前后台启动配置。
+- `Connecting to VNC...` 后连接被拒绝：检查构建 VM 是否仍在运行及宿主机 VNC 是否监听。此时尚未执行 WinRM 连接，不应修改 WinRM 地址来修复 VNC。
+- Windows Boot Manager 只有 `Windows Setup [EMS Enabled]` 且没有倒计时：这是安装光盘的启动选项，选中它按一次 Enter 即可继续，保持 Packer 运行，无需重建。启动按键序列已在末尾增加 Enter；旧序列只发送空格，可能留下等待确认的菜单。新序列需要在 Windows 宿主机验证启动时序。
+- 已到 `Waiting for WinRM...`：检查 guest 的 `C:\Windows\Temp\ls101-bootstrap.log`、HTTPS listener 和防火墙，并从宿主机测试 `Test-NetConnection <虚拟机IP> -Port 5986`。
+
+Packer 配置 `winrm_no_proxy = true`，为当前 guest 的 IP/端口绕过宿主机代理；ISO 和工具下载仍可使用其原有代理配置。插件 1.1.0 的 WinRM 客户端默认读取代理环境变量，因此原生 `winrm identify` 成功不代表 Packer 使用了相同的网络路径。`winrm_insecure = true` 只跳过服务器证书校验，不控制代理或 TLS 重协商。
+
+如果 Packer 的 HTTPS POST 返回 `EOF`，而原生客户端可连接，先检查启动 Packer 的终端是否设置了 `HTTPS_PROXY` / `NO_PROXY`，并测试实际远程命令（如通过 `Invoke-Command` 执行 `whoami`）。`IdentifyResponse` 仅验证 Identify 请求，Packer 在连接检查中还会创建 shell、执行命令。单凭 curl 的 TLS 重协商提示和 `EOF`，不能认定重协商是根因。修改模板不会改变已经运行的 Packer 进程；先保留当前 VM 排查，再决定是否重新构建。
+
+VMware Tools 通过第一个 `file` provisioner 显式上传 `var.tools_iso`，再由 `install-tools.ps1` 校验 SHA-256 并安装。[VMware 插件 1.1.0 的 vmware-iso builder](https://github.com/vmware/packer-plugin-vmware/blob/v1.1.0/builder/vmware/iso/builder.go#L59) 创建 `StepPrepareTools` 时漏传 `ToolsSourcePath`，导致内置上传忽略指定的项目 ISO，回退到 Workstation 安装目录的 `windows.iso`；不能用其 `tools_upload_flavor` / `tools_source_path` 组合选择项目资产。当前配置关闭内置 Tools 上传，不依赖 Workstation 自带的 Tools ISO。校验失败会输出预期摘要、实际摘要及文件大小，并在安装前停止。
+
+Tools 上传期间不一定立即生成 `C:\Windows\Temp\vmware-tools.iso`。固定版本的 [winrmcp 上传实现](https://github.com/packer-community/winrmcp/blob/c76d91c1e7db/winrmcp/cp.go) 先通过 WinRM 将约 6 KB 的数据块编码为 Base64，逐块追加到远程用户 `%TEMP%\winrmcp-<UUID>.tmp`，全部上传后才解码生成目标 ISO 并删除临时文件。Packer 使用 vagrant 账户，其临时目录不一定与当前 Administrator 桌面的 `$env:TEMP` 相同。当前日志应显示文件 provisioner 的 `Uploading ...windows-vmware-tools.iso => C:/Windows/Temp/vmware-tools.iso`，而非旧的 `Uploading VMware Tools (windows)...`。
+
+在虚拟机的管理员 PowerShell 中运行下面的只读命令，隔 30–60 秒再运行一次，比较 `Length` 是否增长：
+
+```powershell
+Get-ChildItem -Path 'C:\Users\vagrant*\AppData\Local\Temp', 'C:\Windows\Temp' `
+  -Filter 'winrmcp-*.tmp' -Recurse -Force -ErrorAction SilentlyContinue |
+  Select-Object FullName, Length, LastWriteTime
+```
+
+Base64 临时文件最终约为原始 ISO 大小的 4/3（另有换行开销）。大量逐块远程命令可能使上传持续几十分钟或更久，应根据临时文件增长速度判断进度，不根据目标 ISO 是否存在判断。临时文件不增长、始终找不到或上传报错时，再检查宿主机 `packer.log` 的最新内容。
+
+| 地址/端口 | 用途 |
+| --- | --- |
+| 宿主机 `127.0.0.1:59xx`（以本次日志为准） | VMware VNC，用于安装界面和启动按键 |
+| 虚拟机 IP 的 `5986` | 本项目 Packer 使用的 HTTPS WinRM |
+| `5985` | HTTP WinRM，Bento 默认使用，本项目 bootstrap 删除 HTTP listener |
+| 宿主机 `127.0.0.1:55986` | 基础 box 构建成功后，Vagrant VM 的 HTTPS WinRM 转发；冲突时可能调整 |
+
+基础 box 构建阶段没有将 guest 的 WinRM 转发到宿主机 `127.0.0.1:5986`。测试该地址失败、测试虚拟机 IP 的 5986 成功，并不意味着 Packer 配错了 WinRM 地址。
+
 默认来源见 [SOURCES.md](SOURCES.md)。官方直链若失效会直接报错，不抓取登录/许可页面，也不切换到镜像站或新版本。准备结果在 `.local/logs/asset-inventory.json`，包含所用地址、摘要及验证方式。
 
 已有旧版 `config.local.json` 的用户：从 `config.example.json` 复制 `WindowsIsoUrl`、`VMwareToolsIsoUrl` 和两个值为 `auto` 的 `*IsoSha256` 字段到本地配置，保留自己的密码和硬件参数。`vm:init` 不会覆盖已有配置。若已有手工放入的 ISO，请保留其明确 SHA-256，不要改为 auto 后直接认可旧文件。

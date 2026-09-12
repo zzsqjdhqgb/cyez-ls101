@@ -44,12 +44,16 @@ source "vmware-iso" "windows" {
   cdrom_adapter_type   = "sata"
   network              = "nat"
   network_adapter_type = "e1000e"
-  headless             = false
+  # Use vmrun start ... nogui: GUI startup can block until Workstation closes.
+  # https://github.com/vmware/packer-plugin-vmware/issues/280
+  headless             = true
   iso_url              = var.windows_iso
   iso_checksum         = "sha256:${var.windows_iso_sha256}"
   output_directory     = var.output_directory
   boot_wait            = "2s"
-  boot_command         = ["<spacebar><wait1s><spacebar><wait1s><spacebar>"]
+  # Confirm the ISO's default Windows Setup [EMS Enabled] entry if the boot
+  # keys leave Boot Manager waiting for input instead of starting Setup.
+  boot_command         = ["<spacebar><wait1s><spacebar><wait1s><spacebar><wait2s><enter>"]
   # Packer creates a floppy itself: no ADK/oscdimg/mkisofs executable is required.
   floppy_content = {
     "Autounattend.xml" = templatefile("${path.root}/Autounattend.xml.pkrtpl", {
@@ -63,13 +67,10 @@ source "vmware-iso" "windows" {
   winrm_password = var.guest_password
   winrm_use_ssl  = true
   winrm_insecure = true
+  # Connect directly to the local VMware NAT guest, bypassing host HTTP proxies.
+  winrm_no_proxy = true
   winrm_port     = 5986
   winrm_timeout  = "60m"
-  # Plugin 1.1.0 uploads this local ISO after WinRM connects. DHCP discovery works
-  # before Tools; Tools are then installed for Vagrant's vmrun IP discovery.
-  tools_upload_flavor = "windows"
-  tools_source_path   = var.tools_iso
-  tools_upload_path   = "C:/Windows/Temp/vmware-tools.iso"
   shutdown_command   = "shutdown /s /t 10 /f /d p:4:1 /c \"Packer image complete\""
   shutdown_timeout   = "15m"
   skip_compaction    = true
@@ -78,6 +79,13 @@ source "vmware-iso" "windows" {
 build {
   sources = ["source.vmware-iso.windows"]
 
+  # Plugin 1.1.0's vmware-iso builder omits ToolsSourcePath when constructing
+  # StepPrepareTools, so built-in Tools upload selects Workstation's ISO.
+  # Upload the verified project asset explicitly instead.
+  provisioner "file" {
+    source      = var.tools_iso
+    destination = "C:/Windows/Temp/vmware-tools.iso"
+  }
   provisioner "powershell" {
     environment_vars = ["LS101_TOOLS_SHA256=${var.tools_iso_sha256}"]
     script           = "${path.root}/../guest/install-tools.ps1"

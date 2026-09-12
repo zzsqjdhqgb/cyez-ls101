@@ -12,7 +12,7 @@
 | Node.js（含 npm、Corepack）      | `24.20.0`，`node-v24.20.0-win-x64.zip`                  | [官方 ZIP](https://nodejs.org/dist/v24.20.0/node-v24.20.0-win-x64.zip)、[SHASUMS256.txt](https://nodejs.org/dist/v24.20.0/SHASUMS256.txt)、[签名](https://nodejs.org/dist/v24.20.0/SHASUMS256.txt.sig)。guest 使用其中的 `node.exe` 和 Corepack，不安装 MSI。                                                                                                                                         |
 | MinGit                           | `2.49.0`，release `v2.49.0.windows.1`                   | [官方 ZIP](https://github.com/git-for-windows/git/releases/download/v2.49.0.windows.1/MinGit-2.49.0-64-bit.zip)、[官方发布页及逐文件 SHA-256](https://github.com/git-for-windows/git/releases/tag/v2.49.0.windows.1)。解压出的 `git.exe`、辅助 EXE/DLL 均来自这一包，没有再单独下载 Git 安装器。                                                                                                      |
 | Windows Server ISO               | Server 2022 Evaluation，English x64，Desktop Experience | [Microsoft Evaluation Center](https://www.microsoft.com/en-us/evalcenter/evaluate-windows-server-2022)。官方下载页的 English ISO 链接解析为下方固定微软 CDN 直链，vm:prepare 自动下载并记录首次内容摘要。                                                                                                                                                                                             |
-| VMware Tools ISO                 | `13.1.5-25544008`，Windows x64 ISO                      | [Broadcom 官方支持门户](https://support.broadcom.com/)、[VMware 官方 Tools 发行目录](https://packages.vmware.com/tools/releases/)。默认自动下载下方固定版本并记录首次摘要；自备 ISO 则填写经过核对的 SHA-256。guest 额外检查 ISO 内 `setup64.exe` 的 Authenticode 有效且签发给 VMware/Broadcom。安装器和驱动均由此 ISO 提供。                                                                         |
+| VMware Tools ISO                 | `13.1.5-25544008`，Windows x64 ISO                      | [Broadcom 官方支持门户](https://support.broadcom.com/)、[VMware 官方 Tools 发行目录](https://packages.vmware.com/tools/releases/)。默认自动下载下方固定版本并记录首次摘要；自备 ISO 则填写经过核对的 SHA-256。guest 额外检查 ISO 根目录 `setup.exe`（兼容 `setup64.exe`）的 Authenticode 有效且签发给 VMware/Broadcom。安装器和驱动均由此 ISO 提供。                                                                         |
 | Vagrant VMware Desktop Ruby 插件 | `vagrant-vmware-desktop` `3.0.5`                        | [RubyGems 页面](https://rubygems.org/gems/vagrant-vmware-desktop/versions/3.0.5)、[包](https://rubygems.org/downloads/vagrant-vmware-desktop-3.0.5.gem)、[官方仓库](https://github.com/hashicorp/vagrant-vmware-desktop)。由 `yarn vm:up` / `yarn vm:cycle` 按需安装到项目 `VAGRANT_HOME`，不是 Packer 插件。当前发布元数据不列额外 runtime gem 依赖；Vagrant 自带的解析器/底层库仍随其全局安装提供。 |
 
 ### 自动下载 ISO 的具体来源
@@ -21,7 +21,7 @@
 - VMware Tools：[固定 13.1.5 官方目录](https://packages.vmware.com/tools/releases/13.1.5/windows/)，文件 [VMware-tools-windows-13.1.5-25544008.iso](https://packages.vmware.com/tools/releases/13.1.5/windows/VMware-tools-windows-13.1.5-25544008.iso)，目录标示约 142 MB。没有采用可变 latest 地址。
 - 两个直链均通过 Range 请求读取卷描述符前 8 字节，包含 ISO-9660 的 CD001 标识；这不是完整内容验证，也没有验证内部 Windows 镜像索引或 Tools 安装兼容性。
 - 默认摘要模式 auto：通过固定官方主机的 HTTPS 下载，拒绝跨主机重定向，完成后记录 SHA-256 到本地 iso-lock.json。没有查到可直接采用的独立 Windows SHA-256 清单；VMware 的 .iso.sha 是二进制块哈希格式，不能当作普通整文件 SHA-256 文本。本轮不解析该格式或验证 .sig。
-- 因此首次来源信任依赖官方 HTTPS，记录的 SHA-256 仅用于后续内容锁定；不声称与发布者独立摘要/签名完成比对。明确填写 SHA-256 时，脚本会在首次下载后立即比对。guest 保留 Tools setup64.exe 的 Authenticode 检查。
+- 因此首次来源信任依赖官方 HTTPS，记录的 SHA-256 仅用于后续内容锁定；不声称与发布者独立摘要/签名完成比对。明确填写 SHA-256 时，脚本会在首次下载后立即比对。guest 保留 Tools 安装器的 Authenticode 检查。
 
 已读取官方清单并填入 `config.example.json` 的值（仍请自行核对）：
 

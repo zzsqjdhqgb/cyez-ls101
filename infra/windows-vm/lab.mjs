@@ -307,7 +307,14 @@ export async function buildBox(root, config, run, validateOnly) {
   await writeFile(varsPath, JSON.stringify(variables, null, 2) + '\n', { mode: 0o600 })
   run(packerPath(root, config), ['validate', `-var-file=${varsPath}`, packerTemplatePath(root)])
   if (validateOnly) return
-  run(packerPath(root, config), ['build', `-var-file=${varsPath}`, packerTemplatePath(root)])
+  // Preserve the VM and attached bootstrap media on failure for diagnosis.
+  // Packer's default cleanup otherwise deletes the VM before it can be inspected.
+  run(packerPath(root, config), [
+    'build',
+    '-on-error=abort',
+    `-var-file=${varsPath}`,
+    packerTemplatePath(root)
+  ])
   const hash = await sha256(box)
   await writeFile(`${box}.sha256`, `${hash}\n`, { flag: 'wx' })
   // Publish credentials only after a successful build; validate cannot change a running VM's password.
