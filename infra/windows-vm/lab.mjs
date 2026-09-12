@@ -369,9 +369,33 @@ export function ensureProvider(run) {
     ])
 }
 
-export async function lifecycle(action, run, prepareUp) {
+export function ensureVmwareUtility(run) {
+  // Vagrant's VMware provider requires the host utility service on 127.0.0.1:9922.
+  // Start it when installed but stopped; leave a focused error when it is absent.
+  const script =
+    "$service = Get-Service -Name 'VagrantVMware' -ErrorAction Stop; if ($service.Status -ne 'Running') { $elevated = \"`$ErrorActionPreference = 'Stop'; Start-Service -Name 'VagrantVMware' -ErrorAction Stop\"; $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($elevated)); $child = Start-Process -FilePath powershell.exe -Verb RunAs -Wait -PassThru -ArgumentList @('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',$encoded); if ($child.ExitCode -ne 0) { throw \"elevated service start failed with exit code $($child.ExitCode)\" } }; $service = Get-Service -Name 'VagrantVMware'; if ($service.Status -ne 'Running') { throw 'Vagrant VMware Utility service is not running' }; Write-Output $service.Status"
+  try {
+    const output = run('powershell.exe', [
+      '-NoLogo',
+      '-NoProfile',
+      '-NonInteractive',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      script
+    ], { capture: true })
+    if (!/Running/i.test(output)) throw new Error('service did not report Running')
+  } catch (error) {
+    throw new Error(
+      `Vagrant VMware Utility is unavailable on 127.0.0.1:9922. Install/start the 'vagrant-vmware-utility' service, then retry. ${error.message}`
+    )
+  }
+}
+
+export async function lifecycle(action, run, prepareUp, ensureUtility = () => {}) {
   if (action === 'up') {
     await prepareUp()
+    ensureUtility(run)
     run('vagrant.exe', ['up', '--provider', 'vmware_desktop'])
     return
   }
@@ -380,6 +404,7 @@ export async function lifecycle(action, run, prepareUp) {
     return
   }
   await prepareUp()
+  ensureUtility(run)
   const status = run('vagrant.exe', ['status', '--machine-readable'], { capture: true })
   const states = status
     .split(/\r?\n/)
@@ -486,7 +511,7 @@ export async function main(args = process.argv.slice(2), dependencies = {}) {
         await lifecycle(action, run, async () => {
           await verifyBox(root)
           ensureProvider(run)
-        })
+        }, ensureVmwareUtility)
       }
       report.success = true
     } catch (error) {

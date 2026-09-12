@@ -206,6 +206,21 @@ test('provider setup reuses pinned plugin and refuses incompatible installed ver
   ])
 })
 
+test('VMware Utility check starts the host service and rejects unavailable services', async () => {
+  const { ensureVmwareUtility } = await api
+  const calls = []
+  ensureVmwareUtility((_command, args) => {
+    calls.push(args)
+    return 'Running\n'
+  })
+  assert.equal(calls[0][0], '-NoLogo')
+  assert.match(calls[0].at(-1), /Start-Service/)
+  assert.throws(
+    () => ensureVmwareUtility(() => { throw new Error('service missing') }),
+    /127\.0\.0\.1:9922/
+  )
+})
+
 test('cycle refuses to touch an existing VM and does not clean up on failed preflight', async () => {
   const { lifecycle } = await api
   const calls = []

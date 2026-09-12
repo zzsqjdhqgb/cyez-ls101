@@ -12,6 +12,19 @@
 - 项目放在本地可写 NTFS 盘，建议至少 16 GB 内存和 100 GB 以上可用磁盘空间。默认 guest 为 4 核、8 GB、128 GB 动态磁盘。
 - VMware NAT/DHCP（VMnet8）须可用。下载来源和固定版本见 [SOURCES.md](SOURCES.md)。
 
+`vm:up` 和 `vm:cycle` 会在调用 Vagrant 前检查实际服务名 `VagrantVMware`（显示名为 `vagrant-vmware-utility`）；服务已安装但未运行时会自动启动。普通权限终端会只为这个固定的 `Start-Service` 命令弹出一次 UAC，提权子进程执行完即退出，Node、Packer、Vagrant 和后续操作仍保持原权限。服务缺失或无法启动时，脚本会直接报告 `127.0.0.1:9922`，请修复 Utility 安装后重试。
+
+### VMware Workstation 26H1 注册表兼容项
+
+Workstation 26H1 改为全 64 位，而部分 Vagrant VMware Utility 版本仍查找旧的 `WOW6432Node` 注册表位置，可能导致服务日志出现 `failed to generate VMware installation information`。仓库提供了社区验证过的兼容文件 [utility-fix.reg](utility-fix.reg)。确认 VMware 安装路径确实是 `C:\Program Files\VMware\VMware Workstation\` 且版本为 `26.0.0.25388281` 后，以管理员身份双击导入，再运行：
+
+```powershell
+Restart-Service VagrantVMware
+Test-NetConnection 127.0.0.1 -Port 9922
+```
+
+该文件只增加 Utility 需要的兼容注册表值，不替换 VMware 文件。卸载或升级 Workstation 后若安装路径/版本变化，应删除这些兼容值或重新生成文件，避免保留过期路径。
+
 脚本固定支持 Windows Server 2022 Evaluation 英文版 **Standard Desktop Experience**，采用 BIOS/MBR。不能直接将 ISO 换为 Windows 11。真实 Windows 11 兼容性需要另建对应模板验证。
 
 ## 创建基础 box（一次）
