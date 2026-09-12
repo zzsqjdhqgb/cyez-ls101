@@ -14,6 +14,8 @@
 
 `vm:up` 和 `vm:cycle` 会在调用 Vagrant 前检查实际服务名 `VagrantVMware`（显示名为 `vagrant-vmware-utility`）；服务已安装但未运行时会自动启动。普通权限终端会只为这个固定的 `Start-Service` 命令弹出一次 UAC，提权子进程执行完即退出，Node、Packer、Vagrant 和后续操作仍保持原权限。服务缺失或无法启动时，脚本会直接报告 `127.0.0.1:9922`，请修复 Utility 安装后重试。
 
+脚本会自动将 `127.0.0.1` 和 `localhost` 加入传给 Vagrant/Packer 的 `NO_PROXY` 与 `no_proxy`。如果环境设置了 HTTPS 代理，Vagrant 的本地 WinRM 转发（默认 `127.0.0.1:55986`）仍会直连，不会被发送到代理端口。
+
 ### VMware Workstation 26H1 注册表兼容项
 
 Workstation 26H1 改为全 64 位，而部分 Vagrant VMware Utility 版本仍查找旧的 `WOW6432Node` 注册表位置，可能导致服务日志出现 `failed to generate VMware installation information`。仓库提供了社区验证过的兼容文件 [utility-fix.reg](utility-fix.reg)。确认 VMware 安装路径确实是 `C:\Program Files\VMware\VMware Workstation\` 且版本为 `26.0.0.25388281` 后，以管理员身份双击导入，再运行：

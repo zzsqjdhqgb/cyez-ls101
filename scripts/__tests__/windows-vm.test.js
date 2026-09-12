@@ -86,6 +86,8 @@ test('Vagrant storage and Vagrantfile override inherited global locations withou
   assert.equal(env.VAGRANT_VAGRANTFILE, 'Vagrantfile')
   assert.equal(env.VAGRANT_CWD, root)
   assert.equal(env.HOME, '/keep-home')
+  assert.match(env.NO_PROXY, /127\.0\.0\.1/)
+  assert.match(env.no_proxy, /localhost/)
   assert.equal(inherited.VAGRANT_HOME, '/outside')
 })
 

@@ -134,7 +134,11 @@ export async function initializeEnvironment(root, inherited = process.env) {
     VAGRANT_NONINTERACTIVE: '1',
     CHECKPOINT_DISABLE: '1',
     PACKER_LOG: '1',
-    PACKER_LOG_PATH: path.join(local, 'logs', 'packer.log')
+    PACKER_LOG_PATH: path.join(local, 'logs', 'packer.log'),
+    // Vagrant's forwarded WinRM endpoint is local; never send it through a
+    // host HTTPS proxy (common with Clash/V2Ray environments).
+    NO_PROXY: [env.NO_PROXY, env.no_proxy, '127.0.0.1', 'localhost'].filter(Boolean).join(','),
+    no_proxy: [env.no_proxy, env.NO_PROXY, '127.0.0.1', 'localhost'].filter(Boolean).join(',')
   })
 }
 
