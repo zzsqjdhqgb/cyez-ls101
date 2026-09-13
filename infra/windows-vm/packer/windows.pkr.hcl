@@ -44,6 +44,9 @@ source "vmware-iso" "windows" {
   cdrom_adapter_type   = "sata"
   network              = "nat"
   network_adapter_type = "e1000e"
+  # Keep only the primary NAT adapter in the exported box. Vagrant on Windows
+  # cannot configure secondary VMware adapters and otherwise prints a warning.
+  vmx_remove_ethernet_interfaces = true
   # Use vmrun start ... nogui: GUI startup can block until Workstation closes.
   # https://github.com/vmware/packer-plugin-vmware/issues/280
   headless             = true
