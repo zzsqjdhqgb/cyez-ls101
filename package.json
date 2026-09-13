@@ -22,6 +22,7 @@
     "vm:halt": "node infra/windows-vm/lab.mjs halt",
     "vm:destroy": "node infra/windows-vm/lab.mjs destroy",
     "vm:cycle": "node infra/windows-vm/lab.mjs cycle",
+    "vm:acceptance": "node infra/windows-vm/lab.mjs acceptance",
     "vm:test": "node --test scripts/__tests__/windows-vm.test.js",
     "lab:contracts": "node scripts/lab/generate-contracts.mjs",
     "lab:contracts:check": "node scripts/lab/generate-contracts.mjs --check",

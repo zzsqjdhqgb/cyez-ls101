@@ -2,7 +2,7 @@
 
 宿主机入口是 **JavaScript + Yarn**。在 Windows x64 宿主机上，用 Packer 构建独立基础 box，再用 Vagrant 创建、关机和销毁一次性 VMware 虚拟机。
 
-本轮实现虚拟机生命周期。`vm:cycle` 自动执行创建、等待 WinRM 就绪、关机和销毁，并在宿主机写入 JSON 结果。**尚未实现项目源码传入、guest 自动运行应用测试和测试产物导出**；生命周期成功不表示 Electron、SCM 或 UAC 测试通过。基础 box 不包含项目源码、应用依赖、应用服务或测试结果。
+`vm:cycle` 自动执行创建、等待 WinRM 就绪、关机和销毁，并在宿主机写入 JSON 结果。`vm:acceptance` 每轮创建全新的临时 VM，上传当前源码快照，在 guest 执行 `yarn install --immutable` 和 `yarn test:smoke`，保存日志后仅在成功时自动关机并销毁。测试失败、超时或命令需要交互输入时保留 VM 供排查；结果 JSON 的 `state` 会标记为 `failed` 或 `manual-required`。
 
 ## 宿主机准备（一次）
 
@@ -144,6 +144,7 @@ yarn vm:destroy
 
 ```text
 yarn vm:cycle
+yarn vm:acceptance
 ```
 
 流程为：检查没有已存在的 Vagrant VM → 创建/启动 → 等待 WinRM → 关机 → 销毁。已有 VM（包括关机状态）时拒绝执行，避免删除调试现场。创建失败后仍尝试关机和销毁；关机失败后仍尝试销毁。任何阶段失败都会使命令返回非零，不会被后续清理成功掩盖。

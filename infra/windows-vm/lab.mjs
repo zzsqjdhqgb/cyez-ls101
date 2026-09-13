@@ -29,6 +29,7 @@ const actions = [
   'halt',
   'destroy',
   'cycle'
+  ,'acceptance'
 ]
 const help = `Windows VMware lab (run on a Windows x64 host with Node and Yarn)
   yarn vm:setup         Initialize config, download assets and build (or verify/reuse) box
@@ -41,13 +42,16 @@ const help = `Windows VMware lab (run on a Windows x64 host with Node and Yarn)
   yarn vm:halt          Shut down this project's VM
   yarn vm:destroy       Destroy this project's VM without a prompt; retain base box
   yarn vm:cycle         Require a fresh VM, boot, shut down, destroy; record outcome
+  yarn vm:acceptance    Run Windows smoke tests in a fresh disposable VM
   yarn vm --help        Show this help
 
 Default ISO URLs download automatically and record first-download SHA-256 values.
 For custom/local ISOs, set the URL/path and a reviewed SHA-256 in config.local.json.
 Host requirements: VMware Workstation, Vagrant, Vagrant VMware Utility.
 Only the disposable Vagrant VM is destroyed. The base box and build output are retained.
-cycle verifies VM lifecycle/WinRM readiness, not application or desktop tests.`
+cycle verifies VM lifecycle/WinRM readiness, not application or desktop tests.
+acceptance uploads the current source tree, installs dependencies, runs yarn test:smoke,
+exports guest logs, and destroys the VM only after a successful run.`
 
 export function parseAction(args) {
   if (args.length === 0 || (args.length === 1 && ['--help', '-h'].includes(args[0]))) return 'help'
@@ -438,6 +442,41 @@ export async function lifecycle(action, run, prepareUp, ensureUtility = () => {}
     throw new AggregateError(failures, failures.map((error) => error.message).join('; '))
 }
 
+async function acceptance(root, config, run, report) {
+  await verifyBox(root)
+  ensureProvider(run)
+  ensureVmwareUtility(run)
+  const status = run('vagrant.exe', ['status', '--machine-readable'], { capture: true })
+  const states = status.split(/\r?\n/).filter((line) => line.split(',')[2] === 'state').map((line) => line.split(',')[3])
+  if (states.length !== 1 || states[0] !== 'not_created') throw new Error('vm:acceptance requires no existing VM; use vm:destroy first.')
+  const runId = `${Date.now()}-${randomUUID()}`
+  const localRun = path.join(root, '.local', 'results', runId)
+  await mkdir(localRun, { recursive: true })
+  const archive = path.join(localRun, 'source.tar.gz')
+  const guestScript = path.join(root, 'guest', 'run-acceptance.ps1')
+  report.runId = runId
+  report.state = 'running'
+  let started = false
+  try {
+    run('vagrant.exe', ['up', '--provider', 'vmware_desktop'])
+    started = true
+    run('tar.exe', ['-czf', archive, '--exclude=.git', '--exclude=node_modules', '--exclude=.local', '--exclude=dist', '--exclude=out', '--exclude=build', '.'])
+    run('vagrant.exe', ['upload', archive, 'C:/ls101-lab/source.tar.gz'])
+    run('vagrant.exe', ['upload', guestScript, 'C:/ls101-lab/run-acceptance.ps1'])
+    run('vagrant.exe', ['winrm', '--command', 'powershell -NoProfile -ExecutionPolicy Bypass -File C:/ls101-lab/run-acceptance.ps1'])
+    const guestLog = run('vagrant.exe', ['winrm', '--command', 'powershell -NoProfile -Command "Get-Content C:/ls101-lab/results/acceptance.log -Raw"'], { capture: true })
+    await writeFile(path.join(localRun, 'acceptance.log'), guestLog)
+    report.state = 'passed'
+    run('vagrant.exe', ['halt'])
+    run('vagrant.exe', ['destroy', '--force'])
+    report.destroyed = true
+  } catch (error) {
+    report.state = /interactive|prompt|parameter|input/i.test(error.message) ? 'manual-required' : 'failed'
+    report.preserved = started
+    throw error
+  }
+}
+
 async function initializeConfig(root) {
   const config = JSON.parse(await readFile(path.join(root, 'config.example.json'), 'utf8'))
   config.GuestPassword = `Aa1!${randomBytes(18).toString('hex')}`
@@ -511,6 +550,8 @@ export async function main(args = process.argv.slice(2), dependencies = {}) {
         )
         if (action === 'prepare') await prepare(root, config, run)
         else await buildBox(root, config, run, action === 'box:validate')
+      } else if (action === 'acceptance') {
+        await acceptance(root, null, run, report)
       } else {
         await lifecycle(action, run, async () => {
           await verifyBox(root)
