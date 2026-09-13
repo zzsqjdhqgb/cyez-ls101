@@ -16,6 +16,10 @@
 
 脚本会自动将 `127.0.0.1` 和 `localhost` 加入传给 Vagrant/Packer 的 `NO_PROXY` 与 `no_proxy`。如果环境设置了 HTTPS 代理，Vagrant 的本地 WinRM 转发（默认 `127.0.0.1:55986`）仍会直连，不会被发送到代理端口。
 
+Packer 设置 `vmx_remove_ethernet_interfaces = true`，导出的 box 只保留主 NAT 网卡。Vagrant VMware Desktop 在 Windows guest 上不能自动配置第二块及后续网卡；旧 box 仍可能显示该提示，需要用新模板重新构建 box。
+
+Vagrant 可能在启动时显示 `Configuring secondary network adapters ... not yet supported`。这是 VMware provider 对 Windows guest 的提示，不代表 `vm:up` 失败；以命令末尾的 `SUCCESS: up completed successfully.`、退出码和 `.local/results/*.json` 中的 `success: true` 为准。
+
 ### VMware Workstation 26H1 注册表兼容项
 
 Workstation 26H1 改为全 64 位，而部分 Vagrant VMware Utility 版本仍查找旧的 `WOW6432Node` 注册表位置，可能导致服务日志出现 `failed to generate VMware installation information`。仓库提供了社区验证过的兼容文件 [utility-fix.reg](utility-fix.reg)。确认 VMware 安装路径确实是 `C:\Program Files\VMware\VMware Workstation\` 且版本为 `26.0.0.25388281` 后，以管理员身份双击导入，再运行：

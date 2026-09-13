@@ -525,6 +525,12 @@ export async function main(args = process.argv.slice(2), dependencies = {}) {
       report.finishedAt = new Date().toISOString()
       await writeFile(reportPath, JSON.stringify(report, null, 2) + '\n')
       console.log(`Host result: ${reportPath}`)
+      if (report.success) {
+        console.log(`SUCCESS: ${action} completed successfully.`)
+        if (action === 'up') console.log('The VM is running. Use yarn vm:status to inspect it.')
+        if (action === 'box:build' || action === 'setup')
+          console.log('The Windows base box is ready. Use yarn vm:up to start it.')
+      }
     }
   })
 }
