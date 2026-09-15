@@ -18,7 +18,7 @@ ENV LS101_DOCKER_KEYRING_PASSWORD=ls101-docker-dev
 
 # 安装必要的系统依赖 (curl, git, sudo 等)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl ca-certificates git openssh-client sudo tar bzip2 \
+    curl ca-certificates git openssh-client sudo tar bzip2 socat \
     xvfb xauth \
     dbus dbus-x11 gnome-keyring libsecret-1-0 libsecret-tools \
     libglib2.0-0 libgtk-3-0 \
@@ -81,10 +81,11 @@ EOF
 # 1. 安装并启用 yarn
 RUN corepack enable && corepack prepare yarn@4.15.0
 
-# 2. 安装 Claude Code 和 OpenAI Codex
+# 2. 安装 Claude Code、OpenAI Codex 和 DeepSeek Harness
 RUN npm i -g \
     @anthropic-ai/claude-code@2.1.263 \
-    @openai/codex@0.153.4
+    @openai/codex@0.153.4 \
+    @deepseek-ai/dsh@0.1.5-rc.1
 
 # 设置工作目录为仓库代码挂载点
 WORKDIR /workspace
