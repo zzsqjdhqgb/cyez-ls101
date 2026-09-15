@@ -2,7 +2,7 @@
 
 宿主机入口是 **JavaScript + Yarn**。在 Windows x64 宿主机上，用 Packer 构建独立基础 box，再用 Vagrant 创建、关机和销毁一次性 VMware 虚拟机。
 
-`vm:cycle` 自动执行创建、等待 WinRM 就绪、关机和销毁，并在宿主机写入 JSON 结果。`vm:acceptance` 每轮创建全新的临时 VM，上传当前源码快照，在 guest 执行 `yarn install --immutable` 和 `yarn test:smoke`，保存日志后仅在成功时自动关机并销毁。测试失败、超时或命令需要交互输入时保留 VM 供排查；结果 JSON 的 `state` 会标记为 `failed` 或 `manual-required`。
+`vm:cycle` 自动执行创建、等待 WinRM 就绪、关机和销毁，并在宿主机写入 JSON 结果。`vm:acceptance` 每轮创建全新的临时 VM，上传当前源码快照，在 guest 执行 `corepack enable`、准备 Yarn 4.15.0、`yarn install --immutable` 和 `yarn test:smoke`，保存日志后仅在成功时自动关机并销毁。测试失败、超时或命令需要交互输入时保留 VM 供排查；结果 JSON 的 `state` 会标记为 `failed` 或 `manual-required`。修改 guest 工具链脚本后需重新构建基础 box。
 
 ## 宿主机准备（一次）
 
@@ -155,7 +155,7 @@ yarn vm:acceptance
 
 ## 后续应用测试流水线的边界
 
-基础 box 保持通用。下一阶段应在 Vagrant 创建的临时 VM 中传入当次源码快照，再安装依赖、执行测试，将日志、Playwright 报告和退出码导出到宿主机 `.local/results/<run-id>/`，确认导出完成后关机、销毁。源码快照应包含当次未提交修改，并排除 .git、宿主机 node_modules、构建产物、VM 存储和本地凭据。当前 Vagrantfile 禁用共享目录，也没有 provision 应用。
+基础 box 保持通用。`vm:acceptance` 在 Vagrant 创建的临时 VM 中传入当次源码快照，再安装依赖、执行测试，将日志、Playwright 报告和退出码导出到宿主机 `.local/results/<run-id>/`，确认导出完成后关机、销毁。源码快照使用 `git ls-files -co --exclude-standard`，包含已跟踪文件和未被 `.gitignore` 忽略的未跟踪文件，并排除 `.git`、宿主机 `node_modules`、构建产物、VM 存储和本地凭据。当前 Vagrantfile 禁用共享目录，也没有 provision 应用。
 
 Electron 桌面测试需要已登录的交互桌面；直接用 WinRM 启动测试不能证明 UAC/桌面行为正确。基础 box 关闭自动登录，下一阶段需要在一次性 VM 中建立明确的桌面测试会话和任务完成协议。现有服务测试中采用 fixture/mock 的断言也不能当作真实 SCM 安装验收。
 

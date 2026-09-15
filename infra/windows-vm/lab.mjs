@@ -169,12 +169,12 @@ export async function withLock(local, callback) {
 }
 
 export function createRunner(root, env, report, spawn = spawnSync) {
-  return (command, args, { capture = false, extraEnv = {} } = {}) => {
+  return (command, args, { capture = false, extraEnv = {}, cwd = root } = {}) => {
     const step = { command: path.basename(command), args, startedAt: new Date().toISOString() }
     report.steps.push(step)
     console.log(`Running ${step.command} ${args.join(' ')}`)
     const result = spawn(command, args, {
-      cwd: root,
+      cwd,
       env: { ...env, ...extraEnv },
       shell: false,
       encoding: 'utf8',
@@ -451,8 +451,9 @@ async function acceptance(root, config, run, report) {
   if (states.length !== 1 || states[0] !== 'not_created') throw new Error('vm:acceptance requires no existing VM; use vm:destroy first.')
   const runId = `${Date.now()}-${randomUUID()}`
   const localRun = path.join(root, '.local', 'results', runId)
+  const projectRoot = path.resolve(root, '..', '..')
   await mkdir(localRun, { recursive: true })
-  const archive = path.join(localRun, 'source.tar.gz')
+  const archive = path.join(localRun, 'source.zip')
   const guestScript = path.join(root, 'guest', 'run-acceptance.ps1')
   report.runId = runId
   report.state = 'running'
@@ -460,8 +461,77 @@ async function acceptance(root, config, run, report) {
   try {
     run('vagrant.exe', ['up', '--provider', 'vmware_desktop'])
     started = true
-    run('tar.exe', ['-czf', archive, '--exclude=.git', '--exclude=node_modules', '--exclude=.local', '--exclude=dist', '--exclude=out', '--exclude=build', '.'])
-    run('vagrant.exe', ['upload', archive, 'C:/ls101-lab/source.tar.gz'])
+    // Get all files to archive: tracked + unignored untracked
+    const filesToArchive = run('git.exe', ['-c', 'core.quotePath=off', 'ls-files', '-co', '--exclude-standard'], {
+      capture: true,
+      cwd: projectRoot
+    }).split(/\r?\n/).filter(Boolean)
+
+    if (filesToArchive.length === 0) {
+      throw new Error('No files to archive')
+    }
+
+    // Create a file list for PowerShell
+    const fileListPath = path.join(localRun, 'files.txt')
+    await writeFile(fileListPath, filesToArchive.join('\n'), 'utf8')
+
+    // Create archive using PowerShell's Compress-Archive
+    const compressScript = `
+$ErrorActionPreference = 'Stop'
+$projectRoot = $env:LS101_PROJECT_ROOT
+$archive = $env:LS101_ARCHIVE
+$fileList = $env:LS101_FILE_LIST
+$files = Get-Content $fileList -Encoding UTF8
+$tempDir = Join-Path $env:TEMP ([Guid]::NewGuid().ToString())
+New-Item -ItemType Directory -Path $tempDir | Out-Null
+try {
+  foreach ($file in $files) {
+    $source = Join-Path $projectRoot $file
+    $dest = Join-Path $tempDir $file
+    $destDir = Split-Path $dest -Parent
+    if (-not (Test-Path $destDir)) {
+      New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+    }
+    Copy-Item -LiteralPath $source -Destination $dest -Force
+  }
+  Compress-Archive -Path (Join-Path $tempDir '*') -DestinationPath $archive -Force
+} finally {
+  Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+`.trim()
+
+    const compressResult = spawnSync(
+      'powershell.exe',
+      [
+        '-NoLogo',
+        '-NoProfile',
+        '-NonInteractive',
+        '-EncodedCommand',
+        Buffer.from(compressScript, 'utf16le').toString('base64')
+      ],
+      {
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          LS101_PROJECT_ROOT: projectRoot,
+          LS101_ARCHIVE: archive,
+          LS101_FILE_LIST: fileListPath
+        },
+        shell: false,
+        stdio: ['ignore', 'inherit', 'inherit']
+      }
+    )
+
+    if (compressResult.error || compressResult.status !== 0) {
+      throw new Error(`PowerShell compression failed (${compressResult.error?.code ?? compressResult.signal ?? compressResult.status})`)
+    }
+
+    // Verify the archive was created
+    if (!(await exists(archive))) {
+      throw new Error('Archive was not created')
+    }
+
+    run('vagrant.exe', ['upload', archive, 'C:/ls101-lab/source.zip'])
     run('vagrant.exe', ['upload', guestScript, 'C:/ls101-lab/run-acceptance.ps1'])
     run('vagrant.exe', ['winrm', '--command', 'powershell -NoProfile -ExecutionPolicy Bypass -File C:/ls101-lab/run-acceptance.ps1'])
     const guestLog = run('vagrant.exe', ['winrm', '--command', 'powershell -NoProfile -Command "Get-Content C:/ls101-lab/results/acceptance.log -Raw"'], { capture: true })

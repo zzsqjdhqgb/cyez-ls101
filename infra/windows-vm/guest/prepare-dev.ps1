@@ -20,6 +20,8 @@ foreach ($entry in @{
     COREPACK_HOME = "$root\cache\corepack"
     npm_config_cache = "$root\cache\npm"
     YARN_CACHE_FOLDER = "$root\cache\yarn"
+    YARN_ENABLE_GLOBAL_CACHE = 'true'
+    YARN_GLOBAL_FOLDER = "$root\cache\yarn\global"
     ELECTRON_CACHE = "$root\cache\electron"
     ELECTRON_BUILDER_CACHE = "$root\cache\electron-builder"
     PLAYWRIGHT_BROWSERS_PATH = "$root\cache\playwright"
@@ -28,7 +30,9 @@ foreach ($entry in @{
 }
 & "$nodePath\corepack.cmd" enable --install-directory $nodePath
 if ($LASTEXITCODE -ne 0) { throw 'corepack enable failed' }
-# Yarn itself is downloaded only when the user explicitly runs Yarn in the guest.
+$env:COREPACK_ENABLE_DOWNLOAD_PROMPT = '0'
+& "$nodePath\corepack.cmd" prepare yarn@4.15.0 --activate
+if ($LASTEXITCODE -ne 0) { throw 'corepack yarn preparation failed' }
 & "$nodePath\node.exe" --version
 if ($LASTEXITCODE -ne 0) { throw 'Node failed to start' }
 & "$gitPath\git.exe" --version
