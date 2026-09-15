@@ -1,5 +1,35 @@
 # Lab Implementation Checkpoint
 
+## Remaining implementation authorized on 2026-09-08
+
+Baseline: `60eef2d`; user explicitly requested completion of the remaining implementation. Preserve uncommitted handoff/TODO updates and original submissions. Do not stage or commit.
+
+- [x] Teacher local service host, encrypted elevation exchange, initialize/connect/start/stop/autostart/logs/restore UI.
+- [x] Isolated desktop packaging, platform service installation, unattended startup and data-preserving upgrades (target OS acceptance remains separate).
+- [x] Teacher unknown-write recovery, connection isolation, revision conflicts, frozen selections and pagination.
+- [x] Student shutdown/save coordination, rebind/admission races and IPC capability validation.
+- [x] Server stable pagination, durable batch outcomes, task aggregation/expiry, retention and bounded resources.
+- [x] Deterministic failure/race coverage, dependency audits, packaged smoke and complete integration verification (full suite had one deadline timeout; unchanged targeted spec passed).
+- [x] Target-system acceptance instructions and explicit remaining Windows/Linux/audio/power-loss results in docs/lab-target-acceptance.md.
+- [ ] Execute target-system acceptance: native Windows build/SCM/UAC/ACL/directory barriers; Linux systemd/login/reboot; real audio, classroom load and power loss. Container evidence cannot close these items.
+
+Current continuation updated 2026-09-09: implementation details and exact test outcomes are at the top of HANDOFF-lab-implementation.md. Final Linux student and teacher deb packages built and passed ASAR audits. Full regression had one license deadline timeout (80/81); unchanged targeted license spec passed both cases, components passed 9/9. Final smoke passed 12/12, lab integration passed 2/2, host tests passed 10/10 including export and transfer cleanup, and typechecks/lint passed. No build/test session remains running. Older unchecked stage lists below are historical.
+
+## Continuation on 2026-09-08
+
+- [x] Reconcile temporary commit `943b969` with the previous handoff; user authorized continuation.
+- [x] Standalone Node service/CLI and packaged runtime test.
+- [x] License-aware explicit initialization and encrypted local control/proof issuance.
+- [x] Offline backup verification, restore index cleanup, retained original directory and interrupted-switch recovery.
+- [x] License/listener configuration snapshot and persistent failed-backup garbage collection.
+- [x] Linux installation artifacts, immutable program versions, fixed data account and operational documentation.
+- [x] Server tests, contract checks, typechecks, initial runtime artifact verification and packaged smoke.
+- [x] Final lab/full regression and static checks: 27 server tests, 5 design-contract tests, packaged Node runtime, 12 smoke tests, lab round trip, 81 Electron tests and 9 component tests passed. Component browser revision 1234 was missing; installed the required Playwright headless shell and reran components successfully. See HANDOFF for the combined-command exit distinction.
+- [ ] Teacher local service UI/host wiring; full desktop installers, Windows SCM/ACLs, unattended deployment and upgrade coordination.
+- [ ] Remaining state/race/retention/resource audits and real Windows/audio/power-loss acceptance.
+
+The older checkpoint below is historical. Current work is uncommitted and must not be staged or committed by the agent. This TODO is tracked by the user's temporary commit despite its original local-only intent; exclude future TODO/handoff changes from feature commits unless the user directs otherwise.
+
 Temporary working record. Update during implementation and before handoff.
 This file does not replace the design documents or grant implementation approval.
 
