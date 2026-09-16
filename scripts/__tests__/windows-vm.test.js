@@ -731,6 +731,88 @@ test('guest acceptance builds once and runs both Windows suites in order', async
   assert.match(script, /Set-Content -Path \$status -Value 'passed'/)
 })
 
+test('guest file server moves bytes over HTTP in both directions', async () => {
+  const { createFileServer } = await import('../../infra/windows-vm/guest/fileserver.mjs')
+  const { putGuestFile, getGuestFile, waitForGuestFileServer } = await api
+  const root = await mkdtemp(path.join(tmpdir(), 'ls101-vm files-'))
+  directories.push(root)
+  const uploads = path.join(root, 'transfers')
+  const results = path.join(root, 'results')
+  await mkdir(results, { recursive: true })
+  const server = createFileServer({ uploads, results })
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+  const baseUrl = `http://127.0.0.1:${server.address().port}`
+  try {
+    assert.equal(await waitForGuestFileServer({ baseUrl, timeoutMs: 5000, intervalMs: 10 }), true)
+
+    const payload = Buffer.concat([Buffer.from('PK\x03\x04'), Buffer.alloc(600 * 1024, 7)])
+    const local = path.join(root, 'source.zip')
+    await writeFile(local, payload)
+    assert.equal(await putGuestFile(local, 'source.zip', { baseUrl }), payload.length)
+    assert.deepEqual(await readFile(path.join(uploads, 'source.zip')), payload)
+
+    const downloaded = path.join(root, 'downloaded.zip')
+    assert.equal(
+      await getGuestFile('source.zip', downloaded, { baseUrl, kind: 'files', zip: true }),
+      downloaded
+    )
+    assert.deepEqual(await readFile(downloaded), payload)
+
+    await writeFile(path.join(results, 'acceptance.log'), 'yarn install\n')
+    const log = path.join(root, 'acceptance.log')
+    assert.equal(await getGuestFile('acceptance.log', log, { baseUrl }), log)
+    assert.equal(await readFile(log, 'utf8'), 'yarn install\n')
+    assert.equal(
+      await getGuestFile('missing.log', path.join(root, 'missing.log'), { baseUrl }),
+      null,
+      'a missing guest file is not an error'
+    )
+
+    // Directory traversal and non-archive payloads must both be refused.
+    await assert.rejects(() => putGuestFile(local, '../escape.zip', { baseUrl }), /rejected/)
+    await assert.rejects(
+      () => getGuestFile('acceptance.log', path.join(root, 'wrong'), { baseUrl, zip: true }),
+      /not a ZIP archive/
+    )
+  } finally {
+    await new Promise((resolve) => server.close(resolve))
+  }
+})
+
+test('the guest file server task exposes only the forwarded port', async () => {
+  const { filesServerTaskScript } = await api
+  const script = filesServerTaskScript({ NodeVersion: '22.20.0' })
+  assert.match(script, /New-NetFirewallRule -Name 'LS101-Lab-FileServer'/)
+  assert.match(script, /-LocalPort 8765 -RemoteAddress LocalSubnet/)
+  assert.match(script, /-Execute 'C:\\ls101-lab\\tools\\node-v22\.20\.0-win-x64\\node\.exe'/)
+  assert.match(script, /--uploads C:\\ls101-lab\\transfers --results C:\\ls101-lab\\results/)
+  assert.match(script, /-LogonType Interactive/)
+  assert.match(script, /Start-ScheduledTask -TaskName 'ls101-files'/)
+})
+
+test('the guest address is read from the NAT adapter that owns the default route', async () => {
+  const { guestAddressScript, parseGuestAddress } = await api
+  assert.match(guestAddressScript(), /IPv4DefaultGateway/)
+  assert.equal(parseGuestAddress('192.168.164.128\r\n'), '192.168.164.128')
+  assert.equal(parseGuestAddress('warning: something\r\n10.0.2.15\r\n'), '10.0.2.15')
+  assert.equal(parseGuestAddress('no address reported'), null)
+})
+
+test('an unreachable guest file server fails fast instead of hanging', async () => {
+  const { waitForGuestFileServer } = await api
+  let elapsed = 0
+  await assert.rejects(
+    () =>
+      waitForGuestFileServer({
+        baseUrl: 'http://127.0.0.1:1',
+        timeoutMs: 200,
+        intervalMs: 1,
+        now: () => (elapsed += 100)
+      }),
+    /not reachable/
+  )
+})
+
 function artifactRun(payload, { override = null } = {}) {
   const requested = []
   const run = (_command, args) => {
@@ -975,7 +1057,8 @@ test('acceptance task script registers an interactive task and clears stale stat
   const { acceptanceTaskScript } = await api
   const script = acceptanceTaskScript()
   assert.match(script, /-LogonType Interactive/)
-  assert.match(script, /run-acceptance\.ps1/)
+  // The script arrives over HTTP, so the task must read it from the upload directory.
+  assert.match(script, /-File C:\\ls101-lab\\transfers\\run-acceptance\.ps1/)
   assert.match(script, /Remove-Item -LiteralPath 'C:\\ls101-lab\\results\\status\.txt'/)
   assert.match(script, /Start-ScheduledTask -TaskName 'ls101-acceptance'/)
 })

@@ -1,8 +1,11 @@
 $ErrorActionPreference = 'Stop'
 $root = 'C:\ls101-lab\workspace'
 $results = 'C:\ls101-lab\results'
+$transfers = 'C:\ls101-lab\transfers'
 New-Item -ItemType Directory -Force -Path $root, $results | Out-Null
-if (-not (Test-Path 'C:\ls101-lab\source.zip')) { throw 'source archive was not uploaded' }
+# The snapshot and this script arrive over the guest file server, which the host fills and then
+# reads back; WinRM only carries the control commands.
+if (-not (Test-Path "$transfers\source.zip")) { throw 'source archive was not uploaded' }
 $log = Join-Path $results 'acceptance.log'
 $status = Join-Path $results 'status.txt'
 $progress = Join-Path $results 'progress.txt'
@@ -14,7 +17,7 @@ function Write-Phase([string]$message) {
 }
 
 Write-Phase 'expanding source archive'
-Expand-Archive -Path 'C:\ls101-lab\source.zip' -DestinationPath $root -Force
+Expand-Archive -Path "$transfers\source.zip" -DestinationPath $root -Force
 Set-Location $root
 $node = Get-ChildItem 'C:\ls101-lab\tools' -Directory -Filter 'node-v*-win-x64' | Select-Object -First 1
 if (-not $node) { throw 'Node runtime was not prepared in the base box' }

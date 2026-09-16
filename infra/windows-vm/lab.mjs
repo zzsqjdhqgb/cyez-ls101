@@ -2,9 +2,12 @@
 
 import { spawnSync } from 'node:child_process'
 import { randomBytes, randomUUID } from 'node:crypto'
-import { mkdir, open, readFile, unlink, writeFile } from 'node:fs/promises'
+import { createReadStream, createWriteStream } from 'node:fs'
+import { mkdir, open, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
+import http from 'node:http'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { pipeline } from 'node:stream/promises'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import {
@@ -56,7 +59,8 @@ acceptance uploads the current source tree, enables automatic console logon, ins
 dependencies in the lightweight product-docs setup mode, packages the application once, runs
 the smoke suite and then yarn test:product-docs through an interactive scheduled task,
 exports the guest log, the phase timeline and the preview artifacts, and destroys the VM only
-after a successful run.`
+after a successful run. Bulk files travel over HTTP to the guest file server on the guest's own
+NAT address; WinRM only carries control commands and the two small bootstrap files.`
 
 export function parseAction(args) {
   if (args.length === 0 || (args.length === 1 && ['--help', '-h'].includes(args[0]))) return 'help'
@@ -496,7 +500,24 @@ const GUEST_STATUS = 'C:/ls101-lab/results/status.txt'
 const GUEST_PROGRESS = 'C:/ls101-lab/results/progress.txt'
 const GUEST_LOG = 'C:/ls101-lab/results/acceptance.log'
 const GUEST_DESKTOP_SCRIPT = 'C:/ls101-lab/enable-desktop-session.ps1'
+const GUEST_FILESERVER_SCRIPT = 'C:/ls101-lab/fileserver.mjs'
+const GUEST_FILESERVER_LOG = 'C:/ls101-lab/results/fileserver.log'
+const GUEST_UPLOAD_DIR = 'C:/ls101-lab/transfers'
+const GUEST_RESULTS_DIR = 'C:/ls101-lab/results'
+// The acceptance script arrives over HTTP like every other bulk input, so the scheduled task reads
+// it from the upload directory instead of the lab root it used to be uploaded to.
+const ACCEPTANCE_SCRIPT_NAME = 'run-acceptance.ps1'
+const GUEST_ACCEPTANCE_SCRIPT = `${GUEST_UPLOAD_DIR}/${ACCEPTANCE_SCRIPT_NAME}`
+const GUEST_FILESERVER_PORT = 8765
+// The file server is reached on the guest's own NAT address instead of a forwarded host port:
+// a forwarded port collided with unrelated host software, and the direct path also skips the NAT
+// user-mode hop. The host may connect outbound to the vmnet subnet without any host firewall rule.
+const FILESERVER_TASK = 'ls101-files'
+const FILESERVER_RULE = 'LS101-Lab-FileServer'
 const ACCEPTANCE_TASK = 'ls101-acceptance'
+// A stalled transfer aborts the run instead of hanging until the acceptance timeout.
+const FILE_SERVER_TIMEOUT_MS = 10 * 60 * 1000
+const FILE_SERVER_READY_TIMEOUT_MS = 60 * 1000
 // 0x800704DD ERROR_NO_TOKEN, reported when an interactive task starts without a user session.
 const TASK_LOGON_UNAVAILABLE = 2147943645
 // Task Scheduler informational results: still running and has not run yet.
@@ -574,8 +595,7 @@ export function hasInteractiveSession(output) {
 }
 
 // Registers the acceptance run as a scheduled task instead of running it through WinRM, because
-// only an interactive logon session has a desktop that Electron can show a window on:
-//   -LogonType Interactive  runs in the console session of the logged-on user; it needs no stored
+// only an interactive logon session has a desktop that Electron can show a window on://   -LogonType Interactive  runs in the console session of the logged-on user; it needs no stored
 //                           password, which is why no credential is sent to the guest here
 //   -RunLevel Highest       the guest script installs dependencies and starts Electron
 //   ExecutionTimeLimit      bounds a hung suite; the host has its own timeout as well
@@ -583,13 +603,210 @@ export function hasInteractiveSession(output) {
 // Clearing the status file before the start makes a stale marker from an earlier run harmless.
 export function acceptanceTaskScript() {
   return [
-    `$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoLogo -NoProfile -ExecutionPolicy Bypass -File C:\\ls101-lab\\run-acceptance.ps1'`,
+    `$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoLogo -NoProfile -ExecutionPolicy Bypass -File ${guestPath(GUEST_ACCEPTANCE_SCRIPT)}'`,
     `$principal = New-ScheduledTaskPrincipal -UserId 'vagrant' -LogonType Interactive -RunLevel Highest`,
     `$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 2)`,
     `Register-ScheduledTask -TaskName '${ACCEPTANCE_TASK}' -Action $action -Principal $principal -Settings $settings -Force | Out-Null`,
     `Remove-Item -LiteralPath '${guestPath(GUEST_STATUS)}' -Force -ErrorAction SilentlyContinue`,
     `Start-ScheduledTask -TaskName '${ACCEPTANCE_TASK}'`
   ].join('\n')
+}
+
+// Starts the guest file server: one firewall rule, then a scheduled task that keeps the server
+// alive outside the WinRM shell. The rule is needed because the host connects in as an ordinary
+// inbound client on the virtual subnet; `bootstrap.ps1` already marks this network as private.
+// Nothing is added on the host, which is the point of serving from the guest instead.
+export function filesServerTaskScript(config) {
+  const node = `${guestPath('C:/ls101-lab/tools')}\\node-v${config.NodeVersion}-win-x64\\node.exe`
+  const argument = [
+    guestPath(GUEST_FILESERVER_SCRIPT),
+    '--port',
+    GUEST_FILESERVER_PORT,
+    '--uploads',
+    guestPath(GUEST_UPLOAD_DIR),
+    '--results',
+    guestPath(GUEST_RESULTS_DIR),
+    '--log',
+    guestPath(GUEST_FILESERVER_LOG)
+  ].join(' ')
+  return [
+    `$rule = Get-NetFirewallRule -Name '${FILESERVER_RULE}' -ErrorAction SilentlyContinue`,
+    `if (-not $rule) { New-NetFirewallRule -Name '${FILESERVER_RULE}' -DisplayName 'LS101 Lab file server' -Direction Inbound -Action Allow -Protocol TCP -LocalPort ${GUEST_FILESERVER_PORT} -RemoteAddress LocalSubnet | Out-Null }`,
+    `$action = New-ScheduledTaskAction -Execute '${node}' -Argument '${argument}' -WorkingDirectory '${guestPath('C:/ls101-lab')}'`,
+    `$principal = New-ScheduledTaskPrincipal -UserId 'vagrant' -LogonType Interactive -RunLevel Highest`,
+    `Register-ScheduledTask -TaskName '${FILESERVER_TASK}' -Action $action -Principal $principal -Force | Out-Null`,
+    `Start-ScheduledTask -TaskName '${FILESERVER_TASK}'`
+  ].join('\n')
+}
+
+// HTTP client for the guest file server. `node:http` is used instead of `fetch` on purpose: it
+// streams file bodies natively and ignores HTTP_PROXY-style environment variables, which matters
+// because this repository configures proxies for other tooling.
+async function fileServerRequest(method, url, { body, timeoutMs = FILE_SERVER_TIMEOUT_MS } = {}) {
+  const target = new URL(url)
+  const request = http.request({
+    hostname: target.hostname,
+    port: target.port,
+    path: `${target.pathname}${target.search}`,
+    method
+  })
+  const responsePromise = new Promise((resolve, reject) => {
+    request.on('response', resolve)
+    request.on('error', reject)
+  })
+  // When the upload fails first, nobody awaits the response promise; keep it from surfacing as an
+  // unhandled rejection on top of the real error.
+  responsePromise.catch(() => undefined)
+  // Socket inactivity timeout: it only fires when no bytes move, so slow but live transfers run on.
+  request.setTimeout(timeoutMs, () =>
+    request.destroy(new Error(`file server request timed out after ${timeoutMs} ms`))
+  )
+  let bodyError = null
+  if (body) {
+    try {
+      await pipeline(body, request)
+    } catch (error) {
+      // A server that rejects the request (bad name, too large) answers and closes the socket
+      // while the body is still streaming. The status code is the useful error, so the body
+      // failure is kept only as a fallback for when no response arrives at all.
+      bodyError = error
+    }
+  } else {
+    request.end()
+  }
+  const response = await responsePromise.catch((error) => {
+    throw bodyError ?? error
+  })
+  if (bodyError && response.statusCode >= 200 && response.statusCode < 300) throw bodyError
+  return response
+}
+
+async function readResponseText(response) {
+  const chunks = []
+  for await (const chunk of response) chunks.push(chunk)
+  return Buffer.concat(chunks).toString('utf8')
+}
+
+// The guest address on the VMware NAT subnet: the adapter that owns the default gateway. The IP
+// is read after the automatic-logon reload, because the address can change across a reboot.
+export function guestAddressScript() {
+  return [
+    `$configuration = Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway -ne $null } | Select-Object -First 1`,
+    `if ($configuration) { $configuration.IPv4Address.IPAddress }`
+  ].join('\n')
+}
+
+export function parseGuestAddress(output) {
+  const line = output
+    .split(/\r?\n/)
+    .map((entry) => entry.trim())
+    .find((entry) => /^\d{1,3}(?:\.\d{1,3}){3}$/.test(entry))
+  return line ?? null
+}
+
+async function guestFileServerUrl(run) {
+  const address = parseGuestAddress(readGuestOutput(run, guestAddressScript(), { quiet: true }))
+  if (!address) throw new Error('The guest did not report an IPv4 address for the file server')
+  return `http://${address}:${GUEST_FILESERVER_PORT}`
+}
+
+export async function waitForGuestFileServer({
+  baseUrl,
+  timeoutMs = FILE_SERVER_READY_TIMEOUT_MS,
+  intervalMs = 2000,
+  delay = sleep,
+  now = Date.now
+} = {}) {
+  if (!baseUrl) throw new Error('waitForGuestFileServer requires the guest file server URL')
+  const deadline = now() + timeoutMs
+  let lastError = 'no response'
+  for (;;) {
+    try {
+      const response = await fileServerRequest('GET', `${baseUrl}/health`, { timeoutMs: 5000 })
+      await readResponseText(response)
+      if (response.statusCode === 200) return true
+      lastError = `HTTP ${response.statusCode}`
+    } catch (error) {
+      lastError = error.message
+    }
+    if (now() >= deadline) throw new Error(`Guest file server is not reachable: ${lastError}`)
+    await delay(intervalMs)
+  }
+}
+
+// Uploads a local file. The server answers with the number of bytes it stored, which is compared
+// with the local size: that is the integrity check the chunked WinRM path had to do itself.
+export async function putGuestFile(localPath, name, { baseUrl } = {}) {
+  if (!baseUrl) throw new Error('putGuestFile requires the guest file server URL')
+  const response = await fileServerRequest('PUT', `${baseUrl}/files/${encodeURIComponent(name)}`, {
+    body: createReadStream(localPath)
+  })
+  const body = await readResponseText(response)
+  if (response.statusCode !== 201) {
+    throw new Error(`Guest file server rejected ${name}: HTTP ${response.statusCode} ${body}`)
+  }
+  const stored = Number.parseInt(body, 10)
+  const localSize = (await stat(localPath)).size
+  if (Number.isFinite(stored) && stored !== localSize) {
+    throw new Error(`Guest file server stored ${stored} of ${localSize} bytes for ${name}`)
+  }
+  return localSize
+}
+
+// Downloads a file, returning null when the guest does not have it. Content-length is verified and
+// the ZIP signature is checked for archives, so a truncated or corrupted transfer never lands.
+export async function getGuestFile(
+  name,
+  localPath,
+  { baseUrl, kind = 'results', zip = false } = {}
+) {
+  if (!baseUrl) throw new Error('getGuestFile requires the guest file server URL')
+  const response = await fileServerRequest('GET', `${baseUrl}/${kind}/${encodeURIComponent(name)}`)
+  if (response.statusCode !== 200) {
+    response.resume()
+    return null
+  }
+  const expected = Number.parseInt(response.headers['content-length'] ?? '', 10)
+  const temporary = `${localPath}.part-${randomUUID()}`
+  try {
+    await pipeline(response, createWriteStream(temporary))
+    const actual = (await stat(temporary)).size
+    if (Number.isFinite(expected) && expected !== actual) {
+      throw new Error(`${name} arrived truncated (${actual} of ${expected} bytes)`)
+    }
+    if (zip) {
+      const handle = await open(temporary, 'r')
+      const signature = Buffer.alloc(2)
+      try {
+        await handle.read(signature, 0, 2, 0)
+      } finally {
+        await handle.close()
+      }
+      if (signature[0] !== 0x50 || signature[1] !== 0x4b) {
+        throw new Error(`${name} is not a ZIP archive`)
+      }
+    }
+    await rename(temporary, localPath)
+    return localPath
+  } catch (error) {
+    await unlink(temporary).catch(() => undefined)
+    throw error
+  }
+}
+
+// Collects one guest file for the run directory: HTTP first, and the chunked WinRM reader as a
+// fallback so a guest file server that died mid-run still leaves the evidence on the host.
+async function collectGuestEvidence(run, { baseUrl, name, guestFile, localPath, zip = false }) {
+  if (baseUrl) {
+    try {
+      const viaHttp = await getGuestFile(name, localPath, { baseUrl, zip })
+      if (viaHttp) return { path: viaHttp, transport: 'http' }
+    } catch (error) {
+      console.warn(`Guest file server transfer for ${name} failed (${error.message}); using WinRM`)
+    }
+  }
+  const viaWinrm = await collectGuestArtifact(run, guestFile, localPath, { zip })
+  return viaWinrm ? { path: viaWinrm, transport: 'winrm' } : null
 }
 
 function readGuestOutput(run, script, options = {}) {
@@ -826,6 +1043,7 @@ async function acceptance(root, config, run, report) {
   await mkdir(localRun, { recursive: true })
   const archive = path.join(localRun, 'source.zip')
   const guestScript = path.join(root, 'guest', 'run-acceptance.ps1')
+  const fileserverScript = path.join(root, 'guest', 'fileserver.mjs')
   report.runId = runId
   report.state = 'running'
   let started = false
@@ -908,9 +1126,14 @@ try {
       throw new Error('Archive was not created')
     }
 
-    run('vagrant.exe', ['upload', archive, 'C:/ls101-lab/source.zip'])
-    run('vagrant.exe', ['upload', guestScript, 'C:/ls101-lab/run-acceptance.ps1'])
+    // Only two small files still travel through WinRM: the file server itself (it cannot arrive
+    // over a server that is not running yet) and the automatic logon script. Its credential stays
+    // on the encrypted WinRM channel instead of the plain HTTP one.
+    run('vagrant.exe', ['upload', fileserverScript, GUEST_FILESERVER_SCRIPT])
     let guestError = null
+    // Filled in once the guest reports its address; the evidence collection below needs it to know
+    // whether the HTTP path is even available.
+    let baseUrl = null
     try {
       await enableDesktopSession(config, run)
       const sessions = await waitForInteractiveSession(run)
@@ -925,6 +1148,27 @@ try {
       console.log(
         `Guest desktop sessions:\n${report.guestSessions.map((line) => `  ${line}`).join('\n')}`
       )
+      run('vagrant.exe', ['winrm', '--command', guestCommand(filesServerTaskScript(config))])
+      baseUrl = await guestFileServerUrl(run)
+      // A host HTTP proxy would swallow a manual probe: `curl.exe` and `Invoke-WebRequest` honour
+      // http_proxy and answer 502 for this private address, so the hint prints the bypass. The
+      // transfer itself uses node:http, which ignores proxy variables and therefore never hits it.
+      console.log(`Guest file server: ${baseUrl}`)
+      console.log(`  live log: curl.exe --noproxy "*" ${baseUrl}/results/acceptance.log`)
+      await waitForGuestFileServer({ baseUrl })
+      // The snapshot and the guest script go over HTTP: 58 MB used to cost about a minute through
+      // `vagrant upload`, while the virtual link itself is far faster than the WinRM chunking.
+      const uploaded = await putGuestFile(archive, 'source.zip', { baseUrl })
+      await putGuestFile(guestScript, ACCEPTANCE_SCRIPT_NAME, { baseUrl })
+      // Recorded because these transfers do not appear as runner steps: they are plain HTTP.
+      report.transfers = {
+        transport: 'guest-http',
+        baseUrl,
+        snapshotBytes: uploaded
+      }
+      console.log(
+        `Uploaded ${Math.round(uploaded / (1024 * 1024))} MiB snapshot through the guest file server`
+      )
       run('vagrant.exe', ['winrm', '--command', guestCommand(acceptanceTaskScript())])
       const result = await waitForAcceptanceStatus(run)
       if (result !== 'passed') throw new Error('Guest acceptance run failed; see acceptance.log')
@@ -935,26 +1179,37 @@ try {
     // readable log next to the report even when the guest wrote it with a different encoding.
     for (const [guestFile, name, zip] of [
       [GUEST_LOG, 'acceptance.log', false],
-      [GUEST_PROGRESS, 'progress.txt', false]
+      [GUEST_PROGRESS, 'progress.txt', false],
+      // The file server's own log explains a transfer failure, and the WinRM fallback still
+      // reaches it when the server is what broke.
+      [GUEST_FILESERVER_LOG, 'fileserver.log', false]
     ]) {
       try {
-        const target = await collectGuestArtifact(run, guestFile, path.join(localRun, name), {
+        const evidence = await collectGuestEvidence(run, {
+          baseUrl,
+          name,
+          guestFile,
+          localPath: path.join(localRun, name),
           zip
         })
-        if (target) await writeFile(target, decodeGuestText(await readFile(target)), 'utf8')
+        if (evidence) {
+          await writeFile(evidence.path, decodeGuestText(await readFile(evidence.path)), 'utf8')
+        }
       } catch (error) {
         console.warn(`Guest ${name} is unavailable: ${error.message}`)
       }
     }
     try {
-      const artifact = await collectGuestArtifact(
-        run,
-        GUEST_ARTIFACT,
-        path.join(localRun, 'acceptance-artifacts.zip')
-      )
-      if (artifact) {
-        report.artifact = artifact
-        console.log(`Saved guest acceptance artifacts to ${artifact}`)
+      const evidence = await collectGuestEvidence(run, {
+        baseUrl,
+        name: 'acceptance-artifacts.zip',
+        guestFile: GUEST_ARTIFACT,
+        localPath: path.join(localRun, 'acceptance-artifacts.zip'),
+        zip: true
+      })
+      if (evidence) {
+        report.artifact = evidence.path
+        console.log(`Saved guest acceptance artifacts to ${evidence.path} (${evidence.transport})`)
       }
     } catch (error) {
       report.artifactError = error.message
