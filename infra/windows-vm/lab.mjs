@@ -44,7 +44,7 @@ const help = `Windows VMware lab (run on a Windows x64 host with Node and Yarn)
   yarn vm:halt          Shut down this project's VM
   yarn vm:destroy       Destroy this project's VM without a prompt; retain base box
   yarn vm:cycle         Require a fresh VM, boot, shut down, destroy; record outcome
-  yarn vm:acceptance    Run Windows product documentation tests in a fresh disposable VM
+  yarn vm:acceptance    Run Windows smoke and product documentation tests in a fresh disposable VM
   yarn vm --help        Show this help
 
 Default ISO URLs download automatically and record first-download SHA-256 values.
@@ -53,9 +53,10 @@ Host requirements: VMware Workstation, Vagrant, Vagrant VMware Utility.
 Only the disposable Vagrant VM is destroyed. The base box and build output are retained.
 cycle verifies VM lifecycle/WinRM readiness, not application or desktop tests.
 acceptance uploads the current source tree, enables automatic console logon, installs
-dependencies in the lightweight product-docs setup mode, runs yarn test:product-docs through
-an interactive scheduled task, exports the guest log and the product documentation preview
-artifacts, and destroys the VM only after a successful run.`
+dependencies in the lightweight product-docs setup mode, packages the application once, runs
+the smoke suite and then yarn test:product-docs through an interactive scheduled task,
+exports the guest log, the phase timeline and the preview artifacts, and destroys the VM only
+after a successful run.`
 
 export function parseAction(args) {
   if (args.length === 0 || (args.length === 1 && ['--help', '-h'].includes(args[0]))) return 'help'

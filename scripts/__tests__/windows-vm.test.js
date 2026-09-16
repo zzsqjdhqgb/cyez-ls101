@@ -704,6 +704,33 @@ test('runner failures name the decoded script that failed', async () => {
   )
 })
 
+test('guest acceptance builds once and runs both Windows suites in order', async () => {
+  const script = await readFile(
+    path.resolve(__dirname, '../../infra/windows-vm/guest/run-acceptance.ps1'),
+    'utf8'
+  )
+  // Both `yarn test:smoke` and `yarn test:product-docs` rebuild the application, so the guest
+  // script packages it once and calls the run-only entry points instead.
+  assert.equal(
+    (script.match(/&\s*\$corepack yarn build:test\s/g) ?? []).length,
+    1,
+    'the application must be packaged exactly once for both suites'
+  )
+  assert.match(
+    script,
+    /&\s*\$corepack yarn test:playwright:electron tests\/integration\/electron-app\.spec\.ts/
+  )
+  assert.match(script, /&\s*\$corepack yarn test:product-docs:run\s/)
+  assert.ok(
+    script.indexOf("Write-Phase 'yarn test:smoke'") <
+      script.indexOf("Write-Phase 'yarn test:product-docs'"),
+    'smoke reports first so a startup failure is visible before the longer suite'
+  )
+  assert.match(script, /LS101_SETUP_MODE = 'product-docs'/)
+  assert.match(script, /test-results\\integration/, 'smoke evidence travels with the artifacts')
+  assert.match(script, /Set-Content -Path \$status -Value 'passed'/)
+})
+
 function artifactRun(payload, { override = null } = {}) {
   const requested = []
   const run = (_command, args) => {

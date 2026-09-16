@@ -54,9 +54,19 @@ try {
   Write-Phase 'yarn install'
   & $corepack yarn install --immutable *>&1 | Out-File -FilePath $log -Append -Encoding utf8
   if ($LASTEXITCODE -ne 0) { throw "yarn install failed with exit code $LASTEXITCODE" }
+  # `yarn test:smoke` and `yarn test:product-docs` both start with `yarn build:test`, so the
+  # application is packaged once here and both suites run through their run-only entry points:
+  # test:smoke runs playwright with the electron-app spec, test:product-docs:run renders the
+  # preview. Sharing one build keeps both suites on the same artifact and saves a second packaging.
+  Write-Phase 'yarn build:test'
+  & $corepack yarn build:test *>&1 | Out-File -FilePath $log -Append -Encoding utf8
+  if ($LASTEXITCODE -ne 0) { throw "yarn build:test failed with exit code $LASTEXITCODE" }
+  Write-Phase 'yarn test:smoke'
+  & $corepack yarn test:playwright:electron tests/integration/electron-app.spec.ts *>&1 | Out-File -FilePath $log -Append -Encoding utf8
+  if ($LASTEXITCODE -ne 0) { throw "smoke tests failed with exit code $LASTEXITCODE" }
   Write-Phase 'yarn test:product-docs'
-  & $corepack yarn test:product-docs *>&1 | Out-File -FilePath $log -Append -Encoding utf8
-  if ($LASTEXITCODE -ne 0) { throw "yarn test:product-docs failed with exit code $LASTEXITCODE" }
+  & $corepack yarn test:product-docs:run *>&1 | Out-File -FilePath $log -Append -Encoding utf8
+  if ($LASTEXITCODE -ne 0) { throw "product documentation tests failed with exit code $LASTEXITCODE" }
 } catch {
   $failure = $_
   Add-Content -Path $log -Value ($_ | Out-String) -Encoding UTF8
@@ -77,6 +87,7 @@ Write-Phase 'exporting artifacts'
 $sources = @(
   (Join-Path $root 'test-results\product-docs-preview'),
   (Join-Path $root 'test-results\product-docs'),
+  (Join-Path $root 'test-results\integration'),
   $log,
   $progress
 ) | Where-Object { Test-Path $_ }
