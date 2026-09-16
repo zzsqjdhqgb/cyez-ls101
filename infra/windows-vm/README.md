@@ -2,7 +2,7 @@
 
 宿主机入口是 **JavaScript + Yarn**。在 Windows x64 宿主机上，用 Packer 构建独立基础 box，再用 Vagrant 创建、关机和销毁一次性 VMware 虚拟机。
 
-`vm:cycle` 自动执行创建、等待 WinRM 就绪、关机和销毁，并在宿主机写入 JSON 结果。`vm:acceptance` 每轮创建全新的临时 VM，上传当前源码快照，在 guest 执行 `corepack enable`、准备 Yarn 4.15.0、`yarn install --immutable` 和 `yarn test:smoke`，保存日志后仅在成功时自动关机并销毁。测试失败、超时或命令需要交互输入时保留 VM 供排查；结果 JSON 的 `state` 会标记为 `failed` 或 `manual-required`。修改 guest 工具链脚本后需重新构建基础 box。
+`vm:cycle` 自动执行创建、等待 WinRM 就绪、关机和销毁，并在宿主机写入 JSON 结果。`vm:acceptance` 每轮创建全新的临时 VM，上传当前源码快照，在 guest 执行 `corepack enable`、准备 Yarn 4.15.0、`yarn install --immutable` 和 `yarn test:product-docs`，保存日志后仅在成功时自动关机并销毁。应用只有在渲染进程 DOM 就绪并显示主窗口之后才会完成启动，而 WinRM 命令运行在 session 0，无法提供窗口，因此 acceptance 会先为一次性 VM 打开控制台自动登录并重启，再通过以 `vagrant` 交互式运行的计划任务执行测试；基础 box 本身不保存自动登录设置。guest 固定使用 `LS101_SETUP_MODE=product-docs`：只下载打包需要的轻量 Qwen TTS runtime、lab 服务资源和本地生成的文件图标，跳过数 GB 的 Qwen、Pocket TTS、STT 与发音模型本体。宿主机同时回传 `acceptance.log` 和 `acceptance-artifacts.zip`（产品文档预览 Markdown、截图，以及失败时的 trace）到 `infra/windows-vm/.local/results/<run-id>/`。测试失败、超时或命令需要交互输入时保留 VM 供排查；结果 JSON 的 `state` 会标记为 `failed` 或 `manual-required`。修改 guest 工具链脚本后需重新构建基础 box。
 
 ## 宿主机准备（一次）
 

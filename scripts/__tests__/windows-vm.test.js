@@ -653,3 +653,302 @@ test('Packer validate/build resolve every HCL resource from an absolute template
   )
   assert.deepEqual(operations, ['validate', 'build'])
 })
+
+// Decodes the encoded PowerShell payload that lab.mjs sends through `vagrant winrm`.
+const guestScriptOf = (args) =>
+  Buffer.from(/-EncodedCommand (\S+)/.exec(args.at(-1))[1], 'base64').toString('utf16le')
+
+test('encoded guest commands are logged as decoded scripts, not base64', async () => {
+  const { createRunner, decodeGuestCommand, describeStep, firstScriptLine } = await api
+  const script = "Get-Content -LiteralPath 'C:\\ls101-lab\\results\\status.txt' -Raw"
+  const args = [
+    'winrm',
+    '--command',
+    `powershell -NoProfile -EncodedCommand ${Buffer.from(script, 'utf16le').toString('base64')}`
+  ]
+  const hidden = args[2].split(' ').at(-1)
+  const printed = []
+  const original = console.log
+  console.log = (line) => printed.push(line)
+  let report
+  try {
+    report = { steps: [] }
+    const spawn = () => ({ status: 0, stdout: '', stderr: '', error: null })
+    createRunner('/tmp', {}, report, spawn)('vagrant.exe', args, { capture: true, quiet: false })
+  } finally {
+    console.log = original
+  }
+  assert.equal(decodeGuestCommand(args), script)
+  assert.equal(report.steps[0].script, script, 'the report keeps a readable copy of the script')
+  const output = printed.join('\n')
+  assert.match(output, /encoded PowerShell, 1 lines/)
+  assert.match(output, /Get-Content -LiteralPath/)
+  assert.ok(!output.includes(hidden), 'the base64 blob is replaced by the decoded script')
+  assert.equal(describeStep('vagrant.exe', ['status'], null), 'vagrant.exe status')
+  assert.match(firstScriptLine(`\n\n  echo hi  \n`), /^echo hi$/)
+  assert.equal(firstScriptLine(''), '')
+})
+
+test('runner failures name the decoded script that failed', async () => {
+  const { createRunner } = await api
+  const script = "Get-Content -LiteralPath 'C:\\missing.log' -Raw"
+  const args = [
+    'winrm',
+    '--command',
+    `powershell -EncodedCommand ${Buffer.from(script, 'utf16le').toString('base64')}`
+  ]
+  const run = createRunner('/tmp', {}, { steps: [] }, () => ({ status: 1, stdout: '', stderr: '' }))
+  assert.throws(
+    () => run('vagrant.exe', args, { capture: true }),
+    /script: Get-Content -LiteralPath/
+  )
+})
+
+function artifactRun(payload, { override = null } = {}) {
+  const requested = []
+  const run = (_command, args) => {
+    const script = guestScriptOf(args)
+    if (script.includes('Get-Item')) return `${payload.length}\r\n`
+    const offset = Number(/Position = (\d+)/.exec(script)[1])
+    const length = Number(/byte\[\] (\d+)/.exec(script)[1])
+    requested.push(length)
+    const chunk = override ?? payload.subarray(offset, offset + length)
+    return `${chunk.toString('base64')}\r\n`
+  }
+  return { run, requested, size: payload.length }
+}
+
+test('acceptance artifacts are reassembled from bounded WinRM commands', async () => {
+  const { collectGuestArtifact } = await api
+  const root = await mkdtemp(path.join(tmpdir(), 'ls101-vm artifact-'))
+  directories.push(root)
+  const payload = Buffer.concat([Buffer.from('PK\x03\x04'), Buffer.alloc(600 * 1024, 7)])
+  const { run, requested } = artifactRun(payload)
+  const local = path.join(root, 'acceptance-artifacts.zip')
+  assert.equal(
+    await collectGuestArtifact(run, 'C:/ls101-lab/results/acceptance-artifacts.zip', local),
+    local
+  )
+  assert.deepEqual(await readFile(local), payload)
+  assert.equal(requested.length, Math.ceil(payload.length / (512 * 1024)))
+  assert.ok(
+    requested.every((length) => length <= 512 * 1024),
+    'each WinRM command stays bounded'
+  )
+  const absent = await collectGuestArtifact(
+    () => '\r\n',
+    'C:/ls101-lab/results/acceptance-artifacts.zip',
+    path.join(root, 'missing.zip')
+  )
+  assert.equal(absent, null, 'a missing guest artifact is not an error')
+})
+
+test('guest text decoding survives every PowerShell log encoding', async () => {
+  const { decodeGuestText } = await api
+  const text = 'yarn install\n'
+  const utf8Bom = Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(text, 'utf8')])
+  const utf16Bom = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, 'utf16le')])
+  assert.equal(decodeGuestText(Buffer.from(text, 'utf8')), text)
+  assert.equal(decodeGuestText(utf8Bom), text)
+  assert.equal(decodeGuestText(utf16Bom), text)
+  assert.equal(
+    decodeGuestText(Buffer.from(text, 'utf16le')),
+    text,
+    'Windows PowerShell wrote UTF-16LE without a BOM'
+  )
+})
+
+test('chunked collection fetches plain text without the ZIP check', async () => {
+  const { collectGuestArtifact } = await api
+  const root = await mkdtemp(path.join(tmpdir(), 'ls101-vm log-'))
+  directories.push(root)
+  const payload = Buffer.from('=== desktop session ===\r\n>console vagrant 1 Active\r\n', 'utf8')
+  const local = path.join(root, 'acceptance.log')
+  assert.equal(
+    await collectGuestArtifact(
+      artifactRun(payload).run,
+      'C:/ls101-lab/results/acceptance.log',
+      local,
+      { zip: false }
+    ),
+    local
+  )
+  assert.deepEqual(await readFile(local), payload)
+})
+
+test('acceptance artifact export rejects non-ZIP and truncated payloads', async () => {
+  const { collectGuestArtifact } = await api
+  const root = await mkdtemp(path.join(tmpdir(), 'ls101-vm artifact-'))
+  directories.push(root)
+  const local = path.join(root, 'acceptance-artifacts.zip')
+  const notZip = artifactRun(Buffer.from('<html>not an archive</html>'))
+  await assert.rejects(
+    () => collectGuestArtifact(notZip.run, 'C:/results/acceptance-artifacts.zip', local),
+    /not a ZIP archive/
+  )
+  const payload = Buffer.concat([Buffer.from('PK\x03\x04'), Buffer.alloc(600 * 1024, 7)])
+  const truncated = artifactRun(payload, { override: payload.subarray(0, 2) })
+  await assert.rejects(
+    () => collectGuestArtifact(truncated.run, 'C:/results/acceptance-artifacts.zip', local),
+    /truncated/
+  )
+})
+
+test('interactive desktop detection requires a session with a logged-on user', async () => {
+  const { hasInteractiveSession } = await api
+  const header = ' SESSIONNAME       USERNAME                 ID  STATE   TYPE        DEVICE\r\n'
+  assert.equal(
+    hasInteractiveSession(
+      `${header} services                                    0  Disc\r\n>console                                     1  Conn\r\n`
+    ),
+    false,
+    'a console without a user is not a desktop session'
+  )
+  assert.equal(
+    hasInteractiveSession(
+      `${header} services                                    0  Disc\r\n>console           vagrant                   1  Active\r\n`
+    ),
+    true
+  )
+})
+
+test('desktop session script enables console logon without accepting unsafe passwords', async () => {
+  const { desktopSessionScript } = await api
+  const script = desktopSessionScript('Test-Password123!')
+  assert.match(script, /AutoAdminLogon -Value '1'/)
+  assert.match(script, /DefaultUserName -Value 'vagrant'/)
+  assert.match(script, /DefaultPassword -Value 'Test-Password123!'/)
+  assert.match(script, /Remove-ItemProperty -Path \$winlogon -Name AutoLogonCount/)
+  assert.match(script, /DoNotOpenServerManagerAtLogon/)
+  assert.match(script, /if \(-not \(Test-Path -LiteralPath \$serverManager\)\)/)
+  assert.doesNotMatch(script, /New-Item -Path \$serverManager -Force/)
+  assert.throws(
+    () => desktopSessionScript("Test'; Remove-Item C:\\ -Recurse"),
+    /cannot be embedded/
+  )
+})
+
+test('desktop session polling stops once the console session appears', async () => {
+  const { waitForInteractiveSession } = await api
+  let polls = 0
+  const run = () => {
+    polls += 1
+    return polls < 3
+      ? ' services                                    0  Disc\r\n'
+      : '>console           vagrant                   1  Active\r\n'
+  }
+  const sessions = await waitForInteractiveSession(run, {
+    timeoutMs: 60_000,
+    intervalMs: 1,
+    delay: async () => undefined
+  })
+  assert.match(sessions, /vagrant/)
+  assert.equal(polls, 3)
+
+  let elapsed = 0
+  const never = await waitForInteractiveSession(() => ' services  0  Disc\r\n', {
+    timeoutMs: 1_000,
+    intervalMs: 1,
+    delay: async () => undefined,
+    now: () => (elapsed += 400)
+  })
+  assert.equal(never, null)
+})
+
+// The host reads guest state from a single encoded PowerShell command, so tests decode the
+// payload instead of matching the base64 blob.
+test('guest state parsing reads the marker line and tolerates WinRM noise', async () => {
+  const { parseGuestState } = await api
+  assert.deepEqual(
+    parseGuestState('warning: something\r\nLS101STATE|passed|12:01:02 yarn install|Ready|0||\r\n'),
+    {
+      status: 'passed',
+      phase: '12:01:02 yarn install',
+      state: 'Ready',
+      result: 0,
+      lastRun: '',
+      tail: ''
+    }
+  )
+  const missing = parseGuestState('no marker here')
+  assert.equal(missing.status, '')
+  assert.equal(missing.state, '')
+  assert.ok(Number.isNaN(missing.result))
+})
+
+// Field order matches guestStateScript: status | phase | task state | result | last run | log tail.
+const stateOutput = ({ status = '', phase = '', task = 'Running|267009|', tail = '' } = {}) =>
+  `LS101STATE|${status}|${phase}|${task}|${tail}\r\n`
+
+test('acceptance polling stays quiet, reports progress and fails fast', async () => {
+  const { waitForAcceptanceStatus } = await api
+  const statusRun = (states) => (_command, args) => {
+    assert.match(guestScriptOf(args), /Get-ScheduledTask/)
+    return states.shift() ?? stateOutput()
+  }
+  const lines = []
+  const options = {
+    timeoutMs: 60_000,
+    intervalMs: 1,
+    delay: async () => undefined,
+    log: (line) => lines.push(line)
+  }
+
+  assert.equal(
+    await waitForAcceptanceStatus(
+      statusRun([
+        stateOutput({ phase: '12:00:01 yarn install', tail: 'YN0000: Installing' }),
+        stateOutput({ phase: '12:00:01 yarn install', tail: 'YN0000: Installing' }),
+        stateOutput({ status: 'passed', task: 'Ready|0|' })
+      ]),
+      options
+    ),
+    'passed'
+  )
+  assert.equal(
+    await waitForAcceptanceStatus(statusRun([stateOutput({ status: 'failed' })]), options),
+    'failed'
+  )
+  assert.equal(lines.length, 1, 'identical polls must not repeat the progress line')
+  assert.match(lines[0], /12:00:01 yarn install/)
+
+  await assert.rejects(
+    () => waitForAcceptanceStatus(statusRun([stateOutput({ task: 'missing|0|' })]), options),
+    /Acceptance task is missing/
+  )
+  await assert.rejects(
+    () => waitForAcceptanceStatus(statusRun([stateOutput({ task: 'Ready|2147943645|' })]), options),
+    /interactive desktop session is unavailable/
+  )
+  await assert.rejects(
+    () => waitForAcceptanceStatus(statusRun([stateOutput({ task: 'Ready|1|' })]), options),
+    /ended without publishing a status/
+  )
+  // Task Scheduler informational results must not be mistaken for failures.
+  assert.equal(
+    await waitForAcceptanceStatus(
+      statusRun([stateOutput({ task: 'Ready|267011|' }), stateOutput({ status: 'passed' })]),
+      options
+    ),
+    'passed'
+  )
+  let elapsed = 0
+  await assert.rejects(
+    () =>
+      waitForAcceptanceStatus(statusRun([]), {
+        ...options,
+        timeoutMs: 1_000,
+        now: () => (elapsed += 600)
+      }),
+    /did not finish within/
+  )
+})
+
+test('acceptance task script registers an interactive task and clears stale status', async () => {
+  const { acceptanceTaskScript } = await api
+  const script = acceptanceTaskScript()
+  assert.match(script, /-LogonType Interactive/)
+  assert.match(script, /run-acceptance\.ps1/)
+  assert.match(script, /Remove-Item -LiteralPath 'C:\\ls101-lab\\results\\status\.txt'/)
+  assert.match(script, /Start-ScheduledTask -TaskName 'ls101-acceptance'/)
+})
