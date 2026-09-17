@@ -288,3 +288,17 @@ M1 覆盖的 Tier 0/1 项：H1、H2、H3、S1–S14、S18。其中 H3 分两段�
 因此 [lab-target-acceptance.md](lab-target-acceptance.md) 的「Windows x64 / NTFS」一节**必须保持"未运行"**，直到 `yarn vm:lab` 在真实 Windows 宿主机上通过并留下结果。
 
 M1 尚未覆盖的 Tier 1 项：S15（停止语义与在线设备）、S16（重启后自启动）、S17（端口占用）。这三项需要多次重启或已注册设备，按计划留给后续里程碑。
+
+## 13. 首次实机运行发现的问题
+
+2026-09-17 在真实 Windows 宿主机上分阶段跑通了 M1 的前两步（宿主机编译、guest 首阶段），发现三个缺陷。全部是单元测试、容器打包和 Linux 目标都无法暴露的问题，也是这套 VM 验收存在的理由。
+
+| 缺陷                           | 表现                                                                                                                                                   | 根因                                                                                                                                                                                                                                                                                          | 状态                                                                                                                        |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Windows 打包必然失败           | `yarn lab:package:teacher` 在 `afterPack` 报 `Unexpected packaged dependencies: \main, \main\index.js, …`                                              | `@electron/asar` 的 `listFiles()` 用 `path.join` 拼路径，Windows 上返回反斜杠，而白名单正则写死了正斜杠                                                                                                                                                                                       | 已修：`scripts/lab/package-audit.mjs` 先规范化分隔符再匹配                                                                  |
+| guest 阶段脚本静默死亡         | 任务 exit 1，结果目录一个文件都没有，`phase unknown`                                                                                                   | 脚本 `param([string]$Config)` 与解析结果同用 `$config`。PowerShell 变量名不区分大小写且类型约束留在变量上，`ConvertFrom-Json` 的结果被强制转成字符串 `@{installer=…}`，随后 `$config.resultsDir` 求值为 `$null`，`Join-Path` 报 `Cannot bind argument to parameter 'Path' because it is null` | 已修：解析结果改名 `$labConfig`；新增启动记录与配置校验，使同类失败自述原因                                                 |
+| 服务装到 `Program Files (x86)` | 安装器返回 0，`%ProgramFiles%\LS101LabService\installation.json` 不存在，但 `C:\Program Files (x86)\LS101LabService` 存在且 SCM 中已有 `LS101Lab` 服务 | electron-builder 的 NSIS 安装器是 32 位进程，`teacher.nsh` 用 `$SYSDIR\…\powershell.exe` 启动的是 **32 位** PowerShell；WOW64 文件系统重定向把该进程的所有 `C:\Program Files` 访问改写到 `C:\Program Files (x86)`。64 位教师端按真实的 `Program Files` 读取安装记录，因此永远显示"未安装"     | 已修：`install-server-windows.ps1` 检测到 32 位进程时用 `Sysnative\…\powershell.exe` 以 64 位重新执行自身，并保留 `-Verify` |
+
+第三条尤其值得记录：**只改环境变量无法修复**，因为 WOW64 重定向作用于路径访问而不是变量值；唯一的可靠做法是让脚本运行在 64 位 PowerShell 中。修复放在脚本自身而不是 `teacher.nsh`，这样 NSIS 安装器、管理员手工调用和教师端管理器三条路径同时受保护。
+
+一处**撤回的判断**：早期日志（安装记录缺失、安装器 16 秒返回）曾被解读为"静默安装失败却返回 0"。第三条缺陷确认后，安装器其实成功执行了服务安装脚本，只是落在被重定向的目录，退出码是正确的。第 11 节风险 2（静默模式下 `MessageBox` 是否挂起）因此仍未验证，保持开放。

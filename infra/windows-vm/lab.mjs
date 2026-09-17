@@ -36,7 +36,9 @@ const actions = [
   'destroy',
   'cycle',
   'acceptance',
-  'lab-acceptance'
+  'lab-acceptance',
+  'lab-diagnose',
+  'lab-execute'
 ]
 const help = `Windows VMware lab (run on a Windows x64 host with Node and Yarn)
   yarn vm:setup         Initialize config, download assets and build (or verify/reuse) box
@@ -51,6 +53,8 @@ const help = `Windows VMware lab (run on a Windows x64 host with Node and Yarn)
   yarn vm:cycle         Require a fresh VM, boot, shut down, destroy; record outcome
   yarn vm:acceptance    Run Windows smoke and product documentation tests in a fresh disposable VM
   yarn vm:lab           Install the packaged lab products in a fresh disposable VM and test them
+  yarn vm:diag          Inspect a preserved lab VM without touching it (files, parse errors, task)
+  yarn vm:execute       Run the phase script once in a preserved lab VM and capture its output
   yarn vm --help        Show this help
 
 Default ISO URLs download automatically and record first-download SHA-256 values.
@@ -549,10 +553,13 @@ const LAB_WINSW_FILE = 'externals/lab/windows/WinSW.NET461.exe'
 // Pinned by scripts/lab/download-service-assets.mjs and copied into the service runtime manifest.
 const LAB_WINSW_SHA256 = 'b5066b7bbdfba1293e5d15cda3caaea88fbeab35bd5b38c41c913d492aadfc4f'
 const LAB_TASK = 'ls101-lab-acceptance'
+// A separate task name so the one-shot diagnostic never clobbers the real run's registration.
+const LAB_EXECUTE_TASK = 'ls101-lab-execute'
 // Uploads land in the guest file server's own upload directory, so the lab files use it too and no
 // extra move command is needed inside the VM.
 const LAB_GUEST_DIR = 'C:/ls101-lab/transfers'
 const LAB_GUEST_SCRIPT = `${LAB_GUEST_DIR}/run-lab-acceptance.ps1`
+const LAB_GUEST_LAUNCHER = `${LAB_GUEST_DIR}/start-lab-acceptance.ps1`
 const LAB_GUEST_CONFIG = `${LAB_GUEST_DIR}/lab-config.json`
 // The invitation code is a credential, so it is NOT uploaded to the plain-HTTP file server that
 // carries bulk files: it travels through the encrypted WinRM channel, outside the lab directory that
@@ -563,6 +570,11 @@ const LAB_GUEST_LOG = `${LAB_GUEST_RESULTS_DIR}/lab-acceptance.log`
 const LAB_GUEST_STATUS = `${LAB_GUEST_RESULTS_DIR}/lab-status.txt`
 const LAB_GUEST_PROGRESS = `${LAB_GUEST_RESULTS_DIR}/lab-progress.txt`
 const LAB_GUEST_RESULTS = `${LAB_GUEST_RESULTS_DIR}/lab-results.json`
+// Written before the phase script reads anything else, so a start-up failure always explains itself.
+const LAB_GUEST_STARTUP = `${LAB_GUEST_RESULTS_DIR}/lab-startup.txt`
+// Captured output of the phase script. A scheduled task discards the output of the process it starts,
+// so without this the reason a run died before its first statement never reaches the host.
+const LAB_GUEST_TASK_OUTPUT = `${LAB_GUEST_RESULTS_DIR}/lab-task-output.txt`
 const LAB_GUEST_ARTIFACT = `${LAB_GUEST_RESULTS_DIR}/lab-artifacts.zip`
 const LAB_ACCEPTANCE_TIMEOUT_MS = 60 * 60 * 1000
 const LAB_ACCEPTANCE_POLL_MS = 15 * 1000
@@ -1328,6 +1340,10 @@ export function labGuestConfig(config, { version, nodeVersion, port = LAB_HTTPS_
     serviceName: 'LS101Lab',
     serviceAccount: 'NT SERVICE\\LS101Lab',
     programDir: 'C:\\Program Files\\LS101LabService',
+    // The installer creates and hardens the data *parent*; the `data` child is created by the service
+    // on first start (startServiceRuntime does mkdir(root, {recursive:true})). Asserting the child
+    // exists right after installation tests something the product never promised.
+    dataRoot: 'C:\\ProgramData\\LS101Lab',
     dataDir: 'C:\\ProgramData\\LS101Lab\\data',
     resultsDir: guestPath(LAB_GUEST_RESULTS_DIR)
   }
@@ -1335,7 +1351,9 @@ export function labGuestConfig(config, { version, nodeVersion, port = LAB_HTTPS_
 
 export function labAcceptanceTaskScript() {
   return [
-    `$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoLogo -NoProfile -ExecutionPolicy Bypass -File ${guestPath(LAB_GUEST_SCRIPT)} -Config ${guestPath(LAB_GUEST_CONFIG)}'`,
+    // The launcher runs the phase script as a child process and captures every stream, so a parse error
+    // or a missing file still leaves evidence instead of an unexplained non-zero task result.
+    `$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoLogo -NoProfile -ExecutionPolicy Bypass -File ${guestPath(LAB_GUEST_LAUNCHER)} -Script ${guestPath(LAB_GUEST_SCRIPT)} -Config ${guestPath(LAB_GUEST_CONFIG)} -Output ${guestPath(LAB_GUEST_TASK_OUTPUT)}'`,
     `$principal = New-ScheduledTaskPrincipal -UserId 'vagrant' -LogonType Interactive -RunLevel Highest`,
     `$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 2)`,
     `Register-ScheduledTask -TaskName '${LAB_TASK}' -Action $action -Principal $principal -Settings $settings -Force | Out-Null`,
@@ -1481,6 +1499,11 @@ async function labAcceptance(root, config, run, report) {
         'run-lab-acceptance.ps1',
         { baseUrl }
       )
+      await putGuestFile(
+        path.join(root, 'guest', 'start-lab-acceptance.ps1'),
+        'start-lab-acceptance.ps1',
+        { baseUrl }
+      )
       await putGuestFile(driver, 'manager-driver.mjs', { baseUrl })
       const configFile = path.join(localRun, 'lab-config.json')
       await writeFile(
@@ -1547,6 +1570,10 @@ async function labAcceptance(root, config, run, report) {
       guestError = error
     }
     for (const [guestFile, name] of [
+      // The captured task output is listed first: it is the only artefact that explains a run which
+      // died before the phase script could write anything of its own.
+      [LAB_GUEST_TASK_OUTPUT, 'lab-task-output.txt'],
+      [LAB_GUEST_STARTUP, 'lab-startup.txt'],
       [LAB_GUEST_LOG, 'lab-acceptance.log'],
       [LAB_GUEST_PROGRESS, 'lab-progress.txt'],
       [LAB_GUEST_RESULTS, 'lab-results.json']
@@ -1592,6 +1619,173 @@ async function labAcceptance(root, config, run, report) {
     report.preserved = started
     throw error
   }
+}
+
+// Read-only inspection of a preserved lab VM. A failed run keeps its VM precisely so it can be
+// examined, but the harness otherwise only knows what it managed to collect; this answers the
+// questions that come first when a run dies early — are the uploaded files where the task expects
+// them, does the phase script even parse, and what did the task actually return.
+export function labDiagnoseScript() {
+  return [
+    `$ErrorActionPreference = 'Continue'`,
+    `$script = '${guestPath(LAB_GUEST_SCRIPT)}'`,
+    `$config = '${guestPath(LAB_GUEST_CONFIG)}'`,
+    `Write-Output '=== uploaded files ==='`,
+    `foreach ($p in @($script, $config, '${guestPath(LAB_GUEST_LAUNCHER)}', '${guestPath(`${LAB_GUEST_DIR}/manager-driver.mjs`)}', '${guestPath(LAB_GUEST_INVITATION)}', '${guestPath(LAB_GUEST_RESULTS_DIR)}')) {`,
+    `  if (Test-Path -LiteralPath $p) { $i = Get-Item -LiteralPath $p; Write-Output ('OK   ' + $p + ' bytes=' + $i.Length) } else { Write-Output ('MISS ' + $p) }`,
+    `}`,
+    `Write-Output '=== results directory ==='`,
+    `if (Test-Path -LiteralPath '${guestPath(LAB_GUEST_RESULTS_DIR)}') { Get-ChildItem -LiteralPath '${guestPath(LAB_GUEST_RESULTS_DIR)}' -Force | ForEach-Object { Write-Output ('  ' + $_.Name + ' ' + $_.Length) } }`,
+    `Write-Output '=== parse ==='`,
+    `if (Test-Path -LiteralPath $script) {`,
+    `  $errors = $null`,
+    `  [System.Management.Automation.Language.Parser]::ParseFile($script, [ref]$null, [ref]$errors) | Out-Null`,
+    `  Write-Output ('parseErrors=' + @($errors).Count)`,
+    `  @($errors) | Select-Object -First 15 | ForEach-Object { Write-Output ('  LINE ' + $_.Extent.StartLineNumber + ': ' + $_.Message) }`,
+    `}`,
+    `Write-Output '=== scheduled task ==='`,
+    `$task = Get-ScheduledTask -TaskName '${LAB_TASK}' -ErrorAction SilentlyContinue`,
+    `if ($task) { $info = $task | Get-ScheduledTaskInfo; Write-Output ('state=' + $task.State + ' lastResult=' + $info.LastTaskResult + ' lastRun=' + $info.LastRunTime); Write-Output ('action=' + $task.Actions.Arguments) } else { Write-Output 'MISSING' }`,
+    `Write-Output '=== installed application ==='`,
+    // The install directory is named after the executable, not the product, so it is discovered rather
+    // than guessed: assuming the product name once produced a confidently wrong conclusion.
+    `$app = Get-ChildItem -LiteralPath $env:ProgramFiles -Directory -ErrorAction SilentlyContinue | Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'ls101-lab-teacher.exe') } | Select-Object -First 1`,
+    `if ($app) {`,
+    `  Write-Output ('app=' + $app.FullName)`,
+    `  Get-ChildItem -LiteralPath $app.FullName -ErrorAction SilentlyContinue | Select-Object -First 20 | ForEach-Object { Write-Output ('  ' + $_.Name) }`,
+    `  $serviceRoot = Join-Path $app.FullName 'resources\\lab-server'`,
+    `  Write-Output ('serviceResources=' + (Test-Path -LiteralPath $serviceRoot))`,
+    `  if (Test-Path -LiteralPath $serviceRoot) { Get-ChildItem -LiteralPath $serviceRoot -ErrorAction SilentlyContinue | Select-Object -First 20 | ForEach-Object { Write-Output ('  resource: ' + $_.Name) } }`,
+    `} else { Write-Output 'app=MISSING' }`,
+    `Write-Output '=== service program directory ==='`,
+    `$serviceProgram = Join-Path $env:ProgramFiles 'LS101LabService'`,
+    `if (Test-Path -LiteralPath $serviceProgram) { Get-ChildItem -LiteralPath $serviceProgram -ErrorAction SilentlyContinue | ForEach-Object { Write-Output ('  ' + $_.Name) } } else { Write-Output ('MISSING ' + $serviceProgram) }`,
+    `Write-Output '=== service ==='`,
+    `$service = Get-CimInstance Win32_Service -Filter "Name='LS101Lab'" -ErrorAction SilentlyContinue`,
+    `if ($service) { Write-Output ('state=' + $service.State + ' startMode=' + $service.StartMode + ' startName=' + $service.StartName); Write-Output ('path=' + $service.PathName) } else { Write-Output 'MISSING' }`,
+    // The captured output is the one artefact that explains a run which died before writing its own.
+    `Write-Output '=== captured task output (tail) ==='`,
+    `if (Test-Path -LiteralPath '${guestPath(LAB_GUEST_TASK_OUTPUT)}') { Get-Content -LiteralPath '${guestPath(LAB_GUEST_TASK_OUTPUT)}' -Tail 40 } else { Write-Output 'MISSING' }`,
+    `Write-Output '=== phase start-up record ==='`,
+    `if (Test-Path -LiteralPath '${guestPath(LAB_GUEST_STARTUP)}') { Get-Content -LiteralPath '${guestPath(LAB_GUEST_STARTUP)}' } else { Write-Output 'MISSING (the phase script never reached its first statement)' }`,
+    `Write-Output '=== phase log (tail) ==='`,
+    `if (Test-Path -LiteralPath '${guestPath(LAB_GUEST_LOG)}') { Get-Content -LiteralPath '${guestPath(LAB_GUEST_LOG)}' -Tail 20 } else { Write-Output 'MISSING' }`
+  ].join('\n')
+}
+
+async function labDiagnose(root, config, run, report) {
+  ensureVmwareUtility(run)
+  const status = run('vagrant.exe', ['status', '--machine-readable'], { capture: true })
+  const states = status
+    .split(/\r?\n/)
+    .filter((line) => line.split(',')[2] === 'state')
+    .map((line) => line.split(',')[3])
+  if (states.length !== 1 || states[0] !== 'running') {
+    throw new Error(
+      `vm:diag needs the preserved VM to be running (found ${states[0] ?? 'no VM'}); start it with yarn vm:up`
+    )
+  }
+  const output = readGuestOutput(run, labDiagnoseScript())
+  console.log(output)
+  report.diagnostic = output
+  const localRun = path.join(root, '.local', 'results', `${Date.now()}-diagnose-${randomUUID()}`)
+  await mkdir(localRun, { recursive: true })
+  await writeFile(path.join(localRun, 'lab-diagnose.txt'), `${output}\n`, 'utf8')
+  report.diagnosticPath = path.join(localRun, 'lab-diagnose.txt')
+}
+
+// Runs the phase script once in a preserved VM and captures both streams.
+//
+// A scheduled task discards the output of the process it starts, so a run that dies before writing any
+// of its own files leaves nothing to explain it. This registers a second task with the same principal
+// as the real run — an interactive session at the highest run level — so the execution environment is
+// reproduced exactly, and the launcher redirects the child's stdout and stderr into a file. The probe
+// waits a bounded time and returns, so it never holds the WinRM call open for the length of an install.
+export function labExecuteScript({ waitSeconds = 25 } = {}) {
+  return [
+    `$ErrorActionPreference = 'Continue'`,
+    `$out = '${guestPath(LAB_GUEST_TASK_OUTPUT)}'`,
+    `Remove-Item -LiteralPath $out -Force -ErrorAction SilentlyContinue`,
+    `$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoLogo -NoProfile -ExecutionPolicy Bypass -File ${guestPath(LAB_GUEST_LAUNCHER)} -Script ${guestPath(LAB_GUEST_SCRIPT)} -Config ${guestPath(LAB_GUEST_CONFIG)} -Output ${guestPath(LAB_GUEST_TASK_OUTPUT)}'`,
+    `$principal = New-ScheduledTaskPrincipal -UserId 'vagrant' -LogonType Interactive -RunLevel Highest`,
+    `$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 30)`,
+    `Register-ScheduledTask -TaskName '${LAB_EXECUTE_TASK}' -Action $action -Principal $principal -Settings $settings -Force | Out-Null`,
+    `Start-ScheduledTask -TaskName '${LAB_EXECUTE_TASK}'`,
+    `Start-Sleep -Seconds ${waitSeconds}`,
+    `$task = Get-ScheduledTask -TaskName '${LAB_EXECUTE_TASK}' -ErrorAction SilentlyContinue`,
+    `if ($task) { $info = $task | Get-ScheduledTaskInfo; Write-Output ('taskState=' + $task.State + ' lastResult=' + $info.LastTaskResult + ' lastRun=' + $info.LastRunTime) }`,
+    `Write-Output '=== captured output ==='`,
+    `if (Test-Path -LiteralPath $out) { Get-Content -LiteralPath $out -Tail 80 } else { Write-Output 'MISSING' }`,
+    `Write-Output '=== phase start-up record ==='`,
+    `if (Test-Path -LiteralPath '${guestPath(LAB_GUEST_STARTUP)}') { Get-Content -LiteralPath '${guestPath(LAB_GUEST_STARTUP)}' } else { Write-Output 'MISSING (the phase script never reached its first statement)' }`,
+    `Write-Output '=== results directory ==='`,
+    `if (Test-Path -LiteralPath '${guestPath(LAB_GUEST_RESULTS_DIR)}') { Get-ChildItem -LiteralPath '${guestPath(LAB_GUEST_RESULTS_DIR)}' -Force | ForEach-Object { Write-Output ('  ' + $_.Name + ' ' + $_.Length) } }`,
+    `Write-Output '=== phase progress (tail) ==='`,
+    `if (Test-Path -LiteralPath '${guestPath(LAB_GUEST_PROGRESS)}') { Get-Content -LiteralPath '${guestPath(LAB_GUEST_PROGRESS)}' -Tail 10 }`,
+    `Write-Output '=== phase log (tail) ==='`,
+    `if (Test-Path -LiteralPath '${guestPath(LAB_GUEST_LOG)}') { Get-Content -LiteralPath '${guestPath(LAB_GUEST_LOG)}' -Tail 20 }`
+  ].join('\n')
+}
+
+async function labExecute(root, config, run, report) {
+  ensureVmwareUtility(run)
+  const status = run('vagrant.exe', ['status', '--machine-readable'], { capture: true })
+  const states = status
+    .split(/\r?\n/)
+    .filter((line) => line.split(',')[2] === 'state')
+    .map((line) => line.split(',')[3])
+  if (states.length !== 1 || states[0] !== 'running') {
+    throw new Error(
+      `vm:execute needs the preserved VM to be running (found ${states[0] ?? 'no VM'}); start it with yarn vm:up`
+    )
+  }
+  const projectRoot = path.resolve(root, '..', '..')
+  const version = JSON.parse(await readFile(path.join(projectRoot, 'package.json'), 'utf8')).version
+  const localRun = path.join(root, '.local', 'results', `${Date.now()}-execute-${randomUUID()}`)
+  await mkdir(localRun, { recursive: true })
+  // Re-upload everything the run reads, so this exercises the current sources rather than whatever the
+  // failed run happened to leave in the guest. The VPN-free encrypted WinRM channel carries them.
+  for (const [local, guest] of [
+    [path.join(root, 'guest', 'run-lab-acceptance.ps1'), LAB_GUEST_SCRIPT],
+    [path.join(root, 'guest', 'start-lab-acceptance.ps1'), LAB_GUEST_LAUNCHER]
+  ]) {
+    run('vagrant.exe', ['upload', local, guest])
+  }
+  const configFile = path.join(localRun, 'lab-config.json')
+  await writeFile(
+    configFile,
+    `${JSON.stringify(
+      labGuestConfig(config, {
+        version,
+        nodeVersion: config.NodeVersion,
+        hostTime: new Date().toISOString()
+      }),
+      null,
+      2
+    )}\n`
+  )
+  run('vagrant.exe', ['upload', configFile, LAB_GUEST_CONFIG])
+  const driver = path.join(projectRoot, 'out', 'lab-vm', 'manager-driver.mjs')
+  if (await exists(driver)) run('vagrant.exe', ['upload', driver, `${LAB_GUEST_DIR}/manager-driver.mjs`])
+  // The phase script deletes the invitation code once the service has consumed it, so a re-run needs a
+  // fresh copy; without one the run still starts and only the activation step would fail.
+  try {
+    const invitationCode = validateLabConfig(config)
+    const invitationFile = path.join(localRun, 'invitation.txt')
+    await writeFile(invitationFile, invitationCode, { mode: 0o600 })
+    try {
+      run('vagrant.exe', ['upload', invitationFile, LAB_GUEST_INVITATION])
+    } finally {
+      await unlink(invitationFile).catch(() => undefined)
+    }
+  } catch (error) {
+    console.warn(`Invitation code not uploaded: ${error.message}`)
+  }
+  const output = readGuestOutput(run, labExecuteScript())
+  console.log(output)
+  report.execution = output
+  await writeFile(path.join(localRun, 'lab-execute.txt'), `${output}\n`, 'utf8')
+  report.executionPath = path.join(localRun, 'lab-execute.txt')
 }
 
 async function initializeConfig(root) {
@@ -1667,11 +1861,18 @@ export async function main(args = process.argv.slice(2), dependencies = {}) {
         )
         if (action === 'prepare') await prepare(root, config, run)
         else await buildBox(root, config, run, action === 'box:validate')
-      } else if (action === 'acceptance' || action === 'lab-acceptance') {
+      } else if (
+        action === 'acceptance' ||
+        action === 'lab-acceptance' ||
+        action === 'lab-diagnose' ||
+        action === 'lab-execute'
+      ) {
         const config = validateConfig(
           JSON.parse(await readFile(path.join(root, 'config.local.json'), 'utf8'))
         )
         if (action === 'acceptance') await acceptance(root, config, run, report)
+        else if (action === 'lab-diagnose') await labDiagnose(root, config, run, report)
+        else if (action === 'lab-execute') await labExecute(root, config, run, report)
         else await labAcceptance(root, config, run, report)
       } else {
         await lifecycle(action, run, async () => {

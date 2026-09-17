@@ -1071,10 +1071,38 @@ const labEntry = path.resolve(__dirname, '../../infra/windows-vm/lab.mjs')
 test('lab acceptance is a CLI action and the defaults still target the smoke suite', async () => {
   const { parseAction, guestStateScript } = await api
   assert.equal(parseAction(['lab-acceptance']), 'lab-acceptance')
+  assert.equal(parseAction(['lab-diagnose']), 'lab-diagnose')
+  assert.equal(parseAction(['lab-execute']), 'lab-execute')
   // Parameterising the shared helpers must not move the existing suite's paths.
   const smoke = guestStateScript()
   assert.match(smoke, /acceptance\.log/)
   assert.match(smoke, /'ls101-acceptance'/)
+})
+
+test('the diagnose action reads the guest without changing it', async () => {
+  const { labDiagnoseScript } = await api
+  const script = labDiagnoseScript()
+  // It must answer the first questions of a run that died early: are the files there, does the phase
+  // script parse, and what did the task return.
+  assert.match(script, /ParseFile\(\$script/)
+  assert.match(script, /parseErrors=/)
+  assert.match(script, /Get-ScheduledTaskInfo/)
+  assert.match(script, /Get-CimInstance Win32_Service/)
+  assert.match(script, /lab-task-output\.txt/)
+  assert.match(script, /run-lab-acceptance\.ps1/)
+  assert.match(script, /start-lab-acceptance\.ps1/)
+  // Read-only: no assignment to the guest state, no service or task mutation.
+  for (const forbidden of [
+    /Start-Service/,
+    /Stop-Service/,
+    /Register-ScheduledTask/,
+    /Start-ScheduledTask/,
+    /Remove-Item/,
+    /Set-Content/,
+    /New-Item/
+  ]) {
+    assert.doesNotMatch(script, forbidden)
+  }
 })
 
 test('a real invitation code is required and never accepted in a malformed shape', async () => {
@@ -1113,6 +1141,8 @@ test('lab guest configuration points the guest at the uploaded artifacts and the
   assert.equal(config.serviceName, 'LS101Lab')
   assert.equal(config.serviceAccount, 'NT SERVICE\\LS101Lab')
   assert.match(config.programDir, /LS101LabService$/)
+  // The installer hardens the data parent; the `data` child is created by the service on first start.
+  assert.match(config.dataRoot, /ProgramData\\LS101Lab$/)
   assert.match(config.dataDir, /ProgramData\\LS101Lab\\data$/)
 })
 
@@ -1121,9 +1151,12 @@ test('the lab task runs interactively at the highest run level and clears stale 
   const script = labAcceptanceTaskScript()
   assert.match(script, /-LogonType Interactive/)
   assert.match(script, /-RunLevel Highest/)
-  // The elevated run level is what avoids a UAC prompt for the installer and for the helper.
-  assert.match(script, /-File C:\\ls101-lab\\transfers\\run-lab-acceptance\.ps1/)
+  // The phase script runs through the launcher, which captures its output: a scheduled task discards
+  // the output of the process it starts, so without it an early crash leaves no evidence at all.
+  assert.match(script, /-File C:\\ls101-lab\\transfers\\start-lab-acceptance\.ps1/)
+  assert.match(script, /-Script C:\\ls101-lab\\transfers\\run-lab-acceptance\.ps1/)
   assert.match(script, /-Config C:\\ls101-lab\\transfers\\lab-config\.json/)
+  assert.match(script, /-Output C:\\ls101-lab\\results\\lab-task-output\.txt/)
   assert.match(script, /Remove-Item -LiteralPath 'C:\\ls101-lab\\results\\lab-status\.txt'/)
   assert.match(script, /Start-ScheduledTask -TaskName 'ls101-lab-acceptance'/)
 
@@ -1163,20 +1196,108 @@ test('the host probe reports whether the guest port really answers', async () =>
   assert.equal(await probeGuestPort('127.0.0.1', port, { timeoutMs: 2000 }), false)
 })
 
+test('the execute action captures both streams so a silent early exit explains itself', async () => {
+  const { labExecuteScript } = await api
+  const script = labExecuteScript({ waitSeconds: 25 })
+  // The diagnostic must reproduce the real run's execution environment: the same interactive,
+  // highest-privilege principal, not the session-0 WinRM context that would hide the difference.
+  assert.match(script, /-LogonType Interactive -RunLevel Highest/)
+  assert.match(script, /-TaskName 'ls101-lab-execute'/)
+  assert.doesNotMatch(script, /-TaskName 'ls101-lab-acceptance'/)
+  // The launcher is what turns the child's streams into a file a scheduled task would otherwise discard.
+  assert.match(script, /-File C:\\ls101-lab\\transfers\\start-lab-acceptance\.ps1/)
+  assert.match(script, /-Output C:\\ls101-lab\\results\\lab-task-output\.txt/)
+  // The wait must be bounded, so this never holds the WinRM call open for a whole install.
+  assert.match(script, /Start-Sleep -Seconds 25/)
+  assert.match(script, /Get-ScheduledTaskInfo/)
+})
+
+test('the launcher captures the phase script output so an early crash still explains itself', async () => {
+  const launcher = await readFile(
+    path.resolve(__dirname, '../../infra/windows-vm/guest/start-lab-acceptance.ps1'),
+    'utf8'
+  )
+  // A real child process is what makes a parse error in the phase script land in the redirected stream.
+  assert.match(launcher, /-File \$Script -Config \$Config \*> \$Output/)
+  assert.match(launcher, /\$LASTEXITCODE/)
+  assert.match(launcher, /New-Item -ItemType Directory -Force -Path \$directory/)
+})
+
 test('the lab guest script only asserts what a real machine can show', async () => {
   const script = await readFile(labScript, 'utf8')
   // SCM registration, virtual service account and the untouched start mode.
-  assert.match(script, /sc\.exe' -Arguments @\('qc', \$config\.serviceName\)/)
-  assert.match(script, /sc\.exe' -Arguments @\('qsidtype', \$config\.serviceName\)/)
+  assert.match(script, /sc\.exe' -Arguments @\('qc', \$labConfig\.serviceName\)/)
+  assert.match(script, /sc\.exe' -Arguments @\('qsidtype', \$labConfig\.serviceName\)/)
   assert.match(script, /UNRESTRICTED/)
   assert.match(script, /\$service\.StartMode -eq 'Manual'/)
-  assert.match(script, /\$service\.StartName -ieq \$config\.serviceAccount/)
+  assert.match(script, /\$service\.StartName -ieq \$labConfig\.serviceAccount/)
   // Session-0 hosting and the owning process of the listening socket.
   assert.match(script, /\$hostProcess\.SessionId -eq 0/)
   assert.match(script, /\$listener\.OwningProcess -eq \$servicePid/)
   assert.match(script, /\$listener\.LocalAddress -eq '0\.0\.0\.0'/)
   // ACL enforcement is checked against a real standard user, not by reading the ACL alone.
+  // The failure that started this: a configuration that could not be read surfaced as a null argument
+  // to an unrelated Join-Path. The script must name the real cause instead.
+  assert.match(script, /lab-startup\.txt/)
+  assert.match(script, /configArgument=\$Config/)
+  assert.match(script, /produced no object/)
+  assert.match(script, /is missing: \$\(\$missing -join/)
+  // The parsed configuration must not be assigned back into the $Config parameter: PowerShell keeps a
+  // parameter's [string] constraint on the variable, so the object would be coerced to text and every
+  // later property access would silently return $null.
+  assert.match(script, /\$labConfig = Get-Content -LiteralPath \$Config/)
+  assert.doesNotMatch(script, /^\s*\$config\s*=/m)
+  // The start-up record must not itself depend on the configuration it is reporting on.
+  const startupBlock = script.slice(script.indexOf('$startupDir ='), script.indexOf('$labConfig = Get-Content'))
+  assert.doesNotMatch(startupBlock, /\$labConfig\./)
+  // The task environment is not guaranteed to define TEMP, and Join-Path rejects a null -Path, so the
+  // run must keep its working files in a directory it created itself.
+  const runPath = script.slice(script.indexOf('$labConfig = Get-Content'))
+  assert.doesNotMatch(runPath, /Join-Path \$env:TEMP/)
+  assert.match(script, /\$workDirectory = 'C:\\ls101-lab\\transfers'/)
+  // The silent install must be judged on a clean machine, or a preserved VM would pass on the previous
+  // run's record and stop testing the installer at all.
+  assert.match(script, /The service is already installed at \$manifest/)
+  // Elevation is asserted before anything else: an unelevated per-machine installer relaunches itself
+  // through UAC and returns 0 without installing, which looks exactly like success here.
+  assert.match(script, /Invoke-Step 'elevation'/)
+  assert.match(script, /Assert-That \$isAdmin "the run is elevated/)
+  assert.match(script, /S-1-16-12288/)
+  // The integrity SIDs are language-independent, unlike the words `whoami /groups` prints.
+  assert.match(script, /\$groupText = \(whoami \/groups \| Out-String\)/)
+  assert.match(script, /highIntegrity=\$\(\$groupText -match 'S-1-16-12288'\)/)
+  // teacher.nsh discards the output of install-windows.ps1, so the step has to reproduce that run to
+  // capture the stage and message, while still judging what the installer itself left behind.
+  assert.match(script, /\$publishedByInstaller = Test-Path -LiteralPath \$recordPath/)
+  assert.match(script, /Assert-That \$publishedByInstaller 'the installer published installation\.json'/)
+  assert.match(script, /install-windows\.ps1 -Verify exit=/)
+  assert.match(script, /resources\\lab-server\\install-windows\.ps1/)
   assert.match(script, /\$acl\.AreAccessRulesProtected/)
+  // Assertions must accept what a test expression actually produces. A [bool]-typed parameter made
+  // "there is at least one matching identity" fail whenever exactly one matched, because PowerShell
+  // refuses to bind a string to [bool] and a one-item pipeline yields a bare string.
+  assert.match(script, /function Assert-That\(\$Condition, \[string\]\$Message\)/)
+  assert.match(script, /\$Condition -is \[string\]/)
+  assert.match(script, /@\(\$Condition\)\.Count -gt 0/)
+  assert.doesNotMatch(script, /function Assert-That\(\[bool\]/)
+  assert.match(script, /\$identities \| Where-Object \{ \$_ -match 'NT AUTHORITY\\\\SYSTEM' \}/)
+  // The installer hardens the data parent; the `data` child is created by the service on first start,
+  // so asserting the child right after installation would test something the product never promised.
+  assert.match(script, /\$acl = Get-Acl -LiteralPath \$dataRoot/)
+  assert.match(script, /the installer created the data parent directory/)
+  // The SCM reports a WinSW service as running before its child runtime exists, so the process, the
+  // control pipe and the listener are all polled with a bound rather than assumed to be ready.
+  assert.match(script, /while \(-not \$hostProcess -and \(Get-Date\) -lt \$deadline\)/)
+  assert.match(script, /while \(-not \$state -and \(Get-Date\) -lt \$deadline\)/)
+  // A service that will not start is a product finding, and the reason is never in the assertion that
+  // noticed it: the SCM, the WinSW wrapper log and the System event log each hold a different part.
+  assert.match(script, /function Write-ServiceDiagnostics/)
+  assert.match(script, /ServiceSpecificExitCode/)
+  assert.match(script, /wrapper log \{0\}/)
+  assert.match(script, /Get-WinEvent -FilterHashtable @\{ LogName = 'System'/)
+  // Both service steps must collect that evidence before recording the failure.
+  assert.equal((script.match(/Write-ServiceDiagnostics/g) ?? []).length, 3)
+  assert.match(script, /Invoke-Step 'service-start' \{\s*try \{/)
   assert.match(script, /New-LocalUser -Name \$user/)
   assert.match(script, /NamedPipeClientStream/)
   assert.match(script, /\$probe\.'control\.key' -eq 'denied'/)
@@ -1195,7 +1316,7 @@ test('the lab run refuses to read a broken VM clock as a product defect', async 
   const script = await readFile(labScript, 'utf8')
   // The licence has a hard expiry, and the service certificate is valid one day either side of its
   // issue time, so a wrong VM clock breaks TLS, enrollment, heartbeats and licensing at once.
-  assert.match(script, /\[DateTime\]::Parse\(\$config\.hostTime\)/)
+  assert.match(script, /\[DateTime\]::Parse\(\$labConfig\.hostTime\)/)
   assert.match(script, /\$skew -lt 1440/)
   assert.match(script, /\$guestNow -lt \$expiresAt/)
   assert.match(script, /LICENSE_WINDOW/)
@@ -1214,8 +1335,8 @@ test('the lab run keeps the invitation code off every command line and out of th
   assert.doesNotMatch(source, /report\.[A-Za-z]*[Ii]nivtationCode\s*=/)
   const script = await readFile(labScript, 'utf8')
   // The guest never reads the code itself; only the driver does, and it deletes the file afterwards.
-  assert.doesNotMatch(script, /Get-Content -LiteralPath \$config\.invitationFile/)
-  assert.match(script, /Remove-Item -LiteralPath \$config\.invitationFile -Force/)
-  assert.match(script, /Assert-That \(-not \(Test-Path -LiteralPath \$config\.invitationFile\)\)/)
+  assert.doesNotMatch(script, /Get-Content -LiteralPath \$labConfig\.invitationFile/)
+  assert.match(script, /Remove-Item -LiteralPath \$labConfig\.invitationFile -Force/)
+  assert.match(script, /Assert-That \(-not \(Test-Path -LiteralPath \$labConfig\.invitationFile\)\)/)
 })
 

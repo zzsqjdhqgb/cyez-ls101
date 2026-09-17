@@ -24,6 +24,8 @@
     "vm:cycle": "node infra/windows-vm/lab.mjs cycle",
     "vm:acceptance": "chcp 65001 && set YARN_ENABLE_PROGRESS_BARS=false&& node infra/windows-vm/lab.mjs acceptance",
     "vm:lab": "chcp 65001 && set YARN_ENABLE_PROGRESS_BARS=false&& node infra/windows-vm/lab.mjs lab-acceptance",
+    "vm:diag": "chcp 65001 && node infra/windows-vm/lab.mjs lab-diagnose",
+    "vm:execute": "chcp 65001 && node infra/windows-vm/lab.mjs lab-execute",
     "vm:test": "node --test scripts/__tests__/windows-vm.test.js",
     "lab:contracts": "node scripts/lab/generate-contracts.mjs",
     "lab:contracts:check": "node scripts/lab/generate-contracts.mjs --check",
