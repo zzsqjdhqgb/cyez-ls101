@@ -1110,6 +1110,17 @@ test('the diagnostic checks each language with its own tool', async () => {
   assert.match(script, /lab-harness\.mjs/)
   assert.match(script, /lab-probes\.ps1/)
   assert.match(script, /lab-task-output\.txt/)
+  // Product state is read through the same probes the phase run uses. A duplicated inline query had
+  // already drifted: it reported the service state without the process id, which is exactly the field a
+  // stuck stop needs to tell "close() never finished" from "the process will not exit".
+  assert.match(script, /& \$probes @Arguments/)
+  assert.match(script, /Show-Probe 'service' @\('-Probe', 'service', '-Name', \$serviceName\)/)
+  assert.match(script, /Show-Probe 'wrapper logs'/)
+  assert.match(script, /Show-Probe 'runtime process'/)
+  assert.doesNotMatch(script, /Get-CimInstance Win32_Service -Filter "Name='LS101Lab'"/)
+  // Service name, data root and port come from the same configuration the run used, not from literals.
+  assert.match(script, /\$serviceName = if \(\$lab\) \{ \$lab\.serviceName \}/)
+  assert.match(script, /lab-probes\.ps1 is not present on this VM/)
   // Read-only: no service, task or filesystem mutation.
   for (const forbidden of [
     /Start-Service/,
@@ -1303,5 +1314,66 @@ test('a failed lab run collects the diagnostic itself, inside the window where i
     failurePath.indexOf('labDiagnoseScript(config)') <
       failurePath.indexOf('if (guestError) throw guestError'),
     'the diagnostic must be collected before the failure is rethrown'
+  )
+})
+
+test('a failed restart captures the stop state before it can expire', async () => {
+  const orchestrator = await readGuest('lab-acceptance.mjs')
+  // WinSW force-kills a service that has not stopped within its own 1900 s budget, so the stuck state
+  // has to be read while it is stuck. The other two service steps already collected diagnostics; this
+  // one silently did not, which cost a whole VM cycle.
+  const restart = orchestrator.slice(orchestrator.indexOf('async function stepRestart'))
+  assert.match(restart, /await serviceDiagnostics\(\)/)
+  assert.match(restart, /await stopDiagnostics\(\)/)
+  // The stop experiment must answer the three questions that separate the candidate causes.
+  const stop = orchestrator.slice(
+    orchestrator.indexOf('async function stopDiagnostics'),
+    orchestrator.indexOf('async function stepRestart')
+  )
+  assert.match(stop, /'-Name', 'node\.exe', '-Match', 'server\.cjs'/)
+  assert.match(stop, /'-Name', 'LS101Lab\.exe'/)
+  assert.match(stop, /control channel after the stop request/)
+  assert.match(stop, /manual shutdown: exit=/)
+  // It runs the same command the wrapper runs on stop, so its timing is comparable.
+  assert.match(stop, /'shutdown', '--data-dir', config\.dataDir/)
+})
+
+test('the restart records the process table while the service is stopping', async () => {
+  const orchestrator = await readGuest('lab-acceptance.mjs')
+  // The wrapper announces "Started process <pid>" without saying what it started, and its stop
+  // executable exits straight away, so the only way to see the command line it ran is to sample the
+  // process table beside the restart rather than polling a probe from the phase script.
+  const restart = orchestrator.slice(
+    orchestrator.indexOf('async function restartService'),
+    orchestrator.indexOf('async function stepFirewallClosed')
+  )
+  assert.match(restart, /processSamplerScript/)
+  // Sampling has to start before the restart, or a fast stop would be missed entirely.
+  assert.ok(
+    restart.indexOf('samplerArguments') <
+      restart.indexOf("runProcess('powershell.exe', restartArguments"),
+    'the sampler has to start before Restart-Service does'
+  )
+  const sampler = orchestrator.slice(
+    orchestrator.indexOf('function processSamplerScript'),
+    orchestrator.indexOf('async function restartService')
+  )
+  // Spawning a probe costs a whole PowerShell process, so the tight loop lives in the sampler instead.
+  assert.match(sampler, /Start-Sleep -Milliseconds 100/)
+  assert.match(sampler, /Name='node\.exe'/)
+  assert.match(sampler, /ParentProcessId/)
+  assert.match(sampler, /commandLine = \$commandLine/)
+  // The phase script ends the sampler, so a normal restart waits no longer than it used to, and the
+  // sampler still carries its own ceiling so it can never outlive the run.
+  assert.match(sampler, /Test-Path -LiteralPath \$stopFile/)
+  assert.match(sampler, /AddSeconds\(240\)/)
+  assert.match(restart, /writeFileSync\(samplerStop/)
+  assert.match(restart, /rmSync\(samplerStop, \{ force: true \}\)/)
+  // The record is written out before the restart result is asserted on: a failed restart is exactly the
+  // case that needs it.
+  assert.ok(
+    restart.indexOf('--- end process table ---') <
+      restart.indexOf('assertThat(restarted.code === 0'),
+    'the sampled process table must be recorded before the restart is judged'
   )
 })

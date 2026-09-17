@@ -736,57 +736,178 @@ async function stepStandardUser() {
   })
 }
 
+// The stop path is the one place where "the SCM never reported STOPPED" has several very different
+// causes, and each of them is answered by a different question. This must run after serviceDiagnostics,
+// because the manual shutdown below changes the very state that check reads.
+async function stopDiagnostics() {
+  run.log('--- stop diagnostics ---')
+  try {
+    // Is the bundled runtime still alive after the SCM was asked to stop it? This single field separates
+    // "close() never completed" from "close() completed but the process will not exit".
+    run.log(
+      `runtime after the stop request: ${JSON.stringify(await probe('process', ['-Name', 'node.exe', '-Match', 'server.cjs']))}`
+    )
+    run.log(
+      `wrapper after the stop request: ${JSON.stringify(await probe('process', ['-Name', 'LS101Lab.exe']))}`
+    )
+    // A control channel that still answers proves the process is up.
+    const status = await runProcess(
+      state.runtimeNode,
+      [state.server, 'status', '--data-dir', config.dataDir],
+      {
+        timeoutMs: 15000
+      }
+    )
+    run.log(
+      `control channel after the stop request: exit=${status.code}${status.timedOut ? ' (timed out)' : ''} ${(status.stdout || status.stderr).trim()}`
+    )
+    // Run exactly what the wrapper runs on stop, and time it. A hang here is the product's stop path; a
+    // quick exit means the process outlives its own shutdown.
+    const startedAt = Date.now()
+    const shutdown = await runProcess(
+      state.runtimeNode,
+      [state.server, 'shutdown', '--data-dir', config.dataDir],
+      {
+        timeoutMs: 45000
+      }
+    )
+    run.log(
+      `manual shutdown: exit=${shutdown.code} timedOut=${shutdown.timedOut} after ${((Date.now() - startedAt) / 1000).toFixed(1)}s ${(shutdown.stdout || shutdown.stderr).trim()}`
+    )
+    run.log(
+      `runtime after the manual shutdown: ${JSON.stringify(await probe('process', ['-Name', 'node.exe', '-Match', 'server.cjs']))}`
+    )
+  } catch (error) {
+    run.log(`stop diagnostics could not be collected: ${error.message}`)
+  }
+  run.log('--- end stop diagnostics ---')
+}
+
 // --- S14: the SCM stop/start cycle preserves identity and data ------------------------------------
 async function stepRestart() {
   return run.step('restart-survives', async () => {
-    const restarted = await native('powershell.exe', [
-      '-NoProfile',
-      '-NonInteractive',
-      '-Command',
-      `Restart-Service -Name '${config.serviceName}'`
-    ])
-    assertThat(restarted.code === 0, 'the service restarted', restarted)
-
-    // Restart-Service returns as soon as the SCM reports the wrapper running, but the bundled runtime and
-    // its control pipe come up a moment later, so the channel is polled rather than assumed.
-    let status
-    for (let attempt = 0; attempt < 120; attempt += 1) {
-      const probeStatus = await runProcess(
-        state.runtimeNode,
-        [state.server, 'status', '--data-dir', config.dataDir],
-        { timeoutMs: 30000 }
-      )
-      if (probeStatus.code === 0) {
-        try {
-          const parsed = extractJsonPayload(probeStatus.stdout)
-          if (parsed.state === 'running') {
-            status = parsed
-            break
-          }
-        } catch {
-          // A partial line during start-up is expected; the next poll reads a complete one.
-        }
-      }
-      await sleep(500)
+    try {
+      return await restartService()
+    } catch (error) {
+      // The stuck state is time-limited: WinSW force-kills a service that has not stopped within its own
+      // 1900 s budget, so what the service looks like right now has to be captured right now.
+      await serviceDiagnostics()
+      await stopDiagnostics()
+      throw error
     }
-    assertThat(
-      status !== undefined,
-      'the control channel answered and reports running after the restart'
-    )
-    assertThat(
-      status.fingerprint === state.fingerprint,
-      'the service identity survived the restart',
-      status
-    )
-    assertThat(status.info.serverId === state.serverId, 'the serverId survived the restart', status)
-    const listeners = await probe('listener', ['-Port', String(config.port)])
-    assertThat(
-      asArray(listeners.listeners).length >= 1,
-      'the restarted service listens again',
-      listeners
-    )
-    return { serverId: status.info.serverId, fingerprint: status.fingerprint }
   })
+}
+
+// The wrapper logs "Started process <pid>" when it runs its stop executable and never says what it
+// started, and the stop executable is short lived, so a poll from here would miss it. A dedicated
+// sampler therefore runs beside the restart and polls the process table far faster than a probe can be
+// spawned. It stops when the file it watches appears, so a fast restart does not wait out a fixed window.
+const PROCESS_SAMPLER_STOP = 'process-sampler.stop'
+
+function processSamplerScript(stopFile) {
+  return `
+$ErrorActionPreference = 'SilentlyContinue'
+$stopFile = '${stopFile}'
+$seen = [ordered]@{}
+$deadline = (Get-Date).AddSeconds(240)
+while (-not (Test-Path -LiteralPath $stopFile) -and (Get-Date) -lt $deadline) {
+  foreach ($candidate in Get-CimInstance Win32_Process -Filter "Name='node.exe'") {
+    $commandLine = [string]$candidate.CommandLine
+    if ($seen.Contains($commandLine)) { continue }
+    $seen[$commandLine] = [pscustomobject]@{
+      processId   = $candidate.ProcessId
+      parentId    = $candidate.ParentProcessId
+      seenAt      = (Get-Date).ToString('HH:mm:ss.fff')
+      commandLine = $commandLine
+    }
+  }
+  Start-Sleep -Milliseconds 100
+}
+$seen.Values | ConvertTo-Json -Compress
+`
+}
+
+async function restartService() {
+  const restartArguments = [
+    '-NoProfile',
+    '-NonInteractive',
+    '-Command',
+    `Restart-Service -Name '${config.serviceName}'`
+  ]
+  const samplerStop = join(config.resultsDir, PROCESS_SAMPLER_STOP)
+  rmSync(samplerStop, { force: true })
+  const samplerArguments = [
+    '-NoProfile',
+    '-NonInteractive',
+    '-Command',
+    processSamplerScript(samplerStop)
+  ]
+  const sampler = runProcess('powershell.exe', samplerArguments, { timeoutMs: 300000 })
+  // The sampler is given a moment to reach its first poll so the runtime's original command line, not
+  // just the ones the restart produces, is part of the record.
+  await sleep(1000)
+  run.log(`$ powershell.exe ${restartArguments.join(' ')}`)
+  const restart = runProcess('powershell.exe', restartArguments, { timeoutMs: 120000 })
+  const restarted = await restart
+  writeFileSync(samplerStop, 'stop\n')
+  const observed = await sampler
+  run.log(`--- process table while the service was stopping (sampler exit ${observed.code}) ---`)
+  try {
+    for (const match of asArray(extractJsonPayload(observed.stdout))) {
+      run.log(
+        `observed: seen ${match.seenAt} pid ${match.processId} (parent ${match.parentId}) :: ${match.commandLine}`
+      )
+    }
+  } catch (error) {
+    run.log(`the process sampler produced no usable output: ${error.message}`)
+    run.log(`${observed.stdout}${observed.stderr}`.trim())
+  }
+  run.log('--- end process table ---')
+  rmSync(samplerStop, { force: true })
+  const restartText = `${restarted.stdout}${restarted.stderr}`.trim()
+  if (restartText)
+    run.log(`Restart-Service: exit=${restarted.code} timedOut=${restarted.timedOut} ${restartText}`)
+  assertThat(restarted.code === 0, 'the service restarted', restarted)
+
+  // Restart-Service returns as soon as the SCM reports the wrapper running, but the bundled runtime and
+  // its control pipe come up a moment later, so the channel is polled rather than assumed.
+  let status
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const probeStatus = await runProcess(
+      state.runtimeNode,
+      [state.server, 'status', '--data-dir', config.dataDir],
+      { timeoutMs: 30000 }
+    )
+    if (probeStatus.code === 0) {
+      try {
+        const parsed = extractJsonPayload(probeStatus.stdout)
+        if (parsed.state === 'running') {
+          status = parsed
+          break
+        }
+      } catch {
+        // A partial line during start-up is expected; the next poll reads a complete one.
+      }
+    }
+    await sleep(500)
+  }
+  assertThat(
+    status !== undefined,
+    'the control channel answered and reports running after the restart'
+  )
+  assertThat(
+    status.fingerprint === state.fingerprint,
+    'the service identity survived the restart',
+    status
+  )
+  assertThat(status.info.serverId === state.serverId, 'the serverId survived the restart', status)
+  const listeners = await probe('listener', ['-Port', String(config.port)])
+  assertThat(
+    asArray(listeners.listeners).length >= 1,
+    'the restarted service listens again',
+    listeners
+  )
+  return { serverId: status.info.serverId, fingerprint: status.fingerprint }
 }
 
 // --- S13 part one: the installer opened no firewall port ------------------------------------------

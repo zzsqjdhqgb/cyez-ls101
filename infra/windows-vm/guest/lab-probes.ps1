@@ -91,11 +91,17 @@ switch ($Probe) {
       Get-CimInstance Win32_Process -Filter "Name='$Name'" -ErrorAction SilentlyContinue |
         Where-Object { -not $Match -or $_.CommandLine -like "*$Match*" }
     )
-    if ($candidates.Count -eq 0) { Write-Probe @{ found = $false }; break }
+    if ($candidates.Count -eq 0) { Write-Probe @{ found = $false; matches = @() }; break }
     # First match only: the service runs one bundled runtime, and reporting each candidate would make
     # the assertion depend on how many other node processes happen to exist.
     $found = $candidates | Select-Object -First 1
     $owner = Invoke-CimMethod -InputObject $found -MethodName GetOwner -ErrorAction SilentlyContinue
+    # Every match is also returned, bounded, because a caller that samples the process list while the
+    # service stops needs to see each command line the wrapper ran, not just the first one.
+    $matches = @(
+      $candidates | Select-Object -First 10 |
+        ForEach-Object { @{ processId = $_.ProcessId; sessionId = $_.SessionId; commandLine = [string]$_.CommandLine } }
+    )
     Write-Probe @{
       found       = $true
       count       = $candidates.Count
@@ -104,6 +110,7 @@ switch ($Probe) {
       commandLine = $found.CommandLine
       domain      = $owner.Domain
       user        = $owner.User
+      matches     = $matches
     }
   }
 
@@ -142,7 +149,15 @@ switch ($Probe) {
       Get-ChildItem -LiteralPath $Path -File -ErrorAction SilentlyContinue |
         Sort-Object LastWriteTime -Descending | Select-Object -First 3 |
         ForEach-Object {
-          @{ name = $_.Name; bytes = $_.Length; tail = @(Get-Content -LiteralPath $_.FullName -Tail $Tail -ErrorAction SilentlyContinue) }
+          # Each line is cast to a plain string. Get-Content decorates every line with the provider's note
+          # properties (PSPath, PSProvider and the whole FileSystemProvider reflection dump) and
+          # ConvertTo-Json serialises all of them: a sixty-line log arrived as fifteen megabytes and the
+          # diagnostic was unreadable exactly when it mattered.
+          @{
+            name  = $_.Name
+            bytes = $_.Length
+            tail  = @(Get-Content -LiteralPath $_.FullName -Tail $Tail -ErrorAction SilentlyContinue | ForEach-Object { [string]$_ })
+          }
         }
     )
     Write-Probe @{ path = $Path; exists = $true; files = $files }
