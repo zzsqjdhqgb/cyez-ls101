@@ -7,6 +7,27 @@ trap {
 }
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 $OutputEncoding = [Console]::OutputEncoding
+
+# WOW64 redirection guard. The NSIS installer is a 32-bit process whose $SYSDIR is SysWOW64, so it
+# launches 32-bit PowerShell; a 32-bit process that opens C:\Program Files is silently redirected to
+# C:\Program Files (x86). The service, its release directory and installation.json then land beside the
+# 64-bit application instead of inside it, and the teacher client — which reads the real
+# Program Files — can never find the installation record. Changing the environment variable does not
+# help, because the redirection applies to the path, not to the value, so the script re-runs itself in
+# 64-bit PowerShell instead. This runs before Set-StrictMode so it also protects the error trap.
+if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess) {
+  $sixtyFourBitShell = Join-Path $env:WINDIR 'Sysnative\WindowsPowerShell\v1.0\powershell.exe'
+  if (-not (Test-Path -LiteralPath $sixtyFourBitShell)) {
+    throw 'This installer must run in 64-bit PowerShell; Sysnative PowerShell was not found'
+  }
+  $relaunch = @(
+    '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath
+  )
+  if ($Verify) { $relaunch += '-Verify' }
+  & $sixtyFourBitShell @relaunch
+  exit $LASTEXITCODE
+}
+
 Set-StrictMode -Version Latest
 $source = $PSScriptRoot
 $manifestPath = Join-Path $source 'runtime-manifest.json'

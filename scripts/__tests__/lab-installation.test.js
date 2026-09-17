@@ -75,6 +75,29 @@ async function installerFixture(t, prepare, mode = '--install', retained = null)
   return () => new AsyncFunction(...Object.keys(bindings), body)(...Object.values(bindings))
 }
 
+test('the Windows installer refuses to work through WOW64 redirection', async () => {
+  const script = await fs.readFile(path.join(scripts, 'install-server-windows.ps1'), 'utf8')
+  // The NSIS installer is a 32-bit process whose $SYSDIR is SysWOW64, so it launches 32-bit
+  // PowerShell, where every C:\Program Files path is redirected to C:\Program Files (x86). The
+  // service, its release directory and installation.json then land beside the 64-bit application and
+  // the teacher client, which reads the real Program Files, never finds them. Changing the environment
+  // variable does not help: the redirection applies to the path, not the value.
+  assert.match(
+    script,
+    /\[Environment\]::Is64BitOperatingSystem -and -not \[Environment\]::Is64BitProcess/
+  )
+  assert.match(script, /Sysnative\\WindowsPowerShell\\v1\.0\\powershell\.exe/)
+  assert.match(script, /& \$sixtyFourBitShell @relaunch/)
+  assert.match(script, /exit \$LASTEXITCODE/)
+  // The relaunch must preserve -Verify, or a verification run would install the service instead.
+  assert.match(script, /if \(\$Verify\) \{ \$relaunch \+= '-Verify' \}/)
+  // It must run before anything touches a path, or the redirect would already have applied.
+  const guard = script.indexOf('Is64BitOperatingSystem')
+  assert.ok(guard < script.indexOf('$source = $PSScriptRoot'), 'guard must precede path use')
+  assert.ok(guard < script.indexOf('$manifestPath = Join-Path'), 'guard must precede path use')
+  assert.ok(guard < script.indexOf('Set-StrictMode -Version Latest'), 'guard must protect the trap')
+})
+
 test('a new installer prepares its target against an existing service before checking the marker', async (t) => {
   let prepared = false
   const run = await installerFixture(t, (data, manifest) => {
