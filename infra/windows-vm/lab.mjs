@@ -5,6 +5,7 @@ import { randomBytes, randomUUID } from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
 import { mkdir, open, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import http from 'node:http'
+import net from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { pipeline } from 'node:stream/promises'
@@ -33,8 +34,9 @@ const actions = [
   'status',
   'halt',
   'destroy',
-  'cycle'
-  ,'acceptance'
+  'cycle',
+  'acceptance',
+  'lab-acceptance'
 ]
 const help = `Windows VMware lab (run on a Windows x64 host with Node and Yarn)
   yarn vm:setup         Initialize config, download assets and build (or verify/reuse) box
@@ -48,6 +50,7 @@ const help = `Windows VMware lab (run on a Windows x64 host with Node and Yarn)
   yarn vm:destroy       Destroy this project's VM without a prompt; retain base box
   yarn vm:cycle         Require a fresh VM, boot, shut down, destroy; record outcome
   yarn vm:acceptance    Run Windows smoke and product documentation tests in a fresh disposable VM
+  yarn vm:lab           Install the packaged lab products in a fresh disposable VM and test them
   yarn vm --help        Show this help
 
 Default ISO URLs download automatically and record first-download SHA-256 values.
@@ -60,7 +63,14 @@ dependencies in the lightweight product-docs setup mode, packages the applicatio
 the smoke suite and then yarn test:product-docs through an interactive scheduled task,
 exports the guest log, the phase timeline and the preview artifacts, and destroys the VM only
 after a successful run. Bulk files travel over HTTP to the guest file server on the guest's own
-NAT address; WinRM only carries control commands and the two small bootstrap files.`
+NAT address; WinRM only carries control commands and the two small bootstrap files.
+lab-acceptance builds the teacher and student installers on this host (it refuses to run unless the
+host Node version is exactly 24.20.0, which scripts/lab/build-server.mjs requires), installs the
+teacher package in the guest, and asserts what only a real machine can show: SCM registration and the
+virtual service account, ProgramData ACLs enforced against a real standard user, session-0 hosting, the
+named-pipe control channel, real activation and initialization, the 0.0.0.0 listener, and the firewall
+gate measured from this host. The guest installs packaged artifacts instead of building the source tree,
+so it needs neither Yarn nor node_modules.`
 
 export function parseAction(args) {
   if (args.length === 0 || (args.length === 1 && ['--help', '-h'].includes(args[0]))) return 'help'
@@ -531,6 +541,35 @@ const SESSION_POLL_MS = 5 * 1000
 const GUEST_ARTIFACT_CHUNK = 512 * 1024
 const GUEST_ARTIFACT_LIMIT = 512 * 1024 * 1024
 
+// --- Lab acceptance (docs/lab-vm-acceptance-design.md, milestone M1) -------------------------
+// The guest installs packaged artifacts instead of building the source tree, so the lab run needs
+// neither Yarn nor node_modules in the VM: the host compiles, the guest only installs and asserts.
+const LAB_NODE_VERSION = '24.20.0'
+const LAB_WINSW_FILE = 'externals/lab/windows/WinSW.NET461.exe'
+// Pinned by scripts/lab/download-service-assets.mjs and copied into the service runtime manifest.
+const LAB_WINSW_SHA256 = 'b5066b7bbdfba1293e5d15cda3caaea88fbeab35bd5b38c41c913d492aadfc4f'
+const LAB_TASK = 'ls101-lab-acceptance'
+// Uploads land in the guest file server's own upload directory, so the lab files use it too and no
+// extra move command is needed inside the VM.
+const LAB_GUEST_DIR = 'C:/ls101-lab/transfers'
+const LAB_GUEST_SCRIPT = `${LAB_GUEST_DIR}/run-lab-acceptance.ps1`
+const LAB_GUEST_CONFIG = `${LAB_GUEST_DIR}/lab-config.json`
+// The invitation code is a credential, so it is NOT uploaded to the plain-HTTP file server that
+// carries bulk files: it travels through the encrypted WinRM channel, outside the lab directory that
+// the guest script deletes, and is removed as soon as the service has consumed it.
+const LAB_GUEST_INVITATION = 'C:/ls101-lab/invitation.txt'
+const LAB_GUEST_RESULTS_DIR = 'C:/ls101-lab/results'
+const LAB_GUEST_LOG = `${LAB_GUEST_RESULTS_DIR}/lab-acceptance.log`
+const LAB_GUEST_STATUS = `${LAB_GUEST_RESULTS_DIR}/lab-status.txt`
+const LAB_GUEST_PROGRESS = `${LAB_GUEST_RESULTS_DIR}/lab-progress.txt`
+const LAB_GUEST_RESULTS = `${LAB_GUEST_RESULTS_DIR}/lab-results.json`
+const LAB_GUEST_ARTIFACT = `${LAB_GUEST_RESULTS_DIR}/lab-artifacts.zip`
+const LAB_ACCEPTANCE_TIMEOUT_MS = 60 * 60 * 1000
+const LAB_ACCEPTANCE_POLL_MS = 15 * 1000
+// The default HTTPS port from docs/lab-service-runtime.md. Using a non-default port here would test
+// the same code path while proving less about the documented deployment, so the documented value wins.
+const LAB_HTTPS_PORT = 8443
+
 // Sends a PowerShell script to the guest. `-EncodedCommand` takes the script as base64 of its
 // UTF-16LE bytes, which is the only form that survives the trip intact: the text passes through
 // Node, `vagrant winrm`, cmd.exe and WinRM XML, and plain quoting would be re-escaped or expanded
@@ -826,18 +865,23 @@ function readGuestOutput(run, script, options = {}) {
 //   last run  task LastRunTime, empty when it never started
 //   tail      newest acceptance.log line, which shows the real build/test progress
 // The guest text is sanitised because `|` is the field separator and WinRM rejects nothing else.
-export function guestStateScript() {
-  const log = guestPath(GUEST_LOG)
-  const progress = guestPath(GUEST_PROGRESS)
-  const status = guestPath(GUEST_STATUS)
+export function guestStateScript({
+  log = GUEST_LOG,
+  progress = GUEST_PROGRESS,
+  status = GUEST_STATUS,
+  task = ACCEPTANCE_TASK
+} = {}) {
+  const logPath = guestPath(log)
+  const progressPath = guestPath(progress)
+  const statusPath = guestPath(status)
   return [
-    `$statusPath = '${status}'`,
-    `$progressPath = '${progress}'`,
-    `$logPath = '${log}'`,
+    `$statusPath = '${statusPath}'`,
+    `$progressPath = '${progressPath}'`,
+    `$logPath = '${logPath}'`,
     `$status = if (Test-Path -LiteralPath $statusPath) { (Get-Content -LiteralPath $statusPath -Raw).Trim() } else { '' }`,
     `$phase = if (Test-Path -LiteralPath $progressPath) { Get-Content -LiteralPath $progressPath -Tail 1 } else { '' }`,
     `$tail = if (Test-Path -LiteralPath $logPath) { Get-Content -LiteralPath $logPath -Tail 1 } else { '' }`,
-    `$task = Get-ScheduledTask -TaskName '${ACCEPTANCE_TASK}' -ErrorAction SilentlyContinue`,
+    `$task = Get-ScheduledTask -TaskName '${task}' -ErrorAction SilentlyContinue`,
     `if ($task) { $info = $task | Get-ScheduledTaskInfo; $taskText = "$($task.State)|$($info.LastTaskResult)|$($info.LastRunTime)" } else { $taskText = 'missing|0|' }`,
     `$clean = { param($value) ($value -replace '\\|', '/') -replace '\\s+', ' ' }`,
     `Write-Output ('${GUEST_STATE_PREFIX}' + $status + '|' + (& $clean $phase) + '|' + $taskText + '|' + (& $clean $tail))`
@@ -882,14 +926,17 @@ export async function waitForAcceptanceStatus(
     intervalMs = ACCEPTANCE_POLL_MS,
     delay = sleep,
     now = Date.now,
-    log = console.log
+    log = console.log,
+    label = 'acceptance',
+    stateScript = guestStateScript
   } = {}
 ) {
   const startedAt = now()
   const deadline = startedAt + timeoutMs
+  const title = label.charAt(0).toUpperCase() + label.slice(1)
   let previous = ''
   for (;;) {
-    const state = parseGuestState(readGuestOutput(run, guestStateScript(), { quiet: true }))
+    const state = parseGuestState(readGuestOutput(run, stateScript(), { quiet: true }))
     if (state.status === 'passed' || state.status === 'failed') return state.status
     // Only print when the phase or the newest log line changed, so a long build reports progress
     // instead of repeating an identical line (and never an encoded command) every interval.
@@ -897,17 +944,17 @@ export async function waitForAcceptanceStatus(
     const task = state.state === 'Running' || state.state === 'Queued' ? '' : ` task=${state.state}`
     const summary = `${state.phase || 'waiting for the guest task'}${task}${state.tail ? ` | ${state.tail}` : ''}`
     if (summary !== previous) {
-      log(`acceptance (${minutes} min): ${summary}`)
+      log(`${label} (${minutes} min): ${summary}`)
       previous = summary
     }
     if (state.state === 'missing') {
-      throw new Error('Acceptance task is missing; it was not registered on the guest')
+      throw new Error(`${title} task is missing; it was not registered on the guest`)
     }
     // 0x800704DD: an interactive task cannot start without a logged-on user, which is how a failed
     // automatic logon surfaces. It is reported separately because the fix is the VM, not the suite.
     if (state.result === TASK_LOGON_UNAVAILABLE) {
       throw new Error(
-        `Acceptance task could not start (result ${state.result}, last run ${state.lastRun || 'never'}); the interactive desktop session is unavailable`
+        `${title} task could not start (result ${state.result}, last run ${state.lastRun || 'never'}); the interactive desktop session is unavailable`
       )
     }
     // 267009 means "still running" and 267011 "has not run yet"; every other non-zero result means
@@ -919,12 +966,12 @@ export async function waitForAcceptanceStatus(
       state.result !== TASK_NOT_RUN
     ) {
       throw new Error(
-        `Acceptance task ended without publishing a status (result ${state.result}, last run ${state.lastRun || 'never'}, phase ${state.phase || 'unknown'})`
+        `${title} task ended without publishing a status (result ${state.result}, last run ${state.lastRun || 'never'}, phase ${state.phase || 'unknown'})`
       )
     }
     if (now() >= deadline) {
       throw new Error(
-        `Acceptance did not finish within ${Math.round(timeoutMs / 60000)} minutes (phase ${state.phase || 'unknown'}, task ${state.state || 'unknown'})`
+        `${title} did not finish within ${Math.round(timeoutMs / 60000)} minutes (phase ${state.phase || 'unknown'}, task ${state.state || 'unknown'})`
       )
     }
     await delay(intervalMs)
@@ -1227,6 +1274,326 @@ try {
   }
 }
 
+// --- Lab acceptance: install the packaged products and assert what only a real machine shows ----
+
+// The invitation code is a credential and there is no test-only activation bypass in the product, so
+// it has to be supplied. It is validated here, before any VM work, and never written to a report.
+export function validateLabConfig(config) {
+  const code = config.InvitationCode
+  if (typeof code !== 'string' || !code.trim() || code.length > 256 || /[\r\n\0]/.test(code)) {
+    throw new Error(
+      'config.local.json needs a non-empty InvitationCode (at most 256 characters, no CR/LF/NUL) so the service can be activated for real; the product has no test activation path'
+    )
+  }
+  return code.trim()
+}
+
+// All three checks are prerequisites of `yarn lab:package:teacher`, which refuses anything but Node
+// 24.20.0 and silently produces a service without WinSW if the asset is wrong. Failing here keeps the
+// message next to the cause instead of surfacing it minutes later as a packaging error.
+export function labPreflight({ platform, arch, nodeVersion, winswSha256 }) {
+  if (platform !== 'win32' || arch !== 'x64') {
+    throw new Error('lab-acceptance packages Windows x64 artifacts and requires a Windows x64 host')
+  }
+  if (nodeVersion !== LAB_NODE_VERSION) {
+    throw new Error(
+      `scripts/lab/build-server.mjs refuses to package the service unless Node is exactly ${LAB_NODE_VERSION}; this host runs ${nodeVersion}. Install Node ${LAB_NODE_VERSION} x64 and retry; there is no workaround.`
+    )
+  }
+  if (winswSha256 !== LAB_WINSW_SHA256) {
+    throw new Error(
+      `${LAB_WINSW_FILE} is missing or does not match its pinned SHA-256. Run yarn setup (or node scripts/lab/download-service-assets.mjs) to prepare it; the build never downloads assets.`
+    )
+  }
+}
+
+export function labInstallerName(role, version) {
+  return `ls101-lab-${role}-${version}-win-x64.exe`
+}
+
+// Mirrors what the guest script expects to find. `node` is the runtime the base box already ships for
+// the guest file server, so the drivers run without installing anything else in the VM.
+// `hostTime` is captured here, a couple of minutes before the guest task starts, and lets the guest
+// detect a VM clock that is so far off that the TLS certificate window, the enrollment window and the
+// licence window would all fail for reasons that have nothing to do with the product.
+export function labGuestConfig(config, { version, nodeVersion, port = LAB_HTTPS_PORT, hostTime }) {
+  return {
+    installer: guestPath(`${LAB_GUEST_DIR}/${labInstallerName('teacher', version)}`),
+    driver: guestPath(`${LAB_GUEST_DIR}/manager-driver.mjs`),
+    invitationFile: guestPath(LAB_GUEST_INVITATION),
+    releaseVersion: version,
+    port,
+    hostTime,
+    node: `${guestPath('C:/ls101-lab/tools')}\\node-v${nodeVersion}-win-x64\\node.exe`,
+    serviceName: 'LS101Lab',
+    serviceAccount: 'NT SERVICE\\LS101Lab',
+    programDir: 'C:\\Program Files\\LS101LabService',
+    dataDir: 'C:\\ProgramData\\LS101Lab\\data',
+    resultsDir: guestPath(LAB_GUEST_RESULTS_DIR)
+  }
+}
+
+export function labAcceptanceTaskScript() {
+  return [
+    `$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoLogo -NoProfile -ExecutionPolicy Bypass -File ${guestPath(LAB_GUEST_SCRIPT)} -Config ${guestPath(LAB_GUEST_CONFIG)}'`,
+    `$principal = New-ScheduledTaskPrincipal -UserId 'vagrant' -LogonType Interactive -RunLevel Highest`,
+    `$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 2)`,
+    `Register-ScheduledTask -TaskName '${LAB_TASK}' -Action $action -Principal $principal -Settings $settings -Force | Out-Null`,
+    `Remove-Item -LiteralPath '${guestPath(LAB_GUEST_STATUS)}' -Force -ErrorAction SilentlyContinue`,
+    `Start-ScheduledTask -TaskName '${LAB_TASK}'`
+  ].join('\n')
+}
+
+export function labGuestStateScript() {
+  return guestStateScript({
+    log: LAB_GUEST_LOG,
+    progress: LAB_GUEST_PROGRESS,
+    status: LAB_GUEST_STATUS,
+    task: LAB_TASK
+  })
+}
+
+// The installer deliberately opens no firewall port, so opening it is a deployment step that has to be
+// performed and then measured. RemoteAddress stays LocalSubnet, matching the documented guidance.
+export function labFirewallScript(port = LAB_HTTPS_PORT) {
+  return [
+    `$rule = Get-NetFirewallRule -Name 'LS101-Lab-Service' -ErrorAction SilentlyContinue`,
+    `if (-not $rule) { New-NetFirewallRule -Name 'LS101-Lab-Service' -DisplayName 'LS101 Lab service' -Direction Inbound -Action Allow -Protocol TCP -LocalPort ${port} -RemoteAddress LocalSubnet | Out-Null }`,
+    `Write-Output 'LS101 firewall rule present'`
+  ].join('\n')
+}
+
+// The host is an ordinary inbound client on the virtual subnet, so this measures the guest listener
+// and its firewall rather than a loopback shortcut. node:net ignores proxy environment variables.
+export function probeGuestPort(address, port, { timeoutMs = 5000 } = {}) {
+  return new Promise((resolve) => {
+    const socket = net.connect({ host: address, port })
+    let settled = false
+    const done = (reachable) => {
+      if (settled) return
+      settled = true
+      socket.destroy()
+      resolve(reachable)
+    }
+    socket.setTimeout(timeoutMs, () => done(false))
+    socket.once('connect', () => done(true))
+    socket.once('error', () => done(false))
+  })
+}
+
+async function labAcceptance(root, config, run, report) {
+  const invitationCode = validateLabConfig(config)
+  const projectRoot = path.resolve(root, '..', '..')
+  const metadata = JSON.parse(await readFile(path.join(projectRoot, 'package.json'), 'utf8'))
+  const version = metadata.version
+  const winswPath = path.join(projectRoot, LAB_WINSW_FILE)
+  labPreflight({
+    platform: process.platform,
+    arch: process.arch,
+    nodeVersion: process.versions.node,
+    winswSha256: (await exists(winswPath)) ? await sha256(winswPath) : ''
+  })
+  await verifyBox(root)
+  ensureProvider(run)
+  ensureVmwareUtility(run)
+  const status = run('vagrant.exe', ['status', '--machine-readable'], { capture: true })
+  const states = status
+    .split(/\r?\n/)
+    .filter((line) => line.split(',')[2] === 'state')
+    .map((line) => line.split(',')[3])
+  if (states.length !== 1 || states[0] !== 'not_created')
+    throw new Error('vm:lab-acceptance requires no existing VM; use vm:destroy first.')
+  const runId = `${Date.now()}-${randomUUID()}`
+  const localRun = path.join(root, '.local', 'results', runId)
+  await mkdir(localRun, { recursive: true })
+  report.runId = runId
+  report.state = 'running'
+  report.lab = { releaseVersion: version, hostNodeVersion: process.versions.node }
+  let started = false
+  try {
+    // Compile on the host. The guest has neither Node 24.20.0 nor a build toolchain, and the point of
+    // this run is to install what a user installs rather than to rebuild the product in the VM.
+    for (const role of ['teacher', 'student']) {
+      run(
+        process.execPath,
+        [path.join(projectRoot, 'scripts', 'lab', 'package-desktop.mjs'), role],
+        {
+          cwd: projectRoot
+        }
+      )
+    }
+    const artifacts = {}
+    for (const role of ['teacher', 'student']) {
+      const name = labInstallerName(role, version)
+      const file = path.join(projectRoot, 'dist', `lab-${role}`, name)
+      if (!(await exists(file))) throw new Error(`Packaging did not produce ${name}`)
+      artifacts[role] = { name, bytes: (await stat(file)).size, sha256: await sha256(file) }
+    }
+    report.artifacts = artifacts
+    console.log(
+      `Packaged lab installers: teacher ${Math.round(artifacts.teacher.bytes / (1024 * 1024))} MiB, student ${Math.round(artifacts.student.bytes / (1024 * 1024))} MiB`
+    )
+    // The guest driver is test tooling, so it is bundled with the repository's own Vite rather than
+    // installed in the VM; the control-channel protocol is inlined from packages/lab-server.
+    run(process.execPath, [path.join(projectRoot, 'scripts', 'lab', 'build-test-driver.mjs')], {
+      cwd: projectRoot
+    })
+    const driver = path.join(projectRoot, 'out', 'lab-vm', 'manager-driver.mjs')
+    if (!(await exists(driver))) throw new Error('Bundling did not produce out/lab-vm/manager-driver.mjs')
+    run('vagrant.exe', ['up', '--provider', 'vmware_desktop'])
+    started = true
+    run('vagrant.exe', [
+      'upload',
+      path.join(root, 'guest', 'fileserver.mjs'),
+      GUEST_FILESERVER_SCRIPT
+    ])
+    let baseUrl = null
+    let guestError = null
+    try {
+      await enableDesktopSession(config, run)
+      const sessions = await waitForInteractiveSession(run)
+      if (!sessions) {
+        throw new Error(
+          'The disposable VM did not reach an interactive desktop session; automatic console logon is not working'
+        )
+      }
+      report.guestSessions = sessions.split(/\r?\n/).filter(Boolean)
+      console.log(
+        `Guest desktop sessions:\n${report.guestSessions.map((line) => `  ${line}`).join('\n')}`
+      )
+      run('vagrant.exe', ['winrm', '--command', guestCommand(filesServerTaskScript(config))])
+      baseUrl = await guestFileServerUrl(run)
+      console.log(`Guest file server: ${baseUrl}`)
+      console.log(`  live log: curl.exe --noproxy "*" ${baseUrl}/results/lab-acceptance.log`)
+      await waitForGuestFileServer({ baseUrl })
+      await putGuestFile(
+        path.join(projectRoot, 'dist', 'lab-teacher', labInstallerName('teacher', version)),
+        labInstallerName('teacher', version),
+        { baseUrl }
+      )
+      await putGuestFile(
+        path.join(projectRoot, 'dist', 'lab-student', labInstallerName('student', version)),
+        labInstallerName('student', version),
+        { baseUrl }
+      )
+      await putGuestFile(
+        path.join(root, 'guest', 'run-lab-acceptance.ps1'),
+        'run-lab-acceptance.ps1',
+        { baseUrl }
+      )
+      await putGuestFile(driver, 'manager-driver.mjs', { baseUrl })
+      const configFile = path.join(localRun, 'lab-config.json')
+      await writeFile(
+        configFile,
+        `${JSON.stringify(
+          labGuestConfig(config, {
+            version,
+            nodeVersion: config.NodeVersion,
+            hostTime: new Date().toISOString()
+          }),
+          null,
+          2
+        )}\n`
+      )
+      await putGuestFile(configFile, 'lab-config.json', { baseUrl })
+      // The invitation code is a credential: it travels through the encrypted WinRM channel rather
+      // than the plain-HTTP file server that carries the installers, and the guest deletes it once the
+      // service has consumed it. `vagrant upload` is the only place it touches the guest filesystem.
+      const invitationFile = path.join(tmpdir(), `ls101-invitation-${randomUUID()}.txt`)
+      await writeFile(invitationFile, invitationCode, { mode: 0o600 })
+      try {
+        run('vagrant.exe', ['upload', invitationFile, LAB_GUEST_INVITATION])
+      } finally {
+        await unlink(invitationFile).catch(() => undefined)
+      }
+      report.transfers = { transport: 'guest-http', baseUrl }
+      run('vagrant.exe', ['winrm', '--command', guestCommand(labAcceptanceTaskScript())])
+      const outcome = await waitForAcceptanceStatus(run, {
+        timeoutMs: LAB_ACCEPTANCE_TIMEOUT_MS,
+        intervalMs: LAB_ACCEPTANCE_POLL_MS,
+        label: 'lab acceptance',
+        stateScript: labGuestStateScript
+      })
+      if (outcome !== 'passed')
+        throw new Error('Guest lab acceptance run failed; see lab-acceptance.log')
+      // The guest asserted that no firewall rule exists. Only the host can prove the gate is real:
+      // probe first (must fail), open the port the documented way, then probe again.
+      const address = new URL(baseUrl).hostname
+      const before = await probeGuestPort(address, LAB_HTTPS_PORT)
+      if (before) {
+        throw new Error(
+          `Guest port ${LAB_HTTPS_PORT} answered from this host before any firewall rule existed; the gate cannot be measured`
+        )
+      }
+      run('vagrant.exe', ['winrm', '--command', guestCommand(labFirewallScript())])
+      let after = false
+      for (let attempt = 0; attempt < 10 && !after; attempt += 1) {
+        after = await probeGuestPort(address, LAB_HTTPS_PORT)
+        if (!after) await sleep(2000)
+      }
+      report.firewall = {
+        address,
+        port: LAB_HTTPS_PORT,
+        reachableBefore: before,
+        reachableAfter: after
+      }
+      if (!after) {
+        throw new Error(
+          `Guest port ${LAB_HTTPS_PORT} is still unreachable from this host after the firewall rule was added`
+        )
+      }
+      console.log(`Firewall gate verified from the host: closed before the rule, open after it`)
+    } catch (error) {
+      guestError = error
+    }
+    for (const [guestFile, name] of [
+      [LAB_GUEST_LOG, 'lab-acceptance.log'],
+      [LAB_GUEST_PROGRESS, 'lab-progress.txt'],
+      [LAB_GUEST_RESULTS, 'lab-results.json']
+    ]) {
+      try {
+        const evidence = await collectGuestEvidence(run, {
+          baseUrl,
+          name,
+          guestFile,
+          localPath: path.join(localRun, name)
+        })
+        if (evidence)
+          await writeFile(evidence.path, decodeGuestText(await readFile(evidence.path)), 'utf8')
+      } catch (error) {
+        console.warn(`Guest ${name} is unavailable: ${error.message}`)
+      }
+    }
+    try {
+      const evidence = await collectGuestEvidence(run, {
+        baseUrl,
+        name: 'lab-artifacts.zip',
+        guestFile: LAB_GUEST_ARTIFACT,
+        localPath: path.join(localRun, 'lab-artifacts.zip'),
+        zip: true
+      })
+      if (evidence) {
+        report.artifact = evidence.path
+        console.log(`Saved guest lab artifacts to ${evidence.path} (${evidence.transport})`)
+      }
+    } catch (error) {
+      report.artifactError = error.message
+      console.warn(`Guest lab artifacts could not be exported: ${error.message}`)
+    }
+    if (guestError) throw guestError
+    report.state = 'passed'
+    run('vagrant.exe', ['halt'])
+    run('vagrant.exe', ['destroy', '--force'])
+    report.destroyed = true
+  } catch (error) {
+    report.state = /interactive|prompt|parameter|input/i.test(error.message)
+      ? 'manual-required'
+      : 'failed'
+    report.preserved = started
+    throw error
+  }
+}
+
 async function initializeConfig(root) {
   const config = JSON.parse(await readFile(path.join(root, 'config.example.json'), 'utf8'))
   config.GuestPassword = `Aa1!${randomBytes(18).toString('hex')}`
@@ -1300,11 +1667,12 @@ export async function main(args = process.argv.slice(2), dependencies = {}) {
         )
         if (action === 'prepare') await prepare(root, config, run)
         else await buildBox(root, config, run, action === 'box:validate')
-      } else if (action === 'acceptance') {
+      } else if (action === 'acceptance' || action === 'lab-acceptance') {
         const config = validateConfig(
           JSON.parse(await readFile(path.join(root, 'config.local.json'), 'utf8'))
         )
-        await acceptance(root, config, run, report)
+        if (action === 'acceptance') await acceptance(root, config, run, report)
+        else await labAcceptance(root, config, run, report)
       } else {
         await lifecycle(action, run, async () => {
           await verifyBox(root)

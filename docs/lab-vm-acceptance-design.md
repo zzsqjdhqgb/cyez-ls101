@@ -263,3 +263,28 @@ playwright.lab-vm.config.ts        # CDP 附着用的 Playwright 配置
 3. **许可证到期**：2026-10-01 之后所有依赖许可的用例都会失败。H3 先做时钟门禁，但到期后需要新的邀请码或新的许可规则。
 4. **单次 TLS 握手的代价**：每个请求新建连接，40 台设备的 5 s 心跳约等于每秒 8 次握手。N11 用于量化，若在 Windows 上出现端口耗尽，属于需要产品层面决策的发现，而不是测试问题。
 5. **`lab:test:integration` 不构建服务端**：该套件中教师端的 `localService` 指向的 `out/lab-server` 是悬空的，因此现有集成测并未覆盖服务端。本方案不依赖该套件，但这条事实应记录在结论里。
+
+## 12. 实现状态
+
+| 里程碑                            | 状态                                      | 说明                                                                               |
+| --------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------- |
+| M1 宿主机门禁与打包、Windows 服务 | 已实现，**未在真实 Windows 宿主机运行过** | `yarn vm:lab`：宿主机门禁、编译编排、guest 阶段脚本、提权管理器驱动器、防火墙门控  |
+| M2 协议驱动器                     | 未实现                                    | 入网字节相等语义、429/503、租约与维护退出、无 keep-alive 压测、端口占用、IPv6 负例 |
+| M3 CDP GUI                        | 未实现                                    |                                                                                    |
+| M4 升级/卸载/数据保留             | 未实现                                    |                                                                                    |
+
+M1 的代码位置：
+
+- `infra/windows-vm/lab.mjs`：`lab-acceptance` 动作，以及 `validateLabConfig`、`labPreflight`、`labGuestConfig`、`labAcceptanceTaskScript`、`labGuestStateScript`、`labFirewallScript`、`probeGuestPort`、`labAcceptance`。
+- `infra/windows-vm/guest/run-lab-acceptance.ps1`：guest 阶段脚本。
+- `tests/lab-vm/manager-driver.ts`：guest 侧驱动器（控制通道父进程、`pipe-name`、`verify-tls`）。
+- `scripts/lab/build-test-driver.mjs`：把驱动器打成单文件，控制通道协议从 `packages/lab-server` 内联，避免协议漂移。
+- `tests/lab-vm/echo-helper.ts`、`scripts/__tests__/lab-driver.test.js`：驱动器在 Linux 容器内可运行的自证。
+
+驱动器在容器内已被验证：错误指纹会在发出任何 HTTP 之前被拒（服务端观测到 0 个请求）、自签服务无法被普通校验证书的客户端连接、`manage` 转发的 `initialize` 输入恰好是 `activationCode/baseUrl/name/password/port` 五个键、失败时只回错误码且不回显密钥。**但这些只证明驱动器正确，不能替代目标机结论。**
+
+M1 覆盖的 Tier 0/1 项：H1、H2、H3、S1–S14、S18。其中 H3 分两段：宿主机把自身 UTC 时间随配置下发，guest 先断言与本机时钟的偏差小于 24 小时（服务证书有效期为签发前后各一天，超出即会同时破坏 TLS、入网有效期、心跳窗口与许可判断），再依据服务自己上报的 `license.expiresAt` 断言尚未过期。两者都以 `LICENSE_WINDOW` 前缀报错，避免把一台时钟不对的 VM 误判为产品缺陷。
+
+因此 [lab-target-acceptance.md](lab-target-acceptance.md) 的「Windows x64 / NTFS」一节**必须保持"未运行"**，直到 `yarn vm:lab` 在真实 Windows 宿主机上通过并留下结果。
+
+M1 尚未覆盖的 Tier 1 项：S15（停止语义与在线设备）、S16（重启后自启动）、S17（端口占用）。这三项需要多次重启或已注册设备，按计划留给后续里程碑。

@@ -1062,3 +1062,160 @@ test('acceptance task script registers an interactive task and clears stale stat
   assert.match(script, /Remove-Item -LiteralPath 'C:\\ls101-lab\\results\\status\.txt'/)
   assert.match(script, /Start-ScheduledTask -TaskName 'ls101-acceptance'/)
 })
+
+// --- Lab acceptance (docs/lab-vm-acceptance-design.md milestone M1) ---------------------------
+
+const labScript = path.resolve(__dirname, '../../infra/windows-vm/guest/run-lab-acceptance.ps1')
+const labEntry = path.resolve(__dirname, '../../infra/windows-vm/lab.mjs')
+
+test('lab acceptance is a CLI action and the defaults still target the smoke suite', async () => {
+  const { parseAction, guestStateScript } = await api
+  assert.equal(parseAction(['lab-acceptance']), 'lab-acceptance')
+  // Parameterising the shared helpers must not move the existing suite's paths.
+  const smoke = guestStateScript()
+  assert.match(smoke, /acceptance\.log/)
+  assert.match(smoke, /'ls101-acceptance'/)
+})
+
+test('a real invitation code is required and never accepted in a malformed shape', async () => {
+  const { validateLabConfig } = await api
+  assert.equal(validateLabConfig({ InvitationCode: '  LS101-ABC  ' }), 'LS101-ABC')
+  for (const value of [undefined, '', '   ', 'a'.repeat(257), 'bad\r\ncode', 'bad\0code']) {
+    assert.throws(() => validateLabConfig({ InvitationCode: value }), /InvitationCode/)
+  }
+})
+
+test('the lab preflight fails before any VM work when the host cannot package the service', async () => {
+  const { labPreflight } = await api
+  const winsw = 'b5066b7bbdfba1293e5d15cda3caaea88fbeab35bd5b38c41c913d492aadfc4f'
+  const base = { platform: 'win32', arch: 'x64', nodeVersion: '24.20.0', winswSha256: winsw }
+  assert.doesNotThrow(() => labPreflight(base))
+  assert.throws(() => labPreflight({ ...base, platform: 'linux' }), /Windows x64 host/)
+  assert.throws(() => labPreflight({ ...base, arch: 'arm64' }), /Windows x64 host/)
+  // scripts/lab/build-server.mjs refuses anything but exactly 24.20.0, so a near miss must fail here.
+  assert.throws(() => labPreflight({ ...base, nodeVersion: '24.21.0' }), /exactly 24\.20\.0/)
+  assert.throws(() => labPreflight({ ...base, winswSha256: '' }), /pinned SHA-256/)
+  assert.throws(() => labPreflight({ ...base, winswSha256: 'deadbeef' }), /pinned SHA-256/)
+})
+
+test('lab guest configuration points the guest at the uploaded artifacts and the documented port', async () => {
+  const { labInstallerName, labGuestConfig } = await api
+  assert.equal(labInstallerName('teacher', '0.4.1'), 'ls101-lab-teacher-0.4.1-win-x64.exe')
+  assert.equal(labInstallerName('student', '0.4.1'), 'ls101-lab-student-0.4.1-win-x64.exe')
+  const config = labGuestConfig({}, { version: '0.4.1', nodeVersion: '24.20.0', hostTime: '2026-09-16T00:00:00.000Z' })
+  assert.equal(config.installer, 'C:\\ls101-lab\\transfers\\ls101-lab-teacher-0.4.1-win-x64.exe')
+  assert.equal(config.driver, 'C:\\ls101-lab\\transfers\\manager-driver.mjs')
+  assert.equal(config.invitationFile, 'C:\\ls101-lab\\invitation.txt')
+  assert.equal(config.releaseVersion, '0.4.1')
+  assert.equal(config.port, 8443)
+  // The host clock travels with the configuration so the guest can spot a broken VM clock.
+  assert.equal(config.hostTime, '2026-09-16T00:00:00.000Z')
+  assert.equal(config.serviceName, 'LS101Lab')
+  assert.equal(config.serviceAccount, 'NT SERVICE\\LS101Lab')
+  assert.match(config.programDir, /LS101LabService$/)
+  assert.match(config.dataDir, /ProgramData\\LS101Lab\\data$/)
+})
+
+test('the lab task runs interactively at the highest run level and clears stale status', async () => {
+  const { labAcceptanceTaskScript, labGuestStateScript } = await api
+  const script = labAcceptanceTaskScript()
+  assert.match(script, /-LogonType Interactive/)
+  assert.match(script, /-RunLevel Highest/)
+  // The elevated run level is what avoids a UAC prompt for the installer and for the helper.
+  assert.match(script, /-File C:\\ls101-lab\\transfers\\run-lab-acceptance\.ps1/)
+  assert.match(script, /-Config C:\\ls101-lab\\transfers\\lab-config\.json/)
+  assert.match(script, /Remove-Item -LiteralPath 'C:\\ls101-lab\\results\\lab-status\.txt'/)
+  assert.match(script, /Start-ScheduledTask -TaskName 'ls101-lab-acceptance'/)
+
+  const state = labGuestStateScript()
+  assert.match(state, /lab-acceptance\.log/)
+  assert.match(state, /lab-progress\.txt/)
+  assert.match(state, /lab-status\.txt/)
+  assert.match(state, /'ls101-lab-acceptance'/)
+  assert.doesNotMatch(state, /'ls101-acceptance'/)
+})
+
+test('opening the service port is a scoped, idempotent and inbound-only firewall step', async () => {
+  const { labFirewallScript } = await api
+  const script = labFirewallScript()
+  assert.match(script, /-Direction Inbound/)
+  assert.match(script, /-Protocol TCP/)
+  assert.match(script, /-LocalPort 8443/)
+  // The documented guidance is a subnet-scoped rule, not an any-address one.
+  assert.match(script, /-RemoteAddress LocalSubnet/)
+  assert.match(script, /Get-NetFirewallRule -Name 'LS101-Lab-Service' -ErrorAction SilentlyContinue/)
+  assert.doesNotMatch(script, /-RemoteAddress Any/)
+  assert.match(labFirewallScript(9443), /-LocalPort 9443/)
+})
+
+test('the host probe reports whether the guest port really answers', async () => {
+  const { probeGuestPort } = await api
+  const net = require('node:net')
+  const server = net.createServer()
+  await new Promise((done) => server.listen(0, '127.0.0.1', done))
+  const port = server.address().port
+  try {
+    assert.equal(await probeGuestPort('127.0.0.1', port, { timeoutMs: 2000 }), true)
+  } finally {
+    await new Promise((done) => server.close(done))
+  }
+  // A closed port must report false rather than throw, because the gate is asserted through a refusal.
+  assert.equal(await probeGuestPort('127.0.0.1', port, { timeoutMs: 2000 }), false)
+})
+
+test('the lab guest script only asserts what a real machine can show', async () => {
+  const script = await readFile(labScript, 'utf8')
+  // SCM registration, virtual service account and the untouched start mode.
+  assert.match(script, /sc\.exe' -Arguments @\('qc', \$config\.serviceName\)/)
+  assert.match(script, /sc\.exe' -Arguments @\('qsidtype', \$config\.serviceName\)/)
+  assert.match(script, /UNRESTRICTED/)
+  assert.match(script, /\$service\.StartMode -eq 'Manual'/)
+  assert.match(script, /\$service\.StartName -ieq \$config\.serviceAccount/)
+  // Session-0 hosting and the owning process of the listening socket.
+  assert.match(script, /\$hostProcess\.SessionId -eq 0/)
+  assert.match(script, /\$listener\.OwningProcess -eq \$servicePid/)
+  assert.match(script, /\$listener\.LocalAddress -eq '0\.0\.0\.0'/)
+  // ACL enforcement is checked against a real standard user, not by reading the ACL alone.
+  assert.match(script, /\$acl\.AreAccessRulesProtected/)
+  assert.match(script, /New-LocalUser -Name \$user/)
+  assert.match(script, /NamedPipeClientStream/)
+  assert.match(script, /\$probe\.'control\.key' -eq 'denied'/)
+  assert.match(script, /\$probe\.pipe -eq 'denied'/)
+  // A probe that could not write its own result, or that timed out because the pipe was absent, must
+  // not be able to pass as "the DACL denied access".
+  assert.match(script, /icacls\.exe' -Arguments @\(\$probeDir, '\/grant'/)
+  assert.match(script, /\$probe\.'pipe-error' -ne 'TimeoutException'/)
+  assert.match(script, /Start-Process -FilePath 'powershell\.exe' -ArgumentList \$arguments -Credential \$credential/)
+  // The activation rule is verified in both directions.
+  assert.match(script, /Assert-That \(\$parsed\.activated -eq \$false\)/)
+  assert.match(script, /ASSERTION FAILED/)
+})
+
+test('the lab run refuses to read a broken VM clock as a product defect', async () => {
+  const script = await readFile(labScript, 'utf8')
+  // The licence has a hard expiry, and the service certificate is valid one day either side of its
+  // issue time, so a wrong VM clock breaks TLS, enrollment, heartbeats and licensing at once.
+  assert.match(script, /\[DateTime\]::Parse\(\$config\.hostTime\)/)
+  assert.match(script, /\$skew -lt 1440/)
+  assert.match(script, /\$guestNow -lt \$expiresAt/)
+  assert.match(script, /LICENSE_WINDOW/)
+  const source = await readFile(labEntry, 'utf8')
+  assert.match(source, /hostTime: new Date\(\)\.toISOString\(\)/)
+})
+
+test('the lab run keeps the invitation code off every command line and out of the guest fileserver', async () => {
+  const source = await readFile(labEntry, 'utf8')
+  // The code travels through the encrypted WinRM channel (`vagrant upload`), never `guestCommand`,
+  // which is logged and stored in the host report, and never the plain-HTTP file server.
+  assert.match(source, /run\('vagrant\.exe', \['upload', invitationFile, LAB_GUEST_INVITATION\]\)/)
+  assert.doesNotMatch(source, /guestCommand\([^)]*[Ii]nivtation/)
+  assert.doesNotMatch(source, /putGuestFile\([^)]*[Ii]nivtation/)
+  // It must not be persisted into the host report either.
+  assert.doesNotMatch(source, /report\.[A-Za-z]*[Ii]nivtationCode\s*=/)
+  const script = await readFile(labScript, 'utf8')
+  // The guest never reads the code itself; only the driver does, and it deletes the file afterwards.
+  assert.doesNotMatch(script, /Get-Content -LiteralPath \$config\.invitationFile/)
+  assert.match(script, /Remove-Item -LiteralPath \$config\.invitationFile -Force/)
+  assert.match(script, /Assert-That \(-not \(Test-Path -LiteralPath \$config\.invitationFile\)\)/)
+})
+

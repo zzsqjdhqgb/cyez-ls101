@@ -14,6 +14,7 @@
   "VMwareToolsIsoSha256": "auto",
   "WindowsImageIndex": 2,
   "GuestPassword": "REPLACE_WITH_A_LOCAL_LAB_PASSWORD",
+  "InvitationCode": "",
   "Cpus": 4,
   "MemoryMB": 8192,
   "DiskMB": 131072

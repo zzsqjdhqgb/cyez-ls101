@@ -1,0 +1,282 @@
+/*
+ * Guest-side driver for the lab VM acceptance run (docs/lab-vm-acceptance-design.md, milestone M1).
+ *
+ * It plays the role the teacher main process plays in production: it owns the control channel, spawns
+ * the packaged elevated helper `manager.cjs`, and answers exactly one `request` and one `complete`.
+ * The channel protocol itself is imported from the product rather than reimplemented, so the wire
+ * format cannot drift. See apps/lab-teacher/main/local-service.ts for the production parent.
+ *
+ * Two further probes live here because they need a real TLS stack and no product code:
+ *   pipe-name   derives the service control-pipe name from the product's own controlPath()
+ *   verify-tls  connects, recomputes the SPKI fingerprint, and optionally fetches /api/v1/info
+ *
+ * Secrets (the invitation code and the management password) arrive through files and travel only
+ * inside the encrypted channel. They are never printed, logged, or embedded in an error message.
+ */
+import { randomBytes, createHash, X509Certificate } from 'node:crypto'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { spawn } from 'node:child_process'
+import { connect } from 'node:tls'
+import { Agent, request as httpsRequest } from 'node:https'
+import { controlPath, listenLocalControl } from '../../packages/lab-server/src/control'
+
+function fail(message: string): never {
+  process.stderr.write(`${message}\n`)
+  process.exit(1)
+}
+
+function option(args: string[], name: string): string | undefined {
+  const index = args.indexOf(name)
+  if (index === -1) return undefined
+  const value = args[index + 1]
+  if (value === undefined || value.startsWith('--')) fail(`${name} requires a value`)
+  return value
+}
+
+async function readJson(file: string): Promise<Record<string, unknown>> {
+  const parsed: unknown = JSON.parse(await readFile(file, 'utf8'))
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+    fail(`${file} is not a JSON object`)
+  return parsed as Record<string, unknown>
+}
+
+function spkiFingerprint(certificate: X509Certificate): string {
+  return `sha256:${createHash('sha256')
+    .update(certificate.publicKey.export({ type: 'spki', format: 'der' }))
+    .digest('hex')}`
+}
+
+// --- pipe-name ---------------------------------------------------------------------------------
+
+function pipeName(args: string[]): void {
+  if (process.platform !== 'win32') fail('pipe-name is only meaningful on Windows')
+  const root = option(args, '--root')
+  if (!root) fail('pipe-name requires --root <data directory>')
+  const path = controlPath(root!)
+  // PowerShell needs the bare name for NamedPipeClientStream, not the \\.\pipe\ device path.
+  process.stdout.write(`${path.replace(/^\\\\\.\\pipe\\/, '')}\n`)
+}
+
+// --- verify-tls --------------------------------------------------------------------------------
+
+interface ProbeResult {
+  fingerprint: string
+  serverId?: string
+  releaseVersion?: string
+  statusCode?: number
+}
+
+// Resolves with the observed identity, or rejects with the reason. `--expect-connect-failure` turns
+// both outcomes into an exit code so PowerShell can assert a refusal without parsing messages.
+function probeTls(
+  url: string,
+  fingerprint: string,
+  { caVerify, withRequest }: { caVerify: boolean; withRequest: boolean }
+): Promise<ProbeResult> {
+  return new Promise((resolve, reject) => {
+    const target = new URL(url)
+    const pinned = target.pathname
+    if (pinned !== '/' && pinned !== '') return reject(new Error('URL must have an empty path'))
+    const socket = connect({
+      host: target.hostname.replace(/^\[|\]$/g, ''),
+      port: Number(target.port || 443),
+      rejectUnauthorized: caVerify,
+      minVersion: 'TLSv1.2'
+    })
+    socket.setTimeout(10000, () => socket.destroy(new Error('TLS connection timed out')))
+    socket.once('error', reject)
+    socket.once('secureConnect', () => {
+      let observed: string
+      try {
+        const peer = socket.getPeerCertificate()
+        if (!peer.raw) throw new Error('Service certificate missing')
+        const certificate = new X509Certificate(peer.raw)
+        observed = spkiFingerprint(certificate)
+        if (
+          Date.parse(certificate.validTo) < Date.now() ||
+          Date.parse(certificate.validFrom) > Date.now()
+        )
+          throw new Error('Service certificate expired or not yet valid')
+      } catch (error) {
+        socket.destroy()
+        reject(error as Error)
+        return
+      }
+      // The pin is checked before any request exists, so a wrong pin never sends credentials.
+      if (observed !== fingerprint) {
+        socket.destroy()
+        reject(new Error('Service public key changed'))
+        return
+      }
+      socket.setTimeout(0)
+      if (!withRequest) {
+        socket.destroy()
+        resolve({ fingerprint: observed })
+        return
+      }
+      // The already-pinned socket is handed to a one-shot agent, mirroring the product transport:
+      // no second connection is opened, so the request cannot bypass the pin check above.
+      const agent = new Agent({ keepAlive: false })
+      agent.createConnection = () => socket
+      const request = httpsRequest(
+        `${target.origin}/api/v1/info`,
+        { method: 'GET', agent },
+        (response) => {
+          const chunks: Buffer[] = []
+          response.on('data', (chunk: Buffer) => chunks.push(chunk))
+          response.on('end', () => {
+            const body = Buffer.concat(chunks).toString('utf8')
+            let parsed: Record<string, unknown> = {}
+            try {
+              parsed = JSON.parse(body) as Record<string, unknown>
+            } catch {
+              parsed = {}
+            }
+            resolve({
+              fingerprint: observed,
+              statusCode: response.statusCode,
+              serverId: typeof parsed.serverId === 'string' ? parsed.serverId : undefined,
+              releaseVersion:
+                typeof parsed.releaseVersion === 'string' ? parsed.releaseVersion : undefined
+            })
+          })
+        }
+      )
+      request.on('error', reject)
+      request.end()
+    })
+  })
+}
+
+async function verifyTls(args: string[]): Promise<void> {
+  const url = option(args, '--url')
+  const fingerprint = option(args, '--fingerprint')
+  if (!url || !fingerprint) fail('verify-tls requires --url and --fingerprint')
+  if (!/^sha256:[a-f0-9]{64}$/.test(fingerprint!)) fail('--fingerprint must be sha256:<64 hex>')
+  const expectFailure = args.includes('--expect-connect-failure')
+  const caVerify = args.includes('--ca-verify')
+  try {
+    const result = await probeTls(url!, fingerprint!, { caVerify, withRequest: !caVerify })
+    if (expectFailure) fail('the connection succeeded but a refusal was required')
+    process.stdout.write(`${JSON.stringify(result)}\n`)
+  } catch (error) {
+    if (expectFailure) {
+      process.stdout.write(`${JSON.stringify({ refused: (error as Error).message })}\n`)
+      return
+    }
+    fail((error as Error).message)
+  }
+}
+
+// --- manage ------------------------------------------------------------------------------------
+
+interface HelperResult {
+  ok: boolean
+  value?: unknown
+  error?: string
+  detail?: string
+}
+
+function runHelper(
+  runtime: string,
+  manager: string,
+  channel: string,
+  timeoutMs: number
+): Promise<{ code: number | null }> {
+  const executable = join(runtime, 'runtime', process.platform === 'win32' ? 'node.exe' : 'node')
+  return new Promise((resolve) => {
+    const child = spawn(executable, [manager, '--channel', channel], {
+      stdio: 'ignore',
+      shell: false
+    })
+    const timer = setTimeout(() => {
+      child.kill()
+      resolve({ code: null })
+    }, timeoutMs)
+    child.once('error', () => {
+      clearTimeout(timer)
+      resolve({ code: null })
+    })
+    child.once('close', (code) => {
+      clearTimeout(timer)
+      resolve({ code })
+    })
+  })
+}
+
+async function manage(args: string[]): Promise<void> {
+  const manager = option(args, '--manager')
+  const runtime = option(args, '--runtime')
+  const operation = option(args, '--operation')
+  const resultFile = option(args, '--result')
+  const inputFile = option(args, '--input-file')
+  const passwordFile = option(args, '--password-file')
+  const activationFile = option(args, '--activation-file')
+  const timeoutMs = Number(option(args, '--timeout-ms') ?? 120000)
+  if (!manager || !runtime || !operation || !resultFile)
+    fail('manage requires --manager, --runtime, --operation and --result')
+
+  const input: Record<string, unknown> = inputFile ? await readJson(inputFile) : {}
+  if (passwordFile) input.password = (await readFile(passwordFile, 'utf8')).trim()
+  if (activationFile) input.activationCode = (await readFile(activationFile, 'utf8')).trim()
+
+  const channel = await mkdtemp(join(tmpdir(), 'ls101-manager-'))
+  let listener: Awaited<ReturnType<typeof listenLocalControl>> | undefined
+  let result: HelperResult | undefined
+  let requested = false
+  try {
+    const key = randomBytes(32)
+    await writeFile(join(channel, 'control.key'), key, { mode: 0o600, flag: 'wx', flush: true })
+    listener = await listenLocalControl(channel, key, async (method, value) => {
+      if (method === 'request' && !requested && value === undefined) {
+        requested = true
+        return { operation, input }
+      }
+      if (
+        method === 'complete' &&
+        requested &&
+        !result &&
+        value &&
+        typeof value === 'object' &&
+        typeof (value as { ok?: unknown }).ok === 'boolean'
+      ) {
+        result = value as HelperResult
+        return null
+      }
+      throw new Error('INVALID_REQUEST')
+    })
+    const outcome = await runHelper(runtime!, manager!, channel, timeoutMs)
+    if (outcome.code === null) fail('LOCAL_HELPER_INCOMPLETE')
+    if (!result) fail('LOCAL_HELPER_INCOMPLETE')
+    const helperResult: HelperResult = result!
+    await writeFile(resultFile!, `${JSON.stringify(helperResult)}\n`, 'utf8')
+    if (!helperResult.ok) {
+      // Only the code and, for install/upgrade, the bounded installer detail. Never the input.
+      const code =
+        helperResult.error && /^[A-Z_]+$/.test(helperResult.error)
+          ? helperResult.error
+          : 'LOCAL_OPERATION_FAILED'
+      const detail =
+        ['install', 'upgrade'].includes(operation!) && typeof helperResult.detail === 'string'
+          ? helperResult.detail.slice(0, 8192).trim()
+          : ''
+      fail(detail ? `${code}\n${detail}` : code)
+    }
+  } finally {
+    try {
+      await listener?.close()
+    } finally {
+      await rm(channel, { recursive: true, force: true }).catch(() => undefined)
+    }
+  }
+}
+
+// --- entry -------------------------------------------------------------------------------------
+
+const [command, ...rest] = process.argv.slice(2)
+if (command === 'pipe-name') pipeName(rest)
+else if (command === 'verify-tls') await verifyTls(rest)
+else if (command === 'manage') await manage(rest)
+else fail('Usage: manager-driver.mjs pipe-name|verify-tls|manage [options]')
