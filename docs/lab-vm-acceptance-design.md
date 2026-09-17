@@ -1,6 +1,6 @@
 # 机房部署 Windows 目标机自动化验收设计
 
-更新日期：2026-09-16。对应分支 `feat/lab-deployment`。本文档定义在一次性 Windows Server 2022 虚拟机中，对教师端/学生端安装产物做操作系统级集成测试的设计。执行结果与尚未取得的证据仍以 [lab-target-acceptance.md](lab-target-acceptance.md) 为准；本文档本身不表示任何功能已经通过验收。
+更新日期：2026-09-17。对应分支 `feat/lab-deployment`。本文档定义在一次性 Windows Server 2022 虚拟机中，对教师端/学生端安装产物做操作系统级集成测试的设计。执行结果与尚未取得的证据仍以 [lab-target-acceptance.md](lab-target-acceptance.md) 为准；本文档本身不表示任何功能已经通过验收，M1 的实机结果见第 12 节。
 
 ## 1. 目的与范围
 
@@ -41,7 +41,7 @@
 | 服务运行时   | 打包 Node 24.20.0 x64 + `server.cjs` + `manager.cjs` + WinSW 2.12.0（复制为 `LS101Lab.exe`）；`out/lab-server` 经 `extraResources` 映射到安装目录的 `resources/lab-server`                                       |
 | 程序目录     | `%ProgramFiles%\LS101LabService`，版本目录 `releases\<release>-<manifest 摘要前 16 位>`，安装记录 `installation.json`                                                                                            |
 | 数据目录     | `%ProgramData%\LS101Lab\data`，日志 `%ProgramData%\LS101Lab\logs`                                                                                                                                                |
-| 服务注册     | WinSW XML `resources/lab/windows/LS101Lab.xml`：`startmode=Manual`、启动参数用 `<startarguments>`、停止参数用 `<stoparguments>`、`onfailure restart`、日志 roll-by-size                                       |
+| 服务注册     | WinSW XML `resources/lab/windows/LS101Lab.xml`：`startmode=Manual`、启动参数用 `<startarguments>`、停止参数用 `<stoparguments>`、`onfailure restart`、日志 roll-by-size                                          |
 | 服务账户     | `sc.exe sidtype LS101Lab unrestricted` + `sc.exe config LS101Lab obj= NT SERVICE\LS101Lab`                                                                                                                       |
 | 目录权限     | 关闭继承；SYSTEM 与 Administrators 完全控制；数据目录额外授予服务 SID 修改权限；程序目录额外授予 Users 读取执行                                                                                                  |
 | 本机控制通道 | Windows 下为命名管道 `\\.\pipe\ls101-lab-<hmac-sha256('ls101-path', 小写绝对路径)前 32 位十六进制>`；`control.key` 32 字节；AES-256-GCM 双向绑定 AAD；64 KiB 帧上限；默认 30 s、`prepare-upgrade` 30 min         |
@@ -266,12 +266,14 @@ playwright.lab-vm.config.ts        # CDP 附着用的 Playwright 配置
 
 ## 12. 实现状态
 
-| 里程碑                            | 状态                                      | 说明                                                                               |
-| --------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------- |
-| M1 宿主机门禁与打包、Windows 服务 | 已实现，**未在真实 Windows 宿主机运行过** | `yarn vm:lab`：宿主机门禁、编译编排、guest 阶段脚本、提权管理器驱动器、防火墙门控  |
-| M2 协议驱动器                     | 未实现                                    | 入网字节相等语义、429/503、租约与维护退出、无 keep-alive 压测、端口占用、IPv6 负例 |
-| M3 CDP GUI                        | 未实现                                    |                                                                                    |
-| M4 升级/卸载/数据保留             | 未实现                                    |                                                                                    |
+| 里程碑                            | 状态                                       | 说明                                                                               |
+| --------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------- |
+| M1 宿主机门禁与打包、Windows 服务 | **已在真实 Windows 宿主机上全绿（15/15）** | `yarn vm:lab`：宿主机门禁、编译编排、guest 阶段脚本、提权管理器驱动器、防火墙门控  |
+| M2 协议驱动器                     | 未实现                                     | 入网字节相等语义、429/503、租约与维护退出、无 keep-alive 压测、端口占用、IPv6 负例 |
+| M3 CDP GUI                        | 未实现                                     |                                                                                    |
+| M4 升级/卸载/数据保留             | 未实现                                     |                                                                                    |
+
+M1 的首次全绿运行：2026-09-17，runId `1789661969192-a443907b-4923-4a0e-8d9f-62c5c250ada8`，宿主机侧 19 步、822 s，guest 阶段 96 s，15 个步骤全部 `passed`。该次产物：教师端 `ls101-lab-teacher-0.4.1-win-x64.exe` SHA-256 `972066e2…9ce777`，学生端 `ls101-lab-student-0.4.1-win-x64.exe` SHA-256 `34111bdd…d5282`。在此之前几轮运行分别止步于打包、服务安装目录和第 13 步 `restart-survives`，后者查出的是产品缺陷（见第 13 节第四条），不是测试问题。
 
 M1 的代码位置：
 
@@ -286,13 +288,13 @@ M1 的代码位置：
 
 驱动器在容器内已被验证：错误指纹会在发出任何 HTTP 之前被拒（服务端观测到 0 个请求）、自签服务无法被普通校验证书的客户端连接、`manage` 转发的 `initialize` 输入恰好是 `activationCode/baseUrl/name/password/port` 五个键、失败时只回错误码且不回显密钥。**但这些只证明驱动器正确，不能替代目标机结论。**
 
-M1 覆盖的 Tier 0/1 项：H1、H2、H3、S1–S14、S18。其中 H3 分两段：宿主机把自身 UTC 时间随配置下发，guest 先断言与本机时钟的偏差小于 24 小时（服务证书有效期为签发前后各一天，超出即会同时破坏 TLS、入网有效期、心跳窗口与许可判断），再依据服务自己上报的 `license.expiresAt` 断言尚未过期。两者都以 `LICENSE_WINDOW` 前缀报错，避免把一台时钟不对的 VM 误判为产品缺陷。
+M1 覆盖的 Tier 0/1 项：H1、H2、H3、S1–S14、S18，已在真实宿主机上全部通过。其中 H3 分两段：宿主机把自身 UTC 时间随配置下发，guest 先断言与本机时钟的偏差小于 24 小时（服务证书有效期为签发前后各一天，超出即会同时破坏 TLS、入网有效期、心跳窗口与许可判断），再依据服务自己上报的 `license.expiresAt` 断言尚未过期。两者都以 `LICENSE_WINDOW` 前缀报错，避免把一台时钟不对的 VM 误判为产品缺陷。
 
-因此 [lab-target-acceptance.md](lab-target-acceptance.md) 的「Windows x64 / NTFS」一节**必须保持"未运行"**，直到 `yarn vm:lab` 在真实 Windows 宿主机上通过并留下结果。
+[lab-target-acceptance.md](lab-target-acceptance.md) 的「Windows x64 / NTFS」一节因此可以引用这次运行作为**部分**证据，但整节仍不能标为通过：该节 7 项中只有第 1 项（Windows 原生打包）与第 3 项（`sc qc`/`qsidtype`/`icacls` 与普通用户隔离）被 M1 完整覆盖，第 2 项里"进程命令行与日志不得泄漏密钥"由 S18 覆盖、UAC 取消后重试属 GUI（M3），第 4 项的作答/备份/恢复与目录 fsync 屏障属 M2，第 5 项的重启自启动属 S16，第 6、7 项的升级、卸载与学生账户路径属 M4。在 M2–M4 完成前，该节状态维持"未运行"。
 
 M1 尚未覆盖的 Tier 1 项：S15（停止语义与在线设备）、S16（重启后自启动）、S17（端口占用）。这三项需要多次重启或已注册设备，按计划留给后续里程碑。
 
-## 13. 首次实机运行发现的问题
+## 13. 实机运行发现的问题
 
 2026-09-17 在真实 Windows 宿主机上分阶段跑通了 M1 的前两步（宿主机编译、guest 首阶段），发现三个缺陷。全部是单元测试、容器打包和 Linux 目标都无法暴露的问题，也是这套 VM 验收存在的理由。后续一次完整运行在 S14 上又发现了第四个缺陷，同样只能在这套环境里暴露，见下文。
 
@@ -306,9 +308,9 @@ M1 尚未覆盖的 Tier 1 项：S15（停止语义与在线设备）、S16（重
 
 第四条在 S14（`Restart-Service`）上暴露，是**被测产品自身的缺陷**，不是测试环境问题：
 
-| 缺陷                    | 表现                                                                                                                                                          | 根因                                                                                                                                                                                                                                                                                                                                                                  | 状态                                                                                             |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| 服务停止后永远停不下来  | `Restart-Service` 卡住；SCM 长期停在 `Stop Pending`；wrapper 日志在 `WaitForProcessToExit <runtime>+<stop>` 之后不再更新；runtime 进程仍活着、控制通道仍应答 | WinSW 2.12.0 在 `WrapperService.DoStop` 里无条件执行 `stopArguments += " " + Arguments`，因此 XML 里用 `<arguments>` 声明的启动参数被**原样追加到停止命令行**。实际停止命令成了 `server.cjs shutdown --data-dir <data> server.cjs serve --data-dir <data>`，被 `cli.ts` 的 `extra.length` 判为 `INVALID_ARGUMENTS` 并立刻以 1 退出，`shutdown` 从未送达 runtime | 已修：`LS101Lab.xml` 的 `<arguments>` 改为 `<startarguments>`；新增契约断言防止回归               |
+| 缺陷                   | 表现                                                                                                                                                         | 根因                                                                                                                                                                                                                                                                                                                                                            | 状态                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| 服务停止后永远停不下来 | `Restart-Service` 卡住；SCM 长期停在 `Stop Pending`；wrapper 日志在 `WaitForProcessToExit <runtime>+<stop>` 之后不再更新；runtime 进程仍活着、控制通道仍应答 | WinSW 2.12.0 在 `WrapperService.DoStop` 里无条件执行 `stopArguments += " " + Arguments`，因此 XML 里用 `<arguments>` 声明的启动参数被**原样追加到停止命令行**。实际停止命令成了 `server.cjs shutdown --data-dir <data> server.cjs serve --data-dir <data>`，被 `cli.ts` 的 `extra.length` 判为 `INVALID_ARGUMENTS` 并立刻以 1 退出，`shutdown` 从未送达 runtime | 已修：`LS101Lab.xml` 的 `<arguments>` 改为 `<startarguments>`；新增契约断言防止回归 |
 
 三个细节值得记下来。其一，WinSW 文档写明了规则——"When you use the `<stoparguments>`, you must use `<startarguments>` instead of `<arguments>`"——但这条规则违反时**完全静默**：WinSW 启动停止进程时传的日志处理器是 `null`，停止进程写往 stderr 的 `INVALID_ARGUMENTS` 没有任何去处，wrapper 日志只留下 `Started process <pid>` 一行。其二，`<stoptimeout>1900 sec</stoptimeout>` 在这种配置下**不生效**：它只在"没有 `<stoparguments>`、由 WinSW 直接杀进程树"的分支里使用，而优雅停止走的是 `while (!WaitForExit(sleeptime)) SignalPending()` 的无界循环，默认 1 秒轮询、永不放弃。也就是说这个缺陷不是"卡 31 分钟后被杀"，而是**服务根本无法停止**，教师机上的 `sc stop`、重启和关机都会无限期挂起；此前"1900 秒后会自愈"的判断是错的。其三，定位手段是把停止进程的命令行抓下来：wrapper 自己不记，探针按秒级轮询又必然错过这个存活不到 1 秒的进程，最终靠在 `Restart-Service` 旁边挂一个 100 ms 轮询 `Win32_Process`、由哨兵文件结束的采样器才拿到证据。
 
