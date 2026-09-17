@@ -110,8 +110,18 @@ async function withService(body, callback) {
   let requests = 0
   const server = createServer(
     { key: certificate.key, cert: certificate.pem },
-    (_request, response) => {
+    (request, response) => {
       requests += 1
+      // The stub enforces the contract the real service enforces: every operation requires the client
+      // version header and is answered 400 without it. Answering 200 unconditionally is what let a probe
+      // that sent no headers pass this suite while failing against the product.
+      if (!request.headers['x-ls101-client-version']) {
+        response.writeHead(400, { 'content-type': 'application/json' })
+        response.end(
+          JSON.stringify({ error: { code: 'INVALID_REQUEST', message: 'missing client version' } })
+        )
+        return
+      }
       response.writeHead(200, { 'content-type': 'application/json' })
       response.end(JSON.stringify(body))
     }
@@ -136,7 +146,9 @@ test('the driver refuses a wrong pin before any request exists and reads /info w
         '--url',
         service.url,
         '--fingerprint',
-        certificate.fingerprint
+        certificate.fingerprint,
+        '--version',
+        '0.4.1'
       ])
       assert.equal(matched.code, 0, matched.stderr)
       const observed = JSON.parse(matched.stdout)
@@ -152,7 +164,9 @@ test('the driver refuses a wrong pin before any request exists and reads /info w
         '--url',
         service.url,
         '--fingerprint',
-        `sha256:${'0'.repeat(64)}`
+        `sha256:${'0'.repeat(64)}`,
+        '--version',
+        '0.4.1'
       ])
       assert.equal(mismatched.code, 1)
       assert.match(mismatched.stderr, /public key changed/)
@@ -165,6 +179,8 @@ test('the driver refuses a wrong pin before any request exists and reads /info w
         service.url,
         '--fingerprint',
         certificate.fingerprint,
+        '--version',
+        '0.4.1',
         '--ca-verify',
         '--expect-connect-failure'
       ])
@@ -177,6 +193,8 @@ test('the driver refuses a wrong pin before any request exists and reads /info w
         service.url,
         '--fingerprint',
         certificate.fingerprint,
+        '--version',
+        '0.4.1',
         '--expect-connect-failure'
       ])
       assert.equal(inverted.code, 1)
@@ -191,7 +209,9 @@ test('the driver rejects a malformed fingerprint instead of silently trusting it
     '--url',
     'https://127.0.0.1:1/',
     '--fingerprint',
-    'nope'
+    'nope',
+    '--version',
+    '0.4.1'
   ])
   assert.equal(result.code, 1)
   assert.match(result.stderr, /sha256:<64 hex>/)
@@ -303,4 +323,18 @@ test('a failing helper reports only its error code and never the secret input', 
   assert.doesNotMatch(result.stderr, /LS101-TEST-INVITATION|ManagementPassword/)
   // The installer detail is only ever surfaced for install/upgrade, never for initialize.
   assert.doesNotMatch(result.stderr, /installer detail/)
+})
+
+test('the probe refuses to send a request the contract would reject', async () => {
+  // Without a version the probe cannot satisfy the header every operation requires, so it must fail
+  // before connecting rather than send a request it knows the service will answer with 400.
+  const result = await driverRun([
+    'verify-tls',
+    '--url',
+    'https://127.0.0.1:1/',
+    '--fingerprint',
+    certificate.fingerprint
+  ])
+  assert.equal(result.code, 1)
+  assert.match(result.stderr, /requires --version/)
 })

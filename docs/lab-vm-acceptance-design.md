@@ -276,7 +276,10 @@ playwright.lab-vm.config.ts        # CDP 附着用的 Playwright 配置
 M1 的代码位置：
 
 - `infra/windows-vm/lab.mjs`：`lab-acceptance` 动作，以及 `validateLabConfig`、`labPreflight`、`labGuestConfig`、`labAcceptanceTaskScript`、`labGuestStateScript`、`labFirewallScript`、`probeGuestPort`、`labAcceptance`。
-- `infra/windows-vm/guest/run-lab-acceptance.ps1`：guest 阶段脚本。
+- `infra/windows-vm/guest/lab-acceptance.mjs`：guest 阶段编排（Node），全部判断都在这里。
+- `infra/windows-vm/guest/lab-harness.mjs`：纯辅助函数（断言、JSON 解析、编码解码、进程调用、运行记录），由 `scripts/__tests__/lab-harness.test.js` 在容器内覆盖。
+- `infra/windows-vm/guest/lab-probes.ps1`：PowerShell 只做数据采集，每个探针输出一行带标记的 JSON，不做判断。
+- `infra/windows-vm/guest/start-lab-acceptance.ps1`：启动器，负责重定向子进程输出，使"启动即失败"也留下证据。
 - `tests/lab-vm/manager-driver.ts`：guest 侧驱动器（控制通道父进程、`pipe-name`、`verify-tls`）。
 - `scripts/lab/build-test-driver.mjs`：把驱动器打成单文件，控制通道协议从 `packages/lab-server` 内联，避免协议漂移。
 - `tests/lab-vm/echo-helper.ts`、`scripts/__tests__/lab-driver.test.js`：驱动器在 Linux 容器内可运行的自证。
@@ -302,3 +305,21 @@ M1 尚未覆盖的 Tier 1 项：S15（停止语义与在线设备）、S16（重
 第三条尤其值得记录：**只改环境变量无法修复**，因为 WOW64 重定向作用于路径访问而不是变量值；唯一的可靠做法是让脚本运行在 64 位 PowerShell 中。修复放在脚本自身而不是 `teacher.nsh`，这样 NSIS 安装器、管理员手工调用和教师端管理器三条路径同时受保护。
 
 一处**撤回的判断**：早期日志（安装记录缺失、安装器 16 秒返回）曾被解读为"静默安装失败却返回 0"。第三条缺陷确认后，安装器其实成功执行了服务安装脚本，只是落在被重定向的目录，退出码是正确的。第 11 节风险 2（静默模式下 `MessageBox` 是否挂起）因此仍未验证，保持开放。
+
+## 14. guest 侧的语言分工
+
+原本整个 guest 阶段脚本是 PowerShell，理由是沿用仓库既有的 `guest/run-acceptance.ps1` 骨架。实测证明这个选择是错的：连续三次失败都出在 PowerShell 的语义上——`param([string]$Config)` 与解析结果同名导致对象被强制转成字符串、`Assert-That` 的 `[bool]` 参数无法绑定单元素管道结果、按行取 JSON 时管道把单行输出解包成标量从而索引到第一个字符。这三处都不是"写错了"，而是**这类辅助函数在 PowerShell 里无法在容器内执行**，只能靠重建 VM（约 7 分钟）来发现。
+
+因此调整为：
+
+| 关注点                                         | 语言       | 位置                             | 容器内可测                       |
+| ---------------------------------------------- | ---------- | -------------------------------- | -------------------------------- |
+| 阶段编排、全部断言与判断                       | Node       | `guest/lab-acceptance.mjs`       | 结构由 `windows-vm.test.js` 断言 |
+| 纯辅助函数（断言、JSON、编码、进程、运行记录） | Node       | `guest/lab-harness.mjs`          | **是**，`lab-harness.test.js`    |
+| 管理控制通道与 TLS 探针                        | Node       | `tests/lab-vm/manager-driver.ts` | **是**，`lab-driver.test.js`     |
+| 结构化数据采集                                 | PowerShell | `guest/lab-probes.ps1`           | 否，但每个探针只有几行且不含判断 |
+| 子进程输出重定向                               | PowerShell | `guest/start-lab-acceptance.ps1` | 否，必须在被测进程之外           |
+
+判断之所以全部移到 Node，是因为**只有能被执行的代码才值得写测试**。带外数据采集继续用 PowerShell，是因为 `Get-Acl`、`Get-CimInstance`、`New-LocalUser`、`Start-Process -Credential` 在 PowerShell 里确实比在 Node 里调 CLI 再解析文本更短更稳；这些探针只回答"是什么"，不回答"是否合格"。
+
+一处工程细节值得记录：PowerShell 5.1 的 `ConvertTo-Json` 会把单元素数组渲染成标量，因此探针输出会在 Node 侧经 `asArray()` 归一化——这个坑在容器内有测试覆盖，而不是等到真机上才发现。

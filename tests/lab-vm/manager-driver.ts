@@ -21,6 +21,7 @@ import { spawn } from 'node:child_process'
 import { connect } from 'node:tls'
 import { Agent, request as httpsRequest } from 'node:https'
 import { controlPath, listenLocalControl } from '../../packages/lab-server/src/control'
+import { PROBE_PATH, buildProbeHeaders } from './probe-headers.mjs'
 
 function fail(message: string): never {
   process.stderr.write(`${message}\n`)
@@ -66,6 +67,8 @@ interface ProbeResult {
   serverId?: string
   releaseVersion?: string
   statusCode?: number
+  errorCode?: string
+  errorMessage?: string
 }
 
 // Resolves with the observed identity, or rejects with the reason. `--expect-connect-failure` turns
@@ -73,7 +76,7 @@ interface ProbeResult {
 function probeTls(
   url: string,
   fingerprint: string,
-  { caVerify, withRequest }: { caVerify: boolean; withRequest: boolean }
+  { caVerify, withRequest, version }: { caVerify: boolean; withRequest: boolean; version: string }
 ): Promise<ProbeResult> {
   return new Promise((resolve, reject) => {
     const target = new URL(url)
@@ -121,8 +124,8 @@ function probeTls(
       const agent = new Agent({ keepAlive: false })
       agent.createConnection = () => socket
       const request = httpsRequest(
-        `${target.origin}/api/v1/info`,
-        { method: 'GET', agent },
+        `${target.origin}${PROBE_PATH}`,
+        { method: 'GET', headers: buildProbeHeaders(version), agent },
         (response) => {
           const chunks: Buffer[] = []
           response.on('data', (chunk: Buffer) => chunks.push(chunk))
@@ -134,12 +137,17 @@ function probeTls(
             } catch {
               parsed = {}
             }
+            // The rejection reason travels with the result. A bare status code once cost a full VM rebuild
+            // to explain, because the service's own error envelope is where the cause lives.
+            const error = (parsed.error ?? {}) as Record<string, unknown>
             resolve({
               fingerprint: observed,
               statusCode: response.statusCode,
               serverId: typeof parsed.serverId === 'string' ? parsed.serverId : undefined,
               releaseVersion:
-                typeof parsed.releaseVersion === 'string' ? parsed.releaseVersion : undefined
+                typeof parsed.releaseVersion === 'string' ? parsed.releaseVersion : undefined,
+              errorCode: typeof error.code === 'string' ? error.code : undefined,
+              errorMessage: typeof error.message === 'string' ? error.message : undefined
             })
           })
         }
@@ -153,13 +161,27 @@ function probeTls(
 async function verifyTls(args: string[]): Promise<void> {
   const url = option(args, '--url')
   const fingerprint = option(args, '--fingerprint')
+  const version = option(args, '--version')
   if (!url || !fingerprint) fail('verify-tls requires --url and --fingerprint')
+  // Required rather than optional: every operation declares this header, and omitting it is answered
+  // with 400 rather than with a hint.
+  if (!version)
+    fail('verify-tls requires --version, the client version the contract expects on every request')
   if (!/^sha256:[a-f0-9]{64}$/.test(fingerprint!)) fail('--fingerprint must be sha256:<64 hex>')
   const expectFailure = args.includes('--expect-connect-failure')
   const caVerify = args.includes('--ca-verify')
   try {
-    const result = await probeTls(url!, fingerprint!, { caVerify, withRequest: !caVerify })
+    const result = await probeTls(url!, fingerprint!, {
+      caVerify,
+      withRequest: !caVerify,
+      version: version!
+    })
     if (expectFailure) fail('the connection succeeded but a refusal was required')
+    // A non-200 is reported with the service's own error code and message instead of the status alone.
+    if (result.statusCode !== 200) {
+      const detail = [result.errorCode, result.errorMessage].filter(Boolean).join(': ')
+      fail(`the service answered ${result.statusCode}${detail ? ` (${detail})` : ''}`)
+    }
     process.stdout.write(`${JSON.stringify(result)}\n`)
   } catch (error) {
     if (expectFailure) {

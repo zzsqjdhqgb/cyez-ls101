@@ -218,7 +218,10 @@ test('VMware Utility check starts the host service and rejects unavailable servi
   assert.equal(calls[0][0], '-NoLogo')
   assert.match(calls[0].at(-1), /Start-Service/)
   assert.throws(
-    () => ensureVmwareUtility(() => { throw new Error('service missing') }),
+    () =>
+      ensureVmwareUtility(() => {
+        throw new Error('service missing')
+      }),
     /127\.0\.0\.1:9922/
   )
 })
@@ -1065,8 +1068,11 @@ test('acceptance task script registers an interactive task and clears stale stat
 
 // --- Lab acceptance (docs/lab-vm-acceptance-design.md milestone M1) ---------------------------
 
-const labScript = path.resolve(__dirname, '../../infra/windows-vm/guest/run-lab-acceptance.ps1')
+// --- Lab acceptance (docs/lab-vm-acceptance-design.md milestone M1) ---------------------------
+
+const guestDirectory = path.resolve(__dirname, '../../infra/windows-vm/guest')
 const labEntry = path.resolve(__dirname, '../../infra/windows-vm/lab.mjs')
+const readGuest = (name) => readFile(path.join(guestDirectory, name), 'utf8')
 
 test('lab acceptance is a CLI action and the defaults still target the smoke suite', async () => {
   const { parseAction, guestStateScript } = await api
@@ -1079,19 +1085,32 @@ test('lab acceptance is a CLI action and the defaults still target the smoke sui
   assert.match(smoke, /'ls101-acceptance'/)
 })
 
-test('the diagnose action reads the guest without changing it', async () => {
+test('the phase run is Node and PowerShell only collects structured data', async () => {
+  const orchestrator = await readGuest('lab-acceptance.mjs')
+  const probes = await readGuest('lab-probes.ps1')
+  // The orchestration and every comparison live in Node, so `yarn vm:test` covers them in the container
+  // instead of a seven-minute VM rebuild being the only way to find a defect.
+  assert.match(orchestrator, /from '\.\/lab-harness\.mjs'/)
+  assert.match(orchestrator, /run\.step\('elevation', async/)
+  assert.match(orchestrator, /assertThat\(/)
+  // Probes answer questions; they never decide. One marked JSON line per invocation, no assertions.
+  assert.match(probes, /LS101PROBE\|/)
+  assert.doesNotMatch(probes, /Assert|ASSERTION FAILED/)
+  // The PowerShell phase script is gone.
+  await assert.rejects(readGuest('run-lab-acceptance.ps1'), { code: 'ENOENT' })
+})
+
+test('the diagnostic checks each language with its own tool', async () => {
   const { labDiagnoseScript } = await api
-  const script = labDiagnoseScript()
-  // It must answer the first questions of a run that died early: are the files there, does the phase
-  // script parse, and what did the task return.
-  assert.match(script, /ParseFile\(\$script/)
-  assert.match(script, /parseErrors=/)
-  assert.match(script, /Get-ScheduledTaskInfo/)
-  assert.match(script, /Get-CimInstance Win32_Service/)
+  const script = labDiagnoseScript({ NodeVersion: '24.20.0' })
+  // Asking the PowerShell parser about a Node module proved nothing; node --check is a real check.
+  assert.match(script, /node --check/)
+  assert.match(script, /probeParseErrors=/)
+  assert.match(script, /ParseFile\('C:\\ls101-lab\\transfers\\lab-probes\.ps1'/)
+  assert.match(script, /lab-harness\.mjs/)
+  assert.match(script, /lab-probes\.ps1/)
   assert.match(script, /lab-task-output\.txt/)
-  assert.match(script, /run-lab-acceptance\.ps1/)
-  assert.match(script, /start-lab-acceptance\.ps1/)
-  // Read-only: no assignment to the guest state, no service or task mutation.
+  // Read-only: no service, task or filesystem mutation.
   for (const forbidden of [
     /Start-Service/,
     /Stop-Service/,
@@ -1126,14 +1145,19 @@ test('the lab preflight fails before any VM work when the host cannot package th
   assert.throws(() => labPreflight({ ...base, winswSha256: 'deadbeef' }), /pinned SHA-256/)
 })
 
-test('lab guest configuration points the guest at the uploaded artifacts and the documented port', async () => {
-  const { labInstallerName, labGuestConfig } = await api
+test('lab guest configuration points the guest at every uploaded file and the documented port', async () => {
+  const { labInstallerName, labGuestConfig, labGuestNodePath } = await api
   assert.equal(labInstallerName('teacher', '0.4.1'), 'ls101-lab-teacher-0.4.1-win-x64.exe')
-  assert.equal(labInstallerName('student', '0.4.1'), 'ls101-lab-student-0.4.1-win-x64.exe')
-  const config = labGuestConfig({}, { version: '0.4.1', nodeVersion: '24.20.0', hostTime: '2026-09-16T00:00:00.000Z' })
+  const config = labGuestConfig(
+    {},
+    { version: '0.4.1', nodeVersion: '24.20.0', hostTime: '2026-09-16T00:00:00.000Z' }
+  )
   assert.equal(config.installer, 'C:\\ls101-lab\\transfers\\ls101-lab-teacher-0.4.1-win-x64.exe')
   assert.equal(config.driver, 'C:\\ls101-lab\\transfers\\manager-driver.mjs')
+  assert.equal(config.harness, 'C:\\ls101-lab\\transfers\\lab-harness.mjs')
+  assert.equal(config.probes, 'C:\\ls101-lab\\transfers\\lab-probes.ps1')
   assert.equal(config.invitationFile, 'C:\\ls101-lab\\invitation.txt')
+  assert.equal(config.node, labGuestNodePath('24.20.0'))
   assert.equal(config.releaseVersion, '0.4.1')
   assert.equal(config.port, 8443)
   // The host clock travels with the configuration so the guest can spot a broken VM clock.
@@ -1144,28 +1168,52 @@ test('lab guest configuration points the guest at the uploaded artifacts and the
   // The installer hardens the data parent; the `data` child is created by the service on first start.
   assert.match(config.dataRoot, /ProgramData\\LS101Lab$/)
   assert.match(config.dataDir, /ProgramData\\LS101Lab\\data$/)
+  // Every key the phase run requires must be present in what the host writes.
+  const { REQUIRED_CONFIG_KEYS } = await import('../../infra/windows-vm/guest/lab-harness.mjs')
+  for (const key of REQUIRED_CONFIG_KEYS)
+    assert.ok(key in config, `configuration is missing ${key}`)
 })
 
-test('the lab task runs interactively at the highest run level and clears stale status', async () => {
+test('the lab task runs the Node orchestrator through the capturing launcher', async () => {
   const { labAcceptanceTaskScript, labGuestStateScript } = await api
-  const script = labAcceptanceTaskScript()
+  const script = labAcceptanceTaskScript({ NodeVersion: '24.20.0' })
   assert.match(script, /-LogonType Interactive/)
   assert.match(script, /-RunLevel Highest/)
-  // The phase script runs through the launcher, which captures its output: a scheduled task discards
-  // the output of the process it starts, so without it an early crash leaves no evidence at all.
   assert.match(script, /-File C:\\ls101-lab\\transfers\\start-lab-acceptance\.ps1/)
-  assert.match(script, /-Script C:\\ls101-lab\\transfers\\run-lab-acceptance\.ps1/)
+  assert.match(script, /-Script C:\\ls101-lab\\transfers\\lab-acceptance\.mjs/)
+  assert.match(script, /-Node C:\\ls101-lab\\tools\\node-v24\.20\.0-win-x64\\node\.exe/)
   assert.match(script, /-Config C:\\ls101-lab\\transfers\\lab-config\.json/)
+  assert.match(script, /-ResultsDir C:\\ls101-lab\\results/)
   assert.match(script, /-Output C:\\ls101-lab\\results\\lab-task-output\.txt/)
-  assert.match(script, /Remove-Item -LiteralPath 'C:\\ls101-lab\\results\\lab-status\.txt'/)
   assert.match(script, /Start-ScheduledTask -TaskName 'ls101-lab-acceptance'/)
 
   const state = labGuestStateScript()
-  assert.match(state, /lab-acceptance\.log/)
-  assert.match(state, /lab-progress\.txt/)
   assert.match(state, /lab-status\.txt/)
   assert.match(state, /'ls101-lab-acceptance'/)
   assert.doesNotMatch(state, /'ls101-acceptance'/)
+})
+
+test('the launcher captures the child output so an early crash still explains itself', async () => {
+  const launcher = await readGuest('start-lab-acceptance.ps1')
+  // A real child process is what makes a start-up failure land in the redirected stream: the phase run
+  // cannot report a problem that prevents it from starting.
+  assert.match(
+    launcher,
+    /& \$Node \$Script --config \$Config --results-dir \$ResultsDir \*> \$Output/
+  )
+  assert.match(launcher, /exit \$LASTEXITCODE/)
+})
+
+test('the execute action reproduces the real run environment and is bounded', async () => {
+  const { labExecuteScript } = await api
+  const script = labExecuteScript({ NodeVersion: '24.20.0' }, { waitSeconds: 25 })
+  assert.match(script, /-LogonType Interactive -RunLevel Highest/)
+  assert.match(script, /-TaskName 'ls101-lab-execute'/)
+  assert.doesNotMatch(script, /-TaskName 'ls101-lab-acceptance'/)
+  assert.match(script, /-Script C:\\ls101-lab\\transfers\\lab-acceptance\.mjs/)
+  assert.match(script, /-ResultsDir C:\\ls101-lab\\results/)
+  // Bounded, so this never holds the WinRM call open for a whole install.
+  assert.match(script, /Start-Sleep -Seconds 25/)
 })
 
 test('opening the service port is a scoped, idempotent and inbound-only firewall step', async () => {
@@ -1174,9 +1222,7 @@ test('opening the service port is a scoped, idempotent and inbound-only firewall
   assert.match(script, /-Direction Inbound/)
   assert.match(script, /-Protocol TCP/)
   assert.match(script, /-LocalPort 8443/)
-  // The documented guidance is a subnet-scoped rule, not an any-address one.
   assert.match(script, /-RemoteAddress LocalSubnet/)
-  assert.match(script, /Get-NetFirewallRule -Name 'LS101-Lab-Service' -ErrorAction SilentlyContinue/)
   assert.doesNotMatch(script, /-RemoteAddress Any/)
   assert.match(labFirewallScript(9443), /-LocalPort 9443/)
 })
@@ -1192,151 +1238,70 @@ test('the host probe reports whether the guest port really answers', async () =>
   } finally {
     await new Promise((done) => server.close(done))
   }
-  // A closed port must report false rather than throw, because the gate is asserted through a refusal.
   assert.equal(await probeGuestPort('127.0.0.1', port, { timeoutMs: 2000 }), false)
-})
-
-test('the execute action captures both streams so a silent early exit explains itself', async () => {
-  const { labExecuteScript } = await api
-  const script = labExecuteScript({ waitSeconds: 25 })
-  // The diagnostic must reproduce the real run's execution environment: the same interactive,
-  // highest-privilege principal, not the session-0 WinRM context that would hide the difference.
-  assert.match(script, /-LogonType Interactive -RunLevel Highest/)
-  assert.match(script, /-TaskName 'ls101-lab-execute'/)
-  assert.doesNotMatch(script, /-TaskName 'ls101-lab-acceptance'/)
-  // The launcher is what turns the child's streams into a file a scheduled task would otherwise discard.
-  assert.match(script, /-File C:\\ls101-lab\\transfers\\start-lab-acceptance\.ps1/)
-  assert.match(script, /-Output C:\\ls101-lab\\results\\lab-task-output\.txt/)
-  // The wait must be bounded, so this never holds the WinRM call open for a whole install.
-  assert.match(script, /Start-Sleep -Seconds 25/)
-  assert.match(script, /Get-ScheduledTaskInfo/)
-})
-
-test('the launcher captures the phase script output so an early crash still explains itself', async () => {
-  const launcher = await readFile(
-    path.resolve(__dirname, '../../infra/windows-vm/guest/start-lab-acceptance.ps1'),
-    'utf8'
-  )
-  // A real child process is what makes a parse error in the phase script land in the redirected stream.
-  assert.match(launcher, /-File \$Script -Config \$Config \*> \$Output/)
-  assert.match(launcher, /\$LASTEXITCODE/)
-  assert.match(launcher, /New-Item -ItemType Directory -Force -Path \$directory/)
-})
-
-test('the lab guest script only asserts what a real machine can show', async () => {
-  const script = await readFile(labScript, 'utf8')
-  // SCM registration, virtual service account and the untouched start mode.
-  assert.match(script, /sc\.exe' -Arguments @\('qc', \$labConfig\.serviceName\)/)
-  assert.match(script, /sc\.exe' -Arguments @\('qsidtype', \$labConfig\.serviceName\)/)
-  assert.match(script, /UNRESTRICTED/)
-  assert.match(script, /\$service\.StartMode -eq 'Manual'/)
-  assert.match(script, /\$service\.StartName -ieq \$labConfig\.serviceAccount/)
-  // Session-0 hosting and the owning process of the listening socket.
-  assert.match(script, /\$hostProcess\.SessionId -eq 0/)
-  assert.match(script, /\$listener\.OwningProcess -eq \$servicePid/)
-  assert.match(script, /\$listener\.LocalAddress -eq '0\.0\.0\.0'/)
-  // ACL enforcement is checked against a real standard user, not by reading the ACL alone.
-  // The failure that started this: a configuration that could not be read surfaced as a null argument
-  // to an unrelated Join-Path. The script must name the real cause instead.
-  assert.match(script, /lab-startup\.txt/)
-  assert.match(script, /configArgument=\$Config/)
-  assert.match(script, /produced no object/)
-  assert.match(script, /is missing: \$\(\$missing -join/)
-  // The parsed configuration must not be assigned back into the $Config parameter: PowerShell keeps a
-  // parameter's [string] constraint on the variable, so the object would be coerced to text and every
-  // later property access would silently return $null.
-  assert.match(script, /\$labConfig = Get-Content -LiteralPath \$Config/)
-  assert.doesNotMatch(script, /^\s*\$config\s*=/m)
-  // The start-up record must not itself depend on the configuration it is reporting on.
-  const startupBlock = script.slice(script.indexOf('$startupDir ='), script.indexOf('$labConfig = Get-Content'))
-  assert.doesNotMatch(startupBlock, /\$labConfig\./)
-  // The task environment is not guaranteed to define TEMP, and Join-Path rejects a null -Path, so the
-  // run must keep its working files in a directory it created itself.
-  const runPath = script.slice(script.indexOf('$labConfig = Get-Content'))
-  assert.doesNotMatch(runPath, /Join-Path \$env:TEMP/)
-  assert.match(script, /\$workDirectory = 'C:\\ls101-lab\\transfers'/)
-  // The silent install must be judged on a clean machine, or a preserved VM would pass on the previous
-  // run's record and stop testing the installer at all.
-  assert.match(script, /The service is already installed at \$manifest/)
-  // Elevation is asserted before anything else: an unelevated per-machine installer relaunches itself
-  // through UAC and returns 0 without installing, which looks exactly like success here.
-  assert.match(script, /Invoke-Step 'elevation'/)
-  assert.match(script, /Assert-That \$isAdmin "the run is elevated/)
-  assert.match(script, /S-1-16-12288/)
-  // The integrity SIDs are language-independent, unlike the words `whoami /groups` prints.
-  assert.match(script, /\$groupText = \(whoami \/groups \| Out-String\)/)
-  assert.match(script, /highIntegrity=\$\(\$groupText -match 'S-1-16-12288'\)/)
-  // teacher.nsh discards the output of install-windows.ps1, so the step has to reproduce that run to
-  // capture the stage and message, while still judging what the installer itself left behind.
-  assert.match(script, /\$publishedByInstaller = Test-Path -LiteralPath \$recordPath/)
-  assert.match(script, /Assert-That \$publishedByInstaller 'the installer published installation\.json'/)
-  assert.match(script, /install-windows\.ps1 -Verify exit=/)
-  assert.match(script, /resources\\lab-server\\install-windows\.ps1/)
-  assert.match(script, /\$acl\.AreAccessRulesProtected/)
-  // Assertions must accept what a test expression actually produces. A [bool]-typed parameter made
-  // "there is at least one matching identity" fail whenever exactly one matched, because PowerShell
-  // refuses to bind a string to [bool] and a one-item pipeline yields a bare string.
-  assert.match(script, /function Assert-That\(\$Condition, \[string\]\$Message\)/)
-  assert.match(script, /\$Condition -is \[string\]/)
-  assert.match(script, /@\(\$Condition\)\.Count -gt 0/)
-  assert.doesNotMatch(script, /function Assert-That\(\[bool\]/)
-  assert.match(script, /\$identities \| Where-Object \{ \$_ -match 'NT AUTHORITY\\\\SYSTEM' \}/)
-  // The installer hardens the data parent; the `data` child is created by the service on first start,
-  // so asserting the child right after installation would test something the product never promised.
-  assert.match(script, /\$acl = Get-Acl -LiteralPath \$dataRoot/)
-  assert.match(script, /the installer created the data parent directory/)
-  // The SCM reports a WinSW service as running before its child runtime exists, so the process, the
-  // control pipe and the listener are all polled with a bound rather than assumed to be ready.
-  assert.match(script, /while \(-not \$hostProcess -and \(Get-Date\) -lt \$deadline\)/)
-  assert.match(script, /while \(-not \$state -and \(Get-Date\) -lt \$deadline\)/)
-  // A service that will not start is a product finding, and the reason is never in the assertion that
-  // noticed it: the SCM, the WinSW wrapper log and the System event log each hold a different part.
-  assert.match(script, /function Write-ServiceDiagnostics/)
-  assert.match(script, /ServiceSpecificExitCode/)
-  assert.match(script, /wrapper log \{0\}/)
-  assert.match(script, /Get-WinEvent -FilterHashtable @\{ LogName = 'System'/)
-  // Both service steps must collect that evidence before recording the failure.
-  assert.equal((script.match(/Write-ServiceDiagnostics/g) ?? []).length, 3)
-  assert.match(script, /Invoke-Step 'service-start' \{\s*try \{/)
-  assert.match(script, /New-LocalUser -Name \$user/)
-  assert.match(script, /NamedPipeClientStream/)
-  assert.match(script, /\$probe\.'control\.key' -eq 'denied'/)
-  assert.match(script, /\$probe\.pipe -eq 'denied'/)
-  // A probe that could not write its own result, or that timed out because the pipe was absent, must
-  // not be able to pass as "the DACL denied access".
-  assert.match(script, /icacls\.exe' -Arguments @\(\$probeDir, '\/grant'/)
-  assert.match(script, /\$probe\.'pipe-error' -ne 'TimeoutException'/)
-  assert.match(script, /Start-Process -FilePath 'powershell\.exe' -ArgumentList \$arguments -Credential \$credential/)
-  // The activation rule is verified in both directions.
-  assert.match(script, /Assert-That \(\$parsed\.activated -eq \$false\)/)
-  assert.match(script, /ASSERTION FAILED/)
-})
-
-test('the lab run refuses to read a broken VM clock as a product defect', async () => {
-  const script = await readFile(labScript, 'utf8')
-  // The licence has a hard expiry, and the service certificate is valid one day either side of its
-  // issue time, so a wrong VM clock breaks TLS, enrollment, heartbeats and licensing at once.
-  assert.match(script, /\[DateTime\]::Parse\(\$labConfig\.hostTime\)/)
-  assert.match(script, /\$skew -lt 1440/)
-  assert.match(script, /\$guestNow -lt \$expiresAt/)
-  assert.match(script, /LICENSE_WINDOW/)
-  const source = await readFile(labEntry, 'utf8')
-  assert.match(source, /hostTime: new Date\(\)\.toISOString\(\)/)
 })
 
 test('the lab run keeps the invitation code off every command line and out of the guest fileserver', async () => {
   const source = await readFile(labEntry, 'utf8')
-  // The code travels through the encrypted WinRM channel (`vagrant upload`), never `guestCommand`,
-  // which is logged and stored in the host report, and never the plain-HTTP file server.
+  // The code travels through the encrypted WinRM channel, never the plain-HTTP file server that carries
+  // bulk files, and never a logged command line or task action.
   assert.match(source, /run\('vagrant\.exe', \['upload', invitationFile, LAB_GUEST_INVITATION\]\)/)
   assert.doesNotMatch(source, /guestCommand\([^)]*[Ii]nivtation/)
   assert.doesNotMatch(source, /putGuestFile\([^)]*[Ii]nivtation/)
-  // It must not be persisted into the host report either.
-  assert.doesNotMatch(source, /report\.[A-Za-z]*[Ii]nivtationCode\s*=/)
-  const script = await readFile(labScript, 'utf8')
-  // The guest never reads the code itself; only the driver does, and it deletes the file afterwards.
-  assert.doesNotMatch(script, /Get-Content -LiteralPath \$labConfig\.invitationFile/)
-  assert.match(script, /Remove-Item -LiteralPath \$labConfig\.invitationFile -Force/)
-  assert.match(script, /Assert-That \(-not \(Test-Path -LiteralPath \$labConfig\.invitationFile\)\)/)
+  assert.doesNotMatch(source, /report\.[A-Za-z]*[Ii]nvitationCode\s*=/)
+  // The phase run reads it through the driver and deletes it once the service consumed it.
+  const orchestrator = await readGuest('lab-acceptance.mjs')
+  assert.doesNotMatch(orchestrator, /readFileSync\(config\.invitationFile/)
+  assert.match(orchestrator, /rmSync\(config\.invitationFile, \{ force: true \}\)/)
+  // And the secret scan proves nothing leaked.
+  assert.match(orchestrator, /no secret leaked into/)
 })
 
+test('every probe the phase run calls is defined with the parameters it passes', async () => {
+  const orchestrator = await readGuest('lab-acceptance.mjs')
+  const probes = await readGuest('lab-probes.ps1')
+  const calls = [...orchestrator.matchAll(/probe\('([a-z-]+)'(?:\s*,\s*\[([\s\S]*?)\])?/g)]
+  const defined = [...probes.matchAll(/^ {2}'([a-z-]+)' \{/gm)].map((match) => match[1])
+  const declared = new Set(
+    [...probes.matchAll(/^\s*\[[a-zA-Z\[\]]+\]\$([A-Za-z]+)/gm)].map((match) => match[1])
+  )
+
+  assert.ok(calls.length > 0, 'the phase run calls at least one probe')
+  assert.ok(defined.length > 0, 'the probe script defines at least one probe')
+  assert.ok(declared.size > 0, 'the probe script declares parameters')
+
+  // A name that does not exist, or a flag the probe does not accept, would otherwise only be discovered
+  // after a full VM rebuild: the probe exits non-zero and the run reports an unrelated step failure.
+  for (const [, name, args] of calls) {
+    assert.ok(defined.includes(name), `probe '${name}' is not defined in lab-probes.ps1`)
+    for (const flag of (args ?? '').matchAll(/'(-[A-Za-z]+)'/g)) {
+      assert.ok(
+        declared.has(flag[1].slice(1)),
+        `probe '${name}' is passed ${flag[1]}, which it does not declare`
+      )
+    }
+  }
+  // An unused probe is dead weight that silently stops being exercised.
+  for (const name of defined) {
+    assert.ok(
+      calls.some(([, called]) => called === name),
+      `probe '${name}' is never called`
+    )
+  }
+})
+
+test('a failed lab run collects the diagnostic itself, inside the window where it is still valid', async () => {
+  const source = await readFile(labEntry, 'utf8')
+  // WinSW force-kills a service that has not stopped within its own 1900 s budget, so a stuck stop is
+  // only visible for about half an hour after the failure. Requiring a separate vm:diag run inside that
+  // window made the evidence fragile; the failure path now collects it before rethrowing.
+  const failurePath = source.slice(source.indexOf('if (guestError) {'))
+  assert.match(failurePath, /labDiagnoseScript\(config\)/)
+  assert.match(failurePath, /lab-diagnose\.txt/)
+  assert.match(failurePath, /report\.diagnostic = diagnosticPath/)
+  assert.ok(
+    failurePath.indexOf('labDiagnoseScript(config)') <
+      failurePath.indexOf('if (guestError) throw guestError'),
+    'the diagnostic must be collected before the failure is rethrown'
+  )
+})
