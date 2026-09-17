@@ -6,6 +6,7 @@ import { constants } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { createHash } from 'node:crypto'
+import { normalizeAsarEntries, unexpectedAsarEntries } from './package-audit.mjs'
 
 const require = createRequire(import.meta.url)
 const [role, mode, ...extra] = process.argv.slice(2)
@@ -115,12 +116,12 @@ await build({
       role === 'student' ? [{ ext: 'lsjoin', name: 'LS101 enrollment', role: 'Viewer' }] : [],
     publish: null,
     afterPack: async ({ appOutDir }) => {
-      const entries = require('@electron/asar').listPackage(
-        resolve(appOutDir, 'resources/app.asar')
+      // Entries are normalised before the allowlist is applied: @electron/asar joins with the platform
+      // separator, so raw Windows entries would never match a forward-slash pattern.
+      const entries = normalizeAsarEntries(
+        require('@electron/asar').listPackage(resolve(appOutDir, 'resources/app.asar'))
       )
-      const unexpected = entries.filter(
-        (path) => !/^\/(main|preload|renderer)(\/|$)/.test(path) && path !== '/package.json'
-      )
+      const unexpected = unexpectedAsarEntries(entries)
       if (unexpected.length)
         throw new Error(`Unexpected packaged dependencies: ${unexpected.join(', ')}`)
       let runtimeManifest

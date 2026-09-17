@@ -146,3 +146,39 @@ test('desktop packaging creates missing output directories before checking their
   for (const name of ['out', 'dist'])
     assert.equal((await fs.stat(path.join(root, name))).isDirectory(), true)
 })
+
+test('the packaged-dependency allowlist does not depend on the platform path separator', async () => {
+  const { pathToFileURL } = require('node:url')
+  const { normalizeAsarEntries, unexpectedAsarEntries } = await import(
+    pathToFileURL(path.join(scripts, 'package-audit.mjs')).href
+  )
+  const linux = [
+    '/main',
+    '/main/index.js',
+    '/main/dependency-audit.json',
+    '/preload/index.js',
+    '/renderer/index.html',
+    '/renderer/assets/index.js',
+    '/package.json'
+  ]
+  // @electron/asar builds entry paths with path.join, so a Windows host lists the same archive with
+  // backslashes. Before this was normalised, every Windows package failed here.
+  const windows = linux.map((entry) => entry.replaceAll('/', '\\'))
+  assert.deepEqual(unexpectedAsarEntries(linux), [])
+  assert.deepEqual(unexpectedAsarEntries(windows), [])
+  assert.deepEqual(normalizeAsarEntries(['\\main\\index.js']), ['/main/index.js'])
+
+  // The allowlist must still reject anything outside the three built directories, on both platforms.
+  assert.deepEqual(unexpectedAsarEntries(['/main/index.js', '/node_modules/electron/index.js']), [
+    '/node_modules/electron/index.js'
+  ])
+  assert.deepEqual(
+    unexpectedAsarEntries(['\\main\\index.js', '\\node_modules\\electron\\index.js']),
+    ['/node_modules/electron/index.js']
+  )
+  assert.deepEqual(unexpectedAsarEntries(['/src/main/index.ts', '/README.md']), [
+    '/src/main/index.ts',
+    '/README.md'
+  ])
+  assert.deepEqual(unexpectedAsarEntries([]), [])
+})
