@@ -3,9 +3,15 @@
   <name>LS101 Lab Service</name>
   <description>LS101 classroom service</description>
   <executable>%BASE%\runtime\node.exe</executable>
-  <arguments>"%BASE%\server.cjs" serve --data-dir "%ProgramData%\LS101Lab\data"</arguments>
+  <!-- WinSW builds the stop command line by appending <arguments> to <stoparguments>, so the start
+       arguments have to be declared as <startarguments> instead. Using <arguments> here, or declaring
+       both, makes the SCM stop hang forever.
+       See docs/lab-vm-acceptance-design.md section 13. -->
+  <startarguments>"%BASE%\server.cjs" serve --data-dir "%ProgramData%\LS101Lab\data"</startarguments>
   <stopexecutable>%BASE%\runtime\node.exe</stopexecutable>
   <stoparguments>"%BASE%\server.cjs" shutdown --data-dir "%ProgramData%\LS101Lab\data"</stoparguments>
+  <!-- Only used when <stoparguments> is absent and WinSW kills the process tree itself; the graceful
+       stop above waits on the service process without a deadline, so this value does not bound it. -->
   <stoptimeout>1900 sec</stoptimeout>
   <workingdirectory>%BASE%</workingdirectory>
   <startmode>Manual</startmode>

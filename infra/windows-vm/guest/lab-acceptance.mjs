@@ -789,8 +789,9 @@ async function stepRestart() {
     try {
       return await restartService()
     } catch (error) {
-      // The stuck state is time-limited: WinSW force-kills a service that has not stopped within its own
-      // 1900 s budget, so what the service looks like right now has to be captured right now.
+      // A stop that never completes does not time out: WinSW only applies <stoptimeout> when it kills
+      // the process itself, and with <stoparguments> it waits on the service process in a loop that
+      // reports STOP_PENDING forever. So this state has to be captured here and now.
       await serviceDiagnostics()
       await stopDiagnostics()
       throw error

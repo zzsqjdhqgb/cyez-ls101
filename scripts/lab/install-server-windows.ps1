@@ -45,6 +45,16 @@ foreach ($file in $manifest.files) {
 foreach ($required in @('server.cjs', 'manager.cjs', 'runtime/node.exe', 'LS101Lab.exe', 'LS101Lab.xml')) {
   if (-not $seen.ContainsKey($required)) { throw 'Incomplete service runtime' }
 }
+# WinSW builds the stop command line as stoparguments + " " + arguments, so a definition that declares
+# <arguments> next to <stoparguments> hands the CLI a second "serve" command line. The shutdown is then
+# rejected as INVALID_ARGUMENTS and never reaches the runtime, while the SCM waits for the stop forever
+# because <stoptimeout> only applies when WinSW kills the service process itself. Parsing here also makes
+# a malformed definition fail with a named stage instead of an opaque error from the wrapper.
+$stage = 'verify-service-definition'
+$definition = [xml](Get-Content -LiteralPath (Join-Path $source 'LS101Lab.xml') -Raw)
+$stopArguments = $definition.SelectSingleNode('//stoparguments')
+if ($null -ne $stopArguments -and $null -ne $definition.SelectSingleNode('//arguments')) { throw 'The service definition must declare startarguments, not arguments, when it uses stoparguments' }
+if ($null -ne $stopArguments -and $null -eq $definition.SelectSingleNode('//startarguments')) { throw 'The service definition must declare startarguments' }
 if ((& (Join-Path $source 'runtime/node.exe') --version) -ne 'v24.20.0' -or $LASTEXITCODE -ne 0) { throw 'Incorrect packaged Node version' }
 if ($Verify) { Write-Output 'Service runtime verified.'; exit 0 }
 $stage = 'authorize'

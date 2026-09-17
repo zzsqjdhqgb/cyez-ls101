@@ -1303,9 +1303,10 @@ test('every probe the phase run calls is defined with the parameters it passes',
 
 test('a failed lab run collects the diagnostic itself, inside the window where it is still valid', async () => {
   const source = await readFile(labEntry, 'utf8')
-  // WinSW force-kills a service that has not stopped within its own 1900 s budget, so a stuck stop is
-  // only visible for about half an hour after the failure. Requiring a separate vm:diag run inside that
-  // window made the evidence fragile; the failure path now collects it before rethrowing.
+  // A stuck stop never resolves on its own: WinSW only applies <stoptimeout> when it kills the service
+  // process itself, and with <stoparguments> it waits on that process in a loop that keeps reporting
+  // STOP_PENDING. Requiring a separate vm:diag run while the VM was still alive made the evidence
+  // fragile; the failure path now collects it before rethrowing.
   const failurePath = source.slice(source.indexOf('if (guestError) {'))
   assert.match(failurePath, /labDiagnoseScript\(config\)/)
   assert.match(failurePath, /lab-diagnose\.txt/)
@@ -1319,9 +1320,10 @@ test('a failed lab run collects the diagnostic itself, inside the window where i
 
 test('a failed restart captures the stop state before it can expire', async () => {
   const orchestrator = await readGuest('lab-acceptance.mjs')
-  // WinSW force-kills a service that has not stopped within its own 1900 s budget, so the stuck state
-  // has to be read while it is stuck. The other two service steps already collected diagnostics; this
-  // one silently did not, which cost a whole VM cycle.
+  // A stop that never completes stays stuck: WinSW only applies <stoptimeout> when it kills the service
+  // process itself, so the state has to be read while it is stuck rather than after some expiry. The
+  // other two service steps already collected diagnostics; this one silently did not, which cost a
+  // whole VM cycle.
   const restart = orchestrator.slice(orchestrator.indexOf('async function stepRestart'))
   assert.match(restart, /await serviceDiagnostics\(\)/)
   assert.match(restart, /await stopDiagnostics\(\)/)
@@ -1375,5 +1377,56 @@ test('the restart records the process table while the service is stopping', asyn
     restart.indexOf('--- end process table ---') <
       restart.indexOf('assertThat(restarted.code === 0'),
     'the sampled process table must be recorded before the restart is judged'
+  )
+})
+
+test('the service definition declares start arguments as startarguments', async () => {
+  const raw = await readFile(
+    path.resolve(__dirname, '../../resources/lab/windows/LS101Lab.xml'),
+    'utf8'
+  )
+  // XML forbids a double hyphen inside a comment, and the natural way to describe this very trap is to
+  // write "--data-dir" in one. WinSW parses the file with XmlDocument, so a comment like that turns the
+  // service definition into an unloadable file; the authoritative parse happens in the installer, and
+  // this catches the mistake a whole VM cycle earlier.
+  for (const [, body] of raw.matchAll(/<!--([\s\S]*?)-->/g)) {
+    assert.equal(body.includes('--'), false, 'an XML comment must not contain a double hyphen')
+    assert.equal(body.endsWith('-'), false, 'an XML comment must not end with a hyphen')
+  }
+  // Comments are stripped for the element assertions: they explain the trap by naming <arguments>.
+  const xml = raw.replace(/<!--[\s\S]*?-->/g, '')
+  // WinSW builds the stop command line as stoparguments + " " + arguments, and its documentation is
+  // explicit: "When you use the <stoparguments>, you must use <startarguments> instead of <arguments>".
+  // Getting this wrong is silent - the wrapper logs nothing about the stop process - and it cost a
+  // whole VM cycle: the stop process exited with INVALID_ARGUMENTS, the runtime kept running, and the
+  // SCM sat in Stop Pending forever because <stoptimeout> is only honoured when WinSW kills the
+  // service itself.
+  assert.match(xml, /<stoparguments>/)
+  assert.match(xml, /<startarguments>/)
+  // Both elements together are just as wrong: the start line would then be built as
+  // startarguments + arguments and every start would fail instead.
+  assert.doesNotMatch(xml, /<arguments>/)
+  const startArguments = xml.match(/<startarguments>(.*)<\/startarguments>/)[1]
+  const stopArguments = xml.match(/<stoparguments>(.*)<\/stoparguments>/)[1]
+  // The two subcommands are mutually exclusive, so neither may be a prefix of the other.
+  assert.match(startArguments, /server\.cjs" serve --data-dir/)
+  assert.match(stopArguments, /server\.cjs" shutdown --data-dir/)
+  assert.equal(stopArguments.includes(' serve '), false)
+  // The installer refuses the same shapes on the machine that has to live with them.
+  const installer = await readFile(
+    path.resolve(__dirname, '../lab/install-server-windows.ps1'),
+    'utf8'
+  )
+  assert.match(installer, /\$stage = 'verify-service-definition'/)
+  assert.match(
+    installer,
+    /\[xml\]\(Get-Content -LiteralPath \(Join-Path \$source 'LS101Lab\.xml'\) -Raw\)/
+  )
+  assert.match(installer, /SelectSingleNode\('\/\/stoparguments'\)/)
+  // It has to run before -Verify returns, or a verification pass would accept a broken definition.
+  assert.ok(
+    installer.indexOf('verify-service-definition') <
+      installer.indexOf("Write-Output 'Service runtime verified.'"),
+    'the service definition must be verified as part of the runtime check'
   )
 })
