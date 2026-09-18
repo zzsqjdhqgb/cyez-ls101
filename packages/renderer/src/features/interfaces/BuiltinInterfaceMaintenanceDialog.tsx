@@ -1,7 +1,7 @@
 import { useState, useSyncExternalStore, type JSX } from 'react'
 import { AlertTriangle, Archive, RefreshCw, Trash2 } from 'lucide-react'
-import { Button } from '../../components/ui/Button'
-import { Modal, ModalDescription, ModalTitle } from '../../components/ui/Modal'
+import { Button } from '@ls101/desktop-ui'
+import { Modal, ModalDescription, ModalTitle } from '@ls101/desktop-ui'
 import { builtinInterfaceMaintenance } from './BuiltinInterfaceRuntime'
 import type {
   BuiltinInterfaceMaintenance,

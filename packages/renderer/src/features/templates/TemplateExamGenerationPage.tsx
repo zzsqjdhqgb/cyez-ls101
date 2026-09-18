@@ -15,11 +15,11 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type JSX } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Button } from '../../components/ui/Button'
-import { ConfirmModal } from '../../components/ui/ConfirmModal'
-import { IconButton } from '../../components/ui/IconButton'
-import { TaskProgress } from '../../components/ui/TaskProgress'
-import { toast } from '../../components/ui/toast'
+import { Button } from '@ls101/desktop-ui'
+import { ConfirmModal } from '@ls101/desktop-ui'
+import { IconButton } from '@ls101/desktop-ui'
+import { TaskProgress } from '@ls101/desktop-ui'
+import { toast } from '@ls101/desktop-ui'
 import { useExamLibrary } from '../exams/ExamLibraryContext'
 import {
   createExamGenerationSession,

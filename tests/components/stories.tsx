@@ -11,28 +11,20 @@ import {
   Settings2,
   Trash2
 } from 'lucide-react'
-import type { AppRouteRegistration } from '../../packages/renderer/src/app/route-registry'
-import { AppShell } from '../../packages/renderer/src/components/shell/AppShell'
+import type { AppRouteRegistration } from '@ls101/desktop-ui'
+import { AppShell } from '@ls101/desktop-ui'
 import {
   AIModelSelect,
   type AIModelOption
 } from '../../packages/renderer/src/components/ai/AIModelSelect'
-import {
-  SettingsContent,
-  SettingsRow,
-  SettingsSection
-} from '../../packages/renderer/src/components/settings/SettingsContent'
-import { Button } from '../../packages/renderer/src/components/ui/Button'
-import { ConfirmModal } from '../../packages/renderer/src/components/ui/ConfirmModal'
-import { EmptyState } from '../../packages/renderer/src/components/ui/EmptyState'
-import { IconButton } from '../../packages/renderer/src/components/ui/IconButton'
-import {
-  Modal,
-  ModalDescription,
-  ModalTitle
-} from '../../packages/renderer/src/components/ui/Modal'
-import { Page, PageHeader } from '../../packages/renderer/src/components/ui/Page'
-import { ResizableSplit } from '../../packages/renderer/src/components/ui/ResizableSplit'
+import { SettingsContent, SettingsRow, SettingsSection } from '@ls101/desktop-ui'
+import { Button } from '@ls101/desktop-ui'
+import { ConfirmModal } from '@ls101/desktop-ui'
+import { EmptyState } from '@ls101/desktop-ui'
+import { IconButton } from '@ls101/desktop-ui'
+import { Modal, ModalDescription, ModalTitle } from '@ls101/desktop-ui'
+import { Page, PageHeader } from '@ls101/desktop-ui'
+import { ResizableSplit } from '@ls101/desktop-ui'
 
 export function ButtonStory(): JSX.Element {
   const [status, setStatus] = useState('尚未保存')

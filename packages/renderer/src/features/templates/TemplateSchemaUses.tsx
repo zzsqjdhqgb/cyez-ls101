@@ -8,8 +8,8 @@ import type {
   TemplateDocumentOperation
 } from '@ls101/template-editor'
 import { FilePlus2, Plus, Trash2 } from 'lucide-react'
-import { Button } from '../../components/ui/Button'
-import { IconButton } from '../../components/ui/IconButton'
+import { Button } from '@ls101/desktop-ui'
+import { IconButton } from '@ls101/desktop-ui'
 import { useSchemaRepository } from '../schemas/SchemaApplicationContext'
 import { questionTypeLabels } from '../schemas/schemaUi'
 import { TemplateVariableInput } from './TemplateVariableInput'

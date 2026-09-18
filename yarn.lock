@@ -1300,6 +1300,25 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@ls101/desktop-ui@workspace:*, @ls101/desktop-ui@workspace:packages/desktop-ui":
+  version: 0.0.0-use.local
+  resolution: "@ls101/desktop-ui@workspace:packages/desktop-ui"
+  dependencies:
+    "@ls101/core-types": "workspace:*"
+    "@ls101/logger": "workspace:*"
+    "@radix-ui/react-alert-dialog": "npm:^1.1.23"
+    "@radix-ui/react-dialog": "npm:^1.1.23"
+    "@radix-ui/react-tooltip": "npm:^1.2.16"
+    "@types/react": "npm:^19.2.18"
+    "@types/react-dom": "npm:^19.2.4"
+    lucide-react: "npm:^1.33.0"
+    react: "npm:^19.2.8"
+    react-dom: "npm:^19.2.8"
+    react-router-dom: "npm:^7.18.2"
+    sonner: "npm:^2.0.8"
+  languageName: unknown
+  linkType: soft
+
 "@ls101/editor-kit@workspace:*, @ls101/editor-kit@workspace:packages/editor-kit":
   version: 0.0.0-use.local
   resolution: "@ls101/editor-kit@workspace:packages/editor-kit"
@@ -1505,6 +1524,7 @@ __metadata:
     "@ls101/clipboard": "workspace:*"
     "@ls101/config-store": "workspace:*"
     "@ls101/core-types": "workspace:*"
+    "@ls101/desktop-ui": "workspace:*"
     "@ls101/editor-kit": "workspace:*"
     "@ls101/exam-library": "workspace:*"
     "@ls101/exam-package": "workspace:*"

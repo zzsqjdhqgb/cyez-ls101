@@ -1,7 +1,10 @@
-import startupLogoMarkup from './startup-assets/logo.svg?raw'
-import startupLogoMotionCss from './startup-assets/motion.css?inline'
-import { applyStartupLogoMotion, waitForStartupLogoAnimation } from './startup-placeholder'
-import { markRendererStartupMilestone } from './startup-timing'
+import {
+  applyStartupLogoMotion,
+  markRendererStartupMilestone,
+  startupLogoMarkup,
+  startupMotionCss,
+  waitForStartupLogoAnimation
+} from '@ls101/desktop-ui/startup'
 
 markRendererStartupMilestone('document-script-started')
 
@@ -13,7 +16,7 @@ if (!root) {
 
 applyStartupLogoMotion(root, {
   logoMarkup: startupLogoMarkup,
-  motionCss: startupLogoMotionCss
+  motionCss: startupMotionCss
 })
 markRendererStartupMilestone('startup-logo-ready')
 

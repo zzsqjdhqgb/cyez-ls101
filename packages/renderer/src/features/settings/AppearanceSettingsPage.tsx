@@ -1,11 +1,7 @@
 import type { JSX } from 'react'
 import { RotateCcw } from 'lucide-react'
-import {
-  SettingsContent,
-  SettingsRow,
-  SettingsSection
-} from '../../components/settings/SettingsContent'
-import { Button } from '../../components/ui/Button'
+import { SettingsContent, SettingsRow, SettingsSection } from '@ls101/desktop-ui'
+import { Button } from '@ls101/desktop-ui'
 import type { ThemePreference } from './AppearanceSettingsApplication'
 import { useAppearanceSettings } from './AppearanceSettingsContext'
 import styles from './AppearanceSettingsPage.module.css'

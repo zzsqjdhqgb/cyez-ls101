@@ -32,18 +32,19 @@ export function applyStartupLogoMotion(
 export function waitForStartupLogoAnimation(root: HTMLElement): Promise<void> {
   const animatedLogo = root.querySelector<SVGElement>('#logo-lockup')
   if (!animatedLogo) return wait(STARTUP_LOGO_ANIMATION_DURATION_MS)
+  const logo = animatedLogo
 
   return new Promise((resolve) => {
     const fallback = window.setTimeout(finish, STARTUP_LOGO_ANIMATION_DURATION_MS + 100)
-    animatedLogo.addEventListener('animationend', handleAnimationEnd)
+    logo.addEventListener('animationend', handleAnimationEnd)
 
     function handleAnimationEnd(event: AnimationEvent): void {
-      if (event.target === animatedLogo) finish()
+      if (event.target === logo) finish()
     }
 
     function finish(): void {
       window.clearTimeout(fallback)
-      animatedLogo.removeEventListener('animationend', handleAnimationEnd)
+      logo.removeEventListener('animationend', handleAnimationEnd)
       resolve()
     }
   })

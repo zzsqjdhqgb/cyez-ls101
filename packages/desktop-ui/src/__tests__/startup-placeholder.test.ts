@@ -5,7 +5,7 @@ import {
   STARTUP_COMPLETION_DELAY_MS,
   waitForStartupCompletionDelay,
   waitForStartupLogoAnimation
-} from '../startup-placeholder'
+} from '../startup/startup-placeholder'
 
 afterEach(() => {
   vi.useRealTimers()
