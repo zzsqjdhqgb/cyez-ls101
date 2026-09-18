@@ -171,6 +171,11 @@ export async function initializeEnvironment(root, inherited = process.env) {
 
 export async function withLock(local, callback) {
   const file = path.join(local, 'operation.lock')
+  // The lock creates its own directory. `open(file, 'wx')` fails with ENOENT when the parent is missing,
+  // which is not the EEXIST this helper is about, so every caller used to have to remember to create
+  // `.local` first — and one call site stopped doing it after a reordering, which broke a fresh checkout
+  // (a GitHub runner, or a clone that has only run `yarn vm:init`) before any work had begun.
+  await mkdir(local, { recursive: true })
   let handle
   try {
     handle = await open(file, 'wx')

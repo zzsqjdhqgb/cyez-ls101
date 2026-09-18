@@ -481,6 +481,9 @@ export async function main(args = process.argv.slice(2), dependencies = {}) {
       throw error
     } finally {
       report.finishedAt = new Date().toISOString()
+      // A failure before `initializeEnvironment` ran (an unreadable config) leaves `.local/results`
+      // missing; without this the report write would fail with its own ENOENT and hide that reason.
+      await mkdir(path.dirname(reportPath), { recursive: true })
       await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
       console.log(`Host result: ${reportPath}`)
     }
