@@ -37,6 +37,16 @@ describe('describeLabError', () => {
     expect(description.message).toContain('LS101_INSTALL_ERROR')
     expect(description.blockers).toEqual([])
   })
+
+  it('localizes host helper codes and keeps the raw code and detail', () => {
+    expect(describeLabError(new Error('LOCAL_OPERATION_BUSY')).message).toBe(
+      '已有本机服务操作正在进行，请等待它完成后再试。（LOCAL_OPERATION_BUSY）'
+    )
+    expect(describeLabError(new Error('LOCAL_HELPER_FAILED\ndetail line')).message).toBe(
+      '本机服务助手启动失败，请确认管理员授权后重试。（LOCAL_HELPER_FAILED）\ndetail line'
+    )
+    expect(describeLabError(new Error('RESOURCE_BUSY')).message).toContain('RESOURCE_BUSY')
+  })
 })
 
 describe('formatBytes', () => {

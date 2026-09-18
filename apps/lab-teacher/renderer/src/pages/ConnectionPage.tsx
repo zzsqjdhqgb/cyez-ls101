@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState, type JSX } from 'react'
+import { useState, type JSX } from 'react'
 import { Monitor, Plus, Server, Settings } from 'lucide-react'
 import { Banner, Button, EmptyState, IconButton } from '@ls101/desktop-ui'
 import { useLabAction } from '@ls101/lab-renderer'
-import type { LocalServiceStatus } from '@ls101/lab-desktop-host'
 import { ConnectDialog } from '../components/ConnectDialog'
 import { GateScreen } from '../components/GateScreen'
 import { LocalServiceDialog } from '../components/LocalServiceDialog'
+import { useLocalService } from '../session/local-service'
 import type { SavedConnection, TeacherSession, TeacherView } from '../session/session'
 import styles from './ConnectionPage.module.css'
 
@@ -32,39 +32,12 @@ export function ConnectionPage({ session, view }: ConnectionPageProps): JSX.Elem
     { mode: 'add' } | { mode: 'connect'; target: SavedConnection } | null
   >(null)
   const [localOpen, setLocalOpen] = useState(false)
-  const [status, setStatus] = useState<LocalServiceStatus | null>(null)
-  const [statusError, setStatusError] = useState<string | null>(null)
+  const local = useLocalService()
   const connectAction = useLabAction()
 
-  const readStatus = useCallback(async (): Promise<void> => {
-    try {
-      setStatus(await session.host.invoke<LocalServiceStatus>('localService.status'))
-      setStatusError(null)
-    } catch (reason) {
-      setStatusError(reason instanceof Error ? reason.message : String(reason))
-    }
-  }, [session])
-
-  useEffect(() => {
-    let active = true
-    void session.host.invoke<LocalServiceStatus>('localService.status').then(
-      (next) => {
-        if (active) {
-          setStatus(next)
-          setStatusError(null)
-        }
-      },
-      (reason: unknown) => {
-        if (active) setStatusError(reason instanceof Error ? reason.message : String(reason))
-      }
-    )
-
-    return () => {
-      active = false
-    }
-  }, [session])
-
-  const localLabel = status ? (LOCAL_STATE_LABELS[status.state] ?? status.state) : '尚未检查'
+  const localLabel = local.status
+    ? (LOCAL_STATE_LABELS[local.status.state] ?? local.status.state)
+    : '尚未检查'
 
   return (
     <GateScreen
@@ -73,6 +46,7 @@ export function ConnectionPage({ session, view }: ConnectionPageProps): JSX.Elem
           添加服务
         </Button>
       }
+      full
       title="连接服务"
     >
       <section aria-labelledby="saved-services" className={styles.section}>
@@ -119,13 +93,13 @@ export function ConnectionPage({ session, view }: ConnectionPageProps): JSX.Elem
               <strong className={styles.name}>本机服务</strong>
               <span className={styles.endpoint}>{localLabel}</span>
               <small className={styles.meta}>
-                {status?.releaseVersion
-                  ? `服务版本 ${status.releaseVersion}`
-                  : '管理安装、启动与备份'}
+                {local.status?.releaseVersion
+                  ? `服务版本 ${local.status.releaseVersion}`
+                  : '管理安装、启动、备份与日志'}
               </small>
             </div>
             <div className={styles.rowActions}>
-              {status?.state === 'running' ? (
+              {local.status?.state === 'running' ? (
                 <Button
                   disabled={connectAction.busy}
                   onClick={() => void connectAction.run(() => session.connectLocal())}
@@ -141,7 +115,7 @@ export function ConnectionPage({ session, view }: ConnectionPageProps): JSX.Elem
       </section>
 
       {view.error ? <Banner tone="error">{view.error}</Banner> : null}
-      {statusError ? <Banner tone="error">{statusError}</Banner> : null}
+      {local.error ? <Banner tone="error">{local.error}</Banner> : null}
       {connectAction.error ? <Banner tone="error">{connectAction.error.message}</Banner> : null}
 
       {dialog ? (
@@ -153,13 +127,7 @@ export function ConnectionPage({ session, view }: ConnectionPageProps): JSX.Elem
         />
       ) : null}
       {localOpen ? (
-        <LocalServiceDialog
-          close={() => {
-            setLocalOpen(false)
-            void readStatus()
-          }}
-          session={session}
-        />
+        <LocalServiceDialog close={() => setLocalOpen(false)} session={session} />
       ) : null}
     </GateScreen>
   )

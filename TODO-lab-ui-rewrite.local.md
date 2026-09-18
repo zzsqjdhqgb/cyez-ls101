@@ -65,6 +65,7 @@ P4 之后 lab 侧不再触发主程序文档测试。lab 检查点（L 系列）
 - [x] D2 `@ls101/lab-renderer` 数据层（query/action/selection/format，17 用例）
 - [x] E 教师端页面契约梳理 → `TODO-lab-teacher-ui-contract.local.md`
 - [x] E2a 教师端外壳 + 激活页 + 连接页（列表式 + 本机服务管理弹窗）+ 无框窗口；其余页面为占位
+- [ ] W 研究并验证"主程序与教师端窗口外观不一致"的根因（H1 平台缺陷 vs H2 显示时序）→ `TODO-lab-window-chrome-parity.md`
 - [ ] E2b 教师端 试卷 / 作答 / 设备 / 维护 / 设置 页面（逐页实现 + 用户逐页验收）
 - [ ] F 学生端页面契约梳理 + 提问
 - [ ] F2 学生端实现
@@ -74,6 +75,14 @@ P4 之后 lab 侧不再触发主程序文档测试。lab 检查点（L 系列）
 
 用户逐页验收、随时提出具体意见（示例：连接页要"已配置服务列表 + 同款式独立分区的本机服务条目，右侧设置按钮打开启停/卸载管理"）。
 除用户明确提出的以外，Q1–Q15 按推荐实现。
+
+### 窗口 chrome 结论（2026-09-18，重要）
+
+- Windows 上 `frame: false` 在用户机器上会残留 35px 原生标题栏（Electron 仍报告 frameless=true，主程序同参数却正常，原因未明）。
+- 解法：Windows 改用官方 Custom Title Bar 路线的 `titleBarStyle: 'hidden'`（无 `titleBarOverlay`），**保留原生边框/阴影/鼠标缩放**；其他平台继续 `frame: false`。见 `packages/lab-desktop-host/src/desktop.ts`。
+- 窗口必须是"`show:false` 创建、`dom-ready` 后显示"；启动命令（`dispatch`）在渲染就绪前不得 `show()`。
+- 教师端两个入口已收敛到 `apps/lab-teacher/main/desktop.ts`（产品入口与 Playwright 测试宿主共用窗口参数）。
+- 诊断日志 `[lab] creating … window` 与 `[lab] window chrome: …` 暂时保留，窗口调整全部结束后再删。
 
 ### 集成测试的临时改动（页面落地后必须恢复）
 

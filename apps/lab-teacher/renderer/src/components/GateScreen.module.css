@@ -12,6 +12,27 @@
   overflow: auto;
 }
 
+.full {
+  min-height: 0;
+  padding: var(--space-8) var(--space-8) var(--space-12);
+  overflow: auto;
+}
+
+.fullHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.fullHeader h1 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 27px;
+  font-weight: 660;
+}
+
 .panel {
   width: min(720px, 100%);
   margin: 0 auto;

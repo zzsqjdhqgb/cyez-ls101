@@ -1,12 +1,12 @@
 import { resolve } from 'node:path'
 import { readFile, writeFile } from 'node:fs/promises'
-import { startLabDesktop } from '../../packages/lab-desktop-host/src/desktop'
+import { startTeacherDesktop } from '../../apps/lab-teacher/main/desktop'
 import { requestLocalControl } from '../../packages/lab-server/src/control'
 
 const root = process.env.LS101_TEST_SERVICE_ROOT
 if (!root) throw new Error('Missing test fixture service')
-startLabDesktop({
-  role: 'teacher',
+
+startTeacherDesktop({
   releaseVersion: '0.4.1',
   preload: resolve('out/lab-teacher/preload/index.js'),
   renderer: resolve('out/lab-teacher/renderer/index.html'),

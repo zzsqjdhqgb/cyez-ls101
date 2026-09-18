@@ -61,6 +61,9 @@ export function startLabDesktop(options: DesktopOptions): void {
     currentEpoch = 0,
     knownState: Schema<'StudentState'> | null = null
   let versionMismatch = false
+  // The window is created hidden and shown on the first renderer paint; commands that arrive
+  // earlier must not surface a half-painted window.
+  let rendererReady = false
   const dispatch = (argv: string[], cwd: string): void => {
     try {
       const command = parseCommand(argv, cwd, randomUUID(), !app.isPackaged)
@@ -68,8 +71,10 @@ export function startLabDesktop(options: DesktopOptions): void {
         pending.push(command)
         window?.webContents.send('lab:event', { type: 'startup-command', value: command.id })
       }
-      window?.show()
-      window?.focus()
+      if (rendererReady) {
+        window?.show()
+        window?.focus()
+      }
     } catch {
       window?.webContents.send('lab:event', { type: 'command-error', value: '启动参数无效' })
     }
@@ -134,14 +139,36 @@ export function startLabDesktop(options: DesktopOptions): void {
       })
       Menu.setApplicationMenu(null)
       registerWindowControlHandlers()
+      // Custom title bar is opt-in: an app enables it together with its own title bar, otherwise
+      // the window would have no way to be moved.
+      //
+      // Windows uses the documented `titleBarStyle: 'hidden'` route: it removes the title bar but
+      // keeps the native frame, drop shadow and mouse resizing. `frame: false` left a 35px native
+      // caption on some Windows machines even though Electron reported the window as frameless.
+      // Other platforms keep the plain frameless window.
+      //
+      // The window is created hidden and shown once the renderer is ready, like the main
+      // application window, so Windows never paints default chrome for a window that is still
+      // empty.
+      const frameless = options.frameless === true
+      const windowStyle: Electron.BrowserWindowConstructorOptions = !frameless
+        ? {}
+        : process.platform === 'win32'
+          ? { titleBarStyle: 'hidden' }
+          : { frame: false }
+      console.info(
+        `[lab] creating ${options.role} window (frameless=${frameless}, style=${JSON.stringify(windowStyle)})`
+      )
       window = new BrowserWindow({
         width: 1280,
         height: 820,
         minWidth: 760,
         minHeight: 560,
-        frame: options.frameless ?? true,
+        show: false,
+        autoHideMenuBar: true,
         backgroundColor: '#ffffff',
         title: options.role === 'student' ? '听说101 学生端' : '听说101 教师端',
+        ...windowStyle,
         webPreferences: {
           preload: options.preload,
           contextIsolation: true,
@@ -151,6 +178,13 @@ export function startLabDesktop(options: DesktopOptions): void {
       })
       bindWindowControlEvents(window)
       const contents = window.webContents
+      contents.once('dom-ready', () => {
+        rendererReady = true
+        if (!window || window.isDestroyed()) return
+        if (!window.isVisible()) window.show()
+        // Measure after the window is on screen: an unrealized window can report a stale frame.
+        setTimeout(() => window && reportWindowChrome(window, frameless), 1000)
+      })
       window.on('close', (event) => {
         if (allowClose) return
         event.preventDefault()
@@ -809,4 +843,21 @@ export function startLabDesktop(options: DesktopOptions): void {
         })
         .then(() => app.quit())
     })
+}
+
+/**
+ * Diagnostic for the custom title bar: a native title bar is part of the window's non-client
+ * area, so the content area ends up shorter than the window bounds. Printed once per window so a
+ * dev run states plainly whether the frameless flag took effect.
+ */
+function reportWindowChrome(window: BrowserWindow, frameless: boolean): void {
+  if (window.isDestroyed()) return
+
+  const bounds = window.getBounds()
+  const content = window.getContentBounds()
+  const frameHeight = bounds.height - content.height
+  const line = `[lab] window chrome: frameless=${frameless} frameHeight=${frameHeight}px menuBarVisible=${window.isMenuBarVisible()}`
+
+  if (frameless && frameHeight > 0) console.warn(`${line} — a native frame is present`)
+  else console.info(line)
 }

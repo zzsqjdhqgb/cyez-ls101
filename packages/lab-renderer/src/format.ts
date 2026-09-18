@@ -51,12 +51,33 @@ export function describeLabError(reason: unknown): LabErrorDescription {
     }
   }
 
+  const raw = reason instanceof Error ? reason.message : String(reason)
   return {
     code: null,
-    message: reason instanceof Error ? reason.message : String(reason),
+    message: localMessage(raw),
     blockers: [],
     retryAfterSeconds: null
   }
+}
+
+const LOCAL_MESSAGES: Record<string, string> = {
+  LOCAL_OPERATION_BUSY: '已有本机服务操作正在进行，请等待它完成后再试。',
+  LOCAL_HELPER_FAILED: '本机服务助手启动失败，请确认管理员授权后重试。',
+  LOCAL_HELPER_INCOMPLETE: '本机服务助手没有返回结果，请重试。',
+  LOCAL_OPERATION_FAILED: '本机服务操作失败。',
+  LOCAL_CONTROL_UNAVAILABLE: '本机服务控制通道不可用。',
+  UNSUPPORTED_PLATFORM: '当前系统不支持本机服务管理。',
+  INVALID_REQUEST: '本机服务拒绝了本次请求。',
+  RESOURCE_BUSY: '本机服务正忙，请稍后重试。'
+}
+
+/** Maps host-side error codes while keeping any helper detail on the following lines. */
+function localMessage(raw: string): string {
+  const [code, ...detail] = raw.split('\n')
+  const localized = code ? LOCAL_MESSAGES[code.trim()] : undefined
+  if (!localized) return raw
+  const rest = detail.join('\n').trim()
+  return rest ? `${localized}（${code.trim()}）\n${rest}` : `${localized}（${code.trim()}）`
 }
 
 export function formatTime(value: string | null | undefined): string {
