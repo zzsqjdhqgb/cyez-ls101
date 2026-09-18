@@ -2047,10 +2047,10 @@ async function stepExamAndSubmission() {
       uploaded
     )
 
-    // The same bytes again, on a connection the first upload never used. The service is required to
-    // answer with the original receipt rather than accepting a second submission.
+    // The same bytes again, on a connection the first upload never used. The service answers from the
+    // digest header, and it now reads the archive before answering, so the client always receives the
+    // original receipt instead of losing it to a reset connection.
     let reupload = null
-    let defect = null
     for (let attempt = 0; attempt < 3 && !reupload; attempt += 1) {
       const again = await protocolResult('submission-upload', [
         '--state',
@@ -2062,22 +2062,13 @@ async function stepExamAndSubmission() {
         '--out',
         protocolFile(`upload-again-${attempt}.json`)
       ])
-      if (again.status === 0) {
-        // The server answers the duplicate before it has read the body, so the client can lose the
-        // answer to a reset connection. That is a defect in the product, not in this case: the record
-        // itself is asserted below, and the strict requirement is enforced in the container lane.
-        defect = { attempt, code: again.code, message: again.message }
-        continue
-      }
-      reupload = again
-    }
-    if (reupload) {
-      assertThat(reupload.status === 200, 'the identical re-upload is answered', reupload)
+      assertThat(again.status === 200, 'the identical re-upload is answered', again)
       assertThat(
-        JSON.stringify(reupload.uploadReceipt) === JSON.stringify(uploaded.uploadReceipt),
+        JSON.stringify(again.uploadReceipt) === JSON.stringify(uploaded.uploadReceipt),
         'the identical re-upload returns the original receipt',
-        { first: uploaded.uploadReceipt, again: reupload.uploadReceipt }
+        { first: uploaded.uploadReceipt, again: again.uploadReceipt }
       )
+      reupload = again
     }
 
     // The record is what matters most: one submission, one digest, the original receipt.
@@ -2151,11 +2142,8 @@ async function stepExamAndSubmission() {
       submissionId: claimed.submissionId,
       archiveBytes: uploaded.archiveBytes,
       archiveSha256: uploaded.archiveSha256,
-      reupload: reupload
-        ? { status: reupload.status, receiptEqual: true }
-        : { status: 0, defect: defect?.code ?? 'transport', attempts: 3 },
-      receiptAfterDelete: afterDelete.receiptState,
-      knownDefect: defect
+      reupload: { status: reupload.status, connectionId: reupload.connectionId },
+      receiptAfterDelete: afterDelete.receiptState
     }
   })
 }

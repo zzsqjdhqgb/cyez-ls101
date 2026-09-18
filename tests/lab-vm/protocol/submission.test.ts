@@ -545,7 +545,7 @@ test('N7 task lease reaches the service task path and reports its refusals', asy
  * before answering, the `status: 0` branch below becomes unreachable and every attempt must report
  * `200` with the byte-identical original receipt.
  */
-test('N7 known defect: an identical large re-upload only sometimes delivers the original receipt', async () => {
+test('N7 an identical large re-upload returns the original receipt every time', async () => {
   const h = await startHarness()
   harness = h
   const device = await registerDevice(h)
@@ -597,7 +597,7 @@ test('N7 known defect: an identical large re-upload only sometimes delivers the 
       '--submission-file',
       archiveFile,
       '--recording-bytes',
-      String(1024 * 1024),
+      String(4 * 1024 * 1024),
       '--out',
       h.path('upload.json')
     ])
@@ -606,7 +606,17 @@ test('N7 known defect: an identical large re-upload only sometimes delivers the 
   expect(first.receiptState).toBe('received')
 
   // The same bytes again, each time on a connection the previous upload never used.
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  //
+  // This used to be a tripwire rather than a test: the server compared the digest header and answered
+  // with the stored receipt *without reading the archive*, so its response finished while the client was
+  // still sending, the socket was reset, and the shipped transport reported `write EPIPE` instead of the
+  // answer. Measured at the time: 2 KiB 3/3 delivered, 256 KiB 1/3, 4 MiB 1/3. The server now drains the
+  // body before answering, so every attempt has to deliver the original receipt.
+  //
+  // Five attempts at 4 MiB: with the defect present roughly two thirds of the attempts lost the answer,
+  // so a regression cannot pass this by luck (five delivered answers without the drain are about a one
+  // in 250 event, against roughly one in three with three attempts at 1 MiB).
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     const again = (await submissionUpload(
       h.args([
         '--state',
@@ -622,14 +632,9 @@ test('N7 known defect: an identical large re-upload only sometimes delivers the 
     expect(again.reused).toBe(true)
     expect(again.archiveSha256).toBe(first.archiveSha256)
     expect(again.connectionId).not.toBe(first.connectionId)
-    if (again.status === 0) {
-      expect(['EPIPE', 'ECONNRESET', 'ERR_STREAM_DESTROYED']).toContain(again.code)
-      expect(again.uploadReceipt).toBeNull()
-    } else {
-      expect(again.status).toBe(200)
-      expect(again.code).toBeNull()
-      expect(again.uploadReceipt).toEqual(first.uploadReceipt)
-    }
+    expect(again.status).toBe(200)
+    expect(again.code).toBeNull()
+    expect(again.uploadReceipt).toEqual(first.uploadReceipt)
   }
 
   // The record itself is untouched either way: one submission, one digest, the original receipt.

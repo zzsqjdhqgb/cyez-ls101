@@ -2,6 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { request } from 'node:https'
+import type { ClientRequest } from 'node:http'
 import { randomBytes, randomUUID } from 'node:crypto'
 import type { Server } from 'node:https'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -95,7 +96,71 @@ async function send(
   })
 }
 
+// Answers decided from the headers alone arrive while the client is still sending the archive. The
+// client here stops mid-body on purpose, which is the only shape that shows the difference: if the server
+// answers without reading, the answer arrives while the client is still writing and the socket is reset
+// under it, so the second half never lands and the answer is lost. Draining first means nothing arrives
+// until the body is complete — and that the answer still reaches a client that is no longer writing.
+function earlyAnswer(server: Server, certificate: string, head: Buffer, tail: Buffer) {
+  const address = server.address() as { port: number }
+  const state = { answered: false }
+  let call!: ClientRequest
+  const answer = new Promise<{ status: number; code: string }>((resolve, reject) => {
+    call = request(
+      {
+        host: '127.0.0.1',
+        port: address.port,
+        path: '/api/v1/teacher/exams',
+        method: 'POST',
+        ca: certificate,
+        checkServerIdentity: () => undefined,
+        headers: {
+          'x-ls101-client-version': 'test-release',
+          connection: 'close',
+          'content-type': 'application/octet-stream',
+          'content-length': String(head.byteLength + tail.byteLength),
+          'x-ls101-archive-sha256': '0'.repeat(64),
+          // A malformed student credential: the refusal comes from the header check, before any read.
+          authorization: `Bearer d.00000000-0000-4000-8000-000000000000.${'x'.repeat(43)}`
+        }
+      },
+      (response) => {
+        state.answered = true
+        const chunks: Buffer[] = []
+        response.on('data', (chunk: Buffer) => chunks.push(chunk))
+        response.on('end', () => {
+          const text = Buffer.concat(chunks).toString('utf8')
+          resolve({ status: response.statusCode!, code: JSON.parse(text).error.code })
+        })
+      }
+    )
+    call.on('error', reject)
+  })
+  return {
+    state,
+    answer,
+    sendHead: () => call.write(head),
+    sendTail: () => call.end(tail)
+  }
+}
+
 describe('HTTPS service contracts', () => {
+  it('reads the archive before answering, so a half-sent upload still receives its refusal', async () => {
+    const { server, service } = await fixture()
+    const upload = earlyAnswer(
+      server,
+      service.identity.certificate,
+      randomBytes(64 * 1024),
+      randomBytes(64 * 1024)
+    )
+    upload.sendHead()
+    await new Promise((done) => setTimeout(done, 300))
+    // Answering here would leave the client writing into a closed socket; that is what lost the answer.
+    expect(upload.state.answered).toBe(false)
+    upload.sendTail()
+    await expect(upload.answer).resolves.toEqual({ status: 401, code: 'AUTH_REQUIRED' })
+  })
+
   it('returns a valid retryable error at capacity and accepts requests again after draining', async () => {
     const { api, service } = await fixture()
     let release!: () => void,
