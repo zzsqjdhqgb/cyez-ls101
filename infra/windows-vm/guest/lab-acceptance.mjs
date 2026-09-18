@@ -1947,7 +1947,6 @@ async function stepExamAndSubmission() {
       normal
     )
     const mirror = protocolFile('exam-mirror')
-    const examFile = join(mirror, 'exam.lsexam')
     // A real resource rather than a compressed placeholder: the archive has to be big enough that the
     // transfer is a transfer, and random bytes cannot deflate away to nothing.
     const published = await protocolResult('exam-publish', [
