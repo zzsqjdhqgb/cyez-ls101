@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict')
-const { mkdtemp, mkdir, readFile, readdir, rm, writeFile } = require('node:fs/promises')
+const { mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } = require('node:fs/promises')
 const { tmpdir } = require('node:os')
 const path = require('node:path')
 const { afterEach, test } = require('node:test')
@@ -107,6 +107,23 @@ test('operation lock prevents simultaneous destroy/build and releases after fail
   )
   assert.equal(await exists(path.join(local, 'operation.lock')), false)
   await withLock(local, async () => {})
+})
+
+test('taking the lock creates the directory it lives in', async () => {
+  const { withLock } = await api
+  // A fresh checkout has no `.local`: the lock has to create it, because `open(file, 'wx')` reports a
+  // missing parent as ENOENT rather than as the EEXIST this helper is about. `fixture()` cannot show
+  // that — it runs `initializeEnvironment` first, which is the implicit dependency that hid the bug on
+  // every developer machine while a GitHub runner (and a clone that only ran `yarn vm:init`) failed.
+  const fresh = await mkdtemp(path.join(tmpdir(), 'ls101-lock-'))
+  directories.push(fresh)
+  const local = path.join(fresh, '.local')
+  let ran = false
+  await withLock(local, async () => {
+    ran = true
+  })
+  assert.equal(ran, true)
+  assert.equal((await stat(local)).isDirectory(), true)
 })
 
 test('asset verification detects tampering without replacing the existing asset', async () => {

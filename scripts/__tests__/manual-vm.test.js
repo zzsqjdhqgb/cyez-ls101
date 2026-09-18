@@ -11,9 +11,10 @@
  */
 const assert = require('node:assert/strict')
 const { execFile } = require('node:child_process')
-const { readFile } = require('node:fs/promises')
+const { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } = require('node:fs/promises')
+const { tmpdir } = require('node:os')
 const path = require('node:path')
-const { test } = require('node:test')
+const { afterEach, test } = require('node:test')
 
 const root = path.resolve(__dirname, '../..')
 const labRoot = path.join(root, 'infra/windows-vm')
@@ -23,6 +24,49 @@ const labRoot = path.join(root, 'infra/windows-vm')
 const manual = import('../../infra/windows-vm/manual.mjs')
 const manualVagrantfile = path.join(labRoot, 'manual/Vagrantfile')
 const acceptanceVagrantfile = path.join(labRoot, 'Vagrantfile')
+
+const fixtures = []
+afterEach(async () => {
+  await Promise.all(
+    fixtures.splice(0).map((directory) => rm(directory, { recursive: true, force: true }))
+  )
+})
+
+// The cases that drive `main` need a root that looks like a configured checkout and nothing else. The
+// real repository root is off limits for that: `config.local.json` is gitignored, so a GitHub runner has
+// none, and the run's report file would land in the developer's `.local/results` as a failed run that
+// never happened. `local` and `config` can be turned off to reproduce the checkout CI actually has.
+async function manualFixture({ local = true, config = true } = {}) {
+  const fixtureRoot = await mkdtemp(path.join(tmpdir(), 'ls101-manual-'))
+  fixtures.push(fixtureRoot)
+  if (local) await mkdir(path.join(fixtureRoot, '.local'), { recursive: true })
+  if (config)
+    await writeFile(
+      path.join(fixtureRoot, 'config.local.json'),
+      JSON.stringify({
+        GuestPassword: 'Aa1!ManagementPasswordForTheTest',
+        InvitationCode: 'LS101-TEST-INVITATION',
+        ManualMemoryMB: 4096
+      })
+    )
+  return fixtureRoot
+}
+
+// A runner that answers `vagrant status` and then stops the run at its first real VM command, which is
+// where every ordering assertion below takes over.
+function statusThenStop(state, name, order) {
+  return (command, args) => {
+    order.push([path.basename(command), ...args].join(' '))
+    if (args.includes('status'))
+      return {
+        status: 0,
+        stdout: `1789000000,${name},state,${state}\n1789000000,${name},provider-name,v\n`,
+        stderr: ''
+      }
+    if (args.includes('up')) throw new Error('stopped after the first VM command')
+    return { status: 0, stdout: '', stderr: '' }
+  }
+}
 
 test('the manual actions name a role and an action, and never the disposable machine', async () => {
   const { parseManualAction, manualActions } = await manual
@@ -224,24 +268,13 @@ test('reset builds before it destroys, so a failed build cannot cost the machine
 test('reset does not require a machine to exist', async () => {
   const { main } = await manual
   const order = []
-  const spawn = (command, args) => {
-    order.push([path.basename(command), ...args].join(' '))
-    if (args.includes('status'))
-      return {
-        status: 0,
-        stdout:
-          '1789000000,student,state,not_created\n1789000000,student,provider-name,vmware_desktop\n',
-        stderr: ''
-      }
-    if (args.includes('up')) throw new Error('stopped after the first VM command')
-    return { status: 0, stdout: '', stderr: '' }
-  }
+  const fixtureRoot = await manualFixture()
   await assert.rejects(
     main(['student:reset'], {
-      root: labRoot,
+      root: fixtureRoot,
       platform: 'win32',
       arch: 'x64',
-      spawn,
+      spawn: statusThenStop('not_created', 'student', order),
       preflight: async () => order.push('preflight'),
       package: async () => {
         order.push('package')
@@ -265,27 +298,16 @@ test('reset does not require a machine to exist', async () => {
 
 test('reset destroys the old machine and boots a fresh one', async () => {
   const { main } = await manual
-  const host = fakeHost('poweroff')
   // `up` and the desktop-session helpers run for real here, so the run is stopped right after its first
   // VM command once the ordering has been observed.
   const order = []
-  const spawn = (command, args) => {
-    order.push([path.basename(command), ...args].join(' '))
-    if (args.includes('status'))
-      return {
-        status: 0,
-        stdout: '1789000000,student,state,poweroff\n1789000000,student,provider-name,v\n',
-        stderr: ''
-      }
-    if (args.includes('up')) throw new Error('stopped after the first VM command')
-    return { status: 0, stdout: '', stderr: '' }
-  }
+  const fixtureRoot = await manualFixture()
   await assert.rejects(
     main(['student:reset'], {
-      root: labRoot,
+      root: fixtureRoot,
       platform: 'win32',
       arch: 'x64',
-      spawn,
+      spawn: statusThenStop('poweroff', 'student', order),
       preflight: async () => order.push('preflight'),
       package: async () => {
         order.push('package')
@@ -301,6 +323,60 @@ test('reset destroys the old machine and boots a fresh one', async () => {
     `destroy must follow the build: ${order.join(' | ')}`
   )
   assert.ok(up > destroy, `up must follow destroy: ${order.join(' | ')}`)
+})
+
+// A GitHub runner is exactly this shape: a configured checkout whose `.local` does not exist yet. The
+// lock used to fail with ENOENT on `operation.lock` before any injected step ran, which is also how
+// `yarn vm:teacher:boot` failed on a clone that had only run `yarn vm:init`.
+test('a checkout that has never run the tooling can still drive the manual actions', async () => {
+  const { main } = await manual
+  const fixtureRoot = await manualFixture({ local: false })
+  const order = []
+  await assert.rejects(
+    main(['student:reset'], {
+      root: fixtureRoot,
+      platform: 'win32',
+      arch: 'x64',
+      spawn: statusThenStop('not_created', 'student', order),
+      preflight: async () => order.push('preflight'),
+      package: async () => {
+        order.push('package')
+        return { name: 'student.exe', file: '/dist/student.exe', version: '0', bytes: 1 }
+      }
+    }),
+    /stopped after the first VM command/
+  )
+  // Reaching `up` is the proof that the run got past the lock, the config and the environment.
+  assert.ok(
+    order.some((call) => call.split(' ').includes('up')),
+    order.join(' | ')
+  )
+  // The failed run still released the lock it had to create itself.
+  await assert.rejects(stat(path.join(fixtureRoot, '.local', 'operation.lock')), { code: 'ENOENT' })
+})
+
+test('a config that cannot be read still leaves a report that names it', async () => {
+  const { main } = await manual
+  const fixtureRoot = await manualFixture({ local: false, config: false })
+  await assert.rejects(
+    main(['student:reset'], {
+      root: fixtureRoot,
+      platform: 'win32',
+      arch: 'x64',
+      spawn: () => ({ status: 0, stdout: '', stderr: '' })
+    }),
+    /config\.local\.json/
+  )
+  // The report is the only artefact a failed run leaves behind, so it has to exist even when the failure
+  // happened before anything created `.local/results`, and it has to carry the real reason.
+  const reports = await readdir(path.join(fixtureRoot, '.local', 'results'))
+  assert.equal(reports.length, 1)
+  const report = JSON.parse(
+    await readFile(path.join(fixtureRoot, '.local', 'results', reports[0]), 'utf8')
+  )
+  assert.equal(report.success, false)
+  assert.equal(report.action, 'student:reset')
+  assert.match(report.error, /config\.local\.json/)
 })
 
 test('the guest file server script is uploaded before the task that runs it', async () => {
