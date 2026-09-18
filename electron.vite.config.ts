@@ -6,6 +6,7 @@
 import { resolve } from 'path'
 import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
+import { startupPlaceholderPlugin } from './scripts/desktop-ui/startup-placeholder-plugin'
 
 export default defineConfig({
   main: {
@@ -49,6 +50,6 @@ export default defineConfig({
         '@renderer': resolve('packages/renderer/src')
       }
     },
-    plugins: [react()]
+    plugins: [react(), startupPlaceholderPlugin({ label: '曹二听说101' })]
   }
 })

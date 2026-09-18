@@ -1,6 +1,4 @@
-import startupLogoMarkup from './assets/logo.svg?raw'
-import startupMotionCss from './assets/motion.css?inline'
-
-export { startupLogoMarkup, startupMotionCss }
+export { startupLogoMarkup, startupMotionCss } from './logo'
+export { startupPlaceholderCss, startupPlaceholderHtml } from './placeholder'
 export * from './startup-placeholder'
 export * from './startup-timing'

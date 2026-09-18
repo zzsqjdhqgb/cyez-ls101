@@ -58,8 +58,8 @@ P4 之后 lab 侧不再触发主程序文档测试。lab 检查点（L 系列）
 ## 7. 进度台账
 
 - [x] P1 建 `@ls101/desktop-ui`、搬迁、import 重写 —— 已通过 `docs:product:check`
-- [x] P2 外壳参数化（title/subtitle/icon/actions/layout + FE-10）—— 自测全绿，等用户视觉回归
-- [ ] P3 启动统一
+- [x] P2 外壳参数化（title/subtitle/icon/actions/layout + FE-10）—— 已通过 `docs:product:check`
+- [x] P3 启动统一（Vite 插件注入占位 + 共享 bootstrap）—— 自测全绿，等用户视觉回归
 - [ ] P4 窗口控制共享
 - [ ] D lab 宿主无框 + bridge
 - [ ] D2 `@ls101/lab-renderer` 数据层

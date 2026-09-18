@@ -10,6 +10,10 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./bootstrap": {
+      "types": "./src/startup/bootstrap.ts",
+      "default": "./src/startup/bootstrap.ts"
+    },
     "./startup": {
       "types": "./src/startup/index.ts",
       "default": "./src/startup/index.ts"
