@@ -3,6 +3,7 @@ import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import metadata from './package.json'
 import { labBundleAudit } from './scripts/lab/bundle-audit'
+import { startupPlaceholderPlugin } from './scripts/desktop-ui/startup-placeholder-plugin'
 export default defineConfig({
   main: {
     plugins: [labBundleAudit('teacher')],
@@ -23,7 +24,11 @@ export default defineConfig({
   },
   renderer: {
     root: resolve('apps/lab-teacher/renderer'),
-    plugins: [react(), labBundleAudit('teacher')],
+    plugins: [
+      react(),
+      labBundleAudit('teacher'),
+      startupPlaceholderPlugin({ label: '听说101 教师端' })
+    ],
     build: {
       outDir: resolve('out/lab-teacher/renderer'),
       rollupOptions: { input: resolve('apps/lab-teacher/renderer/index.html') }

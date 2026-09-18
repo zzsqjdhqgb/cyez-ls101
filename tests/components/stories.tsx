@@ -17,6 +17,7 @@ import {
   AIModelSelect,
   type AIModelOption
 } from '../../packages/renderer/src/components/ai/AIModelSelect'
+import { Banner } from '@ls101/desktop-ui'
 import { SettingsContent, SettingsRow, SettingsSection } from '@ls101/desktop-ui'
 import { Button } from '@ls101/desktop-ui'
 import { ConfirmModal } from '@ls101/desktop-ui'
@@ -227,6 +228,7 @@ export function PageCompositionStory(): JSX.Element {
   return (
     <Page>
       <PageHeader actions={<Button icon={CircleAlert}>检查状态</Button>} title="页面标题" />
+      <Banner tone="success">所有设备已完成同步</Banner>
       <EmptyState icon={FileQuestion} title="暂无内容" />
     </Page>
   )
