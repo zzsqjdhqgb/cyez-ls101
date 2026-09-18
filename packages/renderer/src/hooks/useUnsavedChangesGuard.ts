@@ -16,6 +16,7 @@ export interface UnsavedChangesGuard {
 export function useUnsavedChangesGuard(active: boolean): UnsavedChangesGuard {
   const { navigator } = useContext(UNSAFE_NavigationContext)
   const bypassRef = useRef(false)
+  const removeBeforeUnloadRef = useRef<(() => void) | null>(null)
   const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null)
 
   useEffect(() => {
@@ -24,8 +25,15 @@ export function useUnsavedChangesGuard(active: boolean): UnsavedChangesGuard {
       event.preventDefault()
       event.returnValue = ''
     }
+    const removeBeforeUnload = (): void => {
+      window.removeEventListener('beforeunload', beforeUnload)
+      if (removeBeforeUnloadRef.current === removeBeforeUnload) {
+        removeBeforeUnloadRef.current = null
+      }
+    }
     window.addEventListener('beforeunload', beforeUnload)
-    return () => window.removeEventListener('beforeunload', beforeUnload)
+    removeBeforeUnloadRef.current = removeBeforeUnload
+    return removeBeforeUnload
   }, [active])
 
   useEffect(() => {
@@ -60,6 +68,7 @@ export function useUnsavedChangesGuard(active: boolean): UnsavedChangesGuard {
   return {
     allowNextNavigation: () => {
       bypassRef.current = true
+      removeBeforeUnloadRef.current?.()
     },
     navigationPending: pendingNavigation !== null,
     cancelNavigation: () => setPendingNavigation(null),

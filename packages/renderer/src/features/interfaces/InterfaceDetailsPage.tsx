@@ -168,9 +168,16 @@ export function InterfaceDetailsPage(): JSX.Element {
       <PageHeader
         title={details?.definition.name ?? '题型不存在'}
         actions={
-          <Button icon={ArrowLeft} variant="ghost" onClick={() => navigate('/interfaces')}>
-            返回题型
-          </Button>
+          <>
+            {details ? (
+              <Button icon={FileOutput} disabled={working} onClick={() => void exportInterface()}>
+                导出题型
+              </Button>
+            ) : null}
+            <Button icon={ArrowLeft} variant="ghost" onClick={() => navigate('/interfaces')}>
+              返回题型
+            </Button>
+          </>
         }
       />
 
@@ -261,9 +268,6 @@ export function InterfaceDetailsPage(): JSX.Element {
               <div className={styles.definitionActions}>
                 <Button icon={Copy} disabled={working} onClick={() => void copyToDraft()}>
                   复制为草稿
-                </Button>
-                <Button icon={FileOutput} disabled={working} onClick={() => void exportInterface()}>
-                  导出题型
                 </Button>
               </div>
               <section>

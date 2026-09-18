@@ -6,6 +6,7 @@ import styles from './TitleBar.module.css'
 interface TitleBarProps {
   sidebarCollapsed: boolean
   sidebarVisible: boolean
+  closeDisabled?: boolean
 }
 
 function RestoreIcon(): JSX.Element {
@@ -17,7 +18,11 @@ function RestoreIcon(): JSX.Element {
   )
 }
 
-export function TitleBar({ sidebarCollapsed, sidebarVisible }: TitleBarProps): JSX.Element {
+export function TitleBar({
+  sidebarCollapsed,
+  sidebarVisible,
+  closeDisabled = false
+}: TitleBarProps): JSX.Element {
   const [maximized, setMaximized] = useState(false)
   const controls = window.windowControls
 
@@ -71,8 +76,8 @@ export function TitleBar({ sidebarCollapsed, sidebarVisible }: TitleBarProps): J
         <button
           aria-label="关闭"
           className={`${styles.controlButton} ${styles.closeButton}`}
-          disabled={!controls}
-          title="关闭"
+          disabled={!controls || closeDisabled}
+          title={closeDisabled ? '旧数据整理完成后可关闭' : '关闭'}
           type="button"
           onClick={() => void controls?.close()}
         >

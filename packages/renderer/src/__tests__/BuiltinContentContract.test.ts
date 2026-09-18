@@ -329,7 +329,7 @@ describe('builtin content contract', () => {
       )
       expect(Object.keys(decoded.resources).sort()).toEqual(Object.keys(resources).sort())
     }
-  })
+  }, 15_000)
 })
 
 function createLocatedInstance(

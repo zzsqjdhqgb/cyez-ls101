@@ -1,97 +1,108 @@
-import { app, BrowserWindow, dialog, safeStorage } from 'electron'
-import { electronApp, optimizer } from '@electron-toolkit/utils'
-import { registerConfigStore } from '@ls101/config-store/main'
-import { registerAIRouter } from '@ls101/airouter/main'
-import { registerClipboard } from '@ls101/clipboard/main'
-import { registerFileDialog } from '@ls101/file-dialog/main'
-import {
-  registerBuiltinFileStore,
-  registerBuiltinFileStoreScheme,
-  registerFileStore,
-  registerFileStoreScheme
-} from '@ls101/file-store/main'
+import { app, safeStorage } from 'electron'
+import { createConsoleLogger, createMainLogger, type Logger } from '@ls101/logger/main'
 import { join } from 'node:path'
-import { registerAppInfoHandlers } from './app-info'
-import {
-  initializeDataDirectory,
-  recoverDataDirectory,
-  registerDataDirectoryHandlers
-} from './data-directory'
-import { createMainWindow } from './window'
-import { registerWindowControlHandlers } from './window-controls'
+import { createApplicationWorkerUrls } from './application-worker-urls'
 
-registerFileStoreScheme()
-registerBuiltinFileStoreScheme()
-let applicationInitialized = false
+export interface ApplicationInitialization {
+  logger: Logger
+  dataDirectory: string
+  builtinDataDirectory: string
+}
 
-async function initializeApplication(): Promise<void> {
-  electronApp.setAppUserModelId('io.github.zzsqjdhqgb.cyez-ls101')
+interface ApplicationInitializationOptions {
+  waitForWindowShown?: Promise<void>
+}
 
-  if (
-    process.platform === 'linux' &&
+export async function initializeApplication(
+  options: ApplicationInitializationOptions = {}
+): Promise<ApplicationInitialization> {
+  const userDataDir = app.getPath('userData')
+  const applicationLoggerTask = initializeApplicationLogger()
+  const dataDirectoryTask = initializeApplicationDataDirectory(userDataDir)
+  const applicationServicesTask = settled(
+    (options.waitForWindowShown ?? Promise.resolve()).then(() => import('./application-services'))
+  )
+  const applicationLogger = await applicationLoggerTask
+  applicationLogger.info('Application initialization started', {
+    version: app.getVersion(),
+    packaged: app.isPackaged,
+    platform: process.platform,
+    arch: process.arch
+  })
+
+  const isLocalIntegrationTest =
     process.env['LS101_INTEGRATION_TEST'] === '1' &&
     (!app.isPackaged || app.getVersion().includes('-local.'))
-  ) {
+
+  if (process.platform === 'linux' && isLocalIntegrationTest) {
     safeStorage.setUsePlainTextEncryption(true)
   }
 
-  const userDataDir = app.getPath('userData')
-  let dataDir: string
+  const dataDirectoryResult = await dataDirectoryTask
+  if (!dataDirectoryResult.ok) {
+    applicationLogger.error(
+      'Failed to initialize application data directory',
+      dataDirectoryResult.error
+    )
+    return dataDirectoryResult.module.recoverDataDirectory(userDataDir, dataDirectoryResult.error)
+  }
+  const dataDir = dataDirectoryResult.dataDirectory
+  const builtinDataDir = app.isPackaged
+    ? join(process.resourcesPath, 'builtin')
+    : join(app.getAppPath(), 'resources', 'builtin')
+  const applicationServicesResult = await applicationServicesTask
+  if (!applicationServicesResult.ok) throw applicationServicesResult.error
+  applicationServicesResult.value.registerApplicationServices({
+    builtinDataDirectory: builtinDataDir,
+    dataDirectory: dataDir,
+    isLocalIntegrationTest,
+    logger: applicationLogger,
+    userDataDirectory: userDataDir,
+    workerUrls: createApplicationWorkerUrls(import.meta.url)
+  })
+  return {
+    logger: applicationLogger,
+    dataDirectory: dataDir,
+    builtinDataDirectory: builtinDataDir
+  }
+}
+
+type DataDirectoryModule = typeof import('./data-directory')
+
+type DataDirectoryInitialization =
+  | { ok: true; dataDirectory: string; module: DataDirectoryModule }
+  | { ok: false; error: unknown; module: DataDirectoryModule }
+
+async function initializeApplicationDataDirectory(
+  userDataDirectory: string
+): Promise<DataDirectoryInitialization> {
+  const module = await import('./data-directory')
   try {
-    dataDir = await initializeDataDirectory(userDataDir)
-  } catch (error) {
-    console.error('Failed to initialize application data directory', error)
-    return recoverDataDirectory(userDataDir, error)
-  }
-  registerFileStore({ baseDir: dataDir })
-  registerBuiltinFileStore({
-    baseDir: app.isPackaged
-      ? join(process.resourcesPath, 'builtin')
-      : join(app.getAppPath(), 'resources', 'builtin')
-  })
-  registerConfigStore({ baseDir: dataDir })
-  registerAIRouter({ baseDir: dataDir })
-  registerClipboard()
-  registerFileDialog()
-  registerAppInfoHandlers()
-  registerDataDirectoryHandlers(userDataDir, dataDir)
-  registerWindowControlHandlers()
-
-  app.on('browser-window-created', (_event, window) => {
-    optimizer.watchWindowShortcuts(window)
-  })
-
-  createMainWindow()
-  applicationInitialized = true
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow()
+    return {
+      ok: true,
+      dataDirectory: await module.initializeDataDirectory(userDataDirectory),
+      module
     }
-  })
-}
-
-const hasSingleInstanceLock = app.requestSingleInstanceLock()
-if (!hasSingleInstanceLock) app.quit()
-else {
-  app.on('second-instance', () => {
-    const window = BrowserWindow.getAllWindows()[0]
-    if (!window) return
-    if (window.isMinimized()) window.restore()
-    window.focus()
-  })
-  void app.whenReady().then(initializeApplication).catch(handleApplicationInitializationError)
-}
-
-app.on('window-all-closed', () => {
-  if (applicationInitialized && process.platform !== 'darwin') {
-    app.quit()
+  } catch (error) {
+    return { ok: false, error, module }
   }
-})
+}
 
-function handleApplicationInitializationError(error: unknown): void {
-  const message = error instanceof Error ? error.message : String(error)
-  console.error('Failed to initialize application', error)
-  dialog.showErrorBox('应用启动失败', message)
-  app.exit(1)
+type Settled<T> = { ok: true; value: T } | { ok: false; error: unknown }
+
+function settled<T>(promise: Promise<T>): Promise<Settled<T>> {
+  return promise.then(
+    (value) => ({ ok: true as const, value }),
+    (error: unknown) => ({ ok: false as const, error })
+  )
+}
+
+async function initializeApplicationLogger(): Promise<Logger> {
+  try {
+    return await createMainLogger({ directory: app.getPath('logs') })
+  } catch (error) {
+    const fallback = createConsoleLogger()
+    fallback.error('Persistent logger unavailable; using console-only logging', error)
+    return fallback
+  }
 }

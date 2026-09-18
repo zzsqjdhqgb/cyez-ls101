@@ -1,7 +1,9 @@
 import { useEffect, useState, type JSX } from 'react'
-import { ExternalLink } from 'lucide-react'
+import { ArrowRight, ExternalLink, Sparkles } from 'lucide-react'
 import { SettingsContent, SettingsSection } from '../../components/settings/SettingsContent'
 import { appIconUrl, catAvatarUrl, zhoufeiAvatarUrl, zoujuanAvatarUrl } from '../../assets'
+import { ReleaseNotesModal } from '../release-notes/ReleaseNotesModal'
+import { latestReleaseVersion } from '../release-notes/release-notes'
 import styles from './AboutSettingsPage.module.css'
 
 const projectUrl = 'https://github.com/zzsqjdhqgb/cyez-ls101'
@@ -50,6 +52,7 @@ function PersonRow({ person }: { person: Person }): JSX.Element {
     <a
       aria-label={`${person.name}的 GitHub 主页`}
       className={styles.personRow}
+      draggable={false}
       href={person.profileUrl}
       rel="noreferrer"
       target="_blank"
@@ -62,6 +65,7 @@ function PersonRow({ person }: { person: Person }): JSX.Element {
 }
 
 export function AboutSettingsPage(): JSX.Element {
+  const [releaseNotesOpen, setReleaseNotesOpen] = useState(false)
   const [version, setVersion] = useState<string | undefined>(() =>
     window.appInfo ? undefined : '未知'
   )
@@ -97,6 +101,23 @@ export function AboutSettingsPage(): JSX.Element {
         </div>
       </section>
 
+      <button
+        className={styles.releaseLink}
+        type="button"
+        onClick={() => setReleaseNotesOpen(true)}
+      >
+        <span className={styles.releaseLinkIcon}>
+          <Sparkles aria-hidden="true" />
+        </span>
+        <span>
+          <strong>版本说明</strong>
+          <small>查看 {latestReleaseVersion} 发布预览与本次更新亮点</small>
+        </span>
+        <ArrowRight aria-hidden="true" />
+      </button>
+
+      <ReleaseNotesModal open={releaseNotesOpen} onOpenChange={setReleaseNotesOpen} />
+
       <SettingsSection title="项目发起人">
         <PersonRow person={initiator} />
       </SettingsSection>
@@ -115,7 +136,13 @@ export function AboutSettingsPage(): JSX.Element {
             </p>
             <p className={styles.licenseDescription}>本软件为专有软件，使用须遵守项目许可证。</p>
           </div>
-          <a className={styles.projectLink} href={projectUrl} rel="noreferrer" target="_blank">
+          <a
+            className={styles.projectLink}
+            draggable={false}
+            href={projectUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
             项目主页
             <ExternalLink aria-hidden="true" />
           </a>

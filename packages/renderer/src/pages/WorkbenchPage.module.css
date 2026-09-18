@@ -3,6 +3,7 @@
   padding: 46px 0 64px;
   background: var(--color-surface-subtle);
   animation: workbench-page-enter 360ms ease-out both;
+  user-select: none;
 }
 
 .inner {

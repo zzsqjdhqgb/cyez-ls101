@@ -3,6 +3,7 @@
   "references": [
     { "path": "./tsconfig.node.json" },
     { "path": "./packages/core-types" },
+    { "path": "./packages/logger" },
     { "path": "./packages/clipboard" },
     { "path": "./packages/config-store" },
     { "path": "./packages/secret-store" },

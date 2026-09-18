@@ -35,8 +35,46 @@ select {
 }
 
 button,
+button[role='button'],
+button[role='tab'],
+button[role='option'],
+[role='button'],
+[role='tab'],
+[role='option'],
+summary {
+  user-select: none;
+}
+
+label,
+legend {
+  user-select: none;
+}
+
+input,
+textarea,
+select,
+pre,
+code {
+  user-select: text;
+}
+
+[role='alert'],
+[data-text-selectable] {
+  user-select: text;
+}
+
+button,
 a {
   -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  -webkit-user-drag: none;
+}
+
+img {
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 button:focus-visible,

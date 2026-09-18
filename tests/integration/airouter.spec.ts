@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { strToU8, zipSync } from 'fflate'
 import { MOCK_PNG_BASE64, MockAiServer } from './support/mock-ai-server'
-import { launchIntegrationApp } from './support/electron-app'
+import { closeStartupReleaseNotes, launchIntegrationApp } from './support/electron-app'
 
 interface ModelConfig {
   id: string
@@ -157,6 +157,7 @@ test.beforeEach(async () => {
   page = await electronApp.firstWindow()
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
+  await closeStartupReleaseNotes(page)
   await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
 })
 
@@ -571,6 +572,7 @@ test('AR-10 edits and deletes a text provider with its secret without affecting 
   await page.getByRole('button', { name: '保存 Provider' }).click()
   await page.getByRole('button', { name: '删除 Provider' }).click()
   await page.getByRole('button', { name: '删除配置' }).click()
+  await expect(page.getByText('已删除“edited-provider”', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /edited-provider/ })).toBeHidden()
   const state = await page.evaluate(async () => {
     let deletedKeyError = ''

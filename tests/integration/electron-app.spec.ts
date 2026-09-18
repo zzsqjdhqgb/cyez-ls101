@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { strToU8, unzipSync, zipSync } from 'fflate'
-import { launchIntegrationApp } from './support/electron-app'
+import { APPLICATION_STARTUP_TIMEOUT, launchIntegrationApp } from './support/electron-app'
 
 let electronApp: ElectronApplication
 let page: Page
@@ -69,6 +69,12 @@ test.beforeEach(async () => {
   page = await electronApp.firstWindow()
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
+  await expect(page.locator('.startupPlaceholder')).toBeVisible()
+  await expect(page.getByRole('dialog', { name: '曹二听说101 v0.4.1' })).toBeVisible({
+    timeout: APPLICATION_STARTUP_TIMEOUT
+  })
+  await expect(page.getByRole('heading', { name: /旧数据/ })).toHaveCount(0)
+  await page.getByRole('button', { name: '关闭版本说明' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
 })
 
@@ -89,6 +95,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       contextIsolation: preferences.contextIsolation,
       nodeIntegration: preferences.nodeIntegration,
       sandbox: preferences.sandbox,
+      sourceMapStackTraceInstalled: typeof Error.prepareStackTrace === 'function',
       title: window.getTitle(),
       userDataPath: app.getPath('userData'),
       visible: window.isVisible()
@@ -102,6 +109,7 @@ test('starts a hardened application window and exposes every preload bridge', as
     isPackaged: true,
     nodeIntegration: false,
     sandbox: true,
+    sourceMapStackTraceInstalled: true,
     title: '曹二听说101',
     visible: true
   })
@@ -118,8 +126,11 @@ test('starts a hardened application window and exposes every preload bridge', as
       fileDialog: methods('fileDialog'),
       fileStore: methods('fileStore'),
       imageClipboard: methods('imageClipboard'),
+      legacyData: methods('legacyData'),
+      license: methods('license'),
       nodeProcess: typeof runtimeWindow.process,
       nodeRequire: typeof runtimeWindow.require,
+      startup: methods('startup'),
       windowControls: methods('windowControls')
     }
   })
@@ -168,7 +179,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       'testImageConnection',
       'testSpeechConnection'
     ],
-    appInfo: ['getVersion'],
+    appInfo: ['claimReleaseNotesVersion', 'ensureInstallationMarker', 'getVersion'],
     configStore: ['invoke'],
     dataDirectory: [
       'choose',
@@ -182,10 +193,47 @@ test('starts a hardened application window and exposes every preload bridge', as
     fileDialog: ['read', 'write'],
     fileStore: ['invoke'],
     imageClipboard: ['readImage', 'writeText'],
+    legacyData: ['cleanup', 'exportArchive', 'getInfo', 'retry'],
+    license: ['activate', 'deactivate', 'getStatus', 'openActivationGuide'],
     nodeProcess: 'undefined',
     nodeRequire: 'undefined',
+    startup: ['whenReady'],
     windowControls: ['close', 'getMaximized', 'minimize', 'onMaximizedChange', 'toggleMaximize']
   })
+})
+
+test('packages every worker referenced by the application bundle', async () => {
+  const packagedWorkers = await electronApp.evaluate(({ app }) => {
+    const fs = process.getBuiltinModule('node:fs')
+    const path = process.getBuiltinModule('node:path')
+    return [
+      'legacy-data-worker.js',
+      'pocket-tts-worker.js',
+      'pronunciation-assessment-worker.js',
+      'qwen3-asr-worker.js'
+    ].map((name) => ({
+      name,
+      exists: fs.existsSync(path.join(app.getAppPath(), 'out', 'main', name))
+    }))
+  })
+
+  expect(packagedWorkers).toEqual([
+    { name: 'legacy-data-worker.js', exists: true },
+    { name: 'pocket-tts-worker.js', exists: true },
+    { name: 'pronunciation-assessment-worker.js', exists: true },
+    { name: 'qwen3-asr-worker.js', exists: true }
+  ])
+})
+
+test('shows release notes only once for the current release', async () => {
+  await electronApp.close()
+  electronApp = await launchIntegrationApp(userDataDir)
+  page = await electronApp.firstWindow()
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+  await page.waitForLoadState('domcontentloaded')
+
+  await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '关闭版本说明' })).toHaveCount(0)
 })
 
 test('round-trips data through file, config, asset protocol, AI and clipboard IPC', async () => {
@@ -358,13 +406,43 @@ test('navigates through every primary application area', async () => {
   await page.getByRole('link', { name: '设置' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '设置' })).toBeVisible()
   await expect(page.getByRole('button', { name: /外观/ })).toBeVisible()
+  const licenseSettings = page.getByRole('button', { name: /^许可 / })
+  await expect(licenseSettings).toBeVisible()
   await expect(page.getByRole('button', { name: /AI 引擎/ })).toBeVisible()
   await expectValidStyleBindings(page)
+
+  await licenseSettings.click()
+  await expect(page.getByRole('heading', { level: 1, name: '许可' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '参与意见征集' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '取消激活' })).toBeVisible()
+  await page.getByRole('button', { name: '返回设置' }).click()
+
   await page.getByRole('button', { name: /关于/ }).click()
   await expect(page.getByRole('heading', { level: 1, name: '关于' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '曹二听说101' })).toBeVisible()
   await expect(page.getByText(/^版本 \S+/)).toBeVisible()
   await expectValidStyleBindings(page)
+
+  await page.getByRole('button', { name: /版本说明/ }).click()
+  const releaseNotes = page.getByRole('dialog', { name: '曹二听说101 v0.4.1' })
+  await expect(releaseNotes).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: '曹二听说101 v0.4.1' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '启动与稳定性' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '升级说明' })).toBeAttached()
+  await expect(page.getByText(/^已安装 \S+$/)).toBeVisible()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth
+    )
+  ).toBe(true)
+  await expectValidStyleBindings(page)
+  await page.screenshot({
+    path: test.info().outputPath('release-notes.png'),
+    fullPage: true
+  })
+  await page.getByRole('button', { name: '关闭版本说明' }).click()
+  await expect(releaseNotes).toBeHidden()
+  await expect(page.getByRole('heading', { level: 1, name: '关于' })).toBeVisible()
 
   await page.getByRole('link', { name: '工作台' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
@@ -718,7 +796,7 @@ test('opens and copies bundled Shanghai speaking templates', async () => {
   const zhongkaoRow = page
     .getByText('上海中考口语标准题型', { exact: true })
     .locator('xpath=ancestor::article')
-  await expect(zhongkaoRow.getByText('v1', { exact: true })).toBeVisible()
+  await expect(zhongkaoRow.getByText('v2', { exact: true })).toBeVisible()
   await expect(zhongkaoRow.getByText('中考', { exact: true })).toBeVisible()
 
   const builtinRow = page

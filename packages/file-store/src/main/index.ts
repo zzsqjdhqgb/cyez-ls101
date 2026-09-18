@@ -1,5 +1,5 @@
-import { registerBuiltinFileStoreHandlers } from './builtinHandlers'
-import { registerFileStoreHandlers } from './handlers'
+import { registerBuiltinFileStoreHandlers as installBuiltinFileStoreHandlers } from './builtinHandlers'
+import { registerFileStoreHandlers as installFileStoreHandlers } from './handlers'
 import {
   registerAssetProtocol,
   registerAssetScheme,
@@ -15,12 +15,32 @@ export function registerBuiltinFileStoreScheme(): void {
   registerBuiltinAssetScheme()
 }
 
+export function registerFileStoreProtocol(options: {
+  baseDir: string | (() => Promise<string>)
+}): void {
+  registerAssetProtocol(options.baseDir)
+}
+
+export function registerBuiltinFileStoreProtocol(options: {
+  baseDir: string | (() => Promise<string>)
+}): void {
+  registerBuiltinAssetProtocol(options.baseDir)
+}
+
+export function registerFileStoreHandlers(options: { baseDir: string }): void {
+  installFileStoreHandlers(options.baseDir)
+}
+
+export function registerBuiltinFileStoreHandlers(options: { baseDir: string }): void {
+  installBuiltinFileStoreHandlers(options.baseDir)
+}
+
 export function registerFileStore(options: { baseDir: string }): void {
-  registerFileStoreHandlers(options.baseDir)
+  installFileStoreHandlers(options.baseDir)
   registerAssetProtocol(options.baseDir)
 }
 
 export function registerBuiltinFileStore(options: { baseDir: string }): void {
-  registerBuiltinFileStoreHandlers(options.baseDir)
+  installBuiltinFileStoreHandlers(options.baseDir)
   registerBuiltinAssetProtocol(options.baseDir)
 }

@@ -1,8 +1,21 @@
-import { _electron as electron, type ElectronApplication } from '@playwright/test'
-import { access } from 'node:fs/promises'
+import {
+  expect,
+  _electron as electron,
+  type ElectronApplication,
+  type Page
+} from '@playwright/test'
+import { createHash } from 'node:crypto'
+import { access, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const projectRoot = process.cwd()
+export const APPLICATION_STARTUP_TIMEOUT = process.platform === 'win32' ? 45_000 : 20_000
+
+export const INTEGRATION_LICENSE_CODE = 'ls101-integration-license'
+export const INTEGRATION_LICENSE_CODE_HASH = createHash('sha256')
+  .update(INTEGRATION_LICENSE_CODE.toUpperCase(), 'utf8')
+  .digest('hex')
+const INTEGRATION_LICENSE_NOW = '2026-08-23T08:00:00.000Z'
 
 interface IntegrationAppLaunchOptions {
   contentSize?: {
@@ -12,6 +25,7 @@ interface IntegrationAppLaunchOptions {
   deviceScaleFactor?: number
   extraArgs?: readonly string[]
   environment?: Record<string, string>
+  license?: 'activated' | 'not-activated'
   randomSeed?: number
 }
 
@@ -26,8 +40,30 @@ export async function launchIntegrationApp(
     )
   })
 
-  const environment = { ...process.env, LS101_INTEGRATION_TEST: '1', ...options.environment }
+  const environment = {
+    ...process.env,
+    LS101_INTEGRATION_TEST: '1',
+    LS101_LICENSE_TEST_CODE_HASH: INTEGRATION_LICENSE_CODE_HASH,
+    LS101_LICENSE_TEST_NOW: INTEGRATION_LICENSE_NOW,
+    ...options.environment
+  }
   delete environment['ELECTRON_RENDERER_URL']
+
+  if (options.license !== 'not-activated') {
+    await writeFile(
+      path.join(userDataDir, 'license.json'),
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          invitationCodeHash: environment['LS101_LICENSE_TEST_CODE_HASH'],
+          activatedAt: environment['LS101_LICENSE_TEST_NOW']
+        },
+        null,
+        2
+      )}\n`,
+      { encoding: 'utf8', mode: 0o600 }
+    )
+  }
 
   const args = ['--no-sandbox', '--password-store=basic', `--user-data-dir=${userDataDir}`]
   if (options.deviceScaleFactor !== undefined) {
@@ -46,7 +82,16 @@ export async function launchIntegrationApp(
   })
 
   if (options.contentSize) {
-    await electronApp.firstWindow()
+    const page = await electronApp.firstWindow()
+    // Main-process evaluation can lose its inspector promise while the startup bundle is importing.
+    await page.evaluate(async () => {
+      const startup = (
+        window as unknown as {
+          startup?: { whenReady(): Promise<void> }
+        }
+      ).startup
+      await startup?.whenReady()
+    })
     await electronApp.evaluate(({ BrowserWindow }, contentSize) => {
       const window = BrowserWindow.getAllWindows()[0]
       if (!window) throw new Error('Integration application did not create a browser window')
@@ -55,6 +100,20 @@ export async function launchIntegrationApp(
   }
 
   return electronApp
+}
+
+export async function closeStartupReleaseNotes(page: Page): Promise<void> {
+  const workbench = page.getByRole('heading', { level: 1, name: '工作台' })
+  const closeButton = page.getByRole('button', { name: '关闭版本说明' })
+  const startupError = page.getByRole('heading', { level: 1, name: '应用初始化失败' })
+  await expect(closeButton.or(workbench).or(startupError)).toBeVisible({
+    timeout: APPLICATION_STARTUP_TIMEOUT
+  })
+
+  if (await startupError.isVisible()) {
+    throw new Error(await page.getByRole('alert').innerText())
+  }
+  if (await closeButton.isVisible()) await closeButton.click()
 }
 
 export function integrationExecutablePath(platform = process.platform): string {

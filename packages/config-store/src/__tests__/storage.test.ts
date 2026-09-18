@@ -1,8 +1,8 @@
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, readdir, rename, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { JsonConfigStorage, resolveConfigPath } from '../main/storage'
+import { atomicWriteFile, JsonConfigStorage, resolveConfigPath } from '../main/storage'
 
 describe('JsonConfigStorage', () => {
   let baseDir: string
@@ -28,6 +28,30 @@ describe('JsonConfigStorage', () => {
     expect(await readFile(resolveConfigPath(baseDir, location), 'utf8')).toBe(
       '{"theme":"dark","reduceMotion":true}'
     )
+  })
+
+  it('replaces an existing document after a Windows destination conflict', async () => {
+    const location = { scope: ['appearance'], key: 'settings' }
+    const filePath = resolveConfigPath(baseDir, location)
+    await storage.write(location, { theme: 'light' })
+    let renameAttempts = 0
+
+    await atomicWriteFile(filePath, '{"theme":"dark"}', {
+      platform: 'win32',
+      async rename(source, destination) {
+        renameAttempts += 1
+        if (renameAttempts === 1) {
+          const error = new Error('simulated Windows destination conflict') as NodeJS.ErrnoException
+          error.code = 'EPERM'
+          throw error
+        }
+        await rename(source, destination)
+      }
+    })
+
+    expect(renameAttempts).toBe(2)
+    expect(await readFile(filePath, 'utf8')).toBe('{"theme":"dark"}')
+    expect(await readdir(path.dirname(filePath))).toEqual(['settings.json'])
   })
 
   it('uses null for missing documents and removes a scope recursively', async () => {

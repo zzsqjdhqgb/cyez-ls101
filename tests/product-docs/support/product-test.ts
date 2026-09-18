@@ -135,6 +135,20 @@ export async function evidence(
 
 export async function prepareProductPage(page: Page): Promise<void> {
   await page.clock.setFixedTime(new Date('2026-01-15T08:00:00.000Z'))
+  await page.evaluate(installDeterministicRandomUuid)
+}
+
+export function installDeterministicRandomUuid(
+  cryptoObject: { randomUUID(): string } = globalThis.crypto
+): void {
+  let sequence = 0
+  Object.defineProperty(cryptoObject, 'randomUUID', {
+    configurable: true,
+    value: () => {
+      sequence += 1
+      return `00000000-0000-4000-8000-${sequence.toString(16).padStart(12, '0')}`
+    }
+  })
 }
 
 function validateManualDefinition(definition: ProductManualDefinition): void {

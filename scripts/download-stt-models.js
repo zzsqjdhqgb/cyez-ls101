@@ -4,31 +4,35 @@
  */
 
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/explicit-function-return-type */
-const { createHash } = require('node:crypto')
 const { execFileSync } = require('node:child_process')
 const {
-  createReadStream,
-  createWriteStream,
   existsSync,
+  lstatSync,
   mkdirSync,
   readFileSync,
   renameSync,
   rmSync,
-  statSync,
   unlinkSync,
   writeFileSync
 } = require('node:fs')
-const { once } = require('node:events')
-const { finished } = require('node:stream/promises')
-const { basename, dirname, join } = require('node:path')
+const { basename, join } = require('node:path')
+const {
+  assertAssetFile,
+  cleanUnexpectedEntries,
+  ensureAssetSet,
+  recordAssetSetVerification,
+  sha256File,
+  verifyAssetSet
+} = require('./asset-integrity.js')
+const { downloadVerifiedAsset, validateContentRange } = require('./download-asset.js')
 
-const isTTY = process.stdout.isTTY
-const ROOT_DIR = process.cwd()
+const ROOT_DIR = join(__dirname, '..')
+const STT_ROOT = join(ROOT_DIR, 'externals', 'ai', 'stt')
 const STT_DIR = join(ROOT_DIR, 'externals', 'ai', 'stt', 'model')
 const DOWNLOAD_DIR = join(ROOT_DIR, 'externals', 'ai', 'stt', 'downloads')
+const STATE_DIRECTORY = join(ROOT_DIR, 'externals', 'ai', '.setup-verification')
 const RELEASE_BASE_URL = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models'
 const MODEL_DIRECTORY = 'sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25'
-const MODEL_MARKER = '.source-verification.json'
 const MANIFEST_PATH = join(__dirname, 'stt-model-assets.json')
 const PINNED_MANIFEST = readManifest()
 const ASSETS = PINNED_MANIFEST.assets
@@ -63,8 +67,11 @@ function validateFileMetadata(file, label) {
   const name = file?.filename || file?.path
   if (typeof name !== 'string' || name.length === 0) throw new Error(`${label} 文件名无效`)
   if (!Number.isSafeInteger(file.size) || file.size <= 0) throw new Error(`${label} 文件大小无效`)
-  if (file.sha256 !== undefined && !/^[a-f0-9]{64}$/.test(file.sha256)) {
+  if (!/^[a-f0-9]{64}$/.test(file.sha256 || '')) {
     throw new Error(`${label} SHA-256 无效`)
+  }
+  if (file.sourceBlobId !== undefined && !/^[a-f0-9]{40}$/.test(file.sourceBlobId)) {
+    throw new Error(`${label} source blob ID 无效`)
   }
 }
 
@@ -106,12 +113,19 @@ function officialMetadataFromResponses(githubRelease, huggingFaceModel) {
   const modelFiles = REQUIRED_MODEL_FILES.map((pinned) => {
     const upstream = huggingFaceFiles.find((file) => file.rfilename === pinned.path)
     if (!upstream) throw new Error(`Hugging Face 模型缺少文件：${pinned.path}`)
+    const upstreamSha256 = upstream.lfs?.sha256
     const file = { path: upstream.rfilename, size: upstream.size }
-    if (pinned.sha256) {
-      if (!/^[a-f0-9]{64}$/.test(upstream.lfs?.sha256 || '')) {
-        throw new Error(`Hugging Face 未提供 LFS SHA-256：${pinned.path}`)
+    if (upstreamSha256 !== undefined) {
+      if (!/^[a-f0-9]{64}$/.test(upstreamSha256)) {
+        throw new Error(`Hugging Face LFS SHA-256 无效：${pinned.path}`)
       }
-      file.sha256 = upstream.lfs.sha256
+      file.sha256 = upstreamSha256
+    } else {
+      if (!pinned.sourceBlobId || upstream.blobId !== pinned.sourceBlobId) {
+        throw new Error(`Hugging Face 普通 Git 资产发生变化：${pinned.path}`)
+      }
+      file.sha256 = pinned.sha256
+      file.sourceBlobId = upstream.blobId
     }
     return file
   })
@@ -149,7 +163,7 @@ function compareFileMetadata(label, expected, actual, differences) {
     differences.push(`${label} 缺失`)
     return
   }
-  for (const property of ['filename', 'path', 'size', 'sha256']) {
+  for (const property of ['filename', 'path', 'size', 'sha256', 'sourceBlobId']) {
     if (expected[property] !== actual[property]) {
       differences.push(`${label}.${property}: ${expected[property]} -> ${actual[property]}`)
     }
@@ -166,139 +180,15 @@ function writeManifest(manifest) {
   }
 }
 
-function assetUrl(asset) {
-  return asset.url || `${RELEASE_BASE_URL}/${asset.filename}`
-}
-
-async function sha256File(path) {
-  const hash = createHash('sha256')
-  for await (const chunk of createReadStream(path)) hash.update(chunk)
-  return hash.digest('hex')
-}
-
 async function verifyFile(path, expected, options = {}) {
   if (!existsSync(path)) throw new Error(`文件不存在：${path}`)
-  const stat = statSync(path)
-  if (!stat.isFile()) throw new Error(`不是普通文件：${path}`)
+  const stat = lstatSync(path)
+  if (!stat.isFile() || stat.isSymbolicLink()) throw new Error(`不是普通文件：${path}`)
   if (stat.size !== expected.size) {
     throw new Error(`文件大小不匹配：${path}（应为 ${expected.size}，实际为 ${stat.size}）`)
   }
-  if (expected.sha256 && options.hash !== false) {
-    const actual = await sha256File(path)
-    if (actual !== expected.sha256) {
-      throw new Error(`SHA-256 不匹配：${path}（应为 ${expected.sha256}，实际为 ${actual}）`)
-    }
-  }
-}
-
-function createProgressReporter(label, total) {
-  let lastPercent = -1
-  return (received) => {
-    if (!isTTY || total <= 0) return
-    const percent = Math.min(100, Math.floor((received / total) * 100))
-    if (percent === lastPercent && received < total) return
-    lastPercent = percent
-    process.stdout.write(`\r${label} ${percent}% (${formatBytes(received)}/${formatBytes(total)})`)
-  }
-}
-
-function formatBytes(value) {
-  if (value < 1024) return `${value} B`
-  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KiB`
-  return `${(value / 1024 / 1024).toFixed(1)} MiB`
-}
-
-async function downloadVerifiedAsset(asset, destination, label) {
-  mkdirSync(dirname(destination), { recursive: true })
-
-  if (existsSync(destination)) {
-    try {
-      await verifyFile(destination, asset)
-      console.log(`${label} verified (${asset.sha256})`)
-      return { downloaded: false, path: destination }
-    } catch (error) {
-      console.warn(`${label} cached file is invalid: ${error.message}`)
-      unlinkSync(destination)
-    }
-  }
-
-  const partialPath = `${destination}.part`
-  let offset = existsSync(partialPath) ? statSync(partialPath).size : 0
-  if (offset > asset.size) {
-    console.warn(`${label} partial file is too large; restarting download`)
-    unlinkSync(partialPath)
-    offset = 0
-  }
-
-  if (offset === asset.size) {
-    try {
-      await verifyFile(partialPath, asset)
-      renameSync(partialPath, destination)
-      console.log(`${label} verified (${asset.sha256})`)
-      return { downloaded: true, path: destination }
-    } catch (error) {
-      console.warn(`${label} completed partial file is invalid: ${error.message}`)
-      unlinkSync(partialPath)
-      offset = 0
-    }
-  }
-
-  const headers = offset > 0 ? { Range: `bytes=${offset}-` } : undefined
-  if (offset > 0) console.log(`${label} resuming at ${formatBytes(offset)}...`)
-  else console.log(`${label} downloading ${formatBytes(asset.size)}...`)
-
-  const response = await fetch(assetUrl(asset), { headers })
-  if (!response.ok) throw new Error(`下载失败：${assetUrl(asset)}（HTTP ${response.status}）`)
-  if (!response.body) throw new Error(`下载响应没有内容：${assetUrl(asset)}`)
-
-  const append = offset > 0 && response.status === 206
-  if (offset > 0 && !append) {
-    console.warn(`${label} server did not accept the range request; restarting download`)
-    unlinkSync(partialPath)
-    offset = 0
-  }
-  if (response.status === 206) {
-    validateContentRange(response.headers.get('content-range'), offset, asset.size)
-  }
-
-  const output = createWriteStream(partialPath, { flags: append ? 'a' : 'w' })
-  const outputFinished = finished(output)
-  const reportProgress = createProgressReporter(label, asset.size)
-  let received = offset
-  try {
-    const reader = response.body.getReader()
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      if (!output.write(value)) await once(output, 'drain')
-      received += value.byteLength
-      reportProgress(received)
-    }
-    output.end()
-    await outputFinished
-  } catch (error) {
-    output.destroy()
-    await outputFinished.catch(() => undefined)
-    throw error
-  }
-  if (isTTY) process.stdout.write('\n')
-
-  try {
-    await verifyFile(partialPath, asset)
-  } catch (error) {
-    unlinkSync(partialPath)
-    throw error
-  }
-  renameSync(partialPath, destination)
-  console.log(`${label} verified (${asset.sha256})`)
-  return { downloaded: true, path: destination }
-}
-
-function validateContentRange(value, offset, total) {
-  const match = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(value || '')
-  if (!match || Number(match[1]) !== offset || Number(match[3]) !== total) {
-    throw new Error(`断点续传响应无效：${value || '缺少 Content-Range'}`)
-  }
+  if (options.hash !== false)
+    await assertAssetFile(path, { ...expected, path: expected.path || path })
 }
 
 function cleanupExtractedDir(dir) {
@@ -314,61 +204,38 @@ function cleanupExtractedDir(dir) {
 
 async function verifyExtractedModel(dir, options = {}) {
   for (const file of REQUIRED_MODEL_FILES) {
-    await verifyFile(join(dir, file.path), file, { hash: options.hash === true })
+    await verifyFile(join(dir, file.path), file, { hash: options.hash !== false })
   }
 }
 
-function hasVerificationMarker(dir) {
-  const path = join(dir, MODEL_MARKER)
-  if (!existsSync(path)) return false
-  try {
-    const marker = JSON.parse(readFileSync(path, 'utf8'))
-    return (
-      marker.schemaVersion === 1 &&
-      marker.archive === ASSETS.qwen3Archive.filename &&
-      marker.archiveSha256 === ASSETS.qwen3Archive.sha256
-    )
-  } catch {
-    return false
-  }
+async function verifyInstalledModel(dir, options = {}) {
+  return verifyAssetSet({
+    boundary: options.boundary ?? ROOT_DIR,
+    root: dir,
+    statePath: options.statePath ?? join(STATE_DIRECTORY, 'qwen3-asr-model.json'),
+    assets: REQUIRED_MODEL_FILES,
+    exact: true,
+    forceHash: options.forceHash === true,
+    cleanUnexpected: true
+  })
 }
 
-function writeVerificationMarker(dir) {
-  writeFileSync(
-    join(dir, MODEL_MARKER),
-    `${JSON.stringify(
-      {
-        schemaVersion: 1,
-        archive: ASSETS.qwen3Archive.filename,
-        archiveSha256: ASSETS.qwen3Archive.sha256,
-        verifiedFiles: REQUIRED_MODEL_FILES.filter((file) => file.sha256).map((file) => ({
-          path: file.path,
-          sha256: file.sha256
-        }))
-      },
-      null,
-      2
-    )}\n`
-  )
+async function modelIsValid(dir, fullHashVerification = false) {
+  const status = await verifyInstalledModel(dir, { forceHash: fullHashVerification })
+  return status.valid
 }
 
-async function modelIsValid(dir, fullHashVerification) {
-  if (!hasVerificationMarker(dir)) return false
-  try {
-    await verifyExtractedModel(dir, { hash: fullHashVerification })
-    return true
-  } catch (error) {
-    console.warn(`[stt] installed Qwen3 ASR model is invalid: ${error.message}`)
-    return false
-  }
-}
-
-async function extractVerifiedModel(archivePath, destination) {
+async function extractVerifiedModel(
+  archivePath,
+  destination,
+  statePath = join(STATE_DIRECTORY, 'qwen3-asr-model.json')
+) {
   const extractionRoot = join(STT_DIR, `.extract-${MODEL_DIRECTORY}-${process.pid}`)
   const previousInstallation = `${destination}.previous-${process.pid}`
   rmSync(extractionRoot, { recursive: true, force: true })
   rmSync(previousInstallation, { recursive: true, force: true })
   mkdirSync(extractionRoot, { recursive: true })
+  let discardPreviousInstallation = false
   try {
     console.log(`[stt] extracting ${basename(archivePath)}...`)
     execFileSync('tar', ['-xjf', archivePath, '-C', extractionRoot], { stdio: 'inherit' })
@@ -376,12 +243,14 @@ async function extractVerifiedModel(archivePath, destination) {
     cleanupExtractedDir(candidate)
     console.log('[stt] verifying extracted Qwen3 ASR files...')
     await verifyExtractedModel(candidate, { hash: true })
-    writeVerificationMarker(candidate)
+    await cleanUnexpectedEntries(candidate, REQUIRED_MODEL_FILES)
 
     // Keep the current installation recoverable until the verified replacement is in place.
+    let preservedPreviousInstallation = false
     if (existsSync(destination)) {
       try {
         renameSync(destination, previousInstallation)
+        preservedPreviousInstallation = true
       } catch (error) {
         if (error.code !== 'EACCES' && error.code !== 'EPERM') throw error
         console.warn('[stt] cannot preserve the invalid previous model directory; removing it')
@@ -390,27 +259,42 @@ async function extractVerifiedModel(archivePath, destination) {
     }
     try {
       renameSync(candidate, destination)
+      await recordAssetSetVerification({
+        boundary: ROOT_DIR,
+        root: destination,
+        statePath,
+        assets: REQUIRED_MODEL_FILES,
+        exact: true
+      })
+      discardPreviousInstallation = true
       rmSync(previousInstallation, { recursive: true, force: true })
     } catch (error) {
-      if (existsSync(previousInstallation) && !existsSync(destination)) {
+      if (preservedPreviousInstallation && existsSync(previousInstallation)) {
+        rmSync(destination, { recursive: true, force: true })
         renameSync(previousInstallation, destination)
+        discardPreviousInstallation = true
       }
       throw error
     }
   } finally {
     rmSync(extractionRoot, { recursive: true, force: true })
-    rmSync(previousInstallation, { recursive: true, force: true })
+    if (discardPreviousInstallation) {
+      rmSync(previousInstallation, { recursive: true, force: true })
+    }
   }
 }
 
 function parseOptions(argv) {
-  const allowed = new Set(['--verify', '--refresh-metadata'])
+  const allowed = new Set(['--verify', '--verify-upstream', '--refresh-metadata'])
   const unknown = argv.filter((argument) => !allowed.has(argument))
   if (unknown.length > 0) throw new Error(`未知参数：${unknown.join(', ')}`)
   const verify = argv.includes('--verify')
+  const verifyUpstream = argv.includes('--verify-upstream')
   const refreshMetadata = argv.includes('--refresh-metadata')
-  if (verify && refreshMetadata) throw new Error('--verify 不能与 --refresh-metadata 同时使用')
-  return { verify, refreshMetadata }
+  if ((verify || verifyUpstream) && refreshMetadata) {
+    throw new Error('--refresh-metadata 不能与验证参数同时使用')
+  }
+  return { verify, verifyUpstream, refreshMetadata }
 }
 
 async function main(argv = process.argv.slice(2)) {
@@ -423,42 +307,61 @@ async function main(argv = process.argv.slice(2)) {
     return
   }
 
-  try {
+  if (options.verifyUpstream) {
     const official = await fetchOfficialMetadata()
     assertMetadataMatches(PINNED_MANIFEST, official)
     console.log('[stt] official API metadata matches the pinned manifest')
-  } catch (error) {
-    if (error instanceof MetadataMismatchError) throw error
-    console.warn(`[stt] official metadata unavailable; using pinned manifest: ${error.message}`)
   }
-  mkdirSync(STT_DIR, { recursive: true })
 
-  const vad = await downloadVerifiedAsset(
-    ASSETS.vad,
-    join(STT_DIR, ASSETS.vad.filename),
-    '[stt] silero_vad'
-  )
-  const archive = await downloadVerifiedAsset(
-    ASSETS.qwen3Archive,
-    join(DOWNLOAD_DIR, ASSETS.qwen3Archive.filename),
-    '[stt] qwen3-asr-0.6B archive'
-  )
+  const downloadableAssets = [
+    {
+      ...ASSETS.vad,
+      path: `model/${ASSETS.vad.filename}`,
+      url: `${RELEASE_BASE_URL}/${ASSETS.vad.filename}`,
+      label: '[stt] silero_vad'
+    },
+    {
+      ...ASSETS.qwen3Archive,
+      path: `downloads/${ASSETS.qwen3Archive.filename}`,
+      url: `${RELEASE_BASE_URL}/${ASSETS.qwen3Archive.filename}`,
+      label: '[stt] qwen3-asr-0.6B archive'
+    }
+  ]
+  const downloads = await ensureAssetSet({
+    boundary: ROOT_DIR,
+    root: STT_ROOT,
+    statePath: join(STATE_DIRECTORY, 'qwen3-asr-downloads.json'),
+    assets: downloadableAssets,
+    exact: false,
+    forceHash: options.verify,
+    repair: (asset, destination) => downloadVerifiedAsset(asset, destination, asset.label)
+  })
 
   const modelDir = join(STT_DIR, MODEL_DIRECTORY)
-  const installed = await modelIsValid(modelDir, options.verify)
-  if (installed) {
-    console.log(`[stt] Qwen3 ASR model verified${options.verify ? ' with full hashes' : ''}`)
+  const modelStatePath = join(STATE_DIRECTORY, 'qwen3-asr-model.json')
+  const installed = await verifyInstalledModel(modelDir, {
+    forceHash: options.verify,
+    statePath: modelStatePath
+  })
+  if (installed.valid) {
+    console.log(
+      `[stt] Qwen3 ASR model ${installed.method === 'fast' ? 'quickly' : 'fully'} verified`
+    )
   } else {
-    await extractVerifiedModel(archive.path, modelDir)
-    console.log('[stt] Qwen3 ASR model installed and verified')
+    await extractVerifiedModel(
+      join(DOWNLOAD_DIR, ASSETS.qwen3Archive.filename),
+      modelDir,
+      modelStatePath
+    )
+    console.log('[stt] Qwen3 ASR model restored from the verified archive')
   }
 
-  const downloaded = Number(vad.downloaded) + Number(archive.downloaded)
-  console.log(
-    downloaded === 0
-      ? '[stt] all assets cached and verified'
-      : `[stt] ${downloaded} asset${downloaded === 1 ? '' : 's'} downloaded and verified`
-  )
+  if (downloads.method === 'fast') console.log('[stt] VAD and archive quickly verified')
+  else if (downloads.repaired > 0) {
+    console.log(
+      `[stt] ${downloads.repaired} source asset${downloads.repaired === 1 ? '' : 's'} restored`
+    )
+  } else console.log('[stt] VAD and archive fully verified')
 }
 
 if (require.main === module) {

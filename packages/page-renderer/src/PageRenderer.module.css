@@ -6,6 +6,7 @@
   color: #171b1b;
   background: #fff;
   isolation: isolate;
+  user-select: none;
 }
 
 .scaledPage {

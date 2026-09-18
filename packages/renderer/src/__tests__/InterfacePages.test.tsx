@@ -652,7 +652,6 @@ describe('Interface pages', () => {
     )
 
     expect(await screen.findByRole('tab', { name: '题型定义' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('tab', { name: '题型定义' }))
     fireEvent.click(screen.getByRole('button', { name: '导出题型' }))
 
     expect(await screen.findByRole('heading', { name: '选择要交付的题组' })).toBeInTheDocument()

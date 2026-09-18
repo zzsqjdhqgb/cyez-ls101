@@ -12,6 +12,7 @@ const { join } = require('node:path')
 const { afterEach, test } = require('node:test')
 const {
   PINNED_MANIFEST,
+  REQUIRED_MODEL_FILES,
   assertMetadataMatches,
   downloadVerifiedAsset,
   parseOptions,
@@ -40,6 +41,10 @@ test('validates file size and SHA-256', async () => {
     verifyFile(path, { size: content.length, sha256: '0'.repeat(64) }),
     /SHA-256/
   )
+})
+
+test('pins a SHA-256 for every installed Qwen3 ASR file', () => {
+  for (const file of REQUIRED_MODEL_FILES) assert.match(file.sha256, /^[a-f0-9]{64}$/)
 })
 
 test('resumes a partial download and verifies it before publishing', async () => {
@@ -81,13 +86,27 @@ test('resumes a partial download and verifies it before publishing', async () =>
 test('validates range responses and command-line options', () => {
   validateContentRange('bytes 10-19/20', 10, 20)
   assert.throws(() => validateContentRange('bytes 0-19/20', 10, 20), /断点续传响应无效/)
-  assert.deepEqual(parseOptions([]), { verify: false, refreshMetadata: false })
-  assert.deepEqual(parseOptions(['--verify']), { verify: true, refreshMetadata: false })
+  assert.deepEqual(parseOptions([]), {
+    verify: false,
+    verifyUpstream: false,
+    refreshMetadata: false
+  })
+  assert.deepEqual(parseOptions(['--verify']), {
+    verify: true,
+    verifyUpstream: false,
+    refreshMetadata: false
+  })
+  assert.deepEqual(parseOptions(['--verify-upstream']), {
+    verify: false,
+    verifyUpstream: true,
+    refreshMetadata: false
+  })
   assert.deepEqual(parseOptions(['--refresh-metadata']), {
     verify: false,
+    verifyUpstream: false,
     refreshMetadata: true
   })
-  assert.throws(() => parseOptions(['--verify', '--refresh-metadata']), /不能与 --refresh-metadata/)
+  assert.throws(() => parseOptions(['--verify', '--refresh-metadata']), /不能与验证参数/)
   assert.throws(() => parseOptions(['--unknown']), /未知参数/)
 })
 

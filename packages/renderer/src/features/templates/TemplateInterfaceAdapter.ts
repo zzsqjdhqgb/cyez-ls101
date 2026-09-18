@@ -23,7 +23,8 @@ export function createTemplateInterfaceDependencies(
       if (!details) return null
       return application.published.getVarManifest(interfaceId)
     },
-    listInterfaceInstances: (interfaceId) => application.published.listInstances(interfaceId),
+    listInterfaceInstances: (interfaceId) =>
+      application.published.listInstances(interfaceId, { completeOnly: true }),
     async locateInterfaceInstance(instanceId) {
       const located = await application.instances.locate(instanceId)
       return located

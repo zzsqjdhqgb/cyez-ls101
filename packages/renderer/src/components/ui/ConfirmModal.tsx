@@ -9,6 +9,7 @@ interface ConfirmModalProps {
   title: string
   message: string
   confirmLabel?: string
+  cancelLabel?: string
   secondaryLabel?: string
   danger?: boolean
   error?: string | null
@@ -24,6 +25,7 @@ export function ConfirmModal({
   title,
   message,
   confirmLabel = '确认',
+  cancelLabel = '取消',
   secondaryLabel,
   danger = false,
   error = null,
@@ -91,7 +93,7 @@ export function ConfirmModal({
                 <div className={styles.actions}>
                   <AlertDialog.Cancel asChild>
                     <Button disabled={busy} variant="ghost">
-                      取消
+                      {cancelLabel}
                     </Button>
                   </AlertDialog.Cancel>
                   {secondaryLabel && onSecondary ? (

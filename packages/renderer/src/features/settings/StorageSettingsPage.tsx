@@ -139,6 +139,12 @@ export function StorageSettingsPage(): JSX.Element {
   const usesDefault = sameDisplayPath(info.currentPath, info.defaultPath)
   const usingExisting = candidate?.kind === 'managed'
   const oldDataDirectory = info.oldDataDirectory
+  const locationChangeBlocked = oldDataDirectory !== null || info.legacyCleanupPending
+  const locationChangeTitle = info.legacyCleanupPending
+    ? '请先完成旧版数据归档清理'
+    : oldDataDirectory
+      ? '请先删除旧数据目录'
+      : undefined
   return (
     <SettingsContent>
       {error ? (
@@ -159,17 +165,17 @@ export function StorageSettingsPage(): JSX.Element {
               {info.currentPath}
             </code>
             <Button
-              disabled={busy || oldDataDirectory !== null}
+              disabled={busy || locationChangeBlocked}
               icon={HardDrive}
-              title={oldDataDirectory ? '请先删除旧数据目录' : undefined}
+              title={locationChangeTitle}
               onClick={() => void choose()}
             >
               更改位置
             </Button>
             <Button
-              disabled={busy || usesDefault || oldDataDirectory !== null}
+              disabled={busy || usesDefault || locationChangeBlocked}
               icon={RotateCcw}
-              title={oldDataDirectory ? '请先删除旧数据目录' : undefined}
+              title={locationChangeTitle}
               variant="secondary"
               onClick={() => void chooseDefault()}
             >
@@ -206,7 +212,8 @@ export function StorageSettingsPage(): JSX.Element {
         ) : null}
       </SettingsSection>
       <p className={styles.note}>
-        Electron 缓存和可重新生成的 Qwen TTS 运行文件不会移动。旧数据删除前不能再次更改位置。
+        Electron 缓存和可重新生成的 Qwen TTS
+        运行文件不会移动。旧版数据归档清理或旧数据目录删除完成前不能更改位置。
       </p>
       <ConfirmModal
         busy={busy}

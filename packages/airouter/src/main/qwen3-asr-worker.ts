@@ -5,6 +5,9 @@ import { extname, join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { parentPort, workerData } from 'node:worker_threads'
+import { installSourceMapSupport } from './source-map-support'
+
+installSourceMapSupport()
 
 const require = createRequire(import.meta.url)
 const sherpaOnnx = require('sherpa-onnx-node') as {

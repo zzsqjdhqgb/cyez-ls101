@@ -147,7 +147,7 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
       throw new Error('Qwen TTS 模型包缺少 TTS、语音解码器或音色资产')
     }
     const parameters = parseRuntimeParameters(model.parameters)
-    const backend = request.provider.backend ?? 'cpu'
+    const backend = 'cpu'
     const [ttsModelPath, tokenizerPath, speakerPath] = await Promise.all([
       request.resolveAssetPath(ttsModelAsset),
       request.resolveAssetPath(tokenizerAsset),

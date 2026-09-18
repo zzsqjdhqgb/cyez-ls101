@@ -65,6 +65,14 @@ export type {
 export type { TaskProgressItem, TaskProgressSnapshot, TaskProgressHandle } from './task-progress'
 export { APP_INFO_CHANNELS } from './app-info'
 export type { AppInfoBridge } from './app-info'
+export { LICENSE_CHANNELS } from './license'
+export type {
+  LicenseActivationFailureReason,
+  LicenseActivationResult,
+  LicenseBridge,
+  LicenseState,
+  LicenseStatus
+} from './license'
 export { DATA_DIRECTORY_CHANNELS } from './data-directory'
 export type {
   DataDirectoryBridge,
@@ -73,5 +81,14 @@ export type {
   DataDirectoryInfo,
   DataDirectoryOldLocation
 } from './data-directory'
+export { LEGACY_DATA_CHANNELS } from './legacy-data'
+export type {
+  LegacyDataBridge,
+  LegacyDataInfo,
+  LegacyDataSourceInfo,
+  LegacyDataStatus
+} from './legacy-data'
 export { WINDOW_CONTROL_CHANNELS, WINDOW_CONTROL_EVENTS } from './window-controls'
 export type { WindowControlsBridge } from './window-controls'
+export { STARTUP_CHANNELS } from './startup'
+export type { StartupBridge } from './startup'

@@ -36,3 +36,6 @@ docs/product/**/*.product-docs-backup
 .gop-research/**/*.wav
 .gop-research/**/*.webm
 .gop-research/**/__pycache__/
+
+# Local TextPA environment overrides
+/textpa/.env.local

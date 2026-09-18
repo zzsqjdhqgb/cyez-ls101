@@ -1,5 +1,5 @@
 export const STARTUP_LOGO_ANIMATION_DURATION_MS = 1_500
-export const STARTUP_PROGRESS_DELAY_MS = 1_000
+export const STARTUP_COMPLETION_DELAY_MS = 1_000
 
 interface StartupLogoMotionOptions {
   logoMarkup: string
@@ -24,15 +24,12 @@ export function applyStartupLogoMotion(
 
   const style = document.createElement('style')
   style.dataset.startupLogoMotion = ''
-  style.media = '(prefers-reduced-motion: no-preference)'
   style.textContent = motionCss
   document.head.appendChild(style)
   logo.replaceChildren(document.importNode(svg, true))
 }
 
 export function waitForStartupLogoAnimation(root: HTMLElement): Promise<void> {
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return Promise.resolve()
-
   const animatedLogo = root.querySelector<SVGElement>('#logo-lockup')
   if (!animatedLogo) return wait(STARTUP_LOGO_ANIMATION_DURATION_MS)
 
@@ -52,13 +49,8 @@ export function waitForStartupLogoAnimation(root: HTMLElement): Promise<void> {
   })
 }
 
-export function waitForStartupProgressDelay(): Promise<void> {
-  return wait(STARTUP_PROGRESS_DELAY_MS)
-}
-
-export function showStartupProgress(root: HTMLElement): void {
-  const progress = root.querySelector<HTMLElement>('[data-startup-progress]')
-  if (progress) progress.hidden = false
+export function waitForStartupCompletionDelay(): Promise<void> {
+  return wait(STARTUP_COMPLETION_DELAY_MS)
 }
 
 function wait(durationMs: number): Promise<void> {

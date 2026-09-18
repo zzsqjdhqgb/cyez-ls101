@@ -29,7 +29,7 @@ export function SubmissionMarkdown({
   }
   const Link = (props: AnchorHTMLAttributes<HTMLAnchorElement>): JSX.Element => {
     const href = resolveResourceUrl(props.href, resourceUrls)
-    return <a {...props} href={href} rel="noreferrer" target="_blank" />
+    return <a {...props} draggable={false} href={href} rel="noreferrer" target="_blank" />
   }
 
   return (

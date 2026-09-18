@@ -43,7 +43,7 @@ describe('Template 工作文档与函数资源身份', () => {
     expect(document.templateId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     )
-    expect(document.content).toEqual(content)
+    expect(document.content).toEqual({ ...content, tags: [] })
     expect(document.resources).toEqual(resources)
     expect(document.editorState).toEqual(editorState)
 

@@ -48,6 +48,69 @@
   line-height: 1.4;
 }
 
+.releaseLink {
+  display: grid;
+  width: 100%;
+  min-height: 68px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  color: inherit;
+  background: var(--color-surface);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.releaseLink:hover {
+  border-color: var(--color-accent);
+  background: var(--color-surface-hover);
+}
+
+.releaseLinkIcon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  place-items: center;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.releaseLinkIcon svg,
+.releaseLink > svg {
+  width: 17px;
+  height: 17px;
+}
+
+.releaseLink > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.releaseLink strong {
+  color: var(--color-text-strong);
+  font-size: 13px;
+}
+
+.releaseLink small {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.releaseLink > svg {
+  color: var(--color-text-faint);
+}
+
 .personRow {
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr) auto;

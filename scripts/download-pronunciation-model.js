@@ -5,14 +5,21 @@
 
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/explicit-function-return-type */
 const { readFileSync } = require('node:fs')
-const { dirname, join } = require('node:path')
-const { mkdirSync } = require('node:fs')
-const { downloadVerifiedAsset } = require('./download-stt-models.js')
+const { join } = require('node:path')
+const { ensureAssetSet } = require('./asset-integrity.js')
+const { downloadVerifiedAsset } = require('./download-asset.js')
 
-const ROOT_DIR = process.cwd()
+const ROOT_DIR = join(__dirname, '..')
 const MANIFEST_PATH = join(__dirname, 'pronunciation-model-assets.json')
 const MODEL_DIRECTORY = 'facebook-wav2vec2-lv-60-espeak-cv-ft-int8'
 const MODEL_DIR = join(ROOT_DIR, 'externals', 'ai', 'pronunciation', 'model', MODEL_DIRECTORY)
+const STATE_PATH = join(
+  ROOT_DIR,
+  'externals',
+  'ai',
+  '.setup-verification',
+  'pronunciation-model.json'
+)
 const PINNED_MANIFEST = readManifest()
 
 class MetadataMismatchError extends Error {}
@@ -56,12 +63,12 @@ function isSafeRelativePath(value) {
   )
 }
 
-function modelFileUrl(file) {
-  return `https://huggingface.co/${PINNED_MANIFEST.sourceModelId}/resolve/${PINNED_MANIFEST.revision}/${file.path}`
+function modelFileUrl(file, manifest = PINNED_MANIFEST) {
+  return `https://huggingface.co/${manifest.sourceModelId}/resolve/${manifest.revision}/${file.path}`
 }
 
-async function fetchOfficialMetadata() {
-  const response = await fetch(PINNED_MANIFEST.sourceApi)
+async function fetchOfficialMetadata(manifest = PINNED_MANIFEST) {
+  const response = await fetch(manifest.sourceApi)
   if (!response.ok) throw new Error(`Hugging Face API 请求失败（HTTP ${response.status}）`)
   return response.json()
 }
@@ -93,41 +100,51 @@ function assertMetadataMatches(manifest, official) {
 }
 
 function parseOptions(argv) {
-  const allowed = new Set(['--verify'])
+  const allowed = new Set(['--verify', '--verify-upstream'])
   const unknown = argv.filter((argument) => !allowed.has(argument))
   if (unknown.length > 0) throw new Error(`未知参数：${unknown.join(', ')}`)
-  return { verify: argv.includes('--verify') }
+  return {
+    verify: argv.includes('--verify'),
+    verifyUpstream: argv.includes('--verify-upstream')
+  }
 }
 
-async function main(argv = process.argv.slice(2)) {
-  parseOptions(argv)
-  try {
-    const official = await fetchOfficialMetadata()
-    assertMetadataMatches(PINNED_MANIFEST, official)
+async function main(argv = process.argv.slice(2), overrides = {}) {
+  const options = parseOptions(argv)
+  const manifest = overrides.manifest ?? PINNED_MANIFEST
+  validateManifest(manifest)
+  if (options.verifyUpstream) {
+    const official = await fetchOfficialMetadata(manifest)
+    assertMetadataMatches(manifest, official)
     console.log('[pronunciation] official model metadata matches the pinned manifest')
-  } catch (error) {
-    if (error instanceof MetadataMismatchError) throw error
-    console.warn(
-      `[pronunciation] official metadata unavailable; using pinned manifest: ${error.message}`
-    )
   }
 
-  let downloaded = 0
-  for (const file of PINNED_MANIFEST.files) {
-    const destination = join(MODEL_DIR, file.path)
-    mkdirSync(dirname(destination), { recursive: true })
-    const result = await downloadVerifiedAsset(
-      { ...file, url: modelFileUrl(file) },
-      destination,
-      `[pronunciation] ${file.path}`
+  const assets = manifest.files.map((file) => ({
+    ...file,
+    url: overrides.urlForFile?.(file) ?? modelFileUrl(file, manifest)
+  }))
+  const result = await ensureAssetSet({
+    boundary: overrides.boundary ?? ROOT_DIR,
+    root: overrides.modelDir ?? MODEL_DIR,
+    statePath: overrides.statePath ?? STATE_PATH,
+    assets,
+    exact: true,
+    forceHash: options.verify,
+    repair: (asset, destination) =>
+      downloadVerifiedAsset(
+        asset,
+        destination,
+        `[pronunciation] ${asset.path}`,
+        overrides.downloadOptions
+      )
+  })
+  if (result.method === 'fast') console.log('[pronunciation] all assets quickly verified')
+  else if (result.repaired > 0) {
+    console.log(
+      `[pronunciation] ${result.repaired} asset${result.repaired === 1 ? '' : 's'} restored`
     )
-    downloaded += Number(result.downloaded)
-  }
-  console.log(
-    downloaded === 0
-      ? '[pronunciation] all assets cached and verified'
-      : `[pronunciation] ${downloaded} asset${downloaded === 1 ? '' : 's'} downloaded and verified`
-  )
+  } else console.log('[pronunciation] all assets fully verified')
+  return result
 }
 
 if (require.main === module) {
@@ -142,6 +159,8 @@ module.exports = {
   PINNED_MANIFEST,
   assertMetadataMatches,
   isSafeRelativePath,
+  main,
+  modelFileUrl,
   parseOptions,
   validateManifest
 }

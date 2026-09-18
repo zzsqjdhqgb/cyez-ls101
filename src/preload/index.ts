@@ -2,10 +2,16 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import {
   APP_INFO_CHANNELS,
   DATA_DIRECTORY_CHANNELS,
+  LEGACY_DATA_CHANNELS,
+  LICENSE_CHANNELS,
+  STARTUP_CHANNELS,
   WINDOW_CONTROL_CHANNELS,
   WINDOW_CONTROL_EVENTS,
   type AppInfoBridge,
   type DataDirectoryBridge,
+  type LegacyDataBridge,
+  type LicenseBridge,
+  type StartupBridge,
   type WindowControlsBridge
 } from '@ls101/core-types'
 import {
@@ -53,6 +59,12 @@ import {
   type AIRouterTextRequest
 } from '@ls101/airouter/shared'
 import { CLIPBOARD_CHANNELS, type ClipboardBridge } from '@ls101/clipboard/shared'
+import {
+  LOGGER_CHANNELS,
+  validateRendererLogEvent,
+  type LogEvent,
+  type LoggerBridge
+} from '@ls101/logger/shared'
 
 const allowedChannels = new Set<FileStoreChannel>(Object.values(FILE_STORE_CHANNELS))
 const allowedBuiltinChannels = new Set<BuiltinFileStoreChannel>(
@@ -339,6 +351,27 @@ const clipboardBridge: ClipboardBridge = {
 const appInfoBridge: AppInfoBridge = {
   getVersion() {
     return ipcRenderer.invoke(APP_INFO_CHANNELS.getVersion)
+  },
+  ensureInstallationMarker() {
+    return ipcRenderer.invoke(APP_INFO_CHANNELS.ensureInstallationMarker)
+  },
+  claimReleaseNotesVersion(version: string) {
+    return ipcRenderer.invoke(APP_INFO_CHANNELS.claimReleaseNotesVersion, version)
+  }
+}
+
+const licenseBridge: LicenseBridge = {
+  getStatus() {
+    return ipcRenderer.invoke(LICENSE_CHANNELS.getStatus)
+  },
+  activate(invitationCode: string) {
+    return ipcRenderer.invoke(LICENSE_CHANNELS.activate, invitationCode)
+  },
+  deactivate() {
+    return ipcRenderer.invoke(LICENSE_CHANNELS.deactivate)
+  },
+  openActivationGuide() {
+    return ipcRenderer.invoke(LICENSE_CHANNELS.openActivationGuide)
   }
 }
 
@@ -363,6 +396,21 @@ const dataDirectoryBridge: DataDirectoryBridge = {
   },
   deleteOld() {
     return ipcRenderer.invoke(DATA_DIRECTORY_CHANNELS.deleteOld)
+  }
+}
+
+const legacyDataBridge: LegacyDataBridge = {
+  getInfo() {
+    return ipcRenderer.invoke(LEGACY_DATA_CHANNELS.getInfo)
+  },
+  exportArchive() {
+    return ipcRenderer.invoke(LEGACY_DATA_CHANNELS.exportArchive)
+  },
+  cleanup() {
+    return ipcRenderer.invoke(LEGACY_DATA_CHANNELS.cleanup)
+  },
+  retry() {
+    return ipcRenderer.invoke(LEGACY_DATA_CHANNELS.retry)
   }
 }
 
@@ -391,6 +439,24 @@ const windowControlsBridge: WindowControlsBridge = {
   }
 }
 
+const loggerBridge: LoggerBridge = {
+  write(event: LogEvent) {
+    try {
+      const result = validateRendererLogEvent(event)
+      if (result.ok) ipcRenderer.send(LOGGER_CHANNELS.write, result.event)
+    } catch (error) {
+      console.error('[logger] failed to forward renderer log event', error)
+    }
+  }
+}
+
+const startupBridge: StartupBridge = {
+  whenReady() {
+    return ipcRenderer.invoke(STARTUP_CHANNELS.whenReady)
+  }
+}
+
+contextBridge.exposeInMainWorld('startup', startupBridge)
 contextBridge.exposeInMainWorld('fileStore', fileStoreBridge)
 contextBridge.exposeInMainWorld('builtinFileStore', builtinFileStoreBridge)
 contextBridge.exposeInMainWorld('configStore', configStoreBridge)
@@ -398,5 +464,8 @@ contextBridge.exposeInMainWorld('airouter', airouterBridge)
 contextBridge.exposeInMainWorld('fileDialog', fileDialogBridge)
 contextBridge.exposeInMainWorld('imageClipboard', clipboardBridge)
 contextBridge.exposeInMainWorld('appInfo', appInfoBridge)
+contextBridge.exposeInMainWorld('license', licenseBridge)
 contextBridge.exposeInMainWorld('dataDirectory', dataDirectoryBridge)
+contextBridge.exposeInMainWorld('legacyData', legacyDataBridge)
 contextBridge.exposeInMainWorld('windowControls', windowControlsBridge)
+contextBridge.exposeInMainWorld('logger', loggerBridge)
