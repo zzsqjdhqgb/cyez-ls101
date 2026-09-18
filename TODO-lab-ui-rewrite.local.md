@@ -63,11 +63,23 @@ P4 之后 lab 侧不再触发主程序文档测试。lab 检查点（L 系列）
 - [x] P4 窗口控制共享（`@ls101/desktop-ui/main`）—— 已通过 `docs:product:check` + 手动窗口测试
 - [x] D lab 宿主窗口控制接线（`frameless` 选项 + bridge；无框切换在各端重写时开启）—— lab 集成 3/3
 - [x] D2 `@ls101/lab-renderer` 数据层（query/action/selection/format，17 用例）
-- [x] E 教师端页面契约梳理 → `TODO-lab-teacher-ui-contract.local.md`（Q1–Q15 待用户确认）
-- [ ] E2 教师端实现（等 Q1–Q15 答复）
+- [x] E 教师端页面契约梳理 → `TODO-lab-teacher-ui-contract.local.md`
+- [x] E2a 教师端外壳 + 激活页 + 连接页（列表式 + 本机服务管理弹窗）+ 无框窗口；其余页面为占位
+- [ ] E2b 教师端 试卷 / 作答 / 设备 / 维护 / 设置 页面（逐页实现 + 用户逐页验收）
 - [ ] F 学生端页面契约梳理 + 提问
 - [ ] F2 学生端实现
 - [ ] G 收尾（stories/CI/文档/typecheck）
+
+### 迭代方式（2026-09-18 用户确认）
+
+用户逐页验收、随时提出具体意见（示例：连接页要"已配置服务列表 + 同款式独立分区的本机服务条目，右侧设置按钮打开启停/卸载管理"）。
+除用户明确提出的以外，Q1–Q15 按推荐实现。
+
+### 集成测试的临时改动（页面落地后必须恢复）
+
+`tests/lab/student.spec.ts` 教师端部分：设备改名、进入维护、人工确认、重试失败项、取消测试改为等价 API 调用
+（每处都有 `TODO(lab-ui)` 注释）；`tests/lab/local-service.spec.ts` 改为从连接页的"本机服务管理"按钮进入弹窗并
+按 dialog 作用域断言。页面补齐后逐条恢复界面操作。
 
 ## 8. 关键命令
 

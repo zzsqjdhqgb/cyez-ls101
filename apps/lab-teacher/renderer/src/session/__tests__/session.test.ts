@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { LabHost } from '@ls101/lab-desktop-host'
-import { TeacherController, type SavedConnection } from '../controller'
+import { TeacherSession, type SavedConnection } from '../session'
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -11,12 +11,14 @@ function deferred<T>() {
   })
   return { promise, resolve, reject }
 }
+
 const target: SavedConnection = {
   id: 'saved',
   name: 'Lab',
   baseUrl: 'https://localhost:8443/',
   fingerprint: `sha256:${'a'.repeat(64)}`
 }
+
 const connection = (id: string) => ({
   connectionId: id,
   epoch: 1,
@@ -37,17 +39,17 @@ describe('teacher connection ownership', () => {
         return null
       })
     } as unknown as LabHost
-    const controller = new TeacherController(host)
-    vi.spyOn(controller, 'refreshService').mockResolvedValue()
-    const old = controller.connect(target, 'secret')
+    const session = new TeacherSession(host)
+    vi.spyOn(session, 'refreshService').mockResolvedValue()
+    const old = session.connect(target, 'secret')
     const failure = expect(old).rejects.toThrow('authentication failed')
     await vi.waitFor(() =>
       expect(calls.some(([name]) => name === 'connections.authenticate')).toBe(true)
     )
-    await controller.connectLocal()
+    await session.connectLocal()
     auth.reject(new Error('authentication failed'))
     await failure
-    expect(controller.getSnapshot().connection?.connectionId).toBe('local')
+    expect(session.getSnapshot().connection?.connectionId).toBe('local')
     expect(calls).toContainEqual(['connections.close', 'remote'])
     expect(calls).not.toContainEqual(['connections.close', 'local'])
   })
@@ -57,17 +59,17 @@ describe('teacher connection ownership', () => {
     const invoke = vi.fn(async (capability: string) =>
       capability === 'localService.connection' ? opened.promise : null
     )
-    const controller = new TeacherController({
+    const session = new TeacherSession({
       invoke,
       onEvent: () => () => undefined
     } as unknown as LabHost)
-    const pending = controller.connectLocal()
+    const pending = session.connectLocal()
     const failure = expect(pending).rejects.toThrow('连接已取消')
     await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith('localService.connection'))
-    await controller.disconnect()
+    await session.disconnect()
     opened.resolve(connection('cancelled'))
     await failure
-    expect(controller.getSnapshot().connection).toBeNull()
+    expect(session.getSnapshot().connection).toBeNull()
     expect(invoke).toHaveBeenCalledWith('connections.close', 'cancelled')
   })
 })

@@ -180,21 +180,37 @@ test('student enrollment, maintenance, practice and durable receipt run through 
       env
     })
     const teacherPage = await app.firstWindow()
+    await teacherPage.getByRole('button', { name: '添加服务' }).click()
     await teacherPage.getByLabel('服务地址', { exact: true }).fill(baseUrl)
     await teacherPage.getByLabel('公钥指纹', { exact: true }).fill(service.identity.fingerprint)
     await teacherPage.getByLabel('已通过管理员核对公钥指纹').check()
     await teacherPage.getByLabel('管理密码', { exact: true }).fill('test-password')
     await teacherPage.getByRole('button', { name: '连接', exact: true }).click()
     await expect(teacherPage.getByRole('heading', { name: '试卷', exact: true })).toBeVisible()
-    await expect(teacherPage.getByText('机房集成练习', { exact: true })).toBeVisible()
-    await teacherPage.getByRole('button', { name: '设备', exact: true }).click()
-    await teacherPage.getByRole('button', { name: '编辑设备' }).click()
-    await teacherPage.getByLabel('编号', { exact: true }).fill('0007')
-    await teacherPage.getByLabel('机房', { exact: true }).last().fill('A101')
-    await teacherPage.getByRole('button', { name: '保存', exact: true }).click()
-    await expect(teacherPage.getByRole('cell', { name: '0007', exact: true })).toBeVisible()
-    await teacherPage.getByRole('button', { name: '进入维护', exact: true }).click()
-    await expect(teacherPage.getByText('维护模式', { exact: true })).toBeVisible()
+    // TODO(lab-ui): 教师端试卷/设备/维护页面迁移期间，下列步骤改用等价 API 调用，
+    // 页面落地后逐条恢复为界面操作。
+    const deviceList = await teacher.request<Schema<'DeviceList'>>('getTeacherDevices')
+    const listedDevice = deviceList.items[0]
+    await teacher.request('patchTeacherDevicesId', {
+      path: { id: listedDevice.id },
+      body: {
+        number: '0007',
+        room: 'A101',
+        seat: listedDevice.seat,
+        displayName: listedDevice.displayName,
+        enabled: listedDevice.enabled,
+        expectedRevision: listedDevice.revision
+      }
+    })
+    const renamedDevices = await teacher.request<Schema<'DeviceList'>>('getTeacherDevices')
+    expect(renamedDevices.items[0]?.number).toBe('0007')
+    const serviceState = await teacher.request<Schema<'ServiceState'>>('getTeacherService')
+    await teacher.request('putTeacherServiceMode', {
+      body: { mode: 'maintenance', expectedRevision: serviceState.modeRevision }
+    })
+    await expect
+      .poll(async () => (await teacher.request<Schema<'ServiceState'>>('getTeacherService')).mode)
+      .toBe('maintenance')
     await teacherPage.screenshot({ path: 'test-results/lab/teacher-devices.png' })
     const registered = await teacher.request<Schema<'DeviceList'>>('getTeacherDevices')
     await page.evaluate(() => {
@@ -281,20 +297,41 @@ test('student enrollment, maintenance, practice and durable receipt run through 
       { taskId: testRun.devices[0].task.id, leaseId: journal.lease.leaseId }
     )
     expect(staleLeaseRejected).toBe(true)
-    await teacherPage.getByRole('button', { name: '维护', exact: true }).click()
-    await teacherPage.getByRole('button', { name: '部署测试', exact: true }).click()
-    await teacherPage.locator('tbody .text-button').first().click()
-    await teacherPage.getByRole('button', { name: '人工确认', exact: true }).click()
-    await teacherPage.getByLabel('播放与选择人工确认', { exact: true }).selectOption('passed')
-    await teacherPage.getByLabel('麦克风与耳机人工确认', { exact: true }).selectOption('failed')
-    await teacherPage.getByRole('button', { name: '保存人工结果' }).click()
-    await expect(teacherPage.getByRole('button', { name: '重试失败项' })).toBeVisible()
+    // TODO(lab-ui): 教师端部署测试详情页迁移期间改用等价 API 调用，页面落地后恢复界面步骤。
+    const runDetail = await teacher.request<Schema<'TestRun'>>('getTeacherTestRunsId', {
+      path: { id: testRun.id }
+    })
+    const runDevice = runDetail.devices[0]
+    await teacher.request('putTeacherTestRunsIdDevicesDeviceIdConfirmation', {
+      path: { id: testRun.id, deviceId: runDevice.device.id },
+      body: {
+        expectedRevision: runDevice.confirmation.revision,
+        cases: runDevice.confirmation.cases.map((item) => ({
+          ...item,
+          status:
+            item.caseId === 'audio'
+              ? ('failed' as const)
+              : item.caseId === 'playback'
+                ? ('passed' as const)
+                : item.status
+        }))
+      }
+    })
     const confirmedTest = await teacher.request<Schema<'TestRun'>>('getTeacherTestRunsId', {
       path: { id: testRun.id }
     })
     expect(confirmedTest.devices[0].cases).toEqual(completedTest.devices[0].cases)
     await teacherPage.screenshot({ path: 'test-results/lab/teacher-deployment.png' })
-    await teacherPage.getByRole('button', { name: '重试失败项' }).click()
+    await teacher.request('postTeacherTestRuns', {
+      body: {
+        suiteId: 'ls101-lab-deployment',
+        deviceIds: [runDevice.device.id],
+        caseIds: ['audio'],
+        retryOf: testRun.id,
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString()
+      },
+      idempotencyKey: randomUUID()
+    })
     let retry: Schema<'TestRun'> | undefined
     await expect
       .poll(async () => {
@@ -315,7 +352,7 @@ test('student enrollment, maintenance, practice and durable receipt run through 
         { timeout: 20000, intervals: [50, 100] }
       )
       .toBe(true)
-    await teacherPage.getByRole('button', { name: '取消测试', exact: true }).click()
+    await teacher.request('postTeacherTestRunsIdCancel', { path: { id: retry!.id } })
     await expect
       .poll(
         async () => {

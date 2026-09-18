@@ -48,11 +48,12 @@ test('service uninstall requires a stopped service and confirmation, handles fai
       env: { ...process.env, LS101_TEST_SERVICE_ROOT: root, LS101_TEST_SERVICE_MANAGEMENT: '1' }
     })
     const page = await app.firstWindow()
-    await page.getByRole('button', { name: '本机服务', exact: true }).click()
+    await page.getByRole('button', { name: '本机服务管理' }).click()
+    const localDialog = page.getByRole('dialog', { name: '本机服务' })
     const uninstall = page.getByRole('button', { name: '卸载服务', exact: true })
     await expect(uninstall).toBeDisabled()
     await page.getByRole('button', { name: '检查本机状态' }).click()
-    await expect(page.getByText('运行中', { exact: true })).toBeVisible()
+    await expect(localDialog.getByText('运行中', { exact: true })).toBeVisible()
     await expect(uninstall).toBeDisabled()
     fixture.status.state = 'stopped'
     await writeFile(filename, JSON.stringify(fixture))
@@ -71,7 +72,7 @@ test('service uninstall requires a stopped service and confirmation, handles fai
     await writeFile(filename, JSON.stringify(fixture))
     await uninstall.click()
     await confirmation.getByRole('button', { name: '确认', exact: true }).click()
-    await expect(page.getByText('未安装', { exact: true })).toBeVisible()
+    await expect(localDialog.getByText('未安装', { exact: true })).toBeVisible()
     await expect(uninstall).toBeDisabled()
     await expect(page.getByRole('button', { name: '安装程序', exact: true })).toBeEnabled()
     expect(JSON.parse(await readFile(filename, 'utf8')).uninstalled).toBe(true)
@@ -123,10 +124,12 @@ test('local teacher connection consumes the proof in main and leaves the indepen
       env: { ...process.env, LS101_TEST_SERVICE_ROOT: root }
     })
     const page = await app.firstWindow()
-    await page.getByRole('button', { name: '本机服务', exact: true }).click()
-    await page.getByRole('button', { name: '检查本机状态' }).click()
-    await expect(page.getByText('运行中', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: '本机服务管理' }).click()
+    const localDialog = page.getByRole('dialog', { name: '本机服务' })
+    await localDialog.getByRole('button', { name: '检查本机状态' }).click()
+    await expect(localDialog.getByText('运行中', { exact: true })).toBeVisible()
     await page.screenshot({ path: 'test-results/lab/teacher-local-dialog.png' })
+    await localDialog.getByRole('button', { name: '关闭对话框' }).click()
     const connected = await page.evaluate(async () =>
       (window as unknown as { lab: LabHost }).lab.invoke<{
         connectionId: string

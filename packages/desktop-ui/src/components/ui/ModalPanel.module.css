@@ -1,0 +1,48 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background: rgb(23 32 39 / 40%);
+}
+
+.panel {
+  display: flex;
+  max-height: calc(100vh - var(--space-12));
+  flex-direction: column;
+  padding: var(--space-6);
+  border-radius: var(--radius-md);
+  overflow: auto;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popover);
+}
+
+.small {
+  width: min(440px, 100%);
+}
+
+.medium {
+  width: min(560px, 100%);
+}
+
+.large {
+  width: min(880px, 100%);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.header h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 17px;
+  font-weight: 620;
+}

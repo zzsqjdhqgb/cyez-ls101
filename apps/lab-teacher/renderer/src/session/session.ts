@@ -10,22 +10,24 @@ export interface SavedConnection {
   fingerprint: string
   serverId?: string
 }
-interface Connection {
+
+export interface TeacherConnection {
   connectionId: string
   epoch: number
   info: Schema<'Info'>
 }
+
 export interface TeacherView {
   loading: boolean
   active: boolean
   connections: SavedConnection[]
   target: SavedConnection | null
-  connection: Connection | null
+  connection: TeacherConnection | null
   service: Schema<'ServiceState'> | null
   error: string | null
 }
 
-export class TeacherController {
+export class TeacherSession {
   private view: TeacherView = {
     loading: true,
     active: false,
@@ -39,32 +41,39 @@ export class TeacherController {
   private readonly requests = new Map<string, AbortController>()
   private serial = 0
   private readonly pendingKeys = new Map<string, string>()
+
   constructor(readonly host: LabHost) {}
+
   getSnapshot = (): TeacherView => this.view
+
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener)
     return () => this.listeners.delete(listener)
   }
+
   private update(change: Partial<TeacherView>): void {
     this.view = { ...this.view, ...change }
     for (const listener of this.listeners) listener()
   }
+
   async start(): Promise<void> {
     const license = await this.host.invoke<LicenseStatus>('license.status')
     this.update({ active: license.state === 'active', loading: false })
     if (this.view.active) this.update({ connections: await this.host.invoke('connections.list') })
   }
+
   async activate(code: string): Promise<void> {
     const result = await this.host.invoke<LicenseActivationResult>('license.activate', code)
     if (!result.activated)
       throw new Error(result.reason === 'expired' ? '许可已到期' : '激活码无效')
     await this.start()
   }
+
   async connect(target: SavedConnection, password: string): Promise<void> {
     const serial = ++this.serial
     await this.clearConnection()
     if (serial !== this.serial) throw new Error('连接已取消')
-    const connection = await this.host.invoke<Connection>('connections.open', target)
+    const connection = await this.host.invoke<TeacherConnection>('connections.open', target)
     try {
       await this.host.invoke('connections.authenticate', {
         connectionId: connection.connectionId,
@@ -75,12 +84,7 @@ export class TeacherController {
       await this.host.invoke('connections.save', saved)
       const connections = await this.host.invoke<SavedConnection[]>('connections.list')
       if (serial !== this.serial) throw new Error('连接已取消')
-      this.update({
-        connection,
-        target: saved,
-        error: null,
-        connections
-      })
+      this.update({ connection, target: saved, error: null, connections })
       await this.refreshService()
     } catch (error) {
       await this.host.invoke('connections.close', connection.connectionId)
@@ -88,21 +92,24 @@ export class TeacherController {
       throw error
     }
   }
+
   async disconnect(): Promise<void> {
     this.serial++
     await this.clearConnection()
   }
+
   private async clearConnection(): Promise<void> {
     for (const request of this.requests.values()) request.abort()
     const connection = this.view.connection
     this.update({ connection: null, target: null, service: null })
     if (connection) await this.host.invoke('connections.close', connection.connectionId)
   }
+
   async connectLocal(): Promise<void> {
     const serial = ++this.serial
     await this.clearConnection()
     if (serial !== this.serial) throw new Error('连接已取消')
-    const connection = await this.host.invoke<Connection>('localService.connection')
+    const connection = await this.host.invoke<TeacherConnection>('localService.connection')
     try {
       if (serial !== this.serial) throw new Error('连接已取消')
       this.update({ connection, target: null, error: null })
@@ -113,6 +120,7 @@ export class TeacherController {
       throw error
     }
   }
+
   async request<T>(operationId: OperationId, input: OperationInput = {}): Promise<T> {
     const connection = this.view.connection
     if (!connection) throw new Error('请先连接服务')
@@ -154,6 +162,7 @@ export class TeacherController {
       throw error
     }
   }
+
   async mutate<T>(operationId: OperationId, input: OperationInput = {}): Promise<T> {
     const connection = this.view.connection
     if (!connection) throw new Error('请先连接服务')
@@ -176,11 +185,13 @@ export class TeacherController {
     this.pendingKeys.delete(signature)
     return result
   }
+
   async refreshService(): Promise<void> {
     const connection = this.view.connection
     const service = await this.request<Schema<'ServiceState'>>('getTeacherService')
     if (connection === this.view.connection) this.update({ service })
   }
+
   async changeMode(mode: 'normal' | 'maintenance'): Promise<void> {
     await this.refreshService()
     try {
@@ -191,6 +202,7 @@ export class TeacherController {
       await this.refreshService()
     }
   }
+
   async importExam(): Promise<void> {
     const connection = this.view.connection!
     const archive = await this.host.invoke<{
@@ -202,12 +214,14 @@ export class TeacherController {
     if (connection !== this.view.connection) throw new Error('服务连接已切换')
     await this.mutate('postTeacherExams', { archive })
   }
+
   async download(operation: OperationId, input: OperationInput, filename: string): Promise<void> {
     const archive = await this.mutate<{ handle: string }>(operation, input)
     if (archive.handle)
       await this.host.invoke('transfer.export', { handle: archive.handle, filename })
     else await this.host.invoke('transfer.exportJson', { body: archive, filename })
   }
+
   async changePassword(password: string): Promise<void> {
     const security = await this.request<{ revision: number }>('getTeacherSecurity')
     try {
