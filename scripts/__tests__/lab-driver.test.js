@@ -11,7 +11,7 @@
  */
 const assert = require('node:assert/strict')
 const { execFile } = require('node:child_process')
-const { mkdtemp, mkdir, readFile, rm, writeFile } = require('node:fs/promises')
+const { copyFile, link, mkdir, mkdtemp, readFile, rm, writeFile } = require('node:fs/promises')
 const { createServer } = require('node:https')
 const { createHash, X509Certificate, randomBytes } = require('node:crypto')
 const { tmpdir } = require('node:os')
@@ -94,6 +94,29 @@ async function workdir() {
   const directory = await mkdtemp(path.join(tmpdir(), 'ls101-driver-'))
   scratch.push(directory)
   return directory
+}
+
+// The driver spawns `<runtime>/runtime/node[.exe]`, so the tests need a runtime directory that looks
+// like an installed release without copying a 120 MB interpreter into it.
+//
+// On POSIX a shell script that execs the running interpreter is enough. On Windows the same trick
+// writes a shell script named `node.exe`, which is not a PE image: `spawn` fails with `UNKNOWN` before
+// the control-channel logic under test ever runs, and that is how this file's Windows portability went
+// unnoticed for as long as the bundles could not be built. Windows gets a hard link to the running
+// interpreter instead — instant on the same volume, and a real executable either way.
+async function fakeRuntime(directory) {
+  const target = path.join(directory, 'runtime', process.platform === 'win32' ? 'node.exe' : 'node')
+  await mkdir(path.dirname(target), { recursive: true })
+  if (process.platform === 'win32') {
+    try {
+      await link(process.execPath, target)
+    } catch {
+      await copyFile(process.execPath, target)
+    }
+    return target
+  }
+  await writeFile(target, `#!/bin/sh\nexec "${process.execPath}" "$@"\n`, { mode: 0o755 })
+  return target
 }
 
 async function driverRun(args, options = {}) {
@@ -232,12 +255,7 @@ test('the driver hosts the real control channel and forwards exactly the initial
   const directory = await workdir()
   // The driver spawns <runtime>/runtime/node with the helper, so the runtime layout mirrors the
   // installed release directory without copying a 120 MB binary into the test.
-  await mkdir(path.join(directory, 'runtime'), { recursive: true })
-  await writeFile(
-    path.join(directory, 'runtime', process.platform === 'win32' ? 'node.exe' : 'node'),
-    `#!/bin/sh\nexec "${process.execPath}" "$@"\n`,
-    { mode: 0o755 }
-  )
+  await fakeRuntime(directory)
   const input = path.join(directory, 'input.json')
   const activation = path.join(directory, 'activation.txt')
   const password = path.join(directory, 'password.txt')
@@ -268,6 +286,7 @@ test('the driver hosts the real control channel and forwards exactly the initial
   assert.equal(result.code, 0, result.stderr)
   const value = JSON.parse(await readFile(resultFile, 'utf8')).value
   assert.equal(value.operation, 'initialize')
+  assert.equal(value.hasInput, true)
   // local-manager.ts rejects any key outside these five, so the driver must send exactly them.
   assert.deepEqual(value.inputKeys, ['activationCode', 'baseUrl', 'name', 'password', 'port'])
   assert.equal(value.hasActivation, true)
@@ -281,14 +300,53 @@ test('the driver hosts the real control channel and forwards exactly the initial
   )
 })
 
+test('the driver can send no input at all for the parameterless operations', async () => {
+  const directory = await workdir()
+  await fakeRuntime(directory)
+  const resultFile = path.join(directory, 'result.json')
+  // `connection` is the operation the milestone-M2 phase run needs, and the runtime requires
+  // `input === undefined` for it. Sending `{}` is answered with INVALID_REQUEST, which is what the first
+  // real VM run of milestone M2 hit.
+  const result = await driverRun([
+    'manage',
+    '--manager',
+    helper,
+    '--runtime',
+    directory,
+    '--operation',
+    'connection',
+    '--input-none',
+    '--result',
+    resultFile
+  ])
+  assert.equal(result.code, 0, result.stderr)
+  const value = JSON.parse(await readFile(resultFile, 'utf8')).value
+  assert.equal(value.operation, 'connection')
+  assert.equal(value.hasInput, false)
+  assert.deepEqual(value.inputKeys, [])
+
+  // The two shapes are mutually exclusive: a caller that wants an object must not ask for none.
+  const conflicting = await driverRun([
+    'manage',
+    '--manager',
+    helper,
+    '--runtime',
+    directory,
+    '--operation',
+    'connection',
+    '--input-none',
+    '--password-file',
+    path.join(directory, 'password.txt'),
+    '--result',
+    resultFile
+  ])
+  assert.notEqual(conflicting.code, 0)
+  assert.match(conflicting.stderr, /--input-none cannot be combined/)
+})
+
 test('a failing helper reports only its error code and never the secret input', async () => {
   const directory = await workdir()
-  await mkdir(path.join(directory, 'runtime'), { recursive: true })
-  await writeFile(
-    path.join(directory, 'runtime', process.platform === 'win32' ? 'node.exe' : 'node'),
-    `#!/bin/sh\nexec "${process.execPath}" "$@"\n`,
-    { mode: 0o755 }
-  )
+  await fakeRuntime(directory)
   const input = path.join(directory, 'input.json')
   const activation = path.join(directory, 'activation.txt')
   const password = path.join(directory, 'password.txt')

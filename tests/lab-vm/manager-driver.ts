@@ -240,9 +240,23 @@ async function manage(args: string[]): Promise<void> {
   if (!manager || !runtime || !operation || !resultFile)
     fail('manage requires --manager, --runtime, --operation and --result')
 
-  const input: Record<string, unknown> = inputFile ? await readJson(inputFile) : {}
-  if (passwordFile) input.password = (await readFile(passwordFile, 'utf8')).trim()
-  if (activationFile) input.activationCode = (await readFile(activationFile, 'utf8')).trim()
+  // The control channel distinguishes "no input" from "an empty object": the runtime requires
+  // `input === undefined` for the parameterless operations (status, connection, shutdown, cancel-stop,
+  // prepare-stop) and validates the object for the rest. The teacher main process forwards whatever the
+  // caller passed, so a driver that always sends `{}` cannot reach `connection` at all — which is
+  // exactly what the first milestone-M2 run found.
+  const noInput = args.includes('--input-none')
+  if (noInput && (inputFile || passwordFile || activationFile))
+    fail('--input-none cannot be combined with an input file')
+  const input: Record<string, unknown> | undefined = noInput
+    ? undefined
+    : inputFile
+      ? await readJson(inputFile)
+      : {}
+  if (input) {
+    if (passwordFile) input.password = (await readFile(passwordFile, 'utf8')).trim()
+    if (activationFile) input.activationCode = (await readFile(activationFile, 'utf8')).trim()
+  }
 
   const channel = await mkdtemp(join(tmpdir(), 'ls101-manager-'))
   let listener: Awaited<ReturnType<typeof listenLocalControl>> | undefined

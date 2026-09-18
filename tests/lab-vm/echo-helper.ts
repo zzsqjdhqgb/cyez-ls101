@@ -29,6 +29,9 @@ if (process.env.FAKE_FAIL) {
     ok: true,
     value: {
       operation: request.operation,
+      // Whether the key existed at all: the control channel distinguishes "no input" from `{}` and the
+      // runtime requires `undefined` for the parameterless operations.
+      hasInput: Object.hasOwn(request, 'input'),
       inputKeys: Object.keys(input).sort(),
       hasActivation: typeof input.activationCode === 'string' && input.activationCode.length > 0,
       hasPassword: typeof input.password === 'string' && input.password.length > 0,
