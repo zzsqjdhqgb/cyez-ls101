@@ -132,13 +132,21 @@ function loopbackUrl() {
   return `https://127.0.0.1:${config.port}/`
 }
 
-async function protocol(command, extra = [], { allowFailure = false, timeoutMs = 300000 } = {}) {
+// `fingerprint` and `url` are overridable rather than appendable: the driver reads the *first* match of
+// an option, so passing a second `--fingerprint` in `extra` would silently keep the correct one. That is
+// exactly how the wrong-pin negative first failed — it was answered as an expired batch instead of as a
+// pin refusal, which looked like a product answer rather than a harness mistake.
+async function protocol(
+  command,
+  extra = [],
+  { allowFailure = false, timeoutMs = 300000, fingerprint, url } = {}
+) {
   const args = [
     command,
     '--url',
-    loopbackUrl(),
+    url ?? loopbackUrl(),
     '--fingerprint',
-    state.fingerprint,
+    fingerprint ?? state.fingerprint,
     '--version',
     config.releaseVersion,
     ...extra
@@ -200,6 +208,9 @@ async function fetchLocalProof(index = 0) {
       state.runtime,
       '--operation',
       'connection',
+      // `connection` takes no input, and the control channel distinguishes "no input" from "{}": the
+      // runtime requires `input === undefined` for the parameterless operations.
+      '--input-none',
       '--result',
       resultFile
     ])
@@ -1323,6 +1334,56 @@ async function stepEnrollmentNegatives() {
       return observed
     }
 
+    // The batch issued for the identity cases is still open, and an open enrollment is itself a resource
+    // that keeps the service in maintenance. Two things follow, and both are asserted rather than
+    // assumed: the open batch blocks the exit, and it has to be closed before this step can issue a batch
+    // of its own — the service allows exactly one open enrollment at a time (409 RESOURCE_BUSY
+    // otherwise), which is what the previous run of this suite ran into.
+    const blocked = await protocolResult('maintenance-exit', [
+      ...teacherCredentialArguments(),
+      '--attempts',
+      '1'
+    ])
+    const blockedKinds = asArray(blocked.attempts).flatMap((attempt) =>
+      asArray(attempt.blockers).map((blocker) => blocker.kind)
+    )
+    assertThat(
+      blocked.final?.status === 409 && blockedKinds.includes('enrollment'),
+      'an open enrollment keeps the service in maintenance',
+      { final: blocked.final, kinds: blockedKinds }
+    )
+    const closed = await protocolResult('enroll-reject', [
+      '--enroll-file',
+      state.enrollmentBatch.file,
+      '--installation-id',
+      randomUUID(),
+      '--revoke-first',
+      '--enrollment-id',
+      state.enrollmentBatch.id,
+      ...teacherCredentialArguments()
+    ])
+    assertThat(closed.revoke?.status === 204, 'the identity batch was closed', closed.revoke)
+    const exited = await protocolResult('maintenance-exit', [
+      ...teacherCredentialArguments(),
+      '--attempts',
+      '5',
+      '--interval-ms',
+      '1000'
+    ])
+    assertThat(
+      exited.final?.status === 200 && exited.final?.mode === 'normal',
+      'closing the batch lets the service leave maintenance',
+      exited
+    )
+    // Issuing a batch forces maintenance mode, but asking for it explicitly keeps this step readable:
+    // registration is only possible there, and the failure that follows if it is not is confusing.
+    const reentered = await protocolResult('mode', [
+      ...teacherCredentialArguments(),
+      '--set',
+      'maintenance'
+    ])
+    assertThat(reentered.mode === 'maintenance', 'the service is back in maintenance', reentered)
+
     // Batch A is valid: the negative is the file, not the batch.
     const batchA = protocolFile('enrollment-reject-a')
     const issuedA = await protocolResult('enroll-issue', [
@@ -1416,13 +1477,15 @@ async function stepEnrollmentNegatives() {
       expired
     )
 
-    // The wrong pin fails before any HTTP request exists, so there is no status to report.
-    const wrongPin = await attempt('wrong-pin', [
-      '--enroll-file',
-      batchB,
-      '--fingerprint',
-      `sha256:${'0'.repeat(64)}`
-    ])
+    // The wrong pin fails before any HTTP request exists, so there is no status to report. The
+    // fingerprint is replaced rather than appended, because a second `--fingerprint` would be ignored.
+    const wrongPin = await protocolResult(
+      'enroll-reject',
+      ['--installation-id', randomUUID(), '--enroll-file', batchB],
+      { fingerprint: `sha256:${'0'.repeat(64)}` }
+    )
+    outcome['wrong-pin'] = wrongPin
+    run.log(`enrollment negative 'wrong-pin': ${JSON.stringify(wrongPin)}`)
     assertThat(wrongPin.accepted === false, 'a wrong pin is refused', wrongPin)
     assertThat(
       wrongPin.status === 0 && wrongPin.code === 'TLS_PIN_MISMATCH',
@@ -1443,46 +1506,6 @@ async function stepEnrollmentNegatives() {
       notes.some((note) => /purpose|formatVersion/i.test(String(note))),
       'the unreachable purpose/formatVersion variant is reported rather than silently skipped',
       notes
-    )
-
-    // The batch issued for the identity cases is still open, and an open enrollment is itself a
-    // resource that keeps the service in maintenance. That is worth proving rather than assuming: a
-    // suite that left it open would make the later lease case pass for the wrong reason.
-    const blocked = await protocolResult('maintenance-exit', [
-      ...teacherCredentialArguments(),
-      '--attempts',
-      '1'
-    ])
-    const blockedKinds = asArray(blocked.attempts).flatMap((attempt) =>
-      asArray(attempt.blockers).map((blocker) => blocker.kind)
-    )
-    assertThat(
-      blocked.final?.status === 409 && blockedKinds.includes('enrollment'),
-      'an open enrollment keeps the service in maintenance',
-      { final: blocked.final, kinds: blockedKinds }
-    )
-    const closed = await protocolResult('enroll-reject', [
-      '--enroll-file',
-      state.enrollmentBatch.file,
-      '--installation-id',
-      randomUUID(),
-      '--revoke-first',
-      '--enrollment-id',
-      state.enrollmentBatch.id,
-      ...teacherCredentialArguments()
-    ])
-    assertThat(closed.revoke?.status === 204, 'the batch was closed', closed.revoke)
-    const exited = await protocolResult('maintenance-exit', [
-      ...teacherCredentialArguments(),
-      '--attempts',
-      '5',
-      '--interval-ms',
-      '1000'
-    ])
-    assertThat(
-      exited.final?.status === 200 && exited.final?.mode === 'normal',
-      'closing the batch lets the service leave maintenance',
-      exited
     )
 
     return {
