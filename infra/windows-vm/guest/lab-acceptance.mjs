@@ -1796,9 +1796,13 @@ async function stepServiceModeAdmission() {
     // "Continuing the original numbering" is a statement about that id: the service has no counter, so
     // the proof is that a second start reusing the id returns the original grant rather than making a
     // new one.
+    // `--exam-id` is required even for a continuation: the command reuses the recorded submission id,
+    // candidate and digest from the state file, but it still has to know which exam is being continued.
     const continued = await protocolResult('practice', [
       '--state',
       state.deviceState,
+      '--exam-id',
+      exam.examId,
       '--continuation',
       '--grant-out',
       protocolFile('practice-grant-continued.json')
