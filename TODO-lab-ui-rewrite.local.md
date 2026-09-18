@@ -79,6 +79,7 @@ P4 之后 lab 侧不再触发主程序文档测试。lab 检查点（L 系列）
 ### 窗口 chrome 结论（2026-09-18，重要）
 
 - Windows 上 `frame: false` 在用户机器上会残留 35px 原生标题栏（Electron 仍报告 frameless=true，主程序同参数却正常，原因未明）。
+  根因研究与判定实验见 `TODO-lab-window-chrome-parity.md`（现状是 workaround，不是已证实的结论）。
 - 解法：Windows 改用官方 Custom Title Bar 路线的 `titleBarStyle: 'hidden'`（无 `titleBarOverlay`），**保留原生边框/阴影/鼠标缩放**；其他平台继续 `frame: false`。见 `packages/lab-desktop-host/src/desktop.ts`。
 - 窗口必须是"`show:false` 创建、`dom-ready` 后显示"；启动命令（`dispatch`）在渲染就绪前不得 `show()`。
 - 教师端两个入口已收敛到 `apps/lab-teacher/main/desktop.ts`（产品入口与 Playwright 测试宿主共用窗口参数）。
