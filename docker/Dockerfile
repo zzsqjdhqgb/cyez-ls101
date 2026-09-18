@@ -7,8 +7,6 @@
 FROM node:24-bookworm-slim
 
 # 设置环境变量
-ENV OPENCODE_PATH="/root/.opencode/bin"
-ENV PATH="$OPENCODE_PATH:$PATH"
 ENV YARN_ENABLE_GLOBAL_CACHE=true
 ENV YARN_GLOBAL_FOLDER=/yarn/store
 
@@ -20,7 +18,7 @@ ENV LS101_DOCKER_KEYRING_PASSWORD=ls101-docker-dev
 
 # 安装必要的系统依赖 (curl, git, sudo 等)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl ca-certificates git openssh-client sudo tar bzip2 \
+    curl ca-certificates git openssh-client sudo tar bzip2 socat \
     xvfb xauth \
     dbus dbus-x11 gnome-keyring libsecret-1-0 libsecret-tools \
     libglib2.0-0 libgtk-3-0 \
@@ -83,16 +81,17 @@ EOF
 # 1. 安装并启用 yarn
 RUN corepack enable && corepack prepare yarn@4.15.0
 
-# 2. 安装 OpenCode (使用官方安装脚本)
-RUN npm i -g opencode-ai@1.18.7 --allow-scripts=opencode-ai
-
-RUN npm i -g @openai/codex@0.153.4
+# 2. 安装 Claude Code、OpenAI Codex 和 DeepSeek Harness
+RUN npm i -g \
+    @anthropic-ai/claude-code@2.1.263 \
+    @openai/codex@0.153.4 \
+    @deepseek-ai/dsh@0.1.5-rc.1
 
 # 设置工作目录为仓库代码挂载点
 WORKDIR /workspace
 
 ENTRYPOINT ["/usr/local/bin/ls101-container-entrypoint"]
 
-# 启动时默认运行 opencode
-# 如果你希望启动后进入交互式 shell 但默认打开 opencode，可以改用这个命令
-CMD ["/bin/bash", "-c", "yarn && codex --sandbox danger-full-access"]
+# 不指定默认 AI CLI；由 sbx-docker-codex.bat 或 sbx-docker-claude.bat 选择
+# 需要时仍可通过 sbx-docker-shell.bat 进入容器 shell。
+CMD ["/bin/bash"]
