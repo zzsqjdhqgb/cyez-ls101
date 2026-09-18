@@ -17,7 +17,10 @@ const { test } = require('node:test')
 
 const root = path.resolve(__dirname, '../..')
 const labRoot = path.join(root, 'infra/windows-vm')
-const manual = import(path.join(labRoot, 'manual.mjs'))
+// A relative specifier on purpose: Windows refuses an absolute path in `import()` with
+// ERR_UNSUPPORTED_ESM_URL_SCHEME ("Received protocol 'd:'"), while POSIX accepts it — the asymmetry that
+// let this file pass in the container and fail on the host.
+const manual = import('../../infra/windows-vm/manual.mjs')
 const manualVagrantfile = path.join(labRoot, 'manual/Vagrantfile')
 const acceptanceVagrantfile = path.join(labRoot, 'Vagrantfile')
 
