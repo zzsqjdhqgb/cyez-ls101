@@ -17,5 +17,6 @@
   "InvitationCode": "",
   "Cpus": 4,
   "MemoryMB": 8192,
+  "ManualMemoryMB": 4096,
   "DiskMB": 131072
 }

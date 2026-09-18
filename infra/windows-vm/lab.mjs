@@ -450,15 +450,19 @@ export function ensureVmwareUtility(run) {
   const script =
     "$service = Get-Service -Name 'VagrantVMware' -ErrorAction Stop; if ($service.Status -ne 'Running') { $elevated = \"`$ErrorActionPreference = 'Stop'; Start-Service -Name 'VagrantVMware' -ErrorAction Stop\"; $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($elevated)); $child = Start-Process -FilePath powershell.exe -Verb RunAs -Wait -PassThru -ArgumentList @('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',$encoded); if ($child.ExitCode -ne 0) { throw \"elevated service start failed with exit code $($child.ExitCode)\" } }; $service = Get-Service -Name 'VagrantVMware'; if ($service.Status -ne 'Running') { throw 'Vagrant VMware Utility service is not running' }; Write-Output $service.Status"
   try {
-    const output = run('powershell.exe', [
-      '-NoLogo',
-      '-NoProfile',
-      '-NonInteractive',
-      '-ExecutionPolicy',
-      'Bypass',
-      '-Command',
-      script
-    ], { capture: true })
+    const output = run(
+      'powershell.exe',
+      [
+        '-NoLogo',
+        '-NoProfile',
+        '-NonInteractive',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-Command',
+        script
+      ],
+      { capture: true }
+    )
     if (!/Running/i.test(output)) throw new Error('service did not report Running')
   } catch (error) {
     throw new Error(
@@ -760,7 +764,7 @@ export function parseGuestAddress(output) {
   return line ?? null
 }
 
-async function guestFileServerUrl(run) {
+export async function guestFileServerUrl(run) {
   const address = parseGuestAddress(readGuestOutput(run, guestAddressScript(), { quiet: true }))
   if (!address) throw new Error('The guest did not report an IPv4 address for the file server')
   return `http://${address}:${GUEST_FILESERVER_PORT}`
@@ -865,7 +869,7 @@ async function collectGuestEvidence(run, { baseUrl, name, guestFile, localPath, 
   return viaWinrm ? { path: viaWinrm, transport: 'winrm' } : null
 }
 
-function readGuestOutput(run, script, options = {}) {
+export function readGuestOutput(run, script, options = {}) {
   return run('vagrant.exe', ['winrm', '--command', guestCommand(script)], {
     capture: true,
     ...options
@@ -999,7 +1003,7 @@ export async function waitForAcceptanceStatus(
 // repository, uploaded once, applied, and then deleted on both sides. It is deliberately never
 // passed as a command argument (the runner logs every argument and stores it in the report) and
 // never encoded into a `guestCommand` payload, which would decode back to plain text.
-async function enableDesktopSession(config, run) {
+export async function enableDesktopSession(config, run) {
   const script = path.join(tmpdir(), `ls101-autologon-${randomUUID()}.ps1`)
   await writeFile(script, desktopSessionScript(config.GuestPassword), { mode: 0o600 })
   try {
@@ -1099,8 +1103,12 @@ async function acceptance(root, config, run, report) {
   ensureProvider(run)
   ensureVmwareUtility(run)
   const status = run('vagrant.exe', ['status', '--machine-readable'], { capture: true })
-  const states = status.split(/\r?\n/).filter((line) => line.split(',')[2] === 'state').map((line) => line.split(',')[3])
-  if (states.length !== 1 || states[0] !== 'not_created') throw new Error('vm:acceptance requires no existing VM; use vm:destroy first.')
+  const states = status
+    .split(/\r?\n/)
+    .filter((line) => line.split(',')[2] === 'state')
+    .map((line) => line.split(',')[3])
+  if (states.length !== 1 || states[0] !== 'not_created')
+    throw new Error('vm:acceptance requires no existing VM; use vm:destroy first.')
   const runId = `${Date.now()}-${randomUUID()}`
   const localRun = path.join(root, '.local', 'results', runId)
   const projectRoot = path.resolve(root, '..', '..')
@@ -1115,10 +1123,16 @@ async function acceptance(root, config, run, report) {
     run('vagrant.exe', ['up', '--provider', 'vmware_desktop'])
     started = true
     // Get all files to archive: tracked + unignored untracked
-    const filesToArchive = run('git.exe', ['-c', 'core.quotePath=off', 'ls-files', '-co', '--exclude-standard'], {
-      capture: true,
-      cwd: projectRoot
-    }).split(/\r?\n/).filter(Boolean)
+    const filesToArchive = run(
+      'git.exe',
+      ['-c', 'core.quotePath=off', 'ls-files', '-co', '--exclude-standard'],
+      {
+        capture: true,
+        cwd: projectRoot
+      }
+    )
+      .split(/\r?\n/)
+      .filter(Boolean)
 
     if (filesToArchive.length === 0) {
       throw new Error('No files to archive')
@@ -1182,7 +1196,9 @@ try {
     )
 
     if (compressResult.error || compressResult.status !== 0) {
-      throw new Error(`PowerShell compression failed (${compressResult.error?.code ?? compressResult.signal ?? compressResult.status})`)
+      throw new Error(
+        `PowerShell compression failed (${compressResult.error?.code ?? compressResult.signal ?? compressResult.status})`
+      )
     }
 
     // Verify the archive was created
@@ -1285,7 +1301,9 @@ try {
     run('vagrant.exe', ['destroy', '--force'])
     report.destroyed = true
   } catch (error) {
-    report.state = /interactive|prompt|parameter|input/i.test(error.message) ? 'manual-required' : 'failed'
+    report.state = /interactive|prompt|parameter|input/i.test(error.message)
+      ? 'manual-required'
+      : 'failed'
     report.preserved = started
     throw error
   }
@@ -1988,10 +2006,15 @@ export async function main(args = process.argv.slice(2), dependencies = {}) {
         else if (action === 'lab-execute') await labExecute(root, config, run, report)
         else await labAcceptance(root, config, run, report)
       } else {
-        await lifecycle(action, run, async () => {
-          await verifyBox(root)
-          ensureProvider(run)
-        }, ensureVmwareUtility)
+        await lifecycle(
+          action,
+          run,
+          async () => {
+            await verifyBox(root)
+            ensureProvider(run)
+          },
+          ensureVmwareUtility
+        )
       }
       report.success = true
     } catch (error) {

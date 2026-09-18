@@ -122,6 +122,7 @@ Base64 临时文件最终约为原始 ISO 大小的 4/3（另有换行开销）�
 | WindowsIsoSha256 / VMwareToolsIsoSha256 | 默认官方源可用 auto；自定义地址或手工放入的文件需要明确的 64 位 SHA-256 |
 | WindowsImageIndex                       | Standard Evaluation (Desktop Experience) 的实际索引，当前默认 2         |
 | Cpus / MemoryMB / DiskMB                | guest CPU 数、内存 MB、磁盘 MB                                          |
+| ManualMemoryMB                          | 手动测试机（`vm:teacher` / `vm:student`）的内存 MB，默认 4096           |
 
 JSON 路径建议使用 `/`。更换 Windows ISO 时，在管理员终端核对镜像索引，不要直接沿用默认 2。挂载 ISO，假设盘符为 E:：
 
@@ -160,6 +161,45 @@ yarn vm:acceptance
 每个操作在 `.local/results/<时间>-<操作>-<唯一标识>.json` 写入宿主机结果，包含步骤、起止时间、退出码及失败摘要。结果不含密码或环境变量，不是 guest 应用测试报告。外部命令的实时输出显示在终端；Packer 详细日志为 `.local/logs/packer.log`。
 
 所有命令通过项目内状态目录和排他锁串行执行。进程被强制结束、断电或终端关闭时，无法保证 finally 清理或结果写入；可能保留 VM 和 `.local/operation.lock`。确认 Node、Packer、Vagrant 已退出后再移除该锁，随后运行 `yarn vm:status` 和 `yarn vm:destroy`。不要在另一个操作仍运行时删除锁或绕过入口直接调用 Vagrant。
+
+## 手动测试机（教师端 / 学生端各一台）
+
+上面那些命令里的 VM 都是**一次性**的：跑完就关机销毁，失败才留现场。要用手点着测产品界面时，用下面这两台**长期存在**的机器：
+
+```text
+yarn vm:teacher:boot     # 建一台教师机并留在运行状态
+yarn vm:teacher:reset    # 先删再建（不存在就直接建）
+yarn vm:teacher:delete   # 删掉
+yarn vm:teacher:status   # 看状态
+yarn vm:student:boot / reset / delete / status
+```
+
+两台机器与一次性验收机的关系：
+
+|                | 一次性验收机（`vm:lab` / `vm:acceptance`）              | 手动测试机                                                 |
+| -------------- | ------------------------------------------------------- | ---------------------------------------------------------- |
+| Vagrant 机器名 | `default`                                               | `teacher` / `student`                                      |
+| 状态目录       | `.local/vagrant-state`                                  | `.local/vagrant-state-manual-<role>`（各自独立，互不影响） |
+| 基础镜像       | 同一个 Packer box（共用 `VAGRANT_HOME` 里的注册与凭据） | 同上                                                       |
+| 生命周期       | 跑完自动销毁                                            | 一直留着，直到 `delete` / `reset`                          |
+
+`boot` 的语义是**不能复用**：只要同名机器存在（运行中、关机、挂起都算），它就报错让你选 `reset` 或 `delete`——一台关机的旧机器里还是上一版的安装包和上一次的 Windows 状态，这正是手动测试最不该出现的东西。`reset` 就是"不自动清除旧机器的那一步也做掉"：存在先删、不存在直接建。
+
+`boot` 和 `reset` 都会做这几件事，然后留着机器给你用：
+
+1. 在宿主机上用当前源码树重新打包对应角色的安装包（`--no-build` 可跳过，复用 `dist/` 里已有的）；
+2. 从同一个基础 box 起一台**全新系统**的 VM，并打开 VMware 控制台窗口（`gui = true`）；
+3. 打开自动登录并重启一次，这样你直接就能看到桌面；
+4. 通过 guest 内的文件服务把安装包传进去（放 `C:\ls101-lab\transfers\`），并在桌面放一个指向它的快捷方式；
+5. 教师机额外放行入站 8443，这样学生机能连上它的服务；学生机不做这件事（它不提供服务）。
+
+顺序上**先打包再动 VM**：构建失败时旧机器原样保留。所有可能在真机上出问题的判断（同名拒绝、先建后删、`reset` 容忍不存在）都有 `scripts/__tests__/manual-vm.test.js` 覆盖，但它们只验证宿主机编排；起 VM、装 VMware 这些只能在 Windows 上真跑。
+
+两个客户端第一屏都是激活页，所以每台机器里会放一份邀请码：`C:\ls101-lab\invitation.txt`。它和验收流程一样**只经加密的 WinRM 通道**进入 guest，不走承载大文件的明文 HTTP 文件服务，也不打印到终端（来源是 `config.local.json` 的 `InvitationCode`）。
+
+两台机器可以同时运行：WinRM 转发端口不同（教师 55996 / 学生 55997，冲突时 Vagrant 自动换），VMware 里的显示名分别是 `ls101-manual-teacher` 和 `ls101-manual-student`。guest 内的自动登录账户是 `vagrant`，密码在 `config.local.json` 的 `GuestPassword`（不打印到终端）。
+
+内存是**手动测试机与验收机唯一的硬件差异**：手动机按 `config.local.json` 的 `ManualMemoryMB`（默认 4096）起，验收机继续用 `MemoryMB`（8192）——手动机是人工点界面，验收机要用 32 个客户端并发心跳，两者不该共用一个数字。因此三台 VM 同时开约需 16 GB 内存（4 + 4 + 8）。这个值在 `vagrant up` 时生效，已经存在的机器不会因为改了配置而变小或变大，要生效就 `reset` 一次。
 
 ## 后续应用测试流水线的边界
 
