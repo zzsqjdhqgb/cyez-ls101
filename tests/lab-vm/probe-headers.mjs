@@ -16,6 +16,8 @@
 export const PROBE_PATH = '/api/v1/info'
 export const PROBE_OPERATION = 'getInfo'
 
+// An .mjs helper cannot carry a TypeScript return type; the shape is asserted in the contract test.
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function buildProbeHeaders(version) {
   if (typeof version !== 'string' || version.length === 0 || version.length > 128) {
     throw new Error(

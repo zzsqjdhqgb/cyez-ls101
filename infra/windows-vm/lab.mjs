@@ -1343,6 +1343,7 @@ export function labGuestConfig(config, { version, nodeVersion, port = LAB_HTTPS_
   return {
     installer: guestPath(`${LAB_GUEST_DIR}/${labInstallerName('teacher', version)}`),
     driver: guestPath(`${LAB_GUEST_DIR}/manager-driver.mjs`),
+    protocolDriver: guestPath(`${LAB_GUEST_DIR}/protocol-driver.mjs`),
     harness: guestPath(LAB_GUEST_HARNESS),
     probes: guestPath(LAB_GUEST_PROBES),
     invitationFile: guestPath(LAB_GUEST_INVITATION),
@@ -1382,6 +1383,28 @@ export function labGuestStateScript() {
     status: LAB_GUEST_STATUS,
     task: LAB_TASK
   })
+}
+
+// Milestone M2, case N13 and the remote half of N2. The protocol driver is the bundle the guest ran;
+// what changes is where it runs from: this host, over the real VM network, with the guest firewall now
+// open. Only a separate machine can prove that path, and only a non-loopback source can prove that the
+// service grants no local exemption to whoever asks. Both commands receive the public fingerprint and
+// deliberately no password: the host has to be refused, and refused before anything is sent when the
+// pin does not match what answers on the port.
+export function hostPeerDriverCommands({ address, fingerprint, version, port = LAB_HTTPS_PORT }) {
+  const url = `https://${address}:${port}/`
+  return [
+    ['pin', ['pin', '--url', url, '--fingerprint', fingerprint, '--version', version]],
+    ['login', ['login', '--url', url, '--fingerprint', fingerprint, '--version', version]]
+  ]
+}
+
+// Reads the identity the guest published, so the host checks the fingerprint it was told rather than
+// trusting whatever answers on the port.
+export function hostPeerTarget(results) {
+  const value = results?.['initialize-service']?.value
+  if (!value || typeof value.fingerprint !== 'string' || !Number.isInteger(value.port)) return null
+  return { fingerprint: value.fingerprint, port: value.port, serverId: value.serverId }
 }
 
 // The installer deliberately opens no firewall port, so opening it is a deployment step that has to be
@@ -1470,7 +1493,13 @@ async function labAcceptance(root, config, run, report) {
       cwd: projectRoot
     })
     const driver = path.join(projectRoot, 'out', 'lab-vm', 'manager-driver.mjs')
-    if (!(await exists(driver))) throw new Error('Bundling did not produce out/lab-vm/manager-driver.mjs')
+    const protocolDriver = path.join(projectRoot, 'out', 'lab-vm', 'protocol-driver.mjs')
+    for (const [bundle, name] of [
+      [driver, 'manager-driver.mjs'],
+      [protocolDriver, 'protocol-driver.mjs']
+    ]) {
+      if (!(await exists(bundle))) throw new Error(`Bundling did not produce out/lab-vm/${name}`)
+    }
     run('vagrant.exe', ['up', '--provider', 'vmware_desktop'])
     started = true
     run('vagrant.exe', [
@@ -1519,6 +1548,7 @@ async function labAcceptance(root, config, run, report) {
         await putGuestFile(path.join(root, 'guest', name), name, { baseUrl })
       }
       await putGuestFile(driver, 'manager-driver.mjs', { baseUrl })
+      await putGuestFile(protocolDriver, 'protocol-driver.mjs', { baseUrl })
       const configFile = path.join(localRun, 'lab-config.json')
       await writeFile(
         configFile,
@@ -1621,9 +1651,9 @@ async function labAcceptance(root, config, run, report) {
       report.artifactError = error.message
       console.warn(`Guest lab artifacts could not be exported: ${error.message}`)
     }
-    // The VM is preserved on failure, but the evidence is time-limited: WinSW force-kills a service that
-    // has not stopped within its own 1900 s budget, and a stuck stop is only visible while it is stuck.
-    // Collecting the diagnostic here removes the need to run vm:diag by hand inside that window.
+    // The VM is preserved on failure, and a stuck stop stays stuck: WinSW only applies <stoptimeout>
+    // when it kills the service process itself, so the state is still there, but the VM is only kept for
+    // this run. Collecting the diagnostic here removes the need to run vm:diag by hand afterwards.
     if (guestError) {
       try {
         const diagnostic = readGuestOutput(run, labDiagnoseScript(config))
@@ -1634,6 +1664,42 @@ async function labAcceptance(root, config, run, report) {
         console.log(`Saved the automatic diagnostic to ${diagnosticPath}`)
       } catch (error) {
         console.warn(`The automatic diagnostic could not be collected: ${error.message}`)
+      }
+    }
+    // N13: the same driver bundle, run from this host against the guest over the real link. It happens
+    // after the firewall gate above, because the port is deliberately closed until the deployment step
+    // opens it, and after the evidence was collected, because the fingerprint it must check is published
+    // in the guest results.
+    if (!guestError && report.firewall?.reachableAfter) {
+      try {
+        const results = JSON.parse(await readFile(path.join(localRun, 'lab-results.json'), 'utf8'))
+        const target = hostPeerTarget(results)
+        if (!target) throw new Error('the guest results do not publish a fingerprint and port')
+        const peer = {}
+        for (const [name, args] of hostPeerDriverCommands({
+          address: new URL(baseUrl).hostname,
+          fingerprint: target.fingerprint,
+          version,
+          port: target.port
+        })) {
+          const output = run(process.execPath, [protocolDriver, ...args], {
+            capture: true,
+            quiet: true
+          }).trim()
+          peer[name] = JSON.parse(output)
+          console.log(`Host peer ${name}: ${output}`)
+        }
+        report.hostPeer = peer
+        await writeFile(
+          path.join(localRun, 'lab-host-peer.json'),
+          `${JSON.stringify(peer, null, 2)}\n`,
+          'utf8'
+        )
+      } catch (error) {
+        // Host-side evidence is a check, not a gate: a failure here must not mask a guest failure, and
+        // the guest failure is the one that needs the VM preserved.
+        report.hostPeerError = error.message
+        console.warn(`The host peer check failed: ${error.message}`)
       }
     }
     if (guestError) throw guestError
@@ -1660,7 +1726,7 @@ export function labDiagnoseScript(config) {
     `$script = '${guestPath(LAB_GUEST_SCRIPT)}'`,
     `$config = '${guestPath(LAB_GUEST_CONFIG)}'`,
     `Write-Output '=== uploaded files ==='`,
-    `foreach ($p in @($script, '${guestPath(LAB_GUEST_HARNESS)}', '${guestPath(LAB_GUEST_PROBES)}', $config, '${guestPath(LAB_GUEST_LAUNCHER)}', '${guestPath(`${LAB_GUEST_DIR}/manager-driver.mjs`)}', '${guestPath(LAB_GUEST_INVITATION)}', '${guestPath(LAB_GUEST_RESULTS_DIR)}')) {`,
+    `foreach ($p in @($script, '${guestPath(LAB_GUEST_HARNESS)}', '${guestPath(LAB_GUEST_PROBES)}', $config, '${guestPath(LAB_GUEST_LAUNCHER)}', '${guestPath(`${LAB_GUEST_DIR}/manager-driver.mjs`)}', '${guestPath(`${LAB_GUEST_DIR}/protocol-driver.mjs`)}', '${guestPath(LAB_GUEST_INVITATION)}', '${guestPath(LAB_GUEST_RESULTS_DIR)}')) {`,
     `  if (Test-Path -LiteralPath $p) { $i = Get-Item -LiteralPath $p; Write-Output ('OK   ' + $p + ' bytes=' + $i.Length) } else { Write-Output ('MISS ' + $p) }`,
     `}`,
     `Write-Output '=== results directory ==='`,
@@ -1810,8 +1876,10 @@ async function labExecute(root, config, run, report) {
     )}\n`
   )
   run('vagrant.exe', ['upload', configFile, LAB_GUEST_CONFIG])
-  const driver = path.join(projectRoot, 'out', 'lab-vm', 'manager-driver.mjs')
-  if (await exists(driver)) run('vagrant.exe', ['upload', driver, `${LAB_GUEST_DIR}/manager-driver.mjs`])
+  for (const name of ['manager-driver.mjs', 'protocol-driver.mjs']) {
+    const bundle = path.join(projectRoot, 'out', 'lab-vm', name)
+    if (await exists(bundle)) run('vagrant.exe', ['upload', bundle, `${LAB_GUEST_DIR}/${name}`])
+  }
   // The phase script deletes the invitation code once the service has consumed it, so a re-run needs a
   // fresh copy; without one the run still starts and only the activation step would fail.
   try {

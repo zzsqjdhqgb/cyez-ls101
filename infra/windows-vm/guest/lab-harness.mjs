@@ -24,6 +24,9 @@ export const PROBE_PREFIX = 'LS101PROBE|'
 export const REQUIRED_CONFIG_KEYS = [
   'installer',
   'driver',
+  // The protocol driver is required from milestone M2 on: the phase run cannot reach the service
+  // without it, so a configuration that omits it must fail at parse time rather than mid-run.
+  'protocolDriver',
   'harness',
   'probes',
   'invitationFile',

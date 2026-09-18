@@ -122,6 +122,30 @@ switch ($Probe) {
     Write-Probe @{ port = $Port; listeners = $listeners }
   }
 
+  # Milestone M2 (N11): the load case has to show what the many short-lived TLS connections did to
+  # the machine, which is a question only the guest can answer. Counts by state, plus the dynamic port
+  # range the client side draws from, so a run that exhausts it says so instead of just timing out.
+  'connections' {
+    $byState = @(
+      Get-NetTCPConnection -ErrorAction SilentlyContinue |
+        Group-Object State |
+        ForEach-Object { @{ state = $_.Name; count = $_.Count } }
+    )
+    $toService = @(
+      Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue |
+        Group-Object State |
+        ForEach-Object { @{ state = $_.Name; count = $_.Count } }
+    )
+    $range = (netsh int ipv4 show dynamicport tcp) -join "`n"
+    $dynamic = $null
+    if ($range -match 'Start Port\s*:\s*(\d+)') { $dynamic = @{ start = [int]$Matches[1] } }
+    if ($range -match 'Number of Ports\s*:\s*(\d+)') {
+      if ($null -eq $dynamic) { $dynamic = @{} }
+      $dynamic['count'] = [int]$Matches[1]
+    }
+    Write-Probe @{ port = $Port; byState = $byState; servicePort = $toService; dynamicPorts = $dynamic }
+  }
+
   'firewall' {
     $inbound = @(Get-NetFirewallRule -Direction Inbound -Enabled True -ErrorAction SilentlyContinue)
     $matching = @(

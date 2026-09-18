@@ -100,12 +100,12 @@ Get-ChildItem -Path 'C:\Users\vagrant*\AppData\Local\Temp', 'C:\Windows\Temp' `
 
 Base64 临时文件最终约为原始 ISO 大小的 4/3（另有换行开销）。大量逐块远程命令可能使上传持续几十分钟或更久，应根据临时文件增长速度判断进度，不根据目标 ISO 是否存在判断。临时文件不增长、始终找不到或上传报错时，再检查宿主机 `packer.log` 的最新内容。
 
-| 地址/端口 | 用途 |
-| --- | --- |
-| 宿主机 `127.0.0.1:59xx`（以本次日志为准） | VMware VNC，用于安装界面和启动按键 |
-| 虚拟机 IP 的 `5986` | 本项目 Packer 使用的 HTTPS WinRM |
-| `5985` | HTTP WinRM，Bento 默认使用，本项目 bootstrap 删除 HTTP listener |
-| 宿主机 `127.0.0.1:55986` | 基础 box 构建成功后，Vagrant VM 的 HTTPS WinRM 转发；冲突时可能调整 |
+| 地址/端口                                 | 用途                                                                |
+| ----------------------------------------- | ------------------------------------------------------------------- |
+| 宿主机 `127.0.0.1:59xx`（以本次日志为准） | VMware VNC，用于安装界面和启动按键                                  |
+| 虚拟机 IP 的 `5986`                       | 本项目 Packer 使用的 HTTPS WinRM                                    |
+| `5985`                                    | HTTP WinRM，Bento 默认使用，本项目 bootstrap 删除 HTTP listener     |
+| 宿主机 `127.0.0.1:55986`                  | 基础 box 构建成功后，Vagrant VM 的 HTTPS WinRM 转发；冲突时可能调整 |
 
 基础 box 构建阶段没有将 guest 的 WinRM 转发到宿主机 `127.0.0.1:5986`。测试该地址失败、测试虚拟机 IP 的 5986 成功，并不意味着 Packer 配错了 WinRM 地址。
 
@@ -193,8 +193,17 @@ Electron 桌面测试需要已登录的交互桌面；直接用 WinRM 启动测�
 ## 验证
 
 ```text
-yarn vm:test
-yarn vm --help
+yarn vm:test          # 宿主机编排与控制台的单测（不启动 VM）
+yarn lab:typecheck    # tests/lab-vm 这条测试道的类型检查
+yarn test:vitest      # 协议驱动器的容器内用例（真实 LabService + 真实 HTTPS）
+yarn vm:lab           # 完整实机验收：编译、装包、装服务、初始化、M1+M2 用例、宿主机对打
 ```
 
-单元测试使用模拟进程/网络覆盖下载与重试、ISO 格式和摘要校验、失败清理、凭据发布、锁、退出码和宿主机结果写入；它们不启动 Windows/VMware。真实 box 构建和 VM 生命周期需要在 Windows 宿主机运行上面的命令，目前未做原生实测。
+`yarn vm:lab` 的 guest 阶段现在跑两组用例，判断全部在 `guest/lab-acceptance.mjs` 里：
+
+- **M1（S1–S14、S18）**：安装、服务注册、账户与 ACL、标准用户隔离、控制通道、激活与许可窗口、监听与指纹、重启、防火墙门控、机密扫描。
+- **M2（N1–N12）**：指纹前置拒绝、会话认证的四种进入方式、入网批次与整文件语义、心跳在线/离线、试卷上传下载、作答回执幂等、维护准入、429/503 两个并发上限、租约与维护退出、多连接压测、IPv6 负例。
+
+协议用例走同一个打包后的 `protocol-driver.mjs`：guest 内对 `https://127.0.0.1:8443/` 跑一遍，宿主机在防火墙部署步骤之后经真实链路对 `https://<guest-ip>:8443/` 再跑一遍（N13 与 N2 的远端那一半）。驱动器只观察并打印一个 JSON，判断在阶段脚本里，因此同一批用例在容器内也能对真实服务跑（`yarn test:vitest`）。
+
+`yarn vm:test` 用模拟进程/网络覆盖下载与重试、ISO 格式与摘要校验、失败清理、凭据发布、锁、退出码和宿主机结果写入；它们不启动 Windows/VMware。真实 box 构建和 VM 生命周期需要在 Windows 宿主机上运行。

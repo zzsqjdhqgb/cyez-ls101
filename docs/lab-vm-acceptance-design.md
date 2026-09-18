@@ -125,24 +125,44 @@ CDP 的能力边界必须写进结论：拿不到主进程，也没有原生对�
 
 ### 5.3 guest 编排流程
 
-`run-lab-acceptance.ps1` 按阶段执行，每阶段开始前写 `progress.txt`，结束后写阶段结果 JSON；任一阶段失败即停止后续阶段，但**已完成的证据必须全部导出**，便于定位。阶段划分对应 §6 的 Tier。
+`guest/lab-acceptance.mjs` 按阶段执行，每阶段开始前写 `progress.txt`，结束后写阶段结果 JSON；任一阶段失败即停止后续阶段，但**已完成的证据必须全部导出**，便于定位。阶段划分对应 §6 的 Tier。
 
 ### 5.4 文件清单
 
+实现后的实际布局（m1 用驱动器 A，m2 增加驱动器 B 与其容器内测试道）：
+
 ```text
 infra/windows-vm/
-  lab.mjs                          # 新增 lab-acceptance 动作、宿主机门禁与构建、上传与证据回收
-  guest/run-lab-acceptance.ps1     # guest 编排器
-  guest/lab-phases/                # 每阶段一个 ps1
-  config.example.json              # 增加 InvitationCode 占位说明
+  lab.mjs                       # lab-acceptance 动作：门禁、构建、上传、证据回收、宿主机对打（N13 与 N2 远端半）
+  guest/lab-acceptance.mjs      # guest 阶段编排；全部判断都在这里
+  guest/lab-harness.mjs         # 纯辅助函数，容器内可测
+  guest/lab-probes.ps1          # PowerShell 只采集结构化数据
+  guest/start-lab-acceptance.ps1# 启动器：重定向子进程输出
+  config.example.json           # 含 InvitationCode 占位说明
 tests/lab-vm/
-  manager-driver.mjs               # 驱动器 A
-  protocol-driver.mjs              # 驱动器 B
-  service.spec.ts  network.spec.ts  enrollment.spec.ts  practice.spec.ts  lifecycle.spec.ts
-playwright.lab-vm.config.ts        # CDP 附着用的 Playwright 配置
+  manager-driver.ts             # 驱动器 A：提权管理器与控制通道
+  protocol-driver.ts            # 驱动器 B：真实 HTTPS 协议（guest 内与宿主机对打共用同一份 bundle）
+  probe-headers.mjs             # 契约要求的请求头，单点定义
+  protocol/index.ts             # 命令注册表
+  protocol/context.ts           # 驱动器 B 共享运行时（会话、原始请求、错误信封、机密文件）
+  protocol/harness.ts           # 容器内测试道：真实 LabService + 真实 HTTPS
+  protocol/tls-double.ts        # 错指纹用例用的 TLS 服务替身
+  protocol/commands/*.ts        # 每个用例组的命令
+  protocol/*.test.ts            # 容器内用例（vitest，见 5.5）
+  tsconfig.json                 # 该测试道的类型检查（yarn lab:typecheck）
+scripts/lab/build-test-driver.mjs # 把两个驱动打成单文件，VM 内无需 node_modules
 ```
 
-`scripts/__tests__/windows-vm.test.js` 需要为宿主机新增代码补单测，`package.json` 增加入口脚本。
+### 5.5 驱动器 B 的两条测试道
+
+驱动器 B 的命令只**观察**，判断留在 `guest/lab-acceptance.mjs`。这条分工让同一批用例有两条测试道：
+
+| 测试道 | 载体                                                        | 覆盖                                                               | 入口               |
+| ------ | ----------------------------------------------------------- | ------------------------------------------------------------------ | ------------------ |
+| 容器内 | `protocol/harness.ts` 起真实 `LabService` + 真实 HTTPS 回环 | 协议语义、错误码、幂等、并发上限、归档摘要、时钟可注入的时序       | `yarn test:vitest` |
+| 目标机 | 打包后的 `protocol-driver.mjs`，guest 内与宿主机各跑一遍    | 打包产物本身、Windows 服务身份、真实网络与防火墙、真实时间与多进程 | `yarn vm:lab`      |
+
+容器内那一条不是替代品：它证明协议语义正确，证明不了打包产物和真机路径。反过来，真机那一条也不该用来发现协议语义问题——那要花一整轮 VM（约 15 分钟）。`yarn lab:typecheck` 单独检查这条测试道的类型，因为仓库根 `tsconfig.json` 是 solution 风格，`tsc -p` 不会跟到 `tests/`。
 
 ## 6. 测试矩阵
 
@@ -266,14 +286,16 @@ playwright.lab-vm.config.ts        # CDP 附着用的 Playwright 配置
 
 ## 12. 实现状态
 
-| 里程碑                            | 状态                                       | 说明                                                                               |
-| --------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------- |
-| M1 宿主机门禁与打包、Windows 服务 | **已在真实 Windows 宿主机上全绿（15/15）** | `yarn vm:lab`：宿主机门禁、编译编排、guest 阶段脚本、提权管理器驱动器、防火墙门控  |
-| M2 协议驱动器                     | 未实现                                     | 入网字节相等语义、429/503、租约与维护退出、无 keep-alive 压测、端口占用、IPv6 负例 |
-| M3 CDP GUI                        | 未实现                                     |                                                                                    |
-| M4 升级/卸载/数据保留             | 未实现                                     |                                                                                    |
+| 里程碑                            | 状态                                       | 说明                                                                                                                                                 |
+| --------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M1 宿主机门禁与打包、Windows 服务 | **已在真实 Windows 宿主机上全绿（15/15）** | `yarn vm:lab`：宿主机门禁、编译编排、guest 阶段脚本、提权管理器驱动器、防火墙门控                                                                    |
+| M2 协议驱动器                     | 已实现，**尚未在真实宿主机上运行**         | N1–N13：指纹前置拒绝、非回环认证、入网与整文件语义、心跳在线/离线、上传下载回执、维护准入、429/503、租约+维护退出、多连接压测、IPv6 负例、宿主机对打 |
+| M3 CDP GUI                        | 未实现                                     |                                                                                                                                                      |
+| M4 升级/卸载/数据保留             | 未实现                                     |                                                                                                                                                      |
 
 M1 的首次全绿运行：2026-09-17，runId `1789661969192-a443907b-4923-4a0e-8d9f-62c5c250ada8`，宿主机侧 19 步、822 s，guest 阶段 96 s，15 个步骤全部 `passed`。该次产物：教师端 `ls101-lab-teacher-0.4.1-win-x64.exe` SHA-256 `972066e2…9ce777`，学生端 `ls101-lab-student-0.4.1-win-x64.exe` SHA-256 `34111bdd…d5282`。在此之前几轮运行分别止步于打包、服务安装目录和第 13 步 `restart-survives`，后者查出的是产品缺陷（见第 13 节第四条），不是测试问题。
+
+M2 的实现与验证分两条测试道（见 5.5）：容器内 `tests/lab-vm/protocol/*.test.ts` 用真实 `LabService` 与真实 HTTPS 覆盖 N1–N12 的协议语义；VM 内与宿主机上跑同一份打包后的 `protocol-driver.mjs`，覆盖打包产物、Windows 服务身份、真实网络与真实时间。容器内那一批当前 40 通过、2 跳过（跳过的是需要可写 `out/` 的打包自证），真机结果待记。
 
 M1 的代码位置：
 
@@ -315,6 +337,34 @@ M1 尚未覆盖的 Tier 1 项：S15（停止语义与在线设备）、S16（重
 三个细节值得记下来。其一，WinSW 文档写明了规则——"When you use the `<stoparguments>`, you must use `<startarguments>` instead of `<arguments>`"——但这条规则违反时**完全静默**：WinSW 启动停止进程时传的日志处理器是 `null`，停止进程写往 stderr 的 `INVALID_ARGUMENTS` 没有任何去处，wrapper 日志只留下 `Started process <pid>` 一行。其二，`<stoptimeout>1900 sec</stoptimeout>` 在这种配置下**不生效**：它只在"没有 `<stoparguments>`、由 WinSW 直接杀进程树"的分支里使用，而优雅停止走的是 `while (!WaitForExit(sleeptime)) SignalPending()` 的无界循环，默认 1 秒轮询、永不放弃。也就是说这个缺陷不是"卡 31 分钟后被杀"，而是**服务根本无法停止**，教师机上的 `sc stop`、重启和关机都会无限期挂起；此前"1900 秒后会自愈"的判断是错的。其三，定位手段是把停止进程的命令行抓下来：wrapper 自己不记，探针按秒级轮询又必然错过这个存活不到 1 秒的进程，最终靠在 `Restart-Service` 旁边挂一个 100 ms 轮询 `Win32_Process`、由哨兵文件结束的采样器才拿到证据。
 
 一处**撤回的判断**：早期日志（安装记录缺失、安装器 16 秒返回）曾被解读为"静默安装失败却返回 0"。第三条缺陷确认后，安装器其实成功执行了服务安装脚本，只是落在被重定向的目录，退出码是正确的。第 11 节风险 2（静默模式下 `MessageBox` 是否挂起）因此仍未验证，保持开放。
+
+### 13.1 M2 期间发现的协议与文档偏差
+
+M2 的容器内测试道（真实 `LabService` + 真实 HTTPS）在写用例的过程中发现设计文档的三处描述与服务的实际行为不符，以及一个真实产品缺陷。这些不需要等 VM 就能发现，正好说明 5.5 的两条测试道各管一段。
+
+| 主题                 | 设计文档说法                                 | 服务实际行为                                                                                                                                                                                                                                                       | 处理                                                                                                         |
+| -------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| 心跳的单调性（N6）   | 更旧的 `sequence` 以 `CONTENT_CONFLICT` 拒绝 | 更旧或相同的 `sequence`（同一 runtime）返回 **200 + `heartbeatAccepted:false`**，没有错误码；同 runtimeId 的低 `runtimeGeneration` 同样如此，**更高的 generation 反而被接受**（那是重启/接管路径）；`CONTENT_CONFLICT` 只在 generation 相同而 runtimeId 不同时出现 | VM 步骤改判 `lastAccepted`；容器用例逐条钉住这四种组合                                                       |
+| 整文件即凭据（N5）   | 服务端用**字节相等**校验文件                 | 改一个字节的文件在 `verifyEnrollment` 的 **JWS 签名校验**就已被拒；字节相等那条分支只对"另一批次的有效签名文件"可达。两者都返回 `403 ENROLLMENT_REJECTED`，所以 N5 的可观察结论成立，但"字节相等拦住了改字"是错的                                                  | 断言不变，措辞修正；另记录：一个批次只有一份签名文件，且同时只允许一个批次开放，"同批次另一份合法文件"不可达 |
+| 作答编号续传（N8）   | 恢复后按原作答编号续传                       | 服务端**没有编号计数器**，`PracticeGrant` 也没有编号字段；一次练习的唯一身份是客户端放在路径里的 `submissionId`。续传的可观察含义是：同一个 id 再开一次返回**原 grant**（`grantedAt` 不变）                                                                        | 步骤断言 `reuse`/`sameGrant`，并在结果里写明 `serverCounter:false`                                           |
+| 翻页接口（N6）       | —                                            | `DeviceList` 只有 `nextCursor`，没有 `total`                                                                                                                                                                                                                       | 驱动器把返回页的大小命名为 `total` 并注明                                                                    |
+| IPv6 可读错误（N12） | 用 IPv6 地址的入网文件"必须给出可读错误"     | 入网文件路径确实给出 `connect ECONNREFUSED ::1:<port>`；但 `RuntimeConfig.host` 拒绝 `::1` 时抛出的消息**就是裸错误码** `INVALID_REQUEST`，教师端主进程原样透出，操作者看不到诊断                                                                                  | VM 步骤只对入网文件的措辞断言；host 边界的裸码由容器用例钉住并写进 `notes`                                   |
+| IPv6 不对称（N12）   | —                                            | `LabService.validateBaseUrl` 与客户端 `validateTarget` **都接受** `https://[::1]:8443/`，而 `RuntimeConfig.host` 永远无法绑定 IPv6：服务可以签出一份指向自己永远监听不了的地址的入网文件                                                                           | 记录为发现，未改产品；驱动器不篡改运行中服务的地址，改用改写真实入网文件 payload 的方式触达真实代码路径      |
+
+两个操作要点，都是写 VM 步骤时踩出来的：**开放的入网批次本身就是维护退出的 blocker**（`kind: "enrollment"`），所以 N10 之前必须关闭批次，否则租约到期证明不了任何事——阶段脚本因此先断言"开放批次挡住退出"，再关闭批次并断言退出成功；**上传 429 在单设备下来自"每设备同时只允许一个正式收卷"这条规则**，服务端全局 8 行的上限需要 ≥9 台设备才可达，`concurrency --kind uploads` 只能证明前者，VM 步骤的断言按前者写。
+
+另有一个**产品缺陷**（N7，尚未修，已量化）：学生用**完全相同的归档**重传时，`putStudentSubmissionsSubmissionId` 在读取 `context.stream` 之前就返回原回执并结束连接；响应发完时客户端还在写请求体，Node 关闭仍有未读字节的连接，对端把它重置，响应就被丢掉了。真实服务上的实测（每种大小 3 次）：
+
+| 归档大小                                         | 拿到回执 | 备注                                     |
+| ------------------------------------------------ | -------- | ---------------------------------------- |
+| 2 KiB                                            | 3/3      | 请求体装得进套接字缓冲，所以答案发得出去 |
+| 64 KiB                                           | 3/3      | 同上                                     |
+| 256 KiB                                          | 1/3      | 从这里开始是竞态                         |
+| 1 MiB                                            | 2/3      |                                          |
+| 4 MiB                                            | 1/3      |                                          |
+| 1 MiB（对照组：handler 先排空 `context.stream`） | 3/3      | 证明根因就是"没读请求体就回答"           |
+
+**影响面不止这一处**：任何"读完请求体之前就产生的答案"都有同样的形状——`429 RATE_LIMITED`（>8 并发上传）、`413 PAYLOAD_TOO_LARGE`、`RESOURCE_BUSY` 以及 HTTP 层的 `503 SERVICE_NOT_READY` 都可能以 `EPIPE` 而不是那个错误码的形式到达客户端。也就是说学生看到的是"连接被重置"，而不是"稍后重试"。修法在产品侧（handler 或 `http.ts` 在回答前排空请求体），不在测试侧；容器用例把它钉成"两种结果都记录、服务端记录必须不变"，VM 步骤同样记为 `knownDefect` 并继续，因为让整轮 VM 停在这里会掩盖 N8/N9/N10/N13 的结果。归档越大越容易触发。
 
 ## 14. guest 侧的语言分工
 

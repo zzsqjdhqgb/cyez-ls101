@@ -1165,6 +1165,8 @@ test('lab guest configuration points the guest at every uploaded file and the do
   )
   assert.equal(config.installer, 'C:\\ls101-lab\\transfers\\ls101-lab-teacher-0.4.1-win-x64.exe')
   assert.equal(config.driver, 'C:\\ls101-lab\\transfers\\manager-driver.mjs')
+  // The protocol driver (milestone M2) travels beside the manager driver: same directory, same upload.
+  assert.equal(config.protocolDriver, 'C:\\ls101-lab\\transfers\\protocol-driver.mjs')
   assert.equal(config.harness, 'C:\\ls101-lab\\transfers\\lab-harness.mjs')
   assert.equal(config.probes, 'C:\\ls101-lab\\transfers\\lab-probes.ps1')
   assert.equal(config.invitationFile, 'C:\\ls101-lab\\invitation.txt')
@@ -1183,6 +1185,120 @@ test('lab guest configuration points the guest at every uploaded file and the do
   const { REQUIRED_CONFIG_KEYS } = await import('../../infra/windows-vm/guest/lab-harness.mjs')
   for (const key of REQUIRED_CONFIG_KEYS)
     assert.ok(key in config, `configuration is missing ${key}`)
+})
+
+test('the protocol driver is bundled, checked and uploaded like the manager driver', async () => {
+  const source = await readFile(labEntry, 'utf8')
+  // The M2 protocol driver is a second bundle with the same lifecycle. Forgetting one of these steps
+  // makes the guest phase fail with "Cannot find module" a full VM cycle later, so all four are pinned.
+  const bundler = await readFile(path.resolve(__dirname, '../lab/build-test-driver.mjs'), 'utf8')
+  assert.match(bundler, /'tests\/lab-vm\/protocol-driver\.ts', 'protocol-driver\.mjs'/)
+  assert.match(source, /'protocol-driver\.mjs'/)
+  assert.match(source, /protocolDriver, 'protocol-driver\.mjs'/)
+  // The guest has no other way to learn the path.
+  assert.match(source, /protocolDriver: guestPath/)
+  // A preserved VM from an older run must be told which file is missing, not just fail later.
+  const diagnostic = source.slice(source.indexOf('export function labDiagnoseScript'))
+  assert.ok(
+    diagnostic.indexOf('protocol-driver.mjs') < diagnostic.indexOf("Write-Output '=== results"),
+    'the diagnostic has to list the protocol driver bundle'
+  )
+  assert.ok(
+    source.indexOf("protocolDriver, 'protocol-driver.mjs'") <
+      source.indexOf("await putGuestFile(driver, 'manager-driver.mjs'"),
+    'the bundle has to be checked before it is uploaded'
+  )
+})
+
+test('the host peer check runs the same driver over the real link with no credential', async () => {
+  const { hostPeerDriverCommands, hostPeerTarget } = await api
+  const commands = hostPeerDriverCommands({
+    address: '192.168.228.10',
+    fingerprint: `sha256:${'a'.repeat(64)}`,
+    version: '0.4.1'
+  })
+  // The same bundle the guest ran, pointed at the guest: that is what makes this cross-machine evidence
+  // rather than a loopback shortcut.
+  assert.deepEqual(
+    commands.map(([name]) => name),
+    ['pin', 'login']
+  )
+  for (const [, args] of commands) {
+    assert.ok(args.includes('https://192.168.228.10:8443/'))
+    assert.ok(args.includes(`sha256:${'a'.repeat(64)}`))
+    // No password file: a remote peer must be refused, and that refusal is the assertion.
+    assert.equal(args.includes('--password-file'), false)
+    assert.equal(args.includes('--local-proof-file'), false)
+  }
+  // The fingerprint comes from the guest results, not from whatever answers on the port.
+  assert.deepEqual(
+    hostPeerTarget({ 'initialize-service': { value: { fingerprint: 'sha256:x', port: 8443 } } }),
+    { fingerprint: 'sha256:x', port: 8443, serverId: undefined }
+  )
+  assert.equal(hostPeerTarget({ 'initialize-service': { value: { port: 8443 } } }), null)
+  assert.equal(hostPeerTarget({}), null)
+
+  const source = await readFile(labEntry, 'utf8')
+  // It must run after the firewall gate, or the port would still be closed and the check would prove
+  // nothing about the product.
+  assert.ok(
+    source.indexOf('of hostPeerDriverCommands({') > source.indexOf('labFirewallScript()'),
+    'the host peer check belongs after the firewall step'
+  )
+  assert.match(source, /lab-host-peer\.json/)
+})
+
+test('every protocol command the phase run invokes is registered in the driver', async () => {
+  const orchestrator = await readGuest('lab-acceptance.mjs')
+  const registry = await readFile(
+    path.resolve(__dirname, '../../tests/lab-vm/protocol/index.ts'),
+    'utf8'
+  )
+  // The registry mixes the two object-literal forms: `pin,` for a name that is a valid identifier and
+  // `'enroll-issue': enrollIssue,` for one that is not.
+  const registered = new Set([
+    ...[...registry.matchAll(/^ {2}([a-z][a-z0-9-]*),$/gm)].map((match) => match[1]),
+    ...[...registry.matchAll(/^ {2}'([a-z][a-z0-9-]*)':/gm)].map((match) => match[1])
+  ])
+  // The guest has no way to learn a command name except by invoking it, so a rename on one side would
+  // otherwise surface as a failed VM run ten minutes in.
+  const invoked = new Set(
+    [...orchestrator.matchAll(/protocolResult\(\s*'([a-z][a-z0-9-]*)'/g)].map((match) => match[1])
+  )
+  assert.ok(invoked.size >= 6, `the phase run should exercise the protocol driver: ${[...invoked]}`)
+  for (const name of invoked)
+    assert.ok(registered.has(name), `protocol command '${name}' is not registered in the driver`)
+
+  // Secrets travel through files: no step may put a password, a proof or a device secret on a command
+  // line, where any process on the machine could read it from the process table.
+  for (const match of orchestrator.matchAll(/protocolResult\([^)]*\]/gs)) {
+    assert.doesNotMatch(
+      match[0],
+      /--(?:password|local-proof|device-secret)\s*['"`]/,
+      match[0].slice(0, 120)
+    )
+  }
+  // The milestone-M2 steps run after the milestone-M1 ones, because the protocol cases need an
+  // installed, activated and initialized service.
+  const order = [
+    'stepSecretScan()',
+    'stepProtocolPin()',
+    'stepProtocolAuth()',
+    'stepProtocolIpv6()',
+    'stepEnrollmentBatch()',
+    'stepEnrollmentNegatives()'
+  ].map((name) => orchestrator.indexOf(`await ${name}`))
+  for (let index = 1; index < order.length; index += 1)
+    assert.ok(order[index] > order[index - 1], 'the milestone-M2 steps must run in order, after M1')
+  for (const name of [
+    'stepDeviceHeartbeat()',
+    'stepServiceModeAdmission()',
+    'stepConcurrencyLimits()'
+  ])
+    assert.ok(
+      orchestrator.indexOf(`await ${name}`) > order[0],
+      `${name} belongs to the milestone-M2 run`
+    )
 })
 
 test('the lab task runs the Node orchestrator through the capturing launcher', async () => {
