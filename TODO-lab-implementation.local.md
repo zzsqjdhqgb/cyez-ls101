@@ -280,3 +280,38 @@ The current stage and its verification are complete; work is paused here.
   target-system startup, audio, permissions and power-loss checks remain.
 - Prepare reproducible backend acceptance and Windows service/audio/power-loss
   acceptance. User must perform target-system checks; container cannot prove them.
+
+## Milestone M3 (installed-product GUI over CDP) and M4 (upgrade / uninstall / retention)
+
+Added 2026-09-18, after M1 and M2 went green on a real Windows host. Case definitions are `docs/lab-vm-acceptance-design.md` §6 Tier 3 (G1–G8) and Tier 4 (U1–U5); this is the implementation order, not a restatement of them.
+
+### M3 — GUI driver (Tier 3)
+
+- [ ] CDP driver: launch the **installed** teacher/student exe in the guest's interactive session with a remote-debugging port, attach with `chromium.connectOverCDP`, and expose small helpers (wait for window, read text, click by role/name, screenshot). Planned home: `tests/lab-vm/gui-driver.ts` next to the existing drivers, bundled like them.
+- [ ] Playwright config for attachments (`playwright.lab-vm.config.ts`) so a VM run can record traces/screenshots into the results directory.
+- [ ] The GUI driver must not need the source tree: drive only the installed application, and take every secret from a file (same rule as the other drivers).
+- [ ] G1 launch + "invalid startup argument" prompt (this is expected product behaviour, not a defect).
+- [ ] G2 connection page shows the real named-pipe status, version, licence, service identity and fingerprint — cross-check against the control channel's own answer rather than trusting the screen.
+- [ ] G3 the full local-service path through the UI after driver A performed install/start/initialize.
+- [ ] G4 student `--activate` and `<file.lsjoin> --server-fingerprint <fp>`, then assert the device appears in the teacher's device list.
+- [ ] G5 second instance: a second launch with a new join file must not create a second window/process; the command is handled by the first instance.
+- [ ] G6 full practice through the UI: browse → HTTPS cache download → start grant → short deterministic playback → record → save → upload → receipt on screen.
+- [ ] G7 maintenance standby full-screen window and mode sync.
+- [ ] G8 student autostart after a real reboot (`vagrant reload`) and service autostart following its setting.
+- [ ] Note: G6 overlaps N7 (already proven at the protocol level); the GUI case adds renderer orchestration, real cache download and the recording pipeline. Keep the protocol evidence and the GUI evidence separate in the report.
+
+### M4 — upgrade, uninstall and retention (Tier 4)
+
+- [ ] A second release artifact. The harness currently packages one version; U1/U2/U4 need "same version again" and "a different version". Decide between a version override for the packaging step and a prepared pair, and record which digests were installed.
+- [ ] U1 same-version overwrite install: succeeds without an upgrade-ready record; data and the autostart setting are unchanged.
+- [ ] U2 remove `upgrade-ready.json`, install the different version: must fail, and the old service must still be running afterwards.
+- [ ] U3 NSIS uninstall of the teacher client: service registration and business data are **retained** (`teacher.nsh` has no `customUnInstall`).
+- [ ] U4 `manageLocalService('uninstall')` through driver A: registration and autostart disappear, data is retained, the teacher UI reports "not installed"; reinstall and prove the original serverId and receipts still work.
+- [ ] U5 uninstall while the service is running must be refused.
+- [ ] Ordering: U3/U4 destroy the installation, so they run last, after M1/M2/M3 assertions; U4's reinstall needs the installer still on the guest.
+- [ ] Retention assertions must reuse values captured earlier in the same run (serverId, a submission receipt) and compare them after reinstall, not just assert "something exists".
+
+### Both
+
+- [ ] The guest phase currently stops at the first failure; with M3/M4 appended the run gets long (30+ minutes). Consider a documented way to run a subset (for example an env/flag that selects tiers) so a GUI or uninstall failure does not hide everything after it.
+- [ ] Update `docs/lab-vm-acceptance-design.md` §12, `docs/lab-target-acceptance.md` items 5–7, and the VM README when these land.
