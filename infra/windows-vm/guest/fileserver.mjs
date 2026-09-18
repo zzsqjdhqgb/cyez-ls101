@@ -73,7 +73,11 @@ export function createFileServer({ uploads, results, log } = {}) {
     await appendFile(log, `${new Date().toISOString()} ${line}\n`, 'utf8').catch(() => undefined)
   }
 
-  const server = http.createServer(async (request, response) => {
+  // The handler never rejects. An async request listener whose promise rejects becomes an unhandled
+  // rejection, and Node then ends the process: a single aborted download (the host closing a socket
+  // mid-transfer, a probe that gives up) was enough to kill the whole file server, after which every
+  // later request failed with "socket hang up". The failure is logged and answered instead.
+  const handle = async (request, response) => {
     const url = new URL(request.url ?? '/', 'http://guest')
     const [, kind, rawName] = url.pathname.split('/')
 
@@ -125,6 +129,16 @@ export function createFileServer({ uploads, results, log } = {}) {
     }
     await writeLog(`405 ${request.method} ${url.pathname}`)
     send(response, 405, 'method not allowed')
+  }
+
+  const server = http.createServer((request, response) => {
+    void handle(request, response).catch(async (error) => {
+      await writeLog(`500 ${request.method} ${request.url} ${error.message}`)
+      // A response whose headers are already on the wire cannot be replaced: drop the socket so the
+      // client sees a failed transfer instead of a truncated one.
+      if (response.headersSent) response.destroy()
+      else send(response, 500, 'request failed')
+    })
   })
 
   server.on('clientError', (_error, socket) => socket.destroy())
