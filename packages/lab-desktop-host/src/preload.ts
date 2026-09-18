@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import { createWindowControlsBridge } from '@ls101/desktop-ui/main'
 import type { LabHost } from './shared'
 
 const capabilities = new Set([
@@ -80,3 +81,4 @@ const host: LabHost = {
   }
 }
 contextBridge.exposeInMainWorld('lab', host)
+contextBridge.exposeInMainWorld('windowControls', createWindowControlsBridge(ipcRenderer))

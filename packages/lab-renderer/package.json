@@ -1,0 +1,25 @@
+{
+  "name": "@ls101/lab-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "@ls101/lab-client": "workspace:*",
+    "@ls101/lab-contracts": "workspace:*",
+    "react": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

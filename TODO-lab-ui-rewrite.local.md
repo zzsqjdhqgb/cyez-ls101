@@ -60,11 +60,11 @@ P4 之后 lab 侧不再触发主程序文档测试。lab 检查点（L 系列）
 - [x] P1 建 `@ls101/desktop-ui`、搬迁、import 重写 —— 已通过 `docs:product:check`
 - [x] P2 外壳参数化（title/subtitle/icon/actions/layout + FE-10）—— 已通过 `docs:product:check`
 - [x] P3 启动统一（Vite 插件注入占位 + 共享 bootstrap）—— 已通过 `docs:product:check`
-- [x] P4 窗口控制共享（`@ls101/desktop-ui/main`）—— 自测全绿，等用户视觉回归 + 手动点窗口按钮
-- [ ] D lab 宿主无框 + bridge
-- [ ] D2 `@ls101/lab-renderer` 数据层
-- [ ] E 教师端页面契约梳理 + 提问
-- [ ] E2 教师端实现
+- [x] P4 窗口控制共享（`@ls101/desktop-ui/main`）—— 已通过 `docs:product:check` + 手动窗口测试
+- [x] D lab 宿主窗口控制接线（`frameless` 选项 + bridge；无框切换在各端重写时开启）—— lab 集成 3/3
+- [x] D2 `@ls101/lab-renderer` 数据层（query/action/selection/format，17 用例）
+- [x] E 教师端页面契约梳理 → `TODO-lab-teacher-ui-contract.local.md`（Q1–Q15 待用户确认）
+- [ ] E2 教师端实现（等 Q1–Q15 答复）
 - [ ] F 学生端页面契约梳理 + 提问
 - [ ] F2 学生端实现
 - [ ] G 收尾（stories/CI/文档/typecheck）

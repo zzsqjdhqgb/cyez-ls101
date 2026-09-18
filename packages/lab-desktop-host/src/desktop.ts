@@ -5,6 +5,7 @@ import { readFile, mkdir, copyFile, rm } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 import { LicenseService } from '@ls101/license'
+import { bindWindowControlEvents, registerWindowControlHandlers } from '@ls101/desktop-ui/main'
 import { validateSchema, operationDefinitions, type Schema } from '@ls101/lab-contracts'
 import { PinnedTransport, validateTarget, type TrustedTarget } from './transport'
 import { StudentRecords } from './records'
@@ -25,6 +26,7 @@ export interface DesktopOptions {
   renderer: string
   developmentUrl?: string
   releaseVersion: string
+  frameless?: boolean
   localService?: { invoke(capability: string, input: unknown): Promise<unknown> }
 }
 interface SavedConnection extends TrustedTarget {
@@ -131,12 +133,14 @@ export function startLabDesktop(options: DesktopOptions): void {
         return response.status === 404 ? testCache.respond(request.url) : response
       })
       Menu.setApplicationMenu(null)
+      registerWindowControlHandlers()
       window = new BrowserWindow({
         width: 1280,
         height: 820,
         minWidth: 760,
         minHeight: 560,
-        backgroundColor: '#f5f7f8',
+        frame: options.frameless ?? true,
+        backgroundColor: '#ffffff',
         title: options.role === 'student' ? '听说101 学生端' : '听说101 教师端',
         webPreferences: {
           preload: options.preload,
@@ -145,6 +149,7 @@ export function startLabDesktop(options: DesktopOptions): void {
           nodeIntegration: false
         }
       })
+      bindWindowControlEvents(window)
       const contents = window.webContents
       window.on('close', (event) => {
         if (allowClose) return

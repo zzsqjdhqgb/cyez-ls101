@@ -6,7 +6,12 @@ function getSenderWindow(event: IpcMainInvokeEvent): BrowserWindow | null {
   return window && !window.isDestroyed() ? window : null
 }
 
+let handlersRegistered = false
+
 export function registerWindowControlHandlers(): void {
+  if (handlersRegistered) return
+  handlersRegistered = true
+
   ipcMain.handle(WINDOW_CONTROL_CHANNELS.minimize, (event) => {
     getSenderWindow(event)?.minimize()
   })

@@ -27,6 +27,7 @@
     { "path": "./packages/file-store" },
     { "path": "./packages/file-dialog" },
     { "path": "./packages/desktop-ui" },
+    { "path": "./packages/lab-renderer" },
     { "path": "./packages/renderer" }
   ]
 }
