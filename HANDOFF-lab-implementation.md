@@ -1,5 +1,32 @@
 # HANDOFF: lab-deployment implementation
 
+## Milestone M1/M2 target acceptance on Windows (2026-09-18, current)
+
+Branch `feat/lab-deployment`. The Windows service and the client/server protocol are no longer "unexecuted on Windows": both milestones now run end to end on a real Windows host and are green. Design, matrix and findings: `docs/lab-vm-acceptance-design.md` (§5 test lanes, §6 Tier 0–2, §12 status, §13 findings). Commands live in `infra/windows-vm/README.md`.
+
+What runs where:
+
+- **`yarn vm:lab`** (about 20 minutes on the host) builds both installers on Windows with the pinned Node 24.20.0, boots a disposable Windows Server 2022 VM, installs the teacher package and the WinSW-hosted service, then runs 26 guest steps — M1 15 + M2 11 — followed by a host-side check that reaches the guest over the real VM network. Failures preserve the VM and collect a diagnostic; success halts and destroys it. Evidence lands in `infra/windows-vm/.local/results/`; `yarn vm:destroy` is required before a rerun after any failure.
+- **`yarn lab:typecheck`** and **`yarn test:vitest`** (project `lab-vm`) run the same protocol commands against the real `LabService` over real TLS in this container, with an injectable clock, so protocol semantics are checked in seconds instead of a VM cycle.
+- **`yarn vm:test`**, `scripts/__tests__/*` cover the host orchestration, the bundling and the guest script's structure.
+
+Green runs (each 26 guest steps plus host verification, `success: true`):
+
+- M1 first full green: runId `1789661969192-a443907b-4923-4a0e-8d9f-62c5c250ada8` (2026-09-17).
+- M2 first full green: runId `1789700556225-8611e188-d83c-41fc-9907-4e3fe01aea6b` (2026-09-18).
+- M2 green with the N7 fix and a strict re-upload assertion: runId `1789702105294-f6c6c5fc-a198-432f-ba04-4dc938b9cdf1`, teacher `66d47933dc053e5102fb75ad08067a280a4236b9ce8b2569673d99b769c4c0a1`, student `0fb58ed897f1489aa6248b0d880788952ab015edab4cbf128f6ef31256788d0d`.
+
+What the two milestones now prove on a real machine (not from container results): installer and service registration with the virtual service account and hardened ACLs; the 0.0.0.0 listener and SPKI pinning verified by an independent process; activation and licence window; graceful stop/restart through the SCM; standard-user isolation; the firewall gate measured from the host (unreachable before the deployment rule, reachable after); no secret in any artefact; pin-before-any-request; the loopback-only session exemption and its refusal to a forged `X-Forwarded-For`; enrollment batch issuance, two-process registration and replay idempotency plus six negative shapes; heartbeat liveness with the 20-second offline threshold and retained last-known values; a 32-connection, 1280-heartbeat load run with no transport errors; exam publication, independent-digest download, practice grant, 3 MiB submission upload, receipt, idempotent re-upload, teacher download and receipt survival after deletion; maintenance admission and practice continuation; a task lease keeping maintenance blocked until its 30-second expiry; the 8-upload and 64-handler ceilings with their distinct codes.
+
+Product defects found and fixed by this work, all of which container tests could not see:
+
+1. Windows packaging always failed: `@electron/asar` returns backslash paths on Windows (`scripts/lab/package-audit.mjs` now normalises them).
+2. The service installed into `Program Files (x86)`: the 32-bit NSIS installer launched 32-bit PowerShell, whose WOW64 redirection rewrote every `C:\Program Files` path (`install-server-windows.ps1` re-runs itself through `Sysnative`).
+3. The service could never stop: WinSW appends `<arguments>` to `<stoparguments>`, so the stop command line carried the `serve` arguments too, the CLI rejected it as `INVALID_ARGUMENTS`, and the SCM waited in `Stop Pending` forever because `<stoptimeout>` only applies when WinSW kills the process itself (`LS101Lab.xml` now uses `<startarguments>`, with a contract test).
+4. A replayed submission could lose its receipt: the server answered from the digest header without reading the archive, so the client was still writing when the socket closed and received `EPIPE` instead of the receipt — the same shape affected `429`, `413`, an early credential refusal and the capacity `503` (`http.ts` now drains an unread body before answering, with a deterministic regression test in the server package).
+
+Still manual, and not implied by the above: UAC-cancel-then-retry interaction, logoff and reboot autostart, power-loss and directory `FlushFileBuffers`, real audio devices, classroom-scale load, Linux systemd installation, and the milestone M3 (installed-product GUI over CDP) and M4 (upgrade, uninstall, data retention) suites, which are not implemented. Do not report whole-product target acceptance as complete.
+
 ## Remaining implementation delivered (2026-09-09)
 
 Baseline: `60eef2d`, branch `feat/lab-deployment`. The user authorized completing all remaining implementation and repeatedly instructed continuation. All changes remain unstaged and uncommitted under AGENTS.md. Preserve the two original Chinese-named `.lssubmission` files. The sections below are historical and do not describe the current remaining implementation.
@@ -23,7 +50,7 @@ Final Linux artifacts (0.4.1, x64):
 - `dist/lab-student/ls101-lab-student-0.4.1-linux-amd64.deb`, approximately 88 MiB, SHA-256 `725e2ea97c8baf37b232b33cd90f349426d8fa1289013e0496c7f93c907e44bb`.
 - `dist/lab-teacher/ls101-lab-teacher-0.4.1-linux-amd64.deb`, approximately 120 MiB, SHA-256 `fddebec8311bb42ff13b5d1dd48edd5579eee23108799db6378f72b201b83d32`.
 
-Remaining acceptance: actual Linux systemd installation/login/reboot; Windows native packaging, UAC, SCM, virtual-account ACLs and directory FlushFileBuffers; real microphones and sound cards; power-loss durability and classroom-scale load. Windows code exists but has not been executed on Windows and is not certified by container tests. Follow `docs/lab-target-acceptance.md`; deployment and upgrade steps are in `docs/lab-service-runtime.md`. Do not report whole-product target acceptance as complete.
+Remaining acceptance: actual Linux systemd installation/login/reboot; Windows native packaging, UAC, SCM, virtual-account ACLs and directory FlushFileBuffers; real microphones and sound cards; power-loss durability and classroom-scale load. Windows code exists but has not been executed on Windows and is not certified by container tests. **Superseded for the service and protocol milestones**: see the 2026-09-18 section at the top — Windows packaging, SCM, ACLs and the client/server protocol have since been executed on a real Windows host, while UAC interaction, reboot autostart, power-loss durability, audio and scale remain manual. Follow `docs/lab-target-acceptance.md`; deployment and upgrade steps are in `docs/lab-service-runtime.md`. Do not report whole-product target acceptance as complete.
 
 ## Continuation checkpoint (2026-09-08, supersedes the historical snapshot below)
 
@@ -105,7 +132,7 @@ Last observed `git status --short` before creating this file:
 
 Untracked: `TODO-lab-implementation.local.md`, this handoff file, and the two pre-existing Chinese-named `.lssubmission` files.
 
-All deployment-stage code changes were already staged in the Git index by the interrupted prior session. There is no deployment-stage commit yet. `TODO-lab-implementation.local.md` is staged as an added file even though the user explicitly said TODO must not be committed. The two original `.lssubmission` files must remain untouched. This handoff is new and untracked; do not commit it unless the user explicitly changes that instruction.
+All deployment-stage code changes were already staged in the Git index by the interrupted prior session. There is no deployment-stage commit yet. `TODO-lab-implementation.local.md` is staged as an added file even though the user explicitly said TODO must not be committed. The two original `.lssubmission` files must remain untouched. This handoff is tracked: it was committed in `9e7a207` despite the original instruction to leave it untracked, and the user authorized committing it on 2026-09-18.
 
 The first-stage commit originally failed because `/workspace/.git/index.lock` could not be created (`Read-only file system`), including after escalation. The user requested commands only and then committed externally; HEAD confirms `3fc8834`. The current handoff-only turn did not run `git add` or `git commit`.
 
