@@ -1944,8 +1944,10 @@ async function stepExamAndSubmission() {
       String(4 * 1024 * 1024),
       '--publish'
     ])
+    // `assertThat` takes a real boolean, and `status === 201 && published.examId` is a string: the
+    // comparison has to be spelled out or a successful publish is reported as a failure.
     assertThat(
-      published.status === 201 && published.examId,
+      published.status === 201 && typeof published.examId === 'string',
       'the exam package was published',
       published
     )
