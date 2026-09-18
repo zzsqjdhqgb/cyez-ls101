@@ -239,3 +239,47 @@ export function ToastStory(): JSX.Element {
     </div>
   )
 }
+
+function ShellCustomPage(): JSX.Element {
+  return (
+    <Page>
+      <PageHeader title="自定义外壳" />
+      <EmptyState icon={Layers3} title="侧边栏由 layout 覆盖隐藏" />
+    </Page>
+  )
+}
+
+const customShellRoutes: readonly AppRouteRegistration[] = [
+  {
+    component: ShellCustomPage,
+    id: 'custom-home',
+    navigation: { icon: Home, label: '仪表板', order: 0 },
+    path: '/'
+  }
+]
+
+export function ShellCustomStory(): JSX.Element {
+  return (
+    <MemoryRouter initialEntries={['/']}>
+      <Routes>
+        <Route
+          element={
+            <AppShell
+              actions={
+                <Button icon={Bell} size="small">
+                  刷新服务
+                </Button>
+              }
+              layout="focus"
+              routes={customShellRoutes}
+              subtitle="教师端"
+              title="听说101"
+            />
+          }
+        >
+          <Route element={<ShellCustomPage />} path="/" />
+        </Route>
+      </Routes>
+    </MemoryRouter>
+  )
+}

@@ -1,5 +1,6 @@
-import { useEffect, useState, type JSX } from 'react'
+import { useEffect, useState, type JSX, type ReactNode } from 'react'
 import { Minus, Square, X } from 'lucide-react'
+import type { WindowControlsBridge } from '@ls101/core-types'
 import { appIconUrl } from '../../assets'
 import styles from './TitleBar.module.css'
 
@@ -7,6 +8,11 @@ interface TitleBarProps {
   sidebarCollapsed: boolean
   sidebarVisible: boolean
   closeDisabled?: boolean
+  title?: string
+  subtitle?: string
+  icon?: string
+  actions?: ReactNode
+  windowControls?: WindowControlsBridge | null
 }
 
 function RestoreIcon(): JSX.Element {
@@ -21,10 +27,15 @@ function RestoreIcon(): JSX.Element {
 export function TitleBar({
   sidebarCollapsed,
   sidebarVisible,
-  closeDisabled = false
+  closeDisabled = false,
+  title = '曹二听说101',
+  subtitle,
+  icon = appIconUrl,
+  actions,
+  windowControls
 }: TitleBarProps): JSX.Element {
   const [maximized, setMaximized] = useState(false)
-  const controls = window.windowControls
+  const controls = windowControls === undefined ? window.windowControls : windowControls
 
   useEffect(() => {
     if (!controls) return
@@ -48,10 +59,12 @@ export function TitleBar({
         data-collapsed={sidebarVisible && sidebarCollapsed ? true : undefined}
         data-sidebar-hidden={!sidebarVisible || undefined}
       >
-        <img src={appIconUrl} alt="" />
-        <span>曹二听说101</span>
+        <img src={icon} alt="" />
+        <span>{title}</span>
+        {subtitle ? <small>{subtitle}</small> : null}
       </div>
       <div className={styles.dragRegion} />
+      {actions ? <div className={styles.titleActions}>{actions}</div> : null}
       <div className={styles.controls}>
         <button
           aria-label="最小化"

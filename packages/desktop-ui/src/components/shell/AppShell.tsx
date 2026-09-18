@@ -1,4 +1,4 @@
-import { useMemo, useState, type JSX } from 'react'
+import { useMemo, useState, type JSX, type ReactNode } from 'react'
 import { matchRoutes, Outlet, useLocation } from 'react-router-dom'
 import type { AppRouteRegistration, RouteLayout } from '../../app/route-registry'
 import { Sidebar } from './Sidebar'
@@ -7,6 +7,11 @@ import styles from './AppShell.module.css'
 
 interface AppShellProps {
   routes: readonly AppRouteRegistration[]
+  layout?: RouteLayout
+  title?: string
+  subtitle?: string
+  icon?: string
+  actions?: ReactNode
 }
 
 function resolveRouteLayout(
@@ -21,10 +26,18 @@ function resolveRouteLayout(
   return matches?.at(-1)?.route.handle.layout ?? 'standard'
 }
 
-export function AppShell({ routes }: AppShellProps): JSX.Element {
+export function AppShell({
+  routes,
+  layout: layoutOverride,
+  title,
+  subtitle,
+  icon,
+  actions
+}: AppShellProps): JSX.Element {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const { pathname } = useLocation()
-  const layout = useMemo(() => resolveRouteLayout(routes, pathname), [pathname, routes])
+  const routeLayout = useMemo(() => resolveRouteLayout(routes, pathname), [pathname, routes])
+  const layout = layoutOverride ?? routeLayout
   const sidebarVisible = layout === 'standard'
   const titleBarVisible = layout !== 'immersive'
 
@@ -35,7 +48,14 @@ export function AppShell({ routes }: AppShellProps): JSX.Element {
       data-sidebar-collapsed={sidebarVisible && sidebarCollapsed ? true : undefined}
     >
       {titleBarVisible ? (
-        <TitleBar sidebarCollapsed={sidebarCollapsed} sidebarVisible={sidebarVisible} />
+        <TitleBar
+          actions={actions}
+          icon={icon}
+          sidebarCollapsed={sidebarCollapsed}
+          sidebarVisible={sidebarVisible}
+          subtitle={subtitle}
+          title={title}
+        />
       ) : null}
       <div className={styles.workspace}>
         {sidebarVisible ? (

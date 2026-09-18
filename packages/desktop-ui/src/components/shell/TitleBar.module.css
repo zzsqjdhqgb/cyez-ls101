@@ -48,6 +48,29 @@
   border-right: 0;
 }
 
+.brand small {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+.brand[data-collapsed] small {
+  display: none;
+}
+
+.titleActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-right: var(--space-2);
+  -webkit-app-region: no-drag;
+}
+
 .dragRegion {
   min-width: 24px;
   height: 100%;
