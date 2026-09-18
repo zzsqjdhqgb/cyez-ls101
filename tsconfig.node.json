@@ -2,6 +2,7 @@
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
   "include": [
     "electron.vite.config.*",
+    "scripts/desktop-ui/**/*",
     "src/main/**/*",
     "src/preload/**/*"
   ],
@@ -21,6 +22,7 @@
     { "path": "./packages/secret-store" },
     { "path": "./packages/airouter" },
     { "path": "./packages/file-dialog" },
-    { "path": "./packages/file-store" }
+    { "path": "./packages/file-store" },
+    { "path": "./packages/desktop-ui" }
   ]
 }

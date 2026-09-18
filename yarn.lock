@@ -1316,6 +1316,11 @@ __metadata:
     react-dom: "npm:^19.2.8"
     react-router-dom: "npm:^7.18.2"
     sonner: "npm:^2.0.8"
+  peerDependencies:
+    electron: ^39
+  peerDependenciesMeta:
+    electron:
+      optional: true
   languageName: unknown
   linkType: soft
 

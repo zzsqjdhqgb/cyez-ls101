@@ -14,6 +14,10 @@
       "types": "./src/startup/bootstrap.ts",
       "default": "./src/startup/bootstrap.ts"
     },
+    "./main": {
+      "types": "./src/main/index.ts",
+      "default": "./src/main/index.ts"
+    },
     "./startup": {
       "types": "./src/startup/index.ts",
       "default": "./src/startup/index.ts"
@@ -35,6 +39,14 @@
   "devDependencies": {
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4"
+  },
+  "peerDependencies": {
+    "electron": "^39"
+  },
+  "peerDependenciesMeta": {
+    "electron": {
+      "optional": true
+    }
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
