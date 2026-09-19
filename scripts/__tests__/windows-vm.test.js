@@ -1681,8 +1681,23 @@ test('milestone M4 drives the real upgrade, uninstall and retention paths', asyn
   assert.match(serviceUninstall, /\['config', config\.serviceName, 'start=', 'demand'\]/)
 
   // The uninstaller path comes from the registry entry the installer wrote, not from a guessed name.
+  // electron-builder's NSIS writes `QuietUninstallString` but **not** `InstallLocation`, and the first
+  // run that reached M4 failed precisely because the discovery required an install location: the entry
+  // was there, printed beside the assertion, with `installLocation: null`. The fix keeps every candidate
+  // and takes the command's quoted path, so the shape the installer actually writes has to keep working.
   assert.match(orchestrator, /quietUninstallString/)
   assert.match(orchestrator, /uninstallerPath/)
+  assert.match(orchestrator, /function quotedPath\(/)
+  assert.match(orchestrator, /candidates\.find\(\(candidate\) => existsSync\(candidate\)\)/)
+  const discovery = orchestrator.slice(
+    orchestrator.indexOf('async function uninstallerPath'),
+    orchestrator.indexOf('// =================================================================================================\n// Milestone M4')
+  )
+  assert.doesNotMatch(
+    discovery,
+    /assertThat\(entry !== undefined/,
+    'discovery must not require an entry to carry an install location'
+  )
 
   // The backup command is a precondition of an upgrade, not a case of its own: it has to exist in the
   // registry, be called with a password file rather than a password, and be covered in the container.

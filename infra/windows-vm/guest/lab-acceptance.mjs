@@ -2497,16 +2497,46 @@ async function waitForRuntimeStatus(attempts = 120) {
 }
 
 // The client's own uninstaller, taken from the registry entry the installer wrote rather than guessed:
-// the executable name carries the product name and the install directory is named after the app.
+// the executable name carries the app name and the install directory is named after the app.
+//
+// Only two fields are trusted, and neither is guaranteed to be present: electron-builder's NSIS writes
+// `QuietUninstallString` (which is the whole command, `"<path>" /allusers /S`) but **not**
+// `InstallLocation` — the first real run found that out by failing with the entry printed beside it. So
+// every matching entry is considered, the quiet command is preferred over the display command, and a
+// missing install location is not a reason to reject an entry that names its executable.
 async function uninstallerPath() {
   const entries = asArray((await probe('uninstall-entry', ['-Match', 'LS101'])).entries)
-  const entry = entries.find((candidate) => candidate.installLocation)
-  assertThat(entry !== undefined, 'the client has an uninstall registry entry', entries)
-  const quiet = typeof entry.quietUninstallString === 'string' ? entry.quietUninstallString : ''
-  const fallback = join(String(entry.installLocation), 'Uninstall LS101 Lab Teacher.exe')
-  const command = quiet || `"${fallback}"`
+  const candidates = []
+  for (const entry of entries) {
+    const quiet =
+      typeof entry.quietUninstallString === 'string' ? entry.quietUninstallString.trim() : ''
+    const plain = typeof entry.uninstallString === 'string' ? entry.uninstallString.trim() : ''
+    const location =
+      typeof entry.installLocation === 'string' && entry.installLocation.length > 0
+        ? join(entry.installLocation, 'Uninstall LS101 Lab Teacher.exe')
+        : ''
+    // Order matters: `UninstallString` for an assisted installer carries `/allusers` + the app
+    // directory, which is a valid command but not the one to run unattended.
+    for (const path of [quotedPath(quiet), quotedPath(plain), location]) {
+      if (path) candidates.push(path)
+    }
+  }
+  const found = candidates.find((candidate) => existsSync(candidate))
+  assertThat(found !== undefined, 'the client publishes a discoverable uninstaller', {
+    candidates,
+    entries
+  })
+  return found
+}
+
+// The first quoted token of an uninstall command, or the whole string when it is a bare path. Registry
+// values are written either way, and both have to resolve to the same executable.
+function quotedPath(command) {
+  if (!command) return ''
   const quoted = command.match(/"([^"]+)"/)
-  return quoted ? quoted[1] : command.split(' ')[0]
+  if (quoted) return quoted[1]
+  const token = command.split(' ').find((part) => /\.exe$/i.test(part))
+  return token ?? ''
 }
 
 // =================================================================================================
