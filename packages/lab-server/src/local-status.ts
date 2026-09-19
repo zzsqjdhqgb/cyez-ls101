@@ -7,6 +7,28 @@ import { readServiceStatus } from './status-channel'
 import type { ManagerPaths } from './local-manager'
 import type { RuntimeStatus } from './runtime'
 
+const STATUS_RETRY_COUNT = 8
+const STATUS_RETRY_DELAY_MS = 250
+
+function isTransientStatusError(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException | null)?.code
+  return ['ENOENT', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT'].includes(String(code))
+}
+
+async function readStatusWithStartupRetry(root: string): Promise<RuntimeStatus> {
+  let last: unknown
+  for (let attempt = 0; attempt < STATUS_RETRY_COUNT; attempt += 1) {
+    try {
+      return await readServiceStatus(root)
+    } catch (error) {
+      last = error
+      if (!isTransientStatusError(error) || attempt === STATUS_RETRY_COUNT - 1) throw error
+      await new Promise<void>((resolve) => setTimeout(resolve, STATUS_RETRY_DELAY_MS))
+    }
+  }
+  throw last instanceof Error ? last : new Error('LOCAL_STATUS_UNAVAILABLE')
+}
+
 export interface InspectedServiceStatus extends Omit<
   RuntimeStatus,
   'state' | 'releaseVersion' | 'license'
@@ -132,7 +154,7 @@ export async function inspectLocalService(
   }
   if (registration.stopped) return { ...base, state: 'stopped' as const }
   try {
-    return { ...base, ...(await readServiceStatus(paths.root)) }
+    return { ...base, ...(await readStatusWithStartupRetry(paths.root)) }
   } catch {
     return { ...base, state: 'unavailable' as const, error: 'LOCAL_STATUS_UNAVAILABLE' }
   }

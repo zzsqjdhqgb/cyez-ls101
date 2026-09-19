@@ -79,7 +79,11 @@ if (Test-Path -LiteralPath $recordPath) {
   }
 }
 if (-not $sameRuntime -and (Test-Path -LiteralPath (Join-Path $data 'data\service.sqlite'))) {
-  $ready = Get-Content -LiteralPath (Join-Path $data 'data\upgrade-ready.json') -Raw | ConvertFrom-Json
+  $readyPath = Join-Path $data 'data\upgrade-ready.json'
+  if (-not (Test-Path -LiteralPath $readyPath)) {
+    throw 'Existing service data has no upgrade preparation record. Start the installed version, enter maintenance mode, create a recent backup, then choose service upgrade; for disposable development data, remove C:\ProgramData\LS101Lab first.'
+  }
+  $ready = Get-Content -LiteralPath $readyPath -Raw | ConvertFrom-Json
   if ($ready.targetVersion -ne $manifest.releaseVersion -or [DateTime]::Parse($ready.preparedAt).ToUniversalTime() -lt [DateTime]::UtcNow.AddDays(-1)) { throw 'Prepare the upgrade with a current backup before installation' }
 }
 function Set-PrivateDirectory([string]$Path, [string]$ServiceSid, [bool]$Readable) {

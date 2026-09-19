@@ -120,7 +120,12 @@ export function LocalServiceDialog({ close }: LocalServiceDialogProps): JSX.Elem
   const stopped = state === 'stopped'
   const installed = Boolean(state && state !== 'not-installed')
   const busy = local.busy
-  const error = local.error ?? status?.error ?? null
+  const error = local.error ?? (state === 'unavailable' ? null : status?.error) ?? null
+  const readLogs = (): void => {
+    void local.logs().then((value) => {
+      if (value !== null) setLogs(value)
+    })
+  }
   const confirmation = pending ? CONFIRMATIONS[pending.key] : null
   const port = portDraft ?? status?.port ?? ''
   const stateHint = !state
@@ -201,6 +206,48 @@ export function LocalServiceDialog({ close }: LocalServiceDialogProps): JSX.Elem
             hidden={tab !== 'information'}
             tabIndex={0}
           >
+            {state === 'unavailable' ? (
+              <section className={styles.recoveryCard} aria-labelledby="local-unavailable-heading">
+                <div className={styles.recoveryContent}>
+                  <h3 id="local-unavailable-heading">服务状态暂时不可用</h3>
+                  <p>教师端暂时无法读取本机服务的信息，尚不能确认服务是否已正常启动。</p>
+                  <ol>
+                    <li>如果刚刚启动服务，请稍等几秒后重新检查状态。</li>
+                    <li>如果仍不可用，读取服务日志查看启动错误。</li>
+                    <li>
+                      Windows：按 Win + R，输入 services.msc，查看 LS101 Lab
+                      Service（LS101Lab）的状态。
+                    </li>
+                    <li>Linux：可在终端执行 systemctl status ls101-lab.service 查看服务状态。</li>
+                  </ol>
+                </div>
+                <div className={styles.recoveryActions}>
+                  <Button
+                    disabled={busy}
+                    icon={RefreshCw}
+                    onClick={() => void local.check()}
+                    size="small"
+                  >
+                    重新检查状态
+                  </Button>
+                  <Button
+                    disabled={busy}
+                    icon={FileText}
+                    onClick={() => {
+                      setTab('logs')
+                      readLogs()
+                    }}
+                    size="small"
+                    variant="ghost"
+                  >
+                    查看服务日志
+                  </Button>
+                </div>
+                {status?.error ? (
+                  <p className={styles.recoveryCode}>诊断代码：{status.error}</p>
+                ) : null}
+              </section>
+            ) : null}
             <section aria-labelledby="local-actions-heading" className={styles.operationSection}>
               <h3 id="local-actions-heading" className={styles.heading}>
                 服务操作
@@ -374,15 +421,7 @@ export function LocalServiceDialog({ close }: LocalServiceDialogProps): JSX.Elem
             hidden={tab !== 'logs'}
             tabIndex={0}
           >
-            <Button
-              disabled={busy}
-              icon={FileText}
-              onClick={() =>
-                void local.logs().then((value) => {
-                  if (value !== null) setLogs(value)
-                })
-              }
-            >
+            <Button disabled={busy} icon={FileText} onClick={readLogs}>
               读取日志
             </Button>
             {logs !== null ? <pre className={styles.logs}>{logs || '暂无日志'}</pre> : null}

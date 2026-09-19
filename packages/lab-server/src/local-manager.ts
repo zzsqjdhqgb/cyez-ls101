@@ -10,6 +10,28 @@ import { validateRuntimeConfig } from './runtime-config'
 import { lockDirectory } from './directory-lock'
 import { durableWrite, syncDirectory } from './durable-files'
 
+const STATUS_RETRY_COUNT = 8
+const STATUS_RETRY_DELAY_MS = 250
+
+function isTransientStatusError(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException | null)?.code
+  return ['ENOENT', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT'].includes(String(code))
+}
+
+async function requestStatusWithStartupRetry(root: string): Promise<Record<string, unknown>> {
+  let last: unknown
+  for (let attempt = 0; attempt < STATUS_RETRY_COUNT; attempt += 1) {
+    try {
+      return await requestLocalControl<Record<string, unknown>>(root, 'status')
+    } catch (error) {
+      last = error
+      if (!isTransientStatusError(error) || attempt === STATUS_RETRY_COUNT - 1) throw error
+      await new Promise<void>((resolve) => setTimeout(resolve, STATUS_RETRY_DELAY_MS))
+    }
+  }
+  throw last instanceof Error ? last : new Error('LOCAL_CONTROL_UNAVAILABLE')
+}
+
 declare const __LAB_VERSION__: string
 
 const notInstalledStatus = {
@@ -180,7 +202,7 @@ export async function manageLocalService(
     const { autostart } = registration
     try {
       return {
-        ...(await requestLocalControl<Record<string, unknown>>(root, 'status')),
+        ...(await requestStatusWithStartupRetry(root)),
         autostart,
         error: null
       }
@@ -284,15 +306,31 @@ export async function manageLocalService(
           'cat'
         ])
       ).slice(-12000)
-    const file = await open(join(dirname(root), 'logs', 'LS101Lab.wrapper.log'), 'r')
-    try {
-      const size = (await file.stat()).size
-      const bytes = Buffer.alloc(Math.min(size, 12000))
-      await file.read(bytes, 0, bytes.length, Math.max(0, size - bytes.length))
-      return bytes.toString('utf8')
-    } finally {
-      await file.close()
+    const sections: string[] = []
+    for (const name of ['LS101Lab.err.log', 'LS101Lab.out.log', 'LS101Lab.wrapper.log']) {
+      let content: string
+      try {
+        const file = await open(join(dirname(root), 'logs', name), 'r')
+        try {
+          const size = (await file.stat()).size
+          const bytes = Buffer.alloc(Math.min(size, 12000))
+          const { bytesRead } = await file.read(
+            bytes,
+            0,
+            bytes.length,
+            Math.max(0, size - bytes.length)
+          )
+          content = bytes.subarray(0, bytesRead).toString('utf8') || '（日志为空）'
+        } finally {
+          await file.close()
+        }
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+        content = '（尚未生成日志）'
+      }
+      sections.push(`--- ${name} ---\n${content}`)
     }
+    return sections.join('\n\n')
   }
   if (operation === 'restore') {
     const value = input as { archive: string; password: string }

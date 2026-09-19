@@ -99,7 +99,16 @@ if (mode === '--verify') {
       }
     ))
   ) {
-    const ready = JSON.parse(await readFile('/var/lib/ls101-lab/data/upgrade-ready.json', 'utf8'))
+    const ready = await readFile('/var/lib/ls101-lab/data/upgrade-ready.json', 'utf8').then(
+      (text) => JSON.parse(text),
+      (error) => {
+        if (error.code === 'ENOENT')
+          throw new Error(
+            'Existing service data has no upgrade preparation record. Start the installed version, enter maintenance mode, create a recent backup, then choose service upgrade; for disposable development data, remove /var/lib/ls101-lab first.'
+          )
+        throw error
+      }
+    )
     if (
       ready.targetVersion !== manifest.releaseVersion ||
       !Number.isFinite(Date.parse(ready.preparedAt)) ||

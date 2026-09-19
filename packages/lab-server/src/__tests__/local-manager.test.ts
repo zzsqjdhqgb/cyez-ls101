@@ -21,6 +21,24 @@ describe('fixed local manager capabilities', () => {
     source: '/fixture/new-release'
   }
 
+  it('includes bounded Windows process error and output logs when the wrapper log is missing', async () => {
+    vi.stubGlobal('process', { ...process, platform: 'win32' })
+    const parent = await mkdtemp(join(tmpdir(), 'ls101-manager-logs-'))
+    onTestFinished(async () => rm(parent, { recursive: true, force: true }))
+    await mkdir(join(parent, 'logs'))
+    await writeFile(join(parent, 'logs', 'LS101Lab.err.log'), 'Error: listen EADDRINUSE')
+    await writeFile(join(parent, 'logs', 'LS101Lab.out.log'), 'old entry\n' + 'x'.repeat(12000))
+    const logs = await manageLocalService('logs', undefined, {
+      ...paths,
+      root: join(parent, 'data')
+    })
+    expect(logs).toContain('LS101Lab.err.log ---\nError: listen EADDRINUSE')
+    expect(logs).toContain('LS101Lab.out.log ---\n' + 'x'.repeat(12000))
+    expect(logs).not.toContain('old entry')
+    expect(logs).toContain('LS101Lab.wrapper.log ---\n（尚未生成日志）')
+    expect(execFile).not.toHaveBeenCalled()
+  })
+
   it.each(['linux', 'win32'])('keeps installer stderr and exit status on %s', async (platform) => {
     vi.stubGlobal('process', { ...process, platform })
     vi.mocked(execFile).mockImplementation((_file, _args, options: any, callback: any) => {

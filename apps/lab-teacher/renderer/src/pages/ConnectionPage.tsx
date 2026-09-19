@@ -99,6 +99,9 @@ export function ConnectionPage({ session, view }: ConnectionPageProps): JSX.Elem
               </small>
             </div>
             <div className={styles.rowActions}>
+              {local.status?.state === 'unavailable' ? (
+                <Button onClick={() => setLocalOpen(true)}>排查服务问题</Button>
+              ) : null}
               {local.status?.state === 'running' ? (
                 <Button
                   disabled={connectAction.busy}

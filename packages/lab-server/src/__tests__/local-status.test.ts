@@ -82,4 +82,17 @@ describe.each(['linux', 'win32'])('unprivileged service inspection on %s', (plat
     })
     expect(execFile).toHaveBeenCalledTimes(1)
   })
+
+  it('waits briefly for the public channel while a service is starting', async () => {
+    const paths = await fixture(false)
+    vi.mocked(readServiceStatus)
+      .mockRejectedValueOnce(Object.assign(new Error('not ready'), { code: 'ECONNREFUSED' }))
+      .mockResolvedValueOnce({
+        state: 'running',
+        releaseVersion: 'test',
+        info: { name: 'Lab' }
+      } as any)
+    await expect(inspectLocalService(paths)).resolves.toMatchObject({ state: 'running' })
+    expect(readServiceStatus).toHaveBeenCalledTimes(2)
+  })
 })

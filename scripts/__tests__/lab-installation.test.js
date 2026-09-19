@@ -120,7 +120,7 @@ test('installer aborts on refused preparation and still rejects stopped services
   })
   await assert.rejects(refused, /RESOURCE_BUSY/)
   const stopped = await installerFixture(t, () => {})
-  await assert.rejects(stopped, { code: 'ENOENT' })
+  await assert.rejects(stopped, /Existing service data has no upgrade preparation record/)
   const wrongVersion = await installerFixture(t, (data) => {
     require('node:fs').writeFileSync(
       path.join(data, 'upgrade-ready.json'),
@@ -146,7 +146,7 @@ test('the exact retained runtime can be reinstalled without an upgrade marker', 
   const same = await installerFixture(t, () => {}, '--install', 'same')
   await same()
   const different = await installerFixture(t, () => {}, '--install', 'different')
-  await assert.rejects(different, { code: 'ENOENT' })
+  await assert.rejects(different, /Existing service data has no upgrade preparation record/)
 })
 
 test('desktop packaging creates missing output directories before checking their permissions', async (t) => {

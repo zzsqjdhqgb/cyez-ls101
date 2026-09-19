@@ -61,9 +61,27 @@ test('service uninstall requires a stopped service and confirmation, handles fai
     )
     await expect(uninstall).toBeDisabled()
     fixture.statusError = null
+    fixture.status.state = 'unavailable'
     await writeFile(filename, JSON.stringify(fixture))
     await page.getByRole('button', { name: '检查本机状态' }).click()
+    await expect(localDialog.getByRole('heading', { name: '服务状态暂时不可用' })).toBeVisible()
+    await expect(localDialog.getByText(/services.msc/)).toBeVisible()
+    await expect(uninstall).toBeDisabled()
+    await expect(localDialog.getByRole('button', { name: '停止', exact: true })).toBeDisabled()
+    await expect(localDialog.getByLabel('服务名称', { exact: true })).toBeDisabled()
+    await page.screenshot({ path: 'test-results/lab/teacher-local-unavailable.png' })
+    await localDialog.getByRole('button', { name: '查看服务日志' }).click()
+    await expect(localDialog.getByRole('tab', { name: '服务日志' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    await expect(localDialog.getByText('Fixture service log', { exact: true })).toBeVisible()
+    await localDialog.getByRole('tab', { name: '服务信息与操作' }).click()
+    fixture.status.state = 'running'
+    await writeFile(filename, JSON.stringify(fixture))
+    await localDialog.getByRole('button', { name: '重新检查状态' }).click()
     await expect(localDialog.getByText('运行中', { exact: true })).toBeVisible()
+    await expect(localDialog.getByRole('heading', { name: '服务状态暂时不可用' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: '停止', exact: true })).toBeVisible()
     await expect(uninstall).toBeDisabled()
     fixture.status.state = 'stopped'
