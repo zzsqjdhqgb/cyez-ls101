@@ -1,6 +1,11 @@
 {
   "files": [],
   "references": [
+    { "path": "./packages/license" },
+    { "path": "./packages/lab-contracts" },
+    { "path": "./packages/lab-client" },
+    { "path": "./packages/lab-server" },
+    { "path": "./packages/lab-desktop-host" },
     { "path": "./tsconfig.node.json" },
     { "path": "./packages/core-types" },
     { "path": "./packages/logger" },
@@ -21,6 +26,8 @@
     { "path": "./packages/schema-editor" },
     { "path": "./packages/file-store" },
     { "path": "./packages/file-dialog" },
+    { "path": "./packages/desktop-ui" },
+    { "path": "./packages/lab-renderer" },
     { "path": "./packages/renderer" }
   ]
 }

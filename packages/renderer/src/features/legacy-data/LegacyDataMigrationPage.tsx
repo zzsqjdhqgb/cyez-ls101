@@ -9,8 +9,8 @@ import {
   Trash2
 } from 'lucide-react'
 import type { LegacyDataInfo } from '@ls101/core-types'
-import { TitleBar } from '../../components/shell/TitleBar'
-import { Button } from '../../components/ui/Button'
+import { TitleBar } from '@ls101/desktop-ui'
+import { Button } from '@ls101/desktop-ui'
 import styles from './LegacyDataMigrationPage.module.css'
 
 interface LegacyDataMigrationPageProps {

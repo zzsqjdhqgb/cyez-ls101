@@ -1,0 +1,28 @@
+{
+  "name": "@ls101/lab-desktop-host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./transport": "./src/transport.ts",
+    "./records": "./src/records.ts",
+    "./desktop": "./src/desktop.ts",
+    "./preload": "./src/preload.ts"
+  },
+  "dependencies": {
+    "@ls101/desktop-ui": "workspace:*",
+    "@ls101/exam-package": "workspace:*",
+    "@ls101/lab-client": "workspace:*",
+    "@ls101/lab-contracts": "workspace:*",
+    "@ls101/license": "workspace:*",
+    "canonicalize": "^2.1.0",
+    "jose": "^6.1.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@peculiar/x509": "^1.14.0"
+  }
+}

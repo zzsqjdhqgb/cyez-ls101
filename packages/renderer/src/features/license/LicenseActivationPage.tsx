@@ -9,9 +9,9 @@ import {
   ShieldX
 } from 'lucide-react'
 import type { LicenseStatus } from '@ls101/core-types'
-import { appIconUrl } from '../../assets'
-import { TitleBar } from '../../components/shell/TitleBar'
-import { Button } from '../../components/ui/Button'
+import { appIconUrl } from '@ls101/desktop-ui'
+import { TitleBar } from '@ls101/desktop-ui'
+import { Button } from '@ls101/desktop-ui'
 import styles from './LicenseActivationPage.module.css'
 
 interface LicenseActivationPageProps {

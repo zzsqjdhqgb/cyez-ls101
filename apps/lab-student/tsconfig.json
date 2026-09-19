@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "jsx": "react-jsx", "lib": ["ESNext", "DOM", "DOM.Iterable"], "noEmit": true },
+  "include": ["renderer", "main", "preload"],
+  "references": [
+    { "path": "../../packages/core-types" },
+    { "path": "../../packages/exam-player" },
+    { "path": "../../packages/exam-package" },
+    { "path": "../../packages/lab-client" },
+    { "path": "../../packages/lab-contracts" },
+    { "path": "../../packages/lab-desktop-host" }
+  ]
+}

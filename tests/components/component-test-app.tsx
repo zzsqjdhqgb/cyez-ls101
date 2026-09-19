@@ -8,6 +8,7 @@ import {
   PageCompositionStory,
   ResizableSplitStory,
   SettingsContentStory,
+  ShellCustomStory,
   ShellStory
 } from './stories'
 
@@ -20,7 +21,8 @@ const stories: Record<string, () => JSX.Element> = {
   page: PageCompositionStory,
   'resizable-split': ResizableSplitStory,
   settings: SettingsContentStory,
-  shell: ShellStory
+  shell: ShellStory,
+  'shell-custom': ShellCustomStory
 }
 
 export function ComponentTestApp(): JSX.Element {
@@ -30,7 +32,7 @@ export function ComponentTestApp(): JSX.Element {
   return (
     <main
       data-testid="component-root"
-      style={{ height: '100%', minHeight: '100%', padding: key === 'shell' ? 0 : 24 }}
+      style={{ height: '100%', minHeight: '100%', padding: key.startsWith('shell') ? 0 : 24 }}
     >
       <Story />
     </main>

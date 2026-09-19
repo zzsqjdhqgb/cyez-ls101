@@ -1,0 +1,11 @@
+Windows Registry Editor Version 5.00
+
+; Compatibility entries for Vagrant VMware Utility with VMware Workstation 26H1.
+; The Utility currently looks for the legacy 32-bit registry location.
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\VMware, Inc.]
+"Core"="VMware Workstation"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\VMware, Inc.\VMware Workstation]
+"InstallPath"="C:\\Program Files\\VMware\\VMware Workstation\\"
+"ProductVersion"="26.0.0.25388281"

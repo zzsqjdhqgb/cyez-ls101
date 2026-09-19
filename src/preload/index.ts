@@ -5,15 +5,13 @@ import {
   LEGACY_DATA_CHANNELS,
   LICENSE_CHANNELS,
   STARTUP_CHANNELS,
-  WINDOW_CONTROL_CHANNELS,
-  WINDOW_CONTROL_EVENTS,
   type AppInfoBridge,
   type DataDirectoryBridge,
   type LegacyDataBridge,
   type LicenseBridge,
-  type StartupBridge,
-  type WindowControlsBridge
+  type StartupBridge
 } from '@ls101/core-types'
+import { createWindowControlsBridge } from '@ls101/desktop-ui/main'
 import {
   FILE_DIALOG_CHANNELS,
   type FileDialogBridge,
@@ -411,30 +409,7 @@ const legacyDataBridge: LegacyDataBridge = {
   }
 }
 
-const windowControlsBridge: WindowControlsBridge = {
-  minimize() {
-    return ipcRenderer.invoke(WINDOW_CONTROL_CHANNELS.minimize)
-  },
-  toggleMaximize() {
-    return ipcRenderer.invoke(WINDOW_CONTROL_CHANNELS.toggleMaximize)
-  },
-  close() {
-    return ipcRenderer.invoke(WINDOW_CONTROL_CHANNELS.close)
-  },
-  getMaximized() {
-    return ipcRenderer.invoke(WINDOW_CONTROL_CHANNELS.getMaximized)
-  },
-  onMaximizedChange(listener) {
-    const handler = (_event: IpcRendererEvent, maximized: boolean): void => {
-      listener(maximized)
-    }
-
-    ipcRenderer.on(WINDOW_CONTROL_EVENTS.maximizedChanged, handler)
-    return () => {
-      ipcRenderer.removeListener(WINDOW_CONTROL_EVENTS.maximizedChanged, handler)
-    }
-  }
-}
+const windowControlsBridge = createWindowControlsBridge(ipcRenderer)
 
 const loggerBridge: LoggerBridge = {
   write(event: LogEvent) {

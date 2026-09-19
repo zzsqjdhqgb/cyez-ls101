@@ -36,7 +36,7 @@ import { SchemaDraftLibraryPage } from '../features/schemas/SchemaDraftLibraryPa
 import { SubmissionLibraryPage } from '../features/submissions/SubmissionLibraryPage'
 import { SubmissionGradingPage } from '../features/submissions/SubmissionGradingPage'
 import { SubmissionSettlementPage } from '../features/submissions/SubmissionSettlementPage'
-import { registerAppRoute } from './route-registry'
+import { registerAppRoute } from '@ls101/desktop-ui'
 
 const unregisterRoutes = [
   // Default main navigation registration. `placement` defaults to `main`.

@@ -6,6 +6,7 @@ import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ExamPlayer } from '../ExamPlayer'
 import { fixtureExam } from './loading.test'
+import { decodeSubmissionPackage } from '@ls101/exam-package'
 
 beforeEach(() => {
   vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:resource')
@@ -21,6 +22,116 @@ afterEach(() => {
 })
 
 describe('ExamPlayer', () => {
+  it('宿主提供考生身份后仍须取得开始许可，拒绝时不自动重试', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json(admissionExam()))
+    )
+    const beforeStart = vi.fn().mockRejectedValue(new Error('任务租约已结束')),
+      onFinish = vi.fn(),
+      candidate = { displayName: '部署测试', candidateId: 'deployment-test' }
+    render(
+      <ExamPlayer
+        examBaseUrl="https://exam.test/host-start/"
+        startSession={{ candidate }}
+        beforeStart={beforeStart}
+        onFinish={onFinish}
+        onExit={vi.fn()}
+      />
+    )
+    expect(await screen.findByText('任务租约已结束')).toBeInTheDocument()
+    expect(beforeStart).toHaveBeenCalledOnce()
+    expect(beforeStart.mock.calls[0][0].candidate).toEqual(candidate)
+    expect(onFinish).not.toHaveBeenCalled()
+  })
+  it('开始许可被拒绝时不启动时间线，也不生成作答', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json(admissionExam()))
+    )
+    const onFinish = vi.fn(),
+      beforeStart = vi.fn().mockRejectedValue(new Error('维护中'))
+    render(
+      <ExamPlayer
+        examBaseUrl="https://exam.test/permission/"
+        beforeStart={beforeStart}
+        onFinish={onFinish}
+        onExit={vi.fn()}
+      />
+    )
+    await enterCandidateDetails()
+    expect(await screen.findByText('维护中')).toBeInTheDocument()
+    expect(onFinish).not.toHaveBeenCalled()
+    expect(beforeStart).toHaveBeenCalledOnce()
+  })
+
+  it('保存重试复用相同归档、固定身份和完成时间', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json(admissionExam()))
+    )
+    const id = crypto.randomUUID(),
+      beforeStart = vi.fn(async () => ({ submissionId: id }))
+    const onFinish = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('保存失败'))
+      .mockResolvedValue(undefined)
+    render(
+      <ExamPlayer
+        examBaseUrl="https://exam.test/retry/"
+        beforeStart={beforeStart}
+        onFinish={onFinish}
+        onExit={vi.fn()}
+      />
+    )
+    await enterCandidateDetails()
+    expect(await screen.findByText('保存失败')).toBeInTheDocument()
+    const archive = onFinish.mock.calls[0][0] as Blob
+    fireEvent.click(screen.getByRole('button', { name: '重试' }))
+    expect(await screen.findByRole('heading', { name: '考试完成' })).toBeInTheDocument()
+    expect(onFinish.mock.calls[1][0]).toBe(archive)
+    expect(beforeStart).toHaveBeenCalledOnce()
+    const data = await new Promise<ArrayBuffer>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as ArrayBuffer)
+      reader.onerror = reject
+      reader.readAsArrayBuffer(archive)
+    })
+    const decoded = await decodeSubmissionPackage(new Uint8Array(data))
+    expect(decoded.submission.meta.submissionId).toBe(id)
+    expect(decoded.submission.meta.submittedAt).toBeTruthy()
+  })
+
+  it('卸载中止许可请求，迟到许可不会开始作答', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json(admissionExam()))
+    )
+    let signal: AbortSignal | undefined,
+      resolve: ((value: { submissionId: string }) => void) | undefined
+    const onFinish = vi.fn()
+    const view = render(
+      <ExamPlayer
+        examBaseUrl="https://exam.test/late/"
+        beforeStart={(context) => {
+          signal = context.signal
+          return new Promise((done) => {
+            resolve = done
+          })
+        }}
+        onFinish={onFinish}
+        onExit={vi.fn()}
+      />
+    )
+    await enterCandidateDetails()
+    await screen.findByRole('heading', { name: '正在确认练习许可' })
+    view.unmount()
+    expect(signal?.aborted).toBe(true)
+    await act(async () => {
+      resolve!({ submissionId: crypto.randomUUID() })
+    })
+    expect(onFinish).not.toHaveBeenCalled()
+  })
   it('资源预检完成后收集考生信息并返回完整归档 Blob', async () => {
     const exam = fixtureExam({
       examData: {
@@ -127,7 +238,9 @@ describe('ExamPlayer', () => {
       'fetch',
       vi.fn(async () => Response.json(recordingExam()))
     )
-    vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(function () {
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(function (
+      this: HTMLMediaElement
+    ) {
       this.dispatchEvent(new Event('play'))
       return Promise.resolve()
     })
@@ -215,8 +328,28 @@ describe('ExamPlayer', () => {
   })
 })
 
+function admissionExam() {
+  return fixtureExam({
+    examData: {
+      title: '准入测试',
+      resources: {},
+      player: {
+        pages: [{ id: 'one', content: [], timeline: [{ type: 'countdown', seconds: 0 }] }],
+        recordingIndices: []
+      }
+    },
+    submissionTemplate: {
+      format: 'ls101-submission',
+      formatVersion: 1,
+      meta: { examPackageId: 'exam-1', examTitle: '准入测试' },
+      schemaUses: [],
+      resources: {}
+    }
+  })
+}
+
 async function enterCandidateDetails(): Promise<void> {
-  await screen.findByRole('heading', { name: '录音考试' })
+  await screen.findByLabelText('姓名')
   fireEvent.change(screen.getByLabelText('姓名'), { target: { value: '王五' } })
   fireEvent.change(screen.getByLabelText('考生号'), { target: { value: '1003' } })
   fireEvent.click(screen.getByRole('button', { name: '继续' }))

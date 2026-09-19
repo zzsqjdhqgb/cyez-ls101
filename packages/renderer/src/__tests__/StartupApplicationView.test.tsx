@@ -11,7 +11,7 @@ vi.mock('../app/App', () => ({
   App: () => <main>Application</main>
 }))
 
-vi.mock('../startup-timing', () => ({
+vi.mock('@ls101/desktop-ui/startup', () => ({
   markRendererStartupMilestone: mocks.markStartupMilestone
 }))
 

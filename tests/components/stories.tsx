@@ -11,28 +11,21 @@ import {
   Settings2,
   Trash2
 } from 'lucide-react'
-import type { AppRouteRegistration } from '../../packages/renderer/src/app/route-registry'
-import { AppShell } from '../../packages/renderer/src/components/shell/AppShell'
+import type { AppRouteRegistration } from '@ls101/desktop-ui'
+import { AppShell } from '@ls101/desktop-ui'
 import {
   AIModelSelect,
   type AIModelOption
 } from '../../packages/renderer/src/components/ai/AIModelSelect'
-import {
-  SettingsContent,
-  SettingsRow,
-  SettingsSection
-} from '../../packages/renderer/src/components/settings/SettingsContent'
-import { Button } from '../../packages/renderer/src/components/ui/Button'
-import { ConfirmModal } from '../../packages/renderer/src/components/ui/ConfirmModal'
-import { EmptyState } from '../../packages/renderer/src/components/ui/EmptyState'
-import { IconButton } from '../../packages/renderer/src/components/ui/IconButton'
-import {
-  Modal,
-  ModalDescription,
-  ModalTitle
-} from '../../packages/renderer/src/components/ui/Modal'
-import { Page, PageHeader } from '../../packages/renderer/src/components/ui/Page'
-import { ResizableSplit } from '../../packages/renderer/src/components/ui/ResizableSplit'
+import { Banner } from '@ls101/desktop-ui'
+import { SettingsContent, SettingsRow, SettingsSection } from '@ls101/desktop-ui'
+import { Button } from '@ls101/desktop-ui'
+import { ConfirmModal } from '@ls101/desktop-ui'
+import { EmptyState } from '@ls101/desktop-ui'
+import { IconButton } from '@ls101/desktop-ui'
+import { Modal, ModalDescription, ModalTitle } from '@ls101/desktop-ui'
+import { Page, PageHeader } from '@ls101/desktop-ui'
+import { ResizableSplit } from '@ls101/desktop-ui'
 
 export function ButtonStory(): JSX.Element {
   const [status, setStatus] = useState('尚未保存')
@@ -235,6 +228,7 @@ export function PageCompositionStory(): JSX.Element {
   return (
     <Page>
       <PageHeader actions={<Button icon={CircleAlert}>检查状态</Button>} title="页面标题" />
+      <Banner tone="success">所有设备已完成同步</Banner>
       <EmptyState icon={FileQuestion} title="暂无内容" />
     </Page>
   )
@@ -245,5 +239,49 @@ export function ToastStory(): JSX.Element {
     <div>
       <Button icon={Bell}>发送通知</Button>
     </div>
+  )
+}
+
+function ShellCustomPage(): JSX.Element {
+  return (
+    <Page>
+      <PageHeader title="自定义外壳" />
+      <EmptyState icon={Layers3} title="侧边栏由 layout 覆盖隐藏" />
+    </Page>
+  )
+}
+
+const customShellRoutes: readonly AppRouteRegistration[] = [
+  {
+    component: ShellCustomPage,
+    id: 'custom-home',
+    navigation: { icon: Home, label: '仪表板', order: 0 },
+    path: '/'
+  }
+]
+
+export function ShellCustomStory(): JSX.Element {
+  return (
+    <MemoryRouter initialEntries={['/']}>
+      <Routes>
+        <Route
+          element={
+            <AppShell
+              actions={
+                <Button icon={Bell} size="small">
+                  刷新服务
+                </Button>
+              }
+              layout="focus"
+              routes={customShellRoutes}
+              subtitle="教师端"
+              title="听说101"
+            />
+          }
+        >
+          <Route element={<ShellCustomPage />} path="/" />
+        </Route>
+      </Routes>
+    </MemoryRouter>
   )
 }
