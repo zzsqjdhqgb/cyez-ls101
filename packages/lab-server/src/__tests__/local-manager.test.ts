@@ -251,6 +251,34 @@ describe.each(['linux', 'win32'])('service removal on %s', (platform) => {
     expect(state.installed).toBe(true)
   })
 
+  it('does not report a running OS service as stopped when control is not ready', async () => {
+    const { paths, state } = await fixture()
+    state.stopped = false
+    await expect(manageLocalService('status', undefined, paths)).resolves.toMatchObject({
+      state: 'unavailable',
+      error: 'LOCAL_CONTROL_UNAVAILABLE'
+    })
+    state.stopped = true
+    await expect(manageLocalService('status', undefined, paths)).resolves.toMatchObject({
+      state: 'stopped',
+      error: null
+    })
+  })
+
+  it('returns actual readiness after start, including a service awaiting initialization', async () => {
+    const { paths } = await fixture()
+    vi.mocked(requestLocalControl).mockResolvedValue({
+      state: 'uninitialized',
+      info: null,
+      settings: null,
+      port: null
+    })
+    await expect(manageLocalService('start', undefined, paths)).resolves.toMatchObject({
+      state: 'uninitialized',
+      autostart: false
+    })
+  })
+
   it('refuses removal while the daemon lifetime lock is held', async () => {
     const { paths, commands } = await fixture()
     const lifetime = await lockDirectory(`${paths.root}.runtime`)

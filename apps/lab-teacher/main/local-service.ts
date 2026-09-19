@@ -4,6 +4,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir, userInfo } from 'node:os'
 import { join } from 'node:path'
 import { listenLocalControl } from '@ls101/lab-server/control'
+import { inspectLocalService } from '@ls101/lab-server/status'
 
 function execute(file: string, args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -24,9 +25,12 @@ export function localServiceHost(
   let busy = false
   return {
     async invoke(operation, input) {
+      if (operation === 'status') {
+        if (input !== undefined) throw new Error('INVALID_REQUEST')
+        return inspectLocalService()
+      }
       if (
         ![
-          'status',
           'initialize',
           'connection',
           'start',

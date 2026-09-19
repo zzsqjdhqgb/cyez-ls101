@@ -66,6 +66,7 @@ const LOCAL_MESSAGES: Record<string, string> = {
   LOCAL_HELPER_INCOMPLETE: '本机服务助手没有返回结果，请重试。',
   LOCAL_OPERATION_FAILED: '本机服务操作失败。',
   LOCAL_CONTROL_UNAVAILABLE: '本机服务控制通道不可用。',
+  LOCAL_STATUS_UNAVAILABLE: '暂时无法获取本机服务状态，请稍后刷新。',
   UNSUPPORTED_PLATFORM: '当前系统不支持本机服务管理。',
   INVALID_REQUEST: '本机服务拒绝了本次请求。',
   RESOURCE_BUSY: '本机服务正忙，请稍后重试。'

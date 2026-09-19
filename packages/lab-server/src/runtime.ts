@@ -9,6 +9,7 @@ import { lockDirectory } from './directory-lock'
 import { durableWrite, verifiedFile, syncDirectory } from './durable-files'
 import { createLabHttpServer, closeLabHttpServer } from './http'
 import { listenLocalControl } from './control'
+import { listenServiceStatus } from './status-channel'
 import { validateRuntimeConfig, type RuntimeConfig } from './runtime-config'
 import { DEVICE_OFFLINE_AFTER_MS } from './devices'
 
@@ -19,6 +20,7 @@ export interface RuntimeStatus {
   info: ReturnType<LabService['info']> | null
   port: number | null
   fingerprint: string | null
+  settings: { name: string; baseUrl: string; revision: number; securityRevision: number } | null
 }
 
 export async function startServiceRuntime(
@@ -29,6 +31,7 @@ export async function startServiceRuntime(
   let service: LabService | undefined
   let http: Server | undefined
   let control: Awaited<ReturnType<typeof listenLocalControl>> | undefined
+  let statusListener: Awaited<ReturnType<typeof listenServiceStatus>> | undefined
   let closing = false
   let closeWork: Promise<void> | undefined
   let busy = false
@@ -78,6 +81,7 @@ export async function startServiceRuntime(
       closing = true
       clearInterval(gcTimer)
       clearTimeout(stopTimer)
+      await statusListener?.close()
       await control?.close()
       if (http) await closeLabHttpServer(http)
       for (const transfer of service?.transfers.values() ?? [])
@@ -93,7 +97,15 @@ export async function startServiceRuntime(
     license: await license.getStatus(),
     info: service?.info() ?? null,
     port: config?.port ?? null,
-    fingerprint: service?.identity.fingerprint ?? null
+    fingerprint: service?.identity.fingerprint ?? null,
+    settings: service
+      ? {
+          name: service.data().name,
+          baseUrl: service.data().baseUrl,
+          revision: service.data().settingsRevision,
+          securityRevision: service.security.revision()
+        }
+      : null
   })
   try {
     await mkdir(root, { recursive: true, mode: 0o700 })
@@ -251,6 +263,7 @@ export async function startServiceRuntime(
         busy = false
       }
     })
+    statusListener = await listenServiceStatus(root, status)
     return { close, status }
   } catch (error) {
     await close()

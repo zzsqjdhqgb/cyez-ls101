@@ -10,6 +10,12 @@ export interface LocalServiceStatus {
   port: number | null
   error: string | null
   fingerprint?: string | null
+  settings?: {
+    name: string
+    baseUrl: string
+    revision: number
+    securityRevision: number
+  } | null
 }
 
 export interface LocalServiceInitialization {

@@ -21,6 +21,7 @@ test('service uninstall requires a stopped service and confirmation, handles fai
       port: null,
       error: null
     },
+    statusError: 'LOCAL_STATUS_UNAVAILABLE' as string | null,
     rejectUninstall: true,
     installError:
       'STORAGE_UNAVAILABLE\nLS101_INSTALL_ERROR [configure-service-account]: Access denied',
@@ -51,17 +52,35 @@ test('service uninstall requires a stopped service and confirmation, handles fai
     await page.getByRole('button', { name: '本机服务管理' }).click()
     const localDialog = page.getByRole('dialog', { name: '本机服务' })
     const uninstall = page.getByRole('button', { name: '卸载服务', exact: true })
-    // Actions are offered per state: an unchecked service exposes no management actions at all.
-    await expect(localDialog.getByText('尚未检查', { exact: true })).toBeVisible()
-    await expect(uninstall).toHaveCount(0)
+    // Management actions stay in place, disabled until their required state is known.
+    await expect(localDialog.getByText('状态未知', { exact: true })).toBeVisible()
+    await expect(localDialog.getByLabel('服务名称', { exact: true })).toBeDisabled()
+    await expect(localDialog.getByLabel('对外地址', { exact: true })).toHaveAttribute(
+      'placeholder',
+      '未知'
+    )
+    await expect(uninstall).toBeDisabled()
+    fixture.statusError = null
+    await writeFile(filename, JSON.stringify(fixture))
     await page.getByRole('button', { name: '检查本机状态' }).click()
     await expect(localDialog.getByText('运行中', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: '停止', exact: true })).toBeVisible()
-    await expect(uninstall).toHaveCount(0)
+    await expect(uninstall).toBeDisabled()
     fixture.status.state = 'stopped'
     await writeFile(filename, JSON.stringify(fixture))
     await page.getByRole('button', { name: '检查本机状态' }).click()
     await expect(uninstall).toBeEnabled()
+    await expect(localDialog.getByLabel('服务名称', { exact: true })).toBeDisabled()
+    await localDialog.getByRole('tab', { name: '监听端口与备份恢复' }).click()
+    await expect(localDialog.getByLabel('监听端口', { exact: true })).toBeEnabled()
+    await expect(localDialog.getByLabel('监听端口', { exact: true })).toHaveValue('')
+    await localDialog.getByLabel('监听端口', { exact: true }).fill('9443')
+    await localDialog.getByRole('tab', { name: '服务日志' }).click()
+    await localDialog.getByRole('button', { name: '读取日志' }).click()
+    await expect(localDialog.getByText('Fixture service log', { exact: true })).toBeVisible()
+    await localDialog.getByRole('tab', { name: '监听端口与备份恢复' }).click()
+    await expect(localDialog.getByLabel('监听端口', { exact: true })).toHaveValue('9443')
+    await localDialog.getByRole('tab', { name: '服务信息与操作' }).click()
     await uninstall.click()
     const confirmation = page.getByRole('alertdialog', { name: '卸载本机服务' })
     await expect(confirmation).toContainText('保留试卷、作答、备份和服务程序')
@@ -70,13 +89,15 @@ test('service uninstall requires a stopped service and confirmation, handles fai
     await uninstall.click()
     await confirmation.getByRole('button', { name: '确认', exact: true }).click()
     await expect(page.getByRole('alert')).toContainText('RESOURCE_BUSY')
+    await expect(uninstall).toBeDisabled()
+    await page.getByRole('button', { name: '检查本机状态' }).click()
     await expect(uninstall).toBeEnabled()
     fixture.rejectUninstall = false
     await writeFile(filename, JSON.stringify(fixture))
     await uninstall.click()
     await confirmation.getByRole('button', { name: '确认', exact: true }).click()
     await expect(localDialog.getByText('未安装', { exact: true })).toBeVisible()
-    await expect(uninstall).toHaveCount(0)
+    await expect(uninstall).toBeDisabled()
     await expect(page.getByRole('button', { name: '安装程序', exact: true })).toBeEnabled()
     expect(JSON.parse(await readFile(filename, 'utf8')).uninstalled).toBe(true)
     await page.getByRole('button', { name: '安装程序', exact: true }).click()
@@ -129,8 +150,56 @@ test('local teacher connection consumes the proof in main and leaves the indepen
     const page = await app.firstWindow()
     await page.getByRole('button', { name: '本机服务管理' }).click()
     const localDialog = page.getByRole('dialog', { name: '本机服务' })
-    await localDialog.getByRole('button', { name: '检查本机状态' }).click()
     await expect(localDialog.getByText('运行中', { exact: true })).toBeVisible()
+    await expect(
+      localDialog.getByRole('button', { name: '连接本机服务', exact: true })
+    ).toHaveCount(0)
+    await expect(localDialog.getByRole('tab')).toHaveCount(3)
+    const name = localDialog.getByLabel('服务名称', { exact: true })
+    await expect(name).toHaveValue('Local Lab')
+    await expect(name).toBeEnabled()
+    await name.fill('Local Lab renamed')
+    await localDialog.getByRole('tab', { name: '监听端口与备份恢复' }).click()
+    await expect(localDialog.getByRole('tabpanel', { name: '监听端口与备份恢复' })).toBeVisible()
+    await expect(localDialog.getByLabel('监听端口', { exact: true })).toBeDisabled()
+    await localDialog.getByRole('tab', { name: '服务日志' }).click()
+    await expect(localDialog.getByRole('button', { name: '读取日志' })).toBeVisible()
+    await localDialog.getByRole('tab', { name: '服务日志' }).press('Home')
+    await expect(localDialog.getByRole('tab', { name: '服务信息与操作' })).toBeFocused()
+    await expect(name).toHaveValue('Local Lab renamed')
+    await localDialog.getByRole('button', { name: '保存服务信息' }).click()
+    await expect(localDialog.getByText('服务信息已保存。', { exact: true })).toBeVisible()
+    expect(await requestLocalControl(root, 'status')).toMatchObject({
+      info: { name: 'Local Lab renamed' }
+    })
+    const address = localDialog.getByLabel('对外地址', { exact: true })
+    await address.fill(`https://localhost:${port}/`)
+    await localDialog.getByRole('button', { name: '保存服务信息' }).click()
+    const addressConfirmation = page.getByRole('alertdialog', { name: '修改服务对外地址' })
+    await expect(addressConfirmation).toContainText('不会自动更新地址')
+    await addressConfirmation.getByRole('button', { name: '取消', exact: true }).click()
+    expect(await requestLocalControl(root, 'status')).toMatchObject({
+      settings: { baseUrl: `https://127.0.0.1:${port}/` }
+    })
+    await localDialog.getByRole('button', { name: '保存服务信息' }).click()
+    await addressConfirmation.getByRole('button', { name: '确认', exact: true }).click()
+    await expect(localDialog.getByRole('button', { name: '保存服务信息' })).toBeDisabled()
+    await expect(address).toBeEnabled()
+    expect(await requestLocalControl(root, 'status')).toMatchObject({
+      settings: { baseUrl: `https://localhost:${port}/` }
+    })
+    await localDialog.getByLabel('管理密码', { exact: true }).fill('changed-teacher-secret')
+    await localDialog.getByRole('button', { name: '修改密码', exact: true }).click()
+    const passwordConfirmation = page.getByRole('alertdialog', { name: '修改管理密码' })
+    await expect(passwordConfirmation).toContainText('需要重新连接')
+    await passwordConfirmation.getByRole('button', { name: '确认', exact: true }).click()
+    await expect(
+      localDialog.getByText('管理密码已修改，已登录的教师端需要重新连接。', { exact: true })
+    ).toBeVisible()
+    await expect(localDialog.getByLabel('管理密码', { exact: true })).toHaveValue('')
+    expect(await requestLocalControl(root, 'status')).toMatchObject({
+      settings: { securityRevision: 2 }
+    })
     await page.screenshot({ path: 'test-results/lab/teacher-local-dialog.png' })
     await localDialog.getByRole('button', { name: '关闭对话框' }).click()
     const connected = await page.evaluate(async () =>
@@ -141,7 +210,7 @@ test('local teacher connection consumes the proof in main and leaves the indepen
         fingerprint?: string
       }>('localService.connection')
     )
-    expect(connected.info.name).toBe('Local Lab')
+    expect(connected.info.name).toBe('Local Lab renamed')
     expect(connected.localProof).toBeUndefined()
     expect(connected.fingerprint).toBeUndefined()
     await page.getByRole('button', { name: '连接本机服务', exact: true }).click()

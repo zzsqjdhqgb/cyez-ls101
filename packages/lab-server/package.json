@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./control": "./src/control.ts"
+    "./control": "./src/control.ts",
+    "./status": "./src/local-status.ts"
   },
   "engines": {
     "node": ">=24.20.0 <25"

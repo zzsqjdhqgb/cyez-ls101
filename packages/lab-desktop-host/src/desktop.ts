@@ -347,8 +347,17 @@ export function startLabDesktop(options: DesktopOptions): void {
             })
             return chosen.canceled ? null : chosen.filePaths[0]
           }
-          const result = await options.localService.invoke(capability.slice(13), input)
-          if (capability !== 'localService.connection') return result
+          const editOperation =
+            capability === 'localService.updateSettings'
+              ? 'patchTeacherSettings'
+              : capability === 'localService.changePassword'
+                ? 'putTeacherSecurityPassword'
+                : null
+          const result = await options.localService.invoke(
+            editOperation ? 'connection' : capability.slice(13),
+            editOperation ? undefined : input
+          )
+          if (capability !== 'localService.connection' && !editOperation) return result
           const target = result as LocalServiceConnection
           const url = new URL(target.baseUrl)
           if (
@@ -365,6 +374,21 @@ export function startLabDesktop(options: DesktopOptions): void {
           )
           try {
             await transport.authenticate(connection.connectionId, undefined, target.localProof)
+            if (editOperation) {
+              try {
+                const response = await transport.request(connection.connectionId, editOperation, {
+                  body: input
+                })
+                if (response.status !== 200)
+                  throw new Error((response.body as Schema<'Error'>).error.code)
+                return response.body
+              } finally {
+                await transport
+                  .request(connection.connectionId, 'deleteTeacherSessionsCurrent', {})
+                  .catch(() => undefined)
+                await transport.close(connection.connectionId)
+              }
+            }
             currentEpoch = connection.epoch
             return connection
           } catch (error) {

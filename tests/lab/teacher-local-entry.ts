@@ -2,6 +2,7 @@ import { resolve } from 'node:path'
 import { readFile, writeFile } from 'node:fs/promises'
 import { startTeacherDesktop } from '../../apps/lab-teacher/main/desktop'
 import { requestLocalControl } from '../../packages/lab-server/src/control'
+import { readServiceStatus } from '../../packages/lab-server/src/status-channel'
 
 const root = process.env.LS101_TEST_SERVICE_ROOT
 if (!root) throw new Error('Missing test fixture service')
@@ -15,7 +16,11 @@ startTeacherDesktop({
       if (process.env.LS101_TEST_SERVICE_MANAGEMENT === '1') {
         const filename = resolve(root, 'management.json')
         const fixture = JSON.parse(await readFile(filename, 'utf8'))
-        if (operation === 'status') return fixture.status
+        if (operation === 'status') {
+          if (fixture.statusError) throw new Error(fixture.statusError)
+          return fixture.status
+        }
+        if (operation === 'logs') return 'Fixture service log'
         if (operation === 'install') throw new Error(fixture.installError)
         if (operation === 'uninstall') {
           if (fixture.rejectUninstall) throw new Error('RESOURCE_BUSY')
@@ -28,7 +33,7 @@ startTeacherDesktop({
       }
       if (operation === 'status')
         return {
-          ...(await requestLocalControl<Record<string, unknown>>(root, 'status')),
+          ...(await readServiceStatus(root)),
           autostart: false,
           error: null
         }

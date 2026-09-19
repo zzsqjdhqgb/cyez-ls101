@@ -1,8 +1,22 @@
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { requestLocalControl } from '@ls101/lab-server/control'
 import { localServiceHost } from '../local-service'
+import { inspectLocalService } from '@ls101/lab-server/status'
+
+vi.mock('@ls101/lab-server/status', () => ({ inspectLocalService: vi.fn() }))
+
+it('reads status without launching the administrator helper, including when inspection fails', async () => {
+  const launch = vi.fn()
+  const host = localServiceHost('/fixed/runtime', launch)
+  vi.mocked(inspectLocalService).mockResolvedValueOnce({ state: 'not-installed' } as any)
+  await expect(host.invoke('status', undefined)).resolves.toMatchObject({ state: 'not-installed' })
+  vi.mocked(inspectLocalService).mockRejectedValueOnce(new Error('unavailable'))
+  await expect(host.invoke('status', undefined)).rejects.toThrow('unavailable')
+  await expect(host.invoke('status', {})).rejects.toThrow('INVALID_REQUEST')
+  expect(launch).not.toHaveBeenCalled()
+})
 
 describe.skipIf(process.platform !== 'linux')('elevated helper exchange', () => {
   it.each(['install', 'upgrade'])(

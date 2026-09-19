@@ -126,9 +126,7 @@ export function ConnectionPage({ session, view }: ConnectionPageProps): JSX.Elem
           session={session}
         />
       ) : null}
-      {localOpen ? (
-        <LocalServiceDialog close={() => setLocalOpen(false)} session={session} />
-      ) : null}
+      {localOpen ? <LocalServiceDialog close={() => setLocalOpen(false)} /> : null}
     </GateScreen>
   )
 }

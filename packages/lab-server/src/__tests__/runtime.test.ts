@@ -9,6 +9,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { INVITATION_CODE_HASH } from '@ls101/license'
 import { startServiceRuntime } from '../runtime'
 import { controlPath, requestLocalControl } from '../control'
+import { readServiceStatus, statusChannelPath } from '../status-channel'
+import { execFile } from 'node:child_process'
 import { durableWrite } from '../durable-files'
 import { restoreOffline } from '../restore'
 
@@ -47,6 +49,67 @@ async function fixture() {
 }
 
 describe('independent service runtime and local authentication', () => {
+  it('publishes live status without access to the private management key', async () => {
+    const f = await fixture()
+    expect(await readServiceStatus(f.root)).toMatchObject({ state: 'uninitialized' })
+    await f.activate()
+    await f.initialize()
+    const status = await readServiceStatus(f.root)
+    expect(status).toMatchObject({ state: 'running', settings: { name: 'Lab' } })
+    expect(JSON.stringify(status)).not.toContain('teacher-secret')
+    expect(status).not.toHaveProperty('localProof')
+    // Sending a privileged operation to the status socket must not execute it.
+    await new Promise<void>((done) => {
+      const socket = createConnection(statusChannelPath(f.root))
+      socket.on('error', () => undefined)
+      socket.once('connect', () => socket.end(JSON.stringify({ operation: 'shutdown' })))
+      socket.once('close', () => done())
+      socket.resume()
+    })
+    expect(await readServiceStatus(f.root)).toMatchObject({ state: 'running' })
+    if (process.platform !== 'win32') {
+      await chmod(join(f.root, 'control.key'), 0o644)
+      await expect(requestLocalControl(f.root, 'status')).rejects.toThrow('permissions')
+      expect(await readServiceStatus(f.root)).toMatchObject({ state: 'running' })
+    }
+  })
+
+  it.skipIf(process.platform !== 'linux' || process.getuid?.() !== 0)(
+    'allows an unprivileged user to observe a service with private data',
+    async () => {
+      const f = await fixture()
+      const script = `
+        const net = require('node:net');
+        const fs = require('node:fs');
+        try { fs.readFileSync(process.argv[2]); process.exit(2); } catch (error) {
+          if (error.code !== 'EACCES') process.exit(3);
+        }
+        const socket = net.createConnection(process.argv[1]);
+        socket.setTimeout(5000, () => { socket.destroy(); process.exit(4); });
+        socket.on('data', chunk => process.stdout.write(chunk));
+        socket.on('error', () => process.exit(5));
+      `
+      // Pass the abstract socket name as an escaped string: argv cannot contain NUL.
+      const output = await new Promise<string>((done, fail) => {
+        execFile(
+          process.execPath,
+          [
+            '-e',
+            script.replace('process.argv[1]', JSON.stringify(statusChannelPath(f.root))),
+            'unused',
+            join(f.root, 'control.key')
+          ],
+          { uid: 65534, gid: 65534, timeout: 10000 },
+          (error, stdout) => {
+            if (error) fail(error)
+            else done(stdout)
+          }
+        )
+      })
+      expect(JSON.parse(output)).toMatchObject({ state: 'uninitialized' })
+    }
+  )
+
   it('blocks live activity but permits stop and upgrade with stale offline observations', async () => {
     const f = await fixture()
     await f.activate()

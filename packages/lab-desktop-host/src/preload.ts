@@ -55,6 +55,8 @@ const capabilities = new Set([
   'localService.uninstall',
   'localService.upgrade',
   'localService.configure',
+  'localService.updateSettings',
+  'localService.changePassword',
   'localService.selectBackup',
   'localService.recover-restore',
   'localService.initialize',
