@@ -246,9 +246,9 @@ scripts/lab/build-test-driver.mjs # 把两个驱动打成单文件，VM 内无�
 | ---- | ---- | ------------ |
 | —    | `upgrade-packages` | 断言学生端安装包随本轮上传且非空（它是本轮产物的一半），并从注册表条目读出教师端自带的静默卸载器路径 |
 | —    | `upgrade-initial-state` | 记录安装记录、应用目录、服务身份、自启动状态与运行时清单摘要；后续每个用例都以它为准 |
-| U1   | `upgrade-same-version-reinstall` | 先断言**没有** `upgrade-ready.json`，再以 NSIS `/S` 覆盖安装同版本。安装器的判据是清单摘要相等（`install-windows.ps1` 的 `sameRuntime`），因此这条用例证明的是"同版本重装不需要升级准备"，而不是"碰巧通过"。服务在安装期间保持运行，顺带观察第 11 节风险 2 的静默路径；数据保留由"重新下载已发布试卷并核对摘要"证明 |
+| U1   | `upgrade-same-version-reinstall` | **先停服**，再以 NSIS `/S` 覆盖安装同版本，安装后服务保持停止，再启服核对。这条顺序是 2026-09-19 真机跑出来的：`install-windows.ps1` 自己的 `check-existing-installation` 要求 `Stop the service before installation or upgrade`，而它前面那步 `manager.cjs --prepare-install` 对**正在运行**的服务会去请求 `prepare-upgrade`——那需要维护模式加 24 小时内的 ready 备份（`runtime.ts`），于是同版本重装被当成升级、在 NSIS 钩子里失败并弹出 MessageBox 挂住整轮。服务已停止时 `--prepare-install` 才早退，同版本重装因此不需要任何升级准备。判据仍是清单摘要相等（`sameRuntime`），数据保留由"重新下载已发布试卷并核对摘要"证明，自启动设置在停服前后比对 |
 | U2   | `upgrade-without-preparation` | 把安装记录指向一个真实存在、清单摘要不同的旧 release，使安装器必须要求升级准备；两种失败形态都跑：**准备记录缺失**、以及第一次尝试自己写下的**目标版本不匹配**。两次都必须非 0 退出且不得挂起（挂起正是未应答的 NSIS 对话框的形状），随后断言旧服务仍在运行、安装记录未被替换、控制通道仍报同一 serverId。**归因**单独断言：安装脚本在准入判据之后五个阶段才用 `[IO.File]::Replace` 写记录，因此 `installation.json.previous` 的修改时间是"这次运行确实走到了服务安装阶段"的标记——没有它，一个悄悄跳过服务步骤的安装器会让所有"什么都没变"的断言以错误的理由通过。步骤结束时无论成功失败都恢复记录、删除准备记录与替换标记，避免残留被下一步当成结论 |
-| U2   | `upgrade-prepared` | 走产品真实升级路径：进维护模式 → 通过真实教师接口创建**真实备份**（`backup` 命令轮询到 `ready`，并要求 `snapshotAt`/`archiveBytes`/`archiveSha256` 三项齐备，因为 `prepare-upgrade` 正是校验这三项）→ **直接运行教师端 NSIS 安装器**（验收清单第 6 条的原话"先不运行新版解包目录"），由 `teacher.nsh` 的 `customInstall` 调起包内 `install-windows.ps1`，再由它请求已安装的服务准备并停止自己——服务是在安装器手里停的，不是阶段脚本停的。断言：记录指向新 release、准备记录已被新运行时消费、serverId 与证书指纹不变、试卷摘要逐字节不变、被删作答的回执仍可查 |
+| U2   | `upgrade-prepared` | 走产品真实升级路径：进维护模式 → 通过真实教师接口创建**真实备份**（`backup` 命令轮询到 `ready`，并要求 `snapshotAt`/`archiveBytes`/`archiveSha256` 三项齐备，因为 `prepare-upgrade` 正是校验这三项）→ **直接运行教师端 NSIS 安装器**（验收清单第 6 条的原话"先不运行新版解包目录"），由 `teacher.nsh` 的 `customInstall` 调起包内 `install-windows.ps1`，它再请**正在运行的**服务准备并停止自己——这一步消费掉刚做的备份，服务是在安装器手里停的，不是阶段脚本停的（服务必须运行，否则没有控制通道可请求，安装器只会以"缺少准备记录"拒绝）。断言：记录指向新 release、准备记录已被新运行时消费、serverId 与证书指纹不变、试卷摘要逐字节不变、被删作答的回执仍可查 |
 | U3   | `client-uninstall-keeps-service` | 用 `QuietUninstallString`（不是猜名字）运行真实 NSIS 卸载器：客户端可执行文件消失，而服务仍注册且运行、`installation.json` 不变、自启动设置不变、已发布试卷仍可下载 |
 | U4   | `service-uninstall-and-reinstall` | 先设自启动为 Automatic（否则"设置未变"与"被重置"无法区分）→ **运行中卸载必须被拒绝**（`RESOURCE_BUSY`，即 U5）→ 停服后经真实 `manageLocalService('uninstall')` 卸载：注册消失，程序目录、安装记录与业务数据保留 → 用同一安装包重装：服务重新注册为 `Manual` 且保持 Stopped，启动后 serverId 与试卷摘要不变、作答回执仍可查。最后把自启动恢复为 demand |
 | U2/U3/U4 | 卸载器路径 | `uninstall-entry` 探针额外返回 `UninstallString`/`QuietUninstallString`，M4 因此不必猜可执行文件名——它带产品名和空格 |
@@ -296,7 +296,7 @@ scripts/lab/build-test-driver.mjs # 把两个驱动打成单文件，VM 内无�
 ## 11. 开放风险
 
 1. **命名管道 DACL**：若提权 Administrator 无法连接服务以虚拟账户创建的管道，教师端"本机服务"整链在 Windows 上不可用。S6 会首先暴露这一点。
-2. **静默安装失败时的 NSIS 对话框**：`teacher.nsh` 在服务安装失败时调用 `MessageBox` 后 `Abort`。静默安装下该对话框是否弹出未经确认，可能导致无人值守安装挂起。S1 需要观察并据此决定是否需要改为 `IfSilent` 分支。
+2. **静默安装失败时的 NSIS 对话框（2026-09-19 已确认，需改产品）**：`teacher.nsh` 在服务安装失败时调用 `MessageBox` 后 `Abort`。M4 的第一次真机运行确认了这条风险：那次失败的原因是服务仍在运行时 `--prepare-install` 拒绝了同版本重装，对话框在**交互桌面上弹出并阻塞**，`/S` 安装器等不到任何人点击，`runProcess` 一直等到 900 秒超时——无人值守安装会永久挂起，而且 `stdout`/`stderr` 全空，现场只有"超时"。判断：`teacher.nsh` 需要 `IfSilent` 分支（静默时不弹框，改为把原因写进安装日志并以非零码退出）；在它修好之前，M4 的所有安装步骤都必须保证前置条件成立（先停服 / 先备好升级准备），否则整轮会以超时告终。
 3. **许可证到期**：2026-10-01 之后所有依赖许可的用例都会失败。H3 先做时钟门禁，但到期后需要新的邀请码或新的许可规则。
 4. **单次 TLS 握手的代价**：每个请求新建连接，40 台设备的 5 s 心跳约等于每秒 8 次握手。N11 用于量化，若在 Windows 上出现端口耗尽，属于需要产品层面决策的发现，而不是测试问题。
 5. **`lab:test:integration` 不构建服务端**：该套件中教师端的 `localService` 指向的 `out/lab-server` 是悬空的，因此现有集成测并未覆盖服务端。本方案不依赖该套件，但这条事实应记录在结论里。
@@ -372,7 +372,7 @@ S18 原本只按管理密码扫描三个文件。设计 §3.3 要求同时覆盖
 
 三个细节值得记下来。其一，WinSW 文档写明了规则——"When you use the `<stoparguments>`, you must use `<startarguments>` instead of `<arguments>`"——但这条规则违反时**完全静默**：WinSW 启动停止进程时传的日志处理器是 `null`，停止进程写往 stderr 的 `INVALID_ARGUMENTS` 没有任何去处，wrapper 日志只留下 `Started process <pid>` 一行。其二，`<stoptimeout>1900 sec</stoptimeout>` 在这种配置下**不生效**：它只在"没有 `<stoparguments>`、由 WinSW 直接杀进程树"的分支里使用，而优雅停止走的是 `while (!WaitForExit(sleeptime)) SignalPending()` 的无界循环，默认 1 秒轮询、永不放弃。也就是说这个缺陷不是"卡 31 分钟后被杀"，而是**服务根本无法停止**，教师机上的 `sc stop`、重启和关机都会无限期挂起；此前"1900 秒后会自愈"的判断是错的。其三，定位手段是把停止进程的命令行抓下来：wrapper 自己不记，探针按秒级轮询又必然错过这个存活不到 1 秒的进程，最终靠在 `Restart-Service` 旁边挂一个 100 ms 轮询 `Win32_Process`、由哨兵文件结束的采样器才拿到证据。
 
-一处**撤回的判断**：早期日志（安装记录缺失、安装器 16 秒返回）曾被解读为"静默安装失败却返回 0"。第三条缺陷确认后，安装器其实成功执行了服务安装脚本，只是落在被重定向的目录，退出码是正确的。第 11 节风险 2（静默模式下 `MessageBox` 是否挂起）因此仍未验证，保持开放。
+一处**撤回的判断**：早期日志（安装记录缺失、安装器 16 秒返回）曾被解读为"静默安装失败却返回 0"。第三条缺陷确认后，安装器其实成功执行了服务安装脚本，只是落在被重定向的目录，退出码是正确的。第 11 节风险 2（静默模式下 `MessageBox` 是否挂起）此后一直保持开放，直到 2026-09-19 的 M4 运行确认它**确实会挂起**（见该风险条目）。
 
 ### 13.1 M2 期间发现的协议与文档偏差
 

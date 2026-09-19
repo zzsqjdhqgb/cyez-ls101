@@ -2555,6 +2555,25 @@ function quotedPath(command) {
 //   * Everything else with existing business data needs `upgrade-ready.json` with a matching
 //     `targetVersion` and a `preparedAt` inside 24 hours.
 
+// Stopping and starting through the SCM, with the wait and the postcondition in one place: every M4
+// case that runs the installer needs the service stopped first, and `install-windows.ps1` says so in as
+// many words ("Stop the service before installation or upgrade").
+async function stopService(why) {
+  const started = await native('sc.exe', ['stop', config.serviceName])
+  assertThat(started.code === 0, `the SCM accepted the stop request (${why})`, started)
+  const stopped = await waitForServiceState('Stopped')
+  assertThat(stopped.state === 'Stopped', `the service stopped (${why})`, stopped)
+  return stopped
+}
+
+async function startService(why) {
+  const started = await native('sc.exe', ['start', config.serviceName])
+  assertThat(started.code === 0, `the SCM accepted the start request (${why})`, started)
+  const running = await waitForServiceState('Running')
+  assertThat(running.state === 'Running', `the service started (${why})`, running)
+  return running
+}
+
 // Records what the later steps compare against: the release the client was installed from, the service
 // identity and autostart state, and the raw SCM view. Taking this before anything destructive runs is
 // what keeps a failure diagnosable.
@@ -2604,16 +2623,14 @@ async function stepUpgradeInitialState() {
 // --- U1: installing the same release again needs no upgrade preparation ---------------------------
 async function stepReinstallSameVersion() {
   return run.step('upgrade-same-version-reinstall', async () => {
-    // Same-version reinstall is the case where the installer's own digest comparison has to be the
-    // reason no preparation is required. A preparation record would make the case pass for the wrong
-    // reason, so its absence is asserted rather than tolerated.
-    assertThat(
-      !existsSync(upgradeReadyFile),
-      'no upgrade preparation record exists before the same-version reinstall',
-      upgradeReadyFile
-    )
+    // Two product rules shape this case, and the first version of it got the second one wrong:
+    //   * `install-windows.ps1` requires the service to be stopped before it installs anything.
+    //   * `manager.cjs --prepare-install` (which the installer runs first) asks a *running* service to
+    //     write an upgrade preparation record, and that needs maintenance mode plus a backup under
+    //     24 hours old — so a same-version reinstall only avoids the preparation when the service is
+    //     already stopped. Keeping it running made the install fail inside the NSIS hook and hang on its
+    //     MessageBox for the whole timeout, which is how this was found.
     const before = readInstallationRecord()
-    const autostartBefore = (await helperStatus()).autostart
     const targets = await reinstallTargets('same-version reinstall')
     assertThat(
       targets.sameRuntime === true,
@@ -2625,10 +2642,17 @@ async function stepReinstallSameVersion() {
       'the reinstall targets the directory the client is installed in',
       { before: state.applicationDirectory, now: targets.applicationDirectory }
     )
+    const autostartBefore = (await helperStatus()).autostart
+    // A stopped service must not be able to prepare an upgrade at all: this is the pre-state the case
+    // is about, asserted rather than assumed, because a leftover record would make it pass for the
+    // wrong reason.
+    assertThat(
+      !existsSync(upgradeReadyFile),
+      'no upgrade preparation record exists before the same-version reinstall',
+      upgradeReadyFile
+    )
+    await stopService('same-version reinstall')
 
-    // The NSIS installer is what runs here, and the service is left running on purpose: this is also
-    // the case that observes the silent-install path docs/lab-vm-acceptance-design.md section 11 keeps
-    // open, where `teacher.nsh` reaches a MessageBox and Abort if the service install fails.
     const { result, seconds } = await runInstaller(config.installer, ['/S'])
     assertThat(
       result.code === 0 && !result.timedOut,
@@ -2645,23 +2669,41 @@ async function stepReinstallSameVersion() {
     )
     const service = await probe('service', ['-Name', config.serviceName])
     assertThat(
-      service.installed === true && service.state === 'Running',
-      'the service survived the same-version reinstall',
+      service.installed === true && service.state === 'Stopped',
+      'the reinstall left the service registered and stopped',
       service
     )
-    // The service was never stopped, so this is also evidence about the silently-successful half of a
-    // silent install: the installer did not leave the machine with the service down.
-    const status = await helperStatus()
-    assertThat(status.state === 'running', 'the service is running after the reinstall', status)
+    assertThat(
+      service.startMode === 'Manual',
+      'the reinstall did not start the service on its own',
+      service
+    )
+    // The installer must not have touched the *runtime* either: the release directory is the same and
+    // its manifest digest still matches, which is what "same-version reinstall" means.
+    const after = await reinstallTargets('same-version reinstall, post-state')
+    assertThat(
+      after.sameRuntime === true && after.applicationDirectory === targets.applicationDirectory,
+      'the reinstall published the same runtime it was given',
+      after
+    )
+
+    await startService('same-version reinstall')
+    const status = await waitForRuntimeStatus()
     assertThat(
       status.info?.serverId === state.serverId,
       'the reinstall kept the service identity',
       { before: state.serverId, after: status.info?.serverId }
     )
     assertThat(
-      status.autostart === autostartBefore,
+      status.fingerprint === state.fingerprint,
+      'the reinstall kept the service certificate',
+      { before: state.fingerprint, after: status.fingerprint }
+    )
+    const started = await helperStatus()
+    assertThat(
+      started.autostart === autostartBefore,
       'the reinstall left the autostart setting alone',
-      { before: autostartBefore, after: status.autostart }
+      { before: autostartBefore, after: started.autostart }
     )
     // Business data: an exam published before the reinstall is fetched again and the digest recomputed
     // from the bytes, so "retained" is a statement about content rather than about a file existing.
@@ -2683,8 +2725,9 @@ async function stepReinstallSameVersion() {
       seconds,
       release: record.release,
       serverId: status.info?.serverId ?? null,
-      autostart: status.autostart,
-      examSha256: fetched.sha256
+      autostart: started.autostart,
+      examSha256: fetched.sha256,
+      preparationRecord: existsSync(upgradeReadyFile)
     }
   })
 }
@@ -2748,8 +2791,13 @@ async function stepUpgradeWithoutPreparation() {
         'the refused install starts with no preparation record at all',
         upgradeReadyFile
       )
-      const active = await helperStatus()
-      assertThat(active.state === 'running', 'the service still runs before the install attempt', active)
+      // The service is stopped before the refused install, for the same product reason U1 documents: a
+      // running service makes `--prepare-install` demand maintenance mode and a backup, and the install
+      // then fails inside the NSIS hook instead of reaching the guard this case is about. A stopped
+      // service is also the state an operator is in when they run the installer by hand.
+      const active = await probe('service', ['-Name', config.serviceName])
+      assertThat(active.state === 'Running', 'the service runs before the refused install', active)
+      await stopService('refused version change')
       const missingPreparation = await runInstaller(config.installer, ['/S'])
       assertThat(
         missingPreparation.result.code !== 0 && !missingPreparation.result.timedOut,
@@ -2795,8 +2843,8 @@ async function stepUpgradeWithoutPreparation() {
         { rejectionFile, markerBefore, markerAfter }
       )
 
-      // The old installation has to be intact: the program record is unchanged, the runtime that the
-      // service actually loaded is the one this run installed, and the control channel still answers.
+      // The old installation has to be intact: the program record is unchanged, the runtime the
+      // service actually loaded is the one this run installed, and the machine can bring it back.
       const record = readInstallationRecord()
       assertThat(
         record.release === olderRelease,
@@ -2805,12 +2853,12 @@ async function stepUpgradeWithoutPreparation() {
       )
       const serviceAfter = await probe('service', ['-Name', config.serviceName])
       assertThat(
-        serviceAfter.installed === true && serviceAfter.state === 'Running',
-        'the old service kept running through the refused install',
+        serviceAfter.installed === true && serviceAfter.state === 'Stopped',
+        'the refused install left the service registered and stopped',
         serviceAfter
       )
-      const status = await helperStatus()
-      assertThat(status.state === 'running', 'the control channel still reports running', status)
+      await startService('after the refused version change')
+      const status = await waitForRuntimeStatus()
       assertThat(
         status.info?.serverId === state.serverId,
         'the refused install did not touch the service identity',
@@ -2875,13 +2923,22 @@ async function stepPreparedUpgrade() {
     // The upgrade is performed by running the installer directly, which is what the acceptance
     // checklist asks for ("run the new teacher NSIS installer without first running the new unpacked
     // directory"): `teacher.nsh`'s customInstall calls the service installer from the package's own
-    // resources, that script asks the *installed* service to prepare and stop itself (which writes the
-    // preparation record this step's backup made possible), and only then replaces the program
-    // directory. The service therefore stops at the installer's hand, not at this script's.
+    // resources, that script asks the *running* service to prepare an upgrade and stop itself (which is
+    // what consumes the backup this step just made), and only then replaces the program directory.
+    //
+    // The service has to be running for that handshake, which is why this case does not stop it: a
+    // stopped service has no control channel, so the installer would refuse for want of a preparation
+    // record instead of performing the upgrade. The preparation is written by the service, on request.
     assertThat(
       !existsSync(upgradeReadyFile),
       'nothing is prepared before the installer is asked to upgrade',
       upgradeReadyFile
+    )
+    const active = await probe('service', ['-Name', config.serviceName])
+    assertThat(
+      active.installed === true && active.state === 'Running',
+      'the service runs so the installer can ask it to prepare the upgrade',
+      active
     )
     const before = readInstallationRecord()
     const { result, seconds } = await runInstaller(config.installer, ['/S'])

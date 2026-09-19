@@ -38,7 +38,8 @@ const actions = [
   'acceptance',
   'lab-acceptance',
   'lab-diagnose',
-  'lab-execute'
+  'lab-execute',
+  'lab-probe'
 ]
 const help = `Windows VMware lab (run on a Windows x64 host with Node and Yarn)
   yarn vm:setup         Initialize config, download assets and build (or verify/reuse) box
@@ -55,6 +56,8 @@ const help = `Windows VMware lab (run on a Windows x64 host with Node and Yarn)
   yarn vm:lab           Install the packaged lab products in a fresh disposable VM and test them
   yarn vm:diag          Inspect a preserved lab VM without touching it (files, parse errors, task)
   yarn vm:execute       Run the phase script once in a preserved lab VM and capture its output
+  yarn vm:probe         Run one named diagnostic script in a preserved lab VM (service-install,
+                        service-verify, installer-uninstall) and print its output
   yarn vm --help        Show this help
 
 Default ISO URLs download automatically and record first-download SHA-256 values.
@@ -78,8 +81,22 @@ so it needs neither Yarn nor node_modules.`
 
 export function parseAction(args) {
   if (args.length === 0 || (args.length === 1 && ['--help', '-h'].includes(args[0]))) return 'help'
+  // `lab-probe` takes one more argument, the name of the diagnostic to run; every other action stays a
+  // single word so an accidental extra argument is still an error rather than being ignored.
+  if (args[0] === 'lab-probe' && args.length === 2) return 'lab-probe'
   if (args.length !== 1 || !actions.includes(args[0])) throw new Error(help)
   return args[0]
+}
+
+// The probe name for `lab-probe`, validated against the fixed list so an unknown one fails before any
+// VM work happens.
+export function parseProbe(args) {
+  if (args[0] !== 'lab-probe') return null
+  if (args.length !== 2 || !labProbeNames().includes(args[1]))
+    throw new Error(
+      `yarn vm:probe needs exactly one probe name (${labProbeNames().join(', ')}); got ${JSON.stringify(args.slice(1))}`
+    )
+  return args[1]
 }
 
 export function validateConfig(config) {
@@ -564,6 +581,11 @@ const LAB_WINSW_SHA256 = 'b5066b7bbdfba1293e5d15cda3caaea88fbeab35bd5b38c41c913d
 const LAB_TASK = 'ls101-lab-acceptance'
 // A separate task name so the one-shot diagnostic never clobbers the real run's registration.
 const LAB_EXECUTE_TASK = 'ls101-lab-execute'
+// Milestone M4's diagnostics: a named script the operator can re-run in a preserved VM. The service
+// installer is the first entry because its failure output lives *inside the installer* — the NSIS hook
+// discards both streams and only raises a dialog — so the only way to read the stage and message is to
+// run the same script from the package's own resources.
+const LAB_PROBE_TASK = 'ls101-lab-probe'
 // Uploads land in the guest file server's own upload directory, so the lab files use it too and no
 // extra move command is needed inside the VM.
 const LAB_GUEST_DIR = 'C:/ls101-lab/transfers'
@@ -584,6 +606,9 @@ const LAB_GUEST_LOG = `${LAB_GUEST_RESULTS_DIR}/lab-acceptance.log`
 const LAB_GUEST_STATUS = `${LAB_GUEST_RESULTS_DIR}/lab-status.txt`
 const LAB_GUEST_PROGRESS = `${LAB_GUEST_RESULTS_DIR}/lab-progress.txt`
 const LAB_GUEST_RESULTS = `${LAB_GUEST_RESULTS_DIR}/lab-results.json`
+// Where a `yarn vm:probe` run keeps its captured output. Declared here rather than beside the other
+// probe constants because it is built from the results directory.
+const LAB_PROBE_OUTPUT = `${LAB_GUEST_RESULTS_DIR}/lab-probe-output.txt`
 // Written before the phase script reads anything else, so a start-up failure always explains itself.
 const LAB_GUEST_STARTUP = `${LAB_GUEST_RESULTS_DIR}/lab-startup.txt`
 // Captured output of the phase script. A scheduled task discards the output of the process it starts,
@@ -1747,6 +1772,134 @@ async function labAcceptance(root, config, run, report) {
   }
 }
 
+// A named, read-only-or-reinstall script that the operator runs deliberately in a preserved VM.
+//
+// The reason this exists: the NSIS installer's `customInstall` hook runs
+// `resources\lab-server\install-windows.ps1` through `nsExec` and **discards both streams**, then raises a
+// MessageBox and aborts. When that happens the guest phase has not started, so nothing in the run's own
+// artefacts says *why* the service installation failed — the only copy of the stage and message is the
+// one the dialog swallowed. Running the same script from the package's own resources reproduces it with
+// its output intact.
+//
+// The scripts are built here rather than passed in: this runs elevated in a VM, so the command surface
+// stays a fixed list of named operations a reviewer can read.
+export function labProbeNames() {
+  return ['service-install', 'service-verify', 'installer-uninstall', 'manifest-digests']
+}
+
+export function labProbeScript(name, config) {
+  if (!labProbeNames().includes(name))
+    throw new Error(`Unknown lab probe '${name}'; expected one of ${labProbeNames().join(', ')}`)
+  const applicationDirectory = `${guestPath('C:/Program Files')}\\ls101-lab-teacher`
+  const serviceInstaller = `${applicationDirectory}\\resources\\lab-server\\install-windows.ps1`
+  const uninstaller = `${applicationDirectory}\\Uninstall ls101-lab-teacher.exe`
+  // The installer is always invoked as a *separate process* through `-File`, which is what the product
+  // does (NSIS runs it with `nsExec` from a fresh PowerShell). Launching it in-process with
+  // `& 'install-windows.ps1'` fails for a reason that has nothing to do with the installer: the script's
+  // trap writes plain text with `[Console]::Error.WriteLine`, and the parent then tries to deserialize
+  // its stderr as CLIXML and dies with "Data at the root level is invalid" — losing the very
+  // `LS101_INSTALL_ERROR [stage]: message` line the probe exists to read.
+  const shell64 = '$shell = Join-Path $env:WINDIR \'Sysnative\\WindowsPowerShell\\v1.0\\powershell.exe\'; if (-not (Test-Path -LiteralPath $shell)) { $shell = Join-Path $env:WINDIR \'System32\\WindowsPowerShell\\v1.0\\powershell.exe\' }'
+  const runInstaller = (extra = '') =>
+    `${shell64}; & $shell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File '${serviceInstaller}'${extra} 2>&1 | ForEach-Object { Write-Output ([string]$_) }; Write-Output ('exitCode=' + $LASTEXITCODE)`
+  const commands = {
+    // Re-runs the exact script the NSIS hook ran, with no `-Verify`: this is the reproduction, and it
+    // is also what tells a stuck installer apart from a failure the guard refused on purpose.
+    'service-install': [
+      `Write-Output ('service installer present: ' + (Test-Path -LiteralPath '${serviceInstaller}'))`,
+      runInstaller(),
+      `Write-Output ('serviceState=' + (Get-Service -Name '${config.serviceName ?? 'LS101Lab'}' -ErrorAction SilentlyContinue).Status)`
+    ],
+    // The same script front-loaded with its own digest/permission checks, which report a named stage
+    // instead of the installer hook's silence.
+    'service-verify': [runInstaller(' -Verify')],
+    // The client's uninstaller, for the case where M4's own discovery is what is in question. It is
+    // listed as a probe mainly so the path is visible in the output.
+    'installer-uninstall': [
+      `Write-Output ('uninstaller present: ' + (Test-Path -LiteralPath '${uninstaller}'))`,
+      `Write-Output ('arguments used: /S')`,
+      `& '${uninstaller}' /S`,
+      `Write-Output ('exitCode=' + $LASTEXITCODE)`
+    ],
+    // What `install-windows.ps1` calls `sameRuntime`: the digest of the manifest inside the application
+    // being installed against the one in the release the service actually runs from. They are equal for
+    // a genuine same-version reinstall, and unequal turns that install into an "upgrade" that demands a
+    // preparation record — the state that raises the failure dialog.
+    'manifest-digests': [
+      `$program = Join-Path $env:ProgramFiles 'LS101LabService'`,
+      `$record = Join-Path $program 'installation.json'`,
+      `Write-Output ('installation record: ' + (Test-Path -LiteralPath $record))`,
+      `if (Test-Path -LiteralPath $record) {`,
+      `  $release = (Get-Content -LiteralPath $record -Raw | ConvertFrom-Json).release`,
+      `  $installedManifest = Join-Path $program ('releases\\' + $release + '\\runtime-manifest.json')`,
+      `  $packagedManifest = '${applicationDirectory}\\resources\\lab-server\\runtime-manifest.json'`,
+      `  Write-Output ('release=' + $release)`,
+      `  Write-Output ('installed manifest exists=' + (Test-Path -LiteralPath $installedManifest) + ' packaged manifest exists=' + (Test-Path -LiteralPath $packagedManifest))`,
+      `  if ((Test-Path -LiteralPath $installedManifest) -and (Test-Path -LiteralPath $packagedManifest)) {`,
+      `    $installedHash = (Get-FileHash -LiteralPath $installedManifest -Algorithm SHA256).Hash`,
+      `    $packagedHash = (Get-FileHash -LiteralPath $packagedManifest -Algorithm SHA256).Hash`,
+      `    Write-Output ('installed=' + $installedHash.ToLowerInvariant())`,
+      `    Write-Output ('packaged =' + $packagedHash.ToLowerInvariant())`,
+      `    Write-Output ('sameRuntime=' + ($installedHash -eq $packagedHash))`,
+      `    $installedVersion = (Get-Content -LiteralPath $installedManifest -Raw | ConvertFrom-Json).releaseVersion`,
+      `    $packagedVersion = (Get-Content -LiteralPath $packagedManifest -Raw | ConvertFrom-Json).releaseVersion`,
+      `    Write-Output ('installedVersion=' + $installedVersion + ' packagedVersion=' + $packagedVersion)`,
+      `  }`,
+      `}`,
+      `Write-Output ('upgrade-ready present=' + (Test-Path -LiteralPath 'C:\\ProgramData\\LS101Lab\\data\\upgrade-ready.json'))`
+    ]
+  }
+  return [
+    `$ErrorActionPreference = 'Continue'`,
+    `Write-Output '=== lab probe: ${name} ==='`,
+    `Write-Output ('time=' + (Get-Date).ToString('o') + ' identity=' + [Security.Principal.WindowsIdentity]::GetCurrent().Name)`,
+    `$ProgressPreference = 'SilentlyContinue'`,
+    ...commands[name]
+  ].join('\n')
+}
+
+// Runs one named probe as an interactive elevated task and returns its captured output. The wait polls
+// the task instead of sleeping a fixed amount: an installer that hits the failure dialog never finishes,
+// and a fixed sleep would report "still running" as if it were an answer.
+//
+// The probe text is base64-encoded into a one-line `-Command`. Passing it any other way would nest three
+// levels of quoting (JavaScript string, PowerShell task argument, PowerShell file content), and a single
+// apostrophe or backtick in the wrong place would silently truncate what actually runs.
+export function labProbeTaskScript(name, config, { timeoutSeconds = 300 } = {}) {
+  const probeScript = labProbeScript(name, config)
+  const encodedCommand = Buffer.from(probeScript, 'utf16le').toString('base64')
+  const child = [
+    `$ErrorActionPreference = 'Continue'`,
+    `$encoded = '${encodedCommand}'`,
+    `$out = '${guestPath(LAB_PROBE_OUTPUT)}'`,
+    `Remove-Item -LiteralPath $out -Force -ErrorAction SilentlyContinue`,
+    `& powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -EncodedCommand $encoded *> $out`,
+    `exit $LASTEXITCODE`
+  ].join('; ')
+  const childEncoded = Buffer.from(child, 'utf16le').toString('base64')
+  return [
+    `$ErrorActionPreference = 'Continue'`,
+    `Remove-Item -LiteralPath '${guestPath(LAB_PROBE_OUTPUT)}' -Force -ErrorAction SilentlyContinue`,
+    `$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoLogo -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${childEncoded}'`,
+    `$principal = New-ScheduledTaskPrincipal -UserId 'vagrant' -LogonType Interactive -RunLevel Highest`,
+    `$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 10)`,
+    `Register-ScheduledTask -TaskName '${LAB_PROBE_TASK}' -Action $action -Principal $principal -Settings $settings -Force | Out-Null`,
+    `Start-ScheduledTask -TaskName '${LAB_PROBE_TASK}'`,
+    `$deadline = (Get-Date).AddSeconds(${timeoutSeconds})`,
+    `while ((Get-Date) -lt $deadline) {`,
+    `  $task = Get-ScheduledTask -TaskName '${LAB_PROBE_TASK}' -ErrorAction SilentlyContinue`,
+    `  if (-not $task -or $task.State -ne 'Running') { break }`,
+    `  Start-Sleep -Seconds 3`,
+    `}`,
+    `$task = Get-ScheduledTask -TaskName '${LAB_PROBE_TASK}' -ErrorAction SilentlyContinue`,
+    `if ($task) { $info = $task | Get-ScheduledTaskInfo; Write-Output ('taskState=' + $task.State + ' lastResult=' + $info.LastTaskResult) }`,
+    `Write-Output '=== probe output ==='`,
+    `if (Test-Path -LiteralPath '${guestPath(LAB_PROBE_OUTPUT)}') { Get-Content -LiteralPath '${guestPath(LAB_PROBE_OUTPUT)}' } else { Write-Output 'MISSING: the probe produced no output at all' }`,
+    `Write-Output '=== probe that ran (decoded) ==='`,
+    `Write-Output ([Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encodedCommand}')))`
+  ].join('\n')
+}
+
 // Read-only inspection of a preserved lab VM. A failed run keeps its VM precisely so it can be
 // examined, but the harness otherwise only knows what it managed to collect; this answers the
 // questions that come first when a run dies early — are the uploaded files where the task expects
@@ -1787,6 +1940,10 @@ export function labDiagnoseScript(config) {
     `$serviceName = if ($lab) { $lab.serviceName } else { 'LS101Lab' }`,
     `$dataRoot = if ($lab) { $lab.dataRoot } else { 'C:\\ProgramData\\LS101Lab' }`,
     `$port = if ($lab) { $lab.port } else { 8443 }`,
+    // Resolved once into plain strings: every probe argument below is a flat string array, and a
+    // sub-expression inside an array literal is what broke the splat in the first place.
+    `$logRoot = Join-Path $dataRoot 'logs'`,
+    `$serviceProgramDirectory = Join-Path $env:ProgramFiles 'LS101LabService'`,
     `function Show-Probe([string]$Label, [string[]]$Arguments) {`,
     `  Write-Output ('=== ' + $Label + ' ===')`,
     `  if (-not $hasProbes) { Write-Output 'lab-probes.ps1 is not present on this VM'; return }`,
@@ -1796,6 +1953,11 @@ export function labDiagnoseScript(config) {
     // how the first M4 run's diagnostic exited 1 after printing almost nothing: the failure it was
     // collected to explain left no record. The preference is therefore reset inside the catch, after
     // the error has been recorded.
+    //
+    // `$probes` is a single path, so it is called directly; the argument arrays are flat string arrays
+    // so the splat can only pass them positionally. A sub-expression inside the array literal
+    // (`(Join-Path …)`, a bare `$variable`) is what previously made the splat bind the *first element*
+    // as the value of `-Probe`, which is why every probe answered `Unknown probe: -Probe`.
     `  try {`,
     `    & $probes @Arguments`,
     `  } catch {`,
@@ -1804,17 +1966,17 @@ export function labDiagnoseScript(config) {
     `    Write-Output ('probe ' + $Label + ' failed: ' + $failure)`,
     `  }`,
     `}`,
-    `Show-Probe 'service' @('-Probe', 'service', '-Name', $serviceName)`,
-    `Show-Probe 'wrapper processes' @('-Probe', 'process', '-Name', 'LS101Lab.exe')`,
-    `Show-Probe 'runtime process' @('-Probe', 'process', '-Name', 'node.exe', '-Match', 'server.cjs')`,
-    `Show-Probe 'service program directory' @('-Probe', 'path', '-Path', (Join-Path $env:ProgramFiles 'LS101LabService'))`,
-    `Show-Probe 'data directory' @('-Probe', 'path', '-Path', $dataRoot)`,
-    `Show-Probe 'wrapper logs' @('-Probe', 'wrapper-logs', '-Path', (Join-Path $dataRoot 'logs'), '-Tail', '80')`,
-    `Show-Probe 'system events' @('-Probe', 'events', '-Minutes', '30', '-Match', 'LS101')`,
-    `Show-Probe 'listener' @('-Probe', 'listener', '-Port', $port)`,
+    `Show-Probe 'service' ('-Probe','service','-Name',$serviceName)`,
+    `Show-Probe 'wrapper processes' ('-Probe','process','-Name','LS101Lab.exe')`,
+    `Show-Probe 'runtime process' ('-Probe','process','-Name','node.exe','-Match','server.cjs')`,
+    `Show-Probe 'service program directory' ('-Probe','path','-Path',$serviceProgramDirectory)`,
+    `Show-Probe 'data directory' ('-Probe','path','-Path',$dataRoot)`,
+    `Show-Probe 'wrapper logs' ('-Probe','wrapper-logs','-Path',$logRoot,'-Tail','80')`,
+    `Show-Probe 'system events' ('-Probe','events','-Minutes','30','-Match','LS101')`,
+    `Show-Probe 'listener' ('-Probe','listener','-Port',[string]$port)`,
     // The install directory is named after the executable, not the product, so it is discovered rather
     // than guessed: assuming the product name once produced a confidently wrong conclusion.
-    `Show-Probe 'installed application' @('-Probe', 'find-executable', '-Name', 'ls101-lab-teacher.exe', '-Path', $env:ProgramFiles)`,
+    `Show-Probe 'installed application' ('-Probe','find-executable','-Name','ls101-lab-teacher.exe','-Path',$env:ProgramFiles)`,
     // The captured output is the one artefact that explains a run which died before writing its own.
     `Write-Output '=== captured task output (tail) ==='`,
     `if (Test-Path -LiteralPath '${guestPath(LAB_GUEST_TASK_OUTPUT)}') { Get-Content -LiteralPath '${guestPath(LAB_GUEST_TASK_OUTPUT)}' -Tail 40 } else { Write-Output 'MISSING' }`,
@@ -1944,6 +2106,31 @@ async function labExecute(root, config, run, report) {
   report.executionPath = path.join(localRun, 'lab-execute.txt')
 }
 
+// Runs one named probe in a preserved lab VM. This is deliberately narrow: the probe list is fixed in
+// `labProbeNames()`, and each entry is a short script built by `labProbeScript`. Nothing is uploaded —
+// a probe only reads the machine, re-runs the service installer from the installed package's own
+// resources, or runs the installed uninstaller, so it cannot invalidate the evidence it was asked about.
+async function labProbe(root, config, run, report, probe) {
+  ensureVmwareUtility(run)
+  const status = run('vagrant.exe', ['status', '--machine-readable'], { capture: true })
+  const states = status
+    .split(/\r?\n/)
+    .filter((line) => line.split(',')[2] === 'state')
+    .map((line) => line.split(',')[3])
+  if (states.length !== 1 || states[0] !== 'running') {
+    throw new Error(
+      `vm:probe needs the preserved VM to be running (found ${states[0] ?? 'no VM'}); start it with yarn vm:up`
+    )
+  }
+  const localRun = path.join(root, '.local', 'results', `${Date.now()}-probe-${randomUUID()}`)
+  await mkdir(localRun, { recursive: true })
+  const output = readGuestOutput(run, labProbeTaskScript(probe, config))
+  console.log(output)
+  report.probe = { name: probe, output }
+  report.probePath = path.join(localRun, `lab-probe-${probe}.txt`)
+  await writeFile(report.probePath, `${output}\n`, 'utf8')
+}
+
 async function initializeConfig(root) {
   const config = JSON.parse(await readFile(path.join(root, 'config.example.json'), 'utf8'))
   config.GuestPassword = `Aa1!${randomBytes(18).toString('hex')}`
@@ -2021,7 +2208,8 @@ export async function main(args = process.argv.slice(2), dependencies = {}) {
         action === 'acceptance' ||
         action === 'lab-acceptance' ||
         action === 'lab-diagnose' ||
-        action === 'lab-execute'
+        action === 'lab-execute' ||
+        action === 'lab-probe'
       ) {
         const config = validateConfig(
           JSON.parse(await readFile(path.join(root, 'config.local.json'), 'utf8'))
@@ -2029,6 +2217,7 @@ export async function main(args = process.argv.slice(2), dependencies = {}) {
         if (action === 'acceptance') await acceptance(root, config, run, report)
         else if (action === 'lab-diagnose') await labDiagnose(root, config, run, report)
         else if (action === 'lab-execute') await labExecute(root, config, run, report)
+        else if (action === 'lab-probe') await labProbe(root, config, run, report, parseProbe(args))
         else await labAcceptance(root, config, run, report)
       } else {
         await lifecycle(

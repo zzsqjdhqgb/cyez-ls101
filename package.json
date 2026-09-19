@@ -26,6 +26,7 @@
     "vm:lab": "chcp 65001 && set YARN_ENABLE_PROGRESS_BARS=false&& node infra/windows-vm/lab.mjs lab-acceptance",
     "vm:diag": "chcp 65001 && node infra/windows-vm/lab.mjs lab-diagnose",
     "vm:execute": "chcp 65001 && node infra/windows-vm/lab.mjs lab-execute",
+    "vm:probe": "chcp 65001 && node infra/windows-vm/lab.mjs lab-probe",
     "vm:teacher:boot": "chcp 65001 && node infra/windows-vm/manual.mjs teacher:boot",
     "vm:teacher:reset": "chcp 65001 && node infra/windows-vm/manual.mjs teacher:reset",
     "vm:teacher:delete": "chcp 65001 && node infra/windows-vm/manual.mjs teacher:delete",

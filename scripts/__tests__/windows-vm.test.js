@@ -1131,7 +1131,14 @@ test('the diagnostic checks each language with its own tool', async () => {
   // already drifted: it reported the service state without the process id, which is exactly the field a
   // stuck stop needs to tell "close() never finished" from "the process will not exit".
   assert.match(script, /& \$probes @Arguments/)
-  assert.match(script, /Show-Probe 'service' @\('-Probe', 'service', '-Name', \$serviceName\)/)
+  // Every probe argument list is a flat string array. A sub-expression inside the array literal
+  // (`(Join-Path …)`, a bare `$variable`) made the splat bind the first element as the *value* of
+  // `-Probe`, so all nine probes answered `Unknown probe: -Probe` while the diagnostic still exited 0 —
+  // which is worse than failing, because it looked like a probe result.
+  assert.match(script, /Show-Probe 'service' \('-Probe','service','-Name',\$serviceName\)/)
+  assert.doesNotMatch(script, /Show-Probe '[^']+' @\(/)
+  for (const [, args] of script.matchAll(/Show-Probe '[^']+' \(([^)]*)\)/g))
+    assert.match(args, /^'/, `probe arguments must start with a literal: ${args}`)
   assert.match(script, /Show-Probe 'wrapper logs'/)
   assert.match(script, /Show-Probe 'runtime process'/)
   assert.doesNotMatch(script, /Get-CimInstance Win32_Service -Filter "Name='LS101Lab'"/)
@@ -1556,6 +1563,78 @@ test('the restart records the process table while the service is stopping', asyn
   )
 })
 
+test('the vm:probe action reproduces a named guest script and decodes back to what runs', async () => {
+  const { labProbeNames, labProbeScript, labProbeTaskScript, parseAction, parseProbe } = await api
+  // The action surface is a fixed list: this runs elevated in a VM, so an operator cannot hand it an
+  // arbitrary script.
+  assert.deepEqual(labProbeNames(), [
+    'service-install',
+    'service-verify',
+    'installer-uninstall',
+    'manifest-digests'
+  ])
+  assert.equal(parseAction(['lab-probe', 'service-install']), 'lab-probe')
+  assert.equal(parseProbe(['lab-probe', 'service-verify']), 'service-verify')
+  assert.equal(parseProbe(['lab-acceptance']), null)
+  // A missing probe name is a parse error before any VM work happens, not a run that starts and then
+  // discovers it has nothing to do.
+  assert.throws(() => parseProbe(['lab-probe']), /needs exactly one probe name/)
+  assert.throws(() => parseProbe(['lab-probe', 'rm-rf']), /needs exactly one probe name/)
+
+  const config = { serviceName: 'LS101Lab', NodeVersion: '24.20.0' }
+  const probe = labProbeScript('service-install', config)
+  // It re-runs the script the NSIS hook ran, from the package's own resources, and reports the exit
+  // code — the two facts the dialog swallowed.
+  assert.match(probe, /Program Files\\ls101-lab-teacher\\resources\\lab-server\\install-windows\.ps1/)
+  assert.match(probe, /exitCode=/)
+  assert.doesNotMatch(probe, /-Verify/)
+  assert.match(labProbeScript('service-verify', config), /-Verify/)
+  assert.match(labProbeScript('installer-uninstall', config), /\/S/)
+  // The installer has to run as a separate process through `-File`, exactly as the NSIS hook runs it.
+  // Launching it in-process with `&` makes the parent deserialize the script's plain-text stderr as
+  // CLIXML and die before it can print `LS101_INSTALL_ERROR [stage]: message`.
+  assert.match(probe, /& \$shell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File '/)
+  assert.match(probe, /Sysnative\\WindowsPowerShell\\v1\.0\\powershell\.exe/)
+  assert.doesNotMatch(probe, /^& 'C:\\Program Files/m)
+  // stderr is merged into the captured stream as text, so a trap line cannot be lost to a stream the
+  // probe never reads.
+  assert.match(probe, /2>&1 \| ForEach-Object \{ Write-Output \(\[string\]\$_\) \}/)
+  assert.throws(() => labProbeScript('nope', config), /Unknown lab probe/)
+  // `sameRuntime` is the installer's own decision variable: equal manifest digests mean a same-version
+  // reinstall needs no preparation, unequal means the install is an "upgrade" and demands one. The probe
+  // reports both digests and the comparison, because a silent install failure gives no clue which branch
+  // was taken.
+  const digests = labProbeScript('manifest-digests', config)
+  assert.match(digests, /sameRuntime=/)
+  assert.match(digests, /Get-FileHash -LiteralPath \$installedManifest -Algorithm SHA256/)
+  assert.match(digests, /Get-FileHash -LiteralPath \$packagedManifest -Algorithm SHA256/)
+  assert.match(digests, /upgrade-ready present=/)
+
+  // The generated task is decoded here, which is the only way to check the encoding without a VM: the
+  // probe travels as UTF-16LE base64 through two nested `-EncodedCommand` layers, and a mistake in
+  // either would silently run something else.
+  const task = labProbeTaskScript('service-install', config, { timeoutSeconds: 42 })
+  const childEncoded = /-EncodedCommand ([A-Za-z0-9+/=]+)'/.exec(task)
+  assert.ok(childEncoded, 'the task action carries an encoded command')
+  const child = Buffer.from(childEncoded[1], 'base64').toString('utf16le')
+  // The child assigns the probe to `$encoded` and then passes the variable, so that is where the second
+  // layer has to be read from.
+  const innerEncoded = /\$encoded = '([A-Za-z0-9+/=]+)'/.exec(child)
+  assert.ok(innerEncoded, 'the child carries the probe as a second encoded command')
+  const decoded = Buffer.from(innerEncoded[1], 'base64').toString('utf16le')
+  assert.equal(decoded, probe, 'the probe that runs is exactly the one built here')
+  assert.match(child, /lab-probe-output\.txt/)
+  assert.match(child, /exit \$LASTEXITCODE/)
+  // The wait polls the task rather than sleeping: a probe that hits the failure dialog never finishes,
+  // and the run has to say so instead of reporting the sleep as a result.
+  assert.match(task, /Get-ScheduledTask -TaskName 'ls101-lab-probe'/)
+  assert.match(task, /AddSeconds\(42\)/)
+  assert.match(task, /-LogonType Interactive -RunLevel Highest/)
+  // The probe output is echoed back, and the script is printed decoded so the evidence shows what ran.
+  assert.match(task, /=== probe output ===/)
+  assert.match(task, /Get-Content -LiteralPath 'C:\\ls101-lab\\results\\lab-probe-output\.txt'/)
+})
+
 test('milestone M4 drives the real upgrade, uninstall and retention paths', async () => {
   const orchestrator = await readGuest('lab-acceptance.mjs')
   const { labGuestConfig } = await api
@@ -1609,6 +1688,16 @@ test('milestone M4 drives the real upgrade, uninstall and retention paths', asyn
   assert.match(sameVersion, /sameRuntime === true/)
   // "Autostart is unchanged" is only meaningful against a setting that is not the default.
   assert.match(sameVersion, /autostart === autostartBefore/)
+  // Two product rules shape the sequence: the installer requires a stopped service, and a running
+  // service would make `--prepare-install` demand maintenance mode plus a backup. Running the installer
+  // against a live service is what hung the first attempt on the NSIS MessageBox for the whole timeout.
+  assert.match(sameVersion, /await stopService\('same-version reinstall'\)/)
+  assert.match(sameVersion, /await startService\('same-version reinstall'\)/)
+  assert.ok(
+    sameVersion.indexOf("stopService('same-version reinstall')") <
+      sameVersion.indexOf("runInstaller(config.installer, ['/S'])"),
+    'the service has to be stopped before the installer runs'
+  )
 
   // U2's refusal is the product's decision, so the case has to reach it by making the installer see a
   // *different* runtime while the service is running — and then prove the old service survived. Both
@@ -1631,7 +1720,9 @@ test('milestone M4 drives the real upgrade, uninstall and retention paths', asyn
   // what makes the refusal attributable.
   assert.match(refused, /installation\.json\.previous/)
   assert.match(refused, /'the refused install reached the service installation stage before it refused'/)
-  assert.match(refused, /'the old service kept running through the refused install'/)
+  assert.match(refused, /await stopService\('refused version change'\)/)
+  assert.match(refused, /'the refused install left the service registered and stopped'/)
+  assert.match(refused, /await startService\('after the refused version change'\)/)
   // The machine is put back whichever way the step ended, so the next case cannot measure residue.
   assert.match(refused, /finally \{[\s\S]*rmSync\(upgradeReadyFile, \{ force: true \}\)/)
   assert.match(refused, /writeInstallationRecord\(\{ release: previous\.release \}\)/)
@@ -1648,6 +1739,7 @@ test('milestone M4 drives the real upgrade, uninstall and retention paths', asyn
   assert.match(prepared, /backup\.backupStatus === 'ready'/)
   assert.match(prepared, /backup\.readable === true/)
   assert.match(prepared, /!existsSync\(upgradeReadyFile\)/)
+  assert.match(prepared, /'the service runs so the installer can ask it to prepare the upgrade'/)
   assert.match(prepared, /runInstaller\(config\.installer, \['\/S'\]\)/)
   assert.match(prepared, /'the upgrade kept the service identity'/)
   assert.match(prepared, /'the upgrade kept the published exam byte for byte'/)

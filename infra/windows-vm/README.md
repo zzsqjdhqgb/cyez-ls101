@@ -236,7 +236,9 @@ Electron 桌面测试需要已登录的交互桌面；直接用 WinRM 启动测�
 yarn vm:test          # 宿主机编排与控制台的单测（不启动 VM）
 yarn lab:typecheck    # tests/lab-vm 这条测试道的类型检查
 yarn test:vitest      # 协议驱动器的容器内用例（真实 LabService + 真实 HTTPS）
-yarn vm:lab           # 完整实机验收：编译、装包、装服务、初始化、M1+M2 用例、宿主机对打
+yarn vm:lab           # 完整实机验收：编译、装包、装服务、初始化、M1/M2/M4 用例、宿主机对打
+yarn vm:probe <name>  # 在保留的 VM 里重放一个具名诊断脚本并打印它的输出
+                      #   service-install / service-verify / installer-uninstall / manifest-digests
 ```
 
 `yarn vm:lab` 的 guest 阶段现在跑三组用例，判断全部在 `guest/lab-acceptance.mjs` 里：
