@@ -3,9 +3,9 @@ import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { strToU8, zipSync } from 'fflate'
+import { createTemporaryDirectory } from '../support/temporary-directory'
 import { MOCK_PNG_BASE64, MockAiServer } from './support/mock-ai-server'
 import { closeStartupReleaseNotes, launchIntegrationApp } from './support/electron-app'
 
@@ -151,7 +151,7 @@ test.afterAll(async () => mockServer.close())
 
 test.beforeEach(async () => {
   mockServer.reset()
-  userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-airouter-'))
+  userDataDir = await createTemporaryDirectory('ls101-airouter-')
   pageErrors = []
   electronApp = await launchIntegrationApp(userDataDir)
   page = await electronApp.firstWindow()

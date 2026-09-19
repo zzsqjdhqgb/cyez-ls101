@@ -1,10 +1,10 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import type { ExamPackage } from '@ls101/core-types'
 import { encodeExamPackage } from '@ls101/exam-package'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { strFromU8, unzipSync } from 'fflate'
+import { createTemporaryDirectory } from '../../../support/temporary-directory'
 import { launchProductDocsApp } from '../../support/product-app'
 import { evidence, prepareProductPage, productJourney } from '../../support/product-test'
 
@@ -16,7 +16,7 @@ let submissionPath: string
 let pageErrors: string[]
 
 test.beforeEach(async () => {
-  userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-product-docs-take-exam-'))
+  userDataDir = await createTemporaryDirectory('ls101-product-docs-take-exam-')
   examPath = path.join(userDataDir, 'practice.lsexam')
   submissionPath = path.join(userDataDir, 'practice.lssubmission')
   await writeFile(examPath, await encodeExamPackage(practiceExam(), {}))

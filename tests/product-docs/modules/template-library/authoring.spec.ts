@@ -1,7 +1,6 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
-import { mkdtemp, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import path from 'node:path'
+import { rm } from 'node:fs/promises'
+import { createTemporaryDirectory } from '../../../support/temporary-directory'
 import { launchProductDocsApp } from '../../support/product-app'
 import { evidence, prepareProductPage, productTest } from '../../support/product-test'
 
@@ -11,7 +10,7 @@ let userDataDir: string
 let pageErrors: string[]
 
 test.beforeEach(async () => {
-  userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-product-docs-template-library-'))
+  userDataDir = await createTemporaryDirectory('ls101-product-docs-template-library-')
   pageErrors = []
   electronApp = await launchProductDocsApp(userDataDir)
   page = await electronApp.firstWindow()

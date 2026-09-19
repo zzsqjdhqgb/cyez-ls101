@@ -1,6 +1,5 @@
 import { expect, test, type ElectronApplication } from '@playwright/test'
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import {
   closeStartupReleaseNotes,
@@ -8,9 +7,10 @@ import {
   INTEGRATION_LICENSE_CODE_HASH,
   launchIntegrationApp
 } from './support/electron-app'
+import { createTemporaryDirectory } from '../support/temporary-directory'
 
 test('activates with an invitation code and reuses the hash receipt after restart', async () => {
-  const userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-license-'))
+  const userDataDir = await createTemporaryDirectory('ls101-license-')
   let electronApp: ElectronApplication | undefined
   const pageErrors: string[] = []
 
@@ -119,7 +119,7 @@ test('activates with an invitation code and reuses the hash receipt after restar
 })
 
 test('blocks activation and application access after the license deadline', async () => {
-  const userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-license-expired-'))
+  const userDataDir = await createTemporaryDirectory('ls101-license-expired-')
   const electronApp = await launchIntegrationApp(userDataDir, {
     environment: { LS101_LICENSE_TEST_NOW: '2026-10-01T16:00:00.000Z' },
     license: 'not-activated'

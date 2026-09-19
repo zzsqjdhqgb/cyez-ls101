@@ -1,9 +1,9 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { createHash } from 'node:crypto'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { readFile, rm } from 'node:fs/promises'
 import path from 'node:path'
 import stableStringify from 'fast-json-stable-stringify'
+import { createTemporaryDirectory } from '../../../support/temporary-directory'
 import { MockAiServer } from '../../../integration/support/mock-ai-server'
 import { launchProductDocsApp } from '../../support/product-app'
 import { evidence, prepareProductPage, productTest } from '../../support/product-test'
@@ -43,7 +43,7 @@ test.afterAll(async () => mockServer.close())
 
 test.beforeEach(async () => {
   mockServer.reset()
-  userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-product-docs-interface-'))
+  userDataDir = await createTemporaryDirectory('ls101-product-docs-interface-')
   pageErrors = []
   electronApp = await launchProductDocsApp(userDataDir)
   page = await electronApp.firstWindow()

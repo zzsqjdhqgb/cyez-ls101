@@ -1,9 +1,9 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import type { ExamPackage } from '@ls101/core-types'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { strToU8, unzipSync, zipSync } from 'fflate'
+import { createTemporaryDirectory } from '../support/temporary-directory'
 import { APPLICATION_STARTUP_TIMEOUT, launchIntegrationApp } from './support/electron-app'
 
 let electronApp: ElectronApplication
@@ -63,7 +63,7 @@ async function expectValidStyleBindings(currentPage: Page): Promise<void> {
 }
 
 test.beforeEach(async () => {
-  userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-integration-'))
+  userDataDir = await createTemporaryDirectory('ls101-integration-')
   pageErrors = []
   electronApp = await launchIntegrationApp(userDataDir)
   page = await electronApp.firstWindow()

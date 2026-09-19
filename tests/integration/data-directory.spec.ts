@@ -1,12 +1,12 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
-import { mkdtemp, mkdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { unzipSync } from 'fflate'
+import { createTemporaryDirectory } from '../support/temporary-directory'
 import { closeStartupReleaseNotes, launchIntegrationApp } from './support/electron-app'
 
 test('archives root-level legacy data after startup and cleans it only after confirmation', async () => {
-  const userDataDir = await temporaryDirectory('ls101-legacy-data-integration-')
+  const userDataDir = await createTemporaryDirectory('ls101-legacy-data-integration-')
   await writeFile(path.join(userDataDir, 'version'), '0.3.2')
   await mkdir(path.join(userDataDir, 'data', 'config'), { recursive: true })
   await writeFile(
@@ -82,8 +82,8 @@ test('archives root-level legacy data after startup and cleans it only after con
 })
 
 test('copies business data, switches directories after restart and retains the source', async () => {
-  const userDataDir = await temporaryDirectory('ls101-data-directory-integration-')
-  const targetParent = await temporaryDirectory('ls101-data-directory-target-')
+  const userDataDir = await createTemporaryDirectory('ls101-data-directory-integration-')
+  const targetParent = await createTemporaryDirectory('ls101-data-directory-target-')
   const target = path.join(targetParent, 'data')
   const source = path.join(userDataDir, 'data')
   const migrationId = '11111111-1111-4111-8111-111111111111'
@@ -174,8 +174,8 @@ test('copies business data, switches directories after restart and retains the s
 })
 
 test('resets a custom data directory to the validated default location', async () => {
-  const userDataDir = await temporaryDirectory('ls101-data-default-integration-')
-  const customParent = await temporaryDirectory('ls101-data-default-custom-')
+  const userDataDir = await createTemporaryDirectory('ls101-data-default-integration-')
+  const customParent = await createTemporaryDirectory('ls101-data-default-custom-')
   const custom = path.join(customParent, 'data')
   const defaultPath = path.join(userDataDir, 'data')
   await mkdir(path.join(custom, 'template-editor'), { recursive: true })
@@ -244,8 +244,4 @@ async function mainApplicationWindow(electronApp: ElectronApplication): Promise<
     return window
   }
   throw new Error('Main application window was not found')
-}
-
-async function temporaryDirectory(prefix: string): Promise<string> {
-  return realpath(await mkdtemp(path.join(tmpdir(), prefix)))
 }

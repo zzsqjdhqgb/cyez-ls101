@@ -1,9 +1,9 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { access, mkdtemp, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { access, rm } from 'node:fs/promises'
 import path from 'node:path'
+import { createTemporaryDirectory } from '../../../support/temporary-directory'
 import { launchProductDocsApp } from '../../support/product-app'
 import { evidence, prepareProductPage, productTest } from '../../support/product-test'
 
@@ -24,7 +24,7 @@ test.beforeEach(async () => {
   const address = server.address() as AddressInfo
   serverOrigin = `http://127.0.0.1:${address.port}`
 
-  userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-product-docs-generation-'))
+  userDataDir = await createTemporaryDirectory('ls101-product-docs-generation-')
   pageErrors = []
   electronApp = await launchProductDocsApp(userDataDir)
   page = await electronApp.firstWindow()
