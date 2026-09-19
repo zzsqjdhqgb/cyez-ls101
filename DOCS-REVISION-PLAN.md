@@ -1,3 +1,10 @@
+<!--
+status: draft
+product-version: 0.4.1
+audience: engineer
+owner: docs
+-->
+
 # LS101 文档体系重构方案（临时工作稿）
 
 ```yaml
@@ -419,6 +426,52 @@ visual:
 阶段 2–3 消除"错的和空的"；阶段 4 才是最大工程量的覆盖扩展。
 
 ---
+
+## 13.5 阶段 4 实施方案
+
+阶段 4 是唯一无法在当前容器内完成的阶段：它需要打包 Electron、Playwright，以及生成基线用的 canonical 渲染容器。
+以下分解供在宿主机上执行。
+
+### 4a 产品说明书重建（manual-first）
+
+现状：`tests/product-docs/` 的步骤定义既是回归测试又是文档来源；任务按覆盖挑选，且生成 `guide/` 与 `behaviors/` 两份渲染。
+
+改法：
+
+1. **把说明提升为第一产物**。沿用 `tests/product-docs/support/product-test.ts` 的步骤声明（用户动作 `action`、可见结果 `expected`、稳定 key），但：
+   - 章节大纲（现 `product-guide.ts`）继续手写，声明每章目标 / 为什么 / 输入 / 产出 / 下一步；
+   - 每个任务声明用户叙事与步骤；步骤**可选**绑定可执行验证，允许 `unverified` 并计入锚定率。
+2. **只生成说明书**。Reporter 只产出 `docs/manual/`（README + 章节）；不再生成 `behaviors/`、`verified/`、`coverage.md`。逐操作语义由 `docs/ui/screens/` 承担。
+3. **覆盖目标**：先补完对象链主线（评分单元 + 题型 + 题组 → 模板 → 生成 → 运行 → 导入 → 评分 → 结算），再补各模块界面内任务与关键状态；界面清单以 `docs/ui/screens/README.md` 为准。
+4. **涉及文件**：`tests/product-docs/**`（来源与 reporter 拆分）、`product-docs-reporter.ts`（输出改 `docs/manual/`，删除 behaviors/verified/coverage 渲染）、`playwright.product-docs.config.ts`、`scripts/run-product-docs.mjs`、`scripts/product-docs/container-runner.mjs`、`package.json`、`.github/workflows/ci.yml`、`.gitignore`（路径与门禁名同步）。
+5. **验收**：canonical 运行生成 `docs/manual/`；声明步骤与执行步骤一一对应；失败运行不覆盖上次成功产物；正文不含测试术语与源码路径。
+
+### 4b 逐屏视觉回归实现
+
+约定已定稿于 [`tests/visual/README.md`](tests/visual/README.md)。
+
+1. 新增 Playwright 项目 `playwright.visual.config.ts`，`testDir=tests/visual`，单 worker。
+2. 每个 `UI-*.md` 的 `anchors.visual` 对应 `tests/visual/<module>/<UI-ID>.spec.ts`；基线位于 `tests/visual/baselines/<UI-ID>/<state>.png`。
+3. 复用既有确定性设施：`docker/product-docs/` 的镜像与 `renderer-version` 标记、固定 1280×800 / 1×、固定时钟、`--js-flags=--random-seed=1`。
+4. 一致性校验（扩展 `scripts/docs/check-docs.mjs` 或新增脚本）：规格声明状态集合 == 测试捕获集合 == 磁盘基线集合；`visual: n/a（原因）` 为合法例外。
+5. 先为全部界面建立默认态基线，再对高风险界面补空 / 错误 / 有损确认态。
+6. 命令：`yarn visual:check`（本地只读）、`yarn visual:update`（仅 canonical 容器内）。
+
+### 4c 旧 product docs 冻结迁出
+
+在 4a 产出 `docs/manual/` 之后进行：
+
+1. `git mv docs/product docs/archive/product-docs-0.4.1`。
+2. 摘除旧目录的 canonical 新鲜度门禁；`tests/product-docs/` 继续作为回归网运行，直到 4a + 4b 到位。
+3. 替代完成后删除旧套件与归档产物，并同步 `.gitignore`、`scripts/**`、CI。
+4. 过渡期 `docs/archive/product-docs-0.4.1/` 只接收弃用标记，不接收内容修改。
+
+### 4d 顺序与验收
+
+1. 4b 先行（不依赖 4a），先建立视觉网。
+2. 4a 补主线与界面内任务，生成 `docs/manual/`。
+3. 4c 迁出旧产物并摘除旧门禁。
+4. 最终验收：`docs/README.md` 权威地图中的每条路径可导航；`yarn docs:check` 与视觉配对校验在 CI 通过。
 
 ## 14. 明确不做 / 约束
 

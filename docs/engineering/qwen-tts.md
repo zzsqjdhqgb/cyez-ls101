@@ -1,3 +1,10 @@
+<!--
+status: implemented
+product-version: 0.4.1
+audience: engineer
+owner: airouter
+-->
+
 # Qwen3-TTS 0.6B Base runtime
 
 The application runs `Qwen3-TTS-12Hz-0.6B-Base` through the pinned CPU build of

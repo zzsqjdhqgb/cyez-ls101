@@ -1,3 +1,10 @@
+<!--
+status: implemented
+product-version: 0.4.1
+audience: engineer
+owner: docs
+-->
+
 # Agent Development Notes
 
 - After changes to the renderer, preload, or main process, use `xvfb-run -a yarn test:smoke` as the default runtime smoke test inside the container. This command rebuilds the packaged application and runs `tests/integration/electron-app.spec.ts`.

@@ -1,3 +1,10 @@
+<!--
+status: implemented
+product-version: 0.4.1
+audience: engineer
+owner: airouter
+-->
+
 # AIRouter model catalog
 
 AIRouter ships a generated model metadata snapshot at

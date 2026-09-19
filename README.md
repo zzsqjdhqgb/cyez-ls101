@@ -1,4 +1,11 @@
 <!--
+status: implemented
+product-version: 0.4.1
+audience: both
+owner: docs
+-->
+
+<!--
  Copyright (c) 2026 Haoting Ying (zzsqjdhqgb). All rights reserved.
  Proprietary code. Use is subject to the LICENSE file in the repository root.
 -->
@@ -119,7 +126,7 @@ native/                   Qwen TTS 等原生运行时源码和补丁
 tests/integration/         打包 Electron 集成测试
 tests/components/          renderer 组件测试
 tests/product-docs/        产品行为和文档测试
-docs/                      工程文档与产品使用指南
+docs/                      文档体系入口，见 docs/README.md（ui/engineering/archive/manual）
 electron-builder.yml       安装包、文件关联和额外资源配置
 ```
 
@@ -140,11 +147,16 @@ AI 模型、TTS runtime 和发音评测扩展使用带 manifest 和校验信息�
 
 ## 文档
 
-- [docs/product/guide/README.md](docs/product/guide/README.md)：按内容准备、生成试卷、考试和批改组织的用户指南
-- [docs/testing.md](docs/testing.md)：测试分层、命令和诊断产物
-- [docs/engineering/testing/README.md](docs/engineering/testing/README.md)：Electron 测试维护约定
-- [docs/engineering/qwen-tts.md](docs/engineering/qwen-tts.md)：Qwen TTS runtime 和模型包
-- [docs/engineering/airouter-model-catalog.md](docs/engineering/airouter-model-catalog.md)：AI Router 模型目录
+文档分层、权威说明与写作约定见 [docs/README.md](docs/README.md)。
+
+- 文档总入口与权威地图：[docs/README.md](docs/README.md)
+- 产品与界面设计：[docs/ui/README.md](docs/ui/README.md)
+- 工程实现：[docs/engineering/README.md](docs/engineering/README.md)
+- 历史档案：[docs/archive/README.md](docs/archive/README.md)
+- 测试：[docs/testing.md](docs/testing.md)
+- 修订方案：[DOCS-REVISION-PLAN.md](DOCS-REVISION-PLAN.md)
+
+> `docs/product/` 是上一代产品文档产物，已弃用；迁移期仅用于 UI 回归，不再作为产品说明书。
 
 ## 许可证
 

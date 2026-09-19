@@ -1,3 +1,10 @@
+<!--
+status: implemented
+product-version: 0.4.1
+audience: engineer
+owner: product-docs
+-->
+
 # 测试即文档约定
 
 > 本文描述当前已经实施的测试和生成约定。后续重构的目标思想见[测试即文档重构方向](./test-as-documentation-direction.md)。
@@ -51,10 +58,11 @@
 
 ## 运行命令
 
-- `yarn test:product-docs`：构建应用，执行产品文档测试并生成文档；
-- `yarn test:product-docs:run`：使用已经构建的应用执行产品文档测试；
+- `yarn test:product-docs`：构建应用，执行产品文档测试；该命令只运行预览，产物写入 `test-results/product-docs-preview/`，不会更新 `docs/product`；
+- `yarn test:product-docs:run`：使用已经构建的应用执行产品文档测试（`node scripts/run-product-docs.mjs preview`），同样只生成预览；
 - `yarn test:product-docs:preview --grep <pattern>`：运行筛选场景并只生成临时预览；
-- `yarn docs:product:check`：重新生成正式文档，并检查仓库中的生成结果是否最新；
-- `yarn test`：技术回归测试通过后继续执行产品文档测试。
+- `yarn docs:product:publish`：通过专用 Docker 容器正式生成 `docs/product`；
+- `yarn docs:product:check`：通过专用 Docker 容器重新生成正式文档，并检查仓库中的生成结果是否最新；
+- `yarn test`：技术回归测试通过后继续执行产品文档测试（preview）。
 
 当前自动生成文档入口：[产品测试覆盖](../coverage.md)。
