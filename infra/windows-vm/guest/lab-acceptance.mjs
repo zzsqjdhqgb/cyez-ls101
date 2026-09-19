@@ -1127,6 +1127,51 @@ async function stepFirewallClosed() {
 }
 
 // --- S18: no secret reached any artefact ----------------------------------------------------------
+//
+// The design lists three secrets that must not reach an artefact: the management password, the
+// invitation code and the one-time local proof. All are scanned by value: the passwords from the files
+// this run generated, the invitation code from the copy read before the service consumed it, and the
+// proof from the files the protocol driver received it in.
+//
+// The scan runs twice, because the set of secrets that exist grows during the run. The first pass has
+// the management password and the invitation code; the local proof and the device secret only appear
+// once the protocol cases have run, and the backup password once the upgrade case has prepared its
+// backup. Whichever pass sees a value asserts that it is absent from every artefact, and a pass that
+// expects a secret which is not there fails rather than scanning for nothing.
+async function scanForSecrets(entries) {
+  const scannedValues = []
+  for (const { label, file, value } of entries) {
+    const secret = value ?? (file && existsSync(file) ? readFileSync(file, 'utf8').trim() : '')
+    assertThat(secret.length > 0, `the ${label} is available for the leak scan`, { label, file })
+    scannedValues.push({ label, value: secret })
+  }
+  const scanned = [run.logPath, run.progressPath, run.resultsPath].filter((file) =>
+    existsSync(file)
+  )
+  // The log and the progress file are written from the first phase, so an empty scan set would mean the
+  // artefacts were not where this step thinks they are.
+  assertThat(scanned.length >= 2, 'the log and the progress file exist for the leak scan', scanned)
+  for (const file of scanned) {
+    const text = readFileSync(file, 'utf8')
+    for (const { label, value } of scannedValues)
+      assertThat(!text.includes(value), `no ${label} leaked into ${file}`, file)
+  }
+  return { scanned: scanned.length, secrets: scannedValues.map((entry) => entry.label) }
+}
+
+// The proof files are named by `protocolFile()`; the device secrets by their own suffixes. Only files
+// that still hold a value are used, and a spent proof file is skipped rather than read as an empty
+// string.
+function protocolSecretEntries() {
+  const entries = []
+  for (const file of protocolSecretFiles) {
+    if (!/local-proof|device-secret/.test(file) || !existsSync(file)) continue
+    const value = readFileSync(file, 'utf8').trim()
+    if (value.length > 0) entries.push({ label: `secret file ${file}`, value })
+  }
+  return entries
+}
+
 async function stepSecretScan() {
   return run.step('secret-scan', async () => {
     assertThat(
@@ -1134,50 +1179,24 @@ async function stepSecretScan() {
       'the management password is available for the leak scan',
       managementPasswordFile
     )
-    // The design lists three secrets that must not reach an artefact: the management password, the
-    // invitation code and the one-time local proof. All three are scanned by value: the password from
-    // the file this run generated, the invitation code from the copy read before the service consumed
-    // it, and the proof from the files the protocol driver received it in.
-    const scannedValues = []
-    {
-      const value = readFileSync(managementPasswordFile, 'utf8').trim()
-      assertThat(value.length > 0, 'the management password file holds a value to scan for', {
-        file: managementPasswordFile
-      })
-      scannedValues.push({ label: 'management password', value })
-    }
-    assertThat(
-      invitationCodeValue.length > 0,
-      'the invitation code was captured for the leak scan',
-      { bytes: invitationCodeValue.length }
-    )
-    scannedValues.push({ label: 'invitation code', value: invitationCodeValue })
-    for (const file of protocolSecretFiles) {
-      if (!/local-proof|device-secret/.test(file) || !existsSync(file)) continue
-      const value = readFileSync(file, 'utf8').trim()
-      if (value.length > 0) scannedValues.push({ label: `secret file ${file}`, value })
-    }
-    assertThat(
-      scannedValues.length >= 3,
-      'both passwords and the invitation code are available for the leak scan',
-      scannedValues.map((entry) => entry.label)
-    )
-    const scanned = [run.logPath, run.progressPath, run.resultsPath].filter((file) =>
-      existsSync(file)
-    )
-    // The log and the progress file are written from the first phase, so an empty scan set would mean the
-    // artefacts were not where this step thinks they are.
-    assertThat(
-      scanned.length >= 2,
-      'the log and the progress file exist for the leak scan',
-      scanned
-    )
-    for (const file of scanned) {
-      const text = readFileSync(file, 'utf8')
-      for (const { label, value } of scannedValues)
-        assertThat(!text.includes(value), `no ${label} leaked into ${file}`, file)
-    }
-    return { scanned: scanned.length, secrets: scannedValues.map((entry) => entry.label) }
+    return scanForSecrets([
+      { label: 'management password', file: managementPasswordFile },
+      // Captured before the service consumed it, because the file itself is deleted by then.
+      { label: 'invitation code', value: invitationCodeValue }
+    ])
+  })
+}
+
+// The second pass, after the upgrade cases have created their own secrets. It covers what did not exist
+// at the first one: the archive password and every credential the protocol driver received.
+async function stepFinalSecretScan() {
+  return run.step('secret-scan-final', async () => {
+    return scanForSecrets([
+      { label: 'management password', file: managementPasswordFile },
+      { label: 'invitation code', value: invitationCodeValue },
+      { label: 'backup password', file: backupPasswordFile },
+      ...protocolSecretEntries()
+    ])
   })
 }
 
@@ -2721,11 +2740,29 @@ async function stepUpgradeWithoutPreparation() {
         'the preparation names the release already installed, not the one being installed',
         { prepared: prepared.targetVersion, installing: targets.release }
       )
-      const wrongPreparation = await runInstaller(config.installer, ['/S'])
+      // The refusal has to be attributable, and an installer that silently skipped its service step
+      // would satisfy every "nothing changed" assertion below for the wrong reason. Every successful
+      // install replaces the record through `[IO.File]::Replace`, which writes `installation.json.previous`
+      // — and that runs five stages *after* the preparation guard, so a fresh write proves the run under
+      // test reached that point. The marker is compared by content rather than deleted, because an
+      // earlier install leaves its own copy behind.
+      const rejectionFile = join(config.programDir, 'installation.json.previous')
+      const markerBefore = existsSync(rejectionFile)
+        ? `${statSync(rejectionFile).mtimeMs}:${statSync(rejectionFile).size}`
+        : 'absent'
+      const rejection = await runInstaller(config.installer, ['/S'])
       assertThat(
-        wrongPreparation.result.code !== 0 && !wrongPreparation.result.timedOut,
+        rejection.result.code !== 0 && !rejection.result.timedOut,
         'an install whose preparation names another release is refused',
-        wrongPreparation
+        rejection
+      )
+      const markerAfter = existsSync(rejectionFile)
+        ? `${statSync(rejectionFile).mtimeMs}:${statSync(rejectionFile).size}`
+        : 'absent'
+      assertThat(
+        markerAfter !== markerBefore && markerAfter !== 'absent',
+        'the refused install reached the service installation stage before it refused',
+        { rejectionFile, markerBefore, markerAfter }
       )
 
       // The old installation has to be intact: the program record is unchanged, the runtime that the
@@ -2751,7 +2788,7 @@ async function stepUpgradeWithoutPreparation() {
       )
       return {
         refusedInstallSeconds: missingPreparation.seconds,
-        refusedWrongPreparationSeconds: wrongPreparation.seconds,
+        refusedWrongPreparationSeconds: rejection.seconds,
         installRecord: record.release,
         alternateRelease: olderRelease,
         preparation: prepared.targetVersion,
@@ -2759,9 +2796,11 @@ async function stepUpgradeWithoutPreparation() {
         serverId: status.info?.serverId ?? null
       }
     } finally {
-      // Whichever way the step ended, the machine is put back: the preparation record it wrote and the
-      // record it changed both have to be gone before the next case measures anything.
+      // Whichever way the step ended, the machine is put back: the preparation record it wrote, the
+      // record it changed and the replacement marker all have to be gone before the next case measures
+      // anything.
       rmSync(upgradeReadyFile, { force: true })
+      rmSync(join(config.programDir, 'installation.json.previous'), { force: true })
       writeInstallationRecord({ release: previous.release })
     }
   })
@@ -3157,6 +3196,10 @@ async function main() {
     await stepPreparedUpgrade()
     await stepClientUninstall()
     await stepServiceUninstallAndReinstall()
+    // The last leak pass. It runs after M4 because the archive password and the credentials the
+    // protocol driver received only exist once those cases have run; the early pass at step 15 covers
+    // what exists before them.
+    await stepFinalSecretScan()
   } catch (error) {
     failure = error
     run.log(String(error?.stack ?? error))

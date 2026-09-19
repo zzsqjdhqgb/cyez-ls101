@@ -1220,6 +1220,18 @@ test('the protocol driver is bundled, checked and uploaded like the manager driv
     diagnostic.indexOf('protocol-driver.mjs') < diagnostic.indexOf("Write-Output '=== results"),
     'the diagnostic has to list the protocol driver bundle'
   )
+  // One failing probe must not end the diagnostic. The probes set `$ErrorActionPreference = 'Stop'` for
+  // themselves and PowerShell keeps it in this scope afterwards, so without the reset the next cmdlet
+  // becomes a terminating error — which is how a diagnostic collected to explain a failure exited 1
+  // after printing almost nothing.
+  assert.match(diagnostic, /try \{/)
+  assert.match(diagnostic, /& \$probes @Arguments/)
+  assert.match(diagnostic, /\$ErrorActionPreference = 'Continue'/)
+  assert.match(diagnostic, /probe ' \+ \$Label \+ ' failed: '/)
+  assert.ok(
+    diagnostic.indexOf('& $probes @Arguments') < diagnostic.indexOf('catch {'),
+    'the probe call has to be the thing that is guarded'
+  )
   assert.ok(
     source.indexOf("protocolDriver, 'protocol-driver.mjs'") <
       source.indexOf("await putGuestFile(driver, 'manager-driver.mjs'"),
@@ -1316,6 +1328,16 @@ test('every protocol command the phase run invokes is registered in the driver',
       orchestrator.indexOf(`await ${name}`) > order[0],
       `${name} belongs to the milestone-M2 run`
     )
+  // The leak scan runs twice: the early pass covers the two secrets that exist before the protocol
+  // cases, and the final pass covers the archive password and the credentials M2 and M4 created. The
+  // final pass therefore sits after the M4 group, which is the one exception to "M2 after M1".
+  const early = orchestrator.indexOf('await stepSecretScan()')
+  const late = orchestrator.indexOf('await stepFinalSecretScan()')
+  assert.ok(early > 0 && late > early, 'the final leak pass must follow the early one')
+  assert.ok(
+    late > orchestrator.indexOf('await stepServiceUninstallAndReinstall()'),
+    'the final leak pass must follow the M4 cases whose secrets it scans for'
+  )
 })
 
 test('the lab task runs the Node orchestrator through the capturing launcher', async () => {
@@ -1407,7 +1429,15 @@ test('the lab run keeps the invitation code off every command line and out of th
   ])
     assert.doesNotMatch(orchestrator, sink, 'the invitation code value must not reach a sink')
   // It is reported by length only, so a failing scan says which secret leaked without printing it.
-  assert.match(orchestrator, /invitation code was captured for the leak scan[\s\S]{0,200}bytes:/)
+  assert.match(orchestrator, /const secret = value \?\? \(file && existsSync\(file\)/)
+  assert.match(orchestrator, /the \$\{label\} is available for the leak scan/)
+  // Both passes exist: the early one before the protocol cases, the late one after M4 created its own
+  // secrets. A single pass would either scan for a secret that is not there yet or miss the archive
+  // password entirely.
+  assert.match(orchestrator, /async function stepSecretScan\(\)/)
+  assert.match(orchestrator, /async function stepFinalSecretScan\(\)/)
+  assert.match(orchestrator, /backup password/)
+  assert.match(orchestrator, /protocolSecretEntries\(\)/)
   // And the secret scan proves nothing leaked. It scans by value, so the assertion is the message the
   // leak produces rather than a fixed sentence.
   assert.match(orchestrator, /no \$\{label\} leaked into \$\{file\}/)
@@ -1594,8 +1624,13 @@ test('milestone M4 drives the real upgrade, uninstall and retention paths', asyn
   )
   assert.match(
     refused,
-    /wrongPreparation\.result\.code !== 0 && !wrongPreparation\.result\.timedOut/
+    /rejection\.result\.code !== 0 && !rejection\.result\.timedOut/
   )
+  // "Nothing changed" is not enough on its own: an installer that silently skipped its service step
+  // would satisfy it. The replacement marker the install script writes five stages after the guard is
+  // what makes the refusal attributable.
+  assert.match(refused, /installation\.json\.previous/)
+  assert.match(refused, /'the refused install reached the service installation stage before it refused'/)
   assert.match(refused, /'the old service kept running through the refused install'/)
   // The machine is put back whichever way the step ended, so the next case cannot measure residue.
   assert.match(refused, /finally \{[\s\S]*rmSync\(upgradeReadyFile, \{ force: true \}\)/)

@@ -1692,6 +1692,9 @@ async function labAcceptance(root, config, run, report) {
         console.log(`Saved the automatic diagnostic to ${diagnosticPath}`)
       } catch (error) {
         console.warn(`The automatic diagnostic could not be collected: ${error.message}`)
+        // Recorded in the host report as well: a paper trail that only reaches the console is exactly
+        // what makes a preserved VM look like it was never inspected.
+        report.diagnosticError = error.message
       }
     }
     // N13: the same driver bundle, run from this host against the guest over the real link. It happens
@@ -1787,7 +1790,19 @@ export function labDiagnoseScript(config) {
     `function Show-Probe([string]$Label, [string[]]$Arguments) {`,
     `  Write-Output ('=== ' + $Label + ' ===')`,
     `  if (-not $hasProbes) { Write-Output 'lab-probes.ps1 is not present on this VM'; return }`,
-    `  & $probes @Arguments`,
+    // A probe that fails must not take the rest of the diagnostic with it. The probes set
+    // `$ErrorActionPreference = 'Stop'` for themselves, and PowerShell keeps that preference in this
+    // scope after `&` returns, so the next native call or cmdlet becomes a terminating error. That is
+    // how the first M4 run's diagnostic exited 1 after printing almost nothing: the failure it was
+    // collected to explain left no record. The preference is therefore reset inside the catch, after
+    // the error has been recorded.
+    `  try {`,
+    `    & $probes @Arguments`,
+    `  } catch {`,
+    `    $failure = $_.Exception.Message`,
+    `    $ErrorActionPreference = 'Continue'`,
+    `    Write-Output ('probe ' + $Label + ' failed: ' + $failure)`,
+    `  }`,
     `}`,
     `Show-Probe 'service' @('-Probe', 'service', '-Name', $serviceName)`,
     `Show-Probe 'wrapper processes' @('-Probe', 'process', '-Name', 'LS101Lab.exe')`,
