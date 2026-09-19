@@ -17,7 +17,7 @@ import { randomBytes, createHash, X509Certificate } from 'node:crypto'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { connect } from 'node:tls'
 import { Agent, request as httpsRequest } from 'node:https'
 import { controlPath, listenLocalControl } from '../../packages/lab-server/src/control'
@@ -192,6 +192,38 @@ async function verifyTls(args: string[]): Promise<void> {
   }
 }
 
+// --- prepare-install ---------------------------------------------------------------------------
+//
+// The second entry point of the same `manager.cjs`: no channel, no parent process, and the answer is
+// the process exit code. `install-windows.ps1` runs exactly this before it touches the installed
+// program directory, so a version-change install whose durable preparation is missing stops with this
+// exit code instead of replacing the runtime under a running service. Milestone M4 has to observe that
+// decision, which is why the driver runs the command rather than reimplementing it.
+//
+// stdout and stderr are returned verbatim: on failure `manager-cli.ts` writes the code/detail envelope
+// to stderr, and that envelope is the only place the refusal names itself.
+function prepareInstall(runtime: string, timeoutMs: number): void {
+  const executable = join(runtime, 'runtime', process.platform === 'win32' ? 'node.exe' : 'node')
+  const child = spawnSync(executable, [join(runtime, 'manager.cjs'), '--prepare-install'], {
+    encoding: 'utf8',
+    windowsHide: true,
+    timeout: timeoutMs,
+    maxBuffer: 8 * 1024 * 1024
+  })
+  process.stdout.write(
+    `${JSON.stringify({
+      exitCode: child.status,
+      signal: child.signal ?? null,
+      timedOut: Boolean(
+        child.error && (child.error as { code?: string }).code === 'ETIMEDOUT'
+      ),
+      stdout: (child.stdout ?? '').trim(),
+      stderr: (child.stderr ?? '').trim(),
+      error: child.error ? String(child.error.message ?? child.error) : null
+    })}\n`
+  )
+}
+
 // --- manage ------------------------------------------------------------------------------------
 
 interface HelperResult {
@@ -298,7 +330,16 @@ async function manage(args: string[]): Promise<void> {
         ['install', 'upgrade'].includes(operation!) && typeof helperResult.detail === 'string'
           ? helperResult.detail.slice(0, 8192).trim()
           : ''
+      // `--raw` turns the refusal into the command's result instead of its exit status. M4 needs to
+      // read the refusal *code* (uninstall must be RESOURCE_BUSY while the service runs), and a code
+      // carried in an exit status would have to be parsed back out of a message.
+      if (args.includes('--raw')) {
+        process.stdout.write(`${JSON.stringify(helperResult)}\n`)
+        return
+      }
       fail(detail ? `${code}\n${detail}` : code)
+    } else if (args.includes('--raw')) {
+      process.stdout.write(`${JSON.stringify(helperResult)}\n`)
     }
   } finally {
     try {
@@ -314,5 +355,12 @@ async function manage(args: string[]): Promise<void> {
 const [command, ...rest] = process.argv.slice(2)
 if (command === 'pipe-name') pipeName(rest)
 else if (command === 'verify-tls') await verifyTls(rest)
-else if (command === 'manage') await manage(rest)
-else fail('Usage: manager-driver.mjs pipe-name|verify-tls|manage [options]')
+else if (command === 'prepare-install') {
+  const runtime = option(rest, '--runtime')
+  if (!runtime) fail('prepare-install requires --runtime <installed or unpacked runtime directory>')
+  prepareInstall(runtime!, Number(option(rest, '--timeout-ms') ?? 180000))
+} else if (command === 'manage') await manage(rest)
+else
+  fail(
+    'Usage: manager-driver.mjs pipe-name|verify-tls|prepare-install|manage [options]'
+  )

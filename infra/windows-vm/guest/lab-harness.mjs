@@ -23,6 +23,10 @@ export const PROBE_PREFIX = 'LS101PROBE|'
 // somewhere downstream.
 export const REQUIRED_CONFIG_KEYS = [
   'installer',
+  // Milestone M4 keeps both installers in the guest for the whole run: the teacher package is the one
+  // that installs, upgrades and uninstalls the service, and the student package has to be present for
+  // the run to be about the deliverable rather than about one file.
+  'studentInstaller',
   'driver',
   // The protocol driver is required from milestone M2 on: the phase run cannot reach the service
   // without it, so a configuration that omits it must fail at parse time rather than mid-run.

@@ -1,6 +1,22 @@
 # HANDOFF: lab-deployment implementation
 
-## Milestone M1/M2 target acceptance on Windows (2026-09-18, current)
+## Milestone M4 target acceptance implemented (2026-09-19, current)
+
+Branch state as before; M4 (Tier 4: upgrade, uninstall, data retention) is now implemented in the same harness and **verified in the container lane only** — no real-Windows run has happened since it was written. Do not report M4 as passed on a target machine until `yarn vm:lab` is green.
+
+What M4 adds to `yarn vm:lab` (seven guest steps, so the guest phase is 33 steps: M1 15 + M2 11 + M4 7):
+
+- **U1 `upgrade-same-version-reinstall`** — asserts no `upgrade-ready.json` exists, then reinstalls the same package with NSIS `/S` while the service keeps running. The installer's own decision is recomputed first (`runtime-manifest.json` digests must match), so the case proves "no preparation is required" rather than "it happened to pass". Data retention is a re-download of the published exam with an independent digest; autostart is captured before and compared after.
+- **U2 `upgrade-without-preparation`** — points `installation.json` at a real copied release whose manifest digest differs, then runs the installer twice: once with no preparation record at all, once with the record that first attempt produced (which names the release already installed). Both must exit non-zero without hanging, and after both the old service must still be running, the record unchanged and the control channel still reporting the same serverId. The step restores the record and removes the preparation in a `finally`.
+- **U2 `upgrade-prepared`** — enters maintenance, creates a **real backup** through the protocol driver (`backup` command: `postTeacherBackups` + poll to `ready`; `prepare-upgrade` verifies snapshot age, byte count and digest), then runs the teacher NSIS installer directly — the checklist's own wording, and the only path that exercises `teacher.nsh`'s `customInstall`, through which the installed service is asked to prepare and stop itself. Asserts the new release, the consumed preparation, unchanged serverId/fingerprint, the exam digest, and that a deleted submission still answers with its receipt.
+- **U3 `client-uninstall-keeps-service`** — runs the client's own `QuietUninstallString` from the registry (no guessed executable name): client executable gone, service still registered and running, `installation.json` and autostart unchanged, exam still downloadable.
+- **U4/U5 `service-uninstall-and-reinstall`** — autostart is turned on first so "unchanged" cannot be confused with "reset"; uninstalling while running must fail with `RESOURCE_BUSY`; after stopping, the real `manageLocalService('uninstall')` removes the registration while the program directory, record and business data stay; reinstalling the same package registers the service again (stopped, `Manual`), and starting it brings back the same serverId, the same exam digest and the surviving receipt. Autostart is left at demand start.
+
+New pieces behind those steps: `tests/lab-vm/protocol/commands/backup.ts` (+ registry entry, + container spec `backup.test.ts`), `manager-driver` now runs the product's second entry point (`manager.cjs --prepare-install`) and reports a refused operation as data with `--raw`, and the `uninstall-entry` probe returns `UninstallString`/`QuietUninstallString`. `S18`'s secret scan was widened to scan by value (management password plus the proof/device-secret files the driver received) across all three artefacts. Container verification: `yarn vm:test` (74 assertions across two files), `yarn test:scripts`, `yarn lab:typecheck`, and the `lab-vm` vitest lane (45 tests, including the two new backup ones) — all green.
+
+Boundaries worth repeating: M4 does **not** cover the Linux deb upgrade path; the "other version" in U2 is a copied release with a different manifest digest, so it proves the version-change admission rule rather than cross-version migration; and the student installer is only checked for presence in the guest, not installed.
+
+## Milestone M1/M2 target acceptance on Windows (2026-09-18)
 
 Branch `feat/lab-deployment`. The Windows service and the client/server protocol are no longer "unexecuted on Windows": both milestones now run end to end on a real Windows host and are green. Design, matrix and findings: `docs/lab-vm-acceptance-design.md` (§5 test lanes, §6 Tier 0–2, §12 status, §13 findings). Commands live in `infra/windows-vm/README.md`.
 

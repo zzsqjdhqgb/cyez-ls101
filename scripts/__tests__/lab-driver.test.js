@@ -383,6 +383,91 @@ test('a failing helper reports only its error code and never the secret input', 
   assert.doesNotMatch(result.stderr, /installer detail/)
 })
 
+test('prepare-install reports the product\'s refusal the way the installer sees it', async () => {
+  const directory = await workdir()
+  await fakeRuntime(directory)
+  // `install-windows.ps1` runs `<runtime>/manager.cjs --prepare-install` and judges it by its exit
+  // status, so the driver runs the same pair. The stub stands in for the packaged manager: the point
+  // here is that the exit status, stderr envelope and stdout are all carried back verbatim, which is
+  // what makes a refusal diagnosable from the guest log alone.
+  const manager = path.join(directory, 'manager.cjs')
+  await writeFile(
+    manager,
+    [
+      "const args = process.argv.slice(2)",
+      "if (args[0] !== '--prepare-install') {",
+      "  process.stderr.write('unexpected arguments\\n')",
+      '  process.exit(9)',
+      '}',
+      "process.stdout.write('preparation attempted\\n')",
+      'process.stderr.write(JSON.stringify({ ok: false, error: \'RESOURCE_BUSY\' }) + \'\\n\')',
+      'process.exit(3)'
+    ].join('\n')
+  )
+  const result = await driverRun(['prepare-install', '--runtime', directory])
+  assert.equal(result.code, 0, result.stderr)
+  const reported = JSON.parse(result.stdout)
+  assert.equal(reported.exitCode, 3)
+  assert.equal(reported.timedOut, false)
+  assert.match(reported.stdout, /preparation attempted/)
+  assert.match(reported.stderr, /RESOURCE_BUSY/)
+  // A wrong argument list is a harness error, not a product verdict, and must be visible as one.
+  assert.equal(JSON.parse(result.stdout).signal, null)
+
+  const failed = await driverRun(['prepare-install', '--runtime', path.join(directory, 'missing')])
+  assert.equal(failed.code, 0, 'the driver reports the outcome even when the child cannot start')
+  const missing = JSON.parse(failed.stdout)
+  assert.notEqual(missing.exitCode, 0)
+  assert.ok(missing.error)
+})
+
+test('--raw reports a refused operation as data instead of an exit status', async () => {
+  const directory = await workdir()
+  await fakeRuntime(directory)
+  const resultFile = path.join(directory, 'result.json')
+  const refused = await driverRun(
+    [
+      'manage',
+      '--manager',
+      helper,
+      '--runtime',
+      directory,
+      '--operation',
+      'uninstall',
+      '--input-none',
+      '--result',
+      resultFile,
+      '--raw'
+    ],
+    { env: { ...process.env, FAKE_FAIL: '1' } }
+  )
+  // Without --raw the same call exits 1 with the code on stderr; M4 has to assert the code itself, so
+  // the parsed envelope is the result.
+  assert.equal(refused.code, 0, refused.stderr)
+  const parsed = JSON.parse(refused.stdout)
+  assert.equal(parsed.ok, false)
+  assert.equal(parsed.error, 'LICENSE_INACTIVE')
+  // The result file is written either way, so a caller that prefers reading it is not left with nothing.
+  assert.equal(JSON.parse(await readFile(resultFile, 'utf8')).ok, false)
+
+  const malformed = await driverRun([
+    'manage',
+    '--manager',
+    helper,
+    '--runtime',
+    directory,
+    '--operation',
+    'uninstall',
+    '--input-none',
+    '--result',
+    resultFile,
+    '--raw'
+  ])
+  assert.equal(malformed.code, 0, malformed.stderr)
+  const ok = JSON.parse(malformed.stdout)
+  assert.equal(ok.ok, true)
+})
+
 test('the probe refuses to send a request the contract would reject', async () => {
   // Without a version the probe cannot satisfy the header every operation requires, so it must fail
   // before connecting rather than send a request it knows the service will answer with 400.

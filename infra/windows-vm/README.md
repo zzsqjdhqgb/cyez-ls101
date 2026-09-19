@@ -4,7 +4,7 @@
 
 `vm:cycle` 自动执行创建、等待 WinRM 就绪、关机和销毁，并在宿主机写入 JSON 结果。`vm:acceptance` 每轮创建全新的临时 VM，上传当前源码快照，在 guest 执行 `corepack enable`、准备 Yarn 4.15.0、`yarn install --immutable`、`yarn build:test`，然后依次运行 smoke 套件（`tests/integration/electron-app.spec.ts`）和 `yarn test:product-docs:run`，保存日志后仅在成功时自动关机并销毁。两个套件原本各自都会先跑一遍 `build:test`，因此这里只打包一次、两个套件跑同一份产物。
 
-`vm:lab` 是机房部署的目标机验收，设计与用例见 [../../docs/lab-vm-acceptance-design.md](../../docs/lab-vm-acceptance-design.md)。它在**宿主机**编译教师端与学生端安装包，在全新 VM 中**完整安装**教师端，然后断言只有真机才能证明的部分：SCM 注册与虚拟服务账户、`%ProgramData%` ACL 对真实标准用户的拦截、session 0 托管、命名管道控制通道、真实激活与初始化、`0.0.0.0` 监听，以及由宿主机在加规则前后各测一次的防火墙门控。guest 只安装产物、不构建源码，因此**不需要 Yarn 或 node_modules**。宿主机必须恰好是 Node 24.20.0 x64（`scripts/lab/build-server.mjs` 的硬要求），并且需要在 `config.local.json` 中填写真实 `InvitationCode`：生产代码没有测试用激活后门，脚本会在启动 VM 之前就检查这两项，不满足时直接停下而不是绕过。guest 侧驱动器由宿主机用仓库自带的 Vite 打包，无需在 VM 内安装任何东西。
+`vm:lab` 是机房部署的目标机验收，设计与用例见 [../../docs/lab-vm-acceptance-design.md](../../docs/lab-vm-acceptance-design.md)。它在**宿主机**编译教师端与学生端安装包，在全新 VM 中**完整安装**教师端，然后断言只有真机才能证明的部分：SCM 注册与虚拟服务账户、`%ProgramData%` ACL 对真实标准用户的拦截、session 0 托管、命名管道控制通道、真实激活与初始化、`0.0.0.0` 监听、由宿主机在加规则前后各测一次的防火墙门控，以及升级、客户端/服务卸载与数据保留（M4：同版本重装、版本变化的准入拒绝、真实准备后的安装器升级、卸载后重装的 serverId 与回执保留）。guest 只安装产物、不构建源码，因此**不需要 Yarn 或 node_modules**。宿主机必须恰好是 Node 24.20.0 x64（`scripts/lab/build-server.mjs` 的硬要求），并且需要在 `config.local.json` 中填写真实 `InvitationCode`：生产代码没有测试用激活后门，脚本会在启动 VM 之前就检查这两项，不满足时直接停下而不是绕过。guest 侧驱动器由宿主机用仓库自带的 Vite 打包，无需在 VM 内安装任何东西。
 
 **guest 侧的语言分工**：编排与全部判断都在 Node 里（`guest/lab-acceptance.mjs` 与 `guest/lab-harness.mjs`），因为它们能在 `yarn vm:test` 中执行。早期用 PowerShell 实现同样的辅助函数时，连续暴露了变量遮蔽、`[bool]` 参数绑定、单行 JSON 解析三类缺陷——每一类都要重建一次 VM（约 7 分钟）才能发现，而同样的逻辑在 Node 里当场就能测出来。PowerShell 只保留 `guest/lab-probes.ps1`：每个探针输出**一行**带 `LS101PROBE|` 标记的 JSON，不做任何判断（ACL、CIM 服务与进程、监听端口、防火墙、事件日志、提升权限、标准用户凭据）。`start-lab-acceptance.ps1` 只负责重定向子进程的输出，因为"启动即失败"的诊断必须在被测进程之外完成。
 
@@ -239,11 +239,16 @@ yarn test:vitest      # 协议驱动器的容器内用例（真实 LabService + 
 yarn vm:lab           # 完整实机验收：编译、装包、装服务、初始化、M1+M2 用例、宿主机对打
 ```
 
-`yarn vm:lab` 的 guest 阶段现在跑两组用例，判断全部在 `guest/lab-acceptance.mjs` 里：
+`yarn vm:lab` 的 guest 阶段现在跑三组用例，判断全部在 `guest/lab-acceptance.mjs` 里：
 
-- **M1（S1–S14、S18）**：安装、服务注册、账户与 ACL、标准用户隔离、控制通道、激活与许可窗口、监听与指纹、重启、防火墙门控、机密扫描。
+- **M1（S1–S14 中已实现的部分、S18）**：安装、服务注册、账户与 ACL、标准用户隔离、控制通道、激活与许可窗口、监听与指纹、重启、防火墙门控、机密扫描。
 - **M2（N1–N12）**：指纹前置拒绝、会话认证的四种进入方式、入网批次与整文件语义、心跳在线/离线、试卷上传下载、作答回执幂等、维护准入、429/503 两个并发上限、租约与维护退出、多连接压测、IPv6 负例。
+- **M4（U1–U5）**：同版本覆盖安装（无需升级准备）、版本变化的准入拒绝（准备缺失与目标版本不符两种形态）、经真实备份准备后的直接安装器升级、NSIS 卸载客户端保留服务与数据、运行中卸载被拒、服务卸载后重装的 serverId/回执保留。学生端安装包在本轮只做"上传成功且非空"的校验，**没有安装**。
+
+M1 尚未实现的是 S15（停止语义与在线设备）、S16（重启后自启动）、S17（端口占用）；M3（已安装产品的 CDP GUI）未实现。因此 guest 步骤总数是 33（15 + 11 + 7），而不是文档里旧口径的 26。
 
 协议用例走同一个打包后的 `protocol-driver.mjs`：guest 内对 `https://127.0.0.1:8443/` 跑一遍，宿主机在防火墙部署步骤之后经真实链路对 `https://<guest-ip>:8443/` 再跑一遍（N13 与 N2 的远端那一半）。驱动器只观察并打印一个 JSON，判断在阶段脚本里，因此同一批用例在容器内也能对真实服务跑（`yarn test:vitest`）。
+
+M4 的升级用**真实备份**作为前置：`backup` 命令走教师接口创建并轮询到 `ready`，因为 `prepare-upgrade` 会校验快照时间、字节数与摘要。升级本身直接运行教师端 NSIS 安装器（验收清单的第 6 条就是"先不运行新版解包目录，直接装安装器"），由 `teacher.nsh` 的 `customInstall` 调起包内 `install-windows.ps1`，再由它请求已安装的服务准备并停止自己。
 
 `yarn vm:test` 用模拟进程/网络覆盖下载与重试、ISO 格式与摘要校验、失败清理、凭据发布、锁、退出码和宿主机结果写入；它们不启动 Windows/VMware。真实 box 构建和 VM 生命周期需要在 Windows 宿主机上运行。

@@ -1393,12 +1393,25 @@ test('the lab run keeps the invitation code off every command line and out of th
   assert.doesNotMatch(source, /guestCommand\([^)]*[Ii]nivtation/)
   assert.doesNotMatch(source, /putGuestFile\([^)]*[Ii]nivtation/)
   assert.doesNotMatch(source, /report\.[A-Za-z]*[Ii]nvitationCode\s*=/)
-  // The phase run reads it through the driver and deletes it once the service consumed it.
+  // The phase run reads it through the driver and deletes it once the service consumed it. It reads the
+  // value into memory first — the scan below has to look for the code after its file is gone — but the
+  // value may only be used for that comparison: never logged, never written anywhere.
   const orchestrator = await readGuest('lab-acceptance.mjs')
-  assert.doesNotMatch(orchestrator, /readFileSync\(config\.invitationFile/)
+  const reads = [...orchestrator.matchAll(/readFileSync\(config\.invitationFile[^)]*\)/g)]
+  assert.equal(reads.length, 1, 'the invitation code is read exactly once, for the leak scan')
   assert.match(orchestrator, /rmSync\(config\.invitationFile, \{ force: true \}\)/)
-  // And the secret scan proves nothing leaked.
-  assert.match(orchestrator, /no secret leaked into/)
+  for (const sink of [
+    /run\.log\([^)]*invitationCodeValue/,
+    /writeFileSync\([^)]*invitationCodeValue/,
+    /results\.invitationCodeValue\s*=/
+  ])
+    assert.doesNotMatch(orchestrator, sink, 'the invitation code value must not reach a sink')
+  // It is reported by length only, so a failing scan says which secret leaked without printing it.
+  assert.match(orchestrator, /invitation code was captured for the leak scan[\s\S]{0,200}bytes:/)
+  // And the secret scan proves nothing leaked. It scans by value, so the assertion is the message the
+  // leak produces rather than a fixed sentence.
+  assert.match(orchestrator, /no \$\{label\} leaked into \$\{file\}/)
+  assert.match(orchestrator, /scannedValues/)
 })
 
 test('every probe the phase run calls is defined with the parameters it passes', async () => {
@@ -1511,6 +1524,167 @@ test('the restart records the process table while the service is stopping', asyn
       restart.indexOf('assertThat(restarted.code === 0'),
     'the sampled process table must be recorded before the restart is judged'
   )
+})
+
+test('milestone M4 drives the real upgrade, uninstall and retention paths', async () => {
+  const orchestrator = await readGuest('lab-acceptance.mjs')
+  const { labGuestConfig } = await api
+
+  // The run has to be about the deliverable rather than about one file: the student installer travels
+  // with the run, and the configuration the host writes must name it or the guest cannot assert it.
+  const config = labGuestConfig(
+    {},
+    { version: '0.4.1', nodeVersion: '24.20.0', hostTime: '2026-09-16T00:00:00.000Z' }
+  )
+  assert.equal(
+    config.studentInstaller,
+    'C:\\ls101-lab\\transfers\\ls101-lab-student-0.4.1-win-x64.exe'
+  )
+  const { REQUIRED_CONFIG_KEYS } = await import('../../infra/windows-vm/guest/lab-harness.mjs')
+  assert.ok(REQUIRED_CONFIG_KEYS.includes('studentInstaller'))
+  assert.match(orchestrator, /stepUpgradePackages\(\)/)
+
+  // U1–U5 as separate steps. Each one is a distinct claim, so a single combined step would make a
+  // failure unreadable — and the order matters, because each case leaves the machine in the state the
+  // next one measures. They all run after the M2 cases, which need the install step's own runtime.
+  const steps = [
+    'stepUpgradeInitialState',
+    'stepReinstallSameVersion',
+    'stepUpgradeWithoutPreparation',
+    'stepPreparedUpgrade',
+    'stepClientUninstall',
+    'stepServiceUninstallAndReinstall'
+  ]
+  const positions = steps.map((name) => orchestrator.indexOf(`await ${name}()`))
+  for (const [index, position] of positions.entries())
+    assert.ok(position > 0, `${steps[index]} must be invoked from main()`)
+  for (let index = 1; index < positions.length; index += 1)
+    assert.ok(positions[index] > positions[index - 1], 'the M4 cases must run in order')
+  assert.ok(
+    positions[0] > orchestrator.indexOf('await stepConcurrencyLimits()'),
+    'the M4 cases belong after the milestone-M2 run, which needs the service the install step produced'
+  )
+
+  // U1 is about *no* preparation being required. The step has to assert the record is absent before the
+  // reinstall, or the case would pass for the wrong reason.
+  const sameVersion = orchestrator.slice(
+    orchestrator.indexOf('async function stepReinstallSameVersion'),
+    orchestrator.indexOf('async function stepUpgradeWithoutPreparation')
+  )
+  assert.match(sameVersion, /runInstaller\(config\.installer, \['\/S'\]\)/)
+  assert.match(
+    sameVersion,
+    /!existsSync\(upgradeReadyFile\),\s*'no upgrade preparation record exists before the same-version reinstall'/
+  )
+  assert.match(sameVersion, /sameRuntime === true/)
+  // "Autostart is unchanged" is only meaningful against a setting that is not the default.
+  assert.match(sameVersion, /autostart === autostartBefore/)
+
+  // U2's refusal is the product's decision, so the case has to reach it by making the installer see a
+  // *different* runtime while the service is running — and then prove the old service survived. Both
+  // preparation failure shapes are covered: absent, and present but naming another target.
+  const refused = orchestrator.slice(
+    orchestrator.indexOf('async function stepUpgradeWithoutPreparation'),
+    orchestrator.indexOf('async function stepPreparedUpgrade')
+  )
+  assert.match(refused, /sameRuntime === false/)
+  assert.match(
+    refused,
+    /missingPreparation\.result\.code !== 0 && !missingPreparation\.result\.timedOut/
+  )
+  assert.match(
+    refused,
+    /wrongPreparation\.result\.code !== 0 && !wrongPreparation\.result\.timedOut/
+  )
+  assert.match(refused, /'the old service kept running through the refused install'/)
+  // The machine is put back whichever way the step ended, so the next case cannot measure residue.
+  assert.match(refused, /finally \{[\s\S]*rmSync\(upgradeReadyFile, \{ force: true \}\)/)
+  assert.match(refused, /writeInstallationRecord\(\{ release: previous\.release \}\)/)
+
+  // U2's prepared half has to establish the durable precondition rather than assume it: a real backup,
+  // created through the service, in maintenance mode. The upgrade itself runs the installer directly,
+  // which is the checklist's own step ("run the new teacher NSIS installer without first running the new
+  // unpacked directory") and the only path that exercises `teacher.nsh`'s customInstall hook.
+  const prepared = orchestrator.slice(
+    orchestrator.indexOf('async function stepPreparedUpgrade'),
+    orchestrator.indexOf('async function stepClientUninstall')
+  )
+  assert.match(prepared, /protocolResult\('backup'/)
+  assert.match(prepared, /backup\.backupStatus === 'ready'/)
+  assert.match(prepared, /backup\.readable === true/)
+  assert.match(prepared, /!existsSync\(upgradeReadyFile\)/)
+  assert.match(prepared, /runInstaller\(config\.installer, \['\/S'\]\)/)
+  assert.match(prepared, /'the upgrade kept the service identity'/)
+  assert.match(prepared, /'the upgrade kept the published exam byte for byte'/)
+  assert.match(prepared, /'the submission record survived the upgrade'/)
+  // The manager's own `upgrade` entry point stops the service; the installer path is the one where the
+  // service stops on the installer's own request, so the two must not be confused here.
+  assert.doesNotMatch(orchestrator, /'--operation',\s*'upgrade'/)
+
+  // U3 uses the client's own uninstaller and asserts the three things that must survive it.
+  const clientUninstall = orchestrator.slice(
+    orchestrator.indexOf('async function stepClientUninstall'),
+    orchestrator.indexOf('async function stepServiceUninstallAndReinstall')
+  )
+  assert.match(clientUninstall, /uninstallerPath\(\)/)
+  assert.match(clientUninstall, /runInstaller\(uninstaller, \['\/S'\]\)/)
+  assert.match(clientUninstall, /'the client uninstall left the service registered and running'/)
+  assert.match(clientUninstall, /'the business data is intact after the client uninstall'/)
+
+  // U4/U5: refused while running, removed when stopped, and the data plus the identity survive the
+  // reinstall. Autostart is turned on first so "unchanged" cannot be confused with "reset".
+  const serviceUninstall = orchestrator.slice(
+    orchestrator.indexOf('async function stepServiceUninstallAndReinstall'),
+    orchestrator.indexOf('async function stepUpgradePackages')
+  )
+  assert.match(serviceUninstall, /manageOperation\('uninstall', \{ allowFailure: true, raw: true \}\)/)
+  assert.match(serviceUninstall, /refused\.error === 'RESOURCE_BUSY'/)
+  assert.match(serviceUninstall, /\['config', config\.serviceName, 'start=', 'auto'\]/)
+  assert.match(serviceUninstall, /waitForServiceState\('Stopped'\)/)
+  assert.match(serviceUninstall, /manageOperation\('uninstall'\)/)
+  assert.match(serviceUninstall, /'the reinstalled service kept the original identity'/)
+  assert.match(serviceUninstall, /\['config', config\.serviceName, 'start=', 'demand'\]/)
+
+  // The uninstaller path comes from the registry entry the installer wrote, not from a guessed name.
+  assert.match(orchestrator, /quietUninstallString/)
+  assert.match(orchestrator, /uninstallerPath/)
+
+  // The backup command is a precondition of an upgrade, not a case of its own: it has to exist in the
+  // registry, be called with a password file rather than a password, and be covered in the container.
+  const registry = await readFile(
+    path.resolve(__dirname, '../../tests/lab-vm/protocol/index.ts'),
+    'utf8'
+  )
+  assert.match(registry, /^ {2}backup,$/m)
+  const invoked = [...orchestrator.matchAll(/protocolResult\(\s*'([a-z][a-z0-9-]*)'/g)].map(
+    (match) => match[1]
+  )
+  assert.ok(invoked.includes('backup'))
+  const backupCommand = await readFile(
+    path.resolve(__dirname, '../../tests/lab-vm/protocol/commands/backup.ts'),
+    'utf8'
+  )
+  assert.match(backupCommand, /--backup-password-file/)
+  await readFile(path.resolve(__dirname, '../../tests/lab-vm/protocol/backup.test.ts'), 'utf8')
+})
+
+test('the manager driver can reach both product entry points M4 depends on', async () => {
+  const driver = await readFile(
+    path.resolve(__dirname, '../../tests/lab-vm/manager-driver.ts'),
+    'utf8'
+  )
+  // `install-windows.ps1` runs `manager.cjs --prepare-install` before it replaces the program
+  // directory. Running that same command is the only way to observe the refusal M4's version-change
+  // case is about, and it exits with a code rather than over the control channel.
+  assert.match(driver, /'--prepare-install'/)
+  assert.match(driver, /function prepareInstall/)
+  assert.match(driver, /exitCode: child\.status/)
+  assert.match(driver, /command === 'prepare-install'/)
+  assert.match(driver, /prepare-install requires --runtime/)
+  // The refusal code lives in the helper result, not in the exit status: `--raw` reports it so the
+  // phase script can assert `RESOURCE_BUSY` instead of parsing a message.
+  assert.match(driver, /args\.includes\('--raw'\)/)
+  assert.match(driver, /JSON\.stringify\(helperResult\)/)
 })
 
 test('the service definition declares start arguments as startarguments', async () => {

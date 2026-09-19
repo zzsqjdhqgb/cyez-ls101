@@ -14,6 +14,7 @@
  * `scripts/__tests__/windows-vm.test.js` keeps the registry, the modules and the guest steps aligned.
  */
 import type { CommandHandler } from './context'
+import { backup } from './commands/backup'
 import { concurrency } from './commands/concurrency'
 import { enrollIssue, enrollRegister, enrollReject } from './commands/enroll'
 import { examFetch, examList, examPublish } from './commands/exam'
@@ -73,6 +74,10 @@ export const commands: Record<string, CommandHandler> = {
 
   // N9: the two concurrency ceilings, which have separate error codes.
   concurrency,
+
+  // M4/U2: the real backup whose existence and freshness `prepare-upgrade` requires before it will
+  // write an upgrade preparation record.
+  backup,
 
   // N5: copy a file, or change exactly one byte of it, reporting which byte.
   'file-edit': fileEdit

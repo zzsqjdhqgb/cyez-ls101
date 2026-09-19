@@ -272,12 +272,22 @@ $result | ConvertTo-Json -Compress | Set-Content -LiteralPath $Output -Encoding 
 
   'uninstall-entry' {
     # The install directory is named after the executable rather than the product, so it is read from
-    # the registry instead of being guessed.
+    # the registry instead of being guessed. UninstallString is reported separately from
+    # QuietUninstallString because milestone M4 runs the silent form and needs to be able to say which
+    # one it used.
     $entries = @(
       Get-ChildItem -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall', 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' -ErrorAction SilentlyContinue |
         ForEach-Object { Get-ItemProperty -LiteralPath $_.PSPath -ErrorAction SilentlyContinue } |
         Where-Object { $_.DisplayName -and (-not $Match -or $_.DisplayName -like "*$Match*") } |
-        ForEach-Object { @{ displayName = $_.DisplayName; installLocation = $_.InstallLocation; version = $_.DisplayVersion } }
+        ForEach-Object {
+          @{
+            displayName           = $_.DisplayName
+            installLocation       = $_.InstallLocation
+            version               = $_.DisplayVersion
+            uninstallString       = $_.UninstallString
+            quietUninstallString  = $_.QuietUninstallString
+          }
+        }
     )
     Write-Probe @{ entries = $entries }
   }

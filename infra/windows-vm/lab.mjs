@@ -1365,6 +1365,11 @@ export function labGuestNodePath(nodeVersion) {
 export function labGuestConfig(config, { version, nodeVersion, port = LAB_HTTPS_PORT, hostTime }) {
   return {
     installer: guestPath(`${LAB_GUEST_DIR}/${labInstallerName('teacher', version)}`),
+    // Milestone M4 uninstalls the client through the real NSIS uninstaller, so the package stays in
+    // the transfer directory for the whole run instead of only during the first install. The student
+    // installer travels the same way: the guest asserts it arrived, which is the only check that the
+    // second half of the deliverable was built for this run.
+    studentInstaller: guestPath(`${LAB_GUEST_DIR}/${labInstallerName('student', version)}`),
     driver: guestPath(`${LAB_GUEST_DIR}/manager-driver.mjs`),
     protocolDriver: guestPath(`${LAB_GUEST_DIR}/protocol-driver.mjs`),
     harness: guestPath(LAB_GUEST_HARNESS),

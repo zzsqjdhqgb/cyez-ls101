@@ -148,7 +148,7 @@ tests/lab-vm/
   protocol/harness.ts           # 容器内测试道：真实 LabService + 真实 HTTPS
   protocol/tls-double.ts        # 错指纹用例用的 TLS 服务替身
   protocol/commands/*.ts        # 每个用例组的命令
-  protocol/*.test.ts            # 容器内用例（vitest，见 5.5）
+  protocol/*.test.ts            # 容器内用例（vitest，见 5.5）；M4 增加 backup.test.ts
   tsconfig.json                 # 该测试道的类型检查（yarn lab:typecheck）
 scripts/lab/build-test-driver.mjs # 把两个驱动打成单文件，VM 内无需 node_modules
 ```
@@ -238,6 +238,23 @@ scripts/lab/build-test-driver.mjs # 把两个驱动打成单文件，VM 内无�
 | U4  | 经真实 `manageLocalService('uninstall')` 卸载服务 → 注册与自启动消失、数据保留、教师端显示"未安装"；重装后原 serverId 与回执仍可用 |
 | U5  | 运行中卸载必须被拒绝                                                                                                               |
 
+**状态：已实现（M4，guest 步骤见 6.1；容器内 lane 覆盖新命令，实机结论待下一轮 `yarn vm:lab`）。** Tier 4 不依赖 M3 的 GUI 驱动器，因此可以在 CDP 目标机测试之前先跑。
+
+### 6.1 Tier 4 的实现要点（M4）
+
+| 用例 | 步骤 | 关键实现事实 |
+| ---- | ---- | ------------ |
+| —    | `upgrade-packages` | 断言学生端安装包随本轮上传且非空（它是本轮产物的一半），并从注册表条目读出教师端自带的静默卸载器路径 |
+| —    | `upgrade-initial-state` | 记录安装记录、应用目录、服务身份、自启动状态与运行时清单摘要；后续每个用例都以它为准 |
+| U1   | `upgrade-same-version-reinstall` | 先断言**没有** `upgrade-ready.json`，再以 NSIS `/S` 覆盖安装同版本。安装器的判据是清单摘要相等（`install-windows.ps1` 的 `sameRuntime`），因此这条用例证明的是"同版本重装不需要升级准备"，而不是"碰巧通过"。服务在安装期间保持运行，顺带观察第 11 节风险 2 的静默路径；数据保留由"重新下载已发布试卷并核对摘要"证明 |
+| U2   | `upgrade-without-preparation` | 把安装记录指向一个真实存在、清单摘要不同的旧 release，使安装器必须要求升级准备；两种失败形态都跑：**准备记录缺失**、以及第一次尝试自己写下的**目标版本不匹配**。两次都必须非 0 退出且不得挂起（挂起正是未应答的 NSIS 对话框的形状），随后断言旧服务仍在运行、安装记录未被替换、控制通道仍报同一 serverId。步骤结束时无论成功失败都恢复记录并删除准备记录，避免残留被下一步当成结论 |
+| U2   | `upgrade-prepared` | 走产品真实升级路径：进维护模式 → 通过真实教师接口创建**真实备份**（`backup` 命令轮询到 `ready`，并要求 `snapshotAt`/`archiveBytes`/`archiveSha256` 三项齐备，因为 `prepare-upgrade` 正是校验这三项）→ 用**待安装应用自带**的 `manager.cjs` 执行 `upgrade`，由它自己写准备记录、停服并重装。断言：记录指向新 release、准备记录已被新运行时消费、serverId 与证书指纹不变、试卷摘要逐字节不变 |
+| U3   | `client-uninstall-keeps-service` | 用 `QuietUninstallString`（不是猜名字）运行真实 NSIS 卸载器：客户端可执行文件消失，而服务仍注册且运行、`installation.json` 不变、自启动设置不变、已发布试卷仍可下载 |
+| U4   | `service-uninstall-and-reinstall` | 先设自启动为 Automatic（否则"设置未变"与"被重置"无法区分）→ **运行中卸载必须被拒绝**（`RESOURCE_BUSY`，即 U5）→ 停服后经真实 `manageLocalService('uninstall')` 卸载：注册消失，程序目录、安装记录与业务数据保留 → 用同一安装包重装：服务重新注册为 `Manual` 且保持 Stopped，启动后 serverId 与试卷摘要不变、作答回执仍可查。最后把自启动恢复为 demand |
+| U2/U3/U4 | 卸载器路径 | `uninstall-entry` 探针额外返回 `UninstallString`/`QuietUninstallString`，M4 因此不必猜可执行文件名——它带产品名和空格 |
+
+两条边界写在实现里：M4 **不做** Linux deb 侧的升级（那是另一套 harness）；U2 的"另一个版本"是用同一份产物伪造出的旧 release，因为一次运行只构建一个版本——它证明的是**版本变化时的准入判据**，而不是跨版本迁移语义。
+
 ## 7. 证据与失败处理
 
 回收内容：各阶段结果 JSON、`sc.exe qc`/`qsidtype` 转储、`icacls` 转储、`Get-NetTCPConnection`、`Get-CimInstance Win32_Process`、`%ProgramData%\LS101Lab\logs`、WinSW 日志、System 事件日志、SPKI 指纹独立计算记录、Playwright trace 与截图、两个安装包的 SHA-256。
@@ -291,7 +308,7 @@ scripts/lab/build-test-driver.mjs # 把两个驱动打成单文件，VM 内无�
 | M1 宿主机门禁与打包、Windows 服务 | **已在真实 Windows 宿主机上全绿（15/15）**              | `yarn vm:lab`：宿主机门禁、编译编排、guest 阶段脚本、提权管理器驱动器、防火墙门控                                                                    |
 | M2 协议驱动器                     | **已在真实 Windows 宿主机上全绿（12/12 + 宿主机对打）** | N1–N13：指纹前置拒绝、非回环认证、入网与整文件语义、心跳在线/离线、上传下载回执、维护准入、429/503、租约+维护退出、多连接压测、IPv6 负例、宿主机对打 |
 | M3 CDP GUI                        | 未实现                                                  |                                                                                                                                                      |
-| M4 升级/卸载/数据保留             | 未实现                                                  |                                                                                                                                                      |
+| M4 升级/卸载/数据保留             | **已实现（容器内 lane 全绿；实机结论待下一轮 `yarn vm:lab`）** | U1–U5 的 guest 步骤（`upgrade-packages`、`upgrade-initial-state`、`upgrade-same-version-reinstall`、`upgrade-without-preparation`、`upgrade-prepared`、`client-uninstall-keeps-service`、`service-uninstall-and-reinstall`），以及协议驱动器的 `backup` 命令；见第 12.1 节 |
 
 M1 的首次全绿运行：2026-09-17，runId `1789661969192-a443907b-4923-4a0e-8d9f-62c5c250ada8`，宿主机侧 19 步、822 s，guest 阶段 96 s，15 个步骤全部 `passed`。该次产物：教师端 `ls101-lab-teacher-0.4.1-win-x64.exe` SHA-256 `972066e2…9ce777`，学生端 `ls101-lab-student-0.4.1-win-x64.exe` SHA-256 `34111bdd…d5282`。在此之前几轮运行分别止步于打包、服务安装目录和第 13 步 `restart-survives`，后者查出的是产品缺陷（见第 13 节第四条），不是测试问题。
 
@@ -319,6 +336,16 @@ M1 覆盖的 Tier 0/1 项：H1、H2、H3、S1–S14、S18，已在真实宿主�
 [lab-target-acceptance.md](lab-target-acceptance.md) 的「Windows x64 / NTFS」一节因此可以引用这次运行作为**部分**证据，但整节仍不能标为通过：该节 7 项中只有第 1 项（Windows 原生打包）与第 3 项（`sc qc`/`qsidtype`/`icacls` 与普通用户隔离）被 M1 完整覆盖，第 2 项里"进程命令行与日志不得泄漏密钥"由 S18 覆盖、UAC 取消后重试属 GUI（M3），第 4 项的作答/备份/恢复与目录 fsync 屏障属 M2，第 5 项的重启自启动属 S16，第 6、7 项的升级、卸载与学生账户路径属 M4。在 M2–M4 完成前，该节状态维持"未运行"。
 
 M1 尚未覆盖的 Tier 1 项：S15（停止语义与在线设备）、S16（重启后自启动）、S17（端口占用）。这三项需要多次重启或已注册设备，按计划留给后续里程碑。
+
+M4 在**容器内**已经自证（这是 M2 之后新增的第三条自证要求）：`yarn test:vitest` 的 `tests/lab-vm/protocol/backup.test.ts` 对真实 `LabService`（真实 TLS、可注入时钟）跑新命令，断言正常模式下备份被拒、维护模式下得到 `ready` 且归档确实落在 `backups/<id>.7z` 且字节数与索引一致、以及快照时间是服务自己的时钟；`scripts/__tests__/lab-driver.test.js` 断言 `manager-driver` 的 `prepare-install` 原样带回退出码与 stderr 信封、`--raw` 把拒绝作为结果而不是退出状态返回。`yarn vm:test` 另外钉住 M4 的步骤顺序、失败路径的恢复动作和卸载器路径的来源。
+
+**M4 尚未取得实机结论。** 上表 M4 的"已实现"只表示代码与容器内自证完成，不表示任何一条 U 用例已经在真实 Windows 上通过；下一轮 `yarn vm:lab` 的 guest 步骤数从 26 变为 33（M1 15 + M2 11 + M4 7），通过后本节 M4 行才能改为"已在真实宿主机上全绿"。
+
+### 12.1 S18 的扫描范围（本轮一并补齐）
+
+S18 原本只按管理密码扫描三个文件。设计 §3.3 要求同时覆盖邀请码与一次性本地证明，因此该步骤现在按**值**扫描：管理密码、在服务消费邀请码之前读入内存的那份邀请码、以及协议驱动器收到过的本地证明/设备密钥文件（读回一个已花费的证明文件不会证明任何事，所以证明按文件取当前值）。扫描对象覆盖 `lab-acceptance.log`、`lab-progress.txt`、`lab-results.json`，断言失败时会指出是哪一个秘密泄漏到了哪一个文件。
+
+邀请码的值只用于这次比较：它不写日志、不写结果、只以字节长度出现在证据里（`invitation code was captured for the leak scan`）；`scripts/__tests__/windows-vm.test.js` 钉住"只读一次 + 不得进入任何 sink"这条性质。
 
 ## 13. 实机运行发现的问题
 
