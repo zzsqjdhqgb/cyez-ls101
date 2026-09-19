@@ -5,32 +5,15 @@ import { AppShell, IconButton, type AppRouteRegistration } from '@ls101/desktop-
 import { useLabAction } from '@ls101/lab-renderer'
 import { ActivationPage } from '../pages/ActivationPage'
 import { ConnectionPage } from '../pages/ConnectionPage'
-import { WorkspacePage } from '../pages/WorkspacePage'
+import { ExamsPage } from '../pages/ExamsPage'
+import { SubmissionsPage } from '../pages/SubmissionsPage'
+import { DevicesPage } from '../pages/DevicesPage'
+import { MaintenancePage } from '../pages/MaintenancePage'
+import { SettingsPage } from '../pages/SettingsPage'
+import { WorkspaceContext } from '../session/workspace'
 import type { TeacherSession, TeacherView } from '../session/session'
 import { useTeacherSession } from '../session/useTeacherSession'
 import styles from './App.module.css'
-
-function ExamsPage(): JSX.Element {
-  return <WorkspacePage description="试卷列表、导入、上架与删除将在这里实现。" title="试卷" />
-}
-
-function SubmissionsPage(): JSX.Element {
-  return <WorkspacePage description="作答筛选、导出与删除将在这里实现。" title="作答" />
-}
-
-function DevicesPage(): JSX.Element {
-  return <WorkspacePage description="设备列表、编辑与重置绑定将在这里实现。" title="设备" />
-}
-
-function MaintenancePage(): JSX.Element {
-  return <WorkspacePage description="入网、部署测试、历史清理与备份将在这里实现。" title="维护" />
-}
-
-function SettingsPage(): JSX.Element {
-  return (
-    <WorkspacePage description="服务设置、密码、日志与未确认操作将在这里实现。" title="服务设置" />
-  )
-}
 
 const routes: readonly AppRouteRegistration[] = [
   {
@@ -117,26 +100,28 @@ function Workspace({ session, view }: { session: TeacherSession; view: TeacherVi
   }, [session])
 
   return (
-    <MemoryRouter initialEntries={['/exams']}>
-      <Routes>
-        <Route
-          element={
-            <AppShell
-              actions={<ServiceActions session={session} view={view} />}
-              routes={routes}
-              subtitle="教师端"
-              title="曹二听说101"
-            />
-          }
-        >
-          <Route element={<Navigate replace to="/exams" />} index />
-          {routes.map((route) => {
-            const Component = route.component
-            return <Route element={<Component />} key={route.id} path={route.path} />
-          })}
-        </Route>
-      </Routes>
-    </MemoryRouter>
+    <WorkspaceContext.Provider value={{ session, view }}>
+      <MemoryRouter initialEntries={['/exams']}>
+        <Routes>
+          <Route
+            element={
+              <AppShell
+                actions={<ServiceActions session={session} view={view} />}
+                routes={routes}
+                subtitle="教师端"
+                title="曹二听说101"
+              />
+            }
+          >
+            <Route element={<Navigate replace to="/exams" />} index />
+            {routes.map((route) => {
+              const Component = route.component
+              return <Route element={<Component />} key={route.id} path={route.path} />
+            })}
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    </WorkspaceContext.Provider>
   )
 }
 
@@ -150,6 +135,7 @@ export function App(): JSX.Element {
   if (view.loading) return <div className={styles.loading}>正在启动</div>
   if (!view.active) return <ActivationPage session={session} />
   if (!view.connection) return <ConnectionPage session={session} view={view} />
+  if (!view.service) return <div className={styles.loading}>正在读取服务状态</div>
 
-  return <Workspace session={session} view={view} />
+  return <Workspace key={view.connection.connectionId} session={session} view={view} />
 }

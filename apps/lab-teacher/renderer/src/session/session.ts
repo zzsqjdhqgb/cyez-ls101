@@ -121,11 +121,16 @@ export class TeacherSession {
     }
   }
 
-  async request<T>(operationId: OperationId, input: OperationInput = {}): Promise<T> {
+  async request<T>(
+    operationId: OperationId,
+    input: OperationInput = {},
+    signal?: AbortSignal
+  ): Promise<T> {
     const connection = this.view.connection
     if (!connection) throw new Error('请先连接服务')
     const client = new LabClient(connection.connectionId, {
-      request: async (connectionId, id, value) => {
+      request: async (connectionId, id, value, signal) => {
+        if (signal?.aborted) throw new Error('读取已取消')
         const requestId = crypto.randomUUID(),
           abort = new AbortController()
         this.requests.set(requestId, abort)
@@ -136,6 +141,8 @@ export class TeacherSession {
           },
           { once: true }
         )
+        const cancel = (): void => abort.abort()
+        signal?.addEventListener('abort', cancel, { once: true })
         try {
           return await this.host.invoke('transport.request', {
             connectionId,
@@ -144,12 +151,13 @@ export class TeacherSession {
             requestId
           })
         } finally {
+          signal?.removeEventListener('abort', cancel)
           this.requests.delete(requestId)
         }
       }
     })
     try {
-      const result = await client.request<T>(operationId, input)
+      const result = await client.request<T>(operationId, input, signal)
       if (connection !== this.view.connection) throw new Error('服务连接已切换')
       return result
     } catch (error) {
@@ -224,12 +232,9 @@ export class TeacherSession {
 
   async changePassword(password: string): Promise<void> {
     const security = await this.request<{ revision: number }>('getTeacherSecurity')
-    try {
-      await this.mutate('putTeacherSecurityPassword', {
-        body: { newPassword: password, expectedRevision: security.revision }
-      })
-    } finally {
-      await this.disconnect()
-    }
+    await this.mutate('putTeacherSecurityPassword', {
+      body: { newPassword: password, expectedRevision: security.revision }
+    })
+    await this.disconnect()
   }
 }
