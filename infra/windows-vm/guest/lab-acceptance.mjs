@@ -15,7 +15,7 @@
  * directory, and removed in a finally block. Neither is ever logged, and the last step proves it.
  */
 import { randomBytes, randomUUID, createHash } from 'node:crypto'
-import { existsSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { networkInterfaces } from 'node:os'
 import { dirname, join } from 'node:path'
 import {
@@ -2426,12 +2426,14 @@ async function manageOperation(operation, { allowFailure = false, raw = false } 
 }
 
 // What the installer will decide when it starts: whether the release it carries is the one already
-// installed (same manifest digest) and which application directory it will replace.
+// installed, and which application directory it will replace.
 //
-// The directory is passed in rather than discovered here. `findApplicationDirectory()` reads the
-// uninstall registry entry, and the refused-install case runs the installer — which rewrites that entry
-// before its custom install step aborts. Re-discovering the directory after a refused install would
-// therefore measure the installer's leftovers instead of the release it was asked about.
+// The comparison has to be the installer's own: `install-windows.ps1` reads `installation.json` to find
+// the installed release, then compares *that* release's `runtime-manifest.json` with the manifest in the
+// package it carries. An earlier version of this helper compared the package's manifest with the
+// service's own runtime manifest, which is the same file whenever the machine was installed from this
+// package — so it reported `sameRuntime: true` no matter what the installation record said, and the
+// version-change case could never set up its precondition.
 async function reinstallTargets(label, applicationDirectory = state.applicationDirectory) {
   assertThat(
     typeof applicationDirectory === 'string' &&
@@ -2440,24 +2442,29 @@ async function reinstallTargets(label, applicationDirectory = state.applicationD
     `the installed application directory was found for the ${label}`,
     applicationDirectory
   )
-  const manifestPath = join(
+  const packagedManifestPath = join(
     applicationDirectory,
     'resources',
     'lab-server',
     'runtime-manifest.json'
   )
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+  const packagedManifest = JSON.parse(readFileSync(packagedManifestPath, 'utf8'))
   assertThat(
-    manifest.format === 'ls101-service-runtime',
+    packagedManifest.format === 'ls101-service-runtime',
     'the installed application ships the service runtime',
-    manifest
+    packagedManifest
   )
+  const record = JSON.parse(readFileSync(recordPath, 'utf8'))
+  const installedManifestPath = join(config.programDir, 'releases', record.release, 'runtime-manifest.json')
   const digest = (file) => createHash('sha256').update(readFileSync(file)).digest('hex')
+  const installedExists = existsSync(installedManifestPath)
   return {
     applicationDirectory,
-    release: manifest.releaseVersion,
-    sameRuntime:
-      digest(manifestPath) === digest(join(state.runtime, 'runtime-manifest.json')),
+    // What the installer will call the machine's release, and the manifest that decides `sameRuntime`.
+    installedRelease: record.release,
+    installedManifestExists: installedExists,
+    release: packagedManifest.releaseVersion,
+    sameRuntime: installedExists && digest(installedManifestPath) === digest(packagedManifestPath),
     installBytes: statSync(config.installer).size
   }
 }
@@ -2742,20 +2749,23 @@ async function stepUpgradeWithoutPreparation() {
     // and holds a real runtime, so what the installer replaces is a genuine installation of another
     // release — not a record pointing at nothing.
     //
-    // The alternate version deliberately avoids the hyphen: `install-windows.ps1` validates the
-    // installed release with `^[0-9A-Za-z.+-]+$` (a range, so no literal hyphen), and a version this
-    // machine could not have been installed with is exactly what this case needs.
+    // The copy is prepared in the order the installer's own logic requires: copy the release, *then*
+    // give it a different manifest, then name the release after the digest of that manifest, then point
+    // the record at it. Writing the same bytes back after copying would have left the digest identical
+    // and `sameRuntime` true, which is exactly what the previous attempt did — and the release name has
+    // to be derived after the manifest changes, because `install-windows.ps1` computes the identifier as
+    // `<releaseVersion>-<manifest digest prefix>`.
+    //
+    // The alternate version deliberately avoids a hyphen: `install-windows.ps1` validates the installed
+    // release with `^[0-9A-Za-z.+-]+$` (a range, so no literal hyphen), and a version this machine could
+    // not have been installed with is exactly what this case needs.
     const previous = readInstallationRecord()
-    const olderManifest = join(state.runtime, 'runtime-manifest.json')
-    const olderBytes = readFileSync(olderManifest)
-    const olderDigest = createHash('sha256').update(olderBytes).digest('hex')
-    const olderRelease = `0.4.0.${olderDigest.slice(0, 12)}`
-    const olderDirectory = join(config.programDir, 'releases', olderRelease)
+    const sourceManifest = join(state.runtime, 'runtime-manifest.json')
     const copied = await native('cmd.exe', [
       '/c',
       'robocopy',
       state.runtime,
-      olderDirectory,
+      join(config.programDir, 'releases', 'ls101-alternate-release-staging'),
       '/E',
       '/NFL',
       '/NDL',
@@ -2763,12 +2773,25 @@ async function stepUpgradeWithoutPreparation() {
       '/NJS',
       '/NP'
     ])
+    const staging = join(config.programDir, 'releases', 'ls101-alternate-release-staging')
     assertThat(
       copied.code === 0 || copied.code === 1,
-      'the alternate release directory was copied',
+      'the alternate release was staged before it was named',
       copied
     )
-    writeFileSync(join(olderDirectory, 'runtime-manifest.json'), olderBytes)
+    const olderManifest = JSON.parse(readFileSync(join(staging, 'runtime-manifest.json'), 'utf8'))
+    writeFileSync(
+      join(staging, 'runtime-manifest.json'),
+      `${JSON.stringify({ ...olderManifest, releaseVersion: '0.4.0' }, null, 2)}\n`
+    )
+    const olderDigest = createHash('sha256')
+      .update(readFileSync(join(staging, 'runtime-manifest.json')))
+      .digest('hex')
+    const olderRelease = `0.4.0.${olderDigest.slice(0, 16)}`
+    const olderDirectory = join(config.programDir, 'releases', olderRelease)
+    // `renameSync`, not a shell move: both paths contain spaces, and an unquoted `move` argument is how
+    // the second attempt at this case failed with robocopy instead of doing what it said.
+    renameSync(staging, olderDirectory)
     writeInstallationRecord({ release: olderRelease })
     try {
       const fake = readInstallationRecord()
@@ -2778,6 +2801,11 @@ async function stepUpgradeWithoutPreparation() {
         fake
       )
       const targets = await reinstallTargets('refused version change')
+      assertThat(
+        targets.installedRelease === olderRelease && targets.installedManifestExists === true,
+        'the installer will read the alternate release from the installation record',
+        targets
+      )
       assertThat(
         targets.sameRuntime === false,
         'the installer sees a different runtime from the installed one',

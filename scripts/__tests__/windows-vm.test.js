@@ -1707,6 +1707,20 @@ test('milestone M4 drives the real upgrade, uninstall and retention paths', asyn
     orchestrator.indexOf('async function stepPreparedUpgrade')
   )
   assert.match(refused, /sameRuntime === false/)
+  // The precondition has to make the installer's own comparison false. It compares the record's release
+  // manifest with the package's, so the copy is given a different manifest *before* it is named after
+  // that manifest's digest — writing the original bytes back (as the first attempt did) leaves the
+  // digests equal and the case can never be set up.
+  assert.match(refused, /renameSync\(staging, olderDirectory\)/)
+  assert.match(refused, /releaseVersion: '0\.4\.0'/)
+  assert.ok(
+    refused.indexOf("releaseVersion: '0.4.0'") < refused.indexOf('renameSync(staging, olderDirectory)'),
+    'the manifest must change before the release is named after its digest'
+  )
+  assert.match(refused, /'the installer will read the alternate release from the installation record'/)
+  // `reinstallTargets` has to read the record, not the package: comparing the package's manifest with
+  // the service's own runtime manifest is always equal on a machine installed from that package.
+  assert.match(orchestrator, /const record = JSON.parse\(readFileSync\(recordPath, 'utf8'\)\)[\s\S]{0,200}installedManifestPath/)
   assert.match(
     refused,
     /missingPreparation\.result\.code !== 0 && !missingPreparation\.result\.timedOut/
