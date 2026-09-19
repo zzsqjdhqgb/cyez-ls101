@@ -16,6 +16,54 @@
   min-width: 130px;
   max-width: 240px;
 }
+.toolbar input:not([type='checkbox']),
+.toolbar select,
+.form > label input:not([type='checkbox']),
+.form > label select,
+.form > label textarea {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+}
+.toolbar input:not([type='checkbox']):focus-visible,
+.toolbar select:focus-visible,
+.form > label input:not([type='checkbox']):focus-visible,
+.form > label select:focus-visible,
+.form > label textarea:focus-visible {
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+.toolbar input:disabled,
+.toolbar select:disabled,
+.form > label input:disabled,
+.form > label select:disabled,
+.form > label textarea:disabled {
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle);
+}
+.form > label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 550;
+}
+.form > label input:not([type='checkbox']),
+.form > label select,
+.form > label textarea {
+  width: 100%;
+}
+.toolbar input[type='number'] {
+  width: 130px;
+}
+.toolbar input[type='datetime-local'] {
+  min-width: 210px;
+}
 .tableFrame {
   width: 100%;
   overflow-x: auto;
@@ -153,6 +201,11 @@
 .details dd {
   margin: 0;
   overflow-wrap: anywhere;
+}
+.card > summary {
+  color: var(--color-text-strong);
+  cursor: pointer;
+  font-weight: 600;
 }
 .tabs {
   display: flex;

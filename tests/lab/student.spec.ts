@@ -198,7 +198,9 @@ test('student enrollment, maintenance, practice and durable receipt run through 
     await deviceEditor.getByLabel('机房', { exact: true }).fill('A101')
     await deviceEditor.getByRole('button', { name: '保存设备', exact: true }).click()
     const renamedDevices = await teacher.request<Schema<'DeviceList'>>('getTeacherDevices')
-    expect(renamedDevices.items[0]?.number).toBe('0007')
+    expect(renamedDevices.items.find((device) => device.id === listedDevice.id)?.number).toBe(
+      '0007'
+    )
     await teacherPage.getByRole('link', { name: '维护', exact: true }).click()
     await expect(teacherPage.getByRole('heading', { name: '维护', exact: true })).toBeVisible()
     await teacherPage.getByRole('button', { name: '进入维护模式', exact: true }).click()
