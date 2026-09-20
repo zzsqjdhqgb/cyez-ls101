@@ -1862,6 +1862,12 @@ test('milestone M4 drives the real upgrade, uninstall and retention paths', asyn
   // the second call, after the new runtime restarted, writes a fresh one. The run of 2026-09-20 found it
   // present after a completed upgrade, which is what made the assertion wrong rather than the product.
   assert.doesNotMatch(prepared, /'the upgraded runtime consumed the preparation record'/)
+  // The installer leaves the service stopped on purpose ("Service installed and stopped. Autostart is
+  // unchanged."), so the case starts it and pins the start mode: without that, the run waited for a
+  // service nobody had started, which is exactly how the 2026-09-20 run failed.
+  assert.match(prepared, /'the installer left the upgraded service registered and stopped'/)
+  assert.match(prepared, /'the upgrade did not change the service start mode'/)
+  assert.match(prepared, /await startService\('after the upgrade'\)/)
   assert.match(prepared, /'the upgrade kept the published exam byte for byte'/)
   assert.match(prepared, /'the submission record survived the upgrade'/)
   // The manager's own `upgrade` entry point stops the service; the installer path is the one where the

@@ -3090,6 +3090,23 @@ async function stepPreparedUpgrade() {
     // gone" is therefore not what the product promises (the run of 2026-09-20 found it present, after an
     // upgrade that had otherwise completed). What the upgrade promises is the state below: the record
     // naming the new release, and the same service coming back with its identity intact.
+    //
+    // The installer deliberately leaves the service *stopped*: it reports "Service installed and stopped.
+    // Autostart is unchanged.", and the wrapper log shows the last thing the install does is stop it. So
+    // starting it is the operator's step, which is what this does — and asserting that the install did
+    // not change the start mode is what makes "unchanged" a statement rather than an assumption.
+    const afterInstall = await probe('service', ['-Name', config.serviceName])
+    assertThat(
+      afterInstall.installed === true && afterInstall.state === 'Stopped',
+      'the installer left the upgraded service registered and stopped',
+      afterInstall
+    )
+    assertThat(
+      afterInstall.startMode === 'Manual',
+      'the upgrade did not change the service start mode',
+      afterInstall
+    )
+    await startService('after the upgrade')
     const status = await waitForRuntimeStatus()
     assertThat(status.info?.serverId === state.serverId, 'the upgrade kept the service identity', {
       before: state.serverId,
