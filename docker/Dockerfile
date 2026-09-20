@@ -4,7 +4,7 @@
 #
 
 # 使用 Node.js LTS 作为基础镜像
-FROM node:24-bookworm-slim
+FROM node:24.20.0-bookworm-slim
 
 # 设置环境变量
 ENV YARN_ENABLE_GLOBAL_CACHE=true
