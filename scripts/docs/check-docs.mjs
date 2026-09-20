@@ -44,6 +44,7 @@ function walk(dir) {
   const out = []
   if (!fs.existsSync(dir)) return out
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name.startsWith('.')) continue
     const p = path.join(dir, entry.name)
     if (entry.isDirectory()) out.push(...walk(p))
     else if (entry.name.endsWith('.md')) out.push(p)
