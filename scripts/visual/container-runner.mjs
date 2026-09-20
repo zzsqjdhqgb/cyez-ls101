@@ -55,7 +55,9 @@ export async function main(args = process.argv.slice(2)) {
     console.log(`使用视觉回归渲染器 ${version}`)
 
     run('yarn', ['install', '--immutable'])
-    run('yarn', ['build:test'])
+    // 视觉基线使用正式版版本号打包（--release），避免 `-local.<日期>.<哈希>` 随提交变化；
+    // 仍保留 --dir 与 --skip-model-package：测试需要 unpacked 目录，模型包与 UI 无关。
+    run('yarn', ['build:test:visual'])
     run(process.execPath, [path.join(repositoryRoot, 'scripts', 'run-visual.mjs'), action])
 
     if (action === 'check') assertBaselinesClean()
