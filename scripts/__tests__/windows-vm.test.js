@@ -1785,11 +1785,13 @@ test('milestone M4 drives the real upgrade, uninstall and retention paths', asyn
     refused,
     /rejection\.result\.code !== 0 && !rejection\.result\.timedOut/
   )
-  // "Nothing changed" is not enough on its own: an installer that silently skipped its service step
-  // would satisfy it. The replacement marker the install script writes five stages after the guard is
-  // what makes the refusal attributable.
-  assert.match(refused, /installation\.json\.previous/)
-  assert.match(refused, /'the refused install reached the service installation stage before it refused'/)
+  // The attribution marker that used to be asserted here (`installation.json.previous` gaining a fresh
+  // mtime) cannot work: that file is written by the last stage of a successful install, so a refusal at
+  // the preparation guard never touches it, and the copy left by the same-version reinstall keeps its
+  // content. The refusal does not need it — an install that was *not* refused would succeed and the
+  // record assertions would fail instead.
+  assert.doesNotMatch(refused, /markerBefore/)
+  assert.match(refused, /'an install whose preparation names another release is refused'/)
   assert.match(refused, /await stopService\('refused version change'\)/)
   assert.match(refused, /'the refused install left the service registered and stopped'/)
   assert.match(refused, /await startService\('after the refused version change'\)/)

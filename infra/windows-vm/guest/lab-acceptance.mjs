@@ -2884,29 +2884,21 @@ async function stepUpgradeWithoutPreparation() {
         'the preparation names a release other than the one being installed',
         { prepared: prepared.targetVersion, installing: targets.release }
       )
-      // The refusal has to be attributable, and an installer that silently skipped its service step
-      // would satisfy every "nothing changed" assertion below for the wrong reason. Every successful
-      // install replaces the record through `[IO.File]::Replace`, which writes `installation.json.previous`
-      // — and that runs five stages *after* the preparation guard, so a fresh write proves the run under
-      // test reached that point. The marker is compared by content rather than deleted, because an
-      // earlier install leaves its own copy behind.
-      const rejectionFile = join(config.programDir, 'installation.json.previous')
-      const markerBefore = existsSync(rejectionFile)
-        ? `${statSync(rejectionFile).mtimeMs}:${statSync(rejectionFile).size}`
-        : 'absent'
+      // No attribution marker is needed here, and the one this step used to carry was wrong twice over:
+      // `installation.json.previous` is written by the *last* stage of a successful install, so a refusal
+      // that stops at the preparation guard never touches it, and the file already exists from the
+      // same-version reinstall — its content cannot change, which is exactly what the run showed
+      // (its modification time and size came back byte-for-byte the same, twice).
+      //
+      // The refusal does not need a marker to be attributable: if the guard had not refused, the install
+      // would have succeeded, and the record/release assertions below would fail. What this case asserts
+      // is the refusal itself — a non-zero exit that returns rather than blocking on the dialog — plus
+      // the state it had to leave untouched.
       const rejection = await runInstaller(config.installer, ['/S'])
       assertThat(
         rejection.result.code !== 0 && !rejection.result.timedOut,
         'an install whose preparation names another release is refused',
         rejection
-      )
-      const markerAfter = existsSync(rejectionFile)
-        ? `${statSync(rejectionFile).mtimeMs}:${statSync(rejectionFile).size}`
-        : 'absent'
-      assertThat(
-        markerAfter !== markerBefore && markerAfter !== 'absent',
-        'the refused install reached the service installation stage before it refused',
-        { rejectionFile, markerBefore, markerAfter }
       )
 
       // The old installation has to be intact: the program record is unchanged, the runtime the
@@ -2944,7 +2936,6 @@ async function stepUpgradeWithoutPreparation() {
       // record it changed and the replacement marker all have to be gone before the next case measures
       // anything.
       rmSync(upgradeReadyFile, { force: true })
-      rmSync(join(config.programDir, 'installation.json.previous'), { force: true })
       writeInstallationRecord({ release: previous.release })
     }
   })
