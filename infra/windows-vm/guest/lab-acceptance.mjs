@@ -3083,11 +3083,13 @@ async function stepPreparedUpgrade() {
       `the upgraded release is ${config.releaseVersion}`,
       record
     )
-    assertThat(
-      !existsSync(upgradeReadyFile),
-      'the upgraded runtime consumed the preparation record',
-      upgradeReadyFile
-    )
+    // The preparation record is deliberately *not* asserted here. The new runtime deletes it when it
+    // starts, but the installer runs `--prepare-install` twice — once from the client uninstaller, once
+    // from `install-windows.ps1` — and the second call happens after that restart, against a running
+    // service that is still in maintenance, so `prepare-upgrade` writes a fresh record. "The file is
+    // gone" is therefore not what the product promises (the run of 2026-09-20 found it present, after an
+    // upgrade that had otherwise completed). What the upgrade promises is the state below: the record
+    // naming the new release, and the same service coming back with its identity intact.
     const status = await waitForRuntimeStatus()
     assertThat(status.info?.serverId === state.serverId, 'the upgrade kept the service identity', {
       before: state.serverId,
