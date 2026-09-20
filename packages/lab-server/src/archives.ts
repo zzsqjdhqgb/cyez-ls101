@@ -121,6 +121,10 @@ export class ArchiveStore {
         ? 'teacher'
         : (context.principal as Extract<Principal, { role: 'student' }>).deviceId
     const controller = new AbortController()
+    // Cancellation must wake a pending network read as well as flag the next chunk. Otherwise a
+    // stalled peer keeps its reservation and prevents backup from draining the write gate.
+    const cancelStream = (): void => context.cancelStream?.()
+    controller.signal.addEventListener('abort', cancelStream, { once: true })
     const abort = (): void => controller.abort(context.signal.reason)
     context.signal.addEventListener('abort', abort, { once: true })
     if (context.signal.aborted) abort()
@@ -177,6 +181,9 @@ export class ArchiveStore {
         requireCondition(digest.digest('hex') === declared, 'CONTENT_CONFLICT')
         await handle.sync()
         await this.service.options.fault?.('upload-file-synced')
+      } catch (error) {
+        controller.signal.throwIfAborted()
+        throw error
       } finally {
         clearTimeout(timeout)
         await handle.close()
@@ -212,6 +219,7 @@ export class ArchiveStore {
           }, release)
       } finally {
         this.service.transfers.delete(uploadId)
+        controller.signal.removeEventListener('abort', cancelStream)
         context.signal.removeEventListener('abort', abort)
         release()
         await rm(temporary, { force: true })
@@ -233,6 +241,7 @@ export class ArchiveStore {
       else references.set(filename, remaining)
     }
     try {
+      await this.service.options.fault?.('archive-download-acquired')
       await verifiedFile(filename, data.archiveBytes, row.digest)
       return {
         status: 200,

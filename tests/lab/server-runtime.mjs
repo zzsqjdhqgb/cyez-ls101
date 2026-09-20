@@ -81,7 +81,9 @@ test(
       assert.equal((await command(root, 'status')).info.serverId, initialized.info.serverId)
       assert.ok(!stderr.includes('private-test-password'))
     } finally {
-      child.kill('SIGTERM')
+      // The shipping shutdown control operation is portable; Windows kill(SIGTERM) is forced
+      // termination and does not exercise Node's graceful signal handler.
+      await command(root, 'shutdown')
       const [code] = await exited
       lines.close()
       await rm(parent, { recursive: true, force: true })
