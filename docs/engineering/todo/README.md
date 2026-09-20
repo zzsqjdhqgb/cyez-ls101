@@ -20,6 +20,7 @@ owner: engineering
 | [`qwen-tts-cpu-threading.md`](./qwen-tts-cpu-threading.md) | Qwen TTS CPU 线程数 | 🟡 待办（准确） | `threads: 4` 硬编码，未调用 `ggml_backend_cpu_set_n_threads` |
 | [`qwen-tts-cuda-runtime.md`](./qwen-tts-cuda-runtime.md) | Qwen TTS CUDA runtime | 🟡 待办（准确） | CUDA helper 暂未随包发布 |
 | [`dependency-upgrade.md`](./dependency-upgrade.md) | 依赖统一升级 | 🟡 待办 | 仅占位说明，尚无统一升级提交 |
+| [`dev-container-docker.md`](./dev-container-docker.md) | 开发容器调用宿主 Docker | ⏸ 暂缓 | 暂不考虑开发容器内 canonical runner 的宿主挂载路径适配 |
 
 规则：
 

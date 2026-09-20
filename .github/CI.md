@@ -37,9 +37,11 @@ Failed technical Playwright runs upload diagnostics for 14 days: the `test_suite
 `ci-${{ matrix.suite }}-diagnostics-*` (that is, `ci-other-checks-diagnostics-*` and
 `ci-electron-integration-diagnostics-*`), and `linux_electron_smoke` uploads
 `ci-linux-electron-smoke-diagnostics-*`; each includes traces, screenshots, and reports. Failed
-canonical runs upload the regenerated product documentation as `canonical-product-docs-*` and the
-regenerated visual baselines as `canonical-visual-baselines-*` for the
-same period. Canonical renderer layers use the GitHub Actions cache. Each command shown in the
+canonical documentation runs upload the generated manual as `canonical-manual-*`. Failed visual
+runs upload the committed baselines, actual screenshots, pixel difference images, and Playwright
+report as `canonical-visual-baselines-*` for the same period. Missing baselines retain the actual
+screenshot; dimension mismatches or unreadable baselines retain both inputs without a pixel diff.
+Canonical renderer layers use the GitHub Actions cache. Each command shown in the
 workflow is directly reproducible with the corresponding `yarn` script in `package.json`.
 
 Release tags must point to a commit contained in `main`. Before packaging or publishing, the

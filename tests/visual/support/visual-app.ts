@@ -103,11 +103,14 @@ export async function captureState(page: Page, uiId: string, state: string): Pro
     throw reason
   })
   if (!committed) {
+    await attachVisualDiagnostics(uiId, state, buffer)
     throw new Error(
       `缺少视觉基线：${path.relative(projectRoot, baseline)}（先在 canonical 容器内运行 yarn visual:publish）`
     )
   }
-  if (!visuallyEquivalentPng(committed, buffer)) {
+  const comparison = comparePng(committed, buffer)
+  if (!comparison.matches) {
+    await attachVisualDiagnostics(uiId, state, buffer, committed, comparison.diff)
     throw new Error(`视觉回归差异：${path.relative(projectRoot, baseline)}`)
   }
   return baseline
@@ -125,19 +128,44 @@ async function stableScreenshot(page: Page): Promise<Buffer> {
   return previous
 }
 
-function visuallyEquivalentPng(left: Buffer, right: Buffer): boolean {
-  if (left.equals(right)) return true
+function comparePng(left: Buffer, right: Buffer): { matches: boolean; diff?: Buffer } {
+  if (left.equals(right)) return { matches: true }
   try {
     const leftImage = PNG.sync.read(left)
     const rightImage = PNG.sync.read(right)
-    if (leftImage.width !== rightImage.width || leftImage.height !== rightImage.height) return false
-    return (
-      pixelmatch(leftImage.data, rightImage.data, undefined, leftImage.width, leftImage.height, {
-        threshold: COLOR_DIFFERENCE_THRESHOLD
-      }) === 0
+    if (leftImage.width !== rightImage.width || leftImage.height !== rightImage.height) {
+      return { matches: false }
+    }
+    const diff = new PNG({ width: leftImage.width, height: leftImage.height })
+    const changedPixels = pixelmatch(
+      leftImage.data,
+      rightImage.data,
+      diff.data,
+      leftImage.width,
+      leftImage.height,
+      { threshold: COLOR_DIFFERENCE_THRESHOLD }
     )
+    return changedPixels === 0 ? { matches: true } : { matches: false, diff: PNG.sync.write(diff) }
   } catch {
-    return false
+    return { matches: false }
+  }
+}
+
+async function attachVisualDiagnostics(
+  uiId: string,
+  state: string,
+  actual: Buffer,
+  expected?: Buffer,
+  diff?: Buffer
+): Promise<void> {
+  const info = test.info()
+  for (const [kind, buffer] of Object.entries({ actual, expected, diff })) {
+    if (!buffer) continue
+    const name = `${uiId}-${state}-${kind}`
+    const file = info.outputPath(`${name}.png`)
+    await mkdir(path.dirname(file), { recursive: true })
+    await writeFile(file, buffer)
+    await info.attach(name, { path: file, contentType: 'image/png' })
   }
 }
 

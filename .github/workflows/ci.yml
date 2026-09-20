@@ -273,14 +273,17 @@ jobs:
           fi
           node scripts/visual/docker.mjs check
 
-      - name: Upload regenerated baselines on failure
+      - name: Upload visual regression diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@v6
         with:
           name: canonical-visual-baselines-${{ github.run_attempt }}
           if-no-files-found: ignore
           retention-days: 14
-          path: tests/visual/baselines/
+          path: |
+            tests/visual/baselines/
+            test-results/visual/
+            playwright-report/
 
   linux_electron_smoke:
     name: Linux packaged Electron startup tests
@@ -393,9 +396,10 @@ jobs:
         env:
           TEST_SUITES_RESULT: ${{ needs.test_suites.result }}
           CANONICAL_DOCS_RESULT: ${{ needs.canonical_docs.result }}
+          CANONICAL_VISUAL_RESULT: ${{ needs.canonical_visual.result }}
           LINUX_ELECTRON_SMOKE_RESULT: ${{ needs.linux_electron_smoke.result }}
         run: |
-          if [ "$TEST_SUITES_RESULT" != "success" ] || [ "$CANONICAL_DOCS_RESULT" != "success" ] || [ "$LINUX_ELECTRON_SMOKE_RESULT" != "success" ]; then
+          if [ "$TEST_SUITES_RESULT" != "success" ] || [ "$CANONICAL_DOCS_RESULT" != "success" ] || [ "$CANONICAL_VISUAL_RESULT" != "success" ] || [ "$LINUX_ELECTRON_SMOKE_RESULT" != "success" ]; then
             echo "::error::One or more required CI suites did not complete successfully."
             exit 1
           fi
