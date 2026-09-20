@@ -1816,7 +1816,8 @@ export function labProbeScript(name, config) {
   // trap writes plain text with `[Console]::Error.WriteLine`, and the parent then tries to deserialize
   // its stderr as CLIXML and dies with "Data at the root level is invalid" — losing the very
   // `LS101_INSTALL_ERROR [stage]: message` line the probe exists to read.
-  const shell64 = '$shell = Join-Path $env:WINDIR \'Sysnative\\WindowsPowerShell\\v1.0\\powershell.exe\'; if (-not (Test-Path -LiteralPath $shell)) { $shell = Join-Path $env:WINDIR \'System32\\WindowsPowerShell\\v1.0\\powershell.exe\' }'
+  const shell64 =
+    "$shell = Join-Path $env:WINDIR 'Sysnative\\WindowsPowerShell\\v1.0\\powershell.exe'; if (-not (Test-Path -LiteralPath $shell)) { $shell = Join-Path $env:WINDIR 'System32\\WindowsPowerShell\\v1.0\\powershell.exe' }"
   const runInstaller = (extra = '') =>
     `${shell64}; & $shell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File '${serviceInstaller}'${extra} 2>&1 | ForEach-Object { Write-Output ([string]$_) }; Write-Output ('exitCode=' + $LASTEXITCODE)`
   const commands = {
@@ -1975,7 +1976,9 @@ export function labProbeTaskScript(name, config, { timeoutSeconds = 300 } = {}) 
     // The base64 is written as data, not as code: `Set-Content` reads it from the pipeline, so no amount
     // of it ends up inside a quoted string that has to be parsed.
     `$chunks = @(`,
-    ...base64Chunks.map((chunk, index) => `  '${chunk}'${index === base64Chunks.length - 1 ? '' : ','}`),
+    ...base64Chunks.map(
+      (chunk, index) => `  '${chunk}'${index === base64Chunks.length - 1 ? '' : ','}`
+    ),
     `)`,
     `Set-Content -LiteralPath '${guestPath(LAB_PROBE_BASE64)}' -Value ($chunks -join '') -NoNewline -Encoding ascii`,
     `Set-Content -LiteralPath '${guestPath(LAB_PROBE_LAUNCHER)}' -Value (@'`,

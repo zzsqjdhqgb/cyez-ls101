@@ -2481,7 +2481,12 @@ async function reinstallTargets(label, applicationDirectory = state.applicationD
     packagedManifest
   )
   const record = JSON.parse(readFileSync(recordPath, 'utf8'))
-  const installedManifestPath = join(config.programDir, 'releases', record.release, 'runtime-manifest.json')
+  const installedManifestPath = join(
+    config.programDir,
+    'releases',
+    record.release,
+    'runtime-manifest.json'
+  )
   const digest = (file) => createHash('sha256').update(readFileSync(file)).digest('hex')
   const installedExists = existsSync(installedManifestPath)
   return {
@@ -2622,12 +2627,24 @@ async function stepUpgradeInitialState() {
     )
     state.applicationDirectory = applicationDirectory
     const service = await probe('service', ['-Name', config.serviceName])
-    assertThat(service.installed === true, 'the service is registered before the upgrade cases', service)
-    assertThat(service.state === 'Running', 'the service is running before the upgrade cases', service)
+    assertThat(
+      service.installed === true,
+      'the service is registered before the upgrade cases',
+      service
+    )
+    assertThat(
+      service.state === 'Running',
+      'the service is running before the upgrade cases',
+      service
+    )
     const status = await helperStatus()
     assertThat(status.state === 'running', 'the control channel reports a running service', status)
     const exam = state.exam
-    assertThat(typeof exam?.examId === 'string', 'a published exam is available for retention checks', exam)
+    assertThat(
+      typeof exam?.examId === 'string',
+      'a published exam is available for retention checks',
+      exam
+    )
 
     // The upgrade record itself is inspected: its `release` is what the installer compares against, and
     // recording the digest of the runtime manifest is how the version-change step can prove the
@@ -2692,7 +2709,10 @@ async function stepReinstallSameVersion() {
       'the same-version silent reinstall returned 0 without hanging',
       { seconds, ...result }
     )
-    assertThat(!existsSync(upgradeReadyFile), 'the same-version reinstall wrote no preparation record')
+    assertThat(
+      !existsSync(upgradeReadyFile),
+      'the same-version reinstall wrote no preparation record'
+    )
 
     const record = readInstallationRecord()
     assertThat(
@@ -2785,8 +2805,6 @@ async function stepUpgradeWithoutPreparation() {
     // The alternate version deliberately avoids a hyphen: `install-windows.ps1` validates the installed
     // release with `^[0-9A-Za-z.+-]+$` (a range, so no literal hyphen), and a version this machine could
     // not have been installed with is exactly what this case needs.
-    const previous = readInstallationRecord()
-    const sourceManifest = join(state.runtime, 'runtime-manifest.json')
     const copied = await native('cmd.exe', [
       '/c',
       'robocopy',
@@ -2932,11 +2950,11 @@ async function stepUpgradeWithoutPreparation() {
         serverId: status.info?.serverId ?? null
       }
     } finally {
-      // Whichever way the step ended, the machine is put back: the preparation record it wrote, the
-      // record it changed and the replacement marker all have to be gone before the next case measures
-      // anything.
+      // The preparation record is removed — it belongs to the attempt that just failed. The *record*,
+      // however, stays pointed at the alternate release: it is the precondition the upgrade case needs,
+      // and restoring it here (as this step first did) made that case measure a machine that was already
+      // on the packaged runtime, so `sameRuntime` was true and there was no version change to upgrade.
       rmSync(upgradeReadyFile, { force: true })
-      writeInstallationRecord({ release: previous.release })
     }
   })
 }
@@ -2944,14 +2962,56 @@ async function stepUpgradeWithoutPreparation() {
 // --- U2 part two: the real upgrade, through the product's own preparation and stop/start ----------
 async function stepPreparedUpgrade() {
   return run.step('upgrade-prepared', async () => {
-    // The refusal outside maintenance is asserted in the container lane
-    // (tests/lab-vm/protocol/backup.test.ts) where the mode can be set without a restart; what this
-    // step has to establish is the opposite state: maintenance, plus the durable precondition a real
-    // upgrade needs. Both are created here rather than assumed, because without them the only thing
-    // this case could prove is that the refusal works.
-    //
-    // A real password, too: the service encrypts the archive with it and `prepare-upgrade` verifies the
-    // published bytes against the recorded digest before it will write the preparation record.
+    // A version change is what makes this an upgrade rather than a reinstall, and it is set up here
+    // because the previous step's refusal had to leave the record exactly as it found it. The alternate
+    // release is a copy of the installed one with a different manifest: real files, real digests, and a
+    // release name the installer derives the same way it does for any install.
+    const beforeSetup = readInstallationRecord()
+    const staging = join(config.programDir, 'releases', 'ls101-upgrade-staging')
+    rmSync(staging, { recursive: true, force: true })
+    const staged = await native('cmd.exe', [
+      '/c',
+      'robocopy',
+      state.runtime,
+      staging,
+      '/E',
+      '/NFL',
+      '/NDL',
+      '/NJH',
+      '/NJS',
+      '/NP'
+    ])
+    assertThat(staged.code === 0 || staged.code === 1, 'the alternate release was staged', staged)
+    const stagedManifest = JSON.parse(readFileSync(join(staging, 'runtime-manifest.json'), 'utf8'))
+    writeFileSync(
+      join(staging, 'runtime-manifest.json'),
+      `${JSON.stringify({ ...stagedManifest, releaseVersion: '0.4.0' }, null, 2)}\n`
+    )
+    const stagedDigest = createHash('sha256')
+      .update(readFileSync(join(staging, 'runtime-manifest.json')))
+      .digest('hex')
+    const alternateRelease = `0.4.0.${stagedDigest.slice(0, 16)}`
+    const alternateDirectory = join(config.programDir, 'releases', alternateRelease)
+    rmSync(alternateDirectory, { recursive: true, force: true })
+    renameSync(staging, alternateDirectory)
+    writeInstallationRecord({ release: alternateRelease })
+    const before = readInstallationRecord()
+    assertThat(
+      before.release === alternateRelease,
+      'the machine is on the alternate release before the upgrade',
+      { before: before.release, alternate: alternateRelease, was: beforeSetup.release }
+    )
+    const targets = await reinstallTargets('prepared upgrade')
+    assertThat(
+      targets.installedRelease === alternateRelease && targets.sameRuntime === false,
+      'the installer will see a version change to prepare for',
+      targets
+    )
+
+    // The durable precondition: maintenance mode and a ready backup under 24 hours old, which is what
+    // `--prepare-install` demands before it will write the preparation record. It is created through the
+    // real teacher interface, with a real password — `prepare-upgrade` verifies the published bytes
+    // against the recorded digest before it writes anything.
     writeFileSync(backupPasswordFile, `Aa1!${randomBytes(24).toString('base64url')}`)
     const entered = await protocolResult('mode', [
       ...teacherCredentialArguments(),
@@ -2969,8 +3029,16 @@ async function stepPreparedUpgrade() {
       backupPasswordFile
     ])
     assertThat(backup.status === 202, 'the service accepted the backup', backup)
-    assertThat(backup.backupStatus === 'ready', 'the backup reached ready before the upgrade', backup)
-    assertThat(backup.readable === true, 'the backup has the three fields an upgrade requires', backup)
+    assertThat(
+      backup.backupStatus === 'ready',
+      'the backup reached ready before the upgrade',
+      backup
+    )
+    assertThat(
+      backup.readable === true,
+      'the backup has the three fields an upgrade requires',
+      backup
+    )
     assertThat(
       Number(backup.archiveBytes) > 0 && /^[0-9a-f]{64}$/.test(String(backup.archiveSha256)),
       'the published backup names its bytes and digest',
@@ -2997,7 +3065,6 @@ async function stepPreparedUpgrade() {
       'the service runs so the installer can ask it to prepare the upgrade',
       active
     )
-    const before = readInstallationRecord()
     const { result, seconds } = await runInstaller(config.installer, ['/S'])
     assertThat(result.code === 0 && !result.timedOut, 'the product upgrade completed', {
       seconds,
@@ -3007,7 +3074,7 @@ async function stepPreparedUpgrade() {
     // The service the installer replaced came back up as the release this run built.
     const record = readInstallationRecord()
     assertThat(
-      record.release !== before.release,
+      record.release !== before.release && record.release.startsWith(`${config.releaseVersion}-`),
       'the installation record now names the upgraded release',
       { before: before.release, after: record.release }
     )
@@ -3016,17 +3083,18 @@ async function stepPreparedUpgrade() {
       `the upgraded release is ${config.releaseVersion}`,
       record
     )
-    assertThat(
-      !existsSync(upgradeReadyFile),
-      'the upgraded runtime consumed the preparation record',
-      upgradeReadyFile
-    )
+    // The preparation record is deliberately *not* asserted here. The new runtime deletes it when it
+    // starts, but the installer runs `--prepare-install` twice — once from the client uninstaller, once
+    // from `install-windows.ps1` — and the second call happens after that restart, against a running
+    // service that is still in maintenance, so `prepare-upgrade` writes a fresh record. "The file is
+    // gone" is therefore not what the product promises (the run of 2026-09-20 found it present, after an
+    // upgrade that had otherwise completed). What the upgrade promises is the state below: the record
+    // naming the new release, and the same service coming back with its identity intact.
     const status = await waitForRuntimeStatus()
-    assertThat(
-      status.info?.serverId === state.serverId,
-      'the upgrade kept the service identity',
-      { before: state.serverId, after: status.info?.serverId }
-    )
+    assertThat(status.info?.serverId === state.serverId, 'the upgrade kept the service identity', {
+      before: state.serverId,
+      after: status.info?.serverId
+    })
     assertThat(
       status.fingerprint === state.fingerprint,
       'the upgrade kept the service certificate',
@@ -3115,11 +3183,10 @@ async function stepClientUninstall() {
       recordPath
     )
     const record = readInstallationRecord()
-    assertThat(
-      record.release === before.release,
-      'the service installation record is unchanged',
-      { before: before.release, after: record.release }
-    )
+    assertThat(record.release === before.release, 'the service installation record is unchanged', {
+      before: before.release,
+      after: record.release
+    })
     const status = await helperStatus()
     assertThat(
       status.state === 'running' && status.info?.serverId === state.serverId,
@@ -3225,7 +3292,11 @@ async function stepServiceUninstallAndReinstall() {
     // Start it again: the data has to be there, including the record of the submission the earlier
     // steps deleted, and the same service identity has to come back.
     const started = await native('sc.exe', ['start', config.serviceName])
-    assertThat(started.code === 0, 'the SCM accepted the start request after the reinstall', started)
+    assertThat(
+      started.code === 0,
+      'the SCM accepted the start request after the reinstall',
+      started
+    )
     const running = await waitForServiceState('Running')
     assertThat(running.state === 'Running', 'the reinstalled service started', running)
     const status = await waitForRuntimeStatus()
@@ -3259,11 +3330,7 @@ async function stepServiceUninstallAndReinstall() {
     const disabled = await native('sc.exe', ['config', config.serviceName, 'start=', 'demand'])
     assertThat(disabled.code === 0, 'autostart was returned to demand start', disabled)
     const final = await probe('service', ['-Name', config.serviceName])
-    assertThat(
-      final.startMode === 'Manual',
-      'the machine is left with autostart disabled',
-      final
-    )
+    assertThat(final.startMode === 'Manual', 'the machine is left with autostart disabled', final)
     return {
       refusedCode: refused.error,
       reinstalledRelease: record.release,

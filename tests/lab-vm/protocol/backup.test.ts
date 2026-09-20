@@ -40,7 +40,10 @@ beforeEach(async () => {
     passwordFile: await harness.secret('teacher-password', HARNESS_PASSWORD),
     // A real archive password: the service encrypts with it and verifies the published bytes against
     // the digest it recorded, so a placeholder would test the engine rather than the command.
-    backupPasswordFile: await harness.secret('backup-password', `Aa1!${randomBytes(18).toString('base64url')}`)
+    backupPasswordFile: await harness.secret(
+      'backup-password',
+      `Aa1!${randomBytes(18).toString('base64url')}`
+    )
   }
 }, 45000)
 
@@ -57,7 +60,9 @@ test('M4 the backup command reports a ready archive the upgrade precondition can
   )
   expect(normal).toMatchObject({ status: 200, mode: 'normal' })
   const refused = recordOf(
-    await backup(harness.args(['--password-file', passwordFile, '--backup-password-file', backupPasswordFile]))
+    await backup(
+      harness.args(['--password-file', passwordFile, '--backup-password-file', backupPasswordFile])
+    )
   )
   expect(refused).toMatchObject({ status: 409, code: 'RESOURCE_BUSY', id: null, readable: false })
   expect(refused.message).toBeTruthy()
@@ -68,7 +73,9 @@ test('M4 the backup command reports a ready archive the upgrade precondition can
   expect(entered).toMatchObject({ status: 200, mode: 'maintenance' })
 
   const ready = recordOf(
-    await backup(harness.args(['--password-file', passwordFile, '--backup-password-file', backupPasswordFile]))
+    await backup(
+      harness.args(['--password-file', passwordFile, '--backup-password-file', backupPasswordFile])
+    )
   )
   expect(ready.status).toBe(202)
   expect(ready.backupStatus).toBe('ready')
@@ -84,18 +91,18 @@ test('M4 the backup command reports a ready archive the upgrade precondition can
 
   // The archive the index points at is really on disk, which is the half a driver that only read the
   // JSON could not see.
-  const published = await stat(
-    `${harness.service.options.root}/backups/${String(ready.id)}.7z`
-  )
+  const published = await stat(`${harness.service.options.root}/backups/${String(ready.id)}.7z`)
   expect(published.size).toBe(Number(ready.archiveBytes))
-  expect((await readFile(`${harness.service.options.root}/backups/${String(ready.id)}.7z`)).length).toBe(
-    Number(ready.archiveBytes)
-  )
+  expect(
+    (await readFile(`${harness.service.options.root}/backups/${String(ready.id)}.7z`)).length
+  ).toBe(Number(ready.archiveBytes))
 
   // A second backup in the same maintenance window is allowed and produces a distinct id; the upgrade
   // precondition reads the most recent ready snapshot, so "the newest one wins" has to be observable.
   const second = recordOf(
-    await backup(harness.args(['--password-file', passwordFile, '--backup-password-file', backupPasswordFile]))
+    await backup(
+      harness.args(['--password-file', passwordFile, '--backup-password-file', backupPasswordFile])
+    )
   )
   expect(second.backupStatus).toBe('ready')
   expect(second.id).not.toBe(ready.id)
@@ -105,7 +112,9 @@ test('M4 an aged backup is reported as older than the upgrade window', async () 
   const { harness, passwordFile, backupPasswordFile } = fixture
   await mode(harness.args(['--password-file', passwordFile, '--set', 'maintenance']))
   const ready = recordOf(
-    await backup(harness.args(['--password-file', passwordFile, '--backup-password-file', backupPasswordFile]))
+    await backup(
+      harness.args(['--password-file', passwordFile, '--backup-password-file', backupPasswordFile])
+    )
   )
   expect(ready.backupStatus).toBe('ready')
 
@@ -114,7 +123,9 @@ test('M4 an aged backup is reported as older than the upgrade window', async () 
   // the service rather than simulated around it.
   harness.clock.advance(25 * 60 * 60 * 1000)
   const aged = recordOf(
-    await backup(harness.args(['--password-file', passwordFile, '--backup-password-file', backupPasswordFile]))
+    await backup(
+      harness.args(['--password-file', passwordFile, '--backup-password-file', backupPasswordFile])
+    )
   )
   // A new backup is still created and is ready; what the case shows is that the *snapshot time* the
   // upgrade reads is the service's own timestamp, not the request time.
