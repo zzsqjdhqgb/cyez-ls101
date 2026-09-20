@@ -1876,6 +1876,11 @@ test('milestone M4 drives the real upgrade, uninstall and retention paths', asyn
   assert.match(prepared, /protocolResult\('maintenance-exit'/)
   assert.match(prepared, /'the upgrade kept the published exam byte for byte'/)
   assert.match(prepared, /'the submission record survived the upgrade'/)
+  // It has to ask about the submission that was actually uploaded and deleted. The practice a later step
+  // starts is never uploaded, so its receipt is `not-received` — which is the answer the run of
+  // 2026-09-20 got, and the reason it failed.
+  assert.match(prepared, /state\.exam\?\.submissionId \?\? ''/)
+  assert.match(orchestrator, /submissionId: claimed\.submissionId/)
   // The manager's own `upgrade` entry point stops the service; the installer path is the one where the
   // service stops on the installer's own request, so the two must not be confused here.
   assert.doesNotMatch(orchestrator, /'--operation',\s*'upgrade'/)
@@ -1902,6 +1907,7 @@ test('milestone M4 drives the real upgrade, uninstall and retention paths', asyn
   assert.match(serviceUninstall, /waitForServiceState\('Stopped'\)/)
   assert.match(serviceUninstall, /manageOperation\('uninstall'\)/)
   assert.match(serviceUninstall, /'the reinstalled service kept the original identity'/)
+  assert.match(serviceUninstall, /state\.exam\?\.submissionId \?\? ''/)
   assert.match(serviceUninstall, /\['config', config\.serviceName, 'start=', 'demand'\]/)
 
   // The uninstaller path comes from the registry entry the installer wrote, not from a guessed name.

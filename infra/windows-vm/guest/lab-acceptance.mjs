@@ -2240,7 +2240,12 @@ async function stepExamAndSubmission() {
     state.exam = {
       examId: published.examId,
       packageId: published.packageId,
-      sha256: published.sha256
+      sha256: published.sha256,
+      // The submission this step uploaded, re-uploaded and then deleted. Its receipt is the durable
+      // record the retention cases have to find after the runtime is replaced — a later step starts a
+      // practice of its own, but that one is never uploaded, so its receipt is legitimately
+      // `not-received` (which is what the run of 2026-09-20 asked about, and why it failed).
+      submissionId: claimed.submissionId
     }
     return {
       examId: published.examId,
@@ -3155,7 +3160,7 @@ async function stepPreparedUpgrade() {
       '--state',
       state.deviceState,
       '--submission-id',
-      state.practice?.submissionId ?? ''
+      state.exam?.submissionId ?? ''
     ])
     assertThat(receipt.status === 200, 'the submission record survived the upgrade', receipt)
     assertThat(
@@ -3357,7 +3362,7 @@ async function stepServiceUninstallAndReinstall() {
       '--state',
       state.deviceState,
       '--submission-id',
-      state.practice?.submissionId ?? ''
+      state.exam?.submissionId ?? ''
     ])
     assertThat(receipt.status === 200, 'the submission record survived the reinstall', receipt)
 
