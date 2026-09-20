@@ -52,7 +52,7 @@ export function createLabHttpServer(service: LabService): Server {
         })
         return
       }
-      const work = handle(service, request, response)
+      const work = handle(service, request, response, archiveLimit)
       handlers.add(work)
       void work.finally(() => handlers.delete(work))
     }
@@ -130,15 +130,13 @@ async function readBody(request: IncomingMessage): Promise<unknown> {
 async function handle(
   service: LabService,
   request: IncomingMessage,
-  response: ServerResponse
+  response: ServerResponse,
+  limits: number
 ): Promise<void> {
   const requestId = randomUUID()
   const controller = new AbortController()
-  const serviceLimits = service.data().limits
-  const limits = Math.max(
-    serviceLimits.maxExamArchiveBytes,
-    serviceLimits.maxSubmissionArchiveBytes
-  )
+  // Use the listener's immutable archive limit even when storage is unavailable. Reading service
+  // data before the try block would reject the handler without sending its storage-error response.
   request.once('aborted', () => controller.abort())
   response.once('close', () => {
     if (!response.writableFinished) controller.abort()
@@ -211,7 +209,14 @@ async function handle(
       if (contentType === 'application/json') {
         context.body = await readBody(request)
         validateRequest(match.id, context.body, contentType)
-      } else context.stream = request
+      } else {
+        context.stream = request
+        context.cancelStream = () => {
+          // Wake a receive loop blocked on a peer that stopped sending. Once the complete body
+          // arrived, retain the connection so final-admission refusals can still be returned.
+          if (!request.complete) request.destroy()
+        }
+      }
     } else {
       context.body = await readBody(request)
       validateRequest(match.id, context.body)

@@ -30,6 +30,7 @@ export interface Context {
   loopback: boolean
   signal: AbortSignal
   stream?: AsyncIterable<Uint8Array>
+  cancelStream?: () => void
 }
 export interface Result {
   status: number
