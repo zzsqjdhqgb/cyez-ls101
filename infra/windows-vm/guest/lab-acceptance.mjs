@@ -2858,18 +2858,30 @@ async function stepUpgradeWithoutPreparation() {
         'an install with no preparation record is refused instead of succeeding or hanging',
         missingPreparation
       )
-      // That attempt ran the product's own preparation, so a record now exists — for the release
-      // already installed. The second attempt is the case where a preparation exists and names the
-      // wrong target; it is also the state a previous failed upgrade leaves behind.
+      // The refusal must not have written a preparation record: with the service stopped there is no
+      // control channel to ask, and `--prepare-install` returns without one. Asserting that here is what
+      // keeps the second attempt below about the *wrong* preparation rather than the missing one — the
+      // first version of this step asserted the opposite and died on ENOENT.
       assertThat(
-        existsSync(upgradeReadyFile),
-        'the attempted install produced the preparation the version change needs',
-        JSON.parse(readFileSync(upgradeReadyFile, 'utf8'))
+        !existsSync(upgradeReadyFile),
+        'a refused install of a stopped service wrote no preparation record',
+        upgradeReadyFile
       )
-      const prepared = JSON.parse(readFileSync(upgradeReadyFile, 'utf8'))
+      // The second failure shape: a record exists and names another target. That is the state a previous
+      // failed upgrade leaves behind, and it has to be produced here because nothing else creates it.
+      // The timestamp is deliberately old as well, so either half of the guard's comparison would refuse
+      // it and the refusal cannot be mistaken for the missing-record case.
+      const prepared = {
+        targetVersion: '0.4.0',
+        serverId: state.serverId,
+        backupId: 'not-a-real-backup',
+        snapshotAt: '2026-01-01T00:00:00.000Z',
+        preparedAt: '2026-01-01T00:00:00.000Z'
+      }
+      writeFileSync(upgradeReadyFile, `${JSON.stringify(prepared)}\n`)
       assertThat(
         prepared.targetVersion !== targets.release,
-        'the preparation names the release already installed, not the one being installed',
+        'the preparation names a release other than the one being installed',
         { prepared: prepared.targetVersion, installing: targets.release }
       )
       // The refusal has to be attributable, and an installer that silently skipped its service step

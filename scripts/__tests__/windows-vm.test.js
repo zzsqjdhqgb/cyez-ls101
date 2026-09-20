@@ -1764,6 +1764,16 @@ test('milestone M4 drives the real upgrade, uninstall and retention paths', asyn
     'the manifest must change before the release is named after its digest'
   )
   assert.match(refused, /'the installer will read the alternate release from the installation record'/)
+  // Both preparation failure shapes are built explicitly. A stopped service cannot write a preparation
+  // record (`--prepare-install` returns without one when the control channel is absent), so the "exists
+  // but names another target" shape has to be produced by the step itself — the first version asserted
+  // the installer had written it and died on ENOENT.
+  assert.match(
+    refused,
+    /'a refused install of a stopped service wrote no preparation record'/
+  )
+  assert.match(refused, /targetVersion: '0\.4\.0'/)
+  assert.match(refused, /writeFileSync\(upgradeReadyFile, `\$\{JSON\.stringify\(prepared\)\}\\n`\)/)
   // `reinstallTargets` has to read the record, not the package: comparing the package's manifest with
   // the service's own runtime manifest is always equal on a machine installed from that package.
   assert.match(orchestrator, /const record = JSON.parse\(readFileSync\(recordPath, 'utf8'\)\)[\s\S]{0,200}installedManifestPath/)
