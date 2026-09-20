@@ -1130,15 +1130,26 @@ test('the diagnostic checks each language with its own tool', async () => {
   // Product state is read through the same probes the phase run uses. A duplicated inline query had
   // already drifted: it reported the service state without the process id, which is exactly the field a
   // stuck stop needs to tell "close() never finished" from "the process will not exit".
-  assert.match(script, /& \$probes @Arguments/)
-  // Every probe argument list is a flat string array. A sub-expression inside the array literal
-  // (`(Join-Path …)`, a bare `$variable`) made the splat bind the first element as the *value* of
-  // `-Probe`, so all nine probes answered `Unknown probe: -Probe` while the diagnostic still exited 0 —
-  // which is worse than failing, because it looked like a probe result.
-  assert.match(script, /Show-Probe 'service' \('-Probe','service','-Name',\$serviceName\)/)
-  assert.doesNotMatch(script, /Show-Probe '[^']+' @\(/)
-  for (const [, args] of script.matchAll(/Show-Probe '[^']+' \(([^)]*)\)/g))
-    assert.match(args, /^'/, `probe arguments must start with a literal: ${args}`)
+  // The probes are invoked through an explicit command line, not a parameter splat. `& $probes
+  // @Arguments` answered `Unknown probe: -Probe` for every probe across two runs — the first positional
+  // parameter received the literal string `-Probe` instead of the argument binding by name — and that
+  // looked like a probe result rather than a harness failure. A command line built from quoted values
+  // has one interpretation.
+  // `Invoke-Expression` is what makes the arguments bind by name; the call operator alone passed the
+  // whole string as the first parameter, which is what two runs of `Unknown probe: -Probe …` were.
+  assert.match(script, /Invoke-Expression \('& ' \+ \(Quoted \$probes\) \+ ' ' \+ \$CommandLine\)/)
+  // (`@(' a here-string starts with is not a splat; only the invocation form matters.)
+  assert.doesNotMatch(script, /@Arguments/)
+  assert.doesNotMatch(script, /Show-Probe '[^']+' @/)
+  assert.match(script, /function Quoted\(\[string\]\$Value\)/)
+  assert.match(script, /Show-Probe 'service' \('-Probe service -Name ' \+ \(Quoted \$serviceName\)\)/)
+  assert.match(script, /Show-Probe 'wrapper logs' \('-Probe wrapper-logs -Path ' \+ \(Quoted \$logRoot\)/)
+  // Values that reach the command line are quoted; the ones with spaces (a Program Files path) are why.
+  for (const [, command] of script.matchAll(/Show-Probe '[^']+' \(?-?[^)]*\)/g))
+    assert.ok(
+      !/\$env:ProgramFiles(?!\))/.test(command) || command.includes('Quoted'),
+      `a Program Files path must be quoted: ${command}`
+    )
   assert.match(script, /Show-Probe 'wrapper logs'/)
   assert.match(script, /Show-Probe 'runtime process'/)
   assert.doesNotMatch(script, /Get-CimInstance Win32_Service -Filter "Name='LS101Lab'"/)
@@ -1232,6 +1243,12 @@ test('the protocol driver is bundled, checked and uploaded like the manager driv
   // becomes a terminating error — which is how a diagnostic collected to explain a failure exited 1
   // after printing almost nothing.
   assert.match(diagnostic, /try \{/)
+  // The diagnostic re-uploads the probes: reading a preserved VM with the probe script from the failed
+  // run asks the questions of the version that was already wrong, which is how two runs in a row ended
+  // up with nine probes answering `Unknown probe: -Probe` instead of reporting product state.
+  const diagnose = await readFile(labEntry, 'utf8')
+  const diagnoseAction = diagnose.slice(diagnose.indexOf('async function labDiagnose'))
+  assert.match(diagnoseAction, /'upload', path\.join\(root, 'guest', 'lab-probes\.ps1'\), LAB_GUEST_PROBES/)
   assert.match(diagnostic, /& \$probes @Arguments/)
   assert.match(diagnostic, /\$ErrorActionPreference = 'Continue'/)
   assert.match(diagnostic, /probe ' \+ \$Label \+ ' failed: '/)
@@ -1564,14 +1581,23 @@ test('the restart records the process table while the service is stopping', asyn
 })
 
 test('the vm:probe action reproduces a named guest script and decodes back to what runs', async () => {
-  const { labProbeNames, labProbeScript, labProbeTaskScript, parseAction, parseProbe } = await api
+  const {
+    LAB_PROBE_COMMAND_LIMIT,
+    labProbeNames,
+    labProbeScript,
+    labProbeTaskScript,
+    parseAction,
+    parseProbe,
+    stripScriptComments
+  } = await api
   // The action surface is a fixed list: this runs elevated in a VM, so an operator cannot hand it an
   // arbitrary script.
   assert.deepEqual(labProbeNames(), [
     'service-install',
     'service-verify',
     'installer-uninstall',
-    'manifest-digests'
+    'manifest-digests',
+    'registration'
   ])
   assert.equal(parseAction(['lab-probe', 'service-install']), 'lab-probe')
   assert.equal(parseProbe(['lab-probe', 'service-verify']), 'service-verify')
@@ -1609,22 +1635,42 @@ test('the vm:probe action reproduces a named guest script and decodes back to wh
   assert.match(digests, /Get-FileHash -LiteralPath \$installedManifest -Algorithm SHA256/)
   assert.match(digests, /Get-FileHash -LiteralPath \$packagedManifest -Algorithm SHA256/)
   assert.match(digests, /upgrade-ready present=/)
+  // The registration probe reproduces the one query `local-status.ts` uses to decide whether the
+  // service exists, verbatim, and puts the plain SCM views next to it: the helper collapses every
+  // failure of that query into STORAGE_UNAVAILABLE, so the only way to tell "service gone" from "query
+  // broken" is to run the same command and read what it prints.
+  const registration = labProbeScript('registration', config)
+  assert.match(registration, /what local-status\.ts runs/)
+  assert.match(registration, /Get-CimInstance Win32_Service -Filter "Name=''\$name''"/)
+  assert.match(registration, /Select-Object State, StartMode \| ConvertTo-Json -Compress/)
+  assert.match(registration, /cimDirect=/)
+  assert.match(registration, /getService=/)
+  assert.match(registration, /sc\.exe query \$name/)
+  assert.match(registration, /runtimeManifest=/)
+  assert.match(registration, /recordPresent=/)
 
-  // The generated task is decoded here, which is the only way to check the encoding without a VM: the
-  // probe travels as UTF-16LE base64 through two nested `-EncodedCommand` layers, and a mistake in
-  // either would silently run something else.
+  // The probe travels as UTF-16LE base64 written to a file and decoded on the guest: a command line
+  // cannot carry it (Windows caps one at 8191 characters and `winrm --command` reports the overrun as a
+  // bare ENAMETOOLONG), so the generated script only ever handles the payload as data. It is decoded
+  // here, which is the only way to check that without a VM.
   const task = labProbeTaskScript('service-install', config, { timeoutSeconds: 42 })
-  const childEncoded = /-EncodedCommand ([A-Za-z0-9+/=]+)'/.exec(task)
-  assert.ok(childEncoded, 'the task action carries an encoded command')
-  const child = Buffer.from(childEncoded[1], 'base64').toString('utf16le')
-  // The child assigns the probe to `$encoded` and then passes the variable, so that is where the second
-  // layer has to be read from.
-  const innerEncoded = /\$encoded = '([A-Za-z0-9+/=]+)'/.exec(child)
-  assert.ok(innerEncoded, 'the child carries the probe as a second encoded command')
-  const decoded = Buffer.from(innerEncoded[1], 'base64').toString('utf16le')
-  assert.equal(decoded, probe, 'the probe that runs is exactly the one built here')
-  assert.match(child, /lab-probe-output\.txt/)
-  assert.match(child, /exit \$LASTEXITCODE/)
+  const chunks = [...task.matchAll(/^ {2}'([A-Za-z0-9+/=]+)'/gm)].map((match) => match[1])
+  assert.ok(chunks.length > 0, 'the task writes the probe as base64 chunks')
+  const decoded = Buffer.from(chunks.join(''), 'base64').toString('utf16le')
+  assert.equal(decoded, stripScriptComments(probe), 'the probe that runs is exactly the one built here')
+  // Every probe has to fit the command line the harness will actually send.
+  for (const name of labProbeNames())
+    assert.ok(
+      labProbeTaskScript(name, config).length < LAB_PROBE_COMMAND_LIMIT,
+      `probe ${name} must serialise inside the ${LAB_PROBE_COMMAND_LIMIT}-character command line`
+    )
+  assert.match(task, /lab-probe-output\.txt/)
+  assert.match(task, /lab-probe\.b64/)
+  assert.match(task, /run-lab-probe\.ps1/)
+  assert.match(task, /-File "C:\\ls101-lab\\transfers\\run-lab-probe\.ps1"/)
+  // The decoded probe is echoed back so the evidence shows what ran, and the launcher exits with the
+  // probe's own status rather than the decoder's.
+  assert.match(task, /Get-Content -LiteralPath 'C:\\ls101-lab\\results\\lab-probe-output\.txt'/)
   // The wait polls the task rather than sleeping: a probe that hits the failure dialog never finishes,
   // and the run has to say so instead of reporting the sleep as a result.
   assert.match(task, /Get-ScheduledTask -TaskName 'ls101-lab-probe'/)
@@ -1841,6 +1887,19 @@ test('the manager driver can reach both product entry points M4 depends on', asy
   // phase script can assert `RESOURCE_BUSY` instead of parsing a message.
   assert.match(driver, /args\.includes\('--raw'\)/)
   assert.match(driver, /JSON\.stringify\(helperResult\)/)
+})
+
+test('a transient status failure does not abort the upgrade cases', async () => {
+  const orchestrator = await readGuest('lab-acceptance.mjs')
+  // `local-status.ts` collapses every failure of its single `Get-CimInstance Win32_Service` query —
+  // including a 10 s timeout — into `STORAGE_UNAVAILABLE`, and discards the child's stderr. The M4 run of
+  // 2026-09-20 hit that eight seconds after the same machine reported `state: running`, with the
+  // diagnostic showing the service Running and its listener up, so the case for a bounded retry is the
+  // evidence rather than a hunch. A real absence survives the attempts and is reported with all of them.
+  assert.match(orchestrator, /async function helperStatus\(\{ attempts = 3, intervalMs = 1500 \} = \{\}\)/)
+  assert.match(orchestrator, /result\.error !== 'STORAGE_UNAVAILABLE' \|\| attempt === attempts/)
+  assert.match(orchestrator, /helper status recovered on attempt/)
+  assert.match(orchestrator, /'the manager helper read the service status', tried/)
 })
 
 test('the teacher installer cannot hang on a silent failure', async () => {

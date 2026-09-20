@@ -2380,12 +2380,38 @@ function writeInstallationRecord(record) {
 
 // The service's own status, through the packaged runtime. `autostart` is part of the answer, which is
 // what makes "the setting did not change" checkable without a second query.
-async function helperStatus() {
-  const result = await manageOperation('status')
-  assertThat(result.ok === true, 'the manager helper read the service status', result)
-  const value = result.value
-  assertThat(value !== null && typeof value === 'object', 'the helper returned a status object', value)
-  return value
+//
+// `STORAGE_UNAVAILABLE` is retried, and the retry is not cosmetic: `local-status.ts` produces that code
+// when its single `Get-CimInstance Win32_Service` query fails, times out (10 s) or returns nothing, and
+// it discards the child's stderr while doing so — so the code cannot distinguish "the service is gone"
+// from "WMI answered late once". The M4 run of 2026-09-20 hit exactly that: `manage … --operation status`
+// failed with `STORAGE_UNAVAILABLE` eight seconds after the same machine reported `state: running`, while
+// the diagnostic's probes showed the service Running, its process in session 0, its listener on 8443 and
+// its installation record in place. A failure that survives these attempts is real, and it is reported
+// with every attempt attached.
+async function helperStatus({ attempts = 3, intervalMs = 1500 } = {}) {
+  const tried = []
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const result = await manageOperation('status')
+    tried.push({ attempt, ok: result.ok, error: result.error ?? null })
+    if (result.ok === true) {
+      const value = result.value
+      assertThat(
+        value !== null && typeof value === 'object',
+        'the helper returned a status object',
+        value
+      )
+      if (attempt > 1) run.log(`helper status recovered on attempt ${attempt}`)
+      return value
+    }
+    if (result.error !== 'STORAGE_UNAVAILABLE' || attempt === attempts) break
+    run.log(
+      `helper status attempt ${attempt} failed with STORAGE_UNAVAILABLE; retrying in ${intervalMs} ms`
+    )
+    await sleep(intervalMs)
+  }
+  assertThat(false, 'the manager helper read the service status', tried)
+  return undefined
 }
 
 async function manageOperation(operation, { allowFailure = false, raw = false } = {}) {

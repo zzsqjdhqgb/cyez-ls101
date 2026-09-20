@@ -606,6 +606,12 @@ const LAB_GUEST_LOG = `${LAB_GUEST_RESULTS_DIR}/lab-acceptance.log`
 const LAB_GUEST_STATUS = `${LAB_GUEST_RESULTS_DIR}/lab-status.txt`
 const LAB_GUEST_PROGRESS = `${LAB_GUEST_RESULTS_DIR}/lab-progress.txt`
 const LAB_GUEST_RESULTS = `${LAB_GUEST_RESULTS_DIR}/lab-results.json`
+// The probe reaches the guest as these three files rather than as a command line, for the reason
+// `labProbeTaskScript` documents: a base64 UTF-16 payload does not fit in the 8191 characters Windows
+// allows, and the failure mode is an unexplained ENAMETOOLONG.
+const LAB_PROBE_BASE64 = `${LAB_GUEST_DIR}/lab-probe.b64`
+const LAB_PROBE_FILE = `${LAB_GUEST_DIR}/lab-probe.ps1`
+const LAB_PROBE_LAUNCHER = `${LAB_GUEST_DIR}/run-lab-probe.ps1`
 // Where a `yarn vm:probe` run keeps its captured output. Declared here rather than beside the other
 // probe constants because it is built from the results directory.
 const LAB_PROBE_OUTPUT = `${LAB_GUEST_RESULTS_DIR}/lab-probe-output.txt`
@@ -1784,7 +1790,7 @@ async function labAcceptance(root, config, run, report) {
 // The scripts are built here rather than passed in: this runs elevated in a VM, so the command surface
 // stays a fixed list of named operations a reviewer can read.
 export function labProbeNames() {
-  return ['service-install', 'service-verify', 'installer-uninstall', 'manifest-digests']
+  return ['service-install', 'service-verify', 'installer-uninstall', 'manifest-digests', 'registration']
 }
 
 export function labProbeScript(name, config) {
@@ -1847,6 +1853,33 @@ export function labProbeScript(name, config) {
       `  }`,
       `}`,
       `Write-Output ('upgrade-ready present=' + (Test-Path -LiteralPath 'C:\\ProgramData\\LS101Lab\\data\\upgrade-ready.json'))`
+    ],
+    // Why the manager helper reports STORAGE_UNAVAILABLE. `local-status.ts` asks exactly one question to
+    // decide whether the service is registered — this PowerShell command — and turns any failure or
+    // unexpected shape into that code, with no detail. Reproducing it verbatim, plus the plain SCM views,
+    // separates "the service is gone" from "the query itself is broken".
+    registration: [
+      `$program = Join-Path $env:ProgramFiles 'LS101LabService'`,
+      `$name = '${config.serviceName ?? 'LS101Lab'}'`,
+      `$shell = Join-Path $env:WINDIR 'System32\\WindowsPowerShell\\v1.0\\powershell.exe'`,
+      `Write-Output '--- what local-status.ts runs ---'`,
+      `$query = '$ErrorActionPreference = "Stop"; Get-CimInstance Win32_Service -Filter "Name=''$name''" | Select-Object State, StartMode | ConvertTo-Json -Compress'`,
+      `$result = & $shell -NoLogo -NoProfile -NonInteractive -Command $query 2>&1`,
+      `Write-Output ('exitCode=' + $LASTEXITCODE)`,
+      `foreach ($line in @($result)) { Write-Output ('  out: ' + [string]$line) }`,
+      `Write-Output '--- the same question asked other ways ---'`,
+      `Write-Output ('cimDirect=' + [string](Get-CimInstance Win32_Service -Filter "Name='$name'" -ErrorAction SilentlyContinue | Select-Object State, StartMode | ConvertTo-Json -Compress))`,
+      `Write-Output ('getService=' + [string](Get-Service -Name $name -ErrorAction SilentlyContinue).Status)`,
+      `& sc.exe query $name 2>&1 | ForEach-Object { Write-Output ('  sc: ' + [string]$_) }`,
+      `Write-Output '--- what the helper stats first ---'`,
+      `$record = Join-Path $program 'installation.json'`,
+      `Write-Output ('recordPresent=' + (Test-Path -LiteralPath $record))`,
+      `if (Test-Path -LiteralPath $record) {`,
+      `  $release = (Get-Content -LiteralPath $record -Raw | ConvertFrom-Json).release`,
+      `  $base = Join-Path $program ('releases\\' + $release)`,
+      `  Write-Output ('record=' + $release)`,
+      `  Write-Output ('releaseDir=' + (Test-Path -LiteralPath $base) + ' node=' + (Test-Path -LiteralPath (Join-Path $base 'runtime\\node.exe')) + ' manager=' + (Test-Path -LiteralPath (Join-Path $base 'manager.cjs')) + ' runtimeManifest=' + (Test-Path -LiteralPath (Join-Path $base 'runtime-manifest.json')))`,
+      `}`
     ]
   }
   return [
@@ -1862,25 +1895,54 @@ export function labProbeScript(name, config) {
 // the task instead of sleeping a fixed amount: an installer that hits the failure dialog never finishes,
 // and a fixed sleep would report "still running" as if it were an answer.
 //
-// The probe text is base64-encoded into a one-line `-Command`. Passing it any other way would nest three
-// levels of quoting (JavaScript string, PowerShell task argument, PowerShell file content), and a single
-// apostrophe or backtick in the wrong place would silently truncate what actually runs.
-export function labProbeTaskScript(name, config, { timeoutSeconds = 300 } = {}) {
-  const probeScript = labProbeScript(name, config)
-  const encodedCommand = Buffer.from(probeScript, 'utf16le').toString('base64')
-  const child = [
-    `$ErrorActionPreference = 'Continue'`,
-    `$encoded = '${encodedCommand}'`,
-    `$out = '${guestPath(LAB_PROBE_OUTPUT)}'`,
-    `Remove-Item -LiteralPath $out -Force -ErrorAction SilentlyContinue`,
-    `& powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -EncodedCommand $encoded *> $out`,
-    `exit $LASTEXITCODE`
-  ].join('; ')
-  const childEncoded = Buffer.from(child, 'utf16le').toString('base64')
+// The probe is written to the guest as a file and executed from there, because a command line cannot
+// carry it: Windows caps one at 8191 characters, the probe has to be base64 UTF-16 to survive the trip,
+// and that expansion alone put the larger probes over the limit. `winrm --command` reports the overrun as
+// a bare `ENAMETOOLONG` with no hint about which argument was too long, so the limit is also enforced
+// here at build time — a probe that has outgrown the mechanism fails in the container, not in the VM.
+export const LAB_PROBE_COMMAND_LIMIT = 8191
+
+// Documentation belongs in this file, not in the file that travels: the probe's comments are for whoever
+// reads `labProbeScript`, and every byte of them is re-encoded twice on the way to the guest. Only whole
+// comment lines are dropped, so a `#` inside a string is left alone.
+export function stripScriptComments(script) {
+  return script
+    .split('\n')
+    .filter((line) => !line.trimStart().startsWith('#'))
+    .join('\n')
+}
+
+// A plain-ASCII decoder written to the guest beside the encoded probe. It has no payload of its own,
+// which is what keeps the generated command line short and the quoting trivial.
+export function labProbeLauncher() {
   return [
     `$ErrorActionPreference = 'Continue'`,
+    `$base64Path = '${guestPath(LAB_PROBE_BASE64)}'`,
+    `$probePath = '${guestPath(LAB_PROBE_FILE)}'`,
+    `$base64 = (Get-Content -LiteralPath $base64Path -Raw).Trim()`,
+    `[IO.File]::WriteAllText($probePath, [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($base64)), [Text.Encoding]::Unicode)`,
+    `& powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $probePath`,
+    `exit $LASTEXITCODE`
+  ].join('\n')
+}
+
+export function labProbeTaskScript(name, config, { timeoutSeconds = 300 } = {}) {
+  const probeScript = stripScriptComments(labProbeScript(name, config))
+  const encodedProbe = Buffer.from(probeScript, 'utf16le').toString('base64')
+  const base64Chunks = encodedProbe.match(/.{1,4000}/g) ?? ['']
+  const script = [
+    `$ErrorActionPreference = 'Continue'`,
     `Remove-Item -LiteralPath '${guestPath(LAB_PROBE_OUTPUT)}' -Force -ErrorAction SilentlyContinue`,
-    `$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoLogo -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${childEncoded}'`,
+    // The base64 is written as data, not as code: `Set-Content` reads it from the pipeline, so no amount
+    // of it ends up inside a quoted string that has to be parsed.
+    `$chunks = @(`,
+    ...base64Chunks.map((chunk, index) => `  '${chunk}'${index === base64Chunks.length - 1 ? '' : ','}`),
+    `)`,
+    `Set-Content -LiteralPath '${guestPath(LAB_PROBE_BASE64)}' -Value ($chunks -join '') -NoNewline -Encoding ascii`,
+    `Set-Content -LiteralPath '${guestPath(LAB_PROBE_LAUNCHER)}' -Value (@'`,
+    labProbeLauncher(),
+    `'@) -Encoding ascii`,
+    `$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoLogo -NoProfile -ExecutionPolicy Bypass -File "${guestPath(LAB_PROBE_LAUNCHER)}" *> "${guestPath(LAB_PROBE_OUTPUT)}"'`,
     `$principal = New-ScheduledTaskPrincipal -UserId 'vagrant' -LogonType Interactive -RunLevel Highest`,
     `$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 10)`,
     `Register-ScheduledTask -TaskName '${LAB_PROBE_TASK}' -Action $action -Principal $principal -Settings $settings -Force | Out-Null`,
@@ -1896,8 +1958,13 @@ export function labProbeTaskScript(name, config, { timeoutSeconds = 300 } = {}) 
     `Write-Output '=== probe output ==='`,
     `if (Test-Path -LiteralPath '${guestPath(LAB_PROBE_OUTPUT)}') { Get-Content -LiteralPath '${guestPath(LAB_PROBE_OUTPUT)}' } else { Write-Output 'MISSING: the probe produced no output at all' }`,
     `Write-Output '=== probe that ran (decoded) ==='`,
-    `Write-Output ([Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encodedCommand}')))`
+    `Write-Output ([Text.Encoding]::Unicode.GetString([Convert]::FromBase64String(($chunks -join ''))))`
   ].join('\n')
+  if (script.length >= LAB_PROBE_COMMAND_LIMIT)
+    throw new Error(
+      `The '${name}' probe serialises to ${script.length} characters, which exceeds the ${LAB_PROBE_COMMAND_LIMIT}-character command line Windows accepts; the run would fail with ENAMETOOLONG before the probe started. Shorten the probe or split it.`
+    )
+  return script
 }
 
 // Read-only inspection of a preserved lab VM. A failed run keeps its VM precisely so it can be
@@ -1940,43 +2007,49 @@ export function labDiagnoseScript(config) {
     `$serviceName = if ($lab) { $lab.serviceName } else { 'LS101Lab' }`,
     `$dataRoot = if ($lab) { $lab.dataRoot } else { 'C:\\ProgramData\\LS101Lab' }`,
     `$port = if ($lab) { $lab.port } else { 8443 }`,
-    // Resolved once into plain strings: every probe argument below is a flat string array, and a
-    // sub-expression inside an array literal is what broke the splat in the first place.
+    // Resolved once into plain strings: the probe arguments below are interpolated into a command line,
+    // and a sub-expression there would have to be quoted by hand.
     `$logRoot = Join-Path $dataRoot 'logs'`,
     `$serviceProgramDirectory = Join-Path $env:ProgramFiles 'LS101LabService'`,
-    `function Show-Probe([string]$Label, [string[]]$Arguments) {`,
+    // The probe is invoked through an explicit command line, and that command line is *parsed* before it
+    // runs. That last part is the whole point: `& $probes @Arguments` and `& $probes $CommandLine` both
+    // failed here, and the second failure explained the first — the error named the entire string
+    // (`Unknown probe: -Probe service -Name 'LS101Lab'`), so the call operator had passed all of it as a
+    // single value for the probe's first parameter instead of binding the arguments by name. The probe
+    // script itself is fine: `lab-acceptance.mjs` runs the same file through `powershell -File`, where
+    // Windows parses the arguments.
+    //
+    // `Invoke-Expression` applies the normal command-line parse. The command line is a single-quoted path
+    // to a file this harness wrote, plus values from `lab-config.json` — paths, a service name, a port —
+    // so quoting is the whole of the escaping needed and nothing here is external input.
+    `function Quoted([string]$Value) { return "'" + ($Value -replace "'", "''") + "'" }`,
+    `function Show-Probe([string]$Label, [string]$CommandLine) {`,
     `  Write-Output ('=== ' + $Label + ' ===')`,
     `  if (-not $hasProbes) { Write-Output 'lab-probes.ps1 is not present on this VM'; return }`,
     // A probe that fails must not take the rest of the diagnostic with it. The probes set
     // `$ErrorActionPreference = 'Stop'` for themselves, and PowerShell keeps that preference in this
     // scope after `&` returns, so the next native call or cmdlet becomes a terminating error. That is
     // how the first M4 run's diagnostic exited 1 after printing almost nothing: the failure it was
-    // collected to explain left no record. The preference is therefore reset inside the catch, after
-    // the error has been recorded.
-    //
-    // `$probes` is a single path, so it is called directly; the argument arrays are flat string arrays
-    // so the splat can only pass them positionally. A sub-expression inside the array literal
-    // (`(Join-Path …)`, a bare `$variable`) is what previously made the splat bind the *first element*
-    // as the value of `-Probe`, which is why every probe answered `Unknown probe: -Probe`.
+    // collected to explain left no record. The preference is therefore reset inside the catch.
     `  try {`,
-    `    & $probes @Arguments`,
+    `    Invoke-Expression ('& ' + (Quoted $probes) + ' ' + $CommandLine)`,
     `  } catch {`,
     `    $failure = $_.Exception.Message`,
     `    $ErrorActionPreference = 'Continue'`,
     `    Write-Output ('probe ' + $Label + ' failed: ' + $failure)`,
     `  }`,
     `}`,
-    `Show-Probe 'service' ('-Probe','service','-Name',$serviceName)`,
-    `Show-Probe 'wrapper processes' ('-Probe','process','-Name','LS101Lab.exe')`,
-    `Show-Probe 'runtime process' ('-Probe','process','-Name','node.exe','-Match','server.cjs')`,
-    `Show-Probe 'service program directory' ('-Probe','path','-Path',$serviceProgramDirectory)`,
-    `Show-Probe 'data directory' ('-Probe','path','-Path',$dataRoot)`,
-    `Show-Probe 'wrapper logs' ('-Probe','wrapper-logs','-Path',$logRoot,'-Tail','80')`,
-    `Show-Probe 'system events' ('-Probe','events','-Minutes','30','-Match','LS101')`,
-    `Show-Probe 'listener' ('-Probe','listener','-Port',[string]$port)`,
+    `Show-Probe 'service' ('-Probe service -Name ' + (Quoted $serviceName))`,
+    `Show-Probe 'wrapper processes' "-Probe process -Name 'LS101Lab.exe'"`,
+    `Show-Probe 'runtime process' "-Probe process -Name 'node.exe' -Match 'server.cjs'"`,
+    `Show-Probe 'service program directory' ('-Probe path -Path ' + (Quoted $serviceProgramDirectory))`,
+    `Show-Probe 'data directory' ('-Probe path -Path ' + (Quoted $dataRoot))`,
+    `Show-Probe 'wrapper logs' ('-Probe wrapper-logs -Path ' + (Quoted $logRoot) + " -Tail '80'")`,
+    `Show-Probe 'system events' "-Probe events -Minutes '30' -Match 'LS101'"`,
+    `Show-Probe 'listener' ('-Probe listener -Port ' + (Quoted ([string]$port)))`,
     // The install directory is named after the executable, not the product, so it is discovered rather
     // than guessed: assuming the product name once produced a confidently wrong conclusion.
-    `Show-Probe 'installed application' ('-Probe','find-executable','-Name','ls101-lab-teacher.exe','-Path',$env:ProgramFiles)`,
+    `Show-Probe 'installed application' ('-Probe find-executable -Name ''ls101-lab-teacher.exe'' -Path ' + (Quoted $env:ProgramFiles))`,
     // The captured output is the one artefact that explains a run which died before writing its own.
     `Write-Output '=== captured task output (tail) ==='`,
     `if (Test-Path -LiteralPath '${guestPath(LAB_GUEST_TASK_OUTPUT)}') { Get-Content -LiteralPath '${guestPath(LAB_GUEST_TASK_OUTPUT)}' -Tail 40 } else { Write-Output 'MISSING' }`,
@@ -1999,6 +2072,12 @@ async function labDiagnose(root, config, run, report) {
       `vm:diag needs the preserved VM to be running (found ${states[0] ?? 'no VM'}); start it with yarn vm:up`
     )
   }
+  // The probes are re-uploaded, because the whole point of the diagnostic is to ask the *current*
+  // questions: reading a preserved VM with the probe script from the failed run means every answer comes
+  // from the version that was already wrong once. That is not hypothetical — two runs in a row reported
+  // nine probes failing with `Unknown probe: -Probe` from a stale upload, which buried the very evidence
+  // the diagnostic was collected for.
+  run('vagrant.exe', ['upload', path.join(root, 'guest', 'lab-probes.ps1'), LAB_GUEST_PROBES])
   const output = readGuestOutput(run, labDiagnoseScript(config))
   console.log(output)
   report.diagnostic = output
