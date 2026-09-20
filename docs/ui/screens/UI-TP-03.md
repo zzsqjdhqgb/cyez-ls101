@@ -78,7 +78,8 @@ owner: template-editor
 
 ```yaml
 anchors:
-  visual: VR-TP-03（tests/visual/templates/UI-TP-03.spec.ts；基线待 canonical 容器生成）
+  visual: VR-TP-03（tests/visual/templates/UI-TP-03.spec.ts）
+  visual-states: [default]
   behavior: unverified
 ```
 

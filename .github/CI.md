@@ -13,7 +13,8 @@ both branches and do not configure bypass actors. Merge queues run the same chec
 
 The verification has five job ids: `test_suites` (a Windows matrix with two entries),
 `canonical_docs`, `canonical_visual`, `linux_electron_smoke`, and a final `Required quality gate`. The `test_suites`
-matrix runs `other-checks` (lint, type checking, script tests, the complete Vitest suite, renderer
+matrix runs `other-checks` (documentation metadata/links and visual state pairing checks, lint,
+type checking, script tests, the complete Vitest suite, renderer
 component tests, and product journeys) and `electron-integration` (the complete packaged Electron
 integration suite on Windows). `canonical_docs` runs the canonical product documentation suite in
 the pinned Linux renderer container; `canonical_visual` re-renders the per-screen visual baselines

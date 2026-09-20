@@ -134,7 +134,8 @@ owner: template-editor
 
 ```yaml
 anchors:
-  visual: VR-TP-02（tests/visual/templates/UI-TP-02.spec.ts；基线待 canonical 容器生成）
+  visual: VR-TP-02（tests/visual/templates/UI-TP-02.spec.ts）
+  visual-states: [default]
   behavior: TP-01（tests/product-docs/modules/template-library/authoring.spec.ts，旧套件）
 ```
 

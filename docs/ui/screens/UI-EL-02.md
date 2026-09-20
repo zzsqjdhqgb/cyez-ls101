@@ -128,7 +128,8 @@ owner: exam-library
 
 ```yaml
 anchors:
-  visual: VR-EL-02（tests/visual/exams/UI-EL-02.spec.ts；夹具为最小 .lsexam；基线待 canonical 容器生成）
+  visual: VR-EL-02（tests/visual/exams/UI-EL-02.spec.ts；夹具为最小 .lsexam）
+  visual-states: [default]
   behavior: EX-01（tests/product-docs/flows/take-exam/run.spec.ts，旧套件）
 ```
 

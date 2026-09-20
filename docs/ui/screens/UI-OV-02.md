@@ -90,7 +90,8 @@ owner: data-directory
 
 ```yaml
 anchors:
-  visual: VR-OV-02（tests/visual/overlays/UI-OV-02.spec.ts；基线待 canonical 容器生成）
+  visual: VR-OV-02（tests/visual/overlays/UI-OV-02.spec.ts）
+  visual-states: [default]
   behavior: unverified
 ```
 

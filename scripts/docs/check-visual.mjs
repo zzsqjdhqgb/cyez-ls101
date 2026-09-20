@@ -5,9 +5,10 @@
  *
  * 校验 docs/ui/screens/UI-*.md 的 anchors.visual 与 tests/visual 的一致性：
  *   1. 声明 VR-* 的规格必须能解析出测试文件，且该文件存在；
- *   2. 测试实际捕获的状态集合，必须与磁盘上的基线集合一致（基线存在时）。
+ *   2. anchors.visual-states 必须与测试实际捕获的状态集合一致；
+ *   3. 已建立基线目录时，全部已锚定规格的基线必须与声明状态一致。
  *
- * 基线只由 canonical 容器生成；本地没有基线时只校验第 1 项并输出统计。
+ * 基线只由 canonical 容器生成；整个基线目录尚未建立时只校验规格与测试。
  *
  * 用法：yarn visual:check
  */
@@ -36,7 +37,8 @@ const specs = fs.readdirSync(SCREEN_DIR).filter((name) => /^UI-[A-Z]{2}-\d{2}\.m
 for (const name of specs.sort()) {
   const id = name.replace(/\.md$/, '')
   const text = fs.readFileSync(path.join(SCREEN_DIR, name), 'utf8')
-  const match = text.match(/visual:\s*([^\n]+)/)
+  const anchors = text.match(/^```yaml[ \t]*\r?\nanchors:[ \t]*\r?\n([\s\S]*?)^```/m)?.[1] ?? ''
+  const match = anchors.match(/^ {2}visual:[ \t]*([^\r\n]+)/m)
   if (!match) {
     errors.push(`${rel(path.join(SCREEN_DIR, name))}: 缺少 anchors.visual`)
     continue
@@ -65,20 +67,39 @@ for (const name of specs.sort()) {
 
   anchored.push(id)
 
-  const specText = fs.readFileSync(specPath, 'utf8')
-  const declared = new Set()
-  const callRe = /captureState\([^,]+,\s*'([^']+)',\s*'([^']+)'\)/g
-  let call
-  while ((call = callRe.exec(specText))) {
-    if (call[1] === id) declared.add(call[2])
-  }
-  if (declared.size === 0) {
-    errors.push(`${id}: 测试未捕获该界面的任何状态 -> ${specMatch[0]}`)
+  const statesLine = anchors.match(/^ {2}visual-states:[ \t]*([^\r\n]+)/m)?.[1]
+  const statesMatch = statesLine?.match(/^\[([a-z0-9, -]+)\][ \t]*(?:#.*)?$/)
+  const states = statesMatch?.[1].split(',').map((state) => state.trim()) ?? []
+  if (
+    states.length === 0 ||
+    states.some((state) => !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(state)) ||
+    new Set(states).size !== states.length
+  ) {
+    errors.push(`${id}: anchors.visual-states 必须为非空、无重复的状态列表，如 [default, empty]`)
     continue
   }
+  const declared = new Set(states)
+  const specText = fs.readFileSync(specPath, 'utf8')
+  const captured = new Set()
+  const callRe = /\bcaptureState\(\s*[^,]+,\s*(['"])([^'"]+)\1,\s*(['"])([^'"]+)\3\s*,?\s*\)/g
+  let call
+  while ((call = callRe.exec(specText))) {
+    if (call[2] === id) captured.add(call[4])
+    else errors.push(`${id}: 测试捕获了其他界面 ${call[2]} -> ${specMatch[0]}`)
+  }
+  for (const state of declared) {
+    if (!captured.has(state)) errors.push(`${id}: 规格声明状态 ${state} 未在测试中捕获`)
+  }
+  for (const state of captured) {
+    if (!declared.has(state)) errors.push(`${id}: 测试捕获了规格未声明的状态 ${state}`)
+  }
 
+  if (!fs.existsSync(BASELINE_DIR)) continue
   const baselineDir = path.join(BASELINE_DIR, id)
-  if (!fs.existsSync(baselineDir)) continue
+  if (!fs.existsSync(baselineDir)) {
+    errors.push(`${id}: 缺少基线目录 ${rel(baselineDir)}`)
+    continue
+  }
 
   const files = new Set(
     fs
@@ -90,7 +111,7 @@ for (const name of specs.sort()) {
     if (!files.has(state)) errors.push(`${id}: 缺少基线 ${state}.png`)
   }
   for (const state of files) {
-    if (!declared.has(state)) errors.push(`${id}: 基线 ${state}.png 未在测试中捕获（陈旧基线）`)
+    if (!declared.has(state)) errors.push(`${id}: 基线 ${state}.png 未在规格中声明（陈旧基线）`)
   }
 }
 

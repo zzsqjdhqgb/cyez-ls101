@@ -82,7 +82,8 @@ owner: interface-editor
 
 ```yaml
 anchors:
-  visual: VR-IF-01（tests/visual/interfaces/UI-IF-01.spec.ts；基线待 canonical 容器生成）
+  visual: VR-IF-01（tests/visual/interfaces/UI-IF-01.spec.ts）
+  visual-states: [default]
   behavior: IF-05, IF-07, IF-09（tests/product-docs/modules/interface-library/behaviors.spec.ts，旧套件）
 ```
 

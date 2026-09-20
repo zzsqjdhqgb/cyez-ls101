@@ -9,7 +9,7 @@ owner: testing
 
 本目录存放与 [`docs/ui/screens/`](../../docs/ui/screens/README.md) **一一对应**的逐屏视觉回归测试与基线。
 
-**当前状态：测试框架与运行模式已实现，22 个规格在 Docker 外全部通过。canonical 基线尚未生成（需首次在专用容器内运行 `yarn visual:publish`）。**
+**当前状态：22 个规格已声明截图状态并配有测试与 canonical 基线；CI 校验规格、测试与基线的状态集合，再由专用容器校验像素。**
 
 ## 0. 运行模式（Docker 边界）
 
@@ -37,8 +37,13 @@ tests/visual/baselines/UI-IF-04/default.png       ← 基线（canonical 生成�
 
 ```yaml
 anchors:
-  visual: VR-IF-04        # 或 n/a（原因）
+  visual: VR-IF-04（tests/visual/interfaces/UI-IF-04.spec.ts）
+  visual-states: [default]
 ```
+
+`visual-states` 使用单行列表，状态名使用不带引号的 kebab-case，不可为空或重复。
+测试用 `captureState(page, 'UI-IF-04', 'default')` 这样的字符串字面量声明捕获状态。
+`visual: unverified` 或 `visual: n/a（原因）` 不要求声明截图状态。
 
 ## 2. 一致性校验
 
@@ -50,7 +55,9 @@ anchors:
 - 捕获了但未声明 → 测试越权定义规格；
 - 磁盘存在未声明的基线 → 陈旧基线。
 
-`yarn visual:check` 在本地校验规格 ↔ 测试（无基线时不比较第三项）；容器内的 `check` 模式在此之上比较像素。
+`yarn visual:check` 始终校验规格 ↔ 测试；整个基线目录尚未建立时不比较第三项。
+基线根目录存在后，缺少任何已锚定界面的目录或状态图片都会失败。
+CI 在安装依赖前运行文档与视觉配对检查；容器内的 `check` 模式也先校验配对，再比较像素。
 
 ## 3. 方向
 

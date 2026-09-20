@@ -81,7 +81,8 @@ owner: workbench
 
 ```yaml
 anchors:
-  visual: VR-WB-01（tests/visual/workbench/UI-WB-01.spec.ts；基线待 canonical 容器生成）
+  visual: VR-WB-01（tests/visual/workbench/UI-WB-01.spec.ts）
+  visual-states: [default]
   behavior: WB-01, WB-02（tests/product-docs/modules/workbench/navigation.spec.ts，旧套件）
 ```
 

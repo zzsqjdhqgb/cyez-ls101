@@ -283,7 +283,8 @@ owner: airouter
 
 ```yaml
 anchors:
-  visual: VR-ST-06（tests/visual/settings/UI-ST-06.spec.ts；基线待 canonical 容器生成）
+  visual: VR-ST-06（tests/visual/settings/UI-ST-06.spec.ts）
+  visual-states: [default]
   behavior: unverified
 ```
 

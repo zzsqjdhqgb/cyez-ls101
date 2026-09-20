@@ -40,6 +40,9 @@ export async function main(args = process.argv.slice(2)) {
     throw new Error('canonical 视觉回归环境变量只能由内部发布流程设置，不能从容器外部传入')
   }
   assertRendererIdentity()
+  if (action === 'check') {
+    run(process.execPath, [path.join(repositoryRoot, 'scripts', 'docs', 'check-visual.mjs')])
+  }
 
   mkdirSync(process.env['XDG_RUNTIME_DIR'] ?? '/tmp/ls101-product-docs-runtime', {
     recursive: true,

@@ -92,7 +92,8 @@ owner: license
 
 ```yaml
 anchors:
-  visual: VR-OV-01（tests/visual/overlays/UI-OV-01.spec.ts；基线待 canonical 容器生成）
+  visual: VR-OV-01（tests/visual/overlays/UI-OV-01.spec.ts）
+  visual-states: [default]
   behavior: unverified
 ```
 

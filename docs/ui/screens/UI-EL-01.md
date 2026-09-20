@@ -80,7 +80,8 @@ owner: exam-library
 
 ```yaml
 anchors:
-  visual: VR-EL-01（tests/visual/exams/UI-EL-01.spec.ts；基线待 canonical 容器生成）
+  visual: VR-EL-01（tests/visual/exams/UI-EL-01.spec.ts）
+  visual-states: [default]
   behavior: EX-01（tests/product-docs/flows/take-exam/run.spec.ts，旧套件）
 ```
 

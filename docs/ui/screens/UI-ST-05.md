@@ -84,7 +84,8 @@ owner: settings
 
 ```yaml
 anchors:
-  visual: VR-ST-05（tests/visual/settings/UI-ST-05.spec.ts；基线待 canonical 容器生成）
+  visual: VR-ST-05（tests/visual/settings/UI-ST-05.spec.ts）
+  visual-states: [default]
   behavior: unverified
 ```
 

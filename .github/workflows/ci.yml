@@ -56,6 +56,14 @@ jobs:
         env:
           COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
 
+      - name: Check documentation metadata and links
+        if: matrix.suite == 'other-checks'
+        run: node scripts/docs/check-docs.mjs
+
+      - name: Check visual specification, test and baseline states
+        if: matrix.suite == 'other-checks'
+        run: node scripts/docs/check-visual.mjs
+
       - name: Get Yarn cache directory
         id: yarn-cache-dir
         shell: bash

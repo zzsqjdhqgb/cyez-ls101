@@ -104,7 +104,8 @@ owner: submission-records
 
 ```yaml
 anchors:
-  visual: VR-SR-01（tests/visual/submissions/UI-SR-01.spec.ts；基线待 canonical 容器生成）
+  visual: VR-SR-01（tests/visual/submissions/UI-SR-01.spec.ts）
+  visual-states: [default]
   behavior: SR-01（tests/product-docs/modules/submission-records/settlement.spec.ts，旧套件）
 ```
 

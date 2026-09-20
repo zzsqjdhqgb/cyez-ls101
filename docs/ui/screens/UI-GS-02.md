@@ -131,7 +131,8 @@ owner: schema-editor
 
 ```yaml
 anchors:
-  visual: VR-GS-02（tests/visual/schemas/UI-GS-02.spec.ts；基线待 canonical 容器生成）
+  visual: VR-GS-02（tests/visual/schemas/UI-GS-02.spec.ts）
+  visual-states: [default]
   behavior: GS-01（tests/product-docs/modules/grading-units/publishing.spec.ts，旧套件）
 ```
 

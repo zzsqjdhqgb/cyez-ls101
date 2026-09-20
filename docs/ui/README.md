@@ -71,7 +71,8 @@ owner: interface-library
 
 ```yaml
 anchors:
-  visual: VR-IF-03            # tests/visual/**；无则写 n/a（原因）
+  visual: VR-IF-03（tests/visual/interfaces/UI-IF-03.spec.ts）
+  visual-states: [default]     # 单行、非空、无重复的 kebab-case 状态名列表
   behavior: unverified        # 产品/集成测试 ID；无则写 unverified
 ```
 ````
@@ -81,6 +82,7 @@ anchors:
 - 每个界面要么被视觉或行为测试锚定，要么显式写 `unverified`。**不允许留空。**
 - 视觉锚点与 `tests/visual/` 一一对应：一个 `UI-*` 页面 ↔ 一个视觉测试文件，文件名即 ID。
 - 状态级不要求 1:1：一屏可声明多个状态（`default`、`empty`、`validation-error` 等），
+  在 `anchors.visual-states` 中手写维护；`unverified` 或 `n/a` 不要求此字段。
   校验规则是**规格声明的状态集合 == 测试实际捕获的状态集合 == 磁盘上的基线集合**。
 - 权限：只有 canonical 渲染容器能生成/更新基线，本地运行只产 diff。
   完整约定见 [`../../tests/visual/README.md`](../../tests/visual/README.md)。
