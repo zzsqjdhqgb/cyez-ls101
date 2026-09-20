@@ -1,14 +1,22 @@
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFile } from 'node:child_process'
 import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { localManagerFailure, manageLocalService } from '../local-manager'
 import { requestLocalControl } from '../control'
 import { lockDirectory } from '../directory-lock'
+import { syncDirectory } from '../durable-files'
 
 vi.mock('../control', () => ({ requestLocalControl: vi.fn() }))
 vi.mock('node:child_process', () => ({ execFile: vi.fn() }))
+// These tests simulate both service managers on either host OS. A fake process.platform must not
+// select Linux directory-handle flags for real Windows I/O. Model the persistence barrier here;
+// native directory syncing remains exercised by the runtime, archive and restore integration tests.
+vi.mock('../durable-files', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../durable-files')>()),
+  syncDirectory: vi.fn(async () => {})
+}))
 afterEach(() => {
   vi.resetAllMocks()
   vi.unstubAllGlobals()
@@ -246,9 +254,12 @@ describe.each(['linux', 'win32'])('service removal on %s', (platform) => {
     })
     if (platform === 'linux') {
       await expect(stat(paths.unit)).rejects.toMatchObject({ code: 'ENOENT' })
+      expect(syncDirectory).toHaveBeenCalledOnce()
+      expect(syncDirectory).toHaveBeenCalledWith(dirname(paths.unit))
       expect(commands).toContain('systemctl disable ls101-lab.service')
       expect(commands).toContain('systemctl daemon-reload')
     } else {
+      expect(syncDirectory).not.toHaveBeenCalled()
       expect(commands).toContain('sc.exe config LS101Lab start= disabled')
       expect(commands).toContain('sc.exe delete LS101Lab')
     }
@@ -322,6 +333,22 @@ describe.each(['linux', 'win32'])('service removal on %s', (platform) => {
     const lifetime = await lockDirectory(`${paths.root}.runtime`)
     lifetime.close()
   })
+
+  if (platform === 'linux') {
+    it('propagates a failed directory sync before daemon reload and releases the lifetime lock', async () => {
+      const { paths, state, commands } = await fixture()
+      const failure = Object.assign(new Error('Directory sync failed'), { code: 'EIO' })
+      vi.mocked(syncDirectory).mockRejectedValueOnce(failure)
+      await expect(manageLocalService('uninstall', undefined, paths)).rejects.toBe(failure)
+      expect(syncDirectory).toHaveBeenCalledWith(dirname(paths.unit))
+      expect(commands).toContain('systemctl disable ls101-lab.service')
+      expect(commands).not.toContain('systemctl daemon-reload')
+      expect(state.installed).toBe(true)
+      expect(await stat(join(paths.root, 'service.sqlite'))).toBeDefined()
+      const lifetime = await lockDirectory(`${paths.root}.runtime`)
+      lifetime.close()
+    })
+  }
 
   it('does not treat a service manager failure as an absent service', async () => {
     const { paths, state } = await fixture()

@@ -62,10 +62,9 @@ export function confined(root: string, relative: string): string {
 
 export async function ensureSpace(root: string, bytes: number): Promise<void> {
   const space = await statfs(root)
-  const total = space.blocks * space.bsize
   const available = space.bavail * space.bsize
-  if (available - bytes < Math.max(1024 ** 3, total * 0.05))
-    throw new LabError('STORAGE_UNAVAILABLE')
+  // Keep 1 GiB free after this operation, independent of the volume's total capacity.
+  if (available - bytes < 1024 ** 3) throw new LabError('STORAGE_UNAVAILABLE')
 }
 
 export async function verifiedFile(filename: string, bytes: number, sha256: string): Promise<void> {

@@ -93,7 +93,7 @@ yarn lab:test:soak
 | ORDER-PASSWORD    | 已鉴权试卷上传在改密后不得提交；新会话可重新上传                                             | `concurrency.test.ts`                                                                |
 | ORDER-REPLAY      | 并发相同编号仅一个在途接收；后续重试收敛到同一回执                                           | `concurrency.test.ts`                                                                |
 | ORDER-GC          | 先取得引用的下载／导出可完成；逻辑删除后新下载拒绝；已有引用释放后才 GC                      | `concurrency.test.ts`                                                                |
-| IO-CAPACITY       | 容量探测失败在写入前拒绝，未留下成功或占位，容量恢复后重试成功                               | `failures.test.ts`，仅替换容量探测，非真实磁盘满验收                                 |
+| IO-CAPACITY       | 固定保留 1 GiB；大盘容量不影响准入；边界拒绝无残留，探测失败后可重试                         | `failures.test.ts`，仅替换 `statfs`，非真实磁盘满验收                                |
 | IO-ROLLBACK       | reserve、sync、publish 阶段异常后清理临时文件和占位，重试成功                                | `failures.test.ts`；和真正崩溃测试分别记录                                           |
 | IO-DISCONNECT     | 上传断流回收接收占用并允许相同编号重试                                                       | `failures.test.ts`                                                                   |
 | IO-CANCEL         | 维护主动取消停滞半包，不必等待客户端下一块数据才能回收占用                                   | `failures.test.ts`                                                                   |
@@ -162,3 +162,9 @@ yarn lab:test:soak
 | `node --test scripts/__tests__/lab-design-contract.test.js`   | 24.21.0          | 5 个契约／文档检查通过                                                      |
 
 容器共享 Node 为 24.21.0；精确构建版本 24.20.0 安装在专用 worktree 的忽略缓存目录，核对官方 SHA-256 后仅为对应命令调整 PATH。没有修改构建版本门禁或共享 Node。Windows 矩阵和远端 CI 尚未执行，本地结果不代表这些平台已经通过。
+
+## 固定容量余量及 Windows CI 测试边界修正
+
+容量检查采用固定 1 GiB 余量，适用于归档上传和离线恢复，不随磁盘总容量增加。`failures.test.ts` 仅控制 `statfs` 返回的磁盘状态，保留真实 HTTP、容量判定、SQLite、文件写入和重开：64 GiB 与 8 TiB 数据卷同样剩余 32 GiB 时均可上传；扣除本次写入大小后恰好剩余 1 GiB 时成功，少一字节时拒绝且没有回执、占位或归档；空间恢复后可重试。原百分比实现已在大盘及精确边界两个用例中复现失败。
+
+`local-manager.test.ts` 的 Linux／Windows 是模拟的服务管理器平台，不代表 runner 平台。原测试全局替换 `process.platform` 后，Windows runner 上的 Linux 分支让实际目录同步使用只读句柄，导致 `fsync` 返回 `EPERM`。这组测试现在显式模拟目录同步边界，断言 Linux 卸载需要同步，Windows SCM 分支不调用该边界；同步失败仍须拒绝成功、阻止 daemon-reload 并释放目录锁。运行时、归档及恢复集成测试继续执行当前宿主平台的真实目录同步。
