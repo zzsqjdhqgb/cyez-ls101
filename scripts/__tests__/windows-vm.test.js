@@ -1843,6 +1843,47 @@ test('the manager driver can reach both product entry points M4 depends on', asy
   assert.match(driver, /JSON\.stringify\(helperResult\)/)
 })
 
+test('the teacher installer cannot hang on a silent failure', async () => {
+  const nsh = await readFile(
+    path.resolve(__dirname, '../../resources/lab/windows/teacher.nsh'),
+    'utf8'
+  )
+  // `MessageBox` blocks until a human clicks it, so a silent install has nobody to click it: the process
+  // and its installer sit there forever. The M4 acceptance run hit exactly that and reported it as a
+  // 900-second timeout with empty stdout and stderr, which is why the design document's risk 2 moved
+  // from unverified to confirmed.
+  assert.match(nsh, /\$\{If\} \$\{Silent\}/)
+  assert.match(nsh, /SetErrorLevel 2/)
+  assert.match(nsh, /DetailPrint "Local service installation failed \(exit \$0\)/)
+  // The dialog has to stay inside the `Else` branch: an interactive operator still gets the explanation.
+  const silentBranch = nsh.slice(nsh.indexOf('${If} ${Silent}'), nsh.indexOf('Abort'))
+  assert.doesNotMatch(silentBranch, /MessageBox/, 'the silent branch must not raise a dialog')
+  // The dialog survives in the `Else` branch, after the silent one, so an interactive operator still
+  // gets an explanation while an unattended run does not block.
+  assert.match(
+    nsh.slice(nsh.indexOf('${If} ${Silent}')),
+    /\$\{Else\}[\s\S]*MessageBox/,
+    'the dialog belongs to the interactive branch, after the silent one'
+  )
+  // The failure still aborts, in both modes: a refused service installation must not leave a client
+  // behind. `Abort` follows the whole branch, so it is not inside either half of it.
+  // `Abort` follows the whole silent/interactive branch, so it is not inside either half of it: the
+  // close it follows is the branch's own `${EndIf}`, not the outer one that ends the macro's failure
+  // block (which comes later).
+  assert.ok(
+    nsh.indexOf('Abort') > nsh.lastIndexOf('${EndIf}', nsh.indexOf('Abort')),
+    'Abort must run for a silent failure as well as an interactive one'
+  )
+  assert.equal(
+    nsh.split('${EndIf}').length - 1,
+    2,
+    'the failure branch and the outer guard each close once'
+  )
+  // And nsExec's captured output is used rather than discarded, so the log carries the reason.
+  assert.match(nsh, /Pop \$1/)
+  assert.match(nsh, /DetailPrint "\$1"/)
+})
+
 test('the service definition declares start arguments as startarguments', async () => {
   const raw = await readFile(
     path.resolve(__dirname, '../../resources/lab/windows/LS101Lab.xml'),
