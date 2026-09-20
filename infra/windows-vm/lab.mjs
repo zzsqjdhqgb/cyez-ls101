@@ -612,6 +612,10 @@ const LAB_GUEST_RESULTS = `${LAB_GUEST_RESULTS_DIR}/lab-results.json`
 const LAB_PROBE_BASE64 = `${LAB_GUEST_DIR}/lab-probe.b64`
 const LAB_PROBE_FILE = `${LAB_GUEST_DIR}/lab-probe.ps1`
 const LAB_PROBE_LAUNCHER = `${LAB_GUEST_DIR}/run-lab-probe.ps1`
+// The launcher keeps its own copy of everything it did and everything the probe said. The task's redirected
+// stream has come back empty for two probes while the same mechanism works elsewhere, so the next failure
+// has to explain itself from a file rather than from the absence of output.
+const LAB_PROBE_CAPTURE = `${LAB_GUEST_DIR}/lab-probe-capture.txt`
 // Where a `yarn vm:probe` run keeps its captured output. Declared here rather than beside the other
 // probe constants because it is built from the results directory.
 const LAB_PROBE_OUTPUT = `${LAB_GUEST_RESULTS_DIR}/lab-probe-output.txt`
@@ -1790,7 +1794,14 @@ async function labAcceptance(root, config, run, report) {
 // The scripts are built here rather than passed in: this runs elevated in a VM, so the command surface
 // stays a fixed list of named operations a reviewer can read.
 export function labProbeNames() {
-  return ['service-install', 'service-verify', 'installer-uninstall', 'manifest-digests', 'registration']
+  return [
+    'service-install',
+    'service-verify',
+    'installer-uninstall',
+    'manifest-digests',
+    'registration',
+    'guard-inputs'
+  ]
 }
 
 export function labProbeScript(name, config) {
@@ -1854,6 +1865,29 @@ export function labProbeScript(name, config) {
       `}`,
       `Write-Output ('upgrade-ready present=' + (Test-Path -LiteralPath 'C:\\ProgramData\\LS101Lab\\data\\upgrade-ready.json'))`
     ],
+    // The exact values `install-windows.ps1` compares before it will replace a runtime. A refusal at that
+    // guard is silent from the outside — the NSIS hook discards the script's output and, since the silent
+    // fix, only the exit code survives — so the inputs have to be readable after the fact.
+    'guard-inputs': [
+      `$p = Join-Path $env:ProgramFiles 'LS101LabService'`,
+      `$d = Join-Path $env:ProgramData 'LS101Lab'`,
+      `Write-Output ('service=' + [string](Get-Service -Name '${config.serviceName ?? 'LS101Lab'}' -ErrorAction SilentlyContinue).Status + ' db=' + (Test-Path -LiteralPath (Join-Path $d 'data\\service.sqlite')))`,
+      `$r = Join-Path $p 'installation.json'`,
+      `if (Test-Path -LiteralPath $r) {`,
+      `  $rel = (Get-Content -LiteralPath $r -Raw | ConvertFrom-Json).release`,
+      `  $im = Join-Path $p ('releases\\' + $rel + '\\runtime-manifest.json')`,
+      `  $pm = '${applicationDirectory}\\resources\\lab-server\\runtime-manifest.json'`,
+      `  Write-Output ('record=' + $rel + ' installedManifest=' + (Test-Path -LiteralPath $im) + ' packagedManifest=' + (Test-Path -LiteralPath $pm))`,
+      `  if ((Test-Path -LiteralPath $im) -and (Test-Path -LiteralPath $pm)) {`,
+      `    $a = (Get-FileHash -LiteralPath $im -Algorithm SHA256).Hash.ToLowerInvariant()`,
+      `    $b = (Get-FileHash -LiteralPath $pm -Algorithm SHA256).Hash.ToLowerInvariant()`,
+      `    Write-Output ('sameRuntime=' + ($a -eq $b) + ' installedVersion=' + (Get-Content -LiteralPath $im -Raw | ConvertFrom-Json).releaseVersion + ' packagedVersion=' + (Get-Content -LiteralPath $pm -Raw | ConvertFrom-Json).releaseVersion)`,
+      `  }`,
+      `}`,
+      `$u = Join-Path $d 'data\\upgrade-ready.json'`,
+      `Write-Output ('upgradeReadyPresent=' + (Test-Path -LiteralPath $u))`,
+      `if (Test-Path -LiteralPath $u) { Write-Output (Get-Content -LiteralPath $u -Raw) }`
+    ],
     // Why the manager helper reports STORAGE_UNAVAILABLE. `local-status.ts` asks exactly one question to
     // decide whether the service is registered — this PowerShell command — and turns any failure or
     // unexpected shape into that code, with no detail. Reproducing it verbatim, plus the plain SCM views,
@@ -1915,13 +1949,18 @@ export function stripScriptComments(script) {
 // A plain-ASCII decoder written to the guest beside the encoded probe. It has no payload of its own,
 // which is what keeps the generated command line short and the quoting trivial.
 export function labProbeLauncher() {
+  // Deliberately tiny: it is embedded in every probe's generated script, and that script has to stay
+  // inside the 8191-character command line Windows accepts.
+  //
+  // The probe file is written as ASCII with no BOM — every probe is ASCII by construction, and Windows
+  // PowerShell 5.1 reads a BOM-less file as the current ANSI code page, which cannot mangle ASCII and
+  // cannot half-read a BOM. The previous version wrote UTF-16 without saying so, and for two probes
+  // `-File` then produced no output at all: the silent shape a mis-decoded script has.
   return [
     `$ErrorActionPreference = 'Continue'`,
-    `$base64Path = '${guestPath(LAB_PROBE_BASE64)}'`,
-    `$probePath = '${guestPath(LAB_PROBE_FILE)}'`,
-    `$base64 = (Get-Content -LiteralPath $base64Path -Raw).Trim()`,
-    `[IO.File]::WriteAllText($probePath, [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($base64)), [Text.Encoding]::Unicode)`,
-    `& powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $probePath`,
+    `$base64 = (Get-Content -LiteralPath '${guestPath(LAB_PROBE_BASE64)}' -Raw).Trim()`,
+    `[IO.File]::WriteAllText('${guestPath(LAB_PROBE_FILE)}', [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($base64)), [Text.Encoding]::ASCII)`,
+    `& powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File '${guestPath(LAB_PROBE_FILE)}' *> '${guestPath(LAB_PROBE_CAPTURE)}'`,
     `exit $LASTEXITCODE`
   ].join('\n')
 }
@@ -1956,7 +1995,11 @@ export function labProbeTaskScript(name, config, { timeoutSeconds = 300 } = {}) 
     `$task = Get-ScheduledTask -TaskName '${LAB_PROBE_TASK}' -ErrorAction SilentlyContinue`,
     `if ($task) { $info = $task | Get-ScheduledTaskInfo; Write-Output ('taskState=' + $task.State + ' lastResult=' + $info.LastTaskResult) }`,
     `Write-Output '=== probe output ==='`,
-    `if (Test-Path -LiteralPath '${guestPath(LAB_PROBE_OUTPUT)}') { Get-Content -LiteralPath '${guestPath(LAB_PROBE_OUTPUT)}' } else { Write-Output 'MISSING: the probe produced no output at all' }`,
+    // The launcher redirects the probe's own streams into the capture file, so an empty task output is
+    // the normal shape, not a failure: both files are printed and the reader picks whichever has content.
+    `if (Test-Path -LiteralPath '${guestPath(LAB_PROBE_OUTPUT)}') { Get-Content -LiteralPath '${guestPath(LAB_PROBE_OUTPUT)}' } else { Write-Output '(empty; see the launcher capture)' }`,
+    `Write-Output '=== launcher capture ==='`,
+    `if (Test-Path -LiteralPath '${guestPath(LAB_PROBE_CAPTURE)}') { Get-Content -LiteralPath '${guestPath(LAB_PROBE_CAPTURE)}' } else { Write-Output 'MISSING: the launcher wrote no capture' }`,
     `Write-Output '=== probe that ran (decoded) ==='`,
     `Write-Output ([Text.Encoding]::Unicode.GetString([Convert]::FromBase64String(($chunks -join ''))))`
   ].join('\n')

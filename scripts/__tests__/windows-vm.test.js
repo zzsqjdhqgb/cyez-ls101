@@ -1583,6 +1583,7 @@ test('the restart records the process table while the service is stopping', asyn
 test('the vm:probe action reproduces a named guest script and decodes back to what runs', async () => {
   const {
     LAB_PROBE_COMMAND_LIMIT,
+    labProbeLauncher,
     labProbeNames,
     labProbeScript,
     labProbeTaskScript,
@@ -1597,7 +1598,8 @@ test('the vm:probe action reproduces a named guest script and decodes back to wh
     'service-verify',
     'installer-uninstall',
     'manifest-digests',
-    'registration'
+    'registration',
+    'guard-inputs'
   ])
   assert.equal(parseAction(['lab-probe', 'service-install']), 'lab-probe')
   assert.equal(parseProbe(['lab-probe', 'service-verify']), 'service-verify')
@@ -1648,6 +1650,13 @@ test('the vm:probe action reproduces a named guest script and decodes back to wh
   assert.match(registration, /sc\.exe query \$name/)
   assert.match(registration, /runtimeManifest=/)
   assert.match(registration, /recordPresent=/)
+  // The guard probe reports the exact values the installer compares: a refusal there is otherwise silent,
+  // because the NSIS hook discards the script's output and only the exit code survives.
+  const guards = labProbeScript('guard-inputs', config)
+  assert.match(guards, /sameRuntime=/)
+  assert.match(guards, /upgradeReadyPresent=/)
+  assert.match(guards, /db=' \+ \(Test-Path -LiteralPath \(Join-Path \$d 'data/)
+  assert.match(guards, /record=' \+ \$rel/)
 
   // The probe travels as UTF-16LE base64 written to a file and decoded on the guest: a command line
   // cannot carry it (Windows caps one at 8191 characters and `winrm --command` reports the overrun as a
@@ -1668,9 +1677,28 @@ test('the vm:probe action reproduces a named guest script and decodes back to wh
   assert.match(task, /lab-probe\.b64/)
   assert.match(task, /run-lab-probe\.ps1/)
   assert.match(task, /-File "C:\\ls101-lab\\transfers\\run-lab-probe\.ps1"/)
+  // The launcher keeps its own capture of the probe's merged streams, and the task echoes both files. The
+  // task's redirected stream came back empty for two probes while the same mechanism works elsewhere, so
+  // the next failure has to be explainable from a file rather than from the absence of output.
+  assert.match(task, /lab-probe-capture\.txt/)
+  assert.match(task, /=== launcher capture ===/)
+  const launcher = labProbeLauncher()
+  // ASCII, no BOM: every probe is ASCII by construction, and Windows PowerShell 5.1 reads a BOM-less file
+  // as the ANSI code page — which cannot mangle ASCII and cannot half-read a BOM. The earlier version wrote
+  // UTF-16 without saying so and `-File` produced nothing at all for two probes.
+  assert.match(launcher, /\[Text\.Encoding\]::ASCII/)
+  assert.doesNotMatch(launcher, /WriteAllText\([^)]*Unicode\)\s*$/)
+  assert.match(launcher, /\*> 'C:\\ls101-lab\\transfers\\lab-probe-capture\.txt'/)
+  // The launcher is embedded in every probe, and the whole generated script has to fit the command line.
+  for (const name of labProbeNames())
+    assert.ok(
+      labProbeTaskScript(name, config).length < LAB_PROBE_COMMAND_LIMIT - 500,
+      `probe ${name} must leave room inside the ${LAB_PROBE_COMMAND_LIMIT}-character command line`
+    )
   // The decoded probe is echoed back so the evidence shows what ran, and the launcher exits with the
   // probe's own status rather than the decoder's.
   assert.match(task, /Get-Content -LiteralPath 'C:\\ls101-lab\\results\\lab-probe-output\.txt'/)
+  assert.match(task, /\(empty; see the launcher capture\)/)
   // The wait polls the task rather than sleeping: a probe that hits the failure dialog never finishes,
   // and the run has to say so instead of reporting the sleep as a result.
   assert.match(task, /Get-ScheduledTask -TaskName 'ls101-lab-probe'/)
@@ -1679,6 +1707,7 @@ test('the vm:probe action reproduces a named guest script and decodes back to wh
   // The probe output is echoed back, and the script is printed decoded so the evidence shows what ran.
   assert.match(task, /=== probe output ===/)
   assert.match(task, /Get-Content -LiteralPath 'C:\\ls101-lab\\results\\lab-probe-output\.txt'/)
+  assert.match(task, /\(empty; see the launcher capture\)/)
 })
 
 test('milestone M4 drives the real upgrade, uninstall and retention paths', async () => {
@@ -1945,14 +1974,30 @@ test('the teacher installer cannot hang on a silent failure', async () => {
     nsh.indexOf('Abort') > nsh.lastIndexOf('${EndIf}', nsh.indexOf('Abort')),
     'Abort must run for a silent failure as well as an interactive one'
   )
+  // Three closes: the best-effort log write, the silent/interactive branch, and the outer exit-code guard.
   assert.equal(
     nsh.split('${EndIf}').length - 1,
-    2,
-    'the failure branch and the outer guard each close once'
+    3,
+    'every branch in the failure path closes exactly once'
   )
   // And nsExec's captured output is used rather than discarded, so the log carries the reason.
   assert.match(nsh, /Pop \$1/)
   assert.match(nsh, /DetailPrint "\$1"/)
+  // It is also written to a file next to the installed service runtime. `DetailPrint` only reaches the
+  // installer's own log, which a silent run has no window for, and the stage in
+  // `LS101_INSTALL_ERROR [stage]: message` is what says where the service installation stopped. That gap
+  // is why the M4 run of 2026-09-20 could see the install succeed and still end with exit 2 and no reason.
+  assert.match(nsh, /FileOpen \$2 "\$INSTDIR\\resources\\lab-server\\install-failure\.log" w/)
+  assert.match(nsh, /FileWrite \$2 "installer exit code: \$0\$\\r\$\\n"/)
+  assert.match(nsh, /FileWrite \$2 "\$1\$\\r\$\\n"/)
+  assert.match(nsh, /FileClose \$2/)
+  // A failed install must not become two failures: the write is guarded, and the exit status is set
+  // whether or not the file could be opened.
+  assert.ok(
+    nsh.indexOf('${If} $2 != ""') < nsh.indexOf('SetErrorLevel 2'),
+    'the log write must be optional'
+  )
+  assert.match(nsh, /ClearErrors/)
 })
 
 test('the service definition declares start arguments as startarguments', async () => {

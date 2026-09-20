@@ -6,6 +6,24 @@
   Pop $0
   Pop $1
   ${If} $0 != 0
+    ; The failure is written to a file before anything else happens, because `DetailPrint` only reaches
+    ; the installer's own log and a silent run has no window to read it from. This file is the only
+    ; artefact that carries `LS101_INSTALL_ERROR [stage]: message` out of an unattended install — and the
+    ; stage is what says *where* the service installation stopped. Written next to the installed service
+    ; runtime; the program directory survives both a failed install and the client uninstall.
+    ;
+    ; A missing path (an install that failed before its resources were laid down) must not turn the
+    ; failure report into a second failure, so the write is best-effort and the exit status below is set
+    ; either way.
+    ClearErrors
+    FileOpen $2 "$INSTDIR\resources\lab-server\install-failure.log" w
+    ${If} $2 != ""
+      FileWrite $2 "installer exit code: $0$\r$\n"
+      FileWrite $2 "$1$\r$\n"
+      FileClose $2
+    ${EndIf}
+    ClearErrors
+
     ; Silent installs must never raise a dialog. `MessageBox` blocks until somebody clicks it, and an
     ; installer launched by a deployment script, a management tool or an acceptance run has nobody to
     ; click it: the process then sits there forever and the failure is reported as a timeout with empty
