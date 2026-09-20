@@ -3117,6 +3117,24 @@ async function stepPreparedUpgrade() {
       'the upgrade kept the service certificate',
       { before: state.fingerprint, after: status.fingerprint }
     )
+    // The service is still in maintenance: it had to be, both for the backup that prepared the upgrade and
+    // for `prepare-upgrade` itself, and nothing about replacing the runtime changes the mode. Leaving it
+    // is the operator's step after an upgrade — the mode is durable business state, not a property of the
+    // process — and without it the classroom stays shut. The exam download below is what proves the
+    // service is serving again, and the run of 2026-09-20 is what proved this step was missing: it got
+    // `409 SERVICE_MAINTENANCE` for a service that had otherwise upgraded perfectly.
+    const left = await protocolResult('maintenance-exit', [
+      ...teacherCredentialArguments(),
+      '--attempts',
+      '3',
+      '--interval-ms',
+      '1000'
+    ])
+    assertThat(
+      left.final?.status === 200 && left.final?.mode === 'normal',
+      'the service leaves maintenance after the upgrade',
+      left
+    )
     const fetched = await protocolResult('exam-fetch', [
       '--state',
       state.deviceState,

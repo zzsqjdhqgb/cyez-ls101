@@ -1868,6 +1868,12 @@ test('milestone M4 drives the real upgrade, uninstall and retention paths', asyn
   assert.match(prepared, /'the installer left the upgraded service registered and stopped'/)
   assert.match(prepared, /'the upgrade did not change the service start mode'/)
   assert.match(prepared, /await startService\('after the upgrade'\)/)
+  // The service is still in maintenance after the upgrade — the mode is durable state, and the backup and
+  // the preparation both required it. Leaving it is the operator's next step, and the exam download that
+  // follows is what proves the service is serving again (the run of 2026-09-20 got 409 SERVICE_MAINTENANCE
+  // for a service that had otherwise upgraded perfectly).
+  assert.match(prepared, /'the service leaves maintenance after the upgrade'/)
+  assert.match(prepared, /protocolResult\('maintenance-exit'/)
   assert.match(prepared, /'the upgrade kept the published exam byte for byte'/)
   assert.match(prepared, /'the submission record survived the upgrade'/)
   // The manager's own `upgrade` entry point stops the service; the installer path is the one where the
