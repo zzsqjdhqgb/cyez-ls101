@@ -103,8 +103,8 @@ superseded-by: docs/engineering/features/template-editor.md
 - **阶段 1（归档与索引）** 已完成：`features/` 迁入 `docs/engineering/features/`，`design/`、`refactor/` 迁入 `docs/archive/`，`TODO-*.md` 收拢到 `docs/engineering/todo/`，历史层与工程层补齐状态头，修正 `docs/testing.md`、`.github/CI.md` 与产品文档命令的过期描述，`yarn docs:check` 门禁上线（0 错误）。
 - **阶段 2（工程对齐）已完成**：`features/` 的事实错误逐条修正；`docs/engineering/subsystems/` 的 P0 子系统文档（exam-package、exam-library、exam-player、submission-workflow）已补齐。
 - **阶段 3（UI 规格）已完成**：模块设计文档 7 篇、逐屏 UI 规格 29 篇全部建立并接入索引；视觉回归约定写入 [`../tests/visual/README.md`](../tests/visual/README.md)；`yarn docs:check` 会输出视觉 / 行为锚定率。
-- **阶段 4b（视觉回归）大部分完成**：`tests/visual` 框架与 22 个逐屏规格已建立，`yarn test:visual` 在打包应用上全部通过（本地产物写入 `test-results/visual-preview`）；`yarn visual:check` 已实现，校验规格 ↔ 测试 ↔ 基线三方一致。29 篇规格中 22 篇视觉锚定、2 篇 `n/a`（无界面入口）、5 篇 `unverified`（考试运行外的夹具型界面：评分、结算、题型导入、函数编辑器、生成试卷）。canonical 基线待 canonical 容器生成。
-- **阶段 4a（说明书重建）与 4c（旧产物冻结迁出）待宿主机执行**：需要 canonical 渲染容器（Docker）。实施方案见 [`../DOCS-REVISION-PLAN.md`](../DOCS-REVISION-PLAN.md) 第 13.5 节。
-- **未开始**：`docs/product` 冻结迁出与 CI 门禁改造。
+- **阶段 4b（视觉回归）大部分完成**：`tests/visual` 框架与 22 个逐屏规格已建立，`yarn test:visual` 在打包应用上全部通过（本地产物写入 `test-results/visual-preview`）；`yarn visual:check` 已实现，校验规格 ↔ 测试 ↔ 基线三方一致。29 篇规格中 22 篇视觉锚定、2 篇 `n/a`（无界面入口）、5 篇 `unverified`（考试运行外的夹具型界面：评分、结算、题型导入、函数编辑器、生成试卷）。canonical 容器内用 `yarn visual:publish` 写入基线、`yarn visual:canonical:check` 校验；Docker 外只运行测试、不校验像素。基线与共享渲染镜像、版本标记沿用产品文档那一套。
+- **阶段 4a（产品说明书）已产出**：`docs/manual/` 现在由产品操作测试生成（`README.md` + 5 个章节 + manifest，纯文本、无截图、无逐操作页）。本地命令 `yarn docs:manual:local`（需先 `yarn build:test`）；canonical 容器命令仍为 `yarn docs:product:publish`。覆盖面目前与旧层相同，扩充主线之外的章节仍待补。
+- **阶段 4c（旧产物冻结迁出）未开始**：`docs/product` 仍在原位作为迁移期回归层；`yarn docs:product:check` 同时校验 `docs/product` 与 `docs/manual`。
 
 详见 [`../DOCS-REVISION-PLAN.md`](../DOCS-REVISION-PLAN.md)。

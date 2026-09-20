@@ -31,6 +31,9 @@ const PRODUCT_ROOT = path.join(REPOSITORY_ROOT, 'docs', 'product')
 const PREVIEW_ROOT = path.join(REPOSITORY_ROOT, 'test-results', 'product-docs-preview')
 const STAGING_ROOT = path.join(PRODUCT_ROOT, '.product-docs-staging')
 const MANIFEST_PATH = path.join(PRODUCT_ROOT, '.generated-manifest.json')
+const MANUAL_ROOT = path.join(REPOSITORY_ROOT, 'docs', 'manual')
+const MANUAL_STAGING_ROOT = path.join(MANUAL_ROOT, '.manual-staging')
+const MANUAL_MANIFEST_PATH = path.join(MANUAL_ROOT, '.generated-manifest.json')
 const MAX_EVIDENCE_PER_DOCUMENT = 3
 const prettierConfig = resolveConfig(REPOSITORY_ROOT)
 
@@ -106,7 +109,12 @@ export default class ProductDocsReporter implements Reporter {
     const manifest = await renderDocumentation(outputRoot, behaviors)
 
     if (canonical) {
-      await publishCanonicalDocumentation(outputRoot, manifest)
+      await renderAndPublishManual(behaviors)
+      if (process.env.PRODUCT_DOCS_MANUAL_ONLY !== '1') {
+        await publishCanonicalDocumentation(outputRoot, manifest)
+      } else {
+        await rm(outputRoot, { force: true, recursive: true })
+      }
     }
   }
 }
@@ -333,7 +341,8 @@ function renderGuideChapter(
   chapter: ProductGuideChapter,
   chapterIndex: number,
   chapters: readonly ProductGuideChapter[],
-  behaviors: readonly BehaviorResult[]
+  behaviors: readonly BehaviorResult[],
+  manual = false
 ): string {
   const chapterBehaviors = behaviors
     .flatMap((behavior) =>
@@ -367,7 +376,9 @@ function renderGuideChapter(
       ? [
           '## 完整任务',
           '',
-          ...journeys.flatMap(({ behavior }, index) => renderGuideBehavior(behavior, index + 1)),
+          ...journeys.flatMap(({ behavior }, index) =>
+            renderGuideBehavior(behavior, index + 1, manual)
+          ),
           ''
         ]
       : []
@@ -377,7 +388,7 @@ function renderGuideChapter(
           '## 相关操作',
           '',
           ...supportingBehaviors.flatMap(({ behavior }, index) =>
-            renderGuideBehavior(behavior, index + 1)
+            renderGuideBehavior(behavior, index + 1, manual)
           ),
           ''
         ]
@@ -415,7 +426,7 @@ function renderGuideChapter(
   ].join('\n')
 }
 
-function renderGuideBehavior(behavior: BehaviorResult, index: number): string[] {
+function renderGuideBehavior(behavior: BehaviorResult, index: number, manual = false): string[] {
   const definition = behavior.definition
   const detail = normalizePath(
     path.join(
@@ -449,8 +460,7 @@ function renderGuideBehavior(behavior: BehaviorResult, index: number): string[] 
     '',
     ...definition.outcomes.map((item) => `- ${item}`),
     '',
-    `[查看完整操作与界面示例](${detail})`,
-    ''
+    ...(manual ? [] : [`[查看完整操作与界面示例](${detail})`, ''])
   ]
 }
 
@@ -666,6 +676,65 @@ async function publishCanonicalDocumentation(
       await rm(backup, { force: true, recursive: true })
     }
     await rm(outputRoot, { force: true, recursive: true })
+  }
+}
+
+/**
+ * 产品说明书（manual-first 产物）：只输出章节正文，不生成逐操作页、覆盖表与截图。
+ * 正文不含测试术语与源码路径；界面细节由 docs/ui/screens/ 承担。
+ */
+async function renderAndPublishManual(behaviors: readonly BehaviorResult[]): Promise<void> {
+  await rm(MANUAL_STAGING_ROOT, { force: true, recursive: true })
+  await mkdir(MANUAL_STAGING_ROOT, { recursive: true })
+  const generatedFiles: string[] = []
+  const chapters = [...PRODUCT_GUIDE_CHAPTERS].sort(
+    (left, right) => left.order - right.order || left.slug.localeCompare(right.slug)
+  )
+  await writeGeneratedFile(
+    MANUAL_STAGING_ROOT,
+    path.join(MANUAL_STAGING_ROOT, 'README.md'),
+    renderGuideIndex(chapters),
+    generatedFiles
+  )
+  for (const [index, chapter] of chapters.entries()) {
+    await writeGeneratedFile(
+      MANUAL_STAGING_ROOT,
+      path.join(MANUAL_STAGING_ROOT, guideChapterFilename(chapter, index)),
+      renderGuideChapter(chapter, index, chapters, behaviors, true),
+      generatedFiles
+    )
+  }
+  await publishManual(generatedFiles)
+}
+
+async function publishManual(generatedFiles: readonly string[]): Promise<void> {
+  const previous = await readManualFiles()
+  const next = [...generatedFiles].sort()
+  for (const stale of previous) {
+    if (!next.includes(stale)) await rm(path.join(MANUAL_ROOT, stale), { force: true })
+  }
+  for (const file of next) {
+    const target = path.join(MANUAL_ROOT, file)
+    await mkdir(path.dirname(target), { recursive: true })
+    await copyFile(path.join(MANUAL_STAGING_ROOT, file), target)
+  }
+  await writeFile(
+    MANUAL_MANIFEST_PATH,
+    `${JSON.stringify({ schemaVersion: 1, generatedFiles: next }, null, 2)}\n`,
+    'utf8'
+  )
+  await rm(MANUAL_STAGING_ROOT, { force: true, recursive: true })
+}
+
+async function readManualFiles(): Promise<readonly string[]> {
+  try {
+    const parsed = JSON.parse(await readFile(MANUAL_MANIFEST_PATH, 'utf8')) as {
+      generatedFiles?: string[]
+    }
+    return parsed.generatedFiles ?? []
+  } catch (reason) {
+    if ((reason as NodeJS.ErrnoException).code === 'ENOENT') return []
+    throw reason
   }
 }
 
