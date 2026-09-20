@@ -1,5 +1,5 @@
-import type { ElectronApplication, Page } from '@playwright/test'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { test, type ElectronApplication, type Page } from '@playwright/test'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import pixelmatch from 'pixelmatch'
 import { PNG } from 'pngjs'
@@ -7,11 +7,14 @@ import {
   closeStartupReleaseNotes,
   launchIntegrationApp
 } from '../../integration/support/electron-app'
+import { installDeterminism } from './determinism'
 
 /** 与产品文档、视觉基线共用的固定内容区。 */
 export const VISUAL_CONTENT_SIZE = { width: 1280, height: 800 } as const
 
 const COLOR_DIFFERENCE_THRESHOLD = 0.1
+/** 截图前的统一稳定等待，避开列表/汇总/预览的加载中间态。 */
+const VISUAL_SETTLE_MS = 800
 const projectRoot = process.cwd()
 const BASELINE_ROOT = path.join(projectRoot, 'tests', 'visual', 'baselines')
 const PREVIEW_ROOT = path.join(projectRoot, 'test-results', 'visual-preview')
@@ -60,6 +63,7 @@ export async function launchVisualApp(
     ...(options.license ? { license: options.license } : {})
   })
   const page = await app.firstWindow()
+  await installDeterminism(page)
   await page.waitForLoadState('domcontentloaded')
   if (options.closeReleaseNotes !== false) {
     await closeStartupReleaseNotes(page)
@@ -75,7 +79,10 @@ export async function launchVisualApp(
  */
 export async function captureState(page: Page, uiId: string, state: string): Promise<string> {
   const mode = visualMode()
-  const buffer = await page.screenshot({ animations: 'disabled' })
+  // 等待异步数据装载完成（列表、汇总数字、预览），再等到连续两帧完全一致，
+  // 避免截到加载中间态或懒加载资源尚未稳定的画面。
+  await page.waitForTimeout(VISUAL_SETTLE_MS)
+  const buffer = await stableScreenshot(page)
 
   if (mode === 'preview') {
     const file = path.join(PREVIEW_ROOT, uiId, `${state}.png`)
@@ -106,6 +113,18 @@ export async function captureState(page: Page, uiId: string, state: string): Pro
   return baseline
 }
 
+/** 连续两帧字节完全一致才返回，用于避开懒加载与异步渲染的中间态。 */
+async function stableScreenshot(page: Page): Promise<Buffer> {
+  let previous = await page.screenshot({ animations: 'disabled' })
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    await page.waitForTimeout(250)
+    const next = await page.screenshot({ animations: 'disabled' })
+    if (next.equals(previous)) return next
+    previous = next
+  }
+  return previous
+}
+
 function visuallyEquivalentPng(left: Buffer, right: Buffer): boolean {
   if (left.equals(right)) return true
   try {
@@ -125,4 +144,17 @@ function visuallyEquivalentPng(left: Buffer, right: Buffer): boolean {
 /** 通过一级导航进入界面；导航项使用 aria-label 暴露名称。 */
 export async function navigateTo(page: Page, label: string): Promise<void> {
   await page.getByRole('link', { name: label }).click()
+}
+
+/**
+ * 为当前测试准备一个**稳定路径**的用户数据目录。
+ * 界面上会出现数据目录路径（例如 UI-ST-02），使用随机临时目录会让基线无法复现；
+ * 这里按规格文件名派生路径，并在每次运行前清空，保证起点一致。
+ */
+export async function prepareVisualUserDataDir(): Promise<string> {
+  const specName = path.basename(test.info().file, '.spec.ts')
+  const directory = path.join(projectRoot, 'test-results', 'visual-userdata', specName)
+  await rm(directory, { force: true, recursive: true })
+  await mkdir(directory, { recursive: true })
+  return directory
 }

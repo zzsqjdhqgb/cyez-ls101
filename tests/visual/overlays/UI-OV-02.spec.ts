@@ -1,12 +1,11 @@
 import { expect, test } from '@playwright/test'
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
-import os from 'node:os'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { captureState, launchVisualApp } from '../support/visual-app'
+import { captureState, launchVisualApp, prepareVisualUserDataDir } from '../support/visual-app'
 
 test('UI-OV-02 旧数据迁移 · 已归档待清理态', async () => {
   test.setTimeout(90_000)
-  const userDataDir = await mkdtemp(path.join(os.tmpdir(), 'ls101-visual-'))
+  const userDataDir = await prepareVisualUserDataDir()
   // 夹具：旧版版本标记 + 一个旧版本业务数据目录，触发启动时的旧数据整理流程。
   await writeFile(path.join(userDataDir, 'version'), '0.3.2\n', 'utf8')
   await mkdir(path.join(userDataDir, 'drafts'), { recursive: true })

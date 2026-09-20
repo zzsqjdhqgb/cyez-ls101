@@ -1,11 +1,10 @@
 import { expect, test } from '@playwright/test'
-import { mkdtemp, rm } from 'node:fs/promises'
-import os from 'node:os'
+import { rm } from 'node:fs/promises'
 import path from 'node:path'
-import { captureState, launchVisualApp } from '../support/visual-app'
+import { captureState, launchVisualApp, prepareVisualUserDataDir } from '../support/visual-app'
 
 test('UI-OV-01 许可激活 · 未激活默认态', async () => {
-  const userDataDir = await mkdtemp(path.join(os.tmpdir(), 'ls101-visual-'))
+  const userDataDir = await prepareVisualUserDataDir()
   const { app, page } = await launchVisualApp(userDataDir, {
     license: 'not-activated',
     closeReleaseNotes: false

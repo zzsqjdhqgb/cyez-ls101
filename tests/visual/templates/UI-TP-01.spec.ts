@@ -1,11 +1,15 @@
 import { expect, test } from '@playwright/test'
-import { mkdtemp, rm } from 'node:fs/promises'
-import os from 'node:os'
+import { rm } from 'node:fs/promises'
 import path from 'node:path'
-import { captureState, launchVisualApp, navigateTo } from '../support/visual-app'
+import {
+  captureState,
+  launchVisualApp,
+  navigateTo,
+  prepareVisualUserDataDir
+} from '../support/visual-app'
 
 test('UI-TP-01 模板库列表 · 默认态（内置模板）', async () => {
-  const userDataDir = await mkdtemp(path.join(os.tmpdir(), 'ls101-visual-'))
+  const userDataDir = await prepareVisualUserDataDir()
   const { app, page } = await launchVisualApp(userDataDir)
   try {
     await navigateTo(page, '试卷模板')
