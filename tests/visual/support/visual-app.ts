@@ -1,6 +1,8 @@
 import type { ElectronApplication, Page } from '@playwright/test'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import pixelmatch from 'pixelmatch'
+import { PNG } from 'pngjs'
 import {
   closeStartupReleaseNotes,
   launchIntegrationApp
@@ -9,13 +11,37 @@ import {
 /** 与产品文档、视觉基线共用的固定内容区。 */
 export const VISUAL_CONTENT_SIZE = { width: 1280, height: 800 } as const
 
+const COLOR_DIFFERENCE_THRESHOLD = 0.1
 const projectRoot = process.cwd()
+const BASELINE_ROOT = path.join(projectRoot, 'tests', 'visual', 'baselines')
+const PREVIEW_ROOT = path.join(projectRoot, 'test-results', 'visual-preview')
+
+export type VisualMode = 'preview' | 'publish' | 'check'
 
 export interface VisualLaunchOptions {
   /** 未激活启动用于许可激活覆盖层（UI-OV-01）。 */
   license?: 'activated' | 'not-activated'
   /** 覆盖层界面不显示版本说明时可关闭该步骤。 */
   closeReleaseNotes?: boolean
+}
+
+/**
+ * 运行模式：
+ * - 默认（Docker 外）：`preview`，只把截图写到 `test-results/visual-preview`，只验证测试通过；
+ * - `publish`（canonical 容器内）：写入 `tests/visual/baselines`；
+ * - `check`（canonical 容器内）：与已提交基线比较，存在差异即失败。
+ *
+ * 基线写入与回归校验只允许发生在 canonical 渲染容器内。
+ */
+export function visualMode(): VisualMode {
+  const mode = process.env['LS101_VISUAL_MODE']
+  if (mode === 'publish' || mode === 'check') {
+    if (process.env['LS101_VISUAL_CANONICAL'] !== '1') {
+      throw new Error('视觉基线写入或校验只能在 canonical 渲染容器内进行')
+    }
+    return mode
+  }
+  return 'preview'
 }
 
 /**
@@ -41,24 +67,59 @@ export async function launchVisualApp(
   return { app, page }
 }
 
-/** 只有 canonical 渲染容器可以写正式基线；其他环境一律写 preview。 */
-export function isCanonicalVisualRun(): boolean {
-  return process.env['LS101_VISUAL_CANONICAL'] === '1'
-}
-
 /**
  * 捕获一个界面状态。
- * canonical 运行写入 tests/visual/baselines/<UI-ID>/<state>.png；
- * 本地运行写入 test-results/visual-preview/<UI-ID>/<state>.png（不提交）。
+ * - preview：写入 `test-results/visual-preview/<UI-ID>/<state>.png`（不提交）；
+ * - publish：写入 `tests/visual/baselines/<UI-ID>/<state>.png`；
+ * - check：与基线逐像素比较，不一致即抛错。
  */
 export async function captureState(page: Page, uiId: string, state: string): Promise<string> {
-  const directory = isCanonicalVisualRun()
-    ? path.join(projectRoot, 'tests', 'visual', 'baselines', uiId)
-    : path.join(projectRoot, 'test-results', 'visual-preview', uiId)
-  await mkdir(directory, { recursive: true })
-  const file = path.join(directory, `${state}.png`)
-  await page.screenshot({ path: file, animations: 'disabled' })
-  return file
+  const mode = visualMode()
+  const buffer = await page.screenshot({ animations: 'disabled' })
+
+  if (mode === 'preview') {
+    const file = path.join(PREVIEW_ROOT, uiId, `${state}.png`)
+    await mkdir(path.dirname(file), { recursive: true })
+    await writeFile(file, buffer)
+    return file
+  }
+
+  const baseline = path.join(BASELINE_ROOT, uiId, `${state}.png`)
+  if (mode === 'publish') {
+    await mkdir(path.dirname(baseline), { recursive: true })
+    await writeFile(baseline, buffer)
+    return baseline
+  }
+
+  const committed = await readFile(baseline).catch((reason: NodeJS.ErrnoException) => {
+    if (reason.code === 'ENOENT') return null
+    throw reason
+  })
+  if (!committed) {
+    throw new Error(
+      `缺少视觉基线：${path.relative(projectRoot, baseline)}（先在 canonical 容器内运行 yarn visual:publish）`
+    )
+  }
+  if (!visuallyEquivalentPng(committed, buffer)) {
+    throw new Error(`视觉回归差异：${path.relative(projectRoot, baseline)}`)
+  }
+  return baseline
+}
+
+function visuallyEquivalentPng(left: Buffer, right: Buffer): boolean {
+  if (left.equals(right)) return true
+  try {
+    const leftImage = PNG.sync.read(left)
+    const rightImage = PNG.sync.read(right)
+    if (leftImage.width !== rightImage.width || leftImage.height !== rightImage.height) return false
+    return (
+      pixelmatch(leftImage.data, rightImage.data, undefined, leftImage.width, leftImage.height, {
+        threshold: COLOR_DIFFERENCE_THRESHOLD
+      }) === 0
+    )
+  } catch {
+    return false
+  }
 }
 
 /** 通过一级导航进入界面；导航项使用 aria-label 暴露名称。 */
