@@ -75,7 +75,7 @@ CI 在安装依赖前运行文档与视觉配对检查；容器内的 `check` �
 | 对象身份 / 节点 ID | `crypto.randomUUID` 替换为确定性递增序列 `00000000-0000-4000-8000-0000000000NN` |
 | 随机摘句与随机顺序 | `Math.random` 替换为确定性 xorshift32（启动参数 `--js-flags=--random-seed=1` 只约束 V8 初始种子，不足以覆盖所有隔离环境） |
 | 数据目录路径 | 使用**稳定路径**的用户数据目录（`prepareVisualUserDataDir()` 按规格文件名派生并清空），不使用随机临时目录；否则界面上显示的路径每轮都变 |
-| 应用版本号 | canonical 视觉构建使用**正式版版本号**：`yarn build:test:visual` 以 `--release` 模式打包（版本 = `package.json` 的 `0.4.1`），避免 `-local.<用户>.<日期>.<提交哈希>` 每次提交都变化。仍保留 `--dir`（测试需要 unpacked 目录）与 `--skip-model-package`（模型包与 UI 无关） |
+| 应用版本号 | canonical 视觉构建使用**固定版本后缀**：`yarn build:test:visual` = `--local ... --version-suffix local.visual`，版本恒为 `0.4.1-local.visual`。注意 `-local.` 标记是必需的：打包测试模式下 `src/main/index.ts` 用它启用明文 safeStorage，`src/main/application-services.ts` 用它接受许可证测试码与固定时钟；去掉它（例如改用正式版 `0.4.1`）会让应用卡在启动或进入激活页。固定的只是后缀，因此版本不随提交变化 |
 | 内容区 | 固定 `1280 × 800`，设备倍率 `1` |
 | 异步渲染 | 截图前先 settle，再等待**连续两帧字节完全一致**后才写入 |
 | 动画 | 禁用动画依赖（`animations: 'disabled'`） |
