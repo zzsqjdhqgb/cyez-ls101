@@ -2093,6 +2093,23 @@ export function labDiagnoseScript(config) {
     // The install directory is named after the executable, not the product, so it is discovered rather
     // than guessed: assuming the product name once produced a confidently wrong conclusion.
     `Show-Probe 'installed application' ('-Probe find-executable -Name ''ls101-lab-teacher.exe'' -Path ' + (Quoted $env:ProgramFiles))`,
+    // The installer's own record of *why* a service installation failed. `teacher.nsh` writes it because
+    // the NSIS hook discards the script's output and a silent run has no dialog to read: without it an
+    // unattended failure is an exit code with no reason, which is what the M4 run of 2026-09-20 hit.
+    `Write-Output '=== installer failure log ==='`,
+    `$failureLogs = @(`,
+    `  (Join-Path $env:ProgramFiles 'ls101-lab-teacher\\resources\\lab-server\\install-failure.log'),`,
+    `  'C:\\ls101-lab\\transfers\\install-failure.log'`,
+    `)`,
+    `$found = $false`,
+    `foreach ($candidate in $failureLogs) {`,
+    `  if (Test-Path -LiteralPath $candidate) {`,
+    `    $found = $true`,
+    `    Write-Output ('--- ' + $candidate + ' (' + (Get-Item -LiteralPath $candidate).LastWriteTime.ToString('o') + ') ---')`,
+    `    Get-Content -LiteralPath $candidate`,
+    `  }`,
+    `}`,
+    `if (-not $found) { Write-Output 'no installer failure log was written' }`,
     // The captured output is the one artefact that explains a run which died before writing its own.
     `Write-Output '=== captured task output (tail) ==='`,
     `if (Test-Path -LiteralPath '${guestPath(LAB_GUEST_TASK_OUTPUT)}') { Get-Content -LiteralPath '${guestPath(LAB_GUEST_TASK_OUTPUT)}' -Tail 40 } else { Write-Output 'MISSING' }`,

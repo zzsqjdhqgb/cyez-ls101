@@ -64,8 +64,17 @@ $stage = 'prepare-upgrade'
 & (Join-Path $source 'runtime/node.exe') (Join-Path $source 'manager.cjs') --prepare-install
 if ($LASTEXITCODE -ne 0) { throw 'Service upgrade preparation failed. Check maintenance mode, active devices and the latest backup.' }
 $stage = 'check-existing-installation'
+# `--prepare-install` asks the wrapper to stop the service and returns when that command exits, but the
+# SCM can still report Running (or Stop Pending) for a moment afterwards. A single snapshot therefore
+# fails an upgrade that is actually in order — the M4 acceptance run hit exactly that: the installation
+# had already stopped the service, written its preparation record and replaced the runtime, and then
+# aborted here, leaving a machine whose state contradicted the error it reported.
 $service = Get-Service -Name LS101Lab -ErrorAction SilentlyContinue
-if ($service -and $service.Status -ne 'Stopped') { throw 'Stop the service before installation or upgrade' }
+for ($attempt = 0; $service -and $service.Status -ne 'Stopped' -and $attempt -lt 30; $attempt++) {
+  Start-Sleep -Milliseconds 500
+  $service = Get-Service -Name LS101Lab -ErrorAction SilentlyContinue
+}
+if ($service -and $service.Status -ne 'Stopped') { throw "Stop the service before installation or upgrade (state: $($service.Status))" }
 $program = Join-Path $env:ProgramFiles 'LS101LabService'
 $data = Join-Path $env:ProgramData 'LS101Lab'
 $sameRuntime = $false

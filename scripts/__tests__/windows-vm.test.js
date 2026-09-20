@@ -1153,6 +1153,11 @@ test('the diagnostic checks each language with its own tool', async () => {
   assert.match(script, /Show-Probe 'wrapper logs'/)
   assert.match(script, /Show-Probe 'runtime process'/)
   assert.doesNotMatch(script, /Get-CimInstance Win32_Service -Filter "Name='LS101Lab'"/)
+  // The installer's own record of a failed service installation, because the NSIS hook discards the
+  // script's output and a silent run has no dialog: without it the failure is an exit code with no reason.
+  assert.match(script, /=== installer failure log ===/)
+  assert.match(script, /ls101-lab-teacher\\resources\\lab-server\\install-failure\.log/)
+  assert.match(script, /no installer failure log was written/)
   // Service name, data root and port come from the same configuration the run used, not from literals.
   assert.match(script, /\$serviceName = if \(\$lab\) \{ \$lab\.serviceName \}/)
   assert.match(script, /lab-probes\.ps1 is not present on this VM/)
@@ -1941,6 +1946,25 @@ test('a transient status failure does not abort the upgrade cases', async () => 
   assert.match(orchestrator, /result\.error !== 'STORAGE_UNAVAILABLE' \|\| attempt === attempts/)
   assert.match(orchestrator, /helper status recovered on attempt/)
   assert.match(orchestrator, /'the manager helper read the service status', tried/)
+})
+
+test('the installer waits for the service to stop instead of racing the SCM', async () => {
+  const installer = await readFile(
+    path.resolve(__dirname, '../lab/install-server-windows.ps1'),
+    'utf8'
+  )
+  // `--prepare-install` returns when the wrapper's stop command exits, and the SCM can still report
+  // Running for a moment after that. The single snapshot this replaced aborted an upgrade that had
+  // already stopped the service, written its preparation record and replaced the runtime — the M4 run of
+  // 2026-09-20 ended with exit 2 and a machine state that contradicted the message.
+  assert.match(installer, /\$stage = 'check-existing-installation'/)
+  assert.match(
+    installer,
+    /for \(\$attempt = 0; \$service -and \$service\.Status -ne 'Stopped' -and \$attempt -lt 30; \$attempt\+\+\)/
+  )
+  assert.match(installer, /Start-Sleep -Milliseconds 500/)
+  // The failure still happens, with the state it saw, when the service really is running.
+  assert.match(installer, /Stop the service before installation or upgrade \(state: \$\(\$service\.Status\)\)/)
 })
 
 test('the teacher installer cannot hang on a silent failure', async () => {
