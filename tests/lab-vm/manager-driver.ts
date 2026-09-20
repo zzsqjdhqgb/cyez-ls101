@@ -214,9 +214,7 @@ function prepareInstall(runtime: string, timeoutMs: number): void {
     `${JSON.stringify({
       exitCode: child.status,
       signal: child.signal ?? null,
-      timedOut: Boolean(
-        child.error && (child.error as { code?: string }).code === 'ETIMEDOUT'
-      ),
+      timedOut: Boolean(child.error && (child.error as { code?: string }).code === 'ETIMEDOUT'),
       stdout: (child.stdout ?? '').trim(),
       stderr: (child.stderr ?? '').trim(),
       error: child.error ? String(child.error.message ?? child.error) : null
@@ -360,7 +358,4 @@ else if (command === 'prepare-install') {
   if (!runtime) fail('prepare-install requires --runtime <installed or unpacked runtime directory>')
   prepareInstall(runtime!, Number(option(rest, '--timeout-ms') ?? 180000))
 } else if (command === 'manage') await manage(rest)
-else
-  fail(
-    'Usage: manager-driver.mjs pipe-name|verify-tls|prepare-install|manage [options]'
-  )
+else fail('Usage: manager-driver.mjs pipe-name|verify-tls|prepare-install|manage [options]')

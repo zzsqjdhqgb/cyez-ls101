@@ -21,6 +21,10 @@ export default defineConfig(
       '**/coverage/**',
       '**/playwright-report/**',
       '**/test-results/**',
+      // Git worktrees live inside the checkout but belong to another branch's working copy. Linting them
+      // reports that branch's in-progress state as this tree's problem, which is what made `yarn lint`
+      // exit non-zero with thousands of errors no file in this tree contains.
+      '.worktrees/',
       '.gop-research/{model,site,hf,venv,venv2,pip-cache,tmp}/**',
       'resources/tts',
       '**/__tests__/**',
