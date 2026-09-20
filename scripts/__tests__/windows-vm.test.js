@@ -1829,9 +1829,12 @@ test('milestone M4 drives the real upgrade, uninstall and retention paths', asyn
   assert.match(refused, /await stopService\('refused version change'\)/)
   assert.match(refused, /'the refused install left the service registered and stopped'/)
   assert.match(refused, /await startService\('after the refused version change'\)/)
+  // Its cleanup must not undo the precondition the upgrade case depends on: the `finally` may only drop
+  // the preparation record, never restore the installation record.
+  const cleanup = refused.slice(refused.indexOf('The preparation record is removed'))
+  assert.doesNotMatch(cleanup, /writeInstallationRecord/)
   // The machine is put back whichever way the step ended, so the next case cannot measure residue.
   assert.match(refused, /finally \{[\s\S]*rmSync\(upgradeReadyFile, \{ force: true \}\)/)
-  assert.match(refused, /writeInstallationRecord\(\{ release: previous\.release \}\)/)
 
   // U2's prepared half has to establish the durable precondition rather than assume it: a real backup,
   // created through the service, in maintenance mode. The upgrade itself runs the installer directly,
@@ -1841,6 +1844,13 @@ test('milestone M4 drives the real upgrade, uninstall and retention paths', asyn
     orchestrator.indexOf('async function stepPreparedUpgrade'),
     orchestrator.indexOf('async function stepClientUninstall')
   )
+  // The version change is the precondition that makes this an upgrade rather than a reinstall, and it has
+  // to be established here: the refusal case restores nothing, but its own `finally` used to put the
+  // record back, which left this case measuring a machine already on the packaged runtime — `sameRuntime`
+  // true, no version change, and an assertion that could never see a new release.
+  assert.match(prepared, /const alternateRelease = `0\.4\.0\.\$\{stagedDigest\.slice\(0, 16\)\}`/)
+  assert.match(prepared, /writeInstallationRecord\(\{ release: alternateRelease \}\)/)
+  assert.match(prepared, /targets\.sameRuntime === false/)
   assert.match(prepared, /protocolResult\('backup'/)
   assert.match(prepared, /backup\.backupStatus === 'ready'/)
   assert.match(prepared, /backup\.readable === true/)

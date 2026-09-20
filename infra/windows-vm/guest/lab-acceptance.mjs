@@ -2932,11 +2932,11 @@ async function stepUpgradeWithoutPreparation() {
         serverId: status.info?.serverId ?? null
       }
     } finally {
-      // Whichever way the step ended, the machine is put back: the preparation record it wrote, the
-      // record it changed and the replacement marker all have to be gone before the next case measures
-      // anything.
+      // The preparation record is removed — it belongs to the attempt that just failed. The *record*,
+      // however, stays pointed at the alternate release: it is the precondition the upgrade case needs,
+      // and restoring it here (as this step first did) made that case measure a machine that was already
+      // on the packaged runtime, so `sameRuntime` was true and there was no version change to upgrade.
       rmSync(upgradeReadyFile, { force: true })
-      writeInstallationRecord({ release: previous.release })
     }
   })
 }
@@ -2944,14 +2944,57 @@ async function stepUpgradeWithoutPreparation() {
 // --- U2 part two: the real upgrade, through the product's own preparation and stop/start ----------
 async function stepPreparedUpgrade() {
   return run.step('upgrade-prepared', async () => {
-    // The refusal outside maintenance is asserted in the container lane
-    // (tests/lab-vm/protocol/backup.test.ts) where the mode can be set without a restart; what this
-    // step has to establish is the opposite state: maintenance, plus the durable precondition a real
-    // upgrade needs. Both are created here rather than assumed, because without them the only thing
-    // this case could prove is that the refusal works.
-    //
-    // A real password, too: the service encrypts the archive with it and `prepare-upgrade` verifies the
-    // published bytes against the recorded digest before it will write the preparation record.
+    // A version change is what makes this an upgrade rather than a reinstall, and it is set up here
+    // because the previous step's refusal had to leave the record exactly as it found it. The alternate
+    // release is a copy of the installed one with a different manifest: real files, real digests, and a
+    // release name the installer derives the same way it does for any install.
+    const beforeSetup = readInstallationRecord()
+    const sourceManifest = join(state.runtime, 'runtime-manifest.json')
+    const staging = join(config.programDir, 'releases', 'ls101-upgrade-staging')
+    rmSync(staging, { recursive: true, force: true })
+    const staged = await native('cmd.exe', [
+      '/c',
+      'robocopy',
+      state.runtime,
+      staging,
+      '/E',
+      '/NFL',
+      '/NDL',
+      '/NJH',
+      '/NJS',
+      '/NP'
+    ])
+    assertThat(staged.code === 0 || staged.code === 1, 'the alternate release was staged', staged)
+    const stagedManifest = JSON.parse(readFileSync(join(staging, 'runtime-manifest.json'), 'utf8'))
+    writeFileSync(
+      join(staging, 'runtime-manifest.json'),
+      `${JSON.stringify({ ...stagedManifest, releaseVersion: '0.4.0' }, null, 2)}\n`
+    )
+    const stagedDigest = createHash('sha256')
+      .update(readFileSync(join(staging, 'runtime-manifest.json')))
+      .digest('hex')
+    const alternateRelease = `0.4.0.${stagedDigest.slice(0, 16)}`
+    const alternateDirectory = join(config.programDir, 'releases', alternateRelease)
+    rmSync(alternateDirectory, { recursive: true, force: true })
+    renameSync(staging, alternateDirectory)
+    writeInstallationRecord({ release: alternateRelease })
+    const before = readInstallationRecord()
+    assertThat(
+      before.release === alternateRelease,
+      'the machine is on the alternate release before the upgrade',
+      { before: before.release, alternate: alternateRelease, was: beforeSetup.release }
+    )
+    const targets = await reinstallTargets('prepared upgrade')
+    assertThat(
+      targets.installedRelease === alternateRelease && targets.sameRuntime === false,
+      'the installer will see a version change to prepare for',
+      targets
+    )
+
+    // The durable precondition: maintenance mode and a ready backup under 24 hours old, which is what
+    // `--prepare-install` demands before it will write the preparation record. It is created through the
+    // real teacher interface, with a real password — `prepare-upgrade` verifies the published bytes
+    // against the recorded digest before it writes anything.
     writeFileSync(backupPasswordFile, `Aa1!${randomBytes(24).toString('base64url')}`)
     const entered = await protocolResult('mode', [
       ...teacherCredentialArguments(),
@@ -2997,7 +3040,6 @@ async function stepPreparedUpgrade() {
       'the service runs so the installer can ask it to prepare the upgrade',
       active
     )
-    const before = readInstallationRecord()
     const { result, seconds } = await runInstaller(config.installer, ['/S'])
     assertThat(result.code === 0 && !result.timedOut, 'the product upgrade completed', {
       seconds,
@@ -3007,7 +3049,7 @@ async function stepPreparedUpgrade() {
     // The service the installer replaced came back up as the release this run built.
     const record = readInstallationRecord()
     assertThat(
-      record.release !== before.release,
+      record.release !== before.release && record.release.startsWith(`${config.releaseVersion}-`),
       'the installation record now names the upgraded release',
       { before: before.release, after: record.release }
     )
