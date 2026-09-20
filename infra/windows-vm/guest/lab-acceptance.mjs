@@ -3200,7 +3200,15 @@ async function stepClientUninstall() {
     // `teacher.nsh` declares no customUnInstall, so the NSIS uninstaller removes the application and
     // nothing else. The service registration, the program directory and the business data are the
     // three things that must survive it.
-    const { result, seconds } = await runInstaller(uninstaller, ['/S'])
+    //
+    // `_?=<install directory>` is not optional for an unattended uninstall: without it the uninstaller
+    // copies itself to a temporary directory, starts that copy and returns immediately, so the command
+    // "succeeds" in half a second having removed nothing. The registry's `QuietUninstallString` is
+    // written that way because it is the interactive form; anything scripted has to add the argument.
+    const { result, seconds } = await runInstaller(uninstaller, [
+      '/S',
+      `_?=${dirname(uninstaller)}`
+    ])
     assertThat(
       result.code === 0 && !result.timedOut,
       'the silent client uninstall returned 0 without hanging',

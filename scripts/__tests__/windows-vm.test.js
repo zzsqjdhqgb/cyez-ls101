@@ -1891,7 +1891,14 @@ test('milestone M4 drives the real upgrade, uninstall and retention paths', asyn
     orchestrator.indexOf('async function stepServiceUninstallAndReinstall')
   )
   assert.match(clientUninstall, /uninstallerPath\(\)/)
-  assert.match(clientUninstall, /runInstaller\(uninstaller, \['\/S'\]\)/)
+  // `_?=<install directory>` is required for an unattended uninstall: without it the uninstaller copies
+  // itself to a temporary directory, starts that copy and returns at once, so the command "succeeds"
+  // having removed nothing — which is what the run of 2026-09-20 reported as a passing uninstall.
+  assert.match(clientUninstall, /runInstaller\(uninstaller, \[\s*'\/S',\s*`_\?=\$\{dirname\(uninstaller\)\}`/)
+  assert.match(
+    clientUninstall,
+    /'\/S',\n\s*`_\?=\$\{dirname\(uninstaller\)\}`/
+  )
   assert.match(clientUninstall, /'the client uninstall left the service registered and running'/)
   assert.match(clientUninstall, /'the business data is intact after the client uninstall'/)
 
