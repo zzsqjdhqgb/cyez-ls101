@@ -43,7 +43,7 @@ yarn test:coverage              # Vitest 覆盖率
 
 `yarn test:playwright` 先执行 `yarn build:test`，即 `node build.js --local --dir --current-platform --skip-model-package`，而不是只传 `--dir --current-platform`。
 
-`yarn test:product-docs` 先执行 `yarn build:test`，再执行 `yarn test:product-docs:run`，后者为 `node scripts/run-product-docs.mjs preview`。该命令只运行 preview，产物写入 `test-results/product-docs-preview/`，不会修改 `docs/product`。正式生成 `docs/product` 只能通过专用 Docker 流程：`yarn docs:product:publish`；`yarn docs:product:check` 重新生成并检查仓库中的生成结果是否最新。
+`yarn test:product-docs` 先执行 `yarn build:test`，再执行 `yarn test:product-docs:run`，后者为 `node scripts/run-product-docs.mjs preview`。该命令只运行 preview，产物写入 `test-results/product-docs-preview/`，不会修改 `docs/manual`。正式生成产品说明书只能通过专用 Docker 流程：`yarn docs:product:publish`；`yarn docs:product:check` 重新生成并检查仓库中的生成结果是否最新。产品说明书也可以不依赖容器直接生成：`yarn docs:manual:local`（需先 `yarn build:test`）。
 
 Linux 无桌面环境需要在 Electron / Playwright 命令前加 `xvfb-run -a`：
 

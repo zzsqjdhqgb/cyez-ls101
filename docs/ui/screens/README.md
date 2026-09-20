@@ -100,7 +100,7 @@ owner: ui
 
 ## 命名与边界说明
 
-- 规格 ID 使用 `UI-` 前缀，与旧 `docs/product` 的操作编号（如 `IF-03`）区分；旧层已弃用。
+- 规格 ID 使用 `UI-` 前缀，与旧产品文档的操作编号（如 `IF-03`）区分；旧层已冻结在 `docs/archive/product-docs-0.4.1/`。
 - `/interfaces/drafts` 是重定向入口（`InterfaceDraftListRedirect`），不单独建立规格。
 - `/submissions/:submissionId/grade` 与 `/submissions/grading` 渲染同一组件，共用一份规格。
 - 沉浸式（`immersive`）与专注式（`focus`）界面不显示一级导航；规格需说明退出路径。

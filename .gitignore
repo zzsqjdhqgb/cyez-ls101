@@ -9,8 +9,6 @@ coverage
 .cache/
 playwright-report
 test-results
-docs/product/.product-docs-staging
-docs/product/**/*.product-docs-backup
 docs/manual/.manual-staging
 /assets/*
 /externals/

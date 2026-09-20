@@ -17,7 +17,7 @@ owner: archive
 | [`design/`](./design/) | 0.4 设计期"定稿"设计稿，多数已被代码与 `engineering/features/` 取代 | `design/` | superseded / draft |
 | [`refactor/`](./refactor/) | 重构前草案与部分仍然准确的内部契约 | `refactor/` | draft / archived |
 | [`../old/`](../../old/README.md) | 0.3.x 完整旧世界（文档、源码、模板、真题） | 原地保留 | archived |
-| `product-docs-0.4.1/` | 上一代产品文档产物（待迁入） | `docs/product/` | deprecated |
+| [`product-docs-0.4.1/`](./product-docs-0.4.1/) | 上一代产品文档产物（已冻结迁出，仅作迁移期回归参照） | 原 `docs/product/` | deprecated |
 
 ## 迁移前必须保留的唯一价值内容
 

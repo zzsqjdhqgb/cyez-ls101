@@ -49,7 +49,7 @@ owner: ui
 - **背景**：旧产物需要冻结迁出并摘除 CI 新鲜度门禁，但 `scripts/product-docs/**`、
   `playwright.product-docs.config.ts`、`package.json` 与 CI 都指向 `docs/product`。
 - **影响**：改动涉及生成脚本与 CI，需要单独验证（Docker canonical 流程）。
-- **当前决定**：未执行，保持在 `docs/product/` 并标注弃用。
+- **当前决定**：**已完成**。`docs/product` 迁入 `docs/archive/product-docs-0.4.1/`（只读）；canonical publish 只写 `docs/manual`；`yarn docs:product:check` 只校验 `docs/manual`；reporter 的归属设计校验改指 `docs/ui/modules/<slug>.md`。
 
 ## 5. 空壳包 `editor-kit` / `section-engine`
 

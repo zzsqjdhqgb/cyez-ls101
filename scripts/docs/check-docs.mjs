@@ -4,7 +4,7 @@
  * check-docs.mjs — 文档门禁
  *
  * 校验：
- *   1. 手写文档是否带状态元数据块，字段与取值是否合法（docs/product/** 作为弃用层豁免）
+ *   1. 手写文档是否带状态元数据块，字段与取值是否合法（已归档的弃用层豁免）
  *   2. 相对链接是否可达（old/ 与 docs/archive/ 为冻结层，断链降级为警告）
  *   3. 关键索引文件是否存在
  *   4. implemented 文档中是否出现明确的未来时态（警告，启发式）
@@ -32,7 +32,7 @@ const REQUIRED_INDEX = [
 ]
 
 const MANAGED_ORPHAN_DIRS = ['docs/ui', 'docs/engineering']
-const DEPRECATED_PREFIX = 'docs/product/'
+const DEPRECATED_PREFIX = 'docs/archive/product-docs-0.4.1/'
 
 const errors = []
 const warnings = []

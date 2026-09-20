@@ -1,4 +1,4 @@
-import { copyFile, cp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { format, resolveConfig } from 'prettier'
 import { PNG } from 'pngjs'
@@ -24,13 +24,9 @@ import {
   productGuideChapter,
   type ProductGuideChapter
 } from './product-guide'
-import { preserveEquivalentEvidenceImages } from './evidence-image'
 
 const REPOSITORY_ROOT = process.cwd()
-const PRODUCT_ROOT = path.join(REPOSITORY_ROOT, 'docs', 'product')
 const PREVIEW_ROOT = path.join(REPOSITORY_ROOT, 'test-results', 'product-docs-preview')
-const STAGING_ROOT = path.join(PRODUCT_ROOT, '.product-docs-staging')
-const MANIFEST_PATH = path.join(PRODUCT_ROOT, '.generated-manifest.json')
 const MANUAL_ROOT = path.join(REPOSITORY_ROOT, 'docs', 'manual')
 const MANUAL_STAGING_ROOT = path.join(MANUAL_ROOT, '.manual-staging')
 const MANUAL_MANIFEST_PATH = path.join(MANUAL_ROOT, '.generated-manifest.json')
@@ -102,20 +98,15 @@ export default class ProductDocsReporter implements Reporter {
     if (!canonical && process.env.PRODUCT_DOCS_CANONICAL_RUNNER === '1') {
       throw new Error('canonical runner 缺少 PRODUCT_DOCS_CANONICAL=1')
     }
-    const outputRoot = canonical ? STAGING_ROOT : PREVIEW_ROOT
-    await rm(outputRoot, { force: true, recursive: true })
-    await mkdir(outputRoot, { recursive: true })
-
-    const manifest = await renderDocumentation(outputRoot, behaviors)
-
     if (canonical) {
+      // 说明书是唯一生成产物；旧 docs/product 已冻结迁出，不再重新生成。
       await renderAndPublishManual(behaviors)
-      if (process.env.PRODUCT_DOCS_MANUAL_ONLY !== '1') {
-        await publishCanonicalDocumentation(outputRoot, manifest)
-      } else {
-        await rm(outputRoot, { force: true, recursive: true })
-      }
+      return
     }
+
+    await rm(PREVIEW_ROOT, { force: true, recursive: true })
+    await mkdir(PREVIEW_ROOT, { recursive: true })
+    await renderDocumentation(PREVIEW_ROOT, behaviors)
   }
 }
 
@@ -210,7 +201,7 @@ async function renderDocumentation(
 
   for (const group of ownerGroups) {
     const ownerRoot = ownerRelativeRoot(group.owner)
-    const designPath = path.join(PRODUCT_ROOT, ownerRoot, 'README.md')
+    const designPath = path.join(REPOSITORY_ROOT, 'docs', 'ui', 'modules', `${group.owner.slug}.md`)
     if (!(await exists(designPath))) {
       throw new Error(
         `产品文档归属缺少设计文档：${normalizePath(path.relative(REPOSITORY_ROOT, designPath))}`
@@ -607,82 +598,6 @@ async function writeGeneratedFile(
   generatedFiles.push(normalizePath(path.relative(outputRoot, target)))
 }
 
-async function publishCanonicalDocumentation(
-  outputRoot: string,
-  manifest: ProductManifest
-): Promise<void> {
-  await preserveEquivalentEvidenceImages(PRODUCT_ROOT, outputRoot, manifest.generatedFiles)
-  const previous = await readManifest()
-  const generatedDirectories = new Set([
-    ...[...(previous?.owners ?? []), ...manifest.owners].map((owner) =>
-      path.join(
-        PRODUCT_ROOT,
-        ownerKindDirectory(owner.kind),
-        owner.slug,
-        ownerGeneratedDirectory(owner)
-      )
-    ),
-    path.join(PRODUCT_ROOT, 'guide')
-  ])
-
-  const published: Array<{ target: string; backup: string | null }> = []
-  const backupTargets = new Set<string>()
-
-  try {
-    for (const target of generatedDirectories) {
-      const relativeTarget = path.relative(PRODUCT_ROOT, target)
-      const staged = path.join(outputRoot, relativeTarget)
-      const backup = `${target}.product-docs-backup`
-      backupTargets.add(backup)
-      const targetExists = await exists(target)
-      const stagedExists = await exists(staged)
-      await rm(backup, { force: true, recursive: true })
-      if (targetExists) {
-        await cp(target, backup, { recursive: true })
-      }
-      published.push({ target, backup: targetExists ? backup : null })
-      await rm(target, { force: true, recursive: true })
-      if (stagedExists) {
-        await mkdir(path.dirname(target), { recursive: true })
-        await cp(staged, target, { recursive: true })
-      }
-    }
-
-    for (const filename of ['coverage.md', '.generated-manifest.json']) {
-      const target = path.join(PRODUCT_ROOT, filename)
-      const staged = path.join(outputRoot, filename)
-      const backup = `${target}.product-docs-backup`
-      backupTargets.add(backup)
-      const targetExists = await exists(target)
-      await rm(backup, { force: true, recursive: true })
-      if (targetExists) {
-        await copyFile(target, backup)
-      }
-      published.push({ target, backup: targetExists ? backup : null })
-      await rm(target, { force: true })
-      await copyFile(staged, target)
-    }
-  } catch (reason) {
-    for (const item of [...published].reverse()) {
-      await rm(item.target, { force: true, recursive: true })
-      if (item.backup) {
-        await mkdir(path.dirname(item.target), { recursive: true })
-        await cp(item.backup, item.target, { recursive: true })
-      }
-    }
-    throw reason
-  } finally {
-    for (const backup of backupTargets) {
-      await rm(backup, { force: true, recursive: true })
-    }
-    await rm(outputRoot, { force: true, recursive: true })
-  }
-}
-
-/**
- * 产品说明书（manual-first 产物）：只输出章节正文，不生成逐操作页、覆盖表与截图。
- * 正文不含测试术语与源码路径；界面细节由 docs/ui/screens/ 承担。
- */
 async function renderAndPublishManual(behaviors: readonly BehaviorResult[]): Promise<void> {
   await rm(MANUAL_STAGING_ROOT, { force: true, recursive: true })
   await mkdir(MANUAL_STAGING_ROOT, { recursive: true })
@@ -734,15 +649,6 @@ async function readManualFiles(): Promise<readonly string[]> {
     return parsed.generatedFiles ?? []
   } catch (reason) {
     if ((reason as NodeJS.ErrnoException).code === 'ENOENT') return []
-    throw reason
-  }
-}
-
-async function readManifest(): Promise<ProductManifest | null> {
-  try {
-    return JSON.parse(await readFile(MANIFEST_PATH, 'utf8')) as ProductManifest
-  } catch (reason) {
-    if ((reason as NodeJS.ErrnoException).code === 'ENOENT') return null
     throw reason
   }
 }

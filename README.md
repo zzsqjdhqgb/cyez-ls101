@@ -156,7 +156,7 @@ AI 模型、TTS runtime 和发音评测扩展使用带 manifest 和校验信息�
 - 测试：[docs/testing.md](docs/testing.md)
 - 修订方案：[DOCS-REVISION-PLAN.md](DOCS-REVISION-PLAN.md)
 
-> `docs/product/` 是上一代产品文档产物，已弃用；迁移期仅用于 UI 回归，不再作为产品说明书。
+> 产品说明书由 `docs/manual/` 生成；上一代产物已冻结在 `docs/archive/product-docs-0.4.1/`。
 
 ## 许可证
 

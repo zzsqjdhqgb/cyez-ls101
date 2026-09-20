@@ -203,14 +203,14 @@ jobs:
           LS101_PRODUCT_DOCS_PREBUILT_IMAGE: '1'
         run: node scripts/product-docs/docker.mjs check
 
-      - name: Upload generated documentation on failure
+      - name: Upload generated manual on failure
         if: failure()
         uses: actions/upload-artifact@v6
         with:
-          name: canonical-product-docs-${{ github.run_attempt }}
+          name: canonical-manual-${{ github.run_attempt }}
           if-no-files-found: ignore
           retention-days: 14
-          path: docs/product/
+          path: docs/manual/
 
   canonical_visual:
     name: Canonical visual regression baselines

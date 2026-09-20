@@ -11,7 +11,7 @@ yarn test:product-docs
 ```
 
 该命令只运行预览模式：生成的 Markdown、manifest、截图、trace 和失败证据都保存在
-`test-results/product-docs-preview`，不会修改 `docs/product`。
+`test-results/product-docs-preview`，不会修改 `docs/manual` 或档案层。
 
 ## 生成产品说明书 `docs/manual`
 
@@ -25,14 +25,14 @@ yarn docs:manual:local
 该命令要求整套产品操作测试全部通过；未全部通过时不会覆盖 `docs/manual`。
 逐屏视觉基线仍只允许由 canonical 容器生成，见 [`../../tests/visual/README.md`](../../tests/visual/README.md)。
 
-正式生成（含旧 `docs/product` 层）仍通过专用 Docker 渲染镜像：
+canonical 生成仍通过专用 Docker 渲染镜像（写入 `docs/manual`）：
 
 ```bash
 yarn docs:product:image
 yarn docs:product:publish
 ```
 
-检查从当前提交重新生成的 canonical 文档是否干净（同时覆盖 `docs/product` 与 `docs/manual`）：
+检查从当前提交重新生成的产品说明书是否干净：
 
 ```bash
 yarn docs:product:check

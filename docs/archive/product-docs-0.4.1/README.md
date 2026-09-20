@@ -6,11 +6,10 @@ owner: product-docs
 superseded-by: docs/manual/README.md
 -->
 
-> **已弃用。** 本目录是上一代由产品操作测试生成的产物，不适合作为产品说明书。
-> 它将整体冻结迁出到 `docs/archive/product-docs-0.4.1/`，并在替代品
-> （[`../manual/`](../manual/README.md) 产品说明书 + [`../ui/`](../ui/README.md) 逐屏 UI 规格 +
-> `tests/visual/` 视觉回归）到位后删除。
-> 迁移期它仍用于 UI 回归，但不再作为产品行为的权威依据。文档入口见 [`../README.md`](../README.md)。
+> **已冻结弃用。** 本目录是上一代由产品操作测试生成的产物，不适合作为产品说明书，已整体迁入档案层且不再重新生成。
+> 替代品是 [`../../manual/`](../../manual/README.md) 产品说明书、[`../../ui/`](../../ui/README.md) 逐屏 UI 规格与
+> `tests/visual/` 视觉回归。仅作迁移期的回归参照，不再作为产品行为的权威依据。
+> 文档入口见 [`../../README.md`](../../README.md)。
 
 # LS101 产品定义
 
