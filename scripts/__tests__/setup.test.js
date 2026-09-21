@@ -4,6 +4,7 @@ const { parseOptions, setupTasks } = require('../setup.js')
 
 test('product documentation setup keeps runtime assets and skips full models', () => {
   assert.deepEqual(setupTasks('product-docs'), [
+    { script: 'lab/prepare-archive-engine.mjs', arguments: [], environment: {} },
     {
       script: 'airouter/update-model-catalog.mjs',
       arguments: ['--check'],
@@ -27,6 +28,7 @@ test('default setup retains all installation tasks', () => {
   assert.deepEqual(
     setupTasks('').map((task) => task.script),
     [
+      'lab/prepare-archive-engine.mjs',
       'airouter/update-model-catalog.mjs',
       'lab/download-service-assets.mjs',
       'qwen-tts/download-release-assets.mjs',

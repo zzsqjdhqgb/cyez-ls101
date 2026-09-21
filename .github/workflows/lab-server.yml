@@ -40,6 +40,8 @@ jobs:
       - run: corepack enable
       - run: corepack prepare yarn@4.15.0 --activate
       - run: yarn install --immutable
+      - name: Verify native archive engine before backup tests
+        run: node scripts/lab/prepare-archive-engine.mjs --check
       - run: yarn lab:test:typecheck
       - run: yarn lab:test:service
       - run: yarn exec vitest run --config tests/lab-vm/vitest.config.ts
