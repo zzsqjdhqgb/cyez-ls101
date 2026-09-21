@@ -166,13 +166,19 @@ describe('bundled Interface repository', () => {
     const entries = await repository.loadAll()
     const entry = entries.find(({ builtinKey }) => builtinKey === 'shanghai-gaokao-listening')
     expect(entry?.currentInterface).toMatchObject({
-      id: 'sha256:a3701a27f332aa501381e5740e09ef24c87e542583f418623dc7f6d455dd0868',
+      id: 'sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214',
       name: '上海高考英语听力'
     })
     if (!entry) throw new Error('expected Shanghai Gaokao listening builtin')
     expect(entry.currentInterface.prompts[0].content).toContain('10段短对话')
     expect(entry.currentInterface.prompts[0].content).toContain('只有一个无争议的最佳答案')
     expect(entry.currentInterface.prompts[0].content).toContain('“[Man]:”或“[Woman]:”')
+    expect(entry.currentInterface.prompts.map(({ name }) => name)).toEqual([
+      '基础出题要求',
+      'B2',
+      'C1',
+      'C2'
+    ])
     expect(entry.currentInterface.fields.order).toEqual([
       'shortDialogues',
       'passages',

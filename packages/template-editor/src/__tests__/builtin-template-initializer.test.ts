@@ -164,8 +164,8 @@ describe('内置 Template 启动初始化', () => {
 
     expect(await repository.getActiveBuiltinTemplate(LISTENING_TEMPLATE.templateId)).toMatchObject({
       templateId: LISTENING_TEMPLATE.templateId,
-      version: 4,
-      releaseHash: 'sha256:d7faffb769bde6ce2511fc4ebe7c0d4982086d3643ed9922d3b7110859f5c30e',
+      version: 5,
+      releaseHash: 'sha256:d67f27b701b49324401a3b776c6aad301da0f778d4fd58b2c158b98aab39a57e',
       document: {
         content: {
           name: LISTENING_TEMPLATE.name,
@@ -174,7 +174,7 @@ describe('内置 Template 启动初始化', () => {
             {
               alias: 'data',
               interfaceId:
-                'sha256:a3701a27f332aa501381e5740e09ef24c87e542583f418623dc7f6d455dd0868',
+                'sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214',
               acceptedVars: expect.arrayContaining([
                 'dialogue_text_1',
                 'passage_text_1',
@@ -216,7 +216,7 @@ describe('内置 Template 启动初始化', () => {
       const block = await repository.getActiveBuiltinTemplate(expected.templateId)
       expect(block).toMatchObject({
         templateId: expected.templateId,
-        version: 3,
+        version: 4,
         document: {
           content: {
             name: expected.name,
@@ -225,7 +225,7 @@ describe('内置 Template 启动初始化', () => {
               {
                 alias: 'data',
                 interfaceId:
-                  'sha256:a3701a27f332aa501381e5740e09ef24c87e542583f418623dc7f6d455dd0868',
+                  'sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214',
                 acceptedVars: expect.any(Array)
               }
             ],
