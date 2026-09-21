@@ -155,8 +155,9 @@ function platformFrom(args: string[]): 'win32' | 'linux' {
   return value
 }
 
-// A device secret is generated only when the caller did not supply one, and it is written 0600
-// because it is a credential rather than evidence. Reusing an existing file is what turns a second
+// A device secret is generated only when the caller did not supply one, and it is written 0600 on
+// POSIX (Windows uses the caller's directory ACL) because it is a credential rather than evidence.
+// Reusing an existing file is what turns a second
 // registration into a replay of the same device rather than a new one.
 async function deviceSecretFor(args: string[]): Promise<DeviceSecret> {
   const file = option(args, '--device-secret-file')

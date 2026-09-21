@@ -83,6 +83,8 @@ export async function readJsonFile(file: string): Promise<Record<string, unknown
 
 // Device identities have to survive between processes: the phase script starts one process per
 // registration and one per heartbeat, which is the point of N3 and N11.
+// mode restricts newly created files on POSIX. On Windows the caller's directory ACL governs access;
+// mode 0600 does not establish a private NTFS ACL. These driver files are credentials, not reports.
 export async function writeState(file: string, value: Record<string, unknown>): Promise<void> {
   await writeFile(file, `${JSON.stringify(value)}\n`, { encoding: 'utf8', mode: 0o600 })
 }
