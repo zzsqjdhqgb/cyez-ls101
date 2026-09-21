@@ -12,7 +12,16 @@ const STATUS_RETRY_DELAY_MS = 250
 
 function isTransientStatusError(error: unknown): boolean {
   const code = (error as NodeJS.ErrnoException | null)?.code
-  return ['ENOENT', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT'].includes(String(code))
+  return ['ENOENT', 'ECONNREFUSED', 'ECONNRESET', 'EPIPE'].includes(String(code))
+}
+
+function statusFailureCode(error: unknown): string {
+  const code = (error as NodeJS.ErrnoException | null)?.code
+  if (code === 'EACCES' || code === 'EPERM') return 'LOCAL_STATUS_ACCESS_DENIED'
+  if (code === 'ETIMEDOUT') return 'LOCAL_STATUS_TIMEOUT'
+  if (isTransientStatusError(error)) return 'LOCAL_STATUS_NOT_READY'
+  if (code === 'LOCAL_STATUS_INVALID_RESPONSE') return code
+  return 'LOCAL_STATUS_UNAVAILABLE'
 }
 
 async function readStatusWithStartupRetry(root: string): Promise<RuntimeStatus> {
@@ -154,8 +163,23 @@ export async function inspectLocalService(
   }
   if (registration.stopped) return { ...base, state: 'stopped' as const }
   try {
-    return { ...base, ...(await readStatusWithStartupRetry(paths.root)) }
-  } catch {
-    return { ...base, state: 'unavailable' as const, error: 'LOCAL_STATUS_UNAVAILABLE' }
+    const status = await readStatusWithStartupRetry(paths.root)
+    return {
+      ...base,
+      ...status,
+      error: status.state === 'unavailable' ? 'LOCAL_SERVICE_NOT_LISTENING' : null
+    }
+  } catch (error) {
+    // Startup may have failed while we waited for the status channel. Only a fresh
+    // OS observation can justify enabling start or offline management actions.
+    const current = await serviceRegistration().catch(() => null)
+    if (current && !current.installed) return empty
+    if (current?.stopped) return { ...base, autostart: current.autostart, state: 'stopped' }
+    return {
+      ...base,
+      ...(current ? { autostart: current.autostart } : {}),
+      state: 'unavailable' as const,
+      error: statusFailureCode(error)
+    }
   }
 }

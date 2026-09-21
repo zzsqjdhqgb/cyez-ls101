@@ -19,7 +19,7 @@ test('service uninstall requires a stopped service and confirmation, handles fai
       license: null,
       info: null,
       port: null,
-      error: null
+      error: null as string | null
     },
     statusError: 'LOCAL_STATUS_UNAVAILABLE' as string | null,
     rejectUninstall: true,
@@ -62,10 +62,13 @@ test('service uninstall requires a stopped service and confirmation, handles fai
     await expect(uninstall).toBeDisabled()
     fixture.statusError = null
     fixture.status.state = 'unavailable'
+    fixture.status.error = 'LOCAL_STATUS_ACCESS_DENIED'
     await writeFile(filename, JSON.stringify(fixture))
     await page.getByRole('button', { name: '检查本机状态' }).click()
     await expect(localDialog.getByRole('heading', { name: '服务状态暂时不可用' })).toBeVisible()
     await expect(localDialog.getByText(/services.msc/)).toBeVisible()
+    await expect(localDialog.getByText(/当前账户无权连接本机状态通道/)).toBeVisible()
+    await expect(localDialog.getByText('诊断代码：LOCAL_STATUS_ACCESS_DENIED')).toBeVisible()
     await expect(uninstall).toBeDisabled()
     await expect(localDialog.getByRole('button', { name: '停止', exact: true })).toBeDisabled()
     await expect(localDialog.getByLabel('服务名称', { exact: true })).toBeDisabled()
@@ -77,9 +80,19 @@ test('service uninstall requires a stopped service and confirmation, handles fai
     )
     await expect(localDialog.getByText('Fixture service log', { exact: true })).toBeVisible()
     await localDialog.getByRole('tab', { name: '服务信息与操作' }).click()
-    fixture.status.state = 'running'
+    fixture.status.error = 'LOCAL_STATUS_TIMEOUT'
     await writeFile(filename, JSON.stringify(fixture))
     await localDialog.getByRole('button', { name: '重新检查状态' }).click()
+    await expect(localDialog.getByText(/本机状态通道未在规定时间内响应/)).toBeVisible()
+    fixture.status.state = 'stopped'
+    fixture.status.error = null
+    await writeFile(filename, JSON.stringify(fixture))
+    await localDialog.getByRole('button', { name: '重新检查状态' }).click()
+    await expect(localDialog.getByText('已停止', { exact: true })).toBeVisible()
+    await expect(localDialog.getByRole('button', { name: '启动', exact: true })).toBeEnabled()
+    fixture.status.state = 'running'
+    await writeFile(filename, JSON.stringify(fixture))
+    await localDialog.getByRole('button', { name: '检查本机状态' }).click()
     await expect(localDialog.getByText('运行中', { exact: true })).toBeVisible()
     await expect(localDialog.getByRole('heading', { name: '服务状态暂时不可用' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: '停止', exact: true })).toBeVisible()

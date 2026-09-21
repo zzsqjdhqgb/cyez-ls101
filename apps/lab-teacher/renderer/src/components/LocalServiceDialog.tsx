@@ -28,6 +28,19 @@ const STATES: Record<string, string> = {
   unavailable: '不可用'
 }
 
+const STATUS_FAILURES: Record<string, string> = {
+  LOCAL_STATUS_NOT_READY:
+    '系统服务尚未报告已停止，但本机状态连接未建立或已中断。可能仍在启动，也可能启动失败，请重新检查状态；持续出现时查看服务日志。',
+  LOCAL_STATUS_ACCESS_DENIED:
+    '当前账户无权连接本机状态通道。请联系管理员检查服务安装与账户权限，并查看服务日志。',
+  LOCAL_STATUS_TIMEOUT:
+    '本机状态通道未在规定时间内响应。服务可能繁忙或无响应，请重新检查状态并查看服务日志。',
+  LOCAL_STATUS_INVALID_RESPONSE:
+    '本机服务返回的状态信息不完整或无法识别。请查看服务日志，并核对教师端与服务程序版本。',
+  LOCAL_SERVICE_NOT_LISTENING:
+    '已读取到本机服务状态，但服务尚未监听业务请求。请查看服务日志，检查启动错误和监听端口配置。'
+}
+
 interface ConfirmationDefinition {
   operation: string
   title: string
@@ -210,7 +223,10 @@ export function LocalServiceDialog({ close }: LocalServiceDialogProps): JSX.Elem
               <section className={styles.recoveryCard} aria-labelledby="local-unavailable-heading">
                 <div className={styles.recoveryContent}>
                   <h3 id="local-unavailable-heading">服务状态暂时不可用</h3>
-                  <p>教师端暂时无法读取本机服务的信息，尚不能确认服务是否已正常启动。</p>
+                  <p>
+                    {STATUS_FAILURES[status?.error ?? ''] ??
+                      '教师端暂时无法读取本机服务的信息，尚不能确认服务是否已正常启动。'}
+                  </p>
                   <ol>
                     <li>如果刚刚启动服务，请稍等几秒后重新检查状态。</li>
                     <li>如果仍不可用，读取服务日志查看启动错误。</li>
