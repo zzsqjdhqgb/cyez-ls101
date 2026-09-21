@@ -19,6 +19,7 @@ import { TeacherOperations, type TeacherOperation } from './teacher-operations'
 import { TaskJournals } from './task-journals'
 import type { TaskJournal } from './shared'
 import type { LocalServiceConnection } from './local-service-types'
+import { LocalRecovery } from './local-recovery'
 
 export interface DesktopOptions {
   role: 'student' | 'teacher'
@@ -92,6 +93,16 @@ export function startLabDesktop(options: DesktopOptions): void {
     .whenReady()
     .then(async () => {
       const root = app.getPath('userData')
+      const localRecovery = new LocalRecovery(
+        async () => {
+          const selected = await dialog.showOpenDialog(window!, {
+            title: '选择原始数据导出的保存位置',
+            properties: ['openDirectory', 'createDirectory']
+          })
+          return selected.canceled ? null : selected.filePaths[0]
+        },
+        (operation, input) => options.localService!.invoke(operation, input)
+      )
       await mkdir(root, { recursive: true, mode: 0o700 })
       const license = new LicenseService({ storagePath: join(root, 'license.json') })
       const transport = new PinnedTransport(join(root, 'transfers'), options.releaseVersion)
@@ -340,6 +351,11 @@ export function startLabDesktop(options: DesktopOptions): void {
         if (capability.startsWith('localService.')) {
           if (options.role !== 'teacher' || !options.localService)
             throw new Error('本机服务能力不可用')
+          if (capability === 'localService.export-data' || capability === 'localService.purge')
+            return localRecovery.run(
+              capability === 'localService.purge' ? 'purge' : 'export-data',
+              input
+            )
           if (capability === 'localService.selectBackup') {
             const chosen = await dialog.showOpenDialog(window!, {
               properties: ['openFile'],

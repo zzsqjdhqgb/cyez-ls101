@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react'
-import type { LocalServiceStatus } from '@ls101/lab-desktop-host'
+import type { LocalServiceStatus, LocalDataExport } from '@ls101/lab-desktop-host'
 import { describeLabError } from '@ls101/lab-renderer'
 
 export interface LocalServiceState {
@@ -9,9 +9,16 @@ export interface LocalServiceState {
   error: string | null
   /** Result of the last successful operation, when the new state cannot be derived locally. */
   notice: string | null
+  dataExport: LocalDataExport | null
 }
 
-const EMPTY: LocalServiceState = { status: null, busy: false, error: null, notice: null }
+const EMPTY: LocalServiceState = {
+  status: null,
+  busy: false,
+  error: null,
+  notice: null,
+  dataExport: null
+}
 
 function isStatus(value: unknown): value is LocalServiceStatus {
   return Boolean(value && typeof value === 'object' && 'state' in value)
@@ -75,7 +82,12 @@ export class LocalServiceStore {
         this.update(this.settle(operation, input, result))
       } catch (reason) {
         // A failed mutation may have completed partially. Require a fresh check before editing.
-        this.update({ status: null, busy: false, error: describeLabError(reason).message })
+        this.update({
+          status: null,
+          busy: false,
+          error: describeLabError(reason).message,
+          ...(operation === 'export-data' ? { dataExport: null } : {})
+        })
       }
     })
   }
@@ -103,6 +115,12 @@ export class LocalServiceStore {
   }
 
   private settle(operation: string, input: unknown, result: unknown): Partial<LocalServiceState> {
+    if (operation === 'export-data')
+      return {
+        busy: false,
+        dataExport: result as LocalDataExport | null,
+        notice: result ? '原始数据已导出并校验。请确认保存位置可访问，再决定是否彻底清除。' : null
+      }
     if (isStatus(result))
       return {
         status: {
@@ -111,7 +129,13 @@ export class LocalServiceStore {
           settings: result.settings ?? null
         },
         busy: false,
-        notice: null
+        ...(operation === 'purge' ? { dataExport: null } : {}),
+        notice:
+          operation === 'purge' && result.state === 'not-installed'
+            ? '服务注册、已安装的服务程序和原始数据已清除，导出副本已保留。现在可以重新安装并初始化。'
+            : operation === 'force-stop' && result.state === 'stopped'
+              ? '已确认本机服务停止。开机启动已关闭；下次启动将检查数据并进入维护模式，请核对后再恢复使用。'
+              : null
       }
 
     const current = this.state.status
@@ -147,7 +171,11 @@ export class LocalServiceStore {
       const port = (input as { port?: unknown }).port
       if (typeof port === 'number') return { status: { ...current, port }, busy: false }
     }
-    if (['start', 'stop', 'install', 'upgrade', 'restore', 'recover-restore'].includes(operation)) {
+    if (
+      ['start', 'stop', 'force-stop', 'install', 'upgrade', 'restore', 'recover-restore'].includes(
+        operation
+      )
+    ) {
       return {
         status: null,
         busy: false,
@@ -161,6 +189,7 @@ export class LocalServiceStore {
 const RESULT_NOTICES: Record<string, string> = {
   start: '已发送启动请求',
   stop: '已发送停止请求',
+  'force-stop': '故障停止助手已返回，停止结果尚未确认',
   install: '安装完成',
   upgrade: '升级完成',
   restore: '备份恢复完成',

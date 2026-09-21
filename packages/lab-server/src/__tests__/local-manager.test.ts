@@ -7,6 +7,7 @@ import { localManagerFailure, manageLocalService } from '../local-manager'
 import { requestLocalControl } from '../control'
 import { lockDirectory } from '../directory-lock'
 import { syncDirectory } from '../durable-files'
+import { emergencyStopMarker } from '../emergency-stop'
 
 vi.mock('../control', () => ({ requestLocalControl: vi.fn() }))
 vi.mock('node:child_process', () => ({ execFile: vi.fn() }))
@@ -306,6 +307,23 @@ describe.each(['linux', 'win32'])('service removal on %s', (platform) => {
       state: 'uninitialized',
       autostart: false
     })
+  })
+
+  it('restores manual startup after emergency stop without enabling autostart', async () => {
+    const { paths, commands } = await fixture()
+    await writeFile(emergencyStopMarker(paths.root), '{}')
+    vi.mocked(requestLocalControl).mockResolvedValue({ state: 'uninitialized' })
+    await expect(manageLocalService('start', undefined, paths)).resolves.toMatchObject({
+      state: 'uninitialized'
+    })
+    if (platform === 'win32') {
+      expect(commands).toContain('sc.exe config LS101Lab start= demand')
+      expect(commands.indexOf('sc.exe config LS101Lab start= demand')).toBeLessThan(
+        commands.indexOf(`${join(paths.runtime, 'LS101Lab.exe')} start`)
+      )
+    }
+    expect(commands.join('\n')).not.toMatch(/start= auto|systemctl enable/)
+    expect(await stat(emergencyStopMarker(paths.root))).toBeDefined()
   })
 
   it('refuses removal while the daemon lifetime lock is held', async () => {

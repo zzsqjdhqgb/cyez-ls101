@@ -49,14 +49,17 @@ describe.skipIf(process.platform !== 'linux')('elevated helper exchange', () => 
     })
     await expect(manager.invoke('initialize', {})).rejects.toThrow(/^LICENSE_INACTIVE$/)
   })
-  it('routes uninstall through the authenticated administrator helper', async () => {
-    const manager = localServiceHost('/fixed/runtime', async (_file, args) => {
-      const channel = args.at(-1)!
-      expect(await requestLocalControl(channel, 'request')).toEqual({ operation: 'uninstall' })
-      await requestLocalControl(channel, 'complete', { ok: true, value: null })
-    })
-    await expect(manager.invoke('uninstall', undefined)).resolves.toBeNull()
-  })
+  it.each(['uninstall', 'force-stop', 'export-data', 'purge'])(
+    'routes %s through the authenticated administrator helper',
+    async (operation) => {
+      const manager = localServiceHost('/fixed/runtime', async (_file, args) => {
+        const channel = args.at(-1)!
+        expect(await requestLocalControl(channel, 'request')).toEqual({ operation })
+        await requestLocalControl(channel, 'complete', { ok: true, value: null })
+      })
+      await expect(manager.invoke(operation, undefined)).resolves.toBeNull()
+    }
+  )
   it('transfers secrets through the private authenticated channel and removes it after completion', async () => {
     let channel = ''
     const manager = localServiceHost('/fixed/runtime', async (_file, args) => {

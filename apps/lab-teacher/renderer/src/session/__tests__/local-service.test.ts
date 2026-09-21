@@ -19,6 +19,49 @@ function setup() {
 }
 
 describe('local service state certainty', () => {
+  it('requires a successful export and clears its UI receipt after purge', async () => {
+    const { invoke, store } = setup()
+    const exported = {
+      directory: '/chosen/export',
+      manifestSha256: 'a'.repeat(64),
+      files: 1,
+      bytes: 99
+    }
+    invoke.mockResolvedValueOnce(exported)
+    await store.invoke('export-data')
+    expect(store.getSnapshot().dataExport).toEqual(exported)
+    invoke.mockResolvedValueOnce(null)
+    await store.invoke('export-data')
+    expect(store.getSnapshot().dataExport).toBeNull()
+    invoke.mockResolvedValueOnce(exported)
+    await store.invoke('export-data')
+    invoke.mockRejectedValueOnce(new Error('ENOSPC'))
+    await store.invoke('export-data')
+    expect(store.getSnapshot().dataExport).toBeNull()
+    invoke.mockResolvedValueOnce(exported)
+    await store.invoke('export-data')
+    invoke.mockResolvedValueOnce({ ...running, state: 'not-installed', autostart: false })
+    await store.invoke('purge')
+    expect(store.getSnapshot()).toMatchObject({
+      dataExport: null,
+      status: { state: 'not-installed' }
+    })
+    expect(store.getSnapshot().notice).toContain('重新安装并初始化')
+  })
+  it('requires verified stopped status after emergency stop and invalidates failures', async () => {
+    const { invoke, store } = setup()
+    invoke.mockResolvedValueOnce({ ...running, state: 'stopped', autostart: false })
+    await store.invoke('force-stop')
+    expect(store.getSnapshot()).toMatchObject({ status: { state: 'stopped', autostart: false } })
+    expect(store.getSnapshot().notice).toContain('维护模式')
+    invoke.mockRejectedValueOnce(new Error('LOCAL_FORCE_STOP_INCOMPLETE'))
+    await store.invoke('force-stop')
+    expect(store.getSnapshot()).toMatchObject({ status: null, notice: null })
+    invoke.mockResolvedValueOnce(null)
+    await store.invoke('force-stop')
+    expect(store.getSnapshot().status).toBeNull()
+    expect(store.getSnapshot().notice).toContain('尚未确认')
+  })
   it('coalesces overlapping automatic and manual refreshes', async () => {
     const { invoke, store } = setup()
     const first = store.check()

@@ -22,6 +22,34 @@ startTeacherDesktop({
         }
         if (operation === 'logs') return 'Fixture service log'
         if (operation === 'install') throw new Error(fixture.installError)
+        if (operation === 'export-data') {
+          if (fixture.rejectExport) throw new Error('ENOSPC')
+          return {
+            directory: (input as { directory: string }).directory,
+            manifestSha256: 'a'.repeat(64),
+            files: 5,
+            bytes: 1000
+          }
+        }
+        if (operation === 'purge') {
+          if (fixture.rejectPurge) throw new Error('LOCAL_RECOVERY_EXPORT_CHANGED')
+          fixture.status = {
+            ...fixture.status,
+            state: 'not-installed',
+            autostart: false,
+            error: null
+          }
+          fixture.purged = true
+          await writeFile(filename, JSON.stringify(fixture))
+          return fixture.status
+        }
+        if (operation === 'force-stop') {
+          if (fixture.rejectForceStop) throw new Error('LOCAL_FORCE_STOP_FAILED')
+          fixture.status = { ...fixture.status, state: 'stopped', autostart: false, error: null }
+          fixture.forceStopped = true
+          await writeFile(filename, JSON.stringify(fixture))
+          return fixture.status
+        }
         if (operation === 'uninstall') {
           if (fixture.rejectUninstall) throw new Error('RESOURCE_BUSY')
           fixture.status = { ...fixture.status, state: 'not-installed', autostart: false }
