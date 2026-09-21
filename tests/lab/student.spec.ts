@@ -80,6 +80,12 @@ test('student enrollment, maintenance, practice and durable receipt run through 
     page.on('pageerror', (error) => errors.push(error.message))
     await expect(page.getByRole('heading', { name: '机房维护中' })).toBeVisible()
     await expect(page.getByText('设备编号', { exact: true })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: '主导航' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: '最小化', exact: true })).toBeEnabled()
+    await page.screenshot({
+      path: 'test-results/lab/student-maintenance.png',
+      animations: 'disabled'
+    })
     const denied = await page.evaluate(async () => {
       const host = (
         window as unknown as { lab: { invoke(name: string, input?: unknown): Promise<unknown> } }
@@ -148,15 +154,40 @@ test('student enrollment, maintenance, practice and durable receipt run through 
     })
     await page.getByRole('button', { name: '刷新连接' }).click()
     await expect(page.getByRole('heading', { name: '可用试卷' })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: '主导航' }).getByRole('link')).toHaveCount(4)
+    await expect(page.getByRole('button', { name: '开始练习' })).toBeVisible()
+    await page.screenshot({ path: 'test-results/lab/student-exams.png', animations: 'disabled' })
     await page.getByRole('button', { name: '开始练习' }).click()
     await page.getByLabel('姓名', { exact: true }).fill('集成学生')
     await page.getByLabel('考生号').fill('1001')
     await page.getByRole('button', { name: '继续', exact: true }).click()
     await expect(page.getByRole('heading', { name: '考试完成' })).toBeVisible()
     await page.getByRole('button', { name: '完成', exact: true }).click()
-    await page.getByRole('button', { name: '历史', exact: true }).click()
+    await page.getByRole('link', { name: '历史', exact: true }).click()
     await expect(page.getByText('提交完成', { exact: true })).toBeVisible()
-    await page.screenshot({ path: 'test-results/lab/student-history.png' })
+    await expect(page.getByRole('button', { name: '导出所选', exact: true })).toBeDisabled()
+    await page.getByRole('checkbox', { name: '选择 集成学生', exact: true }).check()
+    await expect(page.getByRole('button', { name: '导出所选', exact: true })).toBeEnabled()
+    await page.getByRole('link', { name: '处理中', exact: true }).click()
+    await expect(page.getByText('暂无记录', { exact: true })).toBeVisible()
+    await page.getByRole('link', { name: '历史', exact: true }).click()
+    await expect(
+      page.getByRole('checkbox', { name: '选择 集成学生', exact: true })
+    ).not.toBeChecked()
+    await page.screenshot({ path: 'test-results/lab/student-history.png', animations: 'disabled' })
+    await page.setViewportSize({ width: 760, height: 640 })
+    await expect(page.getByRole('heading', { name: '历史作答', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: '关闭', exact: true })).toBeInViewport()
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+    ).toBe(true)
+    await page.getByRole('button', { name: '收起侧边栏', exact: true }).click()
+    await expect(page.getByRole('button', { name: '展开侧边栏', exact: true })).toBeVisible()
+    await page.screenshot({
+      path: 'test-results/lab/student-history-narrow.png',
+      animations: 'disabled'
+    })
+    await page.setViewportSize({ width: 1280, height: 800 })
     expect(errors).toEqual([])
     studentApp = app
     app = undefined
@@ -248,6 +279,8 @@ test('student enrollment, maintenance, practice and durable receipt run through 
     })
     await page.getByRole('button', { name: '刷新连接' }).click()
     await expect(page.getByText('显示与选择测试', { exact: true })).toBeVisible({ timeout: 20000 })
+    await expect(page.getByText('部署测试', { exact: true })).toBeVisible()
+    await page.screenshot({ path: 'test-results/lab/student-deployment-player.png' })
     await page.getByRole('radio', { name: 'A 确认', exact: true }).check()
     await page.screenshot({ path: 'test-results/lab/student-deployment.png' })
     let completedTest = testRun
