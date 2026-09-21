@@ -601,6 +601,62 @@ async function expectRenderedAssetsToLoad(expectedCount: number): Promise<void> 
     .toEqual(urls.map((url) => ({ url, loaded: true })))
 }
 
+test('IE-24 upgrades legacy prompt text and migrates its instance and template reference on startup', async () => {
+  const { prompts, ...legacyContent } = textInterface
+  const promptTemplate = prompts[0].content
+  const canonical = stableStringify({
+    ...legacyContent,
+    promptTemplate,
+    fields: canonicalizeFields(legacyContent.fields)
+  })
+  const oldId = `sha256:${createHash('sha256').update(canonical).digest('hex')}`
+  const oldScope = ['interfaces', 'published', oldId.slice(7)]
+  const upgradedContent = {
+    ...legacyContent,
+    prompts: [{ name: 'Default', content: promptTemplate }]
+  }
+  const newId = deriveInterfaceId(upgradedContent)
+  const instanceId = randomUUID()
+  const templateId = randomUUID()
+  await writeFileStoreText(oldScope, 'interface.json', {
+    ...legacyContent,
+    promptTemplate,
+    id: oldId
+  })
+  await writeFileStoreText([...oldScope, 'instances', instanceId], 'instance.json', {
+    instance: {
+      instanceId,
+      name: '旧格式题组',
+      generatedAt: '2026-01-01T00:00:00.000Z',
+      values: { titleText: '已有标题', answerText: '已有答案' }
+    },
+    assets: []
+  })
+  await writeTemplateInterfaceReference(templateId, oldId)
+  await saveTextProvider(textProvider('legacy-text', 'mock-json'))
+  await restartIntegrationApp()
+  await expect(readFileStoreText(oldScope, 'interface.json')).resolves.toBeNull()
+  await expect(
+    readFileStoreText(['interfaces', 'published', newId.slice(7)], 'interface.json')
+  ).resolves.toEqual({ ...upgradedContent, id: newId })
+  await expect(
+    readFileStoreText(['template-editor', 'templates', templateId], 'template.json')
+  ).resolves.toMatchObject({ revision: 1, content: { interfaces: [{ interfaceId: newId }] } })
+  await page.getByRole('link', { name: '题型库' }).click()
+  await page.getByRole('button', { name: textInterface.name, exact: true }).click()
+  await page.getByRole('button', { name: '旧格式题组', exact: true }).click()
+  await expect(page.getByLabel('title 内容')).toHaveValue('已有标题')
+  await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
+  await expect(page.getByRole('checkbox', { name: 'Default', exact: true })).toBeVisible()
+  await page.getByRole('checkbox', { name: 'Default', exact: true }).check()
+  await page.getByText('查看“Default”内容', { exact: true }).click()
+  await expect(page.getByText(promptTemplate, { exact: true })).toBeVisible()
+  await restartIntegrationApp()
+  await expect(
+    readFileStoreText(['template-editor', 'templates', templateId], 'template.json')
+  ).resolves.toMatchObject({ revision: 1, content: { interfaces: [{ interfaceId: newId }] } })
+})
+
 test('IE-01 generates and saves an instance through the real AIRouter pipeline', async () => {
   await saveTextProvider(textProvider('ie-text', 'mock-json'))
   const interfaceId = await seedInterface({

@@ -21,7 +21,22 @@ export function createInterfaceDraft(content: InterfaceContent): InterfaceDraft 
 
 /** 根据 Interface 的规范化内容生成稳定的 SHA-256 ID。 */
 export async function deriveInterfaceId(content: InterfaceContent): Promise<string> {
-  const bytes = new TextEncoder().encode(canonicalizeInterfaceContent(content))
+  return hashContent(canonicalizeInterfaceContent(content))
+}
+
+/** Validate the original checksum before converting a legacy definition to a new content ID. */
+export async function verifyLegacyInterfaceId(def: InterfaceDef): Promise<boolean> {
+  const canonical = stableStringify({
+    name: normalizeText(def.name),
+    description: normalizeText(def.description),
+    promptTemplate: normalizeText(def.prompts[0].content),
+    fields: canonicalizeFields(def.fields)
+  })
+  return def.id === (await hashContent(canonical))
+}
+
+async function hashContent(canonical: string): Promise<string> {
+  const bytes = new TextEncoder().encode(canonical)
   const digest = await crypto.subtle.digest('SHA-256', bytes)
   const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join(
     ''

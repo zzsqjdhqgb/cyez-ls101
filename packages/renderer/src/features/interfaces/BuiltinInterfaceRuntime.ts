@@ -20,3 +20,8 @@ export const builtinInterfaceMaintenance = new BuiltinInterfaceMaintenanceCoordi
   builtinInterfaceApplication,
   bundledRepository
 )
+
+export async function initializeInterfaceContent(): Promise<void> {
+  await interfaceRepository.migrateLegacyPrompts(templateInterfaceReferences)
+  await builtinInterfaceMaintenance.initialize()
+}
