@@ -36,7 +36,7 @@ export async function publishInterface(content: InterfaceContent): Promise<Inter
     id,
     name: content.name,
     description: content.description,
-    promptTemplate: content.promptTemplate,
+    prompts: content.prompts,
     fields: content.fields
   }
 }
@@ -74,7 +74,10 @@ export function canonicalizeInterfaceContent(content: InterfaceContent): string 
   return stableStringify({
     name: normalizeText(content.name),
     description: normalizeText(content.description),
-    promptTemplate: normalizeText(content.promptTemplate),
+    prompts: content.prompts.map((prompt) => ({
+      name: normalizeText(prompt.name),
+      content: normalizeText(prompt.content)
+    })),
     fields: canonicalizeFields(content.fields)
   })
 }

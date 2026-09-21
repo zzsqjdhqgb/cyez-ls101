@@ -45,7 +45,7 @@ function content(name = '口语 Interface'): InterfaceContent {
   return {
     name,
     description: '用于测试',
-    promptTemplate: '生成一套口语题',
+    prompts: [{ name: '基础出题要求', content: '生成一套口语题' }],
     fields: collection({
       title: {
         type: 'text',
@@ -131,7 +131,10 @@ describe('FileInterfaceRepository', () => {
 
   it('拒绝发布不完整的 Interface', async () => {
     const { repository } = setup()
-    const invalid = await publishInterface({ ...content(), promptTemplate: '' })
+    const invalid = await publishInterface({
+      ...content(),
+      prompts: [{ name: '基础出题要求', content: '' }]
+    })
 
     await expect(repository.saveInterface(invalid)).rejects.toMatchObject({ code: 'INVALID_DATA' })
   })
@@ -262,7 +265,7 @@ describe('内置 Interface 更新', () => {
     const nextDef = await publishInterface({
       ...content('新版名称'),
       description: '新版说明',
-      promptTemplate: '新版提示词',
+      prompts: [{ name: '基础出题要求', content: '新版提示词' }],
       fields: collection({
         title: {
           type: 'text',
@@ -820,8 +823,8 @@ describe('Interface application', () => {
       draft.name
     )
     const prompts = await app.published.getPrompts(published.interface.interfaceId)
-    expect(prompts.prompt).toBe(draft.promptTemplate)
-    expect(prompts.fullPrompt).toContain(draft.promptTemplate)
+    expect(prompts.prompt).toContain(draft.prompts[0].content)
+    expect(prompts.fullPrompt).toContain(draft.prompts[0].content)
     expect(JSON.parse(prompts.jsonSchema)).toMatchObject({
       type: 'object',
       properties: { title: { type: 'string' } }
@@ -1059,6 +1062,7 @@ describe('Interface application', () => {
 
     const selectedModel = { providerId: 'provider-a', modelId: 'model-b' }
     const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId, {
+      selectedPromptIndices: [0],
       model: selectedModel
     })
     const snapshots: TaskProgressSnapshot[] = []
@@ -1094,7 +1098,9 @@ describe('Interface application', () => {
       textGenerator: generator
     })
     const blank = await app.published.createBlankInstance(def.id)
-    const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId)
+    const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId, {
+      selectedPromptIndices: [0]
+    })
 
     generator.complete('```json\n{"title":"代码围栏内容"}\n```')
 
@@ -1115,10 +1121,14 @@ describe('Interface application', () => {
       textGenerator: generator
     })
     const blank = await app.published.createBlankInstance(def.id)
-    const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId)
+    const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId, {
+      selectedPromptIndices: [0]
+    })
 
     await expect(
-      app.instances.startAIGeneration(def.id, blank.instance.instanceId)
+      app.instances.startAIGeneration(def.id, blank.instance.instanceId, {
+        selectedPromptIndices: [0]
+      })
     ).rejects.toThrow('Instance is busy')
     await expect(
       app.instances.save(def.id, blank.instance.instanceId, {
@@ -1157,6 +1167,7 @@ describe('Interface application', () => {
       { providerId: 'manual-provider', providerName: '手动生成' }
     ])
     const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId, {
+      selectedPromptIndices: [0],
       imageProvider: selectedImageProvider
     })
     textGenerator.complete('{"title":"AI 图片题","picture":"学生在校园操场上跑步"}')

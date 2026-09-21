@@ -15,6 +15,7 @@ import type {
   InterfaceAIGenerationHandle,
   InterfaceAIGenerationResult,
   InterfaceDef,
+  InterfacePrompt,
   InterfaceImageProviderOption,
   InterfaceImageProviderSelection,
   InterfaceInstanceDetails,
@@ -103,6 +104,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   const [modelOptions, setModelOptions] = useState<readonly AIModelOption[]>([])
   const [selectedModel, setSelectedModel] = useState<AIModelSelection | null>(null)
   const [additionalPrompt, setAdditionalPrompt] = useState('')
+  const [selectedPromptIndices, setSelectedPromptIndices] = useState<number[]>([])
   const [modelsLoading, setModelsLoading] = useState(false)
   const [modelsError, setModelsError] = useState<string | null>(null)
   const [imageProviderOptions, setImageProviderOptions] = useState<
@@ -141,6 +143,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
         setValues(instance?.instance.values ?? {})
         setImagePrompts(instance?.instance.imagePrompts ?? {})
         setAdditionalPrompt('')
+        setSelectedPromptIndices([])
       })
       .catch((reason: unknown) => {
         if (active) setError(errorMessage(reason))
@@ -383,7 +386,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   }
 
   const startGeneration = async (): Promise<void> => {
-    if (!selectedModel) return
+    if (!selectedModel || !selectedPromptIndices.length) return
     if (hasImageFields && !selectedImageProvider) {
       setError('请先选择图像 Provider')
       return
@@ -394,6 +397,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
     try {
       const handle = await application.instances.startAIGeneration(interfaceId, instanceId, {
         model: selectedModel,
+        selectedPromptIndices,
         ...(additionalPrompt.trim() ? { additionalPrompt: additionalPrompt.trim() } : {}),
         ...(hasImageFields && selectedImageProvider ? { imageProvider: selectedImageProvider } : {})
       })
@@ -883,6 +887,9 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       >
         <AIGenerationDialog
           dirty={dirty}
+          prompts={definition?.prompts ?? []}
+          selectedPromptIndices={selectedPromptIndices}
+          onSelectPrompts={setSelectedPromptIndices}
           additionalPrompt={additionalPrompt}
           onAdditionalPromptChange={setAdditionalPrompt}
           modelsError={modelsError}
@@ -1097,6 +1104,9 @@ function ImageValueInput({
 
 function AIGenerationDialog({
   dirty,
+  prompts,
+  selectedPromptIndices,
+  onSelectPrompts,
   additionalPrompt,
   onAdditionalPromptChange,
   modelsError,
@@ -1120,6 +1130,9 @@ function AIGenerationDialog({
   onStart
 }: {
   dirty: boolean
+  prompts: readonly InterfacePrompt[]
+  selectedPromptIndices: readonly number[]
+  onSelectPrompts(indices: number[]): void
   additionalPrompt: string
   onAdditionalPromptChange(value: string): void
   modelsError: string | null
@@ -1180,6 +1193,35 @@ function AIGenerationDialog({
           onChange={onSelectModel}
           onRefresh={onRefresh}
         />
+        <fieldset
+          className={styles.promptSelection}
+          disabled={(session !== null && !finished) || resumable}
+        >
+          <legend>题型提示词（至少选择一项）</legend>
+          <p>只发送选中的内容，按题型定义中的顺序组合。</p>
+          {prompts.map((prompt, index) => (
+            <div className={styles.promptChoice} key={index}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={selectedPromptIndices.includes(index)}
+                  onChange={(event) =>
+                    onSelectPrompts(
+                      event.target.checked
+                        ? [...selectedPromptIndices, index]
+                        : selectedPromptIndices.filter((item) => item !== index)
+                    )
+                  }
+                />
+                <span>{prompt.name}</span>
+              </label>
+              <details>
+                <summary>查看“{prompt.name}”内容</summary>
+                <pre>{prompt.content}</pre>
+              </details>
+            </div>
+          ))}
+        </fieldset>
         <div className={styles.additionalPromptField}>
           <label htmlFor="ai-additional-prompt">补充提示词（可选）</label>
           <textarea
@@ -1237,6 +1279,7 @@ function AIGenerationDialog({
               variant="primary"
               disabled={
                 !selectedModel ||
+                selectedPromptIndices.length === 0 ||
                 (hasImageFields && !selectedImageProvider) ||
                 modelsLoading ||
                 Boolean(modelsError) ||
@@ -1254,6 +1297,7 @@ function AIGenerationDialog({
               icon={RefreshCw}
               disabled={
                 !selectedModel ||
+                selectedPromptIndices.length === 0 ||
                 (hasImageFields && !selectedImageProvider) ||
                 modelsLoading ||
                 Boolean(modelsError) ||

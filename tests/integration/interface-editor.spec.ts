@@ -38,7 +38,7 @@ interface SeededFields {
 interface SeededInterfaceContent {
   name: string
   description: string
-  promptTemplate: string
+  prompts: { name: string; content: string }[]
   fields: SeededFields
 }
 
@@ -46,13 +46,13 @@ interface SeededDraft {
   draftId: string
   name: string
   description: string
-  promptTemplate: string
+  prompts: { name: string; content: string }[]
   fields: { order: string[]; nodes: Record<string, never> }
 }
 
 const BUILTIN_KEY = 'shanghai-gaokao-speaking'
 const BUNDLED_INTERFACE_ID =
-  'sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14'
+  'sha256:70f7547c283404cd8a09829bac34e5245bf5d08f10af444d88c5a0251cc58c9d'
 const BUNDLED_INTERFACE_PATH = path.join(
   process.cwd(),
   'resources/builtin/interface-editor/builtin/shanghai-gaokao-speaking/versions',
@@ -70,7 +70,7 @@ let pageErrors: string[]
 const textInterface: SeededInterfaceContent = {
   name: '集成测试题型',
   description: 'Playwright 跨包 AI 生成端到端测试用题型',
-  promptTemplate: '请生成一份听说测试内容。',
+  prompts: [{ name: '基础出题要求', content: '请生成一份听说测试内容。' }],
   fields: {
     order: ['title', 'answer'],
     nodes: {
@@ -93,7 +93,7 @@ const textInterface: SeededInterfaceContent = {
 const imageInterface: SeededInterfaceContent = {
   name: '集成测试图片题型',
   description: '包含图片字段的跨包 AI 生成端到端测试题型',
-  promptTemplate: '请生成一份带配图的听说测试内容。',
+  prompts: [{ name: '基础出题要求', content: '请生成一份带配图的听说测试内容。' }],
   fields: {
     order: ['title', 'picture'],
     nodes: {
@@ -205,7 +205,10 @@ function canonicalizeInterfaceContent(content: SeededInterfaceContent): string {
   return stableStringify({
     name: normalizeText(content.name),
     description: normalizeText(content.description),
-    promptTemplate: normalizeText(content.promptTemplate),
+    prompts: content.prompts.map((prompt) => ({
+      name: normalizeText(prompt.name),
+      content: normalizeText(prompt.content)
+    })),
     fields: canonicalizeFields(content.fields)
   })
 }
@@ -219,7 +222,10 @@ function deriveDefinitionId(content: Omit<InterfaceDef, 'id'>): string {
   const canonical = stableStringify({
     name: normalizeText(content.name),
     description: normalizeText(content.description),
-    promptTemplate: normalizeText(content.promptTemplate),
+    prompts: content.prompts.map((prompt) => ({
+      name: normalizeText(prompt.name),
+      content: normalizeText(prompt.content)
+    })),
     fields: canonicalizeFieldCollection(content.fields)
   })
   return `sha256:${createHash('sha256').update(Buffer.from(canonical, 'utf8')).digest('hex')}`
@@ -597,14 +603,26 @@ async function expectRenderedAssetsToLoad(expectedCount: number): Promise<void> 
 
 test('IE-01 generates and saves an instance through the real AIRouter pipeline', async () => {
   await saveTextProvider(textProvider('ie-text', 'mock-json'))
-  const interfaceId = await seedInterface(textInterface)
+  const interfaceId = await seedInterface({
+    ...textInterface,
+    prompts: [
+      ...textInterface.prompts,
+      { name: '生活主题', content: '仅限生活类题目，不应发送这一段' },
+      { name: '科技主题', content: '围绕科技发展出题' }
+    ]
+  })
   await openInstanceEditor(interfaceId, textInterface.name)
 
   await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   const modelSelect = page.getByLabel('生成模型', { exact: true })
   await expect(modelSelect).toBeVisible()
   await modelSelect.selectOption({ label: 'mock-json' })
+  await expect(page.getByRole('button', { name: '生成并覆盖', exact: true })).toBeDisabled()
+  await page.getByRole('checkbox', { name: '科技主题', exact: true }).check()
+  await page.getByText('查看“科技主题”内容', { exact: true }).click()
+  await expect(page.getByText('围绕科技发展出题', { exact: true })).toBeVisible()
   await page.getByLabel('补充提示词（可选）').fill('  出题方向偏科技类\n难度适合高中生  ')
+  await page.getByRole('checkbox', { name: '基础出题要求', exact: true }).check()
   await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
 
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 15_000 })
@@ -615,14 +633,27 @@ test('IE-01 generates and saves an instance through the real AIRouter pipeline',
   const request = mockServer.findRequest('/v1/chat/completions')
   expect(request?.body).toMatchObject({
     model: 'mock-json',
-    messages: [{ role: 'user', content: expect.stringContaining(textInterface.promptTemplate) }],
+    messages: [
+      { role: 'user', content: expect.stringContaining(textInterface.prompts[0].content) }
+    ],
     stream: true
   })
   expect(request?.body).toMatchObject({
     messages: [
       {
+        content: expect.stringContaining(
+          '## 基础出题要求\n请生成一份听说测试内容。\n\n## 科技主题\n围绕科技发展出题'
+        )
+      }
+    ]
+  })
+  expect(JSON.stringify(request?.body)).not.toContain('生活主题')
+  expect(JSON.stringify(request?.body)).not.toContain('仅限生活类题目')
+  expect(request?.body).toMatchObject({
+    messages: [
+      {
         role: 'user',
-        content: expect.stringContaining('本次生成的补充要求：\n出题方向偏科技类\n难度适合高中生')
+        content: expect.stringContaining('## 本次生成的补充要求\n出题方向偏科技类\n难度适合高中生')
       }
     ]
   })
@@ -634,6 +665,7 @@ test('IE-01 generates and saves an instance through the real AIRouter pipeline',
   await page.getByRole('button', { name: '集成测试题组', exact: true }).click()
   await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await expect(page.getByLabel('补充提示词（可选）')).toHaveValue('')
+  await expect(page.getByRole('checkbox', { name: '科技主题' })).not.toBeChecked()
   await page.getByRole('button', { name: '取消', exact: true }).click()
   await page.getByRole('button', { name: '返回题型详情' }).click()
   await createInstanceFromDetails('新的 AI 题组', 'AI 生成')
@@ -649,6 +681,7 @@ test('IE-02 generates text and images atomically through the real pipelines', as
   await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-image' })
   await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await page.getByRole('checkbox', { name: '基础出题要求', exact: true }).check()
   await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
 
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 20_000 })
@@ -689,6 +722,7 @@ test('IE-02b retries a failed image step without regenerating completed text', a
   await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-image' })
   await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await page.getByRole('checkbox', { name: '基础出题要求', exact: true }).check()
   await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
 
   await expect(page.getByText('生成失败', { exact: true })).toBeVisible({ timeout: 20_000 })
@@ -715,6 +749,7 @@ test('IE-03 reports invalid AI output and supports cancellation without saving',
 
   await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-nonjson' })
+  await page.getByRole('checkbox', { name: '基础出题要求', exact: true }).check()
   await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
   await expect(page.getByText('生成内容未通过校验')).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText('发现 1 个字段错误')).toBeVisible()
@@ -731,6 +766,7 @@ test('IE-03 reports invalid AI output and supports cancellation without saving',
   await saveTextProvider(textProvider('ie-slow', 'mock-slow'))
   await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-slow' })
+  await page.getByRole('checkbox', { name: '基础出题要求', exact: true }).check()
   await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
   await page.getByRole('button', { name: '取消生成' }).click()
   await expect(page.getByText('生成已取消')).toBeVisible({ timeout: 15_000 })
@@ -743,9 +779,17 @@ test('IE-03 reports invalid AI output and supports cancellation without saving',
 test('IE-04 creates, edits and persists a draft through the real UI', async () => {
   await openDraftEditor()
   const content = page.getByLabel('题型内容')
-  await content.getByLabel('名称').fill('系统测试题型')
+  await content.getByLabel('名称', { exact: true }).fill('系统测试题型')
   await content.getByLabel('描述').fill('系统级草稿编辑测试')
-  await content.getByLabel('生成要求').fill('请生成测试内容。')
+  await content.getByLabel('提示词 1 内容').fill('请生成测试内容。')
+  await content.getByRole('button', { name: '添加提示词', exact: true }).click()
+  await content.getByLabel('提示词 2 名称').fill('科技主题')
+  await content.getByLabel('提示词 2 内容').fill('围绕科技发展出题')
+  await content.getByRole('button', { name: '上移提示词 2', exact: true }).click()
+  await expect(content.getByLabel('提示词 1 名称')).toHaveValue('科技主题')
+  await content.getByRole('button', { name: '下移提示词 1', exact: true }).click()
+  await content.getByRole('button', { name: '添加提示词', exact: true }).click()
+  await content.getByRole('button', { name: '删除提示词 3', exact: true }).click()
   await page.getByRole('button', { name: '添加字段', exact: true }).click()
   const inspector = page.getByLabel('字段结构')
   await inspector.getByLabel('变量名').fill('questionText')
@@ -760,9 +804,12 @@ test('IE-04 creates, edits and persists a draft through the real UI', async () =
   await page.getByRole('button', { name: '系统测试题型', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: '系统测试题型' })).toBeVisible()
   const reopened = page.getByLabel('题型内容')
-  await expect(reopened.getByLabel('名称')).toHaveValue('系统测试题型')
+  await expect(reopened.getByLabel('名称', { exact: true })).toHaveValue('系统测试题型')
   await expect(reopened.getByLabel('描述')).toHaveValue('系统级草稿编辑测试')
-  await expect(reopened.getByLabel('生成要求')).toHaveValue('请生成测试内容。')
+  await expect(reopened.getByLabel('提示词 1 内容')).toHaveValue('请生成测试内容。')
+  await expect(reopened.getByLabel('提示词 2 名称')).toHaveValue('科技主题')
+  await expect(reopened.getByLabel('提示词 2 内容')).toHaveValue('围绕科技发展出题')
+  await expect(reopened.getByLabel('提示词 3 名称')).toHaveCount(0)
   await expect(
     page.getByLabel('字段结构').getByRole('button', { name: /questionText/ })
   ).toBeVisible()
@@ -771,9 +818,9 @@ test('IE-04 creates, edits and persists a draft through the real UI', async () =
 test('IE-05 validates and publishes a draft through the real UI', async () => {
   await openDraftEditor()
   const content = page.getByLabel('题型内容')
-  await content.getByLabel('名称').fill('校验发布题型')
+  await content.getByLabel('名称', { exact: true }).fill('校验发布题型')
   await content.getByLabel('描述').fill('发布流程测试')
-  await content.getByLabel('生成要求').fill('请生成内容。')
+  await content.getByLabel('提示词 1 内容').fill('请生成内容。')
   await page.getByRole('button', { name: '添加字段', exact: true }).click()
 
   await page.getByRole('button', { name: '发布' }).click()
@@ -809,7 +856,7 @@ test('IE-06 deletes drafts and guards unsaved changes on leave', async () => {
     draftId: randomUUID(),
     name: '待删除草稿',
     description: '删除流程测试',
-    promptTemplate: '请生成内容。',
+    prompts: [{ name: '基础出题要求', content: '请生成内容。' }],
     fields: { order: [], nodes: {} }
   })
   await page.getByRole('link', { name: '题型库' }).click()
@@ -821,7 +868,7 @@ test('IE-06 deletes drafts and guards unsaved changes on leave', async () => {
   await expect(page.getByText('暂无草稿')).toBeVisible()
 
   await page.getByRole('button', { name: '新建题型' }).click()
-  await page.getByLabel('题型内容').getByLabel('名称').fill('未保存草稿')
+  await page.getByLabel('题型内容').getByLabel('名称', { exact: true }).fill('未保存草稿')
   await page.getByRole('button', { name: '返回草稿列表' }).click()
   const dialog = page.locator('[aria-modal="true"]')
   await expect(dialog.getByText('放弃未保存的修改？')).toBeVisible()
@@ -1009,8 +1056,8 @@ test('IE-11 exports and re-imports an interface with its instances', async () =>
 test('IE-12 manages draft field groups, image type and node deletion', async () => {
   await openDraftEditor()
   const content = page.getByLabel('题型内容')
-  await content.getByLabel('名称').fill('字段树操作题型')
-  await content.getByLabel('生成要求').fill('请生成内容。')
+  await content.getByLabel('名称', { exact: true }).fill('字段树操作题型')
+  await content.getByLabel('提示词 1 内容').fill('请生成内容。')
   const structure = page.getByLabel('字段结构')
 
   await page.getByRole('button', { name: '添加字段组', exact: true }).click()
@@ -1115,11 +1162,11 @@ test('IE-14 covers list and details page action buttons', async () => {
   const originalText = await electronApp.evaluate(({ clipboard }) => clipboard.readText())
   try {
     await page.getByRole('tab', { name: '题型定义' }).click()
-    await page.getByRole('button', { name: '复制完整提示词' }).click()
+    await page.getByRole('button', { name: '复制全部完整提示词' }).click()
     await expect(page.getByText('已复制完整提示词')).toBeVisible()
     await expect
       .poll(() => electronApp.evaluate(({ clipboard }) => clipboard.readText()))
-      .toContain(textInterface.promptTemplate)
+      .toContain(textInterface.prompts[0].content)
     await page.getByRole('button', { name: '复制 JSON Schema' }).click()
     await expect(page.getByText('已复制JSON Schema')).toBeVisible()
   } finally {
@@ -1181,6 +1228,7 @@ test('IE-17 manages a bundled instance and copies the builtin to a draft', async
   await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-shanghai' })
   await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await page.getByRole('checkbox', { name: '基础出题要求', exact: true }).check()
   await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 30_000 })
   await page.getByRole('button', { name: '返回题组' }).click()
@@ -1232,6 +1280,7 @@ test('IE-18 generates and persists an image in a bundled picture field', async (
   await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-shanghai' })
   await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await page.getByRole('checkbox', { name: '基础出题要求', exact: true }).check()
   await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 30_000 })
   await page.getByRole('button', { name: '返回题组' }).click()
@@ -1320,6 +1369,7 @@ test('IE-23 generates all four bundled story pictures through the AI pipeline', 
   await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-shanghai' })
   await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await page.getByRole('checkbox', { name: '基础出题要求', exact: true }).check()
   await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
 
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 30_000 })

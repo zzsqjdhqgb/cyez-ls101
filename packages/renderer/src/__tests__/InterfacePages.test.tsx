@@ -53,7 +53,7 @@ const draft: InterfaceDraft = {
   draftId: '10000000-0000-4000-8000-000000000001',
   name: '听说测试',
   description: '用于课堂练习',
-  promptTemplate: '生成一套听说练习',
+  prompts: [{ name: '基础出题要求', content: '生成一套听说练习' }],
   fields: {
     order: ['question'],
     nodes: {
@@ -608,8 +608,8 @@ describe('Interface pages', () => {
 
     expect(await screen.findByText('题型定义')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: '题型定义' }))
-    expect(screen.getByRole('button', { name: '复制完整提示词' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '复制单独提示词' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '复制全部完整提示词' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '复制全部题型提示词' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '复制 JSON Schema' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '复制 JSON Example' })).toBeInTheDocument()
 
@@ -772,6 +772,9 @@ describe('Interface pages', () => {
     )
     await waitFor(() => expect(screen.getByLabelText('生成模型')).toBeEnabled())
     fireEvent.change(screen.getByLabelText('生成模型'), { target: { value: '1' } })
+    if (!screen.getByRole('checkbox', { name: '基础出题要求' }).matches(':checked')) {
+      fireEvent.click(screen.getByRole('checkbox', { name: '基础出题要求' }))
+    }
     fireEvent.click(screen.getByRole('button', { name: '生成并覆盖' }))
     fireEvent.click(
       within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
@@ -781,6 +784,7 @@ describe('Interface pages', () => {
 
     await waitFor(() =>
       expect(startAIGeneration).toHaveBeenCalledWith(interfaceId, instanceId, {
+        selectedPromptIndices: [0],
         model: { providerId: 'provider-b', modelId: 'model-b' },
         additionalPrompt: '出题方向偏科技类\n难度适合高中生'
       })
@@ -834,6 +838,7 @@ describe('Interface pages', () => {
     )
     await waitFor(() => expect(startAIGeneration).toHaveBeenCalledTimes(2))
     expect(startAIGeneration).toHaveBeenNthCalledWith(2, interfaceId, instanceId, {
+      selectedPromptIndices: [0],
       model: { providerId: 'provider-b', modelId: 'model-b' },
       additionalPrompt: '出题方向偏体育类'
     })
@@ -849,6 +854,9 @@ describe('Interface pages', () => {
       target: { value: ' \n\t ' }
     })
     await waitFor(() => expect(screen.getByLabelText('生成模型')).toBeEnabled())
+    if (!screen.getByRole('checkbox', { name: '基础出题要求' }).matches(':checked')) {
+      fireEvent.click(screen.getByRole('checkbox', { name: '基础出题要求' }))
+    }
     fireEvent.click(screen.getByRole('button', { name: '生成并覆盖' }))
     fireEvent.click(
       within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
@@ -857,6 +865,7 @@ describe('Interface pages', () => {
     )
     await waitFor(() => expect(startAIGeneration).toHaveBeenCalledTimes(3))
     expect(startAIGeneration).toHaveBeenNthCalledWith(3, interfaceId, instanceId, {
+      selectedPromptIndices: [0],
       model: { providerId: 'provider-b', modelId: 'model-b' }
     })
   })
@@ -1272,6 +1281,9 @@ describe('Interface pages', () => {
     fireEvent.change(screen.getByLabelText('补充提示词（可选）'), {
       target: { value: '出题方向偏科技类' }
     })
+    if (!screen.getByRole('checkbox', { name: '基础出题要求' }).matches(':checked')) {
+      fireEvent.click(screen.getByRole('checkbox', { name: '基础出题要求' }))
+    }
     fireEvent.click(screen.getByRole('button', { name: '生成并覆盖' }))
     fireEvent.click(
       within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {

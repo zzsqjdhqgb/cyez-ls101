@@ -2,11 +2,13 @@ import type { InterfaceInstance } from '@ls101/core-types'
 import { compareInterfaceIdentity, isInterfaceId, verifyInterfaceId } from './id'
 import {
   InterfaceRepositoryError,
+  isInterfaceDef,
   type InterfaceRepository,
   type LocatedInterfaceInstance,
   type SaveEntityResult
 } from './repository'
 import type { InterfaceDef } from './types'
+import { validateInterfaceDef } from './validation'
 
 export type InstanceSelection =
   | { mode: 'none' }
@@ -108,6 +110,9 @@ export async function inspectInterfacePackage(
   value: InterfaceExchangePackage
 ): Promise<InterfacePackageInspection> {
   assertPackageShape(value)
+  if (!isInterfaceDef(value.interface) || !validateInterfaceDef(value.interface).valid) {
+    throw invalidPackage('Interface content is malformed')
+  }
   let verified = false
   try {
     verified = await verifyInterfaceId(value.interface)

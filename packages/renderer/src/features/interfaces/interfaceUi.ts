@@ -53,7 +53,9 @@ export function makeUniqueKey(
 const validationMessages: Record<ValidationError['code'], string> = {
   INVALID_ID: '题型 ID 无效',
   EMPTY_NAME: '题型名称不能为空',
-  EMPTY_PROMPT_TEMPLATE: '提示词不能为空',
+  EMPTY_PROMPTS: '至少需要一项提示词',
+  EMPTY_PROMPT_NAME: '提示词名称不能为空',
+  EMPTY_PROMPT_CONTENT: '提示词内容不能为空',
   EMPTY_FIELDS: '至少需要一个字段',
   EMPTY_GROUP: '字段组中至少需要一个字段',
   INVALID_FIELD_ORDER: '字段顺序无效',
@@ -66,7 +68,12 @@ const validationMessages: Record<ValidationError['code'], string> = {
 }
 
 export function validationMessage(error: ValidationError): string {
-  const prefix = error.path ? `${error.path}：` : ''
+  const prefix =
+    error.params?.index !== undefined
+      ? `提示词 ${Number(error.params?.index) + 1}：`
+      : error.path
+        ? `${error.path}：`
+        : ''
   return `${prefix}${validationMessages[error.code]}`
 }
 

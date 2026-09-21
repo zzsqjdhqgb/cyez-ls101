@@ -29,7 +29,7 @@ export interface FieldLeaf {
   /**
    * 字段描述。告诉 AI 此字段应包含什么内容。
    * 例如 "朗读句子第一题题干" 或 "看图说话题目配图"。
-   * 此文本会随 promptTemplate 一同发送给 LLM。
+   * 此文本会随 prompts 一同发送给 LLM。
    */
   description: string
 
@@ -73,10 +73,16 @@ export interface FieldCollection {
 // Interface 定义
 // ============================================================
 
+/** 题型定义中的命名提示词片段。 */
+export interface InterfacePrompt {
+  name: string
+  content: string
+}
+
 /**
  * Interface 定义。一个 Interface 代表一类考试题型（如"上海高考听说"），
  * 定义了提示词模板和字段结构。教师可在 Interface 管理界面中：
- * 1. 编辑 promptTemplate（提示词）
+ * 1. 编辑 prompts（提示词）
  * 2. 编辑 fields（字段树）
  * 3. 多次调用 AI 生成多套数据实例（InterfaceInstance）
  */
@@ -88,11 +94,11 @@ export interface InterfaceContent {
   description: string
 
   /**
-   * AI 提示词模板。发送给 LLM 的完整 prompt。
+   * 有序的命名提示词片段。生成时只发送选中的项，始终按定义顺序拼接。
    * 系统会将 fields 的 JSON 描述（type + description + example）拼接到 prompt 后一同发送。
    * varName 不发送给 LLM——LLM 看到的是字段结构和描述，不是变量名。
    */
-  promptTemplate: string
+  prompts: InterfacePrompt[]
 
   /**
    * 字段结构树。定义了 AI 输出 JSON 的结构和每个字段的含义。

@@ -94,9 +94,9 @@ test(
 
       await productStep('define-contract', async () => {
         const content = page.getByLabel('题型内容')
-        await content.getByLabel('名称').fill(INTERFACE_NAME)
+        await content.getByLabel('名称', { exact: true }).fill(INTERFACE_NAME)
         await content.getByLabel('描述').fill('用于课堂英语讨论的可复用题型')
-        await content.getByLabel('生成要求').fill('生成一个适合学生讨论校园生活的英语问题。')
+        await content.getByLabel('提示词 1 内容').fill('生成一个适合学生讨论校园生活的英语问题。')
 
         await page.getByRole('button', { name: '添加字段', exact: true }).click()
         const structure = page.getByLabel('字段结构')

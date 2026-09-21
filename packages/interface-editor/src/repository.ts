@@ -792,7 +792,11 @@ function isContent(value: Record<string, unknown>): boolean {
   return (
     typeof value.name === 'string' &&
     typeof value.description === 'string' &&
-    typeof value.promptTemplate === 'string' &&
+    Array.isArray(value.prompts) &&
+    value.prompts.every(
+      (prompt) =>
+        isRecord(prompt) && typeof prompt.name === 'string' && typeof prompt.content === 'string'
+    ) &&
     isFieldCollection(value.fields)
   )
 }
