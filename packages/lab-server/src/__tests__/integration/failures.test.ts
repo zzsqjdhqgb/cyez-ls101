@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { readdir } from 'node:fs/promises'
+import * as fs from 'node:fs/promises'
 import { join } from 'node:path'
-import * as durable from '../../durable-files'
-import { LabError } from '../../errors'
 import {
   recordFailure,
   archiveInput,
@@ -15,6 +13,11 @@ import {
   practice,
   type Fixture
 } from './support'
+
+// Keep real filesystem operations, exposing only the capacity probe for controlled disk states.
+vi.mock('node:fs/promises', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('node:fs/promises')>())
+}))
 
 let f: Fixture, teacher: string, student: Awaited<ReturnType<typeof enroll>>[number]
 beforeEach(async () => {
@@ -29,18 +32,58 @@ afterEach(async ({ task }) => {
 })
 
 describe('IO: failed transfers never create successful receipts', () => {
-  it('insufficient capacity refuses before receiving bytes and permits a later retry', async () => {
+  it.each([64, 8192])(
+    '%i GiB volume with 32 GiB available accepts real exam and submission uploads',
+    async (totalGiB) => {
+      const space = await fs.statfs(f.root)
+      vi.spyOn(fs, 'statfs').mockResolvedValue({
+        ...space,
+        bsize: 4096,
+        blocks: (totalGiB * 1024 ** 3) / 4096,
+        bfree: (32 * 1024 ** 3) / 4096,
+        bavail: (32 * 1024 ** 3) / 4096
+      })
+      const p = await practice(f.endpoint, teacher, student.token)
+      const received = await p.upload()
+      expect(received.status, JSON.stringify(received.body)).toBe(201)
+      await f.restart()
+      expect((await p.receipt()).body).toEqual(received.body)
+      expect((await p.upload()).body).toEqual(received.body)
+    }
+  )
+
+  it('requires the upload size plus a fixed 1 GiB reserve, accepting the exact boundary', async () => {
+    const p = await practice(f.endpoint, teacher, student.token)
+    const space = await fs.statfs(f.root)
+    const available = 1024 ** 3 + p.bytes.byteLength
+    // One-byte blocks make the exact reserve boundary observable without large archive fixtures.
+    // Deliberately distinguish unallocated space from space available to this process.
+    const reported = { ...space, bsize: 1, blocks: 8 * 1024 ** 4, bfree: 32 * 1024 ** 3 }
+    const probe = vi.spyOn(fs, 'statfs').mockResolvedValue({ ...reported, bavail: available - 1 })
+    error(await p.upload(), 503, 'STORAGE_UNAVAILABLE')
+    expect((await p.receipt()).body.status).toBe('not-received')
+    expect(f.service.db.all('SELECT * FROM uploads')).toEqual([])
+    expect(f.service.transfers.size).toBe(0)
+    expect(await fs.readdir(join(f.root, 'incoming'))).toEqual([])
+    expect(await fs.readdir(join(f.root, 'archives/submissions'))).toEqual([])
+    probe.mockResolvedValue({ ...reported, bavail: available })
+    const received = await p.upload()
+    expect(received.status, JSON.stringify(received.body)).toBe(201)
+    expect((await p.receipt()).body).toEqual(received.body)
+  })
+
+  it('failed capacity probe refuses before receiving bytes and permits a later retry', async () => {
     const p = await practice(f.endpoint, teacher, student.token)
     // Only the filesystem capacity probe is replaced. HTTP, authorization, SQLite and all writes
     // remain real. This proves error handling, not an actual full-filesystem durability result.
     const probe = vi
-      .spyOn(durable, 'ensureSpace')
-      .mockRejectedValueOnce(new LabError('STORAGE_UNAVAILABLE'))
+      .spyOn(fs, 'statfs')
+      .mockRejectedValueOnce(Object.assign(new Error('Capacity probe failed'), { code: 'EIO' }))
     error(await p.upload(), 503, 'STORAGE_UNAVAILABLE')
     probe.mockRestore()
     expect((await p.receipt()).body.status).toBe('not-received')
     expect(f.service.db.all('SELECT * FROM uploads')).toEqual([])
-    expect(await readdir(join(f.root, 'incoming'))).toEqual([])
+    expect(await fs.readdir(join(f.root, 'incoming'))).toEqual([])
     expect((await p.upload()).status).toBe(201)
   })
 
@@ -57,8 +100,8 @@ describe('IO: failed transfers never create successful receipts', () => {
       expect((await p.receipt()).body.status).toBe('not-received')
       expect(f.service.db.all('SELECT * FROM uploads')).toEqual([])
       expect(f.service.transfers.size).toBe(0)
-      expect(await readdir(join(f.root, 'incoming'))).toEqual([])
-      expect(await readdir(join(f.root, 'archives/submissions'))).toEqual([])
+      expect(await fs.readdir(join(f.root, 'incoming'))).toEqual([])
+      expect(await fs.readdir(join(f.root, 'archives/submissions'))).toEqual([])
       expect((await p.upload()).status).toBe(201)
     }
   )
