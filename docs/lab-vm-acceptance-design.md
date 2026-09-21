@@ -308,7 +308,7 @@ scripts/lab/build-test-driver.mjs # 把两个驱动打成单文件，VM 内无�
 | M1 宿主机门禁与打包、Windows 服务 | **已在真实 Windows 宿主机上全绿（15/15）**              | `yarn vm:lab`：宿主机门禁、编译编排、guest 阶段脚本、提权管理器驱动器、防火墙门控                                                                    |
 | M2 协议驱动器                     | **已在真实 Windows 宿主机上全绿（12/12 + 宿主机对打）** | N1–N13：指纹前置拒绝、非回环认证、入网与整文件语义、心跳在线/离线、上传下载回执、维护准入、429/503、租约+维护退出、多连接压测、IPv6 负例、宿主机对打 |
 | M3 CDP GUI                        | 未实现                                                  |                                                                                                                                                      |
-| M4 升级/卸载/数据保留             | **已实现（容器内 lane 全绿；实机结论待下一轮 `yarn vm:lab`）** | U1–U5 的 guest 步骤（`upgrade-packages`、`upgrade-initial-state`、`upgrade-same-version-reinstall`、`upgrade-without-preparation`、`upgrade-prepared`、`client-uninstall-keeps-service`、`service-uninstall-and-reinstall`），以及协议驱动器的 `backup` 命令；见第 12.1 节 |
+| M4 升级/卸载/数据保留             | **已在真实 Windows 宿主机上全绿（8/8 步）** | U1–U5：`upgrade-packages`、`upgrade-initial-state`、`upgrade-same-version-reinstall`、`upgrade-without-preparation`、`upgrade-prepared`、`client-uninstall-keeps-service`、`service-uninstall-and-reinstall`、`secret-scan-final`，以及协议驱动器的 `backup` 命令；见第 12.2 节与第 13 节的四条产品缺陷 |
 
 M1 的首次全绿运行：2026-09-17，runId `1789661969192-a443907b-4923-4a0e-8d9f-62c5c250ada8`，宿主机侧 19 步、822 s，guest 阶段 96 s，15 个步骤全部 `passed`。该次产物：教师端 `ls101-lab-teacher-0.4.1-win-x64.exe` SHA-256 `972066e2…9ce777`，学生端 `ls101-lab-student-0.4.1-win-x64.exe` SHA-256 `34111bdd…d5282`。在此之前几轮运行分别止步于打包、服务安装目录和第 13 步 `restart-survives`，后者查出的是产品缺陷（见第 13 节第四条），不是测试问题。
 
@@ -339,7 +339,9 @@ M1 尚未覆盖的 Tier 1 项：S15（停止语义与在线设备）、S16（重
 
 M4 在**容器内**已经自证（这是 M2 之后新增的第三条自证要求）：`yarn test:vitest` 的 `tests/lab-vm/protocol/backup.test.ts` 对真实 `LabService`（真实 TLS、可注入时钟）跑新命令，断言正常模式下备份被拒、维护模式下得到 `ready` 且归档确实落在 `backups/<id>.7z` 且字节数与索引一致、以及快照时间是服务自己的时钟；`scripts/__tests__/lab-driver.test.js` 断言 `manager-driver` 的 `prepare-install` 原样带回退出码与 stderr 信封、`--raw` 把拒绝作为结果而不是退出状态返回。`yarn vm:test` 另外钉住 M4 的步骤顺序、失败路径的恢复动作和卸载器路径的来源。
 
-**M4 尚未取得实机结论。** 上表 M4 的"已实现"只表示代码与容器内自证完成，不表示任何一条 U 用例已经在真实 Windows 上通过；下一轮 `yarn vm:lab` 的 guest 步骤数从 26 变为 33（M1 15 + M2 11 + M4 7），通过后本节 M4 行才能改为"已在真实宿主机上全绿"。
+**M4 已在真实 Windows 宿主机上全绿。** guest 阶段现在是 34 步（M1 15 + M2 11 + M4 8），宿主机对打（N13）与防火墙门控同时通过，全部成功时 VM 自动销毁。
+
+M4 的首次全绿运行：2026-09-21，runId `1789991140621-bca543c3-bb5f-4472-b4e0-8e3355e7215c`，guest 阶段 11:52:49 → 11:59:58（约 7 分钟），34 步全部 `passed`。该次产物：教师端 SHA-256 `84bcbbdc…688ad`，学生端 `546ec570…c6e1`。真机读数：同版本重装的两次拒绝分别 20.4/23.9 秒、`exit=2` 且不再挂起；真实备份 4.2 MB、`ready`、约 1 秒；升级后 `installation.json` 指向新 release、serverId 与证书指纹不变、被删作答的回执仍以 `deleted` 状态可查；客户端卸载返回后 **3 秒**内文件消失；服务卸载 → 重装后 serverId、试卷摘要与回执全部保留。
 
 ### 12.1 S18 的扫描范围（本轮一并补齐）
 
@@ -351,6 +353,19 @@ S18 原本只按管理密码扫描三个文件。设计 §3.3 要求同时覆盖
 扫描对象覆盖 `lab-acceptance.log`、`lab-progress.txt`、`lab-results.json`，断言失败时会指出是哪一个秘密泄漏到了哪一个文件；某一遍声称要扫的秘密如果不存在，该遍直接失败，而不是"什么都没扫"地通过。第一次真机运行正是被这条"不静默降级"的规则拦下的：那一版只有一遍扫描、却要求三个秘密，于是它在 M2 之前就红了——这是测试自身的时序错误，不是产品缺陷。
 
 邀请码的值只用于这次比较：它不写日志、不写结果、只以长度出现在断言消息里；`scripts/__tests__/windows-vm.test.js` 钉住"只读一次 + 不得进入任何 sink"这条性质。
+
+## 12.2 M4 的实机结论与部署步骤（2026-09-21）
+
+M4 在真实 Windows 宿主机上全绿（第 12 节）。除了通过本身，这一轮确认了**四条产品缺陷**和**两条此前未写明的部署步骤**，后者对机房部署是操作性的：
+
+| 结论 | 依据 |
+| ---- | ---- |
+| 升级完成后服务处于**停止**状态，需要显式启动 | `install-windows.ps1` 自报 `Service installed and stopped. Autostart is unchanged.`；wrapper 日志显示安装流程最后一步是停服；升级前的 `startMode` 与升级后一致 |
+| 升级完成后服务仍处于**维护模式**，需要显式退出 | 备份与 `prepare-upgrade` 都要求维护模式，而模式是持久业务状态，替换运行时不会改变它；升级后立即下载试卷得到 `409 SERVICE_MAINTENANCE`，退出后即恢复 |
+| 脚本化卸载客户端必须补 `_?=` 且目录要加引号 | 不带 `_?=` 时卸载器复制自身到临时目录并立即返回（0.5 秒"成功"却没删任何东西）；带上未加引号的含空格路径时同样如此。加引号后仍需**轮询文件消失**（本次 0.4 秒返回、3 秒后文件才真正消失） |
+| 静默安装失败必须留证据 | `install-failure.log`（`teacher.nsh` 写入）是唯一带 stage 的产物；正是它把"与 SCM 抢跑"从"exit 2 + 无输出"变成可定位的缺陷 |
+
+两条对部署文档的要求已在上表前两行：升级后先 `sc.exe start LS101Lab`（或依赖既有的自启动设置），再退出维护模式。
 
 ## 13. 实机运行发现的问题
 
@@ -371,6 +386,15 @@ S18 原本只按管理密码扫描三个文件。设计 §3.3 要求同时覆盖
 | 服务停止后永远停不下来 | `Restart-Service` 卡住；SCM 长期停在 `Stop Pending`；wrapper 日志在 `WaitForProcessToExit <runtime>+<stop>` 之后不再更新；runtime 进程仍活着、控制通道仍应答 | WinSW 2.12.0 在 `WrapperService.DoStop` 里无条件执行 `stopArguments += " " + Arguments`，因此 XML 里用 `<arguments>` 声明的启动参数被**原样追加到停止命令行**。实际停止命令成了 `server.cjs shutdown --data-dir <data> server.cjs serve --data-dir <data>`，被 `cli.ts` 的 `extra.length` 判为 `INVALID_ARGUMENTS` 并立刻以 1 退出，`shutdown` 从未送达 runtime | 已修：`LS101Lab.xml` 的 `<arguments>` 改为 `<startarguments>`；新增契约断言防止回归 |
 
 三个细节值得记下来。其一，WinSW 文档写明了规则——"When you use the `<stoparguments>`, you must use `<startarguments>` instead of `<arguments>`"——但这条规则违反时**完全静默**：WinSW 启动停止进程时传的日志处理器是 `null`，停止进程写往 stderr 的 `INVALID_ARGUMENTS` 没有任何去处，wrapper 日志只留下 `Started process <pid>` 一行。其二，`<stoptimeout>1900 sec</stoptimeout>` 在这种配置下**不生效**：它只在"没有 `<stoparguments>`、由 WinSW 直接杀进程树"的分支里使用，而优雅停止走的是 `while (!WaitForExit(sleeptime)) SignalPending()` 的无界循环，默认 1 秒轮询、永不放弃。也就是说这个缺陷不是"卡 31 分钟后被杀"，而是**服务根本无法停止**，教师机上的 `sc stop`、重启和关机都会无限期挂起；此前"1900 秒后会自愈"的判断是错的。其三，定位手段是把停止进程的命令行抓下来：wrapper 自己不记，探针按秒级轮询又必然错过这个存活不到 1 秒的进程，最终靠在 `Restart-Service` 旁边挂一个 100 ms 轮询 `Win32_Process`、由哨兵文件结束的采样器才拿到证据。
+
+### 13.2 M4 期间发现的四条产品缺陷（2026-09-21）
+
+| 缺陷 | 表现 | 根因 | 状态 |
+| ---- | ---- | ---- | ---- |
+| 静默安装失败时弹框挂死 | `/S` 安装器永不返回，`runProcess` 等到 900 秒超时，`stdout`/`stderr` 全空 | `teacher.nsh` 在服务安装失败时 `MessageBox` 后 `Abort`；无人值守下没人能点击它 | 已修：静默模式改为写 `DetailPrint` + `install-failure.log`、`SetErrorLevel 2` 并同样 `Abort`；交互模式保留对话框 |
+| 与 SCM 抢跑导致正常升级被拒 | `installer exit 1`，日志 `LS101_INSTALL_ERROR [check-existing-installation]: Stop the service before installation or upgrade`，而此时服务确已停止 | `--prepare-install` 通过 wrapper 停服后，SCM 仍可能短暂报告 `Running`；脚本只取一次状态快照 | 已修：轮询最多 15 秒，并把看到的状态写进报错 |
+| 失败原因不可读 | 静默失败只剩退出码 | NSIS 钩子丢弃安装脚本输出，`DetailPrint` 只进安装器自己的日志窗口 | 已修：失败时把 nsExec 捕获的输出写入 `install-failure.log` |
+| 卸载器的返回不等于卸载完成 | `Uninstall …exe /S` 0.5 秒返回 0、文件仍在 | `_?=` 目录未加引号（含空格）时 NSIS 复制自身到临时目录执行，原进程先返回 | 已修（用例侧）：`_?="<dir>"` 并轮询文件消失；真机读数 0.4 秒返回、3 秒后消失 |
 
 一处**撤回的判断**：早期日志（安装记录缺失、安装器 16 秒返回）曾被解读为"静默安装失败却返回 0"。第三条缺陷确认后，安装器其实成功执行了服务安装脚本，只是落在被重定向的目录，退出码是正确的。第 11 节风险 2（静默模式下 `MessageBox` 是否挂起）此后一直保持开放，直到 2026-09-19 的 M4 运行确认它**确实会挂起**（见该风险条目）。
 
