@@ -6,13 +6,23 @@
 
 ## 执行入口
 
-在仓库或专用 worktree 根目录的 PowerShell 中执行：
+在已安装当前操作系统依赖的仓库或专用 worktree 根目录执行统一入口（Windows PowerShell 和 Linux 均相同）：
+
+```powershell
+yarn lab:test
+```
+
+入口先确认 Node 24.20.0 和原生归档程序可用，再依次执行服务端测试类型检查、协议驱动类型检查、服务端源码套件、协议套件、正式服务端构建及产物测试、教师／学生 Electron 跨端测试。任一阶段失败立即以非零状态退出，并标明失败阶段；Linux 的 Electron 阶段自动使用 `xvfb-run -a`。本地和 CI 使用同一入口。
+
+该命令不安装依赖；子命令使用 `LS101_SETUP_MODE=product-docs`。它会重建 `out` 下的产物，同一工作区内应与 VM 打包错开。VM 系统验收和持续混合负载保留独立入口。
+
+需要单独排查时，仍可在 PowerShell 中执行：
 
 ```powershell
 $env:LS101_SETUP_MODE = 'product-docs'
 yarn lab:test:typecheck
 yarn lab:test:service
-yarn exec vitest run --config tests/lab-vm/vitest.config.ts
+yarn lab:test:protocol
 yarn lab:test:server
 yarn lab:test:integration
 ```

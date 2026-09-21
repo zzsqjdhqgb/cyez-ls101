@@ -193,14 +193,18 @@ test('student enrollment, maintenance, practice and durable receipt run through 
     const listedDevice = deviceList.items[0]
     const deviceRow = teacherPage.locator('tr').filter({ hasText: listedDevice.number }).first()
     await deviceRow.getByRole('button', { name: '编辑设备', exact: true }).click()
-    const deviceEditor = teacherPage.getByRole('dialog')
+    const deviceEditor = teacherPage.getByRole('dialog', { name: '编辑设备', exact: true })
     await deviceEditor.getByLabel('设备编号', { exact: true }).fill('0007')
     await deviceEditor.getByLabel('机房', { exact: true }).fill('A101')
     await deviceEditor.getByRole('button', { name: '保存设备', exact: true }).click()
+    // The renderer closes this dialog only after session.mutate resolves. A completed click does
+    // not await the IPC/HTTPS write; querying through our independent client can still see old data.
+    await expect(deviceEditor).toHaveCount(0)
     const renamedDevices = await teacher.request<Schema<'DeviceList'>>('getTeacherDevices')
-    expect(renamedDevices.items.find((device) => device.id === listedDevice.id)?.number).toBe(
-      '0007'
-    )
+    expect(renamedDevices.items.find((device) => device.id === listedDevice.id)).toMatchObject({
+      number: '0007',
+      room: 'A101'
+    })
     await teacherPage.getByRole('link', { name: '维护', exact: true }).click()
     await expect(teacherPage.getByRole('heading', { name: '维护', exact: true })).toBeVisible()
     await teacherPage.getByRole('button', { name: '进入维护模式', exact: true }).click()
