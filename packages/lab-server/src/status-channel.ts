@@ -5,6 +5,10 @@ import type { RuntimeStatus } from './runtime'
 
 const MAX_BYTES = 64 * 1024
 
+function statusError(code: string): NodeJS.ErrnoException {
+  return Object.assign(new Error(code), { code })
+}
+
 export function statusChannelPath(root: string): string {
   const path = resolve(root)
   const id = createHash('sha256')
@@ -70,22 +74,22 @@ export function readServiceStatus(root: string): Promise<RuntimeStatus> {
     const socket = createConnection(statusChannelPath(root))
     const chunks: Buffer[] = []
     let size = 0
-    socket.setTimeout(5000, () => socket.destroy(new Error('LOCAL_STATUS_UNAVAILABLE')))
+    socket.setTimeout(5000, () => socket.destroy(statusError('ETIMEDOUT')))
     socket.on('error', fail)
-    socket.once('close', () => fail(new Error('LOCAL_STATUS_UNAVAILABLE')))
+    socket.once('close', () => fail(statusError('ECONNRESET')))
     socket.on('data', (chunk: Buffer) => {
       size += chunk.length
-      if (size > MAX_BYTES) socket.destroy(new Error('LOCAL_STATUS_UNAVAILABLE'))
+      if (size > MAX_BYTES) socket.destroy(statusError('LOCAL_STATUS_INVALID_RESPONSE'))
       else chunks.push(chunk)
     })
     socket.once('end', () => {
       try {
         const value = JSON.parse(Buffer.concat(chunks).toString('utf8')) as RuntimeStatus
         if (!['running', 'uninitialized', 'unavailable'].includes(value?.state))
-          throw new Error('LOCAL_STATUS_UNAVAILABLE')
+          throw statusError('LOCAL_STATUS_INVALID_RESPONSE')
         done(value)
-      } catch (error) {
-        fail(error)
+      } catch {
+        fail(statusError('LOCAL_STATUS_INVALID_RESPONSE'))
       } finally {
         socket.destroy()
       }
