@@ -222,6 +222,7 @@ export interface InterfaceInstanceApplication {
     options?: {
       model?: InterfaceTextModelSelection
       imageProvider?: InterfaceImageProviderSelection
+      additionalPrompt?: string
     }
   ): Promise<InterfaceAIGenerationHandle>
   generateImage(
@@ -661,6 +662,7 @@ export function createInterfaceApplication(
       replaceFromJson,
       async startAIGeneration(interfaceId, instanceId, options = {}) {
         if (!textGenerator) throw new Error('Interface text generator is not configured')
+        const additionalPrompt = options.additionalPrompt
         const state: InterfaceGenerationState = {
           phase: 'ai',
           reasoning: '',
@@ -688,10 +690,13 @@ export function createInterfaceApplication(
               generationProgressItems(state),
               async (publish) => {
                 if (state.phase === 'ai') {
-                  const stream = textGenerator.generate(buildAIPrompt(generationDef), {
-                    signal: controller.signal,
-                    model: options.model
-                  })
+                  const stream = textGenerator.generate(
+                    buildAIPrompt(generationDef, additionalPrompt),
+                    {
+                      signal: controller.signal,
+                      model: options.model
+                    }
+                  )
                   for await (const chunk of stream) {
                     if (controller.signal.aborted) throw new GenerationCancelledError()
                     if (chunk.type === 'reasoning') state.reasoning += chunk.delta

@@ -48,6 +48,24 @@ function makeDef(overrides: DefOverrides = {}): InterfaceDef {
 // ============================================================
 
 describe('buildAIPrompt', () => {
+  it('将补充要求放在题型要求之后、格式约束之前，并保留内部换行', () => {
+    const def = makeDef()
+    const original = structuredClone(def)
+    const prompt = buildAIPrompt(def, '  出题方向偏科技类\n难度适合高中生  ')
+    expect(prompt).toContain('本次生成的补充要求：\n出题方向偏科技类\n难度适合高中生\n\n')
+    expect(prompt.indexOf(def.promptTemplate)).toBeLessThan(prompt.indexOf('本次生成的补充要求：'))
+    expect(prompt.indexOf('难度适合高中生')).toBeLessThan(
+      prompt.indexOf('请严格按照以下 JSON Schema')
+    )
+    expect(prompt).toContain('示例输出：')
+    expect(def).toEqual(original)
+  })
+
+  it.each(['', ' \n\t '])('忽略空白补充要求 %j', (additionalPrompt) => {
+    const def = makeDef()
+    expect(buildAIPrompt(def, additionalPrompt)).toBe(buildAIPrompt(def))
+  })
+
   it('包含 promptTemplate', () => {
     const def = makeDef({ promptTemplate: '请生成一套测试题目' })
     const prompt = buildAIPrompt(def)

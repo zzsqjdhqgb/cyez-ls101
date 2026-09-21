@@ -79,6 +79,7 @@
 
 .nameField input,
 .valueField textarea,
+.additionalPromptField textarea,
 .jsonInput textarea {
   width: 100%;
   padding: 9px 10px;
@@ -421,6 +422,34 @@
   min-height: 0;
   padding: 24px;
   overflow: auto;
+}
+
+.additionalPromptField {
+  display: grid;
+  gap: 8px;
+}
+
+.additionalPromptField label {
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.additionalPromptField textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.additionalPromptField textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.additionalPromptField p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .generationContent {

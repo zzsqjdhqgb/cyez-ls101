@@ -456,7 +456,8 @@ async function createInstanceFromDetails(
   await page.getByRole('button', { name: '新建题组' }).click()
   const dialog = page.getByRole('dialog', { name: '新建题组' })
   await dialog.getByLabel('题组名称').fill(instanceName)
-  await dialog.getByLabel(mode).check()
+  await dialog.getByText(mode, { exact: true }).click()
+  await expect(dialog.getByLabel(mode)).toBeChecked()
   await dialog.getByRole('button', { name: '创建题组' }).click()
   await expect(page.getByRole('heading', { level: 1, name: instanceName })).toBeVisible()
 }
@@ -603,6 +604,7 @@ test('IE-01 generates and saves an instance through the real AIRouter pipeline',
   const modelSelect = page.getByLabel('生成模型', { exact: true })
   await expect(modelSelect).toBeVisible()
   await modelSelect.selectOption({ label: 'mock-json' })
+  await page.getByLabel('补充提示词（可选）').fill('  出题方向偏科技类\n难度适合高中生  ')
   await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
 
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 15_000 })
@@ -616,9 +618,26 @@ test('IE-01 generates and saves an instance through the real AIRouter pipeline',
     messages: [{ role: 'user', content: expect.stringContaining(textInterface.promptTemplate) }],
     stream: true
   })
+  expect(request?.body).toMatchObject({
+    messages: [
+      {
+        role: 'user',
+        content: expect.stringContaining('本次生成的补充要求：\n出题方向偏科技类\n难度适合高中生')
+      }
+    ]
+  })
   expect(await readInstance(interfaceId)).toMatchObject({
     instance: { values: { titleText: 'AI 标题', answerText: 'AI answer' } }
   })
+  await page.getByRole('button', { name: '返回题组', exact: true }).click()
+  await page.getByRole('button', { name: '返回题型详情' }).click()
+  await page.getByRole('button', { name: '集成测试题组', exact: true }).click()
+  await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
+  await expect(page.getByLabel('补充提示词（可选）')).toHaveValue('')
+  await page.getByRole('button', { name: '取消', exact: true }).click()
+  await page.getByRole('button', { name: '返回题型详情' }).click()
+  await createInstanceFromDetails('新的 AI 题组', 'AI 生成')
+  await expect(page.getByLabel('补充提示词（可选）')).toHaveValue('')
 })
 
 test('IE-02 generates text and images atomically through the real pipelines', async () => {

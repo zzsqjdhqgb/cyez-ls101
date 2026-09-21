@@ -102,6 +102,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   const [jsonErrors, setJsonErrors] = useState<readonly InstanceDataError[]>([])
   const [modelOptions, setModelOptions] = useState<readonly AIModelOption[]>([])
   const [selectedModel, setSelectedModel] = useState<AIModelSelection | null>(null)
+  const [additionalPrompt, setAdditionalPrompt] = useState('')
   const [modelsLoading, setModelsLoading] = useState(false)
   const [modelsError, setModelsError] = useState<string | null>(null)
   const [imageProviderOptions, setImageProviderOptions] = useState<
@@ -139,6 +140,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
         setName(instance?.instance.name ?? '')
         setValues(instance?.instance.values ?? {})
         setImagePrompts(instance?.instance.imagePrompts ?? {})
+        setAdditionalPrompt('')
       })
       .catch((reason: unknown) => {
         if (active) setError(errorMessage(reason))
@@ -392,6 +394,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
     try {
       const handle = await application.instances.startAIGeneration(interfaceId, instanceId, {
         model: selectedModel,
+        ...(additionalPrompt.trim() ? { additionalPrompt: additionalPrompt.trim() } : {}),
         ...(hasImageFields && selectedImageProvider ? { imageProvider: selectedImageProvider } : {})
       })
       setGeneration({ handle, result: null, startError: null })
@@ -880,6 +883,8 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       >
         <AIGenerationDialog
           dirty={dirty}
+          additionalPrompt={additionalPrompt}
+          onAdditionalPromptChange={setAdditionalPrompt}
           modelsError={modelsError}
           modelsLoading={modelsLoading}
           modelOptions={modelOptions}
@@ -1092,6 +1097,8 @@ function ImageValueInput({
 
 function AIGenerationDialog({
   dirty,
+  additionalPrompt,
+  onAdditionalPromptChange,
   modelsError,
   modelsLoading,
   modelOptions,
@@ -1113,6 +1120,8 @@ function AIGenerationDialog({
   onStart
 }: {
   dirty: boolean
+  additionalPrompt: string
+  onAdditionalPromptChange(value: string): void
   modelsError: string | null
   modelsLoading: boolean
   modelOptions: readonly AIModelOption[]
@@ -1171,6 +1180,21 @@ function AIGenerationDialog({
           onChange={onSelectModel}
           onRefresh={onRefresh}
         />
+        <div className={styles.additionalPromptField}>
+          <label htmlFor="ai-additional-prompt">补充提示词（可选）</label>
+          <textarea
+            id="ai-additional-prompt"
+            aria-describedby="ai-additional-prompt-help"
+            disabled={(session !== null && !finished) || resumable}
+            placeholder="例如：出题方向偏科技类"
+            rows={3}
+            value={additionalPrompt}
+            onChange={(event) => onAdditionalPromptChange(event.target.value)}
+          />
+          <p id="ai-additional-prompt-help">
+            补充本次出题的主题、方向或难度要求，将与题型生成要求一并发送给 AI。
+          </p>
+        </div>
         {hasImageFields ? (
           <AIImageProviderSelect
             disabled={(session !== null && !finished) || resumable}

@@ -20,15 +20,21 @@ import { buildJsonSchema, buildJsonExample } from './schema'
 // ============================================================
 
 /**
- * 合成发送给 LLM 的完整提示词，包含三部分：
+ * 合成发送给 LLM 的完整提示词，包含以下部分：
  * 1. 教师编写的 promptTemplate（界面中编辑的提示词）
- * 2. JSON Schema（由字段树自动生成，描述期望的 JSON 结构）
- * 3. JSON Example（由字段的 example 值填充的示例输出）
+ * 2. 本次生成的补充要求（可选，不修改题型定义）
+ * 3. JSON Schema（由字段树自动生成，描述期望的 JSON 结构）
+ * 4. JSON Example（由字段的 example 值填充的示例输出）
  *
  * LLM 应直接返回符合 Schema 的 JSON，不要包含任何 JSON 之外的文本。
  */
-export function buildAIPrompt(def: InterfaceDef): string {
-  return `${def.promptTemplate}\n\n${buildFormatInstructions(def)}`
+export function buildAIPrompt(def: InterfaceDef, additionalPrompt?: string): string {
+  const supplement = additionalPrompt?.trim()
+  return [
+    def.promptTemplate,
+    ...(supplement ? [`本次生成的补充要求：\n${supplement}`] : []),
+    buildFormatInstructions(def)
+  ].join('\n\n')
 }
 
 /** 构建由字段结构派生的格式限制提示词。 */

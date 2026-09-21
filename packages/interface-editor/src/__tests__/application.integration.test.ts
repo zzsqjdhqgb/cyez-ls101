@@ -235,6 +235,7 @@ describe('interface editor application integration', () => {
       instance.instance.instanceId,
       {
         model,
+        additionalPrompt: '出题方向偏科技类',
         imageProvider: { providerId: 'image-provider', modelId: 'image-model' }
       }
     )
@@ -242,6 +243,7 @@ describe('interface editor application integration', () => {
     expect(result.status).toBe('completed')
     expect(textGenerator.lastModel).toEqual(model)
     expect(textGenerator.lastPrompt).toContain(content.promptTemplate)
+    expect(textGenerator.lastPrompt).toContain('本次生成的补充要求：\n出题方向偏科技类')
     expect(imageGenerator.generate).toHaveBeenCalledWith('AI 配图', {
       signal: expect.any(AbortSignal),
       provider: { providerId: 'image-provider', modelId: 'image-model' }
@@ -265,6 +267,49 @@ describe('interface editor application integration', () => {
       provider: { providerId: 'image-provider' }
     })
     expect(generated).toEqual(PNG)
+  })
+
+  it('retains the original supplemental prompt when retrying a failed text request', async () => {
+    const repository = new FileInterfaceRepository(new MemoryStore())
+    const prompts: string[] = []
+    const textGenerator: InterfaceTextGenerator = {
+      async *generate(prompt) {
+        prompts.push(prompt)
+        if (prompts.length === 1) throw new Error('temporary text failure')
+        yield {
+          type: 'output',
+          delta: '{"title":"AI 标题","section":{"picture":"AI 配图","answer":"AI answer"}}'
+        }
+      }
+    }
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(),
+      textGenerator,
+      imageGenerator: { generate: vi.fn().mockResolvedValue({ data: PNG }) }
+    })
+    const draft = await app.drafts.create(content)
+    const published = await app.drafts.publish(draft.draftId)
+    if (published.status === 'invalid') throw new Error('expected a valid draft')
+    const interfaceId = published.interface.interfaceId
+    const blank = await app.published.createBlankInstance(interfaceId)
+    const options = { additionalPrompt: '  出题方向偏科技类  ' }
+    const handle = await app.instances.startAIGeneration(
+      interfaceId,
+      blank.instance.instanceId,
+      options
+    )
+    await expect(handle.completion).resolves.toMatchObject({ status: 'failed' })
+    await expect(app.instances.get(interfaceId, blank.instance.instanceId)).resolves.toEqual(blank)
+
+    options.additionalPrompt = '改为体育类'
+    const retry = await handle.retry()
+    await expect(retry.completion).resolves.toMatchObject({ status: 'completed' })
+    expect(prompts).toHaveLength(2)
+    expect(prompts[1]).toBe(prompts[0])
+    expect(prompts[1]).toContain('本次生成的补充要求：\n出题方向偏科技类')
+    const definition = await app.published.get(interfaceId)
+    expect(definition?.definition.promptTemplate).toBe(content.promptTemplate)
   })
 
   it('keeps the current instance unchanged after an invalid AI response and releases its lock', async () => {
