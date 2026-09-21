@@ -40,21 +40,11 @@ jobs:
       - run: corepack enable
       - run: corepack prepare yarn@4.15.0 --activate
       - run: yarn install --immutable
-      - name: Verify native archive engine before backup tests
-        run: node scripts/lab/prepare-archive-engine.mjs --check
-      - run: yarn lab:test:typecheck
-      - run: yarn lab:test:service
-      - run: yarn exec vitest run --config tests/lab-vm/vitest.config.ts
-      - run: yarn lab:test:server
       - name: Install Linux browser dependencies
         if: runner.os == 'Linux'
         run: yarn playwright install --with-deps chromium
-      - name: Lab desktop integration on Linux
-        if: runner.os == 'Linux'
-        run: xvfb-run -a yarn lab:test:integration
-      - name: Lab desktop integration on Windows
-        if: runner.os == 'Windows'
-        run: yarn lab:test:integration
+      - name: Run lab acceptance suites
+        run: yarn lab:test
       - name: Sustained mixed traffic
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         env:
