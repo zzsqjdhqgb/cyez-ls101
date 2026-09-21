@@ -243,7 +243,9 @@ describe('enrollment issuance and registration', () => {
       version: harness.version,
       releaseVersion: harness.version
     })
-    expect((await stat(stateOut)).mode & 0o777).toBe(0o600)
+    // Windows stat().mode does not describe NTFS ACLs; Node only exposes coarse read/write bits.
+    // Check POSIX permissions on POSIX hosts, retaining all credential assertions on Windows.
+    if (process.platform !== 'win32') expect((await stat(stateOut)).mode & 0o777).toBe(0o600)
     // The driver prints this report, so a secret or a token in it would be a leak.
     expect(JSON.stringify(registered)).not.toContain(deviceSecret)
     // The token is the real credential, not a plausible-looking string.

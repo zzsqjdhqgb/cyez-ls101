@@ -24,6 +24,15 @@ yarn lab:test:integration
 - `lab:test:integration` 是既有教师／学生 Electron 跨端测试；Linux CI 使用虚拟显示执行。
 - `LS101_SETUP_MODE=product-docs` 跳过模型本体下载，保留安装脚本需要的运行时资源。
 
+`yarn install` 的 setup 阶段会准备原生归档程序。`7zip-bin@5.2.0` 的 Linux 二进制在 npm 包中为 `0644`，setup 为其补齐执行位并实际启动验证；CI 在运行服务端测试前再次检查。已有安装遇到备份在加密阶段失败时，可单独准备，无需下载模型：
+
+```powershell
+node scripts/lab/prepare-archive-engine.mjs
+node scripts/lab/prepare-archive-engine.mjs --check
+```
+
+`--check` 只验证，不修改权限。失败会明确报告归档程序路径和底层错误；生产服务及构建过程不修改依赖权限。依赖目录必须可写且使用当前系统的原生程序。
+
 正式构建锁定 Node **24.20.0**，不能用放宽版本检查、替换正式入口或跳过构建来宣称产物验证通过。服务源码测试的 Node 引擎范围较宽，因此源码测试通过不意味着产物入口可构建。
 
 持续混合请求单独运行：

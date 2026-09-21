@@ -11,6 +11,7 @@ const SCRIPTS_DIR = __dirname
 const PRODUCT_DOCS_MODE = 'product-docs'
 
 const tasks = [
+  { script: 'lab/prepare-archive-engine.mjs' },
   { script: 'airouter/update-model-catalog.mjs', arguments: ['--check'] },
   { script: 'lab/download-service-assets.mjs', assetVerification: true },
   {
