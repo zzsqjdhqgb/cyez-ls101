@@ -3207,17 +3207,28 @@ async function stepClientUninstall() {
     // written that way because it is the interactive form; anything scripted has to add the argument.
     const { result, seconds } = await runInstaller(uninstaller, [
       '/S',
-      `_?=${dirname(uninstaller)}`
+      `_?="${dirname(uninstaller)}"`
     ])
     assertThat(
       result.code === 0 && !result.timedOut,
       'the silent client uninstall returned 0 without hanging',
       { seconds, ...result }
     )
+    // The uninstaller's return is not the end of the uninstall. When the `_?=` directory is not accepted
+    // as-is (an unquoted path with spaces is the usual reason), NSIS copies itself to a temporary
+    // directory, starts that copy and returns immediately; the copy then does the deleting. Checking the
+    // filesystem on the spot therefore reports a client that is about to disappear as one that survived
+    // — the run of 2026-09-20 got exit 0 in half a second and found every file still in place.
+    const clientExecutable = join(applicationDirectory, 'ls101-lab-teacher.exe')
+    let removedAfterSeconds
+    for (let attempt = 0; attempt < 60 && removedAfterSeconds === undefined; attempt += 1) {
+      if (!existsSync(clientExecutable)) removedAfterSeconds = attempt * 0.5
+      else await sleep(500)
+    }
     assertThat(
-      !existsSync(join(applicationDirectory, 'ls101-lab-teacher.exe')),
+      removedAfterSeconds !== undefined,
       'the uninstall removed the installed client executable',
-      applicationDirectory
+      { clientExecutable, applicationDirectory, waitedSeconds: 30 }
     )
     const service = await probe('service', ['-Name', config.serviceName])
     assertThat(
@@ -3261,6 +3272,7 @@ async function stepClientUninstall() {
     )
     return {
       seconds,
+      removedAfterSeconds,
       uninstaller,
       serviceState: service.state,
       release: record.release,

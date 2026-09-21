@@ -1894,11 +1894,11 @@ test('milestone M4 drives the real upgrade, uninstall and retention paths', asyn
   // `_?=<install directory>` is required for an unattended uninstall: without it the uninstaller copies
   // itself to a temporary directory, starts that copy and returns at once, so the command "succeeds"
   // having removed nothing — which is what the run of 2026-09-20 reported as a passing uninstall.
-  assert.match(clientUninstall, /runInstaller\(uninstaller, \[\s*'\/S',\s*`_\?=\$\{dirname\(uninstaller\)\}`/)
-  assert.match(
-    clientUninstall,
-    /'\/S',\n\s*`_\?=\$\{dirname\(uninstaller\)\}`/
-  )
+  assert.match(clientUninstall, /`_\?="\$\{dirname\(uninstaller\)\}"`/)
+  // The uninstaller's return is not the end of the uninstall: NSIS may have copied itself to a temporary
+  // directory and returned while that copy does the deleting, so the filesystem is polled.
+  assert.match(clientUninstall, /for \(let attempt = 0; attempt < 60 && removedAfterSeconds === undefined/)
+  assert.match(clientUninstall, /removedAfterSeconds \* 0\.5|removedAfterSeconds = attempt \* 0\.5/)
   assert.match(clientUninstall, /'the client uninstall left the service registered and running'/)
   assert.match(clientUninstall, /'the business data is intact after the client uninstall'/)
 
