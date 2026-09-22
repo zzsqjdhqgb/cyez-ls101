@@ -11,6 +11,7 @@ import { INVITATION_CODE_HASH } from '../../packages/license/src/index'
 import { encodeExamPackage } from '../../packages/exam-package/src/index'
 import type { ExamPackage } from '@ls101/core-types'
 import type { Schema } from '@ls101/lab-contracts'
+import { expectNativeViewport, resizeNativeWindow } from './support/window-layout'
 
 test('student enrollment, maintenance, practice and durable receipt run through real host capabilities', async () => {
   test.setTimeout(180000)
@@ -80,6 +81,7 @@ test('student enrollment, maintenance, practice and durable receipt run through 
     page.on('pageerror', (error) => errors.push(error.message))
     await expect(page.getByRole('heading', { name: '机房维护中' })).toBeVisible()
     await expect(page.getByText('设备编号', { exact: true })).toBeVisible()
+    await expectNativeViewport(app, page)
     await expect(page.getByRole('navigation', { name: '主导航' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: '最小化', exact: true })).toBeEnabled()
     await page.screenshot({
@@ -175,7 +177,10 @@ test('student enrollment, maintenance, practice and durable receipt run through 
       page.getByRole('checkbox', { name: '选择 集成学生', exact: true })
     ).not.toBeChecked()
     await page.screenshot({ path: 'test-results/lab/student-history.png', animations: 'disabled' })
-    await page.setViewportSize({ width: 760, height: 640 })
+    const studentWindow = await app.browserWindow(page)
+    await expect.poll(() => studentWindow.evaluate((window) => window.isFullScreen())).toBe(false)
+    const originalSize = await studentWindow.evaluate((window) => window.getContentSize())
+    await resizeNativeWindow(app, page, 760, 640)
     await expect(page.getByRole('heading', { name: '历史作答', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: '关闭', exact: true })).toBeInViewport()
     expect(
@@ -187,7 +192,8 @@ test('student enrollment, maintenance, practice and durable receipt run through 
       path: 'test-results/lab/student-history-narrow.png',
       animations: 'disabled'
     })
-    await page.setViewportSize({ width: 1280, height: 800 })
+    await resizeNativeWindow(app, page, 1600, 1000)
+    await resizeNativeWindow(app, page, originalSize[0], originalSize[1])
     expect(errors).toEqual([])
     studentApp = app
     app = undefined
@@ -280,6 +286,30 @@ test('student enrollment, maintenance, practice and durable receipt run through 
     await page.getByRole('button', { name: '刷新连接' }).click()
     await expect(page.getByText('显示与选择测试', { exact: true })).toBeVisible({ timeout: 20000 })
     await expect(page.getByText('部署测试', { exact: true })).toBeVisible()
+    await expectNativeViewport(studentApp, page)
+    // The player must fill the real content area and keep its stage centered at full size.
+    // Comparing only against innerWidth would miss a viewport locked by Playwright emulation.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const player = document.querySelector('#root > div')!.getBoundingClientRect()
+          const stage = document.querySelector('#root > div > div')!.getBoundingClientRect()
+          return {
+            coversViewport:
+              player.x === 0 &&
+              player.y === 0 &&
+              player.width === innerWidth &&
+              player.height === innerHeight,
+            centered:
+              Math.abs(stage.x + stage.width / 2 - innerWidth / 2) < 1 &&
+              Math.abs(stage.y + stage.height / 2 - innerHeight / 2) < 1,
+            fits: stage.width <= innerWidth + 1 && stage.height <= innerHeight + 1,
+            fillsOneAxis:
+              Math.abs(stage.width - innerWidth) < 1 || Math.abs(stage.height - innerHeight) < 1
+          }
+        })
+      )
+      .toEqual({ coversViewport: true, centered: true, fits: true, fillsOneAxis: true })
     await page.screenshot({ path: 'test-results/lab/student-deployment-player.png' })
     await page.getByRole('radio', { name: 'A 确认', exact: true }).check()
     await page.screenshot({ path: 'test-results/lab/student-deployment.png' })

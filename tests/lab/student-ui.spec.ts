@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { INVITATION_CODE_HASH } from '../../packages/license/src/index'
+import { resizeNativeWindow } from './support/window-layout'
 
 for (const activated of [false, true]) {
   test(`student shared startup and ${activated ? 'enrollment' : 'activation'} gate`, async () => {
@@ -55,7 +56,7 @@ for (const activated of [false, true]) {
       await page.screenshot({
         path: `test-results/lab/student-${activated ? 'unbound' : 'activation'}.png`
       })
-      await page.setViewportSize({ width: 760, height: 640 })
+      await resizeNativeWindow(app, page, 760, 640)
       await expect(page.getByRole('button', { name: '关闭', exact: true })).toBeInViewport()
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
@@ -64,8 +65,10 @@ for (const activated of [false, true]) {
         path: `test-results/lab/student-${activated ? 'unbound' : 'activation'}-narrow.png`
       })
       expect(errors).toEqual([])
-      await page.getByRole('button', { name: '关闭', exact: true }).click()
-      await expect.poll(() => page.isClosed()).toBe(true)
+      await Promise.all([
+        page.waitForEvent('close'),
+        page.getByRole('button', { name: '关闭', exact: true }).click()
+      ])
     } finally {
       await app.close()
       await rm(root, { recursive: true, force: true })
