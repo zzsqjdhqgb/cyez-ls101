@@ -52,6 +52,28 @@ for (const activated of [false, true]) {
         await page.getByLabel('激活码', { exact: true }).fill('invalid-code')
         await page.getByRole('button', { name: '激活', exact: true }).click()
         await expect(page.getByRole('alert')).toContainText('激活码无效')
+      } else {
+        // The manual enrollment gate is what an unbound and already activated machine shows: both
+        // fields start empty, so the submission stays disabled until an operator supplies them, and
+        // the picker is opened by the themed button rather than by the native file control.
+        await expect(page.getByRole('heading', { name: '手动入网', exact: true })).toBeVisible()
+        await expect(page.getByLabel('入网文件', { exact: true })).toBeAttached()
+        await expect(page.getByLabel('服务器公钥指纹', { exact: true })).toBeVisible()
+        await expect(page.getByRole('button', { name: '选择文件', exact: true })).toBeVisible()
+        await expect(page.getByRole('button', { name: '入网', exact: true })).toBeDisabled()
+        const picker = page.waitForEvent('filechooser')
+        await page.getByRole('button', { name: '选择文件', exact: true }).click()
+        await (
+          await picker
+        ).setFiles({
+          name: 'lab.lsjoin',
+          mimeType: 'application/x-ls101-enrollment',
+          buffer: Buffer.from('header.payload.signature')
+        })
+        await expect(page.getByText('已选择：lab.lsjoin', { exact: true })).toBeVisible()
+        await expect(page.getByRole('button', { name: '重新选择', exact: true })).toBeVisible()
+        await page.getByLabel('服务器公钥指纹', { exact: true }).fill('sha256:abc')
+        await expect(page.getByRole('button', { name: '入网', exact: true })).toBeEnabled()
       }
       await page.screenshot({
         path: `test-results/lab/student-${activated ? 'unbound' : 'activation'}.png`

@@ -462,6 +462,10 @@ export class StudentController {
   async enroll(file: string, fingerprint: string): Promise<void> {
     if (admission(this.view) !== 'unbound') throw new Error('当前状态不允许入网')
     await this.host.invoke('binding.enroll', { file, fingerprint })
+    // Re-enrolling an already bound device replaces its context, so the previous connection is
+    // dropped exactly as the startup command path does; otherwise it stays open for a server the
+    // device is no longer admitted to.
+    await this.disconnect()
     await this.refresh()
   }
   async retry(id: string): Promise<void> {

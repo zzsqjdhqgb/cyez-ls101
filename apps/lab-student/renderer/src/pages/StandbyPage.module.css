@@ -24,13 +24,48 @@
   font-size: 18px;
 }
 
-.enrollment small {
-  color: var(--color-text-muted);
-  overflow-wrap: anywhere;
+.enrollment > p {
+  margin: 0;
 }
 
-.enrollment button {
+.intro {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* Only the submit button is a direct child; `Field` rows keep their own layout. */
+.enrollment > button {
   align-self: flex-start;
+}
+
+.file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/*
+ * The file input itself never renders: its native button keeps the platform appearance (the
+ * background of `::file-selector-button` cannot be overridden in this Chromium, even with
+ * `!important`), so a themed button opens the picker for it instead. Hiding it also has to outrank
+ * `Field.module.css`'s `input:not([type='checkbox'])` rule, and it cannot merely be shrunk to 1px —
+ * a file input keeps its intrinsic content width (button plus filename) whatever width is declared,
+ * which overflows the window.
+ */
+.fileInput {
+  display: none !important;
+}
+
+/*
+ * `Field` separates its rows with `margin-bottom`, which is redundant inside this flex column and
+ * leaves a stray gap above the submit button.
+ */
+.enrollment > fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .details {

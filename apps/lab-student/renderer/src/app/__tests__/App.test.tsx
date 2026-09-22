@@ -49,6 +49,33 @@ function update(patch: Partial<StudentView>): void {
   })
 }
 
+/**
+ * jsdom refuses an array assignment to `HTMLInputElement.files` and cannot construct a real
+ * `FileList`, so the selection is installed on the element with `defineProperty` before the change
+ * event — otherwise React hands the handler an empty list. The installed list is invisible to
+ * jsdom's own constraint validation, so a click on the submit button never fires `submit` (the
+ * `required` file input still looks empty to jsdom); submitting the form directly is what reaches
+ * the React handler the click would reach in a browser.
+ */
+function selectFile(input: HTMLElement, file: File): void {
+  Object.defineProperty(input, 'files', { value: [file], configurable: true })
+  fireEvent.change(input)
+}
+
+/**
+ * Fills the form like an operator would. The button only enables after the asynchronous file read
+ * has landed in state, so waiting for it is what makes the submission below see the file content.
+ */
+async function fillEnrollment(file: File, fingerprint: string): Promise<void> {
+  selectFile(screen.getByLabelText('入网文件'), file)
+  fireEvent.change(screen.getByLabelText('服务器公钥指纹'), { target: { value: fingerprint } })
+  await waitFor(() => expect(screen.getByRole('button', { name: '入网' })).toBeEnabled())
+}
+
+function submitEnrollment(): void {
+  fireEvent.submit(screen.getByRole('button', { name: '入网' }).closest('form')!)
+}
+
 function record(id: string, patch: Partial<StudentRecord> = {}): StudentRecord {
   return {
     schemaVersion: 1,
@@ -174,13 +201,76 @@ it('activates from the gate and shows action errors', async () => {
   expect(model.activate).toHaveBeenCalledWith('test-code')
 })
 
-it('offers manual enrollment while waiting for a binding', () => {
+it('offers manual enrollment while waiting for a binding, and only there', () => {
   model.view!.binding = null
   render(<App />)
   expect(screen.getByRole('heading', { name: '等待入网' })).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: '手动入网' })).toBeInTheDocument()
   expect(screen.getByLabelText('入网文件')).toBeInTheDocument()
   expect(screen.getByLabelText('服务器公钥指纹')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '入网' })).toBeDisabled()
+  update({ binding: { ...record('unused').originalBinding, versionMismatch: true } })
+  expect(screen.queryByRole('heading', { name: '手动入网' })).not.toBeInTheDocument()
+})
+
+it('opens the file picker from the themed button, not from the native control', async () => {
+  model.view!.binding = null
+  const showPicker = vi.fn()
+  HTMLInputElement.prototype.showPicker = showPicker
+  render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: '选择文件' }))
+  expect(showPicker).toHaveBeenCalledTimes(1)
+  await fillEnrollment(new File(['header.payload.signature'], 'lab.lsjoin'), 'sha256:abc')
+  expect(screen.getByRole('button', { name: '重新选择' })).toBeEnabled()
+})
+
+it('submits the selected enrollment file and stays busy until the host answers', async () => {
+  model.view!.binding = null
+  let complete!: () => void
+  model.enroll.mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        complete = resolve
+      })
+  )
+  render(<App />)
+  await fillEnrollment(
+    new File(['header.payload.signature'], 'lab.lsjoin', { type: 'text/plain' }),
+    ' sha256:abc '
+  )
+  submitEnrollment()
+  await waitFor(() =>
+    expect(model.enroll).toHaveBeenCalledWith('header.payload.signature', 'sha256:abc')
+  )
+  // A second submission while the host is still answering must not reach the controller twice.
+  await waitFor(() => expect(screen.getByLabelText('入网文件')).toBeDisabled())
+  fireEvent.submit(screen.getByLabelText('入网文件').closest('form')!)
+  expect(model.enroll).toHaveBeenCalledTimes(1)
+  await act(async () => complete())
+  await waitFor(() => expect(screen.getByLabelText('入网文件')).toBeEnabled())
+})
+
+it('reports a rejected enrollment on the gate', async () => {
+  model.view!.binding = null
+  model.enroll.mockRejectedValueOnce(new Error('ENROLLMENT_REJECTED'))
+  render(<App />)
+  await fillEnrollment(new File(['header.payload.signature'], 'lab.lsjoin'), 'sha256:abc')
+  submitEnrollment()
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('ENROLLMENT_REJECTED'))
+})
+
+it('asks for another file when the selection cannot be read', async () => {
+  model.view!.binding = null
+  vi.spyOn(File.prototype, 'text').mockRejectedValueOnce(new Error('unreadable'))
+  render(<App />)
+  selectFile(
+    screen.getByLabelText('入网文件'),
+    new File(['header.payload.signature'], 'lab.lsjoin')
+  )
+  await waitFor(() =>
+    expect(screen.getByRole('alert')).toHaveTextContent('入网文件无法读取，请重新选择。')
+  )
+  expect(screen.getByRole('button', { name: '入网' })).toBeDisabled()
 })
 
 it('exports only visible archives after background updates and excludes receipt-only retry', async () => {
