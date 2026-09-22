@@ -49,6 +49,11 @@ if (process.platform === 'linux') {
     remove + (role === 'student' ? '\nrm -f /etc/xdg/autostart/ls101-lab-student.desktop\n' : '\n')
   )
 }
+// electron-builder's bundled icons@1.1.0 toolset converts PNG icons with libvips compiled to
+// WebAssembly, which imports a fixed 1 GiB shared WebAssembly.Memory and aborts machines with a
+// tight commit limit ("Committing semi space failed") before converting anything. Point it at the
+// local pure-JS toolset instead; it emits the same ICO/ICNS layout using a few dozen MiB.
+process.env['ELECTRON_BUILDER_ICONS_TOOLSET_DIR'] = resolve(root, 'scripts', 'icon-toolset')
 await build({
   projectDir: app,
   targets: platform.createTarget(
