@@ -48,7 +48,10 @@ export class ExamCache {
     const parsed = new URL(url),
       archive = this.loaded.get(parsed.hostname)
     if (!archive) return new Response(null, { status: 404 })
-    const path = decodeURIComponent(parsed.pathname.slice(1))
+    // `packagePath` deliberately contains percent-encoded resource keys and filenames.
+    // Keep the URL pathname encoded so it can be matched against the manifest verbatim;
+    // decoding here turns `%3A`/`%2F` into different path separators and causes false 404s.
+    const path = parsed.pathname.slice(1)
     if (path === 'manifest.json' || path === '') return Response.json(archive.exam)
     const entry = Object.entries(archive.exam.examData.resources).find(
       ([, resource]) => resource.packagePath === path
