@@ -1,6 +1,13 @@
 import type { Schema } from '@ls101/lab-contracts'
 import type { LicenseStatus } from '@ls101/core-types'
 
+export interface LocalDataExport {
+  directory: string
+  manifestSha256: string
+  files: number
+  bytes: number
+}
+
 export interface LocalServiceStatus {
   state: 'not-installed' | 'stopped' | 'uninitialized' | 'running' | 'unavailable'
   autostart: boolean

@@ -5,13 +5,14 @@ import type { Server } from 'node:https'
 import { LicenseService } from '@ls101/license'
 import { LabService } from './service'
 import { LabError, requireCondition } from './errors'
-import { lockDirectory } from './directory-lock'
+import { directoryPaths, lockDirectory } from './directory-lock'
 import { durableWrite, verifiedFile, syncDirectory } from './durable-files'
 import { createLabHttpServer, closeLabHttpServer } from './http'
 import { listenLocalControl } from './control'
 import { listenServiceStatus } from './status-channel'
 import { validateRuntimeConfig, type RuntimeConfig } from './runtime-config'
 import { DEVICE_OFFLINE_AFTER_MS } from './devices'
+import { emergencyStopMarker } from './emergency-stop'
 
 export interface RuntimeStatus {
   state: 'running' | 'unavailable' | 'uninitialized'
@@ -27,7 +28,14 @@ export async function startServiceRuntime(
   root: string,
   releaseVersion: string
 ): Promise<{ close(): Promise<void>; status(): Promise<RuntimeStatus> }> {
-  const lifetime = await lockDirectory(`${root}.runtime`)
+  const admission = await lockDirectory(`${root}.emergency`)
+  let lifetime: Awaited<ReturnType<typeof lockDirectory>>
+  try {
+    lifetime = await lockDirectory(`${root}.runtime`)
+  } finally {
+    admission.close()
+  }
+  let startupAdmission: Awaited<ReturnType<typeof lockDirectory>> | undefined
   let service: LabService | undefined
   let http: Server | undefined
   let control: Awaited<ReturnType<typeof listenLocalControl>> | undefined
@@ -122,6 +130,25 @@ export async function startServiceRuntime(
         JSON.parse(await readFile(join(root, 'service-runtime.json'), 'utf8'))
       )
       service = await LabService.open(options)
+    }
+    // Recovery can take time. Do not hold the emergency lock while opening the
+    // database/archives: an administrator must still be able to stop a stuck startup.
+    startupAdmission = await lockDirectory(`${root}.emergency`)
+    const recoveryRequired = await stat(emergencyStopMarker(root)).then(
+      () => true,
+      (error: NodeJS.ErrnoException) => {
+        if (error.code !== 'ENOENT') throw error
+        return false
+      }
+    )
+    if (service) {
+      if (recoveryRequired) {
+        service.db.transaction(() => {
+          const data = service!.data()
+          if (data.mode !== 'maintenance')
+            service!.saveData({ ...data, mode: 'maintenance', modeRevision: data.modeRevision + 1 })
+        })
+      }
       await listen()
     }
     const key = randomBytes(32)
@@ -264,9 +291,15 @@ export async function startServiceRuntime(
       }
     })
     statusListener = await listenServiceStatus(root, status)
+    if (recoveryRequired) {
+      await rm(emergencyStopMarker(root))
+      await syncDirectory(directoryPaths(root).parent)
+    }
     return { close, status }
   } catch (error) {
     await close()
     throw error
+  } finally {
+    startupAdmission?.close()
   }
 }

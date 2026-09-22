@@ -19,10 +19,15 @@ test('service uninstall requires a stopped service and confirmation, handles fai
       license: null,
       info: null,
       port: null,
-      error: null
+      error: null as string | null
     },
     statusError: 'LOCAL_STATUS_UNAVAILABLE' as string | null,
     rejectUninstall: true,
+    rejectForceStop: true,
+    forceStopped: false,
+    rejectExport: true,
+    rejectPurge: true,
+    purged: false,
     installError:
       'STORAGE_UNAVAILABLE\nLS101_INSTALL_ERROR [configure-service-account]: Access denied',
     uninstalled: false
@@ -62,14 +67,37 @@ test('service uninstall requires a stopped service and confirmation, handles fai
     await expect(uninstall).toBeDisabled()
     fixture.statusError = null
     fixture.status.state = 'unavailable'
+    fixture.status.error = 'LOCAL_STATUS_ACCESS_DENIED'
     await writeFile(filename, JSON.stringify(fixture))
     await page.getByRole('button', { name: '检查本机状态' }).click()
     await expect(localDialog.getByRole('heading', { name: '服务状态暂时不可用' })).toBeVisible()
     await expect(localDialog.getByText(/services.msc/)).toBeVisible()
+    await expect(localDialog.getByText(/当前账户无权连接本机状态通道/)).toBeVisible()
+    await expect(localDialog.getByText('诊断代码：LOCAL_STATUS_ACCESS_DENIED')).toBeVisible()
     await expect(uninstall).toBeDisabled()
     await expect(localDialog.getByRole('button', { name: '停止', exact: true })).toBeDisabled()
     await expect(localDialog.getByLabel('服务名称', { exact: true })).toBeDisabled()
     await page.screenshot({ path: 'test-results/lab/teacher-local-unavailable.png' })
+    await localDialog.getByRole('button', { name: '强制停止服务', exact: true }).click()
+    const emergency = page.getByRole('alertdialog', { name: '强制停止本机服务' })
+    await expect(emergency).toContainText('未完成的交卷需要学生重试')
+    await emergency.getByRole('button', { name: '取消', exact: true }).click()
+    expect(JSON.parse(await readFile(filename, 'utf8')).forceStopped).toBe(false)
+    await localDialog.getByRole('button', { name: '强制停止服务', exact: true }).click()
+    await emergency.getByRole('button', { name: '确认', exact: true }).click()
+    await expect(localDialog.getByRole('alert')).toContainText('LOCAL_FORCE_STOP_FAILED')
+    await expect(localDialog.getByText('状态未知', { exact: true })).toBeVisible()
+    // A failed attempt must leave a retry available even when the status is unknown.
+    fixture.rejectForceStop = false
+    await writeFile(filename, JSON.stringify(fixture))
+    await localDialog.getByRole('button', { name: '强制停止服务', exact: true }).click()
+    await emergency.getByRole('button', { name: '确认', exact: true }).click()
+    await expect(localDialog.getByText('已停止', { exact: true })).toBeVisible()
+    await expect(localDialog.getByRole('button', { name: '启动', exact: true })).toBeEnabled()
+    await expect(localDialog.getByRole('checkbox', { name: '开机启动本机服务' })).not.toBeChecked()
+    expect(JSON.parse(await readFile(filename, 'utf8')).forceStopped).toBe(true)
+    await writeFile(filename, JSON.stringify(fixture))
+    await localDialog.getByRole('button', { name: '检查本机状态' }).click()
     await localDialog.getByRole('button', { name: '查看服务日志' }).click()
     await expect(localDialog.getByRole('tab', { name: '服务日志' })).toHaveAttribute(
       'aria-selected',
@@ -77,9 +105,19 @@ test('service uninstall requires a stopped service and confirmation, handles fai
     )
     await expect(localDialog.getByText('Fixture service log', { exact: true })).toBeVisible()
     await localDialog.getByRole('tab', { name: '服务信息与操作' }).click()
-    fixture.status.state = 'running'
+    fixture.status.error = 'LOCAL_STATUS_TIMEOUT'
     await writeFile(filename, JSON.stringify(fixture))
     await localDialog.getByRole('button', { name: '重新检查状态' }).click()
+    await expect(localDialog.getByText(/本机状态通道未在规定时间内响应/)).toBeVisible()
+    fixture.status.state = 'stopped'
+    fixture.status.error = null
+    await writeFile(filename, JSON.stringify(fixture))
+    await localDialog.getByRole('button', { name: '重新检查状态' }).click()
+    await expect(localDialog.getByText('已停止', { exact: true })).toBeVisible()
+    await expect(localDialog.getByRole('button', { name: '启动', exact: true })).toBeEnabled()
+    fixture.status.state = 'running'
+    await writeFile(filename, JSON.stringify(fixture))
+    await localDialog.getByRole('button', { name: '检查本机状态' }).click()
     await expect(localDialog.getByText('运行中', { exact: true })).toBeVisible()
     await expect(localDialog.getByRole('heading', { name: '服务状态暂时不可用' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: '停止', exact: true })).toBeVisible()
@@ -126,6 +164,46 @@ test('service uninstall requires a stopped service and confirmation, handles fai
     await expect(page.getByRole('alert')).toContainText(
       'LS101_INSTALL_ERROR [configure-service-account]: Access denied'
     )
+    // Recovery remains available when installation/status cannot be read.
+    await localDialog.getByRole('tab', { name: '监听端口与备份恢复' }).click()
+    await expect(localDialog.getByRole('button', { name: '彻底清除服务及数据' })).toHaveCount(0)
+    await app.evaluate(({ dialog }, directory) => {
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [directory] })
+    }, root)
+    const exportData = async (): Promise<void> => {
+      await localDialog.getByRole('button', { name: '导出原始数据', exact: true }).click()
+      await page
+        .getByRole('alertdialog', { name: '导出原始服务数据' })
+        .getByRole('button', { name: '确认', exact: true })
+        .click()
+    }
+    await exportData()
+    await expect(localDialog.getByRole('alert')).toContainText('ENOSPC')
+    await expect(localDialog.getByRole('button', { name: '彻底清除服务及数据' })).toHaveCount(0)
+    fixture.rejectExport = false
+    await writeFile(filename, JSON.stringify(fixture))
+    await exportData()
+    await expect(localDialog.getByText(/已校验导出：/)).toContainText('LS101-recovery-')
+    const purge = localDialog.getByRole('button', { name: '彻底清除服务及数据', exact: true })
+    await expect(purge).toBeDisabled()
+    await localDialog.getByLabel('输入“清除本机服务”以确认').fill('清除本机服务')
+    await purge.click()
+    const purgeConfirmation = page.getByRole('alertdialog', { name: '彻底清除本机服务及数据' })
+    await expect(purgeConfirmation).toContainText('此操作不可撤销')
+    await purgeConfirmation.getByRole('button', { name: '取消', exact: true }).click()
+    expect(JSON.parse(await readFile(filename, 'utf8')).purged).toBe(false)
+    await purge.click()
+    await purgeConfirmation.getByRole('button', { name: '确认', exact: true }).click()
+    await expect(localDialog.getByRole('alert')).toContainText('LOCAL_RECOVERY_EXPORT_CHANGED')
+    fixture.rejectPurge = false
+    await writeFile(filename, JSON.stringify(fixture))
+    await purge.click()
+    await purgeConfirmation.getByRole('button', { name: '确认', exact: true }).click()
+    await expect(localDialog.getByText('未安装', { exact: true })).toBeVisible()
+    expect(JSON.parse(await readFile(filename, 'utf8')).purged).toBe(true)
+    await expect(purge).toHaveCount(0)
+    await localDialog.getByRole('tab', { name: '服务信息与操作' }).click()
+    await expect(localDialog.getByRole('button', { name: '安装程序', exact: true })).toBeEnabled()
   } finally {
     await app?.close()
     await rm(root, { recursive: true, force: true })

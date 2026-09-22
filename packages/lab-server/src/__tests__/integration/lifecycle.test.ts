@@ -4,9 +4,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createServer } from 'node:net'
 import { DatabaseSync } from 'node:sqlite'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { INVITATION_CODE_HASH } from '@ls101/license'
 import { startServiceRuntime } from '../../runtime'
+import { emergencyStopMarker } from '../../emergency-stop'
+import { lockDirectory } from '../../directory-lock'
+import { LabService } from '../../service'
 import { requestLocalControl } from '../../control'
 import { restoreOffline } from '../../restore'
 import { api, enroll, login, mode, practice, VERSION, PASSWORD } from './support'
@@ -51,6 +54,85 @@ async function runtimeFixture() {
 }
 
 describe('LIFE: independent runtime admission and fail-closed startup', () => {
+  it('allows emergency management while startup is waiting for archive recovery', async () => {
+    const f = await runtimeFixture()
+    await f.activate()
+    await f.initialize()
+    await f.runtime.close()
+    const entered = Promise.withResolvers<void>()
+    const resume = Promise.withResolvers<void>()
+    const original = LabService.open.bind(LabService)
+    const open = vi.spyOn(LabService, 'open').mockImplementationOnce(async (options) => {
+      const service = await original(options)
+      entered.resolve()
+      await resume.promise
+      return service
+    })
+    const starting = f.start().catch((error) => error)
+    try {
+      await entered.promise
+      const emergency = await lockDirectory(`${f.root}.emergency`)
+      try {
+        resume.resolve()
+        expect(await starting).toMatchObject({ code: 'RESOURCE_BUSY' })
+      } finally {
+        emergency.close()
+      }
+    } finally {
+      resume.resolve()
+      await starting
+      open.mockRestore()
+    }
+    await f.start()
+  })
+  it('emergency recovery preserves receipts and requires maintenance before resuming business', async () => {
+    const f = await runtimeFixture()
+    await f.activate()
+    await f.initialize()
+    const endpoint = {
+      port: f.port,
+      certificate: await readFile(join(f.root, 'identity/certificate.pem'), 'utf8')
+    }
+    const teacher = await login(endpoint)
+    const [student] = await enroll(endpoint, teacher, 1)
+    const p = await practice(endpoint, teacher, student.token)
+    const receipt = (await p.upload()).body.receipt
+    await f.runtime.close()
+    const marker = emergencyStopMarker(f.root)
+    await writeFile(marker, '{}')
+    // An in-progress emergency operation must prevent a concurrent start.
+    const operation = await lockDirectory(`${f.root}.emergency`)
+    try {
+      await expect(f.start()).rejects.toMatchObject({ code: 'RESOURCE_BUSY' })
+    } finally {
+      operation.close()
+    }
+    const restarted = await f.start()
+    expect((await api(endpoint, 'GET', '/teacher/service', { token: teacher })).body.mode).toBe(
+      'maintenance'
+    )
+    await expect(readFile(marker)).rejects.toMatchObject({ code: 'ENOENT' })
+    await mode(endpoint, teacher, 'normal')
+    expect((await p.receipt()).body.receipt).toEqual(receipt)
+    expect((await p.upload()).status).toBe(200)
+    await restarted.close()
+    await f.start()
+    expect((await api(endpoint, 'GET', '/teacher/service', { token: teacher })).body.mode).toBe(
+      'normal'
+    )
+  })
+
+  it('keeps the emergency recovery marker when startup validation fails', async () => {
+    const f = await runtimeFixture()
+    await f.activate()
+    await f.initialize()
+    await f.runtime.close()
+    const marker = emergencyStopMarker(f.root)
+    await writeFile(marker, '{}')
+    await writeFile(join(f.root, 'service-runtime.json'), 'invalid')
+    await expect(f.start()).rejects.toThrow()
+    expect(await readFile(marker, 'utf8')).toBe('{}')
+  })
   it('inactive service cannot initialize; explicit initialization is one-time and survives restart', async () => {
     const f = await runtimeFixture()
     await expect(f.initialize()).rejects.toThrow('LICENSE_INACTIVE')

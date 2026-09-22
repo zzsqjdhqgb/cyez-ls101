@@ -9,6 +9,8 @@ import { LabError, requireCondition } from './errors'
 import { validateRuntimeConfig } from './runtime-config'
 import { lockDirectory } from './directory-lock'
 import { durableWrite, syncDirectory } from './durable-files'
+import { emergencyStop, emergencyStopMarker } from './emergency-stop'
+import { exportRawData, installedRecoveryPaths, purgeExportedService } from './disaster-recovery'
 
 const STATUS_RETRY_COUNT = 8
 const STATUS_RETRY_DELAY_MS = 250
@@ -49,6 +51,7 @@ export interface ManagerPaths {
   runtime: string
   source: string
   unit?: string
+  program?: string
 }
 
 class LocalInstallerError extends LabError {
@@ -113,9 +116,22 @@ async function command(
 export async function manageLocalService(
   operation: string,
   input: unknown,
-  paths: ManagerPaths = installedPaths()
+  paths?: ManagerPaths
 ): Promise<unknown> {
+  if (operation === 'export-data' || operation === 'purge') {
+    const recovery = paths
+      ? { ...paths, program: paths.program ?? dirname(paths.runtime) }
+      : installedRecoveryPaths()
+    if (operation === 'export-data') return exportRawData(recovery, input)
+    await purgeExportedService(recovery, input)
+    return { ...notInstalledStatus }
+  }
+  paths ??= installedPaths()
   const { root, runtime, source } = paths
+  if (operation === 'force-stop') {
+    requireCondition(input === undefined, 'INVALID_REQUEST')
+    return emergencyStop(paths)
+  }
   if (operation === 'uninstall') {
     requireCondition(input === undefined, 'INVALID_REQUEST')
     const registration = await serviceRegistration()
@@ -275,6 +291,16 @@ export async function manageLocalService(
   if (operation === 'start' || operation === 'stop') {
     requireCondition(input === undefined, 'INVALID_REQUEST')
     if (operation === 'stop') await requestLocalControl(root, 'prepare-stop')
+    if (operation === 'start' && process.platform === 'win32') {
+      const recovery = await stat(emergencyStopMarker(root)).then(
+        () => true,
+        (error: NodeJS.ErrnoException) => {
+          if (error.code !== 'ENOENT') throw error
+          return false
+        }
+      )
+      if (recovery) await command('sc.exe', ['config', 'LS101Lab', 'start=', 'demand'])
+    }
     try {
       if (process.platform === 'linux') await command('systemctl', [operation, 'ls101-lab.service'])
       else await command(join(runtime, 'LS101Lab.exe'), [operation])

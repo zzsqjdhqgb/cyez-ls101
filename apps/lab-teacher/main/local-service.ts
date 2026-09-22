@@ -35,6 +35,9 @@ export function localServiceHost(
           'connection',
           'start',
           'stop',
+          'force-stop',
+          'export-data',
+          'purge',
           'autostart',
           'logs',
           'restore',
@@ -51,6 +54,17 @@ export function localServiceHost(
       let channel: string | undefined
       let listener: Awaited<ReturnType<typeof listenLocalControl>> | undefined
       try {
+        if (operation === 'export-data' && process.platform === 'win32') {
+          const directory = (input as { directory: string }).directory
+          await execute('icacls.exe', [
+            directory,
+            '/inheritance:r',
+            '/grant:r',
+            `${userInfo().username}:(OI)(CI)F`,
+            '*S-1-5-18:(OI)(CI)F',
+            '*S-1-5-32-544:(OI)(CI)F'
+          ])
+        }
         channel = await mkdtemp(join(tmpdir(), 'ls101-manager-'))
         if (process.platform === 'win32') {
           await execute('icacls.exe', [

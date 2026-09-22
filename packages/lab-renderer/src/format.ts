@@ -61,6 +61,18 @@ export function describeLabError(reason: unknown): LabErrorDescription {
 }
 
 const LOCAL_MESSAGES: Record<string, string> = {
+  LOCAL_RECOVERY_INVALID: '原始数据导出信息无效，请重新导出后再清除。',
+  LOCAL_RECOVERY_UNSAFE_PATH: '保存位置与服务目录重叠，或目录包含链接／特殊文件；已拒绝操作。',
+  LOCAL_RECOVERY_EXPORT_REQUIRED: '请先在当前教师端导出并校验原始数据，再清除服务。',
+  LOCAL_RECOVERY_EXPORT_CHANGED: '导出副本不完整或已改变，原始数据未通过清除校验，请重新导出。',
+  LOCAL_RECOVERY_SOURCE_CHANGED: '原始目录存在导出后新增或改变的数据，请重新导出后再清除。',
+  LOCAL_RECOVERY_SERVICE_RUNNING: '请先停止本机服务；无法连接时可使用“强制停止服务”。',
+  LOCAL_RECOVERY_OS_FAILED:
+    '系统服务清理未完成，导出副本仍保留。请重新检查状态后重试；Windows 上请先关闭占用服务的管理窗口。',
+  LOCAL_FORCE_STOP_FAILED: '故障停止失败，请重新检查状态并查看服务日志。',
+  LOCAL_FORCE_STOP_INCOMPLETE: '尚未确认服务完全停止，请重新检查状态，暂勿启动或恢复数据。',
+  LOCAL_SERVICE_IDENTITY_MISMATCH: '无法确认系统服务属于本机安装，已拒绝本次操作。',
+  LOCAL_SERVICE_NOT_INSTALLED: '系统未注册本机服务，请重新检查状态。',
   LOCAL_OPERATION_BUSY: '已有本机服务操作正在进行，请等待它完成后再试。',
   LOCAL_HELPER_FAILED: '本机服务助手启动失败，请确认管理员授权后重试。',
   LOCAL_HELPER_INCOMPLETE: '本机服务助手没有返回结果，请重试。',

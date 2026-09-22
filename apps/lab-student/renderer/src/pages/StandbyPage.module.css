@@ -1,0 +1,30 @@
+.activation {
+  display: flex;
+  width: min(400px, 100%);
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.activation button {
+  align-self: flex-start;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: var(--space-5) var(--space-6);
+  margin: 0;
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border);
+  font-size: 14px;
+}
+
+.details dt {
+  color: var(--color-text-muted);
+}
+
+.details dd {
+  margin: 0;
+  color: var(--color-text-strong);
+  overflow-wrap: anywhere;
+}

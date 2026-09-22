@@ -3,6 +3,7 @@ import { ExamPlayer } from '@ls101/exam-player'
 import type { ExamPackage } from '@ls101/core-types'
 import type { StudentView } from './controller'
 import { playbackExam, TEST_CANDIDATE } from './deployment-tests'
+import { PracticeNotice } from './src/components/PracticeNotice'
 
 export function DeploymentPlayer({
   player
@@ -43,9 +44,7 @@ export function DeploymentPlayer({
         onError={player.fail}
         onExit={() => player.fail(new Error('Deployment playback stopped'))}
       />
-      <div className="practice-notice" role="status">
-        部署测试
-      </div>
+      <PracticeNotice>部署测试</PracticeNotice>
     </>
   )
 }

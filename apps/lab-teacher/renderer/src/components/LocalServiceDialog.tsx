@@ -28,6 +28,19 @@ const STATES: Record<string, string> = {
   unavailable: '不可用'
 }
 
+const STATUS_FAILURES: Record<string, string> = {
+  LOCAL_STATUS_NOT_READY:
+    '系统服务尚未报告已停止，但本机状态连接未建立或已中断。可能仍在启动，也可能启动失败，请重新检查状态；持续出现时查看服务日志。',
+  LOCAL_STATUS_ACCESS_DENIED:
+    '当前账户无权连接本机状态通道。请联系管理员检查服务安装与账户权限，并查看服务日志。',
+  LOCAL_STATUS_TIMEOUT:
+    '本机状态通道未在规定时间内响应。服务可能繁忙或无响应，请重新检查状态并查看服务日志。',
+  LOCAL_STATUS_INVALID_RESPONSE:
+    '本机服务返回的状态信息不完整或无法识别。请查看服务日志，并核对教师端与服务程序版本。',
+  LOCAL_SERVICE_NOT_LISTENING:
+    '已读取到本机服务状态，但服务尚未监听业务请求。请查看服务日志，检查启动错误和监听端口配置。'
+}
+
 interface ConfirmationDefinition {
   operation: string
   title: string
@@ -39,6 +52,9 @@ type ConfirmationKey =
   | 'install'
   | 'uninstall'
   | 'stop'
+  | 'force-stop'
+  | 'export-data'
+  | 'purge'
   | 'upgrade'
   | 'restore'
   | 'recover-restore'
@@ -46,6 +62,26 @@ type ConfirmationKey =
   | 'changePassword'
 
 const CONFIRMATIONS: Record<ConfirmationKey, ConfirmationDefinition> = {
+  'export-data': {
+    operation: 'export-data',
+    title: '导出原始服务数据',
+    message:
+      '服务必须已停止。将选择保存位置，复制原始数据、日志与恢复残留，并校验每个文件。副本包含学生作答和服务凭据，请保存在可信位置；本次导出不会删除原数据。'
+  },
+  purge: {
+    operation: 'purge',
+    title: '彻底清除本机服务及数据',
+    message:
+      '将重新校验导出副本，然后永久删除本机服务注册、已安装的服务程序和全部原始数据（包括作答、备份、凭据和恢复残留）。清除后须重新安装、初始化和入网；导出副本会保留。此操作不可撤销。',
+    danger: true
+  },
+  'force-stop': {
+    operation: 'force-stop',
+    title: '强制停止本机服务',
+    message:
+      '将请求管理员授权，直接通过系统停止本机服务；等待约 30 秒后仍未停止时将强制结束服务进程。正在上传、备份或保存的工作可能中断，未完成的交卷需要学生重试。开机启动将关闭，服务不会自动重新启动；下次手动启动会先检查数据并进入维护模式。是否继续？',
+    danger: true
+  },
   updateSettings: {
     operation: 'updateSettings',
     title: '修改服务对外地址',
@@ -114,6 +150,7 @@ export function LocalServiceDialog({ close }: LocalServiceDialogProps): JSX.Elem
   const [portDraft, setPortDraft] = useState<number | null>(null)
   const [showInitialization, setShowInitialization] = useState(false)
   const [pending, setPending] = useState<PendingConfirmation | null>(null)
+  const [purgeText, setPurgeText] = useState('')
   const status = local.status
   const state = status?.state
   const running = state === 'running'
@@ -206,11 +243,14 @@ export function LocalServiceDialog({ close }: LocalServiceDialogProps): JSX.Elem
             hidden={tab !== 'information'}
             tabIndex={0}
           >
-            {state === 'unavailable' ? (
+            {state === 'unavailable' || (!state && local.error) ? (
               <section className={styles.recoveryCard} aria-labelledby="local-unavailable-heading">
                 <div className={styles.recoveryContent}>
                   <h3 id="local-unavailable-heading">服务状态暂时不可用</h3>
-                  <p>教师端暂时无法读取本机服务的信息，尚不能确认服务是否已正常启动。</p>
+                  <p>
+                    {STATUS_FAILURES[status?.error ?? ''] ??
+                      '教师端暂时无法读取本机服务的信息，尚不能确认服务是否已正常启动。'}
+                  </p>
                   <ol>
                     <li>如果刚刚启动服务，请稍等几秒后重新检查状态。</li>
                     <li>如果仍不可用，读取服务日志查看启动错误。</li>
@@ -241,6 +281,15 @@ export function LocalServiceDialog({ close }: LocalServiceDialogProps): JSX.Elem
                     variant="ghost"
                   >
                     查看服务日志
+                  </Button>
+                  <Button
+                    disabled={busy}
+                    icon={Square}
+                    onClick={() => setPending({ key: 'force-stop' })}
+                    size="small"
+                    variant="danger"
+                  >
+                    强制停止服务
                   </Button>
                 </div>
                 {status?.error ? (
@@ -344,6 +393,46 @@ export function LocalServiceDialog({ close }: LocalServiceDialogProps): JSX.Elem
             hidden={tab !== 'recovery'}
             tabIndex={0}
           >
+            <section className={styles.recoveryCard} aria-labelledby="local-disaster-heading">
+              <h3 id="local-disaster-heading">故障数据导出与彻底清除</h3>
+              <p className={styles.hint}>
+                无法启动旧服务、无法备份或升级时，先停止服务，再导出原始目录。无法连接的服务可在“服务信息与操作”页强制停止。
+                原始导出保留故障文件供抢救使用，不是可直接导入的业务备份。
+              </p>
+              <Button
+                disabled={busy}
+                icon={FolderOpen}
+                onClick={() => {
+                  setPurgeText('')
+                  setPending({ key: 'export-data' })
+                }}
+              >
+                导出原始数据
+              </Button>
+              {local.dataExport ? (
+                <>
+                  <p className={styles.path}>
+                    已校验导出：{local.dataExport.directory}（{local.dataExport.files} 个文件）
+                  </p>
+                  <Field htmlFor="local-service-purge-confirm" label="输入“清除本机服务”以确认">
+                    <input
+                      id="local-service-purge-confirm"
+                      disabled={busy}
+                      value={purgeText}
+                      onChange={(event) => setPurgeText(event.target.value)}
+                    />
+                  </Field>
+                  <Button
+                    disabled={busy || purgeText !== '清除本机服务'}
+                    variant="danger"
+                    icon={Trash2}
+                    onClick={() => setPending({ key: 'purge' })}
+                  >
+                    彻底清除服务及数据
+                  </Button>
+                </>
+              ) : null}
+            </section>
             <p className={styles.hint}>
               以下操作仅在服务停止后可用。修改监听端口后，请核对对外地址中的端口。
             </p>
@@ -432,7 +521,11 @@ export function LocalServiceDialog({ close }: LocalServiceDialogProps): JSX.Elem
         busy={busy}
         confirmLabel="确认"
         danger={confirmation?.danger ?? false}
-        message={confirmation?.message ?? ''}
+        message={
+          confirmation
+            ? `${confirmation.message}${pending?.key === 'purge' ? ` 导出位置：${local.dataExport?.directory ?? ''}` : ''}`
+            : ''
+        }
         onCancel={() => setPending(null)}
         onConfirm={() => {
           const current = pending
