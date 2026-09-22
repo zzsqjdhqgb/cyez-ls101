@@ -459,6 +459,11 @@ export class StudentController {
     if (!this.view.active || !this.view.initialized) return
     this.update({ records: await this.host.invoke('records.list') })
   }
+  async enroll(file: string, fingerprint: string): Promise<void> {
+    if (admission(this.view) !== 'unbound') throw new Error('当前状态不允许入网')
+    await this.host.invoke('binding.enroll', { file, fingerprint })
+    await this.refresh()
+  }
   async retry(id: string): Promise<void> {
     await this.queue.retry(id)
   }

@@ -1,5 +1,6 @@
-import type { JSX } from 'react'
-import { Banner } from '@ls101/desktop-ui'
+import { useState, type ChangeEvent, type FormEvent, type JSX } from 'react'
+import { Banner, Button, Field } from '@ls101/desktop-ui'
+import { admission } from '../../admission'
 import { GateScreen } from '../components/GateScreen'
 import { StudentStatus } from '../components/StudentStatus'
 import { useWorkspace } from '../session/workspace'
@@ -17,7 +18,25 @@ const testLabels: Record<string, string> = {
 }
 
 export function StandbyPage(): JSX.Element {
-  const { view } = useWorkspace()
+  const { view, controller, action } = useWorkspace()
+  const [file, setFile] = useState('')
+  const [fileName, setFileName] = useState('')
+  const [fingerprint, setFingerprint] = useState('')
+  const gate = admission(view)
+  const onFileChange = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const selected = event.target.files?.[0]
+    if (!selected) {
+      setFile('')
+      setFileName('')
+      return
+    }
+    setFileName(selected.name)
+    setFile(await selected.text())
+  }
+  const submit = (event: FormEvent): void => {
+    event.preventDefault()
+    void action.run(() => controller.enroll(file, fingerprint.trim()))
+  }
   return (
     <GateScreen>
       {view.loading ? <h1>正在启动</h1> : <StudentStatus title />}
@@ -37,6 +56,38 @@ export function StandbyPage(): JSX.Element {
           <dt>版本</dt>
           <dd>{view.version}</dd>
         </dl>
+      )}
+      {!view.loading && gate === 'unbound' && (
+        <form className={styles.enrollment} onSubmit={submit}>
+          <h2>手动入网</h2>
+          <Field htmlFor="enrollment-file" label="入网文件">
+            <input
+              accept=".lsjoin,application/x-ls101-enrollment"
+              id="enrollment-file"
+              onChange={(event) => void onFileChange(event)}
+              type="file"
+              required
+            />
+          </Field>
+          {fileName && <small>{fileName}</small>}
+          <Field htmlFor="enrollment-fingerprint" label="服务器公钥指纹">
+            <input
+              autoComplete="off"
+              id="enrollment-fingerprint"
+              onChange={(event) => setFingerprint(event.target.value)}
+              placeholder="sha256:..."
+              value={fingerprint}
+              required
+            />
+          </Field>
+          <Button
+            disabled={action.busy || !file || !fingerprint.trim()}
+            type="submit"
+            variant="primary"
+          >
+            入网
+          </Button>
+        </form>
       )}
     </GateScreen>
   )

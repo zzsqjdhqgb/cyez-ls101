@@ -9,6 +9,30 @@
   align-self: flex-start;
 }
 
+.enrollment {
+  display: flex;
+  width: min(440px, 100%);
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.enrollment h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 18px;
+}
+
+.enrollment small {
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.enrollment button {
+  align-self: flex-start;
+}
+
 .details {
   display: grid;
   grid-template-columns: 100px minmax(0, 1fr);

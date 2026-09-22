@@ -9,6 +9,7 @@ const model = vi.hoisted(() => ({
   view: null as StudentView | null,
   listeners: new Set<() => void>(),
   activate: vi.fn(async () => {}),
+  enroll: vi.fn(async () => {}),
   prepare: vi.fn(async () => {}),
   retry: vi.fn(async () => {}),
   exportRecords: vi.fn(async () => {}),
@@ -17,14 +18,17 @@ const model = vi.hoisted(() => ({
 
 vi.mock('../../../controller', () => ({
   StudentController: class {
-    getSnapshot = () => model.view!
-    subscribe = (listener: () => void) => {
+    getSnapshot = (): StudentView => model.view!
+    subscribe = (listener: () => void): (() => void) => {
       model.listeners.add(listener)
-      return () => model.listeners.delete(listener)
+      return () => {
+        model.listeners.delete(listener)
+      }
     }
-    start = async () => {}
-    stop = async () => {}
+    start = async (): Promise<void> => {}
+    stop = async (): Promise<void> => {}
     activate = model.activate
+    enroll = model.enroll
     prepare = model.prepare
     retry = model.retry
     exportRecords = model.exportRecords
@@ -168,6 +172,15 @@ it('activates from the gate and shows action errors', async () => {
   fireEvent.click(screen.getByRole('button', { name: '激活' }))
   await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('激活码无效'))
   expect(model.activate).toHaveBeenCalledWith('test-code')
+})
+
+it('offers manual enrollment while waiting for a binding', () => {
+  model.view!.binding = null
+  render(<App />)
+  expect(screen.getByRole('heading', { name: '等待入网' })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: '手动入网' })).toBeInTheDocument()
+  expect(screen.getByLabelText('入网文件')).toBeInTheDocument()
+  expect(screen.getByLabelText('服务器公钥指纹')).toBeInTheDocument()
 })
 
 it('exports only visible archives after background updates and excludes receipt-only retry', async () => {

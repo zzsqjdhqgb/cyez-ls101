@@ -328,6 +328,26 @@ export function startLabDesktop(options: DesktopOptions): void {
           await saveFile(join(root, 'last-command-results.json'), JSON.stringify(result))
           return result
         }
+        if (capability === 'binding.enroll') {
+          active()
+          if (options.role !== 'student') throw new Error('仅学生端可以入网')
+          if (versionMismatch || initializationError || foreground !== 'idle')
+            throw new Error('当前状态拒绝入网')
+          if (
+            !input ||
+            typeof input !== 'object' ||
+            typeof (input as { file?: unknown }).file !== 'string' ||
+            typeof (input as { fingerprint?: unknown }).fingerprint !== 'string'
+          )
+            throw new Error('入网文件和服务器公钥指纹均为必填项')
+          for (const request of requests.values()) request.abort()
+          const value = input as { file: string; fingerprint: string }
+          const summary = await binding.enroll(value.file, value.fingerprint)
+          currentEpoch = 0
+          knownState = null
+          versionMismatch = false
+          return summary
+        }
         const completingSave =
           options.role === 'student' &&
           ((['records.begin', 'records.chunk', 'records.finish'].includes(capability) &&

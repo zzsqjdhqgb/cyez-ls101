@@ -11,6 +11,7 @@ const capabilities = new Set([
   'window.maintenance',
   'foreground.set',
   'binding.summary',
+  'binding.enroll',
   'binding.connect',
   'binding.runtime',
   'binding.observe',
