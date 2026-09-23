@@ -5,6 +5,7 @@ import { admission } from '../../admission'
 import { GateScreen } from '../components/GateScreen'
 import { StudentStatus } from '../components/StudentStatus'
 import { useWorkspace } from '../session/workspace'
+import { MaintenancePage } from './MaintenancePage'
 import styles from './StandbyPage.module.css'
 
 const testLabels: Record<string, string> = {
@@ -30,6 +31,8 @@ export function StandbyPage(): JSX.Element {
   // Reading the file is asynchronous, so a slow first selection must not overwrite a later one.
   const selection = useRef(0)
   const gate = admission(view)
+  if (!view.loading && gate === 'maintenance') return <MaintenancePage />
+
   const onFileChange = (event: ChangeEvent<HTMLInputElement>): void => {
     const selected = event.target.files?.[0]
     const current = ++selection.current
