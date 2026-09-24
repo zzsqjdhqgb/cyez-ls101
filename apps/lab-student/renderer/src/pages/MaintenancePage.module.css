@@ -50,7 +50,7 @@
   align-items: center;
   gap: 12px;
   color: var(--maintenance-accent);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 650;
 }
 
@@ -63,7 +63,7 @@
 .message h1 {
   margin: 28px 0 14px;
   color: var(--maintenance-text);
-  font-size: 68px;
+  font-size: 76px;
   font-weight: 700;
   line-height: 1.18;
   overflow-wrap: anywhere;
@@ -72,7 +72,7 @@
 .summary {
   margin: 0;
   color: var(--maintenance-muted);
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1.6;
 }
 
@@ -111,13 +111,13 @@
 
 .confirmation strong {
   color: var(--maintenance-text);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 650;
 }
 
 .confirmation span {
   color: var(--maintenance-muted);
-  font-size: 13px;
+  font-size: 16px;
   overflow-wrap: anywhere;
 }
 
@@ -138,12 +138,12 @@
 
 .location span {
   color: var(--maintenance-muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .location strong {
   color: var(--maintenance-text);
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 570;
   overflow-wrap: anywhere;
 }
@@ -159,12 +159,12 @@
   align-items: center;
   justify-content: space-between;
   color: var(--maintenance-muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .identityLabel > span:last-child {
   color: var(--maintenance-accent);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -172,7 +172,7 @@
   margin: 12px 0 5px;
   color: var(--maintenance-text);
   font-family: 'Bahnschrift', 'Segoe UI', sans-serif;
-  font-size: 150px;
+  font-size: 176px;
   font-variant-numeric: tabular-nums;
   font-weight: 650;
   line-height: 1;
@@ -182,7 +182,7 @@
 .displayName {
   display: block;
   color: var(--maintenance-accent);
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 600;
   overflow-wrap: anywhere;
 }
@@ -204,14 +204,14 @@
 .facts dt {
   flex: 0 0 auto;
   color: var(--maintenance-muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .facts dd {
   min-width: 0;
   margin: 0;
   color: var(--maintenance-text);
-  font-size: 13px;
+  font-size: 16px;
   text-align: right;
   overflow-wrap: anywhere;
 }
@@ -223,11 +223,11 @@
   }
 
   .message h1 {
-    font-size: 56px;
+    font-size: 64px;
   }
 
   .number {
-    font-size: 124px;
+    font-size: 140px;
   }
 }
 
@@ -249,11 +249,11 @@
 
   .message h1 {
     margin-top: 20px;
-    font-size: 48px;
+    font-size: 52px;
   }
 
   .summary {
-    font-size: 16px;
+    font-size: 18px;
   }
 
   .confirmation {
@@ -272,7 +272,7 @@
 
   .number {
     margin-top: 8px;
-    font-size: 88px;
+    font-size: 104px;
   }
 
   .facts {
