@@ -55,6 +55,14 @@ P4 之后 lab 侧不再触发主程序文档测试。lab 检查点（L 系列）
 - 发现环境问题（只读 node_modules、缺少必需原生工具等）或预期外差异 → 立刻停下报告。
 - `yarn typecheck` 目前是空转（根 tsconfig `files: []` + references，`tsc -p` 不构建引用工程）；收尾阶段补 `typecheck:apps` 脚本，不单独改 CI 语义。
 
+### 已知开发坑（2026-09-18 会话记录，2026-09-24 校对；原 `HANDOFF-lab-ui-rewrite.local.md` 已删除）
+
+- **本机服务仍是两条通道**：`localService.status` 在主进程直接走只读检查（**不提权**，所以可以自动刷新）；其余会改机器的 operation 才起提权 helper。变更必须串行——主进程 `localServiceHost` 用 `busy` 标志，并发直接 `LOCAL_OPERATION_BUSY`；渲染端 `LocalServiceStore` 另有队列，避免旧的 status 观测覆盖刚完成的操作结果。写新的本机服务能力前先想清楚它属于哪条通道。
+- `react-hooks/set-state-in-effect` 经 `eslint-plugin-react-hooks` v7 的 `configs.recommended.rules` 生效，是 **error**：不要在 effect 里同步 `setState`，数据加载走 promise 回调。
+- `packages/desktop-ui` 的 `Modal` 用 Radix `asChild`：面板组件必须 `forwardRef` 并透传 props，否则丢 `role="dialog"` 与可访问名（见 `ModalPanel.tsx` 顶部注释）。
+- app 的 `tsconfig.json` `references` 含 `packages/lab-desktop-host`；改动其公开类型后要 `npx tsc -b packages/lab-desktop-host` 重建 dist，否则 app typecheck 报 TS6305。`desktop-ui`/`lab-renderer` **不要**加进 app references，直接走 node_modules 解析源码即可。
+- `ELECTRON_ENTRY`（见 `package.json` 的 `lab:dev:*`）只告诉 electron-vite dev 启动哪个入口，**不改变构建输入**。
+
 ## 7. 进度台账
 
 - [x] P1 建 `@ls101/desktop-ui`、搬迁、import 重写 —— 已通过 `docs:product:check`
