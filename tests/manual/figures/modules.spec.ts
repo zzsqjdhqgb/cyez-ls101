@@ -54,3 +54,20 @@ test('FIG-TP-LIBRARY 试卷模板库 · 内置模板', async () => {
     await rm(userDataDir, { recursive: true, force: true })
   }
 })
+
+test('FIG-ST-AIROUTER 设置 → AI 引擎 · 默认态', async () => {
+  const userDataDir = await prepareManualUserDataDir()
+  const { app, page } = await launchFigureApp(userDataDir)
+  try {
+    await page.getByRole('link', { name: '设置' }).click()
+    await page.getByRole('button', { name: /^AI 引擎/ }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'AI 引擎' })).toBeVisible()
+    await expect(page.getByText('正在加载', { exact: false })).toHaveCount(0)
+
+    const file = await captureFigure(page, 'FIG-ST-AIROUTER')
+    expect(file).toContain(path.join('FIG-ST-AIROUTER', 'default.png'))
+  } finally {
+    await app.close().catch(() => undefined)
+    await rm(userDataDir, { recursive: true, force: true })
+  }
+})
