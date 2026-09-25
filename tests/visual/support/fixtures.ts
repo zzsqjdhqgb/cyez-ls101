@@ -134,37 +134,69 @@ export async function writeInterfaceFixture(
   directory: string,
   name = 'vision-import.lsinterface'
 ): Promise<string> {
-  const content = interfaceFixtureContent()
-  const interfaceId = deriveInterfaceFixtureId(content)
-  const instanceId = '90000000-0000-4000-8000-000000000001'
-  const exportedAt = '2026-01-15T08:00:00.000Z'
+  return writeInterfacePackageFixture(directory, {
+    content: interfaceFixtureContent(),
+    exportedAt: '2026-01-15T08:00:00.000Z',
+    file: name,
+    instances: [
+      {
+        instanceId: '90000000-0000-4000-8000-000000000001',
+        name: '导入题组',
+        values: {
+          titleText: 'School life',
+          answerText: 'I enjoy reading after class.'
+        }
+      }
+    ]
+  })
+}
+
+export interface InterfacePackageFixture {
+  content: InterfaceFixtureContent
+  instances: ReadonlyArray<{
+    instanceId: string
+    name: string
+    values: Record<string, string>
+  }>
+  file: string
+  exportedAt: string
+}
+
+/**
+ * 按 `@ls101/interface-editor` 的交换包格式写出一个 `.lsinterface`：
+ * 清单 + interface.json + 若干题组。题型编号按规范化内容哈希派生，
+ * 因此同一份内容写出的文件在任何机器上都得到同一个题型编号。
+ */
+export async function writeInterfacePackageFixture(
+  directory: string,
+  fixture: InterfacePackageFixture
+): Promise<string> {
+  const interfaceId = deriveInterfaceFixtureId(fixture.content)
   const manifest = {
     format: 'ls101-interface-zip',
     version: 2,
-    exportedAt,
+    exportedAt: fixture.exportedAt,
     interfaceId,
-    instances: [{ instanceId, assets: [] }]
+    instances: fixture.instances.map(({ instanceId }) => ({ instanceId, assets: [] }))
   }
-  const instance = {
-    instanceId,
-    name: '导入题组',
-    generatedAt: exportedAt,
-    values: {
-      titleText: 'School life',
-      answerText: 'I enjoy reading after class.'
-    }
-  }
-  const bytes = zipSync({
+  const entries: Record<string, Uint8Array> = {
     'manifest.json': jsonBytes(manifest),
-    'interface.json': jsonBytes({ id: interfaceId, ...content }),
-    [`instances/${instanceId}/instance.json`]: jsonBytes(instance)
-  })
-  const file = path.join(directory, name)
-  await writeFile(file, bytes)
+    'interface.json': jsonBytes({ id: interfaceId, ...fixture.content })
+  }
+  for (const instance of fixture.instances) {
+    entries[`instances/${instance.instanceId}/instance.json`] = jsonBytes({
+      instanceId: instance.instanceId,
+      name: instance.name,
+      generatedAt: fixture.exportedAt,
+      values: instance.values
+    })
+  }
+  const file = path.join(directory, fixture.file)
+  await writeFile(file, zipSync(entries))
   return file
 }
 
-interface InterfaceFixtureContent {
+export interface InterfaceFixtureContent {
   name: string
   description: string
   promptTemplate: string

@@ -2,7 +2,8 @@ import { expect, test } from '@playwright/test'
 import { rm } from 'node:fs/promises'
 import path from 'node:path'
 import { captureFigure, launchFigureApp, prepareManualUserDataDir } from '../support/manual-app'
-import { fillStoredInstanceValues } from '../support/manual-fixtures'
+import { fillStoredInstanceValues, writeManualInterfaceFiles } from '../support/manual-fixtures'
+import { stubOpenDialog } from '../../visual/support/fixtures'
 
 test('FIG-GS-EDITOR 新建评分单元 · 结构与数据', async () => {
   const userDataDir = await prepareManualUserDataDir()
@@ -121,6 +122,43 @@ test('FIG-IF-EXPORT 题型导出 · 选择题组', async () => {
 
     const file = await captureFigure(page, 'FIG-IF-EXPORT')
     expect(file).toContain(path.join('FIG-IF-EXPORT', 'default.png'))
+  } finally {
+    await app.close().catch(() => undefined)
+    await rm(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('FIG-IF-IMPORT 题型导入 · 审查题型文件', async () => {
+  test.setTimeout(60_000)
+  const userDataDir = await prepareManualUserDataDir()
+  const files = await writeManualInterfaceFiles(userDataDir)
+  const { app, page } = await launchFigureApp(userDataDir)
+  const importFrom = async (file: string): Promise<void> => {
+    await stubOpenDialog(app, file)
+    await page.getByRole('button', { name: '题型库操作' }).click()
+    await page.getByRole('menuitem', { name: '导入题型' }).click()
+    await expect(page.getByRole('heading', { name: '审查题型文件' })).toBeVisible()
+  }
+  try {
+    // 第一台电脑先导入，让本机留下两套题组。
+    await page.getByRole('link', { name: '题型库' }).click()
+    await importFrom(files.first)
+    await expect(page.getByText('已选择 2 个')).toBeVisible()
+    await page.getByRole('button', { name: '导入选中的题组' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: '题型库' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^校园英语话题卡/ }).first()).toBeVisible()
+
+    // 第二台电脑的文件里，一套内容相同、一套被改过、一套是本机没有的。
+    await importFrom(files.second)
+    await expect(page.getByText('本地已经存在相同内容')).toBeVisible()
+    await expect(page.getByText('同一题组标识对应的内容不同')).toBeVisible()
+    await expect(page.getByText('可以导入')).toBeVisible()
+    await expect(page.getByText('已选择 1 个')).toBeVisible()
+    // 上一次导入的成功提示是全局浮层，等它退场再截图。
+    await expect(page.getByText('题型已导入')).toBeHidden({ timeout: 10_000 })
+
+    const file = await captureFigure(page, 'FIG-IF-IMPORT')
+    expect(file).toContain(path.join('FIG-IF-IMPORT', 'default.png'))
   } finally {
     await app.close().catch(() => undefined)
     await rm(userDataDir, { recursive: true, force: true })
