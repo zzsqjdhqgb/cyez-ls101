@@ -73,7 +73,7 @@ owner: settings
 anchors:
   visual: VR-ST-03（tests/visual/settings/UI-ST-03.spec.ts）
   visual-states: [default]
-  behavior: unverified        # 集成测试只断言入口与标题可见；取消激活只有组件测试
+  behavior: license.spec.ts › deactivates from settings, removes the receipt and requires activation after restart（tests/integration/license.spec.ts）
 ```
 
-行为锚点留 `unverified`：`electron-app.spec.ts › navigates through every primary application area` 只断言本页入口与标题可见；「取消激活」流程只有组件测试覆盖，而组件测试不计入锚点（合格线见 [`../README.md`](../README.md) §2）。
+行为锚点由 `license.spec.ts › deactivates from settings, removes the receipt and requires activation after restart` 承担：从设置总览进入本页，打开并关闭意见征集窗口后断言回执不变，走完「取消」与「取消激活并重启」两条分支，并断言回执被删除、重启后回到启动激活界面（合格线见 [`../README.md`](../README.md) §2）。

@@ -86,7 +86,7 @@ owner: settings
 anchors:
   visual: VR-ST-05（tests/visual/settings/UI-ST-05.spec.ts）
   visual-states: [default]
-  behavior: unverified        # 集成测试只断言入口、版本行与版本说明对话框可见
+  behavior: settings.spec.ts › shows about details and closes the release notes dialog only explicitly（tests/integration/settings.spec.ts）
 ```
 
-行为锚点留 `unverified`：`electron-app.spec.ts` 只断言入口、版本行与版本说明对话框可见，未覆盖本页其余内容（合格线见 [`../README.md`](../README.md) §2）。
+行为锚点由 `settings.spec.ts › shows about details and closes the release notes dialog only explicitly` 承担：断言名称、副标题、版本行、三个分组、成员行与外部链接地址，并断言版本说明对话框在按 Esc 与点击对话框外部后仍保持打开，只有「关闭版本说明」能关闭（合格线见 [`../README.md`](../README.md) §2）。

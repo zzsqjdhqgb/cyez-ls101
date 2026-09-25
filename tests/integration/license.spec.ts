@@ -118,6 +118,68 @@ test('activates with an invitation code and reuses the hash receipt after restar
   }
 })
 
+test('deactivates from settings, removes the receipt and requires activation after restart', async () => {
+  const userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-license-deactivate-'))
+  const receiptPath = path.join(userDataDir, 'license.json')
+  let electronApp: ElectronApplication | undefined
+  const pageErrors: string[] = []
+
+  try {
+    electronApp = await launchIntegrationApp(userDataDir, {
+      environment: { LS101_DISABLE_AUTO_RELAUNCH: '1' }
+    })
+    let page = await electronApp.firstWindow()
+    page.on('pageerror', (error) => pageErrors.push(error.message))
+    await page.waitForLoadState('domcontentloaded')
+    await closeStartupReleaseNotes(page)
+    await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
+    await expect(readFile(receiptPath, 'utf8')).resolves.toContain(INTEGRATION_LICENSE_CODE_HASH)
+
+    await page.getByRole('link', { name: '设置' }).click()
+    await page.getByRole('button', { name: /^许可/ }).click()
+    await expect(page.getByRole('heading', { level: 1, name: '许可' })).toBeVisible()
+    await expect(page.getByText('当前软件已激活。')).toBeVisible()
+
+    const guideWindowPromise = electronApp.waitForEvent('window')
+    await page.getByRole('button', { name: '参与意见征集' }).click()
+    const guideWindow = await guideWindowPromise
+    await guideWindow.waitForLoadState('domcontentloaded')
+    await expect.poll(() => guideWindow.title()).toBe('软件激活方式意见征集')
+    await guideWindow.close()
+    await expect(readFile(receiptPath, 'utf8')).resolves.toContain(INTEGRATION_LICENSE_CODE_HASH)
+
+    await page.getByRole('button', { name: '取消激活', exact: true }).click()
+    await expect(page.getByRole('heading', { name: '取消激活？' })).toBeVisible()
+    await expect(
+      page.getByText(
+        '当前设备上的激活信息将被删除，软件随后重新启动。再次使用时需要输入邀请码，其他软件数据不会被删除。'
+      )
+    ).toBeVisible()
+    await page.getByRole('button', { name: '取消', exact: true }).click()
+    await expect(page.getByRole('heading', { name: '取消激活？' })).toHaveCount(0)
+    await expect(readFile(receiptPath, 'utf8')).resolves.toContain(INTEGRATION_LICENSE_CODE_HASH)
+
+    const closePromise = electronApp.waitForEvent('close')
+    await page.getByRole('button', { name: '取消激活', exact: true }).click()
+    await page.getByRole('button', { name: '取消激活并重启', exact: true }).click()
+    await closePromise
+    electronApp = undefined
+    await expect(readFile(receiptPath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
+
+    electronApp = await launchIntegrationApp(userDataDir, { license: 'not-activated' })
+    page = await electronApp.firstWindow()
+    page.on('pageerror', (error) => pageErrors.push(error.message))
+    await page.waitForLoadState('domcontentloaded')
+
+    await expect(page.getByRole('heading', { name: '激活曹二听说101' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toHaveCount(0)
+    expect(pageErrors).toEqual([])
+  } finally {
+    await electronApp?.close().catch(() => undefined)
+    await rm(userDataDir, { force: true, recursive: true })
+  }
+})
+
 test('blocks activation and application access after the license deadline', async () => {
   const userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-license-expired-'))
   const electronApp = await launchIntegrationApp(userDataDir, {
