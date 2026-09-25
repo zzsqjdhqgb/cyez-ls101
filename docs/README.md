@@ -102,6 +102,7 @@ Docker 外（每次改文档或界面后都应跑）：
 - `yarn docs:check`：状态注释块与取值、`implemented` 文档中的未来时态、相对链接可达性、索引完备性，并输出视觉 / 行为锚定率。
 - `yarn visual:check`：`docs/ui/screens/UI-*.md` 的视觉锚点 ↔ `tests/visual` ↔ `tests/visual/baselines` 三方一致。
 - `yarn manual:figures:check`：`docs/manual/**` 的配图引用 ↔ `tests/manual/figures` 的捕获 ↔ `tests/manual/baselines` 的基线三方一致，并禁止引用逐屏视觉基线。
+- `yarn manual:copy:check`：说明书用「」引用的界面文字必须能在权威来源（`docs/ui/screens`、`docs/ui/modules`、`docs/ui/glossary.md`、界面源码、内置内容）中找到，防止凭印象编写按钮名与提示语。
 - `yarn copy:check`：扫描 `packages/**`、`src/**` 中面向用户的错误消息，纯英文即失败（规则与落地见 [`ui/open-questions.md`](./ui/open-questions.md) 第 10 条）。
 - `yarn lint`、`yarn test:vitest`、`xvfb-run -a yarn test:playwright:run`、`xvfb-run -a yarn test:product-docs:run`。
 

@@ -22,6 +22,7 @@
     "visual:publish:container": "node scripts/visual/container-runner.mjs publish",
     "visual:check:container": "node scripts/visual/container-runner.mjs check",
     "manual:figures:check": "node scripts/docs/check-manual-figures.mjs",
+    "manual:copy:check": "node scripts/docs/check-manual-copy.mjs",
     "manual:figures:image": "node scripts/manual/docker.mjs build",
     "manual:figures:publish": "node scripts/manual/docker.mjs publish",
     "manual:figures:canonical:check": "node scripts/manual/docker.mjs check",

@@ -68,6 +68,10 @@ jobs:
         if: matrix.suite == 'other-checks'
         run: node scripts/docs/check-manual-figures.mjs
 
+      - name: Check manual UI copy against the specification sources
+        if: matrix.suite == 'other-checks'
+        run: node scripts/docs/check-manual-copy.mjs
+
       - name: Check user-facing error copy
         if: matrix.suite == 'other-checks'
         run: node scripts/docs/check-user-facing-copy.mjs
