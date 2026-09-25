@@ -49,6 +49,7 @@ export type {
   FieldNode,
   FieldCollection,
   InterfaceContent,
+  InterfacePrompt,
   InterfaceDraft,
   InterfaceDef
 } from './types'

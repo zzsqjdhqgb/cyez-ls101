@@ -15,8 +15,13 @@ interface InterfaceDef {
   id: string
   name: string
   description: string
-  promptTemplate: string // 发送给 LLM 的提示词
+  prompts: InterfacePrompt[] // 可选的提示词片段
   fields: FieldCollection // 根级字段集合
+}
+
+interface InterfacePrompt {
+  name: string // 提示词片段名称
+  content: string // 提示词片段内容
 }
 
 interface FieldCollection {
@@ -55,7 +60,10 @@ interface FieldLeaf {
 
 ```json
 {
-  "promptTemplate": "请生成一套上海高考英语口语模拟试卷，难度中等，话题围绕校园生活。",
+  "prompts": [
+    { "name": "基础出题要求", "content": "请生成一套上海高考英语口语模拟试卷。" },
+    { "name": "难度与主题", "content": "难度中等，话题围绕校园生活。" }
+  ],
   "fields": {
     "order": ["sectionA", "sectionB"],
     "nodes": {
@@ -110,7 +118,7 @@ interface FieldLeaf {
 
 ### 3.1 上半区：提示词编辑
 
-大文本框，编辑 `promptTemplate`。支持基本 Markdown 格式。
+提示词列表编辑器。每项包含名称和内容，可添加、删除、上下移动。生成时用户可多选提示词；系统按此处的列表顺序拼接选中项。
 
 ### 3.2 下半区：字段树编辑
 
@@ -151,11 +159,11 @@ interface FieldLeaf {
 
 ### 4.1 提交给 LLM
 
-系统按每层 `order` 将领域字段树转换为普通 JSON 输出结构，再与 `promptTemplate` 一同发给 LLM。`order` 和 `nodes` 是本地领域格式，不会出现在发给 LLM 的 JSON 中：
+系统按题型定义顺序拼接用户选中的提示词片段，并为每段保留 `## 名称` 标题；然后将字段树转换为普通 JSON 输出结构，一同发给 LLM。`order` 和 `nodes` 是本地领域格式，不会出现在发给 LLM 的 JSON 中：
 
 ```json
 {
-  "prompt": "请生成一套上海高考英语口语模拟试卷...",
+  "prompt": "## 基础出题要求\n请生成一套上海高考英语口语模拟试卷。\n\n## 难度与主题\n难度中等，话题围绕校园生活。",
   "fields": {
     "sectionA": {
       "sentences": {
@@ -241,7 +249,7 @@ Interface 实例使用实体身份：每次独立生成、复制、基于已有�
 
 ## 六、Interface 导入导出
 
-Interface 定义——包含名称、描述、`promptTemplate` 和有序 `fields` 结构——可导出为文件，供其他教师导入使用。Interface 使用规范化内容的 SHA-256 作为 ID，因此相同内容在不同设备上具有相同 ID；实例不参与该哈希。
+Interface 定义——包含名称、描述、提示词列表和有序 `fields` 结构——可导出为文件，供其他教师导入使用。Interface 使用规范化内容的 SHA-256 作为 ID，因此相同内容在不同设备上具有相同 ID；实例不参与该哈希。
 
 导出时 Interface 定义始终包含，教师可以选择：
 

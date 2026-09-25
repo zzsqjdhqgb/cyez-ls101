@@ -272,7 +272,12 @@ export function InterfaceDetailsPage(): JSX.Element {
               </div>
               <section>
                 <h2>生成要求</h2>
-                <pre>{details.definition.promptTemplate}</pre>
+                {details.definition.prompts.map((prompt, index) => (
+                  <section key={index}>
+                    <h3>{prompt.name}</h3>
+                    <pre>{prompt.content}</pre>
+                  </section>
+                ))}
               </section>
               <section>
                 <div className={styles.definitionHeading}>
@@ -284,14 +289,14 @@ export function InterfaceDetailsPage(): JSX.Element {
                         size="small"
                         onClick={() => void copyText('完整提示词', prompts.fullPrompt)}
                       >
-                        复制完整提示词
+                        复制全部完整提示词
                       </Button>
                       <Button
                         icon={Copy}
                         size="small"
                         onClick={() => void copyText('提示词', prompts.prompt)}
                       >
-                        复制单独提示词
+                        复制全部题型提示词
                       </Button>
                       <Button
                         icon={Copy}

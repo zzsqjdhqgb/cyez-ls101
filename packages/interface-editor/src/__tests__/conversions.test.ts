@@ -34,7 +34,7 @@ function makeDef(overrides: DefOverrides = {}): InterfaceDef {
     id: 'if-test-001',
     name: '测试题型',
     description: '用于测试的 Interface',
-    promptTemplate: '请生成一套测试题目',
+    prompts: [{ name: '基础出题要求', content: '请生成一套测试题目' }],
     fields: collection({
       title: textLeaf('examTitle', '试卷标题', '2024 英语模拟卷')
     }),
@@ -48,14 +48,57 @@ function makeDef(overrides: DefOverrides = {}): InterfaceDef {
 // ============================================================
 
 describe('buildAIPrompt', () => {
-  it('包含 promptTemplate', () => {
-    const def = makeDef({ promptTemplate: '请生成一套测试题目' })
-    const prompt = buildAIPrompt(def)
+  it('只发送所选片段，并按定义顺序拼接，与选择顺序及重复选择无关', () => {
+    const def = makeDef({
+      prompts: [
+        { name: '基础要求', content: '基础正文' },
+        { name: '生活主题', content: '不应发送的生活正文' },
+        { name: '科技主题', content: '科技正文' }
+      ]
+    })
+    const prompt = buildAIPrompt(def, [2, 0, 2], '航天相关')
+    expect(prompt).toBe(buildAIPrompt(def, [0, 2], '航天相关'))
+    expect(prompt).toContain('## 基础要求\n基础正文\n\n## 科技主题\n科技正文')
+    expect(prompt).not.toContain('生活')
+    expect(prompt.indexOf('科技正文')).toBeLessThan(prompt.indexOf('航天相关'))
+    expect(prompt.indexOf('航天相关')).toBeLessThan(prompt.indexOf('## 输出格式要求'))
+  })
+
+  it.each([[], [-1], [1], [0.5], [NaN]].map((indices) => ({ indices })))(
+    '拒绝空选择或无效位置 $indices',
+    ({ indices }) => {
+      expect(() => buildAIPrompt(makeDef(), indices)).toThrow()
+    }
+  )
+
+  it('将补充要求放在题型要求之后、格式约束之前，并保留内部换行', () => {
+    const def = makeDef()
+    const original = structuredClone(def)
+    const prompt = buildAIPrompt(def, [0], '  出题方向偏科技类\n难度适合高中生  ')
+    expect(prompt).toContain('## 本次生成的补充要求\n出题方向偏科技类\n难度适合高中生\n\n')
+    expect(prompt.indexOf(def.prompts[0].content)).toBeLessThan(
+      prompt.indexOf('## 本次生成的补充要求')
+    )
+    expect(prompt.indexOf('难度适合高中生')).toBeLessThan(
+      prompt.indexOf('请严格按照以下 JSON Schema')
+    )
+    expect(prompt).toContain('示例输出：')
+    expect(def).toEqual(original)
+  })
+
+  it.each(['', ' \n\t '])('忽略空白补充要求 %j', (additionalPrompt) => {
+    const def = makeDef()
+    expect(buildAIPrompt(def, [0], additionalPrompt)).toBe(buildAIPrompt(def, [0]))
+  })
+
+  it('包含 prompts', () => {
+    const def = makeDef({ prompts: [{ name: '基础出题要求', content: '请生成一套测试题目' }] })
+    const prompt = buildAIPrompt(def, [0])
     expect(prompt).toContain('请生成一套测试题目')
   })
 
   it('包含 JSON Schema（type: "object"）', () => {
-    const prompt = buildAIPrompt(makeDef())
+    const prompt = buildAIPrompt(makeDef(), [0])
     expect(prompt).toContain('"type": "object"')
     expect(prompt).toContain('"additionalProperties": false')
   })
@@ -64,7 +107,7 @@ describe('buildAIPrompt', () => {
     const def = makeDef({
       fields: { q: textLeaf('v1', '题干描述', '示例题干') }
     })
-    const prompt = buildAIPrompt(def)
+    const prompt = buildAIPrompt(def, [0])
     expect(prompt).toContain('题干描述')
   })
 
@@ -72,7 +115,8 @@ describe('buildAIPrompt', () => {
     const prompt = buildAIPrompt(
       makeDef({
         fields: { picture: imageLeaf('image', '考试配图', '学生在教室学习') }
-      })
+      }),
+      [0]
     )
     expect(prompt).toContain('图片生成模型')
     expect(prompt).toContain('不要返回图片 URL')
@@ -82,7 +126,7 @@ describe('buildAIPrompt', () => {
     const def = makeDef({
       fields: { q: textLeaf('v1', 'desc', '示例值ABC') }
     })
-    const prompt = buildAIPrompt(def)
+    const prompt = buildAIPrompt(def, [0])
     expect(prompt).toContain('示例值ABC')
   })
 
@@ -95,7 +139,7 @@ describe('buildAIPrompt', () => {
         })
       }
     })
-    const prompt = buildAIPrompt(def)
+    const prompt = buildAIPrompt(def, [0])
     expect(prompt).toContain('"section"')
     expect(prompt).toContain('"Hello"')
     expect(prompt).toContain('"World"')
@@ -105,16 +149,16 @@ describe('buildAIPrompt', () => {
     const def = makeDef({
       fields: { q: textLeaf('myPrivateVar', 'desc', 'ex') }
     })
-    const prompt = buildAIPrompt(def)
+    const prompt = buildAIPrompt(def, [0])
     expect(prompt).not.toContain('myPrivateVar')
   })
 
-  it('promptTemplate 在 schema 和 example 之前', () => {
+  it('prompts 在 schema 和 example 之前', () => {
     const def = makeDef({
-      promptTemplate: '开头内容',
+      prompts: [{ name: '基础出题要求', content: '开头内容' }],
       fields: { q: textLeaf('v1', 'desc', 'ex') }
     })
-    const prompt = buildAIPrompt(def)
+    const prompt = buildAIPrompt(def, [0])
     const schemaPos = prompt.indexOf('"type": "object"')
     const examplePos = prompt.indexOf('示例输出')
     const promptPos = prompt.indexOf('开头内容')

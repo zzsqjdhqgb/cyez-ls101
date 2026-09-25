@@ -1,8 +1,8 @@
 // @ls101/interface-editor — 转换层
 //
 // 以 InterfaceDef 为输入，产出三种不同形态的外部 artifact：
-//   1. buildAIPrompt(def) → string
-//      — 拼接 promptTemplate + JSON Schema + JSON Example，发给 LLM
+//   1. buildAIPrompt(def, selectedPromptIndices, additionalPrompt?) → string
+//      — 拼接 prompts + JSON Schema + JSON Example，发给 LLM
 //
 //   2. buildVarManifest(def) → InterfaceVarManifest
 //      — 平铺字段树，生成 Template 编辑器可导入的变量清单
@@ -19,16 +19,46 @@ import { buildJsonSchema, buildJsonExample } from './schema'
 // 1. buildAIPrompt — 拼接发给 LLM 的完整 prompt
 // ============================================================
 
+/** 校验选择并按题型定义顺序拼接片段，保留每段名称。 */
+export function buildPromptSections(
+  def: InterfaceDef,
+  selectedPromptIndices: readonly number[]
+): string {
+  if (!selectedPromptIndices.length) throw new Error('请至少选择一项题型提示词')
+  if (
+    selectedPromptIndices.some(
+      (index) => !Number.isInteger(index) || index < 0 || index >= def.prompts.length
+    )
+  ) {
+    throw new Error('所选题型提示词无效，请重新选择')
+  }
+  const selected = new Set(selectedPromptIndices)
+  return def.prompts
+    .filter((_prompt, index) => selected.has(index))
+    .map((prompt) => `## ${prompt.name.trim()}\n${prompt.content.trim()}`)
+    .join('\n\n')
+}
+
 /**
- * 合成发送给 LLM 的完整提示词，包含三部分：
- * 1. 教师编写的 promptTemplate（界面中编辑的提示词）
- * 2. JSON Schema（由字段树自动生成，描述期望的 JSON 结构）
- * 3. JSON Example（由字段的 example 值填充的示例输出）
+ * 合成发送给 LLM 的完整提示词，包含以下部分：
+ * 1. 教师编写的 prompts 中选中的片段
+ * 2. 本次生成的补充要求（可选，不修改题型定义）
+ * 3. JSON Schema（由字段树自动生成，描述期望的 JSON 结构）
+ * 4. JSON Example（由字段的 example 值填充的示例输出）
  *
  * LLM 应直接返回符合 Schema 的 JSON，不要包含任何 JSON 之外的文本。
  */
-export function buildAIPrompt(def: InterfaceDef): string {
-  return `${def.promptTemplate}\n\n${buildFormatInstructions(def)}`
+export function buildAIPrompt(
+  def: InterfaceDef,
+  selectedPromptIndices: readonly number[],
+  additionalPrompt?: string
+): string {
+  const supplement = additionalPrompt?.trim()
+  return [
+    `以下是本次选中的出题要求，请综合遵循：\n\n${buildPromptSections(def, selectedPromptIndices)}`,
+    ...(supplement ? [`## 本次生成的补充要求\n${supplement}`] : []),
+    `## 输出格式要求\n${buildFormatInstructions(def)}`
+  ].join('\n\n')
 }
 
 /** 构建由字段结构派生的格式限制提示词。 */

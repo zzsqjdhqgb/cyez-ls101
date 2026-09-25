@@ -1,7 +1,8 @@
 import type { InterfaceInstance } from '@ls101/core-types'
-import { compareInterfaceIdentity, isInterfaceId, verifyInterfaceId } from './id'
+import { compareInterfaceIdentity, isInterfaceId } from './id'
 import {
   InterfaceRepositoryError,
+  readInterfaceDefinition,
   type InterfaceRepository,
   type LocatedInterfaceInstance,
   type SaveEntityResult
@@ -108,15 +109,7 @@ export async function inspectInterfacePackage(
   value: InterfaceExchangePackage
 ): Promise<InterfacePackageInspection> {
   assertPackageShape(value)
-  let verified = false
-  try {
-    verified = await verifyInterfaceId(value.interface)
-  } catch {
-    throw invalidPackage('Interface content is malformed')
-  }
-  if (!verified) {
-    throw invalidPackage('Interface content ID does not match its content')
-  }
+  const definition = await readInterfaceDefinition(value.interface)
 
   const seen = new Set<string>()
   const instances = value.instances.map(({ instance, assets }) => {
@@ -136,7 +129,11 @@ export async function inspectInterfacePackage(
   if (value.builtin && value.builtin.interfaceId !== value.interface.id) {
     throw invalidPackage('Builtin Interface identity does not match package content')
   }
-  return { interface: value.interface, builtin: value.builtin, instances }
+  return {
+    interface: definition,
+    builtin: value.builtin ? { ...value.builtin, interfaceId: definition.id } : undefined,
+    instances
+  }
 }
 
 /**
@@ -148,6 +145,7 @@ export async function importInterfacePackage(
   options: InterfacePackageImportOptions
 ): Promise<InterfacePackageImportResult> {
   const inspection = await inspectInterfacePackage(value)
+  value = { ...value, interface: inspection.interface, builtin: inspection.builtin }
   const selectedIds = resolveImportSelection(inspection, options.instances)
   const selected = value.instances.filter(({ instance }) => selectedIds.has(instance.instanceId))
 
