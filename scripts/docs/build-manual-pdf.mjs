@@ -126,6 +126,8 @@ function renderMarkdown(markdown, file, missingFigures) {
       ReactMarkdown,
       {
         remarkPlugins: [remarkGfm],
+        // 源文件里的 HTML 注释是给仓库工具读的元数据（文档状态、适用版本等），不进 PDF。
+        skipHtml: true,
         components: {
           img: ({ src, alt }) => renderFigure(src, alt, path.dirname(file), missingFigures)
         }
@@ -195,10 +197,7 @@ function stripReviewSections(markdown) {
     if (/^#\s/.test(line)) skipping = REVIEW_SECTION.test(line)
     if (!skipping) kept.push(line)
   }
-  return kept
-    .join('\n')
-    .replace(/<!--[\s\S]*?-->/g, (block) => (REVIEW_SECTION.test(block) ? '' : block))
-    .trim()
+  return kept.join('\n').trim()
 }
 
 function documentTitle(html) {
