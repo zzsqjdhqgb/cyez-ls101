@@ -55,7 +55,7 @@ describe('Template 工作文档与函数资源身份', () => {
     expect(document.editorState.collapsed).toEqual(['root'])
   })
 
-  it('为函数库源文档生成稳定 UUID，源文档不使用内容 ID', () => {
+  it('为函数库源文档生成稳定 UUID，源文档不使用内容编号', () => {
     const source = createFunctionDocument(functionContent(), { selectedNodeId: 'root' })
 
     expect(source.functionId).toMatch(
@@ -65,7 +65,7 @@ describe('Template 工作文档与函数资源身份', () => {
     expect(source.editorState).toEqual({ selectedNodeId: 'root' })
   })
 
-  it('为嵌入 Template 的函数快照生成标准 SHA-256 内容 ID', async () => {
+  it('为嵌入 Template 的函数快照生成标准 SHA-256 内容编号', async () => {
     const resource = await createFunctionResource(functionContent())
 
     expect(isFunctionResourceId(resource.id)).toBe(true)
@@ -73,7 +73,7 @@ describe('Template 工作文档与函数资源身份', () => {
     expect(await verifyFunctionResourceId(resource)).toBe(true)
   })
 
-  it('相同函数内容产生相同资源 ID，结构顺序参与哈希', async () => {
+  it('相同函数内容产生相同资源编号，结构顺序参与哈希', async () => {
     const first = await createFunctionResource(functionContent())
     const duplicate = await createFunctionResource(functionContent())
     const pageA = {
@@ -90,7 +90,7 @@ describe('Template 工作文档与函数资源身份', () => {
     expect(ordered).not.toBe(reversed)
   })
 
-  it('对象 key 顺序不影响函数资源 ID', async () => {
+  it('对象 key 顺序不影响函数资源编号', async () => {
     const call = (inputs: Record<string, ReturnType<typeof text>>) =>
       functionContent({
         body: root([
@@ -109,7 +109,7 @@ describe('Template 工作文档与函数资源身份', () => {
     expect(await deriveFunctionResourceId(first)).toBe(await deriveFunctionResourceId(second))
   })
 
-  it('inputs、outputs 和 Schema uses 分别参与函数资源哈希', async () => {
+  it('inputs、outputs 和评分单元 uses 分别参与函数资源哈希', async () => {
     const base = functionContent()
     const baseId = await deriveFunctionResourceId(base)
     const changedInput = functionContent({ inputs: [{ name: 'other', type: 'string' }] })
@@ -160,7 +160,7 @@ describe('Template 工作文档与函数资源身份', () => {
     )
   })
 
-  it('CRLF/LF 和等价 Unicode 规范化后资源 ID 相同', async () => {
+  it('CRLF/LF 和等价 Unicode 规范化后资源编号相同', async () => {
     const first = functionContent({
       name: 'Cafe\u0301\r\nFunction',
       body: root([
@@ -219,7 +219,7 @@ describe('Template 工作文档与函数资源身份', () => {
     expect(await verifyFunctionResourceId(resource)).toBe(true)
   })
 
-  it('拒绝非法 SHA-256 资源 ID 格式', async () => {
+  it('拒绝非法 SHA-256 资源编号格式', async () => {
     const resource = await createFunctionResource(functionContent())
 
     expect(isFunctionResourceId('sha256:ABC')).toBe(false)

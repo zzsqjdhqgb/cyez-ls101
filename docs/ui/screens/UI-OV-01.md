@@ -94,7 +94,7 @@ owner: license
 anchors:
   visual: VR-OV-01（tests/visual/overlays/UI-OV-01.spec.ts）
   visual-states: [default]
-  behavior: unverified
+  behavior: license.spec.ts › activates with an invitation code and reuses the hash receipt after restart；blocks activation and application access after the license deadline（tests/integration/license.spec.ts）
 ```
 
-产品文档测试未覆盖本屏；`tests/integration/license.spec.ts` 是集成测试，不作为产品文档行为锚点。
+行为锚点：`tests/integration/license.spec.ts` 的两个用例覆盖本屏的邀请码错误提示、成功激活、意见征集入口与激活逾期拒绝。

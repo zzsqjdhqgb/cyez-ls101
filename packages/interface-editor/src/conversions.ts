@@ -139,7 +139,7 @@ export function buildExposedInstance(
 export function buildInstanceFromJson(
   def: InterfaceDef,
   data: Record<string, unknown>,
-  name = '未命名实例'
+  name = '未命名题组'
 ): InterfaceInstance {
   const values: Record<string, string> = {}
   const imagePrompts: Record<string, string> = {}

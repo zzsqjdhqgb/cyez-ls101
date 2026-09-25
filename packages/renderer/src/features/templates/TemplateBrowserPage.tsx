@@ -25,6 +25,7 @@ import { IconButton } from '../../components/ui/IconButton'
 import { Page, PageHeader } from '../../components/ui/Page'
 import { toast } from '../../components/ui/toast'
 import { useTemplateApplication } from './TemplateApplicationContext'
+import { templateCompileErrorDetails } from './TemplateCompileErrors'
 import { exportTemplateDocumentFile, readTemplateDocumentFile } from './TemplateDocumentFiles'
 import styles from './TemplateBrowserPage.module.css'
 import { templateErrorMessage } from './templateUi'
@@ -331,7 +332,13 @@ export function TemplateBrowserPage(): JSX.Element {
                         title={
                           item.available
                             ? undefined
-                            : item.errors.map((error) => error.code).join(', ')
+                            : item.errors
+                                .map(
+                                  (error) =>
+                                    templateCompileErrorDetails({ stage: 'validation', error })
+                                      .message
+                                )
+                                .join('\n')
                         }
                         onClick={() => navigate(`/templates/builtin/${item.templateId}/generate`)}
                       >
@@ -432,7 +439,7 @@ export function TemplateBrowserPage(): JSX.Element {
         confirmLabel="覆盖本地模板"
         danger
         error={importConflictError}
-        message={`本地 revision ${pendingImport?.existing.revision ?? 0} 与文件 revision ${pendingImport?.source.revision ?? 0} 的内容不同。覆盖会保留当前模板 ID 并递增本地 revision。`}
+        message={`本地版本 ${pendingImport?.existing.revision ?? 0} 与文件版本 ${pendingImport?.source.revision ?? 0} 的内容不同。覆盖会保留当前模板编号并递增本地版本。`}
         open={pendingImport !== null}
         secondaryLabel="导入为副本"
         title={`模板“${pendingImport?.source.content.name || '未命名模板'}”已存在`}

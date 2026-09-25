@@ -273,13 +273,13 @@ export function AIRouterSpeechSettingsPage({
   return (
     <SettingsContent>
       <SettingsSection
-        title="语音 Provider"
+        title="语音服务商"
         description="管理在线语音服务和使用本地模型包的离线语音运行时。"
       >
         <div className={styles.providerToolbar}>
-          <span>共 {configs.length} 个 Provider</span>
+          <span>共 {configs.length} 个服务商</span>
           <Button icon={Plus} variant="primary" onClick={() => openEditor(createDraft())}>
-            添加 Provider
+            添加服务商
           </Button>
         </div>
         {configs.length ? (
@@ -308,7 +308,7 @@ export function AIRouterSpeechSettingsPage({
         ) : (
           <div className={styles.emptyProviders}>
             <AudioLines aria-hidden="true" />
-            <span>尚未添加语音 Provider</span>
+            <span>尚未添加语音服务商</span>
           </div>
         )}
       </SettingsSection>
@@ -353,9 +353,7 @@ export function AIRouterSpeechSettingsPage({
                       <span>{modelPackage.models.length} 个模型</span>
                       <span>{modelPackage.voices.length} 个音色</span>
                       <span>{formatBytes(modelPackage.totalBytes)}</span>
-                      {references.length ? (
-                        <span>{references.length} 个 Provider 使用中</span>
-                      ) : null}
+                      {references.length ? <span>{references.length} 个服务商使用中</span> : null}
                     </span>
                     {modelPackage.package.description ? (
                       <span className={styles.packageDescription}>
@@ -371,7 +369,7 @@ export function AIRouterSpeechSettingsPage({
                       setFeedback((current) => ({ ...current, 'delete-package': undefined }))
                       setDeletePackageTarget(modelPackage)
                     }}
-                    title={references.length ? '模型包正在被 Provider 使用' : '删除模型包'}
+                    title={references.length ? '模型包正在被服务商使用' : '删除模型包'}
                     type="button"
                   >
                     <Trash2 aria-hidden="true" />
@@ -401,15 +399,15 @@ export function AIRouterSpeechSettingsPage({
               <div>
                 <ModalDescription asChild>
                   <span className={styles.editorEyebrow}>
-                    {draft.id ? '编辑语音 Provider' : '添加语音 Provider'}
+                    {draft.id ? '编辑语音服务商' : '添加语音服务商'}
                   </span>
                 </ModalDescription>
                 <ModalTitle asChild>
-                  <h2>{draft.name.trim() || '未命名 Provider'}</h2>
+                  <h2>{draft.name.trim() || '未命名服务商'}</h2>
                 </ModalTitle>
               </div>
               <button
-                aria-label="关闭语音 Provider 编辑器"
+                aria-label="关闭语音服务商编辑器"
                 className={styles.closeEditor}
                 disabled={Boolean(busy)}
                 onClick={closeEditor}
@@ -455,13 +453,13 @@ export function AIRouterSpeechSettingsPage({
                     }}
                     value={draft.kind}
                   >
-                    <option value="online">在线 Provider</option>
-                    <option value="local">本地 Provider</option>
+                    <option value="online">在线服务商</option>
+                    <option value="local">本地服务商</option>
                   </select>
                 </SettingsRow>
-                <SettingsRow label="Provider 类型">
+                <SettingsRow label="服务商类型">
                   <select
-                    aria-label="语音 Provider 类型"
+                    aria-label="语音服务商类型"
                     className={styles.input}
                     disabled={Boolean(draft.id) || Boolean(busy)}
                     onChange={(event) => {
@@ -498,21 +496,21 @@ export function AIRouterSpeechSettingsPage({
                         value={draft.baseUrl}
                       />
                     </SettingsRow>
-                    <SettingsRow label="API Key" description="本地无鉴权兼容服务可以留空。">
+                    <SettingsRow label="API 密钥" description="本地无鉴权兼容服务可以留空。">
                       <div className={styles.secretControl}>
                         <div className={styles.secretInputWrap}>
                           <input
-                            aria-label="语音 API Key"
+                            aria-label="语音 API 密钥"
                             autoComplete="new-password"
                             className={styles.inputWide}
                             disabled={Boolean(busy)}
                             onChange={(event) => setDraft({ ...draft, apiKey: event.target.value })}
-                            placeholder={draft.hasApiKey ? '已安全保存' : '输入 API Key'}
+                            placeholder={draft.hasApiKey ? '已安全保存' : '输入 API 密钥'}
                             type={apiKeyVisible ? 'text' : 'password'}
                             value={draft.apiKey}
                           />
                           <button
-                            aria-label={apiKeyVisible ? '隐藏语音 API Key' : '显示语音 API Key'}
+                            aria-label={apiKeyVisible ? '隐藏语音 API 密钥' : '显示语音 API 密钥'}
                             className={styles.secretVisibility}
                             disabled={Boolean(busy)}
                             onClick={() => {
@@ -539,7 +537,7 @@ export function AIRouterSpeechSettingsPage({
                                 'api-key'
                               )
                             }}
-                            title={apiKeyVisible ? '隐藏 API Key' : '显示 API Key'}
+                            title={apiKeyVisible ? '隐藏 API 密钥' : '显示 API 密钥'}
                             type="button"
                           >
                             {apiKeyVisible ? (
@@ -620,7 +618,7 @@ export function AIRouterSpeechSettingsPage({
                   <div className={styles.localPackagePrompt}>
                     <FolderOpen aria-hidden="true" />
                     <strong>需要先导入 {modelPackageLabels[draft.type]} 模型包</strong>
-                    <span>当前没有与该本地 Provider 兼容的模型包。</span>
+                    <span>当前没有与该本地服务商兼容的模型包。</span>
                     <Button
                       icon={Upload}
                       variant="primary"
@@ -635,8 +633,8 @@ export function AIRouterSpeechSettingsPage({
               ) : (
                 <>
                   <SettingsSection
-                    title="Model ID"
-                    description="从兼容服务获取模型列表，或手动添加模型 ID。"
+                    title="模型编号"
+                    description="从兼容服务获取模型列表，或手动添加模型编号。"
                   >
                     <div className={styles.modelToolbar}>
                       <Button
@@ -681,7 +679,7 @@ export function AIRouterSpeechSettingsPage({
                         获取模型列表
                       </Button>
                       <ManualEntry
-                        ariaLabel="手动语音模型 ID"
+                        ariaLabel="手动语音模型编号"
                         disabled={Boolean(busy)}
                         value={manualModel}
                         onChange={setManualModel}
@@ -710,15 +708,15 @@ export function AIRouterSpeechSettingsPage({
                     />
                   </SettingsSection>
                   <SettingsSection
-                    title="Voice ID"
-                    description="添加 OpenAI Compatible 服务支持的音色 ID。"
+                    title="音色编号"
+                    description="添加 OpenAI Compatible 服务支持的音色编号。"
                   >
                     <div className={styles.modelToolbar}>
                       <span className={styles.modelToggle}>
                         已配置 {draft.voices.length} 个音色
                       </span>
                       <ManualEntry
-                        ariaLabel="手动语音音色 ID"
+                        ariaLabel="手动语音音色编号"
                         disabled={Boolean(busy)}
                         value={manualVoice}
                         onChange={setManualVoice}
@@ -832,7 +830,7 @@ export function AIRouterSpeechSettingsPage({
                       setDeleteProviderTarget(config)
                     }}
                   >
-                    删除 Provider
+                    删除服务商
                   </Button>
                 ) : null}
               </div>
@@ -863,7 +861,7 @@ export function AIRouterSpeechSettingsPage({
                     )
                   }
                 >
-                  保存 Provider
+                  保存服务商
                 </Button>
               </div>
             </footer>
@@ -875,13 +873,13 @@ export function AIRouterSpeechSettingsPage({
         busy={busy === 'delete-provider'}
         closeOnConfirm={false}
         danger
-        confirmLabel="删除 Provider"
+        confirmLabel="删除服务商"
         error={
           feedback['delete-provider']?.kind === 'error' ? feedback['delete-provider'].text : null
         }
-        message={`将删除“${deleteProviderTarget?.name ?? ''}”及其独立保存的 API Key。`}
+        message={`将删除“${deleteProviderTarget?.name ?? ''}”及其独立保存的 API 密钥。`}
         open={Boolean(deleteProviderTarget)}
-        title="删除语音 Provider？"
+        title="删除语音服务商？"
         onCancel={() => {
           setDeleteProviderTarget(null)
           setFeedback((current) => ({ ...current, 'delete-provider': undefined }))
@@ -954,7 +952,7 @@ function ModelVoiceSections({
 }): JSX.Element {
   return (
     <>
-      <SettingsSection title="启用模型" description="选择这个 Provider 可以使用的模型。">
+      <SettingsSection title="启用模型" description="选择这个服务商可以使用的模型。">
         <ToggleList
           empty="模型包中没有模型。"
           items={draft.models}

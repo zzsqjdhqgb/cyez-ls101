@@ -25,12 +25,12 @@ export function createConfiguredImageGenerator(
       const selected = options.provider
         ? findImageProvider(providers, options.provider)
         : providers[0]
-      if (!selected) throw new Error('所选图像 Provider 未配置或未启用')
+      if (!selected) throw new Error('所选图像服务商未配置或未启用')
       const config = configs.find((candidate) => candidate.id === selected.providerId)
-      if (!config) throw new Error('所选图像 Provider 不存在')
+      if (!config) throw new Error('所选图像服务商不存在')
       const generationOptions = { signal: options.signal }
       if (config.type === 'manual') return manual.generate(prompt, generationOptions)
-      if (!selected.modelId) throw new Error('所选图像 Provider 未选择模型')
+      if (!selected.modelId) throw new Error('所选图像服务商未选择模型')
       return client.generateImage(
         {
           providerConfigId: selected.providerId,

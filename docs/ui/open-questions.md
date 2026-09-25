@@ -28,7 +28,12 @@ owner: ui
 - **选项**：(a) 修改界面文案为「评分单元」等用户用词；(b) 在术语表中承认现状，改产品定义。
 - **影响**：(a) 属代码变更，会触发相关视觉基线更新，需要与视觉回归同批处理。
 - **需要谁定**：产品负责人。
-- **当前决定**：未定。
+- **当前决定**：**已完成，选项 (a)**。界面文案、主进程错误文案与相关测试已改为术语表用词：
+  `Schema`→评分单元、`Interface`→题型、`Instance`（界面上的"实例"）→题组、`Timeline`→时间线、
+  `Collector`/收集器→采集器、`revision`/`Revision`→版本、`Provider`→服务商、`ID`→编号、
+  `API Key`→API 密钥；`JSON Schema`/`JSON Example` 两个复制按钮改为 `复制题型结构`/`复制示例数据`。
+  内置模板禁用「生成试卷」时的 tooltip 由错误码改为人类可读消息。对照表见
+  [`glossary.md`](./glossary.md)。视觉基线随本批重建。
 
 ## 2. `old/` 是否物理迁入 `docs/archive/legacy/`
 
@@ -73,10 +78,21 @@ owner: ui
 
 - **背景**：`application-shell.md` 等与代码冲突（bridge 数量、路由、主题、`ready-to-show`、
   ASR 选项、`updateSchema` 冻结行为、`file-store` baseDir 等）。
-- **当前决定**：**待执行**（阶段 2）。清单见 `DOCS-REVISION-PLAN.md`。
+- **当前决定**：**已完成**（阶段 2）。逐条修正已落在 `docs/engineering/features/` 各篇。
 
 ## 9. `take-exam` 流程的文档归属
 
 - **背景**：产品文档测试 `flows/take-exam/run.spec.ts` 实际声明 `journey/exam-delivery`，
   产出 journey 文档，但目录在 flows 下。
 - **当前决定**：待随说明书重建时一并处理。
+
+## 10. 包内英文错误信息直达界面
+
+- **背景**：`packages/schema-editor`、`packages/interface-editor`、`packages/template-editor`、
+  `packages/exam-library` 等包在存储损坏、内容校验、ZIP 解析失败时抛出英文 `Error`
+  （例如 `Invalid Schema draft library`、`Interface image generator is not configured`）。
+  renderer 只对少数错误做中文映射（`schemaUi.ts`、`templateUi.ts`），其余原样显示。
+- **影响**：这些消息会出现在界面提示与错误页中，与术语表的中文用词规则冲突；
+  翻译属代码变更，且需要逐个包补中文映射与测试。
+- **选项**：(a) 在包内改为中文消息；(b) 保留英文，由 renderer 按错误码统一映射。
+- **当前决定**：未定；术语替换本批只覆盖界面文案与主进程面向用户的错误文案。

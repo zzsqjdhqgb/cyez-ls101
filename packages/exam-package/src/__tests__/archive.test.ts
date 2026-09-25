@@ -387,7 +387,7 @@ describe('SubmissionPackage ZIP archive', () => {
     )
   })
 
-  it('要求 SchemaUse 答案 ID 完整唯一，同时允许复用答案池索引', () => {
+  it('要求 SchemaUse 答案编号完整唯一，同时允许复用答案池索引', () => {
     const sharedIndex = submissionPackage()
     const use = sharedIndex.schemaUses[1]
     use.schema.structure.answerFormat.push({ answerId: 'sentence-2', type: 'fixed-speech' })

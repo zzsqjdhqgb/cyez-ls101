@@ -610,12 +610,12 @@ describe('Interface pages', () => {
     fireEvent.click(screen.getByRole('tab', { name: '题型定义' }))
     expect(screen.getByRole('button', { name: '复制完整提示词' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '复制单独提示词' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '复制 JSON Schema' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '复制 JSON Example' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '复制题型结构' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '复制示例数据' })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '复制 JSON Schema' }))
+    fireEvent.click(screen.getByRole('button', { name: '复制题型结构' }))
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('{"type":"object"}'))
-    expect(await screen.findByText('已复制JSON Schema')).toBeInTheDocument()
+    expect(await screen.findByText('已复制题型结构')).toBeInTheDocument()
   })
 
   it('does not report a successful export when the save dialog is cancelled', async () => {
@@ -925,7 +925,7 @@ describe('Interface pages', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '高级操作' }))
     fireEvent.click(screen.getByRole('menuitem', { name: '从 JSON 覆盖' }))
-    expect(screen.getByLabelText('图像 Provider')).toBeInTheDocument()
+    expect(screen.getByLabelText('图像服务商')).toBeInTheDocument()
     expect(screen.queryByLabelText('生成模型')).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('JSON 内容'), {
       target: { value: '{"picture":"JSON 图片提示词"}' }

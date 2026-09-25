@@ -21,7 +21,7 @@ describe('submission AIRouter adapter', () => {
     vi.mocked(client.listProviderConfigs).mockResolvedValue([
       {
         id: 'provider',
-        name: 'Provider',
+        name: '服务商',
         type: 'openai-compatible',
         baseUrl: 'https://example.com/v1',
         hasApiKey: true,
@@ -44,7 +44,7 @@ describe('submission AIRouter adapter', () => {
       text: [
         {
           providerId: 'provider',
-          providerName: 'Provider',
+          providerName: '服务商',
           modelId: 'enabled',
           modelName: 'Enabled'
         }

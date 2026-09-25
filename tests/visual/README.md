@@ -107,7 +107,7 @@ CI 在安装依赖前运行文档与视觉配对检查；容器内的 `check` �
 
 ## 8. 报告
 
-- 索引与锚定状态汇总写入 `docs/ui/coverage.md`（生成）：页面、状态数、视觉锚点、行为锚点。
+- 索引与锚定状态汇总由 `yarn visual:check` 输出（规格数、已锚定 / 未验证 / `n/a`）；当前没有生成 `docs/ui/coverage.md` 的脚本，逐屏状态以 `docs/ui/screens/README.md` 为准。
 - 像素比较失败时，实际截图、基线副本和差异图写入 `test-results/visual/`，并作为附件加入 Playwright 报告，不提交。
 - 缺少基线时保留实际截图；尺寸不同或基线无法解码时保留两张输入，不生成像素差异图。
 - CI 失败时上传上述诊断、已提交基线和 `playwright-report/`，保留 14 天。
@@ -124,3 +124,13 @@ yarn visual:canonical:check   # canonical 容器内：校验基线与仓库一�
 
 `visual:publish` / `visual:canonical:check` 会先 `yarn install --immutable`、`yarn build:test`，再在 Xvfb 下运行套件；
 `check` 结束后用 `git status --porcelain -- tests/visual/baselines` 断言基线未被改动。
+
+这两个命令必须在能访问 Docker 宿主的机器上运行。开发容器当前不能代跑：Docker bind mount 的源路径由宿主 daemon 解析，
+容器内的仓库路径（`/workspace`）在宿主上不存在。现状与后续方案见
+[`../../docs/engineering/todo/dev-container-docker.md`](../../docs/engineering/todo/dev-container-docker.md)。
+界面文案变化会让所有相关基线过期，改动文案后必须重新执行 `yarn visual:image && yarn visual:publish` 并提交
+`tests/visual/baselines`，否则 `yarn visual:canonical:check` 会失败。
+
+没有自动化覆盖的两条性质（需要时在宿主机上人工核验）：连续两次 `yarn visual:publish` 是否产生字节一致的 PNG，
+以及"故意改动一个像素必然导致对应基线出现差异"。`stableScreenshot` 只保证单次运行内取两帧一致。
+

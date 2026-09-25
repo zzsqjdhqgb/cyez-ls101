@@ -48,7 +48,7 @@ export function ButtonStory(): JSX.Element {
 }
 
 export function IconButtonStory(): JSX.Element {
-  return <IconButton icon={Trash2} label="删除 Provider" />
+  return <IconButton icon={Trash2} label="删除服务商" />
 }
 
 export function ConfirmModalStory(): JSX.Element {
@@ -63,7 +63,7 @@ export function ConfirmModalStory(): JSX.Element {
         onCancel={() => setOpen(false)}
         onConfirm={() => setOpen(false)}
         open={open}
-        title="删除 Provider？"
+        title="删除服务商？"
         confirmLabel="删除"
       />
     </>

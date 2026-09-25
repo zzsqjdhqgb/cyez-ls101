@@ -64,7 +64,7 @@ export function TemplateContentBlockInspector({
       </div>
 
       <label>
-        ID
+        编号
         <input
           value={block.id}
           onChange={(event) => update({ ...block, id: event.target.value })}

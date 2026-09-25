@@ -116,7 +116,7 @@ describe('Template function pages', () => {
       }
     ])
     expect(functionDocument.content.body.children[0]).toMatchObject({ id: 'page', type: 'page' })
-    expect(screen.getByText(/Revision 4/)).toBeInTheDocument()
+    expect(screen.getByText(/版本 4/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '保存' })).toBeDisabled()
   })
 

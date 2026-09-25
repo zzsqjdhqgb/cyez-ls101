@@ -136,7 +136,7 @@ export class AIRouterSpeechRecognitionService {
       (config) => config.modelPackageId === id && config.modelPackageVersion === version
     )
     if (referenced.length) {
-      throw new Error(`模型包仍被 ${referenced.length} 个语音识别 Provider 使用`)
+      throw new Error(`模型包仍被 ${referenced.length} 个语音识别服务商使用`)
     }
     await this.modelStore.deletePackage(id, version)
   }
@@ -219,13 +219,13 @@ export class AIRouterSpeechRecognitionService {
     }
     if (config.kind === 'online') return this.recognizeOnline(config, request, options.signal)
     if (!config.modelPackageId || !config.modelPackageVersion) {
-      throw new Error('本地语音识别 Provider 尚未选择模型包')
+      throw new Error('本地语音识别服务商尚未选择模型包')
     }
     const manifest = await this.modelStore.getPackage(
       config.modelPackageId,
       config.modelPackageVersion
     )
-    if (manifest.runtime.engine !== config.type) throw new Error('模型包与本地 Provider 类型不匹配')
+    if (manifest.runtime.engine !== config.type) throw new Error('模型包与本地服务商类型不匹配')
     const model = manifest.models.find((candidate) => candidate.id === request.modelId)
     if (!model) throw new Error('语音识别模型包不包含所选模型')
     if (config.type !== 'qwen3-asr') throw new Error(`本地 ASR 运行时尚未实现：${config.type}`)
@@ -392,18 +392,18 @@ export class AIRouterSpeechRecognitionService {
   ): Promise<AIRouterSpeechRecognitionProviderConfig> {
     const kind = input.kind
     const type = input.type
-    if (kind === 'local' && type !== 'qwen3-asr') throw new Error('本地语音识别 Provider 类型无效')
+    if (kind === 'local' && type !== 'qwen3-asr') throw new Error('本地语音识别服务商类型无效')
     if (kind === 'online' && type !== 'openai-compatible')
-      throw new Error('在线语音识别 Provider 类型无效')
+      throw new Error('在线语音识别服务商类型无效')
     const modelPackageId = kind === 'local' ? input.modelPackageId?.trim() || '' : ''
     const modelPackageVersion = kind === 'local' ? input.modelPackageVersion?.trim() || '' : ''
     const models = normalizeModels(input.models)
     if (kind === 'local') {
-      if (!modelPackageId || !modelPackageVersion) throw new Error('本地 Provider 必须选择模型包')
+      if (!modelPackageId || !modelPackageVersion) throw new Error('本地服务商必须选择模型包')
       const manifest = await this.modelStore.getPackage(modelPackageId, modelPackageVersion)
-      if (manifest.runtime.engine !== type) throw new Error('模型包与 Provider 类型不匹配')
+      if (manifest.runtime.engine !== type) throw new Error('模型包与服务商类型不匹配')
       if (models.some((model) => !manifest.models.some((candidate) => candidate.id === model.id))) {
-        throw new Error('Provider 包含模型包未声明的模型')
+        throw new Error('服务商包含模型包未声明的模型')
       }
     }
     return {
@@ -448,14 +448,14 @@ export class AIRouterSpeechRecognitionService {
   private async requireConfig(id: string): Promise<AIRouterSpeechRecognitionProviderConfig> {
     validateConfigId(id)
     const config = (await this.readDocument()).providers.find((candidate) => candidate.id === id)
-    if (!config) throw new Error('语音识别 Provider 配置不存在')
+    if (!config) throw new Error('语音识别服务商配置不存在')
     return config
   }
 
   private async readDocument(): Promise<StoredDocument> {
     const value = await this.configStorage.read<JsonValue>({ scope: ['airouter'], key: CONFIG_KEY })
     if (!value) return { version: CONFIG_VERSION, providers: [] }
-    if (!isStoredDocument(value)) throw new Error('语音识别 Provider 配置数据无效')
+    if (!isStoredDocument(value)) throw new Error('语音识别服务商配置数据无效')
     return value
   }
 
@@ -474,11 +474,11 @@ export class AIRouterSpeechRecognitionService {
 function assertProviderInput(
   value: unknown
 ): asserts value is AIRouterSpeechRecognitionProviderConfigInput {
-  if (!isRecord(value)) throw new Error('语音识别 Provider 配置无效')
-  if (typeof value.name !== 'string' || !value.name.trim()) throw new Error('Provider 名称不能为空')
-  if (value.kind !== 'online' && value.kind !== 'local') throw new Error('Provider 运行方式无效')
+  if (!isRecord(value)) throw new Error('语音识别服务商配置无效')
+  if (typeof value.name !== 'string' || !value.name.trim()) throw new Error('服务商名称不能为空')
+  if (value.kind !== 'online' && value.kind !== 'local') throw new Error('服务商运行方式无效')
   if (value.type !== 'openai-compatible' && value.type !== 'qwen3-asr') {
-    throw new Error('Provider 类型无效')
+    throw new Error('服务商类型无效')
   }
   if (!Array.isArray(value.models)) throw new Error('模型配置必须是数组')
 }
@@ -514,7 +514,7 @@ function validateRequest(request: AIRouterSpeechRecognitionRequest): void {
     typeof request.providerConfigId !== 'string' ||
     typeof request.modelId !== 'string'
   ) {
-    throw new Error('语音识别 Provider 或模型无效')
+    throw new Error('语音识别服务商或模型无效')
   }
   if (
     !request.audio ||
@@ -547,7 +547,7 @@ function isStoredDocument(value: JsonValue): value is JsonValue & StoredDocument
 }
 
 function validateConfigId(id: string): void {
-  if (!validConfigId.test(id)) throw new Error('语音识别 Provider 配置 ID 无效')
+  if (!validConfigId.test(id)) throw new Error('语音识别服务商配置编号无效')
 }
 
 function resolveFfmpegPath(): string {

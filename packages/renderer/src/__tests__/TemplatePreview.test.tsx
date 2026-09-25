@@ -117,9 +117,9 @@ describe('Template preview', () => {
     )
 
     openChoiceInfo()
-    expect(screen.getByRole('region', { name: 'ChoiceView 配置' })).toHaveTextContent('全部分页')
-    expect(screen.getByRole('region', { name: 'ChoiceView 配置' })).toHaveTextContent('第 1–3 页')
-    expect(screen.getByRole('region', { name: 'ChoiceView 配置' })).toHaveTextContent('第 2 页')
+    expect(screen.getByRole('region', { name: '选择题视图配置' })).toHaveTextContent('全部分页')
+    expect(screen.getByRole('region', { name: '选择题视图配置' })).toHaveTextContent('第 1–3 页')
+    expect(screen.getByRole('region', { name: '选择题视图配置' })).toHaveTextContent('第 2 页')
 
     rerender(
       canvas(
@@ -131,14 +131,14 @@ describe('Template preview', () => {
         })
       )
     )
-    expect(screen.queryByRole('region', { name: 'ChoiceView 配置' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '选择题视图配置' })).not.toBeInTheDocument()
     openChoiceInfo()
-    expect(screen.getByRole('region', { name: 'ChoiceView 配置' })).toHaveTextContent('限制范围')
-    expect(screen.getByRole('region', { name: 'ChoiceView 配置' })).toHaveTextContent('第 2–3 页')
+    expect(screen.getByRole('region', { name: '选择题视图配置' })).toHaveTextContent('限制范围')
+    expect(screen.getByRole('region', { name: '选择题视图配置' })).toHaveTextContent('第 2–3 页')
 
     rerender(canvas(createSnapshot('snapshot-focus', { mode: 'focus', choiceIndex: 2 })))
     openChoiceInfo()
-    const focusInfo = screen.getByRole('region', { name: 'ChoiceView 配置' })
+    const focusInfo = screen.getByRole('region', { name: '选择题视图配置' })
     expect(focusInfo).toHaveTextContent('聚焦题目')
     expect(focusInfo).toHaveTextContent('第 3 题')
     expect(focusInfo).toHaveTextContent('第 3 页')
@@ -200,7 +200,7 @@ function renderCanvas(snapshot: TemplatePreviewSnapshot): ReturnType<typeof rend
 }
 
 function openChoiceInfo(): void {
-  fireEvent.click(screen.getByRole('button', { name: '查看 ChoiceView 配置' }))
+  fireEvent.click(screen.getByRole('button', { name: '查看选择题视图配置' }))
 }
 
 function withinPreviewPage(label: string): ReturnType<typeof within> {

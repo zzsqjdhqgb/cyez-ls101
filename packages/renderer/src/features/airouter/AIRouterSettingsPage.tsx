@@ -341,7 +341,7 @@ export function AIRouterTextSettingsPage({
     } catch (reason) {
       if (requestId !== loadRequest.current) return
       setConfigs(null)
-      setLoadError(formatAIRouterError(reason, '无法加载文本 Provider 设置'))
+      setLoadError(formatAIRouterError(reason, '无法加载文本服务商设置'))
     } finally {
       if (requestId === loadRequest.current) setLoading(false)
     }
@@ -362,7 +362,7 @@ export function AIRouterTextSettingsPage({
   const testModelProviderId = draft?.id ?? 'unsaved-provider'
   const testModelOptions: AIModelOption[] = enabledModels.map((model) => ({
     providerId: testModelProviderId,
-    providerName: draft?.name.trim() || '当前 Provider',
+    providerName: draft?.name.trim() || '当前服务商',
     modelId: model.id
   }))
   const selectedTestModel: AIModelSelection | null = selectedTestModelId
@@ -397,7 +397,7 @@ export function AIRouterTextSettingsPage({
   }
 
   const saveDraft = async (): Promise<AIRouterProviderConfigSummary> => {
-    if (!draft) throw new Error('没有可保存的 Provider 配置')
+    if (!draft) throw new Error('没有可保存的服务商配置')
     const saved = await application.saveConfig(toConfigInput(draft, apiKeyBaseline, apiKeyLoaded))
     setConfigs((current) => upsert(current ?? [], saved))
     setDraft(draftFromConfig(saved))
@@ -435,7 +435,7 @@ export function AIRouterTextSettingsPage({
         message={loadError}
         onRetry={() => void loadConfigs()}
         retrying={loading}
-        title="无法加载文本 Provider 设置"
+        title="无法加载文本服务商设置"
       />
     ) : (
       <AIRouterPageLoading message="正在加载 AI 引擎设置..." />
@@ -444,11 +444,11 @@ export function AIRouterTextSettingsPage({
 
   return (
     <SettingsContent>
-      <SettingsSection title="Provider" description="管理文本生成所使用的 Provider 配置。">
+      <SettingsSection title="服务商" description="管理文本生成所使用的服务商配置。">
         <div className={styles.providerToolbar}>
-          <span>共 {configs.length} 个 Provider</span>
+          <span>共 {configs.length} 个服务商</span>
           <Button icon={Plus} variant="primary" onClick={() => openEditor(createDraft())}>
-            添加 Provider
+            添加服务商
           </Button>
         </div>
         {configs.length ? (
@@ -478,7 +478,7 @@ export function AIRouterTextSettingsPage({
         ) : (
           <div className={styles.emptyProviders}>
             <MessageSquareText aria-hidden="true" />
-            <span>尚未添加文本生成 Provider</span>
+            <span>尚未添加文本生成服务商</span>
           </div>
         )}
       </SettingsSection>
@@ -496,15 +496,15 @@ export function AIRouterTextSettingsPage({
               <div>
                 <ModalDescription asChild>
                   <span className={styles.editorEyebrow}>
-                    {draft.id ? '编辑 Provider' : '添加 Provider'}
+                    {draft.id ? '编辑服务商' : '添加服务商'}
                   </span>
                 </ModalDescription>
                 <ModalTitle asChild>
-                  <h2>{draft.name.trim() || '未命名 Provider'}</h2>
+                  <h2>{draft.name.trim() || '未命名服务商'}</h2>
                 </ModalTitle>
               </div>
               <button
-                aria-label="关闭 Provider 编辑器"
+                aria-label="关闭服务商编辑器"
                 className={styles.closeEditor}
                 disabled={Boolean(busy)}
                 onClick={closeEditor}
@@ -518,7 +518,7 @@ export function AIRouterTextSettingsPage({
             <div className={styles.editorBody}>
               <SettingsSection
                 title="基础配置"
-                description="API Key 使用系统加密存储；点击眼睛可查看已保存密钥。"
+                description="API 密钥使用系统加密存储；点击眼睛可查看已保存密钥。"
               >
                 <SettingsRow
                   label="配置名称"
@@ -535,25 +535,25 @@ export function AIRouterTextSettingsPage({
                   />
                 </SettingsRow>
                 <SettingsRow
-                  label="Provider"
+                  label="服务商"
                   description="预设会自动配置兼容协议、Base URL 和内置模型目录。"
                 >
                   {draft.id ? (
                     <span className={styles.providerTypeControl}>
                       <input
-                        aria-label="Provider"
+                        aria-label="服务商"
                         className={styles.input}
                         disabled
                         type="text"
                         value={providerPresetName(draft)}
                       />
-                      <span className={styles.providerTypeLock} title="Provider 不可修改">
+                      <span className={styles.providerTypeLock} title="服务商不可修改">
                         <LockKeyhole aria-hidden="true" />
                       </span>
                     </span>
                   ) : (
                     <select
-                      aria-label="Provider"
+                      aria-label="服务商"
                       className={styles.input}
                       disabled={Boolean(busy)}
                       onChange={(event) => {
@@ -600,21 +600,21 @@ export function AIRouterTextSettingsPage({
                     value={draft.baseUrl}
                   />
                 </SettingsRow>
-                <SettingsRow label="API Key" description="本地无鉴权服务可以留空。">
+                <SettingsRow label="API 密钥" description="本地无鉴权服务可以留空。">
                   <div className={styles.secretControl}>
                     <div className={styles.secretInputWrap}>
                       <input
-                        aria-label="API Key"
+                        aria-label="API 密钥"
                         autoComplete="new-password"
                         className={styles.inputWide}
                         disabled={Boolean(busy)}
                         onChange={(event) => setDraft({ ...draft, apiKey: event.target.value })}
-                        placeholder={draft.hasApiKey ? '已安全保存' : '输入 API Key'}
+                        placeholder={draft.hasApiKey ? '已安全保存' : '输入 API 密钥'}
                         type={apiKeyVisible ? 'text' : 'password'}
                         value={draft.apiKey}
                       />
                       <button
-                        aria-label={apiKeyVisible ? '隐藏 API Key' : '显示 API Key'}
+                        aria-label={apiKeyVisible ? '隐藏 API 密钥' : '显示 API 密钥'}
                         className={styles.secretVisibility}
                         disabled={Boolean(busy)}
                         onClick={() => {
@@ -641,7 +641,7 @@ export function AIRouterTextSettingsPage({
                             'api-key'
                           )
                         }}
-                        title={apiKeyVisible ? '隐藏 API Key' : '显示 API Key'}
+                        title={apiKeyVisible ? '隐藏 API 密钥' : '显示 API 密钥'}
                         type="button"
                       >
                         {apiKeyVisible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
@@ -653,8 +653,8 @@ export function AIRouterTextSettingsPage({
               </SettingsSection>
 
               <SettingsSection
-                title="Model ID"
-                description="从服务获取模型列表，或手动添加未出现在列表中的 Model ID。"
+                title="模型编号"
+                description="从服务获取模型列表，或手动添加未出现在列表中的模型编号。"
               >
                 <div className={styles.modelToolbar}>
                   <Button
@@ -694,7 +694,7 @@ export function AIRouterTextSettingsPage({
                   </Button>
                   <div className={styles.addModel}>
                     <input
-                      aria-label="手动模型 ID"
+                      aria-label="手动模型编号"
                       className={styles.input}
                       disabled={Boolean(busy)}
                       onChange={(event) => setManualModel(event.target.value)}
@@ -812,7 +812,7 @@ export function AIRouterTextSettingsPage({
                       if (target) setDeleteTarget(target)
                     }}
                   >
-                    删除 Provider
+                    删除服务商
                   </Button>
                 ) : null}
               </div>
@@ -836,7 +836,7 @@ export function AIRouterTextSettingsPage({
                     )
                   }
                 >
-                  {busy === 'save' ? '正在保存...' : '保存 Provider'}
+                  {busy === 'save' ? '正在保存...' : '保存服务商'}
                 </Button>
               </div>
             </footer>
@@ -873,7 +873,7 @@ export function AIRouterTextSettingsPage({
           )
         }}
         open={Boolean(deleteTarget)}
-        title="删除 Provider 配置？"
+        title="删除服务商配置？"
       />
     </SettingsContent>
   )
@@ -1046,7 +1046,7 @@ function ModelSettings({
                 }
                 value={selectedMode}
               >
-                <option value="default">Provider 默认</option>
+                <option value="default">服务商默认</option>
                 {reasoningModes.map((mode) => (
                   <option key={mode.value} value={mode.value}>
                     {mode.label}
@@ -1107,7 +1107,7 @@ function ModelSettings({
           </>
         ) : metadata?.reasoning ? (
           <p className={styles.modelNotice}>
-            支持推理，但模型目录未提供可调参数；使用 Provider 默认设置。
+            支持推理，但模型目录未提供可调参数；使用服务商默认设置。
           </p>
         ) : (
           <p className={styles.modelNotice}>暂无模型目录推理能力数据。</p>

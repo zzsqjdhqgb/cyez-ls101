@@ -86,7 +86,7 @@ owner: settings
 anchors:
   visual: VR-ST-05（tests/visual/settings/UI-ST-05.spec.ts）
   visual-states: [default]
-  behavior: unverified
+  behavior: unverified        # 集成测试只断言入口、版本行与版本说明对话框可见
 ```
 
-行为未由产品文档测试锚定；集成测试只断言入口、版本行与版本说明对话框可见，不构成产品文档锚点。
+行为锚点留 `unverified`：`electron-app.spec.ts` 只断言入口、版本行与版本说明对话框可见，未覆盖本页其余内容（合格线见 [`../README.md`](../README.md) §2）。

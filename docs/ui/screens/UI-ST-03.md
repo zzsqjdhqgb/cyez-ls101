@@ -59,7 +59,7 @@ owner: settings
 
 界面使用「许可」「激活」「取消激活」「邀请码」「激活方式意见征集」，与 [`../glossary.md`](../glossary.md) 的用户可见用词要求一致。
 
-本页未发现内部术语泄漏。错误文案中的「许可证服务」与页面用词「许可」不一致，属用词待统一问题，同类登记见 [`../open-questions.md`](../open-questions.md) 第 1 条；该文件是唯一未决清单，本规格不修改它。
+本页未发现内部术语泄漏；错误文案与页面统一使用「许可」。
 
 ## 产物
 
@@ -73,7 +73,7 @@ owner: settings
 anchors:
   visual: VR-ST-03（tests/visual/settings/UI-ST-03.spec.ts）
   visual-states: [default]
-  behavior: unverified
+  behavior: unverified        # 集成测试只断言入口与标题可见；取消激活只有组件测试
 ```
 
-行为未由产品文档测试锚定；集成测试只断言本页入口与按钮可见，不构成产品文档锚点。
+行为锚点留 `unverified`：`electron-app.spec.ts › navigates through every primary application area` 只断言本页入口与标题可见；「取消激活」流程只有组件测试覆盖，而组件测试不计入锚点（合格线见 [`../README.md`](../README.md) §2）。

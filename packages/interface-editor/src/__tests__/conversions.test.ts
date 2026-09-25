@@ -33,7 +33,7 @@ function makeDef(overrides: DefOverrides = {}): InterfaceDef {
   return {
     id: 'if-test-001',
     name: '测试题型',
-    description: '用于测试的 Interface',
+    description: '用于测试的题型',
     promptTemplate: '请生成一套测试题目',
     fields: collection({
       title: textLeaf('examTitle', '试卷标题', '2024 英语模拟卷')
@@ -54,7 +54,7 @@ describe('buildAIPrompt', () => {
     expect(prompt).toContain('请生成一套测试题目')
   })
 
-  it('包含 JSON Schema（type: "object"）', () => {
+  it('包含题型结构（type: "object"）', () => {
     const prompt = buildAIPrompt(makeDef())
     expect(prompt).toContain('"type": "object"')
     expect(prompt).toContain('"additionalProperties": false')
@@ -78,7 +78,7 @@ describe('buildAIPrompt', () => {
     expect(prompt).toContain('不要返回图片 URL')
   })
 
-  it('包含 JSON Example', () => {
+  it('包含示例数据', () => {
     const def = makeDef({
       fields: { q: textLeaf('v1', 'desc', '示例值ABC') }
     })
@@ -282,7 +282,7 @@ describe('buildInstanceFromJson', () => {
 
   it('实例名称使用本地默认值，不从 JSON 数据读取', () => {
     const instance = buildInstanceFromJson(makeDef(), { q: 'x', name: 'AI 名称' })
-    expect(instance.name).toBe('未命名实例')
+    expect(instance.name).toBe('未命名题组')
   })
 
   it('data 中路径不存在 → 降级为空字符串', () => {

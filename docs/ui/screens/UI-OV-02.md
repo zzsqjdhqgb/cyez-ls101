@@ -92,7 +92,7 @@ owner: data-directory
 anchors:
   visual: VR-OV-02（tests/visual/overlays/UI-OV-02.spec.ts）
   visual-states: [default]
-  behavior: unverified
+  behavior: data-directory.spec.ts › archives root-level legacy data after startup and cleans it only after confirmation；license.spec.ts › activates with an invitation code and reuses the hash receipt after restart（tests/integration/）
 ```
 
-产品文档测试未覆盖本屏；`tests/integration/data-directory.spec.ts` 与 `packages/renderer/src/__tests__/LegacyDataMigrationPage.test.tsx` 是集成与单元测试，不作为产品文档行为锚点。
+行为锚点：`data-directory.spec.ts › archives root-level legacy data after startup and cleans it only after confirmation` 与 `license.spec.ts › activates with an invitation code and reuses the hash receipt after restart` 覆盖归档结果展示与「清理并继续」；`packages/renderer/src/__tests__/LegacyDataMigrationPage.test.tsx` 只是组件测试，不计入。

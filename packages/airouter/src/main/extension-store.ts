@@ -194,7 +194,7 @@ function parseManifest(
     extension.version !== version ||
     typeof extension.name !== 'string'
   ) {
-    throw new Error('扩展包 ID 或版本与应用要求不匹配')
+    throw new Error('扩展包编号或版本与应用要求不匹配')
   }
   if (!Array.isArray(value.assets) || value.assets.length === 0) throw new Error('扩展包没有资产')
   const assets = value.assets

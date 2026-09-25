@@ -66,7 +66,7 @@ async function prepareApplication(): Promise<PreparedApplication> {
   markRendererStartupMilestone('main-process-ready')
 
   const license = window.license
-  if (!license) throw new Error('许可证服务不可用')
+  if (!license) throw new Error('许可服务不可用')
   const status = await runStartupPhase('license-status', () => license.getStatus())
   if (status.state !== 'active') return { kind: 'license', status }
 

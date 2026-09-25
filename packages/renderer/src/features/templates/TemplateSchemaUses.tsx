@@ -119,7 +119,7 @@ export function TemplateSchemaUses({
       {pickerOpen ? (
         <div className={styles.picker}>
           <label>
-            正式 Schema
+            正式评分单元
             <select
               disabled={loading || available.length === 0}
               value={selectedSchemaId}
@@ -133,7 +133,7 @@ export function TemplateSchemaUses({
             </select>
           </label>
           {loading ? <span>正在加载...</span> : null}
-          {!loading && available.length === 0 ? <span>暂无正式 Schema</span> : null}
+          {!loading && available.length === 0 ? <span>暂无正式评分单元</span> : null}
           <div className={styles.pickerActions}>
             <Button size="small" variant="ghost" onClick={() => setPickerOpen(false)}>
               取消
@@ -198,7 +198,7 @@ function SchemaUseEditor({
     <section className={styles.use} aria-label={`评分单元 ${use.useId}`}>
       <header>
         <div>
-          <strong>{definition?.data.name ?? '未知 Schema'}</strong>
+          <strong>{definition?.data.name ?? '未知评分单元'}</strong>
           <span>
             {definition ? questionTypeLabels[definition.structure.questionType] : use.schemaId}
           </span>
@@ -214,7 +214,7 @@ function SchemaUseEditor({
       </header>
 
       {!definition ? (
-        <div className={styles.error}>Schema 不存在或 ID 无效</div>
+        <div className={styles.error}>评分单元不存在或编号无效</div>
       ) : (
         <>
           <div className={styles.bindingGroup}>

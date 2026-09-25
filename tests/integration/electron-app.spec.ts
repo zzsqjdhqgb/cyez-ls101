@@ -377,7 +377,7 @@ test('navigates through every primary application area', async () => {
 
   await page.getByRole('link', { name: '评分单元' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '评分单元' })).toBeVisible()
-  await expect(page.getByText('正在加载 Schema...')).toBeHidden()
+  await expect(page.getByText('正在加载评分单元...')).toBeHidden()
   for (const name of [
     '上海高考 - 朗读句子',
     '上海高考 - 朗读短文',
@@ -702,7 +702,7 @@ test('creates, edits and reloads a persisted template', async () => {
   await expect(functionName).toHaveValue('未命名函数')
   await functionName.fill('集成测试函数')
   await page.getByRole('button', { name: '保存' }).click()
-  await expect(page.getByText(/Revision 0$/)).toBeVisible()
+  await expect(page.getByText(/版本 0$/)).toBeVisible()
   await page.getByRole('button', { name: '返回模板编辑' }).click()
 
   await page.getByRole('tab', { name: '本地函数库' }).click()
@@ -716,7 +716,7 @@ test('creates, edits and reloads a persisted template', async () => {
     page.getByRole('button', { name: '集成测试函数库，未导出', exact: true })
   ).toHaveCount(0)
 
-  await expect(page.getByText('Revision 1')).toBeVisible()
+  await expect(page.getByText('版本 1')).toBeVisible()
 
   await page.getByRole('button', { name: '返回模板' }).click()
   await page.getByRole('tab', { name: '我的模板' }).click()
@@ -813,7 +813,7 @@ test('opens and copies bundled Shanghai speaking templates', async () => {
   await expect(page.getByRole('button', { name: /删除/ })).toHaveCount(0)
   await page.getByRole('button', { name: '创建副本' }).click()
 
-  await expect(page.getByText('Revision 0')).toBeVisible()
+  await expect(page.getByText('版本 0')).toBeVisible()
   await expect(page.getByRole('textbox', { name: '名称', exact: true })).toBeEnabled()
   await expect(page.getByRole('button', { name: '保存' })).toBeVisible()
   await page.getByRole('button', { name: '返回模板' }).click()
@@ -839,8 +839,8 @@ test('exports a persisted formal Schema through the native save dialog', async (
       ]
     },
     data: {
-      name: '集成测试 Schema',
-      description: '用于验证正式 Schema 导出',
+      name: '集成测试评分单元',
+      description: '用于验证正式评分单元导出',
       maxScore: 10,
       answerDescriptions: { recording: '学生朗读录音' },
       inputDescriptions: {},
@@ -868,12 +868,12 @@ test('exports a persisted formal Schema through the native save dialog', async (
   }, exportPath)
 
   await page.getByRole('link', { name: '评分单元' }).click()
-  await expect(page.getByText('正在加载 Schema...')).toBeHidden()
+  await expect(page.getByText('正在加载评分单元...')).toBeHidden()
   await page.getByRole('tab', { name: '我的评分单元' }).click()
   await page.getByRole('button', { name: schema.data.name }).click()
   await page.getByRole('button', { name: '导出' }).click()
 
-  await expect(page.getByText('Schema 已导出')).toBeVisible()
+  await expect(page.getByText('评分单元已导出')).toBeVisible()
   expect(JSON.parse(await readFile(exportPath, 'utf8'))).toEqual(schema)
 })
 

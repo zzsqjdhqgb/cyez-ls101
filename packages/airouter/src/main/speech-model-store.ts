@@ -150,7 +150,7 @@ export class AIRouterSpeechModelStore {
   }
 
   async deletePackage(id: string, version: string): Promise<void> {
-    validateSegment(id, '模型包 ID')
+    validateSegment(id, '模型包编号')
     validateSegment(version, '模型包版本')
     await this.runMutation(async () => {
       const packagePath = this.resolvePackageDirectory(id, version)
@@ -207,7 +207,7 @@ export class AIRouterSpeechModelStore {
   }
 
   private async readInstalledPackage(id: string, version: string): Promise<InstalledPackage> {
-    validateSegment(id, '模型包 ID')
+    validateSegment(id, '模型包编号')
     validateSegment(version, '模型包版本')
     const directory = this.resolvePackageDirectory(id, version)
     const manifest = parseManifestJson(
@@ -306,7 +306,7 @@ export class AIRouterSpeechModelStore {
   }
 
   private resolvePackageDirectory(id: string, version: string): string {
-    validateSegment(id, '模型包 ID')
+    validateSegment(id, '模型包编号')
     validateSegment(version, '模型包版本')
     return path.join(this.resolvePackageRoot(), id, version)
   }

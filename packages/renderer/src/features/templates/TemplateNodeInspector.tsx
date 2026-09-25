@@ -184,7 +184,7 @@ function FrameInspector({
             setPages(event.target.checked ? [{ questionCount: Math.max(1, questionCount) }] : null)
           }
         />
-        <span>选择题 Collector</span>
+        <span>选择题采集器</span>
       </label>
 
       {pages ? (

@@ -336,7 +336,7 @@ function speechOnlyContent(): TemplateContent {
 }
 
 describe('compileTemplate', () => {
-  it('生成没有 Schema 的试卷和空作答模板', async () => {
+  it('生成没有评分单元的试卷和空作答模板', async () => {
     const result = await compileTemplate(
       document(
         content({
@@ -652,7 +652,7 @@ describe('compileTemplate', () => {
     ])
   })
 
-  it('展开完整 Template 为 Player 数据和 Schema 映射', async () => {
+  it('展开完整 Template 为 Player 数据和评分单元映射', async () => {
     const textResource = await createFunctionResource(textFunctionContent())
     const choiceResource = await createFunctionResource(choiceFunctionContent())
     const textCall = functionCall(
@@ -819,7 +819,7 @@ describe('compileTemplate', () => {
     expect(result.examPackage.submissionTemplate.resources).toEqual({})
   })
 
-  it('为重复函数调用生成独立题目、出参和 Schema useId', async () => {
+  it('为重复函数调用生成独立题目、出参和评分单元 useId', async () => {
     const choiceResource = await createFunctionResource(choiceFunctionContent())
     const call = (id: string, prompt: string, outputName: string): FunctionNode =>
       functionCall(
@@ -933,7 +933,7 @@ describe('compileTemplate', () => {
     })
   })
 
-  it('返回 Interface 绑定缺失、归属不符和变量缺失错误', async () => {
+  it('返回题型绑定缺失、归属不符和变量缺失错误', async () => {
     const missing = await compileTemplate(
       document(content()),
       compileContext({ interfaceBindings: [] })
@@ -986,7 +986,7 @@ describe('compileTemplate', () => {
     })
   })
 
-  it('拒绝重复和未知的 Interface 绑定', async () => {
+  it('拒绝重复和未知的题型绑定', async () => {
     const base = compileContext().interfaceBindings[0]
     const result = await compileTemplate(
       document(content()),
@@ -1068,7 +1068,7 @@ describe('compileTemplate', () => {
     })
   })
 
-  it('拒绝任一 Interface 变量为空，即使模板没有引用该变量', async () => {
+  it('拒绝任一题型变量为空，即使模板没有引用该变量', async () => {
     const otherManifest: InterfaceVarManifest = {
       interfaceId: OTHER_INTERFACE_ID,
       interfaceName: 'Other data',

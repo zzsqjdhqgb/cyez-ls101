@@ -61,18 +61,18 @@ afterEach(() => {
 })
 
 describe('TemplateExamGenerationPage', () => {
-  it('为三种音色分别选择提供商、模型和音色', async () => {
+  it('为三种音色分别选择服务商、模型和音色', async () => {
     renderPage()
 
     expect(await screen.findByRole('heading', { name: '语音设置' })).toBeInTheDocument()
     for (const role of ['默认音色', '男声音色', '女声音色']) {
-      expect(screen.getByLabelText(`${role}提供商`)).toHaveValue('provider-a')
+      expect(screen.getByLabelText(`${role}服务商`)).toHaveValue('provider-a')
       expect(screen.getByLabelText(`${role}模型`)).toHaveValue('model-a')
       expect(screen.getByLabelText(`${role}音色`)).toHaveValue('voice-a')
     }
     expect(screen.queryByText(/Interface/)).not.toBeInTheDocument()
 
-    fireEvent.change(screen.getByLabelText('男声音色提供商'), {
+    fireEvent.change(screen.getByLabelText('男声音色服务商'), {
       target: { value: 'provider-b' }
     })
     fireEvent.click(screen.getByRole('button', { name: '开始生成' }))

@@ -217,7 +217,7 @@ describe('FileTemplateRepository', () => {
     ).rejects.toMatchObject({ code: 'INVALID_DATA' })
   })
 
-  it('拒绝非法 UUID、重复函数 ID 和被篡改的 Template 函数资源', async () => {
+  it('拒绝非法 UUID、重复函数编号和被篡改的 Template 函数资源', async () => {
     const { repository } = setup()
     await expect(repository.getTemplate('bad-id')).rejects.toBeInstanceOf(TemplateRepositoryError)
     await expect(
@@ -316,7 +316,7 @@ describe('FileTemplateRepository', () => {
     })
   })
 
-  it('使用 revision/CAS 拒绝过期 Template 和本地函数库保存', async () => {
+  it('使用版本/CAS 拒绝过期 Template 和本地函数库保存', async () => {
     const { repository } = setup()
     const template = await repository.saveTemplate({
       ...createTemplateDocument(emptyContent()),
@@ -466,7 +466,7 @@ describe('TemplateApplication', () => {
     ])
   })
 
-  it('按源 ID、内容冲突和本地 revision 执行 Template 混合导入', async () => {
+  it('按源编号、内容冲突和本地版本执行 Template 混合导入', async () => {
     const { application } = setup()
     const source: TemplateDocument = {
       ...createTemplateDocument(emptyContent(), { functions: [] }, { selected: 'root' }),
@@ -630,7 +630,7 @@ describe('TemplateApplication', () => {
     ])
   })
 
-  it('复制完整函数依赖闭包、改写引用并按内容 ID 去重', async () => {
+  it('复制完整函数依赖闭包、改写引用并按内容编号去重', async () => {
     const { repository, application } = setup()
     const leaf = functionDocument(FUNCTION_B, 'Leaf')
     const parent = functionDocument(FUNCTION_A, 'Parent', [
@@ -848,7 +848,7 @@ describe('TemplateApplication', () => {
     expect(await repository.getTemplate(template.templateId)).toEqual(template)
   })
 
-  it('从可达的函数资源收集 Schema manifest', async () => {
+  it('从可达的函数资源收集评分单元 manifest', async () => {
     const { repository, application, requestedSchemas } = setup()
     const source = functionDocument(FUNCTION_A, 'Schema consumer')
     source.content.schemaUses = [
@@ -933,7 +933,7 @@ describe('TemplateApplication', () => {
     expect(pruned.resources.functions).toEqual([])
   })
 
-  it('autosave 与 embedFunction 交错时以 revision 冲突阻止覆盖', async () => {
+  it('autosave 与 embedFunction 交错时以版本冲突阻止覆盖', async () => {
     const { repository, externalDependencies } = setup()
     await saveFunctions(repository, functionDocument(FUNCTION_A, 'Slow function'))
     const entered = deferred<void>()
@@ -967,7 +967,7 @@ describe('TemplateApplication', () => {
     expect(edited.resources.functions).toEqual([])
   })
 
-  it('autosave 与 pruneFunctionResources 交错时以 revision 冲突阻止覆盖', async () => {
+  it('autosave 与 pruneFunctionResources 交错时以版本冲突阻止覆盖', async () => {
     const { repository, externalDependencies } = setup()
     const resource = await createFunctionResource(functionDocument(FUNCTION_A, 'Unused').content)
     const baseApplication = createTemplateApplication({ repository, ...externalDependencies })
@@ -1006,7 +1006,7 @@ describe('TemplateApplication', () => {
     expect(stored?.resources.functions).toHaveLength(1)
   })
 
-  it('加载 Interface 与 Schema 依赖并编译所选实例', async () => {
+  it('加载题型与评分单元依赖并编译所选实例', async () => {
     const { application } = setup()
     const template = await application.templates.create({
       name: 'Compiled exam',
@@ -1087,7 +1087,7 @@ describe('TemplateApplication', () => {
     })
   })
 
-  it('使用未保存的函数正文和临时输入生成无 Schema 预览', async () => {
+  it('使用未保存的函数正文和临时输入生成无评分单元预览', async () => {
     const { application, repository } = setup()
     const original = functionDocument(FUNCTION_A, 'Preview function')
     original.content.inputs = [{ name: 'title', type: 'string' }]
@@ -1203,7 +1203,7 @@ describe('TemplateApplication', () => {
     })
   })
 
-  it('函数预览的外层 Collector 会同时收集函数自身题目', async () => {
+  it('函数预览的外层采集器会同时收集函数自身题目', async () => {
     const { application, repository } = setup()
     const source = functionDocument(FUNCTION_A, 'Choice group preview with question')
     source.content.inputs = [
@@ -1278,7 +1278,7 @@ describe('TemplateApplication', () => {
     })
   })
 
-  it('函数已有 Collector 时预览不会再创建嵌套 Collector', async () => {
+  it('函数已有采集器时预览不会再创建嵌套采集器', async () => {
     const { application, repository } = setup()
     const source = functionDocument(FUNCTION_A, 'Collected choice group preview')
     source.content.inputs = [

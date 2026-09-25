@@ -6,7 +6,7 @@ export function submissionErrorMessage(reason: unknown): string {
       case 'INVALID_ARCHIVE':
         return `无法导入作答包：${reason.message}`
       case 'SUBMISSION_ID_CONFLICT':
-        return '作答库中已有相同 ID、但内容不同的作答包。'
+        return '作答库中已有相同编号、但内容不同的作答包。'
       case 'NOT_FOUND':
         return '作答包不存在或已经被删除。'
       case 'INVALID_STORAGE':

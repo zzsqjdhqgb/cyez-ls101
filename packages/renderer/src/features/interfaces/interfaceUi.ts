@@ -51,7 +51,7 @@ export function makeUniqueKey(
 }
 
 const validationMessages: Record<ValidationError['code'], string> = {
-  INVALID_ID: '题型 ID 无效',
+  INVALID_ID: '题型编号无效',
   EMPTY_NAME: '题型名称不能为空',
   EMPTY_PROMPT_TEMPLATE: '提示词不能为空',
   EMPTY_FIELDS: '至少需要一个字段',

@@ -18,7 +18,8 @@ owner: ui
 | [`screens/`](./screens/README.md) | 逐屏 UI 规格（索引见该目录 README） |
 | [`glossary.md`](./glossary.md) | 用户可见术语 ↔ 代码术语 |
 | [`open-questions.md`](./open-questions.md) | 唯一未决清单 |
-| `coverage.md` | 生成：索引与锚定状态 |
+
+锚定状态不生成单独文件：`yarn visual:check` 输出视觉配对，`yarn docs:check` 输出视觉 / 行为锚定率。
 
 ## 1. 逐屏 UI 规格模板
 
@@ -80,6 +81,7 @@ anchors:
 ## 2. 锚定规则
 
 - 每个界面要么被视觉或行为测试锚定，要么显式写 `unverified`。**不允许留空。**
+- 行为锚点的合格线：测试必须通过打包应用真实操作本屏的控件并断言其后果（`tests/product-docs/**` 或 `tests/integration/**` 的用例 ID 或「文件名 › 用例名」）。仅断言入口、标题或页面可见不算锚点；组件与单元测试不计入。不达标就写 `unverified`，不要用弱测试充数。
 - 视觉锚点与 `tests/visual/` 一一对应：一个 `UI-*` 页面 ↔ 一个视觉测试文件，文件名即 ID。
 - 状态级不要求 1:1：一屏可声明多个状态（`default`、`empty`、`validation-error` 等），
   在 `anchors.visual-states` 中手写维护；`unverified` 或 `n/a` 不要求此字段。
@@ -99,5 +101,5 @@ anchors:
 
 逐屏规格已覆盖全部一级模块的主要界面（工作台、试卷库、作答记录、题型库、试卷模板、评分单元、设置与覆盖层），
 覆盖清单与状态见 [`screens/README.md`](./screens/README.md)。
-视觉回归约定已写入 [`../../tests/visual/README.md`](../../tests/visual/README.md)，实现按
-[`../DOCS-REVISION-PLAN.md`](../../DOCS-REVISION-PLAN.md) 阶段 4b 进行。
+视觉回归约定已写入 [`../../tests/visual/README.md`](../../tests/visual/README.md)；实现进度与剩余缺口见
+[`../engineering/todo/manual-coverage.md`](../engineering/todo/manual-coverage.md)。

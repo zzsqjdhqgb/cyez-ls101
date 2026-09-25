@@ -113,10 +113,10 @@ export class AIRouterImageService {
     request: AIRouterImageConnectionTestInput
   ): Promise<AIRouterImageTestResult> {
     if (!request || typeof request.modelId !== 'string' || !request.modelId.trim()) {
-      throw new Error('模型 ID 不能为空')
+      throw new Error('模型编号不能为空')
     }
     const { config, apiKey } = await this.resolveTransientConfig(request.config)
-    if (config.type === 'manual') throw new Error('手动 Provider 不需要连接测试')
+    if (config.type === 'manual') throw new Error('手动服务商不需要连接测试')
     if (!config.models.some((model) => model.id === request.modelId && model.enabled)) {
       throw new Error('模型未配置或未启用')
     }
@@ -130,7 +130,7 @@ export class AIRouterImageService {
   ): Promise<AIRouterGeneratedImage> {
     validateImageRequest(request)
     const config = await this.requireConfig(request.providerConfigId)
-    if (config.type === 'manual') throw new Error('手动 Provider 不能通过 API 生成图片')
+    if (config.type === 'manual') throw new Error('手动服务商不能通过 API 生成图片')
     if (!config.models.some((model) => model.id === request.modelId && model.enabled)) {
       throw new Error('图像生成模型未配置或未启用')
     }
@@ -166,7 +166,7 @@ export class AIRouterImageService {
   private async requireConfig(id: string): Promise<AIRouterImageProviderConfig> {
     validateConfigId(id)
     const config = (await this.readDocument()).providers.find((candidate) => candidate.id === id)
-    if (!config) throw new Error('图像 Provider 配置不存在')
+    if (!config) throw new Error('图像服务商配置不存在')
     return config
   }
 
@@ -178,7 +178,7 @@ export class AIRouterImageService {
     if (!value) {
       return { version: CONFIG_VERSION, providers: [createDefaultManualProvider()] }
     }
-    if (!isStoredDocument(value)) throw new Error('图像 Provider 配置数据无效')
+    if (!isStoredDocument(value)) throw new Error('图像服务商配置数据无效')
     return value
   }
 
@@ -262,12 +262,12 @@ async function generateWithoutResponseFormat(
   try {
     payload = JSON.parse(text)
   } catch {
-    throw new Error('图像 Provider 返回了无效的 JSON')
+    throw new Error('图像服务商返回了无效的 JSON')
   }
   const image = firstCompatibleImage(payload)
   if (image?.b64Json) return new Uint8Array(Buffer.from(image.b64Json, 'base64'))
   if (image?.url) return downloadGeneratedImage(image.url, signal)
-  throw new Error('图像 Provider 未返回可用的图片数据')
+  throw new Error('图像服务商未返回可用的图片数据')
 }
 
 function firstCompatibleImage(payload: unknown): { b64Json?: string; url?: string } | null {
@@ -330,10 +330,10 @@ function normalizeConfig(
   input: AIRouterImageProviderConfigInput & { id: string }
 ): AIRouterImageProviderConfig {
   if (typeof input.name !== 'string' || !input.name.trim()) {
-    throw new Error('Provider 名称不能为空')
+    throw new Error('服务商名称不能为空')
   }
   if (input.type !== 'manual' && input.type !== 'openai-compatible') {
-    throw new Error('不支持的图像 Provider 类型')
+    throw new Error('不支持的图像服务商类型')
   }
   if (input.type === 'manual') {
     return { id: input.id, name: input.name.trim(), type: input.type, baseUrl: '', models: [] }
@@ -410,11 +410,11 @@ function ensureSelectableProvider(
 
 function validateImageRequest(request: AIRouterImageRequest): void {
   if (!request || typeof request.providerConfigId !== 'string' || !request.providerConfigId) {
-    throw new Error('图像 Provider ID 不能为空')
+    throw new Error('图像服务商编号不能为空')
   }
   validateConfigId(request.providerConfigId)
   if (typeof request.modelId !== 'string' || !request.modelId) {
-    throw new Error('图像模型 ID 不能为空')
+    throw new Error('图像模型编号不能为空')
   }
   if (typeof request.prompt !== 'string' || !request.prompt.trim()) {
     throw new Error('图片提示词不能为空')
@@ -435,5 +435,5 @@ function validateImageRequest(request: AIRouterImageRequest): void {
 }
 
 function validateConfigId(id: string): void {
-  if (!validConfigId.test(id)) throw new Error('Provider 配置 ID 无效')
+  if (!validConfigId.test(id)) throw new Error('服务商配置编号无效')
 }

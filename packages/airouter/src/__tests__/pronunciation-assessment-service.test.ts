@@ -53,7 +53,7 @@ describe('AIRouterPronunciationAssessmentService', () => {
       audio: { data: new Uint8Array([1]), mediaType: 'audio/wav' }
     }
     await expect(service.assess({ ...valid, providerConfigId: 'other' })).rejects.toThrow(
-      'Provider'
+      '服务商'
     )
     await expect(service.assess({ ...valid, referenceText: '' })).rejects.toThrow('参考文本')
     await expect(

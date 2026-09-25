@@ -66,5 +66,7 @@ owner: settings
 anchors:
   visual: VR-ST-04（tests/visual/settings/UI-ST-04.spec.ts）
   visual-states: [default]
-  behavior: unverified
+  behavior: electron-app.spec.ts › persists appearance settings through the renderer and config store（tests/integration/electron-app.spec.ts）
 ```
+
+行为锚点在该用例中真实切换主题与「减少动态效果」，并断言配置存储与重载后的界面属性一致。

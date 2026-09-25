@@ -334,7 +334,7 @@ describe('内置 Template 启动初始化', () => {
     })
   })
 
-  it('将内置模板完整复制为 UUID 和 revision 重置的本地模板', async () => {
+  it('将内置模板完整复制为 UUID 和版本重置的本地模板', async () => {
     const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
     const source = await release(1, '内置模板')
     await initializeBuiltinTemplates(repository, { templates: [source] })
@@ -408,7 +408,7 @@ describe('内置 Template 启动初始化', () => {
     expect(await repository.getBuiltinTemplate(TEMPLATE_ID, 1)).toBeNull()
   })
 
-  it('缺少 Interface 依赖时启动成功，但在浏览摘要中标记为不可用', async () => {
+  it('缺少题型依赖时启动成功，但在浏览摘要中标记为不可用', async () => {
     const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
     const dependent = await createBuiltinTemplateRelease(TEMPLATE_ID, 1, {
       ...snapshot('依赖题型的模板'),

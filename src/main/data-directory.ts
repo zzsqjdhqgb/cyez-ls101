@@ -229,7 +229,7 @@ export function registerDataDirectoryHandlers(
     assertNoPendingLegacyCleanup(options)
     await assertNoOldDataDirectory(userDataDir)
     const candidate = await inspectCandidate(userDataDir, target, currentPath)
-    if (candidate.kind !== 'managed') throw new Error('所选目录不是可识别的 LS101 数据目录')
+    if (candidate.kind !== 'managed') throw new Error('所选目录不是可识别的 曹二听说101 数据目录')
     await scheduleMigration(userDataDir, currentPath, candidate.path, 'use-existing')
     relaunchAfterReply()
   })
@@ -281,7 +281,7 @@ export async function recoverDataDirectory(userDataDir: string, error: unknown):
     if (result.response === 1) {
       const selection = await dialog.showOpenDialog({
         properties: ['openDirectory'],
-        title: '选择已有的 LS101 数据目录'
+        title: '选择已有的 曹二听说101 数据目录'
       })
       if (selection.canceled || selection.filePaths.length === 0) continue
       try {
@@ -337,7 +337,7 @@ async function inspectCandidate(
     return { path: normalizedTarget, kind: 'empty', sizeBytes: 0 }
   }
   const entries = await readdir(normalizedTarget)
-  if (entries.length > 0) throw new Error('请选择空目录，或选择一个已有的 LS101 数据目录')
+  if (entries.length > 0) throw new Error('请选择空目录，或选择一个已有的 曹二听说101 数据目录')
   return { path: normalizedTarget, kind: 'empty', sizeBytes: 0 }
 }
 
@@ -1230,7 +1230,7 @@ async function replaceExistingFile(temporary: string, filename: string): Promise
 
 async function assertManagedDirectory(directory: string): Promise<void> {
   if (!(await isManagedDirectory(directory)))
-    throw new Error(`不是可识别的 LS101 数据目录：${directory}`)
+    throw new Error(`不是可识别的 曹二听说101 数据目录：${directory}`)
 }
 
 async function readMarker(directory: string): Promise<DataDirectoryMarker> {

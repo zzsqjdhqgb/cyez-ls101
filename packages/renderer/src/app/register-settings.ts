@@ -36,7 +36,7 @@ const unregisterSettingsPages = [
   registerSettingsPage({
     id: 'ai-router',
     title: 'AI 引擎',
-    description: '配置 AI Provider 和各类可用模型',
+    description: '配置 AI 服务商和各类可用模型',
     icon: Cpu,
     group: {
       id: 'ai',

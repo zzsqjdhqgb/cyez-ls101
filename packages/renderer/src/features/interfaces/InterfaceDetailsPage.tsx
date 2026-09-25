@@ -296,16 +296,16 @@ export function InterfaceDetailsPage(): JSX.Element {
                       <Button
                         icon={Copy}
                         size="small"
-                        onClick={() => void copyText('JSON Schema', prompts.jsonSchema)}
+                        onClick={() => void copyText('题型结构', prompts.jsonSchema)}
                       >
-                        复制 JSON Schema
+                        复制题型结构
                       </Button>
                       <Button
                         icon={Copy}
                         size="small"
-                        onClick={() => void copyText('JSON Example', prompts.jsonExample)}
+                        onClick={() => void copyText('示例数据', prompts.jsonExample)}
                       >
-                        复制 JSON Example
+                        复制示例数据
                       </Button>
                     </div>
                   ) : null}

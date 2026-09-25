@@ -11,7 +11,7 @@ describe('Template Schema adapter', () => {
     expect(getSchema).not.toHaveBeenCalled()
   })
 
-  it('把合法 schemaId 交给正式 Schema 仓储查询', async () => {
+  it('把合法 schemaId 交给正式评分单元仓储查询', async () => {
     const getSchema = vi.fn().mockResolvedValue(null)
     const adapter = createTemplateSchemaDependencies({ getSchema })
     const schemaId = '10000000-0000-4000-8000-000000000001'

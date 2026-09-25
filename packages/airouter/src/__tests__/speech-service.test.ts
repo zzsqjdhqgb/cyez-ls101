@@ -143,7 +143,7 @@ describe('AIRouterSpeechService', () => {
     vi.stubGlobal('fetch', fetchMock)
     await service.saveProviderConfig({
       id: 'provider',
-      name: 'Provider',
+      name: '服务商',
       kind: 'online',
       type: 'openai-compatible',
       models: [{ id: 'model', enabled: true }],
