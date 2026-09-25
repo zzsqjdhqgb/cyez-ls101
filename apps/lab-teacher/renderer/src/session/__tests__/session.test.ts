@@ -73,3 +73,89 @@ describe('teacher connection ownership', () => {
     expect(invoke).toHaveBeenCalledWith('connections.close', 'cancelled')
   })
 })
+
+async function connectedSession() {
+  let nextConnection = 0
+  const invoke = vi.fn(async (capability: string, _input?: unknown): Promise<unknown> => {
+    if (capability === 'localService.connection') return connection(`local-${++nextConnection}`)
+    return null
+  })
+  const session = new TeacherSession({ invoke } as unknown as LabHost)
+  vi.spyOn(session, 'refreshService').mockResolvedValue()
+  await session.connectLocal()
+  return { session, invoke }
+}
+
+it('reuses an unknown write key, but gives a successful subsequent operation a new key', async () => {
+  const { session, invoke } = await connectedSession()
+  const keys: string[] = []
+  invoke.mockImplementation(async (capability, input) => {
+    if (capability !== 'transport.request') return null
+    keys.push((input as { input: { idempotencyKey: string } }).input.idempotencyKey)
+    if (keys.length === 1) throw new Error('response lost')
+    return { status: 200, body: { items: [] } }
+  })
+  const input = { body: { submissionIds: ['3f2504e0-4f89-41d3-9a0c-0305e82c3301'] } }
+  await expect(session.mutate('postTeacherSubmissionsDelete', input)).rejects.toThrow(
+    'response lost'
+  )
+  await expect(session.mutate('postTeacherSubmissionsDelete', input)).resolves.toEqual({
+    items: []
+  })
+  await session.mutate('postTeacherSubmissionsDelete', input)
+  expect(keys[0]).toMatch(/^[a-f\d-]{36}$/)
+  expect(keys[1]).toBe(keys[0])
+  expect(keys[2]).not.toBe(keys[0])
+})
+
+it.each(['TOKEN_EXPIRED', 'TOKEN_REVOKED', 'AUTH_REQUIRED'])(
+  'disconnects the current session on %s',
+  async (code) => {
+    const { session, invoke } = await connectedSession()
+    invoke.mockImplementation(async (capability) =>
+      capability === 'transport.request'
+        ? { status: 401, body: { error: { code, message: code, requestId: 'test-request' } } }
+        : null
+    )
+    await expect(session.request('getTeacherExams')).rejects.toThrow(code)
+    expect(session.getSnapshot()).toMatchObject({ connection: null, service: null })
+    expect(invoke).toHaveBeenCalledWith('connections.close', 'local-1')
+  }
+)
+
+it.each(['success', 'expired'] as const)(
+  'cancels old requests and isolates a late %s after switching services',
+  async (outcome) => {
+    const { session, invoke } = await connectedSession()
+    const pending = deferred<unknown>()
+    const original = invoke.getMockImplementation()!
+    invoke.mockImplementation(async (capability, input) =>
+      capability === 'transport.request' ? pending.promise : original(capability, input)
+    )
+    const request = session.request('getTeacherExams')
+    const rejected = expect(request).rejects.toThrow(
+      outcome === 'success' ? '服务连接已切换' : 'TOKEN_EXPIRED'
+    )
+    await vi.waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('transport.request', expect.anything())
+    )
+    const requestId = (
+      invoke.mock.calls.find(([name]) => name === 'transport.request')![1] as { requestId: string }
+    ).requestId
+    await session.connectLocal()
+    expect(invoke).toHaveBeenCalledWith('transport.cancel', requestId)
+    pending.resolve(
+      outcome === 'success'
+        ? { status: 200, body: { items: [], nextCursor: null } }
+        : {
+            status: 401,
+            body: {
+              error: { code: 'TOKEN_EXPIRED', message: 'expired', requestId: 'test-request' }
+            }
+          }
+    )
+    await rejected
+    expect(session.getSnapshot().connection?.connectionId).toBe('local-2')
+    expect(invoke).not.toHaveBeenCalledWith('connections.close', 'local-2')
+  }
+)

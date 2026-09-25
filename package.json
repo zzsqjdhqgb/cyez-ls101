@@ -42,6 +42,8 @@
     "lab:build:driver": "node scripts/lab/build-test-driver.mjs",
     "lab:typecheck": "tsc --noEmit -p tests/lab-vm",
     "lab:test": "node scripts/lab/test.mjs",
+    "lab:test:desktop": "vitest run --config vitest.lab-desktop.config.ts",
+    "lab:test:submission": "vitest run --config packages/exam-player/vitest.config.ts packages/exam-player/src/__tests__/submission.test.ts",
     "lab:test:service": "vitest run --config packages/lab-server/vitest.config.ts",
     "lab:test:protocol": "vitest run --config tests/lab-vm/vitest.config.ts",
     "lab:test:typecheck": "tsc --noEmit -p packages/lab-server/tsconfig.tests.json",

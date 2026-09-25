@@ -15,6 +15,8 @@ try {
   console.log('[lab:test] Checking native archive engine')
   await prepareArchiveEngine({ check: true })
   const steps = [
+    'lab:test:desktop',
+    'lab:test:submission',
     'lab:test:typecheck',
     'lab:typecheck',
     'lab:test:service',
