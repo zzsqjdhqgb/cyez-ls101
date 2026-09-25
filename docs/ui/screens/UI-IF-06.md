@@ -71,11 +71,12 @@ owner: interface-editor
 
 ```yaml
 anchors:
-  visual: unverified # tests/visual/interfaces/UI-IF-06.spec.ts
+  visual: VR-UI-IF-06（tests/visual/interfaces/UI-IF-06.spec.ts）
+  visual-states: [default]
   behavior: IF-07, IF-08（tests/product-docs/modules/interface-library/behaviors.spec.ts，旧套件）
 ```
 
-`visual` 锚点由 `tests/visual/interfaces/UI-IF-06.spec.ts` 覆盖：构造一份本地不存在的用户题型 `.lsinterface` 文件，从题型库「题型库操作 → 导入题型」打开审查页，捕获可导入题组默认选中的默认态。测试与夹具已就绪，canonical 基线待生成，因此暂时保持 `unverified`。
+`visual` 锚点由 `tests/visual/interfaces/UI-IF-06.spec.ts` 覆盖：构造一份本地不存在的用户题型 `.lsinterface` 文件，从题型库「题型库操作 → 导入题型」打开审查页，捕获可导入题组默认选中的默认态。状态为 `default`，基线已由 canonical 容器发布并提交（`tests/visual/baselines/UI-IF-06/default.png`）。
 
 `IF-07` 覆盖全屏审查页列出题型与可导入题组、默认选中并确认导入；`IF-08` 覆盖「本地已经存在相同内容」与「同一题组标识对应的内容不同」两种不可勾选状态。
 无会话空状态、导入失败提示与内置题型识别失败当前没有行为锚定。

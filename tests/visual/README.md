@@ -140,11 +140,10 @@ yarn visual:verify-determinism # 宿主机：连续两次发布并逐字节比�
   PNG，第二次必须与第一次一致。2026-01 文案迁移后的那次宿主机发布复现了未受影响的 17 张基线字节不变，只有 5 张按文案变化更新。
 - `stableScreenshot` 只保证单次运行内取两帧一致。
 
-## 10. 已就绪但待发布基线的五屏
+## 10. 五屏补齐记录（2026-01）
 
-以下五屏的测试已经存在并在 preview 下通过（`xvfb-run -a yarn test:visual` → 27 passed），但 canonical 基线尚未生成，
-因此规格里的锚点暂时保持 `unverified`。在宿主机执行 `yarn visual:image && yarn visual:publish` 之后，把对应锚点改成
-`visual: VR-<ID>（tests/visual/<目录>/UI-<ID>.spec.ts）` 并补 `visual-states`，再提交基线与规格：
+`UI-SR-02`、`UI-SR-03`、`UI-IF-06`、`UI-TP-04`、`UI-TP-05` 原先没有视觉锚点，现已补齐夹具与测试，
+并由 canonical 容器发布基线：`yarn visual:check` 报告 **29 篇规格；已锚定 27，未验证 0，n/a 2**。
 
 | 规格 | 测试 | 捕获状态 |
 | --- | --- | --- |
@@ -154,4 +153,5 @@ yarn visual:verify-determinism # 宿主机：连续两次发布并逐字节比�
 | `UI-TP-04` | `tests/visual/templates/UI-TP-04.spec.ts` | `default`（函数编辑器新建函数） |
 | `UI-TP-05` | `tests/visual/templates/UI-TP-05.spec.ts` | `default`（生成设置，三组音色） |
 
-翻转后 `yarn visual:check` 应报告「已锚定 27，未验证 0，n/a 2」。
+夹具与助手：`tests/visual/support/fixtures.ts`（混合/客观题作答包、静音 WAV、`.lsinterface` ZIP 及内容 ID 推导、生成用模板）与
+`tests/visual/support/seeding.ts`（`seedFileStoreText`、`seedSpeechProvider`）。

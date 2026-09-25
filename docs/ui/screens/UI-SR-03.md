@@ -75,11 +75,12 @@ owner: submission-records
 
 ```yaml
 anchors:
-  visual: unverified # tests/visual/submissions/UI-SR-03.spec.ts
+  visual: VR-UI-SR-03（tests/visual/submissions/UI-SR-03.spec.ts）
+  visual-states: [default]
   behavior: SR-01（tests/product-docs/modules/submission-records/settlement.spec.ts，旧套件）
 ```
 
-`visual` 锚点由 `tests/visual/submissions/UI-SR-03.spec.ts` 覆盖：导入一份只含客观题的作答，从行内「开始评分」直接进入评分结算，捕获「一条可结算作答」的默认态（页头摘要、结果表格与底部操作条）。测试与夹具已就绪，canonical 基线待生成，因此暂时保持 `unverified`。
+`visual` 锚点由 `tests/visual/submissions/UI-SR-03.spec.ts` 覆盖：导入一份只含客观题的作答，从行内「开始评分」直接进入评分结算，捕获「一条可结算作答」的默认态（页头摘要、结果表格与底部操作条）。状态为 `default`，基线已由 canonical 容器发布并提交（`tests/visual/baselines/UI-SR-03/default.png`）。
 
 `SR-01` 覆盖本页的结算复核（步骤 `review-settlement`：列出可结算作答、`本次结算（2）` 可用、行内显示「可结算」）、「下次结算」返回未结算（步骤 `defer-settlement`）与「本次结算」创建批次并跳转已结算视图（步骤 `settle-batch`）。
 本页的加载中、部分记录缺失、查询失败、无可结算与结算失败重试等状态当前没有行为锚定。

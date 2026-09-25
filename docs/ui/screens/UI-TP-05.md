@@ -99,10 +99,11 @@ owner: template-editor
 
 ```yaml
 anchors:
-  visual: unverified # tests/visual/templates/UI-TP-05.spec.ts
+  visual: VR-UI-TP-05（tests/visual/templates/UI-TP-05.spec.ts）
+  visual-states: [default]
   behavior: TG-01（tests/product-docs/flows/template-exam-generation/generation.spec.ts，旧套件）
 ```
 
-`visual` 锚点由 `tests/visual/templates/UI-TP-05.spec.ts` 覆盖：通过 preload 桥注入一份含 TTS 的本地模板与一个可用语音服务商，捕获「生成设置」阶段的默认态（试卷信息、无需选择题组、默认/男声/女声三组音色）。测试与夹具已就绪，canonical 基线待生成，因此暂时保持 `unverified`。
+`visual` 锚点由 `tests/visual/templates/UI-TP-05.spec.ts` 覆盖：通过 preload 桥注入一份含 TTS 的本地模板与一个可用语音服务商，捕获「生成设置」阶段的默认态（试卷信息、无需选择题组、默认/男声/女声三组音色）。状态为 `default`，基线已由 canonical 容器发布并提交（`tests/visual/baselines/UI-TP-05/default.png`）。
 
 `TG-01` 覆盖本页的完整路径：进入后首先显示「生成设置」、不显示主导航；填写试卷名称并为默认/男声/女声分别选择服务商、模型、音色；「开始生成」后运行中关闭会提示取消并可取消；语音达到 4 次重试上限后标题为「生成已中断」且消息含 `第 4 / 4 次尝试失败`；「从中断位置重试」复用已完成语音；结果未保存时关闭提示丢弃；「加入试卷库」后按钮变为禁用的「已加入试卷库」；「导出文件」成功后按钮变为「再次导出文件」；关闭后返回模板并能在试卷库中找到该试卷。本页的加载态、模板缺失态、无语音模板与无可用语音服务商分支当前没有行为锚定。
