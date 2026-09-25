@@ -30,6 +30,13 @@ test('FIG-IF-DETAILS 题型详情 · 题组视图', async () => {
       .first()
       .click()
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    // 先建一个题组，让详情页展示真实的题组列表而不是空状态。
+    await page.getByRole('button', { name: '新建题组' }).click()
+    await page.getByLabel('题组名称').fill('校园生活第一套')
+    await page.getByRole('button', { name: '创建题组' }).click()
+    await expect(page.getByRole('dialog', { name: '新建题组' })).toBeHidden()
+    await page.getByRole('button', { name: '返回题型详情' }).click()
+    await expect(page.getByRole('button', { name: '校园生活第一套', exact: true })).toBeVisible()
     await expect(page.getByRole('tab', { name: '题组' })).toHaveAttribute('aria-selected', 'true')
 
     const file = await captureFigure(page, 'FIG-IF-DETAILS')

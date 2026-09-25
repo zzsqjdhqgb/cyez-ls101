@@ -3,10 +3,10 @@ import { rm } from 'node:fs/promises'
 import path from 'node:path'
 import {
   stubOpenDialog,
-  writeExamFixture,
   writeMixedSubmissionFixture,
   writeObjectiveSubmissionFixture
 } from '../../visual/support/fixtures'
+import { writeManualExamFixture } from '../support/manual-fixtures'
 import { captureFigure, launchFigureApp, prepareManualUserDataDir } from '../support/manual-app'
 
 /** 导入成功的提示会自动消失，等待退场后再截图，避免把临时提示当成页面内容。 */
@@ -17,7 +17,7 @@ async function waitForToastsToSettle(page: import('@playwright/test').Page): Pro
 test('FIG-EL-PLAYER 考试运行 · 考生登录', async () => {
   test.setTimeout(120_000)
   const userDataDir = await prepareManualUserDataDir()
-  const examPath = await writeExamFixture(userDataDir)
+  const examPath = await writeManualExamFixture(userDataDir)
   const { app, page } = await launchFigureApp(userDataDir)
   try {
     await stubOpenDialog(app, examPath)
@@ -28,6 +28,7 @@ test('FIG-EL-PLAYER 考试运行 · 考生登录', async () => {
     })
     await page.getByRole('button', { name: '开始考试' }).first().click()
     await expect(page.getByLabel('姓名')).toBeVisible({ timeout: 15_000 })
+    await waitForToastsToSettle(page)
 
     const file = await captureFigure(page, 'FIG-EL-PLAYER')
     expect(file).toContain(path.join('FIG-EL-PLAYER', 'default.png'))

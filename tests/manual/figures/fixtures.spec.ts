@@ -1,19 +1,16 @@
 import { expect, test } from '@playwright/test'
 import { rm } from 'node:fs/promises'
 import path from 'node:path'
-import {
-  stubOpenDialog,
-  writeExamFixture,
-  writeMixedSubmissionFixture
-} from '../../visual/support/fixtures'
+import { stubOpenDialog, writeMixedSubmissionFixture } from '../../visual/support/fixtures'
 import { seedFileStoreText, seedSpeechProvider } from '../../visual/support/seeding'
 import { visualGenerationTemplate } from '../../visual/support/fixtures'
+import { writeManualExamFixture } from '../support/manual-fixtures'
 import { captureFigure, launchFigureApp, prepareManualUserDataDir } from '../support/manual-app'
 
 test('FIG-EL-LIBRARY 试卷库 · 已导入试卷', async () => {
   test.setTimeout(90_000)
   const userDataDir = await prepareManualUserDataDir()
-  const examPath = await writeExamFixture(userDataDir)
+  const examPath = await writeManualExamFixture(userDataDir)
   const { app, page } = await launchFigureApp(userDataDir)
   try {
     await stubOpenDialog(app, examPath)

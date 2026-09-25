@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { rm } from 'node:fs/promises'
 import path from 'node:path'
+import { seedTextProvider } from '../support/manual-fixtures'
 import { captureFigure, launchFigureApp, prepareManualUserDataDir } from '../support/manual-app'
 
 test('FIG-GS-LIBRARY 评分单元库 · 内置评分单元', async () => {
@@ -59,10 +60,12 @@ test('FIG-ST-AIROUTER 设置 → AI 引擎 · 默认态', async () => {
   const userDataDir = await prepareManualUserDataDir()
   const { app, page } = await launchFigureApp(userDataDir)
   try {
+    // 先播种一个文本生成服务商，让页面展示已配置状态而不是空状态。
+    await seedTextProvider(page)
     await page.getByRole('link', { name: '设置' }).click()
     await page.getByRole('button', { name: /^AI 引擎/ }).click()
     await expect(page.getByRole('heading', { level: 1, name: 'AI 引擎' })).toBeVisible()
-    await expect(page.getByText('正在加载', { exact: false })).toHaveCount(0)
+    await expect(page.getByText('示例服务商')).toBeVisible()
 
     const file = await captureFigure(page, 'FIG-ST-AIROUTER')
     expect(file).toContain(path.join('FIG-ST-AIROUTER', 'default.png'))
