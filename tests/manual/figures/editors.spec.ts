@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import { rm } from 'node:fs/promises'
 import path from 'node:path'
 import { captureFigure, launchFigureApp, prepareManualUserDataDir } from '../support/manual-app'
+import { fillStoredInstanceValues } from '../support/manual-fixtures'
 
 test('FIG-GS-EDITOR 新建评分单元 · 结构与数据', async () => {
   const userDataDir = await prepareManualUserDataDir()
@@ -85,6 +86,41 @@ test('FIG-IF-INSTANCE 题组编辑器 · 新建题组', async () => {
 
     const file = await captureFigure(page, 'FIG-IF-INSTANCE')
     expect(file).toContain(path.join('FIG-IF-INSTANCE', 'default.png'))
+  } finally {
+    await app.close().catch(() => undefined)
+    await rm(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('FIG-IF-EXPORT 题型导出 · 选择题组', async () => {
+  const userDataDir = await prepareManualUserDataDir()
+  const { app, page } = await launchFigureApp(userDataDir)
+  try {
+    const instanceNames = ['校园生活第一套', '科技与环保第二套']
+    await page.getByRole('link', { name: '题型库' }).click()
+    await page
+      .getByRole('button', { name: /^上海高考英语口语/ })
+      .first()
+      .click()
+    for (const name of instanceNames) {
+      await page.getByRole('button', { name: '新建题组' }).click()
+      await page.getByLabel('题组名称').fill(name)
+      await page.getByRole('button', { name: '创建题组' }).click()
+      await expect(page.getByRole('dialog', { name: '新建题组' })).toBeHidden()
+      await page.getByRole('button', { name: '返回题型详情' }).click()
+    }
+    // 题组先落盘再补写题目内容，导出页挂载时才会读到真正的题目。
+    for (const name of instanceNames) await fillStoredInstanceValues(userDataDir, name)
+
+    await page.getByRole('button', { name: '导出题型' }).click()
+    await expect(page.getByRole('heading', { name: '选择要交付的题组' })).toBeVisible()
+    await expect(page.getByText('已选择 2 个')).toBeVisible()
+    // 只交付其中一套：把第二套取消勾选，选择页的用途才是看得见的。
+    await page.getByRole('checkbox').nth(1).uncheck()
+    await expect(page.getByText('已选择 1 个')).toBeVisible()
+
+    const file = await captureFigure(page, 'FIG-IF-EXPORT')
+    expect(file).toContain(path.join('FIG-IF-EXPORT', 'default.png'))
   } finally {
     await app.close().catch(() => undefined)
     await rm(userDataDir, { recursive: true, force: true })

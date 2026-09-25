@@ -310,6 +310,8 @@ owner: docs
 
 题型文件用于在两台电脑之间传递题目。在题型详情中单击「导出题型」，进入全屏选择页逐项勾选要交付的题组，再导出为 `.lsinterface` 文件；每个题组的全部资源随题组一起交付。
 
+![图 13 导出题型（勾选要交付的题组）](../../tests/manual/baselines/FIG-IF-EXPORT/default.png)
+
 导入时先选择文件，再在全屏审查页看到三类题组：
 
 - **可导入**：本机没有的题组，默认勾选。
@@ -349,7 +351,7 @@ owner: docs
 
 ### 6.3 模板库
 
-![图 13 试卷模板库](../../tests/manual/baselines/FIG-TP-LIBRARY/default.png)
+![图 14 试卷模板库](../../tests/manual/baselines/FIG-TP-LIBRARY/default.png)
 
 导航栏进入「试卷模板」，页面分「内置模板」「我的模板」「函数库」三个视图，内置模板默认显示，两类模板都可以按标签筛选。每条内置模板显示版本号。
 
@@ -365,7 +367,7 @@ owner: docs
 - **页面视图**：在设计面上编辑页面内容块，支持选中、拖动、缩放、复制和删除。
 - **预览视图**：按编译后的展开顺序，把每个页面的每个时间线步骤显示为一个画面，用于检查学生实际看到的顺序和选择题交互；切换画面或重新进入预览会清空答案。
 
-![图 14 内置模板查看（左侧函数库与组件库，中间节点树，右侧属性）](../../tests/manual/baselines/FIG-TP-EDITOR/default.png)
+![图 15 内置模板查看（左侧函数库与组件库，中间节点树，右侧属性）](../../tests/manual/baselines/FIG-TP-EDITOR/default.png)
 
 编辑以整份文档为单位维护撤销与重做，最近一次成功保存是干净基线。保存期间可以继续编辑，不会覆盖新修改。有未保存修改时离开页面会先确认。保存失败时会提示数据已在其他窗口更新，此时需要刷新后重试。
 
@@ -385,7 +387,7 @@ owner: docs
 2. 为模板中声明的每个题型选择题组。此段只在模板声明了题型要求时出现。
 3. 如果模板含语音播放，为默认音色、男声、女声分别选择服务商、模型和音色；不含语音的模板显示「此模板无需合成语音」。
 
-![图 15 生成设置（试卷信息、题组选择与三组音色）](../../tests/manual/baselines/FIG-TP-GENERATE/default.png)
+![图 16 生成设置（试卷信息、题组选择与三组音色）](../../tests/manual/baselines/FIG-TP-GENERATE/default.png)
 
 **生成过程**：单击「开始生成」后，任务按列表顺序执行：准备试卷内容、逐条合成语音、整理资源、打包试卷。中途失败会显示「生成已中断」，可以从中断位置重试，已完成的语音继续复用。
 
@@ -425,7 +427,7 @@ owner: docs
 
 库中没有任何试卷时显示空状态。
 
-![图 16 试卷库（已导入的试卷）](../../tests/manual/baselines/FIG-EL-LIBRARY/default.png)
+![图 17 试卷库（已导入的试卷）](../../tests/manual/baselines/FIG-EL-LIBRARY/default.png)
 
 ### 7.4 考试运行
 
@@ -436,7 +438,7 @@ owner: docs
 3. **作答**：试卷页面按时间线依次播放，页面下方状态条显示当前页码、状态和剩余时间。学生按页面内容听题、录音或作答。
 4. **生成作答包**：考试结束后，软件把本次作答打包保存。作答包需要交给阅卷的老师，由作答记录模块导入。
 
-![图 17 考试运行（考生登录）](../../tests/manual/baselines/FIG-EL-PLAYER/default.png)
+![图 18 考试运行（考生登录）](../../tests/manual/baselines/FIG-EL-PLAYER/default.png)
 
 考试过程中可以退出，界面会先确认，退出不会生成作答包。资源缺失、播放或录音失败时考试会暂停并说明原因，可以重试当前步骤或重新生成作答包。
 
@@ -464,7 +466,7 @@ owner: docs
 
 未结算记录有三种进度：未评分、评分中、可结算（全部评分单元都已完成）。
 
-![图 18 作答记录（未结算）](../../tests/manual/baselines/FIG-SR-LIBRARY/default.png)
+![图 19 作答记录（未结算）](../../tests/manual/baselines/FIG-SR-LIBRARY/default.png)
 
 ### 8.3 评分
 
@@ -475,7 +477,7 @@ owner: docs
 
 客观题不需要人工介入，在准备评分时由系统自动判定。一次会话只使用一种方式；已经提交的评分单元不能修改。
 
-![图 19 评分工作区（左侧评分材料，右侧填写分数与评语）](../../tests/manual/baselines/FIG-SR-GRADING/default.png)
+![图 20 评分工作区（左侧评分材料，右侧填写分数与评语）](../../tests/manual/baselines/FIG-SR-GRADING/default.png)
 
 AI 评分的处理规则：
 
@@ -492,7 +494,7 @@ AI 评分的处理规则：
 - **本次结算**把本场全部评分完成的记录结算为一个批次，计算总分并记录结算时间；没有可结算记录时该操作不可用。
 - **下次结算**保留当前进度并返回未结算列表，已经完成的评分继续保留。
 
-![图 20 评分结算](../../tests/manual/baselines/FIG-SR-SETTLEMENT/default.png)
+![图 21 评分结算](../../tests/manual/baselines/FIG-SR-SETTLEMENT/default.png)
 
 结算整体成功或失败，不会产生只结算了一部分的批次。结算后的记录进入「已结算」标签，按批次展开；只有已结算的记录可以查看评分报告。报告包含总分与满分、逐题分数与评语、题目、评分标准和学生答案，客观题另含正误与解析。
 
@@ -516,7 +518,7 @@ AI 引擎管理软件用到的外部模型与本地模型：题组内容由文�
 
 五个分类里，只有已启用的模型会出现在考试和批改的配置步骤中。
 
-![图 21 设置 → AI 引擎（五个分类，以文本生成为例）](../../tests/manual/baselines/FIG-ST-AIROUTER/default.png)
+![图 22 设置 → AI 引擎（五个分类，以文本生成为例）](../../tests/manual/baselines/FIG-ST-AIROUTER/default.png)
 
 #### 9.1.2 配置一个服务商
 
@@ -528,7 +530,7 @@ AI 引擎管理软件用到的外部模型与本地模型：题组内容由文�
 4. **连接测试**：选择一个已启用模型，发送固定的短请求，成功后显示模型回复，用来确认密钥、地址、模型与生成权限都正确。
 5. 单击「保存服务商」。没有改动时保存按钮不可用。
 
-![图 22 服务商编辑器（基础配置、模型编号与连接测试）](../../tests/manual/baselines/FIG-ST-AIROUTER-EDITOR/default.png)
+![图 23 服务商编辑器（基础配置、模型编号与连接测试）](../../tests/manual/baselines/FIG-ST-AIROUTER-EDITOR/default.png)
 
 已保存的服务商可以再次打开编辑，但服务商类型不可修改。删除服务商会同时删除它的加密密钥，确认框会写明这一点；已经保存的题组、试卷和作答记录不受影响。
 
@@ -548,7 +550,7 @@ AI 引擎管理软件用到的外部模型与本地模型：题组内容由文�
 - **在线服务商**：类型为「OpenAI Compatible」，维护模型编号与音色编号；连接测试会合成一段测试语音，结果可以直接播放。
 - **本地服务商**：类型为「Pocket TTS (WASM)」或「Qwen3-TTS 0.6B」，需要先导入对应的 TTS 模型包。导入后选择模型包，再从包内启用模型与音色；模型包中的音色适用于包内全部模型。导入时相同资源按哈希复用，被服务商引用的模型包不能删除。
 
-![图 23 语音合成区域（在线服务商与本地模型包）](../../tests/manual/baselines/FIG-ST-AIROUTER-SPEECH/default.png)
+![图 24 语音合成区域（在线服务商与本地模型包）](../../tests/manual/baselines/FIG-ST-AIROUTER-SPEECH/default.png)
 
 生成试卷时，语音设置会列出默认音色、男声和女声三组，每组分别选择服务商、模型和音色；只有这里启用的模型与音色会出现在生成设置中。
 
@@ -571,7 +573,7 @@ AI 语音评测由随应用声明的扩展包提供，不支持切换后端。�
 
 存储设置显示数据目录的当前位置与占用大小，并提供三个操作：更改位置、恢复默认位置、删除旧数据目录。位置未更改时，位置行标为默认位置；更改过的目录标为自定义位置。
 
-![图 24 存储（当前目录、占用大小与位置操作）](../../tests/manual/baselines/FIG-ST-STORAGE/default.png)
+![图 25 存储（当前目录、占用大小与位置操作）](../../tests/manual/baselines/FIG-ST-STORAGE/default.png)
 
 迁移、切换与删除的完整说明和注意事项见 1.5 节。
 
@@ -579,20 +581,20 @@ AI 语音评测由随应用声明的扩展包提供，不支持切换后端。�
 
 外观设置分两组：主题用于选择界面主题（浅色、深色或跟随操作系统），交互用于开关减少动态效果。修改后立即生效并保存；保存失败时回滚到上一次的取值，也可以恢复默认设置。
 
-![图 25 外观（主题与动态效果）](../../tests/manual/baselines/FIG-ST-APPEARANCE/default.png)
+![图 26 外观（主题与动态效果）](../../tests/manual/baselines/FIG-ST-APPEARANCE/default.png)
 
 下图是同一个工作台在两种主题下的对照，左半为浅色，右半为深色。
 
-![图 26 工作台在浅色（左）与深色（右）主题下](../../tests/manual/baselines/FIG-ST-THEME/default.png)
+![图 27 工作台在浅色（左）与深色（右）主题下](../../tests/manual/baselines/FIG-ST-THEME/default.png)
 
 ### 9.4 许可
 
 许可页显示当前激活状态。「参与意见征集」打开激活方式意见征集页面，了解并反馈其他激活方式；「取消激活」删除本机激活信息并重启软件，再次使用时需要重新输入邀请码，试卷、题型、作答记录等业务数据不受影响。
 
-![图 27 许可（激活状态与取消激活）](../../tests/manual/baselines/FIG-ST-LICENSE/default.png)
+![图 28 许可（激活状态与取消激活）](../../tests/manual/baselines/FIG-ST-LICENSE/default.png)
 
 ### 9.5 关于
 
 关于页显示软件名称、副标题与当前版本，下面是版本说明入口，以及项目发起人、开发者和版权与许可信息。「版本说明」打开本版本的更新内容与升级注意事项。
 
-![图 28 关于（版本、团队成员与许可信息）](../../tests/manual/baselines/FIG-ST-ABOUT/default.png)
+![图 29 关于（版本、团队成员与许可信息）](../../tests/manual/baselines/FIG-ST-ABOUT/default.png)
