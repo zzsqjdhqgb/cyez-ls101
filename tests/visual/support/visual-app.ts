@@ -21,6 +21,21 @@ const PREVIEW_ROOT = path.join(projectRoot, 'test-results', 'visual-preview')
 
 export type VisualMode = 'preview' | 'publish' | 'check'
 
+/**
+ * 一套截图产物的落盘位置与运行模式。
+ * 逐屏视觉回归（`tests/visual`）与说明书配图（`tests/manual`）各自持有一份，
+ * 共用同一套"预览 / 发布 / 校验"逻辑，但基线互不合并。
+ */
+export interface CaptureTarget {
+  baselineRoot: string
+  previewRoot: string
+  mode: VisualMode
+  /** 失败信息里的主语，例如「视觉」「说明书配图」。 */
+  subject: string
+  /** 缺少基线时提示的发布命令。 */
+  publishCommand: string
+}
+
 export interface VisualLaunchOptions {
   /** 未激活启动用于许可激活覆盖层（UI-OV-01）。 */
   license?: 'activated' | 'not-activated'
@@ -78,20 +93,44 @@ export async function launchVisualApp(
  * - check：与基线逐像素比较，不一致即抛错。
  */
 export async function captureState(page: Page, uiId: string, state: string): Promise<string> {
-  const mode = visualMode()
+  return captureTo(
+    {
+      baselineRoot: BASELINE_ROOT,
+      previewRoot: PREVIEW_ROOT,
+      mode: visualMode(),
+      subject: '视觉',
+      publishCommand: 'yarn visual:publish'
+    },
+    page,
+    uiId,
+    state
+  )
+}
+
+/**
+ * 通用截图落盘：preview 写预览目录，publish 写基线目录，check 与基线逐像素比较。
+ * 说明书配图复用本函数，只替换 target 里的目录与模式。
+ */
+export async function captureTo(
+  target: CaptureTarget,
+  page: Page,
+  id: string,
+  state: string
+): Promise<string> {
+  const mode = target.mode
   // 等待异步数据装载完成（列表、汇总数字、预览），再等到连续两帧完全一致，
   // 避免截到加载中间态或懒加载资源尚未稳定的画面。
   await page.waitForTimeout(VISUAL_SETTLE_MS)
   const buffer = await stableScreenshot(page)
 
   if (mode === 'preview') {
-    const file = path.join(PREVIEW_ROOT, uiId, `${state}.png`)
+    const file = path.join(target.previewRoot, id, `${state}.png`)
     await mkdir(path.dirname(file), { recursive: true })
     await writeFile(file, buffer)
     return file
   }
 
-  const baseline = path.join(BASELINE_ROOT, uiId, `${state}.png`)
+  const baseline = path.join(target.baselineRoot, id, `${state}.png`)
   if (mode === 'publish') {
     await mkdir(path.dirname(baseline), { recursive: true })
     await writeFile(baseline, buffer)
@@ -103,15 +142,15 @@ export async function captureState(page: Page, uiId: string, state: string): Pro
     throw reason
   })
   if (!committed) {
-    await attachVisualDiagnostics(uiId, state, buffer)
+    await attachVisualDiagnostics(id, state, buffer)
     throw new Error(
-      `缺少视觉基线：${path.relative(projectRoot, baseline)}（先在 canonical 容器内运行 yarn visual:publish）`
+      `缺少${target.subject}基线：${path.relative(projectRoot, baseline)}（先在 canonical 容器内运行 ${target.publishCommand}）`
     )
   }
   const comparison = comparePng(committed, buffer)
   if (!comparison.matches) {
-    await attachVisualDiagnostics(uiId, state, buffer, committed, comparison.diff)
-    throw new Error(`视觉回归差异：${path.relative(projectRoot, baseline)}`)
+    await attachVisualDiagnostics(id, state, buffer, committed, comparison.diff)
+    throw new Error(`${target.subject}回归差异：${path.relative(projectRoot, baseline)}`)
   }
   return baseline
 }
