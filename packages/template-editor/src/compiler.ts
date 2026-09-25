@@ -360,7 +360,7 @@ function buildSubmissionSnapshot(
 
   const schemaUses = expandedUses.map<SubmissionSchemaUse>((use) => {
     const schema = schemasById.get(use.schemaId)
-    if (!schema) throw new Error(`Schema disappeared during compilation: ${use.schemaId}`)
+    if (!schema) throw new Error(`编译时找不到评分单元：${use.schemaId}`)
 
     const answers = use.answers.map<SubmissionSchemaAnswer>((answer) => {
       switch (answer.type) {

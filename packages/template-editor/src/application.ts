@@ -274,12 +274,12 @@ export function createTemplateApplication(
       initialization = (async () => {
         if (dependencies.getBuiltinFunctionLibraryManifest) {
           const manifest = await dependencies.getBuiltinFunctionLibraryManifest()
-          if (manifest === null) throw new Error('Builtin function library manifest is missing')
+          if (manifest === null) throw new Error('缺少内置函数库清单')
           await initializeBuiltinFunctionLibraries(repository, manifest)
         }
         if (dependencies.getBuiltinTemplateManifest) {
           const manifest = await dependencies.getBuiltinTemplateManifest()
-          if (manifest === null) throw new Error('Builtin template manifest is missing')
+          if (manifest === null) throw new Error('缺少内置试卷模板清单')
           await initializeBuiltinTemplates(repository, manifest)
         }
       })()
@@ -290,13 +290,9 @@ export function createTemplateApplication(
   const loadTemplate = async (templateId: string): Promise<TemplateDocument> => {
     const document = await repository.getTemplate(templateId)
     if (!document) {
-      throw new TemplateApplicationError(
-        'TEMPLATE_NOT_FOUND',
-        `Template not found: ${templateId}`,
-        {
-          templateId
-        }
-      )
+      throw new TemplateApplicationError('TEMPLATE_NOT_FOUND', `未找到试卷模板：${templateId}`, {
+        templateId
+      })
     }
     return document
   }
@@ -306,7 +302,7 @@ export function createTemplateApplication(
     if (!release) {
       throw new TemplateApplicationError(
         'TEMPLATE_NOT_FOUND',
-        `Builtin template not found: ${templateId}`,
+        `未找到内置试卷模板：${templateId}`,
         { templateId, source: 'builtin' }
       )
     }
@@ -338,7 +334,7 @@ export function createTemplateApplication(
     if (!library) {
       throw new TemplateApplicationError(
         'FUNCTION_LIBRARY_NOT_FOUND',
-        `Function library not found: ${locator.library.libraryId}`,
+        `未找到函数库：${locator.library.libraryId}`,
         {
           source: locator.library.source,
           libraryId: locator.library.libraryId
@@ -354,17 +350,15 @@ export function createTemplateApplication(
         const chain = [...stack, sourceId]
         throw new TemplateApplicationError(
           'RECURSIVE_FUNCTION_DEPENDENCY',
-          `Recursive function dependency: ${chain.join(' -> ')}`,
+          `函数依赖存在循环：${chain.join(' -> ')}`,
           { functionId: sourceId, chain: chain.join(' -> ') }
         )
       }
       const source = functions.get(sourceId)
       if (!source) {
-        throw new TemplateApplicationError(
-          'FUNCTION_NOT_FOUND',
-          `Function not found: ${sourceId}`,
-          { functionId: sourceId }
-        )
+        throw new TemplateApplicationError('FUNCTION_NOT_FOUND', `未找到函数：${sourceId}`, {
+          functionId: sourceId
+        })
       }
       const body = await rewriteFunctionRefs(source.content.body, (nestedId) =>
         snapshot(nestedId, [...stack, sourceId])
@@ -377,7 +371,7 @@ export function createTemplateApplication(
       ) {
         throw new TemplateApplicationError(
           'FUNCTION_RESOURCE_COLLISION',
-          `Function resource ID collision: ${resource.id}`,
+          `函数资源编号冲突：${resource.id}`,
           { resourceId: resource.id }
         )
       }
@@ -547,7 +541,7 @@ export function createTemplateApplication(
         if (mode === 'preserve-id') return repository.createTemplate(imported)
 
         if (expectedRevision === undefined) {
-          throw new TypeError('Overwrite import requires the expected local revision')
+          throw new TypeError('覆盖导入时必须提供本地版本号')
         }
         return repository.saveTemplate({ ...imported, revision: expectedRevision })
       },
@@ -577,7 +571,7 @@ export function createTemplateApplication(
         if (!edited.applied) {
           throw new TemplateApplicationError(
             'EDIT_REJECTED',
-            `Function call insertion rejected: ${edited.error.code} at ${edited.error.path}`,
+            `函数调用插入被拒绝：${edited.error.code}，位置 ${edited.error.path}`,
             { code: edited.error.code, path: edited.error.path }
           )
         }
@@ -585,11 +579,10 @@ export function createTemplateApplication(
           (change) => change.kind === 'insert' && change.subjectId !== undefined
         )?.subjectId
         if (!callNodeId) {
-          throw new TemplateApplicationError(
-            'EDIT_REJECTED',
-            'Function call insertion did not report the inserted node',
-            { code: 'MISSING_INSERT_RESULT', path: 'content.root' }
-          )
+          throw new TemplateApplicationError('EDIT_REJECTED', '函数调用插入后未返回新增节点', {
+            code: 'MISSING_INSERT_RESULT',
+            path: 'content.root'
+          })
         }
         const saved = await repository.saveTemplate(edited.document)
         return { template: saved, functionRef: embedded.resource.id, callNodeId }
@@ -765,7 +758,7 @@ export function createTemplateApplication(
               const chain = [...stack, sourceId]
               throw new TemplateApplicationError(
                 'RECURSIVE_FUNCTION_DEPENDENCY',
-                `Recursive function dependency: ${chain.join(' -> ')}`,
+                `函数依赖存在循环：${chain.join(' -> ')}`,
                 { functionId: sourceId, chain: chain.join(' -> ') }
               )
             }
@@ -856,7 +849,7 @@ export function createTemplateApplication(
           if (!sourceLibrary) {
             throw new TemplateApplicationError(
               'FUNCTION_LIBRARY_NOT_FOUND',
-              `Function library not found: ${locator.library.libraryId}`,
+              `未找到函数库：${locator.library.libraryId}`,
               {
                 source: locator.library.source,
                 libraryId: locator.library.libraryId
@@ -874,7 +867,7 @@ export function createTemplateApplication(
           ) {
             throw new TemplateApplicationError(
               'RECURSIVE_FUNCTION_DEPENDENCY',
-              `Recursive function dependency: ${functionId} -> ${locator.functionId}`,
+              `函数依赖存在循环：${functionId} -> ${locator.functionId}`,
               { functionId, dependencyId: locator.functionId }
             )
           }
@@ -902,7 +895,7 @@ export function createTemplateApplication(
           if (!edited.applied) {
             throw new TemplateApplicationError(
               'EDIT_REJECTED',
-              `Function call insertion rejected: ${edited.error.code} at ${edited.error.path}`,
+              `函数调用插入被拒绝：${edited.error.code}，位置 ${edited.error.path}`,
               { code: edited.error.code, path: edited.error.path }
             )
           }
@@ -910,11 +903,10 @@ export function createTemplateApplication(
             (change) => change.kind === 'insert' && change.subjectId !== undefined
           )?.subjectId
           if (!callNodeId) {
-            throw new TemplateApplicationError(
-              'EDIT_REJECTED',
-              'Function call insertion did not report the inserted node',
-              { code: 'MISSING_INSERT_RESULT', path: 'content.body' }
-            )
+            throw new TemplateApplicationError('EDIT_REJECTED', '函数调用插入后未返回新增节点', {
+              code: 'MISSING_INSERT_RESULT',
+              path: 'content.body'
+            })
           }
           const functions = destination.content.functions.map((entry) =>
             entry.functionId === functionId
@@ -1021,11 +1013,10 @@ async function loadLocalFunctionLibrary(
 ): Promise<LocalFunctionLibraryDocument> {
   const library = await repository.getLocalFunctionLibrary(libraryId)
   if (!library) {
-    throw new TemplateApplicationError(
-      'FUNCTION_LIBRARY_NOT_FOUND',
-      `Function library not found: ${libraryId}`,
-      { source: 'local', libraryId }
-    )
+    throw new TemplateApplicationError('FUNCTION_LIBRARY_NOT_FOUND', `未找到函数库：${libraryId}`, {
+      source: 'local',
+      libraryId
+    })
   }
   return library
 }
@@ -1090,7 +1081,7 @@ function projectFunctionDocument(
 }
 
 function functionNotFound(functionId: string): TemplateApplicationError {
-  return new TemplateApplicationError('FUNCTION_NOT_FOUND', `Function not found: ${functionId}`, {
+  return new TemplateApplicationError('FUNCTION_NOT_FOUND', `未找到函数：${functionId}`, {
     functionId
   })
 }
@@ -1163,7 +1154,7 @@ function collectFunctionEntryClosure(
     if (active.has(functionId)) {
       throw new TemplateApplicationError(
         'RECURSIVE_FUNCTION_DEPENDENCY',
-        `Recursive function dependency: ${[...active, functionId].join(' -> ')}`,
+        `函数依赖存在循环：${[...active, functionId].join(' -> ')}`,
         { functionId }
       )
     }
@@ -1211,9 +1202,8 @@ function functionPreviewChoicePageCounts(
       return
     }
     if (input.shape.kind === 'range' && expression.selection.kind === 'range') {
-      input.shape.pageCounts.forEach((count, index) =>
-        requirePage(expression.selection.startPage + index, count)
-      )
+      const startPage = expression.selection.startPage
+      input.shape.pageCounts.forEach((count, index) => requirePage(startPage + index, count))
       return
     }
     if (input.shape.kind === 'all' && expression.selection.kind === 'all') {

@@ -9,6 +9,7 @@ import {
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import styles from './StorageSettingsPage.module.css'
+import { toUserMessage } from '../../components/ui/userMessage'
 
 export function StorageSettingsPage(): JSX.Element {
   const bridge = window.dataDirectory
@@ -109,7 +110,7 @@ export function StorageSettingsPage(): JSX.Element {
   }
 
   const deleteOld = async (): Promise<void> => {
-    if (!bridge || !info.oldDataDirectory) return
+    if (!bridge || !info?.oldDataDirectory) return
     setBusy(true)
     setDeleteError(null)
     try {
@@ -287,5 +288,5 @@ function isWindowsPlatform(): boolean {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
+  return toUserMessage(error)
 }

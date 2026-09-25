@@ -34,7 +34,7 @@ async function parseAndValidateManifest(value: unknown): Promise<BundledSchemaMa
     Reflect.ownKeys(value).length !== 1 ||
     !Array.isArray(Reflect.get(value, 'schemas'))
   ) {
-    throw new BuiltinSchemaInitializationError('Bundled Schema manifest is invalid')
+    throw new BuiltinSchemaInitializationError('内置评分单元清单无效')
   }
 
   const schemas: SchemaDefinition[] = []
@@ -46,12 +46,10 @@ async function parseAndValidateManifest(value: unknown): Promise<BundledSchemaMa
       !validateSchemaDefinition(definition).valid ||
       !(await verifySchemaDefinition(definition))
     ) {
-      throw new BuiltinSchemaInitializationError('Bundled Schema definition is invalid')
+      throw new BuiltinSchemaInitializationError('内置评分单元定义无效')
     }
     if (schemaIds.has(definition.schemaId)) {
-      throw new BuiltinSchemaInitializationError(
-        `Bundled Schema is duplicated: ${definition.schemaId}`
-      )
+      throw new BuiltinSchemaInitializationError(`内置评分单元重复：${definition.schemaId}`)
     }
     schemaIds.add(definition.schemaId)
     schemas.push(structuredClone(definition))

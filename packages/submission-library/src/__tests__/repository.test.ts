@@ -420,6 +420,7 @@ describe('FileSubmissionLibraryRepository', () => {
     const current = (await repository.startGrading(source.meta.submissionId)).grading
 
     const scope = await importedSubmissionScope(store)
+    const expected: object = current
     const legacy: Record<string, unknown> = {
       ...current,
       status: 'completed',
@@ -427,7 +428,7 @@ describe('FileSubmissionLibraryRepository', () => {
     }
     delete legacy.readyAt
     delete legacy.aiRuns
-    expect(await scope.compareAndSwapText('grading.json', current, legacy)).toBe(true)
+    expect(await scope.compareAndSwapText('grading.json', expected, legacy)).toBe(true)
 
     await expect(repository.getGradingRecord(source.meta.submissionId)).resolves.toEqual(current)
     await expect(repository.listEntries()).resolves.toMatchObject([

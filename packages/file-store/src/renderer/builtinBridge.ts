@@ -8,7 +8,7 @@ declare global {
 
 export function getBuiltinFileStoreBridge(): BuiltinFileStoreBridge {
   if (!window.builtinFileStore) {
-    throw new Error('Builtin file-store preload bridge is unavailable')
+    throw new Error('内置文件存储预加载桥接不可用')
   }
   return window.builtinFileStore
 }

@@ -39,7 +39,7 @@ export function createReviewSamplingRules<T>(
     },
     {
       id: 'schema',
-      label: '按 Schema 分组',
+      label: '按评分单元分组',
       defaultCount: 0,
       groups: [...schemaGroups.values()]
     }

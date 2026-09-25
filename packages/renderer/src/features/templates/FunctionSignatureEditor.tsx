@@ -218,7 +218,7 @@ export function FunctionSignatureEditor({
                               label={`输入 ${index + 1} 删除第 ${pageIndex + 1} 页`}
                               size="small"
                               variant="danger"
-                              disabled={disabled || input.shape.pageCounts.length === 1}
+                              disabled={disabled || choiceGroupPageCounts(input).length === 1}
                               onClick={() =>
                                 apply({
                                   type: 'update-function-input',
@@ -482,6 +482,12 @@ function typeLabel(type: TemplateValueType): string {
 
 function inputWithType(name: string, type: FunctionInputDef['type']): FunctionInputDef {
   return type === 'choice-group' ? { name, type, shape: { kind: 'question' } } : { name, type }
+}
+
+function choiceGroupPageCounts(input: FunctionInputDef): readonly number[] {
+  return input.type === 'choice-group' && input.shape.kind !== 'question'
+    ? input.shape.pageCounts
+    : []
 }
 
 function addPageCount(

@@ -183,7 +183,7 @@ async function openAirouter(
 }
 
 async function addModel(id: string, image = false): Promise<void> {
-  await page.getByLabel(image ? '手动图像模型 ID' : '手动模型 ID').fill(id)
+  await page.getByLabel(image ? '手动图像模型编号' : '手动模型编号').fill(id)
   await page.getByRole('button', { name: '添加', exact: true }).click()
 }
 
@@ -371,12 +371,12 @@ test('AR-01 navigates through AI engine settings categories', async () => {
     await page.getByRole('tab', { name }).click()
     await expect(page.getByRole('tab', { name })).toHaveAttribute('aria-selected', 'true')
   }
-  await expect(page.getByText('尚未添加文本生成 Provider')).toBeVisible()
+  await expect(page.getByText('尚未添加文本生成服务商')).toBeVisible()
   await page.getByRole('tab', { name: '语音合成' }).click()
-  await expect(page.getByRole('heading', { name: '语音 Provider' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '语音服务商' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'TTS 模型包' })).toBeVisible()
   await page.getByRole('tab', { name: '语音识别' }).click()
-  await expect(page.getByRole('heading', { name: '语音识别 Provider' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '语音识别服务商' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'ASR 模型包' })).toBeVisible()
   await page.getByRole('tab', { name: 'AI 语音评测' }).click()
   await expect(page.getByText('未导入', { exact: true })).toBeVisible()
@@ -384,12 +384,12 @@ test('AR-01 navigates through AI engine settings categories', async () => {
 
 test('AR-02 exposes the text empty state and default manual image provider', async () => {
   await openAirouter()
-  await expect(page.getByText('共 0 个 Provider')).toBeVisible()
-  await expect(page.getByText('尚未添加文本生成 Provider')).toBeVisible()
-  await page.getByRole('button', { name: '添加 Provider' }).click()
-  await page.getByLabel('Provider', { exact: true }).selectOption('agnes-ai')
+  await expect(page.getByText('共 0 个服务商')).toBeVisible()
+  await expect(page.getByText('尚未添加文本生成服务商')).toBeVisible()
+  await page.getByRole('button', { name: '添加服务商' }).click()
+  await page.getByLabel('服务商', { exact: true }).selectOption('agnes-ai')
   await expect(page.getByLabel('Base URL')).toHaveValue('https://apihub.agnes-ai.com/v1')
-  await page.getByRole('button', { name: '关闭 Provider 编辑器' }).click()
+  await page.getByRole('button', { name: '关闭服务商编辑器' }).click()
   await page.getByRole('tab', { name: '图像生成' }).click()
   await expect(page.getByRole('button', { name: /手动生成/ })).toBeVisible()
   const state = await page.evaluate(async () => ({
@@ -404,12 +404,12 @@ test('AR-02 exposes the text empty state and default manual image provider', asy
 
 test('AR-03 creates and reloads an OpenAI-compatible provider through the UI', async () => {
   await openAirouter()
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   await page.getByLabel('配置名称').fill('Local OpenAI')
   await page.getByLabel('Base URL').fill(mockServer.baseUrl)
-  await page.getByRole('textbox', { name: 'API Key', exact: true }).fill('openai-secret')
+  await page.getByRole('textbox', { name: 'API 密钥', exact: true }).fill('openai-secret')
   await addModel('mock-text')
-  await page.getByRole('button', { name: '保存 Provider' }).click()
+  await page.getByRole('button', { name: '保存服务商' }).click()
   await expect(page.getByText('已保存“Local OpenAI”')).toBeVisible({ timeout: 10_000 })
   await expect(page.getByText('已配置密钥')).toBeVisible()
   await page.reload()
@@ -431,19 +431,19 @@ test('AR-03 creates and reloads an OpenAI-compatible provider through the UI', a
 
 test('AR-04 creates and reloads an Anthropic provider through the UI', async () => {
   await openAirouter()
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   await page.getByLabel('配置名称').fill('Local Anthropic')
-  await page.getByLabel('Provider', { exact: true }).selectOption('anthropic')
+  await page.getByLabel('服务商', { exact: true }).selectOption('anthropic')
   await expect(page.getByLabel('Base URL')).toHaveValue('https://api.anthropic.com/v1')
   await page.getByLabel('Base URL').fill(mockServer.baseUrl)
   await addModel('mock-reasoning')
-  await page.getByRole('button', { name: '保存 Provider' }).click()
+  await page.getByRole('button', { name: '保存服务商' }).click()
   await expect(page.getByText('已保存“Local Anthropic”')).toBeVisible({ timeout: 10_000 })
   await page.reload()
   await openAirouter()
   await page.getByRole('button', { name: /Local Anthropic/ }).click()
-  await expect(page.getByLabel('Provider', { exact: true })).toHaveValue('自定义 Anthropic')
-  await expect(page.getByLabel('Provider', { exact: true })).toBeDisabled()
+  await expect(page.getByLabel('服务商', { exact: true })).toHaveValue('自定义 Anthropic')
+  await expect(page.getByLabel('服务商', { exact: true })).toBeDisabled()
   await expect(page.getByLabel('Base URL')).toHaveValue(mockServer.baseUrl)
   await expect(page.getByRole('checkbox', { name: 'mock-reasoning' })).toBeChecked()
   expect(await page.evaluate(() => window.airouter.listProviderConfigs())).toEqual([
@@ -462,22 +462,22 @@ test('AR-05 loads, replaces and clears a text provider API key', async () => {
   const id = String(saved.id)
   await openAirouter()
   await page.getByRole('button', { name: /key-lifecycle/ }).click()
-  const apiKey = page.getByRole('textbox', { name: 'API Key', exact: true })
+  const apiKey = page.getByRole('textbox', { name: 'API 密钥', exact: true })
   await expect(apiKey).toHaveAttribute('placeholder', '已安全保存')
-  await page.getByRole('button', { name: '显示 API Key' }).click()
+  await page.getByRole('button', { name: '显示 API 密钥' }).click()
   await expect(apiKey).toHaveValue('key-lifecycle-secret')
   await apiKey.fill('replacement-secret')
-  await page.getByRole('button', { name: '保存 Provider' }).click()
+  await page.getByRole('button', { name: '保存服务商' }).click()
   await expect(page.getByText('已保存“key-lifecycle”')).toBeVisible({ timeout: 10_000 })
   await expect
     .poll(() => page.evaluate((value) => window.airouter.readProviderApiKey(value), id), {
       timeout: 10_000
     })
     .toBe('replacement-secret')
-  await page.getByRole('button', { name: '显示 API Key' }).click()
+  await page.getByRole('button', { name: '显示 API 密钥' }).click()
   await expect(apiKey).toHaveValue('replacement-secret')
   await apiKey.fill('')
-  await page.getByRole('button', { name: '保存 Provider' }).click()
+  await page.getByRole('button', { name: '保存服务商' }).click()
   await expect(page.getByText('已保存“key-lifecycle”').last()).toBeVisible({ timeout: 10_000 })
   await expect
     .poll(() => page.evaluate((value) => window.airouter.readProviderApiKey(value), id), {
@@ -488,14 +488,14 @@ test('AR-05 loads, replaces and clears a text provider API key', async () => {
 
 test('AR-06 manages manual text models, enabled state, deduplication and removal', async () => {
   await openAirouter()
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   await page.getByLabel('配置名称').fill('Model Manager')
   await addModel('alpha')
   await addModel('alpha')
   await addModel('beta')
   await page.getByRole('checkbox', { name: 'beta' }).uncheck()
   await page.getByRole('button', { name: '移除模型 alpha' }).click()
-  await page.getByRole('button', { name: '保存 Provider' }).click()
+  await page.getByRole('button', { name: '保存服务商' }).click()
   await expect
     .poll(
       async () =>
@@ -507,10 +507,10 @@ test('AR-06 manages manual text models, enabled state, deduplication and removal
 
 test('AR-07 discovers, sorts and merges text models with the draft', async () => {
   await openAirouter()
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   await page.getByLabel('配置名称').fill('Discovery')
   await page.getByLabel('Base URL').fill(mockServer.baseUrl)
-  await page.getByRole('textbox', { name: 'API Key', exact: true }).fill('discovery-secret')
+  await page.getByRole('textbox', { name: 'API 密钥', exact: true }).fill('discovery-secret')
   await addModel('mock-text')
   await addModel('custom-model')
   await page.getByRole('button', { name: '获取模型列表' }).click()
@@ -534,10 +534,10 @@ test('AR-07 discovers, sorts and merges text models with the draft', async () =>
 
 test('AR-08 tests an unsaved OpenAI-compatible draft without persisting it', async () => {
   await openAirouter()
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   await page.getByLabel('配置名称').fill('Unsaved OpenAI')
   await page.getByLabel('Base URL').fill(mockServer.baseUrl)
-  await page.getByRole('textbox', { name: 'API Key', exact: true }).fill('draft-secret')
+  await page.getByRole('textbox', { name: 'API 密钥', exact: true }).fill('draft-secret')
   await addModel('mock-text')
   await page.getByRole('button', { name: '测试连接' }).click()
   await expect(page.getByText('连接成功，模型回复：OK')).toBeVisible()
@@ -548,11 +548,11 @@ test('AR-08 tests an unsaved OpenAI-compatible draft without persisting it', asy
 
 test('AR-09 tests an unsaved Anthropic draft with its own protocol and headers', async () => {
   await openAirouter()
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   await page.getByLabel('配置名称').fill('Unsaved Anthropic')
-  await page.getByLabel('Provider', { exact: true }).selectOption('anthropic')
+  await page.getByLabel('服务商', { exact: true }).selectOption('anthropic')
   await page.getByLabel('Base URL').fill(mockServer.baseUrl)
-  await page.getByRole('textbox', { name: 'API Key', exact: true }).fill('anthropic-secret')
+  await page.getByRole('textbox', { name: 'API 密钥', exact: true }).fill('anthropic-secret')
   await addModel('mock-text')
   await page.getByRole('button', { name: '测试连接' }).click()
   await expect(page.getByText('连接成功，模型回复：OK')).toBeVisible()
@@ -569,8 +569,8 @@ test('AR-10 edits and deletes a text provider with its secret without affecting 
   await page.getByRole('button', { name: /delete-me/ }).click()
   await page.getByLabel('配置名称').fill('edited-provider')
   await addModel('second-model')
-  await page.getByRole('button', { name: '保存 Provider' }).click()
-  await page.getByRole('button', { name: '删除 Provider' }).click()
+  await page.getByRole('button', { name: '保存服务商' }).click()
+  await page.getByRole('button', { name: '删除服务商' }).click()
   await page.getByRole('button', { name: '删除配置' }).click()
   await expect(page.getByText('已删除“edited-provider”', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /edited-provider/ })).toBeHidden()
@@ -584,7 +584,7 @@ test('AR-10 edits and deletes a text provider with its secret without affecting 
     return { configs: await window.airouter.listProviderConfigs(), deletedKeyError }
   })
   expect(state.configs).toEqual([expect.objectContaining({ id: 'keep-me', hasApiKey: true })])
-  expect(state.deletedKeyError).toContain('Provider 配置不存在')
+  expect(state.deletedKeyError).toContain('服务商配置不存在')
 })
 
 test('AR-11 streams OpenAI-compatible output across HTTP, main, IPC and preload', async () => {
@@ -664,7 +664,7 @@ test('AR-14 reports both provider protocols, stream failures and truncation', as
   })
   expect(filtered.at(-1)).toEqual({
     type: 'error',
-    message: 'AI 输出被 Provider 的内容安全策略截断'
+    message: 'AI 输出被服务商的内容安全策略截断'
   })
 })
 
@@ -725,12 +725,12 @@ test('AR-15 imports and cancels manual image generation through the global dialo
 
 test('AR-16 saves and reloads an image provider with isolated config and secret scopes', async () => {
   await openAirouter('图像生成')
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   await page.getByLabel('图像配置名称').fill('Image API')
   await page.getByLabel('图像 Base URL').fill(mockServer.baseUrl)
-  await page.getByRole('textbox', { name: '图像 API Key', exact: true }).fill('image-secret')
+  await page.getByRole('textbox', { name: '图像 API 密钥', exact: true }).fill('image-secret')
   await addModel('mock-image', true)
-  await page.getByRole('button', { name: '保存 Provider' }).click()
+  await page.getByRole('button', { name: '保存服务商' }).click()
   await expect(page.getByText('已保存“Image API”')).toBeVisible({ timeout: 10_000 })
   const imageConfig = (await page.evaluate(() => window.airouter.listImageProviderConfigs())).find(
     (config) => config.type === 'openai-compatible'
@@ -749,7 +749,7 @@ test('AR-16 saves and reloads an image provider with isolated config and secret 
   await openAirouter('图像生成')
   await expect(page.getByRole('button', { name: /Image API/ })).toContainText('1 个已启用模型')
   await page.getByRole('button', { name: /Image API/ }).click()
-  await expect(page.getByLabel('图像 Provider 类型')).toBeDisabled()
+  await expect(page.getByLabel('图像服务商类型')).toBeDisabled()
   await expect(page.getByLabel('图像 Base URL')).toHaveValue(mockServer.baseUrl)
   const modelCheckbox = page.getByRole('checkbox', { name: 'mock-image' })
   const modelRow = modelCheckbox.locator('../..')
@@ -790,10 +790,10 @@ test('AR-16 saves and reloads an image provider with isolated config and secret 
 
 test('AR-17 discovers image models and previews an unsaved connection test', async () => {
   await openAirouter('图像生成')
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   await page.getByLabel('图像配置名称').fill('Image Draft')
   await page.getByLabel('图像 Base URL').fill(mockServer.baseUrl)
-  await page.getByRole('textbox', { name: '图像 API Key', exact: true }).fill('image-draft-secret')
+  await page.getByRole('textbox', { name: '图像 API 密钥', exact: true }).fill('image-draft-secret')
   await page.getByRole('button', { name: '获取模型列表' }).click()
   await expect(page.getByText('获取到 5 个模型')).toBeVisible()
   await page.getByRole('checkbox', { name: 'mock-image' }).check()
@@ -893,7 +893,7 @@ test('AR-20 deletes image providers and restores the manual fallback with secret
   ])
   await openAirouter('图像生成')
   await page.getByRole('button', { name: /only-api/ }).click()
-  await page.getByRole('button', { name: '删除 Provider' }).click()
+  await page.getByRole('button', { name: '删除服务商' }).click()
   await page.getByRole('button', { name: '删除配置' }).click()
   await expect(page.getByRole('button', { name: /手动生成/ })).toBeVisible()
   const state = await page.evaluate(async () => {
@@ -908,27 +908,27 @@ test('AR-20 deletes image providers and restores the manual fallback with secret
   expect(state.configs).toEqual([
     expect.objectContaining({ name: '手动生成', type: 'manual', hasApiKey: false })
   ])
-  expect(state.deletedKeyError).toContain('图像 Provider 配置不存在')
+  expect(state.deletedKeyError).toContain('图像服务商配置不存在')
 })
 
 test('AR-21 edits image models and completes the image API key lifecycle', async () => {
   await saveImageProvider(imageProvider('image-lifecycle', 'alpha'))
   await openAirouter('图像生成')
   await page.getByRole('button', { name: /image-lifecycle/ }).click()
-  const apiKey = page.getByRole('textbox', { name: '图像 API Key', exact: true })
+  const apiKey = page.getByRole('textbox', { name: '图像 API 密钥', exact: true })
   await expect(apiKey).toHaveAttribute('placeholder', '已安全保存')
-  await page.getByRole('button', { name: '显示图像 API Key' }).click()
+  await page.getByRole('button', { name: '显示图像 API 密钥' }).click()
   await expect(apiKey).toHaveValue('image-lifecycle-secret')
   await apiKey.fill('replacement-image-secret')
   await expect(apiKey).toHaveValue('replacement-image-secret')
-  await page.getByLabel('图像配置名称').fill('Edited Image Provider')
+  await page.getByLabel('图像配置名称').fill('Edited Image 服务商')
   await addModel('beta', true)
   await addModel('beta', true)
   await addModel('remove-me', true)
   await page.getByRole('checkbox', { name: 'alpha' }).uncheck()
   await page.getByRole('button', { name: '移除图像模型 remove-me' }).click()
-  await page.getByRole('button', { name: '保存 Provider' }).click()
-  await expect(page.getByText('已保存“Edited Image Provider”')).toBeVisible({ timeout: 10_000 })
+  await page.getByRole('button', { name: '保存服务商' }).click()
+  await expect(page.getByText('已保存“Edited Image 服务商”')).toBeVisible({ timeout: 10_000 })
   await expect
     .poll(() => page.evaluate(() => window.airouter.readImageProviderApiKey('image-lifecycle')), {
       timeout: 10_000
@@ -937,7 +937,7 @@ test('AR-21 edits image models and completes the image API key lifecycle', async
   expect(await page.evaluate(() => window.airouter.listImageProviderConfigs())).toContainEqual(
     expect.objectContaining({
       id: 'image-lifecycle',
-      name: 'Edited Image Provider',
+      name: 'Edited Image 服务商',
       models: [
         { id: 'alpha', enabled: false },
         { id: 'beta', enabled: true }
@@ -946,11 +946,11 @@ test('AR-21 edits image models and completes the image API key lifecycle', async
     })
   )
 
-  await page.getByRole('button', { name: '显示图像 API Key' }).click()
+  await page.getByRole('button', { name: '显示图像 API 密钥' }).click()
   await expect(apiKey).toHaveValue('replacement-image-secret')
   await apiKey.fill('')
-  await page.getByRole('button', { name: '保存 Provider' }).click()
-  await expect(page.getByText('已保存“Edited Image Provider”').last()).toBeVisible({
+  await page.getByRole('button', { name: '保存服务商' }).click()
+  await expect(page.getByText('已保存“Edited Image 服务商”').last()).toBeVisible({
     timeout: 10_000
   })
   await expect
@@ -960,7 +960,7 @@ test('AR-21 edits image models and completes the image API key lifecycle', async
     .toBeNull()
   await page.reload()
   await openAirouter('图像生成')
-  await expect(page.getByRole('button', { name: /Edited Image Provider/ })).toContainText(
+  await expect(page.getByRole('button', { name: /Edited Image 服务商/ })).toContainText(
     '1 个已启用模型'
   )
   expect(await page.evaluate(() => window.airouter.listImageProviderConfigs())).toContainEqual(
@@ -970,10 +970,10 @@ test('AR-21 edits image models and completes the image API key lifecycle', async
 
 test('AR-22 reports failed text and image draft connection tests without persisting them', async () => {
   await openAirouter()
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   await page.getByLabel('配置名称').fill('Failed Text Draft')
   await page.getByLabel('Base URL').fill(mockServer.baseUrl)
-  await page.getByRole('textbox', { name: 'API Key', exact: true }).fill('bad-text-key')
+  await page.getByRole('textbox', { name: 'API 密钥', exact: true }).fill('bad-text-key')
   await addModel('mock-http-error')
   await page.getByRole('button', { name: '测试连接' }).click()
   await expect(page.getByRole('alert')).toContainText('mock authentication failed')
@@ -981,10 +981,10 @@ test('AR-22 reports failed text and image draft connection tests without persist
 
   await page.reload()
   await openAirouter('图像生成')
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   await page.getByLabel('图像配置名称').fill('Failed Image Draft')
   await page.getByLabel('图像 Base URL').fill(mockServer.baseUrl)
-  await page.getByRole('textbox', { name: '图像 API Key', exact: true }).fill('bad-image-key')
+  await page.getByRole('textbox', { name: '图像 API 密钥', exact: true }).fill('bad-image-key')
   await addModel('mock-http-error', true)
   await page.getByRole('button', { name: '测试连接' }).click()
   await expect(page.getByRole('alert')).toContainText('mock image quota exceeded', {
@@ -1032,10 +1032,10 @@ test('AR-23 rejects invalid image prompts and dimensions before issuing HTTP req
 
 test('AR-24 reports model discovery failures without persisting drafts', async () => {
   await openAirouter()
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   await page.getByLabel('配置名称').fill('Failed Discovery')
   await page.getByLabel('Base URL').fill(mockServer.baseUrl)
-  await page.getByRole('textbox', { name: 'API Key', exact: true }).fill('discovery-bad-key')
+  await page.getByRole('textbox', { name: 'API 密钥', exact: true }).fill('discovery-bad-key')
   mockServer.failNextRequest('/v1/models', 500, {
     error: { message: 'mock model list failure' }
   })
@@ -1044,12 +1044,14 @@ test('AR-24 reports model discovery failures without persisting drafts', async (
   await expect(page.getByRole('dialog')).toBeVisible()
   expect(await page.evaluate(() => window.airouter.listProviderConfigs())).toEqual([])
 
-  await page.getByRole('button', { name: '关闭 Provider 编辑器' }).click()
+  await page.getByRole('button', { name: '关闭服务商编辑器' }).click()
   await page.getByRole('tab', { name: '图像生成' }).click()
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   await page.getByLabel('图像配置名称').fill('Image Failed Discovery')
   await page.getByLabel('图像 Base URL').fill(mockServer.baseUrl)
-  await page.getByRole('textbox', { name: '图像 API Key', exact: true }).fill('image-discovery-bad')
+  await page
+    .getByRole('textbox', { name: '图像 API 密钥', exact: true })
+    .fill('image-discovery-bad')
   mockServer.failNextRequest('/v1/models', 401, { error: { message: 'mock unauthorized' } })
   await page.getByRole('button', { name: '获取模型列表' }).click()
   await expect(page.getByText('获取模型列表失败（HTTP 401）')).toBeVisible()
@@ -1062,7 +1064,7 @@ test('AR-24 reports model discovery failures without persisting drafts', async (
 test('AR-25 closes an unsaved provider draft without persisting it', async () => {
   await openAirouter()
   const openDraft = async (): Promise<void> => {
-    await page.getByRole('button', { name: '添加 Provider' }).click()
+    await page.getByRole('button', { name: '添加服务商' }).click()
     await page.getByLabel('配置名称').fill('Unsaved Draft')
     await page.getByLabel('Base URL').fill(mockServer.baseUrl)
     await addModel('draft-model')
@@ -1096,17 +1098,17 @@ test('AR-26 constrains save and busy states in the provider editor', async () =>
   await saveTextProvider(textProvider('existing-state', 'mock-text'))
   await openAirouter()
   await page.getByRole('button', { name: /existing-state/ }).click()
-  const save = page.getByRole('button', { name: '保存 Provider' })
+  const save = page.getByRole('button', { name: '保存服务商' })
   await expect(save).toBeDisabled()
   await page.getByLabel('配置名称').fill('changed-state-name')
   await expect(save).toBeEnabled()
   await page.getByRole('button', { name: '取消' }).click()
 
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   await expect(save).toBeDisabled()
   await page.getByLabel('配置名称').fill('State Test')
   await page.getByLabel('Base URL').fill(mockServer.baseUrl)
-  await page.getByRole('textbox', { name: 'API Key', exact: true }).fill('state-secret')
+  await page.getByRole('textbox', { name: 'API 密钥', exact: true }).fill('state-secret')
   await addModel('mock-slow')
   await expect(save).toBeEnabled()
   await page.getByRole('button', { name: '测试连接' }).click()
@@ -1168,10 +1170,10 @@ test('AR-28 manages a local TTS model package and its Provider lifecycle', async
   const packagePath = path.join(userDataDir, 'integration-pocket.zip')
   await writeFile(packagePath, createTestSpeechPackage())
   await openAirouter('语音合成')
-  await expect(page.getByText('共 0 个 Provider')).toBeVisible()
+  await expect(page.getByText('共 0 个服务商')).toBeVisible()
   await expect(page.getByText('已安装 0 个模型包')).toBeVisible()
 
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   const editor = page.getByRole('dialog')
   await editor.getByLabel('语音配置名称').fill('Local Pocket')
   await editor.getByLabel('语音运行方式').selectOption('local')
@@ -1193,7 +1195,7 @@ test('AR-28 manages a local TTS model package and its Provider lifecycle', async
   await expect(editor.getByRole('checkbox', { name: 'Marius (marius)' })).toBeChecked()
   await expect(page.getByText('新增 1 个资源，复用 2 个资源')).toBeVisible()
 
-  await editor.getByRole('button', { name: '保存 Provider' }).click()
+  await editor.getByRole('button', { name: '保存服务商' }).click()
   await expect(page.getByText('已保存“Local Pocket”')).toBeVisible({ timeout: 10_000 })
   const savedState = await page.evaluate(async () => {
     const configs = await window.airouter.listSpeechProviderConfigs()
@@ -1242,9 +1244,9 @@ test('AR-28 manages a local TTS model package and its Provider lifecycle', async
   await page.getByRole('button', { name: /Local Pocket/ }).click()
   await expect(page.getByLabel('语音运行方式')).toBeDisabled()
   await expect(page.getByRole('checkbox', { name: 'Pocket A (pocket-a)' })).toBeChecked()
-  await page.getByRole('button', { name: '删除 Provider' }).click()
-  const providerConfirm = page.getByRole('alertdialog', { name: '删除语音 Provider？' })
-  await providerConfirm.getByRole('button', { name: '删除 Provider' }).click()
+  await page.getByRole('button', { name: '删除服务商' }).click()
+  const providerConfirm = page.getByRole('alertdialog', { name: '删除语音服务商？' })
+  await providerConfirm.getByRole('button', { name: '删除服务商' }).click()
   await expect(page.getByRole('button', { name: /Local Pocket/ })).toBeHidden()
 
   await page.getByRole('button', { name: '删除模型包 Integration Pocket Package' }).click()
@@ -1256,15 +1258,15 @@ test('AR-28 manages a local TTS model package and its Provider lifecycle', async
 
 test('AR-29 configures and tests an online TTS Provider through the UI', async () => {
   await openAirouter('语音合成')
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   const editor = page.getByRole('dialog')
   await editor.getByLabel('语音配置名称').fill('Online Speech')
   await editor.getByLabel('语音 Base URL').fill(mockServer.baseUrl)
-  await editor.getByRole('textbox', { name: '语音 API Key', exact: true }).fill('speech-ui-secret')
+  await editor.getByRole('textbox', { name: '语音 API 密钥', exact: true }).fill('speech-ui-secret')
   await editor.getByRole('button', { name: '获取模型列表' }).click()
   await expect(editor.getByText('获取到 5 个模型')).toBeVisible()
   await editor.getByRole('checkbox', { name: 'mock-text' }).check()
-  await editor.getByLabel('手动语音音色 ID').fill('alloy')
+  await editor.getByLabel('手动语音音色编号').fill('alloy')
   await editor.getByRole('button', { name: '添加', exact: true }).last().click()
 
   await editor.getByRole('button', { name: '测试合成' }).click()
@@ -1280,14 +1282,14 @@ test('AR-29 configures and tests an online TTS Provider through the UI', async (
     response_format: 'wav'
   })
 
-  await editor.getByRole('button', { name: '保存 Provider' }).click()
+  await editor.getByRole('button', { name: '保存服务商' }).click()
   await expect(page.getByText('已保存“Online Speech”')).toBeVisible({ timeout: 10_000 })
   await page.reload()
   await openAirouter('语音合成')
   await page.getByRole('button', { name: /Online Speech/ }).click()
-  const apiKey = page.getByRole('textbox', { name: '语音 API Key', exact: true })
+  const apiKey = page.getByRole('textbox', { name: '语音 API 密钥', exact: true })
   await expect(apiKey).toHaveAttribute('placeholder', '已安全保存')
-  await page.getByRole('button', { name: '显示语音 API Key' }).click()
+  await page.getByRole('button', { name: '显示语音 API 密钥' }).click()
   await expect(apiKey).toHaveValue('speech-ui-secret')
   const state = await page.evaluate(async () => {
     const configs = await window.airouter.listSpeechProviderConfigs()
@@ -1468,7 +1470,7 @@ test('AR-32 executes the real Pocket TTS model package through the Electron stac
   await writeFile(packagePath, await createRealPocketTtsPackage())
   await selectFileInElectronDialog(packagePath)
   await openAirouter('语音合成')
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   const editor = page.getByRole('dialog')
   await editor.getByLabel('语音配置名称').fill('Pocket TTS Integration')
   await editor.getByLabel('语音运行方式').selectOption('local')
@@ -1489,7 +1491,7 @@ test('AR-32 executes the real Pocket TTS model package through the Electron stac
   await expect(editor.locator('audio')).toBeVisible()
   await expect(editor.locator('audio')).toHaveAttribute('src', /^blob:/)
 
-  await editor.getByRole('button', { name: '保存 Provider' }).click()
+  await editor.getByRole('button', { name: '保存服务商' }).click()
   await expect(page.getByText('已保存“Pocket TTS Integration”')).toBeVisible({ timeout: 10_000 })
   const config = await page.evaluate(
     async () => (await window.airouter.listSpeechProviderConfigs())[0]
@@ -1585,11 +1587,11 @@ test.describe('Qwen3 TTS runtime', () => {
     )
     await selectFileInElectronDialog(qwenTtsPackagePath)
     await openAirouter('语音合成')
-    await page.getByRole('button', { name: '添加 Provider' }).click()
+    await page.getByRole('button', { name: '添加服务商' }).click()
     const editor = page.getByRole('dialog')
     await editor.getByLabel('语音配置名称').fill('Qwen3 TTS Integration')
     await editor.getByLabel('语音运行方式').selectOption('local')
-    await editor.getByLabel('语音 Provider 类型').selectOption('qwen-tts')
+    await editor.getByLabel('语音服务商类型').selectOption('qwen-tts')
     await editor.getByRole('button', { name: '导入模型包' }).click()
     await expect(
       page.getByRole('button', {
@@ -1612,7 +1614,7 @@ test.describe('Qwen3 TTS runtime', () => {
     await expect(editor.locator('audio')).toBeVisible()
     await expect(editor.locator('audio')).toHaveAttribute('src', /^blob:/)
 
-    await editor.getByRole('button', { name: '保存 Provider' }).click()
+    await editor.getByRole('button', { name: '保存服务商' }).click()
     await expect(page.getByText('已保存“Qwen3 TTS Integration”')).toBeVisible({ timeout: 10_000 })
     const config = await page.evaluate(
       async () => (await window.airouter.listSpeechProviderConfigs())[0]
@@ -1664,7 +1666,7 @@ test('AR-32c executes Qwen3 ASR without external buffers in Electron', async () 
   })
   await selectFileInElectronDialog(packagePath)
   await openAirouter('语音识别')
-  await page.getByRole('button', { name: '添加 Provider' }).click()
+  await page.getByRole('button', { name: '添加服务商' }).click()
   const editor = page.getByRole('dialog')
   await editor.getByLabel('语音识别配置名称').fill('Qwen3 ASR Integration')
   await editor.getByLabel('语音识别运行方式').selectOption('local')
@@ -1680,7 +1682,7 @@ test('AR-32c executes Qwen3 ASR without external buffers in Electron', async () 
       name: 'Qwen3 ASR 0.6B Int8 (qwen3-asr-0.6b-int8)'
     })
   ).toBeChecked()
-  await editor.getByRole('button', { name: '保存 Provider' }).click()
+  await editor.getByRole('button', { name: '保存服务商' }).click()
   await expect(page.getByText('已保存“Qwen3 ASR Integration”')).toBeVisible({ timeout: 10_000 })
 
   const config = await page.evaluate(
@@ -1800,7 +1802,7 @@ test('AR-33 rejects invalid text and speech selections before making HTTP reques
     modelId: 'missing-text',
     prompt: 'Should fail validation'
   })
-  expect(invalidTextProvider.at(-1)).toEqual({ type: 'error', message: 'Provider 配置 ID 无效' })
+  expect(invalidTextProvider.at(-1)).toEqual({ type: 'error', message: '服务商配置编号无效' })
   expect(disabledTextModel.at(-1)).toEqual({ type: 'error', message: '模型未配置或未启用' })
   expect(missingTextModel.at(-1)).toEqual({ type: 'error', message: '模型未配置或未启用' })
 

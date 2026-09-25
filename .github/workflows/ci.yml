@@ -56,6 +56,18 @@ jobs:
         env:
           COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
 
+      - name: Check documentation metadata and links
+        if: matrix.suite == 'other-checks'
+        run: node scripts/docs/check-docs.mjs
+
+      - name: Check visual specification, test and baseline states
+        if: matrix.suite == 'other-checks'
+        run: node scripts/docs/check-visual.mjs
+
+      - name: Check user-facing error copy
+        if: matrix.suite == 'other-checks'
+        run: node scripts/docs/check-user-facing-copy.mjs
+
       - name: Get Yarn cache directory
         id: yarn-cache-dir
         shell: bash
@@ -203,14 +215,79 @@ jobs:
           LS101_PRODUCT_DOCS_PREBUILT_IMAGE: '1'
         run: node scripts/product-docs/docker.mjs check
 
-      - name: Upload generated documentation on failure
+      - name: Upload generated manual on failure
         if: failure()
         uses: actions/upload-artifact@v6
         with:
-          name: canonical-product-docs-${{ github.run_attempt }}
+          name: canonical-manual-${{ github.run_attempt }}
           if-no-files-found: ignore
           retention-days: 14
-          path: docs/product/
+          path: docs/manual/
+
+  canonical_visual:
+    name: Canonical visual regression baselines
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Read renderer version
+        id: renderer
+        shell: bash
+        run: |
+          version="$(tr -d '\r\n' < docker/product-docs/renderer-version)"
+          if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+            echo "::error::Invalid visual regression renderer version: $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "image=ls101-product-docs-renderer:$version" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build canonical renderer image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/product-docs/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: ${{ steps.renderer.outputs.image }}
+          cache-from: type=gha,scope=product-docs-renderer
+          cache-to: type=gha,mode=max,scope=product-docs-renderer
+
+      - name: Check canonical visual baselines
+        env:
+          LS101_VISUAL_PREBUILT_IMAGE: '1'
+        shell: bash
+        run: |
+          if [[ ! -d tests/visual/baselines ]]; then
+            echo "::warning::No committed visual baselines yet; skipping canonical visual check."
+            exit 0
+          fi
+          node scripts/visual/docker.mjs check
+
+      - name: Upload visual regression diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: canonical-visual-baselines-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            tests/visual/baselines/
+            test-results/visual/
+            playwright-report/
 
   linux_electron_smoke:
     name: Linux packaged Electron startup tests
@@ -314,7 +391,7 @@ jobs:
   quality-gate:
     name: Required quality gate
     if: always()
-    needs: [test_suites, canonical_docs, linux_electron_smoke]
+    needs: [test_suites, canonical_docs, canonical_visual, linux_electron_smoke]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -323,9 +400,10 @@ jobs:
         env:
           TEST_SUITES_RESULT: ${{ needs.test_suites.result }}
           CANONICAL_DOCS_RESULT: ${{ needs.canonical_docs.result }}
+          CANONICAL_VISUAL_RESULT: ${{ needs.canonical_visual.result }}
           LINUX_ELECTRON_SMOKE_RESULT: ${{ needs.linux_electron_smoke.result }}
         run: |
-          if [ "$TEST_SUITES_RESULT" != "success" ] || [ "$CANONICAL_DOCS_RESULT" != "success" ] || [ "$LINUX_ELECTRON_SMOKE_RESULT" != "success" ]; then
+          if [ "$TEST_SUITES_RESULT" != "success" ] || [ "$CANONICAL_DOCS_RESULT" != "success" ] || [ "$CANONICAL_VISUAL_RESULT" != "success" ] || [ "$LINUX_ELECTRON_SMOKE_RESULT" != "success" ]; then
             echo "::error::One or more required CI suites did not complete successfully."
             exit 1
           fi

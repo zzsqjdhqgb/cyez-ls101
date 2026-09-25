@@ -76,10 +76,10 @@ describe('renderer scoped store', () => {
     const { fileStore } = await import('../renderer')
 
     await expect(fileStore.readAsset('asset-key://v1/interfaces/../secret.png')).rejects.toThrow(
-      'Invalid asset key'
+      '资源标识无效'
     )
     expect(() => fileStore.getAssetUrl('asset://local/interfaces/cover.png')).toThrow(
-      'Invalid asset key'
+      '资源标识无效'
     )
     expect(invoke).not.toHaveBeenCalled()
   })
@@ -92,7 +92,7 @@ describe('renderer scoped store', () => {
     })
     const { fileStore } = await import('../renderer')
 
-    expect(() => fileStore.scope('interfaces/drafts')).toThrow('Invalid file-store scope segment')
+    expect(() => fileStore.scope('interfaces/drafts')).toThrow('文件存储作用域片段无效')
     expect(invoke).not.toHaveBeenCalled()
   })
 
@@ -136,6 +136,6 @@ describe('renderer scoped store', () => {
     })
     await expect(
       builtinFileStore.readAsset('asset-key://v1/template-editor/cover.png')
-    ).rejects.toThrow('Invalid builtin asset key')
+    ).rejects.toThrow('内置资源标识无效')
   })
 })

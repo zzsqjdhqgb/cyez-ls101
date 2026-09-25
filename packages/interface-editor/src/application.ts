@@ -321,7 +321,7 @@ export function createInterfaceApplication(
 
   const acquireInstance = (interfaceId: string, instanceId: string): (() => void) => {
     const key = `${interfaceId}/${instanceId}`
-    if (busyInstances.has(key)) throw new Error('Instance is busy')
+    if (busyInstances.has(key)) throw new Error('该题组正在处理中，请稍后重试')
     busyInstances.add(key)
     return () => busyInstances.delete(key)
   }
@@ -335,7 +335,7 @@ export function createInterfaceApplication(
         return { type: 'builtin', builtinKey }
       }
     }
-    throw new Error(`Interface not found: ${interfaceId}`)
+    throw new Error(`未找到题型：${interfaceId}`)
   }
 
   const summaryOf = async (def: InterfaceDef): Promise<PublishedInterfaceSummary> => ({
@@ -379,7 +379,7 @@ export function createInterfaceApplication(
       assertCompleteTextAndImagePrompts(def.fields, mapped.values, mapped.imagePrompts ?? {})
       const prompts = Object.entries(mapped.imagePrompts ?? {})
       if (prompts.length && !imageGenerator) {
-        throw new Error('Interface image generator is not configured')
+        throw new Error('尚未配置题型图片生成服务')
       }
 
       const controller = new AbortController()
@@ -389,7 +389,7 @@ export function createInterfaceApplication(
           signal: controller.signal,
           ...(options.imageProvider ? { provider: options.imageProvider } : {})
         })
-        if (!generated) throw new Error('Interface image generator is not configured')
+        if (!generated) throw new Error('尚未配置题型图片生成服务')
         assertSupportedImage(generated.data)
         generatedImages[varName] = new Uint8Array(generated.data)
       }
@@ -465,7 +465,7 @@ export function createInterfaceApplication(
       delete: (draftId) => repository.deleteDraft(draftId),
       async publish(draftId) {
         const draft = await repository.getDraft(draftId)
-        if (!draft) throw new Error(`Draft not found: ${draftId}`)
+        if (!draft) throw new Error(`未找到草稿：${draftId}`)
         const candidate = { ...draft, id: 'sha256:' + '0'.repeat(64) }
         const validation = validateInterfaceDef(candidate)
         const contentErrors = validation.errors.filter(({ code }) => code !== 'INVALID_ID')
@@ -583,7 +583,7 @@ export function createInterfaceApplication(
           const selectedImageExtensions = new Map<string, string>()
           for (const [varName, data] of Object.entries(selectedImages)) {
             if (!imageVarNames.has(varName)) {
-              throw new Error(`Not an image variable: ${varName}`)
+              throw new Error(`变量「${varName}」不是图片变量`)
             }
             if (data === null) continue
             assertSupportedImage(data)
@@ -591,9 +591,9 @@ export function createInterfaceApplication(
           }
           for (const [varName, prompt] of Object.entries(nextImagePrompts)) {
             if (!imageVarNames.has(varName)) {
-              throw new Error(`Not an image variable: ${varName}`)
+              throw new Error(`变量「${varName}」不是图片变量`)
             }
-            if (typeof prompt !== 'string') throw new TypeError('Image prompt must be a string')
+            if (typeof prompt !== 'string') throw new TypeError('图片提示词必须是字符串')
           }
 
           const nextValues = { ...edit.values }
@@ -660,7 +660,7 @@ export function createInterfaceApplication(
       },
       replaceFromJson,
       async startAIGeneration(interfaceId, instanceId, options = {}) {
-        if (!textGenerator) throw new Error('Interface text generator is not configured')
+        if (!textGenerator) throw new Error('尚未配置题型文本生成服务')
         const state: InterfaceGenerationState = {
           phase: 'ai',
           reasoning: '',
@@ -739,7 +739,7 @@ export function createInterfaceApplication(
                   )
                   state.prompts = Object.entries(state.mapped.imagePrompts ?? {})
                   if (state.prompts.length && !imageGenerator) {
-                    throw new Error('Interface image generator is not configured')
+                    throw new Error('尚未配置题型图片生成服务')
                   }
                   state.phase = state.prompts.length ? 'images' : 'save'
                   publish(generationProgressItems(state))
@@ -755,7 +755,7 @@ export function createInterfaceApplication(
                       ...(options.imageProvider ? { provider: options.imageProvider } : {})
                     })
                     if (controller.signal.aborted) throw new GenerationCancelledError()
-                    if (!generated) throw new Error('Interface image generator is not configured')
+                    if (!generated) throw new Error('尚未配置题型图片生成服务')
                     assertSupportedImage(generated.data)
                     state.generatedImages[varName] = new Uint8Array(generated.data)
                     state.nextImageIndex += 1
@@ -766,7 +766,7 @@ export function createInterfaceApplication(
                 }
 
                 if (controller.signal.aborted) throw new GenerationCancelledError()
-                if (!state.mapped) throw new Error('Validated Interface output is unavailable')
+                if (!state.mapped) throw new Error('已校验的题型生成结果不可用')
                 const current = await requireInstance(repository, interfaceId, instanceId)
                 const values = { ...state.mapped.values }
                 const assets = await loadInstanceAssets(
@@ -831,7 +831,7 @@ export function createInterfaceApplication(
         return startAttempt()
       },
       async generateImage(prompt, options = {}) {
-        if (!imageGenerator) throw new Error('Interface image generator is not configured')
+        if (!imageGenerator) throw new Error('尚未配置题型图片生成服务')
         const controller = new AbortController()
         const abort = (): void => controller.abort()
         if (options.signal?.aborted) abort()
@@ -868,7 +868,7 @@ export function createInterfaceApplication(
         const value = selected.package
         const inspection = await inspectInterfacePackage(value)
         let active = true
-        const previewInstances = await Promise.all(
+        const previewInstances: InterfaceImportPreview['instances'] = await Promise.all(
           inspection.instances.map(async (item) => {
             const incoming = value.instances.find(
               ({ instance }) => instance.instanceId === item.instanceId
@@ -912,7 +912,7 @@ export function createInterfaceApplication(
             instances: previewInstances
           },
           async commit(instances) {
-            if (!active) throw new Error('Import session is no longer active')
+            if (!active) throw new Error('导入会话已失效，请重新选择文件')
             active = false
             if (
               inspection.builtin &&
@@ -1050,15 +1050,15 @@ async function loadInstanceAssets(
   const assets: Record<string, Uint8Array> = {}
   for (const filename of current.assetFilenames) {
     const data = await repository.readInstanceAsset(interfaceId, instanceId, filename)
-    if (!data) throw new Error(`Instance asset is missing: ${filename}`)
+    if (!data) throw new Error(`缺少题组资源文件：${filename}`)
     assets[filename] = data
   }
   return assets
 }
 
 function assertSupportedImage(data: Uint8Array): void {
-  if (!(data instanceof Uint8Array)) throw new TypeError('Image data must be a Uint8Array')
-  if (data.byteLength > MAX_IMAGE_BYTES) throw new Error('Image must not exceed 20 MB')
+  if (!(data instanceof Uint8Array)) throw new TypeError('图片数据必须是二进制数据')
+  if (data.byteLength > MAX_IMAGE_BYTES) throw new Error('图片不能超过 20 MB')
   supportedImageExtension(data)
 }
 
@@ -1081,7 +1081,7 @@ function supportedImageExtension(data: Uint8Array): 'png' | 'jpg' | 'gif' | 'web
   ) {
     return 'webp'
   }
-  throw new Error('Only PNG, JPEG, GIF, and WebP images are supported')
+  throw new Error('仅支持 PNG、JPEG、GIF 和 WebP 格式的图片')
 }
 
 function createImageFilename(
@@ -1108,7 +1108,7 @@ async function requireInterface(
   interfaceId: string
 ): Promise<InterfaceDef> {
   const def = await repository.getInterface(interfaceId)
-  if (!def) throw new Error(`Interface not found: ${interfaceId}`)
+  if (!def) throw new Error(`未找到题型：${interfaceId}`)
   return def
 }
 
@@ -1118,7 +1118,7 @@ async function requireInstance(
   instanceId: string
 ): Promise<NonNullable<Awaited<ReturnType<InterfaceRepository['getInstance']>>>> {
   const stored = await repository.getInstance(interfaceId, instanceId)
-  if (!stored) throw new Error(`Instance not found: ${instanceId}`)
+  if (!stored) throw new Error(`未找到题组：${instanceId}`)
   return stored
 }
 
@@ -1127,7 +1127,7 @@ function jsonErrors(
 ): InstanceDataError[] {
   return (errors ?? []).map((error) => ({
     path: error.instancePath ?? '',
-    message: error.message ?? 'Invalid value'
+    message: error.message ?? '值无效'
   }))
 }
 
@@ -1254,9 +1254,9 @@ function createGenerationHandle(
     completion,
     async retry() {
       const result = await completion
-      if (result.status !== 'failed') throw new Error('Only a failed generation can be retried')
-      if (retryStarted) throw new Error('This failed generation is already being retried')
-      if (retryStarting) throw new Error('This failed generation retry is already starting')
+      if (result.status !== 'failed') throw new Error('只有失败的生成任务才能重试')
+      if (retryStarted) throw new Error('该失败任务正在重试中')
+      if (retryStarting) throw new Error('该失败任务的重试正在启动')
       retryStarting = true
       try {
         const handle = await retryAttempt()

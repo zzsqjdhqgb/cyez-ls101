@@ -87,7 +87,7 @@ function editTemplateMetadata(
         document,
         operation,
         error('INVALID_VALUE', 'content.tags', {
-          message: cause instanceof Error ? cause.message : 'Invalid template tags'
+          message: cause instanceof Error ? cause.message : '试卷模板标签无效'
         })
       )
     }

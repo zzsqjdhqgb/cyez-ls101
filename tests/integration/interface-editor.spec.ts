@@ -629,7 +629,7 @@ test('IE-02 generates text and images atomically through the real pipelines', as
 
   await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-image' })
-  await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await page.getByLabel('图像服务商', { exact: true }).selectOption({ label: 'mock-image' })
   await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
 
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 20_000 })
@@ -669,7 +669,7 @@ test('IE-02b retries a failed image step without regenerating completed text', a
 
   await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-image' })
-  await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await page.getByLabel('图像服务商', { exact: true }).selectOption({ label: 'mock-image' })
   await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
 
   await expect(page.getByText('生成失败', { exact: true })).toBeVisible({ timeout: 20_000 })
@@ -880,9 +880,7 @@ test('IE-08b generates image fields from JSON without selecting a text model', a
   await page.getByRole('menuitem', { name: '从 JSON 覆盖' }).click()
   const jsonDialog = page.getByRole('dialog', { name: '从 JSON 覆盖题组' })
   await expect(jsonDialog.getByLabel('生成模型')).toHaveCount(0)
-  await jsonDialog
-    .getByLabel('图像 Provider', { exact: true })
-    .selectOption({ label: 'mock-image' })
+  await jsonDialog.getByLabel('图像服务商', { exact: true }).selectOption({ label: 'mock-image' })
   await jsonDialog
     .getByLabel('JSON 内容')
     .fill('{"title":"JSON 图片题","picture":"A JSON green circle icon"}')
@@ -1025,7 +1023,7 @@ test('IE-13 drives the instance image field buttons end to end', async () => {
   await openInstanceEditor(interfaceId, imageInterface.name)
 
   await page.getByLabel('picture图片提示词').fill('A green circle icon')
-  await page.getByLabel('picture图像 Provider').selectOption({ label: 'mock-image' })
+  await page.getByLabel('picture图像服务商').selectOption({ label: 'mock-image' })
   await page.getByRole('button', { name: '生成图片' }).click()
   await expect(page.getByText('图片已生成，请保存题组')).toBeVisible()
   const preview = page.getByAltText('picture预览')
@@ -1101,8 +1099,8 @@ test('IE-14 covers list and details page action buttons', async () => {
     await expect
       .poll(() => electronApp.evaluate(({ clipboard }) => clipboard.readText()))
       .toContain(textInterface.promptTemplate)
-    await page.getByRole('button', { name: '复制 JSON Schema' }).click()
-    await expect(page.getByText('已复制JSON Schema')).toBeVisible()
+    await page.getByRole('button', { name: '复制题型结构' }).click()
+    await expect(page.getByText('已复制题型结构')).toBeVisible()
   } finally {
     await electronApp.evaluate(({ clipboard }, value) => clipboard.writeText(value), originalText)
     expect(await electronApp.evaluate(({ clipboard }) => clipboard.readText())).toBe(originalText)
@@ -1120,7 +1118,7 @@ test('IE-15 drives the standalone AI image task dialog end to end', async () => 
   const dialog = page.getByRole('dialog', { name: 'AI 生图' })
   await expect(dialog).toBeVisible()
   await expect(dialog).toContainText('将为 1 个已填写提示词的字段生成图片，成功后立即保存')
-  await dialog.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await dialog.getByLabel('图像服务商', { exact: true }).selectOption({ label: 'mock-image' })
   await dialog.getByRole('button', { name: '开始生图' }).click()
   await expect(dialog.getByText('生图完成')).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText('AI 生图结果已保存')).toBeVisible()
@@ -1130,7 +1128,7 @@ test('IE-15 drives the standalone AI image task dialog end to end', async () => 
 
   await page.getByRole('button', { name: '批量生图' }).click()
   const slowPanel = page.getByLabel('AI 生图', { exact: true })
-  await slowPanel.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-slow' })
+  await slowPanel.getByLabel('图像服务商', { exact: true }).selectOption({ label: 'mock-slow' })
   await slowPanel.getByRole('button', { name: '开始生图' }).click()
   await slowPanel.getByRole('button', { name: '取消生图' }).click()
   await expect(page.getByText('生图已取消')).toBeVisible({ timeout: 15_000 })
@@ -1161,7 +1159,7 @@ test('IE-17 manages a bundled instance and copies the builtin to a draft', async
   await createInstanceFromDetails('上海内置回归题组')
   await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-shanghai' })
-  await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await page.getByLabel('图像服务商', { exact: true }).selectOption({ label: 'mock-image' })
   await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 30_000 })
   await page.getByRole('button', { name: '返回题组' }).click()
@@ -1212,7 +1210,7 @@ test('IE-18 generates and persists an image in a bundled picture field', async (
   await createInstanceFromDetails('内置图片题组')
   await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-shanghai' })
-  await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await page.getByLabel('图像服务商', { exact: true }).selectOption({ label: 'mock-image' })
   await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 30_000 })
   await page.getByRole('button', { name: '返回题组' }).click()
@@ -1225,7 +1223,7 @@ test('IE-18 generates and persists an image in a bundled picture field', async (
   await pictureField
     .getByLabel('picture1图片提示词')
     .fill('A clean educational illustration of a park.')
-  await pictureField.getByLabel('picture1图像 Provider').selectOption({ label: 'mock-image' })
+  await pictureField.getByLabel('picture1图像服务商').selectOption({ label: 'mock-image' })
   await pictureField.getByRole('button', { name: '生成图片' }).click()
   await expect(page.getByText('图片已生成，请保存题组')).toBeVisible({ timeout: 15_000 })
   await expect(page.getByAltText('picture1预览')).toBeVisible()
@@ -1300,7 +1298,7 @@ test('IE-23 generates all four bundled story pictures through the AI pipeline', 
 
   await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
   await page.getByLabel('生成模型', { exact: true }).selectOption({ label: 'mock-json-shanghai' })
-  await page.getByLabel('图像 Provider', { exact: true }).selectOption({ label: 'mock-image' })
+  await page.getByLabel('图像服务商', { exact: true }).selectOption({ label: 'mock-image' })
   await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
 
   await expect(page.getByText('生成完成', { exact: true })).toBeVisible({ timeout: 30_000 })

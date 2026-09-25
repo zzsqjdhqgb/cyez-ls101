@@ -59,7 +59,7 @@ export function createBuiltinInterfaceApplication(dependencies: {
     async apply(plan, choice) {
       const current = await planBuiltinUpdate(dependencies.repository, plan.builtinKey, plan.next)
       if (current.previous?.id !== plan.previous?.id || current.kind !== plan.kind) {
-        throw new Error(`Builtin update plan is stale: ${plan.builtinKey}`)
+        throw new Error(`内置题型「${plan.builtinKey}」的更新计划已过期，请重新检查`)
       }
       return applyBuiltinUpdate(dependencies.repository, dependencies.references, plan, choice)
     },
@@ -77,7 +77,7 @@ export function createBuiltinInterfaceApplication(dependencies: {
         current.referenceCount !== plan.referenceCount ||
         !sameStrings(current.instanceIds, plan.instanceIds)
       ) {
-        throw new Error(`Builtin removal plan is stale: ${plan.builtinKey}`)
+        throw new Error(`内置题型「${plan.builtinKey}」的移除计划已过期，请重新检查`)
       }
       return applyBuiltinRemoval(dependencies.repository, plan, choice)
     },

@@ -286,7 +286,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
       return
     }
     if (!selectedImageProvider) {
-      toast.info('请先选择图像 Provider')
+      toast.info('请先选择图像服务商')
       return
     }
     setGeneratingImage(varName)
@@ -383,7 +383,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
   const startGeneration = async (): Promise<void> => {
     if (!selectedModel) return
     if (hasImageFields && !selectedImageProvider) {
-      setError('请先选择图像 Provider')
+      setError('请先选择图像服务商')
       return
     }
     setGeneration({ handle: null, result: null, startError: null })
@@ -834,7 +834,7 @@ export function InterfaceInstanceEditorPage(): JSX.Element {
               <AIImageProviderSelect
                 disabled={busy}
                 error={imageProvidersError}
-                label="图像 Provider"
+                label="图像服务商"
                 loading={imageProvidersLoading}
                 options={imageProviderOptions}
                 value={selectedImageProvider}
@@ -1035,7 +1035,7 @@ function ImageValueInput({
             <AIImageProviderSelect
               disabled={disabled || generating}
               error={imageProvidersError}
-              label={`${fieldName}图像 Provider`}
+              label={`${fieldName}图像服务商`}
               loading={imageProvidersLoading}
               options={imageProviderOptions}
               showLabel={false}
@@ -1175,7 +1175,7 @@ function AIGenerationDialog({
           <AIImageProviderSelect
             disabled={(session !== null && !finished) || resumable}
             error={imageProvidersError}
-            label="图像 Provider"
+            label="图像服务商"
             loading={imageProvidersLoading}
             options={imageProviderOptions}
             value={selectedImageProvider}
@@ -1308,7 +1308,7 @@ function ImageGenerationDialog({
         <AIImageProviderSelect
           disabled={running}
           error={imageProvidersError}
-          label="图像 Provider"
+          label="图像服务商"
           loading={imageProvidersLoading}
           options={imageProviderOptions}
           value={selectedImageProvider}

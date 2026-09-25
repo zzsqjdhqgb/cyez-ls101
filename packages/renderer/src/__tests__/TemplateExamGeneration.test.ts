@@ -32,7 +32,7 @@ describe('TemplateExamGeneration', () => {
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array([4, 5, 6]))
   })
 
-  it('只列出同时启用的提供商、模型和音色组合', async () => {
+  it('只列出同时启用的服务商、模型和音色组合', async () => {
     const client = {
       listSpeechProviderConfigs: vi.fn().mockResolvedValue([
         {
@@ -191,7 +191,7 @@ describe('TemplateExamGeneration', () => {
     )
   })
 
-  it('内置模板生成使用只读 builtin API，不按同名本地 ID 编译', async () => {
+  it('内置模板生成使用只读 builtin API，不按同名本地编号编译', async () => {
     const application = generationApplication([])
     const session = createExamGenerationSession(
       {

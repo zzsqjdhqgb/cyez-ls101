@@ -1,3 +1,10 @@
+<!--
+status: implemented
+product-version: 0.4.1
+audience: engineer
+owner: setup
+-->
+
 # Setup asset integrity
 
 `yarn setup` manages downloaded AI assets under `externals/ai/` and generated file icons under

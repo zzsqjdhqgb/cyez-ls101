@@ -153,7 +153,7 @@ export function installDeterministicRandomUuid(
 
 function validateManualDefinition(definition: ProductManualDefinition): void {
   if (!/^[A-Z]{2}-\d{2}$/.test(definition.id)) {
-    throw new Error(`产品说明 ID 必须使用 XX-00 格式：${definition.id}`)
+    throw new Error(`产品说明编号必须使用 XX-00 格式：${definition.id}`)
   }
   validateKey(definition.owner.slug, '产品文档归属')
   if (!Number.isFinite(definition.owner.order)) {

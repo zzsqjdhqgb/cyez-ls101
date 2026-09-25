@@ -60,6 +60,7 @@ function parseArguments(args) {
   let platform = null
   let dir = false
   let skipModelPackage = false
+  let versionSuffix = null
   let help = false
 
   const selectMode = (value) => {
@@ -78,7 +79,14 @@ function parseArguments(args) {
     const argument = args[index]
     if (argument === '--dir') dir = true
     else if (argument === '--skip-model-package') skipModelPackage = true
-    else if (argument === '--help' || argument === '-h') help = true
+    else if (argument.startsWith('--version-suffix=')) {
+      versionSuffix = argument.slice('--version-suffix='.length)
+      if (!versionSuffix) throw new Error('--version-suffix 不能为空')
+    } else if (argument === '--version-suffix') {
+      const value = args[++index]
+      if (!value) throw new Error('--version-suffix 需要参数')
+      versionSuffix = value
+    } else if (argument === '--help' || argument === '-h') help = true
     else if (argument === '--win') selectPlatform('win')
     else if (argument === '--linux') selectPlatform('linux')
     else if (argument === '--current-platform') selectPlatform(currentBuildPlatform())
@@ -100,6 +108,7 @@ function parseArguments(args) {
     platform: platform ?? 'win',
     dir,
     skipModelPackage,
+    versionSuffix,
     help
   }
 }
@@ -148,6 +157,10 @@ Platform (default: --win):
 Output:
   --dir                 Build an unpacked application directory
   --skip-model-package  Do not build the separately distributed TTS model ZIP
+  --version-suffix <s>  Use a fixed version suffix instead of the generated one
+                        (visual regression uses 'local.visual': the '-local.' marker
+                        is required by the packaged test mode, and the suffix is
+                        frozen so the version does not change per commit)
   --help                Show this help`)
 }
 
@@ -163,7 +176,9 @@ async function main() {
   if (!fs.existsSync(packagePath)) throw new Error(`找不到 package.json，路径：${packagePath}`)
 
   const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf-8'))
-  const version = generateVersion(options.mode, packageJson.version)
+  const version = options.versionSuffix
+    ? `${packageJson.version}-${options.versionSuffix}`
+    : generateVersion(options.mode, packageJson.version)
   const targetName = options.dir ? 'dir' : 'configured targets'
 
   console.log(

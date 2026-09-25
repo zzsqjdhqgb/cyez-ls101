@@ -133,22 +133,22 @@ export class FileInterfaceRepository implements InterfaceRepository {
   }
 
   async getDraft(draftId: string): Promise<InterfaceDraft | null> {
-    assertUuid(draftId, 'draftId')
+    assertUuid(draftId, '草稿编号')
     const value = await this.drafts.scope(draftId).readText<unknown>(DRAFT_FILE)
     if (value === null) return null
     if (!isInterfaceDraft(value) || value.draftId !== draftId) {
-      throw invalidData(`Draft ${draftId} is invalid`)
+      throw invalidData(`草稿「${draftId}」无效`)
     }
     return value
   }
 
   async saveDraft(draft: InterfaceDraft): Promise<void> {
-    if (!isInterfaceDraft(draft)) throw invalidData('Draft is invalid')
+    if (!isInterfaceDraft(draft)) throw invalidData('草稿内容无效')
     await this.drafts.scope(draft.draftId).writeText(DRAFT_FILE, draft)
   }
 
   async deleteDraft(draftId: string): Promise<void> {
-    assertUuid(draftId, 'draftId')
+    assertUuid(draftId, '草稿编号')
     await this.drafts.scope(draftId).clear()
   }
 
@@ -157,7 +157,7 @@ export class FileInterfaceRepository implements InterfaceRepository {
     for (const id of await this.listPublishedInterfaceIds()) ids.add(id)
     for (const builtinKey of await this.listBuiltinKeys()) {
       for (const id of await this.listBuiltinVersionIds(builtinKey)) {
-        if (ids.has(id)) throw invalidData(`Interface ${id} exists in multiple storage partitions`)
+        if (ids.has(id)) throw invalidData(`题型「${id}」在多个存储位置重复出现`)
         ids.add(id)
       }
     }
@@ -188,10 +188,10 @@ export class FileInterfaceRepository implements InterfaceRepository {
     if (location) {
       const existing = await this.readInterfaceAt(def.id, location.scope)
       if (compareInterfaceIdentity(existing, def) !== 'same') {
-        throw identityConflict(`Interface ID collision: ${def.id}`)
+        throw identityConflict(`题型编号「${def.id}」已被内容不同的题型占用`)
       }
       if (location.kind === 'published') return 'existing'
-      throw identityConflict(`Interface ${def.id} already exists as builtin content`)
+      throw identityConflict(`题型「${def.id}」已作为内置题型存在`)
     }
     await this.publishedInterfaceScope(def.id).writeText(INTERFACE_FILE, def)
     return 'created'
@@ -199,7 +199,7 @@ export class FileInterfaceRepository implements InterfaceRepository {
 
   async publishDraft(draftId: string): Promise<InterfaceDef> {
     const draft = await this.getDraft(draftId)
-    if (!draft) throw new InterfaceRepositoryError('NOT_FOUND', `Draft not found: ${draftId}`)
+    if (!draft) throw new InterfaceRepositoryError('NOT_FOUND', `未找到草稿：${draftId}`)
     const def = await publishInterface(draft)
     await this.saveInterface(def)
     return def
@@ -211,7 +211,7 @@ export class FileInterfaceRepository implements InterfaceRepository {
     if (location.kind === 'builtin') {
       const entry = await this.getBuiltin(location.builtinKey)
       if (entry?.currentInterfaceId === interfaceId) {
-        throw identityConflict(`Cannot delete current builtin Interface: ${interfaceId}`)
+        throw identityConflict(`无法删除当前正在使用的内置题型：${interfaceId}`)
       }
     }
     await location.scope.clear()
@@ -227,7 +227,7 @@ export class FileInterfaceRepository implements InterfaceRepository {
       typeof value.currentInterfaceId !== 'string' ||
       !isInterfaceId(value.currentInterfaceId)
     ) {
-      throw invalidData(`Builtin Interface entry is invalid: ${builtinKey}`)
+      throw invalidData(`内置题型「${builtinKey}」的记录无效`)
     }
     return value as unknown as BuiltinInterfaceEntry
   }
@@ -242,11 +242,11 @@ export class FileInterfaceRepository implements InterfaceRepository {
     if (location) {
       const existing = await this.readInterfaceAt(def.id, location.scope)
       if (compareInterfaceIdentity(existing, def) !== 'same') {
-        throw identityConflict(`Interface ID collision: ${def.id}`)
+        throw identityConflict(`题型编号「${def.id}」已被内容不同的题型占用`)
       }
       if (location.kind === 'builtin') {
         if (location.builtinKey !== builtinKey) {
-          throw identityConflict(`Interface ${def.id} belongs to builtin ${location.builtinKey}`)
+          throw identityConflict(`题型「${def.id}」属于内置题型「${location.builtinKey}」`)
         }
         await this.setBuiltinCurrent(builtinKey, def.id)
         return 'existing'
@@ -281,10 +281,10 @@ export class FileInterfaceRepository implements InterfaceRepository {
     if (location) {
       const existing = await this.readInterfaceAt(def.id, location.scope)
       if (compareInterfaceIdentity(existing, def) !== 'same') {
-        throw identityConflict(`Interface ID collision: ${def.id}`)
+        throw identityConflict(`题型编号「${def.id}」已被内容不同的题型占用`)
       }
       if (location.kind === 'builtin' && location.builtinKey === builtinKey) return 'existing'
-      throw identityConflict(`Interface ${def.id} already exists outside builtin ${builtinKey}`)
+      throw identityConflict(`题型「${def.id}」已存在于内置题型「${builtinKey}」之外`)
     }
     await this.builtinInterfaceScope(builtinKey, def.id).writeText(INTERFACE_FILE, def)
     return 'created'
@@ -296,7 +296,7 @@ export class FileInterfaceRepository implements InterfaceRepository {
     if (!location || location.kind !== 'builtin' || location.builtinKey !== builtinKey) {
       throw new InterfaceRepositoryError(
         'NOT_FOUND',
-        `Builtin Interface not found: ${builtinKey}/${interfaceId}`
+        `未找到内置题型：${builtinKey}/${interfaceId}`
       )
     }
     await this.builtins.scope(builtinKey).writeText(CURRENT_FILE, {
@@ -309,10 +309,10 @@ export class FileInterfaceRepository implements InterfaceRepository {
     assertBuiltinKey(builtinKey)
     const location = await this.locateInterface(interfaceId)
     if (!location || location.kind !== 'builtin' || location.builtinKey !== builtinKey) {
-      throw new InterfaceRepositoryError('NOT_FOUND', `Builtin Interface not found: ${interfaceId}`)
+      throw new InterfaceRepositoryError('NOT_FOUND', `未找到内置题型：${interfaceId}`)
     }
     if (await this.publishedInterfaceScope(interfaceId).readText(INTERFACE_FILE)) {
-      throw identityConflict(`Published Interface already exists: ${interfaceId}`)
+      throw identityConflict(`正式版题型「${interfaceId}」已存在`)
     }
 
     await this.moveInterfaceContent(
@@ -328,7 +328,7 @@ export class FileInterfaceRepository implements InterfaceRepository {
     if (!entry || entry.currentInterfaceId !== expectedCurrentInterfaceId) {
       throw new InterfaceRepositoryError(
         'IDENTITY_CONFLICT',
-        `Builtin Interface changed before removal: ${builtinKey}`
+        `内置题型「${builtinKey}」在移除前已发生变化`
       )
     }
     await this.builtins.scope(builtinKey).clear()
@@ -352,12 +352,12 @@ export class FileInterfaceRepository implements InterfaceRepository {
   }
 
   async findInstance(instanceId: string): Promise<LocatedInterfaceInstance | null> {
-    assertUuid(instanceId, 'instanceId')
+    assertUuid(instanceId, '题组编号')
     let found: LocatedInterfaceInstance | null = null
     for (const interfaceId of await this.listInterfaceIds()) {
       const stored = await this.getInstance(interfaceId, instanceId)
       if (!stored) continue
-      if (found) throw invalidData(`Instance ${instanceId} is stored under multiple Interfaces`)
+      if (found) throw invalidData(`题组「${instanceId}」同时存在于多个题型下`)
       found = { interfaceId, ...stored }
     }
     return found
@@ -379,7 +379,7 @@ export class FileInterfaceRepository implements InterfaceRepository {
       ) {
         return 'existing'
       }
-      throw identityConflict(`Instance ID conflict: ${instance.instanceId}`)
+      throw identityConflict(`题组编号「${instance.instanceId}」已被内容不同的题组占用`)
     }
     const location = await this.requireInterfaceLocation(interfaceId)
     await this.writeInstanceAt(location.scope, instance, assets)
@@ -395,7 +395,7 @@ export class FileInterfaceRepository implements InterfaceRepository {
     await this.assertInstanceCompatible(interfaceId, instance)
     const existing = await this.findInstance(instance.instanceId)
     if (!existing || existing.interfaceId !== interfaceId) {
-      throw new InterfaceRepositoryError('NOT_FOUND', `Instance not found: ${instance.instanceId}`)
+      throw new InterfaceRepositoryError('NOT_FOUND', `未找到题组：${instance.instanceId}`)
     }
 
     const nextAssets =
@@ -464,7 +464,7 @@ export class FileInterfaceRepository implements InterfaceRepository {
     const available = new Set(await this.listInstanceIds(fromInterfaceId))
     const instanceIds = selectedInstanceIds ? [...new Set(selectedInstanceIds)] : [...available]
     if (instanceIds.some((instanceId) => !available.has(instanceId))) {
-      throw new InterfaceRepositoryError('NOT_FOUND', 'Selected migration instance was not found')
+      throw new InterfaceRepositoryError('NOT_FOUND', '所选迁移题组不存在')
     }
 
     const copied: string[] = []
@@ -472,15 +472,13 @@ export class FileInterfaceRepository implements InterfaceRepository {
       for (const instanceId of instanceIds) {
         const located = await this.findInstance(instanceId)
         if (!located || located.interfaceId !== fromInterfaceId) {
-          throw identityConflict(
-            `Instance ${instanceId} is not uniquely owned by the source Interface`
-          )
+          throw identityConflict(`题组「${instanceId}」的来源题型不唯一`)
         }
         if (await this.readInstanceAt(target.scope, instanceId)) {
-          throw identityConflict(`Target Interface already contains instance ${instanceId}`)
+          throw identityConflict(`目标题型中已存在题组「${instanceId}」`)
         }
         const stored = await this.readInstanceAt(source.scope, instanceId)
-        if (!stored) throw invalidData(`Instance disappeared during migration: ${instanceId}`)
+        if (!stored) throw invalidData(`迁移过程中题组「${instanceId}」丢失`)
         await this.assertInstanceCompatible(toInterfaceId, stored.instance)
         const assets = await this.loadAssets(fromInterfaceId, instanceId, stored.assetFilenames)
         await this.writeInstanceAt(target.scope, stored.instance, assets)
@@ -489,7 +487,7 @@ export class FileInterfaceRepository implements InterfaceRepository {
           !written ||
           !(await this.instanceMatches(toInterfaceId, written, stored.instance, assets))
         ) {
-          throw invalidData(`Cannot verify migrated instance: ${instanceId}`)
+          throw invalidData(`无法校验迁移后的题组：${instanceId}`)
         }
         copied.push(instanceId)
       }
@@ -515,7 +513,7 @@ export class FileInterfaceRepository implements InterfaceRepository {
       }
     }
     if (locations.length > 1) {
-      throw invalidData(`Interface ${interfaceId} exists in multiple storage partitions`)
+      throw invalidData(`题型「${interfaceId}」在多个存储位置重复出现`)
     }
     return locations[0] ?? null
   }
@@ -536,7 +534,7 @@ export class FileInterfaceRepository implements InterfaceRepository {
   private async requireInterfaceLocation(interfaceId: string): Promise<InterfaceLocation> {
     const location = await this.locateInterface(interfaceId)
     if (!location) {
-      throw new InterfaceRepositoryError('NOT_FOUND', `Interface not found: ${interfaceId}`)
+      throw new InterfaceRepositoryError('NOT_FOUND', `未找到题型：${interfaceId}`)
     }
     return location
   }
@@ -544,7 +542,7 @@ export class FileInterfaceRepository implements InterfaceRepository {
   private async readInterfaceAt(interfaceId: string, scope: InterfaceStore): Promise<InterfaceDef> {
     const value = await scope.readText<unknown>(INTERFACE_FILE)
     if (!isInterfaceDef(value) || value.id !== interfaceId || !(await verifyInterfaceId(value))) {
-      throw invalidData(`Interface ${interfaceId} is invalid`)
+      throw invalidData(`题型「${interfaceId}」无效`)
     }
     return value
   }
@@ -554,13 +552,13 @@ export class FileInterfaceRepository implements InterfaceRepository {
     instance: InterfaceInstance
   ): Promise<void> {
     const def = await this.getInterface(interfaceId)
-    if (!def) throw new InterfaceRepositoryError('NOT_FOUND', `Interface not found: ${interfaceId}`)
+    if (!def) throw new InterfaceRepositoryError('NOT_FOUND', `未找到题型：${interfaceId}`)
     const expected = flattenFields(def.fields)
       .map(({ leaf }) => leaf.varName)
       .sort()
     const actual = Object.keys(instance.values).sort()
     if (!sameStrings(expected, actual)) {
-      throw invalidData('Instance values do not match the Interface variables')
+      throw invalidData('题组的字段值与题型的变量定义不一致')
     }
     const imageVarNames = new Set(
       flattenFields(def.fields)
@@ -569,7 +567,7 @@ export class FileInterfaceRepository implements InterfaceRepository {
     )
     for (const varName of Object.keys(instance.imagePrompts ?? {})) {
       if (!imageVarNames.has(varName)) {
-        throw invalidData(`Image prompt does not match an image variable: ${varName}`)
+        throw invalidData(`图片提示词「${varName}」不对应任何图片变量`)
       }
     }
   }
@@ -582,11 +580,11 @@ export class FileInterfaceRepository implements InterfaceRepository {
     const value = await scope.readText<unknown>(INSTANCE_FILE)
     if (value === null) return null
     if (!isStoredInstanceFile(value) || value.instance.instanceId !== instanceId) {
-      throw invalidData(`Instance ${instanceId} does not match its storage scope`)
+      throw invalidData(`题组「${instanceId}」与其存储位置不一致`)
     }
     const storedAssets = await scope.listAssets()
     if (!sameStrings(storedAssets, value.assets)) {
-      throw invalidData(`Instance ${instanceId} asset manifest does not match stored assets`)
+      throw invalidData(`题组「${instanceId}」的资源清单与实际资源不一致`)
     }
     return { instance: value.instance, assetFilenames: value.assets }
   }
@@ -615,7 +613,7 @@ export class FileInterfaceRepository implements InterfaceRepository {
     const assets: Record<string, Uint8Array> = {}
     for (const filename of filenames) {
       const data = await this.readInstanceAsset(interfaceId, instanceId, filename)
-      if (!data) throw new InterfaceRepositoryError('MISSING_ASSET', `Missing asset ${filename}`)
+      if (!data) throw new InterfaceRepositoryError('MISSING_ASSET', `缺少资源文件：${filename}`)
       assets[filename] = data
     }
     return assets
@@ -634,12 +632,12 @@ export class FileInterfaceRepository implements InterfaceRepository {
       const instanceId = stored.instance.instanceId
       const copied = await this.readInstanceAt(scope, instanceId)
       if (!copied || canonicalInstance(copied.instance) !== canonicalInstance(stored.instance)) {
-        throw invalidData(`Cannot verify copied instance: ${instanceId}`)
+        throw invalidData(`无法校验复制后的题组：${instanceId}`)
       }
       for (const [filename, expected] of Object.entries(assets)) {
         const actual = await this.instanceScope(scope, instanceId).readAsset(filename)
         if (!actual || !sameBytes(actual, expected)) {
-          throw invalidData(`Cannot verify copied asset: ${instanceId}/${filename}`)
+          throw invalidData(`无法校验复制后的资源文件：${instanceId}/${filename}`)
         }
       }
     }
@@ -660,11 +658,11 @@ export class FileInterfaceRepository implements InterfaceRepository {
     }> = []
     for (const instanceId of instanceIds) {
       const stored = await this.readInstanceAt(source, instanceId)
-      if (!stored) throw invalidData(`Instance disappeared during Interface move: ${instanceId}`)
+      if (!stored) throw invalidData(`题型移动过程中题组「${instanceId}」丢失`)
       const assets: Record<string, Uint8Array> = {}
       for (const filename of stored.assetFilenames) {
         const data = await this.instanceScope(source, instanceId).readAsset(filename)
-        if (!data) throw new InterfaceRepositoryError('MISSING_ASSET', `Missing asset ${filename}`)
+        if (!data) throw new InterfaceRepositoryError('MISSING_ASSET', `缺少资源文件：${filename}`)
         assets[filename] = data
       }
       snapshots.push({ stored, assets })
@@ -705,7 +703,7 @@ export class FileInterfaceRepository implements InterfaceRepository {
   }
 
   private instanceScope(interfaceScope: InterfaceStore, instanceId: string): InterfaceStore {
-    assertUuid(instanceId, 'instanceId')
+    assertUuid(instanceId, '题组编号')
     return interfaceScope.scope('instances').scope(instanceId)
   }
 
@@ -725,51 +723,51 @@ export class FileInterfaceRepository implements InterfaceRepository {
 
 async function assertInterfaceDef(def: InterfaceDef): Promise<void> {
   if (!isInterfaceDef(def) || !validateInterfaceDef(def).valid || !(await verifyInterfaceId(def))) {
-    throw invalidData('Interface content ID does not match its content')
+    throw invalidData('题型的内容编号与内容不一致')
   }
 }
 
 function interfaceDigest(interfaceId: string): string {
   if (!isInterfaceId(interfaceId)) {
-    throw new InterfaceRepositoryError('INVALID_ID', `Invalid Interface ID: ${interfaceId}`)
+    throw new InterfaceRepositoryError('INVALID_ID', `题型编号「${interfaceId}」无效`)
   }
   return interfaceId.slice('sha256:'.length)
 }
 
 function assertUuid(value: string, label: string): void {
   if (!UUID_V4_PATTERN.test(value)) {
-    throw new InterfaceRepositoryError('INVALID_ID', `Invalid ${label}: ${value}`)
+    throw new InterfaceRepositoryError('INVALID_ID', `${label}无效：${value}`)
   }
 }
 
 function assertBuiltinKey(value: string): void {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(value)) {
-    throw new InterfaceRepositoryError('INVALID_ID', `Invalid builtinKey: ${value}`)
+    throw new InterfaceRepositoryError('INVALID_ID', `内置题型编号「${value}」无效`)
   }
 }
 
 function assertInstance(value: InterfaceInstance): void {
-  assertUuid(value.instanceId, 'instanceId')
+  assertUuid(value.instanceId, '题组编号')
   if (typeof value.name !== 'string' || !value.name.trim()) {
-    throw invalidData('Instance name is required')
+    throw invalidData('题组名称不能为空')
   }
-  if (Number.isNaN(Date.parse(value.generatedAt))) throw invalidData('generatedAt is invalid')
-  if (!isStringRecord(value.values)) throw invalidData('Instance values must contain strings')
+  if (Number.isNaN(Date.parse(value.generatedAt))) throw invalidData('生成时间无效')
+  if (!isStringRecord(value.values)) throw invalidData('题组的字段值必须是字符串')
   if (value.imagePrompts !== undefined && !isStringRecord(value.imagePrompts)) {
-    throw invalidData('Instance image prompts must contain strings')
+    throw invalidData('题组的图片提示词必须是字符串')
   }
 }
 
 function assertAssets(assets: Readonly<Record<string, Uint8Array>>): void {
   for (const [filename, data] of Object.entries(assets)) {
     assertAssetFilename(filename)
-    if (!(data instanceof Uint8Array)) throw invalidData(`Asset ${filename} is not binary data`)
+    if (!(data instanceof Uint8Array)) throw invalidData(`资源文件「${filename}」不是二进制数据`)
   }
 }
 
 function assertAssetFilename(filename: string): void {
   if (!ASSET_FILENAME_PATTERN.test(filename)) {
-    throw invalidData(`Invalid asset filename: ${filename}`)
+    throw invalidData(`资源文件名「${filename}」无效`)
   }
 }
 

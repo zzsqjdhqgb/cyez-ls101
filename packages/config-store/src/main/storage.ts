@@ -21,8 +21,8 @@ function isMissingFile(error: unknown): boolean {
 function assertJsonValue(value: unknown, seen = new Set<object>()): asserts value is JsonValue {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return
   if (typeof value === 'number' && Number.isFinite(value)) return
-  if (typeof value !== 'object') throw new TypeError('Config data is not a JSON value')
-  if (seen.has(value)) throw new TypeError('Config data contains a circular reference')
+  if (typeof value !== 'object') throw new TypeError('配置数据不是合法的 JSON 值')
+  if (seen.has(value)) throw new TypeError('配置数据包含循环引用')
 
   seen.add(value)
   if (Array.isArray(value)) {
@@ -30,7 +30,7 @@ function assertJsonValue(value: unknown, seen = new Set<object>()): asserts valu
   } else {
     const prototype = Object.getPrototypeOf(value) as object | null
     if (prototype !== Object.prototype && prototype !== null) {
-      throw new TypeError('Config data is not a plain JSON object')
+      throw new TypeError('配置数据不是纯 JSON 对象')
     }
     Object.values(value).forEach((item) => assertJsonValue(item, seen))
   }

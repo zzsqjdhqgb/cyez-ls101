@@ -83,7 +83,7 @@ describe('Template 核心类型', () => {
     expect(func.outputs[0].type).toBe('choice')
   })
 
-  it('SchemaUse 通过稳定 ID 分离静态输入、运行期答案和附件', () => {
+  it('SchemaUse 通过稳定编号分离静态输入、运行期答案和附件', () => {
     const use: SchemaUse = {
       useId: 'choice-score-1',
       schemaId: `sha256:${'2'.repeat(64)}`,

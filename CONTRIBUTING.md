@@ -1,4 +1,11 @@
 <!--
+status: implemented
+product-version: 0.4.1
+audience: both
+owner: docs
+-->
+
+<!--
  Copyright (c) 2026 Haoting Ying (zzsqjdhqgb). All rights reserved.
  Proprietary code. Use is subject to the LICENSE file in the repository root.
 -->

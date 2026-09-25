@@ -1,7 +1,6 @@
-import { copyFile, cp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { format, resolveConfig } from 'prettier'
-import { PNG } from 'pngjs'
 import type {
   FullConfig,
   FullResult,
@@ -24,13 +23,12 @@ import {
   productGuideChapter,
   type ProductGuideChapter
 } from './product-guide'
-import { preserveEquivalentEvidenceImages } from './evidence-image'
 
 const REPOSITORY_ROOT = process.cwd()
-const PRODUCT_ROOT = path.join(REPOSITORY_ROOT, 'docs', 'product')
 const PREVIEW_ROOT = path.join(REPOSITORY_ROOT, 'test-results', 'product-docs-preview')
-const STAGING_ROOT = path.join(PRODUCT_ROOT, '.product-docs-staging')
-const MANIFEST_PATH = path.join(PRODUCT_ROOT, '.generated-manifest.json')
+const MANUAL_ROOT = path.join(REPOSITORY_ROOT, 'docs', 'manual')
+const MANUAL_STAGING_ROOT = path.join(MANUAL_ROOT, '.manual-staging')
+const MANUAL_MANIFEST_PATH = path.join(MANUAL_ROOT, '.generated-manifest.json')
 const MAX_EVIDENCE_PER_DOCUMENT = 3
 const prettierConfig = resolveConfig(REPOSITORY_ROOT)
 
@@ -99,15 +97,15 @@ export default class ProductDocsReporter implements Reporter {
     if (!canonical && process.env.PRODUCT_DOCS_CANONICAL_RUNNER === '1') {
       throw new Error('canonical runner 缺少 PRODUCT_DOCS_CANONICAL=1')
     }
-    const outputRoot = canonical ? STAGING_ROOT : PREVIEW_ROOT
-    await rm(outputRoot, { force: true, recursive: true })
-    await mkdir(outputRoot, { recursive: true })
-
-    const manifest = await renderDocumentation(outputRoot, behaviors)
-
     if (canonical) {
-      await publishCanonicalDocumentation(outputRoot, manifest)
+      // 说明书是唯一生成产物；旧 docs/product 已冻结迁出，不再重新生成。
+      await renderAndPublishManual(behaviors)
+      return
     }
+
+    await rm(PREVIEW_ROOT, { force: true, recursive: true })
+    await mkdir(PREVIEW_ROOT, { recursive: true })
+    await renderDocumentation(PREVIEW_ROOT, behaviors)
   }
 }
 
@@ -141,7 +139,7 @@ function validateBehaviors(behaviors: readonly BehaviorResult[]): void {
   const owners = new Map<string, ProductOwner>()
   for (const behavior of behaviors) {
     const { definition } = behavior
-    if (ids.has(definition.id)) throw new Error(`产品说明 ID 重复：${definition.id}`)
+    if (ids.has(definition.id)) throw new Error(`产品说明编号重复：${definition.id}`)
     ids.add(definition.id)
 
     const ownerKey = `${definition.owner.kind}:${definition.owner.slug}`
@@ -202,7 +200,7 @@ async function renderDocumentation(
 
   for (const group of ownerGroups) {
     const ownerRoot = ownerRelativeRoot(group.owner)
-    const designPath = path.join(PRODUCT_ROOT, ownerRoot, 'README.md')
+    const designPath = ownerDesignPath(group.owner)
     if (!(await exists(designPath))) {
       throw new Error(
         `产品文档归属缺少设计文档：${normalizePath(path.relative(REPOSITORY_ROOT, designPath))}`
@@ -333,7 +331,8 @@ function renderGuideChapter(
   chapter: ProductGuideChapter,
   chapterIndex: number,
   chapters: readonly ProductGuideChapter[],
-  behaviors: readonly BehaviorResult[]
+  behaviors: readonly BehaviorResult[],
+  manual = false
 ): string {
   const chapterBehaviors = behaviors
     .flatMap((behavior) =>
@@ -367,7 +366,9 @@ function renderGuideChapter(
       ? [
           '## 完整任务',
           '',
-          ...journeys.flatMap(({ behavior }, index) => renderGuideBehavior(behavior, index + 1)),
+          ...journeys.flatMap(({ behavior }, index) =>
+            renderGuideBehavior(behavior, index + 1, manual)
+          ),
           ''
         ]
       : []
@@ -377,7 +378,7 @@ function renderGuideChapter(
           '## 相关操作',
           '',
           ...supportingBehaviors.flatMap(({ behavior }, index) =>
-            renderGuideBehavior(behavior, index + 1)
+            renderGuideBehavior(behavior, index + 1, manual)
           ),
           ''
         ]
@@ -415,7 +416,7 @@ function renderGuideChapter(
   ].join('\n')
 }
 
-function renderGuideBehavior(behavior: BehaviorResult, index: number): string[] {
+function renderGuideBehavior(behavior: BehaviorResult, index: number, manual = false): string[] {
   const definition = behavior.definition
   const detail = normalizePath(
     path.join(
@@ -449,8 +450,7 @@ function renderGuideBehavior(behavior: BehaviorResult, index: number): string[] 
     '',
     ...definition.outcomes.map((item) => `- ${item}`),
     '',
-    `[查看完整操作与界面示例](${detail})`,
-    ''
+    ...(manual ? [] : [`[查看完整操作与界面示例](${detail})`, ''])
   ]
 }
 
@@ -486,7 +486,6 @@ async function renderBehaviorPage(
       if (item.attachment.path) await copyFile(item.attachment.path, assetPath)
       else if (item.attachment.body) await writeFile(assetPath, item.attachment.body)
       else throw new Error(`产品说明 ${behavior.definition.id} 的截图没有内容`)
-      if (outputRoot === STAGING_ROOT) await assertCanonicalEvidenceSize(assetPath)
       generatedFiles.push(normalizePath(assetRelativePath))
       stepLines.push(
         '',
@@ -526,15 +525,6 @@ async function renderBehaviorPage(
     ...definition.outcomes.map((item) => `- ${item}`),
     ''
   ].join('\n')
-}
-
-async function assertCanonicalEvidenceSize(filename: string): Promise<void> {
-  const image = PNG.sync.read(await readFile(filename))
-  if (image.width !== 1280 || image.height !== 800) {
-    throw new Error(
-      `canonical 产品文档截图必须为 1280x800：${normalizePath(path.relative(REPOSITORY_ROOT, filename))} 实际为 ${image.width}x${image.height}`
-    )
-  }
 }
 
 function renderOwnerIndex(owner: ProductOwner, behaviors: readonly BehaviorResult[]): string {
@@ -597,83 +587,57 @@ async function writeGeneratedFile(
   generatedFiles.push(normalizePath(path.relative(outputRoot, target)))
 }
 
-async function publishCanonicalDocumentation(
-  outputRoot: string,
-  manifest: ProductManifest
-): Promise<void> {
-  await preserveEquivalentEvidenceImages(PRODUCT_ROOT, outputRoot, manifest.generatedFiles)
-  const previous = await readManifest()
-  const generatedDirectories = new Set([
-    ...[...(previous?.owners ?? []), ...manifest.owners].map((owner) =>
-      path.join(
-        PRODUCT_ROOT,
-        ownerKindDirectory(owner.kind),
-        owner.slug,
-        ownerGeneratedDirectory(owner)
-      )
-    ),
-    path.join(PRODUCT_ROOT, 'guide')
-  ])
-
-  const published: Array<{ target: string; backup: string | null }> = []
-  const backupTargets = new Set<string>()
-
-  try {
-    for (const target of generatedDirectories) {
-      const relativeTarget = path.relative(PRODUCT_ROOT, target)
-      const staged = path.join(outputRoot, relativeTarget)
-      const backup = `${target}.product-docs-backup`
-      backupTargets.add(backup)
-      const targetExists = await exists(target)
-      const stagedExists = await exists(staged)
-      await rm(backup, { force: true, recursive: true })
-      if (targetExists) {
-        await cp(target, backup, { recursive: true })
-      }
-      published.push({ target, backup: targetExists ? backup : null })
-      await rm(target, { force: true, recursive: true })
-      if (stagedExists) {
-        await mkdir(path.dirname(target), { recursive: true })
-        await cp(staged, target, { recursive: true })
-      }
-    }
-
-    for (const filename of ['coverage.md', '.generated-manifest.json']) {
-      const target = path.join(PRODUCT_ROOT, filename)
-      const staged = path.join(outputRoot, filename)
-      const backup = `${target}.product-docs-backup`
-      backupTargets.add(backup)
-      const targetExists = await exists(target)
-      await rm(backup, { force: true, recursive: true })
-      if (targetExists) {
-        await copyFile(target, backup)
-      }
-      published.push({ target, backup: targetExists ? backup : null })
-      await rm(target, { force: true })
-      await copyFile(staged, target)
-    }
-  } catch (reason) {
-    for (const item of [...published].reverse()) {
-      await rm(item.target, { force: true, recursive: true })
-      if (item.backup) {
-        await mkdir(path.dirname(item.target), { recursive: true })
-        await cp(item.backup, item.target, { recursive: true })
-      }
-    }
-    throw reason
-  } finally {
-    for (const backup of backupTargets) {
-      await rm(backup, { force: true, recursive: true })
-    }
-    await rm(outputRoot, { force: true, recursive: true })
+async function renderAndPublishManual(behaviors: readonly BehaviorResult[]): Promise<void> {
+  await rm(MANUAL_STAGING_ROOT, { force: true, recursive: true })
+  await mkdir(MANUAL_STAGING_ROOT, { recursive: true })
+  const generatedFiles: string[] = []
+  const chapters = [...PRODUCT_GUIDE_CHAPTERS].sort(
+    (left, right) => left.order - right.order || left.slug.localeCompare(right.slug)
+  )
+  await writeGeneratedFile(
+    MANUAL_STAGING_ROOT,
+    path.join(MANUAL_STAGING_ROOT, 'README.md'),
+    renderGuideIndex(chapters),
+    generatedFiles
+  )
+  for (const [index, chapter] of chapters.entries()) {
+    await writeGeneratedFile(
+      MANUAL_STAGING_ROOT,
+      path.join(MANUAL_STAGING_ROOT, guideChapterFilename(chapter, index)),
+      renderGuideChapter(chapter, index, chapters, behaviors, true),
+      generatedFiles
+    )
   }
+  await publishManual(generatedFiles)
 }
 
-async function readManifest(): Promise<ProductManifest | null> {
+async function publishManual(generatedFiles: readonly string[]): Promise<void> {
+  const previous = await readManualFiles()
+  const next = [...generatedFiles].sort()
+  for (const stale of previous) {
+    if (!next.includes(stale)) await rm(path.join(MANUAL_ROOT, stale), { force: true })
+  }
+  for (const file of next) {
+    const target = path.join(MANUAL_ROOT, file)
+    await mkdir(path.dirname(target), { recursive: true })
+    await copyFile(path.join(MANUAL_STAGING_ROOT, file), target)
+  }
+  await writeFile(
+    MANUAL_MANIFEST_PATH,
+    `${JSON.stringify({ schemaVersion: 1, generatedFiles: next }, null, 2)}\n`,
+    'utf8'
+  )
+  await rm(MANUAL_STAGING_ROOT, { force: true, recursive: true })
+}
+
+async function readManualFiles(): Promise<readonly string[]> {
   try {
-    return JSON.parse(await readFile(MANIFEST_PATH, 'utf8')) as ProductManifest
+    const parsed = JSON.parse(await readFile(MANUAL_MANIFEST_PATH, 'utf8')) as {
+      generatedFiles?: string[]
+    }
+    return parsed.generatedFiles ?? []
   } catch (reason) {
-    if ((reason as NodeJS.ErrnoException).code === 'ENOENT') return null
+    if ((reason as NodeJS.ErrnoException).code === 'ENOENT') return []
     throw reason
   }
 }
@@ -723,6 +687,17 @@ function annotation(test: TestCase, type: string): string | null {
 
 function ownerRelativeRoot(owner: ProductOwner): string {
   return path.join(ownerKindDirectory(owner.kind), owner.slug)
+}
+
+function ownerDesignPath(owner: ProductOwner): string {
+  // 流程与旅程沿用测试归属名称，设计约束由对应的产品模块维护。
+  const moduleByOwner: Record<string, string> = {
+    'journey:content-preparation': 'interface-library',
+    'flow:template-exam-generation': 'template-library',
+    'journey:exam-delivery': 'exam-library'
+  }
+  const module = moduleByOwner[`${owner.kind}:${owner.slug}`] ?? owner.slug
+  return path.join(REPOSITORY_ROOT, 'docs', 'ui', 'modules', `${module}.md`)
 }
 
 function ownerKindDirectory(kind: ProductOwner['kind']): string {

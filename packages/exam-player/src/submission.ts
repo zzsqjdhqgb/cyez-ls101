@@ -77,14 +77,14 @@ export function assembleSubmission(
     if (!recording) {
       throw new SubmissionAssemblyError(
         'MISSING_RECORDING',
-        `Missing recording for recordIndex ${capture.recordIndex}`,
+        `缺少录音索引 ${capture.recordIndex} 对应的录音`,
         { recordIndex: capture.recordIndex, audioAnswerIndex: capture.audioAnswerIndex }
       )
     }
     if (!Number.isFinite(recording.durationMs) || recording.durationMs < 0) {
       throw new SubmissionAssemblyError(
         'INVALID_RECORDING',
-        `Invalid recording duration for recordIndex ${capture.recordIndex}`,
+        `录音索引 ${capture.recordIndex} 的录音时长无效`,
         { recordIndex: capture.recordIndex, durationMs: recording.durationMs }
       )
     }
@@ -93,7 +93,7 @@ export function assembleSubmission(
     if (Object.hasOwn(resources, resourceKey)) {
       throw new SubmissionAssemblyError(
         'INVALID_EXAM_PACKAGE',
-        `Submission resource key collides with a static resource: ${resourceKey}`,
+        `作答包资源编号与静态资源冲突：${resourceKey}`,
         { resourceKey }
       )
     }
@@ -139,10 +139,7 @@ function validateExam(exam: ExamPackage): void {
     exam.submissionTemplate.meta.examPackageId !== exam.packageId ||
     exam.submissionTemplate.meta.examTitle !== exam.examData.title
   ) {
-    throw new SubmissionAssemblyError(
-      'INVALID_EXAM_PACKAGE',
-      'ExamPackage and SubmissionTemplate metadata do not match'
-    )
+    throw new SubmissionAssemblyError('INVALID_EXAM_PACKAGE', '试卷包与作答包模板的元数据不一致')
   }
 }
 
@@ -154,7 +151,7 @@ function validateMeta(input: SubmissionAssemblyInput): void {
     !isIsoDate(input.startedAt) ||
     !isIsoDate(input.submittedAt)
   ) {
-    throw new SubmissionAssemblyError('INVALID_SUBMISSION_META', 'Submission metadata is invalid')
+    throw new SubmissionAssemblyError('INVALID_SUBMISSION_META', '作答包元数据无效')
   }
 }
 
@@ -169,7 +166,7 @@ function validateCapturePlan(exam: ExamPackage): void {
     if (!choiceIndices.has(capture.choiceIndex)) {
       throw new SubmissionAssemblyError(
         'INVALID_EXAM_PACKAGE',
-        `Capture plan references unknown choiceIndex ${capture.choiceIndex}`,
+        `采集计划引用了未知的选项索引 ${capture.choiceIndex}`,
         { choiceIndex: capture.choiceIndex }
       )
     }
@@ -180,7 +177,7 @@ function validateCapturePlan(exam: ExamPackage): void {
     if (!recordIndices.has(capture.recordIndex)) {
       throw new SubmissionAssemblyError(
         'INVALID_EXAM_PACKAGE',
-        `Capture plan references unknown recordIndex ${capture.recordIndex}`,
+        `采集计划引用了未知的录音索引 ${capture.recordIndex}`,
         { recordIndex: capture.recordIndex }
       )
     }
@@ -208,7 +205,7 @@ function validateCaptureEntries<
     ) {
       throw new SubmissionAssemblyError(
         'INVALID_CAPTURE_PLAN',
-        `Invalid ${targetField}/${sourceField} mapping`,
+        `采集计划中的作答索引映射无效：${targetField}/${sourceField}`,
         { [targetField]: target, [sourceField]: source }
       )
     }

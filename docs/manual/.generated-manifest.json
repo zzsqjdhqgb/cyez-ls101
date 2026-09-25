@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "generatedFiles": [
+    "01-understand-ls101.md",
+    "02-prepare-content.md",
+    "03-build-generate-exam.md",
+    "04-run-exam.md",
+    "05-grade-settle.md",
+    "README.md"
+  ]
+}

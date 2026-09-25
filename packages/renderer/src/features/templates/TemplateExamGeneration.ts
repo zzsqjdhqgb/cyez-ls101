@@ -5,7 +5,12 @@ import type {
   AIRouterSpeechTarget
 } from '@ls101/airouter'
 import { airouterClient } from '@ls101/airouter/renderer'
-import type { ExamPackage, TaskProgressHandle, TaskProgressItem } from '@ls101/core-types'
+import type {
+  ExamPackage,
+  TaskProgressHandle,
+  TaskProgressItem,
+  TaskProgressSnapshot
+} from '@ls101/core-types'
 import { encodeExamPackage } from '@ls101/exam-package'
 import type { FileDialog } from '@ls101/file-dialog/renderer'
 import { fileDialog } from '@ls101/file-dialog/renderer'
@@ -18,6 +23,7 @@ import type {
   TemplateInterfaceBinding
 } from '@ls101/template-editor'
 import { templateCompileErrorsMessage } from './TemplateCompileErrors'
+import { toUserMessage } from '../../components/ui/userMessage'
 
 const MAX_SPEECH_ATTEMPTS = 4
 
@@ -79,7 +85,7 @@ export async function fetchExamResource(
   throwIfAborted(signal)
   const data = await store.readAsset(assetUrlToKey(input))
   throwIfAborted(signal)
-  return data === null ? new Response(null, { status: 404 }) : new Response(data)
+  return data === null ? new Response(null, { status: 404 }) : new Response(data.slice())
 }
 
 export async function listSpeechGenerationSelections(
@@ -136,7 +142,7 @@ function createGenerationHandle(
 ): TaskProgressHandle<ExamGenerationResult> {
   const controller = new AbortController()
   let cancelled = false
-  let snapshot = {
+  let snapshot: TaskProgressSnapshot = {
     items: baseItems('running')
   }
   const listeners = new Set<() => void>()
@@ -400,5 +406,5 @@ function isAbortError(reason: unknown): boolean {
 }
 
 function errorMessage(reason: unknown): string {
-  return reason instanceof Error ? reason.message : String(reason)
+  return toUserMessage(reason)
 }

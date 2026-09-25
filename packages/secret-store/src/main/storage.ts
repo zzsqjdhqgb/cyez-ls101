@@ -12,16 +12,16 @@ const validSegment = /^[a-zA-Z0-9_-]+$/
 
 function validateSegment(value: string, label: string): void {
   if (!validSegment.test(value) || value === '.' || value === '..') {
-    throw new Error(`Invalid secret ${label}`)
+    throw new Error(`密钥存储${label}无效`)
   }
 }
 
 function validateScope(scope: SecretScope): void {
-  scope.forEach((segment) => validateSegment(segment, 'scope'))
+  scope.forEach((segment) => validateSegment(segment, '作用域'))
 }
 
 function validateKey(key: string): void {
-  validateSegment(key, 'key')
+  validateSegment(key, '键名')
 }
 
 async function writeAtomically(filePath: string, data: Uint8Array): Promise<void> {
@@ -52,7 +52,7 @@ export class EncryptedSecretStorage {
   ) {}
 
   scope(name: string): ScopedSecretStorage {
-    validateSegment(name, 'scope')
+    validateSegment(name, '作用域')
     return new ScopedSecretStorageImpl(this, [name])
   }
 
@@ -67,7 +67,7 @@ export class EncryptedSecretStorage {
   }
 
   async write(scope: SecretScope, key: string, value: string): Promise<void> {
-    if (typeof value !== 'string') throw new TypeError('Secret value must be a string')
+    if (typeof value !== 'string') throw new TypeError('密钥值必须是字符串')
     await writeAtomically(this.resolve(scope, key), this.codec.encrypt(value))
   }
 
@@ -97,7 +97,7 @@ class ScopedSecretStorageImpl implements ScopedSecretStorage {
   ) {}
 
   scope(name: string): ScopedSecretStorage {
-    validateSegment(name, 'scope')
+    validateSegment(name, '作用域')
     return new ScopedSecretStorageImpl(this.storage, [...this.scopePath, name])
   }
 

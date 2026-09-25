@@ -51,7 +51,7 @@ export class ScopedStoreImpl implements ScopedStore {
   }
 
   async writeAsset(filename: string, data: Uint8Array): Promise<void> {
-    if (!(data instanceof Uint8Array)) throw new TypeError('Asset data must be a Uint8Array')
+    if (!(data instanceof Uint8Array)) throw new TypeError('资源数据必须是 Uint8Array')
     await this.invoke(FILE_STORE_CHANNELS.writeAsset, this.location(filename), data)
   }
 
@@ -95,6 +95,6 @@ export class ScopedStoreImpl implements ScopedStore {
 
 function serializeJson<T>(data: T): string {
   const value = JSON.stringify(data)
-  if (value === undefined) throw new TypeError('Data is not JSON serializable')
+  if (value === undefined) throw new TypeError('数据无法序列化为 JSON')
   return value
 }

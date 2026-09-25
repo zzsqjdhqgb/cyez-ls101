@@ -118,7 +118,7 @@ function assertCanonicalFilesClean() {
       '--porcelain=v1',
       '--untracked-files=all',
       '--',
-      'docs/product'
+      'docs/manual'
     ],
     { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] }
   )

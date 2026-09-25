@@ -1,6 +1,13 @@
+<!--
+status: implemented
+product-version: 0.4.1
+audience: engineer
+owner: testing
+-->
+
 # 工程测试
 
-本目录记录自动化测试的分层和运行约束。产品行为及其截图证据位于[产品文档](../../product/README.md)，不在这里重复说明。
+本目录记录自动化测试的分层和运行约束。产品行为位于[产品说明书](../../manual/README.md)与[界面规格](../../ui/README.md)，不在这里重复说明。
 
 ## 测试分层
 

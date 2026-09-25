@@ -122,7 +122,7 @@ describe('validateInterfaceDef — 正常', () => {
 // ============================================================
 
 describe('validateInterfaceDef — 顶层校验', () => {
-  it('id 不是 SHA-256 内容 ID → INVALID_ID', () => {
+  it('id 不是 SHA-256 内容编号 → INVALID_ID', () => {
     const result = validateInterfaceDef(validDef({ id: 'test-id' }))
     expectError(result.errors, 'INVALID_ID', '', { id: 'test-id' })
   })

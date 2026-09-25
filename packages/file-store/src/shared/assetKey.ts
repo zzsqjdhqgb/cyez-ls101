@@ -17,7 +17,7 @@ export function createAssetKey(location: FileLocation): AssetKey {
 }
 
 export function assetKeyToLocation(key: AssetKey): FileLocation {
-  return parseLocationUrl(key, `${ASSET_KEY_SCHEME}:`, ASSET_KEY_VERSION, 'Invalid asset key')
+  return parseLocationUrl(key, `${ASSET_KEY_SCHEME}:`, ASSET_KEY_VERSION, '资源标识无效')
 }
 
 export function assetLocationToUrl(location: FileLocation): string {
@@ -27,12 +27,7 @@ export function assetLocationToUrl(location: FileLocation): string {
 
 export function assetUrlToKey(rawValue: string): AssetKey {
   return createAssetKey(
-    parseLocationUrl(
-      rawValue,
-      `${ASSET_PROTOCOL_SCHEME}:`,
-      ASSET_PROTOCOL_HOST,
-      'Invalid asset URL'
-    )
+    parseLocationUrl(rawValue, `${ASSET_PROTOCOL_SCHEME}:`, ASSET_PROTOCOL_HOST, '资源地址无效')
   )
 }
 
@@ -46,7 +41,7 @@ export function builtinAssetKeyToLocation(key: AssetKey): FileLocation {
     key,
     `${BUILTIN_ASSET_KEY_SCHEME}:`,
     ASSET_KEY_VERSION,
-    'Invalid builtin asset key'
+    '内置资源标识无效'
   )
 }
 

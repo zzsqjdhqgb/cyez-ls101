@@ -14,8 +14,8 @@ import type { ValidationError, ValidationErrorCode } from './validation'
  * 模板中使用 {{paramName}} 占位符，由 formatError 根据 error.params 插值。
  */
 const MESSAGES: Record<ValidationErrorCode, string> = {
-  INVALID_ID: 'Interface ID "{{id}}" 不是有效的 SHA-256 内容 ID',
-  EMPTY_NAME: 'Interface 名称不能为空',
+  INVALID_ID: '题型编号 "{{id}}" 不是有效的 SHA-256 内容编号',
+  EMPTY_NAME: '题型名称不能为空',
   EMPTY_PROMPT_TEMPLATE: '提示词模板不能为空',
   EMPTY_FIELDS: '字段结构不能为空（至少需要一个字段）',
   EMPTY_GROUP: '字段组不能为空（至少需要一个子字段）',

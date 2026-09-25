@@ -11,16 +11,32 @@ yarn test:product-docs
 ```
 
 该命令只运行预览模式：生成的 Markdown、manifest、截图、trace 和失败证据都保存在
-`test-results/product-docs-preview`，不会修改 `docs/product`。
+`test-results/product-docs-preview`，不会修改 `docs/manual` 或档案层。
 
-正式生成必须通过专用 Docker 渲染镜像：
+## 生成产品说明书 `docs/manual`
+
+产品说明书是纯文本产物（`README.md` + 章节，无截图、无逐操作页），因此不依赖 canonical 渲染容器：
+
+```bash
+yarn build:test          # 首次或打包产物缺失时
+yarn docs:manual:local
+```
+
+该命令要求整套产品操作测试全部通过；未全部通过时不会覆盖 `docs/manual`。
+逐屏视觉基线仍只允许由 canonical 容器生成，见 [`../../tests/visual/README.md`](../../tests/visual/README.md)。
+
+canonical 生成仍通过专用 Docker 渲染镜像（写入 `docs/manual`）：
 
 ```bash
 yarn docs:product:image
 yarn docs:product:publish
 ```
 
-检查从当前提交重新生成的 canonical 文档是否干净：
+只有该镜像的运行可以设置 `PRODUCT_DOCS_CANONICAL=1`：`scripts/run-product-docs.mjs preview` 会在发现
+`PRODUCT_DOCS_CANONICAL` / `PRODUCT_DOCS_CANONICAL_RUNNER` 时直接退出，`publish` 与 `check` 则先由
+`verifyCanonicalEnvironment` 校验镜像标识与版本，不满足时不启动 Electron。
+
+检查从当前提交重新生成的产品说明书是否干净：
 
 ```bash
 yarn docs:product:check

@@ -125,7 +125,7 @@ export function SchemaBrowserPage(): JSX.Element {
           <span>{error}</span>
         </div>
       ) : null}
-      {loading ? <div className={styles.loading}>正在加载 Schema...</div> : null}
+      {loading ? <div className={styles.loading}>正在加载评分单元...</div> : null}
       {!loading && visibleSchemas.length === 0 ? (
         <EmptyState
           icon={BookOpen}
@@ -151,7 +151,7 @@ export function SchemaBrowserPage(): JSX.Element {
               </div>
               <div className={styles.rowActions}>
                 <span className={styles.badge}>
-                  {builtinSchemaIds.has(item.schemaId) ? '内置' : `r${item.revision}`}
+                  {builtinSchemaIds.has(item.schemaId) ? '内置' : `版本 ${item.revision}`}
                 </span>
                 {builtinSchemaIds.has(item.schemaId) ? (
                   <Button icon={ArrowRight} onClick={() => copySchema(item)}>

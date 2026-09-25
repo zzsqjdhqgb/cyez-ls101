@@ -192,7 +192,7 @@ describe('bundled Interface repository', () => {
     expect(new Set(answers.map(({ leaf }) => leaf.example))).toEqual(new Set(['A', 'B', 'C', 'D']))
   })
 
-  it('按 builtinKey 和内容摘要读取独立 Interface 文件', async () => {
+  it('按 builtinKey 和内容摘要读取独立题型文件', async () => {
     const def = await publishInterface(content)
     const store = bundledStore('speaking', def)
     const repository = new FileBundledInterfaceRepository(store.scope('interface-editor'))
@@ -202,7 +202,7 @@ describe('bundled Interface repository', () => {
     ])
   })
 
-  it('拒绝 current ID 与 Interface 内容不一致的 bundled 仓储', async () => {
+  it('拒绝 current 编号与题型内容不一致的 bundled 仓储', async () => {
     const def = await publishInterface(content)
     const store = bundledStore('speaking', { ...def, name: '被篡改' })
     const repository = new FileBundledInterfaceRepository(store.scope('interface-editor'))
@@ -251,7 +251,7 @@ describe('bundled Interface repository', () => {
     ])
   })
 
-  it('任一 bundled Interface 损坏时不会安装前面的有效 Interface', async () => {
+  it('任一 bundled 题型损坏时不会安装前面的有效题型', async () => {
     const valid = await publishInterface(content)
     const invalid = { ...valid, name: '损坏内容' }
     const bundled = bundledStore('a-valid', valid)

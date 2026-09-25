@@ -34,14 +34,14 @@ function content(overrides: ContentOverrides = {}): InterfaceContent {
   }
 }
 
-describe('Interface 内容 ID', () => {
-  it('生成标准 SHA-256 内容 ID', async () => {
+describe('题型内容编号', () => {
+  it('生成标准 SHA-256 内容编号', async () => {
     const id = await deriveInterfaceId(content())
     expect(isInterfaceId(id)).toBe(true)
     expect(id).toMatch(/^sha256:[0-9a-f]{64}$/)
   })
 
-  it('相同内置内容在不同对象中产生相同 ID', async () => {
+  it('相同内置内容在不同对象中产生相同编号', async () => {
     const first = await publishInterface(content())
     const second = await publishInterface(content())
     expect(first.id).toBe(second.id)
@@ -59,7 +59,7 @@ describe('Interface 内容 ID', () => {
     )
   })
 
-  it('内容变化产生不同 ID', async () => {
+  it('内容变化产生不同编号', async () => {
     const first = await deriveInterfaceId(content())
     const second = await deriveInterfaceId(content({ promptTemplate: '生成另一套试题' }))
     expect(first).not.toBe(second)
@@ -78,7 +78,7 @@ describe('Interface 内容 ID', () => {
     expect(first).not.toBe(second)
   })
 
-  it('节点对象声明顺序不影响 ID，显式 order 才决定字段顺序', async () => {
+  it('节点对象声明顺序不影响编号，显式 order 才决定字段顺序', async () => {
     const a = {
       type: 'text' as const,
       varName: 'a',
@@ -92,7 +92,7 @@ describe('Interface 内容 ID', () => {
     expect(first).toBe(second)
   })
 
-  it('CRLF/LF 和等价 Unicode 规范化后 ID 相同', async () => {
+  it('CRLF/LF 和等价 Unicode 规范化后编号相同', async () => {
     const first = await deriveInterfaceId(
       content({
         name: 'Caf\u00e9',
@@ -114,10 +114,10 @@ describe('Interface 内容 ID', () => {
     expect(await verifyInterfaceId({ ...published, name: '被篡改的名称' })).toBe(false)
   })
 
-  it('区分重复、不同 ID 和同 ID 不同内容', async () => {
+  it('区分重复、不同编号和同编号不同内容', async () => {
     const existing = await publishInterface(content())
     const duplicate = await publishInterface(content())
-    const different = await publishInterface(content({ name: '另一个 Interface' }))
+    const different = await publishInterface(content({ name: '另一个题型' }))
     const collision = { ...existing, name: '冲突内容' }
 
     expect(compareInterfaceIdentity(existing, duplicate)).toBe('same')
@@ -125,7 +125,7 @@ describe('Interface 内容 ID', () => {
     expect(compareInterfaceIdentity(existing, collision)).toBe('collision')
   })
 
-  it('草稿 ID 独立于发布内容 ID', async () => {
+  it('草稿编号独立于发布内容编号', async () => {
     const draft = createInterfaceDraft(content())
     const published = await publishInterface(draft)
     expect(draft.draftId).toMatch(/^[0-9a-f-]{36}$/i)
@@ -133,7 +133,7 @@ describe('Interface 内容 ID', () => {
     expect(await verifyInterfaceId(published)).toBe(true)
   })
 
-  it('规范化输出不包含传入对象上的额外 ID 字段', () => {
+  it('规范化输出不包含传入对象上的额外编号字段', () => {
     const value = { id: 'ignored', ...content() }
     expect(canonicalizeInterfaceContent(value)).not.toContain('ignored')
   })

@@ -12,6 +12,7 @@ import type { LegacyDataInfo } from '@ls101/core-types'
 import { TitleBar } from '../../components/shell/TitleBar'
 import { Button } from '../../components/ui/Button'
 import styles from './LegacyDataMigrationPage.module.css'
+import { toUserMessage } from '../../components/ui/userMessage'
 
 interface LegacyDataMigrationPageProps {
   initialInfo?: LegacyDataInfo
@@ -227,5 +228,5 @@ function formatBytes(bytes: number): string {
 }
 
 function errorMessage(reason: unknown): string {
-  return reason instanceof Error ? reason.message : String(reason)
+  return toUserMessage(reason)
 }

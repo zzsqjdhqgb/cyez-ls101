@@ -91,30 +91,30 @@ export class FileSchemaRepository implements SchemaRepository {
   async listDraftLibraryIds(): Promise<string[]> {
     const ids = await this.draftLibraries.listScopes()
     if (ids.some((id) => !isSchemaLibraryId(id))) {
-      throw invalidData('Schema draft library storage contains an invalid ID')
+      throw invalidData('评分单元草稿库存储包含无效编号')
     }
     return ids.sort()
   }
 
   async getDraftLibrary(libraryId: string): Promise<SchemaDraftLibraryDocument | null> {
-    assertId(isSchemaLibraryId(libraryId), 'libraryId', libraryId)
+    assertId(isSchemaLibraryId(libraryId), '草稿库编号', libraryId)
     const value = await this.draftLibraries.scope(libraryId).readText<unknown>(LIBRARY_FILE)
     if (value === null) return null
     const library = parseSchemaDraftLibrary(value)
     if (!library || library.libraryId !== libraryId) {
-      throw invalidData(`Invalid Schema draft library: ${libraryId}`)
+      throw invalidData(`评分单元草稿库无效：${libraryId}`)
     }
     return library
   }
 
   async saveDraftLibrary(library: SchemaDraftLibraryDocument): Promise<SchemaDraftLibraryDocument> {
-    if (!parseSchemaDraftLibrary(library)) throw invalidData('Invalid Schema draft library')
+    if (!parseSchemaDraftLibrary(library)) throw invalidData('评分单元草稿库无效')
     assertId(isSchemaLibraryId(library.libraryId), 'libraryId', library.libraryId)
     const scope = this.draftLibraries.scope(library.libraryId)
     const storedValue = await scope.readText<unknown>(LIBRARY_FILE)
     if (storedValue === null) {
       if (library.revision !== 0) {
-        throw revisionConflict('SchemaDraftLibrary', library.libraryId, 0, library.revision)
+        throw revisionConflict('评分单元草稿库', library.libraryId, 0, library.revision)
       }
       const created = structuredClone(library)
       if (!(await scope.compareAndSwapText(LIBRARY_FILE, null, created))) {
@@ -125,11 +125,11 @@ export class FileSchemaRepository implements SchemaRepository {
 
     const current = parseSchemaDraftLibrary(storedValue)
     if (!current || current.libraryId !== library.libraryId) {
-      throw invalidData(`Invalid stored Schema draft library: ${library.libraryId}`)
+      throw invalidData(`存储的评分单元草稿库无效：${library.libraryId}`)
     }
     if (current.revision !== library.revision) {
       throw revisionConflict(
-        'SchemaDraftLibrary',
+        '评分单元草稿库',
         library.libraryId,
         current.revision,
         library.revision
@@ -143,14 +143,14 @@ export class FileSchemaRepository implements SchemaRepository {
   }
 
   async deleteDraftLibrary(libraryId: string): Promise<void> {
-    assertId(isSchemaLibraryId(libraryId), 'libraryId', libraryId)
+    assertId(isSchemaLibraryId(libraryId), '草稿库编号', libraryId)
     await this.draftLibraries.scope(libraryId).clear()
   }
 
   async listSchemaIds(): Promise<string[]> {
     const ids = await this.published.listScopes()
     if (ids.some((id) => !isSchemaId(id))) {
-      throw invalidData('Published Schema storage contains an invalid ID')
+      throw invalidData('正式评分单元存储包含无效编号')
     }
     return ids.sort()
   }
@@ -160,7 +160,7 @@ export class FileSchemaRepository implements SchemaRepository {
   }
 
   async getSchema(schemaId: string): Promise<SchemaDefinition | null> {
-    assertId(isSchemaId(schemaId), 'schemaId', schemaId)
+    assertId(isSchemaId(schemaId), '评分单元编号', schemaId)
     const value = await this.published.scope(schemaId).readText<unknown>(SCHEMA_FILE)
     if (value === null) return null
     const definition = parseSchemaDefinition(value)
@@ -170,7 +170,7 @@ export class FileSchemaRepository implements SchemaRepository {
       !validateSchemaDefinition(definition).valid ||
       !(await verifySchemaDefinition(definition))
     ) {
-      throw invalidData(`Invalid published Schema: ${schemaId}`)
+      throw invalidData(`正式评分单元无效：${schemaId}`)
     }
     return definition
   }
@@ -185,7 +185,7 @@ export class FileSchemaRepository implements SchemaRepository {
     if (!(await scope.compareAndSwapText(SCHEMA_FILE, null, definition))) {
       throw new SchemaRepositoryError(
         'IDENTITY_CONFLICT',
-        `Published Schema ID already exists: ${definition.schemaId}`,
+        `已存在相同编号的正式评分单元：${definition.schemaId}`,
         { schemaId: definition.schemaId }
       )
     }
@@ -198,7 +198,7 @@ export class FileSchemaRepository implements SchemaRepository {
       !validateSchemaDefinition(definition).valid ||
       !(await verifySchemaDefinition(definition))
     ) {
-      throw invalidData('Schema definition is invalid')
+      throw invalidData('评分单元定义无效')
     }
     const scope = this.published.scope(definition.schemaId)
     const storedValue = await scope.readText<unknown>(SCHEMA_FILE)
@@ -234,12 +234,12 @@ export class FileSchemaRepository implements SchemaRepository {
     draftId: string,
     data: SchemaData
   ): Promise<SchemaDefinition> {
-    assertId(isSchemaLibraryId(libraryId), 'libraryId', libraryId)
-    assertId(isSchemaDraftId(draftId), 'draftId', draftId)
+    assertId(isSchemaLibraryId(libraryId), '草稿库编号', libraryId)
+    assertId(isSchemaDraftId(draftId), '草稿编号', draftId)
     const library = await this.getDraftLibrary(libraryId)
-    if (!library) throw notFound(`Schema draft library not found: ${libraryId}`)
+    if (!library) throw notFound(`找不到评分单元草稿库：${libraryId}`)
     const draft = library.drafts.find((item) => item.draftId === draftId)
-    if (!draft) throw notFound(`Schema draft not found: ${draftId}`)
+    if (!draft) throw notFound(`找不到评分单元草稿：${draftId}`)
 
     assertValid(validateSchemaDraft(draft).errors)
     assertValid(validateSchemaData(data, draft.structure).errors)
@@ -250,7 +250,7 @@ export class FileSchemaRepository implements SchemaRepository {
     if (!(await scope.compareAndSwapText(SCHEMA_FILE, null, definition))) {
       throw new SchemaRepositoryError(
         'IDENTITY_CONFLICT',
-        `Published Schema ID already exists: ${definition.schemaId}`,
+        `已存在相同编号的正式评分单元：${definition.schemaId}`,
         { schemaId: definition.schemaId }
       )
     }
@@ -262,12 +262,12 @@ export class FileSchemaRepository implements SchemaRepository {
     expectedRevision: number,
     data: SchemaData
   ): Promise<SchemaDefinition> {
-    assertId(isSchemaId(schemaId), 'schemaId', schemaId)
+    assertId(isSchemaId(schemaId), '评分单元编号', schemaId)
     if (this.builtinSchemaIds.has(schemaId)) throw builtinSchemaError(schemaId)
     const current = await this.getSchema(schemaId)
-    if (!current) throw notFound(`Published Schema not found: ${schemaId}`)
+    if (!current) throw notFound(`找不到正式评分单元：${schemaId}`)
     if (current.revision !== expectedRevision) {
-      throw revisionConflict('Schema', schemaId, current.revision, expectedRevision)
+      throw revisionConflict('评分单元', schemaId, current.revision, expectedRevision)
     }
     assertValid(validateSchemaData(data, current.structure).errors)
 
@@ -275,7 +275,7 @@ export class FileSchemaRepository implements SchemaRepository {
     const scope = this.published.scope(schemaId)
     if (!(await scope.compareAndSwapText(SCHEMA_FILE, current, updated))) {
       const latest = await this.getSchema(schemaId)
-      throw revisionConflict('Schema', schemaId, latest?.revision ?? 0, expectedRevision)
+      throw revisionConflict('评分单元', schemaId, latest?.revision ?? 0, expectedRevision)
     }
     return updated
   }
@@ -286,30 +286,30 @@ export class FileSchemaRepository implements SchemaRepository {
     structure: SchemaDefinition['structure'],
     data: SchemaData
   ): Promise<SchemaDefinition> {
-    assertId(isSchemaId(schemaId), 'schemaId', schemaId)
+    assertId(isSchemaId(schemaId), '评分单元编号', schemaId)
     if (this.builtinSchemaIds.has(schemaId)) throw builtinSchemaError(schemaId)
     const current = await this.getSchema(schemaId)
-    if (!current) throw notFound(`Published Schema not found: ${schemaId}`)
+    if (!current) throw notFound(`找不到正式评分单元：${schemaId}`)
     if (current.revision !== expectedRevision) {
-      throw revisionConflict('Schema', schemaId, current.revision, expectedRevision)
+      throw revisionConflict('评分单元', schemaId, current.revision, expectedRevision)
     }
     assertValid(validateSchemaStructure(structure).errors)
     assertValid(validateSchemaData(data, structure).errors)
     if ((await deriveSchemaStructureHash(structure)) !== current.structureHash) {
-      throw invalidData('Schema structure is frozen after the first save')
+      throw invalidData('评分单元结构在首次保存后冻结，不能再修改')
     }
     const updated = await updateDirectSchemaDefinition(current, structure, data)
     assertValid(validateSchemaDefinition(updated).errors)
     const scope = this.published.scope(schemaId)
     if (!(await scope.compareAndSwapText(SCHEMA_FILE, current, updated))) {
       const latest = await this.getSchema(schemaId)
-      throw revisionConflict('Schema', schemaId, latest?.revision ?? 0, expectedRevision)
+      throw revisionConflict('评分单元', schemaId, latest?.revision ?? 0, expectedRevision)
     }
     return updated
   }
 
   async deleteSchema(schemaId: string): Promise<void> {
-    assertId(isSchemaId(schemaId), 'schemaId', schemaId)
+    assertId(isSchemaId(schemaId), '评分单元编号', schemaId)
     if (this.builtinSchemaIds.has(schemaId)) {
       throw builtinSchemaError(schemaId)
     }
@@ -321,26 +321,19 @@ export class FileSchemaRepository implements SchemaRepository {
     providedRevision: number
   ): Promise<SchemaRepositoryError> {
     const latest = await this.getDraftLibrary(libraryId)
-    return revisionConflict(
-      'SchemaDraftLibrary',
-      libraryId,
-      latest?.revision ?? 0,
-      providedRevision
-    )
+    return revisionConflict('评分单元草稿库', libraryId, latest?.revision ?? 0, providedRevision)
   }
 }
 
 function builtinSchemaError(schemaId: string): SchemaRepositoryError {
-  return new SchemaRepositoryError(
-    'BUILTIN_SCHEMA',
-    `Builtin Schema cannot be modified: ${schemaId}`,
-    { schemaId }
-  )
+  return new SchemaRepositoryError('BUILTIN_SCHEMA', `内置评分单元不能修改：${schemaId}`, {
+    schemaId
+  })
 }
 
 function assertValid(errors: readonly SchemaValidationError[]): void {
   if (errors.length === 0) return
-  throw new SchemaRepositoryError('INVALID_DATA', 'Schema validation failed', {
+  throw new SchemaRepositoryError('INVALID_DATA', '评分单元校验失败', {
     errorCount: errors.length
   })
 }
@@ -351,7 +344,7 @@ function invalidData(message: string): SchemaRepositoryError {
 
 function assertId(valid: boolean, field: string, value: string): void {
   if (valid) return
-  throw new SchemaRepositoryError('INVALID_ID', `Invalid ${field}: ${value}`, { [field]: value })
+  throw new SchemaRepositoryError('INVALID_ID', `${field}无效：${value}`, { [field]: value })
 }
 
 function notFound(message: string): SchemaRepositoryError {
@@ -364,7 +357,7 @@ function revisionConflict(
   currentRevision: number,
   providedRevision: number
 ): SchemaRepositoryError {
-  return new SchemaRepositoryError('REVISION_CONFLICT', `${kind} revision conflict: ${id}`, {
+  return new SchemaRepositoryError('REVISION_CONFLICT', `${kind}版本冲突：${id}`, {
     currentRevision,
     providedRevision
   })

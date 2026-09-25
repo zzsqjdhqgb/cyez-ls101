@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type {
   FunctionContent,
+  FunctionLibraryEntry,
   LocalFunctionLibraryDocument,
   TemplateApplication,
   TemplateDocument
@@ -46,7 +47,7 @@ describe('Template function pages', () => {
     expect(screen.queryByRole('button', { name: '编辑导入函数' })).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('tab', { name: '本地函数库' }))
-    fireEvent.change(screen.getByRole('textbox', { name: '名称', exact: true }), {
+    fireEvent.change(screen.getByRole('textbox', { name: '名称' }), {
       target: { value: '进入函数前保存' }
     })
     fireEvent.click(screen.getByRole('button', { name: '编辑本地函数' }))
@@ -116,7 +117,7 @@ describe('Template function pages', () => {
       }
     ])
     expect(functionDocument.content.body.children[0]).toMatchObject({ id: 'page', type: 'page' })
-    expect(screen.getByText(/Revision 4/)).toBeInTheDocument()
+    expect(screen.getByText(/版本 4/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '保存' })).toBeDisabled()
   })
 
@@ -432,6 +433,7 @@ function application(): TemplateApplication {
     initialize: vi.fn().mockResolvedValue(undefined),
     browser: {
       listTemplates: vi.fn().mockResolvedValue([]),
+      listBuiltinTemplates: vi.fn().mockResolvedValue([]),
       listFunctionLibraries: vi.fn().mockResolvedValue([
         {
           source: 'builtin',
@@ -464,6 +466,8 @@ function application(): TemplateApplication {
     },
     templates: {
       create: vi.fn(),
+      inspectImport: vi.fn(),
+      importDocument: vi.fn(),
       get: vi.fn().mockResolvedValue(template()),
       save: vi.fn().mockImplementation(async (document) => ({
         ...document,
@@ -473,6 +477,13 @@ function application(): TemplateApplication {
       embedFunction: vi.fn(),
       insertFunctionCall: vi.fn(),
       pruneFunctionResources: vi.fn(),
+      validate: vi.fn(),
+      compile: vi.fn(),
+      preview: vi.fn()
+    },
+    builtinTemplates: {
+      get: vi.fn(),
+      createCopy: vi.fn(),
       validate: vi.fn(),
       compile: vi.fn(),
       preview: vi.fn()
@@ -492,7 +503,7 @@ function application(): TemplateApplication {
             storageRevision: library.storageRevision + 1,
             content: {
               ...library.content,
-              functions: library.content.functions.map((entry) =>
+              functions: library.content.functions.map((entry: FunctionLibraryEntry) =>
                 entry.functionId === document.functionId
                   ? { functionId: entry.functionId, content: structuredClone(document.content) }
                   : entry

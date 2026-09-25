@@ -78,7 +78,7 @@ export function SchemaDataFields({
       </section>
 
       <section className={styles.descriptionSection} aria-labelledby="input-description-heading">
-        <h3 id="input-description-heading">Template 输入说明</h3>
+        <h3 id="input-description-heading">试卷模板输入说明</h3>
         {structure.templateInputs.map((input) => {
           const builtinDescription = schemaBuiltinInputDescription(
             structure.questionType,

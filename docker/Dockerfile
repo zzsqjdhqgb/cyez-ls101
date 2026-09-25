@@ -16,6 +16,10 @@ ENV XDG_RUNTIME_DIR=/tmp/ls101-xdg-runtime
 ENV DBUS_SESSION_BUS_ADDRESS=unix:path=/tmp/ls101-session-bus
 ENV LS101_DOCKER_KEYRING_PASSWORD=ls101-docker-dev
 
+# Docker Engine 由 sbx 提供，容器内只使用客户端；socket 由 docker-compose.yml 挂载。
+# 默认 socket 路径，显式声明便于诊断。
+ENV DOCKER_HOST=unix:///var/run/docker.sock
+
 # 安装必要的系统依赖 (curl, git, sudo 等)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl ca-certificates git openssh-client sudo tar bzip2 socat \
@@ -34,6 +38,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xdg-utils \
     vim python3 python3-pip python3-venv python-is-python3 build-essential pkg-config libasound2-dev libsecret-1-dev ffmpeg\
     fonts-liberation fonts-noto-cjk \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装 Docker CLI 与 buildx 插件，用于从容器内驱动 sbx 的 Docker Engine。
+# 只安装客户端，不安装 dockerd/containerd：daemon 始终由 sbx 提供。
+# 需要 buildx 是因为 scripts/product-docs/docker.mjs 使用 `docker build --platform linux/amd64`。
+RUN install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc \
+    && chmod a+r /etc/apt/keyrings/docker.asc \
+    && printf 'deb [arch=%s signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable\n' \
+         "$(dpkg --print-architecture)" > /etc/apt/sources.list.d/docker.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends docker-ce-cli docker-buildx-plugin \
     && rm -rf /var/lib/apt/lists/*
 
 RUN <<'EOF'
@@ -70,6 +86,11 @@ if ! secret-tool lookup application ls101-keyring-probe >/dev/null 2>&1; then
     secret-tool store \
       --label='LS101 Docker keyring probe' \
       application ls101-keyring-probe
+fi
+
+# sbx 的 Docker socket 由 compose 挂载；缺失时只提示，不阻止容器启动。
+if [ ! -S /var/run/docker.sock ]; then
+  printf 'warning: /var/run/docker.sock 不存在，容器内无法访问 Docker Engine。\n' >&2
 fi
 
 exec "$@"

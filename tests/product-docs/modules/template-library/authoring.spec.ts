@@ -72,7 +72,7 @@ test(
 
       await productStep('save-template', async () => {
         await page.getByRole('button', { name: '保存', exact: true }).click()
-        await expect(page.getByText('Revision 1')).toBeVisible()
+        await expect(page.getByText('版本 1')).toBeVisible()
         await expect(page.getByRole('button', { name: '保存', exact: true })).toBeDisabled()
         await evidence(testInfo, page, {
           key: 'saved-template',
