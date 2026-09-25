@@ -20,29 +20,20 @@ The items below remain the broader cross-platform and generated-artifact roadmap
 
 ## Known gaps (verified 2026-01, v0.4.1)
 
-- **The `yarn typecheck` gate is vacuous.** `package.json` runs `tsc --noEmit -p tsconfig.json`, and
-  `tsconfig.json` is a solution file containing only `references`; TypeScript therefore checks no
-  files and the step passes unconditionally (`.github/workflows/ci.yml` runs it as the type gate).
-- **The main-process project currently does not typecheck.** `npx tsc --noEmit -p tsconfig.node.json`
-  reports 10 errors, all pre-existing:
-
-  | File                                          | Error                                                                                                                                                                                             |
-  | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `src/main/data-directory.ts:1007`             | `TS2304: Cannot find name 'LEGACY_DIRECTORIES'` (x2) — the identifier is referenced once and never defined or imported, so the legacy-copy bootstrap path would throw `ReferenceError` at runtime |
-  | `src/main/bootstrap.ts:182`                   | `TS2345` — `MainStartupMilestoneEntry` lacks an index signature for `Record<string, unknown>`                                                                                                     |
-  | `src/main/data-directory.ts:420,813,814,1324` | `TS2322` / `TS2345` — `formatVersion` literal widening, possibly-undefined paths, `PendingCleanup` passed where a bootstrap record is expected                                                    |
-  | `src/main/legacy-data-worker.ts:18,19`        | `TS18047: 'parentPort' is possibly 'null'`                                                                                                                                                        |
-
+- **The type gate is real again.** `package.json` now runs `tsc -b tsconfig.json`, a solution build over the main process
+  plus all 20 workspace packages; it reports 0 errors. `tsconfig.node.json` writes into `.tsbuild/node` (gitignored) so a
+  typecheck no longer drops compiled files next to the sources.
+- The previous vacuous `tsc --noEmit -p tsconfig.json` hid real errors. The ones this exposed were fixed:
+  `src/main/data-directory.ts` referenced an undefined `LEGACY_DIRECTORIES` (now imports `LEGACY_DATA_DIRECTORIES`),
+  `bootstrap.ts` widened a literal type, two narrowing gaps in the deletion path, and three `AIRouterSpeechRecognition*`
+  types missing from the airouter barrel. Package projects had ~120 further errors, mostly stale test doubles.
 - **A window-control integration test is flaky in the full run.**
   `tests/integration/electron-app.spec.ts › routes window controls through preload to the owning BrowserWindow`
   failed once inside the complete suite with `locator.click: Target page, context or browser has been closed`
   and passed when re-run alone, because it closes the owning window while later assertions still run.
   Either enable retries for the integration project or split the closing step into its own test.
-
-- Fixing the gate means either converting the root `tsconfig.json` into a real solution build
-  (`tsc -b`) or listing each referenced project explicitly, then repairing the errors above.
-  Adding `LEGACY_DIRECTORIES` (or deleting the dead branch) is a code change and is not part of the
-  current documentation work.
+- **User-facing copy has its own gate**: `yarn copy:check` fails on any English error message in `packages/**` or
+  `src/**` (see `docs/ui/open-questions.md` item 10).
 
 ## Goal
 

@@ -97,6 +97,7 @@ Docker 外（每次改文档或界面后都应跑）：
 
 - `yarn docs:check`：状态注释块与取值、`implemented` 文档中的未来时态、相对链接可达性、索引完备性，并输出视觉 / 行为锚定率。
 - `yarn visual:check`：`docs/ui/screens/UI-*.md` 的视觉锚点 ↔ `tests/visual` ↔ `tests/visual/baselines` 三方一致。
+- `yarn copy:check`：扫描 `packages/**`、`src/**` 中面向用户的错误消息，纯英文即失败（规则与落地见 [`ui/open-questions.md`](./ui/open-questions.md) 第 10 条）。
 - `yarn lint`、`yarn test:vitest`、`xvfb-run -a yarn test:playwright:run`、`xvfb-run -a yarn test:product-docs:run`。
 
 canonical 容器内（只在能访问 Docker 宿主的机器上跑）：
@@ -117,6 +118,7 @@ canonical 容器内（只在能访问 Docker 宿主的机器上跑）：
 - **阶段 4a（产品说明书）已产出**：`docs/manual/` 由产品操作测试生成（`README.md` + 5 个章节 + manifest，纯文本、无截图、无逐操作页）。本地命令 `xvfb-run -a yarn docs:manual:local`（需先 `yarn build:test`）；canonical 容器命令为 `yarn docs:product:publish`。覆盖面已从旧层的 20 项扩展到 **30 项**：`EP-01` 首次在同一个数据目录内用界面贯通「评分单元 → 题型 → 题组 → 试卷模板绑定 → 生成试卷 → 加入试卷库」；随后补齐试卷库维护（`EL-01`…`EL-05`：重复导入、损坏包重试、空态与查询失败、删除确认、退出考试确认）与作答记录分支（`SR-02`…`SR-05`：行内单条评分入口、评分报告、导出作答包、删除记录）。
 - **阶段 4c（旧产物冻结迁出）已完成**：`docs/product` 已迁入 `docs/archive/product-docs-0.4.1/`（只读）；reporter 的归属设计校验改指 `docs/ui/modules/<slug>.md`；canonical publish 只生成 `docs/manual`，`yarn docs:product:check` 只校验 `docs/manual`。
 - **阶段 4e（工程缺口补齐）已完成**：新增 `engineering/features/license.md`、`installation-marker.md`、`logger.md`、`secret-store.md` 与 `engineering/subsystems/startup-orchestration.md`、`builtin-content.md`、`legacy-data.md`，`docs/engineering/todo/logger.md` 只保留未实现部分。
+- **阶段 4g（质量门禁补齐）已完成**：`yarn typecheck` 从"solution 文件空转"改为真实的 `tsc -b tsconfig.json`（主进程 + 20 个包，0 错误；主进程产物写入 `.tsbuild/`）；`yarn copy:check` 新增用户可见错误文案门禁（包内英文错误一律失败，见 [`ui/open-questions.md`](./ui/open-questions.md) 第 10 条）；`tests/visual` 增加一像素敏感度单元测试与 `yarn visual:verify-determinism`（宿主机连续两次发布比对）。
 - **阶段 4f（界面用词对齐，D1）已完成**：界面与主进程面向用户的文案改为术语表用词（`Schema`→评分单元、`Interface`→题型、`Instance`→题组、`Timeline`→时间线、`Collector`→采集器、`revision`→版本、`Provider`→服务商、`ID`→编号、`API Key`→API 密钥，另含 `Template 输入`→`试卷模板输入`、`ChoiceView`→`选择题视图`、`提供商`→`服务商`）；内置模板「生成试卷」的禁用提示由错误码改为人类可读消息。对照表见 [`ui/glossary.md`](./ui/glossary.md)，落地记录见 [`ui/open-questions.md`](./ui/open-questions.md) 第 1 条。视觉基线随本批重建。
 
 **未完成**：

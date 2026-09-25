@@ -343,7 +343,7 @@ test('round-trips data through file, config, asset protocol, AI and clipboard IP
       text: '{"ready":true}'
     })
     expect(assetResponse).toEqual({ bytes: [10, 20, 30, 40], status: 200 })
-    expect(result.unsupportedChannelError).toContain('Unsupported file-store channel')
+    expect(result.unsupportedChannelError).toContain('不支持的文件存储通道')
     await expect
       .poll(() => electronApp.evaluate(({ clipboard }) => clipboard.readText()))
       .toBe('LS101 integration test')

@@ -26,11 +26,11 @@ owner: exam-package
 编码（生成试卷）：
 
 - `packages/renderer/src/features/templates/TemplateExamGeneration.ts` 的 `runGeneration` 在收集完 `compiled.resourceSources` 后调用 `encodeExamPackage(examPackage, resources)`，把返回的 `Uint8Array` 作为生成结果；`exportGeneratedExam` 以 `.lsexam` 扩展名写盘。
-- `encodeExamPackage` 先执行 `validateExamPackage`，再用 `resourceFiles` 把资源按 `packagePath` 映射为 ZIP 条目。传入的 resources 键集合必须与 manifest 完全一致：缺键抛 `Missing resource bytes`，多键抛 `Archive contains a file without a manifest resource entry`（`packages/exam-package/src/index.ts:44`、`:743`）。
+- `encodeExamPackage` 先执行 `validateExamPackage`，再用 `resourceFiles` 把资源按 `packagePath` 映射为 ZIP 条目。传入的 resources 键集合必须与 manifest 完全一致：缺键抛 `缺少资源字节`，多键抛 `归档包含清单未声明的资源条目`（`packages/exam-package/src/index.ts`）。
 
 编码（生成作答包）：
 
-- `packages/exam-player/src/ExamPlayer.tsx` 的 `finishSubmission` 先用 `collectSubmissionPackageFiles(submission, loaded.resources, recordingBytes)` 从考试资源与本次录音中取文件，再调用 `encodeSubmissionPackage`。`collectSubmissionPackageFiles` 按 `submission.resources[key].packagePath.startsWith('recordings/')` 决定取录音还是取考试资源；缺任一资源抛 `Missing ... resource`，传入未被 manifest 引用的录音抛 `Unused recording supplied for SubmissionPackage`（`:69`）。
+- `packages/exam-player/src/ExamPlayer.tsx` 的 `finishSubmission` 先用 `collectSubmissionPackageFiles(submission, loaded.resources, recordingBytes)` 从考试资源与本次录音中取文件，再调用 `encodeSubmissionPackage`。`collectSubmissionPackageFiles` 按 `submission.resources[key].packagePath.startsWith('recordings/')` 决定取录音还是取考试资源；缺任一资源抛 `缺少录音/试卷包资源：<key>`，传入未被 manifest 引用的录音抛 `提供了作答包未使用的录音`（`packages/exam-package/src/index.ts`）。
 
 解码：
 
@@ -72,7 +72,7 @@ ZIP 入口固定为 `manifest.json`（`MANIFEST_PATH`），其余条目名等于
 ## 运维入口
 
 - 判定一份归档是否损坏：用 `validateExamPackage` / `validateSubmissionPackage` 校验已解压的 manifest；或用 `decodeExamPackage` / `decodeSubmissionPackage` 走完整解压校验。
-- 修复交叉引用：manifest 是纯 JSON，`manifest.json` 与资源条目一一对应；错误 message 直接指出缺失键（如 `SubmissionTemplate references missing ExamPackage resource: <key>`、`SchemaUse references missing resource: <key>`）。
+- 修复交叉引用：manifest 是纯 JSON，`manifest.json` 与资源条目一一对应；错误 message 直接指出缺失键（如 `作答包模板引用了不存在的试卷包资源：<key>`、`评分单元使用项引用了不存在的资源：<key>`）。
 - 修复旧格式：不需要手工改 schema；重新导入即可由 `upgradeLegacyArchiveSchemas` 补齐 `reference-answer`。
 - 归档完整性由上层负责：`exam-library` 的 `exportArchive` 会用 `archiveSha256` 重新校验 ZIP 字节。
 

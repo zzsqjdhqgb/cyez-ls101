@@ -57,12 +57,12 @@ function createElectronSecretStorage(baseDir: string): EncryptedSecretStorage
 
 `@ls101/secret-store/main` 导出 `EncryptedSecretStorage`、`createElectronSecretStorage`、`SecretCodec` 类型和上述 shared 类型；`EncryptedSecretStorage` 的构造函数接受任意 `SecretCodec`，测试与自定义场景用它注入非 `safeStorage` 的编解码器。
 
-scope 和 key 都必须是 `^[a-zA-Z0-9_-]+$`，且不能是 `.` 或 `..`；违规时抛出 `Invalid secret scope` 或 `Invalid secret key`。`write()` 还要求值为字符串，否则抛出 `TypeError('Secret value must be a string')`。
+scope 和 key 都必须是 `^[a-zA-Z0-9_-]+$`，且不能是 `.` 或 `..`；违规时抛出 `密钥存储作用域无效`；`write()` 还要求值为字符串，否则抛出 `TypeError('密钥值必须是字符串')`。
 
 ## 存储与加密
 
 - 加密后端是 Electron `safeStorage`：`encryptString(value)` 得到 `Buffer`，`decryptString(Buffer.from(bytes))` 还原。
-- `createElectronSecretStorage()` 在构造时检查 `safeStorage.isEncryptionAvailable()`；不可用时抛出 `Error('Windows secure storage is unavailable')`，不返回降级实现。
+- `createElectronSecretStorage()` 在构造时检查 `safeStorage.isEncryptionAvailable()`；不可用时抛出 `Error('Windows 安全存储不可用')`，不返回降级实现。
 - 文件路径为 `<baseDir>/secrets/<scope...>/<key>.bin`。调用方 `registerAIRouter({ baseDir: dataDirectory })` 传入的 `dataDirectory` 是当前解析出的可配置 `dataRoot`（默认 `userData/data`），因此密钥实际位于 `<dataRoot>/secrets/...`。
 - 每个文件写入流程：在目标目录创建 `.secret-store-<uuid>.tmp`（`open(..., 'wx', 0o600)`）、写入全部字节并 `fsync`、关闭，再用同目录 `rename` 原子替换目标。任一步骤失败都会删除临时文件；进程在删除前被杀可能留下临时文件。
 - scope 派生只追加 segment，不接受组合路径；`clear()` 递归删除 `<baseDir>/secrets/<scope...>` 整个目录。
@@ -111,7 +111,7 @@ if (process.platform === 'linux' && isLocalIntegrationTest) {
 | 文件或 key 不存在                                                  | `read()` 返回 `null`                                                                                                                                                   |
 | 普通模式下 OS keyring 不可用                                       | `createElectronSecretStorage()` 抛错 → AIRouter 构造失败 → `registerApplicationServices()` 抛错 → 启动失败（`dialog.showErrorBox` 后 `app.exit(1)`），无降级或恢复路径 |
 | 密钥 blob 解密失败（keyring 变化、文件损坏、复制到其他机器或用户） | `safeStorage.decryptString()` 抛错，向上传播到发起读取的 IPC 调用；列表 Provider 时会因为逐个读取密钥失败而整体失败                                                    |
-| scope / key 非法                                                   | 抛出 `Invalid secret scope` / `Invalid secret key`                                                                                                                     |
+| scope / key 非法                                                   | 抛出 `密钥存储作用域无效` / `密钥存储键名无效`                                                                                                                     |
 | 写入值不是字符串                                                   | 抛出 `TypeError`                                                                                                                                                       |
 | 写入中途失败                                                       | 临时文件被清理，旧目标文件保持不变                                                                                                                                     |
 
@@ -129,7 +129,7 @@ if (process.platform === 'linux' && isLocalIntegrationTest) {
 
 ## 已知限制 / 未决
 
-- `createElectronSecretStorage()` 的异常文案固定为 `Windows secure storage is unavailable`，在 Linux 和 macOS 上同样会抛出这条与平台不符的消息。
+- `createElectronSecretStorage()` 的异常文案固定为 `Windows 安全存储不可用`，在 Linux 和 macOS 上同样会抛出这条与平台不符的消息。
 - 没有 renderer 入口是当前设计：AIRouter 只暴露按 Provider 读取密钥的专用 IPC，已保存密钥默认不回传 renderer。若其他模块需要密钥，必须新增 IPC，不能直接复用本模块。
 - 没有密钥轮换、版本化或在数据目录迁移时重新加密；更换 OS 用户、重装系统或换机器后旧 blob 无法解密。
 - `safeStorage.isEncryptionAvailable()` 只在启动时求值一次，运行期不再探测。

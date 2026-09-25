@@ -53,7 +53,7 @@ main 侧导出（`src/main/license-service.ts`）：`LICENSE_RECEIPT_FILENAME`�
 - 默认常量：`INVITATION_CODE_HASH` 是当前分发邀请码的 SHA-256；`LICENSE_EXPIRES_AT = '2026-10-01T15:59:59.999Z'`（北京时间 2026-10-01 23:59:59.999）。更换分发方式时直接替换源码中的摘要常量。
 - 本地集成测试覆盖（`src/main/application-services.ts` 的 `createLicenseOptions`）：仅当 `isLocalIntegrationTest` 为真（`LS101_INTEGRATION_TEST === '1'` 且应用未打包或版本号含 `-local.`，见 `src/main/index.ts`）时才读取两个环境变量：
   - `LS101_LICENSE_TEST_CODE_HASH` 覆盖 `expectedCodeHash`；
-  - `LS101_LICENSE_TEST_NOW` 覆盖时钟；`Date.parse` 失败时抛 `LS101_LICENSE_TEST_NOW is invalid`。
+  - `LS101_LICENSE_TEST_NOW` 覆盖时钟；`Date.parse` 失败时抛 `环境变量 LS101_LICENSE_TEST_NOW 无效`。
   - 集成测试用固定邀请码 `ls101-integration-license`（归一化后 `LS101-INTEGRATION-LICENSE`，SHA-256 `16c045fa7aa104ef6ed25f446f830a995336d69888c122d2f8412be299b2448e`）和固定时钟 `2026-08-23T08:00:00.000Z`，定义在 `tests/integration/support/electron-app.ts`。
 
 ## 数据语义

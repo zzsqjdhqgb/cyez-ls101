@@ -64,6 +64,10 @@ jobs:
         if: matrix.suite == 'other-checks'
         run: node scripts/docs/check-visual.mjs
 
+      - name: Check user-facing error copy
+        if: matrix.suite == 'other-checks'
+        run: node scripts/docs/check-user-facing-copy.mjs
+
       - name: Get Yarn cache directory
         id: yarn-cache-dir
         shell: bash

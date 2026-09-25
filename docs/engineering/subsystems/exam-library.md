@@ -49,10 +49,10 @@ owner: exam-library
 
 ## 失败与恢复
 
-- `INVALID_ARCHIVE`：`importArchive` 入参不是 `Uint8Array`，或 `decodeExamPackage` 抛错。`ExamPackageArchiveError` 的 message 原样透传，其他异常统一为 `Cannot decode exam archive`（`:90`）。
-- `EXAM_ID_CONFLICT`：相同 `packageId` 已存在，但 `record.packageId` 或 `record.archiveSha256` 与本次不同（`:195`）。
-- `NOT_FOUND`：`getRecord`/`exportArchive`/`deleteExam` 的 `packageId` 为空字符串时抛 `Exam ID must not be empty`；`exportArchive` 记录缺失或 `record.packageId !== packageId` 时抛 `Exam not found: <id>`（`:140`、`:240`）。
-- `INVALID_STORAGE`：scope 名不匹配 `SHA256_PATTERN`（`Invalid exam storage key`）、`record.json` 结构非法（`Invalid exam record`）、同 key 下记录 `packageId` 不一致（`Exam storage key collision`）、CAS 后记录消失（`Exam record disappeared`）、导出时归档缺失或重新计算的 SHA-256 与 `archiveSha256` 不一致（`Exam archive is missing or corrupted`）（`:67`、`:175`、`:85`、`:134`、`:149`）。
+- `INVALID_ARCHIVE`：`importArchive` 入参不是 `Uint8Array`，或 `decodeExamPackage` 抛错。`ExamPackageArchiveError` 的 message 原样透传，其他异常统一为 `无法解析试卷包`（`packages/exam-library/src/index.ts`）。
+- `EXAM_ID_CONFLICT`：相同 `packageId` 已存在，但 `record.packageId` 或 `record.archiveSha256` 与本次不同（`packages/exam-library/src/index.ts`）。
+- `NOT_FOUND`：`getRecord`/`exportArchive`/`deleteExam` 的 `packageId` 为空字符串时抛 `试卷包编号不能为空`；`exportArchive` 记录缺失或 `record.packageId !== packageId` 时抛 `试卷包不存在：<id>`（`packages/exam-library/src/index.ts`）。
+- `INVALID_STORAGE`：scope 名不匹配 `SHA256_PATTERN`（`试卷存储键无效`）、`record.json` 结构非法（`试卷记录无效`）、同 key 下记录 `packageId` 不一致（`试卷存储键冲突`）、CAS 后记录消失（`试卷记录已消失`）、导出时归档缺失或重新计算的 SHA-256 与 `archiveSha256` 不一致（`试卷包缺失或已损坏`）（`packages/exam-library/src/index.ts`）。
 - 并发保护：`importArchive` 与 `deleteExam` 通过 `runMutation(storageKey, ...)` 按 storageKey 串行，前一个操作无论成败都不阻塞后一个；最后一个 tail 完成后从 `mutationTails` 删除（`:179`）。`importArchive` 写入后若 CAS 失败，会读取并发写入的记录：归档哈希不同则删除本次刚写的 asset，返回既有记录或抛冲突（`:133`）。导出前无条件重算 SHA-256，因此损坏的 `.lsexam` 不会被当作有效数据返回（`:148`）。
 - 导入失败不会创建记录：解码在任何写盘之前完成（`repository.test.ts:60`）。
 - 删除后行为：`deleteExam` 成功清空 scope 后，`listRecords` 不再返回该记录，`exportArchive` 抛 `NOT_FOUND`（`repository.test.ts:48`）。

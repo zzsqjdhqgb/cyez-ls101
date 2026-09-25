@@ -95,4 +95,11 @@ owner: ui
 - **影响**：这些消息会出现在界面提示与错误页中，与术语表的中文用词规则冲突；
   翻译属代码变更，且需要逐个包补中文映射与测试。
 - **选项**：(a) 在包内改为中文消息；(b) 保留英文，由 renderer 按错误码统一映射。
-- **当前决定**：未定；术语替换本批只覆盖界面文案与主进程面向用户的错误文案。
+- **当前决定**：**已完成，(a)+(b) 组合**：
+  - 包内错误消息全部改为中文（领域包、主进程、preload 共 350+ 处）。
+  - renderer 统一兜底：`packages/renderer/src/components/ui/userMessage.ts` 的 `toUserMessage` 对不含中日韩字符的消息返回中文兜底并写日志，
+    所有界面错误出口（`schemaUi`、`templateUi`、`interfaceUi`、`examUi`、`submissionUi` 及各处 `reason.message`）都经过它；
+    按错误码判断的通用助手是 `hasErrorCode`（不再依赖消息文本，避免翻译后判定失效）。
+  - 门禁：`yarn copy:check`（`scripts/docs/check-user-facing-copy.mjs`）扫描 `packages/**`、`src/**` 的错误构造点，纯英文即失败；
+    CI 的 `other-checks` 与本地 `yarn test` 都会运行它。
+  - 允许保留的技术缩写：`AI`、`JSON`、`TTS`、`WASM`、`SHA-256`、`OpenAI Compatible`、`Base URL`（见 [`glossary.md`](./glossary.md)）。

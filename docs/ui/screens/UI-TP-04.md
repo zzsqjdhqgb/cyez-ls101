@@ -108,8 +108,10 @@ owner: template-editor
 
 ```yaml
 anchors:
-  visual: unverified
+  visual: unverified # tests/visual/templates/UI-TP-04.spec.ts
   behavior: electron-app.spec.ts › creates, edits and reloads a persisted template（tests/integration/electron-app.spec.ts）
 ```
+
+`visual` 锚点由 `tests/visual/templates/UI-TP-04.spec.ts` 覆盖：从「试卷模板 → 新建模板」进入模板编辑器，依次新建本地函数库与函数并打开函数编辑器，捕获新建函数的默认态（结构视图、函数身份与函数签名属性面板）。测试与夹具已就绪，canonical 基线待生成，因此暂时保持 `unverified`。
 
 行为锚点：`electron-app.spec.ts › creates, edits and reloads a persisted template` 覆盖新建函数、改名、保存与版本号断言。`TP-01` 与 `TG-01` 都不进入函数编辑器，因此素材插入、结构编辑、函数签名、预览与删除确认仍未覆盖。

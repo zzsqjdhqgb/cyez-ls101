@@ -129,9 +129,11 @@ owner: submission-records
 
 ```yaml
 anchors:
-  visual: unverified
+  visual: unverified # tests/visual/submissions/UI-SR-02.spec.ts
   behavior: SR-01（tests/product-docs/modules/submission-records/settlement.spec.ts，旧套件）
 ```
+
+`visual` 锚点由 `tests/visual/submissions/UI-SR-02.spec.ts` 覆盖：导入一份同时包含客观题与朗读题的作答后，从作答记录行内「开始评分」进入「选择评分方式」并选择「人工评分」，捕获人工评分页的默认态（客观题已自动判定完成，停在待评的朗读题）。测试与夹具已就绪，canonical 基线待 `yarn visual:publish` 生成，因此暂时保持 `unverified`。
 
 `SR-01` 覆盖批量「开始评分」进入本屏、页内无主导航、选择「人工评分」、填写 `分数` 与 `评语` 并「提交本题」的路径（步骤 `grade-selection`）。
 评分方式中的「AI 评分」、模型配置、AI 执行与失败重试、决策、抽查、AI 审查、预检错误与单条 `:submissionId/grade` 入口当前没有行为锚定。
