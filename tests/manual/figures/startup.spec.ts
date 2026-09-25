@@ -1,7 +1,12 @@
 import { expect, test } from '@playwright/test'
 import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { captureFigure, launchFigureApp, prepareManualUserDataDir } from '../support/manual-app'
+import {
+  captureFigure,
+  launchFigureApp,
+  normalizeEnvironmentArtifacts,
+  prepareManualUserDataDir
+} from '../support/manual-app'
 
 test('FIG-ACTIVATION 激活界面 · 默认态', async () => {
   const userDataDir = await prepareManualUserDataDir()
@@ -28,6 +33,7 @@ test('FIG-RELEASE-NOTES 版本说明对话框 · 默认态', async () => {
     const dialog = page.getByRole('dialog', { name: /^曹二听说101 v\d+\.\d+\.\d+$/ })
     await expect(dialog).toBeVisible()
     await expect(page.getByText(/^已安装 /)).toBeVisible()
+    await normalizeEnvironmentArtifacts(page)
 
     const file = await captureFigure(page, 'FIG-RELEASE-NOTES')
     expect(file).toContain(path.join('FIG-RELEASE-NOTES', 'default.png'))
