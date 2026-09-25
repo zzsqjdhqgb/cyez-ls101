@@ -15,6 +15,7 @@ import { LabClient } from '../../../packages/lab-client/src/index'
 import { INVITATION_CODE_HASH } from '../../../packages/license/src/index'
 import { encodeExamPackage } from '../../../packages/exam-package/src/index'
 import type { ExamPackage } from '@ls101/core-types'
+import { LAB_VERSION } from './release-version'
 
 interface DesktopApp {
   app: ElectronApplication
@@ -37,7 +38,7 @@ interface BusinessFixture {
 export async function businessFixture(): Promise<BusinessFixture> {
   const root = await mkdtemp(join(tmpdir(), 'ls101-business-'))
   const service = await LabService.initialize(
-    { root: join(root, 'server'), releaseVersion: '0.4.1', isLicenseActive: () => true },
+    { root: join(root, 'server'), releaseVersion: LAB_VERSION, isLicenseActive: () => true },
     { name: 'Business Lab', baseUrl: 'https://127.0.0.1:8443/', password: 'test-password' }
   )
   const server = createLabHttpServer(service)
@@ -58,7 +59,7 @@ export async function businessFixture(): Promise<BusinessFixture> {
     await online()
     const baseUrl = `https://127.0.0.1:${port}/`
     service.db.transaction(() => service.saveData({ ...service.data(), baseUrl }))
-    const transport = new PinnedTransport(join(root, 'downloads'), '0.4.1')
+    const transport = new PinnedTransport(join(root, 'downloads'), LAB_VERSION)
     const target = await transport.open(
       { baseUrl, fingerprint: service.identity.fingerprint },
       'teacher'

@@ -12,6 +12,7 @@ import { INVITATION_CODE_HASH } from '../../packages/license/src/index'
 import { encodeExamPackage } from '../../packages/exam-package/src/index'
 import type { ExamPackage } from '@ls101/core-types'
 import type { Schema } from '@ls101/lab-contracts'
+import { LAB_VERSION } from './support/release-version'
 import { expectNativeViewport, resizeNativeWindow } from './support/window-layout'
 
 test('student enrollment, maintenance, practice and durable receipt run through real host capabilities', async () => {
@@ -20,7 +21,7 @@ test('student enrollment, maintenance, practice and durable receipt run through 
   let app: ElectronApplication | undefined
   let studentApp: ElectronApplication | undefined
   const service = await LabService.initialize(
-    { root: join(root, 'server'), releaseVersion: '0.4.1', isLicenseActive: () => true },
+    { root: join(root, 'server'), releaseVersion: LAB_VERSION, isLicenseActive: () => true },
     { name: 'Test Lab', baseUrl: 'https://127.0.0.1:8443/', password: 'test-password' }
   )
   const server = createLabHttpServer(service)
@@ -28,7 +29,7 @@ test('student enrollment, maintenance, practice and durable receipt run through 
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
     const baseUrl = `https://127.0.0.1:${(server.address() as { port: number }).port}/`
     service.db.transaction(() => service.saveData({ ...service.data(), baseUrl }))
-    const transport = new PinnedTransport(join(root, 'downloads'), '0.4.1')
+    const transport = new PinnedTransport(join(root, 'downloads'), LAB_VERSION)
     const target = await transport.open(
       { baseUrl, fingerprint: service.identity.fingerprint },
       'teacher'
