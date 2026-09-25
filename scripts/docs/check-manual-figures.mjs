@@ -72,11 +72,33 @@ for (const manualDir of MANUAL_DIRS) {
 const captures = new Set()
 for (const file of walk(path.join(SPEC_DIR, 'figures'), '.spec.ts')) {
   const text = fs.readFileSync(file, 'utf8')
-  for (const match of text.matchAll(
-    /captureFigure\(\s*page\s*,\s*'([^']+)'\s*(?:,\s*'([^']+)'\s*)?\)/g
-  )) {
-    captures.add(`${match[1]}/${match[2] ?? 'default'}.png`)
+  for (const call of findCaptureCalls(text)) {
+    captures.add(`${call.id}/${call.state ?? 'default'}.png`)
   }
+}
+
+/**
+ * 找出所有配图落盘调用：`captureFigure(page, '<图号>'[, '<状态>'])` 与
+ * `captureComposedFigure(<合成表达式>, '<图号>'[, '<状态>'])`。
+ * 逐字符扫描括号配对，允许实参跨行、允许第一个实参是嵌套调用。
+ */
+function findCaptureCalls(text) {
+  const calls = []
+  const pattern = /capture(?:Figure|ComposedFigure)\(/g
+  while (pattern.exec(text) !== null) {
+    let depth = 1
+    let index = pattern.lastIndex
+    while (index < text.length && depth > 0) {
+      const character = text[index]
+      if (character === '(') depth += 1
+      else if (character === ')') depth -= 1
+      index += 1
+    }
+    const args = text.slice(pattern.lastIndex, index - 1)
+    const quoted = [...args.matchAll(/'([^']+)'/g)].map((entry) => entry[1])
+    if (quoted.length > 0) calls.push({ id: quoted[0], state: quoted[1] })
+  }
+  return calls
 }
 
 const baselinesExist = fs.existsSync(BASELINE_DIR)

@@ -70,6 +70,14 @@ test('rejects a baseline without a matching capture', async (t) => {
   assert.match(result.output, /FIG-DEMO\/default\.png: 没有对应用例捕获（陈旧基线）/)
 })
 
+test('recognises composed captures whose first argument is a nested call', async (t) => {
+  const result = await check(t, {
+    source: "await captureComposedFigure(composeSplitTheme(light, dark), 'FIG-DEMO')\n"
+  })
+  assert.equal(result.status, 0, result.output)
+  assert.match(result.output, /用例捕获 1 张/)
+})
+
 test('rejects references to the per-screen visual baselines', async (t) => {
   const result = await check(t, {
     reference: '![图 1-1 示例](../../tests/visual/baselines/UI-WB-01/default.png)'

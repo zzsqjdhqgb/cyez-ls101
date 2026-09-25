@@ -530,14 +530,18 @@ AI 评分的处理规则：
 
 ![图 23 外观（主题与动态效果）](../../tests/manual/baselines/FIG-ST-APPEARANCE/default.png)
 
+下图是同一个工作台在两种主题下的对照，左半为浅色，右半为深色。
+
+![图 24 工作台在浅色（左）与深色（右）主题下](../../tests/manual/baselines/FIG-ST-THEME/default.png)
+
 ### 9.4 许可
 
 许可页显示当前激活状态。「参与意见征集」打开激活方式意见征集页面，了解并反馈其他激活方式；「取消激活」删除本机激活信息并重启软件，再次使用时需要重新输入邀请码，试卷、题型、作答记录等业务数据不受影响。
 
-![图 24 许可（激活状态与取消激活）](../../tests/manual/baselines/FIG-ST-LICENSE/default.png)
+![图 25 许可（激活状态与取消激活）](../../tests/manual/baselines/FIG-ST-LICENSE/default.png)
 
 ### 9.5 关于
 
 关于页显示软件名称、副标题与当前版本，下面是版本说明入口，以及项目发起人、开发者和版权与许可信息。「版本说明」打开本版本的更新内容与升级注意事项。
 
-![图 25 关于（版本、团队成员与许可信息）](../../tests/manual/baselines/FIG-ST-ABOUT/default.png)
+![图 26 关于（版本、团队成员与许可信息）](../../tests/manual/baselines/FIG-ST-ABOUT/default.png)

@@ -4,6 +4,7 @@ import path from 'node:path'
 import {
   captureTo,
   launchVisualApp,
+  storeCapture,
   type VisualLaunchOptions,
   type VisualMode
 } from '../../visual/support/visual-app'
@@ -62,6 +63,29 @@ export async function captureFigure(
       publishCommand: 'yarn manual:figures:publish'
     },
     page,
+    figureId,
+    state
+  )
+}
+
+/**
+ * 落盘一张已经合成好的图（例如浅色与深色并排的对比图）。
+ * 走与普通配图相同的预览 / 发布 / 校验路径。
+ */
+export async function captureComposedFigure(
+  buffer: Buffer,
+  figureId: string,
+  state = 'default'
+): Promise<string> {
+  return storeCapture(
+    {
+      baselineRoot: BASELINE_ROOT,
+      previewRoot: PREVIEW_ROOT,
+      mode: manualMode(),
+      subject: '说明书配图',
+      publishCommand: 'yarn manual:figures:publish'
+    },
+    buffer,
     figureId,
     state
   )

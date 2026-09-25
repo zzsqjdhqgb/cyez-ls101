@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test'
 import { rm } from 'node:fs/promises'
 import path from 'node:path'
+import { composeSplitTheme } from '../support/compose'
 import {
+  captureComposedFigure,
   captureFigure,
   launchFigureApp,
   normalizeEnvironmentArtifacts,
@@ -76,6 +78,31 @@ test('FIG-ST-ABOUT 设置 → 关于 · 默认态', async () => {
 
     const file = await captureFigure(page, 'FIG-ST-ABOUT')
     expect(file).toContain(path.join('FIG-ST-ABOUT', 'default.png'))
+  } finally {
+    await app.close().catch(() => undefined)
+    await rm(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('FIG-ST-THEME 工作台 · 左半浅色、右半深色', async () => {
+  test.setTimeout(90_000)
+  const userDataDir = await prepareManualUserDataDir()
+  const { app, page } = await launchFigureApp(userDataDir)
+  try {
+    await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
+    await page.waitForTimeout(1000)
+    const light = await page.screenshot({ animations: 'disabled' })
+
+    await page.getByRole('link', { name: '设置' }).click()
+    await page.getByRole('button', { name: /^外观/ }).click()
+    await page.getByLabel('界面主题').selectOption({ label: '深色' })
+    await page.getByRole('link', { name: '工作台' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
+    await page.waitForTimeout(1000)
+    const dark = await page.screenshot({ animations: 'disabled' })
+
+    const file = await captureComposedFigure(composeSplitTheme(light, dark), 'FIG-ST-THEME')
+    expect(file).toContain(path.join('FIG-ST-THEME', 'default.png'))
   } finally {
     await app.close().catch(() => undefined)
     await rm(userDataDir, { recursive: true, force: true })

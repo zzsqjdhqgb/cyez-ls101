@@ -117,11 +117,23 @@ export async function captureTo(
   id: string,
   state: string
 ): Promise<string> {
-  const mode = target.mode
   // 等待异步数据装载完成（列表、汇总数字、预览），再等到连续两帧完全一致，
   // 避免截到加载中间态或懒加载资源尚未稳定的画面。
   await page.waitForTimeout(VISUAL_SETTLE_MS)
-  const buffer = await stableScreenshot(page)
+  return storeCapture(target, await stableScreenshot(page), id, state)
+}
+
+/**
+ * 把一个已经准备好的 PNG 按 preview / publish / check 规则落盘。
+ * 供需要先合成再落盘的配图使用（例如浅色与深色并排的对比图）。
+ */
+export async function storeCapture(
+  target: CaptureTarget,
+  buffer: Buffer,
+  id: string,
+  state: string
+): Promise<string> {
+  const mode = target.mode
 
   if (mode === 'preview') {
     const file = path.join(target.previewRoot, id, `${state}.png`)
