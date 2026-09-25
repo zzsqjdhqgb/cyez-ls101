@@ -24,8 +24,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const BASELINE_DIR = path.join(ROOT, 'tests', 'manual', 'baselines')
 const SPEC_DIR = path.join(ROOT, 'tests', 'manual')
 const VISUAL_BASELINE_MARKER = 'tests/visual/baselines/'
-/** `manual-draft/` 是说明书重写的评审暂存区，正式落地到 docs/manual 后删除。 */
-const MANUAL_DIRS = ['docs/manual', 'manual-draft']
+/** 说明书正文所在目录（手写）。 */
+const MANUAL_DIRS = ['docs/manual']
 
 const errors = []
 const warnings = []

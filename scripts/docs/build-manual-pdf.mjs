@@ -7,15 +7,15 @@
  * markdown → HTML（remark-gfm 表格、代码块、配图）→ Chromium 打印样式 → A4 PDF。
  *
  * 用法：
- *   yarn manual:pdf                        # 源目录 docs/manual（尚未接管时自动用 manual-draft）
- *   yarn manual:pdf --root manual-draft    # 明确指定源目录
+ *   yarn manual:pdf                        # 源目录 docs/manual
+ *   yarn manual:pdf --root <目录>          # 指定其它源目录
  *   yarn manual:pdf --out dist/说明书.pdf  # 指定输出文件
  *   yarn manual:pdf --title-page           # 另起一页标题页
  *   yarn manual:pdf --open                 # 生成后打开
  *
  * 约定：
  *   - 源目录下 `*.md` 按文件名排序后依次排版，`_` 开头的文件跳过；
- *   - 标题含「不属于说明书正文」的章节（评审暂存区的样例说明与待确认事项）不进入 PDF；
+ *   - 标题含「不属于说明书正文」的章节不进入 PDF（评审用的临时章节据此排除）；
  *   - 配图按行内相对路径解析到仓库内文件；缺失时在 PDF 中以占位框标出并汇总警告；
  *   - 默认输出到 test-results/manual-pdf/（已 gitignore，不污染仓库）。
  */
@@ -173,13 +173,18 @@ function renderFigure(src, alt, currentDir, missingFigures) {
 
 function collectMarkdown(directory) {
   if (!fs.existsSync(directory)) return []
-  return fs
+  const names = fs
     .readdirSync(directory, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
     .map((entry) => entry.name)
     .filter((name) => !name.startsWith('_'))
-    .sort((left, right) => left.localeCompare(right, 'zh-Hans-CN'))
-    .map((name) => path.join(directory, name))
+    // README 是封面与修订记录，固定排在最前；其余章节按文件名排序。
+    .sort((left, right) => {
+      if (left === 'README.md') return -1
+      if (right === 'README.md') return 1
+      return left.localeCompare(right, 'zh-Hans-CN')
+    })
+  return names.map((name) => path.join(directory, name))
 }
 
 /** 评审暂存区的样例说明与待确认事项不属于说明书正文，排版前删除。 */
@@ -205,9 +210,9 @@ function packageVersion() {
   return JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version
 }
 
-/** docs/manual 尚未接管（仍是生成物）时，用评审暂存区 manual-draft。 */
+/** 说明书正文在 docs/manual；`--root` 可指向别处（例如只导出某一章）。 */
 function defaultSourceRoot() {
-  return fs.existsSync(path.join(ROOT, 'manual-draft')) ? 'manual-draft' : 'docs/manual'
+  return 'docs/manual'
 }
 
 function slugify(value) {

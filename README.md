@@ -156,7 +156,7 @@ AI 模型、TTS runtime 和发音评测扩展使用带 manifest 和校验信息�
 - 测试：[docs/testing.md](docs/testing.md)
 - 文档重构方案（已归档）：[docs/archive/docs-revision-plan.md](docs/archive/docs-revision-plan.md)
 
-> 产品说明书由 `docs/manual/` 生成；上一代产物已冻结在 `docs/archive/product-docs-0.4.1/`。
+> 产品说明书是手写维护的，在 `docs/manual/`；配图由 `tests/manual` 生成，`yarn manual:pdf` 可导出 A4 PDF。上一代生成产物已冻结在 `docs/archive/product-docs-0.4.1/`。
 
 ## 许可证
 

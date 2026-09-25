@@ -12,14 +12,14 @@ branch. Configure the `Required quality gate` check as required in the branch pr
 both branches and do not configure bypass actors. Merge queues run the same check.
 
 The verification has five job ids: `test_suites` (a Windows matrix with two entries),
-`canonical_docs`, `canonical_visual`, `linux_electron_smoke`, and a final `Required quality gate`. The `test_suites`
-matrix runs `other-checks` (documentation metadata/links and visual state pairing checks, lint,
+`canonical_visual`, `canonical_manual_figures`, `linux_electron_smoke`, and a final `Required quality gate`. The `test_suites`
+matrix runs `other-checks` (documentation metadata/links, visual and manual-figure state pairing checks, lint,
 type checking, script tests, the complete Vitest suite, renderer
 component tests, and product journeys) and `electron-integration` (the complete packaged Electron
-integration suite on Windows). `canonical_docs` runs the canonical product documentation suite in
-the pinned Linux renderer container; `canonical_visual` re-renders the per-screen visual baselines
-in the same container and fails when `tests/visual/baselines` changes (it is skipped with a warning
-while no baselines are committed); and `linux_electron_smoke` runs the Linux packaged-Electron
+integration suite on Windows). `canonical_visual` re-renders the per-screen visual baselines in
+the pinned Linux renderer container and fails when `tests/visual/baselines` changes (it is skipped
+with a warning while no baselines are committed); `canonical_manual_figures` does the same for the
+manual figures in `tests/manual/baselines`; and `linux_electron_smoke` runs the Linux packaged-Electron
 startup tests. No mutable workspace or build output is shared between runners, and Playwright
 suites remain serial within each job. The final `Required quality gate` job succeeds only when all
 four preceding jobs succeed.
@@ -31,15 +31,15 @@ Together, the jobs cover:
 - packaged Windows and canonical Linux application builds;
 - packaged Electron integration tests and renderer component tests;
 - Linux packaged-Electron startup tests;
-- canonical product journey tests, canonical visual baselines, and checked-in documentation freshness.
+- canonical product journey tests, canonical visual and manual-figure baselines, and checked-in documentation freshness.
 
 Failed technical Playwright runs upload diagnostics for 14 days: the `test_suites` matrix uploads
 `ci-${{ matrix.suite }}-diagnostics-*` (that is, `ci-other-checks-diagnostics-*` and
 `ci-electron-integration-diagnostics-*`), and `linux_electron_smoke` uploads
-`ci-linux-electron-smoke-diagnostics-*`; each includes traces, screenshots, and reports. Failed
-canonical documentation runs upload the generated manual as `canonical-manual-*`. Failed visual
+`ci-linux-electron-smoke-diagnostics-*`; each includes traces, screenshots, and reports. Failed visual
 runs upload the committed baselines, actual screenshots, pixel difference images, and Playwright
-report as `canonical-visual-baselines-*` for the same period. Missing baselines retain the actual
+report as `canonical-visual-baselines-*`, and failed manual-figure runs upload
+`canonical-manual-figures-*`, for the same period. Missing baselines retain the actual
 screenshot; dimension mismatches or unreadable baselines retain both inputs without a pixel diff.
 Canonical renderer layers use the GitHub Actions cache. Each command shown in the
 workflow is directly reproducible with the corresponding `yarn` script in `package.json`.
