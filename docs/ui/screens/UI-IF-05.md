@@ -76,5 +76,9 @@ anchors:
   behavior: IF-07, IF-08（tests/product-docs/modules/interface-library/behaviors.spec.ts，旧套件）
 ```
 
+### 视觉基线
+
+![UI-IF-05 默认态](../../../tests/visual/baselines/UI-IF-05/default.png)
+
 `IF-07` 覆盖查看题型身份、只勾选需要交付的题组并导出；`IF-08` 覆盖把题组保存为题型文件后反复导入。
 「题组为空」「保存被取消」「导出失败」状态当前没有行为锚定。

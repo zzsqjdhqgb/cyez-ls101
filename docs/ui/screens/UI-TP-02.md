@@ -157,4 +157,8 @@ anchors:
   behavior: TP-01（tests/product-docs/modules/template-library/authoring.spec.ts，旧套件）
 ```
 
+### 视觉基线
+
+![UI-TP-02 默认态](../../../tests/visual/baselines/UI-TP-02/default.png)
+
 `TP-01` 覆盖本页的模板名称/描述输入与「保存」：默认名 `未命名模板`、保存后显示 `版本 1`、保存按钮变为禁用、返回并在「我的模板」重新打开后名称与描述保持不变。`TG-01` 覆盖本页「生成试卷」入口（进入生成流程前使用已保存内容）与「返回模板」按钮。本页的撤销/重做、函数库管理、节点树操作、属性面板、时间线、预览与各删除确认当前没有行为锚定。

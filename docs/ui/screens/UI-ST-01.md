@@ -81,6 +81,10 @@ anchors:
   behavior: settings.spec.ts › navigates every registered settings page from the settings overview（tests/integration/settings.spec.ts）
 ```
 
+### 视觉基线
+
+![UI-ST-01 默认态](../../../tests/visual/baselines/UI-ST-01/default.png)
+
 行为锚点由 `settings.spec.ts › navigates every registered settings page from the settings overview` 承担：断言两个分组与五个设置项的标题、描述与顺序，并逐项进入明细页、再用「返回设置」回到总览（合格线见 [`../README.md`](../README.md) §2）。
 
 新增或删除设置页会改变本页内容，因为列表由注册表驱动。

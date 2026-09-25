@@ -102,5 +102,9 @@ anchors:
   behavior: IF-05, IF-09, IF-10, IF-11, IF-12（tests/product-docs/modules/interface-library/behaviors.spec.ts，旧套件）
 ```
 
+### 视觉基线
+
+![UI-IF-03 默认态](../../../tests/visual/baselines/UI-IF-03/default.png)
+
 `IF-09` 覆盖字段树、字段属性与折叠；`IF-10` 覆盖发布校验错误的定位与修正后发布；`IF-11` 覆盖未保存离开确认；`IF-12` 覆盖删除非空字段组确认；`IF-05` 覆盖发布确认与草稿保留。
 字段标识就地校验、类型切换与「复制为草稿」入口当前没有行为锚定。

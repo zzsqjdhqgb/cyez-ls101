@@ -86,6 +86,10 @@ anchors:
   behavior: WB-01, WB-02（tests/product-docs/modules/workbench/navigation.spec.ts，旧套件）
 ```
 
+### 视觉基线
+
+![UI-WB-01 默认态](../../../tests/visual/baselines/UI-WB-01/default.png)
+
 **视觉确定性**：摘句由模块加载时的 `Math.random()` 选择（`packages/renderer/src/pages/WorkbenchPage.tsx` 的 `STARTUP_QUOTE`）。
 canonical 运行通过 `--js-flags=--random-seed=1`（`tests/integration/support/electron-app.ts:72-73`）固定该随机序列，
 因此基线可复现；建立逐屏视觉回归时必须保留该种子，否则需对摘句区域做遮罩。

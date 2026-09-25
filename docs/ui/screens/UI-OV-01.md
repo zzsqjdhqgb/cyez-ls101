@@ -97,4 +97,8 @@ anchors:
   behavior: license.spec.ts › activates with an invitation code and reuses the hash receipt after restart；blocks activation and application access after the license deadline（tests/integration/license.spec.ts）
 ```
 
+### 视觉基线
+
+![UI-OV-01 默认态](../../../tests/visual/baselines/UI-OV-01/default.png)
+
 行为锚点：`tests/integration/license.spec.ts` 的两个用例覆盖本屏的邀请码错误提示、成功激活、意见征集入口与激活逾期拒绝。

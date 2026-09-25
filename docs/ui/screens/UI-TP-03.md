@@ -86,4 +86,8 @@ anchors:
   behavior: electron-app.spec.ts › opens and copies bundled Shanghai speaking templates（tests/integration/electron-app.spec.ts）
 ```
 
+### 视觉基线
+
+![UI-TP-03 默认态](../../../tests/visual/baselines/UI-TP-03/default.png)
+
 行为锚点：`electron-app.spec.ts › opens and copies bundled Shanghai speaking templates` 覆盖本页的只读查看与「创建副本」。`TP-01` 与 `TG-01` 都不经过本页，因此内置模板的「生成试卷」入口仍未覆盖。

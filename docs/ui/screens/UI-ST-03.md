@@ -76,4 +76,8 @@ anchors:
   behavior: license.spec.ts › deactivates from settings, removes the receipt and requires activation after restart（tests/integration/license.spec.ts）
 ```
 
+### 视觉基线
+
+![UI-ST-03 默认态](../../../tests/visual/baselines/UI-ST-03/default.png)
+
 行为锚点由 `license.spec.ts › deactivates from settings, removes the receipt and requires activation after restart` 承担：从设置总览进入本页，打开并关闭意见征集窗口后断言回执不变，走完「取消」与「取消激活并重启」两条分支，并断言回执被删除、重启后回到启动激活界面（合格线见 [`../README.md`](../README.md) §2）。

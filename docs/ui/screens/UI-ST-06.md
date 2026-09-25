@@ -288,4 +288,8 @@ anchors:
   behavior: AR-01…AR-33（tests/integration/airouter.spec.ts）
 ```
 
+### 视觉基线
+
+![UI-ST-06 默认态](../../../tests/visual/baselines/UI-ST-06/default.png)
+
 行为锚点：`AR-01…AR-33`（`tests/integration/airouter.spec.ts`）在本页真实完成服务商与密钥的增删改、模型发现与本地模型包生命周期；`packages/renderer/src/__tests__/AIRouterSettingsPage.test.tsx` 只是组件测试，不计入。

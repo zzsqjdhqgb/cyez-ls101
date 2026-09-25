@@ -107,4 +107,8 @@ anchors:
   behavior: data-directory.spec.ts › copies business data, switches directories after restart and retains the source；archives root-level legacy data after startup and cleans it only after confirmation；resets a custom data directory to the validated default location（tests/integration/data-directory.spec.ts）
 ```
 
+### 视觉基线
+
+![UI-ST-02 默认态](../../../tests/visual/baselines/UI-ST-02/default.png)
+
 行为锚点：`tests/integration/data-directory.spec.ts` 的三个用例在本页真实操作「更改位置 / 删除旧数据 / 恢复默认位置」，覆盖位置行展示、按钮禁用状态、确认流程与目录切换后的重启结果。

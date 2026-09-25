@@ -81,4 +81,8 @@ anchors:
   behavior: GS-01（tests/product-docs/modules/grading-units/publishing.spec.ts，旧套件）
 ```
 
+### 视觉基线
+
+![UI-GS-01 默认态](../../../tests/visual/baselines/UI-GS-01/default.png)
+
 `GS-01` 只覆盖新建与保存路径；本页的标签切换、空状态、删除确认与失败提示当前没有行为锚定。

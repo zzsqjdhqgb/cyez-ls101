@@ -87,5 +87,9 @@ anchors:
   behavior: IF-05, IF-07, IF-09（tests/product-docs/modules/interface-library/behaviors.spec.ts，旧套件）
 ```
 
+### 视觉基线
+
+![UI-IF-01 默认态](../../../tests/visual/baselines/UI-IF-01/default.png)
+
 `IF-05`、`IF-09` 覆盖草稿视图的「新建题型」入口，以及保存/发布后返回本页再打开草稿；`IF-07` 覆盖本页「题型库操作 → 导入题型」入口。
 标签切换、空状态、删除草稿确认与失败提示当前没有行为锚定。

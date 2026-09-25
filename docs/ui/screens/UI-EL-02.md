@@ -133,5 +133,9 @@ anchors:
   behavior: EL-05（tests/product-docs/modules/exam-library/player.spec.ts）；EX-01（tests/product-docs/flows/take-exam/run.spec.ts）
 ```
 
+### 视觉基线
+
+![UI-EL-02 默认态](../../../tests/visual/baselines/UI-EL-02/default.png)
+
 `EX-01` 覆盖无录音试卷的身份登记（步骤 `identify-candidate`）、作答完成后的保存确认（步骤 `finish-exam`）与返回试卷库（步骤 `return-to-library`）。
 `EL-05` 覆盖身份登记后进入作答页、退出确认的「继续考试」与「确认退出」两个分支，以及退出后试卷仍可再次使用。麦克风测试、倒计时与录音时间线、流程失败重试、装载失败与数据错误等状态仍未覆盖。

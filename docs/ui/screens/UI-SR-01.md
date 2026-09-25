@@ -109,5 +109,9 @@ anchors:
   behavior: SR-01…SR-05（tests/product-docs/modules/submission-records/）
 ```
 
+### 视觉基线
+
+![UI-SR-01 默认态](../../../tests/visual/baselines/UI-SR-01/default.png)
+
 `SR-01` 覆盖本页的连续导入与未结算列表（步骤 `import-submissions`）、批量勾选后启动评分（步骤 `grade-selection`）、下次结算后回到未结算并显示「可结算」（步骤 `defer-settlement`）、结算后切到已结算视图并展示批次（步骤 `settle-batch`），以及已结算记录的重新评分确认与回到未评分的路径（步骤 `restart-grading`）。
 `SR-02`…`SR-05` 覆盖行内单条「开始评分 / 继续评分 / 进入结算」、已结算记录的评分报告对话框、导出作答包的取消与保存分支、以及删除未结算与已结算记录时的两种确认文案与取消/确认分支。已结算空状态与查询失败仍未覆盖。

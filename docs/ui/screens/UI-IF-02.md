@@ -100,5 +100,9 @@ anchors:
   behavior: IF-01, IF-02, IF-05, IF-07, IF-08（tests/product-docs/modules/interface-library/behaviors.spec.ts，旧套件）
 ```
 
+### 视觉基线
+
+![UI-IF-02 默认态](../../../tests/visual/baselines/UI-IF-02/default.png)
+
 `IF-01`、`IF-02` 覆盖「新建题组」对话框的确认与取消；`IF-05`、`IF-07`、`IF-08` 覆盖从本页打开题型与题组。
 「题型定义」视图、复制按钮、删除题组确认与加载失败提示当前没有行为锚定。

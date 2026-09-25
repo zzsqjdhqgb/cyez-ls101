@@ -112,5 +112,9 @@ anchors:
   behavior: IF-01, IF-03, IF-04, IF-06, IF-07, IF-08（tests/product-docs/modules/interface-library/behaviors.spec.ts，旧套件）
 ```
 
+### 视觉基线
+
+![UI-IF-04 默认态](../../../tests/visual/baselines/UI-IF-04/default.png)
+
 `IF-01` 覆盖手工填写并保存；`IF-03` 覆盖未保存离开确认；`IF-04` 覆盖 AI 生成并覆盖的确认与立即保存；`IF-06` 覆盖 JSON 覆盖的校验失败、取消与替换；`IF-07`、`IF-08` 覆盖保存后打开题组并核对内容。
 图片字段选择/剪贴板/生成、批量生图、服务商失败态与 JSON 对话框的服务商校验当前没有行为锚定。

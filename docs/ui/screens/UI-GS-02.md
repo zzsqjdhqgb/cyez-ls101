@@ -132,4 +132,8 @@ anchors:
   behavior: GS-01（tests/product-docs/modules/grading-units/publishing.spec.ts，旧套件）
 ```
 
+### 视觉基线
+
+![UI-GS-02 默认态](../../../tests/visual/baselines/UI-GS-02/default.png)
+
 `GS-01` 实际进入 `/schemas/new`，填写名称、描述与答案槽位说明并点击 `添加到我的评分单元`，覆盖本屏的新建与保存路径。复制、编辑、导出、删除、校验失败与未保存离开没有行为锚定；视觉基线未建立。

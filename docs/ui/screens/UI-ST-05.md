@@ -89,4 +89,8 @@ anchors:
   behavior: settings.spec.ts › shows about details and closes the release notes dialog only explicitly（tests/integration/settings.spec.ts）
 ```
 
+### 视觉基线
+
+![UI-ST-05 默认态](../../../tests/visual/baselines/UI-ST-05/default.png)
+
 行为锚点由 `settings.spec.ts › shows about details and closes the release notes dialog only explicitly` 承担：断言名称、副标题、版本行、三个分组、成员行与外部链接地址，并断言版本说明对话框在按 Esc 与点击对话框外部后仍保持打开，只有「关闭版本说明」能关闭（合格线见 [`../README.md`](../README.md) §2）。

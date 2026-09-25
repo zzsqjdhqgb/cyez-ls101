@@ -134,6 +134,10 @@ anchors:
   behavior: SR-01（tests/product-docs/modules/submission-records/settlement.spec.ts，旧套件）
 ```
 
+### 视觉基线
+
+![UI-SR-02 默认态](../../../tests/visual/baselines/UI-SR-02/default.png)
+
 `visual` 锚点由 `tests/visual/submissions/UI-SR-02.spec.ts` 覆盖：导入一份同时包含客观题与朗读题的作答后，从作答记录行内「开始评分」进入「选择评分方式」并选择「人工评分」，捕获人工评分页的默认态（客观题已自动判定完成，停在待评的朗读题）。状态为 `default`，基线已由 canonical 容器发布并提交（`tests/visual/baselines/UI-SR-02/default.png`）。
 
 `SR-01` 覆盖批量「开始评分」进入本屏、页内无主导航、选择「人工评分」、填写 `分数` 与 `评语` 并「提交本题」的路径（步骤 `grade-selection`）。

@@ -69,4 +69,8 @@ anchors:
   behavior: electron-app.spec.ts › persists appearance settings through the renderer and config store（tests/integration/electron-app.spec.ts）
 ```
 
+### 视觉基线
+
+![UI-ST-04 默认态](../../../tests/visual/baselines/UI-ST-04/default.png)
+
 行为锚点在该用例中真实切换主题与「减少动态效果」，并断言配置存储与重载后的界面属性一致。

@@ -85,5 +85,9 @@ anchors:
   behavior: EL-01…EL-04（tests/product-docs/modules/exam-library/maintenance.spec.ts）；EX-01（tests/product-docs/flows/take-exam/run.spec.ts）
 ```
 
+### 视觉基线
+
+![UI-EL-01 默认态](../../../tests/visual/baselines/UI-EL-01/default.png)
+
 `EX-01` 覆盖本页的导入路径与导入后的列表展示（步骤 `import-exam`），以及从考试返回后列表仍可用的路径（步骤 `return-to-library`）。
 `EL-01`…`EL-04` 覆盖重复导入判定与取消导入、空状态、导入损坏包与重试、查询失败的错误条、删除确认的取消与确认分支。加载中状态与删除失败提示仍未覆盖。

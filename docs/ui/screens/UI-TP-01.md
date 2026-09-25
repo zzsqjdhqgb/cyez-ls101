@@ -103,4 +103,8 @@ anchors:
   behavior: TP-01（tests/product-docs/modules/template-library/authoring.spec.ts，旧套件）
 ```
 
+### 视觉基线
+
+![UI-TP-01 默认态](../../../tests/visual/baselines/UI-TP-01/default.png)
+
 `TP-01` 覆盖「新建模板 → 编辑器填写名称/描述 → 保存 → 返回模板 → 我的模板 → 重新打开」，因此锚定本页的新建入口、「我的模板」标签页与行标题进入。本页的标签筛选、函数库标签页、导入与覆盖、创建副本、导出、删除确认与失败提示当前没有行为锚定；`TG-01` 也使用「我的模板」标签页打开模板，但不校验本页其他控件。
