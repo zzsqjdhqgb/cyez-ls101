@@ -64,7 +64,7 @@ test(
       title: '从试卷模板生成并保存可运行试卷',
       purpose:
         '模板内容准备完成后，通过生成设置和生成过程得到可运行试卷，再把结果加入试卷库或导出为文件。',
-      preconditions: ['已有一份包含三条语音的试卷模板，并配置三个可独立选择的语音提供商。'],
+      preconditions: ['已有一份包含三条语音的试卷模板，并配置三个可独立选择的语音服务商。'],
       outcomes: [
         '生成设置、生成过程和生成结果在独立全屏流程中依次呈现。',
         '语音失败会在有限重试后中断，并可从中断位置继续。',
@@ -79,7 +79,7 @@ test(
         },
         {
           key: 'configure-generation',
-          action: '填写试卷名称，并为默认、男声和女声音色分别选择提供商、模型和音色。',
+          action: '填写试卷名称，并为默认、男声和女声音色分别选择服务商、模型和音色。',
           expected: '页面保留全部生成设置，可以开始生成。'
         },
         {
@@ -236,7 +236,7 @@ async function selectSpeech(
   model: string,
   voice: string
 ): Promise<void> {
-  await page.getByLabel(`${role}提供商`).selectOption(provider)
+  await page.getByLabel(`${role}服务商`).selectOption(provider)
   await page.getByLabel(`${role}模型`).selectOption(model)
   await page.getByLabel(`${role}音色`).selectOption(voice)
 }

@@ -32,6 +32,10 @@ yarn docs:product:image
 yarn docs:product:publish
 ```
 
+只有该镜像的运行可以设置 `PRODUCT_DOCS_CANONICAL=1`：`scripts/run-product-docs.mjs preview` 会在发现
+`PRODUCT_DOCS_CANONICAL` / `PRODUCT_DOCS_CANONICAL_RUNNER` 时直接退出，`publish` 与 `check` 则先由
+`verifyCanonicalEnvironment` 校验镜像标识与版本，不满足时不启动 Electron。
+
 检查从当前提交重新生成的产品说明书是否干净：
 
 ```bash

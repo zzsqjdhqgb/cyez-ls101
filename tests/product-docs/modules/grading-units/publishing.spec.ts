@@ -51,7 +51,7 @@ test(
         {
           key: 'save-unit',
           action:
-            '选择题型、答案槽位和 Template 输入，填写名称、描述、满分和评分标准，然后选择“保存”。',
+            '选择题型、答案槽位和试卷模板输入，填写名称、描述、满分和评分标准，然后选择“保存”。',
           expected: '页面提示评分单元已经保存，可以立即在模板中引用。'
         }
       ]
@@ -80,7 +80,7 @@ test(
           step: 'save-unit',
           caption: '评分单元保存后可立即使用'
         })
-        await page.getByRole('button', { name: '返回 Schema 列表' }).click()
+        await page.getByRole('button', { name: '返回评分单元列表' }).click()
         await page.getByRole('tab', { name: '我的评分单元' }).click()
         await expect(page.getByRole('button', { name: '客观题评分规则' })).toBeVisible()
       })

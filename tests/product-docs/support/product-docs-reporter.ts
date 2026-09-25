@@ -139,7 +139,7 @@ function validateBehaviors(behaviors: readonly BehaviorResult[]): void {
   const owners = new Map<string, ProductOwner>()
   for (const behavior of behaviors) {
     const { definition } = behavior
-    if (ids.has(definition.id)) throw new Error(`产品说明 ID 重复：${definition.id}`)
+    if (ids.has(definition.id)) throw new Error(`产品说明编号重复：${definition.id}`)
     ids.add(definition.id)
 
     const ownerKey = `${definition.owner.kind}:${definition.owner.slug}`
