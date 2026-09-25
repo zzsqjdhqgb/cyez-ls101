@@ -114,7 +114,7 @@ canonical 容器内（只在能访问 Docker 宿主的机器上跑）：
 - **阶段 1（归档与索引）** 已完成：`features/` 迁入 `docs/engineering/features/`，`design/`、`refactor/` 迁入 `docs/archive/`，`TODO-*.md` 收拢到 `docs/engineering/todo/`，历史层与工程层补齐状态头，修正 `docs/testing.md`、`.github/CI.md` 与产品文档命令的过期描述，`yarn docs:check` 门禁上线（0 错误）。
 - **阶段 2（工程对齐）已完成**：`features/` 的事实错误逐条修正；`docs/engineering/subsystems/` 的 P0 子系统文档（exam-package、exam-library、exam-player、submission-workflow）已补齐。
 - **阶段 3（UI 规格）已完成**：模块设计文档 7 篇、逐屏 UI 规格 29 篇全部建立并接入索引；视觉回归约定写入 [`../tests/visual/README.md`](../tests/visual/README.md)；`yarn docs:check` 会输出视觉 / 行为锚定率。
-- **阶段 4b（视觉回归）大部分完成**：`tests/visual` 框架与 22 个逐屏规格已建立，`yarn test:visual` 在打包应用上全部通过（本地产物写入 `test-results/visual-preview`）；`yarn visual:check` 已实现，校验规格 ↔ 测试 ↔ 基线三方一致。29 篇规格中 22 篇视觉锚定、2 篇 `n/a`（无界面入口）、5 篇 `unverified`（考试运行外的夹具型界面：评分、结算、题型导入、函数编辑器、生成试卷）。canonical 容器内用 `yarn visual:publish` 写入基线、`yarn visual:canonical:check` 校验；Docker 外只运行测试、不校验像素。基线与共享渲染镜像、版本标记沿用产品文档那一套。
+- **阶段 4b（视觉回归）已完成**：`tests/visual` 框架与 29 个逐屏规格已建立，`yarn test:visual` 在打包应用上全部通过（本地产物写入 `test-results/visual-preview`）；`yarn visual:check` 校验规格 ↔ 测试 ↔ 基线三方一致。29 篇规格中 27 篇视觉锚定、2 篇 `n/a`（无界面入口）、0 篇视觉 `unverified`；行为锚定 24 篇、5 篇 `unverified`。canonical 容器内用 `yarn visual:publish` 写入基线、`yarn visual:canonical:check` 校验；Docker 外只运行测试、不校验像素。基线与共享渲染镜像、版本标记沿用产品文档那一套。
 - **阶段 4a（产品说明书）已产出**：`docs/manual/` 由产品操作测试生成（`README.md` + 5 个章节 + manifest，纯文本、无截图、无逐操作页）。本地命令 `xvfb-run -a yarn docs:manual:local`（需先 `yarn build:test`）；canonical 容器命令为 `yarn docs:product:publish`。覆盖面已从旧层的 20 项扩展到 **30 项**：`EP-01` 首次在同一个数据目录内用界面贯通「评分单元 → 题型 → 题组 → 试卷模板绑定 → 生成试卷 → 加入试卷库」；随后补齐试卷库维护（`EL-01`…`EL-05`：重复导入、损坏包重试、空态与查询失败、删除确认、退出考试确认）与作答记录分支（`SR-02`…`SR-05`：行内单条评分入口、评分报告、导出作答包、删除记录）。
 - **阶段 4c（旧产物冻结迁出）已完成**：`docs/product` 已迁入 `docs/archive/product-docs-0.4.1/`（只读）；reporter 的归属设计校验改指 `docs/ui/modules/<slug>.md`；canonical publish 只生成 `docs/manual`，`yarn docs:product:check` 只校验 `docs/manual`。
 - **阶段 4e（工程缺口补齐）已完成**：新增 `engineering/features/license.md`、`installation-marker.md`、`logger.md`、`secret-store.md` 与 `engineering/subsystems/startup-orchestration.md`、`builtin-content.md`、`legacy-data.md`，`docs/engineering/todo/logger.md` 只保留未实现部分。
@@ -123,7 +123,7 @@ canonical 容器内（只在能访问 Docker 宿主的机器上跑）：
 
 **未完成**：
 
-- 阶段 4b 仍有 5 篇规格为 `unverified`（评分、结算、题型导入、函数编辑器、生成试卷）。它们需要新夹具与导航，且基线只能由 canonical 容器生成。
+- 阶段 4b 的视觉锚定已全部完成，但仍有 5 篇规格的**行为**锚定为 `unverified`：`UI-GS-03` 评分单元草稿库、`UI-GS-04` 评分单元草稿编辑器、`UI-ST-01` 设置总览、`UI-ST-03` 许可、`UI-ST-05` 关于。集成测试目前只覆盖这些页面的入口与标题可见性，未覆盖页内行为。
 - 阶段 4a 的其余覆盖面（生成→运行→导入作答→评分→结算、麦克风录音路径、AI 评分与抽查、设置与 AI 配置）见 [`engineering/todo/manual-coverage.md`](./engineering/todo/manual-coverage.md)。
 
 重构方案已归档：[`archive/docs-revision-plan.md`](./archive/docs-revision-plan.md)。
