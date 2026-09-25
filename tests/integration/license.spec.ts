@@ -122,7 +122,7 @@ test('activates with an invitation code and reuses the hash receipt after restar
 test('blocks activation and application access after the license deadline', async () => {
   const userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-license-expired-'))
   const electronApp = await launchIntegrationApp(userDataDir, {
-    environment: { LS101_LICENSE_TEST_NOW: '2026-10-01T16:00:00.000Z' },
+    environment: { LS101_LICENSE_TEST_NOW: '2026-12-01T16:00:00.000Z' },
     license: 'not-activated'
   })
   const pageErrors: string[] = []
@@ -133,7 +133,7 @@ test('blocks activation and application access after the license deadline', asyn
     await page.waitForLoadState('domcontentloaded')
 
     await expect(page.getByRole('heading', { name: '使用权限已到期' })).toBeVisible()
-    await expect(page.getByText(/2026年10月1日 23:59/)).toBeVisible()
+    await expect(page.getByText(/2026年12月1日 23:59/)).toBeVisible()
     await expect(page.getByRole('button', { name: '参与激活方式意见征集' })).toBeVisible()
     await expect(page.getByLabel('邀请码')).toHaveCount(0)
     await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toHaveCount(0)

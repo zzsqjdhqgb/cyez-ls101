@@ -9,8 +9,8 @@ export const LICENSE_RECEIPT_FILENAME = 'license.json'
 export const INVITATION_CODE_HASH =
   '487c1f4d73f9cef0a13ae59eee14a604f67f93c307c89ecdf69b4f20fca0ff3d'
 
-// The temporary license remains valid through October 1 in China Standard Time.
-export const LICENSE_EXPIRES_AT = '2026-10-01T15:59:59.999Z'
+// The temporary license remains valid through December 1 in China Standard Time.
+export const LICENSE_EXPIRES_AT = '2026-12-01T15:59:59.999Z'
 
 interface LicenseReceipt {
   schemaVersion: 1
