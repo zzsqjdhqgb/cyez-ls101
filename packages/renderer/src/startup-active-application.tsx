@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import type { Root } from 'react-dom/client'
 import { StartupApplicationView } from './StartupApplicationView'
-import { builtinInterfaceMaintenance } from './features/interfaces/BuiltinInterfaceRuntime'
+import { initializeInterfaceContent } from './features/interfaces/BuiltinInterfaceRuntime'
 import { latestReleaseVersion } from './features/release-notes/release-notes'
 import { initializeSchemaApplication } from './features/schemas/SchemaApplicationRuntime'
 import { templateApplication } from './features/templates/TemplateApplicationRuntime'
@@ -39,6 +39,6 @@ async function claimReleaseNotesVersion(): Promise<boolean> {
 
 async function initializeApplicationContent(): Promise<void> {
   await runStartupPhase('builtin-schemas', initializeSchemaApplication)
-  await runStartupPhase('builtin-interfaces', () => builtinInterfaceMaintenance.initialize())
+  await runStartupPhase('builtin-interfaces', initializeInterfaceContent)
   await runStartupPhase('builtin-templates-and-functions', () => templateApplication.initialize())
 }

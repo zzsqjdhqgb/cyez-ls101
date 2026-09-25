@@ -11,6 +11,8 @@ import {
 import {
   AlertCircle,
   ArrowLeft,
+  ArrowUp,
+  ArrowDown,
   Braces,
   Check,
   ChevronDown,
@@ -176,8 +178,13 @@ export function InterfaceDraftEditorPage(): JSX.Element {
       document.getElementById('interface-draft-name')?.focus()
       return
     }
-    if (item.code === 'EMPTY_PROMPT_TEMPLATE') {
-      document.getElementById('interface-draft-prompt')?.focus()
+    if (item.code === 'EMPTY_PROMPTS') {
+      document.getElementById('add-interface-prompt')?.focus()
+      return
+    }
+    if (item.code === 'EMPTY_PROMPT_NAME' || item.code === 'EMPTY_PROMPT_CONTENT') {
+      const field = item.code === 'EMPTY_PROMPT_NAME' ? 'name' : 'content'
+      document.getElementById(`interface-prompt-${item.params?.index}-${field}`)?.focus()
       return
     }
     if (!item.path) return
@@ -291,19 +298,98 @@ export function InterfaceDraftEditorPage(): JSX.Element {
                 <Braces aria-hidden="true" />
                 <h2>提示词</h2>
               </div>
-              <label>
-                <span>生成要求</span>
-                <textarea
-                  aria-invalid={validationErrors.some(
-                    (item) => item.code === 'EMPTY_PROMPT_TEMPLATE'
-                  )}
-                  className={styles.prompt}
-                  id="interface-draft-prompt"
-                  value={draft.promptTemplate}
-                  onChange={(event) => apply({ type: 'set-prompt', value: event.target.value })}
-                  placeholder="描述 AI 应该如何生成这一题型的内容"
-                />
-              </label>
+              <p className={styles.groupHint}>生成时可选择多项提示词，始终按此处的顺序组合。</p>
+              {draft.prompts.map((prompt, index) => (
+                <fieldset className={styles.promptItem} key={index}>
+                  <legend>提示词 {index + 1}</legend>
+                  <div className={styles.promptActions}>
+                    {([-1, 1] as const).map((direction) => (
+                      <IconButton
+                        key={direction}
+                        icon={direction === -1 ? ArrowUp : ArrowDown}
+                        label={`${direction === -1 ? '上移' : '下移'}提示词 ${index + 1}`}
+                        disabled={
+                          index + direction < 0 || index + direction >= draft.prompts.length
+                        }
+                        onClick={() => {
+                          const prompts = [...draft.prompts]
+                          ;[prompts[index], prompts[index + direction]] = [
+                            prompts[index + direction],
+                            prompts[index]
+                          ]
+                          apply({ type: 'set-prompts', value: prompts })
+                        }}
+                      />
+                    ))}
+                    <IconButton
+                      icon={Trash2}
+                      label={`删除提示词 ${index + 1}`}
+                      variant="danger"
+                      onClick={() =>
+                        apply({
+                          type: 'set-prompts',
+                          value: draft.prompts.filter((_item, itemIndex) => itemIndex !== index)
+                        })
+                      }
+                    />
+                  </div>
+                  {(['name', 'content'] as const).map((field) => {
+                    const invalid = validationErrors.some(
+                      (item) =>
+                        item.params?.index === String(index) &&
+                        item.code ===
+                          (field === 'name' ? 'EMPTY_PROMPT_NAME' : 'EMPTY_PROMPT_CONTENT')
+                    )
+                    const props = {
+                      id: `interface-prompt-${index}-${field}`,
+                      'aria-label': `提示词 ${index + 1} ${field === 'name' ? '名称' : '内容'}`,
+                      'aria-invalid': invalid,
+                      value: prompt[field],
+                      onChange: (
+                        event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+                      ) =>
+                        apply({
+                          type: 'set-prompts',
+                          value: draft.prompts.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, [field]: event.target.value } : item
+                          )
+                        })
+                    }
+                    return (
+                      <label key={field}>
+                        <span>{field === 'name' ? '提示词名称' : '提示词内容'}</span>
+                        {field === 'name' ? (
+                          <input {...props} placeholder="例如：基础出题要求、科技主题" />
+                        ) : (
+                          <textarea
+                            {...props}
+                            className={styles.prompt}
+                            rows={5}
+                            placeholder="描述选中这项时 AI 应遵循的出题要求"
+                          />
+                        )}
+                        {invalid ? (
+                          <span className={styles.fieldError}>
+                            {field === 'name' ? '提示词名称不能为空' : '提示词内容不能为空'}
+                          </span>
+                        ) : null}
+                      </label>
+                    )
+                  })}
+                </fieldset>
+              ))}
+              <Button
+                id="add-interface-prompt"
+                icon={Plus}
+                onClick={() =>
+                  apply({
+                    type: 'set-prompts',
+                    value: [...draft.prompts, { name: '', content: '' }]
+                  })
+                }
+              >
+                添加提示词
+              </Button>
             </div>
           </section>
 

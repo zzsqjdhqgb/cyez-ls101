@@ -118,8 +118,28 @@
 }
 
 .prompt {
-  min-height: 270px;
+  min-height: 130px;
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace !important;
+}
+
+.promptItem {
+  min-width: 0;
+  margin: 16px 0;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.promptItem legend {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.promptActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-bottom: 8px;
 }
 
 .validation {

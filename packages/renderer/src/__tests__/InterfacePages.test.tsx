@@ -53,7 +53,7 @@ const draft: InterfaceDraft = {
   draftId: '10000000-0000-4000-8000-000000000001',
   name: '听说测试',
   description: '用于课堂练习',
-  promptTemplate: '生成一套听说练习',
+  prompts: [{ name: '基础出题要求', content: '生成一套听说练习' }],
   fields: {
     order: ['question'],
     nodes: {
@@ -608,8 +608,8 @@ describe('Interface pages', () => {
 
     expect(await screen.findByText('题型定义')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: '题型定义' }))
-    expect(screen.getByRole('button', { name: '复制完整提示词' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '复制单独提示词' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '复制全部完整提示词' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '复制全部题型提示词' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '复制 JSON Schema' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '复制 JSON Example' })).toBeInTheDocument()
 
@@ -758,7 +758,23 @@ describe('Interface pages', () => {
 
     expect(screen.getByRole('dialog', { name: 'AI 生成并覆盖' })).toBeInTheDocument()
     await waitFor(() => expect(listAIGenerationModels).toHaveBeenCalledOnce())
+    fireEvent.change(screen.getByLabelText('补充提示词（可选）'), {
+      target: { value: '  出题方向偏科技类\n难度适合高中生  ' }
+    })
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'AI 生成并覆盖' })).getByRole('button', {
+        name: '取消'
+      })
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'AI 生成并覆盖' }))
+    expect(screen.getByLabelText('补充提示词（可选）')).toHaveValue(
+      '  出题方向偏科技类\n难度适合高中生  '
+    )
+    await waitFor(() => expect(screen.getByLabelText('生成模型')).toBeEnabled())
     fireEvent.change(screen.getByLabelText('生成模型'), { target: { value: '1' } })
+    if (!screen.getByRole('checkbox', { name: '基础出题要求' }).matches(':checked')) {
+      fireEvent.click(screen.getByRole('checkbox', { name: '基础出题要求' }))
+    }
     fireEvent.click(screen.getByRole('button', { name: '生成并覆盖' }))
     fireEvent.click(
       within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
@@ -768,10 +784,13 @@ describe('Interface pages', () => {
 
     await waitFor(() =>
       expect(startAIGeneration).toHaveBeenCalledWith(interfaceId, instanceId, {
-        model: { providerId: 'provider-b', modelId: 'model-b' }
+        selectedPromptIndices: [0],
+        model: { providerId: 'provider-b', modelId: 'model-b' },
+        additionalPrompt: '出题方向偏科技类\n难度适合高中生'
       })
     )
     expect(screen.getByRole('region', { name: 'AI 生成进度' })).toBeInTheDocument()
+    expect(screen.getByLabelText('补充提示词（可选）')).toBeDisabled()
     expect(screen.getByDisplayValue('旧题目')).toBeDisabled()
     expect(screen.getByRole('button', { name: '返回题型详情' })).toBeDisabled()
     expect(screen.getByRole('button', { name: '高级操作' })).toBeDisabled()
@@ -807,6 +826,10 @@ describe('Interface pages', () => {
     expect(screen.getByRole('button', { name: 'AI 生成并覆盖' })).toBeEnabled()
     expect(screen.getByRole('button', { name: '重新生成' })).toBeInTheDocument()
 
+    expect(screen.getByLabelText('补充提示词（可选）')).toBeEnabled()
+    fireEvent.change(screen.getByLabelText('补充提示词（可选）'), {
+      target: { value: '出题方向偏体育类' }
+    })
     fireEvent.click(screen.getByRole('button', { name: '重新生成' }))
     fireEvent.click(
       within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
@@ -815,7 +838,9 @@ describe('Interface pages', () => {
     )
     await waitFor(() => expect(startAIGeneration).toHaveBeenCalledTimes(2))
     expect(startAIGeneration).toHaveBeenNthCalledWith(2, interfaceId, instanceId, {
-      model: { providerId: 'provider-b', modelId: 'model-b' }
+      selectedPromptIndices: [0],
+      model: { providerId: 'provider-b', modelId: 'model-b' },
+      additionalPrompt: '出题方向偏体育类'
     })
     expect(await screen.findByRole('button', { name: '重新生成' })).toBeInTheDocument()
 
@@ -824,6 +849,25 @@ describe('Interface pages', () => {
     expect(screen.queryByRole('dialog', { name: 'AI 生成并覆盖' })).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'AI 生成进度' })).not.toBeInTheDocument()
     expect(screen.getByDisplayValue('AI 新题目')).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'AI 生成并覆盖' }))
+    fireEvent.change(screen.getByLabelText('补充提示词（可选）'), {
+      target: { value: ' \n\t ' }
+    })
+    await waitFor(() => expect(screen.getByLabelText('生成模型')).toBeEnabled())
+    if (!screen.getByRole('checkbox', { name: '基础出题要求' }).matches(':checked')) {
+      fireEvent.click(screen.getByRole('checkbox', { name: '基础出题要求' }))
+    }
+    fireEvent.click(screen.getByRole('button', { name: '生成并覆盖' }))
+    fireEvent.click(
+      within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
+        name: '生成并覆盖'
+      })
+    )
+    await waitFor(() => expect(startAIGeneration).toHaveBeenCalledTimes(3))
+    expect(startAIGeneration).toHaveBeenNthCalledWith(3, interfaceId, instanceId, {
+      selectedPromptIndices: [0],
+      model: { providerId: 'provider-b', modelId: 'model-b' }
+    })
   })
 
   it('keeps image prompts while selecting, replacing, and removing an image', async () => {
@@ -1234,6 +1278,12 @@ describe('Interface pages', () => {
     expect(await screen.findByRole('heading', { name: '失败测试题组' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'AI 生成并覆盖' }))
     await waitFor(() => expect(screen.getByLabelText('生成模型')).toBeEnabled())
+    fireEvent.change(screen.getByLabelText('补充提示词（可选）'), {
+      target: { value: '出题方向偏科技类' }
+    })
+    if (!screen.getByRole('checkbox', { name: '基础出题要求' }).matches(':checked')) {
+      fireEvent.click(screen.getByRole('checkbox', { name: '基础出题要求' }))
+    }
     fireEvent.click(screen.getByRole('button', { name: '生成并覆盖' }))
     fireEvent.click(
       within(screen.getByRole('alertdialog', { name: '覆盖当前题组内容？' })).getByRole('button', {
@@ -1243,6 +1293,8 @@ describe('Interface pages', () => {
 
     expect(await screen.findByText('生成失败')).toBeInTheDocument()
     expect(screen.getByText('生成服务暂时不可用')).toBeInTheDocument()
+    expect(screen.getByLabelText('补充提示词（可选）')).toHaveValue('出题方向偏科技类')
+    expect(screen.getByLabelText('补充提示词（可选）')).toBeDisabled()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '从失败位置重试' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '返回题组' })).toBeInTheDocument()

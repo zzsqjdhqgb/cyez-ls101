@@ -15,7 +15,7 @@ import type { InterfaceContent, InterfaceDef } from '../types'
 const content: InterfaceContent = {
   name: '口语题型',
   description: '内置题型',
-  promptTemplate: '生成口语题',
+  prompts: [{ name: '基础出题要求', content: '生成口语题' }],
   fields: {
     order: ['title'],
     nodes: {
@@ -96,19 +96,19 @@ describe('bundled Interface repository', () => {
     const entries = await repository.loadAll()
     const entry = entries.find(({ builtinKey }) => builtinKey === 'shanghai-gaokao-speaking')
     expect(entry?.currentInterface).toMatchObject({
-      id: 'sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14',
+      id: 'sha256:70f7547c283404cd8a09829bac34e5245bf5d08f10af444d88c5a0251cc58c9d',
       name: '上海高考英语口语'
     })
     if (!entry) throw new Error('expected Shanghai Gaokao speaking builtin')
-    expect(entry.currentInterface.promptTemplate).toContain('100至150词')
-    expect(entry.currentInterface.promptTemplate).toContain('适合约1分钟陈述')
-    expect(entry.currentInterface.promptTemplate).not.toContain('适合约1.5分钟陈述')
-    expect(entry.currentInterface.promptTemplate).toContain(
+    expect(entry.currentInterface.prompts[0].content).toContain('100至150词')
+    expect(entry.currentInterface.prompts[0].content).toContain('适合约1分钟陈述')
+    expect(entry.currentInterface.prompts[0].content).not.toContain('适合约1.5分钟陈述')
+    expect(entry.currentInterface.prompts[0].content).toContain(
       '不要为学生生成评分、训练建议或作答反馈'
     )
-    expect(entry.currentInterface.promptTemplate).toContain("As far as I'm concerned")
-    expect(entry.currentInterface.promptTemplate).toContain('In the foreground/background')
-    expect(entry.currentInterface.promptTemplate).toContain('明确包含1:1正方形画幅要求')
+    expect(entry.currentInterface.prompts[0].content).toContain("As far as I'm concerned")
+    expect(entry.currentInterface.prompts[0].content).toContain('In the foreground/background')
+    expect(entry.currentInterface.prompts[0].content).toContain('明确包含1:1正方形画幅要求')
 
     const leaves = flattenFields(entry.currentInterface.fields)
     const leavesByVarName = new Map(leaves.map(({ leaf }) => [leaf.varName, leaf]))
@@ -133,13 +133,13 @@ describe('bundled Interface repository', () => {
     const entries = await repository.loadAll()
     const entry = entries.find(({ builtinKey }) => builtinKey === 'shanghai-zhongkao-speaking')
     expect(entry?.currentInterface).toMatchObject({
-      id: 'sha256:e315a7e3f6c39e8f440272d7e922f78e3a98f6f7715a6b4a885e6b2fc3faf0c6',
+      id: 'sha256:7cf4602e4dfd1557f0d93a70b8f80152709230bc3484efc680b4e231cd6db0f6',
       name: '上海中考英语口语'
     })
     if (!entry) throw new Error('expected Shanghai Zhongkao speaking builtin')
-    expect(entry.currentInterface.promptTemplate).toContain('朗读词组')
-    expect(entry.currentInterface.promptTemplate).toContain('听后复述')
-    expect(entry.currentInterface.promptTemplate).toContain('no text')
+    expect(entry.currentInterface.prompts[0].content).toContain('朗读词组')
+    expect(entry.currentInterface.prompts[0].content).toContain('听后复述')
+    expect(entry.currentInterface.prompts[0].content).toContain('no text')
 
     const leaves = flattenFields(entry.currentInterface.fields)
     expectVarNames(leaves, EXPECTED_ZHONGKAO_SPEAKING_VAR_NAMES)
@@ -166,13 +166,19 @@ describe('bundled Interface repository', () => {
     const entries = await repository.loadAll()
     const entry = entries.find(({ builtinKey }) => builtinKey === 'shanghai-gaokao-listening')
     expect(entry?.currentInterface).toMatchObject({
-      id: 'sha256:03e00d7f007b7b2281e13429ec89220d3d5abfa218f1f953f0d3c64ff1489838',
+      id: 'sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214',
       name: '上海高考英语听力'
     })
     if (!entry) throw new Error('expected Shanghai Gaokao listening builtin')
-    expect(entry.currentInterface.promptTemplate).toContain('10段短对话')
-    expect(entry.currentInterface.promptTemplate).toContain('只有一个无争议的最佳答案')
-    expect(entry.currentInterface.promptTemplate).toContain('“[Man]:”或“[Woman]:”')
+    expect(entry.currentInterface.prompts[0].content).toContain('10段短对话')
+    expect(entry.currentInterface.prompts[0].content).toContain('只有一个无争议的最佳答案')
+    expect(entry.currentInterface.prompts[0].content).toContain('“[Man]:”或“[Woman]:”')
+    expect(entry.currentInterface.prompts.map(({ name }) => name)).toEqual([
+      '基础出题要求',
+      'B2',
+      'C1',
+      'C2'
+    ])
     expect(entry.currentInterface.fields.order).toEqual([
       'shortDialogues',
       'passages',

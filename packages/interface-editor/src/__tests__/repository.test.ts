@@ -31,7 +31,10 @@ import {
   InterfaceRepositoryError,
   type InterfaceStore
 } from '../repository'
-import type { InterfaceContent } from '../types'
+import type { InterfaceContent, InterfaceDef } from '../types'
+import { normalizeLegacyPrompts } from '../compatibility'
+import { verifyInterfaceId } from '../id'
+import { FileBundledInterfaceRepository } from '../bundled'
 import { decodeInterfaceZip, encodeInterfaceZip } from '../zip'
 import { strToU8, unzipSync, zipSync } from 'fflate'
 import { collection } from './fieldFixtures'
@@ -45,7 +48,7 @@ function content(name = '口语 Interface'): InterfaceContent {
   return {
     name,
     description: '用于测试',
-    promptTemplate: '生成一套口语题',
+    prompts: [{ name: '基础出题要求', content: '生成一套口语题' }],
     fields: collection({
       title: {
         type: 'text',
@@ -94,6 +97,119 @@ function setup(): { repository: FileInterfaceRepository; store: MemoryStore } {
 }
 
 describe('FileInterfaceRepository', () => {
+  const legacy = {
+    id: 'sha256:14ee5974099c6224509179f1bc6c2851a3f8ea77e1a67ebba4d80a40692c20d1',
+    name: '口语 Interface',
+    description: '用于测试',
+    promptTemplate: '生成一套口语题',
+    fields: content().fields
+  }
+
+  it('读取旧草稿时转换为 Default，保存后使用新格式；显式列表优先', async () => {
+    const { repository, store } = setup()
+    const draftId = INSTANCE_A
+    const scope = store.scope('interfaces').scope('drafts').scope(draftId)
+    await scope.writeText('draft.json', { ...legacy, draftId, promptTemplate: '' })
+    const draft = await repository.getDraft(draftId)
+    expect(draft?.prompts).toEqual([{ name: 'Default', content: '' }])
+    expect(draft).not.toHaveProperty('promptTemplate')
+    await repository.saveDraft(draft!)
+    expect(await scope.readText('draft.json')).toEqual(draft)
+    const modern = { ...legacy, prompts: content().prompts }
+    expect(normalizeLegacyPrompts(modern)).toBe(modern)
+    expect(normalizeLegacyPrompts({ ...legacy, prompts: null })).toHaveProperty('prompts', null)
+  })
+
+  it.each(['published', 'builtin'] as const)(
+    '升级旧 %s 题型时重算 ID，并迁移题组、资源和引用',
+    async (partition) => {
+      const { repository, store } = setup()
+      const root = store.scope('interfaces')
+      const parent =
+        partition === 'published'
+          ? root.scope('published')
+          : root.scope('builtin').scope('legacy').scope('versions')
+      const oldScope = parent.scope(legacy.id.slice(7))
+      await oldScope.writeText('interface.json', legacy)
+      if (partition === 'builtin') await repository.setBuiltinCurrent('legacy', legacy.id)
+      await repository.saveInstance(legacy.id, instance(INSTANCE_A, '旧题组'), {
+        'picture.png': PNG_BYTES
+      })
+      const upgraded = await repository.getInterface(legacy.id)
+      expect(upgraded?.prompts).toEqual([{ name: 'Default', content: legacy.promptTemplate }])
+      expect(upgraded?.id).not.toBe(legacy.id)
+      expect(await verifyInterfaceId(upgraded!)).toBe(true)
+      if (partition === 'builtin') {
+        expect(
+          (await new FileBundledInterfaceRepository(root).loadAll())[0].currentInterface
+        ).toEqual(upgraded)
+      }
+      const replaceInterfaceReferences = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('reference failure'))
+        .mockResolvedValue(undefined)
+      await expect(repository.migrateLegacyPrompts({ replaceInterfaceReferences })).rejects.toThrow(
+        'reference failure'
+      )
+      expect(await oldScope.readText('interface.json')).toEqual(legacy)
+      await repository.migrateLegacyPrompts({ replaceInterfaceReferences })
+      expect(replaceInterfaceReferences).toHaveBeenLastCalledWith(legacy.id, upgraded!.id)
+      expect(await repository.listInterfaceIds()).toEqual([upgraded!.id])
+      expect((await repository.getInstance(upgraded!.id, INSTANCE_A))?.instance.values).toEqual({
+        title: '旧题组'
+      })
+      expect(await repository.readInstanceAsset(upgraded!.id, INSTANCE_A, 'picture.png')).toEqual(
+        PNG_BYTES
+      )
+      expect(await oldScope.readText('interface.json')).toBeNull()
+      if (partition === 'builtin')
+        expect((await repository.getBuiltin('legacy'))?.currentInterfaceId).toBe(upgraded!.id)
+      await repository.migrateLegacyPrompts({ replaceInterfaceReferences })
+      expect(replaceInterfaceReferences).toHaveBeenCalledTimes(2)
+    }
+  )
+
+  it('旧交换包与 ZIP 升级为新 ID，导入和再次导出保持一致', async () => {
+    const { repository } = setup()
+    const bundle = {
+      format: 'ls101-interface' as const,
+      version: 2 as const,
+      exportedAt: '2026-07-28T10:00:00.000Z',
+      interface: legacy as unknown as InterfaceDef,
+      builtin: { builtinKey: 'legacy', interfaceId: legacy.id },
+      instances: [
+        { instance: instance(INSTANCE_A, '旧内容'), assets: { 'picture.png': PNG_BYTES } }
+      ]
+    }
+    const inspection = await inspectInterfacePackage(bundle)
+    expect(inspection.interface.id).not.toBe(legacy.id)
+    expect(inspection.builtin?.interfaceId).toBe(inspection.interface.id)
+    const files = unzipSync(await encodeInterfaceZip(bundle))
+    const manifest = JSON.parse(new TextDecoder().decode(files['manifest.json']))
+    manifest.interfaceId = legacy.id
+    manifest.builtin.interfaceId = legacy.id
+    files['manifest.json'] = strToU8(JSON.stringify(manifest))
+    files['interface.json'] = strToU8(JSON.stringify(legacy))
+    const decoded = await decodeInterfaceZip(zipSync(files))
+    expect(decoded.interface).toEqual(inspection.interface)
+    expect(decoded.builtin?.interfaceId).toBe(decoded.interface.id)
+    await importInterfacePackage(repository, bundle, { instances: { mode: 'all' } })
+    const exported = await exportInterfacePackage(repository, inspection.interface.id, {
+      mode: 'all'
+    })
+    expect(exported.interface).toEqual(inspection.interface)
+    expect(exported.instances).toEqual(bundle.instances)
+    expect(
+      (await importInterfacePackage(repository, bundle, { instances: { mode: 'all' } })).interface
+    ).toBe('skipped-existing')
+    await expect(
+      inspectInterfacePackage({
+        ...bundle,
+        interface: { ...legacy, promptTemplate: '篡改' } as unknown as InterfaceDef
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_DATA' })
+  })
+
   it('保存、读取、列出和删除草稿', async () => {
     const { repository } = setup()
     const draft = createInterfaceDraft(content())
@@ -131,7 +247,10 @@ describe('FileInterfaceRepository', () => {
 
   it('拒绝发布不完整的 Interface', async () => {
     const { repository } = setup()
-    const invalid = await publishInterface({ ...content(), promptTemplate: '' })
+    const invalid = await publishInterface({
+      ...content(),
+      prompts: [{ name: '基础出题要求', content: '' }]
+    })
 
     await expect(repository.saveInterface(invalid)).rejects.toMatchObject({ code: 'INVALID_DATA' })
   })
@@ -262,7 +381,7 @@ describe('内置 Interface 更新', () => {
     const nextDef = await publishInterface({
       ...content('新版名称'),
       description: '新版说明',
-      promptTemplate: '新版提示词',
+      prompts: [{ name: '基础出题要求', content: '新版提示词' }],
       fields: collection({
         title: {
           type: 'text',
@@ -820,8 +939,8 @@ describe('Interface application', () => {
       draft.name
     )
     const prompts = await app.published.getPrompts(published.interface.interfaceId)
-    expect(prompts.prompt).toBe(draft.promptTemplate)
-    expect(prompts.fullPrompt).toContain(draft.promptTemplate)
+    expect(prompts.prompt).toContain(draft.prompts[0].content)
+    expect(prompts.fullPrompt).toContain(draft.prompts[0].content)
     expect(JSON.parse(prompts.jsonSchema)).toMatchObject({
       type: 'object',
       properties: { title: { type: 'string' } }
@@ -1059,6 +1178,7 @@ describe('Interface application', () => {
 
     const selectedModel = { providerId: 'provider-a', modelId: 'model-b' }
     const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId, {
+      selectedPromptIndices: [0],
       model: selectedModel
     })
     const snapshots: TaskProgressSnapshot[] = []
@@ -1094,7 +1214,9 @@ describe('Interface application', () => {
       textGenerator: generator
     })
     const blank = await app.published.createBlankInstance(def.id)
-    const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId)
+    const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId, {
+      selectedPromptIndices: [0]
+    })
 
     generator.complete('```json\n{"title":"代码围栏内容"}\n```')
 
@@ -1115,10 +1237,14 @@ describe('Interface application', () => {
       textGenerator: generator
     })
     const blank = await app.published.createBlankInstance(def.id)
-    const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId)
+    const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId, {
+      selectedPromptIndices: [0]
+    })
 
     await expect(
-      app.instances.startAIGeneration(def.id, blank.instance.instanceId)
+      app.instances.startAIGeneration(def.id, blank.instance.instanceId, {
+        selectedPromptIndices: [0]
+      })
     ).rejects.toThrow('Instance is busy')
     await expect(
       app.instances.save(def.id, blank.instance.instanceId, {
@@ -1157,6 +1283,7 @@ describe('Interface application', () => {
       { providerId: 'manual-provider', providerName: '手动生成' }
     ])
     const handle = await app.instances.startAIGeneration(def.id, blank.instance.instanceId, {
+      selectedPromptIndices: [0],
       imageProvider: selectedImageProvider
     })
     textGenerator.complete('{"title":"AI 图片题","picture":"学生在校园操场上跑步"}')

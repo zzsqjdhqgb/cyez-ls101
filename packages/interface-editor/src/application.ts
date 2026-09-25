@@ -6,6 +6,7 @@ import type {
 } from '@ls101/core-types'
 import {
   buildAIPrompt,
+  buildPromptSections,
   buildExposedInstance,
   buildFormatInstructions,
   buildInstanceFromJson,
@@ -28,6 +29,7 @@ import type {
   FieldNode,
   InterfaceContent,
   InterfaceDef,
+  InterfacePrompt,
   InterfaceDraft
 } from './types'
 import { validateInterfaceDef, type ValidationError } from './validation'
@@ -93,7 +95,7 @@ export interface InterfacePromptBundle {
 export type InterfaceDraftOperation =
   | { type: 'set-name'; value: string }
   | { type: 'set-description'; value: string }
-  | { type: 'set-prompt'; value: string }
+  | { type: 'set-prompts'; value: InterfacePrompt[] }
   | { type: 'add-node'; parentPath: readonly string[]; key: string; node: FieldNode }
   | { type: 'update-node'; path: readonly string[]; node: FieldNode }
   | { type: 'rename-node'; path: readonly string[]; key: string }
@@ -219,9 +221,11 @@ export interface InterfaceInstanceApplication {
   startAIGeneration(
     interfaceId: string,
     instanceId: string,
-    options?: {
+    options: {
+      selectedPromptIndices: readonly number[]
       model?: InterfaceTextModelSelection
       imageProvider?: InterfaceImageProviderSelection
+      additionalPrompt?: string
     }
   ): Promise<InterfaceAIGenerationHandle>
   generateImage(
@@ -283,7 +287,7 @@ export interface InterfaceApplicationDependencies {
 const EMPTY_CONTENT: InterfaceContent = {
   name: '',
   description: '',
-  promptTemplate: '',
+  prompts: [{ name: '基础出题要求', content: '' }],
   fields: { order: [], nodes: {} }
 }
 
@@ -297,8 +301,11 @@ export function editInterfaceDraft(
   if (operation.type === 'set-description') {
     return { draft: { ...draft, description: operation.value }, operationApplied: true }
   }
-  if (operation.type === 'set-prompt') {
-    return { draft: { ...draft, promptTemplate: operation.value }, operationApplied: true }
+  if (operation.type === 'set-prompts') {
+    return {
+      draft: { ...draft, prompts: structuredClone(operation.value) },
+      operationApplied: true
+    }
   }
   const fields =
     operation.type === 'add-node'
@@ -505,10 +512,11 @@ export function createInterfaceApplication(
       },
       async getPrompts(interfaceId) {
         const def = await requireInterface(repository, interfaceId)
+        const indices = def.prompts.map((_prompt, index) => index)
         return {
-          prompt: def.promptTemplate,
+          prompt: buildPromptSections(def, indices),
           formatInstructions: buildFormatInstructions(def),
-          fullPrompt: buildAIPrompt(def),
+          fullPrompt: buildAIPrompt(def, indices),
           jsonSchema: JSON.stringify(buildJsonSchema(def.fields), null, 2),
           jsonExample: JSON.stringify(buildJsonExample(def.fields), null, 2)
         }
@@ -533,7 +541,7 @@ export function createInterfaceApplication(
         const draft = createInterfaceDraft({
           name: def.name,
           description: def.description,
-          promptTemplate: def.promptTemplate,
+          prompts: def.prompts,
           fields: structuredClone(def.fields)
         })
         await repository.saveDraft(draft)
@@ -659,8 +667,10 @@ export function createInterfaceApplication(
         }
       },
       replaceFromJson,
-      async startAIGeneration(interfaceId, instanceId, options = {}) {
+      async startAIGeneration(interfaceId, instanceId, options) {
         if (!textGenerator) throw new Error('Interface text generator is not configured')
+        const additionalPrompt = options.additionalPrompt
+        const selectedPromptIndices = [...options.selectedPromptIndices]
         const state: InterfaceGenerationState = {
           phase: 'ai',
           reasoning: '',
@@ -678,6 +688,7 @@ export function createInterfaceApplication(
             await requireInstance(repository, interfaceId, instanceId)
             def ??= await requireInterface(repository, interfaceId)
             const generationDef = def
+            const prompt = buildAIPrompt(generationDef, selectedPromptIndices, additionalPrompt)
             if (state.phase === 'ai') {
               state.reasoning = ''
               state.output = ''
@@ -688,7 +699,7 @@ export function createInterfaceApplication(
               generationProgressItems(state),
               async (publish) => {
                 if (state.phase === 'ai') {
-                  const stream = textGenerator.generate(buildAIPrompt(generationDef), {
+                  const stream = textGenerator.generate(prompt, {
                     signal: controller.signal,
                     model: options.model
                   })

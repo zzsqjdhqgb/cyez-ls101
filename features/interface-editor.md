@@ -139,7 +139,7 @@ interface InterfaceDraftApplication {
 ### 创建与保存
 
 - `create()` 立即生成 UUID v4 `draftId` 并持久化草稿。
-- 未提供的初始字段使用空名称、空描述、空提示词和空字段树。
+- 未提供的初始字段使用空名称、空描述、一项名为“基础出题要求”且内容为空的提示词和空字段树。
 - `save()` 保存完整草稿，不执行发布。
 - 草稿允许处于不完整状态，严格业务校验发生在发布时。
 - `delete()` 清除草稿目录；不存在的草稿删除保持成功。
@@ -239,9 +239,9 @@ interface InterfacePromptBundle {
 }
 ```
 
-- `prompt` 是教师编写的原始 `promptTemplate`。
+- `prompt` 是按题型定义顺序拼接的全部提示词片段，每段使用 `## <名称>` 标题分隔，供用户复制。
 - `formatInstructions` 是系统根据字段树生成的 JSON Schema、图片字段约束和示例输出。
-- `fullPrompt` 是 `prompt` 与 `formatInstructions` 的拼接结果。
+- `fullPrompt` 包含全部提示词片段和以 `## 输出格式要求` 为标题的 `formatInstructions`，不包含本次生成的补充提示词。
 - `jsonSchema` 是单独格式化的 JSON Schema 字符串。
 - `jsonExample` 是单独格式化的示例 JSON 字符串。
 
@@ -382,6 +382,10 @@ interface InterfaceTextGenerator {
 
 `listAIGenerationModels()` 将适配器提供的模型选项暴露给 UI。`startAIGeneration()` 可接收所选 `providerId` 和 `modelId`；调用方未指定时，适配器仍可提供自己的默认选择策略。
 
+题型定义使用有序 `prompts: Array<{ name: string; content: string }>`，草稿编辑器可增删和调整顺序。发布时列表不能为空，每项名称和内容都必须非空。
+
+AI 生成弹窗展示可多选、可展开查看正文的提示词列表，默认不选中任何项，至少选择一项后才能生成。`startAIGeneration()` 必须传入 `selectedPromptIndices`，仅发送对应片段，并按题型定义顺序组合；选择顺序和重复索引不改变结果，空选择或无效索引会被拒绝。每段以 `## <名称>` 分隔，随后追加可选的 `## 本次生成的补充要求`，最后追加 `## 输出格式要求`。补充要求通过 `additionalPrompt` 传入，不写入题型定义。失败重试保留原选择和补充要求。
+
 `startAIGeneration()`：
 
 1. 锁定当前实例。
@@ -509,6 +513,8 @@ instances/
 
 ### Interface ID
 
+读取旧版 `promptTemplate: string` 时，会将原文转换为 `prompts: [{ name: 'Default', content: 原文 }]`。旧定义先按原格式验证内容校验和，再按新格式重新计算 ID。启动时迁移本地已发布题型及内置历史版本的存储目录、题组、资源和模板引用；复制验证完成后才删除旧目录，中断后可重试。草稿在读取时转换，后续保存使用新格式。导入旧交换包时也重新计算题型 ID，并同步包内的内置题型标识。显式存在 `prompts` 的数据按新格式校验，不退回旧文本。
+
 已发布 Interface 的 ID 格式为：
 
 ```text
@@ -519,7 +525,7 @@ sha256:<64 lowercase hexadecimal characters>
 
 - `name`
 - `description`
-- `promptTemplate`
+- 有序的 `prompts` 列表（每项包含 `name` 和 `content`）
 - 保留顺序的完整字段树
 
 字段树的每一层存储为 `{ order: string[], nodes: Record<string, FieldNode> }`。`order` 是显示、遍历和哈希的唯一顺序来源，必须无重复且与 `nodes` 的 key 集合完全一致；草稿保存、发布和导入都会拒绝不一致的数据。
