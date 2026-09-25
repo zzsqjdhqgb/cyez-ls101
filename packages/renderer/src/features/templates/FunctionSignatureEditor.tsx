@@ -7,8 +7,8 @@ import {
   type ValueExpression
 } from '@ls101/template-editor'
 import { Plus, Trash2 } from 'lucide-react'
-import { Button } from '../../components/ui/Button'
-import { IconButton } from '../../components/ui/IconButton'
+import { Button } from '@ls101/desktop-ui'
+import { IconButton } from '@ls101/desktop-ui'
 import { TemplateVariableInput } from './TemplateVariableInput'
 import type { TemplateVariableCandidate } from './TemplateVariableInputModel'
 import styles from './FunctionSignatureEditor.module.css'

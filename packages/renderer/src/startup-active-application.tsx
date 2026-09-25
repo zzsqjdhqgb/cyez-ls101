@@ -6,7 +6,7 @@ import { latestReleaseVersion } from './features/release-notes/release-notes'
 import { initializeSchemaApplication } from './features/schemas/SchemaApplicationRuntime'
 import { templateApplication } from './features/templates/TemplateApplicationRuntime'
 import { runStartupPhase } from './startup-phase'
-import { markRendererStartupMilestone } from './startup-timing'
+import { markRendererStartupMilestone } from '@ls101/desktop-ui/startup'
 import './app/register-settings'
 import './app/register-placeholder-routes'
 

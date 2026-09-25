@@ -1,8 +1,8 @@
 import type { JSX } from 'react'
 import { ArrowRight, SlidersHorizontal } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { EmptyState } from '../components/ui/EmptyState'
-import { Page, PageHeader } from '../components/ui/Page'
+import { EmptyState } from '@ls101/desktop-ui'
+import { Page, PageHeader } from '@ls101/desktop-ui'
 import { useRegisteredSettingsPages, type SettingsPageRegistration } from '../app/settings-registry'
 import styles from './SettingsPage.module.css'
 

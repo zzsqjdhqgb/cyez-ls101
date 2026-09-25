@@ -1,0 +1,252 @@
+.toolbar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.toolbar label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+.toolbar input,
+.toolbar select {
+  min-width: 130px;
+  max-width: 240px;
+}
+.toolbar input:not([type='checkbox']),
+.toolbar select,
+.form > label input:not([type='checkbox']),
+.form > label select,
+.form > label textarea {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+}
+.toolbar input:not([type='checkbox']):focus-visible,
+.toolbar select:focus-visible,
+.form > label input:not([type='checkbox']):focus-visible,
+.form > label select:focus-visible,
+.form > label textarea:focus-visible {
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+.toolbar input:disabled,
+.toolbar select:disabled,
+.form > label input:disabled,
+.form > label select:disabled,
+.form > label textarea:disabled {
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle);
+}
+.form > label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 550;
+}
+.form > label input:not([type='checkbox']),
+.form > label select,
+.form > label textarea {
+  width: 100%;
+}
+.toolbar input[type='number'] {
+  width: 130px;
+}
+.toolbar input[type='datetime-local'] {
+  min-width: 210px;
+}
+.tableFrame {
+  width: 100%;
+  overflow-x: auto;
+  border-top: 1px solid var(--color-border);
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.table th {
+  padding: var(--space-3);
+  color: var(--color-text-faint);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+.table td {
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text);
+  vertical-align: middle;
+}
+.table td strong {
+  display: block;
+  color: var(--color-text-strong);
+}
+.table small {
+  display: block;
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+.table td:first-child {
+  max-width: 280px;
+  overflow-wrap: anywhere;
+}
+.table input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+.pagination span {
+  margin-right: auto;
+}
+.hint {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0;
+}
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.card h2,
+.card h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--color-text-strong);
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-3);
+}
+.stat {
+  padding: var(--space-4);
+  background: var(--color-surface-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+.stat strong {
+  display: block;
+  margin-top: var(--space-2);
+  font-size: 24px;
+  color: var(--color-text-strong);
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-xs);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.badge[data-tone='error'] {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+.badge[data-tone='warning'] {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+.details {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: var(--space-3);
+  font-size: 13px;
+}
+.details dt {
+  color: var(--color-text-muted);
+}
+.details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.card > summary {
+  color: var(--color-text-strong);
+  cursor: pointer;
+  font-weight: 600;
+}
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-3);
+}
+.checks {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.checks label {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: 13px;
+}
+.link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.form fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

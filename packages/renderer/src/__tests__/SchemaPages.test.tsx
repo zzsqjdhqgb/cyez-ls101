@@ -9,8 +9,8 @@ import type {
   SchemaRepository
 } from '@ls101/schema-editor'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { AppToaster } from '../components/ui/ToastViewport'
-import { toast } from '../components/ui/toast'
+import { AppToaster } from '@ls101/desktop-ui'
+import { toast } from '@ls101/desktop-ui'
 import { SchemaApplicationProvider } from '../features/schemas/SchemaApplicationProvider'
 import { SchemaBrowserPage } from '../features/schemas/SchemaBrowserPage'
 import { SchemaDefinitionPage } from '../features/schemas/SchemaDefinitionPage'

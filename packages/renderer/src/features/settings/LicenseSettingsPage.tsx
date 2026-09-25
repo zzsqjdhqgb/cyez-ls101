@@ -1,12 +1,8 @@
 import { ExternalLink, ShieldOff } from 'lucide-react'
 import { useState, type JSX } from 'react'
-import {
-  SettingsContent,
-  SettingsRow,
-  SettingsSection
-} from '../../components/settings/SettingsContent'
-import { Button } from '../../components/ui/Button'
-import { ConfirmModal } from '../../components/ui/ConfirmModal'
+import { SettingsContent, SettingsRow, SettingsSection } from '@ls101/desktop-ui'
+import { Button } from '@ls101/desktop-ui'
+import { ConfirmModal } from '@ls101/desktop-ui'
 
 export function LicenseSettingsPage(): JSX.Element {
   const [confirmOpen, setConfirmOpen] = useState(false)

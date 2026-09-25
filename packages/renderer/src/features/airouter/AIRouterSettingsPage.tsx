@@ -35,20 +35,16 @@ import {
   X
 } from 'lucide-react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import {
-  SettingsContent,
-  SettingsRow,
-  SettingsSection
-} from '../../components/settings/SettingsContent'
-import { Button } from '../../components/ui/Button'
+import { SettingsContent, SettingsRow, SettingsSection } from '@ls101/desktop-ui'
+import { Button } from '@ls101/desktop-ui'
 import {
   AIModelSelect,
   type AIModelOption,
   type AIModelSelection
 } from '../../components/ai/AIModelSelect'
-import { ConfirmModal } from '../../components/ui/ConfirmModal'
-import { Modal, ModalDescription, ModalTitle } from '../../components/ui/Modal'
-import { toast } from '../../components/ui/toast'
+import { ConfirmModal } from '@ls101/desktop-ui'
+import { Modal, ModalDescription, ModalTitle } from '@ls101/desktop-ui'
+import { toast } from '@ls101/desktop-ui'
 import { airouterApplication, type AIRouterApplication } from './AIRouterApplication'
 import {
   AIRouterOperationFeedback,

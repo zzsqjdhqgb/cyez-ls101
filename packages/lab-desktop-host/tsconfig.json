@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "composite": true, "outDir": "./dist", "rootDir": "./src" },
+  "include": ["src"],
+  "references": [{ "path": "../license" }, { "path": "../lab-client" }, { "path": "../lab-contracts" }, { "path": "../exam-package" }]
+}

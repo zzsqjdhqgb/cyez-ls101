@@ -13,10 +13,10 @@ import {
   registerFileStoreScheme
 } from '@ls101/file-store/main'
 import type { Logger } from '@ls101/logger/main'
+import { registerWindowControlHandlers } from '@ls101/desktop-ui/main'
 import { installSourceMapSupport } from './source-map-support'
 import { createMainWindow } from './window'
 import type { MainWindowLifecycleEvent } from './window'
-import { registerWindowControlHandlers } from './window-controls'
 
 const mainStartupStartedAt = performance.now()
 const pendingStartupMilestones: MainStartupMilestoneEntry[] = []

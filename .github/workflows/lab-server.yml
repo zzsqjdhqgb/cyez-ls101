@@ -1,0 +1,61 @@
+name: Lab server integration
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lab-server-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  LS101_SETUP_MODE: product-docs
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+
+jobs:
+  integration:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.20.0'
+      - run: corepack enable
+      - run: corepack prepare yarn@4.15.0 --activate
+      - run: yarn install --immutable
+      - name: Install Linux browser dependencies
+        if: runner.os == 'Linux'
+        run: yarn playwright install --with-deps chromium
+      - name: Run lab acceptance suites
+        run: yarn lab:test
+      - name: Sustained mixed traffic
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        env:
+          LS101_LAB_SOAK_ROUNDS: '200'
+        run: yarn lab:test:soak
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: lab-server-${{ runner.os }}-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          path: |
+            test-results/lab
+            test-results/lab-server
+            out/lab-server/runtime-manifest.json

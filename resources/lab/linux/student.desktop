@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=LS101 Lab Student
+Exec=/usr/bin/ls101-lab-student
+Terminal=false
+X-GNOME-Autostart-enabled=true

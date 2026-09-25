@@ -1,6 +1,7 @@
 import type { ExamPackage, SchemaDefinition } from '@ls101/core-types'
 import { describe, expect, it } from 'vitest'
 import { assembleSubmission, SubmissionAssemblyError, type SubmissionAssemblyInput } from '../index'
+import { decodeSubmissionPackage, encodeSubmissionPackage } from '@ls101/exam-package'
 
 const schema: SchemaDefinition = {
   formatVersion: 2,
@@ -118,6 +119,28 @@ function input(overrides: Partial<SubmissionAssemblyInput> = {}): SubmissionAsse
 }
 
 describe('assembleSubmission', () => {
+  it('编码并解码包含选择题和录音的完整作答包，保留答案与音频字节', async () => {
+    const captured = input()
+    const exam = examPackage()
+    exam.submissionTemplate = { ...exam.submissionTemplate, schemaUses: [], resources: {} }
+    const assembled = assembleSubmission(exam, captured)
+    const files: Record<string, Uint8Array> = {}
+    for (const [key, blob] of Object.entries(assembled.files))
+      files[key] = new Uint8Array(await blob.arrayBuffer())
+    const archive = await encodeSubmissionPackage(assembled.submission, files)
+    const decoded = await decodeSubmissionPackage(archive)
+
+    expect(decoded.submission.meta).toMatchObject({
+      submissionId: 'submission-1',
+      candidate: { candidateId: 'student-1', displayName: 'Student' }
+    })
+    expect(decoded.submission.answers.strings).toEqual(['B'])
+    expect(decoded.submission.answers.audios).toEqual([
+      { resourceKey: 'answer-audio-0', durationMs: 1250 }
+    ])
+    expect(decoded.files['answer-audio-0']).toEqual(new Uint8Array(Buffer.from('audio')))
+  })
+
   it('按捕获计划复制静态快照并填入答案池', () => {
     const exam = examPackage()
     const captured = input()

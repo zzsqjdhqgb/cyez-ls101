@@ -4,10 +4,12 @@ import { AlertCircle, RefreshCw } from 'lucide-react'
 import { logger } from '@ls101/logger/renderer'
 import type { LegacyDataInfo, LicenseStatus } from '@ls101/core-types'
 import { runStartupPhase } from './startup-phase'
-import { waitForStartupCompletionDelay } from './startup-placeholder'
-import { enableRendererStartupTimingLogging, markRendererStartupMilestone } from './startup-timing'
-import './styles/tokens.css'
-import './styles/global.css'
+import {
+  enableRendererStartupTimingLogging,
+  markRendererStartupMilestone,
+  waitForStartupCompletionDelay
+} from '@ls101/desktop-ui/startup'
+import '@ls101/desktop-ui/styles.css'
 
 type ActiveApplication = typeof import('./startup-active-application')
 

@@ -14,7 +14,7 @@ import type {
   FunctionInputDef,
   TemplateDocumentOperation
 } from '@ls101/template-editor'
-import { IconButton } from '../../components/ui/IconButton'
+import { IconButton } from '@ls101/desktop-ui'
 import { TemplateVariableInput } from './TemplateVariableInput'
 import type { TemplateVariableCandidate } from './TemplateVariableInputModel'
 import { sameChoiceQuestionRef, type TemplateChoiceTargetPage } from './TemplateChoiceTargets'

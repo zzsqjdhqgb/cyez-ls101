@@ -13,6 +13,7 @@
     "@ls101/clipboard": "workspace:*",
     "@ls101/config-store": "workspace:*",
     "@ls101/core-types": "workspace:*",
+    "@ls101/desktop-ui": "workspace:*",
     "@ls101/editor-kit": "workspace:*",
     "@ls101/exam-library": "workspace:*",
     "@ls101/exam-package": "workspace:*",

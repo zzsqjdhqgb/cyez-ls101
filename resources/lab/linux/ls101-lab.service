@@ -1,0 +1,25 @@
+[Unit]
+Description=LS101 Lab Service
+After=network.target
+
+[Service]
+Type=exec
+User=ls101-lab
+Group=ls101-lab
+StateDirectory=ls101-lab
+StateDirectoryMode=0700
+WorkingDirectory=/opt/ls101-lab/current
+ExecStart=/opt/ls101-lab/current/runtime/node /opt/ls101-lab/current/server.cjs serve --data-dir /var/lib/ls101-lab/data
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=1900
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target

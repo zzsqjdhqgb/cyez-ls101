@@ -1,6 +1,6 @@
 import { Check, CircleAlert, RefreshCw } from 'lucide-react'
 import type { JSX } from 'react'
-import { Button } from '../../components/ui/Button'
+import { Button } from '@ls101/desktop-ui'
 import styles from './AIRouterSettingsPage.module.css'
 
 export interface AIRouterFeedbackValue {

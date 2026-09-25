@@ -12,8 +12,8 @@ import type {
   InterfaceDraft
 } from '@ls101/interface-editor'
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
-import { AppToaster } from '../components/ui/ToastViewport'
-import { toast } from '../components/ui/toast'
+import { AppToaster } from '@ls101/desktop-ui'
+import { toast } from '@ls101/desktop-ui'
 import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceApplicationProvider'
 import { InterfaceDetailsPage } from '../features/interfaces/InterfaceDetailsPage'
 import { InterfaceExportPage } from '../features/interfaces/InterfaceExportPage'

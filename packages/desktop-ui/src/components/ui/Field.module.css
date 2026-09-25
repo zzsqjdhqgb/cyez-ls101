@@ -1,0 +1,68 @@
+.field {
+  display: block;
+  margin-bottom: var(--space-4);
+}
+
+.field > label {
+  display: block;
+  margin-bottom: var(--space-2);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.field input:not([type='checkbox']),
+.field select,
+.field textarea {
+  display: block;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font: inherit;
+}
+
+.field input:not([type='checkbox']):focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible {
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.field input:disabled,
+.field select:disabled,
+.field textarea:disabled {
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle);
+}
+
+.hint {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 var(--space-4);
+}
+
+.check input {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  accent-color: var(--color-accent);
+}
+
+.check label {
+  color: var(--color-text);
+  font-size: 13px;
+  user-select: none;
+}
