@@ -103,3 +103,18 @@ owner: ui
   - 门禁：`yarn copy:check`（`scripts/docs/check-user-facing-copy.mjs`）扫描 `packages/**`、`src/**` 的错误构造点，纯英文即失败；
     CI 的 `other-checks` 与本地 `yarn test` 都会运行它。
   - 允许保留的技术缩写：`AI`、`JSON`、`TTS`、`WASM`、`SHA-256`、`OpenAI Compatible`、`Base URL`（见 [`glossary.md`](./glossary.md)）。
+
+## 11. 评分单元草稿库路由在打包应用里没有入口
+
+- **背景**：兼容路由 `/schemas/drafts/:libraryId`（`UI-GS-03`）与 `/schemas/drafts/:libraryId/:draftId`（`UI-GS-04`）在
+  `packages/renderer/src/app/register-placeholder-routes.ts` 中只注册了 `path` 与 `layout`，没有声明 `navigation`；
+  全仓库对 `/schemas/drafts/...` 的跳转只发生在 `SchemaDraftLibraryPage` 与 `SchemaDraftEditorPage` 之间，
+  没有其他界面链接到它们；renderer 使用 MemoryRouter，规格中写的"直接 URL 进入"在打包应用里不成立。
+  结果是 v0.4.1 打包应用无法打开这两屏，历史草稿库数据也读不到。
+- **选项**：(a) 补入口：在「评分单元」库页检测到历史草稿库数据时给出进入草稿库的入口；
+  (b) 确认兼容期结束后删除两条路由、两个页面与两篇规格；(c) 保持现状，把"不可达"记为已知限制。
+- **影响**：(a) 属产品与代码变更，需要同步改 UI 规格、补行为测试并重建视觉基线；
+  (b) 会让历史草稿库数据彻底无法读取，需要先确认没有用户数据依赖；
+  (c) 两篇规格的行为锚点按 [`README.md`](./README.md) §2 的合格线无法达成，只能保持 `unverified`。
+- **需要谁定**：产品负责人。
+- **当前决定**：未定。

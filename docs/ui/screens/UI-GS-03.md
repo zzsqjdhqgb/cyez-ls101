@@ -79,7 +79,7 @@ owner: schema-editor
 ```yaml
 anchors:
   visual: n/a（无界面入口；历史草稿库兼容路径，仅注册路由，主界面不链接）
-  behavior: unverified
+  behavior: unverified        # 打包应用内没有入口，见 ../open-questions.md 第 11 条
 ```
 
-无产品文档测试覆盖该兼容路径；`GS-01` 覆盖的是直接创建并保存评分单元的正式流程。
+本页在打包应用里没有入口（见 [`../open-questions.md`](../open-questions.md) 第 11 条），因此行为锚点按 [`../README.md`](../README.md) §2 的合格线无法达成，保持 `unverified`；`GS-01` 覆盖的是直接创建并保存评分单元的正式流程。

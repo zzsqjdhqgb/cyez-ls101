@@ -882,10 +882,13 @@ test('routes window controls through preload to the owning BrowserWindow', async
   await expect(page.getByRole('button', { name: '最大化' })).toBeEnabled()
   await expect(page.getByRole('button', { name: '关闭' })).toBeEnabled()
 
-  await Promise.all([
-    electronApp.waitForEvent('close'),
-    page.getByRole('button', { name: '关闭' }).click()
-  ])
+  // 点击「关闭」会让应用退出，点击动作可能随页面销毁被拒绝；应用确实退出由 closed 断言。
+  const closed = electronApp.waitForEvent('close')
+  await page
+    .getByRole('button', { name: '关闭' })
+    .click()
+    .catch(() => undefined)
+  await closed
 })
 
 function largeResourceExamManifest(): ExamPackage {

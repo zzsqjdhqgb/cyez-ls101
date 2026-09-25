@@ -108,7 +108,7 @@ owner: schema-editor
 ```yaml
 anchors:
   visual: n/a（无界面入口；历史草稿库兼容路径，仅注册路由，主界面不链接）
-  behavior: unverified
+  behavior: unverified        # 打包应用内没有入口，见 ../open-questions.md 第 11 条
 ```
 
-产品文档套件没有用例进入 `/schemas/drafts/:libraryId/:draftId`；`GS-01` 覆盖的是直接新建并保存评分单元，不经过草稿编辑器。渲染行为测试 `packages/renderer/src/__tests__/SchemaPages.test.tsx` 覆盖本页的保存与发布，但它不是产品/集成测试 ID；视觉基线未建立。
+本页在打包应用里没有入口（见 [`../open-questions.md`](../open-questions.md) 第 11 条），因此行为锚点按 [`../README.md`](../README.md) §2 的合格线无法达成，保持 `unverified`；`GS-01` 覆盖的是直接新建并保存评分单元，不经过草稿编辑器。渲染行为测试 `packages/renderer/src/__tests__/SchemaPages.test.tsx` 覆盖本页的保存与发布，但它不是产品/集成测试 ID；视觉基线未建立。
