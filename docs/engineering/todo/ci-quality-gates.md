@@ -18,6 +18,32 @@ passed that workflow. Branch protection and local reproduction details are docum
 
 The items below remain the broader cross-platform and generated-artifact roadmap.
 
+## Known gaps (verified 2026-01, v0.4.1)
+
+- **The `yarn typecheck` gate is vacuous.** `package.json` runs `tsc --noEmit -p tsconfig.json`, and
+  `tsconfig.json` is a solution file containing only `references`; TypeScript therefore checks no
+  files and the step passes unconditionally (`.github/workflows/ci.yml` runs it as the type gate).
+- **The main-process project currently does not typecheck.** `npx tsc --noEmit -p tsconfig.node.json`
+  reports 10 errors, all pre-existing:
+
+  | File                                          | Error                                                                                                                                                                                             |
+  | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `src/main/data-directory.ts:1007`             | `TS2304: Cannot find name 'LEGACY_DIRECTORIES'` (x2) — the identifier is referenced once and never defined or imported, so the legacy-copy bootstrap path would throw `ReferenceError` at runtime |
+  | `src/main/bootstrap.ts:182`                   | `TS2345` — `MainStartupMilestoneEntry` lacks an index signature for `Record<string, unknown>`                                                                                                     |
+  | `src/main/data-directory.ts:420,813,814,1324` | `TS2322` / `TS2345` — `formatVersion` literal widening, possibly-undefined paths, `PendingCleanup` passed where a bootstrap record is expected                                                    |
+  | `src/main/legacy-data-worker.ts:18,19`        | `TS18047: 'parentPort' is possibly 'null'`                                                                                                                                                        |
+
+- **A window-control integration test is flaky in the full run.**
+  `tests/integration/electron-app.spec.ts › routes window controls through preload to the owning BrowserWindow`
+  failed once inside the complete suite with `locator.click: Target page, context or browser has been closed`
+  and passed when re-run alone, because it closes the owning window while later assertions still run.
+  Either enable retries for the integration project or split the closing step into its own test.
+
+- Fixing the gate means either converting the root `tsconfig.json` into a real solution build
+  (`tsc -b`) or listing each referenced project explicitly, then repairing the errors above.
+  Adding `LEGACY_DIRECTORIES` (or deleting the dead branch) is a code change and is not part of the
+  current documentation work.
+
 ## Goal
 
 Design and introduce project-wide CI quality gates as one coherent workflow strategy. Do not add
@@ -59,9 +85,10 @@ main build, test, packaging, and generated-artifact paths.
 When the general CI gates are established, add a Linux job that:
 
 1. Runs `yarn docs:product:check` through the versioned product documentation Docker image.
-2. Fails when canonical regeneration changes `docs/product` or the generated Playwright inventory.
-3. Uploads `test-results/product-docs` and `test-results/product-docs-preview` when present.
-4. Never publishes or commits regenerated files from CI.
+2. Fails when canonical regeneration changes `docs/manual` or the generated Playwright inventory.
+3. Fails when a canonical visual run changes `tests/visual/baselines` (the `canonical_visual` job already enforces this).
+4. Uploads `test-results/product-docs` and `test-results/product-docs-preview` when present.
+5. Never publishes or commits regenerated files from CI.
 
 ## Acceptance Criteria
 

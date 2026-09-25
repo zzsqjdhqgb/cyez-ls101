@@ -21,18 +21,22 @@ owner: engineering
 
 ## 功能索引
 
-| 功能                     | 实现模块                                 | 状态                                                    | 文档                                         |
-| ------------------------ | ---------------------------------------- | ------------------------------------------------------- | -------------------------------------------- |
-| 应用私有文件存储         | `@ls101/file-store`                      | 基础设施已实现并完成 Electron 注册                      | [file-store.md](file-store.md)               |
-| 应用配置存储             | `@ls101/config-store`                    | JSON 后端已实现并完成 Electron 注册，外观模块已接入     | [config-store.md](config-store.md)           |
-| 可配置业务数据目录       | Electron main、preload、renderer         | 初始化、旧数据整理、迁移重启和恢复流程已接入            | [data-directory.md](data-directory.md)       |
-| 系统文件对话框           | `@ls101/file-dialog`                     | 基础设施已实现并完成 Electron 注册                      | [file-dialog.md](file-dialog.md)             |
-| 系统剪贴板图片读取       | `@ls101/clipboard`                       | 图片读取已实现并完成 Electron 注册，Interface 已接入    | [clipboard.md](clipboard.md)                 |
-| 通用长耗时任务进度       | `@ls101/core-types`                      | 跨模块契约已实现，Interface 已产生实际句柄              | [task-progress.md](task-progress.md)         |
-| AI 文本、图像与语音路由  | `@ls101/airouter`、renderer              | 文本流、图像、TTS 与内置 Qwen3 ASR 运行时已接入         | [ai-router.md](ai-router.md)                 |
-| AI 评分                  | `@ls101/grading-engine`、作答记录模块    | 整场生成、失败重试、结果持久化和三种审查模式已接入      | [ai-grading.md](ai-grading.md)               |
-| Interface 领域与应用 API | `@ls101/interface-editor`                | 领域、仓储和应用门面已实现，renderer 已接入真实 AIRouter | [interface-editor.md](interface-editor.md)   |
-| Schema 领域模块          | `@ls101/schema-editor`                   | 结构、数据、发布、仓储与内置初始化已实现                | [schema-editor.md](schema-editor.md)         |
-| Template 核心领域模型    | `@ls101/template-editor`                 | 领域、仓储、应用门面、严格校验和试卷包编译已实现        | [template-editor.md](template-editor.md)     |
-| Template 选择题组作用域  | `@ls101/template-editor`                 | 编译期选择题组作用域已实现                              | [template-choice-groups.md](template-choice-groups.md) |
-| 应用外壳与注册式导航     | `@ls101/renderer`、Electron main/preload | 基础外壳、窗口控制、路由注册和轻量 UI 组件已实现        | [application-shell.md](application-shell.md) |
+| 功能                     | 实现模块                                 | 状态                                                     | 文档                                                   |
+| ------------------------ | ---------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------ |
+| 应用私有文件存储         | `@ls101/file-store`                      | 基础设施已实现并完成 Electron 注册                       | [file-store.md](file-store.md)                         |
+| 应用配置存储             | `@ls101/config-store`                    | JSON 后端已实现并完成 Electron 注册，外观模块已接入      | [config-store.md](config-store.md)                     |
+| 可配置业务数据目录       | Electron main、preload、renderer         | 初始化、旧数据整理、迁移重启和恢复流程已接入             | [data-directory.md](data-directory.md)                 |
+| 系统文件对话框           | `@ls101/file-dialog`                     | 基础设施已实现并完成 Electron 注册                       | [file-dialog.md](file-dialog.md)                       |
+| 系统剪贴板图片读取       | `@ls101/clipboard`                       | 图片读取已实现并完成 Electron 注册，Interface 已接入     | [clipboard.md](clipboard.md)                           |
+| 通用长耗时任务进度       | `@ls101/core-types`                      | 跨模块契约已实现，Interface 已产生实际句柄               | [task-progress.md](task-progress.md)                   |
+| AI 文本、图像与语音路由  | `@ls101/airouter`、renderer              | 文本流、图像、TTS 与内置 Qwen3 ASR 运行时已接入          | [ai-router.md](ai-router.md)                           |
+| AI 评分                  | `@ls101/grading-engine`、作答记录模块    | 整场生成、失败重试、结果持久化和三种审查模式已接入       | [ai-grading.md](ai-grading.md)                         |
+| Interface 领域与应用 API | `@ls101/interface-editor`                | 领域、仓储和应用门面已实现，renderer 已接入真实 AIRouter | [interface-editor.md](interface-editor.md)             |
+| Schema 领域模块          | `@ls101/schema-editor`                   | 结构、数据、发布、仓储与内置初始化已实现                 | [schema-editor.md](schema-editor.md)                   |
+| Template 核心领域模型    | `@ls101/template-editor`                 | 领域、仓储、应用门面、严格校验和试卷包编译已实现         | [template-editor.md](template-editor.md)               |
+| Template 选择题组作用域  | `@ls101/template-editor`                 | 编译期选择题组作用域已实现                               | [template-choice-groups.md](template-choice-groups.md) |
+| 应用外壳与注册式导航     | `@ls101/renderer`、Electron main/preload | 基础外壳、窗口控制、路由注册和轻量 UI 组件已实现         | [application-shell.md](application-shell.md)           |
+| 应用日志                 | `@ls101/logger`                          | main JSONL 文件、轮转、renderer 转发与限流已实现         | [logger.md](logger.md)                                 |
+| 加密密钥存储             | `@ls101/secret-store`                    | `safeStorage` 加密的作用域密钥存储已接入 AIRouter        | [secret-store.md](secret-store.md)                     |
+| 激活与许可               | Electron main、preload、renderer         | 邀请码激活、回执、到期与反激活已实现并接入               | [license.md](license.md)                               |
+| 安装标记与首次运行状态   | Electron main、renderer                  | 标记创建/升级与发布说明认领已实现并接入                  | [installation-marker.md](installation-marker.md)       |

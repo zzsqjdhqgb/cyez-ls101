@@ -7,6 +7,8 @@ owner: logger
 
 # Logger follow-up
 
+已实现的部分见 [`../features/logger.md`](../features/logger.md)；本文件只保留尚未执行的工作。
+
 The first logger integration intentionally only adds the shared logger, the main-process file sink, the preload bridge, and renderer/global process error forwarding. The following work is intentionally deferred so it does not become a broad business-logic refactor:
 
 - Wrap every `ipcMain.handle` and `ipcMain.on` entry point with operation names, durations, and normalized error logging.

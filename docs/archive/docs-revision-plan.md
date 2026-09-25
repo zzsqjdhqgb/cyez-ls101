@@ -1,18 +1,18 @@
 <!--
-status: draft
+status: archived
 product-version: 0.4.1
 audience: engineer
 owner: docs
 -->
 
-# LS101 文档体系重构方案（临时工作稿）
+# LS101 文档体系重构方案（已归档）
 
 ```yaml
-status: temporary
+status: archived
 audience: maintainer
 product-version: 0.4.1
 branch: dev
-note: 本文件是执行前的临时工作稿，重构完成后删除或移入 docs/archive/。
+note: 2026-01 归档。阶段 0–3、4a（首批）、4b（首批）、4c、4e、4f 已落地；剩余覆盖面扩展见 docs/engineering/todo/manual-coverage.md。本文件只作为当时的决策依据保留，不再是执行依据。
 ```
 
 > 本方案在 `dev` 分支（`package.json` 0.4.1，tag `v0.4.1`）上拟定。`dev` 比 `main` 多的 4 个提交全部是
@@ -448,7 +448,7 @@ visual:
 
 ### 4b 逐屏视觉回归实现
 
-约定已定稿于 [`tests/visual/README.md`](tests/visual/README.md)。
+约定已定稿于 [`../../tests/visual/README.md`](../../tests/visual/README.md)。
 
 1. 新增 Playwright 项目 `playwright.visual.config.ts`，`testDir=tests/visual`，单 worker。
 2. 每个 `UI-*.md` 的 `anchors.visual` 对应 `tests/visual/<module>/<UI-ID>.spec.ts`；基线位于 `tests/visual/baselines/<UI-ID>/<state>.png`。
