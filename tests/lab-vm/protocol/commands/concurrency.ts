@@ -331,10 +331,15 @@ async function uploadRequests(
   return specs
 }
 
-function heartbeatRequests(count: number, version: string, authorization: string): RequestSpec[] {
+function heartbeatRequests(
+  count: number,
+  version: string,
+  authorization: string,
+  state: Record<string, unknown>
+): RequestSpec[] {
   const heartbeat: Schema<'Heartbeat'> = {
-    runtimeId: randomUUID(),
-    runtimeGeneration: 1,
+    runtimeId: String(state.runtimeId),
+    runtimeGeneration: Number(state.runtimeGeneration),
     sequence: 1,
     activationState: 'active',
     phase: 'idle',
@@ -396,7 +401,7 @@ export const concurrency: CommandHandler = async (args) => {
       await session.close()
     }
   }
-  const specs = heartbeatRequests(count, version, device.authorization)
+  const specs = heartbeatRequests(count, version, device.authorization, state)
   return summarize(
     kind,
     'postStudentHeartbeat',

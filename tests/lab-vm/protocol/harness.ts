@@ -14,7 +14,6 @@ import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { randomUUID } from 'node:crypto'
 import { LabService } from '../../../packages/lab-server/src/service'
 import { createLabHttpServer } from '../../../packages/lab-server/src/http'
 
@@ -97,11 +96,6 @@ export async function startHarness(): Promise<Harness> {
     }
   }
   return harness
-}
-
-// A fresh installation identity per registration, which is what makes two registrations two devices.
-export function installationId(): string {
-  return randomUUID()
 }
 
 export async function readSecretFile(file: string): Promise<string> {

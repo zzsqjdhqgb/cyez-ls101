@@ -71,18 +71,6 @@ interface EnrollmentPayload extends Record<string, unknown> {
   publicKeyFingerprint: string
 }
 
-// The real store encrypts a device secret through the Electron codec before it can touch disk. There is
-// no Electron here, and enrollment is expected to fail before any secret exists, so the stand-in
-// refuses outright rather than letting a plaintext credential be written.
-const NO_CODEC = {
-  encrypt: (): string => {
-    throw new Error('the driver does not persist device credentials')
-  },
-  decrypt: (): string => {
-    throw new Error('the driver does not persist device credentials')
-  }
-}
-
 function boundary(run: () => void): Boundary {
   try {
     run()
@@ -125,7 +113,7 @@ async function enroll(file: string, fingerprint: string, version: string): Promi
   const transport = new PinnedTransport(root, version)
   await transport.initialize()
   try {
-    await new BindingStore(root, transport, NO_CODEC).enroll(file, fingerprint)
+    await new BindingStore(root, transport).enroll(file, fingerprint)
     return { accepted: true, message: null }
   } catch (error) {
     return { accepted: false, message: (error as Error).message }

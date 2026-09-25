@@ -1,3 +1,4 @@
+import { SCHEMA_VERSION } from '../../database'
 import { randomUUID } from 'node:crypto'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -181,7 +182,7 @@ describe('LIFE: independent runtime admission and fail-closed startup', () => {
       await writeFile(path, config)
       if (condition === 'incompatible-schema') {
         const db = new DatabaseSync(join(f.root, 'service.sqlite'))
-        db.exec('PRAGMA user_version=1')
+        db.exec(`PRAGMA user_version=${SCHEMA_VERSION}`)
         db.close()
       }
       const restarted = await f.start()

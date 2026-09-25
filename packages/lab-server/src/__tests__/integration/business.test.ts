@@ -192,7 +192,7 @@ describe('DEV: durable identity, revisions and heartbeat order', () => {
 
   it('restart preserves heartbeat generation/sequence and does not renew stale observations', async () => {
     const student = devices[0],
-      beat = heartbeat(randomUUID(), 3, 8)
+      beat = heartbeat(student.runtimeId, 1, 8)
     expect(
       (await f.api('POST', '/student/heartbeat', { token: student.token, body: beat })).body
         .heartbeatAccepted
@@ -223,11 +223,22 @@ describe('DEV: durable identity, revisions and heartbeat order', () => {
       lastHeartbeatAt: before.lastHeartbeatAt,
       heartbeat: before.heartbeat
     })
+    const nextRuntime = randomUUID()
+    const next = await f.api('POST', '/student/sessions', {
+      body: {
+        connectionSecret: student.connectionSecret,
+        computerName: student.computerName,
+        platform: 'linux',
+        runtimeId: nextRuntime
+      }
+    })
+    expect(next.status).toBe(200)
+    expect(next.body.runtimeGeneration).toBe(2)
     expect(
       (
         await f.api('POST', '/student/heartbeat', {
           token: student.token,
-          body: heartbeat(randomUUID(), 4)
+          body: heartbeat(nextRuntime, next.body.runtimeGeneration)
         })
       ).body.heartbeatAccepted
     ).toBe(true)

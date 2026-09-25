@@ -53,7 +53,7 @@ renderer 不使用浏览器 `fetch` 直接发送管理密码或设备令牌；`l
 
 本机教师首次初始化和免密凭证通过受操作系统权限保护的本地 IPC 获取：Windows 命名管道、Linux Unix domain socket。服务检查对端本机账户授权；教师 main 在该通道取得短期单次本机认证证明，再通过回环 HTTPS 的 `POST /teacher/sessions` 携带 `X-LS101-Local-Authorization`，JSON 为 `{}`。HTTP 服务同时要求实际回环来源、证明有效及允许的宿主 Origin 策略；随机网页即使能访问回环也无法取得证明。证明绑定服务 ID、有效期和单次消费，不记录日志；代理头不作为本机证据。
 
-学生秘密使用宿主 secret-store 或目标系统凭证保护，磁盘明文权限限制作为最低要求；必须验证无人值守学生账户可在重启后解密。服务账户的身份密钥、许可位置、数据目录 ACL 在安装时固定，不能依赖教师交互用户已登录才能运行。
+学生端共享接入配置使用可复制 JSON 和文件访问权限保护，禁止使用 Windows Credential API、DPAPI、safeStorage、TPM 或用户/机器绑定加密。设备凭据仅驻留内存；机器业务数据按 hostname 隔离。详见[hostname 镜像部署设计](./lab-hostname-deployment-design.md)。服务账户的身份密钥、许可位置、数据目录 ACL 在安装时固定，不能依赖教师交互用户已登录才能运行。
 
 ## 5. 播放器通用扩展
 

@@ -286,7 +286,12 @@ export class StudentController {
       await Promise.all([this.queue.settle(), this.maintenance.settle()])
       do {
         this.commandsPending = false
-        const results = await this.host.invoke<Array<{ error?: string }>>('startup.commands')
+        const results =
+          await this.host.invoke<Array<{ type?: string; error?: string }>>('startup.commands')
+        if (results.some((result) => result.type === 'enroll' && !result.error)) {
+          this.revoked = false
+          this.reconnectFailures = 0
+        }
         const failure = results.find((result) => result.error)
         if (failure) this.update({ error: failure.error })
         if (results.length) await this.disconnect()
@@ -328,6 +333,9 @@ export class StudentController {
       if (generation !== this.generation) return
       this.update({ active: license.state === 'active' })
       if (!this.view.active || !this.view.initialized) return
+      const serverConfigured = await this.host.invoke<boolean>('binding.configured')
+      if (generation !== this.generation) return
+      this.update({ serverConfigured })
       const binding = await this.host.invoke<BindingSummary | null>('binding.summary')
       if (generation !== this.generation) return
       this.update({ binding })
@@ -372,7 +380,8 @@ export class StudentController {
         { body: heartbeat }
       )
       if (connection !== this.connection || this.stopped || generation !== this.generation) return
-      if (!state.heartbeatAccepted) throw new Error('设备运行代次已失效，请重新入网')
+      if (!state.heartbeatAccepted)
+        throw new Error('另一个实例已接管此计算机，请关闭旧实例后重新启动')
       const prior = this.view.state
       if (
         prior &&
@@ -462,9 +471,8 @@ export class StudentController {
   async enroll(file: string, fingerprint: string): Promise<void> {
     if (admission(this.view) !== 'unbound') throw new Error('当前状态不允许入网')
     await this.host.invoke('binding.enroll', { file, fingerprint })
-    // Re-enrolling an already bound device replaces its context, so the previous connection is
-    // dropped exactly as the startup command path does; otherwise it stays open for a server the
-    // device is no longer admitted to.
+    // Enrollment may replace the credential context or target server. Close the previous
+    // connection before polling the newly accepted configuration.
     await this.disconnect()
     await this.refresh()
   }

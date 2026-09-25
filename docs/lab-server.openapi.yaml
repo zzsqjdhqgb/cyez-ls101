@@ -446,17 +446,11 @@ paths:
                 type: string
         default:
           $ref: '#/components/responses/Error'
-  /enrollment/devices/{installationId}:
+  /enrollment/connections:
     parameters:
       - $ref: '#/components/parameters/ClientVersion'
-      - name: installationId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    put:
-      operationId: putEnrollmentDevicesInstallationId
+    post:
+      operationId: postEnrollmentConnections
       tags:
         - public
       requestBody:
@@ -464,28 +458,36 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Registration'
+              $ref: '#/components/schemas/ConnectionEnrollment'
       responses:
         '200':
-          description: Existing registration
+          description: Connection established
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RegisteredDevice'
-          headers:
-            X-Request-Id:
-              schema:
-                type: string
-        '201':
-          description: Registered
+                $ref: '#/components/schemas/ServerConnection'
+        default:
+          $ref: '#/components/responses/Error'
+  /student/sessions:
+    parameters:
+      - $ref: '#/components/parameters/ClientVersion'
+    post:
+      operationId: postStudentSessions
+      tags:
+        - public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentSessionRequest'
+      responses:
+        '200':
+          description: Connection established
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RegisteredDevice'
-          headers:
-            X-Request-Id:
-              schema:
-                type: string
+                $ref: '#/components/schemas/StudentSession'
         default:
           $ref: '#/components/responses/Error'
   /teacher/exams:
@@ -2607,44 +2609,56 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/Enrollment'
-    Registration:
+    Hostname:
+      type: string
+      minLength: 1
+      maxLength: 255
+      pattern: '^\S+$'
+    ConnectionSecret:
+      type: string
+      pattern: ^[A-Za-z0-9_-]{43}$
+    ConnectionEnrollment:
       type: object
-      required:
-        - enrollmentFile
-        - deviceSecret
-        - computerName
-        - platform
-        - releaseVersion
+      required: [enrollmentFile, computerName, releaseVersion]
       additionalProperties: false
       properties:
         enrollmentFile:
           type: string
           maxLength: 65536
-        deviceSecret:
-          type: string
-          pattern: ^[A-Za-z0-9_-]{43}$
-          writeOnly: true
         computerName:
-          type: string
-          minLength: 1
-          maxLength: 255
-        platform:
-          type: string
-          enum:
-            - win32
-            - linux
+          $ref: '#/components/schemas/Hostname'
         releaseVersion:
           type: string
           minLength: 1
           maxLength: 128
-    RegisteredDevice:
+    ServerConnection:
+      type: object
+      required: [connectionSecret]
+      additionalProperties: false
+      properties:
+        connectionSecret:
+          $ref: '#/components/schemas/ConnectionSecret'
+    StudentSessionRequest:
+      type: object
+      required: [connectionSecret, computerName, platform, runtimeId]
+      additionalProperties: false
+      properties:
+        connectionSecret:
+          $ref: '#/components/schemas/ConnectionSecret'
+        computerName:
+          $ref: '#/components/schemas/Hostname'
+        platform:
+          type: string
+          enum: [win32, linux]
+        runtimeId:
+          type: string
+          format: uuid
+    StudentSession:
       allOf:
         - $ref: '#/components/schemas/Mode'
         - type: object
           required:
-            - deviceId
-            - deviceNumber
-            - registeredAt
+            [deviceId, deviceNumber, registeredAt, deviceSecret, contextId, runtimeGeneration]
           properties:
             deviceId:
               type: string
@@ -2654,6 +2668,15 @@ components:
             registeredAt:
               type: string
               format: date-time
+            deviceSecret:
+              $ref: '#/components/schemas/ConnectionSecret'
+            contextId:
+              type: string
+              format: uuid
+            runtimeGeneration:
+              type: integer
+              minimum: 1
+              maximum: 9007199254740991
     StudentExam:
       type: object
       required:

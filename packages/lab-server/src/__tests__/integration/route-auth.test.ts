@@ -5,7 +5,12 @@ import { enroll, error, fixture, login, type Fixture } from './support'
 
 // The contract enumerates routes, but does not supply the expected authorization result. The
 // product rule is independent: /teacher/* is teacher-only except login, /student/* student-only.
-const publicOperations = ['getInfo', 'postTeacherSessions', 'putEnrollmentDevicesInstallationId']
+const publicOperations = [
+  'getInfo',
+  'postTeacherSessions',
+  'postEnrollmentConnections',
+  'postStudentSessions'
+]
 const protectedRoutes = Object.entries(operationDefinitions).filter(
   ([id]) => !publicOperations.includes(id)
 )

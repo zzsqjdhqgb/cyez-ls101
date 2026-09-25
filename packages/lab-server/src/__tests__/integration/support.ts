@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID, createHash } from 'node:crypto'
+import { randomUUID, createHash } from 'node:crypto'
 import { mkdir, mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -248,24 +248,35 @@ export async function enroll(endpoint: Endpoint, teacher: string, count = 2) {
   const file = await api(endpoint, 'GET', `/teacher/enrollments/${batch.body.enrollment.id}/file`, {
     token: teacher
   })
-  const devices: Array<{ id: string; token: string; installationId: string }> = []
+  const devices: Array<{
+    id: string
+    token: string
+    runtimeId: string
+    connectionSecret: string
+    computerName: string
+  }> = []
+  const connection = await api(endpoint, 'POST', '/enrollment/connections', {
+    body: { enrollmentFile: file.body, computerName: 'mother-pc', releaseVersion: VERSION }
+  })
+  expect(connection.status).toBe(200)
   for (let i = 0; i < count; i++) {
-    const installationId = randomUUID(),
-      deviceSecret = randomBytes(32).toString('base64url')
-    const reply = await api(endpoint, 'PUT', `/enrollment/devices/${installationId}`, {
+    const runtimeId = randomUUID(),
+      computerName = `pc-${randomUUID()}`
+    const reply = await api(endpoint, 'POST', '/student/sessions', {
       body: {
-        enrollmentFile: file.body,
-        deviceSecret,
-        computerName: `PC-${i}`,
+        connectionSecret: connection.body.connectionSecret,
+        computerName,
         platform: 'linux',
-        releaseVersion: VERSION
+        runtimeId
       }
     })
-    expect(reply.status, JSON.stringify(reply.body)).toBe(201)
+    expect(reply.status, JSON.stringify(reply.body)).toBe(200)
     devices.push({
       id: reply.body.deviceId,
-      token: `d.${reply.body.deviceId}.${deviceSecret}`,
-      installationId
+      token: `d.${reply.body.deviceId}.${reply.body.deviceSecret}`,
+      runtimeId,
+      computerName,
+      connectionSecret: connection.body.connectionSecret
     })
   }
   expect(
@@ -343,7 +354,7 @@ export async function practice(endpoint: Endpoint, teacher: string, student: str
   }
 }
 
-export const heartbeat = (runtimeId = randomUUID(), generation = 1, sequence = 1) => ({
+export const heartbeat = (runtimeId: string = randomUUID(), generation = 1, sequence = 1) => ({
   runtimeId,
   runtimeGeneration: generation,
   sequence,

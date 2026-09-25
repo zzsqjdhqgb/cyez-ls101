@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { lstat, mkdir, open, readFile, rename, rm } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
+import { SCHEMA_VERSION } from './database'
 import { DatabaseSync } from 'node:sqlite'
 import { path7za } from '7zip-bin'
 import type { BackupManifest } from './backups'
@@ -286,7 +287,7 @@ export async function restoreOffline(
     const database = new DatabaseSync(join(staging, 'service.sqlite'))
     try {
       requireCondition(
-        database.prepare('PRAGMA user_version').get()?.user_version === 1 &&
+        database.prepare('PRAGMA user_version').get()?.user_version === SCHEMA_VERSION &&
           database.prepare('PRAGMA integrity_check').get()?.integrity_check === 'ok' &&
           database.prepare('PRAGMA foreign_key_check').all().length === 0,
         'STORAGE_UNAVAILABLE'

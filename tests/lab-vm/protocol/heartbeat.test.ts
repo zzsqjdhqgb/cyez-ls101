@@ -1,3 +1,4 @@
+import { registerStudent } from './register-student'
 /*
  * N6 and N11 against the real service in-process (docs/lab-vm-acceptance-design.md §6, Tier 2).
  *
@@ -10,12 +11,12 @@
  * product issued rather than on a row inserted behind its back. `enroll-register` covers the same
  * ground as a driver command for the VM run; this spec must stay runnable on its own.
  */
-import { randomBytes, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { DEVICE_OFFLINE_AFTER_MS } from '../../../packages/lab-server/src/devices'
 import type { Schema } from '../../../packages/lab-contracts/src'
-import { HARNESS_PASSWORD, installationId, startHarness, type Harness } from './harness'
+import { HARNESS_PASSWORD, startHarness, type Harness } from './harness'
 import { openSession, openTeacher, readState, writeState, type CommandHandler } from './context'
 import {
   deviceList,
@@ -45,32 +46,22 @@ describe('N6 heartbeat liveness and N11 heartbeat load', () => {
   let passwordFile: string
 
   async function registerFixture(name: string, enrollFile: string): Promise<Fixture> {
-    const deviceSecret = randomBytes(32).toString('base64url')
-    const installation = installationId()
     const session = await openSession(harness.args(), 'public')
-    let registered: Schema<'RegisteredDevice'>
+    let registered: Awaited<ReturnType<typeof registerStudent>>
     try {
-      registered = await session.client.request<Schema<'RegisteredDevice'>>(
-        'putEnrollmentDevicesInstallationId',
-        {
-          path: { installationId: installation },
-          body: {
-            enrollmentFile: enrollFile,
-            deviceSecret,
-            computerName: 'protocol-fixture',
-            platform: process.platform === 'win32' ? 'win32' : 'linux',
-            releaseVersion: harness.version
-          }
-        }
-      )
+      registered = await registerStudent(session, enrollFile, name, harness.version)
     } finally {
       await session.close()
     }
+    const deviceSecret = registered.deviceSecret
     const stateFile = harness.path(`${name}.state.json`)
     // The state file is the enrollment command's contract; the heartbeat command extends it with the
     // runtime identity so a later process continues the same runtime.
     await writeState(stateFile, {
-      installationId: installation,
+      connectionSecret: registered.connectionSecret,
+      computerName: name,
+      runtimeId: registered.runtimeId,
+      runtimeGeneration: registered.runtimeGeneration,
       deviceId: registered.deviceId,
       number: registered.deviceNumber,
       duplicate: false,
@@ -235,87 +226,59 @@ describe('N6 heartbeat liveness and N11 heartbeat load', () => {
     expect((await deviceOf(primary)).lastHeartbeatAt).toBe(before.lastHeartbeatAt)
   })
 
-  test('the generation orders runtimes, and the same generation with a new runtime conflicts', async () => {
+  test('only server-allocated generations can replace a runtime', async () => {
     const state = await readState(primary.stateFile)
-    const runtimeId = String(state.runtimeId)
-    // A higher generation is how the student runtime announces a restart of the same installation.
-    const bumped = await run<HeartbeatReport>(
-      heartbeat,
-      harness.args([
-        '--state',
-        primary.stateFile,
-        '--runtime-id',
-        runtimeId,
-        '--runtime-generation',
-        '5',
-        '--sequence',
-        '1'
-      ])
-    )
-    expect(bumped).toMatchObject({ accepted: 1, rejected: 0, runtimeGeneration: 5 })
-    const before = await deviceOf(primary)
-    harness.clock.advance(1000)
-    // A lower generation for the same runtime is refused as stale rather than as a conflict.
-    const lower = await run<HeartbeatReport>(
-      heartbeat,
-      harness.args([
-        '--state',
-        primary.stateFile,
-        '--runtime-id',
-        runtimeId,
-        '--runtime-generation',
-        '2',
-        '--sequence',
-        '1'
-      ])
-    )
-    expect(lower).toMatchObject({
-      accepted: 0,
-      rejected: 1,
-      firstError: null,
-      lastStatus: 200,
-      lastAccepted: false
-    })
-    expect((await deviceOf(primary)).lastHeartbeatAt).toBe(before.lastHeartbeatAt)
-    // The conflict is a *different* runtime id at the generation the credential already holds: one
-    // device credential owns exactly one runtime, so the runtime may only be replaced by moving the
-    // generation, which is what a reinstall does.
-    const conflict = await run<HeartbeatReport>(
-      heartbeat,
-      harness.args([
-        '--state',
-        primary.stateFile,
-        '--runtime-id',
-        randomUUID(),
-        '--runtime-generation',
-        '5',
-        '--sequence',
-        '1'
-      ])
-    )
-    expect(conflict).toMatchObject({
-      accepted: 0,
-      rejected: 1,
-      lastStatus: 409,
-      firstError: { status: 409, code: 'CONTENT_CONFLICT' },
-      lastAccepted: null
-    })
-    expect((await deviceOf(primary)).lastHeartbeatAt).toBe(before.lastHeartbeatAt)
-    // A newer generation does authorise a different runtime, which is how the row is replaced.
-    const takeover = await run<HeartbeatReport>(
-      heartbeat,
-      harness.args([
-        '--state',
-        primary.stateFile,
-        '--runtime-id',
-        randomUUID(),
-        '--runtime-generation',
-        '6',
-        '--sequence',
-        '1'
-      ])
-    )
-    expect(takeover).toMatchObject({ accepted: 1, rejected: 0, runtimeGeneration: 6 })
+    const session = await openSession(harness.args(), 'public')
+    try {
+      const runtimeId = randomUUID()
+      const allocated = await session.client.request<Schema<'StudentSession'>>(
+        'postStudentSessions',
+        {
+          body: {
+            connectionSecret: state.connectionSecret,
+            computerName: state.computerName,
+            platform: 'linux',
+            runtimeId
+          }
+        }
+      )
+      const generation = allocated.runtimeGeneration
+      const send = (id: string, value: number): Promise<HeartbeatReport> =>
+        run<HeartbeatReport>(
+          heartbeat,
+          harness.args([
+            '--state',
+            primary.stateFile,
+            '--runtime-id',
+            id,
+            '--runtime-generation',
+            String(value),
+            '--sequence',
+            '1'
+          ])
+        )
+      expect(await send(runtimeId, generation)).toMatchObject({ accepted: 1, rejected: 0 })
+      const before = await deviceOf(primary)
+      harness.clock.advance(1000)
+      expect(await send(String(state.runtimeId), generation - 1)).toMatchObject({
+        accepted: 0,
+        rejected: 1,
+        lastAccepted: false
+      })
+      expect(await send(randomUUID(), generation)).toMatchObject({
+        accepted: 0,
+        lastStatus: 409,
+        firstError: { code: 'CONTENT_CONFLICT' }
+      })
+      expect(await send(randomUUID(), generation + 1)).toMatchObject({
+        accepted: 0,
+        rejected: 1,
+        lastAccepted: false
+      })
+      expect((await deviceOf(primary)).lastHeartbeatAt).toBe(before.lastHeartbeatAt)
+    } finally {
+      await session.close()
+    }
   })
 
   test('heartbeat-load with three clients runs cleanly at 200 ms for two seconds', async () => {

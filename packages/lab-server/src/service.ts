@@ -533,6 +533,12 @@ export class LabService {
       const accepted = this.db.transaction(() => {
         requireCondition(this.options.isLicenseActive(), 'LICENSE_INACTIVE')
         this.security.recheck(principal)
+        const allocated = this.db.get<{ generation: number; runtime_id: string }>(
+          'SELECT generation,runtime_id FROM device_runtimes WHERE credential_id=? ORDER BY generation DESC LIMIT 1',
+          principal.credentialId
+        )
+        if (!allocated || allocated.generation !== body.runtimeGeneration) return false
+        requireCondition(allocated.runtime_id === body.runtimeId, 'CONTENT_CONFLICT')
         const previous = this.db.get<{ generation: number; runtime_id: string; sequence: number }>(
           'SELECT * FROM heartbeats WHERE credential_id=?',
           principal.credentialId
@@ -725,8 +731,8 @@ export class LabService {
         )
         return { status: 204 }
       })
-    this.handlers.putEnrollmentDevicesInstallationId = async (context) => {
-      const body = context.body as RequestBody<'putEnrollmentDevicesInstallationId'>
+    this.handlers.postEnrollmentConnections = async (context) => {
+      const body = context.body as RequestBody<'postEnrollmentConnections'>
       requireCondition(
         context.version === this.options.releaseVersion &&
           body.releaseVersion === this.options.releaseVersion,
@@ -747,26 +753,47 @@ export class LabService {
             equalSecret(enrollment.signed_file ?? '', body.enrollmentFile),
           'ENROLLMENT_REJECTED'
         )
-        const existing = this.db.get<{ id: string; data: string }>(
-          'SELECT id,data FROM devices WHERE installation_id=?',
-          context.path.installationId
+        const connectionSecret = createHmac('sha256', this.idempotencyKey)
+          .update(`deployment:${enrollment.id}`)
+          .digest('base64url')
+        this.db.run(
+          'INSERT OR IGNORE INTO deployment_connections VALUES (?,?)',
+          hash(connectionSecret),
+          enrollment.id
         )
-        let device: StoredDevice
-        let duplicate = false
-        if (existing) {
-          device = JSON.parse(existing.data)
-          const credential = this.db.get<{ hash: string }>(
-            'SELECT hash FROM device_credentials WHERE device_id=? AND revoked_at IS NULL',
+        const existing = this.db.get<{ id: string }>(
+          'SELECT id FROM devices WHERE hostname=?',
+          body.computerName.toLowerCase()
+        )
+        if (
+          existing &&
+          !this.db.get(
+            'SELECT id FROM device_credentials WHERE device_id=? AND revoked_at IS NULL',
             existing.id
           )
-          if (credential) {
-            requireCondition(
-              equalSecret(credential.hash, hash(body.deviceSecret)),
-              'CONTENT_CONFLICT'
-            )
-            duplicate = true
-          } else this.security.createDeviceCredential(existing.id, body.deviceSecret)
-        } else {
+        )
+          this.createManagedCredential(existing.id)
+        return { status: 200, body: { connectionSecret } }
+      })
+    }
+    this.handlers.postStudentSessions = (context) => {
+      const body = context.body as RequestBody<'postStudentSessions'>
+      return this.db.transaction(() => {
+        requireCondition(this.options.isLicenseActive(), 'LICENSE_INACTIVE')
+        const deployment = this.db.get<{ enrollment_id: string }>(
+          'SELECT enrollment_id FROM deployment_connections WHERE hash=?',
+          hash(body.connectionSecret)
+        )
+        requireCondition(deployment, 'AUTH_REQUIRED')
+        const name = body.computerName.toLowerCase()
+        const existing = this.db.get<{ id: string; data: string }>(
+          'SELECT id,data FROM devices WHERE hostname=?',
+          name
+        )
+        let device: StoredDevice
+        if (existing) device = JSON.parse(existing.data)
+        else {
+          requireCondition(context.version === this.options.releaseVersion, 'VERSION_MISMATCH')
           let number = String(
             this.db.get<{ count: number }>('SELECT COUNT(*) AS count FROM devices')!.count + 1
           ).padStart(3, '0')
@@ -780,37 +807,85 @@ export class LabService {
             displayName: null,
             enabled: true,
             revision: 1,
-            computerName: body.computerName,
+            computerName: name,
             platform: body.platform,
             registeredAt: this.timestamp()
           }
           this.db.run(
             'INSERT INTO devices VALUES (?,?,?,?)',
             device.id,
-            context.path.installationId,
+            name,
             number,
             JSON.stringify(device)
           )
-          this.security.createDeviceCredential(device.id, body.deviceSecret)
-        }
-        if (!duplicate) {
-          const metadata = JSON.parse(enrollment.data) as Schema<'Enrollment'>
-          this.db.run(
-            'UPDATE enrollments SET data=? WHERE id=?',
-            JSON.stringify({ ...metadata, registeredCount: metadata.registeredCount + 1 }),
-            enrollment.id
+          this.createManagedCredential(device.id)
+          const enrollment = this.db.get<{ data: string }>(
+            'SELECT data FROM enrollments WHERE id=?',
+            deployment.enrollment_id
           )
+          if (enrollment) {
+            const metadata = JSON.parse(enrollment.data) as Schema<'Enrollment'>
+            this.db.run(
+              'UPDATE enrollments SET data=? WHERE id=?',
+              JSON.stringify({ ...metadata, registeredCount: metadata.registeredCount + 1 }),
+              deployment.enrollment_id
+            )
+          }
         }
+        const credential = this.db.get<{ id: string }>(
+          'SELECT id FROM device_credentials WHERE device_id=? AND revoked_at IS NULL',
+          device.id
+        )
+        requireCondition(credential, 'TOKEN_REVOKED')
+        const previous = this.db.get<{ generation: number }>(
+          'SELECT generation FROM device_runtimes WHERE credential_id=? AND runtime_id=?',
+          credential.id,
+          body.runtimeId
+        )
+        const latest =
+          this.db.get<{ generation: number }>(
+            'SELECT MAX(generation) AS generation FROM device_runtimes WHERE credential_id=?',
+            credential.id
+          )?.generation ?? 0
+        requireCondition(!previous || previous.generation === latest, 'TOKEN_REVOKED')
+        const generation = previous?.generation ?? latest + 1
+        requireCondition(Number.isSafeInteger(generation), 'CONTENT_CONFLICT')
+        if (!previous)
+          this.db.run(
+            'INSERT INTO device_runtimes VALUES (?,?,?)',
+            credential.id,
+            body.runtimeId,
+            generation
+          )
         return {
-          status: duplicate ? 200 : 201,
+          status: 200,
           body: {
             deviceId: device.id,
             deviceNumber: device.number,
             registeredAt: device.registeredAt,
+            deviceSecret: this.managedSecret(credential.id),
+            contextId: credential.id,
+            runtimeGeneration: generation,
             ...this.mode()
           }
         }
       })
     }
+  }
+
+  private managedSecret(credentialId: string): string {
+    return createHmac('sha256', this.idempotencyKey)
+      .update(`device:${credentialId}`)
+      .digest('base64url')
+  }
+
+  private createManagedCredential(deviceId: string): void {
+    const id = randomUUID()
+    this.db.run(
+      'INSERT INTO device_credentials VALUES (?,?,?,NULL)',
+      id,
+      deviceId,
+      hash(this.managedSecret(id))
+    )
   }
 }

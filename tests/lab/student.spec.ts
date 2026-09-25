@@ -1,3 +1,4 @@
+import { machineDataRoot } from '../../packages/lab-desktop-host/src/binding'
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test'
 import { mkdtemp, mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -348,7 +349,10 @@ test('student enrollment, maintenance, practice and durable receipt run through 
     )
     expect(studentRecords).toHaveLength(1)
     const journal = JSON.parse(
-      await readFile(join(studentPath, 'tasks', testRun.devices[0].task.id, 'journal.json'), 'utf8')
+      await readFile(
+        join(machineDataRoot(studentPath), 'tasks', testRun.devices[0].task.id, 'journal.json'),
+        'utf8'
+      )
     )
     const staleLeaseRejected = await page.evaluate(
       async (input) => {
@@ -441,8 +445,10 @@ test('student enrollment, maintenance, practice and durable receipt run through 
       )
       .not.toBeNull()
     expect(preview.devices[0].selectedCount).toBe(1)
-    const savedId = (await readdir(join(studentPath, 'submissions')))[0]
-    await readFile(join(studentPath, 'submissions', savedId, 'archive.lssubmission'))
+    const savedId = (await readdir(join(machineDataRoot(studentPath), 'submissions')))[0]
+    await readFile(
+      join(machineDataRoot(studentPath), 'submissions', savedId, 'archive.lssubmission')
+    )
     await teacher.request('postTeacherHistoryCleanupsIdConfirm', {
       path: { id: plan.id },
       body: {
@@ -465,10 +471,13 @@ test('student enrollment, maintenance, practice and durable receipt run through 
       )
       .toBe('succeeded')
     await expect(
-      readFile(join(studentPath, 'submissions', savedId, 'archive.lssubmission'))
+      readFile(join(machineDataRoot(studentPath), 'submissions', savedId, 'archive.lssubmission'))
     ).rejects.toMatchObject({ code: 'ENOENT' })
     const cleaned = JSON.parse(
-      await readFile(join(studentPath, 'submissions', savedId, 'record.json'), 'utf8')
+      await readFile(
+        join(machineDataRoot(studentPath), 'submissions', savedId, 'record.json'),
+        'utf8'
+      )
     )
     expect(cleaned).toMatchObject({
       state: 'completed',

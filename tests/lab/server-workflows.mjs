@@ -9,7 +9,7 @@ import { once } from 'node:events'
 import { createInterface } from 'node:readline'
 import { createServer } from 'node:net'
 import { request } from 'node:https'
-import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { zipSync } from 'fflate'
 
 const output = resolve('out/lab-server')
@@ -157,18 +157,24 @@ test(
       const file = await api('GET', `/teacher/enrollments/${batch.body.enrollment.id}/file`, {
         token: teacher
       })
-      const secret = randomBytes(32).toString('base64url')
-      const enrolled = await api('PUT', `/enrollment/devices/${randomUUID()}`, {
+      const connection = await api('POST', '/enrollment/connections', {
         body: {
           enrollmentFile: file.body,
-          deviceSecret: secret,
           computerName: 'shipping-student',
-          platform: process.platform,
           releaseVersion: manifest.releaseVersion
         }
       })
-      assert.equal(enrolled.status, 201)
-      const student = `d.${enrolled.body.deviceId}.${secret}`
+      assert.equal(connection.status, 200)
+      const enrolled = await api('POST', '/student/sessions', {
+        body: {
+          connectionSecret: connection.body.connectionSecret,
+          computerName: 'shipping-student',
+          platform: process.platform,
+          runtimeId: randomUUID()
+        }
+      })
+      assert.equal(enrolled.status, 200)
+      const student = `d.${enrolled.body.deviceId}.${enrolled.body.deviceSecret}`
       assert.equal(
         (
           await api('DELETE', `/teacher/enrollments/${batch.body.enrollment.id}`, {

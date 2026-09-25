@@ -10,7 +10,7 @@ import {
 
 describe('generated lab contract', () => {
   it('matches every documented operation and validates its required path', () => {
-    expect(Object.keys(operationDefinitions)).toHaveLength(61)
+    expect(Object.keys(operationDefinitions)).toHaveLength(62)
     for (const [id, operation] of Object.entries(operationDefinitions)) {
       const url = `/api/v1${operation.route.replace(/\{[^}]+\}/g, '11111111-1111-4111-8111-111111111111')}`
       const match = matchOperation(operation.method, url)

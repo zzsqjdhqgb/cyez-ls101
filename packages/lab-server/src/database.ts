@@ -5,14 +5,16 @@ import { WriteGate } from './write-gate'
 import { LabError } from './errors'
 import { directoryPaths, lockDirectory } from './directory-lock'
 
-const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 const SCHEMA = `
 CREATE TABLE service (singleton INTEGER PRIMARY KEY CHECK(singleton=1), data TEXT NOT NULL);
 CREATE TABLE security (singleton INTEGER PRIMARY KEY CHECK(singleton=1), revision INTEGER NOT NULL, salt TEXT NOT NULL, hash TEXT NOT NULL);
 CREATE TABLE teacher_sessions (hash TEXT PRIMARY KEY, revision INTEGER NOT NULL, expires_at INTEGER NOT NULL);
-CREATE TABLE devices (id TEXT PRIMARY KEY, installation_id TEXT NOT NULL UNIQUE, number TEXT NOT NULL UNIQUE, data TEXT NOT NULL);
+CREATE TABLE devices (id TEXT PRIMARY KEY, hostname TEXT NOT NULL UNIQUE, number TEXT NOT NULL UNIQUE, data TEXT NOT NULL);
 CREATE TABLE device_credentials (id TEXT PRIMARY KEY, device_id TEXT NOT NULL REFERENCES devices(id), hash TEXT NOT NULL, revoked_at INTEGER);
 CREATE UNIQUE INDEX active_device_credential ON device_credentials(device_id) WHERE revoked_at IS NULL;
+CREATE TABLE deployment_connections (hash TEXT PRIMARY KEY, enrollment_id TEXT NOT NULL);
+CREATE TABLE device_runtimes (credential_id TEXT NOT NULL REFERENCES device_credentials(id), runtime_id TEXT NOT NULL, generation INTEGER NOT NULL, PRIMARY KEY(credential_id,runtime_id), UNIQUE(credential_id,generation));
 CREATE TABLE heartbeats (credential_id TEXT PRIMARY KEY REFERENCES device_credentials(id), generation INTEGER NOT NULL, runtime_id TEXT NOT NULL, sequence INTEGER NOT NULL, accepted_at INTEGER NOT NULL, data TEXT NOT NULL);
 CREATE TABLE enrollments (id TEXT PRIMARY KEY, expires_at INTEGER NOT NULL, closed_at INTEGER, data TEXT NOT NULL, signed_file TEXT);
 CREATE UNIQUE INDEX open_enrollment ON enrollments((1)) WHERE closed_at IS NULL;
@@ -35,7 +37,7 @@ CREATE TABLE file_gc (path TEXT PRIMARY KEY, bytes INTEGER NOT NULL, reason TEXT
 CREATE TABLE backups (id TEXT PRIMARY KEY, state TEXT NOT NULL, barrier_state TEXT NOT NULL, data TEXT NOT NULL);
 CREATE UNIQUE INDEX active_backup ON backups((1)) WHERE state IN ('pending','running');
 CREATE TABLE logs (id TEXT PRIMARY KEY, time INTEGER NOT NULL, level TEXT NOT NULL, request_id TEXT, data TEXT NOT NULL);
-PRAGMA user_version=1;
+PRAGMA user_version=2;
 `
 
 type SQLValue = string | number | null | Uint8Array

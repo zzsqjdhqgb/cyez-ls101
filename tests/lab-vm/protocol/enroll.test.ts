@@ -14,13 +14,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdtemp, readFile, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import {
-  HARNESS_PASSWORD,
-  installationId,
-  readSecretFile,
-  startHarness,
-  type Harness
-} from './harness'
+import { HARNESS_PASSWORD, readSecretFile, startHarness, type Harness } from './harness'
 import { isRecord, openSession, openTeacher, readState, sha256Hex } from './context'
 import { enrollIssue, enrollRegister, enrollReject } from './commands/enroll'
 
@@ -75,8 +69,6 @@ async function register(
       harness.args([
         '--enroll-file',
         enrollFile,
-        '--installation-id',
-        installation,
         '--computer-name',
         computerName,
         '--state-out',
@@ -171,13 +163,13 @@ describe('enrollment issuance and registration', () => {
     expect(await listEnrollments()).toHaveLength(1)
   })
 
-  it('registers two installation identities as two devices with status 201', async () => {
+  it('registers two hostnames as two devices', async () => {
     const issued = await issue()
     const enrollmentFile = text(issued.out)
-    const first = await register(enrollmentFile, installationId(), 'lab-01')
-    const second = await register(enrollmentFile, installationId(), 'lab-02')
-    expect(first).toMatchObject({ status: 201, duplicate: false })
-    expect(second).toMatchObject({ status: 201, duplicate: false })
+    const first = await register(enrollmentFile, randomUUID(), 'lab-01')
+    const second = await register(enrollmentFile, randomUUID(), 'lab-02')
+    expect(first).toMatchObject({ status: 200 })
+    expect(second).toMatchObject({ status: 200 })
     expect(first.deviceId).not.toBe(second.deviceId)
     const devices = await listDevices()
     expect(devices.map((device) => device.id).sort()).toEqual(
@@ -191,10 +183,10 @@ describe('enrollment issuance and registration', () => {
     ).toMatchObject({ registeredCount: 2 })
   })
 
-  it('replays the same installation identity as a duplicate without adding a device', async () => {
+  it('reconnects the same hostname without adding a device', async () => {
     const issued = await issue()
     const enrollmentFile = text(issued.out)
-    const installation = installationId()
+    const installation = randomUUID()
     const secretFile = harness.path(`replay-${installation}.secret`)
     const first = await register(enrollmentFile, installation, 'lab-01', [
       '--device-secret-file',
@@ -204,8 +196,8 @@ describe('enrollment issuance and registration', () => {
       '--device-secret-file',
       secretFile
     ])
-    expect(first.status).toBe(201)
-    expect(replay).toMatchObject({ status: 200, duplicate: true, deviceSecretReused: true })
+    expect(first.status).toBe(200)
+    expect(replay).toMatchObject({ status: 200 })
     expect(replay.deviceId).toBe(first.deviceId)
     expect(replay.number).toBe(first.number)
     expect(await listDevices()).toHaveLength(1)
@@ -216,7 +208,7 @@ describe('enrollment issuance and registration', () => {
 
   it('persists a usable device identity and never reports the secret', async () => {
     const issued = await issue()
-    const installation = installationId()
+    const installation = randomUUID()
     const secretFile = harness.path('device.secret')
     const registered = await register(text(issued.out), installation, 'lab-01', [
       '--device-secret-file',
@@ -227,7 +219,6 @@ describe('enrollment issuance and registration', () => {
     const deviceSecret = await readSecretFile(secretFile)
     expect(deviceSecret).toMatch(/^[A-Za-z0-9_-]{43}$/)
     expect(state).toMatchObject({
-      installationId: installation,
       deviceId: registered.deviceId,
       deviceNumber: registered.number,
       number: registered.number,
@@ -265,30 +256,13 @@ describe('enrollment issuance and registration', () => {
 })
 
 describe('enrollment negatives', () => {
-  it('rejects a replay of the same installation with a different device secret', async () => {
+  it('reuses the hostname identity even when no local identity files survive', async () => {
     const issued = await issue()
-    const enrollmentFile = text(issued.out)
-    const installation = installationId()
-    await register(enrollmentFile, installation, 'lab-01', [
-      '--device-secret-file',
-      harness.path(`first-${installation}.secret`)
-    ])
-    // A path that does not exist yet means a freshly generated secret: the same installation with a
-    // credential the service has never seen.
-    const response = await reject([
-      '--enroll-file',
-      enrollmentFile,
-      '--installation-id',
-      installation,
-      '--device-secret-file',
-      harness.path(`other-${installation}.secret`)
-    ])
-    expect(response).toMatchObject({
-      accepted: false,
-      status: 409,
-      code: 'CONTENT_CONFLICT',
-      deviceSecretReused: false
-    })
+    const first = await register(text(issued.out), randomUUID(), 'lab-01')
+    const restored = await register(text(issued.out), randomUUID(), 'LAB-01')
+    expect(restored.deviceId).toBe(first.deviceId)
+    expect(restored.number).toBe(first.number)
+    expect(await listDevices()).toHaveLength(1)
   })
 
   it('rejects a one-byte mutation of a file the same batch accepts unchanged', async () => {
@@ -297,8 +271,8 @@ describe('enrollment negatives', () => {
     const response = await reject([
       '--enroll-file',
       enrollmentFile,
-      '--installation-id',
-      installationId(),
+      '--computer-name',
+      randomUUID(),
       '--mutate',
       'one-byte'
     ])
@@ -311,9 +285,7 @@ describe('enrollment negatives', () => {
     expect(record(response.submitted, 'the submitted file').sha256).toBe(mutation.mutatedSha256)
     // The unmutated original still registers, so the refusal is attributable to the changed byte
     // rather than to the batch, the transport or the driver.
-    expect((await register(enrollmentFile, installationId(), 'lab-after-mutation')).status).toBe(
-      201
-    )
+    expect((await register(enrollmentFile, randomUUID(), 'lab-after-mutation')).status).toBe(200)
   })
 
   it('rejects a validly signed file issued for a different enrollment', async () => {
@@ -325,8 +297,8 @@ describe('enrollment negatives', () => {
       text(second.out),
       '--from-other-enrollment',
       text(first.out),
-      '--installation-id',
-      installationId()
+      '--computer-name',
+      randomUUID()
     ])
     expect(response).toMatchObject({ accepted: false, status: 403, code: 'ENROLLMENT_REJECTED' })
     expect(record(response.submitted, 'the submitted file').sha256).not.toBe(
@@ -339,8 +311,8 @@ describe('enrollment negatives', () => {
     const response = await reject([
       '--enroll-file',
       text(issued.out),
-      '--installation-id',
-      installationId(),
+      '--computer-name',
+      randomUUID(),
       '--revoke-first',
       '--enrollment-id',
       text(issued.enrollmentId),
@@ -363,8 +335,8 @@ describe('enrollment negatives', () => {
     const response = await reject([
       '--enroll-file',
       text(issued.out),
-      '--installation-id',
-      installationId(),
+      '--computer-name',
+      randomUUID(),
       '--expect-expired'
     ])
     expect(response).toMatchObject({ accepted: false, status: 403, code: 'ENROLLMENT_REJECTED' })
@@ -379,8 +351,8 @@ describe('enrollment negatives', () => {
     const response = await reject([
       '--enroll-file',
       text(issued.out),
-      '--installation-id',
-      installationId(),
+      '--computer-name',
+      randomUUID(),
       '--release-version',
       '9.9.9'
     ])
@@ -414,8 +386,8 @@ describe('enrollment negatives', () => {
         harness.version,
         '--enroll-file',
         text(issued.out),
-        '--installation-id',
-        installationId()
+        '--computer-name',
+        randomUUID()
       ]),
       'enroll-reject'
     )
@@ -433,8 +405,8 @@ describe('enrollment negatives', () => {
     const response = await reject([
       '--enroll-file',
       text(issued.out),
-      '--installation-id',
-      installationId()
+      '--computer-name',
+      randomUUID()
     ])
     expect(response.accepted).toBe(true)
     const notes = response.notes

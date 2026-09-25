@@ -1,3 +1,4 @@
+import { registerStudent } from './register-student'
 /*
  * N8/N9/N10 against the real service in-process (docs/lab-vm-acceptance-design.md, Tier 2).
  *
@@ -11,7 +12,7 @@
  * on, everything goes through the commands under test. A service refusal a case expects is data, so
  * the assertions read the reported status and code rather than expecting a rejection.
  */
-import { randomBytes, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -19,7 +20,7 @@ import { afterEach, beforeEach, expect, test } from 'vitest'
 import type { ExamPackage } from '../../../packages/core-types/src'
 import { encodeExamPackage } from '../../../packages/exam-package/src'
 import type { Schema } from '../../../packages/lab-contracts/src'
-import { HARNESS_PASSWORD, installationId, startHarness, type Harness } from './harness'
+import { HARNESS_PASSWORD, startHarness, type Harness } from './harness'
 import { concurrency } from './commands/concurrency'
 import { maintenanceExit, mode, testRun } from './commands/mode'
 import { practice } from './commands/practice'
@@ -31,6 +32,7 @@ interface Fixture {
   stateFile: string
   passwordFile: string
   token: string
+  runtimeId: string
   deviceId: string
   examId: string
   archiveSha256: string
@@ -97,27 +99,16 @@ async function setup(): Promise<Fixture> {
     if (!download.archive) throw new Error('the harness did not return an enrollment file')
     const enrollFile = await readFile(teacher.transport.file(download.archive.handle), 'utf8')
 
-    // A device secret is generated here exactly as the enrollment command generates it; the student
-    // bearer token is derived from it and never printed.
-    const enrollmentId = installationId()
-    const deviceSecret = randomBytes(32).toString('base64url')
-    const registration = await teacher.transport.request(
-      teacher.connectionId,
-      'putEnrollmentDevicesInstallationId',
-      {
-        path: { installationId: enrollmentId },
-        body: {
-          enrollmentFile: enrollFile,
-          deviceSecret,
-          computerName: 'protocol-mode-spec',
-          platform: process.platform === 'win32' ? 'win32' : 'linux',
-          releaseVersion: harness.version
-        }
-      }
+    const runtimeId = randomUUID()
+    const registration = await registerStudent(
+      teacher,
+      enrollFile,
+      'protocol-mode-spec',
+      harness.version,
+      runtimeId
     )
-    if (registration.status >= 400 || !isRecord(registration.body))
-      throw new Error(`the spec device could not be registered: ${registration.status}`)
-    const deviceId = String(registration.body.deviceId)
+    const deviceId = registration.deviceId
+    const deviceSecret = registration.deviceSecret
     const bearerToken = `d.${deviceId}.${deviceSecret}`
     // An open enrollment is itself a maintenance blocker, so it is closed now: N10 has to reach the
     // state where the outstanding lease is the only thing holding the service in maintenance.
@@ -162,9 +153,10 @@ async function setup(): Promise<Fixture> {
     await writeFile(
       stateFile,
       `${JSON.stringify({
-        installationId: enrollmentId,
+        runtimeId,
+        runtimeGeneration: registration.runtimeGeneration,
         deviceId,
-        deviceNumber: registration.body.deviceNumber,
+        deviceNumber: registration.deviceNumber,
         deviceSecret,
         bearerToken,
         authorization: `Bearer ${bearerToken}`,
@@ -183,6 +175,7 @@ async function setup(): Promise<Fixture> {
       stateFile,
       passwordFile,
       token: bearerToken,
+      runtimeId,
       deviceId,
       examId: imported.examId,
       archiveSha256: imported.archiveSha256
@@ -207,7 +200,7 @@ test('N8 maintenance refuses a practice and a submission while heartbeats stay a
   const student = await openSession(harness.args(), 'student', fixture.token)
   try {
     const beat = await student.client.request<Schema<'HeartbeatResponse'>>('postStudentHeartbeat', {
-      body: heartbeat(randomUUID())
+      body: heartbeat(fixture.runtimeId)
     })
     // A heartbeat is the one student call the service keeps admitting in maintenance: that is how the
     // device learns the mode changed without the teacher having to reach every machine.
@@ -370,7 +363,7 @@ test('N10 an offline device lease keeps maintenance exit blocked until its 30 s 
     const taskId = String(recordOf((devices as unknown[])[0]).taskId)
     expect(typeof created.runId).toBe('string')
 
-    const runtimeId = randomUUID()
+    const runtimeId = fixture.runtimeId
     expect(
       (
         await student.client.request<Schema<'HeartbeatResponse'>>('postStudentHeartbeat', {

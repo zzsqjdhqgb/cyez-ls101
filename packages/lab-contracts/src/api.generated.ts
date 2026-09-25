@@ -279,20 +279,36 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/enrollment/devices/{installationId}': {
+  '/enrollment/connections': {
     parameters: {
       query?: never
       header: {
         'X-LS101-Client-Version': components['parameters']['ClientVersion']
       }
-      path: {
-        installationId: string
-      }
+      path?: never
       cookie?: never
     }
     get?: never
-    put: operations['putEnrollmentDevicesInstallationId']
-    post?: never
+    put?: never
+    post: operations['postEnrollmentConnections']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/student/sessions': {
+    parameters: {
+      query?: never
+      header: {
+        'X-LS101-Client-Version': components['parameters']['ClientVersion']
+      }
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations['postStudentSessions']
     delete?: never
     options?: never
     head?: never
@@ -1232,20 +1248,34 @@ export interface components {
     EnrollmentList: components['schemas']['Page'] & {
       items: components['schemas']['Enrollment'][]
     }
-    Registration: {
+    Hostname: string
+    ConnectionSecret: string
+    ConnectionEnrollment: {
       enrollmentFile: string
-      deviceSecret: string
-      computerName: string
-      /** @enum {string} */
-      platform: 'win32' | 'linux'
+      computerName: components['schemas']['Hostname']
       releaseVersion: string
     }
-    RegisteredDevice: components['schemas']['Mode'] & {
+    ServerConnection: {
+      connectionSecret: components['schemas']['ConnectionSecret']
+    }
+    StudentSessionRequest: {
+      connectionSecret: components['schemas']['ConnectionSecret']
+      computerName: components['schemas']['Hostname']
+      /** @enum {string} */
+      platform: 'win32' | 'linux'
+      /** Format: uuid */
+      runtimeId: string
+    }
+    StudentSession: components['schemas']['Mode'] & {
       /** Format: uuid */
       deviceId: string
       deviceNumber: string
       /** Format: date-time */
       registeredAt: string
+      deviceSecret: components['schemas']['ConnectionSecret']
+      /** Format: uuid */
+      contextId: string
+      runtimeGeneration: number
     }
     StudentExam: {
       /** Format: uuid */
@@ -2294,41 +2324,55 @@ export interface operations {
       default: components['responses']['Error']
     }
   }
-  putEnrollmentDevicesInstallationId: {
+  postEnrollmentConnections: {
     parameters: {
       query?: never
       header: {
         'X-LS101-Client-Version': components['parameters']['ClientVersion']
       }
-      path: {
-        installationId: string
-      }
+      path?: never
       cookie?: never
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['Registration']
+        'application/json': components['schemas']['ConnectionEnrollment']
       }
     }
     responses: {
-      /** @description Existing registration */
+      /** @description Connection established */
       200: {
         headers: {
-          'X-Request-Id'?: string
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['RegisteredDevice']
+          'application/json': components['schemas']['ServerConnection']
         }
       }
-      /** @description Registered */
-      201: {
+      default: components['responses']['Error']
+    }
+  }
+  postStudentSessions: {
+    parameters: {
+      query?: never
+      header: {
+        'X-LS101-Client-Version': components['parameters']['ClientVersion']
+      }
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['StudentSessionRequest']
+      }
+    }
+    responses: {
+      /** @description Connection established */
+      200: {
         headers: {
-          'X-Request-Id'?: string
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['RegisteredDevice']
+          'application/json': components['schemas']['StudentSession']
         }
       }
       default: components['responses']['Error']

@@ -10,6 +10,7 @@ const capabilities = new Set([
   'window.close',
   'window.maintenance',
   'foreground.set',
+  'binding.configured',
   'binding.summary',
   'binding.enroll',
   'binding.connect',

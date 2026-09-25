@@ -11798,21 +11798,232 @@ var validators = {}
     return errors === 0
   }
   exports.v34 = validate252
-  const schema101 = { $ref: 'ls101#/components/schemas/Registration' }
-  const schema102 = {
+  const schema101 = { $ref: 'ls101#/components/schemas/Hostname' }
+  const schema102 = { type: 'string', minLength: 1, maxLength: 255, pattern: '^\\S+$' }
+  const pattern3 = new RegExp('^\\S+$', 'u')
+  function validate253(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (typeof data === 'string') {
+      if (func2(data) > 255) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/maxLength',
+          keyword: 'maxLength',
+          params: { limit: 255 },
+          message: 'must NOT have more than 255 characters'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (func2(data) < 1) {
+        const err1 = {
+          instancePath,
+          schemaPath: '#/minLength',
+          keyword: 'minLength',
+          params: { limit: 1 },
+          message: 'must NOT have fewer than 1 characters'
+        }
+        if (vErrors === null) {
+          vErrors = [err1]
+        } else {
+          vErrors.push(err1)
+        }
+        errors++
+      }
+      if (!pattern3.test(data)) {
+        const err2 = {
+          instancePath,
+          schemaPath: '#/pattern',
+          keyword: 'pattern',
+          params: { pattern: '^\\S+$' },
+          message: 'must match pattern "^\\S+$"'
+        }
+        if (vErrors === null) {
+          vErrors = [err2]
+        } else {
+          vErrors.push(err2)
+        }
+        errors++
+      }
+    } else {
+      const err3 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'string' },
+        message: 'must be string'
+      }
+      if (vErrors === null) {
+        vErrors = [err3]
+      } else {
+        vErrors.push(err3)
+      }
+      errors++
+    }
+    validate253.errors = vErrors
+    return errors === 0
+  }
+  function validate252(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate253(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate253.errors : vErrors.concat(validate253.errors)
+      errors = vErrors.length
+    }
+    validate252.errors = vErrors
+    return errors === 0
+  }
+  exports.v35 = validate255
+  const schema103 = { $ref: 'ls101#/components/schemas/ConnectionSecret' }
+  const schema104 = { type: 'string', pattern: '^[A-Za-z0-9_-]{43}$' }
+  const pattern4 = new RegExp('^[A-Za-z0-9_-]{43}$', 'u')
+  function validate256(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (typeof data === 'string') {
+      if (!pattern4.test(data)) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/pattern',
+          keyword: 'pattern',
+          params: { pattern: '^[A-Za-z0-9_-]{43}$' },
+          message: 'must match pattern "^[A-Za-z0-9_-]{43}$"'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'string' },
+        message: 'must be string'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate256.errors = vErrors
+    return errors === 0
+  }
+  function validate255(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate256(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate256.errors : vErrors.concat(validate256.errors)
+      errors = vErrors.length
+    }
+    validate255.errors = vErrors
+    return errors === 0
+  }
+  exports.v36 = validate258
+  const schema105 = { $ref: 'ls101#/components/schemas/ConnectionEnrollment' }
+  const schema106 = {
     type: 'object',
-    required: ['enrollmentFile', 'deviceSecret', 'computerName', 'platform', 'releaseVersion'],
+    required: ['enrollmentFile', 'computerName', 'releaseVersion'],
     additionalProperties: false,
     properties: {
       enrollmentFile: { type: 'string', maxLength: 65536 },
-      deviceSecret: { type: 'string', pattern: '^[A-Za-z0-9_-]{43}$', writeOnly: true },
-      computerName: { type: 'string', minLength: 1, maxLength: 255 },
-      platform: { type: 'string', enum: ['win32', 'linux'] },
+      computerName: { $ref: '#/components/schemas/Hostname' },
       releaseVersion: { type: 'string', minLength: 1, maxLength: 128 }
     }
   }
-  const pattern3 = new RegExp('^[A-Za-z0-9_-]{43}$', 'u')
-  function validate253(
+  function validate260(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (typeof data === 'string') {
+      if (func2(data) > 255) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/maxLength',
+          keyword: 'maxLength',
+          params: { limit: 255 },
+          message: 'must NOT have more than 255 characters'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (func2(data) < 1) {
+        const err1 = {
+          instancePath,
+          schemaPath: '#/minLength',
+          keyword: 'minLength',
+          params: { limit: 1 },
+          message: 'must NOT have fewer than 1 characters'
+        }
+        if (vErrors === null) {
+          vErrors = [err1]
+        } else {
+          vErrors.push(err1)
+        }
+        errors++
+      }
+      if (!pattern3.test(data)) {
+        const err2 = {
+          instancePath,
+          schemaPath: '#/pattern',
+          keyword: 'pattern',
+          params: { pattern: '^\\S+$' },
+          message: 'must match pattern "^\\S+$"'
+        }
+        if (vErrors === null) {
+          vErrors = [err2]
+        } else {
+          vErrors.push(err2)
+        }
+        errors++
+      }
+    } else {
+      const err3 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'string' },
+        message: 'must be string'
+      }
+      if (vErrors === null) {
+        vErrors = [err3]
+      } else {
+        vErrors.push(err3)
+      }
+      errors++
+    }
+    validate260.errors = vErrors
+    return errors === 0
+  }
+  function validate259(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -11834,13 +12045,13 @@ var validators = {}
         }
         errors++
       }
-      if (data.deviceSecret === void 0) {
+      if (data.computerName === void 0) {
         const err1 = {
           instancePath,
           schemaPath: '#/required',
           keyword: 'required',
-          params: { missingProperty: 'deviceSecret' },
-          message: "must have required property 'deviceSecret'"
+          params: { missingProperty: 'computerName' },
+          message: "must have required property 'computerName'"
         }
         if (vErrors === null) {
           vErrors = [err1]
@@ -11849,13 +12060,13 @@ var validators = {}
         }
         errors++
       }
-      if (data.computerName === void 0) {
+      if (data.releaseVersion === void 0) {
         const err2 = {
           instancePath,
           schemaPath: '#/required',
           keyword: 'required',
-          params: { missingProperty: 'computerName' },
-          message: "must have required property 'computerName'"
+          params: { missingProperty: 'releaseVersion' },
+          message: "must have required property 'releaseVersion'"
         }
         if (vErrors === null) {
           vErrors = [err2]
@@ -11864,52 +12075,48 @@ var validators = {}
         }
         errors++
       }
-      if (data.platform === void 0) {
-        const err3 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'platform' },
-          message: "must have required property 'platform'"
-        }
-        if (vErrors === null) {
-          vErrors = [err3]
-        } else {
-          vErrors.push(err3)
-        }
-        errors++
-      }
-      if (data.releaseVersion === void 0) {
-        const err4 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'releaseVersion' },
-          message: "must have required property 'releaseVersion'"
-        }
-        if (vErrors === null) {
-          vErrors = [err4]
-        } else {
-          vErrors.push(err4)
-        }
-        errors++
-      }
       for (const key0 in data) {
-        if (
-          !(
-            key0 === 'enrollmentFile' ||
-            key0 === 'deviceSecret' ||
-            key0 === 'computerName' ||
-            key0 === 'platform' ||
-            key0 === 'releaseVersion'
-          )
-        ) {
-          const err5 = {
+        if (!(key0 === 'enrollmentFile' || key0 === 'computerName' || key0 === 'releaseVersion')) {
+          const err3 = {
             instancePath,
             schemaPath: '#/additionalProperties',
             keyword: 'additionalProperties',
             params: { additionalProperty: key0 },
             message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err3]
+          } else {
+            vErrors.push(err3)
+          }
+          errors++
+        }
+      }
+      if (data.enrollmentFile !== void 0) {
+        let data0 = data.enrollmentFile
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 65536) {
+            const err4 = {
+              instancePath: instancePath + '/enrollmentFile',
+              schemaPath: '#/properties/enrollmentFile/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 65536 },
+              message: 'must NOT have more than 65536 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err4]
+            } else {
+              vErrors.push(err4)
+            }
+            errors++
+          }
+        } else {
+          const err5 = {
+            instancePath: instancePath + '/enrollmentFile',
+            schemaPath: '#/properties/enrollmentFile/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
           }
           if (vErrors === null) {
             vErrors = [err5]
@@ -11919,16 +12126,29 @@ var validators = {}
           errors++
         }
       }
-      if (data.enrollmentFile !== void 0) {
-        let data0 = data.enrollmentFile
-        if (typeof data0 === 'string') {
-          if (func2(data0) > 65536) {
+      if (data.computerName !== void 0) {
+        if (
+          !validate260(data.computerName, {
+            instancePath: instancePath + '/computerName',
+            parentData: data,
+            parentDataProperty: 'computerName',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate260.errors : vErrors.concat(validate260.errors)
+          errors = vErrors.length
+        }
+      }
+      if (data.releaseVersion !== void 0) {
+        let data2 = data.releaseVersion
+        if (typeof data2 === 'string') {
+          if (func2(data2) > 128) {
             const err6 = {
-              instancePath: instancePath + '/enrollmentFile',
-              schemaPath: '#/properties/enrollmentFile/maxLength',
+              instancePath: instancePath + '/releaseVersion',
+              schemaPath: '#/properties/releaseVersion/maxLength',
               keyword: 'maxLength',
-              params: { limit: 65536 },
-              message: 'must NOT have more than 65536 characters'
+              params: { limit: 128 },
+              message: 'must NOT have more than 128 characters'
             }
             if (vErrors === null) {
               vErrors = [err6]
@@ -11937,158 +12157,8 @@ var validators = {}
             }
             errors++
           }
-        } else {
-          const err7 = {
-            instancePath: instancePath + '/enrollmentFile',
-            schemaPath: '#/properties/enrollmentFile/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err7]
-          } else {
-            vErrors.push(err7)
-          }
-          errors++
-        }
-      }
-      if (data.deviceSecret !== void 0) {
-        let data1 = data.deviceSecret
-        if (typeof data1 === 'string') {
-          if (!pattern3.test(data1)) {
-            const err8 = {
-              instancePath: instancePath + '/deviceSecret',
-              schemaPath: '#/properties/deviceSecret/pattern',
-              keyword: 'pattern',
-              params: { pattern: '^[A-Za-z0-9_-]{43}$' },
-              message: 'must match pattern "^[A-Za-z0-9_-]{43}$"'
-            }
-            if (vErrors === null) {
-              vErrors = [err8]
-            } else {
-              vErrors.push(err8)
-            }
-            errors++
-          }
-        } else {
-          const err9 = {
-            instancePath: instancePath + '/deviceSecret',
-            schemaPath: '#/properties/deviceSecret/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err9]
-          } else {
-            vErrors.push(err9)
-          }
-          errors++
-        }
-      }
-      if (data.computerName !== void 0) {
-        let data2 = data.computerName
-        if (typeof data2 === 'string') {
-          if (func2(data2) > 255) {
-            const err10 = {
-              instancePath: instancePath + '/computerName',
-              schemaPath: '#/properties/computerName/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 255 },
-              message: 'must NOT have more than 255 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err10]
-            } else {
-              vErrors.push(err10)
-            }
-            errors++
-          }
           if (func2(data2) < 1) {
-            const err11 = {
-              instancePath: instancePath + '/computerName',
-              schemaPath: '#/properties/computerName/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err11]
-            } else {
-              vErrors.push(err11)
-            }
-            errors++
-          }
-        } else {
-          const err12 = {
-            instancePath: instancePath + '/computerName',
-            schemaPath: '#/properties/computerName/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err12]
-          } else {
-            vErrors.push(err12)
-          }
-          errors++
-        }
-      }
-      if (data.platform !== void 0) {
-        let data3 = data.platform
-        if (typeof data3 !== 'string') {
-          const err13 = {
-            instancePath: instancePath + '/platform',
-            schemaPath: '#/properties/platform/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err13]
-          } else {
-            vErrors.push(err13)
-          }
-          errors++
-        }
-        if (!(data3 === 'win32' || data3 === 'linux')) {
-          const err14 = {
-            instancePath: instancePath + '/platform',
-            schemaPath: '#/properties/platform/enum',
-            keyword: 'enum',
-            params: { allowedValues: schema102.properties.platform.enum },
-            message: 'must be equal to one of the allowed values'
-          }
-          if (vErrors === null) {
-            vErrors = [err14]
-          } else {
-            vErrors.push(err14)
-          }
-          errors++
-        }
-      }
-      if (data.releaseVersion !== void 0) {
-        let data4 = data.releaseVersion
-        if (typeof data4 === 'string') {
-          if (func2(data4) > 128) {
-            const err15 = {
-              instancePath: instancePath + '/releaseVersion',
-              schemaPath: '#/properties/releaseVersion/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 128 },
-              message: 'must NOT have more than 128 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err15]
-            } else {
-              vErrors.push(err15)
-            }
-            errors++
-          }
-          if (func2(data4) < 1) {
-            const err16 = {
+            const err7 = {
               instancePath: instancePath + '/releaseVersion',
               schemaPath: '#/properties/releaseVersion/minLength',
               keyword: 'minLength',
@@ -12096,14 +12166,14 @@ var validators = {}
               message: 'must NOT have fewer than 1 characters'
             }
             if (vErrors === null) {
-              vErrors = [err16]
+              vErrors = [err7]
             } else {
-              vErrors.push(err16)
+              vErrors.push(err7)
             }
             errors++
           }
         } else {
-          const err17 = {
+          const err8 = {
             instancePath: instancePath + '/releaseVersion',
             schemaPath: '#/properties/releaseVersion/type',
             keyword: 'type',
@@ -12111,15 +12181,15 @@ var validators = {}
             message: 'must be string'
           }
           if (vErrors === null) {
-            vErrors = [err17]
+            vErrors = [err8]
           } else {
-            vErrors.push(err17)
+            vErrors.push(err8)
           }
           errors++
         }
       }
     } else {
-      const err18 = {
+      const err9 = {
         instancePath,
         schemaPath: '#/type',
         keyword: 'type',
@@ -12127,45 +12197,414 @@ var validators = {}
         message: 'must be object'
       }
       if (vErrors === null) {
-        vErrors = [err18]
+        vErrors = [err9]
       } else {
-        vErrors.push(err18)
+        vErrors.push(err9)
       }
       errors++
     }
-    validate253.errors = vErrors
+    validate259.errors = vErrors
     return errors === 0
   }
-  function validate252(
+  function validate258(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate253(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate253.errors : vErrors.concat(validate253.errors)
+    if (!validate259(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate259.errors : vErrors.concat(validate259.errors)
       errors = vErrors.length
     }
-    validate252.errors = vErrors
+    validate258.errors = vErrors
     return errors === 0
   }
-  exports.v35 = validate255
-  const schema103 = { $ref: 'ls101#/components/schemas/RegisteredDevice' }
-  const schema104 = {
+  exports.v37 = validate263
+  const schema108 = { $ref: 'ls101#/components/schemas/ServerConnection' }
+  const schema109 = {
+    type: 'object',
+    required: ['connectionSecret'],
+    additionalProperties: false,
+    properties: { connectionSecret: { $ref: '#/components/schemas/ConnectionSecret' } }
+  }
+  function validate265(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (typeof data === 'string') {
+      if (!pattern4.test(data)) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/pattern',
+          keyword: 'pattern',
+          params: { pattern: '^[A-Za-z0-9_-]{43}$' },
+          message: 'must match pattern "^[A-Za-z0-9_-]{43}$"'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'string' },
+        message: 'must be string'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate265.errors = vErrors
+    return errors === 0
+  }
+  function validate264(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.connectionSecret === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'connectionSecret' },
+          message: "must have required property 'connectionSecret'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'connectionSecret')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.connectionSecret !== void 0) {
+        if (
+          !validate265(data.connectionSecret, {
+            instancePath: instancePath + '/connectionSecret',
+            parentData: data,
+            parentDataProperty: 'connectionSecret',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate265.errors : vErrors.concat(validate265.errors)
+          errors = vErrors.length
+        }
+      }
+    } else {
+      const err2 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err2]
+      } else {
+        vErrors.push(err2)
+      }
+      errors++
+    }
+    validate264.errors = vErrors
+    return errors === 0
+  }
+  function validate263(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate264(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate264.errors : vErrors.concat(validate264.errors)
+      errors = vErrors.length
+    }
+    validate263.errors = vErrors
+    return errors === 0
+  }
+  exports.v38 = validate268
+  const schema111 = { $ref: 'ls101#/components/schemas/StudentSessionRequest' }
+  const schema112 = {
+    type: 'object',
+    required: ['connectionSecret', 'computerName', 'platform', 'runtimeId'],
+    additionalProperties: false,
+    properties: {
+      connectionSecret: { $ref: '#/components/schemas/ConnectionSecret' },
+      computerName: { $ref: '#/components/schemas/Hostname' },
+      platform: { type: 'string', enum: ['win32', 'linux'] },
+      runtimeId: { type: 'string', format: 'uuid' }
+    }
+  }
+  function validate269(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.connectionSecret === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'connectionSecret' },
+          message: "must have required property 'connectionSecret'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data.computerName === void 0) {
+        const err1 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'computerName' },
+          message: "must have required property 'computerName'"
+        }
+        if (vErrors === null) {
+          vErrors = [err1]
+        } else {
+          vErrors.push(err1)
+        }
+        errors++
+      }
+      if (data.platform === void 0) {
+        const err2 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'platform' },
+          message: "must have required property 'platform'"
+        }
+        if (vErrors === null) {
+          vErrors = [err2]
+        } else {
+          vErrors.push(err2)
+        }
+        errors++
+      }
+      if (data.runtimeId === void 0) {
+        const err3 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'runtimeId' },
+          message: "must have required property 'runtimeId'"
+        }
+        if (vErrors === null) {
+          vErrors = [err3]
+        } else {
+          vErrors.push(err3)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (
+          !(
+            key0 === 'connectionSecret' ||
+            key0 === 'computerName' ||
+            key0 === 'platform' ||
+            key0 === 'runtimeId'
+          )
+        ) {
+          const err4 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err4]
+          } else {
+            vErrors.push(err4)
+          }
+          errors++
+        }
+      }
+      if (data.connectionSecret !== void 0) {
+        if (
+          !validate265(data.connectionSecret, {
+            instancePath: instancePath + '/connectionSecret',
+            parentData: data,
+            parentDataProperty: 'connectionSecret',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate265.errors : vErrors.concat(validate265.errors)
+          errors = vErrors.length
+        }
+      }
+      if (data.computerName !== void 0) {
+        if (
+          !validate260(data.computerName, {
+            instancePath: instancePath + '/computerName',
+            parentData: data,
+            parentDataProperty: 'computerName',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate260.errors : vErrors.concat(validate260.errors)
+          errors = vErrors.length
+        }
+      }
+      if (data.platform !== void 0) {
+        let data2 = data.platform
+        if (typeof data2 !== 'string') {
+          const err5 = {
+            instancePath: instancePath + '/platform',
+            schemaPath: '#/properties/platform/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err5]
+          } else {
+            vErrors.push(err5)
+          }
+          errors++
+        }
+        if (!(data2 === 'win32' || data2 === 'linux')) {
+          const err6 = {
+            instancePath: instancePath + '/platform',
+            schemaPath: '#/properties/platform/enum',
+            keyword: 'enum',
+            params: { allowedValues: schema112.properties.platform.enum },
+            message: 'must be equal to one of the allowed values'
+          }
+          if (vErrors === null) {
+            vErrors = [err6]
+          } else {
+            vErrors.push(err6)
+          }
+          errors++
+        }
+      }
+      if (data.runtimeId !== void 0) {
+        let data3 = data.runtimeId
+        if (typeof data3 === 'string') {
+          if (!formats2.test(data3)) {
+            const err7 = {
+              instancePath: instancePath + '/runtimeId',
+              schemaPath: '#/properties/runtimeId/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err7]
+            } else {
+              vErrors.push(err7)
+            }
+            errors++
+          }
+        } else {
+          const err8 = {
+            instancePath: instancePath + '/runtimeId',
+            schemaPath: '#/properties/runtimeId/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err8]
+          } else {
+            vErrors.push(err8)
+          }
+          errors++
+        }
+      }
+    } else {
+      const err9 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err9]
+      } else {
+        vErrors.push(err9)
+      }
+      errors++
+    }
+    validate269.errors = vErrors
+    return errors === 0
+  }
+  function validate268(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate269(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate269.errors : vErrors.concat(validate269.errors)
+      errors = vErrors.length
+    }
+    validate268.errors = vErrors
+    return errors === 0
+  }
+  exports.v39 = validate273
+  const schema113 = { $ref: 'ls101#/components/schemas/StudentSession' }
+  const schema114 = {
     allOf: [
       { $ref: '#/components/schemas/Mode' },
       {
         type: 'object',
-        required: ['deviceId', 'deviceNumber', 'registeredAt'],
+        required: [
+          'deviceId',
+          'deviceNumber',
+          'registeredAt',
+          'deviceSecret',
+          'contextId',
+          'runtimeGeneration'
+        ],
         properties: {
           deviceId: { type: 'string', format: 'uuid' },
           deviceNumber: { type: 'string' },
-          registeredAt: { type: 'string', format: 'date-time' }
+          registeredAt: { type: 'string', format: 'date-time' },
+          deviceSecret: { $ref: '#/components/schemas/ConnectionSecret' },
+          contextId: { type: 'string', format: 'uuid' },
+          runtimeGeneration: { type: 'integer', minimum: 1, maximum: 9007199254740991 }
         }
       }
     ]
   }
-  function validate256(
+  function validate274(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -12221,67 +12660,61 @@ var validators = {}
         }
         errors++
       }
+      if (data.deviceSecret === void 0) {
+        const err3 = {
+          instancePath,
+          schemaPath: '#/allOf/1/required',
+          keyword: 'required',
+          params: { missingProperty: 'deviceSecret' },
+          message: "must have required property 'deviceSecret'"
+        }
+        if (vErrors === null) {
+          vErrors = [err3]
+        } else {
+          vErrors.push(err3)
+        }
+        errors++
+      }
+      if (data.contextId === void 0) {
+        const err4 = {
+          instancePath,
+          schemaPath: '#/allOf/1/required',
+          keyword: 'required',
+          params: { missingProperty: 'contextId' },
+          message: "must have required property 'contextId'"
+        }
+        if (vErrors === null) {
+          vErrors = [err4]
+        } else {
+          vErrors.push(err4)
+        }
+        errors++
+      }
+      if (data.runtimeGeneration === void 0) {
+        const err5 = {
+          instancePath,
+          schemaPath: '#/allOf/1/required',
+          keyword: 'required',
+          params: { missingProperty: 'runtimeGeneration' },
+          message: "must have required property 'runtimeGeneration'"
+        }
+        if (vErrors === null) {
+          vErrors = [err5]
+        } else {
+          vErrors.push(err5)
+        }
+        errors++
+      }
       if (data.deviceId !== void 0) {
         let data0 = data.deviceId
         if (typeof data0 === 'string') {
           if (!formats2.test(data0)) {
-            const err3 = {
+            const err6 = {
               instancePath: instancePath + '/deviceId',
               schemaPath: '#/allOf/1/properties/deviceId/format',
               keyword: 'format',
               params: { format: 'uuid' },
               message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-        } else {
-          const err4 = {
-            instancePath: instancePath + '/deviceId',
-            schemaPath: '#/allOf/1/properties/deviceId/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err4]
-          } else {
-            vErrors.push(err4)
-          }
-          errors++
-        }
-      }
-      if (data.deviceNumber !== void 0) {
-        if (typeof data.deviceNumber !== 'string') {
-          const err5 = {
-            instancePath: instancePath + '/deviceNumber',
-            schemaPath: '#/allOf/1/properties/deviceNumber/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err5]
-          } else {
-            vErrors.push(err5)
-          }
-          errors++
-        }
-      }
-      if (data.registeredAt !== void 0) {
-        let data2 = data.registeredAt
-        if (typeof data2 === 'string') {
-          if (!formats0.validate(data2)) {
-            const err6 = {
-              instancePath: instancePath + '/registeredAt',
-              schemaPath: '#/allOf/1/properties/registeredAt/format',
-              keyword: 'format',
-              params: { format: 'date-time' },
-              message: 'must match format "date-time"'
             }
             if (vErrors === null) {
               vErrors = [err6]
@@ -12292,8 +12725,8 @@ var validators = {}
           }
         } else {
           const err7 = {
-            instancePath: instancePath + '/registeredAt',
-            schemaPath: '#/allOf/1/properties/registeredAt/type',
+            instancePath: instancePath + '/deviceId',
+            schemaPath: '#/allOf/1/properties/deviceId/type',
             keyword: 'type',
             params: { type: 'string' },
             message: 'must be string'
@@ -12306,8 +12739,156 @@ var validators = {}
           errors++
         }
       }
+      if (data.deviceNumber !== void 0) {
+        if (typeof data.deviceNumber !== 'string') {
+          const err8 = {
+            instancePath: instancePath + '/deviceNumber',
+            schemaPath: '#/allOf/1/properties/deviceNumber/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err8]
+          } else {
+            vErrors.push(err8)
+          }
+          errors++
+        }
+      }
+      if (data.registeredAt !== void 0) {
+        let data2 = data.registeredAt
+        if (typeof data2 === 'string') {
+          if (!formats0.validate(data2)) {
+            const err9 = {
+              instancePath: instancePath + '/registeredAt',
+              schemaPath: '#/allOf/1/properties/registeredAt/format',
+              keyword: 'format',
+              params: { format: 'date-time' },
+              message: 'must match format "date-time"'
+            }
+            if (vErrors === null) {
+              vErrors = [err9]
+            } else {
+              vErrors.push(err9)
+            }
+            errors++
+          }
+        } else {
+          const err10 = {
+            instancePath: instancePath + '/registeredAt',
+            schemaPath: '#/allOf/1/properties/registeredAt/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err10]
+          } else {
+            vErrors.push(err10)
+          }
+          errors++
+        }
+      }
+      if (data.deviceSecret !== void 0) {
+        if (
+          !validate265(data.deviceSecret, {
+            instancePath: instancePath + '/deviceSecret',
+            parentData: data,
+            parentDataProperty: 'deviceSecret',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate265.errors : vErrors.concat(validate265.errors)
+          errors = vErrors.length
+        }
+      }
+      if (data.contextId !== void 0) {
+        let data4 = data.contextId
+        if (typeof data4 === 'string') {
+          if (!formats2.test(data4)) {
+            const err11 = {
+              instancePath: instancePath + '/contextId',
+              schemaPath: '#/allOf/1/properties/contextId/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err11]
+            } else {
+              vErrors.push(err11)
+            }
+            errors++
+          }
+        } else {
+          const err12 = {
+            instancePath: instancePath + '/contextId',
+            schemaPath: '#/allOf/1/properties/contextId/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err12]
+          } else {
+            vErrors.push(err12)
+          }
+          errors++
+        }
+      }
+      if (data.runtimeGeneration !== void 0) {
+        let data5 = data.runtimeGeneration
+        if (!(typeof data5 == 'number' && !(data5 % 1) && !isNaN(data5))) {
+          const err13 = {
+            instancePath: instancePath + '/runtimeGeneration',
+            schemaPath: '#/allOf/1/properties/runtimeGeneration/type',
+            keyword: 'type',
+            params: { type: 'integer' },
+            message: 'must be integer'
+          }
+          if (vErrors === null) {
+            vErrors = [err13]
+          } else {
+            vErrors.push(err13)
+          }
+          errors++
+        }
+        if (typeof data5 == 'number') {
+          if (data5 > 9007199254740991 || isNaN(data5)) {
+            const err14 = {
+              instancePath: instancePath + '/runtimeGeneration',
+              schemaPath: '#/allOf/1/properties/runtimeGeneration/maximum',
+              keyword: 'maximum',
+              params: { comparison: '<=', limit: 9007199254740991 },
+              message: 'must be <= 9007199254740991'
+            }
+            if (vErrors === null) {
+              vErrors = [err14]
+            } else {
+              vErrors.push(err14)
+            }
+            errors++
+          }
+          if (data5 < 1 || isNaN(data5)) {
+            const err15 = {
+              instancePath: instancePath + '/runtimeGeneration',
+              schemaPath: '#/allOf/1/properties/runtimeGeneration/minimum',
+              keyword: 'minimum',
+              params: { comparison: '>=', limit: 1 },
+              message: 'must be >= 1'
+            }
+            if (vErrors === null) {
+              vErrors = [err15]
+            } else {
+              vErrors.push(err15)
+            }
+            errors++
+          }
+        }
+      }
     } else {
-      const err8 = {
+      const err16 = {
         instancePath,
         schemaPath: '#/allOf/1/type',
         keyword: 'type',
@@ -12315,31 +12896,31 @@ var validators = {}
         message: 'must be object'
       }
       if (vErrors === null) {
-        vErrors = [err8]
+        vErrors = [err16]
       } else {
-        vErrors.push(err8)
+        vErrors.push(err16)
       }
       errors++
     }
-    validate256.errors = vErrors
+    validate274.errors = vErrors
     return errors === 0
   }
-  function validate255(
+  function validate273(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate256(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate256.errors : vErrors.concat(validate256.errors)
+    if (!validate274(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate274.errors : vErrors.concat(validate274.errors)
       errors = vErrors.length
     }
-    validate255.errors = vErrors
+    validate273.errors = vErrors
     return errors === 0
   }
-  exports.v36 = validate259
-  const schema105 = { $ref: 'ls101#/components/schemas/StudentExam' }
-  const schema106 = {
+  exports.v40 = validate278
+  const schema115 = { $ref: 'ls101#/components/schemas/StudentExam' }
+  const schema116 = {
     type: 'object',
     required: [
       'examId',
@@ -12360,7 +12941,7 @@ var validators = {}
       resourceCount: { $ref: '#/components/schemas/Count' }
     }
   }
-  function validate260(
+  function validate279(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -12607,25 +13188,25 @@ var validators = {}
       }
       errors++
     }
-    validate260.errors = vErrors
+    validate279.errors = vErrors
     return errors === 0
   }
-  function validate259(
+  function validate278(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate260(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate260.errors : vErrors.concat(validate260.errors)
+    if (!validate279(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate279.errors : vErrors.concat(validate279.errors)
       errors = vErrors.length
     }
-    validate259.errors = vErrors
+    validate278.errors = vErrors
     return errors === 0
   }
-  exports.v37 = validate266
-  const schema107 = { $ref: 'ls101#/components/schemas/Exam' }
-  const schema108 = {
+  exports.v41 = validate285
+  const schema117 = { $ref: 'ls101#/components/schemas/Exam' }
+  const schema118 = {
     allOf: [
       { $ref: '#/components/schemas/StudentExam' },
       {
@@ -12639,7 +13220,7 @@ var validators = {}
       }
     ]
   }
-  function validate268(
+  function validate287(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -12886,17 +13467,17 @@ var validators = {}
       }
       errors++
     }
-    validate268.errors = vErrors
+    validate287.errors = vErrors
     return errors === 0
   }
-  function validate267(
+  function validate286(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate268(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate268.errors : vErrors.concat(validate268.errors)
+    if (!validate287(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate287.errors : vErrors.concat(validate287.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -13024,38 +13605,38 @@ var validators = {}
       }
       errors++
     }
-    validate267.errors = vErrors
+    validate286.errors = vErrors
     return errors === 0
   }
-  function validate266(
+  function validate285(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate267(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate267.errors : vErrors.concat(validate267.errors)
+    if (!validate286(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate286.errors : vErrors.concat(validate286.errors)
       errors = vErrors.length
     }
-    validate266.errors = vErrors
+    validate285.errors = vErrors
     return errors === 0
   }
-  exports.v38 = validate276
-  const schema110 = { $ref: 'ls101#/components/schemas/ExamImport' }
-  const schema111 = {
+  exports.v42 = validate295
+  const schema120 = { $ref: 'ls101#/components/schemas/ExamImport' }
+  const schema121 = {
     allOf: [
       { $ref: '#/components/schemas/Exam' },
       { type: 'object', required: ['duplicate'], properties: { duplicate: { type: 'boolean' } } }
     ]
   }
-  function validate278(
+  function validate297(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate268(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate268.errors : vErrors.concat(validate268.errors)
+    if (!validate287(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate287.errors : vErrors.concat(validate287.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -13183,17 +13764,17 @@ var validators = {}
       }
       errors++
     }
-    validate278.errors = vErrors
+    validate297.errors = vErrors
     return errors === 0
   }
-  function validate277(
+  function validate296(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate278(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate278.errors : vErrors.concat(validate278.errors)
+    if (!validate297(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate297.errors : vErrors.concat(validate297.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -13244,25 +13825,25 @@ var validators = {}
       }
       errors++
     }
-    validate277.errors = vErrors
+    validate296.errors = vErrors
     return errors === 0
   }
-  function validate276(
+  function validate295(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate277(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate277.errors : vErrors.concat(validate277.errors)
+    if (!validate296(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate296.errors : vErrors.concat(validate296.errors)
       errors = vErrors.length
     }
-    validate276.errors = vErrors
+    validate295.errors = vErrors
     return errors === 0
   }
-  exports.v39 = validate283
-  const schema113 = { $ref: 'ls101#/components/schemas/ExamList' }
-  const schema114 = {
+  exports.v43 = validate302
+  const schema123 = { $ref: 'ls101#/components/schemas/ExamList' }
+  const schema124 = {
     allOf: [
       { $ref: '#/components/schemas/Page' },
       {
@@ -13272,7 +13853,7 @@ var validators = {}
       }
     ]
   }
-  function validate284(
+  function validate303(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -13304,14 +13885,14 @@ var validators = {}
           const len0 = data0.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate278(data0[i0], {
+              !validate297(data0[i0], {
                 instancePath: instancePath + '/items/' + i0,
                 parentData: data0,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate278.errors : vErrors.concat(validate278.errors)
+              vErrors = vErrors === null ? validate297.errors : vErrors.concat(validate297.errors)
               errors = vErrors.length
             }
           }
@@ -13346,25 +13927,25 @@ var validators = {}
       }
       errors++
     }
-    validate284.errors = vErrors
+    validate303.errors = vErrors
     return errors === 0
   }
-  function validate283(
+  function validate302(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate284(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate284.errors : vErrors.concat(validate284.errors)
+    if (!validate303(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate303.errors : vErrors.concat(validate303.errors)
       errors = vErrors.length
     }
-    validate283.errors = vErrors
+    validate302.errors = vErrors
     return errors === 0
   }
-  exports.v40 = validate288
-  const schema115 = { $ref: 'ls101#/components/schemas/StudentExamList' }
-  const schema116 = {
+  exports.v44 = validate307
+  const schema125 = { $ref: 'ls101#/components/schemas/StudentExamList' }
+  const schema126 = {
     allOf: [
       { $ref: '#/components/schemas/Page' },
       {
@@ -13376,7 +13957,7 @@ var validators = {}
       }
     ]
   }
-  function validate289(
+  function validate308(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -13408,14 +13989,14 @@ var validators = {}
           const len0 = data0.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate268(data0[i0], {
+              !validate287(data0[i0], {
                 instancePath: instancePath + '/items/' + i0,
                 parentData: data0,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate268.errors : vErrors.concat(validate268.errors)
+              vErrors = vErrors === null ? validate287.errors : vErrors.concat(validate287.errors)
               errors = vErrors.length
             }
           }
@@ -13450,25 +14031,25 @@ var validators = {}
       }
       errors++
     }
-    validate289.errors = vErrors
+    validate308.errors = vErrors
     return errors === 0
   }
-  function validate288(
+  function validate307(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate289(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate289.errors : vErrors.concat(validate289.errors)
+    if (!validate308(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate308.errors : vErrors.concat(validate308.errors)
       errors = vErrors.length
     }
-    validate288.errors = vErrors
+    validate307.errors = vErrors
     return errors === 0
   }
-  exports.v41 = validate293
-  const schema117 = { $ref: 'ls101#/components/schemas/PracticeRequest' }
-  const schema118 = {
+  exports.v45 = validate312
+  const schema127 = { $ref: 'ls101#/components/schemas/PracticeRequest' }
+  const schema128 = {
     type: 'object',
     required: ['examId', 'archiveSha256', 'candidate'],
     additionalProperties: false,
@@ -13478,7 +14059,7 @@ var validators = {}
       candidate: { $ref: '#/components/schemas/Candidate' }
     }
   }
-  function validate294(
+  function validate313(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -13622,25 +14203,25 @@ var validators = {}
       }
       errors++
     }
-    validate294.errors = vErrors
+    validate313.errors = vErrors
     return errors === 0
   }
-  function validate293(
+  function validate312(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate294(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate294.errors : vErrors.concat(validate294.errors)
+    if (!validate313(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate313.errors : vErrors.concat(validate313.errors)
       errors = vErrors.length
     }
-    validate293.errors = vErrors
+    validate312.errors = vErrors
     return errors === 0
   }
-  exports.v42 = validate298
-  const schema119 = { $ref: 'ls101#/components/schemas/PracticeGrant' }
-  const schema120 = {
+  exports.v46 = validate317
+  const schema129 = { $ref: 'ls101#/components/schemas/PracticeGrant' }
+  const schema130 = {
     type: 'object',
     required: ['submissionId', 'grantedAt', 'startBefore', 'modeRevision'],
     properties: {
@@ -13650,7 +14231,7 @@ var validators = {}
       modeRevision: { $ref: '#/components/schemas/PositiveInteger' }
     }
   }
-  function validate299(
+  function validate318(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -13847,25 +14428,25 @@ var validators = {}
       }
       errors++
     }
-    validate299.errors = vErrors
+    validate318.errors = vErrors
     return errors === 0
   }
-  function validate298(
+  function validate317(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate299(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate299.errors : vErrors.concat(validate299.errors)
+    if (!validate318(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate318.errors : vErrors.concat(validate318.errors)
       errors = vErrors.length
     }
-    validate298.errors = vErrors
+    validate317.errors = vErrors
     return errors === 0
   }
-  exports.v43 = validate302
-  const schema121 = { $ref: 'ls101#/components/schemas/Receipt' }
-  const schema122 = {
+  exports.v47 = validate321
+  const schema131 = { $ref: 'ls101#/components/schemas/Receipt' }
+  const schema132 = {
     type: 'object',
     required: ['receiptId', 'serverId', 'deviceId', 'submissionId', 'archiveSha256', 'receivedAt'],
     properties: {
@@ -13877,7 +14458,7 @@ var validators = {}
       receivedAt: { type: 'string', format: 'date-time' }
     }
   }
-  function validate303(
+  function validate322(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -14172,25 +14753,25 @@ var validators = {}
       }
       errors++
     }
-    validate303.errors = vErrors
+    validate322.errors = vErrors
     return errors === 0
   }
-  function validate302(
+  function validate321(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate303(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate303.errors : vErrors.concat(validate303.errors)
+    if (!validate322(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate322.errors : vErrors.concat(validate322.errors)
       errors = vErrors.length
     }
-    validate302.errors = vErrors
+    validate321.errors = vErrors
     return errors === 0
   }
-  exports.v44 = validate306
-  const schema123 = { $ref: 'ls101#/components/schemas/Received' }
-  const schema124 = {
+  exports.v48 = validate325
+  const schema133 = { $ref: 'ls101#/components/schemas/Received' }
+  const schema134 = {
     type: 'object',
     required: ['status', 'receipt'],
     additionalProperties: false,
@@ -14199,7 +14780,7 @@ var validators = {}
       receipt: { $ref: '#/components/schemas/Receipt' }
     }
   }
-  function validate308(
+  function validate327(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -14494,10 +15075,10 @@ var validators = {}
       }
       errors++
     }
-    validate308.errors = vErrors
+    validate327.errors = vErrors
     return errors === 0
   }
-  function validate307(
+  function validate326(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -14573,7 +15154,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema124.properties.status.enum },
+            params: { allowedValues: schema134.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -14586,14 +15167,14 @@ var validators = {}
       }
       if (data.receipt !== void 0) {
         if (
-          !validate308(data.receipt, {
+          !validate327(data.receipt, {
             instancePath: instancePath + '/receipt',
             parentData: data,
             parentDataProperty: 'receipt',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate308.errors : vErrors.concat(validate308.errors)
+          vErrors = vErrors === null ? validate327.errors : vErrors.concat(validate327.errors)
           errors = vErrors.length
         }
       }
@@ -14612,25 +15193,25 @@ var validators = {}
       }
       errors++
     }
-    validate307.errors = vErrors
+    validate326.errors = vErrors
     return errors === 0
   }
-  function validate306(
+  function validate325(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate307(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate307.errors : vErrors.concat(validate307.errors)
+    if (!validate326(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate326.errors : vErrors.concat(validate326.errors)
       errors = vErrors.length
     }
-    validate306.errors = vErrors
+    validate325.errors = vErrors
     return errors === 0
   }
-  exports.v45 = validate312
-  const schema126 = { $ref: 'ls101#/components/schemas/Deleted' }
-  const schema127 = {
+  exports.v49 = validate331
+  const schema136 = { $ref: 'ls101#/components/schemas/Deleted' }
+  const schema137 = {
     type: 'object',
     required: ['status', 'receipt', 'deletedAt'],
     additionalProperties: false,
@@ -14640,7 +15221,7 @@ var validators = {}
       deletedAt: { type: 'string', format: 'date-time' }
     }
   }
-  function validate313(
+  function validate332(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -14731,7 +15312,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema127.properties.status.enum },
+            params: { allowedValues: schema137.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -14744,14 +15325,14 @@ var validators = {}
       }
       if (data.receipt !== void 0) {
         if (
-          !validate308(data.receipt, {
+          !validate327(data.receipt, {
             instancePath: instancePath + '/receipt',
             parentData: data,
             parentDataProperty: 'receipt',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate308.errors : vErrors.concat(validate308.errors)
+          vErrors = vErrors === null ? validate327.errors : vErrors.concat(validate327.errors)
           errors = vErrors.length
         }
       }
@@ -14804,31 +15385,31 @@ var validators = {}
       }
       errors++
     }
-    validate313.errors = vErrors
+    validate332.errors = vErrors
     return errors === 0
   }
-  function validate312(
+  function validate331(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate313(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate313.errors : vErrors.concat(validate313.errors)
+    if (!validate332(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate332.errors : vErrors.concat(validate332.errors)
       errors = vErrors.length
     }
-    validate312.errors = vErrors
+    validate331.errors = vErrors
     return errors === 0
   }
-  exports.v46 = validate316
-  const schema128 = { $ref: 'ls101#/components/schemas/NotReceived' }
-  const schema129 = {
+  exports.v50 = validate335
+  const schema138 = { $ref: 'ls101#/components/schemas/NotReceived' }
+  const schema139 = {
     type: 'object',
     required: ['status'],
     additionalProperties: false,
     properties: { status: { type: 'string', enum: ['not-received'] } }
   }
-  function validate317(
+  function validate336(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -14889,7 +15470,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema129.properties.status.enum },
+            params: { allowedValues: schema139.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -14915,25 +15496,25 @@ var validators = {}
       }
       errors++
     }
-    validate317.errors = vErrors
+    validate336.errors = vErrors
     return errors === 0
   }
-  function validate316(
+  function validate335(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate317(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate317.errors : vErrors.concat(validate317.errors)
+    if (!validate336(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate336.errors : vErrors.concat(validate336.errors)
       errors = vErrors.length
     }
-    validate316.errors = vErrors
+    validate335.errors = vErrors
     return errors === 0
   }
-  exports.v47 = validate319
-  const schema130 = { $ref: 'ls101#/components/schemas/Receiving' }
-  const schema131 = {
+  exports.v51 = validate338
+  const schema140 = { $ref: 'ls101#/components/schemas/Receiving' }
+  const schema141 = {
     type: 'object',
     required: ['status', 'retryAfterSeconds'],
     additionalProperties: false,
@@ -14942,7 +15523,7 @@ var validators = {}
       retryAfterSeconds: { $ref: '#/components/schemas/PositiveInteger' }
     }
   }
-  function validate320(
+  function validate339(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -15018,7 +15599,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema131.properties.status.enum },
+            params: { allowedValues: schema141.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -15057,28 +15638,28 @@ var validators = {}
       }
       errors++
     }
-    validate320.errors = vErrors
+    validate339.errors = vErrors
     return errors === 0
   }
-  function validate319(
+  function validate338(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate320(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate320.errors : vErrors.concat(validate320.errors)
+    if (!validate339(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate339.errors : vErrors.concat(validate339.errors)
       errors = vErrors.length
     }
-    validate319.errors = vErrors
+    validate338.errors = vErrors
     return errors === 0
   }
-  exports.v48 = validate323
-  const schema132 = { $ref: 'ls101#/components/schemas/CompletedReceipt' }
-  const schema133 = {
+  exports.v52 = validate342
+  const schema142 = { $ref: 'ls101#/components/schemas/CompletedReceipt' }
+  const schema143 = {
     oneOf: [{ $ref: '#/components/schemas/Received' }, { $ref: '#/components/schemas/Deleted' }]
   }
-  function validate325(
+  function validate344(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -15154,7 +15735,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema124.properties.status.enum },
+            params: { allowedValues: schema134.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -15167,14 +15748,14 @@ var validators = {}
       }
       if (data.receipt !== void 0) {
         if (
-          !validate308(data.receipt, {
+          !validate327(data.receipt, {
             instancePath: instancePath + '/receipt',
             parentData: data,
             parentDataProperty: 'receipt',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate308.errors : vErrors.concat(validate308.errors)
+          vErrors = vErrors === null ? validate327.errors : vErrors.concat(validate327.errors)
           errors = vErrors.length
         }
       }
@@ -15193,10 +15774,10 @@ var validators = {}
       }
       errors++
     }
-    validate325.errors = vErrors
+    validate344.errors = vErrors
     return errors === 0
   }
-  function validate328(
+  function validate347(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -15287,7 +15868,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema127.properties.status.enum },
+            params: { allowedValues: schema137.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -15300,14 +15881,14 @@ var validators = {}
       }
       if (data.receipt !== void 0) {
         if (
-          !validate308(data.receipt, {
+          !validate327(data.receipt, {
             instancePath: instancePath + '/receipt',
             parentData: data,
             parentDataProperty: 'receipt',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate308.errors : vErrors.concat(validate308.errors)
+          vErrors = vErrors === null ? validate327.errors : vErrors.concat(validate327.errors)
           errors = vErrors.length
         }
       }
@@ -15360,10 +15941,10 @@ var validators = {}
       }
       errors++
     }
-    validate328.errors = vErrors
+    validate347.errors = vErrors
     return errors === 0
   }
-  function validate324(
+  function validate343(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -15373,8 +15954,8 @@ var validators = {}
     let valid0 = false
     let passing0 = null
     const _errs1 = errors
-    if (!validate325(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate325.errors : vErrors.concat(validate325.errors)
+    if (!validate344(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate344.errors : vErrors.concat(validate344.errors)
       errors = vErrors.length
     }
     var _valid0 = _errs1 === errors
@@ -15383,8 +15964,8 @@ var validators = {}
       passing0 = 0
     }
     const _errs2 = errors
-    if (!validate328(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate328.errors : vErrors.concat(validate328.errors)
+    if (!validate347(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate347.errors : vErrors.concat(validate347.errors)
       errors = vErrors.length
     }
     var _valid0 = _errs2 === errors
@@ -15421,25 +16002,25 @@ var validators = {}
         }
       }
     }
-    validate324.errors = vErrors
+    validate343.errors = vErrors
     return errors === 0
   }
-  function validate323(
+  function validate342(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate324(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate324.errors : vErrors.concat(validate324.errors)
+    if (!validate343(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate343.errors : vErrors.concat(validate343.errors)
       errors = vErrors.length
     }
-    validate323.errors = vErrors
+    validate342.errors = vErrors
     return errors === 0
   }
-  exports.v49 = validate332
-  const schema136 = { $ref: 'ls101#/components/schemas/ReceiptQuery' }
-  const schema137 = {
+  exports.v53 = validate351
+  const schema146 = { $ref: 'ls101#/components/schemas/ReceiptQuery' }
+  const schema147 = {
     oneOf: [
       { $ref: '#/components/schemas/NotReceived' },
       { $ref: '#/components/schemas/Receiving' },
@@ -15447,7 +16028,7 @@ var validators = {}
       { $ref: '#/components/schemas/Deleted' }
     ]
   }
-  function validate334(
+  function validate353(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -15508,7 +16089,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema129.properties.status.enum },
+            params: { allowedValues: schema139.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -15534,10 +16115,10 @@ var validators = {}
       }
       errors++
     }
-    validate334.errors = vErrors
+    validate353.errors = vErrors
     return errors === 0
   }
-  function validate336(
+  function validate355(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -15613,7 +16194,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema131.properties.status.enum },
+            params: { allowedValues: schema141.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -15652,10 +16233,10 @@ var validators = {}
       }
       errors++
     }
-    validate336.errors = vErrors
+    validate355.errors = vErrors
     return errors === 0
   }
-  function validate333(
+  function validate352(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -15665,8 +16246,8 @@ var validators = {}
     let valid0 = false
     let passing0 = null
     const _errs1 = errors
-    if (!validate334(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate334.errors : vErrors.concat(validate334.errors)
+    if (!validate353(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate353.errors : vErrors.concat(validate353.errors)
       errors = vErrors.length
     }
     var _valid0 = _errs1 === errors
@@ -15675,8 +16256,8 @@ var validators = {}
       passing0 = 0
     }
     const _errs2 = errors
-    if (!validate336(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate336.errors : vErrors.concat(validate336.errors)
+    if (!validate355(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate355.errors : vErrors.concat(validate355.errors)
       errors = vErrors.length
     }
     var _valid0 = _errs2 === errors
@@ -15689,8 +16270,8 @@ var validators = {}
         passing0 = 1
       }
       const _errs3 = errors
-      if (!validate325(data, { instancePath, parentData, parentDataProperty, rootData })) {
-        vErrors = vErrors === null ? validate325.errors : vErrors.concat(validate325.errors)
+      if (!validate344(data, { instancePath, parentData, parentDataProperty, rootData })) {
+        vErrors = vErrors === null ? validate344.errors : vErrors.concat(validate344.errors)
         errors = vErrors.length
       }
       var _valid0 = _errs3 === errors
@@ -15703,8 +16284,8 @@ var validators = {}
           passing0 = 2
         }
         const _errs4 = errors
-        if (!validate328(data, { instancePath, parentData, parentDataProperty, rootData })) {
-          vErrors = vErrors === null ? validate328.errors : vErrors.concat(validate328.errors)
+        if (!validate347(data, { instancePath, parentData, parentDataProperty, rootData })) {
+          vErrors = vErrors === null ? validate347.errors : vErrors.concat(validate347.errors)
           errors = vErrors.length
         }
         var _valid0 = _errs4 === errors
@@ -15743,25 +16324,25 @@ var validators = {}
         }
       }
     }
-    validate333.errors = vErrors
+    validate352.errors = vErrors
     return errors === 0
   }
-  function validate332(
+  function validate351(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate333(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate333.errors : vErrors.concat(validate333.errors)
+    if (!validate352(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate352.errors : vErrors.concat(validate352.errors)
       errors = vErrors.length
     }
-    validate332.errors = vErrors
+    validate351.errors = vErrors
     return errors === 0
   }
-  exports.v50 = validate342
-  const schema140 = { $ref: 'ls101#/components/schemas/DeviceLabels' }
-  const schema141 = {
+  exports.v54 = validate361
+  const schema150 = { $ref: 'ls101#/components/schemas/DeviceLabels' }
+  const schema151 = {
     type: 'object',
     required: ['id', 'number', 'room', 'seat', 'displayName'],
     properties: {
@@ -15772,7 +16353,7 @@ var validators = {}
       displayName: { $ref: '#/components/schemas/NullableLabel' }
     }
   }
-  function validate343(
+  function validate362(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -15959,25 +16540,25 @@ var validators = {}
       }
       errors++
     }
-    validate343.errors = vErrors
+    validate362.errors = vErrors
     return errors === 0
   }
-  function validate342(
+  function validate361(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate343(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate343.errors : vErrors.concat(validate343.errors)
+    if (!validate362(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate362.errors : vErrors.concat(validate362.errors)
       errors = vErrors.length
     }
-    validate342.errors = vErrors
+    validate361.errors = vErrors
     return errors === 0
   }
-  exports.v51 = validate348
-  const schema142 = { $ref: 'ls101#/components/schemas/Submission' }
-  const schema143 = {
+  exports.v55 = validate367
+  const schema152 = { $ref: 'ls101#/components/schemas/Submission' }
+  const schema153 = {
     type: 'object',
     required: [
       'id',
@@ -16002,7 +16583,7 @@ var validators = {}
       currentDevice: { $ref: '#/components/schemas/Device' }
     }
   }
-  function validate353(
+  function validate372(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -16189,10 +16770,10 @@ var validators = {}
       }
       errors++
     }
-    validate353.errors = vErrors
+    validate372.errors = vErrors
     return errors === 0
   }
-  function validate349(
+  function validate368(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -16468,14 +17049,14 @@ var validators = {}
       }
       if (data.receipt !== void 0) {
         if (
-          !validate308(data.receipt, {
+          !validate327(data.receipt, {
             instancePath: instancePath + '/receipt',
             parentData: data,
             parentDataProperty: 'receipt',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate308.errors : vErrors.concat(validate308.errors)
+          vErrors = vErrors === null ? validate327.errors : vErrors.concat(validate327.errors)
           errors = vErrors.length
         }
       }
@@ -16494,14 +17075,14 @@ var validators = {}
       }
       if (data.deviceAtReceipt !== void 0) {
         if (
-          !validate353(data.deviceAtReceipt, {
+          !validate372(data.deviceAtReceipt, {
             instancePath: instancePath + '/deviceAtReceipt',
             parentData: data,
             parentDataProperty: 'deviceAtReceipt',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate353.errors : vErrors.concat(validate353.errors)
+          vErrors = vErrors === null ? validate372.errors : vErrors.concat(validate372.errors)
           errors = vErrors.length
         }
       }
@@ -16533,25 +17114,25 @@ var validators = {}
       }
       errors++
     }
-    validate349.errors = vErrors
+    validate368.errors = vErrors
     return errors === 0
   }
-  function validate348(
+  function validate367(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate349(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate349.errors : vErrors.concat(validate349.errors)
+    if (!validate368(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate368.errors : vErrors.concat(validate368.errors)
       errors = vErrors.length
     }
-    validate348.errors = vErrors
+    validate367.errors = vErrors
     return errors === 0
   }
-  exports.v52 = validate360
-  const schema145 = { $ref: 'ls101#/components/schemas/SubmissionList' }
-  const schema146 = {
+  exports.v56 = validate379
+  const schema155 = { $ref: 'ls101#/components/schemas/SubmissionList' }
+  const schema156 = {
     allOf: [
       { $ref: '#/components/schemas/Page' },
       {
@@ -16561,7 +17142,7 @@ var validators = {}
       }
     ]
   }
-  function validate363(
+  function validate382(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -16837,14 +17418,14 @@ var validators = {}
       }
       if (data.receipt !== void 0) {
         if (
-          !validate308(data.receipt, {
+          !validate327(data.receipt, {
             instancePath: instancePath + '/receipt',
             parentData: data,
             parentDataProperty: 'receipt',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate308.errors : vErrors.concat(validate308.errors)
+          vErrors = vErrors === null ? validate327.errors : vErrors.concat(validate327.errors)
           errors = vErrors.length
         }
       }
@@ -16863,14 +17444,14 @@ var validators = {}
       }
       if (data.deviceAtReceipt !== void 0) {
         if (
-          !validate353(data.deviceAtReceipt, {
+          !validate372(data.deviceAtReceipt, {
             instancePath: instancePath + '/deviceAtReceipt',
             parentData: data,
             parentDataProperty: 'deviceAtReceipt',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate353.errors : vErrors.concat(validate353.errors)
+          vErrors = vErrors === null ? validate372.errors : vErrors.concat(validate372.errors)
           errors = vErrors.length
         }
       }
@@ -16902,10 +17483,10 @@ var validators = {}
       }
       errors++
     }
-    validate363.errors = vErrors
+    validate382.errors = vErrors
     return errors === 0
   }
-  function validate361(
+  function validate380(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -16937,14 +17518,14 @@ var validators = {}
           const len0 = data0.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate363(data0[i0], {
+              !validate382(data0[i0], {
                 instancePath: instancePath + '/items/' + i0,
                 parentData: data0,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate363.errors : vErrors.concat(validate363.errors)
+              vErrors = vErrors === null ? validate382.errors : vErrors.concat(validate382.errors)
               errors = vErrors.length
             }
           }
@@ -16979,25 +17560,25 @@ var validators = {}
       }
       errors++
     }
-    validate361.errors = vErrors
+    validate380.errors = vErrors
     return errors === 0
   }
-  function validate360(
+  function validate379(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate361(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate361.errors : vErrors.concat(validate361.errors)
+    if (!validate380(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate380.errors : vErrors.concat(validate380.errors)
       errors = vErrors.length
     }
-    validate360.errors = vErrors
+    validate379.errors = vErrors
     return errors === 0
   }
-  exports.v53 = validate371
-  const schema148 = { $ref: 'ls101#/components/schemas/SubmissionSelection' }
-  const schema149 = {
+  exports.v57 = validate390
+  const schema158 = { $ref: 'ls101#/components/schemas/SubmissionSelection' }
+  const schema159 = {
     type: 'object',
     required: ['submissionIds'],
     additionalProperties: false,
@@ -17011,7 +17592,7 @@ var validators = {}
       }
     }
   }
-  function validate372(
+  function validate391(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -17183,25 +17764,25 @@ var validators = {}
       }
       errors++
     }
-    validate372.errors = vErrors
+    validate391.errors = vErrors
     return errors === 0
   }
-  function validate371(
+  function validate390(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate372(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate372.errors : vErrors.concat(validate372.errors)
+    if (!validate391(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate391.errors : vErrors.concat(validate391.errors)
       errors = vErrors.length
     }
-    validate371.errors = vErrors
+    validate390.errors = vErrors
     return errors === 0
   }
-  exports.v54 = validate374
-  const schema150 = { $ref: 'ls101#/components/schemas/BatchDeleteResult' }
-  const schema151 = {
+  exports.v58 = validate393
+  const schema160 = { $ref: 'ls101#/components/schemas/BatchDeleteResult' }
+  const schema161 = {
     type: 'object',
     required: ['items'],
     properties: {
@@ -17233,7 +17814,7 @@ var validators = {}
       }
     }
   }
-  const schema152 = {
+  const schema162 = {
     type: 'object',
     required: ['code', 'message', 'requestId'],
     properties: {
@@ -17267,7 +17848,7 @@ var validators = {}
       details: { $ref: '#/components/schemas/ErrorDetails' }
     }
   }
-  const schema153 = {
+  const schema163 = {
     type: 'object',
     description: 'Only known diagnostic fields; never credentials or filesystem paths.',
     additionalProperties: false,
@@ -17286,7 +17867,7 @@ var validators = {}
       limit: { $ref: '#/components/schemas/Count' }
     }
   }
-  function validate377(
+  function validate396(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -17369,7 +17950,7 @@ var validators = {}
             instancePath: instancePath + '/mode',
             schemaPath: '#/properties/mode/enum',
             keyword: 'enum',
-            params: { allowedValues: schema153.properties.mode.enum },
+            params: { allowedValues: schema163.properties.mode.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -17521,10 +18102,10 @@ var validators = {}
       }
       errors++
     }
-    validate377.errors = vErrors
+    validate396.errors = vErrors
     return errors === 0
   }
-  function validate376(
+  function validate395(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -17621,7 +18202,7 @@ var validators = {}
             instancePath: instancePath + '/code',
             schemaPath: '#/properties/code/enum',
             keyword: 'enum',
-            params: { allowedValues: schema152.properties.code.enum },
+            params: { allowedValues: schema162.properties.code.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -17668,14 +18249,14 @@ var validators = {}
       }
       if (data.details !== void 0) {
         if (
-          !validate377(data.details, {
+          !validate396(data.details, {
             instancePath: instancePath + '/details',
             parentData: data,
             parentDataProperty: 'details',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate377.errors : vErrors.concat(validate377.errors)
+          vErrors = vErrors === null ? validate396.errors : vErrors.concat(validate396.errors)
           errors = vErrors.length
         }
       }
@@ -17694,10 +18275,10 @@ var validators = {}
       }
       errors++
     }
-    validate376.errors = vErrors
+    validate395.errors = vErrors
     return errors === 0
   }
-  function validate375(
+  function validate394(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -17835,7 +18416,7 @@ var validators = {}
                     keyword: 'enum',
                     params: {
                       allowedValues:
-                        schema151.properties.items.items.oneOf[0].properties.status.enum
+                        schema161.properties.items.items.oneOf[0].properties.status.enum
                     },
                     message: 'must be equal to one of the allowed values'
                   }
@@ -17989,7 +18570,7 @@ var validators = {}
                     keyword: 'enum',
                     params: {
                       allowedValues:
-                        schema151.properties.items.items.oneOf[1].properties.status.enum
+                        schema161.properties.items.items.oneOf[1].properties.status.enum
                     },
                     message: 'must be equal to one of the allowed values'
                   }
@@ -18003,7 +18584,7 @@ var validators = {}
               }
               if (data1.error !== void 0) {
                 if (
-                  !validate376(data1.error, {
+                  !validate395(data1.error, {
                     instancePath: instancePath + '/items/' + i0 + '/error',
                     parentData: data1,
                     parentDataProperty: 'error',
@@ -18011,7 +18592,7 @@ var validators = {}
                   })
                 ) {
                   vErrors =
-                    vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+                    vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
                   errors = vErrors.length
                 }
               }
@@ -18096,25 +18677,25 @@ var validators = {}
       }
       errors++
     }
-    validate375.errors = vErrors
+    validate394.errors = vErrors
     return errors === 0
   }
-  function validate374(
+  function validate393(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate375(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate375.errors : vErrors.concat(validate375.errors)
+    if (!validate394(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate394.errors : vErrors.concat(validate394.errors)
       errors = vErrors.length
     }
-    validate374.errors = vErrors
+    validate393.errors = vErrors
     return errors === 0
   }
-  exports.v55 = validate385
-  const schema154 = { $ref: 'ls101#/components/schemas/TaskState' }
-  function validate386(
+  exports.v59 = validate404
+  const schema164 = { $ref: 'ls101#/components/schemas/TaskState' }
+  function validate405(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -18160,25 +18741,25 @@ var validators = {}
       }
       errors++
     }
-    validate386.errors = vErrors
+    validate405.errors = vErrors
     return errors === 0
   }
-  function validate385(
+  function validate404(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate386(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate386.errors : vErrors.concat(validate386.errors)
+    if (!validate405(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate405.errors : vErrors.concat(validate405.errors)
       errors = vErrors.length
     }
-    validate385.errors = vErrors
+    validate404.errors = vErrors
     return errors === 0
   }
-  exports.v56 = validate388
-  const schema156 = { $ref: 'ls101#/components/schemas/TestParameters' }
-  function validate389(
+  exports.v60 = validate407
+  const schema166 = { $ref: 'ls101#/components/schemas/TestParameters' }
+  function validate408(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -18516,25 +19097,25 @@ var validators = {}
       }
       errors++
     }
-    validate389.errors = vErrors
+    validate408.errors = vErrors
     return errors === 0
   }
-  function validate388(
+  function validate407(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate389(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate389.errors : vErrors.concat(validate389.errors)
+    if (!validate408(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate408.errors : vErrors.concat(validate408.errors)
       errors = vErrors.length
     }
-    validate388.errors = vErrors
+    validate407.errors = vErrors
     return errors === 0
   }
-  exports.v57 = validate392
-  const schema158 = { $ref: 'ls101#/components/schemas/CleanupPreviewParameters' }
-  function validate393(
+  exports.v61 = validate411
+  const schema168 = { $ref: 'ls101#/components/schemas/CleanupPreviewParameters' }
+  function validate412(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -18769,25 +19350,25 @@ var validators = {}
       }
       errors++
     }
-    validate393.errors = vErrors
+    validate412.errors = vErrors
     return errors === 0
   }
-  function validate392(
+  function validate411(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate393(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate393.errors : vErrors.concat(validate393.errors)
+    if (!validate412(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate412.errors : vErrors.concat(validate412.errors)
       errors = vErrors.length
     }
-    validate392.errors = vErrors
+    validate411.errors = vErrors
     return errors === 0
   }
-  exports.v58 = validate395
-  const schema160 = { $ref: 'ls101#/components/schemas/CleanupExecuteParameters' }
-  function validate396(
+  exports.v62 = validate414
+  const schema170 = { $ref: 'ls101#/components/schemas/CleanupExecuteParameters' }
+  function validate415(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -19056,25 +19637,25 @@ var validators = {}
       }
       errors++
     }
-    validate396.errors = vErrors
+    validate415.errors = vErrors
     return errors === 0
   }
-  function validate395(
+  function validate414(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate396(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate396.errors : vErrors.concat(validate396.errors)
+    if (!validate415(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate415.errors : vErrors.concat(validate415.errors)
       errors = vErrors.length
     }
-    validate395.errors = vErrors
+    validate414.errors = vErrors
     return errors === 0
   }
-  exports.v59 = validate399
-  const schema162 = { $ref: 'ls101#/components/schemas/TaskParameters' }
-  function validate400(
+  exports.v63 = validate418
+  const schema172 = { $ref: 'ls101#/components/schemas/TaskParameters' }
+  function validate419(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -19147,25 +19728,25 @@ var validators = {}
         }
       }
     }
-    validate400.errors = vErrors
+    validate419.errors = vErrors
     return errors === 0
   }
-  function validate399(
+  function validate418(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate400(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate400.errors : vErrors.concat(validate400.errors)
+    if (!validate419(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate419.errors : vErrors.concat(validate419.errors)
       errors = vErrors.length
     }
-    validate399.errors = vErrors
+    validate418.errors = vErrors
     return errors === 0
   }
-  exports.v60 = validate405
-  const schema164 = { $ref: 'ls101#/components/schemas/Task' }
-  function validate406(
+  exports.v64 = validate424
+  const schema174 = { $ref: 'ls101#/components/schemas/Task' }
+  function validate425(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -19418,25 +19999,25 @@ var validators = {}
       }
       errors++
     }
-    validate406.errors = vErrors
+    validate425.errors = vErrors
     return errors === 0
   }
-  function validate405(
+  function validate424(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate406(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate406.errors : vErrors.concat(validate406.errors)
+    if (!validate425(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate425.errors : vErrors.concat(validate425.errors)
       errors = vErrors.length
     }
-    validate405.errors = vErrors
+    validate424.errors = vErrors
     return errors === 0
   }
-  exports.v61 = validate411
-  const schema166 = { $ref: 'ls101#/components/schemas/TaskList' }
-  const schema167 = {
+  exports.v65 = validate430
+  const schema176 = { $ref: 'ls101#/components/schemas/TaskList' }
+  const schema177 = {
     allOf: [
       { $ref: '#/components/schemas/Page' },
       {
@@ -19446,7 +20027,7 @@ var validators = {}
       }
     ]
   }
-  function validate412(
+  function validate431(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -19520,25 +20101,25 @@ var validators = {}
       }
       errors++
     }
-    validate412.errors = vErrors
+    validate431.errors = vErrors
     return errors === 0
   }
-  function validate411(
+  function validate430(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate412(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate412.errors : vErrors.concat(validate412.errors)
+    if (!validate431(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate431.errors : vErrors.concat(validate431.errors)
       errors = vErrors.length
     }
-    validate411.errors = vErrors
+    validate430.errors = vErrors
     return errors === 0
   }
-  exports.v62 = validate416
-  const schema168 = { $ref: 'ls101#/components/schemas/TaskLease' }
-  const schema169 = {
+  exports.v66 = validate435
+  const schema178 = { $ref: 'ls101#/components/schemas/TaskLease' }
+  const schema179 = {
     type: 'object',
     required: [
       'taskId',
@@ -19559,7 +20140,7 @@ var validators = {}
       parameters: { $ref: '#/components/schemas/TaskParameters' }
     }
   }
-  function validate417(
+  function validate436(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -19886,25 +20467,25 @@ var validators = {}
       }
       errors++
     }
-    validate417.errors = vErrors
+    validate436.errors = vErrors
     return errors === 0
   }
-  function validate416(
+  function validate435(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate417(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate417.errors : vErrors.concat(validate417.errors)
+    if (!validate436(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate436.errors : vErrors.concat(validate436.errors)
       errors = vErrors.length
     }
-    validate416.errors = vErrors
+    validate435.errors = vErrors
     return errors === 0
   }
-  exports.v63 = validate420
-  const schema170 = { $ref: 'ls101#/components/schemas/CaseResult' }
-  const schema171 = {
+  exports.v67 = validate439
+  const schema180 = { $ref: 'ls101#/components/schemas/CaseResult' }
+  const schema181 = {
     type: 'object',
     required: ['caseId', 'status', 'error'],
     additionalProperties: false,
@@ -19917,7 +20498,7 @@ var validators = {}
       error: { $ref: '#/components/schemas/DiagnosticError' }
     }
   }
-  function validate421(
+  function validate440(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -20034,7 +20615,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema171.properties.status.enum },
+            params: { allowedValues: schema181.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -20073,25 +20654,25 @@ var validators = {}
       }
       errors++
     }
-    validate421.errors = vErrors
+    validate440.errors = vErrors
     return errors === 0
   }
-  function validate420(
+  function validate439(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate421(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate421.errors : vErrors.concat(validate421.errors)
+    if (!validate440(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate440.errors : vErrors.concat(validate440.errors)
       errors = vErrors.length
     }
-    validate420.errors = vErrors
+    validate439.errors = vErrors
     return errors === 0
   }
-  exports.v64 = validate424
-  const schema172 = { $ref: 'ls101#/components/schemas/PreviewResult' }
-  const schema173 = {
+  exports.v68 = validate443
+  const schema182 = { $ref: 'ls101#/components/schemas/PreviewResult' }
+  const schema183 = {
     type: 'object',
     required: ['kind', 'selectionDigest', 'selectedCount', 'selectedBytes'],
     additionalProperties: false,
@@ -20102,7 +20683,7 @@ var validators = {}
       selectedBytes: { $ref: '#/components/schemas/Count' }
     }
   }
-  function validate425(
+  function validate444(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -20215,7 +20796,7 @@ var validators = {}
             instancePath: instancePath + '/kind',
             schemaPath: '#/properties/kind/enum',
             keyword: 'enum',
-            params: { allowedValues: schema173.properties.kind.enum },
+            params: { allowedValues: schema183.properties.kind.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -20280,25 +20861,25 @@ var validators = {}
       }
       errors++
     }
-    validate425.errors = vErrors
+    validate444.errors = vErrors
     return errors === 0
   }
-  function validate424(
+  function validate443(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate425(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate425.errors : vErrors.concat(validate425.errors)
+    if (!validate444(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate444.errors : vErrors.concat(validate444.errors)
       errors = vErrors.length
     }
-    validate424.errors = vErrors
+    validate443.errors = vErrors
     return errors === 0
   }
-  exports.v65 = validate430
-  const schema174 = { $ref: 'ls101#/components/schemas/CleanupResult' }
-  const schema175 = {
+  exports.v69 = validate449
+  const schema184 = { $ref: 'ls101#/components/schemas/CleanupResult' }
+  const schema185 = {
     type: 'object',
     required: [
       'kind',
@@ -20322,7 +20903,7 @@ var validators = {}
       errors: { type: 'array', items: { $ref: '#/components/schemas/DiagnosticError' } }
     }
   }
-  function validate431(
+  function validate450(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -20499,7 +21080,7 @@ var validators = {}
             instancePath: instancePath + '/kind',
             schemaPath: '#/properties/kind/enum',
             keyword: 'enum',
-            params: { allowedValues: schema175.properties.kind.enum },
+            params: { allowedValues: schema185.properties.kind.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -20636,25 +21217,25 @@ var validators = {}
       }
       errors++
     }
-    validate431.errors = vErrors
+    validate450.errors = vErrors
     return errors === 0
   }
-  function validate430(
+  function validate449(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate431(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate431.errors : vErrors.concat(validate431.errors)
+    if (!validate450(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate450.errors : vErrors.concat(validate450.errors)
       errors = vErrors.length
     }
-    validate430.errors = vErrors
+    validate449.errors = vErrors
     return errors === 0
   }
-  exports.v66 = validate440
-  const schema176 = { $ref: 'ls101#/components/schemas/TestResult' }
-  const schema177 = {
+  exports.v70 = validate459
+  const schema186 = { $ref: 'ls101#/components/schemas/TestResult' }
+  const schema187 = {
     type: 'object',
     required: ['kind', 'cases'],
     additionalProperties: false,
@@ -20663,7 +21244,7 @@ var validators = {}
       cases: { type: 'array', items: { $ref: '#/components/schemas/CaseResult' } }
     }
   }
-  function validate442(
+  function validate461(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -20780,7 +21361,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema171.properties.status.enum },
+            params: { allowedValues: schema181.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -20819,10 +21400,10 @@ var validators = {}
       }
       errors++
     }
-    validate442.errors = vErrors
+    validate461.errors = vErrors
     return errors === 0
   }
-  function validate441(
+  function validate460(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -20898,7 +21479,7 @@ var validators = {}
             instancePath: instancePath + '/kind',
             schemaPath: '#/properties/kind/enum',
             keyword: 'enum',
-            params: { allowedValues: schema177.properties.kind.enum },
+            params: { allowedValues: schema187.properties.kind.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -20915,14 +21496,14 @@ var validators = {}
           const len0 = data1.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate442(data1[i0], {
+              !validate461(data1[i0], {
                 instancePath: instancePath + '/cases/' + i0,
                 parentData: data1,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate442.errors : vErrors.concat(validate442.errors)
+              vErrors = vErrors === null ? validate461.errors : vErrors.concat(validate461.errors)
               errors = vErrors.length
             }
           }
@@ -20957,25 +21538,25 @@ var validators = {}
       }
       errors++
     }
-    validate441.errors = vErrors
+    validate460.errors = vErrors
     return errors === 0
   }
-  function validate440(
+  function validate459(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate441(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate441.errors : vErrors.concat(validate441.errors)
+    if (!validate460(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate460.errors : vErrors.concat(validate460.errors)
       errors = vErrors.length
     }
-    validate440.errors = vErrors
+    validate459.errors = vErrors
     return errors === 0
   }
-  exports.v67 = validate446
-  const schema179 = { $ref: 'ls101#/components/schemas/TaskResultInput' }
-  const schema180 = {
+  exports.v71 = validate465
+  const schema189 = { $ref: 'ls101#/components/schemas/TaskResultInput' }
+  const schema190 = {
     type: 'object',
     required: ['leaseId', 'status', 'completedAt', 'result', 'error'],
     additionalProperties: false,
@@ -20994,7 +21575,7 @@ var validators = {}
       error: { $ref: '#/components/schemas/DiagnosticError' }
     }
   }
-  function validate448(
+  function validate467(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -21107,7 +21688,7 @@ var validators = {}
             instancePath: instancePath + '/kind',
             schemaPath: '#/properties/kind/enum',
             keyword: 'enum',
-            params: { allowedValues: schema173.properties.kind.enum },
+            params: { allowedValues: schema183.properties.kind.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -21172,10 +21753,10 @@ var validators = {}
       }
       errors++
     }
-    validate448.errors = vErrors
+    validate467.errors = vErrors
     return errors === 0
   }
-  function validate453(
+  function validate472(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -21352,7 +21933,7 @@ var validators = {}
             instancePath: instancePath + '/kind',
             schemaPath: '#/properties/kind/enum',
             keyword: 'enum',
-            params: { allowedValues: schema175.properties.kind.enum },
+            params: { allowedValues: schema185.properties.kind.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -21489,10 +22070,10 @@ var validators = {}
       }
       errors++
     }
-    validate453.errors = vErrors
+    validate472.errors = vErrors
     return errors === 0
   }
-  function validate462(
+  function validate481(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -21568,7 +22149,7 @@ var validators = {}
             instancePath: instancePath + '/kind',
             schemaPath: '#/properties/kind/enum',
             keyword: 'enum',
-            params: { allowedValues: schema177.properties.kind.enum },
+            params: { allowedValues: schema187.properties.kind.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -21585,14 +22166,14 @@ var validators = {}
           const len0 = data1.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate442(data1[i0], {
+              !validate461(data1[i0], {
                 instancePath: instancePath + '/cases/' + i0,
                 parentData: data1,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate442.errors : vErrors.concat(validate442.errors)
+              vErrors = vErrors === null ? validate461.errors : vErrors.concat(validate461.errors)
               errors = vErrors.length
             }
           }
@@ -21627,10 +22208,10 @@ var validators = {}
       }
       errors++
     }
-    validate462.errors = vErrors
+    validate481.errors = vErrors
     return errors === 0
   }
-  function validate447(
+  function validate466(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -21800,7 +22381,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema180.properties.status.enum },
+            params: { allowedValues: schema190.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -21852,14 +22433,14 @@ var validators = {}
         let passing0 = null
         const _errs10 = errors
         if (
-          !validate448(data3, {
+          !validate467(data3, {
             instancePath: instancePath + '/result',
             parentData: data,
             parentDataProperty: 'result',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate448.errors : vErrors.concat(validate448.errors)
+          vErrors = vErrors === null ? validate467.errors : vErrors.concat(validate467.errors)
           errors = vErrors.length
         }
         var _valid0 = _errs10 === errors
@@ -21869,14 +22450,14 @@ var validators = {}
         }
         const _errs11 = errors
         if (
-          !validate453(data3, {
+          !validate472(data3, {
             instancePath: instancePath + '/result',
             parentData: data,
             parentDataProperty: 'result',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate453.errors : vErrors.concat(validate453.errors)
+          vErrors = vErrors === null ? validate472.errors : vErrors.concat(validate472.errors)
           errors = vErrors.length
         }
         var _valid0 = _errs11 === errors
@@ -21890,14 +22471,14 @@ var validators = {}
           }
           const _errs12 = errors
           if (
-            !validate462(data3, {
+            !validate481(data3, {
               instancePath: instancePath + '/result',
               parentData: data,
               parentDataProperty: 'result',
               rootData
             })
           ) {
-            vErrors = vErrors === null ? validate462.errors : vErrors.concat(validate462.errors)
+            vErrors = vErrors === null ? validate481.errors : vErrors.concat(validate481.errors)
             errors = vErrors.length
           }
           var _valid0 = _errs12 === errors
@@ -21930,7 +22511,7 @@ var validators = {}
                 instancePath: instancePath + '/result',
                 schemaPath: '#/properties/result/oneOf/3/enum',
                 keyword: 'enum',
-                params: { allowedValues: schema180.properties.result.oneOf[3].enum },
+                params: { allowedValues: schema190.properties.result.oneOf[3].enum },
                 message: 'must be equal to one of the allowed values'
               }
               if (vErrors === null) {
@@ -22005,25 +22586,25 @@ var validators = {}
       }
       errors++
     }
-    validate447.errors = vErrors
+    validate466.errors = vErrors
     return errors === 0
   }
-  function validate446(
+  function validate465(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate447(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate447.errors : vErrors.concat(validate447.errors)
+    if (!validate466(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate466.errors : vErrors.concat(validate466.errors)
       errors = vErrors.length
     }
-    validate446.errors = vErrors
+    validate465.errors = vErrors
     return errors === 0
   }
-  exports.v68 = validate467
-  const schema184 = { $ref: 'ls101#/components/schemas/TaskResult' }
-  const schema185 = {
+  exports.v72 = validate486
+  const schema194 = { $ref: 'ls101#/components/schemas/TaskResult' }
+  const schema195 = {
     type: 'object',
     required: ['taskId', 'leaseId', 'receivedAt', 'late'],
     properties: {
@@ -22033,7 +22614,7 @@ var validators = {}
       late: { type: 'boolean' }
     }
   }
-  function validate468(
+  function validate487(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -22234,25 +22815,25 @@ var validators = {}
       }
       errors++
     }
-    validate468.errors = vErrors
+    validate487.errors = vErrors
     return errors === 0
   }
-  function validate467(
+  function validate486(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate468(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate468.errors : vErrors.concat(validate468.errors)
+    if (!validate487(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate487.errors : vErrors.concat(validate487.errors)
       errors = vErrors.length
     }
-    validate467.errors = vErrors
+    validate486.errors = vErrors
     return errors === 0
   }
-  exports.v69 = validate470
-  const schema186 = { $ref: 'ls101#/components/schemas/TestSuite' }
-  const schema187 = {
+  exports.v73 = validate489
+  const schema196 = { $ref: 'ls101#/components/schemas/TestSuite' }
+  const schema197 = {
     type: 'object',
     required: ['id', 'version', 'name', 'cases'],
     properties: {
@@ -22273,7 +22854,7 @@ var validators = {}
       }
     }
   }
-  function validate471(
+  function validate490(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -22542,25 +23123,25 @@ var validators = {}
       }
       errors++
     }
-    validate471.errors = vErrors
+    validate490.errors = vErrors
     return errors === 0
   }
-  function validate470(
+  function validate489(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate471(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate471.errors : vErrors.concat(validate471.errors)
+    if (!validate490(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate490.errors : vErrors.concat(validate490.errors)
       errors = vErrors.length
     }
-    validate470.errors = vErrors
+    validate489.errors = vErrors
     return errors === 0
   }
-  exports.v70 = validate473
-  const schema188 = { $ref: 'ls101#/components/schemas/TestSuiteList' }
-  const schema189 = {
+  exports.v74 = validate492
+  const schema198 = { $ref: 'ls101#/components/schemas/TestSuiteList' }
+  const schema199 = {
     allOf: [
       { $ref: '#/components/schemas/Page' },
       {
@@ -22570,7 +23151,7 @@ var validators = {}
       }
     ]
   }
-  function validate476(
+  function validate495(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -22839,10 +23420,10 @@ var validators = {}
       }
       errors++
     }
-    validate476.errors = vErrors
+    validate495.errors = vErrors
     return errors === 0
   }
-  function validate474(
+  function validate493(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -22874,14 +23455,14 @@ var validators = {}
           const len0 = data0.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate476(data0[i0], {
+              !validate495(data0[i0], {
                 instancePath: instancePath + '/items/' + i0,
                 parentData: data0,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate476.errors : vErrors.concat(validate476.errors)
+              vErrors = vErrors === null ? validate495.errors : vErrors.concat(validate495.errors)
               errors = vErrors.length
             }
           }
@@ -22916,25 +23497,25 @@ var validators = {}
       }
       errors++
     }
-    validate474.errors = vErrors
+    validate493.errors = vErrors
     return errors === 0
   }
-  function validate473(
+  function validate492(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate474(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate474.errors : vErrors.concat(validate474.errors)
+    if (!validate493(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate493.errors : vErrors.concat(validate493.errors)
       errors = vErrors.length
     }
-    validate473.errors = vErrors
+    validate492.errors = vErrors
     return errors === 0
   }
-  exports.v71 = validate479
-  const schema191 = { $ref: 'ls101#/components/schemas/TestRunCreate' }
-  const schema192 = {
+  exports.v75 = validate498
+  const schema201 = { $ref: 'ls101#/components/schemas/TestRunCreate' }
+  const schema202 = {
     type: 'object',
     required: ['suiteId', 'caseIds', 'deviceIds', 'expiresAt'],
     additionalProperties: false,
@@ -22946,7 +23527,7 @@ var validators = {}
       retryOf: { type: 'string', format: 'uuid' }
     }
   }
-  function validate481(
+  function validate500(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -23048,10 +23629,10 @@ var validators = {}
       }
       errors++
     }
-    validate481.errors = vErrors
+    validate500.errors = vErrors
     return errors === 0
   }
-  function validate480(
+  function validate499(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -23265,14 +23846,14 @@ var validators = {}
       }
       if (data.deviceIds !== void 0) {
         if (
-          !validate481(data.deviceIds, {
+          !validate500(data.deviceIds, {
             instancePath: instancePath + '/deviceIds',
             parentData: data,
             parentDataProperty: 'deviceIds',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate481.errors : vErrors.concat(validate481.errors)
+          vErrors = vErrors === null ? validate500.errors : vErrors.concat(validate500.errors)
           errors = vErrors.length
         }
       }
@@ -23359,25 +23940,25 @@ var validators = {}
       }
       errors++
     }
-    validate480.errors = vErrors
+    validate499.errors = vErrors
     return errors === 0
   }
-  function validate479(
+  function validate498(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate480(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate480.errors : vErrors.concat(validate480.errors)
+    if (!validate499(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate499.errors : vErrors.concat(validate499.errors)
       errors = vErrors.length
     }
-    validate479.errors = vErrors
+    validate498.errors = vErrors
     return errors === 0
   }
-  exports.v72 = validate484
-  const schema194 = { $ref: 'ls101#/components/schemas/ConfirmationCase' }
-  const schema195 = {
+  exports.v76 = validate503
+  const schema204 = { $ref: 'ls101#/components/schemas/ConfirmationCase' }
+  const schema205 = {
     type: 'object',
     required: ['caseId', 'status', 'note'],
     additionalProperties: false,
@@ -23387,7 +23968,7 @@ var validators = {}
       note: { type: 'string', maxLength: 2e3 }
     }
   }
-  function validate485(
+  function validate504(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -23495,7 +24076,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema195.properties.status.enum },
+            params: { allowedValues: schema205.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -23555,25 +24136,25 @@ var validators = {}
       }
       errors++
     }
-    validate485.errors = vErrors
+    validate504.errors = vErrors
     return errors === 0
   }
-  function validate484(
+  function validate503(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate485(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate485.errors : vErrors.concat(validate485.errors)
+    if (!validate504(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate504.errors : vErrors.concat(validate504.errors)
       errors = vErrors.length
     }
-    validate484.errors = vErrors
+    validate503.errors = vErrors
     return errors === 0
   }
-  exports.v73 = validate487
-  const schema196 = { $ref: 'ls101#/components/schemas/ConfirmationInput' }
-  const schema197 = {
+  exports.v77 = validate506
+  const schema206 = { $ref: 'ls101#/components/schemas/ConfirmationInput' }
+  const schema207 = {
     type: 'object',
     required: ['expectedRevision', 'cases'],
     additionalProperties: false,
@@ -23582,7 +24163,7 @@ var validators = {}
       cases: { type: 'array', items: { $ref: '#/components/schemas/ConfirmationCase' } }
     }
   }
-  function validate490(
+  function validate509(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -23690,7 +24271,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema195.properties.status.enum },
+            params: { allowedValues: schema205.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -23750,10 +24331,10 @@ var validators = {}
       }
       errors++
     }
-    validate490.errors = vErrors
+    validate509.errors = vErrors
     return errors === 0
   }
-  function validate488(
+  function validate507(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -23826,14 +24407,14 @@ var validators = {}
           const len0 = data1.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate490(data1[i0], {
+              !validate509(data1[i0], {
                 instancePath: instancePath + '/cases/' + i0,
                 parentData: data1,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate490.errors : vErrors.concat(validate490.errors)
+              vErrors = vErrors === null ? validate509.errors : vErrors.concat(validate509.errors)
               errors = vErrors.length
             }
           }
@@ -23868,25 +24449,25 @@ var validators = {}
       }
       errors++
     }
-    validate488.errors = vErrors
+    validate507.errors = vErrors
     return errors === 0
   }
-  function validate487(
+  function validate506(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate488(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate488.errors : vErrors.concat(validate488.errors)
+    if (!validate507(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate507.errors : vErrors.concat(validate507.errors)
       errors = vErrors.length
     }
-    validate487.errors = vErrors
+    validate506.errors = vErrors
     return errors === 0
   }
-  exports.v74 = validate493
-  const schema199 = { $ref: 'ls101#/components/schemas/Confirmation' }
-  const schema200 = {
+  exports.v78 = validate512
+  const schema209 = { $ref: 'ls101#/components/schemas/Confirmation' }
+  const schema210 = {
     type: 'object',
     required: ['revision', 'cases', 'updatedAt'],
     properties: {
@@ -23895,7 +24476,7 @@ var validators = {}
       updatedAt: { $ref: '#/components/schemas/NullableTime' }
     }
   }
-  function validate494(
+  function validate513(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -23966,14 +24547,14 @@ var validators = {}
           const len0 = data1.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate490(data1[i0], {
+              !validate509(data1[i0], {
                 instancePath: instancePath + '/cases/' + i0,
                 parentData: data1,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate490.errors : vErrors.concat(validate490.errors)
+              vErrors = vErrors === null ? validate509.errors : vErrors.concat(validate509.errors)
               errors = vErrors.length
             }
           }
@@ -24021,25 +24602,25 @@ var validators = {}
       }
       errors++
     }
-    validate494.errors = vErrors
+    validate513.errors = vErrors
     return errors === 0
   }
-  function validate493(
+  function validate512(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate494(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate494.errors : vErrors.concat(validate494.errors)
+    if (!validate513(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate513.errors : vErrors.concat(validate513.errors)
       errors = vErrors.length
     }
-    validate493.errors = vErrors
+    validate512.errors = vErrors
     return errors === 0
   }
-  exports.v75 = validate499
-  const schema201 = { $ref: 'ls101#/components/schemas/TestDeviceResult' }
-  const schema202 = {
+  exports.v79 = validate518
+  const schema211 = { $ref: 'ls101#/components/schemas/TestDeviceResult' }
+  const schema212 = {
     type: 'object',
     required: [
       'device',
@@ -24074,7 +24655,7 @@ var validators = {}
       late: { type: 'boolean' }
     }
   }
-  function validate505(
+  function validate524(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -24145,14 +24726,14 @@ var validators = {}
           const len0 = data1.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate490(data1[i0], {
+              !validate509(data1[i0], {
                 instancePath: instancePath + '/cases/' + i0,
                 parentData: data1,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate490.errors : vErrors.concat(validate490.errors)
+              vErrors = vErrors === null ? validate509.errors : vErrors.concat(validate509.errors)
               errors = vErrors.length
             }
           }
@@ -24200,10 +24781,10 @@ var validators = {}
       }
       errors++
     }
-    validate505.errors = vErrors
+    validate524.errors = vErrors
     return errors === 0
   }
-  function validate500(
+  function validate519(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -24332,14 +24913,14 @@ var validators = {}
       }
       if (data.device !== void 0) {
         if (
-          !validate353(data.device, {
+          !validate372(data.device, {
             instancePath: instancePath + '/device',
             parentData: data,
             parentDataProperty: 'device',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate353.errors : vErrors.concat(validate353.errors)
+          vErrors = vErrors === null ? validate372.errors : vErrors.concat(validate372.errors)
           errors = vErrors.length
         }
       }
@@ -24393,14 +24974,14 @@ var validators = {}
           const len0 = data4.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate442(data4[i0], {
+              !validate461(data4[i0], {
                 instancePath: instancePath + '/cases/' + i0,
                 parentData: data4,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate442.errors : vErrors.concat(validate442.errors)
+              vErrors = vErrors === null ? validate461.errors : vErrors.concat(validate461.errors)
               errors = vErrors.length
             }
           }
@@ -24422,14 +25003,14 @@ var validators = {}
       }
       if (data.confirmation !== void 0) {
         if (
-          !validate505(data.confirmation, {
+          !validate524(data.confirmation, {
             instancePath: instancePath + '/confirmation',
             parentData: data,
             parentDataProperty: 'confirmation',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate505.errors : vErrors.concat(validate505.errors)
+          vErrors = vErrors === null ? validate524.errors : vErrors.concat(validate524.errors)
           errors = vErrors.length
         }
       }
@@ -24639,25 +25220,25 @@ var validators = {}
       }
       errors++
     }
-    validate500.errors = vErrors
+    validate519.errors = vErrors
     return errors === 0
   }
-  function validate499(
+  function validate518(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate500(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate500.errors : vErrors.concat(validate500.errors)
+    if (!validate519(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate519.errors : vErrors.concat(validate519.errors)
       errors = vErrors.length
     }
-    validate499.errors = vErrors
+    validate518.errors = vErrors
     return errors === 0
   }
-  exports.v76 = validate513
-  const schema204 = { $ref: 'ls101#/components/schemas/TestRun' }
-  const schema205 = {
+  exports.v80 = validate532
+  const schema214 = { $ref: 'ls101#/components/schemas/TestRun' }
+  const schema215 = {
     type: 'object',
     required: [
       'id',
@@ -24680,7 +25261,7 @@ var validators = {}
       devices: { type: 'array', items: { $ref: '#/components/schemas/TestDeviceResult' } }
     }
   }
-  function validate516(
+  function validate535(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -24809,14 +25390,14 @@ var validators = {}
       }
       if (data.device !== void 0) {
         if (
-          !validate353(data.device, {
+          !validate372(data.device, {
             instancePath: instancePath + '/device',
             parentData: data,
             parentDataProperty: 'device',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate353.errors : vErrors.concat(validate353.errors)
+          vErrors = vErrors === null ? validate372.errors : vErrors.concat(validate372.errors)
           errors = vErrors.length
         }
       }
@@ -24870,14 +25451,14 @@ var validators = {}
           const len0 = data4.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate442(data4[i0], {
+              !validate461(data4[i0], {
                 instancePath: instancePath + '/cases/' + i0,
                 parentData: data4,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate442.errors : vErrors.concat(validate442.errors)
+              vErrors = vErrors === null ? validate461.errors : vErrors.concat(validate461.errors)
               errors = vErrors.length
             }
           }
@@ -24899,14 +25480,14 @@ var validators = {}
       }
       if (data.confirmation !== void 0) {
         if (
-          !validate505(data.confirmation, {
+          !validate524(data.confirmation, {
             instancePath: instancePath + '/confirmation',
             parentData: data,
             parentDataProperty: 'confirmation',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate505.errors : vErrors.concat(validate505.errors)
+          vErrors = vErrors === null ? validate524.errors : vErrors.concat(validate524.errors)
           errors = vErrors.length
         }
       }
@@ -25116,10 +25697,10 @@ var validators = {}
       }
       errors++
     }
-    validate516.errors = vErrors
+    validate535.errors = vErrors
     return errors === 0
   }
-  function validate514(
+  function validate533(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -25436,14 +26017,14 @@ var validators = {}
           const len0 = data7.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate516(data7[i0], {
+              !validate535(data7[i0], {
                 instancePath: instancePath + '/devices/' + i0,
                 parentData: data7,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate516.errors : vErrors.concat(validate516.errors)
+              vErrors = vErrors === null ? validate535.errors : vErrors.concat(validate535.errors)
               errors = vErrors.length
             }
           }
@@ -25478,25 +26059,25 @@ var validators = {}
       }
       errors++
     }
-    validate514.errors = vErrors
+    validate533.errors = vErrors
     return errors === 0
   }
-  function validate513(
+  function validate532(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate514(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate514.errors : vErrors.concat(validate514.errors)
+    if (!validate533(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate533.errors : vErrors.concat(validate533.errors)
       errors = vErrors.length
     }
-    validate513.errors = vErrors
+    validate532.errors = vErrors
     return errors === 0
   }
-  exports.v77 = validate526
-  const schema207 = { $ref: 'ls101#/components/schemas/TestRunList' }
-  const schema208 = {
+  exports.v81 = validate545
+  const schema217 = { $ref: 'ls101#/components/schemas/TestRunList' }
+  const schema218 = {
     allOf: [
       { $ref: '#/components/schemas/Page' },
       {
@@ -25506,7 +26087,7 @@ var validators = {}
       }
     ]
   }
-  function validate529(
+  function validate548(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -25823,14 +26404,14 @@ var validators = {}
           const len0 = data7.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate516(data7[i0], {
+              !validate535(data7[i0], {
                 instancePath: instancePath + '/devices/' + i0,
                 parentData: data7,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate516.errors : vErrors.concat(validate516.errors)
+              vErrors = vErrors === null ? validate535.errors : vErrors.concat(validate535.errors)
               errors = vErrors.length
             }
           }
@@ -25865,10 +26446,10 @@ var validators = {}
       }
       errors++
     }
-    validate529.errors = vErrors
+    validate548.errors = vErrors
     return errors === 0
   }
-  function validate527(
+  function validate546(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -25900,14 +26481,14 @@ var validators = {}
           const len0 = data0.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate529(data0[i0], {
+              !validate548(data0[i0], {
                 instancePath: instancePath + '/items/' + i0,
                 parentData: data0,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate529.errors : vErrors.concat(validate529.errors)
+              vErrors = vErrors === null ? validate548.errors : vErrors.concat(validate548.errors)
               errors = vErrors.length
             }
           }
@@ -25942,25 +26523,25 @@ var validators = {}
       }
       errors++
     }
-    validate527.errors = vErrors
+    validate546.errors = vErrors
     return errors === 0
   }
-  function validate526(
+  function validate545(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate527(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate527.errors : vErrors.concat(validate527.errors)
+    if (!validate546(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate546.errors : vErrors.concat(validate546.errors)
       errors = vErrors.length
     }
-    validate526.errors = vErrors
+    validate545.errors = vErrors
     return errors === 0
   }
-  exports.v78 = validate534
-  const schema210 = { $ref: 'ls101#/components/schemas/TestReport' }
-  const schema211 = {
+  exports.v82 = validate553
+  const schema220 = { $ref: 'ls101#/components/schemas/TestReport' }
+  const schema221 = {
     allOf: [
       { $ref: '#/components/schemas/TestRun' },
       {
@@ -25974,14 +26555,14 @@ var validators = {}
       }
     ]
   }
-  function validate535(
+  function validate554(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate529(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate529.errors : vErrors.concat(validate529.errors)
+    if (!validate548(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate548.errors : vErrors.concat(validate548.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -26130,25 +26711,25 @@ var validators = {}
       }
       errors++
     }
-    validate535.errors = vErrors
+    validate554.errors = vErrors
     return errors === 0
   }
-  function validate534(
+  function validate553(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate535(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate535.errors : vErrors.concat(validate535.errors)
+    if (!validate554(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate554.errors : vErrors.concat(validate554.errors)
       errors = vErrors.length
     }
-    validate534.errors = vErrors
+    validate553.errors = vErrors
     return errors === 0
   }
-  exports.v79 = validate538
-  const schema212 = { $ref: 'ls101#/components/schemas/CleanupCreate' }
-  const schema213 = {
+  exports.v83 = validate557
+  const schema222 = { $ref: 'ls101#/components/schemas/CleanupCreate' }
+  const schema223 = {
     type: 'object',
     required: ['deviceIds', 'submittedBefore', 'expiresAt'],
     additionalProperties: false,
@@ -26158,7 +26739,7 @@ var validators = {}
       expiresAt: { type: 'string', format: 'date-time' }
     }
   }
-  function validate539(
+  function validate558(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -26229,14 +26810,14 @@ var validators = {}
       }
       if (data.deviceIds !== void 0) {
         if (
-          !validate481(data.deviceIds, {
+          !validate500(data.deviceIds, {
             instancePath: instancePath + '/deviceIds',
             parentData: data,
             parentDataProperty: 'deviceIds',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate481.errors : vErrors.concat(validate481.errors)
+          vErrors = vErrors === null ? validate500.errors : vErrors.concat(validate500.errors)
           errors = vErrors.length
         }
       }
@@ -26323,25 +26904,25 @@ var validators = {}
       }
       errors++
     }
-    validate539.errors = vErrors
+    validate558.errors = vErrors
     return errors === 0
   }
-  function validate538(
+  function validate557(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate539(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate539.errors : vErrors.concat(validate539.errors)
+    if (!validate558(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate558.errors : vErrors.concat(validate558.errors)
       errors = vErrors.length
     }
-    validate538.errors = vErrors
+    validate557.errors = vErrors
     return errors === 0
   }
-  exports.v80 = validate542
-  const schema214 = { $ref: 'ls101#/components/schemas/CleanupConfirm' }
-  const schema215 = {
+  exports.v84 = validate561
+  const schema224 = { $ref: 'ls101#/components/schemas/CleanupConfirm' }
+  const schema225 = {
     type: 'object',
     required: ['expectedRevision', 'selections'],
     additionalProperties: false,
@@ -26362,7 +26943,7 @@ var validators = {}
       }
     }
   }
-  function validate543(
+  function validate562(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -26592,25 +27173,25 @@ var validators = {}
       }
       errors++
     }
-    validate543.errors = vErrors
+    validate562.errors = vErrors
     return errors === 0
   }
-  function validate542(
+  function validate561(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate543(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate543.errors : vErrors.concat(validate543.errors)
+    if (!validate562(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate562.errors : vErrors.concat(validate562.errors)
       errors = vErrors.length
     }
-    validate542.errors = vErrors
+    validate561.errors = vErrors
     return errors === 0
   }
-  exports.v81 = validate547
-  const schema216 = { $ref: 'ls101#/components/schemas/CleanupDevice' }
-  const schema217 = {
+  exports.v85 = validate566
+  const schema226 = { $ref: 'ls101#/components/schemas/CleanupDevice' }
+  const schema227 = {
     type: 'object',
     required: [
       'deviceId',
@@ -26644,7 +27225,7 @@ var validators = {}
       error: { $ref: '#/components/schemas/DiagnosticError' }
     }
   }
-  function validate550(
+  function validate569(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -26682,10 +27263,10 @@ var validators = {}
         errors++
       }
     }
-    validate550.errors = vErrors
+    validate569.errors = vErrors
     return errors === 0
   }
-  function validate548(
+  function validate567(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -26975,14 +27556,14 @@ var validators = {}
       }
       if (data.selectionDigest !== void 0) {
         if (
-          !validate550(data.selectionDigest, {
+          !validate569(data.selectionDigest, {
             instancePath: instancePath + '/selectionDigest',
             parentData: data,
             parentDataProperty: 'selectionDigest',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate550.errors : vErrors.concat(validate550.errors)
+          vErrors = vErrors === null ? validate569.errors : vErrors.concat(validate569.errors)
           errors = vErrors.length
         }
       }
@@ -27093,14 +27674,14 @@ var validators = {}
         let passing0 = null
         const _errs21 = errors
         if (
-          !validate453(data9, {
+          !validate472(data9, {
             instancePath: instancePath + '/result',
             parentData: data,
             parentDataProperty: 'result',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate453.errors : vErrors.concat(validate453.errors)
+          vErrors = vErrors === null ? validate472.errors : vErrors.concat(validate472.errors)
           errors = vErrors.length
         }
         var _valid0 = _errs21 === errors
@@ -27129,7 +27710,7 @@ var validators = {}
             instancePath: instancePath + '/result',
             schemaPath: '#/properties/result/oneOf/1/enum',
             keyword: 'enum',
-            params: { allowedValues: schema217.properties.result.oneOf[1].enum },
+            params: { allowedValues: schema227.properties.result.oneOf[1].enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -27202,25 +27783,25 @@ var validators = {}
       }
       errors++
     }
-    validate548.errors = vErrors
+    validate567.errors = vErrors
     return errors === 0
   }
-  function validate547(
+  function validate566(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate548(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate548.errors : vErrors.concat(validate548.errors)
+    if (!validate567(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate567.errors : vErrors.concat(validate567.errors)
       errors = vErrors.length
     }
-    validate547.errors = vErrors
+    validate566.errors = vErrors
     return errors === 0
   }
-  exports.v82 = validate556
-  const schema219 = { $ref: 'ls101#/components/schemas/CleanupPlan' }
-  const schema220 = {
+  exports.v86 = validate575
+  const schema229 = { $ref: 'ls101#/components/schemas/CleanupPlan' }
+  const schema230 = {
     type: 'object',
     required: ['id', 'revision', 'status', 'createdAt', 'submittedBefore', 'expiresAt', 'devices'],
     properties: {
@@ -27245,7 +27826,7 @@ var validators = {}
       devices: { type: 'array', items: { $ref: '#/components/schemas/CleanupDevice' } }
     }
   }
-  function validate559(
+  function validate578(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -27535,14 +28116,14 @@ var validators = {}
       }
       if (data.selectionDigest !== void 0) {
         if (
-          !validate550(data.selectionDigest, {
+          !validate569(data.selectionDigest, {
             instancePath: instancePath + '/selectionDigest',
             parentData: data,
             parentDataProperty: 'selectionDigest',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate550.errors : vErrors.concat(validate550.errors)
+          vErrors = vErrors === null ? validate569.errors : vErrors.concat(validate569.errors)
           errors = vErrors.length
         }
       }
@@ -27653,14 +28234,14 @@ var validators = {}
         let passing0 = null
         const _errs21 = errors
         if (
-          !validate453(data9, {
+          !validate472(data9, {
             instancePath: instancePath + '/result',
             parentData: data,
             parentDataProperty: 'result',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate453.errors : vErrors.concat(validate453.errors)
+          vErrors = vErrors === null ? validate472.errors : vErrors.concat(validate472.errors)
           errors = vErrors.length
         }
         var _valid0 = _errs21 === errors
@@ -27689,7 +28270,7 @@ var validators = {}
             instancePath: instancePath + '/result',
             schemaPath: '#/properties/result/oneOf/1/enum',
             keyword: 'enum',
-            params: { allowedValues: schema217.properties.result.oneOf[1].enum },
+            params: { allowedValues: schema227.properties.result.oneOf[1].enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -27762,10 +28343,10 @@ var validators = {}
       }
       errors++
     }
-    validate559.errors = vErrors
+    validate578.errors = vErrors
     return errors === 0
   }
-  function validate557(
+  function validate576(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -27957,7 +28538,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema220.properties.status.enum },
+            params: { allowedValues: schema230.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -28076,14 +28657,14 @@ var validators = {}
           const len0 = data6.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate559(data6[i0], {
+              !validate578(data6[i0], {
                 instancePath: instancePath + '/devices/' + i0,
                 parentData: data6,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate559.errors : vErrors.concat(validate559.errors)
+              vErrors = vErrors === null ? validate578.errors : vErrors.concat(validate578.errors)
               errors = vErrors.length
             }
           }
@@ -28118,25 +28699,25 @@ var validators = {}
       }
       errors++
     }
-    validate557.errors = vErrors
+    validate576.errors = vErrors
     return errors === 0
   }
-  function validate556(
+  function validate575(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate557(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate557.errors : vErrors.concat(validate557.errors)
+    if (!validate576(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate576.errors : vErrors.concat(validate576.errors)
       errors = vErrors.length
     }
-    validate556.errors = vErrors
+    validate575.errors = vErrors
     return errors === 0
   }
-  exports.v83 = validate567
-  const schema222 = { $ref: 'ls101#/components/schemas/CleanupList' }
-  const schema223 = {
+  exports.v87 = validate586
+  const schema232 = { $ref: 'ls101#/components/schemas/CleanupList' }
+  const schema233 = {
     allOf: [
       { $ref: '#/components/schemas/Page' },
       {
@@ -28148,7 +28729,7 @@ var validators = {}
       }
     ]
   }
-  function validate570(
+  function validate589(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -28340,7 +28921,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema220.properties.status.enum },
+            params: { allowedValues: schema230.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -28459,14 +29040,14 @@ var validators = {}
           const len0 = data6.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate559(data6[i0], {
+              !validate578(data6[i0], {
                 instancePath: instancePath + '/devices/' + i0,
                 parentData: data6,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate559.errors : vErrors.concat(validate559.errors)
+              vErrors = vErrors === null ? validate578.errors : vErrors.concat(validate578.errors)
               errors = vErrors.length
             }
           }
@@ -28501,10 +29082,10 @@ var validators = {}
       }
       errors++
     }
-    validate570.errors = vErrors
+    validate589.errors = vErrors
     return errors === 0
   }
-  function validate568(
+  function validate587(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -28536,14 +29117,14 @@ var validators = {}
           const len0 = data0.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate570(data0[i0], {
+              !validate589(data0[i0], {
                 instancePath: instancePath + '/items/' + i0,
                 parentData: data0,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate570.errors : vErrors.concat(validate570.errors)
+              vErrors = vErrors === null ? validate589.errors : vErrors.concat(validate589.errors)
               errors = vErrors.length
             }
           }
@@ -28578,25 +29159,25 @@ var validators = {}
       }
       errors++
     }
-    validate568.errors = vErrors
+    validate587.errors = vErrors
     return errors === 0
   }
-  function validate567(
+  function validate586(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate568(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate568.errors : vErrors.concat(validate568.errors)
+    if (!validate587(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate587.errors : vErrors.concat(validate587.errors)
       errors = vErrors.length
     }
-    validate567.errors = vErrors
+    validate586.errors = vErrors
     return errors === 0
   }
-  exports.v84 = validate575
-  const schema225 = { $ref: 'ls101#/components/schemas/StorageSummary' }
-  function validate576(
+  exports.v88 = validate594
+  const schema235 = { $ref: 'ls101#/components/schemas/StorageSummary' }
+  function validate595(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -28702,25 +29283,25 @@ var validators = {}
       }
       errors++
     }
-    validate576.errors = vErrors
+    validate595.errors = vErrors
     return errors === 0
   }
-  function validate575(
+  function validate594(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate576(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate576.errors : vErrors.concat(validate576.errors)
+    if (!validate595(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate595.errors : vErrors.concat(validate595.errors)
       errors = vErrors.length
     }
-    validate575.errors = vErrors
+    validate594.errors = vErrors
     return errors === 0
   }
-  exports.v85 = validate581
-  const schema227 = { $ref: 'ls101#/components/schemas/Settings' }
-  const schema228 = {
+  exports.v89 = validate600
+  const schema237 = { $ref: 'ls101#/components/schemas/Settings' }
+  const schema238 = {
     type: 'object',
     required: ['name', 'baseUrl', 'limits', 'revision', 'storage'],
     properties: {
@@ -28731,9 +29312,9 @@ var validators = {}
       storage: { $ref: '#/components/schemas/StorageSummary' }
     }
   }
-  const formats258 = require_formats().fullFormats.uri
-  const pattern5 = new RegExp('^https://', 'u')
-  function validate582(
+  const formats262 = require_formats().fullFormats.uri
+  const pattern8 = new RegExp('^https://', 'u')
+  function validate601(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -28867,7 +29448,7 @@ var validators = {}
       if (data.baseUrl !== void 0) {
         let data1 = data.baseUrl
         if (typeof data1 === 'string') {
-          if (!pattern5.test(data1)) {
+          if (!pattern8.test(data1)) {
             const err8 = {
               instancePath: instancePath + '/baseUrl',
               schemaPath: '#/properties/baseUrl/pattern',
@@ -28882,7 +29463,7 @@ var validators = {}
             }
             errors++
           }
-          if (!formats258(data1)) {
+          if (!formats262(data1)) {
             const err9 = {
               instancePath: instancePath + '/baseUrl',
               schemaPath: '#/properties/baseUrl/format',
@@ -28967,25 +29548,25 @@ var validators = {}
       }
       errors++
     }
-    validate582.errors = vErrors
+    validate601.errors = vErrors
     return errors === 0
   }
-  function validate581(
+  function validate600(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate582(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate582.errors : vErrors.concat(validate582.errors)
+    if (!validate601(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate601.errors : vErrors.concat(validate601.errors)
       errors = vErrors.length
     }
-    validate581.errors = vErrors
+    validate600.errors = vErrors
     return errors === 0
   }
-  exports.v86 = validate587
-  const schema229 = { $ref: 'ls101#/components/schemas/SettingsPatch' }
-  const schema230 = {
+  exports.v90 = validate606
+  const schema239 = { $ref: 'ls101#/components/schemas/SettingsPatch' }
+  const schema240 = {
     type: 'object',
     required: ['expectedRevision'],
     minProperties: 2,
@@ -28997,7 +29578,7 @@ var validators = {}
       expectedRevision: { $ref: '#/components/schemas/PositiveInteger' }
     }
   }
-  function validate588(
+  function validate607(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -29110,7 +29691,7 @@ var validators = {}
       if (data.baseUrl !== void 0) {
         let data1 = data.baseUrl
         if (typeof data1 === 'string') {
-          if (!pattern5.test(data1)) {
+          if (!pattern8.test(data1)) {
             const err6 = {
               instancePath: instancePath + '/baseUrl',
               schemaPath: '#/properties/baseUrl/pattern',
@@ -29125,7 +29706,7 @@ var validators = {}
             }
             errors++
           }
-          if (!formats258(data1)) {
+          if (!formats262(data1)) {
             const err7 = {
               instancePath: instancePath + '/baseUrl',
               schemaPath: '#/properties/baseUrl/format',
@@ -29197,25 +29778,25 @@ var validators = {}
       }
       errors++
     }
-    validate588.errors = vErrors
+    validate607.errors = vErrors
     return errors === 0
   }
-  function validate587(
+  function validate606(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate588(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate588.errors : vErrors.concat(validate588.errors)
+    if (!validate607(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate607.errors : vErrors.concat(validate607.errors)
       errors = vErrors.length
     }
-    validate587.errors = vErrors
+    validate606.errors = vErrors
     return errors === 0
   }
-  exports.v87 = validate592
-  const schema231 = { $ref: 'ls101#/components/schemas/LogEntry' }
-  const schema232 = {
+  exports.v91 = validate611
+  const schema241 = { $ref: 'ls101#/components/schemas/LogEntry' }
+  const schema242 = {
     type: 'object',
     required: ['id', 'at', 'level', 'message', 'requestId'],
     properties: {
@@ -29226,7 +29807,7 @@ var validators = {}
       requestId: { type: 'string', nullable: true }
     }
   }
-  function validate593(
+  function validate612(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -29398,7 +29979,7 @@ var validators = {}
             instancePath: instancePath + '/level',
             schemaPath: '#/properties/level/enum',
             keyword: 'enum',
-            params: { allowedValues: schema232.properties.level.enum },
+            params: { allowedValues: schema242.properties.level.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -29459,25 +30040,25 @@ var validators = {}
       }
       errors++
     }
-    validate593.errors = vErrors
+    validate612.errors = vErrors
     return errors === 0
   }
-  function validate592(
+  function validate611(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate593(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate593.errors : vErrors.concat(validate593.errors)
+    if (!validate612(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate612.errors : vErrors.concat(validate612.errors)
       errors = vErrors.length
     }
-    validate592.errors = vErrors
+    validate611.errors = vErrors
     return errors === 0
   }
-  exports.v88 = validate595
-  const schema233 = { $ref: 'ls101#/components/schemas/LogList' }
-  const schema234 = {
+  exports.v92 = validate614
+  const schema243 = { $ref: 'ls101#/components/schemas/LogList' }
+  const schema244 = {
     allOf: [
       { $ref: '#/components/schemas/Page' },
       {
@@ -29487,7 +30068,7 @@ var validators = {}
       }
     ]
   }
-  function validate598(
+  function validate617(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -29659,7 +30240,7 @@ var validators = {}
             instancePath: instancePath + '/level',
             schemaPath: '#/properties/level/enum',
             keyword: 'enum',
-            params: { allowedValues: schema232.properties.level.enum },
+            params: { allowedValues: schema242.properties.level.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -29720,10 +30301,10 @@ var validators = {}
       }
       errors++
     }
-    validate598.errors = vErrors
+    validate617.errors = vErrors
     return errors === 0
   }
-  function validate596(
+  function validate615(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -29755,14 +30336,14 @@ var validators = {}
           const len0 = data0.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate598(data0[i0], {
+              !validate617(data0[i0], {
                 instancePath: instancePath + '/items/' + i0,
                 parentData: data0,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate598.errors : vErrors.concat(validate598.errors)
+              vErrors = vErrors === null ? validate617.errors : vErrors.concat(validate617.errors)
               errors = vErrors.length
             }
           }
@@ -29797,25 +30378,25 @@ var validators = {}
       }
       errors++
     }
-    validate596.errors = vErrors
+    validate615.errors = vErrors
     return errors === 0
   }
-  function validate595(
+  function validate614(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate596(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate596.errors : vErrors.concat(validate596.errors)
+    if (!validate615(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate615.errors : vErrors.concat(validate615.errors)
       errors = vErrors.length
     }
-    validate595.errors = vErrors
+    validate614.errors = vErrors
     return errors === 0
   }
-  exports.v89 = validate601
-  const schema236 = { $ref: 'ls101#/components/schemas/Backup' }
-  const schema237 = {
+  exports.v93 = validate620
+  const schema246 = { $ref: 'ls101#/components/schemas/Backup' }
+  const schema247 = {
     type: 'object',
     description:
       'pending reserves maintenance; running covers both snapshot and encryption/publication. The write barrier ends after staging is durable, but claims and exit remain blocked until ready/failed. Either pending or running can fail. Restart fails unfinished jobs because passwords are memory-only; replay never restarts them. Only ready is downloadable.',
@@ -29840,7 +30421,7 @@ var validators = {}
       error: { $ref: '#/components/schemas/DiagnosticError' }
     }
   }
-  function validate602(
+  function validate621(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -30025,7 +30606,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema237.properties.status.enum },
+            params: { allowedValues: schema247.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -30137,14 +30718,14 @@ var validators = {}
       }
       if (data.archiveSha256 !== void 0) {
         if (
-          !validate550(data.archiveSha256, {
+          !validate569(data.archiveSha256, {
             instancePath: instancePath + '/archiveSha256',
             parentData: data,
             parentDataProperty: 'archiveSha256',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate550.errors : vErrors.concat(validate550.errors)
+          vErrors = vErrors === null ? validate569.errors : vErrors.concat(validate569.errors)
           errors = vErrors.length
         }
       }
@@ -30176,25 +30757,25 @@ var validators = {}
       }
       errors++
     }
-    validate602.errors = vErrors
+    validate621.errors = vErrors
     return errors === 0
   }
-  function validate601(
+  function validate620(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate602(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate602.errors : vErrors.concat(validate602.errors)
+    if (!validate621(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate621.errors : vErrors.concat(validate621.errors)
       errors = vErrors.length
     }
-    validate601.errors = vErrors
+    validate620.errors = vErrors
     return errors === 0
   }
-  exports.v90 = validate607
-  const schema238 = { $ref: 'ls101#/components/schemas/BackupList' }
-  const schema239 = {
+  exports.v94 = validate626
+  const schema248 = { $ref: 'ls101#/components/schemas/BackupList' }
+  const schema249 = {
     allOf: [
       { $ref: '#/components/schemas/Page' },
       {
@@ -30204,7 +30785,7 @@ var validators = {}
       }
     ]
   }
-  function validate610(
+  function validate629(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -30389,7 +30970,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema237.properties.status.enum },
+            params: { allowedValues: schema247.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -30501,14 +31082,14 @@ var validators = {}
       }
       if (data.archiveSha256 !== void 0) {
         if (
-          !validate550(data.archiveSha256, {
+          !validate569(data.archiveSha256, {
             instancePath: instancePath + '/archiveSha256',
             parentData: data,
             parentDataProperty: 'archiveSha256',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate550.errors : vErrors.concat(validate550.errors)
+          vErrors = vErrors === null ? validate569.errors : vErrors.concat(validate569.errors)
           errors = vErrors.length
         }
       }
@@ -30540,10 +31121,10 @@ var validators = {}
       }
       errors++
     }
-    validate610.errors = vErrors
+    validate629.errors = vErrors
     return errors === 0
   }
-  function validate608(
+  function validate627(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -30575,14 +31156,14 @@ var validators = {}
           const len0 = data0.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate610(data0[i0], {
+              !validate629(data0[i0], {
                 instancePath: instancePath + '/items/' + i0,
                 parentData: data0,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate610.errors : vErrors.concat(validate610.errors)
+              vErrors = vErrors === null ? validate629.errors : vErrors.concat(validate629.errors)
               errors = vErrors.length
             }
           }
@@ -30617,25 +31198,25 @@ var validators = {}
       }
       errors++
     }
-    validate608.errors = vErrors
+    validate627.errors = vErrors
     return errors === 0
   }
-  function validate607(
+  function validate626(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate608(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate608.errors : vErrors.concat(validate608.errors)
+    if (!validate627(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate627.errors : vErrors.concat(validate627.errors)
       errors = vErrors.length
     }
-    validate607.errors = vErrors
+    validate626.errors = vErrors
     return errors === 0
   }
-  exports.v91 = validate616
-  const schema241 = { $ref: 'ls101#/components/schemas/ErrorDetails' }
-  function validate617(
+  exports.v95 = validate635
+  const schema251 = { $ref: 'ls101#/components/schemas/ErrorDetails' }
+  function validate636(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -30718,7 +31299,7 @@ var validators = {}
             instancePath: instancePath + '/mode',
             schemaPath: '#/properties/mode/enum',
             keyword: 'enum',
-            params: { allowedValues: schema153.properties.mode.enum },
+            params: { allowedValues: schema163.properties.mode.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -30870,25 +31451,25 @@ var validators = {}
       }
       errors++
     }
-    validate617.errors = vErrors
+    validate636.errors = vErrors
     return errors === 0
   }
-  function validate616(
+  function validate635(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate617(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate617.errors : vErrors.concat(validate617.errors)
+    if (!validate636(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate636.errors : vErrors.concat(validate636.errors)
       errors = vErrors.length
     }
-    validate616.errors = vErrors
+    validate635.errors = vErrors
     return errors === 0
   }
-  exports.v92 = validate623
-  const schema243 = { $ref: 'ls101#/components/schemas/ErrorBody' }
-  function validate624(
+  exports.v96 = validate642
+  const schema253 = { $ref: 'ls101#/components/schemas/ErrorBody' }
+  function validate643(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -30985,7 +31566,7 @@ var validators = {}
             instancePath: instancePath + '/code',
             schemaPath: '#/properties/code/enum',
             keyword: 'enum',
-            params: { allowedValues: schema152.properties.code.enum },
+            params: { allowedValues: schema162.properties.code.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -31032,14 +31613,14 @@ var validators = {}
       }
       if (data.details !== void 0) {
         if (
-          !validate377(data.details, {
+          !validate396(data.details, {
             instancePath: instancePath + '/details',
             parentData: data,
             parentDataProperty: 'details',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate377.errors : vErrors.concat(validate377.errors)
+          vErrors = vErrors === null ? validate396.errors : vErrors.concat(validate396.errors)
           errors = vErrors.length
         }
       }
@@ -31058,31 +31639,31 @@ var validators = {}
       }
       errors++
     }
-    validate624.errors = vErrors
+    validate643.errors = vErrors
     return errors === 0
   }
-  function validate623(
+  function validate642(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate624(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate624.errors : vErrors.concat(validate624.errors)
+    if (!validate643(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate643.errors : vErrors.concat(validate643.errors)
       errors = vErrors.length
     }
-    validate623.errors = vErrors
+    validate642.errors = vErrors
     return errors === 0
   }
-  exports.v93 = validate627
-  const schema245 = { $ref: 'ls101#/components/schemas/Error' }
-  const schema246 = {
+  exports.v97 = validate646
+  const schema255 = { $ref: 'ls101#/components/schemas/Error' }
+  const schema256 = {
     type: 'object',
     required: ['error'],
     additionalProperties: false,
     properties: { error: { $ref: '#/components/schemas/ErrorBody' } }
   }
-  function validate628(
+  function validate647(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -31123,14 +31704,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -31149,25 +31730,25 @@ var validators = {}
       }
       errors++
     }
-    validate628.errors = vErrors
+    validate647.errors = vErrors
     return errors === 0
   }
-  function validate627(
+  function validate646(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate628(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate628.errors : vErrors.concat(validate628.errors)
+    if (!validate647(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate647.errors : vErrors.concat(validate647.errors)
       errors = vErrors.length
     }
-    validate627.errors = vErrors
+    validate646.errors = vErrors
     return errors === 0
   }
-  exports.v94 = validate631
-  const schema247 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate631(
+  exports.v98 = validate650
+  const schema257 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate650(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -31204,12 +31785,12 @@ var validators = {}
       }
       errors++
     }
-    validate631.errors = vErrors
+    validate650.errors = vErrors
     return errors === 0
   }
-  exports.v97 = validate632
-  const schema248 = { $ref: 'ls101#/components/schemas/Info' }
-  function validate633(
+  exports.v101 = validate651
+  const schema258 = { $ref: 'ls101#/components/schemas/Info' }
+  function validate652(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -31497,25 +32078,25 @@ var validators = {}
       }
       errors++
     }
-    validate633.errors = vErrors
+    validate652.errors = vErrors
     return errors === 0
   }
-  function validate632(
+  function validate651(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate633(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate633.errors : vErrors.concat(validate633.errors)
+    if (!validate652(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate652.errors : vErrors.concat(validate652.errors)
       errors = vErrors.length
     }
-    validate632.errors = vErrors
+    validate651.errors = vErrors
     return errors === 0
   }
-  exports.v98 = validate635
-  const schema250 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate636(
+  exports.v102 = validate654
+  const schema260 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate655(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -31556,14 +32137,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -31582,25 +32163,25 @@ var validators = {}
       }
       errors++
     }
-    validate636.errors = vErrors
+    validate655.errors = vErrors
     return errors === 0
   }
-  function validate635(
+  function validate654(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate636(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate636.errors : vErrors.concat(validate636.errors)
+    if (!validate655(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate655.errors : vErrors.concat(validate655.errors)
       errors = vErrors.length
     }
-    validate635.errors = vErrors
+    validate654.errors = vErrors
     return errors === 0
   }
-  exports.v99 = validate639
-  const schema252 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate639(
+  exports.v103 = validate658
+  const schema262 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate658(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -31637,12 +32218,12 @@ var validators = {}
       }
       errors++
     }
-    validate639.errors = vErrors
+    validate658.errors = vErrors
     return errors === 0
   }
-  exports.v102 = validate640
-  const schema253 = { $ref: 'ls101#/components/schemas/SessionRequest' }
-  function validate641(
+  exports.v106 = validate659
+  const schema263 = { $ref: 'ls101#/components/schemas/SessionRequest' }
+  function validate660(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -31730,25 +32311,25 @@ var validators = {}
       }
       errors++
     }
-    validate641.errors = vErrors
+    validate660.errors = vErrors
     return errors === 0
   }
-  function validate640(
+  function validate659(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate641(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate641.errors : vErrors.concat(validate641.errors)
+    if (!validate660(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate660.errors : vErrors.concat(validate660.errors)
       errors = vErrors.length
     }
-    validate640.errors = vErrors
+    validate659.errors = vErrors
     return errors === 0
   }
-  exports.v103 = validate643
-  const schema255 = { $ref: 'ls101#/components/schemas/Session' }
-  function validate644(
+  exports.v107 = validate662
+  const schema265 = { $ref: 'ls101#/components/schemas/Session' }
+  function validate663(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -31900,25 +32481,25 @@ var validators = {}
       }
       errors++
     }
-    validate644.errors = vErrors
+    validate663.errors = vErrors
     return errors === 0
   }
-  function validate643(
+  function validate662(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate644(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate644.errors : vErrors.concat(validate644.errors)
+    if (!validate663(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate663.errors : vErrors.concat(validate663.errors)
       errors = vErrors.length
     }
-    validate643.errors = vErrors
+    validate662.errors = vErrors
     return errors === 0
   }
-  exports.v104 = validate646
-  const schema257 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate647(
+  exports.v108 = validate665
+  const schema267 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate666(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -31959,14 +32540,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -31985,25 +32566,25 @@ var validators = {}
       }
       errors++
     }
-    validate647.errors = vErrors
+    validate666.errors = vErrors
     return errors === 0
   }
-  function validate646(
+  function validate665(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate647(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate647.errors : vErrors.concat(validate647.errors)
+    if (!validate666(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate666.errors : vErrors.concat(validate666.errors)
       errors = vErrors.length
     }
-    validate646.errors = vErrors
+    validate665.errors = vErrors
     return errors === 0
   }
-  exports.v105 = validate650
-  const schema259 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate651(
+  exports.v109 = validate669
+  const schema269 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate670(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -32044,14 +32625,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -32070,25 +32651,25 @@ var validators = {}
       }
       errors++
     }
-    validate651.errors = vErrors
+    validate670.errors = vErrors
     return errors === 0
   }
-  function validate650(
+  function validate669(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate651(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate651.errors : vErrors.concat(validate651.errors)
+    if (!validate670(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate670.errors : vErrors.concat(validate670.errors)
       errors = vErrors.length
     }
-    validate650.errors = vErrors
+    validate669.errors = vErrors
     return errors === 0
   }
-  exports.v106 = validate654
-  const schema261 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate654(
+  exports.v110 = validate673
+  const schema271 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate673(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -32125,12 +32706,12 @@ var validators = {}
       }
       errors++
     }
-    validate654.errors = vErrors
+    validate673.errors = vErrors
     return errors === 0
   }
-  exports.v109 = validate655
-  const schema262 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate656(
+  exports.v113 = validate674
+  const schema272 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate675(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -32171,14 +32752,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -32197,25 +32778,25 @@ var validators = {}
       }
       errors++
     }
-    validate656.errors = vErrors
+    validate675.errors = vErrors
     return errors === 0
   }
-  function validate655(
+  function validate674(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate656(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate656.errors : vErrors.concat(validate656.errors)
+    if (!validate675(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate675.errors : vErrors.concat(validate675.errors)
       errors = vErrors.length
     }
-    validate655.errors = vErrors
+    validate674.errors = vErrors
     return errors === 0
   }
-  exports.v110 = validate659
-  const schema264 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate659(
+  exports.v114 = validate678
+  const schema274 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate678(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -32252,12 +32833,12 @@ var validators = {}
       }
       errors++
     }
-    validate659.errors = vErrors
+    validate678.errors = vErrors
     return errors === 0
   }
-  exports.v113 = validate660
-  const schema265 = { $ref: 'ls101#/components/schemas/Revision' }
-  function validate661(
+  exports.v117 = validate679
+  const schema275 = { $ref: 'ls101#/components/schemas/Revision' }
+  function validate680(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -32324,25 +32905,25 @@ var validators = {}
       }
       errors++
     }
-    validate661.errors = vErrors
+    validate680.errors = vErrors
     return errors === 0
   }
-  function validate660(
+  function validate679(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate661(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate661.errors : vErrors.concat(validate661.errors)
+    if (!validate680(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate680.errors : vErrors.concat(validate680.errors)
       errors = vErrors.length
     }
-    validate660.errors = vErrors
+    validate679.errors = vErrors
     return errors === 0
   }
-  exports.v114 = validate664
-  const schema267 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate665(
+  exports.v118 = validate683
+  const schema277 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate684(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -32383,14 +32964,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -32409,25 +32990,25 @@ var validators = {}
       }
       errors++
     }
-    validate665.errors = vErrors
+    validate684.errors = vErrors
     return errors === 0
   }
-  function validate664(
+  function validate683(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate665(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate665.errors : vErrors.concat(validate665.errors)
+    if (!validate684(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate684.errors : vErrors.concat(validate684.errors)
       errors = vErrors.length
     }
-    validate664.errors = vErrors
+    validate683.errors = vErrors
     return errors === 0
   }
-  exports.v115 = validate668
-  const schema269 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate668(
+  exports.v119 = validate687
+  const schema279 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate687(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -32464,12 +33045,12 @@ var validators = {}
       }
       errors++
     }
-    validate668.errors = vErrors
+    validate687.errors = vErrors
     return errors === 0
   }
-  exports.v118 = validate669
-  const schema270 = { $ref: 'ls101#/components/schemas/PasswordUpdate' }
-  function validate670(
+  exports.v122 = validate688
+  const schema280 = { $ref: 'ls101#/components/schemas/PasswordUpdate' }
+  function validate689(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -32600,25 +33181,25 @@ var validators = {}
       }
       errors++
     }
-    validate670.errors = vErrors
+    validate689.errors = vErrors
     return errors === 0
   }
-  function validate669(
+  function validate688(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate670(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate670.errors : vErrors.concat(validate670.errors)
+    if (!validate689(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate689.errors : vErrors.concat(validate689.errors)
       errors = vErrors.length
     }
-    validate669.errors = vErrors
+    validate688.errors = vErrors
     return errors === 0
   }
-  exports.v119 = validate673
-  const schema272 = { $ref: 'ls101#/components/schemas/Revision' }
-  function validate674(
+  exports.v123 = validate692
+  const schema282 = { $ref: 'ls101#/components/schemas/Revision' }
+  function validate693(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -32685,25 +33266,25 @@ var validators = {}
       }
       errors++
     }
-    validate674.errors = vErrors
+    validate693.errors = vErrors
     return errors === 0
   }
-  function validate673(
+  function validate692(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate674(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate674.errors : vErrors.concat(validate674.errors)
+    if (!validate693(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate693.errors : vErrors.concat(validate693.errors)
       errors = vErrors.length
     }
-    validate673.errors = vErrors
+    validate692.errors = vErrors
     return errors === 0
   }
-  exports.v120 = validate677
-  const schema274 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate678(
+  exports.v124 = validate696
+  const schema284 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate697(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -32744,14 +33325,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -32770,25 +33351,25 @@ var validators = {}
       }
       errors++
     }
-    validate678.errors = vErrors
+    validate697.errors = vErrors
     return errors === 0
   }
-  function validate677(
+  function validate696(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate678(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate678.errors : vErrors.concat(validate678.errors)
+    if (!validate697(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate697.errors : vErrors.concat(validate697.errors)
       errors = vErrors.length
     }
-    validate677.errors = vErrors
+    validate696.errors = vErrors
     return errors === 0
   }
-  exports.v121 = validate681
-  const schema276 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate682(
+  exports.v125 = validate700
+  const schema286 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate701(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -32829,14 +33410,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -32855,25 +33436,25 @@ var validators = {}
       }
       errors++
     }
-    validate682.errors = vErrors
+    validate701.errors = vErrors
     return errors === 0
   }
-  function validate681(
+  function validate700(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate682(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate682.errors : vErrors.concat(validate682.errors)
+    if (!validate701(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate701.errors : vErrors.concat(validate701.errors)
       errors = vErrors.length
     }
-    validate681.errors = vErrors
+    validate700.errors = vErrors
     return errors === 0
   }
-  exports.v122 = validate685
-  const schema278 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate685(
+  exports.v126 = validate704
+  const schema288 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate704(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -32910,12 +33491,12 @@ var validators = {}
       }
       errors++
     }
-    validate685.errors = vErrors
+    validate704.errors = vErrors
     return errors === 0
   }
-  exports.v125 = validate686
-  const schema279 = { $ref: 'ls101#/components/schemas/ServiceState' }
-  function validate687(
+  exports.v129 = validate705
+  const schema289 = { $ref: 'ls101#/components/schemas/ServiceState' }
+  function validate706(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -33322,25 +33903,25 @@ var validators = {}
       }
       errors++
     }
-    validate687.errors = vErrors
+    validate706.errors = vErrors
     return errors === 0
   }
-  function validate686(
+  function validate705(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate687(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate687.errors : vErrors.concat(validate687.errors)
+    if (!validate706(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate706.errors : vErrors.concat(validate706.errors)
       errors = vErrors.length
     }
-    validate686.errors = vErrors
+    validate705.errors = vErrors
     return errors === 0
   }
-  exports.v126 = validate699
-  const schema281 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate700(
+  exports.v130 = validate718
+  const schema291 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate719(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -33381,14 +33962,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -33407,25 +33988,25 @@ var validators = {}
       }
       errors++
     }
-    validate700.errors = vErrors
+    validate719.errors = vErrors
     return errors === 0
   }
-  function validate699(
+  function validate718(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate700(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate700.errors : vErrors.concat(validate700.errors)
+    if (!validate719(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate719.errors : vErrors.concat(validate719.errors)
       errors = vErrors.length
     }
-    validate699.errors = vErrors
+    validate718.errors = vErrors
     return errors === 0
   }
-  exports.v127 = validate703
-  const schema283 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate703(
+  exports.v131 = validate722
+  const schema293 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate722(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -33462,12 +34043,12 @@ var validators = {}
       }
       errors++
     }
-    validate703.errors = vErrors
+    validate722.errors = vErrors
     return errors === 0
   }
-  exports.v130 = validate704
-  const schema284 = { $ref: 'ls101#/components/schemas/ModeUpdate' }
-  function validate705(
+  exports.v134 = validate723
+  const schema294 = { $ref: 'ls101#/components/schemas/ModeUpdate' }
+  function validate724(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -33604,25 +34185,25 @@ var validators = {}
       }
       errors++
     }
-    validate705.errors = vErrors
+    validate724.errors = vErrors
     return errors === 0
   }
-  function validate704(
+  function validate723(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate705(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate705.errors : vErrors.concat(validate705.errors)
+    if (!validate724(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate724.errors : vErrors.concat(validate724.errors)
       errors = vErrors.length
     }
-    validate704.errors = vErrors
+    validate723.errors = vErrors
     return errors === 0
   }
-  exports.v131 = validate707
-  const schema286 = { $ref: 'ls101#/components/schemas/Mode' }
-  function validate708(
+  exports.v135 = validate726
+  const schema296 = { $ref: 'ls101#/components/schemas/Mode' }
+  function validate727(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -33720,24 +34301,24 @@ var validators = {}
       }
       errors++
     }
-    validate708.errors = vErrors
+    validate727.errors = vErrors
     return errors === 0
   }
-  function validate707(
+  function validate726(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate708(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate708.errors : vErrors.concat(validate708.errors)
+    if (!validate727(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate727.errors : vErrors.concat(validate727.errors)
       errors = vErrors.length
     }
-    validate707.errors = vErrors
+    validate726.errors = vErrors
     return errors === 0
   }
-  exports.v132 = validate711
-  const schema288 = {
+  exports.v136 = validate730
+  const schema298 = {
     allOf: [
       { $ref: 'ls101#/components/schemas/Error' },
       {
@@ -33756,7 +34337,7 @@ var validators = {}
       }
     ]
   }
-  function validate712(
+  function validate731(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -33797,14 +34378,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -33823,17 +34404,17 @@ var validators = {}
       }
       errors++
     }
-    validate712.errors = vErrors
+    validate731.errors = vErrors
     return errors === 0
   }
-  function validate711(
+  function validate730(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate712(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate712.errors : vErrors.concat(validate712.errors)
+    if (!validate731(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate731.errors : vErrors.concat(validate731.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -33869,7 +34450,7 @@ var validators = {}
                 instancePath: instancePath + '/error/code',
                 schemaPath: '#/allOf/1/properties/error/properties/code/enum',
                 keyword: 'enum',
-                params: { allowedValues: schema288.allOf[1].properties.error.properties.code.enum },
+                params: { allowedValues: schema298.allOf[1].properties.error.properties.code.enum },
                 message: 'must be equal to one of the allowed values'
               }
               if (vErrors === null) {
@@ -33911,11 +34492,11 @@ var validators = {}
       }
       errors++
     }
-    validate711.errors = vErrors
+    validate730.errors = vErrors
     return errors === 0
   }
-  exports.v133 = validate715
-  const schema290 = {
+  exports.v137 = validate734
+  const schema300 = {
     allOf: [
       { $ref: 'ls101#/components/schemas/Error' },
       {
@@ -33931,7 +34512,7 @@ var validators = {}
       }
     ]
   }
-  function validate716(
+  function validate735(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -33972,14 +34553,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -33998,17 +34579,17 @@ var validators = {}
       }
       errors++
     }
-    validate716.errors = vErrors
+    validate735.errors = vErrors
     return errors === 0
   }
-  function validate715(
+  function validate734(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate716(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate716.errors : vErrors.concat(validate716.errors)
+    if (!validate735(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate735.errors : vErrors.concat(validate735.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -34037,7 +34618,7 @@ var validators = {}
                 instancePath: instancePath + '/error/code',
                 schemaPath: '#/allOf/1/properties/error/properties/code/enum',
                 keyword: 'enum',
-                params: { allowedValues: schema290.allOf[1].properties.error.properties.code.enum },
+                params: { allowedValues: schema300.allOf[1].properties.error.properties.code.enum },
                 message: 'must be equal to one of the allowed values'
               }
               if (vErrors === null) {
@@ -34079,12 +34660,12 @@ var validators = {}
       }
       errors++
     }
-    validate715.errors = vErrors
+    validate734.errors = vErrors
     return errors === 0
   }
-  exports.v134 = validate719
-  const schema292 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate720(
+  exports.v138 = validate738
+  const schema302 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate739(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -34125,14 +34706,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -34151,25 +34732,25 @@ var validators = {}
       }
       errors++
     }
-    validate720.errors = vErrors
+    validate739.errors = vErrors
     return errors === 0
   }
-  function validate719(
+  function validate738(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate720(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate720.errors : vErrors.concat(validate720.errors)
+    if (!validate739(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate739.errors : vErrors.concat(validate739.errors)
       errors = vErrors.length
     }
-    validate719.errors = vErrors
+    validate738.errors = vErrors
     return errors === 0
   }
-  exports.v135 = validate723
-  const schema294 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate723(
+  exports.v139 = validate742
+  const schema304 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate742(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -34206,12 +34787,12 @@ var validators = {}
       }
       errors++
     }
-    validate723.errors = vErrors
+    validate742.errors = vErrors
     return errors === 0
   }
-  exports.v138 = validate724
-  const schema295 = { $ref: 'ls101#/components/schemas/StudentState' }
-  function validate725(
+  exports.v142 = validate743
+  const schema305 = { $ref: 'ls101#/components/schemas/StudentState' }
+  function validate744(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -34651,25 +35232,25 @@ var validators = {}
       }
       errors++
     }
-    validate725.errors = vErrors
+    validate744.errors = vErrors
     return errors === 0
   }
-  function validate724(
+  function validate743(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate725(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate725.errors : vErrors.concat(validate725.errors)
+    if (!validate744(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate744.errors : vErrors.concat(validate744.errors)
       errors = vErrors.length
     }
-    validate724.errors = vErrors
+    validate743.errors = vErrors
     return errors === 0
   }
-  exports.v139 = validate732
-  const schema297 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate733(
+  exports.v143 = validate751
+  const schema307 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate752(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -34710,14 +35291,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -34736,25 +35317,25 @@ var validators = {}
       }
       errors++
     }
-    validate733.errors = vErrors
+    validate752.errors = vErrors
     return errors === 0
   }
-  function validate732(
+  function validate751(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate733(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate733.errors : vErrors.concat(validate733.errors)
+    if (!validate752(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate752.errors : vErrors.concat(validate752.errors)
       errors = vErrors.length
     }
-    validate732.errors = vErrors
+    validate751.errors = vErrors
     return errors === 0
   }
-  exports.v140 = validate736
-  const schema299 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate736(
+  exports.v144 = validate755
+  const schema309 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate755(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -34791,12 +35372,12 @@ var validators = {}
       }
       errors++
     }
-    validate736.errors = vErrors
+    validate755.errors = vErrors
     return errors === 0
   }
-  exports.v143 = validate737
-  const schema300 = { $ref: 'ls101#/components/schemas/Heartbeat' }
-  function validate738(
+  exports.v147 = validate756
+  const schema310 = { $ref: 'ls101#/components/schemas/Heartbeat' }
+  function validate757(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -35141,25 +35722,25 @@ var validators = {}
       }
       errors++
     }
-    validate738.errors = vErrors
+    validate757.errors = vErrors
     return errors === 0
   }
-  function validate737(
+  function validate756(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate738(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate738.errors : vErrors.concat(validate738.errors)
+    if (!validate757(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate757.errors : vErrors.concat(validate757.errors)
       errors = vErrors.length
     }
-    validate737.errors = vErrors
+    validate756.errors = vErrors
     return errors === 0
   }
-  exports.v144 = validate745
-  const schema302 = { $ref: 'ls101#/components/schemas/HeartbeatResponse' }
-  function validate746(
+  exports.v148 = validate764
+  const schema312 = { $ref: 'ls101#/components/schemas/HeartbeatResponse' }
+  function validate765(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -35286,25 +35867,25 @@ var validators = {}
       }
       errors++
     }
-    validate746.errors = vErrors
+    validate765.errors = vErrors
     return errors === 0
   }
-  function validate745(
+  function validate764(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate746(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate746.errors : vErrors.concat(validate746.errors)
+    if (!validate765(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate765.errors : vErrors.concat(validate765.errors)
       errors = vErrors.length
     }
-    validate745.errors = vErrors
+    validate764.errors = vErrors
     return errors === 0
   }
-  exports.v145 = validate749
-  const schema304 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate750(
+  exports.v149 = validate768
+  const schema314 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate769(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -35345,14 +35926,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -35371,25 +35952,25 @@ var validators = {}
       }
       errors++
     }
-    validate750.errors = vErrors
+    validate769.errors = vErrors
     return errors === 0
   }
-  function validate749(
+  function validate768(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate750(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate750.errors : vErrors.concat(validate750.errors)
+    if (!validate769(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate769.errors : vErrors.concat(validate769.errors)
       errors = vErrors.length
     }
-    validate749.errors = vErrors
+    validate768.errors = vErrors
     return errors === 0
   }
-  exports.v146 = validate753
-  const schema306 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate754(
+  exports.v150 = validate772
+  const schema316 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate773(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -35430,14 +36011,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -35456,25 +36037,25 @@ var validators = {}
       }
       errors++
     }
-    validate754.errors = vErrors
+    validate773.errors = vErrors
     return errors === 0
   }
-  function validate753(
+  function validate772(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate754(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate754.errors : vErrors.concat(validate754.errors)
+    if (!validate773(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate773.errors : vErrors.concat(validate773.errors)
       errors = vErrors.length
     }
-    validate753.errors = vErrors
+    validate772.errors = vErrors
     return errors === 0
   }
-  exports.v147 = validate757
-  const schema308 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate757(
+  exports.v151 = validate776
+  const schema318 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate776(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -35511,12 +36092,12 @@ var validators = {}
       }
       errors++
     }
-    validate757.errors = vErrors
+    validate776.errors = vErrors
     return errors === 0
   }
-  exports.v150 = validate758
-  const schema309 = { $ref: 'ls101#/components/schemas/DeviceList' }
-  function validate759(
+  exports.v154 = validate777
+  const schema319 = { $ref: 'ls101#/components/schemas/DeviceList' }
+  function validate778(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -35590,25 +36171,25 @@ var validators = {}
       }
       errors++
     }
-    validate759.errors = vErrors
+    validate778.errors = vErrors
     return errors === 0
   }
-  function validate758(
+  function validate777(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate759(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate759.errors : vErrors.concat(validate759.errors)
+    if (!validate778(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate778.errors : vErrors.concat(validate778.errors)
       errors = vErrors.length
     }
-    validate758.errors = vErrors
+    validate777.errors = vErrors
     return errors === 0
   }
-  exports.v151 = validate763
-  const schema311 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate764(
+  exports.v155 = validate782
+  const schema321 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate783(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -35649,14 +36230,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -35675,30 +36256,30 @@ var validators = {}
       }
       errors++
     }
-    validate764.errors = vErrors
+    validate783.errors = vErrors
     return errors === 0
   }
-  function validate763(
+  function validate782(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate764(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate764.errors : vErrors.concat(validate764.errors)
+    if (!validate783(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate783.errors : vErrors.concat(validate783.errors)
       errors = vErrors.length
     }
-    validate763.errors = vErrors
+    validate782.errors = vErrors
     return errors === 0
   }
-  exports.v152 = validate767
-  const schema313 = {
+  exports.v156 = validate786
+  const schema323 = {
     type: 'object',
     properties: { id: { type: 'string', format: 'uuid' } },
     required: ['id'],
     additionalProperties: false
   }
-  function validate767(
+  function validate786(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -35786,12 +36367,12 @@ var validators = {}
       }
       errors++
     }
-    validate767.errors = vErrors
+    validate786.errors = vErrors
     return errors === 0
   }
-  exports.v155 = validate768
-  const schema314 = { $ref: 'ls101#/components/schemas/DeviceDetails' }
-  function validate769(
+  exports.v159 = validate787
+  const schema324 = { $ref: 'ls101#/components/schemas/DeviceDetails' }
+  function validate788(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -36110,25 +36691,25 @@ var validators = {}
       }
       errors++
     }
-    validate769.errors = vErrors
+    validate788.errors = vErrors
     return errors === 0
   }
-  function validate768(
+  function validate787(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate769(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate769.errors : vErrors.concat(validate769.errors)
+    if (!validate788(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate788.errors : vErrors.concat(validate788.errors)
       errors = vErrors.length
     }
-    validate768.errors = vErrors
+    validate787.errors = vErrors
     return errors === 0
   }
-  exports.v156 = validate776
-  const schema316 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate777(
+  exports.v160 = validate795
+  const schema326 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate796(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -36169,14 +36750,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -36195,30 +36776,30 @@ var validators = {}
       }
       errors++
     }
-    validate777.errors = vErrors
+    validate796.errors = vErrors
     return errors === 0
   }
-  function validate776(
+  function validate795(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate777(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate777.errors : vErrors.concat(validate777.errors)
+    if (!validate796(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate796.errors : vErrors.concat(validate796.errors)
       errors = vErrors.length
     }
-    validate776.errors = vErrors
+    validate795.errors = vErrors
     return errors === 0
   }
-  exports.v157 = validate780
-  const schema318 = {
+  exports.v161 = validate799
+  const schema328 = {
     type: 'object',
     properties: { id: { type: 'string', format: 'uuid' } },
     required: ['id'],
     additionalProperties: false
   }
-  function validate780(
+  function validate799(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -36306,12 +36887,12 @@ var validators = {}
       }
       errors++
     }
-    validate780.errors = vErrors
+    validate799.errors = vErrors
     return errors === 0
   }
-  exports.v160 = validate781
-  const schema319 = { $ref: 'ls101#/components/schemas/DevicePatch' }
-  function validate782(
+  exports.v164 = validate800
+  const schema329 = { $ref: 'ls101#/components/schemas/DevicePatch' }
+  function validate801(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -36507,25 +37088,25 @@ var validators = {}
       }
       errors++
     }
-    validate782.errors = vErrors
+    validate801.errors = vErrors
     return errors === 0
   }
-  function validate781(
+  function validate800(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate782(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate782.errors : vErrors.concat(validate782.errors)
+    if (!validate801(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate801.errors : vErrors.concat(validate801.errors)
       errors = vErrors.length
     }
-    validate781.errors = vErrors
+    validate800.errors = vErrors
     return errors === 0
   }
-  exports.v161 = validate788
-  const schema321 = { $ref: 'ls101#/components/schemas/Device' }
-  function validate789(
+  exports.v165 = validate807
+  const schema331 = { $ref: 'ls101#/components/schemas/Device' }
+  function validate808(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -36804,25 +37385,25 @@ var validators = {}
       }
       errors++
     }
-    validate789.errors = vErrors
+    validate808.errors = vErrors
     return errors === 0
   }
-  function validate788(
+  function validate807(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate789(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate789.errors : vErrors.concat(validate789.errors)
+    if (!validate808(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate808.errors : vErrors.concat(validate808.errors)
       errors = vErrors.length
     }
-    validate788.errors = vErrors
+    validate807.errors = vErrors
     return errors === 0
   }
-  exports.v162 = validate795
-  const schema323 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate796(
+  exports.v166 = validate814
+  const schema333 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate815(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -36863,14 +37444,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -36889,25 +37470,25 @@ var validators = {}
       }
       errors++
     }
-    validate796.errors = vErrors
+    validate815.errors = vErrors
     return errors === 0
   }
-  function validate795(
+  function validate814(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate796(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate796.errors : vErrors.concat(validate796.errors)
+    if (!validate815(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate815.errors : vErrors.concat(validate815.errors)
       errors = vErrors.length
     }
-    validate795.errors = vErrors
+    validate814.errors = vErrors
     return errors === 0
   }
-  exports.v163 = validate799
-  const schema325 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate800(
+  exports.v167 = validate818
+  const schema335 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate819(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -36948,14 +37529,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -36974,30 +37555,30 @@ var validators = {}
       }
       errors++
     }
-    validate800.errors = vErrors
+    validate819.errors = vErrors
     return errors === 0
   }
-  function validate799(
+  function validate818(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate800(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate800.errors : vErrors.concat(validate800.errors)
+    if (!validate819(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate819.errors : vErrors.concat(validate819.errors)
       errors = vErrors.length
     }
-    validate799.errors = vErrors
+    validate818.errors = vErrors
     return errors === 0
   }
-  exports.v164 = validate803
-  const schema327 = {
+  exports.v168 = validate822
+  const schema337 = {
     type: 'object',
     properties: { id: { type: 'string', format: 'uuid' } },
     required: ['id'],
     additionalProperties: false
   }
-  function validate803(
+  function validate822(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -37085,12 +37666,12 @@ var validators = {}
       }
       errors++
     }
-    validate803.errors = vErrors
+    validate822.errors = vErrors
     return errors === 0
   }
-  exports.v167 = validate804
-  const schema328 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate805(
+  exports.v171 = validate823
+  const schema338 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate824(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -37131,14 +37712,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -37157,25 +37738,25 @@ var validators = {}
       }
       errors++
     }
-    validate805.errors = vErrors
+    validate824.errors = vErrors
     return errors === 0
   }
-  function validate804(
+  function validate823(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate805(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate805.errors : vErrors.concat(validate805.errors)
+    if (!validate824(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate824.errors : vErrors.concat(validate824.errors)
       errors = vErrors.length
     }
-    validate804.errors = vErrors
+    validate823.errors = vErrors
     return errors === 0
   }
-  exports.v168 = validate808
-  const schema330 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate808(
+  exports.v172 = validate827
+  const schema340 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate827(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -37212,12 +37793,12 @@ var validators = {}
       }
       errors++
     }
-    validate808.errors = vErrors
+    validate827.errors = vErrors
     return errors === 0
   }
-  exports.v171 = validate809
-  const schema331 = { $ref: 'ls101#/components/schemas/EnrollmentList' }
-  function validate810(
+  exports.v175 = validate828
+  const schema341 = { $ref: 'ls101#/components/schemas/EnrollmentList' }
+  function validate829(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -37291,25 +37872,25 @@ var validators = {}
       }
       errors++
     }
-    validate810.errors = vErrors
+    validate829.errors = vErrors
     return errors === 0
   }
-  function validate809(
+  function validate828(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate810(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate810.errors : vErrors.concat(validate810.errors)
+    if (!validate829(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate829.errors : vErrors.concat(validate829.errors)
       errors = vErrors.length
     }
-    validate809.errors = vErrors
+    validate828.errors = vErrors
     return errors === 0
   }
-  exports.v172 = validate814
-  const schema333 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate815(
+  exports.v176 = validate833
+  const schema343 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate834(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -37350,14 +37931,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -37376,25 +37957,25 @@ var validators = {}
       }
       errors++
     }
-    validate815.errors = vErrors
+    validate834.errors = vErrors
     return errors === 0
   }
-  function validate814(
+  function validate833(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate815(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate815.errors : vErrors.concat(validate815.errors)
+    if (!validate834(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate834.errors : vErrors.concat(validate834.errors)
       errors = vErrors.length
     }
-    validate814.errors = vErrors
+    validate833.errors = vErrors
     return errors === 0
   }
-  exports.v173 = validate818
-  const schema335 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate818(
+  exports.v177 = validate837
+  const schema345 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate837(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -37431,12 +38012,12 @@ var validators = {}
       }
       errors++
     }
-    validate818.errors = vErrors
+    validate837.errors = vErrors
     return errors === 0
   }
-  exports.v176 = validate819
-  const schema336 = { $ref: 'ls101#/components/schemas/EnrollmentCreate' }
-  function validate820(
+  exports.v180 = validate838
+  const schema346 = { $ref: 'ls101#/components/schemas/EnrollmentCreate' }
+  function validate839(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -37553,25 +38134,25 @@ var validators = {}
       }
       errors++
     }
-    validate820.errors = vErrors
+    validate839.errors = vErrors
     return errors === 0
   }
-  function validate819(
+  function validate838(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate820(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate820.errors : vErrors.concat(validate820.errors)
+    if (!validate839(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate839.errors : vErrors.concat(validate839.errors)
       errors = vErrors.length
     }
-    validate819.errors = vErrors
+    validate838.errors = vErrors
     return errors === 0
   }
-  exports.v177 = validate823
-  const schema338 = { $ref: 'ls101#/components/schemas/EnrollmentCreated' }
-  function validate824(
+  exports.v181 = validate842
+  const schema348 = { $ref: 'ls101#/components/schemas/EnrollmentCreated' }
+  function validate843(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -37625,479 +38206,8 @@ var validators = {}
       }
       errors++
     }
-    validate824.errors = vErrors
+    validate843.errors = vErrors
     return errors === 0
-  }
-  function validate823(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate824(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate824.errors : vErrors.concat(validate824.errors)
-      errors = vErrors.length
-    }
-    validate823.errors = vErrors
-    return errors === 0
-  }
-  exports.v178 = validate828
-  const schema340 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate829(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.error === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'error' },
-          message: "must have required property 'error'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'error')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.error !== void 0) {
-        if (
-          !validate376(data.error, {
-            instancePath: instancePath + '/error',
-            parentData: data,
-            parentDataProperty: 'error',
-            rootData
-          })
-        ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
-          errors = vErrors.length
-        }
-      }
-    } else {
-      const err2 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err2]
-      } else {
-        vErrors.push(err2)
-      }
-      errors++
-    }
-    validate829.errors = vErrors
-    return errors === 0
-  }
-  function validate828(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate829(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate829.errors : vErrors.concat(validate829.errors)
-      errors = vErrors.length
-    }
-    validate828.errors = vErrors
-    return errors === 0
-  }
-  exports.v179 = validate832
-  const schema342 = {
-    type: 'object',
-    properties: { id: { type: 'string', format: 'uuid' } },
-    required: ['id'],
-    additionalProperties: false
-  }
-  function validate832(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.id === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'id' },
-          message: "must have required property 'id'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'id')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.id !== void 0) {
-        let data0 = data.id
-        if (typeof data0 === 'string') {
-          if (!formats2.test(data0)) {
-            const err2 = {
-              instancePath: instancePath + '/id',
-              schemaPath: '#/properties/id/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-        } else {
-          const err3 = {
-            instancePath: instancePath + '/id',
-            schemaPath: '#/properties/id/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err3]
-          } else {
-            vErrors.push(err3)
-          }
-          errors++
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
-    }
-    validate832.errors = vErrors
-    return errors === 0
-  }
-  exports.v182 = validate833
-  const schema343 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate834(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.error === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'error' },
-          message: "must have required property 'error'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'error')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.error !== void 0) {
-        if (
-          !validate376(data.error, {
-            instancePath: instancePath + '/error',
-            parentData: data,
-            parentDataProperty: 'error',
-            rootData
-          })
-        ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
-          errors = vErrors.length
-        }
-      }
-    } else {
-      const err2 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err2]
-      } else {
-        vErrors.push(err2)
-      }
-      errors++
-    }
-    validate834.errors = vErrors
-    return errors === 0
-  }
-  function validate833(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate834(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate834.errors : vErrors.concat(validate834.errors)
-      errors = vErrors.length
-    }
-    validate833.errors = vErrors
-    return errors === 0
-  }
-  exports.v183 = validate837
-  const schema345 = {
-    type: 'object',
-    properties: { id: { type: 'string', format: 'uuid' } },
-    required: ['id'],
-    additionalProperties: false
-  }
-  function validate837(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.id === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'id' },
-          message: "must have required property 'id'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'id')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.id !== void 0) {
-        let data0 = data.id
-        if (typeof data0 === 'string') {
-          if (!formats2.test(data0)) {
-            const err2 = {
-              instancePath: instancePath + '/id',
-              schemaPath: '#/properties/id/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-        } else {
-          const err3 = {
-            instancePath: instancePath + '/id',
-            schemaPath: '#/properties/id/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err3]
-          } else {
-            vErrors.push(err3)
-          }
-          errors++
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
-    }
-    validate837.errors = vErrors
-    return errors === 0
-  }
-  exports.v186 = validate838
-  const schema346 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate839(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.error === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'error' },
-          message: "must have required property 'error'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'error')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.error !== void 0) {
-        if (
-          !validate376(data.error, {
-            instancePath: instancePath + '/error',
-            parentData: data,
-            parentDataProperty: 'error',
-            rootData
-          })
-        ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
-          errors = vErrors.length
-        }
-      }
-    } else {
-      const err2 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err2]
-      } else {
-        vErrors.push(err2)
-      }
-      errors++
-    }
-    validate839.errors = vErrors
-    return errors === 0
-  }
-  function validate838(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate839(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate839.errors : vErrors.concat(validate839.errors)
-      errors = vErrors.length
-    }
-    validate838.errors = vErrors
-    return errors === 0
-  }
-  exports.v187 = validate842
-  const schema348 = {
-    type: 'object',
-    properties: { installationId: { type: 'string', format: 'uuid' } },
-    required: ['installationId'],
-    additionalProperties: false
   }
   function validate842(
     data,
@@ -38105,781 +38215,16 @@ var validators = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.installationId === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'installationId' },
-          message: "must have required property 'installationId'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'installationId')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.installationId !== void 0) {
-        let data0 = data.installationId
-        if (typeof data0 === 'string') {
-          if (!formats2.test(data0)) {
-            const err2 = {
-              instancePath: instancePath + '/installationId',
-              schemaPath: '#/properties/installationId/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-        } else {
-          const err3 = {
-            instancePath: instancePath + '/installationId',
-            schemaPath: '#/properties/installationId/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err3]
-          } else {
-            vErrors.push(err3)
-          }
-          errors++
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
+    if (!validate843(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate843.errors : vErrors.concat(validate843.errors)
+      errors = vErrors.length
     }
     validate842.errors = vErrors
     return errors === 0
   }
-  exports.v190 = validate843
-  const schema349 = { $ref: 'ls101#/components/schemas/Registration' }
-  function validate844(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.enrollmentFile === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'enrollmentFile' },
-          message: "must have required property 'enrollmentFile'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data.deviceSecret === void 0) {
-        const err1 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'deviceSecret' },
-          message: "must have required property 'deviceSecret'"
-        }
-        if (vErrors === null) {
-          vErrors = [err1]
-        } else {
-          vErrors.push(err1)
-        }
-        errors++
-      }
-      if (data.computerName === void 0) {
-        const err2 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'computerName' },
-          message: "must have required property 'computerName'"
-        }
-        if (vErrors === null) {
-          vErrors = [err2]
-        } else {
-          vErrors.push(err2)
-        }
-        errors++
-      }
-      if (data.platform === void 0) {
-        const err3 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'platform' },
-          message: "must have required property 'platform'"
-        }
-        if (vErrors === null) {
-          vErrors = [err3]
-        } else {
-          vErrors.push(err3)
-        }
-        errors++
-      }
-      if (data.releaseVersion === void 0) {
-        const err4 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'releaseVersion' },
-          message: "must have required property 'releaseVersion'"
-        }
-        if (vErrors === null) {
-          vErrors = [err4]
-        } else {
-          vErrors.push(err4)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (
-          !(
-            key0 === 'enrollmentFile' ||
-            key0 === 'deviceSecret' ||
-            key0 === 'computerName' ||
-            key0 === 'platform' ||
-            key0 === 'releaseVersion'
-          )
-        ) {
-          const err5 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err5]
-          } else {
-            vErrors.push(err5)
-          }
-          errors++
-        }
-      }
-      if (data.enrollmentFile !== void 0) {
-        let data0 = data.enrollmentFile
-        if (typeof data0 === 'string') {
-          if (func2(data0) > 65536) {
-            const err6 = {
-              instancePath: instancePath + '/enrollmentFile',
-              schemaPath: '#/properties/enrollmentFile/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 65536 },
-              message: 'must NOT have more than 65536 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err6]
-            } else {
-              vErrors.push(err6)
-            }
-            errors++
-          }
-        } else {
-          const err7 = {
-            instancePath: instancePath + '/enrollmentFile',
-            schemaPath: '#/properties/enrollmentFile/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err7]
-          } else {
-            vErrors.push(err7)
-          }
-          errors++
-        }
-      }
-      if (data.deviceSecret !== void 0) {
-        let data1 = data.deviceSecret
-        if (typeof data1 === 'string') {
-          if (!pattern3.test(data1)) {
-            const err8 = {
-              instancePath: instancePath + '/deviceSecret',
-              schemaPath: '#/properties/deviceSecret/pattern',
-              keyword: 'pattern',
-              params: { pattern: '^[A-Za-z0-9_-]{43}$' },
-              message: 'must match pattern "^[A-Za-z0-9_-]{43}$"'
-            }
-            if (vErrors === null) {
-              vErrors = [err8]
-            } else {
-              vErrors.push(err8)
-            }
-            errors++
-          }
-        } else {
-          const err9 = {
-            instancePath: instancePath + '/deviceSecret',
-            schemaPath: '#/properties/deviceSecret/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err9]
-          } else {
-            vErrors.push(err9)
-          }
-          errors++
-        }
-      }
-      if (data.computerName !== void 0) {
-        let data2 = data.computerName
-        if (typeof data2 === 'string') {
-          if (func2(data2) > 255) {
-            const err10 = {
-              instancePath: instancePath + '/computerName',
-              schemaPath: '#/properties/computerName/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 255 },
-              message: 'must NOT have more than 255 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err10]
-            } else {
-              vErrors.push(err10)
-            }
-            errors++
-          }
-          if (func2(data2) < 1) {
-            const err11 = {
-              instancePath: instancePath + '/computerName',
-              schemaPath: '#/properties/computerName/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err11]
-            } else {
-              vErrors.push(err11)
-            }
-            errors++
-          }
-        } else {
-          const err12 = {
-            instancePath: instancePath + '/computerName',
-            schemaPath: '#/properties/computerName/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err12]
-          } else {
-            vErrors.push(err12)
-          }
-          errors++
-        }
-      }
-      if (data.platform !== void 0) {
-        let data3 = data.platform
-        if (typeof data3 !== 'string') {
-          const err13 = {
-            instancePath: instancePath + '/platform',
-            schemaPath: '#/properties/platform/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err13]
-          } else {
-            vErrors.push(err13)
-          }
-          errors++
-        }
-        if (!(data3 === 'win32' || data3 === 'linux')) {
-          const err14 = {
-            instancePath: instancePath + '/platform',
-            schemaPath: '#/properties/platform/enum',
-            keyword: 'enum',
-            params: { allowedValues: schema102.properties.platform.enum },
-            message: 'must be equal to one of the allowed values'
-          }
-          if (vErrors === null) {
-            vErrors = [err14]
-          } else {
-            vErrors.push(err14)
-          }
-          errors++
-        }
-      }
-      if (data.releaseVersion !== void 0) {
-        let data4 = data.releaseVersion
-        if (typeof data4 === 'string') {
-          if (func2(data4) > 128) {
-            const err15 = {
-              instancePath: instancePath + '/releaseVersion',
-              schemaPath: '#/properties/releaseVersion/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 128 },
-              message: 'must NOT have more than 128 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err15]
-            } else {
-              vErrors.push(err15)
-            }
-            errors++
-          }
-          if (func2(data4) < 1) {
-            const err16 = {
-              instancePath: instancePath + '/releaseVersion',
-              schemaPath: '#/properties/releaseVersion/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err16]
-            } else {
-              vErrors.push(err16)
-            }
-            errors++
-          }
-        } else {
-          const err17 = {
-            instancePath: instancePath + '/releaseVersion',
-            schemaPath: '#/properties/releaseVersion/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err17]
-          } else {
-            vErrors.push(err17)
-          }
-          errors++
-        }
-      }
-    } else {
-      const err18 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err18]
-      } else {
-        vErrors.push(err18)
-      }
-      errors++
-    }
-    validate844.errors = vErrors
-    return errors === 0
-  }
-  function validate843(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate844(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate844.errors : vErrors.concat(validate844.errors)
-      errors = vErrors.length
-    }
-    validate843.errors = vErrors
-    return errors === 0
-  }
-  exports.v191 = validate846
-  const schema351 = { $ref: 'ls101#/components/schemas/RegisteredDevice' }
-  function validate847(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate78(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate78.errors : vErrors.concat(validate78.errors)
-      errors = vErrors.length
-    }
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.deviceId === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/allOf/1/required',
-          keyword: 'required',
-          params: { missingProperty: 'deviceId' },
-          message: "must have required property 'deviceId'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data.deviceNumber === void 0) {
-        const err1 = {
-          instancePath,
-          schemaPath: '#/allOf/1/required',
-          keyword: 'required',
-          params: { missingProperty: 'deviceNumber' },
-          message: "must have required property 'deviceNumber'"
-        }
-        if (vErrors === null) {
-          vErrors = [err1]
-        } else {
-          vErrors.push(err1)
-        }
-        errors++
-      }
-      if (data.registeredAt === void 0) {
-        const err2 = {
-          instancePath,
-          schemaPath: '#/allOf/1/required',
-          keyword: 'required',
-          params: { missingProperty: 'registeredAt' },
-          message: "must have required property 'registeredAt'"
-        }
-        if (vErrors === null) {
-          vErrors = [err2]
-        } else {
-          vErrors.push(err2)
-        }
-        errors++
-      }
-      if (data.deviceId !== void 0) {
-        let data0 = data.deviceId
-        if (typeof data0 === 'string') {
-          if (!formats2.test(data0)) {
-            const err3 = {
-              instancePath: instancePath + '/deviceId',
-              schemaPath: '#/allOf/1/properties/deviceId/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-        } else {
-          const err4 = {
-            instancePath: instancePath + '/deviceId',
-            schemaPath: '#/allOf/1/properties/deviceId/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err4]
-          } else {
-            vErrors.push(err4)
-          }
-          errors++
-        }
-      }
-      if (data.deviceNumber !== void 0) {
-        if (typeof data.deviceNumber !== 'string') {
-          const err5 = {
-            instancePath: instancePath + '/deviceNumber',
-            schemaPath: '#/allOf/1/properties/deviceNumber/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err5]
-          } else {
-            vErrors.push(err5)
-          }
-          errors++
-        }
-      }
-      if (data.registeredAt !== void 0) {
-        let data2 = data.registeredAt
-        if (typeof data2 === 'string') {
-          if (!formats0.validate(data2)) {
-            const err6 = {
-              instancePath: instancePath + '/registeredAt',
-              schemaPath: '#/allOf/1/properties/registeredAt/format',
-              keyword: 'format',
-              params: { format: 'date-time' },
-              message: 'must match format "date-time"'
-            }
-            if (vErrors === null) {
-              vErrors = [err6]
-            } else {
-              vErrors.push(err6)
-            }
-            errors++
-          }
-        } else {
-          const err7 = {
-            instancePath: instancePath + '/registeredAt',
-            schemaPath: '#/allOf/1/properties/registeredAt/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err7]
-          } else {
-            vErrors.push(err7)
-          }
-          errors++
-        }
-      }
-    } else {
-      const err8 = {
-        instancePath,
-        schemaPath: '#/allOf/1/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err8]
-      } else {
-        vErrors.push(err8)
-      }
-      errors++
-    }
-    validate847.errors = vErrors
-    return errors === 0
-  }
-  function validate846(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate847(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate847.errors : vErrors.concat(validate847.errors)
-      errors = vErrors.length
-    }
-    validate846.errors = vErrors
-    return errors === 0
-  }
-  exports.v192 = validate850
-  const schema353 = { $ref: 'ls101#/components/schemas/RegisteredDevice' }
-  function validate851(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate78(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate78.errors : vErrors.concat(validate78.errors)
-      errors = vErrors.length
-    }
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.deviceId === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/allOf/1/required',
-          keyword: 'required',
-          params: { missingProperty: 'deviceId' },
-          message: "must have required property 'deviceId'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data.deviceNumber === void 0) {
-        const err1 = {
-          instancePath,
-          schemaPath: '#/allOf/1/required',
-          keyword: 'required',
-          params: { missingProperty: 'deviceNumber' },
-          message: "must have required property 'deviceNumber'"
-        }
-        if (vErrors === null) {
-          vErrors = [err1]
-        } else {
-          vErrors.push(err1)
-        }
-        errors++
-      }
-      if (data.registeredAt === void 0) {
-        const err2 = {
-          instancePath,
-          schemaPath: '#/allOf/1/required',
-          keyword: 'required',
-          params: { missingProperty: 'registeredAt' },
-          message: "must have required property 'registeredAt'"
-        }
-        if (vErrors === null) {
-          vErrors = [err2]
-        } else {
-          vErrors.push(err2)
-        }
-        errors++
-      }
-      if (data.deviceId !== void 0) {
-        let data0 = data.deviceId
-        if (typeof data0 === 'string') {
-          if (!formats2.test(data0)) {
-            const err3 = {
-              instancePath: instancePath + '/deviceId',
-              schemaPath: '#/allOf/1/properties/deviceId/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-        } else {
-          const err4 = {
-            instancePath: instancePath + '/deviceId',
-            schemaPath: '#/allOf/1/properties/deviceId/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err4]
-          } else {
-            vErrors.push(err4)
-          }
-          errors++
-        }
-      }
-      if (data.deviceNumber !== void 0) {
-        if (typeof data.deviceNumber !== 'string') {
-          const err5 = {
-            instancePath: instancePath + '/deviceNumber',
-            schemaPath: '#/allOf/1/properties/deviceNumber/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err5]
-          } else {
-            vErrors.push(err5)
-          }
-          errors++
-        }
-      }
-      if (data.registeredAt !== void 0) {
-        let data2 = data.registeredAt
-        if (typeof data2 === 'string') {
-          if (!formats0.validate(data2)) {
-            const err6 = {
-              instancePath: instancePath + '/registeredAt',
-              schemaPath: '#/allOf/1/properties/registeredAt/format',
-              keyword: 'format',
-              params: { format: 'date-time' },
-              message: 'must match format "date-time"'
-            }
-            if (vErrors === null) {
-              vErrors = [err6]
-            } else {
-              vErrors.push(err6)
-            }
-            errors++
-          }
-        } else {
-          const err7 = {
-            instancePath: instancePath + '/registeredAt',
-            schemaPath: '#/allOf/1/properties/registeredAt/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err7]
-          } else {
-            vErrors.push(err7)
-          }
-          errors++
-        }
-      }
-    } else {
-      const err8 = {
-        instancePath,
-        schemaPath: '#/allOf/1/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err8]
-      } else {
-        vErrors.push(err8)
-      }
-      errors++
-    }
-    validate851.errors = vErrors
-    return errors === 0
-  }
-  function validate850(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate851(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate851.errors : vErrors.concat(validate851.errors)
-      errors = vErrors.length
-    }
-    validate850.errors = vErrors
-    return errors === 0
-  }
-  exports.v193 = validate854
-  const schema355 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate855(
+  exports.v182 = validate847
+  const schema350 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate848(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -38920,14 +38265,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -38946,25 +38291,391 @@ var validators = {}
       }
       errors++
     }
-    validate855.errors = vErrors
+    validate848.errors = vErrors
     return errors === 0
   }
-  function validate854(
+  function validate847(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate855(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate855.errors : vErrors.concat(validate855.errors)
+    if (!validate848(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate848.errors : vErrors.concat(validate848.errors)
       errors = vErrors.length
     }
-    validate854.errors = vErrors
+    validate847.errors = vErrors
     return errors === 0
   }
-  exports.v194 = validate858
-  const schema357 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  exports.v183 = validate851
+  const schema352 = {
+    type: 'object',
+    properties: { id: { type: 'string', format: 'uuid' } },
+    required: ['id'],
+    additionalProperties: false
+  }
+  function validate851(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.id === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'id' },
+          message: "must have required property 'id'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'id')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.id !== void 0) {
+        let data0 = data.id
+        if (typeof data0 === 'string') {
+          if (!formats2.test(data0)) {
+            const err2 = {
+              instancePath: instancePath + '/id',
+              schemaPath: '#/properties/id/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+        } else {
+          const err3 = {
+            instancePath: instancePath + '/id',
+            schemaPath: '#/properties/id/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err3]
+          } else {
+            vErrors.push(err3)
+          }
+          errors++
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate851.errors = vErrors
+    return errors === 0
+  }
+  exports.v186 = validate852
+  const schema353 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate853(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.error === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'error' },
+          message: "must have required property 'error'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'error')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.error !== void 0) {
+        if (
+          !validate395(data.error, {
+            instancePath: instancePath + '/error',
+            parentData: data,
+            parentDataProperty: 'error',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
+          errors = vErrors.length
+        }
+      }
+    } else {
+      const err2 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err2]
+      } else {
+        vErrors.push(err2)
+      }
+      errors++
+    }
+    validate853.errors = vErrors
+    return errors === 0
+  }
+  function validate852(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate853(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate853.errors : vErrors.concat(validate853.errors)
+      errors = vErrors.length
+    }
+    validate852.errors = vErrors
+    return errors === 0
+  }
+  exports.v187 = validate856
+  const schema355 = {
+    type: 'object',
+    properties: { id: { type: 'string', format: 'uuid' } },
+    required: ['id'],
+    additionalProperties: false
+  }
+  function validate856(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.id === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'id' },
+          message: "must have required property 'id'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'id')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.id !== void 0) {
+        let data0 = data.id
+        if (typeof data0 === 'string') {
+          if (!formats2.test(data0)) {
+            const err2 = {
+              instancePath: instancePath + '/id',
+              schemaPath: '#/properties/id/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+        } else {
+          const err3 = {
+            instancePath: instancePath + '/id',
+            schemaPath: '#/properties/id/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err3]
+          } else {
+            vErrors.push(err3)
+          }
+          errors++
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate856.errors = vErrors
+    return errors === 0
+  }
+  exports.v190 = validate857
+  const schema356 = { $ref: 'ls101#/components/schemas/Error' }
   function validate858(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.error === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'error' },
+          message: "must have required property 'error'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'error')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.error !== void 0) {
+        if (
+          !validate395(data.error, {
+            instancePath: instancePath + '/error',
+            parentData: data,
+            parentDataProperty: 'error',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
+          errors = vErrors.length
+        }
+      }
+    } else {
+      const err2 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err2]
+      } else {
+        vErrors.push(err2)
+      }
+      errors++
+    }
+    validate858.errors = vErrors
+    return errors === 0
+  }
+  function validate857(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate858(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate858.errors : vErrors.concat(validate858.errors)
+      errors = vErrors.length
+    }
+    validate857.errors = vErrors
+    return errors === 0
+  }
+  exports.v191 = validate861
+  const schema358 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate861(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -39001,12 +38712,1082 @@ var validators = {}
       }
       errors++
     }
-    validate858.errors = vErrors
+    validate861.errors = vErrors
     return errors === 0
   }
-  exports.v197 = validate859
-  const schema358 = { $ref: 'ls101#/components/schemas/ExamList' }
-  function validate860(
+  exports.v194 = validate862
+  const schema359 = { $ref: 'ls101#/components/schemas/ConnectionEnrollment' }
+  function validate863(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.enrollmentFile === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'enrollmentFile' },
+          message: "must have required property 'enrollmentFile'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data.computerName === void 0) {
+        const err1 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'computerName' },
+          message: "must have required property 'computerName'"
+        }
+        if (vErrors === null) {
+          vErrors = [err1]
+        } else {
+          vErrors.push(err1)
+        }
+        errors++
+      }
+      if (data.releaseVersion === void 0) {
+        const err2 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'releaseVersion' },
+          message: "must have required property 'releaseVersion'"
+        }
+        if (vErrors === null) {
+          vErrors = [err2]
+        } else {
+          vErrors.push(err2)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'enrollmentFile' || key0 === 'computerName' || key0 === 'releaseVersion')) {
+          const err3 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err3]
+          } else {
+            vErrors.push(err3)
+          }
+          errors++
+        }
+      }
+      if (data.enrollmentFile !== void 0) {
+        let data0 = data.enrollmentFile
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 65536) {
+            const err4 = {
+              instancePath: instancePath + '/enrollmentFile',
+              schemaPath: '#/properties/enrollmentFile/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 65536 },
+              message: 'must NOT have more than 65536 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err4]
+            } else {
+              vErrors.push(err4)
+            }
+            errors++
+          }
+        } else {
+          const err5 = {
+            instancePath: instancePath + '/enrollmentFile',
+            schemaPath: '#/properties/enrollmentFile/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err5]
+          } else {
+            vErrors.push(err5)
+          }
+          errors++
+        }
+      }
+      if (data.computerName !== void 0) {
+        if (
+          !validate260(data.computerName, {
+            instancePath: instancePath + '/computerName',
+            parentData: data,
+            parentDataProperty: 'computerName',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate260.errors : vErrors.concat(validate260.errors)
+          errors = vErrors.length
+        }
+      }
+      if (data.releaseVersion !== void 0) {
+        let data2 = data.releaseVersion
+        if (typeof data2 === 'string') {
+          if (func2(data2) > 128) {
+            const err6 = {
+              instancePath: instancePath + '/releaseVersion',
+              schemaPath: '#/properties/releaseVersion/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 128 },
+              message: 'must NOT have more than 128 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err6]
+            } else {
+              vErrors.push(err6)
+            }
+            errors++
+          }
+          if (func2(data2) < 1) {
+            const err7 = {
+              instancePath: instancePath + '/releaseVersion',
+              schemaPath: '#/properties/releaseVersion/minLength',
+              keyword: 'minLength',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err7]
+            } else {
+              vErrors.push(err7)
+            }
+            errors++
+          }
+        } else {
+          const err8 = {
+            instancePath: instancePath + '/releaseVersion',
+            schemaPath: '#/properties/releaseVersion/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err8]
+          } else {
+            vErrors.push(err8)
+          }
+          errors++
+        }
+      }
+    } else {
+      const err9 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err9]
+      } else {
+        vErrors.push(err9)
+      }
+      errors++
+    }
+    validate863.errors = vErrors
+    return errors === 0
+  }
+  function validate862(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate863(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate863.errors : vErrors.concat(validate863.errors)
+      errors = vErrors.length
+    }
+    validate862.errors = vErrors
+    return errors === 0
+  }
+  exports.v195 = validate866
+  const schema361 = { $ref: 'ls101#/components/schemas/ServerConnection' }
+  function validate867(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.connectionSecret === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'connectionSecret' },
+          message: "must have required property 'connectionSecret'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'connectionSecret')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.connectionSecret !== void 0) {
+        if (
+          !validate265(data.connectionSecret, {
+            instancePath: instancePath + '/connectionSecret',
+            parentData: data,
+            parentDataProperty: 'connectionSecret',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate265.errors : vErrors.concat(validate265.errors)
+          errors = vErrors.length
+        }
+      }
+    } else {
+      const err2 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err2]
+      } else {
+        vErrors.push(err2)
+      }
+      errors++
+    }
+    validate867.errors = vErrors
+    return errors === 0
+  }
+  function validate866(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate867(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate867.errors : vErrors.concat(validate867.errors)
+      errors = vErrors.length
+    }
+    validate866.errors = vErrors
+    return errors === 0
+  }
+  exports.v196 = validate870
+  const schema363 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate871(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.error === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'error' },
+          message: "must have required property 'error'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'error')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.error !== void 0) {
+        if (
+          !validate395(data.error, {
+            instancePath: instancePath + '/error',
+            parentData: data,
+            parentDataProperty: 'error',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
+          errors = vErrors.length
+        }
+      }
+    } else {
+      const err2 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err2]
+      } else {
+        vErrors.push(err2)
+      }
+      errors++
+    }
+    validate871.errors = vErrors
+    return errors === 0
+  }
+  function validate870(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate871(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate871.errors : vErrors.concat(validate871.errors)
+      errors = vErrors.length
+    }
+    validate870.errors = vErrors
+    return errors === 0
+  }
+  exports.v197 = validate874
+  const schema365 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate874(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate874.errors = vErrors
+    return errors === 0
+  }
+  exports.v200 = validate875
+  const schema366 = { $ref: 'ls101#/components/schemas/StudentSessionRequest' }
+  function validate876(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.connectionSecret === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'connectionSecret' },
+          message: "must have required property 'connectionSecret'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data.computerName === void 0) {
+        const err1 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'computerName' },
+          message: "must have required property 'computerName'"
+        }
+        if (vErrors === null) {
+          vErrors = [err1]
+        } else {
+          vErrors.push(err1)
+        }
+        errors++
+      }
+      if (data.platform === void 0) {
+        const err2 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'platform' },
+          message: "must have required property 'platform'"
+        }
+        if (vErrors === null) {
+          vErrors = [err2]
+        } else {
+          vErrors.push(err2)
+        }
+        errors++
+      }
+      if (data.runtimeId === void 0) {
+        const err3 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'runtimeId' },
+          message: "must have required property 'runtimeId'"
+        }
+        if (vErrors === null) {
+          vErrors = [err3]
+        } else {
+          vErrors.push(err3)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (
+          !(
+            key0 === 'connectionSecret' ||
+            key0 === 'computerName' ||
+            key0 === 'platform' ||
+            key0 === 'runtimeId'
+          )
+        ) {
+          const err4 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err4]
+          } else {
+            vErrors.push(err4)
+          }
+          errors++
+        }
+      }
+      if (data.connectionSecret !== void 0) {
+        if (
+          !validate265(data.connectionSecret, {
+            instancePath: instancePath + '/connectionSecret',
+            parentData: data,
+            parentDataProperty: 'connectionSecret',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate265.errors : vErrors.concat(validate265.errors)
+          errors = vErrors.length
+        }
+      }
+      if (data.computerName !== void 0) {
+        if (
+          !validate260(data.computerName, {
+            instancePath: instancePath + '/computerName',
+            parentData: data,
+            parentDataProperty: 'computerName',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate260.errors : vErrors.concat(validate260.errors)
+          errors = vErrors.length
+        }
+      }
+      if (data.platform !== void 0) {
+        let data2 = data.platform
+        if (typeof data2 !== 'string') {
+          const err5 = {
+            instancePath: instancePath + '/platform',
+            schemaPath: '#/properties/platform/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err5]
+          } else {
+            vErrors.push(err5)
+          }
+          errors++
+        }
+        if (!(data2 === 'win32' || data2 === 'linux')) {
+          const err6 = {
+            instancePath: instancePath + '/platform',
+            schemaPath: '#/properties/platform/enum',
+            keyword: 'enum',
+            params: { allowedValues: schema112.properties.platform.enum },
+            message: 'must be equal to one of the allowed values'
+          }
+          if (vErrors === null) {
+            vErrors = [err6]
+          } else {
+            vErrors.push(err6)
+          }
+          errors++
+        }
+      }
+      if (data.runtimeId !== void 0) {
+        let data3 = data.runtimeId
+        if (typeof data3 === 'string') {
+          if (!formats2.test(data3)) {
+            const err7 = {
+              instancePath: instancePath + '/runtimeId',
+              schemaPath: '#/properties/runtimeId/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err7]
+            } else {
+              vErrors.push(err7)
+            }
+            errors++
+          }
+        } else {
+          const err8 = {
+            instancePath: instancePath + '/runtimeId',
+            schemaPath: '#/properties/runtimeId/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err8]
+          } else {
+            vErrors.push(err8)
+          }
+          errors++
+        }
+      }
+    } else {
+      const err9 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err9]
+      } else {
+        vErrors.push(err9)
+      }
+      errors++
+    }
+    validate876.errors = vErrors
+    return errors === 0
+  }
+  function validate875(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate876(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate876.errors : vErrors.concat(validate876.errors)
+      errors = vErrors.length
+    }
+    validate875.errors = vErrors
+    return errors === 0
+  }
+  exports.v201 = validate880
+  const schema368 = { $ref: 'ls101#/components/schemas/StudentSession' }
+  function validate881(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate78(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate78.errors : vErrors.concat(validate78.errors)
+      errors = vErrors.length
+    }
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.deviceId === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/allOf/1/required',
+          keyword: 'required',
+          params: { missingProperty: 'deviceId' },
+          message: "must have required property 'deviceId'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data.deviceNumber === void 0) {
+        const err1 = {
+          instancePath,
+          schemaPath: '#/allOf/1/required',
+          keyword: 'required',
+          params: { missingProperty: 'deviceNumber' },
+          message: "must have required property 'deviceNumber'"
+        }
+        if (vErrors === null) {
+          vErrors = [err1]
+        } else {
+          vErrors.push(err1)
+        }
+        errors++
+      }
+      if (data.registeredAt === void 0) {
+        const err2 = {
+          instancePath,
+          schemaPath: '#/allOf/1/required',
+          keyword: 'required',
+          params: { missingProperty: 'registeredAt' },
+          message: "must have required property 'registeredAt'"
+        }
+        if (vErrors === null) {
+          vErrors = [err2]
+        } else {
+          vErrors.push(err2)
+        }
+        errors++
+      }
+      if (data.deviceSecret === void 0) {
+        const err3 = {
+          instancePath,
+          schemaPath: '#/allOf/1/required',
+          keyword: 'required',
+          params: { missingProperty: 'deviceSecret' },
+          message: "must have required property 'deviceSecret'"
+        }
+        if (vErrors === null) {
+          vErrors = [err3]
+        } else {
+          vErrors.push(err3)
+        }
+        errors++
+      }
+      if (data.contextId === void 0) {
+        const err4 = {
+          instancePath,
+          schemaPath: '#/allOf/1/required',
+          keyword: 'required',
+          params: { missingProperty: 'contextId' },
+          message: "must have required property 'contextId'"
+        }
+        if (vErrors === null) {
+          vErrors = [err4]
+        } else {
+          vErrors.push(err4)
+        }
+        errors++
+      }
+      if (data.runtimeGeneration === void 0) {
+        const err5 = {
+          instancePath,
+          schemaPath: '#/allOf/1/required',
+          keyword: 'required',
+          params: { missingProperty: 'runtimeGeneration' },
+          message: "must have required property 'runtimeGeneration'"
+        }
+        if (vErrors === null) {
+          vErrors = [err5]
+        } else {
+          vErrors.push(err5)
+        }
+        errors++
+      }
+      if (data.deviceId !== void 0) {
+        let data0 = data.deviceId
+        if (typeof data0 === 'string') {
+          if (!formats2.test(data0)) {
+            const err6 = {
+              instancePath: instancePath + '/deviceId',
+              schemaPath: '#/allOf/1/properties/deviceId/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err6]
+            } else {
+              vErrors.push(err6)
+            }
+            errors++
+          }
+        } else {
+          const err7 = {
+            instancePath: instancePath + '/deviceId',
+            schemaPath: '#/allOf/1/properties/deviceId/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err7]
+          } else {
+            vErrors.push(err7)
+          }
+          errors++
+        }
+      }
+      if (data.deviceNumber !== void 0) {
+        if (typeof data.deviceNumber !== 'string') {
+          const err8 = {
+            instancePath: instancePath + '/deviceNumber',
+            schemaPath: '#/allOf/1/properties/deviceNumber/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err8]
+          } else {
+            vErrors.push(err8)
+          }
+          errors++
+        }
+      }
+      if (data.registeredAt !== void 0) {
+        let data2 = data.registeredAt
+        if (typeof data2 === 'string') {
+          if (!formats0.validate(data2)) {
+            const err9 = {
+              instancePath: instancePath + '/registeredAt',
+              schemaPath: '#/allOf/1/properties/registeredAt/format',
+              keyword: 'format',
+              params: { format: 'date-time' },
+              message: 'must match format "date-time"'
+            }
+            if (vErrors === null) {
+              vErrors = [err9]
+            } else {
+              vErrors.push(err9)
+            }
+            errors++
+          }
+        } else {
+          const err10 = {
+            instancePath: instancePath + '/registeredAt',
+            schemaPath: '#/allOf/1/properties/registeredAt/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err10]
+          } else {
+            vErrors.push(err10)
+          }
+          errors++
+        }
+      }
+      if (data.deviceSecret !== void 0) {
+        if (
+          !validate265(data.deviceSecret, {
+            instancePath: instancePath + '/deviceSecret',
+            parentData: data,
+            parentDataProperty: 'deviceSecret',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate265.errors : vErrors.concat(validate265.errors)
+          errors = vErrors.length
+        }
+      }
+      if (data.contextId !== void 0) {
+        let data4 = data.contextId
+        if (typeof data4 === 'string') {
+          if (!formats2.test(data4)) {
+            const err11 = {
+              instancePath: instancePath + '/contextId',
+              schemaPath: '#/allOf/1/properties/contextId/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err11]
+            } else {
+              vErrors.push(err11)
+            }
+            errors++
+          }
+        } else {
+          const err12 = {
+            instancePath: instancePath + '/contextId',
+            schemaPath: '#/allOf/1/properties/contextId/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err12]
+          } else {
+            vErrors.push(err12)
+          }
+          errors++
+        }
+      }
+      if (data.runtimeGeneration !== void 0) {
+        let data5 = data.runtimeGeneration
+        if (!(typeof data5 == 'number' && !(data5 % 1) && !isNaN(data5))) {
+          const err13 = {
+            instancePath: instancePath + '/runtimeGeneration',
+            schemaPath: '#/allOf/1/properties/runtimeGeneration/type',
+            keyword: 'type',
+            params: { type: 'integer' },
+            message: 'must be integer'
+          }
+          if (vErrors === null) {
+            vErrors = [err13]
+          } else {
+            vErrors.push(err13)
+          }
+          errors++
+        }
+        if (typeof data5 == 'number') {
+          if (data5 > 9007199254740991 || isNaN(data5)) {
+            const err14 = {
+              instancePath: instancePath + '/runtimeGeneration',
+              schemaPath: '#/allOf/1/properties/runtimeGeneration/maximum',
+              keyword: 'maximum',
+              params: { comparison: '<=', limit: 9007199254740991 },
+              message: 'must be <= 9007199254740991'
+            }
+            if (vErrors === null) {
+              vErrors = [err14]
+            } else {
+              vErrors.push(err14)
+            }
+            errors++
+          }
+          if (data5 < 1 || isNaN(data5)) {
+            const err15 = {
+              instancePath: instancePath + '/runtimeGeneration',
+              schemaPath: '#/allOf/1/properties/runtimeGeneration/minimum',
+              keyword: 'minimum',
+              params: { comparison: '>=', limit: 1 },
+              message: 'must be >= 1'
+            }
+            if (vErrors === null) {
+              vErrors = [err15]
+            } else {
+              vErrors.push(err15)
+            }
+            errors++
+          }
+        }
+      }
+    } else {
+      const err16 = {
+        instancePath,
+        schemaPath: '#/allOf/1/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err16]
+      } else {
+        vErrors.push(err16)
+      }
+      errors++
+    }
+    validate881.errors = vErrors
+    return errors === 0
+  }
+  function validate880(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate881(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate881.errors : vErrors.concat(validate881.errors)
+      errors = vErrors.length
+    }
+    validate880.errors = vErrors
+    return errors === 0
+  }
+  exports.v202 = validate885
+  const schema370 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate886(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.error === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'error' },
+          message: "must have required property 'error'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'error')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.error !== void 0) {
+        if (
+          !validate395(data.error, {
+            instancePath: instancePath + '/error',
+            parentData: data,
+            parentDataProperty: 'error',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
+          errors = vErrors.length
+        }
+      }
+    } else {
+      const err2 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err2]
+      } else {
+        vErrors.push(err2)
+      }
+      errors++
+    }
+    validate886.errors = vErrors
+    return errors === 0
+  }
+  function validate885(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate886(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate886.errors : vErrors.concat(validate886.errors)
+      errors = vErrors.length
+    }
+    validate885.errors = vErrors
+    return errors === 0
+  }
+  exports.v203 = validate889
+  const schema372 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate889(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate889.errors = vErrors
+    return errors === 0
+  }
+  exports.v206 = validate890
+  const schema373 = { $ref: 'ls101#/components/schemas/ExamList' }
+  function validate891(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -39038,14 +39819,14 @@ var validators = {}
           const len0 = data0.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate278(data0[i0], {
+              !validate297(data0[i0], {
                 instancePath: instancePath + '/items/' + i0,
                 parentData: data0,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate278.errors : vErrors.concat(validate278.errors)
+              vErrors = vErrors === null ? validate297.errors : vErrors.concat(validate297.errors)
               errors = vErrors.length
             }
           }
@@ -39080,25 +39861,25 @@ var validators = {}
       }
       errors++
     }
-    validate860.errors = vErrors
+    validate891.errors = vErrors
     return errors === 0
   }
-  function validate859(
+  function validate890(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate860(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate860.errors : vErrors.concat(validate860.errors)
+    if (!validate891(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate891.errors : vErrors.concat(validate891.errors)
       errors = vErrors.length
     }
-    validate859.errors = vErrors
+    validate890.errors = vErrors
     return errors === 0
   }
-  exports.v198 = validate864
-  const schema360 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate865(
+  exports.v207 = validate895
+  const schema375 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate896(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -39139,14 +39920,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -39165,25 +39946,25 @@ var validators = {}
       }
       errors++
     }
-    validate865.errors = vErrors
+    validate896.errors = vErrors
     return errors === 0
   }
-  function validate864(
+  function validate895(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate865(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate865.errors : vErrors.concat(validate865.errors)
+    if (!validate896(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate896.errors : vErrors.concat(validate896.errors)
       errors = vErrors.length
     }
-    validate864.errors = vErrors
+    validate895.errors = vErrors
     return errors === 0
   }
-  exports.v199 = validate868
-  const schema362 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate868(
+  exports.v208 = validate899
+  const schema377 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate899(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -39220,19 +40001,19 @@ var validators = {}
       }
       errors++
     }
-    validate868.errors = vErrors
+    validate899.errors = vErrors
     return errors === 0
   }
-  exports.v202 = validate869
-  const schema363 = { $ref: 'ls101#/components/schemas/ExamImport' }
-  function validate870(
+  exports.v211 = validate900
+  const schema378 = { $ref: 'ls101#/components/schemas/ExamImport' }
+  function validate901(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate278(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate278.errors : vErrors.concat(validate278.errors)
+    if (!validate297(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate297.errors : vErrors.concat(validate297.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -39283,32 +40064,32 @@ var validators = {}
       }
       errors++
     }
-    validate870.errors = vErrors
+    validate901.errors = vErrors
     return errors === 0
   }
-  function validate869(
+  function validate900(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate870(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate870.errors : vErrors.concat(validate870.errors)
+    if (!validate901(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate901.errors : vErrors.concat(validate901.errors)
       errors = vErrors.length
     }
-    validate869.errors = vErrors
+    validate900.errors = vErrors
     return errors === 0
   }
-  exports.v203 = validate873
-  const schema365 = { $ref: 'ls101#/components/schemas/ExamImport' }
-  function validate874(
+  exports.v212 = validate904
+  const schema380 = { $ref: 'ls101#/components/schemas/ExamImport' }
+  function validate905(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate278(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate278.errors : vErrors.concat(validate278.errors)
+    if (!validate297(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate297.errors : vErrors.concat(validate297.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -39359,25 +40140,25 @@ var validators = {}
       }
       errors++
     }
-    validate874.errors = vErrors
+    validate905.errors = vErrors
     return errors === 0
   }
-  function validate873(
+  function validate904(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate874(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate874.errors : vErrors.concat(validate874.errors)
+    if (!validate905(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate905.errors : vErrors.concat(validate905.errors)
       errors = vErrors.length
     }
-    validate873.errors = vErrors
+    validate904.errors = vErrors
     return errors === 0
   }
-  exports.v204 = validate877
-  const schema367 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate878(
+  exports.v213 = validate908
+  const schema382 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate909(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -39418,14 +40199,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -39444,30 +40225,30 @@ var validators = {}
       }
       errors++
     }
-    validate878.errors = vErrors
+    validate909.errors = vErrors
     return errors === 0
   }
-  function validate877(
+  function validate908(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate878(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate878.errors : vErrors.concat(validate878.errors)
+    if (!validate909(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate909.errors : vErrors.concat(validate909.errors)
       errors = vErrors.length
     }
-    validate877.errors = vErrors
+    validate908.errors = vErrors
     return errors === 0
   }
-  exports.v205 = validate881
-  const schema369 = {
+  exports.v214 = validate912
+  const schema384 = {
     type: 'object',
     properties: { examId: { type: 'string', format: 'uuid' } },
     required: ['examId'],
     additionalProperties: false
   }
-  function validate881(
+  function validate912(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -39555,19 +40336,19 @@ var validators = {}
       }
       errors++
     }
-    validate881.errors = vErrors
+    validate912.errors = vErrors
     return errors === 0
   }
-  exports.v208 = validate882
-  const schema370 = { $ref: 'ls101#/components/schemas/Exam' }
-  function validate883(
+  exports.v217 = validate913
+  const schema385 = { $ref: 'ls101#/components/schemas/Exam' }
+  function validate914(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate268(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate268.errors : vErrors.concat(validate268.errors)
+    if (!validate287(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate287.errors : vErrors.concat(validate287.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -39695,25 +40476,25 @@ var validators = {}
       }
       errors++
     }
-    validate883.errors = vErrors
+    validate914.errors = vErrors
     return errors === 0
   }
-  function validate882(
+  function validate913(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate883(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate883.errors : vErrors.concat(validate883.errors)
+    if (!validate914(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate914.errors : vErrors.concat(validate914.errors)
       errors = vErrors.length
     }
-    validate882.errors = vErrors
+    validate913.errors = vErrors
     return errors === 0
   }
-  exports.v209 = validate887
-  const schema372 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate888(
+  exports.v218 = validate918
+  const schema387 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate919(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -39754,14 +40535,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -39780,30 +40561,30 @@ var validators = {}
       }
       errors++
     }
-    validate888.errors = vErrors
+    validate919.errors = vErrors
     return errors === 0
   }
-  function validate887(
+  function validate918(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate888(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate888.errors : vErrors.concat(validate888.errors)
+    if (!validate919(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate919.errors : vErrors.concat(validate919.errors)
       errors = vErrors.length
     }
-    validate887.errors = vErrors
+    validate918.errors = vErrors
     return errors === 0
   }
-  exports.v210 = validate891
-  const schema374 = {
+  exports.v219 = validate922
+  const schema389 = {
     type: 'object',
     properties: { examId: { type: 'string', format: 'uuid' } },
     required: ['examId'],
     additionalProperties: false
   }
-  function validate891(
+  function validate922(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -39891,11 +40672,11 @@ var validators = {}
       }
       errors++
     }
-    validate891.errors = vErrors
+    validate922.errors = vErrors
     return errors === 0
   }
-  exports.v213 = validate892
-  const schema375 = {
+  exports.v222 = validate923
+  const schema390 = {
     type: 'object',
     required: ['published', 'expectedRevision'],
     additionalProperties: false,
@@ -39904,7 +40685,7 @@ var validators = {}
       expectedRevision: { $ref: 'ls101#/components/schemas/PositiveInteger' }
     }
   }
-  function validate893(
+  function validate924(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -39957,10 +40738,10 @@ var validators = {}
         errors++
       }
     }
-    validate893.errors = vErrors
+    validate924.errors = vErrors
     return errors === 0
   }
-  function validate892(
+  function validate923(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -40033,14 +40814,14 @@ var validators = {}
       }
       if (data.expectedRevision !== void 0) {
         if (
-          !validate893(data.expectedRevision, {
+          !validate924(data.expectedRevision, {
             instancePath: instancePath + '/expectedRevision',
             parentData: data,
             parentDataProperty: 'expectedRevision',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate893.errors : vErrors.concat(validate893.errors)
+          vErrors = vErrors === null ? validate924.errors : vErrors.concat(validate924.errors)
           errors = vErrors.length
         }
       }
@@ -40059,19 +40840,19 @@ var validators = {}
       }
       errors++
     }
-    validate892.errors = vErrors
+    validate923.errors = vErrors
     return errors === 0
   }
-  exports.v214 = validate895
-  const schema377 = { $ref: 'ls101#/components/schemas/Exam' }
-  function validate896(
+  exports.v223 = validate926
+  const schema392 = { $ref: 'ls101#/components/schemas/Exam' }
+  function validate927(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate268(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate268.errors : vErrors.concat(validate268.errors)
+    if (!validate287(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate287.errors : vErrors.concat(validate287.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -40199,25 +40980,25 @@ var validators = {}
       }
       errors++
     }
-    validate896.errors = vErrors
+    validate927.errors = vErrors
     return errors === 0
   }
-  function validate895(
+  function validate926(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate896(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate896.errors : vErrors.concat(validate896.errors)
+    if (!validate927(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate927.errors : vErrors.concat(validate927.errors)
       errors = vErrors.length
     }
-    validate895.errors = vErrors
+    validate926.errors = vErrors
     return errors === 0
   }
-  exports.v215 = validate900
-  const schema379 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate901(
+  exports.v224 = validate931
+  const schema394 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate932(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -40258,14 +41039,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -40284,30 +41065,30 @@ var validators = {}
       }
       errors++
     }
-    validate901.errors = vErrors
+    validate932.errors = vErrors
     return errors === 0
   }
-  function validate900(
+  function validate931(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate901(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate901.errors : vErrors.concat(validate901.errors)
+    if (!validate932(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate932.errors : vErrors.concat(validate932.errors)
       errors = vErrors.length
     }
-    validate900.errors = vErrors
+    validate931.errors = vErrors
     return errors === 0
   }
-  exports.v216 = validate904
-  const schema381 = {
+  exports.v225 = validate935
+  const schema396 = {
     type: 'object',
     properties: { examId: { type: 'string', format: 'uuid' } },
     required: ['examId'],
     additionalProperties: false
   }
-  function validate904(
+  function validate935(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -40395,12 +41176,12 @@ var validators = {}
       }
       errors++
     }
-    validate904.errors = vErrors
+    validate935.errors = vErrors
     return errors === 0
   }
-  exports.v219 = validate905
-  const schema382 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate906(
+  exports.v228 = validate936
+  const schema397 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate937(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -40441,14 +41222,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -40467,30 +41248,30 @@ var validators = {}
       }
       errors++
     }
-    validate906.errors = vErrors
+    validate937.errors = vErrors
     return errors === 0
   }
-  function validate905(
+  function validate936(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate906(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate906.errors : vErrors.concat(validate906.errors)
+    if (!validate937(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate937.errors : vErrors.concat(validate937.errors)
       errors = vErrors.length
     }
-    validate905.errors = vErrors
+    validate936.errors = vErrors
     return errors === 0
   }
-  exports.v220 = validate909
-  const schema384 = {
+  exports.v229 = validate940
+  const schema399 = {
     type: 'object',
     properties: { examId: { type: 'string', format: 'uuid' } },
     required: ['examId'],
     additionalProperties: false
   }
-  function validate909(
+  function validate940(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -40578,12 +41359,12 @@ var validators = {}
       }
       errors++
     }
-    validate909.errors = vErrors
+    validate940.errors = vErrors
     return errors === 0
   }
-  exports.v223 = validate910
-  const schema385 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate911(
+  exports.v232 = validate941
+  const schema400 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate942(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -40624,14 +41405,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -40650,25 +41431,25 @@ var validators = {}
       }
       errors++
     }
-    validate911.errors = vErrors
+    validate942.errors = vErrors
     return errors === 0
   }
-  function validate910(
+  function validate941(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate911(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate911.errors : vErrors.concat(validate911.errors)
+    if (!validate942(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate942.errors : vErrors.concat(validate942.errors)
       errors = vErrors.length
     }
-    validate910.errors = vErrors
+    validate941.errors = vErrors
     return errors === 0
   }
-  exports.v224 = validate914
-  const schema387 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate914(
+  exports.v233 = validate945
+  const schema402 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate945(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -40705,12 +41486,12 @@ var validators = {}
       }
       errors++
     }
-    validate914.errors = vErrors
+    validate945.errors = vErrors
     return errors === 0
   }
-  exports.v227 = validate915
-  const schema388 = { $ref: 'ls101#/components/schemas/StudentExamList' }
-  function validate916(
+  exports.v236 = validate946
+  const schema403 = { $ref: 'ls101#/components/schemas/StudentExamList' }
+  function validate947(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -40742,14 +41523,14 @@ var validators = {}
           const len0 = data0.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate268(data0[i0], {
+              !validate287(data0[i0], {
                 instancePath: instancePath + '/items/' + i0,
                 parentData: data0,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate268.errors : vErrors.concat(validate268.errors)
+              vErrors = vErrors === null ? validate287.errors : vErrors.concat(validate287.errors)
               errors = vErrors.length
             }
           }
@@ -40784,25 +41565,25 @@ var validators = {}
       }
       errors++
     }
-    validate916.errors = vErrors
+    validate947.errors = vErrors
     return errors === 0
   }
-  function validate915(
+  function validate946(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate916(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate916.errors : vErrors.concat(validate916.errors)
+    if (!validate947(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate947.errors : vErrors.concat(validate947.errors)
       errors = vErrors.length
     }
-    validate915.errors = vErrors
+    validate946.errors = vErrors
     return errors === 0
   }
-  exports.v228 = validate920
-  const schema390 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate921(
+  exports.v237 = validate951
+  const schema405 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate952(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -40843,14 +41624,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -40869,30 +41650,30 @@ var validators = {}
       }
       errors++
     }
-    validate921.errors = vErrors
+    validate952.errors = vErrors
     return errors === 0
   }
-  function validate920(
+  function validate951(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate921(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate921.errors : vErrors.concat(validate921.errors)
+    if (!validate952(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate952.errors : vErrors.concat(validate952.errors)
       errors = vErrors.length
     }
-    validate920.errors = vErrors
+    validate951.errors = vErrors
     return errors === 0
   }
-  exports.v229 = validate924
-  const schema392 = {
+  exports.v238 = validate955
+  const schema407 = {
     type: 'object',
     properties: { examId: { type: 'string', format: 'uuid' } },
     required: ['examId'],
     additionalProperties: false
   }
-  function validate924(
+  function validate955(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -40980,12 +41761,12 @@ var validators = {}
       }
       errors++
     }
-    validate924.errors = vErrors
+    validate955.errors = vErrors
     return errors === 0
   }
-  exports.v232 = validate925
-  const schema393 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate926(
+  exports.v241 = validate956
+  const schema408 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate957(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -41026,14 +41807,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -41052,30 +41833,30 @@ var validators = {}
       }
       errors++
     }
-    validate926.errors = vErrors
+    validate957.errors = vErrors
     return errors === 0
   }
-  function validate925(
+  function validate956(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate926(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate926.errors : vErrors.concat(validate926.errors)
+    if (!validate957(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate957.errors : vErrors.concat(validate957.errors)
       errors = vErrors.length
     }
-    validate925.errors = vErrors
+    validate956.errors = vErrors
     return errors === 0
   }
-  exports.v233 = validate929
-  const schema395 = {
+  exports.v242 = validate960
+  const schema410 = {
     type: 'object',
     properties: { submissionId: { type: 'string', format: 'uuid' } },
     required: ['submissionId'],
     additionalProperties: false
   }
-  function validate929(
+  function validate960(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -41163,12 +41944,12 @@ var validators = {}
       }
       errors++
     }
-    validate929.errors = vErrors
+    validate960.errors = vErrors
     return errors === 0
   }
-  exports.v236 = validate930
-  const schema396 = { $ref: 'ls101#/components/schemas/PracticeRequest' }
-  function validate931(
+  exports.v245 = validate961
+  const schema411 = { $ref: 'ls101#/components/schemas/PracticeRequest' }
+  function validate962(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -41312,25 +42093,25 @@ var validators = {}
       }
       errors++
     }
-    validate931.errors = vErrors
+    validate962.errors = vErrors
     return errors === 0
   }
-  function validate930(
+  function validate961(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate931(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate931.errors : vErrors.concat(validate931.errors)
+    if (!validate962(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate962.errors : vErrors.concat(validate962.errors)
       errors = vErrors.length
     }
-    validate930.errors = vErrors
+    validate961.errors = vErrors
     return errors === 0
   }
-  exports.v237 = validate935
-  const schema398 = { $ref: 'ls101#/components/schemas/PracticeGrant' }
-  function validate936(
+  exports.v246 = validate966
+  const schema413 = { $ref: 'ls101#/components/schemas/PracticeGrant' }
+  function validate967(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -41527,25 +42308,25 @@ var validators = {}
       }
       errors++
     }
-    validate936.errors = vErrors
+    validate967.errors = vErrors
     return errors === 0
   }
-  function validate935(
+  function validate966(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate936(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate936.errors : vErrors.concat(validate936.errors)
+    if (!validate967(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate967.errors : vErrors.concat(validate967.errors)
       errors = vErrors.length
     }
-    validate935.errors = vErrors
+    validate966.errors = vErrors
     return errors === 0
   }
-  exports.v238 = validate939
-  const schema400 = { $ref: 'ls101#/components/schemas/PracticeGrant' }
-  function validate940(
+  exports.v247 = validate970
+  const schema415 = { $ref: 'ls101#/components/schemas/PracticeGrant' }
+  function validate971(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -41742,25 +42523,25 @@ var validators = {}
       }
       errors++
     }
-    validate940.errors = vErrors
+    validate971.errors = vErrors
     return errors === 0
   }
-  function validate939(
+  function validate970(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate940(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate940.errors : vErrors.concat(validate940.errors)
+    if (!validate971(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate971.errors : vErrors.concat(validate971.errors)
       errors = vErrors.length
     }
-    validate939.errors = vErrors
+    validate970.errors = vErrors
     return errors === 0
   }
-  exports.v239 = validate943
-  const schema402 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate944(
+  exports.v248 = validate974
+  const schema417 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate975(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -41801,14 +42582,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -41827,30 +42608,30 @@ var validators = {}
       }
       errors++
     }
-    validate944.errors = vErrors
+    validate975.errors = vErrors
     return errors === 0
   }
-  function validate943(
+  function validate974(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate944(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate944.errors : vErrors.concat(validate944.errors)
+    if (!validate975(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate975.errors : vErrors.concat(validate975.errors)
       errors = vErrors.length
     }
-    validate943.errors = vErrors
+    validate974.errors = vErrors
     return errors === 0
   }
-  exports.v240 = validate947
-  const schema404 = {
+  exports.v249 = validate978
+  const schema419 = {
     type: 'object',
     properties: { submissionId: { type: 'string', format: 'uuid' } },
     required: ['submissionId'],
     additionalProperties: false
   }
-  function validate947(
+  function validate978(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -41938,12 +42719,12 @@ var validators = {}
       }
       errors++
     }
-    validate947.errors = vErrors
+    validate978.errors = vErrors
     return errors === 0
   }
-  exports.v243 = validate948
-  const schema405 = { $ref: 'ls101#/components/schemas/CompletedReceipt' }
-  function validate949(
+  exports.v252 = validate979
+  const schema420 = { $ref: 'ls101#/components/schemas/CompletedReceipt' }
+  function validate980(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -41953,8 +42734,8 @@ var validators = {}
     let valid0 = false
     let passing0 = null
     const _errs1 = errors
-    if (!validate325(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate325.errors : vErrors.concat(validate325.errors)
+    if (!validate344(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate344.errors : vErrors.concat(validate344.errors)
       errors = vErrors.length
     }
     var _valid0 = _errs1 === errors
@@ -41963,8 +42744,8 @@ var validators = {}
       passing0 = 0
     }
     const _errs2 = errors
-    if (!validate328(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate328.errors : vErrors.concat(validate328.errors)
+    if (!validate347(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate347.errors : vErrors.concat(validate347.errors)
       errors = vErrors.length
     }
     var _valid0 = _errs2 === errors
@@ -42001,25 +42782,25 @@ var validators = {}
         }
       }
     }
-    validate949.errors = vErrors
+    validate980.errors = vErrors
     return errors === 0
   }
-  function validate948(
+  function validate979(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate949(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate949.errors : vErrors.concat(validate949.errors)
+    if (!validate980(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate980.errors : vErrors.concat(validate980.errors)
       errors = vErrors.length
     }
-    validate948.errors = vErrors
+    validate979.errors = vErrors
     return errors === 0
   }
-  exports.v244 = validate953
-  const schema407 = { $ref: 'ls101#/components/schemas/Received' }
-  function validate954(
+  exports.v253 = validate984
+  const schema422 = { $ref: 'ls101#/components/schemas/Received' }
+  function validate985(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -42095,7 +42876,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema124.properties.status.enum },
+            params: { allowedValues: schema134.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -42108,14 +42889,14 @@ var validators = {}
       }
       if (data.receipt !== void 0) {
         if (
-          !validate308(data.receipt, {
+          !validate327(data.receipt, {
             instancePath: instancePath + '/receipt',
             parentData: data,
             parentDataProperty: 'receipt',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate308.errors : vErrors.concat(validate308.errors)
+          vErrors = vErrors === null ? validate327.errors : vErrors.concat(validate327.errors)
           errors = vErrors.length
         }
       }
@@ -42134,25 +42915,25 @@ var validators = {}
       }
       errors++
     }
-    validate954.errors = vErrors
+    validate985.errors = vErrors
     return errors === 0
   }
-  function validate953(
+  function validate984(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate954(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate954.errors : vErrors.concat(validate954.errors)
+    if (!validate985(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate985.errors : vErrors.concat(validate985.errors)
       errors = vErrors.length
     }
-    validate953.errors = vErrors
+    validate984.errors = vErrors
     return errors === 0
   }
-  exports.v245 = validate957
-  const schema409 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate958(
+  exports.v254 = validate988
+  const schema424 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate989(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -42193,14 +42974,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -42219,30 +43000,30 @@ var validators = {}
       }
       errors++
     }
-    validate958.errors = vErrors
+    validate989.errors = vErrors
     return errors === 0
   }
-  function validate957(
+  function validate988(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate958(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate958.errors : vErrors.concat(validate958.errors)
+    if (!validate989(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate989.errors : vErrors.concat(validate989.errors)
       errors = vErrors.length
     }
-    validate957.errors = vErrors
+    validate988.errors = vErrors
     return errors === 0
   }
-  exports.v246 = validate961
-  const schema411 = {
+  exports.v255 = validate992
+  const schema426 = {
     type: 'object',
     properties: { submissionId: { type: 'string', format: 'uuid' } },
     required: ['submissionId'],
     additionalProperties: false
   }
-  function validate961(
+  function validate992(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -42330,12 +43111,12 @@ var validators = {}
       }
       errors++
     }
-    validate961.errors = vErrors
+    validate992.errors = vErrors
     return errors === 0
   }
-  exports.v249 = validate962
-  const schema412 = { $ref: 'ls101#/components/schemas/ReceiptQuery' }
-  function validate963(
+  exports.v258 = validate993
+  const schema427 = { $ref: 'ls101#/components/schemas/ReceiptQuery' }
+  function validate994(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -42345,8 +43126,8 @@ var validators = {}
     let valid0 = false
     let passing0 = null
     const _errs1 = errors
-    if (!validate334(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate334.errors : vErrors.concat(validate334.errors)
+    if (!validate353(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate353.errors : vErrors.concat(validate353.errors)
       errors = vErrors.length
     }
     var _valid0 = _errs1 === errors
@@ -42355,8 +43136,8 @@ var validators = {}
       passing0 = 0
     }
     const _errs2 = errors
-    if (!validate336(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate336.errors : vErrors.concat(validate336.errors)
+    if (!validate355(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate355.errors : vErrors.concat(validate355.errors)
       errors = vErrors.length
     }
     var _valid0 = _errs2 === errors
@@ -42369,8 +43150,8 @@ var validators = {}
         passing0 = 1
       }
       const _errs3 = errors
-      if (!validate325(data, { instancePath, parentData, parentDataProperty, rootData })) {
-        vErrors = vErrors === null ? validate325.errors : vErrors.concat(validate325.errors)
+      if (!validate344(data, { instancePath, parentData, parentDataProperty, rootData })) {
+        vErrors = vErrors === null ? validate344.errors : vErrors.concat(validate344.errors)
         errors = vErrors.length
       }
       var _valid0 = _errs3 === errors
@@ -42383,8 +43164,8 @@ var validators = {}
           passing0 = 2
         }
         const _errs4 = errors
-        if (!validate328(data, { instancePath, parentData, parentDataProperty, rootData })) {
-          vErrors = vErrors === null ? validate328.errors : vErrors.concat(validate328.errors)
+        if (!validate347(data, { instancePath, parentData, parentDataProperty, rootData })) {
+          vErrors = vErrors === null ? validate347.errors : vErrors.concat(validate347.errors)
           errors = vErrors.length
         }
         var _valid0 = _errs4 === errors
@@ -42423,25 +43204,25 @@ var validators = {}
         }
       }
     }
-    validate963.errors = vErrors
+    validate994.errors = vErrors
     return errors === 0
   }
-  function validate962(
+  function validate993(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate963(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate963.errors : vErrors.concat(validate963.errors)
+    if (!validate994(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate994.errors : vErrors.concat(validate994.errors)
       errors = vErrors.length
     }
-    validate962.errors = vErrors
+    validate993.errors = vErrors
     return errors === 0
   }
-  exports.v250 = validate969
-  const schema414 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate970(
+  exports.v259 = validate1000
+  const schema429 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1001(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -42482,14 +43263,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -42508,25 +43289,25 @@ var validators = {}
       }
       errors++
     }
-    validate970.errors = vErrors
+    validate1001.errors = vErrors
     return errors === 0
   }
-  function validate969(
+  function validate1000(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate970(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate970.errors : vErrors.concat(validate970.errors)
+    if (!validate1001(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1001.errors : vErrors.concat(validate1001.errors)
       errors = vErrors.length
     }
-    validate969.errors = vErrors
+    validate1000.errors = vErrors
     return errors === 0
   }
-  exports.v251 = validate973
-  const schema416 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate973(
+  exports.v260 = validate1004
+  const schema431 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate1004(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -42563,12 +43344,12 @@ var validators = {}
       }
       errors++
     }
-    validate973.errors = vErrors
+    validate1004.errors = vErrors
     return errors === 0
   }
-  exports.v254 = validate974
-  const schema417 = { $ref: 'ls101#/components/schemas/SubmissionList' }
-  function validate975(
+  exports.v263 = validate1005
+  const schema432 = { $ref: 'ls101#/components/schemas/SubmissionList' }
+  function validate1006(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -42600,14 +43381,14 @@ var validators = {}
           const len0 = data0.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate363(data0[i0], {
+              !validate382(data0[i0], {
                 instancePath: instancePath + '/items/' + i0,
                 parentData: data0,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate363.errors : vErrors.concat(validate363.errors)
+              vErrors = vErrors === null ? validate382.errors : vErrors.concat(validate382.errors)
               errors = vErrors.length
             }
           }
@@ -42642,25 +43423,25 @@ var validators = {}
       }
       errors++
     }
-    validate975.errors = vErrors
+    validate1006.errors = vErrors
     return errors === 0
   }
-  function validate974(
+  function validate1005(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate975(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate975.errors : vErrors.concat(validate975.errors)
+    if (!validate1006(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1006.errors : vErrors.concat(validate1006.errors)
       errors = vErrors.length
     }
-    validate974.errors = vErrors
+    validate1005.errors = vErrors
     return errors === 0
   }
-  exports.v255 = validate979
-  const schema419 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate980(
+  exports.v264 = validate1010
+  const schema434 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1011(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -42701,14 +43482,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -42727,30 +43508,30 @@ var validators = {}
       }
       errors++
     }
-    validate980.errors = vErrors
+    validate1011.errors = vErrors
     return errors === 0
   }
-  function validate979(
+  function validate1010(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate980(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate980.errors : vErrors.concat(validate980.errors)
+    if (!validate1011(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1011.errors : vErrors.concat(validate1011.errors)
       errors = vErrors.length
     }
-    validate979.errors = vErrors
+    validate1010.errors = vErrors
     return errors === 0
   }
-  exports.v256 = validate983
-  const schema421 = {
+  exports.v265 = validate1014
+  const schema436 = {
     type: 'object',
     properties: { id: { type: 'string', format: 'uuid' } },
     required: ['id'],
     additionalProperties: false
   }
-  function validate983(
+  function validate1014(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -42838,12 +43619,12 @@ var validators = {}
       }
       errors++
     }
-    validate983.errors = vErrors
+    validate1014.errors = vErrors
     return errors === 0
   }
-  exports.v259 = validate984
-  const schema422 = { $ref: 'ls101#/components/schemas/Submission' }
-  function validate985(
+  exports.v268 = validate1015
+  const schema437 = { $ref: 'ls101#/components/schemas/Submission' }
+  function validate1016(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -43119,14 +43900,14 @@ var validators = {}
       }
       if (data.receipt !== void 0) {
         if (
-          !validate308(data.receipt, {
+          !validate327(data.receipt, {
             instancePath: instancePath + '/receipt',
             parentData: data,
             parentDataProperty: 'receipt',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate308.errors : vErrors.concat(validate308.errors)
+          vErrors = vErrors === null ? validate327.errors : vErrors.concat(validate327.errors)
           errors = vErrors.length
         }
       }
@@ -43145,14 +43926,14 @@ var validators = {}
       }
       if (data.deviceAtReceipt !== void 0) {
         if (
-          !validate353(data.deviceAtReceipt, {
+          !validate372(data.deviceAtReceipt, {
             instancePath: instancePath + '/deviceAtReceipt',
             parentData: data,
             parentDataProperty: 'deviceAtReceipt',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate353.errors : vErrors.concat(validate353.errors)
+          vErrors = vErrors === null ? validate372.errors : vErrors.concat(validate372.errors)
           errors = vErrors.length
         }
       }
@@ -43184,1006 +43965,6 @@ var validators = {}
       }
       errors++
     }
-    validate985.errors = vErrors
-    return errors === 0
-  }
-  function validate984(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate985(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate985.errors : vErrors.concat(validate985.errors)
-      errors = vErrors.length
-    }
-    validate984.errors = vErrors
-    return errors === 0
-  }
-  exports.v260 = validate992
-  const schema424 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate993(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.error === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'error' },
-          message: "must have required property 'error'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'error')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.error !== void 0) {
-        if (
-          !validate376(data.error, {
-            instancePath: instancePath + '/error',
-            parentData: data,
-            parentDataProperty: 'error',
-            rootData
-          })
-        ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
-          errors = vErrors.length
-        }
-      }
-    } else {
-      const err2 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err2]
-      } else {
-        vErrors.push(err2)
-      }
-      errors++
-    }
-    validate993.errors = vErrors
-    return errors === 0
-  }
-  function validate992(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate993(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate993.errors : vErrors.concat(validate993.errors)
-      errors = vErrors.length
-    }
-    validate992.errors = vErrors
-    return errors === 0
-  }
-  exports.v261 = validate996
-  const schema426 = {
-    type: 'object',
-    properties: { id: { type: 'string', format: 'uuid' } },
-    required: ['id'],
-    additionalProperties: false
-  }
-  function validate996(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.id === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'id' },
-          message: "must have required property 'id'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'id')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.id !== void 0) {
-        let data0 = data.id
-        if (typeof data0 === 'string') {
-          if (!formats2.test(data0)) {
-            const err2 = {
-              instancePath: instancePath + '/id',
-              schemaPath: '#/properties/id/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-        } else {
-          const err3 = {
-            instancePath: instancePath + '/id',
-            schemaPath: '#/properties/id/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err3]
-          } else {
-            vErrors.push(err3)
-          }
-          errors++
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
-    }
-    validate996.errors = vErrors
-    return errors === 0
-  }
-  exports.v264 = validate997
-  const schema427 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate998(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.error === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'error' },
-          message: "must have required property 'error'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'error')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.error !== void 0) {
-        if (
-          !validate376(data.error, {
-            instancePath: instancePath + '/error',
-            parentData: data,
-            parentDataProperty: 'error',
-            rootData
-          })
-        ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
-          errors = vErrors.length
-        }
-      }
-    } else {
-      const err2 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err2]
-      } else {
-        vErrors.push(err2)
-      }
-      errors++
-    }
-    validate998.errors = vErrors
-    return errors === 0
-  }
-  function validate997(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate998(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate998.errors : vErrors.concat(validate998.errors)
-      errors = vErrors.length
-    }
-    validate997.errors = vErrors
-    return errors === 0
-  }
-  exports.v265 = validate1001
-  const schema429 = {
-    type: 'object',
-    properties: { id: { type: 'string', format: 'uuid' } },
-    required: ['id'],
-    additionalProperties: false
-  }
-  function validate1001(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.id === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'id' },
-          message: "must have required property 'id'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'id')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.id !== void 0) {
-        let data0 = data.id
-        if (typeof data0 === 'string') {
-          if (!formats2.test(data0)) {
-            const err2 = {
-              instancePath: instancePath + '/id',
-              schemaPath: '#/properties/id/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-        } else {
-          const err3 = {
-            instancePath: instancePath + '/id',
-            schemaPath: '#/properties/id/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err3]
-          } else {
-            vErrors.push(err3)
-          }
-          errors++
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
-    }
-    validate1001.errors = vErrors
-    return errors === 0
-  }
-  exports.v268 = validate1002
-  const schema430 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1003(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.error === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'error' },
-          message: "must have required property 'error'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'error')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.error !== void 0) {
-        if (
-          !validate376(data.error, {
-            instancePath: instancePath + '/error',
-            parentData: data,
-            parentDataProperty: 'error',
-            rootData
-          })
-        ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
-          errors = vErrors.length
-        }
-      }
-    } else {
-      const err2 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err2]
-      } else {
-        vErrors.push(err2)
-      }
-      errors++
-    }
-    validate1003.errors = vErrors
-    return errors === 0
-  }
-  function validate1002(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate1003(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1003.errors : vErrors.concat(validate1003.errors)
-      errors = vErrors.length
-    }
-    validate1002.errors = vErrors
-    return errors === 0
-  }
-  exports.v269 = validate1006
-  const schema432 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate1006(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      for (const key0 in data) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/additionalProperties',
-          keyword: 'additionalProperties',
-          params: { additionalProperty: key0 },
-          message: 'must NOT have additional properties'
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-    } else {
-      const err1 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err1]
-      } else {
-        vErrors.push(err1)
-      }
-      errors++
-    }
-    validate1006.errors = vErrors
-    return errors === 0
-  }
-  exports.v272 = validate1007
-  const schema433 = { $ref: 'ls101#/components/schemas/SubmissionSelection' }
-  function validate1008(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.submissionIds === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'submissionIds' },
-          message: "must have required property 'submissionIds'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'submissionIds')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.submissionIds !== void 0) {
-        let data0 = data.submissionIds
-        if (Array.isArray(data0)) {
-          if (data0.length > 500) {
-            const err2 = {
-              instancePath: instancePath + '/submissionIds',
-              schemaPath: '#/properties/submissionIds/maxItems',
-              keyword: 'maxItems',
-              params: { limit: 500 },
-              message: 'must NOT have more than 500 items'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-          if (data0.length < 1) {
-            const err3 = {
-              instancePath: instancePath + '/submissionIds',
-              schemaPath: '#/properties/submissionIds/minItems',
-              keyword: 'minItems',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 items'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-          const len0 = data0.length
-          for (let i0 = 0; i0 < len0; i0++) {
-            let data1 = data0[i0]
-            if (typeof data1 === 'string') {
-              if (!formats2.test(data1)) {
-                const err4 = {
-                  instancePath: instancePath + '/submissionIds/' + i0,
-                  schemaPath: '#/properties/submissionIds/items/format',
-                  keyword: 'format',
-                  params: { format: 'uuid' },
-                  message: 'must match format "uuid"'
-                }
-                if (vErrors === null) {
-                  vErrors = [err4]
-                } else {
-                  vErrors.push(err4)
-                }
-                errors++
-              }
-            } else {
-              const err5 = {
-                instancePath: instancePath + '/submissionIds/' + i0,
-                schemaPath: '#/properties/submissionIds/items/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err5]
-              } else {
-                vErrors.push(err5)
-              }
-              errors++
-            }
-          }
-          let i1 = data0.length
-          let j0
-          if (i1 > 1) {
-            const indices0 = {}
-            for (; i1--; ) {
-              let item0 = data0[i1]
-              if (typeof item0 !== 'string') {
-                continue
-              }
-              if (typeof indices0[item0] == 'number') {
-                j0 = indices0[item0]
-                const err6 = {
-                  instancePath: instancePath + '/submissionIds',
-                  schemaPath: '#/properties/submissionIds/uniqueItems',
-                  keyword: 'uniqueItems',
-                  params: { i: i1, j: j0 },
-                  message:
-                    'must NOT have duplicate items (items ## ' +
-                    j0 +
-                    ' and ' +
-                    i1 +
-                    ' are identical)'
-                }
-                if (vErrors === null) {
-                  vErrors = [err6]
-                } else {
-                  vErrors.push(err6)
-                }
-                errors++
-                break
-              }
-              indices0[item0] = i1
-            }
-          }
-        } else {
-          const err7 = {
-            instancePath: instancePath + '/submissionIds',
-            schemaPath: '#/properties/submissionIds/type',
-            keyword: 'type',
-            params: { type: 'array' },
-            message: 'must be array'
-          }
-          if (vErrors === null) {
-            vErrors = [err7]
-          } else {
-            vErrors.push(err7)
-          }
-          errors++
-        }
-      }
-    } else {
-      const err8 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err8]
-      } else {
-        vErrors.push(err8)
-      }
-      errors++
-    }
-    validate1008.errors = vErrors
-    return errors === 0
-  }
-  function validate1007(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate1008(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1008.errors : vErrors.concat(validate1008.errors)
-      errors = vErrors.length
-    }
-    validate1007.errors = vErrors
-    return errors === 0
-  }
-  exports.v273 = validate1010
-  const schema435 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1011(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.error === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'error' },
-          message: "must have required property 'error'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'error')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.error !== void 0) {
-        if (
-          !validate376(data.error, {
-            instancePath: instancePath + '/error',
-            parentData: data,
-            parentDataProperty: 'error',
-            rootData
-          })
-        ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
-          errors = vErrors.length
-        }
-      }
-    } else {
-      const err2 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err2]
-      } else {
-        vErrors.push(err2)
-      }
-      errors++
-    }
-    validate1011.errors = vErrors
-    return errors === 0
-  }
-  function validate1010(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate1011(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1011.errors : vErrors.concat(validate1011.errors)
-      errors = vErrors.length
-    }
-    validate1010.errors = vErrors
-    return errors === 0
-  }
-  exports.v274 = validate1014
-  const schema437 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate1014(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      for (const key0 in data) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/additionalProperties',
-          keyword: 'additionalProperties',
-          params: { additionalProperty: key0 },
-          message: 'must NOT have additional properties'
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-    } else {
-      const err1 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err1]
-      } else {
-        vErrors.push(err1)
-      }
-      errors++
-    }
-    validate1014.errors = vErrors
-    return errors === 0
-  }
-  exports.v277 = validate1015
-  const schema438 = { $ref: 'ls101#/components/schemas/SubmissionSelection' }
-  function validate1016(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.submissionIds === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'submissionIds' },
-          message: "must have required property 'submissionIds'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'submissionIds')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.submissionIds !== void 0) {
-        let data0 = data.submissionIds
-        if (Array.isArray(data0)) {
-          if (data0.length > 500) {
-            const err2 = {
-              instancePath: instancePath + '/submissionIds',
-              schemaPath: '#/properties/submissionIds/maxItems',
-              keyword: 'maxItems',
-              params: { limit: 500 },
-              message: 'must NOT have more than 500 items'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-          if (data0.length < 1) {
-            const err3 = {
-              instancePath: instancePath + '/submissionIds',
-              schemaPath: '#/properties/submissionIds/minItems',
-              keyword: 'minItems',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 items'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-          const len0 = data0.length
-          for (let i0 = 0; i0 < len0; i0++) {
-            let data1 = data0[i0]
-            if (typeof data1 === 'string') {
-              if (!formats2.test(data1)) {
-                const err4 = {
-                  instancePath: instancePath + '/submissionIds/' + i0,
-                  schemaPath: '#/properties/submissionIds/items/format',
-                  keyword: 'format',
-                  params: { format: 'uuid' },
-                  message: 'must match format "uuid"'
-                }
-                if (vErrors === null) {
-                  vErrors = [err4]
-                } else {
-                  vErrors.push(err4)
-                }
-                errors++
-              }
-            } else {
-              const err5 = {
-                instancePath: instancePath + '/submissionIds/' + i0,
-                schemaPath: '#/properties/submissionIds/items/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err5]
-              } else {
-                vErrors.push(err5)
-              }
-              errors++
-            }
-          }
-          let i1 = data0.length
-          let j0
-          if (i1 > 1) {
-            const indices0 = {}
-            for (; i1--; ) {
-              let item0 = data0[i1]
-              if (typeof item0 !== 'string') {
-                continue
-              }
-              if (typeof indices0[item0] == 'number') {
-                j0 = indices0[item0]
-                const err6 = {
-                  instancePath: instancePath + '/submissionIds',
-                  schemaPath: '#/properties/submissionIds/uniqueItems',
-                  keyword: 'uniqueItems',
-                  params: { i: i1, j: j0 },
-                  message:
-                    'must NOT have duplicate items (items ## ' +
-                    j0 +
-                    ' and ' +
-                    i1 +
-                    ' are identical)'
-                }
-                if (vErrors === null) {
-                  vErrors = [err6]
-                } else {
-                  vErrors.push(err6)
-                }
-                errors++
-                break
-              }
-              indices0[item0] = i1
-            }
-          }
-        } else {
-          const err7 = {
-            instancePath: instancePath + '/submissionIds',
-            schemaPath: '#/properties/submissionIds/type',
-            keyword: 'type',
-            params: { type: 'array' },
-            message: 'must be array'
-          }
-          if (vErrors === null) {
-            vErrors = [err7]
-          } else {
-            vErrors.push(err7)
-          }
-          errors++
-        }
-      }
-    } else {
-      const err8 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err8]
-      } else {
-        vErrors.push(err8)
-      }
-      errors++
-    }
     validate1016.errors = vErrors
     return errors === 0
   }
@@ -44200,9 +43981,1009 @@ var validators = {}
     validate1015.errors = vErrors
     return errors === 0
   }
-  exports.v278 = validate1018
-  const schema440 = { $ref: 'ls101#/components/schemas/BatchDeleteResult' }
-  function validate1019(
+  exports.v269 = validate1023
+  const schema439 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1024(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.error === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'error' },
+          message: "must have required property 'error'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'error')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.error !== void 0) {
+        if (
+          !validate395(data.error, {
+            instancePath: instancePath + '/error',
+            parentData: data,
+            parentDataProperty: 'error',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
+          errors = vErrors.length
+        }
+      }
+    } else {
+      const err2 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err2]
+      } else {
+        vErrors.push(err2)
+      }
+      errors++
+    }
+    validate1024.errors = vErrors
+    return errors === 0
+  }
+  function validate1023(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate1024(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1024.errors : vErrors.concat(validate1024.errors)
+      errors = vErrors.length
+    }
+    validate1023.errors = vErrors
+    return errors === 0
+  }
+  exports.v270 = validate1027
+  const schema441 = {
+    type: 'object',
+    properties: { id: { type: 'string', format: 'uuid' } },
+    required: ['id'],
+    additionalProperties: false
+  }
+  function validate1027(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.id === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'id' },
+          message: "must have required property 'id'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'id')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.id !== void 0) {
+        let data0 = data.id
+        if (typeof data0 === 'string') {
+          if (!formats2.test(data0)) {
+            const err2 = {
+              instancePath: instancePath + '/id',
+              schemaPath: '#/properties/id/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+        } else {
+          const err3 = {
+            instancePath: instancePath + '/id',
+            schemaPath: '#/properties/id/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err3]
+          } else {
+            vErrors.push(err3)
+          }
+          errors++
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate1027.errors = vErrors
+    return errors === 0
+  }
+  exports.v273 = validate1028
+  const schema442 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1029(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.error === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'error' },
+          message: "must have required property 'error'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'error')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.error !== void 0) {
+        if (
+          !validate395(data.error, {
+            instancePath: instancePath + '/error',
+            parentData: data,
+            parentDataProperty: 'error',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
+          errors = vErrors.length
+        }
+      }
+    } else {
+      const err2 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err2]
+      } else {
+        vErrors.push(err2)
+      }
+      errors++
+    }
+    validate1029.errors = vErrors
+    return errors === 0
+  }
+  function validate1028(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate1029(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1029.errors : vErrors.concat(validate1029.errors)
+      errors = vErrors.length
+    }
+    validate1028.errors = vErrors
+    return errors === 0
+  }
+  exports.v274 = validate1032
+  const schema444 = {
+    type: 'object',
+    properties: { id: { type: 'string', format: 'uuid' } },
+    required: ['id'],
+    additionalProperties: false
+  }
+  function validate1032(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.id === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'id' },
+          message: "must have required property 'id'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'id')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.id !== void 0) {
+        let data0 = data.id
+        if (typeof data0 === 'string') {
+          if (!formats2.test(data0)) {
+            const err2 = {
+              instancePath: instancePath + '/id',
+              schemaPath: '#/properties/id/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+        } else {
+          const err3 = {
+            instancePath: instancePath + '/id',
+            schemaPath: '#/properties/id/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err3]
+          } else {
+            vErrors.push(err3)
+          }
+          errors++
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate1032.errors = vErrors
+    return errors === 0
+  }
+  exports.v277 = validate1033
+  const schema445 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1034(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.error === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'error' },
+          message: "must have required property 'error'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'error')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.error !== void 0) {
+        if (
+          !validate395(data.error, {
+            instancePath: instancePath + '/error',
+            parentData: data,
+            parentDataProperty: 'error',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
+          errors = vErrors.length
+        }
+      }
+    } else {
+      const err2 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err2]
+      } else {
+        vErrors.push(err2)
+      }
+      errors++
+    }
+    validate1034.errors = vErrors
+    return errors === 0
+  }
+  function validate1033(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate1034(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1034.errors : vErrors.concat(validate1034.errors)
+      errors = vErrors.length
+    }
+    validate1033.errors = vErrors
+    return errors === 0
+  }
+  exports.v278 = validate1037
+  const schema447 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate1037(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate1037.errors = vErrors
+    return errors === 0
+  }
+  exports.v281 = validate1038
+  const schema448 = { $ref: 'ls101#/components/schemas/SubmissionSelection' }
+  function validate1039(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.submissionIds === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'submissionIds' },
+          message: "must have required property 'submissionIds'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'submissionIds')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.submissionIds !== void 0) {
+        let data0 = data.submissionIds
+        if (Array.isArray(data0)) {
+          if (data0.length > 500) {
+            const err2 = {
+              instancePath: instancePath + '/submissionIds',
+              schemaPath: '#/properties/submissionIds/maxItems',
+              keyword: 'maxItems',
+              params: { limit: 500 },
+              message: 'must NOT have more than 500 items'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+          if (data0.length < 1) {
+            const err3 = {
+              instancePath: instancePath + '/submissionIds',
+              schemaPath: '#/properties/submissionIds/minItems',
+              keyword: 'minItems',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 items'
+            }
+            if (vErrors === null) {
+              vErrors = [err3]
+            } else {
+              vErrors.push(err3)
+            }
+            errors++
+          }
+          const len0 = data0.length
+          for (let i0 = 0; i0 < len0; i0++) {
+            let data1 = data0[i0]
+            if (typeof data1 === 'string') {
+              if (!formats2.test(data1)) {
+                const err4 = {
+                  instancePath: instancePath + '/submissionIds/' + i0,
+                  schemaPath: '#/properties/submissionIds/items/format',
+                  keyword: 'format',
+                  params: { format: 'uuid' },
+                  message: 'must match format "uuid"'
+                }
+                if (vErrors === null) {
+                  vErrors = [err4]
+                } else {
+                  vErrors.push(err4)
+                }
+                errors++
+              }
+            } else {
+              const err5 = {
+                instancePath: instancePath + '/submissionIds/' + i0,
+                schemaPath: '#/properties/submissionIds/items/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err5]
+              } else {
+                vErrors.push(err5)
+              }
+              errors++
+            }
+          }
+          let i1 = data0.length
+          let j0
+          if (i1 > 1) {
+            const indices0 = {}
+            for (; i1--; ) {
+              let item0 = data0[i1]
+              if (typeof item0 !== 'string') {
+                continue
+              }
+              if (typeof indices0[item0] == 'number') {
+                j0 = indices0[item0]
+                const err6 = {
+                  instancePath: instancePath + '/submissionIds',
+                  schemaPath: '#/properties/submissionIds/uniqueItems',
+                  keyword: 'uniqueItems',
+                  params: { i: i1, j: j0 },
+                  message:
+                    'must NOT have duplicate items (items ## ' +
+                    j0 +
+                    ' and ' +
+                    i1 +
+                    ' are identical)'
+                }
+                if (vErrors === null) {
+                  vErrors = [err6]
+                } else {
+                  vErrors.push(err6)
+                }
+                errors++
+                break
+              }
+              indices0[item0] = i1
+            }
+          }
+        } else {
+          const err7 = {
+            instancePath: instancePath + '/submissionIds',
+            schemaPath: '#/properties/submissionIds/type',
+            keyword: 'type',
+            params: { type: 'array' },
+            message: 'must be array'
+          }
+          if (vErrors === null) {
+            vErrors = [err7]
+          } else {
+            vErrors.push(err7)
+          }
+          errors++
+        }
+      }
+    } else {
+      const err8 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err8]
+      } else {
+        vErrors.push(err8)
+      }
+      errors++
+    }
+    validate1039.errors = vErrors
+    return errors === 0
+  }
+  function validate1038(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate1039(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1039.errors : vErrors.concat(validate1039.errors)
+      errors = vErrors.length
+    }
+    validate1038.errors = vErrors
+    return errors === 0
+  }
+  exports.v282 = validate1041
+  const schema450 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1042(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.error === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'error' },
+          message: "must have required property 'error'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'error')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.error !== void 0) {
+        if (
+          !validate395(data.error, {
+            instancePath: instancePath + '/error',
+            parentData: data,
+            parentDataProperty: 'error',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
+          errors = vErrors.length
+        }
+      }
+    } else {
+      const err2 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err2]
+      } else {
+        vErrors.push(err2)
+      }
+      errors++
+    }
+    validate1042.errors = vErrors
+    return errors === 0
+  }
+  function validate1041(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate1042(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1042.errors : vErrors.concat(validate1042.errors)
+      errors = vErrors.length
+    }
+    validate1041.errors = vErrors
+    return errors === 0
+  }
+  exports.v283 = validate1045
+  const schema452 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate1045(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate1045.errors = vErrors
+    return errors === 0
+  }
+  exports.v286 = validate1046
+  const schema453 = { $ref: 'ls101#/components/schemas/SubmissionSelection' }
+  function validate1047(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.submissionIds === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'submissionIds' },
+          message: "must have required property 'submissionIds'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'submissionIds')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.submissionIds !== void 0) {
+        let data0 = data.submissionIds
+        if (Array.isArray(data0)) {
+          if (data0.length > 500) {
+            const err2 = {
+              instancePath: instancePath + '/submissionIds',
+              schemaPath: '#/properties/submissionIds/maxItems',
+              keyword: 'maxItems',
+              params: { limit: 500 },
+              message: 'must NOT have more than 500 items'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+          if (data0.length < 1) {
+            const err3 = {
+              instancePath: instancePath + '/submissionIds',
+              schemaPath: '#/properties/submissionIds/minItems',
+              keyword: 'minItems',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 items'
+            }
+            if (vErrors === null) {
+              vErrors = [err3]
+            } else {
+              vErrors.push(err3)
+            }
+            errors++
+          }
+          const len0 = data0.length
+          for (let i0 = 0; i0 < len0; i0++) {
+            let data1 = data0[i0]
+            if (typeof data1 === 'string') {
+              if (!formats2.test(data1)) {
+                const err4 = {
+                  instancePath: instancePath + '/submissionIds/' + i0,
+                  schemaPath: '#/properties/submissionIds/items/format',
+                  keyword: 'format',
+                  params: { format: 'uuid' },
+                  message: 'must match format "uuid"'
+                }
+                if (vErrors === null) {
+                  vErrors = [err4]
+                } else {
+                  vErrors.push(err4)
+                }
+                errors++
+              }
+            } else {
+              const err5 = {
+                instancePath: instancePath + '/submissionIds/' + i0,
+                schemaPath: '#/properties/submissionIds/items/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err5]
+              } else {
+                vErrors.push(err5)
+              }
+              errors++
+            }
+          }
+          let i1 = data0.length
+          let j0
+          if (i1 > 1) {
+            const indices0 = {}
+            for (; i1--; ) {
+              let item0 = data0[i1]
+              if (typeof item0 !== 'string') {
+                continue
+              }
+              if (typeof indices0[item0] == 'number') {
+                j0 = indices0[item0]
+                const err6 = {
+                  instancePath: instancePath + '/submissionIds',
+                  schemaPath: '#/properties/submissionIds/uniqueItems',
+                  keyword: 'uniqueItems',
+                  params: { i: i1, j: j0 },
+                  message:
+                    'must NOT have duplicate items (items ## ' +
+                    j0 +
+                    ' and ' +
+                    i1 +
+                    ' are identical)'
+                }
+                if (vErrors === null) {
+                  vErrors = [err6]
+                } else {
+                  vErrors.push(err6)
+                }
+                errors++
+                break
+              }
+              indices0[item0] = i1
+            }
+          }
+        } else {
+          const err7 = {
+            instancePath: instancePath + '/submissionIds',
+            schemaPath: '#/properties/submissionIds/type',
+            keyword: 'type',
+            params: { type: 'array' },
+            message: 'must be array'
+          }
+          if (vErrors === null) {
+            vErrors = [err7]
+          } else {
+            vErrors.push(err7)
+          }
+          errors++
+        }
+      }
+    } else {
+      const err8 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err8]
+      } else {
+        vErrors.push(err8)
+      }
+      errors++
+    }
+    validate1047.errors = vErrors
+    return errors === 0
+  }
+  function validate1046(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate1047(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1047.errors : vErrors.concat(validate1047.errors)
+      errors = vErrors.length
+    }
+    validate1046.errors = vErrors
+    return errors === 0
+  }
+  exports.v287 = validate1049
+  const schema455 = { $ref: 'ls101#/components/schemas/BatchDeleteResult' }
+  function validate1050(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -44340,7 +45121,7 @@ var validators = {}
                     keyword: 'enum',
                     params: {
                       allowedValues:
-                        schema151.properties.items.items.oneOf[0].properties.status.enum
+                        schema161.properties.items.items.oneOf[0].properties.status.enum
                     },
                     message: 'must be equal to one of the allowed values'
                   }
@@ -44494,7 +45275,7 @@ var validators = {}
                     keyword: 'enum',
                     params: {
                       allowedValues:
-                        schema151.properties.items.items.oneOf[1].properties.status.enum
+                        schema161.properties.items.items.oneOf[1].properties.status.enum
                     },
                     message: 'must be equal to one of the allowed values'
                   }
@@ -44508,7 +45289,7 @@ var validators = {}
               }
               if (data1.error !== void 0) {
                 if (
-                  !validate376(data1.error, {
+                  !validate395(data1.error, {
                     instancePath: instancePath + '/items/' + i0 + '/error',
                     parentData: data1,
                     parentDataProperty: 'error',
@@ -44516,7 +45297,7 @@ var validators = {}
                   })
                 ) {
                   vErrors =
-                    vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+                    vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
                   errors = vErrors.length
                 }
               }
@@ -44601,25 +45382,25 @@ var validators = {}
       }
       errors++
     }
-    validate1019.errors = vErrors
+    validate1050.errors = vErrors
     return errors === 0
   }
-  function validate1018(
+  function validate1049(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1019(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1019.errors : vErrors.concat(validate1019.errors)
+    if (!validate1050(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1050.errors : vErrors.concat(validate1050.errors)
       errors = vErrors.length
     }
-    validate1018.errors = vErrors
+    validate1049.errors = vErrors
     return errors === 0
   }
-  exports.v279 = validate1022
-  const schema442 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1023(
+  exports.v288 = validate1053
+  const schema457 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1054(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -44660,14 +45441,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -44686,25 +45467,25 @@ var validators = {}
       }
       errors++
     }
-    validate1023.errors = vErrors
+    validate1054.errors = vErrors
     return errors === 0
   }
-  function validate1022(
+  function validate1053(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1023(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1023.errors : vErrors.concat(validate1023.errors)
+    if (!validate1054(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1054.errors : vErrors.concat(validate1054.errors)
       errors = vErrors.length
     }
-    validate1022.errors = vErrors
+    validate1053.errors = vErrors
     return errors === 0
   }
-  exports.v280 = validate1026
-  const schema444 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate1026(
+  exports.v289 = validate1057
+  const schema459 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate1057(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -44741,12 +45522,12 @@ var validators = {}
       }
       errors++
     }
-    validate1026.errors = vErrors
+    validate1057.errors = vErrors
     return errors === 0
   }
-  exports.v283 = validate1027
-  const schema445 = { $ref: 'ls101#/components/schemas/TaskList' }
-  function validate1028(
+  exports.v292 = validate1058
+  const schema460 = { $ref: 'ls101#/components/schemas/TaskList' }
+  function validate1059(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -44820,25 +45601,25 @@ var validators = {}
       }
       errors++
     }
-    validate1028.errors = vErrors
+    validate1059.errors = vErrors
     return errors === 0
   }
-  function validate1027(
+  function validate1058(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1028(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1028.errors : vErrors.concat(validate1028.errors)
+    if (!validate1059(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1059.errors : vErrors.concat(validate1059.errors)
       errors = vErrors.length
     }
-    validate1027.errors = vErrors
+    validate1058.errors = vErrors
     return errors === 0
   }
-  exports.v284 = validate1032
-  const schema447 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1033(
+  exports.v293 = validate1063
+  const schema462 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1064(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -44879,14 +45660,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -44905,30 +45686,30 @@ var validators = {}
       }
       errors++
     }
-    validate1033.errors = vErrors
+    validate1064.errors = vErrors
     return errors === 0
   }
-  function validate1032(
+  function validate1063(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1033(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1033.errors : vErrors.concat(validate1033.errors)
+    if (!validate1064(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1064.errors : vErrors.concat(validate1064.errors)
       errors = vErrors.length
     }
-    validate1032.errors = vErrors
+    validate1063.errors = vErrors
     return errors === 0
   }
-  exports.v285 = validate1036
-  const schema449 = {
+  exports.v294 = validate1067
+  const schema464 = {
     type: 'object',
     properties: { id: { type: 'string', format: 'uuid' } },
     required: ['id'],
     additionalProperties: false
   }
-  function validate1036(
+  function validate1067(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -45016,17 +45797,17 @@ var validators = {}
       }
       errors++
     }
-    validate1036.errors = vErrors
+    validate1067.errors = vErrors
     return errors === 0
   }
-  exports.v288 = validate1037
-  const schema450 = {
+  exports.v297 = validate1068
+  const schema465 = {
     type: 'object',
     required: ['runtimeId'],
     additionalProperties: false,
     properties: { runtimeId: { type: 'string', format: 'uuid' } }
   }
-  function validate1037(
+  function validate1068(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -45114,12 +45895,12 @@ var validators = {}
       }
       errors++
     }
-    validate1037.errors = vErrors
+    validate1068.errors = vErrors
     return errors === 0
   }
-  exports.v289 = validate1038
-  const schema451 = { $ref: 'ls101#/components/schemas/TaskLease' }
-  function validate1039(
+  exports.v298 = validate1069
+  const schema466 = { $ref: 'ls101#/components/schemas/TaskLease' }
+  function validate1070(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -45446,24 +46227,24 @@ var validators = {}
       }
       errors++
     }
-    validate1039.errors = vErrors
+    validate1070.errors = vErrors
     return errors === 0
   }
-  function validate1038(
+  function validate1069(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1039(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1039.errors : vErrors.concat(validate1039.errors)
+    if (!validate1070(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1070.errors : vErrors.concat(validate1070.errors)
       errors = vErrors.length
     }
-    validate1038.errors = vErrors
+    validate1069.errors = vErrors
     return errors === 0
   }
-  exports.v290 = validate1042
-  const schema453 = {
+  exports.v299 = validate1073
+  const schema468 = {
     allOf: [
       { $ref: 'ls101#/components/schemas/Error' },
       {
@@ -45482,7 +46263,7 @@ var validators = {}
       }
     ]
   }
-  function validate1043(
+  function validate1074(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -45523,14 +46304,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -45549,17 +46330,17 @@ var validators = {}
       }
       errors++
     }
-    validate1043.errors = vErrors
+    validate1074.errors = vErrors
     return errors === 0
   }
-  function validate1042(
+  function validate1073(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1043(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1043.errors : vErrors.concat(validate1043.errors)
+    if (!validate1074(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1074.errors : vErrors.concat(validate1074.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -45595,7 +46376,7 @@ var validators = {}
                 instancePath: instancePath + '/error/code',
                 schemaPath: '#/allOf/1/properties/error/properties/code/enum',
                 keyword: 'enum',
-                params: { allowedValues: schema453.allOf[1].properties.error.properties.code.enum },
+                params: { allowedValues: schema468.allOf[1].properties.error.properties.code.enum },
                 message: 'must be equal to one of the allowed values'
               }
               if (vErrors === null) {
@@ -45637,11 +46418,11 @@ var validators = {}
       }
       errors++
     }
-    validate1042.errors = vErrors
+    validate1073.errors = vErrors
     return errors === 0
   }
-  exports.v291 = validate1046
-  const schema455 = {
+  exports.v300 = validate1077
+  const schema470 = {
     allOf: [
       { $ref: 'ls101#/components/schemas/Error' },
       {
@@ -45657,7 +46438,7 @@ var validators = {}
       }
     ]
   }
-  function validate1047(
+  function validate1078(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -45698,14 +46479,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -45724,17 +46505,17 @@ var validators = {}
       }
       errors++
     }
-    validate1047.errors = vErrors
+    validate1078.errors = vErrors
     return errors === 0
   }
-  function validate1046(
+  function validate1077(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1047(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1047.errors : vErrors.concat(validate1047.errors)
+    if (!validate1078(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1078.errors : vErrors.concat(validate1078.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -45763,7 +46544,7 @@ var validators = {}
                 instancePath: instancePath + '/error/code',
                 schemaPath: '#/allOf/1/properties/error/properties/code/enum',
                 keyword: 'enum',
-                params: { allowedValues: schema455.allOf[1].properties.error.properties.code.enum },
+                params: { allowedValues: schema470.allOf[1].properties.error.properties.code.enum },
                 message: 'must be equal to one of the allowed values'
               }
               if (vErrors === null) {
@@ -45805,12 +46586,12 @@ var validators = {}
       }
       errors++
     }
-    validate1046.errors = vErrors
+    validate1077.errors = vErrors
     return errors === 0
   }
-  exports.v292 = validate1050
-  const schema457 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1051(
+  exports.v301 = validate1081
+  const schema472 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1082(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -45851,14 +46632,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -45877,30 +46658,30 @@ var validators = {}
       }
       errors++
     }
-    validate1051.errors = vErrors
+    validate1082.errors = vErrors
     return errors === 0
   }
-  function validate1050(
+  function validate1081(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1051(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1051.errors : vErrors.concat(validate1051.errors)
+    if (!validate1082(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1082.errors : vErrors.concat(validate1082.errors)
       errors = vErrors.length
     }
-    validate1050.errors = vErrors
+    validate1081.errors = vErrors
     return errors === 0
   }
-  exports.v293 = validate1054
-  const schema459 = {
+  exports.v302 = validate1085
+  const schema474 = {
     type: 'object',
     properties: { id: { type: 'string', format: 'uuid' } },
     required: ['id'],
     additionalProperties: false
   }
-  function validate1054(
+  function validate1085(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -45988,11 +46769,11 @@ var validators = {}
       }
       errors++
     }
-    validate1054.errors = vErrors
+    validate1085.errors = vErrors
     return errors === 0
   }
-  exports.v296 = validate1055
-  const schema460 = {
+  exports.v305 = validate1086
+  const schema475 = {
     type: 'object',
     required: ['runtimeId', 'leaseId'],
     additionalProperties: false,
@@ -46001,7 +46782,7 @@ var validators = {}
       leaseId: { type: 'string', format: 'uuid' }
     }
   }
-  function validate1055(
+  function validate1086(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -46138,12 +46919,12 @@ var validators = {}
       }
       errors++
     }
-    validate1055.errors = vErrors
+    validate1086.errors = vErrors
     return errors === 0
   }
-  exports.v297 = validate1056
-  const schema461 = { $ref: 'ls101#/components/schemas/TaskLease' }
-  function validate1057(
+  exports.v306 = validate1087
+  const schema476 = { $ref: 'ls101#/components/schemas/TaskLease' }
+  function validate1088(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -46470,24 +47251,24 @@ var validators = {}
       }
       errors++
     }
-    validate1057.errors = vErrors
+    validate1088.errors = vErrors
     return errors === 0
   }
-  function validate1056(
+  function validate1087(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1057(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1057.errors : vErrors.concat(validate1057.errors)
+    if (!validate1088(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1088.errors : vErrors.concat(validate1088.errors)
       errors = vErrors.length
     }
-    validate1056.errors = vErrors
+    validate1087.errors = vErrors
     return errors === 0
   }
-  exports.v298 = validate1060
-  const schema463 = {
+  exports.v307 = validate1091
+  const schema478 = {
     allOf: [
       { $ref: 'ls101#/components/schemas/Error' },
       {
@@ -46506,7 +47287,7 @@ var validators = {}
       }
     ]
   }
-  function validate1061(
+  function validate1092(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -46547,14 +47328,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -46573,17 +47354,17 @@ var validators = {}
       }
       errors++
     }
-    validate1061.errors = vErrors
+    validate1092.errors = vErrors
     return errors === 0
   }
-  function validate1060(
+  function validate1091(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1061(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1061.errors : vErrors.concat(validate1061.errors)
+    if (!validate1092(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1092.errors : vErrors.concat(validate1092.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -46619,7 +47400,7 @@ var validators = {}
                 instancePath: instancePath + '/error/code',
                 schemaPath: '#/allOf/1/properties/error/properties/code/enum',
                 keyword: 'enum',
-                params: { allowedValues: schema463.allOf[1].properties.error.properties.code.enum },
+                params: { allowedValues: schema478.allOf[1].properties.error.properties.code.enum },
                 message: 'must be equal to one of the allowed values'
               }
               if (vErrors === null) {
@@ -46661,11 +47442,11 @@ var validators = {}
       }
       errors++
     }
-    validate1060.errors = vErrors
+    validate1091.errors = vErrors
     return errors === 0
   }
-  exports.v299 = validate1064
-  const schema465 = {
+  exports.v308 = validate1095
+  const schema480 = {
     allOf: [
       { $ref: 'ls101#/components/schemas/Error' },
       {
@@ -46681,7 +47462,7 @@ var validators = {}
       }
     ]
   }
-  function validate1065(
+  function validate1096(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -46722,14 +47503,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -46748,17 +47529,17 @@ var validators = {}
       }
       errors++
     }
-    validate1065.errors = vErrors
+    validate1096.errors = vErrors
     return errors === 0
   }
-  function validate1064(
+  function validate1095(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1065(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1065.errors : vErrors.concat(validate1065.errors)
+    if (!validate1096(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1096.errors : vErrors.concat(validate1096.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -46787,7 +47568,7 @@ var validators = {}
                 instancePath: instancePath + '/error/code',
                 schemaPath: '#/allOf/1/properties/error/properties/code/enum',
                 keyword: 'enum',
-                params: { allowedValues: schema465.allOf[1].properties.error.properties.code.enum },
+                params: { allowedValues: schema480.allOf[1].properties.error.properties.code.enum },
                 message: 'must be equal to one of the allowed values'
               }
               if (vErrors === null) {
@@ -46829,12 +47610,12 @@ var validators = {}
       }
       errors++
     }
-    validate1064.errors = vErrors
+    validate1095.errors = vErrors
     return errors === 0
   }
-  exports.v300 = validate1068
-  const schema467 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1069(
+  exports.v309 = validate1099
+  const schema482 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1100(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -46875,14 +47656,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -46901,30 +47682,30 @@ var validators = {}
       }
       errors++
     }
-    validate1069.errors = vErrors
+    validate1100.errors = vErrors
     return errors === 0
   }
-  function validate1068(
+  function validate1099(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1069(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1069.errors : vErrors.concat(validate1069.errors)
+    if (!validate1100(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1100.errors : vErrors.concat(validate1100.errors)
       errors = vErrors.length
     }
-    validate1068.errors = vErrors
+    validate1099.errors = vErrors
     return errors === 0
   }
-  exports.v301 = validate1072
-  const schema469 = {
+  exports.v310 = validate1103
+  const schema484 = {
     type: 'object',
     properties: { id: { type: 'string', format: 'uuid' } },
     required: ['id'],
     additionalProperties: false
   }
-  function validate1072(
+  function validate1103(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -47012,12 +47793,12 @@ var validators = {}
       }
       errors++
     }
-    validate1072.errors = vErrors
+    validate1103.errors = vErrors
     return errors === 0
   }
-  exports.v304 = validate1073
-  const schema470 = { $ref: 'ls101#/components/schemas/TaskResultInput' }
-  function validate1074(
+  exports.v313 = validate1104
+  const schema485 = { $ref: 'ls101#/components/schemas/TaskResultInput' }
+  function validate1105(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -47187,7 +47968,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema180.properties.status.enum },
+            params: { allowedValues: schema190.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -47239,14 +48020,14 @@ var validators = {}
         let passing0 = null
         const _errs10 = errors
         if (
-          !validate448(data3, {
+          !validate467(data3, {
             instancePath: instancePath + '/result',
             parentData: data,
             parentDataProperty: 'result',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate448.errors : vErrors.concat(validate448.errors)
+          vErrors = vErrors === null ? validate467.errors : vErrors.concat(validate467.errors)
           errors = vErrors.length
         }
         var _valid0 = _errs10 === errors
@@ -47256,14 +48037,14 @@ var validators = {}
         }
         const _errs11 = errors
         if (
-          !validate453(data3, {
+          !validate472(data3, {
             instancePath: instancePath + '/result',
             parentData: data,
             parentDataProperty: 'result',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate453.errors : vErrors.concat(validate453.errors)
+          vErrors = vErrors === null ? validate472.errors : vErrors.concat(validate472.errors)
           errors = vErrors.length
         }
         var _valid0 = _errs11 === errors
@@ -47277,14 +48058,14 @@ var validators = {}
           }
           const _errs12 = errors
           if (
-            !validate462(data3, {
+            !validate481(data3, {
               instancePath: instancePath + '/result',
               parentData: data,
               parentDataProperty: 'result',
               rootData
             })
           ) {
-            vErrors = vErrors === null ? validate462.errors : vErrors.concat(validate462.errors)
+            vErrors = vErrors === null ? validate481.errors : vErrors.concat(validate481.errors)
             errors = vErrors.length
           }
           var _valid0 = _errs12 === errors
@@ -47317,7 +48098,7 @@ var validators = {}
                 instancePath: instancePath + '/result',
                 schemaPath: '#/properties/result/oneOf/3/enum',
                 keyword: 'enum',
-                params: { allowedValues: schema180.properties.result.oneOf[3].enum },
+                params: { allowedValues: schema190.properties.result.oneOf[3].enum },
                 message: 'must be equal to one of the allowed values'
               }
               if (vErrors === null) {
@@ -47392,25 +48173,25 @@ var validators = {}
       }
       errors++
     }
-    validate1074.errors = vErrors
+    validate1105.errors = vErrors
     return errors === 0
   }
-  function validate1073(
+  function validate1104(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1074(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1074.errors : vErrors.concat(validate1074.errors)
+    if (!validate1105(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1105.errors : vErrors.concat(validate1105.errors)
       errors = vErrors.length
     }
-    validate1073.errors = vErrors
+    validate1104.errors = vErrors
     return errors === 0
   }
-  exports.v305 = validate1080
-  const schema472 = { $ref: 'ls101#/components/schemas/TaskResult' }
-  function validate1081(
+  exports.v314 = validate1111
+  const schema487 = { $ref: 'ls101#/components/schemas/TaskResult' }
+  function validate1112(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -47611,25 +48392,25 @@ var validators = {}
       }
       errors++
     }
-    validate1081.errors = vErrors
+    validate1112.errors = vErrors
     return errors === 0
   }
-  function validate1080(
+  function validate1111(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1081(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1081.errors : vErrors.concat(validate1081.errors)
+    if (!validate1112(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1112.errors : vErrors.concat(validate1112.errors)
       errors = vErrors.length
     }
-    validate1080.errors = vErrors
+    validate1111.errors = vErrors
     return errors === 0
   }
-  exports.v306 = validate1083
-  const schema474 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1084(
+  exports.v315 = validate1114
+  const schema489 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1115(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -47670,14 +48451,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -47696,25 +48477,25 @@ var validators = {}
       }
       errors++
     }
-    validate1084.errors = vErrors
+    validate1115.errors = vErrors
     return errors === 0
   }
-  function validate1083(
+  function validate1114(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1084(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1084.errors : vErrors.concat(validate1084.errors)
+    if (!validate1115(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1115.errors : vErrors.concat(validate1115.errors)
       errors = vErrors.length
     }
-    validate1083.errors = vErrors
+    validate1114.errors = vErrors
     return errors === 0
   }
-  exports.v307 = validate1087
-  const schema476 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate1087(
+  exports.v316 = validate1118
+  const schema491 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate1118(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -47751,12 +48532,12 @@ var validators = {}
       }
       errors++
     }
-    validate1087.errors = vErrors
+    validate1118.errors = vErrors
     return errors === 0
   }
-  exports.v310 = validate1088
-  const schema477 = { $ref: 'ls101#/components/schemas/TestSuiteList' }
-  function validate1089(
+  exports.v319 = validate1119
+  const schema492 = { $ref: 'ls101#/components/schemas/TestSuiteList' }
+  function validate1120(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -47788,14 +48569,14 @@ var validators = {}
           const len0 = data0.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate476(data0[i0], {
+              !validate495(data0[i0], {
                 instancePath: instancePath + '/items/' + i0,
                 parentData: data0,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate476.errors : vErrors.concat(validate476.errors)
+              vErrors = vErrors === null ? validate495.errors : vErrors.concat(validate495.errors)
               errors = vErrors.length
             }
           }
@@ -47830,25 +48611,25 @@ var validators = {}
       }
       errors++
     }
-    validate1089.errors = vErrors
+    validate1120.errors = vErrors
     return errors === 0
   }
-  function validate1088(
+  function validate1119(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1089(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1089.errors : vErrors.concat(validate1089.errors)
+    if (!validate1120(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1120.errors : vErrors.concat(validate1120.errors)
       errors = vErrors.length
     }
-    validate1088.errors = vErrors
+    validate1119.errors = vErrors
     return errors === 0
   }
-  exports.v311 = validate1093
-  const schema479 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1094(
+  exports.v320 = validate1124
+  const schema494 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1125(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -47889,14 +48670,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -47915,25 +48696,25 @@ var validators = {}
       }
       errors++
     }
-    validate1094.errors = vErrors
+    validate1125.errors = vErrors
     return errors === 0
   }
-  function validate1093(
+  function validate1124(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1094(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1094.errors : vErrors.concat(validate1094.errors)
+    if (!validate1125(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1125.errors : vErrors.concat(validate1125.errors)
       errors = vErrors.length
     }
-    validate1093.errors = vErrors
+    validate1124.errors = vErrors
     return errors === 0
   }
-  exports.v312 = validate1097
-  const schema481 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate1097(
+  exports.v321 = validate1128
+  const schema496 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate1128(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -47970,12 +48751,12 @@ var validators = {}
       }
       errors++
     }
-    validate1097.errors = vErrors
+    validate1128.errors = vErrors
     return errors === 0
   }
-  exports.v315 = validate1098
-  const schema482 = { $ref: 'ls101#/components/schemas/TestRunList' }
-  function validate1099(
+  exports.v324 = validate1129
+  const schema497 = { $ref: 'ls101#/components/schemas/TestRunList' }
+  function validate1130(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -48007,14 +48788,14 @@ var validators = {}
           const len0 = data0.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate529(data0[i0], {
+              !validate548(data0[i0], {
                 instancePath: instancePath + '/items/' + i0,
                 parentData: data0,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate529.errors : vErrors.concat(validate529.errors)
+              vErrors = vErrors === null ? validate548.errors : vErrors.concat(validate548.errors)
               errors = vErrors.length
             }
           }
@@ -48049,25 +48830,25 @@ var validators = {}
       }
       errors++
     }
-    validate1099.errors = vErrors
+    validate1130.errors = vErrors
     return errors === 0
   }
-  function validate1098(
+  function validate1129(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1099(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1099.errors : vErrors.concat(validate1099.errors)
+    if (!validate1130(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1130.errors : vErrors.concat(validate1130.errors)
       errors = vErrors.length
     }
-    validate1098.errors = vErrors
+    validate1129.errors = vErrors
     return errors === 0
   }
-  exports.v316 = validate1103
-  const schema484 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1104(
+  exports.v325 = validate1134
+  const schema499 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1135(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -48108,14 +48889,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -48134,25 +48915,25 @@ var validators = {}
       }
       errors++
     }
-    validate1104.errors = vErrors
+    validate1135.errors = vErrors
     return errors === 0
   }
-  function validate1103(
+  function validate1134(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1104(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1104.errors : vErrors.concat(validate1104.errors)
+    if (!validate1135(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1135.errors : vErrors.concat(validate1135.errors)
       errors = vErrors.length
     }
-    validate1103.errors = vErrors
+    validate1134.errors = vErrors
     return errors === 0
   }
-  exports.v317 = validate1107
-  const schema486 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate1107(
+  exports.v326 = validate1138
+  const schema501 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate1138(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -48189,12 +48970,12 @@ var validators = {}
       }
       errors++
     }
-    validate1107.errors = vErrors
+    validate1138.errors = vErrors
     return errors === 0
   }
-  exports.v320 = validate1108
-  const schema487 = { $ref: 'ls101#/components/schemas/TestRunCreate' }
-  function validate1109(
+  exports.v329 = validate1139
+  const schema502 = { $ref: 'ls101#/components/schemas/TestRunCreate' }
+  function validate1140(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -48408,14 +49189,14 @@ var validators = {}
       }
       if (data.deviceIds !== void 0) {
         if (
-          !validate481(data.deviceIds, {
+          !validate500(data.deviceIds, {
             instancePath: instancePath + '/deviceIds',
             parentData: data,
             parentDataProperty: 'deviceIds',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate481.errors : vErrors.concat(validate481.errors)
+          vErrors = vErrors === null ? validate500.errors : vErrors.concat(validate500.errors)
           errors = vErrors.length
         }
       }
@@ -48502,25 +49283,25 @@ var validators = {}
       }
       errors++
     }
-    validate1109.errors = vErrors
+    validate1140.errors = vErrors
     return errors === 0
   }
-  function validate1108(
+  function validate1139(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1109(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1109.errors : vErrors.concat(validate1109.errors)
+    if (!validate1140(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1140.errors : vErrors.concat(validate1140.errors)
       errors = vErrors.length
     }
-    validate1108.errors = vErrors
+    validate1139.errors = vErrors
     return errors === 0
   }
-  exports.v321 = validate1112
-  const schema489 = { $ref: 'ls101#/components/schemas/TestRun' }
-  function validate1113(
+  exports.v330 = validate1143
+  const schema504 = { $ref: 'ls101#/components/schemas/TestRun' }
+  function validate1144(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -48837,14 +49618,14 @@ var validators = {}
           const len0 = data7.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate516(data7[i0], {
+              !validate535(data7[i0], {
                 instancePath: instancePath + '/devices/' + i0,
                 parentData: data7,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate516.errors : vErrors.concat(validate516.errors)
+              vErrors = vErrors === null ? validate535.errors : vErrors.concat(validate535.errors)
               errors = vErrors.length
             }
           }
@@ -48879,1335 +49660,1335 @@ var validators = {}
       }
       errors++
     }
-    validate1113.errors = vErrors
+    validate1144.errors = vErrors
     return errors === 0
   }
-  function validate1112(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate1113(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1113.errors : vErrors.concat(validate1113.errors)
-      errors = vErrors.length
-    }
-    validate1112.errors = vErrors
-    return errors === 0
-  }
-  exports.v322 = validate1117
-  const schema491 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1118(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.error === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'error' },
-          message: "must have required property 'error'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'error')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.error !== void 0) {
-        if (
-          !validate376(data.error, {
-            instancePath: instancePath + '/error',
-            parentData: data,
-            parentDataProperty: 'error',
-            rootData
-          })
-        ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
-          errors = vErrors.length
-        }
-      }
-    } else {
-      const err2 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err2]
-      } else {
-        vErrors.push(err2)
-      }
-      errors++
-    }
-    validate1118.errors = vErrors
-    return errors === 0
-  }
-  function validate1117(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate1118(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1118.errors : vErrors.concat(validate1118.errors)
-      errors = vErrors.length
-    }
-    validate1117.errors = vErrors
-    return errors === 0
-  }
-  exports.v323 = validate1121
-  const schema493 = {
-    type: 'object',
-    properties: { id: { type: 'string', format: 'uuid' } },
-    required: ['id'],
-    additionalProperties: false
-  }
-  function validate1121(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.id === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'id' },
-          message: "must have required property 'id'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'id')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.id !== void 0) {
-        let data0 = data.id
-        if (typeof data0 === 'string') {
-          if (!formats2.test(data0)) {
-            const err2 = {
-              instancePath: instancePath + '/id',
-              schemaPath: '#/properties/id/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-        } else {
-          const err3 = {
-            instancePath: instancePath + '/id',
-            schemaPath: '#/properties/id/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err3]
-          } else {
-            vErrors.push(err3)
-          }
-          errors++
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
-    }
-    validate1121.errors = vErrors
-    return errors === 0
-  }
-  exports.v326 = validate1122
-  const schema494 = { $ref: 'ls101#/components/schemas/TestRun' }
-  function validate1123(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.id === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'id' },
-          message: "must have required property 'id'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data.suiteId === void 0) {
-        const err1 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'suiteId' },
-          message: "must have required property 'suiteId'"
-        }
-        if (vErrors === null) {
-          vErrors = [err1]
-        } else {
-          vErrors.push(err1)
-        }
-        errors++
-      }
-      if (data.suiteVersion === void 0) {
-        const err2 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'suiteVersion' },
-          message: "must have required property 'suiteVersion'"
-        }
-        if (vErrors === null) {
-          vErrors = [err2]
-        } else {
-          vErrors.push(err2)
-        }
-        errors++
-      }
-      if (data.createdAt === void 0) {
-        const err3 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'createdAt' },
-          message: "must have required property 'createdAt'"
-        }
-        if (vErrors === null) {
-          vErrors = [err3]
-        } else {
-          vErrors.push(err3)
-        }
-        errors++
-      }
-      if (data.expiresAt === void 0) {
-        const err4 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'expiresAt' },
-          message: "must have required property 'expiresAt'"
-        }
-        if (vErrors === null) {
-          vErrors = [err4]
-        } else {
-          vErrors.push(err4)
-        }
-        errors++
-      }
-      if (data.status === void 0) {
-        const err5 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'status' },
-          message: "must have required property 'status'"
-        }
-        if (vErrors === null) {
-          vErrors = [err5]
-        } else {
-          vErrors.push(err5)
-        }
-        errors++
-      }
-      if (data.retryOf === void 0) {
-        const err6 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'retryOf' },
-          message: "must have required property 'retryOf'"
-        }
-        if (vErrors === null) {
-          vErrors = [err6]
-        } else {
-          vErrors.push(err6)
-        }
-        errors++
-      }
-      if (data.devices === void 0) {
-        const err7 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'devices' },
-          message: "must have required property 'devices'"
-        }
-        if (vErrors === null) {
-          vErrors = [err7]
-        } else {
-          vErrors.push(err7)
-        }
-        errors++
-      }
-      if (data.id !== void 0) {
-        let data0 = data.id
-        if (typeof data0 === 'string') {
-          if (!formats2.test(data0)) {
-            const err8 = {
-              instancePath: instancePath + '/id',
-              schemaPath: '#/properties/id/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err8]
-            } else {
-              vErrors.push(err8)
-            }
-            errors++
-          }
-        } else {
-          const err9 = {
-            instancePath: instancePath + '/id',
-            schemaPath: '#/properties/id/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err9]
-          } else {
-            vErrors.push(err9)
-          }
-          errors++
-        }
-      }
-      if (data.suiteId !== void 0) {
-        if (typeof data.suiteId !== 'string') {
-          const err10 = {
-            instancePath: instancePath + '/suiteId',
-            schemaPath: '#/properties/suiteId/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err10]
-          } else {
-            vErrors.push(err10)
-          }
-          errors++
-        }
-      }
-      if (data.suiteVersion !== void 0) {
-        if (typeof data.suiteVersion !== 'string') {
-          const err11 = {
-            instancePath: instancePath + '/suiteVersion',
-            schemaPath: '#/properties/suiteVersion/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err11]
-          } else {
-            vErrors.push(err11)
-          }
-          errors++
-        }
-      }
-      if (data.createdAt !== void 0) {
-        let data3 = data.createdAt
-        if (typeof data3 === 'string') {
-          if (!formats0.validate(data3)) {
-            const err12 = {
-              instancePath: instancePath + '/createdAt',
-              schemaPath: '#/properties/createdAt/format',
-              keyword: 'format',
-              params: { format: 'date-time' },
-              message: 'must match format "date-time"'
-            }
-            if (vErrors === null) {
-              vErrors = [err12]
-            } else {
-              vErrors.push(err12)
-            }
-            errors++
-          }
-        } else {
-          const err13 = {
-            instancePath: instancePath + '/createdAt',
-            schemaPath: '#/properties/createdAt/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err13]
-          } else {
-            vErrors.push(err13)
-          }
-          errors++
-        }
-      }
-      if (data.expiresAt !== void 0) {
-        let data4 = data.expiresAt
-        if (typeof data4 === 'string') {
-          if (!formats0.validate(data4)) {
-            const err14 = {
-              instancePath: instancePath + '/expiresAt',
-              schemaPath: '#/properties/expiresAt/format',
-              keyword: 'format',
-              params: { format: 'date-time' },
-              message: 'must match format "date-time"'
-            }
-            if (vErrors === null) {
-              vErrors = [err14]
-            } else {
-              vErrors.push(err14)
-            }
-            errors++
-          }
-        } else {
-          const err15 = {
-            instancePath: instancePath + '/expiresAt',
-            schemaPath: '#/properties/expiresAt/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err15]
-          } else {
-            vErrors.push(err15)
-          }
-          errors++
-        }
-      }
-      if (data.status !== void 0) {
-        if (
-          !validate82(data.status, {
-            instancePath: instancePath + '/status',
-            parentData: data,
-            parentDataProperty: 'status',
-            rootData
-          })
-        ) {
-          vErrors = vErrors === null ? validate82.errors : vErrors.concat(validate82.errors)
-          errors = vErrors.length
-        }
-      }
-      if (data.retryOf !== void 0) {
-        let data6 = data.retryOf
-        if (typeof data6 !== 'string' && data6 !== null) {
-          const err16 = {
-            instancePath: instancePath + '/retryOf',
-            schemaPath: '#/properties/retryOf/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err16]
-          } else {
-            vErrors.push(err16)
-          }
-          errors++
-        }
-        if (typeof data6 === 'string') {
-          if (!formats2.test(data6)) {
-            const err17 = {
-              instancePath: instancePath + '/retryOf',
-              schemaPath: '#/properties/retryOf/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err17]
-            } else {
-              vErrors.push(err17)
-            }
-            errors++
-          }
-        }
-      }
-      if (data.devices !== void 0) {
-        let data7 = data.devices
-        if (Array.isArray(data7)) {
-          const len0 = data7.length
-          for (let i0 = 0; i0 < len0; i0++) {
-            if (
-              !validate516(data7[i0], {
-                instancePath: instancePath + '/devices/' + i0,
-                parentData: data7,
-                parentDataProperty: i0,
-                rootData
-              })
-            ) {
-              vErrors = vErrors === null ? validate516.errors : vErrors.concat(validate516.errors)
-              errors = vErrors.length
-            }
-          }
-        } else {
-          const err18 = {
-            instancePath: instancePath + '/devices',
-            schemaPath: '#/properties/devices/type',
-            keyword: 'type',
-            params: { type: 'array' },
-            message: 'must be array'
-          }
-          if (vErrors === null) {
-            vErrors = [err18]
-          } else {
-            vErrors.push(err18)
-          }
-          errors++
-        }
-      }
-    } else {
-      const err19 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err19]
-      } else {
-        vErrors.push(err19)
-      }
-      errors++
-    }
-    validate1123.errors = vErrors
-    return errors === 0
-  }
-  function validate1122(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate1123(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1123.errors : vErrors.concat(validate1123.errors)
-      errors = vErrors.length
-    }
-    validate1122.errors = vErrors
-    return errors === 0
-  }
-  exports.v327 = validate1127
-  const schema496 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1128(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.error === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'error' },
-          message: "must have required property 'error'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'error')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.error !== void 0) {
-        if (
-          !validate376(data.error, {
-            instancePath: instancePath + '/error',
-            parentData: data,
-            parentDataProperty: 'error',
-            rootData
-          })
-        ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
-          errors = vErrors.length
-        }
-      }
-    } else {
-      const err2 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err2]
-      } else {
-        vErrors.push(err2)
-      }
-      errors++
-    }
-    validate1128.errors = vErrors
-    return errors === 0
-  }
-  function validate1127(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate1128(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1128.errors : vErrors.concat(validate1128.errors)
-      errors = vErrors.length
-    }
-    validate1127.errors = vErrors
-    return errors === 0
-  }
-  exports.v328 = validate1131
-  const schema498 = {
-    type: 'object',
-    properties: { id: { type: 'string', format: 'uuid' } },
-    required: ['id'],
-    additionalProperties: false
-  }
-  function validate1131(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.id === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'id' },
-          message: "must have required property 'id'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'id')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.id !== void 0) {
-        let data0 = data.id
-        if (typeof data0 === 'string') {
-          if (!formats2.test(data0)) {
-            const err2 = {
-              instancePath: instancePath + '/id',
-              schemaPath: '#/properties/id/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-        } else {
-          const err3 = {
-            instancePath: instancePath + '/id',
-            schemaPath: '#/properties/id/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err3]
-          } else {
-            vErrors.push(err3)
-          }
-          errors++
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
-    }
-    validate1131.errors = vErrors
-    return errors === 0
-  }
-  exports.v331 = validate1132
-  const schema499 = { $ref: 'ls101#/components/schemas/TestRun' }
-  function validate1133(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.id === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'id' },
-          message: "must have required property 'id'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data.suiteId === void 0) {
-        const err1 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'suiteId' },
-          message: "must have required property 'suiteId'"
-        }
-        if (vErrors === null) {
-          vErrors = [err1]
-        } else {
-          vErrors.push(err1)
-        }
-        errors++
-      }
-      if (data.suiteVersion === void 0) {
-        const err2 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'suiteVersion' },
-          message: "must have required property 'suiteVersion'"
-        }
-        if (vErrors === null) {
-          vErrors = [err2]
-        } else {
-          vErrors.push(err2)
-        }
-        errors++
-      }
-      if (data.createdAt === void 0) {
-        const err3 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'createdAt' },
-          message: "must have required property 'createdAt'"
-        }
-        if (vErrors === null) {
-          vErrors = [err3]
-        } else {
-          vErrors.push(err3)
-        }
-        errors++
-      }
-      if (data.expiresAt === void 0) {
-        const err4 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'expiresAt' },
-          message: "must have required property 'expiresAt'"
-        }
-        if (vErrors === null) {
-          vErrors = [err4]
-        } else {
-          vErrors.push(err4)
-        }
-        errors++
-      }
-      if (data.status === void 0) {
-        const err5 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'status' },
-          message: "must have required property 'status'"
-        }
-        if (vErrors === null) {
-          vErrors = [err5]
-        } else {
-          vErrors.push(err5)
-        }
-        errors++
-      }
-      if (data.retryOf === void 0) {
-        const err6 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'retryOf' },
-          message: "must have required property 'retryOf'"
-        }
-        if (vErrors === null) {
-          vErrors = [err6]
-        } else {
-          vErrors.push(err6)
-        }
-        errors++
-      }
-      if (data.devices === void 0) {
-        const err7 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'devices' },
-          message: "must have required property 'devices'"
-        }
-        if (vErrors === null) {
-          vErrors = [err7]
-        } else {
-          vErrors.push(err7)
-        }
-        errors++
-      }
-      if (data.id !== void 0) {
-        let data0 = data.id
-        if (typeof data0 === 'string') {
-          if (!formats2.test(data0)) {
-            const err8 = {
-              instancePath: instancePath + '/id',
-              schemaPath: '#/properties/id/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err8]
-            } else {
-              vErrors.push(err8)
-            }
-            errors++
-          }
-        } else {
-          const err9 = {
-            instancePath: instancePath + '/id',
-            schemaPath: '#/properties/id/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err9]
-          } else {
-            vErrors.push(err9)
-          }
-          errors++
-        }
-      }
-      if (data.suiteId !== void 0) {
-        if (typeof data.suiteId !== 'string') {
-          const err10 = {
-            instancePath: instancePath + '/suiteId',
-            schemaPath: '#/properties/suiteId/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err10]
-          } else {
-            vErrors.push(err10)
-          }
-          errors++
-        }
-      }
-      if (data.suiteVersion !== void 0) {
-        if (typeof data.suiteVersion !== 'string') {
-          const err11 = {
-            instancePath: instancePath + '/suiteVersion',
-            schemaPath: '#/properties/suiteVersion/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err11]
-          } else {
-            vErrors.push(err11)
-          }
-          errors++
-        }
-      }
-      if (data.createdAt !== void 0) {
-        let data3 = data.createdAt
-        if (typeof data3 === 'string') {
-          if (!formats0.validate(data3)) {
-            const err12 = {
-              instancePath: instancePath + '/createdAt',
-              schemaPath: '#/properties/createdAt/format',
-              keyword: 'format',
-              params: { format: 'date-time' },
-              message: 'must match format "date-time"'
-            }
-            if (vErrors === null) {
-              vErrors = [err12]
-            } else {
-              vErrors.push(err12)
-            }
-            errors++
-          }
-        } else {
-          const err13 = {
-            instancePath: instancePath + '/createdAt',
-            schemaPath: '#/properties/createdAt/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err13]
-          } else {
-            vErrors.push(err13)
-          }
-          errors++
-        }
-      }
-      if (data.expiresAt !== void 0) {
-        let data4 = data.expiresAt
-        if (typeof data4 === 'string') {
-          if (!formats0.validate(data4)) {
-            const err14 = {
-              instancePath: instancePath + '/expiresAt',
-              schemaPath: '#/properties/expiresAt/format',
-              keyword: 'format',
-              params: { format: 'date-time' },
-              message: 'must match format "date-time"'
-            }
-            if (vErrors === null) {
-              vErrors = [err14]
-            } else {
-              vErrors.push(err14)
-            }
-            errors++
-          }
-        } else {
-          const err15 = {
-            instancePath: instancePath + '/expiresAt',
-            schemaPath: '#/properties/expiresAt/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err15]
-          } else {
-            vErrors.push(err15)
-          }
-          errors++
-        }
-      }
-      if (data.status !== void 0) {
-        if (
-          !validate82(data.status, {
-            instancePath: instancePath + '/status',
-            parentData: data,
-            parentDataProperty: 'status',
-            rootData
-          })
-        ) {
-          vErrors = vErrors === null ? validate82.errors : vErrors.concat(validate82.errors)
-          errors = vErrors.length
-        }
-      }
-      if (data.retryOf !== void 0) {
-        let data6 = data.retryOf
-        if (typeof data6 !== 'string' && data6 !== null) {
-          const err16 = {
-            instancePath: instancePath + '/retryOf',
-            schemaPath: '#/properties/retryOf/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err16]
-          } else {
-            vErrors.push(err16)
-          }
-          errors++
-        }
-        if (typeof data6 === 'string') {
-          if (!formats2.test(data6)) {
-            const err17 = {
-              instancePath: instancePath + '/retryOf',
-              schemaPath: '#/properties/retryOf/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err17]
-            } else {
-              vErrors.push(err17)
-            }
-            errors++
-          }
-        }
-      }
-      if (data.devices !== void 0) {
-        let data7 = data.devices
-        if (Array.isArray(data7)) {
-          const len0 = data7.length
-          for (let i0 = 0; i0 < len0; i0++) {
-            if (
-              !validate516(data7[i0], {
-                instancePath: instancePath + '/devices/' + i0,
-                parentData: data7,
-                parentDataProperty: i0,
-                rootData
-              })
-            ) {
-              vErrors = vErrors === null ? validate516.errors : vErrors.concat(validate516.errors)
-              errors = vErrors.length
-            }
-          }
-        } else {
-          const err18 = {
-            instancePath: instancePath + '/devices',
-            schemaPath: '#/properties/devices/type',
-            keyword: 'type',
-            params: { type: 'array' },
-            message: 'must be array'
-          }
-          if (vErrors === null) {
-            vErrors = [err18]
-          } else {
-            vErrors.push(err18)
-          }
-          errors++
-        }
-      }
-    } else {
-      const err19 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err19]
-      } else {
-        vErrors.push(err19)
-      }
-      errors++
-    }
-    validate1133.errors = vErrors
-    return errors === 0
-  }
-  function validate1132(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate1133(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1133.errors : vErrors.concat(validate1133.errors)
-      errors = vErrors.length
-    }
-    validate1132.errors = vErrors
-    return errors === 0
-  }
-  exports.v332 = validate1137
-  const schema501 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1138(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.error === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'error' },
-          message: "must have required property 'error'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'error')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.error !== void 0) {
-        if (
-          !validate376(data.error, {
-            instancePath: instancePath + '/error',
-            parentData: data,
-            parentDataProperty: 'error',
-            rootData
-          })
-        ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
-          errors = vErrors.length
-        }
-      }
-    } else {
-      const err2 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err2]
-      } else {
-        vErrors.push(err2)
-      }
-      errors++
-    }
-    validate1138.errors = vErrors
-    return errors === 0
-  }
-  function validate1137(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (!validate1138(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1138.errors : vErrors.concat(validate1138.errors)
-      errors = vErrors.length
-    }
-    validate1137.errors = vErrors
-    return errors === 0
-  }
-  exports.v333 = validate1141
-  const schema503 = {
-    type: 'object',
-    properties: { id: { type: 'string', format: 'uuid' } },
-    required: ['id'],
-    additionalProperties: false
-  }
-  function validate1141(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data.id === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'id' },
-          message: "must have required property 'id'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      for (const key0 in data) {
-        if (!(key0 === 'id')) {
-          const err1 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err1]
-          } else {
-            vErrors.push(err1)
-          }
-          errors++
-        }
-      }
-      if (data.id !== void 0) {
-        let data0 = data.id
-        if (typeof data0 === 'string') {
-          if (!formats2.test(data0)) {
-            const err2 = {
-              instancePath: instancePath + '/id',
-              schemaPath: '#/properties/id/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-        } else {
-          const err3 = {
-            instancePath: instancePath + '/id',
-            schemaPath: '#/properties/id/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err3]
-          } else {
-            vErrors.push(err3)
-          }
-          errors++
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
-    }
-    validate1141.errors = vErrors
-    return errors === 0
-  }
-  exports.v336 = validate1142
-  const schema504 = { $ref: 'ls101#/components/schemas/TestReport' }
   function validate1143(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate529(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate529.errors : vErrors.concat(validate529.errors)
+    if (!validate1144(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1144.errors : vErrors.concat(validate1144.errors)
+      errors = vErrors.length
+    }
+    validate1143.errors = vErrors
+    return errors === 0
+  }
+  exports.v331 = validate1148
+  const schema506 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1149(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.error === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'error' },
+          message: "must have required property 'error'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'error')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.error !== void 0) {
+        if (
+          !validate395(data.error, {
+            instancePath: instancePath + '/error',
+            parentData: data,
+            parentDataProperty: 'error',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
+          errors = vErrors.length
+        }
+      }
+    } else {
+      const err2 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err2]
+      } else {
+        vErrors.push(err2)
+      }
+      errors++
+    }
+    validate1149.errors = vErrors
+    return errors === 0
+  }
+  function validate1148(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate1149(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1149.errors : vErrors.concat(validate1149.errors)
+      errors = vErrors.length
+    }
+    validate1148.errors = vErrors
+    return errors === 0
+  }
+  exports.v332 = validate1152
+  const schema508 = {
+    type: 'object',
+    properties: { id: { type: 'string', format: 'uuid' } },
+    required: ['id'],
+    additionalProperties: false
+  }
+  function validate1152(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.id === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'id' },
+          message: "must have required property 'id'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'id')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.id !== void 0) {
+        let data0 = data.id
+        if (typeof data0 === 'string') {
+          if (!formats2.test(data0)) {
+            const err2 = {
+              instancePath: instancePath + '/id',
+              schemaPath: '#/properties/id/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+        } else {
+          const err3 = {
+            instancePath: instancePath + '/id',
+            schemaPath: '#/properties/id/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err3]
+          } else {
+            vErrors.push(err3)
+          }
+          errors++
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate1152.errors = vErrors
+    return errors === 0
+  }
+  exports.v335 = validate1153
+  const schema509 = { $ref: 'ls101#/components/schemas/TestRun' }
+  function validate1154(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.id === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'id' },
+          message: "must have required property 'id'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data.suiteId === void 0) {
+        const err1 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'suiteId' },
+          message: "must have required property 'suiteId'"
+        }
+        if (vErrors === null) {
+          vErrors = [err1]
+        } else {
+          vErrors.push(err1)
+        }
+        errors++
+      }
+      if (data.suiteVersion === void 0) {
+        const err2 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'suiteVersion' },
+          message: "must have required property 'suiteVersion'"
+        }
+        if (vErrors === null) {
+          vErrors = [err2]
+        } else {
+          vErrors.push(err2)
+        }
+        errors++
+      }
+      if (data.createdAt === void 0) {
+        const err3 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'createdAt' },
+          message: "must have required property 'createdAt'"
+        }
+        if (vErrors === null) {
+          vErrors = [err3]
+        } else {
+          vErrors.push(err3)
+        }
+        errors++
+      }
+      if (data.expiresAt === void 0) {
+        const err4 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'expiresAt' },
+          message: "must have required property 'expiresAt'"
+        }
+        if (vErrors === null) {
+          vErrors = [err4]
+        } else {
+          vErrors.push(err4)
+        }
+        errors++
+      }
+      if (data.status === void 0) {
+        const err5 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'status' },
+          message: "must have required property 'status'"
+        }
+        if (vErrors === null) {
+          vErrors = [err5]
+        } else {
+          vErrors.push(err5)
+        }
+        errors++
+      }
+      if (data.retryOf === void 0) {
+        const err6 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'retryOf' },
+          message: "must have required property 'retryOf'"
+        }
+        if (vErrors === null) {
+          vErrors = [err6]
+        } else {
+          vErrors.push(err6)
+        }
+        errors++
+      }
+      if (data.devices === void 0) {
+        const err7 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'devices' },
+          message: "must have required property 'devices'"
+        }
+        if (vErrors === null) {
+          vErrors = [err7]
+        } else {
+          vErrors.push(err7)
+        }
+        errors++
+      }
+      if (data.id !== void 0) {
+        let data0 = data.id
+        if (typeof data0 === 'string') {
+          if (!formats2.test(data0)) {
+            const err8 = {
+              instancePath: instancePath + '/id',
+              schemaPath: '#/properties/id/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err8]
+            } else {
+              vErrors.push(err8)
+            }
+            errors++
+          }
+        } else {
+          const err9 = {
+            instancePath: instancePath + '/id',
+            schemaPath: '#/properties/id/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err9]
+          } else {
+            vErrors.push(err9)
+          }
+          errors++
+        }
+      }
+      if (data.suiteId !== void 0) {
+        if (typeof data.suiteId !== 'string') {
+          const err10 = {
+            instancePath: instancePath + '/suiteId',
+            schemaPath: '#/properties/suiteId/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err10]
+          } else {
+            vErrors.push(err10)
+          }
+          errors++
+        }
+      }
+      if (data.suiteVersion !== void 0) {
+        if (typeof data.suiteVersion !== 'string') {
+          const err11 = {
+            instancePath: instancePath + '/suiteVersion',
+            schemaPath: '#/properties/suiteVersion/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err11]
+          } else {
+            vErrors.push(err11)
+          }
+          errors++
+        }
+      }
+      if (data.createdAt !== void 0) {
+        let data3 = data.createdAt
+        if (typeof data3 === 'string') {
+          if (!formats0.validate(data3)) {
+            const err12 = {
+              instancePath: instancePath + '/createdAt',
+              schemaPath: '#/properties/createdAt/format',
+              keyword: 'format',
+              params: { format: 'date-time' },
+              message: 'must match format "date-time"'
+            }
+            if (vErrors === null) {
+              vErrors = [err12]
+            } else {
+              vErrors.push(err12)
+            }
+            errors++
+          }
+        } else {
+          const err13 = {
+            instancePath: instancePath + '/createdAt',
+            schemaPath: '#/properties/createdAt/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err13]
+          } else {
+            vErrors.push(err13)
+          }
+          errors++
+        }
+      }
+      if (data.expiresAt !== void 0) {
+        let data4 = data.expiresAt
+        if (typeof data4 === 'string') {
+          if (!formats0.validate(data4)) {
+            const err14 = {
+              instancePath: instancePath + '/expiresAt',
+              schemaPath: '#/properties/expiresAt/format',
+              keyword: 'format',
+              params: { format: 'date-time' },
+              message: 'must match format "date-time"'
+            }
+            if (vErrors === null) {
+              vErrors = [err14]
+            } else {
+              vErrors.push(err14)
+            }
+            errors++
+          }
+        } else {
+          const err15 = {
+            instancePath: instancePath + '/expiresAt',
+            schemaPath: '#/properties/expiresAt/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err15]
+          } else {
+            vErrors.push(err15)
+          }
+          errors++
+        }
+      }
+      if (data.status !== void 0) {
+        if (
+          !validate82(data.status, {
+            instancePath: instancePath + '/status',
+            parentData: data,
+            parentDataProperty: 'status',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate82.errors : vErrors.concat(validate82.errors)
+          errors = vErrors.length
+        }
+      }
+      if (data.retryOf !== void 0) {
+        let data6 = data.retryOf
+        if (typeof data6 !== 'string' && data6 !== null) {
+          const err16 = {
+            instancePath: instancePath + '/retryOf',
+            schemaPath: '#/properties/retryOf/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err16]
+          } else {
+            vErrors.push(err16)
+          }
+          errors++
+        }
+        if (typeof data6 === 'string') {
+          if (!formats2.test(data6)) {
+            const err17 = {
+              instancePath: instancePath + '/retryOf',
+              schemaPath: '#/properties/retryOf/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err17]
+            } else {
+              vErrors.push(err17)
+            }
+            errors++
+          }
+        }
+      }
+      if (data.devices !== void 0) {
+        let data7 = data.devices
+        if (Array.isArray(data7)) {
+          const len0 = data7.length
+          for (let i0 = 0; i0 < len0; i0++) {
+            if (
+              !validate535(data7[i0], {
+                instancePath: instancePath + '/devices/' + i0,
+                parentData: data7,
+                parentDataProperty: i0,
+                rootData
+              })
+            ) {
+              vErrors = vErrors === null ? validate535.errors : vErrors.concat(validate535.errors)
+              errors = vErrors.length
+            }
+          }
+        } else {
+          const err18 = {
+            instancePath: instancePath + '/devices',
+            schemaPath: '#/properties/devices/type',
+            keyword: 'type',
+            params: { type: 'array' },
+            message: 'must be array'
+          }
+          if (vErrors === null) {
+            vErrors = [err18]
+          } else {
+            vErrors.push(err18)
+          }
+          errors++
+        }
+      }
+    } else {
+      const err19 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err19]
+      } else {
+        vErrors.push(err19)
+      }
+      errors++
+    }
+    validate1154.errors = vErrors
+    return errors === 0
+  }
+  function validate1153(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate1154(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1154.errors : vErrors.concat(validate1154.errors)
+      errors = vErrors.length
+    }
+    validate1153.errors = vErrors
+    return errors === 0
+  }
+  exports.v336 = validate1158
+  const schema511 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1159(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.error === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'error' },
+          message: "must have required property 'error'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'error')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.error !== void 0) {
+        if (
+          !validate395(data.error, {
+            instancePath: instancePath + '/error',
+            parentData: data,
+            parentDataProperty: 'error',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
+          errors = vErrors.length
+        }
+      }
+    } else {
+      const err2 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err2]
+      } else {
+        vErrors.push(err2)
+      }
+      errors++
+    }
+    validate1159.errors = vErrors
+    return errors === 0
+  }
+  function validate1158(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate1159(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1159.errors : vErrors.concat(validate1159.errors)
+      errors = vErrors.length
+    }
+    validate1158.errors = vErrors
+    return errors === 0
+  }
+  exports.v337 = validate1162
+  const schema513 = {
+    type: 'object',
+    properties: { id: { type: 'string', format: 'uuid' } },
+    required: ['id'],
+    additionalProperties: false
+  }
+  function validate1162(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.id === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'id' },
+          message: "must have required property 'id'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'id')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.id !== void 0) {
+        let data0 = data.id
+        if (typeof data0 === 'string') {
+          if (!formats2.test(data0)) {
+            const err2 = {
+              instancePath: instancePath + '/id',
+              schemaPath: '#/properties/id/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+        } else {
+          const err3 = {
+            instancePath: instancePath + '/id',
+            schemaPath: '#/properties/id/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err3]
+          } else {
+            vErrors.push(err3)
+          }
+          errors++
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate1162.errors = vErrors
+    return errors === 0
+  }
+  exports.v340 = validate1163
+  const schema514 = { $ref: 'ls101#/components/schemas/TestRun' }
+  function validate1164(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.id === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'id' },
+          message: "must have required property 'id'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data.suiteId === void 0) {
+        const err1 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'suiteId' },
+          message: "must have required property 'suiteId'"
+        }
+        if (vErrors === null) {
+          vErrors = [err1]
+        } else {
+          vErrors.push(err1)
+        }
+        errors++
+      }
+      if (data.suiteVersion === void 0) {
+        const err2 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'suiteVersion' },
+          message: "must have required property 'suiteVersion'"
+        }
+        if (vErrors === null) {
+          vErrors = [err2]
+        } else {
+          vErrors.push(err2)
+        }
+        errors++
+      }
+      if (data.createdAt === void 0) {
+        const err3 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'createdAt' },
+          message: "must have required property 'createdAt'"
+        }
+        if (vErrors === null) {
+          vErrors = [err3]
+        } else {
+          vErrors.push(err3)
+        }
+        errors++
+      }
+      if (data.expiresAt === void 0) {
+        const err4 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'expiresAt' },
+          message: "must have required property 'expiresAt'"
+        }
+        if (vErrors === null) {
+          vErrors = [err4]
+        } else {
+          vErrors.push(err4)
+        }
+        errors++
+      }
+      if (data.status === void 0) {
+        const err5 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'status' },
+          message: "must have required property 'status'"
+        }
+        if (vErrors === null) {
+          vErrors = [err5]
+        } else {
+          vErrors.push(err5)
+        }
+        errors++
+      }
+      if (data.retryOf === void 0) {
+        const err6 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'retryOf' },
+          message: "must have required property 'retryOf'"
+        }
+        if (vErrors === null) {
+          vErrors = [err6]
+        } else {
+          vErrors.push(err6)
+        }
+        errors++
+      }
+      if (data.devices === void 0) {
+        const err7 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'devices' },
+          message: "must have required property 'devices'"
+        }
+        if (vErrors === null) {
+          vErrors = [err7]
+        } else {
+          vErrors.push(err7)
+        }
+        errors++
+      }
+      if (data.id !== void 0) {
+        let data0 = data.id
+        if (typeof data0 === 'string') {
+          if (!formats2.test(data0)) {
+            const err8 = {
+              instancePath: instancePath + '/id',
+              schemaPath: '#/properties/id/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err8]
+            } else {
+              vErrors.push(err8)
+            }
+            errors++
+          }
+        } else {
+          const err9 = {
+            instancePath: instancePath + '/id',
+            schemaPath: '#/properties/id/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err9]
+          } else {
+            vErrors.push(err9)
+          }
+          errors++
+        }
+      }
+      if (data.suiteId !== void 0) {
+        if (typeof data.suiteId !== 'string') {
+          const err10 = {
+            instancePath: instancePath + '/suiteId',
+            schemaPath: '#/properties/suiteId/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err10]
+          } else {
+            vErrors.push(err10)
+          }
+          errors++
+        }
+      }
+      if (data.suiteVersion !== void 0) {
+        if (typeof data.suiteVersion !== 'string') {
+          const err11 = {
+            instancePath: instancePath + '/suiteVersion',
+            schemaPath: '#/properties/suiteVersion/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err11]
+          } else {
+            vErrors.push(err11)
+          }
+          errors++
+        }
+      }
+      if (data.createdAt !== void 0) {
+        let data3 = data.createdAt
+        if (typeof data3 === 'string') {
+          if (!formats0.validate(data3)) {
+            const err12 = {
+              instancePath: instancePath + '/createdAt',
+              schemaPath: '#/properties/createdAt/format',
+              keyword: 'format',
+              params: { format: 'date-time' },
+              message: 'must match format "date-time"'
+            }
+            if (vErrors === null) {
+              vErrors = [err12]
+            } else {
+              vErrors.push(err12)
+            }
+            errors++
+          }
+        } else {
+          const err13 = {
+            instancePath: instancePath + '/createdAt',
+            schemaPath: '#/properties/createdAt/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err13]
+          } else {
+            vErrors.push(err13)
+          }
+          errors++
+        }
+      }
+      if (data.expiresAt !== void 0) {
+        let data4 = data.expiresAt
+        if (typeof data4 === 'string') {
+          if (!formats0.validate(data4)) {
+            const err14 = {
+              instancePath: instancePath + '/expiresAt',
+              schemaPath: '#/properties/expiresAt/format',
+              keyword: 'format',
+              params: { format: 'date-time' },
+              message: 'must match format "date-time"'
+            }
+            if (vErrors === null) {
+              vErrors = [err14]
+            } else {
+              vErrors.push(err14)
+            }
+            errors++
+          }
+        } else {
+          const err15 = {
+            instancePath: instancePath + '/expiresAt',
+            schemaPath: '#/properties/expiresAt/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err15]
+          } else {
+            vErrors.push(err15)
+          }
+          errors++
+        }
+      }
+      if (data.status !== void 0) {
+        if (
+          !validate82(data.status, {
+            instancePath: instancePath + '/status',
+            parentData: data,
+            parentDataProperty: 'status',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate82.errors : vErrors.concat(validate82.errors)
+          errors = vErrors.length
+        }
+      }
+      if (data.retryOf !== void 0) {
+        let data6 = data.retryOf
+        if (typeof data6 !== 'string' && data6 !== null) {
+          const err16 = {
+            instancePath: instancePath + '/retryOf',
+            schemaPath: '#/properties/retryOf/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err16]
+          } else {
+            vErrors.push(err16)
+          }
+          errors++
+        }
+        if (typeof data6 === 'string') {
+          if (!formats2.test(data6)) {
+            const err17 = {
+              instancePath: instancePath + '/retryOf',
+              schemaPath: '#/properties/retryOf/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err17]
+            } else {
+              vErrors.push(err17)
+            }
+            errors++
+          }
+        }
+      }
+      if (data.devices !== void 0) {
+        let data7 = data.devices
+        if (Array.isArray(data7)) {
+          const len0 = data7.length
+          for (let i0 = 0; i0 < len0; i0++) {
+            if (
+              !validate535(data7[i0], {
+                instancePath: instancePath + '/devices/' + i0,
+                parentData: data7,
+                parentDataProperty: i0,
+                rootData
+              })
+            ) {
+              vErrors = vErrors === null ? validate535.errors : vErrors.concat(validate535.errors)
+              errors = vErrors.length
+            }
+          }
+        } else {
+          const err18 = {
+            instancePath: instancePath + '/devices',
+            schemaPath: '#/properties/devices/type',
+            keyword: 'type',
+            params: { type: 'array' },
+            message: 'must be array'
+          }
+          if (vErrors === null) {
+            vErrors = [err18]
+          } else {
+            vErrors.push(err18)
+          }
+          errors++
+        }
+      }
+    } else {
+      const err19 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err19]
+      } else {
+        vErrors.push(err19)
+      }
+      errors++
+    }
+    validate1164.errors = vErrors
+    return errors === 0
+  }
+  function validate1163(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate1164(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1164.errors : vErrors.concat(validate1164.errors)
+      errors = vErrors.length
+    }
+    validate1163.errors = vErrors
+    return errors === 0
+  }
+  exports.v341 = validate1168
+  const schema516 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1169(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.error === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'error' },
+          message: "must have required property 'error'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'error')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.error !== void 0) {
+        if (
+          !validate395(data.error, {
+            instancePath: instancePath + '/error',
+            parentData: data,
+            parentDataProperty: 'error',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
+          errors = vErrors.length
+        }
+      }
+    } else {
+      const err2 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err2]
+      } else {
+        vErrors.push(err2)
+      }
+      errors++
+    }
+    validate1169.errors = vErrors
+    return errors === 0
+  }
+  function validate1168(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate1169(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1169.errors : vErrors.concat(validate1169.errors)
+      errors = vErrors.length
+    }
+    validate1168.errors = vErrors
+    return errors === 0
+  }
+  exports.v342 = validate1172
+  const schema518 = {
+    type: 'object',
+    properties: { id: { type: 'string', format: 'uuid' } },
+    required: ['id'],
+    additionalProperties: false
+  }
+  function validate1172(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data.id === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'id' },
+          message: "must have required property 'id'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      for (const key0 in data) {
+        if (!(key0 === 'id')) {
+          const err1 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err1]
+          } else {
+            vErrors.push(err1)
+          }
+          errors++
+        }
+      }
+      if (data.id !== void 0) {
+        let data0 = data.id
+        if (typeof data0 === 'string') {
+          if (!formats2.test(data0)) {
+            const err2 = {
+              instancePath: instancePath + '/id',
+              schemaPath: '#/properties/id/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+        } else {
+          const err3 = {
+            instancePath: instancePath + '/id',
+            schemaPath: '#/properties/id/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err3]
+          } else {
+            vErrors.push(err3)
+          }
+          errors++
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate1172.errors = vErrors
+    return errors === 0
+  }
+  exports.v345 = validate1173
+  const schema519 = { $ref: 'ls101#/components/schemas/TestReport' }
+  function validate1174(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (!validate548(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate548.errors : vErrors.concat(validate548.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -50356,25 +51137,25 @@ var validators = {}
       }
       errors++
     }
-    validate1143.errors = vErrors
+    validate1174.errors = vErrors
     return errors === 0
   }
-  function validate1142(
+  function validate1173(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1143(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1143.errors : vErrors.concat(validate1143.errors)
+    if (!validate1174(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1174.errors : vErrors.concat(validate1174.errors)
       errors = vErrors.length
     }
-    validate1142.errors = vErrors
+    validate1173.errors = vErrors
     return errors === 0
   }
-  exports.v337 = validate1146
-  const schema506 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1147(
+  exports.v346 = validate1177
+  const schema521 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1178(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -50415,14 +51196,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -50441,24 +51222,24 @@ var validators = {}
       }
       errors++
     }
-    validate1147.errors = vErrors
+    validate1178.errors = vErrors
     return errors === 0
   }
-  function validate1146(
+  function validate1177(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1147(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1147.errors : vErrors.concat(validate1147.errors)
+    if (!validate1178(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1178.errors : vErrors.concat(validate1178.errors)
       errors = vErrors.length
     }
-    validate1146.errors = vErrors
+    validate1177.errors = vErrors
     return errors === 0
   }
-  exports.v338 = validate1150
-  const schema508 = {
+  exports.v347 = validate1181
+  const schema523 = {
     type: 'object',
     properties: {
       id: { type: 'string', format: 'uuid' },
@@ -50467,7 +51248,7 @@ var validators = {}
     required: ['id', 'deviceId'],
     additionalProperties: false
   }
-  function validate1150(
+  function validate1181(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -50604,12 +51385,12 @@ var validators = {}
       }
       errors++
     }
-    validate1150.errors = vErrors
+    validate1181.errors = vErrors
     return errors === 0
   }
-  exports.v341 = validate1151
-  const schema509 = { $ref: 'ls101#/components/schemas/ConfirmationInput' }
-  function validate1152(
+  exports.v350 = validate1182
+  const schema524 = { $ref: 'ls101#/components/schemas/ConfirmationInput' }
+  function validate1183(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -50682,14 +51463,14 @@ var validators = {}
           const len0 = data1.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate490(data1[i0], {
+              !validate509(data1[i0], {
                 instancePath: instancePath + '/cases/' + i0,
                 parentData: data1,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate490.errors : vErrors.concat(validate490.errors)
+              vErrors = vErrors === null ? validate509.errors : vErrors.concat(validate509.errors)
               errors = vErrors.length
             }
           }
@@ -50724,25 +51505,25 @@ var validators = {}
       }
       errors++
     }
-    validate1152.errors = vErrors
+    validate1183.errors = vErrors
     return errors === 0
   }
-  function validate1151(
+  function validate1182(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1152(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1152.errors : vErrors.concat(validate1152.errors)
+    if (!validate1183(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1183.errors : vErrors.concat(validate1183.errors)
       errors = vErrors.length
     }
-    validate1151.errors = vErrors
+    validate1182.errors = vErrors
     return errors === 0
   }
-  exports.v342 = validate1156
-  const schema511 = { $ref: 'ls101#/components/schemas/Confirmation' }
-  function validate1157(
+  exports.v351 = validate1187
+  const schema526 = { $ref: 'ls101#/components/schemas/Confirmation' }
+  function validate1188(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -50813,14 +51594,14 @@ var validators = {}
           const len0 = data1.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate490(data1[i0], {
+              !validate509(data1[i0], {
                 instancePath: instancePath + '/cases/' + i0,
                 parentData: data1,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate490.errors : vErrors.concat(validate490.errors)
+              vErrors = vErrors === null ? validate509.errors : vErrors.concat(validate509.errors)
               errors = vErrors.length
             }
           }
@@ -50868,25 +51649,25 @@ var validators = {}
       }
       errors++
     }
-    validate1157.errors = vErrors
+    validate1188.errors = vErrors
     return errors === 0
   }
-  function validate1156(
+  function validate1187(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1157(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1157.errors : vErrors.concat(validate1157.errors)
+    if (!validate1188(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1188.errors : vErrors.concat(validate1188.errors)
       errors = vErrors.length
     }
-    validate1156.errors = vErrors
+    validate1187.errors = vErrors
     return errors === 0
   }
-  exports.v343 = validate1162
-  const schema513 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1163(
+  exports.v352 = validate1193
+  const schema528 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1194(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -50927,14 +51708,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -50953,30 +51734,30 @@ var validators = {}
       }
       errors++
     }
-    validate1163.errors = vErrors
+    validate1194.errors = vErrors
     return errors === 0
   }
-  function validate1162(
+  function validate1193(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1163(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1163.errors : vErrors.concat(validate1163.errors)
+    if (!validate1194(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1194.errors : vErrors.concat(validate1194.errors)
       errors = vErrors.length
     }
-    validate1162.errors = vErrors
+    validate1193.errors = vErrors
     return errors === 0
   }
-  exports.v344 = validate1166
-  const schema515 = {
+  exports.v353 = validate1197
+  const schema530 = {
     type: 'object',
     properties: { taskId: { type: 'string', format: 'uuid' } },
     required: ['taskId'],
     additionalProperties: false
   }
-  function validate1166(
+  function validate1197(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -51064,12 +51845,12 @@ var validators = {}
       }
       errors++
     }
-    validate1166.errors = vErrors
+    validate1197.errors = vErrors
     return errors === 0
   }
-  exports.v347 = validate1167
-  const schema516 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1168(
+  exports.v356 = validate1198
+  const schema531 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1199(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -51110,14 +51891,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -51136,30 +51917,30 @@ var validators = {}
       }
       errors++
     }
-    validate1168.errors = vErrors
+    validate1199.errors = vErrors
     return errors === 0
   }
-  function validate1167(
+  function validate1198(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1168(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1168.errors : vErrors.concat(validate1168.errors)
+    if (!validate1199(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1199.errors : vErrors.concat(validate1199.errors)
       errors = vErrors.length
     }
-    validate1167.errors = vErrors
+    validate1198.errors = vErrors
     return errors === 0
   }
-  exports.v348 = validate1171
-  const schema518 = {
+  exports.v357 = validate1202
+  const schema533 = {
     type: 'object',
     properties: { taskId: { type: 'string', format: 'uuid' } },
     required: ['taskId'],
     additionalProperties: false
   }
-  function validate1171(
+  function validate1202(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -51247,12 +52028,12 @@ var validators = {}
       }
       errors++
     }
-    validate1171.errors = vErrors
+    validate1202.errors = vErrors
     return errors === 0
   }
-  exports.v351 = validate1172
-  const schema519 = { $ref: 'ls101#/components/schemas/Received' }
-  function validate1173(
+  exports.v360 = validate1203
+  const schema534 = { $ref: 'ls101#/components/schemas/Received' }
+  function validate1204(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -51328,7 +52109,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema124.properties.status.enum },
+            params: { allowedValues: schema134.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -51341,14 +52122,14 @@ var validators = {}
       }
       if (data.receipt !== void 0) {
         if (
-          !validate308(data.receipt, {
+          !validate327(data.receipt, {
             instancePath: instancePath + '/receipt',
             parentData: data,
             parentDataProperty: 'receipt',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate308.errors : vErrors.concat(validate308.errors)
+          vErrors = vErrors === null ? validate327.errors : vErrors.concat(validate327.errors)
           errors = vErrors.length
         }
       }
@@ -51367,25 +52148,25 @@ var validators = {}
       }
       errors++
     }
-    validate1173.errors = vErrors
+    validate1204.errors = vErrors
     return errors === 0
   }
-  function validate1172(
+  function validate1203(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1173(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1173.errors : vErrors.concat(validate1173.errors)
+    if (!validate1204(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1204.errors : vErrors.concat(validate1204.errors)
       errors = vErrors.length
     }
-    validate1172.errors = vErrors
+    validate1203.errors = vErrors
     return errors === 0
   }
-  exports.v352 = validate1176
-  const schema521 = { $ref: 'ls101#/components/schemas/Received' }
-  function validate1177(
+  exports.v361 = validate1207
+  const schema536 = { $ref: 'ls101#/components/schemas/Received' }
+  function validate1208(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -51461,7 +52242,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema124.properties.status.enum },
+            params: { allowedValues: schema134.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -51474,14 +52255,14 @@ var validators = {}
       }
       if (data.receipt !== void 0) {
         if (
-          !validate308(data.receipt, {
+          !validate327(data.receipt, {
             instancePath: instancePath + '/receipt',
             parentData: data,
             parentDataProperty: 'receipt',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate308.errors : vErrors.concat(validate308.errors)
+          vErrors = vErrors === null ? validate327.errors : vErrors.concat(validate327.errors)
           errors = vErrors.length
         }
       }
@@ -51500,25 +52281,25 @@ var validators = {}
       }
       errors++
     }
-    validate1177.errors = vErrors
+    validate1208.errors = vErrors
     return errors === 0
   }
-  function validate1176(
+  function validate1207(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1177(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1177.errors : vErrors.concat(validate1177.errors)
+    if (!validate1208(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1208.errors : vErrors.concat(validate1208.errors)
       errors = vErrors.length
     }
-    validate1176.errors = vErrors
+    validate1207.errors = vErrors
     return errors === 0
   }
-  exports.v353 = validate1180
-  const schema523 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1181(
+  exports.v362 = validate1211
+  const schema538 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1212(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -51559,14 +52340,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -51585,30 +52366,30 @@ var validators = {}
       }
       errors++
     }
-    validate1181.errors = vErrors
+    validate1212.errors = vErrors
     return errors === 0
   }
-  function validate1180(
+  function validate1211(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1181(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1181.errors : vErrors.concat(validate1181.errors)
+    if (!validate1212(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1212.errors : vErrors.concat(validate1212.errors)
       errors = vErrors.length
     }
-    validate1180.errors = vErrors
+    validate1211.errors = vErrors
     return errors === 0
   }
-  exports.v354 = validate1184
-  const schema525 = {
+  exports.v363 = validate1215
+  const schema540 = {
     type: 'object',
     properties: { taskId: { type: 'string', format: 'uuid' } },
     required: ['taskId'],
     additionalProperties: false
   }
-  function validate1184(
+  function validate1215(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -51696,18 +52477,18 @@ var validators = {}
       }
       errors++
     }
-    validate1184.errors = vErrors
+    validate1215.errors = vErrors
     return errors === 0
   }
-  exports.v357 = validate1185
-  const schema526 = {
+  exports.v366 = validate1216
+  const schema541 = {
     oneOf: [
       { $ref: 'ls101#/components/schemas/NotReceived' },
       { $ref: 'ls101#/components/schemas/Receiving' },
       { $ref: 'ls101#/components/schemas/Received' }
     ]
   }
-  function validate1186(
+  function validate1217(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -51768,7 +52549,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema129.properties.status.enum },
+            params: { allowedValues: schema139.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -51794,10 +52575,10 @@ var validators = {}
       }
       errors++
     }
-    validate1186.errors = vErrors
+    validate1217.errors = vErrors
     return errors === 0
   }
-  function validate1188(
+  function validate1219(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -51873,7 +52654,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema131.properties.status.enum },
+            params: { allowedValues: schema141.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -51912,10 +52693,10 @@ var validators = {}
       }
       errors++
     }
-    validate1188.errors = vErrors
+    validate1219.errors = vErrors
     return errors === 0
   }
-  function validate1191(
+  function validate1222(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -51991,7 +52772,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema124.properties.status.enum },
+            params: { allowedValues: schema134.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -52004,14 +52785,14 @@ var validators = {}
       }
       if (data.receipt !== void 0) {
         if (
-          !validate308(data.receipt, {
+          !validate327(data.receipt, {
             instancePath: instancePath + '/receipt',
             parentData: data,
             parentDataProperty: 'receipt',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate308.errors : vErrors.concat(validate308.errors)
+          vErrors = vErrors === null ? validate327.errors : vErrors.concat(validate327.errors)
           errors = vErrors.length
         }
       }
@@ -52030,10 +52811,10 @@ var validators = {}
       }
       errors++
     }
-    validate1191.errors = vErrors
+    validate1222.errors = vErrors
     return errors === 0
   }
-  function validate1185(
+  function validate1216(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -52043,8 +52824,8 @@ var validators = {}
     let valid0 = false
     let passing0 = null
     const _errs1 = errors
-    if (!validate1186(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1186.errors : vErrors.concat(validate1186.errors)
+    if (!validate1217(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1217.errors : vErrors.concat(validate1217.errors)
       errors = vErrors.length
     }
     var _valid0 = _errs1 === errors
@@ -52053,8 +52834,8 @@ var validators = {}
       passing0 = 0
     }
     const _errs2 = errors
-    if (!validate1188(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1188.errors : vErrors.concat(validate1188.errors)
+    if (!validate1219(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1219.errors : vErrors.concat(validate1219.errors)
       errors = vErrors.length
     }
     var _valid0 = _errs2 === errors
@@ -52067,8 +52848,8 @@ var validators = {}
         passing0 = 1
       }
       const _errs3 = errors
-      if (!validate1191(data, { instancePath, parentData, parentDataProperty, rootData })) {
-        vErrors = vErrors === null ? validate1191.errors : vErrors.concat(validate1191.errors)
+      if (!validate1222(data, { instancePath, parentData, parentDataProperty, rootData })) {
+        vErrors = vErrors === null ? validate1222.errors : vErrors.concat(validate1222.errors)
         errors = vErrors.length
       }
       var _valid0 = _errs3 === errors
@@ -52106,12 +52887,12 @@ var validators = {}
         }
       }
     }
-    validate1185.errors = vErrors
+    validate1216.errors = vErrors
     return errors === 0
   }
-  exports.v358 = validate1194
-  const schema530 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1195(
+  exports.v367 = validate1225
+  const schema545 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1226(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -52152,14 +52933,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -52178,25 +52959,25 @@ var validators = {}
       }
       errors++
     }
-    validate1195.errors = vErrors
+    validate1226.errors = vErrors
     return errors === 0
   }
-  function validate1194(
+  function validate1225(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1195(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1195.errors : vErrors.concat(validate1195.errors)
+    if (!validate1226(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1226.errors : vErrors.concat(validate1226.errors)
       errors = vErrors.length
     }
-    validate1194.errors = vErrors
+    validate1225.errors = vErrors
     return errors === 0
   }
-  exports.v359 = validate1198
-  const schema532 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate1198(
+  exports.v368 = validate1229
+  const schema547 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate1229(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -52233,12 +53014,12 @@ var validators = {}
       }
       errors++
     }
-    validate1198.errors = vErrors
+    validate1229.errors = vErrors
     return errors === 0
   }
-  exports.v362 = validate1199
-  const schema533 = { $ref: 'ls101#/components/schemas/CleanupList' }
-  function validate1200(
+  exports.v371 = validate1230
+  const schema548 = { $ref: 'ls101#/components/schemas/CleanupList' }
+  function validate1231(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -52270,14 +53051,14 @@ var validators = {}
           const len0 = data0.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate570(data0[i0], {
+              !validate589(data0[i0], {
                 instancePath: instancePath + '/items/' + i0,
                 parentData: data0,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate570.errors : vErrors.concat(validate570.errors)
+              vErrors = vErrors === null ? validate589.errors : vErrors.concat(validate589.errors)
               errors = vErrors.length
             }
           }
@@ -52312,25 +53093,25 @@ var validators = {}
       }
       errors++
     }
-    validate1200.errors = vErrors
+    validate1231.errors = vErrors
     return errors === 0
   }
-  function validate1199(
+  function validate1230(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1200(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1200.errors : vErrors.concat(validate1200.errors)
+    if (!validate1231(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1231.errors : vErrors.concat(validate1231.errors)
       errors = vErrors.length
     }
-    validate1199.errors = vErrors
+    validate1230.errors = vErrors
     return errors === 0
   }
-  exports.v363 = validate1204
-  const schema535 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1205(
+  exports.v372 = validate1235
+  const schema550 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1236(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -52371,14 +53152,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -52397,25 +53178,25 @@ var validators = {}
       }
       errors++
     }
-    validate1205.errors = vErrors
+    validate1236.errors = vErrors
     return errors === 0
   }
-  function validate1204(
+  function validate1235(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1205(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1205.errors : vErrors.concat(validate1205.errors)
+    if (!validate1236(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1236.errors : vErrors.concat(validate1236.errors)
       errors = vErrors.length
     }
-    validate1204.errors = vErrors
+    validate1235.errors = vErrors
     return errors === 0
   }
-  exports.v364 = validate1208
-  const schema537 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate1208(
+  exports.v373 = validate1239
+  const schema552 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate1239(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -52452,12 +53233,12 @@ var validators = {}
       }
       errors++
     }
-    validate1208.errors = vErrors
+    validate1239.errors = vErrors
     return errors === 0
   }
-  exports.v367 = validate1209
-  const schema538 = { $ref: 'ls101#/components/schemas/CleanupCreate' }
-  function validate1210(
+  exports.v376 = validate1240
+  const schema553 = { $ref: 'ls101#/components/schemas/CleanupCreate' }
+  function validate1241(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -52528,14 +53309,14 @@ var validators = {}
       }
       if (data.deviceIds !== void 0) {
         if (
-          !validate481(data.deviceIds, {
+          !validate500(data.deviceIds, {
             instancePath: instancePath + '/deviceIds',
             parentData: data,
             parentDataProperty: 'deviceIds',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate481.errors : vErrors.concat(validate481.errors)
+          vErrors = vErrors === null ? validate500.errors : vErrors.concat(validate500.errors)
           errors = vErrors.length
         }
       }
@@ -52622,25 +53403,25 @@ var validators = {}
       }
       errors++
     }
-    validate1210.errors = vErrors
+    validate1241.errors = vErrors
     return errors === 0
   }
-  function validate1209(
+  function validate1240(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1210(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1210.errors : vErrors.concat(validate1210.errors)
+    if (!validate1241(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1241.errors : vErrors.concat(validate1241.errors)
       errors = vErrors.length
     }
-    validate1209.errors = vErrors
+    validate1240.errors = vErrors
     return errors === 0
   }
-  exports.v368 = validate1213
-  const schema540 = { $ref: 'ls101#/components/schemas/CleanupPlan' }
-  function validate1214(
+  exports.v377 = validate1244
+  const schema555 = { $ref: 'ls101#/components/schemas/CleanupPlan' }
+  function validate1245(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -52832,7 +53613,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema220.properties.status.enum },
+            params: { allowedValues: schema230.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -52951,14 +53732,14 @@ var validators = {}
           const len0 = data6.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate559(data6[i0], {
+              !validate578(data6[i0], {
                 instancePath: instancePath + '/devices/' + i0,
                 parentData: data6,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate559.errors : vErrors.concat(validate559.errors)
+              vErrors = vErrors === null ? validate578.errors : vErrors.concat(validate578.errors)
               errors = vErrors.length
             }
           }
@@ -52993,25 +53774,25 @@ var validators = {}
       }
       errors++
     }
-    validate1214.errors = vErrors
+    validate1245.errors = vErrors
     return errors === 0
   }
-  function validate1213(
+  function validate1244(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1214(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1214.errors : vErrors.concat(validate1214.errors)
+    if (!validate1245(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1245.errors : vErrors.concat(validate1245.errors)
       errors = vErrors.length
     }
-    validate1213.errors = vErrors
+    validate1244.errors = vErrors
     return errors === 0
   }
-  exports.v369 = validate1218
-  const schema542 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1219(
+  exports.v378 = validate1249
+  const schema557 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1250(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -53052,14 +53833,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -53078,30 +53859,30 @@ var validators = {}
       }
       errors++
     }
-    validate1219.errors = vErrors
+    validate1250.errors = vErrors
     return errors === 0
   }
-  function validate1218(
+  function validate1249(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1219(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1219.errors : vErrors.concat(validate1219.errors)
+    if (!validate1250(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1250.errors : vErrors.concat(validate1250.errors)
       errors = vErrors.length
     }
-    validate1218.errors = vErrors
+    validate1249.errors = vErrors
     return errors === 0
   }
-  exports.v370 = validate1222
-  const schema544 = {
+  exports.v379 = validate1253
+  const schema559 = {
     type: 'object',
     properties: { id: { type: 'string', format: 'uuid' } },
     required: ['id'],
     additionalProperties: false
   }
-  function validate1222(
+  function validate1253(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -53189,12 +53970,12 @@ var validators = {}
       }
       errors++
     }
-    validate1222.errors = vErrors
+    validate1253.errors = vErrors
     return errors === 0
   }
-  exports.v373 = validate1223
-  const schema545 = { $ref: 'ls101#/components/schemas/CleanupPlan' }
-  function validate1224(
+  exports.v382 = validate1254
+  const schema560 = { $ref: 'ls101#/components/schemas/CleanupPlan' }
+  function validate1255(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -53386,7 +54167,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema220.properties.status.enum },
+            params: { allowedValues: schema230.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -53505,14 +54286,14 @@ var validators = {}
           const len0 = data6.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate559(data6[i0], {
+              !validate578(data6[i0], {
                 instancePath: instancePath + '/devices/' + i0,
                 parentData: data6,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate559.errors : vErrors.concat(validate559.errors)
+              vErrors = vErrors === null ? validate578.errors : vErrors.concat(validate578.errors)
               errors = vErrors.length
             }
           }
@@ -53547,25 +54328,25 @@ var validators = {}
       }
       errors++
     }
-    validate1224.errors = vErrors
+    validate1255.errors = vErrors
     return errors === 0
   }
-  function validate1223(
+  function validate1254(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1224(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1224.errors : vErrors.concat(validate1224.errors)
+    if (!validate1255(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1255.errors : vErrors.concat(validate1255.errors)
       errors = vErrors.length
     }
-    validate1223.errors = vErrors
+    validate1254.errors = vErrors
     return errors === 0
   }
-  exports.v374 = validate1228
-  const schema547 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1229(
+  exports.v383 = validate1259
+  const schema562 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1260(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -53606,14 +54387,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -53632,30 +54413,30 @@ var validators = {}
       }
       errors++
     }
-    validate1229.errors = vErrors
+    validate1260.errors = vErrors
     return errors === 0
   }
-  function validate1228(
+  function validate1259(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1229(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1229.errors : vErrors.concat(validate1229.errors)
+    if (!validate1260(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1260.errors : vErrors.concat(validate1260.errors)
       errors = vErrors.length
     }
-    validate1228.errors = vErrors
+    validate1259.errors = vErrors
     return errors === 0
   }
-  exports.v375 = validate1232
-  const schema549 = {
+  exports.v384 = validate1263
+  const schema564 = {
     type: 'object',
     properties: { id: { type: 'string', format: 'uuid' } },
     required: ['id'],
     additionalProperties: false
   }
-  function validate1232(
+  function validate1263(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -53743,12 +54524,12 @@ var validators = {}
       }
       errors++
     }
-    validate1232.errors = vErrors
+    validate1263.errors = vErrors
     return errors === 0
   }
-  exports.v378 = validate1233
-  const schema550 = { $ref: 'ls101#/components/schemas/CleanupConfirm' }
-  function validate1234(
+  exports.v387 = validate1264
+  const schema565 = { $ref: 'ls101#/components/schemas/CleanupConfirm' }
+  function validate1265(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -53978,25 +54759,25 @@ var validators = {}
       }
       errors++
     }
-    validate1234.errors = vErrors
+    validate1265.errors = vErrors
     return errors === 0
   }
-  function validate1233(
+  function validate1264(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1234(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1234.errors : vErrors.concat(validate1234.errors)
+    if (!validate1265(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1265.errors : vErrors.concat(validate1265.errors)
       errors = vErrors.length
     }
-    validate1233.errors = vErrors
+    validate1264.errors = vErrors
     return errors === 0
   }
-  exports.v379 = validate1238
-  const schema552 = { $ref: 'ls101#/components/schemas/CleanupPlan' }
-  function validate1239(
+  exports.v388 = validate1269
+  const schema567 = { $ref: 'ls101#/components/schemas/CleanupPlan' }
+  function validate1270(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -54188,7 +54969,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema220.properties.status.enum },
+            params: { allowedValues: schema230.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -54307,14 +55088,14 @@ var validators = {}
           const len0 = data6.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate559(data6[i0], {
+              !validate578(data6[i0], {
                 instancePath: instancePath + '/devices/' + i0,
                 parentData: data6,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate559.errors : vErrors.concat(validate559.errors)
+              vErrors = vErrors === null ? validate578.errors : vErrors.concat(validate578.errors)
               errors = vErrors.length
             }
           }
@@ -54349,25 +55130,25 @@ var validators = {}
       }
       errors++
     }
-    validate1239.errors = vErrors
+    validate1270.errors = vErrors
     return errors === 0
   }
-  function validate1238(
+  function validate1269(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1239(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1239.errors : vErrors.concat(validate1239.errors)
+    if (!validate1270(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1270.errors : vErrors.concat(validate1270.errors)
       errors = vErrors.length
     }
-    validate1238.errors = vErrors
+    validate1269.errors = vErrors
     return errors === 0
   }
-  exports.v380 = validate1243
-  const schema554 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1244(
+  exports.v389 = validate1274
+  const schema569 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1275(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -54408,14 +55189,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -54434,30 +55215,30 @@ var validators = {}
       }
       errors++
     }
-    validate1244.errors = vErrors
+    validate1275.errors = vErrors
     return errors === 0
   }
-  function validate1243(
+  function validate1274(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1244(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1244.errors : vErrors.concat(validate1244.errors)
+    if (!validate1275(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1275.errors : vErrors.concat(validate1275.errors)
       errors = vErrors.length
     }
-    validate1243.errors = vErrors
+    validate1274.errors = vErrors
     return errors === 0
   }
-  exports.v381 = validate1247
-  const schema556 = {
+  exports.v390 = validate1278
+  const schema571 = {
     type: 'object',
     properties: { id: { type: 'string', format: 'uuid' } },
     required: ['id'],
     additionalProperties: false
   }
-  function validate1247(
+  function validate1278(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -54545,12 +55326,12 @@ var validators = {}
       }
       errors++
     }
-    validate1247.errors = vErrors
+    validate1278.errors = vErrors
     return errors === 0
   }
-  exports.v384 = validate1248
-  const schema557 = { $ref: 'ls101#/components/schemas/CleanupPlan' }
-  function validate1249(
+  exports.v393 = validate1279
+  const schema572 = { $ref: 'ls101#/components/schemas/CleanupPlan' }
+  function validate1280(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -54742,7 +55523,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema220.properties.status.enum },
+            params: { allowedValues: schema230.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -54861,14 +55642,14 @@ var validators = {}
           const len0 = data6.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate559(data6[i0], {
+              !validate578(data6[i0], {
                 instancePath: instancePath + '/devices/' + i0,
                 parentData: data6,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate559.errors : vErrors.concat(validate559.errors)
+              vErrors = vErrors === null ? validate578.errors : vErrors.concat(validate578.errors)
               errors = vErrors.length
             }
           }
@@ -54903,25 +55684,25 @@ var validators = {}
       }
       errors++
     }
-    validate1249.errors = vErrors
+    validate1280.errors = vErrors
     return errors === 0
   }
-  function validate1248(
+  function validate1279(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1249(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1249.errors : vErrors.concat(validate1249.errors)
+    if (!validate1280(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1280.errors : vErrors.concat(validate1280.errors)
       errors = vErrors.length
     }
-    validate1248.errors = vErrors
+    validate1279.errors = vErrors
     return errors === 0
   }
-  exports.v385 = validate1253
-  const schema559 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1254(
+  exports.v394 = validate1284
+  const schema574 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1285(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -54962,14 +55743,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -54988,25 +55769,25 @@ var validators = {}
       }
       errors++
     }
-    validate1254.errors = vErrors
+    validate1285.errors = vErrors
     return errors === 0
   }
-  function validate1253(
+  function validate1284(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1254(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1254.errors : vErrors.concat(validate1254.errors)
+    if (!validate1285(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1285.errors : vErrors.concat(validate1285.errors)
       errors = vErrors.length
     }
-    validate1253.errors = vErrors
+    validate1284.errors = vErrors
     return errors === 0
   }
-  exports.v386 = validate1257
-  const schema561 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate1257(
+  exports.v395 = validate1288
+  const schema576 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate1288(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -55043,12 +55824,12 @@ var validators = {}
       }
       errors++
     }
-    validate1257.errors = vErrors
+    validate1288.errors = vErrors
     return errors === 0
   }
-  exports.v389 = validate1258
-  const schema562 = { $ref: 'ls101#/components/schemas/Settings' }
-  function validate1259(
+  exports.v398 = validate1289
+  const schema577 = { $ref: 'ls101#/components/schemas/Settings' }
+  function validate1290(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -55182,7 +55963,7 @@ var validators = {}
       if (data.baseUrl !== void 0) {
         let data1 = data.baseUrl
         if (typeof data1 === 'string') {
-          if (!pattern5.test(data1)) {
+          if (!pattern8.test(data1)) {
             const err8 = {
               instancePath: instancePath + '/baseUrl',
               schemaPath: '#/properties/baseUrl/pattern',
@@ -55197,7 +55978,7 @@ var validators = {}
             }
             errors++
           }
-          if (!formats258(data1)) {
+          if (!formats262(data1)) {
             const err9 = {
               instancePath: instancePath + '/baseUrl',
               schemaPath: '#/properties/baseUrl/format',
@@ -55282,25 +56063,25 @@ var validators = {}
       }
       errors++
     }
-    validate1259.errors = vErrors
+    validate1290.errors = vErrors
     return errors === 0
   }
-  function validate1258(
+  function validate1289(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1259(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1259.errors : vErrors.concat(validate1259.errors)
+    if (!validate1290(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1290.errors : vErrors.concat(validate1290.errors)
       errors = vErrors.length
     }
-    validate1258.errors = vErrors
+    validate1289.errors = vErrors
     return errors === 0
   }
-  exports.v390 = validate1264
-  const schema564 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1265(
+  exports.v399 = validate1295
+  const schema579 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1296(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -55341,14 +56122,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -55367,25 +56148,25 @@ var validators = {}
       }
       errors++
     }
-    validate1265.errors = vErrors
+    validate1296.errors = vErrors
     return errors === 0
   }
-  function validate1264(
+  function validate1295(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1265(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1265.errors : vErrors.concat(validate1265.errors)
+    if (!validate1296(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1296.errors : vErrors.concat(validate1296.errors)
       errors = vErrors.length
     }
-    validate1264.errors = vErrors
+    validate1295.errors = vErrors
     return errors === 0
   }
-  exports.v391 = validate1268
-  const schema566 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate1268(
+  exports.v400 = validate1299
+  const schema581 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate1299(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -55422,12 +56203,12 @@ var validators = {}
       }
       errors++
     }
-    validate1268.errors = vErrors
+    validate1299.errors = vErrors
     return errors === 0
   }
-  exports.v394 = validate1269
-  const schema567 = { $ref: 'ls101#/components/schemas/SettingsPatch' }
-  function validate1270(
+  exports.v403 = validate1300
+  const schema582 = { $ref: 'ls101#/components/schemas/SettingsPatch' }
+  function validate1301(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -55540,7 +56321,7 @@ var validators = {}
       if (data.baseUrl !== void 0) {
         let data1 = data.baseUrl
         if (typeof data1 === 'string') {
-          if (!pattern5.test(data1)) {
+          if (!pattern8.test(data1)) {
             const err6 = {
               instancePath: instancePath + '/baseUrl',
               schemaPath: '#/properties/baseUrl/pattern',
@@ -55555,7 +56336,7 @@ var validators = {}
             }
             errors++
           }
-          if (!formats258(data1)) {
+          if (!formats262(data1)) {
             const err7 = {
               instancePath: instancePath + '/baseUrl',
               schemaPath: '#/properties/baseUrl/format',
@@ -55627,25 +56408,25 @@ var validators = {}
       }
       errors++
     }
-    validate1270.errors = vErrors
+    validate1301.errors = vErrors
     return errors === 0
   }
-  function validate1269(
+  function validate1300(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1270(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1270.errors : vErrors.concat(validate1270.errors)
+    if (!validate1301(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1301.errors : vErrors.concat(validate1301.errors)
       errors = vErrors.length
     }
-    validate1269.errors = vErrors
+    validate1300.errors = vErrors
     return errors === 0
   }
-  exports.v395 = validate1274
-  const schema569 = { $ref: 'ls101#/components/schemas/Settings' }
-  function validate1275(
+  exports.v404 = validate1305
+  const schema584 = { $ref: 'ls101#/components/schemas/Settings' }
+  function validate1306(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -55779,7 +56560,7 @@ var validators = {}
       if (data.baseUrl !== void 0) {
         let data1 = data.baseUrl
         if (typeof data1 === 'string') {
-          if (!pattern5.test(data1)) {
+          if (!pattern8.test(data1)) {
             const err8 = {
               instancePath: instancePath + '/baseUrl',
               schemaPath: '#/properties/baseUrl/pattern',
@@ -55794,7 +56575,7 @@ var validators = {}
             }
             errors++
           }
-          if (!formats258(data1)) {
+          if (!formats262(data1)) {
             const err9 = {
               instancePath: instancePath + '/baseUrl',
               schemaPath: '#/properties/baseUrl/format',
@@ -55879,25 +56660,25 @@ var validators = {}
       }
       errors++
     }
-    validate1275.errors = vErrors
+    validate1306.errors = vErrors
     return errors === 0
   }
-  function validate1274(
+  function validate1305(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1275(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1275.errors : vErrors.concat(validate1275.errors)
+    if (!validate1306(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1306.errors : vErrors.concat(validate1306.errors)
       errors = vErrors.length
     }
-    validate1274.errors = vErrors
+    validate1305.errors = vErrors
     return errors === 0
   }
-  exports.v396 = validate1280
-  const schema571 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1281(
+  exports.v405 = validate1311
+  const schema586 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1312(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -55938,14 +56719,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -55964,25 +56745,25 @@ var validators = {}
       }
       errors++
     }
-    validate1281.errors = vErrors
+    validate1312.errors = vErrors
     return errors === 0
   }
-  function validate1280(
+  function validate1311(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1281(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1281.errors : vErrors.concat(validate1281.errors)
+    if (!validate1312(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1312.errors : vErrors.concat(validate1312.errors)
       errors = vErrors.length
     }
-    validate1280.errors = vErrors
+    validate1311.errors = vErrors
     return errors === 0
   }
-  exports.v397 = validate1284
-  const schema573 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate1284(
+  exports.v406 = validate1315
+  const schema588 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate1315(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -56019,12 +56800,12 @@ var validators = {}
       }
       errors++
     }
-    validate1284.errors = vErrors
+    validate1315.errors = vErrors
     return errors === 0
   }
-  exports.v400 = validate1285
-  const schema574 = { $ref: 'ls101#/components/schemas/LogList' }
-  function validate1286(
+  exports.v409 = validate1316
+  const schema589 = { $ref: 'ls101#/components/schemas/LogList' }
+  function validate1317(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -56056,14 +56837,14 @@ var validators = {}
           const len0 = data0.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate598(data0[i0], {
+              !validate617(data0[i0], {
                 instancePath: instancePath + '/items/' + i0,
                 parentData: data0,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate598.errors : vErrors.concat(validate598.errors)
+              vErrors = vErrors === null ? validate617.errors : vErrors.concat(validate617.errors)
               errors = vErrors.length
             }
           }
@@ -56098,25 +56879,25 @@ var validators = {}
       }
       errors++
     }
-    validate1286.errors = vErrors
+    validate1317.errors = vErrors
     return errors === 0
   }
-  function validate1285(
+  function validate1316(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1286(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1286.errors : vErrors.concat(validate1286.errors)
+    if (!validate1317(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1317.errors : vErrors.concat(validate1317.errors)
       errors = vErrors.length
     }
-    validate1285.errors = vErrors
+    validate1316.errors = vErrors
     return errors === 0
   }
-  exports.v401 = validate1290
-  const schema576 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1291(
+  exports.v410 = validate1321
+  const schema591 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1322(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -56157,14 +56938,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -56183,25 +56964,25 @@ var validators = {}
       }
       errors++
     }
-    validate1291.errors = vErrors
+    validate1322.errors = vErrors
     return errors === 0
   }
-  function validate1290(
+  function validate1321(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1291(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1291.errors : vErrors.concat(validate1291.errors)
+    if (!validate1322(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1322.errors : vErrors.concat(validate1322.errors)
       errors = vErrors.length
     }
-    validate1290.errors = vErrors
+    validate1321.errors = vErrors
     return errors === 0
   }
-  exports.v402 = validate1294
-  const schema578 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate1294(
+  exports.v411 = validate1325
+  const schema593 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate1325(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -56238,12 +57019,12 @@ var validators = {}
       }
       errors++
     }
-    validate1294.errors = vErrors
+    validate1325.errors = vErrors
     return errors === 0
   }
-  exports.v405 = validate1295
-  const schema579 = { $ref: 'ls101#/components/schemas/BackupList' }
-  function validate1296(
+  exports.v414 = validate1326
+  const schema594 = { $ref: 'ls101#/components/schemas/BackupList' }
+  function validate1327(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -56275,14 +57056,14 @@ var validators = {}
           const len0 = data0.length
           for (let i0 = 0; i0 < len0; i0++) {
             if (
-              !validate610(data0[i0], {
+              !validate629(data0[i0], {
                 instancePath: instancePath + '/items/' + i0,
                 parentData: data0,
                 parentDataProperty: i0,
                 rootData
               })
             ) {
-              vErrors = vErrors === null ? validate610.errors : vErrors.concat(validate610.errors)
+              vErrors = vErrors === null ? validate629.errors : vErrors.concat(validate629.errors)
               errors = vErrors.length
             }
           }
@@ -56317,25 +57098,25 @@ var validators = {}
       }
       errors++
     }
-    validate1296.errors = vErrors
+    validate1327.errors = vErrors
     return errors === 0
   }
-  function validate1295(
+  function validate1326(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1296(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1296.errors : vErrors.concat(validate1296.errors)
+    if (!validate1327(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1327.errors : vErrors.concat(validate1327.errors)
       errors = vErrors.length
     }
-    validate1295.errors = vErrors
+    validate1326.errors = vErrors
     return errors === 0
   }
-  exports.v406 = validate1300
-  const schema581 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1301(
+  exports.v415 = validate1331
+  const schema596 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1332(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -56376,14 +57157,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -56402,25 +57183,25 @@ var validators = {}
       }
       errors++
     }
-    validate1301.errors = vErrors
+    validate1332.errors = vErrors
     return errors === 0
   }
-  function validate1300(
+  function validate1331(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1301(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1301.errors : vErrors.concat(validate1301.errors)
+    if (!validate1332(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1332.errors : vErrors.concat(validate1332.errors)
       errors = vErrors.length
     }
-    validate1300.errors = vErrors
+    validate1331.errors = vErrors
     return errors === 0
   }
-  exports.v407 = validate1304
-  const schema583 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate1304(
+  exports.v416 = validate1335
+  const schema598 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate1335(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -56457,11 +57238,11 @@ var validators = {}
       }
       errors++
     }
-    validate1304.errors = vErrors
+    validate1335.errors = vErrors
     return errors === 0
   }
-  exports.v410 = validate1305
-  const schema584 = {
+  exports.v419 = validate1336
+  const schema599 = {
     type: 'object',
     required: ['encryptionPassword'],
     additionalProperties: false,
@@ -56475,8 +57256,8 @@ var validators = {}
       }
     }
   }
-  const pattern11 = new RegExp('^[^\\r\\n\\u0000]+$', 'u')
-  function validate1305(
+  const pattern13 = new RegExp('^[^\\r\\n\\u0000]+$', 'u')
+  function validate1336(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -56548,7 +57329,7 @@ var validators = {}
             }
             errors++
           }
-          if (!pattern11.test(data0)) {
+          if (!pattern13.test(data0)) {
             const err4 = {
               instancePath: instancePath + '/encryptionPassword',
               schemaPath: '#/properties/encryptionPassword/pattern',
@@ -56594,12 +57375,12 @@ var validators = {}
       }
       errors++
     }
-    validate1305.errors = vErrors
+    validate1336.errors = vErrors
     return errors === 0
   }
-  exports.v411 = validate1306
-  const schema585 = { $ref: 'ls101#/components/schemas/Backup' }
-  function validate1307(
+  exports.v420 = validate1337
+  const schema600 = { $ref: 'ls101#/components/schemas/Backup' }
+  function validate1338(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -56784,7 +57565,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema237.properties.status.enum },
+            params: { allowedValues: schema247.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -56896,14 +57677,14 @@ var validators = {}
       }
       if (data.archiveSha256 !== void 0) {
         if (
-          !validate550(data.archiveSha256, {
+          !validate569(data.archiveSha256, {
             instancePath: instancePath + '/archiveSha256',
             parentData: data,
             parentDataProperty: 'archiveSha256',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate550.errors : vErrors.concat(validate550.errors)
+          vErrors = vErrors === null ? validate569.errors : vErrors.concat(validate569.errors)
           errors = vErrors.length
         }
       }
@@ -56935,24 +57716,24 @@ var validators = {}
       }
       errors++
     }
-    validate1307.errors = vErrors
+    validate1338.errors = vErrors
     return errors === 0
   }
-  function validate1306(
+  function validate1337(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1307(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1307.errors : vErrors.concat(validate1307.errors)
+    if (!validate1338(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1338.errors : vErrors.concat(validate1338.errors)
       errors = vErrors.length
     }
-    validate1306.errors = vErrors
+    validate1337.errors = vErrors
     return errors === 0
   }
-  exports.v412 = validate1312
-  const schema587 = {
+  exports.v421 = validate1343
+  const schema602 = {
     allOf: [
       { $ref: 'ls101#/components/schemas/Error' },
       {
@@ -56971,7 +57752,7 @@ var validators = {}
       }
     ]
   }
-  function validate1313(
+  function validate1344(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -57012,14 +57793,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -57038,17 +57819,17 @@ var validators = {}
       }
       errors++
     }
-    validate1313.errors = vErrors
+    validate1344.errors = vErrors
     return errors === 0
   }
-  function validate1312(
+  function validate1343(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1313(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1313.errors : vErrors.concat(validate1313.errors)
+    if (!validate1344(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1344.errors : vErrors.concat(validate1344.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -57084,7 +57865,7 @@ var validators = {}
                 instancePath: instancePath + '/error/code',
                 schemaPath: '#/allOf/1/properties/error/properties/code/enum',
                 keyword: 'enum',
-                params: { allowedValues: schema587.allOf[1].properties.error.properties.code.enum },
+                params: { allowedValues: schema602.allOf[1].properties.error.properties.code.enum },
                 message: 'must be equal to one of the allowed values'
               }
               if (vErrors === null) {
@@ -57126,11 +57907,11 @@ var validators = {}
       }
       errors++
     }
-    validate1312.errors = vErrors
+    validate1343.errors = vErrors
     return errors === 0
   }
-  exports.v413 = validate1316
-  const schema589 = {
+  exports.v422 = validate1347
+  const schema604 = {
     allOf: [
       { $ref: 'ls101#/components/schemas/Error' },
       {
@@ -57146,7 +57927,7 @@ var validators = {}
       }
     ]
   }
-  function validate1317(
+  function validate1348(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -57187,14 +57968,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -57213,17 +57994,17 @@ var validators = {}
       }
       errors++
     }
-    validate1317.errors = vErrors
+    validate1348.errors = vErrors
     return errors === 0
   }
-  function validate1316(
+  function validate1347(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1317(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1317.errors : vErrors.concat(validate1317.errors)
+    if (!validate1348(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1348.errors : vErrors.concat(validate1348.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -57252,7 +58033,7 @@ var validators = {}
                 instancePath: instancePath + '/error/code',
                 schemaPath: '#/allOf/1/properties/error/properties/code/enum',
                 keyword: 'enum',
-                params: { allowedValues: schema589.allOf[1].properties.error.properties.code.enum },
+                params: { allowedValues: schema604.allOf[1].properties.error.properties.code.enum },
                 message: 'must be equal to one of the allowed values'
               }
               if (vErrors === null) {
@@ -57294,12 +58075,12 @@ var validators = {}
       }
       errors++
     }
-    validate1316.errors = vErrors
+    validate1347.errors = vErrors
     return errors === 0
   }
-  exports.v414 = validate1320
-  const schema591 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1321(
+  exports.v423 = validate1351
+  const schema606 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1352(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -57340,14 +58121,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -57366,30 +58147,30 @@ var validators = {}
       }
       errors++
     }
-    validate1321.errors = vErrors
+    validate1352.errors = vErrors
     return errors === 0
   }
-  function validate1320(
+  function validate1351(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1321(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1321.errors : vErrors.concat(validate1321.errors)
+    if (!validate1352(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1352.errors : vErrors.concat(validate1352.errors)
       errors = vErrors.length
     }
-    validate1320.errors = vErrors
+    validate1351.errors = vErrors
     return errors === 0
   }
-  exports.v415 = validate1324
-  const schema593 = {
+  exports.v424 = validate1355
+  const schema608 = {
     type: 'object',
     properties: { id: { type: 'string', format: 'uuid' } },
     required: ['id'],
     additionalProperties: false
   }
-  function validate1324(
+  function validate1355(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -57477,12 +58258,12 @@ var validators = {}
       }
       errors++
     }
-    validate1324.errors = vErrors
+    validate1355.errors = vErrors
     return errors === 0
   }
-  exports.v418 = validate1325
-  const schema594 = { $ref: 'ls101#/components/schemas/Backup' }
-  function validate1326(
+  exports.v427 = validate1356
+  const schema609 = { $ref: 'ls101#/components/schemas/Backup' }
+  function validate1357(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -57667,7 +58448,7 @@ var validators = {}
             instancePath: instancePath + '/status',
             schemaPath: '#/properties/status/enum',
             keyword: 'enum',
-            params: { allowedValues: schema237.properties.status.enum },
+            params: { allowedValues: schema247.properties.status.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -57779,14 +58560,14 @@ var validators = {}
       }
       if (data.archiveSha256 !== void 0) {
         if (
-          !validate550(data.archiveSha256, {
+          !validate569(data.archiveSha256, {
             instancePath: instancePath + '/archiveSha256',
             parentData: data,
             parentDataProperty: 'archiveSha256',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate550.errors : vErrors.concat(validate550.errors)
+          vErrors = vErrors === null ? validate569.errors : vErrors.concat(validate569.errors)
           errors = vErrors.length
         }
       }
@@ -57818,25 +58599,25 @@ var validators = {}
       }
       errors++
     }
-    validate1326.errors = vErrors
+    validate1357.errors = vErrors
     return errors === 0
   }
-  function validate1325(
+  function validate1356(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1326(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1326.errors : vErrors.concat(validate1326.errors)
+    if (!validate1357(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1357.errors : vErrors.concat(validate1357.errors)
       errors = vErrors.length
     }
-    validate1325.errors = vErrors
+    validate1356.errors = vErrors
     return errors === 0
   }
-  exports.v419 = validate1331
-  const schema596 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1332(
+  exports.v428 = validate1362
+  const schema611 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1363(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -57877,14 +58658,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -57903,30 +58684,30 @@ var validators = {}
       }
       errors++
     }
-    validate1332.errors = vErrors
+    validate1363.errors = vErrors
     return errors === 0
   }
-  function validate1331(
+  function validate1362(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1332(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1332.errors : vErrors.concat(validate1332.errors)
+    if (!validate1363(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1363.errors : vErrors.concat(validate1363.errors)
       errors = vErrors.length
     }
-    validate1331.errors = vErrors
+    validate1362.errors = vErrors
     return errors === 0
   }
-  exports.v420 = validate1335
-  const schema598 = {
+  exports.v429 = validate1366
+  const schema613 = {
     type: 'object',
     properties: { id: { type: 'string', format: 'uuid' } },
     required: ['id'],
     additionalProperties: false
   }
-  function validate1335(
+  function validate1366(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -58014,11 +58795,11 @@ var validators = {}
       }
       errors++
     }
-    validate1335.errors = vErrors
+    validate1366.errors = vErrors
     return errors === 0
   }
-  exports.v423 = validate1336
-  const schema599 = {
+  exports.v432 = validate1367
+  const schema614 = {
     allOf: [
       { $ref: 'ls101#/components/schemas/Error' },
       {
@@ -58037,7 +58818,7 @@ var validators = {}
       }
     ]
   }
-  function validate1337(
+  function validate1368(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -58078,14 +58859,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -58104,17 +58885,17 @@ var validators = {}
       }
       errors++
     }
-    validate1337.errors = vErrors
+    validate1368.errors = vErrors
     return errors === 0
   }
-  function validate1336(
+  function validate1367(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1337(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1337.errors : vErrors.concat(validate1337.errors)
+    if (!validate1368(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1368.errors : vErrors.concat(validate1368.errors)
       errors = vErrors.length
     }
     if (data && typeof data == 'object' && !Array.isArray(data)) {
@@ -58150,7 +58931,7 @@ var validators = {}
                 instancePath: instancePath + '/error/code',
                 schemaPath: '#/allOf/1/properties/error/properties/code/enum',
                 keyword: 'enum',
-                params: { allowedValues: schema599.allOf[1].properties.error.properties.code.enum },
+                params: { allowedValues: schema614.allOf[1].properties.error.properties.code.enum },
                 message: 'must be equal to one of the allowed values'
               }
               if (vErrors === null) {
@@ -58192,12 +58973,12 @@ var validators = {}
       }
       errors++
     }
-    validate1336.errors = vErrors
+    validate1367.errors = vErrors
     return errors === 0
   }
-  exports.v424 = validate1340
-  const schema601 = { $ref: 'ls101#/components/schemas/Error' }
-  function validate1341(
+  exports.v433 = validate1371
+  const schema616 = { $ref: 'ls101#/components/schemas/Error' }
+  function validate1372(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -58238,14 +59019,14 @@ var validators = {}
       }
       if (data.error !== void 0) {
         if (
-          !validate376(data.error, {
+          !validate395(data.error, {
             instancePath: instancePath + '/error',
             parentData: data,
             parentDataProperty: 'error',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate376.errors : vErrors.concat(validate376.errors)
+          vErrors = vErrors === null ? validate395.errors : vErrors.concat(validate395.errors)
           errors = vErrors.length
         }
       }
@@ -58264,26 +59045,26 @@ var validators = {}
       }
       errors++
     }
-    validate1341.errors = vErrors
+    validate1372.errors = vErrors
     return errors === 0
   }
-  function validate1340(
+  function validate1371(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
     let vErrors = null
     let errors = 0
-    if (!validate1341(data, { instancePath, parentData, parentDataProperty, rootData })) {
-      vErrors = vErrors === null ? validate1341.errors : vErrors.concat(validate1341.errors)
+    if (!validate1372(data, { instancePath, parentData, parentDataProperty, rootData })) {
+      vErrors = vErrors === null ? validate1372.errors : vErrors.concat(validate1372.errors)
       errors = vErrors.length
     }
-    validate1340.errors = vErrors
+    validate1371.errors = vErrors
     return errors === 0
   }
 })(validators)
 ;(function (exports) {
   'use strict'
-  exports.v95 = validate21
+  exports.v99 = validate21
   const schema6 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate21(
     data,
@@ -58325,7 +59106,7 @@ var validators = {}
     validate21.errors = vErrors
     return errors === 0
   }
-  exports.v96 = validate22
+  exports.v100 = validate22
   const schema7 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -58439,7 +59220,7 @@ var validators = {}
     validate22.errors = vErrors
     return errors === 0
   }
-  exports.v100 = validate23
+  exports.v104 = validate23
   const schema8 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate23(
     data,
@@ -58481,7 +59262,7 @@ var validators = {}
     validate23.errors = vErrors
     return errors === 0
   }
-  exports.v101 = validate24
+  exports.v105 = validate24
   const schema9 = {
     type: 'object',
     properties: {
@@ -58663,7 +59444,7 @@ var validators = {}
     validate24.errors = vErrors
     return errors === 0
   }
-  exports.v107 = validate25
+  exports.v111 = validate25
   const schema10 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate25(
     data,
@@ -58705,7 +59486,7 @@ var validators = {}
     validate25.errors = vErrors
     return errors === 0
   }
-  exports.v108 = validate26
+  exports.v112 = validate26
   const schema11 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -58818,7 +59599,7 @@ var validators = {}
     validate26.errors = vErrors
     return errors === 0
   }
-  exports.v111 = validate27
+  exports.v115 = validate27
   const schema12 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate27(
     data,
@@ -58860,7 +59641,7 @@ var validators = {}
     validate27.errors = vErrors
     return errors === 0
   }
-  exports.v112 = validate28
+  exports.v116 = validate28
   const schema13 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -58973,7 +59754,7 @@ var validators = {}
     validate28.errors = vErrors
     return errors === 0
   }
-  exports.v116 = validate29
+  exports.v120 = validate29
   const schema14 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate29(
     data,
@@ -59015,7 +59796,7 @@ var validators = {}
     validate29.errors = vErrors
     return errors === 0
   }
-  exports.v117 = validate30
+  exports.v121 = validate30
   const schema15 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -59128,7 +59909,7 @@ var validators = {}
     validate30.errors = vErrors
     return errors === 0
   }
-  exports.v123 = validate31
+  exports.v127 = validate31
   const schema16 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate31(
     data,
@@ -59170,7 +59951,7 @@ var validators = {}
     validate31.errors = vErrors
     return errors === 0
   }
-  exports.v124 = validate32
+  exports.v128 = validate32
   const schema17 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -59283,7 +60064,7 @@ var validators = {}
     validate32.errors = vErrors
     return errors === 0
   }
-  exports.v128 = validate33
+  exports.v132 = validate33
   const schema18 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate33(
     data,
@@ -59325,7 +60106,7 @@ var validators = {}
     validate33.errors = vErrors
     return errors === 0
   }
-  exports.v129 = validate34
+  exports.v133 = validate34
   const schema19 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -59438,7 +60219,7 @@ var validators = {}
     validate34.errors = vErrors
     return errors === 0
   }
-  exports.v136 = validate35
+  exports.v140 = validate35
   const schema20 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate35(
     data,
@@ -59480,7 +60261,7 @@ var validators = {}
     validate35.errors = vErrors
     return errors === 0
   }
-  exports.v137 = validate36
+  exports.v141 = validate36
   const schema21 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -59593,7 +60374,7 @@ var validators = {}
     validate36.errors = vErrors
     return errors === 0
   }
-  exports.v141 = validate37
+  exports.v145 = validate37
   const schema22 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate37(
     data,
@@ -59635,7 +60416,7 @@ var validators = {}
     validate37.errors = vErrors
     return errors === 0
   }
-  exports.v142 = validate38
+  exports.v146 = validate38
   const schema23 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -59748,7 +60529,7 @@ var validators = {}
     validate38.errors = vErrors
     return errors === 0
   }
-  exports.v148 = validate39
+  exports.v152 = validate39
   const schema24 = {
     type: 'object',
     properties: {
@@ -60115,7 +60896,7 @@ var validators = {}
     validate39.errors = vErrors
     return errors === 0
   }
-  exports.v149 = validate40
+  exports.v153 = validate40
   const schema25 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -60228,7 +61009,7 @@ var validators = {}
     validate40.errors = vErrors
     return errors === 0
   }
-  exports.v153 = validate41
+  exports.v157 = validate41
   const schema26 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate41(
     data,
@@ -60270,7 +61051,7 @@ var validators = {}
     validate41.errors = vErrors
     return errors === 0
   }
-  exports.v154 = validate42
+  exports.v158 = validate42
   const schema27 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -60383,7 +61164,7 @@ var validators = {}
     validate42.errors = vErrors
     return errors === 0
   }
-  exports.v158 = validate43
+  exports.v162 = validate43
   const schema28 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate43(
     data,
@@ -60425,7 +61206,7 @@ var validators = {}
     validate43.errors = vErrors
     return errors === 0
   }
-  exports.v159 = validate44
+  exports.v163 = validate44
   const schema29 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -60538,7 +61319,7 @@ var validators = {}
     validate44.errors = vErrors
     return errors === 0
   }
-  exports.v165 = validate45
+  exports.v169 = validate45
   const schema30 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate45(
     data,
@@ -60580,7 +61361,7 @@ var validators = {}
     validate45.errors = vErrors
     return errors === 0
   }
-  exports.v166 = validate46
+  exports.v170 = validate46
   const schema31 = {
     type: 'object',
     properties: {
@@ -60763,7 +61544,7 @@ var validators = {}
     validate46.errors = vErrors
     return errors === 0
   }
-  exports.v169 = validate47
+  exports.v173 = validate47
   const schema32 = {
     type: 'object',
     properties: {
@@ -60949,7 +61730,7 @@ var validators = {}
     validate47.errors = vErrors
     return errors === 0
   }
-  exports.v170 = validate48
+  exports.v174 = validate48
   const schema33 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -61062,7 +61843,7 @@ var validators = {}
     validate48.errors = vErrors
     return errors === 0
   }
-  exports.v174 = validate49
+  exports.v178 = validate49
   const schema34 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate49(
     data,
@@ -61104,7 +61885,7 @@ var validators = {}
     validate49.errors = vErrors
     return errors === 0
   }
-  exports.v175 = validate50
+  exports.v179 = validate50
   const schema35 = {
     type: 'object',
     properties: {
@@ -61286,7 +62067,7 @@ var validators = {}
     validate50.errors = vErrors
     return errors === 0
   }
-  exports.v180 = validate51
+  exports.v184 = validate51
   const schema36 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate51(
     data,
@@ -61328,7 +62109,7 @@ var validators = {}
     validate51.errors = vErrors
     return errors === 0
   }
-  exports.v181 = validate52
+  exports.v185 = validate52
   const schema37 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -61441,7 +62222,7 @@ var validators = {}
     validate52.errors = vErrors
     return errors === 0
   }
-  exports.v184 = validate53
+  exports.v188 = validate53
   const schema38 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate53(
     data,
@@ -61483,7 +62264,7 @@ var validators = {}
     validate53.errors = vErrors
     return errors === 0
   }
-  exports.v185 = validate54
+  exports.v189 = validate54
   const schema39 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -61596,7 +62377,7 @@ var validators = {}
     validate54.errors = vErrors
     return errors === 0
   }
-  exports.v188 = validate55
+  exports.v192 = validate55
   const schema40 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate55(
     data,
@@ -61638,7 +62419,7 @@ var validators = {}
     validate55.errors = vErrors
     return errors === 0
   }
-  exports.v189 = validate56
+  exports.v193 = validate56
   const schema41 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -61751,8 +62532,163 @@ var validators = {}
     validate56.errors = vErrors
     return errors === 0
   }
-  exports.v195 = validate57
-  const schema42 = {
+  exports.v198 = validate57
+  const schema42 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate57(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate57.errors = vErrors
+    return errors === 0
+  }
+  exports.v199 = validate58
+  const schema43 = {
+    type: 'object',
+    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
+    required: ['x-ls101-client-version'],
+    additionalProperties: true
+  }
+  function validate58(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data['x-ls101-client-version'] === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-client-version' },
+          message: "must have required property 'x-ls101-client-version'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data['x-ls101-client-version'] !== void 0) {
+        let data0 = data['x-ls101-client-version']
+        if (typeof data0 !== 'string') {
+          let dataType0 = typeof data0
+          let coerced0 = void 0
+          if (!(coerced0 !== void 0)) {
+            if (dataType0 == 'number' || dataType0 == 'boolean') {
+              coerced0 = '' + data0
+            } else if (data0 === null) {
+              coerced0 = ''
+            } else {
+              const err1 = {
+                instancePath: instancePath + '/x-ls101-client-version',
+                schemaPath: '#/properties/x-ls101-client-version/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err1]
+              } else {
+                vErrors.push(err1)
+              }
+              errors++
+            }
+          }
+          if (coerced0 !== void 0) {
+            data0 = coerced0
+            if (data !== void 0) {
+              data['x-ls101-client-version'] = coerced0
+            }
+          }
+        }
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 128) {
+            const err2 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 128 },
+              message: 'must NOT have more than 128 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+          if (func2(data0) < 1) {
+            const err3 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/minLength',
+              keyword: 'minLength',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err3]
+            } else {
+              vErrors.push(err3)
+            }
+            errors++
+          }
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate58.errors = vErrors
+    return errors === 0
+  }
+  exports.v204 = validate59
+  const schema44 = {
     type: 'object',
     properties: {
       cursor: { type: 'string', minLength: 1, maxLength: 2048 },
@@ -61763,7 +62699,7 @@ var validators = {}
     required: [],
     additionalProperties: false
   }
-  function validate57(
+  function validate59(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -62020,17 +62956,17 @@ var validators = {}
       }
       errors++
     }
-    validate57.errors = vErrors
+    validate59.errors = vErrors
     return errors === 0
   }
-  exports.v196 = validate58
-  const schema43 = {
+  exports.v205 = validate60
+  const schema45 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
     required: ['x-ls101-client-version'],
     additionalProperties: true
   }
-  function validate58(
+  function validate60(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -62133,12 +63069,12 @@ var validators = {}
       }
       errors++
     }
-    validate58.errors = vErrors
+    validate60.errors = vErrors
     return errors === 0
   }
-  exports.v200 = validate59
-  const schema44 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate59(
+  exports.v209 = validate61
+  const schema46 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate61(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -62175,11 +63111,11 @@ var validators = {}
       }
       errors++
     }
-    validate59.errors = vErrors
+    validate61.errors = vErrors
     return errors === 0
   }
-  exports.v201 = validate60
-  const schema45 = {
+  exports.v210 = validate62
+  const schema47 = {
     type: 'object',
     properties: {
       'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 },
@@ -62188,9 +63124,9 @@ var validators = {}
     required: ['x-ls101-client-version', 'x-ls101-archive-sha256'],
     additionalProperties: true
   }
-  const schema47 = { type: 'string', pattern: '^[a-f0-9]{64}$' }
+  const schema49 = { type: 'string', pattern: '^[a-f0-9]{64}$' }
   const pattern0 = new RegExp('^[a-f0-9]{64}$', 'u')
-  function validate62(
+  function validate64(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -62244,10 +63180,10 @@ var validators = {}
         errors++
       }
     }
-    validate62.errors = vErrors
+    validate64.errors = vErrors
     return errors === 0
   }
-  function validate60(
+  function validate62(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -62352,14 +63288,14 @@ var validators = {}
       }
       if (data['x-ls101-archive-sha256'] !== void 0) {
         if (
-          !validate62(data['x-ls101-archive-sha256'], {
+          !validate64(data['x-ls101-archive-sha256'], {
             instancePath: instancePath + '/x-ls101-archive-sha256',
             parentData: data,
             parentDataProperty: 'x-ls101-archive-sha256',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate62.errors : vErrors.concat(validate62.errors)
+          vErrors = vErrors === null ? validate64.errors : vErrors.concat(validate64.errors)
           errors = vErrors.length
         }
       }
@@ -62378,165 +63314,10 @@ var validators = {}
       }
       errors++
     }
-    validate60.errors = vErrors
+    validate62.errors = vErrors
     return errors === 0
   }
-  exports.v206 = validate64
-  const schema48 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate64(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      for (const key0 in data) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/additionalProperties',
-          keyword: 'additionalProperties',
-          params: { additionalProperty: key0 },
-          message: 'must NOT have additional properties'
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-    } else {
-      const err1 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err1]
-      } else {
-        vErrors.push(err1)
-      }
-      errors++
-    }
-    validate64.errors = vErrors
-    return errors === 0
-  }
-  exports.v207 = validate65
-  const schema49 = {
-    type: 'object',
-    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
-    required: ['x-ls101-client-version'],
-    additionalProperties: true
-  }
-  function validate65(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data['x-ls101-client-version'] === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-client-version' },
-          message: "must have required property 'x-ls101-client-version'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data['x-ls101-client-version'] !== void 0) {
-        let data0 = data['x-ls101-client-version']
-        if (typeof data0 !== 'string') {
-          let dataType0 = typeof data0
-          let coerced0 = void 0
-          if (!(coerced0 !== void 0)) {
-            if (dataType0 == 'number' || dataType0 == 'boolean') {
-              coerced0 = '' + data0
-            } else if (data0 === null) {
-              coerced0 = ''
-            } else {
-              const err1 = {
-                instancePath: instancePath + '/x-ls101-client-version',
-                schemaPath: '#/properties/x-ls101-client-version/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err1]
-              } else {
-                vErrors.push(err1)
-              }
-              errors++
-            }
-          }
-          if (coerced0 !== void 0) {
-            data0 = coerced0
-            if (data !== void 0) {
-              data['x-ls101-client-version'] = coerced0
-            }
-          }
-        }
-        if (typeof data0 === 'string') {
-          if (func2(data0) > 128) {
-            const err2 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 128 },
-              message: 'must NOT have more than 128 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-          if (func2(data0) < 1) {
-            const err3 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
-    }
-    validate65.errors = vErrors
-    return errors === 0
-  }
-  exports.v211 = validate66
+  exports.v215 = validate66
   const schema50 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate66(
     data,
@@ -62578,7 +63359,7 @@ var validators = {}
     validate66.errors = vErrors
     return errors === 0
   }
-  exports.v212 = validate67
+  exports.v216 = validate67
   const schema51 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -62691,7 +63472,7 @@ var validators = {}
     validate67.errors = vErrors
     return errors === 0
   }
-  exports.v217 = validate68
+  exports.v220 = validate68
   const schema52 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate68(
     data,
@@ -62733,7 +63514,7 @@ var validators = {}
     validate68.errors = vErrors
     return errors === 0
   }
-  exports.v218 = validate69
+  exports.v221 = validate69
   const schema53 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -62846,7 +63627,7 @@ var validators = {}
     validate69.errors = vErrors
     return errors === 0
   }
-  exports.v221 = validate70
+  exports.v226 = validate70
   const schema54 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate70(
     data,
@@ -62888,7 +63669,7 @@ var validators = {}
     validate70.errors = vErrors
     return errors === 0
   }
-  exports.v222 = validate71
+  exports.v227 = validate71
   const schema55 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -63001,8 +63782,163 @@ var validators = {}
     validate71.errors = vErrors
     return errors === 0
   }
-  exports.v225 = validate72
-  const schema56 = {
+  exports.v230 = validate72
+  const schema56 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate72(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate72.errors = vErrors
+    return errors === 0
+  }
+  exports.v231 = validate73
+  const schema57 = {
+    type: 'object',
+    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
+    required: ['x-ls101-client-version'],
+    additionalProperties: true
+  }
+  function validate73(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data['x-ls101-client-version'] === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-client-version' },
+          message: "must have required property 'x-ls101-client-version'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data['x-ls101-client-version'] !== void 0) {
+        let data0 = data['x-ls101-client-version']
+        if (typeof data0 !== 'string') {
+          let dataType0 = typeof data0
+          let coerced0 = void 0
+          if (!(coerced0 !== void 0)) {
+            if (dataType0 == 'number' || dataType0 == 'boolean') {
+              coerced0 = '' + data0
+            } else if (data0 === null) {
+              coerced0 = ''
+            } else {
+              const err1 = {
+                instancePath: instancePath + '/x-ls101-client-version',
+                schemaPath: '#/properties/x-ls101-client-version/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err1]
+              } else {
+                vErrors.push(err1)
+              }
+              errors++
+            }
+          }
+          if (coerced0 !== void 0) {
+            data0 = coerced0
+            if (data !== void 0) {
+              data['x-ls101-client-version'] = coerced0
+            }
+          }
+        }
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 128) {
+            const err2 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 128 },
+              message: 'must NOT have more than 128 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+          if (func2(data0) < 1) {
+            const err3 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/minLength',
+              keyword: 'minLength',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err3]
+            } else {
+              vErrors.push(err3)
+            }
+            errors++
+          }
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate73.errors = vErrors
+    return errors === 0
+  }
+  exports.v234 = validate74
+  const schema58 = {
     type: 'object',
     properties: {
       cursor: { type: 'string', minLength: 1, maxLength: 2048 },
@@ -63012,7 +63948,7 @@ var validators = {}
     required: [],
     additionalProperties: false
   }
-  function validate72(
+  function validate74(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -63236,165 +64172,10 @@ var validators = {}
       }
       errors++
     }
-    validate72.errors = vErrors
-    return errors === 0
-  }
-  exports.v226 = validate73
-  const schema57 = {
-    type: 'object',
-    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
-    required: ['x-ls101-client-version'],
-    additionalProperties: true
-  }
-  function validate73(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data['x-ls101-client-version'] === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-client-version' },
-          message: "must have required property 'x-ls101-client-version'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data['x-ls101-client-version'] !== void 0) {
-        let data0 = data['x-ls101-client-version']
-        if (typeof data0 !== 'string') {
-          let dataType0 = typeof data0
-          let coerced0 = void 0
-          if (!(coerced0 !== void 0)) {
-            if (dataType0 == 'number' || dataType0 == 'boolean') {
-              coerced0 = '' + data0
-            } else if (data0 === null) {
-              coerced0 = ''
-            } else {
-              const err1 = {
-                instancePath: instancePath + '/x-ls101-client-version',
-                schemaPath: '#/properties/x-ls101-client-version/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err1]
-              } else {
-                vErrors.push(err1)
-              }
-              errors++
-            }
-          }
-          if (coerced0 !== void 0) {
-            data0 = coerced0
-            if (data !== void 0) {
-              data['x-ls101-client-version'] = coerced0
-            }
-          }
-        }
-        if (typeof data0 === 'string') {
-          if (func2(data0) > 128) {
-            const err2 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 128 },
-              message: 'must NOT have more than 128 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-          if (func2(data0) < 1) {
-            const err3 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
-    }
-    validate73.errors = vErrors
-    return errors === 0
-  }
-  exports.v230 = validate74
-  const schema58 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate74(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      for (const key0 in data) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/additionalProperties',
-          keyword: 'additionalProperties',
-          params: { additionalProperty: key0 },
-          message: 'must NOT have additional properties'
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-    } else {
-      const err1 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err1]
-      } else {
-        vErrors.push(err1)
-      }
-      errors++
-    }
     validate74.errors = vErrors
     return errors === 0
   }
-  exports.v231 = validate75
+  exports.v235 = validate75
   const schema59 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -63507,7 +64288,7 @@ var validators = {}
     validate75.errors = vErrors
     return errors === 0
   }
-  exports.v234 = validate76
+  exports.v239 = validate76
   const schema60 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate76(
     data,
@@ -63549,7 +64330,7 @@ var validators = {}
     validate76.errors = vErrors
     return errors === 0
   }
-  exports.v235 = validate77
+  exports.v240 = validate77
   const schema61 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -63662,7 +64443,7 @@ var validators = {}
     validate77.errors = vErrors
     return errors === 0
   }
-  exports.v241 = validate78
+  exports.v243 = validate78
   const schema62 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate78(
     data,
@@ -63704,8 +64485,163 @@ var validators = {}
     validate78.errors = vErrors
     return errors === 0
   }
-  exports.v242 = validate79
+  exports.v244 = validate79
   const schema63 = {
+    type: 'object',
+    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
+    required: ['x-ls101-client-version'],
+    additionalProperties: true
+  }
+  function validate79(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data['x-ls101-client-version'] === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-client-version' },
+          message: "must have required property 'x-ls101-client-version'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data['x-ls101-client-version'] !== void 0) {
+        let data0 = data['x-ls101-client-version']
+        if (typeof data0 !== 'string') {
+          let dataType0 = typeof data0
+          let coerced0 = void 0
+          if (!(coerced0 !== void 0)) {
+            if (dataType0 == 'number' || dataType0 == 'boolean') {
+              coerced0 = '' + data0
+            } else if (data0 === null) {
+              coerced0 = ''
+            } else {
+              const err1 = {
+                instancePath: instancePath + '/x-ls101-client-version',
+                schemaPath: '#/properties/x-ls101-client-version/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err1]
+              } else {
+                vErrors.push(err1)
+              }
+              errors++
+            }
+          }
+          if (coerced0 !== void 0) {
+            data0 = coerced0
+            if (data !== void 0) {
+              data['x-ls101-client-version'] = coerced0
+            }
+          }
+        }
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 128) {
+            const err2 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 128 },
+              message: 'must NOT have more than 128 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+          if (func2(data0) < 1) {
+            const err3 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/minLength',
+              keyword: 'minLength',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err3]
+            } else {
+              vErrors.push(err3)
+            }
+            errors++
+          }
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate79.errors = vErrors
+    return errors === 0
+  }
+  exports.v250 = validate80
+  const schema64 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate80(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate80.errors = vErrors
+    return errors === 0
+  }
+  exports.v251 = validate81
+  const schema65 = {
     type: 'object',
     properties: {
       'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 },
@@ -63714,7 +64650,7 @@ var validators = {}
     required: ['x-ls101-client-version', 'x-ls101-archive-sha256'],
     additionalProperties: true
   }
-  function validate80(
+  function validate82(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -63768,10 +64704,10 @@ var validators = {}
         errors++
       }
     }
-    validate80.errors = vErrors
+    validate82.errors = vErrors
     return errors === 0
   }
-  function validate79(
+  function validate81(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -63876,14 +64812,14 @@ var validators = {}
       }
       if (data['x-ls101-archive-sha256'] !== void 0) {
         if (
-          !validate80(data['x-ls101-archive-sha256'], {
+          !validate82(data['x-ls101-archive-sha256'], {
             instancePath: instancePath + '/x-ls101-archive-sha256',
             parentData: data,
             parentDataProperty: 'x-ls101-archive-sha256',
             rootData
           })
         ) {
-          vErrors = vErrors === null ? validate80.errors : vErrors.concat(validate80.errors)
+          vErrors = vErrors === null ? validate82.errors : vErrors.concat(validate82.errors)
           errors = vErrors.length
         }
       }
@@ -63902,12 +64838,12 @@ var validators = {}
       }
       errors++
     }
-    validate79.errors = vErrors
+    validate81.errors = vErrors
     return errors === 0
   }
-  exports.v247 = validate82
-  const schema65 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate82(
+  exports.v256 = validate84
+  const schema67 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate84(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -63944,17 +64880,17 @@ var validators = {}
       }
       errors++
     }
-    validate82.errors = vErrors
+    validate84.errors = vErrors
     return errors === 0
   }
-  exports.v248 = validate83
-  const schema66 = {
+  exports.v257 = validate85
+  const schema68 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
     required: ['x-ls101-client-version'],
     additionalProperties: true
   }
-  function validate83(
+  function validate85(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -64057,11 +64993,11 @@ var validators = {}
       }
       errors++
     }
-    validate83.errors = vErrors
+    validate85.errors = vErrors
     return errors === 0
   }
-  exports.v252 = validate84
-  const schema67 = {
+  exports.v261 = validate86
+  const schema69 = {
     type: 'object',
     properties: {
       cursor: { type: 'string', minLength: 1, maxLength: 2048 },
@@ -64077,9 +65013,9 @@ var validators = {}
     required: [],
     additionalProperties: false
   }
-  const func74 = Object.prototype.hasOwnProperty
+  const func76 = Object.prototype.hasOwnProperty
   const formats8 = require_formats().fullFormats['date-time']
-  function validate84(
+  function validate86(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -64087,7 +65023,7 @@ var validators = {}
     let errors = 0
     if (data && typeof data == 'object' && !Array.isArray(data)) {
       for (const key0 in data) {
-        if (!func74.call(schema67.properties, key0)) {
+        if (!func76.call(schema69.properties, key0)) {
           const err0 = {
             instancePath,
             schemaPath: '#/additionalProperties',
@@ -64575,165 +65511,10 @@ var validators = {}
       }
       errors++
     }
-    validate84.errors = vErrors
-    return errors === 0
-  }
-  exports.v253 = validate85
-  const schema68 = {
-    type: 'object',
-    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
-    required: ['x-ls101-client-version'],
-    additionalProperties: true
-  }
-  function validate85(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data['x-ls101-client-version'] === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-client-version' },
-          message: "must have required property 'x-ls101-client-version'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data['x-ls101-client-version'] !== void 0) {
-        let data0 = data['x-ls101-client-version']
-        if (typeof data0 !== 'string') {
-          let dataType0 = typeof data0
-          let coerced0 = void 0
-          if (!(coerced0 !== void 0)) {
-            if (dataType0 == 'number' || dataType0 == 'boolean') {
-              coerced0 = '' + data0
-            } else if (data0 === null) {
-              coerced0 = ''
-            } else {
-              const err1 = {
-                instancePath: instancePath + '/x-ls101-client-version',
-                schemaPath: '#/properties/x-ls101-client-version/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err1]
-              } else {
-                vErrors.push(err1)
-              }
-              errors++
-            }
-          }
-          if (coerced0 !== void 0) {
-            data0 = coerced0
-            if (data !== void 0) {
-              data['x-ls101-client-version'] = coerced0
-            }
-          }
-        }
-        if (typeof data0 === 'string') {
-          if (func2(data0) > 128) {
-            const err2 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 128 },
-              message: 'must NOT have more than 128 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-          if (func2(data0) < 1) {
-            const err3 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
-    }
-    validate85.errors = vErrors
-    return errors === 0
-  }
-  exports.v257 = validate86
-  const schema69 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate86(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      for (const key0 in data) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/additionalProperties',
-          keyword: 'additionalProperties',
-          params: { additionalProperty: key0 },
-          message: 'must NOT have additional properties'
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-    } else {
-      const err1 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err1]
-      } else {
-        vErrors.push(err1)
-      }
-      errors++
-    }
     validate86.errors = vErrors
     return errors === 0
   }
-  exports.v258 = validate87
+  exports.v262 = validate87
   const schema70 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -64846,7 +65627,7 @@ var validators = {}
     validate87.errors = vErrors
     return errors === 0
   }
-  exports.v262 = validate88
+  exports.v266 = validate88
   const schema71 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate88(
     data,
@@ -64888,7 +65669,7 @@ var validators = {}
     validate88.errors = vErrors
     return errors === 0
   }
-  exports.v263 = validate89
+  exports.v267 = validate89
   const schema72 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -65001,7 +65782,7 @@ var validators = {}
     validate89.errors = vErrors
     return errors === 0
   }
-  exports.v266 = validate90
+  exports.v271 = validate90
   const schema73 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate90(
     data,
@@ -65043,7 +65824,7 @@ var validators = {}
     validate90.errors = vErrors
     return errors === 0
   }
-  exports.v267 = validate91
+  exports.v272 = validate91
   const schema74 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -65156,7 +65937,7 @@ var validators = {}
     validate91.errors = vErrors
     return errors === 0
   }
-  exports.v270 = validate92
+  exports.v275 = validate92
   const schema75 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate92(
     data,
@@ -65198,7 +65979,7 @@ var validators = {}
     validate92.errors = vErrors
     return errors === 0
   }
-  exports.v271 = validate93
+  exports.v276 = validate93
   const schema76 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -65311,7 +66092,7 @@ var validators = {}
     validate93.errors = vErrors
     return errors === 0
   }
-  exports.v275 = validate94
+  exports.v279 = validate94
   const schema77 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate94(
     data,
@@ -65353,8 +66134,163 @@ var validators = {}
     validate94.errors = vErrors
     return errors === 0
   }
-  exports.v276 = validate95
+  exports.v280 = validate95
   const schema78 = {
+    type: 'object',
+    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
+    required: ['x-ls101-client-version'],
+    additionalProperties: true
+  }
+  function validate95(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data['x-ls101-client-version'] === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-client-version' },
+          message: "must have required property 'x-ls101-client-version'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data['x-ls101-client-version'] !== void 0) {
+        let data0 = data['x-ls101-client-version']
+        if (typeof data0 !== 'string') {
+          let dataType0 = typeof data0
+          let coerced0 = void 0
+          if (!(coerced0 !== void 0)) {
+            if (dataType0 == 'number' || dataType0 == 'boolean') {
+              coerced0 = '' + data0
+            } else if (data0 === null) {
+              coerced0 = ''
+            } else {
+              const err1 = {
+                instancePath: instancePath + '/x-ls101-client-version',
+                schemaPath: '#/properties/x-ls101-client-version/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err1]
+              } else {
+                vErrors.push(err1)
+              }
+              errors++
+            }
+          }
+          if (coerced0 !== void 0) {
+            data0 = coerced0
+            if (data !== void 0) {
+              data['x-ls101-client-version'] = coerced0
+            }
+          }
+        }
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 128) {
+            const err2 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 128 },
+              message: 'must NOT have more than 128 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+          if (func2(data0) < 1) {
+            const err3 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/minLength',
+              keyword: 'minLength',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err3]
+            } else {
+              vErrors.push(err3)
+            }
+            errors++
+          }
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate95.errors = vErrors
+    return errors === 0
+  }
+  exports.v284 = validate96
+  const schema79 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate96(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate96.errors = vErrors
+    return errors === 0
+  }
+  exports.v285 = validate97
+  const schema80 = {
     type: 'object',
     properties: {
       'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 },
@@ -65363,7 +66299,7 @@ var validators = {}
     required: ['x-ls101-client-version', 'idempotency-key'],
     additionalProperties: true
   }
-  function validate95(
+  function validate97(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -65532,11 +66468,11 @@ var validators = {}
       }
       errors++
     }
-    validate95.errors = vErrors
+    validate97.errors = vErrors
     return errors === 0
   }
-  exports.v281 = validate96
-  const schema79 = {
+  exports.v290 = validate98
+  const schema81 = {
     type: 'object',
     properties: {
       cursor: { type: 'string', minLength: 1, maxLength: 2048 },
@@ -65545,7 +66481,7 @@ var validators = {}
     required: [],
     additionalProperties: false
   }
-  function validate96(
+  function validate98(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -65718,165 +66654,10 @@ var validators = {}
       }
       errors++
     }
-    validate96.errors = vErrors
-    return errors === 0
-  }
-  exports.v282 = validate97
-  const schema80 = {
-    type: 'object',
-    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
-    required: ['x-ls101-client-version'],
-    additionalProperties: true
-  }
-  function validate97(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data['x-ls101-client-version'] === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-client-version' },
-          message: "must have required property 'x-ls101-client-version'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data['x-ls101-client-version'] !== void 0) {
-        let data0 = data['x-ls101-client-version']
-        if (typeof data0 !== 'string') {
-          let dataType0 = typeof data0
-          let coerced0 = void 0
-          if (!(coerced0 !== void 0)) {
-            if (dataType0 == 'number' || dataType0 == 'boolean') {
-              coerced0 = '' + data0
-            } else if (data0 === null) {
-              coerced0 = ''
-            } else {
-              const err1 = {
-                instancePath: instancePath + '/x-ls101-client-version',
-                schemaPath: '#/properties/x-ls101-client-version/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err1]
-              } else {
-                vErrors.push(err1)
-              }
-              errors++
-            }
-          }
-          if (coerced0 !== void 0) {
-            data0 = coerced0
-            if (data !== void 0) {
-              data['x-ls101-client-version'] = coerced0
-            }
-          }
-        }
-        if (typeof data0 === 'string') {
-          if (func2(data0) > 128) {
-            const err2 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 128 },
-              message: 'must NOT have more than 128 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-          if (func2(data0) < 1) {
-            const err3 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
-    }
-    validate97.errors = vErrors
-    return errors === 0
-  }
-  exports.v286 = validate98
-  const schema81 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate98(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      for (const key0 in data) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/additionalProperties',
-          keyword: 'additionalProperties',
-          params: { additionalProperty: key0 },
-          message: 'must NOT have additional properties'
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-    } else {
-      const err1 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err1]
-      } else {
-        vErrors.push(err1)
-      }
-      errors++
-    }
     validate98.errors = vErrors
     return errors === 0
   }
-  exports.v287 = validate99
+  exports.v291 = validate99
   const schema82 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -65989,7 +66770,7 @@ var validators = {}
     validate99.errors = vErrors
     return errors === 0
   }
-  exports.v294 = validate100
+  exports.v295 = validate100
   const schema83 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate100(
     data,
@@ -66031,7 +66812,7 @@ var validators = {}
     validate100.errors = vErrors
     return errors === 0
   }
-  exports.v295 = validate101
+  exports.v296 = validate101
   const schema84 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -66144,7 +66925,7 @@ var validators = {}
     validate101.errors = vErrors
     return errors === 0
   }
-  exports.v302 = validate102
+  exports.v303 = validate102
   const schema85 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate102(
     data,
@@ -66186,7 +66967,7 @@ var validators = {}
     validate102.errors = vErrors
     return errors === 0
   }
-  exports.v303 = validate103
+  exports.v304 = validate103
   const schema86 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -66299,16 +67080,8 @@ var validators = {}
     validate103.errors = vErrors
     return errors === 0
   }
-  exports.v308 = validate104
-  const schema87 = {
-    type: 'object',
-    properties: {
-      cursor: { type: 'string', minLength: 1, maxLength: 2048 },
-      limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 }
-    },
-    required: [],
-    additionalProperties: false
-  }
+  exports.v311 = validate104
+  const schema87 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate104(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
@@ -66317,158 +67090,22 @@ var validators = {}
     let errors = 0
     if (data && typeof data == 'object' && !Array.isArray(data)) {
       for (const key0 in data) {
-        if (!(key0 === 'cursor' || key0 === 'limit')) {
-          const err0 = {
-            instancePath,
-            schemaPath: '#/additionalProperties',
-            keyword: 'additionalProperties',
-            params: { additionalProperty: key0 },
-            message: 'must NOT have additional properties'
-          }
-          if (vErrors === null) {
-            vErrors = [err0]
-          } else {
-            vErrors.push(err0)
-          }
-          errors++
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
         }
-      }
-      if (data.cursor !== void 0) {
-        let data0 = data.cursor
-        if (typeof data0 !== 'string') {
-          let dataType0 = typeof data0
-          let coerced0 = void 0
-          if (!(coerced0 !== void 0)) {
-            if (dataType0 == 'number' || dataType0 == 'boolean') {
-              coerced0 = '' + data0
-            } else if (data0 === null) {
-              coerced0 = ''
-            } else {
-              const err1 = {
-                instancePath: instancePath + '/cursor',
-                schemaPath: '#/properties/cursor/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err1]
-              } else {
-                vErrors.push(err1)
-              }
-              errors++
-            }
-          }
-          if (coerced0 !== void 0) {
-            data0 = coerced0
-            if (data !== void 0) {
-              data['cursor'] = coerced0
-            }
-          }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
         }
-        if (typeof data0 === 'string') {
-          if (func2(data0) > 2048) {
-            const err2 = {
-              instancePath: instancePath + '/cursor',
-              schemaPath: '#/properties/cursor/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 2048 },
-              message: 'must NOT have more than 2048 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-          if (func2(data0) < 1) {
-            const err3 = {
-              instancePath: instancePath + '/cursor',
-              schemaPath: '#/properties/cursor/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-        }
-      }
-      if (data.limit !== void 0) {
-        let data1 = data.limit
-        if (!(typeof data1 == 'number' && !(data1 % 1) && !isNaN(data1))) {
-          let dataType1 = typeof data1
-          let coerced1 = void 0
-          if (!(coerced1 !== void 0)) {
-            if (
-              dataType1 === 'boolean' ||
-              data1 === null ||
-              (dataType1 === 'string' && data1 && data1 == +data1 && !(data1 % 1))
-            ) {
-              coerced1 = +data1
-            } else {
-              const err4 = {
-                instancePath: instancePath + '/limit',
-                schemaPath: '#/properties/limit/type',
-                keyword: 'type',
-                params: { type: 'integer' },
-                message: 'must be integer'
-              }
-              if (vErrors === null) {
-                vErrors = [err4]
-              } else {
-                vErrors.push(err4)
-              }
-              errors++
-            }
-          }
-          if (coerced1 !== void 0) {
-            data1 = coerced1
-            if (data !== void 0) {
-              data['limit'] = coerced1
-            }
-          }
-        }
-        if (typeof data1 == 'number') {
-          if (data1 > 200 || isNaN(data1)) {
-            const err5 = {
-              instancePath: instancePath + '/limit',
-              schemaPath: '#/properties/limit/maximum',
-              keyword: 'maximum',
-              params: { comparison: '<=', limit: 200 },
-              message: 'must be <= 200'
-            }
-            if (vErrors === null) {
-              vErrors = [err5]
-            } else {
-              vErrors.push(err5)
-            }
-            errors++
-          }
-          if (data1 < 1 || isNaN(data1)) {
-            const err6 = {
-              instancePath: instancePath + '/limit',
-              schemaPath: '#/properties/limit/minimum',
-              keyword: 'minimum',
-              params: { comparison: '>=', limit: 1 },
-              message: 'must be >= 1'
-            }
-            if (vErrors === null) {
-              vErrors = [err6]
-            } else {
-              vErrors.push(err6)
-            }
-            errors++
-          }
-        }
+        errors++
       }
     } else {
-      const err7 = {
+      const err1 = {
         instancePath,
         schemaPath: '#/type',
         keyword: 'type',
@@ -66476,16 +67113,16 @@ var validators = {}
         message: 'must be object'
       }
       if (vErrors === null) {
-        vErrors = [err7]
+        vErrors = [err1]
       } else {
-        vErrors.push(err7)
+        vErrors.push(err1)
       }
       errors++
     }
     validate104.errors = vErrors
     return errors === 0
   }
-  exports.v309 = validate105
+  exports.v312 = validate105
   const schema88 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -66598,7 +67235,7 @@ var validators = {}
     validate105.errors = vErrors
     return errors === 0
   }
-  exports.v313 = validate106
+  exports.v317 = validate106
   const schema89 = {
     type: 'object',
     properties: {
@@ -66784,7 +67421,7 @@ var validators = {}
     validate106.errors = vErrors
     return errors === 0
   }
-  exports.v314 = validate107
+  exports.v318 = validate107
   const schema90 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -66897,1610 +67534,8 @@ var validators = {}
     validate107.errors = vErrors
     return errors === 0
   }
-  exports.v318 = validate108
-  const schema91 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate108(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      for (const key0 in data) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/additionalProperties',
-          keyword: 'additionalProperties',
-          params: { additionalProperty: key0 },
-          message: 'must NOT have additional properties'
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-    } else {
-      const err1 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err1]
-      } else {
-        vErrors.push(err1)
-      }
-      errors++
-    }
-    validate108.errors = vErrors
-    return errors === 0
-  }
-  exports.v319 = validate109
-  const schema92 = {
-    type: 'object',
-    properties: {
-      'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 },
-      'idempotency-key': { type: 'string', format: 'uuid' }
-    },
-    required: ['x-ls101-client-version', 'idempotency-key'],
-    additionalProperties: true
-  }
-  function validate109(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data['x-ls101-client-version'] === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-client-version' },
-          message: "must have required property 'x-ls101-client-version'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data['idempotency-key'] === void 0) {
-        const err1 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'idempotency-key' },
-          message: "must have required property 'idempotency-key'"
-        }
-        if (vErrors === null) {
-          vErrors = [err1]
-        } else {
-          vErrors.push(err1)
-        }
-        errors++
-      }
-      if (data['x-ls101-client-version'] !== void 0) {
-        let data0 = data['x-ls101-client-version']
-        if (typeof data0 !== 'string') {
-          let dataType0 = typeof data0
-          let coerced0 = void 0
-          if (!(coerced0 !== void 0)) {
-            if (dataType0 == 'number' || dataType0 == 'boolean') {
-              coerced0 = '' + data0
-            } else if (data0 === null) {
-              coerced0 = ''
-            } else {
-              const err2 = {
-                instancePath: instancePath + '/x-ls101-client-version',
-                schemaPath: '#/properties/x-ls101-client-version/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err2]
-              } else {
-                vErrors.push(err2)
-              }
-              errors++
-            }
-          }
-          if (coerced0 !== void 0) {
-            data0 = coerced0
-            if (data !== void 0) {
-              data['x-ls101-client-version'] = coerced0
-            }
-          }
-        }
-        if (typeof data0 === 'string') {
-          if (func2(data0) > 128) {
-            const err3 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 128 },
-              message: 'must NOT have more than 128 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-          if (func2(data0) < 1) {
-            const err4 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err4]
-            } else {
-              vErrors.push(err4)
-            }
-            errors++
-          }
-        }
-      }
-      if (data['idempotency-key'] !== void 0) {
-        let data1 = data['idempotency-key']
-        if (typeof data1 !== 'string') {
-          let dataType1 = typeof data1
-          let coerced1 = void 0
-          if (!(coerced1 !== void 0)) {
-            if (dataType1 == 'number' || dataType1 == 'boolean') {
-              coerced1 = '' + data1
-            } else if (data1 === null) {
-              coerced1 = ''
-            } else {
-              const err5 = {
-                instancePath: instancePath + '/idempotency-key',
-                schemaPath: '#/properties/idempotency-key/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err5]
-              } else {
-                vErrors.push(err5)
-              }
-              errors++
-            }
-          }
-          if (coerced1 !== void 0) {
-            data1 = coerced1
-            if (data !== void 0) {
-              data['idempotency-key'] = coerced1
-            }
-          }
-        }
-        if (typeof data1 === 'string') {
-          if (!formats0.test(data1)) {
-            const err6 = {
-              instancePath: instancePath + '/idempotency-key',
-              schemaPath: '#/properties/idempotency-key/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err6]
-            } else {
-              vErrors.push(err6)
-            }
-            errors++
-          }
-        }
-      }
-    } else {
-      const err7 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err7]
-      } else {
-        vErrors.push(err7)
-      }
-      errors++
-    }
-    validate109.errors = vErrors
-    return errors === 0
-  }
-  exports.v324 = validate110
-  const schema93 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate110(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      for (const key0 in data) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/additionalProperties',
-          keyword: 'additionalProperties',
-          params: { additionalProperty: key0 },
-          message: 'must NOT have additional properties'
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-    } else {
-      const err1 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err1]
-      } else {
-        vErrors.push(err1)
-      }
-      errors++
-    }
-    validate110.errors = vErrors
-    return errors === 0
-  }
-  exports.v325 = validate111
-  const schema94 = {
-    type: 'object',
-    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
-    required: ['x-ls101-client-version'],
-    additionalProperties: true
-  }
-  function validate111(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data['x-ls101-client-version'] === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-client-version' },
-          message: "must have required property 'x-ls101-client-version'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data['x-ls101-client-version'] !== void 0) {
-        let data0 = data['x-ls101-client-version']
-        if (typeof data0 !== 'string') {
-          let dataType0 = typeof data0
-          let coerced0 = void 0
-          if (!(coerced0 !== void 0)) {
-            if (dataType0 == 'number' || dataType0 == 'boolean') {
-              coerced0 = '' + data0
-            } else if (data0 === null) {
-              coerced0 = ''
-            } else {
-              const err1 = {
-                instancePath: instancePath + '/x-ls101-client-version',
-                schemaPath: '#/properties/x-ls101-client-version/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err1]
-              } else {
-                vErrors.push(err1)
-              }
-              errors++
-            }
-          }
-          if (coerced0 !== void 0) {
-            data0 = coerced0
-            if (data !== void 0) {
-              data['x-ls101-client-version'] = coerced0
-            }
-          }
-        }
-        if (typeof data0 === 'string') {
-          if (func2(data0) > 128) {
-            const err2 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 128 },
-              message: 'must NOT have more than 128 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-          if (func2(data0) < 1) {
-            const err3 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
-    }
-    validate111.errors = vErrors
-    return errors === 0
-  }
-  exports.v329 = validate112
-  const schema95 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate112(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      for (const key0 in data) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/additionalProperties',
-          keyword: 'additionalProperties',
-          params: { additionalProperty: key0 },
-          message: 'must NOT have additional properties'
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-    } else {
-      const err1 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err1]
-      } else {
-        vErrors.push(err1)
-      }
-      errors++
-    }
-    validate112.errors = vErrors
-    return errors === 0
-  }
-  exports.v330 = validate113
-  const schema96 = {
-    type: 'object',
-    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
-    required: ['x-ls101-client-version'],
-    additionalProperties: true
-  }
-  function validate113(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data['x-ls101-client-version'] === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-client-version' },
-          message: "must have required property 'x-ls101-client-version'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data['x-ls101-client-version'] !== void 0) {
-        let data0 = data['x-ls101-client-version']
-        if (typeof data0 !== 'string') {
-          let dataType0 = typeof data0
-          let coerced0 = void 0
-          if (!(coerced0 !== void 0)) {
-            if (dataType0 == 'number' || dataType0 == 'boolean') {
-              coerced0 = '' + data0
-            } else if (data0 === null) {
-              coerced0 = ''
-            } else {
-              const err1 = {
-                instancePath: instancePath + '/x-ls101-client-version',
-                schemaPath: '#/properties/x-ls101-client-version/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err1]
-              } else {
-                vErrors.push(err1)
-              }
-              errors++
-            }
-          }
-          if (coerced0 !== void 0) {
-            data0 = coerced0
-            if (data !== void 0) {
-              data['x-ls101-client-version'] = coerced0
-            }
-          }
-        }
-        if (typeof data0 === 'string') {
-          if (func2(data0) > 128) {
-            const err2 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 128 },
-              message: 'must NOT have more than 128 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-          if (func2(data0) < 1) {
-            const err3 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
-    }
-    validate113.errors = vErrors
-    return errors === 0
-  }
-  exports.v334 = validate114
-  const schema97 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate114(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      for (const key0 in data) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/additionalProperties',
-          keyword: 'additionalProperties',
-          params: { additionalProperty: key0 },
-          message: 'must NOT have additional properties'
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-    } else {
-      const err1 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err1]
-      } else {
-        vErrors.push(err1)
-      }
-      errors++
-    }
-    validate114.errors = vErrors
-    return errors === 0
-  }
-  exports.v335 = validate115
-  const schema98 = {
-    type: 'object',
-    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
-    required: ['x-ls101-client-version'],
-    additionalProperties: true
-  }
-  function validate115(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data['x-ls101-client-version'] === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-client-version' },
-          message: "must have required property 'x-ls101-client-version'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data['x-ls101-client-version'] !== void 0) {
-        let data0 = data['x-ls101-client-version']
-        if (typeof data0 !== 'string') {
-          let dataType0 = typeof data0
-          let coerced0 = void 0
-          if (!(coerced0 !== void 0)) {
-            if (dataType0 == 'number' || dataType0 == 'boolean') {
-              coerced0 = '' + data0
-            } else if (data0 === null) {
-              coerced0 = ''
-            } else {
-              const err1 = {
-                instancePath: instancePath + '/x-ls101-client-version',
-                schemaPath: '#/properties/x-ls101-client-version/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err1]
-              } else {
-                vErrors.push(err1)
-              }
-              errors++
-            }
-          }
-          if (coerced0 !== void 0) {
-            data0 = coerced0
-            if (data !== void 0) {
-              data['x-ls101-client-version'] = coerced0
-            }
-          }
-        }
-        if (typeof data0 === 'string') {
-          if (func2(data0) > 128) {
-            const err2 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 128 },
-              message: 'must NOT have more than 128 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-          if (func2(data0) < 1) {
-            const err3 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
-    }
-    validate115.errors = vErrors
-    return errors === 0
-  }
-  exports.v339 = validate116
-  const schema99 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate116(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      for (const key0 in data) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/additionalProperties',
-          keyword: 'additionalProperties',
-          params: { additionalProperty: key0 },
-          message: 'must NOT have additional properties'
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-    } else {
-      const err1 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err1]
-      } else {
-        vErrors.push(err1)
-      }
-      errors++
-    }
-    validate116.errors = vErrors
-    return errors === 0
-  }
-  exports.v340 = validate117
-  const schema100 = {
-    type: 'object',
-    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
-    required: ['x-ls101-client-version'],
-    additionalProperties: true
-  }
-  function validate117(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data['x-ls101-client-version'] === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-client-version' },
-          message: "must have required property 'x-ls101-client-version'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data['x-ls101-client-version'] !== void 0) {
-        let data0 = data['x-ls101-client-version']
-        if (typeof data0 !== 'string') {
-          let dataType0 = typeof data0
-          let coerced0 = void 0
-          if (!(coerced0 !== void 0)) {
-            if (dataType0 == 'number' || dataType0 == 'boolean') {
-              coerced0 = '' + data0
-            } else if (data0 === null) {
-              coerced0 = ''
-            } else {
-              const err1 = {
-                instancePath: instancePath + '/x-ls101-client-version',
-                schemaPath: '#/properties/x-ls101-client-version/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err1]
-              } else {
-                vErrors.push(err1)
-              }
-              errors++
-            }
-          }
-          if (coerced0 !== void 0) {
-            data0 = coerced0
-            if (data !== void 0) {
-              data['x-ls101-client-version'] = coerced0
-            }
-          }
-        }
-        if (typeof data0 === 'string') {
-          if (func2(data0) > 128) {
-            const err2 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 128 },
-              message: 'must NOT have more than 128 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-          if (func2(data0) < 1) {
-            const err3 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
-    }
-    validate117.errors = vErrors
-    return errors === 0
-  }
-  exports.v345 = validate118
-  const schema101 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate118(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      for (const key0 in data) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/additionalProperties',
-          keyword: 'additionalProperties',
-          params: { additionalProperty: key0 },
-          message: 'must NOT have additional properties'
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-    } else {
-      const err1 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err1]
-      } else {
-        vErrors.push(err1)
-      }
-      errors++
-    }
-    validate118.errors = vErrors
-    return errors === 0
-  }
-  exports.v346 = validate119
-  const schema102 = {
-    type: 'object',
-    properties: {
-      'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 },
-      'x-ls101-task-lease': { type: 'string', format: 'uuid' }
-    },
-    required: ['x-ls101-client-version', 'x-ls101-task-lease'],
-    additionalProperties: true
-  }
-  function validate119(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data['x-ls101-client-version'] === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-client-version' },
-          message: "must have required property 'x-ls101-client-version'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data['x-ls101-task-lease'] === void 0) {
-        const err1 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-task-lease' },
-          message: "must have required property 'x-ls101-task-lease'"
-        }
-        if (vErrors === null) {
-          vErrors = [err1]
-        } else {
-          vErrors.push(err1)
-        }
-        errors++
-      }
-      if (data['x-ls101-client-version'] !== void 0) {
-        let data0 = data['x-ls101-client-version']
-        if (typeof data0 !== 'string') {
-          let dataType0 = typeof data0
-          let coerced0 = void 0
-          if (!(coerced0 !== void 0)) {
-            if (dataType0 == 'number' || dataType0 == 'boolean') {
-              coerced0 = '' + data0
-            } else if (data0 === null) {
-              coerced0 = ''
-            } else {
-              const err2 = {
-                instancePath: instancePath + '/x-ls101-client-version',
-                schemaPath: '#/properties/x-ls101-client-version/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err2]
-              } else {
-                vErrors.push(err2)
-              }
-              errors++
-            }
-          }
-          if (coerced0 !== void 0) {
-            data0 = coerced0
-            if (data !== void 0) {
-              data['x-ls101-client-version'] = coerced0
-            }
-          }
-        }
-        if (typeof data0 === 'string') {
-          if (func2(data0) > 128) {
-            const err3 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 128 },
-              message: 'must NOT have more than 128 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-          if (func2(data0) < 1) {
-            const err4 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err4]
-            } else {
-              vErrors.push(err4)
-            }
-            errors++
-          }
-        }
-      }
-      if (data['x-ls101-task-lease'] !== void 0) {
-        let data1 = data['x-ls101-task-lease']
-        if (typeof data1 !== 'string') {
-          let dataType1 = typeof data1
-          let coerced1 = void 0
-          if (!(coerced1 !== void 0)) {
-            if (dataType1 == 'number' || dataType1 == 'boolean') {
-              coerced1 = '' + data1
-            } else if (data1 === null) {
-              coerced1 = ''
-            } else {
-              const err5 = {
-                instancePath: instancePath + '/x-ls101-task-lease',
-                schemaPath: '#/properties/x-ls101-task-lease/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err5]
-              } else {
-                vErrors.push(err5)
-              }
-              errors++
-            }
-          }
-          if (coerced1 !== void 0) {
-            data1 = coerced1
-            if (data !== void 0) {
-              data['x-ls101-task-lease'] = coerced1
-            }
-          }
-        }
-        if (typeof data1 === 'string') {
-          if (!formats0.test(data1)) {
-            const err6 = {
-              instancePath: instancePath + '/x-ls101-task-lease',
-              schemaPath: '#/properties/x-ls101-task-lease/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err6]
-            } else {
-              vErrors.push(err6)
-            }
-            errors++
-          }
-        }
-      }
-    } else {
-      const err7 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err7]
-      } else {
-        vErrors.push(err7)
-      }
-      errors++
-    }
-    validate119.errors = vErrors
-    return errors === 0
-  }
-  exports.v349 = validate120
-  const schema103 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate120(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      for (const key0 in data) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/additionalProperties',
-          keyword: 'additionalProperties',
-          params: { additionalProperty: key0 },
-          message: 'must NOT have additional properties'
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-    } else {
-      const err1 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err1]
-      } else {
-        vErrors.push(err1)
-      }
-      errors++
-    }
-    validate120.errors = vErrors
-    return errors === 0
-  }
-  exports.v350 = validate121
-  const schema104 = {
-    type: 'object',
-    properties: {
-      'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 },
-      'x-ls101-task-lease': { type: 'string', format: 'uuid' },
-      'x-ls101-archive-sha256': { $ref: 'ls101#/components/schemas/Digest' }
-    },
-    required: ['x-ls101-client-version', 'x-ls101-task-lease', 'x-ls101-archive-sha256'],
-    additionalProperties: true
-  }
-  function validate122(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (typeof data !== 'string') {
-      let dataType0 = typeof data
-      let coerced0 = void 0
-      if (!(coerced0 !== void 0)) {
-        if (dataType0 == 'number' || dataType0 == 'boolean') {
-          coerced0 = '' + data
-        } else if (data === null) {
-          coerced0 = ''
-        } else {
-          const err0 = {
-            instancePath,
-            schemaPath: '#/type',
-            keyword: 'type',
-            params: { type: 'string' },
-            message: 'must be string'
-          }
-          if (vErrors === null) {
-            vErrors = [err0]
-          } else {
-            vErrors.push(err0)
-          }
-          errors++
-        }
-      }
-      if (coerced0 !== void 0) {
-        data = coerced0
-        if (parentData !== void 0) {
-          parentData[parentDataProperty] = coerced0
-        }
-      }
-    }
-    if (typeof data === 'string') {
-      if (!pattern0.test(data)) {
-        const err1 = {
-          instancePath,
-          schemaPath: '#/pattern',
-          keyword: 'pattern',
-          params: { pattern: '^[a-f0-9]{64}$' },
-          message: 'must match pattern "^[a-f0-9]{64}$"'
-        }
-        if (vErrors === null) {
-          vErrors = [err1]
-        } else {
-          vErrors.push(err1)
-        }
-        errors++
-      }
-    }
-    validate122.errors = vErrors
-    return errors === 0
-  }
-  function validate121(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data['x-ls101-client-version'] === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-client-version' },
-          message: "must have required property 'x-ls101-client-version'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data['x-ls101-task-lease'] === void 0) {
-        const err1 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-task-lease' },
-          message: "must have required property 'x-ls101-task-lease'"
-        }
-        if (vErrors === null) {
-          vErrors = [err1]
-        } else {
-          vErrors.push(err1)
-        }
-        errors++
-      }
-      if (data['x-ls101-archive-sha256'] === void 0) {
-        const err2 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-archive-sha256' },
-          message: "must have required property 'x-ls101-archive-sha256'"
-        }
-        if (vErrors === null) {
-          vErrors = [err2]
-        } else {
-          vErrors.push(err2)
-        }
-        errors++
-      }
-      if (data['x-ls101-client-version'] !== void 0) {
-        let data0 = data['x-ls101-client-version']
-        if (typeof data0 !== 'string') {
-          let dataType0 = typeof data0
-          let coerced0 = void 0
-          if (!(coerced0 !== void 0)) {
-            if (dataType0 == 'number' || dataType0 == 'boolean') {
-              coerced0 = '' + data0
-            } else if (data0 === null) {
-              coerced0 = ''
-            } else {
-              const err3 = {
-                instancePath: instancePath + '/x-ls101-client-version',
-                schemaPath: '#/properties/x-ls101-client-version/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err3]
-              } else {
-                vErrors.push(err3)
-              }
-              errors++
-            }
-          }
-          if (coerced0 !== void 0) {
-            data0 = coerced0
-            if (data !== void 0) {
-              data['x-ls101-client-version'] = coerced0
-            }
-          }
-        }
-        if (typeof data0 === 'string') {
-          if (func2(data0) > 128) {
-            const err4 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 128 },
-              message: 'must NOT have more than 128 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err4]
-            } else {
-              vErrors.push(err4)
-            }
-            errors++
-          }
-          if (func2(data0) < 1) {
-            const err5 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err5]
-            } else {
-              vErrors.push(err5)
-            }
-            errors++
-          }
-        }
-      }
-      if (data['x-ls101-task-lease'] !== void 0) {
-        let data1 = data['x-ls101-task-lease']
-        if (typeof data1 !== 'string') {
-          let dataType1 = typeof data1
-          let coerced1 = void 0
-          if (!(coerced1 !== void 0)) {
-            if (dataType1 == 'number' || dataType1 == 'boolean') {
-              coerced1 = '' + data1
-            } else if (data1 === null) {
-              coerced1 = ''
-            } else {
-              const err6 = {
-                instancePath: instancePath + '/x-ls101-task-lease',
-                schemaPath: '#/properties/x-ls101-task-lease/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err6]
-              } else {
-                vErrors.push(err6)
-              }
-              errors++
-            }
-          }
-          if (coerced1 !== void 0) {
-            data1 = coerced1
-            if (data !== void 0) {
-              data['x-ls101-task-lease'] = coerced1
-            }
-          }
-        }
-        if (typeof data1 === 'string') {
-          if (!formats0.test(data1)) {
-            const err7 = {
-              instancePath: instancePath + '/x-ls101-task-lease',
-              schemaPath: '#/properties/x-ls101-task-lease/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err7]
-            } else {
-              vErrors.push(err7)
-            }
-            errors++
-          }
-        }
-      }
-      if (data['x-ls101-archive-sha256'] !== void 0) {
-        if (
-          !validate122(data['x-ls101-archive-sha256'], {
-            instancePath: instancePath + '/x-ls101-archive-sha256',
-            parentData: data,
-            parentDataProperty: 'x-ls101-archive-sha256',
-            rootData
-          })
-        ) {
-          vErrors = vErrors === null ? validate122.errors : vErrors.concat(validate122.errors)
-          errors = vErrors.length
-        }
-      }
-    } else {
-      const err8 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err8]
-      } else {
-        vErrors.push(err8)
-      }
-      errors++
-    }
-    validate121.errors = vErrors
-    return errors === 0
-  }
-  exports.v355 = validate124
-  const schema106 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate124(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      for (const key0 in data) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/additionalProperties',
-          keyword: 'additionalProperties',
-          params: { additionalProperty: key0 },
-          message: 'must NOT have additional properties'
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-    } else {
-      const err1 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err1]
-      } else {
-        vErrors.push(err1)
-      }
-      errors++
-    }
-    validate124.errors = vErrors
-    return errors === 0
-  }
-  exports.v356 = validate125
-  const schema107 = {
-    type: 'object',
-    properties: {
-      'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 },
-      'x-ls101-task-lease': { type: 'string', format: 'uuid' }
-    },
-    required: ['x-ls101-client-version', 'x-ls101-task-lease'],
-    additionalProperties: true
-  }
-  function validate125(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data['x-ls101-client-version'] === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-client-version' },
-          message: "must have required property 'x-ls101-client-version'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data['x-ls101-task-lease'] === void 0) {
-        const err1 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-task-lease' },
-          message: "must have required property 'x-ls101-task-lease'"
-        }
-        if (vErrors === null) {
-          vErrors = [err1]
-        } else {
-          vErrors.push(err1)
-        }
-        errors++
-      }
-      if (data['x-ls101-client-version'] !== void 0) {
-        let data0 = data['x-ls101-client-version']
-        if (typeof data0 !== 'string') {
-          let dataType0 = typeof data0
-          let coerced0 = void 0
-          if (!(coerced0 !== void 0)) {
-            if (dataType0 == 'number' || dataType0 == 'boolean') {
-              coerced0 = '' + data0
-            } else if (data0 === null) {
-              coerced0 = ''
-            } else {
-              const err2 = {
-                instancePath: instancePath + '/x-ls101-client-version',
-                schemaPath: '#/properties/x-ls101-client-version/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err2]
-              } else {
-                vErrors.push(err2)
-              }
-              errors++
-            }
-          }
-          if (coerced0 !== void 0) {
-            data0 = coerced0
-            if (data !== void 0) {
-              data['x-ls101-client-version'] = coerced0
-            }
-          }
-        }
-        if (typeof data0 === 'string') {
-          if (func2(data0) > 128) {
-            const err3 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 128 },
-              message: 'must NOT have more than 128 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-          if (func2(data0) < 1) {
-            const err4 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err4]
-            } else {
-              vErrors.push(err4)
-            }
-            errors++
-          }
-        }
-      }
-      if (data['x-ls101-task-lease'] !== void 0) {
-        let data1 = data['x-ls101-task-lease']
-        if (typeof data1 !== 'string') {
-          let dataType1 = typeof data1
-          let coerced1 = void 0
-          if (!(coerced1 !== void 0)) {
-            if (dataType1 == 'number' || dataType1 == 'boolean') {
-              coerced1 = '' + data1
-            } else if (data1 === null) {
-              coerced1 = ''
-            } else {
-              const err5 = {
-                instancePath: instancePath + '/x-ls101-task-lease',
-                schemaPath: '#/properties/x-ls101-task-lease/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err5]
-              } else {
-                vErrors.push(err5)
-              }
-              errors++
-            }
-          }
-          if (coerced1 !== void 0) {
-            data1 = coerced1
-            if (data !== void 0) {
-              data['x-ls101-task-lease'] = coerced1
-            }
-          }
-        }
-        if (typeof data1 === 'string') {
-          if (!formats0.test(data1)) {
-            const err6 = {
-              instancePath: instancePath + '/x-ls101-task-lease',
-              schemaPath: '#/properties/x-ls101-task-lease/format',
-              keyword: 'format',
-              params: { format: 'uuid' },
-              message: 'must match format "uuid"'
-            }
-            if (vErrors === null) {
-              vErrors = [err6]
-            } else {
-              vErrors.push(err6)
-            }
-            errors++
-          }
-        }
-      }
-    } else {
-      const err7 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err7]
-      } else {
-        vErrors.push(err7)
-      }
-      errors++
-    }
-    validate125.errors = vErrors
-    return errors === 0
-  }
-  exports.v360 = validate126
-  const schema108 = {
+  exports.v322 = validate108
+  const schema91 = {
     type: 'object',
     properties: {
       cursor: { type: 'string', minLength: 1, maxLength: 2048 },
@@ -68509,7 +67544,7 @@ var validators = {}
     required: [],
     additionalProperties: false
   }
-  function validate126(
+  function validate108(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -68682,17 +67717,17 @@ var validators = {}
       }
       errors++
     }
-    validate126.errors = vErrors
+    validate108.errors = vErrors
     return errors === 0
   }
-  exports.v361 = validate127
-  const schema109 = {
+  exports.v323 = validate109
+  const schema92 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
     required: ['x-ls101-client-version'],
     additionalProperties: true
   }
-  function validate127(
+  function validate109(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -68795,12 +67830,12 @@ var validators = {}
       }
       errors++
     }
-    validate127.errors = vErrors
+    validate109.errors = vErrors
     return errors === 0
   }
-  exports.v365 = validate128
-  const schema110 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate128(
+  exports.v327 = validate110
+  const schema93 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate110(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -68837,11 +67872,11 @@ var validators = {}
       }
       errors++
     }
-    validate128.errors = vErrors
+    validate110.errors = vErrors
     return errors === 0
   }
-  exports.v366 = validate129
-  const schema111 = {
+  exports.v328 = validate111
+  const schema94 = {
     type: 'object',
     properties: {
       'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 },
@@ -68850,7 +67885,7 @@ var validators = {}
     required: ['x-ls101-client-version', 'idempotency-key'],
     additionalProperties: true
   }
-  function validate129(
+  function validate111(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -69019,12 +68054,12 @@ var validators = {}
       }
       errors++
     }
-    validate129.errors = vErrors
+    validate111.errors = vErrors
     return errors === 0
   }
-  exports.v371 = validate130
-  const schema112 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate130(
+  exports.v333 = validate112
+  const schema95 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate112(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -69061,17 +68096,17 @@ var validators = {}
       }
       errors++
     }
-    validate130.errors = vErrors
+    validate112.errors = vErrors
     return errors === 0
   }
-  exports.v372 = validate131
-  const schema113 = {
+  exports.v334 = validate113
+  const schema96 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
     required: ['x-ls101-client-version'],
     additionalProperties: true
   }
-  function validate131(
+  function validate113(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -69174,10 +68209,1756 @@ var validators = {}
       }
       errors++
     }
+    validate113.errors = vErrors
+    return errors === 0
+  }
+  exports.v338 = validate114
+  const schema97 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate114(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate114.errors = vErrors
+    return errors === 0
+  }
+  exports.v339 = validate115
+  const schema98 = {
+    type: 'object',
+    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
+    required: ['x-ls101-client-version'],
+    additionalProperties: true
+  }
+  function validate115(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data['x-ls101-client-version'] === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-client-version' },
+          message: "must have required property 'x-ls101-client-version'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data['x-ls101-client-version'] !== void 0) {
+        let data0 = data['x-ls101-client-version']
+        if (typeof data0 !== 'string') {
+          let dataType0 = typeof data0
+          let coerced0 = void 0
+          if (!(coerced0 !== void 0)) {
+            if (dataType0 == 'number' || dataType0 == 'boolean') {
+              coerced0 = '' + data0
+            } else if (data0 === null) {
+              coerced0 = ''
+            } else {
+              const err1 = {
+                instancePath: instancePath + '/x-ls101-client-version',
+                schemaPath: '#/properties/x-ls101-client-version/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err1]
+              } else {
+                vErrors.push(err1)
+              }
+              errors++
+            }
+          }
+          if (coerced0 !== void 0) {
+            data0 = coerced0
+            if (data !== void 0) {
+              data['x-ls101-client-version'] = coerced0
+            }
+          }
+        }
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 128) {
+            const err2 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 128 },
+              message: 'must NOT have more than 128 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+          if (func2(data0) < 1) {
+            const err3 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/minLength',
+              keyword: 'minLength',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err3]
+            } else {
+              vErrors.push(err3)
+            }
+            errors++
+          }
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate115.errors = vErrors
+    return errors === 0
+  }
+  exports.v343 = validate116
+  const schema99 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate116(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate116.errors = vErrors
+    return errors === 0
+  }
+  exports.v344 = validate117
+  const schema100 = {
+    type: 'object',
+    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
+    required: ['x-ls101-client-version'],
+    additionalProperties: true
+  }
+  function validate117(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data['x-ls101-client-version'] === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-client-version' },
+          message: "must have required property 'x-ls101-client-version'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data['x-ls101-client-version'] !== void 0) {
+        let data0 = data['x-ls101-client-version']
+        if (typeof data0 !== 'string') {
+          let dataType0 = typeof data0
+          let coerced0 = void 0
+          if (!(coerced0 !== void 0)) {
+            if (dataType0 == 'number' || dataType0 == 'boolean') {
+              coerced0 = '' + data0
+            } else if (data0 === null) {
+              coerced0 = ''
+            } else {
+              const err1 = {
+                instancePath: instancePath + '/x-ls101-client-version',
+                schemaPath: '#/properties/x-ls101-client-version/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err1]
+              } else {
+                vErrors.push(err1)
+              }
+              errors++
+            }
+          }
+          if (coerced0 !== void 0) {
+            data0 = coerced0
+            if (data !== void 0) {
+              data['x-ls101-client-version'] = coerced0
+            }
+          }
+        }
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 128) {
+            const err2 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 128 },
+              message: 'must NOT have more than 128 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+          if (func2(data0) < 1) {
+            const err3 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/minLength',
+              keyword: 'minLength',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err3]
+            } else {
+              vErrors.push(err3)
+            }
+            errors++
+          }
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate117.errors = vErrors
+    return errors === 0
+  }
+  exports.v348 = validate118
+  const schema101 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate118(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate118.errors = vErrors
+    return errors === 0
+  }
+  exports.v349 = validate119
+  const schema102 = {
+    type: 'object',
+    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
+    required: ['x-ls101-client-version'],
+    additionalProperties: true
+  }
+  function validate119(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data['x-ls101-client-version'] === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-client-version' },
+          message: "must have required property 'x-ls101-client-version'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data['x-ls101-client-version'] !== void 0) {
+        let data0 = data['x-ls101-client-version']
+        if (typeof data0 !== 'string') {
+          let dataType0 = typeof data0
+          let coerced0 = void 0
+          if (!(coerced0 !== void 0)) {
+            if (dataType0 == 'number' || dataType0 == 'boolean') {
+              coerced0 = '' + data0
+            } else if (data0 === null) {
+              coerced0 = ''
+            } else {
+              const err1 = {
+                instancePath: instancePath + '/x-ls101-client-version',
+                schemaPath: '#/properties/x-ls101-client-version/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err1]
+              } else {
+                vErrors.push(err1)
+              }
+              errors++
+            }
+          }
+          if (coerced0 !== void 0) {
+            data0 = coerced0
+            if (data !== void 0) {
+              data['x-ls101-client-version'] = coerced0
+            }
+          }
+        }
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 128) {
+            const err2 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 128 },
+              message: 'must NOT have more than 128 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+          if (func2(data0) < 1) {
+            const err3 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/minLength',
+              keyword: 'minLength',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err3]
+            } else {
+              vErrors.push(err3)
+            }
+            errors++
+          }
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate119.errors = vErrors
+    return errors === 0
+  }
+  exports.v354 = validate120
+  const schema103 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate120(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate120.errors = vErrors
+    return errors === 0
+  }
+  exports.v355 = validate121
+  const schema104 = {
+    type: 'object',
+    properties: {
+      'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 },
+      'x-ls101-task-lease': { type: 'string', format: 'uuid' }
+    },
+    required: ['x-ls101-client-version', 'x-ls101-task-lease'],
+    additionalProperties: true
+  }
+  function validate121(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data['x-ls101-client-version'] === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-client-version' },
+          message: "must have required property 'x-ls101-client-version'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data['x-ls101-task-lease'] === void 0) {
+        const err1 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-task-lease' },
+          message: "must have required property 'x-ls101-task-lease'"
+        }
+        if (vErrors === null) {
+          vErrors = [err1]
+        } else {
+          vErrors.push(err1)
+        }
+        errors++
+      }
+      if (data['x-ls101-client-version'] !== void 0) {
+        let data0 = data['x-ls101-client-version']
+        if (typeof data0 !== 'string') {
+          let dataType0 = typeof data0
+          let coerced0 = void 0
+          if (!(coerced0 !== void 0)) {
+            if (dataType0 == 'number' || dataType0 == 'boolean') {
+              coerced0 = '' + data0
+            } else if (data0 === null) {
+              coerced0 = ''
+            } else {
+              const err2 = {
+                instancePath: instancePath + '/x-ls101-client-version',
+                schemaPath: '#/properties/x-ls101-client-version/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err2]
+              } else {
+                vErrors.push(err2)
+              }
+              errors++
+            }
+          }
+          if (coerced0 !== void 0) {
+            data0 = coerced0
+            if (data !== void 0) {
+              data['x-ls101-client-version'] = coerced0
+            }
+          }
+        }
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 128) {
+            const err3 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 128 },
+              message: 'must NOT have more than 128 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err3]
+            } else {
+              vErrors.push(err3)
+            }
+            errors++
+          }
+          if (func2(data0) < 1) {
+            const err4 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/minLength',
+              keyword: 'minLength',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err4]
+            } else {
+              vErrors.push(err4)
+            }
+            errors++
+          }
+        }
+      }
+      if (data['x-ls101-task-lease'] !== void 0) {
+        let data1 = data['x-ls101-task-lease']
+        if (typeof data1 !== 'string') {
+          let dataType1 = typeof data1
+          let coerced1 = void 0
+          if (!(coerced1 !== void 0)) {
+            if (dataType1 == 'number' || dataType1 == 'boolean') {
+              coerced1 = '' + data1
+            } else if (data1 === null) {
+              coerced1 = ''
+            } else {
+              const err5 = {
+                instancePath: instancePath + '/x-ls101-task-lease',
+                schemaPath: '#/properties/x-ls101-task-lease/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err5]
+              } else {
+                vErrors.push(err5)
+              }
+              errors++
+            }
+          }
+          if (coerced1 !== void 0) {
+            data1 = coerced1
+            if (data !== void 0) {
+              data['x-ls101-task-lease'] = coerced1
+            }
+          }
+        }
+        if (typeof data1 === 'string') {
+          if (!formats0.test(data1)) {
+            const err6 = {
+              instancePath: instancePath + '/x-ls101-task-lease',
+              schemaPath: '#/properties/x-ls101-task-lease/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err6]
+            } else {
+              vErrors.push(err6)
+            }
+            errors++
+          }
+        }
+      }
+    } else {
+      const err7 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err7]
+      } else {
+        vErrors.push(err7)
+      }
+      errors++
+    }
+    validate121.errors = vErrors
+    return errors === 0
+  }
+  exports.v358 = validate122
+  const schema105 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate122(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate122.errors = vErrors
+    return errors === 0
+  }
+  exports.v359 = validate123
+  const schema106 = {
+    type: 'object',
+    properties: {
+      'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 },
+      'x-ls101-task-lease': { type: 'string', format: 'uuid' },
+      'x-ls101-archive-sha256': { $ref: 'ls101#/components/schemas/Digest' }
+    },
+    required: ['x-ls101-client-version', 'x-ls101-task-lease', 'x-ls101-archive-sha256'],
+    additionalProperties: true
+  }
+  function validate124(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (typeof data !== 'string') {
+      let dataType0 = typeof data
+      let coerced0 = void 0
+      if (!(coerced0 !== void 0)) {
+        if (dataType0 == 'number' || dataType0 == 'boolean') {
+          coerced0 = '' + data
+        } else if (data === null) {
+          coerced0 = ''
+        } else {
+          const err0 = {
+            instancePath,
+            schemaPath: '#/type',
+            keyword: 'type',
+            params: { type: 'string' },
+            message: 'must be string'
+          }
+          if (vErrors === null) {
+            vErrors = [err0]
+          } else {
+            vErrors.push(err0)
+          }
+          errors++
+        }
+      }
+      if (coerced0 !== void 0) {
+        data = coerced0
+        if (parentData !== void 0) {
+          parentData[parentDataProperty] = coerced0
+        }
+      }
+    }
+    if (typeof data === 'string') {
+      if (!pattern0.test(data)) {
+        const err1 = {
+          instancePath,
+          schemaPath: '#/pattern',
+          keyword: 'pattern',
+          params: { pattern: '^[a-f0-9]{64}$' },
+          message: 'must match pattern "^[a-f0-9]{64}$"'
+        }
+        if (vErrors === null) {
+          vErrors = [err1]
+        } else {
+          vErrors.push(err1)
+        }
+        errors++
+      }
+    }
+    validate124.errors = vErrors
+    return errors === 0
+  }
+  function validate123(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data['x-ls101-client-version'] === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-client-version' },
+          message: "must have required property 'x-ls101-client-version'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data['x-ls101-task-lease'] === void 0) {
+        const err1 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-task-lease' },
+          message: "must have required property 'x-ls101-task-lease'"
+        }
+        if (vErrors === null) {
+          vErrors = [err1]
+        } else {
+          vErrors.push(err1)
+        }
+        errors++
+      }
+      if (data['x-ls101-archive-sha256'] === void 0) {
+        const err2 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-archive-sha256' },
+          message: "must have required property 'x-ls101-archive-sha256'"
+        }
+        if (vErrors === null) {
+          vErrors = [err2]
+        } else {
+          vErrors.push(err2)
+        }
+        errors++
+      }
+      if (data['x-ls101-client-version'] !== void 0) {
+        let data0 = data['x-ls101-client-version']
+        if (typeof data0 !== 'string') {
+          let dataType0 = typeof data0
+          let coerced0 = void 0
+          if (!(coerced0 !== void 0)) {
+            if (dataType0 == 'number' || dataType0 == 'boolean') {
+              coerced0 = '' + data0
+            } else if (data0 === null) {
+              coerced0 = ''
+            } else {
+              const err3 = {
+                instancePath: instancePath + '/x-ls101-client-version',
+                schemaPath: '#/properties/x-ls101-client-version/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err3]
+              } else {
+                vErrors.push(err3)
+              }
+              errors++
+            }
+          }
+          if (coerced0 !== void 0) {
+            data0 = coerced0
+            if (data !== void 0) {
+              data['x-ls101-client-version'] = coerced0
+            }
+          }
+        }
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 128) {
+            const err4 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 128 },
+              message: 'must NOT have more than 128 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err4]
+            } else {
+              vErrors.push(err4)
+            }
+            errors++
+          }
+          if (func2(data0) < 1) {
+            const err5 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/minLength',
+              keyword: 'minLength',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err5]
+            } else {
+              vErrors.push(err5)
+            }
+            errors++
+          }
+        }
+      }
+      if (data['x-ls101-task-lease'] !== void 0) {
+        let data1 = data['x-ls101-task-lease']
+        if (typeof data1 !== 'string') {
+          let dataType1 = typeof data1
+          let coerced1 = void 0
+          if (!(coerced1 !== void 0)) {
+            if (dataType1 == 'number' || dataType1 == 'boolean') {
+              coerced1 = '' + data1
+            } else if (data1 === null) {
+              coerced1 = ''
+            } else {
+              const err6 = {
+                instancePath: instancePath + '/x-ls101-task-lease',
+                schemaPath: '#/properties/x-ls101-task-lease/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err6]
+              } else {
+                vErrors.push(err6)
+              }
+              errors++
+            }
+          }
+          if (coerced1 !== void 0) {
+            data1 = coerced1
+            if (data !== void 0) {
+              data['x-ls101-task-lease'] = coerced1
+            }
+          }
+        }
+        if (typeof data1 === 'string') {
+          if (!formats0.test(data1)) {
+            const err7 = {
+              instancePath: instancePath + '/x-ls101-task-lease',
+              schemaPath: '#/properties/x-ls101-task-lease/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err7]
+            } else {
+              vErrors.push(err7)
+            }
+            errors++
+          }
+        }
+      }
+      if (data['x-ls101-archive-sha256'] !== void 0) {
+        if (
+          !validate124(data['x-ls101-archive-sha256'], {
+            instancePath: instancePath + '/x-ls101-archive-sha256',
+            parentData: data,
+            parentDataProperty: 'x-ls101-archive-sha256',
+            rootData
+          })
+        ) {
+          vErrors = vErrors === null ? validate124.errors : vErrors.concat(validate124.errors)
+          errors = vErrors.length
+        }
+      }
+    } else {
+      const err8 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err8]
+      } else {
+        vErrors.push(err8)
+      }
+      errors++
+    }
+    validate123.errors = vErrors
+    return errors === 0
+  }
+  exports.v364 = validate126
+  const schema108 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate126(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate126.errors = vErrors
+    return errors === 0
+  }
+  exports.v365 = validate127
+  const schema109 = {
+    type: 'object',
+    properties: {
+      'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 },
+      'x-ls101-task-lease': { type: 'string', format: 'uuid' }
+    },
+    required: ['x-ls101-client-version', 'x-ls101-task-lease'],
+    additionalProperties: true
+  }
+  function validate127(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data['x-ls101-client-version'] === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-client-version' },
+          message: "must have required property 'x-ls101-client-version'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data['x-ls101-task-lease'] === void 0) {
+        const err1 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-task-lease' },
+          message: "must have required property 'x-ls101-task-lease'"
+        }
+        if (vErrors === null) {
+          vErrors = [err1]
+        } else {
+          vErrors.push(err1)
+        }
+        errors++
+      }
+      if (data['x-ls101-client-version'] !== void 0) {
+        let data0 = data['x-ls101-client-version']
+        if (typeof data0 !== 'string') {
+          let dataType0 = typeof data0
+          let coerced0 = void 0
+          if (!(coerced0 !== void 0)) {
+            if (dataType0 == 'number' || dataType0 == 'boolean') {
+              coerced0 = '' + data0
+            } else if (data0 === null) {
+              coerced0 = ''
+            } else {
+              const err2 = {
+                instancePath: instancePath + '/x-ls101-client-version',
+                schemaPath: '#/properties/x-ls101-client-version/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err2]
+              } else {
+                vErrors.push(err2)
+              }
+              errors++
+            }
+          }
+          if (coerced0 !== void 0) {
+            data0 = coerced0
+            if (data !== void 0) {
+              data['x-ls101-client-version'] = coerced0
+            }
+          }
+        }
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 128) {
+            const err3 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 128 },
+              message: 'must NOT have more than 128 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err3]
+            } else {
+              vErrors.push(err3)
+            }
+            errors++
+          }
+          if (func2(data0) < 1) {
+            const err4 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/minLength',
+              keyword: 'minLength',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err4]
+            } else {
+              vErrors.push(err4)
+            }
+            errors++
+          }
+        }
+      }
+      if (data['x-ls101-task-lease'] !== void 0) {
+        let data1 = data['x-ls101-task-lease']
+        if (typeof data1 !== 'string') {
+          let dataType1 = typeof data1
+          let coerced1 = void 0
+          if (!(coerced1 !== void 0)) {
+            if (dataType1 == 'number' || dataType1 == 'boolean') {
+              coerced1 = '' + data1
+            } else if (data1 === null) {
+              coerced1 = ''
+            } else {
+              const err5 = {
+                instancePath: instancePath + '/x-ls101-task-lease',
+                schemaPath: '#/properties/x-ls101-task-lease/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err5]
+              } else {
+                vErrors.push(err5)
+              }
+              errors++
+            }
+          }
+          if (coerced1 !== void 0) {
+            data1 = coerced1
+            if (data !== void 0) {
+              data['x-ls101-task-lease'] = coerced1
+            }
+          }
+        }
+        if (typeof data1 === 'string') {
+          if (!formats0.test(data1)) {
+            const err6 = {
+              instancePath: instancePath + '/x-ls101-task-lease',
+              schemaPath: '#/properties/x-ls101-task-lease/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err6]
+            } else {
+              vErrors.push(err6)
+            }
+            errors++
+          }
+        }
+      }
+    } else {
+      const err7 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err7]
+      } else {
+        vErrors.push(err7)
+      }
+      errors++
+    }
+    validate127.errors = vErrors
+    return errors === 0
+  }
+  exports.v369 = validate128
+  const schema110 = {
+    type: 'object',
+    properties: {
+      cursor: { type: 'string', minLength: 1, maxLength: 2048 },
+      limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 }
+    },
+    required: [],
+    additionalProperties: false
+  }
+  function validate128(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        if (!(key0 === 'cursor' || key0 === 'limit')) {
+          const err0 = {
+            instancePath,
+            schemaPath: '#/additionalProperties',
+            keyword: 'additionalProperties',
+            params: { additionalProperty: key0 },
+            message: 'must NOT have additional properties'
+          }
+          if (vErrors === null) {
+            vErrors = [err0]
+          } else {
+            vErrors.push(err0)
+          }
+          errors++
+        }
+      }
+      if (data.cursor !== void 0) {
+        let data0 = data.cursor
+        if (typeof data0 !== 'string') {
+          let dataType0 = typeof data0
+          let coerced0 = void 0
+          if (!(coerced0 !== void 0)) {
+            if (dataType0 == 'number' || dataType0 == 'boolean') {
+              coerced0 = '' + data0
+            } else if (data0 === null) {
+              coerced0 = ''
+            } else {
+              const err1 = {
+                instancePath: instancePath + '/cursor',
+                schemaPath: '#/properties/cursor/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err1]
+              } else {
+                vErrors.push(err1)
+              }
+              errors++
+            }
+          }
+          if (coerced0 !== void 0) {
+            data0 = coerced0
+            if (data !== void 0) {
+              data['cursor'] = coerced0
+            }
+          }
+        }
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 2048) {
+            const err2 = {
+              instancePath: instancePath + '/cursor',
+              schemaPath: '#/properties/cursor/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 2048 },
+              message: 'must NOT have more than 2048 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+          if (func2(data0) < 1) {
+            const err3 = {
+              instancePath: instancePath + '/cursor',
+              schemaPath: '#/properties/cursor/minLength',
+              keyword: 'minLength',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err3]
+            } else {
+              vErrors.push(err3)
+            }
+            errors++
+          }
+        }
+      }
+      if (data.limit !== void 0) {
+        let data1 = data.limit
+        if (!(typeof data1 == 'number' && !(data1 % 1) && !isNaN(data1))) {
+          let dataType1 = typeof data1
+          let coerced1 = void 0
+          if (!(coerced1 !== void 0)) {
+            if (
+              dataType1 === 'boolean' ||
+              data1 === null ||
+              (dataType1 === 'string' && data1 && data1 == +data1 && !(data1 % 1))
+            ) {
+              coerced1 = +data1
+            } else {
+              const err4 = {
+                instancePath: instancePath + '/limit',
+                schemaPath: '#/properties/limit/type',
+                keyword: 'type',
+                params: { type: 'integer' },
+                message: 'must be integer'
+              }
+              if (vErrors === null) {
+                vErrors = [err4]
+              } else {
+                vErrors.push(err4)
+              }
+              errors++
+            }
+          }
+          if (coerced1 !== void 0) {
+            data1 = coerced1
+            if (data !== void 0) {
+              data['limit'] = coerced1
+            }
+          }
+        }
+        if (typeof data1 == 'number') {
+          if (data1 > 200 || isNaN(data1)) {
+            const err5 = {
+              instancePath: instancePath + '/limit',
+              schemaPath: '#/properties/limit/maximum',
+              keyword: 'maximum',
+              params: { comparison: '<=', limit: 200 },
+              message: 'must be <= 200'
+            }
+            if (vErrors === null) {
+              vErrors = [err5]
+            } else {
+              vErrors.push(err5)
+            }
+            errors++
+          }
+          if (data1 < 1 || isNaN(data1)) {
+            const err6 = {
+              instancePath: instancePath + '/limit',
+              schemaPath: '#/properties/limit/minimum',
+              keyword: 'minimum',
+              params: { comparison: '>=', limit: 1 },
+              message: 'must be >= 1'
+            }
+            if (vErrors === null) {
+              vErrors = [err6]
+            } else {
+              vErrors.push(err6)
+            }
+            errors++
+          }
+        }
+      }
+    } else {
+      const err7 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err7]
+      } else {
+        vErrors.push(err7)
+      }
+      errors++
+    }
+    validate128.errors = vErrors
+    return errors === 0
+  }
+  exports.v370 = validate129
+  const schema111 = {
+    type: 'object',
+    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
+    required: ['x-ls101-client-version'],
+    additionalProperties: true
+  }
+  function validate129(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data['x-ls101-client-version'] === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-client-version' },
+          message: "must have required property 'x-ls101-client-version'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data['x-ls101-client-version'] !== void 0) {
+        let data0 = data['x-ls101-client-version']
+        if (typeof data0 !== 'string') {
+          let dataType0 = typeof data0
+          let coerced0 = void 0
+          if (!(coerced0 !== void 0)) {
+            if (dataType0 == 'number' || dataType0 == 'boolean') {
+              coerced0 = '' + data0
+            } else if (data0 === null) {
+              coerced0 = ''
+            } else {
+              const err1 = {
+                instancePath: instancePath + '/x-ls101-client-version',
+                schemaPath: '#/properties/x-ls101-client-version/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err1]
+              } else {
+                vErrors.push(err1)
+              }
+              errors++
+            }
+          }
+          if (coerced0 !== void 0) {
+            data0 = coerced0
+            if (data !== void 0) {
+              data['x-ls101-client-version'] = coerced0
+            }
+          }
+        }
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 128) {
+            const err2 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 128 },
+              message: 'must NOT have more than 128 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+          if (func2(data0) < 1) {
+            const err3 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/minLength',
+              keyword: 'minLength',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err3]
+            } else {
+              vErrors.push(err3)
+            }
+            errors++
+          }
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate129.errors = vErrors
+    return errors === 0
+  }
+  exports.v374 = validate130
+  const schema112 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate130(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate130.errors = vErrors
+    return errors === 0
+  }
+  exports.v375 = validate131
+  const schema113 = {
+    type: 'object',
+    properties: {
+      'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 },
+      'idempotency-key': { type: 'string', format: 'uuid' }
+    },
+    required: ['x-ls101-client-version', 'idempotency-key'],
+    additionalProperties: true
+  }
+  function validate131(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data['x-ls101-client-version'] === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-client-version' },
+          message: "must have required property 'x-ls101-client-version'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data['idempotency-key'] === void 0) {
+        const err1 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'idempotency-key' },
+          message: "must have required property 'idempotency-key'"
+        }
+        if (vErrors === null) {
+          vErrors = [err1]
+        } else {
+          vErrors.push(err1)
+        }
+        errors++
+      }
+      if (data['x-ls101-client-version'] !== void 0) {
+        let data0 = data['x-ls101-client-version']
+        if (typeof data0 !== 'string') {
+          let dataType0 = typeof data0
+          let coerced0 = void 0
+          if (!(coerced0 !== void 0)) {
+            if (dataType0 == 'number' || dataType0 == 'boolean') {
+              coerced0 = '' + data0
+            } else if (data0 === null) {
+              coerced0 = ''
+            } else {
+              const err2 = {
+                instancePath: instancePath + '/x-ls101-client-version',
+                schemaPath: '#/properties/x-ls101-client-version/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err2]
+              } else {
+                vErrors.push(err2)
+              }
+              errors++
+            }
+          }
+          if (coerced0 !== void 0) {
+            data0 = coerced0
+            if (data !== void 0) {
+              data['x-ls101-client-version'] = coerced0
+            }
+          }
+        }
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 128) {
+            const err3 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 128 },
+              message: 'must NOT have more than 128 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err3]
+            } else {
+              vErrors.push(err3)
+            }
+            errors++
+          }
+          if (func2(data0) < 1) {
+            const err4 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/minLength',
+              keyword: 'minLength',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err4]
+            } else {
+              vErrors.push(err4)
+            }
+            errors++
+          }
+        }
+      }
+      if (data['idempotency-key'] !== void 0) {
+        let data1 = data['idempotency-key']
+        if (typeof data1 !== 'string') {
+          let dataType1 = typeof data1
+          let coerced1 = void 0
+          if (!(coerced1 !== void 0)) {
+            if (dataType1 == 'number' || dataType1 == 'boolean') {
+              coerced1 = '' + data1
+            } else if (data1 === null) {
+              coerced1 = ''
+            } else {
+              const err5 = {
+                instancePath: instancePath + '/idempotency-key',
+                schemaPath: '#/properties/idempotency-key/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err5]
+              } else {
+                vErrors.push(err5)
+              }
+              errors++
+            }
+          }
+          if (coerced1 !== void 0) {
+            data1 = coerced1
+            if (data !== void 0) {
+              data['idempotency-key'] = coerced1
+            }
+          }
+        }
+        if (typeof data1 === 'string') {
+          if (!formats0.test(data1)) {
+            const err6 = {
+              instancePath: instancePath + '/idempotency-key',
+              schemaPath: '#/properties/idempotency-key/format',
+              keyword: 'format',
+              params: { format: 'uuid' },
+              message: 'must match format "uuid"'
+            }
+            if (vErrors === null) {
+              vErrors = [err6]
+            } else {
+              vErrors.push(err6)
+            }
+            errors++
+          }
+        }
+      }
+    } else {
+      const err7 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err7]
+      } else {
+        vErrors.push(err7)
+      }
+      errors++
+    }
     validate131.errors = vErrors
     return errors === 0
   }
-  exports.v376 = validate132
+  exports.v380 = validate132
   const schema114 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate132(
     data,
@@ -69219,7 +70000,7 @@ var validators = {}
     validate132.errors = vErrors
     return errors === 0
   }
-  exports.v377 = validate133
+  exports.v381 = validate133
   const schema115 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -69332,7 +70113,7 @@ var validators = {}
     validate133.errors = vErrors
     return errors === 0
   }
-  exports.v382 = validate134
+  exports.v385 = validate134
   const schema116 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate134(
     data,
@@ -69374,7 +70155,7 @@ var validators = {}
     validate134.errors = vErrors
     return errors === 0
   }
-  exports.v383 = validate135
+  exports.v386 = validate135
   const schema117 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -69487,7 +70268,7 @@ var validators = {}
     validate135.errors = vErrors
     return errors === 0
   }
-  exports.v387 = validate136
+  exports.v391 = validate136
   const schema118 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate136(
     data,
@@ -69529,7 +70310,7 @@ var validators = {}
     validate136.errors = vErrors
     return errors === 0
   }
-  exports.v388 = validate137
+  exports.v392 = validate137
   const schema119 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -69642,7 +70423,7 @@ var validators = {}
     validate137.errors = vErrors
     return errors === 0
   }
-  exports.v392 = validate138
+  exports.v396 = validate138
   const schema120 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate138(
     data,
@@ -69684,7 +70465,7 @@ var validators = {}
     validate138.errors = vErrors
     return errors === 0
   }
-  exports.v393 = validate139
+  exports.v397 = validate139
   const schema121 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -69797,8 +70578,163 @@ var validators = {}
     validate139.errors = vErrors
     return errors === 0
   }
-  exports.v398 = validate140
-  const schema122 = {
+  exports.v401 = validate140
+  const schema122 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate140(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate140.errors = vErrors
+    return errors === 0
+  }
+  exports.v402 = validate141
+  const schema123 = {
+    type: 'object',
+    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
+    required: ['x-ls101-client-version'],
+    additionalProperties: true
+  }
+  function validate141(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data['x-ls101-client-version'] === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-client-version' },
+          message: "must have required property 'x-ls101-client-version'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data['x-ls101-client-version'] !== void 0) {
+        let data0 = data['x-ls101-client-version']
+        if (typeof data0 !== 'string') {
+          let dataType0 = typeof data0
+          let coerced0 = void 0
+          if (!(coerced0 !== void 0)) {
+            if (dataType0 == 'number' || dataType0 == 'boolean') {
+              coerced0 = '' + data0
+            } else if (data0 === null) {
+              coerced0 = ''
+            } else {
+              const err1 = {
+                instancePath: instancePath + '/x-ls101-client-version',
+                schemaPath: '#/properties/x-ls101-client-version/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err1]
+              } else {
+                vErrors.push(err1)
+              }
+              errors++
+            }
+          }
+          if (coerced0 !== void 0) {
+            data0 = coerced0
+            if (data !== void 0) {
+              data['x-ls101-client-version'] = coerced0
+            }
+          }
+        }
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 128) {
+            const err2 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 128 },
+              message: 'must NOT have more than 128 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+          if (func2(data0) < 1) {
+            const err3 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/minLength',
+              keyword: 'minLength',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err3]
+            } else {
+              vErrors.push(err3)
+            }
+            errors++
+          }
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate141.errors = vErrors
+    return errors === 0
+  }
+  exports.v407 = validate142
+  const schema124 = {
     type: 'object',
     properties: {
       cursor: { type: 'string', minLength: 1, maxLength: 2048 },
@@ -69811,7 +70747,7 @@ var validators = {}
     required: [],
     additionalProperties: false
   }
-  function validate140(
+  function validate142(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -70118,7 +71054,7 @@ var validators = {}
             instancePath: instancePath + '/level',
             schemaPath: '#/properties/level/enum',
             keyword: 'enum',
-            params: { allowedValues: schema122.properties.level.enum },
+            params: { allowedValues: schema124.properties.level.enum },
             message: 'must be equal to one of the allowed values'
           }
           if (vErrors === null) {
@@ -70178,17 +71114,17 @@ var validators = {}
       }
       errors++
     }
-    validate140.errors = vErrors
+    validate142.errors = vErrors
     return errors === 0
   }
-  exports.v399 = validate141
-  const schema123 = {
+  exports.v408 = validate143
+  const schema125 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
     required: ['x-ls101-client-version'],
     additionalProperties: true
   }
-  function validate141(
+  function validate143(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -70291,11 +71227,11 @@ var validators = {}
       }
       errors++
     }
-    validate141.errors = vErrors
+    validate143.errors = vErrors
     return errors === 0
   }
-  exports.v403 = validate142
-  const schema124 = {
+  exports.v412 = validate144
+  const schema126 = {
     type: 'object',
     properties: {
       cursor: { type: 'string', minLength: 1, maxLength: 2048 },
@@ -70304,7 +71240,7 @@ var validators = {}
     required: [],
     additionalProperties: false
   }
-  function validate142(
+  function validate144(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -70477,17 +71413,17 @@ var validators = {}
       }
       errors++
     }
-    validate142.errors = vErrors
+    validate144.errors = vErrors
     return errors === 0
   }
-  exports.v404 = validate143
-  const schema125 = {
+  exports.v413 = validate145
+  const schema127 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
     required: ['x-ls101-client-version'],
     additionalProperties: true
   }
-  function validate143(
+  function validate145(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -70590,12 +71526,12 @@ var validators = {}
       }
       errors++
     }
-    validate143.errors = vErrors
+    validate145.errors = vErrors
     return errors === 0
   }
-  exports.v408 = validate144
-  const schema126 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate144(
+  exports.v417 = validate146
+  const schema128 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate146(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -70632,11 +71568,11 @@ var validators = {}
       }
       errors++
     }
-    validate144.errors = vErrors
+    validate146.errors = vErrors
     return errors === 0
   }
-  exports.v409 = validate145
-  const schema127 = {
+  exports.v418 = validate147
+  const schema129 = {
     type: 'object',
     properties: {
       'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 },
@@ -70645,7 +71581,7 @@ var validators = {}
     required: ['x-ls101-client-version', 'idempotency-key'],
     additionalProperties: true
   }
-  function validate145(
+  function validate147(
     data,
     { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
   ) {
@@ -70814,165 +71750,10 @@ var validators = {}
       }
       errors++
     }
-    validate145.errors = vErrors
-    return errors === 0
-  }
-  exports.v416 = validate146
-  const schema128 = { type: 'object', properties: {}, required: [], additionalProperties: false }
-  function validate146(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      for (const key0 in data) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/additionalProperties',
-          keyword: 'additionalProperties',
-          params: { additionalProperty: key0 },
-          message: 'must NOT have additional properties'
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-    } else {
-      const err1 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err1]
-      } else {
-        vErrors.push(err1)
-      }
-      errors++
-    }
-    validate146.errors = vErrors
-    return errors === 0
-  }
-  exports.v417 = validate147
-  const schema129 = {
-    type: 'object',
-    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
-    required: ['x-ls101-client-version'],
-    additionalProperties: true
-  }
-  function validate147(
-    data,
-    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
-  ) {
-    let vErrors = null
-    let errors = 0
-    if (data && typeof data == 'object' && !Array.isArray(data)) {
-      if (data['x-ls101-client-version'] === void 0) {
-        const err0 = {
-          instancePath,
-          schemaPath: '#/required',
-          keyword: 'required',
-          params: { missingProperty: 'x-ls101-client-version' },
-          message: "must have required property 'x-ls101-client-version'"
-        }
-        if (vErrors === null) {
-          vErrors = [err0]
-        } else {
-          vErrors.push(err0)
-        }
-        errors++
-      }
-      if (data['x-ls101-client-version'] !== void 0) {
-        let data0 = data['x-ls101-client-version']
-        if (typeof data0 !== 'string') {
-          let dataType0 = typeof data0
-          let coerced0 = void 0
-          if (!(coerced0 !== void 0)) {
-            if (dataType0 == 'number' || dataType0 == 'boolean') {
-              coerced0 = '' + data0
-            } else if (data0 === null) {
-              coerced0 = ''
-            } else {
-              const err1 = {
-                instancePath: instancePath + '/x-ls101-client-version',
-                schemaPath: '#/properties/x-ls101-client-version/type',
-                keyword: 'type',
-                params: { type: 'string' },
-                message: 'must be string'
-              }
-              if (vErrors === null) {
-                vErrors = [err1]
-              } else {
-                vErrors.push(err1)
-              }
-              errors++
-            }
-          }
-          if (coerced0 !== void 0) {
-            data0 = coerced0
-            if (data !== void 0) {
-              data['x-ls101-client-version'] = coerced0
-            }
-          }
-        }
-        if (typeof data0 === 'string') {
-          if (func2(data0) > 128) {
-            const err2 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/maxLength',
-              keyword: 'maxLength',
-              params: { limit: 128 },
-              message: 'must NOT have more than 128 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err2]
-            } else {
-              vErrors.push(err2)
-            }
-            errors++
-          }
-          if (func2(data0) < 1) {
-            const err3 = {
-              instancePath: instancePath + '/x-ls101-client-version',
-              schemaPath: '#/properties/x-ls101-client-version/minLength',
-              keyword: 'minLength',
-              params: { limit: 1 },
-              message: 'must NOT have fewer than 1 characters'
-            }
-            if (vErrors === null) {
-              vErrors = [err3]
-            } else {
-              vErrors.push(err3)
-            }
-            errors++
-          }
-        }
-      }
-    } else {
-      const err4 = {
-        instancePath,
-        schemaPath: '#/type',
-        keyword: 'type',
-        params: { type: 'object' },
-        message: 'must be object'
-      }
-      if (vErrors === null) {
-        vErrors = [err4]
-      } else {
-        vErrors.push(err4)
-      }
-      errors++
-    }
     validate147.errors = vErrors
     return errors === 0
   }
-  exports.v421 = validate148
+  exports.v425 = validate148
   const schema130 = { type: 'object', properties: {}, required: [], additionalProperties: false }
   function validate148(
     data,
@@ -71014,7 +71795,7 @@ var validators = {}
     validate148.errors = vErrors
     return errors === 0
   }
-  exports.v422 = validate149
+  exports.v426 = validate149
   const schema131 = {
     type: 'object',
     properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
@@ -71125,6 +71906,161 @@ var validators = {}
       errors++
     }
     validate149.errors = vErrors
+    return errors === 0
+  }
+  exports.v430 = validate150
+  const schema132 = { type: 'object', properties: {}, required: [], additionalProperties: false }
+  function validate150(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      for (const key0 in data) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/additionalProperties',
+          keyword: 'additionalProperties',
+          params: { additionalProperty: key0 },
+          message: 'must NOT have additional properties'
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+    } else {
+      const err1 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err1]
+      } else {
+        vErrors.push(err1)
+      }
+      errors++
+    }
+    validate150.errors = vErrors
+    return errors === 0
+  }
+  exports.v431 = validate151
+  const schema133 = {
+    type: 'object',
+    properties: { 'x-ls101-client-version': { type: 'string', minLength: 1, maxLength: 128 } },
+    required: ['x-ls101-client-version'],
+    additionalProperties: true
+  }
+  function validate151(
+    data,
+    { instancePath = '', parentData, parentDataProperty, rootData = data } = {}
+  ) {
+    let vErrors = null
+    let errors = 0
+    if (data && typeof data == 'object' && !Array.isArray(data)) {
+      if (data['x-ls101-client-version'] === void 0) {
+        const err0 = {
+          instancePath,
+          schemaPath: '#/required',
+          keyword: 'required',
+          params: { missingProperty: 'x-ls101-client-version' },
+          message: "must have required property 'x-ls101-client-version'"
+        }
+        if (vErrors === null) {
+          vErrors = [err0]
+        } else {
+          vErrors.push(err0)
+        }
+        errors++
+      }
+      if (data['x-ls101-client-version'] !== void 0) {
+        let data0 = data['x-ls101-client-version']
+        if (typeof data0 !== 'string') {
+          let dataType0 = typeof data0
+          let coerced0 = void 0
+          if (!(coerced0 !== void 0)) {
+            if (dataType0 == 'number' || dataType0 == 'boolean') {
+              coerced0 = '' + data0
+            } else if (data0 === null) {
+              coerced0 = ''
+            } else {
+              const err1 = {
+                instancePath: instancePath + '/x-ls101-client-version',
+                schemaPath: '#/properties/x-ls101-client-version/type',
+                keyword: 'type',
+                params: { type: 'string' },
+                message: 'must be string'
+              }
+              if (vErrors === null) {
+                vErrors = [err1]
+              } else {
+                vErrors.push(err1)
+              }
+              errors++
+            }
+          }
+          if (coerced0 !== void 0) {
+            data0 = coerced0
+            if (data !== void 0) {
+              data['x-ls101-client-version'] = coerced0
+            }
+          }
+        }
+        if (typeof data0 === 'string') {
+          if (func2(data0) > 128) {
+            const err2 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/maxLength',
+              keyword: 'maxLength',
+              params: { limit: 128 },
+              message: 'must NOT have more than 128 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err2]
+            } else {
+              vErrors.push(err2)
+            }
+            errors++
+          }
+          if (func2(data0) < 1) {
+            const err3 = {
+              instancePath: instancePath + '/x-ls101-client-version',
+              schemaPath: '#/properties/x-ls101-client-version/minLength',
+              keyword: 'minLength',
+              params: { limit: 1 },
+              message: 'must NOT have fewer than 1 characters'
+            }
+            if (vErrors === null) {
+              vErrors = [err3]
+            } else {
+              vErrors.push(err3)
+            }
+            errors++
+          }
+        }
+      }
+    } else {
+      const err4 = {
+        instancePath,
+        schemaPath: '#/type',
+        keyword: 'type',
+        params: { type: 'object' },
+        message: 'must be object'
+      }
+      if (vErrors === null) {
+        vErrors = [err4]
+      } else {
+        vErrors.push(err4)
+      }
+      errors++
+    }
+    validate151.errors = vErrors
     return errors === 0
   }
 })(validators)

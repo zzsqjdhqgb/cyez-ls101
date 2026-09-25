@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, safeStorage } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, protocol } from 'electron'
 import { hostname } from 'node:os'
 import { join } from 'node:path'
 import { readFile, mkdir, copyFile, rm } from 'node:fs/promises'
@@ -9,7 +9,7 @@ import { bindWindowControlEvents, registerWindowControlHandlers } from '@ls101/d
 import { validateSchema, operationDefinitions, type Schema } from '@ls101/lab-contracts'
 import { PinnedTransport, validateTarget, type TrustedTarget } from './transport'
 import { StudentRecords } from './records'
-import { BindingStore } from './binding'
+import { BindingStore, machineDataRoot } from './binding'
 import { ExamCache } from './cache'
 import { exportFile, loadJson, saveFile, requireId } from './files'
 import { parseCommand, type StartupCommand } from './commands'
@@ -92,7 +92,9 @@ export function startLabDesktop(options: DesktopOptions): void {
   void app
     .whenReady()
     .then(async () => {
-      const root = app.getPath('userData')
+      const configurationRoot = app.getPath('userData')
+      const root =
+        options.role === 'student' ? machineDataRoot(configurationRoot) : configurationRoot
       const localRecovery = new LocalRecovery(
         async () => {
           const selected = await dialog.showOpenDialog(window!, {
@@ -104,19 +106,10 @@ export function startLabDesktop(options: DesktopOptions): void {
         (operation, input) => options.localService!.invoke(operation, input)
       )
       await mkdir(root, { recursive: true, mode: 0o700 })
-      const license = new LicenseService({ storagePath: join(root, 'license.json') })
+      const license = new LicenseService({ storagePath: join(configurationRoot, 'license.json') })
       const transport = new PinnedTransport(join(root, 'transfers'), options.releaseVersion)
       const records = new StudentRecords(root)
-      const binding = new BindingStore(root, transport, {
-        encrypt: (value) =>
-          safeStorage.isEncryptionAvailable()
-            ? `encrypted:${safeStorage.encryptString(value).toString('base64')}`
-            : `restricted:${Buffer.from(value).toString('base64')}`,
-        decrypt: (value) =>
-          value.startsWith('encrypted:')
-            ? safeStorage.decryptString(Buffer.from(value.slice(10), 'base64'))
-            : Buffer.from(value.slice(11), 'base64').toString('utf8')
-      })
+      const binding = new BindingStore(configurationRoot, transport)
       const cache = new ExamCache(join(root, 'exam-cache'))
       const testCache = new ExamCache(join(root, 'test-data', 'exam-cache'))
       const testRecords = new Map<string, StudentRecords>()
@@ -445,9 +438,17 @@ export function startLabDesktop(options: DesktopOptions): void {
           window?.setFullScreen(input === true)
           return null
         }
+        if (capability === 'binding.configured') return binding.configured()
         if (capability === 'binding.summary') return binding.summary()
         if (capability === 'binding.connect') {
-          const connected = await binding.connect(typeof input === 'string' ? input : undefined)
+          const contextIdInput = typeof input === 'string' ? input : undefined
+          const origin = contextIdInput
+            ? (await records.list()).find(
+                (record) => record.originalBinding.contextId === contextIdInput
+              )?.originalBinding
+            : undefined
+          if (contextIdInput && !origin) throw new Error('Unknown submission binding')
+          const connected = await binding.connect(contextIdInput, origin?.serverId)
           const summary = await binding.summary()
           const contextId = connected.contextId
           studentConnections.set(connected.connectionId, { contextId, state: null })

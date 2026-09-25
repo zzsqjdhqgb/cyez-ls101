@@ -1,3 +1,4 @@
+import { registerStudent } from './register-student'
 /*
  * N7 in-container proof of the exam → submission chain (docs/lab-vm-acceptance-design.md, section 6).
  *
@@ -17,13 +18,13 @@
  * does not survive the trip back to the client for an archive of any real size. That test documents
  * the observed behaviour; it is a defect tripwire, not an accepted design.
  */
-import { randomBytes, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { afterEach, expect, test } from 'vitest'
 import { decodeExamPackage } from '@ls101/exam-package'
 import type { Schema } from '@ls101/lab-contracts'
-import { errorOf, openSession, openTeacher, sha256Hex, writeState } from './context'
-import { HARNESS_PASSWORD, installationId, startHarness, type Harness } from './harness'
+import { openSession, openTeacher, sha256Hex, writeState } from './context'
+import { HARNESS_PASSWORD, startHarness, type Harness } from './harness'
 import {
   examFetch,
   examList,
@@ -88,31 +89,19 @@ async function registerDevice(h: Harness): Promise<{ file: string }> {
       teacher.transport.file(file.handle, teacher.connectionId),
       'utf8'
     )
-    const installation = installationId()
-    const deviceSecret = randomBytes(32).toString('base64url')
     const publicSession = await openSession(h.args(), 'public')
-    let registered: { deviceId: string; deviceNumber: string }
+    let registered: Awaited<ReturnType<typeof registerStudent>>
     try {
-      const response = await publicSession.transport.request(
-        publicSession.connectionId,
-        'putEnrollmentDevicesInstallationId',
-        {
-          path: { installationId: installation },
-          body: {
-            enrollmentFile,
-            deviceSecret,
-            computerName: 'protocol-harness',
-            platform: process.platform === 'win32' ? 'win32' : 'linux',
-            releaseVersion: h.version
-          }
-        }
+      registered = await registerStudent(
+        publicSession,
+        enrollmentFile,
+        'protocol-harness',
+        h.version
       )
-      if (response.status >= 400)
-        throw new Error(`device registration was rejected: ${errorOf(response).code}`)
-      registered = response.body as { deviceId: string; deviceNumber: string }
     } finally {
       await publicSession.close()
     }
+    const deviceSecret = registered.deviceSecret
     await teacher.client.request('deleteTeacherEnrollmentsId', {
       path: { id: enrollment.enrollment.id }
     })
@@ -121,7 +110,8 @@ async function registerDevice(h: Harness): Promise<{ file: string }> {
     })
     const stateFile = h.path('device.json')
     await writeState(stateFile, {
-      installationId: installation,
+      runtimeId: registered.runtimeId,
+      runtimeGeneration: registered.runtimeGeneration,
       deviceId: registered.deviceId,
       number: registered.deviceNumber,
       deviceSecret,

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { LabHost } from '@ls101/lab-desktop-host'
+import { RemoteError } from '@ls101/lab-client'
 import { StudentController } from '../controller'
 
 const serverId = '3f2504e0-4f89-41d3-9a0c-0305e82c3301'
@@ -154,4 +155,34 @@ describe('student manual enrollment', () => {
       await controller.stop()
     }
   })
+})
+
+it('resumes polling after an enrollment command replaces a revoked binding', async () => {
+  const { host, invoke } = fakeHost(() => binding)
+  const original = invoke.getMockImplementation() as (
+    capability: string,
+    input?: unknown
+  ) => Promise<unknown>
+  let enrolled = false
+  let notify!: Parameters<LabHost['onEvent']>[0]
+  host.onEvent = (listener) => {
+    notify = listener
+    return () => undefined
+  }
+  invoke.mockImplementation(async (capability: string, input?: unknown) => {
+    if (capability === 'startup.commands') return enrolled ? [{ type: 'enroll' }] : []
+    if (capability === 'transport.request' && !enrolled) throw new RemoteError('TOKEN_REVOKED', 401)
+    return original(capability, input)
+  })
+  const controller = new StudentController(host)
+  try {
+    await controller.start()
+    expect(controller.getSnapshot().connected).toBe(false)
+    expect(controller.getSnapshot().error).toContain('TOKEN_REVOKED')
+    enrolled = true
+    notify({ type: 'startup-command', value: 'reenroll' })
+    await vi.waitFor(() => expect(controller.getSnapshot().connected).toBe(true))
+  } finally {
+    await controller.stop()
+  }
 })

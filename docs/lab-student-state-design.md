@@ -62,16 +62,17 @@ renderer 中的应用控制器组织准入、练习与后台提交；main 提供
 
 ```text
 student-data/
-  binding.json
-  practices/<submissionId>.json
-  submissions/<submissionId>/record.json
-  submissions/<submissionId>/archive.lssubmission
-  submissions/<submissionId>/save-intent.json
-  tasks/<taskId>/journal.json
-  cache/<opaqueCacheId>/
+  server-connection.json  # 可随镜像复制的服务连接配置，不使用本机加密
+  machines/<hostname-sha256>/
+    practices/<submissionId>.json
+    submissions/<submissionId>/record.json
+    submissions/<submissionId>/archive.lssubmission
+    submissions/<submissionId>/save-intent.json
+    tasks/<taskId>/journal.json
+    cache/<opaqueCacheId>/
 ```
 
-先持久化 save intent（身份、固定路径、预期摘要和大小），再写临时归档、同步、发布不可变原归档，最后原子写 record。record 完成后才返回本地保存成功。启动时有 intent 且归档完整可验证，则恢复为 queued；归档未完成不伪造已完成作答，保留错误诊断并清理无效临时部分。record 已存在时校验相同 ID、摘要和原服务，不覆盖不同内容。全机目录不得由学校还原软件回滚。
+先持久化 save intent（身份、固定路径、预期摘要和大小），再写临时归档、同步、发布不可变原归档，最后原子写 record。record 完成后才返回本地保存成功。启动时有 intent 且归档完整可验证，则恢复为 queued；归档未完成不伪造已完成作答，保留错误诊断并清理无效临时部分。record 已存在时校验相同 ID、摘要和原服务，不覆盖不同内容。共享连接配置可随镜像复制。作答和任务位于规范化 hostname 对应的目录，其他 hostname 不读取该目录；若学校需要保留未上传作答，该业务目录必须排除在还原范围之外。设备身份和座位配置不依赖这些本地文件，恢复镜像后由服务端按 hostname 重新取得。
 
 record 保存：schemaVersion、revision、submissionId、原 serverId/deviceId/凭证引用、原 baseUrl 与指纹、examId、学生身份、submittedAt、archiveSha256、archiveBytes、状态、attemptId、attemptCount、resultKnowledge、retryPolicy、pauseReason、lastError、receipt、completedAt。导出需要的列表字段可以从记录读取；清理归档后保留最小身份、摘要与成功回执标记。
 
@@ -113,12 +114,12 @@ record 保存：schemaVersion、revision、submissionId、原 serverId/deviceId/
 
 任务领取前先持久化任务及执行意图；领取响应丢失可用相同 runtime ID 取回有效租约。执行前保存 lease ID、固定参数与截止时间；本地单调计时采用请求发出到收到响应的完整耗时作为保守余量，不直接信任本机墙钟。超期、续租失败或取消时停止新的副作用，释放音频资源。
 
-| 领取/续租响应 | renderer 控制器与宿主动作 |
-| --- | --- |
-| 领取 409 RESOURCE_BUSY，含 backup-pending/backup-running | 保持维护待机和未执行意图；按 Retry-After 或重连退避刷新状态、心跳及任务列表，任务仍可领取且本地空闲时重试同一 task/runtime |
-| 领取 503 SERVICE_NOT_READY | 不视为领取成功、不产生副作用；按第 3 节等待写入恢复。此前领取结果不明时仍用原 task/runtime 确认，避免重复启动 |
-| 续租 503、409 或网络失败 | 立即停止新的测试/删除副作用，收敛当前不可中断的文件操作，释放音频并持久化部分结果；不按 Retry-After 延长租约，也不在服务恢复后自动继续旧执行 |
-| 非备份的 409、401/403 或版本拒绝 | 按模式、身份、租约或版本规则停止并刷新诊断；撤销凭证停止自动使用，不能无限重试领取 |
+| 领取/续租响应                                            | renderer 控制器与宿主动作                                                                                                                    |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 领取 409 RESOURCE_BUSY，含 backup-pending/backup-running | 保持维护待机和未执行意图；按 Retry-After 或重连退避刷新状态、心跳及任务列表，任务仍可领取且本地空闲时重试同一 task/runtime                   |
+| 领取 503 SERVICE_NOT_READY                               | 不视为领取成功、不产生副作用；按第 3 节等待写入恢复。此前领取结果不明时仍用原 task/runtime 确认，避免重复启动                                |
+| 续租 503、409 或网络失败                                 | 立即停止新的测试/删除副作用，收敛当前不可中断的文件操作，释放音频并持久化部分结果；不按 Retry-After 延长租约，也不在服务恢复后自动继续旧执行 |
+| 非备份的 409、401/403 或版本拒绝                         | 按模式、身份、租约或版本规则停止并刷新诊断；撤销凭证停止自动使用，不能无限重试领取                                                           |
 
 已停止任务的不可变结果按原 lease ID 补报；结果接口遇 503 时保留本地日志，按退避重报相同内容，迟到结果由服务端标记 late。正式上传收到 503 仍沿用第 6 节普通 HTTP 失败的 unknown/manual 分支，不能仅凭 Retry-After 自动重传。
 

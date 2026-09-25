@@ -1176,34 +1176,27 @@
           }
         ]
       },
-      "Registration": {
+      "Hostname": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 255,
+        "pattern": "^\\S+$"
+      },
+      "ConnectionSecret": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{43}$"
+      },
+      "ConnectionEnrollment": {
         "type": "object",
-        "required": [
-          "enrollmentFile",
-          "deviceSecret",
-          "computerName",
-          "platform",
-          "releaseVersion"
-        ],
+        "required": ["enrollmentFile", "computerName", "releaseVersion"],
         "additionalProperties": false,
         "properties": {
           "enrollmentFile": {
             "type": "string",
             "maxLength": 65536
           },
-          "deviceSecret": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9_-]{43}$",
-            "writeOnly": true
-          },
           "computerName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "platform": {
-            "type": "string",
-            "enum": ["win32", "linux"]
+            "$ref": "#/components/schemas/Hostname"
           },
           "releaseVersion": {
             "type": "string",
@@ -1212,14 +1205,52 @@
           }
         }
       },
-      "RegisteredDevice": {
+      "ServerConnection": {
+        "type": "object",
+        "required": ["connectionSecret"],
+        "additionalProperties": false,
+        "properties": {
+          "connectionSecret": {
+            "$ref": "#/components/schemas/ConnectionSecret"
+          }
+        }
+      },
+      "StudentSessionRequest": {
+        "type": "object",
+        "required": ["connectionSecret", "computerName", "platform", "runtimeId"],
+        "additionalProperties": false,
+        "properties": {
+          "connectionSecret": {
+            "$ref": "#/components/schemas/ConnectionSecret"
+          },
+          "computerName": {
+            "$ref": "#/components/schemas/Hostname"
+          },
+          "platform": {
+            "type": "string",
+            "enum": ["win32", "linux"]
+          },
+          "runtimeId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "StudentSession": {
         "allOf": [
           {
             "$ref": "#/components/schemas/Mode"
           },
           {
             "type": "object",
-            "required": ["deviceId", "deviceNumber", "registeredAt"],
+            "required": [
+              "deviceId",
+              "deviceNumber",
+              "registeredAt",
+              "deviceSecret",
+              "contextId",
+              "runtimeGeneration"
+            ],
             "properties": {
               "deviceId": {
                 "type": "string",
@@ -1231,6 +1262,18 @@
               "registeredAt": {
                 "type": "string",
                 "format": "date-time"
+              },
+              "deviceSecret": {
+                "$ref": "#/components/schemas/ConnectionSecret"
+              },
+              "contextId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "runtimeGeneration": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
               }
             }
           }
@@ -4194,9 +4237,9 @@
         }
       }
     },
-    "putEnrollmentDevicesInstallationId": {
-      "method": "PUT",
-      "route": "/enrollment/devices/{installationId}",
+    "postEnrollmentConnections": {
+      "method": "POST",
+      "route": "/enrollment/connections",
       "role": "public",
       "parameters": [
         {
@@ -4208,14 +4251,68 @@
             "minLength": 1,
             "maxLength": 128
           }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ConnectionEnrollment"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Connection established",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerConnection"
+              }
+            }
+          }
         },
+        "default": {
+          "description": "400 INVALID_REQUEST; 401 AUTH_REQUIRED/TOKEN_EXPIRED/TOKEN_REVOKED; 403 DEVICE_DISABLED/LICENSE_INACTIVE/ENROLLMENT_REJECTED; 404 NOT_FOUND; 409 SERVICE_MAINTENANCE/VERSION_MISMATCH/REVISION_CONFLICT/CONTENT_CONFLICT/RESOURCE_BUSY; 413 PAYLOAD_TOO_LARGE; 415 UNSUPPORTED_MEDIA_TYPE; 422 INVALID_EXAM/INVALID_SUBMISSION; 429 RATE_LIMITED; 503 SERVICE_NOT_READY/STORAGE_UNAVAILABLE. Current authorization is checked even on replay.",
+          "headers": {
+            "X-Request-Id": {
+              "schema": {
+                "type": "string"
+              }
+            },
+            "Retry-After": {
+              "description": "Whole seconds before retry; does not imply a submission was not received.",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Error"
+              }
+            }
+          }
+        }
+      }
+    },
+    "postStudentSessions": {
+      "method": "POST",
+      "route": "/student/sessions",
+      "role": "public",
+      "parameters": [
         {
-          "name": "installationId",
-          "in": "path",
+          "name": "X-LS101-Client-Version",
+          "in": "header",
           "required": true,
           "schema": {
             "type": "string",
-            "format": "uuid"
+            "minLength": 1,
+            "maxLength": 128
           }
         }
       ],
@@ -4224,42 +4321,18 @@
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/Registration"
+              "$ref": "#/components/schemas/StudentSessionRequest"
             }
           }
         }
       },
       "responses": {
         "200": {
-          "description": "Existing registration",
+          "description": "Connection established",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RegisteredDevice"
-              }
-            }
-          },
-          "headers": {
-            "X-Request-Id": {
-              "schema": {
-                "type": "string"
-              }
-            }
-          }
-        },
-        "201": {
-          "description": "Registered",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisteredDevice"
-              }
-            }
-          },
-          "headers": {
-            "X-Request-Id": {
-              "schema": {
-                "type": "string"
+                "$ref": "#/components/schemas/StudentSession"
               }
             }
           }

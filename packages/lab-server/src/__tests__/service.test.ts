@@ -253,23 +253,26 @@ describe('HTTPS service contracts', () => {
       undefined,
       token
     )
-    const installationId = randomUUID(),
-      secret = randomBytes(32).toString('base64url')
-    const body = {
+    const connection = await api('POST', '/enrollment/connections', {
       enrollmentFile: file.body,
-      deviceSecret: secret,
+      computerName: 'Lab-001',
+      releaseVersion: 'test-release'
+    })
+    const runtimeId = randomUUID()
+    const body = {
+      connectionSecret: connection.body.connectionSecret,
       computerName: 'Lab-001',
       platform: 'linux',
-      releaseVersion: 'test-release'
+      runtimeId
     }
-    const enrolled = await api('PUT', `/enrollment/devices/${installationId}`, body)
-    expect(enrolled.status).toBe(201)
-    expect((await api('PUT', `/enrollment/devices/${installationId}`, body)).status).toBe(200)
-    const credential = `d.${enrolled.body.deviceId}.${secret}`
+    const enrolled = await api('POST', '/student/sessions', body)
+    expect(enrolled.status).toBe(200)
+    expect((await api('POST', '/student/sessions', body)).body).toEqual(enrolled.body)
+    const credential = `d.${enrolled.body.deviceId}.${enrolled.body.deviceSecret}`
     expect((await api('GET', '/teacher/security', undefined, credential)).status).toBe(401)
     const heartbeat = {
-      runtimeId: randomUUID(),
-      runtimeGeneration: 2,
+      runtimeId,
+      runtimeGeneration: 1,
       sequence: 1,
       activationState: 'active',
       phase: 'maintenance-idle',
@@ -284,7 +287,7 @@ describe('HTTPS service contracts', () => {
     const old = await api(
       'POST',
       '/student/heartbeat',
-      { ...heartbeat, runtimeGeneration: 1, runtimeId: randomUUID() },
+      { ...heartbeat, runtimeGeneration: 2, runtimeId: randomUUID() },
       credential
     )
     expect(old.body.heartbeatAccepted).toBe(false)
@@ -343,17 +346,20 @@ describe('HTTPS service contracts', () => {
     const file = (
       await api('GET', `/teacher/enrollments/${batch.body.enrollment.id}/file`, undefined, token)
     ).body
-    const secret = randomBytes(32).toString('base64url')
-    const registration = await api('PUT', `/enrollment/devices/${randomUUID()}`, {
+    const runtimeId = randomUUID()
+    const connection = await api('POST', '/enrollment/connections', {
       enrollmentFile: file,
-      deviceSecret: secret,
       computerName: 'PC-001',
-      platform: 'linux',
       releaseVersion: 'test-release'
     })
+    const registration = await api('POST', '/student/sessions', {
+      connectionSecret: connection.body.connectionSecret,
+      computerName: 'PC-001',
+      platform: 'linux',
+      runtimeId
+    })
     const deviceId = registration.body.deviceId,
-      credential = `d.${deviceId}.${secret}`,
-      runtimeId = randomUUID()
+      credential = `d.${deviceId}.${registration.body.deviceSecret}`
     const run = await api(
       'POST',
       '/teacher/test-runs',

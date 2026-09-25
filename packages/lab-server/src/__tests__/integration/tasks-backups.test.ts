@@ -37,7 +37,7 @@ async function run() {
   return reply.body
 }
 async function claim(task: string, index = 0) {
-  const beat = heartbeat()
+  const beat = heartbeat(devices[index].runtimeId)
   expect(
     (await f.api('POST', '/student/heartbeat', { token: devices[index].token, body: beat })).status
   ).toBe(200)
@@ -360,7 +360,7 @@ describe('BK-ORDER: backup admission vs mode and lease', () => {
           )?.expires_at
         ).toBe(Date.parse(lease.leaseExpiresAt))
       } else {
-        const beat = heartbeat()
+        const beat = heartbeat(devices[0].runtimeId)
         await f.api('POST', '/student/heartbeat', { token: devices[0].token, body: beat })
         const gate = f.pause('backup-pending')
         expect((await f.api('POST', '/teacher/backups', input)).status).toBe(202)
