@@ -16,12 +16,11 @@ owner: docs
 
 | 层 | 位置 | 回答什么 | 读者 | 维护方式 |
 | --- | --- | --- | --- | --- |
-| 产品说明书 | [`manual/`](./manual/README.md) | 产品承诺什么、用户如何完成一次考试 | 用户、第三方评审 | 生成（**尚未建立**） |
+| 产品说明书 | [`manual/`](./manual/README.md) | 产品承诺什么、用户如何完成一次考试 | 用户、第三方评审 | 生成（`yarn docs:manual:local`；canonical 容器内 `yarn docs:product:publish`） |
 | 产品与界面设计 | [`ui/`](./ui/README.md) | 产品对象是什么、每屏界面的布局/控件/状态/文案 | 产品、设计、工程 | 手写 |
 | 工程实现 | [`engineering/`](./engineering/README.md) | 代码如何实现、契约、边界、运维 | 工程师 | 手写 |
 | 历史档案 | [`archive/`](./archive/README.md)、[`../old/`](../old/README.md) | 已废弃的设计、旧格式、决策理由 | 需要追溯的人 | 只读 |
 | 应用资源（非文档） | `./license-activation.html` | 激活方式意见征集问卷页 | 终端用户 | 由应用运行时打开，**勿移动** |
-| 修订方案 | [`../DOCS-REVISION-PLAN.md`](../DOCS-REVISION-PLAN.md) | 文档体系重构的目标与阶段 | 维护者 | 临时 |
 
 **冲突裁决**：`manual` 与 `ui` 冲突以 `ui` 为准；`ui` 与 `engineering` 冲突以 `engineering` 为准；`engineering` 与代码冲突以代码为准；`archive` 一律不作为当前行为依据。
 
@@ -90,12 +89,23 @@ superseded-by: docs/engineering/features/template-editor.md
 - 测试说明：[`testing.md`](./testing.md)
 - 术语表：[`ui/glossary.md`](./ui/glossary.md)
 - 未决问题：[`ui/open-questions.md`](./ui/open-questions.md)
-- 修订方案：[`../DOCS-REVISION-PLAN.md`](../DOCS-REVISION-PLAN.md)
+- 覆盖面待办：[`engineering/todo/manual-coverage.md`](./engineering/todo/manual-coverage.md)
 
 ## 6. 门禁
 
-- `yarn docs:check`：校验状态注释块、状态取值、`implemented` 文档中的未来时态、相对链接可达性、索引完备性。
-- 生成层沿用产品文档测试的新鲜度检查（改造中）。
+Docker 外（每次改文档或界面后都应跑）：
+
+- `yarn docs:check`：状态注释块与取值、`implemented` 文档中的未来时态、相对链接可达性、索引完备性，并输出视觉 / 行为锚定率。
+- `yarn visual:check`：`docs/ui/screens/UI-*.md` 的视觉锚点 ↔ `tests/visual` ↔ `tests/visual/baselines` 三方一致。
+- `yarn lint`、`yarn test:vitest`、`xvfb-run -a yarn test:playwright:run`、`xvfb-run -a yarn test:product-docs:run`。
+
+canonical 容器内（只在能访问 Docker 宿主的机器上跑）：
+
+- `yarn docs:product:check`：重新生成 `docs/manual` 并断言与仓库一致。
+- `yarn visual:canonical:check`：断言基线与仓库一致；`yarn visual:publish` 才是唯一的基线写入方式。
+
+界面文案变化会让相关视觉基线过期，必须重新发布基线，否则 CI 的 `canonical_visual` 会失败。命令与限制见
+[`../tests/visual/README.md`](../tests/visual/README.md)。
 
 ## 7. 重构进度
 
@@ -104,7 +114,15 @@ superseded-by: docs/engineering/features/template-editor.md
 - **阶段 2（工程对齐）已完成**：`features/` 的事实错误逐条修正；`docs/engineering/subsystems/` 的 P0 子系统文档（exam-package、exam-library、exam-player、submission-workflow）已补齐。
 - **阶段 3（UI 规格）已完成**：模块设计文档 7 篇、逐屏 UI 规格 29 篇全部建立并接入索引；视觉回归约定写入 [`../tests/visual/README.md`](../tests/visual/README.md)；`yarn docs:check` 会输出视觉 / 行为锚定率。
 - **阶段 4b（视觉回归）大部分完成**：`tests/visual` 框架与 22 个逐屏规格已建立，`yarn test:visual` 在打包应用上全部通过（本地产物写入 `test-results/visual-preview`）；`yarn visual:check` 已实现，校验规格 ↔ 测试 ↔ 基线三方一致。29 篇规格中 22 篇视觉锚定、2 篇 `n/a`（无界面入口）、5 篇 `unverified`（考试运行外的夹具型界面：评分、结算、题型导入、函数编辑器、生成试卷）。canonical 容器内用 `yarn visual:publish` 写入基线、`yarn visual:canonical:check` 校验；Docker 外只运行测试、不校验像素。基线与共享渲染镜像、版本标记沿用产品文档那一套。
-- **阶段 4a（产品说明书）已产出**：`docs/manual/` 现在由产品操作测试生成（`README.md` + 5 个章节 + manifest，纯文本、无截图、无逐操作页）。本地命令 `yarn docs:manual:local`（需先 `yarn build:test`）；canonical 容器命令仍为 `yarn docs:product:publish`。覆盖面目前与旧层相同，扩充主线之外的章节仍待补。
+- **阶段 4a（产品说明书）已产出**：`docs/manual/` 由产品操作测试生成（`README.md` + 5 个章节 + manifest，纯文本、无截图、无逐操作页）。本地命令 `xvfb-run -a yarn docs:manual:local`（需先 `yarn build:test`）；canonical 容器命令为 `yarn docs:product:publish`。覆盖面已从旧层的 20 项扩展到 **30 项**：`EP-01` 首次在同一个数据目录内用界面贯通「评分单元 → 题型 → 题组 → 试卷模板绑定 → 生成试卷 → 加入试卷库」；随后补齐试卷库维护（`EL-01`…`EL-05`：重复导入、损坏包重试、空态与查询失败、删除确认、退出考试确认）与作答记录分支（`SR-02`…`SR-05`：行内单条评分入口、评分报告、导出作答包、删除记录）。
 - **阶段 4c（旧产物冻结迁出）已完成**：`docs/product` 已迁入 `docs/archive/product-docs-0.4.1/`（只读）；reporter 的归属设计校验改指 `docs/ui/modules/<slug>.md`；canonical publish 只生成 `docs/manual`，`yarn docs:product:check` 只校验 `docs/manual`。
+- **阶段 4e（工程缺口补齐）已完成**：新增 `engineering/features/license.md`、`installation-marker.md`、`logger.md`、`secret-store.md` 与 `engineering/subsystems/startup-orchestration.md`、`builtin-content.md`、`legacy-data.md`，`docs/engineering/todo/logger.md` 只保留未实现部分。
+- **阶段 4f（界面用词对齐，D1）已完成**：界面与主进程面向用户的文案改为术语表用词（`Schema`→评分单元、`Interface`→题型、`Instance`→题组、`Timeline`→时间线、`Collector`→采集器、`revision`→版本、`Provider`→服务商、`ID`→编号、`API Key`→API 密钥，另含 `Template 输入`→`试卷模板输入`、`ChoiceView`→`选择题视图`、`提供商`→`服务商`）；内置模板「生成试卷」的禁用提示由错误码改为人类可读消息。对照表见 [`ui/glossary.md`](./ui/glossary.md)，落地记录见 [`ui/open-questions.md`](./ui/open-questions.md) 第 1 条。视觉基线随本批重建。
 
-详见 [`../DOCS-REVISION-PLAN.md`](../DOCS-REVISION-PLAN.md)。
+**未完成**：
+
+- 阶段 4b 仍有 5 篇规格为 `unverified`（评分、结算、题型导入、函数编辑器、生成试卷）。它们需要新夹具与导航，且基线只能由 canonical 容器生成。
+- 阶段 4a 的其余覆盖面（生成→运行→导入作答→评分→结算、麦克风录音路径、AI 评分与抽查、设置与 AI 配置）见 [`engineering/todo/manual-coverage.md`](./engineering/todo/manual-coverage.md)。
+
+重构方案已归档：[`archive/docs-revision-plan.md`](./archive/docs-revision-plan.md)。
+

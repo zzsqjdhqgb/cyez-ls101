@@ -154,7 +154,7 @@ AI 模型、TTS runtime 和发音评测扩展使用带 manifest 和校验信息�
 - 工程实现：[docs/engineering/README.md](docs/engineering/README.md)
 - 历史档案：[docs/archive/README.md](docs/archive/README.md)
 - 测试：[docs/testing.md](docs/testing.md)
-- 修订方案：[DOCS-REVISION-PLAN.md](DOCS-REVISION-PLAN.md)
+- 文档重构方案（已归档）：[docs/archive/docs-revision-plan.md](docs/archive/docs-revision-plan.md)
 
 > 产品说明书由 `docs/manual/` 生成；上一代产物已冻结在 `docs/archive/product-docs-0.4.1/`。
 

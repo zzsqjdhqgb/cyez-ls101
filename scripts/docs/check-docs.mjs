@@ -55,7 +55,7 @@ function walk(dir) {
 const files = new Set()
 for (const p of walk(path.join(ROOT, 'docs'))) files.add(p)
 for (const p of walk(path.join(ROOT, 'old'))) files.add(p)
-for (const name of ['README.md', 'CONTRIBUTING.md', 'AGENTS.md', 'DOCS-REVISION-PLAN.md']) {
+for (const name of ['README.md', 'CONTRIBUTING.md', 'AGENTS.md']) {
   const p = path.join(ROOT, name)
   if (fs.existsSync(p)) files.add(p)
 }

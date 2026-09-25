@@ -50,7 +50,12 @@ Linux 无桌面环境需要在 Electron / Playwright 命令前加 `xvfb-run -a`�
 ```bash
 xvfb-run -a yarn test:playwright
 xvfb-run -a yarn test:product-docs
+xvfb-run -a yarn test:product-docs:preview --grep <pattern>   # 筛选调试
+xvfb-run -a yarn docs:manual:local                            # 生成 docs/manual
+xvfb-run -a yarn test:visual                                  # 本地产物只截图，不校验基线
 ```
+
+漏加 `xvfb-run` 时 Electron 以 `electron.launch: Process failed to launch!` 直接失败，整个套件的用例都会报同一句错误；看到这个症状先确认 `DISPLAY` 是否为空。
 
 ## Renderer 组件测试
 
