@@ -41,6 +41,7 @@
     "test:product-docs:preview": "playwright test --config=playwright.product-docs.config.ts",
     "test:visual": "playwright test --config=playwright.visual.config.ts",
     "test:manual-figures": "node scripts/run-manual-figures.mjs preview",
+    "manual:pdf": "node scripts/docs/build-manual-pdf.mjs",
     "build:test:visual": "node build.js --local --dir --current-platform --skip-model-package --version-suffix local.visual",
     "docs:product:image": "node scripts/product-docs/docker.mjs build",
     "docs:product:publish": "node scripts/product-docs/docker.mjs publish",

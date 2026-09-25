@@ -67,6 +67,15 @@ yarn docs:serve --no-browser   # 无桌面环境（容器）用，手动访问�
 
 表格、代码块、中文与相对链接都由 markserv 直接渲染，文档按仓库目录树逐级导航。
 
+把产品说明书导出为 A4 PDF（用 Playwright Chromium 排版，源目录默认 `docs/manual`，评审暂存期自动读 `manual-draft`）：
+
+```bash
+yarn manual:pdf                                       # 输出到 test-results/manual-pdf/
+yarn manual:pdf --title-page --out dist/说明书.pdf    # 另加标题页并指定输出位置
+```
+
+配图缺失时 PDF 中以占位框标出并汇总警告；配图基线由 `yarn manual:figures:publish` 单独发布，见 [tests/manual/README.md](tests/manual/README.md)。
+
 ## 代码边界
 
 维护代码时请保持现有安全边界：
