@@ -18,6 +18,20 @@ function screenshot(color: number, width = 8): Buffer {
   return PNG.sync.write(png)
 }
 
+/** 8x8 白底图，按坐标涂一个像素，用于验证像素级敏感度。 */
+function imageWithPixel(x: number, y: number, color: readonly [number, number, number]): Buffer {
+  const png = new PNG({ width: 8, height: 8 })
+  for (let index = 0; index < png.data.length; index += 4) {
+    png.data.fill(255, index, index + 3)
+    png.data[index + 3] = 255
+  }
+  const offset = (y * png.width + x) * 4
+  png.data[offset] = color[0]
+  png.data[offset + 1] = color[1]
+  png.data[offset + 2] = color[2]
+  return PNG.sync.write(png)
+}
+
 describe('visual check diagnostics', () => {
   let directory: string
   let baseline: string
@@ -106,5 +120,26 @@ describe('visual check diagnostics', () => {
     ])
     expect(await readFile(path.join(output, 'UI-WB-01-default-actual.png'))).toEqual(actual)
     expect(await readFile(path.join(output, 'UI-WB-01-default-expected.png'))).toEqual(expected)
+  })
+
+  // 敏感度下限：阈值 0.1 只用于放过抗锯齿噪声，成片或高对比的单像素改动必须被检出。
+  it('detects a one-pixel change above the colour threshold', async () => {
+    await writeFile(baseline, screenshot(255))
+    await expect(capture(imageWithPixel(4, 4, [128, 128, 128]))).rejects.toThrow('视觉回归差异')
+    const diff = PNG.sync.read(await readFile(path.join(output, 'UI-WB-01-default-diff.png')))
+    const marked: number[] = []
+    for (let index = 0; index < diff.data.length; index += 4) {
+      if (diff.data[index] === 255 && diff.data[index + 1] === 0 && diff.data[index + 2] === 0) {
+        marked.push(index / 4)
+      }
+    }
+    expect(marked).toEqual([4 * 8 + 4])
+  })
+
+  it('tolerates a one-pixel change below the colour threshold', async () => {
+    await writeFile(baseline, screenshot(255))
+    await expect(capture(imageWithPixel(4, 4, [245, 245, 245]))).resolves.toBe(baseline)
+    expect(attach).not.toHaveBeenCalled()
+    await expect(readdir(output)).rejects.toMatchObject({ code: 'ENOENT' })
   })
 })

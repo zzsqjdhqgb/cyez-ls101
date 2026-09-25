@@ -120,6 +120,7 @@ yarn visual:check             # Docker 外：校验 规格 ↔ 测试 ↔ 基线
 yarn visual:image             # 构建/复用共享渲染镜像
 yarn visual:publish           # canonical 容器内：写入 tests/visual/baselines
 yarn visual:canonical:check   # canonical 容器内：校验基线与仓库一致（差异即失败）
+yarn visual:verify-determinism # 宿主机：连续两次发布并逐字节比较（可复现性验证）
 ```
 
 `visual:publish` / `visual:canonical:check` 会先 `yarn install --immutable`、`yarn build:test`，再在 Xvfb 下运行套件；
@@ -131,6 +132,26 @@ yarn visual:canonical:check   # canonical 容器内：校验基线与仓库一�
 界面文案变化会让所有相关基线过期，改动文案后必须重新执行 `yarn visual:image && yarn visual:publish` 并提交
 `tests/visual/baselines`，否则 `yarn visual:canonical:check` 会失败。
 
-没有自动化覆盖的两条性质（需要时在宿主机上人工核验）：连续两次 `yarn visual:publish` 是否产生字节一致的 PNG，
-以及"故意改动一个像素必然导致对应基线出现差异"。`stableScreenshot` 只保证单次运行内取两帧一致。
+两条可复现性性质的覆盖情况：
 
+- **一像素敏感度**：`tests/visual/support/visual-app.test.ts` 断言高对比的单像素改动会被检出、阈值以下的单像素噪声被放过
+  （阈值 0.1 只用于过滤抗锯齿噪声，不掩盖成片或高对比改动）。
+- **两次发布字节一致**：在能访问 Docker 宿主的机器上执行 `yarn visual:verify-determinism`，连续跑两次 canonical 发布并逐字节比较
+  PNG，第二次必须与第一次一致。2026-01 文案迁移后的那次宿主机发布复现了未受影响的 17 张基线字节不变，只有 5 张按文案变化更新。
+- `stableScreenshot` 只保证单次运行内取两帧一致。
+
+## 10. 已就绪但待发布基线的五屏
+
+以下五屏的测试已经存在并在 preview 下通过（`xvfb-run -a yarn test:visual` → 27 passed），但 canonical 基线尚未生成，
+因此规格里的锚点暂时保持 `unverified`。在宿主机执行 `yarn visual:image && yarn visual:publish` 之后，把对应锚点改成
+`visual: VR-<ID>（tests/visual/<目录>/UI-<ID>.spec.ts）` 并补 `visual-states`，再提交基线与规格：
+
+| 规格 | 测试 | 捕获状态 |
+| --- | --- | --- |
+| `UI-SR-02` | `tests/visual/submissions/UI-SR-02.spec.ts` | `default`（人工评分） |
+| `UI-SR-03` | `tests/visual/submissions/UI-SR-03.spec.ts` | `default`（评分结算，1 可结算） |
+| `UI-IF-06` | `tests/visual/interfaces/UI-IF-06.spec.ts` | `default`（审查题型文件） |
+| `UI-TP-04` | `tests/visual/templates/UI-TP-04.spec.ts` | `default`（函数编辑器新建函数） |
+| `UI-TP-05` | `tests/visual/templates/UI-TP-05.spec.ts` | `default`（生成设置，三组音色） |
+
+翻转后 `yarn visual:check` 应报告「已锚定 27，未验证 0，n/a 2」。
