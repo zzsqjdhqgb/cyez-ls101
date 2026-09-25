@@ -38,8 +38,10 @@ test('lab OpenAPI contract is internally consistent', () => {
       }
     }
   }
-  assert.equal(Object.keys(api.paths).length, 51)
-  assert.equal(operationCount, 61)
+  // Deliberate change detectors: keep these in sync with the sibling assertion in
+  // packages/lab-contracts/src/__tests__/contract.test.ts whenever the API surface changes.
+  assert.equal(Object.keys(api.paths).length, 52)
+  assert.equal(operationCount, 62)
   assert.ok(api.components.schemas.Heartbeat)
   assert.ok(api.components.schemas.DevicePatch)
   assert.ok(api.components.schemas.PasswordUpdate)
