@@ -24,11 +24,16 @@ test('teacher imports, publishes, unpublishes and deletes an exam through the re
     expect((await exams()).items[0].published).toBe(true)
     await row.getByRole('button', { name: '删除', exact: true }).click()
     await page.getByRole('alertdialog').getByRole('button', { name: '取消' }).click()
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
     expect((await exams()).items).toHaveLength(1)
     await row.getByRole('button', { name: '删除', exact: true }).click()
     await page.getByRole('alertdialog').getByRole('button', { name: '确认' }).click()
+    // An open modal hides the table from the accessibility tree, so a row-count assertion would pass
+    // against the dialog itself and race the delete request. The dialog closes only after the
+    // mutation resolves, which is what makes the row and server assertions meaningful.
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
     await expect(row).toHaveCount(0)
-    expect((await exams()).items).toHaveLength(0)
+    await expect.poll(async () => (await exams()).items.length).toBe(0)
   } finally {
     await f.close()
   }
