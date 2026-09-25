@@ -30,7 +30,7 @@ export class SettingsPageRegistry {
 
   register(registration: SettingsPageRegistration): () => void {
     if (this.pages.some((page) => page.id === registration.id)) {
-      throw new Error(`Settings page id is already registered: ${registration.id}`)
+      throw new Error(`设置页编号重复注册：${registration.id}`)
     }
 
     const existingGroup = this.pages.find((page) => page.group.id === registration.group.id)
@@ -39,7 +39,7 @@ export class SettingsPageRegistry {
       (existingGroup.group.label !== registration.group.label ||
         existingGroup.group.order !== registration.group.order)
     ) {
-      throw new Error(`Settings group metadata conflicts: ${registration.group.id}`)
+      throw new Error(`设置分组信息冲突：${registration.group.id}`)
     }
 
     this.pages = [...this.pages, registration]

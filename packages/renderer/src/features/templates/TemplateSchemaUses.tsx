@@ -80,7 +80,11 @@ export function TemplateSchemaUses({
       setAvailable(items)
       setSelectedSchemaId(items[0]?.schemaId ?? '')
       setDefinitions(
-        (current) => new Map([...current, ...items.map((item) => [item.schemaId, item])])
+        (current) =>
+          new Map([
+            ...current,
+            ...items.map((item): [string, SchemaDefinition] => [item.schemaId, item])
+          ])
       )
     } catch (reason) {
       setError(templateErrorMessage(reason))

@@ -252,7 +252,7 @@ export class AIRouterSpeechRecognitionService {
     body.set('model', request.modelId)
     body.set(
       'file',
-      new Blob([request.audio.data], { type: request.audio.mediaType }),
+      new Blob([new Uint8Array(request.audio.data)], { type: request.audio.mediaType }),
       request.audio.filename || 'audio.webm'
     )
     const response = await fetch(`${config.baseUrl}/audio/transcriptions`, {

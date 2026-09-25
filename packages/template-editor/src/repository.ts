@@ -14,6 +14,7 @@ import {
 } from './id'
 import type {
   BuiltinTemplateRelease,
+  FunctionContent,
   FunctionDef,
   FunctionLibraryContent,
   FunctionLibraryRelease,
@@ -28,6 +29,24 @@ const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}
 const BUILTIN_LIBRARY_ID_PATTERN = /^builtin:([a-z0-9][a-z0-9_-]*)$/
 const BUILTIN_FUNCTION_ID_PATTERN = /^builtin:[a-z0-9][a-z0-9_-]*$/
 const VERSION_SCOPE_PATTERN = /^v([1-9][0-9]*)$/
+
+const FUNCTION_LIBRARY_SOURCE_LABELS = {
+  Imported: '导入',
+  Builtin: '内置'
+} as const
+
+const UUID_FIELD_LABELS = {
+  templateId: '试卷模板编号',
+  libraryId: '函数库编号',
+  functionId: '函数编号',
+  functionRef: '函数引用',
+  'stored ID': '存储编号'
+} as const
+
+const VERSION_KIND_LABELS = {
+  template: '试卷模板',
+  'function library': '函数库'
+} as const
 
 /** @ls101/file-store 的 ScopedStore 满足此结构，也可由测试内存实现替代。 */
 export interface TemplateStore {
@@ -119,28 +138,28 @@ export class FileTemplateRepository implements TemplateRepository {
     const value = await readStoredValue(
       this.templates.scope(templateId),
       TEMPLATE_FILE,
-      `Template ${templateId}`
+      `试卷模板 ${templateId}`
     )
     if (value === null) return null
     const document = parseTemplateDocument(value)
     if (!document || document.templateId !== templateId) {
-      throw invalidData(`Template ${templateId} is invalid`)
+      throw invalidData(`试卷模板 ${templateId} 无效`)
     }
     await assertFunctionResources(document.resources.functions)
     return document
   }
 
   async createTemplate(document: TemplateDocument): Promise<TemplateDocument> {
-    if (!parseTemplateDocument(document)) throw invalidData('Template is invalid')
+    if (!parseTemplateDocument(document)) throw invalidData('试卷模板无效')
     assertUuid(document.templateId, 'templateId')
     if (document.revision !== 0) {
-      throw revisionConflict('Template', document.templateId, 0, document.revision)
+      throw revisionConflict('试卷模板', document.templateId, 0, document.revision)
     }
     await assertFunctionResources(document.resources.functions)
     const scope = this.templates.scope(document.templateId)
     if (!(await scope.compareAndSwapText(TEMPLATE_FILE, null, document))) {
       throw await latestRevisionConflict(
-        'Template',
+        '试卷模板',
         document.templateId,
         document.revision,
         scope,
@@ -152,18 +171,18 @@ export class FileTemplateRepository implements TemplateRepository {
   }
 
   async saveTemplate(document: TemplateDocument): Promise<TemplateDocument> {
-    if (!parseTemplateDocument(document)) throw invalidData('Template is invalid')
+    if (!parseTemplateDocument(document)) throw invalidData('试卷模板无效')
     assertUuid(document.templateId, 'templateId')
     await assertFunctionResources(document.resources.functions)
     const scope = this.templates.scope(document.templateId)
-    const stored = await readStoredValue(scope, TEMPLATE_FILE, `Template ${document.templateId}`)
+    const stored = await readStoredValue(scope, TEMPLATE_FILE, `试卷模板 ${document.templateId}`)
     if (stored === null) {
       if (document.revision !== 0) {
-        throw revisionConflict('Template', document.templateId, 0, document.revision)
+        throw revisionConflict('试卷模板', document.templateId, 0, document.revision)
       }
       if (!(await scope.compareAndSwapText(TEMPLATE_FILE, null, document))) {
         throw await latestRevisionConflict(
-          'Template',
+          '试卷模板',
           document.templateId,
           document.revision,
           scope,
@@ -175,16 +194,16 @@ export class FileTemplateRepository implements TemplateRepository {
     }
     const current = parseTemplateDocument(stored)
     if (!current || current.templateId !== document.templateId) {
-      throw invalidData(`Template ${document.templateId} is invalid`)
+      throw invalidData(`试卷模板 ${document.templateId} 无效`)
     }
     await assertFunctionResources(current.resources.functions)
     if (current.revision !== document.revision) {
-      throw revisionConflict('Template', document.templateId, current.revision, document.revision)
+      throw revisionConflict('试卷模板', document.templateId, current.revision, document.revision)
     }
     const updated = { ...document, revision: document.revision + 1 }
     if (!(await scope.compareAndSwapText(TEMPLATE_FILE, stored, updated))) {
       throw await latestRevisionConflict(
-        'Template',
+        '试卷模板',
         document.templateId,
         document.revision,
         scope,
@@ -212,9 +231,7 @@ export class FileTemplateRepository implements TemplateRepository {
     if (!entry) return null
     const release = await this.getBuiltinTemplate(templateId, entry.version)
     if (!release) {
-      throw invalidData(
-        `Builtin template ${templateId} active release v${entry.version} is missing`
-      )
+      throw invalidData(`内置试卷模板 ${templateId} 的启用版本 v${entry.version} 缺失`)
     }
     return release
   }
@@ -228,7 +245,7 @@ export class FileTemplateRepository implements TemplateRepository {
     const value = await readStoredValue(
       builtinTemplateReleaseScope(this.builtinTemplates, templateId, version),
       TEMPLATE_FILE,
-      `Builtin template ${templateId} v${version}`
+      `内置试卷模板 ${templateId} v${version}`
     )
     if (value === null) return null
     const release = parseBuiltinTemplateRelease(value)
@@ -238,7 +255,7 @@ export class FileTemplateRepository implements TemplateRepository {
       release.version !== version ||
       !(await verifyBuiltinTemplateRelease(release))
     ) {
-      throw invalidData(`Builtin template ${templateId} v${version} is invalid`)
+      throw invalidData(`内置试卷模板 ${templateId} v${version} 无效`)
     }
     await validateBuiltinTemplateRelease(release)
     return release
@@ -254,12 +271,12 @@ export class FileTemplateRepository implements TemplateRepository {
     const stored = await readStoredValue(
       scope,
       TEMPLATE_FILE,
-      `Builtin template ${release.templateId} v${release.version}`
+      `内置试卷模板 ${release.templateId} v${release.version}`
     )
     if (stored !== null) {
       const current = parseBuiltinTemplateRelease(stored)
       if (!current || !(await verifyBuiltinTemplateRelease(current))) {
-        throw invalidData(`Builtin template ${release.templateId} v${release.version} is invalid`)
+        throw invalidData(`内置试卷模板 ${release.templateId} v${release.version} 无效`)
       }
       if (sameBuiltinTemplateRelease(current, release)) return current
       throw templateReleaseConflict(release.templateId, release.version)
@@ -282,23 +299,19 @@ export class FileTemplateRepository implements TemplateRepository {
     for (const { templateId, version } of normalized) {
       assertUuid(templateId, 'templateId')
       assertVersion(version, 'template')
-      if (ids.has(templateId)) throw invalidData(`Duplicate active builtin template: ${templateId}`)
+      if (ids.has(templateId)) throw invalidData(`重复启用的内置试卷模板：${templateId}`)
       ids.add(templateId)
       if (!(await this.getBuiltinTemplate(templateId, version))) {
-        throw invalidData(`Builtin template ${templateId} release v${version} is missing`)
+        throw invalidData(`内置试卷模板 ${templateId} 的版本 v${version} 缺失`)
       }
     }
     await this.builtinTemplates.writeText(ACTIVE_FILE, { templates: normalized })
   }
 
   private async readActiveBuiltinTemplates(): Promise<ActiveBuiltinTemplates> {
-    const value = await readStoredValue(
-      this.builtinTemplates,
-      ACTIVE_FILE,
-      'Active builtin templates'
-    )
+    const value = await readStoredValue(this.builtinTemplates, ACTIVE_FILE, '启用的内置试卷模板')
     if (value === null) return { templates: [] }
-    if (!isActiveBuiltinTemplates(value)) throw invalidData('Active builtin templates are invalid')
+    if (!isActiveBuiltinTemplates(value)) throw invalidData('启用的内置试卷模板无效')
     return value
   }
 
@@ -311,7 +324,7 @@ export class FileTemplateRepository implements TemplateRepository {
     const scope = this.localLibraries.scope(libraryId)
     let value: unknown | null
     try {
-      value = await readStoredValue(scope, LIBRARY_FILE, `Local function library ${libraryId}`)
+      value = await readStoredValue(scope, LIBRARY_FILE, `本地函数库 ${libraryId}`)
     } catch (error) {
       if (error instanceof TemplateRepositoryError && error.code === 'INVALID_DATA') {
         throw invalidLocalLibrary(libraryId, error.message)
@@ -338,23 +351,19 @@ export class FileTemplateRepository implements TemplateRepository {
     document: LocalFunctionLibraryDocument
   ): Promise<LocalFunctionLibraryDocument> {
     if (!parseLocalFunctionLibraryDocument(document)) {
-      throw invalidData('Local function library is invalid')
+      throw invalidData('本地函数库无效')
     }
     assertUuid(document.libraryId, 'libraryId')
     assertLocalLibrary(document)
     const scope = this.localLibraries.scope(document.libraryId)
-    const stored = await readStoredValue(
-      scope,
-      LIBRARY_FILE,
-      `Local function library ${document.libraryId}`
-    )
+    const stored = await readStoredValue(scope, LIBRARY_FILE, `本地函数库 ${document.libraryId}`)
     if (stored === null) {
       if (document.storageRevision !== 0) {
-        throw revisionConflict('FunctionLibrary', document.libraryId, 0, document.storageRevision)
+        throw revisionConflict('函数库', document.libraryId, 0, document.storageRevision)
       }
       if (!(await scope.compareAndSwapText(LIBRARY_FILE, null, document))) {
         throw await latestRevisionConflict(
-          'FunctionLibrary',
+          '函数库',
           document.libraryId,
           document.storageRevision,
           scope,
@@ -367,12 +376,12 @@ export class FileTemplateRepository implements TemplateRepository {
     }
     const current = parseLocalFunctionLibraryDocument(stored)
     if (!current || current.libraryId !== document.libraryId) {
-      throw invalidData(`Local function library ${document.libraryId} is invalid`)
+      throw invalidData(`本地函数库 ${document.libraryId} 无效`)
     }
     assertLocalLibrary(current)
     if (current.storageRevision !== document.storageRevision) {
       throw revisionConflict(
-        'FunctionLibrary',
+        '函数库',
         document.libraryId,
         current.storageRevision,
         document.storageRevision
@@ -381,7 +390,7 @@ export class FileTemplateRepository implements TemplateRepository {
     const updated = { ...document, storageRevision: document.storageRevision + 1 }
     if (!(await scope.compareAndSwapText(LIBRARY_FILE, stored, updated))) {
       throw await latestRevisionConflict(
-        'FunctionLibrary',
+        '函数库',
         document.libraryId,
         document.storageRevision,
         scope,
@@ -448,9 +457,7 @@ export class FileTemplateRepository implements TemplateRepository {
     if (!entry) return null
     const release = await this.getBuiltinFunctionLibrary(libraryId, entry.version)
     if (!release) {
-      throw invalidData(
-        `Builtin function library ${libraryId} active release v${entry.version} is missing`
-      )
+      throw invalidData(`内置函数库 ${libraryId} 的启用版本 v${entry.version} 缺失`)
     }
     return release
   }
@@ -489,25 +496,21 @@ export class FileTemplateRepository implements TemplateRepository {
       assertBuiltinLibraryId(libraryId)
       assertVersion(version)
       if (ids.has(libraryId)) {
-        throw invalidData(`Duplicate active builtin function library: ${libraryId}`)
+        throw invalidData(`重复启用的内置函数库：${libraryId}`)
       }
       ids.add(libraryId)
       if (!(await this.getBuiltinFunctionLibrary(libraryId, version))) {
-        throw invalidData(`Builtin function library ${libraryId} release v${version} is missing`)
+        throw invalidData(`内置函数库 ${libraryId} 的版本 v${version} 缺失`)
       }
     }
     await this.builtinLibraries.writeText(ACTIVE_FILE, { libraries: normalized })
   }
 
   private async readActiveBuiltinFunctionLibraries(): Promise<ActiveBuiltinFunctionLibraries> {
-    const value = await readStoredValue(
-      this.builtinLibraries,
-      ACTIVE_FILE,
-      'Active builtin function libraries'
-    )
+    const value = await readStoredValue(this.builtinLibraries, ACTIVE_FILE, '启用的内置函数库')
     if (value === null) return { libraries: [] }
     if (!isActiveBuiltinFunctionLibraries(value)) {
-      throw invalidData('Active builtin function libraries are invalid')
+      throw invalidData('启用的内置函数库无效')
     }
     return value
   }
@@ -523,7 +526,7 @@ export class FileTemplateRepository implements TemplateRepository {
     const value = await readStoredValue(
       releaseScope(root, physicalLibraryId, version),
       LIBRARY_FILE,
-      `${label} function library ${logicalLibraryId} v${version}`
+      `${FUNCTION_LIBRARY_SOURCE_LABELS[label]}函数库 ${logicalLibraryId} v${version}`
     )
     if (value === null) return null
     const release = parseFunctionLibraryRelease(value)
@@ -533,7 +536,9 @@ export class FileTemplateRepository implements TemplateRepository {
       release.version !== version ||
       !(await verifyFunctionLibraryRelease(release))
     ) {
-      throw invalidData(`${label} function library ${logicalLibraryId} v${version} is invalid`)
+      throw invalidData(
+        `${FUNCTION_LIBRARY_SOURCE_LABELS[label]}函数库 ${logicalLibraryId} v${version} 无效`
+      )
     }
     await validateFunctionLibraryRelease(release, label === 'Builtin' ? 'builtin' : 'imported')
     return release
@@ -549,13 +554,13 @@ export class FileTemplateRepository implements TemplateRepository {
     const stored = await readStoredValue(
       scope,
       LIBRARY_FILE,
-      `${label} function library ${release.libraryId} v${release.version}`
+      `${FUNCTION_LIBRARY_SOURCE_LABELS[label]}函数库 ${release.libraryId} v${release.version}`
     )
     if (stored !== null) {
       const current = parseFunctionLibraryRelease(stored)
       if (!current || !(await verifyFunctionLibraryRelease(current))) {
         throw invalidData(
-          `${label} function library ${release.libraryId} v${release.version} is invalid`
+          `${FUNCTION_LIBRARY_SOURCE_LABELS[label]}函数库 ${release.libraryId} v${release.version} 无效`
         )
       }
       if (
@@ -599,13 +604,13 @@ async function readStoredValue(
   try {
     return await store.readText<unknown>(filename)
   } catch (error) {
-    if (isSyntaxError(error)) throw invalidData(`${label} contains invalid JSON`)
+    if (isSyntaxError(error)) throw invalidData(`${label} 包含无效的 JSON`)
     throw error
   }
 }
 
 async function latestRevisionConflict<T extends { revision: number }>(
-  kind: 'Template' | 'FunctionLibrary',
+  kind: '试卷模板' | '函数库',
   id: string,
   providedRevision: number,
   store: TemplateStore,
@@ -616,7 +621,7 @@ async function latestRevisionConflict<T extends { revision: number }>(
   const stored = await readStoredValue(store, filename, `${kind} ${id}`)
   if (stored === null) return revisionConflict(kind, id, 0, providedRevision)
   const current = parse(stored)
-  if (!current) throw invalidData(`${kind} ${id} is invalid`)
+  if (!current) throw invalidData(`${kind} ${id} 无效`)
   return revisionConflict(kind, id, selectRevision(current), providedRevision)
 }
 
@@ -638,7 +643,7 @@ async function listVersionScopes(store: TemplateStore): Promise<number[]> {
   return scopes
     .map((scope) => {
       const match = VERSION_SCOPE_PATTERN.exec(scope)
-      if (!match) throw invalidData(`Invalid stored function library version: ${scope}`)
+      if (!match) throw invalidData(`存储的函数库版本无效：${scope}`)
       const version = Number(match[1])
       assertVersion(version)
       return version
@@ -664,7 +669,7 @@ export async function validateBuiltinTemplateRelease(
   release: BuiltinTemplateRelease
 ): Promise<void> {
   if (!parseBuiltinTemplateRelease(release) || !(await verifyBuiltinTemplateRelease(release))) {
-    throw invalidData('Builtin template release is invalid')
+    throw invalidData('内置试卷模板版本无效')
   }
   assertUuid(release.templateId, 'templateId')
   assertVersion(release.version, 'template')
@@ -677,7 +682,7 @@ function assertLocalLibrary(document: LocalFunctionLibraryDocument): void {
   const ids = new Set(document.content.functions.map((entry) => entry.functionId))
   for (const functionId of Object.keys(document.editorState.functions)) {
     if (!ids.has(functionId)) {
-      throw invalidData(`Editor state references unknown function: ${functionId}`)
+      throw invalidData(`编辑器状态引用了未知函数：${functionId}`)
     }
   }
 }
@@ -687,7 +692,7 @@ export async function validateFunctionLibraryRelease(
   source: 'builtin' | 'imported'
 ): Promise<void> {
   if (!parseFunctionLibraryRelease(release) || !(await verifyFunctionLibraryRelease(release))) {
-    throw invalidData('Function library release is invalid')
+    throw invalidData('函数库版本无效')
   }
   assertVersion(release.version)
   if (source === 'builtin') assertBuiltinLibraryId(release.libraryId)
@@ -704,16 +709,13 @@ function assertFunctionLibraryContent(
   for (const entry of content.functions) {
     if (source === 'builtin') {
       if (!BUILTIN_FUNCTION_ID_PATTERN.test(entry.functionId)) {
-        throw new TemplateRepositoryError(
-          'INVALID_ID',
-          `Invalid builtin functionId: ${entry.functionId}`
-        )
+        throw new TemplateRepositoryError('INVALID_ID', `内置函数编号无效：${entry.functionId}`)
       }
     } else {
       assertUuid(entry.functionId, 'functionId')
     }
     if (ids.has(entry.functionId)) {
-      throw invalidData(`Duplicate function in library: ${entry.functionId}`)
+      throw invalidData(`函数库中存在重复函数：${entry.functionId}`)
     }
     ids.add(entry.functionId)
   }
@@ -731,16 +733,13 @@ function assertFunctionLibraryDependencyGraph(
     visitFunctionRefs(entry.content.body, (functionRef) => {
       if (source === 'builtin') {
         if (!BUILTIN_FUNCTION_ID_PATTERN.test(functionRef)) {
-          throw new TemplateRepositoryError(
-            'INVALID_ID',
-            `Invalid builtin functionRef: ${functionRef}`
-          )
+          throw new TemplateRepositoryError('INVALID_ID', `内置函数引用编号无效：${functionRef}`)
         }
       } else {
         assertUuid(functionRef, 'functionRef')
       }
       if (!functions.has(functionRef)) {
-        throw invalidData(`Unknown function dependency in ${entry.functionId}: ${functionRef}`)
+        throw invalidData(`函数 ${entry.functionId} 引用了未知函数：${functionRef}`)
       }
       refs.push(functionRef)
     })
@@ -755,7 +754,7 @@ function assertFunctionLibraryDependencyGraph(
     if (visiting.has(functionId)) {
       const start = stack.indexOf(functionId)
       const chain = [...stack.slice(start), functionId]
-      throw invalidData(`Recursive function dependency: ${chain.join(' -> ')}`)
+      throw invalidData(`函数依赖存在循环：${chain.join(' -> ')}`)
     }
     visiting.add(functionId)
     stack.push(functionId)
@@ -780,31 +779,37 @@ function visitFunctionRefs(
 async function assertFunctionResources(resources: readonly FunctionDef[]): Promise<void> {
   const ids = new Set<string>()
   for (const resource of resources) {
-    if (ids.has(resource.id)) throw invalidData(`Duplicate function resource: ${resource.id}`)
+    if (ids.has(resource.id)) throw invalidData(`函数资源重复：${resource.id}`)
     ids.add(resource.id)
     if (!(await verifyFunctionResourceId(resource))) {
-      throw invalidData(`Function resource integrity check failed: ${resource.id}`)
+      throw invalidData(`函数资源完整性校验失败：${resource.id}`)
     }
   }
 }
 
-function assertUuid(value: string, label: string): void {
+function assertUuid(value: string, label: keyof typeof UUID_FIELD_LABELS): void {
   if (!UUID_V4_PATTERN.test(value)) {
-    throw new TemplateRepositoryError('INVALID_ID', `Invalid ${label}: ${value}`)
+    throw new TemplateRepositoryError('INVALID_ID', `无效的${UUID_FIELD_LABELS[label]}：${value}`)
   }
 }
 
 function assertBuiltinLibraryId(libraryId: string): string {
   const match = BUILTIN_LIBRARY_ID_PATTERN.exec(libraryId)
   if (!match) {
-    throw new TemplateRepositoryError('INVALID_ID', `Invalid builtin libraryId: ${libraryId}`)
+    throw new TemplateRepositoryError('INVALID_ID', `内置函数库编号无效：${libraryId}`)
   }
   return match[1]
 }
 
-function assertVersion(version: number, kind = 'function library'): void {
+function assertVersion(
+  version: number,
+  kind: keyof typeof VERSION_KIND_LABELS = 'function library'
+): void {
   if (!Number.isSafeInteger(version) || version < 1) {
-    throw new TemplateRepositoryError('INVALID_ID', `Invalid ${kind} version: ${version}`)
+    throw new TemplateRepositoryError(
+      'INVALID_ID',
+      `无效的${VERSION_KIND_LABELS[kind]}版本：${version}`
+    )
   }
 }
 
@@ -882,11 +887,9 @@ function invalidData(message: string): TemplateRepositoryError {
 }
 
 function invalidLocalLibrary(libraryId: string, message?: string): TemplateRepositoryError {
-  return new TemplateRepositoryError(
-    'INVALID_DATA',
-    message ?? `Local function library ${libraryId} is invalid`,
-    { libraryId }
-  )
+  return new TemplateRepositoryError('INVALID_DATA', message ?? `本地函数库 ${libraryId} 无效`, {
+    libraryId
+  })
 }
 
 function assertReadableLocalLibrary(document: LocalFunctionLibraryDocument): void {
@@ -901,12 +904,12 @@ function assertReadableLocalLibrary(document: LocalFunctionLibraryDocument): voi
 }
 
 function revisionConflict(
-  kind: 'Template' | 'FunctionLibrary',
+  kind: '试卷模板' | '函数库',
   id: string,
   currentRevision: number,
   providedRevision: number
 ): TemplateRepositoryError {
-  return new TemplateRepositoryError('REVISION_CONFLICT', `${kind} revision conflict: ${id}`, {
+  return new TemplateRepositoryError('REVISION_CONFLICT', `${kind}版本冲突：${id}`, {
     id,
     currentRevision,
     providedRevision
@@ -916,7 +919,7 @@ function revisionConflict(
 function releaseConflict(libraryId: string, version: number): TemplateRepositoryError {
   return new TemplateRepositoryError(
     'RELEASE_CONFLICT',
-    `Function library release conflict: ${libraryId} v${version}`,
+    `函数库版本冲突：${libraryId} v${version}`,
     { libraryId, version }
   )
 }
@@ -924,7 +927,7 @@ function releaseConflict(libraryId: string, version: number): TemplateRepository
 function templateReleaseConflict(templateId: string, version: number): TemplateRepositoryError {
   return new TemplateRepositoryError(
     'RELEASE_CONFLICT',
-    `Template release conflict: ${templateId} v${version}`,
+    `试卷模板版本冲突：${templateId} v${version}`,
     { templateId, version }
   )
 }

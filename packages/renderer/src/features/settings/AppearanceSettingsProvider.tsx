@@ -6,6 +6,7 @@ import {
 } from './AppearanceSettingsApplication'
 import { AppearanceSettingsContext } from './AppearanceSettingsContext'
 import { applyAppearanceSettings } from './AppearanceSettingsRuntime'
+import { toUserMessage } from '../../components/ui/userMessage'
 
 interface AppearanceSettingsProviderProps {
   children: ReactNode
@@ -100,5 +101,5 @@ export function AppearanceSettingsProvider({
 }
 
 function errorMessage(reason: unknown): string {
-  return reason instanceof Error ? reason.message : '外观设置操作失败'
+  return toUserMessage(reason, '外观设置操作失败')
 }

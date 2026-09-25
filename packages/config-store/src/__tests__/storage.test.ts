@@ -67,19 +67,19 @@ describe('JsonConfigStorage', () => {
   it('rejects traversal before touching disk', async () => {
     await expect(
       storage.write({ scope: ['appearance', '..'], key: 'settings' }, {})
-    ).rejects.toThrow('Invalid config-store scope segment')
+    ).rejects.toThrow('配置存储作用域片段无效')
     await expect(storage.read({ scope: ['appearance'], key: '../settings' })).rejects.toThrow(
-      'Invalid config-store key'
+      '配置键无效'
     )
   })
 
   it('rejects runtime values that JSON would silently alter', async () => {
     const location = { scope: ['appearance'], key: 'settings' }
     await expect(storage.write(location, { value: undefined } as never)).rejects.toThrow(
-      'Config data is not a JSON value'
+      '配置数据不是合法的 JSON 值'
     )
     await expect(storage.write(location, { value: Number.NaN })).rejects.toThrow(
-      'Config data is not a JSON value'
+      '配置数据不是合法的 JSON 值'
     )
   })
 })

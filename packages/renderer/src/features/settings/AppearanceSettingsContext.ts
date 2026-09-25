@@ -15,6 +15,6 @@ export const AppearanceSettingsContext = createContext<AppearanceSettingsContext
 
 export function useAppearanceSettings(): AppearanceSettingsContextValue {
   const value = useContext(AppearanceSettingsContext)
-  if (!value) throw new Error('AppearanceSettingsProvider is missing')
+  if (!value) throw new Error('外观设置上下文缺失，请在应用内打开本页。')
   return value
 }

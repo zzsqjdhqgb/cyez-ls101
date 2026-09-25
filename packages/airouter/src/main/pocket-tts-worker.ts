@@ -63,16 +63,16 @@ async function initialize(): Promise<void> {
 }
 
 function synthesize(text: string, voiceId: string, requestId: string): Uint8Array {
-  if (!model || !tokenizer) throw new Error('TTS engine is not initialized')
+  if (!model || !tokenizer) throw new Error('TTS 引擎尚未初始化')
   const voiceIndex = voiceMap.get(voiceId)
-  if (voiceIndex === undefined) throw new Error(`Unknown TTS voice: ${voiceId}`)
+  if (voiceIndex === undefined) throw new Error(`未知的 TTS 音色：${voiceId}`)
   return synthesizePocketTts(text, voiceIndex, model, tokenizer, {
     ...config,
     onProgress: (message) => console.info(`[Pocket TTS ${requestId}] ${message}`)
   })
 }
 
-if (!parentPort) throw new Error('TTS worker parent port is unavailable')
+if (!parentPort) throw new Error('TTS Worker 父端口不可用')
 
 void initialize()
   .then(() => send({ type: 'ready' }))

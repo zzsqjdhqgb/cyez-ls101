@@ -38,3 +38,4 @@ docs/manual/.manual-staging
 
 # Local TextPA environment overrides
 /textpa/.env.local
+.tsbuild/

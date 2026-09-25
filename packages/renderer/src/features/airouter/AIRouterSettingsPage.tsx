@@ -74,6 +74,13 @@ interface ProviderDraft {
   models: AIRouterModelConfig[]
 }
 
+/**
+ * 只读取服务商身份字段的视图，`catalogProviderId` 尚未匹配内置目录时缺省。
+ */
+type ProviderPresetIdentity = Pick<ProviderDraft, 'type' | 'baseUrl'> & {
+  catalogProviderId?: string
+}
+
 type FeedbackScope = 'api-key' | 'models' | 'test' | 'editor' | 'delete'
 
 const providerLabels: Record<AIRouterProviderType, string> = {
@@ -1144,9 +1151,7 @@ function mergeDiscoveredModel(
   }
 }
 
-function providerPresetId(
-  draft: Pick<ProviderDraft, 'type' | 'baseUrl' | 'catalogProviderId'>
-): string {
+function providerPresetId(draft: ProviderPresetIdentity): string {
   return (
     providerPresets.find(
       (preset) =>
@@ -1157,9 +1162,7 @@ function providerPresetId(
   )
 }
 
-function providerPresetName(
-  draft: Pick<ProviderDraft, 'type' | 'baseUrl' | 'catalogProviderId'>
-): string {
+function providerPresetName(draft: ProviderPresetIdentity): string {
   const id = providerPresetId(draft)
   return providerPresets.find((preset) => preset.id === id)?.name ?? providerLabels[draft.type]
 }

@@ -543,7 +543,7 @@ export function SchemaDefinitionPage(): JSX.Element {
               </div>
             ) : null}
             <SchemaDataFields
-              structure={structure ?? definition.structure}
+              structure={structure}
               data={data}
               readOnly={builtin}
               onChange={(nextData) => {
@@ -564,7 +564,7 @@ export function SchemaDefinitionPage(): JSX.Element {
             <dl>
               <div>
                 <dt>评分管道</dt>
-                <dd>{questionTypeLabels[(structure ?? definition.structure).questionType]}</dd>
+                <dd>{questionTypeLabels[structure.questionType]}</dd>
               </div>
               {definition ? (
                 <>
@@ -586,7 +586,7 @@ export function SchemaDefinitionPage(): JSX.Element {
                 </div>
               </div>
               <ul className={styles.frozenList}>
-                {(structure ?? definition.structure).answerFormat.map((answer) => (
+                {structure.answerFormat.map((answer) => (
                   <li key={answer.answerId}>
                     <code>{answer.answerId}</code>
                     <span>
@@ -604,7 +604,7 @@ export function SchemaDefinitionPage(): JSX.Element {
                 </div>
               </div>
               <ul className={styles.frozenList}>
-                {(structure ?? definition.structure).templateInputs.map((input) => (
+                {structure.templateInputs.map((input) => (
                   <li key={input.inputId}>
                     <code>{input.inputId}</code>
                     <span>{input.required ? '必填' : '可选'}</span>

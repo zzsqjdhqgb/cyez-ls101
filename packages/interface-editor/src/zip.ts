@@ -55,7 +55,7 @@ export async function encodeInterfaceZip(value: InterfaceExchangePackage): Promi
 }
 
 export async function decodeInterfaceZip(data: Uint8Array): Promise<InterfaceExchangePackage> {
-  if (!(data instanceof Uint8Array)) throw invalidZip('Interface file must contain binary data')
+  if (!(data instanceof Uint8Array)) throw invalidZip('题型文件必须是二进制数据')
 
   const files = await unzipAsync(data)
   validatePaths(files)
@@ -63,7 +63,7 @@ export async function decodeInterfaceZip(data: Uint8Array): Promise<InterfaceExc
   assertManifest(manifest)
   const def = readJson<InterfaceDef>(files, INTERFACE_PATH)
   if (def.id !== manifest.interfaceId) {
-    throw invalidZip('ZIP manifest Interface ID does not match interface.json')
+    throw invalidZip('压缩包清单中的题型编号与题型文件不一致')
   }
 
   const expectedPaths = new Set([MANIFEST_PATH, INTERFACE_PATH])
@@ -72,7 +72,7 @@ export async function decodeInterfaceZip(data: Uint8Array): Promise<InterfaceExc
     expectedPaths.add(instancePath)
     const instance = readJson<InterfaceInstance>(files, instancePath)
     if (instance.instanceId !== instanceId) {
-      throw invalidZip(`Instance ID does not match its ZIP path: ${instanceId}`)
+      throw invalidZip(`题组编号与压缩包路径不一致：${instanceId}`)
     }
 
     const assetData: Record<string, Uint8Array> = {}
@@ -80,14 +80,14 @@ export async function decodeInterfaceZip(data: Uint8Array): Promise<InterfaceExc
       const assetPath = `instances/${instanceId}/assets/${filename}`
       expectedPaths.add(assetPath)
       const asset = files[assetPath]
-      if (!asset) throw invalidZip(`Missing instance asset: ${assetPath}`)
+      if (!asset) throw invalidZip(`缺少题组资源文件：${assetPath}`)
       assetData[filename] = asset
     }
     return { instance, assets: assetData }
   })
 
   for (const path of Object.keys(files)) {
-    if (!expectedPaths.has(path)) throw invalidZip(`Unexpected file in Interface ZIP: ${path}`)
+    if (!expectedPaths.has(path)) throw invalidZip(`题型压缩包中存在多余文件：${path}`)
   }
 
   return {
@@ -116,7 +116,7 @@ function assertManifest(value: ZipManifest): void {
         value.builtin.interfaceId !== value.interfaceId)) ||
     !Array.isArray(value.instances)
   ) {
-    throw invalidZip('Invalid Interface ZIP manifest')
+    throw invalidZip('题型压缩包清单无效')
   }
 
   const ids = new Set<string>()
@@ -132,7 +132,7 @@ function assertManifest(value: ZipManifest): void {
       new Set(entry.assets).size !== entry.assets.length ||
       ids.has(entry.instanceId)
     ) {
-      throw invalidZip('Invalid Interface ZIP instance manifest')
+      throw invalidZip('题型压缩包中的题组清单无效')
     }
     ids.add(entry.instanceId)
   }
@@ -140,20 +140,20 @@ function assertManifest(value: ZipManifest): void {
 
 function validatePaths(files: Record<string, Uint8Array>): void {
   const paths = Object.keys(files)
-  if (paths.length > MAX_FILES) throw invalidZip('Interface ZIP contains too many files')
+  if (paths.length > MAX_FILES) throw invalidZip('题型压缩包中的文件数量过多')
 
   let totalBytes = 0
   for (const path of paths) {
     totalBytes += files[path].byteLength
     if (totalBytes > MAX_UNCOMPRESSED_BYTES) {
-      throw invalidZip('Interface ZIP is too large after decompression')
+      throw invalidZip('题型压缩包解压后体积过大')
     }
     if (
       path.includes('\\') ||
       path.startsWith('/') ||
       path.split('/').some((segment) => !segment || segment === '.' || segment === '..')
     ) {
-      throw invalidZip(`Unsafe path in Interface ZIP: ${path}`)
+      throw invalidZip(`题型压缩包中存在不安全的路径：${path}`)
     }
     if (
       path !== MANIFEST_PATH &&
@@ -161,18 +161,18 @@ function validatePaths(files: Record<string, Uint8Array>): void {
       !INSTANCE_PATH_PATTERN.test(path) &&
       !ASSET_PATH_PATTERN.test(path)
     ) {
-      throw invalidZip(`Unsupported path in Interface ZIP: ${path}`)
+      throw invalidZip(`题型压缩包中存在不受支持的路径：${path}`)
     }
   }
 }
 
 function readJson<T>(files: Record<string, Uint8Array>, path: string): T {
   const data = files[path]
-  if (!data) throw invalidZip(`Missing required file: ${path}`)
+  if (!data) throw invalidZip(`缺少必需文件：${path}`)
   try {
     return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(data)) as T
   } catch {
-    throw invalidZip(`Invalid UTF-8 JSON file: ${path}`)
+    throw invalidZip(`JSON 文件不是有效的 UTF-8 编码：${path}`)
   }
 }
 
@@ -201,14 +201,13 @@ function unzipAsync(data: Uint8Array): Promise<Record<string, Uint8Array>> {
         }
       },
       (error, files) => {
-        if (error) return reject(invalidZip(`Cannot read Interface ZIP: ${error.message}`))
-        if (fileCount > MAX_FILES)
-          return reject(invalidZip('Interface ZIP contains too many files'))
+        if (error) return reject(invalidZip(`无法读取题型压缩包：${error.message}`))
+        if (fileCount > MAX_FILES) return reject(invalidZip('题型压缩包中的文件数量过多'))
         if (totalBytes > MAX_UNCOMPRESSED_BYTES) {
-          return reject(invalidZip('Interface ZIP is too large after decompression'))
+          return reject(invalidZip('题型压缩包解压后体积过大'))
         }
         if (fileCount !== Object.keys(files).length) {
-          return reject(invalidZip('Interface ZIP contains duplicate file paths'))
+          return reject(invalidZip('题型压缩包中存在重复的文件路径'))
         }
         resolve(files)
       }

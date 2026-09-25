@@ -1365,6 +1365,11 @@ function forwardRepository(
     createTemplate: (document) => base.createTemplate(document),
     saveTemplate: (document) => base.saveTemplate(document),
     deleteTemplate: (id) => base.deleteTemplate(id),
+    listBuiltinTemplateIds: () => base.listBuiltinTemplateIds(),
+    getActiveBuiltinTemplate: (id) => base.getActiveBuiltinTemplate(id),
+    getBuiltinTemplate: (id, version) => base.getBuiltinTemplate(id, version),
+    registerBuiltinTemplate: (release) => base.registerBuiltinTemplate(release),
+    setActiveBuiltinTemplates: (templates) => base.setActiveBuiltinTemplates(templates),
     listLocalFunctionLibraryIds: () => base.listLocalFunctionLibraryIds(),
     getLocalFunctionLibrary: (id) => base.getLocalFunctionLibrary(id),
     saveLocalFunctionLibrary: (document) => base.saveLocalFunctionLibrary(document),
@@ -1380,6 +1385,8 @@ function forwardRepository(
     registerBuiltinFunctionLibrary: (release) => base.registerBuiltinFunctionLibrary(release),
     setActiveBuiltinFunctionLibraryVersion: (id, version) =>
       base.setActiveBuiltinFunctionLibraryVersion(id, version),
+    setActiveBuiltinFunctionLibraries: (libraries) =>
+      base.setActiveBuiltinFunctionLibraries(libraries),
     ...overrides
   }
 }

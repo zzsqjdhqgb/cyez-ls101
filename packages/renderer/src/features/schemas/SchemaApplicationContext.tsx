@@ -6,6 +6,6 @@ export const SchemaApplicationContext = createContext<SchemaRepository>(schemaRe
 
 export function useSchemaRepository(): SchemaRepository {
   const repository = useContext(SchemaApplicationContext)
-  if (!repository) throw new Error('SchemaApplicationProvider is missing')
+  if (!repository) throw new Error('评分单元应用上下文缺失，请在应用内打开本页。')
   return repository
 }

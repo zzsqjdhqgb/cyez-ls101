@@ -6,6 +6,7 @@ import type { LegacyDataInfo, LicenseStatus } from '@ls101/core-types'
 import { runStartupPhase } from './startup-phase'
 import { waitForStartupCompletionDelay } from './startup-placeholder'
 import { enableRendererStartupTimingLogging, markRendererStartupMilestone } from './startup-timing'
+import { toUserMessage } from './components/ui/userMessage'
 import './styles/tokens.css'
 import './styles/global.css'
 
@@ -130,7 +131,7 @@ function loadActiveApplication(): Promise<ActiveApplication> {
 
 function renderStartupError(reason: unknown): void {
   logger.error('Renderer application initialization failed', reason)
-  const message = reason instanceof Error ? reason.message : '未知初始化错误'
+  const message = toUserMessage(reason, '未知初始化错误')
   reactRoot.render(
     <main className="startupError" role="alert">
       <AlertCircle aria-hidden="true" />

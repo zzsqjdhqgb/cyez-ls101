@@ -26,15 +26,15 @@ function parseAssetUrl(rawUrl: string, scheme: string, host: string): FileLocati
     url.search ||
     url.hash
   ) {
-    throw new Error('Invalid asset URL')
+    throw new Error('资源地址无效')
   }
 
   const rawParts = url.pathname.slice(1).split('/')
-  if (rawParts.some((part) => part.length === 0)) throw new Error('Invalid asset URL')
+  if (rawParts.some((part) => part.length === 0)) throw new Error('资源地址无效')
 
   const parts = rawParts.map((part) => decodeURIComponent(part))
   const filename = parts.pop()
-  if (!filename) throw new Error('Invalid asset URL')
+  if (!filename) throw new Error('资源地址无效')
 
   validateScope(parts)
   validateFilename(filename)

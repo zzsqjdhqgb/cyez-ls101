@@ -6,6 +6,7 @@ import type {
   SchemaValidationError
 } from '@ls101/schema-editor'
 import { isSchemaBuiltinInput } from '@ls101/schema-editor'
+import { DEFAULT_USER_MESSAGE, hasErrorCode, toUserMessage } from '../../components/ui/userMessage'
 
 export const questionTypeLabels: Record<SchemaQuestionType, string> = {
   objective: '客观题',
@@ -73,12 +74,12 @@ export function schemaErrorMessage(error: unknown): string {
     if (error.message.includes('preload bridge is unavailable')) {
       return '当前环境无法访问本地数据，请在桌面应用中打开。'
     }
-    if (error.message.includes('revision conflict')) {
+    if (hasErrorCode(error, 'REVISION_CONFLICT')) {
       return '数据已在其他窗口中更新，请刷新后重试。'
     }
-    return error.message
+    return toUserMessage(error)
   }
-  return '操作失败，请重试。'
+  return DEFAULT_USER_MESSAGE
 }
 
 export function createEmptySchemaData(name: string, structure: SchemaStructure): SchemaData {

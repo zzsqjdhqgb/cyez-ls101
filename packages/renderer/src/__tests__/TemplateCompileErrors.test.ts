@@ -56,7 +56,7 @@ describe('Template compile errors', () => {
             {
               id: 'question',
               type: 'choice-question',
-              stem: { type: 'text', parts: [] },
+              stem: { type: 'string', parts: [] },
               options: [],
               outputName: 'answer'
             }

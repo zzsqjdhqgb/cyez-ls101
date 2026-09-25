@@ -1,4 +1,5 @@
 import type { FieldCollection, FieldNode, ValidationError } from '@ls101/interface-editor'
+import { DEFAULT_USER_MESSAGE, toUserMessage } from '../../components/ui/userMessage'
 
 export interface FieldEntry {
   key: string
@@ -75,9 +76,9 @@ export function errorMessage(error: unknown): string {
     if (error.message.includes('preload bridge is unavailable')) {
       return '当前环境无法访问本地数据，请在桌面应用中打开。'
     }
-    return error.message
+    return toUserMessage(error)
   }
-  return '操作失败，请重试。'
+  return DEFAULT_USER_MESSAGE
 }
 
 export function formatDate(value: string): string {

@@ -12,9 +12,16 @@ describe('Pocket TTS runtime synthesis', () => {
       encode: (text) => new Uint32Array(text.trim() ? text.trim().split(/\s+/).length : 0)
     }
     let hasFrame = true
-    const model: PocketTtsModel = {
+    const model = {
       prepare_text: vi.fn((text: string) => [text, 0] as [string, number]),
-      start_generation: vi.fn(),
+      start_generation: vi.fn(
+        (
+          _voiceIndex: number,
+          _tokenIds: Uint32Array,
+          _framesAfterEos: number,
+          _temperature: number
+        ) => {}
+      ),
       generation_step: vi.fn(() => {
         if (hasFrame) {
           hasFrame = false
@@ -23,7 +30,7 @@ describe('Pocket TTS runtime synthesis', () => {
         hasFrame = true
         return undefined
       })
-    }
+    } satisfies PocketTtsModel
     const config: PocketTtsRuntimeConfig = {
       maxTokensPerChunk: 4,
       silenceBetweenChunksMs: 0,

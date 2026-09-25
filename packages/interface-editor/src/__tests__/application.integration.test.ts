@@ -689,7 +689,7 @@ describe('interface editor application integration', () => {
     await expect(
       targetRepository.readInstanceAsset(interfaceId, first.instance.instanceId, importedFilename)
     ).resolves.toEqual(PNG)
-    await expect(session.commit({ mode: 'all' })).rejects.toThrow('no longer active')
+    await expect(session.commit({ mode: 'all' })).rejects.toThrow('导入会话已失效，请重新选择文件')
   })
 
   it('未知 builtinKey 在导入预览和提交时都拒绝', async () => {
@@ -756,7 +756,7 @@ describe('interface editor application integration', () => {
 
     session.cancel()
 
-    await expect(session.commit({ mode: 'all' })).rejects.toThrow('no longer active')
+    await expect(session.commit({ mode: 'all' })).rejects.toThrow('导入会话已失效，请重新选择文件')
     await expect(target.browser.listPublished()).resolves.toEqual([])
   })
 
@@ -780,7 +780,7 @@ describe('interface editor application integration', () => {
     await repository.saveBuiltinInterface('speaking', intervening)
     await repository.setBuiltinCurrent('speaking', intervening.id)
 
-    await expect(builtins.apply(stalePlan)).rejects.toThrow('plan is stale')
+    await expect(builtins.apply(stalePlan)).rejects.toThrow('更新计划已过期')
     await expect(repository.getBuiltin('speaking')).resolves.toMatchObject({
       currentInterfaceId: intervening.id
     })

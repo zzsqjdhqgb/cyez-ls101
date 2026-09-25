@@ -64,7 +64,7 @@ export class FileExamLibraryRepository implements ExamLibraryRepository {
     const keys = await this.exams.listScopes()
     const records = await Promise.all(
       keys.map(async (key) => {
-        if (!SHA256_PATTERN.test(key)) throw invalidStorage(`Invalid exam storage key: ${key}`)
+        if (!SHA256_PATTERN.test(key)) throw invalidStorage(`试卷存储键无效：${key}`)
         return this.readRecord(this.exams.scope(key), key)
       })
     )
@@ -82,14 +82,14 @@ export class FileExamLibraryRepository implements ExamLibraryRepository {
     const key = await examStorageKey(packageId)
     const record = await this.readRecord(this.exams.scope(key), key)
     if (record && record.packageId !== packageId) {
-      throw invalidStorage(`Exam storage key collision: ${packageId}`)
+      throw invalidStorage(`试卷存储键冲突：${packageId}`)
     }
     return record
   }
 
   async importArchive(data: Uint8Array): Promise<ExamImportResult> {
     if (!(data instanceof Uint8Array)) {
-      throw new ExamLibraryError('INVALID_ARCHIVE', 'Exam archive must be binary data')
+      throw new ExamLibraryError('INVALID_ARCHIVE', '试卷包必须是二进制数据')
     }
 
     let archive: Awaited<ReturnType<typeof decodeExamPackage>>
@@ -97,8 +97,7 @@ export class FileExamLibraryRepository implements ExamLibraryRepository {
       // Decoding validates the manifest and confirms every declared resource is present.
       archive = await decodeExamPackage(data)
     } catch (reason) {
-      const message =
-        reason instanceof ExamPackageArchiveError ? reason.message : 'Cannot decode exam archive'
+      const message = reason instanceof ExamPackageArchiveError ? reason.message : '无法解析试卷包'
       throw new ExamLibraryError('INVALID_ARCHIVE', message)
     }
 
@@ -131,7 +130,7 @@ export class FileExamLibraryRepository implements ExamLibraryRepository {
       }
 
       const concurrent = await this.readRecord(scope, storageKey)
-      if (!concurrent) throw invalidStorage(`Exam record disappeared: ${record.packageId}`)
+      if (!concurrent) throw invalidStorage(`试卷记录已消失：${record.packageId}`)
       if (concurrent.archiveSha256 !== hash) await scope.deleteAsset(filename)
       return resolveExisting(concurrent, record.packageId, hash)
     })
@@ -143,11 +142,11 @@ export class FileExamLibraryRepository implements ExamLibraryRepository {
     const scope = this.exams.scope(key)
     const record = await this.readRecord(scope, key)
     if (!record || record.packageId !== packageId) {
-      throw new ExamLibraryError('NOT_FOUND', `Exam not found: ${packageId}`)
+      throw new ExamLibraryError('NOT_FOUND', `试卷包不存在：${packageId}`)
     }
     const data = await scope.readAsset(archiveFilename(record.archiveSha256))
     if (!data || (await sha256(data)) !== record.archiveSha256) {
-      throw invalidStorage(`Exam archive is missing or corrupted: ${packageId}`)
+      throw invalidStorage(`试卷包缺失或已损坏：${packageId}`)
     }
     return new Uint8Array(data)
   }
@@ -160,7 +159,7 @@ export class FileExamLibraryRepository implements ExamLibraryRepository {
       const record = await this.readRecord(scope, key)
       if (!record) return
       if (record.packageId !== packageId) {
-        throw invalidStorage(`Exam storage key collision: ${packageId}`)
+        throw invalidStorage(`试卷存储键冲突：${packageId}`)
       }
       await scope.clear()
     })
@@ -172,7 +171,7 @@ export class FileExamLibraryRepository implements ExamLibraryRepository {
   ): Promise<ExamLibraryRecord | null> {
     const value = await scope.readText<unknown>(RECORD_FILE)
     if (value === null) return null
-    if (!isExamLibraryRecord(value)) throw invalidStorage(`Invalid exam record: ${storageKey}`)
+    if (!isExamLibraryRecord(value)) throw invalidStorage(`试卷记录无效：${storageKey}`)
     return structuredClone(value)
   }
 
@@ -200,7 +199,7 @@ function resolveExisting(
   if (record.packageId !== packageId || record.archiveSha256 !== archiveSha256) {
     throw new ExamLibraryError(
       'EXAM_ID_CONFLICT',
-      `Exam package ID already exists with different content: ${packageId}`,
+      `已存在编号相同但内容不同的试卷包：${packageId}`,
       { packageId }
     )
   }
@@ -237,7 +236,7 @@ function archiveFilename(hash: string): string {
 }
 
 function assertPackageId(value: string): void {
-  if (!nonEmptyString(value)) throw new ExamLibraryError('NOT_FOUND', 'Exam ID must not be empty')
+  if (!nonEmptyString(value)) throw new ExamLibraryError('NOT_FOUND', '试卷包编号不能为空')
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

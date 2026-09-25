@@ -37,6 +37,6 @@ describe('EncryptedSecretStorage', () => {
     await scoped.write('key', 'value')
     await scoped.clear()
     expect(await readdir(path.join(baseDir, 'secrets', 'airouter')).catch(() => [])).toEqual([])
-    await expect(scoped.write('../escape', 'value')).rejects.toThrow('Invalid secret key')
+    await expect(scoped.write('../escape', 'value')).rejects.toThrow('密钥存储键名无效')
   })
 })

@@ -487,7 +487,7 @@ function normalizeVoices(
   return normalized
 }
 
-function isStoredDocument(value: JsonValue): value is JsonValue & StoredDocument {
+function isStoredDocument(value: JsonValue): value is StoredDocument & Record<string, JsonValue> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const candidate = value as { version?: unknown; providers?: unknown }
   return (

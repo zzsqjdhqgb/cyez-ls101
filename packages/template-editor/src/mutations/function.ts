@@ -54,7 +54,8 @@ function detectLocalOutputRename(
   root: FunctionContent['body'],
   operation: DefinitionOperation
 ): { previous: string; next: string } | null {
-  const node = findNode(root, 'nodeId' in operation ? operation.nodeId : '')
+  const nodeId = 'nodeId' in operation ? operation.nodeId : undefined
+  const node = nodeId === undefined ? null : findNode(root, nodeId)
   if (
     operation.type === 'set-function-call-output-name' &&
     operation.value !== null &&

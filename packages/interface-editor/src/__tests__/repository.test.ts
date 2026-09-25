@@ -408,7 +408,7 @@ describe('内置题型更新', () => {
     const plan = await planBuiltinUpdate(repository, 'speaking', changedContract)
     await expect(
       applyBuiltinUpdate(repository, { async replaceInterfaceReferences() {} }, plan)
-    ).rejects.toThrow('changes its variable contract')
+    ).rejects.toThrow('变量结构发生了变化')
     expect(await repository.getBuiltin('speaking')).toEqual({
       builtinKey: 'speaking',
       currentInterfaceId: oldDef.id
@@ -1031,7 +1031,7 @@ describe('Interface application', () => {
         values: { title: '看图回答', questionImage: '' },
         imageFiles: { questionImage: new TextEncoder().encode('not an image') }
       })
-    ).rejects.toThrow('Only PNG, JPEG, GIF, and WebP images are supported')
+    ).rejects.toThrow('仅支持 PNG、JPEG、GIF 和 WebP 格式的图片')
     expect((await app.instances.get(def.id, blank.instance.instanceId))?.instance.values).toEqual({
       title: '',
       questionImage: ''
@@ -1119,16 +1119,16 @@ describe('Interface application', () => {
 
     await expect(
       app.instances.startAIGeneration(def.id, blank.instance.instanceId)
-    ).rejects.toThrow('Instance is busy')
+    ).rejects.toThrow('该题组正在处理中，请稍后重试')
     await expect(
       app.instances.save(def.id, blank.instance.instanceId, {
         name: '手动名称',
         values: { title: '手动值' }
       })
-    ).rejects.toThrow('Instance is busy')
+    ).rejects.toThrow('该题组正在处理中，请稍后重试')
     await expect(
       app.instances.replaceFromJson(def.id, blank.instance.instanceId, '{"title":"JSON 值"}')
-    ).rejects.toThrow('Instance is busy')
+    ).rejects.toThrow('该题组正在处理中，请稍后重试')
 
     generator.complete('{"title":"AI 值"}')
     await handle.completion

@@ -19,6 +19,7 @@ import {
   type DataDirectoryCandidate,
   type DataDirectoryInfo
 } from '@ls101/core-types'
+import { LEGACY_DATA_DIRECTORIES } from './legacy-data'
 
 const FORMAT_VERSION = 1
 const BOOTSTRAP_FILENAME = 'data-location.json'
@@ -38,6 +39,13 @@ interface PendingCleanup {
   parentPath: string
   parentIdentity: FileSystemIdentity
   stagingIdentity?: FileSystemIdentity
+}
+
+interface MigrationLocation {
+  migrationId: string
+  target: string
+  staging: string
+  parentPath: string
 }
 
 interface FileSystemIdentity {
@@ -410,7 +418,6 @@ async function scheduleMigration(
   }
   const pendingCleanups = currentBootstrap?.pendingCleanups ?? []
   const base = {
-    formatVersion: FORMAT_VERSION,
     state: 'migrating' as const,
     migrationId,
     source,
@@ -419,18 +426,25 @@ async function scheduleMigration(
   }
   const migration: MigratingBootstrap =
     mode === 'use-existing'
-      ? { ...base, mode, retiredSource: await captureOldDataDirectory(source) }
+      ? {
+          formatVersion: FORMAT_VERSION,
+          ...base,
+          mode: 'use-existing',
+          retiredSource: await captureOldDataDirectory(source)
+        }
       : mode === 'legacy-copy'
         ? {
+            formatVersion: FORMAT_VERSION,
             ...base,
-            mode,
+            mode: 'legacy-copy',
             staging: stagingPath(target, migrationId),
             ...(await captureStagingParent(target)),
             legacyDirectories: [...legacyDirectories]
           }
         : {
+            formatVersion: FORMAT_VERSION,
             ...base,
-            mode,
+            mode: 'copy',
             staging: stagingPath(target, migrationId),
             ...(await captureStagingParent(target)),
             retiredSource: await captureOldDataDirectory(source)
@@ -762,14 +776,15 @@ async function retryOldDataDirectoryDeletion(
 ): Promise<OldDataDirectory | undefined> {
   let oldDataDirectory = initialOldDataDirectory
   try {
-    if (!oldDataDirectory.deleting || !oldDataDirectory.deletionPath) {
+    const deletionPath = oldDataDirectory.deletionPath
+    if (!oldDataDirectory.deleting || !deletionPath) {
       throw new Error('旧数据目录删除状态无效')
     }
     assertSeparateDirectories(
       await normalizeDirectory(currentPath),
-      path.normalize(path.resolve(oldDataDirectory.deletionPath))
+      path.normalize(path.resolve(deletionPath))
     )
-    const deletionStats = await lstatIfExists(oldDataDirectory.deletionPath)
+    const deletionStats = await lstatIfExists(deletionPath)
     if (deletionStats) {
       if (!deletionStats.isDirectory() || deletionStats.isSymbolicLink()) {
         throw new Error('旧数据删除路径已被其他文件占用')
@@ -779,7 +794,7 @@ async function retryOldDataDirectoryDeletion(
         if (await pathExists(oldDataDirectory.path)) {
           throw new Error('旧数据删除路径已被占用，原目录仍然存在')
         }
-        const marker = await readMarker(oldDataDirectory.deletionPath)
+        const marker = await readMarker(deletionPath)
         if (marker.directoryId !== oldDataDirectory.directoryId) {
           throw new Error('旧数据删除路径标识不匹配')
         }
@@ -801,8 +816,8 @@ async function retryOldDataDirectoryDeletion(
     } else {
       await validateOldDataDirectory(oldDataDirectory, currentPath)
       if (!(await pathExists(oldDataDirectory.path))) return undefined
-      await rename(oldDataDirectory.path, oldDataDirectory.deletionPath)
-      const claimedStats = await lstat(oldDataDirectory.deletionPath)
+      await rename(oldDataDirectory.path, deletionPath)
+      const claimedStats = await lstat(deletionPath)
       oldDataDirectory = {
         ...oldDataDirectory,
         deletionClaimed: true,
@@ -810,8 +825,8 @@ async function retryOldDataDirectoryDeletion(
       }
       await persistClaim(oldDataDirectory)
     }
-    await rm(oldDataDirectory.deletionPath, { recursive: true, force: true })
-    if (await pathExists(oldDataDirectory.deletionPath)) return oldDataDirectory
+    await rm(deletionPath, { recursive: true, force: true })
+    if (await pathExists(deletionPath)) return oldDataDirectory
     return undefined
   } catch (error) {
     console.warn(`Failed to delete old data directory: ${oldDataDirectory.path}`, error)
@@ -1004,7 +1019,7 @@ async function readBootstrap(userDataDir: string): Promise<Bootstrap | null> {
       value.legacyDirectories.some(
         (directory) =>
           typeof directory !== 'string' ||
-          !LEGACY_DIRECTORIES.includes(directory as (typeof LEGACY_DIRECTORIES)[number])
+          !LEGACY_DATA_DIRECTORIES.includes(directory as (typeof LEGACY_DATA_DIRECTORIES)[number])
       )
     ) {
       throw new Error('旧数据迁移目录列表无效')
@@ -1302,7 +1317,7 @@ async function normalizePotentialDirectory(directory: string): Promise<string> {
 }
 
 function assertMigrationPaths(
-  bootstrap: CopyingBootstrap | LegacyCopyingBootstrap,
+  bootstrap: Pick<MigrationLocation, 'migrationId' | 'staging'>,
   target: string
 ): void {
   const expected = stagingPath(target, bootstrap.migrationId)
@@ -1310,7 +1325,7 @@ function assertMigrationPaths(
   if (!samePath(configured, expected)) throw new Error('数据目录迁移暂存路径与迁移事务不一致')
 }
 
-function assertStoredMigrationPaths(bootstrap: PendingCleanup): void {
+function assertStoredMigrationPaths(bootstrap: MigrationLocation): void {
   if (
     !path.isAbsolute(bootstrap.target) ||
     !path.isAbsolute(bootstrap.staging) ||

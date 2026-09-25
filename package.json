@@ -19,10 +19,11 @@
     "visual:image": "node scripts/visual/docker.mjs build",
     "visual:publish": "node scripts/visual/docker.mjs publish",
     "visual:canonical:check": "node scripts/visual/docker.mjs check",
+    "visual:verify-determinism": "node scripts/visual/verify-determinism.mjs",
     "visual:publish:container": "node scripts/visual/container-runner.mjs publish",
     "visual:check:container": "node scripts/visual/container-runner.mjs check",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "yarn test:scripts && yarn test:vitest && yarn test:playwright && yarn test:product-docs:run",
+    "typecheck": "tsc -b tsconfig.json",
+    "test": "yarn test:scripts && yarn copy:check && yarn test:vitest && yarn test:playwright && yarn test:product-docs:run",
     "test:scripts": "node --test scripts/__tests__/*.test.js",
     "test:vitest": "vitest run",
     "test:playwright": "yarn build:test && yarn test:playwright:run",
@@ -68,7 +69,8 @@
     "build:linux": "node build.js --local --linux",
     "build:dev": "node build.js --dev",
     "build:nightly": "node build.js --nightly",
-    "build:release": "node build.js --release"
+    "build:release": "node build.js --release",
+    "copy:check": "node scripts/docs/check-user-facing-copy.mjs"
   },
   "dependencies": {
     "@electron-toolkit/utils": "^4.0.0",

@@ -9,6 +9,7 @@ import type {
   TemplatePreviewPage,
   TemplatePreviewTimelineStep
 } from '@ls101/template-editor'
+import type { JSX } from 'react'
 import {
   TemplatePreviewCanvas,
   TemplatePreviewFilmstrip,

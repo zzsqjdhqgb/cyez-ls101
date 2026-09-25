@@ -129,7 +129,7 @@ describe('TemplateExamGenerationPage', () => {
   })
 
   it('从内置路由加载 release 并创建 builtin 生成会话', async () => {
-    const app = {
+    const app: TemplateApplication = {
       ...application(),
       builtinTemplates: {
         get: vi.fn().mockResolvedValue({
@@ -141,9 +141,13 @@ describe('TemplateExamGenerationPage', () => {
             resources: template().resources,
             editorState: template().editorState
           }
-        })
+        }),
+        createCopy: vi.fn(),
+        validate: vi.fn(),
+        compile: vi.fn(),
+        preview: vi.fn()
       }
-    } as TemplateApplication
+    }
     render(
       <ExamLibraryProvider repository={examRepository()}>
         <TemplateApplicationProvider application={app}>

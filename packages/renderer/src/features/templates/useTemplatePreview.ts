@@ -4,6 +4,7 @@ import type {
   TemplateDocument,
   TemplatePreviewResult
 } from '@ls101/template-editor'
+import { toUserMessage } from '../../components/ui/userMessage'
 
 type InstanceOptions = Record<
   string,
@@ -147,5 +148,5 @@ export function useTemplatePreview(
 }
 
 function errorMessage(reason: unknown): string {
-  return reason instanceof Error ? reason.message : String(reason)
+  return toUserMessage(reason)
 }

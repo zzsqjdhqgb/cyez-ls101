@@ -211,16 +211,18 @@ function parseManifest(
 }
 
 function isAsset(value: unknown): value is AIRouterExtensionManifest['assets'][number] {
+  if (!isRecord(value)) return false
+  const { path: assetPath, kind, size, sha256 } = value
   return (
-    isRecord(value) &&
-    typeof value.path === 'string' &&
-    isSafePath(value.path) &&
-    typeof value.kind === 'string' &&
-    Number.isSafeInteger(value.size) &&
-    value.size > 0 &&
-    value.size <= MAX_ASSET_BYTES &&
-    typeof value.sha256 === 'string' &&
-    SHA256.test(value.sha256)
+    typeof assetPath === 'string' &&
+    isSafePath(assetPath) &&
+    typeof kind === 'string' &&
+    typeof size === 'number' &&
+    Number.isSafeInteger(size) &&
+    size > 0 &&
+    size <= MAX_ASSET_BYTES &&
+    typeof sha256 === 'string' &&
+    SHA256.test(sha256)
   )
 }
 
