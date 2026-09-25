@@ -312,6 +312,36 @@ describe('builtin content contract', () => {
       if (summary.templateId === ZHONGKAO_TEMPLATE_ID) {
         expect(compiled.examPackage.submissionTemplate.schemaUses).toHaveLength(5)
       }
+      if (summary.name.startsWith('上海高考英语听力')) {
+        const acceptedVars = release.document.content.interfaces.flatMap(
+          (requirement) => requirement.acceptedVars
+        )
+        const located = locatedByInstance.get(bindings[0]?.instanceId ?? '')
+        if (!located) throw new Error(`Missing Interface instance for ${summary.name}`)
+        const materials = ['passage_text_1', 'passage_text_2', 'dialogue_long_text']
+          .filter((varName) => acceptedVars.includes(varName))
+          .map((varName) => located.instance.values[varName])
+        if (materials.length > 0) {
+          const passageUses = compiled.examPackage.submissionTemplate.schemaUses.filter(
+            (use) => use.schema.data.name === '上海高考 - 听力语篇选择题'
+          )
+          expect(passageUses.length).toBeGreaterThan(0)
+          for (const use of passageUses) {
+            const analysis = use.inputs.find((input) => input.inputId === 'analysis')?.value ?? ''
+            // 听力语篇/长对话原文必须随作答包进入解析
+            expect(materials.some((material) => analysis.includes(material))).toBe(true)
+          }
+          // 材料仍只在材料页播放两遍，不会在每道题页面重复播放
+          const playTexts = preview.preview.pages.flatMap((page) =>
+            page.timeline
+              .filter((step) => step.type === 'play')
+              .map((step) => (step.type === 'play' ? step.text : ''))
+          )
+          for (const material of materials) {
+            expect(playTexts.filter((text) => text === material)).toHaveLength(2)
+          }
+        }
+      }
       expect(compiled.resourceSources.length).toBeGreaterThan(0)
 
       const resources = Object.fromEntries(

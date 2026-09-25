@@ -4632,8 +4632,8 @@
     },
     {
       "libraryId": "builtin:shanghai-gaokao-choice",
-      "version": 8,
-      "contentHash": "sha256:c33f684a8d26dd6bae49425ba5c3af0dee3f8700d197d98b1cec0f510bd2784f",
+      "version": 9,
+      "contentHash": "sha256:b1947a52e7572e453be80eb45aa43801bbb06e03df4d4871c2a37973aca1a426",
       "content": {
         "name": "高中选择题",
         "functions": [
@@ -6825,12 +6825,15 @@
                           "questionIndex": 0
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -6951,12 +6954,15 @@
                           "questionIndex": 1
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -7077,12 +7083,15 @@
                           "questionIndex": 2
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -7395,12 +7404,15 @@
                           "questionIndex": 0
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts2"
+                            }
                           }
                         ]
                       },
@@ -7521,12 +7533,15 @@
                           "questionIndex": 1
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts2"
+                            }
                           }
                         ]
                       },
@@ -7647,12 +7662,15 @@
                           "questionIndex": 2
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts2"
+                            }
                           }
                         ]
                       },
@@ -8105,12 +8123,15 @@
                           "questionIndex": 0
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -8231,12 +8252,15 @@
                           "questionIndex": 1
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -8357,12 +8381,15 @@
                           "questionIndex": 2
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -8483,12 +8510,15 @@
                           "questionIndex": 3
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -8886,7 +8916,7 @@
                   }
                 },
                 {
-                  "name": "tts",
+                  "name": "script",
                   "type": "string"
                 },
                 {
@@ -8954,13 +8984,6 @@
                       "tts": {
                         "type": "string",
                         "parts": [
-                          {
-                            "type": "variable",
-                            "ref": {
-                              "scope": "local",
-                              "name": "tts"
-                            }
-                          },
                           {
                             "type": "literal",
                             "value": "\nQuestion: "
@@ -9122,7 +9145,7 @@
                           "type": "variable",
                           "ref": {
                             "scope": "local",
-                            "name": "tts"
+                            "name": "script"
                           }
                         }
                       ]
