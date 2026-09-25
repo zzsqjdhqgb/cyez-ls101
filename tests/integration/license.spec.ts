@@ -89,14 +89,15 @@ test('activates with an invitation code and reuses the hash receipt after restar
     await closeStartupReleaseNotes(page)
     await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()
 
+    const appVersion = await electronApp.evaluate(({ app }) => app.getVersion())
     const installationMarker = JSON.parse(
       await readFile(path.join(userDataDir, '.ls101-installation.json'), 'utf8')
     ) as Record<string, unknown>
     expect(installationMarker).toMatchObject({
       kind: 'ls101-installation',
       formatVersion: 1,
-      firstAppVersion: expect.stringContaining('0.4.1'),
-      lastAppVersion: expect.stringContaining('0.4.1')
+      firstAppVersion: appVersion,
+      lastAppVersion: appVersion
     })
 
     const receipt = await readFile(path.join(userDataDir, 'license.json'), 'utf8')
