@@ -12,6 +12,9 @@
     "@ls101/core-types": "workspace:*",
     "@ls101/exam-package": "workspace:*"
   },
+  "devDependencies": {
+    "fflate": "^0.8.2"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit"
   }

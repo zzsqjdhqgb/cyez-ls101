@@ -98,15 +98,26 @@ export function SubmissionLibraryPage(): JSX.Element {
     setError(null)
     try {
       const selected = await fileDialog.readBinary({
-        title: '导入作答包',
+        title: '导入作答包或批量压缩包',
         filters: SUBMISSION_FILTER
       })
       if (!selected) return
       const result = await repository.importArchive(selected.data)
       await load()
-      if (result.status === 'duplicate') toast.info('该作答包已经在作答记录中')
-      else toast.success(`已导入 ${result.record.candidateName} 的作答包`)
+      const created = result.items.filter((item) => item.status === 'created').length
+      const duplicates = result.items.length - created
+      if (result.kind === 'bundle') {
+        if (created === 0) toast.info(`${duplicates} 份作答包都已经在作答记录中`)
+        else if (duplicates === 0) toast.success(`已导入 ${created} 份作答包`)
+        else toast.success(`已导入 ${created} 份作答包，${duplicates} 份已存在`)
+      } else if (created === 0) {
+        toast.info('该作答包已经在作答记录中')
+      } else {
+        toast.success(`已导入 ${result.items[0].record.candidateName} 的作答包`)
+      }
     } catch (reason) {
+      // 批量导入可能已经写入前面的成员，失败后仍刷新列表。
+      await load()
       setError(submissionErrorMessage(reason))
     } finally {
       setImporting(false)
