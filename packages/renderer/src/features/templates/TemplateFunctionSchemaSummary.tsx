@@ -65,10 +65,10 @@ export function TemplateFunctionSchemaSummary({
   if (uses.length === 0) return null
 
   return (
-    <section className={styles.section} aria-label="函数内 Schema（只读）">
+    <section className={styles.section} aria-label="函数内评分单元（只读）">
       <div className={styles.heading}>
         <Database aria-hidden="true" />
-        <span>函数内 Schema</span>
+        <span>函数内评分单元</span>
         <small>{uses.length} 个，只读</small>
       </div>
       {error ? (
@@ -106,7 +106,7 @@ function SchemaUseSummary({
           <Braces aria-hidden="true" />
         </span>
         <span className={styles.identity}>
-          <strong>{definition?.data.name ?? '未知 Schema'}</strong>
+          <strong>{definition?.data.name ?? '未知评分单元'}</strong>
           <small>
             {definition ? questionTypeLabels[definition.structure.questionType] : use.schemaId}
           </small>

@@ -9,7 +9,7 @@ export const imageClipboard: ImageClipboard = {
     return value === null ? null : new Uint8Array(value as ArrayLike<number>)
   },
   writeText(text) {
-    if (typeof text !== 'string') throw new TypeError('Clipboard text must be a string')
+    if (typeof text !== 'string') throw new TypeError('剪贴板文本必须是字符串')
     return getClipboardBridge().writeText(text)
   }
 }

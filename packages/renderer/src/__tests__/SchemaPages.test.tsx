@@ -143,7 +143,7 @@ describe('Schema pages', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: '内置评分单元' }))
     fireEvent.click(screen.getByRole('button', { name: '单句朗读评分' }))
-    expect(await screen.findByText('内置 · r3')).toBeInTheDocument()
+    expect(await screen.findByText('内置 · 版本 3')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '删除评分单元' })).not.toBeInTheDocument()
     view.unmount()
   })
@@ -171,8 +171,8 @@ describe('Schema pages', () => {
 
     expect(await screen.findByRole('heading', { name: '单句朗读' })).toBeInTheDocument()
     expect(screen.getByLabelText('recording 子槽位')).toHaveTextContent('文本录音')
-    fireEvent.change(screen.getByLabelText('答案槽位 1 ID'), { target: { value: 'speech' } })
-    fireEvent.change(screen.getByLabelText('输入 reference-text ID'), {
+    fireEvent.change(screen.getByLabelText('答案槽位 1 编号'), { target: { value: 'speech' } })
+    fireEvent.change(screen.getByLabelText('输入 reference-text 编号'), {
       target: { value: 'analysis' }
     })
     fireEvent.click(screen.getByRole('button', { name: '添加输入' }))
@@ -290,12 +290,12 @@ describe('Schema pages', () => {
     expect(schemaFileDialog.writeText).toHaveBeenCalledWith(
       `${JSON.stringify(definition, null, 2)}\n`,
       expect.objectContaining({
-        title: '导出 Schema',
+        title: '导出评分单元',
         defaultName: '单句朗读评分-r3.lsschema',
-        filters: [{ name: 'LS101 Schema', extensions: ['lsschema'] }]
+        filters: [{ name: 'LS101 评分单元', extensions: ['lsschema'] }]
       })
     )
-    expect(await screen.findByText('Schema 已导出')).toBeInTheDocument()
+    expect(await screen.findByText('评分单元已导出')).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('满分'), { target: { value: '15' } })
     expect(exportButton).toBeDisabled()

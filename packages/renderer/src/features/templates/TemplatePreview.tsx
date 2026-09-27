@@ -203,17 +203,17 @@ export function TemplatePreviewCanvas({
         <div className={styles.canvasHeading}>
           <strong>{snapshot.page.sourceNodeName || snapshot.page.sourceNodeId}</strong>
           <span>
-            页面 {snapshot.pageIndex + 1} · Timeline {snapshot.stepIndex + 1}
+            页面 {snapshot.pageIndex + 1} · 时间线 {snapshot.stepIndex + 1}
           </span>
         </div>
         <div className={styles.canvasHeaderActions}>
           {choiceViews.length > 0 ? (
             <div className={styles.choiceInfoAnchor} ref={choiceInfoRef}>
-              <Tooltip label="查看 ChoiceView 配置" side="bottom">
+              <Tooltip label="查看选择题视图配置" side="bottom">
                 <button
                   aria-controls="template-preview-choice-info"
                   aria-expanded={choiceInfoOpen}
-                  aria-label="查看 ChoiceView 配置"
+                  aria-label="查看选择题视图配置"
                   className={styles.choiceInfoButton}
                   type="button"
                   onClick={() =>
@@ -282,20 +282,20 @@ function ChoiceViewInfoPopover({
 }): JSX.Element {
   return (
     <div
-      aria-label="ChoiceView 配置"
+      aria-label="选择题视图配置"
       className={styles.choiceInfoPopover}
       id="template-preview-choice-info"
       role="region"
     >
       <div className={styles.choiceInfoTitle}>
-        <strong>ChoiceView 配置</strong>
+        <strong>选择题视图配置</strong>
         <span>{choiceViews.length} 个控件</span>
       </div>
       <ol className={styles.choiceInfoList}>
         {choiceViews.map((choiceView, index) => (
           <li key={choiceView.id}>
             <div className={styles.choiceInfoItemHeading}>
-              <strong>ChoiceView {index + 1}</strong>
+              <strong>选择题视图 {index + 1}</strong>
               <span>{choiceView.id}</span>
             </div>
             <dl>
@@ -383,7 +383,7 @@ export function TemplatePreviewInspector({
         </Button>
       </TemplateInspectorSection>
       <TemplatePreviewBindings document={document ?? undefined} session={session} />
-      <TemplateInspectorSection title="当前 Timeline">
+      <TemplateInspectorSection title="当前时间线">
         {snapshot ? (
           <dl className={styles.details}>
             <div>
@@ -400,7 +400,7 @@ export function TemplatePreviewInspector({
             </div>
           </dl>
         ) : (
-          <p className={styles.emptyValue}>暂无 Timeline 信息</p>
+          <p className={styles.emptyValue}>暂无时间线信息</p>
         )}
       </TemplateInspectorSection>
       {session.error ? (
@@ -452,21 +452,21 @@ export function TemplatePreviewBindings({
   const requirements = document?.content.interfaces ?? []
   if (requirements.length === 0) return null
   return (
-    <TemplateInspectorSection title="Interface 实例">
+    <TemplateInspectorSection title="题组">
       <div className={styles.bindings}>
         {requirements.map((requirement) => (
           <label key={requirement.alias}>
             <span>{requirement.alias}</span>
             <select
-              aria-label={`预览 Interface ${requirement.alias} 实例`}
+              aria-label={`预览题组 ${requirement.alias}`}
               disabled={session.instancesLoading}
               value={session.selections[requirement.alias] ?? ''}
               onChange={(event) => session.selectInstance(requirement.alias, event.target.value)}
             >
-              <option value="">请选择实例</option>
+              <option value="">请选择题组</option>
               {(session.instanceOptions[requirement.alias] ?? []).map((instance) => (
                 <option key={instance.instanceId} value={instance.instanceId}>
-                  {instance.name || '未命名实例'}
+                  {instance.name || '未命名题组'}
                 </option>
               ))}
             </select>
@@ -485,7 +485,7 @@ function PreviewStatus({
   snapshots
 }: PreviewCommonProps & { snapshots: readonly TemplatePreviewSnapshot[] }): JSX.Element | null {
   if (error) return <FilmstripNotice message="预览加载失败" />
-  if (missingInstances) return <FilmstripNotice message="请先选择 Interface 实例" />
+  if (missingInstances) return <FilmstripNotice message="请先选择题组" />
   if (compiling) return <FilmstripNotice message="正在生成预览..." />
   if (result && !result.success) return <FilmstripNotice message="模板未通过校验" />
   if (result?.success && snapshots.length === 0) {

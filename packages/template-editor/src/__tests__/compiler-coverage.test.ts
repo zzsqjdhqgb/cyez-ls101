@@ -625,7 +625,7 @@ describe('Template 编译组合覆盖', () => {
     ])
   })
 
-  it('函数中的选择题可以由外部 Collector 收集和分页', async () => {
+  it('函数中的选择题可以由外部采集器收集和分页', async () => {
     const resource = await createFunctionResource({
       name: 'Question source',
       inputs: [{ name: 'stem', type: 'string' }],
@@ -905,7 +905,7 @@ describe('Template 编译组合覆盖', () => {
     ])
   })
 
-  it('稳定编码页面、块和 Schema use ID，并为 26 个选项生成 A-Z', async () => {
+  it('稳定编码页面、块和评分单元 use 编号，并为 26 个选项生成 A-Z', async () => {
     const options = Array.from({ length: 26 }, (_, index) => ({
       id: `option-${index}`,
       content: text(`Option ${index}`)

@@ -129,7 +129,7 @@ export function SchemaDraftLibraryPage(): JSX.Element {
         actions={
           <>
             <Button icon={ArrowLeft} variant="ghost" onClick={() => navigate('/schemas')}>
-              返回 Schema
+              返回评分单元
             </Button>
             <Button icon={Save} disabled={saving} onClick={() => void saveName()}>
               {saving ? '正在保存' : '保存名称'}
@@ -181,7 +181,7 @@ export function SchemaDraftLibraryPage(): JSX.Element {
                 </p>
               </div>
               <div className={shared.rowActions}>
-                <span className={shared.badge}>草稿 r{draft.revision}</span>
+                <span className={shared.badge}>草稿版本 {draft.revision}</span>
                 <Button
                   onClick={() => navigate(`/schemas/drafts/${library.libraryId}/${draft.draftId}`)}
                 >
@@ -202,7 +202,7 @@ export function SchemaDraftLibraryPage(): JSX.Element {
       <ConfirmModal
         danger
         confirmLabel="删除"
-        message="删除后无法恢复，这不会影响已经发布的正式 Schema。"
+        message="删除后无法恢复，这不会影响已经发布的正式评分单元。"
         open={pendingDelete !== null}
         title={`删除结构草稿“${pendingDelete?.name ?? ''}”？`}
         onCancel={() => setPendingDelete(null)}

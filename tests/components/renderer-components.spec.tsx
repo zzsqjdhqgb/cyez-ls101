@@ -21,11 +21,11 @@ test('FE-01 buttons expose semantic defaults and keyboard activation', async ({ 
 
 test('FE-02 icon buttons remain discoverable through focus and tooltips', async ({ page }) => {
   const component = await openComponent(page, 'icon-button')
-  const button = component.getByRole('button', { name: '删除 Provider' })
+  const button = component.getByRole('button', { name: '删除服务商' })
 
-  await expect(button).toHaveAccessibleName('删除 Provider')
+  await expect(button).toHaveAccessibleName('删除服务商')
   await button.focus()
-  const tooltip = page.getByRole('tooltip', { name: '删除 Provider' })
+  const tooltip = page.getByRole('tooltip', { name: '删除服务商' })
   await expect(tooltip).toBeVisible()
   const tooltipId = await tooltip.getAttribute('id')
   expect(tooltipId).toBeTruthy()
@@ -37,7 +37,7 @@ test('FE-03 confirmation modal requires an explicit action and restores focus', 
 }) => {
   const component = await openComponent(page, 'confirm-modal')
   const trigger = component.getByRole('button', { name: '打开确认框' })
-  const dialog = page.getByRole('alertdialog', { name: '删除 Provider？' })
+  const dialog = page.getByRole('alertdialog', { name: '删除服务商？' })
 
   await expect(dialog).toHaveAttribute('aria-modal', 'true')
   await expect(dialog).toContainText('删除后将无法恢复。')

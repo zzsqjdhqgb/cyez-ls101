@@ -66,12 +66,6 @@ test('runs a check from an explicitly prebuilt renderer image', async () => {
   )
 })
 
-test('container runner rejects a caller-supplied canonical flag', async () => {
-  const { parseContainerAction } = await import('../product-docs/container-runner.mjs')
-  assert.equal(parseContainerAction(['publish']), 'publish')
-  assert.throws(() => parseContainerAction(['preview']), /publish\|check/)
-})
-
 async function repositoryFixture() {
   const root = await mkdtemp(path.join(tmpdir(), 'ls101-product-docs-docker-'))
   temporaryDirectories.push(root)

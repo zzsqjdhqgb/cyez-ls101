@@ -120,7 +120,7 @@ function parseInteger(value: string, min: number, max: number): number {
 
 function parseRequestId(value: string): string {
   if (!/^[a-zA-Z0-9_-]{1,64}$/.test(value)) {
-    throw new Error('Qwen TTS helper 协议包含无效请求 ID')
+    throw new Error('Qwen TTS helper 协议包含无效请求编号')
   }
   return value
 }

@@ -12,11 +12,12 @@ type WorkerRequest =
   | { type: 'create'; request: CreateLegacyArchiveRequest }
   | { type: 'verify'; archivePath: string }
 
-if (!parentPort) throw new Error('旧数据归档 Worker 缺少 parentPort')
+const port = parentPort
+if (!port) throw new Error('旧数据归档 Worker 缺少 parentPort')
 
 void run(workerData as WorkerRequest).then(
-  (result) => parentPort.postMessage({ ok: true, result }),
-  (error: unknown) => parentPort.postMessage({ ok: false, error: errorMessage(error) })
+  (result) => port.postMessage({ ok: true, result }),
+  (error: unknown) => port.postMessage({ ok: false, error: errorMessage(error) })
 )
 
 async function run(request: WorkerRequest): Promise<unknown> {

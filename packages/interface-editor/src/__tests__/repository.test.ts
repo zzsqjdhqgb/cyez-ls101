@@ -44,7 +44,7 @@ afterEach(() => vi.unstubAllGlobals())
 const INSTANCE_A = '10000000-0000-4000-8000-000000000001'
 const INSTANCE_B = '10000000-0000-4000-8000-000000000002'
 
-function content(name = '口语 Interface'): InterfaceContent {
+function content(name = '口语题型'): InterfaceContent {
   return {
     name,
     description: '用于测试',
@@ -222,7 +222,7 @@ describe('FileInterfaceRepository', () => {
     expect(await repository.getDraft(draft.draftId)).toBeNull()
   })
 
-  it('发布草稿并按内容 ID 去重', async () => {
+  it('发布草稿并按内容编号去重', async () => {
     const { repository } = setup()
     const first = createInterfaceDraft(content())
     const second = createInterfaceDraft(content())
@@ -236,7 +236,7 @@ describe('FileInterfaceRepository', () => {
     expect(await repository.listInterfaceIds()).toEqual([firstPublished.id])
   })
 
-  it('拒绝内容 ID 与内容不匹配的 Interface', async () => {
+  it('拒绝内容编号与内容不匹配的题型', async () => {
     const { repository } = setup()
     const def = await publishInterface(content())
 
@@ -245,7 +245,7 @@ describe('FileInterfaceRepository', () => {
     })
   })
 
-  it('拒绝发布不完整的 Interface', async () => {
+  it('拒绝发布不完整的题型', async () => {
     const { repository } = setup()
     const invalid = await publishInterface({
       ...content(),
@@ -302,7 +302,7 @@ describe('FileInterfaceRepository', () => {
     ).rejects.toMatchObject({ code: 'IDENTITY_CONFLICT' })
   })
 
-  it('拒绝变量集合与 Interface 不一致的实例', async () => {
+  it('拒绝变量集合与题型不一致的实例', async () => {
     const { repository } = setup()
     const def = await publishInterface(content())
     await repository.saveInterface(def)
@@ -325,7 +325,7 @@ describe('FileInterfaceRepository', () => {
     ).rejects.toMatchObject({ code: 'INVALID_DATA' })
   })
 
-  it('删除 Interface 时一并删除其实例', async () => {
+  it('删除题型时一并删除其实例', async () => {
     const { repository } = setup()
     const def = await publishInterface(content())
     await repository.saveInterface(def)
@@ -337,8 +337,8 @@ describe('FileInterfaceRepository', () => {
   })
 })
 
-describe('内置 Interface 更新', () => {
-  it('首次安装时接管相同的已发布 Interface 并保留实例与资源', async () => {
+describe('内置题型更新', () => {
+  it('首次安装时接管相同的已发布题型并保留实例与资源', async () => {
     const { repository } = setup()
     const def = await publishInterface(content())
     await repository.saveInterface(def)
@@ -527,7 +527,7 @@ describe('内置 Interface 更新', () => {
     const plan = await planBuiltinUpdate(repository, 'speaking', changedContract)
     await expect(
       applyBuiltinUpdate(repository, { async replaceInterfaceReferences() {} }, plan)
-    ).rejects.toThrow('changes its variable contract')
+    ).rejects.toThrow('变量结构发生了变化')
     expect(await repository.getBuiltin('speaking')).toEqual({
       builtinKey: 'speaking',
       currentInterfaceId: oldDef.id
@@ -577,7 +577,7 @@ describe('内置 Interface 更新', () => {
     expect(references).toEqual([[oldDef.id, nextDef.id]])
   })
 
-  it('删除内置 Interface 时可同时删除实例并报告受影响引用', async () => {
+  it('删除内置题型时可同时删除实例并报告受影响引用', async () => {
     const { repository } = setup()
     const def = await publishInterface(content())
     await repository.saveBuiltinInterface('speaking', def)
@@ -603,7 +603,7 @@ describe('内置 Interface 更新', () => {
     expect(await repository.getInterface(def.id)).toBeNull()
   })
 
-  it('删除内置 Interface 时可将旧版和实例备份到 published', async () => {
+  it('删除内置题型时可将旧版和实例备份到 published', async () => {
     const { repository } = setup()
     const def = await publishInterface(content())
     await repository.saveBuiltinInterface('speaking', def)
@@ -629,7 +629,7 @@ describe('内置 Interface 更新', () => {
   })
 })
 
-describe('Interface 交换包', () => {
+describe('题型交换包', () => {
   it('支持不附带、选择和附带全部实例', async () => {
     const { repository } = setup()
     const def = await publishInterface(content())
@@ -652,7 +652,7 @@ describe('Interface 交换包', () => {
     ])
   })
 
-  it('导出内置题型时保留稳定 builtinKey 和当前内容 ID', async () => {
+  it('导出内置题型时保留稳定 builtinKey 和当前内容编号', async () => {
     const { repository } = setup()
     const def = await publishInterface(content())
     await repository.saveBuiltinInterface('speaking', def)
@@ -688,7 +688,7 @@ describe('Interface 交换包', () => {
     )
   })
 
-  it('跳过已存在的 Interface 并继续导入新实例', async () => {
+  it('跳过已存在的题型并继续导入新实例', async () => {
     const source = setup().repository
     const target = setup().repository
     const def = await publishInterface(content())
@@ -723,7 +723,7 @@ describe('Interface 交换包', () => {
     expect(await target.listInstanceIds(def.id)).toEqual([INSTANCE_A, INSTANCE_B])
   })
 
-  it('导入旧版包时跳过已迁移到其他 Interface 的同一实例', async () => {
+  it('导入旧版包时跳过已迁移到其他题型的同一实例', async () => {
     const source = setup().repository
     const target = setup().repository
     const oldDef = await publishInterface(content('旧版'))
@@ -761,7 +761,7 @@ describe('Interface 交换包', () => {
     expect(await target.getInstance(def.id, INSTANCE_B)).toBeNull()
   })
 
-  it('拒绝内容 ID 被篡改的包和不存在的选择项', async () => {
+  it('拒绝内容编号被篡改的包和不存在的选择项', async () => {
     const source = setup().repository
     const target = setup().repository
     const def = await publishInterface(content())
@@ -779,7 +779,7 @@ describe('Interface 交换包', () => {
   })
 })
 
-describe('Interface ZIP 与文件对话框', () => {
+describe('题型 ZIP 与文件对话框', () => {
   it('ZIP 往返保留定义、实例和二进制资源', async () => {
     const source = setup().repository
     const def = await publishInterface(content())
@@ -837,7 +837,7 @@ describe('Interface ZIP 与文件对话框', () => {
 
   it('通过 file-dialog 导出 ZIP，并清洗默认文件名', async () => {
     const repository = setup().repository
-    const def = await publishInterface(content('口语/Interface:*?'))
+    const def = await publishInterface(content('口语/题型:*?'))
     await repository.saveInterface(def)
     const dialog = new TestFileDialog()
 
@@ -845,8 +845,8 @@ describe('Interface ZIP 与文件对话框', () => {
       true
     )
     expect(dialog.writeOptions).toMatchObject({
-      title: '导出 Interface',
-      defaultName: '口语_Interface___.lsinterface'
+      title: '导出题型',
+      defaultName: '口语_题型___.lsinterface'
     })
     expect((await decodeInterfaceZip(dialog.writtenData as Uint8Array)).interface).toEqual(def)
   })
@@ -896,7 +896,7 @@ describe('Interface ZIP 与文件对话框', () => {
 })
 
 describe('Interface application', () => {
-  it('导入会话报告 Interface 跳过状态并继续导入新实例', async () => {
+  it('导入会话报告题型跳过状态并继续导入新实例', async () => {
     const source = setup().repository
     const target = setup().repository
     const def = await publishInterface(content())
@@ -922,7 +922,7 @@ describe('Interface application', () => {
     })
   })
 
-  it('按五个 UI 模块浏览、复制和发布 Interface', async () => {
+  it('按五个 UI 模块浏览、复制和发布题型', async () => {
     const { repository } = setup()
     const app = createInterfaceApplication({ repository, fileDialog: new TestFileDialog(null) })
     const draft = await app.drafts.create(content())
@@ -951,7 +951,7 @@ describe('Interface application', () => {
     expect(copy.fields).toEqual(draft.fields)
   })
 
-  it('从内置 Interface 复制的未修改草稿发布为已存在内容', async () => {
+  it('从内置题型复制的未修改草稿发布为已存在内容', async () => {
     const { repository } = setup()
     const def = await publishInterface(content())
     await repository.saveBuiltinInterface('speaking', def)
@@ -1085,7 +1085,7 @@ describe('Interface application', () => {
     ).resolves.toEqual(PNG_BYTES)
   })
 
-  it('JSON 覆盖使用所选图像 Provider 更新提示词和图片', async () => {
+  it('JSON 覆盖使用所选图像服务商更新提示词和图片', async () => {
     const { repository } = setup()
     const def = await publishInterface(contentWithImage())
     await repository.saveInterface(def)
@@ -1150,7 +1150,7 @@ describe('Interface application', () => {
         values: { title: '看图回答', questionImage: '' },
         imageFiles: { questionImage: new TextEncoder().encode('not an image') }
       })
-    ).rejects.toThrow('Only PNG, JPEG, GIF, and WebP images are supported')
+    ).rejects.toThrow('仅支持 PNG、JPEG、GIF 和 WebP 格式的图片')
     expect((await app.instances.get(def.id, blank.instance.instanceId))?.instance.values).toEqual({
       title: '',
       questionImage: ''
@@ -1245,16 +1245,16 @@ describe('Interface application', () => {
       app.instances.startAIGeneration(def.id, blank.instance.instanceId, {
         selectedPromptIndices: [0]
       })
-    ).rejects.toThrow('Instance is busy')
+    ).rejects.toThrow('该题组正在处理中，请稍后重试')
     await expect(
       app.instances.save(def.id, blank.instance.instanceId, {
         name: '手动名称',
         values: { title: '手动值' }
       })
-    ).rejects.toThrow('Instance is busy')
+    ).rejects.toThrow('该题组正在处理中，请稍后重试')
     await expect(
       app.instances.replaceFromJson(def.id, blank.instance.instanceId, '{"title":"JSON 值"}')
-    ).rejects.toThrow('Instance is busy')
+    ).rejects.toThrow('该题组正在处理中，请稍后重试')
 
     generator.complete('{"title":"AI 值"}')
     await handle.completion

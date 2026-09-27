@@ -34,7 +34,7 @@ export function LicenseActivationPage({
     event.preventDefault()
     const license = window.license
     if (!license) {
-      setError('许可证服务不可用，请重新启动应用。')
+      setError('许可服务不可用，请重新启动应用。')
       return
     }
 

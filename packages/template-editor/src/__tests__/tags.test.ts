@@ -11,7 +11,7 @@ describe('normalizeTemplateTags', () => {
   })
 
   it('rejects invalid tag values', () => {
-    expect(() => normalizeTemplateTags(['line\nfeed'])).toThrow(/control characters/)
+    expect(() => normalizeTemplateTags(['line\nfeed'])).toThrow(/控制字符/)
     expect(() => normalizeTemplateTags(['x'.repeat(25)])).toThrow(/24/)
     expect(() =>
       normalizeTemplateTags(Array.from({ length: 13 }, (_, index) => String(index)))

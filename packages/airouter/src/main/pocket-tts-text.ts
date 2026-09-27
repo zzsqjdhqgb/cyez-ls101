@@ -110,7 +110,7 @@ function needsWordSeparator(left: string, right: string): boolean {
 
 function preprocessText(text: string, options: PocketTtsTextOptions): string {
   let normalized = text.trim()
-  if (!normalized) throw new Error('Text prompt cannot be empty')
+  if (!normalized) throw new Error('文本提示不能为空')
   normalized = normalized.replace(/\n|\r/g, ' ').replace(/  +/g, ' ')
   if (options.removeSemicolons) normalized = normalized.replace(/;/g, ',')
   if (!/^[A-Z\u{00C0}-\u{024F}\u{0400}-\u{04FF}]/u.test(normalized[0])) {

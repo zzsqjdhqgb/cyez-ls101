@@ -48,7 +48,7 @@ type MainStartupMilestone =
   | 'application-module-imported'
   | 'application-initialized'
 
-interface MainStartupMilestoneEntry {
+type MainStartupMilestoneEntry = {
   milestone: MainStartupMilestone
   elapsedMs: number
 }

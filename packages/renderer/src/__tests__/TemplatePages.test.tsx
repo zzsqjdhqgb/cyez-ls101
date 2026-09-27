@@ -3,7 +3,11 @@
 import '@testing-library/jest-dom/vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { TemplateApplication, TemplateDocument } from '@ls101/template-editor'
+import type {
+  LocalFunctionLibraryDocument,
+  TemplateApplication,
+  TemplateDocument
+} from '@ls101/template-editor'
 import type { JSX } from 'react'
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { TemplateApplicationProvider } from '../features/templates/TemplateApplicationProvider'
@@ -311,14 +315,16 @@ function application(document = template()): TemplateApplication {
             function: { functionId: NEW_FUNCTION_ID, content, editorState: {} }
           }
         }),
-        deleteFunction: vi.fn().mockImplementation(async (library, functionId) => ({
-          ...library,
-          storageRevision: library.storageRevision + 1,
-          content: {
-            ...library.content,
-            functions: library.content.functions.filter((item) => item.functionId !== functionId)
-          }
-        })),
+        deleteFunction: vi
+          .fn()
+          .mockImplementation(async (library: LocalFunctionLibraryDocument, functionId) => ({
+            ...library,
+            storageRevision: library.storageRevision + 1,
+            content: {
+              ...library.content,
+              functions: library.content.functions.filter((item) => item.functionId !== functionId)
+            }
+          })),
         delete: vi.fn().mockResolvedValue(undefined)
       }
     }
@@ -512,22 +518,22 @@ describe('Template pages', () => {
     )
 
     const properties = await screen.findByRole('complementary', { name: '属性' })
-    fireEvent.click(await within(properties).findByRole('button', { name: '添加 Interface' }))
-    fireEvent.change(within(properties).getByLabelText('选择 Interface'), {
+    fireEvent.click(await within(properties).findByRole('button', { name: '添加题型' }))
+    fireEvent.change(within(properties).getByLabelText('选择题型'), {
       target: { value: INTERFACE_ID }
     })
 
-    expect(within(properties).getByLabelText('新 Interface 别名')).toHaveValue('data')
-    expect(within(properties).getByLabelText('新 Interface 变量 prompt')).toBeChecked()
-    expect(within(properties).getByLabelText('新 Interface 变量 picture')).toBeChecked()
-    fireEvent.click(within(properties).getByLabelText('新 Interface 变量 picture'))
-    fireEvent.click(within(properties).getByRole('button', { name: '添加', exact: true }))
+    expect(within(properties).getByLabelText('新题型别名')).toHaveValue('data')
+    expect(within(properties).getByLabelText('新题型变量 prompt')).toBeChecked()
+    expect(within(properties).getByLabelText('新题型变量 picture')).toBeChecked()
+    fireEvent.click(within(properties).getByLabelText('新题型变量 picture'))
+    fireEvent.click(within(properties).getByRole('button', { name: '添加' }))
 
     expect(within(properties).getByText('考试数据')).toBeInTheDocument()
-    fireEvent.change(within(properties).getByLabelText('Interface data 别名'), {
+    fireEvent.change(within(properties).getByLabelText('题型 data 别名'), {
       target: { value: 'speaking' }
     })
-    expect(within(properties).getByLabelText('Interface speaking 变量 prompt')).toBeChecked()
+    expect(within(properties).getByLabelText('题型 speaking 变量 prompt')).toBeChecked()
 
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
     await waitFor(() => expect(app.templates.save).toHaveBeenCalledOnce())
@@ -693,7 +699,7 @@ describe('Template pages', () => {
     expect(screen.getByRole('button', { name: '选择节点 builtin-root' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '选择节点 builtin-page' }))
     expect(screen.getByRole('tab', { name: '页面' })).toBeEnabled()
-    expect(screen.getByRole('textbox', { name: '名称', exact: true })).toBeDisabled()
+    expect(screen.getByRole('textbox', { name: '名称' })).toBeDisabled()
     expect(screen.getByRole('button', { name: '查看节点 builtin-page 页面内容' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: '保存' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '编辑' })).not.toBeInTheDocument()
@@ -867,7 +873,7 @@ describe('Template pages', () => {
     await screen.findByRole('button', { name: '听力模板' })
     fireEvent.click(screen.getByRole('button', { name: '导入模板' }))
     const dialog = await screen.findByRole('alertdialog', { name: '模板“外部模板”已存在' })
-    expect(within(dialog).getByText(/本地 revision 1 与文件 revision 4/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/本地版本 1 与文件版本 4/)).toBeInTheDocument()
     fireEvent.click(within(dialog).getByRole('button', { name: '导入为副本' }))
 
     await waitFor(() =>
@@ -1314,7 +1320,7 @@ describe('Template pages', () => {
     fireEvent.click(await screen.findByRole('button', { name: '选择节点 call' }))
     const selectedCard = screen
       .getByRole('button', { name: '选择节点 call' })
-      .closest('[data-selected]')
+      .closest<HTMLElement>('[data-selected]')
     if (!selectedCard) throw new Error('expected selected function card')
 
     expect(within(selectedCard).getByLabelText('节点 call 入参 title')).toHaveValue('旧标题')
@@ -1409,7 +1415,7 @@ describe('Template pages', () => {
         content: expect.objectContaining({ name: '更新后的模板' })
       })
     )
-    expect(await screen.findByText('Revision 2')).toBeInTheDocument()
+    expect(await screen.findByText('版本 2')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '保存' })).toBeDisabled()
   })
 
@@ -1440,14 +1446,14 @@ describe('Template pages', () => {
     fireEvent.change(name, { target: { value: '保存期间的新修改' } })
 
     expect(name).toHaveValue('保存期间的新修改')
-    if (!savedSnapshot) throw new Error('save did not capture the document snapshot')
     await act(async () => {
+      if (!savedSnapshot) throw new Error('save did not capture the document snapshot')
       pendingSave.resolve({ ...savedSnapshot, revision: 2 })
       await pendingSave.promise
     })
 
     expect(name).toHaveValue('保存期间的新修改')
-    expect(screen.getByText(/Revision 2/)).toBeInTheDocument()
+    expect(screen.getByText(/版本 2/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '保存' })).toBeEnabled()
 
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
@@ -1623,7 +1629,7 @@ describe('Template pages', () => {
     expect(screen.getByRole('button', { name: '选择节点 page' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '复制节点' })).toBeEnabled()
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
-    expect(await screen.findByText('Revision 2')).toBeInTheDocument()
+    expect(await screen.findByText('版本 2')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '保存' })).toBeDisabled()
 
     fireEvent.click(screen.getByRole('button', { name: '撤销' }))
@@ -1699,7 +1705,7 @@ describe('Template pages', () => {
     await clickLibraryFunction('选择题')
     const selectedCard = screen
       .getByRole('button', { name: '选择节点 question' })
-      .closest('[data-selected]')
+      .closest<HTMLElement>('[data-selected]')
     if (!selectedCard) throw new Error('expected selected node card')
     expect(within(selectedCard).getByText('选择题内容')).toBeInTheDocument()
     expect(within(selectedCard).getByLabelText('节点 question 输出名称')).toHaveValue('choice')
@@ -1765,7 +1771,7 @@ describe('Template pages', () => {
     await clickLibraryFunction('选择题')
     await clickLibraryFunction('选择题')
     fireEvent.click(screen.getByRole('button', { name: '选择节点 root' }))
-    fireEvent.click(screen.getByRole('checkbox', { name: '选择题 Collector' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: '选择题采集器' }))
 
     expect(screen.getByText('2 / 2 题')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('第 1 页题目数'), { target: { value: '1' } })
@@ -1828,7 +1834,7 @@ describe('Template pages', () => {
     )
 
     await screen.findByRole('button', { name: '选择节点 root' })
-    fireEvent.click(screen.getByRole('checkbox', { name: '选择题 Collector' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: '选择题采集器' }))
 
     expect(screen.getByText('1 / 1 题')).toBeInTheDocument()
   })
@@ -2088,7 +2094,7 @@ describe('Template pages', () => {
     fireEvent.click(screen.getByRole('button', { name: '选择题视图 choices' }))
     const properties = screen.getByRole('complementary', { name: '属性' })
     expect(within(properties).queryByText('调用路径')).not.toBeInTheDocument()
-    expect(within(properties).queryByText('题目 ID')).not.toBeInTheDocument()
+    expect(within(properties).queryByText('题目编号')).not.toBeInTheDocument()
     expect(within(properties).getByLabelText('聚焦页面')).toHaveValue('0')
     expect(within(properties).getByLabelText('聚焦题目')).toHaveValue('1')
 

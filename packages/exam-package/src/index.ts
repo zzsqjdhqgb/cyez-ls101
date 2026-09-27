@@ -79,13 +79,13 @@ export function collectSubmissionPackageFiles(
     const source = recording ? recordings : examResources
     const data = source[key]
     if (!(data instanceof Uint8Array)) {
-      throw invalidArchive(`Missing ${recording ? 'recording' : 'ExamPackage'} resource: ${key}`)
+      throw invalidArchive(`缺少${recording ? '录音' : '试卷包'}资源：${key}`)
     }
     files[key] = data
     if (recording) recordingKeys.add(key)
   }
   if (Object.keys(recordings).some((key) => !recordingKeys.has(key))) {
-    throw invalidArchive('Unused recording supplied for SubmissionPackage')
+    throw invalidArchive('提供了作答包未使用的录音')
   }
   return files
 }
@@ -111,15 +111,15 @@ export function validateExamPackage(value: unknown): asserts value is ExamPackag
     !isCapturePlan(value.answerCapturePlan) ||
     !isSubmissionTemplate(value.submissionTemplate)
   ) {
-    throw invalidArchive('Invalid ExamPackage manifest')
+    throw invalidArchive('试卷包清单无效')
   }
 
   const exam = value as unknown as ExamPackage
   if (exam.submissionTemplate.meta.examPackageId !== exam.packageId) {
-    throw invalidArchive('SubmissionTemplate examPackageId does not match packageId')
+    throw invalidArchive('作答包模板的试卷包编号与试卷包编号不一致')
   }
   if (exam.submissionTemplate.meta.examTitle !== exam.examData.title) {
-    throw invalidArchive('SubmissionTemplate examTitle does not match examData.title')
+    throw invalidArchive('作答包模板的试卷标题与试卷数据中的标题不一致')
   }
   validateCaptureSources(exam)
   validateTemplateAnswers(exam)
@@ -142,7 +142,7 @@ export function validateSubmissionPackage(value: unknown): asserts value is Subm
     !value.schemaUses.every(isSubmissionSchemaUse) ||
     !isResourceManifest(value.resources, 'either')
   ) {
-    throw invalidArchive('Invalid SubmissionPackage manifest')
+    throw invalidArchive('作答包清单无效')
   }
 
   const submission = value as unknown as SubmissionPackage
@@ -154,10 +154,10 @@ export function validateSubmissionPackage(value: unknown): asserts value is Subm
   }
   for (const audio of submission.answers.audios) {
     if (!Object.hasOwn(submission.resources, audio.resourceKey)) {
-      throw invalidArchive(`Audio answer references missing resource: ${audio.resourceKey}`)
+      throw invalidArchive(`录音作答引用了不存在的资源：${audio.resourceKey}`)
     }
     if (!submission.resources[audio.resourceKey].packagePath.startsWith('recordings/')) {
-      throw invalidArchive(`Audio answer resource is outside recordings/: ${audio.resourceKey}`)
+      throw invalidArchive(`录音作答的资源不在 recordings/ 目录中：${audio.resourceKey}`)
     }
   }
   validateSchemaResourceReferences(submission.schemaUses, submission.resources)
@@ -170,12 +170,12 @@ function validateCaptureSources(exam: ExamPackage): void {
   const recordingIndices = new Set(exam.examData.player.recordingIndices)
   for (const capture of exam.answerCapturePlan.strings) {
     if (!choiceIndices.has(capture.choiceIndex)) {
-      throw invalidArchive(`Unknown choiceIndex in capture plan: ${capture.choiceIndex}`)
+      throw invalidArchive(`采集计划引用了未知的选项索引：${capture.choiceIndex}`)
     }
   }
   for (const capture of exam.answerCapturePlan.audios) {
     if (!recordingIndices.has(capture.recordIndex)) {
-      throw invalidArchive(`Unknown recordIndex in capture plan: ${capture.recordIndex}`)
+      throw invalidArchive(`采集计划引用了未知的录音索引：${capture.recordIndex}`)
     }
   }
 }
@@ -193,7 +193,7 @@ function validateUniqueSchemaUseIds(uses: readonly SubmissionSchemaUse[]): void 
   const ids = new Set<string>()
   for (const use of uses) {
     if (ids.has(use.instanceId)) {
-      throw invalidArchive(`Duplicate SchemaUse instanceId: ${use.instanceId}`)
+      throw invalidArchive(`评分单元使用项的编号重复：${use.instanceId}`)
     }
     ids.add(use.instanceId)
   }
@@ -205,7 +205,7 @@ function validateReferencedResources(
 ): void {
   for (const key of Object.keys(referenced)) {
     if (!Object.hasOwn(available, key)) {
-      throw invalidArchive(`SubmissionTemplate references missing ExamPackage resource: ${key}`)
+      throw invalidArchive(`作答包模板引用了不存在的试卷包资源：${key}`)
     }
   }
 }
@@ -223,7 +223,7 @@ function validateSchemaResourceReferences(
       for (const match of text.matchAll(/resource:([A-Za-z0-9][A-Za-z0-9_.:%-]*)/g)) {
         const key = match[1]
         if (!Object.hasOwn(resources, key)) {
-          throw invalidArchive(`SchemaUse references missing resource: ${key}`)
+          throw invalidArchive(`评分单元使用项引用了不存在的资源：${key}`)
         }
         const resource = resources[key]
         if (
@@ -231,7 +231,7 @@ function validateSchemaResourceReferences(
           typeof resource.packagePath !== 'string' ||
           !resource.packagePath.startsWith('resources/')
         ) {
-          throw invalidArchive(`SchemaUse references non-static resource: ${key}`)
+          throw invalidArchive(`评分单元使用项引用了非静态资源：${key}`)
         }
       }
     }
@@ -242,7 +242,7 @@ function validatePlayerReferences(exam: ExamPackage): void {
   const player = exam.examData.player
   const recordingIndices = new Set(player.recordingIndices)
   if (recordingIndices.size !== player.recordingIndices.length) {
-    throw invalidArchive('Player recordingIndices contains duplicates')
+    throw invalidArchive('播放器的录音索引重复')
   }
   const timelineRecordingIndices = new Set<number>()
   for (const page of player.pages) {
@@ -253,18 +253,18 @@ function validatePlayerReferences(exam: ExamPackage): void {
       if (step.type === 'play') {
         const key = resourceKey(step.src)
         if (key === null || !Object.hasOwn(exam.examData.resources, key)) {
-          throw invalidArchive(`Player audio references missing resource: ${step.src}`)
+          throw invalidArchive(`播放器音频引用了不存在的资源：${step.src}`)
         }
       }
       if (step.type === 'record') {
         if (timelineRecordingIndices.has(step.recordIndex)) {
-          throw invalidArchive(`Duplicate recordIndex in timeline: ${step.recordIndex}`)
+          throw invalidArchive(`时间线中的录音索引重复：${step.recordIndex}`)
         }
         timelineRecordingIndices.add(step.recordIndex)
       }
       for (const id of Object.keys(step.choiceViewOverrides ?? {})) {
         if (!choiceViewIds.has(id)) {
-          throw invalidArchive(`Timeline override references unknown choice view: ${id}`)
+          throw invalidArchive(`时间线覆盖引用了未知的选项视图：${id}`)
         }
       }
     }
@@ -273,17 +273,17 @@ function validatePlayerReferences(exam: ExamPackage): void {
     recordingIndices.size !== timelineRecordingIndices.size ||
     [...recordingIndices].some((index) => !timelineRecordingIndices.has(index))
   ) {
-    throw invalidArchive('Player recordingIndices does not match record timeline steps')
+    throw invalidArchive('播放器的录音索引与时间线中的录音步骤不一致')
   }
 
   const questions = player.choiceMeta?.questions ?? []
   const choiceIndices = new Set(questions.map((question) => question.choiceIndex))
   if (choiceIndices.size !== questions.length) {
-    throw invalidArchive('Player choiceMeta contains duplicate choiceIndex values')
+    throw invalidArchive('播放器的选项元数据包含重复的选项索引')
   }
   for (const page of player.choiceMeta?.pages ?? []) {
     if (page.questionIndices.some((index) => !choiceIndices.has(index))) {
-      throw invalidArchive('Choice page references an unknown question index')
+      throw invalidArchive('选项页面引用了未知的题目索引')
     }
   }
   for (const page of player.pages) {
@@ -291,7 +291,7 @@ function validatePlayerReferences(exam: ExamPackage): void {
       if (block.type === 'image') {
         const key = resourceKey(block.src)
         if (key === null || !Object.hasOwn(exam.examData.resources, key)) {
-          throw invalidArchive(`Player image references missing resource: ${block.src}`)
+          throw invalidArchive(`播放器图片引用了不存在的资源：${block.src}`)
         }
       }
       if (block.type === 'choice-view')
@@ -311,7 +311,7 @@ function validateViewport(
   player: ExamPackage['examData']['player']
 ): void {
   if (viewport.mode === 'focus' && !choiceIndices.has(viewport.choiceIndex)) {
-    throw invalidArchive(`Choice viewport references unknown choiceIndex: ${viewport.choiceIndex}`)
+    throw invalidArchive(`选项视口引用了未知的选项索引：${viewport.choiceIndex}`)
   }
   if (viewport.mode === 'range') {
     const pageCount = player.choiceMeta?.pages.length ?? 0
@@ -322,13 +322,13 @@ function validateViewport(
       (viewport.initialPage !== undefined &&
         (viewport.initialPage < viewport.startPage || viewport.initialPage > viewport.endPage))
     ) {
-      throw invalidArchive('Choice range viewport is outside choiceMeta pages')
+      throw invalidArchive('选项范围视口超出了选项元数据的页面范围')
     }
   }
   if (viewport.mode === 'free' && viewport.initialPage !== undefined) {
     const pageCount = player.choiceMeta?.pages.length ?? 0
     if (viewport.initialPage >= pageCount) {
-      throw invalidArchive('Choice free viewport initialPage is outside choiceMeta pages')
+      throw invalidArchive('选项自由视口的初始页超出了选项元数据的页面范围')
     }
   }
 }
@@ -342,7 +342,7 @@ function validateSchemaAnswerIndices(
     const index = answerIndex(answer)
     const count = answer.type === 'text' ? stringCount : audioCount
     if (!Number.isInteger(index) || index < 0 || index >= count) {
-      throw invalidArchive(`SchemaUse answer index is outside its answer pool: ${use.instanceId}`)
+      throw invalidArchive(`评分单元使用项的作答索引超出了作答池范围：${use.instanceId}`)
     }
   }
 }
@@ -747,14 +747,14 @@ function resourceFiles(
   const archiveFiles: Record<string, Uint8Array> = {}
   const expectedKeys = Object.keys(manifest)
   if (Object.keys(files).some((key) => !Object.hasOwn(manifest, key))) {
-    throw invalidArchive('Archive contains a file without a manifest resource entry')
+    throw invalidArchive('压缩包中存在清单未声明的资源文件')
   }
   const paths = new Set<string>()
   for (const key of expectedKeys) {
     const data = files[key]
-    if (!(data instanceof Uint8Array)) throw invalidArchive(`Missing resource bytes: ${key}`)
+    if (!(data instanceof Uint8Array)) throw invalidArchive(`缺少资源数据：${key}`)
     const path = manifest[key].packagePath
-    if (paths.has(path)) throw invalidArchive(`Duplicate resource path: ${path}`)
+    if (paths.has(path)) throw invalidArchive(`资源路径重复：${path}`)
     paths.add(path)
     archiveFiles[path] = data
   }
@@ -769,27 +769,25 @@ function readResources(
   const expectedPaths = new Set<string>([MANIFEST_PATH])
   const paths = new Set<string>()
   for (const [key, entry] of Object.entries(manifest)) {
-    if (paths.has(entry.packagePath))
-      throw invalidArchive(`Duplicate resource path: ${entry.packagePath}`)
+    if (paths.has(entry.packagePath)) throw invalidArchive(`资源路径重复：${entry.packagePath}`)
     paths.add(entry.packagePath)
     expectedPaths.add(entry.packagePath)
-    if (!files[entry.packagePath]) throw invalidArchive(`Missing resource file: ${key}`)
+    if (!files[entry.packagePath]) throw invalidArchive(`缺少资源文件：${key}`)
     resources[key] = files[entry.packagePath]
   }
   for (const path of Object.keys(files)) {
-    if (!expectedPaths.has(path)) throw invalidArchive(`Unexpected file in archive: ${path}`)
+    if (!expectedPaths.has(path)) throw invalidArchive(`压缩包中存在多余的文件：${path}`)
   }
   return resources
 }
 
 function validatePaths(files: Record<string, Uint8Array>): void {
-  if (Object.keys(files).length > MAX_FILES) throw invalidArchive('Archive contains too many files')
+  if (Object.keys(files).length > MAX_FILES) throw invalidArchive('压缩包中的文件过多')
   let totalBytes = 0
   for (const path of Object.keys(files)) {
     totalBytes += files[path].byteLength
-    if (totalBytes > MAX_UNCOMPRESSED_BYTES)
-      throw invalidArchive('Archive is too large after decompression')
-    if (!safePath(path)) throw invalidArchive(`Unsafe archive path: ${path}`)
+    if (totalBytes > MAX_UNCOMPRESSED_BYTES) throw invalidArchive('压缩包解压后体积过大')
+    if (!safePath(path)) throw invalidArchive(`压缩包路径不安全：${path}`)
   }
 }
 
@@ -814,11 +812,11 @@ function canonicalUrlPath(path: string): boolean {
 
 function readJson<T>(files: Record<string, Uint8Array>, path: string): T {
   const data = files[path]
-  if (!data) throw invalidArchive(`Missing required file: ${path}`)
+  if (!data) throw invalidArchive(`缺少必需的文件：${path}`)
   try {
     return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(data)) as T
   } catch {
-    throw invalidArchive(`Invalid UTF-8 JSON file: ${path}`)
+    throw invalidArchive(`JSON 文件不是有效的 UTF-8 编码：${path}`)
   }
 }
 
@@ -842,8 +840,7 @@ function zipAsync(files: Record<string, Uint8Array>): Promise<Uint8Array> {
 }
 
 function unzipArchive(data: Uint8Array): Promise<Record<string, Uint8Array>> {
-  if (!(data instanceof Uint8Array))
-    return Promise.reject(invalidArchive('Archive must be binary data'))
+  if (!(data instanceof Uint8Array)) return Promise.reject(invalidArchive('压缩包必须是二进制数据'))
   let fileCount = 0
   let totalBytes = 0
   return new Promise((resolve, reject) => {
@@ -857,12 +854,12 @@ function unzipArchive(data: Uint8Array): Promise<Record<string, Uint8Array>> {
         }
       },
       (error, files) => {
-        if (error) return reject(invalidArchive(`Cannot read archive: ${error.message}`))
-        if (fileCount > MAX_FILES) return reject(invalidArchive('Archive contains too many files'))
+        if (error) return reject(invalidArchive(`无法读取压缩包：${error.message}`))
+        if (fileCount > MAX_FILES) return reject(invalidArchive('压缩包中的文件过多'))
         if (totalBytes > MAX_UNCOMPRESSED_BYTES)
-          return reject(invalidArchive('Archive is too large after decompression'))
+          return reject(invalidArchive('压缩包解压后体积过大'))
         if (fileCount !== Object.keys(files).length)
-          return reject(invalidArchive('Archive contains duplicate file paths'))
+          return reject(invalidArchive('压缩包中存在重复的文件路径'))
         try {
           validatePaths(files)
           resolve(files)

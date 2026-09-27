@@ -21,7 +21,7 @@ describe('submission AIRouter adapter', () => {
     vi.mocked(client.listProviderConfigs).mockResolvedValue([
       {
         id: 'provider',
-        name: 'Provider',
+        name: '服务商',
         type: 'openai-compatible',
         baseUrl: 'https://example.com/v1',
         hasApiKey: true,
@@ -44,7 +44,7 @@ describe('submission AIRouter adapter', () => {
       text: [
         {
           providerId: 'provider',
-          providerName: 'Provider',
+          providerName: '服务商',
           modelId: 'enabled',
           modelName: 'Enabled'
         }
@@ -133,8 +133,18 @@ function mockClient(): AIRouterClient {
     listSpeechVoices: vi.fn(),
     testSpeechConnection: vi.fn(),
     probeQwenTtsCuda: vi.fn().mockResolvedValue({ available: false }),
+    listSpeechRecognitionProviderConfigs: vi.fn().mockResolvedValue([]),
+    saveSpeechRecognitionProviderConfig: vi.fn(),
+    deleteSpeechRecognitionProviderConfig: vi.fn(),
+    readSpeechRecognitionProviderApiKey: vi.fn(),
+    listSpeechRecognitionModelPackages: vi.fn(),
+    importSpeechRecognitionModelPackage: vi.fn(),
+    deleteSpeechRecognitionModelPackage: vi.fn(),
+    listSpeechRecognitionProviderModels: vi.fn(),
     listSpeechRecognitionModels: vi.fn().mockResolvedValue([]),
     recognizeSpeech: vi.fn(),
+    getPronunciationAssessmentExtensionStatus: vi.fn(),
+    importPronunciationAssessmentExtension: vi.fn(),
     listPronunciationAssessmentModels: vi.fn().mockResolvedValue([]),
     assessPronunciation: vi.fn(),
     synthesizeSpeech: vi.fn(),

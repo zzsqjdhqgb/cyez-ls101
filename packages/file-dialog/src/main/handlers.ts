@@ -36,7 +36,7 @@ export function registerFileDialogHandlers(): void {
     FILE_DIALOG_CHANNELS.write,
     async (event, data: Uint8Array, options?: WriteFileOptions) => {
       if (!(data instanceof Uint8Array)) {
-        throw new TypeError('File-dialog data must be a Uint8Array')
+        throw new TypeError('文件对话框数据必须是 Uint8Array')
       }
       validateWriteFileOptions(options)
       const parent = BrowserWindow.fromWebContents(event.sender)

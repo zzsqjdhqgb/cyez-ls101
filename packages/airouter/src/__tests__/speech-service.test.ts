@@ -143,7 +143,7 @@ describe('AIRouterSpeechService', () => {
     vi.stubGlobal('fetch', fetchMock)
     await service.saveProviderConfig({
       id: 'provider',
-      name: 'Provider',
+      name: '服务商',
       kind: 'online',
       type: 'openai-compatible',
       models: [{ id: 'model', enabled: true }],
@@ -321,7 +321,7 @@ function createLocalPackage(bytes: Uint8Array): Uint8Array {
   })
 }
 
-function createWav(samples: number[]): Uint8Array {
+function createWav(samples: number[]): Uint8Array<ArrayBuffer> {
   const data = new Uint8Array(samples.length * 2)
   const dataView = new DataView(data.buffer)
   samples.forEach((sample, index) => dataView.setInt16(index * 2, sample, true))

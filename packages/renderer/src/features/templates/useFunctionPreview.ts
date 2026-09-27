@@ -6,6 +6,7 @@ import type {
   TemplatePreviewResult
 } from '@ls101/template-editor'
 import { useEffect, useMemo, useState } from 'react'
+import { toUserMessage } from '../../components/ui/userMessage'
 
 export interface FunctionPreviewSession {
   compiling: boolean
@@ -90,7 +91,7 @@ export function useFunctionPreview(
       .catch((reason: unknown) => {
         if (!current) return
         setResult(null)
-        setError(reason instanceof Error ? reason.message : String(reason))
+        setError(toUserMessage(reason))
       })
       .finally(() => {
         if (current) setCompiling(false)

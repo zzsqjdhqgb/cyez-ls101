@@ -26,7 +26,7 @@ describe('asset keys', () => {
 
     expect(key).toBe('builtin-asset-key://v1/template-editor/cover.png')
     expect(builtinAssetKeyToLocation(key)).toEqual(location)
-    expect(() => assetKeyToLocation(key)).toThrow('Invalid asset key')
+    expect(() => assetKeyToLocation(key)).toThrow('资源标识无效')
   })
 
   it('converts a local asset URL to its IPC-safe asset key', () => {
@@ -44,6 +44,6 @@ describe('asset keys', () => {
     'asset-key://v1/interfaces/cover.png#preview',
     'asset://local/interfaces/cover.png'
   ])('rejects invalid key %s', (key) => {
-    expect(() => assetKeyToLocation(key)).toThrow('Invalid asset key')
+    expect(() => assetKeyToLocation(key)).toThrow('资源标识无效')
   })
 })

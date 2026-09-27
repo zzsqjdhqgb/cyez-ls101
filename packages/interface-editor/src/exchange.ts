@@ -57,7 +57,7 @@ export async function exportInterfacePackage(
   selection: InstanceSelection
 ): Promise<InterfaceExchangePackage> {
   const def = await repository.getInterface(interfaceId)
-  if (!def) throw new InterfaceRepositoryError('NOT_FOUND', `Interface not found: ${interfaceId}`)
+  if (!def) throw new InterfaceRepositoryError('NOT_FOUND', `未找到题型：${interfaceId}`)
 
   const instanceIds = await resolveExportSelection(repository, interfaceId, selection)
   const builtinKey = await findBuiltinKey(repository, interfaceId)
@@ -66,7 +66,7 @@ export async function exportInterfacePackage(
   for (const instanceId of instanceIds) {
     const stored = await repository.getInstance(interfaceId, instanceId)
     if (!stored) {
-      throw new InterfaceRepositoryError('NOT_FOUND', `Instance not found: ${instanceId}`)
+      throw new InterfaceRepositoryError('NOT_FOUND', `未找到题组：${instanceId}`)
     }
 
     const assets: Record<string, Uint8Array> = {}
@@ -75,7 +75,7 @@ export async function exportInterfacePackage(
       if (!asset) {
         throw new InterfaceRepositoryError(
           'MISSING_ASSET',
-          `Instance ${instanceId} is missing asset ${filename}`
+          `题组「${instanceId}」缺少资源文件「${filename}」`
         )
       }
       assets[filename] = asset
@@ -109,13 +109,19 @@ export async function inspectInterfacePackage(
   value: InterfaceExchangePackage
 ): Promise<InterfacePackageInspection> {
   assertPackageShape(value)
-  const definition = await readInterfaceDefinition(value.interface)
+  // 读取时顺带完成旧格式提示词归一化与内容编号复算，两者任一不通过都视为包内容错误。
+  let definition: InterfaceDef
+  try {
+    definition = await readInterfaceDefinition(value.interface)
+  } catch {
+    throw invalidPackage('题型内容格式错误，或内容编号与内容不一致')
+  }
 
   const seen = new Set<string>()
   const instances = value.instances.map(({ instance, assets }) => {
     assertExchangeInstance(instance, assets)
     if (seen.has(instance.instanceId)) {
-      throw invalidPackage(`Duplicate instance ID in package: ${instance.instanceId}`)
+      throw invalidPackage(`导入包中存在重复的题组编号：${instance.instanceId}`)
     }
     seen.add(instance.instanceId)
     return {
@@ -127,7 +133,7 @@ export async function inspectInterfacePackage(
   })
 
   if (value.builtin && value.builtin.interfaceId !== value.interface.id) {
-    throw invalidPackage('Builtin Interface identity does not match package content')
+    throw invalidPackage('内置题型的编号与导入包内容不一致')
   }
   return {
     interface: definition,
@@ -151,7 +157,7 @@ export async function importInterfacePackage(
 
   const existingDef = await repository.getInterface(value.interface.id)
   if (existingDef && compareInterfaceIdentity(existingDef, value.interface) !== 'same') {
-    throw identityConflict(`Interface ${value.interface.id} has an identity collision`)
+    throw identityConflict(`题型编号「${value.interface.id}」已被内容不同的题型占用`)
   }
 
   for (const incoming of selected) {
@@ -160,7 +166,7 @@ export async function importInterfacePackage(
 
     const same = await exportedInstanceMatches(repository, existing, incoming)
     if (!same) {
-      throw identityConflict(`Instance ID conflict: ${incoming.instance.instanceId}`)
+      throw identityConflict(`题组编号「${incoming.instance.instanceId}」已被内容不同的题组占用`)
     }
   }
 
@@ -220,7 +226,7 @@ function resolveImportSelection(
   const selected = uniqueSelection(selection.instanceIds)
   for (const instanceId of selected) {
     if (!available.has(instanceId)) {
-      throw new InterfaceRepositoryError('NOT_FOUND', `Package instance not found: ${instanceId}`)
+      throw new InterfaceRepositoryError('NOT_FOUND', `导入包中不存在题组：${instanceId}`)
     }
   }
   return new Set(selected)
@@ -229,7 +235,7 @@ function resolveImportSelection(
 function uniqueSelection(instanceIds: readonly string[]): string[] {
   const unique = [...new Set(instanceIds)]
   if (unique.length !== instanceIds.length) {
-    throw invalidPackage('Instance selection contains duplicate IDs')
+    throw invalidPackage('所选题组中存在重复编号')
   }
   return unique
 }
@@ -244,7 +250,7 @@ function assertPackageShape(value: InterfaceExchangePackage): void {
     !isInterfaceId(value.interface.id) ||
     !Array.isArray(value.instances)
   ) {
-    throw invalidPackage('Unsupported or malformed Interface package')
+    throw invalidPackage('题型导入包格式不受支持或已损坏')
   }
 }
 
@@ -258,14 +264,14 @@ function assertExchangeInstance(
     !instance.name.trim() ||
     Number.isNaN(Date.parse(instance.generatedAt))
   ) {
-    throw invalidPackage(`Instance metadata is invalid: ${instance.instanceId}`)
+    throw invalidPackage(`题组「${instance.instanceId}」的信息无效`)
   }
   if (
     !instance.values ||
     typeof instance.values !== 'object' ||
     Object.values(instance.values).some((item) => typeof item !== 'string')
   ) {
-    throw invalidPackage(`Instance values are invalid: ${instance.instanceId}`)
+    throw invalidPackage(`题组「${instance.instanceId}」的字段值无效`)
   }
   if (
     instance.imagePrompts !== undefined &&
@@ -274,14 +280,14 @@ function assertExchangeInstance(
       Array.isArray(instance.imagePrompts) ||
       Object.values(instance.imagePrompts).some((item) => typeof item !== 'string'))
   ) {
-    throw invalidPackage(`Instance image prompts are invalid: ${instance.instanceId}`)
+    throw invalidPackage(`题组「${instance.instanceId}」的图片提示词无效`)
   }
   if (!assets || typeof assets !== 'object' || Array.isArray(assets)) {
-    throw invalidPackage(`Instance assets are invalid: ${instance.instanceId}`)
+    throw invalidPackage(`题组「${instance.instanceId}」的资源文件无效`)
   }
   for (const [filename, data] of Object.entries(assets)) {
     if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(filename) || !(data instanceof Uint8Array)) {
-      throw invalidPackage(`Invalid instance asset: ${filename}`)
+      throw invalidPackage(`题组资源文件「${filename}」无效`)
     }
   }
 }

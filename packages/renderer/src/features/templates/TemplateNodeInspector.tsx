@@ -129,14 +129,24 @@ export function VariableEditor({
             value={'parts' in node.value ? node.value : stringValueAsText(node.value)}
             onChange={(value) => apply({ type: 'set-variable', nodeId: node.id, value })}
           />
+        ) : node.value.type === 'number' ? (
+          <TemplateVariableInput
+            mode="value"
+            ariaLabel={label('值')}
+            candidates={valueCandidates}
+            inputMode="decimal"
+            value={node.value}
+            valueType="number"
+            onChange={(value) => apply({ type: 'set-variable', nodeId: node.id, value })}
+          />
         ) : (
           <TemplateVariableInput
             mode="value"
             ariaLabel={label('值')}
             candidates={valueCandidates}
-            inputMode={node.value.type === 'number' ? 'decimal' : 'text'}
+            inputMode="text"
             value={node.value}
-            valueType={node.value.type}
+            valueType="file"
             onChange={(value) => apply({ type: 'set-variable', nodeId: node.id, value })}
           />
         )}
@@ -184,7 +194,7 @@ function FrameInspector({
             setPages(event.target.checked ? [{ questionCount: Math.max(1, questionCount) }] : null)
           }
         />
-        <span>选择题 Collector</span>
+        <span>选择题采集器</span>
       </label>
 
       {pages ? (

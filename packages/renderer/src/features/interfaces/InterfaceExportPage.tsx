@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { toast } from '../../components/ui/toast'
 import { useInterfaceApplication } from './InterfaceApplicationContext'
-import { errorMessage } from './interfaceUi'
+import { errorMessage, formatDate } from './interfaceUi'
 import styles from './InterfaceTransferPage.module.css'
 
 interface ExportItem {
@@ -126,7 +126,7 @@ export function InterfaceExportPage(): JSX.Element {
                 />
                 <span>
                   <strong>{item.name}</strong>
-                  <small>生成于 {new Date(item.generatedAt).toLocaleString()}</small>
+                  <small>生成于 {formatDate(item.generatedAt)}</small>
                 </span>
                 <span className={styles.status}>包含全部题组资源</span>
               </label>

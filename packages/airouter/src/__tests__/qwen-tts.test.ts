@@ -3,7 +3,11 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { PassThrough } from 'node:stream'
-import type { ChildProcessWithoutNullStreams, spawn } from 'node:child_process'
+import type {
+  ChildProcessWithoutNullStreams,
+  SpawnOptionsWithoutStdio,
+  spawn
+} from 'node:child_process'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AIRouterLocalSpeechRequest } from '../main/speech-service'
 
@@ -100,7 +104,10 @@ describe('QwenTtsSynthesizer', () => {
 
   it('keeps one CPU helper alive for repeated synthesis', async () => {
     const helper = new FakeHelper()
-    const spawnProcess = vi.fn(() => helper as unknown as ChildProcessWithoutNullStreams)
+    const spawnProcess = vi.fn(
+      (_command: string, _args: readonly string[], _options: SpawnOptionsWithoutStdio) =>
+        helper as unknown as ChildProcessWithoutNullStreams
+    )
     const synthesizer = new QwenTtsSynthesizer({
       helperPath,
       spawnProcess: spawnProcess as unknown as typeof spawn
@@ -207,7 +214,7 @@ describe('QwenTtsSynthesizer', () => {
 
   it('probes the CUDA helper without loading models', async () => {
     const spawnProcess = vi.fn(
-      () =>
+      (_command: string, _args: readonly string[], _options: SpawnOptionsWithoutStdio) =>
         new FakeProbe({
           available: true,
           backend: 'cuda',

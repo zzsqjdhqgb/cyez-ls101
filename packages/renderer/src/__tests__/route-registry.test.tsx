@@ -36,11 +36,11 @@ describe('AppRouteRegistry', () => {
     registry.register({ id: 'first', path: '/first', component: TestPage })
 
     expect(() => registry.register({ id: 'first', path: '/second', component: TestPage })).toThrow(
-      'Route id is already registered'
+      '路由编号重复注册'
     )
 
     expect(() => registry.register({ id: 'second', path: '/first', component: TestPage })).toThrow(
-      'Route path is already registered'
+      '路由路径重复注册'
     )
   })
 })

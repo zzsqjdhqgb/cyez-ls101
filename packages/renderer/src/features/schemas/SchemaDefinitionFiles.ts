@@ -1,7 +1,7 @@
 import type { SchemaDefinition } from '@ls101/schema-editor'
 import { fileDialog, type FileDialog } from '@ls101/file-dialog/renderer'
 
-const SCHEMA_FILTER = [{ name: 'LS101 Schema', extensions: ['lsschema'] }] as const
+const SCHEMA_FILTER = [{ name: 'LS101 评分单元', extensions: ['lsschema'] }] as const
 
 export type SchemaFileDialog = Pick<FileDialog, 'writeText'>
 
@@ -10,7 +10,7 @@ export async function exportSchemaDefinitionFile(
   dialog: SchemaFileDialog = fileDialog
 ): Promise<boolean> {
   return dialog.writeText(`${JSON.stringify(definition, null, 2)}\n`, {
-    title: '导出 Schema',
+    title: '导出评分单元',
     defaultName: `${safeFilename(definition.data.name)}-r${definition.revision}.lsschema`,
     filters: SCHEMA_FILTER
   })

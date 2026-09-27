@@ -66,7 +66,7 @@ export async function ensureInstallationMarker(
       createdAt: timestamp,
       updatedAt: timestamp
     }
-    if (!UUID_PATTERN.test(marker.installationId)) throw new Error('安装标记 ID 无效')
+    if (!UUID_PATTERN.test(marker.installationId)) throw new Error('安装标记编号无效')
     await writeJsonAtomically(filename, marker)
     return marker
   }

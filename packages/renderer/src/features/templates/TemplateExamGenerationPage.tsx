@@ -480,7 +480,7 @@ function SettingsStage(props: SettingsStageProps): JSX.Element {
           ) : (
             <div className={styles.errorNotice} role="alert">
               <AlertCircle aria-hidden="true" />
-              <span>没有可用的语音提供商、模型和音色，请先在设置中完成配置。</span>
+              <span>没有可用的语音服务商、模型和音色，请先在设置中完成配置。</span>
             </div>
           )}
         </section>
@@ -494,7 +494,7 @@ function SettingsStage(props: SettingsStageProps): JSX.Element {
       <footer className={styles.stageFooter}>
         <div>
           <strong>{props.document.content.name}</strong>
-          <span>Revision {props.document.revision}</span>
+          <span>版本 {props.document.revision}</span>
         </div>
         <Button
           icon={FileArchive}
@@ -539,9 +539,9 @@ function SpeechChoiceFields({
         {label}
       </legend>
       <label className={styles.compactField}>
-        <span>提供商</span>
+        <span>服务商</span>
         <select
-          aria-label={`${label}提供商`}
+          aria-label={`${label}服务商`}
           value={choice.providerConfigId}
           onChange={(event) => {
             const first = options.find((option) => option.providerConfigId === event.target.value)
@@ -552,7 +552,7 @@ function SpeechChoiceFields({
             })
           }}
         >
-          <option value="">请选择提供商</option>
+          <option value="">请选择服务商</option>
           {providers.map((option) => (
             <option key={option.providerConfigId} value={option.providerConfigId}>
               {option.providerName}

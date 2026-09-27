@@ -249,10 +249,10 @@ describe('data directory initialization', () => {
     expect(resetDefault).toBeDefined()
 
     await expect(chooseDefault!({ sender: {} })).rejects.toThrow(
-      '请选择空目录，或选择一个已有的 LS101 数据目录'
+      '请选择空目录，或选择一个已有的 曹二听说101 数据目录'
     )
     await expect(resetDefault!({ sender: {} })).rejects.toThrow(
-      '请选择空目录，或选择一个已有的 LS101 数据目录'
+      '请选择空目录，或选择一个已有的 曹二听说101 数据目录'
     )
     await expect(readFile(path.join(defaultPath, 'unrelated.txt'), 'utf8')).resolves.toBe('keep')
   })
@@ -363,7 +363,7 @@ describe('data directory initialization', () => {
     expect(migrate).toBeDefined()
 
     await expect(migrate!({ sender: {} }, target as never)).rejects.toThrow(
-      '请选择空目录，或选择一个已有的 LS101 数据目录'
+      '请选择空目录，或选择一个已有的 曹二听说101 数据目录'
     )
     await expect(readFile(path.join(target, 'unrelated.txt'), 'utf8')).resolves.toBe('keep')
   })

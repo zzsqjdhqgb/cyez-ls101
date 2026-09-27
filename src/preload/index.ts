@@ -75,7 +75,7 @@ const allowedConfigChannels = new Set<ConfigStoreChannel>(Object.values(CONFIG_S
 const fileStoreBridge: FileStoreBridge = {
   invoke(channel, ...args) {
     if (!allowedChannels.has(channel as FileStoreChannel)) {
-      return Promise.reject(new Error(`Unsupported file-store channel: ${channel}`))
+      return Promise.reject(new Error(`不支持的文件存储通道：${channel}`))
     }
     return ipcRenderer.invoke(channel, ...args)
   }
@@ -84,7 +84,7 @@ const fileStoreBridge: FileStoreBridge = {
 const builtinFileStoreBridge: BuiltinFileStoreBridge = {
   invoke(channel, ...args) {
     if (!allowedBuiltinChannels.has(channel as BuiltinFileStoreChannel)) {
-      return Promise.reject(new Error(`Unsupported builtin file-store channel: ${channel}`))
+      return Promise.reject(new Error(`不支持的内置文件存储通道：${channel}`))
     }
     return ipcRenderer.invoke(channel, ...args)
   }
@@ -93,7 +93,7 @@ const builtinFileStoreBridge: BuiltinFileStoreBridge = {
 const configStoreBridge: ConfigStoreBridge = {
   invoke(channel, ...args) {
     if (!allowedConfigChannels.has(channel as ConfigStoreChannel)) {
-      return Promise.reject(new Error(`Unsupported config-store channel: ${channel}`))
+      return Promise.reject(new Error(`不支持的配置存储通道：${channel}`))
     }
     return ipcRenderer.invoke(channel, ...args)
   }

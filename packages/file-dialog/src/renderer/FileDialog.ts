@@ -20,14 +20,14 @@ export class FileDialogImpl implements FileDialog {
 
   writeBinary(data: Uint8Array, options?: WriteFileOptions): Promise<boolean> {
     if (!(data instanceof Uint8Array)) {
-      throw new TypeError('File-dialog data must be a Uint8Array')
+      throw new TypeError('文件对话框数据必须是 Uint8Array')
     }
     validateWriteFileOptions(options)
     return getFileDialogBridge().write(data, options)
   }
 
   writeText(data: string, options?: WriteFileOptions): Promise<boolean> {
-    if (typeof data !== 'string') throw new TypeError('File-dialog text must be a string')
+    if (typeof data !== 'string') throw new TypeError('文件对话框文本必须是字符串')
     return this.writeBinary(new TextEncoder().encode(data), options)
   }
 }

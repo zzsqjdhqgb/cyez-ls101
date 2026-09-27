@@ -26,9 +26,9 @@ describe('AIRouterSettingsPage', () => {
     })
     renderAIRouter(application)
 
-    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
-    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
-    const provider = within(dialog).getByLabelText('Provider') as HTMLSelectElement
+    fireEvent.click(await screen.findByRole('button', { name: '添加服务商' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名服务商' })
+    const provider = within(dialog).getByLabelText('服务商') as HTMLSelectElement
     expect(Array.from(provider.options).map((option) => option.text)).toEqual(
       expect.arrayContaining([
         'OpenAI',
@@ -80,8 +80,8 @@ describe('AIRouterSettingsPage', () => {
     })
     renderAIRouter(application)
 
-    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
-    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.click(await screen.findByRole('button', { name: '添加服务商' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名服务商' })
     fireEvent.click(within(dialog).getByRole('button', { name: '获取模型列表' }))
     expect(await within(dialog).findByText('Reasoning Model')).toBeInTheDocument()
     expect(
@@ -101,7 +101,7 @@ describe('AIRouterSettingsPage', () => {
       target: { value: 'Reasoning Provider' }
     })
     fireEvent.click(within(dialog).getByRole('checkbox', { name: 'reasoning-model' }))
-    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存服务商' }))
     await waitFor(() =>
       expect(application.saveConfig).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -129,12 +129,12 @@ describe('AIRouterSettingsPage', () => {
     renderAIRouter(application)
 
     const pageError = await screen.findByRole('alert')
-    expect(pageError).toHaveTextContent('无法加载文本 Provider 设置')
+    expect(pageError).toHaveTextContent('无法加载文本服务商设置')
     expect(pageError).toHaveTextContent('存储不可用')
     expect(pageError).not.toHaveTextContent('Error invoking remote method')
 
     fireEvent.click(within(pageError).getByRole('button', { name: '重试' }))
-    expect(await screen.findByText('尚未添加文本生成 Provider')).toBeInTheDocument()
+    expect(await screen.findByText('尚未添加文本生成服务商')).toBeInTheDocument()
     expect(listConfigs).toHaveBeenCalledTimes(2)
   })
 
@@ -143,7 +143,7 @@ describe('AIRouterSettingsPage', () => {
       listConfigs: vi.fn().mockResolvedValue([
         {
           id: 'text-provider',
-          name: '文本 Provider',
+          name: '文本服务商',
           type: 'openai-compatible',
           baseUrl: 'https://api.example.com/v1',
           models: [],
@@ -154,12 +154,12 @@ describe('AIRouterSettingsPage', () => {
     })
 
     renderAIRouter(application)
-    fireEvent.click(await screen.findByRole('button', { name: /文本 Provider/ }))
-    const dialog = screen.getByRole('dialog', { name: '文本 Provider' })
+    fireEvent.click(await screen.findByRole('button', { name: /文本服务商/ }))
+    const dialog = screen.getByRole('dialog', { name: '文本服务商' })
     fireEvent.click(within(dialog).getByRole('button', { name: '获取模型列表' }))
 
     const modelSection = within(dialog)
-      .getByRole('heading', { name: 'Model ID' })
+      .getByRole('heading', { name: '模型编号' })
       .closest('section')
     expect(modelSection).not.toBeNull()
     expect(await within(modelSection as HTMLElement).findByRole('alert')).toHaveTextContent(
@@ -173,7 +173,7 @@ describe('AIRouterSettingsPage', () => {
       listConfigs: vi.fn().mockResolvedValue([
         {
           id: 'delete-provider',
-          name: '待删除 Provider',
+          name: '待删除服务商',
           type: 'openai-compatible',
           baseUrl: 'https://api.example.com/v1',
           models: [],
@@ -184,11 +184,11 @@ describe('AIRouterSettingsPage', () => {
     })
 
     renderAIRouter(application)
-    fireEvent.click(await screen.findByRole('button', { name: /待删除 Provider/ }))
-    const editor = screen.getByRole('dialog', { name: '待删除 Provider' })
-    fireEvent.click(within(editor).getByRole('button', { name: '删除 Provider' }))
+    fireEvent.click(await screen.findByRole('button', { name: /待删除服务商/ }))
+    const editor = screen.getByRole('dialog', { name: '待删除服务商' })
+    fireEvent.click(within(editor).getByRole('button', { name: '删除服务商' }))
 
-    const confirmation = screen.getByRole('alertdialog', { name: '删除 Provider 配置？' })
+    const confirmation = screen.getByRole('alertdialog', { name: '删除服务商配置？' })
     fireEvent.click(within(confirmation).getByRole('button', { name: '删除配置' }))
 
     await waitFor(() => expect(confirmation).toHaveTextContent('删除服务暂时不可用'))
@@ -204,7 +204,7 @@ describe('AIRouterSettingsPage', () => {
       listImageConfigs: vi.fn().mockResolvedValue([
         {
           id: 'image-provider',
-          name: '图像 Provider',
+          name: '图像服务商',
           type: 'openai-compatible',
           baseUrl: 'https://api.example.com/v1',
           models: [],
@@ -215,12 +215,12 @@ describe('AIRouterSettingsPage', () => {
     })
 
     renderAIRouter(application, '/settings/ai-router/image')
-    fireEvent.click(await screen.findByRole('button', { name: /图像 Provider/ }))
-    const dialog = screen.getByRole('dialog', { name: '图像 Provider' })
+    fireEvent.click(await screen.findByRole('button', { name: /图像服务商/ }))
+    const dialog = screen.getByRole('dialog', { name: '图像服务商' })
     fireEvent.change(within(dialog).getByLabelText('图像配置名称'), {
-      target: { value: '更新后的图像 Provider' }
+      target: { value: '更新后的图像服务商' }
     })
-    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存服务商' }))
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('图像配置保存失败')
     expect(dialog).toBeInTheDocument()
@@ -254,12 +254,12 @@ describe('AIRouterSettingsPage', () => {
     renderAIRouter(application)
 
     const providerButton = await screen.findByRole('button', { name: /学校 OpenAI/ })
-    expect(screen.queryByLabelText('API Key')).toBeNull()
+    expect(screen.queryByLabelText('API 密钥')).toBeNull()
     fireEvent.click(providerButton)
 
     const dialog = screen.getByRole('dialog', { name: '学校 OpenAI' })
-    const apiKeyInput = within(dialog).getByLabelText('API Key') as HTMLInputElement
-    const providerType = within(dialog).getByLabelText('Provider') as HTMLInputElement
+    const apiKeyInput = within(dialog).getByLabelText('API 密钥') as HTMLInputElement
+    const providerType = within(dialog).getByLabelText('服务商') as HTMLInputElement
     expect(providerType.tagName).toBe('INPUT')
     expect(providerType).toBeDisabled()
     expect(providerType.value).toBe('自定义 OpenAI Compatible')
@@ -270,13 +270,13 @@ describe('AIRouterSettingsPage', () => {
     expect(within(dialog).queryByText('清除密钥')).toBeNull()
     expect(within(dialog).queryByRole('button', { name: '保存模型设置' })).toBeNull()
 
-    fireEvent.click(within(dialog).getByRole('button', { name: '显示 API Key' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '显示 API 密钥' }))
     await waitFor(() => expect(application.readApiKey).toHaveBeenCalledWith('provider-1'))
     expect(apiKeyInput.value).toBe('saved-secret')
     expect(apiKeyInput.type).toBe('text')
-    expect(within(dialog).getByRole('button', { name: '保存 Provider' })).toBeDisabled()
+    expect(within(dialog).getByRole('button', { name: '保存服务商' })).toBeDisabled()
 
-    fireEvent.click(within(dialog).getByRole('button', { name: '隐藏 API Key' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '隐藏 API 密钥' }))
     expect(apiKeyInput.type).toBe('password')
 
     fireEvent.click(within(dialog).getByRole('button', { name: '测试连接' }))
@@ -303,11 +303,11 @@ describe('AIRouterSettingsPage', () => {
     fireEvent.change(within(dialog).getByLabelText('配置名称'), {
       target: { value: '学校 OpenAI 更新' }
     })
-    fireEvent.change(within(dialog).getByLabelText('手动模型 ID'), {
+    fireEvent.change(within(dialog).getByLabelText('手动模型编号'), {
       target: { value: 'new-model' }
     })
     fireEvent.click(within(dialog).getByRole('button', { name: '添加' }))
-    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存服务商' }))
 
     await waitFor(() => expect(application.saveConfig).toHaveBeenCalledTimes(1))
     expect(application.saveConfig).toHaveBeenCalledWith(
@@ -322,7 +322,7 @@ describe('AIRouterSettingsPage', () => {
       })
     )
     expect(dialog).toBeInTheDocument()
-    expect(within(dialog).getByRole('button', { name: '保存 Provider' })).toBeDisabled()
+    expect(within(dialog).getByRole('button', { name: '保存服务商' })).toBeDisabled()
   })
 
   it('clears a saved API key when the revealed input is emptied and saved', async () => {
@@ -350,12 +350,12 @@ describe('AIRouterSettingsPage', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /OpenAI/ }))
     const dialog = screen.getByRole('dialog', { name: 'OpenAI' })
-    fireEvent.click(within(dialog).getByRole('button', { name: '显示 API Key' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '显示 API 密钥' }))
     const apiKeyInput = (await within(dialog).findByDisplayValue(
       'saved-secret'
     )) as HTMLInputElement
     fireEvent.change(apiKeyInput, { target: { value: '' } })
-    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存服务商' }))
 
     await waitFor(() =>
       expect(application.saveConfig).toHaveBeenCalledWith(
@@ -387,13 +387,13 @@ describe('AIRouterSettingsPage', () => {
 
     renderAIRouter(application)
 
-    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
-    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
-    expect(within(dialog).getByLabelText('Provider').tagName).toBe('SELECT')
+    fireEvent.click(await screen.findByRole('button', { name: '添加服务商' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名服务商' })
+    expect(within(dialog).getByLabelText('服务商').tagName).toBe('SELECT')
     fireEvent.change(within(dialog).getByLabelText('配置名称'), {
-      target: { value: '未保存 Provider' }
+      target: { value: '未保存服务商' }
     })
-    fireEvent.change(within(dialog).getByLabelText('API Key'), {
+    fireEvent.change(within(dialog).getByLabelText('API 密钥'), {
       target: { value: 'draft-secret' }
     })
     fireEvent.click(within(dialog).getByRole('button', { name: '获取模型列表' }))
@@ -402,7 +402,7 @@ describe('AIRouterSettingsPage', () => {
       expect(application.listModels).toHaveBeenCalledWith(
         expect.objectContaining({
           id: undefined,
-          name: '未保存 Provider',
+          name: '未保存服务商',
           apiKey: 'draft-secret',
           models: []
         })
@@ -410,7 +410,7 @@ describe('AIRouterSettingsPage', () => {
     )
     expect(application.saveConfig).not.toHaveBeenCalled()
     const modelSection = within(dialog)
-      .getByRole('heading', { name: 'Model ID' })
+      .getByRole('heading', { name: '模型编号' })
       .closest('section')
     expect(modelSection).not.toBeNull()
     expect(within(modelSection as HTMLElement).getByText('获取到 1 个模型')).toBeInTheDocument()
@@ -423,7 +423,7 @@ describe('AIRouterSettingsPage', () => {
       expect(application.testConnection).toHaveBeenCalledWith(
         expect.objectContaining({
           id: undefined,
-          name: '未保存 Provider',
+          name: '未保存服务商',
           apiKey: 'draft-secret',
           models: [
             expect.objectContaining({ id: 'draft-model', enabled: true, maxOutputTokens: 131072 })
@@ -441,14 +441,14 @@ describe('AIRouterSettingsPage', () => {
       await within(connectionSection as HTMLElement).findByText('连接成功，模型回复：OK')
     ).toBeInTheDocument()
 
-    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存服务商' }))
     await waitFor(() => expect(application.saveConfig).toHaveBeenCalledTimes(1))
     expect(dialog).toBeInTheDocument()
-    const savedProviderType = within(dialog).getByLabelText('Provider') as HTMLInputElement
+    const savedProviderType = within(dialog).getByLabelText('服务商') as HTMLInputElement
     expect(savedProviderType.tagName).toBe('INPUT')
     expect(savedProviderType).toBeDisabled()
     expect(savedProviderType.value).toBe('自定义 OpenAI Compatible')
-    expect(within(dialog).getByRole('button', { name: '保存 Provider' })).toBeDisabled()
+    expect(within(dialog).getByRole('button', { name: '保存服务商' })).toBeDisabled()
   })
 
   it('uses URL-backed model categories and exposes speech recognition providers', async () => {
@@ -460,14 +460,14 @@ describe('AIRouterSettingsPage', () => {
     renderAIRouter(application, '/settings/ai-router/speech-synthesis')
 
     expect(screen.getByRole('tab', { name: '语音合成' })).toHaveAttribute('aria-selected', 'true')
-    expect(await screen.findByRole('heading', { name: '语音 Provider' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '语音服务商' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'TTS 模型包' })).toBeInTheDocument()
     expect(screen.queryByText('临时占位')).toBeNull()
     expect(application.listConfigs).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('tab', { name: '语音识别' }))
     expect(screen.getByRole('tab', { name: '语音识别' })).toHaveAttribute('aria-selected', 'true')
-    expect(await screen.findByRole('heading', { name: '语音识别 Provider' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '语音识别服务商' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'ASR 模型包' })).toBeInTheDocument()
     expect(screen.queryByText('临时占位')).toBeNull()
   })
@@ -492,23 +492,23 @@ describe('AIRouterSettingsPage', () => {
 
     renderAIRouter(application, '/settings/ai-router/speech-synthesis')
 
-    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
-    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.click(await screen.findByRole('button', { name: '添加服务商' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名服务商' })
     fireEvent.change(within(dialog).getByLabelText('语音配置名称'), {
       target: { value: '在线语音' }
     })
-    fireEvent.change(within(dialog).getByLabelText('语音 API Key'), {
+    fireEvent.change(within(dialog).getByLabelText('语音 API 密钥'), {
       target: { value: 'speech-secret' }
     })
-    fireEvent.change(within(dialog).getByLabelText('手动语音模型 ID'), {
+    fireEvent.change(within(dialog).getByLabelText('手动语音模型编号'), {
       target: { value: 'gpt-4o-mini-tts' }
     })
     fireEvent.click(within(dialog).getAllByRole('button', { name: '添加' })[0])
-    fireEvent.change(within(dialog).getByLabelText('手动语音音色 ID'), {
+    fireEvent.change(within(dialog).getByLabelText('手动语音音色编号'), {
       target: { value: 'alloy' }
     })
     fireEvent.click(within(dialog).getAllByRole('button', { name: '添加' })[1])
-    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存服务商' }))
 
     await waitFor(() =>
       expect(application.saveSpeechConfig).toHaveBeenCalledWith(
@@ -550,19 +550,19 @@ describe('AIRouterSettingsPage', () => {
 
     renderAIRouter(application, '/settings/ai-router/speech-synthesis')
 
-    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
-    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.click(await screen.findByRole('button', { name: '添加服务商' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名服务商' })
     fireEvent.change(within(dialog).getByLabelText('语音运行方式'), {
       target: { value: 'local' }
     })
     expect(within(dialog).getByText('需要先导入 Pocket TTS 模型包')).toBeInTheDocument()
     expect(within(dialog).queryByRole('heading', { name: '启用模型' })).toBeNull()
 
-    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+    fireEvent.change(within(dialog).getByLabelText('语音服务商类型'), {
       target: { value: 'qwen-tts' }
     })
     expect(within(dialog).getByText('需要先导入 Qwen3-TTS 0.6B 模型包')).toBeInTheDocument()
-    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+    fireEvent.change(within(dialog).getByLabelText('语音服务商类型'), {
       target: { value: 'pocket-tts' }
     })
 
@@ -575,7 +575,7 @@ describe('AIRouterSettingsPage', () => {
     fireEvent.change(within(dialog).getByLabelText('语音配置名称'), {
       target: { value: '本地英文语音' }
     })
-    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存服务商' }))
 
     await waitFor(() =>
       expect(application.saveSpeechConfig).toHaveBeenCalledWith(
@@ -633,7 +633,7 @@ describe('AIRouterSettingsPage', () => {
     expect(within(dialog).queryByRole('button', { name: '检测 CUDA' })).toBeNull()
     expect(probeQwenTtsCuda).not.toHaveBeenCalled()
 
-    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存服务商' }))
     await waitFor(() =>
       expect(saveSpeechConfig).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'qwen-local', backend: 'cpu' })
@@ -664,22 +664,22 @@ describe('AIRouterSettingsPage', () => {
 
     renderAIRouter(application, '/settings/ai-router/image')
 
-    expect(await screen.findByText('共 1 个 Provider')).toBeInTheDocument()
-    expect(screen.queryByLabelText('默认图像 Provider')).toBeNull()
+    expect(await screen.findByText('共 1 个服务商')).toBeInTheDocument()
+    expect(screen.queryByLabelText('默认图像服务商')).toBeNull()
     expect(screen.queryByRole('button', { name: 'API Provider' })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: '添加 Provider' }))
-    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.click(screen.getByRole('button', { name: '添加服务商' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名服务商' })
     fireEvent.change(within(dialog).getByLabelText('图像配置名称'), {
       target: { value: '图片服务' }
     })
-    fireEvent.change(within(dialog).getByLabelText('图像 API Key'), {
+    fireEvent.change(within(dialog).getByLabelText('图像 API 密钥'), {
       target: { value: 'image-secret' }
     })
-    fireEvent.change(within(dialog).getByLabelText('手动图像模型 ID'), {
+    fireEvent.change(within(dialog).getByLabelText('手动图像模型编号'), {
       target: { value: 'gpt-image-1' }
     })
     fireEvent.click(within(dialog).getByRole('button', { name: '添加' }))
-    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存服务商' }))
 
     await waitFor(() => expect(application.saveImageConfig).toHaveBeenCalledOnce())
   })
@@ -708,13 +708,13 @@ describe('AIRouterSettingsPage', () => {
 
     renderAIRouter(application, '/settings/ai-router/image')
 
-    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
-    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
-    fireEvent.change(within(dialog).getByLabelText('图像 Provider 类型'), {
+    fireEvent.click(await screen.findByRole('button', { name: '添加服务商' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名服务商' })
+    fireEvent.change(within(dialog).getByLabelText('图像服务商类型'), {
       target: { value: 'manual' }
     })
-    expect(within(dialog).queryByLabelText('图像 API Key')).toBeNull()
-    expect(within(dialog).queryByLabelText('手动图像模型 ID')).toBeNull()
+    expect(within(dialog).queryByLabelText('图像 API 密钥')).toBeNull()
+    expect(within(dialog).queryByLabelText('手动图像模型编号')).toBeNull()
     expect(within(dialog).queryByRole('heading', { name: '连接测试' })).toBeNull()
     expect(within(dialog).getByRole('button', { name: '测试手动生成' })).toBeInTheDocument()
 
@@ -733,7 +733,7 @@ describe('AIRouterSettingsPage', () => {
     fireEvent.change(within(dialog).getByLabelText('图像配置名称'), {
       target: { value: '浏览器生图' }
     })
-    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存服务商' }))
 
     await waitFor(() =>
       expect(application.saveImageConfig).toHaveBeenCalledWith(

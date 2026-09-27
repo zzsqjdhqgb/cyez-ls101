@@ -141,7 +141,7 @@ export function SchemaDraftEditorPage(): JSX.Element {
     try {
       const definition = await repository.publishDraft(libraryId, draft.draftId, publishData)
       setPublishData(null)
-      toast.success('正式 Schema 已发布')
+      toast.success('正式评分单元已发布')
       navigate(`/schemas/${definition.schemaId}`)
     } catch (reason) {
       setError(schemaErrorMessage(reason))
@@ -237,7 +237,7 @@ export function SchemaDraftEditorPage(): JSX.Element {
         <main className={styles.missing}>结构草稿不存在</main>
       ) : (
         <main className={styles.workspace}>
-          <section className={styles.mainPane} aria-label="Schema 结构">
+          <section className={styles.mainPane} aria-label="评分单元结构">
             {error ? (
               <div className={shared.notice} role="alert">
                 <AlertCircle aria-hidden="true" />
@@ -287,7 +287,7 @@ export function SchemaDraftEditorPage(): JSX.Element {
               <div className={styles.sectionHeading}>
                 <div>
                   <h2>答案槽位</h2>
-                  <p>ID、类型和顺序在正式发布后冻结</p>
+                  <p>编号、类型和顺序在正式发布后冻结</p>
                 </div>
                 {draft.structure.questionType !== 'objective' ? (
                   <Button icon={Plus} size="small" onClick={addAnswer}>
@@ -300,9 +300,9 @@ export function SchemaDraftEditorPage(): JSX.Element {
                   <div className={styles.itemRow} key={`${index}:${answer.answerId}`}>
                     <span className={styles.order}>{index + 1}</span>
                     <label>
-                      <span>稳定 ID</span>
+                      <span>稳定编号</span>
                       <input
-                        aria-label={`答案槽位 ${index + 1} ID`}
+                        aria-label={`答案槽位 ${index + 1} 编号`}
                         value={answer.answerId}
                         onChange={(event) =>
                           setAnswers(
@@ -367,7 +367,7 @@ export function SchemaDraftEditorPage(): JSX.Element {
             <div className={styles.formSection}>
               <div className={styles.sectionHeading}>
                 <div>
-                  <h2>Template 输入</h2>
+                  <h2>试卷模板输入</h2>
                   <p>内置输入只读；其他输入可按需增加</p>
                 </div>
                 <Button
@@ -399,10 +399,10 @@ export function SchemaDraftEditorPage(): JSX.Element {
                   return (
                     <div className={styles.inputRow} key={input.inputId}>
                       <label>
-                        <span>{builtin ? '内置 ID' : '稳定 ID'}</span>
+                        <span>{builtin ? '内置编号' : '稳定编号'}</span>
                         <input
                           readOnly={builtin}
-                          aria-label={`输入 ${input.inputId} ID`}
+                          aria-label={`输入 ${input.inputId} 编号`}
                           value={input.inputId}
                           onChange={(event) =>
                             setAdditionalInputs(
@@ -467,12 +467,12 @@ export function SchemaDraftEditorPage(): JSX.Element {
                 <dd>{draft.structure.answerFormat.length}</dd>
               </div>
               <div>
-                <dt>Template 输入</dt>
+                <dt>试卷模板输入</dt>
                 <dd>{draft.structure.templateInputs.length}</dd>
               </div>
               <div>
                 <dt>草稿修订</dt>
-                <dd>r{draft.revision}</dd>
+                <dd>版本 {draft.revision}</dd>
               </div>
             </dl>
           </aside>
@@ -490,10 +490,10 @@ export function SchemaDraftEditorPage(): JSX.Element {
           <header>
             <div>
               <ModalTitle asChild>
-                <h2>发布正式 Schema</h2>
+                <h2>发布正式评分单元</h2>
               </ModalTitle>
               <ModalDescription asChild>
-                <p>当前结构将被冻结，并创建一个新的稳定 Schema ID。</p>
+                <p>当前结构将被冻结，并创建一个新的稳定评分单元编号。</p>
               </ModalDescription>
             </div>
           </header>

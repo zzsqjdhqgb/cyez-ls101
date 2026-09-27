@@ -262,8 +262,7 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     const keys = await this.submissions.listScopes()
     const records = await Promise.all(
       keys.map(async (key) => {
-        if (!SHA256_PATTERN.test(key))
-          throw invalidStorage(`Invalid submission storage key: ${key}`)
+        if (!SHA256_PATTERN.test(key)) throw invalidStorage(`作答记录存储键无效：${key}`)
         return this.readRecord(this.submissions.scope(key), key)
       })
     )
@@ -308,24 +307,21 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     const key = await submissionStorageKey(submissionId)
     const record = await this.readRecord(this.submissions.scope(key), key)
     if (record && record.submissionId !== submissionId) {
-      throw invalidStorage(`Submission storage key collision: ${submissionId}`)
+      throw invalidStorage(`作答记录存储键冲突：${submissionId}`)
     }
     return record
   }
 
   async importArchive(data: Uint8Array): Promise<SubmissionImportResult> {
     if (!(data instanceof Uint8Array)) {
-      throw new SubmissionLibraryError('INVALID_ARCHIVE', 'Submission archive must be binary data')
+      throw new SubmissionLibraryError('INVALID_ARCHIVE', '作答包必须是二进制数据')
     }
 
     let archive: Awaited<ReturnType<typeof decodeSubmissionPackage>>
     try {
       archive = await decodeSubmissionPackage(data)
     } catch (reason) {
-      const message =
-        reason instanceof ExamPackageArchiveError
-          ? reason.message
-          : 'Cannot decode submission archive'
+      const message = reason instanceof ExamPackageArchiveError ? reason.message : '无法解析作答包'
       throw new SubmissionLibraryError('INVALID_ARCHIVE', message)
     }
 
@@ -359,7 +355,7 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
 
       const concurrent = await this.readRecord(scope, storageKey)
       if (!concurrent) {
-        throw invalidStorage(`Submission record disappeared: ${record.submissionId}`)
+        throw invalidStorage(`作答记录已消失：${record.submissionId}`)
       }
       if (concurrent.archiveSha256 !== hash) await scope.deleteAsset(filename)
       return resolveExisting(concurrent, record.submissionId, hash)
@@ -372,11 +368,11 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     const scope = this.submissions.scope(key)
     const record = await this.readRecord(scope, key)
     if (!record || record.submissionId !== submissionId) {
-      throw new SubmissionLibraryError('NOT_FOUND', `Submission not found: ${submissionId}`)
+      throw new SubmissionLibraryError('NOT_FOUND', `作答包不存在：${submissionId}`)
     }
     const data = await scope.readAsset(archiveFilename(record.archiveSha256))
     if (!data || (await sha256(data)) !== record.archiveSha256) {
-      throw invalidStorage(`Submission archive is missing or corrupted: ${submissionId}`)
+      throw invalidStorage(`作答包缺失或已损坏：${submissionId}`)
     }
     return new Uint8Array(data)
   }
@@ -390,7 +386,7 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
         const record = await this.readRecord(scope, key)
         if (!record) return
         if (record.submissionId !== submissionId) {
-          throw invalidStorage(`Submission storage key collision: ${submissionId}`)
+          throw invalidStorage(`作答记录存储键冲突：${submissionId}`)
         }
         const existing = await this.readSettlementIndex()
         const next = removeSubmissionFromSettlements(existing, submissionId)
@@ -422,9 +418,7 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
           if (!sameValue(existing, next)) await this.writeSettlementIndex(existing, next)
         } catch (reason) {
           if (!(await scope.compareAndSwapText(GRADING_FILE, null, stored))) {
-            throw invalidStorage(
-              `Cannot restore grading after settlement conflict: ${submissionId}`
-            )
+            throw invalidStorage(`结算冲突后无法恢复评分结果：${submissionId}`)
           }
           throw reason
         }
@@ -443,10 +437,7 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
   async settleSubmissions(submissionIds: readonly string[]): Promise<SubmissionSettlementBatch> {
     const uniqueIds = [...new Set(submissionIds)]
     if (uniqueIds.length === 0 || uniqueIds.some((submissionId) => !nonEmptyString(submissionId))) {
-      throw new SubmissionLibraryError(
-        'GRADING_NOT_READY',
-        'Settlement requires at least one submission'
-      )
+      throw new SubmissionLibraryError('GRADING_NOT_READY', '结算至少需要一条作答记录')
     }
     return this.runMutation(SETTLEMENT_MUTATION_KEY, async () => {
       const existing = await this.readSettlementIndex()
@@ -454,11 +445,9 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
       const records: SubmissionSettlementBatchRecord[] = []
       for (const submissionId of uniqueIds) {
         if (settled.has(submissionId)) {
-          throw new SubmissionLibraryError(
-            'ALREADY_SETTLED',
-            `Submission is already settled: ${submissionId}`,
-            { submissionId }
-          )
+          throw new SubmissionLibraryError('ALREADY_SETTLED', `作答记录已结算：${submissionId}`, {
+            submissionId
+          })
         }
         const key = await submissionStorageKey(submissionId)
         const scope = this.submissions.scope(key)
@@ -467,7 +456,7 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
         if (!grading || grading.status !== 'ready') {
           throw new SubmissionLibraryError(
             'GRADING_NOT_READY',
-            `Submission grading is not ready for settlement: ${submissionId}`,
+            `作答记录的评分结果尚未就绪，无法结算：${submissionId}`,
             { submissionId }
           )
         }
@@ -495,7 +484,7 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     const key = await submissionStorageKey(submissionId)
     return this.runMutation(key, async () => {
       if (settlementLookup(await this.readSettlementIndex()).has(submissionId)) {
-        throw new SubmissionLibraryError('ALREADY_SETTLED', 'Submission is already settled', {
+        throw new SubmissionLibraryError('ALREADY_SETTLED', '该作答记录已结算', {
           submissionId
         })
       }
@@ -521,28 +510,23 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
       const scope = this.submissions.scope(key)
       const archive = await this.readArchive(scope, submissionId)
       const existing = await this.readGrading(scope, archive.submission)
-      if (!existing) throw invalidStorage(`Missing grading session: ${submissionId}`)
+      if (!existing) throw invalidStorage(`缺少评分记录：${submissionId}`)
       if (existing.status === 'ready') {
-        throw new SubmissionLibraryError('GRADING_COMPLETED', 'Grading is already completed', {
+        throw new SubmissionLibraryError('GRADING_COMPLETED', '评分已完成', {
           submissionId
         })
       }
       const use = archive.submission.schemaUses.find((item) => item.instanceId === instanceId)
       if (!use) {
-        throw new SubmissionLibraryError('NOT_FOUND', `Grading item not found: ${instanceId}`)
+        throw new SubmissionLibraryError('NOT_FOUND', `评分单元不存在：${instanceId}`)
       }
       if (use.schema.structure.questionType === 'objective') {
-        throw new SubmissionLibraryError(
-          'INVALID_GRADING_RESULT',
-          'Objective items cannot be graded manually'
-        )
+        throw new SubmissionLibraryError('INVALID_GRADING_RESULT', '客观题不能人工评分')
       }
       if (existing.items.some((item) => item.instanceId === instanceId)) {
-        throw new SubmissionLibraryError(
-          'GRADING_RESULT_LOCKED',
-          `Grading result is already submitted: ${instanceId}`,
-          { instanceId }
-        )
+        throw new SubmissionLibraryError('GRADING_RESULT_LOCKED', `评分结果已提交：${instanceId}`, {
+          instanceId
+        })
       }
       assertGradingResult(result, use.schema.data.maxScore)
       const now = new Date().toISOString()
@@ -566,16 +550,13 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
       const scope = this.submissions.scope(key)
       const archive = await this.readArchive(scope, submissionId)
       const existing = await this.readGrading(scope, archive.submission)
-      if (!existing) throw invalidStorage(`Missing grading session: ${submissionId}`)
+      if (!existing) throw invalidStorage(`缺少评分记录：${submissionId}`)
       const use = archive.submission.schemaUses.find((item) => item.instanceId === instanceId)
       if (!use) {
-        throw new SubmissionLibraryError('NOT_FOUND', `Grading item not found: ${instanceId}`)
+        throw new SubmissionLibraryError('NOT_FOUND', `评分单元不存在：${instanceId}`)
       }
       if (use.schema.structure.questionType === 'objective') {
-        throw new SubmissionLibraryError(
-          'INVALID_GRADING_RESULT',
-          'Objective items cannot have AI grading runs'
-        )
+        throw new SubmissionLibraryError('INVALID_GRADING_RESULT', '客观题不能使用 AI 评分')
       }
       const nextRun: SubmissionAIGradingRun = {
         instanceId,
@@ -607,13 +588,13 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     if (!grading || grading.status !== 'ready') {
       throw new SubmissionLibraryError(
         'GRADING_NOT_COMPLETED',
-        `Submission grading is not completed: ${submissionId}`
+        `作答记录的评分尚未完成：${submissionId}`
       )
     }
     if (!settlementLookup(await this.readSettlementIndex()).has(submissionId)) {
       throw new SubmissionLibraryError(
         'GRADING_NOT_SETTLED',
-        `Submission grading is not settled: ${submissionId}`,
+        `作答记录的评分结果尚未结算：${submissionId}`,
         { submissionId }
       )
     }
@@ -635,7 +616,7 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     const value = await scope.readText<unknown>(RECORD_FILE)
     if (value === null) return null
     if (!isSubmissionLibraryRecord(value)) {
-      throw invalidStorage(`Invalid submission record: ${storageKey}`)
+      throw invalidStorage(`作答记录无效：${storageKey}`)
     }
     return structuredClone(value)
   }
@@ -646,17 +627,17 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
   ): Promise<Awaited<ReturnType<typeof decodeSubmissionPackage>>> {
     const record = await this.readRecord(scope, await submissionStorageKey(submissionId))
     if (!record || record.submissionId !== submissionId) {
-      throw new SubmissionLibraryError('NOT_FOUND', `Submission not found: ${submissionId}`)
+      throw new SubmissionLibraryError('NOT_FOUND', `作答包不存在：${submissionId}`)
     }
     const data = await scope.readAsset(archiveFilename(record.archiveSha256))
     if (!data || (await sha256(data)) !== record.archiveSha256) {
-      throw invalidStorage(`Submission archive is missing or corrupted: ${submissionId}`)
+      throw invalidStorage(`作答包缺失或已损坏：${submissionId}`)
     }
     try {
       return await decodeSubmissionPackage(data)
     } catch (reason) {
       throw invalidStorage(
-        reason instanceof Error ? reason.message : `Cannot decode submission: ${submissionId}`
+        reason instanceof Error ? reason.message : `无法解析作答包：${submissionId}`
       )
     }
   }
@@ -679,17 +660,17 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     const stored = await scope.readText<unknown>(GRADING_FILE)
     const current = stored === null ? null : normalizeGradingRecord(stored, submission)
     if (!sameValue(current, existing)) {
-      throw invalidStorage(`Concurrent grading update: ${next.submissionId}`)
+      throw invalidStorage(`评分记录被并发修改：${next.submissionId}`)
     }
     if (!(await scope.compareAndSwapText(GRADING_FILE, stored, next))) {
-      throw invalidStorage(`Concurrent grading update: ${next.submissionId}`)
+      throw invalidStorage(`评分记录被并发修改：${next.submissionId}`)
     }
   }
 
   private async readSettlementIndex(): Promise<SubmissionSettlementIndex> {
     const value = await this.settlements.readText<unknown>(SETTLEMENT_FILE)
     if (value === null) return { formatVersion: 1, batches: [] }
-    if (!isSettlementIndex(value)) throw invalidStorage('Invalid settlement index')
+    if (!isSettlementIndex(value)) throw invalidStorage('结算索引无效')
     return structuredClone(value)
   }
 
@@ -700,11 +681,11 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     const stored = await this.settlements.readText<unknown>(SETTLEMENT_FILE)
     const current = stored === null ? { formatVersion: 1, batches: [] } : stored
     if (!sameValue(current, existing)) {
-      throw new SubmissionLibraryError('SETTLEMENT_CONFLICT', 'Settlement data changed')
+      throw new SubmissionLibraryError('SETTLEMENT_CONFLICT', '结算数据已变更')
     }
     const expected = stored === null ? null : stored
     if (!(await this.settlements.compareAndSwapText(SETTLEMENT_FILE, expected, next))) {
-      throw new SubmissionLibraryError('SETTLEMENT_CONFLICT', 'Settlement data changed')
+      throw new SubmissionLibraryError('SETTLEMENT_CONFLICT', '结算数据已变更')
     }
   }
 
@@ -730,7 +711,7 @@ export const objectiveGradingEngine: GradingEngine = {
     if (input.schema.structure.questionType !== 'objective') {
       throw new SubmissionLibraryError(
         'INVALID_GRADING_RESULT',
-        'Objective engine only accepts objective grading inputs'
+        '客观题评分引擎只接受客观题评分输入'
       )
     }
     const answer = input.answers.find(
@@ -740,10 +721,7 @@ export const objectiveGradingEngine: GradingEngine = {
       (item) => item.inputId === OBJECTIVE_CORRECT_ANSWER_INPUT_ID
     )?.value
     if (!answer || correctAnswer === undefined) {
-      throw new SubmissionLibraryError(
-        'INVALID_GRADING_RESULT',
-        'Objective grading input is incomplete'
-      )
+      throw new SubmissionLibraryError('INVALID_GRADING_RESULT', '客观题评分输入不完整')
     }
     return {
       score:
@@ -760,10 +738,7 @@ export function createHumanGradingEngine(
     kind: 'human',
     async grade(input) {
       if (input.schema.structure.questionType === 'objective') {
-        throw new SubmissionLibraryError(
-          'INVALID_GRADING_RESULT',
-          'Objective items do not enter the human grading engine'
-        )
+        throw new SubmissionLibraryError('INVALID_GRADING_RESULT', '客观题不能进入人工评分引擎')
       }
       const result = await decide(input)
       assertGradingResult(result, input.schema.data.maxScore)
@@ -790,7 +765,7 @@ export function buildGradingInput(
     }
     const audioAnswer = archive.submission.answers.audios[answer.audioAnswerIndex]
     const resource = resources[audioAnswer.resourceKey]
-    if (!resource) throw invalidStorage(`Missing answer audio: ${audioAnswer.resourceKey}`)
+    if (!resource) throw invalidStorage(`缺少作答录音：${audioAnswer.resourceKey}`)
     const audio = { ...resource, durationMs: audioAnswer.durationMs }
     return answer.type === 'fixed-speech'
       ? { answerId: answer.answerId, description, type: answer.type, text: answer.text, audio }
@@ -929,7 +904,7 @@ function gradingRecord(
   const expectedIds = new Set(submission.schemaUses.map((use) => use.instanceId))
   const uniqueIds = new Set(items.map((item) => item.instanceId))
   if (uniqueIds.size !== items.length || items.some((item) => !expectedIds.has(item.instanceId))) {
-    throw invalidStorage(`Grading results do not match submission: ${submission.meta.submissionId}`)
+    throw invalidStorage(`评分结果与作答包不匹配：${submission.meta.submissionId}`)
   }
   const complete = uniqueIds.size === expectedIds.size
   return {
@@ -962,9 +937,9 @@ function buildResources(
   return Object.fromEntries(
     [...resourceKeys].map((resourceKey) => {
       const entry = archive.submission.resources[resourceKey]
-      if (!entry) throw invalidStorage(`Unknown submission resource: ${resourceKey}`)
+      if (!entry) throw invalidStorage(`作答包中存在未知资源：${resourceKey}`)
       const data = archive.files[resourceKey]
-      if (!data) throw invalidStorage(`Missing submission resource: ${resourceKey}`)
+      if (!data) throw invalidStorage(`作答包缺少资源：${resourceKey}`)
       const resource: GradingResourceInput = {
         resourceKey,
         filename: entry.filename,
@@ -992,7 +967,7 @@ function gradingResourceKeys(
   for (const answer of use.answers) {
     if (answer.type === 'text') continue
     const audio = submission.answers.audios[answer.audioAnswerIndex]
-    if (!audio) throw invalidStorage(`Missing audio answer index: ${answer.audioAnswerIndex}`)
+    if (!audio) throw invalidStorage(`缺少录音作答索引：${answer.audioAnswerIndex}`)
     keys.add(audio.resourceKey)
   }
   return keys
@@ -1008,7 +983,7 @@ function assertGradingResult(result: GradingResult, maxScore: number): void {
   ) {
     throw new SubmissionLibraryError(
       'INVALID_GRADING_RESULT',
-      `Grading result must contain a score from 0 to ${maxScore} and a string comment`,
+      `评分结果必须包含 0 到 ${maxScore} 之间的分数和文字评语`,
       { maxScore }
     )
   }
@@ -1031,7 +1006,7 @@ function normalizeGradingRecord(
     (value.readyAt !== undefined && !isoDate(value.readyAt)) ||
     (legacyCompleted && value.completedAt !== undefined && !isoDate(value.completedAt))
   ) {
-    throw invalidStorage(`Invalid grading record: ${submission.meta.submissionId}`)
+    throw invalidStorage(`评分记录无效：${submission.meta.submissionId}`)
   }
 
   const items = structuredClone(value.items) as SubmissionGradingItem[]
@@ -1042,7 +1017,7 @@ function normalizeGradingRecord(
   for (const item of items) {
     const use = usesById.get(item.instanceId)
     if (!use || ids.has(item.instanceId) || item.result.score > use.schema.data.maxScore) {
-      throw invalidStorage(`Grading item does not match submission: ${item.instanceId}`)
+      throw invalidStorage(`评分单元与作答包不匹配：${item.instanceId}`)
     }
     ids.add(item.instanceId)
     if (use.schema.structure.questionType === 'objective') {
@@ -1052,10 +1027,10 @@ function normalizeGradingRecord(
         item.result.score !== expected.score ||
         item.result.comment !== expected.comment
       ) {
-        throw invalidStorage(`Invalid objective grading result: ${item.instanceId}`)
+        throw invalidStorage(`客观题评分结果无效：${item.instanceId}`)
       }
     } else if (item.engine === 'objective') {
-      throw invalidStorage(`Invalid grading engine for item: ${item.instanceId}`)
+      throw invalidStorage(`评分单元的评分引擎无效：${item.instanceId}`)
     }
   }
 
@@ -1068,7 +1043,7 @@ function normalizeGradingRecord(
       aiRunIds.has(run.instanceId) ||
       (run.result !== undefined && run.result.score > use.schema.data.maxScore)
     ) {
-      throw invalidStorage(`Invalid AI grading run: ${run.instanceId}`)
+      throw invalidStorage(`AI 评分运行记录无效：${run.instanceId}`)
     }
     aiRunIds.add(run.instanceId)
   }
@@ -1229,7 +1204,7 @@ function isGradingResult(value: unknown): value is GradingResult {
 
 function assertAIGradingRun(run: SubmissionAIGradingRun, maxScore: number): void {
   if (!isSubmissionAIGradingRun(run) || (run.result && run.result.score > maxScore)) {
-    throw new SubmissionLibraryError('INVALID_GRADING_RESULT', 'AI grading run is invalid', {
+    throw new SubmissionLibraryError('INVALID_GRADING_RESULT', 'AI 评分运行记录无效', {
       maxScore
     })
   }
@@ -1244,7 +1219,7 @@ function objectiveResult(submission: SubmissionPackage, use: SubmissionSchemaUse
     (input) => input.inputId === OBJECTIVE_CORRECT_ANSWER_INPUT_ID
   )?.value
   if (!answer || correctAnswer === undefined) {
-    throw invalidStorage(`Incomplete objective grading item: ${use.instanceId}`)
+    throw invalidStorage(`客观题评分单元不完整：${use.instanceId}`)
   }
   const studentAnswer = submission.answers.strings[answer.stringAnswerIndex] ?? null
   return {
@@ -1291,7 +1266,7 @@ function resolveExisting(
   if (record.submissionId !== submissionId || record.archiveSha256 !== archiveSha256) {
     throw new SubmissionLibraryError(
       'SUBMISSION_ID_CONFLICT',
-      `Submission ID already exists with different content: ${submissionId}`,
+      `已存在编号相同但内容不同的作答包：${submissionId}`,
       { submissionId }
     )
   }
@@ -1332,7 +1307,7 @@ function archiveFilename(hash: string): string {
 
 function assertSubmissionId(value: string): void {
   if (!nonEmptyString(value)) {
-    throw new SubmissionLibraryError('NOT_FOUND', 'Submission ID must not be empty')
+    throw new SubmissionLibraryError('NOT_FOUND', '作答包编号不能为空')
   }
 }
 

@@ -91,7 +91,7 @@ export function collectTemplateVariableCandidates(
       add({
         key: `interface:${requirement.alias}.${varName}`,
         label: `${requirement.alias}.${varName}`,
-        sourceLabel: 'Interface',
+        sourceLabel: '题型',
         type: variable.type === 'text' ? 'string' : 'file',
         ref
       })

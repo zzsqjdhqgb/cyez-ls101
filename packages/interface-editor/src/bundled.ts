@@ -43,7 +43,7 @@ export class FileBundledInterfaceRepository implements BundledInterfaceSource {
 
   private async load(builtinKey: string): Promise<BundledInterfaceEntry> {
     if (!BUILTIN_KEY_PATTERN.test(builtinKey)) {
-      throw new BundledInterfaceRepositoryError(`Bundled builtin key is invalid: ${builtinKey}`)
+      throw new BundledInterfaceRepositoryError(`内置题型编号「${builtinKey}」无效`)
     }
 
     const builtinScope = this.builtins.scope(builtinKey)
@@ -54,9 +54,7 @@ export class FileBundledInterfaceRepository implements BundledInterfaceSource {
       current.builtinKey !== builtinKey ||
       typeof current.currentInterfaceId !== 'string'
     ) {
-      throw new BundledInterfaceRepositoryError(
-        `Bundled Interface current entry is invalid: ${builtinKey}`
-      )
+      throw new BundledInterfaceRepositoryError(`内置题型「${builtinKey}」的当前版本记录无效`)
     }
 
     const digest = interfaceDigest(current.currentInterfaceId, builtinKey)
@@ -65,16 +63,12 @@ export class FileBundledInterfaceRepository implements BundledInterfaceSource {
       .scope(digest)
       .readText<unknown>(INTERFACE_FILE)
     if (!isRecord(value) || value.id !== current.currentInterfaceId) {
-      throw new BundledInterfaceRepositoryError(
-        `Bundled Interface definition is invalid: ${builtinKey}`
-      )
+      throw new BundledInterfaceRepositoryError(`内置题型「${builtinKey}」的定义无效`)
     }
     try {
       return { builtinKey, currentInterface: structuredClone(await readInterfaceDefinition(value)) }
     } catch {
-      throw new BundledInterfaceRepositoryError(
-        `Bundled Interface content ID does not match: ${builtinKey}`
-      )
+      throw new BundledInterfaceRepositoryError(`内置题型「${builtinKey}」的内容编号与内容不一致`)
     }
   }
 }
@@ -82,9 +76,7 @@ export class FileBundledInterfaceRepository implements BundledInterfaceSource {
 function interfaceDigest(interfaceId: string, builtinKey: string): string {
   const match = /^sha256:([0-9a-f]{64})$/.exec(interfaceId)
   if (!match) {
-    throw new BundledInterfaceRepositoryError(
-      `Bundled Interface current ID is invalid: ${builtinKey}`
-    )
+    throw new BundledInterfaceRepositoryError(`内置题型「${builtinKey}」的当前版本编号无效`)
   }
   return match[1]
 }

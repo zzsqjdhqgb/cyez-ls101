@@ -47,12 +47,12 @@ export class BuiltinInterfaceMaintenanceCoordinator implements BuiltinInterfaceM
   ): Promise<void> {
     if (plan.kind === 'removal') {
       if (choice !== 'delete' && choice !== 'backup-old') {
-        throw new Error(`Invalid removal choice for ${plan.builtinKey}`)
+        throw new Error(`内置题型删除选项无效：${plan.builtinKey}`)
       }
       await this.application.applyRemoval(plan, choice)
     } else {
       if (choice !== 'migrate' && choice !== 'backup-old') {
-        throw new Error(`Invalid update choice for ${plan.builtinKey}`)
+        throw new Error(`内置题型更新选项无效：${plan.builtinKey}`)
       }
       await this.application.apply(plan, choice)
     }

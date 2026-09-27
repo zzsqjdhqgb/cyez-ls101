@@ -48,7 +48,7 @@ describe('SchemaUse 变量文本格式', () => {
     })
   })
 
-  it('解析带题号前缀的 Interface 变量名', () => {
+  it('解析带题号前缀的题型变量名', () => {
     expect(parseTextExpression('[@oral.3_dialogue]').parts[0]).toEqual({
       type: 'variable',
       ref: { scope: 'interface', alias: 'oral', varName: '3_dialogue' }
@@ -85,7 +85,7 @@ const candidates: TemplateVariableCandidate[] = [
   {
     key: 'interface:exam.prompt',
     label: 'exam.prompt',
-    sourceLabel: 'Interface',
+    sourceLabel: '题型',
     type: 'string',
     ref: { scope: 'interface', alias: 'exam', varName: 'prompt' }
   }
@@ -129,7 +129,7 @@ function SchemaTextHarness(): JSX.Element {
     <>
       <TemplateVariableInput
         mode="schema-text"
-        ariaLabel="Schema 文本"
+        ariaLabel="评分单元文本"
         candidates={attachments}
         value={value}
         onChange={setValue}
@@ -186,7 +186,7 @@ function StringValueHarness(): JSX.Element {
 describe('TemplateVariableInput', () => {
   it('inserts a Schema attachment reference into multiline text', () => {
     render(<SchemaTextHarness />)
-    const input = screen.getByLabelText('Schema 文本')
+    const input = screen.getByLabelText('评分单元文本')
     fireEvent.change(input, { target: { value: '@ref', selectionStart: 4 } })
     fireEvent.keyDown(input, { key: 'Enter' })
 

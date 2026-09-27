@@ -220,7 +220,7 @@ describe('ExamPackage ZIP archive', () => {
     )
     readingUse.inputs = readingUse.inputs.filter((input) => input.inputId !== 'reference-answer')
 
-    expect(() => validateExamPackage(exam)).toThrow('Invalid ExamPackage manifest')
+    expect(() => validateExamPackage(exam)).toThrow('试卷包清单无效')
     const bytes = await legacyExamArchive(exam)
     const decoded = await decodeExamPackage(bytes)
 
@@ -248,7 +248,7 @@ describe('ExamPackage ZIP archive', () => {
     const exam = examPackage()
     exam.examData.player.pages = []
 
-    expect(() => validateExamPackage(exam)).toThrow('Invalid ExamPackage manifest')
+    expect(() => validateExamPackage(exam)).toThrow('试卷包清单无效')
   })
 
   it('拒绝零秒录音动作', () => {
@@ -256,7 +256,7 @@ describe('ExamPackage ZIP archive', () => {
     const step = exam.examData.player.pages[0].timeline[0]
     if (step.type === 'record') step.duration = 0
 
-    expect(() => validateExamPackage(exam)).toThrow('Invalid ExamPackage manifest')
+    expect(() => validateExamPackage(exam)).toThrow('试卷包清单无效')
   })
 
   it('校验播放器页面图片的资源引用', () => {
@@ -275,25 +275,25 @@ describe('ExamPackage ZIP archive', () => {
     const missing = structuredClone(valid)
     const image = missing.examData.player.pages[0].content[0]
     if (image.type === 'image') image.src = 'resource:missing'
-    expect(() => validateExamPackage(missing)).toThrow('Player image references missing resource')
+    expect(() => validateExamPackage(missing)).toThrow('播放器图片引用了不存在的资源')
   })
 
   it('考试资源和作答模板静态附件只能使用 resources 路径', () => {
     const examResource = examPackage()
     examResource.examData.resources.picture.packagePath = 'recordings/picture/picture.png'
-    expect(() => validateExamPackage(examResource)).toThrow('Invalid ExamPackage manifest')
+    expect(() => validateExamPackage(examResource)).toThrow('试卷包清单无效')
 
     const templateResource = examPackage()
     templateResource.submissionTemplate.resources.picture.packagePath =
       'recordings/picture/picture.png'
-    expect(() => validateExamPackage(templateResource)).toThrow('Invalid ExamPackage manifest')
+    expect(() => validateExamPackage(templateResource)).toThrow('试卷包清单无效')
   })
 
   it('拒绝缺失和多余资源', async () => {
-    await expect(encodeExamPackage(examPackage(), {})).rejects.toThrow('Missing resource bytes')
+    await expect(encodeExamPackage(examPackage(), {})).rejects.toThrow('缺少资源数据')
     await expect(
       encodeExamPackage(examPackage(), { picture: pictureBytes, extra: new Uint8Array() })
-    ).rejects.toThrow('without a manifest resource entry')
+    ).rejects.toThrow('清单未声明的资源文件')
   })
 })
 
@@ -319,9 +319,7 @@ describe('SubmissionPackage ZIP archive', () => {
     const readingUse = submission.schemaUses[1]
     readingUse.schema.data.inputDescriptions['reference-answer'] = '参考答案'
 
-    expect(() => validateSubmissionPackage(submission)).toThrow(
-      'Invalid SubmissionPackage manifest'
-    )
+    expect(() => validateSubmissionPackage(submission)).toThrow('作答包清单无效')
     const bytes = await legacySubmissionArchive(submission)
     const decoded = await decodeSubmissionPackage(bytes)
 
@@ -371,23 +369,21 @@ describe('SubmissionPackage ZIP archive', () => {
 
     await expect(
       decodeSubmissionPackage(await legacySubmissionArchive(submission))
-    ).rejects.toThrow('Invalid SubmissionPackage manifest')
+    ).rejects.toThrow('作答包清单无效')
   })
 
   it('拒绝越界答案索引和缺失音频资源引用', () => {
     const badIndex = submissionPackage()
     const readingAnswer = badIndex.schemaUses[1].answers[0]
     if (readingAnswer.type === 'fixed-speech') readingAnswer.audioAnswerIndex = 4
-    expect(() => validateSubmissionPackage(badIndex)).toThrow('outside its answer pool')
+    expect(() => validateSubmissionPackage(badIndex)).toThrow('超出了作答池范围')
 
     const missingAudio = submissionPackage()
     delete missingAudio.resources['answer-audio-0']
-    expect(() => validateSubmissionPackage(missingAudio)).toThrow(
-      'Audio answer references missing resource'
-    )
+    expect(() => validateSubmissionPackage(missingAudio)).toThrow('录音作答引用了不存在的资源')
   })
 
-  it('要求 SchemaUse 答案 ID 完整唯一，同时允许复用答案池索引', () => {
+  it('要求 SchemaUse 答案编号完整唯一，同时允许复用答案池索引', () => {
     const sharedIndex = submissionPackage()
     const use = sharedIndex.schemaUses[1]
     use.schema.structure.answerFormat.push({ answerId: 'sentence-2', type: 'fixed-speech' })
@@ -402,11 +398,11 @@ describe('SubmissionPackage ZIP archive', () => {
 
     const duplicate = structuredClone(sharedIndex)
     duplicate.schemaUses[1].answers[1].answerId = 'sentence'
-    expect(() => validateSubmissionPackage(duplicate)).toThrow('Invalid SubmissionPackage manifest')
+    expect(() => validateSubmissionPackage(duplicate)).toThrow('作答包清单无效')
 
     const missing = structuredClone(sharedIndex)
     missing.schemaUses[1].answers.pop()
-    expect(() => validateSubmissionPackage(missing)).toThrow('Invalid SubmissionPackage manifest')
+    expect(() => validateSubmissionPackage(missing)).toThrow('作答包清单无效')
   })
 
   it('从完整考试资源和录音中收集作答归档文件', () => {
@@ -420,7 +416,7 @@ describe('SubmissionPackage ZIP archive', () => {
 
     expect(() =>
       collectSubmissionPackageFiles(submissionPackage(), { picture: pictureBytes }, {})
-    ).toThrow('Missing recording resource')
+    ).toThrow('缺少录音资源')
   })
 
   it('拒绝重复资源路径和包含路径的文件名', () => {
@@ -429,16 +425,12 @@ describe('SubmissionPackage ZIP archive', () => {
       ...duplicatePath.resources.picture,
       filename: 'picture.png'
     }
-    expect(() => validateSubmissionPackage(duplicatePath)).toThrow(
-      'Invalid SubmissionPackage manifest'
-    )
+    expect(() => validateSubmissionPackage(duplicatePath)).toThrow('作答包清单无效')
 
     const pathInFilename = submissionPackage()
     pathInFilename.resources.picture.filename = 'nested/picture.png'
     pathInFilename.resources.picture.packagePath = 'resources/picture/nested%2Fpicture.png'
-    expect(() => validateSubmissionPackage(pathInFilename)).toThrow(
-      'Invalid SubmissionPackage manifest'
-    )
+    expect(() => validateSubmissionPackage(pathInFilename)).toThrow('作答包清单无效')
   })
 
   it('拒绝 URL 规范化后发生碰撞的资源路径', () => {
@@ -454,22 +446,20 @@ describe('SubmissionPackage ZIP archive', () => {
       mediaType: 'audio/wav'
     }
 
-    expect(() => validateExamPackage(collision)).toThrow('Invalid ExamPackage manifest')
+    expect(() => validateExamPackage(collision)).toThrow('试卷包清单无效')
   })
 
   it('按引用用途区分最终作答包中的静态附件和录音', () => {
     const staticAsRecording = submissionPackage()
     staticAsRecording.resources.picture.packagePath = 'recordings/picture/picture.png'
     expect(() => validateSubmissionPackage(staticAsRecording)).toThrow(
-      'SchemaUse references non-static resource'
+      '评分单元使用项引用了非静态资源'
     )
 
     const recordingAsStatic = submissionPackage()
     recordingAsStatic.resources['answer-audio-0'].packagePath =
       'resources/answer-audio-0/recording-0.ogg'
-    expect(() => validateSubmissionPackage(recordingAsStatic)).toThrow(
-      'Audio answer resource is outside recordings/'
-    )
+    expect(() => validateSubmissionPackage(recordingAsStatic)).toThrow('不在 recordings/ 目录中')
   })
 
   it('接受带负时区偏移的时间并拒绝倒置的考试时间', () => {
@@ -480,7 +470,7 @@ describe('SubmissionPackage ZIP archive', () => {
 
     const reversed = submissionPackage()
     reversed.meta.submittedAt = '2026-08-10T00:59:59Z'
-    expect(() => validateSubmissionPackage(reversed)).toThrow('Invalid SubmissionPackage manifest')
+    expect(() => validateSubmissionPackage(reversed)).toThrow('作答包清单无效')
   })
 
   it('拒绝路径穿越、缺失文件和未知归档文件', async () => {
@@ -491,7 +481,7 @@ describe('SubmissionPackage ZIP archive', () => {
         picture: pictureBytes,
         'answer-audio-0': recordingBytes
       })
-    ).rejects.toThrow('Invalid SubmissionPackage manifest')
+    ).rejects.toThrow('作答包清单无效')
 
     const validBytes = await encodeSubmissionPackage(submissionPackage(), {
       picture: pictureBytes,
@@ -499,13 +489,11 @@ describe('SubmissionPackage ZIP archive', () => {
     })
     const missing = unzipSync(validBytes)
     delete missing['resources/picture/picture.png']
-    await expect(decodeSubmissionPackage(zipSync(missing))).rejects.toThrow('Missing resource file')
+    await expect(decodeSubmissionPackage(zipSync(missing))).rejects.toThrow('缺少资源文件')
 
     const extra = unzipSync(validBytes)
     extra['unexpected.txt'] = strToU8('unexpected')
-    await expect(decodeSubmissionPackage(zipSync(extra))).rejects.toThrow(
-      'Unexpected file in archive'
-    )
+    await expect(decodeSubmissionPackage(zipSync(extra))).rejects.toThrow('压缩包中存在多余的文件')
   })
 
   it('拒绝损坏的 ZIP 和 manifest', async () => {
@@ -514,6 +502,6 @@ describe('SubmissionPackage ZIP archive', () => {
     )
     await expect(
       decodeSubmissionPackage(zipSync({ 'manifest.json': strToU8('{broken') }))
-    ).rejects.toThrow('Invalid UTF-8 JSON file')
+    ).rejects.toThrow('JSON 文件不是有效的 UTF-8 编码')
   })
 })

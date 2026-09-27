@@ -63,9 +63,9 @@ describe('renderer file dialog', () => {
 
     expect(() =>
       fileDialog.readBinary({ filters: [{ name: 'JSON', extensions: ['.json'] }] })
-    ).toThrow('Invalid file-dialog extension')
+    ).toThrow('文件对话框扩展名无效')
     expect(() => fileDialog.writeBinary(new Uint8Array(), { defaultName: '../data.json' })).toThrow(
-      'File-dialog default name must be a filename without a path'
+      '文件对话框默认文件名不能包含路径'
     )
     expect(read).not.toHaveBeenCalled()
     expect(write).not.toHaveBeenCalled()

@@ -77,7 +77,7 @@ export function AIRouterImageSettingsPage({
     } catch (reason) {
       if (requestId !== loadRequest.current) return
       setConfigs(null)
-      setLoadError(formatAIRouterError(reason, '无法加载图像 Provider 设置'))
+      setLoadError(formatAIRouterError(reason, '无法加载图像服务商设置'))
     } finally {
       if (requestId === loadRequest.current) setLoading(false)
     }
@@ -130,10 +130,10 @@ export function AIRouterImageSettingsPage({
         message={loadError}
         onRetry={() => void loadConfigs()}
         retrying={loading}
-        title="无法加载图像 Provider 设置"
+        title="无法加载图像服务商设置"
       />
     ) : (
-      <AIRouterPageLoading message="正在加载图像 Provider..." />
+      <AIRouterPageLoading message="正在加载图像服务商..." />
     )
   }
 
@@ -201,13 +201,13 @@ export function AIRouterImageSettingsPage({
   return (
     <SettingsContent>
       <SettingsSection
-        title="图像 Provider"
-        description="单独管理图像生成服务，不复用文本 Provider；具体调用时选择 Provider。"
+        title="图像服务商"
+        description="单独管理图像生成服务，不复用文本服务商；具体调用时选择服务商。"
       >
         <div className={styles.providerToolbar}>
-          <span>共 {configs.length} 个 Provider</span>
+          <span>共 {configs.length} 个服务商</span>
           <Button icon={Plus} variant="primary" onClick={() => openEditor(createDraft())}>
-            添加 Provider
+            添加服务商
           </Button>
         </div>
         {configs.length ? (
@@ -241,7 +241,7 @@ export function AIRouterImageSettingsPage({
         ) : (
           <div className={styles.emptyProviders}>
             <ImageIcon aria-hidden="true" />
-            <span>尚未添加图像 Provider</span>
+            <span>尚未添加图像服务商</span>
           </div>
         )}
       </SettingsSection>
@@ -259,15 +259,15 @@ export function AIRouterImageSettingsPage({
               <div>
                 <ModalDescription asChild>
                   <span className={styles.editorEyebrow}>
-                    {draft.id ? '编辑图像 Provider' : '添加图像 Provider'}
+                    {draft.id ? '编辑图像服务商' : '添加图像服务商'}
                   </span>
                 </ModalDescription>
                 <ModalTitle asChild>
-                  <h2>{draft.name.trim() || '未命名 Provider'}</h2>
+                  <h2>{draft.name.trim() || '未命名服务商'}</h2>
                 </ModalTitle>
               </div>
               <button
-                aria-label="关闭图像 Provider 编辑器"
+                aria-label="关闭图像服务商编辑器"
                 className={styles.closeEditor}
                 type="button"
                 onClick={closeEditor}
@@ -280,8 +280,8 @@ export function AIRouterImageSettingsPage({
                 title="基础配置"
                 description={
                   draft.type === 'manual'
-                    ? '手动 Provider 会通过全局弹窗完成图片导入。'
-                    : '图像 Provider 的 API Key 使用独立加密存储。'
+                    ? '手动服务商会通过全局弹窗完成图片导入。'
+                    : '图像服务商的 API 密钥使用独立加密存储。'
                 }
               >
                 <SettingsRow label="配置名称">
@@ -292,17 +292,17 @@ export function AIRouterImageSettingsPage({
                     onChange={(event) => setDraft({ ...draft, name: event.target.value })}
                   />
                 </SettingsRow>
-                <SettingsRow label="Provider 类型">
+                <SettingsRow label="服务商类型">
                   {draft.id ? (
                     <input
-                      aria-label="图像 Provider 类型"
+                      aria-label="图像服务商类型"
                       className={styles.input}
                       disabled
                       value={providerTypeLabel(draft.type)}
                     />
                   ) : (
                     <select
-                      aria-label="图像 Provider 类型"
+                      aria-label="图像服务商类型"
                       className={styles.input}
                       value={draft.type}
                       onChange={(event) =>
@@ -327,19 +327,19 @@ export function AIRouterImageSettingsPage({
                         onChange={(event) => setDraft({ ...draft, baseUrl: event.target.value })}
                       />
                     </SettingsRow>
-                    <SettingsRow label="API Key">
+                    <SettingsRow label="API 密钥">
                       <div className={styles.secretControl}>
                         <div className={styles.secretInputWrap}>
                           <input
-                            aria-label="图像 API Key"
+                            aria-label="图像 API 密钥"
                             className={styles.inputWide}
                             type={apiKeyVisible ? 'text' : 'password'}
-                            placeholder={draft.hasApiKey ? '已安全保存' : '输入 API Key'}
+                            placeholder={draft.hasApiKey ? '已安全保存' : '输入 API 密钥'}
                             value={draft.apiKey}
                             onChange={(event) => setDraft({ ...draft, apiKey: event.target.value })}
                           />
                           <button
-                            aria-label={apiKeyVisible ? '隐藏图像 API Key' : '显示图像 API Key'}
+                            aria-label={apiKeyVisible ? '隐藏图像 API 密钥' : '显示图像 API 密钥'}
                             className={styles.secretVisibility}
                             type="button"
                             onClick={() => {
@@ -378,7 +378,7 @@ export function AIRouterImageSettingsPage({
               {draft.type === 'openai-compatible' ? (
                 <SettingsSection
                   title="图像模型"
-                  description="从服务获取模型列表，或手动添加模型 ID。"
+                  description="从服务获取模型列表，或手动添加模型编号。"
                 >
                   <div className={styles.modelToolbar}>
                     <Button
@@ -421,7 +421,7 @@ export function AIRouterImageSettingsPage({
                     </Button>
                     <div className={styles.addModel}>
                       <input
-                        aria-label="手动图像模型 ID"
+                        aria-label="手动图像模型编号"
                         className={styles.input}
                         value={manualModel}
                         onChange={(event) => setManualModel(event.target.value)}
@@ -527,7 +527,7 @@ export function AIRouterImageSettingsPage({
               {draft.type === 'openai-compatible' ? (
                 <SettingsSection
                   title="连接测试"
-                  description="实际生成一张测试图片，可能产生 Provider 费用。"
+                  description="实际生成一张测试图片，可能产生服务商费用。"
                 >
                   <SettingsRow label="测试模型">
                     <select
@@ -598,7 +598,7 @@ export function AIRouterImageSettingsPage({
                       setDeleteTarget(target)
                     }}
                   >
-                    删除 Provider
+                    删除服务商
                   </Button>
                 ) : null}
               </div>
@@ -613,7 +613,7 @@ export function AIRouterImageSettingsPage({
                   disabled={!draft.name.trim() || !draftModified || Boolean(busy)}
                   onClick={saveDraft}
                 >
-                  保存 Provider
+                  保存服务商
                 </Button>
               </div>
             </footer>
@@ -632,7 +632,7 @@ export function AIRouterImageSettingsPage({
             : `将删除“${deleteTarget?.name ?? ''}”的图像配置和加密密钥。`
         }
         open={Boolean(deleteTarget)}
-        title="删除图像 Provider 配置？"
+        title="删除图像服务商配置？"
         onCancel={() => {
           setDeleteTarget(null)
           setFeedback((current) => ({ ...current, delete: undefined }))

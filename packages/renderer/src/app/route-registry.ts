@@ -32,11 +32,11 @@ export class AppRouteRegistry {
 
   register(registration: AppRouteRegistration): () => void {
     if (this.routes.some((route) => route.id === registration.id)) {
-      throw new Error(`Route id is already registered: ${registration.id}`)
+      throw new Error(`路由编号重复注册：${registration.id}`)
     }
 
     if (this.routes.some((route) => route.path === registration.path)) {
-      throw new Error(`Route path is already registered: ${registration.path}`)
+      throw new Error(`路由路径重复注册：${registration.path}`)
     }
 
     this.routes = [...this.routes, registration]

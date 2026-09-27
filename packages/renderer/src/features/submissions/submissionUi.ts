@@ -1,16 +1,17 @@
 import { SubmissionLibraryError } from '@ls101/submission-library'
+import { toUserMessage } from '../../components/ui/userMessage'
 
 export function submissionErrorMessage(reason: unknown): string {
   if (reason instanceof SubmissionLibraryError) {
     switch (reason.code) {
       case 'INVALID_ARCHIVE':
-        return `无法导入作答包：${reason.message}`
+        return `无法导入作答包：${toUserMessage(reason, '文件内容无效')}`
       case 'SUBMISSION_ID_CONFLICT':
-        return '作答库中已有相同 ID、但内容不同的作答包。'
+        return '作答库中已有相同编号、但内容不同的作答包。'
       case 'NOT_FOUND':
         return '作答包不存在或已经被删除。'
       case 'INVALID_STORAGE':
-        return `作答库数据损坏：${reason.message}`
+        return `作答库数据损坏：${toUserMessage(reason, '数据格式无效')}`
       case 'INVALID_GRADING_RESULT':
         return '评分无效，请检查分数范围。'
       case 'GRADING_RESULT_LOCKED':
@@ -29,7 +30,7 @@ export function submissionErrorMessage(reason: unknown): string {
         return '结算数据已经发生变化，请重新加载后再试。'
     }
   }
-  return reason instanceof Error ? reason.message : '操作失败，请重试。'
+  return toUserMessage(reason)
 }
 
 export function submissionExportName(candidateId: string, submittedAt: string): string {

@@ -89,7 +89,7 @@ export class FileStorage {
   }
 
   async writeText(location: FileLocation, data: string): Promise<void> {
-    if (typeof data !== 'string') throw new TypeError('Text data must be a string')
+    if (typeof data !== 'string') throw new TypeError('文本数据必须是字符串')
     await this.runMutation(() => this.write(resolveTextPath(this.baseDir, location), data))
   }
 
@@ -99,9 +99,9 @@ export class FileStorage {
     data: string
   ): Promise<boolean> {
     if (expected !== null && typeof expected !== 'string') {
-      throw new TypeError('Expected text data must be a string or null')
+      throw new TypeError('期望的文本数据必须是字符串或 null')
     }
-    if (typeof data !== 'string') throw new TypeError('Text data must be a string')
+    if (typeof data !== 'string') throw new TypeError('文本数据必须是字符串')
     return this.runMutation(async () => {
       const current = await this.readText(location)
       if (current !== expected) return false
@@ -121,7 +121,7 @@ export class FileStorage {
   }
 
   async writeAsset(location: FileLocation, data: Uint8Array): Promise<void> {
-    if (!(data instanceof Uint8Array)) throw new TypeError('Asset data must be a Uint8Array')
+    if (!(data instanceof Uint8Array)) throw new TypeError('资源数据必须是 Uint8Array')
     await this.runMutation(() => this.write(resolveAssetPath(this.baseDir, location), data))
   }
 

@@ -47,10 +47,10 @@ describe('AIRouterExtensionStore', () => {
   it('rejects packages whose declared ID or version does not match the application requirement', async () => {
     await expect(
       importPackage(store, baseDir, createPackage({ extensionId: 'another-extension' }))
-    ).rejects.toThrow('ID 或版本')
+    ).rejects.toThrow('编号或版本')
     await expect(
       importPackage(store, baseDir, createPackage({ extensionVersion: '2.0.0' }))
-    ).rejects.toThrow('ID 或版本')
+    ).rejects.toThrow('编号或版本')
     await expect(
       store.getStatus(EXTENSION_ID, EXTENSION_VERSION, 'AI 语音评测')
     ).resolves.toMatchObject({ state: 'not-imported' })

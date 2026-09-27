@@ -62,12 +62,12 @@ export function TemplateInterfaceRequirements({
   }
 
   return (
-    <section className={styles.section} aria-label="Interface 配置">
+    <section className={styles.section} aria-label="题型配置">
       <div className={styles.heading}>
-        <span>Interface</span>
+        <span>题型</span>
         <IconButton
           icon={Plus}
-          label="添加 Interface"
+          label="添加题型"
           size="small"
           variant="ghost"
           disabled={disabled || loading || manifests.length === 0 || adding}
@@ -76,15 +76,15 @@ export function TemplateInterfaceRequirements({
       </div>
 
       {error ? <div className={styles.error}>{error}</div> : null}
-      {loading ? <div className={styles.status}>正在加载 Interface...</div> : null}
+      {loading ? <div className={styles.status}>正在加载题型...</div> : null}
       {!loading && !error && manifests.length === 0 ? (
         <div className={styles.empty}>
           <Braces aria-hidden="true" />
-          <span>暂无已发布 Interface</span>
+          <span>暂无已发布题型</span>
         </div>
       ) : null}
       {!loading && requirements.length === 0 && !adding && manifests.length > 0 ? (
-        <div className={styles.status}>尚未配置 Interface</div>
+        <div className={styles.status}>尚未配置题型</div>
       ) : null}
 
       {requirements.length > 0 ? (
@@ -104,26 +104,26 @@ export function TemplateInterfaceRequirements({
       {adding ? (
         <div className={styles.addEditor}>
           <div className={styles.itemHeading}>
-            <strong>添加 Interface</strong>
+            <strong>添加题型</strong>
             <IconButton
               icon={X}
-              label="取消添加 Interface"
+              label="取消添加题型"
               size="small"
               variant="ghost"
               onClick={resetDraft}
             />
           </div>
           <label className={styles.field}>
-            Interface
+            题型
             <select
-              aria-label="选择 Interface"
+              aria-label="选择题型"
               value={selectedId}
               onChange={(event) => selectInterface(event.target.value)}
             >
               <option value="">请选择</option>
               {manifests.map((manifest) => (
                 <option key={manifest.interfaceId} value={manifest.interfaceId}>
-                  {manifest.interfaceName || '未命名 Interface'}
+                  {manifest.interfaceName || '未命名题型'}
                 </option>
               ))}
             </select>
@@ -133,13 +133,13 @@ export function TemplateInterfaceRequirements({
               <label className={styles.field}>
                 别名
                 <input
-                  aria-label="新 Interface 别名"
+                  aria-label="新题型别名"
                   value={alias}
                   onChange={(event) => setAlias(event.target.value)}
                 />
               </label>
               <VariableSelector
-                labelPrefix="新 Interface"
+                labelPrefix="新题型"
                 manifest={manifestsById.get(selectedId)}
                 selected={acceptedVars}
                 onChange={setAcceptedVars}
@@ -185,12 +185,12 @@ function RequirementEditor({
     <article className={styles.item}>
       <div className={styles.itemHeading}>
         <span className={styles.itemIdentity} title={requirement.interfaceId}>
-          <strong>{manifest?.interfaceName || '未知 Interface'}</strong>
+          <strong>{manifest?.interfaceName || '未知题型'}</strong>
           <small>{requirement.interfaceId}</small>
         </span>
         <IconButton
           icon={Trash2}
-          label={`移除 Interface ${requirement.alias}`}
+          label={`移除题型 ${requirement.alias}`}
           size="small"
           variant="danger"
           disabled={disabled}
@@ -200,7 +200,7 @@ function RequirementEditor({
       <label className={styles.field}>
         别名
         <input
-          aria-label={`Interface ${requirement.alias} 别名`}
+          aria-label={`题型 ${requirement.alias} 别名`}
           disabled={disabled}
           value={requirement.alias}
           onChange={(event) => update({ ...requirement, alias: event.target.value })}
@@ -208,7 +208,7 @@ function RequirementEditor({
       </label>
       <VariableSelector
         disabled={disabled}
-        labelPrefix={`Interface ${requirement.alias}`}
+        labelPrefix={`题型 ${requirement.alias} `}
         manifest={manifest}
         selected={requirement.acceptedVars}
         variables={variables}
@@ -254,7 +254,7 @@ function VariableSelector({
         return (
           <label className={styles.variableOption} key={varName} title={variable?.description}>
             <input
-              aria-label={`${labelPrefix} 变量 ${varName}`}
+              aria-label={`${labelPrefix}变量 ${varName}`}
               checked={checked}
               disabled={disabled || (checked && selected.length === 1)}
               type="checkbox"

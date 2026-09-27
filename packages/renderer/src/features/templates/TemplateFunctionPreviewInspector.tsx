@@ -65,7 +65,7 @@ export function TemplateFunctionPreviewInspector({
           </div>
         </TemplateInspectorSection>
       ) : null}
-      <TemplateInspectorSection title="当前 Timeline">
+      <TemplateInspectorSection title="当前时间线">
         {snapshot ? (
           <dl className={styles.details}>
             <div>
@@ -78,7 +78,7 @@ export function TemplateFunctionPreviewInspector({
             </div>
           </dl>
         ) : (
-          <p className={styles.emptyValue}>暂无 Timeline 信息</p>
+          <p className={styles.emptyValue}>暂无时间线信息</p>
         )}
       </TemplateInspectorSection>
       {session.error ? (

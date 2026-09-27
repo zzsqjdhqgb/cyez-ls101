@@ -140,7 +140,7 @@ describe('Template SchemaUse editor', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: '添加' }))
-    await waitFor(() => expect(screen.getByLabelText('正式 Schema')).toBeEnabled())
+    await waitFor(() => expect(screen.getByLabelText('正式评分单元')).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: '添加评分单元' }))
 
     expect(apply).toHaveBeenCalledWith({

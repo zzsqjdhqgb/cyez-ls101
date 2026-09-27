@@ -7,6 +7,6 @@ declare global {
 }
 
 export function getConfigStoreBridge(): ConfigStoreBridge {
-  if (!window.configStore) throw new Error('Config-store preload bridge is unavailable')
+  if (!window.configStore) throw new Error('配置存储预加载桥接不可用')
   return window.configStore
 }

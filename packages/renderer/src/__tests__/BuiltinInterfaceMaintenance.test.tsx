@@ -119,10 +119,10 @@ describe('BuiltinInterfaceMaintenanceCoordinator', () => {
     const coordinator = new BuiltinInterfaceMaintenanceCoordinator(application, source)
 
     await expect(coordinator.resolve(updatePlan, 'delete' as never)).rejects.toThrow(
-      'Invalid update choice'
+      '内置题型更新选项无效'
     )
     await expect(coordinator.resolve(removalPlan, 'migrate' as never)).rejects.toThrow(
-      'Invalid removal choice'
+      '内置题型删除选项无效'
     )
     expect(application.apply).not.toHaveBeenCalled()
     expect(application.applyRemoval).not.toHaveBeenCalled()
@@ -195,7 +195,7 @@ describe('BuiltinInterfaceMaintenanceDialog', () => {
 
 function maintenanceFor(
   plan: BuiltinUpdatePlan | BuiltinRemovalPlan,
-  resolve: ReturnType<typeof vi.fn>,
+  resolve: BuiltinInterfaceMaintenance['resolve'],
   dismiss = vi.fn()
 ): BuiltinInterfaceMaintenance {
   const snapshot = [plan]

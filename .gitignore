@@ -9,8 +9,7 @@ coverage
 .cache/
 playwright-report
 test-results
-docs/product/.product-docs-staging
-docs/product/**/*.product-docs-backup
+docs/manual/.manual-staging
 /assets/*
 /externals/
 /.yarn/*
@@ -39,3 +38,4 @@ docs/product/**/*.product-docs-backup
 
 # Local TextPA environment overrides
 /textpa/.env.local
+.tsbuild/

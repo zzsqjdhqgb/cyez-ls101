@@ -58,7 +58,7 @@ function compileContext(): TemplateCompileContext {
 }
 
 describe('函数资源入口完整性', () => {
-  it('拒绝不符合 sha256 格式的函数资源 ID', async () => {
+  it('拒绝不符合 sha256 格式的函数资源编号', async () => {
     const invalid: FunctionDef = {
       id: 'function-id',
       name: 'Invalid ID',
@@ -80,7 +80,7 @@ describe('函数资源入口完整性', () => {
     })
   })
 
-  it('拒绝保留旧 ID 的已篡改函数正文', async () => {
+  it('拒绝保留旧编号的已篡改函数正文', async () => {
     const resource = await createFunctionResource({
       name: 'Original',
       inputs: [],

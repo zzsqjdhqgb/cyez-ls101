@@ -311,7 +311,7 @@ function TemplateFunctionDocumentEditor({
             <h1>{document?.content.name || '未命名函数'}</h1>
             <span>
               {document && session.library
-                ? `${session.library.content.name || '未命名函数库'} · Revision ${session.library.revision}${session.dirty ? ' · 未保存' : ''}`
+                ? `${session.library.content.name || '未命名函数库'} · 版本 ${session.library.revision}${session.dirty ? ' · 未保存' : ''}`
                 : session.loading
                   ? '正在加载'
                   : '无法加载'}
@@ -673,7 +673,7 @@ function TemplateFunctionDocumentEditor({
                   variableCandidates={variableCandidates}
                 />
               </TemplateInspectorSection>
-              <TemplateInspectorSection title="评分 Schema" defaultExpanded={false}>
+              <TemplateInspectorSection title="评分单元" defaultExpanded={false}>
                 <TemplateSchemaUses
                   apply={applyDefinition}
                   disabled={!document || session.saving}

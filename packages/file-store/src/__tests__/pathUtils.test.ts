@@ -12,14 +12,14 @@ describe('file-store paths', () => {
   it.each(['.drafts', 'drafts.current', 'drafts/current', 'drafts\\current', '../drafts', ''])(
     'rejects scope segment %s',
     (segment) => {
-      expect(() => validateScopeSegment(segment)).toThrow('Invalid file-store scope segment')
+      expect(() => validateScopeSegment(segment)).toThrow('文件存储作用域片段无效')
     }
   )
 
   it('requires a non-empty scope of valid segments', () => {
     expect(() => validateScope(['interfaces', 'drafts', 'draft-abc123'])).not.toThrow()
-    expect(() => validateScope([])).toThrow('at least one segment')
-    expect(() => validateScope(['interfaces', '..'])).toThrow('Invalid file-store scope segment')
+    expect(() => validateScope([])).toThrow('文件存储作用域至少需要一个片段')
+    expect(() => validateScope(['interfaces', '..'])).toThrow('文件存储作用域片段无效')
   })
 
   it.each(['manifest.json', 'cover-1.png', 'recording_2.mp3', 'content'])(
@@ -32,7 +32,7 @@ describe('file-store paths', () => {
   it.each(['.hidden', '../secret', 'nested/file', 'nested\\file', ''])(
     'rejects filename %s',
     (filename) => {
-      expect(() => validateFilename(filename)).toThrow('Invalid file-store filename')
+      expect(() => validateFilename(filename)).toThrow('文件存储文件名无效')
     }
   )
 })

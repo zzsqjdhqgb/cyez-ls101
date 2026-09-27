@@ -7,7 +7,7 @@ export type { SecretScope, SecretStorage, ScopedSecretStorage } from '../shared'
 
 export function createElectronSecretStorage(baseDir: string): EncryptedSecretStorage {
   if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error('Windows secure storage is unavailable')
+    throw new Error('Windows 安全存储不可用')
   }
 
   const codec: SecretCodec = {

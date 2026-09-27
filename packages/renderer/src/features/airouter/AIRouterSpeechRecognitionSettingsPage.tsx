@@ -162,13 +162,13 @@ export function AIRouterSpeechRecognitionSettingsPage({
   return (
     <SettingsContent>
       <SettingsSection
-        title="语音识别 Provider"
+        title="语音识别服务商"
         description="管理在线转写服务和使用本地模型包的离线识别运行时。"
       >
         <div className={styles.providerToolbar}>
-          <span>共 {configs.length} 个 Provider</span>
+          <span>共 {configs.length} 个服务商</span>
           <Button icon={Plus} variant="primary" onClick={() => setDraft(createDraft())}>
-            添加 Provider
+            添加服务商
           </Button>
         </div>
         {configs.length ? (
@@ -195,7 +195,7 @@ export function AIRouterSpeechRecognitionSettingsPage({
         ) : (
           <div className={styles.emptyProviders}>
             <Mic aria-hidden="true" />
-            <span>尚未添加语音识别 Provider</span>
+            <span>尚未添加语音识别服务商</span>
           </div>
         )}
       </SettingsSection>
@@ -239,9 +239,7 @@ export function AIRouterSpeechRecognitionSettingsPage({
                       <span>{providerLabels[modelPackage.runtime.engine]}</span>
                       <span>{modelPackage.models.length} 个模型</span>
                       <span>{formatBytes(modelPackage.totalBytes)}</span>
-                      {references.length ? (
-                        <span>{references.length} 个 Provider 使用中</span>
-                      ) : null}
+                      {references.length ? <span>{references.length} 个服务商使用中</span> : null}
                     </span>
                   </span>
                   <button
@@ -249,7 +247,7 @@ export function AIRouterSpeechRecognitionSettingsPage({
                     className={styles.removeModel}
                     disabled={Boolean(references.length) || Boolean(busy)}
                     onClick={() => setDeletePackage(modelPackage)}
-                    title={references.length ? '模型包正在被 Provider 使用' : '删除模型包'}
+                    title={references.length ? '模型包正在被服务商使用' : '删除模型包'}
                     type="button"
                   >
                     <Trash2 aria-hidden="true" />
@@ -279,15 +277,15 @@ export function AIRouterSpeechRecognitionSettingsPage({
               <div>
                 <ModalDescription asChild>
                   <span className={styles.editorEyebrow}>
-                    {draft.id ? '编辑语音识别 Provider' : '添加语音识别 Provider'}
+                    {draft.id ? '编辑语音识别服务商' : '添加语音识别服务商'}
                   </span>
                 </ModalDescription>
                 <ModalTitle asChild>
-                  <h2>{draft.name.trim() || '未命名 Provider'}</h2>
+                  <h2>{draft.name.trim() || '未命名服务商'}</h2>
                 </ModalTitle>
               </div>
               <button
-                aria-label="关闭语音识别 Provider 编辑器"
+                aria-label="关闭语音识别服务商编辑器"
                 className={styles.closeEditor}
                 disabled={Boolean(busy)}
                 onClick={() => setDraft(null)}
@@ -329,13 +327,13 @@ export function AIRouterSpeechRecognitionSettingsPage({
                       })
                     }}
                   >
-                    <option value="online">在线 Provider</option>
-                    <option value="local">本地 Provider</option>
+                    <option value="online">在线服务商</option>
+                    <option value="local">本地服务商</option>
                   </select>
                 </SettingsRow>
-                <SettingsRow label="Provider 类型">
+                <SettingsRow label="服务商类型">
                   <select
-                    aria-label="语音识别 Provider 类型"
+                    aria-label="语音识别服务商类型"
                     className={styles.input}
                     disabled
                     value={draft.type}
@@ -355,7 +353,7 @@ export function AIRouterSpeechRecognitionSettingsPage({
                       />
                     </SettingsRow>
                     <SettingsRow
-                      label="API Key"
+                      label="API 密钥"
                       description={
                         draft.hasApiKey
                           ? '已安全保存；留空可继续使用原密钥。'
@@ -363,11 +361,11 @@ export function AIRouterSpeechRecognitionSettingsPage({
                       }
                     >
                       <input
-                        aria-label="语音识别 API Key"
+                        aria-label="语音识别 API 密钥"
                         autoComplete="new-password"
                         className={styles.inputWide}
                         disabled={Boolean(busy)}
-                        placeholder={draft.hasApiKey ? '已安全保存' : '输入 API Key'}
+                        placeholder={draft.hasApiKey ? '已安全保存' : '输入 API 密钥'}
                         type="password"
                         value={draft.apiKey}
                         onChange={(event) => setDraft({ ...draft, apiKey: event.target.value })}
@@ -432,8 +430,8 @@ export function AIRouterSpeechRecognitionSettingsPage({
                 </SettingsSection>
               ) : (
                 <SettingsSection
-                  title="Model ID"
-                  description="从兼容服务获取模型列表，或手动添加模型 ID。"
+                  title="模型编号"
+                  description="从兼容服务获取模型列表，或手动添加模型编号。"
                 >
                   <div className={styles.modelToolbar}>
                     <Button
@@ -466,7 +464,7 @@ export function AIRouterSpeechRecognitionSettingsPage({
                     </Button>
                     <div className={styles.addModel}>
                       <input
-                        aria-label="手动语音识别模型 ID"
+                        aria-label="手动语音识别模型编号"
                         className={styles.input}
                         disabled={Boolean(busy)}
                         value={manualModel}
@@ -519,7 +517,7 @@ export function AIRouterSpeechRecognitionSettingsPage({
                     setDeleteProvider(configs.find((item) => item.id === draft.id) ?? null)
                   }
                 >
-                  删除 Provider
+                  删除服务商
                 </Button>
               ) : (
                 <span />
@@ -546,7 +544,7 @@ export function AIRouterSpeechRecognitionSettingsPage({
                     })
                   }
                 >
-                  保存 Provider
+                  保存服务商
                 </Button>
               </div>
             </footer>
@@ -556,12 +554,12 @@ export function AIRouterSpeechRecognitionSettingsPage({
 
       <ConfirmModal
         open={Boolean(deleteProvider)}
-        title="删除语音识别 Provider？"
-        message={`将删除“${deleteProvider?.name ?? ''}”及其独立保存的 API Key。`}
+        title="删除语音识别服务商？"
+        message={`将删除“${deleteProvider?.name ?? ''}”及其独立保存的 API 密钥。`}
         danger
         busy={busy === 'delete-provider'}
         closeOnConfirm={false}
-        confirmLabel="删除 Provider"
+        confirmLabel="删除服务商"
         error={
           feedback['delete-provider']?.kind === 'error' ? feedback['delete-provider'].text : null
         }

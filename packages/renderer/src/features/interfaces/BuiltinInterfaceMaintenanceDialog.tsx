@@ -8,6 +8,7 @@ import type {
   PendingBuiltinInterfacePlan
 } from './BuiltinInterfaceMaintenance'
 import styles from './BuiltinInterfaceMaintenanceDialog.module.css'
+import { toUserMessage } from '../../components/ui/userMessage'
 
 export function BuiltinInterfaceMaintenanceDialog({
   maintenance = builtinInterfaceMaintenance
@@ -43,7 +44,7 @@ function MaintenanceSession({
     try {
       await maintenance.resolve(plan, choice)
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : '内置题型处理失败')
+      setError(toUserMessage(reason, '内置题型处理失败'))
     } finally {
       setBusy(false)
     }

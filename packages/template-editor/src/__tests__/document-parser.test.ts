@@ -270,7 +270,7 @@ function completeTemplate(): TemplateDocument {
 }
 
 describe('工作文档结构解析器', () => {
-  it('接受所有已定义节点、表达式、时间线、Schema 绑定和函数出参结构', () => {
+  it('接受所有已定义节点、表达式、时间线、评分单元绑定和函数出参结构', () => {
     const template = completeTemplate()
     const func: FunctionDocument = {
       functionId: '20000000-0000-4000-8000-000000000001',

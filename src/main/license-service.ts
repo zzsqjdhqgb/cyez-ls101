@@ -44,7 +44,7 @@ export class LicenseService {
     assertSha256Hash(this.expectedCodeHash)
 
     const expirationTime = Date.parse(options.expiresAt ?? LICENSE_EXPIRES_AT)
-    if (!Number.isFinite(expirationTime)) throw new Error('License expiration is invalid')
+    if (!Number.isFinite(expirationTime)) throw new Error('授权有效期无效')
 
     this.expirationTime = expirationTime
     this.expiresAt = new Date(expirationTime).toISOString()
@@ -114,7 +114,7 @@ export class LicenseService {
   private currentDate(): Date {
     const current = this.now()
     const time = current.getTime()
-    if (!Number.isFinite(time)) throw new Error('Current time is invalid')
+    if (!Number.isFinite(time)) throw new Error('当前时间无效')
     return current
   }
 
@@ -163,7 +163,7 @@ function isLicenseReceipt(value: unknown): value is LicenseReceipt {
 }
 
 function assertSha256Hash(value: string): void {
-  if (!/^[a-f\d]{64}$/i.test(value)) throw new Error('Invitation-code hash must be SHA-256 hex')
+  if (!/^[a-f\d]{64}$/i.test(value)) throw new Error('邀请码哈希必须是 SHA-256 十六进制字符串')
 }
 
 function constantTimeHashEqual(actualHash: string, expectedHash: string): boolean {

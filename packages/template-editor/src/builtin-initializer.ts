@@ -64,9 +64,7 @@ async function parseAndValidateManifest(value: unknown): Promise<BundledFunction
     Reflect.ownKeys(value).length !== 1 ||
     !Array.isArray(Reflect.get(value, 'libraries'))
   ) {
-    throw new BuiltinFunctionLibraryInitializationError(
-      'Bundled function library manifest is invalid'
-    )
+    throw new BuiltinFunctionLibraryInitializationError('内置函数库清单无效')
   }
 
   const libraries: FunctionLibraryRelease[] = []
@@ -74,20 +72,16 @@ async function parseAndValidateManifest(value: unknown): Promise<BundledFunction
   for (const item of Reflect.get(value, 'libraries') as unknown[]) {
     const release = parseFunctionLibraryRelease(item)
     if (!release) {
-      throw new BuiltinFunctionLibraryInitializationError(
-        'Bundled function library release is invalid'
-      )
+      throw new BuiltinFunctionLibraryInitializationError('内置函数库版本无效')
     }
     if (libraryIds.has(release.libraryId)) {
-      throw new BuiltinFunctionLibraryInitializationError(
-        `Bundled function library is duplicated: ${release.libraryId}`
-      )
+      throw new BuiltinFunctionLibraryInitializationError(`内置函数库重复：${release.libraryId}`)
     }
     try {
       await validateFunctionLibraryRelease(release, 'builtin')
     } catch (error) {
       throw new BuiltinFunctionLibraryInitializationError(
-        `Bundled function library ${release.libraryId} is invalid: ${errorMessage(error)}`
+        `内置函数库 ${release.libraryId} 无效：${errorMessage(error)}`
       )
     }
     libraryIds.add(release.libraryId)
@@ -104,7 +98,7 @@ async function parseAndValidateTemplateManifest(value: unknown): Promise<Bundled
     Reflect.ownKeys(value).length !== 1 ||
     !Array.isArray(Reflect.get(value, 'templates'))
   ) {
-    throw new BuiltinTemplateInitializationError('Bundled template manifest is invalid')
+    throw new BuiltinTemplateInitializationError('内置试卷模板清单无效')
   }
 
   const templates: BuiltinTemplateRelease[] = []
@@ -112,18 +106,16 @@ async function parseAndValidateTemplateManifest(value: unknown): Promise<Bundled
   for (const item of Reflect.get(value, 'templates') as unknown[]) {
     const release = parseBuiltinTemplateRelease(item)
     if (!release) {
-      throw new BuiltinTemplateInitializationError('Bundled template release is invalid')
+      throw new BuiltinTemplateInitializationError('内置试卷模板版本无效')
     }
     if (templateIds.has(release.templateId)) {
-      throw new BuiltinTemplateInitializationError(
-        `Bundled template is duplicated: ${release.templateId}`
-      )
+      throw new BuiltinTemplateInitializationError(`内置试卷模板重复：${release.templateId}`)
     }
     try {
       await validateBuiltinTemplateRelease(release)
     } catch (error) {
       throw new BuiltinTemplateInitializationError(
-        `Bundled template ${release.templateId} is invalid: ${errorMessage(error)}`
+        `内置试卷模板 ${release.templateId} 无效：${errorMessage(error)}`
       )
     }
     templateIds.add(release.templateId)

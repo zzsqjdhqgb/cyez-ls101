@@ -17,6 +17,7 @@ export default defineConfig(
       '**/.cache/**',
       '**/dist',
       '**/out',
+      '**/.tsbuild/**',
       '**/externals/**',
       '**/coverage/**',
       '**/playwright-report/**',

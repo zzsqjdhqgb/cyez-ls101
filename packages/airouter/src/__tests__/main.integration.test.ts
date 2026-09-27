@@ -146,7 +146,7 @@ describe('AIRouter main integration', () => {
     const save = handler(AIROUTER_CHANNELS.saveConfig)
     const saved = await save(undefined, {
       id: 'provider-a',
-      name: '集成测试 Provider',
+      name: '集成测试服务商',
       type: 'openai-compatible',
       baseUrl: 'https://api.example.com/v1/',
       models: [{ id: 'model-a', enabled: true }],
@@ -172,7 +172,7 @@ describe('AIRouter main integration', () => {
 
     const saved = await handler(AIROUTER_CHANNELS.saveSpeechConfig)(undefined, {
       id: 'speech-provider',
-      name: '集成测试语音 Provider',
+      name: '集成测试语音服务商',
       kind: 'online',
       type: 'openai-compatible',
       baseUrl: 'https://api.example.com/v1/',
@@ -228,7 +228,7 @@ describe('AIRouter main integration', () => {
     registerAIRouter({ baseDir, secretStorage: secrets })
     await handler(AIROUTER_CHANNELS.saveConfig)(undefined, {
       id: 'provider-a',
-      name: '集成测试 Provider',
+      name: '集成测试服务商',
       type: 'openai-compatible',
       models: [{ id: 'model-a', enabled: true }]
     })
@@ -265,7 +265,7 @@ describe('AIRouter main integration', () => {
     registerAIRouter({ baseDir, secretStorage: secrets })
     await handler(AIROUTER_CHANNELS.saveImageConfig)(undefined, {
       id: 'image-provider',
-      name: '集成测试图片 Provider',
+      name: '集成测试图片服务商',
       type: 'openai-compatible',
       models: [{ id: 'image-model', enabled: true }],
       apiKey: 'image-secret'
@@ -297,7 +297,7 @@ describe('AIRouter main integration', () => {
     await importSpeechPackage(baseDir, createSpeechPackage())
     await handler(AIROUTER_CHANNELS.saveSpeechConfig)(undefined, {
       id: 'local-speech-provider',
-      name: '本地语音 Provider',
+      name: '本地语音服务商',
       kind: 'local',
       type: 'pocket-tts',
       modelPackageId: 'integration-pocket',

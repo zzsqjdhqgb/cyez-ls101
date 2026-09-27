@@ -198,7 +198,7 @@ function validateRequest(request: AIRouterPronunciationAssessmentRequest): void 
     request.providerConfigId !== BUILTIN_PRONUNCIATION_PROVIDER_ID ||
     request.modelId !== BUILTIN_PRONUNCIATION_MODEL_ID
   ) {
-    throw new Error('发音评测 Provider 或模型无效')
+    throw new Error('发音评测服务商或模型无效')
   }
   if (
     typeof request.referenceText !== 'string' ||

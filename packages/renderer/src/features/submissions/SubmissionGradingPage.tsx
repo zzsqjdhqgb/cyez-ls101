@@ -38,6 +38,7 @@ import {
 } from './reviewSampling'
 import { submissionErrorMessage } from './submissionUi'
 import styles from './SubmissionGradingPage.module.css'
+import { toUserMessage } from '../../components/ui/userMessage'
 
 export function SubmissionGradingPage(): JSX.Element {
   const { submissionId: legacySubmissionId = '' } = useParams()
@@ -548,7 +549,7 @@ function AISubmissionGradingPage({
         updateWorkspaces(currentWorkspaces)
       } catch (reason) {
         if (controller.signal.aborted) return
-        const message = reason instanceof Error ? reason.message : String(reason)
+        const message = toUserMessage(reason)
         nextFailures.push({ target, error: message })
         try {
           const failed = await repository.saveAIGradingRun(

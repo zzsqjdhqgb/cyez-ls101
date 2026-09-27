@@ -14,28 +14,24 @@ describe('file-dialog option validation', () => {
 
   it('rejects a default name containing a path', () => {
     expect(() => validateWriteFileOptions({ defaultName: '../export.json' })).toThrow(
-      'File-dialog default name must be a filename without a path'
+      '文件对话框默认文件名不能包含路径'
     )
     expect(() => validateWriteFileOptions({ defaultName: 'folder\\export.json' })).toThrow(
-      'File-dialog default name must be a filename without a path'
+      '文件对话框默认文件名不能包含路径'
     )
   })
 
   it('rejects invalid filter extensions', () => {
     expect(() =>
       validateReadFileOptions({ filters: [{ name: 'JSON', extensions: ['.json'] }] })
-    ).toThrow('Invalid file-dialog extension')
+    ).toThrow('文件对话框扩展名无效')
     expect(() =>
       validateReadFileOptions({ filters: [{ name: 'JSON', extensions: ['../json'] }] })
-    ).toThrow('Invalid file-dialog extension')
+    ).toThrow('文件对话框扩展名无效')
   })
 
   it('rejects empty titles and filter arrays', () => {
-    expect(() => validateReadFileOptions({ title: ' ' })).toThrow(
-      'File-dialog title must be a non-empty string'
-    )
-    expect(() => validateReadFileOptions({ filters: [] })).toThrow(
-      'File-dialog filters must be a non-empty array'
-    )
+    expect(() => validateReadFileOptions({ title: ' ' })).toThrow('文件对话框标题必须是非空字符串')
+    expect(() => validateReadFileOptions({ filters: [] })).toThrow('文件对话框筛选器必须是非空数组')
   })
 })

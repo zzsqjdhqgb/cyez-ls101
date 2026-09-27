@@ -117,7 +117,7 @@ export class AIRouterService {
 
   async testConnection(request: AIRouterConnectionTestInput): Promise<AIRouterTestResult> {
     if (!request || typeof request.modelId !== 'string' || !request.modelId) {
-      throw new Error('模型 ID 不能为空')
+      throw new Error('模型编号不能为空')
     }
     const { config, apiKey } = await this.resolveTransientConfig(request.config)
     const selected = config.models.find((model) => model.id === request.modelId && model.enabled)
@@ -150,7 +150,7 @@ export class AIRouterService {
         throw new Error('AI 输出达到长度上限，JSON 未完整生成；请减少字段内容后重试')
       }
       if (finishReason === 'content-filter') {
-        throw new Error('AI 输出被 Provider 的内容安全策略截断')
+        throw new Error('AI 输出被服务商的内容安全策略截断')
       }
       if (isStreamError(part)) throw new Error(formatProviderError(part.error))
     }
@@ -202,7 +202,7 @@ export class AIRouterService {
 
   private async requireConfig(id: string): Promise<AIRouterProviderConfig> {
     const config = (await this.readDocument()).providers.find((candidate) => candidate.id === id)
-    if (!config) throw new Error('Provider 配置不存在')
+    if (!config) throw new Error('服务商配置不存在')
     return config
   }
 
@@ -225,10 +225,10 @@ function normalizeConfig(
   input: AIRouterProviderConfigInput & { id: string }
 ): AIRouterProviderConfig {
   if (typeof input.name !== 'string' || !input.name.trim()) {
-    throw new Error('Provider 名称不能为空')
+    throw new Error('服务商名称不能为空')
   }
   if (input.type !== 'openai-compatible' && input.type !== 'anthropic') {
-    throw new Error('不支持的 Provider 类型')
+    throw new Error('不支持的服务商类型')
   }
   if (input.baseUrl !== undefined && typeof input.baseUrl !== 'string') {
     throw new Error('Base URL 必须是字符串')
@@ -370,7 +370,7 @@ function normalizeReasoningConfig(
     throw new Error(`模型 ${modelId} 的推理预算必须是正整数`)
   }
   if (providerType !== 'anthropic') {
-    throw new Error(`模型 ${modelId} 的当前 Provider 不支持 token 推理预算`)
+    throw new Error(`模型 ${modelId} 的当前服务商不支持 token 推理预算`)
   }
   const option = options.find((candidate) => candidate.type === 'budget_tokens')
   if (option?.type === 'budget_tokens') {
@@ -471,7 +471,7 @@ function reasoningCallOptions(
     return { reasoning: reasoning.effort }
   }
   if (providerType !== 'anthropic') {
-    throw new Error('当前 Provider 协议不支持按 token 设置推理预算')
+    throw new Error('当前服务商协议不支持按 token 设置推理预算')
   }
   return {
     providerOptions: {
@@ -635,7 +635,7 @@ function formatProviderError(error: unknown): string {
 }
 
 function validateConfigId(id: string): void {
-  if (!validConfigId.test(id)) throw new Error('Provider 配置 ID 无效')
+  if (!validConfigId.test(id)) throw new Error('服务商配置编号无效')
 }
 
 function validateTextSelection(request: Omit<AIRouterTextRequest, 'prompt'>): void {
@@ -646,7 +646,7 @@ function validateTextSelection(request: Omit<AIRouterTextRequest, 'prompt'>): vo
     !request.providerConfigId ||
     !request.modelId
   ) {
-    throw new Error('Provider 和模型 ID 不能为空')
+    throw new Error('服务商和模型编号不能为空')
   }
   validateConfigId(request.providerConfigId)
 }

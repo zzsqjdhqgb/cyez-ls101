@@ -7,6 +7,6 @@ declare global {
 }
 
 export function getFileStoreBridge(): FileStoreBridge {
-  if (!window.fileStore) throw new Error('File-store preload bridge is unavailable')
+  if (!window.fileStore) throw new Error('文件存储预加载桥接不可用')
   return window.fileStore
 }

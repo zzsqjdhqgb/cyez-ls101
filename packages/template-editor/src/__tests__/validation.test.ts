@@ -235,7 +235,7 @@ describe('validateTemplateContent - 基础依赖', () => {
     })
   })
 
-  it('拒绝空名称、未知 Interface 和空变量清单', () => {
+  it('拒绝空名称、未知题型和空变量清单', () => {
     const content = templateContent({
       name: ' ',
       interfaces: [
@@ -253,7 +253,7 @@ describe('validateTemplateContent - 基础依赖', () => {
     expect(resultCodes).toContain('EMPTY_ACCEPTED_VARS')
   })
 
-  it('拒绝重复别名和 Interface 中不存在的 acceptedVar', () => {
+  it('拒绝重复别名和题型中不存在的 acceptedVar', () => {
     const content = templateContent({
       interfaces: [
         { alias: 'speaking', interfaceId: INTERFACE_ID, acceptedVars: ['missing'] },
@@ -275,7 +275,7 @@ describe('validateTemplateContent - 基础依赖', () => {
     )
   })
 
-  it('Interface 变量必须被当前 Template 接受', () => {
+  it('题型变量必须被当前 Template 接受', () => {
     const content = templateContent({
       root: root([
         page({
@@ -297,7 +297,7 @@ describe('validateTemplateContent - 基础依赖', () => {
     expectCode(content, 'INTERFACE_VAR_NOT_ACCEPTED')
   })
 
-  it('拒绝将 image Interface 变量用于文本', () => {
+  it('拒绝将 image 题型变量用于文本', () => {
     const content = templateContent({
       interfaces: [
         {
@@ -412,7 +412,7 @@ describe('validateTemplateContent - 局部作用域', () => {
     expect(resultCodes).toContain('DUPLICATE_LOCAL_NAME')
   })
 
-  it('拒绝重复节点 ID、内容块 ID 和无效选项列表', () => {
+  it('拒绝重复节点编号、内容块编号和无效选项列表', () => {
     const invalidQuestion = question('same-id')
     invalidQuestion.options = [{ id: '', content: text('only') }]
     const content = templateContent({
@@ -483,7 +483,7 @@ describe('validateTemplateContent - 函数', () => {
     }
   }
 
-  it('校验函数输入、内部 Schema 和调用点出参重命名', () => {
+  it('校验函数输入、内部评分单元和调用点出参重命名', () => {
     const node: FunctionNode = {
       id: 'record-call',
       type: 'function',
@@ -519,7 +519,7 @@ describe('validateTemplateContent - 函数', () => {
     expect(resultCodes).toContain('UNKNOWN_FUNCTION_OUTPUT_NAME')
   })
 
-  it('函数可以独立提供 Template 所需的 Schema 消费', () => {
+  it('函数可以独立提供 Template 所需的评分单元消费', () => {
     const content = templateContent({
       root: root([
         {
@@ -588,7 +588,7 @@ describe('validateTemplateContent - 函数', () => {
   })
 })
 
-describe('validateTemplateContent - Schema 绑定', () => {
+describe('validateTemplateContent - 评分单元绑定', () => {
   it('限制 [@this.*] 在当前 SchemaUse 的附件命名空间内', () => {
     const baseUse: SchemaUse = {
       useId: 'attachment-use',
@@ -631,7 +631,7 @@ describe('validateTemplateContent - Schema 绑定', () => {
     expect(resultCodes).toContain('UNKNOWN_SCHEMA_ATTACHMENT')
   })
 
-  it('要求完整输入绑定且拒绝 Schema 外输入', () => {
+  it('要求完整输入绑定且拒绝评分单元外输入', () => {
     const content = templateContent({
       schemaUses: [
         {
@@ -649,7 +649,7 @@ describe('validateTemplateContent - Schema 绑定', () => {
     expect(resultCodes).toContain('UNKNOWN_SCHEMA_INPUT_BINDING')
   })
 
-  it('按答案 ID 和类型校验运行期答案绑定', () => {
+  it('按答案编号和类型校验运行期答案绑定', () => {
     const content = templateContent({
       root: collectedRoot([question()], [1]),
       schemaUses: [
@@ -668,7 +668,7 @@ describe('validateTemplateContent - Schema 绑定', () => {
     expect(codes(content)).toContain('SCHEMA_ANSWER_TYPE_MISMATCH')
   })
 
-  it('SchemaUse 必须引用存在的正式 Schema', () => {
+  it('SchemaUse 必须引用存在的正式评分单元', () => {
     const unknownSchema = templateContent({
       schemaUses: [
         {
@@ -680,7 +680,7 @@ describe('validateTemplateContent - Schema 绑定', () => {
     expectCode(unknownSchema, 'UNKNOWN_SCHEMA')
   })
 
-  it('允许没有 Schema 的 Template', () => {
+  it('允许没有评分单元的 Template', () => {
     expect(
       validateTemplateContent(templateContent({ schemaUses: [] }), validationContext())
     ).toEqual({
@@ -689,7 +689,7 @@ describe('validateTemplateContent - Schema 绑定', () => {
     })
   })
 
-  it('同一作用域的 Schema useId 必须非空且唯一', () => {
+  it('同一作用域的评分单元 useId 必须非空且唯一', () => {
     const first = { ...templateContent().schemaUses[0], useId: '' }
     const second = { ...templateContent().schemaUses[0], useId: '' }
     const resultCodes = codes(templateContent({ schemaUses: [first, second] }))
@@ -700,7 +700,7 @@ describe('validateTemplateContent - Schema 绑定', () => {
 })
 
 describe('validateTemplateContent - ChoiceCollector', () => {
-  it('接受单题、分页、全局视图和 choice Schema 绑定', () => {
+  it('接受单题、分页、全局视图和 choice 评分单元绑定', () => {
     const content = templateContent({
       root: collectedRoot(
         [
@@ -788,7 +788,7 @@ describe('validateTemplateContent - ChoiceCollector', () => {
     )
   })
 
-  it('拒绝嵌套 Collector 和多个候选', () => {
+  it('拒绝嵌套采集器和多个候选', () => {
     const inner = collectedRoot([question()], [1])
     inner.id = 'inner-frame'
     inner.choiceCollector = { pages: [{ questionCount: 1 }] }

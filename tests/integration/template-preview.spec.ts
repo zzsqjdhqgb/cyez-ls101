@@ -289,8 +289,8 @@ test('previews a selected node tree as a vertical timeline filmstrip', async ({}
   await freeChoicePage.getByRole('radio', { name: /选项 B/ }).check()
   await expect(freeChoicePage.getByRole('radio', { name: /选项 B/ })).toBeChecked()
 
-  await page.getByRole('button', { name: '查看 ChoiceView 配置' }).click()
-  let choiceInfo = page.getByRole('region', { name: 'ChoiceView 配置' })
+  await page.getByRole('button', { name: '查看选择题视图配置' }).click()
+  let choiceInfo = page.getByRole('region', { name: '选择题视图配置' })
   await expect(choiceInfo).toContainText('全部分页')
   await expect(choiceInfo).toContainText('第 1–3 页')
 
@@ -314,8 +314,8 @@ test('previews a selected node tree as a vertical timeline filmstrip', async ({}
   const rangeChoicePage = page.getByLabel('最终画面 4')
   await expect(rangeChoicePage).toContainText('第二题：请选择 B')
   await expect(rangeChoicePage.getByText('1 / 2')).toBeVisible()
-  await page.getByRole('button', { name: '查看 ChoiceView 配置' }).click()
-  choiceInfo = page.getByRole('region', { name: 'ChoiceView 配置' })
+  await page.getByRole('button', { name: '查看选择题视图配置' }).click()
+  choiceInfo = page.getByRole('region', { name: '选择题视图配置' })
   await expect(choiceInfo).toContainText('限制范围')
   await expect(choiceInfo).toContainText('第 2–3 页')
 
@@ -323,8 +323,8 @@ test('previews a selected node tree as a vertical timeline filmstrip', async ({}
   const focusedChoicePage = page.getByLabel('最终画面 5')
   await expect(focusedChoicePage).toContainText('第三题：聚焦题')
   await expect(focusedChoicePage.getByRole('navigation', { name: '选择题分页' })).toHaveCount(0)
-  await page.getByRole('button', { name: '查看 ChoiceView 配置' }).click()
-  choiceInfo = page.getByRole('region', { name: 'ChoiceView 配置' })
+  await page.getByRole('button', { name: '查看选择题视图配置' }).click()
+  choiceInfo = page.getByRole('region', { name: '选择题视图配置' })
   await expect(choiceInfo).toContainText('聚焦题目')
   await expect(choiceInfo).toContainText('第 3 题')
   await expect(choiceInfo).toContainText('第 3 页')

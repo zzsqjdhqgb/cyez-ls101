@@ -74,7 +74,7 @@ function createLicenseOptions(
   const fixedNow = process.env['LS101_LICENSE_TEST_NOW']
   if (fixedNow) {
     const fixedTime = Date.parse(fixedNow)
-    if (!Number.isFinite(fixedTime)) throw new Error('LS101_LICENSE_TEST_NOW is invalid')
+    if (!Number.isFinite(fixedTime)) throw new Error('环境变量 LS101_LICENSE_TEST_NOW 无效')
     options.now = () => new Date(fixedTime)
   }
 

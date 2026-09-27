@@ -6,6 +6,6 @@ export const TemplateApplicationContext = createContext<TemplateApplication>(tem
 
 export function useTemplateApplication(): TemplateApplication {
   const application = useContext(TemplateApplicationContext)
-  if (!application) throw new Error('TemplateApplicationProvider is missing')
+  if (!application) throw new Error('试卷模板应用上下文缺失，请在应用内打开本页。')
   return application
 }

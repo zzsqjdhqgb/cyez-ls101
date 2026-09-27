@@ -48,7 +48,7 @@ describe('SettingsPageRegistry', () => {
         group: { id: 'other', label: '其他' },
         component: TestPage
       })
-    ).toThrow('Settings page id is already registered')
+    ).toThrow('设置页编号重复注册')
 
     expect(() =>
       registry.register({
@@ -58,6 +58,6 @@ describe('SettingsPageRegistry', () => {
         group: { id: 'general', label: '基础', order: 0 },
         component: TestPage
       })
-    ).toThrow('Settings group metadata conflicts')
+    ).toThrow('设置分组信息冲突')
   })
 })

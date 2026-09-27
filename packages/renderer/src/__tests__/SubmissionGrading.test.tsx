@@ -36,7 +36,7 @@ vi.mock('../features/submissions/SubmissionAIRouterAdapter', () => ({
     text: [
       {
         providerId: 'provider',
-        providerName: 'Provider',
+        providerName: '服务商',
         modelId: 'model'
       }
     ]

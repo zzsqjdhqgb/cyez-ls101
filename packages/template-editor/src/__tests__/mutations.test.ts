@@ -180,7 +180,7 @@ describe('Template 文档编辑', () => {
     }
   })
 
-  it('修改节点显示名称时不改变节点 ID', () => {
+  it('修改节点显示名称时不改变节点编号', () => {
     const document = template([page()])
     const result = editTemplateDocument(document, {
       type: 'set-node-name',
@@ -196,7 +196,7 @@ describe('Template 文档编辑', () => {
     })
   })
 
-  it('插入节点时生成不冲突的节点 ID 和局部输出名，并保持 revision', () => {
+  it('插入节点时生成不冲突的节点编号和局部输出名，并保持版本', () => {
     const document = template([question('question', 'answer')])
     const result = editTemplateDocument(document, {
       type: 'insert-node',
@@ -320,7 +320,7 @@ describe('Template 文档编辑', () => {
     })
   })
 
-  it('移动节点保留 ID，并拒绝把框架移动到自己的后代中', () => {
+  it('移动节点保留编号，并拒绝把框架移动到自己的后代中', () => {
     const document = template([
       { id: 'first', type: 'frame', children: [page('nested')] },
       { id: 'second', type: 'frame', children: [] }
@@ -549,7 +549,7 @@ describe('Template 文档编辑', () => {
     expect(serialized).not.toContain('"type":"record-output","name":"recording"')
   })
 
-  it('重命名 Interface alias 时重写 Template 根和 Schema 绑定', () => {
+  it('重命名题型 alias 时重写 Template 根和评分单元绑定', () => {
     const document = createTemplateDocument({
       name: 'Template',
       description: '',
@@ -612,7 +612,7 @@ describe('Template 文档编辑', () => {
     expect(JSON.stringify(result.document.content)).toContain('"alias":"data"')
   })
 
-  it('Interface alias 重命名不改写内容寻址函数资源，函数直接引用会被明确拒绝', async () => {
+  it('题型 alias 重命名不改写内容寻址函数资源，函数直接引用会被明确拒绝', async () => {
     const interfaceId = `sha256:${'1'.repeat(64)}`
     const schemaId = `sha256:${'2'.repeat(64)}`
     const resource = await createFunctionResource({
@@ -761,7 +761,7 @@ describe('Template 文档编辑', () => {
     expect(result.changes).toContainEqual({ kind: 'cleanup', path: 'resources.functions' })
   })
 
-  it('编辑 Collector、选择题选项、页面内容块和时间线列表', () => {
+  it('编辑采集器、选择题选项、页面内容块和时间线列表', () => {
     let document = template([
       {
         id: 'section',
@@ -824,7 +824,7 @@ describe('Template 文档编辑', () => {
     })
   })
 
-  it('编辑 Interface requirement、Schema use 和编辑器私有状态', () => {
+  it('编辑题型 requirement、评分单元 use 和编辑器私有状态', () => {
     let document = template()
     document = applyTemplateEdit(document, {
       type: 'insert-interface-requirement',
@@ -1322,7 +1322,7 @@ class MemoryStore implements TemplateStore {
 }
 
 describe('Function 文档编辑', () => {
-  it('重命名函数输入时重写正文、函数出参和 Schema 内的局部引用', () => {
+  it('重命名函数输入时重写正文、函数出参和评分单元内的局部引用', () => {
     const content: FunctionContent = {
       name: 'Function',
       inputs: [{ name: 'prompt', type: 'string' }],

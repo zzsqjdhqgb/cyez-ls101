@@ -184,7 +184,7 @@ export function SchemaDefinitionPage(): JSX.Element {
     setExporting(true)
     setError(null)
     try {
-      if (await exportSchemaDefinitionFile(definition)) toast.success('Schema 已导出')
+      if (await exportSchemaDefinitionFile(definition)) toast.success('评分单元已导出')
     } catch (reason) {
       setError(schemaErrorMessage(reason))
     } finally {
@@ -269,13 +269,13 @@ export function SchemaDefinitionPage(): JSX.Element {
     return `${base}${suffix}`
   }
 
-  if (loading) return <div className={shared.loading}>正在加载正式 Schema...</div>
+  if (loading) return <div className={shared.loading}>正在加载正式评分单元...</div>
 
   return (
     <div className={styles.editor}>
       <header className={styles.toolbar}>
         <div className={styles.toolbarIdentity}>
-          <IconButton icon={ArrowLeft} label="返回 Schema 列表" variant="ghost" onClick={leave} />
+          <IconButton icon={ArrowLeft} label="返回评分单元列表" variant="ghost" onClick={leave} />
           <div>
             <h1>{data?.name || '未命名评分单元'}</h1>
             <span>
@@ -286,7 +286,7 @@ export function SchemaDefinitionPage(): JSX.Element {
                 : dirty
                   ? '有未保存修改'
                   : definition
-                    ? `${builtin ? '内置' : '正式版'} · r${definition.revision}`
+                    ? `${builtin ? '内置' : '正式版'} · 版本 ${definition.revision}`
                     : '正式版'}
             </span>
           </div>
@@ -334,7 +334,7 @@ export function SchemaDefinitionPage(): JSX.Element {
         <main className={styles.missing}>评分单元不存在</main>
       ) : (
         <main className={styles.workspace}>
-          <section className={styles.mainPane} aria-label="正式 Schema 数据">
+          <section className={styles.mainPane} aria-label="正式评分单元数据">
             {error ? (
               <div className={shared.notice} role="alert">
                 <AlertCircle aria-hidden="true" />
@@ -406,9 +406,9 @@ export function SchemaDefinitionPage(): JSX.Element {
                     <div className={styles.itemRow} key={`${index}:${answer.answerId}`}>
                       <span className={styles.order}>{index + 1}</span>
                       <label>
-                        <span>稳定 ID</span>
+                        <span>稳定编号</span>
                         <input
-                          aria-label={`答案槽位 ${index + 1} ID`}
+                          aria-label={`答案槽位 ${index + 1} 编号`}
                           value={answer.answerId}
                           onChange={(event) =>
                             setAnswers(
@@ -457,7 +457,7 @@ export function SchemaDefinitionPage(): JSX.Element {
                 </div>
                 <div className={styles.sectionHeading}>
                   <div>
-                    <h3>Template 输入</h3>
+                    <h3>试卷模板输入</h3>
                   </div>
                   <Button
                     icon={Plus}
@@ -485,10 +485,10 @@ export function SchemaDefinitionPage(): JSX.Element {
                     return (
                       <div className={styles.inputRow} key={input.inputId}>
                         <label>
-                          <span>{builtinInput ? '内置 ID' : '稳定 ID'}</span>
+                          <span>{builtinInput ? '内置编号' : '稳定编号'}</span>
                           <input
                             readOnly={builtinInput}
-                            aria-label={`输入 ${input.inputId} ID`}
+                            aria-label={`输入 ${input.inputId} 编号`}
                             value={input.inputId}
                             onChange={(event) =>
                               setInputs(
@@ -543,7 +543,7 @@ export function SchemaDefinitionPage(): JSX.Element {
               </div>
             ) : null}
             <SchemaDataFields
-              structure={structure ?? definition.structure}
+              structure={structure}
               data={data}
               readOnly={builtin}
               onChange={(nextData) => {
@@ -564,12 +564,12 @@ export function SchemaDefinitionPage(): JSX.Element {
             <dl>
               <div>
                 <dt>评分管道</dt>
-                <dd>{questionTypeLabels[(structure ?? definition.structure).questionType]}</dd>
+                <dd>{questionTypeLabels[structure.questionType]}</dd>
               </div>
               {definition ? (
                 <>
                   <div>
-                    <dt>Schema ID</dt>
+                    <dt>评分单元编号</dt>
                     <dd>{definition.schemaId}</dd>
                   </div>
                   <div>
@@ -586,7 +586,7 @@ export function SchemaDefinitionPage(): JSX.Element {
                 </div>
               </div>
               <ul className={styles.frozenList}>
-                {(structure ?? definition.structure).answerFormat.map((answer) => (
+                {structure.answerFormat.map((answer) => (
                   <li key={answer.answerId}>
                     <code>{answer.answerId}</code>
                     <span>
@@ -600,11 +600,11 @@ export function SchemaDefinitionPage(): JSX.Element {
             <div className={styles.formSection}>
               <div className={styles.sectionHeading}>
                 <div>
-                  <h2>Template 输入</h2>
+                  <h2>试卷模板输入</h2>
                 </div>
               </div>
               <ul className={styles.frozenList}>
-                {(structure ?? definition.structure).templateInputs.map((input) => (
+                {structure.templateInputs.map((input) => (
                   <li key={input.inputId}>
                     <code>{input.inputId}</code>
                     <span>{input.required ? '必填' : '可选'}</span>
@@ -628,7 +628,7 @@ export function SchemaDefinitionPage(): JSX.Element {
       <ConfirmModal
         confirmLabel="删除"
         danger
-        message="删除后引用这个 Schema 的模板将无法通过校验。"
+        message="删除后引用这个评分单元的模板将无法通过校验。"
         open={confirmDelete}
         title={`删除评分单元“${definition?.data.name ?? ''}”？`}
         onCancel={() => setConfirmDelete(false)}

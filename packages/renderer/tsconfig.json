@@ -5,7 +5,7 @@
     "jsx": "react-jsx",
     "outDir": "./dist",
     "rootDir": "./src",
-    "types": ["vite/client"]
+    "types": ["vite/client", "node"]
   },
   "include": ["src"],
   "references": [

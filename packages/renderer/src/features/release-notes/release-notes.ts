@@ -17,5 +17,5 @@ export function getReleaseNote(version: string): string {
 
   if (selected) return selected
   if (fallback) return fallback
-  throw new Error(`Release note is missing for ${latestReleaseVersion}`)
+  throw new Error(`缺少版本 ${latestReleaseVersion} 的版本说明`)
 }

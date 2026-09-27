@@ -11,7 +11,7 @@ import {
 import type { InterfaceRepository } from './repository'
 import { decodeInterfaceZip, encodeInterfaceZip } from './zip'
 
-const FILE_FILTER = [{ name: 'LS101 Interface', extensions: ['lsinterface'] }] as const
+const FILE_FILTER = [{ name: 'LS101 题型', extensions: ['lsinterface'] }] as const
 
 export type InterfaceFileDialog = Pick<FileDialog, 'readBinary' | 'writeBinary'>
 
@@ -33,7 +33,7 @@ export async function exportInterfaceFile(
   const value = await exportInterfacePackage(repository, interfaceId, instances)
   const bytes = await encodeInterfaceZip(value)
   return dialog.writeBinary(bytes, {
-    title: '导出 Interface',
+    title: '导出题型',
     defaultName: `${safeFilename(value.interface.name)}.lsinterface`,
     filters: FILE_FILTER
   })
@@ -42,7 +42,7 @@ export async function exportInterfaceFile(
 export async function readInterfaceFile(
   dialog: InterfaceFileDialog = fileDialog
 ): Promise<InterfaceFileReadResult | null> {
-  const selected = await dialog.readBinary({ title: '导入 Interface', filters: FILE_FILTER })
+  const selected = await dialog.readBinary({ title: '导入题型', filters: FILE_FILTER })
   if (!selected) return null
   return { filename: selected.name, package: await decodeInterfaceZip(selected.data) }
 }

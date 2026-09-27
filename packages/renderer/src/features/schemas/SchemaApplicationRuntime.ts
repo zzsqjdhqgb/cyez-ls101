@@ -11,7 +11,7 @@ export function initializeSchemaApplication(): Promise<void> {
       const manifest = await builtinFileStore
         .scope('schema-editor')
         .readText('builtin-schemas.json')
-      if (manifest === null) throw new Error('Builtin Schema manifest is missing')
+      if (manifest === null) throw new Error('内置评分单元清单缺失')
       await initializeBuiltinSchemas(schemaRepository, manifest)
     })()
   }

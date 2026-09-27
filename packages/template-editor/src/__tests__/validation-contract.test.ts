@@ -172,7 +172,7 @@ describe('Template 校验错误契约', () => {
     })
   })
 
-  it('覆盖重复的 Interface、Schema 和函数清单', () => {
+  it('覆盖重复的题型、评分单元和函数清单', () => {
     const emptyFunction: FunctionDef = {
       id: FUNCTION_ID,
       name: 'Empty',
@@ -209,7 +209,7 @@ describe('Template 校验错误契约', () => {
     ])
   })
 
-  it('覆盖空节点、内容块、无效局部名和未知 Interface 别名', () => {
+  it('覆盖空节点、内容块、无效局部名和未知题型别名', () => {
     const result = validateTemplateContent(
       content({
         root: {
@@ -266,7 +266,7 @@ describe('Template 校验错误契约', () => {
     ])
   })
 
-  it('覆盖重复选项 ID 和 27 个选项上限', () => {
+  it('覆盖重复选项编号和 27 个选项上限', () => {
     const duplicate = question()
     duplicate.options[1].id = 'a'
     const tooMany = question('question-2', 'answer-2')
@@ -301,7 +301,7 @@ describe('Template 校验错误契约', () => {
     ])
   })
 
-  it('覆盖空 Collector、空分页和无效页大小', () => {
+  it('覆盖空采集器、空分页和无效页大小', () => {
     const empty = validateTemplateContent(
       content({
         root: { id: 'root', type: 'frame', children: [], choiceCollector: { pages: [] } }
@@ -401,7 +401,7 @@ describe('Template 校验错误契约', () => {
     ).toEqual({ valid: true, errors: [] })
   })
 
-  it('允许函数中的选择题由外部 Collector 收集', () => {
+  it('允许函数中的选择题由外部采集器收集', () => {
     const func: FunctionDef = {
       id: FUNCTION_ID,
       name: 'Question source',
@@ -425,7 +425,7 @@ describe('Template 校验错误契约', () => {
     })
   })
 
-  it('拒绝函数内 ChoiceView 依赖函数外 Collector', () => {
+  it('拒绝函数内 ChoiceView 依赖函数外采集器', () => {
     const func: FunctionDef = {
       id: FUNCTION_ID,
       name: 'Leaky choice view',
@@ -452,7 +452,7 @@ describe('Template 校验错误契约', () => {
     ])
   })
 
-  it('允许函数通过题组入参使用函数外 Collector', () => {
+  it('允许函数通过题组入参使用函数外采集器', () => {
     const func: FunctionDef = {
       id: FUNCTION_ID,
       name: 'Scoped choice view',
@@ -500,7 +500,7 @@ describe('Template 校验错误契约', () => {
     })
   })
 
-  it('允许函数在内部封装题目、Collector 和 ChoiceView', () => {
+  it('允许函数在内部封装题目、采集器和 ChoiceView', () => {
     const func: FunctionDef = {
       id: FUNCTION_ID,
       name: 'Self-contained choice section',
@@ -558,7 +558,7 @@ describe('Template 校验错误契约', () => {
     ])
   })
 
-  it('函数只能通过输入接收 Interface 值，不能直接引用 Template alias', () => {
+  it('函数只能通过输入接收题型值，不能直接引用 Template alias', () => {
     const func: FunctionDef = {
       id: FUNCTION_ID,
       name: 'Interface consumer',
@@ -610,7 +610,7 @@ describe('Template 校验错误契约', () => {
     ])
   })
 
-  it('允许 Template 调用点把 Interface 值绑定给函数输入', () => {
+  it('允许 Template 调用点把题型值绑定给函数输入', () => {
     const func: FunctionDef = {
       id: FUNCTION_ID,
       name: 'Input consumer',

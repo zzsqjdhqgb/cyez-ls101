@@ -1,4 +1,11 @@
 <!--
+status: implemented
+product-version: 0.4.2
+audience: both
+owner: docs
+-->
+
+<!--
  Copyright (c) 2026 Haoting Ying (zzsqjdhqgb). All rights reserved.
  Proprietary code. Use is subject to the LICENSE file in the repository root.
 -->
@@ -47,6 +54,28 @@ xvfb-run -a yarn test:product-docs:run
 ```
 
 测试分层和故障诊断见 [docs/testing.md](docs/testing.md)。发布前的分支顺序是先验证 `dev`，再合入 `main`；不要在未验证的本地工作区直接创建发行标签。
+
+## 文档审阅
+
+本地起一个按真实目录结构浏览全部 markdown 的站点（打开 8642 端口并自动打开浏览器）：
+
+```bash
+yarn docs:serve
+yarn docs:serve --port 9000
+yarn docs:serve --no-browser   # 无桌面环境（容器）用，手动访问输出的地址
+```
+
+表格、代码块、中文与相对链接都由 markserv 直接渲染，文档按仓库目录树逐级导航。
+
+把产品说明书（[`docs/manual/`](docs/manual/README.md)，手写）导出为 A4 PDF，用 Playwright Chromium 排版：
+
+```bash
+yarn manual:pdf                                       # 输出到 test-results/manual-pdf/
+yarn manual:pdf --title-page --out dist/说明书.pdf    # 另加标题页并指定输出位置
+```
+
+配图由 `tests/manual` 独立生成与校验（`yarn test:manual-figures`、`yarn manual:figures:check`），
+缺失时 PDF 中以占位框标出并汇总警告；基线发布见 [tests/manual/README.md](tests/manual/README.md)。
 
 ## 代码边界
 

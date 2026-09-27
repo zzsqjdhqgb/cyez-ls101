@@ -144,6 +144,6 @@ describe('FileStorage', () => {
   it('rejects traversal before touching disk', async () => {
     await expect(
       storage.writeText({ scope: ['interfaces', '..'], filename: 'outside.json' }, '{}')
-    ).rejects.toThrow('Invalid file-store scope segment')
+    ).rejects.toThrow('文件存储作用域片段无效')
   })
 })

@@ -1,0 +1,10 @@
+<!--
+status: archived
+product-version: 0.4.1
+audience: engineer
+owner: docs
+-->
+
+本目录下的所有文档均为半成品/草案，仅用作重构设计时的参考。
+接下来新写的设计文档才是定稿。
+所有编码工作以定稿文档为准。

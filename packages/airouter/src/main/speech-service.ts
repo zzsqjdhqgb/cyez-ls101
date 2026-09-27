@@ -187,7 +187,7 @@ export class AIRouterSpeechService {
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult> {
     if (!request || typeof request.modelId !== 'string' || !request.modelId.trim()) {
-      throw new Error('语音模型 ID 不能为空')
+      throw new Error('语音模型编号不能为空')
     }
     const config = await this.resolveTransientConfig(request.config)
     const voiceId = request.voiceId || config.voices.find((voice) => voice.enabled)?.id
@@ -249,16 +249,16 @@ export class AIRouterSpeechService {
       return this.synthesizeOpenAI(config, modelId, voiceId, text, format, signal, apiKey)
     }
     if (!config.modelPackageId || !config.modelPackageVersion) {
-      throw new Error('本地语音 Provider 尚未选择模型包')
+      throw new Error('本地语音服务商尚未选择模型包')
     }
-    if (config.type === 'openai-compatible') throw new Error('在线 Provider 配置无效')
+    if (config.type === 'openai-compatible') throw new Error('在线服务商配置无效')
     const synthesizer = this.localSynthesizers[config.type]
     if (!synthesizer) throw new Error(`本地 TTS 运行时尚未实现：${config.type}`)
     const manifest = await this.modelStore.getPackage(
       config.modelPackageId,
       config.modelPackageVersion
     )
-    if (manifest.runtime.engine !== config.type) throw new Error('模型包与本地 Provider 类型不匹配')
+    if (manifest.runtime.engine !== config.type) throw new Error('模型包与本地服务商类型不匹配')
     assertModel(manifest, modelId)
     assertVoice(manifest, voiceId)
     return synthesizer.synthesize({
@@ -340,16 +340,16 @@ export class AIRouterSpeechService {
   ): Promise<AIRouterSpeechProviderConfig> {
     assertProviderConfigInput(input)
     if (typeof input.name !== 'string' || !input.name.trim())
-      throw new Error('语音 Provider 名称不能为空')
+      throw new Error('语音服务商名称不能为空')
     if (!Array.isArray(input.models)) throw new Error('语音模型配置必须是数组')
     if (!Array.isArray(input.voices)) throw new Error('语音音色配置必须是数组')
     const models = normalizeModels(input.models)
     const voices = normalizeVoices(input.voices)
     if (input.kind === 'online' && input.type !== 'openai-compatible') {
-      throw new Error('在线语音 Provider 类型无效')
+      throw new Error('在线语音服务商类型无效')
     }
     if (input.kind === 'local' && input.type === 'openai-compatible') {
-      throw new Error('离线语音 Provider 类型无效')
+      throw new Error('离线语音服务商类型无效')
     }
     if (
       input.type === 'qwen-tts' &&
@@ -378,10 +378,9 @@ export class AIRouterSpeechService {
     const modelPackageId = input.modelPackageId?.trim() || ''
     const modelPackageVersion = input.modelPackageVersion?.trim() || ''
     if (modelPackageId || modelPackageVersion) {
-      if (!modelPackageId || !modelPackageVersion) throw new Error('本地 Provider 模型包信息不完整')
+      if (!modelPackageId || !modelPackageVersion) throw new Error('本地服务商模型包信息不完整')
       const manifest = await this.modelStore.getPackage(modelPackageId, modelPackageVersion)
-      if (manifest.runtime.engine !== input.type)
-        throw new Error('模型包与本地 Provider 类型不匹配')
+      if (manifest.runtime.engine !== input.type) throw new Error('模型包与本地服务商类型不匹配')
       for (const model of models.filter((candidate) => candidate.enabled))
         assertModel(manifest, model.id)
       for (const voice of voices.filter((candidate) => candidate.enabled))
@@ -415,14 +414,14 @@ export class AIRouterSpeechService {
   private async requireConfig(id: string): Promise<AIRouterSpeechProviderConfig> {
     validateConfigId(id)
     const config = (await this.readDocument()).providers.find((candidate) => candidate.id === id)
-    if (!config) throw new Error('语音 Provider 配置不存在')
+    if (!config) throw new Error('语音服务商配置不存在')
     return config
   }
 
   private async readDocument(): Promise<StoredDocument> {
     const value = await this.configStorage.read<JsonValue>({ scope: ['airouter'], key: CONFIG_KEY })
     if (!value) return { version: CONFIG_VERSION, providers: [] }
-    if (!isStoredDocument(value)) throw new Error('语音 Provider 配置数据无效')
+    if (!isStoredDocument(value)) throw new Error('语音服务商配置数据无效')
     return {
       ...value,
       providers: value.providers.map((config) =>
@@ -459,18 +458,18 @@ function assertProviderConfigInput(
   value: unknown
 ): asserts value is AIRouterSpeechProviderConfigInput {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('语音 Provider 配置无效')
+    throw new Error('语音服务商配置无效')
   }
   const candidate = value as { kind?: unknown; type?: unknown }
   if (candidate.kind !== 'online' && candidate.kind !== 'local') {
-    throw new Error('语音 Provider kind 无效')
+    throw new Error('语音服务商 kind 无效')
   }
   if (
     candidate.type !== 'openai-compatible' &&
     candidate.type !== 'pocket-tts' &&
     candidate.type !== 'qwen-tts'
   ) {
-    throw new Error('语音 Provider 类型无效')
+    throw new Error('语音服务商类型无效')
   }
 }
 
@@ -488,7 +487,7 @@ function normalizeVoices(
   return normalized
 }
 
-function isStoredDocument(value: JsonValue): value is JsonValue & StoredDocument {
+function isStoredDocument(value: JsonValue): value is StoredDocument & Record<string, JsonValue> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const candidate = value as { version?: unknown; providers?: unknown }
   return (
@@ -527,7 +526,7 @@ function isProviderConfig(value: unknown): value is AIRouterSpeechProviderConfig
 }
 
 function validateConfigId(id: string): void {
-  if (!validConfigId.test(id)) throw new Error('语音 Provider 配置 ID 无效')
+  if (!validConfigId.test(id)) throw new Error('语音服务商配置编号无效')
 }
 
 function assertHttpUrl(value: string): void {

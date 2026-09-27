@@ -61,7 +61,7 @@ export async function planBuiltinUpdate(
   const entry = await repository.getBuiltin(builtinKey)
   if (!entry) return { builtinKey, previous: null, next, kind: 'automatic' }
   const previous = await repository.getInterface(entry.currentInterfaceId)
-  if (!previous) throw new Error(`Builtin Interface is missing: ${entry.currentInterfaceId}`)
+  if (!previous) throw new Error(`内置题型缺失：${entry.currentInterfaceId}`)
   return { builtinKey, previous, next, kind: classifyBuiltinUpdate(previous, next) }
 }
 
@@ -72,10 +72,10 @@ export async function applyBuiltinUpdate(
   choice?: ManualBuiltinUpdateChoice
 ): Promise<BuiltinUpdateResult> {
   if (plan.kind === 'invalid-contract') {
-    throw new Error(`Builtin ${plan.builtinKey} changes its variable contract`)
+    throw new Error(`内置题型「${plan.builtinKey}」的变量结构发生了变化`)
   }
   if (plan.kind === 'manual' && !choice) {
-    throw new Error(`Builtin ${plan.builtinKey} requires an update choice`)
+    throw new Error(`内置题型「${plan.builtinKey}」需要选择更新方式`)
   }
 
   if (!plan.previous) {
@@ -160,7 +160,7 @@ export async function planBuiltinRemoval(
   const entry = await repository.getBuiltin(builtinKey)
   if (!entry) return null
   const previous = await repository.getInterface(entry.currentInterfaceId)
-  if (!previous) throw new Error(`Builtin Interface is missing: ${entry.currentInterfaceId}`)
+  if (!previous) throw new Error(`内置题型缺失：${entry.currentInterfaceId}`)
   const [instanceIds, referenceCount] = await Promise.all([
     repository.listInstanceIds(previous.id),
     references.countInterfaceReferences(previous.id)
@@ -174,7 +174,7 @@ export async function applyBuiltinRemoval(
   choice: BuiltinRemovalChoice
 ): Promise<BuiltinRemovalResult> {
   if (choice !== 'delete' && choice !== 'backup-old') {
-    throw new Error(`Builtin ${plan.builtinKey} requires a removal choice`)
+    throw new Error(`内置题型「${plan.builtinKey}」需要选择移除方式`)
   }
   let backedUpPrevious = false
   try {

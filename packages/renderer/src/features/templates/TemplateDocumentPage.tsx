@@ -653,7 +653,7 @@ function TemplateDocumentEditor({
               {document
                 ? readOnly
                   ? '内置模板 · 只读'
-                  : `Revision ${document.revision}${session.dirty ? ' · 未保存' : ''}`
+                  : `版本 ${document.revision}${session.dirty ? ' · 未保存' : ''}`
                 : session.loading
                   ? '正在加载'
                   : '无法加载'}
@@ -1241,7 +1241,7 @@ function TemplateDocumentEditor({
                   apply={session.apply}
                 />
               </TemplateInspectorSection>
-              <TemplateInspectorSection title="评分 Schema" defaultExpanded={false}>
+              <TemplateInspectorSection title="评分单元" defaultExpanded={false}>
                 <TemplateSchemaUses
                   apply={session.apply}
                   disabled={!document || readOnly || session.saving}

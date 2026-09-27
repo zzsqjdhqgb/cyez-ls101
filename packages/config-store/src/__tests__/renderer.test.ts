@@ -32,10 +32,8 @@ describe('renderer config store', () => {
     })
     const { configStore } = await import('../renderer')
 
-    expect(() => configStore.scope('../appearance')).toThrow('Invalid config-store scope segment')
-    await expect(configStore.scope('appearance').read('../settings')).rejects.toThrow(
-      'Invalid config-store key'
-    )
+    expect(() => configStore.scope('../appearance')).toThrow('配置存储作用域片段无效')
+    await expect(configStore.scope('appearance').read('../settings')).rejects.toThrow('配置键无效')
     expect(invoke).not.toHaveBeenCalled()
   })
 })

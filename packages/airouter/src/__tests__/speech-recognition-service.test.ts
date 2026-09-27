@@ -57,7 +57,7 @@ describe('AIRouterSpeechRecognitionService', () => {
       }
     ])
     await expect(service.deleteModelPackage('qwen3-asr-test', '1.0.0')).rejects.toThrow(
-      '仍被 1 个语音识别 Provider 使用'
+      '仍被 1 个语音识别服务商使用'
     )
   })
 

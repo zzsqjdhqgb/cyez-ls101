@@ -26,7 +26,7 @@ const schema: SchemaDefinition = {
   },
   data: {
     name: '朗读评分',
-    description: '朗读评分 Schema',
+    description: '朗读评分单元',
     maxScore: 10,
     answerDescriptions: { reading: '朗读答案' },
     inputDescriptions: { prompt: '朗读内容' },
@@ -137,7 +137,7 @@ describe('Function call Schema summary', () => {
       </SchemaApplicationProvider>
     )
 
-    const summary = screen.getByRole('region', { name: '函数内 Schema（只读）' })
+    const summary = screen.getByRole('region', { name: '函数内评分单元（只读）' })
     expect(within(summary).getByText('2 个，只读')).toBeInTheDocument()
     expect(await within(summary).findAllByText('朗读评分')).toHaveLength(2)
     expect(
@@ -167,7 +167,7 @@ describe('Function call Schema summary', () => {
       </SchemaApplicationProvider>
     )
 
-    expect(screen.queryByRole('region', { name: '函数内 Schema（只读）' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '函数内评分单元（只读）' })).not.toBeInTheDocument()
   })
 
   it('derives choice-group source and range starts from available shapes', () => {
