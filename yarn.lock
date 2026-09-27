@@ -1456,6 +1456,7 @@ __metadata:
   dependencies:
     "@ls101/core-types": "workspace:*"
     "@ls101/exam-package": "workspace:*"
+    fflate: "npm:^0.8.2"
   languageName: unknown
   linkType: soft
 
