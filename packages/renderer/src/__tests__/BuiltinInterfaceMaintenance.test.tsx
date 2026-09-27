@@ -195,7 +195,7 @@ describe('BuiltinInterfaceMaintenanceDialog', () => {
 
 function maintenanceFor(
   plan: BuiltinUpdatePlan | BuiltinRemovalPlan,
-  resolve: ReturnType<typeof vi.fn>,
+  resolve: BuiltinInterfaceMaintenance['resolve'],
   dismiss = vi.fn()
 ): BuiltinInterfaceMaintenance {
   const snapshot = [plan]

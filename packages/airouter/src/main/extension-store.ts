@@ -216,6 +216,7 @@ function isAsset(value: unknown): value is AIRouterExtensionManifest['assets'][n
     typeof value.path === 'string' &&
     isSafePath(value.path) &&
     typeof value.kind === 'string' &&
+    typeof value.size === 'number' &&
     Number.isSafeInteger(value.size) &&
     value.size > 0 &&
     value.size <= MAX_ASSET_BYTES &&

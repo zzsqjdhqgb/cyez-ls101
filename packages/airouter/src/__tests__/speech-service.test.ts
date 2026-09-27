@@ -80,11 +80,12 @@ describe('AIRouterSpeechService', () => {
 
   it('stores online speech providers separately and maps OpenAI speech requests', async () => {
     const audio = createWav([0, 0, 0, 0])
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(audio, { status: 200, headers: { 'content-type': 'audio/wav' } })
-      )
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(new Uint8Array(audio), {
+        status: 200,
+        headers: { 'content-type': 'audio/wav' }
+      })
+    )
     vi.stubGlobal('fetch', fetchMock)
 
     const saved = await service.saveProviderConfig({
@@ -138,8 +139,12 @@ describe('AIRouterSpeechService', () => {
     const outputs = [createWav([100, 200]), createWav([300, 400])]
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(new Response(outputs[0], { headers: { 'content-type': 'audio/wav' } }))
-      .mockResolvedValueOnce(new Response(outputs[1], { headers: { 'content-type': 'audio/wav' } }))
+      .mockResolvedValueOnce(
+        new Response(new Uint8Array(outputs[0]), { headers: { 'content-type': 'audio/wav' } })
+      )
+      .mockResolvedValueOnce(
+        new Response(new Uint8Array(outputs[1]), { headers: { 'content-type': 'audio/wav' } })
+      )
     vi.stubGlobal('fetch', fetchMock)
     await service.saveProviderConfig({
       id: 'provider',
@@ -181,8 +186,12 @@ describe('AIRouterSpeechService', () => {
     const wav = createWav(new Array(2400).fill(0))
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(new Response(wav, { headers: { 'content-type': 'audio/wav' } }))
-      .mockResolvedValueOnce(new Response(wav, { headers: { 'content-type': 'audio/wav' } }))
+      .mockResolvedValueOnce(
+        new Response(new Uint8Array(wav), { headers: { 'content-type': 'audio/wav' } })
+      )
+      .mockResolvedValueOnce(
+        new Response(new Uint8Array(wav), { headers: { 'content-type': 'audio/wav' } })
+      )
     vi.stubGlobal('fetch', fetchMock)
     await service.saveProviderConfig({
       id: `provider-${format}`,
