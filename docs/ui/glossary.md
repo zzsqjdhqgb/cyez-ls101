@@ -1,6 +1,6 @@
 <!--
 status: implemented
-product-version: 0.4.1
+product-version: 0.4.2
 audience: both
 owner: ui
 -->
@@ -14,6 +14,10 @@ owner: ui
 | 评分单元 | `Schema`、`.lsschema` | 定义答案结构、评分输入、分值与评分标准 |
 | 试卷模板 | `Template`、`.lstemplate` | 可编辑的制卷规则 |
 | 题型 | `Interface`、`.lsinterface` | 字段定义与生成要求 |
+| 提示词 | `InterfacePrompt`（`prompts[]` 中的一段） | 题型生成要求的一段，含名称与正文，可增删与排序；旧数据里对应 `promptTemplate` |
+| 生成要求 | — | 题型提示词的统称；详情页用它作小节标题，草稿编辑器按分段展示 |
+| 题型提示词 | — | 写在题型定义里的提示词分段，生成题组内容时按需勾选 |
+| 补充提示词 | `additionalPrompt` | 发起一次 AI 生成时临时附加的要求，只对本次生成生效，不写入题型 |
 | 题组 | `Instance` | 题型下可复用的具体内容 |
 | 试卷 / 试卷库 | `ExamPackage`、`.lsexam` | 生成后的可运行快照 |
 | 作答包 | `SubmissionPackage`、`.lssubmission` | 一次运行产生的原始作答 |

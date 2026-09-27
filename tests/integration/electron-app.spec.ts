@@ -795,13 +795,13 @@ test('opens and copies bundled Shanghai speaking templates', async () => {
   const zhongkaoRow = page
     .getByText('上海中考口语标准题型', { exact: true })
     .locator('xpath=ancestor::article')
-  await expect(zhongkaoRow.getByText('v2', { exact: true })).toBeVisible()
+  await expect(zhongkaoRow.getByText('v3', { exact: true })).toBeVisible()
   await expect(zhongkaoRow.getByText('中考', { exact: true })).toBeVisible()
 
   const builtinRow = page
     .getByText('上海高考口语标准题型', { exact: true })
     .locator('xpath=ancestor::article')
-  await expect(builtinRow.getByText('v3', { exact: true })).toBeVisible()
+  await expect(builtinRow.getByText('v4', { exact: true })).toBeVisible()
   await expect(builtinRow.getByRole('button', { name: '编辑' })).toHaveCount(0)
   await expect(builtinRow.getByRole('button', { name: /删除/ })).toHaveCount(0)
   await builtinRow.getByRole('button', { name: '查看' }).click()

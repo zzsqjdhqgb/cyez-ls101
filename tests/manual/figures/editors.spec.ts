@@ -2,7 +2,11 @@ import { expect, test } from '@playwright/test'
 import { rm } from 'node:fs/promises'
 import path from 'node:path'
 import { captureFigure, launchFigureApp, prepareManualUserDataDir } from '../support/manual-app'
-import { fillStoredInstanceValues, writeManualInterfaceFiles } from '../support/manual-fixtures'
+import {
+  fillStoredInstanceValues,
+  seedTextProvider,
+  writeManualInterfaceFiles
+} from '../support/manual-fixtures'
 import { stubOpenDialog } from '../../visual/support/fixtures'
 
 test('FIG-GS-EDITOR 新建评分单元 · 结构与数据', async () => {
@@ -175,6 +179,68 @@ test('FIG-TP-EDITOR 内置模板查看 · 结构视图', async () => {
 
     const file = await captureFigure(page, 'FIG-TP-EDITOR')
     expect(file).toContain(path.join('FIG-TP-EDITOR', 'default.png'))
+  } finally {
+    await app.close().catch(() => undefined)
+    await rm(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('FIG-IF-DEFINITION 题型详情 · 分段提示词', async () => {
+  const userDataDir = await prepareManualUserDataDir()
+  const { app, page } = await launchFigureApp(userDataDir)
+  try {
+    await page.getByRole('link', { name: '题型库' }).click()
+    await page
+      .getByRole('button', { name: /^上海高考英语听力/ })
+      .first()
+      .click()
+    await page.getByRole('tab', { name: '题型定义' }).click()
+    await expect(page.getByRole('button', { name: '复制全部题型提示词' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 3, name: 'B2' })).toBeVisible()
+
+    const file = await captureFigure(page, 'FIG-IF-DEFINITION')
+    expect(file).toContain(path.join('FIG-IF-DEFINITION', 'default.png'))
+
+    // 第二张：同一页滚到字段结构，展示字段树与复制操作。
+    await page.getByRole('heading', { name: '字段结构' }).scrollIntoViewIfNeeded()
+    const structure = await captureFigure(page, 'FIG-IF-DEFINITION', 'structure')
+    expect(structure).toContain(path.join('FIG-IF-DEFINITION', 'structure.png'))
+  } finally {
+    await app.close().catch(() => undefined)
+    await rm(userDataDir, { recursive: true, force: true })
+  }
+})
+
+test('FIG-IF-AI-GENERATE 题组编辑器 · 整组 AI 生成', async () => {
+  test.setTimeout(60_000)
+  const userDataDir = await prepareManualUserDataDir()
+  const { app, page } = await launchFigureApp(userDataDir)
+  try {
+    await seedTextProvider(page)
+    await page.getByRole('link', { name: '题型库' }).click()
+    await page
+      .getByRole('button', { name: /^上海高考英语听力/ })
+      .first()
+      .click()
+    await page.getByRole('button', { name: '新建题组' }).click()
+    await page.getByLabel('题组名称').fill('听力模拟第一套')
+    await page.getByRole('button', { name: '创建题组' }).click()
+    await expect(page.getByRole('dialog', { name: '新建题组' })).toBeHidden()
+
+    await page.getByRole('button', { name: 'AI 生成并覆盖' }).click()
+    const dialog = page.getByRole('dialog', { name: 'AI 生成并覆盖' })
+    await expect(dialog.getByText('题型提示词（至少选择一项）')).toBeVisible()
+    // 生成模型来自示例服务商，对话框里显示已配置的模型名。
+    await expect(dialog.getByLabel('生成模型', { exact: true })).toContainText('example-chat', {
+      timeout: 10_000
+    })
+    await dialog.getByRole('checkbox', { name: '基础出题要求' }).check()
+    await dialog.getByRole('checkbox', { name: 'B2' }).check()
+    await dialog.getByLabel('补充提示词（可选）').fill('本次偏校园生活主题，难度按 B2 处理。')
+    await expect(dialog.getByText('按题型定义中的顺序组合')).toBeVisible()
+
+    const file = await captureFigure(page, 'FIG-IF-AI-GENERATE')
+    expect(file).toContain(path.join('FIG-IF-AI-GENERATE', 'default.png'))
   } finally {
     await app.close().catch(() => undefined)
     await rm(userDataDir, { recursive: true, force: true })

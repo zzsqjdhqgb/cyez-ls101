@@ -1,6 +1,6 @@
 <!--
 status: implemented
-product-version: 0.4.1
+product-version: 0.4.2
 audience: engineer
 owner: license
 -->
@@ -9,7 +9,7 @@ owner: license
 
 ## 功能状态
 
-v0.4.1 已实现一套离线、单一邀请码的临时许可：main 进程的 `LicenseService` 校验邀请码并把回执写入用户数据目录，preload 通过固定 IPC 白名单暴露 `window.license`，renderer 在激活页收集邀请码、在设置页提供反激活入口。许可状态只有 `active`、`not-activated`、`expired` 三种，未激活或已到期时应用不进入主界面（见 [`../subsystems/startup-orchestration.md`](../subsystems/startup-orchestration.md)）。
+v0.4.2 已实现一套离线、单一邀请码的临时许可：main 进程的 `LicenseService` 校验邀请码并把回执写入用户数据目录，preload 通过固定 IPC 白名单暴露 `window.license`，renderer 在激活页收集邀请码、在设置页提供反激活入口。许可状态只有 `active`、`not-activated`、`expired` 三种，未激活或已到期时应用不进入主界面（见 [`../subsystems/startup-orchestration.md`](../subsystems/startup-orchestration.md)）。
 
 ## 功能边界
 
@@ -50,7 +50,7 @@ main 侧导出（`src/main/license-service.ts`）：`LICENSE_RECEIPT_FILENAME`�
 }
 ```
 
-- 默认常量：`INVITATION_CODE_HASH` 是当前分发邀请码的 SHA-256；`LICENSE_EXPIRES_AT = '2026-10-01T15:59:59.999Z'`（北京时间 2026-10-01 23:59:59.999）。更换分发方式时直接替换源码中的摘要常量。
+- 默认常量：`INVITATION_CODE_HASH` 是当前分发邀请码的 SHA-256；`LICENSE_EXPIRES_AT = '2026-12-01T15:59:59.999Z'`（北京时间 2026-12-01 23:59:59.999）。更换分发方式时直接替换源码中的摘要常量。
 - 本地集成测试覆盖（`src/main/application-services.ts` 的 `createLicenseOptions`）：仅当 `isLocalIntegrationTest` 为真（`LS101_INTEGRATION_TEST === '1'` 且应用未打包或版本号含 `-local.`，见 `src/main/index.ts`）时才读取两个环境变量：
   - `LS101_LICENSE_TEST_CODE_HASH` 覆盖 `expectedCodeHash`；
   - `LS101_LICENSE_TEST_NOW` 覆盖时钟；`Date.parse` 失败时抛 `环境变量 LS101_LICENSE_TEST_NOW 无效`。

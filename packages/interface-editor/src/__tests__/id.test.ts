@@ -20,7 +20,7 @@ function content(overrides: ContentOverrides = {}): InterfaceContent {
   return {
     name: '上海高考口语',
     description: '口语模拟考试',
-    promptTemplate: '生成一套试题',
+    prompts: [{ name: '基础出题要求', content: '生成一套试题' }],
     fields: collection({
       title: {
         type: 'text',
@@ -35,6 +35,23 @@ function content(overrides: ContentOverrides = {}): InterfaceContent {
 }
 
 describe('题型内容编号', () => {
+  it('提示词名称、正文和列表顺序都参与内容编号', async () => {
+    const prompts = [
+      { name: '基础', content: '基础内容' },
+      { name: '主题', content: '科技内容' }
+    ]
+    const original = await deriveInterfaceId(content({ prompts }))
+    expect(await deriveInterfaceId(content({ prompts: [...prompts].reverse() }))).not.toBe(original)
+    expect(
+      await deriveInterfaceId(content({ prompts: [{ ...prompts[0], name: '新名称' }, prompts[1]] }))
+    ).not.toBe(original)
+    expect(
+      await deriveInterfaceId(
+        content({ prompts: [{ ...prompts[0], content: '新内容' }, prompts[1]] })
+      )
+    ).not.toBe(original)
+  })
+
   it('生成标准 SHA-256 内容编号', async () => {
     const id = await deriveInterfaceId(content())
     expect(isInterfaceId(id)).toBe(true)
@@ -49,19 +66,21 @@ describe('题型内容编号', () => {
 
   it('使用固定 key 顺序、无缩进的确定性序列化格式', () => {
     expect(canonicalizeInterfaceContent(content())).toBe(
-      '{"description":"口语模拟考试","fields":[["title",{"description":"试卷标题","example":"英语口语模拟卷","type":"text","varName":"title"}]],"name":"上海高考口语","promptTemplate":"生成一套试题"}'
+      '{"description":"口语模拟考试","fields":[["title",{"description":"试卷标题","example":"英语口语模拟卷","type":"text","varName":"title"}]],"name":"上海高考口语","prompts":[{"content":"生成一套试题","name":"基础出题要求"}]}'
     )
   })
 
   it('固定规范内容的 UTF-8 SHA-256 摘要', async () => {
     expect(await deriveInterfaceId(content())).toBe(
-      'sha256:fd802dfd0e05605b6cccf191203ec47665d75ae2696dcbfeebd8aa605f1fb93e'
+      'sha256:9707e78be2e70e5f1a666594e9023683a21aa1e81c5a28d893cd5af4bb7e22e9'
     )
   })
 
   it('内容变化产生不同编号', async () => {
     const first = await deriveInterfaceId(content())
-    const second = await deriveInterfaceId(content({ promptTemplate: '生成另一套试题' }))
+    const second = await deriveInterfaceId(
+      content({ prompts: [{ name: '基础出题要求', content: '生成另一套试题' }] })
+    )
     expect(first).not.toBe(second)
   })
 
@@ -96,13 +115,13 @@ describe('题型内容编号', () => {
     const first = await deriveInterfaceId(
       content({
         name: 'Caf\u00e9',
-        promptTemplate: 'line 1\r\nline 2'
+        prompts: [{ name: '基础出题要求', content: 'line 1\r\nline 2' }]
       })
     )
     const second = await deriveInterfaceId(
       content({
         name: 'Cafe\u0301',
-        promptTemplate: 'line 1\nline 2'
+        prompts: [{ name: '基础出题要求', content: 'line 1\nline 2' }]
       })
     )
     expect(first).toBe(second)

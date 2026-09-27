@@ -1,5 +1,13 @@
 import type { InterfaceInstance } from '@ls101/core-types'
-import { compareInterfaceIdentity, isInterfaceId, publishInterface, verifyInterfaceId } from './id'
+import {
+  compareInterfaceIdentity,
+  isInterfaceId,
+  publishInterface,
+  verifyInterfaceId,
+  verifyLegacyInterfaceId
+} from './id'
+import { normalizeLegacyPrompts } from './compatibility'
+import type { InterfaceReferenceMigrator } from './builtin'
 import { flattenFields } from './queries'
 import type { InterfaceDef, InterfaceDraft } from './types'
 import { validateInterfaceDef } from './validation'
@@ -134,7 +142,9 @@ export class FileInterfaceRepository implements InterfaceRepository {
 
   async getDraft(draftId: string): Promise<InterfaceDraft | null> {
     assertUuid(draftId, '草稿编号')
-    const value = await this.drafts.scope(draftId).readText<unknown>(DRAFT_FILE)
+    const value = normalizeLegacyPrompts(
+      await this.drafts.scope(draftId).readText<unknown>(DRAFT_FILE)
+    )
     if (value === null) return null
     if (!isInterfaceDraft(value) || value.draftId !== draftId) {
       throw invalidData(`草稿「${draftId}」无效`)
@@ -180,6 +190,64 @@ export class FileInterfaceRepository implements InterfaceRepository {
     const location = await this.locateInterface(interfaceId)
     if (!location) return null
     return this.readInterfaceAt(interfaceId, location.scope)
+  }
+
+  /** Run before consumers load references. Copies are verified before the old scope is removed. */
+  async migrateLegacyPrompts(references: InterfaceReferenceMigrator): Promise<void> {
+    for (const interfaceId of await this.listInterfaceIds()) {
+      const source = await this.requireInterfaceLocation(interfaceId)
+      const raw = await source.scope.readText<unknown>(INTERFACE_FILE)
+      if (normalizeLegacyPrompts(raw) === raw) continue
+      const def = await this.readInterfaceAt(interfaceId, source.scope)
+      const existingLocation = await this.locateInterface(def.id)
+      if (
+        existingLocation &&
+        source.kind === 'builtin' &&
+        (existingLocation.kind !== 'builtin' || existingLocation.builtinKey !== source.builtinKey)
+      ) {
+        throw identityConflict(`内置题型「${def.id}」已经存在于另一个分区`)
+      }
+      const target =
+        existingLocation?.scope ??
+        (source.kind === 'builtin'
+          ? this.builtinInterfaceScope(source.builtinKey, def.id)
+          : this.publishedInterfaceScope(def.id))
+      if (existingLocation) {
+        const existing = await this.readInterfaceAt(def.id, target)
+        if (compareInterfaceIdentity(existing, def) !== 'same') {
+          throw identityConflict(`题型编号「${def.id}」已被内容不同的题型占用`)
+        }
+      } else {
+        await target.writeText(INTERFACE_FILE, def)
+      }
+      const snapshots: Array<{
+        stored: StoredInterfaceInstance
+        assets: Record<string, Uint8Array>
+      }> = []
+      for (const instanceId of await this.listInstanceIds(interfaceId)) {
+        const stored = await this.readInstanceAt(source.scope, instanceId)
+        if (!stored) throw invalidData(`迁移过程中题组「${instanceId}」丢失`)
+        const assets = await this.loadAssets(interfaceId, instanceId, stored.assetFilenames)
+        const existing = await this.readInstanceAt(target, instanceId)
+        if (existing) {
+          if (!(await this.instanceMatches(def.id, existing, stored.instance, assets))) {
+            throw identityConflict(`迁移的题组「${instanceId}」与目标位置已有的内容不同`)
+          }
+        } else {
+          await this.writeInstanceAt(target, stored.instance, assets)
+        }
+        snapshots.push({ stored, assets })
+      }
+      await this.verifyInterfaceCopy(def.id, target, snapshots)
+      await references.replaceInterfaceReferences(interfaceId, def.id)
+      if (source.kind === 'builtin') {
+        const current = await this.getBuiltin(source.builtinKey)
+        if (current?.currentInterfaceId === interfaceId) {
+          await this.setBuiltinCurrent(source.builtinKey, def.id)
+        }
+      }
+      await source.scope.clear()
+    }
   }
 
   async saveInterface(def: InterfaceDef): Promise<SaveEntityResult> {
@@ -541,10 +609,10 @@ export class FileInterfaceRepository implements InterfaceRepository {
 
   private async readInterfaceAt(interfaceId: string, scope: InterfaceStore): Promise<InterfaceDef> {
     const value = await scope.readText<unknown>(INTERFACE_FILE)
-    if (!isInterfaceDef(value) || value.id !== interfaceId || !(await verifyInterfaceId(value))) {
+    if (!isRecord(value) || value.id !== interfaceId) {
       throw invalidData(`题型「${interfaceId}」无效`)
     }
-    return value
+    return readInterfaceDefinition(value)
   }
 
   private async assertInstanceCompatible(
@@ -780,6 +848,21 @@ function isInterfaceDraft(value: unknown): value is InterfaceDraft {
   )
 }
 
+/** 归一化旧格式定义并复算其内容编号；新格式定义按严格校验处理。 */
+export async function readInterfaceDefinition(raw: unknown): Promise<InterfaceDef> {
+  const value = normalizeLegacyPrompts(raw)
+  if (!isInterfaceDef(value) || !validateInterfaceDef(value).valid) {
+    throw invalidData('题型内容格式错误')
+  }
+  if (value !== raw) {
+    if (!(await verifyLegacyInterfaceId(value)))
+      throw invalidData('旧格式题型的内容编号与内容不一致')
+    return publishInterface(value)
+  }
+  if (!(await verifyInterfaceId(value))) throw invalidData('题型的内容编号与内容不一致')
+  return value
+}
+
 export function isInterfaceDef(value: unknown): value is InterfaceDef {
   return (
     isRecord(value) && typeof value.id === 'string' && isInterfaceId(value.id) && isContent(value)
@@ -790,7 +873,11 @@ function isContent(value: Record<string, unknown>): boolean {
   return (
     typeof value.name === 'string' &&
     typeof value.description === 'string' &&
-    typeof value.promptTemplate === 'string' &&
+    Array.isArray(value.prompts) &&
+    value.prompts.every(
+      (prompt) =>
+        isRecord(prompt) && typeof prompt.name === 'string' && typeof prompt.content === 'string'
+    ) &&
     isFieldCollection(value.fields)
   )
 }

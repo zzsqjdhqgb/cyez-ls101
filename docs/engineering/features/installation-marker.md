@@ -1,6 +1,6 @@
 <!--
 status: implemented
-product-version: 0.4.1
+product-version: 0.4.2
 audience: engineer
 owner: installation-marker
 -->
@@ -9,7 +9,7 @@ owner: installation-marker
 
 ## 功能状态
 
-v0.4.1 已实现一个主进程维护的安装标记：每次应用进入主界面时创建或更新 `<userData>/.ls101-installation.json`，记录本次安装的稳定 ID、首次安装版本、上次运行版本，并用其中的 `lastShownReleaseNotesVersion` 保证每个版本的发布说明只弹一次。renderer 通过 `window.appInfo` 的两个 IPC 方法触发写入（见 [`../subsystems/startup-orchestration.md`](../subsystems/startup-orchestration.md)）。
+v0.4.2 已实现一个主进程维护的安装标记：每次应用进入主界面时创建或更新 `<userData>/.ls101-installation.json`，记录本次安装的稳定 ID、首次安装版本、上次运行版本，并用其中的 `lastShownReleaseNotesVersion` 保证每个版本的发布说明只弹一次。renderer 通过 `window.appInfo` 的两个 IPC 方法触发写入（见 [`../subsystems/startup-orchestration.md`](../subsystems/startup-orchestration.md)）。
 
 ## 功能边界
 

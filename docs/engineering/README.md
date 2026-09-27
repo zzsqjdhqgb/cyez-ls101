@@ -1,6 +1,6 @@
 <!--
 status: implemented
-product-version: 0.4.1
+product-version: 0.4.2
 audience: engineer
 owner: engineering
 -->
@@ -8,7 +8,7 @@ owner: engineering
 # 工程文档
 
 本目录面向工程师，回答"代码如何实现、契约是什么、边界在哪"。
-**代码是唯一事实来源**；本目录只记录 v0.4.1 已经存在的行为。
+**代码是唯一事实来源**；本目录只记录 v0.4.2 已经存在的行为。
 
 | 路径                                                                           | 内容                                                                    |
 | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
@@ -71,7 +71,7 @@ page-renderer              -> 无 workspace 依赖
 ```markdown
 <!--
 status: implemented
-product-version: 0.4.1
+product-version: 0.4.2
 audience: engineer
 owner: <包或模块名>
 -->

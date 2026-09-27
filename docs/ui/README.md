@@ -1,6 +1,6 @@
 <!--
 status: implemented
-product-version: 0.4.1
+product-version: 0.4.2
 audience: both
 owner: ui
 -->
@@ -28,7 +28,7 @@ owner: ui
 ````markdown
 <!--
 status: implemented
-product-version: 0.4.1
+product-version: 0.4.2
 audience: both
 owner: interface-library
 -->
@@ -95,7 +95,7 @@ anchors:
   禁止"以用户为中心""提升体验"这类无法证伪的表述。
 - 引用代码或测试时只写 ID 或路径，不在正文展开实现细节。
 - 界面行为变化时先改本目录，再改测试，最后让视觉基线更新。
-- 与代码冲突：以代码（v0.4.1）为准，并修正本目录。
+- 与代码冲突：以代码（v0.4.2）为准，并修正本目录。
 
 ## 4. 当前状态
 

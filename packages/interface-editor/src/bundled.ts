@@ -1,7 +1,5 @@
-import { verifyInterfaceId } from './id'
-import { isInterfaceDef } from './repository'
+import { readInterfaceDefinition } from './repository'
 import type { InterfaceDef } from './types'
-import { validateInterfaceDef } from './validation'
 
 const CURRENT_FILE = 'current.json'
 const INTERFACE_FILE = 'interface.json'
@@ -64,14 +62,14 @@ export class FileBundledInterfaceRepository implements BundledInterfaceSource {
       .scope('versions')
       .scope(digest)
       .readText<unknown>(INTERFACE_FILE)
-    if (!isInterfaceDef(value) || !validateInterfaceDef(value).valid) {
+    if (!isRecord(value) || value.id !== current.currentInterfaceId) {
       throw new BundledInterfaceRepositoryError(`内置题型「${builtinKey}」的定义无效`)
     }
-    if (value.id !== current.currentInterfaceId || !(await verifyInterfaceId(value))) {
+    try {
+      return { builtinKey, currentInterface: structuredClone(await readInterfaceDefinition(value)) }
+    } catch {
       throw new BundledInterfaceRepositoryError(`内置题型「${builtinKey}」的内容编号与内容不一致`)
     }
-
-    return { builtinKey, currentInterface: structuredClone(value) }
   }
 }
 

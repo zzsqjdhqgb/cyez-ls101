@@ -1,7 +1,8 @@
 import type { InterfaceInstance } from '@ls101/core-types'
-import { compareInterfaceIdentity, isInterfaceId, verifyInterfaceId } from './id'
+import { compareInterfaceIdentity, isInterfaceId } from './id'
 import {
   InterfaceRepositoryError,
+  readInterfaceDefinition,
   type InterfaceRepository,
   type LocatedInterfaceInstance,
   type SaveEntityResult
@@ -108,14 +109,12 @@ export async function inspectInterfacePackage(
   value: InterfaceExchangePackage
 ): Promise<InterfacePackageInspection> {
   assertPackageShape(value)
-  let verified = false
+  // 读取时顺带完成旧格式提示词归一化与内容编号复算，两者任一不通过都视为包内容错误。
+  let definition: InterfaceDef
   try {
-    verified = await verifyInterfaceId(value.interface)
+    definition = await readInterfaceDefinition(value.interface)
   } catch {
-    throw invalidPackage('题型内容格式错误')
-  }
-  if (!verified) {
-    throw invalidPackage('题型的内容编号与内容不一致')
+    throw invalidPackage('题型内容格式错误，或内容编号与内容不一致')
   }
 
   const seen = new Set<string>()
@@ -136,7 +135,11 @@ export async function inspectInterfacePackage(
   if (value.builtin && value.builtin.interfaceId !== value.interface.id) {
     throw invalidPackage('内置题型的编号与导入包内容不一致')
   }
-  return { interface: value.interface, builtin: value.builtin, instances }
+  return {
+    interface: definition,
+    builtin: value.builtin ? { ...value.builtin, interfaceId: definition.id } : undefined,
+    instances
+  }
 }
 
 /**
@@ -148,6 +151,7 @@ export async function importInterfacePackage(
   options: InterfacePackageImportOptions
 ): Promise<InterfacePackageImportResult> {
   const inspection = await inspectInterfacePackage(value)
+  value = { ...value, interface: inspection.interface, builtin: inspection.builtin }
   const selectedIds = resolveImportSelection(inspection, options.instances)
   const selected = value.instances.filter(({ instance }) => selectedIds.has(instance.instanceId))
 

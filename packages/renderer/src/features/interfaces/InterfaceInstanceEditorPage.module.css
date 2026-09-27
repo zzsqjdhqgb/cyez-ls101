@@ -79,6 +79,7 @@
 
 .nameField input,
 .valueField textarea,
+.additionalPromptField textarea,
 .jsonInput textarea {
   width: 100%;
   padding: 9px 10px;
@@ -421,6 +422,79 @@
   min-height: 0;
   padding: 24px;
   overflow: auto;
+}
+
+.additionalPromptField {
+  display: grid;
+  gap: 8px;
+}
+
+.promptSelection {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.promptSelection > p {
+  margin: 0 0 12px;
+  color: var(--color-text-muted);
+}
+
+.promptChoice + .promptChoice {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.promptChoice label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+
+.promptChoice details {
+  margin: 8px 0 0 24px;
+  color: var(--color-text-muted);
+}
+
+.promptChoice summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.promptChoice pre {
+  margin-bottom: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  line-height: 1.6;
+}
+
+.additionalPromptField label {
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.additionalPromptField textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.additionalPromptField textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.additionalPromptField p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .generationContent {

@@ -1,6 +1,6 @@
 <!--
 status: implemented
-product-version: 0.4.1
+product-version: 0.4.2
 audience: both
 owner: ui
 -->
@@ -25,7 +25,7 @@ owner: ui
 ```markdown
 <!--
 status: implemented
-product-version: 0.4.1
+product-version: 0.4.2
 audience: both
 owner: <module>
 -->
@@ -57,7 +57,7 @@ owner: <module>
 
 ## 写作约束
 
-- 只写 v0.4.1 已实现的行为；未实现的确认设计写入 [`../open-questions.md`](../open-questions.md)，不写入本文。
+- 只写 v0.4.2 已实现的行为；未实现的确认设计写入 [`../open-questions.md`](../open-questions.md)，不写入本文。
 - 不写代码路径、类名、IPC、存储格式、愿景段落。
 - 与代码冲突时以代码为准。
 - 不重复 UI 规格中的控件与文案。

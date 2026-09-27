@@ -1,6 +1,6 @@
 <!--
 status: draft
-product-version: 0.4.1
+product-version: 0.4.2
 audience: engineer
 owner: renderer
 -->

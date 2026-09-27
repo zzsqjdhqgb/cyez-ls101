@@ -11,7 +11,7 @@ import { evidence, prepareProductPage, productTest } from '../../support/product
 const interfaceContent = {
   name: '英语问答练习',
   description: '用于产品行为文档的文本题型',
-  promptTemplate: '生成一组简短的英语问答练习。',
+  prompts: [{ name: '基础出题要求', content: '生成一组简短的英语问答练习。' }],
   fields: {
     order: ['title', 'answer'],
     nodes: {
@@ -291,6 +291,7 @@ test(
       })
 
       await productStep('confirm-overwrite', async () => {
+        await page.getByRole('checkbox', { name: '基础出题要求', exact: true }).check()
         await page.getByRole('button', { name: '生成并覆盖', exact: true }).click()
         const dialog = page.getByRole('alertdialog', { name: '覆盖当前题组内容？' })
         await expect(dialog).toContainText('全部文本')
@@ -369,9 +370,9 @@ test(
 
       await productStep('define-contract', async () => {
         const content = page.getByLabel('题型内容')
-        await content.getByLabel('名称').fill('课堂口语题型')
+        await content.getByLabel('名称', { exact: true }).fill('课堂口语题型')
         await content.getByLabel('描述').fill('用于课堂口语练习')
-        await content.getByLabel('生成要求').fill('生成一个适合课堂讨论的英语问题。')
+        await content.getByLabel('提示词 1 内容').fill('生成一个适合课堂讨论的英语问题。')
         await page.getByRole('button', { name: '添加字段', exact: true }).click()
         const structure = page.getByLabel('字段结构')
         await structure.getByLabel('变量名').fill('questionText')
@@ -769,9 +770,9 @@ test(
 
       await productStep('define-field-structure', async () => {
         const content = page.getByLabel('题型内容')
-        await content.getByLabel('名称').fill('课堂问答题型')
+        await content.getByLabel('名称', { exact: true }).fill('课堂问答题型')
         await content.getByLabel('描述').fill('用于课堂问答练习')
-        await content.getByLabel('生成要求').fill('生成一组适合课堂讨论的英语问题。')
+        await content.getByLabel('提示词 1 内容').fill('生成一组适合课堂讨论的英语问题。')
 
         const structure = page.getByLabel('字段结构')
         await structure.getByRole('button', { name: '添加字段组' }).click()
@@ -866,9 +867,9 @@ test(
 
       await productStep('prepare-incomplete-draft', async () => {
         const content = page.getByLabel('题型内容')
-        await content.getByLabel('名称').fill('校验定位题型')
+        await content.getByLabel('名称', { exact: true }).fill('校验定位题型')
         await content.getByLabel('描述').fill('用于验证字段错误定位')
-        await content.getByLabel('生成要求').fill('生成一个课堂问题。')
+        await content.getByLabel('提示词 1 内容').fill('生成一个课堂问题。')
         const structure = page.getByLabel('字段结构')
         await structure.getByRole('button', { name: '添加字段', exact: true }).click()
         await structure.getByLabel('字段标识').fill('question')
@@ -949,9 +950,9 @@ test(
       await page.getByRole('tab', { name: '草稿' }).click()
       await page.getByRole('button', { name: '新建题型' }).click()
       const content = page.getByLabel('题型内容')
-      await content.getByLabel('名称').fill('草稿退出保护题型')
+      await content.getByLabel('名称', { exact: true }).fill('草稿退出保护题型')
       await content.getByLabel('描述').fill('已保存的原始说明')
-      await content.getByLabel('生成要求').fill('生成一组课堂问题。')
+      await content.getByLabel('提示词 1 内容').fill('生成一组课堂问题。')
       const structure = page.getByLabel('字段结构')
       await structure.getByRole('button', { name: '添加字段', exact: true }).click()
       await structure.getByLabel('字段标识').fill('question')
@@ -1106,7 +1107,10 @@ async function seedInterface(): Promise<string> {
   const canonical = stableStringify({
     name: normalize(interfaceContent.name),
     description: normalize(interfaceContent.description),
-    promptTemplate: normalize(interfaceContent.promptTemplate),
+    prompts: interfaceContent.prompts.map((prompt) => ({
+      name: normalize(prompt.name),
+      content: normalize(prompt.content)
+    })),
     fields: interfaceContent.fields.order.map((key) => {
       const node = interfaceContent.fields.nodes[key]
       return [

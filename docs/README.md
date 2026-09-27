@@ -1,6 +1,6 @@
 <!--
 status: implemented
-product-version: 0.4.1
+product-version: 0.4.2
 audience: both
 owner: docs
 -->
@@ -9,7 +9,7 @@ owner: docs
 
 本文件回答三件事：**哪份文档算数**、**文档分成哪几层**、**新增或修改文档时遵循什么规则**。
 
-版本前提：当前文档描述 **v0.4.1**（`dev` 分支）。`dev` 比 `main` 多的提交均为构建/开发环境类改动，不含产品变更。
+版本前提：当前文档描述 **v0.4.2**。文档与代码冲突时以代码为准。
 **代码是唯一事实来源**；任何 `implemented` 文档与代码冲突，一律以代码为准并修正文档。
 
 ## 1. 权威地图
@@ -31,7 +31,7 @@ owner: docs
 ```html
 <!--
 status: implemented
-product-version: 0.4.1
+product-version: 0.4.2
 audience: engineer
 owner: template-editor
 superseded-by: docs/engineering/features/template-editor.md
@@ -41,7 +41,7 @@ superseded-by: docs/engineering/features/template-editor.md
 | 字段              | 必填                | 取值                                                              |
 | ----------------- | ------------------- | ----------------------------------------------------------------- |
 | `status`          | 是                  | `implemented` / `confirmed` / `draft` / `superseded` / `archived` |
-| `product-version` | 是                  | 描述生效的版本，如 `0.4.1`、`0.3.x`                               |
+| `product-version` | 是                  | 描述生效的版本，如 `0.4.2`、`0.3.x`                               |
 | `audience`        | 是                  | `user` / `engineer` / `both`                                      |
 | `owner`           | 是                  | 责任域，如 `template-editor`、`docs`                              |
 | `superseded-by`   | `superseded` 时必填 | 取代它的文档路径                                                  |
@@ -128,11 +128,12 @@ canonical 容器内（只在能访问 Docker 宿主的机器上跑）：
 - **阶段 4c（旧产物冻结迁出）已完成**：`docs/product` 已迁入 `docs/archive/product-docs-0.4.1/`（只读）；reporter 的归属设计校验改指 `docs/ui/modules/<slug>.md`。
 - **阶段 4e（工程缺口补齐）已完成**：新增 `engineering/features/license.md`、`installation-marker.md`、`logger.md`、`secret-store.md` 与 `engineering/subsystems/startup-orchestration.md`、`builtin-content.md`、`legacy-data.md`，`docs/engineering/todo/logger.md` 只保留未实现部分。
 - **阶段 4g（质量门禁补齐）已完成**：`yarn typecheck` 从"solution 文件空转"改为真实的 `tsc -b tsconfig.json`（主进程 + 20 个包，0 错误；主进程产物写入 `.tsbuild/`）；`yarn copy:check` 新增用户可见错误文案门禁（包内英文错误一律失败，见 [`ui/open-questions.md`](./ui/open-questions.md) 第 10 条）；`tests/visual` 增加一像素敏感度单元测试与 `yarn visual:verify-determinism`（宿主机连续两次发布比对）。
+- **阶段 4h（题型提示词分段）已完成**：题型生成要求由单段 `promptTemplate` 改为命名分段 `prompts[]`，草稿编辑器可增删、改名与排序，题组 AI 生成按分段勾选并可附加补充提示词；旧格式在读取时归一化并按新格式复算编号，启动时迁移本地题型与内置历史版本。规格、术语表与说明书同步更新。
 - **阶段 4f（界面用词对齐，D1）已完成**：界面与主进程面向用户的文案改为术语表用词（`Schema`→评分单元、`Interface`→题型、`Instance`→题组、`Timeline`→时间线、`Collector`→采集器、`revision`→版本、`Provider`→服务商、`ID`→编号、`API Key`→API 密钥，另含 `Template 输入`→`试卷模板输入`、`ChoiceView`→`选择题视图`、`提供商`→`服务商`）；内置模板「生成试卷」的禁用提示由错误码改为人类可读消息。对照表见 [`ui/glossary.md`](./ui/glossary.md)，落地记录见 [`ui/open-questions.md`](./ui/open-questions.md) 第 1 条。视觉基线随本批重建。
 
 **未完成**：
 
 - 阶段 4b 的视觉锚定已全部完成，行为锚定剩 2 篇兼容路径为 `unverified`：`UI-GS-03` 评分单元草稿库、`UI-GS-04` 评分单元草稿编辑器。它们没有界面入口，主流程已改走 `UI-GS-01`/`UI-GS-02`，产品文档套件不进入这两条路由。
-- 说明书目前只写到第 5 章。第 6 章起（评分单元、题型库、试卷模板、试卷库、考试运行、作答记录与评分、评分结算、设置、数据与备份、常见问题）按同一语气续写，缺口与前置条件见 [`engineering/todo/manual-coverage.md`](./engineering/todo/manual-coverage.md)。
+- 说明书九章已成稿（含 38 张配图与 A4 PDF 导出）；仍缺常见问题、数据与备份的完整步骤，以及 0.4.2 的版本说明正文，见 [`engineering/todo/manual-coverage.md`](./engineering/todo/manual-coverage.md)。
 
 重构方案已归档：[`archive/docs-revision-plan.md`](./archive/docs-revision-plan.md)。

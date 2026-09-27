@@ -1,13 +1,13 @@
 <!--
 status: implemented
-product-version: 0.4.1
+product-version: 0.4.2
 audience: both
 owner: ui
 -->
 
 # 逐屏 UI 规格索引
 
-本目录为每个用户可见界面建立一份规格（`UI-<模块>-<序号>.md`），依据是 v0.4.1 的**实际路由与界面**。
+本目录为每个用户可见界面建立一份规格（`UI-<模块>-<序号>.md`），依据是 v0.4.2 的**实际路由与界面**。
 
 - 路由来源：`packages/renderer/src/app/register-placeholder-routes.ts`、`packages/renderer/src/app/register-settings.ts`。
 - 规格状态：`未建立` 表示尚未编写；`已建立` 表示规格存在；`锚定` 表示同时有视觉/行为测试。下表统一使用 `已建立`，逐屏锚定状态以每篇规格的 `anchors` 块为准。

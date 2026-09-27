@@ -1,6 +1,6 @@
 <!--
 status: implemented
-product-version: 0.4.1
+product-version: 0.4.2
 audience: engineer
 owner: interface-editor
 -->
@@ -11,7 +11,7 @@ owner: interface-editor
 
 `@ls101/interface-editor` 已实现与 UI 框架无关的 Interface 领域模型、文件仓储、草稿与发布流程、实例编辑、导入导出、builtin 更新和五模块应用门面。
 
-renderer 已创建应用组合层和 React Context，并接入真实 `@ls101/file-store`、`@ls101/file-dialog` 与 AIRouter。当前 UI 包含题型列表、草稿列表、草稿编辑、题型详情和题组编辑页面；草稿编辑与题组编辑使用 `focus` 布局，编辑器中的工作区分栏支持拖动调整。题组页可以从所有已启用的 AIRouter 文本模型中选择生成模型，并在存在图片字段时同时选择图像 Provider；右侧分栏展示文本流、校验、逐图片生成、保存和取消状态。每个图片字段也可在调用时选择图像 Provider、单独生成，并在保存题组前预览结果。题组工具栏还提供独立的“AI 生图”操作，按字段顺序生成当前已有提示词的图片，全部成功后一次保存并覆盖对应旧图片。
+renderer 已创建应用组合层和 React Context，并接入真实 `@ls101/file-store`、`@ls101/file-dialog` 与 AIRouter。当前 UI 包含题型列表、草稿列表、草稿编辑、题型详情和题组编辑页面；草稿编辑与题组编辑使用 `focus` 布局，编辑器中的工作区分栏支持拖动调整。题型定义把生成要求保存为若干段可命名、可排序的提示词，草稿编辑器逐段编辑；题组页的 AI 生成弹窗按分段勾选发送内容，并可附加一段只对本次生效的补充提示词。题组页可以从所有已启用的 AIRouter 文本模型中选择生成模型，并在存在图片字段时同时选择图像 Provider；右侧分栏展示文本流、校验、逐图片生成、保存和取消状态。每个图片字段也可在调用时选择图像 Provider、单独生成，并在保存题组前预览结果。题组工具栏还提供独立的“AI 生图”操作，按字段顺序生成当前已有提示词的图片，全部成功后一次保存并覆盖对应旧图片。
 
 ## 功能边界
 
@@ -21,7 +21,7 @@ Interface Editor 负责：
 - 根据规范化内容生成稳定的 SHA-256 Interface ID。
 - 管理草稿、用户发布内容、builtin 版本和附属实例。
 - 为 UI 提供浏览、草稿、发布详情、实例和导入导出五组应用能力。
-- 生成原始提示词、格式限制提示词和拼接后的完整提示词。
+- 按命名分段生成题型提示词、格式限制说明和拼接后的完整提示词。
 - 创建空白实例、整表保存实例、使用 JSON 或 AI 覆盖实例。
 - 将 AI 文本增量流适配成通用任务进度句柄。
 - 编排图片生成、校验图片字节并原子更新实例资源。
@@ -160,7 +160,7 @@ interface InterfaceDraftApplication {
 ### 创建与保存
 
 - `create()` 立即生成 UUID v4 `draftId` 并持久化草稿。
-- 未提供的初始字段使用空名称、空描述、空提示词和空字段树。
+- 未提供的初始字段使用空名称、空描述、一项名为“基础出题要求”且内容为空的提示词和空字段树。
 - `save()` 保存完整草稿，不执行发布。
 - 草稿允许处于不完整状态，严格业务校验发生在发布时。
 - `delete()` 清除草稿目录；不存在的草稿删除保持成功。
@@ -265,9 +265,9 @@ interface InterfacePromptBundle {
 }
 ```
 
-- `prompt` 是教师编写的原始 `promptTemplate`。
+- `prompt` 是按题型定义顺序拼接的全部提示词片段，每段使用 `## <名称>` 标题分隔，供用户复制。
 - `formatInstructions` 是系统根据字段树生成的 JSON Schema、图片字段约束和示例输出。
-- `fullPrompt` 是 `prompt` 与 `formatInstructions` 的拼接结果。
+- `fullPrompt` 包含全部提示词片段和以 `## 输出格式要求` 为标题的 `formatInstructions`，不包含本次生成的补充提示词。
 - `jsonSchema` 是单独格式化的 JSON Schema 字符串。
 - `jsonExample` 是单独格式化的示例 JSON 字符串。
 
@@ -458,6 +458,10 @@ interface InterfaceAIGenerationHandle extends TaskProgressHandle<InterfaceAIGene
 
 `listAIGenerationModels()` 将适配器提供的文本模型选项暴露给 UI，`listImageGenerationProviders()` 暴露图像 Provider 选项。`startAIGeneration(interfaceId, instanceId, options?)` 的 `options.model` 指定文本模型，`options.imageProvider` 指定图片生成使用的图像 Provider；调用方未指定时，适配器仍可提供自己的默认选择策略。
 
+题型定义使用有序 `prompts: Array<{ name: string; content: string }>`，草稿编辑器可增删和调整顺序。发布时列表不能为空，每项名称和内容都必须非空。
+
+AI 生成弹窗展示可多选、可展开查看正文的提示词列表，默认不选中任何项，至少选择一项后才能生成。`startAIGeneration()` 必须传入 `selectedPromptIndices`，仅发送对应片段，并按题型定义顺序组合；选择顺序和重复索引不改变结果，空选择或无效索引会被拒绝。每段以 `## <名称>` 分隔，随后追加可选的 `## 本次生成的补充要求`，最后追加 `## 输出格式要求`。补充要求通过 `additionalPrompt` 传入，不写入题型定义。失败重试保留原选择和补充要求。
+
 `startAIGeneration()`：
 
 1. 锁定当前实例。
@@ -589,6 +593,8 @@ instances/
 
 ### Interface ID
 
+读取旧版 `promptTemplate: string` 时，会将原文转换为 `prompts: [{ name: 'Default', content: 原文 }]`。旧定义先按原格式验证内容校验和，再按新格式重新计算 ID。启动时迁移本地已发布题型及内置历史版本的存储目录、题组、资源和模板引用；复制验证完成后才删除旧目录，中断后可重试。草稿在读取时转换，后续保存使用新格式。导入旧交换包时也重新计算题型 ID，并同步包内的内置题型标识。显式存在 `prompts` 的数据按新格式校验，不退回旧文本。
+
 已发布 Interface 的 ID 格式为：
 
 ```text
@@ -599,7 +605,7 @@ sha256:<64 lowercase hexadecimal characters>
 
 - `name`
 - `description`
-- `promptTemplate`
+- 有序的 `prompts` 列表（每项包含 `name` 和 `content`）
 - 保留顺序的完整字段树
 
 字段树的每一层存储为 `{ order: string[], nodes: Record<string, FieldNode> }`。`order` 是显示、遍历和哈希的唯一顺序来源，必须无重复且与 `nodes` 的 key 集合完全一致；草稿保存、发布和导入都会拒绝不一致的数据。
@@ -754,9 +760,9 @@ MISSING_ASSET
 当前自动化测试覆盖：
 
 - 草稿保存、读取、发布、内容去重和校验拒绝。
-- SHA-256 内容身份、换行和 Unicode 规范化。
+- SHA-256 内容身份、换行和 Unicode 规范化，以及旧格式提示词归一化后的编号复算。
 - 字段树查询、不可变编辑和校验。
-- JSON Schema、示例、提示词和变量清单生成。
+- JSON Schema、示例、提示词分段（名称、正文、顺序参与编号）和变量清单生成。
 - 用户发布与 builtin 物理分区。
 - 实例 UUID 唯一性、变量集合校验、资源保存和删除。
 - 空白实例创建、整表保存和 JSON 原子覆盖。
@@ -782,6 +788,8 @@ MISSING_ASSET
 - `packages/interface-editor/src/id.ts`
 - `packages/interface-editor/src/validation.ts`
 - `packages/interface-editor/src/conversions.ts`
+- `packages/interface-editor/src/compatibility.ts`
+- `packages/interface-editor/src/errorMessages.ts`
 - `packages/interface-editor/src/exchange.ts`
 - `packages/interface-editor/src/zip.ts`
 - `packages/interface-editor/src/fileExchange.ts`
