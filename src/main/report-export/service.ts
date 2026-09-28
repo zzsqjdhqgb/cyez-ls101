@@ -2,7 +2,8 @@ import { writeFile } from 'node:fs/promises'
 import {
   type ReportExportFailure,
   type ReportExportProgress,
-  type ReportExportResult
+  type ReportExportResult,
+  type ReportExportSingleResult
 } from '@ls101/core-types'
 import { buildReportArchive, type ReportArchiveEntry } from './archive'
 import { createPdfPrinter, type PdfPrinter } from './printer'
@@ -65,4 +66,35 @@ export async function exportReportBatch(
 function describeError(error: unknown): string {
   if (error instanceof Error && error.message !== '') return error.message
   return '报告打印失败'
+}
+
+export interface ExportSingleReportOptions {
+  /** 渲染层传来的单份报告，由本模块校验 */
+  request: unknown
+  /** 选择 PDF 落盘位置；返回 null 表示用户取消 */
+  chooseTarget(defaultName: string): Promise<string | null>
+  /** 测试可注入打印器；默认使用隐藏窗口打印 */
+  createPrinter?: () => Promise<PdfPrinter>
+}
+
+/** 单份导出直接写出 PDF；失败以结果形式返回，便于渲染层原样提示原因。 */
+export async function exportSingleReport(
+  options: ExportSingleReportOptions
+): Promise<ReportExportSingleResult> {
+  const [item] = parseReportExportRequest({ items: [options.request] })
+  if (!item) throw new Error('报告内容无效')
+
+  const target = await options.chooseTarget(item.filename)
+  if (!target) return { status: 'cancelled' }
+
+  const print = options.createPrinter ?? createPdfPrinter
+  const printer = await print()
+  try {
+    await writeFile(target, await printer.print(item.html))
+    return { status: 'exported' }
+  } catch (error) {
+    return { status: 'failed', reason: describeError(error) }
+  } finally {
+    await printer.dispose()
+  }
 }

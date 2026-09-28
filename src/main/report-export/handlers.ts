@@ -4,7 +4,7 @@ import {
   REPORT_EXPORT_EVENTS,
   type ReportExportProgress
 } from '@ls101/core-types'
-import { exportReportBatch } from './service'
+import { exportReportBatch, exportSingleReport } from './service'
 
 let registered = false
 
@@ -18,6 +18,12 @@ export function registerReportExportHandlers(): void {
       notify: (progress) => sendProgress(event.sender, progress)
     })
   )
+  ipcMain.handle(REPORT_EXPORT_CHANNELS.exportSingle, (event, item: unknown) =>
+    exportSingleReport({
+      request: item,
+      chooseTarget: (defaultName) => choosePdfTarget(event.sender, defaultName)
+    })
+  )
 }
 
 async function chooseArchiveTarget(sender: WebContents): Promise<string | null> {
@@ -26,6 +32,26 @@ async function chooseArchiveTarget(sender: WebContents): Promise<string | null> 
     defaultPath: `作答报告-${new Date().toISOString().slice(0, 10)}.zip`,
     filters: [{ name: 'ZIP 压缩包', extensions: ['zip'] }]
   }
+  return chooseTarget(sender, options)
+}
+
+async function choosePdfTarget(sender: WebContents, defaultName: string): Promise<string | null> {
+  const options = {
+    title: '导出作答报告',
+    defaultPath: defaultName,
+    filters: [{ name: 'PDF 文档', extensions: ['pdf'] }]
+  }
+  return chooseTarget(sender, options)
+}
+
+async function chooseTarget(
+  sender: WebContents,
+  options: {
+    title: string
+    defaultPath: string
+    filters: Array<{ name: string; extensions: string[] }>
+  }
+): Promise<string | null> {
   const parent = BrowserWindow.fromWebContents(sender)
   const result = parent
     ? await dialog.showSaveDialog(parent, options)

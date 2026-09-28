@@ -63,6 +63,7 @@ vi.mock('electron', () => ({
 import {
   buildReportArchive,
   exportReportBatch,
+  exportSingleReport,
   parseReportExportRequest,
   registerReportExportHandlers,
   type PdfPrinter
@@ -357,5 +358,77 @@ describe('report export helper guard', () => {
       })
     ).rejects.toThrow()
     expect(printer.dispose).toHaveBeenCalledOnce()
+  })
+})
+
+describe('exportSingleReport', () => {
+  it('按报告文件名建议保存位置并直接写出 PDF', async () => {
+    const target = join(directory, 'single.pdf')
+    const printer = fixedPrinter()
+    const chooseTarget = vi.fn(async (defaultName: string) => {
+      expect(defaultName).toBe('甲-001-报告.pdf')
+      return target
+    })
+
+    const result = await exportSingleReport({
+      request: item('甲-001-报告.pdf', '<p>甲</p>'),
+      chooseTarget,
+      createPrinter: async () => printer
+    })
+
+    expect(result).toEqual({ status: 'exported' })
+    expect(new Uint8Array(await readFile(target))).toEqual(PDF_HEADER)
+    expect(printer.dispose).toHaveBeenCalledOnce()
+  })
+
+  it('用户取消保存时不打印', async () => {
+    const createPrinter = vi.fn()
+    const result = await exportSingleReport({
+      request: item('甲.pdf'),
+      chooseTarget: async () => null,
+      createPrinter
+    })
+
+    expect(result).toEqual({ status: 'cancelled' })
+    expect(createPrinter).not.toHaveBeenCalled()
+  })
+
+  it('打印失败时返回原因并释放打印器', async () => {
+    const printer: PdfPrinter = {
+      print: vi.fn().mockRejectedValue(new Error('打印机不可用')),
+      dispose: vi.fn().mockResolvedValue(undefined)
+    }
+    const result = await exportSingleReport({
+      request: item('甲.pdf'),
+      chooseTarget: async () => join(directory, 'single.pdf'),
+      createPrinter: async () => printer
+    })
+
+    expect(result).toEqual({ status: 'failed', reason: '打印机不可用' })
+    expect(printer.dispose).toHaveBeenCalledOnce()
+  })
+
+  it('拒绝非法请求', async () => {
+    await expect(
+      exportSingleReport({
+        request: { filename: '../escape.pdf', html: '<p>x</p>' },
+        chooseTarget: async () => null
+      })
+    ).rejects.toThrow()
+  })
+})
+
+describe('exportSingle IPC handler', () => {
+  it('通过 exportSingle 通道写出 PDF', async () => {
+    const target = join(directory, 'ipc-single.pdf')
+    electronMocks.dialog.showSaveDialog.mockResolvedValue({ canceled: false, filePath: target })
+    registerReportExportHandlers()
+
+    const handler = electronMocks.handlers.get(REPORT_EXPORT_CHANNELS.exportSingle)
+    expect(handler).toBeDefined()
+    const result = await handler!({ sender: sender() } as never, item('甲.pdf') as never)
+
+    expect(result).toEqual({ status: 'exported' })
+    expect(new Uint8Array(await readFile(target))).toEqual(PDF_HEADER)
   })
 })

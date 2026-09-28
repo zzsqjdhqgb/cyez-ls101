@@ -1,5 +1,10 @@
 export { buildReportArchive, type ReportArchiveEntry } from './archive'
 export { registerReportExportHandlers } from './handlers'
 export { createPdfPrinter, type PdfPrinter } from './printer'
-export { exportReportBatch, type ExportReportBatchOptions } from './service'
+export {
+  exportReportBatch,
+  exportSingleReport,
+  type ExportReportBatchOptions,
+  type ExportSingleReportOptions
+} from './service'
 export { parseReportExportRequest } from './validation'

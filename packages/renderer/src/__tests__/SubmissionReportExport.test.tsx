@@ -2,7 +2,12 @@
 
 import '@testing-library/jest-dom/vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type { ReportExportProgress, ReportExportResult } from '@ls101/core-types'
+import type {
+  ReportExportBridge,
+  ReportExportProgress,
+  ReportExportResult,
+  ReportExportSingleResult
+} from '@ls101/core-types'
 import type {
   SubmissionLibraryEntry,
   SubmissionLibraryRecord,
@@ -27,7 +32,7 @@ describe('批次报告导出', () => {
       exportedCount: 2,
       failures: []
     } satisfies ReportExportResult)
-    window.reportExport = { exportBatch, onProgress: vi.fn(() => () => undefined) }
+    window.reportExport = bridgeWith(exportBatch)
     const repository = mockRepository()
 
     renderPage(repository)
@@ -57,15 +62,12 @@ describe('批次报告导出', () => {
           finish = resolve
         })
     )
-    window.reportExport = {
-      exportBatch,
-      onProgress: (listener) => {
-        emitProgress = listener
-        return () => {
-          emitProgress = null
-        }
+    window.reportExport = bridgeWith(exportBatch, undefined, (listener) => {
+      emitProgress = listener
+      return () => {
+        emitProgress = null
       }
-    }
+    })
     const repository = mockRepository()
 
     renderPage(repository)
@@ -90,14 +92,13 @@ describe('批次报告导出', () => {
   })
 
   it('单份失败时列出失败原因', async () => {
-    window.reportExport = {
-      exportBatch: vi.fn().mockResolvedValue({
+    window.reportExport = bridgeWith(
+      vi.fn().mockResolvedValue({
         status: 'exported',
         exportedCount: 1,
         failures: [{ filename: '李四-candidate-2-报告.pdf', reason: '报告打印超时' }]
-      } satisfies ReportExportResult),
-      onProgress: vi.fn(() => () => undefined)
-    }
+      } satisfies ReportExportResult)
+    )
     const repository = mockRepository()
 
     renderPage(repository)
@@ -119,6 +120,54 @@ describe('批次报告导出', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('报告导出不可用')
   })
 })
+
+describe('单份报告导出', () => {
+  it('把单份作答渲染成 PDF 文档并直接交给主进程', async () => {
+    const exportSingle = vi
+      .fn()
+      .mockResolvedValue({ status: 'exported' } satisfies ReportExportSingleResult)
+    window.reportExport = bridgeWith(vi.fn(), exportSingle)
+    const repository = mockRepository()
+
+    renderPage(repository)
+    fireEvent.click(await screen.findByRole('button', { name: /结算于/ }))
+    fireEvent.click((await screen.findAllByRole('button', { name: '导出报告' }))[0])
+
+    await waitFor(() => expect(exportSingle).toHaveBeenCalledOnce())
+    expect(exportSingle).toHaveBeenCalledWith({
+      filename: '张三-candidate-1-报告.pdf',
+      html: expect.stringContaining('张三')
+    })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('导出失败时显示原因', async () => {
+    window.reportExport = bridgeWith(
+      vi.fn(),
+      vi
+        .fn()
+        .mockResolvedValue({
+          status: 'failed',
+          reason: '报告打印超时'
+        } satisfies ReportExportSingleResult)
+    )
+    const repository = mockRepository()
+
+    renderPage(repository)
+    fireEvent.click(await screen.findByRole('button', { name: /结算于/ }))
+    fireEvent.click((await screen.findAllByRole('button', { name: '导出报告' }))[0])
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('报告导出失败：报告打印超时')
+  })
+})
+
+function bridgeWith(
+  exportBatch: ReportExportBridge['exportBatch'],
+  exportSingle: ReportExportBridge['exportSingle'] = vi.fn(),
+  onProgress: ReportExportBridge['onProgress'] = () => () => undefined
+): ReportExportBridge {
+  return { exportBatch, exportSingle, onProgress }
+}
 
 function renderPage(repository: SubmissionLibraryRepository) {
   return render(

@@ -197,7 +197,7 @@ test('starts a hardened application window and exposes every preload bridge', as
     license: ['activate', 'deactivate', 'getStatus', 'openActivationGuide'],
     nodeProcess: 'undefined',
     nodeRequire: 'undefined',
-    reportExport: ['exportBatch', 'onProgress'],
+    reportExport: ['exportBatch', 'exportSingle', 'onProgress'],
     startup: ['whenReady'],
     windowControls: ['close', 'getMaximized', 'minimize', 'onMaximizedChange', 'toggleMaximize']
   })
@@ -537,6 +537,27 @@ test('exports report PDFs through the report-export bridge', async () => {
   const filenames = Object.keys(archive)
   expect(filenames).toEqual(['测试考生-worker-001-报告.pdf'])
   expect(Buffer.from(archive[filenames[0]]).subarray(0, 5).toString('latin1')).toBe('%PDF-')
+})
+
+test('exports a single report PDF through the report-export bridge', async () => {
+  const exportPath = path.join(userDataDir, 'single-report.pdf')
+  await electronApp.evaluate(({ dialog }, filePath) => {
+    Object.defineProperty(dialog, 'showSaveDialog', {
+      configurable: true,
+      value: async () => ({ canceled: false, filePath })
+    })
+  }, exportPath)
+
+  const outcome = await page.evaluate(() =>
+    window.reportExport.exportSingle({
+      filename: '测试考生-worker-001-报告.pdf',
+      html: '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"></head><body><h1>作答报告</h1></body></html>'
+    })
+  )
+
+  expect(outcome).toEqual({ status: 'exported' })
+  const pdf = await readFile(exportPath)
+  expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-')
 })
 
 test('guides microphone setup through recording and playback before the exam', async () => {

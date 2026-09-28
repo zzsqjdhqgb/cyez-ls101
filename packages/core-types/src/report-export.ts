@@ -35,8 +35,15 @@ export type ReportExportResult =
   | { status: 'exported'; exportedCount: number; failures: ReportExportFailure[] }
   | { status: 'cancelled' }
 
+/** 单份导出直接产出 PDF；打印或写入失败时给出原因而不是丢弃用户操作。 */
+export type ReportExportSingleResult =
+  | { status: 'exported' }
+  | { status: 'cancelled' }
+  | { status: 'failed'; reason: string }
+
 export const REPORT_EXPORT_CHANNELS = {
-  exportBatch: 'report-export:export-batch'
+  exportBatch: 'report-export:export-batch',
+  exportSingle: 'report-export:export-single'
 } as const
 
 export const REPORT_EXPORT_EVENTS = {
@@ -45,5 +52,6 @@ export const REPORT_EXPORT_EVENTS = {
 
 export interface ReportExportBridge {
   exportBatch(request: ReportExportRequest): Promise<ReportExportResult>
+  exportSingle(item: ReportExportItem): Promise<ReportExportSingleResult>
   onProgress(listener: (progress: ReportExportProgress) => void): () => void
 }

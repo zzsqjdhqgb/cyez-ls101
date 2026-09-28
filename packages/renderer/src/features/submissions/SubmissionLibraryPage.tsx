@@ -55,6 +55,7 @@ export function SubmissionLibraryPage(): JSX.Element {
   const [importing, setImporting] = useState(false)
   const [exportingId, setExportingId] = useState<string | null>(null)
   const [exportingBatchId, setExportingBatchId] = useState<string | null>(null)
+  const [exportingReportId, setExportingReportId] = useState<string | null>(null)
   const [exportProgress, setExportProgress] = useState<ReportExportProgress | null>(null)
   const [pendingDelete, setPendingDelete] = useState<SubmissionLibraryEntry | null>(null)
   const [pendingReset, setPendingReset] = useState<SubmissionLibraryEntry | null>(null)
@@ -191,6 +192,33 @@ export function SubmissionLibraryPage(): JSX.Element {
       unsubscribe()
       setExportingBatchId(null)
       setExportProgress(null)
+    }
+  }
+
+  const exportEntryReport = async (entry: SubmissionLibraryEntry): Promise<void> => {
+    const bridge = window.reportExport
+    if (!bridge) {
+      setError('报告导出不可用，请重启应用后重试。')
+      return
+    }
+    setError(null)
+    setExportingReportId(entry.record.submissionId)
+    try {
+      const report = await repository.getReport(entry.record.submissionId)
+      const result = await bridge.exportSingle({
+        filename: submissionReportFileName(entry.record),
+        html: buildSubmissionReportDocument(report)
+      })
+      if (result.status === 'cancelled') return
+      if (result.status === 'failed') {
+        setError(`报告导出失败：${result.reason}`)
+        return
+      }
+      toast.success('作答报告已导出')
+    } catch (reason) {
+      setError(submissionErrorMessage(reason))
+    } finally {
+      setExportingReportId(null)
     }
   }
 
@@ -331,10 +359,12 @@ export function SubmissionLibraryPage(): JSX.Element {
           expandedBatchIds={expandedBatchIds}
           exportingId={exportingId}
           exportingBatchId={exportingBatchId}
+          exportingReportId={exportingReportId}
           exportProgress={exportProgress}
           onDelete={setPendingDelete}
           onExport={(record) => void exportSubmission(record)}
           onExportBatch={(batch) => void exportBatchReports(batch)}
+          onExportReport={(entry) => void exportEntryReport(entry)}
           onReport={(entry) => void viewReport(entry)}
           onReset={setPendingReset}
           onToggle={(batchId) =>
@@ -540,12 +570,14 @@ function SettledBatches({
   expandedBatchIds,
   exportingId,
   exportingBatchId,
+  exportingReportId,
   exportProgress,
   onToggle,
   onReport,
   onReset,
   onExport,
   onExportBatch,
+  onExportReport,
   onDelete
 }: {
   batches: SubmissionSettlementBatch[]
@@ -553,12 +585,14 @@ function SettledBatches({
   expandedBatchIds: Set<string>
   exportingId: string | null
   exportingBatchId: string | null
+  exportingReportId: string | null
   exportProgress: ReportExportProgress | null
   onToggle(batchId: string): void
   onReport(entry: SubmissionLibraryEntry): void
   onReset(entry: SubmissionLibraryEntry): void
   onExport(record: SubmissionLibraryRecord): void
   onExportBatch(batch: SubmissionSettlementBatch): void
+  onExportReport(entry: SubmissionLibraryEntry): void
   onDelete(entry: SubmissionLibraryEntry): void
 }): JSX.Element {
   if (batches.length === 0) return <EmptyState icon={Inbox} title="还没有已结算作答" />
@@ -651,6 +685,12 @@ function SettledBatches({
                               icon={RotateCcw}
                               label="重新评分"
                               onClick={() => onReset(entry)}
+                            />
+                            <IconButton
+                              disabled={exportingReportId !== null}
+                              icon={FileDown}
+                              label="导出报告"
+                              onClick={() => onExportReport(entry)}
                             />
                             <IconButton
                               disabled={exportingId !== null}

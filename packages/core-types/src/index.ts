@@ -98,7 +98,8 @@ export type {
   ReportExportPhase,
   ReportExportProgress,
   ReportExportRequest,
-  ReportExportResult
+  ReportExportResult,
+  ReportExportSingleResult
 } from './report-export'
 export { STARTUP_CHANNELS } from './startup'
 export type { StartupBridge } from './startup'

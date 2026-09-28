@@ -456,6 +456,9 @@ const reportExportBridge: ReportExportBridge = {
   exportBatch(request: ReportExportRequest) {
     return ipcRenderer.invoke(REPORT_EXPORT_CHANNELS.exportBatch, request)
   },
+  exportSingle(item) {
+    return ipcRenderer.invoke(REPORT_EXPORT_CHANNELS.exportSingle, item)
+  },
   onProgress(listener: (progress: ReportExportProgress) => void) {
     const handler = (_event: IpcRendererEvent, progress: ReportExportProgress): void => {
       listener(progress)
