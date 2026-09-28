@@ -1,11 +1,10 @@
 import type { SubmissionLibraryRecord, SubmissionReport } from '@ls101/submission-library'
-import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { SubmissionMarkdown } from '../features/submissions/SubmissionMarkdown'
 import {
   buildSubmissionReportDocument,
   submissionReportFileName
 } from '../features/submissions/submissionReportDocument'
+import { renderSubmissionReportMarkup } from '../features/submissions/submissionReportMarkup'
 
 const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
 const DATA_URL = 'data:image/png;base64,iVBORw=='
@@ -54,7 +53,7 @@ describe('submissionReportFileName', () => {
 })
 
 describe('buildSubmissionReportDocument', () => {
-  it('把报告 Markdown 渲染成带打印样式的自包含 HTML', () => {
+  it('把报告渲染成带样式的自包含 HTML', () => {
     const html = buildSubmissionReportDocument(mixedReport())
 
     expect(html.startsWith('<!doctype html>')).toBe(true)
@@ -67,17 +66,24 @@ describe('buildSubmissionReportDocument', () => {
     expect(html).not.toContain('<script')
   })
 
-  it('正文与“查看报告”用同一个渲染器，只有资源地址不同', () => {
+  it('正文与“查看报告”共用同一段 Markdown → HTML 实现', () => {
     const report = mixedReport()
-    const viewMarkup = renderToStaticMarkup(
-      <SubmissionMarkdown
-        content={report.markdown}
-        resources={report.resources}
-        resourceUrl={() => DATA_URL}
-      />
-    )
+    const shared = renderSubmissionReportMarkup(report.markdown, report.resources, () => DATA_URL)
 
-    expect(buildSubmissionReportDocument(report)).toContain(viewMarkup)
+    expect(buildSubmissionReportDocument(report)).toContain(
+      `<div class="submissionReport">${shared}</div>`
+    )
+  })
+
+  it('转义原始 HTML 并过滤危险协议', () => {
+    const html = buildSubmissionReportDocument({
+      markdown: '<img src=x onerror="alert(1)">\n\n[点我](javascript:alert(1))\n',
+      resources: {}
+    })
+
+    expect(html).not.toContain('<img src=x')
+    expect(html).toContain('&lt;img src=x')
+    expect(html).not.toContain('javascript:')
   })
 
   it('缺少资源时不抛错，只是没有可用的图片地址', () => {

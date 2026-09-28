@@ -3,8 +3,7 @@ import type {
   SubmissionLibraryRecord,
   SubmissionReport
 } from '@ls101/submission-library'
-import { renderToStaticMarkup } from 'react-dom/server'
-import { SubmissionMarkdown } from './SubmissionMarkdown'
+import { renderSubmissionReportMarkup } from './submissionReportMarkup'
 import reportStyles from './submissionReport.css?raw'
 
 const BASE64_CHUNK = 0x8000
@@ -18,18 +17,12 @@ export function submissionReportFileName(record: SubmissionLibraryRecord): strin
 }
 
 /**
- * 把一份报告渲染成自包含 HTML。
- * 正文用与“查看报告”完全相同的渲染器（SubmissionMarkdown）静态输出，
- * 区别只有两点：资源内联为 data URL，样式内联为 <style>，因为打印窗口没有应用样式表。
+ * 把一份报告渲染成自包含 HTML 文档。
+ * 正文与“查看报告”共用 renderSubmissionReportMarkup，区别只有两点：
+ * 资源地址换成 data URL，样式内联为 <style>（打印窗口没有应用样式表）。
  */
 export function buildSubmissionReportDocument(report: SubmissionReport): string {
-  const markup = renderToStaticMarkup(
-    <SubmissionMarkdown
-      content={report.markdown}
-      resources={report.resources}
-      resourceUrl={toDataUrl}
-    />
-  )
+  const markup = renderSubmissionReportMarkup(report.markdown, report.resources, toDataUrl)
   return [
     '<!doctype html>',
     '<html lang="zh-CN">',
@@ -38,7 +31,7 @@ export function buildSubmissionReportDocument(report: SubmissionReport): string 
     '<title>作答报告</title>',
     `<style>${reportStyles}</style>`,
     '</head>',
-    `<body>${markup}</body>`,
+    `<body><div class="submissionReport">${markup}</div></body>`,
     '</html>'
   ].join('')
 }

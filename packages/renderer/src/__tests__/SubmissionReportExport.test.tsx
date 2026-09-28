@@ -144,12 +144,10 @@ describe('单份报告导出', () => {
   it('导出失败时显示原因', async () => {
     window.reportExport = bridgeWith(
       vi.fn(),
-      vi
-        .fn()
-        .mockResolvedValue({
-          status: 'failed',
-          reason: '报告打印超时'
-        } satisfies ReportExportSingleResult)
+      vi.fn().mockResolvedValue({
+        status: 'failed',
+        reason: '报告打印超时'
+      } satisfies ReportExportSingleResult)
     )
     const repository = mockRepository()
 
