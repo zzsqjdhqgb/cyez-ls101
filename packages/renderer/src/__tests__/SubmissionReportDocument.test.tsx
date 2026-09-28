@@ -1,11 +1,43 @@
-import type { SubmissionLibraryRecord } from '@ls101/submission-library'
+import type { SubmissionLibraryRecord, SubmissionReport } from '@ls101/submission-library'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
+import { SubmissionMarkdown } from '../features/submissions/SubmissionMarkdown'
 import {
   buildSubmissionReportDocument,
   submissionReportFileName
 } from '../features/submissions/submissionReportDocument'
 
 const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
+const DATA_URL = 'data:image/png;base64,iVBORw=='
+
+function mixedReport(): SubmissionReport {
+  return {
+    markdown: [
+      '# 张三 — 期末考试',
+      '',
+      '| 姓名 | 总分 |',
+      '| :---: | :---: |',
+      '| 张三 | 8/10 |',
+      '',
+      '> 听力原文：*W: Shall we meet at three?*',
+      '',
+      '- 要点一',
+      '  - 子要点',
+      '',
+      '![题目](resource:img-1)',
+      ''
+    ].join('\n'),
+    resources: {
+      'img-1': {
+        resourceKey: 'img-1',
+        filename: 'question.png',
+        kind: 'static',
+        mediaType: 'image/png',
+        data: PNG_BYTES
+      }
+    }
+  }
+}
 
 describe('submissionReportFileName', () => {
   it('用姓名和考生号命名并去掉非法字符', () => {
@@ -23,44 +55,39 @@ describe('submissionReportFileName', () => {
 
 describe('buildSubmissionReportDocument', () => {
   it('把报告 Markdown 渲染成带打印样式的自包含 HTML', () => {
-    const html = buildSubmissionReportDocument({
-      markdown: [
-        '# 张三 — 期末考试',
-        '',
-        '| 姓名 | 总分 |',
-        '| --- | --- |',
-        '| 张三 | 8/10 |',
-        '',
-        '![题目](resource:img-1)',
-        ''
-      ].join('\n'),
-      resources: {
-        'img-1': {
-          resourceKey: 'img-1',
-          filename: 'question.png',
-          kind: 'static',
-          mediaType: 'image/png',
-          data: PNG_BYTES
-        }
-      }
-    })
+    const html = buildSubmissionReportDocument(mixedReport())
 
     expect(html.startsWith('<!doctype html>')).toBe(true)
     expect(html).toContain('<style>')
     expect(html).toContain('<h1')
     expect(html).toContain('<table>')
+    expect(html).toContain('<blockquote>')
     expect(html).toContain('data:image/png;base64,iVBORw==')
     expect(html).not.toContain('resource:img-1')
     expect(html).not.toContain('<script')
   })
 
-  it('缺少资源时保留原引用而不是抛错', () => {
+  it('正文与“查看报告”用同一个渲染器，只有资源地址不同', () => {
+    const report = mixedReport()
+    const viewMarkup = renderToStaticMarkup(
+      <SubmissionMarkdown
+        content={report.markdown}
+        resources={report.resources}
+        resourceUrl={() => DATA_URL}
+      />
+    )
+
+    expect(buildSubmissionReportDocument(report)).toContain(viewMarkup)
+  })
+
+  it('缺少资源时不抛错，只是没有可用的图片地址', () => {
     const html = buildSubmissionReportDocument({
       markdown: '![题目](resource:missing)',
       resources: {}
     })
 
-    expect(html).toContain('resource:missing')
+    expect(html).toContain('<img')
+    expect(html).not.toContain('src=')
   })
 
   it('没有媒体类型时按二进制内联', () => {

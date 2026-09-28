@@ -3,11 +3,10 @@ import type {
   SubmissionLibraryRecord,
   SubmissionReport
 } from '@ls101/submission-library'
-import { marked } from 'marked'
-import printStyles from './submissionReportDocument.css?raw'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { SubmissionMarkdown } from './SubmissionMarkdown'
+import reportStyles from './submissionReport.css?raw'
 
-/** 报告 Markdown 里的资源引用；与 submission-library 的写法保持一致。 */
-const RESOURCE_ATTRIBUTE = /(src|href)="resource:([A-Za-z0-9][A-Za-z0-9_.:%-]*)"/g
 const BASE64_CHUNK = 0x8000
 const INVALID_FILENAME_CHARS = /[\\/:*?"<>|\p{Cc}]/gu
 
@@ -19,33 +18,29 @@ export function submissionReportFileName(record: SubmissionLibraryRecord): strin
 }
 
 /**
- * 把一份报告渲染成自包含 HTML：图片内联为 data URL，样式内嵌。
- * 主进程只负责打印，不再接触报告模型。
+ * 把一份报告渲染成自包含 HTML。
+ * 正文用与“查看报告”完全相同的渲染器（SubmissionMarkdown）静态输出，
+ * 区别只有两点：资源内联为 data URL，样式内联为 <style>，因为打印窗口没有应用样式表。
  */
 export function buildSubmissionReportDocument(report: SubmissionReport): string {
-  const body = marked.parse(report.markdown, { async: false, gfm: true })
-  const markup = inlineResources(body, report.resources)
+  const markup = renderToStaticMarkup(
+    <SubmissionMarkdown
+      content={report.markdown}
+      resources={report.resources}
+      resourceUrl={toDataUrl}
+    />
+  )
   return [
     '<!doctype html>',
     '<html lang="zh-CN">',
     '<head>',
     '<meta charset="utf-8">',
     '<title>作答报告</title>',
-    `<style>${printStyles}</style>`,
+    `<style>${reportStyles}</style>`,
     '</head>',
     `<body>${markup}</body>`,
     '</html>'
   ].join('')
-}
-
-function inlineResources(
-  markup: string,
-  resources: Readonly<Record<string, GradingResourceInput>>
-): string {
-  return markup.replace(RESOURCE_ATTRIBUTE, (match, attribute: string, key: string) => {
-    const resource = resources[key]
-    return resource ? `${attribute}="${toDataUrl(resource)}"` : match
-  })
 }
 
 function toDataUrl(resource: GradingResourceInput): string {

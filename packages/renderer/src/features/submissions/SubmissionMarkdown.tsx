@@ -6,35 +6,71 @@ import {
   type JSX
 } from 'react'
 import type { GradingResourceInput } from '@ls101/submission-library'
-import ReactMarkdown from 'react-markdown'
+import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import styles from './SubmissionMarkdown.module.css'
+import './submissionReport.css'
+
+/** react-markdown 会把 hast 节点一并传给自定义组件，不能透传到 DOM。 */
+type MarkdownNodeProps = { node?: unknown }
+type MarkdownImageProps = ImgHTMLAttributes<HTMLImageElement> & MarkdownNodeProps
+type MarkdownLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & MarkdownNodeProps
+
+/** `resource:<key>` 不在默认 URL 白名单里，必须先放行再交给组件解析。 */
+function resourceSafeUrlTransform(url: string): string {
+  return url.startsWith('resource:') ? url : defaultUrlTransform(url)
+}
 
 interface SubmissionMarkdownProps {
   content: string
   resources: Readonly<Record<string, GradingResourceInput>>
   className?: string
+  /**
+   * 资源引用（`resource:<key>`）的解析方式。
+   * 默认生成应用内可直接使用的 blob URL；导出报告时改传 data URL 工厂，
+   * 这样静态渲染出来的 HTML 与屏幕上看到的结构完全一致。
+   */
+  resourceUrl?: (resource: GradingResourceInput) => string
 }
 
 export function SubmissionMarkdown({
   content,
   resources,
-  className
+  className,
+  resourceUrl
 }: SubmissionMarkdownProps): JSX.Element {
-  const resourceUrls = useResourceUrls(resources)
+  const resourceUrls = useResourceUrls(resources, resourceUrl)
 
-  const Image = (props: ImgHTMLAttributes<HTMLImageElement>): JSX.Element => {
-    const src = resolveResourceUrl(props.src, resourceUrls)
-    return <img {...props} alt={props.alt ?? ''} draggable={false} src={src} />
+  const Image = ({ node, src, alt, ...props }: MarkdownImageProps): JSX.Element => {
+    void node
+    return (
+      <img
+        {...props}
+        alt={alt ?? ''}
+        draggable={false}
+        src={resolveResourceUrl(src, resourceUrls)}
+      />
+    )
   }
-  const Link = (props: AnchorHTMLAttributes<HTMLAnchorElement>): JSX.Element => {
-    const href = resolveResourceUrl(props.href, resourceUrls)
-    return <a {...props} draggable={false} href={href} rel="noreferrer" target="_blank" />
+  const Link = ({ node, href, ...props }: MarkdownLinkProps): JSX.Element => {
+    void node
+    return (
+      <a
+        {...props}
+        draggable={false}
+        href={resolveResourceUrl(href, resourceUrls)}
+        rel="noreferrer"
+        target="_blank"
+      />
+    )
   }
 
   return (
-    <div className={[styles.markdown, className].filter(Boolean).join(' ')}>
-      <ReactMarkdown components={{ a: Link, img: Image }} remarkPlugins={[remarkGfm]}>
+    <div className={['submissionReport', className].filter(Boolean).join(' ')}>
+      <ReactMarkdown
+        components={{ a: Link, img: Image }}
+        remarkPlugins={[remarkGfm]}
+        urlTransform={resourceSafeUrlTransform}
+      >
         {content}
       </ReactMarkdown>
     </div>
@@ -42,24 +78,30 @@ export function SubmissionMarkdown({
 }
 
 function useResourceUrls(
-  resources: Readonly<Record<string, GradingResourceInput>>
+  resources: Readonly<Record<string, GradingResourceInput>>,
+  resolve?: (resource: GradingResourceInput) => string
 ): Readonly<Record<string, string>> {
   const urls = useMemo(
     () =>
       Object.fromEntries(
         Object.entries(resources).map(([key, resource]) => [
           key,
-          URL.createObjectURL(
-            new Blob([new Uint8Array(resource.data)], {
-              type: resource.mediaType || 'application/octet-stream'
-            })
-          )
+          resolve
+            ? resolve(resource)
+            : URL.createObjectURL(
+                new Blob([new Uint8Array(resource.data)], {
+                  type: resource.mediaType || 'application/octet-stream'
+                })
+              )
         ])
       ),
-    [resources]
+    [resources, resolve]
   )
 
-  useEffect(() => () => Object.values(urls).forEach((url) => URL.revokeObjectURL(url)), [urls])
+  useEffect(() => {
+    if (resolve) return
+    return () => Object.values(urls).forEach((url) => URL.revokeObjectURL(url))
+  }, [resolve, urls])
 
   return urls
 }

@@ -5,7 +5,12 @@ import { BrowserWindow } from 'electron'
 
 /** 单份报告打印超时；超时按该份失败处理，不拖住整批。 */
 const PRINT_TIMEOUT_MS = 30_000
-const PRINT_OPTIONS = { printBackground: true, pageSize: 'A4' } as const
+/** 页面尺寸与页边距由报告样式里的 @page 决定。 */
+const PRINT_OPTIONS = {
+  printBackground: true,
+  pageSize: 'A4',
+  preferCSSPageSize: true
+} as const
 
 export interface PdfPrinter {
   /** 把一份自包含 HTML 打印成 PDF；失败时抛错，由调用方按份记录。 */

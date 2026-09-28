@@ -306,7 +306,8 @@ describe('registerReportExportHandlers', () => {
     expect(await readFile(htmlPath, 'utf8').catch(() => null)).toBeNull()
     expect(electronMocks.printToPDF).toHaveBeenCalledWith({
       printBackground: true,
-      pageSize: 'A4'
+      pageSize: 'A4',
+      preferCSSPageSize: true
     })
     expect(electronMocks.destroy).toHaveBeenCalledOnce()
   })

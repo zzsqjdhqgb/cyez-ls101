@@ -1,0 +1,297 @@
+/*
+ * 作答报告正文样式：应用内“查看报告”和导出的 PDF 共用这一份文件与 .submissionReport 类名。
+ * 屏幕上沿用应用主题变量，打印窗口里变量未定义，自动回退到浅色值；分页由 @page 控制。
+ */
+
+@page {
+  size: A4;
+  margin: 14mm 12mm;
+}
+
+.submissionReport {
+  --report-text: var(--color-text, #3f4847);
+  --report-strong: var(--color-text-strong, #171b1b);
+  --report-muted: var(--color-text-muted, #737e7c);
+  --report-border: var(--color-border, #e7eaea);
+  --report-border-strong: var(--color-border-strong, #d7dcdc);
+  --report-surface: var(--color-surface-subtle, #f6f8f8);
+  --report-accent: var(--color-accent, #087c72);
+  --report-accent-soft: var(--color-accent-soft, #e8f4f2);
+  --report-font: var(
+    --font-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Microsoft YaHei',
+    'PingFang SC',
+    sans-serif
+  );
+
+  min-width: 0;
+  color: var(--report-text);
+  font-family: var(--report-font);
+  font-size: 14px;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+  user-select: text;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.submissionReport > :first-child {
+  margin-top: 0;
+}
+
+.submissionReport > :last-child {
+  margin-bottom: 0;
+}
+
+/* 标题 */
+.submissionReport h1,
+.submissionReport h2,
+.submissionReport h3,
+.submissionReport h4,
+.submissionReport h5,
+.submissionReport h6 {
+  color: var(--report-strong);
+  font-weight: 650;
+  line-height: 1.35;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.submissionReport h1 {
+  margin: 0 0 18px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--report-accent);
+  font-size: 23px;
+}
+
+.submissionReport h2 {
+  margin: 30px 0 12px;
+  padding-left: 10px;
+  border-left: 4px solid var(--report-accent);
+  font-size: 18px;
+}
+
+.submissionReport h3 {
+  margin: 22px 0 8px;
+  color: var(--report-accent);
+  font-size: 15px;
+}
+
+.submissionReport h4,
+.submissionReport h5,
+.submissionReport h6 {
+  margin: 18px 0 6px;
+  font-size: 14px;
+}
+
+/* 正文与列表 */
+.submissionReport p {
+  margin: 8px 0;
+}
+
+.submissionReport strong {
+  color: var(--report-strong);
+  font-weight: 650;
+}
+
+/* 整段加粗的行（分数、评语）做成强调块；其余加粗文字保持普通样式 */
+.submissionReport p:has(> strong:only-child) > strong {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: var(--report-accent-soft);
+  color: var(--report-accent);
+}
+
+.submissionReport em {
+  font-style: italic;
+}
+
+.submissionReport del {
+  color: var(--report-muted);
+}
+
+.submissionReport a {
+  color: var(--report-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.submissionReport ul,
+.submissionReport ol {
+  margin: 10px 0;
+  padding-left: 26px;
+}
+
+.submissionReport li {
+  margin: 4px 0;
+}
+
+.submissionReport li::marker {
+  color: var(--report-accent);
+  font-weight: 600;
+}
+
+.submissionReport li > ul,
+.submissionReport li > ol {
+  margin: 4px 0;
+}
+
+.submissionReport input[type='checkbox'] {
+  margin-right: 6px;
+  accent-color: var(--report-accent);
+}
+
+/* 首张表是报告抬头（姓名/学号/试卷名称/总分/作答时间），按信息条呈现 */
+.submissionReport > table:first-of-type {
+  border-left: 3px solid var(--report-accent);
+}
+
+.submissionReport > table:first-of-type thead th {
+  color: var(--report-muted);
+  background: transparent;
+  font-size: 0.86em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.submissionReport > table:first-of-type tbody td {
+  color: var(--report-strong);
+  font-weight: 650;
+}
+
+/* 表格 */
+.submissionReport table {
+  width: 100%;
+  margin: 14px 0;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+
+.submissionReport th,
+.submissionReport td {
+  padding: 7px 10px;
+  border: 1px solid var(--report-border-strong);
+  vertical-align: top;
+}
+
+.submissionReport thead th {
+  color: var(--report-strong);
+  background: var(--report-surface);
+  font-weight: 650;
+}
+
+.submissionReport tbody tr:nth-child(even) {
+  background: var(--report-surface);
+}
+
+/* 引用、代码、分隔线 */
+.submissionReport blockquote {
+  margin: 12px 0;
+  padding: 10px 16px;
+  border-left: 4px solid var(--report-accent);
+  border-radius: 0 6px 6px 0;
+  background: var(--report-accent-soft);
+  color: var(--report-strong);
+}
+
+.submissionReport blockquote > :first-child {
+  margin-top: 0;
+}
+
+.submissionReport blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.submissionReport code {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--report-surface);
+  color: var(--report-strong);
+  font-family: 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.submissionReport pre {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--report-border);
+  border-radius: 6px;
+  background: var(--report-surface);
+  overflow-x: auto;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.submissionReport pre code {
+  padding: 0;
+  background: none;
+  font-size: 0.88em;
+}
+
+.submissionReport hr {
+  height: 1px;
+  margin: 26px 0;
+  border: 0;
+  background: linear-gradient(90deg, var(--report-border-strong), transparent);
+}
+
+/* 图片 */
+.submissionReport img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 14px auto;
+  border: 1px solid var(--report-border);
+  border-radius: 6px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* 打印：字号按纸张收敛，表头跨页重复，整块内容尽量不跨页 */
+@media print {
+  .submissionReport {
+    font-size: 10.5pt;
+    line-height: 1.7;
+  }
+
+  .submissionReport h1 {
+    font-size: 19pt;
+  }
+
+  .submissionReport h2 {
+    font-size: 14pt;
+  }
+
+  .submissionReport h3 {
+    font-size: 11.5pt;
+  }
+
+  .submissionReport h4,
+  .submissionReport h5,
+  .submissionReport h6 {
+    font-size: 10.5pt;
+  }
+
+  .submissionReport table {
+    font-size: 10pt;
+  }
+
+  .submissionReport thead {
+    display: table-header-group;
+  }
+
+  .submissionReport tr,
+  .submissionReport blockquote {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* 单张图片不占满整页 */
+  .submissionReport img {
+    max-height: 110mm;
+  }
+}
