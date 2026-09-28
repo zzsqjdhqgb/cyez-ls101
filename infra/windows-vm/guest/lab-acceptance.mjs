@@ -14,7 +14,7 @@
  * consumed it; the management password is generated here, written to a file outside the results
  * directory, and removed in a finally block. Neither is ever logged, and the last step proves it.
  */
-import { randomBytes, randomUUID, createHash } from 'node:crypto'
+import { randomBytes, createHash } from 'node:crypto'
 import { existsSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { networkInterfaces } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -1161,13 +1161,33 @@ async function scanForSecrets(entries) {
 
 // The proof files are named by `protocolFile()`; the device secrets by their own suffixes. Only files
 // that still hold a value are used, and a spent proof file is skipped rather than read as an empty
-// string.
+// string. The suffix test is the one `protocolFile()` actually produces (`ls101-device-a-secret-<pid>`),
+// which the older `device-secret` spelling never matched: the device secrets were registered here and
+// then filtered out again, so this scan only ever looked at the one-time proofs.
 function protocolSecretEntries() {
   const entries = []
   for (const file of protocolSecretFiles) {
-    if (!/local-proof|device-secret/.test(file) || !existsSync(file)) continue
-    const value = readFileSync(file, 'utf8').trim()
-    if (value.length > 0) entries.push({ label: `secret file ${file}`, value })
+    if (!existsSync(file)) continue
+    if (/-secret-|local-proof/.test(file)) {
+      const value = readFileSync(file, 'utf8').trim()
+      if (value.length > 0) entries.push({ label: `secret file ${file}`, value })
+      continue
+    }
+    // The state files are JSON and hold several credentials at once, so they are read by field. That
+    // includes the shared connection secret the machine image carries, which is the credential this
+    // deployment model makes worth leaking.
+    if (!/\.json-/.test(file)) continue
+    let state
+    try {
+      state = JSON.parse(readFileSync(file, 'utf8'))
+    } catch {
+      continue
+    }
+    for (const key of ['deviceSecret', 'connectionSecret', 'bearerToken']) {
+      const value = state?.[key]
+      if (typeof value === 'string' && value.length > 0)
+        entries.push({ label: `${key} in ${file}`, value })
+    }
   }
   return entries
 }
@@ -1314,7 +1334,7 @@ async function stepProtocolAuth() {
   })
 }
 
-// --- N3: a batch, two processes that must not share an identity, and a replay -------------------
+// --- N3: a batch, two hostnames that must not share an identity, and a reconnect ------------------
 async function stepEnrollmentBatch() {
   return run.step('enrollment-batch', async () => {
     const batchFile = protocolFile('enrollment-a')
@@ -1342,7 +1362,9 @@ async function stepEnrollmentBatch() {
       batch.listed
     )
 
-    // Two registrations in two processes, with two installation identities and two secrets.
+    // Two registrations in two processes. The machine name is the identity now, so the two runs
+    // differ by `--computer-name` alone and nothing is carried between them: the driver takes the
+    // service connection from the enrollment file, not from an installation record on disk.
     const deviceA = protocolFile('device-a.json')
     const secretA = protocolFile('device-a-secret')
     const deviceB = protocolFile('device-b.json')
@@ -1350,8 +1372,6 @@ async function stepEnrollmentBatch() {
     const first = await protocolResult('enroll-register', [
       '--enroll-file',
       batchFile,
-      '--installation-id',
-      randomUUID(),
       '--state-out',
       deviceA,
       '--device-secret-file',
@@ -1361,13 +1381,15 @@ async function stepEnrollmentBatch() {
       '--platform',
       'win32'
     ])
-    assertThat(first.status === 201, 'the first device registered', first)
-    assertThat(first.duplicate === false, 'the first registration is not a duplicate', first)
+    assertThat(
+      typeof first.deviceId === 'string' && first.deviceId !== '',
+      'the first hostname registered as a device',
+      first
+    )
+    assertThat(typeof first.number === 'string', 'the first device has a number', first)
     const second = await protocolResult('enroll-register', [
       '--enroll-file',
       batchFile,
-      '--installation-id',
-      randomUUID(),
       '--state-out',
       deviceB,
       '--device-secret-file',
@@ -1377,18 +1399,21 @@ async function stepEnrollmentBatch() {
       '--platform',
       'win32'
     ])
-    assertThat(second.status === 201, 'the second device registered', second)
-    assertThat(second.deviceId !== first.deviceId, 'two installations get two device identities', {
+    assertThat(
+      typeof second.deviceId === 'string' && second.deviceId !== '',
+      'the second hostname registered as a device',
+      second
+    )
+    assertThat(second.deviceId !== first.deviceId, 'two hostnames get two device identities', {
       first: first.deviceId,
       second: second.deviceId
     })
 
-    // Replaying the first installation with the same secret must return the same device, not a new one.
+    // The same hostname registering again from a fresh process must land on the device that already
+    // exists: that is what keeps a re-imaged machine's number, seat and history attached to it.
     const replay = await protocolResult('enroll-register', [
       '--enroll-file',
       batchFile,
-      '--installation-id',
-      first.installationId,
       '--state-out',
       protocolFile('device-a-replay.json'),
       '--device-secret-file',
@@ -1398,13 +1423,15 @@ async function stepEnrollmentBatch() {
       '--platform',
       'win32'
     ])
-    assertThat(replay.status === 200, 'the replay is answered as a duplicate', replay)
-    assertThat(replay.duplicate === true, 'the replay reports itself as a duplicate', replay)
     assertThat(
       replay.deviceId === first.deviceId,
-      'the replay returns the device that already exists',
+      'the same hostname returns the device that already exists',
       { replay: replay.deviceId, first: first.deviceId }
     )
+    assertThat(replay.number === first.number, 'the same hostname keeps its device number', {
+      replay: replay.number,
+      first: first.number
+    })
 
     // The teacher's own list is where "no second device appeared" has to be visible.
     const devices = await protocolResult('device-list', [...teacherCredentialArguments()])
@@ -1412,7 +1439,7 @@ async function stepEnrollmentBatch() {
     assertThat(ids.includes(first.deviceId), 'the first device is listed', ids)
     assertThat(ids.includes(second.deviceId), 'the second device is listed', ids)
     const occurrences = ids.filter((id) => id === first.deviceId).length
-    assertThat(occurrences === 1, 'the replayed installation produced no extra device', ids)
+    assertThat(occurrences === 1, 'the replayed hostname produced no extra device', ids)
 
     state.deviceState = deviceA
     state.enrollmentBatch = { id: batch.enrollmentId, file: batchFile }
@@ -1421,7 +1448,7 @@ async function stepEnrollmentBatch() {
       mode: batch.mode,
       fileBytes: batch.bytes,
       devices: [first.deviceId, second.deviceId],
-      replay: { status: replay.status, duplicate: replay.duplicate },
+      replay: { deviceId: replay.deviceId, sameDevice: replay.deviceId === first.deviceId },
       listed: ids.length
     }
   })
@@ -1432,11 +1459,7 @@ async function stepEnrollmentNegatives() {
   return run.step('enrollment-negatives', async () => {
     const outcome = {}
     const attempt = async (name, extra) => {
-      const observed = await protocolResult('enroll-reject', [
-        '--installation-id',
-        randomUUID(),
-        ...extra
-      ])
+      const observed = await protocolResult('enroll-reject', [...extra])
       outcome[name] = observed
       run.log(`enrollment negative '${name}': ${JSON.stringify(observed)}`)
       return observed
@@ -1463,8 +1486,6 @@ async function stepEnrollmentNegatives() {
     const closed = await protocolResult('enroll-reject', [
       '--enroll-file',
       state.enrollmentBatch.file,
-      '--installation-id',
-      randomUUID(),
       '--revoke-first',
       '--enrollment-id',
       state.enrollmentBatch.id,
@@ -1587,11 +1608,9 @@ async function stepEnrollmentNegatives() {
 
     // The wrong pin fails before any HTTP request exists, so there is no status to report. The
     // fingerprint is replaced rather than appended, because a second `--fingerprint` would be ignored.
-    const wrongPin = await protocolResult(
-      'enroll-reject',
-      ['--installation-id', randomUUID(), '--enroll-file', batchB],
-      { fingerprint: `sha256:${'0'.repeat(64)}` }
-    )
+    const wrongPin = await protocolResult('enroll-reject', ['--enroll-file', batchB], {
+      fingerprint: `sha256:${'0'.repeat(64)}`
+    })
     outcome['wrong-pin'] = wrongPin
     run.log(`enrollment negative 'wrong-pin': ${JSON.stringify(wrongPin)}`)
     assertThat(wrongPin.accepted === false, 'a wrong pin is refused', wrongPin)
