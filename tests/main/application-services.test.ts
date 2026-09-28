@@ -7,7 +7,8 @@ const mocks = vi.hoisted(() => ({
     return { hasPendingCleanup: vi.fn(() => false) }
   }),
   registerAIRouter: vi.fn(),
-  registerNoop: vi.fn()
+  registerNoop: vi.fn(),
+  registerReportExportHandlers: vi.fn()
 }))
 
 vi.mock('@ls101/airouter/main', () => ({ registerAIRouter: mocks.registerAIRouter }))
@@ -31,6 +32,9 @@ vi.mock('../../src/main/legacy-data', () => ({
   registerLegacyDataHandlers: mocks.registerNoop
 }))
 vi.mock('../../src/main/license', () => ({ registerLicenseHandlers: mocks.registerNoop }))
+vi.mock('../../src/main/report-export', () => ({
+  registerReportExportHandlers: mocks.registerReportExportHandlers
+}))
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -70,5 +74,6 @@ describe('application service registration', () => {
         speechRecognition: workerUrls.speechRecognition
       }
     })
+    expect(mocks.registerReportExportHandlers).toHaveBeenCalledOnce()
   })
 })

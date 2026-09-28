@@ -130,6 +130,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       license: methods('license'),
       nodeProcess: typeof runtimeWindow.process,
       nodeRequire: typeof runtimeWindow.require,
+      reportExport: methods('reportExport'),
       startup: methods('startup'),
       windowControls: methods('windowControls')
     }
@@ -196,6 +197,7 @@ test('starts a hardened application window and exposes every preload bridge', as
     license: ['activate', 'deactivate', 'getStatus', 'openActivationGuide'],
     nodeProcess: 'undefined',
     nodeRequire: 'undefined',
+    reportExport: ['exportBatch', 'onProgress'],
     startup: ['whenReady'],
     windowControls: ['close', 'getMaximized', 'minimize', 'onMaximizedChange', 'toggleMaximize']
   })
@@ -497,6 +499,44 @@ test('exports a submission containing a large resource through the renderer ZIP 
     format: 'ls101-submission',
     meta: { candidate: { candidateId: 'worker-001', displayName: '测试考生' } }
   })
+})
+
+test('exports report PDFs through the report-export bridge', async () => {
+  const exportPath = path.join(userDataDir, 'reports.zip')
+  await electronApp.evaluate(({ dialog }, filePath) => {
+    Object.defineProperty(dialog, 'showSaveDialog', {
+      configurable: true,
+      value: async () => ({ canceled: false, filePath })
+    })
+  }, exportPath)
+
+  const outcome = await page.evaluate(async () => {
+    const progress: Array<{ phase: string; completed: number; total: number }> = []
+    const unsubscribe = window.reportExport.onProgress((value) =>
+      progress.push({ phase: value.phase, completed: value.completed, total: value.total })
+    )
+    try {
+      const result = await window.reportExport.exportBatch({
+        items: [
+          {
+            filename: '测试考生-worker-001-报告.pdf',
+            html: '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"></head><body><h1>作答报告</h1><p>集成测试</p></body></html>'
+          }
+        ]
+      })
+      return { progress, result }
+    } finally {
+      unsubscribe()
+    }
+  })
+
+  expect(outcome.result).toEqual({ status: 'exported', exportedCount: 1, failures: [] })
+  expect(outcome.progress.at(-1)).toEqual({ phase: 'saving', completed: 1, total: 1 })
+
+  const archive = unzipSync(await readFile(exportPath))
+  const filenames = Object.keys(archive)
+  expect(filenames).toEqual(['测试考生-worker-001-报告.pdf'])
+  expect(Buffer.from(archive[filenames[0]]).subarray(0, 5).toString('latin1')).toBe('%PDF-')
 })
 
 test('guides microphone setup through recording and playback before the exam', async () => {

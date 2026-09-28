@@ -90,5 +90,15 @@ export type {
 } from './legacy-data'
 export { WINDOW_CONTROL_CHANNELS, WINDOW_CONTROL_EVENTS } from './window-controls'
 export type { WindowControlsBridge } from './window-controls'
+export { REPORT_EXPORT_CHANNELS, REPORT_EXPORT_EVENTS } from './report-export'
+export type {
+  ReportExportBridge,
+  ReportExportFailure,
+  ReportExportItem,
+  ReportExportPhase,
+  ReportExportProgress,
+  ReportExportRequest,
+  ReportExportResult
+} from './report-export'
 export { STARTUP_CHANNELS } from './startup'
 export type { StartupBridge } from './startup'
