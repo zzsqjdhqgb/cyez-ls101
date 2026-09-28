@@ -1,25 +1,12 @@
-/*
- * 作答报告正文样式：应用内“查看报告”和导出的 PDF 共用这一份文件与 .submissionReport 类名。
- * 屏幕上沿用应用主题变量，打印窗口里变量未定义，自动回退到浅色值；分页由 @page 控制。
- * 所有规则只改外观，不改变 Markdown 的语义与结构。
- */
-
 @page {
   size: A4;
-  margin: 14mm 12mm;
+  margin: 15mm 13mm;
 }
 
 .submissionReport {
-  --report-text: var(--color-text, #3f4847);
-  --report-strong: var(--color-text-strong, #171b1b);
-  --report-muted: var(--color-text-muted, #737e7c);
-  --report-border: var(--color-border, #e7eaea);
-  --report-border-strong: var(--color-border-strong, #d7dcdc);
-  --report-surface: var(--color-surface-subtle, #f6f8f8);
-  --report-accent: var(--color-accent, #087c72);
-  --report-accent-deep: var(--color-accent-pressed, #05584f);
-  --report-accent-soft: var(--color-accent-soft, #e8f4f2);
-  --report-font: var(
+  min-width: 0;
+  color: var(--color-text, #3f4847);
+  font-family: var(
     --font-ui,
     -apple-system,
     BlinkMacSystemFont,
@@ -28,103 +15,110 @@
     'PingFang SC',
     sans-serif
   );
-
-  min-width: 0;
-  color: var(--report-text);
-  font-family: var(--report-font);
   font-size: 14px;
-  line-height: 1.75;
+  line-height: 1.76;
+  font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
   user-select: text;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
 
-.submissionReport > :first-child {
+.submissionReport > h1:first-child {
   margin-top: 0;
 }
 
-.submissionReport > :last-child {
-  margin-bottom: 0;
-}
-
-/* 标题：一级标题做封面条，二级标题做小节条，三级标题带主色方块 */
 .submissionReport h1,
 .submissionReport h2,
 .submissionReport h3,
 .submissionReport h4,
 .submissionReport h5,
 .submissionReport h6 {
-  color: var(--report-strong);
+  color: var(--color-text-strong, #171b1b);
   font-weight: 650;
-  line-height: 1.35;
+  line-height: 1.4;
   break-after: avoid;
   page-break-after: avoid;
 }
 
 .submissionReport h1 {
-  margin: 0 0 18px;
-  padding: 20px 24px;
-  border-radius: 12px;
-  background: linear-gradient(120deg, var(--report-accent) 0%, var(--report-accent-deep) 100%);
-  box-shadow: 0 6px 18px rgb(8 124 114 / 18%);
-  color: #ffffff;
-  font-size: 23px;
-  letter-spacing: 0.01em;
+  margin: 0 0 13px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--color-border-strong, #d7dcdc);
+  font-size: 26px;
+}
+
+.submissionReport h1::before {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--color-accent, #087c72);
+  content: '学生学习报告';
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.submissionReport h1::after {
+  display: block;
+  width: 36px;
+  height: 2px;
+  margin-top: 11px;
+  background: var(--color-accent, #087c72);
+  content: '';
 }
 
 .submissionReport h2 {
-  margin: 30px 0 14px;
-  padding: 9px 16px;
-  border-left: 5px solid var(--report-accent);
-  border-radius: 0 9px 9px 0;
-  background: var(--report-accent-soft);
+  margin: 29px 0 11px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-border, #e7eaea);
   font-size: 17px;
 }
 
-.submissionReport h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 22px 0 8px;
-  color: var(--report-accent);
-  font-size: 15px;
+.submissionReport h2::before {
+  display: inline-block;
+  width: 0.48em;
+  height: 0.48em;
+  margin-right: 9px;
+  background: var(--color-accent, #087c72);
+  content: '';
+  vertical-align: 0.1em;
 }
 
-.submissionReport h3::before {
-  content: '';
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 2px;
-  background: var(--report-accent);
+.submissionReport h3 {
+  margin: 19px 0 7px;
+  padding-left: 9px;
+  border-left: 2px solid var(--color-accent, #087c72);
+  color: var(--color-text-strong, #171b1b);
+  font-size: 14px;
 }
 
 .submissionReport h4,
 .submissionReport h5,
 .submissionReport h6 {
-  margin: 18px 0 6px;
-  font-size: 14px;
+  margin: 16px 0 6px;
+  font-size: 13px;
 }
 
-/* 正文与列表 */
 .submissionReport p {
   margin: 8px 0;
+  orphans: 3;
+  widows: 3;
 }
 
 .submissionReport strong {
-  color: var(--report-strong);
+  color: var(--color-text-strong, #171b1b);
   font-weight: 650;
 }
 
-/* 整段加粗的行（分数、评语）做成强调块 */
+.submissionReport p:has(> strong:only-child) {
+  margin: 13px 0;
+  padding: 3px 0 3px 12px;
+  border-left: 2px solid var(--color-accent, #087c72);
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
 .submissionReport p:has(> strong:only-child) > strong {
-  display: inline-block;
-  padding: 4px 12px;
-  border: 1px solid var(--report-accent-soft);
-  border-radius: 8px;
-  background: var(--report-accent-soft);
-  color: var(--report-accent);
   font-variant-numeric: tabular-nums;
 }
 
@@ -133,113 +127,125 @@
 }
 
 .submissionReport del {
-  color: var(--report-muted);
+  color: var(--color-text-muted, #737e7c);
 }
 
 .submissionReport a {
-  color: var(--report-accent);
+  color: var(--color-accent-pressed, #05584f);
   text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
+  text-decoration-color: var(--color-accent, #087c72);
+  text-underline-offset: 2px;
 }
 
 .submissionReport ul,
 .submissionReport ol {
-  margin: 10px 0;
-  padding-left: 26px;
+  margin: 9px 0;
+  padding-left: 1.55em;
 }
 
 .submissionReport li {
-  margin: 4px 0;
+  margin: 3px 0;
 }
 
 .submissionReport li::marker {
-  color: var(--report-accent);
-  font-weight: 600;
+  color: var(--color-text-muted, #737e7c);
 }
 
 .submissionReport li > ul,
 .submissionReport li > ol {
-  margin: 4px 0;
+  margin: 3px 0;
 }
 
 .submissionReport input[type='checkbox'] {
-  margin-right: 6px;
-  accent-color: var(--report-accent);
+  margin: 0 6px 0 0;
+  accent-color: var(--color-accent, #087c72);
+  vertical-align: -1px;
 }
 
-/* 报告抬头：首张表做成信息卡 */
-.submissionReport > table:first-of-type {
-  overflow: hidden;
-  margin: 0 0 6px;
-  border: 1px solid var(--report-border);
-  border-radius: 12px;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: var(--report-surface);
-}
-
-.submissionReport > table:first-of-type th,
-.submissionReport > table:first-of-type td {
-  padding: 10px 12px;
-  border: 0;
-  border-right: 1px solid var(--report-border);
-}
-
-.submissionReport > table:first-of-type th:last-child,
-.submissionReport > table:first-of-type td:last-child {
-  border-right: 0;
-}
-
-.submissionReport > table:first-of-type thead th {
-  color: var(--report-muted);
-  background: transparent;
-  font-size: 0.84em;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-}
-
-.submissionReport > table:first-of-type tbody td {
-  color: var(--report-strong);
-  font-size: 1.02em;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 其余表格：主色表头 + 斑马行 */
 .submissionReport table {
   width: 100%;
   margin: 14px 0;
   border-collapse: collapse;
-  font-size: 0.95em;
+  border-top: 1px solid var(--color-border-strong, #d7dcdc);
+  font-size: 0.94em;
   font-variant-numeric: tabular-nums;
 }
 
 .submissionReport th,
 .submissionReport td {
-  padding: 8px 11px;
-  border: 1px solid var(--report-border-strong);
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--color-border, #e7eaea);
   vertical-align: top;
+  overflow-wrap: anywhere;
 }
 
-.submissionReport thead th {
-  color: var(--report-accent-deep);
-  background: var(--report-accent-soft);
+.submissionReport th {
+  color: var(--color-text-strong, #171b1b);
   font-weight: 650;
 }
 
-.submissionReport tbody tr:nth-child(even) {
-  background: var(--report-surface);
+.submissionReport thead th {
+  border-bottom-color: var(--color-border-strong, #d7dcdc);
 }
 
-/* 引用、代码、分隔线 */
+.submissionReport tbody tr:nth-child(even) {
+  background: var(--color-surface-subtle, #f6f8f8);
+}
+
+.submissionReport > table:first-of-type {
+  margin: 12px 0 26px;
+  border-top-width: 2px;
+  font-size: 0.92em;
+}
+
+.submissionReport > table:first-of-type th {
+  padding: 6px 8px 5px;
+  color: var(--color-text-muted, #737e7c);
+  font-size: 0.84em;
+  font-weight: 600;
+}
+
+.submissionReport > table:first-of-type th strong {
+  color: var(--color-text-muted, #737e7c);
+  font-weight: 600;
+}
+
+.submissionReport > table:first-of-type td {
+  padding: 7px 8px 9px;
+  border-bottom-color: var(--color-border-strong, #d7dcdc);
+  color: var(--color-text-strong, #171b1b);
+  font-weight: 600;
+}
+
+.submissionReport > h2 + table {
+  margin: 9px 0 24px;
+  border-top-width: 2px;
+}
+
+.submissionReport > h2 + table th,
+.submissionReport > h2 + table td {
+  padding: 9px 6px;
+}
+
+.submissionReport > h2 + table thead th {
+  color: var(--color-text-muted, #737e7c);
+  font-size: 0.86em;
+}
+
+.submissionReport > h2 + table tbody td {
+  border-bottom-color: var(--color-border-strong, #d7dcdc);
+  color: var(--color-accent-pressed, #05584f);
+  font-size: 1.16em;
+  font-weight: 700;
+}
+
 .submissionReport blockquote {
-  margin: 14px 0;
-  padding: 12px 18px;
-  border-left: 4px solid var(--report-accent);
-  border-radius: 0 8px 8px 0;
-  background: var(--report-accent-soft);
-  color: var(--report-strong);
+  margin: 13px 0;
+  padding: 2px 0 2px 14px;
+  border-left: 2px solid var(--color-border-strong, #d7dcdc);
+  color: var(--color-text, #3f4847);
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 .submissionReport blockquote > :first-child {
@@ -251,108 +257,137 @@
 }
 
 .submissionReport code {
-  padding: 2px 6px;
-  border-radius: 5px;
-  background: var(--report-surface);
-  color: var(--report-accent-deep);
+  padding: 1px 4px;
+  border-radius: var(--radius-xs, 2px);
+  background: var(--color-surface-subtle, #f6f8f8);
+  color: var(--color-text-strong, #171b1b);
   font-family: 'Cascadia Mono', Consolas, 'Courier New', monospace;
   font-size: 0.9em;
+  overflow-wrap: anywhere;
 }
 
 .submissionReport pre {
-  margin: 14px 0;
-  padding: 13px 16px;
-  border: 1px solid var(--report-border);
-  border-radius: 9px;
-  background: var(--report-surface);
+  margin: 13px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border, #e7eaea);
+  border-radius: var(--radius-xs, 2px);
+  background: var(--color-surface-subtle, #f6f8f8);
   overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   break-inside: avoid;
   page-break-inside: avoid;
 }
 
 .submissionReport pre code {
   padding: 0;
+  border-radius: 0;
   background: none;
-  color: var(--report-text);
+  color: var(--color-text, #3f4847);
   font-size: 0.88em;
 }
 
-/* 分隔线：短主色段 + 渐隐尾迹，作为题与题之间的节拍 */
 .submissionReport hr {
-  height: 3px;
-  margin: 30px 0;
+  height: 0;
+  margin: 27px 0;
   border: 0;
-  border-radius: 2px;
-  background: linear-gradient(
-    90deg,
-    var(--report-accent) 0 64px,
-    var(--report-border-strong) 64px 100%
-  );
+  border-top: 1px solid var(--color-border-strong, #d7dcdc);
+  break-after: avoid;
+  page-break-after: avoid;
 }
 
-/* 图片：白底相框 + 主色描边 */
 .submissionReport img {
   display: block;
   max-width: 100%;
+  max-height: 110mm;
   height: auto;
-  margin: 16px auto;
-  padding: 6px;
-  border: 1px solid var(--report-border);
-  border-radius: 10px;
-  background: #ffffff;
-  box-shadow: 0 2px 10px rgb(23 27 27 / 8%);
+  margin: 15px auto;
+  padding: 3px;
+  border: 1px solid var(--color-border, #e7eaea);
+  background: var(--color-surface-subtle, #f6f8f8);
   break-inside: avoid;
   page-break-inside: avoid;
 }
 
-/* 打印：字号按纸张收敛，表头跨页重复，整块内容尽量不跨页 */
 @media print {
   .submissionReport {
-    font-size: 10.5pt;
-    line-height: 1.7;
+    font-size: 10.3pt;
+    line-height: 1.62;
   }
 
   .submissionReport h1 {
-    padding: 16px 20px;
-    font-size: 18pt;
+    margin-bottom: 11px;
+    padding-bottom: 10px;
+    font-size: 19pt;
+  }
+
+  .submissionReport h1::before {
+    margin-bottom: 3px;
+    font-size: 8pt;
+  }
+
+  .submissionReport h1::after {
+    margin-top: 8px;
   }
 
   .submissionReport h2 {
-    margin: 24px 0 12px;
-    font-size: 13.5pt;
+    margin: 22px 0 8px;
+    font-size: 13pt;
   }
 
   .submissionReport h3 {
-    font-size: 11.5pt;
+    margin-top: 15px;
+    font-size: 10.8pt;
   }
 
   .submissionReport h4,
   .submissionReport h5,
   .submissionReport h6 {
-    font-size: 10.5pt;
+    font-size: 10pt;
   }
 
   .submissionReport table {
-    font-size: 10pt;
+    margin: 11px 0;
+    font-size: 9.2pt;
+  }
+
+  .submissionReport > table:first-of-type {
+    margin: 9px 0 20px;
+    font-size: 8.6pt;
+  }
+
+  .submissionReport > table:first-of-type th,
+  .submissionReport > table:first-of-type td {
+    padding: 5px 6px;
+  }
+
+  .submissionReport > h2 + table {
+    margin: 7px 0 18px;
+  }
+
+  .submissionReport > h2 + table th,
+  .submissionReport > h2 + table td {
+    padding: 6px 4px;
   }
 
   .submissionReport thead {
     display: table-header-group;
   }
 
-  .submissionReport tr,
-  .submissionReport blockquote {
+  .submissionReport tfoot {
+    display: table-footer-group;
+  }
+
+  .submissionReport tr {
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
   .submissionReport hr {
-    margin: 24px 0;
+    margin: 20px 0;
   }
 
-  /* 单张图片不占满整页 */
   .submissionReport img {
-    max-height: 110mm;
-    box-shadow: none;
+    max-height: 105mm;
   }
 }
