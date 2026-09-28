@@ -39,3 +39,8 @@ docs/product/**/*.product-docs-backup
 
 # Local TextPA environment overrides
 /textpa/.env.local
+
+# DeepSeek 本地代理的审计数据与统计日志（含完整对话明文，不入库）
+proxy-captures/
+proxy-usage.jsonl
+
