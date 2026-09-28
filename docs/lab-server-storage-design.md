@@ -49,7 +49,9 @@ service-data/
 | `file_gc`                              | 待物理删除的归档 ID、原因、重试时间；不承载业务删除事实                                                                                      |
 | `backups`                              | ID、快照时间、schema 与发布版本、状态、barrierState（reserved/active/released）、加密文件摘要和大小、脱敏错误；至多一个 pending/running 备份 |
 
-`deployment_connections` 保存共享接入秘密摘要和来源批次；`device_runtimes` 保存凭据内的运行 ID 和服务端分配代次，防止镜像恢复和旧运行重连造成代次倒退。数据库 schema 版本为 2，不迁移未发布的旧格式。
+`deployment_connections` 保存共享接入秘密摘要和来源批次；`device_runtimes` 保存凭据内的运行 ID 和服务端分配代次，防止镜像恢复和旧运行重连造成代次倒退。数据库 schema 版本为 2，不提供旧格式的自动迁移。
+
+服务打开 `user_version` 低于自身版本的数据库时以 `SCHEMA_OUTDATED` 拒绝启动，高于自身版本时以 `SCHEMA_UNSUPPORTED` 拒绝；两者都只报告方向，不尝试改写数据。升级路径是导出原始数据、彻底清除服务并重新初始化，原客户端重新入网，见 [机房独立服务运行与恢复](lab-service-runtime.md#升级)。备份归档在切换目录前同样校验格式，过低或过高分别报告 `BACKUP_SCHEMA_OUTDATED` 与 `BACKUP_SCHEMA_UNSUPPORTED`，与“归档损坏”用的 `STORAGE_UNAVAILABLE` 区分开。
 
 设备主键决定作答归属，凭证 ID 决定当前授权和心跳排序。重置绑定事务撤销原凭证、取消旧凭证的未执行任务；同一 hostname 重新入网保留设备 ID 和教师配置，生成新凭证记录。不同 hostname 对应不同设备。旧凭证仍返回 401，新凭证只能按同一设备归属访问记录；学生本地旧提交仍遵循换绑后仅核对或导出的规则。
 

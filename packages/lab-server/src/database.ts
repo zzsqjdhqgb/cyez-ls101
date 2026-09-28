@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { mkdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { WriteGate } from './write-gate'
-import { LabError } from './errors'
+import { LabError, StorageSchemaError } from './errors'
 import { directoryPaths, lockDirectory } from './directory-lock'
 
 export const SCHEMA_VERSION = 2
@@ -87,7 +87,15 @@ export class LabDatabase {
           db.exec('ROLLBACK')
           throw error
         }
-      } else if (version !== SCHEMA_VERSION) throw new LabError('STORAGE_UNAVAILABLE')
+      } else if (version !== SCHEMA_VERSION) {
+        // A database this build cannot open says which way it differs, because the remedies are
+        // opposite: an older one is not migrated and has to be exported and cleared, while a newer
+        // one only needs the release that wrote it. Reporting both as STORAGE_UNAVAILABLE left the
+        // teacher client with "已停止" and the wrapper log with a code that named neither cause.
+        throw new StorageSchemaError(
+          Number(version) < SCHEMA_VERSION ? 'SCHEMA_OUTDATED' : 'SCHEMA_UNSUPPORTED'
+        )
+      }
       return new LabDatabase(root, db, directoryLock)
     } catch (error) {
       db?.close()

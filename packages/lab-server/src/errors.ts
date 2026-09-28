@@ -38,6 +38,27 @@ export class LabError extends Error {
   }
 }
 
+/**
+ * Storage-schema failures of the service's own database. They never travel over the HTTPS API: the
+ * service raises one while opening its own data (the CLI prints it to stderr, which is what the
+ * wrapper log keeps), and the offline restore raises one while verifying a backup archive before
+ * touching the live directory. They are kept out of the generated `ErrorBody` enum for that reason,
+ * and each code names a different remedy — an older database must be exported and cleared, a newer
+ * one needs the matching newer release, and a backup archive is not a live database at all.
+ */
+export type StorageSchemaCode =
+  | 'SCHEMA_OUTDATED'
+  | 'SCHEMA_UNSUPPORTED'
+  | 'BACKUP_SCHEMA_OUTDATED'
+  | 'BACKUP_SCHEMA_UNSUPPORTED'
+
+export class StorageSchemaError extends Error {
+  constructor(readonly code: StorageSchemaCode) {
+    super(code)
+    this.name = 'StorageSchemaError'
+  }
+}
+
 export function requireCondition(
   condition: unknown,
   code: ErrorCode,

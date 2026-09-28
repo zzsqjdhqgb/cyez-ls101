@@ -14,7 +14,7 @@ import {
   verifiedFile,
   type FaultPoint
 } from './durable-files'
-import { LabError, requireCondition } from './errors'
+import { LabError, StorageSchemaError, requireCondition } from './errors'
 import { LabService } from './service'
 import { validateRuntimeConfig } from './runtime-config'
 
@@ -219,6 +219,25 @@ export async function recoverOfflineRestore(root: string, releaseVersion: string
   }
 }
 
+/**
+ * Verifies the database a backup archive carries, before the live directory is touched. The schema
+ * is checked on its own and first so an outdated archive is not reported as a damaged one: the
+ * archive is intact, its format simply predates this release, and the remedy is to keep it as a
+ * record rather than restore it. A newer archive names the opposite remedy.
+ */
+export function verifyRestoredDatabase(database: DatabaseSync): void {
+  const archiveVersion = Number(database.prepare('PRAGMA user_version').get()?.user_version)
+  if (archiveVersion !== SCHEMA_VERSION)
+    throw new StorageSchemaError(
+      archiveVersion < SCHEMA_VERSION ? 'BACKUP_SCHEMA_OUTDATED' : 'BACKUP_SCHEMA_UNSUPPORTED'
+    )
+  requireCondition(
+    database.prepare('PRAGMA integrity_check').get()?.integrity_check === 'ok' &&
+      database.prepare('PRAGMA foreign_key_check').all().length === 0,
+    'STORAGE_UNAVAILABLE'
+  )
+}
+
 export async function restoreOffline(
   options: RestoreOptions
 ): Promise<{ previousDirectory: string; serverId: string }> {
@@ -286,12 +305,7 @@ export async function restoreOffline(
     }
     const database = new DatabaseSync(join(staging, 'service.sqlite'))
     try {
-      requireCondition(
-        database.prepare('PRAGMA user_version').get()?.user_version === SCHEMA_VERSION &&
-          database.prepare('PRAGMA integrity_check').get()?.integrity_check === 'ok' &&
-          database.prepare('PRAGMA foreign_key_check').all().length === 0,
-        'STORAGE_UNAVAILABLE'
-      )
+      verifyRestoredDatabase(database)
       database.exec('PRAGMA synchronous=FULL; BEGIN IMMEDIATE;')
       const row = database.prepare('SELECT data FROM service WHERE singleton=1').get()
       requireCondition(row && typeof row.data === 'string', 'STORAGE_UNAVAILABLE')

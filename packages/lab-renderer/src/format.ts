@@ -81,7 +81,15 @@ const LOCAL_MESSAGES: Record<string, string> = {
   LOCAL_STATUS_UNAVAILABLE: '暂时无法获取本机服务状态，请稍后刷新。',
   UNSUPPORTED_PLATFORM: '当前系统不支持本机服务管理。',
   INVALID_REQUEST: '本机服务拒绝了本次请求。',
-  RESOURCE_BUSY: '本机服务正忙，请稍后重试。'
+  RESOURCE_BUSY: '本机服务正忙，请稍后重试。',
+  // The service refuses to open a database whose format it cannot read, and the offline restore
+  // refuses an archive for the same reason. Naming the direction is the whole point: an older format
+  // is exported and cleared, a newer one only needs the matching release.
+  SCHEMA_OUTDATED:
+    '本机服务的数据格式低于当前版本，且不会自动迁移。请先导出原始数据，再彻底清除服务并重新初始化。',
+  SCHEMA_UNSUPPORTED: '本机服务的数据格式高于当前版本，请安装与该数据匹配的新版本后再启动。',
+  BACKUP_SCHEMA_OUTDATED: '该备份的数据格式低于当前版本，无法恢复；请仅作为留档保存。',
+  BACKUP_SCHEMA_UNSUPPORTED: '该备份的数据格式高于当前版本，请使用更新的版本恢复。'
 }
 
 /** Maps host-side error codes while keeping any helper detail on the following lines. */

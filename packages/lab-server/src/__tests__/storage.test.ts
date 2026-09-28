@@ -1,8 +1,9 @@
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it } from 'vitest'
-import { LabDatabase } from '../database'
+import { LabDatabase, SCHEMA_VERSION } from '../database'
 import { WriteGate } from '../write-gate'
 
 const roots: string[] = []
@@ -27,6 +28,27 @@ describe('service storage', () => {
     expect(db.get('PRAGMA journal_mode')).toEqual({ journal_mode: 'wal' })
     expect(db.get('PRAGMA synchronous')).toEqual({ synchronous: 2 })
     expect(db.get('PRAGMA foreign_keys')).toEqual({ foreign_keys: 1 })
+  })
+
+  it('names the direction of an unreadable database format instead of a bare storage failure', async () => {
+    const root = await temporary()
+    const created = await LabDatabase.open(root, true)
+    await created.close()
+    const setVersion = (version: number): void => {
+      const raw = new DatabaseSync(join(root, 'service.sqlite'))
+      try {
+        raw.exec(`PRAGMA user_version=${version}`)
+      } finally {
+        raw.close()
+      }
+    }
+    setVersion(SCHEMA_VERSION - 1)
+    await expect(LabDatabase.open(root)).rejects.toMatchObject({ code: 'SCHEMA_OUTDATED' })
+    setVersion(SCHEMA_VERSION + 1)
+    await expect(LabDatabase.open(root)).rejects.toMatchObject({ code: 'SCHEMA_UNSUPPORTED' })
+    // The rejected opens released the directory lock, so the readable format still opens.
+    setVersion(SCHEMA_VERSION)
+    databases.push(await LabDatabase.open(root))
   })
 
   it('rolls back multi-field writes on unique device number conflict', async () => {

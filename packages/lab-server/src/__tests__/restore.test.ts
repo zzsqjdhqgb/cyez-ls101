@@ -2,9 +2,11 @@ import { mkdtemp, readFile, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { randomUUID } from 'node:crypto'
+import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it } from 'vitest'
 import { LabService, type Context } from '../service'
-import { restoreOffline, recoverOfflineRestore } from '../restore'
+import { SCHEMA_VERSION } from '../database'
+import { restoreOffline, recoverOfflineRestore, verifyRestoredDatabase } from '../restore'
 import { durableWrite } from '../durable-files'
 import { TEST_EXAM_BYTES, TEST_EXAM_DIGEST } from '../test-suite'
 import { INVITATION_CODE_HASH } from '@ls101/license'
@@ -285,4 +287,26 @@ describe('offline service restore', () => {
     },
     60000
   )
+
+  it('names an outdated or newer backup archive instead of reporting a damaged one', async () => {
+    const parent = await mkdtemp(join(tmpdir(), 'ls101-restore-schema-'))
+    cleanup.push(() => rm(parent, { recursive: true, force: true }))
+    const database = new DatabaseSync(join(parent, 'service.sqlite'))
+    try {
+      const outcome = (version: number): string => {
+        database.exec(`PRAGMA user_version=${version}`)
+        try {
+          verifyRestoredDatabase(database)
+        } catch (error) {
+          return String((error as { code?: unknown }).code)
+        }
+        return 'accepted'
+      }
+      expect(outcome(SCHEMA_VERSION - 1)).toBe('BACKUP_SCHEMA_OUTDATED')
+      expect(outcome(SCHEMA_VERSION + 1)).toBe('BACKUP_SCHEMA_UNSUPPORTED')
+      expect(outcome(SCHEMA_VERSION)).toBe('accepted')
+    } finally {
+      database.close()
+    }
+  })
 })

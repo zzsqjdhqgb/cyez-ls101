@@ -47,6 +47,17 @@ describe('describeLabError', () => {
     )
     expect(describeLabError(new Error('RESOURCE_BUSY')).message).toContain('RESOURCE_BUSY')
   })
+
+  it('turns a storage-schema refusal into its own remedy', () => {
+    // The service reports these instead of a bare STORAGE_UNAVAILABLE, so the teacher client must
+    // not fall back to the generic "存储不可用" text for any of them.
+    const outdated = describeLabError(new Error('SCHEMA_OUTDATED')).message
+    expect(outdated).toContain('数据格式低于当前版本')
+    expect(outdated).toContain('彻底清除服务并重新初始化')
+    expect(describeLabError(new Error('SCHEMA_UNSUPPORTED')).message).toContain('匹配的新版本')
+    expect(describeLabError(new Error('BACKUP_SCHEMA_OUTDATED')).message).toContain('留档')
+    expect(describeLabError(new Error('BACKUP_SCHEMA_UNSUPPORTED')).message).toContain('更新的版本')
+  })
 })
 
 describe('formatBytes', () => {
