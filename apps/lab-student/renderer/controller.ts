@@ -527,8 +527,8 @@ export class StudentController {
   async retry(id: string): Promise<void> {
     await this.queue.retry(id)
   }
-  /** 关闭当前报告；如有排队的报告则显示下一份，否则不再保留任何入口。 */
-  dismissReport(): void {
+  /** 关闭当前报告；如有排队的报告则显示下一份，否则不再保留任何入口。箭头属性：直接作为 React 回调传递。 */
+  dismissReport: () => void = () => {
     if (!this.view.report) return
     this.update({ report: this.reportQueue.shift() ?? null })
   }

@@ -192,7 +192,9 @@ it('shows the local report once the upload receipt arrives, then never again', a
     maxScore: 5
   })
   // 关闭即丢弃：不落盘、不再提供任何重新查看的入口。
-  controller.dismissReport()
+  // App 以脱离实例的回调引用把 dismissReport 交给对话框，因此这里必须同样脱离调用。
+  const dismiss = controller.dismissReport
+  dismiss()
   expect(controller.getSnapshot().report).toBeNull()
   await controller.refreshRecords()
   await settle()
