@@ -20,8 +20,5 @@
     "canonicalize": "^2.1.0",
     "fflate": "^0.8.2",
     "jose": "^6.1.0"
-  },
-  "scripts": {
-    "typecheck": "tsc --noEmit"
   }
 }

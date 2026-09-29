@@ -149,7 +149,7 @@ tests/lab-vm/
   protocol/tls-double.ts        # 错指纹用例用的 TLS 服务替身
   protocol/commands/*.ts        # 每个用例组的命令
   protocol/*.test.ts            # 容器内用例（vitest，见 5.5）；M4 增加 backup.test.ts
-  tsconfig.json                 # 该测试道的类型检查（yarn lab:typecheck）
+  tsconfig.json                 # 该测试道的类型检查（由根 yarn typecheck 覆盖）
 scripts/lab/build-test-driver.mjs # 把两个驱动打成单文件，VM 内无需 node_modules
 ```
 
@@ -162,7 +162,7 @@ scripts/lab/build-test-driver.mjs # 把两个驱动打成单文件，VM 内无�
 | 容器内 | `protocol/harness.ts` 起真实 `LabService` + 真实 HTTPS 回环 | 协议语义、错误码、幂等、并发上限、归档摘要、时钟可注入的时序       | `yarn test:vitest` |
 | 目标机 | 打包后的 `protocol-driver.mjs`，guest 内与宿主机各跑一遍    | 打包产物本身、Windows 服务身份、真实网络与防火墙、真实时间与多进程 | `yarn vm:lab`      |
 
-容器内那一条不是替代品：它证明协议语义正确，证明不了打包产物和真机路径。反过来，真机那一条也不该用来发现协议语义问题——那要花一整轮 VM（约 15 分钟）。`yarn lab:typecheck` 单独检查这条测试道的类型，因为仓库根 `tsconfig.json` 是 solution 风格，`tsc -p` 不会跟到 `tests/`。
+容器内那一条不是替代品：它证明协议语义正确，证明不了打包产物和真机路径。反过来，真机那一条也不该用来发现协议语义问题——那要花一整轮 VM（约 15 分钟）。这条测试道的类型由根 `yarn typecheck` 统一覆盖：它是根 `tsc -b` 的一个根项目，`tests/` 不再需要独立入口。
 
 ## 6. 测试矩阵
 

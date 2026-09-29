@@ -8,8 +8,5 @@
   },
   "dependencies": {
     "@ls101/core-types": "workspace:*"
-  },
-  "scripts": {
-    "typecheck": "tsc --noEmit"
   }
 }

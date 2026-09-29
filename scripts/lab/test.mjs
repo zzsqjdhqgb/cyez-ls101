@@ -17,8 +17,7 @@ try {
   const steps = [
     'lab:test:desktop',
     'lab:test:submission',
-    'lab:test:typecheck',
-    'lab:typecheck',
+    'typecheck',
     'lab:test:service',
     'lab:test:protocol',
     'lab:test:server',

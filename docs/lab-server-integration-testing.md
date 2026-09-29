@@ -12,7 +12,7 @@
 yarn lab:test
 ```
 
-入口先确认 Node 24.20.0 和原生归档程序可用，再依次执行服务端测试类型检查、协议驱动类型检查、服务端源码套件、协议套件、正式服务端构建及产物测试、教师／学生 Electron 跨端测试。任一阶段失败立即以非零状态退出，并标明失败阶段；Linux 的 Electron 阶段自动使用 `xvfb-run -a`。本地和 CI 使用同一入口。
+入口先确认 Node 24.20.0 和原生归档程序可用，再依次执行全仓统一类型检查、服务端源码套件、协议套件、正式服务端构建及产物测试、教师／学生 Electron 跨端测试。任一阶段失败立即以非零状态退出，并标明失败阶段；Linux 的 Electron 阶段自动使用 `xvfb-run -a`。本地和 CI 使用同一入口。
 
 该命令不安装依赖；子命令使用 `LS101_SETUP_MODE=product-docs`。它会重建 `out` 下的产物，同一工作区内应与 VM 打包错开。VM 系统验收和持续混合负载保留独立入口。
 
@@ -20,7 +20,7 @@ yarn lab:test
 
 ```powershell
 $env:LS101_SETUP_MODE = 'product-docs'
-yarn lab:test:typecheck
+yarn typecheck
 yarn lab:test:service
 yarn lab:test:protocol
 yarn lab:test:server
@@ -28,7 +28,7 @@ yarn lab:test:integration
 ```
 
 - `lab:test:service` 包含既有单元、组件集成与新增服务端集成测试。
-- `lab:test:typecheck` 检查新增集成测试及其引用的生产源码，不生成产物。
+- `typecheck` 是全仓统一类型检查（根 `tsc -b`），已覆盖服务端集成测试与协议测试道，不再为单条测试道保留独立入口。它按项目引用构建，会产生 `dist` 与 `.tsbuildinfo`（均已在 `.gitignore` 中）。
 - `tests/lab-vm` 的 Vitest 测试在本机启动真实 TLS 服务，不需要 Vagrant。
 - `lab:test:server` 先用正式构建脚本构建，再从仓库外启动随包 Node 和 `server.cjs`。
 - `lab:test:integration` 是既有教师／学生 Electron 跨端测试；Linux CI 使用虚拟显示执行。

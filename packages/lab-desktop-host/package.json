@@ -19,9 +19,6 @@
     "canonicalize": "^2.1.0",
     "jose": "^6.1.0"
   },
-  "scripts": {
-    "typecheck": "tsc --noEmit"
-  },
   "devDependencies": {
     "@peculiar/x509": "^1.14.0"
   }
