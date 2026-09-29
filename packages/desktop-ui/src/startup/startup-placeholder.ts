@@ -30,9 +30,9 @@ export function applyStartupLogoMotion(
 }
 
 export function waitForStartupLogoAnimation(root: HTMLElement): Promise<void> {
-  const animatedLogo = root.querySelector<SVGElement>('#logo-lockup')
-  if (!animatedLogo) return wait(STARTUP_LOGO_ANIMATION_DURATION_MS)
-  const logo = animatedLogo
+  const renderedLogo = root.querySelector<SVGElement>('#logo-lockup')
+  if (!renderedLogo) return wait(STARTUP_LOGO_ANIMATION_DURATION_MS)
+  const logo = renderedLogo
 
   return new Promise((resolve) => {
     const fallback = window.setTimeout(finish, STARTUP_LOGO_ANIMATION_DURATION_MS + 100)

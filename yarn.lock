@@ -1567,6 +1567,7 @@ __metadata:
     "@types/react": "npm:^19.2.18"
     "@types/react-dom": "npm:^19.2.4"
     lucide-react: "npm:^1.33.0"
+    marked: "npm:^18.0.14"
     react: "npm:^19.2.8"
     react-dom: "npm:^19.2.8"
     react-markdown: "npm:^10.1.0"
@@ -1609,6 +1610,7 @@ __metadata:
   dependencies:
     "@ls101/core-types": "workspace:*"
     "@ls101/exam-package": "workspace:*"
+    fflate: "npm:^0.8.2"
   languageName: unknown
   linkType: soft
 
@@ -6898,6 +6900,15 @@ __metadata:
   version: 3.0.4
   resolution: "markdown-table@npm:3.0.4"
   checksum: 10c0/1257b31827629a54c24a5030a3dac952256c559174c95ce3ef89bebd6bff0cb1444b1fd667b1a1bb53307f83278111505b3e26f0c4e7b731e0060d435d2d930b
+  languageName: node
+  linkType: hard
+
+"marked@npm:^18.0.14":
+  version: 18.0.14
+  resolution: "marked@npm:18.0.14"
+  bin:
+    marked: bin/marked.js
+  checksum: 10c0/1214c7553fdcb1db6c5adad29a7d019f9350f861bc9783ed41a2d177f021551fb22884de012ea26be446af8650d8abbf76d822b9ad5b0c5d592628f66663c42e
   languageName: node
   linkType: hard
 

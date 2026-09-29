@@ -1211,9 +1211,8 @@ function functionPreviewChoicePageCounts(
       return
     }
     if (input.shape.kind === 'range' && expression.selection.kind === 'range') {
-      input.shape.pageCounts.forEach((count, index) =>
-        requirePage(expression.selection.startPage + index, count)
-      )
+      const { startPage } = expression.selection
+      input.shape.pageCounts.forEach((count, index) => requirePage(startPage + index, count))
       return
     }
     if (input.shape.kind === 'all' && expression.selection.kind === 'all') {

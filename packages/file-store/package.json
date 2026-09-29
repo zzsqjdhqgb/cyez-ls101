@@ -24,8 +24,5 @@
     "electron": {
       "optional": true
     }
-  },
-  "scripts": {
-    "typecheck": "tsc --noEmit"
   }
 }

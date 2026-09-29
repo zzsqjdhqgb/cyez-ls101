@@ -377,7 +377,7 @@ export class AIRouterSpeechRecognitionModelStore {
 }
 
 function openZip(filePath: string): Promise<ZipFile> {
-  return new Promise((resolve, reject) => {
+  return new Promise<ZipFile>((resolve, reject) => {
     yauzl.open(
       filePath,
       {

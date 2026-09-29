@@ -459,7 +459,12 @@ export function AIRouterTextSettingsPage({
                 <span className={styles.providerText}>
                   <span className={styles.providerName}>{config.name}</span>
                   <span className={styles.providerMeta}>
-                    <span>{providerPresetName(config)}</span>
+                    <span>
+                      {providerPresetName({
+                        ...config,
+                        catalogProviderId: config.catalogProviderId || ''
+                      })}
+                    </span>
                     <span>
                       {config.models.filter((model: AIRouterModelConfig) => model.enabled).length}{' '}
                       个已启用模型

@@ -100,7 +100,13 @@ describe('QwenTtsSynthesizer', () => {
 
   it('keeps one CPU helper alive for repeated synthesis', async () => {
     const helper = new FakeHelper()
-    const spawnProcess = vi.fn(() => helper as unknown as ChildProcessWithoutNullStreams)
+    const spawnProcess = vi.fn(
+      (
+        _command: string,
+        _args: string[],
+        _options?: { env?: Record<string, string | undefined> }
+      ) => helper as unknown as ChildProcessWithoutNullStreams
+    )
     const synthesizer = new QwenTtsSynthesizer({
       helperPath,
       spawnProcess: spawnProcess as unknown as typeof spawn
@@ -151,7 +157,13 @@ describe('QwenTtsSynthesizer', () => {
 
   it('forces a CUDA provider request through the CPU helper', async () => {
     const helper = new FakeHelper()
-    const spawnProcess = vi.fn(() => helper as unknown as ChildProcessWithoutNullStreams)
+    const spawnProcess = vi.fn(
+      (
+        _command: string,
+        _args: string[],
+        _options?: { env?: Record<string, string | undefined> }
+      ) => helper as unknown as ChildProcessWithoutNullStreams
+    )
     const synthesizer = new QwenTtsSynthesizer({
       helperPaths: {
         cpu: helperPath,
@@ -175,7 +187,13 @@ describe('QwenTtsSynthesizer', () => {
 
   it('terminates the helper when synthesis is aborted', async () => {
     const helper = new FakeHelper(false)
-    const spawnProcess = vi.fn(() => helper as unknown as ChildProcessWithoutNullStreams)
+    const spawnProcess = vi.fn(
+      (
+        _command: string,
+        _args: string[],
+        _options?: { env?: Record<string, string | undefined> }
+      ) => helper as unknown as ChildProcessWithoutNullStreams
+    )
     const synthesizer = new QwenTtsSynthesizer({
       helperPath,
       spawnProcess: spawnProcess as unknown as typeof spawn
@@ -207,7 +225,11 @@ describe('QwenTtsSynthesizer', () => {
 
   it('probes the CUDA helper without loading models', async () => {
     const spawnProcess = vi.fn(
-      () =>
+      (
+        _command: string,
+        _args: string[],
+        _options?: { env?: Record<string, string | undefined> }
+      ) =>
         new FakeProbe({
           available: true,
           backend: 'cuda',

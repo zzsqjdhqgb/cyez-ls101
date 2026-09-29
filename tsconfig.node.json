@@ -11,6 +11,7 @@
   ],
   "compilerOptions": {
     "composite": true,
+    "outDir": "./dist/node",
     "types": ["electron-vite/node"]
   },
   "references": [

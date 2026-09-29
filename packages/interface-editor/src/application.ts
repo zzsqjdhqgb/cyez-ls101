@@ -879,7 +879,7 @@ export function createInterfaceApplication(
         const value = selected.package
         const inspection = await inspectInterfacePackage(value)
         let active = true
-        const previewInstances = await Promise.all(
+        const previewInstances: InterfaceImportPreview['instances'] = await Promise.all(
           inspection.instances.map(async (item) => {
             const incoming = value.instances.find(
               ({ instance }) => instance.instanceId === item.instanceId

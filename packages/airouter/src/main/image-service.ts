@@ -203,7 +203,9 @@ async function generate(
   signal?: AbortSignal
 ): Promise<AIRouterGeneratedImage> {
   const provider = createOpenAI({ apiKey, baseURL: config.baseUrl })
-  const imageSize = size ? `${size.width}x${size.height}` : undefined
+  const imageSize: `${number}x${number}` | undefined = size
+    ? `${size.width}x${size.height}`
+    : undefined
   let data: Uint8Array
   try {
     const result = await generateImageWithModel({

@@ -138,6 +138,16 @@ function mockClient(): AIRouterClient {
     listPronunciationAssessmentModels: vi.fn().mockResolvedValue([]),
     assessPronunciation: vi.fn(),
     synthesizeSpeech: vi.fn(),
+    listSpeechRecognitionProviderConfigs: vi.fn().mockResolvedValue([]),
+    saveSpeechRecognitionProviderConfig: vi.fn(),
+    deleteSpeechRecognitionProviderConfig: vi.fn(),
+    readSpeechRecognitionProviderApiKey: vi.fn(),
+    listSpeechRecognitionModelPackages: vi.fn().mockResolvedValue([]),
+    importSpeechRecognitionModelPackage: vi.fn().mockResolvedValue(null),
+    deleteSpeechRecognitionModelPackage: vi.fn(),
+    listSpeechRecognitionProviderModels: vi.fn().mockResolvedValue([]),
+    getPronunciationAssessmentExtensionStatus: vi.fn(),
+    importPronunciationAssessmentExtension: vi.fn().mockResolvedValue(null),
     generateImage: vi.fn(),
     generateText: vi.fn()
   }

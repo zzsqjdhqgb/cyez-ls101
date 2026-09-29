@@ -218,7 +218,11 @@ export function FunctionSignatureEditor({
                               label={`输入 ${index + 1} 删除第 ${pageIndex + 1} 页`}
                               size="small"
                               variant="danger"
-                              disabled={disabled || input.shape.pageCounts.length === 1}
+                              disabled={
+                                disabled ||
+                                (input.shape.kind !== 'question' &&
+                                  input.shape.pageCounts.length === 1)
+                              }
                               onClick={() =>
                                 apply({
                                   type: 'update-function-input',

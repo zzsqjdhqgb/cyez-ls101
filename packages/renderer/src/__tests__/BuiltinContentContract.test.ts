@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import type { InterfaceInstance, InterfaceVarManifest } from '@ls101/core-types'
 import { decodeExamPackage, encodeExamPackage } from '@ls101/exam-package'
 import { createInterfaceApplication } from '@ls101/interface-editor'

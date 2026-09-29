@@ -4,11 +4,16 @@ import {
   DATA_DIRECTORY_CHANNELS,
   LEGACY_DATA_CHANNELS,
   LICENSE_CHANNELS,
+  REPORT_EXPORT_CHANNELS,
+  REPORT_EXPORT_EVENTS,
   STARTUP_CHANNELS,
   type AppInfoBridge,
   type DataDirectoryBridge,
   type LegacyDataBridge,
   type LicenseBridge,
+  type ReportExportBridge,
+  type ReportExportProgress,
+  type ReportExportRequest,
   type StartupBridge
 } from '@ls101/core-types'
 import { createWindowControlsBridge } from '@ls101/desktop-ui/main'
@@ -422,6 +427,25 @@ const loggerBridge: LoggerBridge = {
   }
 }
 
+const reportExportBridge: ReportExportBridge = {
+  exportBatch(request: ReportExportRequest) {
+    return ipcRenderer.invoke(REPORT_EXPORT_CHANNELS.exportBatch, request)
+  },
+  exportSingle(item) {
+    return ipcRenderer.invoke(REPORT_EXPORT_CHANNELS.exportSingle, item)
+  },
+  onProgress(listener: (progress: ReportExportProgress) => void) {
+    const handler = (_event: IpcRendererEvent, progress: ReportExportProgress): void => {
+      listener(progress)
+    }
+
+    ipcRenderer.on(REPORT_EXPORT_EVENTS.progress, handler)
+    return () => {
+      ipcRenderer.removeListener(REPORT_EXPORT_EVENTS.progress, handler)
+    }
+  }
+}
+
 const startupBridge: StartupBridge = {
   whenReady() {
     return ipcRenderer.invoke(STARTUP_CHANNELS.whenReady)
@@ -440,4 +464,5 @@ contextBridge.exposeInMainWorld('license', licenseBridge)
 contextBridge.exposeInMainWorld('dataDirectory', dataDirectoryBridge)
 contextBridge.exposeInMainWorld('legacyData', legacyDataBridge)
 contextBridge.exposeInMainWorld('windowControls', windowControlsBridge)
+contextBridge.exposeInMainWorld('reportExport', reportExportBridge)
 contextBridge.exposeInMainWorld('logger', loggerBridge)

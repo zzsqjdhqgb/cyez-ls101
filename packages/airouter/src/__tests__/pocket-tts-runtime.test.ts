@@ -12,9 +12,10 @@ describe('Pocket TTS runtime synthesis', () => {
       encode: (text) => new Uint32Array(text.trim() ? text.trim().split(/\s+/).length : 0)
     }
     let hasFrame = true
+    const startGeneration = vi.fn<PocketTtsModel['start_generation']>()
     const model: PocketTtsModel = {
       prepare_text: vi.fn((text: string) => [text, 0] as [string, number]),
-      start_generation: vi.fn(),
+      start_generation: startGeneration,
       generation_step: vi.fn(() => {
         if (hasFrame) {
           hasFrame = false
@@ -42,8 +43,8 @@ describe('Pocket TTS runtime synthesis', () => {
       config
     )
 
-    expect(model.start_generation).toHaveBeenCalledTimes(3)
-    expect(model.start_generation.mock.calls.map(([voiceIndex]) => voiceIndex)).toEqual([7, 7, 7])
+    expect(startGeneration).toHaveBeenCalledTimes(3)
+    expect(startGeneration.mock.calls.map(([voiceIndex]) => voiceIndex)).toEqual([7, 7, 7])
     expect(model.prepare_text).toHaveBeenCalledTimes(3)
     expect(audio.slice(0, 4)).toEqual(new Uint8Array([82, 73, 70, 70]))
   })

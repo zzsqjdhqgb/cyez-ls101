@@ -105,7 +105,7 @@ export function StorageSettingsPage(): JSX.Element {
   }
 
   const deleteOld = async (): Promise<void> => {
-    if (!bridge || !info.oldDataDirectory) return
+    if (!bridge || !info?.oldDataDirectory) return
     setBusy(true)
     setDeleteError(null)
     try {

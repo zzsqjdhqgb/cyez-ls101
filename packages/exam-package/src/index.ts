@@ -44,6 +44,14 @@ const DEFAULT_READ_LIMITS: ArchiveReadLimits = {
   maxUncompressedBytes: MAX_UNCOMPRESSED_BYTES
 }
 
+/** 归档条目清单里的一项；只描述结构，不携带内容。 */
+export interface ArchiveEntryInfo {
+  /** 归档内的条目路径，始终以 `/` 分隔。 */
+  name: string
+  /** 归档记录的解压后字节数，用于读取前的容量判断。 */
+  uncompressedBytes: number
+}
+
 export class ExamPackageArchiveError extends Error {
   constructor(message: string) {
     super(message)
@@ -112,6 +120,79 @@ export async function decodeSubmissionPackage(
   validateSubmissionPackage(submission)
   const resources = readResources(files, submission.resources)
   return { submission, files: resources }
+}
+
+/**
+ * 列出归档条目，不解压任何内容。
+ * 供外层容器（如批量下载的 ZIP）在导入前判断结构，避免为探测结构解压全部条目。
+ */
+export function listArchiveEntries(data: Uint8Array): Promise<ArchiveEntryInfo[]> {
+  if (!(data instanceof Uint8Array))
+    return Promise.reject(invalidArchive('Archive must be binary data'))
+  const entries: ArchiveEntryInfo[] = []
+  return new Promise((resolve, reject) => {
+    unzip(
+      data,
+      {
+        filter(file) {
+          entries.push({ name: file.name, uncompressedBytes: file.originalSize })
+          return false
+        }
+      },
+      (error) => {
+        if (error) return reject(invalidArchive(`Cannot read archive: ${error.message}`))
+        if (entries.length > MAX_FILES)
+          return reject(invalidArchive('Archive contains too many files'))
+        try {
+          if (new Set(entries.map((entry) => entry.name)).size !== entries.length)
+            throw invalidArchive('Archive contains duplicate file paths')
+          for (const entry of entries) {
+            if (!safePath(entry.name)) throw invalidArchive(`Unsafe archive path: ${entry.name}`)
+          }
+          resolve(entries)
+        } catch (validationError) {
+          reject(validationError)
+        }
+      }
+    )
+  })
+}
+
+/** 归档根目录是否带单包清单；不成立时它不是试卷包或作答包本身，而是外层容器。 */
+export function hasArchiveManifest(entries: readonly ArchiveEntryInfo[]): boolean {
+  return entries.some((entry) => entry.name === MANIFEST_PATH)
+}
+
+/** 只解压指定条目；其它条目不解压。 */
+export function readArchiveEntry(data: Uint8Array, name: string): Promise<Uint8Array> {
+  if (!(data instanceof Uint8Array))
+    return Promise.reject(invalidArchive('Archive must be binary data'))
+  if (!safePath(name)) return Promise.reject(invalidArchive(`Unsafe archive path: ${name}`))
+  let matched = false
+  let oversized = false
+  return new Promise((resolve, reject) => {
+    unzip(
+      data,
+      {
+        filter(file) {
+          if (file.name !== name) return false
+          matched = true
+          if (file.originalSize > MAX_UNCOMPRESSED_BYTES) {
+            oversized = true
+            return false
+          }
+          return true
+        }
+      },
+      (error, files) => {
+        if (error) return reject(invalidArchive(`Cannot read archive: ${error.message}`))
+        if (oversized) return reject(invalidArchive(`Archive entry is too large: ${name}`))
+        const entry = files[name]
+        if (!matched || !entry) return reject(invalidArchive(`Missing required file: ${name}`))
+        resolve(entry)
+      }
+    )
+  })
 }
 
 export function validateExamPackage(value: unknown): asserts value is ExamPackage {

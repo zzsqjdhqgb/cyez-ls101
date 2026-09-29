@@ -81,25 +81,41 @@ test('shows an animated progress indicator while application initialization is p
 
   const progress = page.getByRole('progressbar', { name: '正在加载' })
   await expect(progress).toBeAttached()
-  await expect
-    .poll(() =>
-      progress.evaluate((element) => ({
-        opacity: getComputedStyle(element).opacity,
-        revealDelay: getComputedStyle(element).animationDelay
-      }))
-    )
-    .toEqual({ opacity: '0', revealDelay: '2.5s' })
-  await expect
-    .poll(() => progress.evaluate((element) => getComputedStyle(element).opacity), {
-      timeout: 3_000
-    })
-    .toBe('1')
-  const initialTransform = await progress.evaluate(
-    (element) => getComputedStyle(element, '::after').transform
-  )
-  await expect
-    .poll(() => progress.evaluate((element) => getComputedStyle(element, '::after').transform))
-    .not.toBe(initialTransform)
+
+  // 用 Web Animations 时间轴验证两条动画，而不是按墙钟等满 2.5s 延迟：
+  // CI 上渲染进程会被并行用例抢占，实时等待会随机失败。
+  const animations = await progress.evaluate((element) => {
+    const entries = element.ownerDocument.getAnimations()
+    const reveal = entries.find((entry) => entry.animationName === 'startup-progress-reveal')
+    const marquee = entries.find((entry) => entry.animationName === 'startup-progress')
+    const readOpacity = (time: number): string | null => {
+      if (!reveal) return null
+      reveal.pause()
+      reveal.currentTime = time
+      return getComputedStyle(element).opacity
+    }
+    const readTransform = (time: number): string | null => {
+      if (!marquee) return null
+      marquee.pause()
+      marquee.currentTime = time
+      return getComputedStyle(element, '::after').transform
+    }
+    return {
+      revealDelay: reveal?.effect?.getTiming().delay ?? null,
+      hiddenOpacity: readOpacity(0),
+      revealedOpacity: readOpacity(2_600),
+      marqueeIterations: marquee?.effect?.getTiming().iterations ?? null,
+      marqueeMoved: readTransform(0) !== readTransform(500)
+    }
+  })
+
+  expect(animations).toEqual({
+    revealDelay: 2_500,
+    hiddenOpacity: '0',
+    revealedOpacity: '1',
+    marqueeIterations: Number.POSITIVE_INFINITY,
+    marqueeMoved: true
+  })
 
   await closeStartupReleaseNotes(page)
   await expect(page.getByRole('heading', { level: 1, name: '工作台' })).toBeVisible()

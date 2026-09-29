@@ -12,6 +12,7 @@ import { createWorkerLegacyArchiveOperations } from './legacy-data-archive-clien
 import { LegacyDataService, registerLegacyDataHandlers } from './legacy-data'
 import { registerLicenseHandlers } from './license'
 import { LICENSE_RECEIPT_FILENAME, type LicenseServiceOptions } from './license-service'
+import { registerReportExportHandlers } from './report-export'
 
 interface ApplicationServiceOptions {
   builtinDataDirectory: string
@@ -50,6 +51,7 @@ export function registerApplicationServices(options: ApplicationServiceOptions):
   })
   registerClipboard()
   registerFileDialog()
+  registerReportExportHandlers()
   registerAppInfoHandlers()
   registerLicenseHandlers(createLicenseOptions(userDataDirectory, isLocalIntegrationTest))
   registerDataDirectoryHandlers(userDataDirectory, dataDirectory, {

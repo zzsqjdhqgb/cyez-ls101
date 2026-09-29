@@ -59,7 +59,7 @@
     "format": "prettier --write .",
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --fix --cache",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc -b",
     "test": "yarn test:scripts && yarn test:vitest && yarn test:playwright && yarn test:product-docs:run",
     "test:scripts": "node --test scripts/__tests__/*.test.js",
     "test:vitest": "vitest run",

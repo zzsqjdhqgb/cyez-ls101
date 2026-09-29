@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type {
   FunctionContent,
+  FunctionDocument,
   LocalFunctionLibraryDocument,
   TemplateApplication,
   TemplateDocument
@@ -46,7 +47,7 @@ describe('Template function pages', () => {
     expect(screen.queryByRole('button', { name: '编辑导入函数' })).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('tab', { name: '本地函数库' }))
-    fireEvent.change(screen.getByRole('textbox', { name: '名称', exact: true }), {
+    fireEvent.change(screen.getByRole('textbox', { name: '名称' }), {
       target: { value: '进入函数前保存' }
     })
     fireEvent.click(screen.getByRole('button', { name: '编辑本地函数' }))
@@ -432,6 +433,7 @@ function application(): TemplateApplication {
     initialize: vi.fn().mockResolvedValue(undefined),
     browser: {
       listTemplates: vi.fn().mockResolvedValue([]),
+      listBuiltinTemplates: vi.fn().mockResolvedValue([]),
       listFunctionLibraries: vi.fn().mockResolvedValue([
         {
           source: 'builtin',
@@ -462,8 +464,19 @@ function application(): TemplateApplication {
       listInterfaces: vi.fn().mockResolvedValue([]),
       listInterfaceInstances: vi.fn().mockResolvedValue([])
     },
+    builtinTemplates: {
+      get: vi.fn().mockResolvedValue(null),
+      createCopy: vi.fn(),
+      validate: vi.fn(),
+      compile: vi.fn(),
+      preview: vi.fn()
+    },
     templates: {
       create: vi.fn(),
+      inspectImport: vi.fn().mockResolvedValue({ status: 'new', existing: null }),
+      importDocument: vi
+        .fn()
+        .mockImplementation(async (source: TemplateDocument) => structuredClone(source)),
       get: vi.fn().mockResolvedValue(template()),
       save: vi.fn().mockImplementation(async (document) => ({
         ...document,
@@ -486,28 +499,32 @@ function application(): TemplateApplication {
         delete: vi.fn(),
         createFunction: vi.fn(),
         getFunction: vi.fn(),
-        saveFunction: vi.fn().mockImplementation(async (library, document) => {
-          storedLibrary = {
-            ...library,
-            storageRevision: library.storageRevision + 1,
-            content: {
-              ...library.content,
-              functions: library.content.functions.map((entry) =>
-                entry.functionId === document.functionId
-                  ? { functionId: entry.functionId, content: structuredClone(document.content) }
-                  : entry
-              )
-            },
-            editorState: {
-              ...library.editorState,
-              functions: {
-                ...library.editorState.functions,
-                [document.functionId]: structuredClone(document.editorState)
+        saveFunction: vi
+          .fn()
+          .mockImplementation(
+            async (library: LocalFunctionLibraryDocument, document: FunctionDocument) => {
+              storedLibrary = {
+                ...library,
+                storageRevision: library.storageRevision + 1,
+                content: {
+                  ...library.content,
+                  functions: library.content.functions.map((entry) =>
+                    entry.functionId === document.functionId
+                      ? { functionId: entry.functionId, content: structuredClone(document.content) }
+                      : entry
+                  )
+                },
+                editorState: {
+                  ...library.editorState,
+                  functions: {
+                    ...library.editorState.functions,
+                    [document.functionId]: structuredClone(document.editorState)
+                  }
+                }
               }
+              return structuredClone(storedLibrary)
             }
-          }
-          return structuredClone(storedLibrary)
-        }),
+          ),
         preview: vi.fn(),
         insertFunctionCall: vi.fn().mockImplementation(async () => {
           const source = storedLibrary.content.functions.find(
