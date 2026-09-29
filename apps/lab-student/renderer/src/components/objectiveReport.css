@@ -1,0 +1,220 @@
+/* 学生端本地报告正文的排版；规则与 packages/renderer 的 submissionReport.css
+   保持同源（只保留屏幕展示需要的部分）。作用域限定在 .objectiveReport 下。 */
+.objectiveReport {
+  min-width: 0;
+  color: var(--color-text, #3f4847);
+  font-size: 14px;
+  line-height: 1.76;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.objectiveReport > h1:first-child {
+  margin-top: 0;
+}
+
+.objectiveReport h1,
+.objectiveReport h2,
+.objectiveReport h3,
+.objectiveReport h4 {
+  color: var(--color-text-strong, #171b1b);
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.objectiveReport h1 {
+  margin: 0 0 13px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--color-border-strong, #d7dcdc);
+  font-size: 26px;
+}
+
+.objectiveReport h1::before {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--color-accent, #087c72);
+  content: '学生学习报告';
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.objectiveReport h1::after {
+  display: block;
+  width: 36px;
+  height: 2px;
+  margin-top: 11px;
+  background: var(--color-accent, #087c72);
+  content: '';
+}
+
+.objectiveReport h2 {
+  margin: 29px 0 11px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-border, #e7eaea);
+  font-size: 17px;
+}
+
+.objectiveReport h2::before {
+  display: inline-block;
+  width: 0.48em;
+  height: 0.48em;
+  margin-right: 9px;
+  background: var(--color-accent, #087c72);
+  content: '';
+  vertical-align: 0.1em;
+}
+
+.objectiveReport h3 {
+  margin: 19px 0 7px;
+  padding-left: 9px;
+  border-left: 2px solid var(--color-accent, #087c72);
+  font-size: 14px;
+}
+
+.objectiveReport h4 {
+  margin: 16px 0 6px;
+  font-size: 13px;
+}
+
+.objectiveReport p {
+  margin: 8px 0;
+}
+
+.objectiveReport strong {
+  color: var(--color-text-strong, #171b1b);
+  font-weight: 650;
+}
+
+.objectiveReport p:has(> strong:only-child) {
+  margin: 13px 0;
+  padding: 3px 0 3px 12px;
+  border-left: 2px solid var(--color-accent, #087c72);
+}
+
+.objectiveReport ul,
+.objectiveReport ol {
+  margin: 9px 0;
+  padding-left: 1.55em;
+}
+
+.objectiveReport li {
+  margin: 3px 0;
+}
+
+.objectiveReport li::marker {
+  color: var(--color-text-muted, #737e7c);
+}
+
+.objectiveReport a {
+  color: var(--color-accent-pressed, #05584f);
+  text-decoration: underline;
+  text-decoration-color: var(--color-accent, #087c72);
+  text-underline-offset: 2px;
+}
+
+.objectiveReport table {
+  width: 100%;
+  margin: 14px 0;
+  border-collapse: collapse;
+  border-top: 1px solid var(--color-border-strong, #d7dcdc);
+  font-size: 0.94em;
+  font-variant-numeric: tabular-nums;
+}
+
+.objectiveReport th,
+.objectiveReport td {
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--color-border, #e7eaea);
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.objectiveReport th {
+  color: var(--color-text-strong, #171b1b);
+  font-weight: 650;
+}
+
+.objectiveReport thead th {
+  border-bottom-color: var(--color-border-strong, #d7dcdc);
+}
+
+.objectiveReport tbody tr:nth-child(even) {
+  background: var(--color-surface-subtle, #f6f8f8);
+}
+
+.objectiveReport > table:first-of-type {
+  margin: 12px 0 26px;
+  border-top-width: 2px;
+  font-size: 0.92em;
+}
+
+.objectiveReport > table:first-of-type th {
+  padding: 6px 8px 5px;
+  color: var(--color-text-muted, #737e7c);
+  font-size: 0.84em;
+  font-weight: 600;
+}
+
+.objectiveReport > table:first-of-type td {
+  padding: 7px 8px 9px;
+  border-bottom-color: var(--color-border-strong, #d7dcdc);
+  color: var(--color-text-strong, #171b1b);
+  font-weight: 600;
+}
+
+.objectiveReport > h2 + table {
+  margin: 9px 0 24px;
+  border-top-width: 2px;
+}
+
+.objectiveReport > h2 + table th,
+.objectiveReport > h2 + table td {
+  padding: 9px 6px;
+}
+
+.objectiveReport > h2 + table thead th {
+  color: var(--color-text-muted, #737e7c);
+  font-size: 0.86em;
+}
+
+.objectiveReport > h2 + table tbody td {
+  border-bottom-color: var(--color-border-strong, #d7dcdc);
+  color: var(--color-accent-pressed, #05584f);
+  font-size: 1.16em;
+  font-weight: 700;
+}
+
+.objectiveReport hr {
+  height: 0;
+  margin: 27px 0;
+  border: 0;
+  border-top: 1px solid var(--color-border-strong, #d7dcdc);
+}
+
+.objectiveReport img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 15px auto;
+  padding: 3px;
+  border: 1px solid var(--color-border, #e7eaea);
+  background: var(--color-surface-subtle, #f6f8f8);
+}
+
+.objectiveReport code {
+  padding: 1px 4px;
+  border-radius: var(--radius-xs, 2px);
+  background: var(--color-surface-subtle, #f6f8f8);
+  color: var(--color-text-strong, #171b1b);
+  font-family: 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+}
+
+.objectiveReport blockquote {
+  margin: 13px 0;
+  padding: 2px 0 2px 14px;
+  border-left: 2px solid var(--color-border-strong, #d7dcdc);
+}

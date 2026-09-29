@@ -14,6 +14,7 @@
   "dependencies": {
     "@ls101/lab-client": "workspace:*",
     "@ls101/lab-contracts": "workspace:*",
+    "marked": "^18.0.14",
     "react": "^19.2.8"
   },
   "devDependencies": {

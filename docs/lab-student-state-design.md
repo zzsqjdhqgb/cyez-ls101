@@ -102,6 +102,12 @@ record 保存：schemaVersion、revision、submissionId、原 serverId/deviceId/
 
 处理中、异常和心跳统计是不同投影：`waitingFirstUpload` 是 never-sent 且原归档存在的记录；`unconfirmed` 是 unknown 的记录；`failed` 是携带普通失败或需人工处理的未完成记录，允许与 unknown 重叠。maintenance 暂停本身不计普通失败。completed 只进入历史。
 
+### 6.1 纯客观卷的一次性本地报告
+
+上传拿到成功回执（record 变为 completed）后，若整卷评分单元全部是客观题，学生端用内存中保留的作答包字节在本地批改并生成报告：复用 `@ls101/submission-library` 的 `objectiveGradingEngine` 与报告 Markdown 生成，不引入主观题评分（human/AI）或 AIRouter。批改与报告生成严格发生在上传完成之后，不参与、不阻塞第 6 节的提交转换与重试调度；混合卷或空卷不生成报告。
+
+报告是一次性的：数据只存在于 renderer 内存，弹窗关闭即丢弃，不落盘、不进入历史或任何可重新打开的入口，弹窗内常驻提示“如需再次查看，请询问任课老师”。展示时机避让维护与部署测试，也不打断进行中的下一场练习；同一会话内多份报告按完成顺序排队展示。应用重启后不补发未展示的报告。
+
 ## 7. 换绑与旧服务核对
 
 入网命令必须通过激活、版本和忙碌检查。正在播放、保存或执行维护任务时拒绝；先取消并等待后台传输收敛、持久化所有状态，再原子替换绑定。切换失败时保留旧绑定，不出现一半新身份一半旧指纹。

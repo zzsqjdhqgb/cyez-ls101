@@ -12,6 +12,7 @@
     "@ls101/lab-contracts": "workspace:*",
     "@ls101/lab-desktop-host": "workspace:*",
     "@ls101/lab-renderer": "workspace:*",
+    "@ls101/submission-library": "workspace:*",
     "lucide-react": "^1.33.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

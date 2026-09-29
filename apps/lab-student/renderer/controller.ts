@@ -12,6 +12,7 @@ import { admission, canViewRecords, type AdmissionFacts } from './admission'
 import { SubmissionQueue } from './submission-queue'
 import { MaintenanceQueue } from './maintenance-queue'
 import { runDeploymentTests } from './deployment-tests'
+import { buildObjectiveReport, type ObjectiveReport } from './objective-report'
 
 type Phase = 'idle' | 'preparing' | 'practicing' | 'saving' | 'testing' | 'error'
 interface Connection {
@@ -41,6 +42,8 @@ export interface StudentView extends AdmissionFacts {
   } | null
   testCase: string | null
   error: string | null
+  /** 一次性本地客观题报告；仅在对话框打开期间非空，关闭后即丢弃且不再重现。 */
+  report: ObjectiveReport | null
 }
 
 export class StudentController {
@@ -59,7 +62,8 @@ export class StudentController {
     player: null,
     testPlayer: null,
     testCase: null,
-    error: null
+    error: null,
+    report: null
   }
   private readonly listeners = new Set<() => void>()
   private connection: Connection | null = null
@@ -81,6 +85,13 @@ export class StudentController {
     pageIndex: null,
     stepIndex: null
   }
+  /**
+   * 本地客观题报告的会话内状态。作答包字节在 finish 时留在内存里，直到上传拿到
+   * 回执后才解码批改；报告只在内存队列中等待展示，关闭即丢弃，不提供重看入口。
+   */
+  private readonly reportArchives = new Map<string, Uint8Array>()
+  private readonly reportSeen = new Set<string>()
+  private readonly reportQueue: ObjectiveReport[] = []
   private readonly requests = new Set<AbortController>()
   private unsubscribe: (() => void) | undefined
 
@@ -264,6 +275,9 @@ export class StudentController {
     this.unsubscribe?.()
     this.queue.suspend('shutdown')
     this.maintenance.suspend()
+    this.reportArchives.clear()
+    this.reportSeen.clear()
+    this.reportQueue.length = 0
     for (const request of this.requests) request.abort()
     await Promise.all([this.queue.settle(), this.maintenance.settle()])
     await this.disconnect()
@@ -395,6 +409,7 @@ export class StudentController {
       })
       if (generation !== this.generation || connection !== this.connection) return
       this.update({ state, binding: observed, connected: true, records })
+      this.checkObjectiveReports(records)
       this.reconnectFailures = 0
       if (this.ready()) {
         this.queue.resume()
@@ -466,7 +481,40 @@ export class StudentController {
   }
   async refreshRecords(): Promise<void> {
     if (!this.view.active || !this.view.initialized) return
-    this.update({ records: await this.host.invoke('records.list') })
+    const records = await this.host.invoke<StudentRecord[]>('records.list')
+    this.update({ records })
+    this.checkObjectiveReports(records)
+  }
+
+  /** 上传拿到回执后才尝试生成报告；同一份作答只会被处理一次。 */
+  private checkObjectiveReports(records: readonly StudentRecord[]): void {
+    for (const record of records) {
+      if (record.state !== 'completed' || this.reportSeen.has(record.submissionId)) continue
+      this.reportSeen.add(record.submissionId)
+      const bytes = this.reportArchives.get(record.submissionId)
+      if (!bytes) continue
+      this.reportArchives.delete(record.submissionId)
+      void buildObjectiveReport(bytes)
+        .then((report) => {
+          if (!report) return
+          this.reportQueue.push(report)
+          this.presentNextReport()
+        })
+        .catch(() => undefined)
+    }
+    this.presentNextReport()
+  }
+
+  /**
+   * 报告只在合适的时机盖在界面上：部署测试和机房维护期间不打扰，学生正在作答下一
+   * 份试卷时（player 存在且不在完成页）也不打断，其余情况立即展示。
+   */
+  private presentNextReport(): void {
+    if (this.view.report) return
+    if (this.view.testPlayer || !canViewRecords(this.view)) return
+    if (this.view.player && this.view.phase !== 'idle') return
+    const report = this.reportQueue.shift()
+    if (report) this.update({ report })
   }
   async enroll(file: string, fingerprint: string): Promise<void> {
     if (admission(this.view) !== 'unbound') throw new Error('当前状态不允许入网')
@@ -478,6 +526,11 @@ export class StudentController {
   }
   async retry(id: string): Promise<void> {
     await this.queue.retry(id)
+  }
+  /** 关闭当前报告；如有排队的报告则显示下一份，否则不再保留任何入口。 */
+  dismissReport(): void {
+    if (!this.view.report) return
+    this.update({ report: this.reportQueue.shift() ?? null })
   }
   async exportRecords(ids: string[]): Promise<void> {
     if (!canViewRecords(this.view)) throw new Error('当前状态不允许导出')
@@ -575,6 +628,8 @@ export class StudentController {
         bytes: new Uint8Array(bytes.slice(offset, offset + 1024 * 1024))
       })
     await this.host.invoke('records.finish', { handle, sha256 })
+    // 仅为之后的本地客观题报告保留字节；不解码、不批改，也不影响上传队列。
+    this.reportArchives.set(this.intent.submissionId, new Uint8Array(bytes))
     await this.refreshRecords().catch((error) => this.fail(error))
     void this.queue.pump().catch((error) => this.fail(error))
   }
@@ -586,6 +641,7 @@ export class StudentController {
   }
   private async setPhase(phase: Phase): Promise<void> {
     this.update({ phase })
+    this.presentNextReport()
     await this.host.invoke('foreground.set', phase)
   }
   async exitPractice(): Promise<void> {
@@ -593,6 +649,7 @@ export class StudentController {
     if (this.view.player) await this.host.invoke('cache.release', this.view.player.baseUrl)
     this.intent = null
     this.update({ player: null })
+    this.presentNextReport()
     if (this.view.active && this.view.initialized) await this.setPhase('idle')
   }
 }

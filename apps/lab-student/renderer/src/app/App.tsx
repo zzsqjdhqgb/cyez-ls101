@@ -9,6 +9,7 @@ import { StudentController } from '../../controller'
 import { DeploymentPlayer } from '../../deployment-player'
 import { StudentActions, StudentStatus } from '../components/StudentStatus'
 import { PracticeNotice } from '../components/PracticeNotice'
+import { ObjectiveReportDialog } from '../components/ObjectiveReportDialog'
 import { ActivationPage } from '../pages/ActivationPage'
 import { ExamsPage } from '../pages/ExamsPage'
 import { ErrorsPage, HistoryPage, PendingPage } from '../pages/RecordsPage'
@@ -45,39 +46,49 @@ const routes: readonly AppRouteRegistration[] = [
 
 function StudentApplication(): JSX.Element {
   const { controller, view, gate, action } = useWorkspace()
-  if (view.testPlayer && gate === 'maintenance')
-    return <DeploymentPlayer player={view.testPlayer} />
-  if (view.player)
-    return (
-      <>
-        <ExamPlayer
-          examBaseUrl={view.player.baseUrl}
-          beforeStart={controller.beforeStart}
-          onFinish={controller.finish}
-          onPhaseChange={controller.phaseChanged}
-          onExit={() => void action.run(() => controller.exitPractice())}
-        />
-        {(gate !== 'ready' || action.error) && (
-          <PracticeNotice>
-            {gate !== 'ready' && <StudentStatus />}
-            {action.error && <div>{action.error.message}</div>}
-          </PracticeNotice>
-        )}
-      </>
-    )
-  if (view.loading) return <StandbyPage />
-  if (gate === 'activation-required') return <ActivationPage />
-  if (!canViewRecords(view)) return <StandbyPage />
   return (
-    <Routes>
-      <Route element={<AppShell routes={routes} subtitle="学生端" actions={<StudentActions />} />}>
-        <Route index element={<Navigate replace to="/exams" />} />
-        {routes.map((route) => {
-          const Component = route.component
-          return <Route key={route.id} path={route.path} element={<Component />} />
-        })}
-      </Route>
-    </Routes>
+    <>
+      {view.testPlayer && gate === 'maintenance' ? (
+        <DeploymentPlayer player={view.testPlayer} />
+      ) : view.player ? (
+        <>
+          <ExamPlayer
+            examBaseUrl={view.player.baseUrl}
+            beforeStart={controller.beforeStart}
+            onFinish={controller.finish}
+            onPhaseChange={controller.phaseChanged}
+            onExit={() => void action.run(() => controller.exitPractice())}
+          />
+          {(gate !== 'ready' || action.error) && (
+            <PracticeNotice>
+              {gate !== 'ready' && <StudentStatus />}
+              {action.error && <div>{action.error.message}</div>}
+            </PracticeNotice>
+          )}
+        </>
+      ) : view.loading ? (
+        <StandbyPage />
+      ) : gate === 'activation-required' ? (
+        <ActivationPage />
+      ) : !canViewRecords(view) ? (
+        <StandbyPage />
+      ) : (
+        <Routes>
+          <Route
+            element={<AppShell routes={routes} subtitle="学生端" actions={<StudentActions />} />}
+          >
+            <Route index element={<Navigate replace to="/exams" />} />
+            {routes.map((route) => {
+              const Component = route.component
+              return <Route key={route.id} path={route.path} element={<Component />} />
+            })}
+          </Route>
+        </Routes>
+      )}
+      {view.report && (
+        <ObjectiveReportDialog report={view.report} onClose={controller.dismissReport} />
+      )}
+    </>
   )
 }
 

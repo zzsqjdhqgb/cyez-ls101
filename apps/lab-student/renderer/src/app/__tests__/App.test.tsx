@@ -13,7 +13,8 @@ const model = vi.hoisted(() => ({
   prepare: vi.fn(async () => {}),
   retry: vi.fn(async () => {}),
   exportRecords: vi.fn(async () => {}),
-  refresh: vi.fn(async () => {})
+  refresh: vi.fn(async () => {}),
+  dismissReport: vi.fn()
 }))
 
 vi.mock('../../../controller', () => ({
@@ -33,6 +34,7 @@ vi.mock('../../../controller', () => ({
     retry = model.retry
     exportRecords = model.exportRecords
     refresh = model.refresh
+    dismissReport = model.dismissReport
   }
 }))
 vi.mock('@ls101/exam-player', () => ({ ExamPlayer: () => <div>活动播放器</div> }))
@@ -131,7 +133,8 @@ beforeEach(() => {
     player: null,
     testPlayer: null,
     testCase: null,
-    error: null
+    error: null,
+    report: null
   }
 })
 afterEach(cleanup)
@@ -306,4 +309,27 @@ it('keeps an active player mounted across offline and maintenance transitions', 
   expect(screen.getByText('机房维护中')).toBeInTheDocument()
   update({ player: null })
   expect(screen.getByRole('heading', { name: '机房维护中' })).toBeInTheDocument()
+})
+
+it('shows the one-shot objective report and leaves no way back after closing', () => {
+  model.view!.report = {
+    submissionId: 'submission-1',
+    examTitle: '客观题练习',
+    candidateName: '学生',
+    candidateId: '001',
+    submittedAt: '2026-09-22T01:10:00.000Z',
+    totalScore: 2,
+    maxScore: 5,
+    markdown: '# 学生 - 客观题练习\n\n| 姓名 | 学号 |\n| :---: | :---: |\n| 学生 | 001 |',
+    resources: {}
+  }
+  render(<App />)
+  expect(screen.getByRole('heading', { name: '作答报告' })).toBeInTheDocument()
+  expect(screen.getByText('学生 · 客观题练习 · 总分 2/5')).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: '学生 - 客观题练习' })).toBeInTheDocument()
+  expect(screen.getByText(/如需再次查看，请询问任课老师/)).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '关闭报告' }))
+  expect(model.dismissReport).toHaveBeenCalledTimes(1)
+  update({ report: null })
+  expect(screen.queryByRole('heading', { name: '作答报告' })).not.toBeInTheDocument()
 })

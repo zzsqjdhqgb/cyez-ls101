@@ -1453,6 +1453,7 @@ __metadata:
     "@ls101/lab-client": "workspace:*"
     "@ls101/lab-contracts": "workspace:*"
     "@types/react": "npm:^19.2.18"
+    marked: "npm:^18.0.14"
     react: "npm:^19.2.8"
   languageName: unknown
   linkType: soft
@@ -1484,6 +1485,7 @@ __metadata:
     "@ls101/lab-contracts": "workspace:*"
     "@ls101/lab-desktop-host": "workspace:*"
     "@ls101/lab-renderer": "workspace:*"
+    "@ls101/submission-library": "workspace:*"
     lucide-react: "npm:^1.33.0"
     react: "npm:^19.2.8"
     react-dom: "npm:^19.2.8"

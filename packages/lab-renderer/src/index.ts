@@ -7,4 +7,9 @@ export {
   type LabErrorDescription
 } from './format'
 export { queryKey, useLabQuery, type LabQueryOptions, type LabQueryResult } from './query'
+export {
+  renderSafeReportMarkup,
+  type ReportResource,
+  type ReportResourceUrlResolver
+} from './report-markup'
 export { useSelection, type LabSelection } from './selection'
