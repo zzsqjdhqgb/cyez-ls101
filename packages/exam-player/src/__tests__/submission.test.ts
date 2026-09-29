@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import type { ExamPackage, SchemaDefinition } from '@ls101/core-types'
 import { describe, expect, it } from 'vitest'
 import { assembleSubmission, SubmissionAssemblyError, type SubmissionAssemblyInput } from '../index'
