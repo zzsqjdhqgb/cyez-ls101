@@ -12,3 +12,5 @@
 *.onnx binary !eol
 *.safetensors binary !eol
 *.wasm binary !eol
+*.gz binary !eol
+*.zip binary !eol
