@@ -52,6 +52,7 @@ const aiAdapterMocks = vi.hoisted(() => ({
       acoustic_phone_inventory: '39 CMU phones',
       reference_source: 'CMUdict',
       dictionary_source: 'test dictionary',
+      uncovered_words: [] as string[],
       phones: [phone],
       words: [
         {

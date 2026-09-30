@@ -68,6 +68,7 @@ export interface SpeechCorrectionEvidence {
     acoustic_phone_inventory: string
     reference_source: string
     dictionary_source: string
+    uncovered_words: string[]
   }
   selection_policy: {
     gop_log_ratio_lte: typeof SPEECH_GOP_THRESHOLD
@@ -157,7 +158,8 @@ export function createSpeechCorrectionEvidence(request: {
       acoustic_model: request.assessment.acoustic_model,
       acoustic_phone_inventory: request.assessment.acoustic_phone_inventory,
       reference_source: request.assessment.reference_source,
-      dictionary_source: request.assessment.dictionary_source
+      dictionary_source: request.assessment.dictionary_source,
+      uncovered_words: [...request.assessment.uncovered_words]
     },
     selection_policy: {
       gop_log_ratio_lte: SPEECH_GOP_THRESHOLD,
@@ -242,6 +244,12 @@ export function validateSpeechCorrectionEvidence(evidence: SpeechCorrectionEvide
 
 export function buildSpeechCorrectionPrompt(evidence: SpeechCorrectionEvidence): string {
   validateSpeechCorrectionEvidence(evidence)
+  const uncoveredNote =
+    evidence.source_result.uncovered_words.length === 0
+      ? ''
+      : `
+
+补充：以下单词不在标准发音词典中，未参与强制对齐，也没有任何 GOP 证据：${evidence.source_result.uncovered_words.join('、')}。不要猜测或评价这些单词的发音。`
   return `请把下面的低 GOP 音素证据写成一段保守的中文发音纠错说明。
 
 输入按“问题单词”组织：每个 word_context 是一个至少含有一条低 GOP 音素的单词，
@@ -262,7 +270,7 @@ export function buildSpeechCorrectionPrompt(evidence: SpeechCorrectionEvidence):
 - 2 段以内：先说明观察到的模式，再给 1-3 条具体建议。
 
 按单词组织的低 GOP 证据 JSON：
-${JSON.stringify(evidence, null, 2)}`
+${JSON.stringify(evidence, null, 2)}${uncoveredNote}`
 }
 
 // 与实验脚本 ai_eval3.mjs 的 plain() 一致：模型已被要求纯文本，这里只剥掉
@@ -341,6 +349,7 @@ function validatePronunciationAssessment(assessment: PronunciationAssessmentResu
     !nonEmptyText(assessment.acoustic_phone_inventory) ||
     !nonEmptyText(assessment.reference_source) ||
     !nonEmptyText(assessment.dictionary_source) ||
+    !stringList(assessment.uncovered_words) ||
     !stringList(assessment.recognized_phones) ||
     !stringList(assessment.recognized_phones_ipa) ||
     assessment.recognized_phones.length !== assessment.recognized_phones_ipa.length ||

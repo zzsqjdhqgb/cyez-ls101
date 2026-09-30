@@ -4,6 +4,36 @@ const NEGATIVE_INFINITY = Number.NEGATIVE_INFINITY
 const MAX_REFERENCE_CANDIDATES = 32
 const ALIGNMENT_REFERENCE_CANDIDATES = 8
 
+// 转写里的词不在 CMUdict（词典缺词，或学生读错被 ASR 转成非词）时，GOP 无法为其构造
+// 参考音素。这类词会被剔除出强制对齐并记录在 uncovered_words 中；只有当全部词都缺时
+// 才抛出带标记的错误，由评分引擎降级处理（0 分 + 评语说明），而不是让整题卡死。
+// 标记必须能在 Worker/IPC 边界上以纯错误消息的形式存活，因此编码为消息前缀。
+const NO_DICTIONARY_COVERAGE_PREFIX = 'NO_DICTIONARY_COVERAGE:'
+
+export interface NoDictionaryCoverage {
+  words: string[]
+}
+
+export function noDictionaryCoverageError(words: readonly string[]): Error {
+  return new Error(`${NO_DICTIONARY_COVERAGE_PREFIX}${JSON.stringify({ words: [...words] })}`)
+}
+
+export function parseNoDictionaryCoverageError(error: unknown): NoDictionaryCoverage | null {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
+  if (!message.startsWith(NO_DICTIONARY_COVERAGE_PREFIX)) return null
+  try {
+    const value = JSON.parse(message.slice(NO_DICTIONARY_COVERAGE_PREFIX.length)) as {
+      words?: unknown
+    }
+    if (!Array.isArray(value.words) || !value.words.every((word) => typeof word === 'string')) {
+      return null
+    }
+    return { words: value.words }
+  } catch {
+    return null
+  }
+}
+
 export const CMU_PHONE_TO_IPA: Readonly<Record<string, string>> = {
   AA: 'ɑː',
   AE: 'æ',
@@ -113,6 +143,7 @@ export interface PronunciationAssessmentResult {
   acoustic_phone_inventory: string
   reference_source: string
   dictionary_source: string
+  uncovered_words: string[]
   phones: PronunciationPhoneAssessment[]
   words: PronunciationWordAssessment[]
 }
@@ -176,8 +207,16 @@ export function createPronunciationReferences(
   if (!Number.isSafeInteger(maxCandidates) || maxCandidates <= 0) {
     throw new Error('发音候选数量无效')
   }
-  const { normalizedText, variantsByWord } = referenceWordVariants(referenceText)
+  const { coveredText, variantsByWord, uncoveredWords } = referenceWordVariants(referenceText)
+  if (variantsByWord.length === 0) throw noDictionaryCoverageError(uncoveredWords)
+  return referencesFromVariants(coveredText, variantsByWord, maxCandidates)
+}
 
+function referencesFromVariants(
+  normalizedText: string,
+  variantsByWord: PronunciationReferenceWord[][],
+  maxCandidates: number
+): PronunciationReference[] {
   let candidates: PronunciationReferenceWord[][] = [[]]
   for (const variants of variantsByWord) {
     const next: PronunciationReferenceWord[][] = []
@@ -210,8 +249,17 @@ export function assessCtcPronunciation(
     inventory,
     blankTokenId
   )
-  const evidenceReference = createEvidenceSelectedReference(input.referenceText, recognizedPhones)
-  const references = [evidenceReference, ...createPronunciationReferences(input.referenceText)]
+  const { coveredText, variantsByWord, uncoveredWords } = referenceWordVariants(input.referenceText)
+  if (variantsByWord.length === 0) throw noDictionaryCoverageError(uncoveredWords)
+  const evidenceReference = createEvidenceSelectedReference(
+    coveredText,
+    variantsByWord,
+    recognizedPhones
+  )
+  const references = [
+    evidenceReference,
+    ...referencesFromVariants(coveredText, variantsByWord, MAX_REFERENCE_CANDIDATES)
+  ]
     .filter(
       (reference, index, values) =>
         values.findIndex((candidate) => samePhones(candidate.phones, reference.phones)) === index
@@ -276,6 +324,7 @@ export function assessCtcPronunciation(
     acoustic_phone_inventory: inventory.description,
     reference_source: 'CMUdict; selected legal variant using acoustic evidence',
     dictionary_source: 'cmu-pronouncing-dictionary',
+    uncovered_words: uncoveredWords,
     phones,
     words
   }
@@ -283,19 +332,27 @@ export function assessCtcPronunciation(
 
 function referenceWordVariants(referenceText: string): {
   normalizedText: string
+  coveredText: string
   variantsByWord: PronunciationReferenceWord[][]
+  uncoveredWords: string[]
 } {
   const normalizedText = referenceText.normalize('NFKC').replace(/[‘’]/g, "'")
   const surfaceWords = normalizedText.match(/[A-Za-z]+(?:'[A-Za-z]+)*/g) ?? []
-  if (surfaceWords.length === 0) throw new Error('参考文本中没有可评测的英文单词')
-  return {
-    normalizedText,
-    variantsByWord: surfaceWords.map((surfaceWord) => {
-      const variants = dictionaryPronunciations(surfaceWord.toLowerCase())
-      if (variants.length === 0) throw new Error(`CMUdict 中没有单词“${surfaceWord}”`)
-      return variants.map((variant) => ({ text: surfaceWord, ...variant }))
-    })
+  const variantsByWord: PronunciationReferenceWord[][] = []
+  const uncoveredWords: string[] = []
+  for (const surfaceWord of surfaceWords) {
+    const variants = dictionaryPronunciations(surfaceWord.toLowerCase())
+    if (variants.length === 0) {
+      uncoveredWords.push(surfaceWord)
+      continue
+    }
+    variantsByWord.push(variants.map((variant) => ({ text: surfaceWord, ...variant })))
   }
+  const coveredText =
+    uncoveredWords.length === 0
+      ? normalizedText
+      : variantsByWord.map((variants) => variants[0].text).join(' ')
+  return { normalizedText, coveredText, variantsByWord, uncoveredWords }
 }
 
 function dictionaryPronunciations(word: string): Array<{ phones: string[]; ipaPhones: string[] }> {
@@ -311,6 +368,21 @@ function dictionaryPronunciations(word: string): Array<{ phones: string[]; ipaPh
       values.push(`${value} ${pluralSuffix(value)}`)
     }
   }
+  if (values.length === 0 && word.endsWith('es')) {
+    for (const value of rawDictionaryPronunciations(word.slice(0, -2))) {
+      values.push(`${value} ${pluralSuffix(value)}`)
+    }
+  }
+  if (values.length === 0 && word.endsWith('ing')) {
+    for (const value of rawDictionaryPronunciations(word.slice(0, -3))) {
+      values.push(`${value} IH0 NG`)
+    }
+  }
+  if (values.length === 0 && word.endsWith('ed')) {
+    for (const value of rawDictionaryPronunciations(word.slice(0, -2))) {
+      values.push(`${value} ${pastTenseSuffix(value)}`)
+    }
+  }
 
   const unique = new Map<string, { phones: string[]; ipaPhones: string[] }>()
   for (const value of values) {
@@ -324,10 +396,10 @@ function dictionaryPronunciations(word: string): Array<{ phones: string[]; ipaPh
 }
 
 function createEvidenceSelectedReference(
-  referenceText: string,
+  coveredText: string,
+  variantsByWord: PronunciationReferenceWord[][],
   recognizedPhones: readonly string[]
 ): PronunciationReference {
-  const { normalizedText, variantsByWord } = referenceWordVariants(referenceText)
   const primaryWords = variantsByWord.map((variants) => variants[0])
   const primaryPhones = primaryWords.flatMap((word) => word.phones)
   const observedByExpected = alignPhoneSequences(primaryPhones, recognizedPhones)
@@ -347,7 +419,7 @@ function createEvidenceSelectedReference(
         : best
     )
   })
-  return referenceFromWords(normalizedText, words)
+  return referenceFromWords(coveredText, words)
 }
 
 function referenceFromWords(
@@ -383,6 +455,14 @@ function pluralSuffix(pronunciation: string): string {
   if (['S', 'Z', 'SH', 'ZH', 'CH', 'JH'].includes(final)) return 'IH0 Z'
   if (['P', 'T', 'K', 'F', 'TH'].includes(final)) return 'S'
   return 'Z'
+}
+
+function pastTenseSuffix(pronunciation: string): string {
+  const finalPhone = pronunciation.trim().split(/\s+/).at(-1)
+  const final = finalPhone ? stripStress(finalPhone) : ''
+  if (final === 'T' || final === 'D') return 'IH0 D'
+  if (['P', 'K', 'F', 'TH', 'S', 'SH', 'CH', 'HH'].includes(final)) return 'T'
+  return 'D'
 }
 
 function stripStress(phone: string): string {

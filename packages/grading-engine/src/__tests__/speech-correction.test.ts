@@ -128,6 +128,34 @@ describe('GOP + LLM v4 plain-text speech correction', () => {
     expect(result.trace.evidence?.rows).toEqual([])
   })
 
+  it('echoes uncovered words in evidence and appends the prompt note only when present', () => {
+    const coveredEvidence = createSpeechCorrectionEvidence({
+      transcript: 'one target word',
+      assessment: assessment([
+        word(0, 'one', [phone(0, 0, 0, 'one', 'W', 'W', 1)]),
+        word(1, 'target', [phone(1, 1, 0, 'target', 'T', 'D', -2)]),
+        word(2, 'word', [phone(2, 2, 0, 'word', 'W', 'W', 1)])
+      ])
+    })
+    const coveredPrompt = buildSpeechCorrectionPrompt(coveredEvidence)
+    expect(coveredPrompt).not.toContain('补充：')
+    // 无缺词时冻结 prompt 保持原样：仍然以证据 JSON 结尾，没有附加说明。
+    expect(coveredPrompt.endsWith(JSON.stringify(coveredEvidence, null, 2))).toBe(true)
+
+    const partialEvidence = createSpeechCorrectionEvidence({
+      transcript: 'overweigh three',
+      assessment: assessment([word(0, 'three', [phone(0, 0, 0, 'three', 'TH', 'S', -2)])], [
+        'overweigh'
+      ])
+    })
+    expect(partialEvidence.source_result.uncovered_words).toEqual(['overweigh'])
+    const partialPrompt = buildSpeechCorrectionPrompt(partialEvidence)
+    expect(partialPrompt).toContain('补充：以下单词不在标准发音词典中')
+    expect(partialPrompt).toContain('overweigh')
+    expect(partialPrompt).toContain('未参与强制对齐')
+    expect(partialPrompt.endsWith(JSON.stringify(partialEvidence, null, 2))).toBe(false)
+  })
+
   it('reproduces the committed frozen evidence payload', () => {
     const base = fixture('stable-gop-demo/result.json') as Record<string, unknown>
     const frozenEvidence = fixture('stable-gop-demo-llm-v3/evidence.json') as {
@@ -149,6 +177,7 @@ describe('GOP + LLM v4 plain-text speech correction', () => {
       acoustic_phone_inventory: 'native uppercase CMU phones',
       reference_source: base.reference_source,
       dictionary_source: base.dictionary_source,
+      uncovered_words: [] as string[],
       phones: base.phones,
       words: base.words
     } as PronunciationAssessmentResult
@@ -234,7 +263,10 @@ function word(
   }
 }
 
-function assessment(words: PronunciationAssessmentResult['words']): PronunciationAssessmentResult {
+function assessment(
+  words: PronunciationAssessmentResult['words'],
+  uncoveredWords: string[] = []
+): PronunciationAssessmentResult {
   return {
     schema_version: 2,
     reference_text: words.map((item) => item.text).join(' '),
@@ -250,6 +282,7 @@ function assessment(words: PronunciationAssessmentResult['words']): Pronunciatio
     acoustic_phone_inventory: '39 CMU phones',
     reference_source: 'CMUdict test reference',
     dictionary_source: 'test dictionary',
+    uncovered_words: uncoveredWords,
     phones: words.flatMap((item) => item.phones),
     words
   }

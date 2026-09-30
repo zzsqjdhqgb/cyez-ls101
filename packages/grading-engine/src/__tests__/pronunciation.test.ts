@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   assessCtcPronunciation,
   CMU_PHONE_TO_IPA,
-  createPronunciationReferences
+  createPronunciationReferences,
+  noDictionaryCoverageError,
+  parseNoDictionaryCoverageError
 } from '../pronunciation'
 
 describe('pronunciation GOP assessment', () => {
@@ -120,7 +122,59 @@ describe('pronunciation GOP assessment', () => {
     expect(result.recognized_phones).toEqual(['B', 'UH', 'K', 'S'])
     expect(result.words[0].expected_arpabet).toEqual(['B', 'UH', 'K', 'S'])
   })
+
+  it('skips dictionary-missing words from alignment and records them', () => {
+    const vocabulary = pronunciationVocabulary('ipa')
+    const dominant = ['<pad>', 'TH', '<pad>', 'R', '<pad>', 'IY', '<pad>']
+
+    const result = assessCtcPronunciation({
+      logits: syntheticLogits(dominant, vocabulary),
+      frameCount: dominant.length,
+      vocabularySize: Object.keys(vocabulary).length,
+      vocabulary,
+      referenceText: 'overweigh three',
+      durationMs: 700
+    })
+
+    expect(result.uncovered_words).toEqual(['overweigh'])
+    expect(result.reference_text).toBe('three')
+    expect(result.words.map((word) => word.text)).toEqual(['three'])
+  })
+
+  it('throws a parseable marker error when no word is coverable', () => {
+    const caught = captureError(() => createPronunciationReferences('overweigh flumberz'))
+    expect(parseNoDictionaryCoverageError(caught)).toEqual({ words: ['overweigh', 'flumberz'] })
+    expect(parseNoDictionaryCoverageError(new Error(noDictionaryCoverageError(['x']).message))).toEqual(
+      { words: ['x'] }
+    )
+    expect(parseNoDictionaryCoverageError(new Error('普通模型错误'))).toBeNull()
+    expect(parseNoDictionaryCoverageError(undefined)).toBeNull()
+  })
+
+  it('reports zero coverage with no words when the transcript has no English words', () => {
+    const caught = captureError(() => createPronunciationReferences('123 456'))
+    expect(parseNoDictionaryCoverageError(caught)).toEqual({ words: [] })
+  })
+
+  it('derives pronunciations for -es, -ed and -ing non-words', () => {
+    const [slushed] = createPronunciationReferences('slushed')
+    const [slushes] = createPronunciationReferences('slushes')
+    const [schoolrooming] = createPronunciationReferences('schoolrooming')
+
+    expect(slushed.words[0].phones).toEqual(['S', 'L', 'AH', 'SH', 'T'])
+    expect(slushes.words[0].phones).toEqual(['S', 'L', 'AH', 'SH', 'IH', 'Z'])
+    expect(schoolrooming.words[0].phones.slice(-2)).toEqual(['IH', 'NG'])
+  })
 })
+
+function captureError(action: () => unknown): unknown {
+  try {
+    action()
+  } catch (error) {
+    return error
+  }
+  throw new Error('expected action to throw')
+}
 
 function pronunciationVocabulary(mode: 'cmu' | 'ipa'): Record<string, number> {
   const tokens = Object.entries(CMU_PHONE_TO_IPA).map(([cmu, ipa]) => (mode === 'cmu' ? cmu : ipa))

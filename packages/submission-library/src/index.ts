@@ -107,6 +107,8 @@ export interface SubmissionAIProcessedAnswer {
     prompt?: string
     rawResponse?: string
   }
+  uncoveredWords?: string[]
+  allWordsOutsideDictionary?: true
   referenceText?: string
 }
 
@@ -1219,6 +1221,10 @@ function isAIProcessedAnswer(value: unknown): value is SubmissionAIProcessedAnsw
     typeof value.transcript === 'string' &&
     typeof value.correction === 'string' &&
     (value.correctionTrace === undefined || isAICorrectionTrace(value.correctionTrace)) &&
+    (value.uncoveredWords === undefined ||
+      (Array.isArray(value.uncoveredWords) &&
+        value.uncoveredWords.every((word) => typeof word === 'string'))) &&
+    (value.allWordsOutsideDictionary === undefined || value.allWordsOutsideDictionary === true) &&
     (value.referenceText === undefined || typeof value.referenceText === 'string')
   )
 }

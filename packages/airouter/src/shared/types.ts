@@ -179,6 +179,7 @@ export interface AIRouterPronunciationAssessmentResult {
   acoustic_phone_inventory: string
   reference_source: string
   dictionary_source: string
+  uncovered_words: string[]
   phones: AIRouterPronunciationPhoneAssessment[]
   words: AIRouterPronunciationWordAssessment[]
 }
