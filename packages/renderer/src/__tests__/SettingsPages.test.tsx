@@ -10,7 +10,7 @@ import {
   SettingsContent,
   SettingsRow,
   SettingsSection
-} from '../components/settings/SettingsContent'
+} from '@ls101/desktop-ui'
 import { SettingsDetailPage } from '../pages/SettingsDetailPage'
 import { SettingsOverviewPage } from '../pages/SettingsOverviewPage'
 

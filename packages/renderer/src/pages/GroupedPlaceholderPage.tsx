@@ -1,9 +1,9 @@
 import type { JSX } from 'react'
 import { Boxes, Maximize2, PanelLeftClose } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { Button } from '../components/ui/Button'
-import { EmptyState } from '../components/ui/EmptyState'
-import { Page, PageHeader } from '../components/ui/Page'
+import { Button } from '@ls101/desktop-ui'
+import { EmptyState } from '@ls101/desktop-ui'
+import { Page, PageHeader } from '@ls101/desktop-ui'
 
 export function GroupedPlaceholderPage(): JSX.Element {
   const navigate = useNavigate()

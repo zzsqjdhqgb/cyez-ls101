@@ -1,6 +1,6 @@
 import { useId, type JSX } from 'react'
 import { RefreshCw } from 'lucide-react'
-import { IconButton } from '../ui/IconButton'
+import { IconButton } from '@ls101/desktop-ui'
 import styles from './AIModelSelect.module.css'
 
 export interface AIModelSelection {

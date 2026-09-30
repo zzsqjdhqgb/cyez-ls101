@@ -1,6 +1,6 @@
 import { useEffect, useRef, type JSX } from 'react'
 import { App } from './app/App'
-import { markRendererStartupMilestone } from './startup-timing'
+import { markRendererStartupMilestone } from '@ls101/desktop-ui/startup'
 
 interface StartupApplicationViewProps {
   showReleaseNotes: boolean

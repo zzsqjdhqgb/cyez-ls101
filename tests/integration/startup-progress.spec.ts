@@ -2,7 +2,11 @@ import { expect, test, type ElectronApplication } from '@playwright/test'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { closeStartupReleaseNotes, launchIntegrationApp } from './support/electron-app'
+import {
+  APPLICATION_STARTUP_TIMEOUT,
+  closeStartupReleaseNotes,
+  launchIntegrationApp
+} from './support/electron-app'
 
 let electronApp: ElectronApplication
 let userDataDir: string
@@ -18,7 +22,9 @@ test('keeps the startup animation visible for its full animation and settle dela
   const page = await electronApp.firstWindow()
   await page.waitForLoadState('domcontentloaded')
 
-  await expect(page.getByRole('dialog', { name: '曹二听说101 v0.4.1' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: '曹二听说101 v0.4.1' })).toBeVisible({
+    timeout: APPLICATION_STARTUP_TIMEOUT
+  })
   const elapsed = await page.evaluate(() => performance.now())
   expect(elapsed).toBeGreaterThanOrEqual(2_400)
   const startupMilestones = await page.evaluate(() =>

@@ -13,8 +13,8 @@ import type {
   VariableNode,
   ValueExpression
 } from '@ls101/template-editor'
-import { Button } from '../../components/ui/Button'
-import { IconButton } from '../../components/ui/IconButton'
+import { Button } from '@ls101/desktop-ui'
+import { IconButton } from '@ls101/desktop-ui'
 import { TemplateFunctionCallEditor } from './TemplateFunctionCallEditor'
 import type { TemplateChoiceGroupCandidate } from './TemplateChoiceTargets'
 import styles from './TemplateNodeInspector.module.css'

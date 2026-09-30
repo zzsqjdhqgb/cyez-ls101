@@ -5,8 +5,8 @@ import type {
   TemplateInterfaceRequirement
 } from '@ls101/template-editor'
 import { Braces, Plus, Trash2, X } from 'lucide-react'
-import { Button } from '../../components/ui/Button'
-import { IconButton } from '../../components/ui/IconButton'
+import { Button } from '@ls101/desktop-ui'
+import { IconButton } from '@ls101/desktop-ui'
 import styles from './TemplateInterfaceRequirements.module.css'
 
 interface TemplateInterfaceRequirementsProps {

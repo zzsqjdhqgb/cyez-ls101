@@ -16,15 +16,11 @@ import {
   Trash2,
   X
 } from 'lucide-react'
-import { Button } from '../../components/ui/Button'
-import { ConfirmModal } from '../../components/ui/ConfirmModal'
-import { Modal, ModalDescription, ModalTitle } from '../../components/ui/Modal'
-import {
-  SettingsContent,
-  SettingsRow,
-  SettingsSection
-} from '../../components/settings/SettingsContent'
-import { toast } from '../../components/ui/toast'
+import { Button } from '@ls101/desktop-ui'
+import { ConfirmModal } from '@ls101/desktop-ui'
+import { Modal, ModalDescription, ModalTitle } from '@ls101/desktop-ui'
+import { SettingsContent, SettingsRow, SettingsSection } from '@ls101/desktop-ui'
+import { toast } from '@ls101/desktop-ui'
 import { airouterApplication, type AIRouterApplication } from './AIRouterApplication'
 import {
   AIRouterOperationFeedback,

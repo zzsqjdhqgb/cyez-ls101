@@ -46,7 +46,7 @@ corepack prepare yarn@4.15.0 --activate
 yarn install
 ```
 
-安装后的 setup 会校验或下载模型、运行时和图标资源。需要单独重新执行时：
+安装后的 setup 会校验或下载模型、运行时（Windows 包括机房服务所需的 WinSW）和图标资源。需要单独重新执行时：
 
 ```bash
 yarn setup

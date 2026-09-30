@@ -2,10 +2,10 @@ import { useEffect, useState, useSyncExternalStore, type JSX } from 'react'
 import { imageClipboard } from '@ls101/clipboard/renderer'
 import { fileDialog } from '@ls101/file-dialog/renderer'
 import { Check, ClipboardCopy, ClipboardPaste, FolderOpen, Image, X } from 'lucide-react'
-import { Button } from '../../components/ui/Button'
-import { IconButton } from '../../components/ui/IconButton'
-import { Modal, ModalDescription, ModalTitle } from '../../components/ui/Modal'
-import { toast } from '../../components/ui/toast'
+import { Button } from '@ls101/desktop-ui'
+import { IconButton } from '@ls101/desktop-ui'
+import { Modal, ModalDescription, ModalTitle } from '@ls101/desktop-ui'
+import { toast } from '@ls101/desktop-ui'
 import {
   manualImageGenerationCoordinator,
   type ManualImageGenerationCoordinator,

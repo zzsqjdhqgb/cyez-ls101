@@ -1,0 +1,118 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.exam {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-6) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.exam > svg {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  color: var(--color-accent);
+}
+
+.examTitle {
+  min-width: 0;
+  flex: 1;
+}
+
+.examTitle h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.examTitle p {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.exam button {
+  flex-shrink: 0;
+}
+
+.tableFrame {
+  width: 100%;
+  overflow-x: auto;
+  border-top: 1px solid var(--color-border);
+}
+
+.table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.table th {
+  padding: var(--space-3);
+  color: var(--color-text-faint);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.table td {
+  max-width: 260px;
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  overflow-wrap: anywhere;
+}
+
+.table strong {
+  color: var(--color-text-strong);
+}
+
+.table small {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+}
+
+.selectColumn {
+  width: 40px;
+}
+
+.table input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+}
+
+.badge {
+  display: inline-flex;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-xs);
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.badge[data-state='completed'] {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.badge[data-state='retry-required'],
+.badge[data-state='manual-resolution'] {
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.summary {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}

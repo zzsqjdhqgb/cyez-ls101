@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Menu, shell } from 'electron'
 import { join } from 'node:path'
 import type { Logger } from '@ls101/logger/main'
-import { bindWindowControlEvents } from './window-controls'
+import { bindWindowControlEvents } from '@ls101/desktop-ui/main'
 
 const DEVELOPMENT_RENDERER_URL = process.env['ELECTRON_RENDERER_URL']
 

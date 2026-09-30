@@ -1,7 +1,7 @@
 import { useState, type JSX } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { AppShell } from '../components/shell/AppShell'
-import { AppToaster } from '../components/ui/ToastViewport'
+import { AppShell } from '@ls101/desktop-ui'
+import { AppToaster } from '@ls101/desktop-ui'
 import { ManualImageGenerationDialog } from '../features/airouter/ManualImageGenerationDialog'
 import { ExamLibraryProvider } from '../features/exams/ExamLibraryProvider'
 import { InterfaceApplicationProvider } from '../features/interfaces/InterfaceApplicationProvider'
@@ -12,7 +12,7 @@ import { SubmissionLibraryProvider } from '../features/submissions/SubmissionLib
 import { TemplateApplicationProvider } from '../features/templates/TemplateApplicationProvider'
 import { ReleaseNotesModal } from '../features/release-notes/ReleaseNotesModal'
 import { NotFoundPage } from '../pages/NotFoundPage'
-import { useRegisteredRoutes } from './route-registry'
+import { useRegisteredRoutes } from '@ls101/desktop-ui'
 
 function RegisteredAppRoutes(): JSX.Element {
   const routes = useRegisteredRoutes()

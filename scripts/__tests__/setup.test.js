@@ -4,9 +4,15 @@ const { parseOptions, setupTasks } = require('../setup.js')
 
 test('product documentation setup keeps runtime assets and skips full models', () => {
   assert.deepEqual(setupTasks('product-docs'), [
+    { script: 'lab/prepare-archive-engine.mjs', arguments: [], environment: {} },
     {
       script: 'airouter/update-model-catalog.mjs',
       arguments: ['--check'],
+      environment: {}
+    },
+    {
+      script: 'lab/download-service-assets.mjs',
+      arguments: [],
       environment: {}
     },
     {
@@ -22,7 +28,9 @@ test('default setup retains all installation tasks', () => {
   assert.deepEqual(
     setupTasks('').map((task) => task.script),
     [
+      'lab/prepare-archive-engine.mjs',
       'airouter/update-model-catalog.mjs',
+      'lab/download-service-assets.mjs',
       'qwen-tts/download-release-assets.mjs',
       'download-tts-assets.js',
       'download-stt-models.js',
@@ -44,6 +52,7 @@ test('setup forwards explicit verification to every downloaded asset task', () =
       .filter((task) => task.script.includes('download'))
       .map((task) => [task.script, task.arguments]),
     [
+      ['lab/download-service-assets.mjs', ['--verify-upstream']],
       ['qwen-tts/download-release-assets.mjs', ['--verify-upstream']],
       ['download-tts-assets.js', ['--verify-upstream']],
       ['download-stt-models.js', ['--verify-upstream']],

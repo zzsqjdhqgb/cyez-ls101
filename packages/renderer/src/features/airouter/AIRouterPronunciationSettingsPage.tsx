@@ -9,9 +9,9 @@ import {
   type AIRouterFeedbackValue
 } from './AIRouterFeedback'
 import { formatAIRouterError } from './airouterError'
-import { Button } from '../../components/ui/Button'
-import { SettingsContent, SettingsSection } from '../../components/settings/SettingsContent'
-import { toast } from '../../components/ui/toast'
+import { Button } from '@ls101/desktop-ui'
+import { SettingsContent, SettingsSection } from '@ls101/desktop-ui'
+import { toast } from '@ls101/desktop-ui'
 import styles from './AIRouterSettingsPage.module.css'
 
 export function AIRouterPronunciationSettingsPage({

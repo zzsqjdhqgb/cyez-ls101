@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import '../app/register-placeholder-routes'
 import { App } from '../app/App'
-import { appRouteRegistry } from '../app/route-registry'
+import { appRouteRegistry } from '@ls101/desktop-ui'
 
 afterEach(() => {
   cleanup()

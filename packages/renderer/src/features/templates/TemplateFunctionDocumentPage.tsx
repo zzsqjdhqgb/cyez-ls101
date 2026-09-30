@@ -27,11 +27,11 @@ import {
   Variable as VariableIcon
 } from 'lucide-react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { Button } from '../../components/ui/Button'
-import { ConfirmModal } from '../../components/ui/ConfirmModal'
-import { EmptyState } from '../../components/ui/EmptyState'
-import { IconButton } from '../../components/ui/IconButton'
-import { ResizableSplit } from '../../components/ui/ResizableSplit'
+import { Button } from '@ls101/desktop-ui'
+import { ConfirmModal } from '@ls101/desktop-ui'
+import { EmptyState } from '@ls101/desktop-ui'
+import { IconButton } from '@ls101/desktop-ui'
+import { ResizableSplit } from '@ls101/desktop-ui'
 import { FunctionSignatureEditor } from './FunctionSignatureEditor'
 import { useTemplateApplication } from './TemplateApplicationContext'
 import {

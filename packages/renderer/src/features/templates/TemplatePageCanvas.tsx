@@ -38,7 +38,7 @@ import {
   ZoomIn,
   ZoomOut
 } from 'lucide-react'
-import { IconButton } from '../../components/ui/IconButton'
+import { IconButton } from '@ls101/desktop-ui'
 import styles from './TemplatePageCanvas.module.css'
 
 interface TemplatePageCanvasProps {

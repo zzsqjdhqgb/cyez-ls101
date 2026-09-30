@@ -175,6 +175,11 @@ async function main() {
 
   console.log('Starting electron-builder...')
   const platform = electronBuilderPlatform(options.platform)
+  // electron-builder's bundled icons@1.1.0 toolset converts PNG icons with libvips compiled to
+  // WebAssembly, which imports a fixed 1 GiB shared WebAssembly.Memory and aborts machines with a
+  // tight commit limit ("Committing semi space failed") before converting anything. Point it at the
+  // local pure-JS toolset instead; it emits the same ICO/ICNS layout using a few dozen MiB.
+  process.env['ELECTRON_BUILDER_ICONS_TOOLSET_DIR'] = path.join(root, 'scripts', 'icon-toolset')
   const result = await builder.build({
     config: { extraMetadata: { version } },
     targets: platform.createTarget(options.dir ? 'dir' : undefined)

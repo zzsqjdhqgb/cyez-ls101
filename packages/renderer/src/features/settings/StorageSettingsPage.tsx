@@ -1,13 +1,9 @@
 import { HardDrive, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useState, type JSX } from 'react'
 import type { DataDirectoryCandidate, DataDirectoryInfo } from '@ls101/core-types'
-import {
-  SettingsContent,
-  SettingsRow,
-  SettingsSection
-} from '../../components/settings/SettingsContent'
-import { Button } from '../../components/ui/Button'
-import { ConfirmModal } from '../../components/ui/ConfirmModal'
+import { SettingsContent, SettingsRow, SettingsSection } from '@ls101/desktop-ui'
+import { Button } from '@ls101/desktop-ui'
+import { ConfirmModal } from '@ls101/desktop-ui'
 import styles from './StorageSettingsPage.module.css'
 
 export function StorageSettingsPage(): JSX.Element {

@@ -1,0 +1,92 @@
+# Vagrant environment for the two long-lived manual-test machines.
+#
+# `yarn vm:teacher:boot` and `yarn vm:student:boot` start one machine each, from the same base box the
+# acceptance run uses, and leave it running with a desktop session and the current installer inside it.
+# They are deliberately separate from the disposable acceptance VM:
+#
+#   * the machine is *named* after the role, so it is never `default` (that name belongs to the
+#     acceptance VM) and `vagrant status teacher` in this environment answers about the right machine;
+#   * exactly one machine is defined per invocation, so every `vagrant upload` / `vagrant winrm` /
+#     `vagrant reload` call the shared helpers make stays unambiguous;
+#   * a per-role dotfile directory, so booting or destroying one machine can never touch the other or the
+#     acceptance VM's state;
+#   * the memory the orchestrator resolved (config.local.json's ManualMemoryMB, 4 GB by default) rather
+#     than the acceptance VM's 8 GB, so two manual machines and one acceptance VM fit on one host;
+#   * the box registration and the WinRM credentials come from the shared VAGRANT_HOME, which is what
+#     makes "both machines use the same base image" true rather than hopeful.
+require 'json'
+
+role = ENV['LS101_MANUAL_ROLE']
+lab_root = File.expand_path('..', __dir__)
+local_root = File.join(lab_root, '.local')
+unless %w[teacher student].include?(role)
+  abort 'Run through yarn vm:teacher:<action> or yarn vm:student:<action>.'
+end
+{
+  'VAGRANT_HOME' => File.join(local_root, 'vagrant-home'),
+  'VAGRANT_DOTFILE_PATH' => File.join(local_root, "vagrant-state-manual-#{role}"),
+  'VAGRANT_CWD' => File.expand_path(__dir__)
+}.each do |name, expected|
+  unless ENV[name] && File.expand_path(ENV[name]).downcase == expected.downcase
+    abort 'Run through yarn vm:<role>:<action> so Vagrant storage remains inside this project.'
+  end
+end
+
+# The memory comes from the orchestrator, because `vagrant up` is a separate process and this file has no
+# other way to see the value config.local.json resolved. The fallback matches MANUAL_MEMORY_MB in
+# manual.mjs, and the tests pin the two together.
+manual_memory = ENV['LS101_MANUAL_MEMORY'].to_s.empty? ? '4096' : ENV['LS101_MANUAL_MEMORY']
+unless manual_memory.match?(/\A\d+\z/) && manual_memory.to_i.between?(2048, 262_144)
+  abort 'Invalid LS101_MANUAL_MEMORY: expected an integer between 2048 and 262144 MB.'
+end
+
+Vagrant.configure('2') do |config|
+  credentials_file = File.join(local_root, 'generated', 'guest.json')
+  credentials = File.file?(credentials_file) ? JSON.parse(File.read(credentials_file)) : {}
+  digest = credentials.fetch('box_sha256', '')
+  unless digest.empty? || digest.match?(/\A[0-9a-f]{64}\z/)
+    abort 'Invalid base-box digest; build with yarn vm:box:build.'
+  end
+  # The same box name and URL as the acceptance environment: one base image, built once by Packer.
+  config.vm.box = "ls101/windows-server-2022-#{digest.empty? ? 'unbuilt' : digest}"
+  config.vm.box_url = File.join(local_root, 'boxes', 'ls101-windows-server-2022-vmware.box')
+  config.vm.box_check_update = false
+  checksum_file = "#{config.vm.box_url}.sha256"
+  if File.file?(checksum_file)
+    config.vm.box_download_checksum_type = 'sha256'
+    config.vm.box_download_checksum = File.read(checksum_file).strip
+  end
+  config.vm.guest = :windows
+  config.vm.communicator = 'winrm'
+  config.winrm.username = credentials.fetch('username', 'vagrant')
+  config.winrm.password = credentials.fetch('password', '')
+  config.winrm.transport = :ssl
+  config.winrm.ssl_peer_verification = false
+  config.winrm.port = 5986
+  config.vm.boot_timeout = 900
+  config.windows.halt_timeout = 300
+  # Manual testing means the console window: the user drives the installed product by hand.
+  config.vm.synced_folder '.', '/vagrant', disabled: true
+
+  # The role is the machine name — not `default`, which is the disposable acceptance VM.
+  config.vm.define role do |machine|
+    machine.vm.hostname = "ls101-#{role}"
+    # Both machines can run at the same time, so their control ports must not collide.
+    machine.vm.network 'forwarded_port', guest: 5986, host: role == 'teacher' ? 55996 : 55997,
+                       host_ip: '127.0.0.1', id: 'winrm-ssl', auto_correct: true
+    machine.vm.network 'forwarded_port', guest: 5985, host: role == 'teacher' ? 55995 : 55994,
+                       id: 'winrm', disabled: true
+    machine.vm.network 'forwarded_port', guest: 3389, host: role == 'teacher' ? 53396 : 53397,
+                       id: 'rdp', disabled: true
+    machine.vm.provider 'vmware_desktop' do |vmware|
+      vmware.gui = true
+      vmware.linked_clone = false
+      vmware.clone_directory = File.join(local_root, 'vms-manual', role)
+      vmware.vmx['displayName'] = "ls101-manual-#{role}"
+      # Deliberately not guest.json's `memory`: a manual machine is hand-driven, and the acceptance VM
+      # needs the larger figure for its 32-client load case.
+      vmware.vmx['memsize'] = manual_memory
+      vmware.vmx['numvcpus'] = credentials.fetch('cpus', 4).to_s
+    end
+  end
+end

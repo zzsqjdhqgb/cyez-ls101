@@ -176,3 +176,16 @@ test('FE-09 page compositions retain a heading and empty-state reading order', a
   await expect(component.getByRole('button', { name: '检查状态' })).toBeVisible()
   await expect(component.getByText('暂无内容')).toBeVisible()
 })
+
+test('FE-10 shell accepts a custom brand, header actions and a layout override', async ({
+  page
+}) => {
+  const component = await openComponent(page, 'shell-custom')
+
+  await expect(component.getByRole('heading', { name: '自定义外壳' })).toBeVisible()
+  await expect(component.getByText('听说101', { exact: true })).toBeVisible()
+  await expect(component.getByText('教师端', { exact: true })).toBeVisible()
+  await expect(component.getByRole('button', { name: '刷新服务' })).toBeVisible()
+  await expect(component.locator('aside')).toHaveCount(0)
+  await expect(component.getByRole('button', { name: '最小化' })).toBeVisible()
+})

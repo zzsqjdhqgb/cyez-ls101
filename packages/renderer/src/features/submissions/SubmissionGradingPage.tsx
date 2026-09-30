@@ -21,7 +21,7 @@ import {
 import { ArrowLeft, Bot, Check, CircleAlert, LockKeyhole, RefreshCw, UserRound } from 'lucide-react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AIModelSelect, type AIModelOption } from '../../components/ai/AIModelSelect'
-import { Button } from '../../components/ui/Button'
+import { Button } from '@ls101/desktop-ui'
 import { useSubmissionLibrary } from './SubmissionLibraryContext'
 import { SubmissionMarkdown } from './SubmissionMarkdown'
 import {

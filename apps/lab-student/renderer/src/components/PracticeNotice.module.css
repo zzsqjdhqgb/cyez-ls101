@@ -1,0 +1,15 @@
+.notice {
+  position: fixed;
+  z-index: 10000;
+  top: var(--space-2);
+  left: 50%;
+  max-width: calc(100% - 32px);
+  padding: var(--space-2) var(--space-5);
+  transform: translateX(-50%);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-xs);
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}

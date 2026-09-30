@@ -4,11 +4,12 @@
 #
 
 # 使用 Node.js LTS 作为基础镜像
-FROM node:24-bookworm-slim
+FROM node:24.20.0-bookworm-slim
 
 # 设置环境变量
 ENV YARN_ENABLE_GLOBAL_CACHE=true
 ENV YARN_GLOBAL_FOLDER=/yarn/store
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 # 为 Electron safeStorage 提供固定的 D-Bus 会话和 Secret Service。
 # Keyring 密码仅用于开发容器，不作为安全边界。
@@ -35,6 +36,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     vim python3 python3-pip python3-venv python-is-python3 build-essential pkg-config libasound2-dev libsecret-1-dev ffmpeg\
     fonts-liberation fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
+
+# apt 层之后
+RUN npm i -g playwright@1.62.1 \
+ && playwright install --with-deps chromium \
+ && rm -rf /var/lib/apt/lists/*
 
 RUN <<'EOF'
 set -eu
@@ -84,8 +90,8 @@ RUN corepack enable && corepack prepare yarn@4.15.0
 # 2. 安装 Claude Code、OpenAI Codex 和 DeepSeek Harness
 RUN npm i -g \
     @anthropic-ai/claude-code@2.1.263 \
-    @openai/codex@0.153.4 \
-    @deepseek-ai/dsh@0.1.5-rc.1
+    @openai/codex@0.156.1 \
+    @deepseek-ai/dsh@0.1.5-rc.3
 
 # 设置工作目录为仓库代码挂载点
 WORKDIR /workspace

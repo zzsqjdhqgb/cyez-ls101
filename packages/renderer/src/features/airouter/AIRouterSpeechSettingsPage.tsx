@@ -24,15 +24,11 @@ import {
   Upload,
   X
 } from 'lucide-react'
-import {
-  SettingsContent,
-  SettingsRow,
-  SettingsSection
-} from '../../components/settings/SettingsContent'
-import { Button } from '../../components/ui/Button'
-import { ConfirmModal } from '../../components/ui/ConfirmModal'
-import { Modal, ModalDescription, ModalTitle } from '../../components/ui/Modal'
-import { toast } from '../../components/ui/toast'
+import { SettingsContent, SettingsRow, SettingsSection } from '@ls101/desktop-ui'
+import { Button } from '@ls101/desktop-ui'
+import { ConfirmModal } from '@ls101/desktop-ui'
+import { Modal, ModalDescription, ModalTitle } from '@ls101/desktop-ui'
+import { toast } from '@ls101/desktop-ui'
 import { airouterApplication, type AIRouterApplication } from './AIRouterApplication'
 import {
   AIRouterOperationFeedback,

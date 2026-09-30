@@ -25,11 +25,11 @@ import {
   Trash2
 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Button } from '../../components/ui/Button'
-import { ConfirmModal } from '../../components/ui/ConfirmModal'
-import { IconButton } from '../../components/ui/IconButton'
-import { Modal, ModalDescription, ModalTitle } from '../../components/ui/Modal'
-import { toast } from '../../components/ui/toast'
+import { Button } from '@ls101/desktop-ui'
+import { ConfirmModal } from '@ls101/desktop-ui'
+import { IconButton } from '@ls101/desktop-ui'
+import { Modal, ModalDescription, ModalTitle } from '@ls101/desktop-ui'
+import { toast } from '@ls101/desktop-ui'
 import { useSchemaRepository } from './SchemaApplicationContext'
 import { SchemaDataFields } from './SchemaDataFields'
 import {
