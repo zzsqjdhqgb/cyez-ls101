@@ -169,6 +169,16 @@ interface CandidateAssessment {
   alignment: CtcAlignment
 }
 
+// CMU 音素模型词表用 `[PAD]`（charsiu/tokenizer_en_cmu），早期 eSpeak 多语言模型用 `<pad>`；
+// 两种拼写都接受，都缺失时退回 0，由调用方按模型实际词表决定是否有效。
+export function resolveBlankTokenId(vocabulary: Readonly<Record<string, number>>): number {
+  for (const token of ['[PAD]', '<pad>', '[pad]']) {
+    const tokenId = vocabulary[token]
+    if (Number.isSafeInteger(tokenId) && tokenId >= 0) return tokenId
+  }
+  return 0
+}
+
 interface AcousticPhoneToken {
   cmu: string
   token: string
@@ -320,7 +330,7 @@ export function assessCtcPronunciation(
     recognized_phones_ipa: recognizedPhones.map(cmuPhoneToIpa),
     gop_method: 'viterbi',
     alignment_path_score: round(best.alignment.pathScore, 6),
-    acoustic_model: 'facebook/wav2vec2-lv-60-espeak-cv-ft ONNX INT8',
+    acoustic_model: 'charsiu/en_w2v2_ctc_libris_and_cv ONNX INT8',
     acoustic_phone_inventory: inventory.description,
     reference_source: 'CMUdict; selected legal variant using acoustic evidence',
     dictionary_source: 'cmu-pronouncing-dictionary',

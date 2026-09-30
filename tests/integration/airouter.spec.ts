@@ -340,8 +340,8 @@ async function collectPronunciationAssessment(
       new Promise((resolve) => {
         window.airouter.startPronunciationAssessment(
           {
-            providerConfigId: 'builtin-facebook-phoneme',
-            modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f',
+            providerConfigId: 'builtin-cmu-phoneme',
+            modelId: 'en-w2v2-ctc-libris-and-cv-int8-70f5061',
             referenceText: text,
             audio: {
               data: new Uint8Array(bytes),
@@ -1739,7 +1739,7 @@ test('AR-32d imports and executes the required pronunciation extension in Electr
     }))
   ).resolves.toMatchObject({
     status: {
-      extensionId: 'facebook-wav2vec2-pronunciation',
+      extensionId: 'charsiu-en-w2v2-pronunciation',
       requiredVersion: '1.0.0',
       installedVersion: '1.0.0',
       state: 'imported',
@@ -1747,8 +1747,8 @@ test('AR-32d imports and executes the required pronunciation extension in Electr
     },
     models: [
       {
-        providerId: 'builtin-facebook-phoneme',
-        modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f'
+        providerId: 'builtin-cmu-phoneme',
+        modelId: 'en-w2v2-ctc-libris-and-cv-int8-70f5061'
       }
     ]
   })
@@ -1781,7 +1781,7 @@ test('AR-32d imports and executes the required pronunciation extension in Electr
   ).resolves.toMatchObject({
     models: [],
     status: {
-      extensionId: 'facebook-wav2vec2-pronunciation',
+      extensionId: 'charsiu-en-w2v2-pronunciation',
       requiredVersion: '1.0.0',
       state: 'not-imported'
     }

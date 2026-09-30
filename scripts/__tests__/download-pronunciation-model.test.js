@@ -15,23 +15,25 @@ const {
 
 test('validates the pinned pronunciation model manifest', () => {
   assert.doesNotThrow(() => validateManifest(PINNED_MANIFEST))
+  assert.equal(PINNED_MANIFEST.sources.length, 2)
   assert.equal(isSafeRelativePath('onnx/model_quantized.onnx'), true)
   assert.equal(isSafeRelativePath('../model.onnx'), false)
   assert.equal(isSafeRelativePath('onnx\\model.onnx'), false)
 })
 
 test('rejects pronunciation model metadata changes', () => {
+  const source = PINNED_MANIFEST.sources[0]
   const official = {
-    sha: PINNED_MANIFEST.revision,
-    siblings: PINNED_MANIFEST.files.map((file) => ({
+    sha: source.revision,
+    siblings: source.files.map((file) => ({
       rfilename: file.path,
       size: file.size,
-      ...(file.path.endsWith('.onnx') ? { lfs: { sha256: file.sha256 } } : {})
+      ...(file.path.endsWith('.bin') ? { lfs: { sha256: file.sha256 } } : {})
     }))
   }
-  assert.doesNotThrow(() => assertMetadataMatches(PINNED_MANIFEST, official))
+  assert.doesNotThrow(() => assertMetadataMatches(source, official))
   official.siblings[0].size += 1
-  assert.throws(() => assertMetadataMatches(PINNED_MANIFEST, official), /元数据与固定清单不一致/)
+  assert.throws(() => assertMetadataMatches(source, official), /元数据与固定清单不一致/)
 })
 
 test('only accepts pronunciation downloader verification option', () => {

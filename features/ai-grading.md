@@ -21,9 +21,11 @@
 
 静态附件的二进制内容不发送给模型。Markdown 本身会进入 prompt，因此题目 Markdown 中已经填写的图片描述或提示词仍然可供文本模型使用。
 
-发音评测后端当前使用独立的内置 Facebook Wav2Vec2 eSpeak 音素 CTC 模型。模型输出逐帧 logits；评分引擎只使用与 39 个 CMU 音素一一对应的 canonical IPA token，排除复合 token 和其他语言 token。结果保留完整的扁平音素行和词级记录，包括 CMU/IPA 参考、声学赢家、排除参考后的最强替代项、两类平均 log posterior、GOP、相对证据强度、时间区间和完整词音素序列。证据中如实记录当前 eSpeak ONNX 模型来源，不冒充冻结研究样本使用的 CMU-phone 模型。
+发音评测后端使用内置的英文 CMU 音素 CTC 模型 `charsiu/en_w2v2_ctc_libris_and_cv`（wav2vec2-base；词表为 39 个无重音 CMU/ARPAbet 音素加 `[SIL]`、`[UNK]`、`[PAD]`）。模型输出逐帧 logits；评分引擎只使用与 39 个 CMU 音素一一对应的 uppercase ARPAbet token，`[PAD]` 作为 CTC blank。结果保留完整的扁平音素行和词级记录，包括 CMU/IPA 参考、声学赢家、排除参考后的最强替代项、两类平均 log posterior、GOP、相对证据强度、时间区间和完整词音素序列。
 
-模型文件位于 `externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8`，由 `scripts/download-pronunciation-model.js` 按固定 revision 和 SHA-256 下载。模型及 ONNX Runtime 在独立 Worker 中运行，不阻塞 renderer。
+2026-09-30 之前使用 `facebook/wav2vec2-lv-60-espeak-cv-ft` 多语言 eSpeak 模型：它在长时自由表达上会把英语判成带声调的普通话音素（39 个英文音素只分到约 7% 的概率质量），同一段录音产生 241 行低 GOP 误报（研究侧基线只有 15 行），使 ① 的措辞和 ② 的评分系统性偏严。切换后同一批 12 段录音的音素清晰率由 27%–98% 提升到 90%–100%（背景与数据见 `textpa/PRONUNCIATION_GOP_LLM_V4_PLAINTEXT.md`）。
+
+模型文件位于 `externals/ai/pronunciation/model/charsiu-en_w2v2_ctc_libris_and_cv-int8`。上游没有可直接下载的 ONNX，因此 `scripts/download-pronunciation-model.js` 先按固定 revision 与 SHA-256 校验两个上游仓库（模型权重与 `charsiu/tokenizer_en_cmu`），再调用 `scripts/export-pronunciation-model.py` 导出 fp32 ONNX 并只对 MatMul 做 INT8 量化；运行时目录已存在且 SHA-256 一致时直接跳过，此时不需要 Python。受限网络可用 `LS101_HF_ENDPOINT` 指向镜像，用 `LS101_PYTHON` 指定解释器。模型及 ONNX Runtime 在独立 Worker 中运行，不阻塞 renderer。
 
 LLM 后处理遵循 `gop-llm-word-context-v4` 冻结合同（2026-08 纯文本纠错实验的最终设计，背景与对照数据见 `textpa/PRONUNCIATION_GOP_LLM_V4_PLAINTEXT.md`）。请求使用固定 system message、`temperature=0` 和单次 `maxOutputTokens=65535`；输出必须是不超过两段的自然语言中文纯文本——不输出 JSON、键值对、表格、代码块、标题、evidence_id 或分数等级，也不得断言发音错误已确认。程序只剥离意外出现的 Markdown 代码围栏并要求结果非空，不再逐条校验证据 ID 或音素字段。没有音素越过阈值时跳过 LLM，并生成确定性的保守说明。
 
@@ -89,7 +91,7 @@ LLM 后处理遵循 `gop-llm-word-context-v4` 冻结合同（2026-08 纯文本�
 
 ## 验证覆盖
 
-Vitest 覆盖多录音顺序处理、ASR 对齐文本传递、Viterbi GOP 原始字段、冻结样本的 15 条证据和 9 个词窗、完整证据载荷进入纠错请求、纯文本响应原样透传、代码围栏剥离与空响应拒绝、无低 GOP 跳过模型、词典缺词剔除与 `uncovered_words` 记录、缺词时 ① prompt 附加说明且无缺词时保持冻结原样、全缺词答案跳过 ① 且 ② 强制 0 分与政策指令、-es/-ed/-ing 后缀还原、语音失败中止单题、最终评分严格 JSON 和小数精度、AI 中间状态持久化、AIRouter 参数转发、整场完成、审查编辑及按 `schemaId` 抽查分组。Electron smoke 覆盖 preload 方法和打包后内置模型运行。
+Vitest 覆盖多录音顺序处理、ASR 对齐文本传递、Viterbi GOP 原始字段、CMU 音素词表布局与 `[PAD]`/`<pad>` blank 解析、冻结样本的 15 条证据和 9 个词窗、完整证据载荷进入纠错请求、纯文本响应原样透传、代码围栏剥离与空响应拒绝、无低 GOP 跳过模型、词典缺词剔除与 `uncovered_words` 记录、缺词时 ① prompt 附加说明且无缺词时保持冻结原样、全缺词答案跳过 ① 且 ② 强制 0 分与政策指令、-es/-ed/-ing 后缀还原、语音失败中止单题、最终评分严格 JSON 和小数精度、AI 中间状态持久化、AIRouter 参数转发、整场完成、审查编辑及按 `schemaId` 抽查分组。Node 脚本测试覆盖固定清单校验、上游元数据比对与扩展包构建；Electron smoke 与 `airouter.spec.ts` 集成用例覆盖 preload 方法、扩展包导入和打包后内置模型运行。
 
 ## 代码依据
 

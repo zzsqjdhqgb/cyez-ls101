@@ -6,7 +6,7 @@ import { strToU8, zipSync } from 'fflate'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { AIRouterExtensionStore } from '../main/extension-store'
 
-const EXTENSION_ID = 'facebook-wav2vec2-pronunciation'
+const EXTENSION_ID = 'charsiu-en-w2v2-pronunciation'
 const EXTENSION_VERSION = '1.0.0'
 
 describe('AIRouterExtensionStore', () => {

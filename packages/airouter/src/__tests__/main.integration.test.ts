@@ -98,9 +98,9 @@ vi.mock('../main/pronunciation-assessment-service', () => ({
     listModels() {
       return [
         {
-          providerId: 'builtin-facebook-phoneme',
+          providerId: 'builtin-cmu-phoneme',
           providerName: '内置发音评测',
-          modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f',
+          modelId: 'en-w2v2-ctc-libris-and-cv-int8-70f5061',
           modelName: 'Facebook Wav2Vec2 Phoneme INT8'
         }
       ]
@@ -397,13 +397,13 @@ describe('AIRouter main integration', () => {
     }
     assessPronunciationMock.mockResolvedValue(result)
     expect(handler(AIROUTER_CHANNELS.listPronunciationModels)(undefined)).toEqual([
-      expect.objectContaining({ modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f' })
+      expect.objectContaining({ modelId: 'en-w2v2-ctc-libris-and-cv-int8-70f5061' })
     ])
     const sender = createSender()
     const requestId = 'pronunciation-request'
     const request = {
-      providerConfigId: 'builtin-facebook-phoneme',
-      modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f',
+      providerConfigId: 'builtin-cmu-phoneme',
+      modelId: 'en-w2v2-ctc-libris-and-cv-int8-70f5061',
       referenceText: 'three',
       audio: { data: new Uint8Array([1, 2, 3]), mediaType: 'audio/wav' }
     }

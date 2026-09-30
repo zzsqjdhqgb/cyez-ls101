@@ -117,8 +117,8 @@ describe('submission AIRouter adapter', () => {
     )
     expect(client.assessPronunciation).toHaveBeenCalledWith(
       expect.objectContaining({
-        providerConfigId: 'builtin-facebook-phoneme',
-        modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f',
+        providerConfigId: 'builtin-cmu-phoneme',
+        modelId: 'en-w2v2-ctc-libris-and-cv-int8-70f5061',
         referenceText: 'Read this.'
       }),
       undefined

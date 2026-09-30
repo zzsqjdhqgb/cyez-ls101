@@ -72,7 +72,6 @@ evidence IDs or any kind of score. Never claim a pronunciation error is confirme
 - 阈值仍未用中国学生语料标定，人工复听仍不可省。
 
 ## 6. 2026-08-30 增补：词典缺词处理（仍属 v4）
-
 背景：实验中 ASR 把 `outweigh` 转成 `overweigh`，词典无此词，GOP 步骤直接抛错、
 该单元无结果（`HANDOFF-plain-text-correction.md` 第五节）。落地处理：
 
@@ -91,3 +90,43 @@ evidence IDs or any kind of score. Never claim a pronunciation error is confirme
 - 设计理由：ASR 非词不存在正确读音，G2P 兜底会虚构对齐目标、制造假低 GOP 证据；
   剔除并如实记录更符合证据保守原则。② 仍能看到完整转写，读错产生的非词作为
   语言层面的信号保留在评语中。
+
+## 7. 2026-09-30 增补：声学模型换成英文 CMU 音素模型（仍属 v4）
+
+背景：用户反馈应用批改明显比实验偏严。逐段复核后定位到声学模型，而不是 ①/②
+的 prompt（两者与实验逐字节一致）：
+
+- 现象：recording-11（60 秒观点题）应用侧 46.2% 音素清晰、均 GOP −0.845、241 行低 GOP
+  证据；研究侧同一段音频 96.7%、+6.592、只有 15 行。全卷 1083 行低 GOP 证据中有
+  467 行（43%）来自两段长自由表达（5 号看图说话、11 号观点题）。
+- 定位：用应用自己的 ONNX 模型与 worker 相同的 FFmpeg 解码路径逐条重跑 12 段录音，
+  多语言 eSpeak 模型在长时自由表达上把英语判成带声调的普通话音素
+  （`ai5 t y5 p t ts. j i5 p ɚ s ɔː p uei5 w ei5 ph eɪ …`），39 个英文音素只分到
+  约 7% 概率质量；把 softmax 限制到 39 个英文音素重算 GOP 结果分毫不变，说明不是
+  词表稀释，而是模型自身的声学判断错误。短句与朗读段不受影响（解码正确）。
+- 处置：改用英文 CMU 音素 CTC 模型 `charsiu/en_w2v2_ctc_libris_and_cv`
+  （wav2vec2-base；词表为 39 个无重音 CMU/ARPAbet 音素 + `[SIL]`/`[UNK]`/`[PAD]`，
+  `[PAD]` 为 CTC blank），与研究侧冻结基线同族。只对 MatMul 做 INT8 量化，本批数据上
+  与 fp32 几乎无差（95.5% vs 95.7% 清晰）。
+
+切换前后（应用管线，同一批 12 段录音，参考为 ASR 转写，括号为旧模型均值 GOP）：
+
+| 录音 | 旧清晰% | 新清晰% | 录音 | 旧清晰% | 新清晰% |
+| --- | ---: | ---: | --- | ---: | ---: |
+| 0 朗读句子 | 79.3 | 98.3 | 6 快速应答 | 84.8 | 100.0 |
+| 1 朗读句子 | 84.0 | 97.1 | 7 快速应答 | 65.0 | 90.0 |
+| 2 朗读短文 | 27.4 | 98.3 | 8 快速应答 | 68.8 | 100.0 |
+| 3 情景提问 | 76.4 | 94.6 | 9 快速应答 | 67.6 | 94.1 |
+| 4 情景提问 | 82.9 | 97.6 | 10 事实题 | 75.2 | 98.1 |
+| 5 看图说话 | 45.8 | 95.5 | 11 观点题 | 46.2 | 95.5 |
+
+阈值、词窗、证据 schema、①/② prompt 都没有变化；动的只是声学模型。资产构建：
+`scripts/download-pronunciation-model.js` 按固定 revision 与 SHA-256 校验
+`charsiu/en_w2v2_ctc_libris_and_cv` 与 `charsiu/tokenizer_en_cmu`，再由
+`scripts/export-pronunciation-model.py` 在本地导出 ONNX（上游没有可直接下载的
+ONNX）；运行时目录校验通过时跳过导出，不需要 Python。受限网络可用
+`LS101_HF_ENDPOINT` 指向镜像。
+
+仍未解决：阈值 −0.35 与 `confidence` 是随旧模型标定的，换模型后分布整体上移，
+该阈值现在更宽松，是否重新标定需要中国学生语料；短句（快速应答）样本量小，
+90%–100% 的清晰率还不能当作准确率。

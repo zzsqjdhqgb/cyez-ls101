@@ -26,10 +26,10 @@ test('builds the declared AI pronunciation extension package', async () => {
     const manifest = JSON.parse(strFromU8(archive['manifest.json']))
     assert.equal(manifest.format, 'ls101.extension-package')
     assert.deepEqual(manifest.extension, {
-      id: 'facebook-wav2vec2-pronunciation',
+      id: 'charsiu-en-w2v2-pronunciation',
       version: '1.0.0',
       name: 'AI 语音评测',
-      description: 'Facebook Wav2Vec2 phoneme assessment extension.'
+      description: 'Charsiu English CMU-phone Wav2Vec2 pronunciation assessment extension.'
     })
     assert.equal(manifest.assets.length, 4)
     assert.equal(strFromU8(archive['model/vocab.json']), '{"updated":true}')

@@ -2,6 +2,13 @@
 
 记录日期：2026-08-20。
 
+> 2026-09-30 更新：产品内的声学模型已从多语言 eSpeak 模型
+> `facebook/wav2vec2-lv-60-espeak-cv-ft` 换成英文 CMU 音素模型
+> `charsiu/en_w2v2_ctc_libris_and_cv`。本文第四节关于复合 token、IPA 表示体系与
+> eSpeak 词表的分析属于更换前的历史记录；教师朗读案例的音素清晰率由 79.3% 提升到
+> 98.3%（见 [`PRONUNCIATION_GOP_LLM_V4_PLAINTEXT.md`](PRONUNCIATION_GOP_LLM_V4_PLAINTEXT.md)
+> 第 7 节）。文中关于「低 GOP 不等于错误概率」「需要人工复听」的结论仍然成立。
+
 本文记录一次关于现有语音纠错系统误报、音标体系和单词级证据设计的侧线讨论，
 供主线程继续设计 CTC + TextPA 停顿 + LLM demo 时参考。本文不包含 API key。
 

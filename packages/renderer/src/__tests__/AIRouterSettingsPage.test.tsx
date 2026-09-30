@@ -203,7 +203,7 @@ describe('AIRouterSettingsPage', () => {
     const getPronunciationExtensionStatus = vi
       .fn()
       .mockResolvedValueOnce({
-        extensionId: 'facebook-wav2vec2-pronunciation',
+        extensionId: 'charsiu-en-w2v2-pronunciation',
         requiredVersion: '1.0.0',
         installedVersion: '1.0.0',
         name: 'AI 语音评测',
@@ -212,7 +212,7 @@ describe('AIRouterSettingsPage', () => {
         totalBytes: 1024
       })
       .mockResolvedValueOnce({
-        extensionId: 'facebook-wav2vec2-pronunciation',
+        extensionId: 'charsiu-en-w2v2-pronunciation',
         requiredVersion: '1.0.0',
         name: 'AI 语音评测',
         state: 'not-imported'
@@ -806,7 +806,7 @@ function applicationWith(overrides: Partial<AIRouterApplication>): AIRouterAppli
     testSpeechConnection: vi.fn(),
     probeQwenTtsCuda: vi.fn().mockResolvedValue({ available: false }),
     getPronunciationExtensionStatus: vi.fn().mockResolvedValue({
-      extensionId: 'facebook-wav2vec2-pronunciation',
+      extensionId: 'charsiu-en-w2v2-pronunciation',
       requiredVersion: '1.0.0',
       name: 'AI 语音评测',
       state: 'not-imported'

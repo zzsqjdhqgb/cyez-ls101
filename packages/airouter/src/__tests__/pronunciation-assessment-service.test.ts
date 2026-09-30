@@ -35,7 +35,7 @@ describe('AIRouterPronunciationAssessmentService', () => {
       }
     ])
     await rm(
-      join(baseDir, 'extensions', 'facebook-wav2vec2-pronunciation', '1.0.0', 'manifest.json')
+      join(baseDir, 'extensions', 'charsiu-en-w2v2-pronunciation', '1.0.0', 'manifest.json')
     )
     installed = false
     expect(service.listModels()).toEqual([])
@@ -77,7 +77,7 @@ describe('AIRouterPronunciationAssessmentService', () => {
     expect(service.listModels()).toHaveLength(1)
     await service.deleteExtension()
 
-    expect(deletePackage).toHaveBeenCalledWith('facebook-wav2vec2-pronunciation', '1.0.0')
+    expect(deletePackage).toHaveBeenCalledWith('charsiu-en-w2v2-pronunciation', '1.0.0')
     expect(service.listModels()).toEqual([])
   })
 })
@@ -85,14 +85,14 @@ describe('AIRouterPronunciationAssessmentService', () => {
 async function modelAssets(): Promise<string> {
   const baseDir = await mkdtemp(join(tmpdir(), 'ls101-pronunciation-assets-'))
   temporaryDirectories.push(baseDir)
-  const packageDir = join(baseDir, 'extensions', 'facebook-wav2vec2-pronunciation', '1.0.0')
+  const packageDir = join(baseDir, 'extensions', 'charsiu-en-w2v2-pronunciation', '1.0.0')
   await mkdir(packageDir, { recursive: true })
   await writeFile(
     join(packageDir, 'manifest.json'),
     JSON.stringify({
       format: 'ls101.extension-package',
       formatVersion: 1,
-      extension: { id: 'facebook-wav2vec2-pronunciation', version: '1.0.0', name: 'AI 语音评测' },
+      extension: { id: 'charsiu-en-w2v2-pronunciation', version: '1.0.0', name: 'AI 语音评测' },
       assets: [{ path: 'model/config.json', kind: 'model-config', size: 1, sha256: '0'.repeat(64) }]
     })
   )

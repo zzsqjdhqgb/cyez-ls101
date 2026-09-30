@@ -4,10 +4,37 @@ import {
   CMU_PHONE_TO_IPA,
   createPronunciationReferences,
   noDictionaryCoverageError,
-  parseNoDictionaryCoverageError
+  parseNoDictionaryCoverageError,
+  resolveBlankTokenId
 } from '../pronunciation'
 
 describe('pronunciation GOP assessment', () => {
+  it('resolves the CTC blank token for CMU and eSpeak vocabularies', () => {
+    expect(resolveBlankTokenId({ '[PAD]': 41, '[SIL]': 0, AA: 1 })).toBe(41)
+    expect(resolveBlankTokenId({ '<pad>': 0, AA: 1 })).toBe(0)
+    expect(resolveBlankTokenId({ AA: 1 })).toBe(0)
+    expect(resolveBlankTokenId({ '[PAD]': -1 })).toBe(0)
+  })
+
+  it('runs forced alignment against the pinned CMU-phone vocabulary layout', () => {
+    const vocabulary = cmuTokenizerVocabulary()
+    const dominant = ['[SIL]', 'B', '[SIL]', 'UH', '[SIL]', 'K', '[SIL]', 'S', '[SIL]']
+
+    const result = assessCtcPronunciation({
+      logits: syntheticLogits(dominant, vocabulary),
+      frameCount: dominant.length,
+      vocabularySize: Object.keys(vocabulary).length,
+      vocabulary,
+      referenceText: 'books',
+      durationMs: 900,
+      blankTokenId: resolveBlankTokenId(vocabulary)
+    })
+
+    expect(resolveBlankTokenId(vocabulary)).toBe(41)
+    expect(result.acoustic_phone_inventory).toContain('uppercase ARPAbet')
+    expect(result.recognized_phones).toEqual(['B', 'UH', 'K', 'S'])
+  })
+
   it('creates complete CMU and IPA references from CMUdict', () => {
     const references = createPronunciationReferences('Three weather reports.')
 
@@ -179,6 +206,16 @@ function captureError(action: () => unknown): unknown {
 function pronunciationVocabulary(mode: 'cmu' | 'ipa'): Record<string, number> {
   const tokens = Object.entries(CMU_PHONE_TO_IPA).map(([cmu, ipa]) => (mode === 'cmu' ? cmu : ipa))
   return Object.fromEntries(['<pad>', ...tokens].map((token, index) => [token, index]))
+}
+
+// charsiu/tokenizer_en_cmu 的真实标签顺序（39 个无重音 CMU 音素 + [SIL]/[UNK]/[PAD]）。
+function cmuTokenizerVocabulary(): Record<string, number> {
+  const tokens = [
+    '[SIL]', 'NG', 'F', 'M', 'AE', 'R', 'UW', 'N', 'IY', 'AW', 'V', 'UH', 'OW', 'AA', 'ER',
+    'HH', 'Z', 'K', 'CH', 'W', 'EY', 'ZH', 'T', 'EH', 'Y', 'AH', 'B', 'P', 'TH', 'DH', 'AO',
+    'G', 'L', 'JH', 'OY', 'SH', 'D', 'AY', 'S', 'IH', '[UNK]', '[PAD]'
+  ]
+  return Object.fromEntries(tokens.map((token, index) => [token, index]))
 }
 
 function syntheticLogits(

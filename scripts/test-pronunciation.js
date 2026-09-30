@@ -8,9 +8,9 @@ const { existsSync, readFileSync } = require('node:fs')
 const { join, resolve } = require('node:path')
 const { Worker } = require('node:worker_threads')
 
-const MODEL_DIRECTORY = 'facebook-wav2vec2-lv-60-espeak-cv-ft-int8'
-const PROVIDER_ID = 'builtin-facebook-phoneme'
-const MODEL_ID = 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f'
+const MODEL_DIRECTORY = 'charsiu-en_w2v2_ctc_libris_and_cv-int8'
+const PROVIDER_ID = 'builtin-cmu-phoneme'
+const MODEL_ID = 'en-w2v2-ctc-libris-and-cv-int8-70f5061'
 
 function parseArgs(argv) {
   const audioPath = argv[0]

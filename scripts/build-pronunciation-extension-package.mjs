@@ -14,7 +14,7 @@ const sourceRoot = path.join(
   'ai',
   'pronunciation',
   'model',
-  'facebook-wav2vec2-lv-60-espeak-cv-ft-int8'
+  'charsiu-en_w2v2_ctc_libris_and_cv-int8'
 )
 const files = [
   ['config.json', 'model/config.json', 'model-config'],
@@ -27,7 +27,7 @@ export async function buildPronunciationExtensionPackage({
   sourceDir = sourceRoot,
   output = process.env.LS101_PRONUNCIATION_EXTENSION_OUTPUT
     ? path.resolve(process.env.LS101_PRONUNCIATION_EXTENSION_OUTPUT)
-    : path.join(root, 'dist', 'facebook-wav2vec2-pronunciation-1.0.0.zip')
+    : path.join(root, 'dist', 'charsiu-en-w2v2-pronunciation-1.0.0.zip')
 } = {}) {
   await mkdir(path.dirname(output), { recursive: true })
   const temporaryOutput = `${output}.${process.pid}.${randomUUID()}.part`
@@ -45,10 +45,10 @@ export async function buildPronunciationExtensionPackage({
       format: 'ls101.extension-package',
       formatVersion: 1,
       extension: {
-        id: 'facebook-wav2vec2-pronunciation',
+        id: 'charsiu-en-w2v2-pronunciation',
         version: '1.0.0',
         name: 'AI 语音评测',
-        description: 'Facebook Wav2Vec2 phoneme assessment extension.'
+        description: 'Charsiu English CMU-phone Wav2Vec2 pronunciation assessment extension.'
       },
       assets
     }
