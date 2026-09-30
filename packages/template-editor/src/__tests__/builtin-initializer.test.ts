@@ -187,8 +187,8 @@ describe('内置函数库启动初始化', () => {
     )
     expect(choices).toMatchObject({
       libraryId: 'builtin:shanghai-gaokao-choice',
-      version: 8,
-      contentHash: 'sha256:c33f684a8d26dd6bae49425ba5c3af0dee3f8700d197d98b1cec0f510bd2784f',
+      version: 9,
+      contentHash: 'sha256:b1947a52e7572e453be80eb45aa43801bbb06e03df4d4871c2a37973aca1a426',
       content: { name: '高中选择题' }
     })
     expect(
@@ -335,11 +335,16 @@ describe('内置函数库启动初始化', () => {
       }))
     )
     expect(
-      [...passageQuestionCalls, ...conversationQuestionCalls].map((child) => child.inputs.tts)
+      [...passageQuestionCalls, ...conversationQuestionCalls].map((child) => child.inputs.script)
     ).toEqual(
-      Array.from({ length: 10 }, () => ({
+      [11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map((index) => ({
         type: 'string',
-        parts: [{ type: 'literal', value: '' }]
+        parts: [
+          {
+            type: 'variable',
+            ref: { scope: 'local', name: index >= 14 && index <= 16 ? 'tts2' : 'tts' }
+          }
+        ]
       }))
     )
     expect(passageQuestionCalls.map((child) => child.inputs.choice)).toEqual(
@@ -380,13 +385,42 @@ describe('内置函数库启动初始化', () => {
     const expectedSecondContent = structuredClone(firstChoice.content)
     expectedSecondContent.name = '选择题11~20单题'
     expectedSecondContent.schemaUses[0].schemaId = 'c13cd52c-cb16-402b-9a75-b4c993b3eae6'
+    // 语篇/长对话原文只进解析：输入 tts -> script，题目页不再重复播放材料
+    expectedSecondContent.inputs = expectedSecondContent.inputs.map((input) =>
+      input.name === 'tts' ? { ...input, name: 'script' } : input
+    )
+    expectedSecondContent.schemaUses[0].inputBindings.analysis.parts = [
+      { type: 'variable', ref: { scope: 'local', name: 'script' } }
+    ]
+    for (const node of expectedSecondContent.body.children) {
+      if (node.type !== 'function' || node.name !== '选择题页面') continue
+      node.inputs.tts = {
+        type: 'string',
+        parts: [
+          { type: 'literal', value: '\nQuestion: ' },
+          { type: 'variable', ref: { scope: 'local', name: 'stem' } }
+        ]
+      }
+    }
     expect(secondChoice.content).toEqual(expectedSecondContent)
-    for (const choice of [firstChoice, secondChoice, internalChoice]) {
+    for (const choice of [firstChoice, internalChoice]) {
       const pageCall = choice.content.body.children.find((child) => child.type === 'function')
       expect(pageCall?.inputs.tts).toEqual({
         type: 'string',
         parts: [
           { type: 'variable', ref: { scope: 'local', name: 'tts' } },
+          { type: 'literal', value: '\nQuestion: ' },
+          { type: 'variable', ref: { scope: 'local', name: 'stem' } }
+        ]
+      })
+    }
+    {
+      const secondPageCall = secondChoice.content.body.children.find(
+        (child) => child.type === 'function'
+      )
+      expect(secondPageCall?.inputs.tts).toEqual({
+        type: 'string',
+        parts: [
           { type: 'literal', value: '\nQuestion: ' },
           { type: 'variable', ref: { scope: 'local', name: 'stem' } }
         ]
@@ -593,7 +627,7 @@ describe('内置函数库启动初始化', () => {
     expect(await repository.getBuiltinFunctionLibrary('builtin:examples', 1)).toEqual(previous)
   })
 
-  it('选择题库升级到 v8 时保留已安装的 v7 release', async () => {
+  it('选择题库升级到 v9 时保留已安装的 v7 release', async () => {
     const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
     const previous = await createFunctionLibraryRelease('builtin:shanghai-gaokao-choice', 7, {
       name: '旧高中选择题',
@@ -613,8 +647,8 @@ describe('内置函数库启动初始化', () => {
       await repository.getActiveBuiltinFunctionLibrary('builtin:shanghai-gaokao-choice')
     ).toMatchObject({
       libraryId: 'builtin:shanghai-gaokao-choice',
-      version: 8,
-      contentHash: 'sha256:c33f684a8d26dd6bae49425ba5c3af0dee3f8700d197d98b1cec0f510bd2784f'
+      version: 9,
+      contentHash: 'sha256:b1947a52e7572e453be80eb45aa43801bbb06e03df4d4871c2a37973aca1a426'
     })
     expect(await repository.getBuiltinFunctionLibrary('builtin:shanghai-gaokao-choice', 7)).toEqual(
       previous
