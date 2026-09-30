@@ -9,6 +9,11 @@
 `.gop-research/exam/stable-gop-demo-llm-v3/` 为行为基准；改变阈值、上下文、prompt
 或输出合同时必须另起版本号。
 
+2026-08-29 更新：软件内 AI 批改引擎已切换到 `gop-llm-word-context-v4`
+（① 输出改为保守中文纯文本、完整证据进入请求、② 不变），见
+[`PRONUNCIATION_GOP_LLM_V4_PLAINTEXT.md`](PRONUNCIATION_GOP_LLM_V4_PLAINTEXT.md)。
+证据构建仍以 v3 冻结样本为行为基准。
+
 ## 当前结论
 
 目前已经有一条单命令、端到端的本地链路：

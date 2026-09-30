@@ -18,8 +18,8 @@ describe('AI grading engine', () => {
       )
     const generate = vi
       .fn()
-      .mockResolvedValueOnce(speechCorrectionResponse('未发现可信问题。'))
-      .mockResolvedValueOnce(speechCorrectionResponse('自由表达未发现可信问题。'))
+      .mockResolvedValueOnce('这批证据多为弱读或连读造成的低 GOP，未见可确认的发音问题。')
+      .mockResolvedValueOnce('自由表达部分未观察到可确认的发音问题，建议保持慢速清晰朗读。')
       .mockResolvedValueOnce('{"score":4.125,"comment":"Good answer"}')
 
     const execution = await executeAIGrading(input, dependencies({ recognize, assess, generate }))
@@ -30,16 +30,23 @@ describe('AI grading engine', () => {
     expect(assess.mock.calls[1][0].referenceText).toBe('Free talk.')
     expect(generate).toHaveBeenCalledTimes(3)
     expect(generate.mock.calls[0][0]).toContain('"evidence_id": "GOP-0000"')
+    expect(generate.mock.calls[0][0]).toContain('"transcript": "Read won."')
     expect(generate.mock.calls[0][0]).toContain('"context_text": "Read won"')
     expect(generate.mock.calls[0][0]).not.toContain('Read one.')
     expect(generate.mock.calls[1][0]).toContain('"context_text": "Free talk"')
     expect(generate.mock.calls[2][0]).toContain('Read won.')
     expect(generate.mock.calls[2][0]).toContain('Free talk.')
+    expect(generate.mock.calls[2][0]).toContain('未见可确认的发音问题')
     expect(generate.mock.calls[2][0]).not.toContain('correctionTrace')
     expect(execution.result).toEqual({ score: 4.125, comment: 'Good answer' })
     expect(execution.trace.answers.map((answer) => answer.answerId)).toEqual(['reading', 'talk'])
+    expect(execution.trace.answers[0].correction).toBe(
+      '这批证据多为弱读或连读造成的低 GOP，未见可确认的发音问题。'
+    )
     expect(execution.trace.answers[0].correctionTrace.evidence?.word_contexts).toHaveLength(1)
-    expect(execution.trace.answers[0].correctionTrace.rawResponse).toContain('feedback_items')
+    expect(execution.trace.answers[0].correctionTrace.rawResponse).toBe(
+      '这批证据多为弱读或连读造成的低 GOP，未见可确认的发音问题。'
+    )
   })
 
   it('stops the item before text grading when speech processing fails', async () => {
@@ -143,29 +150,6 @@ function pronunciationAssessment(referenceText: string) {
       phones: [phoneRows[index]]
     }))
   }
-}
-
-function speechCorrectionResponse(summary: string): string {
-  return JSON.stringify({
-    summary_zh: summary,
-    feedback_items: [],
-    withheld_differences: [
-      {
-        evidence_ids: ['GOP-0000'],
-        observations: [
-          {
-            evidence_id: 'GOP-0000',
-            expected: 'AH',
-            expected_ipa: 'ʌ',
-            acoustic_winner: 'AE',
-            acoustic_winner_ipa: 'æ'
-          }
-        ],
-        reason_zh: '单条模型证据不足以确认发音错误。'
-      }
-    ],
-    limitations_zh: ['文本模型不能听音频。']
-  })
 }
 
 function gradingInput(): GradingInput {

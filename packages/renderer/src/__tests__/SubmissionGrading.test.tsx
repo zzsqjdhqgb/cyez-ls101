@@ -69,26 +69,7 @@ const aiAdapterMocks = vi.hoisted(() => ({
   generate: vi.fn().mockImplementation(async (prompt: string) => {
     const marker = '按单词组织的低 GOP 证据 JSON：\n'
     if (prompt.includes(marker)) {
-      return JSON.stringify({
-        summary_zh: '单条声学证据暂不直接反馈。',
-        feedback_items: [],
-        withheld_differences: [
-          {
-            evidence_ids: ['GOP-0000'],
-            observations: [
-              {
-                evidence_id: 'GOP-0000',
-                expected: 'R',
-                expected_ipa: 'ɹ',
-                acoustic_winner: 'L',
-                acoustic_winner_ipa: 'l'
-              }
-            ],
-            reason_zh: '需要结合原录音复听。'
-          }
-        ],
-        limitations_zh: ['文本模型不能听音频。']
-      })
+      return '单条声学证据不足以确认发音问题，暂不直接反馈；建议结合原录音复听后对照练习。'
     }
     return '{"score":4,"comment":"AI comment"}'
   })
@@ -281,7 +262,7 @@ describe('submission grading UI', () => {
     fireEvent.click(await screen.findByRole('button', { name: '全部审查' }))
     expect(await screen.findByText('语音识别与发音纠正')).toBeInTheDocument()
     expect(screen.getByText('识别文本：recognized answer')).toBeInTheDocument()
-    expect(screen.getAllByText(/单条声学证据暂不直接反馈/)).not.toHaveLength(0)
+    expect(screen.getAllByText(/单条声学证据不足以确认发音问题/)).not.toHaveLength(0)
     fireEvent.change(await screen.findByLabelText('分数'), { target: { value: '3.125' } })
     fireEvent.change(screen.getByLabelText('评语'), { target: { value: 'Reviewed' } })
     fireEvent.click(screen.getByRole('button', { name: '确认本题' }))

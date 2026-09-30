@@ -15,7 +15,7 @@
 1. 按 Schema 答案格式中的稳定顺序处理每个录音答案。
 2. 将录音交给 AIRouter 语音识别，得到自然语言转写。
 3. 将 ASR 临时转写和原始录音交给发音评测接口，以 CMUdict 生成完整参考音素并执行整句 CTC Viterbi 强制对齐和 GOP 计算。固定朗读原文不用于这一步，避免绕过冻结版的 ASR 输入边界。
-4. 选择全部 `gop_log_ratio <= -0.35` 的原始音素行，按问题词组织前后各最多两个 ASR 单词的局部上下文，再由所选文本模型生成证据受限的保守中文纠错描述。完整 ASR 转写只保留在本地 trace 中，不进入该次模型请求。
+4. 选择全部 `gop_log_ratio <= -0.35` 的原始音素行，按问题词组织前后各最多两个 ASR 单词的局部上下文，再由所选文本模型写成不超过两段的保守中文纯文本纠错说明。完整冻结证据 JSON（含完整 ASR 转写与扁平证据行）随该次模型请求发送。
 5. 将 Schema 类型、名称、满分、静态输入 Markdown、评分标准、额外提示词、转写和纠错描述组成文本评分 prompt。`fixed-speech` 的原始朗读文本仍作为最终评分材料保留。
 6. 调用所选文本模型并严格解析最终结果。
 
@@ -25,7 +25,7 @@
 
 模型文件位于 `externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8`，由 `scripts/download-pronunciation-model.js` 按固定 revision 和 SHA-256 下载。模型及 ONNX Runtime 在独立 Worker 中运行，不阻塞 renderer。
 
-LLM 后处理遵循 `gop-llm-word-context-v3` 冻结合同。请求使用固定 system message、`temperature=0` 和单次 `maxOutputTokens=65535`；输出只能包含 snake_case 的四个顶层字段。每条低 GOP 证据 ID 必须且只能在反馈项或暂缓项中出现一次，`observations` 必须按 ID 顺序逐字复制四个原始音素字段。校验失败时整题失败，不生成面向学习者的报告。没有音素越过阈值时跳过 LLM，并生成确定性的保守说明。
+LLM 后处理遵循 `gop-llm-word-context-v4` 冻结合同（2026-08 纯文本纠错实验的最终设计，背景与对照数据见 `textpa/PRONUNCIATION_GOP_LLM_V4_PLAINTEXT.md`）。请求使用固定 system message、`temperature=0` 和单次 `maxOutputTokens=65535`；输出必须是不超过两段的自然语言中文纯文本——不输出 JSON、键值对、表格、代码块、标题、evidence_id 或分数等级，也不得断言发音错误已确认。程序只剥离意外出现的 Markdown 代码围栏并要求结果非空，不再逐条校验证据 ID 或音素字段。没有音素越过阈值时跳过 LLM，并生成确定性的保守说明。
 
 `free-speech` 与 `fixed-speech` 使用同一套基于 ASR 临时转写的 GOP 证据流程；两者都可能受 ASR 错词影响。当前没有针对自由表达的专用发音或评分策略。
 
@@ -82,7 +82,7 @@ LLM 后处理遵循 `gop-llm-word-context-v3` 冻结合同。请求使用固定 
 
 ## 验证覆盖
 
-Vitest 覆盖多录音顺序处理、ASR 对齐文本传递、Viterbi GOP 原始字段、冻结样本的 15 条证据和 9 个词窗、证据 ID 全量覆盖、原始音素逐字校验、无低 GOP 跳过模型、语音失败中止单题、最终评分严格 JSON 和小数精度、AI 中间状态持久化、AIRouter 参数转发、整场完成、审查编辑及按 `schemaId` 抽查分组。Electron smoke 覆盖 preload 方法和打包后内置模型运行。
+Vitest 覆盖多录音顺序处理、ASR 对齐文本传递、Viterbi GOP 原始字段、冻结样本的 15 条证据和 9 个词窗、完整证据载荷进入纠错请求、纯文本响应原样透传、代码围栏剥离与空响应拒绝、无低 GOP 跳过模型、语音失败中止单题、最终评分严格 JSON 和小数精度、AI 中间状态持久化、AIRouter 参数转发、整场完成、审查编辑及按 `schemaId` 抽查分组。Electron smoke 覆盖 preload 方法和打包后内置模型运行。
 
 ## 代码依据
 

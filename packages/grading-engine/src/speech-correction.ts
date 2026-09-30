@@ -1,12 +1,21 @@
 import type { PronunciationAssessmentResult, PronunciationPhoneAssessment } from './pronunciation'
 import type { TextGradingModel } from './index'
 
+// 协议 `gop-llm-word-context-v4`（2026-08 发音实验最终设计 C，见
+// HANDOFF-plain-text-correction.md 与 textpa/PRONUNCIATION_GOP_LLM_V4_PLAINTEXT.md）：
+// 证据选择与 v3 冻结协议完全一致（阈值 <= -0.35、前后各 2 词上下文、schema 2）；
+// 改动只在 LLM 阶段——模型直接输出保守的中文纯文本纠错说明，不再要求 JSON 合同、
+// evidence_id 归档或逐字音素校验。实验中 v3 的 JSON 措辞在近乎满分的教师朗读上
+// 断言了 likely_issue 并把评分模型带偏到 0.5/1；纯文本版保持 ②（buildAIGradingPrompt）
+// 完全不变并得到 1/1。v4 的 ① 请求携带完整冻结证据 JSON（含完整 ASR 转写与扁平
+// 证据行），与实验脚本 ai_eval3.mjs 逐字一致。
+export const SPEECH_CORRECTION_SYSTEM_PROMPT = `You are an English pronunciation feedback writer working from CTC-GOP phone evidence.
+You cannot hear the audio and may only describe what the supplied reference/observed phone evidence shows.
+Write plain natural-language Chinese prose. Never output JSON, key-value pairs, tables, code blocks,
+evidence IDs or any kind of score. Never claim a pronunciation error is confirmed.`
+
 export const SPEECH_GOP_THRESHOLD = -0.35
 export const SPEECH_WORD_CONTEXT_RADIUS = 2
-export const SPEECH_CORRECTION_SYSTEM_PROMPT = `You are an evidence-constrained English pronunciation feedback editor.
-You cannot hear the audio. You may only organize and cautiously explain the supplied
-CMU-phone CTC-GOP word-context evidence. Never invent acoustic, prosodic, grammatical,
-semantic, or audio observations. Return the requested JSON contract exactly.`
 
 const SELECTION_MEANING =
   'Every phone row at or below the threshold is included. No consonant, word-position, acoustic-winner, or hand-written diagnostic filter was applied.'
@@ -86,36 +95,6 @@ export interface SpeechCorrectionResult {
   trace: SpeechCorrectionTrace
 }
 
-export interface SpeechEvidenceObservation {
-  evidence_id: string
-  expected: string
-  expected_ipa: string
-  acoustic_winner: string
-  acoustic_winner_ipa: string
-}
-
-export interface SpeechFeedbackItem {
-  evidence_ids: string[]
-  decision: 'likely_issue' | 'needs_listening'
-  observations: SpeechEvidenceObservation[]
-  finding_zh: string
-  rationale_zh: string
-  practice_zh: string
-}
-
-export interface WithheldSpeechDifference {
-  evidence_ids: string[]
-  observations: SpeechEvidenceObservation[]
-  reason_zh: string
-}
-
-export interface SpeechCorrectionDecision {
-  summary_zh: string
-  feedback_items: SpeechFeedbackItem[]
-  withheld_differences: WithheldSpeechDifference[]
-  limitations_zh: string[]
-}
-
 export async function correctSpeechWithLLM(
   request: {
     transcript: string
@@ -140,9 +119,8 @@ export async function correctSpeechWithLLM(
     temperature: 0,
     maxOutputTokens: 65_535
   })
-  const decision = parseSpeechCorrectionResponse(rawResponse, evidence)
   return {
-    correction: formatSpeechCorrection(decision, evidence),
+    correction: normalizePlainTextResponse(rawResponse),
     trace: { evidence, prompt, rawResponse }
   }
 }
@@ -205,7 +183,7 @@ export function validateSpeechCorrectionEvidence(evidence: SpeechCorrectionEvide
     evidence.selection_policy.gop_log_ratio_lte !== SPEECH_GOP_THRESHOLD ||
     evidence.word_context_policy.radius_words !== SPEECH_WORD_CONTEXT_RADIUS
   ) {
-    throw new Error('语音纠错证据选择策略不符合 v3 冻结协议')
+    throw new Error('语音纠错证据选择策略不符合冻结协议')
   }
   if (
     evidence.selection_policy.selected_count !== evidence.rows.length ||
@@ -264,175 +242,39 @@ export function validateSpeechCorrectionEvidence(evidence: SpeechCorrectionEvide
 
 export function buildSpeechCorrectionPrompt(evidence: SpeechCorrectionEvidence): string {
   validateSpeechCorrectionEvidence(evidence)
-  const sourceResult = {
-    transcript_source: evidence.source_result.transcript_source,
-    audio_duration_ms: evidence.source_result.audio_duration_ms,
-    gop_method: evidence.source_result.gop_method,
-    acoustic_model: evidence.source_result.acoustic_model,
-    acoustic_phone_inventory: evidence.source_result.acoustic_phone_inventory,
-    reference_source: evidence.source_result.reference_source,
-    dictionary_source: evidence.source_result.dictionary_source
-  }
-  const promptEvidence = {
-    source_result: {
-      ...sourceResult,
-      transcript_scope:
-        'The full ASR transcript is retained in local evidence for audit only; the prompt contains only the local context_words/context_text windows.'
-    },
-    selection_policy: evidence.selection_policy,
-    word_context_policy: evidence.word_context_policy,
-    interpretation_boundary: evidence.interpretation_boundary,
-    word_contexts: evidence.word_contexts
-  }
-  return `请把下面所有存在低 GOP 质疑的单词证据整理成保守的中文发音反馈，不要评分。
+  return `请把下面的低 GOP 音素证据写成一段保守的中文发音纠错说明。
 
-输入按“问题单词”组织：每个 \`word_context\` 都表示至少含有一条低 GOP 音素的单词，
-并包含该词前后各最多两个 ASR 单词、该词完整的参考音素序列、
-以及沿强制对齐窗口得到的用户声学赢家音素序列。\`gop_evidence\` 是该词内每一条
-低 GOP 音素的详细原始证据。
+输入按“问题单词”组织：每个 word_context 是一个至少含有一条低 GOP 音素的单词，
+包含该词前后各最多两个 ASR 单词、该词完整的参考音素序列，以及沿强制对齐窗口得到的
+声学赢家音素序列；gop_evidence 是该词内每一条低 GOP 音素的原始证据。
 
 必须遵守：
-1. 你看不到音频。每一条 evidence_id 都是程序按阈值选出的原始声学证据，不是人工标注，
-   也不是错误概率；expected 与 acoustic_winner 不同不自动等于发音错误。
-2. 本次请求不包含完整 ASR transcript；\`context_words\` 和 \`context_text\` 来自 ASR，
-   可能有错词，只用于提供局部语境。
-   不得讨论语法、内容、措辞、停顿、流利度、
-   音高、重音、语调、音量、情绪或整体水平。
-3. \`reference_phones\` 是标准参考的 CMU/IPA 序列；\`observed_phones\` 是每个参考音素
-   对齐窗口的 \`acoustic_winner\` 拼接，不是独立无条件的单词 ASR，也不是已经确认的用户发音。
-4. 可以结合单词、CMU 音素、IPA、相邻证据和重复模式判断教学价值，但必须承认模型/对齐
-   混淆、连读、弱读、合法变体和边界偏移的可能性。
-5. \`likely_issue\` 只用于你认为值得明确反馈的重复或相对清晰模式；\`needs_listening\` 用于
-   值得人工复听但不能确定的模式；其余放入 \`withheld_differences\`，说明为什么不应直接报错。
-6. 必须让每个输入 evidence_id 在 \`feedback_items\` 或 \`withheld_differences\` 中出现且只出现
-   一次。可以把同类 evidence_id 合并成一条，但不要丢弃任何一条，也不要创造 ID。
-7. 每个反馈/暂缓项都必须在 \`observations\` 中逐字复制所引用行的 expected、expected_ipa、
-   acoustic_winner、acoustic_winner_ipa；程序会核对这些字段。不要把 ARPAbet 音素改名，
-   也不要把单个音素拼成输入中没有的整词 IPA、音节重音或方言转写。
-8. 反馈只能引用输入中的音素和数值。练习建议要针对具体音素，且不能承诺模型已经证明了
-   某个错误；不要用外部词典知识替换输入中的 CMU 音素。
+1. 你看不到音频。这些证据是程序按阈值选出的声学观测，不是人工标注，也不是错误概率；
+   expected 与 acoustic_winner 不同不等于发音错误。
+2. context_words 和 context_text 来自 ASR，可能有错词，只用于提供局部语境。
+3. 只谈发音。不要讨论语法、内容、措辞、停顿、流利度、音高、重音、语调、音量、情绪或整体水平。
+4. 承认模型混淆、强制对齐边界、连读、弱读和合法变体的可能，不要断言已经发错。
+5. 练习建议要落到具体单词或音素，措辞保守。
 
-严格输出以下 JSON，不要 Markdown 代码块，不要增加字段：
-{
-  "summary_zh": "一句保守总结",
-  "feedback_items": [
-    {
-      "evidence_ids": ["GOP-0001"],
-      "decision": "likely_issue 或 needs_listening",
-      "observations": [
-        {
-          "evidence_id": "GOP-0001",
-          "expected": "B",
-          "expected_ipa": "b",
-          "acoustic_winner": "P",
-          "acoustic_winner_ipa": "p"
-        }
-      ],
-      "finding_zh": "证据支持的发音观察",
-      "rationale_zh": "为什么值得反馈或复听",
-      "practice_zh": "具体而保守的练习建议"
-    }
-  ],
-  "withheld_differences": [
-    {
-      "evidence_ids": ["GOP-0002"],
-      "observations": [
-        {
-          "evidence_id": "GOP-0002",
-          "expected": "B",
-          "expected_ipa": "b",
-          "acoustic_winner": "P",
-          "acoustic_winner_ipa": "p"
-        }
-      ],
-      "reason_zh": "为什么不能直接向学习者报错"
-    }
-  ],
-  "limitations_zh": ["本次整理的具体限制"]
-}
+输出要求：
+- 只输出自然语言中文，纯文本：不要 JSON、不要键值对、不要代码块、不要表格、不要标题、
+  不要罗列 evidence_id、不要给分数或等级。
+- 2 段以内：先说明观察到的模式，再给 1-3 条具体建议。
 
 按单词组织的低 GOP 证据 JSON：
-${JSON.stringify(promptEvidence, null, 2)}`
+${JSON.stringify(evidence, null, 2)}`
 }
 
-export function parseSpeechCorrectionResponse(
-  response: string,
-  evidence: SpeechCorrectionEvidence
-): SpeechCorrectionDecision {
-  validateSpeechCorrectionEvidence(evidence)
-  const value = parseJsonObject(response)
-  if (
-    !hasExactKeys(value, [
-      'summary_zh',
-      'feedback_items',
-      'withheld_differences',
-      'limitations_zh'
-    ]) ||
-    !nonEmptyText(value.summary_zh) ||
-    !Array.isArray(value.feedback_items) ||
-    !Array.isArray(value.withheld_differences) ||
-    !Array.isArray(value.limitations_zh) ||
-    !value.limitations_zh.every(nonEmptyText)
-  ) {
-    throw new Error('LLM 语音纠错结果不符合 v3 顶层合同')
-  }
-
-  const rowById = new Map(evidence.rows.map((row) => [row.evidence_id, row]))
-  const seen = new Set<string>()
-  const feedbackItems = value.feedback_items.map((item) => {
-    if (
-      !isRecord(item) ||
-      !hasExactKeys(item, [
-        'evidence_ids',
-        'decision',
-        'observations',
-        'finding_zh',
-        'rationale_zh',
-        'practice_zh'
-      ]) ||
-      (item.decision !== 'likely_issue' && item.decision !== 'needs_listening') ||
-      !nonEmptyText(item.finding_zh) ||
-      !nonEmptyText(item.rationale_zh) ||
-      !nonEmptyText(item.practice_zh)
-    ) {
-      throw new Error('LLM 语音纠错反馈项不符合 v3 证据合同')
-    }
-    const evidenceIds = validateEvidenceIds(item.evidence_ids, rowById, seen)
-    const observations = validateObservations(item.observations, evidenceIds, rowById)
-    return {
-      evidence_ids: evidenceIds,
-      decision: item.decision,
-      observations,
-      finding_zh: item.finding_zh,
-      rationale_zh: item.rationale_zh,
-      practice_zh: item.practice_zh
-    }
-  })
-  const withheldDifferences = value.withheld_differences.map((item) => {
-    if (
-      !isRecord(item) ||
-      !hasExactKeys(item, ['evidence_ids', 'observations', 'reason_zh']) ||
-      !nonEmptyText(item.reason_zh)
-    ) {
-      throw new Error('LLM 语音纠错暂缓项不符合 v3 证据合同')
-    }
-    const evidenceIds = validateEvidenceIds(item.evidence_ids, rowById, seen)
-    return {
-      evidence_ids: evidenceIds,
-      observations: validateObservations(item.observations, evidenceIds, rowById),
-      reason_zh: item.reason_zh
-    }
-  })
-
-  if (seen.size !== rowById.size || [...rowById.keys()].some((id) => !seen.has(id))) {
-    throw new Error('LLM 没有恰好一次归档全部低 GOP 证据 ID')
-  }
-  return {
-    summary_zh: value.summary_zh,
-    feedback_items: feedbackItems,
-    withheld_differences: withheldDifferences,
-    limitations_zh: value.limitations_zh as string[]
-  }
+// 与实验脚本 ai_eval3.mjs 的 plain() 一致：模型已被要求纯文本，这里只剥掉
+// 意外出现的 Markdown 代码围栏并要求非空，不做其它结构校验。
+export function normalizePlainTextResponse(response: string): string {
+  if (typeof response !== 'string') throw new Error('LLM 语音纠错结果必须是纯文本')
+  const text = response
+    .replace(/^```[a-zA-Z]*\s*/, '')
+    .replace(/```\s*$/, '')
+    .trim()
+  if (!text) throw new Error('LLM 语音纠错结果为空')
+  return text
 }
 
 function createWordContexts(
@@ -616,128 +458,11 @@ function copyGopRow(phone: PronunciationPhoneAssessment): SpeechGopEvidenceRow {
   }
 }
 
-function validateEvidenceIds(
-  value: unknown,
-  rowById: ReadonlyMap<string, SpeechGopEvidenceRow>,
-  seen: Set<string>
-): string[] {
-  if (
-    !Array.isArray(value) ||
-    value.length === 0 ||
-    !value.every((item) => typeof item === 'string')
-  ) {
-    throw new Error('LLM 语音纠错引用了无效的证据 ID 列表')
-  }
-  const ids = value as string[]
-  if (new Set(ids).size !== ids.length) throw new Error('LLM 单项重复引用了证据 ID')
-  if (ids.some((id) => !rowById.has(id))) throw new Error('LLM 语音纠错引用了未知证据 ID')
-  if (ids.some((id) => seen.has(id))) throw new Error('LLM 语音纠错重复归档了证据 ID')
-  ids.forEach((id) => seen.add(id))
-  return ids
-}
-
-function validateObservations(
-  value: unknown,
-  evidenceIds: readonly string[],
-  rowById: ReadonlyMap<string, SpeechGopEvidenceRow>
-): SpeechEvidenceObservation[] {
-  if (!Array.isArray(value) || value.length !== evidenceIds.length) {
-    throw new Error('LLM observations 必须与 evidence_ids 一一对应')
-  }
-  return value.map((observation, index) => {
-    if (
-      !isRecord(observation) ||
-      !hasExactKeys(observation, [
-        'evidence_id',
-        'expected',
-        'expected_ipa',
-        'acoustic_winner',
-        'acoustic_winner_ipa'
-      ]) ||
-      observation.evidence_id !== evidenceIds[index]
-    ) {
-      throw new Error('LLM observation ID 必须按 evidence_ids 顺序逐项对应')
-    }
-    const source = rowById.get(evidenceIds[index])!
-    for (const field of [
-      'expected',
-      'expected_ipa',
-      'acoustic_winner',
-      'acoustic_winner_ipa'
-    ] as const) {
-      if (observation[field] !== source[field]) {
-        throw new Error(`LLM observation 没有逐字复制 ${field}：${source.evidence_id}`)
-      }
-    }
-    return {
-      evidence_id: source.evidence_id,
-      expected: source.expected,
-      expected_ipa: source.expected_ipa,
-      acoustic_winner: source.acoustic_winner,
-      acoustic_winner_ipa: source.acoustic_winner_ipa
-    }
-  })
-}
-
-function formatSpeechCorrection(
-  decision: SpeechCorrectionDecision,
-  evidence: SpeechCorrectionEvidence
-): string {
-  const rowById = new Map(evidence.rows.map((row) => [row.evidence_id, row]))
-  const lines = ['**语音纠错（CMU-phone CTC-GOP v3）**', '', decision.summary_zh]
-  if (decision.feedback_items.length === 0) {
-    lines.push('', '未发现有充分证据、值得向学习者反馈的发音问题。')
-  } else {
-    lines.push('', '建议关注：')
-    for (const item of decision.feedback_items) {
-      const label = item.decision === 'likely_issue' ? '较可能' : '需复听'
-      const words = [
-        ...new Set(item.evidence_ids.map((id) => rowById.get(id)?.word).filter(nonEmptyText))
-      ]
-      lines.push(
-        `- \`${words.join(', ') || '目标词'}\`（${label}；${item.evidence_ids.join(', ')}）：${item.finding_zh}`,
-        `  ${item.rationale_zh}`,
-        `  练习：${item.practice_zh}`
-      )
-    }
-  }
-  lines.push('', '> 低 GOP 是模型证据而非错误概率；暂缓项保留在审计记录中，不直接作为学习者错误。')
-  return lines.join('\n')
-}
-
 function formatNoLowGopCorrection(): string {
   return [
-    '**语音纠错（CMU-phone CTC-GOP v3）**',
-    '',
     `全部强制对齐音素的 GOP 均高于 ${SPEECH_GOP_THRESHOLD}，本次没有生成待纠错证据，也未调用文本模型。`,
-    '',
-    '> GOP 不是校准后的正确率；本结果只表示没有音素进入冻结阈值范围。'
-  ].join('\n')
-}
-
-function parseJsonObject(response: string): Record<string, unknown> {
-  if (typeof response !== 'string') throw new Error('LLM 语音纠错结果必须是 JSON 文本')
-  let candidate = response.replace(/^\uFEFF/, '').trim()
-  if (candidate.startsWith('```')) {
-    const lines = candidate.split(/\r?\n/).slice(1)
-    if (lines.at(-1)?.trim() === '```') lines.pop()
-    candidate = lines.join('\n').trim()
-  }
-  let value: unknown
-  try {
-    value = JSON.parse(candidate)
-  } catch {
-    const start = candidate.indexOf('{')
-    const end = candidate.lastIndexOf('}')
-    if (start < 0 || end <= start) throw new Error('LLM 语音纠错结果不包含 JSON 对象')
-    try {
-      value = JSON.parse(candidate.slice(start, end + 1))
-    } catch {
-      throw new Error('LLM 语音纠错结果不是有效 JSON')
-    }
-  }
-  if (!isRecord(value)) throw new Error('LLM 语音纠错结果必须是 JSON 对象')
-  return value
+    'GOP 不是校准后的正确率；本结果只表示没有音素进入冻结阈值范围，不构成发音水平评价。'
+  ].join('')
 }
 
 function evidenceId(index: number): string {
@@ -784,19 +509,10 @@ function sameGopRow(left: SpeechGopEvidenceRow, right: SpeechGopEvidenceRow): bo
   return left.evidence_id === right.evidence_id && samePhoneRow(left, right)
 }
 
-function hasExactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
-  const actual = Object.keys(value)
-  return actual.length === keys.length && keys.every((key) => actual.includes(key))
-}
-
 function stringList(value: unknown): value is string[] {
   return Array.isArray(value) && value.every(nonEmptyText)
 }
 
 function nonEmptyText(value: unknown): value is string {
   return typeof value === 'string' && Boolean(value.trim())
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
 }

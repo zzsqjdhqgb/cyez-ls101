@@ -18,7 +18,7 @@ export {
   buildSpeechCorrectionPrompt,
   correctSpeechWithLLM,
   createSpeechCorrectionEvidence,
-  parseSpeechCorrectionResponse,
+  normalizePlainTextResponse,
   SPEECH_CORRECTION_SYSTEM_PROMPT,
   SPEECH_GOP_THRESHOLD,
   SPEECH_WORD_CONTEXT_RADIUS,
@@ -26,17 +26,13 @@ export {
 } from './speech-correction'
 export type {
   SpeechCorrectionEvidence,
-  SpeechCorrectionDecision,
   SpeechCorrectionResult,
   SpeechCorrectionTrace,
   SpeechContextWord,
-  SpeechEvidenceObservation,
-  SpeechFeedbackItem,
   SpeechGopEvidenceRow,
   SpeechObservedPhoneSequence,
   SpeechPhoneSequence,
-  SpeechWordContext,
-  WithheldSpeechDifference
+  SpeechWordContext
 } from './speech-correction'
 
 export interface SpeechRecognitionModelSelection {

@@ -2,6 +2,11 @@
 
 状态：**暂时冻结，作为后续 AI 批改引擎重写的行为基准**
 
+> 2026-08-29 起软件内 AI 批改引擎已改用 `gop-llm-word-context-v4`
+> （纯文本纠错说明，见 [`PRONUNCIATION_GOP_LLM_V4_PLAINTEXT.md`](PRONUNCIATION_GOP_LLM_V4_PLAINTEXT.md)）。
+> 本文件仍是证据构建（阈值、词窗、schema 2）的行为基准；v3 的 JSON 输出合同
+> 仅存于本文件与 git 历史。
+
 冻结版本：`gop-llm-word-context-v3`
 
 记录日期：2026-08-23

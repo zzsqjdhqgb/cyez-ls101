@@ -10,13 +10,13 @@ import {
   buildSpeechCorrectionPrompt,
   correctSpeechWithLLM,
   createSpeechCorrectionEvidence,
-  parseSpeechCorrectionResponse,
+  normalizePlainTextResponse,
   SPEECH_CORRECTION_SYSTEM_PROMPT
 } from '../speech-correction'
 
-describe('GOP + LLM v3 speech correction', () => {
-  it('selects every low-GOP row and sends only complete local word contexts', () => {
-    const transcript = 'FULL TRANSCRIPT MUST STAY LOCAL word one target word four'
+describe('GOP + LLM v4 plain-text speech correction', () => {
+  it('selects every low-GOP row and keeps the frozen word contexts', () => {
+    const transcript = 'FULL TRANSCRIPT STAYS IN THE REQUEST word one target word four'
     const evidence = createSpeechCorrectionEvidence({
       transcript,
       assessment: assessment([
@@ -48,37 +48,39 @@ describe('GOP + LLM v3 speech correction', () => {
       'GOP-0002',
       'GOP-0003'
     ])
-
-    const prompt = buildSpeechCorrectionPrompt(evidence)
-    expect(prompt).toContain('GOP-0002')
-    expect(prompt).toContain('"context_text": "full transcript target word four"')
-    expect(prompt).not.toContain(transcript)
   })
 
-  it('uses the frozen system prompt and generation parameters', async () => {
-    const evidenceAssessment = assessment([
-      word(0, 'books', [phone(12, 0, 0, 'books', 'B', 'P', -2.277763)])
-    ])
-    const generate = vi.fn().mockResolvedValue(
-      JSON.stringify({
-        summary_zh: '该证据值得复听。',
-        feedback_items: [
-          {
-            evidence_ids: ['GOP-0012'],
-            decision: 'needs_listening',
-            observations: [observation('GOP-0012', 'B', 'P')],
-            finding_zh: '对齐窗口的声学赢家与参考音素不同。',
-            rationale_zh: '单条证据不能直接确认为错误，建议复听。',
-            practice_zh: '对比练习 /b/ 与 /p/，并结合原录音确认。'
-          }
-        ],
-        withheld_differences: [],
-        limitations_zh: ['文本模型听不到音频。']
-      })
-    )
+  it('sends the full frozen evidence, including the transcript and flat rows', () => {
+    const evidence = createSpeechCorrectionEvidence({
+      transcript: 'one target word',
+      assessment: assessment([
+        word(0, 'one', [phone(0, 0, 0, 'one', 'W', 'W', 1)]),
+        word(1, 'target', [phone(1, 1, 0, 'target', 'T', 'D', -2)]),
+        word(2, 'word', [phone(2, 2, 0, 'word', 'W', 'W', 1)])
+      ])
+    })
+
+    const prompt = buildSpeechCorrectionPrompt(evidence)
+
+    expect(prompt).toContain('保守的中文发音纠错说明')
+    expect(prompt).toContain('不要给分数或等级')
+    expect(prompt).toContain('"transcript": "one target word"')
+    expect(prompt).toContain('"evidence_id": "GOP-0001"')
+    expect(prompt).toContain('"context_text": "one target word"')
+  })
+
+  it('uses the frozen system prompt and returns the model prose untouched', async () => {
+    const prose = [
+      '这批低 GOP 证据多集中在弱读音节的中央元音上，属于模型偏好而非确认的错误。',
+      '建议对照 target 一词慢速练习 /t/ 与 /d/ 的对立。'
+    ].join('\n\n')
+    const generate = vi.fn().mockResolvedValue(prose)
 
     const result = await correctSpeechWithLLM(
-      { transcript: 'books', assessment: evidenceAssessment },
+      {
+        transcript: 'books',
+        assessment: assessment([word(0, 'books', [phone(12, 0, 0, 'books', 'B', 'P', -2.277763)])])
+      },
       { generate }
     )
 
@@ -88,9 +90,19 @@ describe('GOP + LLM v3 speech correction', () => {
       temperature: 0,
       maxOutputTokens: 65_535
     })
-    expect(result.correction).toContain('books')
-    expect(result.correction).toContain('GOP-0012')
-    expect(result.trace.rawResponse).toContain('observations')
+    expect(result.correction).toBe(prose)
+    expect(result.trace.rawResponse).toBe(prose)
+    expect(result.trace.prompt).toContain('GOP-0012')
+    expect(result.trace.evidence?.rows).toHaveLength(1)
+  })
+
+  it('strips accidental markdown code fences and rejects empty responses', () => {
+    expect(normalizePlainTextResponse('```text\n第一段。\n\n第二段。\n```\n')).toBe(
+      '第一段。\n\n第二段。'
+    )
+    expect(normalizePlainTextResponse('  直接可用的说明。  ')).toBe('直接可用的说明。')
+    expect(() => normalizePlainTextResponse('')).toThrow('为空')
+    expect(() => normalizePlainTextResponse('```\n```')).toThrow('为空')
   })
 
   it('skips the LLM when no phone crosses the frozen threshold', async () => {
@@ -111,76 +123,16 @@ describe('GOP + LLM v3 speech correction', () => {
 
     expect(generate).not.toHaveBeenCalled()
     expect(result.correction).toContain('没有生成待纠错证据')
+    expect(result.correction).not.toContain('**')
     expect(result.trace).not.toHaveProperty('prompt')
     expect(result.trace.evidence?.rows).toEqual([])
   })
 
-  it('requires exactly-once ID coverage and verbatim ordered observations', () => {
-    const evidence = createSpeechCorrectionEvidence({
-      transcript: 'three free',
-      assessment: assessment([
-        word(0, 'three', [phone(0, 0, 0, 'three', 'TH', 'S', -2)]),
-        word(1, 'free', [phone(1, 1, 0, 'free', 'F', 'P', -1)])
-      ])
-    })
-    const valid = {
-      summary_zh: '两条证据均需保守处理。',
-      feedback_items: [
-        {
-          evidence_ids: ['GOP-0000'],
-          decision: 'needs_listening',
-          observations: [observation('GOP-0000', 'TH', 'S')],
-          finding_zh: '存在声学差异。',
-          rationale_zh: '值得复听。',
-          practice_zh: '进行音素对比。'
-        }
-      ],
-      withheld_differences: [
-        {
-          evidence_ids: ['GOP-0001'],
-          observations: [observation('GOP-0001', 'F', 'P')],
-          reason_zh: '单条证据不足以确认。'
-        }
-      ],
-      limitations_zh: ['文本模型不能听音频。']
-    }
-
-    expect(parseSpeechCorrectionResponse(JSON.stringify(valid), evidence)).toEqual(valid)
-
-    const missing = structuredClone(valid)
-    missing.withheld_differences = []
-    expect(() => parseSpeechCorrectionResponse(JSON.stringify(missing), evidence)).toThrow(
-      '全部低 GOP 证据 ID'
-    )
-
-    const changedPhone = structuredClone(valid)
-    changedPhone.feedback_items[0].observations[0].expected = 'S'
-    expect(() => parseSpeechCorrectionResponse(JSON.stringify(changedPhone), evidence)).toThrow(
-      '逐字复制 expected'
-    )
-
-    const wrongOrder = structuredClone(valid)
-    wrongOrder.feedback_items = [
-      {
-        ...wrongOrder.feedback_items[0],
-        evidence_ids: ['GOP-0000', 'GOP-0001'],
-        observations: [observation('GOP-0001', 'F', 'P'), observation('GOP-0000', 'TH', 'S')]
-      }
-    ]
-    wrongOrder.withheld_differences = []
-    expect(() => parseSpeechCorrectionResponse(JSON.stringify(wrongOrder), evidence)).toThrow(
-      '顺序'
-    )
-  })
-
-  it('reproduces the committed v3 frozen evidence and accepts its response', () => {
+  it('reproduces the committed frozen evidence payload', () => {
     const base = fixture('stable-gop-demo/result.json') as Record<string, unknown>
     const frozenEvidence = fixture('stable-gop-demo-llm-v3/evidence.json') as {
       rows: unknown[]
       word_contexts: unknown[]
-    }
-    const frozenResult = fixture('stable-gop-demo-llm-v3/result.json') as {
-      feedback: unknown
     }
     const baseAssessment = {
       schema_version: 2,
@@ -217,36 +169,9 @@ describe('GOP + LLM v3 speech correction', () => {
       observed_phones: { arpabet: ['P', 'UH', 'K', 'S'] },
       gop_evidence: [{ evidence_id: 'GOP-0012', gop_log_ratio: -2.277763 }]
     })
-    expect(() =>
-      parseSpeechCorrectionResponse(JSON.stringify(frozenResult.feedback), evidence)
-    ).not.toThrow()
+    expect(buildSpeechCorrectionPrompt(evidence)).toContain('"evidence_id": "GOP-0012"')
   })
 })
-
-function observation(evidenceId: string, expected: string, winner: string) {
-  return {
-    evidence_id: evidenceId,
-    expected,
-    expected_ipa: IPA[expected],
-    acoustic_winner: winner,
-    acoustic_winner_ipa: IPA[winner]
-  }
-}
-
-const IPA: Readonly<Record<string, string>> = {
-  AA: 'ɑː',
-  AH: 'ʌ',
-  B: 'b',
-  D: 'd',
-  F: 'f',
-  IY: 'iː',
-  P: 'p',
-  R: 'ɹ',
-  S: 's',
-  T: 't',
-  TH: 'θ',
-  W: 'w'
-}
 
 function phone(
   index: number,
@@ -276,6 +201,21 @@ function phone(
     start_ms: index * 20,
     end_ms: index * 20 + 20
   }
+}
+
+const IPA: Readonly<Record<string, string>> = {
+  AA: 'ɑː',
+  AH: 'ʌ',
+  B: 'b',
+  D: 'd',
+  F: 'f',
+  IY: 'iː',
+  P: 'p',
+  R: 'ɹ',
+  S: 's',
+  T: 't',
+  TH: 'θ',
+  W: 'w'
 }
 
 function word(
