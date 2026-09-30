@@ -6,6 +6,7 @@ import {
 } from '../builtin-initializer'
 import { createFunctionLibraryRelease } from '../id'
 import { FileTemplateRepository, type TemplateStore } from '../repository'
+import type { FunctionNode } from '../types'
 
 describe('内置函数库启动初始化', () => {
   it('预校验安装清单后幂等登记 release 并更新 active 版本', async () => {
@@ -171,7 +172,11 @@ describe('内置函数库启动初始化', () => {
     const phrase = zhongkaoBasic?.content.functions.find(
       ({ functionId }) => functionId === 'builtin:shanghai-zhongkao-phrase-reading'
     )
-    expect(phrase?.content.body.children.map((child) => child.timeline)).toEqual([
+    expect(
+      phrase?.content.body.children.map((child) =>
+        child.type === 'page' ? child.timeline : undefined
+      )
+    ).toEqual([
       [{ type: 'countdown', seconds: { type: 'number', source: 'literal', value: 10 } }],
       [
         {
@@ -313,12 +318,12 @@ describe('内置函数库启动初始化', () => {
       expect(group.content.body.choiceCollector).toBeUndefined()
     }
     const passageQuestionCalls = passageGroup.content.body.children.filter(
-      (child) =>
+      (child): child is FunctionNode =>
         child.type === 'function' &&
         child.functionRef === 'builtin:shanghai-gaokao-choice-question-11-20'
     )
     const conversationQuestionCalls = conversationGroup.content.body.children.filter(
-      (child) =>
+      (child): child is FunctionNode =>
         child.type === 'function' &&
         child.functionRef === 'builtin:shanghai-gaokao-choice-question-11-20'
     )

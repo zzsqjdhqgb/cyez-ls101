@@ -14,6 +14,7 @@ import {
 } from './id'
 import type {
   BuiltinTemplateRelease,
+  FunctionContent,
   FunctionDef,
   FunctionLibraryContent,
   FunctionLibraryRelease,

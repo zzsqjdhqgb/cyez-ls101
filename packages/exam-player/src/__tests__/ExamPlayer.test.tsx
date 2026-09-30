@@ -127,7 +127,9 @@ describe('ExamPlayer', () => {
       'fetch',
       vi.fn(async () => Response.json(recordingExam()))
     )
-    vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(function () {
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(function (
+      this: HTMLMediaElement
+    ) {
       this.dispatchEvent(new Event('play'))
       return Promise.resolve()
     })
