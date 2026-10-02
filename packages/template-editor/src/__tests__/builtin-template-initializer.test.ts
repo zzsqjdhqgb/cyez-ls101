@@ -20,16 +20,19 @@ const LISTENING_BLOCK_TEMPLATES = [
   {
     templateId: '5c2f1d4e-6a7b-4c8d-9e0f-1234567890ab',
     name: '上海高考英语听力 - 短对话专项训练',
+    version: 4,
     questionCounts: [5, 5]
   },
   {
     templateId: '6d3e2f5a-7b8c-4d9e-a0f1-2345678901bc',
     name: '上海高考英语听力 - 短文专项训练',
+    version: 5,
     questionCounts: [3, 3]
   },
   {
     templateId: '7e4f3a6b-8c9d-4e0f-a1b2-3456789012cd',
     name: '上海高考英语听力 - 长对话专项训练',
+    version: 5,
     questionCounts: [4]
   }
 ] as const
@@ -87,8 +90,8 @@ describe('内置 Template 启动初始化', () => {
     )
     expect(await repository.getActiveBuiltinTemplate(TEMPLATE_ID)).toMatchObject({
       templateId: TEMPLATE_ID,
-      version: 3,
-      releaseHash: 'sha256:893d9b14836c9eea4e2600f4668313e00039dcf887f4f916176639938f5882af',
+      version: 4,
+      releaseHash: 'sha256:26d58adf0ead48f2972ac21c4391cc54781a171bc819f04f3418536bfb82dfa7',
       document: {
         content: {
           name: '上海高考口语标准题型',
@@ -111,8 +114,8 @@ describe('内置 Template 启动初始化', () => {
     const zhongkao = await repository.getActiveBuiltinTemplate(ZHONGKAO_TEMPLATE_ID)
     expect(zhongkao).toMatchObject({
       templateId: ZHONGKAO_TEMPLATE_ID,
-      version: 2,
-      releaseHash: 'sha256:ce0ce7a51b22cea8dc4e3305ec0b0e779580b601144c5e00f89b23a52d7e9a7e',
+      version: 3,
+      releaseHash: 'sha256:da5991caccb100f3d277147fc10e88af234307e268bf115e2268e25c60efe106',
       document: {
         content: {
           name: '上海中考口语标准题型',
@@ -121,7 +124,7 @@ describe('内置 Template 启动初始化', () => {
             {
               alias: 'data',
               interfaceId:
-                'sha256:e315a7e3f6c39e8f440272d7e922f78e3a98f6f7715a6b4a885e6b2fc3faf0c6',
+                'sha256:7cf4602e4dfd1557f0d93a70b8f80152709230bc3484efc680b4e231cd6db0f6',
               acceptedVars: [
                 'phrase_1_display',
                 'phrase_1',
@@ -164,8 +167,8 @@ describe('内置 Template 启动初始化', () => {
 
     expect(await repository.getActiveBuiltinTemplate(LISTENING_TEMPLATE.templateId)).toMatchObject({
       templateId: LISTENING_TEMPLATE.templateId,
-      version: 3,
-      releaseHash: 'sha256:77bc20103adeb7a716dbb6f55cb71b6e49ebdc0be3ede50a6772cb3333cac6e1',
+      version: 6,
+      releaseHash: 'sha256:29f532a3d7afecb4bf26c813511d4a9c8dba8e41aa6135d56efc5c5a292baa2f',
       document: {
         content: {
           name: LISTENING_TEMPLATE.name,
@@ -174,7 +177,7 @@ describe('内置 Template 启动初始化', () => {
             {
               alias: 'data',
               interfaceId:
-                'sha256:03e00d7f007b7b2281e13429ec89220d3d5abfa218f1f953f0d3c64ff1489838',
+                'sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214',
               acceptedVars: expect.arrayContaining([
                 'dialogue_text_1',
                 'passage_text_1',
@@ -216,7 +219,7 @@ describe('内置 Template 启动初始化', () => {
       const block = await repository.getActiveBuiltinTemplate(expected.templateId)
       expect(block).toMatchObject({
         templateId: expected.templateId,
-        version: 2,
+        version: expected.version,
         document: {
           content: {
             name: expected.name,
@@ -225,7 +228,7 @@ describe('内置 Template 启动初始化', () => {
               {
                 alias: 'data',
                 interfaceId:
-                  'sha256:03e00d7f007b7b2281e13429ec89220d3d5abfa218f1f953f0d3c64ff1489838',
+                  'sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214',
                 acceptedVars: expect.any(Array)
               }
             ],
@@ -280,7 +283,7 @@ describe('内置 Template 启动初始化', () => {
       const section = await repository.getActiveBuiltinTemplate(expected.templateId)
       expect(section).toMatchObject({
         templateId: expected.templateId,
-        version: 3,
+        version: 4,
         document: {
           content: {
             name: expected.name,
@@ -305,7 +308,7 @@ describe('内置 Template 启动初始化', () => {
     }
   })
 
-  it('保留已落盘的无标签 v2 并将拆分模板升级到带标签的 v3', async () => {
+  it('保留已落盘的无标签 v2 并将拆分模板升级到当前带标签的版本', async () => {
     const repository = new FileTemplateRepository(new MemoryStore().scope('template-editor'))
     const manifest = JSON.parse(
       await readFile('resources/builtin/template-editor/.text/builtin-templates.json', 'utf8')
@@ -324,7 +327,7 @@ describe('内置 Template 启动初始化', () => {
 
     await expect(repository.getBuiltinTemplate(current.templateId, 2)).resolves.toEqual(previous)
     await expect(repository.getActiveBuiltinTemplate(current.templateId)).resolves.toMatchObject({
-      version: 3,
+      version: current.version,
       document: {
         content: {
           name: '上海高考口语 - 朗读句子',

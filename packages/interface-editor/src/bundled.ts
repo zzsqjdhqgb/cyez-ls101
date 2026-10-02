@@ -1,7 +1,5 @@
-import { verifyInterfaceId } from './id'
-import { isInterfaceDef } from './repository'
+import { readInterfaceDefinition } from './repository'
 import type { InterfaceDef } from './types'
-import { validateInterfaceDef } from './validation'
 
 const CURRENT_FILE = 'current.json'
 const INTERFACE_FILE = 'interface.json'
@@ -66,18 +64,18 @@ export class FileBundledInterfaceRepository implements BundledInterfaceSource {
       .scope('versions')
       .scope(digest)
       .readText<unknown>(INTERFACE_FILE)
-    if (!isInterfaceDef(value) || !validateInterfaceDef(value).valid) {
+    if (!isRecord(value) || value.id !== current.currentInterfaceId) {
       throw new BundledInterfaceRepositoryError(
         `Bundled Interface definition is invalid: ${builtinKey}`
       )
     }
-    if (value.id !== current.currentInterfaceId || !(await verifyInterfaceId(value))) {
+    try {
+      return { builtinKey, currentInterface: structuredClone(await readInterfaceDefinition(value)) }
+    } catch {
       throw new BundledInterfaceRepositoryError(
         `Bundled Interface content ID does not match: ${builtinKey}`
       )
     }
-
-    return { builtinKey, currentInterface: structuredClone(value) }
   }
 }
 

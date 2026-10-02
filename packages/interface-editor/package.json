@@ -17,8 +17,5 @@
     "@sinclair/typebox": "^0.34.52",
     "fast-json-stable-stringify": "^2.1.0",
     "fflate": "^0.8.2"
-  },
-  "scripts": {
-    "typecheck": "tsc --noEmit"
   }
 }

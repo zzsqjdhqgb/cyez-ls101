@@ -2,8 +2,8 @@
   "templates": [
     {
       "templateId": "0c283c54-683a-498c-bf69-fb1490f99356",
-      "version": 3,
-      "releaseHash": "sha256:893d9b14836c9eea4e2600f4668313e00039dcf887f4f916176639938f5882af",
+      "version": 4,
+      "releaseHash": "sha256:26d58adf0ead48f2972ac21c4391cc54781a171bc819f04f3418536bfb82dfa7",
       "document": {
         "content": {
           "name": "上海高考口语标准题型",
@@ -12,7 +12,7 @@
           "interfaces": [
             {
               "alias": "data",
-              "interfaceId": "sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14",
+              "interfaceId": "sha256:70f7547c283404cd8a09829bac34e5245bf5d08f10af444d88c5a0251cc58c9d",
               "acceptedVars": [
                 "sentence_1",
                 "sentence_2",
@@ -3552,8 +3552,8 @@
     },
     {
       "templateId": "261d2ad9-225e-41ac-a394-1887b912b917",
-      "version": 3,
-      "releaseHash": "sha256:59c20462af5ac5fe60bbaa592927faf55801ae04965aa0b447234e28fb25082a",
+      "version": 4,
+      "releaseHash": "sha256:467c661d4df4a1a6325099b26da0c9db9b2e2e5ed5203f158e5d2d711e4cdac5",
       "document": {
         "content": {
           "name": "上海高考口语 - 朗读句子",
@@ -3562,7 +3562,7 @@
           "interfaces": [
             {
               "alias": "data",
-              "interfaceId": "sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14",
+              "interfaceId": "sha256:70f7547c283404cd8a09829bac34e5245bf5d08f10af444d88c5a0251cc58c9d",
               "acceptedVars": [
                 "sentence_1",
                 "sentence_2",
@@ -4125,8 +4125,8 @@
     },
     {
       "templateId": "c77c98f4-049d-4991-a5dc-3c39b7088100",
-      "version": 3,
-      "releaseHash": "sha256:92e2f5463f6e677263781993e4b462d559090081b1cc3c72e20d8833bb4a9288",
+      "version": 4,
+      "releaseHash": "sha256:37fbb24192dc9a525342608eee6add7d486e291da73ca0cd18aa73cee9365842",
       "document": {
         "content": {
           "name": "上海高考口语 - 朗读短文",
@@ -4135,7 +4135,7 @@
           "interfaces": [
             {
               "alias": "data",
-              "interfaceId": "sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14",
+              "interfaceId": "sha256:70f7547c283404cd8a09829bac34e5245bf5d08f10af444d88c5a0251cc58c9d",
               "acceptedVars": [
                 "sentence_1",
                 "sentence_2",
@@ -4579,8 +4579,8 @@
     },
     {
       "templateId": "bf2dddd5-f85f-4fbe-8e2f-9f2aa86f5e05",
-      "version": 3,
-      "releaseHash": "sha256:540b18d16f3affb30cf3978421cce3f4c32c31127820036eec1ef97eea1036d8",
+      "version": 4,
+      "releaseHash": "sha256:eb24b5ffe1be61ae41fd68bb79dbf4f9dc3675cf5b863c4c64a40b9cf0e6c8a7",
       "document": {
         "content": {
           "name": "上海高考口语 - 情景提问",
@@ -4589,7 +4589,7 @@
           "interfaces": [
             {
               "alias": "data",
-              "interfaceId": "sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14",
+              "interfaceId": "sha256:70f7547c283404cd8a09829bac34e5245bf5d08f10af444d88c5a0251cc58c9d",
               "acceptedVars": [
                 "sentence_1",
                 "sentence_2",
@@ -5221,8 +5221,8 @@
     },
     {
       "templateId": "dccc9ca8-6b17-4b54-8fb8-bc5be6517e88",
-      "version": 3,
-      "releaseHash": "sha256:1622ccbb57336057874a7a2825593d9c6fd8d294ab92ff5fa063a7d625511c8a",
+      "version": 4,
+      "releaseHash": "sha256:848b9c98d4fb4cba232d9cf5ef77dbe1d4c73dbc34d83b89f3f539f11c2d75be",
       "document": {
         "content": {
           "name": "上海高考口语 - 看图说话",
@@ -5231,7 +5231,7 @@
           "interfaces": [
             {
               "alias": "data",
-              "interfaceId": "sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14",
+              "interfaceId": "sha256:70f7547c283404cd8a09829bac34e5245bf5d08f10af444d88c5a0251cc58c9d",
               "acceptedVars": [
                 "sentence_1",
                 "sentence_2",
@@ -6125,8 +6125,8 @@
     },
     {
       "templateId": "490f6873-a39d-409e-954c-c345a90004a3",
-      "version": 3,
-      "releaseHash": "sha256:fdd935ea38c553ff73e2589651e2371639fad625d882100eb8b1f06cd9ca3c2e",
+      "version": 4,
+      "releaseHash": "sha256:8c42cc1e120de1a1433ba36530689e3d8adc315b0c2f93b28a7337efe65b334b",
       "document": {
         "content": {
           "name": "上海高考口语 - 快速应答",
@@ -6135,7 +6135,7 @@
           "interfaces": [
             {
               "alias": "data",
-              "interfaceId": "sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14",
+              "interfaceId": "sha256:70f7547c283404cd8a09829bac34e5245bf5d08f10af444d88c5a0251cc58c9d",
               "acceptedVars": [
                 "sentence_1",
                 "sentence_2",
@@ -7043,8 +7043,8 @@
     },
     {
       "templateId": "ef1dc645-eba5-4144-a82b-f52e24d5f925",
-      "version": 3,
-      "releaseHash": "sha256:73758183958da873b16f66e8f8a85ccabb137d82ee666b7832ad39befc0c51ea",
+      "version": 4,
+      "releaseHash": "sha256:51a600ec517d178c22d06db811f2b606de960ce4931622f7072bc91244507b96",
       "document": {
         "content": {
           "name": "上海高考口语 - 听短文回答",
@@ -7053,7 +7053,7 @@
           "interfaces": [
             {
               "alias": "data",
-              "interfaceId": "sha256:a53e4092e675dcf366ffe5f9c3fa06ad213923ea3ced42ea3b6ee640919d9d14",
+              "interfaceId": "sha256:70f7547c283404cd8a09829bac34e5245bf5d08f10af444d88c5a0251cc58c9d",
               "acceptedVars": [
                 "sentence_1",
                 "sentence_2",
@@ -7952,8 +7952,8 @@
     },
     {
       "templateId": "4f4c8c1a-9b2a-4d71-8f1e-4a5e8c7d2b63",
-      "version": 3,
-      "releaseHash": "sha256:77bc20103adeb7a716dbb6f55cb71b6e49ebdc0be3ede50a6772cb3333cac6e1",
+      "version": 6,
+      "releaseHash": "sha256:29f532a3d7afecb4bf26c813511d4a9c8dba8e41aa6135d56efc5c5a292baa2f",
       "document": {
         "content": {
           "name": "上海高考英语听力标准题型",
@@ -7962,7 +7962,7 @@
           "interfaces": [
             {
               "alias": "data",
-              "interfaceId": "sha256:03e00d7f007b7b2281e13429ec89220d3d5abfa218f1f953f0d3c64ff1489838",
+              "interfaceId": "sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214",
               "acceptedVars": [
                 "dialogue_text_1",
                 "stem_1",
@@ -9055,7 +9055,7 @@
                 "id": "passages",
                 "name": "短文题组（11~16）",
                 "type": "function",
-                "functionRef": "sha256:9319ea27d6f077a38df8e104f3de2bbce5db526c68d117fb96c9b76be2335119",
+                "functionRef": "sha256:0da3953a4ee695a3a6fd211d78b06827f7cf7117b5504739e6e53a10afacb1f7",
                 "inputs": {
                   "choice": {
                     "type": "choice-group",
@@ -9566,7 +9566,7 @@
                 "id": "long-conversation",
                 "name": "长对话（17~20）",
                 "type": "function",
-                "functionRef": "sha256:bf027f9a41c6ab6e5ad74fc5a7d707dbcbe57a1ca2ebcd5b39508330361040dc",
+                "functionRef": "sha256:55c49133d420435ac5c324c58bc79ea2abea7a47d9224eeaf2f64642b9d41bc6",
                 "inputs": {
                   "choice": {
                     "type": "choice-group",
@@ -12310,7 +12310,7 @@
                   }
                 },
                 {
-                  "name": "tts",
+                  "name": "script",
                   "type": "string"
                 },
                 {
@@ -12378,13 +12378,6 @@
                       "tts": {
                         "type": "string",
                         "parts": [
-                          {
-                            "type": "variable",
-                            "ref": {
-                              "scope": "local",
-                              "name": "tts"
-                            }
-                          },
                           {
                             "type": "literal",
                             "value": "\nQuestion: "
@@ -12546,7 +12539,7 @@
                           "type": "variable",
                           "ref": {
                             "scope": "local",
-                            "name": "tts"
+                            "name": "script"
                           }
                         }
                       ]
@@ -12574,7 +12567,7 @@
                   "attachments": []
                 }
               ],
-              "id": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8"
+              "id": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd"
             },
             {
               "name": "短文题组（11~16）",
@@ -13004,7 +12997,7 @@
                     "id": "function-call-11",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -13037,12 +13030,15 @@
                           "questionIndex": 0
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -13130,7 +13126,7 @@
                     "id": "function-call-12",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -13163,12 +13159,15 @@
                           "questionIndex": 1
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -13256,7 +13255,7 @@
                     "id": "function-call-13",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -13289,12 +13288,15 @@
                           "questionIndex": 2
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -13574,7 +13576,7 @@
                     "id": "function-call-14",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -13607,12 +13609,15 @@
                           "questionIndex": 0
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts2"
+                            }
                           }
                         ]
                       },
@@ -13700,7 +13705,7 @@
                     "id": "function-call-15",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -13733,12 +13738,15 @@
                           "questionIndex": 1
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts2"
+                            }
                           }
                         ]
                       },
@@ -13826,7 +13834,7 @@
                     "id": "function-call-16",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -13859,12 +13867,15 @@
                           "questionIndex": 2
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts2"
+                            }
                           }
                         ]
                       },
@@ -13952,7 +13963,7 @@
               },
               "outputs": [],
               "schemaUses": [],
-              "id": "sha256:9319ea27d6f077a38df8e104f3de2bbce5db526c68d117fb96c9b76be2335119"
+              "id": "sha256:0da3953a4ee695a3a6fd211d78b06827f7cf7117b5504739e6e53a10afacb1f7"
             },
             {
               "name": "长对话（17~20）",
@@ -14282,7 +14293,7 @@
                     "id": "function-call-17",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -14315,12 +14326,15 @@
                           "questionIndex": 0
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -14408,7 +14422,7 @@
                     "id": "function-call-18",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -14441,12 +14455,15 @@
                           "questionIndex": 1
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -14534,7 +14551,7 @@
                     "id": "function-call-19",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -14567,12 +14584,15 @@
                           "questionIndex": 2
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -14660,7 +14680,7 @@
                     "id": "function-call-20",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -14693,12 +14713,15 @@
                           "questionIndex": 3
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -14786,7 +14809,7 @@
               },
               "outputs": [],
               "schemaUses": [],
-              "id": "sha256:bf027f9a41c6ab6e5ad74fc5a7d707dbcbe57a1ca2ebcd5b39508330361040dc"
+              "id": "sha256:55c49133d420435ac5c324c58bc79ea2abea7a47d9224eeaf2f64642b9d41bc6"
             }
           ]
         },
@@ -14795,8 +14818,8 @@
     },
     {
       "templateId": "5c2f1d4e-6a7b-4c8d-9e0f-1234567890ab",
-      "version": 2,
-      "releaseHash": "sha256:db030ecaf7278e85281b386f34801651e5686238c59c1c33104c957ca536dd98",
+      "version": 4,
+      "releaseHash": "sha256:9bebab7fb6803032d049185b3d27fae8076f2e2ccda5e959491689b71d3dd824",
       "document": {
         "content": {
           "name": "上海高考英语听力 - 短对话专项训练",
@@ -14805,7 +14828,7 @@
           "interfaces": [
             {
               "alias": "data",
-              "interfaceId": "sha256:03e00d7f007b7b2281e13429ec89220d3d5abfa218f1f953f0d3c64ff1489838",
+              "interfaceId": "sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214",
               "acceptedVars": [
                 "dialogue_text_1",
                 "stem_1",
@@ -18110,8 +18133,8 @@
     },
     {
       "templateId": "6d3e2f5a-7b8c-4d9e-a0f1-2345678901bc",
-      "version": 2,
-      "releaseHash": "sha256:2e4720b54402f04521b4ab422c65531d31251c5e46a5c3ba3477b0c844cbb76e",
+      "version": 5,
+      "releaseHash": "sha256:5e09bace92af4a6e5a7256b4fa5037830417b7baf23526db8b0660020b0ffaf8",
       "document": {
         "content": {
           "name": "上海高考英语听力 - 短文专项训练",
@@ -18120,7 +18143,7 @@
           "interfaces": [
             {
               "alias": "data",
-              "interfaceId": "sha256:03e00d7f007b7b2281e13429ec89220d3d5abfa218f1f953f0d3c64ff1489838",
+              "interfaceId": "sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214",
               "acceptedVars": [
                 "passage_text_1",
                 "stem_11",
@@ -18182,7 +18205,7 @@
                 "id": "listening-group",
                 "name": "上海高考英语听力 - 短文专项训练",
                 "type": "function",
-                "functionRef": "sha256:9319ea27d6f077a38df8e104f3de2bbce5db526c68d117fb96c9b76be2335119",
+                "functionRef": "sha256:0da3953a4ee695a3a6fd211d78b06827f7cf7117b5504739e6e53a10afacb1f7",
                 "inputs": {
                   "choice": {
                     "type": "choice-group",
@@ -19087,7 +19110,7 @@
                   }
                 },
                 {
-                  "name": "tts",
+                  "name": "script",
                   "type": "string"
                 },
                 {
@@ -19155,13 +19178,6 @@
                       "tts": {
                         "type": "string",
                         "parts": [
-                          {
-                            "type": "variable",
-                            "ref": {
-                              "scope": "local",
-                              "name": "tts"
-                            }
-                          },
                           {
                             "type": "literal",
                             "value": "\nQuestion: "
@@ -19323,7 +19339,7 @@
                           "type": "variable",
                           "ref": {
                             "scope": "local",
-                            "name": "tts"
+                            "name": "script"
                           }
                         }
                       ]
@@ -19351,7 +19367,7 @@
                   "attachments": []
                 }
               ],
-              "id": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8"
+              "id": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd"
             },
             {
               "name": "短文题组（11~16）",
@@ -19781,7 +19797,7 @@
                     "id": "function-call-11",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -19814,12 +19830,15 @@
                           "questionIndex": 0
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -19907,7 +19926,7 @@
                     "id": "function-call-12",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -19940,12 +19959,15 @@
                           "questionIndex": 1
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -20033,7 +20055,7 @@
                     "id": "function-call-13",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -20066,12 +20088,15 @@
                           "questionIndex": 2
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -20351,7 +20376,7 @@
                     "id": "function-call-14",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -20384,12 +20409,15 @@
                           "questionIndex": 0
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts2"
+                            }
                           }
                         ]
                       },
@@ -20477,7 +20505,7 @@
                     "id": "function-call-15",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -20510,12 +20538,15 @@
                           "questionIndex": 1
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts2"
+                            }
                           }
                         ]
                       },
@@ -20603,7 +20634,7 @@
                     "id": "function-call-16",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -20636,12 +20667,15 @@
                           "questionIndex": 2
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts2"
+                            }
                           }
                         ]
                       },
@@ -20729,7 +20763,7 @@
               },
               "outputs": [],
               "schemaUses": [],
-              "id": "sha256:9319ea27d6f077a38df8e104f3de2bbce5db526c68d117fb96c9b76be2335119"
+              "id": "sha256:0da3953a4ee695a3a6fd211d78b06827f7cf7117b5504739e6e53a10afacb1f7"
             }
           ]
         },
@@ -20738,8 +20772,8 @@
     },
     {
       "templateId": "7e4f3a6b-8c9d-4e0f-a1b2-3456789012cd",
-      "version": 2,
-      "releaseHash": "sha256:9e768061d4a8d6744bd454bb9fc8058612657fba4e7e43e55dc1fff268440de3",
+      "version": 5,
+      "releaseHash": "sha256:748c227d5ea7a30296d1ae9f91f25cbe01ca6a2cf76f82464a139c7dda501fad",
       "document": {
         "content": {
           "name": "上海高考英语听力 - 长对话专项训练",
@@ -20748,7 +20782,7 @@
           "interfaces": [
             {
               "alias": "data",
-              "interfaceId": "sha256:03e00d7f007b7b2281e13429ec89220d3d5abfa218f1f953f0d3c64ff1489838",
+              "interfaceId": "sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214",
               "acceptedVars": [
                 "dialogue_long_text",
                 "stem_17",
@@ -20821,7 +20855,7 @@
                 "id": "listening-group",
                 "name": "上海高考英语听力 - 长对话专项训练",
                 "type": "function",
-                "functionRef": "sha256:bf027f9a41c6ab6e5ad74fc5a7d707dbcbe57a1ca2ebcd5b39508330361040dc",
+                "functionRef": "sha256:55c49133d420435ac5c324c58bc79ea2abea7a47d9224eeaf2f64642b9d41bc6",
                 "inputs": {
                   "choice": {
                     "type": "choice-group",
@@ -21557,7 +21591,7 @@
                   }
                 },
                 {
-                  "name": "tts",
+                  "name": "script",
                   "type": "string"
                 },
                 {
@@ -21625,13 +21659,6 @@
                       "tts": {
                         "type": "string",
                         "parts": [
-                          {
-                            "type": "variable",
-                            "ref": {
-                              "scope": "local",
-                              "name": "tts"
-                            }
-                          },
                           {
                             "type": "literal",
                             "value": "\nQuestion: "
@@ -21793,7 +21820,7 @@
                           "type": "variable",
                           "ref": {
                             "scope": "local",
-                            "name": "tts"
+                            "name": "script"
                           }
                         }
                       ]
@@ -21821,7 +21848,7 @@
                   "attachments": []
                 }
               ],
-              "id": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8"
+              "id": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd"
             },
             {
               "name": "长对话（17~20）",
@@ -22151,7 +22178,7 @@
                     "id": "function-call-17",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -22184,12 +22211,15 @@
                           "questionIndex": 0
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -22277,7 +22307,7 @@
                     "id": "function-call-18",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -22310,12 +22340,15 @@
                           "questionIndex": 1
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -22403,7 +22436,7 @@
                     "id": "function-call-19",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -22436,12 +22469,15 @@
                           "questionIndex": 2
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -22529,7 +22565,7 @@
                     "id": "function-call-20",
                     "name": "选择题11~20单题",
                     "type": "function",
-                    "functionRef": "sha256:e65a0ca2a6655c0d079eb42d396adb39fe099b40949570a95f9e7a847ba8daa8",
+                    "functionRef": "sha256:88af57fab12af58cb62522a3a64745a4ba6b7650450af6a1f64ea3ec5716fbcd",
                     "inputs": {
                       "title": {
                         "type": "string",
@@ -22562,12 +22598,15 @@
                           "questionIndex": 3
                         }
                       },
-                      "tts": {
+                      "script": {
                         "type": "string",
                         "parts": [
                           {
-                            "type": "literal",
-                            "value": ""
+                            "type": "variable",
+                            "ref": {
+                              "scope": "local",
+                              "name": "tts"
+                            }
                           }
                         ]
                       },
@@ -22655,7 +22694,7 @@
               },
               "outputs": [],
               "schemaUses": [],
-              "id": "sha256:bf027f9a41c6ab6e5ad74fc5a7d707dbcbe57a1ca2ebcd5b39508330361040dc"
+              "id": "sha256:55c49133d420435ac5c324c58bc79ea2abea7a47d9224eeaf2f64642b9d41bc6"
             }
           ]
         },
@@ -22664,21 +22703,17 @@
     },
     {
       "templateId": "8e96c4b2-5f31-4a7d-9c68-2b4f0d7e1a53",
-      "version": 2,
-      "releaseHash": "sha256:ce0ce7a51b22cea8dc4e3305ec0b0e779580b601144c5e00f89b23a52d7e9a7e",
+      "version": 3,
+      "releaseHash": "sha256:da5991caccb100f3d277147fc10e88af234307e268bf115e2268e25c60efe106",
       "document": {
         "content": {
           "name": "上海中考口语标准题型",
           "description": "上海中考英语口语完整试卷，包含朗读词组、朗读句子、交际应答、复述和话题表达。",
-          "tags": [
-            "全卷",
-            "口语",
-            "中考"
-          ],
+          "tags": ["全卷", "口语", "中考"],
           "interfaces": [
             {
               "alias": "data",
-              "interfaceId": "sha256:e315a7e3f6c39e8f440272d7e922f78e3a98f6f7715a6b4a885e6b2fc3faf0c6",
+              "interfaceId": "sha256:7cf4602e4dfd1557f0d93a70b8f80152709230bc3484efc680b4e231cd6db0f6",
               "acceptedVars": [
                 "phrase_1_display",
                 "phrase_1",

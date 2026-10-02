@@ -12,8 +12,5 @@
     "@ls101/core-types": "workspace:*",
     "@ls101/schema-editor": "workspace:*",
     "fflate": "^0.8.2"
-  },
-  "scripts": {
-    "typecheck": "tsc --noEmit"
   }
 }

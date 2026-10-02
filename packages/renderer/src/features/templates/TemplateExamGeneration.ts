@@ -5,7 +5,12 @@ import type {
   AIRouterSpeechTarget
 } from '@ls101/airouter'
 import { airouterClient } from '@ls101/airouter/renderer'
-import type { ExamPackage, TaskProgressHandle, TaskProgressItem } from '@ls101/core-types'
+import type {
+  ExamPackage,
+  TaskProgressHandle,
+  TaskProgressItem,
+  TaskProgressSnapshot
+} from '@ls101/core-types'
 import { encodeExamPackage } from '@ls101/exam-package'
 import type { FileDialog } from '@ls101/file-dialog/renderer'
 import { fileDialog } from '@ls101/file-dialog/renderer'
@@ -79,7 +84,8 @@ export async function fetchExamResource(
   throwIfAborted(signal)
   const data = await store.readAsset(assetUrlToKey(input))
   throwIfAborted(signal)
-  return data === null ? new Response(null, { status: 404 }) : new Response(data)
+  // Uint8Array 在运行时是合法的 BodyInit；TS 5.7+ 的 BufferSource 只接受 ArrayBuffer 承载的视图。
+  return data === null ? new Response(null, { status: 404 }) : new Response(data as BodyInit)
 }
 
 export async function listSpeechGenerationSelections(
@@ -136,7 +142,7 @@ function createGenerationHandle(
 ): TaskProgressHandle<ExamGenerationResult> {
   const controller = new AbortController()
   let cancelled = false
-  let snapshot = {
+  let snapshot: TaskProgressSnapshot = {
     items: baseItems('running')
   }
   const listeners = new Set<() => void>()

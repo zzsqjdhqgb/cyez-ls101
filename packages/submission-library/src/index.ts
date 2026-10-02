@@ -9,7 +9,20 @@ import {
   type SubmissionPackage,
   type SubmissionSchemaUse
 } from '@ls101/core-types'
-import { decodeSubmissionPackage, ExamPackageArchiveError } from '@ls101/exam-package'
+import {
+  decodeSubmissionPackage,
+  ExamPackageArchiveError,
+  hasArchiveManifest,
+  listArchiveEntries,
+  readArchiveEntry
+} from '@ls101/exam-package'
+import { strictSubmissionBundlePolicy, type SubmissionBundlePolicy } from './bundle'
+
+export {
+  SUBMISSION_BUNDLE_MEMBER,
+  strictSubmissionBundlePolicy,
+  type SubmissionBundlePolicy
+} from './bundle'
 
 const RECORD_FILE = 'record.json'
 const GRADING_FILE = 'grading.json'
@@ -34,9 +47,22 @@ export interface SubmissionLibraryRecord {
   schemaUseCount: number
 }
 
-export interface SubmissionImportResult {
+export interface SubmissionImportItem {
+  /** 批量容器中的成员条目名；单个作答包为 null。 */
+  bundleEntry: string | null
   status: 'created' | 'duplicate'
   record: SubmissionLibraryRecord
+}
+
+export interface SubmissionImportResult {
+  /** `package`：单个 `.lssubmission`；`bundle`：包含多个 `.lssubmission` 的外层 ZIP。 */
+  kind: 'package' | 'bundle'
+  items: SubmissionImportItem[]
+}
+
+/** 作答库可选行为；缺省时使用默认的批量容器策略。 */
+export interface SubmissionLibraryOptions {
+  bundlePolicy?: SubmissionBundlePolicy
 }
 
 export type GradingEngineKind = 'objective' | 'human' | 'ai'
@@ -258,11 +284,13 @@ export class SubmissionLibraryError extends Error {
 export class FileSubmissionLibraryRepository implements SubmissionLibraryRepository {
   private readonly submissions: SubmissionLibraryStore
   private readonly settlements: SubmissionLibraryStore
+  private readonly bundlePolicy: SubmissionBundlePolicy
   private readonly mutationTails = new Map<string, Promise<void>>()
 
-  constructor(root: SubmissionLibraryStore) {
+  constructor(root: SubmissionLibraryStore, options: SubmissionLibraryOptions = {}) {
     this.submissions = root.scope('submissions')
     this.settlements = root.scope('settlements')
+    this.bundlePolicy = options.bundlePolicy ?? strictSubmissionBundlePolicy
   }
 
   async listRecords(): Promise<SubmissionLibraryRecord[]> {
@@ -320,11 +348,68 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     return record
   }
 
+  /**
+   * 导入一个作答包，或一个装着多个作答包的外层 ZIP。
+   * 批量容器成员全部先校验再入库，因此结构损坏的压缩包不会只导入一半。
+   */
   async importArchive(data: Uint8Array): Promise<SubmissionImportResult> {
     if (!(data instanceof Uint8Array)) {
       throw new SubmissionLibraryError('INVALID_ARCHIVE', 'Submission archive must be binary data')
     }
 
+    const entries = await listArchiveEntries(data).catch((reason: unknown) => {
+      throw invalidArchive(archiveMessage(reason, 'Cannot read submission archive'))
+    })
+    if (hasArchiveManifest(entries)) {
+      return { kind: 'package', items: [await this.importPackage(data, null)] }
+    }
+
+    const members = this.bundlePolicy.selectMembers(entries)
+    if (!members) {
+      throw invalidArchive(
+        'Submission archive must be a .lssubmission package or a ZIP whose entries are all top-level .lssubmission files'
+      )
+    }
+    await this.validateBundleMembers(data, members)
+    const items: SubmissionImportItem[] = []
+    for (const name of members) {
+      items.push(await this.importPackage(await this.readBundleMember(data, name), name))
+    }
+    return { kind: 'bundle', items }
+  }
+
+  /** 逐个校验批量容器成员；只读取和解析，不写存储。 */
+  private async validateBundleMembers(data: Uint8Array, members: readonly string[]): Promise<void> {
+    const seen = new Set<string>()
+    for (const name of members) {
+      const bytes = await this.readBundleMember(data, name)
+      let submissionId: string
+      try {
+        submissionId = (await decodeSubmissionPackage(bytes)).submission.meta.submissionId
+      } catch (reason) {
+        throw invalidArchive(
+          `Cannot decode submission archive ${name}: ${archiveMessage(reason, 'invalid archive')}`
+        )
+      }
+      if (seen.has(submissionId)) {
+        throw invalidArchive(`Duplicate submission in archive: ${submissionId}`)
+      }
+      seen.add(submissionId)
+    }
+  }
+
+  private async readBundleMember(data: Uint8Array, name: string): Promise<Uint8Array> {
+    return readArchiveEntry(data, name).catch((reason: unknown) => {
+      throw invalidArchive(
+        `Cannot read submission archive ${name}: ${archiveMessage(reason, 'invalid archive')}`
+      )
+    })
+  }
+
+  private async importPackage(
+    data: Uint8Array,
+    bundleEntry: string | null
+  ): Promise<SubmissionImportItem> {
     let archive: Awaited<ReturnType<typeof decodeSubmissionPackage>>
     try {
       archive = await decodeSubmissionPackage(data)
@@ -333,7 +418,7 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
         reason instanceof ExamPackageArchiveError
           ? reason.message
           : 'Cannot decode submission archive'
-      throw new SubmissionLibraryError('INVALID_ARCHIVE', message)
+      throw invalidArchive(message)
     }
 
     const submission = archive.submission
@@ -342,7 +427,9 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
     return this.runMutation(storageKey, async () => {
       const scope = this.submissions.scope(storageKey)
       const existing = await this.readRecord(scope, storageKey)
-      if (existing) return resolveExisting(existing, submission.meta.submissionId, hash)
+      if (existing) {
+        return resolveExisting(existing, submission.meta.submissionId, hash, bundleEntry)
+      }
 
       const record: SubmissionLibraryRecord = {
         formatVersion: 1,
@@ -361,7 +448,7 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
       const filename = archiveFilename(hash)
       await scope.writeAsset(filename, new Uint8Array(data))
       if (await scope.compareAndSwapText(RECORD_FILE, null, record)) {
-        return { status: 'created', record }
+        return { bundleEntry, status: 'created', record }
       }
 
       const concurrent = await this.readRecord(scope, storageKey)
@@ -369,7 +456,7 @@ export class FileSubmissionLibraryRepository implements SubmissionLibraryReposit
         throw invalidStorage(`Submission record disappeared: ${record.submissionId}`)
       }
       if (concurrent.archiveSha256 !== hash) await scope.deleteAsset(filename)
-      return resolveExisting(concurrent, record.submissionId, hash)
+      return resolveExisting(concurrent, record.submissionId, hash, bundleEntry)
     })
   }
 
@@ -1306,8 +1393,9 @@ function formatDuration(durationMs: number): string {
 function resolveExisting(
   record: SubmissionLibraryRecord,
   submissionId: string,
-  archiveSha256: string
-): SubmissionImportResult {
+  archiveSha256: string,
+  bundleEntry: string | null
+): SubmissionImportItem {
   if (record.submissionId !== submissionId || record.archiveSha256 !== archiveSha256) {
     throw new SubmissionLibraryError(
       'SUBMISSION_ID_CONFLICT',
@@ -1315,7 +1403,7 @@ function resolveExisting(
       { submissionId }
     )
   }
-  return { status: 'duplicate', record }
+  return { bundleEntry, status: 'duplicate', record }
 }
 
 function isSubmissionLibraryRecord(value: unknown): value is SubmissionLibraryRecord {
@@ -1374,4 +1462,12 @@ function nonNegativeInteger(value: unknown): value is number {
 
 function invalidStorage(message: string): SubmissionLibraryError {
   return new SubmissionLibraryError('INVALID_STORAGE', message)
+}
+
+function invalidArchive(message: string): SubmissionLibraryError {
+  return new SubmissionLibraryError('INVALID_ARCHIVE', message)
+}
+
+function archiveMessage(reason: unknown, fallback: string): string {
+  return reason instanceof Error && reason.message !== '' ? reason.message : fallback
 }

@@ -3,6 +3,7 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { JSX } from 'react'
 import type { PlayerChoiceMeta, ResolvedChoiceViewport } from '@ls101/core-types'
 import type {
   TemplatePreviewData,

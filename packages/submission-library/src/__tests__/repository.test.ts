@@ -1,5 +1,6 @@
 import type { SchemaDefinition, SubmissionPackage } from '@ls101/core-types'
 import { encodeSubmissionPackage } from '@ls101/exam-package'
+import { strToU8, zipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
 import {
   createHumanGradingEngine,
@@ -70,16 +71,20 @@ describe('FileSubmissionLibraryRepository', () => {
     const bytes = await encodeSubmissionPackage(submission(), {})
 
     const imported = await repository.importArchive(bytes)
-    expect(imported.status).toBe('created')
-    expect(imported.record).toMatchObject({
+    expect(imported.kind).toBe('package')
+    expect(imported.items).toHaveLength(1)
+    const [item] = imported.items
+    expect(item.bundleEntry).toBeNull()
+    expect(item.status).toBe('created')
+    expect(item.record).toMatchObject({
       submissionId: 'submission-1',
       examTitle: 'Archive exam',
       candidateId: 'candidate-1',
       candidateName: 'Student',
       schemaUseCount: 1
     })
-    expect(await repository.listRecords()).toEqual([imported.record])
-    expect(await repository.getRecord('submission-1')).toEqual(imported.record)
+    expect(await repository.listRecords()).toEqual([item.record])
+    expect(await repository.getRecord('submission-1')).toEqual(item.record)
     expect(await repository.exportArchive('submission-1')).toEqual(bytes)
   })
 
@@ -89,7 +94,10 @@ describe('FileSubmissionLibraryRepository', () => {
     const first = await repository.importArchive(bytes)
     const second = await repository.importArchive(bytes)
 
-    expect(second).toEqual({ status: 'duplicate', record: first.record })
+    expect(second).toEqual({
+      kind: 'package',
+      items: [{ bundleEntry: null, status: 'duplicate', record: first.items[0].record }]
+    })
     expect(await repository.listRecords()).toHaveLength(1)
   })
 
@@ -444,7 +452,7 @@ describe('FileSubmissionLibraryRepository', () => {
     }
     delete legacy.readyAt
     delete legacy.aiRuns
-    expect(await scope.compareAndSwapText('grading.json', current, legacy)).toBe(true)
+    expect(await scope.compareAndSwapText<unknown>('grading.json', current, legacy)).toBe(true)
 
     await expect(repository.getGradingRecord(source.meta.submissionId)).resolves.toEqual(current)
     await expect(repository.listEntries()).resolves.toMatchObject([
@@ -475,7 +483,103 @@ describe('FileSubmissionLibraryRepository', () => {
 
     await expect(repository.listEntries()).rejects.toMatchObject({ code: 'INVALID_STORAGE' })
   })
+
+  describe('批量容器导入', () => {
+    it('导入 ZIP 中的每一份作答并保留原始字节', async () => {
+      const repository = new FileSubmissionLibraryRepository(new MemoryStore())
+      const first = await submissionBytes('submission-bundle-1')
+      const second = await submissionBytes('submission-bundle-2')
+
+      const imported = await repository.importArchive(
+        zipSync({ 'first.lssubmission': first, 'second.lssubmission': second })
+      )
+
+      expect(imported.kind).toBe('bundle')
+      expect(imported.items.map((item) => [item.bundleEntry, item.status])).toEqual([
+        ['first.lssubmission', 'created'],
+        ['second.lssubmission', 'created']
+      ])
+      expect(
+        (await repository.listRecords()).map((record) => record.submissionId).sort()
+      ).toEqual(['submission-bundle-1', 'submission-bundle-2'])
+      expect(await repository.exportArchive('submission-bundle-1')).toEqual(first)
+      expect(await repository.exportArchive('submission-bundle-2')).toEqual(second)
+    })
+
+    it('重复导入同一批量压缩包时逐项报告已存在', async () => {
+      const repository = new FileSubmissionLibraryRepository(new MemoryStore())
+      const bytes = await submissionBytes('submission-bundle-1')
+      const archive = zipSync({ 'first.lssubmission': bytes })
+
+      await repository.importArchive(archive)
+      const again = await repository.importArchive(archive)
+
+      expect(again.items).toEqual([
+        expect.objectContaining({ bundleEntry: 'first.lssubmission', status: 'duplicate' })
+      ])
+      expect(await repository.listRecords()).toHaveLength(1)
+    })
+
+    it('拒绝含子目录、目录项或其它文件的压缩包，且不导入任何一份', async () => {
+      const repository = new FileSubmissionLibraryRepository(new MemoryStore())
+      const bytes = await submissionBytes('submission-bundle-1')
+
+      const archives: Record<string, Uint8Array>[] = [
+        { 'nested/first.lssubmission': bytes },
+        { 'submissions/': new Uint8Array() },
+        { 'first.lssubmission': bytes, 'notes.txt': strToU8('notes') },
+        {}
+      ]
+      for (const entries of archives) {
+        await expect(repository.importArchive(zipSync(entries))).rejects.toMatchObject({
+          code: 'INVALID_ARCHIVE'
+        })
+      }
+      expect(await repository.listRecords()).toEqual([])
+    })
+
+    it('成员损坏或 ID 重复时拒绝整个压缩包，不写入一半', async () => {
+      const repository = new FileSubmissionLibraryRepository(new MemoryStore())
+      const bytes = await submissionBytes('submission-bundle-1')
+
+      await expect(
+        repository.importArchive(
+          zipSync({ 'first.lssubmission': bytes, 'broken.lssubmission': new Uint8Array([1, 2, 3]) })
+        )
+      ).rejects.toMatchObject({ code: 'INVALID_ARCHIVE' })
+      expect(await repository.listRecords()).toEqual([])
+
+      await expect(
+        repository.importArchive(zipSync({ 'a.lssubmission': bytes, 'b.lssubmission': bytes }))
+      ).rejects.toMatchObject({ code: 'INVALID_ARCHIVE' })
+      expect(await repository.listRecords()).toEqual([])
+    })
+
+    it('自定义策略可以接受子目录成员', async () => {
+      const repository = new FileSubmissionLibraryRepository(new MemoryStore(), {
+        bundlePolicy: { selectMembers: (entries) => entries.map((entry) => entry.name) }
+      })
+
+      const imported = await repository.importArchive(
+        zipSync({ 'submissions/first.lssubmission': await submissionBytes('submission-bundle-1') })
+      )
+
+      expect(imported.kind).toBe('bundle')
+      expect(imported.items).toEqual([
+        expect.objectContaining({
+          bundleEntry: 'submissions/first.lssubmission',
+          status: 'created'
+        })
+      ])
+    })
+  })
 })
+
+async function submissionBytes(submissionId: string): Promise<Uint8Array> {
+  const value = submission()
+  value.meta.submissionId = submissionId
+  return encodeSubmissionPackage(value, {})
+}
 
 const readingSchema: SchemaDefinition = {
   ...schema,

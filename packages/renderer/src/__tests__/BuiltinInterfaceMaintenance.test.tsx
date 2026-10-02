@@ -26,7 +26,7 @@ const previous: InterfaceDef = {
   id: `sha256:${'a'.repeat(64)}`,
   name: '旧版听说题型',
   description: '旧版说明',
-  promptTemplate: '生成旧版题型',
+  prompts: [{ name: '基础出题要求', content: '生成旧版题型' }],
   fields: {
     order: ['title'],
     nodes: {
@@ -195,7 +195,7 @@ describe('BuiltinInterfaceMaintenanceDialog', () => {
 
 function maintenanceFor(
   plan: BuiltinUpdatePlan | BuiltinRemovalPlan,
-  resolve: ReturnType<typeof vi.fn>,
+  resolve: BuiltinInterfaceMaintenance['resolve'],
   dismiss = vi.fn()
 ): BuiltinInterfaceMaintenance {
   const snapshot = [plan]

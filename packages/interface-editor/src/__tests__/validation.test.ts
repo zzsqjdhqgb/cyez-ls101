@@ -27,7 +27,7 @@ function validDef(overrides: DefOverrides = {}): InterfaceDef {
     id: `sha256:${'a'.repeat(64)}`,
     name: 'Test Interface',
     description: 'A test interface',
-    promptTemplate: 'Generate a test exam',
+    prompts: [{ name: '基础出题要求', content: 'Generate a test exam' }],
     fields: collection({
       s1: textLeaf('question1')
     }),
@@ -132,15 +132,36 @@ describe('validateInterfaceDef — 顶层校验', () => {
     expectError(result.errors, 'EMPTY_NAME', '')
   })
 
-  it('promptTemplate 为空字符串 → EMPTY_PROMPT_TEMPLATE', () => {
-    const result = validateInterfaceDef(validDef({ promptTemplate: '' }))
-    expect(result.valid).toBe(false)
-    expectError(result.errors, 'EMPTY_PROMPT_TEMPLATE', '')
+  it('空提示词列表不能发布', () => {
+    const result = validateInterfaceDef(validDef({ prompts: [] }))
+    expectError(result.errors, 'EMPTY_PROMPTS', '')
   })
 
-  it('promptTemplate 仅空白 → EMPTY_PROMPT_TEMPLATE', () => {
-    const result = validateInterfaceDef(validDef({ promptTemplate: '   ' }))
-    expectError(result.errors, 'EMPTY_PROMPT_TEMPLATE', '')
+  it('提示词名称不能为空，错误关联到具体列表项', () => {
+    const result = validateInterfaceDef(
+      validDef({
+        prompts: [
+          { name: '基础', content: '要求' },
+          { name: '  ', content: '科技' }
+        ]
+      })
+    )
+    expectError(result.errors, 'EMPTY_PROMPT_NAME', '', { index: '1' })
+  })
+
+  it('prompts 内容为空字符串 → EMPTY_PROMPT_CONTENT', () => {
+    const result = validateInterfaceDef(
+      validDef({ prompts: [{ name: '基础出题要求', content: '' }] })
+    )
+    expect(result.valid).toBe(false)
+    expectError(result.errors, 'EMPTY_PROMPT_CONTENT', '', { index: '0' })
+  })
+
+  it('prompts 仅空白 → EMPTY_PROMPT_CONTENT', () => {
+    const result = validateInterfaceDef(
+      validDef({ prompts: [{ name: '基础出题要求', content: '   ' }] })
+    )
+    expectError(result.errors, 'EMPTY_PROMPT_CONTENT', '', { index: '0' })
   })
 
   it('fields 为空 → EMPTY_FIELDS', () => {
@@ -322,7 +343,7 @@ describe('validateInterfaceDef — 多重错误聚合', () => {
   it('同时存在多个错误时全部收集', () => {
     const result = validateInterfaceDef(
       validDef({
-        promptTemplate: '',
+        prompts: [{ name: '基础出题要求', content: '' }],
         fields: {
           a: textLeaf(''), // EMPTY_VAR_NAME
           b: textLeaf('dup'), // 首次出现，不报
@@ -331,7 +352,7 @@ describe('validateInterfaceDef — 多重错误聚合', () => {
       })
     )
     expect(result.valid).toBe(false)
-    // EMPTY_PROMPT_TEMPLATE + EMPTY_VAR_NAME + DUPLICATE_VAR_NAME = 3
+    // EMPTY_PROMPT_CONTENT + EMPTY_VAR_NAME + DUPLICATE_VAR_NAME = 3
     expect(result.errors.length).toBe(3)
   })
 })

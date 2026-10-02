@@ -33,8 +33,13 @@ interface InterfaceDef {
   id: string // sha256:<64 位十六进制摘要>
   name: string
   description: string
-  promptTemplate: string
+  prompts: InterfacePrompt[]
   fields: FieldCollection
+}
+
+interface InterfacePrompt {
+  name: string
+  content: string
 }
 
 interface FieldCollection {

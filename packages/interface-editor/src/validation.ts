@@ -18,7 +18,9 @@ import { isInterfaceId } from './id'
 export type ValidationErrorCode =
   | 'INVALID_ID' // id 不是 SHA-256 内容 ID
   | 'EMPTY_NAME' // name 为空
-  | 'EMPTY_PROMPT_TEMPLATE' // promptTemplate 为空
+  | 'EMPTY_PROMPTS'
+  | 'EMPTY_PROMPT_NAME'
+  | 'EMPTY_PROMPT_CONTENT'
   | 'EMPTY_FIELDS' // fields 根级为空
   | 'EMPTY_GROUP' // FieldGroup.children 为空
   | 'INVALID_FIELD_ORDER' // order 与 nodes 的 key 集合不一致或包含重复项
@@ -118,9 +120,12 @@ export function validateInterfaceDef(def: InterfaceDef): ValidationResult {
     errors.push(err('', 'EMPTY_NAME'))
   }
 
-  if (!def.promptTemplate.trim()) {
-    errors.push(err('', 'EMPTY_PROMPT_TEMPLATE'))
-  }
+  if (!def.prompts.length) errors.push(err('', 'EMPTY_PROMPTS'))
+  def.prompts.forEach((prompt, index) => {
+    if (!prompt.name.trim()) errors.push(err('', 'EMPTY_PROMPT_NAME', { index: String(index) }))
+    if (!prompt.content.trim())
+      errors.push(err('', 'EMPTY_PROMPT_CONTENT', { index: String(index) }))
+  })
 
   if (Object.keys(def.fields.nodes).length === 0) {
     errors.push(err('', 'EMPTY_FIELDS'))

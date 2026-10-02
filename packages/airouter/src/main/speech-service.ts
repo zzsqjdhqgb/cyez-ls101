@@ -423,9 +423,10 @@ export class AIRouterSpeechService {
     const value = await this.configStorage.read<JsonValue>({ scope: ['airouter'], key: CONFIG_KEY })
     if (!value) return { version: CONFIG_VERSION, providers: [] }
     if (!isStoredDocument(value)) throw new Error('语音 Provider 配置数据无效')
+    const document: StoredDocument = value
     return {
-      ...value,
-      providers: value.providers.map((config) =>
+      ...document,
+      providers: document.providers.map((config) =>
         config.type === 'qwen-tts' ? { ...config, backend: 'cpu' } : config
       )
     }
