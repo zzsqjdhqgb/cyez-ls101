@@ -87,7 +87,7 @@ Model: en-w2v2-ctc-libris-and-cv-int8-70f5061
 
 文本流请求支持可选的 `systemPrompt`、`temperature` 和单次 `maxOutputTokens`。AI 语音纠错使用固定 system message、`temperature=0`、`maxOutputTokens=65535`；AIRouter 会在已配置模型输出上限内约束单次请求。
 
-模型资产不默认写入源码仓库。运行 `node scripts/download-pronunciation-model.js` 会按固定 revision 和 SHA-256 校验上游权重与 tokenizer，再在本地导出 ONNX 并做 INT8 量化（运行时资产已存在且校验通过时直接跳过，不需要 Python）；构建时复制到 `resources/assets/pronunciation`。完成构建后可以用以下命令验证真实录音：
+模型资产不默认写入源码仓库。运行 `node scripts/download-pronunciation-model.js` 会从 `scripts/pronunciation-model-assets.json` 固定的 GitHub Release 下载 4 个运行时资产并按 size 与 SHA-256 校验（已存在且校验通过时直接跳过，不需要 Python）；打包时由 `scripts/build-pronunciation-extension-package.mjs` 把它们打成 `dist/charsiu-en-w2v2-pronunciation-1.0.0.zip` 扩展包。重新导出模型才需要 Python 与 torch：`node scripts/download-pronunciation-model.js --export` 按固定 revision 与 SHA-256 下载上游权重与 tokenizer 并调用 `scripts/export-pronunciation-model.py`，随后用 `node scripts/publish-pronunciation-model.mjs --publish` 发布新 Release。完成构建后可以用以下命令验证真实录音：
 
 ```text
 node scripts/test-pronunciation.js <audio-file> --text "Reference sentence"

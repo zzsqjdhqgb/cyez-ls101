@@ -44,6 +44,8 @@
     "qwen-tts:prepare": "node scripts/qwen-tts/prepare-package.mjs",
     "qwen-asr:build-package": "node scripts/build-asr-model-package.mjs",
     "pronunciation:build-extension": "node scripts/build-pronunciation-extension-package.mjs",
+    "pronunciation:export-model": "node scripts/download-pronunciation-model.js --export",
+    "pronunciation:publish-model": "node scripts/publish-pronunciation-model.mjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "start": "electron-vite preview",

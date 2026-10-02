@@ -121,11 +121,13 @@ evidence IDs or any kind of score. Never claim a pronunciation error is confirme
 | 5 看图说话 | 45.8 | 95.5 | 11 观点题 | 46.2 | 95.5 |
 
 阈值、词窗、证据 schema、①/② prompt 都没有变化；动的只是声学模型。资产构建：
-`scripts/download-pronunciation-model.js` 按固定 revision 与 SHA-256 校验
-`charsiu/en_w2v2_ctc_libris_and_cv` 与 `charsiu/tokenizer_en_cmu`，再由
-`scripts/export-pronunciation-model.py` 在本地导出 ONNX（上游没有可直接下载的
-ONNX）；运行时目录校验通过时跳过导出，不需要 Python。受限网络可用
-`LS101_HF_ENDPOINT` 指向镜像。
+`scripts/export-pronunciation-model.py` 把 `charsiu/en_w2v2_ctc_libris_and_cv` 与
+`charsiu/tokenizer_en_cmu` 在本地导出为 ONNX（上游没有可直接下载的 ONNX），产物发布成
+`pronunciation-model-v1.0.0` Release；安装与 CI 只运行
+`scripts/download-pronunciation-model.js` 从该 Release 下载并按 size 与 SHA-256 校验，
+不需要 Python。重新导出用 `node scripts/download-pronunciation-model.js --export`
+（受限网络可用 `LS101_HF_ENDPOINT` 指向镜像），再用
+`node scripts/publish-pronunciation-model.mjs --publish` 发布新 Release。
 
 仍未解决：阈值 −0.35 与 `confidence` 是随旧模型标定的，换模型后分布整体上移，
 该阈值现在更宽松，是否重新标定需要中国学生语料；短句（快速应答）样本量小，

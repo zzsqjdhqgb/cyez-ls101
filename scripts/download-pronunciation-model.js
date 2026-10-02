@@ -6,15 +6,23 @@
 /*
  * 准备 AI 发音评测的运行时资产。
  *
- * 上游（charsiu）没有可直接下载的 ONNX，因此运行时资产由钉住的源权重在本地导出：
+ * 安装路径（默认，不需要 Python）：
  *
  *   1. 运行时目录已存在且 SHA-256 全部匹配 -> 直接通过，不下载也不导出；
- *   2. 否则下载并校验两个上游仓库（模型权重 + CMU 音素 tokenizer），
- *      再调用 scripts/export-pronunciation-model.py 导出 fp32 ONNX 并做 INT8 量化；
- *   3. 导出后再次按清单核对运行时资产。
+ *   2. 否则按固定清单从受控 GitHub Release 下载 4 个运行时资产并校验 size/SHA-256；
+ *   3. `--verify` 强制重新计算哈希；`--verify-upstream` 额外用 Release API
+ *      核对已发布资产的元数据。
  *
- * 因此只有缺少运行时资产时才需要 Python 3.10+ 与 torch / transformers / onnx / onnxruntime；
- * 受限网络可用 LS101_HF_ENDPOINT 指向镜像，用 LS101_PYTHON 指定解释器。
+ * 维护路径（`--export`，需要 Python 3.10+ 与 torch / transformers / onnx / onnxruntime）：
+ * 上游（charsiu）没有可直接下载的 ONNX，因此换模型或重新导出时先按固定 revision 与
+ * SHA-256 下载两个上游仓库（模型权重 + CMU 音素 tokenizer），再调用
+ * `scripts/export-pronunciation-model.py` 导出 fp32 ONNX 并做 INT8 量化，最后按清单
+ * 核对产物；产物通过 `scripts/publish-pronunciation-model.mjs` 发布到固定 Release 后，
+ * 安装路径才不再需要 Python。
+ *
+ * 受限网络可用 `LS101_RELEASE_ENDPOINT` 指向 GitHub Release 镜像、
+ * `LS101_RELEASE_API_ENDPOINT` 指向 Release API 镜像、`LS101_HF_ENDPOINT`
+ * 指向 Hugging Face 镜像，用 `LS101_PYTHON` 指定导出解释器。
  */
 
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/explicit-function-return-type */
@@ -31,7 +39,12 @@ const MANIFEST_PATH = join(__dirname, 'pronunciation-model-assets.json')
 const MODEL_ROOT = join(ROOT_DIR, 'externals', 'ai', 'pronunciation', 'model')
 const SOURCE_CACHE_ROOT = join(ROOT_DIR, 'externals', 'ai', '.model-sources', 'pronunciation')
 const STATE_ROOT = join(ROOT_DIR, 'externals', 'ai', '.setup-verification')
+const RUNTIME_STATE_PATH = join(STATE_ROOT, 'pronunciation-model.json')
+const RELEASE_TAG_PREFIX = 'pronunciation-model-v'
+const DEFAULT_RELEASE_ENDPOINT = 'https://github.com'
+const DEFAULT_RELEASE_API_ENDPOINT = 'https://api.github.com'
 const DEFAULT_HF_ENDPOINT = 'https://huggingface.co'
+const USER_AGENT = 'cyez-ls101-pronunciation-model'
 const PINNED_MANIFEST = readManifest()
 
 class MetadataMismatchError extends Error {}
@@ -48,7 +61,7 @@ function readManifest() {
 }
 
 function validateManifest(manifest) {
-  if (!manifest || manifest.schemaVersion !== 2) throw new Error('发音模型摘要清单版本无效')
+  if (!manifest || manifest.schemaVersion !== 3) throw new Error('发音模型摘要清单版本无效')
   if (typeof manifest.modelId !== 'string' || !manifest.modelId) {
     throw new Error('发音模型标识无效')
   }
@@ -56,6 +69,23 @@ function validateManifest(manifest) {
     throw new Error(`发音模型运行时目录无效：${manifest.runtimeDirectory}`)
   }
   if (!isSafeRelativePath(manifest.exporter)) throw new Error('发音模型导出脚本路径无效')
+  validateRelease(manifest.release)
+  validateFileList(manifest.release.assets, '发音模型运行时清单为空')
+  const names = new Set()
+  const paths = new Set()
+  for (const asset of manifest.release.assets) {
+    if (
+      typeof asset.name !== 'string' ||
+      !isSafeRelativePath(asset.name) ||
+      asset.name.includes('/')
+    ) {
+      throw new Error(`发音模型 Release 资产名无效：${asset.name}`)
+    }
+    if (names.has(asset.name)) throw new Error(`发音模型 Release 资产名重复：${asset.name}`)
+    names.add(asset.name)
+    if (paths.has(asset.path)) throw new Error(`发音模型 Release 资产路径重复：${asset.path}`)
+    paths.add(asset.path)
+  }
   if (!Array.isArray(manifest.sources) || manifest.sources.length === 0) {
     throw new Error('发音模型上游清单为空')
   }
@@ -70,7 +100,22 @@ function validateManifest(manifest) {
     if (!/^https:\/\//.test(source.sourceApi || '')) throw new Error('发音模型 API 地址无效')
     validateFileList(source.files, '发音模型上游文件清单为空')
   }
-  validateFileList(manifest.runtime, '发音模型运行时清单为空')
+}
+
+function validateRelease(release) {
+  if (!release || typeof release !== 'object') throw new Error('发音模型 Release 清单缺失')
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(release.repository || '')) {
+    throw new Error(`发音模型 Release 仓库无效：${release.repository}`)
+  }
+  if (!/^\d+\.\d+\.\d+([.-][0-9A-Za-z.-]+)?$/.test(release.version || '')) {
+    throw new Error(`发音模型 Release 版本无效：${release.version}`)
+  }
+  if (release.tag !== `${RELEASE_TAG_PREFIX}${release.version}`) {
+    throw new Error(`发音模型 Release 标签无效：${release.tag}`)
+  }
+  if (typeof release.prerelease !== 'boolean') {
+    throw new Error('发音模型 Release prerelease 标记无效')
+  }
 }
 
 function validateFileList(files, emptyMessage) {
@@ -96,24 +141,163 @@ function isSafeRelativePath(value) {
   )
 }
 
-function resolveEndpoint(explicit) {
-  const endpoint = explicit ?? process.env.LS101_HF_ENDPOINT ?? DEFAULT_HF_ENDPOINT
-  return endpoint.replace(/\/+$/, '')
+function resolveEndpoint(explicit, environmentValue, fallback) {
+  const endpoint = explicit ?? environmentValue ?? fallback
+  return String(endpoint).replace(/\/+$/, '')
 }
 
-function withEndpoint(url, endpoint) {
+function resolveReleaseEndpoint(explicit) {
+  return resolveEndpoint(explicit, process.env.LS101_RELEASE_ENDPOINT, DEFAULT_RELEASE_ENDPOINT)
+}
+
+function resolveReleaseApiEndpoint(explicit) {
+  return resolveEndpoint(
+    explicit,
+    process.env.LS101_RELEASE_API_ENDPOINT,
+    DEFAULT_RELEASE_API_ENDPOINT
+  )
+}
+
+function resolveHfEndpoint(explicit) {
+  return resolveEndpoint(explicit, process.env.LS101_HF_ENDPOINT, DEFAULT_HF_ENDPOINT)
+}
+
+function releaseAssetUrl(release, name, endpoint = DEFAULT_RELEASE_ENDPOINT) {
+  return `${endpoint}/${release.repository}/releases/download/${release.tag}/${encodeURIComponent(name)}`
+}
+
+function releaseApiUrl(release, endpoint = DEFAULT_RELEASE_API_ENDPOINT) {
+  return `${endpoint}/repos/${release.repository}/releases/tags/${encodeURIComponent(release.tag)}`
+}
+
+function githubHeaders(accept) {
+  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
+  return {
+    accept,
+    'user-agent': USER_AGENT,
+    ...(token ? { authorization: `Bearer ${token}` } : {})
+  }
+}
+
+function releaseDownloadOptions() {
+  return { headers: () => githubHeaders('application/octet-stream') }
+}
+
+function parseOptions(argv) {
+  const allowed = new Set(['--verify', '--verify-upstream', '--export'])
+  const unknown = argv.filter((argument) => !allowed.has(argument))
+  if (unknown.length > 0) throw new Error(`未知参数：${unknown.join(', ')}`)
+  return {
+    verify: argv.includes('--verify'),
+    verifyUpstream: argv.includes('--verify-upstream'),
+    export: argv.includes('--export')
+  }
+}
+
+async function sha256File(path) {
+  const digest = createHash('sha256')
+  for await (const chunk of createReadStream(path)) digest.update(chunk)
+  return digest.digest('hex')
+}
+
+async function inspectRuntimeAssets(manifest, runtimeDir) {
+  const missing = []
+  const mismatched = []
+  for (const asset of manifest.release.assets) {
+    const path = join(runtimeDir, asset.path)
+    const details = await stat(path).catch(() => null)
+    if (!details?.isFile()) {
+      missing.push(asset)
+      continue
+    }
+    if (details.size !== asset.size || (await sha256File(path)) !== asset.sha256) {
+      mismatched.push(asset)
+    }
+  }
+  return { missing, mismatched }
+}
+
+function runtimeAssets(manifest, urlFor) {
+  return manifest.release.assets.map((asset) => ({
+    path: asset.path,
+    size: asset.size,
+    sha256: asset.sha256,
+    name: asset.name,
+    url: urlFor(asset)
+  }))
+}
+
+async function ensureRuntimeAssets(manifest, options) {
+  const endpoint = resolveReleaseEndpoint(options.endpoint)
+  return ensureAssetSet({
+    boundary: ROOT_DIR,
+    root: options.runtimeDir,
+    statePath: RUNTIME_STATE_PATH,
+    assets: runtimeAssets(manifest, (asset) =>
+      releaseAssetUrl(manifest.release, asset.name, endpoint)
+    ),
+    exact: true,
+    forceHash: options.verify === true,
+    repair: (asset, destination) =>
+      downloadVerifiedAsset(asset, destination, `[pronunciation] ${asset.name}`, {
+        ...releaseDownloadOptions(),
+        ...options.downloadOptions
+      })
+  })
+}
+
+async function fetchRelease(release, endpoint = DEFAULT_RELEASE_API_ENDPOINT) {
+  const response = await fetch(releaseApiUrl(release, endpoint), {
+    headers: githubHeaders('application/vnd.github+json')
+  })
+  if (response.status === 404) {
+    throw new MetadataMismatchError(`发音模型 Release 不存在：${release.repository}@${release.tag}`)
+  }
+  if (!response.ok) throw new Error(`发音模型 Release API 请求失败（HTTP ${response.status}）`)
+  return response.json()
+}
+
+function assertReleaseMetadataMatches(manifest, official) {
+  const release = manifest.release
+  const assets = Array.isArray(official?.assets) ? official.assets : []
+  const differences = []
+  if (official?.tag_name && official.tag_name !== release.tag) {
+    differences.push(`tag: ${release.tag} -> ${official.tag_name}`)
+  }
+  for (const pinned of release.assets) {
+    const actual = assets.find((candidate) => candidate?.name === pinned.name)
+    if (!actual) {
+      differences.push(`${pinned.name}: 缺失`)
+      continue
+    }
+    if (actual.size !== pinned.size) {
+      differences.push(`${pinned.name}.size: ${pinned.size} -> ${actual.size}`)
+    }
+    const digest = typeof actual.digest === 'string' ? actual.digest.replace(/^sha256:/, '') : ''
+    if (digest && digest !== pinned.sha256) {
+      differences.push(`${pinned.name}.sha256: ${pinned.sha256} -> ${digest}`)
+    }
+  }
+  if (differences.length > 0) {
+    throw new MetadataMismatchError(
+      `发音模型 Release 元数据与固定清单不一致：\n- ${differences.join('\n- ')}`
+    )
+  }
+}
+
+function withHfEndpoint(url, endpoint) {
   return endpoint === DEFAULT_HF_ENDPOINT ? url : url.replace(DEFAULT_HF_ENDPOINT, endpoint)
 }
 
 function modelFileUrl(source, file, endpoint = DEFAULT_HF_ENDPOINT) {
-  return withEndpoint(
+  return withHfEndpoint(
     `${DEFAULT_HF_ENDPOINT}/${source.sourceModelId}/resolve/${source.revision}/${file.path}`,
     endpoint
   )
 }
 
 async function fetchOfficialMetadata(source, endpoint = DEFAULT_HF_ENDPOINT) {
-  const response = await fetch(withEndpoint(source.sourceApi, endpoint))
+  const response = await fetch(withHfEndpoint(source.sourceApi, endpoint))
   if (!response.ok) throw new Error(`Hugging Face API 请求失败（HTTP ${response.status}）`)
   return response.json()
 }
@@ -144,58 +328,6 @@ function assertMetadataMatches(source, official) {
   }
 }
 
-function parseOptions(argv) {
-  const allowed = new Set(['--verify', '--verify-upstream'])
-  const unknown = argv.filter((argument) => !allowed.has(argument))
-  if (unknown.length > 0) throw new Error(`未知参数：${unknown.join(', ')}`)
-  return {
-    verify: argv.includes('--verify'),
-    verifyUpstream: argv.includes('--verify-upstream')
-  }
-}
-
-async function sha256File(path) {
-  const digest = createHash('sha256')
-  for await (const chunk of createReadStream(path)) digest.update(chunk)
-  return digest.digest('hex')
-}
-
-async function inspectRuntimeAssets(manifest, runtimeDir) {
-  const missing = []
-  const mismatched = []
-  for (const asset of manifest.runtime) {
-    const path = join(runtimeDir, asset.path)
-    const details = await stat(path).catch(() => null)
-    if (!details?.isFile()) {
-      missing.push(asset)
-      continue
-    }
-    if (details.size !== asset.size || (await sha256File(path)) !== asset.sha256) {
-      mismatched.push(asset)
-    }
-  }
-  return { missing, mismatched }
-}
-
-function buildRuntimeAssets({ manifest, sourceRootFor, runtimeDir, endpoint, python }) {
-  const sourceDir = (directory) => sourceRootFor({ directory })
-  console.log('[pronunciation] 正在从上游权重导出 ONNX 运行时资产（需要 Python 与 torch）')
-  execFileSync(
-    python,
-    [
-      join(ROOT_DIR, manifest.exporter),
-      '--model-dir',
-      sourceDir('model'),
-      '--tokenizer-dir',
-      sourceDir('tokenizer'),
-      '--output',
-      runtimeDir
-    ],
-    { stdio: 'inherit' }
-  )
-  void endpoint
-}
-
 async function verifyUpstreamMetadata(manifest, endpoint) {
   for (const source of manifest.sources) {
     const official = await fetchOfficialMetadata(source, endpoint)
@@ -205,7 +337,7 @@ async function verifyUpstreamMetadata(manifest, endpoint) {
 }
 
 async function ensureSources(manifest, options) {
-  const endpoint = resolveEndpoint(options.endpoint)
+  const endpoint = resolveHfEndpoint(options.endpoint)
   for (const source of manifest.sources) {
     const assets = source.files.map((file) => ({
       ...file,
@@ -232,35 +364,46 @@ async function ensureSources(manifest, options) {
   }
 }
 
-async function main(argv = process.argv.slice(2), overrides = {}) {
-  const options = { ...parseOptions(argv), ...overrides }
-  const manifest = overrides.manifest ?? PINNED_MANIFEST
-  validateManifest(manifest)
-  const runtimeDir = overrides.runtimeDir ?? join(MODEL_ROOT, manifest.runtimeDirectory)
+function sourceDirectory(manifest, directory) {
+  const source = manifest.sources.find((candidate) => candidate.directory === directory)
+  if (!source) throw new Error(`发音模型上游清单缺少 ${directory} 目录`)
+  return source
+}
+
+function exporterArguments({ manifest, sourceRootFor, runtimeDir }) {
+  return [
+    join(ROOT_DIR, manifest.exporter),
+    '--model-dir',
+    sourceRootFor(sourceDirectory(manifest, 'model')),
+    '--tokenizer-dir',
+    sourceRootFor(sourceDirectory(manifest, 'tokenizer')),
+    '--output',
+    runtimeDir
+  ]
+}
+
+function buildRuntimeAssets({ manifest, sourceRootFor, runtimeDir, python }) {
+  console.log('[pronunciation] 正在从上游权重导出 ONNX 运行时资产（需要 Python 与 torch）')
+  execFileSync(python, exporterArguments({ manifest, sourceRootFor, runtimeDir }), {
+    stdio: 'inherit'
+  })
+}
+
+async function exportRuntimeAssets({ manifest, options, runtimeDir, overrides }) {
   const sourceRootFor =
     overrides.sourceRootFor ?? ((source) => join(SOURCE_CACHE_ROOT, source.directory))
   const python = overrides.python ?? process.env.LS101_PYTHON ?? 'python3'
 
-  const runtime = await inspectRuntimeAssets(manifest, runtimeDir)
-  if (runtime.missing.length === 0 && runtime.mismatched.length === 0) {
-    if (options.verifyUpstream) {
-      await verifyUpstreamMetadata(manifest, resolveEndpoint(overrides.endpoint))
-    }
-    console.log('[pronunciation] 运行时资产已与固定清单一致，无需重新导出')
-    return { method: 'fast', repaired: 0 }
-  }
-
-  await ensureSources(manifest, { ...options, sourceRootFor, endpoint: overrides.endpoint })
-  if (options.verifyUpstream) {
-    await verifyUpstreamMetadata(manifest, resolveEndpoint(overrides.endpoint))
-  }
-  buildRuntimeAssets({
-    manifest,
+  await ensureSources(manifest, {
     sourceRootFor,
-    runtimeDir,
-    endpoint: resolveEndpoint(overrides.endpoint),
-    python
+    endpoint: overrides.hfEndpoint,
+    verify: options.verify,
+    downloadOptions: overrides.downloadOptions
   })
+  if (options.verifyUpstream) {
+    await verifyUpstreamMetadata(manifest, resolveHfEndpoint(overrides.hfEndpoint))
+  }
+  buildRuntimeAssets({ manifest, sourceRootFor, runtimeDir, python })
 
   const after = await inspectRuntimeAssets(manifest, runtimeDir)
   if (after.missing.length > 0) {
@@ -273,8 +416,56 @@ async function main(argv = process.argv.slice(2), overrides = {}) {
     if (options.verify) throw new Error(message)
     console.warn(`[pronunciation] 警告：${message}`)
   }
-  console.log('[pronunciation] 运行时资产导出完成')
+  console.log(
+    '[pronunciation] 运行时资产导出完成；发布前请运行 node scripts/publish-pronunciation-model.mjs'
+  )
   return { method: 'exported', repaired: after.mismatched.length }
+}
+
+async function main(argv = process.argv.slice(2), overrides = {}) {
+  const options = { ...parseOptions(argv), ...overrides }
+  const manifest = overrides.manifest ?? PINNED_MANIFEST
+  validateManifest(manifest)
+  const runtimeDir = overrides.runtimeDir ?? join(MODEL_ROOT, manifest.runtimeDirectory)
+
+  if (options.export) {
+    return exportRuntimeAssets({ manifest, options, runtimeDir, overrides })
+  }
+
+  const result = await ensureRuntimeAssets(manifest, {
+    runtimeDir,
+    endpoint: overrides.releaseEndpoint,
+    verify: options.verify,
+    downloadOptions: overrides.downloadOptions
+  }).catch((error) => {
+    if (/HTTP 404/.test(error.message)) {
+      throw new Error(
+        `${error.message}\n发音模型 Release "${manifest.release.tag}" 还没有发布对应资产；维护者需要先运行 node scripts/publish-pronunciation-model.mjs --publish。`
+      )
+    }
+    throw error
+  })
+  const after = await inspectRuntimeAssets(manifest, runtimeDir)
+  if (after.missing.length > 0 || after.mismatched.length > 0) {
+    throw new Error(
+      `发音模型运行时资产校验失败：${[...after.missing, ...after.mismatched]
+        .map((asset) => asset.path)
+        .join(', ')}`
+    )
+  }
+  if (options.verifyUpstream) {
+    const release = await fetchRelease(
+      manifest.release,
+      resolveReleaseApiEndpoint(overrides.apiEndpoint)
+    )
+    assertReleaseMetadataMatches(manifest, release)
+    console.log(`[pronunciation] Release ${manifest.release.tag} 资产与固定清单一致`)
+  }
+  if (result.repaired > 0) {
+    console.log(`[pronunciation] 从 Release 恢复 ${result.repaired} 个运行时资产`)
+  }
+  console.log(`[pronunciation] 运行时资产已与固定清单一致（${manifest.release.tag}）`)
+  return { method: result.repaired > 0 ? 'downloaded' : result.method, repaired: result.repaired }
 }
 
 if (require.main === module) {
@@ -286,15 +477,28 @@ if (require.main === module) {
 
 module.exports = {
   DEFAULT_HF_ENDPOINT,
+  DEFAULT_RELEASE_API_ENDPOINT,
+  DEFAULT_RELEASE_ENDPOINT,
   MANIFEST_PATH,
   MODEL_ROOT,
   PINNED_MANIFEST,
+  RELEASE_TAG_PREFIX,
+  RUNTIME_STATE_PATH,
   assertMetadataMatches,
+  assertReleaseMetadataMatches,
+  exporterArguments,
+  fetchRelease,
   inspectRuntimeAssets,
   isSafeRelativePath,
   main,
   modelFileUrl,
   parseOptions,
-  resolveEndpoint,
+  releaseApiUrl,
+  releaseAssetUrl,
+  resolveHfEndpoint,
+  resolveReleaseApiEndpoint,
+  resolveReleaseEndpoint,
+  runtimeAssets,
+  sourceDirectory,
   validateManifest
 }
