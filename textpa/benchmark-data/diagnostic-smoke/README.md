@@ -8,7 +8,7 @@
 - Model: `gpt-5.6-sol`
 - API style: Responses
 - Reasoning effort: `medium`
-- Prompt: [`../../Temp.txt`](../../Temp.txt)
+- Prompt: [`../../PROMPT-gop-llm-word-context-v3.txt`](../../PROMPT-gop-llm-word-context-v3.txt)
 - Raw acoustic cues: `cues.jsonl`
 - Raw transcript: `transcripts.jsonl`
 - Input manifests: `cues.jsonl.manifest.json`, `transcripts.jsonl.manifest.json`

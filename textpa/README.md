@@ -207,5 +207,24 @@ MultiPA 评测默认要求预测完整覆盖全部标注，防止把缺失样本
 PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
 
+# 数据来源与署名
+
 论文、作者实现及数据仍受各自许可证约束。作者实现为 MIT；MultiPA 与
 Speechocean762 的论文实验数据标注为 CC BY 4.0。
+
+`benchmark-data/upstream-reference/speechocean.zip` 是 TextPA 上游仓库在固定 commit
+`e429201f2f8a7dbdb594e637bf0139c458256aad` 处附带的 Speechocean762 快照，原样保留以便在
+临时测试环境销毁后仍能复现研究结论。该数据集由开源语音评测数据集
+[Speechocean762（OpenSLR SLR101）](https://openslr.elda.org/101/) 派生，采用
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) 许可：
+
+- 数据集名称：Speechocean762（OpenSLR SLR101）
+- 发布方：Open Speech and Language Resources（OpenSLR）
+- 许可：Attribution 4.0 International（CC BY 4.0）
+- 变更说明：本仓库仅原样保存该快照，未修改其中的音频、标注或说话人标识；快照内
+  各说话人目录名是数据集公开的说话人编号。
+- 快照校验：SHA-256 `eb89fd4cb86ebf84012ab47b10d507b9b3d2c8f5de2392855fd897f7d85e8faa`
+  （与 `benchmark-data/upstream-reference/README.md` 记录一致）。
+
+该快照不参与当前的 50 条 MultiPA 基准，也不进入安装包；如果未来不再需要复现，
+可以整目录删除而不影响任何产品代码或测试。

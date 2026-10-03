@@ -66,7 +66,9 @@ PCC 也不代表逐词、逐音素反馈正确。
 
 样本及原始结果保存在 [`benchmark-data/diagnostic-smoke/`](benchmark-data/diagnostic-smoke/)。
 使用同一条 16.745 秒 MultiPA 音频和当前本地 transcript/CMU/IPA，提示词见
-`Temp.txt`，调用 `gpt-5.6-sol`、Responses API、reasoning effort `medium`。
+[`PROMPT-gop-llm-word-context-v3.txt`](PROMPT-gop-llm-word-context-v3.txt)
+（说明见 [`PROMPT-gop-llm-word-context-v3.md`](PROMPT-gop-llm-word-context-v3.md)），
+调用 `gpt-5.6-sol`、Responses API、reasoning effort `medium`。
 
 - Sol medium 返回 5 个有证据支持的错音、3 个不确定项。
 - 16 个 CMU/IPA 引用片段均能在输入中逐字找到；这只验证了引用未伪造，未验证
